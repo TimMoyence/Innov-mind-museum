@@ -1,12 +1,26 @@
-/** A single enriched image attached to an assistant message (e.g. from Wikidata or Unsplash). */
+/**
+ * A single enriched image attached to an assistant message.
+ *
+ * v1 sources: Wikidata, Unsplash. v2 (C2 finition 2026-05) adds Wikimedia
+ * Commons and the Musaium curated catalogue plus a `rationale` field
+ * (LLM-authored 1-sentence explanation rendered under the carousel thumb).
+ *
+ * Reading-side compatibility: pre-C2 cached responses lack `rationale`; the
+ * UI must read it defensively (`rationale ?? ''`) and fall back to the i18n
+ * key `chat.enrichment.rationale_fallback` when empty.
+ */
 export interface ChatUiEnrichedImage {
   url: string;
   thumbnailUrl: string;
   caption: string;
-  source: 'wikidata' | 'unsplash';
+  /** LLM-authored explanation (may be empty for legacy responses). */
+  rationale?: string | null;
+  source: 'wikidata' | 'unsplash' | 'commons' | 'musaium';
   score: number;
   attribution?: string | null;
 }
+
+import type { components } from '@/shared/api/generated/openapi';
 
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
@@ -24,6 +38,14 @@ export interface ChatUiMessageMetadata {
   openQuestion?: string;
   imageDescription?: string;
   images?: ChatUiEnrichedImage[];
+  /**
+   * C3 visual-similarity payload (Phase 8 / T8.5). Populated when the
+   * backend's `/chat/compare` endpoint returned a `CompareResult` for this
+   * message. The bubble renders an `<ImageCompareCarousel>` whenever this
+   * field is present — even with an empty `matches` array, because the
+   * carousel itself owns the empty-state UX (driven by `fallbackReason`).
+   */
+  compareResults?: components['schemas']['CompareResult'];
 }
 
 /** UI-layer representation of a single chat message (user, assistant, or system). */

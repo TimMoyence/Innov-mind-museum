@@ -8,6 +8,7 @@ import {
   resolveAppVersion,
   resolveCommitSha,
   resolveDeploymentMode,
+  resolveEmbeddingsProvider,
   resolveGuardrailsCandidate,
   resolveLlmProvider,
   resolveNodeEnv,
@@ -16,7 +17,13 @@ import {
 } from './env-resolvers';
 import { validateProductionEnv } from './env.production-validation';
 
-import type { AppEnv, DeploymentMode, LlmProvider, StorageDriver } from './env.types';
+import type {
+  AppEnv,
+  DeploymentMode,
+  EmbeddingsProvider,
+  LlmProvider,
+  StorageDriver,
+} from './env.types';
 
 dotenv.config();
 
@@ -25,6 +32,7 @@ const provider = resolveLlmProvider();
 const guardrailsCandidate = resolveGuardrailsCandidate();
 const storageDriver = resolveStorageDriver();
 const deploymentMode = resolveDeploymentMode();
+const embeddingsProvider: EmbeddingsProvider = resolveEmbeddingsProvider();
 
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 const isProduction = nodeEnv === 'production';
@@ -284,6 +292,22 @@ const env: AppEnv = {
     cacheMaxEntries: toNumber(process.env.IMAGE_ENRICHMENT_CACHE_MAX_ENTRIES, 200),
     fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
+  },
+  // C3 (2026-05) — visual similarity engine config. Additive block, no impact
+  // on existing pipelines until `/chat/compare` ships (Phase 6 wiring).
+  visualSimilarity: {
+    provider: embeddingsProvider,
+    siglipOnnxModelPath:
+      toOptionalString(process.env.SIGLIP_ONNX_MODEL_PATH) ?? './models/siglip-base-patch16-224.onnx',
+    replicateApiToken: toOptionalString(process.env.REPLICATE_API_TOKEN),
+    embeddingsDim: toNumber(process.env.EMBEDDINGS_DIM, 768),
+    topN: toNumber(process.env.VISUAL_TOP_N, 20),
+    topKDefault: toNumber(process.env.VISUAL_TOP_K_DEFAULT, 5),
+    wVisual: toNumber(process.env.VISUAL_W_VISUAL, 0.7),
+    wMeta: toNumber(process.env.VISUAL_W_META, 0.3),
+    fallbackVisualThreshold: toNumber(process.env.VISUAL_FALLBACK_VISUAL_THRESHOLD, 0.4),
+    embeddingsCacheTtlMs: toNumber(process.env.EMBEDDINGS_CACHE_TTL_MS, 3_600_000),
+    encodeTimeoutMs: toNumber(process.env.EMBEDDINGS_ENCODE_TIMEOUT_MS, 3000),
   },
   enrichment: {
     hardDeleteAfterDays: toNumber(process.env.ENRICHMENT_HARD_DELETE_AFTER_DAYS, 180),

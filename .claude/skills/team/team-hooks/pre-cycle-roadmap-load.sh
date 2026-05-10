@@ -28,7 +28,7 @@ set -uo pipefail
 # Force C locale (consistency with sibling hooks; awk/sort behave identically).
 export LC_ALL=C LANG=C
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 # ---------------------------------------------------------------------------
 # Parse a ROADMAP file, emit JSON array of unticked items in `## NOW` section.

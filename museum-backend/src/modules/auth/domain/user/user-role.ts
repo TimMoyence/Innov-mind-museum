@@ -12,8 +12,10 @@
  *   moderator      — content review (reports, feedback).
  *   visitor        — default end-user role.
  *
- * A super_admin implicitly satisfies any check that admin would satisfy —
- * call sites that want "admin or above" should pass both literals.
+ * A super_admin implicitly satisfies any role check; this escalation is
+ * centralized in `requireRole` so call sites only need to list the
+ * minimum tier required. Adding a new admin route therefore cannot
+ * accidentally lock the platform owner out.
  */
 export const UserRole = {
   VISITOR: 'visitor',

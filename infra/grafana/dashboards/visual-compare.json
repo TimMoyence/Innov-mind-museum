@@ -1,0 +1,234 @@
+{
+  "title": "Visual Compare (C3)",
+  "uid": "visual-compare",
+  "tags": ["musaium", "chat", "visual-similarity", "c3"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "musaium-prometheus"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "${datasource}",
+        "enable": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "titleFormat": "Deploy",
+        "target": {
+          "expr": "changes(process_start_time_seconds{service=\"musaium-backend\"}[1m]) > 0",
+          "refId": "Anno"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Compare end-to-end latency (p50 / p95 / p99)",
+      "description": "Wall-clock time of POST /api/chat/compare. Source: http_request_duration_seconds_bucket{route=\"/api/chat/compare\"}. Per-stage breakdown lives in Langfuse (chat.compare.{encode,search,enrich,fusion} spans, T9.1) — Prometheus per-stage metrics are a follow-up.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{route=\"/api/chat/compare\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{route=\"/api/chat/compare\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{route=\"/api/chat/compare\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Compare requests / 5m by status",
+      "description": "Throughput + status breakdown. status_code=200 = success, 503 = COMPARE_ENCODER_UNAVAILABLE, 4xx = client/payload errors.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status_code) (rate(http_requests_total{route=\"/api/chat/compare\"}[5m]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Encoder unavailability rate (503 / total)",
+      "description": "Share of compare requests returning the COMPARE_ENCODER_UNAVAILABLE fallback (HTTP 503). Sentry alert (T9.5) fires when this exceeds 5/5min.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{route=\"/api/chat/compare\",status_code=\"503\"}[5m])) / sum(rate(http_requests_total{route=\"/api/chat/compare\"}[5m]))",
+          "legendFormat": "encoder_unavailable_rate"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Compare error rate (5xx + 4xx)",
+      "description": "Combined error rate. 4xx are client mistakes (bad image, missing field, oversized upload); 5xx are infrastructure (encoder, DB, enricher). Track separately to triage.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total{route=\"/api/chat/compare\",status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total{route=\"/api/chat/compare\"}[5m]))",
+          "legendFormat": "5xx"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_requests_total{route=\"/api/chat/compare\",status_code=~\"4..\"}[5m])) / sum(rate(http_requests_total{route=\"/api/chat/compare\"}[5m]))",
+          "legendFormat": "4xx"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Catalogue size (artwork_embeddings)",
+      "description": "Live row count of artwork_embeddings, refreshed on every Prometheus scrape via the gauge collect() callback (T9.2). Sentry alert fires when this drops below 9 000 — see docs/AI_VISUAL_SIMILARITY.md (Catalogue drift runbook).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 9000 },
+              { "color": "green", "value": 10000 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(artwork_embeddings_count)",
+          "legendFormat": "rows"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Catalogue size — growth",
+      "description": "Trend view of artwork_embeddings row count. Sudden drops indicate ingest regression or table truncation. The 9 000 floor is the Sentry alert threshold (T9.5).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 18, "x": 6, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 9000 },
+              { "color": "green", "value": 10000 }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": { "mode": "line" }
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["last", "min", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(artwork_embeddings_count)",
+          "legendFormat": "rows"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "Compare service code",
+      "url": "https://github.com/musaium/musaium/tree/main/museum-backend/src/modules/chat/useCase/visual-similarity",
+      "targetBlank": true
+    },
+    {
+      "title": "ADR — Visual similarity",
+      "url": "https://github.com/musaium/musaium/blob/main/docs/adr/ADR-XXX-visual-similarity.md",
+      "targetBlank": true
+    }
+  ]
+}

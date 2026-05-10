@@ -20,6 +20,7 @@
 !docs/SOCIAL_AUTH_SETUP.md
 !docs/RELEASE_CHECKLIST.md
 !docs/AI_VOICE.md
+!docs/AI_VISUAL_SIMILARITY.md
 !docs/TECH_DEBT.md
 !docs/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md
 !docs/GITHUB_ACTIONS_SHA_PINS.md
@@ -180,3 +181,8 @@ xcshareddata/swiftpm/configuration/
 
 # Perf seed checkpoint (local state, not for VCS)
 museum-backend/.perf-seed-checkpoint.json
+
+# C3 (2026-05) — visual-similarity ONNX bundles. Binary, ~340MB; fetched at
+# Docker build time by museum-backend/scripts/fetch-models.sh. Never committed.
+museum-backend/models/
+**/*.onnx

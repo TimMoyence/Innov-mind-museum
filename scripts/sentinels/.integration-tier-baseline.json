@@ -19,6 +19,11 @@
       "path": "museum-backend/tests/integration/admin/admin-museum-cache-invalidation.integration.test.ts",
       "reason": "C1 PR-A — pins LlmCacheServiceImpl.invalidateMuseum contract (R9: both museum-mode and personalized buckets purged) against a mocked CacheService. The SQL paths are exhaustively covered in tests/unit/chat/llm-cache.service.test.ts; this file is the cross-module admin↔chat contract pin and does not need a real Postgres+Redis testcontainer.",
       "approved_by": "C1-spec-R9"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/visual-similarity/compare.route.test.ts",
+      "reason": "C3 T6.2 — bare Express smoke test asserting the HTTP wire contract of POST /chat/compare. Mocks the use-case via spy and exercises status mapping (200/400/401/503). Real DB + pgvector paths covered by sibling artwork-embedding-repository.test.ts and recall.test.ts.",
+      "approved_by": "C3-spec-T6.2"
     }
   ]
 }

@@ -49,13 +49,21 @@ const CarouselThumb = React.memo(
       }).start();
     };
 
+    // C2 v2 (2026-05) — render LLM-authored rationale under the thumb. Falls
+    // back to the i18n string when missing (legacy responses or empty).
+    const rationaleResolved =
+      image.rationale && image.rationale.trim().length > 0
+        ? image.rationale
+        : t('chat.enrichment.rationale_fallback');
+    const a11yLabel = `${image.caption} - ${rationaleResolved}`;
+
     return (
       <Pressable
         onPress={() => {
           onPress(index);
         }}
         accessibilityRole="image"
-        accessibilityLabel={image.caption}
+        accessibilityLabel={a11yLabel}
         accessibilityHint={t('chat.viewFullscreen')}
         style={styles.thumbPressable}
       >
@@ -75,6 +83,11 @@ const CarouselThumb = React.memo(
               </Text>
             </View>
           ) : null}
+        </View>
+        <View style={styles.rationaleContainer}>
+          <Text numberOfLines={2} ellipsizeMode="tail" style={styles.rationaleText}>
+            {rationaleResolved}
+          </Text>
         </View>
       </Pressable>
     );
@@ -142,5 +155,14 @@ const styles = StyleSheet.create({
   attributionText: {
     color: ATTRIBUTION_COLOR,
     fontSize: space['2'],
+  },
+  // C2 v2 (2026-05) — rationale rendered as a 2-line caption under the thumb.
+  rationaleContainer: {
+    width: THUMB_WIDTH,
+    paddingTop: space['1'],
+  },
+  rationaleText: {
+    fontSize: space['2'],
+    lineHeight: space['3'],
   },
 });

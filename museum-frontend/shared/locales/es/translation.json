@@ -408,6 +408,22 @@
     "imageAttribution": "Foto de {{photographer}} en Unsplash",
     "imageLoadError": "No se pudo cargar la imagen",
     "viewFullscreen": "Ver en pantalla completa",
+    "enrichment": {
+      "rationale_fallback": "Mas sobre esta obra.",
+      "skeleton_loading": "Buscando imagenes contextuales…"
+    },
+    "compare": {
+      "title": "Obras similares",
+      "empty": "No se encontró ninguna obra similar — prueba con una foto más nítida",
+      "viewArtist": "Ver artista",
+      "attribution": "Fuente: Wikimedia Commons",
+      "rationale": {
+        "fallback": "Obra similar"
+      },
+      "error": {
+        "unavailable": "La similitud visual no está disponible temporalmente. Inténtalo de nuevo en un momento."
+      }
+    },
     "listen": "Escuchar",
     "listening": "Reproduciendo...",
     "tts_unavailable": "Audio no disponible",

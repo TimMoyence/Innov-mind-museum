@@ -8,6 +8,11 @@ coverage
 .env.*
 npm-debug.log
 
+# C3 (2026-05) — local ONNX bundle. Fetched inside the prod build stage by
+# scripts/fetch-models.sh; never shipped from the host context. Excluded here
+# so a dev-machine `models/` directory does not bloat the build context.
+models/
+
 # Test & dev files
 tests/
 *.test.ts
@@ -23,6 +28,8 @@ scripts/*
 !scripts/seed-museums.ts
 !scripts/seed-knowledge.ts
 !scripts/seed-smoke-account.ts
+# C3 (2026-05) — fetch-models.sh runs in the build stage of Dockerfile.prod.
+!scripts/fetch-models.sh
 
 # Docker configs (avoid recursive context)
 docker-compose*.yml

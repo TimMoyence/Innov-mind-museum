@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
+import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
+import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
@@ -63,11 +65,18 @@ export const ChatMessageBubble = React.memo(
     const isAssistant = message.role === 'assistant';
     const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
+    // C2 v2 (2026-05) — Q1 RESOLVED option (b): show a skeleton placeholder
+    // above the streaming body while we wait for image enrichment to land,
+    // then swap to the real carousel once `metadata.images` hydrates.
+    const hasImages = (message.metadata?.images?.length ?? 0) > 0;
+    const showSkeleton = isStreaming && !hasImages;
+
     const bubbleContent = (
       <>
         {isAssistant ? (
           <View>
-            {!isStreaming && message.metadata?.images?.length ? (
+            {showSkeleton ? <ImageCarouselSkeleton /> : null}
+            {!isStreaming && hasImages && message.metadata?.images ? (
               <ImageCarousel
                 images={message.metadata.images}
                 onImagePress={(index) => {
@@ -167,6 +176,21 @@ export const ChatMessageBubble = React.memo(
             museum={message.metadata.detectedArtwork.museum}
             room={message.metadata.detectedArtwork.room}
             confidence={message.metadata.detectedArtwork.confidence}
+          />
+        ) : null}
+
+        {/*
+          C3 visual-similarity carousel (Phase 8 / T8.5). Mounts whenever
+          `compareResults` metadata is present, even when `matches` is empty —
+          the carousel owns its own empty-state UX (driven by `fallbackReason`).
+          `locale` is parsed defensively: the bubble receives a BCP-47 string
+          (e.g. `'fr-FR'`); the carousel only knows about `'fr' | 'en'`.
+        */}
+        {!isStreaming && isAssistant && message.metadata?.compareResults ? (
+          <ImageCompareCarousel
+            matches={message.metadata.compareResults.matches}
+            locale={locale.toLowerCase().startsWith('fr') ? 'fr' : 'en'}
+            onMatchPress={() => undefined}
           />
         ) : null}
 

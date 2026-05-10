@@ -18,10 +18,12 @@ import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave
 import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
 import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
 import { GoogleCseClient } from '@modules/chat/adapters/secondary/search/google-cse.client';
+import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
 import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
+import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
@@ -42,6 +44,11 @@ import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
+import {
+  buildCompareImageUseCase,
+  buildCompareSessionAccessVerifier,
+} from './chat-module.compare-wiring';
+
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
@@ -49,7 +56,9 @@ import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestra
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
+import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
+import type { CompareUseCaseInput } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
@@ -66,6 +75,19 @@ export interface BuiltChatModule {
   userMemoryService: UserMemoryService | undefined;
   artKeywordRepository: ArtKeywordRepository;
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
+  /**
+   * C3 Visual Similarity (T5.5) — partially-applied `compareImageUseCase` for
+   * the `POST /chat/compare` route. Wired in {@link ChatModule.build}; the
+   * route adapter (T6.3) consumes this single function. Optional because legacy
+   * test harnesses build the module without the C3 pipeline.
+   */
+  compareImageUseCase?: (input: CompareUseCaseInput) => Promise<CompareResult>;
+  /**
+   * C3 Visual Similarity — session-ownership check piped to the compare router.
+   * Closes over the chat repository so the route does not import persistence.
+   * Optional in lockstep with `compareImageUseCase`.
+   */
+  compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
 }
 
 /**
@@ -215,18 +237,23 @@ export class ChatModule {
     );
   }
 
-  /** Creates the image enrichment service if the feature flag is enabled. */
-  /** Creates image enrichment (Unsplash + Wikidata P18). Natural gate: Unsplash key presence. */
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
     const unsplashClient = env.imageEnrichment.unsplashAccessKey
       ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
       : undefined;
-    return new ImageEnrichmentService(unsplashClient, {
-      cacheTtlMs: env.imageEnrichment.cacheTtlMs,
-      cacheMaxEntries: env.imageEnrichment.cacheMaxEntries,
-      fetchTimeoutMs: env.imageEnrichment.fetchTimeoutMs,
-      maxImagesPerResponse: env.imageEnrichment.maxImagesPerResponse,
-    });
+    const commonsClient = new WikimediaCommonsClient(env.imageEnrichment.fetchTimeoutMs);
+    const musaiumClient = new MusaiumCatalogueClient();
+    return new ImageEnrichmentService(
+      unsplashClient,
+      {
+        cacheTtlMs: env.imageEnrichment.cacheTtlMs,
+        cacheMaxEntries: env.imageEnrichment.cacheMaxEntries,
+        fetchTimeoutMs: env.imageEnrichment.fetchTimeoutMs,
+        maxImagesPerResponse: env.imageEnrichment.maxImagesPerResponse,
+      },
+      commonsClient,
+      musaiumClient,
+    );
   }
 
   /** Builds the knowledge extraction module (DB lookup + background pipeline). */
@@ -374,6 +401,19 @@ export class ChatModule {
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
+    // C3 Visual Similarity (T5.5) — wire the `POST /chat/compare` use case
+    // plus the session-ownership verifier consumed by the route (security
+    // BLOCKER 2026-05-10: parity with `ensureSessionAccess()` on every other
+    // chat write path).
+    const compareImageUseCase = buildCompareImageUseCase(
+      repository,
+      dataSource,
+      imageStorage,
+      ocr,
+      cache,
+    );
+    const compareSessionAccessVerifier = buildCompareSessionAccessVerifier(repository);
+
     const built: BuiltChatModule = {
       chatService,
       describeService,
@@ -383,6 +423,8 @@ export class ChatModule {
       userMemoryService: userMemory,
       artKeywordRepository: artKeywordRepo,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
+      compareImageUseCase,
+      compareSessionAccessVerifier,
     };
     this._built = built;
     return built;

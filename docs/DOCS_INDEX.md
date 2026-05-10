@@ -32,6 +32,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
 | LLM cache strategy (single-source) | [`docs/adr/ADR-036-llm-cache-strategy.md`](adr/ADR-036-llm-cache-strategy.md) |
+| Visual similarity (C3, SigLIP + pgvector) | [`docs/adr/ADR-037-visual-similarity-siglip-pgvector.md`](adr/ADR-037-visual-similarity-siglip-pgvector.md), runbook [`docs/AI_VISUAL_SIMILARITY.md`](AI_VISUAL_SIMILARITY.md) |
 | RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
 | SLO + observability strategy | [`docs/SLO.md`](SLO.md) |
 | Capacity plan (10rps→1K→100K tiers) | [`docs/CAPACITY_PLAN.md`](CAPACITY_PLAN.md) |

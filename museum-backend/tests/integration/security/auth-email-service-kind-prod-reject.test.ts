@@ -113,6 +113,18 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       fetchTimeoutMs: 3000,
       maxImagesPerResponse: 5,
     },
+    visualSimilarity: {
+      provider: 'siglip-onnx',
+      siglipOnnxModelPath: './models/siglip-base-patch16-224.onnx',
+      embeddingsDim: 768,
+      topN: 20,
+      topKDefault: 5,
+      wVisual: 0.7,
+      wMeta: 0.3,
+      fallbackVisualThreshold: 0.4,
+      embeddingsCacheTtlMs: 3600000,
+      encodeTimeoutMs: 3000,
+    },
     enrichment: { hardDeleteAfterDays: 180 },
     webSearch: {
       searxngInstances: [],

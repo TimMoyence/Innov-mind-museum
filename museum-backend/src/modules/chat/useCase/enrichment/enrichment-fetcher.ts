@@ -1,7 +1,10 @@
-import type { EnrichedImage } from '@modules/chat/domain/chat.types';
+import type { EnrichedImage, SuggestedImage } from '@modules/chat/domain/chat.types';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
-import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
+import type {
+  ImageEnrichmentService,
+  SuggestedImageAnnotation,
+} from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
@@ -37,6 +40,40 @@ export function extractSearchTerm(
     return inputText;
   }
   return null;
+}
+
+/**
+ * Walks history backward and returns the LAST assistant turn's
+ * `suggestedImages[]` entries (LLM-authored fan-out queries with caption +
+ * rationale). Returns `null` when no v2 entries are found.
+ *
+ * R1 + R15 — capped at 4 entries (defence-in-depth on top of LLM prompt cap).
+ */
+export function extractSuggestedImageEntries(
+  history: { role: string; metadata?: Record<string, unknown> | null }[],
+): SuggestedImage[] | null {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    if (msg.role !== 'assistant' || !msg.metadata) continue;
+    const meta = msg.metadata as { suggestedImages?: unknown };
+    if (!Array.isArray(meta.suggestedImages) || meta.suggestedImages.length === 0) continue;
+    const entries = meta.suggestedImages
+      .filter((entry): entry is SuggestedImage => isV2SuggestedImage(entry))
+      .slice(0, 4);
+    if (entries.length > 0) return entries;
+  }
+  return null;
+}
+
+function isV2SuggestedImage(entry: unknown): entry is SuggestedImage {
+  if (!entry || typeof entry !== 'object') return false;
+  const e = entry as Record<string, unknown>;
+  return (
+    typeof e.query === 'string' &&
+    typeof e.description === 'string' &&
+    typeof e.rationale === 'string' &&
+    typeof e.caption === 'string'
+  );
 }
 
 /** Wraps a promise so any error is swallowed (fail-open). Resolves to `undefined` on error. */
@@ -75,13 +112,40 @@ function fetchKbFacts(
   return failOpen(deps.knowledgeBase.lookupFacts(searchTerm));
 }
 
-/** Fetches image enrichment results — fail-open. */
+/**
+ * Fetches image enrichment — fail-open.
+ *
+ * When the last assistant turn carries a `suggestedImages[]` array, fan out
+ * one `enrich()` call per entry with LLM-authored caption + rationale carried
+ * through. Otherwise falls back to the legacy single-term path (R2).
+ */
+interface FetchImagesArgs {
+  searchTerm: string | null;
+  suggestedEntries: SuggestedImage[] | null;
+  museumMode: boolean;
+  requestId: string | undefined;
+}
+
 function fetchImages(
   deps: EnrichmentDeps,
-  searchTerm: string | null,
+  args: FetchImagesArgs,
 ): Promise<EnrichedImage[] | undefined> {
-  if (!deps.imageEnrichment || !searchTerm) return NONE;
-  return failOpen(deps.imageEnrichment.enrich(searchTerm));
+  const { searchTerm, suggestedEntries, museumMode, requestId } = args;
+  if (!deps.imageEnrichment) return NONE;
+  if (suggestedEntries && suggestedEntries.length > 0) {
+    const queries = suggestedEntries.map((s) => s.query.trim()).filter(Boolean);
+    if (queries.length === 0) return NONE;
+    const annotations: SuggestedImageAnnotation[] = suggestedEntries.map((s) => ({
+      query: s.query,
+      caption: s.caption,
+      rationale: s.rationale,
+    }));
+    return failOpen(
+      deps.imageEnrichment.enrich(queries, undefined, annotations, museumMode, requestId),
+    );
+  }
+  if (!searchTerm) return NONE;
+  return failOpen(deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode, requestId));
 }
 
 /** Fetches raw web search results for prompt building and URL enqueuing — fail-open. */
@@ -103,14 +167,22 @@ function fetchLocalKnowledge(
   return failOpen(deps.dbLookup.lookup(searchTerm, locale));
 }
 
+/**
+ * Args bundle for {@link fetchEnrichmentData}. Bundled to keep the function
+ * under the codebase max-params bar (5).
+ */
+export interface FetchEnrichmentArgs {
+  deps: EnrichmentDeps;
+  history: { role: string; metadata?: Record<string, unknown> | null }[];
+  inputText: string | undefined;
+  ownerId: number | undefined;
+  locale?: string;
+  museumMode?: boolean;
+  requestId?: string;
+}
+
 /** Fetches all enrichment sources in parallel (fail-open): memory, KB, local knowledge, web search, images. */
-export async function fetchEnrichmentData(
-  deps: EnrichmentDeps,
-  history: { role: string; metadata?: Record<string, unknown> | null }[],
-  inputText: string | undefined,
-  ownerId: number | undefined,
-  locale?: string,
-): Promise<{
+export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
   userMemoryBlock: string;
   knowledgeBaseBlock: string;
   localKnowledgeBlock: string;
@@ -118,14 +190,21 @@ export async function fetchEnrichmentData(
   webSearchResults: SearchResult[];
   enrichedImages: EnrichedImage[];
 }> {
+  const { deps, history, inputText, ownerId, locale, museumMode, requestId } = args;
   const searchTerm = extractSearchTerm(history, inputText);
+  const suggestedEntries = extractSuggestedImageEntries(history);
   const resolvedLocale = locale ?? 'en';
 
   const [memory, kb, kbFacts, images, webResults, localKb] = await Promise.all([
     fetchMemory(deps, ownerId),
     fetchKnowledgeBase(deps, searchTerm),
     fetchKbFacts(deps, searchTerm),
-    fetchImages(deps, searchTerm),
+    fetchImages(deps, {
+      searchTerm,
+      suggestedEntries,
+      museumMode: museumMode === true,
+      requestId,
+    }),
     fetchWebSearchRaw(deps, searchTerm),
     fetchLocalKnowledge(deps, searchTerm, resolvedLocale),
   ]);

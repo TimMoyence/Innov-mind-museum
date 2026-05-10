@@ -10,6 +10,7 @@ jest.mock('@shared/logger/logger', () => ({
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 
 import type { ImageEnrichmentConfig } from '@modules/chat/useCase/image/image-enrichment.service';
+import { makeEnrichedImage } from '../../helpers/chat/enrichedImage.fixtures';
 import {
   makeUnsplashClientMock,
   makeUnsplashPhoto,
@@ -190,13 +191,13 @@ describe('ImageEnrichmentService', () => {
     it('adds a new wikidata image to existing list', () => {
       const service = new ImageEnrichmentService(undefined, makeConfig());
       const existing = [
-        {
+        makeEnrichedImage({
           url: 'https://unsplash.com/1.jpg',
           thumbnailUrl: 'thumb',
           caption: 'art',
-          source: 'unsplash' as const,
+          source: 'unsplash',
           score: 0.5,
-        },
+        }),
       ];
 
       const merged = service.mergeWikidataImage(existing, 'https://wiki.org/new.jpg', 'art');
@@ -207,13 +208,13 @@ describe('ImageEnrichmentService', () => {
     it('does not duplicate if wikidata URL already exists', () => {
       const service = new ImageEnrichmentService(undefined, makeConfig());
       const existing = [
-        {
+        makeEnrichedImage({
           url: 'https://wiki.org/existing.jpg',
           thumbnailUrl: 'thumb',
           caption: 'art',
-          source: 'wikidata' as const,
+          source: 'wikidata',
           score: 0.8,
-        },
+        }),
       ];
 
       const merged = service.mergeWikidataImage(existing, 'https://wiki.org/existing.jpg', 'art');
@@ -223,13 +224,13 @@ describe('ImageEnrichmentService', () => {
     it('sorts merged results by score descending', () => {
       const service = new ImageEnrichmentService(undefined, makeConfig());
       const existing = [
-        {
+        makeEnrichedImage({
           url: 'https://unsplash.com/low.jpg',
           thumbnailUrl: 'thumb',
           caption: 'low',
-          source: 'unsplash' as const,
+          source: 'unsplash',
           score: 0.1,
-        },
+        }),
       ];
 
       const merged = service.mergeWikidataImage(existing, 'https://wiki.org/high.jpg', 'high');
@@ -240,20 +241,20 @@ describe('ImageEnrichmentService', () => {
     it('deduplicates when merged list has duplicate URLs', () => {
       const service = new ImageEnrichmentService(undefined, makeConfig());
       const existing = [
-        {
+        makeEnrichedImage({
           url: 'https://unsplash.com/dup.jpg',
           thumbnailUrl: 'thumb1',
           caption: 'art1',
-          source: 'unsplash' as const,
+          source: 'unsplash',
           score: 0.5,
-        },
-        {
+        }),
+        makeEnrichedImage({
           url: 'https://unsplash.com/dup.jpg',
           thumbnailUrl: 'thumb2',
           caption: 'art2',
-          source: 'unsplash' as const,
+          source: 'unsplash',
           score: 0.4,
-        },
+        }),
       ];
 
       const merged = service.mergeWikidataImage(existing, 'https://wiki.org/new.jpg', 'art');
@@ -314,5 +315,145 @@ describe('ImageEnrichmentService', () => {
 
       expect(result[0].attribution).toBe('Photo by Jane Doe on Unsplash');
     });
+  });
+
+  // =========================================================================
+  // C2 v2 (2026-05) — multi-source aggregator + tie-break + spans + R13 pin
+  // =========================================================================
+  describe('C2 v2 multi-source aggregator', () => {
+    it('R1 — fans out one enrich() call per searchTerm in parallel', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockImplementation((q: string) =>
+        Promise.resolve([
+          makeUnsplashPhoto({ url: `https://unsplash/${q.replace(/\s+/g, '-')}.jpg`, caption: q }),
+        ]),
+      );
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
+
+      const result = await service.enrich(['Monet', 'Manet', 'Van Gogh']);
+      expect(unsplash.searchPhotos).toHaveBeenCalledTimes(3);
+      expect(result.length).toBeLessThanOrEqual(3);
+    });
+
+    it('R3 — dedup tie-break: musaium URL beats unsplash on duplicate URL', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockResolvedValue([
+        makeUnsplashPhoto({
+          url: 'https://shared.example/dup.jpg',
+          caption: 'Unsplash variant',
+        }),
+      ]);
+      const musaium = {
+        searchPhotos: jest.fn().mockResolvedValue([
+          {
+            url: 'https://shared.example/dup.jpg',
+            thumbnailUrl: 'https://shared.example/dup.jpg',
+            caption: 'Mona Lisa',
+            width: 0,
+            height: 0,
+            photographerName: 'Musaium curated',
+          },
+        ]),
+      };
+      const service = new ImageEnrichmentService(unsplash, makeConfig(), undefined, musaium);
+
+      const result = await service.enrich('Mona Lisa');
+      expect(result.length).toBe(1);
+      expect(result[0].source).toBe('musaium');
+    });
+
+    it('R13 — museumMode hoists Musaium hit to position 0 even if a higher-score wikidata exists', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockResolvedValue([]);
+      const musaium = {
+        searchPhotos: jest.fn().mockResolvedValue([
+          {
+            url: 'https://museum.example/mona.jpg',
+            thumbnailUrl: 'https://museum.example/mona.jpg',
+            caption: 'Mona Lisa',
+            width: 0,
+            height: 0,
+            photographerName: 'Musaium curated',
+          },
+        ]),
+      };
+      const service = new ImageEnrichmentService(unsplash, makeConfig(), undefined, musaium);
+
+      const result = await service.enrich(
+        'Mona Lisa',
+        'https://wiki.org/p18.jpg',
+        undefined,
+        true,
+      );
+      expect(result[0].source).toBe('musaium');
+    });
+
+    it('R9 — when v2 clients are undefined, only Unsplash + Wikidata flow exercised', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockResolvedValue([
+        makeUnsplashPhoto({ url: 'https://unsplash/x.jpg' }),
+      ]);
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
+      const result = await service.enrich('Art', 'https://wiki.org/p18.jpg');
+
+      const sources = new Set(result.map((r) => r.source));
+      expect(sources.has('musaium')).toBe(false);
+      expect(sources.has('commons')).toBe(false);
+      expect(sources.has('wikidata')).toBe(true);
+    });
+
+    it('R11 — per-source error fail-open: commons throws, unsplash + wikidata still produced', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockResolvedValue([makeUnsplashPhoto({ caption: 'art' })]);
+      const commons = {
+        searchPhotos: jest.fn().mockRejectedValue(new Error('connection refused')),
+      };
+      const service = new ImageEnrichmentService(unsplash, makeConfig(), commons);
+
+      const result = await service.enrich('Art', 'https://wiki.org/p18.jpg');
+      const sources = result.map((r) => r.source);
+      expect(sources).toContain('wikidata');
+      expect(sources).toContain('unsplash');
+      // commons contributed [], no entry
+      expect(sources).not.toContain('commons');
+    });
+
+    it('R6 — propagates LLM-authored caption + rationale from annotations into EnrichedImage', async () => {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockResolvedValue([]);
+      const musaium = {
+        searchPhotos: jest.fn().mockResolvedValue([
+          {
+            url: 'https://museum.example/mona.jpg',
+            thumbnailUrl: 'https://museum.example/mona.jpg',
+            caption: 'Mona Lisa', // photo caption
+            width: 0,
+            height: 0,
+            photographerName: 'Musaium curated',
+          },
+        ]),
+      };
+      const service = new ImageEnrichmentService(unsplash, makeConfig(), undefined, musaium);
+      const result = await service.enrich(
+        ['Mona Lisa'],
+        undefined,
+        [
+          {
+            query: 'Mona Lisa',
+            caption: 'Mona Lisa at the Louvre',
+            rationale: 'The exact work the visitor asked about.',
+          },
+        ],
+      );
+      expect(result[0].caption).toBe('Mona Lisa at the Louvre');
+      expect(result[0].rationale).toBe('The exact work the visitor asked about.');
+    });
+  });
+
+  // Existing factory used by tests above
+  it('factory makeEnrichedImage returns the v2 default shape', () => {
+    const img = makeEnrichedImage();
+    expect(img.rationale).toBeDefined();
+    expect(typeof img.rationale).toBe('string');
   });
 });

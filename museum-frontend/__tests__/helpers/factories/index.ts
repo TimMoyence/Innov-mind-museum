@@ -16,3 +16,10 @@ export { makeMuseumListItem, makeGeoLocation } from './museum.factories';
 export type { GeoLocation } from './museum.factories';
 export { makeReview } from './review.factories';
 export { makeSupportTicket, makeSupportTicketDetail, makeTicketMessage } from './support.factories';
+export {
+  makeArtworkFacts,
+  makeCompareMatch,
+  makeCompareMatchCcBySa,
+  makeCompareResult,
+  makeCompareFallbackResult,
+} from './compare.factories';
