@@ -18,7 +18,10 @@ import { validateProductionEnv } from './env.production-validation';
 
 import type { AppEnv, DeploymentMode, LlmProvider, StorageDriver } from './env.types';
 
-dotenv.config();
+// Skip in jest runs (NODE_ENV=test) so .env doesn't contaminate controlled-env tests.
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config();
+}
 
 const nodeEnv = resolveNodeEnv();
 const provider = resolveLlmProvider();
