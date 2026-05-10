@@ -22,7 +22,7 @@ import {
   makeNormalisedFloat32,
   makeNormalisedVectorLiteral,
 } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
-import { createIntegrationHarness } from '../../../helpers/integration/integration-harness';
+import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 
 import type {
   ArtworkEmbeddingRepository,

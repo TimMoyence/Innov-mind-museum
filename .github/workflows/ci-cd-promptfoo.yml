@@ -26,7 +26,10 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
+        # C3 migration `AddArtworkEmbeddings` runs `CREATE EXTENSION vector`
+        # and declares a `halfvec(768)` column (CLAUDE.md gotcha + ADR-037).
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: musaium
           POSTGRES_PASSWORD: musaium_ci

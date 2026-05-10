@@ -87,7 +87,7 @@ const buildFormData = (input: UseCompareImageInput): FormData => {
 /**
  * React Query mutation wrapper around `POST /api/chat/compare`.
  *
- * Returns the same shape as any `useMutation()` result; consumers should read
+ * Returns the standard `useMutation()` result shape; consumers should read
  * `data` (the `CompareResult`) and `error` (a normalised `Error`).
  */
 export const useCompareImage = (): UseMutationResult<

@@ -20,7 +20,7 @@
  */
 
 import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
-import { createIntegrationHarness } from '../../../helpers/integration/integration-harness';
+import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 import { EMBEDDING_DIM } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';

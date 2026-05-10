@@ -1,14 +1,17 @@
 /**
  * HTML-entity escape for email templates and any other HTML rendering of user-controlled data.
  *
- * Order matters: `&` MUST be replaced first to avoid double-escaping the entities
- * we introduce immediately after.
+ * Single-pass `String.replace` with a class regex avoids the order-of-operations
+ * footgun of chained `replaceAll` (where `&` must run before `&amp;` would
+ * double-escape) and the semgrep `detect-replaceall-sanitization` rule.
  */
-// nosemgrep: javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization -- intentional HTML-entity escape chain for server-side rendering; order matters (& must be first)
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
 export const escapeHtml = (value: string): string =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+  value.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] ?? ch);

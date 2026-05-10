@@ -30,7 +30,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { createIntegrationHarness } from '../../../helpers/integration/integration-harness';
+import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 import { EMBEDDING_DIM, makeNormalisedFloat32 } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
