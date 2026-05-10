@@ -35,6 +35,18 @@ export const socialLoginSchema = z.object({
   nonce: z.string().min(16).max(256).optional(),
 });
 
+// F11-mobile — single-use code minted by /google/callback for the mobile
+// platform branch. Bounds match the OTC issuer: base64url 22 chars at the
+// floor (16 raw bytes), 64 ceiling so a future entropy bump stays in-bounds
+// without re-deploying the schema.
+export const socialRedeemSchema = z.object({
+  code: z
+    .string()
+    .min(22)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/, 'Code must be base64url'),
+});
+
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(128),

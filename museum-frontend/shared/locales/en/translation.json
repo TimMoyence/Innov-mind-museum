@@ -591,7 +591,8 @@
     "retry": "Try Again",
     "failed": "Authentication failed",
     "not_available": "Biometric authentication not available",
-    "not_enrolled": "No biometrics enrolled"
+    "not_enrolled": "No biometrics enrolled",
+    "continue_with": "Continue with"
   },
   "museumDirectory": {
     "title": "Nearby Museums",

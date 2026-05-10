@@ -152,4 +152,25 @@ export const authStyles = StyleSheet.create({
     lineHeight: lineHeightPx['18'],
     marginTop: space['1'],
   },
+  // F11-mobile (2026-05) — "Continue with Face ID" affordance shown when a
+  // refresh token is still locally available + biometric is enabled.
+  faceIdButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space['2'],
+    borderRadius: semantic.button.radius,
+    paddingVertical: semantic.button.paddingYCompact,
+    marginBottom: space['1'],
+  },
+  faceIdButtonDisabled: {
+    opacity: 0.6,
+  },
+  faceIdButtonIcon: {
+    marginRight: 0,
+  },
+  faceIdButtonLabel: {
+    fontWeight: '700',
+    fontSize: fontSize['base-'],
+  },
 });

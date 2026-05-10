@@ -10,15 +10,14 @@ const mockSignInWithApple = jest.fn<
   Promise<{ provider: 'apple'; idToken: string; nonce?: string }>,
   [unknown?]
 >();
-const mockSignInWithGoogle = jest.fn<
-  Promise<{ provider: 'google'; idToken: string; nonce?: string }>,
-  [unknown?]
->();
+// F11-mobile (2026-05) — signInWithGoogle now returns a session directly
+// (server-mediated redeem flow), not the legacy {provider, idToken, nonce}.
+const mockSignInWithGoogle = jest.fn<Promise<unknown>, []>();
 const mockIsAppleSignInAvailable = jest.fn<Promise<boolean>, []>();
 
 jest.mock('@/features/auth/infrastructure/socialAuthProviders', () => ({
   signInWithApple: (opts: unknown) => mockSignInWithApple(opts),
-  signInWithGoogle: (opts: unknown) => mockSignInWithGoogle(opts),
+  signInWithGoogle: () => mockSignInWithGoogle(),
   isAppleSignInAvailable: () => mockIsAppleSignInAvailable(),
 }));
 
@@ -50,11 +49,10 @@ describe('useSocialLogin', () => {
       idToken: 'apple-token-123',
       nonce: 'fixed-nonce',
     });
-    mockSignInWithGoogle.mockResolvedValue({
-      provider: 'google',
-      idToken: 'google-token-456',
-      nonce: 'fixed-nonce',
-    });
+    // F11-mobile (2026-05) — Google flow returns the session directly via the
+    // server-mediated redeem path. The default mock therefore returns a
+    // LoginResponse-shaped object, not the legacy {provider, idToken, nonce}.
+    mockSignInWithGoogle.mockResolvedValue(makeAuthTokens());
   });
 
   it('checks Apple Sign-In availability on mount', async () => {
@@ -79,9 +77,9 @@ describe('useSocialLogin', () => {
     });
   });
 
-  it('completes Google sign-in flow successfully', async () => {
+  it('completes Google sign-in flow via server-mediated redeem (F11-mobile)', async () => {
     const tokens = makeAuthTokens();
-    mockSocialLogin.mockResolvedValue(tokens);
+    mockSignInWithGoogle.mockResolvedValue(tokens);
     const opts = defaultOptions();
 
     const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -91,10 +89,12 @@ describe('useSocialLogin', () => {
     });
 
     expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1);
-    expect(mockSignInWithGoogle).toHaveBeenCalledWith({ nonce: 'fixed-nonce' });
-    // F3: hook still passes the nonce it fetched downstream — provider returns whatever
-    // it knows to echo (Apple = real nonce, Google = undefined per Phase-2 deferral).
-    expect(mockSocialLogin).toHaveBeenCalledWith('google', 'google-token-456', 'fixed-nonce');
+    // No client-side nonce fetch — backend issues + consumes the nonce
+    // entirely server-side in the /google/initiate -> /google/callback dance.
+    expect(mockRequestSocialNonce).not.toHaveBeenCalled();
+    // Redeem flow returns the session directly; /social-login is NOT invoked
+    // for Google anymore (Apple still uses it).
+    expect(mockSocialLogin).not.toHaveBeenCalled();
     expect(opts.loginWithSession).toHaveBeenCalledWith(tokens);
     expect(result.current.isSocialLoading).toBe(false);
   });
@@ -162,8 +162,8 @@ describe('useSocialLogin', () => {
     expect(result.current.isSocialLoading).toBe(false);
   });
 
-  it('does not call loginWithSession when response lacks tokens', async () => {
-    mockSocialLogin.mockResolvedValue({ accessToken: null, refreshToken: null });
+  it('does not call loginWithSession when redeem response lacks tokens', async () => {
+    mockSignInWithGoogle.mockResolvedValue({ accessToken: null, refreshToken: null });
     const opts = defaultOptions();
 
     const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -193,14 +193,13 @@ describe('useSocialLogin', () => {
       expect(mockSocialLogin).toHaveBeenCalledWith('apple', 'apple-tok', undefined);
     });
 
-    it('threads the fetched nonce end-to-end on Google flow', async () => {
+    // F11-mobile (2026-05) — Google no longer threads the client-side nonce
+    // round-trip. The nonce is issued, embedded in the OIDC state, and
+    // consumed entirely on the backend during the /google/initiate ->
+    // /google/callback redirect dance.
+    it('skips client-side nonce fetch on Google flow (server-mediated redeem)', async () => {
       mockRequestSocialNonce.mockResolvedValue({ nonce: 'specific-google-nonce' });
-      mockSignInWithGoogle.mockResolvedValue({
-        provider: 'google',
-        idToken: 'g-tok',
-        nonce: 'specific-google-nonce',
-      });
-      mockSocialLogin.mockResolvedValue(makeAuthTokens());
+      mockSignInWithGoogle.mockResolvedValue(makeAuthTokens());
       const opts = defaultOptions();
 
       const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -208,9 +207,9 @@ describe('useSocialLogin', () => {
         await result.current.handleGoogleSignIn();
       });
 
-      expect(mockRequestSocialNonce).toHaveBeenCalledTimes(1);
-      expect(mockSignInWithGoogle).toHaveBeenCalledWith({ nonce: 'specific-google-nonce' });
-      expect(mockSocialLogin).toHaveBeenCalledWith('google', 'g-tok', 'specific-google-nonce');
+      expect(mockRequestSocialNonce).not.toHaveBeenCalled();
+      expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1);
+      expect(mockSocialLogin).not.toHaveBeenCalled();
     });
   });
 });

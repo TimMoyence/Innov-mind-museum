@@ -22,10 +22,12 @@ import {
   refreshSchema,
   registerSchema,
   socialLoginSchema,
+  socialRedeemSchema,
 } from '@modules/auth/adapters/primary/http/schemas/auth.schemas';
 import {
   authSessionService,
   nonceStore,
+  redeemSocialOtcUseCase,
   registerUseCase,
   socialLoginUseCase,
 } from '@modules/auth/useCase';
@@ -164,6 +166,23 @@ authSessionRouter.post(
   async (_req: Request, res: Response) => {
     const issuedNonce = await nonceStore.issue();
     res.status(200).json({ nonce: issuedNonce });
+  },
+);
+
+// F11-mobile — exchange the one-time-code delivered to the mobile client via
+// the /google/callback deeplink for the actual session payload. The auth
+// audit row is emitted inside /google/callback (where the user actually
+// authenticated); /social-redeem is a token handoff and only requires the
+// rate-limit guard against bruteforce of the OTC entropy pool.
+authSessionRouter.post(
+  '/social-redeem',
+  socialLoginLimiter,
+  validateBody(socialRedeemSchema),
+  async (req: Request, res: Response) => {
+    const { code } = req.body;
+    const session = await redeemSocialOtcUseCase.execute(code);
+    setAuthCookies(res, session);
+    res.status(200).json(session);
   },
 );
 

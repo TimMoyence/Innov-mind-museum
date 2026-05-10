@@ -24,7 +24,29 @@ describe('Google OAuth state JWT', () => {
   it('round-trips nonce and returnTo', () => {
     const token = signGoogleOAuthState({ nonce: 'abc123', returnTo: '/fr/admin' });
     const payload = verifyGoogleOAuthState(token);
-    expect(payload).toEqual({ nonce: 'abc123', returnTo: '/fr/admin' });
+    expect(payload).toEqual({ nonce: 'abc123', returnTo: '/fr/admin', platform: 'web' });
+  });
+
+  it('round-trips platform=mobile when explicitly signed', () => {
+    const token = signGoogleOAuthState({
+      nonce: 'abc123',
+      returnTo: '/',
+      platform: 'mobile',
+    });
+    const payload = verifyGoogleOAuthState(token);
+    expect(payload).toEqual({ nonce: 'abc123', returnTo: '/', platform: 'mobile' });
+  });
+
+  it('defaults platform to "web" when the signed token omits the field', () => {
+    // Backward-compat: states minted before the platform field existed are
+    // re-verified as platform=web so the existing admin web flow keeps working.
+    const legacy = jwt.sign(
+      { nonce: 'n', returnTo: '/x' },
+      'unit-test-state-secret-that-is-long-enough',
+      { issuer: 'oauth-google-state', expiresIn: 60 },
+    );
+    const payload = verifyGoogleOAuthState(legacy);
+    expect(payload).toEqual({ nonce: 'n', returnTo: '/x', platform: 'web' });
   });
 
   it('rejects a tampered token', () => {

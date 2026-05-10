@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { z } from 'zod';
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { useEmailPasswordAuth } from '@/features/auth/application/useEmailPasswordAuth';
+import { useFaceIdSessionRestore } from '@/features/auth/application/useFaceIdSessionRestore';
 import { useForgotPassword } from '@/features/auth/application/useForgotPassword';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { AuthActionMenu } from '@/features/auth/ui/AuthActionMenu';
@@ -111,6 +113,15 @@ export default function AuthScreen() {
     loginWithSession: loginWithSessionWithBiometricPrompt,
   });
 
+  // F11-mobile (2026-05) — surfaces a "Continue with Face ID" affordance when
+  // a refresh token is still in secure-store and biometric is enabled. The
+  // happy path goes through AuthContext.bootstrap, but this button covers
+  // edge cases where the user lands on auth.tsx with that pair still aligned.
+  const faceIdRestore = useFaceIdSessionRestore();
+  const handleFaceIdRestore = useCallback(async () => {
+    await faceIdRestore.restore();
+  }, [faceIdRestore]);
+
   const forgot = useForgotPassword({ email });
 
   const onRegistrationComplete = useCallback(() => {
@@ -187,6 +198,33 @@ export default function AuthScreen() {
               ) : null}
               {infoMessage ? (
                 <Text style={[styles.infoText, { color: theme.success }]}>{infoMessage}</Text>
+              ) : null}
+
+              {isLogin && faceIdRestore.canRestore ? (
+                <Pressable
+                  testID="auth-face-id-button"
+                  onPress={() => {
+                    void handleFaceIdRestore();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('biometric.continue_with')} ${faceIdRestore.biometricLabel}`}
+                  disabled={asyncBusy}
+                  style={[
+                    styles.faceIdButton,
+                    { backgroundColor: theme.primary },
+                    asyncBusy && styles.faceIdButtonDisabled,
+                  ]}
+                >
+                  <Ionicons
+                    name="finger-print"
+                    size={20}
+                    color={theme.primaryContrast}
+                    style={styles.faceIdButtonIcon}
+                  />
+                  <Text style={[styles.faceIdButtonLabel, { color: theme.primaryContrast }]}>
+                    {`${t('biometric.continue_with')} ${faceIdRestore.biometricLabel}`}
+                  </Text>
+                </Pressable>
               ) : null}
 
               {isLogin ? (

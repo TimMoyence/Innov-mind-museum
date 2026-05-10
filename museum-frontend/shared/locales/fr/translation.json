@@ -591,7 +591,8 @@
     "retry": "Réessayer",
     "failed": "Échec de l'authentification",
     "not_available": "Authentification biométrique non disponible",
-    "not_enrolled": "Aucune donnée biométrique enregistrée"
+    "not_enrolled": "Aucune donnée biométrique enregistrée",
+    "continue_with": "Continuer avec"
   },
   "museumDirectory": {
     "title": "Musées à proximité",
