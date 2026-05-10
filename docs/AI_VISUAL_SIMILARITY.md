@@ -96,14 +96,59 @@ The catalogue is missing rows. Check:
 
 ## Monitoring
 
-- **Grafana dashboard**: `infra/grafana/dashboards/visual-compare.json` (UID `visual-compare`). Panels: end-to-end p50/p95/p99, throughput by status, encoder unavailability rate, error rate split 5xx/4xx.
+- **Grafana dashboard**: `infra/grafana/dashboards/visual-compare.json` (UID `visual-compare`). Panels: end-to-end p50/p95/p99, throughput by status, encoder unavailability rate, error rate split 5xx/4xx, catalogue size (stat + growth timeseries, T9.2).
 - **Langfuse traces**: `chat.compare.total` parent + 4 child stage spans. Drill in via the Langfuse UI for per-request forensics.
-- **Sentry alerts** (T9.5 — pending ops action): see the Sentry alert rules referenced by ADR-037.
+- **Per-stage Prometheus histogram**: `compare_duration_seconds_bucket{stage=...}` with `stage ∈ {total, encode, search, enrich, fusion}` (T9.1).
+- **Catalogue gauge**: `artwork_embeddings_count` updated synchronously on every `/metrics` scrape via the gauge `collect()` callback (T9.2 — `museum-backend/src/shared/observability/prometheus-metrics.ts`). No CRON, no scheduler — Prometheus scrape interval (~15-30s) is the effective sampling cadence.
+
+## Sentry alerts to provision (T9.5)
+
+The three alerts below MUST be created in Sentry before this service is considered fully observable. Each spec is copy-paste-ready: `Query` is the literal PromQL the Sentry UI expects, `Threshold` and `Window` go straight into the alert builder.
+
+### 1. Encoder unavailability spike — HIGH severity
+
+| Field | Value |
+|---|---|
+| Name | `compare-encoder-unavailable-rate` |
+| Metric source | Prometheus (`musaium-prometheus`) |
+| Query | `sum(rate(compare_fallback_total{reason="encoder_unavailable"}[5m])) * 300` |
+| Condition | `> 5` |
+| Window | 5 minutes |
+| Severity | HIGH (degraded service — `/api/chat/compare` returns the contractual 503 envelope) |
+| Runbook | `Runbook — failure modes` → `compare_encoder_unavailable_total > 5/5min` (this doc, above) |
+
+The `* 300` rescales the per-second rate over the 5-minute window into "occurrences per window" so the threshold reads naturally as "more than 5 fallback responses inside 5 min".
+
+### 2. End-to-end p95 latency breach — HIGH severity
+
+| Field | Value |
+|---|---|
+| Name | `compare-p95-latency-breach` |
+| Metric source | Prometheus (`musaium-prometheus`) |
+| Query | `histogram_quantile(0.95, sum(rate(compare_duration_seconds_bucket{stage="total"}[10m])) by (le))` |
+| Condition | `> 3` |
+| Window | 10 minutes |
+| Severity | HIGH (NFR violation — `spec.md §10` budget is p95 ≤ 3s) |
+| Runbook | `Runbook — failure modes` → `compare p95 > 3s sur 10min` (this doc, above) |
+
+10-minute window (vs 5-min for the encoder alert) smooths over single bursty deploys; the encoder alert fires faster because the failure mode is binary.
+
+### 3. Catalogue drift — MEDIUM severity
+
+| Field | Value |
+|---|---|
+| Name | `compare-catalogue-drift` |
+| Metric source | Prometheus (`musaium-prometheus`) |
+| Query | `max(artwork_embeddings_count)` |
+| Condition | `< 9000` |
+| Window | 5 minutes |
+| Severity | MEDIUM (data freshness; users still get matches, just from a smaller pool) |
+| Runbook | `Runbook — failure modes` → `artwork_embeddings_count < 9000` (this doc, above) |
+
+The `max(...)` aggregator is defensive — multiple BE replicas all report the same gauge value (DB row count is global), so `max` and `avg` would agree, but `max` survives a transient scrape miss on one replica without firing the alert. The 5-minute window gives the ingest job time to catch up after a re-run.
 
 ## Known limitations (V1)
 
-- **No per-stage Prometheus histograms.** Per-stage observability is Langfuse-only today. Add `compare_stage_duration_seconds_bucket{stage="..."}` to surface in Grafana.
-- **No catalog-count gauge job (T9.2).** The `artwork_embeddings` row count is not currently emitted as a Prometheus gauge. Workaround: query Postgres directly when investigating an alert.
-- **Maestro fixture pending.** The nightly flow expects `museum-frontend/.maestro/fixtures/test-artwork.jpg`; the fixture is added by a follow-up CI iteration.
+- **Maestro fixture.** The nightly flow expects `museum-frontend/.maestro/fixtures/test-artwork.jpg`; CI uploads it via `adb push` (Android) or `xcrun simctl addmedia` (iOS) before invoking maestro.
 - **Empty `metadataScore` in V1.** No query-side enrichment yet — `finalScore` collapses to `wVisual * visualScore`. V2 introduces query-facts resolution.
 - **Single encoder.** No Replicate fallback in V1. Encoder downtime → `503` contractual envelope.

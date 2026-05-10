@@ -1,4 +1,7 @@
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+
+import { logger } from '@shared/logger/logger';
+import { getDataSourceForMetrics } from '@shared/observability/metrics-context';
 
 /**
  * Prometheus metrics registry. Holds the RED metrics + business metrics
@@ -181,6 +184,41 @@ export const compareCacheHitsTotal = new Counter({
   name: 'compare_cache_hits_total',
   help: 'Total /chat/compare requests served from the top-K result cache (no encoder/repo hit)',
   registers: [registry],
+});
+
+/**
+ * C3 visual similarity (T9.2) — catalogue size gauge. Updated SYNCHRONOUSLY
+ * on every `/metrics` scrape via the `collect()` callback (no scheduler);
+ * Prometheus scrape interval (~15-30s) is the effective sampling cadence.
+ *
+ * Fail-open: if the DataSource hasn't been wired yet (early boot, tests) or
+ * the `SELECT count(*)` rejects (DB outage, transient connectivity), the
+ * gauge keeps its previous value rather than being reset to 0 — this avoids
+ * spurious "catalog drift" Sentry alerts (T9.5) on a momentary DB blip.
+ *
+ * The `SELECT count(*)` is exact, not the `pg_class.reltuples` estimate.
+ * Trade-off accepted: at the V1 scale (~10k rows, indexed) the count is
+ * ≪10ms; if the catalogue ever grows past ~100k we can swap to the
+ * estimate without changing the metric contract.
+ */
+export const artworkEmbeddingsCount = new Gauge({
+  name: 'artwork_embeddings_count',
+  help: 'Total rows in artwork_embeddings (C3 catalogue size). Refreshed on every /metrics scrape.',
+  registers: [registry],
+  async collect() {
+    const ds = getDataSourceForMetrics();
+    if (!ds) return;
+    try {
+      const rows = await ds.query<{ count: string }[]>(
+        'SELECT count(*)::text AS count FROM artwork_embeddings',
+      );
+      this.set(Number(rows[0]?.count ?? 0));
+    } catch (err) {
+      logger.warn('artwork_embeddings_count_collect_failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
 });
 
 /** Returns the Prometheus-format metrics dump. */

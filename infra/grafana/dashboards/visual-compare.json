@@ -148,6 +148,75 @@
           "legendFormat": "4xx"
         }
       ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Catalogue size (artwork_embeddings)",
+      "description": "Live row count of artwork_embeddings, refreshed on every Prometheus scrape via the gauge collect() callback (T9.2). Sentry alert fires when this drops below 9 000 — see docs/AI_VISUAL_SIMILARITY.md (Catalogue drift runbook).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 9000 },
+              { "color": "green", "value": 10000 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(artwork_embeddings_count)",
+          "legendFormat": "rows"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Catalogue size — growth",
+      "description": "Trend view of artwork_embeddings row count. Sudden drops indicate ingest regression or table truncation. The 9 000 floor is the Sentry alert threshold (T9.5).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 18, "x": 6, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 9000 },
+              { "color": "green", "value": 10000 }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": { "mode": "line" }
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["last", "min", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(artwork_embeddings_count)",
+          "legendFormat": "rows"
+        }
+      ]
     }
   ],
   "links": [

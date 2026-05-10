@@ -67,11 +67,23 @@ appId: com.musaium.mobile.preview
     optional: true
 - waitForAnimationToEnd
 
-# Choose the seeded test image. On Android the fixture sits in Downloads;
-# on iOS we grab the most-recent Photos asset (which the CI job uploads
-# right before running this flow).
+# Choose the seeded test image. CI uploads the fixture immediately before
+# running this flow so it surfaces as the most-recent asset:
+#   • Android emulator — `adb push .maestro/fixtures/test-artwork.jpg /sdcard/Download/`
+#   • iOS simulator    — `xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg`
+#
+# Two-step strategy because the underlying picker varies:
+#   1. Documents-style picker (Android Files / older OS) lists by filename
+#      → tap by literal "test-artwork.jpg".
+#   2. Native Photo Picker (PHPicker on iOS, Photo Picker on Android 13+)
+#      shows a thumbnail grid with no visible filenames → tap the top-left
+#      cell, which is the most-recent asset (i.e. the one CI just uploaded).
+# Both taps are optional so whichever picker is on screen, exactly one wins.
 - tapOn:
     text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
     optional: true
 - waitForAnimationToEnd
 
