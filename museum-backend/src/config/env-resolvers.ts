@@ -17,6 +17,7 @@ import { toOptionalString } from './env-helpers';
 
 import type {
   DeploymentMode,
+  EmbeddingsProvider,
   GuardrailsV2Candidate,
   LlmProvider,
   NodeEnv,
@@ -148,6 +149,18 @@ export function resolveGuardrailsCandidate(): GuardrailsV2Candidate {
 export function resolveStorageDriver(): StorageDriver {
   const raw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
   return ['local', 's3'].includes(raw) ? (raw as StorageDriver) : 'local';
+}
+
+/**
+ * C3 (2026-05) — whitelist-narrows `EMBEDDINGS_PROVIDER` for the visual
+ * similarity engine. Defaults to `'siglip-onnx'` so dev/prod default to the
+ * self-hosted CPU path (no per-call cost). Unknown values fall back to the
+ * default rather than throwing — keeps behaviour aligned with the other
+ * resolvers in this file.
+ */
+export function resolveEmbeddingsProvider(): EmbeddingsProvider {
+  const raw = (process.env.EMBEDDINGS_PROVIDER || 'siglip-onnx').toLowerCase();
+  return ['siglip-onnx', 'replicate'].includes(raw) ? (raw as EmbeddingsProvider) : 'siglip-onnx';
 }
 
 /**

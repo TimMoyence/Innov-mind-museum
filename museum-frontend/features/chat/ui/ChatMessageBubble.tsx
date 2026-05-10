@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
+import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
@@ -63,11 +64,18 @@ export const ChatMessageBubble = React.memo(
     const isAssistant = message.role === 'assistant';
     const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
+    // C2 v2 (2026-05) — Q1 RESOLVED option (b): show a skeleton placeholder
+    // above the streaming body while we wait for image enrichment to land,
+    // then swap to the real carousel once `metadata.images` hydrates.
+    const hasImages = (message.metadata?.images?.length ?? 0) > 0;
+    const showSkeleton = isStreaming && !hasImages;
+
     const bubbleContent = (
       <>
         {isAssistant ? (
           <View>
-            {!isStreaming && message.metadata?.images?.length ? (
+            {showSkeleton ? <ImageCarouselSkeleton /> : null}
+            {!isStreaming && hasImages && message.metadata?.images ? (
               <ImageCarousel
                 images={message.metadata.images}
                 onImagePress={(index) => {

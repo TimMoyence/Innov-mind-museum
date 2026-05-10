@@ -396,4 +396,106 @@ describe('env.ts module', () => {
       expect(env.storage.driver).toBe('local');
     });
   });
+
+  // C3 (2026-05) — visual similarity engine config (additive block, T1.3).
+  describe('visualSimilarity defaults', () => {
+    it('applies all spec defaults when no env vars are set', () => {
+      const env = loadEnv({
+        EMBEDDINGS_PROVIDER: undefined,
+        SIGLIP_ONNX_MODEL_PATH: undefined,
+        REPLICATE_API_TOKEN: undefined,
+        EMBEDDINGS_DIM: undefined,
+        VISUAL_TOP_N: undefined,
+        VISUAL_TOP_K_DEFAULT: undefined,
+        VISUAL_W_VISUAL: undefined,
+        VISUAL_W_META: undefined,
+        VISUAL_FALLBACK_VISUAL_THRESHOLD: undefined,
+        VISUAL_COMPARE_ENABLED: undefined,
+        EMBEDDINGS_CACHE_TTL_MS: undefined,
+        EMBEDDINGS_ENCODE_TIMEOUT_MS: undefined,
+      });
+      expect(env.visualSimilarity).toEqual({
+        provider: 'siglip-onnx',
+        siglipOnnxModelPath: './models/siglip-base-patch16-224.onnx',
+        replicateApiToken: undefined,
+        embeddingsDim: 768,
+        topN: 20,
+        topKDefault: 5,
+        wVisual: 0.7,
+        wMeta: 0.3,
+        fallbackVisualThreshold: 0.4,
+        compareEnabled: true,
+        embeddingsCacheTtlMs: 3_600_000,
+        encodeTimeoutMs: 3000,
+      });
+    });
+  });
+
+  describe('visualSimilarity provider whitelist', () => {
+    it('selects siglip-onnx when EMBEDDINGS_PROVIDER=siglip-onnx', () => {
+      const env = loadEnv({ EMBEDDINGS_PROVIDER: 'siglip-onnx' });
+      expect(env.visualSimilarity.provider).toBe('siglip-onnx');
+    });
+
+    it('selects replicate when EMBEDDINGS_PROVIDER=replicate', () => {
+      const env = loadEnv({ EMBEDDINGS_PROVIDER: 'replicate' });
+      expect(env.visualSimilarity.provider).toBe('replicate');
+    });
+
+    it('falls back to siglip-onnx for unknown provider value', () => {
+      const env = loadEnv({ EMBEDDINGS_PROVIDER: 'huggingface' });
+      expect(env.visualSimilarity.provider).toBe('siglip-onnx');
+    });
+
+    it('is case-insensitive on EMBEDDINGS_PROVIDER', () => {
+      const env = loadEnv({ EMBEDDINGS_PROVIDER: 'Replicate' });
+      expect(env.visualSimilarity.provider).toBe('replicate');
+    });
+  });
+
+  describe('visualSimilarity numeric overrides', () => {
+    it('overrides VISUAL_TOP_N from env', () => {
+      const env = loadEnv({ VISUAL_TOP_N: '50' });
+      expect(env.visualSimilarity.topN).toBe(50);
+    });
+
+    it('overrides VISUAL_W_VISUAL with a fractional value', () => {
+      const env = loadEnv({ VISUAL_W_VISUAL: '0.85' });
+      expect(env.visualSimilarity.wVisual).toBeCloseTo(0.85);
+    });
+
+    it('falls back to default 0.4 when VISUAL_FALLBACK_VISUAL_THRESHOLD is non-numeric', () => {
+      const env = loadEnv({ VISUAL_FALLBACK_VISUAL_THRESHOLD: 'high' });
+      expect(env.visualSimilarity.fallbackVisualThreshold).toBeCloseTo(0.4);
+    });
+
+    it('overrides EMBEDDINGS_DIM (still numeric, no validation here)', () => {
+      const env = loadEnv({ EMBEDDINGS_DIM: '1024' });
+      expect(env.visualSimilarity.embeddingsDim).toBe(1024);
+    });
+  });
+
+  describe('visualSimilarity boolean kill-switch', () => {
+    it('VISUAL_COMPARE_ENABLED defaults to true when unset', () => {
+      const env = loadEnv({ VISUAL_COMPARE_ENABLED: undefined });
+      expect(env.visualSimilarity.compareEnabled).toBe(true);
+    });
+
+    it('VISUAL_COMPARE_ENABLED=false flips the kill-switch', () => {
+      const env = loadEnv({ VISUAL_COMPARE_ENABLED: 'false' });
+      expect(env.visualSimilarity.compareEnabled).toBe(false);
+    });
+  });
+
+  describe('visualSimilarity replicate token wiring', () => {
+    it('exposes REPLICATE_API_TOKEN when set', () => {
+      const env = loadEnv({ REPLICATE_API_TOKEN: 'r8-test-token-123' });
+      expect(env.visualSimilarity.replicateApiToken).toBe('r8-test-token-123');
+    });
+
+    it('returns undefined when REPLICATE_API_TOKEN is empty', () => {
+      const env = loadEnv({ REPLICATE_API_TOKEN: '' });
+      expect(env.visualSimilarity.replicateApiToken).toBeUndefined();
+    });
+  });
 });

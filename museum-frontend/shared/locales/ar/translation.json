@@ -408,6 +408,10 @@
     "imageAttribution": "تصوير {{photographer}} على Unsplash",
     "imageLoadError": "تعذر تحميل الصورة",
     "viewFullscreen": "عرض بالحجم الكامل",
+    "enrichment": {
+      "rationale_fallback": "المزيد عن هذا العمل الفني.",
+      "skeleton_loading": "جاري البحث عن الصور السياقية…"
+    },
     "listen": "استماع",
     "listening": "جاري التشغيل...",
     "tts_unavailable": "الصوت غير متاح",

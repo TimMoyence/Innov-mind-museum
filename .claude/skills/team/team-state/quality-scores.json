@@ -92,5 +92,43 @@
       "important": 0,
       "nit": 0
     }
+  },
+  {
+    "runId": "2026-05-10-c2-image-chat-finition",
+    "ts": "2026-05-10T10:48:25Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 92,
+        "weight": 0.30,
+        "reasoning": "All 15 EARS R requirements have a corresponding implementation citation + at least one test. 157/157 BE C2 unit tests + 2039/2039 FE tests pass on this worktree. R6/R7 edge cases (empty rationale, null rationale, v1 legacy) covered. R3 tie-break + R13 museum pin verified by tests. R5 fail-open paths verified. Minor edge gap: bump cap behaviour (R15 from spec) defended-in-depth at both `assistant-response.ts:84` AND `enrichment-fetcher.ts:64` — robust."
+      },
+      "security": {
+        "score": 90,
+        "weight": 0.25,
+        "reasoning": "Security grep PASS: no dangerouslySetInnerHTML / eval / new Function / SQL interpolation / env-leak / hardcoded secret hits in C2-touched files. Wikidata SPARQL `language` interpolation guarded by `assertLang` (line 141). Commons URL is fixed host, no SSRF surface. User input flow audited: source-client query strings come from LLM-produced `suggestedImages[].query` (not raw user input), via encodeURIComponent in URLSearchParams. D3 guardrail extension: `aggregateOutputText` correctly folds caption + rationale into the single keyword guardrail (CLAUDE.md AI Safety §4 single source of truth preserved). Promptfoo c2-enrichment.yaml covers comparative / single-visual / non-visual / no-PII rationale. Sha256-truncated query in spans (no PII to Langfuse). LLM-authored rationale flows back to FE via `<Text>`, not markdown — no XSS surface."
+      },
+      "maintainability": {
+        "score": 88,
+        "weight": 0.20,
+        "reasoning": "KISS: aggregator overload preserves the public surface (no port mutation). DRY: `pickNonUnsplashCaption`, `buildAttribution`, `buildAnnotationLookup` extracted; OpenAPI shapes added once and consumed via regen. Hexagonal: no adapter imports in domain; composition root gated. Naming consistent (`SuggestedImageAnnotation`, `EnrichedImageSource`, `RATIONALE_FALLBACK_MARKER`). Comments cite spec EARS IDs directly (R1, R3, R7, R9, R11, R13, R15) — excellent traceability. Two new eslint-disables in adapters carry full Justification + Approved-by paragraph; one inherited skeleton-file disable lacks Approved-by (IMPORTANT finding above). The 357-LOC image-enrichment.service.ts is at the edge of comfort but well-segmented (helpers below class)."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "BE: 2 new test files (wikimedia-commons-client, musaium-catalogue-client) + 4 modified (image-enrichment-service, enrichment-fetcher, llm-sections, assistant-response) + 1 modified (guardrail-evaluation-service). Total +166 unit tests. FE: ImageCarousel.test.tsx full rewrite (8 cases incl. R7 null, R7 empty, R14, multi-source) + ImageCarouselSkeleton.test.tsx + ChatMessageBubble.skeleton.test.tsx (4 cases). Factories used (makeEnrichedImage, makeSuggestedImage) — DRY discipline preserved. Promptfoo regression added (4 scenarios). No `.skip` introduced; no inline `as any`. Minor gap: no explicit env unit test for `CHAT_ENRICHMENT_V2_ENABLED` strict-true parse (NIT). T7.1 integration test (real-PG testcontainer for end-to-end v2 wiring) deferred to TD-5 per editor note — acceptable trade-off."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.10,
+        "reasoning": "STORY.md is exhaustive (12 phases logged with file-level deltas + corrective-loop counts). spec.md + design.md complete with EARS + 7 design decisions D1-D7 + open-questions-resolved amendment for transparency (UFR-013). OpenAPI delta documented inline (description fields cite C2 v2). docs/ROADMAP_PRODUCT.md ticked + docs/TECH_DEBT.md TD-5 added with operator runbook (bake plan). Inline comments cite EARS IDs in code (R1/R3/R7/R9/R11/R13/R15). Memory project_c2_ai_side_only respected: 'Multi-image upload by visitor' explicitly out of scope (spec §2). Minor: no explicit ADR for the kill-switch (CHAT_ENRICHMENT_V2_ENABLED) but the env.ts comment + bake plan in TECH_DEBT.md cover the operational story."
+      },
+      "weightedMean": 90.0
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 2,
+      "nit": 4
+    }
   }
 ]

@@ -56,6 +56,24 @@ describe('llm-sections', () => {
     expect(plan[0].prompt).toContain('openQuestion');
   });
 
+  it('emits the v2 SuggestedImage shape (rationale + caption REQUIRED) — C2 R6', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'intermediate',
+      timeoutSummaryMs: 10000,
+    });
+    const prompt = plan[0].prompt;
+    // JSON shape mention
+    expect(prompt).toContain('"rationale":"string"');
+    expect(prompt).toContain('"caption":"string"');
+    // Quantity tune (1-4 range; 2-4 on comparative answers)
+    expect(prompt).toContain('1-4 short search queries');
+    expect(prompt).toContain('2-4 entries when the answer compares');
+    // PII safety guidance for rationale (R12 + GDPR)
+    expect(prompt).toContain('Rationale MUST NOT include any visitor PII');
+  });
+
   it('uses English-only prompts with Reply in French directive for fr locale', () => {
     const plan = createLlmSectionPlan({
       locale: 'fr-FR',

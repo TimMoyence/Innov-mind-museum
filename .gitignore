@@ -180,3 +180,8 @@ xcshareddata/swiftpm/configuration/
 
 # Perf seed checkpoint (local state, not for VCS)
 museum-backend/.perf-seed-checkpoint.json
+
+# C3 (2026-05) — visual-similarity ONNX bundles. Binary, ~340MB; fetched at
+# Docker build time by museum-backend/scripts/fetch-models.sh. Never committed.
+museum-backend/models/
+**/*.onnx

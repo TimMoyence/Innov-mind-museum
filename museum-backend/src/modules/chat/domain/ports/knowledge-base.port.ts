@@ -18,6 +18,14 @@ export interface ArtworkFacts {
   genre?: string;
   /** Primary image URL from Wikidata (P18 property). */
   imageUrl?: string;
+  /**
+   * Alternate-name labels (`schema:alternateName` / `skos:altLabel`) in the
+   * resolved language, fed into the alias-aware `titleMatchScore` (R8).
+   * Empty when no aliases are present in Wikidata for the entity.
+   *
+   * C2 v2 — added 2026-05.
+   */
+  aliases?: string[];
 }
 
 /** Query input for knowledge base lookup. */

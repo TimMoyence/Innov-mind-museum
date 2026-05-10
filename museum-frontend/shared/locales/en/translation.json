@@ -408,6 +408,10 @@
     "imageAttribution": "Photo by {{photographer}} on Unsplash",
     "imageLoadError": "Image could not be loaded",
     "viewFullscreen": "View full size",
+    "enrichment": {
+      "rationale_fallback": "More about this artwork.",
+      "skeleton_loading": "Looking up contextual images…"
+    },
     "listen": "Listen",
     "listening": "Playing...",
     "tts_unavailable": "Audio unavailable",

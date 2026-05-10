@@ -408,6 +408,10 @@
     "imageAttribution": "{{photographer}} 撮影 (Unsplash)",
     "imageLoadError": "画像を読み込めませんでした",
     "viewFullscreen": "フルサイズで表示",
+    "enrichment": {
+      "rationale_fallback": "この作品についてもっと知る。",
+      "skeleton_loading": "関連画像を検索中…"
+    },
     "listen": "聴く",
     "listening": "再生中...",
     "tts_unavailable": "音声は利用できません",

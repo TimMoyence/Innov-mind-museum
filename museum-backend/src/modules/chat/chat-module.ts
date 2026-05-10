@@ -18,10 +18,12 @@ import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave
 import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
 import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
 import { GoogleCseClient } from '@modules/chat/adapters/secondary/search/google-cse.client';
+import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
 import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
+import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
@@ -215,18 +217,36 @@ export class ChatModule {
     );
   }
 
-  /** Creates the image enrichment service if the feature flag is enabled. */
-  /** Creates image enrichment (Unsplash + Wikidata P18). Natural gate: Unsplash key presence. */
+  /**
+   * Creates image enrichment with v1 (Unsplash + Wikidata P18) and, when
+   * `CHAT_ENRICHMENT_V2_ENABLED=true`, the v2 sources (Wikimedia Commons +
+   * Musaium curated catalogue). The kill-switch governs ONLY the v2 wiring;
+   * the legacy Unsplash gate (key presence) is preserved verbatim.
+   *
+   * R9 — when v2 is disabled the new clients are NOT instantiated, so the
+   * service receives `undefined` for both and resolves to byte-identical
+   * pre-C2 behaviour.
+   */
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
     const unsplashClient = env.imageEnrichment.unsplashAccessKey
       ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
       : undefined;
-    return new ImageEnrichmentService(unsplashClient, {
-      cacheTtlMs: env.imageEnrichment.cacheTtlMs,
-      cacheMaxEntries: env.imageEnrichment.cacheMaxEntries,
-      fetchTimeoutMs: env.imageEnrichment.fetchTimeoutMs,
-      maxImagesPerResponse: env.imageEnrichment.maxImagesPerResponse,
-    });
+    const v2Enabled = env.imageEnrichment.v2Enabled;
+    const commonsClient = v2Enabled
+      ? new WikimediaCommonsClient(env.imageEnrichment.fetchTimeoutMs)
+      : undefined;
+    const musaiumClient = v2Enabled ? new MusaiumCatalogueClient() : undefined;
+    return new ImageEnrichmentService(
+      unsplashClient,
+      {
+        cacheTtlMs: env.imageEnrichment.cacheTtlMs,
+        cacheMaxEntries: env.imageEnrichment.cacheMaxEntries,
+        fetchTimeoutMs: env.imageEnrichment.fetchTimeoutMs,
+        maxImagesPerResponse: env.imageEnrichment.maxImagesPerResponse,
+      },
+      commonsClient,
+      musaiumClient,
+    );
   }
 
   /** Builds the knowledge extraction module (DB lookup + background pipeline). */

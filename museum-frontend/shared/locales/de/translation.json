@@ -408,6 +408,10 @@
     "imageAttribution": "Foto von {{photographer}} auf Unsplash",
     "imageLoadError": "Bild konnte nicht geladen werden",
     "viewFullscreen": "In voller Grosse anzeigen",
+    "enrichment": {
+      "rationale_fallback": "Mehr uber dieses Werk.",
+      "skeleton_loading": "Kontextbilder werden gesucht…"
+    },
     "listen": "Anhören",
     "listening": "Wiedergabe...",
     "tts_unavailable": "Audio nicht verfügbar",

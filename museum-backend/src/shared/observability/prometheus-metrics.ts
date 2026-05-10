@@ -99,6 +99,32 @@ export const chatPhaseErrorsTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * C2 v2 (2026-05) — per-source image enrichment call counter. Cardinality is
+ * bounded:
+ *   - `source` ∈ {wikidata, unsplash, commons, musaium}
+ *   - `outcome` ∈ {success, error, timeout, disabled}
+ * Total active series ≤ 16. Increment in `ImageEnrichmentService.fetchSourcePhotos`.
+ */
+export const chatEnrichmentSourceCallsTotal = new Counter({
+  name: 'chat_enrichment_source_calls_total',
+  help: 'Total image-enrichment source-client calls, by source and outcome',
+  labelNames: ['source', 'outcome'] as const,
+  registers: [registry],
+});
+
+/**
+ * C2 v2 (2026-05) — per-source image enrichment latency histogram.
+ * Same `source` dimension as the calls counter; outcomes collapsed in p50/p95.
+ */
+export const chatEnrichmentSourceLatencySeconds = new Histogram({
+  name: 'chat_enrichment_source_latency_seconds',
+  help: 'Image-enrichment source-client latency in seconds, by source',
+  labelNames: ['source'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 8],
+  registers: [registry],
+});
+
 /** Returns the Prometheus-format metrics dump. */
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();

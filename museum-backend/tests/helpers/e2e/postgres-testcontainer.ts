@@ -91,7 +91,7 @@ export const startPostgresTestContainer = async (): Promise<StartedPostgresTestC
     `POSTGRES_PASSWORD=${password}`,
     '-p',
     '127.0.0.1::5432',
-    'postgres:16-alpine',
+    'pgvector/pgvector:pg16',
   );
 
   const stop = async (): Promise<void> => {

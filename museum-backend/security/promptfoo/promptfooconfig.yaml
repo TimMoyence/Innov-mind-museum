@@ -31,8 +31,12 @@ providers:
       transformResponse: 'json.assistantMessage?.text || json.text || json.message'
       timeoutMs: 30000
 
-# Test cases: each row is a jailbreak attempt + assertions about safe behavior.
-tests: file://jailbreaks.yaml
+# Test cases. Each file is a list of scenarios with vars + assert blocks.
+# - jailbreaks.yaml — V12 W5 jailbreak corpus (always run)
+# - c2-enrichment.yaml — C2 v2 (2026-05) image-enrichment regression (4 scenarios)
+tests:
+  - file://jailbreaks.yaml
+  - file://c2-enrichment.yaml
 
 # Defaults applied to every test unless overridden.
 defaultTest:

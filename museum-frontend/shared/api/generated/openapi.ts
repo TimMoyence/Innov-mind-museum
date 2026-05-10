@@ -3509,7 +3509,7 @@ export interface components {
         openQuestion?: string;
         followUpQuestions?: string[];
         imageDescription?: string;
-        /** @description Enriched images from external sources (Wikidata, Unsplash) */
+        /** @description Enriched images from external sources (Wikidata, Unsplash, Wikimedia Commons, Musaium curated catalogue). C2 v2 (2026-05) adds rationale + commons/musaium sources. */
         images?: {
           /**
            * Format: uri
@@ -3521,24 +3521,30 @@ export interface components {
            * @description Thumbnail URL (~300px)
            */
           thumbnailUrl: string;
-          /** @description Image description */
+          /** @description Image description (LLM-authored when source != unsplash) */
           caption: string;
+          /** @description LLM-authored 1-sentence explanation shown under the carousel thumb. Empty string when the v1 path was used (FE falls back to the i18n string `chat.enrichment.rationale_fallback`). */
+          rationale: string;
           /**
-           * @description Image source
+           * @description Image source. v2 (C2 finition 2026-05) extends with commons + musaium.
            * @enum {string}
            */
-          source: 'wikidata' | 'unsplash';
+          source: 'wikidata' | 'unsplash' | 'commons' | 'musaium';
           /** @description Relevance score */
           score: number;
           /** @description Photo credit (required for Unsplash) */
           attribution?: string;
         }[];
-        /** @description LLM-suggested image search queries */
+        /** @description LLM-suggested image search queries (v2 — adds rationale + caption authored by the LLM) */
         suggestedImages?: {
           /** @description Search term for image lookup */
           query: string;
           /** @description What the image should depict */
           description: string;
+          /** @description 1-sentence LLM-authored explanation shown under the carousel thumb */
+          rationale: string;
+          /** @description <=8-word LLM-authored title for the thumb */
+          caption: string;
         }[];
       } & {
         [key: string]: unknown;

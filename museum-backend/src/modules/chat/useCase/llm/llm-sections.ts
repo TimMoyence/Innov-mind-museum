@@ -125,7 +125,7 @@ const buildSummaryPrompt = (input: {
   parts.push(
     'Write your answer as plain text first.',
     'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
-    '{"deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","suggestedImages":[{"query":"string","description":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
+    '{"deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
     'Do not include the answer text in the JSON — it is already provided above.',
     'Do not add markdown fences around the JSON.',
     'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
@@ -134,7 +134,7 @@ const buildSummaryPrompt = (input: {
     museumMode
       ? 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
       : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
-    'In suggestedImages, if the topic is visual (a painting, sculpture, place, or person), suggest 1-2 short search queries that would find illustrative photos (e.g. {"query":"Mona Lisa painting Louvre","description":"The painting in its Louvre gallery"}). Omit for non-visual topics.',
+    'In suggestedImages, if the topic is visual (a painting, sculpture, place, or person), suggest 1-4 short search queries that would find illustrative photos. Use 2-4 entries when the answer compares or covers multiple subjects (e.g. comparing Monet and Manet) — one entry per subject. Each entry MUST include a `rationale` (1 short sentence explaining why this image, e.g. "Shows the brushwork discussed above") AND a `caption` (≤8 word title for the thumb). Example: {"query":"Mona Lisa painting Louvre","description":"The painting in its Louvre gallery","rationale":"The work the visitor asked about.","caption":"Mona Lisa at the Louvre"}. Omit suggestedImages entirely for non-visual topics. Rationale MUST NOT include any visitor PII (name, email, location).',
     'Set expertiseSignal to the visitor expertise level you detect from their question.',
   );
 

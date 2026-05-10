@@ -1,4 +1,8 @@
-import type { ChatAssistantMetadata, ExpertiseLevel } from '@modules/chat/domain/chat.types';
+import type {
+  ChatAssistantMetadata,
+  ExpertiseLevel,
+  SuggestedImage,
+} from '@modules/chat/domain/chat.types';
 
 /** Parsed answer text and structured metadata extracted from the LLM's raw output. */
 interface ParsedAssistantResponse {
@@ -41,21 +45,45 @@ const toFollowUpQuestions = (value: unknown): string[] | undefined => {
   return filtered.length ? filtered : undefined;
 };
 
-const toSuggestedImages = (
-  value: unknown,
-): { query: string; description: string }[] | undefined => {
+/**
+ * Sentinel placeholder for missing/empty `rationale` and `caption` strings on
+ * a SuggestedImage entry. Carried through the metadata so the FE can swap it
+ * for the localised i18n fallback (`chat.enrichment.rationale_fallback`).
+ *
+ * The empty-string sentinel is intentional: matches the same convention used
+ * for `EnrichedImage.rationale` set by adapters that pre-date the LLM-authored
+ * field (Unsplash, raw Wikidata P18). Truthiness check on FE → fallback.
+ */
+const RATIONALE_FALLBACK_MARKER = '';
+
+const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
   if (!Array.isArray(value)) return undefined;
 
-  const filtered = value
+  const normalised = value
     .filter(
-      (item): item is { query: string; description: string } =>
-        typeof item === 'object' &&
-        item !== null &&
-        typeof (item as Record<string, unknown>).query === 'string' &&
-        typeof (item as Record<string, unknown>).description === 'string',
+      (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
     )
-    .slice(0, 3);
-  return filtered.length > 0 ? filtered : undefined;
+    .map((item): SuggestedImage | null => {
+      const query = typeof item.query === 'string' ? item.query.trim() : '';
+      const description = typeof item.description === 'string' ? item.description.trim() : '';
+      if (!query || !description) return null;
+      const rationaleRaw = typeof item.rationale === 'string' ? item.rationale.trim() : '';
+      const captionRaw = typeof item.caption === 'string' ? item.caption.trim() : '';
+      // R7 — if the LLM omits rationale or caption, fall back gracefully:
+      // - caption defaults to description (already validated non-empty above)
+      // - rationale defaults to RATIONALE_FALLBACK_MARKER (resolved by FE i18n)
+      return {
+        query,
+        description,
+        rationale: rationaleRaw || RATIONALE_FALLBACK_MARKER,
+        caption: captionRaw || description,
+      };
+    })
+    .filter((item): item is SuggestedImage => item !== null)
+    // R15 — defence-in-depth cap to 4 entries (LLM prompt also instructs ≤4).
+    .slice(0, 4);
+
+  return normalised.length > 0 ? normalised : undefined;
 };
 
 const toOptionalString = (value: unknown): string | undefined => {
