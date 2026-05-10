@@ -1,11 +1,17 @@
 /**
- * Lightweight test for socialAuthProviders — Apple-only paths plus Google native error mapping.
+ * F11-mobile (2026-05) — socialAuthProviders tests.
+ *
+ * Apple keeps the direct ID-token POST flow (signInAsync nonce-binds via SHA-256
+ * client-side). Google migrated off the broken @react-native-google-signin nonce
+ * flow to the server-mediated /google/initiate redirect — the in-app browser
+ * lands on `musaium://auth/google/callback?code=<otc>` and the OTC is redeemed
+ * via POST /api/auth/social-redeem.
  */
 
 const mockSignInAsync = jest.fn();
 const mockIsAvailableAsync = jest.fn<Promise<boolean>, []>();
-const mockGoogleSignIn = jest.fn();
-const mockGoogleHasPlayServices = jest.fn();
+const mockOpenAuthSessionAsync = jest.fn();
+const mockRedeemSocialCode = jest.fn();
 
 jest.mock('expo-apple-authentication', () => ({
   signInAsync: (opts: unknown) => mockSignInAsync(opts),
@@ -13,24 +19,29 @@ jest.mock('expo-apple-authentication', () => ({
   AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
 }));
 
-jest.mock('@react-native-google-signin/google-signin', () => ({
-  GoogleSignin: {
-    configure: jest.fn(),
-    hasPlayServices: (...args: unknown[]) => mockGoogleHasPlayServices(...args),
-    signIn: (...args: unknown[]) => mockGoogleSignIn(...args),
-  },
-  statusCodes: {
-    SIGN_IN_CANCELLED: '12501',
-    IN_PROGRESS: '12502',
-    PLAY_SERVICES_NOT_AVAILABLE: '12503',
-    SIGN_IN_REQUIRED: '12504',
-    DEVELOPER_ERROR: '10',
-  },
+jest.mock('expo-web-browser', () => ({
+  openAuthSessionAsync: (...args: unknown[]) => mockOpenAuthSessionAsync(...args),
 }));
 
 jest.mock('expo-constants', () => ({
   __esModule: true,
-  default: { expoConfig: { extra: {} } },
+  default: {
+    expoConfig: {
+      extra: {
+        EXPO_PUBLIC_API_BASE_URL: 'https://api.musaium.test',
+      },
+    },
+  },
+}));
+
+jest.mock('@/shared/infrastructure/apiConfig', () => ({
+  resolveInitialApiBaseUrl: () => 'https://api.musaium.test',
+}));
+
+jest.mock('@/features/auth/infrastructure/authApi', () => ({
+  authService: {
+    redeemSocialCode: (...args: unknown[]) => mockRedeemSocialCode(...args),
+  },
 }));
 
 import {
@@ -39,6 +50,19 @@ import {
   isAppleSignInAvailable,
 } from '@/features/auth/infrastructure/socialAuthProviders';
 import { Platform } from 'react-native';
+
+const fakeSession = () => ({
+  accessToken: 'access-tok',
+  refreshToken: 'refresh-tok',
+  expiresIn: 900,
+  refreshExpiresIn: 604_800,
+  user: {
+    id: 1,
+    email: 'mobile@example.com',
+    role: 'visitor' as const,
+    onboardingCompleted: false,
+  },
+});
 
 describe('signInWithApple', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -74,34 +98,7 @@ describe('isAppleSignInAvailable', () => {
   });
 });
 
-describe('signInWithGoogle native error mapping', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGoogleHasPlayServices.mockResolvedValue(true);
-  });
-
-  it('wraps a native DEVELOPER_ERROR into an AppError with code "google_developer_error"', async () => {
-    const orig = Platform.OS;
-    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
-
-    const nativeError = Object.assign(
-      new Error(
-        'DEVELOPER_ERROR: Follow troubleshooting instructions at https://react-native-google-signin.github.io/docs/troubleshooting',
-      ),
-      { code: '10' },
-    );
-    mockGoogleSignIn.mockRejectedValue(nativeError);
-
-    await expect(signInWithGoogle()).rejects.toMatchObject({
-      kind: 'SocialAuth',
-      code: 'google_developer_error',
-    });
-
-    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
-  });
-});
-
-// ── F3 — OIDC nonce binding ─────────────────────────────────────────
+// ── F3 — OIDC nonce binding (Apple still binds client-side) ───────────────
 describe('signInWithApple — F3 nonce', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -127,36 +124,71 @@ describe('signInWithApple — F3 nonce', () => {
   });
 });
 
-describe('signInWithGoogle — F3 nonce (deferred to Phase 2)', () => {
+// ── F11-mobile — Google server-mediated flow ─────────────────────────────
+describe('signInWithGoogle — F11-mobile web flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGoogleHasPlayServices.mockResolvedValue(true);
-    mockGoogleSignIn.mockResolvedValue({
+  });
+
+  it('opens the backend /google/initiate URL with platform=mobile and redeems the OTC', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({
       type: 'success',
-      data: { idToken: 'google-token' },
+      url: 'musaium://auth/google/callback?code=opaque-otc-22-chars-abc',
+    });
+    const session = fakeSession();
+    mockRedeemSocialCode.mockResolvedValue(session);
+
+    const result = await signInWithGoogle();
+
+    expect(mockOpenAuthSessionAsync).toHaveBeenCalledWith(
+      'https://api.musaium.test/api/auth/google/initiate?platform=mobile',
+      'musaium://auth/google/callback',
+    );
+    expect(mockRedeemSocialCode).toHaveBeenCalledWith('opaque-otc-22-chars-abc');
+    expect(result).toEqual(session);
+  });
+
+  it('throws google_cancelled when the user dismisses the in-app browser', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+
+    await expect(signInWithGoogle()).rejects.toMatchObject({
+      kind: 'SocialAuth',
+      code: 'google_cancelled',
+    });
+    expect(mockRedeemSocialCode).not.toHaveBeenCalled();
+  });
+
+  it('throws google_cancelled when the in-app browser is dismissed without success type', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({ type: 'dismiss' });
+
+    await expect(signInWithGoogle()).rejects.toMatchObject({
+      kind: 'SocialAuth',
+      code: 'google_cancelled',
     });
   });
 
-  it('accepts a nonce option for API symmetry but does NOT forward it to the SDK (legacy GoogleSignin API has no nonce field — Phase 2 migration to GoogleOneTapSignIn)', async () => {
-    const orig = Platform.OS;
-    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+  it('throws google_unknown when the deeplink carries reason=login_failed', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'musaium://auth/google/error?reason=login_failed',
+    });
 
-    const result = await signInWithGoogle({ nonce: 'g-nonce-123' });
-    // SDK called with no args — nonce intentionally dropped (see JSDoc).
-    expect(mockGoogleSignIn).toHaveBeenCalledWith();
-    // nonce intentionally undefined in result so backend skips assertion.
-    expect(result).toEqual({ provider: 'google', idToken: 'google-token' });
-
-    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
+    await expect(signInWithGoogle()).rejects.toMatchObject({
+      kind: 'SocialAuth',
+      code: 'google_unknown',
+    });
+    expect(mockRedeemSocialCode).not.toHaveBeenCalled();
   });
 
-  it('legacy callers without nonce option still work', async () => {
-    const orig = Platform.OS;
-    Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+  it('throws google_unknown when the deeplink success URL has no code parameter', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'musaium://auth/google/callback',
+    });
 
-    const result = await signInWithGoogle();
-    expect(result.nonce).toBeUndefined();
-
-    Object.defineProperty(Platform, 'OS', { value: orig, writable: true });
+    await expect(signInWithGoogle()).rejects.toMatchObject({
+      kind: 'SocialAuth',
+      code: 'google_unknown',
+    });
   });
 });

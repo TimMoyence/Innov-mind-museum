@@ -575,7 +575,8 @@
     "retry": "もう一度試す",
     "failed": "認証に失敗しました",
     "not_available": "生体認証は利用できません",
-    "not_enrolled": "生体情報が登録されていません"
+    "not_enrolled": "生体情報が登録されていません",
+    "continue_with": "次で続行"
   },
   "museumDirectory": {
     "title": "近くのミュージアム",

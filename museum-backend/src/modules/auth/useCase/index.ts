@@ -10,6 +10,7 @@ import { TotpSecretRepositoryPg } from '@modules/auth/adapters/secondary/pg/totp
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
 import { UserConsentRepositoryPg } from '@modules/auth/adapters/secondary/pg/userConsent.repository.pg';
 import { InMemoryNonceStore } from '@modules/auth/adapters/secondary/social/nonce-store';
+import { InMemorySocialOtcStore } from '@modules/auth/adapters/secondary/social/social-otc-store';
 import { SocialTokenVerifierAdapter } from '@modules/auth/adapters/secondary/social/social-token-verifier.adapter';
 import {
   DeleteAccountUseCase,
@@ -32,6 +33,7 @@ import { ResetPasswordUseCase } from '@modules/auth/useCase/password/resetPasswo
 import { RegisterUseCase } from '@modules/auth/useCase/registration/register.useCase';
 import { VerifyEmailUseCase } from '@modules/auth/useCase/registration/verifyEmail.useCase';
 import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
+import { RedeemSocialOtcUseCase } from '@modules/auth/useCase/social/redeemSocialOtc.useCase';
 import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
 import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.useCase';
 import { DisableMfaUseCase } from '@modules/auth/useCase/totp/disableMfa.useCase';
@@ -54,6 +56,7 @@ import type {
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
 } from '@modules/auth/domain/export/exportUserData.types';
+import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
 import type { EmailService } from '@shared/email/email.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);
@@ -110,6 +113,14 @@ const recoveryMfaUseCase = new RecoveryMfaUseCase(
  */
 const nonceStore = new InMemoryNonceStore();
 
+/**
+ * F11-mobile — short-lived store for the mobile-redirect OAuth flow. Holds
+ * the issued AuthSessionResponse keyed by a single-use opaque code that
+ * travels back to the mobile client via the /google/callback deeplink and
+ * is exchanged for the actual session via POST /api/auth/social-redeem.
+ */
+const socialOtcStore = new InMemorySocialOtcStore<AuthSessionResponse>();
+
 /** Singleton instance of {@link SocialLoginUseCase}. */
 const socialLoginUseCase = new SocialLoginUseCase(
   userRepository,
@@ -118,6 +129,9 @@ const socialLoginUseCase = new SocialLoginUseCase(
   socialTokenVerifier,
   nonceStore,
 );
+
+/** Singleton instance of {@link RedeemSocialOtcUseCase}. */
+const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
 /** Singleton instance of {@link DeleteAccountUseCase}. Lazy image cleanup via chat module's shared storage. */
 const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
@@ -240,7 +254,9 @@ export {
   resetPasswordUseCase,
   authSessionService,
   socialLoginUseCase,
+  redeemSocialOtcUseCase,
   nonceStore,
+  socialOtcStore,
   deleteAccountUseCase,
   exportUserDataUseCase,
   getProfileUseCase,

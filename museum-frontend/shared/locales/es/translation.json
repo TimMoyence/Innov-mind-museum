@@ -575,7 +575,8 @@
     "retry": "Intentar de nuevo",
     "failed": "Error de autenticación",
     "not_available": "Autenticación biométrica no disponible",
-    "not_enrolled": "No hay biometría registrada"
+    "not_enrolled": "No hay biometría registrada",
+    "continue_with": "Continuar con"
   },
   "museumDirectory": {
     "title": "Museos cercanos",

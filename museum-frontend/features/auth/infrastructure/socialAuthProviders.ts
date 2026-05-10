@@ -1,89 +1,26 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import Constants from 'expo-constants';
-import { Linking, Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
+import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
+import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
 import { createAppError } from '@/shared/types/AppError';
 
-/** Supported social identity providers for sign-in. */
-type SocialProvider = 'apple' | 'google';
-
 /**
- * Result of a successful social sign-in containing the provider name, its identity token,
- * and the OIDC nonce embedded in that token (if `signInWith*` was called with one).
- *
- * The nonce MUST be forwarded to `authService.socialLogin(provider, idToken, nonce)` so
- * the backend can assert single-use replay protection (F3, 2026-04-30).
+ * F11-mobile (2026-05) — deeplink scheme the in-app OAuth browser must land on
+ * for the Google flow. Hardcoded server-side too, so the redirect is not
+ * client-controlled (no open-redirect surface).
  */
-interface SocialAuthResult {
-  provider: SocialProvider;
+const MOBILE_DEEPLINK_SUCCESS = 'musaium://auth/google/callback';
+const MOBILE_DEEPLINK_PREFIX = 'musaium://';
+
+/** Result of a successful Apple sign-in (direct ID-token POST flow). */
+interface AppleAuthResult {
+  provider: 'apple';
   idToken: string;
   /** Raw nonce echoed for backend verification — `undefined` only on legacy callers. */
   nonce?: string;
 }
-
-const DEFAULT_GOOGLE_WEB_CLIENT_ID =
-  '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com';
-const DEFAULT_GOOGLE_IOS_CLIENT_ID =
-  '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com';
-const DEFAULT_GOOGLE_IOS_URL_SCHEME =
-  'com.googleusercontent.apps.498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2';
-const GOOGLE_IOS_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
-
-const asNonEmptyString = (value: unknown): string | null => {
-  if (typeof value !== 'string') {
-    return null;
-  }
-  const normalized = value.trim();
-  return normalized.length ? normalized : null;
-};
-
-const deriveGoogleIosUrlScheme = (googleIosClientId: string): string | null => {
-  if (!googleIosClientId.endsWith(GOOGLE_IOS_CLIENT_ID_SUFFIX)) {
-    return null;
-  }
-
-  const clientIdPrefix = googleIosClientId.slice(0, -GOOGLE_IOS_CLIENT_ID_SUFFIX.length);
-  if (!clientIdPrefix.length) {
-    return null;
-  }
-
-  return `com.googleusercontent.apps.${clientIdPrefix}`;
-};
-
-const googleWebClientId =
-  asNonEmptyString(Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID) ??
-  DEFAULT_GOOGLE_WEB_CLIENT_ID;
-const googleIosClientId =
-  asNonEmptyString(Constants.expoConfig?.extra?.GOOGLE_IOS_CLIENT_ID) ??
-  DEFAULT_GOOGLE_IOS_CLIENT_ID;
-const googleIosUrlScheme =
-  asNonEmptyString(Constants.expoConfig?.extra?.GOOGLE_IOS_URL_SCHEME) ??
-  deriveGoogleIosUrlScheme(googleIosClientId) ??
-  DEFAULT_GOOGLE_IOS_URL_SCHEME;
-
-let isGoogleSignInInFlight = false;
-
-GoogleSignin.configure({
-  webClientId: googleWebClientId,
-  iosClientId: googleIosClientId,
-});
-
-const assertGoogleIosUrlSchemeIsRegistered = async (): Promise<void> => {
-  if (Platform.OS !== 'ios') {
-    return;
-  }
-
-  const canOpenGoogleScheme = await Linking.canOpenURL(`${googleIosUrlScheme}://oauth`);
-  if (!canOpenGoogleScheme) {
-    throw createAppError({
-      kind: 'SocialAuth',
-      code: 'ios_unavailable',
-      message:
-        'Google Sign-In is unavailable on this iOS build (missing URL scheme configuration).',
-    });
-  }
-};
 
 /**
  * Initiates the Apple Sign-In flow and returns the identity token.
@@ -92,13 +29,10 @@ const assertGoogleIosUrlSchemeIsRegistered = async (): Promise<void> => {
  *   SHA-256 client-side and embeds the digest as the `nonce` claim of the
  *   returned ID token. Pass it through to `authService.socialLogin` so the
  *   backend can verify a single-use binding.
- * @returns A {@link SocialAuthResult} with provider `'apple'`, the identity token,
- *   and the original (un-hashed) nonce echoed for backend verification.
- * @throws If the user cancels or Apple does not return a token.
  */
 export const signInWithApple = async (
   options: { nonce?: string } = {},
-): Promise<SocialAuthResult> => {
+): Promise<AppleAuthResult> => {
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [
       AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -123,111 +57,85 @@ export const signInWithApple = async (
 };
 
 /**
- * Native Android `DEVELOPER_ERROR` rejection code emitted by RNGoogleSigninModule:
- * `String.valueOf(CommonStatusCodes.DEVELOPER_ERROR)` = `"10"`.
+ * F11-mobile (2026-05) — Google sign-in via the server-mediated redirect flow.
  *
- * The library's `statusCodes` constant does not currently re-export DEVELOPER_ERROR
- * (cf. node_modules/.../errors/errorCodes.d.ts), so we match the raw code defensively.
- */
-const GOOGLE_DEVELOPER_ERROR_CODE = '10';
-
-/**
- * Maps a native Google Sign-In error code to a stable AppError code consumed by the UI layer.
- * Native error `code` values come from `statusCodes` exported by `@react-native-google-signin/google-signin`.
- */
-const mapGoogleNativeErrorCode = (
-  nativeCode: unknown,
-):
-  | 'google_cancelled'
-  | 'google_in_progress'
-  | 'google_play_services_unavailable'
-  | 'google_developer_error'
-  | 'google_unknown' => {
-  if (nativeCode === statusCodes.SIGN_IN_CANCELLED) return 'google_cancelled';
-  if (nativeCode === statusCodes.IN_PROGRESS) return 'google_in_progress';
-  if (nativeCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE)
-    return 'google_play_services_unavailable';
-  if (nativeCode === GOOGLE_DEVELOPER_ERROR_CODE) return 'google_developer_error';
-  return 'google_unknown';
-};
-
-const isOurSocialAuthError = (error: unknown): boolean => {
-  return (
-    !!error &&
-    typeof error === 'object' &&
-    'kind' in error &&
-    (error as { kind?: unknown }).kind === 'SocialAuth'
-  );
-};
-
-/**
- * Initiates the Google Sign-In flow and returns the identity token.
+ * The previous direct ID-token POST through @react-native-google-signin v16
+ * was broken: that SDK does not support OIDC nonce binding (it is a paid
+ * feature of the universal-sign-in.com fork), and the legacy code shipped a
+ * client-issued nonce that the backend then rejected as INVALID_NONCE.
  *
- * @param options.nonce - Optional OIDC nonce (F3). **Currently ignored on Google**:
- *   the legacy `GoogleSignin.signIn()` API exposed by `@react-native-google-signin`
- *   v16 does not embed a nonce in the ID token (only the newer `GoogleOneTapSignIn`
- *   flow does). Migrating to One Tap is tracked as a phase-2 follow-up; until then
- *   the backend tolerates a missing Google nonce while `OIDC_NONCE_ENFORCE=false`.
- *   Apple sign-in DOES enforce nonce binding today.
- * @returns A {@link SocialAuthResult} with provider `'google'`, the ID token,
- *   and `nonce: undefined` (see note above).
- * @throws An {@link AppError} with `kind: 'SocialAuth'` for cancellation, in-progress,
- *   missing Play Services, developer config errors, or any other native failure.
+ * Replacement flow:
+ *   1. Build `${apiBaseUrl}/api/auth/google/initiate?platform=mobile`.
+ *   2. Open the URL via `WebBrowser.openAuthSessionAsync` so the in-app
+ *      browser auto-closes when the redirect lands on `musaium://`.
+ *   3. The backend signs a state JWT with platform=mobile, issues a nonce,
+ *      sends the user to Google. After Google redirects back, the backend
+ *      consumes the nonce + ID token, mints an OTC keyed against the issued
+ *      session, and 302s to `musaium://auth/google/callback?code=<otc>`.
+ *   4. We parse the OTC from the deeplink URL and exchange it for the actual
+ *      session via POST /api/auth/social-redeem.
+ *
+ * The OTC is single-use, 60s TTL, base64url. Even if the deeplink leaks (logs,
+ * screenshots, app-switch peek) an attacker has at most a handful of seconds
+ * before the legitimate client redeems it.
+ *
+ * @returns The authenticated session payload, identical to /login.
+ * @throws An {@link AppError} `kind: 'SocialAuth'` for cancellation
+ *   (`google_cancelled`) or any backend failure (`google_unknown`).
  */
-export const signInWithGoogle = async (
-  _options: { nonce?: string } = {},
-): Promise<SocialAuthResult> => {
-  if (isGoogleSignInInFlight) {
+export const signInWithGoogle = async (): Promise<LoginResponse> => {
+  const baseUrl = resolveInitialApiBaseUrl().replace(/\/$/, '');
+  const authUrl = `${baseUrl}/api/auth/google/initiate?platform=mobile`;
+
+  const result = await WebBrowser.openAuthSessionAsync(authUrl, MOBILE_DEEPLINK_SUCCESS);
+
+  if (result.type !== 'success' || !result.url) {
     throw createAppError({
       kind: 'SocialAuth',
-      code: 'google_in_progress',
-      message: 'Google Sign-In already in progress',
+      code: 'google_cancelled',
+      message: 'Google Sign-In was cancelled',
     });
   }
 
-  isGoogleSignInInFlight = true;
-
-  try {
-    if (Platform.OS === 'android') {
-      await GoogleSignin.hasPlayServices();
-    } else if (Platform.OS === 'ios') {
-      await assertGoogleIosUrlSchemeIsRegistered();
-    }
-
-    const response = await GoogleSignin.signIn();
-
-    if (response.type !== 'success' || !response.data.idToken) {
-      throw createAppError({
-        kind: 'SocialAuth',
-        code: 'google_no_id_token',
-        message: 'Google Sign-In failed: no ID token',
-      });
-    }
-
-    return {
-      provider: 'google',
-      idToken: response.data.idToken,
-      // nonce intentionally undefined — see JSDoc above + Phase 2 backlog.
-    };
-  } catch (rawError: unknown) {
-    // Re-throw our own AppErrors untouched (e.g. google_in_progress, google_no_id_token,
-    // ios_unavailable) so they keep their canonical code.
-    if (isOurSocialAuthError(rawError)) {
-      throw rawError;
-    }
-
-    const nativeCode = (rawError as { code?: unknown } | null)?.code;
-    const nativeMessage = rawError instanceof Error ? rawError.message : 'Google Sign-In failed';
-
+  const callback = parseCallbackUrl(result.url);
+  if (callback.kind === 'error') {
     throw createAppError({
       kind: 'SocialAuth',
-      code: mapGoogleNativeErrorCode(nativeCode),
-      message: nativeMessage,
+      code: 'google_unknown',
+      message: `Google Sign-In failed: ${callback.reason}`,
     });
-  } finally {
-    isGoogleSignInInFlight = false;
   }
+
+  return await authService.redeemSocialCode(callback.code);
 };
+
+type CallbackParse = { kind: 'ok'; code: string } | { kind: 'error'; reason: string };
+
+/**
+ * Parses a `musaium://...` deeplink URL into either an OTC code (success path)
+ * or an error reason (failure path). Anything that doesn't carry a code is
+ * treated as failure to avoid silently swallowing edge cases.
+ */
+function parseCallbackUrl(url: string): CallbackParse {
+  // The success path is `musaium://auth/google/callback?code=<otc>` and the
+  // failure path is `musaium://auth/google/error?reason=<reason>`. Both share
+  // the `musaium://` prefix; we read the query regardless of host so a
+  // backend-side path tweak does not silently break the parser.
+  const queryIndex = url.indexOf('?');
+  if (!url.startsWith(MOBILE_DEEPLINK_PREFIX) || queryIndex === -1) {
+    return { kind: 'error', reason: 'invalid_callback_url' };
+  }
+  const search = new URLSearchParams(url.slice(queryIndex + 1));
+  const reason = search.get('reason') ?? search.get('error');
+  if (reason) {
+    return { kind: 'error', reason };
+  }
+  const code = search.get('code');
+  if (!code) {
+    return { kind: 'error', reason: 'missing_code' };
+  }
+  return { kind: 'ok', code };
+}
 
 /**
  * Checks whether Apple Sign-In is available on the current device.

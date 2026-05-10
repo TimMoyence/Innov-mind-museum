@@ -1,17 +1,25 @@
 /**
- * F11 (2026-05) — Server-driven Google OAuth flow for the museum-web admin.
+ * F11 (2026-05) — Server-driven Google OAuth flow.
  *
- * Two routes:
- *   GET /google/initiate?returnTo=/fr/admin
+ * Two routes, two platform branches:
+ *   GET /google/initiate?returnTo=/fr/admin&platform=web|mobile
  *     Issues an OIDC nonce + signed state JWT and 302s to Google's auth screen.
+ *     `platform=mobile` (F11-mobile, 2026-05) tags the state so the callback
+ *     completes via deeplink instead of cookies.
  *   GET /google/callback?code=...&state=...
  *     Verifies state, exchanges the code for an id_token, hands it to the
  *     existing SocialLoginUseCase (which consumes the nonce, links/loads the
- *     user, and issues the session), sets the auth cookies + the readable
- *     `admin-authz` middleware hint cookie, then 302s to `${frontendUrl}${returnTo}`.
+ *     user, and issues the session). Then:
+ *       - state.platform=web   → set auth cookies + admin-authz hint cookie,
+ *                                redirect to `${frontendUrl}${returnTo}`.
+ *       - state.platform=mobile → store the session in the OTC store, redirect
+ *                                 to `musaium://auth/google/callback?code=<otc>`.
+ *                                 The mobile client exchanges the OTC for the
+ *                                 session via POST /api/auth/social-redeem.
  *
- * The mobile path (POST /social-login with idToken) is untouched — both
- * flows funnel through the same SocialLoginUseCase.
+ * The legacy mobile path (POST /social-login with idToken) is preserved for
+ * Apple Sign-In, which binds the nonce client-side via expo-apple-authentication
+ * and does not need the redirect dance.
  */
 import { type Request, type Response, Router } from 'express';
 
@@ -23,16 +31,29 @@ import { socialLoginLimiter } from '@modules/auth/adapters/primary/http/helpers/
 import {
   signGoogleOAuthState,
   verifyGoogleOAuthState,
+  type GoogleOAuthPlatform,
 } from '@modules/auth/adapters/secondary/social/google-oauth-state';
 import { exchangeGoogleAuthCode } from '@modules/auth/adapters/secondary/social/google-token-exchange';
-import { nonceStore, socialLoginUseCase } from '@modules/auth/useCase';
+import { nonceStore, socialLoginUseCase, socialOtcStore } from '@modules/auth/useCase';
 import { auditService } from '@shared/audit';
 import { AUDIT_AUTH_SOCIAL_LOGIN } from '@shared/audit/audit.types';
 import { env } from '@src/config/env';
 
+import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
+
 const DEFAULT_RETURN_TO = '/fr/admin';
 const ADMIN_AUTHZ_COOKIE = 'admin-authz';
 const ADMIN_AUTHZ_TTL_SECONDS = 8 * 60 * 60;
+
+/**
+ * F11-mobile — hardcoded deeplink the callback redirects to for the mobile
+ * platform branch. Hardcoding (rather than letting the client pass an
+ * arbitrary scheme) closes off the open-redirect class cleanly: an attacker
+ * cannot coerce the callback into delivering the session OTC to a hostile
+ * scheme.
+ */
+const MOBILE_DEEPLINK_SUCCESS = 'musaium://auth/google/callback';
+const MOBILE_DEEPLINK_ERROR = 'musaium://auth/google/error';
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_OAUTH_SCOPE = 'openid email profile';
@@ -82,6 +103,24 @@ function loginErrorRedirect(reason: string): string {
   const webBase = resolveWebBaseUrl();
   const returnTarget = `${DEFAULT_RETURN_TO}/login?oauth_error=${encodeURIComponent(reason)}`;
   return webBase ? `${webBase}${returnTarget}` : returnTarget;
+}
+
+/**
+ * F11-mobile — error redirect target for the mobile platform branch. Carries
+ * the same `reason` query convention as the web error redirect so the mobile
+ * client can render parity error copy.
+ */
+function mobileErrorRedirect(reason: string): string {
+  return `${MOBILE_DEEPLINK_ERROR}?reason=${encodeURIComponent(reason)}`;
+}
+
+/**
+ * F11-mobile — accept only the canonical `web` / `mobile` strings; treat
+ * anything else (typo, attacker-supplied junk) as `web` so we keep the
+ * existing default behaviour rather than failing closed.
+ */
+function parsePlatformQuery(raw: unknown): GoogleOAuthPlatform {
+  return raw === 'mobile' ? 'mobile' : 'web';
 }
 
 /**
@@ -145,16 +184,47 @@ function parseCallback(req: Request): CallbackPrelude {
   };
 }
 
-interface CallbackOutcome {
-  session: CookieSessionInput & { user: { id: number } };
+interface VerifiedState {
+  nonce: string;
   returnTo: string;
+  platform: GoogleOAuthPlatform;
 }
 
-/** End-to-end callback pipeline: state verify -> code exchange -> social login. */
-async function executeCallback(ctx: CallbackContext): Promise<CallbackOutcome> {
-  const { nonce, returnTo: rawReturnTo } = await runStep('session_expired', () =>
-    verifyGoogleOAuthState(ctx.stateRaw),
-  );
+interface CallbackOutcome {
+  session: AuthSessionResponse;
+  returnTo: string;
+  platform: GoogleOAuthPlatform;
+}
+
+/**
+ * Step 1 of the callback pipeline. Pulled out so the route handler can read
+ * the platform BEFORE later failures, which lets mobile errors redirect via
+ * the musaium:// deeplink and close the in-app browser cleanly. State
+ * verification failure is a special case: we cannot tell the platform, so
+ * the caller defaults to the web error path.
+ */
+function verifyState(stateRaw: string): VerifiedState | null {
+  try {
+    const decoded = verifyGoogleOAuthState(stateRaw);
+    return {
+      nonce: decoded.nonce,
+      returnTo: decoded.returnTo,
+      platform: decoded.platform,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Steps 2-3 of the callback pipeline given an already-verified state: code
+ * exchange + social login. Throws an {@link OAuthCallbackError} carrying the
+ * redirect reason on either step's failure.
+ */
+async function loginFromVerifiedState(
+  ctx: CallbackContext,
+  state: VerifiedState,
+): Promise<CallbackOutcome> {
   const idToken = await runStep('exchange_failed', () =>
     exchangeGoogleAuthCode({
       code: ctx.code,
@@ -164,9 +234,37 @@ async function executeCallback(ctx: CallbackContext): Promise<CallbackOutcome> {
     }),
   );
   const session = await runStep('login_failed', () =>
-    socialLoginUseCase.execute('google', idToken, nonce),
+    socialLoginUseCase.execute('google', idToken, state.nonce),
   );
-  return { session, returnTo: sanitizeReturnTo(rawReturnTo) };
+  return { session, returnTo: sanitizeReturnTo(state.returnTo), platform: state.platform };
+}
+
+/**
+ * F11-mobile — completes the mobile branch of the callback by stashing the
+ * session under a fresh OTC and 302'ing back to the hardcoded deeplink with
+ * the code in the query string.
+ */
+async function completeMobileCallback(res: Response, session: AuthSessionResponse): Promise<void> {
+  const code = await socialOtcStore.issue(session);
+  res.redirect(302, `${MOBILE_DEEPLINK_SUCCESS}?code=${encodeURIComponent(code)}`);
+}
+
+/**
+ * F11 (web) — completes the web branch of the callback by setting auth
+ * cookies + the `admin-authz` middleware hint cookie, then 302'ing to the
+ * frontend `returnTo`.
+ */
+function completeWebCallback(res: Response, session: CookieSessionInput, returnTo: string): void {
+  setAuthCookies(res, session);
+  res.cookie(ADMIN_AUTHZ_COOKIE, '1', {
+    path: '/',
+    maxAge: ADMIN_AUTHZ_TTL_SECONDS * 1000,
+    sameSite: 'lax',
+    secure: env.nodeEnv === 'production',
+  });
+  const webBase = resolveWebBaseUrl();
+  const target = webBase ? `${webBase}${returnTo}` : returnTo;
+  res.redirect(302, target);
 }
 
 authGoogleOauthRouter.get(
@@ -181,9 +279,10 @@ authGoogleOauthRouter.get(
       return;
     }
 
+    const platform = parsePlatformQuery(req.query.platform);
     const returnTo = sanitizeReturnTo(req.query.returnTo);
     const nonce = await nonceStore.issue();
-    const state = signGoogleOAuthState({ nonce, returnTo });
+    const state = signGoogleOAuthState({ nonce, returnTo, platform });
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -204,6 +303,15 @@ authGoogleOauthRouter.get(
   },
 );
 
+/**
+ * Picks the right error redirect target given the (possibly unknown)
+ * platform. Mobile failures land on the deeplink so the in-app browser
+ * closes; everything else lands on the web error page.
+ */
+function errorRedirectFor(platform: GoogleOAuthPlatform | null, reason: string): string {
+  return platform === 'mobile' ? mobileErrorRedirect(reason) : loginErrorRedirect(reason);
+}
+
 authGoogleOauthRouter.get(
   '/google/callback',
   socialLoginLimiter,
@@ -214,31 +322,26 @@ authGoogleOauthRouter.get(
       return;
     }
     if (prelude.kind === 'redirect') {
-      res.redirect(302, loginErrorRedirect(prelude.reason));
+      // Pre-state failure: cannot tell the platform yet — default to web.
+      res.redirect(302, errorRedirectFor(null, prelude.reason));
+      return;
+    }
+
+    const state = verifyState(prelude.ctx.stateRaw);
+    if (state === null) {
+      // State did not verify (signature, expiry, shape): platform unknown.
+      res.redirect(302, errorRedirectFor(null, 'session_expired'));
       return;
     }
 
     let outcome: CallbackOutcome;
     try {
-      outcome = await executeCallback(prelude.ctx);
+      outcome = await loginFromVerifiedState(prelude.ctx, state);
     } catch (err) {
       const reason = err instanceof OAuthCallbackError ? err.reason : 'login_failed';
-      res.redirect(302, loginErrorRedirect(reason));
+      res.redirect(302, errorRedirectFor(state.platform, reason));
       return;
     }
-
-    setAuthCookies(res, outcome.session);
-    // F11 — middleware hint cookie. Non-HttpOnly so the LoginForm/middleware
-    // can read it without a network round-trip; the real session lives in the
-    // HttpOnly access_token cookie. SameSite=Lax matches the auth.tsx client
-    // helper so behaviour is symmetric whether the user logs in via password
-    // or via Google.
-    res.cookie(ADMIN_AUTHZ_COOKIE, '1', {
-      path: '/',
-      maxAge: ADMIN_AUTHZ_TTL_SECONDS * 1000,
-      sameSite: 'lax',
-      secure: env.nodeEnv === 'production',
-    });
 
     await auditService.log({
       action: AUDIT_AUTH_SOCIAL_LOGIN,
@@ -246,14 +349,19 @@ authGoogleOauthRouter.get(
       actorId: outcome.session.user.id,
       targetType: 'user',
       targetId: String(outcome.session.user.id),
-      metadata: { provider: 'google', flow: 'web-redirect' },
+      metadata: {
+        provider: 'google',
+        flow: outcome.platform === 'mobile' ? 'mobile-redirect' : 'web-redirect',
+      },
       ip: req.ip,
       requestId: req.requestId,
     });
 
-    const webBase = resolveWebBaseUrl();
-    const target = webBase ? `${webBase}${outcome.returnTo}` : outcome.returnTo;
-    res.redirect(302, target);
+    if (outcome.platform === 'mobile') {
+      await completeMobileCallback(res, outcome.session);
+      return;
+    }
+    completeWebCallback(res, outcome.session, outcome.returnTo);
   },
 );
 

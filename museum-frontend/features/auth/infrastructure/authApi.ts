@@ -129,10 +129,10 @@ export const authService = {
 
   /**
    * F3 (2026-04-30) — Requests a single-use OIDC nonce from the backend.
-   * Mobile MUST call this immediately before invoking the native social SDK
-   * and pass the returned `nonce` to `signInWithApple` / `signInWithGoogle`.
-   * The backend stores it in Redis with a 5-min TTL and asserts a single
-   * consume on the matching `/social-login` call.
+   * Apple Sign-In on mobile MUST call this immediately before invoking
+   * `signInWithApple({ nonce })` so the SDK SHA-256-hashes it client-side.
+   * The Google flow is server-mediated since F11-mobile (2026-05) and does
+   * not need this — see {@link redeemSocialCode}.
    *
    * @returns A 128-bit base64url nonce.
    */
@@ -140,6 +140,25 @@ export const authService = {
     return openApiRequest({
       path: '/api/auth/social-nonce',
       method: 'post',
+      requiresAuth: false,
+    });
+  },
+
+  /**
+   * F11-mobile (2026-05) — exchanges the one-time-code delivered to the mobile
+   * client via the `musaium://auth/google/callback?code=…` deeplink for the
+   * actual session payload.
+   *
+   * The OTC was minted by the backend at the moment Google's callback
+   * resolved (state.platform=mobile branch) and stashed against the
+   * AuthSessionResponse the SocialLoginUseCase had just issued. Single-use
+   * with 60s TTL — replays return 401 INVALID_OTC.
+   */
+  async redeemSocialCode(code: string): Promise<LoginResponse> {
+    return openApiRequest({
+      path: '/api/auth/social-redeem',
+      method: 'post',
+      body: JSON.stringify({ code }),
       requiresAuth: false,
     });
   },

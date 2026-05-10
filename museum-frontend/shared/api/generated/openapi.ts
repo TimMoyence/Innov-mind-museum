@@ -654,7 +654,7 @@ export interface paths {
     put?: never;
     /**
      * Issue a single-use OIDC nonce (F3 2026-04-30)
-     * @description Mobile MUST call this immediately before invoking the native social SDK. Pass the returned nonce into Apple's `signInAsync({nonce})` (Apple SDK SHA-256-hashes it client-side) or Google One Tap / GoogleOneTapSignIn. The backend stores the nonce with a 5-minute TTL and consumes it atomically on the matching POST /api/auth/social-login.
+     * @description Apple Sign-In on mobile MUST call this immediately before invoking expo-apple-authentication and pass the nonce into `signInAsync({nonce})` so Apple SHA-256-hashes it client-side. Google Sign-In on mobile uses the server-mediated flow (GET /api/auth/google/initiate?platform=mobile) instead — the nonce is generated and consumed entirely server-side, no client round-trip. The backend stores nonces with a 5-minute TTL and consumes atomically on /api/auth/social-login.
      */
     post: {
       parameters: {
@@ -677,6 +677,55 @@ export interface paths {
             };
           };
         };
+        429: components['responses']['TooManyRequests'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/social-redeem': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Exchange a one-time-code for a session (F11-mobile 2026-05)
+     * @description Mobile clients call this after the server-mediated Google OAuth flow lands the in-app browser on `musaium://auth/google/callback?code=<otc>`. The OTC was minted by /api/auth/google/callback when state.platform=mobile and stashed against the issued AuthSessionResponse. Single-use: replay returns 401 INVALID_OTC. Default TTL is 60s.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description base64url one-time-code delivered via the deeplink callback. */
+            code: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Session for the mobile client */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AuthSessionResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
         429: components['responses']['TooManyRequests'];
       };
     };

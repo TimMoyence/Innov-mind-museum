@@ -64,19 +64,22 @@ export const useSocialLogin = ({
 
   const appleMutation = useMutation({
     mutationFn: async () => {
-      const nonce = await safeRequestNonce();
-      const { provider, idToken } = await signInWithApple({ nonce });
+      const requestedNonce = await safeRequestNonce();
+      const { provider, idToken, nonce } = await signInWithApple({ nonce: requestedNonce });
       const response = await authService.socialLogin(provider, idToken, nonce);
       await handleSocialLoginSuccess(response);
     },
   });
 
+  // F11-mobile (2026-05) — Google migrated off the broken @react-native-google-signin
+  // direct ID-token POST onto the server-mediated /google/initiate redirect flow.
+  // signInWithGoogle now opens an in-app browser, intercepts the deeplink, and
+  // redeems the OTC against /api/auth/social-redeem — returning the session
+  // directly. No client-side nonce round-trip.
   const googleMutation = useMutation({
     mutationFn: async () => {
-      const nonce = await safeRequestNonce();
-      const { provider, idToken } = await signInWithGoogle({ nonce });
-      const response = await authService.socialLogin(provider, idToken, nonce);
-      await handleSocialLoginSuccess(response);
+      const session = await signInWithGoogle();
+      await handleSocialLoginSuccess(session);
     },
   });
 

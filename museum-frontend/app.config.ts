@@ -312,6 +312,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-font',
       'expo-localization',
       'expo-secure-store',
+      'expo-web-browser',
       [
         '@react-native-google-signin/google-signin',
         {

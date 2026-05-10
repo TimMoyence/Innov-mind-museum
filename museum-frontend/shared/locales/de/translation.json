@@ -575,7 +575,8 @@
     "retry": "Erneut versuchen",
     "failed": "Authentifizierung fehlgeschlagen",
     "not_available": "Biometrische Authentifizierung nicht verfügbar",
-    "not_enrolled": "Keine biometrischen Daten registriert"
+    "not_enrolled": "Keine biometrischen Daten registriert",
+    "continue_with": "Weiter mit"
   },
   "museumDirectory": {
     "title": "Museen in der Nähe",
