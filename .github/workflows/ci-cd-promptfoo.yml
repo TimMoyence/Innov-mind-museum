@@ -41,6 +41,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        # Required by BullMQ (audit-cron, chat-purge-cron, museum-enrichment-
+        # queue) which `pnpm dev` boots eagerly. Without it the backend retries
+        # ECONNREFUSED indefinitely and never answers /health → step times out.
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       # data-source.ts reads DB_* (env.ts L53-57) — not DATABASE_URL.
