@@ -267,7 +267,10 @@
       "emailPlaceholder": "Email",
       "passwordPlaceholder": "Password",
       "submit": "Sign in",
-      "error": "Invalid credentials"
+      "error": "Invalid credentials",
+      "googleButton": "Continue with Google",
+      "divider": "or",
+      "oauthError": "Google sign-in failed. Try again or use your password."
     },
     "common": {
       "date": "Date",

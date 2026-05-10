@@ -18,6 +18,9 @@ export const mockAdminDict: Dictionary['admin'] = {
     passwordPlaceholder: 'Password',
     submit: 'Sign In',
     error: 'Invalid credentials',
+    googleButton: 'Continue with Google',
+    divider: 'or',
+    oauthError: 'Google sign-in failed.',
   },
   common: {
     date: 'Date',

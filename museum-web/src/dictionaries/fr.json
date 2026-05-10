@@ -267,7 +267,10 @@
       "emailPlaceholder": "Email",
       "passwordPlaceholder": "Mot de passe",
       "submit": "Se connecter",
-      "error": "Identifiants invalides"
+      "error": "Identifiants invalides",
+      "googleButton": "Continuer avec Google",
+      "divider": "ou",
+      "oauthError": "La connexion Google a échoué. Réessaie ou utilise ton mot de passe."
     },
     "common": {
       "date": "Date",

@@ -157,6 +157,9 @@ export interface Dictionary {
       passwordPlaceholder: string;
       submit: string;
       error: string;
+      googleButton: string;
+      divider: string;
+      oauthError: string;
     };
     common: {
       date: string;

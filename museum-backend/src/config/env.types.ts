@@ -139,6 +139,22 @@ export interface AppEnv {
      */
     emailServiceKind: 'test' | 'brevo' | 'noop';
     /**
+     * F11 (2026-05) — Server-driven Google OAuth flow used by museum-web admin
+     * login. Distinct from the mobile flow, which uses native google-signin to
+     * obtain an id_token directly. All four fields are required together to
+     * activate the /api/auth/google/initiate + /callback routes; when any is
+     * missing the routes return 503 GOOGLE_OAUTH_NOT_CONFIGURED. Mobile path
+     * (POST /social-login with idToken) is unaffected.
+     */
+    googleWebOauth?: {
+      /** Web OAuth Client ID (distinct from mobile audience IDs in `googleClientIds`). */
+      clientId?: string;
+      /** Web OAuth Client Secret — only required for the redirect-flow code exchange. */
+      clientSecret?: string;
+      /** Exact redirect URI registered in Google Cloud Console for this client. */
+      redirectUri?: string;
+    };
+    /**
      * F10 — toggle for the HIBP Pwned Passwords k-anonymity check.
      * Default `true` everywhere except e2e tests, where the harness overrides
      * it to `false` to avoid a network round-trip on every register/reset call

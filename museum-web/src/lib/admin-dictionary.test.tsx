@@ -15,7 +15,16 @@ const mockAdminDict: Dictionary['admin'] = {
   reviewsAdmin: 'Reviews',
   accessDenied: 'Access Denied',
   goToHomepage: 'Go to Homepage',
-  login: { title: '', emailPlaceholder: '', passwordPlaceholder: '', submit: '', error: '' },
+  login: {
+    title: '',
+    emailPlaceholder: '',
+    passwordPlaceholder: '',
+    submit: '',
+    error: '',
+    googleButton: '',
+    divider: '',
+    oauthError: '',
+  },
   common: {
     date: '',
     status: '',

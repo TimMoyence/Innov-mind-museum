@@ -88,9 +88,15 @@ const env: AppEnv = {
     // UX impact: casual visitors who skip a day will see a one-time login prompt.
     refreshIdleWindowSeconds: toNumber(process.env.JWT_REFRESH_IDLE_WINDOW_SECONDS, 24 * 60 * 60),
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
-    googleClientIds: toList(process.env.GOOGLE_OAUTH_CLIENT_ID).length
-      ? toList(process.env.GOOGLE_OAUTH_CLIENT_ID)
-      : [],
+    googleClientIds: (() => {
+      // Mobile audience IDs come from the comma-separated GOOGLE_OAUTH_CLIENT_ID.
+      // The web client ID (F11 redirect flow) is auto-merged so the JWT-audience
+      // check in social-token-verifier accepts id_tokens minted for the web app
+      // without forcing operators to keep two env vars in sync manually.
+      const fromList = toList(process.env.GOOGLE_OAUTH_CLIENT_ID);
+      const webId = toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_ID);
+      return webId && !fromList.includes(webId) ? [...fromList, webId] : fromList;
+    })(),
     // Phase 5 — JWKS endpoint URLs for social-login token verification. Default
     // to the canonical provider URLs. Overridable via env for e2e test spoofing.
     appleJwksUrl: process.env.APPLE_OIDC_JWKS_URL || 'https://appleid.apple.com/auth/keys',
@@ -121,6 +127,14 @@ const env: AppEnv = {
     // F3 — default false during the mobile rollout window. Flip to true after
     // every supported mobile build ships the OIDC nonce flow.
     oidcNonceEnforce: toBoolean(process.env.OIDC_NONCE_ENFORCE, false),
+    // F11 (2026-05) — Server-driven Google OAuth flow for museum-web admin.
+    // All three values must be set together for the /google/initiate + /callback
+    // routes to be live; otherwise the routes return 503. Mobile is unaffected.
+    googleWebOauth: {
+      clientId: toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_ID),
+      clientSecret: toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_SECRET),
+      redirectUri: toOptionalString(process.env.GOOGLE_OAUTH_REDIRECT_URI),
+    },
     // F7 — HMAC key for CSRF double-submit tokens. Required in prod, distinct
     // from every other signing secret (enforced in env.production-validation.ts).
     csrfSecret: isDev
