@@ -5,6 +5,12 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
+# `curl` is required by museum-backend/scripts/fetch-models.sh (C3 SigLIP
+# ONNX bundle). node:22-bookworm-slim does not ship curl.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
 # Copy the workspace plugin FIRST so the file:.. path exists when pnpm
@@ -21,8 +27,11 @@ RUN pnpm run build
 # Idempotent: skips re-download when the file is already present and (when
 # configured via SIGLIP_ONNX_SHA256) its sha256 matches the recorded value.
 # Build-arg pattern lets CI inject a pinned hash without rebuilding the
-# script. The script will exit non-zero (fail the build) if the URL is wrong
-# or the hash drifts — desired fail-loud behaviour.
+# script. The script exits non-zero ONCE SIGLIP_ONNX_SHA256 is set (then any
+# 404 / hash mismatch is a hard failure — desired fail-loud behaviour). When
+# the SHA is unset (current state, bucket pending provisioning), 404 logs a
+# warning and exits 0 so the rest of the deploy can proceed; the runtime
+# falls back to `EMBEDDINGS_PROVIDER=replicate`.
 ARG SIGLIP_ONNX_SHA256=""
 ENV SIGLIP_ONNX_SHA256=${SIGLIP_ONNX_SHA256}
 RUN bash scripts/fetch-models.sh
