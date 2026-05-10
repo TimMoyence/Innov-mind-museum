@@ -3182,6 +3182,68 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/chat/compare': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Compare an uploaded image against the visual-similarity catalogue
+     * @description Phase 5 / C3 — encodes the uploaded image and returns the top-K visually-similar catalogued artworks with rationale and verified Wikidata facts. Mounted only when the compare-image use-case is wired in the composition root.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'multipart/form-data': components['schemas']['CompareRequest'];
+        };
+      };
+      responses: {
+        /** @description Compare result envelope (matches + durationMs + modelVersion). Empty `matches` with `fallbackReason: no_visual_neighbor` when no candidate clears the similarity floor. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CompareResult'];
+          };
+        };
+        /** @description Validation error. The `error.code` discriminates the failure mode: `COMPARE_INVALID_IMAGE` (missing/unsupported image bytes — R6/R12), `COMPARE_INVALID_TOPK` (`topK` outside `[1, 10]` — R17), `COMPARE_GUARDRAIL_BLOCKED` (OCR / prompt-injection rejection — R18), or `BAD_REQUEST` (other Zod failures: invalid `sessionId`, malformed `museumQids`, unsupported `locale`). */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CompareErrorResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        /** @description Visual similarity encoder is temporarily unavailable (`error.code = COMPARE_ENCODER_UNAVAILABLE`). Surfaced when the use-case returns `fallbackReason: encoder_unavailable`. */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['CompareErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/chat/memory/preference': {
     parameters: {
       query?: never;
@@ -4015,6 +4077,86 @@ export interface components {
     CachePurgeResponse: {
       museumId: string;
       durationMs: number;
+    };
+    /**
+     * @description Why no useful match could be returned. `no_visual_neighbor` — vector search returned no candidate above the similarity floor; `encoder_unavailable` — embeddings model not available (mapped to HTTP 503); `quota_exceeded` — paid-tier quota exhausted (V2).
+     * @enum {string}
+     */
+    FallbackReason: 'no_visual_neighbor' | 'encoder_unavailable' | 'quota_exceeded';
+    /** @description Verified artwork facts hydrated from the knowledge base (Wikidata). */
+    ArtworkFacts: {
+      /** @description Wikidata QID of the artwork (e.g., `Q12418`). */
+      qid: string;
+      title: string;
+      artist?: string;
+      /** @description Creation date or period (free text — Wikidata P571 raw). */
+      date?: string;
+      technique?: string;
+      collection?: string;
+      movement?: string;
+      genre?: string;
+      imageUrl?: string;
+      /** @description Alternate-name labels in the resolved language. */
+      aliases?: string[];
+    };
+    /** @description One match returned by the visual-similarity compare pipeline. */
+    CompareMatch: {
+      /** @description Wikidata QID of the matched artwork. */
+      qid: string;
+      /** @description Display title in the resolved language. */
+      title: string;
+      /** @description Direct image URL for the carousel. */
+      imageUrl: string;
+      /** @description Optional thumbnail URL (smaller variant) for list rendering. */
+      thumbnailUrl?: string;
+      /** @description Visual similarity score, [0, 1]. */
+      visualScore: number;
+      /** @description Metadata bonus score, [0, 1]. */
+      metadataScore: number;
+      /** @description Fused final score = w_visual * visualScore + w_meta * metadataScore, clipped to [0, 1]. */
+      finalScore: number;
+      /** @description Templated, deterministic rationale shown next to the card. */
+      rationale: string;
+      facts: components['schemas']['ArtworkFacts'];
+      /** @description RFC 3986 attribution string. Only set for cc-by-sa matches. */
+      attribution?: string;
+    };
+    /** @description Top-level response of the visual-similarity compare pipeline. */
+    CompareResult: {
+      /** @description Ordered top-K matches (best `finalScore` first). Empty when fallback applies. */
+      matches: components['schemas']['CompareMatch'][];
+      /** @description Total wall-clock duration of the compare pipeline, milliseconds. */
+      durationMs: number;
+      /** @description Model version used to encode the input image. */
+      modelVersion: string;
+      fallbackReason?: components['schemas']['FallbackReason'];
+    };
+    /** @description Error envelope for `POST /chat/compare` failures. The `error.code` field takes one of: `COMPARE_INVALID_IMAGE` (400 — missing/unsupported image, R6/R12), `COMPARE_INVALID_TOPK` (400 — `topK` outside `[1, 10]`, R17), `COMPARE_GUARDRAIL_BLOCKED` (400 — OCR/prompt-injection rejected the upload, R18), `BAD_REQUEST` (400 — generic Zod validation failure on other fields), or `COMPARE_ENCODER_UNAVAILABLE` (503 — `fallbackReason: encoder_unavailable`). */
+    CompareErrorResponse: components['schemas']['ApiError'];
+    /** @description Multipart body for `POST /chat/compare`. The `image` field is the binary upload (≤ 10 MB, PNG/JPEG/WebP); the rest are form fields. */
+    CompareRequest: {
+      /**
+       * Format: binary
+       * @description Image bytes — JPEG, PNG, or WebP (≤ 10 MB after multer). Validated by `ImageProcessingService`.
+       */
+      image: string;
+      /**
+       * Format: uuid
+       * @description UUID v4 of the chat session the assistant turn threads into.
+       */
+      sessionId: string;
+      /**
+       * @description Number of matches to return. Defaults to 5 when omitted (R17).
+       * @default 5
+       */
+      topK: number;
+      /**
+       * @description Optional response locale. Falls back to `Accept-Language` then `en`.
+       * @enum {string}
+       */
+      locale?: 'fr' | 'en';
+      /** @description Optional list of Wikidata museum QIDs scoping the kNN search to the selected museums (R4). */
+      museumQids?: string[];
     };
   };
   responses: {

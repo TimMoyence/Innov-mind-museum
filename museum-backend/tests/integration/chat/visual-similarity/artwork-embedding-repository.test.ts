@@ -103,7 +103,7 @@ describe('ArtworkEmbeddingRepositoryPg (T4.5 — integration)', () => {
 
     expect(nearest).toHaveLength(5);
     expect(nearest[0].qid).toBe('Q100000');
-    expect(nearest[0].visualScore).toBeGreaterThan(0.99);
+    expect(nearest[0].visualScore).toBeCloseTo(1, 3);
     // Sanity: scores are monotonically non-increasing.
     for (let i = 1; i < nearest.length; i += 1) {
       expect(nearest[i].visualScore).toBeLessThanOrEqual(nearest[i - 1].visualScore);

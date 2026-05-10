@@ -1,6 +1,7 @@
 import {
   createLlmSectionPlan,
   createSummaryFallback,
+  mainAssistantOutputSchema,
 } from '@modules/chat/useCase/llm/llm-sections';
 import { makeMessage } from '../../helpers/chat/message.fixtures';
 
@@ -64,14 +65,52 @@ describe('llm-sections', () => {
       timeoutSummaryMs: 10000,
     });
     const prompt = plan[0].prompt;
-    // JSON shape mention
-    expect(prompt).toContain('"rationale":"string"');
-    expect(prompt).toContain('"caption":"string"');
-    // Quantity tune (1-4 range; 2-4 on comparative answers)
+    // Quantity tune (1-4 range; 1-2 single-subject; 2-4 multi-subject) —
+    // applies to both the structured-output path and the legacy [META]
+    // fallback path. The single-subject cap (≤2) was tightened from the
+    // original "1-4" wording to align with promptfoo c2-enrichment Test 2
+    // (Mona Lisa expects 1..2 entries).
     expect(prompt).toContain('1-4 short search queries');
-    expect(prompt).toContain('2-4 entries when the answer compares');
+    expect(prompt).toContain('single-subject answers');
+    expect(prompt).toContain('comparative or multi-subject answers');
+    expect(prompt).toContain('2-4 entries');
+    // Structural rationale + caption guidance carried in the prompt (the
+    // structured-output schema enforces the field types; this test asserts
+    // that the behavioural intent — required rationale & caption — is still
+    // expressed in the prompt verbatim).
+    expect(prompt).toContain('rationale');
+    expect(prompt).toContain('caption');
     // PII safety guidance for rationale (R12 + GDPR)
     expect(prompt).toContain('Rationale MUST NOT include any visitor PII');
+  });
+
+  it('attaches the structured-output schema to the summary section (C2 fix 2026-05)', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'intermediate',
+      timeoutSummaryMs: 10000,
+    });
+    const summary = plan[0];
+    expect(summary.outputSchema).toBeDefined();
+    expect(summary.outputSchema?.name).toBe('MainAssistantOutput');
+    expect(summary.outputSchema?.schema).toBe(mainAssistantOutputSchema);
+  });
+
+  it('drops the legacy [META] markup directive from the structured-output prompt', () => {
+    const plan = createLlmSectionPlan({
+      locale: 'en-US',
+      museumMode: false,
+      guideLevel: 'intermediate',
+      timeoutSummaryMs: 10000,
+    });
+    // Structured-output path is the default — schema enforces the shape, so
+    // the prompt MUST NOT instruct the model to emit a `[META]` block.
+    expect(plan[0].prompt).not.toContain('[META]');
+    expect(plan[0].prompt).not.toContain('"detectedArtwork":{');
+    // But the structured directive that anchors the visitor reply field IS
+    // present.
+    expect(plan[0].prompt).toContain('Place your visitor-facing reply in the `text` field');
   });
 
   it('uses English-only prompts with Reply in French directive for fr locale', () => {

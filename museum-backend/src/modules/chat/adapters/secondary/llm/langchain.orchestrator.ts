@@ -11,7 +11,11 @@ import {
   type SectionRunResult,
   type SectionTask,
 } from '@modules/chat/useCase/llm/llm-section-runner';
-import { createSummaryFallback, type LlmSectionName } from '@modules/chat/useCase/llm/llm-sections';
+import {
+  createSummaryFallback,
+  type LlmSectionName,
+  type LlmSectionDefinition,
+} from '@modules/chat/useCase/llm/llm-sections';
 import {
   WALK_TOUR_GUIDE_SECTION,
   walkAssistantOutputSchema,
@@ -47,6 +51,29 @@ import type {
   ChatOrchestrator,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
+/**
+ * Serialises the parsed structured-output object so the existing
+ * {@link parseAssistantResponse} legacy-JSON branch consumes it transparently.
+ *
+ * The schema produced by `mainAssistantOutputSchema` carries the visitor reply
+ * in the `text` field, but the legacy parser keys off `answer`. Map `text →
+ * answer`, drop the original `text` key to avoid carrying it forward as
+ * unrecognised metadata, and stringify the result. `JSON.stringify` skips
+ * `undefined` values, so optional metadata fields the model omitted stay
+ * absent in the legacy parser's output (matches existing semantics).
+ */
+const serializeStructuredOutput = (parsed: unknown): string => {
+  if (typeof parsed !== 'object' || parsed === null) {
+    // Defensive: a structured-output adapter that returns a non-object
+    // (provider regression, schema misuse) — surface as raw string so the
+    // legacy parser falls through to the plain-text path.
+    return typeof parsed === 'string' ? parsed : '';
+  }
+  const { text, ...metadata } = parsed as { text?: unknown } & Record<string, unknown>;
+  const answer = typeof text === 'string' ? text : '';
+  return JSON.stringify({ answer, ...metadata });
+};
+
 /** LangChain-based implementation of {@link ChatOrchestrator} that delegates to OpenAI, Google, or Deepseek models. */
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
@@ -75,9 +102,35 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           'llm.section': input.sectionName,
           'llm.timeout_ms': input.timeoutMs,
           'llm.payload_bytes': input.payloadBytes,
+          'llm.structured_output': !!input.outputSchema && !!input.model.withStructuredOutput,
         },
       },
       async () => {
+        // Structured-output fast path: when both the section ships a schema
+        // AND the model exposes `withStructuredOutput`, route through the
+        // adapter so OpenAI / Gemini honour `response_format: json_schema`
+        // and return a parsed object directly. Re-stringifies the object as
+        // `{ answer, ...metadata }` so the existing
+        // `parseAssistantResponse` legacy-JSON branch consumes it without
+        // change. Fixes gpt-4o-mini ignoring the `[META]` directive on the
+        // first turn (promptfoo C2-enrichment 2026-05).
+        if (input.outputSchema && input.model.withStructuredOutput) {
+          const structured = input.model.withStructuredOutput(
+            input.outputSchema.schema,
+            { name: input.outputSchema.name },
+          );
+          const parsed = await this.circuitBreaker.execute(() =>
+            this.semaphore.use(
+              async () =>
+                await structured.invoke(input.sectionMessages, { signal: input.signal }),
+            ),
+          );
+          return serializeStructuredOutput(parsed);
+        }
+
+        // Legacy text + [META] path — exercised by test fakes that don't
+        // implement `withStructuredOutput` and by providers that lack
+        // structured-output support.
         const result = await this.circuitBreaker.execute(() =>
           this.semaphore.use(
             async () => await input.model.invoke(input.sectionMessages, { signal: input.signal }),
@@ -201,7 +254,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     input: OrchestratorInput,
   ): SectionTask<string>[] {
     const { sectionPlan, systemPrompt, historyMessages, userMessage } = prepared;
-    return sectionPlan.map((section) => {
+    return sectionPlan.map((section: LlmSectionDefinition) => {
       const sectionMessages = buildSectionMessages(
         systemPrompt,
         section.prompt,
@@ -227,6 +280,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             sectionName: section.name,
             timeoutMs: section.timeoutMs,
             payloadBytes,
+            outputSchema: section.outputSchema,
           }),
       };
     });

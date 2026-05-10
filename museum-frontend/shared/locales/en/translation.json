@@ -412,6 +412,18 @@
       "rationale_fallback": "More about this artwork.",
       "skeleton_loading": "Looking up contextual images…"
     },
+    "compare": {
+      "title": "Similar artworks",
+      "empty": "No similar artwork found — try a clearer photo",
+      "viewArtist": "View artist",
+      "attribution": "Source: Wikimedia Commons",
+      "rationale": {
+        "fallback": "Similar artwork"
+      },
+      "error": {
+        "unavailable": "Visual similarity is temporarily unavailable. Please try again in a moment."
+      }
+    },
     "listen": "Listen",
     "listening": "Playing...",
     "tts_unavailable": "Audio unavailable",

@@ -412,6 +412,18 @@
       "rationale_fallback": "En savoir plus sur cette œuvre.",
       "skeleton_loading": "Recherche d'images contextuelles en cours…"
     },
+    "compare": {
+      "title": "Œuvres similaires",
+      "empty": "Aucune œuvre similaire trouvée — essaie une photo plus nette",
+      "viewArtist": "Voir l'artiste",
+      "attribution": "Source : Wikimedia Commons",
+      "rationale": {
+        "fallback": "Œuvre similaire"
+      },
+      "error": {
+        "unavailable": "La recherche de similarité visuelle est temporairement indisponible. Réessayez dans un instant."
+      }
+    },
     "listen": "Écouter",
     "listening": "Lecture...",
     "tts_unavailable": "Audio indisponible",

@@ -2,22 +2,43 @@ import { buildLocalizedFallback, FALLBACK_TEMPLATES } from '@shared/i18n/fallbac
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 
+import { mainAssistantOutputSchema } from './llm-sections/main-assistant-output.schema';
+
 import type {
   ContentPreference,
   ExpertiseLevel,
   LlmSectionName,
 } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { ZodSchema } from 'zod';
 
 export type { LlmSectionName } from '@modules/chat/domain/chat.types';
+export {
+  mainAssistantOutputSchema,
+  type MainAssistantOutput,
+} from './llm-sections/main-assistant-output.schema';
 
 /** Defines a single LLM section with its name, timeout budget, and prompt text. */
-interface LlmSectionDefinition {
+export interface LlmSectionDefinition {
   name: LlmSectionName;
   timeoutMs: number;
   /** Whether the orchestrator must fail when this section fails. */
   required: boolean;
   prompt: string;
+  /**
+   * Optional structured-output schema. When provided AND the underlying model
+   * exposes `withStructuredOutput`, the orchestrator invokes the LLM through
+   * that adapter and parses the result directly. Falls back to the legacy
+   * `text + [META] {json}` parsing path when either condition is unmet (test
+   * fakes, providers without structured-output support).
+   *
+   * The schema name is propagated to the adapter call as `name` for
+   * observability (OpenAI surfaces it in tool-call traces).
+   */
+  outputSchema?: {
+    schema: ZodSchema<unknown>;
+    name: string;
+  };
 }
 
 /** Input parameters used to build the LLM section plan. */
@@ -71,7 +92,7 @@ const resolveWordLimit = (museumMode: boolean, audioDescriptionMode?: boolean): 
   return museumMode ? 150 : 250;
 };
 
-const buildSummaryPrompt = (input: {
+interface BuildSummaryPromptInput {
   locale?: string;
   museumMode: boolean;
   guideLevel: 'beginner' | 'intermediate' | 'expert';
@@ -79,7 +100,16 @@ const buildSummaryPrompt = (input: {
   hasImage?: boolean;
   audioDescriptionMode?: boolean;
   contentPreferences?: readonly ContentPreference[];
-}): string => {
+  /**
+   * When true, emit a prompt that delegates output formatting to the
+   * structured-output schema (no `[META]` marker, no JSON example). The
+   * orchestrator wires the schema separately. When false, the legacy
+   * `text + [META] {json}` markup path is emitted for fallback compatibility.
+   */
+  structuredOutput: boolean;
+}
+
+const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
   const {
     locale,
     museumMode,
@@ -88,6 +118,7 @@ const buildSummaryPrompt = (input: {
     hasImage,
     audioDescriptionMode,
     contentPreferences,
+    structuredOutput,
   } = input;
   const language = localeToLanguageName(resolveLocale([locale]));
   const modeLine = museumMode
@@ -113,7 +144,7 @@ const buildSummaryPrompt = (input: {
   }
 
   parts.push(
-    `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep answer under ${String(wordLimit)} words.`,
+    `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep the answer under ${String(wordLimit)} words.`,
   );
 
   if (hasImage) {
@@ -122,21 +153,35 @@ const buildSummaryPrompt = (input: {
     );
   }
 
+  // Behavioural reminders — apply to both structured and legacy paths.
   parts.push(
-    'Write your answer as plain text first.',
-    'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
-    '{"deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
-    'Do not include the answer text in the JSON — it is already provided above.',
-    'Do not add markdown fences around the JSON.',
     'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
     'In openQuestion, ask a question that encourages the visitor to look more closely at the work (optional).',
     'In followUpQuestions, suggest 1-2 natural follow-up questions the visitor might want to ask next, based on the current discussion. Keep them short and specific.',
     museumMode
       ? 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
       : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
-    'In suggestedImages, if the topic is visual (a painting, sculpture, place, or person), suggest 1-4 short search queries that would find illustrative photos. Use 2-4 entries when the answer compares or covers multiple subjects (e.g. comparing Monet and Manet) — one entry per subject. Each entry MUST include a `rationale` (1 short sentence explaining why this image, e.g. "Shows the brushwork discussed above") AND a `caption` (≤8 word title for the thumb). Example: {"query":"Mona Lisa painting Louvre","description":"The painting in its Louvre gallery","rationale":"The work the visitor asked about.","caption":"Mona Lisa at the Louvre"}. Omit suggestedImages entirely for non-visual topics. Rationale MUST NOT include any visitor PII (name, email, location).',
+    'In suggestedImages, if the topic is visual (a painting, sculpture, place, or person), suggest 1-4 short search queries that would find illustrative photos. RULES: single-subject answers (one work, one artist, one monument) → 1-2 entries; comparative or multi-subject answers (e.g. comparing Monet and Manet, "best impressionist works", a list of monuments) → 2-4 entries, one per subject. Each entry MUST include a `rationale` (1 short sentence explaining why this image, e.g. "Shows the brushwork discussed above") AND a `caption` (≤8 word title for the thumb). Example: {"query":"Mona Lisa painting Louvre","description":"The painting in its Louvre gallery","rationale":"The work the visitor asked about.","caption":"Mona Lisa at the Louvre"}. Omit suggestedImages entirely for non-visual topics. Rationale MUST NOT include any visitor PII (name, email, location).',
     'Set expertiseSignal to the visitor expertise level you detect from their question.',
   );
+
+  if (structuredOutput) {
+    // Structured-output path: the schema enforces shape + types. No JSON
+    // example, no [META] marker — the model fills the schema fields directly.
+    parts.push(
+      'Place your visitor-facing reply in the `text` field. Fill the other fields per their description; omit any optional field you have nothing to add for.',
+    );
+  } else {
+    // Legacy path retained for providers / test fakes that lack
+    // `withStructuredOutput`. Emits the [META] markup the parser falls back to.
+    parts.push(
+      'Write your answer as plain text first.',
+      'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
+      '{"deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
+      'Do not include the answer text in the JSON — it is already provided above.',
+      'Do not add markdown fences around the JSON.',
+    );
+  }
 
   return parts.join(' ');
 };
@@ -144,6 +189,19 @@ const buildSummaryPrompt = (input: {
 /**
  * Creates the ordered list of LLM section definitions to execute for a single request.
  * Currently produces a single required "summary" section.
+ *
+ * The summary section ships with a structured-output schema
+ * ({@link mainAssistantOutputSchema}); the orchestrator uses it via
+ * `model.withStructuredOutput` when the underlying model supports it (OpenAI
+ * gpt-4o family ≥ 2024-08, Gemini), and falls back to parsing the legacy
+ * `text + [META]` markup when it doesn't (test fakes, older providers).
+ *
+ * The prompt itself is emitted in `structuredOutput=true` form by default —
+ * matches what the live providers consume. Test fakes that don't implement
+ * `withStructuredOutput` exercise the legacy `[META]` parser via the same
+ * prompt: they ignore the structured directive and the parser tolerates a
+ * plain-text-only response (it returns `metadata: {}`, then the orchestrator
+ * uses the `createSummaryFallback` text path on the next turn).
  *
  * @param input - Configuration for locale, guide level, museum mode, and timeouts.
  * @returns An array of section definitions.
@@ -161,7 +219,12 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
       hasImage: input.hasImage,
       audioDescriptionMode: input.audioDescriptionMode,
       contentPreferences: input.contentPreferences,
+      structuredOutput: true,
     }),
+    outputSchema: {
+      schema: mainAssistantOutputSchema,
+      name: 'MainAssistantOutput',
+    },
   };
 
   return [summary];

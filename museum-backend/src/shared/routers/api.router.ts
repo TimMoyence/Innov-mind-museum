@@ -11,6 +11,7 @@ import { createChatRouter } from '@modules/chat/adapters/primary/http/routes/cha
 import {
   getArtKeywordRepository,
   getArtworkKnowledgeRepo,
+  getCompareImageUseCase,
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
@@ -238,6 +239,7 @@ function mountDomainRouters(
       getArtKeywordRepository(),
       getUserMemoryService(),
       getDescribeService(),
+      getCompareImageUseCase(),
     ),
   );
   router.use('/auth/consent', consentRouter);

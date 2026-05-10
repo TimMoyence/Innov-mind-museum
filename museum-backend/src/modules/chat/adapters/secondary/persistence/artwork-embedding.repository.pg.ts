@@ -11,9 +11,11 @@
  *     `"[v1,v2,…]"` form on the way in and parsed lazily on the way out.
  *   - kNN search uses the inner-product operator `<#>`, which returns the
  *     *negative* inner product. Embeddings are L2-normalised at encode time,
- *     so `1 - (embedding <#> query)` is mapped into `[0, 1]` and equivalent
- *     to cosine similarity rescaled. `ORDER BY <#>` ascending therefore puts
- *     the closest match first.
+ *     so `<#>` ranges over `[-1, 1]` and `(1 - (embedding <#> query)) / 2`
+ *     rescales it into `[0, 1]` (1 = identical, 0.5 = orthogonal, 0 =
+ *     opposite) — equivalent to cosine similarity remapped from `[-1, 1]`
+ *     into `[0, 1]`. `ORDER BY <#>` ascending therefore puts the closest
+ *     match first.
  *   - {@link upsertBatch} is idempotent: rows whose `(vector, model_version)`
  *     pair matches what is already persisted are reported as `skipped` and
  *     never UPDATEd, so reruns of the catalog ingest CLI do not bump
@@ -57,7 +59,7 @@ interface ArtworkEmbeddingSqlRow {
 
 /** Shape of the row returned by `findNearest` (adds the computed similarity). */
 interface ArtworkEmbeddingNearestSqlRow extends ArtworkEmbeddingSqlRow {
-  /** `1 - (embedding <#> query)` cast to JS number by node-postgres. */
+  /** `(1 - (embedding <#> query)) / 2` cast to JS number by node-postgres. */
   similarity: number | string;
 }
 
@@ -128,7 +130,10 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   /**
    * Returns the `topN` closest catalog rows to the query embedding, ordered
    * by ascending pgvector inner-product distance (closest first). The
-   * `visualScore` field is mapped into `[0, 1]` via `1 - <#>`.
+   * `visualScore` field is mapped into `[0, 1]` via `(1 - <#>) / 2`
+   * (pgvector `<#>` returns the negative inner product, which ranges over
+   * `[-1, 1]` for L2-unit vectors — the rescaling lands identical = 1,
+   * orthogonal = 0.5, opposite = 0).
    *
    * The optional `museumQids` filter is applied via `museum_qid = ANY($2)`
    * so the btree index on `museum_qid` (Phase 3 migration) prunes the HNSW
@@ -145,7 +150,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     const rows: ArtworkEmbeddingNearestSqlRow[] = await this.dataSource.query(
       `SELECT qid, museum_qid, title, image_url, license, image_source,
               embedding, embedding_model_version, created_at, updated_at,
-              1 - (embedding <#> $1::halfvec) AS similarity
+              ((1 - (embedding <#> $1::halfvec)) / 2) AS similarity
        FROM artwork_embeddings
        WHERE ($2::text[] IS NULL OR museum_qid = ANY($2::text[]))
        ORDER BY embedding <#> $1::halfvec

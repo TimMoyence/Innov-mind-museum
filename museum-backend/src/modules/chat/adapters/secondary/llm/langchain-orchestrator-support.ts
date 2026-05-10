@@ -58,6 +58,18 @@ export interface InvokeSectionInput {
   sectionName: string;
   timeoutMs: number;
   payloadBytes: number;
+  /**
+   * Optional structured-output schema. When provided AND the model exposes
+   * `withStructuredOutput`, the invocation is routed through the adapter and
+   * the parsed object is re-serialised as `{ answer, ...metadata }` so the
+   * existing legacy-JSON parser branch consumes it transparently. Mismatches
+   * (no `withStructuredOutput`) gracefully fall back to the plain-text
+   * `[META]` path.
+   */
+  outputSchema?: {
+    schema: ZodSchema<unknown>;
+    name: string;
+  };
 }
 
 /** Parameters for assembling the final orchestrator response. */

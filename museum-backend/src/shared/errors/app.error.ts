@@ -169,3 +169,65 @@ export const unauthorized = (message: string): AppError => {
     code: 'UNAUTHORIZED',
   });
 };
+
+/**
+ * C3 Visual Similarity — 400 with code `COMPARE_INVALID_IMAGE`.
+ *
+ * Used by `POST /chat/compare` when the uploaded image is missing, has an
+ * unsupported MIME, or fails the magic-byte / OCR-injection checks performed
+ * by the shared `ImageProcessingService` (R6 / R12). FE clients branch on
+ * this code to prompt the user to retake the photo (design.md §5).
+ *
+ * @param message - Human-readable error description.
+ * @param details - Optional structured details (e.g. zod issues).
+ * @returns AppError with status 400 and code `COMPARE_INVALID_IMAGE`.
+ */
+export const compareInvalidImage = (message: string, details?: unknown): AppError => {
+  return new AppError({
+    message,
+    statusCode: 400,
+    code: 'COMPARE_INVALID_IMAGE',
+    details,
+  });
+};
+
+/**
+ * C3 Visual Similarity — 400 with code `COMPARE_INVALID_TOPK`.
+ *
+ * Emitted by `POST /chat/compare` when the `topK` body field falls outside
+ * the `[1, 10]` range pinned by R17. FE clients branch on this code to clamp
+ * the carousel size selector (design.md §5).
+ *
+ * @param message - Human-readable error description.
+ * @param details - Optional structured details (e.g. zod issues for topK).
+ * @returns AppError with status 400 and code `COMPARE_INVALID_TOPK`.
+ */
+export const compareInvalidTopK = (message: string, details?: unknown): AppError => {
+  return new AppError({
+    message,
+    statusCode: 400,
+    code: 'COMPARE_INVALID_TOPK',
+    details,
+  });
+};
+
+/**
+ * C3 Visual Similarity — 400 with code `COMPARE_GUARDRAIL_BLOCKED`.
+ *
+ * Emitted by `POST /chat/compare` when the shared `ImageProcessingService`
+ * rejects the upload via its OCR / prompt-injection guardrail (R18). FE
+ * clients branch on this code to surface the guardrail message verbatim
+ * (design.md §5).
+ *
+ * @param message - Human-readable error description.
+ * @param details - Optional structured details.
+ * @returns AppError with status 400 and code `COMPARE_GUARDRAIL_BLOCKED`.
+ */
+export const compareGuardrailBlocked = (message: string, details?: unknown): AppError => {
+  return new AppError({
+    message,
+    statusCode: 400,
+    code: 'COMPARE_GUARDRAIL_BLOCKED',
+    details,
+  });
+};

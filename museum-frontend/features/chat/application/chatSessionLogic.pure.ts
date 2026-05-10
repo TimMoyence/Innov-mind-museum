@@ -20,6 +20,8 @@ export interface ChatUiEnrichedImage {
   attribution?: string | null;
 }
 
+import type { components } from '@/shared/api/generated/openapi';
+
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
   detectedArtwork?: {
@@ -36,6 +38,14 @@ export interface ChatUiMessageMetadata {
   openQuestion?: string;
   imageDescription?: string;
   images?: ChatUiEnrichedImage[];
+  /**
+   * C3 visual-similarity payload (Phase 8 / T8.5). Populated when the
+   * backend's `/chat/compare` endpoint returned a `CompareResult` for this
+   * message. The bubble renders an `<ImageCompareCarousel>` whenever this
+   * field is present — even with an empty `matches` array, because the
+   * carousel itself owns the empty-state UX (driven by `fallbackReason`).
+   */
+  compareResults?: components['schemas']['CompareResult'];
 }
 
 /** UI-layer representation of a single chat message (user, assistant, or system). */

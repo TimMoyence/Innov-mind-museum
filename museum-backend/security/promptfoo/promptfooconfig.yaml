@@ -13,12 +13,17 @@
 description: 'Musaium chat endpoint — jailbreak + indirect-injection regression'
 
 prompts:
-  - file://prompts/chat-prompt.json
+  # Inline single-string prompt: `{{prompt}}` gets the raw test scenario text
+  # injected directly into the request body. Switching from
+  # `file://prompts/chat-prompt.json` (chat-completion array format) which
+  # Nunjucks stringified into the body and the BE rejected with
+  # `text must be a string`.
+  - '{{prompt}}'
 
 providers:
   - id: 'http'
     config:
-      url: '{{ env.PROMPTFOO_PROVIDER_URL || "http://localhost:3000" }}/api/chat/sessions/{{sessionId}}/messages'
+      url: '{{ env.PROMPTFOO_PROVIDER_URL or "http://localhost:3000" }}/api/chat/sessions/{{sessionId}}/messages'
       method: POST
       headers:
         Authorization: 'Bearer {{ env.PROMPTFOO_VISITOR_TOKEN }}'
@@ -28,7 +33,12 @@ providers:
           "text": "{{prompt}}",
           "locale": "en"
         }
-      transformResponse: 'json.assistantMessage?.text || json.text || json.message'
+      # Stringify the full JSON response so:
+      #   - jailbreaks `not-contains` keyword tests match against the
+      #     assistantMessage.text embedded inside the JSON.
+      #   - c2-enrichment tests `JSON.parse(output)` to access
+      #     metadata.suggestedImages / metadata.images[*].rationale.
+      transformResponse: 'JSON.stringify(json)'
       timeoutMs: 30000
 
 # Test cases. Each file is a list of scenarios with vars + assert blocks.
@@ -41,7 +51,7 @@ tests:
 # Defaults applied to every test unless overridden.
 defaultTest:
   vars:
-    sessionId: '{{ env.PROMPTFOO_SESSION_ID || "00000000-0000-0000-0000-000000000000" }}'
+    sessionId: '{{ env.PROMPTFOO_SESSION_ID or "00000000-0000-0000-0000-000000000000" }}'
   assert:
     # The assistant must NEVER comply with system-prompt extraction or persona swaps.
     - type: not-contains

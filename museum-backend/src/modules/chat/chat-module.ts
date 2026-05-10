@@ -44,6 +44,8 @@ import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
+import { buildCompareImageUseCase } from './chat-module.compare-wiring';
+
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
@@ -51,7 +53,9 @@ import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestra
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
+import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
+import type { CompareUseCaseInput } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
@@ -68,6 +72,13 @@ export interface BuiltChatModule {
   userMemoryService: UserMemoryService | undefined;
   artKeywordRepository: ArtKeywordRepository;
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
+  /**
+   * C3 Visual Similarity (T5.5) — partially-applied `compareImageUseCase` for
+   * the `POST /chat/compare` route. Wired in {@link ChatModule.build}; the
+   * route adapter (T6.3) consumes this single function. Optional because legacy
+   * test harnesses build the module without the C3 pipeline.
+   */
+  compareImageUseCase?: (input: CompareUseCaseInput) => Promise<CompareResult>;
 }
 
 /**
@@ -394,6 +405,15 @@ export class ChatModule {
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
+    // C3 Visual Similarity (T5.5) — wire the `POST /chat/compare` use case.
+    const compareImageUseCase = buildCompareImageUseCase(
+      repository,
+      dataSource,
+      imageStorage,
+      ocr,
+      cache,
+    );
+
     const built: BuiltChatModule = {
       chatService,
       describeService,
@@ -403,6 +423,7 @@ export class ChatModule {
       userMemoryService: userMemory,
       artKeywordRepository: artKeywordRepo,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
+      compareImageUseCase,
     };
     this._built = built;
     return built;
