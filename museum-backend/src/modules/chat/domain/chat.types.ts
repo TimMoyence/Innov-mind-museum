@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 export type { ContentPreference };
@@ -192,6 +194,59 @@ export interface SuggestedImage {
   caption: string;
 }
 
+/**
+ * Provenance of a citation source surfaced to the user (C4 citations v2).
+ *
+ * - `wikidata`: SPARQL-resolved Wikidata entity (P18 image, P1476 label, etc.).
+ * - `web`: Brave/Tavily/SearXNG WebSearch fallback result.
+ * - `museum-catalog`: internal Musaium curated catalogue entry.
+ * - `commons`: Wikimedia Commons file or category.
+ *
+ * The four-value enum is the V1 source provenance whitelist; any other value
+ * is a schema-invalid entry and MUST be dropped by `CitationSourceSchema`.
+ */
+export type CitationSourceType = 'wikidata' | 'web' | 'museum-catalog' | 'commons';
+
+/**
+ * A user-verifiable citation source attached to a factual assistant response.
+ *
+ * Shape decided in design D2 (`design.md#9`). `quote` is the architectural
+ * prevention lever — a verbatim NFKC-normalized substring of a fact block fed
+ * to the LLM, validated post-LLM via `sources-validator`. Replaces the legacy
+ * `citations: string[]` field, which coexists for one release cycle (NFR8).
+ *
+ * `quote.length ∈ [10, 500]` avoids trivial-match false positives at the
+ * lower bound and pathological output sizes at the upper bound (NG2).
+ */
+export interface CitationSource {
+  url: string;
+  type: CitationSourceType;
+  title: string;
+  /** Verbatim NFKC-normalized substring of a fact block fed to the LLM. */
+  quote: string;
+  /** Optional judge-derived confidence (0..1) — may be absent for KB-direct sources. */
+  confidence?: number;
+}
+
+/**
+ * Zod runtime validator for `CitationSource`.
+ *
+ * Used by `assistant-response.ts` parser to silently drop malformed entries
+ * via `safeParse` (R2). Schema mirrors the TS interface; field constraints:
+ * - `url`: must parse as a URL (Zod `.url()`).
+ * - `type`: closed enum `'wikidata'|'web'|'museum-catalog'|'commons'`.
+ * - `title`: non-empty, ≤ 300 chars (display safeguard).
+ * - `quote`: 10..500 chars (clamp anti-FP / anti-bloat, NG2 + token budget).
+ * - `confidence`: optional `number` in [0, 1].
+ */
+export const CitationSourceSchema = z.object({
+  url: z.string().url(),
+  type: z.enum(['wikidata', 'web', 'museum-catalog', 'commons']),
+  title: z.string().min(1).max(300),
+  quote: z.string().min(10).max(500),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
 /** Structured metadata extracted from an assistant response by the LLM pipeline. */
 export interface ChatAssistantMetadata {
   /** Artwork identified from user image or text. */
@@ -206,7 +261,21 @@ export interface ChatAssistantMetadata {
   };
   recommendations?: string[];
   expertiseSignal?: ExpertiseLevel;
+  /**
+   * Legacy citations (string[]) — superseded by `sources` (Citations v2, C4).
+   * Kept for one release cycle (NFR8) so legacy clients/cached messages keep
+   * parsing. Formal `@deprecated` marker + `console.warn` will land in V1.1;
+   * removal target V1.2. Do NOT add the `@deprecated` tag now — it would
+   * break the BE lint baseline on the existing `assistant-response.ts`
+   * consumer that still writes this field at T2.2.
+   */
   citations?: string[];
+  /**
+   * Citations v2 — user-verifiable sources with verbatim `quote` post-validated
+   * by the `sources-validator` use-case (R1/R4). Renders as inline `[n]`
+   * superscript + bottom-sheet preview on mobile (R12).
+   */
+  sources?: CitationSource[];
   deeperContext?: string;
   openQuestion?: string;
   followUpQuestions?: string[];

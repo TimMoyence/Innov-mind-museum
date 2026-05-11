@@ -412,6 +412,13 @@
       "rationale_fallback": "この作品についてもっと知る。",
       "skeleton_loading": "関連画像を検索中…"
     },
+    "sources": {
+      "viewSource": "出典を表示",
+      "openLink": "リンクを開く",
+      "quoteFromSource": "出典からの引用",
+      "closeSheet": "閉じる",
+      "noQuote": "この出典には利用可能な引用がありません。"
+    },
     "compare": {
       "title": "類似する作品",
       "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",

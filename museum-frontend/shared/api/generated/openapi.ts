@@ -3615,7 +3615,27 @@ export interface components {
         recommendations?: string[];
         /** @enum {string} */
         expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
+        /** @description Legacy citations (string[]) — superseded by `sources` (Citations v2, C4). Kept for one release cycle so legacy clients/cached messages keep parsing. */
         citations?: string[];
+        /** @description Citations v2 (C4 anti-hallucination) — user-verifiable sources with verbatim quote post-validated by the sources-validator use-case. Renders as inline `[n]` superscript + bottom-sheet preview on mobile. */
+        sources?: {
+          /**
+           * Format: uri
+           * @description Canonical URL of the source (Wikidata entity, web page, museum catalogue entry, Commons file).
+           */
+          url: string;
+          /**
+           * @description Source provenance enum.
+           * @enum {string}
+           */
+          type: 'wikidata' | 'web' | 'museum-catalog' | 'commons';
+          /** @description Display title for the source. */
+          title: string;
+          /** @description Verbatim NFKC-normalized substring of a fact block fed to the LLM (anti-hallucination architectural lever). */
+          quote: string;
+          /** @description Optional judge-derived confidence — absent for KB-direct sources. */
+          confidence?: number;
+        }[];
         deeperContext?: string;
         openQuestion?: string;
         followUpQuestions?: string[];

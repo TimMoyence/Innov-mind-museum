@@ -23,3 +23,4 @@ export {
   makeCompareResult,
   makeCompareFallbackResult,
 } from './compare.factories';
+export { makeCitationSource } from './citation-source.factories';

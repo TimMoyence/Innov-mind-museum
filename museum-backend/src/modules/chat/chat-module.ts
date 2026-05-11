@@ -22,19 +22,23 @@ import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
+import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { WikidataBreakerClient } from '@modules/chat/adapters/secondary/search/wikidata-breaker';
+import { WikidataWriteThroughProvider } from '@modules/chat/adapters/secondary/search/wikidata-write-through.provider';
 import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
-import { NoopWikidataKbDumpRepository } from '@modules/chat/domain/ports/wikidata-kb-dump.port';
 import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
-import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import {
+  KnowledgeBaseService,
+  type KnowledgeBaseCascadeDeps,
+} from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import { LocationResolver } from '@modules/chat/useCase/location/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
@@ -50,12 +54,15 @@ import {
   buildCompareImageUseCase,
   buildCompareSessionAccessVerifier,
 } from './chat-module.compare-wiring';
+import { buildKnowledgeRouter } from './chat-module.knowledge-router-wiring';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
+import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
@@ -90,6 +97,12 @@ export interface BuiltChatModule {
    * Optional in lockstep with `compareImageUseCase`.
    */
   compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
+  /**
+   * C4.1 (2026-05-11) — `KnowledgeRouterService` wired by T3.3. Optional :
+   * legacy test harnesses skip C4 ports + NFR8 keeps 1 cycle backward-compat.
+   * Production always wires it (see `chat-module.knowledge-router-wiring.ts`).
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
 }
 
 /**
@@ -225,28 +238,31 @@ export class ChatModule {
     return new UserMemoryService(repo, cache, { artworkRepo });
   }
 
-  /** Creates the knowledge base service (Wikidata, always active in V1). */
-  private buildKnowledgeBase(cache?: CacheService): KnowledgeBaseService | undefined {
-    const wikidataClient = new WikidataClient({ userAgent: env.wikidata.userAgent });
-    // C5.1 — wrap with opossum circuit breaker. Drop-in KnowledgeBaseProvider,
-    // no kill-switch (pré-launch V1 doctrine — rollback via git revert).
-    const wikidataBreaker = new WikidataBreakerClient(wikidataClient, env.knowledgeBase.breaker);
-    // C5.3 — local-dump fallback. Noop until the Phase 4 ingest pipeline ships ;
-    // cascade soak window honored regardless so the wiring is fully exercised.
-    const dumpRepo = new NoopWikidataKbDumpRepository();
+  /**
+   * Wraps the shared `kbProvider` in the cached + cascade-aware
+   * `KnowledgeBaseService`. The provider parameter is the C5.3 decorator
+   * stack assembled at the composition root (`WikidataWriteThroughProvider`
+   * → `WikidataBreakerClient` → `WikidataClient`) so this method stays
+   * dependency-shape-agnostic — `KnowledgeRouterService` shares the same
+   * instance via the `kbProvider` variable in `build()`.
+   *
+   * `cascadeDeps` carries the breaker state callback + dump repo that gate
+   * the local-dump fallback path inside `KnowledgeBaseService.lookupFacts`
+   * (cf. C5.3 cascade contract, ADR-039 D4). Pass `undefined` to disable
+   * the cascade — only used by tests that exercise the service in isolation.
+   */
+  private buildKnowledgeBase(
+    kbProvider: KnowledgeBaseProvider,
+    cache?: CacheService,
+    cascadeDeps?: KnowledgeBaseCascadeDeps,
+  ): KnowledgeBaseService {
+    const { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs } =
+      env.knowledgeBase;
     return new KnowledgeBaseService(
-      wikidataBreaker,
-      {
-        timeoutMs: env.knowledgeBase.timeoutMs,
-        cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
-        cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
-        localDumpFallbackAfterMs: env.knowledgeBase.localDumpFallbackAfterMs,
-      },
+      kbProvider,
+      { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs },
       cache,
-      {
-        breakerState: () => wikidataBreaker.getState(),
-        dumpRepo,
-      },
+      cascadeDeps,
     );
   }
 
@@ -274,8 +290,11 @@ export class ChatModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /** Creates web search with multi-provider fallback. Natural gate: provider key presence. DuckDuckGo always included as last resort. */
-  private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
+  /**
+   * Creates web search with multi-provider fallback chain (shared with the
+   * `KnowledgeRouterService` per T3.3). DuckDuckGo is always last-resort.
+   */
+  private buildWebSearch(cache?: CacheService): { service: WebSearchService; provider: WebSearchProvider } {
     const providers: WebSearchProvider[] = [];
 
     if (env.webSearch.tavilyApiKey) {
@@ -299,7 +318,7 @@ export class ChatModule {
     });
 
     const fallbackProvider = new FallbackSearchProvider(providers);
-    return new WebSearchService(
+    const service = new WebSearchService(
       fallbackProvider,
       {
         timeoutMs: env.webSearch.timeoutMs,
@@ -308,6 +327,7 @@ export class ChatModule {
       },
       cache,
     );
+    return { service, provider: fallbackProvider };
   }
 
   /** Sets up the dynamic art keyword set with periodic refresh from the database. */
@@ -366,9 +386,29 @@ export class ChatModule {
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    const knowledgeBase = this.buildKnowledgeBase(cache);
+    // C4.1 (T3.3) + C5.1 + C5.3 — single Wikidata provider chain shared with
+    // the cached `KnowledgeBaseService` AND the `KnowledgeRouterService`
+    // cascade. Composition (outermost → innermost) :
+    //   WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
+    //     └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
+    //          └─ WikidataClient      ← raw HTTP / SPARQL
+    // Both downstream consumers (knowledgeBase + knowledgeRouter) see the
+    // same `kbProvider` reference, so the breaker state and the dump
+    // write-through are shared across both legs ; the C4 router's calls
+    // contribute to `wikidata_sparql_requests_total` and populate the dump
+    // alongside the cascade-aware `KnowledgeBaseService`. Doctrine pré-launch
+    // V1 — no `*_ENABLED` flag, rollback = `git revert` of the merge SHA.
+    const wikidataClient = new WikidataClient({ userAgent: env.wikidata.userAgent });
+    const wikidataBreaker = new WikidataBreakerClient(wikidataClient, env.knowledgeBase.breaker);
+    const wikidataDumpRepo = new WikidataKbDumpRepositoryTypeOrm(dataSource);
+    const kbProvider = new WikidataWriteThroughProvider(wikidataBreaker, wikidataDumpRepo);
+    const cascadeDeps: KnowledgeBaseCascadeDeps = {
+      breakerState: () => wikidataBreaker.getState(),
+      dumpRepo: wikidataDumpRepo,
+    };
+    const knowledgeBase = this.buildKnowledgeBase(kbProvider, cache, cascadeDeps);
     const imageEnrichment = this.buildImageEnrichment();
-    const webSearch = this.buildWebSearch(cache);
+    const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
     this.buildArtKeywordRefresh(artKeywordRepo);
@@ -379,6 +419,11 @@ export class ChatModule {
     // ADR-036 — no adapter-level decorator. The orchestrator is wired bare.
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache }); // ADR-030 — judge budget Redis/in-process pick
+
+    // C4.1 (T3.3) — `KnowledgeRouterService` wired after the orchestrator so
+    // the LLM judge leg shares the live `ChatOrchestrator` instance. See
+    // `chat-module.knowledge-router-wiring.ts` for the cascade contract.
+    const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, effectiveOrchestrator);
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
       : undefined;
@@ -404,6 +449,7 @@ export class ChatModule {
       ocr,
       userMemory,
       knowledgeBase,
+      knowledgeRouter,
       imageEnrichment,
       webSearch,
       museumRepository,
@@ -438,6 +484,7 @@ export class ChatModule {
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
       compareImageUseCase,
       compareSessionAccessVerifier,
+      knowledgeRouter, // C4.1 (T3.3) — see BuiltChatModule.knowledgeRouter docblock.
     };
     this._built = built;
     return built;
@@ -457,6 +504,8 @@ export class ChatModule {
     ocr: TesseractOcrService | DisabledOcrService;
     userMemory?: UserMemoryService;
     knowledgeBase?: KnowledgeBaseService;
+    /** C4.1 (T3.3) — travels with legacy `knowledgeBase` for NFR8 (1 cycle). */
+    knowledgeRouter?: KnowledgeRouterPort;
     imageEnrichment?: ImageEnrichmentService;
     webSearch?: WebSearchService;
     museumRepository?: IMuseumRepository;
@@ -477,6 +526,7 @@ export class ChatModule {
       audit: auditService,
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
+      knowledgeRouter: deps.knowledgeRouter,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: new ArtTopicClassifier(),

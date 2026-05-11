@@ -24,6 +24,9 @@ export function buildFirstSectionMessages(
       knowledgeBaseBlock: input.knowledgeBaseBlock,
       webSearchBlock: input.webSearchBlock,
       localKnowledgeBlock: input.localKnowledgeBlock,
+      // C4.1 (T3.5) — thread `KnowledgeRouter` result from upstream pipeline.
+      facts: input.facts,
+      source: input.factsSource,
     },
   );
 }

@@ -96,10 +96,10 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 > Existant : keyword guardrail multilingue + LLM judge V2 confidence scoring + output guardrail + KB Wikidata. Manque : WebSearch fallback wiring orchestrateur + threshold tuning + citations sources + regression eval continu.
 
-- [ ] **C4.1 WebSearch fallback wiring** — Brave wrapper existe, brancher orchestrateur quand KB miss + judge confidence < threshold (ex-W1.7)
-- [ ] **C4.2 Threshold confidence tuning** — calibrer cutoff LLM judge V2 sur dataset réel chat prod
-- [ ] **C4.3 Promptfoo regression suite anti-hallucination** — T1.5b real-mode bake (cf. ROADMAP_TEAM.md)
-- [ ] **C4.4 Citation enforce** — LLM doit citer source dans réponse (struct output `sources[]: {url, type, title}`), affichage FE clickable
+- [x] **C4.1 WebSearch fallback wiring** — Brave wrapper existe, brancher orchestrateur quand KB miss + judge confidence < threshold (ex-W1.7) — done 2026-05-11 (cf. ADR-038, KnowledgeRouter cascade KB→judge→WS via `AbortSignal.any`)
+- [ ] **C4.2 Threshold confidence tuning** — calibrer cutoff LLM judge V2 sur dataset réel chat prod — explicitly deferred V1.1 (ADR-038 §Phase D, ≥7j prod bake)
+- [x] **C4.3 Promptfoo regression suite anti-hallucination** — T1.5b real-mode bake (cf. ROADMAP_TEAM.md) — done 2026-05-11 (60 entries corpus + CI `halluc-eval` job + assertions `quoteInFacts`/`citeRealUrl`)
+- [x] **C4.4 Citation enforce** — LLM doit citer source dans réponse (struct output `sources[]: {url, type, title}`), affichage FE clickable — done 2026-05-11 (Zod schema v2 + Spotlighting + validator NFKC + FE `SourceCitation` Ionicons + i18n 8 locales)
 
 ### C5 — Wikidata premium (resilient)
 
@@ -107,7 +107,7 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 - [x] **C5.1 Circuit-breaker SPARQL** — opossum 9.x via `WikidataBreakerClient`, drop-in `KnowledgeBaseProvider`. 7 tests TDD transitions CLOSED/OPEN/HALF_OPEN + 4xx-no-trip + Step 7.1 DoD null fail-open. (PR-C5, 2026-05-11, ADR-039)
 - [x] **C5.2 Downtime metric + alerts** — span `chat.knowledge.lookup` shipped (PR-C5) ; `wikidata_sparql_circuit_state` gauge + `wikidata_sparql_requests_total{outcome}` counter + `wikidata_sparql_request_duration_seconds` histogram ; 4 alertes (`WikidataBreakerOpenSustained`, `WikidataSparqlErrorRateHigh`, `WikidataSparqlLatencyP95High`, `WikidataLocalDumpHotPath`) wired via `infra/grafana/alerting/wikidata-resilience.yml`. (PR-C5 Phase 6.2-4, 2026-05-11, ADR-039)
-- [ ] **C5.3 Local dump backup** — port + `NoopWikidataKbDumpRepository` + cascade soak `LOCAL_DUMP_FALLBACK_AFTER_MS` shipped (PR-C5) ; `wikidata_local_dump_{hits,misses}_total` counters wired Phase 6.2 ; ingest = write-through organique au lieu de 150GB monthly (ADR-039 D4) — migration `wikidata_kb_dump` + hook UPSERT en hot-path à Phase 4-light
+- [x] **C5.3 Local dump backup** — `wikidata_kb_dump` migration + `WikidataKbDumpRepositoryTypeOrm` + `WikidataWriteThroughProvider` decorator (fire-and-forget UPSERT) + `scripts/seed-kb-canon.ts` (~50 œuvres canon × en+fr). Stack wired dans `chat-module.ts` : `WikidataWriteThroughProvider → WikidataBreakerClient → WikidataClient` partagé avec `KnowledgeRouterService` C4 → tous les chemins KB bénéficient du breaker + write-through. Cascade local-dump opérationnelle dès J1 sur le seed canon, croît organiquement post-launch. (PR-C5.3, 2026-05-11, ADR-039)
 - [x] **C5.4 Cache hit-rate monitoring** — `wikidata_cache_{hits,misses}_total` counters + Grafana dashboard `wikidata-resilience.json` (5 panels : circuit state, outcomes, latency p50/p95/p99, cache hit rate, dump fallback rate). (PR-C5 Phase 6.2-4, 2026-05-11, ADR-039)
 
 ### C6 — Premium soft-paywall stub

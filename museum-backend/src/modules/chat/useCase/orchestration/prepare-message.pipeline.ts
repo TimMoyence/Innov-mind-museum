@@ -10,6 +10,10 @@ import type { PostMessageResult } from './chat.service.types';
 import type { EnrichedImage, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type {
+  KnowledgeRouterPort,
+  KnowledgeRouterSource,
+} from '@modules/chat/domain/ports/knowledge-router.port';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
@@ -42,6 +46,18 @@ export interface PrepareReady {
   webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
   resolvedLocation?: ResolvedLocation;
+  /**
+   * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`.
+   * Threaded into `OrchestratorInput.facts` so every orchestrator entry point
+   * (full-shot / streaming / walk) wraps them in the Spotlighting envelope.
+   * Empty / undefined when no router is wired or no facts grounded.
+   */
+  routerFacts?: readonly string[];
+  /**
+   * C4.1 (T3.5) — Provenance label from `KnowledgeRouterResult.source`. Maps to
+   * `OrchestratorInput.factsSource`. `'none'` short-circuits the envelope.
+   */
+  routerSource?: KnowledgeRouterSource;
 }
 
 /** Guardrail-refused preparation — contains the ready-to-return refusal result. */
@@ -64,6 +80,13 @@ export interface PrepareMessagePipelineDeps {
   guardrail: GuardrailEvaluationService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  /**
+   * C4.1 (T3.3) — additive injection of the `KnowledgeRouterPort`. Not
+   * consumed yet inside `enrichAndResolveLocation` ; T3.4 will replace the
+   * direct `knowledgeBase` call in `fetchEnrichmentData` with this port and
+   * drop the legacy field at C4.2.
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   dbLookup?: DbLookupService;
@@ -90,6 +113,12 @@ export class PrepareMessagePipeline {
   private readonly guardrail: GuardrailEvaluationService;
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
+  /**
+   * C4.1 (T3.3) — held until T3.4 plumbs it into `enrichAndResolveLocation`.
+   * Exposed via {@link getKnowledgeRouter} so the additive wiring step passes
+   * `noUnusedLocals` while keeping the field private to the use-case.
+   */
+  private readonly knowledgeRouter?: KnowledgeRouterPort;
   private readonly imageEnrichment?: ImageEnrichmentService;
   private readonly webSearch?: WebSearchService;
   private readonly dbLookup?: DbLookupService;
@@ -103,12 +132,23 @@ export class PrepareMessagePipeline {
     this.guardrail = deps.guardrail;
     this.userMemory = deps.userMemory;
     this.knowledgeBase = deps.knowledgeBase;
+    this.knowledgeRouter = deps.knowledgeRouter;
     this.imageEnrichment = deps.imageEnrichment;
     this.webSearch = deps.webSearch;
     this.dbLookup = deps.dbLookup;
     this.extractionQueue = deps.extractionQueue;
     this.locationResolver = deps.locationResolver;
     this.locationConsentChecker = deps.locationConsentChecker;
+  }
+
+  /**
+   * C4.1 (T3.3) — read-only accessor for the wired router. Consumed by T3.4
+   * (LLM prompt builder) + integration tests asserting the wiring is healthy.
+   * Returns `undefined` only on legacy test harnesses that build the pipeline
+   * without the C4 port.
+   */
+  getKnowledgeRouter(): KnowledgeRouterPort | undefined {
+    return this.knowledgeRouter;
   }
 
   private validateMessageInput(text: string | undefined, image: PostMessageInput['image']): void {
@@ -223,6 +263,24 @@ export class PrepareMessagePipeline {
     };
   }
 
+  /**
+   * C4.1 (T3.5) — Resolve verified facts via `KnowledgeRouter` when wired.
+   * Fail-open per port contract (the router NEVER throws — see ADR-035). Returns
+   * `{ routerFacts: [], routerSource: 'none' }` when no router is injected
+   * (legacy / test harness) or when no search term is available.
+   */
+  private async resolveRouterFacts(
+    inputText: string | undefined,
+  ): Promise<{ routerFacts: readonly string[]; routerSource: KnowledgeRouterSource }> {
+    const router = this.knowledgeRouter;
+    const searchTerm = inputText?.trim();
+    if (!router || !searchTerm) {
+      return { routerFacts: [], routerSource: 'none' };
+    }
+    const result = await router.resolve(searchTerm);
+    return { routerFacts: result.facts, routerSource: result.source };
+  }
+
   /** Post-validation enrichment + location resolution (extracted to keep `prepare` under max-lines). */
   private async enrichAndResolveLocation(args: {
     input: PostMessageInput;
@@ -238,6 +296,8 @@ export class PrepareMessagePipeline {
     webSearchBlock: string | undefined;
     enrichedImages: EnrichedImage[];
     resolvedLocation: ResolvedLocation | undefined;
+    routerFacts: readonly string[];
+    routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
     const {
@@ -274,6 +334,8 @@ export class PrepareMessagePipeline {
       },
     );
 
+    const { routerFacts, routerSource } = await this.resolveRouterFacts(input.text?.trim());
+
     return {
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -281,6 +343,8 @@ export class PrepareMessagePipeline {
       webSearchBlock,
       enrichedImages,
       resolvedLocation: resolvedLocation ?? undefined,
+      routerFacts,
+      routerSource,
     };
   }
 
@@ -318,6 +382,11 @@ export class PrepareMessagePipeline {
       // Walk-intent routing: propagated so the orchestrator can select the
       // walk prompt section and return structured suggestions.
       intent: prep.session.intent,
+      // C4.1 (T3.5) — KnowledgeRouter facts + provenance threaded through to
+      // every orchestrator entry point. Optional; absent on legacy harnesses
+      // that build the pipeline without a `KnowledgeRouterPort`.
+      facts: prep.routerFacts,
+      factsSource: prep.routerSource,
     };
   }
 }

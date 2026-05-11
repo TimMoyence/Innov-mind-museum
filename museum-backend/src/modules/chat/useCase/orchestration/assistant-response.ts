@@ -1,7 +1,9 @@
-import type {
-  ChatAssistantMetadata,
-  ExpertiseLevel,
-  SuggestedImage,
+import {
+  CitationSourceSchema,
+  type ChatAssistantMetadata,
+  type CitationSource,
+  type ExpertiseLevel,
+  type SuggestedImage,
 } from '@modules/chat/domain/chat.types';
 
 /** Parsed answer text and structured metadata extracted from the LLM's raw output. */
@@ -20,6 +22,39 @@ const toCitations = (value: unknown): string[] | undefined => {
   }
 
   const filtered = value.filter((item): item is string => typeof item === 'string');
+  return filtered.length ? filtered : undefined;
+};
+
+/**
+ * Citations v2 (C4) — parses `sources[]` via `CitationSourceSchema.safeParse`
+ * (R2 + NFR8).
+ *
+ * Behaviour:
+ * - Non-array (e.g. malformed LLM output `"not-an-array"`) → `undefined`
+ *   (graceful, no throw).
+ * - Per-entry validation via Zod `safeParse`; malformed entries are SILENTLY
+ *   dropped, valid ones retained.
+ * - Empty result after filtering (every entry invalid OR empty input array)
+ *   → `undefined` (do NOT surface empty arrays; FE convention is "absent =
+ *   no sources to render").
+ *
+ * Backward-compat (NFR8): legacy `citations: string[]` is still parsed by
+ * `toCitations` above; both fields may coexist in the same metadata for
+ * one release cycle.
+ */
+const toSources = (value: unknown): CitationSource[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const filtered: CitationSource[] = [];
+  for (const item of value) {
+    const result = CitationSourceSchema.safeParse(item);
+    if (result.success) {
+      filtered.push(result.data);
+    }
+  }
+
   return filtered.length ? filtered : undefined;
 };
 
@@ -138,6 +173,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   metadata.recommendations = toRecommendations(parsed.recommendations);
   metadata.expertiseSignal = toExpertiseSignal(parsed.expertiseSignal);
   metadata.citations = toCitations(parsed.citations);
+  metadata.sources = toSources(parsed.sources);
   metadata.deeperContext = toOptionalString(parsed.deeperContext);
   metadata.openQuestion = toOptionalString(parsed.openQuestion);
   metadata.followUpQuestions = toFollowUpQuestions(parsed.followUpQuestions);

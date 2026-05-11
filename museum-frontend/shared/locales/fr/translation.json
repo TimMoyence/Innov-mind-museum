@@ -412,6 +412,13 @@
       "rationale_fallback": "En savoir plus sur cette œuvre.",
       "skeleton_loading": "Recherche d'images contextuelles en cours…"
     },
+    "sources": {
+      "viewSource": "Voir la source",
+      "openLink": "Ouvrir le lien",
+      "quoteFromSource": "Extrait de la source",
+      "closeSheet": "Fermer",
+      "noQuote": "Aucun extrait disponible pour cette source."
+    },
     "compare": {
       "title": "Œuvres similaires",
       "empty": "Aucune œuvre similaire trouvée — essaie une photo plus nette",

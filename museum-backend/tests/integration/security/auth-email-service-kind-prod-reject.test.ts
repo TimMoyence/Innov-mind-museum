@@ -113,6 +113,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       },
       localDumpFallbackAfterMs: 60000,
     },
+    knowledgeRouter: { threshold: 0.7, kbTimeoutMs: 200, judgeTimeoutMs: 500, wsTimeoutMs: 1500 },
     wikidata: { userAgent: 'Musaium/1.0 (test)' },
     nominatim: {
       contactEmail: 'contact@musaium.app',

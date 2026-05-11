@@ -412,6 +412,13 @@
       "rationale_fallback": "了解更多此作品。",
       "skeleton_loading": "正在搜索相关图片…"
     },
+    "sources": {
+      "viewSource": "查看来源",
+      "openLink": "打开链接",
+      "quoteFromSource": "来源摘录",
+      "closeSheet": "关闭",
+      "noQuote": "此来源无可用摘录。"
+    },
     "compare": {
       "title": "相似作品",
       "empty": "未找到相似作品 — 请尝试更清晰的照片",

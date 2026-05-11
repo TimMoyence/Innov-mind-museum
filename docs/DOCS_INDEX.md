@@ -23,7 +23,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-036) | [`docs/adr/`](adr/) |
+| ADRs (002-038) | [`docs/adr/`](adr/) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) |
 | Phase history (test/quality hardening 2-11) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) |
@@ -33,6 +33,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
 | LLM cache strategy (single-source) | [`docs/adr/ADR-036-llm-cache-strategy.md`](adr/ADR-036-llm-cache-strategy.md) |
 | Visual similarity (C3, SigLIP + pgvector) | [`docs/adr/ADR-037-visual-similarity-siglip-pgvector.md`](adr/ADR-037-visual-similarity-siglip-pgvector.md), runbook [`docs/AI_VISUAL_SIMILARITY.md`](AI_VISUAL_SIMILARITY.md) |
+| Anti-hallucination (C4, citations v2 + WebSearch fallback) | [`docs/adr/ADR-038-anti-hallucination-citations-websearch.md`](adr/ADR-038-anti-hallucination-citations-websearch.md) — *Accepted-Implemented* (`c72ec2ba` 2026-05-11) |
 | Wikidata résilient (C5, opossum CB + organic local dump) | [`docs/adr/ADR-039-wikidata-resilient-circuit-breaker.md`](adr/ADR-039-wikidata-resilient-circuit-breaker.md), plan [`docs/plans/2026-05-10-c5-launch-prompt.md`](plans/2026-05-10-c5-launch-prompt.md) |
 | RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
 | SLO + observability strategy | [`docs/SLO.md`](SLO.md) |

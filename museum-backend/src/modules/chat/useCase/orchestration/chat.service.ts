@@ -31,6 +31,7 @@ import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcri
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
@@ -47,6 +48,7 @@ import type {
   LocationResolver,
 } from '@modules/chat/useCase/location/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
+import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
@@ -84,6 +86,13 @@ export interface ChatServiceDeps {
   audit?: AuditService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  /**
+   * C4.1 (T3.3) — additive `KnowledgeRouterPort` injection. Travels alongside
+   * the legacy `knowledgeBase` dep for NFR8 backward-compat (1 cycle); T3.4
+   * will plumb it into `fetchEnrichmentData` and remove the legacy field at
+   * C4.2.
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
@@ -100,6 +109,12 @@ export interface ChatServiceDeps {
   locationResolver?: LocationResolver;
   /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
+  /**
+   * C4 (T2.6) — Optional URL reachability probe for the post-LLM grounding
+   * gate. Held back at V1 composition root pending p99 latency baking ; the
+   * DI seam is live so V1.1 only needs `new UrlHeadProbe({cache})` here.
+   */
+  urlHeadProbe?: UrlHeadProbe;
 }
 
 /**
@@ -132,10 +147,12 @@ export class ChatService {
       audioTranscriber,
       cache: deps.cache,
       llmCache: deps.cache ? new LlmCacheServiceImpl(deps.cache) : undefined,
+      urlHeadProbe: deps.urlHeadProbe,
       ocr: deps.ocr,
       enrichment: {
         userMemory: deps.userMemory,
         knowledgeBase: deps.knowledgeBase,
+        knowledgeRouter: deps.knowledgeRouter,
         imageEnrichment: deps.imageEnrichment,
         webSearch: deps.webSearch,
         dbLookup: deps.dbLookup,

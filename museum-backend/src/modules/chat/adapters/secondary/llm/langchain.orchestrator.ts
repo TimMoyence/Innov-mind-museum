@@ -265,6 +265,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           knowledgeBaseBlock: input.knowledgeBaseBlock,
           webSearchBlock: input.webSearchBlock,
           localKnowledgeBlock: input.localKnowledgeBlock,
+          // C4.1 (T3.5) — thread `KnowledgeRouter` result from upstream pipeline.
+          facts: input.facts,
+          source: input.factsSource,
         },
       );
       const payloadBytes = estimatePayloadBytes(sectionMessages);
@@ -433,6 +436,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         knowledgeBaseBlock: input.knowledgeBaseBlock,
         webSearchBlock: input.webSearchBlock,
         localKnowledgeBlock: input.localKnowledgeBlock,
+        // C4.1 (T3.5) — thread `KnowledgeRouter` result from upstream pipeline.
+        facts: input.facts,
+        source: input.factsSource,
       },
     );
 

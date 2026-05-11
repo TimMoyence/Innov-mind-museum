@@ -25,6 +25,7 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
@@ -46,6 +47,7 @@ import type {
   PostAudioMessageResult,
 } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { PrepareReady } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
+import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
@@ -90,6 +92,13 @@ interface LlmCacheCtx {
 export interface ChatEnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
+  /**
+   * C4.1 (T3.3) — `KnowledgeRouterPort` injection. Additive : the legacy
+   * `knowledgeBase` field stays for 1 cycle (NFR8 backward-compat) ; T3.4
+   * will plumb the router into `PrepareMessagePipeline` and remove the
+   * legacy field at C4.2.
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   dbLookup?: DbLookupService;
@@ -133,6 +142,13 @@ export interface ChatMessageServiceDeps {
    * Bypass conditions: streaming path, env.llm.cacheEnabled=false, image present.
    */
   llmCache?: LlmCacheService;
+  /**
+   * C4 (T2.6) — URL reachability probe. Optional ; when injected, drops
+   * citations whose URLs do not respond 2xx within 800 ms. Held back at V1
+   * composition root pending p99 baking (per launch-no-staging doctrine —
+   * see `chat-module.ts`). NFR8 backward-compat : undefined → no-op.
+   */
+  urlHeadProbe?: UrlHeadProbe;
 }
 
 /** Awaits stream drain with a safety timeout to prevent indefinite hangs. */
@@ -166,6 +182,7 @@ export class ChatMessageService {
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly piiSanitizer: PiiSanitizer;
   private readonly llmCache?: LlmCacheService;
+  private readonly urlHeadProbe?: UrlHeadProbe;
 
   constructor(deps: ChatMessageServiceDeps) {
     const enrichment = deps.enrichment ?? {};
@@ -176,6 +193,7 @@ export class ChatMessageService {
     this.audioTranscriber = deps.audioTranscriber ?? new DisabledAudioTranscriber();
     this.cache = deps.cache;
     this.llmCache = deps.llmCache;
+    this.urlHeadProbe = deps.urlHeadProbe;
     this.userMemory = enrichment.userMemory;
     this.artTopicClassifier = safety.artTopicClassifier;
     this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
@@ -202,6 +220,7 @@ export class ChatMessageService {
       guardrail: this.guardrail,
       userMemory: enrichment.userMemory,
       knowledgeBase: enrichment.knowledgeBase,
+      knowledgeRouter: enrichment.knowledgeRouter,
       imageEnrichment: enrichment.imageEnrichment,
       webSearch: enrichment.webSearch,
       dbLookup: enrichment.dbLookup,
@@ -223,6 +242,12 @@ export class ChatMessageService {
         repository: this.repository,
         cache: this.cache,
         userMemory: this.userMemory,
+        // C4 (T2.6) — URL HEAD probe optional. Currently not injected at
+        // composition root (V1 latency budget — see chat-module.ts comment),
+        // so V1 ships with quote-substring grounding only ; URL reachability
+        // wiring will flip on after the V1.1 p99 baking window. The seam is
+        // here so the V1.1 flip is a one-line composition root change.
+        urlHeadProbe: this.urlHeadProbe,
       },
       sessionId,
       prep.session,
@@ -233,6 +258,10 @@ export class ChatMessageService {
         enrichedImages: prep.enrichedImages,
         requestId: auditCtx?.requestId,
         ip: auditCtx?.ip,
+        // C4 (T2.6) — Thread router-supplied facts through so the post-LLM
+        // grounding gate can run substring-match validation. Empty / absent
+        // routerFacts → grounding gate becomes a no-op (NFR8 backward-compat).
+        routerFacts: prep.routerFacts,
       },
     );
   }

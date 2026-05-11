@@ -334,6 +334,22 @@ export interface AppEnv {
     userAgent: string;
   };
   /**
+   * C4.1 (2026-05-11) — KnowledgeRouter cascade tuning. TUNING-ONLY block — no
+   * `*_ENABLED` switch exists or may be added per the pré-launch V1 doctrine
+   * (see `feedback_no_feature_flags_prelaunch.md`). Defaults mirror
+   * `team-state/2026-05-11-c4-anti-hallucination/design.md` §D4.
+   */
+  knowledgeRouter: {
+    /** Confidence cutoff in `[0..1]` above which WebSearch is skipped (default 0.7). */
+    threshold: number;
+    /** KB lookup per-leg budget in ms (default 200). */
+    kbTimeoutMs: number;
+    /** LLM judge per-leg budget in ms (default 500). */
+    judgeTimeoutMs: number;
+    /** WebSearch per-leg budget in ms (default 1500). */
+    wsTimeoutMs: number;
+  };
+  /**
    * Nominatim (OpenStreetMap) reverse-geocoding client configuration.
    *
    * Enforces the OSMF Nominatim Usage Policy:

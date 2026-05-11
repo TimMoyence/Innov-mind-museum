@@ -1,0 +1,21 @@
+{
+  "comment": "Auto-generated index for halluc-corpus.json by merge-halluc-corpus.mjs. DO NOT EDIT BY HAND. Edit a partial then re-run.",
+  "schema_version": 1,
+  "partials": [
+    "halluc-corpus-realtime.partial.json",
+    "halluc-corpus-postcutoff.partial.json",
+    "halluc-corpus-domain.partial.json",
+    "halluc-corpus-multilingual.partial.json",
+    "halluc-corpus-injection.partial.json"
+  ],
+  "total": 60,
+  "per_category": {
+    "realtime": 10,
+    "postcutoff": 10,
+    "domain": 15,
+    "multilingual": 15,
+    "injection": 10
+  },
+  "total_assertions": 108,
+  "llm_rubric_pct": 0
+}

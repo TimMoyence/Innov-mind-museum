@@ -412,6 +412,13 @@
       "rationale_fallback": "Mehr uber dieses Werk.",
       "skeleton_loading": "Kontextbilder werden gesucht…"
     },
+    "sources": {
+      "viewSource": "Quelle anzeigen",
+      "openLink": "Link offnen",
+      "quoteFromSource": "Zitat aus der Quelle",
+      "closeSheet": "Schliessen",
+      "noQuote": "Kein Zitat fur diese Quelle verfugbar."
+    },
     "compare": {
       "title": "Ähnliche Werke",
       "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",

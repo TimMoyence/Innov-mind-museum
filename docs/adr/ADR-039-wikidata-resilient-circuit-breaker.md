@@ -1,6 +1,6 @@
 # ADR-039 — Wikidata resilient (C5) — opossum circuit-breaker + organic local-dump fallback
 
-- **Status**: Proposed (Phase 1 Consolidation, planned merge before launch 2026-06-01)
+- **Status**: Accepted-Implemented (C5.3 Phase A files + Phase B wiring merged 2026-05-11 ; status flip pending Tech Lead validation at PR merge SHA)
 - **Date**: 2026-05-11
 - **Owner**: backend / chat / knowledge-base module
 - **Linked plan**: `docs/plans/2026-05-10-c5-launch-prompt.md`
@@ -112,22 +112,24 @@ Doctrine inverts after the first paying B2B museum (`feedback_no_feature_flags_p
 |---|---|
 | Circuit breaker | `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` |
 | Refactored client | `museum-backend/src/modules/chat/adapters/secondary/search/wikidata.client.ts` (`lookupOrThrow` + `WikidataTransientError`) |
-| Dump port + noop | `museum-backend/src/modules/chat/domain/ports/wikidata-kb-dump.port.ts` |
+| Dump port + noop | `museum-backend/src/modules/chat/domain/ports/wikidata-kb-dump.port.ts` (Phase A: `upsert` added to contract) |
+| TypeORM dump entity + repo (C5.3 Phase A) | `museum-backend/src/modules/chat/domain/knowledge/wikidata-kb-dump.entity.ts` + `adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm.ts` (UPSERT on natural key `(search_term, language)`) |
+| Migration (C5.3 Phase A) | `museum-backend/src/data/db/migrations/1778504875210-AddWikidataKbDump.ts` (table + UNIQUE constraint + qid index) |
+| Write-through decorator (C5.3 Phase A) | `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-write-through.provider.ts` (fire-and-forget UPSERT post-success, fail-open) |
+| Canon seed (C5.3 Phase A) | `museum-backend/src/modules/chat/useCase/knowledge/seed-kb-canon.ts` + `museum-backend/scripts/seed-kb-canon.ts` (CLI: `pnpm seed:kb-canon[:host]` ; ~50 œuvres × en+fr) |
 | Cascade logic | `museum-backend/src/modules/chat/useCase/knowledge/knowledge-base.service.ts` (`shouldFallbackToDump`, `startTrace`, `applyCascade`) |
-| Wiring | `museum-backend/src/modules/chat/chat-module.ts:buildKnowledgeBase` |
+| Wiring (Phase B) | `museum-backend/src/modules/chat/chat-module.ts:build` — `kbProvider = WikidataWriteThroughProvider(WikidataBreakerClient(WikidataClient), WikidataKbDumpRepositoryTypeOrm)` shared between `KnowledgeBaseService` AND `KnowledgeRouterService` (C4) so every Wikidata call contributes to `wikidata_sparql_requests_total` and populates the dump |
 | Env contract | `museum-backend/src/config/env.ts:knowledgeBase.breaker` + `.env.example` C5 section |
 | Prometheus surface (Phase 6.2) | `museum-backend/src/shared/observability/prometheus-metrics.ts` (`wikidataSparqlCircuitState`, `wikidataSparqlRequestsTotal`, `wikidataSparqlRequestDurationSeconds`, `wikidataCacheHitsTotal`/`MissesTotal`, `wikidataLocalDumpHitsTotal`/`MissesTotal`) |
 | Grafana dashboard (Phase 6.3) | `infra/grafana/dashboards/wikidata-resilience.json` — 5 panels (circuit state, outcome rate, latency p50/p95/p99, cache hit rate, dump fallback rate) |
 | Alert rules (Phase 6.4) | `infra/grafana/alerting/wikidata-resilience.yml` — 4 alerts (`WikidataBreakerOpenSustained` warn 5m, `WikidataSparqlErrorRateHigh` critical 10m, `WikidataSparqlLatencyP95High` warn 15m, `WikidataLocalDumpHotPath` info 10m) |
-| Unit tests | `tests/unit/chat/wikidata-breaker.test.ts` (13 — 7 transitions + 6 metric emission) + `knowledge-base-cascade.test.ts` (12 — 6 cascade + 6 metric emission) + `wikidata-kb-dump-noop.test.ts` (1) + `tests/unit/observability/prometheus-metrics.test.ts` (+5 Wikidata-specific assertions) |
-| Integration E2E | `tests/integration/chat/wikidata-resilience.integration.test.ts` (4 — live + 5xx storm + Step 7.1 DoD + HALF_OPEN recovery) |
+| Unit tests | `tests/unit/chat/wikidata-breaker.test.ts` (13 — 7 transitions + 6 metric emission) + `knowledge-base-cascade.test.ts` (12 — 6 cascade + 6 metric emission) + `wikidata-kb-dump-noop.test.ts` (2 — null lookup + swallowed upsert) + `wikidata-write-through.test.ts` (6 — delegate + fire-and-forget + error semantics) + `seed-kb-canon.test.ts` (6 — cartesian + dry-run + error resilience) + `tests/unit/observability/prometheus-metrics.test.ts` (+5 Wikidata-specific assertions) |
+| Integration E2E | `tests/integration/chat/wikidata-resilience.integration.test.ts` (4 — live + 5xx storm + Step 7.1 DoD + HALF_OPEN recovery) + `wikidata-kb-dump-repository.test.ts` (11 — round-trip + idempotent UPSERT + multi-language + qid denorm) |
 
 ## Deferred (separate sessions)
 
-- **Phase 4-light** — `wikidata_kb_dump` migration + `WikidataKbDumpRepositoryTypeOrm` real implementation + write-through hook in `KnowledgeBaseService` (~3 h work).
 - **Phase 7.3** — Chaos game-day on staging once the staging env is available (`docs/CHAOS_RUNBOOKS.md` extension).
-- **Optional Phase 4-light seed** — `scripts/seed-kb-canon.ts` curated top-1k via WDQS (~5 MB, one-shot before launch).
-- **150 GB RDF dump pipeline** — NOT scheduled. Re-open the discussion only if production telemetry (post-launch) shows the write-through coverage is insufficient on a measurable scale, AND a B2B contract requires the long-tail guarantee.
+- **150 GB RDF dump pipeline** — NOT scheduled. Re-open the discussion only if production telemetry (post-launch) shows the write-through coverage is insufficient on a measurable scale, AND a B2B contract requires the long-tail guarantee. The write-through + canon seed (C5.3 Phase A) is the V1 ship and intentionally avoids the cron / 150 GB ingest burden.
 
 ## Related links
 
