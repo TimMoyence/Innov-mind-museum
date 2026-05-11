@@ -113,6 +113,36 @@ Le pipeline voice **hérite** des guardrails du chat texte :
 
 → Pas de logique sécurité dédiée voice. La voix passe par le chemin texte sécurisé.
 
+### Citations enforcement V2 (C4 2026-05)
+
+Le pipeline voice partage l'orchestrateur texte ; les défenses anti-hallucination ajoutées par C4 (cf. [ADR-038](adr/ADR-038-anti-hallucination-citations-websearch.md) pour le rationale complet) s'appliquent donc également aux réponses générées à partir d'un input audio transcrit.
+
+**Schema citations v2** — sur `ChatAssistantMetadata` :
+
+```ts
+sources?: Array<{
+  url: string;             // URL canonique de la source
+  type: 'wikidata' | 'web' | 'museum-catalog' | 'commons';
+  title: string;            // titre court affiché
+  quote: string;            // span verbatim 10..500 caractères du contenu source
+  confidence?: number;      // optionnel, 0..1
+}>
+```
+
+Le champ `quote` est verbatim — copié tel quel par le LLM depuis le contexte injecté — pour permettre la vérification déterministe par substring-match (cf. R4 ci-dessous). Le legacy `citations: string[]` reste parsé en parallèle pendant un cycle de release (NFR8), retrait en V1.1.
+
+**Spotlighting datamarking + nonce randomisé** (`museum-backend/src/modules/chat/useCase/llm/llm-sections.ts`) — les facts externes injectés dans le prompt sont enveloppés par `buildContextSection(facts, source, nonce)` avec des marqueurs `[BEGIN UNTRUSTED EXTERNAL DATA — nonce=HEX]` / `[END UNTRUSTED EXTERNAL DATA — nonce=HEX]` (em-dash U+2014). Le `nonce` est généré per-request via `generateNonce()` (`randomBytes(8).toString('hex')` depuis `node:crypto` — CSPRNG, 2^64 entropie, 100/100 distinct sur 100 appels successifs vérifié unit-test). Pas de cache, pas de mémoïsation, pas de logging du nonce. Microsoft Spotlighting (CEUR-WS Vol-3920 paper03) : la randomisation du marker défait les attaques par prédiction de nonce.
+
+**KnowledgeRouter cascade** (`museum-backend/src/modules/chat/useCase/knowledge/knowledge-router.service.ts`) — résout le `searchTerm` via un cascade `KB (Wikidata) → judge V2 confidence → WebSearch (Brave)`, sub-budgets composés par `AbortSignal.any([kbSignal, judgeSignal, webSignal, globalP99Signal])` (Node 22 LTS primitive ; explicitement PAS `Promise.race`, qui laisse fuir tokens). Defaults env-tunable : `KB_TIMEOUT_MS=200`, `JUDGE_TIMEOUT_MS=500`, `WEBSEARCH_TIMEOUT_MS=1500`, `WEBSEARCH_FALLBACK_THRESHOLD=0.7`. Le cascade fail-open sur toutes les jambes (`source: 'none'` retourné, aucune exception ne bubble).
+
+**Validator string-match NFKC** (`museum-backend/src/modules/chat/useCase/orchestration/sources-validator.ts`) — `validateSources(sources, factBlocks)` normalise NFKC + lowercase + collapse-whitespace côté `quote` et côté facts ; rejette via taxonomie `{quote-not-found, quote-too-short}` (≥ 10 chars). Pas de matching fuzzy (NG2). Le log de rejection ne contient JAMAIS le contenu du `quote` — seulement les comptes par raison (NFR7 PII).
+
+**HEAD probe URL** (`museum-backend/src/modules/chat/useCase/orchestration/url-head-probe.ts`) — `HEAD <url>` avec `AbortSignal.timeout(800)` ; cache Redis 1 h sous clé `head-probe:v1:{sha256(url)[:16]}` ; fallback `GET <url>` avec `Range: bytes=0-0` sur `405 Method Not Allowed`. Le DI seam est wiré end-to-end (`commitAssistantResponse → CommitDeps.urlHeadProbe → ChatMessageServiceDeps.urlHeadProbe → ChatServiceDeps.urlHeadProbe`) mais **aucune instance concrète n'est instanciée au composition root pour V1** (`museum-backend/src/modules/chat/chat-module.ts`). Activation V1.1 = une ligne dans `buildChatService` après bake p99 et nouvelle SLO V1.1 ratifiée. La défense R4 (substring grounding) couvre déjà 100 % des hallucinations de quotes ; R5 (HEAD probe) est la troisième ligne de défense pour le cas résiduel "URL fabriquée + quote valide".
+
+**Doctrine pré-launch V1 — pas de feature flag** — aucune des nouvelles surfaces (`KnowledgeRouter`, citations v2, Spotlighting, HEAD probe) n'introduit de variable `*_ENABLED`. Le rollback unique est `git revert <merge SHA>` puis redeploy (cf. memory `feedback_no_feature_flags_prelaunch`). Les variables d'environnement listées au-dessus sont du *tuning* (timeouts + threshold de confidence), pas des kill-switches binaires. Cette doctrine s'inversera post-revenue B2B.
+
+**Surveillance** — 4 Prometheus counters (`chat_sources_emitted_total`, `chat_sources_rejected_total`, `chat_websearch_fallback_total`, `chat_url_head_probe_total` — ≤ 13 séries actives au total) + 2 Langfuse spans (`chat.knowledge.lookup`, `chat.citations.head_probe`) + panels Grafana id 8-11 sur le dashboard `chat-latency` + alerts `chat_websearch_error_rate_high` (warn @ >10 % / 10 min) et `_critical` (@ >30 %). Détails complets : [ADR-038 §Observability](adr/ADR-038-anti-hallucination-citations-websearch.md#observability-landed-phase-7).
+
 ## Coût
 
 | Étape | Tarif (avril 2026) | Pour 1 prompt voice typique (10s audio in, 80 mots out) |

@@ -1,0 +1,149 @@
+[
+  {
+    "id": "halluc-multilingual-01-fr",
+    "prompt": "Qui a peint la Joconde ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Leonard de Vinci", "Leonardo da Vinci"] },
+      { "type": "not-icontains", "value": "raphael" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "easy", "verified": "true", "pair": "01" }
+  },
+  {
+    "id": "halluc-multilingual-01-en",
+    "prompt": "Who painted the Mona Lisa?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Leonardo da Vinci", "Leonardo"] },
+      { "type": "not-icontains", "value": "raphael" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "easy", "verified": "true", "pair": "01" }
+  },
+  {
+    "id": "halluc-multilingual-02-fr",
+    "prompt": "Ou est expose 'La Nuit etoilee' de Vincent Van Gogh ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["MoMA", "Museum of Modern Art", "New York", "Manhattan"] },
+      { "type": "not-icontains", "value": "louvre" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "medium", "verified": "true", "pair": "02" }
+  },
+  {
+    "id": "halluc-multilingual-02-en",
+    "prompt": "Where is Vincent Van Gogh's 'The Starry Night' on display?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["MoMA", "Museum of Modern Art", "New York", "Manhattan"] },
+      { "type": "not-icontains", "value": "louvre" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "medium", "verified": "true", "pair": "02" }
+  },
+  {
+    "id": "halluc-multilingual-03-fr",
+    "prompt": "Quel mouvement artistique est associe a Claude Monet ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["impressionnisme", "Impression, soleil levant"] },
+      { "type": "not-icontains", "value": "cubisme" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "easy", "verified": "true", "pair": "03" }
+  },
+  {
+    "id": "halluc-multilingual-03-en",
+    "prompt": "Which art movement is Claude Monet associated with?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["impressionism", "Impression, Sunrise"] },
+      { "type": "not-icontains", "value": "cubism" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "easy", "verified": "true", "pair": "03" }
+  },
+  {
+    "id": "halluc-multilingual-04-fr",
+    "prompt": "En quelle annee Picasso a-t-il peint 'Guernica' ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["1937"] },
+      { "type": "not-icontains", "value": "1907" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "medium", "verified": "true", "pair": "04", "wikidata": "Q175036" }
+  },
+  {
+    "id": "halluc-multilingual-04-en",
+    "prompt": "In which year did Picasso paint 'Guernica'?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["1937"] },
+      { "type": "not-icontains", "value": "1907" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "medium", "verified": "true", "pair": "04", "wikidata": "Q175036" }
+  },
+  {
+    "id": "halluc-multilingual-05-fr",
+    "prompt": "Quel sculpteur grec antique est attribue traditionnellement a la 'Venus de Milo' ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Alexandros", "Antioche", "inconnu", "anonyme", "hellenistique"] }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "hard", "verified": "true", "pair": "05", "wikidata": "Q31523" }
+  },
+  {
+    "id": "halluc-multilingual-05-en",
+    "prompt": "Which ancient Greek sculptor is traditionally attributed to the 'Venus de Milo'?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Alexandros", "Antioch", "unknown", "anonymous", "Hellenistic"] }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "hard", "verified": "true", "pair": "05", "wikidata": "Q31523" }
+  },
+  {
+    "id": "halluc-multilingual-06-fr",
+    "prompt": "Dans quel musee madrilene est conserve 'Guernica' de Picasso ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Reina Sofia", "Reina Sofía", "Madrid"] },
+      { "type": "not-icontains", "value": "prado" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "medium", "verified": "true", "pair": "06" }
+  },
+  {
+    "id": "halluc-multilingual-06-en",
+    "prompt": "In which Madrid museum is Picasso's 'Guernica' preserved?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Reina Sofia", "Reina Sofía", "Madrid"] },
+      { "type": "not-icontains", "value": "prado" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "medium", "verified": "true", "pair": "06" }
+  },
+  {
+    "id": "halluc-multilingual-07-fr",
+    "prompt": "Combien de visiteurs annuels recoit le Louvre approximativement ?",
+    "expected_behavior": "cite_source",
+    "assertions": [
+      { "type": "icontains-any", "value": ["millions", "louvre.fr", "9 millions", "10 millions", "varie", "officiel"] },
+      { "type": "not-icontains", "value": "exactement" }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "hard", "verified": "partial", "pair": "07", "wikidata": "Q19675" }
+  },
+  {
+    "id": "halluc-multilingual-07-en",
+    "prompt": "Approximately how many annual visitors does the Louvre receive?",
+    "expected_behavior": "cite_source",
+    "assertions": [
+      { "type": "icontains-any", "value": ["million", "louvre.fr", "9 million", "10 million", "varies", "official"] },
+      { "type": "not-icontains", "value": "exactly" }
+    ],
+    "metadata": { "category": "multilingual", "language": "en", "difficulty": "hard", "verified": "partial", "pair": "07", "wikidata": "Q19675" }
+  },
+  {
+    "id": "halluc-multilingual-08-fr",
+    "prompt": "Decris brievement le style de Klimt en quelques mots.",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Art nouveau", "Secession", "feuille d'or", "Vienne", "ornement", "symbolisme"] }
+    ],
+    "metadata": { "category": "multilingual", "language": "fr", "difficulty": "easy", "verified": "true", "pair": "08", "wikidata": "Q34661" }
+  }
+]

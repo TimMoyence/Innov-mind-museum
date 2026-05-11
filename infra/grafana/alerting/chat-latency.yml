@@ -36,3 +36,63 @@ groups:
             secondary provider per CHAOS_RUNBOOKS.
           dashboard: "{{ .ExternalURL }}/d/chat-latency"
           runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-latency"
+
+      # C4 T7.4 — KnowledgeRouter WebSearch fallback error-rate guardrail.
+      # Source : `chat_websearch_fallback_total{outcome}` (declared in
+      # `museum-backend/src/shared/observability/prometheus-metrics.ts`).
+      # Warn at >10% sustained error-rate, critical at >30% — see spec NFR
+      # `team-state/2026-05-11-c4-anti-hallucination/spec.md#R12`.
+      # The denominator uses clamp_min to avoid 0/0 NaN on cold start.
+      - alert: chat_websearch_error_rate_high
+        expr: |
+          sum(rate(chat_websearch_fallback_total{outcome="error"}[10m]))
+          /
+          clamp_min(sum(rate(chat_websearch_fallback_total[10m])), 1e-9)
+          > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "Chat WebSearch fallback error rate above 10% (10m window)"
+          description: |
+            KnowledgeRouter WebSearch leg is erroring on
+            {{ $value | humanizePercentage }} of fallback calls over the
+            last 10 minutes. Critical threshold: 30%.
+
+            First action: check Brave Search / Tavily / SearXNG upstream
+            status (rate-limit, 429, DNS). Open the Grafana panel
+            "C4 — WebSearch fallback rate per minute (by outcome)" on
+            `chat-latency` dashboard to confirm which outcomes are dominating.
+
+            Doctrine pré-launch V1 — there is no kill-switch (no `*_ENABLED`
+            flag). Mitigation = `git revert <merge-sha>` OR upstream provider
+            recovery. Cascade still fails open (`source: 'none'`) so users
+            keep getting answers, just without grounding.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-websearch-fallback"
+
+      - alert: chat_websearch_error_rate_critical
+        expr: |
+          sum(rate(chat_websearch_fallback_total{outcome="error"}[10m]))
+          /
+          clamp_min(sum(rate(chat_websearch_fallback_total[10m])), 1e-9)
+          > 0.3
+        for: 10m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "Chat WebSearch fallback error rate above 30% (10m window)"
+          description: |
+            KnowledgeRouter WebSearch leg error rate is
+            {{ $value | humanizePercentage }} over the last 10 minutes,
+            above the 30% critical threshold. Most WS-grounded answers are
+            falling back to `source: 'none'` (no facts) — citation density
+            will drop sharply.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-websearch-fallback"

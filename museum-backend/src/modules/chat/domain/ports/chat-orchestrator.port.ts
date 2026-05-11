@@ -5,6 +5,7 @@ import type {
   VisitContext,
 } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
+import type { KnowledgeRouterSource } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { ResolvedLocation } from '@modules/chat/useCase/location/location-resolver';
 
 /** Input for the LLM orchestrator. */
@@ -54,6 +55,20 @@ export interface OrchestratorInput {
    * to return up to 3 next-artwork suggestions alongside the answer.
    */
   intent?: ChatSessionIntent;
+  /**
+   * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`
+   * upstream in `PrepareMessagePipeline`. Threaded into `buildSectionMessages`
+   * by every orchestrator entry point (full-shot / streaming / walk) so the
+   * Spotlighting datamarking envelope (T2.3) wraps these facts as the SECOND
+   * SystemMessage. Empty / undefined → envelope NOT emitted (legacy path).
+   */
+  facts?: readonly string[];
+  /**
+   * C4.1 (T3.5) — Provenance label propagated from
+   * `KnowledgeRouterResult.source`. `'none'` short-circuits the envelope
+   * (envelope NOT emitted even if `facts` is non-empty).
+   */
+  factsSource?: KnowledgeRouterSource;
 }
 
 /** Result returned by {@link ChatOrchestrator.generate}. */

@@ -9,6 +9,7 @@ import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
+import { SourceCitation } from '@/features/chat/ui/SourceCitation';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
@@ -70,6 +71,8 @@ export const ChatMessageBubble = React.memo(
     // then swap to the real carousel once `metadata.images` hydrates.
     const hasImages = (message.metadata?.images?.length ?? 0) > 0;
     const showSkeleton = isStreaming && !hasImages;
+    const sources = message.metadata?.sources;
+    const hasSources = (sources?.length ?? 0) > 0;
 
     const bubbleContent = (
       <>
@@ -89,6 +92,13 @@ export const ChatMessageBubble = React.memo(
               isStreaming={isStreaming}
               onLinkPress={onLinkPress}
             />
+            {!isStreaming && hasSources && sources ? (
+              <View style={styles.sourcesRow}>
+                {sources.map((s, i) => (
+                  <SourceCitation key={`${s.url}-${String(i)}`} source={s} index={i + 1} />
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : (
           <Text style={{ color: theme.primaryContrast }}>{message.text}</Text>
@@ -236,5 +246,11 @@ const styles = StyleSheet.create({
     padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
     borderWidth: semantic.input.borderWidth,
+  },
+  sourcesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: semantic.chat.gapSmall,
+    columnGap: semantic.chat.gapSmall,
   },
 });

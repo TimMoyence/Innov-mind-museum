@@ -101,6 +101,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     chatPurgeRetentionDays: 180,
     s3OrphanSweepEnabled: false,
     knowledgeBase: { timeoutMs: 500, cacheTtlSeconds: 3600, cacheMaxEntries: 500 },
+    knowledgeRouter: { threshold: 0.7, kbTimeoutMs: 200, judgeTimeoutMs: 500, wsTimeoutMs: 1500 },
     nominatim: {
       contactEmail: 'contact@musaium.app',
       cacheTtlSeconds: 86400,

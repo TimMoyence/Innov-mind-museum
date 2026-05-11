@@ -96,10 +96,10 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 > Existant : keyword guardrail multilingue + LLM judge V2 confidence scoring + output guardrail + KB Wikidata. Manque : WebSearch fallback wiring orchestrateur + threshold tuning + citations sources + regression eval continu.
 
-- [ ] **C4.1 WebSearch fallback wiring** — Brave wrapper existe, brancher orchestrateur quand KB miss + judge confidence < threshold (ex-W1.7)
-- [ ] **C4.2 Threshold confidence tuning** — calibrer cutoff LLM judge V2 sur dataset réel chat prod
-- [ ] **C4.3 Promptfoo regression suite anti-hallucination** — T1.5b real-mode bake (cf. ROADMAP_TEAM.md)
-- [ ] **C4.4 Citation enforce** — LLM doit citer source dans réponse (struct output `sources[]: {url, type, title}`), affichage FE clickable
+- [x] **C4.1 WebSearch fallback wiring** — Brave wrapper existe, brancher orchestrateur quand KB miss + judge confidence < threshold (ex-W1.7) — done 2026-05-11 (cf. ADR-038, KnowledgeRouter cascade KB→judge→WS via `AbortSignal.any`)
+- [ ] **C4.2 Threshold confidence tuning** — calibrer cutoff LLM judge V2 sur dataset réel chat prod — explicitly deferred V1.1 (ADR-038 §Phase D, ≥7j prod bake)
+- [x] **C4.3 Promptfoo regression suite anti-hallucination** — T1.5b real-mode bake (cf. ROADMAP_TEAM.md) — done 2026-05-11 (60 entries corpus + CI `halluc-eval` job + assertions `quoteInFacts`/`citeRealUrl`)
+- [x] **C4.4 Citation enforce** — LLM doit citer source dans réponse (struct output `sources[]: {url, type, title}`), affichage FE clickable — done 2026-05-11 (Zod schema v2 + Spotlighting + validator NFKC + FE `SourceCitation` Ionicons + i18n 8 locales)
 
 ### C5 — Wikidata premium (resilient)
 

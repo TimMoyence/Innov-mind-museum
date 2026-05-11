@@ -7,8 +7,9 @@ import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { env } from '@src/config/env';
 
-import { createLlmSectionPlan } from './llm-sections';
+import { buildContextSection, createLlmSectionPlan, generateNonce } from './llm-sections';
 
+import type { SpotlightingSource } from './llm-sections';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ResolvedLocation } from '@modules/chat/useCase/location/location-resolver';
@@ -294,13 +295,28 @@ const wrapUntrusted = (source: string, content: string): string =>
 
 /**
  * Assembles the full message array for a single LLM section call:
- * system prompt, section prompt, optional memory/redirect blocks,
- * conversation history, user message, and anti-injection reminder.
+ * system prompt, optional Spotlighting envelope, section prompt, optional
+ * memory/redirect blocks, conversation history, user message, and
+ * anti-injection reminder.
  *
  * External-content blocks (`localKnowledgeBlock`, `knowledgeBaseBlock`,
  * `webSearchBlock`) are wrapped with `<untrusted_content>` per V12 W5 §3.1.
  * `userMemoryBlock` is NOT wrapped — sourced from our own DB / past
  * conversations after guardrail checks; treated as trusted derived data.
+ *
+ * C4 / T3.4 — When `facts.length > 0` AND `source !== 'none'`, the
+ * `buildContextSection` Spotlighting envelope (T2.3) is injected as the
+ * **second** SystemMessage of the array, immediately after the main system
+ * prompt and BEFORE the section prompt. This placement preserves the
+ * `[END OF SYSTEM INSTRUCTIONS]` boundary at the end of the first
+ * SystemMessage (CLAUDE.md AI Safety §2) and surfaces the grounded facts to
+ * the LLM as authoritative DATA before any user-derived content is rendered.
+ *
+ * The nonce is generated ONCE per `buildSectionMessages` call via
+ * `generateNonce()` and threaded into both the BEGIN and END markers of the
+ * envelope. When no facts are supplied (empty array or `source === 'none'`),
+ * NO envelope is emitted and `generateNonce()` is NOT called — avoiding both
+ * prompt-token waste and unnecessary entropy consumption.
  */
 export const buildSectionMessages = (
   systemPrompt: string,
@@ -312,14 +328,46 @@ export const buildSectionMessages = (
     knowledgeBaseBlock?: string;
     webSearchBlock?: string;
     localKnowledgeBlock?: string;
+    /**
+     * Verified fact strings produced by `KnowledgeRouter.resolve()` (T3.2).
+     * Wrapped in the Spotlighting datamarking envelope when non-empty and
+     * `source !== 'none'`. Each fact is rendered verbatim — sanitisation
+     * MUST happen upstream.
+     */
+    facts?: readonly string[];
+    /**
+     * Provenance label propagated from `KnowledgeRouterResult.source`.
+     * `'none'` short-circuits the envelope (envelope NOT emitted).
+     */
+    source?: SpotlightingSource;
   },
 ): ChatModelMessage[] => {
-  const { userMemoryBlock, knowledgeBaseBlock, webSearchBlock, localKnowledgeBlock } =
-    options ?? {};
-  const messages: ChatModelMessage[] = [
-    new SystemMessage(systemPrompt),
-    new SystemMessage(sectionPrompt),
-  ];
+  const {
+    userMemoryBlock,
+    knowledgeBaseBlock,
+    webSearchBlock,
+    localKnowledgeBlock,
+    facts,
+    source,
+  } = options ?? {};
+  const messages: ChatModelMessage[] = [new SystemMessage(systemPrompt)];
+
+  // C4 / T3.4 — Spotlighting envelope as the 2nd SystemMessage (when facts
+  // are grounded). Inject BEFORE the section prompt so the envelope sits in
+  // the system-instruction stack adjacent to the main prompt, with the
+  // [END OF SYSTEM INSTRUCTIONS] boundary still terminating the first
+  // SystemMessage (CLAUDE.md AI Safety §2). `generateNonce()` is called
+  // exactly once per invocation when the envelope is needed; otherwise it
+  // is skipped to avoid wasting entropy.
+  if (facts && facts.length > 0 && source && source !== 'none') {
+    const nonce = generateNonce();
+    const envelope = buildContextSection(Array.from(facts), source, nonce);
+    if (envelope) {
+      messages.push(new SystemMessage(envelope));
+    }
+  }
+
+  messages.push(new SystemMessage(sectionPrompt));
 
   if (userMemoryBlock) {
     messages.push(new SystemMessage(userMemoryBlock));

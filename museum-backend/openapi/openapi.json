@@ -449,8 +449,47 @@
               },
               "citations": {
                 "type": "array",
+                "description": "Legacy citations (string[]) — superseded by `sources` (Citations v2, C4). Kept for one release cycle so legacy clients/cached messages keep parsing.",
                 "items": {
                   "type": "string"
+                }
+              },
+              "sources": {
+                "type": "array",
+                "description": "Citations v2 (C4 anti-hallucination) — user-verifiable sources with verbatim quote post-validated by the sources-validator use-case. Renders as inline `[n]` superscript + bottom-sheet preview on mobile.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "Canonical URL of the source (Wikidata entity, web page, museum catalogue entry, Commons file)."
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["wikidata", "web", "museum-catalog", "commons"],
+                      "description": "Source provenance enum."
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 300,
+                      "description": "Display title for the source."
+                    },
+                    "quote": {
+                      "type": "string",
+                      "minLength": 10,
+                      "maxLength": 500,
+                      "description": "Verbatim NFKC-normalized substring of a fact block fed to the LLM (anti-hallucination architectural lever)."
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Optional judge-derived confidence — absent for KB-direct sources."
+                    }
+                  },
+                  "required": ["url", "type", "title", "quote"]
                 }
               },
               "deeperContext": {

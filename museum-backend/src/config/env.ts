@@ -283,6 +283,24 @@ const env: AppEnv = {
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
   },
+  // C4.1 (2026-05-11) — KnowledgeRouter tuning. TUNING-ONLY block: there is NO
+  // `*_ENABLED` flag here and none can be added (D11 / pré-launch V1 doctrine
+  // — see `feedback_no_feature_flags_prelaunch`). Rollback = `git revert`.
+  //
+  // Names are namespaced with `KNOWLEDGE_ROUTER_*` to avoid colliding with the
+  // pre-existing `KB_TIMEOUT_MS` (500 ms — used by `KnowledgeBaseService` for
+  // its outer cache wrapper). The router enforces its own per-leg budget on
+  // top of that with `KNOWLEDGE_ROUTER_KB_TIMEOUT_MS` (200 ms by design.md D4).
+  knowledgeRouter: {
+    /** Confidence cutoff [0..1] above which WebSearch is skipped (default 0.7). */
+    threshold: toNumber(process.env.WEBSEARCH_FALLBACK_THRESHOLD, 0.7),
+    /** Per-leg KB lookup budget in ms (default 200; see design.md §9 D4). */
+    kbTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_KB_TIMEOUT_MS, 200),
+    /** Per-leg judge budget in ms (default 500). */
+    judgeTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_JUDGE_TIMEOUT_MS, 500),
+    /** Per-leg WebSearch budget in ms (default 1500). */
+    wsTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_WS_TIMEOUT_MS, 1500),
+  },
   nominatim: {
     contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.app',
     cacheTtlSeconds: toNumber(process.env.NOMINATIM_CACHE_TTL_SECONDS, 86_400),

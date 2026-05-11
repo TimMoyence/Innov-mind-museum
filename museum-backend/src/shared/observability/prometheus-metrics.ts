@@ -221,6 +221,55 @@ export const artworkEmbeddingsCount = new Gauge({
   },
 });
 
+/**
+ * C4 anti-hallucination (2026-05-11) — citation grounding + WebSearch fallback
+ * surface mandated by `spec.md §R12 / NFR6` and `design.md §10 Observability`.
+ *
+ * Cardinality budget (all four counters, summed):
+ *   - `chat_sources_emitted_total{type}`            ∈ {wikidata, web, museum-catalog, commons} → 4 series
+ *   - `chat_sources_rejected_total{reason}`         ∈ {quote-not-found, quote-too-short}      → 2 series
+ *   - `chat_websearch_fallback_total{outcome}`      ∈ {hit, empty, error}                      → 3 series
+ *   - `chat_url_head_probe_total{cache_hit,outcome}` ∈ {true,false} × {reachable, unreachable}  → 4 series
+ * Total active series ≤ 13. Comfortably within the spec NFR cardinality budget.
+ *
+ * Call sites:
+ *   - `chat_sources_emitted_total` → `useCase/orchestration/message-commit.ts`
+ *     (incremented per surviving source after the anti-hallucination filters).
+ *   - `chat_sources_rejected_total` → `useCase/orchestration/sources-validator.ts`
+ *     (replaces the deferred-instrumentation marker dated T2.4).
+ *   - `chat_websearch_fallback_total` → `useCase/knowledge/knowledge-router.service.ts`
+ *     (incremented once per resolve() on the WS leg outcome).
+ *   - `chat_url_head_probe_total` → `useCase/orchestration/url-head-probe.ts`
+ *     (replaces the deferred-instrumentation marker dated T2.5).
+ */
+export const chatSourcesEmittedTotal = new Counter({
+  name: 'chat_sources_emitted_total',
+  help: 'Total citation sources attached to a chat assistant response, by source type',
+  labelNames: ['type'] as const,
+  registers: [registry],
+});
+
+export const chatSourcesRejectedTotal = new Counter({
+  name: 'chat_sources_rejected_total',
+  help: 'Total citation sources dropped by the anti-hallucination validator, by rejection reason',
+  labelNames: ['reason'] as const,
+  registers: [registry],
+});
+
+export const chatWebsearchFallbackTotal = new Counter({
+  name: 'chat_websearch_fallback_total',
+  help: 'Total knowledge-router WebSearch fallback invocations, by outcome (hit / empty / error)',
+  labelNames: ['outcome'] as const,
+  registers: [registry],
+});
+
+export const chatUrlHeadProbeTotal = new Counter({
+  name: 'chat_url_head_probe_total',
+  help: 'Total citation URL reachability probes, partitioned by cache_hit + outcome',
+  labelNames: ['cache_hit', 'outcome'] as const,
+  registers: [registry],
+});
+
 /** Returns the Prometheus-format metrics dump. */
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();

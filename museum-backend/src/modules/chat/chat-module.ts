@@ -48,12 +48,15 @@ import {
   buildCompareImageUseCase,
   buildCompareSessionAccessVerifier,
 } from './chat-module.compare-wiring';
+import { buildKnowledgeRouter } from './chat-module.knowledge-router-wiring';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
+import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
@@ -88,6 +91,12 @@ export interface BuiltChatModule {
    * Optional in lockstep with `compareImageUseCase`.
    */
   compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
+  /**
+   * C4.1 (2026-05-11) — `KnowledgeRouterService` wired by T3.3. Optional :
+   * legacy test harnesses skip C4 ports + NFR8 keeps 1 cycle backward-compat.
+   * Production always wires it (see `chat-module.knowledge-router-wiring.ts`).
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
 }
 
 /**
@@ -223,18 +232,10 @@ export class ChatModule {
     return new UserMemoryService(repo, cache, { artworkRepo });
   }
 
-  /** Creates the knowledge base service (Wikidata, always active in V1). */
-  private buildKnowledgeBase(cache?: CacheService): KnowledgeBaseService | undefined {
-    const wikidataClient = new WikidataClient();
-    return new KnowledgeBaseService(
-      wikidataClient,
-      {
-        timeoutMs: env.knowledgeBase.timeoutMs,
-        cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
-        cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
-      },
-      cache,
-    );
+  /** Wraps the shared `WikidataClient` in the cached `KnowledgeBaseService`. */
+  private buildKnowledgeBase(wikidataClient: KnowledgeBaseProvider, cache?: CacheService): KnowledgeBaseService {
+    const { timeoutMs, cacheTtlSeconds, cacheMaxEntries } = env.knowledgeBase;
+    return new KnowledgeBaseService(wikidataClient, { timeoutMs, cacheTtlSeconds, cacheMaxEntries }, cache);
   }
 
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
@@ -261,8 +262,11 @@ export class ChatModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /** Creates web search with multi-provider fallback. Natural gate: provider key presence. DuckDuckGo always included as last resort. */
-  private buildWebSearch(cache?: CacheService): WebSearchService | undefined {
+  /**
+   * Creates web search with multi-provider fallback chain (shared with the
+   * `KnowledgeRouterService` per T3.3). DuckDuckGo is always last-resort.
+   */
+  private buildWebSearch(cache?: CacheService): { service: WebSearchService; provider: WebSearchProvider } {
     const providers: WebSearchProvider[] = [];
 
     if (env.webSearch.tavilyApiKey) {
@@ -286,7 +290,7 @@ export class ChatModule {
     });
 
     const fallbackProvider = new FallbackSearchProvider(providers);
-    return new WebSearchService(
+    const service = new WebSearchService(
       fallbackProvider,
       {
         timeoutMs: env.webSearch.timeoutMs,
@@ -295,6 +299,7 @@ export class ChatModule {
       },
       cache,
     );
+    return { service, provider: fallbackProvider };
   }
 
   /** Sets up the dynamic art keyword set with periodic refresh from the database. */
@@ -353,9 +358,12 @@ export class ChatModule {
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    const knowledgeBase = this.buildKnowledgeBase(cache);
+    // C4.1 (T3.3) — single Wikidata + fallback-search instance shared with
+    // the cached wrapper services AND the `KnowledgeRouterService` cascade.
+    const kbProvider = new WikidataClient();
+    const knowledgeBase = this.buildKnowledgeBase(kbProvider, cache);
     const imageEnrichment = this.buildImageEnrichment();
-    const webSearch = this.buildWebSearch(cache);
+    const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
 
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
     this.buildArtKeywordRefresh(artKeywordRepo);
@@ -366,6 +374,11 @@ export class ChatModule {
     // ADR-036 — no adapter-level decorator. The orchestrator is wired bare.
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache }); // ADR-030 — judge budget Redis/in-process pick
+
+    // C4.1 (T3.3) — `KnowledgeRouterService` wired after the orchestrator so
+    // the LLM judge leg shares the live `ChatOrchestrator` instance. See
+    // `chat-module.knowledge-router-wiring.ts` for the cascade contract.
+    const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, effectiveOrchestrator);
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
       : undefined;
@@ -391,6 +404,7 @@ export class ChatModule {
       ocr,
       userMemory,
       knowledgeBase,
+      knowledgeRouter,
       imageEnrichment,
       webSearch,
       museumRepository,
@@ -425,6 +439,7 @@ export class ChatModule {
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
       compareImageUseCase,
       compareSessionAccessVerifier,
+      knowledgeRouter, // C4.1 (T3.3) — see BuiltChatModule.knowledgeRouter docblock.
     };
     this._built = built;
     return built;
@@ -444,6 +459,8 @@ export class ChatModule {
     ocr: TesseractOcrService | DisabledOcrService;
     userMemory?: UserMemoryService;
     knowledgeBase?: KnowledgeBaseService;
+    /** C4.1 (T3.3) — travels with legacy `knowledgeBase` for NFR8 (1 cycle). */
+    knowledgeRouter?: KnowledgeRouterPort;
     imageEnrichment?: ImageEnrichmentService;
     webSearch?: WebSearchService;
     museumRepository?: IMuseumRepository;
@@ -464,6 +481,7 @@ export class ChatModule {
       audit: auditService,
       userMemory: deps.userMemory,
       knowledgeBase: deps.knowledgeBase,
+      knowledgeRouter: deps.knowledgeRouter,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: new ArtTopicClassifier(),

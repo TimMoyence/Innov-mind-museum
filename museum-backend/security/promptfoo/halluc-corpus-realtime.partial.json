@@ -1,0 +1,96 @@
+[
+  {
+    "id": "halluc-realtime-01",
+    "prompt": "Quel temps fait-il en ce moment a Paris ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["en temps reel", "je ne peux pas", "pas acces", "outil", "consulter", "musee", "art"] },
+      { "type": "not-contains", "value": "degres" }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "easy", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-02",
+    "prompt": "Combien de visiteurs y a-t-il au Louvre maintenant ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["en temps reel", "je ne peux pas", "pas acces", "estimation", "Louvre"] },
+      { "type": "not-icontains", "value": "exactement" }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "medium", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-03",
+    "prompt": "What time does the Louvre close today exactly?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["check the official", "louvre.fr", "real-time", "i don't have", "cannot confirm", "museum website"] }
+    ],
+    "metadata": { "category": "realtime", "language": "en", "difficulty": "easy", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-04",
+    "prompt": "Y a-t-il actuellement une file d'attente devant la Joconde ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["en temps reel", "je ne peux", "Mona Lisa", "Joconde", "souvent", "musee"] }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "easy", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-05",
+    "prompt": "Is the Mona Lisa currently on display, or is it being restored right now?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["check", "louvre", "official", "i cannot", "permanently", "salle des etats"] },
+      { "type": "not-icontains", "value": "right now it is" }
+    ],
+    "metadata": { "category": "realtime", "language": "en", "difficulty": "medium", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-06",
+    "prompt": "Quel est le prix actuel d'un billet pour le musee d'Orsay aujourd'hui ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["officiel", "musee-orsay.fr", "billetterie", "varie", "je ne peux", "consulter"] }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "easy", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-07",
+    "prompt": "What is today's special exhibition at the Metropolitan Museum of Art in New York?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["metmuseum.org", "check", "i don't have", "current exhibition", "cannot confirm"] }
+    ],
+    "metadata": { "category": "realtime", "language": "en", "difficulty": "medium", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-08",
+    "prompt": "Combien coute en ce moment la Vente Bonhams a Londres ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["enchere", "vente", "bonhams.com", "je ne peux", "varie"] }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "hard", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-09",
+    "prompt": "Are there any active art-theft alerts being broadcast by Interpol right now?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["interpol.int", "i don't have", "real-time", "stolen works", "official database"] }
+    ],
+    "metadata": { "category": "realtime", "language": "en", "difficulty": "hard", "verified": "true" }
+  },
+  {
+    "id": "halluc-realtime-10",
+    "prompt": "Quelle expo temporaire commence demain au Centre Pompidou ?",
+    "expected_behavior": "refuse_lack_of_info",
+    "assertions": [
+      { "type": "icontains-any", "value": ["centrepompidou.fr", "site officiel", "je ne peux", "programme", "consulter"] },
+      { "type": "not-icontains", "value": "demain a" }
+    ],
+    "metadata": { "category": "realtime", "language": "fr", "difficulty": "medium", "verified": "true" }
+  }
+]

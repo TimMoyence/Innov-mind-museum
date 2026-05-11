@@ -23,6 +23,7 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
+import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { TextToSpeechService } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import type { OcrService } from '@modules/chat/adapters/secondary/image/ocr-service';
 import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
@@ -395,6 +396,13 @@ interface BuildChatTestServiceOptions {
   cache?: CacheService;
   ocr?: OcrService;
   artTopicClassifier?: ArtTopicClassifierPort;
+  /**
+   * C4.1 T6.2 — optional `KnowledgeRouterPort` stub. When set, threads through
+   * to `ChatService` so integration tests can exercise the prepare-pipeline →
+   * router → orchestrator wiring without instantiating the full
+   * `ChatModule.build()` adapter graph (Wikidata / WebSearch / judge clients).
+   */
+  knowledgeRouter?: KnowledgeRouterPort;
 }
 
 /**
@@ -425,6 +433,7 @@ export function buildChatTestService(
       cache: opts.cache,
       ocr: opts.ocr,
       artTopicClassifier: opts.artTopicClassifier,
+      knowledgeRouter: opts.knowledgeRouter,
     });
   }
 

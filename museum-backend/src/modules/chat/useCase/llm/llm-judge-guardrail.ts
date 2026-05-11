@@ -29,6 +29,11 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type {
+  LlmJudgeDecision,
+  LlmJudgePort,
+  LlmJudgeResult,
+} from '@modules/chat/domain/ports/llm-judge.port';
 
 /** One of four canonical verdicts emitted by the judge. */
 export type JudgeVerdict = 'allow' | 'block:offtopic' | 'block:injection' | 'block:abuse';
@@ -205,3 +210,62 @@ export const judgeWithLlm = async (
 
   return parseJudgeJson(raw);
 };
+
+/** Options accepted by the `LlmJudgeGuardrail` wrapper constructor. */
+export interface LlmJudgeGuardrailOptions {
+  /** Orchestrator used to drive the judge LLM call. */
+  orchestrator: ChatOrchestrator;
+  /** Override the per-call timeout (default: `env.guardrails.judgeTimeoutMs`). */
+  timeoutMs?: number;
+}
+
+/**
+ * C4.1 (2026-05-11) — port-shaped adapter around `judgeWithLlm`.
+ *
+ * Implements `LlmJudgePort` so the `KnowledgeRouter` cascade (D4 / R6) can
+ * inject the judge through a hexagonal seam. Maps the internal `JudgeDecision`
+ * shape to the coarse `LlmJudgeResult` triage required by the router :
+ *   - `decision: 'allow'`     → `{ decision: 'allow' }` (router proceeds)
+ *   - `decision: 'block:*'`   → `{ decision: 'block' }` (router skips WS)
+ *   - `null` (fail-open path) → `{ decision: 'review', confidence: 0 }`
+ *
+ * Backward compat preserved : the legacy `judgeWithLlm` function continues to
+ * be exported and consumed by `chat-module.ts`, `guardrail-evaluation.service`
+ * (F4 input layer), and tests. No call-site is forced to migrate in this PR.
+ */
+export class LlmJudgeGuardrail implements LlmJudgePort {
+  private readonly orchestrator: ChatOrchestrator;
+  private readonly timeoutMs?: number;
+
+  constructor(opts: LlmJudgeGuardrailOptions) {
+    this.orchestrator = opts.orchestrator;
+    this.timeoutMs = opts.timeoutMs;
+  }
+
+  /**
+   * Evaluate a prompt and return a port-shaped result. Honors `signal` by
+   * short-circuiting to `'review'` when the caller has already aborted —
+   * preserves the fail-open contract of the underlying judge.
+   */
+  async evaluate(prompt: string, signal?: AbortSignal): Promise<LlmJudgeResult> {
+    if (signal?.aborted) {
+      return { confidence: 0, decision: 'review', reason: 'aborted' };
+    }
+
+    const decision = await judgeWithLlm(prompt, {
+      orchestrator: this.orchestrator,
+      timeoutMs: this.timeoutMs,
+    });
+
+    if (decision === null) {
+      return { confidence: 0, decision: 'review' };
+    }
+
+    const mapped: LlmJudgeDecision = decision.decision === 'allow' ? 'allow' : 'block';
+    return {
+      confidence: decision.confidence,
+      decision: mapped,
+      reason: decision.decision,
+    };
+  }
+}

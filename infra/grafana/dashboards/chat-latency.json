@@ -1,7 +1,7 @@
 {
   "title": "Chat Latency",
   "uid": "chat-latency",
-  "tags": ["musaium", "chat", "latency", "c1"],
+  "tags": ["musaium", "chat", "latency", "c1", "c4"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -223,6 +223,76 @@
           "refId": "A",
           "expr": "sum(rate(chat_request_duration_seconds_count[1m]))",
           "legendFormat": "requests / sec"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "C4 — Citations rate per minute (by source type)",
+      "description": "Rate of citation sources attached to assistant responses, partitioned by provenance (wikidata / web / commons / museum-catalog). Source: chat_sources_emitted_total. Rising trend = more grounded answers reaching users (R1 acceptance).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 30 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_sources_emitted_total[5m])) by (type)",
+          "legendFormat": "{{type}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "C4 — WebSearch fallback rate per minute (by outcome)",
+      "description": "Rate of KnowledgeRouter WebSearch leg invocations, partitioned by outcome (hit / empty / error). Source: chat_websearch_fallback_total. Watch for error-rate spikes — alert `chat_websearch_error_rate_high` fires at sustained >10% error over 10 min.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 30 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_websearch_fallback_total[5m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "C4 — URL HEAD probe cache hit-rate",
+      "description": "Fraction of HEAD probes served from the 1h Redis cache. Source: chat_url_head_probe_total. Target ≥ 60% after the cache warms (1h+ uptime, repeated citation URLs).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_url_head_probe_total{cache_hit=\"true\"}[5m])) / clamp_min(sum(rate(chat_url_head_probe_total[5m])), 1e-9)",
+          "legendFormat": "cache hit-rate"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "C4 — Sources rejected by anti-hallucination validator (by reason)",
+      "description": "Rate of citation sources dropped by the post-LLM grounding gate (sources-validator). Source: chat_sources_rejected_total. Spikes on `quote-not-found` = LLM hallucinating quotes despite Spotlighting envelope.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 36 },
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_sources_rejected_total[5m])) by (reason)",
+          "legendFormat": "{{reason}}"
         }
       ]
     }

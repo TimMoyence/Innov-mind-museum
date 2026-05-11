@@ -1,0 +1,146 @@
+[
+  {
+    "id": "halluc-domain-01",
+    "prompt": "Decris la Joconde : qui l'a peinte, ou est-elle exposee, et a quelle periode ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Leonard de Vinci", "Leonardo da Vinci", "Louvre", "Renaissance", "XVIe"] },
+      { "type": "not-icontains", "value": "musee d'orsay" }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "easy", "verified": "true", "wikidata": "Q12418" }
+  },
+  {
+    "id": "halluc-domain-02",
+    "prompt": "Who is the sculptor traditionally attributed to the Venus de Milo, and where is she held today?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Alexandros of Antioch", "Hellenistic", "Louvre", "Aphrodite", "unknown sculptor", "anonymous"] },
+      { "type": "not-icontains", "value": "michelangelo" }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "medium", "verified": "true", "wikidata": "Q31523" }
+  },
+  {
+    "id": "halluc-domain-03",
+    "prompt": "Quelle est l'œuvre la plus celebre de Vermeer et dans quel musee neerlandais est-elle conservee ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Jeune fille a la perle", "La Laitiere", "Mauritshuis", "Rijksmuseum", "Vue de Delft"] },
+      { "type": "not-icontains", "value": "uffizi" }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "medium", "verified": "true", "wikidata": "Q41264" }
+  },
+  {
+    "id": "halluc-domain-04",
+    "prompt": "Where is Picasso's Guernica displayed today, and what historical event inspired it?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Reina Sofia", "Madrid", "Spanish Civil War", "1937", "bombing"] },
+      { "type": "not-icontains", "value": "prado" }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "medium", "verified": "true", "wikidata": "Q175036" }
+  },
+  {
+    "id": "halluc-domain-05",
+    "prompt": "Quel artiste a peint 'La Ronde de nuit' et dans quel musee est-elle aujourd'hui ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Rembrandt", "Rijksmuseum", "Amsterdam", "1642"] },
+      { "type": "not-icontains", "value": "Vermeer"  }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "easy", "verified": "true", "wikidata": "Q5598" }
+  },
+  {
+    "id": "halluc-domain-06",
+    "prompt": "Who painted 'The Kiss' (1907-1908) and what is the dominant material in its surface treatment?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Klimt", "gold leaf", "feuille d'or", "Belvedere", "Vienna"] },
+      { "type": "not-icontains", "value": "rodin" }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "medium", "verified": "true", "wikidata": "Q34661" }
+  },
+  {
+    "id": "halluc-domain-07",
+    "prompt": "Quelles sont les couleurs primaires que Piet Mondrian a privilegiees dans ses compositions geometriques ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["rouge", "bleu", "jaune", "noir", "blanc", "neoplasticisme", "De Stijl"] }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "medium", "verified": "true", "wikidata": "Q151803" }
+  },
+  {
+    "id": "halluc-domain-08",
+    "prompt": "Where is the largest Caspar David Friedrich collection held, and which museum owns 'Wanderer above the Sea of Fog'?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Hamburger Kunsthalle", "Hamburg", "Dresden", "Wanderer", "Romanticism"] }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "hard", "verified": "true", "wikidata": "Q104884" }
+  },
+  {
+    "id": "halluc-domain-09",
+    "prompt": "Combien d'œuvres de Van Gogh sont conservees au musee Van Gogh d'Amsterdam, approximativement ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["van gogh museum", "Amsterdam", "200", "peintures", "dessins", "collection"] },
+      { "type": "not-icontains", "value": "prado" }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "hard", "verified": "true", "wikidata": "Q5582" }
+  },
+  {
+    "id": "halluc-domain-10",
+    "prompt": "Which Titian painting is displayed in the Tribuna of the Uffizi Gallery in Florence?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Venus of Urbino", "Uffizi", "Tribuna", "1538", "Titian"] }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "hard", "verified": "partial", "wikidata": "Q47551" }
+  },
+  {
+    "id": "halluc-domain-11",
+    "prompt": "Quel sculpteur a realise le 'David' florentin de 1504, et quel musee l'expose aujourd'hui ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Michel-Ange", "Michelangelo", "Galleria dell'Accademia", "Florence", "marbre"] },
+      { "type": "not-icontains", "value": "bernin" }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "easy", "verified": "true", "wikidata": "Q179900" }
+  },
+  {
+    "id": "halluc-domain-12",
+    "prompt": "What is the founding year of the Louvre as a public museum, and under which political regime was it opened?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["1793", "French Revolution", "Republic", "Louvre"] }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "medium", "verified": "true", "wikidata": "Q19675" }
+  },
+  {
+    "id": "halluc-domain-13",
+    "prompt": "Quel mouvement artistique du XIXe est principalement associe au musee d'Orsay a Paris ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["impressionnisme", "post-impressionnisme", "Orsay", "XIXe", "1848", "1914"] }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "easy", "verified": "true", "wikidata": "Q23402" }
+  },
+  {
+    "id": "halluc-domain-14",
+    "prompt": "Which Egyptian collection in Paris houses the seated scribe and the bust of Akhenaten?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Louvre", "Departement des antiquites egyptiennes", "Egyptian antiquities", "Salle Henri IV"] },
+      { "type": "not-icontains", "value": "british museum" }
+    ],
+    "metadata": { "category": "domain", "language": "en", "difficulty": "hard", "verified": "partial", "wikidata": "Q19675" }
+  },
+  {
+    "id": "halluc-domain-15",
+    "prompt": "Quel est le titre exact en francais du tableau de Caspar David Friedrich representant un homme de dos sur un rocher dans le brouillard ?",
+    "expected_behavior": "return_facts_with_quotes",
+    "assertions": [
+      { "type": "icontains-any", "value": ["Voyageur contemplant", "mer de nuages", "brouillard", "Wanderer", "Hambourg"] }
+    ],
+    "metadata": { "category": "domain", "language": "fr", "difficulty": "hard", "verified": "true", "wikidata": "Q104884" }
+  }
+]

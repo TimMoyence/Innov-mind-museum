@@ -22,6 +22,33 @@ export interface ChatUiEnrichedImage {
 
 import type { components } from '@/shared/api/generated/openapi';
 
+/**
+ * Provenance of a citation source surfaced to the user (C4 citations v2).
+ * Mirrors the BE `CitationSourceType` enum — see
+ * `museum-backend/src/modules/chat/domain/chat.types.ts`.
+ */
+export type CitationSourceType = 'wikidata' | 'web' | 'museum-catalog' | 'commons';
+
+/**
+ * A user-verifiable citation source attached to a factual assistant response
+ * (C4 anti-hallucination citations v2). Rendered as inline `[n]` superscript
+ * + bottom-sheet preview by `<SourceCitation>`. Pre-v1.1 cached responses
+ * may lack this field; readers MUST guard with `metadata?.sources?.length`.
+ *
+ * Shape mirrors BE `CitationSource` interface — verified at parse-time by
+ * `CitationSourceSchema` (Zod). Confidence is optional (absent for KB-direct
+ * sources, present when judge-derived).
+ */
+export interface CitationSource {
+  url: string;
+  type: CitationSourceType;
+  title: string;
+  /** Verbatim NFKC-normalized substring of a fact block fed to the LLM. */
+  quote: string;
+  /** Optional judge-derived confidence (0..1). */
+  confidence?: number;
+}
+
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
   detectedArtwork?: {
@@ -46,6 +73,12 @@ export interface ChatUiMessageMetadata {
    * carousel itself owns the empty-state UX (driven by `fallbackReason`).
    */
   compareResults?: components['schemas']['CompareResult'];
+  /**
+   * Citations v2 — user-verifiable sources rendered as inline `[n]`
+   * superscript + bottom-sheet preview (C4). Hidden when `undefined` or
+   * empty. Numérotation stable: index = position in array starting at 1.
+   */
+  sources?: CitationSource[];
 }
 
 /** UI-layer representation of a single chat message (user, assistant, or system). */
