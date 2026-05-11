@@ -50,6 +50,7 @@ export class MemoryCacheService implements CacheService {
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (this.store.size >= this.maxEntries && !this.store.has(key)) {
       const firstKey = this.store.keys().next().value;
+      // Stryker disable next-line ConditionalExpression: forcing the branch to always-true would call store.delete(undefined), a silent no-op in JS Map, so the mutation is observationally identical to the original guard.
       if (firstKey !== undefined) this.store.delete(firstKey);
     }
 
