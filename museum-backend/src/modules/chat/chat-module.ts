@@ -22,12 +22,14 @@ import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
+import { WikidataBreakerClient } from '@modules/chat/adapters/secondary/search/wikidata-breaker';
 import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
+import { NoopWikidataKbDumpRepository } from '@modules/chat/domain/ports/wikidata-kb-dump.port';
 import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
@@ -225,15 +227,26 @@ export class ChatModule {
 
   /** Creates the knowledge base service (Wikidata, always active in V1). */
   private buildKnowledgeBase(cache?: CacheService): KnowledgeBaseService | undefined {
-    const wikidataClient = new WikidataClient();
+    const wikidataClient = new WikidataClient({ userAgent: env.wikidata.userAgent });
+    // C5.1 — wrap with opossum circuit breaker. Drop-in KnowledgeBaseProvider,
+    // no kill-switch (pré-launch V1 doctrine — rollback via git revert).
+    const wikidataBreaker = new WikidataBreakerClient(wikidataClient, env.knowledgeBase.breaker);
+    // C5.3 — local-dump fallback. Noop until the Phase 4 ingest pipeline ships ;
+    // cascade soak window honored regardless so the wiring is fully exercised.
+    const dumpRepo = new NoopWikidataKbDumpRepository();
     return new KnowledgeBaseService(
-      wikidataClient,
+      wikidataBreaker,
       {
         timeoutMs: env.knowledgeBase.timeoutMs,
         cacheTtlSeconds: env.knowledgeBase.cacheTtlSeconds,
         cacheMaxEntries: env.knowledgeBase.cacheMaxEntries,
+        localDumpFallbackAfterMs: env.knowledgeBase.localDumpFallbackAfterMs,
       },
       cache,
+      {
+        breakerState: () => wikidataBreaker.getState(),
+        dumpRepo,
+      },
     );
   }
 

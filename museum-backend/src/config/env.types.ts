@@ -310,6 +310,28 @@ export interface AppEnv {
     timeoutMs: number;
     cacheTtlSeconds: number;
     cacheMaxEntries: number;
+    /**
+     * Circuit-breaker tuning around the Wikidata SPARQL/API client (C5.1).
+     * No `enabled` flag — rollback is `git revert` of the wiring, doctrine
+     * pré-launch V1 (`feedback_no_feature_flags_prelaunch`).
+     */
+    breaker: {
+      timeoutMs: number;
+      errorThresholdPercentage: number;
+      resetTimeoutMs: number;
+      volumeThreshold: number;
+      capacity: number;
+    };
+    /**
+     * Soak window (ms) the breaker must stay OPEN before the cascade
+     * consults the local Wikidata dump (Step 5.1). Tuning value, not a
+     * switch — `0` means "consult immediately on OPEN".
+     */
+    localDumpFallbackAfterMs: number;
+  };
+  /** Wikidata HTTP client tuning (User-Agent per WMF policy). */
+  wikidata: {
+    userAgent: string;
   };
   /**
    * Nominatim (OpenStreetMap) reverse-geocoding client configuration.
