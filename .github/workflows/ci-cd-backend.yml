@@ -2,17 +2,15 @@ name: backend
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'museum-backend/**'
-      - 'infra/**'
-      - '.github/workflows/ci-cd-backend.yml'
+  # Path filtering moved from workflow-level `on.*.paths` to a job-level `if:`
+  # gated by `dorny/paths-filter` (see `changes` job + `quality.if` below).
+  # Workflow-level path filters left required-status-checks in "Pending"
+  # forever for Renovate PRs that bumped only unrelated workflows; with the
+  # current pattern the workflow always starts and skipped jobs report
+  # `success`, so the required check is satisfied either way.
+  pull_request: {}
   push:
     branches: ['main', 'staging']
-    paths:
-      - 'museum-backend/**'
-      - 'infra/**'
-      - '.github/workflows/ci-cd-backend.yml'
   schedule:
     - cron: '17 3 * * *'
 
@@ -25,8 +23,33 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # ─── 1. Quality gate (always runs) ───────────────────────────────────
+  # ─── 0. Change detection — gates downstream jobs so Renovate PRs that touch
+  #        only unrelated paths skip the heavy work (skipped = success, so
+  #        the required check is satisfied without running tsc/tests).
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'museum-backend/**'
+              - 'infra/**'
+              - '.github/workflows/ci-cd-backend.yml'
+
+  # ─── 1. Quality gate (runs when backend paths change OR on schedule/dispatch) ─
   quality:
+    needs: changes
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
