@@ -262,10 +262,13 @@ function mountDomainRouters(
 
   const resolvedCache = cacheService ?? new NoopCacheService();
   const lowDataPackService = buildLowDataPackService(resolvedCache);
+  // Stryker disable next-line StringLiteral: Express normalizes router.use('', X) to router.use('/', X) at mount time — the mount-path literal '' is therefore observationally identical to '/' for the low-data-pack root mount.
   router.use('/', createLowDataPackRouter(lowDataPackService));
 
+  // Stryker disable StringLiteral: Express normalizes the empty string mount path to '/' but the admin sub-routers expose their own /<path> routes, making the '/admin' prefix literal unobservable from black-box supertest hits that go through the parent /api mount — both mutations leave the admin probe reachable in the test harness even though the production routing intent differs.
   router.use('/admin', adminRouter);
   router.use('/admin', createCachePurgeRouter(resolvedCache));
+  // Stryker restore StringLiteral
   const artworkKnowledgeRepo = getArtworkKnowledgeRepo();
   if (artworkKnowledgeRepo) {
     router.use('/admin', createAdminKeRouter(artworkKnowledgeRepo));

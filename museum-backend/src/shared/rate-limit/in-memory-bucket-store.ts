@@ -80,6 +80,14 @@ export class InMemoryBucketStore<T> {
         this.stopSweep();
       }
     }, this.sweepIntervalMs);
+    // The guard exists for non-Node runtimes (e.g. browser setInterval returns
+    // a number, no .unref). In every supported environment for this backend
+    // (Node + Jest fake timers) both sub-expressions are statically true, so
+    // the `&&` vs `||` distinction and the "always-true" mutants are not
+    // observable from any black-box test — both produce the same single
+    // unref() call. Behaviour-skipping mutants (false, !==, '', empty block)
+    // are killed by the unrefStub test in in-memory-bucket-store.test.ts.
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: defensive guard for non-Node runtimes; in Node setInterval always returns an object with unref, so true/||-flips are observationally identical (see test "invokes unref exactly once").
     if (typeof this.sweepTimer === 'object' && 'unref' in this.sweepTimer) {
       this.sweepTimer.unref();
     }

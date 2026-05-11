@@ -1,26 +1,32 @@
 /**
- * Musaium email layout — single source of truth for the charte graphique.
+ * Musaium email layout — single source of truth for the email charte graphique.
  *
- * Design decisions (see team-state/2026-05-09-emails-charte-graphique/design.md):
+ * Mirrors the mobile app design language (`museum-frontend/shared/ui/`) :
+ * - Pastel header gradient (matches `lightTheme.pageGradient` in `themes.ts`).
+ * - Hosted logo image (`<FRONTEND_URL>/images/logo.png`, mirror of
+ *   `museum-frontend/assets/images/logo.png`).
+ * - Brand voice strings imported from the same i18n keys used in mobile copy
+ *   (translation.json `welcome.subtitle`, `home.hero_title`, etc.).
+ *
+ * Design constraints (NOT mobile but emails-specific):
  * - Table-based layout (Outlook desktop = Word render engine, requires tables).
  * - Inline CSS only, except a single `<style>` block in `<head>` for `@media`
  *   queries (mobile breakpoint) and Outlook fallbacks.
  * - Bulletproof CTA: VML mso conditional for Outlook + standard `<a>` for the rest.
- * - Brand mark: pure typographic "Musaium" with letter-spacing (no SVG → broken
- *   in Outlook desktop ; no hosted image → blocked-by-default in many clients).
- * - Palette pulled from design-system/tokens/colors.ts (primary 500, accent 500,
- *   gold 500, text primary, surface elevated). Hard-coded here to keep the email
- *   module self-contained (design tokens TS not consumed at backend runtime).
+ * - No backdrop-filter / glass effects (not supported by ANY email client).
  *
- * All input strings expected to be either safe-by-construction (server-built URLs,
- * static copy) or pre-escaped via `@shared/email/escape-html` before being passed in.
+ * Color values MIRROR `design-system/tokens/colors.ts` (primary600 used for CTA
+ * because that's what mobile `lightTheme.primary` resolves to). Hard-coded
+ * here because the design-system package is not consumed at backend runtime.
+ * The unit test `tests/unit/shared/email/templates/palette-mirror.test.ts`
+ * guards against drift.
  */
 
 const PALETTE = {
-  brandPrimary: '#2563EB',
-  brandPrimaryDark: '#1D4ED8',
-  brandAccent: '#0EA5E9',
-  brandGold: '#C49A3C',
+  brandPrimary: '#1D4ED8', // primary600 — matches mobile lightTheme.primary
+  brandPrimaryDark: '#1E40AF', // primary700 — gradient end + hover
+  brandAccent: '#0EA5E9', // accent500
+  brandGold: '#C49A3C', // gold500 — cultural highlight
   textPrimary: '#0F172A',
   textSecondary: '#334155',
   textMuted: '#64748B',
@@ -28,9 +34,16 @@ const PALETTE = {
   surfaceElevated: '#F8FAFC',
   surfaceMuted: '#F1F5F9',
   borderSubtle: '#E2E8F0',
+  // Pastel gradient stops mirroring lightTheme.pageGradient
+  // [primaryScale.50, primaryScale.100, gradient.lightEnd]
+  gradientStart: '#EAF2FF', // primary50
+  gradientMid: '#D8E8FF', // primary100
+  gradientEnd: '#D5F0FF', // gradient.lightEnd
 } as const;
 
 const FONT_STACK = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+const DEFAULT_LOGO_URL = 'https://musaium.com/images/logo.png';
 
 /** Input shape for {@link renderEmailLayout}. */
 export interface EmailLayoutInput {
@@ -46,23 +59,23 @@ export interface EmailLayoutInput {
   fallbackUrl?: string;
   /** Hidden inbox preview snippet. Plain text only, ≤120 chars. */
   preheader?: string;
-  /** Locale used for the html lang attribute. */
+  /** Locale used for the html lang attribute and footer copy. */
   locale?: 'fr' | 'en';
   /** Optional context line in the footer ("Why am I receiving this?"). */
   footerNote?: string;
-  /** Accent color for the header band. Default = brandPrimary→brandAccent gradient. */
-  accentColor?: string;
+  /** Override the hosted logo URL. Defaults to `<FRONTEND_URL>/images/logo.png`. */
+  logoUrl?: string;
 }
 
-const FOOTER_COPY: Record<'fr' | 'en', { brand: string; legal: string; sentBy: string }> = {
+const FOOTER_COPY: Record<'fr' | 'en', { tagline: string; legal: string; sentBy: string }> = {
   fr: {
-    brand: "Musaium · L'art se découvre, l'instant se partage.",
+    tagline: 'Votre compagnon de musée personnel',
     legal:
       '© Musaium 2026. Cet email vous a été envoyé automatiquement, merci de ne pas y répondre.',
     sentBy: 'Envoyé par Musaium',
   },
   en: {
-    brand: 'Musaium · Art unfolds, the moment is shared.',
+    tagline: 'Your museum companion',
     legal: '© Musaium 2026. This email was sent automatically — please do not reply.',
     sentBy: 'Sent by Musaium',
   },
@@ -73,23 +86,32 @@ const FALLBACK_PROMPT: Record<'fr' | 'en', string> = {
   en: 'Button not showing? Copy this link:',
 };
 
-const TAGLINE: Record<'fr' | 'en', string> = {
-  fr: "L'art en balade",
-  en: 'Art on the move',
+/**
+ * Compute the hosted logo URL.
+ * Priority: explicit `logoUrl` arg > env `FRONTEND_URL` > musaium.com default.
+ */
+const resolveLogoUrl = (override: string | undefined): string => {
+  if (override) return override;
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (frontendUrl && frontendUrl.trim().length > 0) {
+    return `${frontendUrl.replace(/\/$/, '')}/images/logo.png`;
+  }
+  return DEFAULT_LOGO_URL;
 };
 
 const renderHeadStyle = (): string => `
     <style type="text/css">
       body { margin:0 !important; padding:0 !important; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
       table { border-collapse:collapse !important; mso-table-lspace:0; mso-table-rspace:0; }
-      img { border:0; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
+      img { border:0; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; display:block; }
       a { text-decoration:none; }
       a[x-apple-data-detectors] { color:inherit !important; text-decoration:none !important; }
       @media screen and (max-width: 600px) {
         .musaium-card { width:100% !important; max-width:100% !important; border-radius:0 !important; }
-        .musaium-card-inner { padding:28px 20px !important; }
-        .musaium-band-inner { padding:28px 20px !important; }
-        .musaium-brand { font-size:24px !important; letter-spacing:0.18em !important; }
+        .musaium-card-inner { padding:28px 22px !important; }
+        .musaium-band-inner { padding:32px 22px 28px 22px !important; }
+        .musaium-logo { width:72px !important; height:72px !important; }
+        .musaium-tagline { font-size:13px !important; }
         .musaium-heading { font-size:22px !important; line-height:1.3 !important; }
         .musaium-body-text { font-size:15px !important; line-height:1.65 !important; }
       }
@@ -111,14 +133,14 @@ const renderCtaBlock = (
                   <![endif]-->
                   <!--[if !mso]><!-- -->
                   <a href="${ctaUrl}"
-                     style="display:inline-block;background-color:${PALETTE.brandPrimary};background-image:linear-gradient(135deg,${PALETTE.brandPrimary} 0%,${PALETTE.brandPrimaryDark} 100%);color:#ffffff;text-decoration:none;font-family:${FONT_STACK};font-size:16px;font-weight:600;line-height:48px;padding:0 32px;border-radius:8px;letter-spacing:0.01em;mso-hide:all;">
+                     style="display:inline-block;background-color:${PALETTE.brandPrimary};background-image:linear-gradient(135deg,${PALETTE.brandPrimary} 0%,${PALETTE.brandPrimaryDark} 100%);color:#ffffff;text-decoration:none;font-family:${FONT_STACK};font-size:16px;font-weight:600;line-height:48px;padding:0 32px;border-radius:10px;letter-spacing:0.01em;mso-hide:all;">
                     ${ctaLabel}
                   </a>
                   <!--<![endif]-->
                 </td>
               </tr>
               <tr>
-                <td align="center" style="padding:16px 0 0 0;font-family:${FONT_STACK};font-size:13px;color:${PALETTE.textMuted};line-height:1.5;">
+                <td align="center" style="padding:18px 0 0 0;font-family:${FONT_STACK};font-size:13px;color:${PALETTE.textMuted};line-height:1.5;">
                   ${fallbackPrompt}<br/>
                   <a href="${fallbackUrl}" style="color:${PALETTE.brandPrimary};word-break:break-all;text-decoration:underline;">${fallbackUrl}</a>
                 </td>
@@ -126,7 +148,7 @@ const renderCtaBlock = (
 
 const renderFooterNote = (note: string): string => `
               <tr>
-                <td align="center" style="padding:0 0 12px 0;font-family:${FONT_STACK};font-size:12px;color:${PALETTE.textMuted};line-height:1.55;">
+                <td align="center" style="padding:0 0 14px 0;font-family:${FONT_STACK};font-size:12px;color:${PALETTE.textMuted};line-height:1.55;">
                   ${note}
                 </td>
               </tr>`;
@@ -150,11 +172,11 @@ const renderHead = (): string => `  <head>
     ${renderHeadStyle()}
   </head>`;
 
-const renderHeaderBand = (accent: string, tagline: string): string => `
+const renderHeaderBand = (logoUrl: string, tagline: string): string => `
             <tr>
-              <td class="musaium-band-inner" align="center" style="background-color:${accent};background-image:linear-gradient(135deg,${PALETTE.brandPrimary} 0%,${PALETTE.brandAccent} 100%);padding:36px 32px 32px 32px;">
-                <div class="musaium-brand" style="font-family:${FONT_STACK};font-size:28px;font-weight:700;letter-spacing:0.22em;color:#ffffff;text-transform:uppercase;line-height:1;">Musaium</div>
-                <div style="font-family:${FONT_STACK};font-size:13px;font-weight:400;letter-spacing:0.08em;color:rgba(255,255,255,0.85);margin-top:8px;text-transform:uppercase;">${tagline}</div>
+              <td class="musaium-band-inner" align="center" style="background-color:${PALETTE.gradientMid};background-image:linear-gradient(160deg,${PALETTE.gradientStart} 0%,${PALETTE.gradientMid} 50%,${PALETTE.gradientEnd} 100%);padding:40px 32px 32px 32px;">
+                <img src="${logoUrl}" alt="Musaium" width="88" height="88" class="musaium-logo" style="width:88px;height:88px;border-radius:18px;display:block;margin:0 auto;" />
+                <div class="musaium-tagline" style="font-family:${FONT_STACK};font-size:14px;font-weight:500;letter-spacing:0.04em;color:${PALETTE.textSecondary};margin-top:18px;">${tagline}</div>
               </td>
             </tr>`;
 
@@ -170,7 +192,7 @@ const renderBodyCard = (heading: string, bodyHtml: string, ctaTable: string): st
             </tr>`;
 
 const renderFooterCard = (
-  footerCopy: { brand: string; legal: string; sentBy: string },
+  footerCopy: { tagline: string; legal: string; sentBy: string },
   footerNoteBlock: string,
 ): string => `
             <tr>
@@ -183,7 +205,7 @@ const renderFooterCard = (
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   ${footerNoteBlock}
                   <tr>
-                    <td align="center" style="padding:0 0 6px 0;font-family:${FONT_STACK};font-size:13px;font-weight:500;color:${PALETTE.textSecondary};letter-spacing:0.01em;">${footerCopy.brand}</td>
+                    <td align="center" style="padding:0 0 6px 0;font-family:${FONT_STACK};font-size:13px;font-weight:500;color:${PALETTE.textSecondary};letter-spacing:0.01em;">${footerCopy.tagline}</td>
                   </tr>
                   <tr>
                     <td align="center" style="font-family:${FONT_STACK};font-size:11px;color:${PALETTE.textMuted};line-height:1.55;">${footerCopy.legal}</td>
@@ -214,15 +236,15 @@ const buildCtaTable = (
 
 /**
  * Render the full HTML document for an email built on the Musaium charte.
- * Combines header band, body card with optional CTA, and footer with brand mention.
+ * Combines pastel header band with hosted logo, body card with optional CTA,
+ * and footer with brand mention.
  */
 export function renderEmailLayout(input: EmailLayoutInput): string {
   const locale = input.locale ?? 'en';
   const footer = FOOTER_COPY[locale];
-  const tagline = TAGLINE[locale];
   const fallbackPrompt = FALLBACK_PROMPT[locale];
   const preheader = input.preheader ?? '';
-  const accent = input.accentColor ?? PALETTE.brandPrimary;
+  const logoUrl = resolveLogoUrl(input.logoUrl);
   const fallbackUrl = input.fallbackUrl ?? input.ctaUrl ?? '';
   const ctaTable = buildCtaTable(input.ctaLabel, input.ctaUrl, fallbackUrl, fallbackPrompt);
   const footerNoteBlock = input.footerNote ? renderFooterNote(input.footerNote) : '';
@@ -235,7 +257,7 @@ ${renderHead()}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PALETTE.surfaceMuted};">
       <tr>
         <td align="center" style="padding:32px 16px 32px 16px;">
-          <table role="presentation" class="musaium-card" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:${PALETTE.surfaceDefault};border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.06);">${renderHeaderBand(accent, tagline)}${renderBodyCard(input.heading, input.bodyHtml, ctaTable)}${renderFooterCard(footer, footerNoteBlock)}
+          <table role="presentation" class="musaium-card" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:${PALETTE.surfaceDefault};border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.06);">${renderHeaderBand(logoUrl, footer.tagline)}${renderBodyCard(input.heading, input.bodyHtml, ctaTable)}${renderFooterCard(footer, footerNoteBlock)}
           </table>${renderOuterFooter(footer.sentBy)}
         </td>
       </tr>

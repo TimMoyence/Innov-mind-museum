@@ -22,6 +22,7 @@ export const extractAddress = (tags: Record<string, string> | undefined): string
 
 /** Maps an OSM `museum` tag value to a normalized category. */
 export const classifyMuseumType = (tags: Record<string, string> | undefined): MuseumCategory => {
+  // Stryker disable next-line StringLiteral: the fallback value is unobservable — any non-matching string lowercases to a value that fails every includes() check below and yields 'general'.
   const raw = tags?.museum ?? tags?.subject ?? '';
   const lower = raw.toLowerCase();
 

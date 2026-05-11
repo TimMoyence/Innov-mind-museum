@@ -21,8 +21,8 @@ const COPY: Record<
   }
 > = {
   fr: {
-    heading: 'Confirmez votre nouvelle adresse email',
-    preheader: "Confirmez le changement d'email de votre compte Musaium.",
+    heading: "Changement d'adresse email",
+    preheader: 'Confirmez votre nouvelle adresse email Musaium.',
     lead: "Vous avez demandé à changer l'adresse email de votre compte Musaium. Confirmez en cliquant sur le bouton ci-dessous.",
     expires: 'Ce lien est valable 1 heure pour des raisons de sécurité.',
     ignored:
@@ -32,8 +32,8 @@ const COPY: Record<
       "Vous recevez cet email parce qu'un changement d'adresse a été demandé sur ce compte.",
   },
   en: {
-    heading: 'Confirm your new email',
-    preheader: 'Confirm the email change for your Musaium account.',
+    heading: 'Email address change',
+    preheader: 'Confirm your new Musaium email address.',
     lead: 'You requested to change the email address of your Musaium account. Confirm by clicking the button below.',
     expires: 'This link is valid for 1 hour for security reasons.',
     ignored:

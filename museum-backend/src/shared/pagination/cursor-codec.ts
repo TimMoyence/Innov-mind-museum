@@ -9,6 +9,7 @@ export class CursorCodec<T> {
 
   /** Encodes a cursor value to a Base64URL string. */
   encode(value: T): string {
+    // Stryker disable next-line StringLiteral: Node 22 Buffer.from(str, '') silently defaults to utf8 — the literal value is observationally inert and every test round-trip stays green either way.
     return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
   }
 

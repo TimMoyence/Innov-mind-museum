@@ -9,6 +9,11 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { logger: mockedLogger } = require('@shared/logger/logger') as {
+  logger: { warn: jest.Mock; info: jest.Mock; error: jest.Mock };
+};
+
 const SAMPLE_OSM_RESPONSE = {
   elements: [
     {
@@ -216,6 +221,132 @@ describe('createCachedOverpassClient', () => {
       expect(fetchMock).not.toHaveBeenCalled();
 
       randomSpy.mockRestore();
+    });
+  });
+
+  describe('no-cache-key path', () => {
+    it('bypasses cache.get / cache.set entirely and calls live when params yield no cache key', async () => {
+      const cache = makeCache();
+      const client = createCachedOverpassClient(cache);
+
+      // No bbox and partial coords → buildOverpassCacheKey returns null.
+      const result = await client({ lat: 48.86, lng: 2.34 });
+
+      expect(result).toEqual([]);
+      expect(cache.get).not.toHaveBeenCalled();
+      expect(cache.set).not.toHaveBeenCalled();
+      // Live path is queryOverpassMuseums which also short-circuits on missing
+      // radius — and importantly must NOT have hit fetch.
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('bypasses cache.get / cache.set entirely when called with an empty params object', async () => {
+      const cache = makeCache();
+      const client = createCachedOverpassClient(cache);
+
+      const result = await client({});
+
+      expect(result).toEqual([]);
+      expect(cache.get).not.toHaveBeenCalled();
+      expect(cache.set).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cache.set failure path', () => {
+    it('serves the live result and logs a warn when cache.set throws', async () => {
+      const setError = new Error('redis write down');
+      const cache = makeCache({
+        set: jest.fn().mockRejectedValue(setError),
+      });
+      const client = createCachedOverpassClient(cache);
+
+      mockedLogger.warn.mockClear();
+
+      const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
+
+      // Live result MUST still be returned despite the cache write blowing up.
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ name: 'Louvre', museumType: 'art' });
+      expect(cache.set).toHaveBeenCalledTimes(1);
+
+      // Exact message + context shape — pins the StringLiteral + ObjectLiteral mutants.
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Overpass cache write failed, serving live result',
+        expect.objectContaining({
+          error: 'redis write down',
+          cacheKey: 'overpass:nearby:48.861:2.338:5.0',
+        }),
+      );
+    });
+
+    it('stringifies non-Error throwables from cache.set in the warn context', async () => {
+      const cache = makeCache({
+        set: jest.fn().mockRejectedValue('plain-string-failure'),
+      });
+      const client = createCachedOverpassClient(cache);
+
+      mockedLogger.warn.mockClear();
+
+      const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
+
+      expect(result).toHaveLength(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Overpass cache write failed, serving live result',
+        expect.objectContaining({
+          error: 'plain-string-failure',
+          cacheKey: 'overpass:nearby:48.861:2.338:5.0',
+        }),
+      );
+    });
+  });
+
+  describe('cache.get failure path', () => {
+    // Kills L169 BlockStatement (catch body empty) + L170 StringLiteral
+    // ('Overpass cache read failed, falling back to live') on the cache.get
+    // try/catch. Original logs a warn with the exact message + cacheKey.
+    it('falls back to live result and logs a warn when cache.get throws', async () => {
+      const getError = new Error('redis read down');
+      const cache = makeCache({
+        get: jest.fn().mockRejectedValue(getError),
+      });
+      const client = createCachedOverpassClient(cache);
+
+      mockedLogger.warn.mockClear();
+
+      const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
+
+      // Live fetch must still succeed.
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ name: 'Louvre', museumType: 'art' });
+      expect(cache.get).toHaveBeenCalledTimes(1);
+
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Overpass cache read failed, falling back to live',
+        expect.objectContaining({
+          error: 'redis read down',
+          cacheKey: 'overpass:nearby:48.861:2.338:5.0',
+        }),
+      );
+    });
+
+    it('stringifies non-Error throwables from cache.get in the warn context', async () => {
+      const cache = makeCache({
+        get: jest.fn().mockRejectedValue('plain-string-read-failure'),
+      });
+      const client = createCachedOverpassClient(cache);
+
+      mockedLogger.warn.mockClear();
+
+      await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
+
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Overpass cache read failed, falling back to live',
+        expect.objectContaining({
+          error: 'plain-string-read-failure',
+          cacheKey: 'overpass:nearby:48.861:2.338:5.0',
+        }),
+      );
     });
   });
 });

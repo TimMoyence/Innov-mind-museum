@@ -36,7 +36,7 @@ describe('renderEmailLayout', () => {
     });
     expect(html).toContain('Click me');
     expect(html).toContain('https://example.com/x');
-    expect(html).toContain('#2563EB');
+    expect(html).toContain('#1D4ED8');
   });
 
   it('renders plaintext fallback link below the CTA', () => {
@@ -53,7 +53,7 @@ describe('renderEmailLayout', () => {
 
   it('does NOT render CTA when ctaLabel or ctaUrl missing', () => {
     const html = renderEmailLayout({ heading: 'h', bodyHtml: '<p>x</p>' });
-    expect(html).not.toContain('display:inline-block;background-color:#2563EB');
+    expect(html).not.toContain('display:inline-block;background-color:#1D4ED8');
   });
 
   it('renders the hidden preheader for inbox preview', () => {
@@ -93,13 +93,24 @@ describe('renderEmailLayout', () => {
     expect(html).toContain('Why am I receiving this?');
   });
 
-  it('uses the custom accentColor when provided', () => {
+  it('renders the pastel header gradient (matches mobile lightTheme.pageGradient)', () => {
+    const html = renderEmailLayout({ heading: 'h', bodyHtml: '<p>x</p>' });
+    expect(html).toContain('#EAF2FF');
+    expect(html).toContain('#D5F0FF');
+  });
+
+  it('embeds a hosted logo image with alt text', () => {
+    const html = renderEmailLayout({ heading: 'h', bodyHtml: '<p>x</p>' });
+    expect(html).toMatch(/<img[^>]+src="[^"]+\/images\/logo\.png"[^>]+alt="Musaium"/);
+  });
+
+  it('honours the logoUrl override when provided', () => {
     const html = renderEmailLayout({
       heading: 'h',
       bodyHtml: '<p>x</p>',
-      accentColor: '#C49A3C',
+      logoUrl: 'https://cdn.example.com/custom-logo.png',
     });
-    expect(html).toContain('#C49A3C');
+    expect(html).toContain('https://cdn.example.com/custom-logo.png');
   });
 
   it('embeds a mobile @media query for responsive rendering', () => {

@@ -1,12 +1,21 @@
 import { reverseGeocodeWithNominatim } from '@shared/http/nominatim.client';
+import { logger } from '@shared/logger/logger';
 
-// Suppress logger output during tests
+// Suppress + spy logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
+const mockedLogger = logger as jest.Mocked<typeof logger>;
+
 describe('reverseGeocodeWithNominatim', () => {
   const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    mockedLogger.warn.mockClear();
+    mockedLogger.info.mockClear();
+    mockedLogger.error.mockClear();
+  });
 
   afterEach(() => {
     global.fetch = originalFetch;
@@ -37,6 +46,7 @@ describe('reverseGeocodeWithNominatim', () => {
     expect(result!.address.city).toBe('Paris');
     expect(result!.address.country).toBe('France');
     expect(result!.address.suburb).toBe('Paris Centre');
+    expect(mockedLogger.warn).not.toHaveBeenCalled();
   });
 
   it('falls back to town when city is absent', async () => {
@@ -76,7 +86,7 @@ describe('reverseGeocodeWithNominatim', () => {
     expect(result!.address.city).toBe('Tiny Village');
   });
 
-  it('returns null when response is not OK', async () => {
+  it('returns null on non-OK 429 response and logs the warning with status + statusText', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 429,
@@ -86,6 +96,32 @@ describe('reverseGeocodeWithNominatim', () => {
     const result = await reverseGeocodeWithNominatim(48.8606, 2.3376);
 
     expect(result).toBeNull();
+    // Kills:
+    //  - BlockStatement {} mutation on the if-block (line 260)
+    //  - StringLiteral '' mutation on the warn event name (line 261)
+    //  - ObjectLiteral {} mutation on the warn payload (line 261)
+    expect(mockedLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      'Nominatim reverse API returned non-OK status',
+      expect.objectContaining({ status: 429, statusText: 'Too Many Requests' }),
+    );
+  });
+
+  it('returns null on non-OK 503 response and propagates the 503 + statusText to the log payload', async () => {
+    // Boundary test to lock the payload field identities (status vs statusText).
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+    });
+
+    const result = await reverseGeocodeWithNominatim(48.8606, 2.3376);
+
+    expect(result).toBeNull();
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      'Nominatim reverse API returned non-OK status',
+      expect.objectContaining({ status: 503, statusText: 'Service Unavailable' }),
+    );
   });
 
   it('returns null when display_name is empty', async () => {
@@ -100,23 +136,118 @@ describe('reverseGeocodeWithNominatim', () => {
     const result = await reverseGeocodeWithNominatim(48.8606, 2.3376);
 
     expect(result).toBeNull();
+    expect(mockedLogger.warn).not.toHaveBeenCalled();
   });
 
-  it('returns null on fetch error', async () => {
+  // Kills L212/L216/L217 OptionalChaining mutations on `data.address?.city` /
+  // `data.address?.road` / `data.address?.neighbourhood`: dropping the `?.`
+  // throws TypeError when the response omits the `address` field entirely.
+  // The original safely maps every address field to undefined and still
+  // returns the typed result with the display_name.
+  it('returns a partial result when the response omits the address field', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        display_name: 'Standalone display name with no address sub-object',
+      }),
+    });
+
+    const result = await reverseGeocodeWithNominatim(48.8606, 2.3376);
+
+    expect(result).not.toBeNull();
+    expect(result?.displayName).toBe('Standalone display name with no address sub-object');
+    expect(result?.address.city).toBeUndefined();
+    expect(result?.address.road).toBeUndefined();
+    expect(result?.address.neighbourhood).toBeUndefined();
+    expect(result?.address.country).toBeUndefined();
+    expect(result?.name).toBeUndefined();
+  });
+
+  it('returns null on fetch error and logs the warning with error message + lat + lng', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
 
     const result = await reverseGeocodeWithNominatim(48.8606, 2.3376);
 
     expect(result).toBeNull();
+    // Kills:
+    //  - StringLiteral '' mutation on the catch warn event name (line 271)
+    //  - ObjectLiteral {} mutation on the catch warn payload (line 271)
+    expect(mockedLogger.warn).toHaveBeenCalledTimes(1);
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      'Nominatim reverse geocoding failed',
+      expect.objectContaining({
+        error: 'Network error',
+        lat: 48.8606,
+        lng: 2.3376,
+      }),
+    );
   });
 
-  it('returns null on abort (timeout simulation)', async () => {
+  it('stringifies a non-Error rejection when logging the catch payload', async () => {
+    global.fetch = jest.fn().mockRejectedValue('reverse-boom');
+
+    const result = await reverseGeocodeWithNominatim(12.34, 56.78);
+
+    expect(result).toBeNull();
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      'Nominatim reverse geocoding failed',
+      expect.objectContaining({
+        error: 'reverse-boom',
+        lat: 12.34,
+        lng: 56.78,
+      }),
+    );
+  });
+
+  it('returns null on abort (timeout simulation) and logs the abort error', async () => {
     global.fetch = jest.fn().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
 
     const result = await reverseGeocodeWithNominatim(48.8606, 2.3376, 100);
 
     expect(result).toBeNull();
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
+      'Nominatim reverse geocoding failed',
+      expect.objectContaining({
+        error: expect.stringContaining('Aborted'),
+        lat: 48.8606,
+        lng: 2.3376,
+      }),
+    );
   });
+
+  it('aborts the in-flight reverse fetch via AbortController when the timeout fires', async () => {
+    // Kills the BlockStatement mutation on the reverse setTimeout callback
+    // body (line 243): emptying `controller.abort()` would prevent abort.
+    //
+    // NOTE: the source `await rateLimiter.acquire()`s (~1s OSMF spacing)
+    // BEFORE invoking fetch, so by the time our mock receives the signal it
+    // is already aborted. We therefore check `signal.aborted` synchronously
+    // (real fetch does the same) AND wire an abort listener for the rare
+    // case where the signal is not yet aborted when the listener attaches.
+    let capturedSignal: AbortSignal | undefined;
+    let resolveFetch!: (value: unknown) => void;
+
+    global.fetch = jest.fn().mockImplementation((_url: unknown, init?: RequestInit) => {
+      capturedSignal = init?.signal ?? undefined;
+      return new Promise((resolve, reject) => {
+        resolveFetch = resolve;
+        if (capturedSignal?.aborted) {
+          reject(new DOMException('The operation was aborted', 'AbortError'));
+          return;
+        }
+        capturedSignal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted', 'AbortError'));
+        });
+      });
+    });
+
+    const result = await reverseGeocodeWithNominatim(48.8606, 2.3376, 10);
+
+    expect(result).toBeNull();
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal!.aborted).toBe(true);
+    resolveFetch?.({ ok: true, json: async () => ({ display_name: '', address: {} }) });
+  }, 15_000);
 
   it('sets name to undefined when response has no name', async () => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -156,6 +287,10 @@ describe('reverseGeocodeWithNominatim', () => {
     expect(calledUrl.searchParams.get('format')).toBe('json');
     expect(calledUrl.searchParams.get('addressdetails')).toBe('1');
     expect(calledUrl.searchParams.get('zoom')).toBe('18');
+
+    // Verify fetch is called with the GET method explicitly.
+    const calledOptions = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit;
+    expect(calledOptions.method).toBe('GET');
   });
 
   it('sends a User-Agent header matching the OSMF-compliant format', async () => {

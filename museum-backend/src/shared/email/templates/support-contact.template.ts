@@ -15,7 +15,7 @@ export interface SupportContactEmailInput {
 
 const renderFieldRow = (label: string, value: string): string => `
     <tr>
-      <td style="padding:6px 12px 6px 0;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0F172A;letter-spacing:0.02em;text-transform:uppercase;width:140px;vertical-align:top;">${label}</td>
+      <td style="padding:6px 12px 6px 0;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;font-weight:600;color:#0F172A;letter-spacing:0.04em;text-transform:uppercase;width:140px;vertical-align:top;">${label}</td>
       <td style="padding:6px 0;font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#334155;word-break:break-word;">${value}</td>
     </tr>
   `;
@@ -33,12 +33,12 @@ export function buildSupportContactEmail(input: SupportContactEmailInput): strin
     <p style="margin:0 0 20px 0;color:#334155;">A new contact request just landed in the public support form.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin:0 0 24px 0;">
       ${renderFieldRow('Name', safeName)}
-      ${renderFieldRow('Email', `<a href="mailto:${safeEmail}" style="color:#2563EB;text-decoration:underline;">${safeEmail}</a>`)}
+      ${renderFieldRow('Email', `<a href="mailto:${safeEmail}" style="color:#1D4ED8;text-decoration:underline;">${safeEmail}</a>`)}
       ${renderFieldRow('Request ID', `<code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#475569;">${safeRequestId}</code>`)}
       ${renderFieldRow('IP', `<code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#475569;">${safeIp}</code>`)}
       ${renderFieldRow('User-Agent', `<span style="font-size:12px;color:#64748B;line-height:1.5;">${safeUserAgent}</span>`)}
     </table>
-    <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;color:#0F172A;letter-spacing:0.02em;text-transform:uppercase;margin-bottom:8px;">Message</div>
+    <div style="font-family:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;font-weight:600;color:#0F172A;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">Message</div>
     <div style="background-color:#FFFFFF;border-left:3px solid #C49A3C;padding:14px 18px;border-radius:0 8px 8px 0;font-size:15px;line-height:1.65;color:#0F172A;">
       ${safeMessage}
     </div>
@@ -49,7 +49,6 @@ export function buildSupportContactEmail(input: SupportContactEmailInput): strin
     bodyHtml,
     preheader: `${safeName} via the public contact form`,
     locale: 'en',
-    accentColor: '#C49A3C',
     footerNote: 'Internal notification — do not forward outside the support team.',
   });
 }

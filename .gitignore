@@ -33,6 +33,8 @@
 !docs/incidents/**
 !docs/RUNBOOKS/
 !docs/RUNBOOKS/**
+!docs/plans/
+!docs/plans/**
 !docs/MIGRATION_GOVERNANCE.md
 !docs/CAPACITY_PLAN.md
 !docs/SLO.md
