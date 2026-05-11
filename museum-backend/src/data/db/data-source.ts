@@ -9,6 +9,7 @@ import { TotpSecret } from '@modules/auth/domain/totp/totp-secret.entity';
 import { User } from '@modules/auth/domain/user/user.entity';
 import { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
+import { WikidataKbDump } from '@modules/chat/domain/knowledge/wikidata-kb-dump.entity';
 import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageFeedback } from '@modules/chat/domain/message/messageFeedback.entity';
@@ -55,6 +56,7 @@ export const AppDataSource = new DataSource({
     MessageFeedback,
     MessageReport,
     UserMemory,
+    WikidataKbDump,
     AuditLog,
     Museum,
     MuseumQaSeed,

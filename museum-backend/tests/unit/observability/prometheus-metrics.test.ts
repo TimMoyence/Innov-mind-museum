@@ -6,6 +6,13 @@ import {
   chatPhaseDurationSeconds,
   chatRequestDurationSeconds,
   chatPhaseErrorsTotal,
+  wikidataSparqlCircuitState,
+  wikidataSparqlRequestsTotal,
+  wikidataSparqlRequestDurationSeconds,
+  wikidataCacheHitsTotal,
+  wikidataCacheMissesTotal,
+  wikidataLocalDumpHitsTotal,
+  wikidataLocalDumpMissesTotal,
   renderMetrics,
   registry,
   enableDefaultMetrics,
@@ -120,5 +127,76 @@ describe('prometheus-metrics', () => {
     // Calling twice should not throw nor double-register collectors.
     enableDefaultMetrics();
     expect(() => enableDefaultMetrics()).not.toThrow();
+  });
+
+  // C5 Phase 6.2 — Wikidata resilience metrics. The breaker emits state +
+  // outcome + duration ; the KnowledgeBaseService emits cache + dump
+  // hit/miss counters. All low-cardinality (state ∈ 3, outcome ∈ 5, no
+  // search-term / qid labels).
+
+  it('wikidata_sparql_circuit_state exposes the state label', async () => {
+    wikidataSparqlCircuitState.set({ state: 'closed' }, 1);
+    wikidataSparqlCircuitState.set({ state: 'open' }, 0);
+    wikidataSparqlCircuitState.set({ state: 'half_open' }, 0);
+    const body = await renderMetrics();
+    expect(body).toContain('# HELP wikidata_sparql_circuit_state');
+    expect(body).toContain('# TYPE wikidata_sparql_circuit_state gauge');
+    expect(body).toContain('wikidata_sparql_circuit_state{state="closed"} 1');
+    expect(body).toContain('wikidata_sparql_circuit_state{state="open"} 0');
+    expect(body).toContain('wikidata_sparql_circuit_state{state="half_open"} 0');
+  });
+
+  it('wikidata_sparql_requests_total carries the outcome label', async () => {
+    wikidataSparqlRequestsTotal.inc({ outcome: 'success' });
+    wikidataSparqlRequestsTotal.inc({ outcome: 'error' });
+    wikidataSparqlRequestsTotal.inc({ outcome: 'timeout' });
+    wikidataSparqlRequestsTotal.inc({ outcome: 'circuit_open' });
+    wikidataSparqlRequestsTotal.inc({ outcome: 'rate_limit' });
+    const body = await renderMetrics();
+    expect(body).toContain('# TYPE wikidata_sparql_requests_total counter');
+    expect(body).toContain('wikidata_sparql_requests_total{outcome="success"} 1');
+    expect(body).toContain('wikidata_sparql_requests_total{outcome="error"} 1');
+    expect(body).toContain('wikidata_sparql_requests_total{outcome="timeout"} 1');
+    expect(body).toContain('wikidata_sparql_requests_total{outcome="circuit_open"} 1');
+    expect(body).toContain('wikidata_sparql_requests_total{outcome="rate_limit"} 1');
+  });
+
+  it('wikidata_sparql_request_duration_seconds exposes the configured buckets', async () => {
+    wikidataSparqlRequestDurationSeconds.observe(0.06);
+    wikidataSparqlRequestDurationSeconds.observe(0.4);
+    wikidataSparqlRequestDurationSeconds.observe(35);
+    const body = await renderMetrics();
+    expect(body).toContain('# TYPE wikidata_sparql_request_duration_seconds histogram');
+    const bucketBoundaries = ['0.05', '0.1', '0.25', '0.5', '1', '2', '5', '10', '30', '60'];
+    for (const le of bucketBoundaries) {
+      expect(body).toContain(`wikidata_sparql_request_duration_seconds_bucket{le="${le}"}`);
+    }
+    // Sanity-check the cumulative bucket assignment. Bracket-bracket regex
+    // tolerates the trailing-comma quirk in prom-client's output for
+    // labelless histograms across versions.
+    expect(body).toMatch(/wikidata_sparql_request_duration_seconds_bucket\{le="0\.05",?\}\s+0/);
+    expect(body).toMatch(/wikidata_sparql_request_duration_seconds_bucket\{le="\+Inf",?\}\s+3/);
+  });
+
+  it('wikidata_cache_hits_total / wikidata_cache_misses_total increment without labels', async () => {
+    wikidataCacheHitsTotal.inc();
+    wikidataCacheHitsTotal.inc();
+    wikidataCacheMissesTotal.inc();
+    const body = await renderMetrics();
+    expect(body).toContain('# TYPE wikidata_cache_hits_total counter');
+    expect(body).toContain('# TYPE wikidata_cache_misses_total counter');
+    expect(body).toMatch(/wikidata_cache_hits_total\s+2\b/);
+    expect(body).toMatch(/wikidata_cache_misses_total\s+1\b/);
+  });
+
+  it('wikidata_local_dump_hits_total / wikidata_local_dump_misses_total increment without labels', async () => {
+    wikidataLocalDumpHitsTotal.inc();
+    wikidataLocalDumpMissesTotal.inc();
+    wikidataLocalDumpMissesTotal.inc();
+    const body = await renderMetrics();
+    expect(body).toContain('# TYPE wikidata_local_dump_hits_total counter');
+    expect(body).toContain('# TYPE wikidata_local_dump_misses_total counter');
+    expect(body).toMatch(/wikidata_local_dump_hits_total\s+1\b/);
+    expect(body).toMatch(/wikidata_local_dump_misses_total\s+2\b/);
   });
 });

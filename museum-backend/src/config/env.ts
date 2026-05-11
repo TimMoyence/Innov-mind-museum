@@ -282,6 +282,21 @@ const env: AppEnv = {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
+    // C5.1 Wikidata circuit-breaker tuning — no *_ENABLED switch (pré-launch V1 doctrine).
+    breaker: {
+      timeoutMs: toNumber(process.env.WIKIDATA_CB_TIMEOUT_MS, 5000),
+      errorThresholdPercentage: toNumber(process.env.WIKIDATA_CB_ERROR_THRESHOLD_PCT, 50),
+      resetTimeoutMs: toNumber(process.env.WIKIDATA_CB_RESET_TIMEOUT_MS, 30000),
+      volumeThreshold: toNumber(process.env.WIKIDATA_CB_VOLUME_THRESHOLD, 5),
+      capacity: toNumber(process.env.WIKIDATA_CB_CAPACITY, 5),
+    },
+    // C5.3 cascade — soak window before falling back to the local dump.
+    localDumpFallbackAfterMs: toNumber(process.env.LOCAL_DUMP_FALLBACK_AFTER_MS, 60_000),
+  },
+  wikidata: {
+    userAgent:
+      toOptionalString(process.env.WIKIDATA_USER_AGENT) ||
+      'Musaium/1.0 (https://musaium.app; contact@musaium.app)',
   },
   // C4.1 (2026-05-11) — KnowledgeRouter tuning. TUNING-ONLY block: there is NO
   // `*_ENABLED` flag here and none can be added (D11 / pré-launch V1 doctrine

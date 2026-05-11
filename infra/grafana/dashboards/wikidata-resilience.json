@@ -1,0 +1,266 @@
+{
+  "title": "Wikidata Résilience (C5)",
+  "uid": "wikidata-resilience",
+  "tags": ["musaium", "chat", "knowledge-base", "wikidata", "c5"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "musaium-prometheus"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "${datasource}",
+        "enable": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "titleFormat": "Deploy",
+        "target": {
+          "expr": "changes(process_start_time_seconds{service=\"musaium-backend\"}[1m]) > 0",
+          "refId": "Anno"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Circuit state",
+      "description": "Live state of the WikidataBreakerClient (opossum 9.x). Green = closed (nominal). Yellow = half_open (probing recovery). Red = open (Wikidata is being shielded ; the cascade is gating the local dump fallback after the LOCAL_DUMP_FALLBACK_AFTER_MS soak window). Source: wikidata_sparql_circuit_state gauge — exactly one of {closed, open, half_open} carries value 1 at any time.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "off", "color": "text" } } },
+            { "type": "value", "options": { "1": { "text": "ACTIVE", "color": "background" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "text", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "closed" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "text", "value": null },
+                    { "color": "green", "value": 1 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "half_open" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "text", "value": null },
+                    { "color": "yellow", "value": 1 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (state) (wikidata_sparql_circuit_state)",
+          "legendFormat": "{{state}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request outcomes per minute",
+      "description": "Throughput of WikidataBreakerClient.lookup() partitioned by terminal outcome. success = inner client returned (facts or legitimate null). error = transient 5xx/network/4xx-non-rate-limit. timeout = opossum per-call timeout (>5s by default). circuit_open = breaker rejected the call without invoking the inner client. rate_limit = HTTP 429 from Wikidata (we are over their fair-use threshold).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "stacking": { "mode": "normal" },
+            "fillOpacity": 30
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "lastNotNull", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(wikidata_sparql_requests_total[1m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "SPARQL request latency (p50 / p95 / p99)",
+      "description": "Wikidata SPARQL latency derived from wikidata_sparql_request_duration_seconds_bucket. Histogram covers successful calls AND failed calls that the action ran end-to-end ; circuit_open rejects do NOT observe (action never ran). Thresholds line up with the WikidataSparqlLatencyP95High alert (p95 > 0.5s for 15m → warning).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(wikidata_sparql_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(wikidata_sparql_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(wikidata_sparql_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "KB cache hit rate (5m window)",
+      "description": "Share of KnowledgeBaseService.lookupFacts() calls served from the Redis cache vs. those that fell through to the provider. Closer to 1.0 = good (cache absorbs most repeat lookups). Drops correlate with new artwork queries hitting the catalogue OR a cache outage (in which case the absolute counters flatten — check the Redis dashboard).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.8 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "calcs": ["lastNotNull"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(wikidata_cache_hits_total[5m])) / (sum(rate(wikidata_cache_hits_total[5m])) + sum(rate(wikidata_cache_misses_total[5m])))",
+          "legendFormat": "hit_rate"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Local dump fallback rate (cascade path)",
+      "description": "Rate of KnowledgeBaseService cascade triggers — split into hits (dump returned facts) vs misses (dump returned null, real cold lookup OR dump corpus gap). Both should hover near 0 outside incident windows ; sustained activity here means Wikidata SPARQL has been unavailable long enough for the breaker to open AND for the LOCAL_DUMP_FALLBACK_AFTER_MS soak window to elapse. Paired with the WikidataLocalDumpHotPath alert (info severity at >0.01/s for 10m).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 17 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "lastNotNull", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(wikidata_local_dump_hits_total[5m])",
+          "legendFormat": "dump_hits"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(wikidata_local_dump_misses_total[5m])",
+          "legendFormat": "dump_misses"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "ADR-039 — Wikidata résilient circuit breaker",
+      "url": "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-039-wikidata-resilient-circuit-breaker.md",
+      "targetBlank": true
+    },
+    {
+      "title": "WikidataBreakerClient source",
+      "url": "https://github.com/Tim-Kraken/InnovMind/blob/main/museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts",
+      "targetBlank": true
+    },
+    {
+      "title": "Chaos runbook (cascade)",
+      "url": "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md",
+      "targetBlank": true
+    }
+  ]
+}
