@@ -24,6 +24,36 @@
       "path": "museum-backend/tests/integration/chat/visual-similarity/compare.route.test.ts",
       "reason": "C3 T6.2 — bare Express smoke test asserting the HTTP wire contract of POST /chat/compare. Mocks the use-case via spy and exercises status mapping (200/400/401/503). Real DB + pgvector paths covered by sibling artwork-embedding-repository.test.ts and recall.test.ts.",
       "approved_by": "C3-spec-T6.2"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/chat-citations.integration.test.ts",
+      "reason": "C4 T6.1 — exercises ChatService.postMessage() with in-memory repo from buildChatTestService + a mocked ChatOrchestrator returning synthetic metadata.sources[]. Pins (1) verbatim source propagation, (2) sources-validator rejection of hallucinated quotes (R4), (3) graceful undefined when LLM omits sources, (4) Spotlighting envelope nonce. Real LLM HTTP path would require live OpenAI key — deterministic CI uses orchestrator stub. Persistence covered by chat-repository-typeorm.integration.test.ts.",
+      "approved_by": "C4-spec-R1-R4"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/knowledge-router.integration.test.ts",
+      "reason": "C4 T6.2 — full chat pipeline (PrepareMessagePipeline + ChatMessageService glue) with KnowledgeRouterPort stub + orchestrator stub injected via buildChatTestService. Pins router facts/source propagation into OrchestratorInput and fail-open semantics when a router leg throws (R10). Pure use-case orchestration — no SQL/Redis. Wikidata/Brave/Tavily HTTP graph isolated by stub injection.",
+      "approved_by": "C4-spec-R6-R10"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/knowledge-spans.test.ts",
+      "reason": "C4 T7.1 — asserts KnowledgeRouterService.resolve() opens chat.knowledge.lookup Langfuse trace with the contractual attribute set (source, fallback_triggered, judge_confidence, search_term_hash, latency_ms.*). Mocks getLangfuse() to inject a recording fake — avoids standing up the real Langfuse SDK. NFR7 PII safety asserted via hash-only payload check.",
+      "approved_by": "C4-spec-R12"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/head-probe-spans.test.ts",
+      "reason": "C4 T7.2 — asserts UrlHeadProbe.probeBatch() opens chat.citations.head_probe Langfuse trace with url_count / cache_hit_rate / unreachable_count metadata. Empty-input fast path emits no trace. Same module-mock pattern as knowledge-spans.test.ts — Langfuse SDK injected via jest.mock.",
+      "approved_by": "C4-spec-R12"
+    },
+    {
+      "path": "museum-backend/tests/integration/observability/prom-c4.test.ts",
+      "reason": "C4 T7.3 — verifies the four C4 Prometheus counters (chat_sources_emitted_total, chat_sources_rejected_total, chat_websearch_fallback_total, chat_url_head_probe_total) are present on /metrics with the expected label cardinality. Exercises the public renderMetrics() surface — same code-path Express /metrics route uses. Use-case unit tests mock prom-client out; this file is the cross-module registry surface pin.",
+      "approved_by": "C4-spec-R12"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/wikidata-resilience.integration.test.ts",
+      "reason": "C5 Step 5.2 — drives the real opossum breaker + real WikidataClient (with mocked global.fetch) + cascade { breakerState, dumpRepo } via WikidataBreakerClient and KnowledgeBaseService. Exercises the breaker trip → soak window → local dump fallback path end-to-end. fetch is mocked because the test intent IS the breaker behaviour under controlled upstream failure modes; real Wikidata in CI would be non-deterministic. The dump repository round-trip is covered separately by wikidata-kb-dump-repository.test.ts (real Postgres testcontainer).",
+      "approved_by": "C5-spec-Step5.2"
     }
   ]
 }
