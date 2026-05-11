@@ -647,6 +647,54 @@ describe('queryOverpassOpeningHours', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  // Kills L53 `if (!response.ok) continue;` ConditionalExpression by making the
+  // non-OK first endpoint return DIFFERENT data than the second. Original
+  // skips to second (returns 'right'); mutation processes first (returns
+  // 'wrong'). Without this distinguishing payload, both paths reach
+  // 'right' through different routes and the mutation survives.
+  it('does NOT read the non-OK response body even when it parses (continue gates body access)', async () => {
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 200,
+        statusText: 'Surprise',
+        json: async () =>
+          makeTagsResponse([{ type: 'node', id: 7, tags: { opening_hours: 'wrong-from-non-ok' } }]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          makeTagsResponse([{ type: 'node', id: 8, tags: { opening_hours: 'right-from-second' } }]),
+      });
+
+    const value = await queryOverpassOpeningHours({ lat: 48.86, lng: 2.34 });
+
+    expect(value).toBe('right-from-second');
+  });
+
+  // Kills L55 `if (!Array.isArray(data.elements)) continue;`: first endpoint
+  // returns OK but with a NON-ARRAY `elements`. Original skips; mutation tries
+  // to iterate and either throws or yields wrong data.
+  it('skips to next endpoint when elements is not an array', async () => {
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ elements: 'not-an-array' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () =>
+          makeTagsResponse([
+            { type: 'node', id: 9, tags: { opening_hours: 'right-after-bad-shape' } },
+          ]),
+      });
+
+    const value = await queryOverpassOpeningHours({ lat: 48.86, lng: 2.34 });
+
+    expect(value).toBe('right-after-bad-shape');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('walks the full endpoint chain and returns null when every endpoint throws', async () => {
     fetchSpy.mockRejectedValue(new Error('boom-net'));
 
