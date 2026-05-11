@@ -1,12 +1,11 @@
 name: semgrep
 
+# Path filtering moved from workflow-level `on.pull_request.paths` to a
+# job-level `if:` gated by `dorny/paths-filter`. See codeql.yml header for
+# rationale (Renovate workflow-SHA bumps left required checks Pending forever).
+
 on:
-  pull_request:
-    paths:
-      - 'museum-backend/src/**'
-      - 'museum-frontend/features/**'
-      - 'museum-frontend/shared/**'
-      - 'museum-web/src/**'
+  pull_request: {}
   schedule:
     - cron: '30 4 * * *'
 
@@ -15,7 +14,31 @@ permissions:
   security-events: write
 
 jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'museum-backend/src/**'
+              - 'museum-frontend/features/**'
+              - 'museum-frontend/shared/**'
+              - 'museum-web/src/**'
+              - '.github/workflows/semgrep.yml'
+
   semgrep:
+    needs: changes
+    if: |
+      needs.changes.outputs.code == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -30,12 +53,14 @@ jobs:
         run: semgrep scan --config auto --config p/javascript --config p/typescript --config p/nodejs --config p/owasp-top-ten --sarif --output semgrep-results.sarif museum-backend/src/ museum-frontend/features/ museum-frontend/shared/ museum-web/src/ || true
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e  # v4if: always()
+        if: always()
+        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e  # v4
         with:
           sarif_file: semgrep-results.sarif
 
       - name: Upload results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7if: always()
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: semgrep-results
           path: |

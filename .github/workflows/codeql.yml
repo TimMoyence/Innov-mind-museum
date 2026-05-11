@@ -3,25 +3,18 @@ name: codeql
 # Semantic SAST — taint tracking, prototype pollution, second-order injection.
 # Complements Semgrep (pattern-based) with deeper interprocedural analysis.
 # Created: 2026-04-07 (Tier 1 audit fix)
+#
+# Path filtering moved from workflow-level `on.pull_request.paths` to a
+# job-level `if:` gated by `dorny/paths-filter`. Workflow-level path filters
+# leave required-status-checks in "Pending" forever when a PR touches none
+# of the configured paths (typical for Renovate workflow SHA bumps). With the
+# pattern below, the workflow always starts; the `analyze` job evaluates `if:`
+# and skipped jobs report `success` — unblocking PR merges.
 
 on:
-  pull_request:
-    paths:
-      - 'museum-backend/src/**'
-      - 'museum-frontend/features/**'
-      - 'museum-frontend/shared/**'
-      - 'museum-frontend/app/**'
-      - 'museum-web/src/**'
-      - '.github/workflows/codeql.yml'
+  pull_request: {}
   push:
     branches: ['main']
-    paths:
-      - 'museum-backend/src/**'
-      - 'museum-frontend/features/**'
-      - 'museum-frontend/shared/**'
-      - 'museum-frontend/app/**'
-      - 'museum-web/src/**'
-      - '.github/workflows/codeql.yml'
   schedule:
     # Nightly deep scan at 03:30 UTC (after Semgrep nightly at 04:30)
     - cron: '30 3 * * *'
@@ -36,8 +29,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'museum-backend/src/**'
+              - 'museum-frontend/features/**'
+              - 'museum-frontend/shared/**'
+              - 'museum-frontend/app/**'
+              - 'museum-web/src/**'
+              - '.github/workflows/codeql.yml'
+
   analyze:
     name: CodeQL (${{ matrix.language }})
+    needs: changes
+    # Always run on schedule + manual dispatch. On PR/push, run only if scanned
+    # paths actually changed — skipped jobs report `success` so the required
+    # check is satisfied for Renovate workflow-SHA bumps.
+    if: |
+      needs.changes.outputs.code == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:

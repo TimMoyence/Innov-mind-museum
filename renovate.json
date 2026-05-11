@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
+    "config:best-practices",
+    "helpers:pinGitHubActionDigestsToSemver",
     ":semanticCommits",
     ":dependencyDashboard"
   ],
@@ -9,22 +10,29 @@
   "schedule": ["before 7am every weekday"],
   "labels": ["dependencies", "renovate"],
   "rangeStrategy": "replace",
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+  "platformAutomerge": true,
 
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security", "dependencies"],
-    "schedule": ["at any time"]
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null
   },
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 7am on monday"],
+    "automerge": true
+  },
+
+  "postUpdateOptions": ["pnpmDedupe"],
 
   "packageRules": [
     {
       "description": "V12 W8: pin LangChain stack — minor releases have shipped breaking sec patches in 2024-2025",
-      "matchPackagePatterns": [
-        "^langchain$",
-        "^@langchain/"
-      ],
+      "matchPackagePatterns": ["^langchain$", "^@langchain/"],
       "rangeStrategy": "pin",
       "labels": ["security", "dependencies", "langchain-pin"],
       "schedule": ["at any time"],
@@ -32,7 +40,29 @@
       "prPriority": 10
     },
     {
-      "description": "Auto-merge dev-only patch + minor for low-risk packages",
+      "description": "GitHub Actions — group all bumps into a single weekly PR + auto-merge digest/patch/minor (3d cool-down)",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "pin", "pinDigest", "patch", "minor"],
+      "groupName": "github-actions",
+      "schedule": ["before 7am on monday"],
+      "automerge": true,
+      "platformAutomerge": true,
+      "minimumReleaseAge": "3 days",
+      "labels": ["dependencies", "renovate", "ci-only"]
+    },
+    {
+      "description": "Docker images — group patch/digest bumps weekly + auto-merge (3d cool-down)",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["digest", "pin", "pinDigest", "patch"],
+      "groupName": "docker patches",
+      "schedule": ["before 7am on monday"],
+      "automerge": true,
+      "platformAutomerge": true,
+      "minimumReleaseAge": "3 days",
+      "labels": ["dependencies", "renovate", "docker"]
+    },
+    {
+      "description": "Dev-only tooling (types, linters, test runners) — auto-merge patch + minor",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "matchPackagePatterns": [
@@ -48,15 +78,38 @@
         "^@playwright/"
       ],
       "automerge": true,
-      "automergeType": "branch",
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Production npm patches — auto-merge with 3d supply-chain cool-down, excludes risk-flagged packages",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "excludePackagePatterns": [
+        "^langchain$",
+        "^@langchain/",
+        "^typeorm",
+        "^pg$",
+        "^reflect-metadata",
+        "^openai$",
+        "^@google/generative-ai",
+        "^@deepseek-ai/api",
+        "^expo",
+        "^react-native",
+        "^@react-native"
+      ],
+      "automerge": true,
+      "platformAutomerge": true,
+      "minimumReleaseAge": "3 days",
+      "labels": ["dependencies", "renovate", "auto-patch"]
     },
     {
       "description": "OpenAI + Google + Deepseek SDKs — manual review (LLM contract risk)",
       "matchPackageNames": ["openai", "@google/generative-ai", "@deepseek-ai/api"],
       "rangeStrategy": "pin",
       "labels": ["llm-sdk", "manual-review"],
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "7 days",
+      "automerge": false
     },
     {
       "description": "Major upgrades — never auto-merge, always manual review",
@@ -69,29 +122,17 @@
       "description": "TypeORM — pin (V1 in flight, breaking changes possible)",
       "matchPackageNames": ["typeorm", "pg", "reflect-metadata"],
       "rangeStrategy": "pin",
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "7 days",
+      "automerge": false
     },
     {
       "description": "Expo + React Native — bundle minor updates, defer until SDK changelog reviewed",
-      "matchPackagePatterns": [
-        "^expo",
-        "^react-native",
-        "^@react-native"
-      ],
+      "matchPackagePatterns": ["^expo", "^react-native", "^@react-native"],
       "groupName": "expo + react-native",
       "schedule": ["before 7am on monday"],
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "7 days",
+      "automerge": false
     }
-  ],
-
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 7am on monday"],
-    "automerge": false
-  },
-
-  "postUpdateOptions": [
-    "pnpmDedupe"
   ],
 
   "ignorePaths": [
