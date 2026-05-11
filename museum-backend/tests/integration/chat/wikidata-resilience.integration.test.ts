@@ -43,11 +43,16 @@ const KB_CFG = {
 
 class StubDumpRepo implements WikidataKbDumpRepositoryPort {
   public calls = 0;
+  public upsertCalls = 0;
   constructor(private readonly facts: ArtworkFacts | null) {}
   // eslint-disable-next-line @typescript-eslint/require-await -- interface contract
   async findFactsBySearchTerm(): Promise<ArtworkFacts | null> {
     this.calls++;
     return this.facts;
+  }
+  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract; the integration test does not exercise the write-through path
+  async upsert(): Promise<void> {
+    this.upsertCalls++;
   }
 }
 

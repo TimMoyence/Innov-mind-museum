@@ -45,6 +45,8 @@
     "purge:tokens": "ts-node -r tsconfig-paths/register scripts/purge-expired-tokens.ts",
     "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts",
     "seed:knowledge": "ts-node -r tsconfig-paths/register scripts/seed-knowledge.ts",
+    "seed:kb-canon": "ts-node -r tsconfig-paths/register scripts/seed-kb-canon.ts",
+    "seed:kb-canon:host": "bash scripts/with-host-env.sh ts-node -r tsconfig-paths/register scripts/seed-kb-canon.ts",
     "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
     "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
     "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",

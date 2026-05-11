@@ -17,13 +17,20 @@ interface ProviderStub extends KnowledgeBaseProvider {
 }
 interface DumpStub extends WikidataKbDumpRepositoryPort {
   findFactsBySearchTerm: jest.Mock<Promise<ArtworkFacts | null>, [string, string?]>;
+  upsert: jest.Mock<Promise<void>, [string, string | undefined, ArtworkFacts]>;
 }
 
 function makeProvider(): ProviderStub {
   return { lookup: jest.fn() };
 }
 function makeDump(): DumpStub {
-  return { findFactsBySearchTerm: jest.fn() };
+  return {
+    findFactsBySearchTerm: jest.fn(),
+    // C5.3 write-through contract — kept as a swallowed no-op stub so the
+    // cascade tests stay focused on the lookup path without leaking
+    // assertions about persistence.
+    upsert: jest.fn<Promise<void>, [string, string | undefined, ArtworkFacts]>(),
+  };
 }
 
 const baseConfig = {
