@@ -22,10 +22,6 @@ import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
-import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
-import { WikidataBreakerClient } from '@modules/chat/adapters/secondary/search/wikidata-breaker';
-import { WikidataWriteThroughProvider } from '@modules/chat/adapters/secondary/search/wikidata-write-through.provider';
-import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
@@ -35,10 +31,6 @@ import { DescribeService } from '@modules/chat/useCase/describe/describe.service
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
-import {
-  KnowledgeBaseService,
-  type KnowledgeBaseCascadeDeps,
-} from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import { LocationResolver } from '@modules/chat/useCase/location/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
@@ -55,17 +47,18 @@ import {
   buildCompareSessionAccessVerifier,
 } from './chat-module.compare-wiring';
 import { buildKnowledgeRouter } from './chat-module.knowledge-router-wiring';
+import { buildWikidataStack } from './chat-module.wikidata-wiring';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
-import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
+import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
 import type { CompareUseCaseInput } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
@@ -238,34 +231,6 @@ export class ChatModule {
     return new UserMemoryService(repo, cache, { artworkRepo });
   }
 
-  /**
-   * Wraps the shared `kbProvider` in the cached + cascade-aware
-   * `KnowledgeBaseService`. The provider parameter is the C5.3 decorator
-   * stack assembled at the composition root (`WikidataWriteThroughProvider`
-   * → `WikidataBreakerClient` → `WikidataClient`) so this method stays
-   * dependency-shape-agnostic — `KnowledgeRouterService` shares the same
-   * instance via the `kbProvider` variable in `build()`.
-   *
-   * `cascadeDeps` carries the breaker state callback + dump repo that gate
-   * the local-dump fallback path inside `KnowledgeBaseService.lookupFacts`
-   * (cf. C5.3 cascade contract, ADR-039 D4). Pass `undefined` to disable
-   * the cascade — only used by tests that exercise the service in isolation.
-   */
-  private buildKnowledgeBase(
-    kbProvider: KnowledgeBaseProvider,
-    cache?: CacheService,
-    cascadeDeps?: KnowledgeBaseCascadeDeps,
-  ): KnowledgeBaseService {
-    const { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs } =
-      env.knowledgeBase;
-    return new KnowledgeBaseService(
-      kbProvider,
-      { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs },
-      cache,
-      cascadeDeps,
-    );
-  }
-
   private buildImageEnrichment(): ImageEnrichmentService | undefined {
     const unsplashClient = env.imageEnrichment.unsplashAccessKey
       ? new UnsplashClient(env.imageEnrichment.unsplashAccessKey)
@@ -386,27 +351,10 @@ export class ChatModule {
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    // C4.1 (T3.3) + C5.1 + C5.3 — single Wikidata provider chain shared with
-    // the cached `KnowledgeBaseService` AND the `KnowledgeRouterService`
-    // cascade. Composition (outermost → innermost) :
-    //   WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
-    //     └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
-    //          └─ WikidataClient      ← raw HTTP / SPARQL
-    // Both downstream consumers (knowledgeBase + knowledgeRouter) see the
-    // same `kbProvider` reference, so the breaker state and the dump
-    // write-through are shared across both legs ; the C4 router's calls
-    // contribute to `wikidata_sparql_requests_total` and populate the dump
-    // alongside the cascade-aware `KnowledgeBaseService`. Doctrine pré-launch
-    // V1 — no `*_ENABLED` flag, rollback = `git revert` of the merge SHA.
-    const wikidataClient = new WikidataClient({ userAgent: env.wikidata.userAgent });
-    const wikidataBreaker = new WikidataBreakerClient(wikidataClient, env.knowledgeBase.breaker);
-    const wikidataDumpRepo = new WikidataKbDumpRepositoryTypeOrm(dataSource);
-    const kbProvider = new WikidataWriteThroughProvider(wikidataBreaker, wikidataDumpRepo);
-    const cascadeDeps: KnowledgeBaseCascadeDeps = {
-      breakerState: () => wikidataBreaker.getState(),
-      dumpRepo: wikidataDumpRepo,
-    };
-    const knowledgeBase = this.buildKnowledgeBase(kbProvider, cache, cascadeDeps);
+    // C5.3 — shared Wikidata decorator chain (write-through → breaker → raw client).
+    // `kbProvider` is reused below by `buildKnowledgeRouter` so the C4 router
+    // path also benefits from the breaker + dump write-through.
+    const { kbProvider, knowledgeBase } = buildWikidataStack(dataSource, cache);
     const imageEnrichment = this.buildImageEnrichment();
     const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
 
