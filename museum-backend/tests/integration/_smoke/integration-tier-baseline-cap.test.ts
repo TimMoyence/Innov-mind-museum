@@ -22,7 +22,22 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // contract for POST /chat/compare). Same shape as the existing
 // chat-api.smoke.integration.test.ts entry. Justification + approval
 // ref in the baseline JSON.
-const PHASE_1_BASELINE_CAP = 5;
+//
+// 2026-05-11 (C4 + C5.3 sentinel reconciliation): bumped 5 → 11 to admit
+// six files that landed across two feature trains and exercise integration-
+// tier contracts via stub injection at the infra seam:
+//   - C4 T6.1 chat-citations.integration.test.ts (sources validator wiring)
+//   - C4 T6.2 knowledge-router.integration.test.ts (router → orchestrator)
+//   - C4 T7.1 knowledge-spans.test.ts (Langfuse chat.knowledge.lookup)
+//   - C4 T7.2 head-probe-spans.test.ts (Langfuse chat.citations.head_probe)
+//   - C4 T7.3 observability/prom-c4.test.ts (Prom counter registry surface)
+//   - C5 Step 5.2 wikidata-resilience.integration.test.ts (real breaker +
+//     cascade, fetch-mocked upstream)
+// All six match the existing baseline shape (use-case orchestration / span
+// emission / registry surface) with the real infra path covered by sibling
+// tests carrying a real DataSource / testcontainer. Reduce back to a lower
+// cap only by deleting entries, never by adding more.
+const PHASE_1_BASELINE_CAP = 11;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {
