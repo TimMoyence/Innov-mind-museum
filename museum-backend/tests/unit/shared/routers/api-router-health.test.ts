@@ -133,16 +133,45 @@ const getLlmCircuitBreakerStateMock = jest.fn<
   { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
   []
 >();
-jest.mock('@modules/chat/wiring', () => ({
-  getArtKeywordRepository: () => undefined,
-  // Default returns a truthy value so the artwork-knowledge-repo branch is
-  // exercised; individual tests can override via mockReturnValueOnce.
-  getArtworkKnowledgeRepo: jest.fn(() => ({}) as object),
-  getCompareImageUseCase: () => undefined,
-  getCompareSessionAccessVerifier: () => undefined,
-  getDescribeService: () => undefined,
-  getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
-  getUserMemoryService: () => undefined,
+// `getActiveChatModule` is the shallow entry point that wiring.ts delegates
+// every accessor through. Replacing it with a fixed isBuilt=false handle
+// lets the REAL wiring code run unchanged — every accessor flows through
+// `isBuilt() === false` and returns undefined exactly like the production
+// boot-order-tolerant path. Test-controlled overrides:
+//   - `isBuilt` flips per test (default false) for the artwork-knowledge-repo
+//     branch in api.router.ts (`if (artworkKnowledgeRepo) router.use(...)`).
+//   - `getBuilt().artworkKnowledgeRepo` is the only Built field the suite
+//     reads — exposing it keeps the truthy branch reachable without
+//     materialising the rest of the BuiltChatModule.
+//   - `getLlmCircuitBreakerState` is module-private state on the singleton,
+//     mocked here so tests can flip cbState=undefined / 'CLOSED' / 'OPEN'.
+//
+// No catch-all `() => undefined` stubs: future additions to `wiring.ts`
+// (`getXxx` accessors that delegate to `getActiveChatModule()`) work out
+// of the box because the real wiring code runs end-to-end.
+// Default `isBuilt=true` keeps the artwork-knowledge-repo branch active so
+// the suite's happy-path mount of `createAdminKeRouter` triggers without
+// per-test setup; the one test that exercises the falsy branch flips it
+// via `artworkKnowledgeRepoOverride.mockReturnValueOnce(undefined)`. Every
+// other Built field is `undefined` (object literal omits them) so the
+// wiring accessors for compareImageUseCase, compareSessionAccessVerifier,
+// describeService, etc. all return undefined just like the production
+// boot-order-tolerant path.
+const isBuiltMock = jest.fn<boolean, []>(() => true);
+const artworkKnowledgeRepoOverride = jest.fn<unknown, []>(() => ({}) as object);
+
+jest.mock('@modules/chat/chat-module-singleton', () => ({
+  getActiveChatModule: () => ({
+    isBuilt: () => isBuiltMock(),
+    getBuilt: () => ({
+      get artworkKnowledgeRepo() {
+        return artworkKnowledgeRepoOverride();
+      },
+    }),
+    getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
+  }),
+  setActiveChatModule: () => {},
+  resetActiveChatModule: () => {},
 }));
 jest.mock('@modules/daily-art', () => ({
   createDailyArtRouter: jest.fn(() => makeProbeRouter('daily-art')),
@@ -200,7 +229,6 @@ import { createDailyArtRouter } from '@modules/daily-art';
 import { buildLowDataPackService, buildEnrichMuseumUseCase } from '@modules/museum';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/routes/museum.route';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
-import { getArtworkKnowledgeRepo } from '@modules/chat/wiring';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -650,7 +678,7 @@ describe('createApiRouter — dependency injection wiring', () => {
   });
 
   it('skips createAdminKeRouter when artworkKnowledgeRepo is undefined', () => {
-    (getArtworkKnowledgeRepo as jest.Mock).mockReturnValueOnce(undefined);
+    artworkKnowledgeRepoOverride.mockReturnValueOnce(undefined);
     buildApp({});
     expect(createAdminKeRouter).not.toHaveBeenCalled();
   });
