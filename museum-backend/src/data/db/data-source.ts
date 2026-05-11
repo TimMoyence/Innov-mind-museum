@@ -14,6 +14,7 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageFeedback } from '@modules/chat/domain/message/messageFeedback.entity';
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
+import { ArtworkEmbedding } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import { ExtractedContent } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
@@ -63,6 +64,7 @@ export const AppDataSource = new DataSource({
     ExtractedContent,
     ArtworkKnowledge,
     MuseumEnrichment,
+    ArtworkEmbedding,
   ],
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']

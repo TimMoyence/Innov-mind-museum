@@ -26,7 +26,10 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
+        # C3 migration `AddArtworkEmbeddings` runs `CREATE EXTENSION vector`
+        # and declares a `halfvec(768)` column (CLAUDE.md gotcha + ADR-037).
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: musaium
           POSTGRES_PASSWORD: musaium_ci
@@ -35,6 +38,18 @@ jobs:
           - 5433:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        # Required by BullMQ (audit-cron, chat-purge-cron, museum-enrichment-
+        # queue) which `pnpm dev` boots eagerly. Without it the backend retries
+        # ECONNREFUSED indefinitely and never answers /health → step times out.
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -83,7 +98,7 @@ jobs:
       - name: Wait for backend health
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:3000/health 2>/dev/null; then
+            if curl -fsS http://localhost:3000/api/health 2>/dev/null; then
               echo "backend healthy after ${i}s"; exit 0
             fi
             sleep 1

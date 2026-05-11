@@ -6,7 +6,12 @@
     },
     {
       "name": "chat",
-      "flows": ["chat-flow.yaml", "chat-history-pagination.yaml", "museum-chat-flow.yaml"]
+      "flows": [
+        "chat-flow.yaml",
+        "chat-history-pagination.yaml",
+        "museum-chat-flow.yaml",
+        "chat-compare.yaml"
+      ]
     },
     {
       "name": "museum",

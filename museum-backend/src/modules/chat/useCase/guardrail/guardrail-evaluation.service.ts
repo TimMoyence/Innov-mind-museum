@@ -403,8 +403,16 @@ export class GuardrailEvaluationService {
     const advancedRan = Boolean(this.advancedGuardrail);
     const classifierRan = Boolean(this.artTopicClassifier);
 
-    // Safety keyword checks (insults, injections, empty)
-    const safetyDecision = evaluateAssistantOutputGuardrail({ text });
+    // Safety keyword checks (insults, injections, empty).
+    // C2 v2 (D3 — 2026-05): the LLM-authored `caption` + `rationale` on each
+    // EnrichedImage flow back to the FE bubble inside <Text>; they are not
+    // markdown-rendered, but they are user-visible content authored by the LLM
+    // and may carry leaks. Aggregate them with the answer text so the keyword
+    // guardrail catches injections / PII leaks in either surface — single
+    // source of truth (CLAUDE.md AI Safety §4) preserved by routing through
+    // the same evaluator.
+    const guardrailText = aggregateOutputText(text, metadata);
+    const safetyDecision = evaluateAssistantOutputGuardrail({ text: guardrailText });
     if (!safetyDecision.allow) {
       await this.logBlock({
         phase: 'output',
@@ -462,4 +470,25 @@ export class GuardrailEvaluationService {
     });
     return { text, metadata, allowed: true };
   }
+}
+
+/**
+ * Aggregates the answer text with LLM-authored caption + rationale strings
+ * from `metadata.images[]` and `metadata.suggestedImages[]`.
+ *
+ * D3 (2026-05) — those fields flow back to the user as visible text via
+ * `ImageCarousel.<Text>`; they must pass through the same keyword guardrail
+ * as the answer body so injection / PII leaks in either surface are caught.
+ */
+function aggregateOutputText(text: string, metadata: ChatAssistantMetadata): string {
+  const parts: string[] = [text];
+  for (const img of metadata.images ?? []) {
+    if (img.caption) parts.push(img.caption);
+    if (img.rationale) parts.push(img.rationale);
+  }
+  for (const sugg of metadata.suggestedImages ?? []) {
+    if (sugg.caption) parts.push(sugg.caption);
+    if (sugg.rationale) parts.push(sugg.rationale);
+  }
+  return parts.join(' ');
 }

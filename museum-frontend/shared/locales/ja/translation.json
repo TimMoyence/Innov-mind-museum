@@ -408,6 +408,22 @@
     "imageAttribution": "{{photographer}} 撮影 (Unsplash)",
     "imageLoadError": "画像を読み込めませんでした",
     "viewFullscreen": "フルサイズで表示",
+    "enrichment": {
+      "rationale_fallback": "この作品についてもっと知る。",
+      "skeleton_loading": "関連画像を検索中…"
+    },
+    "compare": {
+      "title": "類似する作品",
+      "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",
+      "viewArtist": "アーティストを表示",
+      "attribution": "出典: Wikimedia Commons",
+      "rationale": {
+        "fallback": "類似作品"
+      },
+      "error": {
+        "unavailable": "視覚的類似度は一時的に利用できません。少し後にもう一度お試しください。"
+      }
+    },
     "listen": "聴く",
     "listening": "再生中...",
     "tts_unavailable": "音声は利用できません",

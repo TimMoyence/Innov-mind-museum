@@ -98,6 +98,28 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   4. Test e2e : download pack ville → mode avion → vérifier tuiles identiques en/offline.
   5. Cocher TD-3 ici.
 
+### TD-5 — Bake `CHAT_ENRICHMENT_V2_ENABLED` puis flip default code
+
+- [ ] **Statut** : ouvert (créé 2026-05-10 post-implémentation C2 v2 image-chat-finition)
+- **Référence code** :
+  ```
+  museum-backend/src/config/env.ts:imageEnrichment.v2Enabled
+  museum-backend/src/modules/chat/chat-module.ts:buildImageEnrichment
+  museum-backend/src/modules/chat/useCase/enrichment/enrichment-fetcher.ts:fetchImages
+  ```
+- **Sprint d'origine** : 2026-05-10 (run `/team 2026-05-10-c2-image-chat-finition`).
+- **Pourquoi pas fait dans le sprint d'origine** : memory `project_no_staging_v1` impose un bake ≥7j avant flip default ; l'env var permet rollback instantané sans code revert.
+- **Pourquoi c'est important** : v2 ajoute 2 sources externes (Wikimedia Commons + Musaium catalogue) + un fan-out parallèle qui multiplie le RPS sortant ; un canary à `CHAT_ENRICHMENT_V2_ENABLED=true` doit valider le NFR p95 ≤500ms total + l'absence de régression sur le `chat_request_duration_seconds` avant qu'on flippe le default code.
+- **Effort estimé** : 0 jour de dev (operator action).
+- **Comment fermer** :
+  1. Set `CHAT_ENRICHMENT_V2_ENABLED=true` en prod (env update only, pas de redeploy code).
+  2. Observer `chat_enrichment_source_calls_total{outcome}` + `chat_enrichment_source_latency_seconds{source}` sur Grafana ≥7 jours pleins.
+  3. Vérifier `chat_request_duration_seconds` p95 stable (pas de régression > +100ms vs 7 jours pré-flip).
+  4. Si OK : promouvoir le default code de `false` à `true` dans `env.ts:282` (literal flip, PR + bake encore 7j).
+  5. Cocher TD-5 ici.
+
+---
+
 ### TD-4 — Pas de test d'intégration real-PG sur les 3 prune retention use cases
 
 - [ ] **Statut** : ouvert (créé 2026-05-08 post-incident `2026-05-08-prune-hardening`)

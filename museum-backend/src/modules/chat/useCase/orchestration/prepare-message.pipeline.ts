@@ -247,8 +247,8 @@ export class PrepareMessagePipeline {
       webSearchBlock,
       webSearchResults,
       enrichedImages,
-    } = await fetchEnrichmentData(
-      {
+    } = await fetchEnrichmentData({
+      deps: {
         userMemory: this.userMemory,
         knowledgeBase: this.knowledgeBase,
         imageEnrichment: this.imageEnrichment,
@@ -256,10 +256,11 @@ export class PrepareMessagePipeline {
         dbLookup: this.dbLookup,
       },
       history,
-      input.text?.trim(),
+      inputText: input.text?.trim(),
       ownerId,
-      requestedLocale,
-    );
+      locale: requestedLocale,
+      museumMode: input.context?.museumMode ?? session.museumMode,
+    });
 
     this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);
 

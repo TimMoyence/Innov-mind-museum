@@ -23,7 +23,7 @@
 set -uo pipefail
 export LC_ALL=C LANG=C
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 
 # ---------------------------------------------------------------------------
 # Rotate one ROADMAP file in-place. Returns 0 on success, 1 on missing NEXT.

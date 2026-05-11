@@ -408,6 +408,22 @@
     "imageAttribution": "Foto von {{photographer}} auf Unsplash",
     "imageLoadError": "Bild konnte nicht geladen werden",
     "viewFullscreen": "In voller Grosse anzeigen",
+    "enrichment": {
+      "rationale_fallback": "Mehr uber dieses Werk.",
+      "skeleton_loading": "Kontextbilder werden gesucht…"
+    },
+    "compare": {
+      "title": "Ähnliche Werke",
+      "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",
+      "viewArtist": "Künstler ansehen",
+      "attribution": "Quelle: Wikimedia Commons",
+      "rationale": {
+        "fallback": "Ähnliches Werk"
+      },
+      "error": {
+        "unavailable": "Visuelle Ähnlichkeit ist vorübergehend nicht verfügbar. Bitte versuche es gleich erneut."
+      }
+    },
     "listen": "Anhören",
     "listening": "Wiedergabe...",
     "tts_unavailable": "Audio nicht verfügbar",

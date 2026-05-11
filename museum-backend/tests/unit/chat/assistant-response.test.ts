@@ -341,7 +341,7 @@ describe('parseAssistantResponse', () => {
     expect(meta.suggestedImages).toBeUndefined();
   });
 
-  it('filters invalid items from suggestedImages', () => {
+  it('filters invalid items from suggestedImages (v1 entries get fallback rationale + caption)', () => {
     const meta = extractMetadata({
       suggestedImages: [
         { query: 'valid', description: 'desc' },
@@ -351,7 +351,12 @@ describe('parseAssistantResponse', () => {
         { query: 123, description: 'wrong type' },
       ],
     });
-    expect(meta.suggestedImages).toEqual([{ query: 'valid', description: 'desc' }]);
+    // C2 v2 (R7): entries missing rationale/caption fall back gracefully —
+    // caption defaults to description, rationale to the empty-string sentinel
+    // (the FE swaps it for `chat.enrichment.rationale_fallback`).
+    expect(meta.suggestedImages).toEqual([
+      { query: 'valid', description: 'desc', rationale: '', caption: 'desc' },
+    ]);
   });
 
   it('returns undefined suggestedImages when all items are invalid', () => {
@@ -361,16 +366,54 @@ describe('parseAssistantResponse', () => {
     expect(meta.suggestedImages).toBeUndefined();
   });
 
-  it('caps suggestedImages at 3 items', () => {
+  it('caps suggestedImages at 4 items (C2 v2 — Q3 RESOLVED bumps cap 3→4)', () => {
     const meta = extractMetadata({
       suggestedImages: [
         { query: 'q1', description: 'd1' },
         { query: 'q2', description: 'd2' },
         { query: 'q3', description: 'd3' },
         { query: 'q4', description: 'd4' },
+        { query: 'q5', description: 'd5' },
       ],
     });
-    expect(meta.suggestedImages).toHaveLength(3);
+    expect(meta.suggestedImages).toHaveLength(4);
+  });
+
+  it('preserves valid v2 entries with rationale + caption (R6 contract)', () => {
+    const meta = extractMetadata({
+      suggestedImages: [
+        {
+          query: 'Mona Lisa',
+          description: 'The painting',
+          rationale: 'The work the visitor asked about.',
+          caption: 'Mona Lisa at the Louvre',
+        },
+      ],
+    });
+    expect(meta.suggestedImages).toEqual([
+      {
+        query: 'Mona Lisa',
+        description: 'The painting',
+        rationale: 'The work the visitor asked about.',
+        caption: 'Mona Lisa at the Louvre',
+      },
+    ]);
+  });
+
+  it('falls back caption=description and rationale="" when only rationale empty (R7)', () => {
+    const meta = extractMetadata({
+      suggestedImages: [
+        {
+          query: 'Q1',
+          description: 'D1',
+          rationale: '   ',
+          caption: 'C1',
+        },
+      ],
+    });
+    expect(meta.suggestedImages).toEqual([
+      { query: 'Q1', description: 'D1', rationale: '', caption: 'C1' },
+    ]);
   });
 
   // --- detectedArtwork validation (valid + invalid) ---

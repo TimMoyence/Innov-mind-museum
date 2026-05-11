@@ -2,12 +2,37 @@ import type { ContentPreference } from '@modules/auth/domain/consent/content-pre
 
 export type { ContentPreference };
 
-/** An image enriched from external sources (Wikidata, Unsplash). */
+/**
+ * Tagged source identifier for an enriched image.
+ *
+ * - `wikidata`: P18 image URL from Wikidata SPARQL.
+ * - `unsplash`: external Unsplash search result.
+ * - `commons`: Wikimedia Commons search result (C2 v2).
+ * - `musaium`: internal curated catalogue match (C2 v2).
+ *
+ * Source-priority on duplicate-URL dedup is `musaium > wikidata > commons > unsplash`
+ * — see `image-enrichment.service.sortAndDedup`.
+ */
+export type EnrichedImageSource = 'wikidata' | 'unsplash' | 'commons' | 'musaium';
+
+/**
+ * An image enriched from external sources (Wikidata, Unsplash, Commons, Musaium).
+ *
+ * v2 (C2 enrichment) adds `rationale` (LLM-authored explanation) to every
+ * EnrichedImage. Pre-v2 cached metadata may not include it; readers SHOULD
+ * fall back to an i18n string when missing.
+ */
 export interface EnrichedImage {
   url: string;
   thumbnailUrl: string;
   caption: string;
-  source: 'wikidata' | 'unsplash';
+  /**
+   * LLM-authored rationale shown under the thumb in the carousel.
+   * v2 (C2 finition 2026-05) — REQUIRED for new responses; absent for
+   * pre-v2 cached messages (FE falls back to `chat.enrichment.rationale_fallback`).
+   */
+  rationale: string;
+  source: EnrichedImageSource;
   score: number;
   attribution?: string;
 }
@@ -146,6 +171,27 @@ export interface ChatAssistantDiagnostics {
   }[];
 }
 
+/**
+ * v2 LLM-suggested image search-query entry attached to an assistant response.
+ *
+ * v1 had `{query, description}`. v2 (C2 finition 2026-05) adds REQUIRED
+ * `rationale` (1-sentence why-this-image) and `caption` (≤8-word title)
+ * authored by the LLM. The aggregator (`enrichment-fetcher.fetchImages`) fans
+ * out one source-client search per `query`, then propagates `rationale +
+ * caption` into the resulting `EnrichedImage` for FE rendering.
+ *
+ * Cap: at most 4 entries per response (defence-in-depth on top of LLM prompt
+ * cap; enforced in `assistant-response.toSuggestedImages`).
+ */
+export interface SuggestedImage {
+  query: string;
+  description: string;
+  /** LLM-authored 1-sentence explanation rendered under the carousel thumb. */
+  rationale: string;
+  /** LLM-authored ≤8-word title used as caption when source is non-Unsplash. */
+  caption: string;
+}
+
 /** Structured metadata extracted from an assistant response by the LLM pipeline. */
 export interface ChatAssistantMetadata {
   /** Artwork identified from user image or text. */
@@ -165,9 +211,16 @@ export interface ChatAssistantMetadata {
   openQuestion?: string;
   followUpQuestions?: string[];
   imageDescription?: string;
-  /** Enriched images fetched from external sources (Wikidata, Unsplash). */
+  /** Enriched images fetched from external sources (Wikidata, Unsplash, Commons, Musaium). */
   images?: EnrichedImage[];
-  /** LLM-suggested image search queries for post-streaming enrichment. */
-  suggestedImages?: { query: string; description: string }[];
+  /**
+   * LLM-suggested image search queries for post-streaming enrichment.
+   *
+   * v2 (C2 finition 2026-05) — `rationale` and `caption` are REQUIRED for new
+   * entries. Legacy v1 entries (`{query, description}` only) are tolerated by
+   * `assistant-response.toSuggestedImages` which fills `rationale` with the
+   * fallback marker and `caption` with `description` for backward compatibility.
+   */
+  suggestedImages?: SuggestedImage[];
   diagnostics?: ChatAssistantDiagnostics;
 }

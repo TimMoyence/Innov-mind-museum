@@ -408,6 +408,22 @@
     "imageAttribution": "{{photographer}} 拍摄 (Unsplash)",
     "imageLoadError": "无法加载图片",
     "viewFullscreen": "查看大图",
+    "enrichment": {
+      "rationale_fallback": "了解更多此作品。",
+      "skeleton_loading": "正在搜索相关图片…"
+    },
+    "compare": {
+      "title": "相似作品",
+      "empty": "未找到相似作品 — 请尝试更清晰的照片",
+      "viewArtist": "查看艺术家",
+      "attribution": "来源：Wikimedia Commons",
+      "rationale": {
+        "fallback": "相似作品"
+      },
+      "error": {
+        "unavailable": "视觉相似度暂时不可用。请稍后再试。"
+      }
+    },
     "listen": "听",
     "listening": "播放中...",
     "tts_unavailable": "语音不可用",

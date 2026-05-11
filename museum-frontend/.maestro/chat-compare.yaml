@@ -1,0 +1,126 @@
+appId: com.musaium.mobile.preview
+---
+# Chat Compare Flow (T8.8 / Phase 8 — C3 Image Comparative).
+#
+# Validates the visitor-facing flow for visual similarity matching:
+#   open chat → attach a photo of an artwork → wait for the LLM response
+#   → assert the "Similar artworks" carousel header is visible
+#   → tap the first match card.
+#
+# Status: nightly (Android cron + iOS nightly), NOT PR-blocking.
+# Per `.claude/skills/team/team-state/2026-05-08-c3-image-comparative/tasks.md`
+# T8.8 DONE-WHEN: `npx maestro test museum-frontend/.maestro/chat-compare.yaml`
+# passes on a real device with a backend that has SigLIP encoder + a seeded
+# Wikidata-ingested artwork catalogue (cf. `scripts/catalog-ingest.ts`).
+#
+# Prerequisites:
+#   - User logged in (helpers/quick-login.yaml fallback handles re-auth)
+#   - Backend on localhost:3000 with `/api/chat/compare` reachable
+#   - SigLIP ONNX encoder live (env DOCKER + ONNX model preloaded)
+#   - At least one ingested artwork with a public-domain image
+#   - Test fixture image present at `/sdcard/Download/test-artwork.jpg` (Android)
+#     or in the iOS simulator's photo library (`xcrun simctl addmedia`).
+#     The CI nightly job uploads `museum-frontend/.maestro/fixtures/test-artwork.jpg`
+#     before invoking maestro.
+
+# ──────────────────────────────────────────────
+# Phase 1: Land on home, log in if necessary
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Open a new chat session
+# ──────────────────────────────────────────────
+- tapOn: "Start Conversation"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    text: "I understand, continue"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Attach an image (camera roll path)
+# ──────────────────────────────────────────────
+# The chat composer exposes the image picker via an attach button. The exact
+# id / label is owned by `museum-frontend/features/chat/ui/ChatComposer.tsx`.
+# When the picker permission dialog appears we accept it (one-shot, idempotent).
+- tapOn:
+    label: "Attach image"
+- tapOn:
+    text: "Allow"
+    optional: true
+- waitForAnimationToEnd
+
+# Choose the seeded test image. CI uploads the fixture immediately before
+# running this flow so it surfaces as the most-recent asset:
+#   • Android emulator — `adb push .maestro/fixtures/test-artwork.jpg /sdcard/Download/`
+#   • iOS simulator    — `xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg`
+#
+# Two-step strategy because the underlying picker varies:
+#   1. Documents-style picker (Android Files / older OS) lists by filename
+#      → tap by literal "test-artwork.jpg".
+#   2. Native Photo Picker (PHPicker on iOS, Photo Picker on Android 13+)
+#      shows a thumbnail grid with no visible filenames → tap the top-left
+#      cell, which is the most-recent asset (i.e. the one CI just uploaded).
+# Both taps are optional so whichever picker is on screen, exactly one wins.
+- tapOn:
+    text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Wait for the LLM + compare round-trip
+# ──────────────────────────────────────────────
+# The bubble shows ImageCarouselSkeleton during streaming, then swaps to the
+# real ImageCompareCarousel once `metadata.compareResults` lands.
+- extendedWaitUntil:
+    visible:
+      text: "Similar artworks|Œuvres similaires"
+    timeout: 60000
+
+# ──────────────────────────────────────────────
+# Phase 5: Assert carousel header is rendered (FR or EN locale)
+# ──────────────────────────────────────────────
+- assertVisible:
+    text: "Similar artworks|Œuvres similaires"
+
+# ──────────────────────────────────────────────
+# Phase 6: Tap the first match card
+# ──────────────────────────────────────────────
+# Uses the `accessibilityLabel` set by ImageCompareCard:
+#   "Similar artwork: <title>, <artist>, <rationale>"
+# We match the prefix only — the title/artist are seed-data dependent.
+# NOTE T8.5: ChatMessageBubble currently wires `onMatchPress` to a no-op.
+# The deep-link external open (per tasks.md T8.8) requires a downstream wiring
+# step (out of T8.5 scope). Once wired, the post-tap assertion below should
+# expect the system browser intent or the in-app artwork detail screen.
+- tapOn:
+    label:
+      text: "Similar artwork:|Œuvre similaire :"
+- waitForAnimationToEnd
+
+# Placeholder assertion — replace with the actual deep-link target once wired.
+# Current state: no observable side-effect (no-op handler), so we simply
+# re-assert the carousel is still visible (defensive — confirms the tap did
+# not crash the bubble).
+- assertVisible:
+    text: "Similar artworks|Œuvres similaires"

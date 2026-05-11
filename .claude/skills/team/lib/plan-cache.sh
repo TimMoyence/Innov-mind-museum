@@ -14,7 +14,7 @@
 
 set -uo pipefail
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 CACHE_FILE="$REPO_ROOT/.claude/skills/team/team-knowledge/plan-cache.json"
 LOCK_DIR="$CACHE_FILE.lock.d"
 

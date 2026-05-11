@@ -16,7 +16,13 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // invalidateMuseum contract (R9). Both have justifications + approval
 // refs in the baseline JSON. Reduce back to 2 only by deleting one of
 // those entries, never by adding more.
-const PHASE_1_BASELINE_CAP = 4;
+//
+// 2026-05-10 (C3 T6.2): bumped 4 → 5 to admit compare.route.test.ts —
+// bare Express smoke test mocking the use-case via spy (HTTP wire
+// contract for POST /chat/compare). Same shape as the existing
+// chat-api.smoke.integration.test.ts entry. Justification + approval
+// ref in the baseline JSON.
+const PHASE_1_BASELINE_CAP = 5;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

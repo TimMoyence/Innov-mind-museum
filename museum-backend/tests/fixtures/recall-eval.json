@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "purpose": "Recall@5 evaluation fixture for C3 visual-similarity (NFR ≥ 0.85, spec.md §5).",
+    "status": "seed",
+    "note": "T1.4 ops PENDING — full 50-pair fixture + GCS upload of SigLIP ONNX model required before live recall validation. Test recall.test.ts skips when SIGLIP_ONNX_MODEL_PATH file is absent. Current 6 pairs are placeholders covering the V1 seed museums (Louvre / Orsay / Pompidou / MoMA / Met) so the test STRUCTURE is correct; expand to 50 once T1.4 lands.",
+    "expectedSize": 50,
+    "currentSize": 6,
+    "modelVersion": "siglip-base-patch16-224@v1"
+  },
+  "pairs": [
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q12418.jpg",
+      "expectedQid": "Q12418",
+      "title": "Mona Lisa",
+      "museumQid": "Q19675"
+    },
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q43270.jpg",
+      "expectedQid": "Q43270",
+      "title": "The Starry Night",
+      "museumQid": "Q188740"
+    },
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q187257.jpg",
+      "expectedQid": "Q187257",
+      "title": "The Persistence of Memory",
+      "museumQid": "Q188740"
+    },
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q160236.jpg",
+      "expectedQid": "Q160236",
+      "title": "Liberty Leading the People",
+      "museumQid": "Q19675"
+    },
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q623638.jpg",
+      "expectedQid": "Q623638",
+      "title": "Impression, Sunrise",
+      "museumQid": "Q23402"
+    },
+    {
+      "inputImagePath": "tests/fixtures/recall-images/Q47222149.jpg",
+      "expectedQid": "Q47222149",
+      "title": "Les Demoiselles d'Avignon",
+      "museumQid": "Q188740"
+    }
+  ]
+}

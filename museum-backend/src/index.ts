@@ -27,6 +27,7 @@ import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
 import { shutdownLangfuse } from '@shared/observability/langfuse.client';
+import { setMetricsDataSource } from '@shared/observability/metrics-context';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
@@ -260,6 +261,9 @@ async function flushTelemetryAndFinalize(redisClient: Redis | undefined): Promis
 async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
   try {
     if (AppDataSource.isInitialized) {
+      // Clear before destroy() so a late /metrics scrape during the drain
+      // window can't trigger a query against a half-closed pool (T9.2).
+      setMetricsDataSource(null);
       await AppDataSource.destroy();
       logger.info('database_closed');
     }
@@ -450,6 +454,11 @@ const start = async (): Promise<void> => {
       host: env.db.host,
       database: env.db.database,
     });
+
+    // Expose the live DataSource to Prometheus collectors that depend on a
+    // DB query at scrape time (T9.2 — `artwork_embeddings_count` gauge).
+    // Wiring AFTER initialize() guarantees collectors only see a ready pool.
+    setMetricsDataSource(AppDataSource);
 
     const { cacheService, redisClient } = initCacheAndRateLimit();
 

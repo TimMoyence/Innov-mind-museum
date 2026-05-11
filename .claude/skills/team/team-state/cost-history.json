@@ -1,1 +1,63 @@
-[]
+[
+  {
+    "runId": "2026-05-10-c2-image-chat-finition",
+    "ts": "2026-05-10T10:51:04Z",
+    "mode": "feature",
+    "pipeline": "enterprise",
+    "estimated": {
+      "pipeline": "enterprise",
+      "complexity": 4,
+      "perAgent": {
+        "architect": {
+          "model": "opus-4.7",
+          "tokensIn": 24000,
+          "tokensOut": 12000,
+          "costUSD": 1.2600
+        },
+        "editor": {
+          "model": "opus-4.6",
+          "tokensIn": 45000,
+          "tokensOut": 24000,
+          "costUSD": 2.4750
+        },
+        "verifier": {
+          "model": "opus-4.6",
+          "tokensIn": 18000,
+          "tokensOut": 6000,
+          "costUSD": 0.7200
+        },
+        "security": {
+          "model": "opus-4.6",
+          "tokensIn": 24000,
+          "tokensOut": 9000,
+          "costUSD": 1.0350
+        },
+        "reviewer": {
+          "model": "opus-4.7",
+          "tokensIn": 30000,
+          "tokensOut": 12000,
+          "costUSD": 1.3500
+        },
+        "documenter": {
+          "model": "sonnet-4.6",
+          "tokensIn": 15000,
+          "tokensOut": 6000,
+          "costUSD": 0.1350
+        }
+      },
+      "totalTokensIn": 156000,
+      "totalTokensOut": 69000,
+      "totalCostUSD": 6.9750,
+      "methodology": "static-bootstrap-2026-05"
+    },
+    "actual": {
+      "runId": "2026-05-10-c2-image-chat-finition",
+      "tokensIn": 881240,
+      "tokensOut": 221507,
+      "costUSD": 29.8316,
+      "source": "state-json"
+    },
+    "delta": 22.8566,
+    "deltaPct": 327.69
+  }
+]

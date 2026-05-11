@@ -57,13 +57,18 @@ export const makeAssistantMessage = (
   };
 };
 
-/** Creates a ChatUiEnrichedImage with sensible defaults. */
+/**
+ * Creates a ChatUiEnrichedImage with sensible v2 defaults (rationale +
+ * caption present). C2 finition (2026-05) — pass `rationale: ''` in overrides
+ * to test the FE i18n-fallback branch.
+ */
 export const makeEnrichedImage = (
   overrides?: Partial<ChatUiEnrichedImage>,
 ): ChatUiEnrichedImage => ({
   url: 'https://example.com/full.jpg',
   thumbnailUrl: 'https://example.com/thumb.jpg',
   caption: 'A painting',
+  rationale: faker.lorem.sentence(),
   source: 'wikidata',
   score: 0.9,
   ...overrides,

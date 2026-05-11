@@ -1,0 +1,198 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ImageCompareCarousel (T8.4) matches the structural snapshot for 2 matches 1`] = `
+<View
+  style={
+    {
+      "marginBottom": 8,
+      "marginTop": 8,
+    }
+  }
+>
+  <Text
+    accessibilityRole="header"
+    style={
+      [
+        {
+          "fontSize": 16,
+          "fontWeight": "700",
+          "marginBottom": 6,
+          "paddingHorizontal": 4,
+        },
+        {
+          "color": "#0F172A",
+        },
+      ]
+    }
+  >
+    chat.compare.title
+  </Text>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "flexDirection": "row",
+      }
+    }
+    data={
+      [
+        {
+          "facts": {
+            "artist": "Bobbie Nienow",
+            "qid": "Q1",
+            "title": "A",
+          },
+          "finalScore": 0.78,
+          "imageUrl": "https://example.com/full.jpg",
+          "metadataScore": 0.62,
+          "qid": "Q1",
+          "rationale": "Composition voisine et palette froide comparable.",
+          "thumbnailUrl": "https://example.com/thumb.jpg",
+          "title": "A",
+          "visualScore": 0.84,
+        },
+        {
+          "facts": {
+            "artist": "Ben Crooks DDS",
+            "qid": "Q2",
+            "title": "B",
+          },
+          "finalScore": 0.78,
+          "imageUrl": "https://example.com/full.jpg",
+          "metadataScore": 0.62,
+          "qid": "Q2",
+          "rationale": "Composition voisine et palette froide comparable.",
+          "thumbnailUrl": "https://example.com/thumb.jpg",
+          "title": "B",
+          "visualScore": 0.84,
+        },
+      ]
+    }
+    decelerationRate="fast"
+    getItem={[Function]}
+    getItemCount={[Function]}
+    horizontal={true}
+    keyExtractor={[Function]}
+    onContentSizeChange={[Function]}
+    onLayout={[Function]}
+    onMomentumScrollBegin={[Function]}
+    onMomentumScrollEnd={[Function]}
+    onScroll={[Function]}
+    onScrollBeginDrag={[Function]}
+    onScrollEndDrag={[Function]}
+    removeClippedSubviews={false}
+    renderItem={[Function]}
+    scrollEventThrottle={0.0001}
+    showsHorizontalScrollIndicator={false}
+    snapToInterval={228}
+    stickyHeaderIndices={[]}
+    viewabilityConfigCallbackPairs={[]}
+  >
+    <View>
+      <View
+        onFocusCapture={[Function]}
+        onLayout={[Function]}
+        style={
+          [
+            {
+              "flexDirection": "row",
+            },
+            null,
+          ]
+        }
+      >
+        <View
+          accessibilityLabel="mock-card-Q1"
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          testID="mock-card-Q1"
+        >
+          <View>
+            <Text>
+              A
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        onFocusCapture={[Function]}
+        onLayout={[Function]}
+        style={
+          [
+            {
+              "flexDirection": "row",
+            },
+            null,
+          ]
+        }
+      >
+        <View
+          accessibilityLabel="mock-card-Q2"
+          accessibilityState={
+            {
+              "busy": undefined,
+              "checked": undefined,
+              "disabled": undefined,
+              "expanded": undefined,
+              "selected": undefined,
+            }
+          }
+          accessibilityValue={
+            {
+              "max": undefined,
+              "min": undefined,
+              "now": undefined,
+              "text": undefined,
+            }
+          }
+          accessible={true}
+          collapsable={false}
+          focusable={true}
+          onBlur={[Function]}
+          onClick={[Function]}
+          onFocus={[Function]}
+          onResponderGrant={[Function]}
+          onResponderMove={[Function]}
+          onResponderRelease={[Function]}
+          onResponderTerminate={[Function]}
+          onResponderTerminationRequest={[Function]}
+          onStartShouldSetResponder={[Function]}
+          testID="mock-card-Q2"
+        >
+          <View>
+            <Text>
+              B
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;

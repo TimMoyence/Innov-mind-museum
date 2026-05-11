@@ -1,0 +1,88 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ImageCarouselSkeleton (C2.4 v2) renders 3 placeholder thumbs inside a non-scrollable progressbar container 1`] = `
+<RCTScrollView
+  accessibilityLabel="chat.enrichment.skeleton_loading"
+  accessibilityRole="progressbar"
+  accessible={true}
+  contentContainerStyle={
+    {
+      "flexDirection": "row",
+    }
+  }
+  horizontal={true}
+  scrollEnabled={false}
+  showsHorizontalScrollIndicator={false}
+  style={
+    {
+      "marginBottom": 8,
+    }
+  }
+>
+  <View>
+    <View
+      style={
+        {
+          "marginRight": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        style={
+          {
+            "backgroundColor": "rgba(255,255,255,0.64)",
+            "borderRadius": 8,
+            "height": 120,
+            "opacity": 0.45,
+            "overflow": "hidden",
+            "width": 120,
+          }
+        }
+      />
+    </View>
+    <View
+      style={
+        {
+          "marginRight": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        style={
+          {
+            "backgroundColor": "rgba(255,255,255,0.64)",
+            "borderRadius": 8,
+            "height": 120,
+            "opacity": 0.45,
+            "overflow": "hidden",
+            "width": 120,
+          }
+        }
+      />
+    </View>
+    <View
+      style={
+        {
+          "marginRight": 8,
+        }
+      }
+    >
+      <View
+        collapsable={false}
+        style={
+          {
+            "backgroundColor": "rgba(255,255,255,0.64)",
+            "borderRadius": 8,
+            "height": 120,
+            "opacity": 0.45,
+            "overflow": "hidden",
+            "width": 120,
+          }
+        }
+      />
+    </View>
+  </View>
+</RCTScrollView>
+`;

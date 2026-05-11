@@ -8,6 +8,15 @@ export type LlmProvider = 'openai' | 'deepseek' | 'google';
 export type StorageDriver = 'local' | 's3';
 
 /**
+ * C3 (2026-05) — supported image-embedding providers for the visual-similarity
+ * pipeline (`/chat/compare`). `'siglip-onnx'` self-hosts SigLIP base ONNX on
+ * CPU (no per-call cost, ~0.6–1.5s/encode, ~500MB RAM); `'replicate'` is the
+ * managed fallback used when self-host is unavailable (per-call cost, network
+ * latency). See design D1/D3 in `team-state/2026-05-08-c3-image-comparative/design.md`.
+ */
+export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
+
+/**
  * Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default).
  *
  * F4 (2026-04-30) — `llm-judge` adds a structured-output LLM second-layer verdict
@@ -322,13 +331,71 @@ export interface AppEnv {
     /** Minimum interval (ms) between any two outbound Nominatim fetches. Default 1000ms per OSMF policy. */
     minRequestIntervalMs: number;
   };
-  /** Image enrichment (Unsplash + Wikidata P18) configuration. */
+  /** Image enrichment (Unsplash + Wikidata P18 + v2 sources) configuration. */
   imageEnrichment: {
     unsplashAccessKey?: string;
     cacheTtlMs: number;
     cacheMaxEntries: number;
     fetchTimeoutMs: number;
     maxImagesPerResponse: number;
+  };
+  /**
+   * C3 (2026-05) — visual similarity engine (`/chat/compare`) configuration.
+   *
+   * The pipeline encodes an uploaded image to a fixed-dim embedding (default
+   * SigLIP base patch16-224 → 768d), searches `artwork_embeddings` via pgvector
+   * HNSW for top-N=20 nearest, enriches metadata via Wikidata, then fuses a
+   * weighted (`wVisual` × visualScore + `wMeta` × metadataScore) final score
+   * before truncating to top-K. See `team-state/2026-05-08-c3-image-comparative/design.md`.
+   */
+  visualSimilarity: {
+    /**
+     * Selects the encoder adapter. `'siglip-onnx'` (default) is the self-host
+     * CPU path; `'replicate'` switches to the managed fallback. Both adapters
+     * implement `EmbeddingsPort` so the use case is provider-agnostic.
+     */
+    provider: EmbeddingsProvider;
+    /**
+     * Filesystem path to the SigLIP ONNX bundle on disk. Relative paths resolve
+     * from `process.cwd()`. Default `./models/siglip-base-patch16-224.onnx`
+     * (downloaded at Docker build by `scripts/fetch-models.sh`). Ignored when
+     * `provider === 'replicate'`.
+     */
+    siglipOnnxModelPath: string;
+    /** Replicate API token, only consumed when `provider === 'replicate'`. */
+    replicateApiToken?: string;
+    /**
+     * Embedding dimension. Default 768 matches SigLIP-base. Changing this
+     * REQUIRES re-ingesting `artwork_embeddings` and a new migration to widen
+     * the `halfvec(N)` column — do not flip casually.
+     */
+    embeddingsDim: number;
+    /** ANN search top-N candidates fetched from pgvector before re-ranking. Default 20. */
+    topN: number;
+    /** Default top-K returned to the client after fusion. Capped server-side. Default 5. */
+    topKDefault: number;
+    /** Fusion weight applied to the visual cosine score. Defaults sum to 1 (0.7 + 0.3). */
+    wVisual: number;
+    /** Fusion weight applied to the metadata score (license + freshness). Default 0.3. */
+    wMeta: number;
+    /**
+     * Visual score threshold below which the result is degraded to the
+     * `no_visual_neighbor` fallback path (no compare results, generic prompt).
+     * Default 0.4. Raise to bias precision; lower to bias recall.
+     */
+    fallbackVisualThreshold: number;
+    /**
+     * TTL (ms) for the in-memory + Redis embedding cache (queries dedup'd by
+     * SHA256 of the input bytes). Default 1h. Raise for stable catalogs.
+     */
+    embeddingsCacheTtlMs: number;
+    /**
+     * Hard timeout (ms) on a single encoder call. On elapsed, the use case
+     * surfaces `EncoderUnavailableError` and the route returns the
+     * `encoder_unavailable` fallback. Default 3000ms (covers SigLIP-base CPU
+     * p99 with margin).
+     */
+    encodeTimeoutMs: number;
   };
   /**
    * Museum enrichment cache retention policy. Complements the refresh scan

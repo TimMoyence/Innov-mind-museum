@@ -292,6 +292,14 @@ jobs:
           script: |
             cd museum-frontend
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            # T9.x — Push the chat-compare fixture into /sdcard/Download/ so
+            # the picker surfaces it as the most-recent local asset. Harmless
+            # on the other shards; pushing is cheap (≤25KB) and idempotent.
+            if [ -f .maestro/fixtures/test-artwork.jpg ]; then
+              adb push .maestro/fixtures/test-artwork.jpg /sdcard/Download/test-artwork.jpg
+              # Tell MediaStore the new file exists so it appears in pickers.
+              adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/test-artwork.jpg || true
+            fi
             ./scripts/maestro-run-shard.sh ${{ matrix.shard }}
 
       - name: Upload shard logs
@@ -319,7 +327,7 @@ jobs:
         with:
           path: shard-logs
       - name: Post summary as PR comment
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
         with:
           script: |
             const fs = require('fs');
@@ -390,6 +398,14 @@ jobs:
         run: |
           APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
           xcrun simctl install booted "$APP_PATH"
+      - name: Seed Maestro fixtures into simulator photo library
+        # T9.x — Inject the chat-compare fixture into the booted simulator
+        # so the PHPicker surfaces it as the most-recent asset. Skipped if
+        # the fixture file is missing (fail-open).
+        run: |
+          if [ -f .maestro/fixtures/test-artwork.jpg ]; then
+            xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg
+          fi
       - name: Run all Maestro flows (sequential)
         run: ./scripts/maestro-run-shard.sh all
       - name: Upload iOS Maestro logs

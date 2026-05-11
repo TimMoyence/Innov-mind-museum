@@ -1,4 +1,7 @@
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+
+import { logger } from '@shared/logger/logger';
+import { getDataSourceForMetrics } from '@shared/observability/metrics-context';
 
 /**
  * Prometheus metrics registry. Holds the RED metrics + business metrics
@@ -97,6 +100,125 @@ export const chatPhaseErrorsTotal = new Counter({
   help: 'Total chat pipeline phase errors, by phase/provider/error_type',
   labelNames: ['phase', 'provider', 'error_type'] as const,
   registers: [registry],
+});
+
+/**
+ * C2 v2 (2026-05) — per-source image enrichment call counter. Cardinality is
+ * bounded:
+ *   - `source` ∈ {wikidata, unsplash, commons, musaium}
+ *   - `outcome` ∈ {success, error, timeout, disabled}
+ * Total active series ≤ 16. Increment in `ImageEnrichmentService.fetchSourcePhotos`.
+ */
+export const chatEnrichmentSourceCallsTotal = new Counter({
+  name: 'chat_enrichment_source_calls_total',
+  help: 'Total image-enrichment source-client calls, by source and outcome',
+  labelNames: ['source', 'outcome'] as const,
+  registers: [registry],
+});
+
+/**
+ * C2 v2 (2026-05) — per-source image enrichment latency histogram.
+ * Same `source` dimension as the calls counter; outcomes collapsed in p50/p95.
+ */
+export const chatEnrichmentSourceLatencySeconds = new Histogram({
+  name: 'chat_enrichment_source_latency_seconds',
+  help: 'Image-enrichment source-client latency in seconds, by source',
+  labelNames: ['source'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 8],
+  registers: [registry],
+});
+
+/**
+ * C3 visual similarity (2026-05 / Phase 9 T9.x corrective) — Prometheus
+ * surface mandated by `spec.md §10 NFR`. Cardinality is bounded so the
+ * series count stays explainable:
+ *   - `requests_total` has no labels (just total throughput).
+ *   - `duration_seconds` carries one `stage` label ∈ {total, encode, search,
+ *     enrich, fusion}. 5 active series.
+ *   - `fallback_total` carries one `reason` label ∈ {encoder_unavailable,
+ *     no_visual_neighbor}. 2 active series.
+ *   - `cache_hits_total` has no labels — a single counter, paired with
+ *     `requests_total` for the hit-rate computation in the dashboard.
+ *
+ * Total compare-namespaced active series ≤ 9. The Grafana dashboard
+ * (`infra/grafana/dashboards/visual-compare.json`) consumes the per-stage
+ * histogram for the latency panels and the fallback counter for the
+ * encoder-unavailability rate.
+ */
+export const compareRequestsTotal = new Counter({
+  name: 'compare_requests_total',
+  help: 'Total /chat/compare requests reaching the use-case (post-auth, post-rate-limit)',
+  registers: [registry],
+});
+
+/**
+ * Per-stage latency histogram. Bucket boundaries pinned to the spec NFR
+ * latency budget (p95 ≤ 3s for `total`); finer buckets at the low end so
+ * fast cache hits / single-stage spikes resolve in the panel.
+ */
+export const compareDurationSeconds = new Histogram({
+  name: 'compare_duration_seconds',
+  help: 'Per-stage latency of the /chat/compare pipeline',
+  labelNames: ['stage'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 1.5, 2, 3, 5, 8],
+  registers: [registry],
+});
+
+/**
+ * Counter of fallback responses by reason. Increments on the contractual
+ * fallback paths in the orchestrator (encoder unavailable, no neighbour).
+ * 4xx client errors are tracked via `http_requests_total` instead.
+ */
+export const compareFallbackTotal = new Counter({
+  name: 'compare_fallback_total',
+  help: 'Total /chat/compare requests that returned a contractual fallback envelope',
+  labelNames: ['reason'] as const,
+  registers: [registry],
+});
+
+/**
+ * Top-K result-cache hit counter. Pair with `compare_requests_total` to
+ * compute the cache hit rate in the dashboard.
+ */
+export const compareCacheHitsTotal = new Counter({
+  name: 'compare_cache_hits_total',
+  help: 'Total /chat/compare requests served from the top-K result cache (no encoder/repo hit)',
+  registers: [registry],
+});
+
+/**
+ * C3 visual similarity (T9.2) — catalogue size gauge. Updated SYNCHRONOUSLY
+ * on every `/metrics` scrape via the `collect()` callback (no scheduler);
+ * Prometheus scrape interval (~15-30s) is the effective sampling cadence.
+ *
+ * Fail-open: if the DataSource hasn't been wired yet (early boot, tests) or
+ * the `SELECT count(*)` rejects (DB outage, transient connectivity), the
+ * gauge keeps its previous value rather than being reset to 0 — this avoids
+ * spurious "catalog drift" Sentry alerts (T9.5) on a momentary DB blip.
+ *
+ * The `SELECT count(*)` is exact, not the `pg_class.reltuples` estimate.
+ * Trade-off accepted: at the V1 scale (~10k rows, indexed) the count is
+ * ≪10ms; if the catalogue ever grows past ~100k we can swap to the
+ * estimate without changing the metric contract.
+ */
+export const artworkEmbeddingsCount = new Gauge({
+  name: 'artwork_embeddings_count',
+  help: 'Total rows in artwork_embeddings (C3 catalogue size). Refreshed on every /metrics scrape.',
+  registers: [registry],
+  async collect() {
+    const ds = getDataSourceForMetrics();
+    if (!ds) return;
+    try {
+      const rows = await ds.query<{ count: string }[]>(
+        'SELECT count(*)::text AS count FROM artwork_embeddings',
+      );
+      this.set(Number(rows[0]?.count ?? 0));
+    } catch (err) {
+      logger.warn('artwork_embeddings_count_collect_failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
 });
 
 /** Returns the Prometheus-format metrics dump. */

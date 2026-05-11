@@ -144,8 +144,13 @@ export class WikidataClient implements KnowledgeBaseProvider {
       throw err;
     }
 
+    // C2 v2 (2026-05) — adds `aliases` projection via skos:altLabel +
+    // schema:alternateName, GROUP_CONCAT-joined on `|`. Empty / missing when
+    // the entity has no aliases in the requested language. No extra round-trip.
     const sparql = `
-      SELECT ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
+      SELECT
+        ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
+        (GROUP_CONCAT(DISTINCT ?aliasLabel; SEPARATOR='|') AS ?aliases)
       WHERE {
         BIND(wd:${qid} AS ?item)
         OPTIONAL { ?item wdt:P170 ?creator. }
@@ -155,8 +160,12 @@ export class WikidataClient implements KnowledgeBaseProvider {
         OPTIONAL { ?item wdt:P135 ?movement. }
         OPTIONAL { ?item wdt:P136 ?genre. }
         OPTIONAL { ?item wdt:P18 ?image. }
+        OPTIONAL { ?item skos:altLabel ?skosAlias FILTER(LANG(?skosAlias) = "${language}") }
+        OPTIONAL { ?item schema:alternateName ?schemaAlias FILTER(LANG(?schemaAlias) = "${language}") }
+        BIND(COALESCE(?skosAlias, ?schemaAlias) AS ?aliasLabel)
         SERVICE wikibase:label { bd:serviceParam wikibase:language "${language},en". }
       }
+      GROUP BY ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
       LIMIT 1`;
 
     const res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`, {
@@ -181,6 +190,12 @@ export class WikidataClient implements KnowledgeBaseProvider {
     // 1502 when interpreted in Europe/Paris pre-1891 local mean time).
     const date = inception ? `c. ${new Date(inception).getUTCFullYear().toString()}` : undefined;
 
+    // C2 v2 — split GROUP_CONCAT on `|`, drop empty fragments, dedup.
+    const aliasesRaw = val('aliases');
+    const aliases = aliasesRaw
+      ? Array.from(new Set(aliasesRaw.split('|').map((s) => s.trim()).filter(Boolean)))
+      : undefined;
+
     return {
       qid,
       title: label,
@@ -191,6 +206,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
       movement: val('movementLabel'),
       genre: val('genreLabel'),
       imageUrl: val('image') ?? undefined,
+      aliases: aliases && aliases.length > 0 ? aliases : undefined,
     };
   }
 }
