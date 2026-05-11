@@ -14,6 +14,7 @@ import {
   shouldDehydrateQuery,
 } from '@/shared/data/queryClient';
 import { initSentry, reactNavigationIntegration } from '@/shared/observability/sentry-init';
+import { installGlobalErrorHandler } from '@/shared/observability/global-error-handler';
 import { logInitPhase } from '@/shared/observability/init-phase-breadcrumbs';
 
 import '@/features/museum/infrastructure/mapLibreBootstrap';
@@ -51,6 +52,14 @@ const sentryDsn: string | undefined =
 
 initSentry(sentryDsn);
 logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });
+
+// Install a global JS error handler ASAP so any subsequent uncaught
+// exception (route-module evaluation, missing native module, async
+// rejection that bubbles to ErrorUtils) is captured by Sentry and
+// downgraded from fatal to non-fatal in release — preventing the
+// SIGABRT path observed on TestFlight 1.2.2 (87) when the ExpoWebBrowser
+// pod was unlinked. Detail: shared/observability/global-error-handler.ts.
+installGlobalErrorHandler();
 
 // Cert pinning init runs PRE-axios so the first network request is pinned
 // when the env flag and kill-switch agree. The env defaults to false, so

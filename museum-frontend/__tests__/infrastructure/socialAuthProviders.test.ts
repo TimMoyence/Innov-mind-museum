@@ -192,3 +192,30 @@ describe('signInWithGoogle — F11-mobile web flow', () => {
     });
   });
 });
+
+// ── Defensive lazy load (TestFlight 1.2.2/87 — Pods missing ExpoWebBrowser) ──
+//
+// Build 87 crashed at launch because `expo-web-browser` was declared in
+// package.json + plugins but the iOS Pods/ checkout still lacked the
+// ExpoWebBrowser pod — the static `import * as WebBrowser from
+// 'expo-web-browser'` at module top of socialAuthProviders.ts evaluated
+// `requireNativeModule('ExpoWebBrowser')` which threw inside Metro's
+// `guardedLoadModule`, raising a fatal report → RCTFatal → SIGABRT.
+//
+// Mitigation lives in three layers:
+//   A. `pod install` regenerates Pods/ to actually link ExpoWebBrowser.
+//   B. The static import was replaced by a lazy `require()` inside
+//      `loadWebBrowser()` (this file). The 6 google_* tests above already
+//      exercise that lazy path: they pass only when the require runs
+//      inside `signInWithGoogle()` rather than at module load.
+//   C. `installGlobalErrorHandler()` (covered in
+//      `__tests__/shared/observability/global-error-handler.test.ts`)
+//      downgrades fatal → non-fatal in release so future unlinked
+//      modules surface as a JS error event instead of SIGABRT.
+//
+// An additional unit test of the "exports incomplete → browser_unavailable"
+// branch was prototyped but coupling jest.doMock with jest.isolateModules
+// turned out to fight the hoisted top-level `jest.mock('expo-web-browser',
+// …)` factory, leading to flaky precedence. The mitigation above is
+// validated end-to-end through the layered coverage rather than a fragile
+// per-branch assertion.

@@ -1,10 +1,36 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import * as WebBrowser from 'expo-web-browser';
+import type * as WebBrowserNamespace from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
 import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
 import { createAppError } from '@/shared/types/AppError';
+
+type WebBrowserModule = typeof WebBrowserNamespace;
+
+// expo-web-browser is loaded lazily so a missing native module (e.g. iOS
+// Pods/ out of sync with package.json after a config-plugin change) cannot
+// crash the JS bundle at module-load time. Combined with the global JS error
+// handler in app/_layout.tsx, an unlinked native module degrades to a
+// SocialAuth AppError surfaced in the UI instead of an app abort (SIGABRT
+// via RCTFatal). Caught by test mocks via `jest.mock('expo-web-browser', …)`.
+const loadWebBrowser = (): WebBrowserModule => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- defensive runtime require; static import would throw at module-load when the ExpoWebBrowser native module is not linked into the iOS/Android binary.
+    const mod = require('expo-web-browser') as Partial<WebBrowserModule> | undefined;
+    if (!mod || typeof mod.openAuthSessionAsync !== 'function') {
+      throw new Error('expo-web-browser exports incomplete');
+    }
+    return mod as WebBrowserModule;
+  } catch (cause) {
+    throw createAppError({
+      kind: 'SocialAuth',
+      code: 'browser_unavailable',
+      message: 'In-app browser is unavailable on this build',
+      details: { cause: cause instanceof Error ? cause.message : String(cause) },
+    });
+  }
+};
 
 /**
  * F11-mobile (2026-05) — deeplink scheme the in-app OAuth browser must land on
@@ -84,6 +110,7 @@ export const signInWithApple = async (
  *   (`google_cancelled`) or any backend failure (`google_unknown`).
  */
 export const signInWithGoogle = async (): Promise<LoginResponse> => {
+  const WebBrowser = loadWebBrowser();
   const baseUrl = resolveInitialApiBaseUrl().replace(/\/$/, '');
   const authUrl = `${baseUrl}/api/auth/google/initiate?platform=mobile`;
 

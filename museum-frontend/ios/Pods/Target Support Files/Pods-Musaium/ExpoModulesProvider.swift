@@ -37,6 +37,7 @@ internal import ExpoStoreReview
 internal import ExpoSymbols
 internal import ExpoSystemUI
 internal import EXUpdates
+internal import ExpoWebBrowser
 #if EXPO_CONFIGURATION_DEBUG
 internal import EXDevLauncher
 internal import EXDevMenu
@@ -81,6 +82,7 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: SymbolModule.self, name: nil),
       (module: ExpoSystemUIModule.self, name: nil),
       (module: UpdatesModule.self, name: nil),
+      (module: WebBrowserModule.self, name: nil),
       (module: DevLauncherModule.self, name: nil),
       (module: DevMenuModule.self, name: nil),
       (module: DevMenuInternalModule.self, name: nil),
@@ -121,7 +123,8 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: StoreReviewModule.self, name: nil),
       (module: SymbolModule.self, name: nil),
       (module: ExpoSystemUIModule.self, name: nil),
-      (module: UpdatesModule.self, name: nil)
+      (module: UpdatesModule.self, name: nil),
+      (module: WebBrowserModule.self, name: nil)
     ]
     #endif
   }
