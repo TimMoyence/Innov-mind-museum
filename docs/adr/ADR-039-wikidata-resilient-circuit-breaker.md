@@ -19,7 +19,7 @@ C5 (`docs/ROADMAP_PRODUCT.md` lignes 104-111) tracks the gap. The plan originall
 
 ### D1 — Circuit-breaker pattern via [opossum](https://nodeshift.dev/opossum) 9.x
 
-Wrap `WikidataClient` with `WikidataBreakerClient` (decorator implementing `KnowledgeBaseProvider`). Drop-in at the `chat-module.ts:buildKnowledgeBase` injection seam.
+Wrap `WikidataClient` with `WikidataBreakerClient` (decorator implementing `KnowledgeBaseProvider`). Assembled at the `chat-module.wikidata-wiring.ts:buildWikidataStack` injection seam.
 
 Configuration (env, defaults set for V1 launch traffic ~1k req/day) :
 

@@ -41,16 +41,17 @@ export interface WikidataKbDumpRepositoryPort {
 
 /**
  * Null-object implementation : always resolves to `null`, swallows upserts.
- * Wired in {@link buildKnowledgeBase} until the C5.3 Phase B wiring step
- * promotes the TypeORM implementation in `chat-module.ts`.
+ * Retained as a stub for tests that exercise the cascade in isolation —
+ * the production composition root (`chat-module.wikidata-wiring.ts`) now
+ * wires `WikidataKbDumpRepositoryTypeOrm` instead (C5.3 Phase B).
  */
 export class NoopWikidataKbDumpRepository implements WikidataKbDumpRepositoryPort {
-  // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars -- interface contract requires async signature with same parameter shape
+  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract requires async signature
   async findFactsBySearchTerm(_searchTerm: string, _language?: string): Promise<ArtworkFacts | null> {
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars -- interface contract requires async signature with same parameter shape
+  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract requires async signature
   async upsert(
     _searchTerm: string,
     _language: string | undefined,
