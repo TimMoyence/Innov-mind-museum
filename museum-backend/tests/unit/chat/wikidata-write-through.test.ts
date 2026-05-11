@@ -12,6 +12,7 @@
  */
 
 import { WikidataWriteThroughProvider } from '@modules/chat/adapters/secondary/search/wikidata-write-through.provider';
+import { makeArtworkFacts } from 'tests/helpers/chat/visual-similarity/artwork-facts.fixtures';
 
 import type {
   ArtworkFacts,
@@ -20,7 +21,7 @@ import type {
 } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { WikidataKbDumpRepositoryPort } from '@modules/chat/domain/ports/wikidata-kb-dump.port';
 
-const MONA: ArtworkFacts = { qid: 'Q12418', title: 'Mona Lisa' };
+const MONA: ArtworkFacts = makeArtworkFacts();
 const QUERY: KnowledgeBaseQuery = { searchTerm: 'Mona Lisa' };
 const QUERY_FR: KnowledgeBaseQuery = { searchTerm: 'La Joconde', language: 'fr' };
 

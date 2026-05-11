@@ -11,24 +11,18 @@
 
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { WikidataKbDump } from '@modules/chat/domain/knowledge/wikidata-kb-dump.entity';
+import { makeArtworkFacts } from 'tests/helpers/chat/visual-similarity/artwork-facts.fixtures';
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 
-const MONA: ArtworkFacts = {
-  qid: 'Q12418',
-  title: 'Mona Lisa',
-  artist: 'Leonardo da Vinci',
-  date: 'c. 1503',
-  technique: 'Oil on poplar panel',
-};
-
-const VENUS: ArtworkFacts = {
+const MONA: ArtworkFacts = makeArtworkFacts();
+const VENUS: ArtworkFacts = makeArtworkFacts({
   qid: 'Q3914',
   title: 'Vénus de Milo',
   artist: 'Unknown',
   date: 'c. 100 BC',
-};
+});
 
 describe('WikidataKbDumpRepositoryTypeOrm (C5.3 — integration)', () => {
   let harness: Awaited<ReturnType<typeof createIntegrationHarness>>;

@@ -14,6 +14,7 @@ import {
   DEFAULT_CANON_TERMS,
   seedKbCanon,
 } from '@modules/chat/useCase/knowledge/seed-kb-canon';
+import { makeArtworkFacts } from 'tests/helpers/chat/visual-similarity/artwork-facts.fixtures';
 
 import type {
   ArtworkFacts,
@@ -21,8 +22,8 @@ import type {
 } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { WikidataKbDumpRepositoryPort } from '@modules/chat/domain/ports/wikidata-kb-dump.port';
 
-const MONA: ArtworkFacts = { qid: 'Q12418', title: 'Mona Lisa' };
-const VENUS: ArtworkFacts = { qid: 'Q3914', title: 'Vénus de Milo' };
+const MONA: ArtworkFacts = makeArtworkFacts();
+const VENUS: ArtworkFacts = makeArtworkFacts({ qid: 'Q3914', title: 'Vénus de Milo' });
 
 function makeClient(): KnowledgeBaseProvider & { lookup: jest.Mock } {
   return { lookup: jest.fn() };
