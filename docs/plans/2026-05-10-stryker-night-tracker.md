@@ -6,50 +6,51 @@ Tracking de la session nuit autonome Stryker (branche `Strycker`, worktree
 Mise à jour vivante au fil des étapes. Le récap final ira dans
 `docs/plans/2026-05-NN-stryker-night-recap.md` à la fin (étape 4).
 
-## Étape 0 — Fix env + sentry test blockers
+## Étape 0 — Fix env + sentry test blockers ✅
 
 - [x] RED state reproduit (`tests/unit/config/env.test.ts:188` + `tests/unit/shared/sentry.test.ts:25`) — 2 failed, 54 passed
 - [x] Fix appliqué dans `src/config/env.ts:22-24` : `if (NODE_ENV !== 'test') dotenv.config()`
 - [x] GREEN sur env + sentry : `Tests: 56 passed, 56 total`
 - [x] Suite complète : `Tests: 82 skipped, 4154 passed, 4236 total` (0 failing, +8 vs baseline)
-- [x] Commit `fix(env,sentry): skip dotenv.config in test mode to keep tests env-agnostic`
+- [x] Commit `d6b66028 fix(env,sentry): skip dotenv.config in test mode to keep tests env-agnostic`
+- [x] Commit `24cd4956 chore(stryker): bootstrap docs/plans/ + night-tracker for Stryker session`
 
-## Étape 1.1 — shared-db (12 survivors latents)
+## Étape 1.1 — shared-db (12 survivors latents) ✅
 
-Cache déjà au scope `museum-backend/stryker/shared-db.config.mjs`. Test
-additions de 98fb5a52 déjà sur HEAD. Rerun direct attendu.
+- [x] Stryker run shared-db (4m20s, 0 survivors, 32 killed + 24 timeout / 63 total, 88.89% covered)
+- [x] Commit `1604478c chore(mutation): finalize shared-db scope at 100% covered (0 survivors)`
 
-- [ ] Lancement Stryker run (background)
-- [ ] Parse survivors → 0
-- [ ] Commit
+## Étape 1.2 — shared-http (42 survivors : overpass-cache/tags/wikidata-ids) ✅
 
-## Étape 1.2 — shared-http (42 survivors : overpass-cache/tags/wikidata-ids)
+- [x] Stryker run shared-http initial : 42 survivors
+- [x] Test additions : 26 nouveaux tests dans 3 fichiers (overpass-cache, overpass-tags, wikidata-injection)
+- [x] 2 annotations Stryker disable justifiées (≥20 chars) — overpass-cache:113 (cond+eq équivalents), overpass-tags:25 (StringLiteral fallback)
+- [x] Stryker rerun shared-http (7m27s, 0 survivors, 267 mutants : 165k+77t+25 ignored static Regex)
+- [x] Commit `969a5ca5 chore(mutation): finalize shared-http scope at 100% covered (0 survivors)`
 
-- [ ] Stryker run (background)
-- [ ] Fresh agent : prépare test additions strictes
-- [ ] Code review parallèle
-- [ ] Apply → retry → 0 survivor
-- [ ] Commit
+## Étape 1.3 — shared-misc (92 survivors, api.router 57 = carve-out) ✅
 
-## Étape 1.3 — shared-misc (92 survivors, api.router 57 = carve-out probable)
+- [x] Carve-out api.router → `stryker/shared-routers.config.mjs` (57 survivors isolés)
+- [x] Agent bucket-store : 16 survivors → 13 killed + 3 annotations (non-Node guard)
+- [x] Test additions main : app.error.ts (+14 cases ValidationError + tooManyRequests + serviceUnavailable + unauthorized), logger.ts (+8 cases env-driven defaultFields via jest.isolateModules + withEnv helper), cursor-codec.ts (+1 annotation utf8 default)
+- [x] Factory fix : `tests/helpers/rate-limit/bucket-store.fixtures.ts` passe options.maxSize/sweepIntervalMs en `undefined` pour exercer le fallback constructeur (kill L27 ArithmeticOperator)
+- [x] Stryker shared-misc rerun à STRYKER_CONCURRENCY=4 (CPU dial-down, évite flake MFA timeout 5s) : 0 survivors, 135 mutants (52k+64t+19 ignored)
+- [x] Commit `3971f063 chore(mutation): finalize shared-misc scope at 100% covered (0 survivors) + carve out routers`
 
-- [ ] Décision carve-out routers vs in-bundle
-- [ ] Stryker
-- [ ] Apply test additions / carve-out config
-- [ ] Commit
+## Étape 2 — Carve-out scopes (8) 🟡 en cours
 
-## Étape 2 — Carve-out scopes (8)
+État courant dans `reports/mutation/mutation.json` :
 
-Configs déjà créées dans `museum-backend/stryker/`. Ordre :
-
-1. shared-zod-issue (8, facile, test from-scratch)
-2. shared-password-breach-check (14, logger/sentry payload)
-3. shared-resilient-cache (23, fault injection)
-4. shared-memory-cache (19 + 16 NoCov, fakeTimers)
-5. shared-string-similarity (49, table de cas)
-6. shared-nominatim-client (config à créer)
-7. shared-overpass-client (config à créer)
-8. http no-test bundle (4-5 tests from-scratch puis scope dédié)
+| Scope                    | Config                                                | Survivors | Status |
+|--------------------------|-------------------------------------------------------|-----------|--------|
+| shared-zod-issue         | `stryker/shared-zod-issue.config.mjs`                 | 8 → **0** | ✅ commit `abef65ef` |
+| shared-password-breach   | `stryker/shared-password-breach-check.config.mjs`     | 14 → **0** | ✅ commit `abef65ef` |
+| shared-memory-cache      | `stryker/shared-memory-cache.config.mjs`              | 19 + 16 NoCov | 🔄 agent en cours |
+| shared-resilient-cache   | `stryker/shared-resilient-cache.config.mjs`           | 23 + 4 NoCov  | 🔄 agent en cours |
+| shared-string-similarity | `stryker/shared-string-similarity.config.mjs`         | 49        | 🔄 agent en cours |
+| shared-nominatim-client  | `stryker/shared-nominatim-client.config.mjs` (créé)   | NOT IN CACHE | 🔜 |
+| shared-overpass-client   | `stryker/shared-overpass-client.config.mjs` (créé)    | NOT IN CACHE | 🔜 |
+| shared-routers           | `stryker/shared-routers.config.mjs` (créé)            | 57 + 15 NoCov | 🔜 |
 
 ## Étape 3 — Modules
 
