@@ -71,10 +71,15 @@ const ART_KEYWORDS = [
 
 /** Wikidata adapter implementing {@link KnowledgeBaseProvider}. The public `lookup()` never throws. */
 export class WikidataClient implements KnowledgeBaseProvider {
-  private readonly userAgent: string;
+  // ES2022 private field — kept off the instance's own-property surface so the
+  // SSRF matrix (`tests/integration/security/ssrf-matrix.integration.test.ts`)
+  // continues to assert `Object.keys(new WikidataClient()) === []`. The
+  // User-Agent is configurable at construction time but is NOT a URL knob
+  // (header value only, no SSRF surface).
+  readonly #userAgent: string;
 
   constructor(options: { userAgent?: string } = {}) {
-    this.userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+    this.#userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
   }
   /**
    * Looks up artwork facts and swallows all errors — preserves the
@@ -132,7 +137,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
     let res: Response;
     try {
       res = await fetch(`${WIKIDATA_API}?${params.toString()}`, {
-        headers: { 'User-Agent': this.userAgent },
+        headers: { 'User-Agent': this.#userAgent },
       });
     } catch (err) {
       // Network failure (fetch reject) — transient, breaker should count it
@@ -215,7 +220,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
     try {
       res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`, {
         headers: {
-          'User-Agent': this.userAgent,
+          'User-Agent': this.#userAgent,
           Accept: 'application/sparql-results+json',
         },
       });

@@ -105,10 +105,10 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 > Existant : live SPARQL + Redis cache 7d + fail-open + prompt injection wrap (ADR-035 Accepted-Implemented). Manque : circuit-breaker + downtime metric + local dump fallback.
 
-- [ ] **C5.1 Circuit-breaker SPARQL** — open après N fails consécutifs, half-open après cooldown, fermé sur succès
-- [ ] **C5.2 Downtime metric Langfuse** — alerte si p95 >500ms ou error-rate >5%
-- [ ] **C5.3 Local dump backup** — Wikidata monthly dump art-related entities only, restore fallback en cas SPARQL down >X min
-- [ ] **C5.4 Cache hit-rate monitoring** — expose metric Redis 7d TTL, dashboard Grafana
+- [x] **C5.1 Circuit-breaker SPARQL** — opossum 9.x via `WikidataBreakerClient`, drop-in `KnowledgeBaseProvider`. 7 tests TDD transitions CLOSED/OPEN/HALF_OPEN + 4xx-no-trip + Step 7.1 DoD null fail-open. (PR-C5, 2026-05-11, ADR-039)
+- [ ] **C5.2 Downtime metric Langfuse** — span `chat.knowledge.lookup` shipped (PR-C5) ; alertes p95>500ms / error-rate>5% restent à wirer Phase 6.2-4
+- [ ] **C5.3 Local dump backup** — port + `NoopWikidataKbDumpRepository` + cascade soak `LOCAL_DUMP_FALLBACK_AFTER_MS` shipped (PR-C5) ; ingest = write-through organique au lieu de 150GB monthly (ADR-039 D4) — migration `wikidata_kb_dump` + hook UPSERT en hot-path à Phase 4-light
+- [ ] **C5.4 Cache hit-rate monitoring** — Prometheus counters + Grafana dashboard à Phase 6.2-4
 
 ### C6 — Premium soft-paywall stub
 

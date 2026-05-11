@@ -33,6 +33,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
 | LLM cache strategy (single-source) | [`docs/adr/ADR-036-llm-cache-strategy.md`](adr/ADR-036-llm-cache-strategy.md) |
 | Visual similarity (C3, SigLIP + pgvector) | [`docs/adr/ADR-037-visual-similarity-siglip-pgvector.md`](adr/ADR-037-visual-similarity-siglip-pgvector.md), runbook [`docs/AI_VISUAL_SIMILARITY.md`](AI_VISUAL_SIMILARITY.md) |
+| Wikidata résilient (C5, opossum CB + organic local dump) | [`docs/adr/ADR-039-wikidata-resilient-circuit-breaker.md`](adr/ADR-039-wikidata-resilient-circuit-breaker.md), plan [`docs/plans/2026-05-10-c5-launch-prompt.md`](plans/2026-05-10-c5-launch-prompt.md) |
 | RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
 | SLO + observability strategy | [`docs/SLO.md`](SLO.md) |
 | Capacity plan (10rps→1K→100K tiers) | [`docs/CAPACITY_PLAN.md`](CAPACITY_PLAN.md) |
