@@ -106,9 +106,9 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 > Existant : live SPARQL + Redis cache 7d + fail-open + prompt injection wrap (ADR-035 Accepted-Implemented). Manque : circuit-breaker + downtime metric + local dump fallback.
 
 - [x] **C5.1 Circuit-breaker SPARQL** — opossum 9.x via `WikidataBreakerClient`, drop-in `KnowledgeBaseProvider`. 7 tests TDD transitions CLOSED/OPEN/HALF_OPEN + 4xx-no-trip + Step 7.1 DoD null fail-open. (PR-C5, 2026-05-11, ADR-039)
-- [ ] **C5.2 Downtime metric Langfuse** — span `chat.knowledge.lookup` shipped (PR-C5) ; alertes p95>500ms / error-rate>5% restent à wirer Phase 6.2-4
-- [ ] **C5.3 Local dump backup** — port + `NoopWikidataKbDumpRepository` + cascade soak `LOCAL_DUMP_FALLBACK_AFTER_MS` shipped (PR-C5) ; ingest = write-through organique au lieu de 150GB monthly (ADR-039 D4) — migration `wikidata_kb_dump` + hook UPSERT en hot-path à Phase 4-light
-- [ ] **C5.4 Cache hit-rate monitoring** — Prometheus counters + Grafana dashboard à Phase 6.2-4
+- [x] **C5.2 Downtime metric + alerts** — span `chat.knowledge.lookup` shipped (PR-C5) ; `wikidata_sparql_circuit_state` gauge + `wikidata_sparql_requests_total{outcome}` counter + `wikidata_sparql_request_duration_seconds` histogram ; 4 alertes (`WikidataBreakerOpenSustained`, `WikidataSparqlErrorRateHigh`, `WikidataSparqlLatencyP95High`, `WikidataLocalDumpHotPath`) wired via `infra/grafana/alerting/wikidata-resilience.yml`. (PR-C5 Phase 6.2-4, 2026-05-11, ADR-039)
+- [ ] **C5.3 Local dump backup** — port + `NoopWikidataKbDumpRepository` + cascade soak `LOCAL_DUMP_FALLBACK_AFTER_MS` shipped (PR-C5) ; `wikidata_local_dump_{hits,misses}_total` counters wired Phase 6.2 ; ingest = write-through organique au lieu de 150GB monthly (ADR-039 D4) — migration `wikidata_kb_dump` + hook UPSERT en hot-path à Phase 4-light
+- [x] **C5.4 Cache hit-rate monitoring** — `wikidata_cache_{hits,misses}_total` counters + Grafana dashboard `wikidata-resilience.json` (5 panels : circuit state, outcomes, latency p50/p95/p99, cache hit rate, dump fallback rate). (PR-C5 Phase 6.2-4, 2026-05-11, ADR-039)
 
 ### C6 — Premium soft-paywall stub
 

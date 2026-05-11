@@ -113,16 +113,18 @@ Doctrine inverts after the first paying B2B museum (`feedback_no_feature_flags_p
 | Circuit breaker | `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` |
 | Refactored client | `museum-backend/src/modules/chat/adapters/secondary/search/wikidata.client.ts` (`lookupOrThrow` + `WikidataTransientError`) |
 | Dump port + noop | `museum-backend/src/modules/chat/domain/ports/wikidata-kb-dump.port.ts` |
-| Cascade logic | `museum-backend/src/modules/chat/useCase/knowledge/knowledge-base.service.ts` (`shouldFallbackToDump`, `startTrace`) |
+| Cascade logic | `museum-backend/src/modules/chat/useCase/knowledge/knowledge-base.service.ts` (`shouldFallbackToDump`, `startTrace`, `applyCascade`) |
 | Wiring | `museum-backend/src/modules/chat/chat-module.ts:buildKnowledgeBase` |
 | Env contract | `museum-backend/src/config/env.ts:knowledgeBase.breaker` + `.env.example` C5 section |
-| Unit tests | `tests/unit/chat/wikidata-breaker.test.ts` (7) + `knowledge-base-cascade.test.ts` (6) + `wikidata-kb-dump-noop.test.ts` (1) |
+| Prometheus surface (Phase 6.2) | `museum-backend/src/shared/observability/prometheus-metrics.ts` (`wikidataSparqlCircuitState`, `wikidataSparqlRequestsTotal`, `wikidataSparqlRequestDurationSeconds`, `wikidataCacheHitsTotal`/`MissesTotal`, `wikidataLocalDumpHitsTotal`/`MissesTotal`) |
+| Grafana dashboard (Phase 6.3) | `infra/grafana/dashboards/wikidata-resilience.json` — 5 panels (circuit state, outcome rate, latency p50/p95/p99, cache hit rate, dump fallback rate) |
+| Alert rules (Phase 6.4) | `infra/grafana/alerting/wikidata-resilience.yml` — 4 alerts (`WikidataBreakerOpenSustained` warn 5m, `WikidataSparqlErrorRateHigh` critical 10m, `WikidataSparqlLatencyP95High` warn 15m, `WikidataLocalDumpHotPath` info 10m) |
+| Unit tests | `tests/unit/chat/wikidata-breaker.test.ts` (13 — 7 transitions + 6 metric emission) + `knowledge-base-cascade.test.ts` (12 — 6 cascade + 6 metric emission) + `wikidata-kb-dump-noop.test.ts` (1) + `tests/unit/observability/prometheus-metrics.test.ts` (+5 Wikidata-specific assertions) |
 | Integration E2E | `tests/integration/chat/wikidata-resilience.integration.test.ts` (4 — live + 5xx storm + Step 7.1 DoD + HALF_OPEN recovery) |
 
 ## Deferred (separate sessions)
 
 - **Phase 4-light** — `wikidata_kb_dump` migration + `WikidataKbDumpRepositoryTypeOrm` real implementation + write-through hook in `KnowledgeBaseService` (~3 h work).
-- **Phase 6.2-4** — Prometheus counters + Grafana dashboards + alert rules (C5.2 downtime metric).
 - **Phase 7.3** — Chaos game-day on staging once the staging env is available (`docs/CHAOS_RUNBOOKS.md` extension).
 - **Optional Phase 4-light seed** — `scripts/seed-kb-canon.ts` curated top-1k via WDQS (~5 MB, one-shot before launch).
 - **150 GB RDF dump pipeline** — NOT scheduled. Re-open the discussion only if production telemetry (post-launch) shows the write-through coverage is insufficient on a measurable scale, AND a B2B contract requires the long-tail guarantee.

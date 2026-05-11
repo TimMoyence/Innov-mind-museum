@@ -221,6 +221,72 @@ export const artworkEmbeddingsCount = new Gauge({
   },
 });
 
+/**
+ * C5 (2026-05) — Wikidata résilience surface mandated by ADR-039 and the C5
+ * launch prompt §J Phase 6.2-4. The breaker emits state + outcome + duration ;
+ * the KnowledgeBaseService emits cache + dump hit/miss counters. Cardinality
+ * is strictly bounded so the active series count stays explainable :
+ *
+ *   - `wikidata_sparql_circuit_state` carries one `state` label ∈ {closed, open,
+ *     half_open}. 3 active series. Gauge holds 1 for the current state and
+ *     0 for the others, set on opossum `open` / `close` / `halfOpen` events.
+ *   - `wikidata_sparql_requests_total` carries one `outcome` label ∈ {success,
+ *     error, timeout, circuit_open, rate_limit}. 5 active series. NO
+ *     search-term and NO QID labels — both are unbounded user-derived strings.
+ *   - `wikidata_sparql_request_duration_seconds` is labelless ; buckets pinned
+ *     to ADR-039 budget (timeout=5s, 60s upper bound covers worst-case retry
+ *     storms). Reject events do NOT observe — the action never ran.
+ *   - `wikidata_cache_hits_total` / `wikidata_cache_misses_total` are labelless
+ *     (single-tier KB cache today — SWR 3-tier shape is C5.4 future work).
+ *   - `wikidata_local_dump_hits_total` / `wikidata_local_dump_misses_total` are
+ *     labelless ; incremented only when the cascade is *triggered* (breaker
+ *     OPEN past `localDumpFallbackAfterMs` soak window).
+ */
+export const wikidataSparqlCircuitState = new Gauge({
+  name: 'wikidata_sparql_circuit_state',
+  help: 'Current state of the Wikidata SPARQL circuit breaker. 1 = active state, 0 = inactive.',
+  labelNames: ['state'] as const,
+  registers: [registry],
+});
+
+export const wikidataSparqlRequestsTotal = new Counter({
+  name: 'wikidata_sparql_requests_total',
+  help: 'Total Wikidata SPARQL requests by terminal outcome (success, error, timeout, circuit_open, rate_limit)',
+  labelNames: ['outcome'] as const,
+  registers: [registry],
+});
+
+export const wikidataSparqlRequestDurationSeconds = new Histogram({
+  name: 'wikidata_sparql_request_duration_seconds',
+  help: 'Wikidata SPARQL request latency in seconds (action calls only ; circuit_open rejects do not observe)',
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+  registers: [registry],
+});
+
+export const wikidataCacheHitsTotal = new Counter({
+  name: 'wikidata_cache_hits_total',
+  help: 'Total Wikidata KB cache hits (Redis-backed, single-tier in V1)',
+  registers: [registry],
+});
+
+export const wikidataCacheMissesTotal = new Counter({
+  name: 'wikidata_cache_misses_total',
+  help: 'Total Wikidata KB cache misses (falls through to provider lookup)',
+  registers: [registry],
+});
+
+export const wikidataLocalDumpHitsTotal = new Counter({
+  name: 'wikidata_local_dump_hits_total',
+  help: 'Total Wikidata local-dump fallback hits (cascade triggered + dump returned facts)',
+  registers: [registry],
+});
+
+export const wikidataLocalDumpMissesTotal = new Counter({
+  name: 'wikidata_local_dump_misses_total',
+  help: 'Total Wikidata local-dump fallback misses (cascade triggered + dump returned null)',
+  registers: [registry],
+});
+
 /** Returns the Prometheus-format metrics dump. */
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
