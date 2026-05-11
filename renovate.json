@@ -32,12 +32,12 @@
   "packageRules": [
     {
       "description": "V12 W8: pin LangChain stack — minor releases have shipped breaking sec patches in 2024-2025",
-      "matchPackagePatterns": ["^langchain$", "^@langchain/"],
       "rangeStrategy": "pin",
       "labels": ["security", "dependencies", "langchain-pin"],
       "schedule": ["at any time"],
       "minimumReleaseAge": "3 days",
-      "prPriority": 10
+      "prPriority": 10,
+      "matchPackageNames": ["/^langchain$/", "/^@langchain//"]
     },
     {
       "description": "GitHub Actions — group all bumps into a single weekly PR + auto-merge digest/patch/minor (3d cool-down)",
@@ -65,47 +65,51 @@
       "description": "Dev-only tooling (types, linters, test runners) — auto-merge patch + minor",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
-      "matchPackagePatterns": [
-        "^@types/",
-        "^eslint",
-        "^prettier",
-        "^jest",
-        "^ts-jest",
-        "^@stryker-mutator/",
-        "^vitest",
-        "^@vitejs/",
-        "^playwright",
-        "^@playwright/"
-      ],
       "automerge": true,
       "platformAutomerge": true,
-      "minimumReleaseAge": "3 days"
+      "minimumReleaseAge": "3 days",
+      "matchPackageNames": [
+        "/^@types//",
+        "/^eslint/",
+        "/^prettier/",
+        "/^jest/",
+        "/^ts-jest/",
+        "/^@stryker-mutator//",
+        "/^vitest/",
+        "/^@vitejs//",
+        "/^playwright/",
+        "/^@playwright//"
+      ]
     },
     {
       "description": "Production npm patches — auto-merge with 3d supply-chain cool-down, excludes risk-flagged packages",
       "matchDepTypes": ["dependencies"],
       "matchUpdateTypes": ["patch"],
-      "excludePackagePatterns": [
-        "^langchain$",
-        "^@langchain/",
-        "^typeorm",
-        "^pg$",
-        "^reflect-metadata",
-        "^openai$",
-        "^@google/generative-ai",
-        "^@deepseek-ai/api",
-        "^expo",
-        "^react-native",
-        "^@react-native"
-      ],
       "automerge": true,
       "platformAutomerge": true,
       "minimumReleaseAge": "3 days",
-      "labels": ["dependencies", "renovate", "auto-patch"]
+      "labels": ["dependencies", "renovate", "auto-patch"],
+      "matchPackageNames": [
+        "!/^langchain$/",
+        "!/^@langchain//",
+        "!/^typeorm/",
+        "!/^pg$/",
+        "!/^reflect-metadata/",
+        "!/^openai$/",
+        "!/^@google/generative-ai/",
+        "!/^@deepseek-ai/api/",
+        "!/^expo/",
+        "!/^react-native/",
+        "!/^@react-native/"
+      ]
     },
     {
       "description": "OpenAI + Google + Deepseek SDKs — manual review (LLM contract risk)",
-      "matchPackageNames": ["openai", "@google/generative-ai", "@deepseek-ai/api"],
+      "matchPackageNames": [
+        "openai",
+        "@google/generative-ai",
+        "@deepseek-ai/api"
+      ],
       "rangeStrategy": "pin",
       "labels": ["llm-sdk", "manual-review"],
       "minimumReleaseAge": "7 days",
@@ -127,11 +131,11 @@
     },
     {
       "description": "Expo + React Native — bundle minor updates, defer until SDK changelog reviewed",
-      "matchPackagePatterns": ["^expo", "^react-native", "^@react-native"],
       "groupName": "expo + react-native",
       "schedule": ["before 7am on monday"],
       "minimumReleaseAge": "7 days",
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": ["/^expo/", "/^react-native/", "/^@react-native/"]
     }
   ],
 
