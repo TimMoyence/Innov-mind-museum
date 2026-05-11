@@ -376,8 +376,11 @@ jobs:
 
       - name: Run halluc-assertions unit tests (T4.3)
         # Scoped Jest run — verifies quoteInFacts + citeRealUrl + extractSources
-        # before promptfoo touches the corpus.
-        run: pnpm test -- --testPathPattern=halluc-assertions --coverage=false --silent
+        # before promptfoo touches the corpus. Invoked via `pnpm exec jest` so
+        # the `--` separator that `pnpm test --` injects (which makes jest treat
+        # the remaining flags as positional file-path patterns and emits
+        # "No tests found, exiting with code 1") is avoided.
+        run: pnpm exec jest --watchman=false --runInBand --selectProjects unit-integration --testPathPattern=halluc-assertions --coverage=false --silent
 
       - name: Install promptfoo
         run: npm install -g promptfoo@latest
