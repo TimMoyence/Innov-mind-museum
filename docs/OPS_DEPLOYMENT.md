@@ -555,6 +555,38 @@ curl https://api.example.com/api/health
 
 Re-run the smoke sequence from §16 against `https://api.example.com`.
 
+### Optional — C5.3 canon seed (one-shot post-deploy)
+
+The Wikidata local-dump (`wikidata_kb_dump` table) populates **organically**
+via the `WikidataWriteThroughProvider` decorator on every live SPARQL
+success. No seed is required for the cascade to work — the table just
+starts empty and fills as visitors ask questions.
+
+For day-1 coverage of the ~50 most-asked canonical artworks
+(Mona Lisa, Vénus de Milo, Starry Night, etc. × en+fr), run the canon
+seed once after the first deploy:
+
+```bash
+ssh user@vps "docker exec museum-backend node dist/scripts/seed-kb-canon.js"
+```
+
+Flags:
+- `--dry-run` — log hits without UPSERTing (useful for an initial sanity check)
+- `--terms="A,B,C"` — override the default canon list
+- `--languages=en` — limit to one language (default `en,fr`)
+
+The seed is **idempotent** (`INSERT ... ON CONFLICT DO UPDATE`) so it can
+be re-run safely after every redeploy ; subsequent runs just refresh
+`updated_at` on existing rows. It is **NOT** wired into the container
+entrypoint because (a) a Wikidata SPARQL outage at deploy time would
+block the container startup, and (b) the walk takes ~30-60s which would
+needlessly delay readiness checks.
+
+Verify via the Grafana dashboard `wikidata-resilience` :
+`wikidata_local_dump_hits_total` should start incrementing once the
+breaker has been OPEN past `LOCAL_DUMP_FALLBACK_AFTER_MS` (default 60s)
+and a request matches one of the seeded entries.
+
 ---
 
 ## 18. Mobile EAS Preview Build

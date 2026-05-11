@@ -42,6 +42,7 @@
     "scripts/seed-museums.ts",
     "scripts/seed-knowledge.ts",
     "scripts/seed-smoke-account.ts",
+    "scripts/seed-kb-canon.ts",
     "scripts/audit-chain-verify.ts"
   ],
   "exclude": ["node_modules", ".stryker-tmp", ".stryker-run", "dist", "coverage"]

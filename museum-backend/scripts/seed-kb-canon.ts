@@ -2,11 +2,23 @@
 /**
  * C5.3 Phase A — canonical seed CLI for `wikidata_kb_dump`.
  *
- * Usage :
+ * Usage (local dev — pnpm available) :
  *   pnpm run seed:kb-canon                                # default (~50 terms × en+fr)
  *   pnpm run seed:kb-canon -- --dry-run                   # report hits, no UPSERT
  *   pnpm run seed:kb-canon -- --languages=en              # English only
  *   pnpm run seed:kb-canon -- --terms="Mona Lisa,David"   # custom terms (comma-sep)
+ *
+ * Usage (prod — Docker image, NO pnpm/ts-node) :
+ *   docker exec museum-backend node dist/scripts/seed-kb-canon.js [--dry-run] [--terms=...] [--languages=...]
+ *
+ * Run ONCE post-deploy. Idempotent — re-running just refreshes `updated_at`
+ * on existing rows. NOT wired into the container entrypoint because (a)
+ * Wikidata SPARQL can be flaky and we do NOT want a seed failure to block
+ * the container startup, and (b) the seed walks the full canon list (~30-60s
+ * latency) which would needlessly delay readiness checks. The write-through
+ * decorator (`WikidataWriteThroughProvider`) populates the table organically
+ * from live traffic regardless ; the canon seed only improves the J1
+ * cold-start coverage.
  *
  * Behaviour :
  *   - Connects via {@link AppDataSource} ; reads the same `.env` as the
@@ -86,7 +98,7 @@ async function main(): Promise<void> {
       dryRun: flags.dryRun,
     });
 
-    logger.info('kb_canon_seed_complete', result);
+    logger.info('kb_canon_seed_complete', { ...result });
     // Friendly stdout summary for ops eyeballing the CLI exit.
     process.stdout.write(
       `seed-kb-canon — total=${result.total} attempted=${result.attempted} ` +
