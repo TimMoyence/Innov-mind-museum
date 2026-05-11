@@ -138,6 +138,8 @@ jest.mock('@modules/chat/wiring', () => ({
   // Default returns a truthy value so the artwork-knowledge-repo branch is
   // exercised; individual tests can override via mockReturnValueOnce.
   getArtworkKnowledgeRepo: jest.fn(() => ({}) as object),
+  getCompareImageUseCase: () => undefined,
+  getCompareSessionAccessVerifier: () => undefined,
   getDescribeService: () => undefined,
   getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
   getUserMemoryService: () => undefined,
