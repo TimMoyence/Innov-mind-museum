@@ -1,6 +1,6 @@
 # ADR-038 — Anti-hallucination via Citations Schema v2 + WebSearch Fallback Wiring
 
-**Status:** Proposed (pending C4 merge to main — will flip to `Accepted` at merge SHA by Tech Lead, Step 8.1)
+**Status:** Accepted-Implemented (merged to main `c72ec2ba` 2026-05-11 — reviewer fresh-context APPROVED weightedMean 89.0)
 **Date:** 2026-05-11
 **Deciders:** /team architect, security reviewer, Tech Lead (final merge), product owner (sign-off on launch-blocking risk)
 **Related ADRs:**
