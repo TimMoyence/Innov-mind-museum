@@ -22,13 +22,22 @@
 #                        until the bucket is provisioned and a canonical hash
 #                        is published; tracked in the T1.4 PARTIAL note).
 #
+# Bucket-not-provisioned tolerance (2026-05-10):
+#   When the URL returns 404 AND no SIGLIP_ONNX_SHA256 is configured, the
+#   script logs a warning and exits 0 instead of failing the Docker build.
+#   Rationale: the C3 visual-similarity feature has a managed fallback
+#   (`EMBEDDINGS_PROVIDER=replicate`) that doesn't need this artifact, and
+#   blocking every prod deploy until ops provisions the bucket would also
+#   block unrelated backend changes (RBAC fixes, security patches, etc.).
+#   Once SIGLIP_ONNX_SHA256 is set in CI/CD, ANY failure (404 or hash drift)
+#   becomes fail-loud again — the SHA being set is the explicit signal that
+#   the bucket is ready for production use.
+#
 # TODO(ops): provision the `musaium-models-public` GCS bucket and upload the
 # ONNX bundle exported via:
 #   optimum-cli export onnx --model google/siglip-base-patch16-224 ./models/siglip-base-patch16-224
 # Then publish the canonical SHA256 and propagate it to CI/CD secrets so this
-# script can refuse drift. Until then the URL below is a PLACEHOLDER and the
-# Docker build of museum-backend will fail at this step — which is the desired
-# fail-loud behaviour during the C3 staging window.
+# script can refuse drift.
 
 set -euo pipefail
 
@@ -65,8 +74,16 @@ echo "fetch-models: downloading $URL -> $DEST"
 if ! curl --fail --silent --show-error --location \
         --retry 3 --retry-all-errors --retry-delay 2 \
         --output "$PARTIAL" "$URL"; then
-  echo "fetch-models: download failed (URL=$URL)"
   rm -f "$PARTIAL"
+  if [ -z "$EXPECTED_SHA256" ]; then
+    # Bucket-not-provisioned tolerance — see header docstring. The runtime
+    # adapter selection (`EMBEDDINGS_PROVIDER`) controls whether siglip-onnx
+    # is attempted at all; without this artefact the `replicate` fallback
+    # remains usable.
+    echo "fetch-models: WARNING — download failed (URL=$URL) but no SIGLIP_ONNX_SHA256 set; skipping (bucket-not-provisioned tolerance)."
+    exit 0
+  fi
+  echo "fetch-models: download failed (URL=$URL)"
   exit 1
 fi
 
