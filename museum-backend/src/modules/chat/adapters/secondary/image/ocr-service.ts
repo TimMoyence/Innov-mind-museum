@@ -46,7 +46,11 @@ export class TesseractOcrService implements OcrService {
           if (timeoutId !== undefined) clearTimeout(timeoutId);
         });
 
-        const text = data.text.trim();
+        // tesseract.js types `data.text` as `string` but the runtime may return
+        // undefined when the buffer is fully blank — the test
+        // `returns null when text is undefined` pins this contract.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime types diverge from declared types
+        const text = data.text?.trim();
         if (!text) return null;
 
         return { text, confidence: data.confidence / 100 };
