@@ -194,7 +194,7 @@ eas submit --platform ios --profile production --latest
 - Complete form answers are documented in section "Form Answers Quick Reference"
 - Key declarations:
   - Collects: email, name, photos, audio, location, chat messages, crash logs, device IDs
-  - Shares with: Sentry, OpenAI, Deepseek, Google AI, Brevo
+  - Shares with: Sentry, OpenAI, Google AI, Brevo
   - Does NOT sell data
   - Does NOT use advertising SDKs
   - Users can request deletion

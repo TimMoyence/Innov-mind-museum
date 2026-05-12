@@ -18,11 +18,11 @@ Musaium is an interactive museum assistant mobile app. Visitors photograph artwo
 | **Email address** | Yes | Brevo (transactional email) | Account creation, login, password reset, email verification | No (required for account) | Yes (TLS) | Yes (account deletion) |
 | **Name (first, last)** | Yes | No | User profile display | Yes (nullable fields) | Yes (TLS) | Yes (account deletion) |
 | **Password** | Yes | No | Authentication (bcrypt cost-12 hash stored; plaintext never persisted) | No (required for email accounts; not collected for social-only accounts) | Yes (TLS) | Yes (account deletion) |
-| **Photos** | Yes | LLM providers (OpenAI / Deepseek / Google) | Artwork identification via AI vision models | Yes (user chooses to attach) | Yes (TLS) | Yes (account deletion deletes S3 objects) |
+| **Photos** | Yes | LLM providers (OpenAI / Google) | Artwork identification via AI vision models | Yes (user chooses to attach) | Yes (TLS) | Yes (account deletion deletes S3 objects) |
 | **Camera** | Yes (permission requested) | No | Capture artwork photos in-app | Yes (user can use gallery instead) | N/A (local capture) | N/A |
 | **Audio (microphone)** | Yes | OpenAI (Whisper transcription) | Voice question input; transcribed server-side, audio not persisted | Yes (user chooses to record) | Yes (TLS) | Yes (not stored after transcription) |
 | **Approximate location** | Yes | No | Find nearby museums (`expo-location`, `Accuracy.Balanced`) | Yes (permission prompt; app works without it) | Yes (TLS) | Yes (not persisted server-side beyond request) |
-| **Chat messages (text)** | Yes | LLM providers (OpenAI / Deepseek / Google) | Core functionality -- AI-powered art Q&A | No (core feature) | Yes (TLS) | Yes (account deletion cascades) |
+| **Chat messages (text)** | Yes | LLM providers (OpenAI / Google) | Core functionality -- AI-powered art Q&A | No (core feature) | Yes (TLS) | Yes (account deletion cascades) |
 | **Chat session metadata** | Yes | No | Session title, locale, museum mode flag, visit context | No (auto-generated) | Yes (TLS) | Yes (account deletion cascades) |
 | **Crash logs & performance** | Yes | Sentry | App stability monitoring, error tracking | No (automatic via `@sentry/react-native`) | Yes (TLS) | Sentry retention policy (90 days default) |
 | **Device/other IDs** | Yes | Sentry | Sentry device context for crash deduplication; request IDs in audit logs | No (automatic) | Yes (TLS) | Sentry retention policy |
@@ -41,7 +41,6 @@ Musaium is an interactive museum assistant mobile app. Visitors photograph artwo
 |---|---|---|---|
 | **Sentry** (`@sentry/react-native`) | Crash traces, device info, user ID (numeric), performance spans | Error monitoring, app stability | Default 90-day retention |
 | **OpenAI** | Chat text, images (vision), audio (Whisper transcription), text-to-speech requests | AI response generation, speech-to-text, text-to-speech | Per OpenAI API ToS: API inputs/outputs not used for training; not retained beyond processing |
-| **Deepseek** | Chat text, images (if configured as active provider) | AI response generation | Per Deepseek API ToS: not retained beyond processing |
 | **Google AI** | Chat text, images (if configured as active provider) | AI response generation | Per Google API ToS: not retained beyond processing |
 | **Brevo** (formerly Sendinblue) | Email addresses | Transactional emails only (verification, password reset) | Per Brevo data processing terms |
 
@@ -136,7 +135,7 @@ Use the answers below when filling out each section of the Google Play Console D
 | Question | Answer |
 |---|---|
 | Photos | **Collected** |
-| Is it shared? | **Yes** -- with LLM providers (OpenAI/Deepseek/Google) for artwork identification |
+| Is it shared? | **Yes** -- with LLM providers (OpenAI/Google) for artwork identification |
 | Purpose | App functionality (AI artwork analysis) |
 | Is this data required or can users choose? | **Optional** (user explicitly attaches photos) |
 
