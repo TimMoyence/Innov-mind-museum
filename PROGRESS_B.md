@@ -20,8 +20,8 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.
 - [x] B.8 — BE zod ^3.25.76 → ^4.4.1 (resolved 4.4.3) ; FE 4.4.1. Single breaking change touched : `z.record(z.unknown())` → `z.record(z.string(), z.unknown())` in 3 files (museum.schemas.ts, content-classifier.service.ts). BE typecheck clean on Zod-touched code ; 201 unit tests pass.
 - [x] B.9 — Web react/react-dom pinned to `19.2.0` exact (caret dropped) ; FE already exact. `pnpm list react` Web = 19.2.0 ; `npm list react` FE = 19.2.0.
-- [ ] B.10 — final audit
-- [ ] B.11 — Renovate config audit
+- [x] B.10 — final audit ALL apps : BE `pnpm audit` = No known vulnerabilities found ; FE `npm audit --audit-level=high` = found 0 vulnerabilities ; Web `pnpm audit` = No known vulnerabilities found.
+- [x] B.11 — Renovate config audit. `vulnerabilityAlerts` had `enabled: true` + `schedule: at any time` but **no `automerge`/`platformAutomerge`** — security PRs fell through to per-package rules, which for major bumps (next, OTel) defaulted to `automerge: false`. Patched: added `automerge: true` + `platformAutomerge: true` on `vulnerabilityAlerts` so CVE PRs land automatically once CI green. `dependencyDashboard` already enabled via `:dependencyDashboard` preset. `gh pr list --label=dependencies` returns 4 open PRs (top 270/269/268/267) — backlog to merge manually post-sprint once the new policy takes effect.
 
 ## Verifs / commits
 

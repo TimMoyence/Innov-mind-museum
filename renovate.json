@@ -18,7 +18,9 @@
     "enabled": true,
     "labels": ["security", "dependencies"],
     "schedule": ["at any time"],
-    "minimumReleaseAge": null
+    "minimumReleaseAge": null,
+    "automerge": true,
+    "platformAutomerge": true
   },
 
   "lockFileMaintenance": {
