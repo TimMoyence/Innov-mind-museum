@@ -3,8 +3,10 @@
 // against a real document. Only Readability is mocked because it needs to be
 // deterministic and is the unit under test.
 jest.mock('@mozilla/readability', () => {
+  // Local minimal shape — Document is a DOM lib type, not available in Node typings.
+  type DomLike = { querySelector: (sel: string) => unknown };
   return {
-    Readability: jest.fn().mockImplementation((doc: Document) => ({
+    Readability: jest.fn().mockImplementation((doc: DomLike) => ({
       parse: jest.fn().mockImplementation(() => {
         // Return article result only when there is an <article> tag in the doc
         if (doc.querySelector('article')) {

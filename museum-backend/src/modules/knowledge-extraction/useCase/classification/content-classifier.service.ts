@@ -23,12 +23,12 @@ const artworkDataSchema = z.object({
 
 const museumDataSchema = z.object({
   name: z.string(),
-  openingHours: z.record(z.unknown()).nullable(),
-  admissionFees: z.record(z.unknown()).nullable(),
+  openingHours: z.record(z.string(), z.unknown()).nullable(),
+  admissionFees: z.record(z.string(), z.unknown()).nullable(),
   website: z.string().nullable(),
-  collections: z.record(z.unknown()).nullable(),
-  currentExhibitions: z.record(z.unknown()).nullable(),
-  accessibility: z.record(z.unknown()).nullable(),
+  collections: z.record(z.string(), z.unknown()).nullable(),
+  currentExhibitions: z.record(z.string(), z.unknown()).nullable(),
+  accessibility: z.record(z.string(), z.unknown()).nullable(),
 });
 
 const classificationSchema = z.discriminatedUnion('type', [

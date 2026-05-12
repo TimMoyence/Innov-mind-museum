@@ -9,7 +9,7 @@ export const createMuseumSchema = z.object({
   description: z.string().max(2000).optional(),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   museumType: museumTypeSchema.optional(),
 });
 
@@ -20,7 +20,7 @@ export const updateMuseumSchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   isActive: z.boolean().optional(),
   museumType: museumTypeSchema.optional(),
 });

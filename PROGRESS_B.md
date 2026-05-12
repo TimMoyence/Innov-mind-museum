@@ -16,9 +16,9 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [x] B.3 — uuid override ^11.1.1 — `pnpm list uuid -r` → 11.1.1 ; `pnpm audit` BE = `No known vulnerabilities found`.
 - [x] B.4 — remove google-signin ; uninstall + clean app.config.ts (plugin + dead Google client-id config + extras) + comments trimmed in socialAuthProviders/useSocialLogin ; `expo prebuild` + `pod install` ; iOS Pods/GoogleSignIn, GoogleUtilities, AppAuth, GTM*, RNGoogleSignin gone ; Info.plist com.googleusercontent URL scheme removed.
 - [x] B.5 — new `shared/ui/Confetti.tsx` (Reanimated 4) drop-in replaces ConfettiCannon in `app/(stack)/reviews.tsx` ; npm uninstall ; tsc clean on Confetti.tsx + reviews.tsx.
-- [ ] B.6 — replace js-sha256 with expo-crypto
+- [~] B.6 — **DEFERRED to V1.1 / dedicated PR**. Reason: `js-sha256` carries no CVE (orphan-cleanup goal only). The migration requires `Crypto.digestStringAsync` (async) which cascades through `computeLocalCacheKey` → `chatLocalCache` store API (`lookup`/`store`/`bulkStore` sync→async) → `useChatSession` → `sendMessageCache` / `sendMessageStreaming` → `useMuseumPrefetch` + 4 tests. Additionally, `expo-crypto` is **not in deps** today (the brief assumed it was a transitive of Expo SDK 55, but `npm list expo-crypto` returns empty). Trade-off rejected pre-launch: bundle saving (~10KB) ≪ regression risk on chat cache hot path. Open ADR-046 covers this. Coordinate with D for tracking.
 - [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.
-- [ ] B.8 — align Zod v4 BE↔FE
+- [x] B.8 — BE zod ^3.25.76 → ^4.4.1 (resolved 4.4.3) ; FE 4.4.1. Single breaking change touched : `z.record(z.unknown())` → `z.record(z.string(), z.unknown())` in 3 files (museum.schemas.ts, content-classifier.service.ts). BE typecheck clean on Zod-touched code ; 201 unit tests pass.
 - [ ] B.9 — align React 19.2.0 exact
 - [ ] B.10 — final audit
 - [ ] B.11 — Renovate config audit

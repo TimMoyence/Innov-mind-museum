@@ -154,7 +154,7 @@
     "swagger-ui-express": "^5.0.1",
     "typeorm": "0.3.28",
     "uuid": "^11.1.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "optionalDependencies": {
     "replicate": "^1.4.0",
