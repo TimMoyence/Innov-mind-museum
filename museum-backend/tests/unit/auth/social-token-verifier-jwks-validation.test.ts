@@ -16,7 +16,6 @@
  * for `JwksResponseSchema.safeParse(...)` + throw `AppError({code: 'JWKS_*'})`,
  * after which these tests turn green.
  */
-import { AppError } from '@shared/errors/app.error';
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 
 jest.mock('@src/config/env', () => ({
@@ -95,11 +94,16 @@ describe('social-token-verifier — JWKS response validation (P0-8 RED)', () => 
 
     const token = makeTokenWithKid('test-kid-rate-limited');
 
-    // Single expect that covers BOTH the class (typed AppError) and the
-    // semantic intent (response is structurally malformed). This is the
-    // headline RED assertion — today the code throws a raw TypeError when
-    // it tries `keys.find(...)` on undefined.
-    await expect(verifyAppleIdToken(token)).rejects.toBeInstanceOf(AppError);
+    // Headline RED assertion — today the code throws a raw TypeError when
+    // it tries `keys.find(...)` on undefined; the fix surfaces a typed
+    // AppError with code JWKS_MALFORMED and a 4xx statusCode. Asserted via
+    // toMatchObject to match the codebase convention (see
+    // social-token-verifier.test.ts) — `instanceof AppError` is unstable
+    // when the verifier is re-imported in beforeEach via jest.resetModules().
+    await expect(verifyAppleIdToken(token)).rejects.toMatchObject({
+      code: 'JWKS_MALFORMED',
+      statusCode: expect.any(Number),
+    });
   });
 
   /**
@@ -148,7 +152,13 @@ describe('social-token-verifier — JWKS response validation (P0-8 RED)', () => 
 
     const token = makeTokenWithKid('test-kid-incomplete');
 
-    await expect(verifyAppleIdToken(token)).rejects.toBeInstanceOf(AppError);
+    // Asserted via toMatchObject to match the codebase convention (see
+    // social-token-verifier.test.ts) — `instanceof AppError` is unstable
+    // when the verifier is re-imported in beforeEach via jest.resetModules().
+    await expect(verifyAppleIdToken(token)).rejects.toMatchObject({
+      code: 'JWKS_MALFORMED',
+      statusCode: expect.any(Number),
+    });
   });
 
   /**
