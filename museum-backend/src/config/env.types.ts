@@ -584,5 +584,30 @@ export interface AppEnv {
     maxInflight: number;
     /** Surge queue depth before overflow → fail-CLOSED. */
     queueMax: number;
+    /**
+     * ADR-050 (2026-05-12) — Microsoft Presidio analyzer + anonymizer sidecar
+     * config. Adapter is implemented but NOT wired into the composition root
+     * pre-launch; these knobs are operational config awaiting Phase 1 shadow
+     * promotion.
+     */
+    presidio: {
+      /** Base URL of the Presidio service (e.g. http://presidio:3000). */
+      baseUrl?: string;
+      /** Hard request timeout (ms) for /analyze + /anonymize. Fail-CLOSED on elapsed. */
+      timeoutMs: number;
+    };
+    /**
+     * ADR-050 (2026-05-12) — Llama Prompt Guard 2 86M (Meta) sidecar config.
+     * Same not-wired-yet status as Presidio above. Score threshold is the
+     * MALICIOUS probability above which the adapter returns a block verdict.
+     */
+    llamaPromptGuard: {
+      /** Base URL of the Prompt Guard 2 sidecar (e.g. http://llama-prompt-guard:8082). */
+      baseUrl?: string;
+      /** Hard request timeout (ms) for /classify. Fail-CLOSED on elapsed. */
+      timeoutMs: number;
+      /** MALICIOUS score threshold above which a block verdict is emitted. Default 0.8. */
+      scoreThreshold: number;
+    };
   };
 }

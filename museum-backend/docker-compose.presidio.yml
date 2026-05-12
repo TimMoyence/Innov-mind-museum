@@ -1,0 +1,49 @@
+# Opt-in docker-compose overlay for the ADR-050 Microsoft Presidio sidecar
+# (Phase 1 shadow-mode candidate — NOT activated by default).
+#
+# Coverage: OWASP LLM02 (Sensitive Information Disclosure) gap detection.
+# The current backend `RegexPiiSanitizer` covers email + phone only; Presidio
+# extends to PERSON, LOCATION, CREDIT_CARD, IBAN, IP, SSN, passport, crypto,
+# NRP. License Apache 2.0, maintained by Microsoft, French recognizers
+# shipped out of the box.
+#
+# Activation status: adapter exists at
+#   src/modules/chat/adapters/secondary/guardrails/presidio.adapter.ts
+# but is NOT wired in chat-module.ts composition root pre-launch. See
+# ADR-050 for the Phase 1 promotion criteria (≥7d shadow, decision-match
+# thresholds, latency gates).
+#
+# Activation when promotion criteria pass:
+#   1. Wire the adapter in chat-module.ts (constructor-injection swap)
+#   2. Set in `.env`:
+#        PRESIDIO_BASE_URL=http://presidio-analyzer:3000
+#        PRESIDIO_TIMEOUT_MS=500
+#   3. Start with the overlay:
+#        docker compose -f docker-compose.dev.yml -f docker-compose.presidio.yml up -d
+
+services:
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    container_name: dev-presidio-analyzer
+    ports:
+      - '3001:3000'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/health']
+      interval: 10s
+      timeout: 3s
+      retries: 2
+      start_period: 60s
+
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    container_name: dev-presidio-anonymizer
+    ports:
+      - '3002:3000'
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/health']
+      interval: 10s
+      timeout: 3s
+      retries: 2
+      start_period: 30s

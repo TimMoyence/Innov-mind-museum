@@ -428,6 +428,21 @@ const env: AppEnv = {
     // fail-CLOSED (preserves safety contract).
     maxInflight: toNumber(process.env.LLM_GUARD_MAX_INFLIGHT, 8),
     queueMax: toNumber(process.env.LLM_GUARD_QUEUE_MAX, 32),
+    // ADR-050 (2026-05-12) — OSS provider adapters READY but NOT activated.
+    // Pre-launch V1 doctrine: ship the adapters behind the ADR-048 port so a
+    // Phase 1 shadow-mode swap is a constructor-injection swap, NOT a refactor.
+    // No `.env` entries default these to set values — composition root does NOT
+    // wire either provider until ADR-050 promotion criteria pass (≥7d shadow,
+    // decision-match thresholds, p95 latency).
+    presidio: {
+      baseUrl: toOptionalString(process.env.PRESIDIO_BASE_URL),
+      timeoutMs: toNumber(process.env.PRESIDIO_TIMEOUT_MS, 500),
+    },
+    llamaPromptGuard: {
+      baseUrl: toOptionalString(process.env.LLAMA_PROMPT_GUARD_BASE_URL),
+      timeoutMs: toNumber(process.env.LLAMA_PROMPT_GUARD_TIMEOUT_MS, 500),
+      scoreThreshold: toNumber(process.env.LLAMA_PROMPT_GUARD_SCORE_THRESHOLD, 0.8),
+    },
   },
   // Pre-launch V1: retention crons always-on; the `env.cache?.enabled` upstream
   // gate (Redis required) is the structural skip path for tests/dev without Redis.
