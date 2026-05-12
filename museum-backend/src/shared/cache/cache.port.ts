@@ -13,6 +13,11 @@ export interface CacheValueSchema<T> {
   safeParse(raw: unknown): { success: true; data: T } | { success: false };
 }
 
+/**
+ * Cache port shared by Redis/memory/noop adapters. Backend code depends on
+ * this surface so the implementation can be swapped for tests and dev without
+ * Redis.
+ */
 export interface CacheService {
   /**
    * Retrieve a cached value by key. Returns `null` on miss or on schema

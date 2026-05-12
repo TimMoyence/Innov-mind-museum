@@ -46,7 +46,7 @@ export class TesseractOcrService implements OcrService {
           if (timeoutId !== undefined) clearTimeout(timeoutId);
         });
 
-        const text = data.text?.trim();
+        const text = data.text.trim();
         if (!text) return null;
 
         return { text, confidence: data.confidence / 100 };

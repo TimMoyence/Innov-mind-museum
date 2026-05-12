@@ -68,13 +68,13 @@ import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-r
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
+import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
 import type {
   ChatPersistencePort,
   CompareMimeType,
   CompareUseCaseInput,
   ImageProcessorPort as CompareImageProcessorPort,
 } from '@modules/chat/useCase/visual-similarity/compare.use-case';
-import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';

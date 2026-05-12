@@ -10,11 +10,14 @@ import {
 import { WikidataTransientError } from './wikidata.client';
 
 import type { WikidataClient } from './wikidata.client';
+import type { BreakerState, BreakerStateName } from '@modules/chat/domain/breaker/breaker-state';
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
   KnowledgeBaseQuery,
 } from '@modules/chat/domain/ports/knowledge-base.port';
+
+export type { BreakerState, BreakerStateName };
 
 /**
  * Tuning knobs for the Wikidata SPARQL/API circuit breaker.
@@ -35,10 +38,6 @@ export interface WikidataBreakerConfig {
   /** Maximum concurrent in-flight calls (bulkhead). */
   capacity: number;
 }
-
-import type { BreakerState, BreakerStateName } from '@modules/chat/domain/breaker/breaker-state';
-
-export type { BreakerState, BreakerStateName };
 
 type LookupFn = (query: KnowledgeBaseQuery) => Promise<ArtworkFacts | null>;
 
