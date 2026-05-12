@@ -53,6 +53,12 @@ const resolveVariant = (env: RuntimeEnv): AppVariant => {
   return 'development';
 };
 
+// Narrows `unknown`/`any` to `string` without a cast — used on `process.env.X`
+// reads where the resolved type differs local (string | undefined) vs CI (any).
+// Returns undefined for non-strings so `?? 'default'` still applies.
+const typeofString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
 const nonEmpty = (value?: string): string | undefined => {
   if (!value) {
     return undefined;
@@ -322,14 +328,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          // `as string` (not String()) bridges a local/CI typing divergence:
-          // local TS sees `process.env.X` as `string | undefined` (via Expo
-          // metro-require ambient types), CI sees `any`. `String()` would
-          // trigger `no-unnecessary-type-conversion` locally; `as string` is
-          // a pure type assertion (no runtime conversion), silently satisfies
-          // both. See feedback_process_env_local_vs_ci memory.
-          organization: process.env.SENTRY_ORG ?? 'asili-design',
-          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
+          // `typeof v === 'string'` narrowing — bridges local/CI typing divergence
+          // (local sees `process.env.X` as `string | undefined`, CI sees `any`).
+          // Cast or `String()` triggers a rule on one side or the other; an
+          // explicit type-narrowing predicate is silent on both.
+          organization: typeofString(process.env.SENTRY_ORG) ?? 'asili-design',
+          project: typeofString(process.env.SENTRY_PROJECT) ?? 'apple-ios',
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],

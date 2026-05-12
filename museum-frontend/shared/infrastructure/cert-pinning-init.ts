@@ -37,13 +37,14 @@ import { storage } from './storage';
 
 const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
 
-// `as string` (not String()) bridges a local/CI typing divergence: local TS
-// sees `process.env.X` as `string | undefined` (via Expo metro-require ambient
-// types), CI sees `any`. `String()` would trigger `no-unnecessary-type-conversion`
-// locally; `as string` is a pure type assertion (no runtime conversion),
-// silently satisfies both. See feedback_process_env_local_vs_ci memory.
-const isEnvEnabled = (): boolean =>
-  (process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED ?? '').toLowerCase() === 'true';
+// `typeof v === 'string'` narrowing — bridges local/CI typing divergence
+// (local sees `process.env.X` as `string | undefined`, CI sees `any`). Cast
+// or `String()` triggers a rule on one side or the other; an explicit type-
+// narrowing predicate is silent on both.
+const isEnvEnabled = (): boolean => {
+  const raw = process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED;
+  return typeof raw === 'string' && raw.toLowerCase() === 'true';
+};
 
 const isCacheFresh = (state: KillSwitchState): boolean => {
   if (state.source === 'fail-open') return false;
