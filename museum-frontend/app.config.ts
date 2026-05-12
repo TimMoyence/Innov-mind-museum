@@ -288,8 +288,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: process.env.SENTRY_ORG ?? 'asili-design',
-          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
+          organization: (process.env.SENTRY_ORG as string | undefined) ?? 'asili-design',
+          project: (process.env.SENTRY_PROJECT as string | undefined) ?? 'apple-ios',
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],

@@ -1,4 +1,4 @@
-import { baseJwtPayloadSchema, decodeJwtPayload } from '@/shared/auth/jwt-decode';
+import { baseJwtPayloadSchema, decodeJwtPayload } from '../../../shared/auth/jwt-decode';
 
 import type { AppError } from '@/shared/types/AppError';
 

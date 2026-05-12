@@ -151,13 +151,14 @@ describe('AuthScreen', () => {
     });
   });
 
-  it('register button is disabled until GDPR checkbox is checked', async () => {
+  it('register button is disabled until GDPR checkbox is checked and DOB is filled', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
     const registerButton = await waitFor(() => screen.getByLabelText('a11y.auth.register_button'));
     expect(registerButton.props.accessibilityState.disabled).toBe(true);
 
-    // Check GDPR
+    // CNIL Délibération 2021-018 — DOB required for the button to enable.
+    fireEvent.changeText(screen.getByLabelText('auth.date_of_birth_a11y'), '2000-01-01');
     fireEvent.press(screen.getByLabelText('a11y.auth.gdpr_checkbox'));
     await waitFor(() => {
       expect(registerButton.props.accessibilityState.disabled).toBe(false);

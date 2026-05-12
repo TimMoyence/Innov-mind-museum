@@ -7,8 +7,8 @@ import Animated, {
   useSharedValue,
   withSequence,
   withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 interface ConfettiProps {
   count?: number;
@@ -38,7 +38,7 @@ const screen = Dimensions.get('window');
 const makeParticles = (count: number): readonly Particle[] => {
   return Array.from({ length: count }, (_, index) => ({
     index,
-    color: PARTICLE_COLORS[index % PARTICLE_COLORS.length] ?? PARTICLE_COLORS[0]!,
+    color: PARTICLE_COLORS[index % PARTICLE_COLORS.length] ?? '#FFFFFF',
     driftX: (Math.random() - 0.5) * screen.width,
     rotateEnd: 360 + Math.random() * 720,
     delay: Math.random() * GRAVITY_BAND,
@@ -78,7 +78,7 @@ const ConfettiParticle = memo(function ConfettiParticle({
       transform: [
         { translateX: horizontalSwing },
         { translateY: fallY },
-        { rotate: `${rotateDeg}deg` },
+        { rotate: `${rotateDeg.toString()}deg` },
       ],
     };
   });
@@ -121,7 +121,7 @@ export function Confetti({
       1,
       { duration: fallSpeed + GRAVITY_BAND, easing: Easing.linear },
       (finished) => {
-        if (finished) runOnJS(onAnimationEnd)();
+        if (finished) scheduleOnRN(onAnimationEnd);
       },
     );
   }, [sentinel, fallSpeed, onAnimationEnd]);
