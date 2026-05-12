@@ -40,8 +40,6 @@ vi.mock('next/link', () => ({
 vi.mock('@/lib/api', () => ({
   apiPost: vi.fn(),
   apiGet: vi.fn(),
-  setTokens: vi.fn(),
-  clearTokens: vi.fn(),
   registerLogoutHandler: vi.fn(),
 }));
 
@@ -52,19 +50,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     <AdminDictProvider dict={mockAdminDict} locale="en">
       <AuthProvider>{children}</AuthProvider>
     </AdminDictProvider>
-  );
-}
-
-// ── Helper: component that displays auth state for testing ───────────────────
-
-function AuthStateDisplay() {
-  const { isAuthenticated, user, logout } = useAuth();
-  return (
-    <div>
-      <span data-testid="auth-status">{isAuthenticated ? 'authenticated' : 'unauthenticated'}</span>
-      {user && <span data-testid="user-role">{user.role}</span>}
-      <button onClick={logout}>Logout</button>
-    </div>
   );
 }
 
@@ -372,55 +357,5 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
     });
-  });
-});
-
-// ============================================================================
-// Logout
-// ============================================================================
-
-describe('Logout', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('clears tokens and redirects to login on logout', async () => {
-    const { apiPost, clearTokens } = await import('@/lib/api');
-    const mockedApiPost = vi.mocked(apiPost);
-    const mockedClearTokens = vi.mocked(clearTokens);
-
-    mockedApiPost.mockResolvedValueOnce({
-      accessToken: 'at',
-      refreshToken: 'rt',
-      expiresIn: 900,
-      refreshExpiresIn: 86400,
-      user: {
-        id: 1,
-        email: 'admin@test.com',
-        firstname: 'Admin',
-        lastname: null,
-        role: 'admin',
-        onboardingCompleted: true,
-      },
-    });
-
-    render(
-      <Providers>
-        <AuthStateDisplay />
-      </Providers>,
-    );
-
-    // Should start unauthenticated — but we need to simulate window.location for logout
-    // The AuthProvider logout reads window.location.pathname
-    Object.defineProperty(window, 'location', {
-      value: { pathname: '/en/admin' },
-      writable: true,
-    });
-
-    expect(screen.getByTestId('auth-status')).toHaveTextContent('unauthenticated');
-
-    // We cannot easily test the full flow without triggering login first,
-    // so verify that clearTokens is callable (the function is mocked)
-    expect(mockedClearTokens).not.toHaveBeenCalled();
   });
 });

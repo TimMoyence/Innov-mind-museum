@@ -61,8 +61,6 @@ const mockApiGet = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPost: vi.fn(),
-  setTokens: vi.fn(),
-  clearTokens: vi.fn(),
   registerLogoutHandler: vi.fn(),
 }));
 

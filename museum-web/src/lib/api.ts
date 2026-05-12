@@ -12,10 +12,6 @@
  * refresh tokens, eliminating XSS exfiltration. The csrf_token cookie (NOT HttpOnly)
  * is read here and echoed back as `X-CSRF-Token` on state-changing requests for
  * double-submit verification by the backend.
- *
- * The legacy `setTokens` / `getAccessToken` exports are kept as no-ops for backward
- * compatibility with call sites that haven't migrated yet — auth state now lives in
- * cookies, not in this module.
  */
 
 // ── Error class ────────────────────────────────────────────────────────
@@ -34,26 +30,6 @@ export class ApiError extends Error {
 // ── Logout handler (called when refresh ultimately fails) ──────────────
 
 let onLogout: (() => void) | null = null;
-
-/**
- * F7 — Cookies are HttpOnly so JS cannot set/read access or refresh tokens. These
- * functions are kept as no-op exports so existing call sites compile; the actual
- * auth state lives in the backend-issued cookies. Future cleanup: drop both calls
- * once every consumer has migrated.
- */
-export function setTokens(_access: string, _refresh: string): void {
-  /* no-op — tokens live in HttpOnly cookies post-F7 */
-}
-
-export function clearTokens(): void {
-  /* no-op — backend /logout clears cookies; consumers should call POST /api/auth/logout */
-}
-
-export function getAccessToken(): string | null {
-  // Cookies are HttpOnly so JS cannot read the access token. Always returns null
-  // post-F7. Use `credentials: 'include'` instead — fetch will attach the cookie.
-  return null;
-}
 
 export function registerLogoutHandler(handler: () => void): void {
   onLogout = handler;
@@ -143,7 +119,6 @@ async function refreshAccessToken(): Promise<string> {
     return newToken;
   } catch (err) {
     processQueue(err, null);
-    clearTokens();
     onLogout?.();
     throw err;
   } finally {

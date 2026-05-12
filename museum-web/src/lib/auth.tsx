@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
-import { apiGet, apiPost, setTokens, clearTokens, registerLogoutHandler } from '@/lib/api';
+import { apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
 import type { AuthSessionResponse } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
@@ -147,7 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearTokens();
     clearAdminAuthzCookie();
     setUser(null);
     // Redirect to login — extract locale from current path
@@ -168,9 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
       });
-      // F7 — tokens live in HttpOnly cookies; setTokens is a no-op. Called for
-      // legacy compat only. Backend sets access_token + refresh_token cookies.
-      setTokens(data.accessToken, data.refreshToken);
+      // F7 — backend sets access_token + refresh_token + csrf_token HttpOnly cookies
+      // on the response. JS cannot touch them; we just record the admin-authz hint
+      // cookie so the middleware stops bouncing /admin/* requests to login.
       setAdminAuthzCookie();
       // Map AuthSessionResponse.user (AuthUser from spec) to local AuthUser shape.
       const u = data.user;

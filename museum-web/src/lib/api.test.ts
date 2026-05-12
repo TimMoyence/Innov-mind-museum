@@ -1,14 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  ApiError,
-  setTokens,
-  clearTokens,
-  getAccessToken,
-  registerLogoutHandler,
-  apiGet,
-  apiPost,
-  apiPatch,
-} from './api';
+import { ApiError, registerLogoutHandler, apiGet, apiPost, apiPatch } from './api';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 
 // ---------------------------------------------------------------------------
@@ -39,28 +30,6 @@ function clearCsrfCookie(): void {
 // F7 (2026-04-30) — cookie auth + CSRF double-submit
 // ---------------------------------------------------------------------------
 
-describe('api.ts — token store (F7 backward-compat shim)', () => {
-  beforeEach(() => {
-    clearTokens();
-    clearCsrfCookie();
-  });
-
-  it('getAccessToken returns null (cookies are HttpOnly, JS cannot read)', () => {
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it('setTokens is a no-op post-F7 (tokens live in HttpOnly cookies)', () => {
-    setTokens('access-123', 'refresh-456');
-    expect(getAccessToken()).toBeNull();
-  });
-
-  it('clearTokens is a no-op post-F7 (cookie clearing happens server-side via /logout)', () => {
-    setTokens('a', 'b');
-    clearTokens();
-    expect(getAccessToken()).toBeNull();
-  });
-});
-
 describe('api.ts — ApiError', () => {
   it('has correct status, statusText, and message', () => {
     const err = new ApiError(404, 'Not Found', 'Resource missing');
@@ -78,7 +47,6 @@ describe('api.ts — ApiError', () => {
 
 describe('api.ts — request functions', () => {
   beforeEach(() => {
-    clearTokens();
     clearCsrfCookie();
     vi.restoreAllMocks();
   });
