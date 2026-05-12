@@ -8,6 +8,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AnalyticsPage from '@/app/[locale]/admin/analytics/page';
 import type { UsageAnalytics, ContentAnalytics, EngagementAnalytics } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
+import { requireIndex } from '../helpers/require-index';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -429,7 +430,7 @@ describe('AnalyticsPage', () => {
 
     await waitFor(() => {
       const calls = mockApiGet.mock.calls;
-      const lastCall = calls[calls.length - 1][0] as string;
+      const lastCall = requireIndex(calls, calls.length - 1, 'mockApiGet.calls')[0] as string;
       expect(lastCall).toContain('granularity=weekly');
     });
   });

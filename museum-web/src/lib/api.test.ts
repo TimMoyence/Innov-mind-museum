@@ -9,6 +9,7 @@ import {
   apiPost,
   apiPatch,
 } from './api';
+import { requireIndex } from '@/__tests__/helpers/require-index';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -88,7 +89,7 @@ describe('api.ts — request functions', () => {
     const data = await apiGet<{ id: number }>('/api/items');
 
     expect(spy).toHaveBeenCalledOnce();
-    const [url, init] = spy.mock.calls[0];
+    const [url, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     expect(url).toBe('/api/items');
     expect((init as RequestInit).method).toBe('GET');
     expect(data).toEqual({ id: 1 });
@@ -99,7 +100,7 @@ describe('api.ts — request functions', () => {
 
     await apiPost('/api/items', { name: 'test' });
 
-    const [, init] = spy.mock.calls[0];
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     expect((init as RequestInit).method).toBe('POST');
     expect((init as RequestInit).body).toBe(JSON.stringify({ name: 'test' }));
   });
@@ -109,7 +110,7 @@ describe('api.ts — request functions', () => {
 
     await apiPatch('/api/items/1', { name: 'updated' });
 
-    const [, init] = spy.mock.calls[0];
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     expect((init as RequestInit).method).toBe('PATCH');
   });
 
@@ -118,7 +119,7 @@ describe('api.ts — request functions', () => {
 
     await apiGet('/api/me');
 
-    const [, init] = spy.mock.calls[0];
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     expect((init as RequestInit).credentials).toBe('include');
   });
 
@@ -127,7 +128,7 @@ describe('api.ts — request functions', () => {
 
     await apiGet('/api/me');
 
-    const [, init] = spy.mock.calls[0];
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBeUndefined();
   });
@@ -138,7 +139,7 @@ describe('api.ts — request functions', () => {
 
     await apiPost('/api/items', { x: 1 });
 
-    const [, init] = spy.mock.calls[0];
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['X-CSRF-Token']).toBe('abc-csrf-123');
   });
@@ -149,7 +150,8 @@ describe('api.ts — request functions', () => {
 
     await apiPatch('/api/items/1', { x: 2 });
 
-    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    const headers = (requireIndex(spy.mock.calls, 0, 'fetch.calls')[1] as RequestInit)
+      .headers as Record<string, string>;
     expect(headers['X-CSRF-Token']).toBe('csrf-patch');
   });
 
@@ -159,7 +161,8 @@ describe('api.ts — request functions', () => {
 
     await apiGet('/api/items');
 
-    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    const headers = (requireIndex(spy.mock.calls, 0, 'fetch.calls')[1] as RequestInit)
+      .headers as Record<string, string>;
     expect(headers['X-CSRF-Token']).toBeUndefined();
   });
 
@@ -168,7 +171,8 @@ describe('api.ts — request functions', () => {
 
     await apiPost('/api/items', {});
 
-    const headers = (spy.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    const headers = (requireIndex(spy.mock.calls, 0, 'fetch.calls')[1] as RequestInit)
+      .headers as Record<string, string>;
     expect(headers['X-CSRF-Token']).toBeUndefined();
   });
 

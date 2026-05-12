@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import LandingJsonLd from '../LandingJsonLd';
+import { requireIndex } from '@/__tests__/helpers/require-index';
 
 const FAQ_FIXTURE = [
   { question: 'Q1?', answer: 'A1.' },
@@ -66,10 +67,10 @@ describe('LandingJsonLd', () => {
 
     const payloads = parseScripts(container);
     expect(payloads).toHaveLength(4);
-    expect(payloads[0]['@type']).toBe('MobileApplication');
-    expect(payloads[1]['@type']).toBe('Organization');
-    expect(payloads[2]['@type']).toBe('WebSite');
-    expect(payloads[3]['@type']).toBe('FAQPage');
+    expect(requireIndex(payloads, 0, 'payloads')['@type']).toBe('MobileApplication');
+    expect(requireIndex(payloads, 1, 'payloads')['@type']).toBe('Organization');
+    expect(requireIndex(payloads, 2, 'payloads')['@type']).toBe('WebSite');
+    expect(requireIndex(payloads, 3, 'payloads')['@type']).toBe('FAQPage');
   });
 
   it('builds the MobileApplication payload with stable schema.org keys', () => {
@@ -135,6 +136,6 @@ describe('LandingJsonLd', () => {
       name: 'Q1?',
       acceptedAnswer: { '@type': 'Answer', text: 'A1.' },
     });
-    expect(faq.mainEntity[1].name).toBe('Q2?');
+    expect(requireIndex(faq.mainEntity, 1, 'faq.mainEntity').name).toBe('Q2?');
   });
 });

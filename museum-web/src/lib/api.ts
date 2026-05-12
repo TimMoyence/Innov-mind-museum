@@ -65,7 +65,8 @@ export function registerLogoutHandler(handler: () => void): void {
 function readCsrfToken(): string | null {
   if (typeof document === 'undefined') return null;
   const match = /(?:^|;\s*)csrf_token=([^;]+)/.exec(document.cookie);
-  return match ? decodeURIComponent(match[1]) : null;
+  // match[1] is the capture group; guaranteed defined when match is non-null.
+  return match?.[1] !== undefined ? decodeURIComponent(match[1]) : null;
 }
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

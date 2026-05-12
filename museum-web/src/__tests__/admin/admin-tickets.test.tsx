@@ -8,6 +8,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import TicketsPage from '@/app/[locale]/admin/tickets/page';
 import type { Ticket, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
+import { requireIndex } from '../helpers/require-index';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -314,7 +315,7 @@ describe('TicketsPage', () => {
     });
 
     const updateButtons = screen.getAllByText('Update');
-    fireEvent.click(updateButtons[0]);
+    fireEvent.click(requireIndex(updateButtons, 0, 'updateButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -339,7 +340,7 @@ describe('TicketsPage', () => {
     });
 
     const updateButtons = screen.getAllByText('Update');
-    fireEvent.click(updateButtons[0]);
+    fireEvent.click(requireIndex(updateButtons, 0, 'updateButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -363,7 +364,7 @@ describe('TicketsPage', () => {
     });
 
     const updateButtons = screen.getAllByText('Update');
-    fireEvent.click(updateButtons[0]);
+    fireEvent.click(requireIndex(updateButtons, 0, 'updateButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -390,7 +391,7 @@ describe('TicketsPage', () => {
     });
 
     const updateButtons = screen.getAllByText('Update');
-    fireEvent.click(updateButtons[0]);
+    fireEvent.click(requireIndex(updateButtons, 0, 'updateButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -398,7 +399,9 @@ describe('TicketsPage', () => {
 
     // Change the status in the modal
     const statusSelects = screen.getByRole('dialog').querySelectorAll('select');
-    fireEvent.change(statusSelects[0], { target: { value: 'resolved' } });
+    fireEvent.change(requireIndex(Array.from(statusSelects), 0, 'statusSelects'), {
+      target: { value: 'resolved' },
+    });
 
     mockApiPatch.mockResolvedValueOnce({});
     mockApiGet.mockResolvedValueOnce(mockTicketsPage1);

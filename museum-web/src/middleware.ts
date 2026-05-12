@@ -135,8 +135,11 @@ export function middleware(request: NextRequest) {
     if (adminRedirect) return adminRedirect;
 
     const requestHeaders = new Headers(request.headers);
-    const locale = pathname.split('/')[1];
-    requestHeaders.set('x-locale', locale);
+    // pathnameHasLocale guarantees pathname starts with /{locale}, so segment exists.
+    const [, locale] = pathname.split('/');
+    if (locale) {
+      requestHeaders.set('x-locale', locale);
+    }
     return withNonceAndCsp(request, requestHeaders);
   }
 

@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import UsersPage from '@/app/[locale]/admin/users/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
+import { requireIndex } from '@/__tests__/helpers/require-index';
 import type { PaginatedResponse, AdminUserDTO } from '@/lib/admin-types';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
@@ -282,7 +283,7 @@ describe('UsersPage', () => {
 
     // Click the first "Change Role" button
     const changeRoleButtons = screen.getAllByText('Change Role');
-    fireEvent.click(changeRoleButtons[0]);
+    fireEvent.click(requireIndex(changeRoleButtons, 0, 'changeRoleButtons'));
 
     // Modal should appear with role select
     await waitFor(() => {

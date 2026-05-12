@@ -8,6 +8,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import ReportsPage from '@/app/[locale]/admin/reports/page';
 import type { Report, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
+import { requireIndex } from '../helpers/require-index';
 
 // ── Next.js mocks ───────────────────────────────────────────────────────────
 
@@ -285,7 +286,7 @@ describe('ReportsPage', () => {
     });
 
     const reviewButtons = screen.getAllByText('Review');
-    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(requireIndex(reviewButtons, 0, 'reviewButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -309,7 +310,7 @@ describe('ReportsPage', () => {
     });
 
     const reviewButtons = screen.getAllByText('Review');
-    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(requireIndex(reviewButtons, 0, 'reviewButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -336,7 +337,7 @@ describe('ReportsPage', () => {
     });
 
     const reviewButtons = screen.getAllByText('Review');
-    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(requireIndex(reviewButtons, 0, 'reviewButtons'));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();

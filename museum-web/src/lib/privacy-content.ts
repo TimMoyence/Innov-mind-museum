@@ -1,4 +1,3 @@
-
 export interface PrivacySection {
   id: string;
   title: string;
@@ -101,7 +100,7 @@ const en: PrivacyContent = {
       title: '10. Complaints',
       paragraphs: [
         'You may lodge a complaint with your local supervisory authority.',
-        'Lead authority (if applicable): CNIL (Commission Nationale de l\'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France.',
+        "Lead authority (if applicable): CNIL (Commission Nationale de l'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France.",
       ],
     },
     {
@@ -139,7 +138,7 @@ const fr: PrivacyContent = {
       id: 'controller',
       title: '1. Responsable du traitement',
       paragraphs: [
-        'Musaium est opéré par InnovMind (Tim Moyence, Entrepreneur Individuel), agissant en qualité de responsable du traitement des données personnelles traitées via l\'application mobile et les canaux de support associés.',
+        "Musaium est opéré par InnovMind (Tim Moyence, Entrepreneur Individuel), agissant en qualité de responsable du traitement des données personnelles traitées via l'application mobile et les canaux de support associés.",
         'Adresse : France.',
         'Contact : tim.moyence@gmail.com',
       ],
@@ -148,8 +147,8 @@ const fr: PrivacyContent = {
       id: 'data-collected',
       title: '2. Données collectées',
       paragraphs: [
-        'Données de compte : adresse e-mail, identifiants d\'authentification et métadonnées de statut de compte.',
-        'Données d\'utilisation : messages de chat, images téléversées, messages vocaux soumis pour transcription, horodatages, métadonnées d\'appareil/runtime et diagnostics applicatifs nécessaires au support.',
+        "Données de compte : adresse e-mail, identifiants d'authentification et métadonnées de statut de compte.",
+        "Données d'utilisation : messages de chat, images téléversées, messages vocaux soumis pour transcription, horodatages, métadonnées d'appareil/runtime et diagnostics applicatifs nécessaires au support.",
         'Données de support : les messages envoyés via les canaux de support (Instagram/Telegram) peuvent être traités par ces plateformes selon leurs propres politiques de confidentialité.',
       ],
     },
@@ -157,8 +156,8 @@ const fr: PrivacyContent = {
       id: 'purposes',
       title: '3. Finalités du traitement',
       paragraphs: [
-        'Fournir une assistance muséale par IA concernant les œuvres d\'art, monuments, musées, architecture et patrimoine culturel.',
-        'Opérer l\'authentification, les sessions sécurisées, la gestion des erreurs et les flux de support.',
+        "Fournir une assistance muséale par IA concernant les œuvres d'art, monuments, musées, architecture et patrimoine culturel.",
+        "Opérer l'authentification, les sessions sécurisées, la gestion des erreurs et les flux de support.",
         'Améliorer la qualité du service, surveiller les abus/garde-fous et maintenir la sécurité et la fiabilité.',
       ],
     },
@@ -166,52 +165,52 @@ const fr: PrivacyContent = {
       id: 'legal-basis',
       title: '4. Bases légales (RGPD Art. 6)',
       paragraphs: [
-        'Exécution du contrat (Art. 6(1)(b)) pour l\'accès au compte et les fonctionnalités principales de l\'application.',
+        "Exécution du contrat (Art. 6(1)(b)) pour l'accès au compte et les fonctionnalités principales de l'application.",
         'Intérêts légitimes (Art. 6(1)(f)) pour la surveillance de sécurité, la prévention de la fraude, la fiabilité du service et les diagnostics produit.',
-        'Consentement (Art. 6(1)(a)) pour les permissions d\'appareil telles que la caméra/microphone, lorsque requises par la plateforme et uniquement lorsque l\'utilisateur déclenche explicitement ces fonctionnalités.',
+        "Consentement (Art. 6(1)(a)) pour les permissions d'appareil telles que la caméra/microphone, lorsque requises par la plateforme et uniquement lorsque l'utilisateur déclenche explicitement ces fonctionnalités.",
       ],
     },
     {
       id: 'recipients',
       title: '5. Destinataires et sous-traitants',
       paragraphs: [
-        'Personnel interne autorisé, sur la base du besoin d\'en connaître.',
+        "Personnel interne autorisé, sur la base du besoin d'en connaître.",
         'Sous-traitants : OpenAI (États-Unis), Google Cloud (États-Unis/UE), DeepSeek (Chine), OVH SAS (France, données UE), Amazon Web Services (UE, données UE), Expo/EAS (États-Unis).',
-        'Aucun prestataire de paiement n\'est utilisé à ce jour.',
+        "Aucun prestataire de paiement n'est utilisé à ce jour.",
       ],
     },
     {
       id: 'transfers',
       title: '6. Transferts internationaux',
       paragraphs: [
-        'Certains sous-traitants peuvent traiter des données en dehors de l\'EEE/Royaume-Uni/Suisse. Le cas échéant, les transferts sont encadrés par des garanties appropriées telles que les CCT, décisions d\'adéquation ou mécanismes équivalents.',
-        'Les données hébergées chez OVH et AWS restent dans l\'Union européenne.',
+        "Certains sous-traitants peuvent traiter des données en dehors de l'EEE/Royaume-Uni/Suisse. Le cas échéant, les transferts sont encadrés par des garanties appropriées telles que les CCT, décisions d'adéquation ou mécanismes équivalents.",
+        "Les données hébergées chez OVH et AWS restent dans l'Union européenne.",
       ],
     },
     {
       id: 'retention',
       title: '7. Durées de conservation',
       paragraphs: [
-        'Données de compte, historique de conversations et images : conservés pendant la durée d\'utilisation du service, supprimés sur demande.',
+        "Données de compte, historique de conversations et images : conservés pendant la durée d'utilisation du service, supprimés sur demande.",
         'Fichiers audio (questions vocales) : non stockés — transmis pour transcription puis immédiatement supprimés.',
-        'Jetons d\'authentification : accès 15 minutes, renouvellement 30 jours.',
+        "Jetons d'authentification : accès 15 minutes, renouvellement 30 jours.",
       ],
     },
     {
       id: 'security',
       title: '8. Mesures de sécurité',
       paragraphs: [
-        'Musaium utilise des mesures techniques et organisationnelles comprenant le contrôle d\'accès, le chiffrement des transports (TLS), l\'isolation des environnements, le hachage des mots de passe (bcrypt) et la surveillance opérationnelle.',
-        'Aucun système n\'est sans risque. Les utilisateurs sont invités à ne pas partager de données personnelles sensibles inutiles dans les conversations de chat.',
+        "Musaium utilise des mesures techniques et organisationnelles comprenant le contrôle d'accès, le chiffrement des transports (TLS), l'isolation des environnements, le hachage des mots de passe (bcrypt) et la surveillance opérationnelle.",
+        "Aucun système n'est sans risque. Les utilisateurs sont invités à ne pas partager de données personnelles sensibles inutiles dans les conversations de chat.",
       ],
     },
     {
       id: 'rights',
       title: '9. Vos droits RGPD',
       paragraphs: [
-        'Vous pouvez demander l\'accès, la rectification, l\'effacement, la limitation, la portabilité et l\'opposition au traitement, dans les conditions prévues par la loi.',
+        "Vous pouvez demander l'accès, la rectification, l'effacement, la limitation, la portabilité et l'opposition au traitement, dans les conditions prévues par la loi.",
         'Lorsque le traitement est fondé sur le consentement, vous pouvez le retirer à tout moment sans affecter la licéité du traitement antérieur.',
-        'Pour exercer vos droits, contactez : tim.moyence@gmail.com. Incluez suffisamment d\'informations pour vérifier votre demande.',
+        "Pour exercer vos droits, contactez : tim.moyence@gmail.com. Incluez suffisamment d'informations pour vérifier votre demande.",
       ],
     },
     {
@@ -219,14 +218,14 @@ const fr: PrivacyContent = {
       title: '10. Réclamations',
       paragraphs: [
         'Vous pouvez introduire une réclamation auprès de votre autorité de contrôle locale.',
-        'Autorité chef de file (le cas échéant) : CNIL (Commission Nationale de l\'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.',
+        "Autorité chef de file (le cas échéant) : CNIL (Commission Nationale de l'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.",
       ],
     },
     {
       id: 'minors',
       title: '11. Enfants et mineurs',
       paragraphs: [
-        'Musaium n\'est pas destiné aux utilisateurs de moins de 15 ans (majorité numérique française — CNIL Délibération 2021-018). Les utilisateurs de moins de 15 ans nécessitent une autorisation parentale pour créer un compte. Si vous pensez qu\'un mineur a fourni des données de manière illicite, contactez tim.moyence@gmail.com.',
+        "Musaium n'est pas destiné aux utilisateurs de moins de 15 ans (majorité numérique française — CNIL Délibération 2021-018). Les utilisateurs de moins de 15 ans nécessitent une autorisation parentale pour créer un compte. Si vous pensez qu'un mineur a fourni des données de manière illicite, contactez tim.moyence@gmail.com.",
       ],
     },
     {
@@ -235,21 +234,27 @@ const fr: PrivacyContent = {
       paragraphs: [
         'Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, Deepseek). Les réponses sont produites automatiquement et peuvent contenir des erreurs, des omissions ou des inexactitudes — veuillez vérifier les informations critiques auprès de sources primaires.',
         'Les messages vocaux sont transcrits par un modèle de reconnaissance vocale ; les réponses orales sont synthétisées par un modèle text-to-speech. Les tampons audio ne sont pas conservés au-delà du cycle de la requête.',
-        'Cette information est fournie conformément à l\'article 50 du règlement UE sur l\'intelligence artificielle (Règlement (UE) 2024/1689).',
+        "Cette information est fournie conformément à l'article 50 du règlement UE sur l'intelligence artificielle (Règlement (UE) 2024/1689).",
       ],
     },
     {
       id: 'changes',
       title: '13. Modifications de la politique',
       paragraphs: [
-        'Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l\'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.',
+        "Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.",
       ],
     },
   ],
 };
 
-const privacyContentByLocale: Record<string, PrivacyContent> = { en, fr };
+const privacyContentByLocale = { en, fr } as const;
+
+type PrivacyLocale = keyof typeof privacyContentByLocale;
+
+function isPrivacyLocale(locale: string): locale is PrivacyLocale {
+  return locale in privacyContentByLocale;
+}
 
 export function getPrivacyContent(locale: string): PrivacyContent {
-  return privacyContentByLocale[locale] ?? privacyContentByLocale.en;
+  return isPrivacyLocale(locale) ? privacyContentByLocale[locale] : privacyContentByLocale.en;
 }

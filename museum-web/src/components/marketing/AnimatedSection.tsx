@@ -18,7 +18,9 @@ interface AnimatedSectionProps {
   stagger?: boolean;
 }
 
-const directionOffsets: Record<string, { x: number; y: number }> = {
+type Direction = 'up' | 'down' | 'left' | 'right';
+
+const directionOffsets: Record<Direction, { x: number; y: number }> = {
   up: { x: 0, y: 40 },
   down: { x: 0, y: -40 },
   left: { x: 40, y: 0 },
@@ -27,7 +29,7 @@ const directionOffsets: Record<string, { x: number; y: number }> = {
 
 const springTransition = { type: 'spring' as const, stiffness: 100, damping: 20 };
 
-function getVariants(variant: AnimationVariant, direction: string) {
+function getVariants(variant: AnimationVariant, direction: Direction) {
   switch (variant) {
     case 'blur-scale':
       return {
@@ -82,7 +84,11 @@ export default function AnimatedSection({
   const shouldReduceMotion = useReducedMotion();
 
   if (shouldReduceMotion) {
-    return <div ref={ref} className={className}>{children}</div>;
+    return (
+      <div ref={ref} className={className}>
+        {children}
+      </div>
+    );
   }
 
   if (stagger) {
