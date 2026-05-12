@@ -76,8 +76,14 @@ export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 // Intentionally hand-rolled — AnalyticsGranularity is embedded in UsageAnalytics.granularity, not a named schema component
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
-// Intentionally hand-rolled — UserRole is embedded in AuthUser.role, not a named schema component
-export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin';
+/**
+ * Canonical UserRole — single source of truth (re-exported by `auth.tsx`).
+ * Hand-rolled because `super_admin` is a Musaium platform-owner tier stored
+ * out-of-band (not surfaced in the OpenAPI `AuthUser.role` schema); B2B
+ * museum operators get `admin` per-tenant. `super_admin` SHALL implicitly
+ * satisfy any `admin`-only check (see `RoleGuard` usage).
+ */
+export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
 
 // ---------------------------------------------------------------------------
 // Runtime constants (kept — tests assert on these values)

@@ -13,7 +13,11 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
-import type { AuthSessionResponse } from '@/lib/admin-types';
+import type { AuthSessionResponse, UserRole } from '@/lib/admin-types';
+
+// Re-export the canonical UserRole so existing `import { UserRole } from '@/lib/auth'`
+// call sites keep working. Single source of truth lives in `admin-types.ts`.
+export type { UserRole } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
 // Admin authz cookie — middleware redirect hint
@@ -51,17 +55,6 @@ function hasAdminAuthzCookie(): boolean {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-/**
- * Matches backend UserRole enum exactly. `super_admin` is a Musaium-platform
- * tier reserved for the platform operator (Tim) — distinct from `admin`
- * which is granted to B2B museum operators on a per-tenant basis.
- *
- * UI rule: `super_admin` SHALL implicitly satisfy any `admin`-only check.
- * Where a guard wants "admin or above", pass both literals to
- * `<RoleGuard allowedRoles={['admin', 'super_admin']}>`.
- */
-export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
 
 export interface AuthUser {
   id: number;

@@ -17,13 +17,21 @@ function displayName(u: AdminUserDTO): string {
 // ── Role badge colors ──────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<UserRole, string> = {
+  super_admin: 'bg-purple-100 text-purple-800',
   admin: 'bg-red-100 text-red-700',
   museum_manager: 'bg-purple-100 text-purple-700',
   moderator: 'bg-blue-100 text-blue-700',
   visitor: 'bg-gray-100 text-gray-700',
 };
 
-const ALL_ROLES: UserRole[] = ['visitor', 'moderator', 'museum_manager', 'admin'];
+// `super_admin` is intentionally excluded from the admin-promotion UI —
+// platform-owner role assigned out-of-band, not grantable from the dashboard.
+const ALL_ROLES: Exclude<UserRole, 'super_admin'>[] = [
+  'visitor',
+  'moderator',
+  'museum_manager',
+  'admin',
+];
 
 // ── Debounce hook ──────────────────────────────────────────────────────
 
