@@ -97,6 +97,19 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
+  // Node default cap on EventEmitter listeners is 10. Our stack attaches a
+  // `finish`/`close` listener per request from each of: requestLogger,
+  // httpMetrics, compression, express-rate-limit, body-parser (json +
+  // urlencoded), Sentry http+tracing+express integrations, res.setTimeout —
+  // which lands at 11+ and produces a MaxListenersExceededWarning per request
+  // (visual noise, not a real leak since the response is GC'd per request).
+  // Raise the per-response cap to 20 to silence the warning and accommodate
+  // future observability hooks (OTel auto-instrumentation when re-enabled).
+  app.use((_req, res, next) => {
+    res.setMaxListeners(20);
+    next();
+  });
+
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
 
