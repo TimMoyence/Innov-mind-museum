@@ -422,6 +422,12 @@ const env: AppEnv = {
       openDurationMs: toNumber(process.env.LLM_GUARD_CB_OPEN_DURATION_MS, 30_000),
       halfOpenMaxProbes: toNumber(process.env.LLM_GUARD_CB_HALF_OPEN_MAX_PROBES, 1),
     },
+    // 2026-05-12 (ADR-047) — in-flight concurrency cap on /scan calls. Caps
+    // fan-out so a traffic surge can't amplify sidecar latency into a death
+    // spiral. NOT a feature flag — operational tunables. Overflow returns
+    // fail-CLOSED (preserves safety contract).
+    maxInflight: toNumber(process.env.LLM_GUARD_MAX_INFLIGHT, 8),
+    queueMax: toNumber(process.env.LLM_GUARD_QUEUE_MAX, 32),
   },
   // Pre-launch V1: retention crons always-on; the `env.cache?.enabled` upstream
   // gate (Redis required) is the structural skip path for tests/dev without Redis.

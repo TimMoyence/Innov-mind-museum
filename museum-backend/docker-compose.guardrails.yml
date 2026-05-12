@@ -46,12 +46,22 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health']
+      # ADR-047 (2026-05-12) — tightened from 30s/5s/3 to 10s/3s/2 so a
+      # degraded replica is unhealthy within ~30s instead of ~2min. The
+      # cold-boot grace below stays at 240s for HF model downloads.
       interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 2
       # First boot on a cold HF cache can take 3–4 min (model downloads).
       # Subsequent boots land in ~20–30s once volume is warm.
       start_period: 240s
+      # Horizontal scaling path (production capacity): `docker compose -f
+      # deploy/docker-compose.prod.yml up -d --scale llm-guard=2`. Docker
+      # service-name DNS resolves to all replica IPs (undici keep-alive
+      # pool round-robins). NOT changed here pre-launch to avoid coupling
+      # the safety hotfix to an ops procedure change. Runbook references
+      # this command path under "Recovery actions / Scale up". See
+      # docs/OPS_INCIDENT_LLM_GUARD.md.
 
   backend:
     environment:

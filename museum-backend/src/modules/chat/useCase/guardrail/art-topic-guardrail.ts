@@ -1,8 +1,21 @@
 import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 import { resolveLocale } from '@shared/i18n/locale';
 
-/** Reason why the guardrail blocked or flagged a message. */
-export type GuardrailBlockReason = 'insult' | 'prompt_injection' | 'off_topic' | 'unsafe_output';
+/**
+ * Reason why the guardrail blocked or flagged a message.
+ *
+ * `service_unavailable` is distinct from `unsafe_output` — it signals that the
+ * upstream LLM Guard sidecar could not produce a verdict (timeout, non-OK
+ * response, breaker open, semaphore overflow). The user-facing copy is then
+ * honest ("Service temporarily unavailable, please retry") instead of the
+ * misleading "your content was flagged" framing. See ADR-047.
+ */
+export type GuardrailBlockReason =
+  | 'insult'
+  | 'prompt_injection'
+  | 'off_topic'
+  | 'unsafe_output'
+  | 'service_unavailable';
 
 /**
  * Result of a guardrail evaluation.
@@ -272,6 +285,7 @@ export const buildGuardrailRefusal = (
   const messages = GUARDRAIL_REFUSALS[resolved];
 
   if (reason === 'insult') return messages.insult;
+  if (reason === 'service_unavailable') return messages.serviceUnavailable;
   return messages.default;
 };
 

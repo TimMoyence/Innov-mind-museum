@@ -171,6 +171,8 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
         openDurationMs: 30_000,
         halfOpenMaxProbes: 1,
       },
+      maxInflight: 8,
+      queueMax: 32,
     },
     retention: {
       cronPattern: '15 3 * * *',

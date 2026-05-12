@@ -1,5 +1,13 @@
 import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
+import {
+  ScanInflightSemaphore,
+  ScanSemaphoreOverflowError,
+} from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { logger } from '@shared/logger/logger';
+import {
+  llmGuardCircuitBreakerSkipsTotal,
+  llmGuardScanDurationSeconds,
+} from '@shared/observability/prometheus-metrics';
 
 import type { GuardrailCircuitBreakerSnapshot } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import type {
@@ -39,6 +47,13 @@ interface LLMGuardAdapterOptions {
    * the state survives across the input + output legs of one request.
    */
   circuitBreaker?: GuardrailCircuitBreaker;
+  /**
+   * Optional in-flight concurrency semaphore — caps concurrent /scan calls
+   * to prevent surge-amplified latency on the sidecar (ADR-047). Defaults
+   * to an unbounded sentinel (1e6, 1e6) — composition root injects the
+   * env-configured instance, but tests can keep the default.
+   */
+  semaphore?: ScanInflightSemaphore;
 }
 
 /**
@@ -79,10 +94,13 @@ const mapReason = (raw: string | undefined): AdvancedGuardrailBlockReason => {
   return 'prompt_injection';
 };
 
+type ScanOutcome = 'success' | 'fail_closed' | 'timeout' | 'breaker_skip' | 'overflow';
+
 /**
  * Secondary adapter: wraps the LLM Guard Python sidecar behind our hexagonal
  * AdvancedGuardrail port. Every network operation honours the configured
- * timeout and fails CLOSED on any error (network, HTTP ≥ 400, malformed JSON).
+ * timeout and fails CLOSED on any error (network, HTTP ≥ 400, malformed JSON,
+ * breaker open, queue overflow) — see ADR-047 for the no-fail-OPEN contract.
  *
  * Activation: `env.guardrails.candidate === 'llm-guard'` in chat-module.ts.
  */
@@ -93,12 +111,17 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
   private readonly timeoutMs: number;
   private readonly fetchFn: typeof fetch;
   private readonly circuitBreaker: GuardrailCircuitBreaker;
+  private readonly semaphore: ScanInflightSemaphore;
 
   constructor(options: LLMGuardAdapterOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.timeoutMs = options.timeoutMs;
     this.fetchFn = options.fetchFn ?? fetch;
     this.circuitBreaker = options.circuitBreaker ?? new GuardrailCircuitBreaker();
+    // Sentinel default (effectively unbounded) so existing unit tests that
+    // don't care about concurrency don't have to construct one. Production
+    // composition root in chat-module.ts always injects an env-bounded one.
+    this.semaphore = options.semaphore ?? new ScanInflightSemaphore(1_000_000, 1_000_000);
   }
 
   /** Snapshot of the breaker state for `/api/health` (R8). */
@@ -124,19 +147,51 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
     path: string,
     body: Record<string, unknown>,
   ): Promise<AdvancedGuardrailDecision> {
-    // Spec R3 + R5 — when the breaker is OPEN (or HALF_OPEN with no probe
-    // slot remaining), short-circuit to fail-OPEN. The upstream deterministic
-    // keyword guardrail + structural prompt isolation + sanitizePromptInput
-    // remain active in chat.service — this only bypasses the LLM Guard
-    // sidecar defense-in-depth layer.
+    // Fail-CLOSED contract preserved during breaker OPEN window — see ADR-047.
     if (!this.circuitBreaker.canAttempt()) {
-      logger.info('llm_guard_circuit_breaker_skip', {
+      logger.warn('llm_guard_circuit_breaker_skip', {
         state: this.circuitBreaker.state,
         path,
       });
-      return { allow: true };
+      llmGuardCircuitBreakerSkipsTotal.inc({ path, reason: 'breaker' });
+      llmGuardScanDurationSeconds.observe({ path, outcome: 'breaker_skip' }, 0);
+      return { allow: false, reason: 'error' };
     }
 
+    // Concurrency cap. Overflow → fail-CLOSED (ADR-047), no fan-out to a
+    // saturated sidecar.
+    try {
+      await this.semaphore.acquire();
+    } catch (e) {
+      if (e instanceof ScanSemaphoreOverflowError) {
+        logger.warn('llm_guard_semaphore_overflow', {
+          path,
+          stats: this.semaphore.getStats(),
+        });
+        llmGuardCircuitBreakerSkipsTotal.inc({ path, reason: 'overflow' });
+        llmGuardScanDurationSeconds.observe({ path, outcome: 'overflow' }, 0);
+        return { allow: false, reason: 'error' };
+      }
+      throw e;
+    }
+
+    const start = process.hrtime.bigint();
+    let outcome: ScanOutcome = 'fail_closed';
+    try {
+      const result = await this.scanOverHttp(path, body);
+      outcome = result.outcome;
+      return result.decision;
+    } finally {
+      const elapsedSeconds = Number(process.hrtime.bigint() - start) / 1e9;
+      llmGuardScanDurationSeconds.observe({ path, outcome }, elapsedSeconds);
+      this.semaphore.release();
+    }
+  }
+
+  private async scanOverHttp(
+    path: string,
+    body: Record<string, unknown>,
+  ): Promise<{ decision: AdvancedGuardrailDecision; outcome: ScanOutcome }> {
     const controller = new AbortController();
     const timer = setTimeout(() => {
       controller.abort();
@@ -153,41 +208,46 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
       if (!response.ok) {
         this.circuitBreaker.recordFailure();
         logger.warn('llm_guard_non_ok_fail_closed', { status: response.status, path });
-        return { allow: false, reason: 'error' };
+        return { decision: { allow: false, reason: 'error' }, outcome: 'fail_closed' };
       }
 
       const raw = (await response.json()) as Partial<ScanResponse>;
       if (typeof raw.is_valid !== 'boolean') {
         this.circuitBreaker.recordFailure();
         logger.warn('llm_guard_malformed_fail_closed', { path });
-        return { allow: false, reason: 'error' };
+        return { decision: { allow: false, reason: 'error' }, outcome: 'fail_closed' };
       }
 
-      // Success path — sidecar responded with a well-formed verdict.
       this.circuitBreaker.recordSuccess();
-
-      if (raw.is_valid) {
-        return {
-          allow: true,
-          confidence: typeof raw.risk_score === 'number' ? 1 - raw.risk_score : undefined,
-          redactedText: raw.sanitized,
-        };
-      }
-
-      return {
-        allow: false,
-        reason: mapReason(raw.reason),
-        confidence: typeof raw.risk_score === 'number' ? raw.risk_score : undefined,
-        redactedText: raw.sanitized,
-      };
+      return { decision: decisionFromSidecar(raw), outcome: 'success' };
     } catch (error) {
       this.circuitBreaker.recordFailure();
       const message = error instanceof Error ? error.message : String(error);
       const kind = message.toLowerCase().includes('abort') ? 'timeout' : 'network';
       logger.warn('llm_guard_fail_closed', { kind, path, error: message });
-      return { allow: false, reason: 'error' };
+      return {
+        decision: { allow: false, reason: 'error' },
+        outcome: kind === 'timeout' ? 'timeout' : 'fail_closed',
+      };
     } finally {
       clearTimeout(timer);
     }
   }
+}
+
+/** Build the AdvancedGuardrailDecision from a well-formed sidecar payload. */
+function decisionFromSidecar(raw: Partial<ScanResponse>): AdvancedGuardrailDecision {
+  if (raw.is_valid) {
+    return {
+      allow: true,
+      confidence: typeof raw.risk_score === 'number' ? 1 - raw.risk_score : undefined,
+      redactedText: raw.sanitized,
+    };
+  }
+  return {
+    allow: false,
+    reason: mapReason(raw.reason),
+    confidence: typeof raw.risk_score === 'number' ? raw.risk_score : undefined,
+    redactedText: raw.sanitized,
+  };
 }

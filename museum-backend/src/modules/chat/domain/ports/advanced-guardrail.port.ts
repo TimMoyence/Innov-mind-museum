@@ -22,7 +22,14 @@ export type AdvancedGuardrailBlockReason =
   | 'bias'
   | 'data_exfiltration'
   | 'jailbreak'
-  | 'error';
+  | 'error'
+  /**
+   * Upstream guard is unreachable / saturated (timeout, non-OK response,
+   * breaker open, semaphore overflow). Distinct from `error` at the mapper
+   * level (ADR-047) so the user sees an honest "service unavailable" copy
+   * instead of a misleading "your content was flagged" message.
+   */
+  | 'service_unavailable';
 
 /** Decision returned by an advanced guardrail check. */
 export interface AdvancedGuardrailDecision {

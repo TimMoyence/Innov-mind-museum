@@ -576,5 +576,13 @@ export interface AppEnv {
       /** Max concurrent probe calls admitted while HALF_OPEN. */
       halfOpenMaxProbes: number;
     };
+    /**
+     * 2026-05-12 (ADR-047) — concurrent /scan call cap per backend process.
+     * Prevents a surge from amplifying sidecar latency into a death spiral.
+     * Overflow → fail-CLOSED (safety preserved).
+     */
+    maxInflight: number;
+    /** Surge queue depth before overflow → fail-CLOSED. */
+    queueMax: number;
   };
 }

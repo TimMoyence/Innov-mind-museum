@@ -41,6 +41,10 @@ export const AUDIT_API_KEY_REVOKED = 'API_KEY_REVOKED';
 export const AUDIT_SECURITY_RATE_LIMIT = 'SECURITY_RATE_LIMIT';
 export const AUDIT_SECURITY_GUARDRAIL_BLOCK = 'SECURITY_GUARDRAIL_BLOCK';
 export const AUDIT_SECURITY_GUARDRAIL_PASS = 'SECURITY_GUARDRAIL_PASS';
+// ADR-047 (2026-05-12) — emitted on every LLM Guard sidecar circuit-breaker
+// transition into OPEN. Metadata-only payload (no raw prompts); operators
+// correlate with /metrics. Follows the standard audit pipeline (Sentry).
+export const AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN = 'SECURITY_LLM_GUARD_BREAKER_OPEN';
 // V13 / STRIDE R3 — phase-scoped guardrail blocks for retro-analysis (input vs output).
 // Carry redacted snippet (≤64 chars) + sha256 fingerprint to enable forensic dedup
 // without bloating the audit hash chain or echoing raw user/LLM payloads.

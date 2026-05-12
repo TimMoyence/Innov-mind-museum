@@ -658,6 +658,10 @@ npx eas submit --platform ios --profile production --latest --non-interactive
 
 ## 21. Incident Runbook (Diagnostics)
 
+> **Component-specific runbooks :**
+>
+> - [`docs/OPS_INCIDENT_LLM_GUARD.md`](./OPS_INCIDENT_LLM_GUARD.md) — LLM Guard sidecar outage / degradation (chat-pipeline safety layer). See also [ADR-047](./adr/ADR-047-llm-guard-circuit-breaker-fail-closed.md).
+
 ### Health failing (`503`)
 
 Check:

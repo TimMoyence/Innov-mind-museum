@@ -16,6 +16,13 @@ export function judgeVerdictToReason(verdict: JudgeDecision['decision']): Guardr
 /**
  * Maps an AdvancedGuardrail reason to our canonical GuardrailBlockReason, used
  * downstream by the refusal message builder and audit log.
+ *
+ * `error` (raw from the adapter) → `service_unavailable` (ADR-047). The
+ * sidecar could not produce a verdict — the user-facing copy should say
+ * "service temporarily unavailable" rather than the misleading
+ * `unsafe_output` framing that suggests the message itself was flagged.
+ * Genuine content categories (pii, bias, toxicity, data_exfiltration,
+ * schema_violation) keep mapping to `unsafe_output`.
  */
 export function mapAdvancedReason(reason: string | undefined): GuardrailBlockReason {
   switch (reason) {
@@ -24,8 +31,10 @@ export function mapAdvancedReason(reason: string | undefined): GuardrailBlockRea
     case 'toxicity':
     case 'data_exfiltration':
     case 'schema_violation':
-    case 'error':
       return 'unsafe_output';
+    case 'error':
+    case 'service_unavailable':
+      return 'service_unavailable';
     case 'off_topic':
       return 'off_topic';
     case 'jailbreak':

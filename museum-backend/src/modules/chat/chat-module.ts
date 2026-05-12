@@ -8,6 +8,7 @@ import {
 import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
+import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
   TesseractOcrService,
@@ -54,6 +55,7 @@ import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikida
 import { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
+import { AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN } from '@shared/audit/audit.types';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { logger } from '@shared/logger/logger';
 import {
@@ -412,15 +414,43 @@ export class ChatModule {
           }
           if (next === 'OPEN') {
             llmGuardCircuitBreakerTripsTotal.inc();
+            const snapshot = breaker.getState();
+            // Audit trail (ADR-047 R6) — no PII, metadata only.
+            fireAndForget(
+              auditService.log({
+                action: AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
+                actorType: 'system',
+                metadata: {
+                  failureCount: snapshot.failureCount,
+                  windowMs: env.guardrails.circuitBreaker.windowMs,
+                  openedAt: snapshot.openedAt?.toISOString() ?? null,
+                },
+              }),
+              'llm_guard_breaker_open_audit',
+            );
           }
         },
       });
       this._guardrailCircuitBreaker = breaker;
 
+      // Seed gauges so dashboards see the healthy state before the first
+      // transition (onStateChange only fires on transitions, not construction).
+      llmGuardCircuitBreakerState.set({ state: 'closed' }, 1);
+      llmGuardCircuitBreakerState.set({ state: 'half_open' }, 0);
+      llmGuardCircuitBreakerState.set({ state: 'open' }, 0);
+
+      // Single semaphore instance per process — shared across input + output
+      // legs so the concurrency cap matches actual sidecar fan-out.
+      const semaphore = new ScanInflightSemaphore(
+        env.guardrails.maxInflight,
+        env.guardrails.queueMax,
+      );
+
       return new LLMGuardAdapter({
         baseUrl,
         timeoutMs: env.guardrails.timeoutMs,
         circuitBreaker: breaker,
+        semaphore,
       });
     }
 

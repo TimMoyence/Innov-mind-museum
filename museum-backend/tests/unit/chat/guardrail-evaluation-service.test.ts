@@ -552,7 +552,7 @@ describe('GuardrailEvaluationService', () => {
       expect(result.allow).toBe(true);
     });
 
-    it('fails CLOSED when advanced guardrail throws (enforce mode)', async () => {
+    it('fails CLOSED when advanced guardrail throws (enforce mode), surfaces service_unavailable (ADR-047 R7)', async () => {
       const adv = makeAdvancedMock(new Error('sidecar timeout'));
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
@@ -562,8 +562,12 @@ describe('GuardrailEvaluationService', () => {
 
       const result = await service.evaluateInput('hello');
 
+      // Fail-CLOSED contract preserved (allow=false), but the reason maps to
+      // the new `service_unavailable` channel so the user-facing copy is
+      // honest (sidecar dead, not "your message was flagged"). See
+      // guardrail-reason-mapping.ts + ADR-047.
       expect(result.allow).toBe(false);
-      expect(result.reason).toBe('unsafe_output');
+      expect(result.reason).toBe('service_unavailable');
     });
 
     it('still runs deterministic guardrail FIRST (keyword catches injection before advanced layer)', async () => {

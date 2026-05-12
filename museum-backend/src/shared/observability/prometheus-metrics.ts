@@ -320,6 +320,42 @@ export const llmGuardCircuitBreakerTripsTotal = new Counter({
 });
 
 /**
+ * Volume of /scan calls short-circuited before reaching the sidecar (ADR-047
+ * resilience surface, 2026-05-12). Two reasons coexist :
+ *   - `breaker` : the breaker FSM forbids the attempt (CLOSED→OPEN cooldown
+ *     or HALF_OPEN-no-slot)
+ *   - `overflow` : the inflight semaphore queue is full ; fast-fail-CLOSED
+ *     to keep the sidecar from drowning
+ * Both end with `{allow:false, reason:'error'}` returned to the caller —
+ * fail-CLOSED preserved (R1). Cardinality : 2 paths × 2 reasons = 4 series.
+ */
+export const llmGuardCircuitBreakerSkipsTotal = new Counter({
+  name: 'musaium_llm_guard_circuit_breaker_skips_total',
+  help: 'Total /scan calls short-circuited before reaching the sidecar. reason in {breaker, overflow}.',
+  labelNames: ['path', 'reason'] as const,
+  registers: [registry],
+});
+
+/**
+ * Latency of /scan HTTP calls. Leading indicator (alerts can page on p95
+ * before the breaker even trips). Outcomes :
+ *   - `success` : sidecar returned 2xx + valid JSON
+ *   - `fail_closed` : sidecar returned non-OK or malformed payload
+ *   - `timeout` : AbortController fired before the response
+ *   - `breaker_skip` : breaker FSM forbade the attempt (observed at 0s)
+ *   - `overflow` : semaphore queue full (observed at 0s)
+ * Buckets bracket the typical 50ms→3s window of LLM Guard inference on the
+ * VPS hardware.
+ */
+export const llmGuardScanDurationSeconds = new Histogram({
+  name: 'musaium_llm_guard_scan_duration_seconds',
+  help: 'Duration of LLM Guard /scan HTTP calls in seconds, labeled by path + outcome.',
+  labelNames: ['path', 'outcome'] as const,
+  buckets: [0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 3],
+  registers: [registry],
+});
+
+/**
  * C4 anti-hallucination (2026-05-11) — citation grounding + WebSearch fallback
  * surface mandated by `spec.md §R12 / NFR6` and `design.md §10 Observability`.
  *

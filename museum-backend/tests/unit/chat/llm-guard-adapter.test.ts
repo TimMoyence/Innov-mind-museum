@@ -1,5 +1,6 @@
 import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
+import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { logger } from '@shared/logger/logger';
 
 jest.mock('@shared/logger/logger', () => ({
@@ -7,6 +8,7 @@ jest.mock('@shared/logger/logger', () => ({
 }));
 
 const loggerInfo = logger.info as unknown as jest.Mock;
+const loggerWarn = logger.warn as unknown as jest.Mock;
 
 const makeFetch = (response: Partial<Response>): jest.Mock => {
   return jest.fn<Promise<Response>, Parameters<typeof fetch>>().mockResolvedValue({
@@ -214,6 +216,7 @@ describe('LLMGuardAdapter identity', () => {
 describe('LLMGuardAdapter circuit breaker integration', () => {
   beforeEach(() => {
     loggerInfo.mockClear();
+    loggerWarn.mockClear();
     jest.useFakeTimers();
   });
 
@@ -221,7 +224,7 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     jest.useRealTimers();
   });
 
-  it('trips the breaker after threshold consecutive timeouts and short-circuits subsequent calls', async () => {
+  it('trips the breaker after threshold consecutive timeouts and short-circuits subsequent calls fail-CLOSED (ADR-047 R1)', async () => {
     const breaker = new GuardrailCircuitBreaker({
       failureThreshold: 3,
       windowMs: 60_000,
@@ -241,17 +244,18 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     expect(breaker.state).toBe('OPEN');
     expect(fetchFn).toHaveBeenCalledTimes(3);
 
-    // 4th call must NOT hit fetch and must fail-OPEN.
+    // 4th call must NOT hit fetch AND must STILL fail-CLOSED (ADR-047 regression pin).
     const decision = await adapter.checkInput({ text: 'hello again' });
-    expect(decision.allow).toBe(true);
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toBe('error');
     expect(fetchFn).toHaveBeenCalledTimes(3);
-    expect(loggerInfo).toHaveBeenCalledWith(
+    expect(loggerWarn).toHaveBeenCalledWith(
       'llm_guard_circuit_breaker_skip',
       expect.objectContaining({ state: 'OPEN', path: '/scan/prompt' }),
     );
   });
 
-  it('with a pre-tripped breaker, checkInput allows without calling fetch', async () => {
+  it('with a pre-tripped breaker, checkInput fail-CLOSED without calling fetch (ADR-047 R1+R9)', async () => {
     const breaker = new GuardrailCircuitBreaker({
       failureThreshold: 1,
       windowMs: 60_000,
@@ -263,11 +267,12 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     const fetchFn = makeFetch({ json: async () => ({ is_valid: false, reason: 'whatever' }) });
     const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
 
-    const decision = await adapter.checkInput({ text: 'should bypass' });
+    const decision = await adapter.checkInput({ text: 'should be blocked' });
 
-    expect(decision.allow).toBe(true);
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toBe('error');
     expect(fetchFn).not.toHaveBeenCalled();
-    expect(loggerInfo).toHaveBeenCalledWith(
+    expect(loggerWarn).toHaveBeenCalledWith(
       'llm_guard_circuit_breaker_skip',
       expect.objectContaining({ state: 'OPEN' }),
     );
@@ -348,5 +353,59 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     const after = breaker.getState().failureCount;
 
     expect(after).toBe(before + 1);
+  });
+});
+
+describe('LLMGuardAdapter inflight semaphore (ADR-047 R5)', () => {
+  beforeEach(() => {
+    loggerWarn.mockClear();
+  });
+
+  it('rejects fail-CLOSED when the queue overflows (preserves R1)', async () => {
+    // maxInflight=1 + queueMax=0 → second concurrent call overflows immediately.
+    const semaphore = new ScanInflightSemaphore(1, 0);
+
+    // Reserve the single slot by acquiring directly so the adapter's call
+    // immediately overflows the queue.
+    await semaphore.acquire();
+
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = new LLMGuardAdapter({
+      baseUrl: 'http://llm-guard:8081',
+      timeoutMs: 300,
+      fetchFn: fetchFn as unknown as typeof fetch,
+      semaphore,
+    });
+
+    const decision = await adapter.checkInput({ text: 'surge' });
+
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toBe('error');
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(loggerWarn).toHaveBeenCalledWith(
+      'llm_guard_semaphore_overflow',
+      expect.objectContaining({ path: '/scan/prompt' }),
+    );
+
+    // Release the manually held slot to keep test isolation clean.
+    semaphore.release();
+  });
+
+  it('releases the slot on success path (subsequent calls go through)', async () => {
+    const semaphore = new ScanInflightSemaphore(1, 32);
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = new LLMGuardAdapter({
+      baseUrl: 'http://llm-guard:8081',
+      timeoutMs: 300,
+      fetchFn: fetchFn as unknown as typeof fetch,
+      semaphore,
+    });
+
+    await adapter.checkInput({ text: 'first' });
+    await adapter.checkInput({ text: 'second' });
+    await adapter.checkInput({ text: 'third' });
+
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(semaphore.getStats().inFlight).toBe(0);
   });
 });
