@@ -1,0 +1,98 @@
+appId: com.musaium.mobile.preview
+---
+# Audio Recording Flow: open chat -> tap mic -> record -> release -> verify transcription + AI audio response
+#
+# Prerequisites:
+#   - User is already logged in (helpers/quick-login.yaml)
+#   - Backend running on localhost:3000 with STT (gpt-4o-mini-transcribe) and
+#     TTS (gpt-4o-mini-tts) configured
+#   - A mock audio asset is injected via the test harness (Maestro cannot drive a
+#     real microphone input device). See `museum-frontend/.maestro/fixtures/audio.md`
+#     for the harness contract: when `MAESTRO_AUDIO_FIXTURE=<path>` is set, the
+#     recording pipeline reads that PCM file instead of the live mic stream.
+#
+# This flow validates Voice V1 STT -> LLM -> TTS pipeline (docs/AI_VOICE.md).
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach the chat surface authenticated
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+- tapOn: "Start Conversation"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    text: "I understand, continue"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Press the mic, hold ~3s, release
+# ──────────────────────────────────────────────
+# Mic button is identified by accessibility label "Hold to talk".
+# Hold for ~3 seconds — harness injects the fixture audio during this window.
+# Audio asset injected via test harness ; cf. .maestro/fixtures/audio.md
+- longPressOn:
+    label: "Hold to talk"
+    duration: 3000
+
+# Release happens automatically at the end of longPressOn — the recorder
+# closes the audio buffer and the pipeline starts STT.
+
+# ──────────────────────────────────────────────
+# Phase 3: Wait for transcription, then assert visitor message appears
+# ──────────────────────────────────────────────
+# The transcribed text should appear as the latest visitor (right-aligned)
+# message bubble. Fixture transcript = "Who painted the Mona Lisa".
+- extendedWaitUntil:
+    visible: "Who painted the Mona Lisa"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 4: Wait for AI response (text + audio buffer)
+# ──────────────────────────────────────────────
+# The assistant bubble renders the text response and a play button (TTS audio
+# downloaded as MP3 buffer from the backend). The play button is labelled
+# "Play assistant response".
+- extendedWaitUntil:
+    visible:
+      label: "Play assistant response"
+    timeout: 30000
+
+# Sanity check: the visitor message must still be visible (the conversation
+# was preserved through the round-trip).
+- assertVisible: "Who painted the Mona Lisa"
+
+# ──────────────────────────────────────────────
+# Phase 5: Tap play, verify audio playback started
+# ──────────────────────────────────────────────
+- tapOn:
+    label: "Play assistant response"
+
+# The label flips to "Pause assistant response" once playback starts.
+- extendedWaitUntil:
+    visible:
+      label: "Pause assistant response"
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Phase 6: Cleanup — close the chat
+# ──────────────────────────────────────────────
+- tapOn:
+    label: "Close conversation"
+- waitForAnimationToEnd

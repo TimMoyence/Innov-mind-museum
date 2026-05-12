@@ -143,6 +143,23 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-5 — `chaos-circuit-breaker.e2e` HALF_OPEN→CLOSED test cannot run without orchestrator stub-swap
+
+- [ ] **Statut** : ouvert (créé 2026-05-12, sprint audit-cleanup-2026-05-12 / D.4)
+- **Référence code** :
+  ```
+  museum-backend/tests/e2e/chaos-circuit-breaker.e2e.test.ts:100
+    it.todo('after openDurationMs, breaker → HALF_OPEN; success closes it')
+  ```
+- **Sprint d'origine** : 2026-04 (Phase 6 chaos resilience). The test was skipped at creation time because `LangChainChatOrchestrator` holds the failing model by reference; mid-run swap to a success model is not supported.
+- **Effort estimé** : 1-2 heures. Either (a) extend the orchestrator with a `setModel()` / reset hook, or (b) extend `createE2EHarness` with an `orchestratorReset(newOverride)` option that rebuilds the orchestrator container after the breaker opens. Option (b) is preferred (no production-surface change).
+- **Comment fermer** :
+  1. Add `harness.orchestratorReset(newOrchestrator)` in `tests/helpers/e2e/`.
+  2. Replace the `it.todo` at chaos-circuit-breaker.e2e.test.ts:100 with a real `it(...)` that: trips breaker → swaps to success orchestrator → waits openDurationMs → asserts CLOSED on next call.
+  3. Cocher TD-5 ici.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

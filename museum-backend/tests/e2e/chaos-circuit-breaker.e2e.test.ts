@@ -97,13 +97,11 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
     }
   });
 
-  it.skip('after openDurationMs, breaker → HALF_OPEN; success closes it', async () => {
-    // @TODO Phase 6 follow-up: harness stub-swap
-    // LangChainChatOrchestrator holds the failing model by reference; we cannot swap
-    // the model mid-run to a success model without a dedicated reset/inject mechanism.
-    // Skipping until the orchestrator gains a setModel() or the harness gains a
-    // reset-orchestrator option.
-  });
+  // TD-5 (docs/TECH_DEBT.md) — needs harness orchestrator stub-swap before this can run.
+  // LangChainChatOrchestrator holds the failing model by reference; mid-run swap to a
+  // success model is unsupported. Convert `.todo` → `it(...)` once harness gains
+  // `orchestratorReset(newOverride)`.
+  it.todo('after openDurationMs, breaker → HALF_OPEN; success closes it');
 
   it('repeated failure cycles: breaker re-opens after each round', async () => {
     const orchestrator = await buildFailingOrchestrator();
