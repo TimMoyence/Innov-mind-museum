@@ -97,16 +97,18 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
-  // Node default cap on EventEmitter listeners is 10. Our stack attaches a
-  // `finish`/`close` listener per request from each of: requestLogger,
-  // httpMetrics, compression, express-rate-limit, body-parser (json +
-  // urlencoded), Sentry http+tracing+express integrations, res.setTimeout —
-  // which lands at 11+ and produces a MaxListenersExceededWarning per request
-  // (visual noise, not a real leak since the response is GC'd per request).
-  // Raise the per-response cap to 20 to silence the warning and accommodate
-  // future observability hooks (OTel auto-instrumentation when re-enabled).
+  // Node default cap on EventEmitter listeners is 10. Each request attaches
+  // ~21 `finish`/`close` listeners on its ServerResponse — the bulk comes
+  // from @sentry/node + @opentelemetry/auto-instrumentations-node, each
+  // attaching multiple `http` instrumentation hooks per response, plus
+  // requestLogger + httpMetrics + compression + express-rate-limit +
+  // body-parser + res.setTimeout. The listeners are GC'd with the response
+  // (not cumulative — verified in prod: count stays flat at 21 across
+  // requests), so this is per-request weight, not a memory leak. Raise the
+  // per-response cap to 50 to silence MaxListenersExceededWarning with
+  // comfortable headroom; a real leak would still surface at 51.
   app.use((_req, res, next) => {
-    res.setMaxListeners(20);
+    res.setMaxListeners(50);
     next();
   });
 
