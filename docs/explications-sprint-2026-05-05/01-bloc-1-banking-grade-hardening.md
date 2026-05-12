@@ -676,3 +676,5 @@ C'est ce que le récap appelle "Defense-in-Depth recap". Lecture : **pour chaque
 4. **Avoir lu les 3 runbooks** au moins une fois pour savoir où chercher quand un incident arrivera.
 
 Si après cette lecture tu n'as pas une question précise sur un F-finding, c'est qu'on a bien fait notre boulot. Si tu en as une, on l'éclaire ensemble dans la prochaine doc ou en chat.
+
+docker exec -it <db-container> psql -U <user> -d <db> -c "SELECT 'users' AS t, id, email, created_at FROM users WHERE id IN ('b52c89b9-fd4c-4917-9b24-cced0c7ed0de','04a0b9aa-d038-4bf4-857f-fe2602d54d1b') UNION ALL SELECT 'groups', id::text, name, created_at FROM budget_groups WHERE id IN ('e97273f9-f67d-450a-b18f-08ecff3520c0','a98f5309-8c40-4f56-a454-fdea2386102f');"
