@@ -7,7 +7,6 @@
 
 internal import ExpoModulesCore
 internal import ExpoDomWebView
-internal import ExpoAdapterGoogleSignIn
 internal import Expo
 internal import ExpoAppleAuthentication
 internal import ExpoAsset
@@ -132,7 +131,6 @@ internal class ExpoModulesProvider: ModulesProvider {
   public override func getAppDelegateSubscribers() -> [ExpoAppDelegateSubscriber.Type] {
     #if EXPO_CONFIGURATION_DEBUG
     return [
-      GoogleSignInAppDelegate.self,
       FileSystemBackgroundSessionHandler.self,
       LinkingAppDelegateSubscriber.self,
       ExpoHeadAppDelegateSubscriber.self,
@@ -141,7 +139,6 @@ internal class ExpoModulesProvider: ModulesProvider {
     ]
     #else
     return [
-      GoogleSignInAppDelegate.self,
       FileSystemBackgroundSessionHandler.self,
       LinkingAppDelegateSubscriber.self,
       ExpoHeadAppDelegateSubscriber.self,

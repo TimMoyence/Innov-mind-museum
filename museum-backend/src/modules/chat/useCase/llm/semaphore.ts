@@ -1,35 +1,9 @@
-import { AppError } from '@shared/errors/app.error';
+import pLimit from 'p-limit';
 
-/**
- * Thrown when the semaphore queue is at capacity and a new acquirer cannot
- * be enqueued. Extends `AppError` so the global error middleware returns 503.
- */
-export class SemaphoreQueueFullError extends AppError {
-  constructor(queueSize: number) {
-    super({
-      message: `Semaphore queue is full (${String(queueSize)} waiting)`,
-      statusCode: 503,
-      code: 'SEMAPHORE_QUEUE_FULL',
-    });
-    this.name = 'SemaphoreQueueFullError';
-  }
-}
+import { SemaphoreQueueFullError } from '@modules/chat/domain/errors/semaphore-queue-full.error';
+import { SemaphoreTimeoutError } from '@modules/chat/domain/errors/semaphore-timeout.error';
 
-/**
- * Thrown when an enqueued acquirer waited longer than the configured timeout
- * before a slot freed up. Extends `AppError` so the global error middleware
- * returns 503.
- */
-export class SemaphoreTimeoutError extends AppError {
-  constructor(timeoutMs: number) {
-    super({
-      message: `Semaphore acquire timed out after ${String(timeoutMs)}ms`,
-      statusCode: 503,
-      code: 'SEMAPHORE_TIMEOUT',
-    });
-    this.name = 'SemaphoreTimeoutError';
-  }
-}
+export { SemaphoreQueueFullError, SemaphoreTimeoutError };
 
 interface SemaphoreOptions {
   maxConcurrent: number;
@@ -39,36 +13,34 @@ interface SemaphoreOptions {
 
 /**
  * Counting semaphore that limits the number of concurrently executing async tasks.
- * Tasks that exceed the limit are queued and executed in FIFO order as slots free up.
+ * Thin wrapper around `p-limit` adding (a) bounded queue size and (b) acquire
+ * timeout — both absent from p-limit's primitive.
  *
- * Supports bounded queue size and acquire timeout to prevent unbounded resource consumption.
+ * Synchronous counters (`_inFlight`, `_waiting`) shadow p-limit's
+ * `activeCount`/`pendingCount` to provide immediate visibility from
+ * synchronous test patterns (p-limit defers slot promotion to the next
+ * microtask, which would otherwise make `queueSize` flicker).
  */
 export class Semaphore {
-  private readonly queue: {
-    resolve: () => void;
-    reject: (err: Error) => void;
-    timer?: ReturnType<typeof setTimeout>;
-  }[] = [];
-  private _inFlight = 0;
+  private readonly limit: ReturnType<typeof pLimit>;
   private readonly _maxConcurrent: number;
   private readonly _maxQueueSize: number;
   private readonly _acquireTimeoutMs: number;
+  private _inFlight = 0;
+  private _waiting = 0;
 
   constructor(options: number | SemaphoreOptions) {
-    if (typeof options === 'number') {
-      this._maxConcurrent = options;
-      this._maxQueueSize = 200;
-      this._acquireTimeoutMs = 30_000;
-    } else {
-      this._maxConcurrent = options.maxConcurrent;
-      this._maxQueueSize = options.maxQueueSize ?? 200;
-      this._acquireTimeoutMs = options.acquireTimeoutMs ?? 30_000;
-    }
+    const opts: SemaphoreOptions =
+      typeof options === 'number' ? { maxConcurrent: options } : options;
+    this._maxConcurrent = opts.maxConcurrent;
+    this._maxQueueSize = opts.maxQueueSize ?? 200;
+    this._acquireTimeoutMs = opts.acquireTimeoutMs ?? 30_000;
+    this.limit = pLimit(this._maxConcurrent);
   }
 
   /** Number of tasks currently waiting in the queue. */
   get queueSize(): number {
-    return this.queue.length;
+    return this._waiting;
   }
 
   /** Number of tasks currently executing (holding a slot). */
@@ -78,55 +50,59 @@ export class Semaphore {
 
   /**
    * Acquires a slot, executes the task, then releases the slot.
-   *
-   * @param task - Async function to run under the concurrency limit.
-   * @returns The resolved value of the task.
+   * Rejects with `SemaphoreQueueFullError` when the queue is at capacity,
+   * or `SemaphoreTimeoutError` when the acquire takes longer than the
+   * configured timeout.
    */
-  async use<T>(task: () => Promise<T>): Promise<T> {
-    await this.acquire();
-    try {
-      return await task();
-    } finally {
-      this.release();
+  use<T>(task: () => Promise<T>): Promise<T> {
+    if (this._waiting >= this._maxQueueSize && this._inFlight >= this._maxConcurrent) {
+      return Promise.reject(new SemaphoreQueueFullError(this._waiting));
     }
-  }
 
-  private acquire(): Promise<void> {
-    if (this._inFlight < this._maxConcurrent) {
+    const acquiredImmediately = this._inFlight < this._maxConcurrent;
+    if (acquiredImmediately) {
       this._inFlight += 1;
-      return Promise.resolve();
+    } else {
+      this._waiting += 1;
     }
 
-    if (this.queue.length >= this._maxQueueSize) {
-      return Promise.reject(new SemaphoreQueueFullError(this.queue.length));
-    }
+    // Acquire-timeout only applies to queued tasks; tasks that get a slot
+    // immediately are not subject to it (matches the previous semaphore).
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    const timeoutPromise: Promise<never> = acquiredImmediately
+      ? new Promise<never>(() => {
+          /* never settles — acquiredImmediately path has no timeout */
+        })
+      : new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            if (this._waiting > 0) this._waiting -= 1;
+            reject(new SemaphoreTimeoutError(this._acquireTimeoutMs));
+          }, this._acquireTimeoutMs);
+        });
 
-    return new Promise<void>((resolve, reject) => {
-      const entry: {
-        resolve: () => void;
-        reject: (err: Error) => void;
-        timer?: ReturnType<typeof setTimeout>;
-      } = { resolve, reject };
-
-      entry.timer = setTimeout(() => {
-        const idx = this.queue.indexOf(entry);
-        if (idx !== -1) {
-          this.queue.splice(idx, 1);
-          reject(new SemaphoreTimeoutError(this._acquireTimeoutMs));
-        }
-      }, this._acquireTimeoutMs);
-
-      this.queue.push(entry);
+    const run = this.limit(async () => {
+      if (timedOut) return undefined as unknown as T;
+      // Promote from waiting → in-flight when the slot frees up.
+      if (!acquiredImmediately) {
+        if (this._waiting > 0) this._waiting -= 1;
+        this._inFlight += 1;
+      }
+      try {
+        return await task();
+      } finally {
+        this._inFlight = Math.max(0, this._inFlight - 1);
+      }
     });
-  }
 
-  private release(): void {
-    this._inFlight = Math.max(0, this._inFlight - 1);
-    const next = this.queue.shift();
-    if (next) {
-      if (next.timer) clearTimeout(next.timer);
-      this._inFlight += 1;
-      next.resolve();
-    }
+    return Promise.race([run, timeoutPromise]).finally(() => {
+      if (timer !== undefined) clearTimeout(timer);
+      if (timedOut) {
+        run.catch(() => {
+          /* swallow — timeout already surfaced the user-visible error */
+        });
+      }
+    }) as Promise<T>;
   }
 }

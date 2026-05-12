@@ -160,19 +160,35 @@ const getLlmCircuitBreakerStateMock = jest.fn<
 const isBuiltMock = jest.fn<boolean, []>(() => true);
 const artworkKnowledgeRepoOverride = jest.fn<unknown, []>(() => ({}) as object);
 
-jest.mock('@modules/chat/chat-module-singleton', () => ({
-  getActiveChatModule: () => ({
-    isBuilt: () => isBuiltMock(),
-    getBuilt: () => ({
-      get artworkKnowledgeRepo() {
-        return artworkKnowledgeRepoOverride();
-      },
+jest.mock('@modules/chat/chat-module', () => {
+  const built = {
+    get artworkKnowledgeRepo() {
+      return artworkKnowledgeRepoOverride();
+    },
+  };
+  return {
+    getActiveChatModule: () => ({
+      isBuilt: () => isBuiltMock(),
+      getBuilt: () => built,
+      getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
     }),
+    setActiveChatModule: () => {},
+    resetActiveChatModule: () => {},
+    // Runtime accessors previously from chat-module.wiring — these match the
+    // boot-order-tolerant path: undefined when not built, undefined per missing
+    // field on the built shape.
+    getImageStorage: () => ({}) as unknown,
+    getChatRepository: () => ({}) as unknown,
+    getUserMemoryService: () => undefined,
+    getArtKeywordRepository: () => undefined,
+    getDescribeService: () => undefined,
     getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
-  }),
-  setActiveChatModule: () => {},
-  resetActiveChatModule: () => {},
-}));
+    getArtworkKnowledgeRepo: () =>
+      isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined,
+    getCompareImageUseCase: () => undefined,
+    getCompareSessionAccessVerifier: () => undefined,
+  };
+});
 jest.mock('@modules/daily-art', () => ({
   createDailyArtRouter: jest.fn(() => makeProbeRouter('daily-art')),
 }));

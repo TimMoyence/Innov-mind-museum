@@ -85,25 +85,13 @@ export const signInWithApple = async (
 /**
  * F11-mobile (2026-05) — Google sign-in via the server-mediated redirect flow.
  *
- * The previous direct ID-token POST through @react-native-google-signin v16
- * was broken: that SDK does not support OIDC nonce binding (it is a paid
- * feature of the universal-sign-in.com fork), and the legacy code shipped a
- * client-issued nonce that the backend then rejected as INVALID_NONCE.
- *
- * Replacement flow:
+ * Flow:
  *   1. Build `${apiBaseUrl}/api/auth/google/initiate?platform=mobile`.
- *   2. Open the URL via `WebBrowser.openAuthSessionAsync` so the in-app
- *      browser auto-closes when the redirect lands on `musaium://`.
- *   3. The backend signs a state JWT with platform=mobile, issues a nonce,
- *      sends the user to Google. After Google redirects back, the backend
- *      consumes the nonce + ID token, mints an OTC keyed against the issued
- *      session, and 302s to `musaium://auth/google/callback?code=<otc>`.
- *   4. We parse the OTC from the deeplink URL and exchange it for the actual
- *      session via POST /api/auth/social-redeem.
- *
- * The OTC is single-use, 60s TTL, base64url. Even if the deeplink leaks (logs,
- * screenshots, app-switch peek) an attacker has at most a handful of seconds
- * before the legitimate client redeems it.
+ *   2. Open via `WebBrowser.openAuthSessionAsync` (auto-closes on `musaium://`).
+ *   3. Backend signs state JWT, issues nonce, redirects to Google; on success
+ *      mints a single-use OTC (60s TTL, base64url) and 302s to
+ *      `musaium://auth/google/callback?code=<otc>`.
+ *   4. We parse the OTC and exchange it via POST /api/auth/social-redeem.
  *
  * @returns The authenticated session payload, identical to /login.
  * @throws An {@link AppError} `kind: 'SocialAuth'` for cancellation

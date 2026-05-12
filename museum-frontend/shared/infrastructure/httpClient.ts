@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import * as Sentry from '@sentry/react-native';
 
 import { assertApiBaseUrlAllowed, tryResolveInitialApiBaseUrl } from './apiConfig';
@@ -245,7 +245,7 @@ httpClient.interceptors.response.use(
           ...headers,
           Authorization: `Bearer ${refreshResult.accessToken}`,
         };
-        return await httpClient.request(axiosError.config as never);
+        return await httpClient.request(axiosError.config as AxiosRequestConfig);
       }
       // `invalid` → unauthorizedHandler already fired exactly once for the
       // shared cycle. `transient` → fall through and let the request fail.
@@ -282,7 +282,7 @@ httpClient.interceptors.response.use(
       }
 
       await wait(delayMs);
-      return httpClient.request(axiosError.config as never);
+      return httpClient.request(axiosError.config as AxiosRequestConfig);
     }
 
     const mapped = mapAxiosError(error);

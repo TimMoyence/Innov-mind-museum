@@ -1,4 +1,4 @@
-import { type Request, Router } from 'express';
+import { Router } from 'express';
 
 import { parseListSessionsQuery } from '@modules/chat/adapters/primary/http/chat.contracts';
 import {
@@ -34,7 +34,7 @@ export const createSessionRouter = (chatService: ChatService): Router => {
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
       locale: payload.locale || req.clientLocale,
       userId: currentUser?.id,
-      museumId: payload.museumId ?? (req as Request & { museumId?: number }).museumId,
+      museumId: payload.museumId ?? req.museumId ?? undefined,
     });
     res.status(201).json({ session });
   });

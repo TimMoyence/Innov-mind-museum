@@ -3,7 +3,7 @@ import {
   getActiveChatModule,
   resetActiveChatModule,
   setActiveChatModule,
-} from '@modules/chat/chat-module-singleton';
+} from '@modules/chat/chat-module';
 
 describe('chat module registry', () => {
   afterEach(() => {

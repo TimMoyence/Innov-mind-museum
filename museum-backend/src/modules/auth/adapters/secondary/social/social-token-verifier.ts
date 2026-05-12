@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 import jwt from 'jsonwebtoken';
 
+import { decodeJwtHeader, jwtHeaderSchema } from '@shared/auth/jwt-decode';
 import { AppError } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
@@ -91,14 +92,10 @@ const getSigningKey = async (jwksUrl: string, kid: string): Promise<string> => {
 };
 
 const decodeHeader = (token: string): { kid?: string; alg?: string } => {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
+  const header = decodeJwtHeader(token, jwtHeaderSchema);
+  if (!header) {
     throw new Error('Invalid JWT format');
   }
-  const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')) as {
-    kid?: string;
-    alg?: string;
-  };
   return header;
 };
 

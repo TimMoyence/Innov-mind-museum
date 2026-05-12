@@ -1,4 +1,8 @@
 {
+  "ai_disclosure": {
+    "onboarding_toast": "Musaium è un assistente IA. Le risposte sono generate automaticamente.",
+    "chat_footer": "Risposte generate da IA — possono contenere errori."
+  },
   "common": {
     "cancel": "Annulla",
     "error": "Errore",
@@ -51,6 +55,8 @@
     "last_name": "Cognome",
     "email": "Email",
     "password": "Password",
+    "date_of_birth_placeholder": "Data di nascita (AAAA-MM-GG)",
+    "date_of_birth_a11y": "Data di nascita, formato anno-mese-giorno",
     "log_in": "Accedi",
     "sign_up": "Registrati",
     "no_account": "Non hai un account? Registrati",

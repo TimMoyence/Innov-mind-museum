@@ -8,8 +8,6 @@ interface RuntimeEnv {
   EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
   EXPO_PUBLIC_API_BASE_URL_PROD?: string;
   EXPO_PUBLIC_API_ENVIRONMENT?: string;
-  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string;
-  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?: string;
   EAS_BUILD_PROFILE?: string;
   APP_VARIANT?: string;
 }
@@ -33,11 +31,6 @@ const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png
 const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
   './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
 const BRAND_BACKGROUND_COLOR = '#1E1B19';
-const DEFAULT_GOOGLE_WEB_CLIENT_ID =
-  '498339023976-bjbain2ir2t9q4pu9lsmmk8ni7t96dd7.apps.googleusercontent.com';
-const DEFAULT_GOOGLE_IOS_CLIENT_ID =
-  '498339023976-8r199kpqbqmhb7mdf45ostg3sutqeng2.apps.googleusercontent.com';
-const GOOGLE_IOS_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
 const resolveVariant = (env: RuntimeEnv): AppVariant => {
   const raw = (env.APP_VARIANT ?? env.EAS_BUILD_PROFILE ?? 'development').toLowerCase();
@@ -103,33 +96,12 @@ const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
   return explicit ?? staging ?? production ?? 'http://localhost:3000';
 };
 
-const resolveGoogleWebClientId = (env: RuntimeEnv): string => {
-  return nonPlaceholder(env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) ?? DEFAULT_GOOGLE_WEB_CLIENT_ID;
-};
-
-const resolveGoogleIosClientId = (env: RuntimeEnv): string => {
-  const configured = nonPlaceholder(env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-  if (!configured?.endsWith(GOOGLE_IOS_CLIENT_ID_SUFFIX)) {
-    return DEFAULT_GOOGLE_IOS_CLIENT_ID;
-  }
-
-  return configured;
-};
-
-const deriveGoogleIosUrlScheme = (googleIosClientId: string): string => {
-  const clientIdPrefix = googleIosClientId.slice(0, -GOOGLE_IOS_CLIENT_ID_SUFFIX.length);
-  return `com.googleusercontent.apps.${clientIdPrefix}`;
-};
-
 export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
   const variant = resolveVariant(env);
   const apiEnvironment = resolveApiEnvironment(variant, env);
   const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
   const projectId = configProjectId;
-  const googleWebClientId = resolveGoogleWebClientId(env);
-  const googleIosClientId = resolveGoogleIosClientId(env);
-  const googleIosUrlScheme = deriveGoogleIosUrlScheme(googleIosClientId);
 
   const appConfig: ExpoConfig = {
     ...config,
@@ -320,18 +292,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-secure-store',
       'expo-web-browser',
       [
-        '@react-native-google-signin/google-signin',
-        {
-          iosUrlScheme: googleIosUrlScheme,
-        },
-      ],
-      [
         '@sentry/react-native/expo',
         {
-          // `typeof v === 'string'` narrowing — bridges local/CI typing divergence
-          // (local sees `process.env.X` as `string | undefined`, CI sees `any`).
-          // Cast or `String()` triggers a rule on one side or the other; an
-          // explicit type-narrowing predicate is silent on both.
           organization: typeofString(process.env.SENTRY_ORG) ?? 'asili-design',
           project: typeofString(process.env.SENTRY_PROJECT) ?? 'apple-ios',
         },
@@ -362,9 +324,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
       API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
       API_ENVIRONMENT: apiEnvironment,
-      GOOGLE_WEB_CLIENT_ID: googleWebClientId,
-      GOOGLE_IOS_CLIENT_ID: googleIosClientId,
-      GOOGLE_IOS_URL_SCHEME: googleIosUrlScheme,
       APP_VARIANT: variant,
       eas: projectId
         ? {

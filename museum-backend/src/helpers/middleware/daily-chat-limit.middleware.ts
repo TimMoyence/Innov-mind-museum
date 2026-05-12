@@ -91,7 +91,7 @@ const checkInMemory = (key: string, limit: number, dateStr: string, next: NextFu
  * `{ code: 'DAILY_LIMIT_REACHED', limit, message }`.
  */
 export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction): void => {
-  const user = (req as Request & { user?: { id?: number } }).user;
+  const user = req.user;
 
   if (!user?.id) {
     next();

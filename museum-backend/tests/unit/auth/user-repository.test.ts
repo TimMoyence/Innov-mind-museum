@@ -109,6 +109,7 @@ describe('UserRepositoryPg', () => {
         password: '$2b$12$hashed_result',
         firstname: 'Jane',
         lastname: 'Doe',
+        dateOfBirth: null,
       });
       expect(repo.save).toHaveBeenCalledWith(created);
       expect(result).toBe(created);

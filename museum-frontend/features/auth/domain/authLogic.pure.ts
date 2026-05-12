@@ -1,25 +1,12 @@
+import { baseJwtPayloadSchema, decodeJwtPayload } from '../../../shared/auth/jwt-decode';
+
 import type { AppError } from '@/shared/types/AppError';
 
 export const extractUserIdFromToken = (accessToken: string): string | null => {
-  try {
-    const segment = accessToken.split('.')[1];
-    if (!segment) return null;
-    const payload = JSON.parse(atob(segment)) as Record<string, unknown>;
-    const userId = (payload.id ?? payload.sub) as string | number | undefined;
-    return userId ? String(userId) : null;
-  } catch {
-    return null;
-  }
-};
-
-const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
-  try {
-    const segment = token.split('.')[1];
-    if (!segment) return null;
-    return JSON.parse(atob(segment)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  const payload = decodeJwtPayload(accessToken, baseJwtPayloadSchema);
+  if (!payload) return null;
+  const userId = payload.id ?? payload.sub;
+  return userId !== undefined ? String(userId) : null;
 };
 
 /**
@@ -27,10 +14,9 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
  * cannot be decoded or lacks an `exp` claim.
  */
 export const getTokenExpiryMs = (token: string): number | null => {
-  const payload = decodeJwtPayload(token);
-  if (!payload) return null;
-  const exp = payload.exp;
-  return typeof exp === 'number' ? exp * 1000 : null;
+  const payload = decodeJwtPayload(token, baseJwtPayloadSchema);
+  if (!payload?.exp) return null;
+  return payload.exp * 1000;
 };
 
 /**

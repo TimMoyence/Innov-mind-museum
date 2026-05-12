@@ -242,9 +242,8 @@ const escapeXmlTag = (tag: string): string => tag.replace(/[.*+?^${}()|[\]\\]/g,
 const extractXmlValues = (xml: string, tag: string): string[] => {
   const results: string[] = [];
   const escaped = escapeXmlTag(tag);
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
-  // eslint-disable-next-line security/detect-non-literal-regexp -- same justification as nosemgrep above: tag escaped, caller-controlled literal
-  const regex = new RegExp(`<${escaped}>([^<]*)</${escaped}>`, 'g');
+  // eslint-disable-next-line security/detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
+  const regex = new RegExp(`<${escaped}>([^<]*)</${escaped}>`, 'g'); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   let match: RegExpExecArray | null;
   while ((match = regex.exec(xml)) !== null) {
     results.push(match[1]);
@@ -254,9 +253,8 @@ const extractXmlValues = (xml: string, tag: string): string[] => {
 
 const extractXmlValue = (xml: string, tag: string): string | undefined => {
   const escaped = escapeXmlTag(tag);
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
-  // eslint-disable-next-line security/detect-non-literal-regexp -- same justification as nosemgrep above: tag escaped, caller-controlled literal
-  const match = new RegExp(`<${escaped}>([^<]*)</${escaped}>`).exec(xml);
+  // eslint-disable-next-line security/detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
+  const match = new RegExp(`<${escaped}>([^<]*)</${escaped}>`).exec(xml); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   return match?.[1];
 };
 

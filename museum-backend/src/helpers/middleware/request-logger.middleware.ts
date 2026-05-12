@@ -41,14 +41,14 @@ function redactQueryString(originalUrl: string): string {
 /** Logs each completed HTTP request with method, path, status, latency, and request ID. */
 export const requestLoggerMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const startedAt = Date.now();
-  const requestId = (req as Request & { requestId?: string }).requestId;
+  const requestId = req.requestId;
 
   res.on('finish', () => {
     if (SILENT_PATHS.includes(req.originalUrl)) {
       return;
     }
 
-    const userId = (req as Request & { user?: { id?: number } }).user?.id;
+    const userId = req.user?.id;
 
     logger.info('http_request', {
       requestId,

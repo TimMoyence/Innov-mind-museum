@@ -13,7 +13,7 @@ import type {
   LlmSectionName,
 } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
-import type { ZodSchema } from 'zod';
+import type { z } from 'zod';
 
 export type { LlmSectionName } from '@modules/chat/domain/chat.types';
 export {
@@ -125,7 +125,7 @@ export interface LlmSectionDefinition {
    * observability (OpenAI surfaces it in tool-call traces).
    */
   outputSchema?: {
-    schema: ZodSchema<unknown>;
+    schema: z.ZodType;
     name: string;
   };
 }

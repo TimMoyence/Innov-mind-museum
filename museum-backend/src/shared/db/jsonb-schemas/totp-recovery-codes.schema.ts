@@ -13,7 +13,7 @@ import { z } from 'zod';
 export const TotpRecoveryCodesSchema = z.array(
   z.object({
     hash: z.string().min(1),
-    consumedAt: z.string().datetime().nullable(),
+    consumedAt: z.iso.datetime().nullable(),
   }),
 );
 /**

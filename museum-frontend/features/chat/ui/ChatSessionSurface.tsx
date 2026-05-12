@@ -5,6 +5,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { AiDisclosureFooter } from './AiDisclosureFooter';
 import { ChatMessageList } from './ChatMessageList';
 
 interface ChatSessionSurfaceProps {
@@ -56,20 +57,23 @@ export const ChatSessionSurface = ({
         <SkeletonChatBubble alignSelf="flex-start" />
       </View>
     ) : (
-      <ChatMessageList
-        messages={messages}
-        isSending={isSending}
-        isStreaming={isStreaming}
-        locale={locale}
-        onFollowUpPress={onFollowUpPress}
-        onRecommendationPress={onRecommendationPress}
-        onCamera={onCamera}
-        onImageError={onImageError}
-        onReport={onReport}
-        onLinkPress={onLinkPress}
-        onRetry={onRetry}
-        isAssistantPending={isAssistantPending}
-      />
+      <>
+        <ChatMessageList
+          messages={messages}
+          isSending={isSending}
+          isStreaming={isStreaming}
+          locale={locale}
+          onFollowUpPress={onFollowUpPress}
+          onRecommendationPress={onRecommendationPress}
+          onCamera={onCamera}
+          onImageError={onImageError}
+          onReport={onReport}
+          onLinkPress={onLinkPress}
+          onRetry={onRetry}
+          isAssistantPending={isAssistantPending}
+        />
+        <AiDisclosureFooter />
+      </>
     )}
   </GlassCard>
 );

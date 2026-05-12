@@ -10,6 +10,7 @@ interface RegisterFormProps {
   password: string;
   firstname: string;
   lastname: string;
+  dateOfBirth: string;
   gdprAccepted: boolean;
   isLoading: boolean;
   isSocialLoading: boolean;
@@ -17,6 +18,7 @@ interface RegisterFormProps {
   onChangePassword: (value: string) => void;
   onChangeFirstname: (value: string) => void;
   onChangeLastname: (value: string) => void;
+  onChangeDateOfBirth: (value: string) => void;
   onToggleGdpr: () => void;
   onSubmit: () => void;
   onOpenTerms: () => void;
@@ -35,6 +37,7 @@ export function RegisterForm({
   password,
   firstname,
   lastname,
+  dateOfBirth,
   gdprAccepted,
   isLoading,
   isSocialLoading,
@@ -42,6 +45,7 @@ export function RegisterForm({
   onChangePassword,
   onChangeFirstname,
   onChangeLastname,
+  onChangeDateOfBirth,
   onToggleGdpr,
   onSubmit,
   onOpenTerms,
@@ -49,7 +53,10 @@ export function RegisterForm({
 }: RegisterFormProps) {
   const { t } = useTranslation();
 
-  const disabled = isLoading || isSocialLoading || !gdprAccepted;
+  // CNIL Délibération 2021-018 — block submit if no DOB or DOB is malformed.
+  // Server re-validates and computes age; this is only a UX guard.
+  const dobLooksValid = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth);
+  const disabled = isLoading || isSocialLoading || !gdprAccepted || !dobLooksValid;
 
   return (
     <>
@@ -86,6 +93,15 @@ export function RegisterForm({
         variant="password-new"
         testID="password-input"
         accessibilityLabel={t('a11y.auth.password_input')}
+      />
+
+      <FormInput
+        icon="calendar-outline"
+        placeholder={t('auth.date_of_birth_placeholder')}
+        value={dateOfBirth}
+        onChangeText={onChangeDateOfBirth}
+        accessibilityLabel={t('auth.date_of_birth_a11y')}
+        testID="date-of-birth-input"
       />
 
       <GdprConsentCheckbox

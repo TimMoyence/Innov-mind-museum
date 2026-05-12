@@ -113,40 +113,54 @@ export default tseslint.config(
       'boundaries/dependency-nodes': ['import', 'dynamic-import'],
     },
     rules: {
-      'boundaries/element-types': [
+      // v6 syntax — `boundaries/dependencies` replaces deprecated `boundaries/element-types`.
+      // v5 inline arrays (e.g. `disallow: ['application']`) emit deprecation warnings and
+      // silently route to legacy matchers in v6, which broke enforcement on this repo
+      // before this migration. Object selectors below are the supported form.
+      'boundaries/dependencies': [
         'error',
         {
           default: 'allow',
           rules: [
             // Domain CANNOT import application, infrastructure, primary, helpers, data
             {
-              from: ['domain'],
-              disallow: [
-                'application',
-                'infrastructure',
-                'primary',
-                'helpers',
-                'data',
-                'module-root',
-                'entrypoint',
-              ],
+              from: { type: 'domain' },
+              disallow: {
+                to: {
+                  type: [
+                    'application',
+                    'infrastructure',
+                    'primary',
+                    'helpers',
+                    'data',
+                    'module-root',
+                    'entrypoint',
+                  ],
+                },
+              },
             },
             // Application CANNOT import infrastructure, primary, helpers, data
             {
-              from: ['application'],
-              disallow: [
-                'infrastructure',
-                'primary',
-                'helpers',
-                'data',
-                'module-root',
-                'entrypoint',
-              ],
+              from: { type: 'application' },
+              disallow: {
+                to: {
+                  type: [
+                    'infrastructure',
+                    'primary',
+                    'helpers',
+                    'data',
+                    'module-root',
+                    'entrypoint',
+                  ],
+                },
+              },
             },
             // Infrastructure CANNOT import primary, application (except via domain ports)
             {
-              from: ['infrastructure'],
-              disallow: ['primary', 'application', 'module-root', 'entrypoint'],
+              from: { type: 'infrastructure' },
+              disallow: {
+                to: { type: ['primary', 'application', 'module-root', 'entrypoint'] },
+              },
             },
           ],
         },

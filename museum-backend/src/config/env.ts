@@ -156,9 +156,9 @@ const env: AppEnv = {
     // env.production-validation.ts). Default 'brevo'.
     emailServiceKind:
       (process.env.AUTH_EMAIL_SERVICE_KIND as 'test' | 'brevo' | 'noop' | undefined) ?? 'brevo',
-    // F10 — HIBP breach gate toggle. Default true. e2e harness flips false to
-    // avoid blocking the test suite on the third-party HIBP API every register
-    // call. Production sentinel (env.production-validation.ts) rejects false.
+    // JUSTIFIED: e2e harness needs to skip third-party HIBP API to avoid
+    // blocking the test suite on every register call. Production sentinel
+    // (env.production-validation.ts) rejects false. Pre-launch V1 doctrine.
     passwordBreachCheckEnabled: toBoolean(process.env.PASSWORD_BREACH_CHECK_ENABLED, true),
   },
   llm: {
@@ -187,10 +187,6 @@ const env: AppEnv = {
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
-    // G (2026-05-01) — LLM response cache kill switch. Defaults true; set
-    // LLM_CACHE_ENABLED=false to bypass cache for all requests (e.g. during
-    // cache debugging or rollout of a prompt change).
-    cacheEnabled: toBoolean(process.env.LLM_CACHE_ENABLED, true),
   },
   rateLimit: {
     ipLimit: toNumber(process.env.RATE_LIMIT_IP, 200),
@@ -227,10 +223,13 @@ const env: AppEnv = {
     maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
     cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
   },
-  cache: toBoolean(process.env.CACHE_ENABLED, false)
+  // Pre-launch V1 doctrine: cache is active when REDIS_URL is set, otherwise
+  // undefined (no separate CACHE_ENABLED flag). Production validation
+  // (env.production-validation.ts) enforces REDIS_URL presence.
+  cache: toOptionalString(process.env.REDIS_URL)
     ? {
         enabled: true,
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        url: (process.env.REDIS_URL ?? '').trim(),
         password: parseRedisUrlFallback().password,
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
@@ -249,6 +248,8 @@ const env: AppEnv = {
         profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
       }
     : undefined,
+  // JUSTIFIED: OTel is heavy in local dev without a collector — explicit opt-in
+  // keeps the dev loop fast. Prod sets OTEL_ENABLED=true via deploy env.
   otel: toBoolean(process.env.OTEL_ENABLED, false)
     ? {
         enabled: true,
@@ -256,9 +257,8 @@ const env: AppEnv = {
         serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
       }
     : undefined,
-  // V12 W1 — Langfuse LLM observability. Default OFF; opt-in per env.
-  // When ENABLED=true, the public+secret keys are required (env.ts will
-  // surface undefined as a runtime warning via the client wrapper).
+  // JUSTIFIED: Langfuse SaaS observability — keys are not available in local dev.
+  // Explicit opt-in for prod via LANGFUSE_ENABLED=true + keys in deploy env.
   langfuse: toBoolean(process.env.LANGFUSE_ENABLED, false)
     ? {
         enabled: true,
@@ -277,7 +277,6 @@ const env: AppEnv = {
     negativeCacheTtlSeconds: toNumber(process.env.OVERPASS_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
   },
   chatPurgeRetentionDays: toNumber(process.env.CHAT_PURGE_RETENTION_DAYS, 180),
-  s3OrphanSweepEnabled: toBoolean(process.env.S3_ORPHAN_SWEEP_ENABLED, false),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
@@ -371,19 +370,13 @@ const env: AppEnv = {
     confidenceThreshold: toNumber(process.env.EXTRACTION_CONFIDENCE_THRESHOLD, 0.7),
     reviewThreshold: toNumber(process.env.EXTRACTION_REVIEW_THRESHOLD, 0.4),
   },
-  /**
-   * Default `true` preserves current production behavior. Set to `false` in
-   * test environments without Redis (e.g. e2e harness) to avoid BullMQ +
-   * ioredis ECONNREFUSED log floods. See `AppEnv.extractionWorkerEnabled`.
-   */
+  // JUSTIFIED: e2e harness opts out (no Redis) to avoid BullMQ/ioredis
+  // ECONNREFUSED log floods. Production sentinel rejects false. Pre-launch V1.
   extractionWorkerEnabled: toBoolean(process.env.EXTRACTION_WORKER_ENABLED, true),
-  /**
-   * Default `false`: the BullMQ scheduler that produces `museum-enrichment`
-   * jobs has no consumer wired in production yet (`MuseumEnrichmentWorker` is
-   * defined but never instantiated), so leaving the producer enabled by
-   * default lets jobs accumulate in Redis indefinitely. Flip to `true`
-   * explicitly once a worker is wired at boot. See `AppEnv.museumEnrichmentSchedulerEnabled`.
-   */
+  // JUSTIFIED: the producer is wired but no `MuseumEnrichmentWorker` consumer
+  // is instantiated at boot, so leaving the scheduler always-on would queue
+  // jobs that nothing drains. Will flip to always-on (and the flag will be
+  // deleted) once the consumer is wired. Pre-launch V1 carry-over.
   museumEnrichmentSchedulerEnabled: toBoolean(
     process.env.MUSEUM_ENRICHMENT_SCHEDULER_ENABLED,
     false,
@@ -408,8 +401,9 @@ const env: AppEnv = {
     // tests pin 'memory' to avoid coupling to a Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
   },
+  // Pre-launch V1: retention crons always-on; the `env.cache?.enabled` upstream
+  // gate (Redis required) is the structural skip path for tests/dev without Redis.
   retention: {
-    enabled: toBoolean(process.env.RETENTION_PRUNE_ENABLED, true),
     cronPattern: process.env.RETENTION_CRON_PATTERN || '15 3 * * *',
     batchLimit: toNumber(process.env.RETENTION_BATCH_LIMIT, 1000),
     supportTicketsDays: toNumber(process.env.RETENTION_SUPPORT_TICKETS_DAYS, 365),

@@ -26,6 +26,7 @@ export interface IUserRepository {
    * @param password - Plain-text password (hashed before storage).
    * @param firstname - Optional first name.
    * @param lastname - Optional last name.
+   * @param dateOfBirth - Optional ISO `YYYY-MM-DD`. Persisted to `date_of_birth` for the digital-majority age-gate.
    * @returns The newly created user.
    */
   registerUser(
@@ -33,6 +34,7 @@ export interface IUserRepository {
     password: string,
     firstname?: string,
     lastname?: string,
+    dateOfBirth?: string,
   ): Promise<User>;
 
   /**

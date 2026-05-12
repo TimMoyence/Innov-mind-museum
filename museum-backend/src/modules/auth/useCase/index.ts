@@ -75,8 +75,6 @@ export const __testEmailService = testEmailService;
 
 const frontendUrl = env.frontendUrl;
 
-/** Singleton instance of {@link RegisterUseCase}. */
-const registerUseCase = new RegisterUseCase(userRepository, emailService, frontendUrl);
 /** Singleton instance of {@link ForgotPasswordUseCase}. */
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
 /** Singleton instance of {@link ResetPasswordUseCase}. Revokes refresh tokens on reset (OWASP). */
@@ -136,7 +134,7 @@ const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
 const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
     // Late-bind to avoid circular init: chat module initializes after auth module
-    const { getImageStorage } = await import('@modules/chat/wiring');
+    const { getImageStorage } = await import('@modules/chat/chat-module');
     await getImageStorage().deleteByPrefix(prefix);
   },
 };
@@ -145,7 +143,7 @@ const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageClean
 /** Lazy-bound proxy for GDPR data export — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
   async getAllUserData(userId: number) {
-    const { getChatRepository } = await import('@modules/chat/wiring');
+    const { getChatRepository } = await import('@modules/chat/chat-module');
     return await getChatRepository().exportUserData(userId);
   },
 };
@@ -229,6 +227,18 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 // GDPR consent use cases (userConsentRepository is initialised earlier alongside the DSAR export use case).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
+
+/**
+ * Singleton instance of {@link RegisterUseCase}. Wired after `grantConsentUseCase`
+ * because registration now records the ToS/privacy consent server-side
+ * (`user_consents.scope = 'tos_privacy'`) as part of the registration flow.
+ */
+const registerUseCase = new RegisterUseCase(
+  userRepository,
+  emailService,
+  frontendUrl,
+  grantConsentUseCase,
+);
 
 /**
  * Registers the API-key middleware globals (apiKeyRepository + userRoleResolver).

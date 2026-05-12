@@ -72,6 +72,11 @@ export interface paths {
             password: string;
             firstname: string;
             lastname: string;
+            /**
+             * Format: date
+             * @description ISO YYYY-MM-DD. Used to enforce the French digital-majority age-gate (15 years — CNIL Délibération 2021-018).
+             */
+            dateOfBirth?: string;
           };
         };
       };

@@ -4,8 +4,10 @@ While paying-users SLA is not yet active, several automated workflows are
 intentionally dormant (`db-backup-daily`, `db-backup-monthly-restore-drill`,
 `tls-renewal`, `tls-cert-monitor`, `breach-72h-timer`). This runbook is the
 operator-side substitute. **Activate the V2 workflows the day you onboard a
-paying user — see `docs/V2_PENDING.md` for the secret list and enable
-sequence.**
+paying user. The V2 enable sequence was originally tracked in
+`docs/V2_PENDING.md` (deleted 2026-05-03, recover via
+`git log --all -- docs/V2_PENDING.md`); migrate it back to a NEXT entry
+in `docs/ROADMAP_PRODUCT.md` before activation.**
 
 ## Signal that a fallback is needed
 
@@ -184,7 +186,7 @@ reference (verify by `grep -h 'secrets\.' .github/workflows/{db-backup-daily,db-
 - [ ] `gh workflow run db-backup-daily.yml` — run once manually, confirm S3 object present and heartbeat received
 - [ ] `gh workflow run db-backup-monthly-restore-drill.yml` — confirm the drill restores cleanly
 - [ ] `gh workflow run tls-renewal.yml` — confirm renew step exits 0 even when nothing is due
-- [ ] Update [`docs/V2_PENDING.md`](../V2_PENDING.md) to mark the V2 milestone as active and note the activation date
+- [ ] Update the V2-activation entry in `docs/ROADMAP_PRODUCT.md` (post-migration from the deleted `docs/V2_PENDING.md` — recoverable via `git log --all -- docs/V2_PENDING.md`) to mark the V2 milestone as active and note the activation date
 
 After activation, all sections above (§1–§5) become **fallbacks only** — the
 automated workflows take primary responsibility, and operators step in only

@@ -1,1 +1,0 @@
-../../../GoogleSignIn/GoogleSignIn/Sources/GIDJSONSerializer/API/GIDJSONSerializer.h

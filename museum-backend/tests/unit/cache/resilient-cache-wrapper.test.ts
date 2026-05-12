@@ -58,7 +58,8 @@ describe('ResilientCacheWrapper', () => {
 
     it('get returns null and logs cache_get_failed with key+error', async () => {
       await expect(wrapper.get('k1')).resolves.toBeNull();
-      expect(inner.get).toHaveBeenCalledWith('k1');
+      // Wrapper forwards key + (undefined) schema to inner.get<T>(key, schema?)
+      expect(inner.get).toHaveBeenCalledWith('k1', undefined);
       expect(warnMock).toHaveBeenCalledTimes(1);
       expect(warnMock).toHaveBeenCalledWith('cache_get_failed', {
         key: 'k1',
@@ -168,7 +169,8 @@ describe('ResilientCacheWrapper', () => {
 
     it('passes through get values without logging', async () => {
       await expect(wrapper.get<string>('k')).resolves.toBe('value');
-      expect(inner.get).toHaveBeenCalledWith('k');
+      // Wrapper forwards key + (undefined) schema to inner.get<T>(key, schema?)
+      expect(inner.get).toHaveBeenCalledWith('k', undefined);
       expect(warnMock).not.toHaveBeenCalled();
     });
 

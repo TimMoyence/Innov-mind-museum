@@ -108,12 +108,21 @@ const en: PrivacyContent = {
       id: 'minors',
       title: '11. Children & Minors',
       paragraphs: [
-        'Musaium is not intended for children below the age required under applicable law without parental authorization. If you believe a minor provided data unlawfully, contact tim.moyence@gmail.com.',
+        'Musaium is not intended for users under 15 years old (French digital majority — CNIL Délibération 2021-018). Users under 15 require parental authorization to create an account. If you believe a minor provided data unlawfully, contact tim.moyence@gmail.com.',
+      ],
+    },
+    {
+      id: 'ai-disclosure',
+      title: '12. AI Generative Content (EU AI Act Art. 50)',
+      paragraphs: [
+        'When you interact with Musaium, you are interacting with a generative AI assistant powered by third-party large language models (OpenAI, Google, Deepseek). Replies are produced automatically and may contain errors, omissions, or factual inaccuracies — please verify critical information with primary sources.',
+        'Voice messages are transcribed by a speech-to-text model; spoken replies are synthesized by a text-to-speech model. Audio buffers are not stored beyond the request lifecycle.',
+        'This disclosure is provided pursuant to Article 50 of the EU AI Act (Regulation (EU) 2024/1689).',
       ],
     },
     {
       id: 'changes',
-      title: '12. Policy Changes',
+      title: '13. Policy Changes',
       paragraphs: [
         'We may update this policy to reflect legal, technical, or product changes. Material changes will be communicated in-app or through appropriate channels before or when they take effect.',
       ],
@@ -217,12 +226,21 @@ const fr: PrivacyContent = {
       id: 'minors',
       title: '11. Enfants et mineurs',
       paragraphs: [
-        'Musaium n\'est pas destiné aux enfants en dessous de l\'âge requis par la loi applicable sans autorisation parentale. Si vous pensez qu\'un mineur a fourni des données de manière illicite, contactez tim.moyence@gmail.com.',
+        'Musaium n\'est pas destiné aux utilisateurs de moins de 15 ans (majorité numérique française — CNIL Délibération 2021-018). Les utilisateurs de moins de 15 ans nécessitent une autorisation parentale pour créer un compte. Si vous pensez qu\'un mineur a fourni des données de manière illicite, contactez tim.moyence@gmail.com.',
+      ],
+    },
+    {
+      id: 'ai-disclosure',
+      title: '12. Contenu généré par IA (AI Act UE Art. 50)',
+      paragraphs: [
+        'Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, Deepseek). Les réponses sont produites automatiquement et peuvent contenir des erreurs, des omissions ou des inexactitudes — veuillez vérifier les informations critiques auprès de sources primaires.',
+        'Les messages vocaux sont transcrits par un modèle de reconnaissance vocale ; les réponses orales sont synthétisées par un modèle text-to-speech. Les tampons audio ne sont pas conservés au-delà du cycle de la requête.',
+        'Cette information est fournie conformément à l\'article 50 du règlement UE sur l\'intelligence artificielle (Règlement (UE) 2024/1689).',
       ],
     },
     {
       id: 'changes',
-      title: '12. Modifications de la politique',
+      title: '13. Modifications de la politique',
       paragraphs: [
         'Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l\'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.',
       ],

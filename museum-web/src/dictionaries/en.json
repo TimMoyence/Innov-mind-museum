@@ -1,4 +1,7 @@
 {
+  "ai_disclosure": {
+    "banner": "Musaium is an AI assistant. Replies are generated automatically and may contain errors."
+  },
   "metadata": {
     "title": "Musaium — The Intelligent Museum Assistant",
     "description": "Photograph an artwork, ask a question, and let AI guide you. Musaium transforms every visit into an enriching experience."

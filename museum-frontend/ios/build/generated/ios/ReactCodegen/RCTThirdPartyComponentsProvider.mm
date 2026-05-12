@@ -31,7 +31,6 @@
 		@"MLRNRasterSource": NSClassFromString(@"MLRNRasterSourceComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNGeoJSONSource": NSClassFromString(@"MLRNGeoJSONSourceComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNVectorSource": NSClassFromString(@"MLRNVectorSourceComponentView"), // @maplibre/maplibre-react-native
-		@"RNGoogleSignInButton": NSClassFromString(@"RNGoogleSignInButtonComponentView"), // @react-native-google-signin/google-signin
 		@"RNGestureHandlerButton": NSClassFromString(@"RNGestureHandlerButtonComponentView"), // react-native-gesture-handler
 		@"RNCSafeAreaProvider": NSClassFromString(@"RNCSafeAreaProviderComponentView"), // react-native-safe-area-context
 		@"RNCSafeAreaView": NSClassFromString(@"RNCSafeAreaViewComponentView"), // react-native-safe-area-context

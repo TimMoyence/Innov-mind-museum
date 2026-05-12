@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import { AppDataSource } from '@data/db/data-source';
 import { wireAuthMiddleware } from '@modules/auth';
 import { buildChatService } from '@modules/chat';
-import { setActiveChatModule } from '@modules/chat/chat-module-singleton';
+import { setActiveChatModule } from '@modules/chat/chat-module';
 import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';

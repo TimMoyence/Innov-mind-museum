@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 
-import type { CacheService } from './cache.port';
+import type { CacheService, CacheValueSchema } from './cache.port';
 
 interface RedisCacheOptions {
   /** Redis connection URL (e.g. redis://localhost:6379). */
@@ -42,7 +42,7 @@ export class RedisCacheService implements CacheService {
   }
 
   /** Retrieves and deserializes a cached value by key, returning null on miss or error. */
-  async get<T>(key: string): Promise<T | null> {
+  async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     try {
       const raw = await this.redis.get(key);
       // Stryker equivalent mutant: removing this guard would still return null
@@ -50,7 +50,12 @@ export class RedisCacheService implements CacheService {
       // then `null as T` -> null. Same observable behavior.
       // Stryker disable next-line ConditionalExpression
       if (raw === null) return null;
-      return JSON.parse(raw) as T;
+      const parsed = JSON.parse(raw) as unknown;
+      if (schema) {
+        const result = schema.safeParse(parsed);
+        return result.success ? result.data : null;
+      }
+      return parsed as T;
     } catch {
       return null;
     }

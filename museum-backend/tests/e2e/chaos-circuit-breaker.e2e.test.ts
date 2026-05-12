@@ -17,7 +17,8 @@ process.env.LLM_CB_OPEN_DURATION_MS ??= '500';
  * Build a LangChainChatOrchestrator wired with a fake model that always throws.
  * The real circuit breaker inside the orchestrator trips after LLM_CB_FAILURE_THRESHOLD
  * consecutive failures — this is what the circuit-breaker chaos tests exercise.
- * @param errorMessage
+ * @param errorMessage - Message of the synthetic error thrown by the fake model on every call.
+ * @returns A ChatOrchestrator whose model always rejects with `errorMessage`.
  */
 async function buildFailingOrchestrator(
   errorMessage = 'LLM provider 500',
@@ -97,13 +98,11 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
     }
   });
 
-  it.skip('after openDurationMs, breaker → HALF_OPEN; success closes it', async () => {
-    // @TODO Phase 6 follow-up: harness stub-swap
-    // LangChainChatOrchestrator holds the failing model by reference; we cannot swap
-    // the model mid-run to a success model without a dedicated reset/inject mechanism.
-    // Skipping until the orchestrator gains a setModel() or the harness gains a
-    // reset-orchestrator option.
-  });
+  // TD-5 (docs/TECH_DEBT.md): pending the harness orchestrator stub-swap.
+  // LangChainChatOrchestrator holds the failing model by reference; mid-run swap to a
+  // success model is unsupported. Promote this placeholder to a real `it(...)` once the
+  // harness gains `orchestratorReset(newOverride)`.
+  it.todo('after openDurationMs, breaker → HALF_OPEN; success closes it');
 
   it('repeated failure cycles: breaker re-opens after each round', async () => {
     const orchestrator = await buildFailingOrchestrator();

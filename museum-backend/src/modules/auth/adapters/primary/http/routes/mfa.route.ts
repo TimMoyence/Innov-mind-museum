@@ -50,7 +50,7 @@ const RATE_LIMIT_OPTIONS = { limit: 5, windowMs: 15 * 60 * 1000 } as const;
  *     the route-specific `bucketName`.
  */
 function bySessionOrIp(req: Request): string {
-  const user = (req as Request & { user?: { id?: number } }).user;
+  const user = req.user;
   if (user?.id) return `user:${String(user.id)}`;
   const token = (req.body as { mfaSessionToken?: unknown }).mfaSessionToken;
   if (typeof token === 'string' && token.length > 0) {

@@ -10,6 +10,9 @@
  * the client in raw form either way.
  */
 
+// SOURCE-OF-TRUTH: kept manually in sync with the 2 other scrubbers (BE/FE/Web).
+// Cf docs/audit-cleanup-2026-05-12/ + ADR-045 (future extraction).
+
 /** Header names (case-insensitive) whose values must be redacted before leaving the app. */
 const SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/i;
 
@@ -17,7 +20,15 @@ const SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/
 const SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
 
 /** Query-string keys whose values must be stripped from captured URLs. */
-const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set(['token', 'password']);
+const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set([
+  'access_token',
+  'api_key',
+  'apikey',
+  'password',
+  'refresh_token',
+  'secret',
+  'token',
+]);
 
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
 const SENSITIVE_BREADCRUMB_PATHS: readonly string[] = [

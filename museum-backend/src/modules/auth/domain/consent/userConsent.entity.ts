@@ -18,7 +18,12 @@ import type { Relation } from 'typeorm';
  * forward compatibility (we store the scope as a free-form VARCHAR so adding
  * a scope doesn't require a DB migration — only a constant update here).
  */
-export const CONSENT_SCOPES = ['location_to_llm', 'analytics', 'marketing'] as const;
+export const CONSENT_SCOPES = [
+  'location_to_llm',
+  'analytics',
+  'marketing',
+  'tos_privacy',
+] as const;
 
 /**
  *

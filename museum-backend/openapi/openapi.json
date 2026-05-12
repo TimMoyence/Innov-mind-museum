@@ -2104,6 +2104,11 @@
                   },
                   "lastname": {
                     "type": "string"
+                  },
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "ISO YYYY-MM-DD. Used to enforce the French digital-majority age-gate (15 years — CNIL Délibération 2021-018)."
                   }
                 }
               }

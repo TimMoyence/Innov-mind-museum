@@ -1,4 +1,8 @@
 {
+  "ai_disclosure": {
+    "onboarding_toast": "Musaium 是 AI 助手。回复由 AI 自动生成。",
+    "chat_footer": "AI 生成的回复 — 可能包含错误。"
+  },
   "common": {
     "cancel": "取消",
     "error": "错误",
@@ -51,6 +55,8 @@
     "last_name": "姓",
     "email": "邮箱",
     "password": "密码",
+    "date_of_birth_placeholder": "出生日期（YYYY-MM-DD）",
+    "date_of_birth_a11y": "出生日期，年-月-日格式",
     "log_in": "登录",
     "sign_up": "注册",
     "no_account": "没有账户？立即注册",

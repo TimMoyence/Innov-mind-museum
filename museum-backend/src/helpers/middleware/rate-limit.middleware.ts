@@ -197,7 +197,7 @@ export const bySession = (req: Parameters<RequestHandler>[0]): string => {
  * @returns User-prefixed or IP-based bucket key.
  */
 export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
-  const user = (req as Request & { user?: { id?: number } }).user;
+  const user = (req as Request).user;
   return user?.id ? `user:${String(user.id)}` : byIp(req);
 };
 

@@ -5,35 +5,17 @@ import {
 } from '@shared/http/nominatim.client';
 import { parseLocationString } from '@shared/utils/location';
 
+import type { ResolvedLocation } from '@modules/chat/domain/location/resolvedLocation';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
-import type { NearbyMuseum } from '@modules/chat/useCase/enrichment/nearby-museums.provider';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { CachedReverseGeocodeFn } from '@shared/http/nominatim.client';
 
+export type { ResolvedLocation };
+
 const IN_MUSEUM_THRESHOLD_M = 200;
 const IN_MUSEUM_CACHE_TTL_S = 20 * 60; // 20 minutes
 const REVERSE_GEOCODE_TIMEOUT_MS = 3_000;
-
-/** Resolved geolocation context for a single chat message. */
-export interface ResolvedLocation {
-  nearbyMuseums: NearbyMuseum[];
-  nearestMuseumDistance: number | null;
-  /**
-   * Fine-grained reverse geocode string (name + road + suburb + city + country).
-   * NEVER emit this to third-party LLMs — it contains street-level detail that
-   * uniquely pin-points the user. Keep strictly for internal analytics / logs
-   * when the user has consented to higher-fidelity processing.
-   */
-  reverseGeocode: string | null;
-  /**
-   * GDPR-safe coarse reverse geocode string containing ONLY city + country (or
-   * the smallest available locality fallback). Safe to send to external LLM
-   * providers subject to user consent (`location_to_llm` scope).
-   */
-  reverseGeocodeCoarse: string | null;
-  isInsideMuseum: boolean;
-}
 
 /** Optional dependencies for {@link LocationResolver}. */
 export interface LocationResolverDeps {

@@ -39,6 +39,12 @@ const authSchema = z.object({
   firstname: z.string().optional(),
   lastname: z.string().optional(),
   gdprAccepted: z.boolean().optional(),
+  // ISO YYYY-MM-DD. Validated server-side against the French digital
+  // majority (15 years — CNIL Délibération 2021-018).
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD')
+    .optional(),
 });
 type AuthFormValues = z.infer<typeof authSchema>;
 
@@ -66,6 +72,7 @@ export default function AuthScreen() {
   const password = watch('password');
   const firstname = watch('firstname') ?? '';
   const lastname = watch('lastname') ?? '';
+  const dateOfBirth = watch('dateOfBirth') ?? '';
   const gdprAccepted = watch('gdprAccepted') ?? false;
   const { loginWithSession } = useAuth();
   type Session = Parameters<typeof loginWithSession>[0];
@@ -136,6 +143,7 @@ export default function AuthScreen() {
     password,
     firstname,
     lastname,
+    dateOfBirth,
     loginWithSession: loginWithSessionWithBiometricPrompt,
     onRegistrationComplete,
   });
@@ -250,6 +258,7 @@ export default function AuthScreen() {
                   password={password}
                   firstname={firstname}
                   lastname={lastname}
+                  dateOfBirth={dateOfBirth}
                   gdprAccepted={gdprAccepted}
                   isLoading={isLoading}
                   isSocialLoading={isSocialLoading}
@@ -264,6 +273,9 @@ export default function AuthScreen() {
                   }}
                   onChangeLastname={(value) => {
                     setValue('lastname', value, { shouldValidate: true });
+                  }}
+                  onChangeDateOfBirth={(value) => {
+                    setValue('dateOfBirth', value, { shouldValidate: true });
                   }}
                   onToggleGdpr={() => {
                     setValue('gdprAccepted', !gdprAccepted);

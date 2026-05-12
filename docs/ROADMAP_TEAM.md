@@ -106,7 +106,7 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 
 - [x] Hook `team-hooks/pre-cycle-roadmap-load.sh` — dispatcher lit `docs/ROADMAP_PRODUCT.md` + ce fichier au démarrage chaque cycle (Step 0 §8). Awk parser tracks parent `### Tx.y` H3 headers + emits `parentSection` per item. WARN-tolerant: missing roadmap → empty arrays + dispatch continues. 4/4 self-tests PASS.
 - [x] Hook `team-hooks/post-cycle-roadmap-update.sh` — Step 9 §4 fuzzy-match Jaccard (id + parent + text vs DESCRIPTION tokens, threshold 0.6, gap 0.1). Verdicts MATCH (patch staged, NEVER auto-commit) / AMBIGUOUS / NO_MATCH / SKIP (chore/hotfix/audit/mockup). 4/4 self-tests PASS. Known limitation : DESCRIPTION at parent-feature level (e.g. "T1.6 ...") matches all 3 sub-items at ~0.33 → NO_MATCH ; user applies patches manually from candidates list.
-- [x] Fin sprint trigger — `/team roadmap:rotate` (`lib/roadmap-rotate.sh`) archive ROADMAPs courants à `docs/archive/roadmaps/<sprint-end>/` (collide-safe `-2`/`-3`/...), promote NEXT body → NOW, insère `## NEXT — TBD` placeholder. Refuse tree dirty (exit 2). NEVER `git add`/`commit`/`push`. 4/4 self-tests PASS.
+- [x] Fin sprint trigger — `/team roadmap:rotate` (`lib/roadmap-rotate.sh`) archive ROADMAPs courants à `docs/_archive/roadmaps/<sprint-end>/` (collide-safe `-2`/`-3`/...), promote NEXT body → NOW, insère `## NEXT — TBD` placeholder. Refuse tree dirty (exit 2). NEVER `git add`/`commit`/`push`. 4/4 self-tests PASS.
 
 Run de référence : `team-state/2026-05-03-t1-6-roadmap-auto-consolidation/` (spec + design + tasks + STORY).
 
@@ -144,7 +144,7 @@ Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décisi
 - [ ] Estimation cumulée par sprint — alerte si budget mensuel projection >X€ avant launch
 - [ ] Cost dashboard Grafana — Langfuse → Prometheus exporter
 
-> **Pickup contingent — sprint 2026-05-05 P1 closure note (2026-05-05) :** start only if bandwidth available after the 2026-05-19 feature freeze ramp closes the P1 stack (cf. `docs/SPRINT_2026-05-05_PLAN.md`). KR3 stability + KR4 acquisition prime over orchestrateur tooling pre-launch. Re-evaluate at the post-launch + 14d retro.
+> **Pickup contingent — sprint 2026-05-05 P1 closure note (2026-05-05) :** start only if bandwidth available after the 2026-05-19 feature freeze ramp closes the P1 stack (cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`). KR3 stability + KR4 acquisition prime over orchestrateur tooling pre-launch. Re-evaluate at the post-launch + 14d retro.
 
 ---
 

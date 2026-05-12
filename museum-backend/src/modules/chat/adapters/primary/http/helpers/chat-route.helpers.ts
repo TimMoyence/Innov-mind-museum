@@ -245,7 +245,7 @@ export const contentTypeByExtension: Record<string, string> = {
 
 /** Extracts the authenticated user from the request. */
 export const getRequestUser = (req: Request): { id?: number } | undefined => {
-  return (req as Request & { user?: { id?: number } }).user;
+  return req.user;
 };
 
 /** Builds a signed read URL for a chat message image (S3 or local). */

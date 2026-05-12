@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-import type { CacheService } from './cache.port';
+import type { CacheService, CacheValueSchema } from './cache.port';
 
 /**
  * Wraps any {@link CacheService} so that backend failures (Redis ECONNREFUSED,
@@ -20,9 +20,9 @@ export class ResilientCacheWrapper implements CacheService {
   constructor(private readonly inner: CacheService) {}
 
   /** Read; returns null on backend failure (cache-miss semantics). */
-  async get<T>(key: string): Promise<T | null> {
+  async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     try {
-      return await this.inner.get<T>(key);
+      return await this.inner.get<T>(key, schema);
     } catch (err) {
       this.warn('cache_get_failed', key, err);
       return null;

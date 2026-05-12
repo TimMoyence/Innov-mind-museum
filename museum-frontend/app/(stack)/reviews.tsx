@@ -13,9 +13,9 @@ import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
-import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { useReviews } from '@/features/review/application/useReviews';
+import { Confetti } from '@/shared/ui/Confetti';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
 import { StarRating } from '@/features/review/ui/StarRating';
@@ -264,12 +264,10 @@ export default function ReviewsScreen() {
       )}
 
       {showConfetti ? (
-        <ConfettiCannon
+        <Confetti
           count={80}
           origin={{ x: Dimensions.get('window').width / 2, y: 0 }}
-          fadeOut
           fallSpeed={2500}
-          autoStart
           testID="reviews-confetti"
         />
       ) : null}

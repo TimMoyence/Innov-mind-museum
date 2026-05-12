@@ -13,6 +13,7 @@ import LandingChatShowcase from '@/components/marketing/LandingChatShowcase';
 import LandingMapsShowcase from '@/components/marketing/LandingMapsShowcase';
 import LandingFeatureGrid from '@/components/marketing/LandingFeatureGrid';
 import LandingDownloadCTA from '@/components/marketing/LandingDownloadCTA';
+import { AiDisclosureBanner } from '@/components/ai-disclosure/AiDisclosureBanner';
 
 interface LandingPageProps {
   params: Promise<{ locale: string }>;
@@ -55,6 +56,9 @@ export default async function LandingPage({ params }: LandingPageProps) {
 
       <LandingAppPreview dict={dict.showcase} />
       <LandingSteps dict={dict.features} />
+      <div className="px-4 pb-4 pt-2">
+        <AiDisclosureBanner locale={locale === 'fr' ? 'fr' : 'en'} />
+      </div>
       <LandingChatShowcase dict={dict.chatShowcase} />
       <LandingMapsShowcase dict={dict.mapsShowcase} />
       <LandingFeatureGrid dict={dict.features} />

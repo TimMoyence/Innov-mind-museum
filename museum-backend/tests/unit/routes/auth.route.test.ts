@@ -415,8 +415,15 @@ describe('Auth Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ user: { id: 42, email: 'new@test.com' } });
-      // 5th arg is the resolved email locale (no body/header → default 'fr')
-      expect(mockRegister).toHaveBeenCalledWith('new@test.com', 'ValidPass1', 'Jane', 'Doe', 'fr');
+      // Options-object signature; `locale` is resolved from the request (defaults to 'fr').
+      expect(mockRegister).toHaveBeenCalledWith({
+        email: 'new@test.com',
+        password: 'ValidPass1',
+        firstname: 'Jane',
+        lastname: 'Doe',
+        locale: 'fr',
+        dateOfBirth: undefined,
+      });
     });
 
     it('POST /api/auth/login returns access and refresh tokens', async () => {

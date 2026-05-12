@@ -1,19 +1,15 @@
-// Mock heavy deps before importing the module under test.
-jest.mock('linkedom', () => {
-  return {
-    parseHTML: jest.fn().mockImplementation((html: string) => ({
-      document: { __html: html, title: '' },
-    })),
-  };
-});
-
+// linkedom is pure-JS and lightweight; use the real implementation so the
+// fallback DOM-extraction path (querySelectorAll, body.textContent) works
+// against a real document. Only Readability is mocked because it needs to be
+// deterministic and is the unit under test.
 jest.mock('@mozilla/readability', () => {
+  // Local minimal shape — Document is a DOM lib type, not available in Node typings.
+  type DomLike = { querySelector: (sel: string) => unknown };
   return {
-    Readability: jest.fn().mockImplementation((_doc: { __html?: string }) => ({
+    Readability: jest.fn().mockImplementation((doc: DomLike) => ({
       parse: jest.fn().mockImplementation(() => {
-        const html: string = (_doc as { __html?: string }).__html ?? '';
-        // Return article result only when there is an <article> tag in the html
-        if (html.includes('<article>')) {
+        // Return article result only when there is an <article> tag in the doc
+        if (doc.querySelector('article')) {
           return {
             title: 'Van Gogh at the Louvre',
             textContent:
@@ -99,14 +95,14 @@ describe('HtmlScraper', () => {
     expect(result!.contentHash).toHaveLength(16);
   });
 
-  it('falls back to cheerio extraction when Readability returns null', async () => {
+  it('falls back to linkedom DOM extraction when Readability returns null', async () => {
     global.fetch = mockHtmlFetch(SIMPLE_HTML);
 
     const result = await scraper.scrape('https://example.com/simple');
 
     expect(result).not.toBeNull();
     expect(result!.textContent).toContain('Welcome to the museum');
-    // nav and footer should be stripped by cheerio fallback
+    // nav and footer should be stripped by linkedom fallback
     expect(result!.textContent).not.toContain('Navigation');
     expect(result!.textContent).not.toContain('Footer');
     expect(result!.contentHash).toHaveLength(16);

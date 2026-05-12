@@ -120,6 +120,15 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true, name: 'mfa_enrollment_deadline' })
   mfaEnrollmentDeadline?: Date | null;
 
+  /**
+   * Visitor's date of birth, captured at registration to enforce the French
+   * "majorité numérique" (15 years — CNIL Délibération 2021-018). Nullable
+   * because legacy accounts created before the age-gate landed had no DOB
+   * collected; new registrations always set it.
+   */
+  @Column({ type: 'date', nullable: true, name: 'date_of_birth' })
+  dateOfBirth?: Date | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 

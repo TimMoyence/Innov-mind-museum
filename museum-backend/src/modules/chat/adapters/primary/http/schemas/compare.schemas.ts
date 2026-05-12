@@ -57,7 +57,7 @@ const DEFAULT_TOP_K = 5;
  * without breaking older clients.
  */
 export const compareRequestSchema = z.object({
-  sessionId: z.string().uuid(),
+  sessionId: z.uuid(),
   topK: z.coerce
     .number()
     .int()

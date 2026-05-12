@@ -36,7 +36,7 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute('newuser@test.com', 'StrongP@ss1!');
+    const result = await useCase.execute({ email: 'newuser@test.com', password: 'StrongP@ss1!' });
 
     expect(result.id).toBe(10);
     expect(result.email).toBe('newuser@test.com');
@@ -44,6 +44,7 @@ describe('RegisterUseCase', () => {
     expect(userRepo.registerUser).toHaveBeenCalledWith(
       'newuser@test.com',
       'StrongP@ss1!',
+      undefined,
       undefined,
       undefined,
     );
@@ -56,11 +57,12 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    await useCase.execute('  User@Test.COM  ', 'StrongP@ss1!');
+    await useCase.execute({ email: '  User@Test.COM  ', password: 'StrongP@ss1!' });
 
     expect(userRepo.registerUser).toHaveBeenCalledWith(
       'user@test.com',
       expect.anything(),
+      undefined,
       undefined,
       undefined,
     );
@@ -70,14 +72,16 @@ describe('RegisterUseCase', () => {
     const userRepo = makeUserRepo();
     const useCase = new RegisterUseCase(userRepo);
 
-    await expect(useCase.execute('not-an-email', 'StrongP@ss1!')).rejects.toThrow('Invalid email');
+    await expect(
+      useCase.execute({ email: 'not-an-email', password: 'StrongP@ss1!' }),
+    ).rejects.toThrow('Invalid email');
   });
 
   it('rejects weak password', async () => {
     const userRepo = makeUserRepo();
     const useCase = new RegisterUseCase(userRepo);
 
-    await expect(useCase.execute('user@test.com', '123')).rejects.toThrow();
+    await expect(useCase.execute({ email: 'user@test.com', password: '123' })).rejects.toThrow();
   });
 
   it('passes sanitized name fields to the repository', async () => {
@@ -87,13 +91,19 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    await useCase.execute('user@test.com', 'StrongP@ss1!', 'Jane', 'Doe');
+    await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      firstname: 'Jane',
+      lastname: 'Doe',
+    });
 
     expect(userRepo.registerUser).toHaveBeenCalledWith(
       'user@test.com',
       'StrongP@ss1!',
       'Jane',
       'Doe',
+      undefined,
     );
   });
 
@@ -105,7 +115,7 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute('user@test.com', 'StrongP@ss1!');
+    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
 
     expect(userRepo.setVerificationToken).toHaveBeenCalledTimes(1);
     const [userId, storedToken, expires] = userRepo.setVerificationToken.mock.calls[0];
@@ -131,7 +141,7 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute('user@test.com', 'StrongP@ss1!');
+    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
 
     expect(emailService.sendEmail).toHaveBeenCalledTimes(1);
     expect(emailService.sendEmail).toHaveBeenCalledWith(
@@ -152,7 +162,7 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute('user@test.com', 'StrongP@ss1!', undefined, undefined, 'en');
+    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!', locale: 'en' });
 
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
     expect(htmlArg).toContain('https://app.example.com/en/verify-email?token=');
@@ -168,7 +178,7 @@ describe('RegisterUseCase', () => {
     emailService.sendEmail.mockRejectedValue(new Error('SMTP connection refused'));
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    const result = await useCase.execute('user@test.com', 'StrongP@ss1!');
+    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
 
     // Registration should still succeed
     expect(result.id).toBe(7);
@@ -183,7 +193,7 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute('user@test.com', 'StrongP@ss1!');
+    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
 
     // Registration still succeeds
     expect(result.id).toBe(8);
@@ -196,7 +206,7 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute('user@test.com', 'StrongP@ss1!');
+    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
 
     expect(result.id).toBe(9);
     // setVerificationToken is still called

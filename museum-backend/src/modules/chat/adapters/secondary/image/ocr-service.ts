@@ -4,15 +4,16 @@ import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
 import type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
+import type { Scheduler } from 'tesseract.js';
 
 // Re-export domain port types so existing consumers that imported from here keep working
 export type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 
 /** Tesseract.js-based OCR implementation with pooled Scheduler (2 workers). */
 export class TesseractOcrService implements OcrService {
-  private schedulerPromise: Promise<any> | null = null;
+  private schedulerPromise: Promise<Scheduler> | null = null;
 
-  private getScheduler(): Promise<any> {
+  private getScheduler(): Promise<Scheduler> {
     this.schedulerPromise ??= (async () => {
       const Tesseract = await import('tesseract.js');
       const scheduler = Tesseract.createScheduler();
@@ -45,6 +46,10 @@ export class TesseractOcrService implements OcrService {
           if (timeoutId !== undefined) clearTimeout(timeoutId);
         });
 
+        // tesseract.js types `data.text` as `string` but the runtime may return
+        // undefined when the buffer is fully blank — the test
+        // `returns null when text is undefined` pins this contract.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime types diverge from declared types
         const text = data.text?.trim();
         if (!text) return null;
 

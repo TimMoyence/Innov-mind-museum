@@ -29,6 +29,12 @@ export const GreetingSlide = () => {
       <Text style={[styles.description, { color: theme.textSecondary }]}>
         {t('onboarding.v2.greeting.description')}
       </Text>
+      <Text
+        style={[styles.disclosure, { color: theme.textSecondary }]}
+        accessibilityLabel={t('ai_disclosure.onboarding_toast')}
+      >
+        {t('ai_disclosure.onboarding_toast')}
+      </Text>
     </Animated.View>
   );
 };
@@ -57,5 +63,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     textAlign: 'center',
     lineHeight: space['5'],
+  },
+  disclosure: {
+    fontSize: fontSize.xs,
+    textAlign: 'center',
+    marginTop: space['2'],
+    opacity: 0.75,
   },
 });
