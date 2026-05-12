@@ -17,13 +17,18 @@ export function initOpenTelemetry(): void {
   const { NodeSDK } = require('@opentelemetry/sdk-node');
   const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
   const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-  const { Resource } = require('@opentelemetry/resources');
+  // `@opentelemetry/resources` v2 removed the `Resource` class constructor —
+  // use the `resourceFromAttributes(...)` factory instead (Renovate PR #224
+  // bumped the OTel monorepo to ^0.217.0 without migrating this call site,
+  // which crashed every container start in prod with "Resource is not a
+  // constructor" — see 2026-05-12 hotfix).
+  const { resourceFromAttributes } = require('@opentelemetry/resources');
   const {
     ATTR_SERVICE_NAME,
     ATTR_SERVICE_VERSION,
   } = require('@opentelemetry/semantic-conventions');
 
-  const resource = new Resource({
+  const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: env.otel.serviceName,
     [ATTR_SERVICE_VERSION]: env.appVersion,
   });
