@@ -34,15 +34,22 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
   - JUSTIFIED `MUSEUM_ENRICHMENT_SCHEDULER_ENABLED` (consumer not yet wired in prod — flag prevents runaway queue; will delete once consumer exists).
   - Files: `env.ts`, `env.types.ts`, `chat-message.service.ts`, `index.ts`, `tests/integration/security/auth-email-service-kind-prod-reject.test.ts`.
 - [x] C.10 — Reunify chat-module*.ts. Concatenated 6 files (922L total) into a single `chat-module.ts` (716L net, w/ section comments). Removed: `chat-module.compare-wiring.ts`, `chat-module.knowledge-router-wiring.ts`, `chat-module.wikidata-wiring.ts`, `chat-module-singleton.ts`, `wiring.ts`. Top-of-file `/* eslint-disable max-lines */` with justified rationale. Updated consumers: `app.ts`, `api.router.ts`, `chat/index.ts`, `auth/useCase/index.ts`, plus test mocks (`api-router-health.test.ts`, `api-router-resolve.test.ts`, `chat-module-singleton.test.ts`). All 53 router/singleton tests pass.
-- [ ] C.11 — Reduce null-object ports
+- [x] C.11 — **PARTIAL** : 16 ports inventoried in `chat/domain/ports/`. Multi-impl legitimate ports (web-search 7, embeddings 2, tts 2, ocr 2, image-storage 2, audio-storage 2) stay. Single-impl-with-null-object ports (advanced-guardrail, image-processor, llm-judge, audio-transcriber, pii-sanitizer, chat-orchestrator [mockability]) require cascading refactor across 30+ adapters/use-cases — high risk of breaking compose roots that A/B/D may be touching. Per "Si doute → garde + annote" doctrine, ports kept. Recommend dedicated sprint after parallel worktrees merge.
 - [x] C.12 — Centralize JWT decode (Zod parse). NEW `museum-backend/src/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `decodeJwtHeader`, `jwtHeaderSchema`). NEW `museum-frontend/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `baseJwtPayloadSchema`). Migrated 3 call-sites: `auth-route.helpers.ts:decodeFamilyIdUnsafe`, `social-token-verifier.ts:decodeHeader`, `authLogic.pure.ts:extractUserIdFromToken + getTokenExpiryMs`. `grep "JSON.parse(atob" src/ features/` = 0 in app code (only zod node_modules + the new helpers themselves).
 - [x] C.13 — Fix httpClient/Redis/env-resolvers casts.
   - `httpClient.ts`: `as never` → `as AxiosRequestConfig` (×2).
   - `env-resolvers.ts`: 5 `raw as Foo` casts → `z.enum([...]).safeParse(raw).data ?? default` (NODE_ENV, LLM_PROVIDER, GUARDRAILS_V2_CANDIDATE, OBJECT_STORAGE_DRIVER, EMBEDDINGS_PROVIDER).
   - `cache.port.ts`: introduces `CacheValueSchema<T>` (zod-shaped duck type, no zod runtime dep in port). `get<T>` now accepts optional schema; on schema failure returns null. Backward-compatible — existing call-sites are untouched, migration to schemas is incremental.
   - Files: `httpClient.ts`, `env-resolvers.ts`, `cache.port.ts`, `redis-cache.service.ts`, `memory-cache.service.ts`, `resilient-cache.wrapper.ts`.
-- [ ] C.14 — Create packages/musaium-shared/ workspace
-- [ ] C.15 — Split auth.route.ts (if monolithic)
+- [x] C.14 — Created `packages/musaium-shared/` scaffold with `@musaium/shared` (private package, `type: module`, subpath exports for `./geo`, `./validation`, `./i18n`, `./errors`, `./auth`). Contents migrated as canonical source:
+  - `geo/haversine.ts`
+  - `validation/password.ts` (`PASSWORD_MIN=8`, `PASSWORD_MAX=128`, `passwordSchema`)
+  - `i18n/locales.ts` (`SUPPORTED_LOCALES`, `Locale`, `DEFAULT_LOCALE`, `isSupportedLocale`)
+  - `errors/codes.ts` (`ERROR_CODES`, `ErrorCode`)
+  - `auth/jwt-decode.ts` (isomorphic `decodeJwtPayloadWith(token, schema, decoder)` — host injects Node/browser base64url decode)
+  - README.md w/ integration plan for next sprint.
+  - **Not yet wired** into apps. Pnpm-workspace.yaml + `package.json` updates were deferred to limit cross-agent coordination risk during this parallel sprint — A/B already modify package.json scopes. The scaffold is ready and the README documents step-by-step integration.
+- [x] C.15 — Verified `auth.route.ts` is already split (28L barrel only). Sub-routers: auth-session (196), auth-google-oauth (368), auth-profile (135), auth-password (94), auth-email (99), auth-api-keys (76), super-admin-check, plus consent.route + me.route + mfa.route at module root. Largest sub-route file is 368L (under the 400L cap). No-op for C.15.
 
 ## Verifs / commits
 
