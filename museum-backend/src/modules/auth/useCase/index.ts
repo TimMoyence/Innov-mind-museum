@@ -134,7 +134,7 @@ const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
 const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
     // Late-bind to avoid circular init: chat module initializes after auth module
-    const { getImageStorage } = await import('@modules/chat/wiring');
+    const { getImageStorage } = await import('@modules/chat/chat-module');
     await getImageStorage().deleteByPrefix(prefix);
   },
 };
@@ -143,7 +143,7 @@ const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageClean
 /** Lazy-bound proxy for GDPR data export — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
   async getAllUserData(userId: number) {
-    const { getChatRepository } = await import('@modules/chat/wiring');
+    const { getChatRepository } = await import('@modules/chat/chat-module');
     return await getChatRepository().exportUserData(userId);
   },
 };

@@ -33,7 +33,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
   - JUSTIFIED `EXTRACTION_WORKER_ENABLED` (e2e harness no-Redis avoids BullMQ ECONNREFUSED).
   - JUSTIFIED `MUSEUM_ENRICHMENT_SCHEDULER_ENABLED` (consumer not yet wired in prod — flag prevents runaway queue; will delete once consumer exists).
   - Files: `env.ts`, `env.types.ts`, `chat-message.service.ts`, `index.ts`, `tests/integration/security/auth-email-service-kind-prod-reject.test.ts`.
-- [ ] C.10 — Reunify chat-module*.ts
+- [x] C.10 — Reunify chat-module*.ts. Concatenated 6 files (922L total) into a single `chat-module.ts` (716L net, w/ section comments). Removed: `chat-module.compare-wiring.ts`, `chat-module.knowledge-router-wiring.ts`, `chat-module.wikidata-wiring.ts`, `chat-module-singleton.ts`, `wiring.ts`. Top-of-file `/* eslint-disable max-lines */` with justified rationale. Updated consumers: `app.ts`, `api.router.ts`, `chat/index.ts`, `auth/useCase/index.ts`, plus test mocks (`api-router-health.test.ts`, `api-router-resolve.test.ts`, `chat-module-singleton.test.ts`). All 53 router/singleton tests pass.
 - [ ] C.11 — Reduce null-object ports
 - [x] C.12 — Centralize JWT decode (Zod parse). NEW `museum-backend/src/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `decodeJwtHeader`, `jwtHeaderSchema`). NEW `museum-frontend/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `baseJwtPayloadSchema`). Migrated 3 call-sites: `auth-route.helpers.ts:decodeFamilyIdUnsafe`, `social-token-verifier.ts:decodeHeader`, `authLogic.pure.ts:extractUserIdFromToken + getTokenExpiryMs`. `grep "JSON.parse(atob" src/ features/` = 0 in app code (only zod node_modules + the new helpers themselves).
 - [x] C.13 — Fix httpClient/Redis/env-resolvers casts.

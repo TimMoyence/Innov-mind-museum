@@ -112,7 +112,7 @@ jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
     return Router();
   },
 }));
-jest.mock('@modules/chat/wiring', () => ({
+jest.mock('@modules/chat/chat-module', () => ({
   getArtKeywordRepository: () => undefined,
   getArtworkKnowledgeRepo: () => undefined,
   getCompareImageUseCase: () => undefined,

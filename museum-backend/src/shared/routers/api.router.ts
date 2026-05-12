@@ -16,7 +16,7 @@ import {
   getDescribeService,
   getLlmCircuitBreakerState,
   getUserMemoryService,
-} from '@modules/chat/wiring';
+} from '@modules/chat/chat-module';
 import { createDailyArtRouter } from '@modules/daily-art';
 import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/routes/low-data-pack.route';

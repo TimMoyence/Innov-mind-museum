@@ -1,8 +1,11 @@
+/* eslint-disable max-lines -- JUSTIFIED: composition root for the chat module. The previous split across 6 files (chat-module.ts + compare-wiring + knowledge-router-wiring + wikidata-wiring + singleton + wiring.ts, 922L total) existed only to game ESLint max-lines:400; the inline docblocks of those files admitted as much. Reunifying restores ordering invariants in one place. Cf docs/audit-cleanup-2026-05-12/PROMPT_C.md#C.10 */
+
 import { OpenAiAudioTranscriber } from '@modules/chat/adapters/secondary/audio/audio-transcriber.openai';
 import {
   OpenAiTextToSpeechService,
   DisabledTextToSpeechService,
 } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
+import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
@@ -11,8 +14,10 @@ import {
 } from '@modules/chat/adapters/secondary/image/ocr-service';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
+import { ArtworkEmbeddingRepositoryPg } from '@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg';
 import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
+import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
 import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
 import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
@@ -22,6 +27,9 @@ import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/
 import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
+import { WikidataBreakerClient } from '@modules/chat/adapters/secondary/search/wikidata-breaker';
+import { WikidataWriteThroughProvider } from '@modules/chat/adapters/secondary/search/wikidata-write-through.provider';
+import { WikidataClient } from '@modules/chat/adapters/secondary/search/wikidata.client';
 import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.s3';
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
@@ -31,41 +39,51 @@ import { DescribeService } from '@modules/chat/useCase/describe/describe.service
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
-import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
+import { ImageProcessingService as ImageProcessingPipelineService } from '@modules/chat/useCase/image/image-processing.service';
+import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
+import { judgeWithLlm, LlmJudgeGuardrail } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import { LocationResolver } from '@modules/chat/useCase/location/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
+import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
+import { compareImageUseCase as createCompareImageUseCase } from '@modules/chat/useCase/visual-similarity/compare.use-case';
+import { VisualSimilarityService } from '@modules/chat/useCase/visual-similarity/similarity.service';
+import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
 import { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
+import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
-
-import {
-  buildCompareImageUseCase,
-  buildCompareSessionAccessVerifier,
-} from './chat-module.compare-wiring';
-import { buildKnowledgeRouter } from './chat-module.knowledge-router-wiring';
-import { buildWikidataStack } from './chat-module.wikidata-wiring';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
+import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
-import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import type {
+  ChatPersistencePort,
+  CompareMimeType,
+  CompareUseCaseInput,
+  ImageProcessorPort as CompareImageProcessorPort,
+} from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
-import type { CompareUseCaseInput } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { BuiltKnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Public typed result of build() ===
+// ═══════════════════════════════════════════════════════════════════
 
 /** Typed result of building the chat module — all services guaranteed initialized. */
 export interface BuiltChatModule {
@@ -77,26 +95,177 @@ export interface BuiltChatModule {
   userMemoryService: UserMemoryService | undefined;
   artKeywordRepository: ArtKeywordRepository;
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
-  /**
-   * C3 Visual Similarity (T5.5) — partially-applied `compareImageUseCase` for
-   * the `POST /chat/compare` route. Wired in {@link ChatModule.build}; the
-   * route adapter (T6.3) consumes this single function. Optional because legacy
-   * test harnesses build the module without the C3 pipeline.
-   */
   compareImageUseCase?: (input: CompareUseCaseInput) => Promise<CompareResult>;
-  /**
-   * C3 Visual Similarity — session-ownership check piped to the compare router.
-   * Closes over the chat repository so the route does not import persistence.
-   * Optional in lockstep with `compareImageUseCase`.
-   */
   compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
-  /**
-   * C4.1 (2026-05-11) — `KnowledgeRouterService` wired by T3.3. Optional :
-   * legacy test harnesses skip C4 ports + NFR8 keeps 1 cycle backward-compat.
-   * Production always wires it (see `chat-module.knowledge-router-wiring.ts`).
-   */
   knowledgeRouter?: KnowledgeRouterPort;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Wikidata stack wiring (ex chat-module.wikidata-wiring.ts) ===
+//
+//  Composition (outermost → innermost):
+//    WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
+//      └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
+//           └─ WikidataClient      ← raw HTTP / SPARQL
+//
+//  Both downstream consumers — `KnowledgeBaseService` AND `KnowledgeRouterService`
+//  — share the same `kbProvider` reference so the breaker state and dump write-
+//  through are shared. Doctrine pré-launch V1 : no `*_ENABLED` flag, rollback
+//  = `git revert` of the wiring.
+// ═══════════════════════════════════════════════════════════════════
+
+interface WikidataStack {
+  readonly kbProvider: KnowledgeBaseProvider;
+  readonly knowledgeBase: KnowledgeBaseService;
+}
+
+function buildWikidataStack(dataSource: DataSource, cache?: CacheService): WikidataStack {
+  const wikidataClient = new WikidataClient({ userAgent: env.wikidata.userAgent });
+  const wikidataBreaker = new WikidataBreakerClient(wikidataClient, env.knowledgeBase.breaker);
+  const wikidataDumpRepo = new WikidataKbDumpRepositoryTypeOrm(dataSource);
+  const kbProvider = new WikidataWriteThroughProvider(wikidataBreaker, wikidataDumpRepo);
+  const { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs } =
+    env.knowledgeBase;
+  const knowledgeBase = new KnowledgeBaseService(
+    kbProvider,
+    { timeoutMs, cacheTtlSeconds, cacheMaxEntries, localDumpFallbackAfterMs },
+    cache,
+    {
+      breakerState: () => wikidataBreaker.getState(),
+      dumpRepo: wikidataDumpRepo,
+    },
+  );
+  return { kbProvider, knowledgeBase };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Knowledge router wiring (ex chat-module.knowledge-router-wiring.ts) ===
+//
+//  C4.1 — `KnowledgeRouterService` cascade: KB → LLM judge → WebSearch.
+//  Each leg's per-leg budget is sourced from `env.knowledgeRouter.*` —
+//  TUNING-ONLY by doctrine (D11 / pré-launch V1). NO `*_ENABLED` switch.
+// ═══════════════════════════════════════════════════════════════════
+
+function buildKnowledgeRouter(
+  kbProvider: KnowledgeBaseProvider,
+  wsProvider: WebSearchProvider,
+  orchestrator: ChatOrchestrator,
+): KnowledgeRouterService {
+  return new KnowledgeRouterService({
+    kb: kbProvider,
+    ws: wsProvider,
+    judge: new LlmJudgeGuardrail({ orchestrator }),
+    config: {
+      threshold: env.knowledgeRouter.threshold,
+      kbTimeoutMs: env.knowledgeRouter.kbTimeoutMs,
+      judgeTimeoutMs: env.knowledgeRouter.judgeTimeoutMs,
+      wsTimeoutMs: env.knowledgeRouter.wsTimeoutMs,
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Compare wiring (ex chat-module.compare-wiring.ts) ===
+//
+//  C3 Visual Similarity — composition root for the `POST /chat/compare` pipeline.
+//  See `compare.use-case.ts` for the orchestration contract.
+// ═══════════════════════════════════════════════════════════════════
+
+function buildCompareImageProcessor(
+  imageStorage: ImageStorage,
+  ocr: OcrService,
+): CompareImageProcessorPort {
+  const imageProcessingPipeline = new ImageProcessingPipelineService({
+    imageStorage,
+    ocr,
+    imageProcessor: new SharpImageProcessor(),
+  });
+  return {
+    async process(input) {
+      const inputMime: CompareMimeType = input.mimeType;
+      const inputBase64 = input.buffer.toString('base64');
+      const processed = await imageProcessingPipeline.processImage(
+        {
+          source: 'upload',
+          value: inputBase64,
+          mimeType: inputMime,
+          sizeBytes: input.buffer.byteLength,
+        },
+        input.sessionId,
+        input.ownerId,
+      );
+      const orchImage = processed.orchestratorImage;
+      const cleanedBuffer = Buffer.from(orchImage.value, 'base64');
+      const cleanedMime: CompareMimeType =
+        (orchImage.mimeType as CompareMimeType | undefined) ?? inputMime;
+      return { buffer: cleanedBuffer, mimeType: cleanedMime };
+    },
+  };
+}
+
+function buildCompareChatPersistence(repository: TypeOrmChatRepository): ChatPersistencePort {
+  return {
+    async appendAssistantMessage(opts) {
+      const persisted = await repository.persistMessage({
+        sessionId: opts.sessionId,
+        role: 'assistant',
+        ...(opts.text !== undefined ? { text: opts.text } : {}),
+        ...(opts.metadata !== undefined ? { metadata: opts.metadata } : {}),
+      });
+      return { id: persisted.id };
+    },
+  };
+}
+
+function buildCompareImageUseCase(
+  repository: TypeOrmChatRepository,
+  dataSource: DataSource,
+  imageStorage: ImageStorage,
+  ocr: OcrService,
+  cache: CacheService | undefined,
+): (input: CompareUseCaseInput) => Promise<CompareResult> {
+  const cacheBackend: CacheService = cache ?? new NoopCacheService();
+
+  const embeddingsAdapter = createEmbeddingsAdapter(env);
+  const artworkEmbeddingRepo = new ArtworkEmbeddingRepositoryPg(dataSource);
+
+  const wikidataClient = new WikidataClient();
+  const wikidataEnricher = new WikidataEnricher({
+    client: wikidataClient,
+    cache: cacheBackend,
+  });
+
+  const visualSimilarityService = new VisualSimilarityService({
+    encoder: embeddingsAdapter,
+    repo: artworkEmbeddingRepo,
+    enricher: wikidataEnricher,
+    cache: cacheBackend,
+    weights: {
+      wVisual: env.visualSimilarity.wVisual,
+      wMeta: env.visualSimilarity.wMeta,
+    },
+    topN: env.visualSimilarity.topN,
+    topK: env.visualSimilarity.topKDefault,
+  });
+
+  return createCompareImageUseCase({
+    imageProcessor: buildCompareImageProcessor(imageStorage, ocr),
+    similarityService: visualSimilarityService,
+    chatService: buildCompareChatPersistence(repository),
+  });
+}
+
+function buildCompareSessionAccessVerifier(
+  repository: TypeOrmChatRepository,
+): (sessionId: string, ownerId: number | undefined) => Promise<void> {
+  return async (sessionId, ownerId) => {
+    await ensureSessionAccess(sessionId, repository, ownerId);
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  === ChatModule class — the composition root proper ===
+// ═══════════════════════════════════════════════════════════════════
 
 /**
  * Encapsulates the chat module dependency graph and lifecycle.
@@ -167,12 +336,7 @@ export class ChatModule {
     return new LocalImageStorage(env.storage.localUploadsDir);
   }
 
-  /**
-   * Creates the audio storage adapter (S3 or local). Mirrors {@link buildImageStorage}
-   * — TTS audio uses the same S3 backend / local dir as images, just under a different
-   * key prefix (`chat-audios/`). Returns `undefined` when storage is misconfigured so
-   * the chat service still operates (TTS just runs without long-term persistence).
-   */
+  /** Creates the audio storage adapter (S3 or local). */
   private buildAudioStorage(): AudioStorage | undefined {
     if (env.storage.driver === 's3') {
       const s3 = env.storage.s3;
@@ -195,11 +359,7 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /**
-   * Creates the advanced guardrail V2 adapter when one is selected via env.
-   * Returns `undefined` when candidate is 'off' (default) so the service layer
-   * installs the noop path (no runtime cost).
-   */
+  /** Creates the advanced guardrail V2 adapter when one is selected via env. */
   private buildAdvancedGuardrail(): AdvancedGuardrail | undefined {
     const candidate = env.guardrails.candidate;
     if (candidate === 'off') return undefined;
@@ -257,7 +417,10 @@ export class ChatModule {
    * Creates web search with multi-provider fallback chain (shared with the
    * `KnowledgeRouterService` per T3.3). DuckDuckGo is always last-resort.
    */
-  private buildWebSearch(cache?: CacheService): { service: WebSearchService; provider: WebSearchProvider } {
+  private buildWebSearch(cache?: CacheService): {
+    service: WebSearchService;
+    provider: WebSearchProvider;
+  } {
     const providers: WebSearchProvider[] = [];
 
     if (env.webSearch.tavilyApiKey) {
@@ -272,7 +435,6 @@ export class ChatModule {
     if (env.webSearch.searxngInstances.length > 0) {
       providers.push(new SearXNGClient(env.webSearch.searxngInstances));
     }
-    // DuckDuckGo: always available, no key needed — last resort
     providers.push(new DuckDuckGoClient());
 
     logger.info('web_search_providers_configured', {
@@ -315,7 +477,7 @@ export class ChatModule {
 
     void refreshKeywords();
     const timer = setInterval(() => void refreshKeywords(), 5 * 60 * 1000);
-    timer.unref(); // allow process/Jest to exit without waiting for this timer
+    timer.unref();
     this._artKeywordsRefreshTimer = timer;
 
     const onArtKeywordDiscovered = (keyword: string, locale: string) => {
@@ -333,10 +495,10 @@ export class ChatModule {
    *
    * @param dataSource - Initialized TypeORM DataSource for repository creation.
    * @param cache - Optional cache service for session/memory caching.
-   * @param museumRepository - Optional museum repository for resolving museum info at session creation.
+   * @param museumRepository - Optional museum repository for resolving museum info.
    * @returns Built module with all services guaranteed initialized.
    */
-  // eslint-disable-next-line max-lines-per-function -- Justification: composition root that intentionally wires every dependency in one place; splitting hides ordering invariants documented inline (artKeyword → orchestrator → guardrail-budget → userMemory). 1 LOC over the soft cap (61) post-ADR-030 wiring. Approved-by: tim@2026-05-05
+  // eslint-disable-next-line max-lines-per-function -- Justification: composition root that intentionally wires every dependency in one place; ordering invariants documented inline (artKeyword → orchestrator → guardrail-budget → userMemory). Approved-by: tim@2026-05-05
   build(
     dataSource: DataSource,
     cache?: CacheService,
@@ -344,14 +506,10 @@ export class ChatModule {
   ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
     const repository = new TypeOrmChatRepository(dataSource);
-    // TTS is always wired in V1 — falls back to Disabled only when no OpenAI key (dev safety).
     const tts = env.llm.openAiApiKey
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    // C5.3 — shared Wikidata decorator chain (write-through → breaker → raw client).
-    // `kbProvider` is reused below by `buildKnowledgeRouter` so the C4 router
-    // path also benefits from the breaker + dump write-through.
     const { kbProvider, knowledgeBase } = buildWikidataStack(dataSource, cache);
     const imageEnrichment = this.buildImageEnrichment();
     const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
@@ -361,14 +519,9 @@ export class ChatModule {
 
     const orchestrator = new LangChainChatOrchestrator();
     this._orchestrator = orchestrator;
-    // Cache is owned by the use-case layer (LlmCacheServiceImpl) since
-    // ADR-036 — no adapter-level decorator. The orchestrator is wired bare.
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
-    configureGuardrailBudget({ cache }); // ADR-030 — judge budget Redis/in-process pick
+    configureGuardrailBudget({ cache });
 
-    // C4.1 (T3.3) — `KnowledgeRouterService` wired after the orchestrator so
-    // the LLM judge leg shares the live `ChatOrchestrator` instance. See
-    // `chat-module.knowledge-router-wiring.ts` for the cascade contract.
     const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, effectiveOrchestrator);
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
@@ -378,8 +531,6 @@ export class ChatModule {
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
 
-    // UserMemory depends on the knowledge-extraction artwork repo for the
-    // mergePeriods enrichment (Spec C T1.5) — must build *after* knowledgeExtraction.
     const userMemory = this.buildUserMemory(
       dataSource,
       cache,
@@ -406,10 +557,6 @@ export class ChatModule {
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
-    // C3 Visual Similarity (T5.5) — wire the `POST /chat/compare` use case
-    // plus the session-ownership verifier consumed by the route (security
-    // BLOCKER 2026-05-10: parity with `ensureSessionAccess()` on every other
-    // chat write path).
     const compareImageUseCase = buildCompareImageUseCase(
       repository,
       dataSource,
@@ -430,7 +577,7 @@ export class ChatModule {
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
       compareImageUseCase,
       compareSessionAccessVerifier,
-      knowledgeRouter, // C4.1 (T3.3) — see BuiltChatModule.knowledgeRouter docblock.
+      knowledgeRouter,
     };
     this._built = built;
     return built;
@@ -450,7 +597,6 @@ export class ChatModule {
     ocr: TesseractOcrService | DisabledOcrService;
     userMemory?: UserMemoryService;
     knowledgeBase?: KnowledgeBaseService;
-    /** C4.1 (T3.3) — travels with legacy `knowledgeBase` for NFR8 (1 cycle). */
     knowledgeRouter?: KnowledgeRouterPort;
     imageEnrichment?: ImageEnrichmentService;
     webSearch?: WebSearchService;
@@ -478,8 +624,6 @@ export class ChatModule {
       artTopicClassifier: new ArtTopicClassifier(),
       advancedGuardrail: this.buildAdvancedGuardrail(),
       advancedGuardrailObserveOnly: env.guardrails.observeOnly,
-      // F4 (2026-04-30) — bind the judge to the live orchestrator. Disabled
-      // unless `GUARDRAILS_V2_CANDIDATE=llm-judge` so the noop path stays cost-free.
       llmJudgeEnabled: env.guardrails.candidate === 'llm-judge',
       llmJudge: async (message: string) =>
         await judgeWithLlm(message, { orchestrator: deps.effectiveOrchestrator }),
@@ -506,3 +650,67 @@ function buildLocationConsentChecker(): LocationConsentChecker {
     },
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Singleton (ex chat-module-singleton.ts) ===
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Active chat module reference. Defaults to a fresh singleton on import so
+ * existing call sites keep working, but `setActiveChatModule()` lets
+ * `createApp()` and tests substitute their own instance.
+ */
+let active: ChatModule = new ChatModule();
+
+/** Returns the active chat module — used by wiring accessors and the chat barrel. */
+export const getActiveChatModule = (): ChatModule => active;
+
+/** Swaps the active chat module. Call at boot inside `createApp()` or in tests. */
+export const setActiveChatModule = (next: ChatModule): void => {
+  active = next;
+};
+
+/** Resets to a fresh module — primarily for test teardown. */
+export const resetActiveChatModule = (): void => {
+  active = new ChatModule();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  === Runtime accessors (ex wiring.ts) ===
+//
+//  Used for lazy access to built services at request time
+//  (e.g. api.router.ts, auth callbacks). For lifecycle management,
+//  use the main barrel (`@modules/chat`).
+// ═══════════════════════════════════════════════════════════════════
+
+export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;
+
+export const getChatRepository = (): TypeOrmChatRepository =>
+  getActiveChatModule().getBuilt().repository;
+
+export const getUserMemoryService = (): UserMemoryService | undefined =>
+  getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().userMemoryService : undefined;
+
+export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().artKeywordRepository
+    : undefined;
+
+export const getDescribeService = (): DescribeService | undefined =>
+  getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().describeService : undefined;
+
+export const getLlmCircuitBreakerState = (): ReturnType<ChatModule['getLlmCircuitBreakerState']> =>
+  getActiveChatModule().getLlmCircuitBreakerState();
+
+export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().artworkKnowledgeRepo
+    : undefined;
+
+export const getCompareImageUseCase = (): BuiltChatModule['compareImageUseCase'] =>
+  getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().compareImageUseCase : undefined;
+
+export const getCompareSessionAccessVerifier = (): BuiltChatModule['compareSessionAccessVerifier'] =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
+    : undefined;

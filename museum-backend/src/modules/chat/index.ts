@@ -1,10 +1,11 @@
 /**
  * Chat module barrel — lifecycle API.
  *
- * Builds and tears down the chat module singleton. For lazy runtime accessors
- * (getters used at request time), import from `@modules/chat/wiring`.
+ * Builds and tears down the chat module singleton. Runtime accessors used at
+ * request time (`getImageStorage`, `getChatRepository`, etc.) are also exported
+ * from `./chat-module`.
  */
-import { getActiveChatModule } from './chat-module-singleton';
+import { getActiveChatModule } from './chat-module';
 
 import type { BuiltChatModule } from './chat-module';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
