@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from 'express';
-import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
+import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },

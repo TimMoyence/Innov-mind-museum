@@ -21,13 +21,13 @@ import {
 } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import {
   byIp,
   byUserId,
   createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
  * R16 MFA endpoints (SOC2 CC6.1).

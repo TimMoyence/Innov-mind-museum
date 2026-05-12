@@ -2,8 +2,8 @@ import { type Request, type Response, Router } from 'express';
 
 import { auditService } from '@shared/audit';
 import { logger } from '@shared/logger/logger';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { requireRole } from '@src/helpers/middleware/require-role.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { requireRole } from '@shared/middleware/require-role.middleware';
 
 import type { CacheService } from '@shared/cache/cache.port';
 

@@ -14,8 +14,8 @@
  * cookies (post follow-up web PR), mobile reads from JSON.
  */
 
+import { computeCsrfToken } from '@shared/middleware/csrf.middleware';
 import { env } from '@src/config/env';
-import { computeCsrfToken } from '@src/helpers/middleware/csrf.middleware';
 
 import type { Response, CookieOptions } from 'express';
 

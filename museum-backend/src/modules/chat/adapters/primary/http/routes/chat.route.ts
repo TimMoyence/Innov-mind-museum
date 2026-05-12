@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
+import { createUploadAdmissionMiddleware } from '@shared/middleware/upload-admission.middleware';
 
 import { createCompareRouter } from './chat-compare.route';
 import { createDescribeRouter } from './chat-describe.route';

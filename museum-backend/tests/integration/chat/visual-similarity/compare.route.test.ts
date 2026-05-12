@@ -27,7 +27,7 @@ import express from 'express';
 import request from 'supertest';
 
 import { badRequest } from '@shared/errors/app.error';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 import {
   makeCompareMatch,
   makeCompareResult,

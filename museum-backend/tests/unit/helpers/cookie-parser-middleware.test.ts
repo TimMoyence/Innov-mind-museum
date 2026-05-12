@@ -9,7 +9,7 @@
 import {
   cookieParserMiddleware,
   parseCookieHeader,
-} from '@src/helpers/middleware/cookie-parser.middleware';
+} from '@shared/middleware/cookie-parser.middleware';
 
 import type { NextFunction, Request, Response } from 'express';
 

@@ -8,8 +8,8 @@ import {
   userConsentRepository,
 } from '@modules/auth/useCase';
 import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /** Zod schema for POST /api/auth/consent. */
 export const grantConsentSchema = z.object({

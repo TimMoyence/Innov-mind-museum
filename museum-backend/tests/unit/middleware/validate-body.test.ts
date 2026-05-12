@@ -1,6 +1,6 @@
 import type { NextFunction } from 'express';
 import { z } from 'zod';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { AppError } from '@shared/errors/app.error';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 

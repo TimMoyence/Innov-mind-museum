@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { badRequest } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { byUserId, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 
 import type { DescribeService } from '@modules/chat/useCase/describe/describe.service';
 import type { Request, Response } from 'express';

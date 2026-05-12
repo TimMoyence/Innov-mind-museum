@@ -1,4 +1,4 @@
-import { httpMetricsMiddleware, metricsHandler } from '@src/helpers/metrics-middleware';
+import { httpMetricsMiddleware, metricsHandler } from '@shared/observability/metrics-middleware';
 import { registry } from '@shared/observability/prometheus-metrics';
 
 import type { Request, Response } from 'express';

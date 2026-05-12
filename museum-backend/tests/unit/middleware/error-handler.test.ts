@@ -1,5 +1,5 @@
 import type { NextFunction } from 'express';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 import { AppError } from '@shared/errors/app.error';
 import { MulterError } from 'multer';
 

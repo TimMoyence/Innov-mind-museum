@@ -5,7 +5,7 @@ import {
   clearDailyChatLimitBuckets,
   setDailyChatLimitCacheService,
   _resetDailyChatLimitCacheService,
-} from '@src/helpers/middleware/daily-chat-limit.middleware';
+} from '@shared/middleware/daily-chat-limit.middleware';
 import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 /** Flush multiple microtask cycles — needed for rejected promise .catch() chains */

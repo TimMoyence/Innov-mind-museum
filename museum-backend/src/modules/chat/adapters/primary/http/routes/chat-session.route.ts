@@ -11,8 +11,8 @@ import {
   type CreateSessionBody,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 import { AppError } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 

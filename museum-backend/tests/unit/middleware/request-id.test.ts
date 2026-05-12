@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from 'express';
-import { requestIdMiddleware } from '@src/helpers/middleware/request-id.middleware';
+import { requestIdMiddleware } from '@shared/middleware/request-id.middleware';
 import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 const mockReq = (headers: Record<string, string | undefined> = {}) =>

@@ -22,9 +22,9 @@ import {
   AUDIT_AUTH_EMAIL_VERIFIED,
 } from '@shared/audit/audit.types';
 import { requireUser } from '@shared/http/requireUser';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { env } from '@src/config/env';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 /**
  * Sub-router for email management endpoints:

@@ -1,7 +1,7 @@
 /**
  * F Phase 2 — httpCacheHeaders middleware unit tests (ADR-024).
  */
-import { httpCacheHeaders } from '@src/helpers/http-cache-headers';
+import { httpCacheHeaders } from '@shared/http/http-cache-headers';
 
 import type { Request, Response } from 'express';
 

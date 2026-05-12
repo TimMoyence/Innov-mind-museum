@@ -11,8 +11,8 @@ import { auditService } from '@shared/audit';
 import { AUDIT_API_KEY_CREATED, AUDIT_API_KEY_REVOKED } from '@shared/audit/audit.types';
 import { badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticatedJwtOnly } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { isAuthenticatedJwtOnly } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
  * Sub-router for the B2B API-key programme:

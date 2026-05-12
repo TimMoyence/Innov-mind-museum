@@ -43,11 +43,11 @@ import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCa
 import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
-import { env } from '@src/config/env';
 import {
   setApiKeyRepository,
   setUserRoleResolver,
-} from '@src/helpers/middleware/apiKey.middleware';
+} from '@shared/middleware/apiKey.middleware';
+import { env } from '@src/config/env';
 
 import type {
   ChatDataExportPort,

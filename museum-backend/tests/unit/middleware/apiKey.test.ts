@@ -16,7 +16,7 @@ import {
   setApiKeyRepository,
   getApiKeyRepository,
   setUserRoleResolver,
-} from '@src/helpers/middleware/apiKey.middleware';
+} from '@shared/middleware/apiKey.middleware';
 
 const mockRes = makePartialResponse;
 
@@ -54,7 +54,7 @@ describe('validateApiKey middleware', () => {
     await jest.isolateModulesAsync(async () => {
       const {
         validateApiKey: freshValidateApiKey,
-      } = require('@src/helpers/middleware/apiKey.middleware');
+      } = require('@shared/middleware/apiKey.middleware');
       const req = {} as Request;
       const res = mockRes();
       const next = jest.fn() as NextFunction;

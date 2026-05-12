@@ -2,7 +2,7 @@ import {
   byIp,
   byUserId,
   createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
 
 import { decodeFamilyIdUnsafe, toPositiveInt } from './auth-route.helpers';
 

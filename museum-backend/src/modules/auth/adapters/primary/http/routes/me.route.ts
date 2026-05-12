@@ -5,8 +5,8 @@ import { auditService } from '@shared/audit';
 import { AUDIT_DATA_EXPORT } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { byUserId, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 
 /**
  * Express router for current-user (`req.user`) GDPR endpoints.

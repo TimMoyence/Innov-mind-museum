@@ -26,18 +26,18 @@ import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cro
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { logger } from '@shared/logger/logger';
+import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
+import {
+  stopRateLimitSweep,
+  setRedisRateLimitStore,
+} from '@shared/middleware/rate-limit.middleware';
+import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { shutdownLangfuse } from '@shared/observability/langfuse.client';
 import { setMetricsDataSource } from '@shared/observability/metrics-context';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
-import { setDailyChatLimitCacheService } from '@src/helpers/middleware/daily-chat-limit.middleware';
-import {
-  stopRateLimitSweep,
-  setRedisRateLimitStore,
-} from '@src/helpers/middleware/rate-limit.middleware';
-import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
 
 import { createApp } from './app';
 

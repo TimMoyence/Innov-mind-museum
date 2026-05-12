@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 import { auditService } from '@shared/audit';
 import { notFound } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { requireRole } from '@src/helpers/middleware/require-role.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { requireRole } from '@shared/middleware/require-role.middleware';
+import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 

@@ -3,7 +3,7 @@ import {
   createRateLimitMiddleware,
   byIp,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 describe('rate-limit middleware — sweep and eviction', () => {

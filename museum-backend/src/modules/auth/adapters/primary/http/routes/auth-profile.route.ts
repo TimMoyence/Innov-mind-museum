@@ -20,8 +20,8 @@ import {
 } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
  * Sub-router for profile + account endpoints:

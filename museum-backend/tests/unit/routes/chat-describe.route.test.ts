@@ -5,8 +5,8 @@ import { createDescribeRouter } from '@modules/chat/adapters/primary/http/routes
 import {
   clearRateLimitBuckets,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 
 import { visitorToken } from '../../helpers/auth/token.helpers';
 

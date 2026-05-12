@@ -208,7 +208,7 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   const { createApp } = await import('@src/app');
   const { AppDataSource } = await import('@src/data/db/data-source');
   const { clearRateLimitBuckets } = await import(
-    '@src/helpers/middleware/rate-limit.middleware'
+    '@shared/middleware/rate-limit.middleware'
   );
 
   // Discover migrations the same way e2e-app-harness does — read from disk

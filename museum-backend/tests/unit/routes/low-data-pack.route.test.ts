@@ -5,8 +5,8 @@ import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/r
 import {
   clearRateLimitBuckets,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 import { AppError } from '@shared/errors/app.error';
 
 import { visitorToken } from '../../helpers/auth/token.helpers';

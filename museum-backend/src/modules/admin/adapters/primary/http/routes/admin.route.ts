@@ -33,10 +33,10 @@ import {
 } from '@modules/admin/useCase';
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { badRequest } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { requireRole } from '@src/helpers/middleware/require-role.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { requireRole } from '@shared/middleware/require-role.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
+import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 const adminRouter: Router = Router();
 

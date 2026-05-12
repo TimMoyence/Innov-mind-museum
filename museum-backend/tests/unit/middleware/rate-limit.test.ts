@@ -13,8 +13,8 @@ import {
   setRedisRateLimitStore,
   clearRateLimitBuckets,
   _resetRedisStore,
-} from '@src/helpers/middleware/rate-limit.middleware';
-import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+} from '@shared/middleware/rate-limit.middleware';
+import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 const makeMockReq = (overrides: Record<string, unknown> = {}): Request =>

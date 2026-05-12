@@ -3,8 +3,8 @@ import { z } from 'zod';
 
 import { getRequestUser } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { AppError } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 

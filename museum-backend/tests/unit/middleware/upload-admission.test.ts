@@ -1,4 +1,4 @@
-import { createUploadAdmissionMiddleware } from '@src/helpers/middleware/upload-admission.middleware';
+import { createUploadAdmissionMiddleware } from '@shared/middleware/upload-admission.middleware';
 
 import type { Response, NextFunction } from 'express';
 import { makePartialRequest } from '../../helpers/http/express-mock.helpers';

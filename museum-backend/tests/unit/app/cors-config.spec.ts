@@ -1,4 +1,4 @@
-import { resolveCorsOrigin } from '@src/helpers/cors.config';
+import { resolveCorsOrigin } from '@shared/http/cors.config';
 
 describe('resolveCorsOrigin — CORS policy matrix', () => {
   it('returns false when prod + empty origins (safe-by-default rejection)', () => {

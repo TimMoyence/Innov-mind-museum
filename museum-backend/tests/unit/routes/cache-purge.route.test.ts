@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/routes/cache-purge.route';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 
 import { adminToken, visitorToken } from '../../helpers/auth/token.helpers';
 

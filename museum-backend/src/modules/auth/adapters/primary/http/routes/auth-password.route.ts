@@ -19,9 +19,9 @@ import {
   AUDIT_AUTH_PASSWORD_RESET_REQUEST,
 } from '@shared/audit/audit.types';
 import { requireUser } from '@shared/http/requireUser';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { env } from '@src/config/env';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
 
 /**
  * Sub-router for password endpoints:

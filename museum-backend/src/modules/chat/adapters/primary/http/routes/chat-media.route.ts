@@ -19,14 +19,14 @@ import {
 import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { AppError, badRequest } from '@shared/errors/app.error';
-import { env } from '@src/config/env';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import {
   bySession,
   byUserId,
   createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';

@@ -25,16 +25,16 @@ jest.mock(
 );
 
 // Mock the apiKey.middleware relative import used inside authenticated.middleware
-jest.mock('@src/helpers/middleware/apiKey.middleware', () => ({
+jest.mock('@shared/middleware/apiKey.middleware', () => ({
   validateApiKey: jest.fn(),
 }));
 
 import {
   isAuthenticated,
   isAuthenticatedJwtOnly,
-} from '@src/helpers/middleware/authenticated.middleware';
+} from '@shared/middleware/authenticated.middleware';
 import { authSessionService } from '@modules/auth/useCase';
-import { validateApiKey } from '@src/helpers/middleware/apiKey.middleware';
+import { validateApiKey } from '@shared/middleware/apiKey.middleware';
 
 const expectUnauthorized = (fn: () => void, message: string): void => {
   try {

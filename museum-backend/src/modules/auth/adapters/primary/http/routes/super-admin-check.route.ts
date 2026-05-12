@@ -1,6 +1,6 @@
 import { type NextFunction, type Request, type Response, Router } from 'express';
 
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
 /**
  * GET /api/auth/super-admin-check — single-purpose RBAC gate consumed by

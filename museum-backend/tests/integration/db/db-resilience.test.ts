@@ -3,7 +3,7 @@ import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 
 import { AppError } from '@shared/errors/app.error';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 import { buildHealthPayload } from '@shared/routers/api.router';
 import { EntityNotFoundError } from 'typeorm/error/EntityNotFoundError';
 import { QueryFailedError } from 'typeorm/error/QueryFailedError';

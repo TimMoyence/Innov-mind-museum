@@ -69,7 +69,6 @@ export default tseslint.config(
         // ── Shared layer (cross-cutting) ──
         { type: 'shared', pattern: ['src/shared/**'], mode: 'full' },
         { type: 'config', pattern: ['src/config/**'], mode: 'full' },
-        { type: 'helpers', pattern: ['src/helpers/**'], mode: 'full' },
         { type: 'data', pattern: ['src/data/**'], mode: 'full' },
 
         // ── Domain layer (pure business logic, zero external deps) ──
@@ -122,7 +121,7 @@ export default tseslint.config(
         {
           default: 'allow',
           rules: [
-            // Domain CANNOT import application, infrastructure, primary, helpers, data
+            // Domain CANNOT import application, infrastructure, primary, data
             {
               from: { type: 'domain' },
               disallow: {
@@ -131,7 +130,6 @@ export default tseslint.config(
                     'application',
                     'infrastructure',
                     'primary',
-                    'helpers',
                     'data',
                     'module-root',
                     'entrypoint',
@@ -139,19 +137,12 @@ export default tseslint.config(
                 },
               },
             },
-            // Application CANNOT import infrastructure, primary, helpers, data
+            // Application CANNOT import infrastructure, primary, data
             {
               from: { type: 'application' },
               disallow: {
                 to: {
-                  type: [
-                    'infrastructure',
-                    'primary',
-                    'helpers',
-                    'data',
-                    'module-root',
-                    'entrypoint',
-                  ],
+                  type: ['infrastructure', 'primary', 'data', 'module-root', 'entrypoint'],
                 },
               },
             },

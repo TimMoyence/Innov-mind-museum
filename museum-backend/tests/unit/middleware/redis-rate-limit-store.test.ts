@@ -1,5 +1,5 @@
 import type Redis from 'ioredis';
-import { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import {
   makePartialRequest,
   makePartialResponse,
@@ -144,8 +144,8 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
 
   afterEach(() => {
     const { _resetRedisStore, clearRateLimitBuckets } = jest.requireActual<
-      typeof import('@src/helpers/middleware/rate-limit.middleware')
-    >('@src/helpers/middleware/rate-limit.middleware');
+      typeof import('@shared/middleware/rate-limit.middleware')
+    >('@shared/middleware/rate-limit.middleware');
     _resetRedisStore();
     clearRateLimitBuckets();
   });
@@ -157,9 +157,9 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
       setRedisRateLimitStore,
       _resetRedisStore,
       clearRateLimitBuckets,
-    } = await import('@src/helpers/middleware/rate-limit.middleware');
+    } = await import('@shared/middleware/rate-limit.middleware');
     const { RedisRateLimitStore: StoreClass } =
-      await import('@src/helpers/middleware/redis-rate-limit-store');
+      await import('@shared/middleware/redis-rate-limit-store');
 
     const store = new StoreClass(asRedis(mockRedis));
     setRedisRateLimitStore(store);

@@ -2,7 +2,7 @@ import { createApp } from '@src/app';
 import {
   clearRateLimitBuckets,
   stopRateLimitSweep,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
 
 /**
  * Creates a test Express app with mocked healthCheck and provides

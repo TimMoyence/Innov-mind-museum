@@ -209,7 +209,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
     import('@modules/chat/useCase/orchestration/chat.service'),
     import('@modules/chat/adapters/secondary/persistence/chat.repository.typeorm'),
     import('@modules/chat/adapters/secondary/storage/image-storage.stub'),
-    import('@src/helpers/middleware/rate-limit.middleware'),
+    import('@shared/middleware/rate-limit.middleware'),
     discoverMigrationClasses(),
   ]);
 

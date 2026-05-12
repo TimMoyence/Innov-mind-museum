@@ -10,7 +10,7 @@ import express from 'express';
 import request from 'supertest';
 
 import { logger } from '@shared/logger/logger';
-import { requestLoggerMiddleware } from '@src/helpers/middleware/request-logger.middleware';
+import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: {

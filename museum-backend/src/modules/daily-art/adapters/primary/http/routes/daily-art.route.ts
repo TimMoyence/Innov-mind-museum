@@ -4,7 +4,7 @@ import {
   selectArtworkForDate,
   toDateString,
 } from '@modules/daily-art/useCase/listing/getDailyArtwork.useCase';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
 import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
 import type { CacheService } from '@shared/cache/cache.port';

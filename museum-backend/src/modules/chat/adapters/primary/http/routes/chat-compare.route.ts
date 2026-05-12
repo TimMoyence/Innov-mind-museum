@@ -32,15 +32,15 @@ import {
   compareInvalidImage,
   compareInvalidTopK,
 } from '@shared/errors/app.error';
-import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
-import { env } from '@src/config/env';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import {
   bySession,
   byUserId,
   createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
+import { env } from '@src/config/env';
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { Request, Response, RequestHandler } from 'express';

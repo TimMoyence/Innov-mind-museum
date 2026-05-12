@@ -27,12 +27,12 @@ jest.mock('@shared/observability/sentry', () => ({
   setUser: jest.fn(),
 }));
 
-jest.mock('@src/helpers/middleware/apiKey.middleware', () => ({
+jest.mock('@shared/middleware/apiKey.middleware', () => ({
   validateApiKey: jest.fn(),
 }));
 
 import { authSessionService } from '@modules/auth/useCase';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
 const expectUnauthorized = (fn: () => void): AppError => {
   try {

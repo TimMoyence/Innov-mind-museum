@@ -39,10 +39,10 @@ import { createHash } from 'node:crypto';
 
 import { serviceUnavailable, tooManyRequests } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { getRedisRateLimitStore } from '@shared/middleware/rate-limit.middleware';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
-import { getRedisRateLimitStore } from '@src/helpers/middleware/rate-limit.middleware';
 
-import type { RedisRateLimitStore } from '@src/helpers/middleware/redis-rate-limit-store';
+import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 
 // --- Sliding window ---------------------------------------------------------
 const MAX_ATTEMPTS = 10;

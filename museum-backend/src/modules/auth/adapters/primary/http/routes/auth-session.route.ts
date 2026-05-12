@@ -38,7 +38,7 @@ import {
   AUDIT_AUTH_SOCIAL_LOGIN,
 } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
  * TEMP DIAGNOSTIC (2026-05-12) — TestFlight 1.2.2/88 prod log 13:52:49.094

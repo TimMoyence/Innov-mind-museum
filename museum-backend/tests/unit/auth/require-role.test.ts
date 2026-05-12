@@ -1,4 +1,4 @@
-import { requireRole } from '@src/helpers/middleware/require-role.middleware';
+import { requireRole } from '@shared/middleware/require-role.middleware';
 import {
   makePartialRequest,
   makePartialResponse,

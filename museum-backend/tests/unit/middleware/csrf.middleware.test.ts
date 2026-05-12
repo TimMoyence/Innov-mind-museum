@@ -35,7 +35,7 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-import { csrfMiddleware } from '@src/helpers/middleware/csrf.middleware';
+import { csrfMiddleware } from '@shared/middleware/csrf.middleware';
 
 const ACCESS_TOKEN = 'fake.jwt.value';
 const CSRF_SECRET = 'test-csrf-secret-32chars-minimum-aaaa';

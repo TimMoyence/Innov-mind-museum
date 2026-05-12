@@ -13,10 +13,10 @@ import {
   getTicketDetailUseCase,
   addTicketMessageUseCase,
 } from '@modules/support/useCase';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { byIp, createRateLimitMiddleware } from '@src/helpers/middleware/rate-limit.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
+import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 const supportRouter: Router = Router();
 

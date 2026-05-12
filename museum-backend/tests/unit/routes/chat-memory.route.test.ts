@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 
 import { createMemoryRouter } from '@modules/chat/adapters/primary/http/routes/chat-memory.route';
-import { errorHandler } from '@src/helpers/middleware/error.middleware';
+import { errorHandler } from '@shared/middleware/error.middleware';
 
 import { visitorToken } from '../../helpers/auth/token.helpers';
 

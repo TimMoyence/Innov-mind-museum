@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { acceptLanguageMiddleware } from '@src/helpers/middleware/accept-language.middleware';
+import { acceptLanguageMiddleware } from '@shared/middleware/accept-language.middleware';
 import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
 
 const mockReq = (headers: Record<string, string | string[] | undefined> = {}): Request =>

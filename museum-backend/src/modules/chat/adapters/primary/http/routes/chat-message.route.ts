@@ -9,14 +9,14 @@ import {
   extendTimeoutForUpload,
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { badRequest } from '@shared/errors/app.error';
-import { env } from '@src/config/env';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { dailyChatLimit } from '@src/helpers/middleware/daily-chat-limit.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import {
   bySession,
   byUserId,
   createRateLimitMiddleware,
-} from '@src/helpers/middleware/rate-limit.middleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { env } from '@src/config/env';
 
 import type { PostMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';

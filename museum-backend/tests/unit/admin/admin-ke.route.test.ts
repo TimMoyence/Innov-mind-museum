@@ -10,7 +10,7 @@ import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes
 
 // ── Auth middleware mocks ──────────────────────────────────────────────────────
 
-jest.mock('@src/helpers/middleware/authenticated.middleware', () => ({
+jest.mock('@shared/middleware/authenticated.middleware', () => ({
   isAuthenticated: (req: Request, _res: Response, next: NextFunction) => {
     const auth = req.headers.authorization;
     if (!auth) {
@@ -22,7 +22,7 @@ jest.mock('@src/helpers/middleware/authenticated.middleware', () => ({
 }));
 
 // requireRole mock: reads the role from the test-injected req.role header
-jest.mock('@src/helpers/middleware/require-role.middleware', () => ({
+jest.mock('@shared/middleware/require-role.middleware', () => ({
   requireRole:
     (...allowed: string[]) =>
     (req: Request, _res: Response, next: NextFunction) => {
@@ -38,7 +38,7 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-jest.mock('@src/helpers/middleware/validate-query.middleware', () => ({
+jest.mock('@shared/middleware/validate-query.middleware', () => ({
   validateQuery:
     (schema: { parse: (q: unknown) => unknown }) =>
     (req: Request, res: Response, next: NextFunction) => {

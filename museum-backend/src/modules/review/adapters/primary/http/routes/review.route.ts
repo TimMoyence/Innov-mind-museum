@@ -11,9 +11,9 @@ import {
   getReviewStatsUseCase,
 } from '@modules/review/useCase';
 import { unauthorized } from '@shared/errors/app.error';
-import { isAuthenticated } from '@src/helpers/middleware/authenticated.middleware';
-import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
-import { validateQuery } from '@src/helpers/middleware/validate-query.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
+import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 import type { ReviewAuthorProfile } from '@modules/review/useCase/public/createReview.useCase';
 
