@@ -42,7 +42,10 @@ const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
 // or `String()` triggers a rule on one side or the other; an explicit type-
 // narrowing predicate is silent on both.
 const isEnvEnabled = (): boolean => {
-  const raw = process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED;
+  // Explicit `: unknown` so CI's `any` typing on process.env doesn't leak into
+  // `raw` and trigger no-unsafe-assignment. Local sees string | undefined →
+  // unknown is a safe widening, no rule fires either side.
+  const raw: unknown = process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED;
   return typeof raw === 'string' && raw.toLowerCase() === 'true';
 };
 
