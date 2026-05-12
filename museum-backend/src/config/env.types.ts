@@ -23,7 +23,7 @@ export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
  * AFTER the deterministic keyword guardrail, gated by message length and budget.
  * See `src/modules/chat/useCase/llm-judge-guardrail.ts`.
  */
-export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'nemo' | 'prompt-armor' | 'llm-judge';
+export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'llm-judge';
 
 /**
  * Deployment topology hint consumed by boot-time invariant checks.

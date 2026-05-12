@@ -111,7 +111,7 @@ function resolveLocale(
   req: Request,
 ): 'fr' | 'en' {
   if (bodyLocale) return bodyLocale;
-  const clientLocale = (req as Request & { clientLocale?: string }).clientLocale;
+  const clientLocale = req.clientLocale;
   if (clientLocale === 'fr' || clientLocale === 'en') return clientLocale;
   return DEFAULT_LOCALE;
 }
@@ -225,7 +225,7 @@ function createCompareHandler(deps: CompareRouterDeps) {
 
     const body = parsed.data;
     const locale = resolveLocale(body.locale, req);
-    const ownerId = (req as Request & { user?: { id?: number } }).user?.id;
+    const ownerId = req.user?.id;
 
     // Authorization — verify the authenticated user owns the target session.
     // Mirrors `ensureSessionAccess()` on every other chat write path. Throws

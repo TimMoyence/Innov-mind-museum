@@ -4,15 +4,16 @@ import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
 import type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
+import type { Scheduler } from 'tesseract.js';
 
 // Re-export domain port types so existing consumers that imported from here keep working
 export type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 
 /** Tesseract.js-based OCR implementation with pooled Scheduler (2 workers). */
 export class TesseractOcrService implements OcrService {
-  private schedulerPromise: Promise<any> | null = null;
+  private schedulerPromise: Promise<Scheduler> | null = null;
 
-  private getScheduler(): Promise<any> {
+  private getScheduler(): Promise<Scheduler> {
     this.schedulerPromise ??= (async () => {
       const Tesseract = await import('tesseract.js');
       const scheduler = Tesseract.createScheduler();

@@ -109,7 +109,7 @@ export async function validateApiKey(
 
     // Set user on request (same shape as JWT auth)
     const museumId = (apiKey as { museumId?: number | null }).museumId ?? null;
-    (req as Request & { user?: { id: number; role: UserRole; museumId?: number | null } }).user = {
+    req.user = {
       id: apiKey.userId,
       role,
       museumId,

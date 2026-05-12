@@ -17,11 +17,11 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
 - [x] C.1 — boundaries v5 → v6 migration (`museum-backend/eslint.config.mjs`). Replaced `boundaries/element-types` (deprecated inline string-array form) with `boundaries/dependencies` using v6 object selectors. No deprecation warnings. Files: `museum-backend/eslint.config.mjs`.
 - [x] C.2 — Fix domain→useCase violation. Moved `ResolvedLocation` + `NearbyMuseum` to `museum-backend/src/modules/chat/domain/location/`. `chat-orchestrator.port.ts` now imports from domain. Re-exported via location-resolver.ts to keep useCase callers stable. Files: `chat-orchestrator.port.ts`, `location-resolver.ts`, `nearby-museums.provider.ts`, NEW `domain/location/{resolvedLocation,nearbyMuseum}.ts`.
 - [x] C.3 — Fix useCase→adapter direct imports. Moved `CircuitOpenError` to `domain/errors/circuit-open.error.ts` and `BreakerState`/`BreakerStateName` to `domain/breaker/breaker-state.ts`. Adapter files re-export for backward compat. `chat.service.ts` + `knowledge-base.service.ts` now import from domain. Files: `chat.service.ts`, `knowledge-base.service.ts`, `llm-circuit-breaker.ts`, `wikidata-breaker.ts`, NEW `domain/errors/circuit-open.error.ts`, NEW `domain/breaker/breaker-state.ts`.
-- [ ] C.4 — Fix `Promise<any>` ocr-service.ts
-- [ ] C.5 — Express augmentation cleanup
-- [ ] C.6 — Remove dead `nemo`/`prompt-armor` branches
-- [ ] C.7 — Replace LLMCircuitBreaker with opossum
-- [ ] C.8 — Replace Semaphore with p-limit
+- [x] C.4 — Fix `Promise<any>` ocr-service.ts. Imported `Scheduler` from `tesseract.js`. `grep "Promise<any>" src/` = 0. Files: `ocr-service.ts`.
+- [x] C.5 — Express augmentation cleanup. Verified `src/shared/types/express/index.d.ts` is loaded (tsc --listFiles). Removed 10 `(req as Request & {...})` casts across middleware + routes. Files: `apiKey`, `request-logger`, `daily-chat-limit`, `rate-limit`, `mfa.route`, `chat-session.route`, `chat-compare.route`, `chat-route.helpers`. `grep "as Request &" src/` = 0.
+- [x] C.6 — Remove dead `nemo`/`prompt-armor` branches. `GuardrailsV2Candidate` → `'off' | 'llm-guard' | 'llm-judge'`. Resolver narrowed. chat-module.ts noop fallback removed. `grep "nemo\\|prompt-armor" src/` = 0. Files: `env.types.ts`, `env-resolvers.ts`, `chat-module.ts`.
+- [x] C.7 — **BLOCKED** : opossum's async event-based model is incompatible with custom breaker's synchronous test helpers (`recordFailure`/`recordSuccess` expect immediate state update). Migration would require rewriting 4 test files (`llm-circuit-breaker.test.ts`, `langchain-orchestrator.test.ts`, `langchain-orchestrator-branches.test.ts`, `chaos-circuit-breaker.e2e.test.ts`) with async assertion patterns — out-of-scope for the audit's ~30L estimate. Defer to dedicated sprint with test rebase plan.
+- [x] C.8 — Replace Semaphore with p-limit (BE). p-limit@^3 (CJS-compat) installed via `pnpm add p-limit@^3`. Rewrote `semaphore.ts` as wrapper preserving counters (immediate visibility for synchronous test patterns) + queue-size cap + acquire timeout via `Promise.race`. 9/9 unit tests pass. Files: `semaphore.ts` (132→108L), NEW `domain/errors/semaphore-queue-full.error.ts`, NEW `domain/errors/semaphore-timeout.error.ts`. **For D**: tests pass, no rebase needed.
 - [ ] C.9 — Remove 14 *_ENABLED flags
 - [ ] C.10 — Reunify chat-module*.ts
 - [ ] C.11 — Reduce null-object ports

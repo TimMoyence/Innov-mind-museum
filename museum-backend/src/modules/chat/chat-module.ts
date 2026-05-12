@@ -216,8 +216,6 @@ export class ChatModule {
       return new LLMGuardAdapter({ baseUrl, timeoutMs: env.guardrails.timeoutMs });
     }
 
-    // nemo and prompt-armor adapters are not yet implemented; fall back to noop.
-    logger.info('advanced_guardrail_adapter_pending', { candidate });
     return undefined;
   }
 

@@ -138,9 +138,7 @@ export function resolveLlmProvider(): LlmProvider {
 /** Whitelist-narrows `GUARDRAILS_V2_CANDIDATE`; defaults to off. */
 export function resolveGuardrailsCandidate(): GuardrailsV2Candidate {
   const raw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
-  return (['off', 'llm-guard', 'nemo', 'prompt-armor', 'llm-judge'] as const).includes(
-    raw as GuardrailsV2Candidate,
-  )
+  return (['off', 'llm-guard', 'llm-judge'] as const).includes(raw as GuardrailsV2Candidate)
     ? (raw as GuardrailsV2Candidate)
     : 'off';
 }
