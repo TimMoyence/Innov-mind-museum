@@ -32,8 +32,12 @@ const makeServiceMock = (
   }) as unknown as DescribeService;
 
 describe('POST /api/chat/describe', () => {
-  beforeEach(() => clearRateLimitBuckets());
-  afterAll(() => stopRateLimitSweep());
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
 
   it('returns description on golden path (text-only input)', async () => {
     const service = makeServiceMock();

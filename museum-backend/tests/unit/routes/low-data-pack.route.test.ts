@@ -35,8 +35,12 @@ const makeServiceMock = (
   }) as unknown as LowDataPackService;
 
 describe('GET /api/museums/:id/low-data-pack', () => {
-  beforeEach(() => clearRateLimitBuckets());
-  afterAll(() => stopRateLimitSweep());
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+  afterAll(() => {
+    stopRateLimitSweep();
+  });
 
   it('returns pack on golden path (authenticated, default locale)', async () => {
     const service = makeServiceMock();
