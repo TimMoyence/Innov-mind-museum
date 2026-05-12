@@ -1,6 +1,6 @@
 import compression from 'compression';
 import cors from 'cors';
-import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { AppDataSource } from '@data/db/data-source';
@@ -93,35 +93,9 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
   };
 }
 
-/**
- * Diagnostic for the MaxListenersExceededWarning ("21 finish listeners")
- * that survived the Sentry+OTel dedup attempt (commit a739f4a). Logs the
- * listener count seen at the start of the Express middleware chain (= what
- * OTel + Sentry + the http module wrapping already attached) and the total
- * count at `finish` emission (= cumulative including all Express middleware).
- *
- * Cap raised to 100 so the warning stays silent during data collection;
- * remove this block once the breakdown is known and the targeted fix lands.
- */
-const diagFinishListenersMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
-  res.setMaxListeners(100);
-  const atStart = res.listenerCount('finish');
-  res.on('finish', () => {
-    logger.info('diag_finish_listeners', {
-      atStart,
-      atFinish: res.listenerCount('finish'),
-      closeCount: res.listenerCount('close'),
-      errorCount: res.listenerCount('error'),
-    });
-  });
-  next();
-};
-
 /** Registers security, compression, timeout, and parsing middleware on the Express app. */
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
-
-  app.use(diagFinishListenersMiddleware);
 
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
