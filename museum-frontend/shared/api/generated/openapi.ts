@@ -72,6 +72,8 @@ export interface paths {
             password: string;
             firstname: string;
             lastname: string;
+            /** Format: date — ISO YYYY-MM-DD. Required to enforce the French digital-majority age-gate (15 years, CNIL Délibération 2021-018). */
+            dateOfBirth?: string;
           };
         };
       };

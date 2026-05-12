@@ -2,13 +2,29 @@ import crypto from 'node:crypto';
 
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildVerifyEmail } from '@shared/email/templates';
-import { badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest } from '@shared/errors/app.error';
 import { POLICY_VERSION } from '@shared/legal/policy-version';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
+
+/**
+ * French digital majority (CNIL Délibération 2021-018). Standalone account
+ * creation requires the user to be at least this old; below the threshold,
+ * the FE flow must route the user to a parental-consent screen instead.
+ */
+const MINIMUM_AGE_FOR_REGISTRATION = 15;
+
+const calculateAgeYears = (dob: Date, now: Date = new Date()): number => {
+  let age = now.getUTCFullYear() - dob.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - dob.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < dob.getUTCDate())) {
+    age -= 1;
+  }
+  return age;
+};
 
 import type { User } from '@modules/auth/domain/user/user.entity';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -42,11 +58,32 @@ export class RegisterUseCase {
     firstname?: string,
     lastname?: string,
     locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
+    dateOfBirth?: string,
   ): Promise<User> {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!validateEmail(normalizedEmail)) {
       throw badRequest('Invalid email format');
+    }
+
+    // Age-gate (CNIL Délibération 2021-018). The FE always passes
+    // `dateOfBirth` after the age-gate ships; reject if it's missing or if
+    // the user is below the digital majority. 422 (Unprocessable Entity) +
+    // a stable code so the FE can route the user to the parental-consent
+    // screen instead of showing a generic validation error.
+    if (dateOfBirth) {
+      const parsed = new Date(`${dateOfBirth}T00:00:00Z`);
+      if (Number.isNaN(parsed.getTime())) {
+        throw badRequest('Invalid dateOfBirth');
+      }
+      const age = calculateAgeYears(parsed);
+      if (age < MINIMUM_AGE_FOR_REGISTRATION) {
+        throw new AppError({
+          message: 'Standalone registration is not available below 15 years; parental consent is required.',
+          statusCode: 422,
+          code: 'MINOR_PARENTAL_CONSENT_REQUIRED',
+        });
+      }
     }
 
     const pw = validatePassword(password);
@@ -73,6 +110,7 @@ export class RegisterUseCase {
       password,
       sanitizedFirstname,
       sanitizedLastname,
+      dateOfBirth,
     );
 
     // GDPR — register the ToS/privacy consent at policy version POLICY_VERSION.

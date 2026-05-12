@@ -9,6 +9,14 @@ export const registerSchema = z.object({
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
   locale: z.enum(['fr', 'en']).optional(),
+  // CNIL Délibération 2021-018 — digital majority is 15 years. Standalone
+  // registration is rejected below the threshold (parental flow handled by
+  // the BE returning `MINOR_PARENTAL_CONSENT_REQUIRED`). YYYY-MM-DD wire
+  // format; the use case parses and computes the age server-side.
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD')
+    .optional(),
 });
 
 export const loginSchema = z.object({

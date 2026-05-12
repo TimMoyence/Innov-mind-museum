@@ -14,6 +14,8 @@ interface UseEmailPasswordAuthArgs {
   password: string;
   firstname: string;
   lastname: string;
+  /** ISO YYYY-MM-DD. Required at submit time (age-gate); empty string forwarded for type stability. */
+  dateOfBirth: string;
   loginWithSession: LoginWithSession;
   onRegistrationComplete: () => void;
 }
@@ -44,6 +46,7 @@ export function useEmailPasswordAuth({
   password,
   firstname,
   lastname,
+  dateOfBirth,
   loginWithSession,
   onRegistrationComplete,
 }: UseEmailPasswordAuthArgs): UseEmailPasswordAuthResult {
@@ -67,11 +70,11 @@ export function useEmailPasswordAuth({
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      if (!email || !password || !firstname || !lastname) {
+      if (!email || !password || !firstname || !lastname || !dateOfBirth) {
         Alert.alert(t('common.error'), t('auth.fill_all_fields'));
         return;
       }
-      await authService.register({ email, password, firstname, lastname });
+      await authService.register({ email, password, firstname, lastname, dateOfBirth });
 
       // Auto-login after successful registration
       try {

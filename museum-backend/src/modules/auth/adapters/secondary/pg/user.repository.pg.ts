@@ -53,6 +53,7 @@ export class UserRepositoryPg implements IUserRepository {
     password: string,
     firstname?: string,
     lastname?: string,
+    dateOfBirth?: string,
   ): Promise<User> {
     const existingUser = await this.getUserByEmail(email);
     if (existingUser) {
@@ -65,6 +66,7 @@ export class UserRepositoryPg implements IUserRepository {
       password: hashedPassword,
       firstname: firstname ?? undefined,
       lastname: lastname ?? undefined,
+      dateOfBirth: dateOfBirth ? new Date(`${dateOfBirth}T00:00:00Z`) : null,
     });
     return await this.repo.save(entity);
   }
