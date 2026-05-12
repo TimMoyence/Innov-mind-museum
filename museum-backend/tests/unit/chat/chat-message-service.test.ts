@@ -324,22 +324,37 @@ describe('ChatMessageService', () => {
     // R10 end-to-end coverage lives in the manual smoke (see ADR-036
     // §Status timeline, PR-B precondition: `LLM_CACHE_ENABLED=false` smoke
     // verified locally).
-    it('R10 — kill-switch bypass branch wired in tryLlmCacheLookup (static guard)', () => {
+    it('R10 — kill-switch bypass is structural (no cache adapter when env disables it)', () => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- static source read for regression guard, no module load
       const { readFileSync } = require('fs') as typeof import('fs');
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- ditto
       const { resolve } = require('path') as typeof import('path');
-      const src = readFileSync(
+
+      // Post-refactor (C.10 chat-module reunification): the kill-switch is no
+      // longer a runtime `!env.llm.cacheEnabled` branch inside the service —
+      // the composition root simply doesn't construct an `LlmCacheServiceImpl`
+      // when `deps.cache` is undefined (env disabled cache). The service then
+      // short-circuits via `if (!llmCache)` in `tryLlmCacheLookup`.
+      const composition = readFileSync(
+        resolve(
+          __dirname,
+          '../../../src/modules/chat/useCase/orchestration/chat.service.ts',
+        ),
+        'utf8',
+      );
+      expect(composition).toMatch(/llmCache:\s*deps\.cache\s*\?\s*new\s+LlmCacheServiceImpl/);
+
+      const service = readFileSync(
         resolve(
           __dirname,
           '../../../src/modules/chat/useCase/message/chat-message.service.ts',
         ),
         'utf8',
       );
-      // The condition (cache wired AND kill-switch flipped off) and the
-      // observable side effect (the named log event) must coexist.
-      expect(src).toMatch(/!env\.llm\.cacheEnabled/);
-      expect(src).toMatch(/llm_cache_disabled_bypass/);
+      // Both code paths (lookup + store) must guard on `!llmCache` so a
+      // missing adapter never silently bypasses the kill-switch contract.
+      expect(service).toMatch(/tryLlmCacheLookup[\s\S]+?if\s*\(\s*!llmCache/);
+      expect(service).toMatch(/tryLlmCacheStore[\s\S]+?if\s*\(\s*!llmCache/);
     });
 
     it('handles optimistic lock error as 409 conflict', async () => {
