@@ -1,4 +1,3 @@
-import { z } from 'zod';
 
 import { decodeJwtPayload } from '@shared/auth/jwt-decode';
 import {
@@ -6,6 +5,7 @@ import {
   localeFromAcceptLanguage,
   resolveEmailLocale,
 } from '@shared/email/email-locale';
+import { z } from 'zod';
 
 import type { Request } from 'express';
 
@@ -13,7 +13,10 @@ import type { Request } from 'express';
  * Pick the email locale for outgoing transactional emails.
  *
  * Priority order:
- *   1. Explicit `locale` field in the request body (validated by Zod → `'fr' | 'en'`).
+ *   1. Explicit `locale` field in the request body. The Zod schemas accept any
+ *      `SupportedLocale` (8 user locales incl. 'ar'), but transactional emails
+ *      ship in only fr/en today — anything other than `'fr' | 'en'` falls
+ *      through to the next step rather than failing the request.
  *   2. `Accept-Language` header (simple fr/en heuristic).
  *   3. Default (`'fr'`).
  */

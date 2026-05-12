@@ -8,9 +8,9 @@ import {
 
 describe('locale utilities', () => {
   describe('SUPPORTED_LOCALES', () => {
-    it('contains exactly 7 locales', () => {
-      expect(SUPPORTED_LOCALES).toHaveLength(7);
-      expect([...SUPPORTED_LOCALES]).toEqual(['en', 'fr', 'es', 'de', 'it', 'ja', 'zh']);
+    it('contains exactly 8 locales', () => {
+      expect(SUPPORTED_LOCALES).toHaveLength(8);
+      expect([...SUPPORTED_LOCALES]).toEqual(['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar']);
     });
   });
 
@@ -19,7 +19,7 @@ describe('locale utilities', () => {
       expect(isSupportedLocale(locale)).toBe(true);
     });
 
-    it.each(['pt', 'ru', 'ko', 'ar', 'xx', ''])('returns false for "%s"', (locale) => {
+    it.each(['pt', 'ru', 'ko', 'xx', ''])('returns false for "%s"', (locale) => {
       expect(isSupportedLocale(locale)).toBe(false);
     });
   });

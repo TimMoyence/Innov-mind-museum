@@ -1,14 +1,15 @@
-import { z } from 'zod';
 
 import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-preference';
 import { TTS_VOICES } from '@modules/chat/domain/voice-catalog';
+import { SUPPORTED_LOCALES } from '@shared/i18n/locale';
+import { z } from 'zod';
 
 export const registerSchema = z.object({
   email: z.email(),
   password: z.string().min(8).max(128),
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
-  locale: z.enum(['fr', 'en']).optional(),
+  locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
   // CNIL Délibération 2021-018 — digital majority is 15 years. Standalone
   // registration is rejected below the threshold (parental flow handled by
   // the BE returning `MINOR_PARENTAL_CONSENT_REQUIRED`). YYYY-MM-DD wire
@@ -62,7 +63,7 @@ export const changePasswordSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email: z.email(),
-  locale: z.enum(['fr', 'en']).optional(),
+  locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
 });
 
 export const resetPasswordSchema = z.object({
@@ -77,7 +78,7 @@ export const verifyEmailSchema = z.object({
 export const changeEmailSchema = z.object({
   newEmail: z.email(),
   currentPassword: z.string().min(1),
-  locale: z.enum(['fr', 'en']).optional(),
+  locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
 });
 
 export const confirmEmailChangeSchema = z.object({

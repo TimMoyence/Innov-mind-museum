@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'] as const;
+export const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'] as const;
 /** Union type of all supported two-letter locale codes. */
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
@@ -10,6 +10,7 @@ const LOCALE_TO_LANGUAGE: Record<SupportedLocale, string> = {
   it: 'Italian',
   ja: 'Japanese',
   zh: 'Chinese',
+  ar: 'Arabic',
 };
 
 /** Type guard that checks whether a string is a supported locale code. */

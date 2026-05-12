@@ -68,6 +68,14 @@ const FALLBACK_TEMPLATES: Record<SupportedLocale, FallbackTemplates> = {
     standardHint: '有用的角度: 关注构图、光线和历史背景。',
     closingQuestion: '您想要技术性、传记性还是象征性的解读？',
   },
+  ar: {
+    locationPrefix: (loc) => `أنت حاليًا بالقرب من ${loc}. `,
+    quickSummary: 'ملخّص سريع: ',
+    defaultQuestion: 'سؤال عن عمل فني.',
+    museumNextStep: 'الخطوة التالية: قارن تفاصيل التكوين بعمل قريب.',
+    standardHint: 'زاوية مفيدة: ركّز على التكوين والإضاءة والسياق التاريخي.',
+    closingQuestion: 'هل تودّ قراءة تقنية أم سيرة ذاتية أم رمزية؟',
+  },
 };
 
 /**

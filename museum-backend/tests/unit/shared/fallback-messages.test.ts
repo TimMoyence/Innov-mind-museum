@@ -41,7 +41,7 @@ describe('buildLocalizedFallback', () => {
   });
 
   it('works for all supported locales', () => {
-    const locales: SupportedLocale[] = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'];
+    const locales: SupportedLocale[] = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'];
 
     for (const locale of locales) {
       const result = buildLocalizedFallback(locale, {
@@ -66,7 +66,7 @@ describe('buildLocalizedFallback', () => {
   });
 
   it('all locales have locationPrefix as a function', () => {
-    const locales: SupportedLocale[] = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh'];
+    const locales: SupportedLocale[] = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'];
 
     for (const locale of locales) {
       const templates = FALLBACK_TEMPLATES[locale];
