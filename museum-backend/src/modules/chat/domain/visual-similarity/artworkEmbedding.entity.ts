@@ -57,6 +57,27 @@ export class ArtworkEmbedding {
   @Column({ type: 'text', name: 'museum_qid', nullable: true })
   museumQid?: string | null;
 
+  /**
+   * Internal Musaium tenant FK (`museums.id`). Distinct from {@link museumQid}
+   * (Wikidata public reference). NULL means the row belongs to the **global
+   * public catalog** (Wikimedia / public museum APIs) and is visible to every
+   * tenant; non-NULL means the row is **tenant-private** to that museum.
+   *
+   * Modeled as a flat integer column (no `@ManyToOne` Relation) because the
+   * repository goes through raw SQL exclusively (`halfvec` cast — see file
+   * header). Adding a relation here would force TypeORM to surface a join on
+   * every hand-written query, which we never want. The FK constraint is
+   * declared at the DB layer in migration
+   * `AddMuseumIdScopeToArtworkEmbeddings1778622760826`.
+   *
+   * OWASP LLM08 — `findNearest()` scopes by `museum_id IS NULL OR museum_id =
+   * $tenantId` so a tenant can never receive a private match owned by another
+   * tenant.
+   */
+  @Index('IDX_artwork_embeddings_museum_id')
+  @Column({ type: 'integer', name: 'museum_id', nullable: true })
+  museumId?: number | null;
+
   /** Canonical artwork title (resolved language at ingestion time, typically EN). */
   @Column({ type: 'text', name: 'title' })
   title!: string;

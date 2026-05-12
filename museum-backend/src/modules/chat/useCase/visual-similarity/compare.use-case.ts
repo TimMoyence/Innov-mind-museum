@@ -90,6 +90,8 @@ export interface SimilarityServicePort {
     topK: number;
     locale: 'fr' | 'en';
     museumQids?: string[];
+    /** OWASP LLM08 internal tenant scope (`museums.id`); see {@link CompareUseCaseInput.museumId}. */
+    museumId?: number | null;
   }): Promise<CompareResult>;
 }
 
@@ -128,8 +130,16 @@ export interface CompareUseCaseInput {
   topK: number;
   /** Resolved locale for rationale + Wikidata enrichment. */
   locale: 'fr' | 'en';
-  /** Optional museum-scope filter forwarded to the kNN search (R4). */
+  /** Optional Wikidata QID filter forwarded to the kNN search (R4 — external public axis). */
   museumQids?: string[];
+  /**
+   * Optional internal tenant scope (`museums.id`) forwarded to the kNN search.
+   * OWASP LLM08 — resolved by the route from `ChatSession.museumId` so the
+   * use-case does not need a chat-repository handle. V1 single-tenant ships
+   * with this `undefined` (a warn is logged at the repo layer); the field is
+   * plumbed end-to-end so B2B onboarding flips a single call site.
+   */
+  museumId?: number | null;
   /** Optional uploader user id (storage key + audit trail). */
   ownerId?: number;
 }
@@ -179,6 +189,12 @@ export function compareImageUseCase(
       topK: input.topK,
       locale: input.locale,
       ...(input.museumQids !== undefined ? { museumQids: input.museumQids } : {}),
+      // OWASP LLM08 — forward the resolved tenant scope. `null` is treated
+      // identically to `undefined` downstream (legacy global read + warn);
+      // only a positive integer activates the WHERE clause at the repo layer.
+      ...(input.museumId !== undefined && input.museumId !== null
+        ? { museumId: input.museumId }
+        : {}),
     };
     const result = await similarityService.compare(compareInput);
 
@@ -231,9 +247,7 @@ export function compareImageUseCase(
       locale: input.locale,
       durationMs: Date.now() - startedAt,
       matchesCount: result.matches.length,
-      ...(result.fallbackReason !== undefined
-        ? { fallbackReason: result.fallbackReason }
-        : {}),
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
     });
 
     return result;

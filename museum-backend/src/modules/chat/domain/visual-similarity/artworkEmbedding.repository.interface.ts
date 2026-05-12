@@ -27,16 +27,43 @@ export interface ArtworkEmbeddingRow {
   license: ArtworkEmbedding['license'];
   /** Model version that produced the embedding (e.g. `"siglip-base-patch16-224@v1"`). */
   embeddingModelVersion: string;
+  /**
+   * Optional internal Musaium tenant FK (`museums.id`). Omitted / `null` means
+   * the row belongs to the global public catalog (visible to every tenant);
+   * a non-null value pins the row to that single tenant.
+   *
+   * Distinct from {@link ArtworkMetadata.museumQid} (Wikidata public reference).
+   * OWASP LLM08 — see {@link FindNearestOptions.museumId}.
+   */
+  museumId?: number | null;
 }
 
 /** Optional tuning knobs for {@link ArtworkEmbeddingRepository.findNearest}. */
 export interface FindNearestOptions {
   /**
-   * Optional list of museum QIDs to restrict the search to. Implementations
-   * MUST translate this into an indexed predicate on `museum_qid` so the
-   * HNSW pre-filter remains cheap.
+   * Optional list of museum **Wikidata QIDs** to restrict the search to.
+   * Implementations MUST translate this into an indexed predicate on
+   * `museum_qid` so the HNSW pre-filter remains cheap.
+   *
+   * Note: this is the **external public** axis (Wikidata Q-identifiers shared
+   * across all tenants — Q19675 = "Louvre" for every caller). For tenant
+   * isolation use {@link museumId} below.
    */
   museumQids?: string[];
+
+  /**
+   * Optional **internal tenant** scope (`museums.id`). When provided, the
+   * repository MUST filter rows to `museum_id IS NULL OR museum_id =
+   * $museumId` — i.e. global public catalog rows PLUS that single tenant's
+   * private rows. Other tenants' private rows MUST NEVER be returned.
+   *
+   * When omitted (undefined), implementations SHOULD warn-log and fall back
+   * to the **global** read (NULL + every tenant) for V1 single-tenant
+   * backward compatibility. The B2B onboarding checklist must flip every
+   * caller to pass an explicit `museumId` before the first paying tenant
+   * goes live (OWASP LLM08).
+   */
+  museumId?: number | null;
 }
 
 /**

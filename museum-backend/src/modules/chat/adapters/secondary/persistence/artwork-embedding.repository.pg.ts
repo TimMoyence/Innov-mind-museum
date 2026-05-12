@@ -26,6 +26,8 @@
  *     inside a single transaction so a partial crash never leaves the
  *     catalog half-ingested.
  */
+import { logger } from '@shared/logger/logger';
+
 import type { ArtworkEmbedding } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 import type {
   ArtworkEmbeddingRepository,
@@ -47,6 +49,7 @@ import type { DataSource, EntityManager } from 'typeorm';
 interface ArtworkEmbeddingSqlRow {
   qid: string;
   museum_qid: string | null;
+  museum_id: number | null;
   title: string;
   image_url: string;
   license: ArtworkEmbedding['license'];
@@ -78,6 +81,7 @@ const serialiseVector = (vector: Float32Array): string => `[${Array.from(vector)
 const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   qid: row.qid,
   museumQid: row.museum_qid,
+  museumId: row.museum_id,
   title: row.title,
   imageUrl: row.image_url,
   license: row.license,
@@ -134,9 +138,21 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
    * `[-1, 1]` for L2-unit vectors — the rescaling lands identical = 1,
    * orthogonal = 0.5, opposite = 0).
    *
-   * The optional `museumQids` filter is applied via `museum_qid = ANY($2)`
-   * so the btree index on `museum_qid` (Phase 3 migration) prunes the HNSW
-   * candidate set without a full table scan.
+   * Two orthogonal filters can be applied:
+   *
+   *   - `museumQids` (Wikidata external axis) — `museum_qid = ANY($2)`,
+   *     served by `IDX_artwork_embeddings_museum_qid`.
+   *   - `museumId` (internal tenant axis, OWASP LLM08) — `museum_id IS NULL
+   *     OR museum_id = $4`, served by `IDX_artwork_embeddings_museum_id`.
+   *     The NULL branch covers the global public catalog (visible to every
+   *     tenant); the equality branch covers the requesting tenant's private
+   *     rows. **When `museumId` is `undefined`** the predicate is omitted
+   *     entirely (legacy global read) and a `warn` is logged so the B2B
+   *     onboarding checklist surfaces every remaining unscoped call site
+   *     before the first tenant goes live. V1 single-tenant has zero rows
+   *     with a non-NULL `museum_id`, so the unscoped path is currently
+   *     leakage-free by construction — but the warn must be silenced before
+   *     B2B.
    */
   async findNearest(
     query: Float32Array,
@@ -145,16 +161,32 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   ): Promise<NearestResult[]> {
     const queryLiteral = serialiseVector(query);
     const museumQids = opts.museumQids ?? null;
+    // `museumId === undefined` → legacy global read (warn). `null` is treated
+    // identically to `undefined` here — explicit "I want the public catalog
+    // only" callers must pass an empty-array filter convention if we add one
+    // later. Today's contract: only a positive integer tenant id activates
+    // the scope.
+    const museumId = typeof opts.museumId === 'number' ? opts.museumId : null;
+    if (museumId === null) {
+      logger.warn('artwork_embeddings_find_nearest_unscoped', {
+        // OWASP LLM08 — flag every unscoped call so the B2B onboarding
+        // checklist can grep this log line and trace it back to its caller.
+        reason: 'museumId not provided — global read (cross-tenant scope disabled)',
+        topN,
+        museumQidsCount: museumQids?.length ?? 0,
+      });
+    }
 
     const rows: ArtworkEmbeddingNearestSqlRow[] = await this.dataSource.query(
-      `SELECT qid, museum_qid, title, image_url, license, image_source,
+      `SELECT qid, museum_qid, museum_id, title, image_url, license, image_source,
               embedding, embedding_model_version, created_at, updated_at,
               ((1 - (embedding <#> $1::halfvec)) / 2) AS similarity
        FROM artwork_embeddings
        WHERE ($2::text[] IS NULL OR museum_qid = ANY($2::text[]))
+         AND ($4::integer IS NULL OR museum_id IS NULL OR museum_id = $4::integer)
        ORDER BY embedding <#> $1::halfvec
        LIMIT $3`,
-      [queryLiteral, museumQids, topN],
+      [queryLiteral, museumQids, topN, museumId],
     );
 
     return rows.map((row) => ({
@@ -280,25 +312,32 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
 
   /**
    * Write the non-skipped rows via a single multi-VALUES `INSERT … ON
-   * CONFLICT (qid) DO UPDATE`. Each row contributes seven placeholders
-   * (qid, museum_qid, title, image_url, license, image_source, embedding,
-   * embedding_model_version) — the eighth column `updated_at` is bumped via
-   * `now()` on the conflict path so concurrent ingests cannot regress it.
+   * CONFLICT (qid) DO UPDATE`. Each row contributes nine placeholders
+   * (qid, museum_qid, museum_id, title, image_url, license, image_source,
+   * embedding, embedding_model_version) — the tenth column `updated_at` is
+   * bumped via `now()` on the conflict path so concurrent ingests cannot
+   * regress it.
+   *
+   * `museum_id` (OWASP LLM08 tenant axis — `museums.id`) is sourced from
+   * `row.museumId` and defaults to NULL when the catalog ingest CLI does not
+   * supply one (i.e. global public catalog ingest). Distinct from
+   * `museum_qid` (Wikidata public reference, sourced from `metadata.museumQid`).
    */
   private async writeBatch(manager: EntityManager, rows: ArtworkEmbeddingRow[]): Promise<void> {
     const valuesClauses: string[] = [];
-    const params: (string | null)[] = [];
+    const params: (string | number | null)[] = [];
 
     for (const [idx, row] of rows.entries()) {
-      const base = idx * 8;
+      const base = idx * 9;
       valuesClauses.push(
         `($${String(base + 1)}, $${String(base + 2)}, $${String(base + 3)}, ` +
           `$${String(base + 4)}, $${String(base + 5)}, $${String(base + 6)}, ` +
-          `$${String(base + 7)}::halfvec, $${String(base + 8)})`,
+          `$${String(base + 7)}, $${String(base + 8)}::halfvec, $${String(base + 9)})`,
       );
       params.push(
         row.qid,
         row.metadata.museumQid ?? null,
+        row.museumId ?? null,
         row.metadata.title,
         row.metadata.imageUrl,
         row.license,
@@ -310,10 +349,11 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
 
     const sql = `
       INSERT INTO artwork_embeddings
-        (qid, museum_qid, title, image_url, license, image_source, embedding, embedding_model_version)
+        (qid, museum_qid, museum_id, title, image_url, license, image_source, embedding, embedding_model_version)
       VALUES ${valuesClauses.join(', ')}
       ON CONFLICT (qid) DO UPDATE SET
         museum_qid              = EXCLUDED.museum_qid,
+        museum_id               = EXCLUDED.museum_id,
         title                   = EXCLUDED.title,
         image_url               = EXCLUDED.image_url,
         license                 = EXCLUDED.license,
@@ -331,7 +371,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
    */
   async findByQid(qid: string): Promise<ArtworkEmbedding | null> {
     const rows: ArtworkEmbeddingSqlRow[] = await this.dataSource.query(
-      `SELECT qid, museum_qid, title, image_url, license, image_source,
+      `SELECT qid, museum_qid, museum_id, title, image_url, license, image_source,
               embedding, embedding_model_version, created_at, updated_at
        FROM artwork_embeddings
        WHERE qid = $1

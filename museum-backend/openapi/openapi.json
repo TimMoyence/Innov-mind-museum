@@ -766,6 +766,82 @@
           }
         }
       },
+      "ExplanationResponse": {
+        "type": "object",
+        "description": "GDPR Article 22 + AI Act Art. 14 / Art. 50 — right-to-explanation payload for a chat message owned by the authenticated caller. See docs/GDPR_ART22_SCOPE.md.",
+        "required": [
+          "decision",
+          "category",
+          "reasonSummary",
+          "recourse",
+          "auditRef",
+          "providedBy",
+          "decisionAt",
+          "policyVersion"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": ["allowed", "blocked"]
+          },
+          "category": {
+            "type": ["string", "null"],
+            "enum": [
+              "off_topic",
+              "prompt_injection",
+              "pii",
+              "service_unavailable",
+              "unsafe_output",
+              null
+            ]
+          },
+          "reasonSummary": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "recourse": {
+            "type": "object",
+            "required": ["type", "description", "supportUrl"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["self-retry", "signal", "support"]
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "supportUrl": {
+                "type": ["string", "null"],
+                "format": "uri"
+              }
+            }
+          },
+          "auditRef": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "providedBy": {
+            "type": ["object", "null"],
+            "required": ["name", "version"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
+          },
+          "decisionAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "policyVersion": {
+            "type": "string"
+          }
+        }
+      },
       "ApiKeyResponse": {
         "type": "object",
         "required": ["apiKey", "plaintext"],
@@ -3821,6 +3897,59 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/chat/messages/{messageId}/explanation": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "GDPR Art. 22 right-to-explanation for a chat message",
+        "description": "Returns the localised decision, category, recourse path and audit reference for a chat message owned by the authenticated caller. Pre-emptive implementation of GDPR Art. 22 + AI Act Art. 14 / Art. 50; see `docs/GDPR_ART22_SCOPE.md`. Cross-tenant probes return 404 (security through obscurity).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "description": "Optional locale override (BCP47 or two-letter). Falls back to `Accept-Language`, then `en`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Explanation payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplanationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "$ref": "#/components/responses/NotFound"

@@ -98,7 +98,7 @@ Coverage per `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-
 | LLM05 improper output handling | MITIGATED | React Native `<Text>` zero HTML injection; TypeORM zero SQLi |
 | LLM06 excessive agency | MITIGATED | no agentic / tool-calling; pure text generator |
 | LLM07 system prompt exfiltration | PARTIAL → Phase 1 | ADR-049 Garak + promptfoo CI; corpus 85 adversarial prompts × 8 locales |
-| LLM08 vector + embedding | PARTIAL → Phase 2 | `findNearest()` unscoped today; B2B-onset task adds `museum_id` filter |
+| LLM08 vector + embedding | PARTIAL → DONE-ish (2026-05-13) | `museum_id` scope landed on `artwork_embeddings` + `findNearest()` (migration `1778622760826`). V1 single-tenant ships unscoped on purpose (warn-logged `artwork_embeddings_find_nearest_unscoped`) — flip to mandatory before first B2B onboarding |
 | LLM09 misinformation | PARTIAL → DONE-ish | ADR-038 anti-hallucination + Wikidata KB + WebSearch fallback + Spotlighting + URL HEAD probe (V1.1) |
 | LLM10 unbounded consumption | PARTIAL → Phase 1 | LLM judge daily budget cap (ADR-030); Redis aggregation for multi-instance is Phase 1 work |
 

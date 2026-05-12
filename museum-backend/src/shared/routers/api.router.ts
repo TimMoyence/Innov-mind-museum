@@ -16,6 +16,7 @@ import {
   getDescribeService,
   getLlmCircuitBreakerState,
   getLlmGuardCircuitBreakerState,
+  getMessageExplanationUseCase,
   getUserMemoryService,
 } from '@modules/chat/chat-module';
 import { createDailyArtRouter } from '@modules/daily-art';
@@ -260,6 +261,7 @@ function mountDomainRouters(
       getDescribeService(),
       getCompareImageUseCase(),
       getCompareSessionAccessVerifier(),
+      getMessageExplanationUseCase(),
     ),
   );
   router.use('/auth/consent', consentRouter);

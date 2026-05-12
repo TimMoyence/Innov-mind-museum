@@ -38,6 +38,10 @@ import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audi
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { DescribeService } from '@modules/chat/useCase/describe.service';
+import {
+  GetMessageExplanationUseCase,
+  TypeOrmAuditCorrelator,
+} from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
@@ -103,8 +107,16 @@ export interface BuiltChatModule {
   artKeywordRepository: ArtKeywordRepository;
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
   compareImageUseCase?: (input: CompareUseCaseInput) => Promise<CompareResult>;
-  compareSessionAccessVerifier?: (sessionId: string, ownerId: number | undefined) => Promise<void>;
+  compareSessionAccessVerifier?: (
+    sessionId: string,
+    ownerId: number | undefined,
+  ) => Promise<{ museumId: number | null }>;
   knowledgeRouter?: KnowledgeRouterPort;
+  /**
+   * GDPR Art. 22 + AI Act Art. 14 — read-only use-case for
+   * `GET /api/chat/messages/:id/explanation`. See `docs/GDPR_ART22_SCOPE.md`.
+   */
+  getMessageExplanationUseCase: GetMessageExplanationUseCase;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -264,9 +276,13 @@ function buildCompareImageUseCase(
 
 function buildCompareSessionAccessVerifier(
   repository: TypeOrmChatRepository,
-): (sessionId: string, ownerId: number | undefined) => Promise<void> {
+): (sessionId: string, ownerId: number | undefined) => Promise<{ museumId: number | null }> {
   return async (sessionId, ownerId) => {
-    await ensureSessionAccess(sessionId, repository, ownerId);
+    // `ensureSessionAccess` already runs the UUID + lookup + ownership
+    // invariants; returning the loaded session lets us forward its tenant
+    // scope to the route without a second round-trip (OWASP LLM08).
+    const session = await ensureSessionAccess(sessionId, repository, ownerId);
+    return { museumId: session.museumId ?? null };
   };
 }
 
@@ -648,6 +664,14 @@ export class ChatModule {
     );
     const compareSessionAccessVerifier = buildCompareSessionAccessVerifier(repository);
 
+    // GDPR Art. 22 + AI Act Art. 14 — right-to-explanation use case.
+    // Wired with a TypeORM-backed audit correlator so the response can return
+    // the forensic `auditRef` linking back to the hash-chained audit row.
+    const getMessageExplanationUseCase = new GetMessageExplanationUseCase({
+      repository,
+      auditCorrelator: new TypeOrmAuditCorrelator(dataSource),
+    });
+
     const built: BuiltChatModule = {
       chatService,
       describeService,
@@ -660,6 +684,7 @@ export class ChatModule {
       compareImageUseCase,
       compareSessionAccessVerifier,
       knowledgeRouter,
+      getMessageExplanationUseCase,
     };
     this._built = built;
     return built;
@@ -803,3 +828,14 @@ export const getCompareSessionAccessVerifier =
     getActiveChatModule().isBuilt()
       ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
       : undefined;
+
+/**
+ * GDPR Art. 22 + AI Act Art. 14 — runtime accessor for the right-to-explanation
+ * use case (`GET /api/chat/messages/:id/explanation`). Returns `undefined` when
+ * the chat module has not been built yet — consumers should mount the endpoint
+ * conditionally so tests/composition order remain flexible.
+ */
+export const getMessageExplanationUseCase = (): GetMessageExplanationUseCase | undefined =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().getMessageExplanationUseCase
+    : undefined;

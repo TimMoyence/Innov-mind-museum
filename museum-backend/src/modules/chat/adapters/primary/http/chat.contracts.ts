@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import {
   createSessionSchema,
   postMessageSchema,
@@ -286,3 +288,74 @@ export {
   isReportMessageResponse,
   isListSessionsResponse,
 } from './chat.type-guards';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GDPR Art. 22 — right-to-explanation contract
+//   - `ExplanationResponseSchema` is the wire-format Zod schema
+//   - `ExplanationResponse` is the inferred TS type (matches the use-case
+//     return shape `MessageExplanation`)
+//   - `parseExplanationParams` validates the path-param shape (UUID)
+//   See `docs/GDPR_ART22_SCOPE.md` + ADR-048.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Stable category taxonomy exposed by the explanation endpoint. */
+export const EXPLANATION_CATEGORIES = [
+  'off_topic',
+  'prompt_injection',
+  'pii',
+  'service_unavailable',
+  'unsafe_output',
+] as const;
+
+/** Recourse channels surfaced by the explanation endpoint. */
+export const EXPLANATION_RECOURSE_TYPES = ['self-retry', 'signal', 'support'] as const;
+
+/** Zod schema for the recourse object nested in the response. */
+const ExplanationRecourseSchema = z.object({
+  type: z.enum(EXPLANATION_RECOURSE_TYPES),
+  description: z.string().max(200),
+  supportUrl: z.union([z.url(), z.null()]),
+});
+
+/** Zod schema for the provider-stamp object nested in the response. */
+const ExplanationProvidedBySchema = z.object({
+  name: z.string().min(1).max(128),
+  version: z.string().min(1).max(64),
+});
+
+/** Wire-format response Zod schema for `GET /api/chat/messages/:id/explanation`. */
+export const ExplanationResponseSchema = z.object({
+  decision: z.enum(['allowed', 'blocked']),
+  category: z.union([z.enum(EXPLANATION_CATEGORIES), z.null()]),
+  reasonSummary: z.string().max(200),
+  recourse: ExplanationRecourseSchema,
+  auditRef: z.union([z.uuid(), z.null()]),
+  providedBy: z.union([ExplanationProvidedBySchema, z.null()]),
+  decisionAt: z.iso.datetime({ offset: true }),
+  policyVersion: z.string().min(1).max(64),
+});
+
+/** TS type inferred from {@link ExplanationResponseSchema}. */
+export type ExplanationResponse = z.infer<typeof ExplanationResponseSchema>;
+
+/** Zod schema for the `:id` path parameter. */
+const ExplanationParamsSchema = z.object({
+  id: z.uuid({ message: 'message id must be a UUID' }),
+});
+
+/** Validated path parameters for the explanation endpoint. */
+export interface ExplanationParams {
+  messageId: string;
+}
+
+/**
+ * Validates and transforms raw path params into {@link ExplanationParams}.
+ * Throws 400 if `:id` is not a well-formed UUID.
+ */
+export const parseExplanationParams = (params: unknown): ExplanationParams => {
+  const result = ExplanationParamsSchema.safeParse(params);
+  if (!result.success) {
+    throw badRequest(formatZodIssues(result.error.issues));
+  }
+  return { messageId: result.data.id };
+};

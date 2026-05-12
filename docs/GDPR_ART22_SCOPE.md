@@ -60,7 +60,7 @@ In every such case, the **automated guardrail decision** (not the admin click-th
 
 ## Current implementation
 
-- **Endpoint** `GET /api/chat/messages/:id/explanation`: **NOT YET SHIPPED**. Pre-emptively scheduled for Phase 1 (post-launch) as a best-practice anchor — covers AI Act Art. 14 spirit and future-proofs against SCHUFA escalation even though Art. 22 strict-reading doesn't require it today.
+- **Endpoint** `GET /api/chat/messages/:id/explanation`: **Phase 1 — landed 2026-05-12**. Pre-emptive implementation as a best-practice anchor — covers AI Act Art. 14 / Art. 50 spirit and future-proofs against SCHUFA escalation even though Art. 22 strict-reading doesn't require it today. Returns localised decision + category + recourse + audit reference; cross-tenant probes 404 by design. Wiring: `museum-backend/src/modules/chat/useCase/explanation/get-message-explanation.use-case.ts` + `museum-backend/src/modules/chat/adapters/primary/http/explanation.controller.ts` + i18n at `museum-backend/src/shared/i18n/explanation-reasons.ts`.
 - **"Signaler" button** in chat (`features/chat/ui/ChatMessageBubble.tsx`): **active**. Routes user feedback to `museum-backend/src/modules/support/` for human review. Linkage to guardrail audit log is **Phase 1** work.
 - **Audit trail of guardrail decisions**: append-only via `audit_log` table (hash-chained, `museum-backend/src/shared/audit/audit-chain.ts`). Today: per-transition (breaker open/close) + per-block. Phase 1 adds per-decision rows for the explainability endpoint backing store.
 

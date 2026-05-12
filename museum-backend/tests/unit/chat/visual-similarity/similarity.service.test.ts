@@ -41,10 +41,7 @@ const { getLangfuse: mockGetLangfuse } = require('@shared/observability/langfuse
 
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
 
-import type {
-  EmbeddingsPort,
-  EncodeOutput,
-} from '@modules/chat/domain/ports/embeddings.port';
+import type { EmbeddingsPort, EncodeOutput } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 import type {
   ArtworkEmbeddingRepository,
@@ -77,20 +74,25 @@ interface CompareInput {
   topK: number;
   locale: 'fr' | 'en';
   museumQids?: string[];
+  /** OWASP LLM08 — internal tenant scope (`museums.id`); see SUT contract. */
+  museumId?: number | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { VisualSimilarityService } = require('@modules/chat/useCase/visual-similarity/similarity.service') as {
-  VisualSimilarityService: new (args: VisualSimilarityServiceCtorArgs) => {
-    compare: (input: CompareInput) => Promise<CompareResult>;
+const { VisualSimilarityService } =
+  require('@modules/chat/useCase/visual-similarity/similarity.service') as {
+    VisualSimilarityService: new (args: VisualSimilarityServiceCtorArgs) => {
+      compare: (input: CompareInput) => Promise<CompareResult>;
+    };
   };
-};
 
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
-/** Build a deterministic neighbour list (descending visualScore) of size `n`. */
+/**
+ * Build a deterministic neighbour list (descending visualScore) of size `n`.
+ * @param n
+ */
 function makeNeighbours(n: number): NearestResult[] {
   return Array.from({ length: n }, (_, i) =>
     makeNearestResult({
@@ -107,6 +109,7 @@ function makeNeighbours(n: number): NearestResult[] {
 /**
  * Build a `Map<qid, ArtworkFacts>` mirroring a neighbour list — one fact per
  * qid, all sharing the default Mona-Lisa metadata so fusion is deterministic.
+ * @param neighbours
  */
 function makeFactsMap(neighbours: NearestResult[]): Map<string, ArtworkFacts> {
   const out = new Map<string, ArtworkFacts>();
@@ -119,6 +122,7 @@ function makeFactsMap(neighbours: NearestResult[]): Map<string, ArtworkFacts> {
 /**
  * Build the four mocks used by every test, with sensible defaults the
  * individual tests override per-scenario.
+ * @param neighbours
  */
 function buildMocks(neighbours: NearestResult[] = makeNeighbours(20)): {
   encoder: jest.Mocked<EmbeddingsPort>;
@@ -127,18 +131,21 @@ function buildMocks(neighbours: NearestResult[] = makeNeighbours(20)): {
   cache: jest.Mocked<CacheService>;
 } {
   const encoder: jest.Mocked<EmbeddingsPort> = {
-    encode: jest.fn<Promise<EncodeOutput>, [Parameters<EmbeddingsPort['encode']>[0]]>()
+    encode: jest
+      .fn<Promise<EncodeOutput>, [Parameters<EmbeddingsPort['encode']>[0]]>()
       .mockResolvedValue(makeEncodeOutput()),
   };
   const repo: jest.Mocked<ArtworkEmbeddingRepository> = {
-    findNearest: jest.fn<Promise<NearestResult[]>, [Float32Array, number, FindNearestOptions?]>()
+    findNearest: jest
+      .fn<Promise<NearestResult[]>, [Float32Array, number, FindNearestOptions?]>()
       .mockResolvedValue(neighbours),
     upsertBatch: jest.fn(),
     findByQid: jest.fn(),
     count: jest.fn(),
   };
   const enricher = {
-    enrichBatch: jest.fn<Promise<Map<string, ArtworkFacts>>, [string[], string]>()
+    enrichBatch: jest
+      .fn<Promise<Map<string, ArtworkFacts>>, [string[], string]>()
       .mockImplementation(async (qids: string[]) =>
         makeFactsMap(neighbours.filter((n) => qids.includes(n.qid))),
       ),
@@ -244,6 +251,77 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
 
     const [, , opts] = repo.findNearest.mock.calls[0] ?? [];
     expect(opts).toEqual(expect.objectContaining({ museumQids }));
+  });
+
+  it('LLM08 — forwards the museumId tenant scope to repo.findNearest when set', async () => {
+    const { encoder, repo, enricher, cache } = buildMocks();
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer, museumId: 42 });
+
+    const [, , opts] = repo.findNearest.mock.calls[0] ?? [];
+    expect(opts).toEqual(expect.objectContaining({ museumId: 42 }));
+  });
+
+  it('LLM08 — does NOT set museumId on the repo opts when input.museumId is undefined', async () => {
+    const { encoder, repo, enricher, cache } = buildMocks();
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer });
+
+    const [, , opts] = repo.findNearest.mock.calls[0] ?? [];
+    // The opts object is allowed to exist (uniform shape) but MUST NOT carry
+    // a museumId key when none was passed — the repo would then log the
+    // "unscoped global read" warn (legacy V1 behaviour).
+    expect(opts ?? {}).not.toHaveProperty('museumId');
+  });
+
+  it('LLM08 — null museumId is treated as unset (legacy global read)', async () => {
+    const { encoder, repo, enricher, cache } = buildMocks();
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    await service.compare({ ...DEFAULT_INPUT, buffer, museumId: null });
+
+    const [, , opts] = repo.findNearest.mock.calls[0] ?? [];
+    expect(opts ?? {}).not.toHaveProperty('museumId');
+  });
+
+  it('LLM08 — cache key differs for distinct tenant ids (no cross-tenant cache poisoning)', async () => {
+    const { encoder, repo, enricher, cache } = buildMocks();
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    // Tenant A hits — populates the cache under tenant A's key.
+    await service.compare({ ...DEFAULT_INPUT, buffer, museumId: 1 });
+    // Tenant B hits with the IDENTICAL image — must NOT hit the cache from A.
+    await service.compare({ ...DEFAULT_INPUT, buffer, museumId: 2 });
+
+    // Both runs went through the encoder + repo: no cross-tenant cache reuse.
+    expect(encoder.encode).toHaveBeenCalledTimes(2);
+    expect(repo.findNearest).toHaveBeenCalledTimes(2);
   });
 
   it('R5 — calls encoder.encode with an L2-normalised vector and trusts that normalisation downstream', async () => {
@@ -417,7 +495,9 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
   it('T9.1 — emits parent + per-stage Langfuse spans when Langfuse is enabled', async () => {
     const fakeTrace = { span: jest.fn(), update: jest.fn() };
     const fakeLangfuse = { trace: jest.fn().mockReturnValue(fakeTrace) };
-    mockGetLangfuse.mockReturnValueOnce(fakeLangfuse as unknown as ReturnType<typeof mockGetLangfuse>);
+    mockGetLangfuse.mockReturnValueOnce(
+      fakeLangfuse as unknown as ReturnType<typeof mockGetLangfuse>,
+    );
 
     const { encoder, repo, enricher, cache } = buildMocks();
     const service = new VisualSimilarityService({

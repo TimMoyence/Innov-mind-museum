@@ -58,7 +58,10 @@ import type {
   EmbeddingsPort,
 } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { ArtworkEmbeddingRepository } from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
+import type {
+  ArtworkEmbeddingRepository,
+  FindNearestOptions,
+} from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
 import type {
   CompareMatch,
   CompareResult,
@@ -123,8 +126,16 @@ export interface CompareInput {
   topK: number;
   /** Resolved language for rationale + Wikidata enrichment. */
   locale: 'fr' | 'en';
-  /** Optional museum-scope filter forwarded to the kNN search. */
+  /** Optional **Wikidata QID** filter forwarded to the kNN search (external public axis). */
   museumQids?: string[];
+  /**
+   * Optional **internal tenant** scope (`museums.id`) forwarded to the kNN
+   * search. OWASP LLM08 — global public catalog rows (museum_id IS NULL) are
+   * always visible; tenant-private rows of OTHER museums are never returned.
+   * V1 single-tenant ships unscoped (a warn is logged at the repo layer) but
+   * the field is plumbed so B2B onboarding flips a single call site.
+   */
+  museumId?: number | null;
 }
 
 /**
@@ -194,7 +205,11 @@ function resolveTopN(topK: number, override: number | undefined): number {
  *
  * Includes `sha256(buffer)` so a re-submission of an identical image
  * short-circuits the whole pipeline. `locale` + `topK` + sorted `museumQids`
- * are folded in so different request shapes don't collide.
+ * + `museumId` are folded in so different request shapes don't collide.
+ *
+ * CRITICAL — `museumId` MUST be in the key (OWASP LLM08). Without it,
+ * tenant A's cached result could be served to tenant B for the same image
+ * + locale + topK, defeating the repository-layer tenant scope.
  */
 function resultCacheKey(input: CompareInput): string {
   const hash = createHash('sha256').update(input.buffer).digest('hex');
@@ -202,8 +217,9 @@ function resultCacheKey(input: CompareInput): string {
     .slice()
     .sort((a, b) => a.localeCompare(b))
     .join(',');
+  const tenantPart = input.museumId != null ? String(input.museumId) : '';
   const topKPart = String(input.topK);
-  return `${RESULT_CACHE_KEY_PREFIX}:${input.locale}:${topKPart}:${museumPart}:${hash}`;
+  return `${RESULT_CACHE_KEY_PREFIX}:${input.locale}:${topKPart}:${museumPart}:t${tenantPart}:${hash}`;
 }
 
 /**
@@ -323,8 +339,18 @@ export class VisualSimilarityService {
 
     const searchStart = Date.now();
     const topN = resolveTopN(topK, this.topNOverride);
-    const findOpts =
-      input.museumQids !== undefined ? { museumQids: input.museumQids } : undefined;
+    // Build `findOpts` field-by-field so each property is only set when defined
+    // — keeps `exactOptionalPropertyTypes` happy and lets the repo distinguish
+    // "not provided" (legacy global read + warn for V1, OWASP LLM08) from an
+    // explicit scope value. Passing an empty object instead of `undefined` when
+    // neither filter is set keeps the call shape uniform.
+    const findOpts: FindNearestOptions = {};
+    if (input.museumQids !== undefined) {
+      findOpts.museumQids = input.museumQids;
+    }
+    if (input.museumId !== undefined && input.museumId !== null) {
+      findOpts.museumId = input.museumId;
+    }
     const neighbours = await this.repo.findNearest(vector, topN, findOpts);
     recordStageSpan(parentSpan, 'search', searchStart, {
       topN,
@@ -420,10 +446,7 @@ export class VisualSimilarityService {
         );
         safeTrace('visualSimilarity.metric.cache_hit', () => {
           compareCacheHitsTotal.inc();
-          compareDurationSeconds.observe(
-            { stage: 'total' },
-            (Date.now() - startedAt) / 1000,
-          );
+          compareDurationSeconds.observe({ stage: 'total' }, (Date.now() - startedAt) / 1000);
         });
         return cached;
       }
@@ -444,10 +467,7 @@ export class VisualSimilarityService {
     input: CompareInput,
     parentSpan: VisualCompareTrace | undefined,
     startedAt: number,
-  ): Promise<
-    | { vector: Float32Array; modelVersion: string }
-    | { fallback: CompareResult }
-  > {
+  ): Promise<{ vector: Float32Array; modelVersion: string } | { fallback: CompareResult }> {
     const encodeStart = Date.now();
     try {
       const encoded = await this.encoder.encode({
@@ -472,10 +492,7 @@ export class VisualSimilarityService {
       );
       safeTrace('visualSimilarity.metric.fallback_encoder', () => {
         compareFallbackTotal.inc({ reason: 'encoder_unavailable' });
-        compareDurationSeconds.observe(
-          { stage: 'total' },
-          (Date.now() - startedAt) / 1000,
-        );
+        compareDurationSeconds.observe({ stage: 'total' }, (Date.now() - startedAt) / 1000);
       });
       return {
         fallback: {

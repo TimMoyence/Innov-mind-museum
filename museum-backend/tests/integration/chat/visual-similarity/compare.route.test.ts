@@ -65,10 +65,15 @@ interface CompareRouterDeps {
   /**
    * Session-ownership verifier piped from the composition root. Required by
    * the compare router (security 2026-05-10 BLOCKER). The test default is a
-   * no-op that resolves — individual cases override it to assert it is
-   * invoked, or to make it throw a 404 to exercise the negative path.
+   * stub that resolves with a null `museumId` (legacy V1 single-tenant
+   * shape) — individual cases override it to assert it is invoked, to make
+   * it throw a 404 to exercise the negative path, or to pin a non-null
+   * tenant id to exercise the OWASP LLM08 scoping path.
    */
-  verifySessionAccess: (sessionId: string, ownerId: number | undefined) => Promise<void>;
+  verifySessionAccess: (
+    sessionId: string,
+    ownerId: number | undefined,
+  ) => Promise<{ museumId: number | null }>;
   /** Optional shared upload-admission middleware (concurrency limiter). */
   uploadAdmission?: RequestHandler;
 }
@@ -77,10 +82,8 @@ interface CompareRouteModule {
   createCompareRouter: (deps: CompareRouterDeps) => Router;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load (Phase 6 RED)
-const sut = require(
-  '@modules/chat/adapters/primary/http/routes/chat-compare.route',
-) as CompareRouteModule;
+const sut =
+  require('@modules/chat/adapters/primary/http/routes/chat-compare.route') as CompareRouteModule;
 
 const { createCompareRouter } = sut;
 
@@ -97,15 +100,19 @@ const VALID_SESSION_ID = '8c7b1e0a-3f4d-4e21-9b6a-1c2d3e4f5a6b';
  * @param deps - Router dependencies — the compare use-case spy + optional admission middleware.
  * @returns A configured Express app ready for `supertest`.
  */
-function buildApp(deps: Omit<CompareRouterDeps, 'verifySessionAccess'> & {
-  verifySessionAccess?: CompareRouterDeps['verifySessionAccess'];
-}): Express {
+function buildApp(
+  deps: Omit<CompareRouterDeps, 'verifySessionAccess'> & {
+    verifySessionAccess?: CompareRouterDeps['verifySessionAccess'];
+  },
+): Express {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   // No-op verifier by default — individual cases override to exercise the
-  // negative path (404 on ownership mismatch).
-  const verifySessionAccess = deps.verifySessionAccess ?? (async () => undefined);
+  // negative path (404 on ownership mismatch). Returns a null `museumId` to
+  // mirror the V1 single-tenant shape; tenant-scope cases pass an explicit
+  // verifier that resolves with `{ museumId: <id> }`.
+  const verifySessionAccess = deps.verifySessionAccess ?? (async () => ({ museumId: null }));
   app.use('/chat', createCompareRouter({ ...deps, verifySessionAccess }));
   app.use(errorHandler);
   return app;
@@ -166,7 +173,7 @@ describe('POST /chat/compare (T6.2 — route integration)', () => {
 
   it('SEC — invokes verifySessionAccess with the parsed sessionId + authenticated ownerId', async () => {
     const compareImageUseCase = buildHappyUseCase();
-    const verifySessionAccess = jest.fn(async () => undefined);
+    const verifySessionAccess = jest.fn(async () => ({ museumId: null }));
     const app = buildApp({ compareImageUseCase, verifySessionAccess });
 
     const res = await request(app)
@@ -179,7 +186,10 @@ describe('POST /chat/compare (T6.2 — route integration)', () => {
 
     expect(res.status).toBe(200);
     expect(verifySessionAccess).toHaveBeenCalledTimes(1);
-    const [sessionId, ownerId] = verifySessionAccess.mock.calls[0] as unknown as [string, number | undefined];
+    const [sessionId, ownerId] = verifySessionAccess.mock.calls[0] as unknown as [
+      string,
+      number | undefined,
+    ];
     expect(sessionId).toBe(VALID_SESSION_ID);
     expect(typeof ownerId).toBe('number');
   });

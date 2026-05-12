@@ -63,6 +63,8 @@ interface CompareUseCaseInput {
   topK: number;
   locale: 'fr' | 'en';
   museumQids?: string[];
+  /** OWASP LLM08 — resolved from `ChatSession.museumId` by the route. */
+  museumId?: number | null;
   ownerId?: number;
 }
 
@@ -79,15 +81,25 @@ export interface CompareRouterDeps {
   uploadAdmission?: RequestHandler;
   /**
    * Verify that the authenticated user owns the target chat session BEFORE the
-   * use-case runs. Mirrors the `ensureSessionAccess()` invariant on every other
-   * chat write path (`chat-session.service.ts:170,291`). Wired by the
-   * composition root from the chat repository; throws `404 Chat session not
-   * found` on UUID parse failure or ownership mismatch (parity with the rest
-   * of the chat surface). Required field — making it optional invites the
-   * exact cross-tenant write bug the security review surfaced
-   * (2026-05-10 BLOCKER).
+   * use-case runs AND return the session's tenant scope (`museumId`).
+   *
+   * Mirrors `ensureSessionAccess()` on every other chat write path
+   * (`chat-session.service.ts:170,291`). Wired by the composition root from
+   * the chat repository; throws `404 Chat session not found` on UUID parse
+   * failure or ownership mismatch (parity with the rest of the chat surface).
+   * Required field — making it optional invites the exact cross-tenant write
+   * bug the security review surfaced (2026-05-10 BLOCKER).
+   *
+   * The returned `museumId` is the **internal tenant axis** (OWASP LLM08),
+   * `null` for B2C anonymous / single-tenant V1 sessions and a positive
+   * integer once B2B onboarding pins sessions to a tenant. The route forwards
+   * it 1:1 to the use-case so the kNN search at the repository layer can
+   * scope rows to `museum_id IS NULL OR museum_id = $tenantId`.
    */
-  verifySessionAccess: (sessionId: string, ownerId: number | undefined) => Promise<void>;
+  verifySessionAccess: (
+    sessionId: string,
+    ownerId: number | undefined,
+  ) => Promise<{ museumId: number | null }>;
 }
 
 /**
@@ -106,10 +118,7 @@ const DEFAULT_LOCALE: 'fr' | 'en' = 'en';
  *      isolated integration-test app).
  *   3. {@link DEFAULT_LOCALE}.
  */
-function resolveLocale(
-  bodyLocale: 'fr' | 'en' | undefined,
-  req: Request,
-): 'fr' | 'en' {
+function resolveLocale(bodyLocale: 'fr' | 'en' | undefined, req: Request): 'fr' | 'en' {
   if (bodyLocale) return bodyLocale;
   const clientLocale = req.clientLocale;
   if (clientLocale === 'fr' || clientLocale === 'en') return clientLocale;
@@ -207,9 +216,7 @@ function createCompareHandler(deps: CompareRouterDeps) {
       throw compareInvalidImage('image file is required');
     }
 
-    const normalisedBody = normaliseMuseumQids(
-      (req.body ?? {}) as Record<string, unknown>,
-    );
+    const normalisedBody = normaliseMuseumQids((req.body ?? {}) as Record<string, unknown>);
     const parsed = compareRequestSchema.safeParse(normalisedBody);
     if (!parsed.success) {
       const issues = parsed.error.issues;
@@ -232,7 +239,9 @@ function createCompareHandler(deps: CompareRouterDeps) {
     // 400 (bad UUID) or 404 (not found / not owned) — parity with the rest of
     // the chat surface (security BLOCKER 2026-05-10: without this guard,
     // user A could append assistant messages to user B's session).
-    await deps.verifySessionAccess(body.sessionId, ownerId);
+    // Returns the session's `museumId` (OWASP LLM08 tenant axis) so the
+    // kNN search can scope to that tenant + the global public catalog.
+    const { museumId: sessionMuseumId } = await deps.verifySessionAccess(body.sessionId, ownerId);
 
     const mimeType = req.file.mimetype as CompareUseCaseInput['mimeType'];
 
@@ -243,6 +252,10 @@ function createCompareHandler(deps: CompareRouterDeps) {
       topK: body.topK,
       locale,
       ...(body.museumQids !== undefined ? { museumQids: body.museumQids } : {}),
+      // OWASP LLM08 — only set when the session is pinned to a tenant
+      // (positive integer); B2C anonymous sessions pass `null` and the repo
+      // falls back to the legacy global read with a warn.
+      ...(sessionMuseumId !== null ? { museumId: sessionMuseumId } : {}),
       ...(ownerId !== undefined ? { ownerId } : {}),
     };
 
