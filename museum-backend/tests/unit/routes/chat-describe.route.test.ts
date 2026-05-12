@@ -10,7 +10,7 @@ import { errorHandler } from '@shared/middleware/error.middleware';
 
 import { visitorToken } from '../../helpers/auth/token.helpers';
 
-import type { DescribeService } from '@modules/chat/useCase/describe/describe.service';
+import type { DescribeService } from '@modules/chat/useCase/describe.service';
 
 const buildApp = (service: DescribeService) => {
   const app = express();

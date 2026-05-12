@@ -12,7 +12,7 @@ import { buildContextSection, createLlmSectionPlan, generateNonce } from './llm-
 import type { SpotlightingSource } from './llm-sections';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { ResolvedLocation } from '@modules/chat/useCase/location/location-resolver';
+import type { ResolvedLocation } from '@modules/chat/useCase/location-resolver';
 
 /**
  * Applies the prompt-injection guardrail to a free-text context field (e.g. `location`).

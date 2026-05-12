@@ -11,7 +11,7 @@ import { createSessionRouter } from './chat-session.route';
 
 import type { CompareRouterDeps } from './chat-compare.route';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
-import type { DescribeService } from '@modules/chat/useCase/describe/describe.service';
+import type { DescribeService } from '@modules/chat/useCase/describe.service';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 

@@ -9,7 +9,7 @@ import type {
   UserChatExportData,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
-} from '@modules/auth/domain/export/exportUserData.types';
+} from '@modules/auth/domain/exportUserData.types';
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 

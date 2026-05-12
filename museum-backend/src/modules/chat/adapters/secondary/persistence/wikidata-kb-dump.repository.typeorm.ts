@@ -1,4 +1,4 @@
-import { WikidataKbDump } from '@modules/chat/domain/knowledge/wikidata-kb-dump.entity';
+import { WikidataKbDump } from '@modules/chat/domain/wikidata-kb-dump.entity';
 import { logger } from '@shared/logger/logger';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';

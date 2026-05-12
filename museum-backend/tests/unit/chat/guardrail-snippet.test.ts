@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { redactSnippetForAudit } from '@modules/chat/util/guardrail-snippet';
+import { redactSnippetForAudit } from '@modules/chat/useCase/guardrail/guardrail-snippet';
 
 describe('redactSnippetForAudit', () => {
   it('returns an empty preview and the sha256 of an empty string for empty input', () => {

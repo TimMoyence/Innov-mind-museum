@@ -1,4 +1,4 @@
-import { isTtsVoice, type TtsVoice } from '@modules/chat/domain/voice/voice-catalog';
+import { isTtsVoice, type TtsVoice } from '@modules/chat/domain/voice-catalog';
 import { badRequest, notFound } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';

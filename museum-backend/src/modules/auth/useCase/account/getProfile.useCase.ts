@@ -12,7 +12,7 @@ interface UserProfile {
   contentPreferences: ContentPreference[];
   /**
    * Spec C T2.4 — Visitor's preferred TTS voice (one of `TTS_VOICES` from
-   * `@modules/chat/domain/voice/voice-catalog`). `null` means "use the env-level default".
+   * `@modules/chat/domain/voice-catalog`). `null` means "use the env-level default".
    */
   ttsVoice: string | null;
   createdAt: Date;

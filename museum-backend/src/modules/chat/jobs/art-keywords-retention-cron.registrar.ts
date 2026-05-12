@@ -1,4 +1,4 @@
-import { pruneStaleArtKeywords } from '@modules/chat/useCase/retention/prune-stale-art-keywords';
+import { pruneStaleArtKeywords } from '@modules/chat/useCase/prune-stale-art-keywords';
 import { registerScheduledJob, type ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
 
 import type { ConnectionOptions } from 'bullmq';

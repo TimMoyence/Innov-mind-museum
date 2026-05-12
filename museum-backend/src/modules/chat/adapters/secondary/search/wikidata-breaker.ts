@@ -10,7 +10,7 @@ import {
 import { WikidataTransientError } from './wikidata.client';
 
 import type { WikidataClient } from './wikidata.client';
-import type { BreakerState, BreakerStateName } from '@modules/chat/domain/breaker/breaker-state';
+import type { BreakerState, BreakerStateName } from '@modules/chat/domain/breaker-state';
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,

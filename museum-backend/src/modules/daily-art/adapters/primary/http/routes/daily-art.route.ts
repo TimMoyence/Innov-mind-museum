@@ -3,10 +3,10 @@ import { Router } from 'express';
 import {
   selectArtworkForDate,
   toDateString,
-} from '@modules/daily-art/useCase/listing/getDailyArtwork.useCase';
+} from '@modules/daily-art/useCase/getDailyArtwork.useCase';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
-import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
+import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { Request, Response } from 'express';
 

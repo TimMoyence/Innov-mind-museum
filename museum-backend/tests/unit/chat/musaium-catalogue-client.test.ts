@@ -1,6 +1,6 @@
 import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
 
-import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
+import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
 const fixtureCatalogue: readonly Artwork[] = [
   {

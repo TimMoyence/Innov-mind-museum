@@ -54,4 +54,4 @@ export type {
   ChatDataExportPort,
   UserChatExportData,
   UserExportPayload,
-} from '@modules/auth/domain/export/exportUserData.types';
+} from '@modules/auth/domain/exportUserData.types';

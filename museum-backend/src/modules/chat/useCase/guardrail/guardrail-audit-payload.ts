@@ -1,4 +1,4 @@
-import { redactSnippetForAudit } from '@modules/chat/util/guardrail-snippet';
+import { redactSnippetForAudit } from '@modules/chat/useCase/guardrail/guardrail-snippet';
 import {
   AUDIT_GUARDRAIL_BLOCKED_INPUT,
   AUDIT_GUARDRAIL_BLOCKED_OUTPUT,

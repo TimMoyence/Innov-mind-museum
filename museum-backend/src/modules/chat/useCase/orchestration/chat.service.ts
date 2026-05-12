@@ -46,7 +46,7 @@ import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowl
 import type {
   LocationConsentChecker,
   LocationResolver,
-} from '@modules/chat/useCase/location/location-resolver';
+} from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';

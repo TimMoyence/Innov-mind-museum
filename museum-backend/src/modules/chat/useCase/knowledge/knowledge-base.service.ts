@@ -12,7 +12,7 @@ import { safeTrace } from '@shared/observability/safeTrace';
 
 import { buildKnowledgeBasePromptBlock } from './knowledge-base.prompt';
 
-import type { BreakerState } from '@modules/chat/domain/breaker/breaker-state';
+import type { BreakerState } from '@modules/chat/domain/breaker-state';
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,

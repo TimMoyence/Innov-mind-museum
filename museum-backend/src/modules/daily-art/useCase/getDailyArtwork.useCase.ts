@@ -1,6 +1,6 @@
 import { artworks } from '@modules/daily-art/adapters/secondary/catalog/artworks.data';
 
-import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
+import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
 /**
  * Returns the day-of-year (1-366) for a given date.

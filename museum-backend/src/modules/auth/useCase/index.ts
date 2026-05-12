@@ -55,7 +55,7 @@ import type {
   SupportDataExportPort,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
-} from '@modules/auth/domain/export/exportUserData.types';
+} from '@modules/auth/domain/exportUserData.types';
 import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
 import type { EmailService } from '@shared/email/email.port';
 

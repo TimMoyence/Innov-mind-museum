@@ -40,7 +40,7 @@ import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/ll
 import type {
   LocationConsentChecker,
   LocationResolver,
-} from '@modules/chat/useCase/location/location-resolver';
+} from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type {
   PostMessageResult,

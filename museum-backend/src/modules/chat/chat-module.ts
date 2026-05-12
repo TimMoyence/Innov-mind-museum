@@ -35,7 +35,7 @@ import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/stora
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
-import { DescribeService } from '@modules/chat/useCase/describe/describe.service';
+import { DescribeService } from '@modules/chat/useCase/describe.service';
 import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
@@ -43,7 +43,7 @@ import { ImageProcessingService as ImageProcessingPipelineService } from '@modul
 import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import { judgeWithLlm, LlmJudgeGuardrail } from '@modules/chat/useCase/llm/llm-judge-guardrail';
-import { LocationResolver } from '@modules/chat/useCase/location/location-resolver';
+import { LocationResolver } from '@modules/chat/useCase/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
@@ -68,7 +68,7 @@ import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-r
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
-import type { LocationConsentChecker } from '@modules/chat/useCase/location/location-resolver';
+import type { LocationConsentChecker } from '@modules/chat/useCase/location-resolver';
 import type {
   ChatPersistencePort,
   CompareMimeType,

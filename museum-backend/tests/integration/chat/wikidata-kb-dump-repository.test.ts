@@ -10,7 +10,7 @@
  */
 
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
-import { WikidataKbDump } from '@modules/chat/domain/knowledge/wikidata-kb-dump.entity';
+import { WikidataKbDump } from '@modules/chat/domain/wikidata-kb-dump.entity';
 import { makeArtworkFacts } from 'tests/helpers/chat/visual-similarity/artwork-facts.fixtures';
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 

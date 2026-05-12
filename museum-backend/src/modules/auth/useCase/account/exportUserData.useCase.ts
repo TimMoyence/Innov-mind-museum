@@ -5,7 +5,7 @@ import type {
   SupportDataExportPort,
   UserConsentExportEntry,
   UserExportPayload,
-} from '@modules/auth/domain/export/exportUserData.types';
+} from '@modules/auth/domain/exportUserData.types';
 import type { User } from '@modules/auth/domain/user/user.entity';
 
 interface ExportUserDataDeps {

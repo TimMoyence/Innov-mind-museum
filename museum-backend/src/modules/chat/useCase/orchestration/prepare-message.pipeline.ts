@@ -1,6 +1,6 @@
 import { fetchEnrichmentData } from '@modules/chat/useCase/enrichment/enrichment-fetcher';
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
-import { resolveLocationForMessage } from '@modules/chat/useCase/location/location-resolver';
+import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolver';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
@@ -25,7 +25,7 @@ import type {
   LocationConsentChecker,
   LocationResolver,
   ResolvedLocation,
-} from '@modules/chat/useCase/location/location-resolver';
+} from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';

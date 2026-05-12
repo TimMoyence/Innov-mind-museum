@@ -5,7 +5,7 @@ import type {
   ImageSourceClient,
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
-import type { Artwork } from '@modules/daily-art/domain/artwork/artwork.types';
+import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
 /**
  * Internal Musaium curated catalogue client (C2 v2 — 2026-05).
