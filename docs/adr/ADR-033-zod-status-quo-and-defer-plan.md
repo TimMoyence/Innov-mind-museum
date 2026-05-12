@@ -1,9 +1,13 @@
 # ADR-033 — zod status quo + post-launch unification plan
 
-- **Status** : Accepted (2026-05-05, consolidated 2026-05-12 — supersedes the split ADR-033 / ADR-034)
+- **Status** : **SUPERSEDED 2026-05-12** by sprint audit-cleanup-2026-05-12 B.8 (commit `f3d25317 chore(backend,zod): bump zod ^3.25.76 → ^4.4.1 — align with FE`). The deferred BE migration was executed within the same cleanup sprint, ahead of the 2026-Q4 re-evaluation window this ADR proposed.
+- **Original status** : Accepted (2026-05-05, consolidated 2026-05-12 — superseded the split ADR-033 / ADR-034)
 - **Owner** : backend
 - **Supersedes** : (consolidates the original ADR-033 status-quo note and ADR-034 defer plan into a single decision)
+- **Superseded by** : commit `f3d25317` (2026-05-12)
 - **Amends** : N/A
+
+> **Historical note**: this ADR is retained for context. The migration plan in §"Concrete migration plan" was the actual playbook used by B.8. The re-evaluation gates are no longer relevant — the migration shipped during the cleanup sprint.
 
 ## Context
 
