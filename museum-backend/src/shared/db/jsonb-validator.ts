@@ -2,7 +2,7 @@ import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 
 import type { ValueTransformer } from 'typeorm';
-import type { ZodSchema } from 'zod';
+import type { z } from 'zod';
 
 /**
  * Builds a TypeORM column transformer that runs the supplied Zod schema's
@@ -19,7 +19,7 @@ import type { ZodSchema } from 'zod';
  * The fieldName argument is used in log lines and error details — use the
  * `<table>.<column>` convention for grep-ability across logs.
  */
-export function jsonbValidator(schema: ZodSchema, fieldName: string): ValueTransformer {
+export function jsonbValidator(schema: z.ZodType, fieldName: string): ValueTransformer {
   return {
     to(value: unknown): unknown {
       if (value === null || value === undefined) return value;

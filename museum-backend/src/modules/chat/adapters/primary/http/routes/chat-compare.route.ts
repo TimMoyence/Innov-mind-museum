@@ -44,7 +44,7 @@ import {
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { Request, Response, RequestHandler } from 'express';
-import type { ZodIssue } from 'zod';
+import type { z } from 'zod';
 
 /**
  * Single-call input shape accepted by `compareImageUseCase` — Phase 5 contract.
@@ -165,7 +165,7 @@ function normaliseMuseumQids(body: Record<string, unknown>): Record<string, unkn
  * code — keeping the wire contract scoped to `COMPARE_INVALID_TOPK` only when
  * topK is the SOLE cause (design.md §5).
  */
-function isTopKOnlyZodFailure(issues: readonly ZodIssue[]): boolean {
+function isTopKOnlyZodFailure(issues: readonly z.core.$ZodIssue[]): boolean {
   if (issues.length === 0) return false;
   return issues.every((issue) => issue.path[0] === 'topK');
 }

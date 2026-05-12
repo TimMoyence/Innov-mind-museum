@@ -14,7 +14,7 @@ import type {
 } from '@modules/chat/useCase/llm/llm-section-runner';
 import type { LlmSectionName } from '@modules/chat/useCase/llm/llm-sections';
 import type { Semaphore } from '@modules/chat/useCase/llm/semaphore';
-import type { ZodSchema } from 'zod';
+import type { z } from 'zod';
 
 /** Fallback response when LLM produces no usable text after all retries/parsing. */
 export const EMPTY_RESPONSE_FALLBACK =
@@ -43,7 +43,7 @@ export interface ChatModel {
    * explicit cast in `toModel()`.
    */
   withStructuredOutput?<T>(
-    schema: ZodSchema<T>,
+    schema: z.ZodType<T>,
     opts?: { name?: string },
   ): {
     invoke(messages: unknown, opts?: { signal?: AbortSignal }): Promise<T>;
@@ -67,7 +67,7 @@ export interface InvokeSectionInput {
    * `[META]` path.
    */
   outputSchema?: {
-    schema: ZodSchema<unknown>;
+    schema: z.ZodType;
     name: string;
   };
 }

@@ -4,7 +4,7 @@ import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-prefer
 import { TTS_VOICES } from '@modules/chat/domain/voice/voice-catalog';
 
 export const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8).max(128),
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
@@ -20,7 +20,7 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 });
 
@@ -61,7 +61,7 @@ export const changePasswordSchema = z.object({
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   locale: z.enum(['fr', 'en']).optional(),
 });
 
@@ -75,7 +75,7 @@ export const verifyEmailSchema = z.object({
 });
 
 export const changeEmailSchema = z.object({
-  newEmail: z.string().email(),
+  newEmail: z.email(),
   currentPassword: z.string().min(1),
   locale: z.enum(['fr', 'en']).optional(),
 });
@@ -86,7 +86,7 @@ export const confirmEmailChangeSchema = z.object({
 
 export const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
-  expiresAt: z.string().datetime().optional(),
+  expiresAt: z.iso.datetime().optional(),
 });
 
 export const updateContentPreferencesSchema = z.object({

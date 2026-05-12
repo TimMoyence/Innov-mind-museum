@@ -17,7 +17,7 @@ import type { z } from 'zod';
  *
  * Any change to wire format must happen here so both code paths stay in sync.
  */
-export const formatZodIssue = (issue: z.ZodIssue | undefined): string => {
+export const formatZodIssue = (issue: z.core.$ZodIssue | undefined): string => {
   if (!issue) return 'Invalid payload';
   const path = issue.path.map(String).join('.');
   const { message } = issue;
@@ -27,7 +27,7 @@ export const formatZodIssue = (issue: z.ZodIssue | undefined): string => {
 };
 
 /** Joins multiple Zod issues into a comma-separated string for the AppError message. */
-export const formatZodIssues = (issues: readonly z.ZodIssue[]): string => {
+export const formatZodIssues = (issues: readonly z.core.$ZodIssue[]): string => {
   if (issues.length === 0) return 'Invalid payload';
   return issues.map((i) => formatZodIssue(i)).join(', ');
 };

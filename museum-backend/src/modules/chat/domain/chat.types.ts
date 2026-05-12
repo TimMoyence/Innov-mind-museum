@@ -240,7 +240,7 @@ export interface CitationSource {
  * - `confidence`: optional `number` in [0, 1].
  */
 export const CitationSourceSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   type: z.enum(['wikidata', 'web', 'museum-catalog', 'commons']),
   title: z.string().min(1).max(300),
   quote: z.string().min(10).max(500),

@@ -456,9 +456,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     const result = await structured.invoke(messages, { signal });
 
-    // Schema applies `.default([])` so suggestions is always present at runtime,
-    // but the inferred ZodSchema<T> may surface it as optional. Coalesce defensively.
-    const suggestions = result.suggestions ?? [];
+    // Schema applies `.default([])` so suggestions is always present at runtime.
+    // Zod 4 infers this correctly as required, so no defensive coalesce needed.
+    const suggestions = result.suggestions;
 
     logger.info('llm_walk_orchestration_complete', {
       requestId: input.requestId,

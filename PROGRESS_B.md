@@ -28,3 +28,16 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 **B.1** — next@15.5.18 — pnpm audit web : `No known vulnerabilities found` (was 7 HIGH + 6 others).
 
 READY: agents A/C/D peuvent démarrer.
+
+**B.12** (followup) — Zod 4 bump exposed 46 pre-existing deprecation lint errors (`z.string().email()`, `.datetime()`, `.url()`, `.uuid()`, `ZodSchema`, `ZodIssue`) across 11 files in BE. Fixed all of them:
+- `z.string().email()` → `z.email()` (4 files)
+- `z.string().datetime()` → `z.iso.datetime()` (2 files)
+- `z.string().uuid()` → `z.uuid()` (1 file)
+- `z.string().url()` → `z.url()` (1 file)
+- `ZodSchema` → `z.ZodType` (4 files)
+- `ZodIssue` → `z.core.$ZodIssue` (2 files)
+- Removed Zod-3-defensive `?? []` coalesce in langchain.orchestrator.ts:461 (Zod 4 infers `.default([])` correctly)
+
+After fixes: 5 BE lint errors remain — ALL from commit `fc71d6948` (compliance age-gate by Agent A: migration JSDoc + register.useCase max-lines/max-params). Not mine.
+
+BE unit tests in my domain (museum/knowledge-extraction): **201/201 pass**. 9 other test failures exist (auth register signature, chat ocr-service, cache wrapper) — also from Agent A/C compliance work, pre-existed before my Zod fixes.

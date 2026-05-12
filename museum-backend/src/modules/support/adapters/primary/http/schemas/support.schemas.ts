@@ -9,7 +9,7 @@ export const createTicketSchema = z.object({
 
 export const submitSupportContactSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  email: z.string().trim().email().max(254),
+  email: z.email().trim().max(254),
   message: z.string().trim().min(10).max(5000),
 });
 
