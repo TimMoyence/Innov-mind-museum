@@ -15,6 +15,7 @@ import {
   getCompareSessionAccessVerifier,
   getDescribeService,
   getLlmCircuitBreakerState,
+  getLlmGuardCircuitBreakerState,
   getUserMemoryService,
 } from '@modules/chat/chat-module';
 import { createDailyArtRouter } from '@modules/daily-art';
@@ -38,6 +39,9 @@ interface ApiRouterDeps {
   cacheService?: CacheService;
 }
 
+/** Shared circuit-breaker state shape, surfaced for both LLM provider + LLM Guard sidecar. */
+type CircuitBreakerHealthState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+
 /** Shape of the JSON response returned by the GET /api/health endpoint. */
 export interface HealthPayload {
   status: 'ok' | 'degraded';
@@ -45,7 +49,13 @@ export interface HealthPayload {
     database: 'up' | 'down';
     llmConfigured?: boolean;
     redis?: 'up' | 'down' | 'skipped';
-    llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+    llmCircuitBreaker?: CircuitBreakerHealthState;
+    /**
+     * LLM Guard sidecar circuit breaker state. Additive 2026-05-12 ; same
+     * redaction posture as `llmCircuitBreaker` — only surfaced in
+     * non-production responses.
+     */
+    llmGuard?: CircuitBreakerHealthState;
   };
   environment?: string;
   version?: string;
@@ -62,6 +72,7 @@ export interface HealthPayload {
  * @param params.checks.database - Database connectivity status.
  * @param params.checks.redis - Optional Redis connectivity status.
  * @param params.checks.llmCircuitBreaker - Optional LLM circuit breaker state.
+ * @param params.checks.llmGuard - Optional LLM Guard sidecar circuit breaker state.
  * @param params.llmConfigured - Whether at least one LLM provider is configured.
  * @param params.nodeEnv - Optional environment override for testing; defaults to `env.nodeEnv`.
  * @returns Structured health payload with version and timestamp.
@@ -70,7 +81,8 @@ export const buildHealthPayload = (params: {
   checks: {
     database: 'up' | 'down';
     redis?: 'up' | 'down' | 'skipped';
-    llmCircuitBreaker?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+    llmCircuitBreaker?: CircuitBreakerHealthState;
+    llmGuard?: CircuitBreakerHealthState;
   };
   llmConfigured: boolean;
   /**
@@ -110,6 +122,10 @@ export const buildHealthPayload = (params: {
 
     if (params.checks.llmCircuitBreaker !== undefined) {
       payload.checks.llmCircuitBreaker = params.checks.llmCircuitBreaker;
+    }
+
+    if (params.checks.llmGuard !== undefined) {
+      payload.checks.llmGuard = params.checks.llmGuard;
     }
 
     if (env.commitSha) {
@@ -165,12 +181,14 @@ export const createApiRouter = ({
       (env.llm.provider === 'google' && !!env.llm.googleApiKey);
 
     const cbState = getLlmCircuitBreakerState();
+    const guardCbState = getLlmGuardCircuitBreakerState();
 
     const payload = buildHealthPayload({
       checks: {
         database: dbChecks.database,
         redis: redisStatus,
         llmCircuitBreaker: cbState?.state,
+        llmGuard: guardCbState?.state,
       },
       llmConfigured,
     });

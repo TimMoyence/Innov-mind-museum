@@ -77,6 +77,11 @@
               },
               "llmConfigured": {
                 "type": "boolean"
+              },
+              "llmGuard": {
+                "type": "string",
+                "enum": ["CLOSED", "OPEN", "HALF_OPEN"],
+                "description": "LLM Guard sidecar circuit breaker state. Only surfaced in non-production responses (same redaction posture as llmCircuitBreaker). Additive 2026-05-12."
               }
             }
           },

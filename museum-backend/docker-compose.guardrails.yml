@@ -57,9 +57,15 @@ services:
     environment:
       - GUARDRAILS_V2_CANDIDATE=${GUARDRAILS_V2_CANDIDATE:-llm-guard}
       - GUARDRAILS_V2_LLM_GUARD_URL=${GUARDRAILS_V2_LLM_GUARD_URL:-http://llm-guard:8081}
-      # Raised from 300ms to 500ms — v3 bench P95 was 375ms on local MPS; add
-      # 125ms margin for network RTT in the compose network + prod CPU-only infer.
-      - GUARDRAILS_V2_TIMEOUT_MS=${GUARDRAILS_V2_TIMEOUT_MS:-500}
+      # 2026-05-12 incident response — raised from 500ms to 1500ms after a
+      # prod incident where the sidecar P95 inference on the CPU-only VPS
+      # exceeded 500ms, causing 100% fail-CLOSED canned refusals on every
+      # chat message. 1500ms gives ~3-4x headroom over the local MPS bench
+      # (375ms P95), matching the typical CPU/MPS perf gap for transformer
+      # inference. The in-process circuit breaker (LLM_GUARD_CB_*) absorbs
+      # the rare residual timeout. See
+      # team-state/2026-05-12-llm-guard-circuit-breaker/.
+      - GUARDRAILS_V2_TIMEOUT_MS=${GUARDRAILS_V2_TIMEOUT_MS:-1500}
       - GUARDRAILS_V2_OBSERVE_ONLY=${GUARDRAILS_V2_OBSERVE_ONLY:-true}
     depends_on:
       llm-guard:

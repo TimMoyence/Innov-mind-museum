@@ -6,6 +6,7 @@ import {
   DisabledTextToSpeechService,
 } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
+import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
@@ -55,6 +56,10 @@ import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { logger } from '@shared/logger/logger';
+import {
+  llmGuardCircuitBreakerState,
+  llmGuardCircuitBreakerTripsTotal,
+} from '@shared/observability/prometheus-metrics';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -274,6 +279,7 @@ function buildCompareSessionAccessVerifier(
 export class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
+  private _guardrailCircuitBreaker: GuardrailCircuitBreaker | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
 
@@ -295,6 +301,22 @@ export class ChatModule {
     | { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'; failureCount: number; lastFailureAt: Date | null }
     | undefined {
     return this._orchestrator?.getCircuitBreakerState();
+  }
+
+  /**
+   * Returns the LLM Guard sidecar circuit breaker state for the health endpoint.
+   * Mirrors `getLlmCircuitBreakerState()` shape so the response payload stays
+   * uniform across the two breakers exposed at `/api/health` (R8).
+   */
+  getLlmGuardCircuitBreakerState():
+    | {
+        state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+        failureCount: number;
+        lastFailureAt: Date | null;
+        openedAt: Date | null;
+      }
+    | undefined {
+    return this._guardrailCircuitBreaker?.getState();
   }
 
   /** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
@@ -373,7 +395,33 @@ export class ChatModule {
         });
         return undefined;
       }
-      return new LLMGuardAdapter({ baseUrl, timeoutMs: env.guardrails.timeoutMs });
+
+      // Single breaker instance per process — shared between the input and
+      // output scan paths so a sidecar degradation trips ONE breaker, not two
+      // unsynchronised ones. Metrics are wired here via onStateChange so the
+      // breaker primitive itself stays Prometheus-free.
+      const breaker = new GuardrailCircuitBreaker({
+        failureThreshold: env.guardrails.circuitBreaker.failureThreshold,
+        windowMs: env.guardrails.circuitBreaker.windowMs,
+        openDurationMs: env.guardrails.circuitBreaker.openDurationMs,
+        halfOpenMaxProbes: env.guardrails.circuitBreaker.halfOpenMaxProbes,
+        onStateChange: (next) => {
+          const nextLabel = next.toLowerCase();
+          for (const label of ['closed', 'half_open', 'open']) {
+            llmGuardCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
+          }
+          if (next === 'OPEN') {
+            llmGuardCircuitBreakerTripsTotal.inc();
+          }
+        },
+      });
+      this._guardrailCircuitBreaker = breaker;
+
+      return new LLMGuardAdapter({
+        baseUrl,
+        timeoutMs: env.guardrails.timeoutMs,
+        circuitBreaker: breaker,
+      });
     }
 
     return undefined;
@@ -702,15 +750,22 @@ export const getDescribeService = (): DescribeService | undefined =>
 export const getLlmCircuitBreakerState = (): ReturnType<ChatModule['getLlmCircuitBreakerState']> =>
   getActiveChatModule().getLlmCircuitBreakerState();
 
+export const getLlmGuardCircuitBreakerState = (): ReturnType<
+  ChatModule['getLlmGuardCircuitBreakerState']
+> => getActiveChatModule().getLlmGuardCircuitBreakerState();
+
 export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().artworkKnowledgeRepo
     : undefined;
 
 export const getCompareImageUseCase = (): BuiltChatModule['compareImageUseCase'] =>
-  getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().compareImageUseCase : undefined;
-
-export const getCompareSessionAccessVerifier = (): BuiltChatModule['compareSessionAccessVerifier'] =>
   getActiveChatModule().isBuilt()
-    ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
+    ? getActiveChatModule().getBuilt().compareImageUseCase
     : undefined;
+
+export const getCompareSessionAccessVerifier =
+  (): BuiltChatModule['compareSessionAccessVerifier'] =>
+    getActiveChatModule().isBuilt()
+      ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
+      : undefined;

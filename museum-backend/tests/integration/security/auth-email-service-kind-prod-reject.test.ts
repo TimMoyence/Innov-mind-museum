@@ -165,6 +165,12 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       judgeTimeoutMs: 500,
       judgeMinMessageLength: 50,
       budgetBackend: 'memory',
+      circuitBreaker: {
+        failureThreshold: 5,
+        windowMs: 60_000,
+        openDurationMs: 30_000,
+        halfOpenMaxProbes: 1,
+      },
     },
     retention: {
       cronPattern: '15 3 * * *',

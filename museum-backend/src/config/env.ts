@@ -333,7 +333,8 @@ const env: AppEnv = {
   visualSimilarity: {
     provider: embeddingsProvider,
     siglipOnnxModelPath:
-      toOptionalString(process.env.SIGLIP_ONNX_MODEL_PATH) ?? './models/siglip-base-patch16-224.onnx',
+      toOptionalString(process.env.SIGLIP_ONNX_MODEL_PATH) ??
+      './models/siglip-base-patch16-224.onnx',
     replicateApiToken: toOptionalString(process.env.REPLICATE_API_TOKEN),
     embeddingsDim: toNumber(process.env.EMBEDDINGS_DIM, 768),
     topN: toNumber(process.env.VISUAL_TOP_N, 20),
@@ -388,7 +389,14 @@ const env: AppEnv = {
   guardrails: {
     candidate: guardrailsCandidate,
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
-    timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 300),
+    // 2026-05-12 — raised from 300/500ms after a prod incident where the
+    // sidecar P95 inference on the CPU-only VPS exceeded 500ms, causing
+    // 100 % fail-CLOSED canned refusals on every chat message. 1500ms gives
+    // ~3-4× headroom over the local MPS bench (375ms P95), matching the
+    // typical CPU/MPS perf gap for transformer inference. The circuit
+    // breaker below absorbs the rare residual timeout. See
+    // `team-state/2026-05-12-llm-guard-circuit-breaker/`.
+    timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 1500),
     observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
     // F4 (2026-04-30) — LLM judge layer config (defaults: 5€/day, 500ms, 50 chars)
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
@@ -400,6 +408,20 @@ const env: AppEnv = {
     // Default is 'redis' in production so multi-instance deploys do not 2× spend;
     // tests pin 'memory' to avoid coupling to a Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
+    // 2026-05-12 — operational tunables for the LLM Guard sidecar circuit
+    // breaker (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
+    // These are NOT feature flags — the breaker is always-on per pré-launch
+    // V1 doctrine (`feedback_no_feature_flags_prelaunch`). The values let
+    // operators tune trip sensitivity without a redeploy ; emergency
+    // disable is `LLM_GUARD_CB_FAILURE_THRESHOLD=1000000` (effectively never
+    // trips). Real rollback path is `git revert` of the wiring. Defaults
+    // derived from the existing `LLMCircuitBreaker` envelope.
+    circuitBreaker: {
+      failureThreshold: toNumber(process.env.LLM_GUARD_CB_FAILURE_THRESHOLD, 5),
+      windowMs: toNumber(process.env.LLM_GUARD_CB_WINDOW_MS, 60_000),
+      openDurationMs: toNumber(process.env.LLM_GUARD_CB_OPEN_DURATION_MS, 30_000),
+      halfOpenMaxProbes: toNumber(process.env.LLM_GUARD_CB_HALF_OPEN_MAX_PROBES, 1),
+    },
   },
   // Pre-launch V1: retention crons always-on; the `env.cache?.enabled` upstream
   // gate (Redis required) is the structural skip path for tests/dev without Redis.

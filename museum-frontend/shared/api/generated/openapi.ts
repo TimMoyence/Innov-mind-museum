@@ -3474,6 +3474,11 @@ export interface components {
         /** @enum {string} */
         database: 'up' | 'down';
         llmConfigured: boolean;
+        /**
+         * @description LLM Guard sidecar circuit breaker state. Only surfaced in non-production responses (same redaction posture as llmCircuitBreaker). Additive 2026-05-12.
+         * @enum {string}
+         */
+        llmGuard?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
       };
       environment: string;
       version: string;

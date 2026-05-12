@@ -288,6 +288,38 @@ export const wikidataLocalDumpMissesTotal = new Counter({
 });
 
 /**
+ * LLM Guard sidecar circuit breaker surface (2026-05-12 incident response —
+ * `team-state/2026-05-12-llm-guard-circuit-breaker/`).
+ *
+ * Cardinality is strictly bounded :
+ *   - `musaium_llm_guard_circuit_breaker_state{state}` : Gauge holding 1 for
+ *     the active state and 0 for the other two. `state` ∈ {closed, half_open,
+ *     open}. 3 active series.
+ *   - `musaium_llm_guard_circuit_breaker_trips_total` : labelless Counter,
+ *     incremented each time the breaker transitions to OPEN (from either
+ *     CLOSED or HALF_OPEN). 1 active series.
+ *
+ * Total active series ≤ 4 — comfortably within budget.
+ *
+ * Call sites : the Gauge is `set()` from the breaker's `onStateChange`
+ * callback wired in `chat-module.ts`. The Counter is `inc()`'d in the same
+ * callback when the next state is OPEN. The breaker primitive itself stays
+ * Prometheus-free (separation of concerns).
+ */
+export const llmGuardCircuitBreakerState = new Gauge({
+  name: 'musaium_llm_guard_circuit_breaker_state',
+  help: 'Current state of the LLM Guard sidecar circuit breaker. 1 = active state, 0 = inactive.',
+  labelNames: ['state'] as const,
+  registers: [registry],
+});
+
+export const llmGuardCircuitBreakerTripsTotal = new Counter({
+  name: 'musaium_llm_guard_circuit_breaker_trips_total',
+  help: 'Total transitions of the LLM Guard circuit breaker into OPEN (from CLOSED or HALF_OPEN)',
+  registers: [registry],
+});
+
+/**
  * C4 anti-hallucination (2026-05-11) — citation grounding + WebSearch fallback
  * surface mandated by `spec.md §R12 / NFR6` and `design.md §10 Observability`.
  *

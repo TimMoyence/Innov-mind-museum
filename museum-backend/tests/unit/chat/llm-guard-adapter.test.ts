@@ -1,4 +1,12 @@
+import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
+import { logger } from '@shared/logger/logger';
+
+jest.mock('@shared/logger/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+const loggerInfo = logger.info as unknown as jest.Mock;
 
 const makeFetch = (response: Partial<Response>): jest.Mock => {
   return jest.fn<Promise<Response>, Parameters<typeof fetch>>().mockResolvedValue({
@@ -9,8 +17,18 @@ const makeFetch = (response: Partial<Response>): jest.Mock => {
   } as Response);
 };
 
-const buildAdapter = (fetchFn: jest.Mock, baseUrl = 'http://llm-guard:8081', timeoutMs = 300) =>
-  new LLMGuardAdapter({ baseUrl, timeoutMs, fetchFn: fetchFn as unknown as typeof fetch });
+const buildAdapter = (
+  fetchFn: jest.Mock,
+  baseUrl = 'http://llm-guard:8081',
+  timeoutMs = 300,
+  circuitBreaker?: GuardrailCircuitBreaker,
+) =>
+  new LLMGuardAdapter({
+    baseUrl,
+    timeoutMs,
+    fetchFn: fetchFn as unknown as typeof fetch,
+    ...(circuitBreaker ? { circuitBreaker } : {}),
+  });
 
 describe('LLMGuardAdapter.checkInput', () => {
   it('returns allow=true when sidecar validates the prompt', async () => {
@@ -190,5 +208,145 @@ describe('LLMGuardAdapter identity', () => {
   it('exposes a stable name for telemetry', () => {
     const adapter = buildAdapter(makeFetch({}));
     expect(adapter.name).toBe('llm-guard');
+  });
+});
+
+describe('LLMGuardAdapter circuit breaker integration', () => {
+  beforeEach(() => {
+    loggerInfo.mockClear();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('trips the breaker after threshold consecutive timeouts and short-circuits subsequent calls', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 3,
+      windowMs: 60_000,
+      openDurationMs: 30_000,
+    });
+    const fetchFn = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    // First 3 calls fail-CLOSED and feed the breaker.
+    for (let i = 0; i < 3; i += 1) {
+      const decision = await adapter.checkInput({ text: 'hello' });
+      expect(decision.allow).toBe(false);
+      expect(decision.reason).toBe('error');
+    }
+    expect(breaker.state).toBe('OPEN');
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+
+    // 4th call must NOT hit fetch and must fail-OPEN.
+    const decision = await adapter.checkInput({ text: 'hello again' });
+    expect(decision.allow).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(loggerInfo).toHaveBeenCalledWith(
+      'llm_guard_circuit_breaker_skip',
+      expect.objectContaining({ state: 'OPEN', path: '/scan/prompt' }),
+    );
+  });
+
+  it('with a pre-tripped breaker, checkInput allows without calling fetch', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 1,
+      windowMs: 60_000,
+      openDurationMs: 30_000,
+    });
+    breaker.recordFailure();
+    expect(breaker.state).toBe('OPEN');
+
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: false, reason: 'whatever' }) });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const decision = await adapter.checkInput({ text: 'should bypass' });
+
+    expect(decision.allow).toBe(true);
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(loggerInfo).toHaveBeenCalledWith(
+      'llm_guard_circuit_breaker_skip',
+      expect.objectContaining({ state: 'OPEN' }),
+    );
+  });
+
+  it('HALF_OPEN probe success transitions breaker back to CLOSED', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 2,
+      windowMs: 60_000,
+      openDurationMs: 5_000,
+    });
+    breaker.recordFailure();
+    breaker.recordFailure();
+    expect(breaker.state).toBe('OPEN');
+    jest.advanceTimersByTime(5_001);
+    expect(breaker.state).toBe('HALF_OPEN');
+
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const decision = await adapter.checkInput({ text: 'recovery probe' });
+
+    expect(decision.allow).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(breaker.state).toBe('CLOSED');
+  });
+
+  it('HALF_OPEN probe failure trips breaker back to OPEN', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 2,
+      windowMs: 60_000,
+      openDurationMs: 5_000,
+    });
+    breaker.recordFailure();
+    breaker.recordFailure();
+    jest.advanceTimersByTime(5_001);
+    expect(breaker.state).toBe('HALF_OPEN');
+
+    const fetchFn = jest
+      .fn<Promise<Response>, Parameters<typeof fetch>>()
+      .mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const decision = await adapter.checkInput({ text: 'still bad' });
+
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toBe('error');
+    expect(breaker.state).toBe('OPEN');
+  });
+
+  it('non-200 status (503) increments the breaker failure count', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 5,
+      windowMs: 60_000,
+      openDurationMs: 30_000,
+    });
+    const fetchFn = makeFetch({ ok: false, status: 503 });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const before = breaker.getState().failureCount;
+    await adapter.checkInput({ text: 'srv down' });
+    const after = breaker.getState().failureCount;
+
+    expect(after).toBe(before + 1);
+  });
+
+  it('malformed JSON increments the breaker failure count', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 5,
+      windowMs: 60_000,
+      openDurationMs: 30_000,
+    });
+    const fetchFn = makeFetch({ json: async () => ({ not_a_valid_field: true }) });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const before = breaker.getState().failureCount;
+    await adapter.checkInput({ text: 'garbled' });
+    const after = breaker.getState().failureCount;
+
+    expect(after).toBe(before + 1);
   });
 });

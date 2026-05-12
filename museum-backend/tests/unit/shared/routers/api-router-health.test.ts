@@ -133,6 +133,10 @@ const getLlmCircuitBreakerStateMock = jest.fn<
   { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
   []
 >();
+const getLlmGuardCircuitBreakerStateMock = jest.fn<
+  { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
+  []
+>();
 // `getActiveChatModule` is the shallow entry point that wiring.ts delegates
 // every accessor through. Replacing it with a fixed isBuilt=false handle
 // lets the REAL wiring code run unchanged — every accessor flows through
@@ -171,6 +175,7 @@ jest.mock('@modules/chat/chat-module', () => {
       isBuilt: () => isBuiltMock(),
       getBuilt: () => built,
       getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
+      getLlmGuardCircuitBreakerState: () => getLlmGuardCircuitBreakerStateMock(),
     }),
     setActiveChatModule: () => {},
     resetActiveChatModule: () => {},
@@ -183,8 +188,8 @@ jest.mock('@modules/chat/chat-module', () => {
     getArtKeywordRepository: () => undefined,
     getDescribeService: () => undefined,
     getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
-    getArtworkKnowledgeRepo: () =>
-      isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined,
+    getLlmGuardCircuitBreakerState: () => getLlmGuardCircuitBreakerStateMock(),
+    getArtworkKnowledgeRepo: () => (isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined),
     getCompareImageUseCase: () => undefined,
     getCompareSessionAccessVerifier: () => undefined,
   };
@@ -377,9 +382,9 @@ describe('createApiRouter — /health route', () => {
       // routes on router.stack; the first GET on /health is what we want.
       const layers = (
         router as unknown as {
-          stack: Array<{
-            route?: { path: string; stack: Array<{ method: string; handle: express.Handler }> };
-          }>;
+          stack: {
+            route?: { path: string; stack: { method: string; handle: express.Handler }[] };
+          }[];
         }
       ).stack;
       const healthLayer = layers.find((l) => l.route?.path === '/health');
@@ -507,6 +512,25 @@ describe('createApiRouter — /health route', () => {
     // Mutant `cbState.state` would throw on undefined → 500.
     expect(res.status).toBe(200);
     expect(res.body.checks.llmCircuitBreaker).toBeUndefined();
+  });
+
+  // ── R8 — llmGuard CB state surfaced in /health (additive 2026-05-12) ───
+  // Mirrors the `llmCircuitBreaker` assertions above, applied to the new
+  // sidecar breaker accessor (`getLlmGuardCircuitBreakerState`). Same
+  // redaction posture as the existing breaker.
+  it('passes llmGuard state into buildHealthPayload when getLlmGuardCircuitBreakerState() returns a state', async () => {
+    getLlmGuardCircuitBreakerStateMock.mockReturnValue({ state: 'OPEN' });
+    const res = await request(buildApp({})).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body.checks.llmGuard).toBe('OPEN');
+  });
+
+  it('omits llmGuard when getLlmGuardCircuitBreakerState() returns undefined', async () => {
+    getLlmGuardCircuitBreakerStateMock.mockReturnValue(undefined);
+    const res = await request(buildApp({})).get('/api/health');
+    // Mutant `guardCbState.state` would throw on undefined → 500.
+    expect(res.status).toBe(200);
+    expect(res.body.checks.llmGuard).toBeUndefined();
   });
 
   // ── responseTimeMs presence in non-prod vs prod (L177) ─────────────────

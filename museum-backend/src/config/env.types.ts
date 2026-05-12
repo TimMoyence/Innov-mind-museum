@@ -560,5 +560,21 @@ export interface AppEnv {
      * counter across replicas via SET INCRBY + TTL.
      */
     budgetBackend: 'memory' | 'redis';
+    /**
+     * 2026-05-12 — operational tunables for the LLM Guard sidecar circuit
+     * breaker (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
+     * These are NOT feature flags — the breaker is always-on per pré-launch
+     * V1 doctrine (`feedback_no_feature_flags_prelaunch`).
+     */
+    circuitBreaker: {
+      /** Number of failures within `windowMs` that trip the breaker OPEN. */
+      failureThreshold: number;
+      /** Sliding-window length (ms) for the failure count. */
+      windowMs: number;
+      /** Cooldown (ms) after which an OPEN breaker becomes HALF_OPEN. */
+      openDurationMs: number;
+      /** Max concurrent probe calls admitted while HALF_OPEN. */
+      halfOpenMaxProbes: number;
+    };
   };
 }

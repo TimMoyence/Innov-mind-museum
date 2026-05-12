@@ -1,5 +1,7 @@
+import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { logger } from '@shared/logger/logger';
 
+import type { GuardrailCircuitBreakerSnapshot } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import type {
   AdvancedGuardrail,
   AdvancedGuardrailBlockReason,
@@ -30,6 +32,13 @@ interface LLMGuardAdapterOptions {
   timeoutMs: number;
   /** Optional fetch override — enables unit testing without an HTTP server. */
   fetchFn?: typeof fetch;
+  /**
+   * Optional circuit breaker — defaults to a fresh `GuardrailCircuitBreaker`
+   * reading its tunables from the `LLM_GUARD_CB_*` env vars. The composition
+   * root (`chat-module.ts`) injects a single shared instance per process so
+   * the state survives across the input + output legs of one request.
+   */
+  circuitBreaker?: GuardrailCircuitBreaker;
 }
 
 /**
@@ -83,11 +92,18 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchFn: typeof fetch;
+  private readonly circuitBreaker: GuardrailCircuitBreaker;
 
   constructor(options: LLMGuardAdapterOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.timeoutMs = options.timeoutMs;
     this.fetchFn = options.fetchFn ?? fetch;
+    this.circuitBreaker = options.circuitBreaker ?? new GuardrailCircuitBreaker();
+  }
+
+  /** Snapshot of the breaker state for `/api/health` (R8). */
+  getCircuitBreakerState(): GuardrailCircuitBreakerSnapshot {
+    return this.circuitBreaker.getState();
   }
 
   /** Scans user input against the sidecar's prompt endpoint. Fail-CLOSED on error. */
@@ -108,6 +124,19 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
     path: string,
     body: Record<string, unknown>,
   ): Promise<AdvancedGuardrailDecision> {
+    // Spec R3 + R5 — when the breaker is OPEN (or HALF_OPEN with no probe
+    // slot remaining), short-circuit to fail-OPEN. The upstream deterministic
+    // keyword guardrail + structural prompt isolation + sanitizePromptInput
+    // remain active in chat.service — this only bypasses the LLM Guard
+    // sidecar defense-in-depth layer.
+    if (!this.circuitBreaker.canAttempt()) {
+      logger.info('llm_guard_circuit_breaker_skip', {
+        state: this.circuitBreaker.state,
+        path,
+      });
+      return { allow: true };
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => {
       controller.abort();
@@ -122,15 +151,20 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
       });
 
       if (!response.ok) {
+        this.circuitBreaker.recordFailure();
         logger.warn('llm_guard_non_ok_fail_closed', { status: response.status, path });
         return { allow: false, reason: 'error' };
       }
 
       const raw = (await response.json()) as Partial<ScanResponse>;
       if (typeof raw.is_valid !== 'boolean') {
+        this.circuitBreaker.recordFailure();
         logger.warn('llm_guard_malformed_fail_closed', { path });
         return { allow: false, reason: 'error' };
       }
+
+      // Success path — sidecar responded with a well-formed verdict.
+      this.circuitBreaker.recordSuccess();
 
       if (raw.is_valid) {
         return {
@@ -147,6 +181,7 @@ export class LLMGuardAdapter implements AdvancedGuardrail {
         redactedText: raw.sanitized,
       };
     } catch (error) {
+      this.circuitBreaker.recordFailure();
       const message = error instanceof Error ? error.message : String(error);
       const kind = message.toLowerCase().includes('abort') ? 'timeout' : 'network';
       logger.warn('llm_guard_fail_closed', { kind, path, error: message });
