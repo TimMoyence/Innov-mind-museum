@@ -3,7 +3,6 @@ import { lookup } from 'node:dns/promises';
 import { isIPv4 } from 'node:net';
 
 import { Readability } from '@mozilla/readability';
-import * as cheerio from 'cheerio';
 import { parseHTML } from 'linkedom';
 
 import { logger } from '@shared/logger/logger';
@@ -239,7 +238,7 @@ async function fetchWithSafeRedirects(
  * HTML scraper adapter implementing {@link ScraperPort}.
  *
  * Uses native `fetch` (Node 18+) and Mozilla Readability for article extraction,
- * falling back to cheerio-based body text extraction for non-article pages.
+ * falling back to linkedom DOM body-text extraction for non-article pages.
  * Never throws from public methods — any error returns null so the caller can fail-open.
  */
 export class HtmlScraper implements ScraperPort {
@@ -349,17 +348,21 @@ export class HtmlScraper implements ScraperPort {
     const article = reader.parse();
 
     if (!article?.textContent) {
-      // Fallback: cheerio-based body extraction for non-article pages
-      const $ = cheerio.load(html);
-      $('script, style, nav, footer, header').remove();
-      const text = $('body').text().replace(/\s+/g, ' ').trim();
+      // Fallback: linkedom DOM body extraction for non-article pages.
+      // Re-parse because Readability mutates the original document during `parse()`.
+      const { document: fallbackDoc } = parseHTML(html);
+      for (const el of fallbackDoc.querySelectorAll('script, style, nav, footer, header')) {
+        el.remove();
+      }
+      const text = (fallbackDoc.body?.textContent ?? '').replace(/\s+/g, ' ').trim();
       if (!text) return null;
 
       const truncated = text.slice(0, this.config.maxContentBytes);
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentionally treating empty string as falsy
+      const title = fallbackDoc.querySelector('title')?.textContent?.trim() || url;
       return {
         url,
-
-        title: $('title').text().trim() || url,
+        title,
         textContent: truncated,
         contentHash: createHash('sha256').update(truncated).digest('hex').slice(0, 16),
       };

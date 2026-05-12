@@ -17,7 +17,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [ ] B.4 — remove google-signin
 - [ ] B.5 — replace confetti-cannon with Reanimated
 - [ ] B.6 — replace js-sha256 with expo-crypto
-- [ ] B.7 — remove cheerio
+- [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.
 - [ ] B.8 — align Zod v4 BE↔FE
 - [ ] B.9 — align React 19.2.0 exact
 - [ ] B.10 — final audit

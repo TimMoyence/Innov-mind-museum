@@ -134,7 +134,6 @@
     "@sentry/node": "^10.49.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.74.1",
-    "cheerio": "^1.2.0",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
