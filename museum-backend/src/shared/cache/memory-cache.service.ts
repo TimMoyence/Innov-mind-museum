@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-import type { CacheService } from './cache.port';
+import type { CacheService, CacheValueSchema } from './cache.port';
 
 interface CacheEntry {
   value: unknown;
@@ -33,7 +33,7 @@ export class MemoryCacheService implements CacheService {
 
   /** Retrieves a value by key, returning null on miss or expiry. */
   // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map lookup must match async CacheService interface
-  async get<T>(key: string): Promise<T | null> {
+  async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     const entry = this.store.get(key);
     if (!entry) return null;
 
@@ -42,6 +42,10 @@ export class MemoryCacheService implements CacheService {
       return null;
     }
 
+    if (schema) {
+      const result = schema.safeParse(entry.value);
+      return result.success ? result.data : null;
+    }
     return entry.value as T;
   }
 

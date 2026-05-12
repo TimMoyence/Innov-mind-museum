@@ -13,6 +13,8 @@
  *   - `warnLegacyJwtSecret()` writes a single JSON warn line to stderr when
  *     production still has JWT_SECRET set. Same circular-init reason.
  */
+import { z } from 'zod';
+
 import { toOptionalString } from './env-helpers';
 
 import type {
@@ -23,6 +25,12 @@ import type {
   NodeEnv,
   StorageDriver,
 } from './env.types';
+
+const nodeEnvSchema = z.enum(['development', 'test', 'production']);
+const llmProviderSchema = z.enum(['openai', 'deepseek', 'google']);
+const guardrailsCandidateSchema = z.enum(['off', 'llm-guard', 'llm-judge']);
+const storageDriverSchema = z.enum(['local', 's3']);
+const embeddingsProviderSchema = z.enum(['siglip-onnx', 'replicate']);
 
 /**
  * Resolves Redis connection config with a URL fallback.
@@ -122,31 +130,30 @@ export function resolveDeploymentMode(): DeploymentMode {
 
 /** Validates and narrows `NODE_ENV`. Throws on invalid values. */
 export function resolveNodeEnv(): NodeEnv {
-  const raw = (process.env.NODE_ENV || 'development') as NodeEnv;
-  if (!['development', 'test', 'production'].includes(raw)) {
+  const raw = process.env.NODE_ENV || 'development';
+  const result = nodeEnvSchema.safeParse(raw);
+  if (!result.success) {
     throw new Error(`Invalid NODE_ENV="${raw}". Must be development, test, or production.`);
   }
-  return raw;
+  return result.data;
 }
 
 /** Whitelist-narrows `LLM_PROVIDER` to a known provider; defaults to openai. */
 export function resolveLlmProvider(): LlmProvider {
   const raw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
-  return ['openai', 'deepseek', 'google'].includes(raw) ? (raw as LlmProvider) : 'openai';
+  return llmProviderSchema.safeParse(raw).data ?? 'openai';
 }
 
 /** Whitelist-narrows `GUARDRAILS_V2_CANDIDATE`; defaults to off. */
 export function resolveGuardrailsCandidate(): GuardrailsV2Candidate {
   const raw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
-  return (['off', 'llm-guard', 'llm-judge'] as const).includes(raw as GuardrailsV2Candidate)
-    ? (raw as GuardrailsV2Candidate)
-    : 'off';
+  return guardrailsCandidateSchema.safeParse(raw).data ?? 'off';
 }
 
 /** Whitelist-narrows `OBJECT_STORAGE_DRIVER`; defaults to local. */
 export function resolveStorageDriver(): StorageDriver {
   const raw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
-  return ['local', 's3'].includes(raw) ? (raw as StorageDriver) : 'local';
+  return storageDriverSchema.safeParse(raw).data ?? 'local';
 }
 
 /**
@@ -158,7 +165,7 @@ export function resolveStorageDriver(): StorageDriver {
  */
 export function resolveEmbeddingsProvider(): EmbeddingsProvider {
   const raw = (process.env.EMBEDDINGS_PROVIDER || 'siglip-onnx').toLowerCase();
-  return ['siglip-onnx', 'replicate'].includes(raw) ? (raw as EmbeddingsProvider) : 'siglip-onnx';
+  return embeddingsProviderSchema.safeParse(raw).data ?? 'siglip-onnx';
 }
 
 /**

@@ -36,7 +36,11 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
 - [ ] C.10 — Reunify chat-module*.ts
 - [ ] C.11 — Reduce null-object ports
 - [x] C.12 — Centralize JWT decode (Zod parse). NEW `museum-backend/src/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `decodeJwtHeader`, `jwtHeaderSchema`). NEW `museum-frontend/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `baseJwtPayloadSchema`). Migrated 3 call-sites: `auth-route.helpers.ts:decodeFamilyIdUnsafe`, `social-token-verifier.ts:decodeHeader`, `authLogic.pure.ts:extractUserIdFromToken + getTokenExpiryMs`. `grep "JSON.parse(atob" src/ features/` = 0 in app code (only zod node_modules + the new helpers themselves).
-- [ ] C.13 — Fix httpClient/Redis/env-resolvers casts
+- [x] C.13 — Fix httpClient/Redis/env-resolvers casts.
+  - `httpClient.ts`: `as never` → `as AxiosRequestConfig` (×2).
+  - `env-resolvers.ts`: 5 `raw as Foo` casts → `z.enum([...]).safeParse(raw).data ?? default` (NODE_ENV, LLM_PROVIDER, GUARDRAILS_V2_CANDIDATE, OBJECT_STORAGE_DRIVER, EMBEDDINGS_PROVIDER).
+  - `cache.port.ts`: introduces `CacheValueSchema<T>` (zod-shaped duck type, no zod runtime dep in port). `get<T>` now accepts optional schema; on schema failure returns null. Backward-compatible — existing call-sites are untouched, migration to schemas is incremental.
+  - Files: `httpClient.ts`, `env-resolvers.ts`, `cache.port.ts`, `redis-cache.service.ts`, `memory-cache.service.ts`, `resilient-cache.wrapper.ts`.
 - [ ] C.14 — Create packages/musaium-shared/ workspace
 - [ ] C.15 — Split auth.route.ts (if monolithic)
 
