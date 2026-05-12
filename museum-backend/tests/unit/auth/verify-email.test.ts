@@ -54,7 +54,12 @@ describe('RegisterUseCase — verification email', () => {
     };
     const useCase = new RegisterUseCase(repo, emailService, 'https://app.example.com');
 
-    await useCase.execute('test@example.com', 'ValidPass1', 'Test', 'User');
+    await useCase.execute({
+      email: 'test@example.com',
+      password: 'ValidPass1',
+      firstname: 'Test',
+      lastname: 'User',
+    });
 
     expect(repo.setVerificationToken).toHaveBeenCalledWith(
       user.id,
@@ -77,7 +82,12 @@ describe('RegisterUseCase — verification email', () => {
     };
     const useCase = new RegisterUseCase(repo, emailService, 'https://app.example.com');
 
-    const result = await useCase.execute('test@example.com', 'ValidPass1', 'Test', 'User');
+    const result = await useCase.execute({
+      email: 'test@example.com',
+      password: 'ValidPass1',
+      firstname: 'Test',
+      lastname: 'User',
+    });
 
     expect(result).toEqual(user);
   });

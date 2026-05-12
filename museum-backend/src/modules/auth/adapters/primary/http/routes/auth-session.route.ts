@@ -52,14 +52,14 @@ authSessionRouter.post(
   async (req: Request, res: Response) => {
     const { email, password, firstname, lastname, dateOfBirth } = req.body;
     const locale = pickEmailLocale(req);
-    const user = await registerUseCase.execute(
+    const user = await registerUseCase.execute({
       email,
       password,
       firstname,
       lastname,
       locale,
       dateOfBirth,
-    );
+    });
     await auditService.log({
       action: AUDIT_AUTH_REGISTER,
       actorType: 'user',

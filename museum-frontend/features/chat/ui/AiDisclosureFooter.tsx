@@ -26,8 +26,8 @@ export function AiDisclosureFooter() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
+    paddingHorizontal: space['3'],
+    paddingVertical: space['1'],
     alignItems: 'center',
   },
   text: {

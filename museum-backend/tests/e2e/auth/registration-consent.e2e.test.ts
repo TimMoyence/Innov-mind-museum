@@ -43,7 +43,7 @@ describeE2E('registration consent (GDPR)', () => {
     const userId = (res.body as { user: { id: number } }).user.id;
 
     const rows = await harness.dataSource.query<
-      Array<{ scope: string; version: string; source: string; revoked_at: Date | null }>
+      { scope: string; version: string; source: string; revoked_at: Date | null }[]
     >(
       `SELECT scope, version, source, revoked_at FROM user_consents WHERE user_id = $1`,
       [userId],
@@ -85,7 +85,7 @@ describeE2E('registration consent (GDPR)', () => {
     expect(res.status).toBe(422);
     expect((res.body as { code?: string }).code).toBe('MINOR_PARENTAL_CONSENT_REQUIRED');
 
-    const rows = await harness.dataSource.query<Array<{ id: number }>>(
+    const rows = await harness.dataSource.query<{ id: number }[]>(
       `SELECT uc.id FROM user_consents uc
        JOIN users u ON u.id = uc.user_id
        WHERE u.email = $1`,
@@ -118,7 +118,7 @@ describeE2E('registration consent (GDPR)', () => {
     expect(res.status).toBe(201);
     const userId = (res.body as { user: { id: number } }).user.id;
 
-    const rows = await harness.dataSource.query<Array<{ date_of_birth: string | Date | null }>>(
+    const rows = await harness.dataSource.query<{ date_of_birth: string | Date | null }[]>(
       `SELECT date_of_birth FROM users WHERE id = $1`,
       [userId],
     );
