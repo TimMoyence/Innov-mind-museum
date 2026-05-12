@@ -20,10 +20,10 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Doc | Path |
 |---|---|
 | ADRs (002-046) | [`docs/adr/`](adr/) |
-| Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Architecture (BE hex / FE Expo / Web Next.js) | `CLAUDE.md` § Architecture (summary) — `docs/ARCHITECTURE.md` not yet extracted |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
-| Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) |
-| ESLint discipline | [`docs/LINT_DISCIPLINE.md`](LINT_DISCIPLINE.md) |
+| Test discipline — DRY factories | `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` — `docs/TEST_FACTORIES.md` not yet extracted |
+| ESLint discipline | `CLAUDE.md` § ESLint Discipline (quick ref) — `docs/LINT_DISCIPLINE.md` not yet extracted |
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
@@ -32,7 +32,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Anti-hallucination (C4, citations v2 + WebSearch fallback) | [`docs/adr/ADR-038-anti-hallucination-citations-websearch.md`](adr/ADR-038-anti-hallucination-citations-websearch.md) — *Accepted-Implemented* (`c72ec2ba` 2026-05-11) |
 | Wikidata résilient (C5, opossum CB + organic local dump) | [`docs/adr/ADR-039-wikidata-resilient-circuit-breaker.md`](adr/ADR-039-wikidata-resilient-circuit-breaker.md) |
 | Zod 3/4 status quo + defer plan (BE) | [`docs/adr/ADR-033-zod-status-quo-and-defer-plan.md`](adr/ADR-033-zod-status-quo-and-defer-plan.md) |
-| RBAC matrix (backend) | [`museum-backend/docs/rbac-matrix.md`](../museum-backend/docs/rbac-matrix.md) |
+| RBAC matrix (backend) | `museum-backend/src/helpers/middleware/require-role.middleware.ts` + ADR-013 / ADR-014 (matrix not yet extracted to its own doc) |
 | SLO + observability strategy | [`docs/SLO.md`](SLO.md) |
 | Capacity plan (10rps→1K→100K tiers) | [`docs/CAPACITY_PLAN.md`](CAPACITY_PLAN.md) |
 

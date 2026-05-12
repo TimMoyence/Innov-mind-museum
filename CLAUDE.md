@@ -97,7 +97,7 @@ Phase history (Maestro / Web a11y / Stryker / Auth e2e / Chaos / Coverage gates)
 
 ## Architecture
 
-Détail complet par app (BE hexagonal, FE Expo Router, Web Next.js App Router) : **`docs/ARCHITECTURE.md`**.
+> `docs/ARCHITECTURE.md` is referenced in older docs but not yet extracted. The summary below + the per-app `src/` tree are the source of truth.
 
 Résumé :
 - **Backend** — hexagonal (domain → useCase → adapters), modules barrel-pattern (admin/auth/museum/review/support) ou composition-root (chat/knowledge-extraction). Import discipline via codemod 2026-05-05 (alias `@modules/*`/`@shared/*`/`@data/*`, no 4-level relative). Minimal-barrel policy.
@@ -203,7 +203,7 @@ Spec complète : `docs/AI_VOICE.md`.
 
 **Tests MUST use shared factories. Inline object creation forbidden.**
 
-Détail complet (factories existantes, rules, anti-patterns, tier classification ADR-012, ESLint enforcement) : **`docs/TEST_FACTORIES.md`**.
+Source de vérité = quick reference ci-dessous + les fichiers `tests/helpers/**/*.fixtures.ts` (BE) / `__tests__/helpers/factories/*.ts` (FE). Le doc séparé `docs/TEST_FACTORIES.md` est référencé mais pas encore extrait — pour l'instant, lis directement les factories.
 
 Quick reference :
 - BE factories : `museum-backend/tests/helpers/<module>/<entity>.fixtures.ts`
@@ -215,12 +215,12 @@ Quick reference :
 
 **`eslint-disable` = last resort, not first reflex.**
 
-Détail (decision tree, common anti-patterns, justified disable patterns whitelist, PR-validation hard rule) : **`docs/LINT_DISCIPLINE.md`**.
+Source de vérité = quick reference ci-dessous + per-rule decision tree au moment du PR. Le doc séparé `docs/LINT_DISCIPLINE.md` est référencé mais pas encore extrait.
 
 Quick reference :
 - Read rule docs → fix code (90% of cases) → only disable if false positive in this context, no alternative, `-- reason` comment
 - Any new `eslint-disable` in PR must include `Justification: ≥20 chars` + `Approved-by: <reviewer/SHA>` paragraphs
-- Pre-approved categories listed in `docs/LINT_DISCIPLINE.md` are the only ones not requiring per-PR justification
+- Pre-approved categories (TBD when `docs/LINT_DISCIPLINE.md` is extracted) are the only ones not requiring per-PR justification
 
 ## Team reports lifecycle
 
