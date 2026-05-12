@@ -45,6 +45,10 @@
 !docs/observability/**
 !docs/security/
 !docs/security/**
+!docs/legal/
+!docs/legal/**
+!docs/audit-cleanup-2026-05-12/
+!docs/audit-cleanup-2026-05-12/**
 
 # frontend docs
 !museum-frontend/docs/
