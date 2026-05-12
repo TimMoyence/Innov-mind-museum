@@ -46,6 +46,12 @@ const resolveVariant = (env: RuntimeEnv): AppVariant => {
   return 'development';
 };
 
+// Narrows `unknown`/`any` to `string` without a cast — used on `process.env.X`
+// reads where the resolved type differs local (string | undefined) vs CI (any).
+// Returns undefined for non-strings so `?? 'default'` still applies.
+const typeofString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
 const nonEmpty = (value?: string): string | undefined => {
   if (!value) {
     return undefined;
@@ -288,8 +294,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: (process.env.SENTRY_ORG as string | undefined) ?? 'asili-design',
-          project: (process.env.SENTRY_PROJECT as string | undefined) ?? 'apple-ios',
+          organization: typeofString(process.env.SENTRY_ORG) ?? 'asili-design',
+          project: typeofString(process.env.SENTRY_PROJECT) ?? 'apple-ios',
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],

@@ -43,13 +43,30 @@ export const initSentry = (): void => {
     return;
   }
 
+  // The OTel SDK is already initialised by `src/instrumentation.ts` BEFORE
+  // this runs and provides all HTTP/Express/Postgres/Redis/etc. instrumentation
+  // via `getNodeAutoInstrumentations()`. Two settings here prevent Sentry from
+  // duplicating that work — which previously stacked ~21 finish listeners on
+  // every ServerResponse and tripped Node's MaxListenersExceededWarning:
+  //   1. `skipOpenTelemetrySetup: true` — Sentry won't create its OWN OTel
+  //      NodeSDK on top of ours (Sentry v8+ ships an internal OTel SDK; left
+  //      to its defaults it double-wraps http/express).
+  //   2. `getDefaultIntegrationsWithoutPerformance()` — drops Sentry's
+  //      ~25 performance integrations (Express, Postgres, Redis, Kafka, …)
+  //      that mirror OTel's auto-instrumentations one-for-one. Errors,
+  //      breadcrumbs, console capture, requestData, linkedErrors, etc.
+  //      are kept (those don't duplicate OTel).
+  // Trade-off (intentional per 2026-05-12 decision): Sentry APM/traces no
+  // longer reach the Sentry dashboard; spans go exclusively to the OTel
+  // collector via OTLP. Sentry remains the error + breadcrumb pipeline.
   Sentry.init({
     dsn: env.sentry.dsn,
     environment: env.sentry.environment,
     release: env.sentry.release,
     tracesSampleRate: env.sentry.tracesSampleRate,
     profilesSampleRate: env.sentry.profilesSampleRate,
-    integrations: [...Sentry.getDefaultIntegrations({})],
+    skipOpenTelemetrySetup: true,
+    integrations: [...Sentry.getDefaultIntegrationsWithoutPerformance()],
     sendDefaultPii: false,
     beforeSend: (event) => scrubEvent(event as ScrubbableEvent) as typeof event,
     beforeBreadcrumb: (breadcrumb) =>

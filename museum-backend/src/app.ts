@@ -97,6 +97,21 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
+  // Residual headroom for `finish`/`close` listeners on each ServerResponse.
+  // The root cause of the previous MaxListenersExceededWarning (~21 listeners
+  // per response) was Sentry+OTel double-instrumentation — fixed in
+  // `shared/observability/sentry.ts` via `skipOpenTelemetrySetup: true` and
+  // `getDefaultIntegrationsWithoutPerformance()`. Post-dedup the legitimate
+  // per-request listener budget (requestLogger + httpMetrics + compression +
+  // express-rate-limit + body-parsers + OTel http/express auto-instrumentation
+  // + res.setTimeout + Sentry breadcrumb hooks) sits around 10-12, which is
+  // right at Node's default cap of 10. Setting 20 gives clean margin without
+  // hiding a real leak (it would still surface at 21+).
+  app.use((_req, res, next) => {
+    res.setMaxListeners(20);
+    next();
+  });
+
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
 
