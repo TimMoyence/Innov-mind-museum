@@ -191,6 +191,27 @@ describe('signInWithGoogle — F11-mobile web flow', () => {
       code: 'google_unknown',
     });
   });
+
+  // Regression — TestFlight 1.2.2/88 prod log 2026-05-12 13:52:49.094:
+  // backend rejected /social-redeem with `code Code must be base64url`. iOS
+  // ASWebAuthenticationSession appended a stray fragment to the redirect URL
+  // (`musaium://auth/google/callback?code=<otc>#...`), and the pre-fix parser
+  // sliced everything after `?` into URLSearchParams — `URLSearchParams` does
+  // not strip fragments, so the OTC value carried `#...` into the POST body
+  // and tripped the `^[A-Za-z0-9_-]+$` regex. The parser now slices the
+  // fragment off before constructing URLSearchParams.
+  it('strips a trailing fragment so the OTC code stays base64url-clean', async () => {
+    mockOpenAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'musaium://auth/google/callback?code=opaque-otc-22-chars-abc#_=_',
+    });
+    const session = fakeSession();
+    mockRedeemSocialCode.mockResolvedValue(session);
+
+    await signInWithGoogle();
+
+    expect(mockRedeemSocialCode).toHaveBeenCalledWith('opaque-otc-22-chars-abc');
+  });
 });
 
 // ── Defensive lazy load (TestFlight 1.2.2/87 — Pods missing ExpoWebBrowser) ──

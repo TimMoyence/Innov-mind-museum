@@ -140,7 +140,16 @@ function parseCallbackUrl(url: string): CallbackParse {
   if (!url.startsWith(MOBILE_DEEPLINK_PREFIX) || queryIndex === -1) {
     return { kind: 'error', reason: 'invalid_callback_url' };
   }
-  const search = new URLSearchParams(url.slice(queryIndex + 1));
+  // Strip the fragment (`#...`) before parsing query. URLSearchParams does
+  // NOT strip it on its own — `URLSearchParams('code=ABC#frag').get('code')`
+  // returns `'ABC#frag'`, not `'ABC'`. Any stray fragment appended by the
+  // host OS / in-app browser (observed on iOS ASWebAuthenticationSession in
+  // TestFlight 1.2.2/88) would leak into the OTC value and fail the backend
+  // `^[A-Za-z0-9_-]+$` regex with a misleading `Code must be base64url`.
+  const afterQuery = url.slice(queryIndex + 1);
+  const fragmentIndex = afterQuery.indexOf('#');
+  const queryString = fragmentIndex === -1 ? afterQuery : afterQuery.slice(0, fragmentIndex);
+  const search = new URLSearchParams(queryString);
   const reason = search.get('reason') ?? search.get('error');
   if (reason) {
     return { kind: 'error', reason };

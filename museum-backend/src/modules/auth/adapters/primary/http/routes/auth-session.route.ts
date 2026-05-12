@@ -37,7 +37,38 @@ import {
   AUDIT_AUTH_REGISTER,
   AUDIT_AUTH_SOCIAL_LOGIN,
 } from '@shared/audit/audit.types';
+import { logger } from '@shared/logger/logger';
 import { validateBody } from '@src/helpers/middleware/validate-body.middleware';
+
+/**
+ * TEMP DIAGNOSTIC (2026-05-12) — TestFlight 1.2.2/88 prod log 13:52:49.094
+ * shows /social-redeem 400 `Code must be base64url` with no insight into the
+ * actual payload. This middleware fires BEFORE validateBody and emits a
+ * PII-safe fingerprint (first 8 chars + length + char-class booleans) of any
+ * code that fails the backend's base64url regex, so we can pinpoint the
+ * cause if the FE parser fix (parseCallbackUrl fragment strip) does not
+ * fully resolve TestFlight failures. OTC is single-use 60s — short-lived
+ * leakage risk is acceptable for the diagnostic window. REVERT this block
+ * once TestFlight reports clean.
+ */
+const diagSocialRedeemCode = (req: Request, _res: Response, next: NextFunction): void => {
+  const body = req.body as { code?: unknown };
+  const code = body.code;
+  if (typeof code === 'string' && !/^[A-Za-z0-9_-]+$/.test(code)) {
+    logger.warn('social_redeem_diag_invalid_code', {
+      firstChars: code.slice(0, 8),
+      length: code.length,
+      hasHash: code.includes('#'),
+      hasEquals: code.includes('='),
+      hasPlus: code.includes('+'),
+      hasSlash: code.includes('/'),
+      hasPercent: code.includes('%'),
+      hasSpace: code.includes(' '),
+      hasDot: code.includes('.'),
+    });
+  }
+  next();
+};
 
 /**
  * Sub-router for session lifecycle endpoints:
@@ -184,6 +215,7 @@ authSessionRouter.post(
 authSessionRouter.post(
   '/social-redeem',
   socialLoginLimiter,
+  diagSocialRedeemCode,
   validateBody(socialRedeemSchema),
   async (req: Request, res: Response) => {
     const { code } = req.body;
