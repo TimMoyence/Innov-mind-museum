@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildVerifyEmail } from '@shared/email/templates';
 import { badRequest } from '@shared/errors/app.error';
+import { POLICY_VERSION } from '@shared/legal/policy-version';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
@@ -11,6 +12,7 @@ import { assertPasswordNotBreached } from '@shared/validation/password-breach-ch
 
 import type { User } from '@modules/auth/domain/user/user.entity';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
 import type { EmailService } from '@shared/email/email.port';
 
 /** Orchestrates new user registration with email/password. */
@@ -19,6 +21,7 @@ export class RegisterUseCase {
     private readonly userRepository: IUserRepository,
     private readonly emailService?: EmailService,
     private readonly frontendUrl?: string,
+    private readonly grantConsentUseCase?: GrantConsentUseCase,
   ) {}
 
   /**
@@ -71,6 +74,27 @@ export class RegisterUseCase {
       sanitizedFirstname,
       sanitizedLastname,
     );
+
+    // GDPR — register the ToS/privacy consent at policy version POLICY_VERSION.
+    // The mobile/web flows block submission unless the user ticked the GDPR
+    // checkbox, so we treat reaching this code path as proof of consent. Audit
+    // trail lives in `user_consents` (immutable insert per grant, revoke marks
+    // a row rather than deleting it).
+    if (this.grantConsentUseCase) {
+      try {
+        await this.grantConsentUseCase.execute(user.id, 'tos_privacy', POLICY_VERSION, 'registration');
+      } catch (error) {
+        // Consent recording failure must not silently swallow — surface via
+        // logger so DPO can reconcile. We still return the created user since
+        // the legal proof is on the FE checkbox + audit log; missing row will
+        // be visible in DPO dashboards.
+        logger.error('registration_consent_record_failed', {
+          userId: user.id,
+          policyVersion: POLICY_VERSION,
+          error: (error as Error).message,
+        });
+      }
+    }
 
     // Send verification email (non-blocking — registration succeeds even if this fails)
     try {

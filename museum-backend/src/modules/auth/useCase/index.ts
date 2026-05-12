@@ -75,8 +75,6 @@ export const __testEmailService = testEmailService;
 
 const frontendUrl = env.frontendUrl;
 
-/** Singleton instance of {@link RegisterUseCase}. */
-const registerUseCase = new RegisterUseCase(userRepository, emailService, frontendUrl);
 /** Singleton instance of {@link ForgotPasswordUseCase}. */
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
 /** Singleton instance of {@link ResetPasswordUseCase}. Revokes refresh tokens on reset (OWASP). */
@@ -229,6 +227,18 @@ const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 // GDPR consent use cases (userConsentRepository is initialised earlier alongside the DSAR export use case).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
+
+/**
+ * Singleton instance of {@link RegisterUseCase}. Wired after `grantConsentUseCase`
+ * because registration now records the ToS/privacy consent server-side
+ * (`user_consents.scope = 'tos_privacy'`) as part of the registration flow.
+ */
+const registerUseCase = new RegisterUseCase(
+  userRepository,
+  emailService,
+  frontendUrl,
+  grantConsentUseCase,
+);
 
 /**
  * Registers the API-key middleware globals (apiKeyRepository + userRoleResolver).
