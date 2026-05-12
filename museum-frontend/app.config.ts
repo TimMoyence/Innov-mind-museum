@@ -322,14 +322,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          // String() wrap needed: CI sees process.env as `any` (missing
-          // @types/node resolution in the GitHub runner image), local sees
-          // `string | undefined`. String() satisfies CI's no-unsafe-*, the
-          // disable silences local's no-unnecessary-type-conversion.
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- needed on CI; see comment above
-          organization: String(process.env.SENTRY_ORG ?? 'asili-design'),
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- needed on CI; see comment above
-          project: String(process.env.SENTRY_PROJECT ?? 'apple-ios'),
+          // `as string` (not String()) bridges a local/CI typing divergence:
+          // local TS sees `process.env.X` as `string | undefined` (via Expo
+          // metro-require ambient types), CI sees `any`. `String()` would
+          // trigger `no-unnecessary-type-conversion` locally; `as string` is
+          // a pure type assertion (no runtime conversion), silently satisfies
+          // both. See feedback_process_env_local_vs_ci memory.
+          organization: process.env.SENTRY_ORG ?? 'asili-design',
+          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],
