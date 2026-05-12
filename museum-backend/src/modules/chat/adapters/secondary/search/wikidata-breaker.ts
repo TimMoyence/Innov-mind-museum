@@ -36,15 +36,9 @@ export interface WikidataBreakerConfig {
   capacity: number;
 }
 
-/** Symbolic name of the breaker's current state, mapped from opossum flags. */
-export type BreakerStateName = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+import type { BreakerState, BreakerStateName } from '@modules/chat/domain/breaker/breaker-state';
 
-/** Snapshot consumed by the C5 cascade (Step 5.1) to decide local-dump fallback. */
-export interface BreakerState {
-  name: BreakerStateName;
-  /** Timestamp (ms epoch) of the most recent OPEN transition ; carried through HALF_OPEN. */
-  openSince?: number;
-}
+export type { BreakerState, BreakerStateName };
 
 type LookupFn = (query: KnowledgeBaseQuery) => Promise<ArtworkFacts | null>;
 

@@ -14,7 +14,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [x] B.1 — next 15.5.15 → 15.5.18 (advisory GHSA-26hh-7cqf-hhc6 patched in 15.5.18, not 15.5.16 — bumped to actual fix). pnpm audit web = `No known vulnerabilities found`.
 - [x] B.2 — OTel 0.75.0 (commit dd584e34, hotfix prod déjà landed)
 - [x] B.3 — uuid override ^11.1.1 — `pnpm list uuid -r` → 11.1.1 ; `pnpm audit` BE = `No known vulnerabilities found`.
-- [ ] B.4 — remove google-signin
+- [x] B.4 — remove google-signin ; uninstall + clean app.config.ts (plugin + dead Google client-id config + extras) + comments trimmed in socialAuthProviders/useSocialLogin ; `expo prebuild` + `pod install` ; iOS Pods/GoogleSignIn, GoogleUtilities, AppAuth, GTM*, RNGoogleSignin gone ; Info.plist com.googleusercontent URL scheme removed.
 - [ ] B.5 — replace confetti-cannon with Reanimated
 - [ ] B.6 — replace js-sha256 with expo-crypto
 - [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.

@@ -1,12 +1,9 @@
 import { haversineDistanceMeters } from '@shared/utils/haversine';
 
+import type { NearbyMuseum } from '@modules/chat/domain/location/nearbyMuseum';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 
-/** A museum within range of the user's coordinates, with haversine distance. */
-export interface NearbyMuseum {
-  name: string;
-  distance: number;
-}
+export type { NearbyMuseum };
 
 const MAX_NEARBY = 5;
 const MAX_DISTANCE_METERS = 30_000;

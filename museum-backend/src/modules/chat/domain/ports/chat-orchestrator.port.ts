@@ -6,7 +6,7 @@ import type {
 } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { KnowledgeRouterSource } from '@modules/chat/domain/ports/knowledge-router.port';
-import type { ResolvedLocation } from '@modules/chat/useCase/location/location-resolver';
+import type { ResolvedLocation } from '@modules/chat/domain/location/resolvedLocation';
 
 /** Input for the LLM orchestrator. */
 export interface OrchestratorInput {

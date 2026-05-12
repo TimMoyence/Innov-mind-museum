@@ -71,11 +71,8 @@ export const useSocialLogin = ({
     },
   });
 
-  // F11-mobile (2026-05) — Google migrated off the broken @react-native-google-signin
-  // direct ID-token POST onto the server-mediated /google/initiate redirect flow.
-  // signInWithGoogle now opens an in-app browser, intercepts the deeplink, and
-  // redeems the OTC against /api/auth/social-redeem — returning the session
-  // directly. No client-side nonce round-trip.
+  // F11-mobile (2026-05) — Google uses the server-mediated /google/initiate redirect flow:
+  // in-app browser → deeplink callback → OTC redeem via /api/auth/social-redeem.
   const googleMutation = useMutation({
     mutationFn: async () => {
       const session = await signInWithGoogle();

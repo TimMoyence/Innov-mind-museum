@@ -1,4 +1,4 @@
-import { CircuitOpenError } from '@modules/chat/adapters/secondary/llm/llm-circuit-breaker';
+import { CircuitOpenError } from '@modules/chat/domain/errors/circuit-open.error';
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
