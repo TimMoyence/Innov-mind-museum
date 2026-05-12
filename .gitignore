@@ -44,6 +44,8 @@
 !docs/CHAOS_RUNBOOKS.md
 !docs/observability/
 !docs/observability/**
+!docs/operations/
+!docs/operations/**
 !docs/security/
 !docs/security/**
 !docs/legal/

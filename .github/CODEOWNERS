@@ -91,9 +91,23 @@ design-system/**                                                        @TimKrak
 **/Dockerfile*                                                          @TimKraken
 **/docker-compose*.yml                                                  @TimKraken
 
+# ─── Guardrail subsystem (Phase 0 fold-in, ADR-048, 2026-05-12) ───────
+# Code paths already covered by the AI Safety block above; this block adds
+# the docs + ADRs + ops surface around the guardrail subsystem so every
+# change requires steward review even before an FTE Security on-call exists.
+museum-backend/src/modules/chat/useCase/guardrail/**                    @TimKraken
+docs/adr/ADR-015*.md                                                    @TimKraken
+docs/adr/ADR-047*.md                                                    @TimKraken
+docs/adr/ADR-048*.md                                                    @TimKraken
+docs/OPS_INCIDENT_LLM_GUARD.md                                          @TimKraken
+docs/RUNBOOKS/guardrail-incidents.md                                    @TimKraken
+docs/observability/alerts-llm-guard.yml                                 @TimKraken
+docs/operations/**                                                      @TimKraken
+
 # ─── Compliance + legal + incident response ───────────────────────────
 docs/compliance/**                                                      @TimKraken
 docs/incidents/**                                                       @TimKraken
+docs/legal/**                                                           @TimKraken
 docs/CI_CD_SECRETS.md                                                   @TimKraken
 
 # ─── Project guidance ─────────────────────────────────────────────────

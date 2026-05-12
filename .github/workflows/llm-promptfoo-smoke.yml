@@ -1,0 +1,181 @@
+# ---------------------------------------------------------------------------
+# llm-promptfoo-smoke.yml
+#
+# Scope
+#   Defense-in-depth complement to `llm-security-promptfoo.yml`. Runs a small
+#   set of non-adversarial reference prompts (e.g. "Tell me about the Mona
+#   Lisa") and asserts that the LangChain orchestrator still returns coherent
+#   art-domain answers. Catches regressions where the guardrail tightening
+#   accidentally over-blocks legitimate questions.
+#
+# Triggers
+#   - schedule: '30 3 * * *'      Nightly at 03:30 UTC.
+#   - workflow_dispatch:          Manual trigger.
+#
+# Failure policy
+#   pass-rate < 80 % fails the run.
+#
+# Notes
+#   The reference corpus lives at
+#     museum-backend/scripts/llm-security/promptfoo-daily-art-smoke.yaml
+#   It uses a `contains-any` assertion family so any answer that mentions the
+#   artwork title / artist counts as a pass.
+# ---------------------------------------------------------------------------
+name: llm-promptfoo-smoke
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promptfoo-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: daily-art smoke (recall ≥80 %)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: musaium
+          POSTGRES_PASSWORD: musaium_ci
+          POSTGRES_DB: musaium
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://musaium:musaium_ci@localhost:5433/musaium
+      DB_HOST: localhost
+      DB_PORT: '5433'
+      DB_USER: musaium
+      DB_PASSWORD: musaium_ci
+      PGDATABASE: musaium
+      DB_SYNCHRONIZE: 'false'
+      JWT_ACCESS_SECRET: ci-access-secret-smoke
+      JWT_REFRESH_SECRET: ci-refresh-secret-smoke
+      MEDIA_SIGNING_SECRET: ci-media-secret-smoke
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NODE_ENV: test
+      PORT: '3000'
+      PROMPTFOO_DISABLE_TELEMETRY: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install backend deps
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run migrations
+        working-directory: museum-backend
+        run: pnpm migration:run
+
+      - name: Boot backend
+        working-directory: museum-backend
+        run: pnpm dev > /tmp/backend.log 2>&1 &
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health 2>/dev/null; then
+              echo "backend healthy after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/backend.log
+          exit 1
+
+      - name: Bootstrap throwaway visitor + chat session
+        id: bootstrap
+        run: |
+          set -euo pipefail
+          REG_BODY='{"email":"smoke+ci@musaium.test","password":"SmokeCI2026!","firstName":"Smk","lastName":"Ci"}'
+          curl -fsS -X POST http://localhost:3000/api/auth/register \
+            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null || true
+          LOGIN_BODY='{"email":"smoke+ci@musaium.test","password":"SmokeCI2026!"}'
+          TOKEN=$(curl -fsS -X POST http://localhost:3000/api/auth/login \
+            -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
+          SID=$(curl -fsS -X POST http://localhost:3000/api/chat/sessions \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' -d '{"locale":"en","museumMode":false}' | jq -r '.id')
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "session=$SID" >> "$GITHUB_OUTPUT"
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo@latest
+
+      - name: Run smoke eval
+        working-directory: museum-backend/scripts/llm-security
+        env:
+          MUSAIUM_API_BASE_URL: http://localhost:3000
+          MUSAIUM_API_KEY: ${{ steps.bootstrap.outputs.token }}
+          MUSAIUM_SESSION_ID: ${{ steps.bootstrap.outputs.session }}
+        run: |
+          mkdir -p reports
+          promptfoo eval \
+            --config promptfoo-daily-art-smoke.yaml \
+            --max-concurrency 2 \
+            --output reports/promptfoo-daily-art-smoke.json
+
+      - name: Enforce ≥80 % pass-rate
+        working-directory: museum-backend/scripts/llm-security
+        run: |
+          python3 - <<'PY'
+          import json, sys, pathlib
+          report = pathlib.Path("reports/promptfoo-daily-art-smoke.json")
+          data = json.loads(report.read_text(encoding="utf-8"))
+          stats = (data.get("results") or {}).get("stats") or {}
+          successes = int(stats.get("successes", 0))
+          failures = int(stats.get("failures", 0))
+          total = successes + failures
+          if total == 0:
+              print("::error::Zero tests executed")
+              sys.exit(1)
+          rate = successes / total
+          print(f"pass_rate={rate:.4f} successes={successes} failures={failures}")
+          if rate < 0.80:
+              print(f"::error::Smoke pass-rate {rate:.2%} below 80 % threshold")
+              sys.exit(1)
+          PY
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-daily-art-smoke-${{ github.run_id }}
+          path: museum-backend/scripts/llm-security/reports
+          retention-days: 14
+
+      - name: Print backend log on failure
+        if: failure()
+        run: tail -200 /tmp/backend.log || true

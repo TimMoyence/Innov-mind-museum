@@ -1,0 +1,156 @@
+# ---------------------------------------------------------------------------
+# llm-security-garak.yml
+#
+# Scope
+#   NVIDIA Garak — adversarial LLM vulnerability scanner. Probes a small,
+#   self-hosted HuggingFace model (Phi-3-mini) with the `promptinject`, `xss`
+#   and `leakreplay` probe families. This is a BASELINE pipeline check that
+#   exercises the Garak ↔ GitHub-Actions plumbing; Phase 1.5 will replace the
+#   HuggingFace target with a custom REST probe pointed at the LLMGuard sidecar
+#   so we measure the actual Musaium chat pipeline instead of an upstream model.
+#
+# Triggers
+#   - schedule: '0 4 * * 1'       Every Monday 04:00 UTC (nightly weekly).
+#   - pull_request paths:         Code that affects the guardrail / LLM stack.
+#   - workflow_dispatch:          Manual re-run from the Actions UI.
+#
+# Budget
+#   ~10 min on ubuntu-latest (model download cached, probes batched). Runs once
+#   weekly on cron + on PRs that touch guard surfaces, so monthly cost stays
+#   bounded. Hard cap via `timeout-minutes: 30`.
+#
+# Failure policy
+#   Step `Evaluate severity` parses Garak's JSONL report and exits non-zero
+#   when any probe reports a HIGH / CRITICAL severity finding. Lower-severity
+#   findings are surfaced in the artifact but don't fail the build (yet).
+#
+# Sources
+#   - https://github.com/NVIDIA/garak
+#   - https://reference.garak.ai/en/stable/garak.probes.promptinject.html
+#   - https://genai.owasp.org/llmrisk/llm07-system-prompt-leakage/
+# ---------------------------------------------------------------------------
+name: llm-security-garak
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  pull_request:
+    paths:
+      - 'museum-backend/src/modules/chat/**'
+      - 'museum-backend/src/shared/llm/**'
+      - 'museum-backend/scripts/llm-security/**'
+      - '.github/workflows/llm-security-*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: garak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  garak:
+    name: NVIDIA Garak adversarial scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # Disable HuggingFace transfer telemetry + force offline-friendly cache.
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TRANSFORMERS_NO_ADVISORY_WARNINGS: '1'
+      # Garak writes reports + logs under $HOME/.local/share/garak; pin to
+      # workspace so we can upload it as an artifact.
+      GARAK_REPORTS_DIR: ${{ github.workspace }}/garak-reports
+      # Phi-3-mini-4k-instruct — 3.8 B params, runs CPU-only in <2 min/probe.
+      GARAK_TARGET_MODEL: microsoft/Phi-3-mini-4k-instruct
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Garak
+        run: |
+          python -m pip install --upgrade pip
+          # Pin a known-working minor; the harness installs the latest patch.
+          # If the upstream API changes we want the PR build to flag it, not
+          # silently break the nightly run.
+          python -m pip install "garak>=0.10,<0.12"
+          garak --version
+
+      - name: Prepare report dir
+        run: mkdir -p "${GARAK_REPORTS_DIR}"
+
+      - name: Run Garak probes
+        # Probe selection rationale:
+        #   - promptinject : Agency Enterprise PromptInject suite — direct
+        #                    system-prompt-override attempts (LLM01 + LLM07).
+        #   - xss          : data exfiltration probes (LLM02).
+        #   - leakreplay   : training-data + prompt replay (LLM02 + LLM07).
+        # Reports land in $GARAK_REPORTS_DIR with `musaium-garak` prefix.
+        working-directory: ${{ env.GARAK_REPORTS_DIR }}
+        run: |
+          set -euo pipefail
+          garak \
+            --target_type huggingface.Pipeline \
+            --target_name "${GARAK_TARGET_MODEL}" \
+            --probes promptinject,xss,leakreplay \
+            --report_prefix musaium-garak \
+            --parallel_attempts 2 \
+            --verbose
+          echo "--- generated reports ---"
+          ls -la
+
+      - name: Evaluate severity
+        # Garak's JSONL report contains one record per probe-attempt. Records
+        # with `status == "fail"` indicate a successful adversarial hit. We
+        # surface ALL failures in the artifact, but only fail the workflow if
+        # ≥1 record carries an explicit HIGH or CRITICAL severity tag.
+        working-directory: ${{ env.GARAK_REPORTS_DIR }}
+        run: |
+          set -euo pipefail
+          REPORT="$(find . -maxdepth 1 -name 'musaium-garak.*.report.jsonl' -print -quit 2>/dev/null || true)"
+          if [ -z "${REPORT}" ]; then
+            echo "::error::No Garak report produced — investigate logs."
+            exit 1
+          fi
+          echo "Parsing ${REPORT}"
+          python3 - "${REPORT}" <<'PY'
+          import json, sys
+          path = sys.argv[1]
+          high = 0
+          fails = 0
+          with open(path, encoding="utf-8") as fh:
+              for line in fh:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      rec = json.loads(line)
+                  except json.JSONDecodeError:
+                      continue
+                  if rec.get("status") in ("fail", "FAIL"):
+                      fails += 1
+                  sev = (rec.get("severity") or "").lower()
+                  if sev in ("high", "critical"):
+                      high += 1
+          print(f"failures={fails} high_or_critical={high}")
+          if high > 0:
+              print(f"::error::Garak found {high} HIGH/CRITICAL severity finding(s)")
+              sys.exit(1)
+          PY
+
+      - name: Upload Garak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: garak-report-${{ github.run_id }}
+          path: ${{ env.GARAK_REPORTS_DIR }}
+          retention-days: 30
+          if-no-files-found: warn
