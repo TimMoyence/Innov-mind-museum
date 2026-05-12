@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 
 import { decodeJwtHeader, jwtHeaderSchema } from '@shared/auth/jwt-decode';
 import { AppError } from '@shared/errors/app.error';
@@ -20,18 +21,37 @@ export interface SocialTokenPayload {
   lastname?: string;
 }
 
-interface JwksKey {
-  kty: string;
-  kid: string;
-  use: string;
-  alg: string;
-  n: string;
-  e: string;
-}
+/**
+ * Runtime shape contract for a single JWKS key entry (P0-8).
+ *
+ * All six fields are required. Apple's and Google's JWKS endpoints both
+ * publish complete RSA public keys; a key missing any of these would be
+ * unusable for `crypto.createPublicKey({ format: 'jwk' })` anyway, so we
+ * surface the malformation as a typed AppError BEFORE `crypto` throws a
+ * generic TypeError deep in the signature-verification path.
+ */
+const JwksKeySchema = z.object({
+  kty: z.string(),
+  kid: z.string(),
+  use: z.string(),
+  alg: z.string(),
+  n: z.string(),
+  e: z.string(),
+});
 
-interface JwksResponse {
-  keys: JwksKey[];
-}
+/**
+ * Runtime shape contract for a JWKS endpoint response (P0-8).
+ *
+ * Closes the silent-cast gap audited in
+ * `docs/audit-2026-05-12/details/01-typing.md §P1-1` — a rate-limit JSON
+ * envelope ({error, retry_after}) or version-drifted key entries no longer
+ * propagate as `undefined.find()` or `crypto.createPublicKey` TypeErrors.
+ */
+const JwksResponseSchema = z.object({
+  keys: z.array(JwksKeySchema),
+});
+
+type JwksKey = z.infer<typeof JwksKeySchema>;
 
 interface JwksCache {
   keys: JwksKey[];
@@ -53,9 +73,23 @@ const fetchJwks = async (url: string): Promise<JwksKey[]> => {
     throw new Error(`Failed to fetch JWKS from ${url}: ${response.status}`);
   }
 
-  const data = (await response.json()) as JwksResponse;
-  jwksCaches.set(url, { keys: data.keys, fetchedAt: Date.now() });
-  return data.keys;
+  const raw: unknown = await response.json();
+  const parsed = JwksResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    // P0-8: typed AppError at the auth boundary instead of a 500-class
+    // TypeError surfacing from `keys.find(...)` / `crypto.createPublicKey`.
+    // 401 matches the existing `invalidToken` style — the upstream JWKS
+    // is part of the auth contract; if it returns garbage we cannot
+    // authenticate the caller, which is a 401 from the client's POV.
+    throw new AppError({
+      message: 'JWKS response failed shape validation (malformed keys payload)',
+      statusCode: 401,
+      code: 'JWKS_MALFORMED',
+      details: { issues: parsed.error.issues, url },
+    });
+  }
+  jwksCaches.set(url, { keys: parsed.data.keys, fetchedAt: Date.now() });
+  return parsed.data.keys;
 };
 
 const jwkToPem = (jwk: JwksKey): string => {

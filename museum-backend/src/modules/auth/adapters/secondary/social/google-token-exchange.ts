@@ -9,6 +9,8 @@
  * exchange itself authenticates Google as the issuer via the TLS handshake,
  * but the ID token still goes through the canonical JWKS verification).
  */
+import { z } from 'zod';
+
 import { AppError } from '@shared/errors/app.error';
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -24,13 +26,27 @@ export interface GoogleTokenExchangeParams {
   redirectUri: string;
 }
 
-interface GoogleTokenResponse {
-  id_token?: string;
-  access_token?: string;
-  expires_in?: number;
-  scope?: string;
-  token_type?: string;
-}
+/**
+ * Runtime shape contract for Google's `/token` endpoint response (P0-8).
+ *
+ * Closes the silent-cast gap audited in
+ * `docs/audit-2026-05-12/details/01-typing.md §P1-1` — replacing the bare
+ * `as GoogleTokenResponse` cast at the json() call site so external API
+ * drift (added required fields, wrong types, error envelopes) surfaces as
+ * a typed AppError with the failing field name in `details.issues` rather
+ * than as a deep TypeError or undetected contract breach downstream.
+ *
+ * `id_token` is required because every code path that consumes this
+ * response forwards it; the other fields are kept optional to match Google's
+ * actual variable response shape.
+ */
+const GoogleTokenResponseSchema = z.object({
+  id_token: z.string().min(1),
+  access_token: z.string().optional(),
+  expires_in: z.number().optional(),
+  scope: z.string().optional(),
+  token_type: z.string().optional(),
+});
 
 /**
  * Exchange the authorization code for an ID token. Returns just the
@@ -77,13 +93,17 @@ export async function exchangeGoogleAuthCode(params: GoogleTokenExchangeParams):
     });
   }
 
-  const json = (await response.json()) as GoogleTokenResponse;
-  if (typeof json.id_token !== 'string' || json.id_token.length === 0) {
+  const raw: unknown = await response.json();
+  const parsed = GoogleTokenResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    // P0-8: surface Zod issues so ops can distinguish "missing id_token"
+    // from "id_token wrong type" from "expires_in wrong type" at a glance.
     throw new AppError({
-      message: 'Google token response missing id_token',
+      message: 'Google token response failed shape validation',
       statusCode: 502,
       code: 'GOOGLE_TOKEN_EXCHANGE_MALFORMED',
+      details: { issues: parsed.error.issues },
     });
   }
-  return json.id_token;
+  return parsed.data.id_token;
 }

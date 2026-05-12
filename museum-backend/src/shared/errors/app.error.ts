@@ -1,5 +1,20 @@
+/**
+ * Stash the AppError class on globalThis so `jest.resetModules()`-based test
+ * patterns (e.g. social-token-verifier-jwks-validation.test.ts) can still
+ * pass `rejects.toBeInstanceOf(AppError)` even when the verifier is
+ * re-imported AFTER the test file's top-level `import { AppError }`. Without
+ * this guard, each module reload creates a fresh class identity and the
+ * test-side reference no longer matches the throw site. Production behavior
+ * is identical to the previous direct `export class` — same shape, same
+ * prototype chain, just memoized.
+ */
+interface AppErrorGlobalStash {
+  __MUSAIUM_APP_ERROR__?: typeof AppErrorBase;
+}
+const _appErrorStash = globalThis as unknown as AppErrorGlobalStash;
+
 /** Represents a structured application error with an HTTP status code and machine-readable code. */
-export class AppError extends Error {
+class AppErrorBase extends Error {
   readonly statusCode: number;
   readonly code: string;
   readonly details?: unknown;
@@ -21,6 +36,13 @@ export class AppError extends Error {
     this.headers = params.headers;
   }
 }
+
+export const AppError: typeof AppErrorBase =
+  _appErrorStash.__MUSAIUM_APP_ERROR__ ?? (_appErrorStash.__MUSAIUM_APP_ERROR__ = AppErrorBase);
+/**
+ *
+ */
+export type AppError = InstanceType<typeof AppError>;
 
 /**
  * Thrown when caller-supplied input fails strict validation
