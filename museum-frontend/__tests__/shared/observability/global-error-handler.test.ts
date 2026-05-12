@@ -61,7 +61,7 @@ describe('installGlobalErrorHandler', () => {
     jest.clearAllMocks();
     // Force production-bundle codepath by default. Each test overrides
     // __DEV__ explicitly when it asserts dev behaviour.
-    (globalThis as { __DEV__: boolean }).__DEV__ = false;
+    (globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
@@ -121,7 +121,7 @@ describe('installGlobalErrorHandler', () => {
   });
 
   it('preserves isFatal=true when forwarding in dev (__DEV__=true)', () => {
-    (globalThis as { __DEV__: boolean }).__DEV__ = true;
+    (globalThis as unknown as { __DEV__: boolean }).__DEV__ = true;
     const original = jest.fn();
     const errorUtils = stubErrorUtils(original);
 
