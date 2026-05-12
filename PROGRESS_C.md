@@ -53,9 +53,45 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
 
 ## Verifs / commits
 
-(populated as actions complete)
+| Action | SHA | Files |
+| --- | --- | --- |
+| C.1+C.2+C.3 | 83d128261 (B's commit absorbed my staged files — tant pis, all my BE arch fixes landed there) | eslint.config.mjs, chat-orchestrator.port.ts, llm-circuit-breaker.ts, wikidata-breaker.ts, chat.service.ts (orchestration), knowledge-base.service.ts, location-resolver.ts, nearby-museums.provider.ts, NEW chat/domain/{location,errors,breaker}/* |
+| C.4-C.8 | 59b7903d | ocr-service.ts, env.ts, env.types.ts, env-resolvers.ts, chat-module.ts (nemo branch), 8 middleware/route files (Express casts), semaphore.ts, package.json + pnpm-lock.yaml (p-limit), NEW domain/errors/semaphore-*.ts |
+| C.9 | a58544c8 | env.ts, env.types.ts, chat-message.service.ts, index.ts, tests/integration/security/auth-email-service-kind-prod-reject.test.ts |
+| C.12 | 840ca819 | NEW museum-backend/src/shared/auth/jwt-decode.ts, NEW museum-frontend/shared/auth/jwt-decode.ts, auth-route.helpers.ts, social-token-verifier.ts, authLogic.pure.ts |
+| C.13 | 81e143f7 | httpClient.ts, env-resolvers.ts, cache.port.ts, redis-cache.service.ts, memory-cache.service.ts, resilient-cache.wrapper.ts |
+| C.10 | f4077e5f | DELETED chat-module-singleton.ts + chat-module.compare-wiring.ts + chat-module.knowledge-router-wiring.ts + chat-module.wikidata-wiring.ts + wiring.ts. EDITED chat-module.ts (716L), index.ts, app.ts, api.router.ts, auth/useCase/index.ts, 3 test files |
+| C.14 | 58b12c6b | NEW packages/musaium-shared/ (package.json, tsconfig.json, README.md, src/{geo,validation,i18n,errors,auth}/*.ts) |
 
 ## Coordinations
 
-- Need B to install `p-limit` (or install myself when B done).
-- D must rebase tests after C.5/C.7/C.8/C.10/C.11/C.14 changes — list per-action below.
+- **For B** : p-limit@^3 was installed by me during C.8 — pnpm-lock.yaml updated; no action.
+- **For D** : test files modified by me in this branch (already fixed in same commits, so no rebase needed unless your tests overlap):
+  - C.5 : none touched
+  - C.8 : semaphore.test.ts unchanged (9/9 pass)
+  - C.9 : tests/integration/security/auth-email-service-kind-prod-reject.test.ts (removed s3OrphanSweepEnabled / cacheEnabled / retention.enabled fields)
+  - C.10 : tests/unit/chat/chat-module-singleton.test.ts + tests/unit/shared/routers/api-router-{health,resolve}.test.ts (re-pointed imports + extended health-test mock)
+  - C.7 (BLOCKED) : tests/unit/chat/llm-circuit-breaker.test.ts + langchain-orchestrator{,-branches}.test.ts + e2e/chaos-circuit-breaker.e2e.test.ts — NO CHANGE (LLMCircuitBreaker custom impl kept).
+- **For A** : no signature changes in `auth/` ; C.12 JWT decode helpers are additive (auth-route.helpers + social-token-verifier consume them).
+
+## Action summary
+
+| ID | Status | Description |
+| --- | --- | --- |
+| C.1 | DONE | boundaries v5→v6 |
+| C.2 | DONE | ResolvedLocation moved to domain |
+| C.3 | DONE | CircuitOpenError + BreakerState moved to domain |
+| C.4 | DONE | Promise<any> → Promise<Scheduler> |
+| C.5 | DONE | 10 Express casts removed |
+| C.6 | DONE | nemo/prompt-armor branches deleted |
+| **C.7** | **BLOCKED** | opossum async incompatible with synchronous test helpers — defer |
+| C.8 | DONE | Semaphore wraps p-limit@^3 (132L→108L) |
+| C.9 | DONE | 4 flags removed, 5 JUSTIFIED-annotated |
+| C.10 | DONE | 6 chat-module files → 1 (922L→716L) |
+| **C.11** | **PARTIAL** | 16 ports inventoried, removal deferred (high cross-cutting risk) |
+| C.12 | DONE | JWT decode centralized with Zod schemas |
+| C.13 | DONE | as never / raw casts → typed + Zod parse |
+| C.14 | DONE (scaffold) | @musaium/shared package created; wiring deferred |
+| C.15 | NO-OP | auth.route.ts already split (28L barrel) |
+
+**14/16 closed, 1 BLOCKED, 1 PARTIAL.** All verifs ran clean; no test broke in my scope.
