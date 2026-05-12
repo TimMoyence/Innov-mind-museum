@@ -19,7 +19,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [~] B.6 — **DEFERRED to V1.1 / dedicated PR**. Reason: `js-sha256` carries no CVE (orphan-cleanup goal only). The migration requires `Crypto.digestStringAsync` (async) which cascades through `computeLocalCacheKey` → `chatLocalCache` store API (`lookup`/`store`/`bulkStore` sync→async) → `useChatSession` → `sendMessageCache` / `sendMessageStreaming` → `useMuseumPrefetch` + 4 tests. Additionally, `expo-crypto` is **not in deps** today (the brief assumed it was a transitive of Expo SDK 55, but `npm list expo-crypto` returns empty). Trade-off rejected pre-launch: bundle saving (~10KB) ≪ regression risk on chat cache hot path. Open ADR-046 covers this. Coordinate with D for tracking.
 - [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.
 - [x] B.8 — BE zod ^3.25.76 → ^4.4.1 (resolved 4.4.3) ; FE 4.4.1. Single breaking change touched : `z.record(z.unknown())` → `z.record(z.string(), z.unknown())` in 3 files (museum.schemas.ts, content-classifier.service.ts). BE typecheck clean on Zod-touched code ; 201 unit tests pass.
-- [ ] B.9 — align React 19.2.0 exact
+- [x] B.9 — Web react/react-dom pinned to `19.2.0` exact (caret dropped) ; FE already exact. `pnpm list react` Web = 19.2.0 ; `npm list react` FE = 19.2.0.
 - [ ] B.10 — final audit
 - [ ] B.11 — Renovate config audit
 
