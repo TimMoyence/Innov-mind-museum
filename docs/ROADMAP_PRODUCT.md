@@ -58,7 +58,7 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 > **Discipline :** chaque feature non-trivial passe par /team Spec Kit (spec.md + design.md + tasks.md).
 > Coche `[x]` au merge. Bloqué = `[BLOCKED: raison]` inline.
 >
-> **Sprint segment intermédiaire P1 closure :** 2026-05-05 → 2026-05-19, plan détaillé dans [`docs/SPRINT_2026-05-05_PLAN.md`](./SPRINT_2026-05-05_PLAN.md). Feature freeze 2026-05-19, soak staging 48h, release checklist post-19.
+> **Sprint segment intermédiaire P1 closure :** 2026-05-05 → 2026-05-19, recap consolidé dans [`docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`](./_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md). Feature freeze 2026-05-19, soak en local Docker 48h (pas de staging avant B2B revenue), release checklist post-19.
 
 ### C1 — Chat fast (latency premium)
 

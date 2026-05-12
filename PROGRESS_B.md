@@ -15,7 +15,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/C/D.
 - [x] B.2 — OTel 0.75.0 (commit dd584e34, hotfix prod déjà landed)
 - [x] B.3 — uuid override ^11.1.1 — `pnpm list uuid -r` → 11.1.1 ; `pnpm audit` BE = `No known vulnerabilities found`.
 - [x] B.4 — remove google-signin ; uninstall + clean app.config.ts (plugin + dead Google client-id config + extras) + comments trimmed in socialAuthProviders/useSocialLogin ; `expo prebuild` + `pod install` ; iOS Pods/GoogleSignIn, GoogleUtilities, AppAuth, GTM*, RNGoogleSignin gone ; Info.plist com.googleusercontent URL scheme removed.
-- [ ] B.5 — replace confetti-cannon with Reanimated
+- [x] B.5 — new `shared/ui/Confetti.tsx` (Reanimated 4) drop-in replaces ConfettiCannon in `app/(stack)/reviews.tsx` ; npm uninstall ; tsc clean on Confetti.tsx + reviews.tsx.
 - [ ] B.6 — replace js-sha256 with expo-crypto
 - [x] B.7 — remove cheerio ; linkedom DOM API replaces fallback ; html-scraper tests 31/31 ; lint clean.
 - [ ] B.8 — align Zod v4 BE↔FE

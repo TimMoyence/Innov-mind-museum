@@ -1,7 +1,7 @@
 # ADR-032 — TypeScript version alignment across the monorepo
 
 - **Status** : Accepted (2026-05-05)
-- **Ticket** : SPRINT_2026-05-05_PLAN.md task C / web-version-harmonize-roadmap-2026-05-05
+- **Ticket** : sprint 2026-05-05 (recap archived in `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`) — task C / web-version-harmonize-roadmap-2026-05-05
 - **Supersedes** : N/A
 - **Amends** : N/A
 
@@ -88,7 +88,7 @@ If those three converge, run a single coordinated bump on a dedicated `chore/ts-
 ## References
 
 - ROADMAP_TEAM.md (auto-consolidation pattern)
-- SPRINT_2026-05-05_PLAN.md task C
+- `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` task C (archived)
 - TypeScript 6.0 release notes (consult at re-evaluation time)
 - typescript-eslint compatibility matrix (consult at re-evaluation time)
 

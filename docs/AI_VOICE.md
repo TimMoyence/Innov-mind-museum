@@ -1,8 +1,8 @@
 # AI Voice — Architecture V1
 
 > **Statut :** Production V1 (2026-04)
-> **Spec source :** mesures latence terrain consolidées dans cette page (origine `docs/archive/` purgée 2026-05-07, voir git log si besoin du raw).
-> **ADR liés :** ADR-001-sse-streaming-deprecated supprimée 2026-05-03 (SSE streaming dropped pour V1, le pipeline voice est synchrone end-to-end).
+> **Spec source :** mesures latence terrain consolidées dans cette page (origine archivée puis purgée 2026-05-07, voir `git log -- docs/archive/` si besoin du raw).
+> **ADR liés :** ADR-001 (sse-streaming-deprecated) supprimée 2026-05-03 — SSE streaming dropped pour V1, le pipeline voice est synchrone end-to-end. Voir `git log -- docs/adr/ADR-001-sse-streaming-deprecated.md` pour l'historique.
 
 ## TL;DR
 

@@ -4,7 +4,7 @@
 
 - **Status:** Accepted (2026-04-30)
 - **Owner:** Mobile platform
-- **Supersedes:** [ADR-008](./ADR-008-sentry-rn-upgrade-deferred.md)
+- **Supersedes:** ADR-008 (sentry-rn-upgrade-deferred — file deleted 2026-05-03, recover via `git log -- docs/adr/ADR-008-sentry-rn-upgrade-deferred.md`)
 
 ## Context
 

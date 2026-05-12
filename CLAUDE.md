@@ -23,7 +23,7 @@ Réécrites complètement chaque sprint (4 semaines). Snapshots précédents = `
 
 Index docs : **`docs/DOCS_INDEX.md`**. Tech debts ouverts : **`docs/TECH_DEBT.md`**.
 
-Sprint debrief pédagogique 2026-04-30 → 2026-05-05 : **`docs/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français).
+Sprint debrief pédagogique 2026-04-30 → 2026-05-05 : **`docs/_archive/training-2026-05/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français, archivé 2026-05-12).
 
 Post-2026-04-20 runtime tracking : `.claude/tasks/` + `.claude/skills/team/team-reports/`.
 
@@ -194,7 +194,7 @@ Pipeline classique STT → LLM → TTS, **toujours actif** (feature flags retir�
 - **LLM** : LangChain orchestrator multi-provider.
 - **TTS** : `gpt-4o-mini-tts` (env `TTS_MODEL`), voix `alloy` par défaut. Audio MP3 buffer + persisté S3 (`ChatMessage.audioUrl`).
 - **Guardrails** : appliqués au texte intermédiaire (transcrit + réponse LLM).
-- **SSE streaming** : @deprecated, voir `docs/adr/ADR-001-sse-streaming-deprecated.md`.
+- **SSE streaming** : @deprecated. ADR-001 supprimée 2026-05-03 ; recover via `git log -- docs/adr/ADR-001-sse-streaming-deprecated.md`.
 - **Realtime WebRTC** : reporté V1.1.
 
 Spec complète : `docs/AI_VOICE.md`.

@@ -69,7 +69,7 @@ Audit decision binary (per design spec §2 ADR-012, now this file):
 
 ## Phase rollout & promotion criteria
 
-> Consolidated 2026-05-07 from `docs/archive/nl-reports-2026-04-17/reports/P11-decision.md` (sidecar benchmark v1→v2→v3).
+> Consolidated 2026-05-07 from `docs/archive/nl-reports-2026-04-17/reports/P11-decision.md` (sidecar benchmark v1→v2→v3 — archive purged 2026-05-07, recoverable via `git log -- docs/archive/nl-reports-2026-04-17/`).
 
 The `llm-guard` Python sidecar (P11) and the LLM judge (this ADR) share the same rollout scheme. Three phases, each with measurable promotion criteria.
 

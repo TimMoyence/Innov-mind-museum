@@ -11,9 +11,9 @@
 
 **`museum-frontend/` = experience visiteur balade culturelle, voice-first, off-line capable.**
 
-Référence transverse : `museum-frontend/docs/QUALITY_GUIDE.md` (qualité runtime + tests), `museum-frontend/docs/ARCHITECTURE_MAP.md` (dossiers + patterns), `museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md` (release engineering).
+Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patterns FE ; release engineering = `docs/MOBILE_INTERNAL_TESTING_FLOW.md` + `docs/STORE_SUBMISSION_GUIDE.md` ; iOS crash diag = `museum-frontend/docs/IOS26_CRASH_DIAG.md`.
 
-**Produit context (décision 2026-05-08) :** ROADMAP_PRODUCT priorise **Phase 1 Consolidation (chat fast / image / Wikidata / no-halluc / compare / paywall stub) AVANT Phase 2 Walk V1**. Cette roadmap FE = **track parallèle indépendant** (dette Expo / RN). Items F3/F5/F12 ci-dessous restent sur leur cadence WT2, **pas bloqués** par Phase 1 produit, **pas prioritaires** sur elle. Coordination : cf. `docs/SPRINT_2026-05-05_PLAN.md`.
+**Produit context (décision 2026-05-08) :** ROADMAP_PRODUCT priorise **Phase 1 Consolidation (chat fast / image / Wikidata / no-halluc / compare / paywall stub) AVANT Phase 2 Walk V1**. Cette roadmap FE = **track parallèle indépendant** (dette Expo / RN). Items F3/F5/F12 ci-dessous restent sur leur cadence WT2, **pas bloqués** par Phase 1 produit, **pas prioritaires** sur elle. Coordination : cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`.
 
 ---
 
@@ -109,7 +109,7 @@ Référence transverse : `museum-frontend/docs/QUALITY_GUIDE.md` (qualité runti
 
 | Item | Date kill | Raison |
 |---|---|---|
-| SSE streaming chat client | 2026-04 | Cf. `docs/adr/ADR-001-sse-streaming-deprecated.md` (archived). Replaced by sync chat. |
+| SSE streaming chat client | 2026-04 | ADR-001 (SSE streaming deprecated) was deleted 2026-05-03 — recover via `git log -- docs/adr/ADR-001-sse-streaming-deprecated.md`. Replaced by sync chat. |
 | OTA via expo-updates | (ADR-009) | Cf. `docs/adr/ADR-009-ota-disabled.md`. Chemin Expo store-submission only. |
 
 ---
@@ -118,4 +118,4 @@ Référence transverse : `museum-frontend/docs/QUALITY_GUIDE.md` (qualité runti
 
 WT3 (web) tient ce fichier à jour côté **statut + decision + roadmap** ; WT2 (museum-frontend) **exécute** F3/F5/F12 et merge dans `main`. Soft-sync : un item « `[ ] in WT2` » bascule à `[x]` quand WT2 merge dans `main` sur la même semaine.
 
-Coordination des 3 worktrees : cf. `docs/SPRINT_2026-05-05_PLAN.md`.
+Coordination des 3 worktrees : cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`.

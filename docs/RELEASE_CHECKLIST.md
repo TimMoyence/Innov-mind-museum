@@ -428,7 +428,7 @@ Redis n'a pas besoin d'être re-pull à chaque deploy, donc un `docker compose u
 ### 5.3 CloudFlare CDN (optionnel)
 
 Si CloudFlare est activé en front du VPS :
-- [ ] Migrer les DNS vers CloudFlare (voir `docs/CDN_CLOUDFLARE_SETUP.md`)
+- [ ] Migrer les DNS vers CloudFlare (voir `docs/adr/ADR-024-cloudflare-cdn-strategy.md` — l'ancien runbook `CDN_CLOUDFLARE_SETUP.md` a été archivé/supprimé 2026-05-07, decision-only ADR remplace le runbook)
 - [ ] SSL/TLS mode : Full (Strict)
 - [ ] Vérifier le health endpoint à travers CloudFlare : `curl https://musaium.com/api/health`
 - [ ] Tester le SSE streaming à travers CloudFlare (les réponses chat ne doivent pas être bufferisées)

@@ -22,8 +22,10 @@
 !docs/AI_VOICE.md
 !docs/AI_VISUAL_SIMILARITY.md
 !docs/TECH_DEBT.md
-!docs/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md
 !docs/GITHUB_ACTIONS_SHA_PINS.md
+!docs/PHASE_HISTORY.md
+!docs/_archive/
+!docs/_archive/**
 !docs/adr/
 !docs/adr/**
 !docs/CONTRIBUTING.md
@@ -43,14 +45,9 @@
 !docs/observability/**
 !docs/security/
 !docs/security/**
-!docs/explications-sprint-2026-05-05/
-!docs/explications-sprint-2026-05-05/**
 
 # frontend docs
 !museum-frontend/docs/
-!museum-frontend/docs/ARCHITECTURE_MAP.md
-!museum-frontend/docs/QUALITY_GUIDE.md
-!museum-frontend/docs/NEXT_LEVEL_MOBILE_PRODUCTION_AND_TEST.md
 !museum-frontend/docs/IOS26_CRASH_DIAG.md
 
 # backend perf bench artifacts (EXPLAIN ANALYZE outputs + reports)
