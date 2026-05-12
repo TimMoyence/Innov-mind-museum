@@ -122,7 +122,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       icon: BRAND_ICON,
       bundleIdentifier: variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
-      buildNumber: '88',
+      buildNumber: '89',
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -221,7 +221,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: variant === 'production' ? APP_ANDROID_PACKAGE : APP_ANDROID_PACKAGE_PREVIEW,
-      versionCode: 88,
+      versionCode: 89,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',
