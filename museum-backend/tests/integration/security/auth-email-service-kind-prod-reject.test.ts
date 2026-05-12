@@ -72,7 +72,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       maxAudioBytes: 12582912,
       maxOutputTokens: 800,
       includeDiagnostics: false,
-      cacheEnabled: true,
     },
     rateLimit: {
       ipLimit: 200,
@@ -99,7 +98,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     overpassCacheTtlSeconds: 86400,
     overpass: { cacheTtlSeconds: 86400, negativeCacheTtlSeconds: 3600 },
     chatPurgeRetentionDays: 180,
-    s3OrphanSweepEnabled: false,
     knowledgeBase: {
       timeoutMs: 500,
       cacheTtlSeconds: 3600,
@@ -169,7 +167,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       budgetBackend: 'memory',
     },
     retention: {
-      enabled: true,
       cronPattern: '15 3 * * *',
       batchLimit: 1000,
       supportTicketsDays: 365,

@@ -194,8 +194,6 @@ export interface AppEnv {
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
-    /** Whether the LLM response cache (G spec) is active. Defaults true; set false to bypass. */
-    cacheEnabled: boolean;
   };
   rateLimit: {
     ipLimit: number;
@@ -304,7 +302,6 @@ export interface AppEnv {
    * Default `false` — flip on after the in-cron media purge ships to clean
    * historical orphans, then leave it on as a long-term safety net.
    */
-  s3OrphanSweepEnabled: boolean;
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;
@@ -506,8 +503,6 @@ export interface AppEnv {
    * from support_tickets, reviews, and art_keywords.
    */
   retention: {
-    /** Master on/off switch. When false, no cron is registered at boot. Default true. */
-    enabled: boolean;
     /** BullMQ cron pattern shared by all three retention jobs. Default '15 3 * * *'. */
     cronPattern: string;
     /** Max rows deleted per chunked DELETE transaction. Default 1000. */

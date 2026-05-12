@@ -331,14 +331,13 @@ async function startChatPurgeCron(): Promise<ChatPurgeCronHandle | undefined> {
 
 /**
  * Boots the three daily retention crons (support_tickets, reviews, art_keywords).
- * Gated by `RETENTION_PRUNE_ENABLED` (default true) AND Redis being available.
+ * Pre-launch V1: always-on; structural skip when Redis is unavailable (BullMQ requires it).
  * Fail-open: any registrar error is logged and the server proceeds without the cron.
  */
 async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
-  if (!env.cache?.enabled || !env.retention.enabled) {
+  if (!env.cache?.enabled) {
     logger.info('retention_crons_disabled', {
-      cacheEnabled: Boolean(env.cache?.enabled),
-      retentionEnabled: env.retention.enabled,
+      reason: 'redis_unavailable',
     });
     return [];
   }

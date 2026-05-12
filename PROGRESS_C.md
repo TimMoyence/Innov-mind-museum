@@ -22,7 +22,17 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
 - [x] C.6 — Remove dead `nemo`/`prompt-armor` branches. `GuardrailsV2Candidate` → `'off' | 'llm-guard' | 'llm-judge'`. Resolver narrowed. chat-module.ts noop fallback removed. `grep "nemo\\|prompt-armor" src/` = 0. Files: `env.types.ts`, `env-resolvers.ts`, `chat-module.ts`.
 - [x] C.7 — **BLOCKED** : opossum's async event-based model is incompatible with custom breaker's synchronous test helpers (`recordFailure`/`recordSuccess` expect immediate state update). Migration would require rewriting 4 test files (`llm-circuit-breaker.test.ts`, `langchain-orchestrator.test.ts`, `langchain-orchestrator-branches.test.ts`, `chaos-circuit-breaker.e2e.test.ts`) with async assertion patterns — out-of-scope for the audit's ~30L estimate. Defer to dedicated sprint with test rebase plan.
 - [x] C.8 — Replace Semaphore with p-limit (BE). p-limit@^3 (CJS-compat) installed via `pnpm add p-limit@^3`. Rewrote `semaphore.ts` as wrapper preserving counters (immediate visibility for synchronous test patterns) + queue-size cap + acquire timeout via `Promise.race`. 9/9 unit tests pass. Files: `semaphore.ts` (132→108L), NEW `domain/errors/semaphore-queue-full.error.ts`, NEW `domain/errors/semaphore-timeout.error.ts`. **For D**: tests pass, no rebase needed.
-- [ ] C.9 — Remove 14 *_ENABLED flags
+- [x] C.9 — Audit 9 active *_ENABLED flags : 4 removed, 5 JUSTIFIED-annotated.
+  - REMOVED `LLM_CACHE_ENABLED` (cache always-on; bypass logic removed from chat-message.service).
+  - REMOVED `CACHE_ENABLED` (cache now structurally keyed on `REDIS_URL` presence — pre-launch V1 requires Redis live).
+  - REMOVED `S3_ORPHAN_SWEEP_ENABLED` (flag was unreferenced in src code; only test fixtures had it).
+  - REMOVED `RETENTION_PRUNE_ENABLED` (retention always-on; structural skip via `env.cache?.enabled` upstream).
+  - JUSTIFIED `PASSWORD_BREACH_CHECK_ENABLED` (e2e harness skips third-party HIBP).
+  - JUSTIFIED `OTEL_ENABLED` (local dev opt-out, no collector).
+  - JUSTIFIED `LANGFUSE_ENABLED` (local dev opt-out, SaaS keys not in dev).
+  - JUSTIFIED `EXTRACTION_WORKER_ENABLED` (e2e harness no-Redis avoids BullMQ ECONNREFUSED).
+  - JUSTIFIED `MUSEUM_ENRICHMENT_SCHEDULER_ENABLED` (consumer not yet wired in prod — flag prevents runaway queue; will delete once consumer exists).
+  - Files: `env.ts`, `env.types.ts`, `chat-message.service.ts`, `index.ts`, `tests/integration/security/auth-email-service-kind-prod-reject.test.ts`.
 - [ ] C.10 — Reunify chat-module*.ts
 - [ ] C.11 — Reduce null-object ports
 - [ ] C.12 — Centralize JWT decode (Zod parse)
