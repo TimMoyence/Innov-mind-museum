@@ -663,7 +663,13 @@
       "title": "You're near {{cityName}}",
       "description": "Download the offline content to explore without a connection.",
       "accept": "Download",
-      "decline": "Later"
+      "decline": "Later",
+      "transparency": "Map of the area · ~30 MB · about 1 min on wifi",
+      "downloading": "Downloading…",
+      "completed": "Map downloaded",
+      "completed_size": "{{size}} · available offline",
+      "retry": "Retry",
+      "close": "Close"
     }
   },
   "days": {

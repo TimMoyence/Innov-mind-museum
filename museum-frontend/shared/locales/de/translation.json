@@ -663,7 +663,13 @@
       "title": "Du bist in der Nähe von {{cityName}}",
       "description": "Lade die Offline-Inhalte, um auch ohne Verbindung zu erkunden.",
       "accept": "Herunterladen",
-      "decline": "Später"
+      "decline": "Später",
+      "transparency": "Karte des Gebiets · ca. 30 MB · etwa 1 Min im WLAN",
+      "downloading": "Wird heruntergeladen…",
+      "completed": "Karte heruntergeladen",
+      "completed_size": "{{size}} · offline verfügbar",
+      "retry": "Erneut versuchen",
+      "close": "Schließen"
     }
   },
   "days": {

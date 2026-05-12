@@ -663,7 +663,13 @@
       "title": "您靠近{{cityName}}",
       "description": "下载离线内容以便在无连接时浏览。",
       "accept": "下载",
-      "decline": "稍后"
+      "decline": "稍后",
+      "transparency": "本区域地图 · 约30 MB · Wi-Fi下约1分钟",
+      "downloading": "正在下载…",
+      "completed": "地图已下载",
+      "completed_size": "{{size}} · 离线可用",
+      "retry": "重试",
+      "close": "关闭"
     }
   },
   "days": {

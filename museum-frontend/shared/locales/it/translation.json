@@ -663,7 +663,13 @@
       "title": "Sei vicino a {{cityName}}",
       "description": "Scarica i contenuti offline per esplorare senza connessione.",
       "accept": "Scarica",
-      "decline": "Più tardi"
+      "decline": "Più tardi",
+      "transparency": "Mappa della zona · ~30 MB · circa 1 min su Wi-Fi",
+      "downloading": "Download in corso…",
+      "completed": "Mappa scaricata",
+      "completed_size": "{{size}} · disponibile offline",
+      "retry": "Riprova",
+      "close": "Chiudi"
     }
   },
   "days": {

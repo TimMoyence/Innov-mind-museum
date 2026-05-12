@@ -663,7 +663,13 @@
       "title": "Tu es près de {{cityName}}",
       "description": "Télécharge le contenu hors-ligne pour explorer sans connexion.",
       "accept": "Télécharger",
-      "decline": "Plus tard"
+      "decline": "Plus tard",
+      "transparency": "Carte de la zone · ~30 Mo · environ 1 min en wifi",
+      "downloading": "Téléchargement en cours…",
+      "completed": "Carte téléchargée",
+      "completed_size": "{{size}} · disponible hors-ligne",
+      "retry": "Réessayer",
+      "close": "Fermer"
     }
   },
   "days": {

@@ -1,28 +1,37 @@
 import NetInfo from '@react-native-community/netinfo';
 import { useCallback, useEffect, useState } from 'react';
 
+import { findCity } from '../infrastructure/cityCatalog';
 import { useOfflinePackChoiceStore } from '../infrastructure/offlinePackChoiceStore';
+import type { City } from '../infrastructure/cityCatalog';
+import type { CityPackState } from './useOfflinePacks';
+import { useOfflinePacks } from './useOfflinePacks';
 import type { NearestCity } from './useNearestCity';
 
 export interface OfflinePackPromptTrigger {
   visible: boolean;
+  packState: CityPackState;
+  errorVisible: boolean;
   accept: () => void;
   decline: () => void;
+  retry: () => void;
+  dismiss: () => void;
 }
 
+const ABSENT: CityPackState = { status: 'absent' };
+
 /**
- * Orchestrates the offline-pack prompt: asks NetInfo whether the device is on
- * a strong network (wifi or 4G/5G) once a `nearestCity` is identified and the
- * user has not already accepted or declined for that city, then exposes the
- * accept / decline callbacks for the prompt UI.
+ * Orchestrates the offline-pack prompt: gates visibility on a strong network
+ * (wifi / 4G / 5G) once a `nearestCity` is identified and the user has not
+ * already decided for that city, then exposes accept / decline / retry /
+ * dismiss callbacks plus the live `packState` so the modal can render a
+ * progress / completion / error UI without owning the download lifecycle.
  *
- * Pulls `offlineChoice`, `acceptOfflinePack`, `declineOfflinePack` directly
- * from `useOfflinePackChoiceStore` so the caller only has to pass the
- * derived `nearestCity`.
- *
- * Mirrors the inline NetInfo + zustand wiring previously living in
- * `MuseumMapView.tsx` — extracted to keep the component shell under 300 LOC
- * and to bring component-level `useEffect` count to ≤ 2.
+ * Composes `useOfflinePacks` so the download lifecycle stays in a single
+ * source of truth shared with the Settings screen. Errors thrown by the
+ * download are surfaced via the local `errorVisible` flag — `useOfflinePacks`
+ * reports them to Sentry but swallows them for callers, which is fine for
+ * the Settings list but not for an interactive prompt.
  */
 export function useOfflinePackPromptTrigger(
   nearestCity: NearestCity | null,
@@ -32,20 +41,20 @@ export function useOfflinePackPromptTrigger(
   );
   const acceptOfflinePack = useOfflinePackChoiceStore((s) => s.acceptOfflinePack);
   const declineOfflinePack = useOfflinePackChoiceStore((s) => s.declineOfflinePack);
+  const { packsByCity, download } = useOfflinePacks();
   const [visible, setVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+
+  const packState: CityPackState = nearestCity
+    ? (packsByCity[nearestCity.cityId] ?? ABSENT)
+    : ABSENT;
 
   useEffect(() => {
     if (!nearestCity) return;
-    if (offlineChoice !== undefined) return; // user already decided for this city
+    if (offlineChoice !== undefined) return;
     let cancelled = false;
     void NetInfo.fetch().then((state) => {
       if (cancelled) return;
-      // NetInfo `type` and `cellularGeneration` are string enums at runtime
-      // but TypeScript models them as opaque enum members. Narrowing through
-      // `unknown` lets us compare against the runtime-equivalent strings
-      // without tripping `no-unsafe-enum-comparison`, and the explicit
-      // optional-shape cast on `details` removes the nullability assumption
-      // that triggers `no-unnecessary-condition`.
       const type: unknown = state.type;
       const details = (state as { details?: { cellularGeneration?: unknown } | null }).details;
       const gen: unknown = details?.cellularGeneration;
@@ -57,12 +66,24 @@ export function useOfflinePackPromptTrigger(
     };
   }, [nearestCity, offlineChoice]);
 
+  const triggerDownload = useCallback(
+    (city: City) => {
+      setErrorVisible(false);
+      void download(city).catch(() => {
+        setErrorVisible(true);
+      });
+    },
+    [download],
+  );
+
   const accept = useCallback(() => {
-    if (nearestCity) {
-      acceptOfflinePack(nearestCity.cityId);
-    }
-    setVisible(false);
-  }, [acceptOfflinePack, nearestCity]);
+    if (!nearestCity) return;
+    if (packState.status === 'active') return;
+    const city = findCity(nearestCity.cityId);
+    if (!city) return;
+    acceptOfflinePack(nearestCity.cityId);
+    triggerDownload(city);
+  }, [acceptOfflinePack, nearestCity, packState.status, triggerDownload]);
 
   const decline = useCallback(() => {
     if (nearestCity) {
@@ -71,5 +92,17 @@ export function useOfflinePackPromptTrigger(
     setVisible(false);
   }, [declineOfflinePack, nearestCity]);
 
-  return { visible, accept, decline };
+  const retry = useCallback(() => {
+    if (!nearestCity) return;
+    const city = findCity(nearestCity.cityId);
+    if (!city) return;
+    triggerDownload(city);
+  }, [nearestCity, triggerDownload]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    setErrorVisible(false);
+  }, []);
+
+  return { visible, packState, errorVisible, accept, decline, retry, dismiss };
 }

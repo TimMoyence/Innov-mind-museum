@@ -287,10 +287,13 @@ export const MuseumMapView = ({
       {nearestCity ? (
         <OfflinePackPrompt
           visible={offlinePrompt.visible}
-          cityId={nearestCity.cityId}
           cityName={nearestCity.cityName}
+          packState={offlinePrompt.packState}
+          errorVisible={offlinePrompt.errorVisible}
           onAccept={offlinePrompt.accept}
           onDecline={offlinePrompt.decline}
+          onRetry={offlinePrompt.retry}
+          onDismiss={offlinePrompt.dismiss}
           testID="museum-map-offline-prompt"
         />
       ) : null}

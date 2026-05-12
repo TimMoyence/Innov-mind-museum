@@ -114,7 +114,6 @@ jest.mock('@/features/museum/ui/OfflinePackPrompt', () => {
       testID,
     }: {
       visible: boolean;
-      cityId: string;
       cityName: string;
       onAccept: () => void;
       onDecline: () => void;
@@ -200,6 +199,11 @@ jest.mock('@maplibre/maplibre-react-native', () => {
       setLogLevel: jest.fn(),
       onLog: jest.fn(),
       start: jest.fn(),
+    },
+    OfflineManager: {
+      getPacks: jest.fn().mockResolvedValue([]),
+      createPack: jest.fn().mockResolvedValue({ id: 'noop', bounds: [0, 0, 0, 0], metadata: {} }),
+      deletePack: jest.fn().mockResolvedValue(undefined),
     },
   };
 });
@@ -550,7 +554,7 @@ describe('MuseumMapView', () => {
       expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
     });
 
-    it('records accepted decision and hides the prompt on accept', async () => {
+    it('records accepted decision on accept (modal stays open to show download progress)', async () => {
       const { useOfflinePackChoiceStore } = jest.requireMock(
         '@/features/museum/infrastructure/offlinePackChoiceStore',
       );
@@ -563,10 +567,13 @@ describe('MuseumMapView', () => {
         />,
       );
       await screen.findByTestId('museum-map-offline-prompt');
-      act(() => {
+      await act(async () => {
         fireEvent.press(screen.getByTestId('museum-map-offline-prompt-accept'));
+        await Promise.resolve();
       });
-      expect(screen.queryByTestId('museum-map-offline-prompt')).toBeNull();
+      // Contract change (2026-05-12): the prompt now stays visible after accept
+      // so it can render the download progress / completion / error states.
+      // Dismissal is now an explicit user action (Fermer button) or decline.
       expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('accepted');
     });
 

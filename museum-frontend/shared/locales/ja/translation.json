@@ -663,7 +663,13 @@
       "title": "{{cityName}}の近くにいます",
       "description": "オフラインコンテンツをダウンロードして接続なしで探索できます。",
       "accept": "ダウンロード",
-      "decline": "後で"
+      "decline": "後で",
+      "transparency": "エリアの地図 · 約30 MB · Wi-Fiで約1分",
+      "downloading": "ダウンロード中…",
+      "completed": "地図をダウンロードしました",
+      "completed_size": "{{size}} · オフラインで利用可能",
+      "retry": "再試行",
+      "close": "閉じる"
     }
   },
   "days": {

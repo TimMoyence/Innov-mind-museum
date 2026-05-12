@@ -36,6 +36,22 @@ jest.mock('@/features/museum/infrastructure/offlinePackChoiceStore', () => {
   return { useOfflinePackChoiceStore: mockStore };
 });
 
+// ── useOfflinePacks mock ─────────────────────────────────────────────────────
+// The hook composes useOfflinePacks for the download lifecycle. We expose a
+// controllable `mockDownload` + a mutable `mockPacksByCity` so each test can
+// drive the state machine (idle → active → complete | error).
+const mockDownload = jest.fn();
+let mockPacksByCity: Record<string, unknown> = {};
+jest.mock('@/features/museum/application/useOfflinePacks', () => ({
+  useOfflinePacks: () => ({
+    packsByCity: mockPacksByCity,
+    isLoading: false,
+    refresh: jest.fn(),
+    download: mockDownload,
+    remove: jest.fn(),
+  }),
+}));
+
 import { useOfflinePackPromptTrigger } from '@/features/museum/application/useOfflinePackPromptTrigger';
 import { useOfflinePackChoiceStore } from '@/features/museum/infrastructure/offlinePackChoiceStore';
 
@@ -49,6 +65,8 @@ describe('useOfflinePackPromptTrigger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     resetStore();
+    mockPacksByCity = {};
+    mockDownload.mockResolvedValue(undefined);
     mockNetInfoFetch.mockResolvedValue({ type: 'wifi', isConnected: true, details: null });
   });
 
@@ -66,7 +84,6 @@ describe('useOfflinePackPromptTrigger', () => {
       },
     });
     const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
-    // Give NetInfo a chance to settle — visibility must NOT flip on.
     await act(async () => {
       await Promise.resolve();
     });
@@ -74,7 +91,7 @@ describe('useOfflinePackPromptTrigger', () => {
     expect(mockNetInfoFetch).not.toHaveBeenCalled();
   });
 
-  it('records an accepted choice + clears visibility when accept() is invoked', async () => {
+  it('accept() records choice + triggers download(city) with full City object (R1)', async () => {
     const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
     await waitFor(() => {
       expect(result.current.visible).toBe(true);
@@ -82,11 +99,69 @@ describe('useOfflinePackPromptTrigger', () => {
     act(() => {
       result.current.accept();
     });
-    expect(result.current.visible).toBe(false);
     expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('accepted');
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    const arg = mockDownload.mock.calls[0]?.[0] as { id: string; bounds: number[] };
+    expect(arg.id).toBe('paris');
+    expect(arg.bounds).toHaveLength(4);
+    expect(arg.bounds.every((n) => typeof n === 'number')).toBe(true);
   });
 
-  it('records a declined choice + clears visibility when decline() is invoked', async () => {
+  it('accept() with null nearestCity is a no-op (R8)', () => {
+    const { result } = renderHook(() => useOfflinePackPromptTrigger(null));
+    act(() => {
+      result.current.accept();
+    });
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  it('accept() while packState is already active is a no-op (race guard)', async () => {
+    mockPacksByCity = { paris: { status: 'active', percentage: 30, bytesOnDisk: 1000 } };
+    const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
+    await waitFor(() => {
+      expect(result.current.visible).toBe(true);
+    });
+    act(() => {
+      result.current.accept();
+    });
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  it('download rejection → errorVisible flips to true (R4)', async () => {
+    mockDownload.mockRejectedValueOnce(new Error('boom'));
+    const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
+    await waitFor(() => {
+      expect(result.current.visible).toBe(true);
+    });
+    await act(async () => {
+      result.current.accept();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorVisible).toBe(true);
+  });
+
+  it('retry() clears errorVisible + re-calls download', async () => {
+    mockDownload.mockRejectedValueOnce(new Error('first')).mockResolvedValueOnce(undefined);
+    const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
+    await waitFor(() => {
+      expect(result.current.visible).toBe(true);
+    });
+    await act(async () => {
+      result.current.accept();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorVisible).toBe(true);
+    await act(async () => {
+      result.current.retry();
+      await Promise.resolve();
+    });
+    expect(result.current.errorVisible).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(2);
+  });
+
+  it('decline() records declined + hides modal (R7)', async () => {
     const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
     await waitFor(() => {
       expect(result.current.visible).toBe(true);
@@ -96,6 +171,26 @@ describe('useOfflinePackPromptTrigger', () => {
     });
     expect(result.current.visible).toBe(false);
     expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('declined');
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  it('dismiss() hides modal + clears errorVisible', async () => {
+    mockDownload.mockRejectedValueOnce(new Error('x'));
+    const { result } = renderHook(() => useOfflinePackPromptTrigger(PARIS_CITY));
+    await waitFor(() => {
+      expect(result.current.visible).toBe(true);
+    });
+    await act(async () => {
+      result.current.accept();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.errorVisible).toBe(true);
+    act(() => {
+      result.current.dismiss();
+    });
+    expect(result.current.visible).toBe(false);
+    expect(result.current.errorVisible).toBe(false);
   });
 
   it('keeps visible=false on cellular 3G (only wifi or 4G/5G qualify as strong network)', async () => {
