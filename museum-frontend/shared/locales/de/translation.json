@@ -1,4 +1,8 @@
 {
+  "ai_disclosure": {
+    "onboarding_toast": "Musaium ist ein KI-Assistent. Antworten werden automatisch generiert.",
+    "chat_footer": "KI-generierte Antworten — können Fehler enthalten."
+  },
   "common": {
     "cancel": "Abbrechen",
     "error": "Fehler",
@@ -51,6 +55,8 @@
     "last_name": "Nachname",
     "email": "E-Mail",
     "password": "Passwort",
+    "date_of_birth_placeholder": "Geburtsdatum (JJJJ-MM-TT)",
+    "date_of_birth_a11y": "Geburtsdatum, Format Jahr-Monat-Tag",
     "log_in": "Anmelden",
     "sign_up": "Registrieren",
     "no_account": "Kein Konto? Registrieren",

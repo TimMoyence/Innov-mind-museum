@@ -1,4 +1,8 @@
 {
+  "ai_disclosure": {
+    "onboarding_toast": "MusaiumはAIアシスタントです。返答は自動生成されます。",
+    "chat_footer": "AI生成の返答 — 誤りを含む場合があります。"
+  },
   "common": {
     "cancel": "キャンセル",
     "error": "エラー",
@@ -51,6 +55,8 @@
     "last_name": "姓",
     "email": "メールアドレス",
     "password": "パスワード",
+    "date_of_birth_placeholder": "生年月日（YYYY-MM-DD）",
+    "date_of_birth_a11y": "生年月日、年-月-日形式",
     "log_in": "ログイン",
     "sign_up": "新規登録",
     "no_account": "アカウントをお持ちでない方は新規登録",
