@@ -9,6 +9,8 @@ import type { UserChatExportData } from '@modules/chat/domain/session/chat.repos
 /** Maximum number of items per page for cursor-based pagination queries. */
 const MAX_PAGE_SIZE = 50;
 
+const SESSION_ID_COLUMN = 'message.sessionId';
+
 /** Fetches message counts per session in a single query. */
 export async function fetchMessageCounts(
   messageRepo: Repository<ChatMessage>,
@@ -16,10 +18,10 @@ export async function fetchMessageCounts(
 ): Promise<Map<string, number>> {
   const messageCounts = await messageRepo
     .createQueryBuilder('message')
-    .select('message.sessionId', 'sessionId')
+    .select(SESSION_ID_COLUMN, 'sessionId')
     .addSelect('COUNT(message.id)', 'messageCount')
     .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-    .groupBy('message.sessionId')
+    .groupBy(SESSION_ID_COLUMN)
     .getRawMany<{ sessionId: string; messageCount: string }>();
 
   const countBySessionId = new Map<string, number>();
@@ -36,13 +38,13 @@ export async function fetchMessagePreviews(
 ): Promise<Map<string, { role: ChatRole; text: string | null; createdAt: Date }>> {
   const previewRows = await messageRepo
     .createQueryBuilder('message')
-    .select('message.sessionId', 'sessionId')
+    .select(SESSION_ID_COLUMN, 'sessionId')
     .addSelect('message.role', 'role')
     .addSelect('message.text', 'text')
     .addSelect('message.createdAt', 'createdAt')
     .where('message.sessionId IN (:...sessionIds)', { sessionIds })
-    .distinctOn(['message.sessionId'])
-    .orderBy('message.sessionId', 'ASC')
+    .distinctOn([SESSION_ID_COLUMN])
+    .orderBy(SESSION_ID_COLUMN, 'ASC')
     .addOrderBy('message.createdAt', 'DESC')
     .addOrderBy('message.id', 'DESC')
     .getRawMany<{

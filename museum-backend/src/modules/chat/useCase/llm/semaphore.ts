@@ -7,7 +7,7 @@ import { AppError } from '@shared/errors/app.error';
 export class SemaphoreQueueFullError extends AppError {
   constructor(queueSize: number) {
     super({
-      message: `Semaphore queue is full (${queueSize} waiting)`,
+      message: `Semaphore queue is full (${String(queueSize)} waiting)`,
       statusCode: 503,
       code: 'SEMAPHORE_QUEUE_FULL',
     });
@@ -23,7 +23,7 @@ export class SemaphoreQueueFullError extends AppError {
 export class SemaphoreTimeoutError extends AppError {
   constructor(timeoutMs: number) {
     super({
-      message: `Semaphore acquire timed out after ${timeoutMs}ms`,
+      message: `Semaphore acquire timed out after ${String(timeoutMs)}ms`,
       statusCode: 503,
       code: 'SEMAPHORE_TIMEOUT',
     });

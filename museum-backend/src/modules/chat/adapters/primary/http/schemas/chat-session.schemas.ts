@@ -59,20 +59,22 @@ const positiveIntegerMuseumId = optionalFiniteNumber.refine(
   { message: 'museumId must be a positive integer' },
 );
 
+const COORDS_FINITE_MSG = 'coordinates.lat and coordinates.lng must be finite numbers';
+
 const coordinatesSchema = z.object(
   {
     lat: z
-      .number({ message: 'coordinates.lat and coordinates.lng must be finite numbers' })
+      .number({ message: COORDS_FINITE_MSG })
       .refine(Number.isFinite, {
-        message: 'coordinates.lat and coordinates.lng must be finite numbers',
+        message: COORDS_FINITE_MSG,
       })
       .refine((v) => v >= -90 && v <= 90, {
         message: 'coordinates.lat must be between -90 and 90',
       }),
     lng: z
-      .number({ message: 'coordinates.lat and coordinates.lng must be finite numbers' })
+      .number({ message: COORDS_FINITE_MSG })
       .refine(Number.isFinite, {
-        message: 'coordinates.lat and coordinates.lng must be finite numbers',
+        message: COORDS_FINITE_MSG,
       })
       .refine((v) => v >= -180 && v <= 180, {
         message: 'coordinates.lng must be between -180 and 180',

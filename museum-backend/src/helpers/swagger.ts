@@ -7,6 +7,7 @@ import type { Express } from 'express';
 
 const loadOpenApiSpec = (): Record<string, unknown> => {
   const specPath = path.resolve(process.cwd(), 'openapi', 'openapi.json');
+  // eslint-disable-next-line n/no-sync -- spec is read once at boot during setupSwagger(); event loop is not yet serving requests
   const raw = fs.readFileSync(specPath, 'utf8');
   return JSON.parse(raw) as Record<string, unknown>;
 };

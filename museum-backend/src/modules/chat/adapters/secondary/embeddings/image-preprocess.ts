@@ -44,10 +44,10 @@ const SIGLIP_STD = 0.5;
  * @param buffer - Raw image bytes. Format auto-detected by sharp.
  * @returns A `Float32Array` of length `150528` in NCHW layout, ready to wrap
  *   in an ONNX `Tensor('float32', data, [1, 3, 224, 224])`.
- * @throws Propagates sharp's decoding error when the buffer is not a valid
- *   image (corrupt header, truncated stream, unsupported format). Callers in
- *   the embeddings adapter wrap this into `EncoderUnavailableError` /
- *   `IMAGE_DECODE_FAILED` as appropriate.
+ * @throws {Error} Propagates sharp's decoding error when the buffer is not a
+ *   valid image (corrupt header, truncated stream, unsupported format).
+ *   Callers in the embeddings adapter wrap this into `EncoderUnavailableError`
+ *   / `IMAGE_DECODE_FAILED` as appropriate.
  */
 export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array> {
   const { data, info } = await sharp(buffer)

@@ -258,6 +258,7 @@ export class StreamBuffer {
 
       if (this.queue.length > 0) {
         const token = this.queue.shift();
+        // eslint-disable-next-line security/detect-possible-timing-attacks -- defensive non-undefined check on shift() result, not a secret comparison
         if (token !== undefined) {
           this.releaseCb?.(token);
         }

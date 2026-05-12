@@ -182,8 +182,10 @@ export const byIp = (req: Parameters<RequestHandler>[0]): string => {
  * @returns Session-prefixed or IP-based bucket key.
  */
 export const bySession = (req: Parameters<RequestHandler>[0]): string => {
+  // `req.body` is `any` in @types/express; narrow to the shape we read.
+  const body = req.body as { sessionId?: string } | undefined;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: params.id may be undefined; String() ensures type safety
-  const sessionId = req.params.id ?? req.body?.sessionId ?? req.header('x-session-id');
+  const sessionId = req.params.id ?? body?.sessionId ?? req.header('x-session-id');
   return sessionId ? `session:${sessionId}` : byIp(req);
 };
 

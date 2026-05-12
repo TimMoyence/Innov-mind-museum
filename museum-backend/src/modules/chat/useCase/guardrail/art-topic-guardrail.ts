@@ -193,6 +193,7 @@ const containsKeyword = (normalizedText: string, keyword: string): boolean => {
 
   if (normalizedKeyword.includes(' ') || normalizedKeyword.length <= 3) {
     // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- keyword is escaped via escapeRegExp; bounded by \b anchors
+    // eslint-disable-next-line security/detect-non-literal-regexp -- same justification as nosemgrep above: keyword escaped + anchored
     const pattern = new RegExp(`(^|\\b)${escapeRegExp(normalizedKeyword)}(\\b|$)`);
     return pattern.test(normalizedText);
   }

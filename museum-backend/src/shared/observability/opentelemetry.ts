@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- OpenTelemetry conditional loading requires CJS require() */
 import { env } from '@src/config/env';
 
-let sdkInstance: any = null;
+/** Structural subset of `@opentelemetry/sdk-node`'s NodeSDK that this module touches. */
+interface OtelSdkLike {
+  start: () => void;
+  shutdown: () => Promise<void>;
+}
+
+let sdkInstance: OtelSdkLike | null = null;
 
 /**
  * Initializes the OpenTelemetry SDK with auto-instrumentation and OTLP trace export.

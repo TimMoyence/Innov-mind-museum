@@ -128,6 +128,7 @@ function applyClause(clause: string, weekly: (ParsedOpeningDay | null)[]): boole
   if (!trimmed) return true;
 
   // "Mo off" or "Mo-We off"
+  // eslint-disable-next-line sonarjs/slow-regex -- bounded input (single clause, ~50 chars max from upstream tokeniser); `.+?` + `\s+` cannot cause catastrophic backtracking with the `off$` anchor and non-overlapping char classes
   const offMatch = /^(.+?)\s+off$/i.exec(trimmed);
   if (offMatch) {
     const days = expandDaySpec(offMatch[1].trim());

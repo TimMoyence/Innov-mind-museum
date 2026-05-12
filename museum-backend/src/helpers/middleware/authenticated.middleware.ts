@@ -21,7 +21,10 @@ function resolveCredential(req: Request): { token: string; source: 'bearer' | 'c
   if (bearer) {
     return { token: bearer, source: 'bearer' };
   }
-  const cookieToken = req.cookies?.access_token;
+  // @types/express-serve-static-core types `cookies` as `any`; cast locally to
+  // the shape that `cookieParserMiddleware` produces (parsed string values).
+  const cookies = req.cookies as Record<string, string | undefined> | undefined;
+  const cookieToken = cookies?.access_token;
   if (typeof cookieToken === 'string' && cookieToken.length > 0) {
     return { token: cookieToken, source: 'cookie' };
   }

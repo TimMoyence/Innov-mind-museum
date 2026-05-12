@@ -20,7 +20,10 @@ export const acceptLanguageMiddleware = (
   _res: Response,
   next: NextFunction,
 ): void => {
-  const header = req.headers['accept-language'];
+  // Some HTTP/2 setups and certain proxies surface `accept-language` as an
+  // array; collapse to the first preference. Cast: `req.headers[name]` resolves
+  // to `any` under some @types/express versions despite IncomingHttpHeaders.
+  const header = req.headers['accept-language'] as string | string[] | undefined;
   const headerValue = Array.isArray(header) ? header[0] : header;
   req.clientLocale = parseAcceptLanguageHeader(headerValue);
   next();

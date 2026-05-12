@@ -19,8 +19,6 @@
  */
 import crypto from 'node:crypto';
 
-import { env } from '@src/config/env';
-
 import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
 import type Redis from 'ioredis';
 
@@ -142,11 +140,6 @@ export class RedisNonceStore implements NonceStore {
  * single env var controls both adapters.
  */
 export const createNonceStore = (redis?: Redis): NonceStore => {
-  // env import keeps the implementation honest if a future migration reroutes
-  // the TTL through `env.auth`. Today we only read it via `process.env`, but
-  // referencing `env` ensures the module participates in the config-load
-  // ordering so a missing env loader can never hand us undefined behaviour.
-  void env;
   if (redis) {
     return new RedisNonceStore(redis);
   }

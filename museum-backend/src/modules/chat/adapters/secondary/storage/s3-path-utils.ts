@@ -31,6 +31,7 @@ export const normalizeEndpoint = (endpoint: string): URL => {
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error('S3 endpoint must use http or https');
   }
+  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
   url.pathname = url.pathname.replace(/\/+$/, '');
   return url;
 };
@@ -43,6 +44,7 @@ export const buildObjectPath = (params: {
   key: string;
   endpointPath?: string;
 }): string => {
+  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
   const base = params.endpointPath?.replace(/\/+$/, '') ?? '';
   const bucketPart = encodePathSegments(params.bucket);
   const keyPart = encodePathSegments(params.key);
@@ -96,6 +98,7 @@ export const buildReadBaseUrlAndPath = (params: {
   const keyPath = `/${encodePathSegments(params.key)}`;
 
   const hasBucketInHost = base.hostname.startsWith(`${params.bucket}.`);
+  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
   const pathname = base.pathname.replace(/\/+$/, '');
   const hasBucketInPath = pathname === bucketPath || pathname.startsWith(`${bucketPath}/`);
 

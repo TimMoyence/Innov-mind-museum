@@ -17,8 +17,6 @@
  */
 import crypto from 'node:crypto';
 
-import { env } from '@src/config/env';
-
 import type { SocialOtcStore } from '@modules/auth/domain/ports/social-otc-store.port';
 import type Redis from 'ioredis';
 
@@ -139,7 +137,6 @@ export class RedisSocialOtcStore<TPayload> implements SocialOtcStore<TPayload> {
  * fallback.
  */
 export const createSocialOtcStore = <TPayload>(redis?: Redis): SocialOtcStore<TPayload> => {
-  void env; // participate in config-load ordering, mirrors nonce-store.
   if (redis) {
     return new RedisSocialOtcStore<TPayload>(redis);
   }

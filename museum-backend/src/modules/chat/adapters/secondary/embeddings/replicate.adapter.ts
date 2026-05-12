@@ -252,12 +252,10 @@ function extractVector(prediction: ReplicatePrediction): number[] {
     );
   }
 
-  let flat: number[];
-  if (Array.isArray(output) && output.length > 0 && Array.isArray(output[0])) {
-    flat = output[0];
-  } else {
-    flat = output as number[];
-  }
+  const flat: number[] =
+    Array.isArray(output) && output.length > 0 && Array.isArray(output[0])
+      ? output[0]
+      : (output as number[]);
 
   if (!Array.isArray(flat) || flat.length !== EXPECTED_VECTOR_LEN) {
     throw new EncoderUnavailableError(

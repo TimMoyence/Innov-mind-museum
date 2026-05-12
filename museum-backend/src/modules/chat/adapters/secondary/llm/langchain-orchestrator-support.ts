@@ -147,51 +147,47 @@ export const isRetryableError = (error: unknown): boolean => {
   );
 };
 
-const buildLoggingHooks = (): SectionRunnerHooks => {
-  const logEvent = (
-    level: 'info' | 'warn',
-    label: string,
-    event: {
-      requestId?: string;
-      name: string;
-      attempt: number;
-      timeoutMs: number;
-      payloadBytes: number;
-      latencyMs?: number;
-      error?: string;
-    },
-  ) => {
-    logger[level](label, {
-      requestId: event.requestId,
-      section: event.name,
-      attempt: event.attempt,
-      ...(event.latencyMs !== undefined ? { latencyMs: event.latencyMs } : {}),
-      timeoutMs: event.timeoutMs,
-      payloadBytes: event.payloadBytes,
-      ...(event.error !== undefined ? { error: event.error } : {}),
-      provider: env.llm.provider,
-      model: env.llm.model,
-    });
-  };
+interface SectionLogEvent {
+  requestId?: string;
+  name: string;
+  attempt: number;
+  timeoutMs: number;
+  payloadBytes: number;
+  latencyMs?: number;
+  error?: string;
+}
 
-  return {
-    onStart: (event) => {
-      logEvent('info', 'llm_section_start', event);
-    },
-    onSuccess: (event) => {
-      logEvent('info', 'llm_section_success', event);
-    },
-    onRetry: (event) => {
-      logEvent('warn', 'llm_section_retry', event);
-    },
-    onTimeout: (event) => {
-      logEvent('warn', 'llm_section_timeout', event);
-    },
-    onError: (event) => {
-      logEvent('warn', 'llm_section_error', event);
-    },
-  };
+const logSectionEvent = (level: 'info' | 'warn', label: string, event: SectionLogEvent): void => {
+  logger[level](label, {
+    requestId: event.requestId,
+    section: event.name,
+    attempt: event.attempt,
+    ...(event.latencyMs !== undefined ? { latencyMs: event.latencyMs } : {}),
+    timeoutMs: event.timeoutMs,
+    payloadBytes: event.payloadBytes,
+    ...(event.error !== undefined ? { error: event.error } : {}),
+    provider: env.llm.provider,
+    model: env.llm.model,
+  });
 };
+
+const buildLoggingHooks = (): SectionRunnerHooks => ({
+  onStart: (event) => {
+    logSectionEvent('info', 'llm_section_start', event);
+  },
+  onSuccess: (event) => {
+    logSectionEvent('info', 'llm_section_success', event);
+  },
+  onRetry: (event) => {
+    logSectionEvent('warn', 'llm_section_retry', event);
+  },
+  onTimeout: (event) => {
+    logSectionEvent('warn', 'llm_section_timeout', event);
+  },
+  onError: (event) => {
+    logSectionEvent('warn', 'llm_section_error', event);
+  },
+});
 
 /** Pre-built logging hooks for the section runner. */
 export const sectionRunnerHooks = buildLoggingHooks();

@@ -38,7 +38,7 @@ import { storage } from './storage';
 const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
 
 const isEnvEnabled = (): boolean =>
-  String(process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED ?? '').toLowerCase() === 'true';
+  (process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED ?? '').toLowerCase() === 'true';
 
 const isCacheFresh = (state: KillSwitchState): boolean => {
   if (state.source === 'fail-open') return false;

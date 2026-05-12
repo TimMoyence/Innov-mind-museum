@@ -13,11 +13,13 @@ import type { z } from 'zod';
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateBody<T extends z.ZodType>(schema: T) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
+    // `req.body` is `any` in @types/express; narrow to `unknown` so Zod's
+    // typed `data` output flows through to the assignment.
+    const result = schema.safeParse(req.body as unknown);
     if (!result.success) {
       throw badRequest(formatZodIssues(result.error.issues));
     }
-    req.body = result.data;
+    req.body = result.data as unknown;
     next();
   };
 }

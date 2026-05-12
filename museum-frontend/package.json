@@ -12,7 +12,7 @@
     "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts && prettier --write shared/api/generated/openapi.ts",
     "check:openapi-types": "npm run generate:openapi-types && git diff --exit-code -- shared/api/generated/openapi.ts",
     "check:i18n": "node scripts/check-i18n-completeness.js",
-    "lint": "eslint . --max-warnings=22 && tsc --noEmit",
+    "lint": "eslint . --max-warnings=0 && tsc --noEmit",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx}\" --ignore-path .gitignore",

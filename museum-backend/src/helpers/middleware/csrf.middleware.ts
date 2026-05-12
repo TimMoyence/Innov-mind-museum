@@ -129,7 +129,9 @@ export function csrfMiddleware(req: Request, _res: Response, next: NextFunction)
     return;
   }
 
-  const cookies = req.cookies;
+  // @types/express-serve-static-core types `cookies` as `any`; cast locally to
+  // the shape that `cookieParserMiddleware` produces (parsed string values).
+  const cookies = req.cookies as Record<string, string | undefined>;
   const accessTokenCookie = cookies.access_token;
   // No cookie session ⇒ anonymous; CSRF doesn't apply.
   if (!accessTokenCookie) {
@@ -142,9 +144,8 @@ export function csrfMiddleware(req: Request, _res: Response, next: NextFunction)
     throw csrfInvalid();
   }
 
-  const headerToken = req.headers['x-csrf-token'];
-  const headerValue = Array.isArray(headerToken) ? headerToken[0] : headerToken;
-  if (typeof headerValue !== 'string' || !headerValue) {
+  const headerValue = req.header('x-csrf-token');
+  if (!headerValue) {
     throw csrfInvalid();
   }
 

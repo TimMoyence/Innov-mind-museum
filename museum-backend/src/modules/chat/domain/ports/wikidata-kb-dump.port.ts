@@ -47,11 +47,13 @@ export interface WikidataKbDumpRepositoryPort {
  */
 export class NoopWikidataKbDumpRepository implements WikidataKbDumpRepositoryPort {
   // eslint-disable-next-line @typescript-eslint/require-await -- interface contract requires async signature
-  async findFactsBySearchTerm(_searchTerm: string, _language?: string): Promise<ArtworkFacts | null> {
+  async findFactsBySearchTerm(
+    _searchTerm: string,
+    _language?: string,
+  ): Promise<ArtworkFacts | null> {
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract requires async signature
   async upsert(
     _searchTerm: string,
     _language: string | undefined,

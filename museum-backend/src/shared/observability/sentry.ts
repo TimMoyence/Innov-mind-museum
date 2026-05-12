@@ -15,9 +15,19 @@ import type { Express } from 'express';
 
 let initialized = false;
 
-/** No-op span used when Sentry is disabled — safe to call any method on. */
-const NOOP_SPAN = new Proxy({} as Span, {
-  get: () => () => NOOP_SPAN,
+/**
+ * No-op span used when Sentry is disabled — safe to call any method on.
+ * Every property access returns a function that returns NOOP_SPAN, so
+ * chained method calls (`span.setAttribute(...).end()`) never crash.
+ */
+function noopSpanMethod(): Span {
+  return NOOP_SPAN;
+}
+function noopSpanProxyGet(): () => Span {
+  return noopSpanMethod;
+}
+const NOOP_SPAN: Span = new Proxy({} as Span, {
+  get: noopSpanProxyGet,
 });
 
 /** Returns `true` when Sentry has been successfully initialized. */

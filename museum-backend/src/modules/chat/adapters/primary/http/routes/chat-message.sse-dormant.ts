@@ -45,7 +45,7 @@ export function initSseTimers(
       sendSseError(
         res,
         'TIMEOUT',
-        `Stream timeout exceeded (${SSE_TIMEOUT_MS / 1_000}s). The response took too long.`,
+        `Stream timeout exceeded (${String(SSE_TIMEOUT_MS / 1_000)}s). The response took too long.`,
       );
       controller.abort();
       res.end();

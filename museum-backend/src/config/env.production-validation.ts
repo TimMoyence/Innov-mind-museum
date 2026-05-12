@@ -94,6 +94,10 @@ function validateRedis(env: AppEnv): void {
 
   // Reject sharing the Redis password with any signing secret. Operators have
   // copy-pasted secrets across services in past incidents; this catches it.
+  // The 3 comparisons below run ONCE at boot from in-memory env values — not
+  // a network-exposed surface — so plain `===` is fine; constant-time
+  // comparison is irrelevant when there is no remote attacker to time.
+  /* eslint-disable security/detect-possible-timing-attacks -- boot-time secret-shape check, not a network-exposed comparison */
   if (password === process.env.JWT_ACCESS_SECRET) {
     throw new Error(
       'REDIS_PASSWORD must be distinct from JWT_ACCESS_SECRET in production. ' +
@@ -106,6 +110,7 @@ function validateRedis(env: AppEnv): void {
   if (password === process.env.MEDIA_SIGNING_SECRET) {
     throw new Error('REDIS_PASSWORD must be distinct from MEDIA_SIGNING_SECRET in production.');
   }
+  /* eslint-enable security/detect-possible-timing-attacks */
 }
 
 /**

@@ -243,6 +243,7 @@ const extractXmlValues = (xml: string, tag: string): string[] => {
   const results: string[] = [];
   const escaped = escapeXmlTag(tag);
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
+  // eslint-disable-next-line security/detect-non-literal-regexp -- same justification as nosemgrep above: tag escaped, caller-controlled literal
   const regex = new RegExp(`<${escaped}>([^<]*)</${escaped}>`, 'g');
   let match: RegExpExecArray | null;
   while ((match = regex.exec(xml)) !== null) {
@@ -254,6 +255,7 @@ const extractXmlValues = (xml: string, tag: string): string[] => {
 const extractXmlValue = (xml: string, tag: string): string | undefined => {
   const escaped = escapeXmlTag(tag);
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
+  // eslint-disable-next-line security/detect-non-literal-regexp -- same justification as nosemgrep above: tag escaped, caller-controlled literal
   const match = new RegExp(`<${escaped}>([^<]*)</${escaped}>`).exec(xml);
   return match?.[1];
 };
@@ -266,6 +268,7 @@ export const listObjectsByPrefix = async (
 ): Promise<ListObjectsResult> => {
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
+  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on a single char class, no alternation: linear time
   const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
     /\/{2,}/g,
     '/',
@@ -328,6 +331,7 @@ export const deleteObjectsBatch = async (
 
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
+  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on a single char class, no alternation: linear time
   const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
     /\/{2,}/g,
     '/',

@@ -10,7 +10,7 @@
  *     `::halfvec` casts. Vectors are serialised as the pgvector text literal
  *     `"[v1,v2,…]"` form on the way in and parsed lazily on the way out.
  *   - kNN search uses the inner-product operator `<#>`, which returns the
- *     *negative* inner product. Embeddings are L2-normalised at encode time,
+ *     negative inner product. Embeddings are L2-normalised at encode time,
  *     so `<#>` ranges over `[-1, 1]` and `(1 - (embedding <#> query)) / 2`
  *     rescales it into `[0, 1]` (1 = identical, 0.5 = orthogonal, 0 =
  *     opposite) — equivalent to cosine similarity remapped from `[-1, 1]`
@@ -69,8 +69,7 @@ interface ArtworkEmbeddingNearestSqlRow extends ArtworkEmbeddingSqlRow {
  * `Number#toString` (no trailing zeros), which matches the format pgvector
  * accepts as input. The output is wrapped in `[…]`.
  */
-const serialiseVector = (vector: Float32Array): string =>
-  `[${Array.from(vector).join(',')}]`;
+const serialiseVector = (vector: Float32Array): string => `[${Array.from(vector).join(',')}]`;
 
 /**
  * Map a flat SQL row onto the domain {@link ArtworkEmbedding} entity. Used by
@@ -222,11 +221,13 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     // Each row contributes 3 placeholders, ordered (qid, embedding, model_version).
     const valuesClauses: string[] = [];
     const params: string[] = [];
-    rows.forEach((row, idx) => {
+    for (const [idx, row] of rows.entries()) {
       const base = idx * 3;
-      valuesClauses.push(`($${String(base + 1)}, $${String(base + 2)}::halfvec, $${String(base + 3)})`);
+      valuesClauses.push(
+        `($${String(base + 1)}, $${String(base + 2)}::halfvec, $${String(base + 3)})`,
+      );
       params.push(row.qid, serialiseVector(row.vector), row.embeddingModelVersion);
-    });
+    }
 
     const sql = `
       WITH input(qid, embedding, model_version) AS (
@@ -240,8 +241,10 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
       FROM input i
       LEFT JOIN artwork_embeddings e ON e.qid = i.qid
     `;
-    const classified: { qid: string; is_insert: boolean; is_skip: boolean }[] =
-      await manager.query(sql, params);
+    const classified: { qid: string; is_insert: boolean; is_skip: boolean }[] = await manager.query(
+      sql,
+      params,
+    );
 
     // Re-index the result by qid so we can walk `rows` in original order.
     const byQid = new Map<string, { is_insert: boolean; is_skip: boolean }>();
@@ -253,14 +256,14 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     let inserted = 0;
     let updated = 0;
     let skipped = 0;
-    rows.forEach((row, idx) => {
+    for (const [idx, row] of rows.entries()) {
       const verdict = byQid.get(row.qid);
       if (!verdict) {
         // Defensive : a missing CTE row would only happen if the SQL diverged
         // from the input shape. Treat as "must insert" so we still write the
         // row and let the DB raise on any genuine conflict.
         inserted += 1;
-        return;
+        continue;
       }
       if (verdict.is_skip) {
         skipped += 1;
@@ -270,7 +273,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
       } else {
         updated += 1;
       }
-    });
+    }
 
     return { inserted, updated, skipped, skipMask };
   }
@@ -282,14 +285,11 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
    * embedding_model_version) — the eighth column `updated_at` is bumped via
    * `now()` on the conflict path so concurrent ingests cannot regress it.
    */
-  private async writeBatch(
-    manager: EntityManager,
-    rows: ArtworkEmbeddingRow[],
-  ): Promise<void> {
+  private async writeBatch(manager: EntityManager, rows: ArtworkEmbeddingRow[]): Promise<void> {
     const valuesClauses: string[] = [];
     const params: (string | null)[] = [];
 
-    rows.forEach((row, idx) => {
+    for (const [idx, row] of rows.entries()) {
       const base = idx * 8;
       valuesClauses.push(
         `($${String(base + 1)}, $${String(base + 2)}, $${String(base + 3)}, ` +
@@ -306,7 +306,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
         serialiseVector(row.vector),
         row.embeddingModelVersion,
       );
-    });
+    }
 
     const sql = `
       INSERT INTO artwork_embeddings
