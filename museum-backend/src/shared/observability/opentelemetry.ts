@@ -50,6 +50,17 @@ export function initOpenTelemetry(): void {
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },
         '@opentelemetry/instrumentation-dns': { enabled: false },
+        // Root cause of `MaxListenersExceededWarning: 11 finish listeners`
+        // (2026-05-12). RouterInstrumentation attaches a `prependListener('finish')`
+        // PER router layer to scope its span — Express has ~15 middlewares
+        // (requestLogger, cors, rate-limit, helmet, compression, json,
+        // urlencoded, cookieParser, csrf, …), so every request stacks 11+
+        // finish listeners on its ServerResponse. We keep instrumentation-http
+        // (1 span/request) + instrumentation-express (middleware chain span);
+        // per-layer router spans are redundant for our needs and pay a high
+        // listener-cost. Stack trace captured via process.on('warning') hook
+        // in src/instrumentation.ts pointed straight here.
+        '@opentelemetry/instrumentation-router': { enabled: false },
       }),
     ],
   });
