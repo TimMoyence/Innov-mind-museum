@@ -37,8 +37,13 @@ import { storage } from './storage';
 
 const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
 
+// String() wrap needed: CI sees process.env as `any` (missing @types/node
+// resolution in the GitHub runner image), local sees `string | undefined`.
+// String() satisfies CI's no-unsafe-call/member, the inline disable silences
+// local's no-unnecessary-type-conversion.
 const isEnvEnabled = (): boolean =>
-  (process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED ?? '').toLowerCase() === 'true';
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- needed on CI; see header
+  String(process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED ?? '').toLowerCase() === 'true';
 
 const isCacheFresh = (state: KillSwitchState): boolean => {
   if (state.source === 'fail-open') return false;

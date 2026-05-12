@@ -322,8 +322,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: process.env.SENTRY_ORG ?? 'asili-design',
-          project: process.env.SENTRY_PROJECT ?? 'apple-ios',
+          // String() wrap needed: CI sees process.env as `any` (missing
+          // @types/node resolution in the GitHub runner image), local sees
+          // `string | undefined`. String() satisfies CI's no-unsafe-*, the
+          // disable silences local's no-unnecessary-type-conversion.
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- needed on CI; see comment above
+          organization: String(process.env.SENTRY_ORG ?? 'asili-design'),
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- needed on CI; see comment above
+          project: String(process.env.SENTRY_PROJECT ?? 'apple-ios'),
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],
