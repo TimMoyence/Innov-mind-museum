@@ -37,9 +37,16 @@ const fallbackSearch = jest.fn();
 const judgeEvaluate = jest.fn();
 
 jest.mock('@modules/chat/adapters/secondary/search/wikidata.client', () => ({
+  // Mock BOTH `lookup` and `lookupOrThrow` because C5.3 Phase B inserts the
+  // `WikidataBreakerClient` in the provider chain — the breaker invokes
+  // `lookupOrThrow` (its `action` callback) rather than the public `lookup`.
+  // Keeping the same `wikidataLookup` impl behind both surfaces preserves the
+  // call-count assertions across the wrapped path.
   WikidataClient: jest.fn().mockImplementation(() => ({
     lookup: wikidataLookup,
+    lookupOrThrow: wikidataLookup,
   })),
+  WikidataTransientError: class extends Error {},
 }));
 
 jest.mock('@modules/chat/adapters/secondary/search/fallback-search.provider', () => ({

@@ -44,6 +44,13 @@ export interface KnowledgeBaseServiceConfig {
   cacheTtlSeconds: number;
   /** Maximum number of entries in the cache. */
   cacheMaxEntries: number;
+  /**
+   * Soak window (ms) the underlying breaker must stay OPEN before the
+   * cascade consults the local Wikidata dump (C5.3). Honored only when a
+   * breaker + dump repository are both wired ; absent or `0` means the
+   * dump is consulted immediately on a breaker OPEN.
+   */
+  localDumpFallbackAfterMs?: number;
 }
 
 /** Port for knowledge base providers (e.g., Wikidata). */

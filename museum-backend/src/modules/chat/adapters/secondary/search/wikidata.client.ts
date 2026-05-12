@@ -8,9 +8,31 @@ import type {
   KnowledgeBaseQuery,
 } from '@modules/chat/domain/ports/knowledge-base.port';
 
-const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
+const DEFAULT_USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
+
+/**
+ * Transient error wrapping a network or server-side Wikidata failure
+ * (fetch reject, 408, 429, 5xx). Distinct from legitimate "no match" /
+ * malformed-entity / 4xx-non-retryable cases which still resolve to `null`.
+ *
+ * The C5 circuit breaker (`WikidataBreakerClient`) counts these as failures
+ * for opening; the public `WikidataClient.lookup()` catches them to preserve
+ * its fail-open contract.
+ */
+export class WikidataTransientError extends Error {
+  constructor(
+    public readonly cause: unknown,
+    public readonly stage: 'search' | 'sparql',
+  ) {
+    super(`wikidata_transient_${stage}`);
+    this.name = 'WikidataTransientError';
+  }
+}
+
+const isTransientStatus = (status: number): boolean =>
+  status === 408 || status === 429 || (status >= 500 && status < 600);
 
 /**
  * Validates a Wikidata language code (2-3 lowercase letters, optional region).
@@ -47,31 +69,46 @@ const ART_KEYWORDS = [
   'oeuvre',
 ];
 
-/** Wikidata adapter implementing {@link KnowledgeBaseProvider}. Never throws from public methods. */
+/** Wikidata adapter implementing {@link KnowledgeBaseProvider}. The public `lookup()` never throws. */
 export class WikidataClient implements KnowledgeBaseProvider {
+  // ES2022 private field — kept off the instance's own-property surface so the
+  // SSRF matrix (`tests/integration/security/ssrf-matrix.integration.test.ts`)
+  // continues to assert `Object.keys(new WikidataClient()) === []`. The
+  // User-Agent is configurable at construction time but is NOT a URL knob
+  // (header value only, no SSRF surface).
+  readonly #userAgent: string;
+
+  constructor(options: { userAgent?: string } = {}) {
+    this.#userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+  }
   /**
-   * Looks up artwork facts from Wikidata by search term.
-   *
-   * Searches for entities matching the term, filters for art-related results,
-   * then fetches structured properties via SPARQL. Returns `null` on any failure
-   * (network error, rate limit, no results, etc.) — never throws.
-   *
-   * @param query - Search term and optional language code.
-   * @returns Artwork facts if found, or `null`.
+   * Looks up artwork facts and swallows all errors — preserves the
+   * fail-open contract relied on by direct callers and existing tests.
+   * The C5 breaker should call {@link lookupOrThrow} instead.
    */
   async lookup(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     try {
-      const rawLang = query.language ?? 'en';
-      const lang = isValidLanguageCode(rawLang) ? rawLang.toLowerCase() : 'en';
-      const entity = await this.searchEntity(query.searchTerm, lang);
-      if (!entity) return null;
-      return await this.fetchProperties(entity.id, entity.label, lang);
+      return await this.lookupOrThrow(query);
     } catch (err) {
       logger.warn('wikidata_lookup_error', {
         error: err instanceof Error ? err.message : String(err),
       });
       return null;
     }
+  }
+
+  /**
+   * Looks up artwork facts, propagating {@link WikidataTransientError} on
+   * network / 408 / 429 / 5xx so that a circuit breaker can count failures.
+   * Legitimate empties (no match, invalid QID, non-art descriptions, 4xx-non-retryable)
+   * still resolve to `null` without throwing.
+   */
+  async lookupOrThrow(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
+    const rawLang = query.language ?? 'en';
+    const lang = isValidLanguageCode(rawLang) ? rawLang.toLowerCase() : 'en';
+    const entity = await this.searchEntity(query.searchTerm, lang);
+    if (!entity) return null;
+    return await this.fetchProperties(entity.id, entity.label, lang);
   }
 
   /**
@@ -97,11 +134,22 @@ export class WikidataClient implements KnowledgeBaseProvider {
       format: 'json',
     });
 
-    const res = await fetch(`${WIKIDATA_API}?${params.toString()}`, {
-      headers: { 'User-Agent': USER_AGENT },
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${WIKIDATA_API}?${params.toString()}`, {
+        headers: { 'User-Agent': this.#userAgent },
+      });
+    } catch (err) {
+      // Network failure (fetch reject) — transient, breaker should count it
+      throw new WikidataTransientError(err, 'search');
+    }
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (isTransientStatus(res.status)) {
+        throw new WikidataTransientError({ status: res.status }, 'search');
+      }
+      return null;
+    }
 
     const data = (await res.json()) as {
       search: { id: string; label: string; description?: string }[];
@@ -168,14 +216,24 @@ export class WikidataClient implements KnowledgeBaseProvider {
       GROUP BY ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
       LIMIT 1`;
 
-    const res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/sparql-results+json',
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${WIKIDATA_SPARQL}?query=${encodeURIComponent(sparql)}&format=json`, {
+        headers: {
+          'User-Agent': this.#userAgent,
+          Accept: 'application/sparql-results+json',
+        },
+      });
+    } catch (err) {
+      throw new WikidataTransientError(err, 'sparql');
+    }
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (isTransientStatus(res.status)) {
+        throw new WikidataTransientError({ status: res.status }, 'sparql');
+      }
+      return null;
+    }
 
     const data = (await res.json()) as {
       results: { bindings: Record<string, { value: string }>[] };

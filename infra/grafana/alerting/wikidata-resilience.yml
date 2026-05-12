@@ -1,0 +1,146 @@
+# Prometheus alerting rules — Wikidata résilience (C5 Phase 6.4).
+# Loaded by Prometheus via `rule_files` glob in infra/grafana/prometheus.yml
+# (and prometheus.local.yml for the local stack). AlertManager routes firing
+# alerts to the `telegram-ops` receiver defined in alertmanager.yml.
+#
+# Each rule pairs with a panel in
+# `infra/grafana/dashboards/wikidata-resilience.json`. The metrics
+# (wikidata_sparql_circuit_state, wikidata_sparql_requests_total{outcome},
+# wikidata_sparql_request_duration_seconds_bucket, wikidata_local_dump_hits_total)
+# are declared in
+# `museum-backend/src/shared/observability/prometheus-metrics.ts` and emitted
+# by the WikidataBreakerClient + KnowledgeBaseService cascade. Runbook
+# reference : `docs/CHAOS_RUNBOOKS.md` + `docs/adr/ADR-039-wikidata-resilient-circuit-breaker.md`.
+
+groups:
+  - name: wikidata-resilience
+    interval: 30s
+    rules:
+      - alert: WikidataBreakerOpenSustained
+        expr: wikidata_sparql_circuit_state{state="open"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: knowledge-base
+          owner: tim
+        annotations:
+          summary: "Wikidata SPARQL circuit breaker has been OPEN for ≥5 minutes"
+          description: |
+            The WikidataBreakerClient (opossum 9.x) has held the OPEN state
+            for over 5 minutes. The chat pipeline is fail-open (knowledge
+            base lookups return null), but artwork enrichment is degraded.
+
+            If the cascade soak window has elapsed (LOCAL_DUMP_FALLBACK_AFTER_MS,
+            default 60s), the local Wikidata dump is serving the fallback
+            path — `rate(wikidata_local_dump_hits_total[5m])` on the dashboard
+            confirms.
+
+            First actions :
+              1. Open the Grafana dashboard `wikidata-resilience` and inspect
+                 the "Request outcomes per minute" panel — a sustained
+                 timeout / error spike confirms upstream Wikidata is the
+                 root cause.
+              2. Check https://www.wikidata.org/wiki/Wikidata:Project_chat for
+                 announced outages.
+              3. If the outage will drag on, accept the local-dump fallback
+                 (the cascade handles it) — no manual intervention required.
+                 If the dump corpus is too narrow, consider widening
+                 LOCAL_DUMP_FALLBACK_AFTER_MS down (faster fallback).
+          dashboard: "{{ .ExternalURL }}/d/wikidata-resilience"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#wikidata-circuit-breaker"
+
+      - alert: WikidataSparqlErrorRateHigh
+        expr: |
+          (
+            sum(rate(wikidata_sparql_requests_total{outcome="error"}[5m]))
+            /
+            sum(rate(wikidata_sparql_requests_total[5m]))
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: knowledge-base
+          owner: tim
+        annotations:
+          summary: "Wikidata SPARQL error ratio above 5% (10m window)"
+          description: |
+            Over the last 5 minutes, more than 5% of WikidataBreakerClient
+            calls have terminated with outcome=error (transient 5xx,
+            network failure, or non-rate-limit 4xx). Persisting for 10
+            minutes means the breaker has not yet absorbed the failure
+            either because volumeThreshold is unmet (low traffic) or
+            because errorThresholdPercentage is not tripping.
+
+            Investigate :
+              - Inspect Grafana panel "Request outcomes per minute" to confirm
+                this is sustained vs. a transient spike.
+              - Check WikidataBreakerConfig (`museum-backend/src/.../wikidata-breaker.ts`)
+                — if `volumeThreshold` is too high for current traffic, the
+                breaker won't trip even with 100% errors. Tune via env.
+              - If Wikidata public infra is degraded, accept and wait for
+                WikidataBreakerOpenSustained to fire on cascade fallback.
+          dashboard: "{{ .ExternalURL }}/d/wikidata-resilience"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#wikidata-circuit-breaker"
+
+      - alert: WikidataSparqlLatencyP95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(wikidata_sparql_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: knowledge-base
+          owner: tim
+        annotations:
+          summary: "Wikidata SPARQL p95 latency above 500ms (15m window)"
+          description: |
+            p95 latency of WikidataBreakerClient calls has stayed above
+            500ms for 15 minutes. The KnowledgeBaseService timeout (default
+            1s, see `knowledge-base.service.ts`) absorbs this, but the
+            chat pipeline is paying real wall-clock on enrichment.
+
+            Histogram covers only calls where the action ran — circuit_open
+            rejects do not observe (they have no latency). So a high p95
+            here means the upstream is slow, not that the breaker is open.
+
+            First action : open the dashboard "SPARQL request latency"
+            panel + inspect rendering on Wikidata's status page. If
+            latency is sustained, consider trimming the SPARQL projection
+            (fetchProperties query) or widening the cache TTL.
+          dashboard: "{{ .ExternalURL }}/d/wikidata-resilience"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#wikidata-circuit-breaker"
+
+      - alert: WikidataLocalDumpHotPath
+        expr: rate(wikidata_local_dump_hits_total[5m]) > 0.01
+        for: 10m
+        labels:
+          severity: info
+          service: musaium-backend
+          surface: knowledge-base
+          owner: tim
+        annotations:
+          summary: "Wikidata local-dump fallback is serving live traffic"
+          description: |
+            The C5 cascade is hitting the local Wikidata dump at
+            >0.01 req/s for 10 minutes. This is informational, not
+            actionable on its own — the cascade is doing its job.
+            However it confirms that :
+              - SPARQL has been unavailable long enough (>5m of OPEN +
+                LOCAL_DUMP_FALLBACK_AFTER_MS soak) to spill traffic into
+                the local dump.
+              - The local dump corpus contains entries matching live queries
+                (otherwise we'd see `wikidata_local_dump_misses_total` rising
+                instead — inspect the dashboard "Local dump fallback rate"
+                panel).
+
+            Pair with WikidataBreakerOpenSustained (warning) for the
+            full incident picture. If both stay firing past 1 hour, draft
+            an internal status note — V1 users may experience degraded
+            artwork facts.
+          dashboard: "{{ .ExternalURL }}/d/wikidata-resilience"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#wikidata-circuit-breaker"

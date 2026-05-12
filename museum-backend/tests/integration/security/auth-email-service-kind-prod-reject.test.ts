@@ -100,8 +100,21 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     overpass: { cacheTtlSeconds: 86400, negativeCacheTtlSeconds: 3600 },
     chatPurgeRetentionDays: 180,
     s3OrphanSweepEnabled: false,
-    knowledgeBase: { timeoutMs: 500, cacheTtlSeconds: 3600, cacheMaxEntries: 500 },
+    knowledgeBase: {
+      timeoutMs: 500,
+      cacheTtlSeconds: 3600,
+      cacheMaxEntries: 500,
+      breaker: {
+        timeoutMs: 5000,
+        errorThresholdPercentage: 50,
+        resetTimeoutMs: 30000,
+        volumeThreshold: 5,
+        capacity: 5,
+      },
+      localDumpFallbackAfterMs: 60000,
+    },
     knowledgeRouter: { threshold: 0.7, kbTimeoutMs: 200, judgeTimeoutMs: 500, wsTimeoutMs: 1500 },
+    wikidata: { userAgent: 'Musaium/1.0 (test)' },
     nominatim: {
       contactEmail: 'contact@musaium.app',
       cacheTtlSeconds: 86400,
