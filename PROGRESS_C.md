@@ -35,7 +35,7 @@ Sprint cleanup-2026-05-12. Worktree shared with A/B/D.
   - Files: `env.ts`, `env.types.ts`, `chat-message.service.ts`, `index.ts`, `tests/integration/security/auth-email-service-kind-prod-reject.test.ts`.
 - [ ] C.10 — Reunify chat-module*.ts
 - [ ] C.11 — Reduce null-object ports
-- [ ] C.12 — Centralize JWT decode (Zod parse)
+- [x] C.12 — Centralize JWT decode (Zod parse). NEW `museum-backend/src/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `decodeJwtHeader`, `jwtHeaderSchema`). NEW `museum-frontend/shared/auth/jwt-decode.ts` (`decodeJwtPayload`, `baseJwtPayloadSchema`). Migrated 3 call-sites: `auth-route.helpers.ts:decodeFamilyIdUnsafe`, `social-token-verifier.ts:decodeHeader`, `authLogic.pure.ts:extractUserIdFromToken + getTokenExpiryMs`. `grep "JSON.parse(atob" src/ features/` = 0 in app code (only zod node_modules + the new helpers themselves).
 - [ ] C.13 — Fix httpClient/Redis/env-resolvers casts
 - [ ] C.14 — Create packages/musaium-shared/ workspace
 - [ ] C.15 — Split auth.route.ts (if monolithic)

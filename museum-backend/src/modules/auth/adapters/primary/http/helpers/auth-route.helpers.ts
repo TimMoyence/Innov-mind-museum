@@ -1,3 +1,6 @@
+import { z } from 'zod';
+
+import { decodeJwtPayload } from '@shared/auth/jwt-decode';
 import {
   type EmailLocale,
   localeFromAcceptLanguage,
@@ -34,16 +37,9 @@ export const toPositiveInt = (value: string | undefined, fallback: number): numb
  * cryptographic verification runs in the handler. A parse failure cannot
  * bypass the limit because the caller falls back to IP-only keying.
  */
+const familyIdPayloadSchema = z.object({ familyId: z.string() });
+
 export const decodeFamilyIdUnsafe = (token: string | undefined): string | null => {
-  if (typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
-      familyId?: unknown;
-    };
-    return typeof payload.familyId === 'string' ? payload.familyId : null;
-  } catch {
-    return null;
-  }
+  const payload = decodeJwtPayload(token, familyIdPayloadSchema);
+  return payload?.familyId ?? null;
 };
