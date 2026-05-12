@@ -25,7 +25,7 @@ Index docs : **`docs/DOCS_INDEX.md`**. Tech debts ouverts : **`docs/TECH_DEBT.md
 
 Sprint debrief pédagogique 2026-04-30 → 2026-05-05 : **`docs/_archive/training-2026-05/explications-sprint-2026-05-05/`** (22 fichiers, ~6200 lignes en français, archivé 2026-05-12).
 
-Post-2026-04-20 runtime tracking : `.claude/tasks/` + `.claude/skills/team/team-reports/`.
+Post-2026-04-20 runtime tracking : `.claude/skills/team/team-reports/`.
 
 ## Common Commands
 
@@ -120,7 +120,7 @@ Auto-generated, massive, or pure data. Reading full wastes tokens, rarely helps.
 |---|---|---|---|
 | `museum-frontend/shared/api/generated/openapi.ts` | 83 KB / 3 510 lines | Auto-generated from backend OpenAPI spec | `Grep` for specific type/operation name, or read ±50 lines with `offset`/`limit` |
 | `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
-| `museum-backend/src/data/db/migrations/*.ts` (34 files) | ~5 KB each, 172 KB total | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
+| `museum-backend/src/data/db/migrations/*.ts` (56 files) | ~5 KB each | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
 | `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 
@@ -144,7 +144,7 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 
 ## Environment Setup
 
-1. Copy `.env.local.example` → `.env` in both `museum-backend/` and `museum-frontend/`
+1. Copy `.env.example` → `.env` in `museum-backend/`, and `.env.local.example` → `.env` in `museum-frontend/`
 2. Backend need: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets
 3. Frontend need: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
 4. Backend DB exposed on port **5433** (not 5432) when using docker-compose

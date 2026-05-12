@@ -45,11 +45,10 @@ Path alias: `@/*` → `./*`.
 
 ## Tests & quality
 
-Use shared factories from `tests/helpers/`. Never inline entity creation. Mocks live in `__tests__/test-utils.tsx`. See `docs/QUALITY_GUIDE.md`.
+Use shared factories from `tests/helpers/`. Never inline entity creation. Mocks live in `__tests__/test-utils.tsx`.
 
 ## More docs
 
-- Architecture map — `docs/ARCHITECTURE_MAP.md`
 - Internal testing flow — `../docs/MOBILE_INTERNAL_TESTING_FLOW.md`
 - Store submission — `../docs/STORE_SUBMISSION_GUIDE.md`
 - Voice pipeline — `../docs/AI_VOICE.md`

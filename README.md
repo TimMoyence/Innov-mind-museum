@@ -58,7 +58,7 @@ The backend is containerized via **Docker** and hosted on an **OVH VPS**.
 | **Backend** | Node.js 22, Express 5, TypeORM, pnpm | REST API, business logic, AI integration |
 | **Architecture** | Hexagonal (Ports & Adapters) | Strict separation of concerns |
 | **Database** | PostgreSQL 16 + Redis 7 | Persistence + cache/rate-limit/distributed locks |
-| **AI** | LangChain + Multi-provider LLM (OpenAI/Deepseek/Google) | Visual analysis, response generation (SSE streaming deprecated — see ADR-001) |
+| **AI** | LangChain + Multi-provider LLM (OpenAI/Deepseek/Google) | Visual analysis, response generation (classic STT → LLM → TTS pipeline, see `docs/AI_VOICE.md`) |
 | **Observability** | Sentry, OpenTelemetry, Promtail/Loki | APM, distributed tracing, structured logging |
 | **Containers** | Docker | Backend encapsulation + persistent volumes |
 | **Hosting** | VPS OVH | Autonomous project deployment and management |
@@ -133,7 +133,7 @@ musaium/
 API keys and sensitive configuration are managed via **environment variables** in an unversioned `.env` file.
 
 Reference templates:
-- `museum-backend/.env.local.example`
+- `museum-backend/.env.example`
 - `museum-frontend/.env.local.example`
 
 ---
@@ -143,12 +143,13 @@ Reference templates:
 - Authenticated user flows (email, Apple, Google)
 - Image upload and artwork processing
 - Contextual AI chat via Multi-LLM + LangChain
+- Voice pipeline (STT → LLM → TTS, see `docs/AI_VOICE.md`)
 - Conversation and artwork persistence
-- SSE streaming chat responses (deprecated as of ADR-001, classic JSON responses in use)
 - Museum directory with geolocation
-- Multi-tenancy support
 - Admin dashboard (museum-web)
-- Full observability (Sentry + OpenTelemetry)
+- Full observability (Sentry + OpenTelemetry + Prometheus + Langfuse)
+
+> Multi-tenant museum onboarding is **deferred** post-launch — see [ADR-044](docs/adr/ADR-044-multi-tenant-museum-onboarding-deferred.md).
 
 ---
 
