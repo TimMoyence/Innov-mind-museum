@@ -1,4 +1,8 @@
 {
+  "ai_disclosure": {
+    "onboarding_toast": "Musaium is an AI assistant. Replies are generated automatically.",
+    "chat_footer": "AI-generated replies — may contain errors."
+  },
   "common": {
     "cancel": "Cancel",
     "error": "Error",
