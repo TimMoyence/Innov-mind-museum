@@ -35,10 +35,10 @@ export function buildGuardrailBlockAuditEntry(params: {
   reason: GuardrailBlockReason | undefined;
   fullText: string;
   classifierRan: boolean;
-  advancedRan: boolean;
+  providerRan: boolean;
   context?: GuardrailAuditContext;
 }): AuditLogEntry {
-  const { phase, reason, fullText, classifierRan, advancedRan, context } = params;
+  const { phase, reason, fullText, classifierRan, providerRan, context } = params;
   const { snippetPreview, snippetFingerprint } = redactSnippetForAudit(fullText);
   const userId = context?.userId;
 
@@ -55,7 +55,7 @@ export function buildGuardrailBlockAuditEntry(params: {
       snippetFingerprint,
       locale: context?.locale ?? null,
       classifierRan,
-      advancedRan,
+      providerRan,
     },
     ip: context?.ip ?? null,
     requestId: context?.requestId ?? null,

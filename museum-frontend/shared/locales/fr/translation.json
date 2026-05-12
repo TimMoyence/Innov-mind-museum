@@ -3,6 +3,21 @@
     "onboarding_toast": "Musaium est un assistant IA. Les réponses sont générées automatiquement.",
     "chat_footer": "Réponses générées par IA — peuvent contenir des erreurs."
   },
+  "voice": {
+    "disclosure": {
+      "title": "Bonjour, je suis l'assistant Musaium",
+      "aiNotice": "Je suis une intelligence artificielle. Je peux faire des erreurs.",
+      "startButton": "Commencer",
+      "audioGreeting": "Bonjour, vous interagissez avec l'assistant IA Musaium. Je peux me tromper. Commençons.",
+      "badgeLabel": "IA",
+      "badgeA11y": "Assistant IA — toucher pour les détails de la divulgation",
+      "modalTitle": "Divulgation IA",
+      "modalLearnMore": "En savoir plus",
+      "modalClose": "Fermer",
+      "audioPreparing": "Préparation de l'annonce vocale",
+      "audioFallback": "Annonce vocale indisponible sur cet appareil"
+    }
+  },
   "common": {
     "cancel": "Annuler",
     "error": "Erreur",

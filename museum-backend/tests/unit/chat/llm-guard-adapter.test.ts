@@ -245,9 +245,12 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     expect(fetchFn).toHaveBeenCalledTimes(3);
 
     // 4th call must NOT hit fetch AND must STILL fail-CLOSED (ADR-047 regression pin).
+    // Reason flips from 'error' (genuine network/timeout failure) to
+    // 'service_unavailable' (ADR-048 honest UX channel — the breaker short-
+    // circuited because the sidecar is known-down).
     const decision = await adapter.checkInput({ text: 'hello again' });
     expect(decision.allow).toBe(false);
-    expect(decision.reason).toBe('error');
+    expect(decision.reason).toBe('service_unavailable');
     expect(fetchFn).toHaveBeenCalledTimes(3);
     expect(loggerWarn).toHaveBeenCalledWith(
       'llm_guard_circuit_breaker_skip',
@@ -270,7 +273,9 @@ describe('LLMGuardAdapter circuit breaker integration', () => {
     const decision = await adapter.checkInput({ text: 'should be blocked' });
 
     expect(decision.allow).toBe(false);
-    expect(decision.reason).toBe('error');
+    // ADR-048 — breaker short-circuit returns `service_unavailable` so the
+    // user-facing copy is honest (sidecar dead, not "your content flagged").
+    expect(decision.reason).toBe('service_unavailable');
     expect(fetchFn).not.toHaveBeenCalled();
     expect(loggerWarn).toHaveBeenCalledWith(
       'llm_guard_circuit_breaker_skip',
@@ -380,7 +385,9 @@ describe('LLMGuardAdapter inflight semaphore (ADR-047 R5)', () => {
     const decision = await adapter.checkInput({ text: 'surge' });
 
     expect(decision.allow).toBe(false);
-    expect(decision.reason).toBe('error');
+    // ADR-048 — semaphore overflow returns `service_unavailable` so the
+    // user-facing copy is honest (capacity issue, not "content flagged").
+    expect(decision.reason).toBe('service_unavailable');
     expect(fetchFn).not.toHaveBeenCalled();
     expect(loggerWarn).toHaveBeenCalledWith(
       'llm_guard_semaphore_overflow',
@@ -407,5 +414,89 @@ describe('LLMGuardAdapter inflight semaphore (ADR-047 R5)', () => {
 
     expect(fetchFn).toHaveBeenCalledTimes(3);
     expect(semaphore.getStats().inFlight).toBe(0);
+  });
+});
+
+describe('LLMGuardAdapter ADR-048 perennial-design surface (version/health/metrics)', () => {
+  it('exposes a non-empty readonly version string (Phase 0 hardcoded sidecar pin)', () => {
+    const adapter = buildAdapter(makeFetch({}));
+    expect(typeof adapter.version).toBe('string');
+    expect(adapter.version.length).toBeGreaterThan(0);
+    expect(adapter.version).toMatch(/^llm-guard-/);
+  });
+
+  it('health() returns up when breaker CLOSED + scan succeeds', async () => {
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = buildAdapter(fetchFn);
+
+    const health = await adapter.health();
+
+    expect(health.status).toBe('up');
+    expect(health.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(typeof health.lastCheckedAt).toBe('string');
+    expect(new Date(health.lastCheckedAt).getTime()).not.toBeNaN();
+  });
+
+  it('health() returns down when breaker is OPEN (skips probe entirely)', async () => {
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: 1,
+      windowMs: 60_000,
+      openDurationMs: 30_000,
+    });
+    breaker.recordFailure();
+    expect(breaker.state).toBe('OPEN');
+
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = buildAdapter(fetchFn, 'http://llm-guard:8081', 300, breaker);
+
+    const health = await adapter.health();
+
+    expect(health.status).toBe('down');
+    expect(health.detail).toBe('circuit_breaker_open');
+    // Breaker is OPEN, so the probe path must NOT have hit fetch.
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('metrics() returns a non-zero snapshot after scans run', async () => {
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true }) });
+    const adapter = buildAdapter(fetchFn);
+
+    expect(adapter.metrics()).toEqual({
+      requests: 0,
+      blocks: 0,
+      errors: 0,
+      skipsBreaker: 0,
+      skipsOverflow: 0,
+    });
+
+    await adapter.checkInput({ text: 'hello art' });
+    await adapter.checkInput({ text: 'second' });
+
+    const snapshot = adapter.metrics();
+    expect(snapshot.requests).toBe(2);
+    expect(snapshot.blocks).toBe(0);
+    expect(snapshot.errors).toBe(0);
+  });
+
+  it('metrics() increments blocks + errors on a fail-CLOSED scan', async () => {
+    const fetchFn = makeFetch({ ok: false, status: 500 });
+    const adapter = buildAdapter(fetchFn);
+
+    await adapter.checkInput({ text: 'hello' });
+
+    const snapshot = adapter.metrics();
+    expect(snapshot.requests).toBe(1);
+    expect(snapshot.blocks).toBe(1);
+    expect(snapshot.errors).toBe(1);
+  });
+
+  it('verdicts carry the schema version literal and providedBy stamp (ADR-048)', async () => {
+    const fetchFn = makeFetch({ json: async () => ({ is_valid: true, risk_score: 0.1 }) });
+    const adapter = buildAdapter(fetchFn);
+
+    const verdict = await adapter.checkInput({ text: 'hello' });
+
+    expect(verdict.version).toBe('v1');
+    expect(verdict.providedBy).toEqual({ name: 'llm-guard', version: adapter.version });
   });
 });

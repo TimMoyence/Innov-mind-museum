@@ -9,13 +9,13 @@ import {
   evaluateUserInputGuardrail,
 } from './art-topic-guardrail';
 import { buildGuardrailBlockAuditEntry } from './guardrail-audit-payload';
-import { judgeVerdictToReason, mapAdvancedReason } from './guardrail-reason-mapping';
+import { judgeVerdictToReason, mapProviderReason } from './guardrail-reason-mapping';
 import { buildBlockedOutputPayload } from './guardrail-refusal-builder';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { GuardrailAuditContext } from './guardrail-audit-payload';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
-import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type {
   ChatRepository,
   PersistMessageInput,
@@ -52,13 +52,13 @@ interface GuardrailEvaluationServiceDeps {
   audit?: AuditService;
   artTopicClassifier?: ArtTopicClassifierPort;
   /**
-   * Optional advanced (V2) guardrail layer. Runs AFTER the deterministic keyword
-   * guardrail and uses the hexagonal AdvancedGuardrail port. When `observeOnly`
-   * is true the service logs decisions but never blocks — useful for Phase A
-   * rollout of a new candidate.
+   * Optional guardrail provider layer (ADR-048). Runs AFTER the deterministic
+   * keyword guardrail and uses the hexagonal `GuardrailProvider` port. When
+   * `observeOnly` is true the service logs decisions but never blocks —
+   * useful for Phase A rollout of a new candidate.
    */
-  advancedGuardrail?: AdvancedGuardrail;
-  advancedGuardrailObserveOnly?: boolean;
+  guardrailProvider?: GuardrailProvider;
+  guardrailProviderObserveOnly?: boolean;
   /**
    * F4 — LLM judge callable. Runs ONLY when `llmJudgeEnabled` is true AND the
    * keyword pre-filter returned allow AND the message length is above the
@@ -82,8 +82,8 @@ export class GuardrailEvaluationService {
   private readonly repository: ChatRepository;
   private readonly audit?: AuditService;
   private readonly artTopicClassifier?: ArtTopicClassifierPort;
-  private readonly advancedGuardrail?: AdvancedGuardrail;
-  private readonly advancedGuardrailObserveOnly: boolean;
+  private readonly guardrailProvider?: GuardrailProvider;
+  private readonly guardrailProviderObserveOnly: boolean;
   private readonly llmJudge?: LlmJudgeFn;
   private readonly llmJudgeEnabled: boolean;
 
@@ -91,8 +91,8 @@ export class GuardrailEvaluationService {
     this.repository = deps.repository;
     this.audit = deps.audit;
     this.artTopicClassifier = deps.artTopicClassifier;
-    this.advancedGuardrail = deps.advancedGuardrail;
-    this.advancedGuardrailObserveOnly = deps.advancedGuardrailObserveOnly ?? true;
+    this.guardrailProvider = deps.guardrailProvider;
+    this.guardrailProviderObserveOnly = deps.guardrailProviderObserveOnly ?? true;
     this.llmJudge = deps.llmJudge;
     this.llmJudgeEnabled = deps.llmJudgeEnabled ?? false;
   }
@@ -140,7 +140,7 @@ export class GuardrailEvaluationService {
     reason: GuardrailBlockReason | undefined;
     fullText: string;
     classifierRan: boolean;
-    advancedRan: boolean;
+    providerRan: boolean;
     context?: GuardrailAuditContext;
   }): Promise<void> {
     if (!this.audit) return;
@@ -148,23 +148,24 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * Runs the advanced guardrail check with a safety net: any throw is translated
-   * to a fail-CLOSED blocking decision. In observe-only mode blocking decisions
-   * are downgraded to `allow: true` after logging — letting operators validate a
-   * new candidate on production traffic without user-visible refusals.
+   * Runs the configured guardrail provider check (ADR-048) with a safety net:
+   * any throw is translated to a fail-CLOSED blocking decision. In
+   * observe-only mode, blocking decisions are downgraded to `allow: true`
+   * after logging — letting operators validate a new candidate on production
+   * traffic without user-visible refusals.
    */
-  private async evaluateAdvanced(
+  private async evaluateGuardrailProvider(
     phase: 'input' | 'output',
     run: () => Promise<{ allow: boolean; reason?: string }>,
   ): Promise<{ allow: boolean; reason?: GuardrailBlockReason }> {
-    if (!this.advancedGuardrail) return { allow: true };
+    if (!this.guardrailProvider) return { allow: true };
 
     let raw: { allow: boolean; reason?: string };
     try {
       raw = await run();
     } catch (error) {
-      logger.warn('advanced_guardrail_throw_fail_closed', {
-        adapter: this.advancedGuardrail.name,
+      logger.warn('guardrail_provider_throw_fail_closed', {
+        adapter: this.guardrailProvider.name,
         phase,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -173,11 +174,11 @@ export class GuardrailEvaluationService {
 
     if (raw.allow) return { allow: true };
 
-    const mappedReason = mapAdvancedReason(raw.reason);
+    const mappedReason = mapProviderReason(raw.reason);
 
-    if (this.advancedGuardrailObserveOnly) {
-      logger.info('advanced_guardrail_observe_would_block', {
-        adapter: this.advancedGuardrail.name,
+    if (this.guardrailProviderObserveOnly) {
+      logger.info('guardrail_provider_observe_would_block', {
+        adapter: this.guardrailProvider.name,
         phase,
         rawReason: raw.reason,
         mappedReason,
@@ -185,8 +186,8 @@ export class GuardrailEvaluationService {
       return { allow: true };
     }
 
-    logger.info('advanced_guardrail_block', {
-      adapter: this.advancedGuardrail.name,
+    logger.info('guardrail_provider_block', {
+      adapter: this.guardrailProvider.name,
       phase,
       rawReason: raw.reason,
       mappedReason,
@@ -212,7 +213,7 @@ export class GuardrailEvaluationService {
     preClassified?: 'art',
     context?: GuardrailAuditContext,
   ): Promise<InputGuardrailResult> {
-    const advancedRan = Boolean(this.advancedGuardrail);
+    const providerRan = Boolean(this.guardrailProvider);
 
     // Hard blocks (insults, injection) always run regardless of preClassified
     const decision = evaluateUserInputGuardrail({ text });
@@ -222,28 +223,29 @@ export class GuardrailEvaluationService {
         reason: decision.reason,
         fullText: text ?? '',
         classifierRan: false,
-        advancedRan: false,
+        providerRan: false,
         context,
       });
       return decision;
     }
 
-    // Advanced V2 layer (NeMo / LLM Guard / Prompt Armor) when configured. Runs in
-    // addition to the deterministic guardrail above, never replacing it.
-    const advanced = await this.evaluateAdvanced('input', async () => {
-      if (!this.advancedGuardrail) return { allow: true };
-      return await this.advancedGuardrail.checkInput({ text: text ?? '' });
+    // Guardrail provider layer (LLM-Guard sidecar, future Llama Prompt Guard 2,
+    // Lakera, etc. — ADR-048) when configured. Runs in addition to the
+    // deterministic guardrail above, never replacing it.
+    const providerVerdict = await this.evaluateGuardrailProvider('input', async () => {
+      if (!this.guardrailProvider) return { allow: true };
+      return await this.guardrailProvider.checkInput({ text: text ?? '' });
     });
-    if (!advanced.allow) {
+    if (!providerVerdict.allow) {
       await this.logBlock({
         phase: 'input',
-        reason: advanced.reason,
+        reason: providerVerdict.reason,
         fullText: text ?? '',
         classifierRan: false,
-        advancedRan,
+        providerRan,
         context,
       });
-      return advanced;
+      return providerVerdict;
     }
 
     // F4 (2026-04-30) — LLM judge second layer. Selective invocation: only on
@@ -257,7 +259,7 @@ export class GuardrailEvaluationService {
         reason: judgeDecision.reason,
         fullText: text ?? '',
         classifierRan: false,
-        advancedRan: false,
+        providerRan: false,
         context,
       });
       return judgeDecision;
@@ -334,10 +336,10 @@ export class GuardrailEvaluationService {
     text: string;
     metadata: ChatAssistantMetadata;
     requestedLocale?: string;
-    advancedRan: boolean;
+    providerRan: boolean;
     context?: GuardrailAuditContext;
   }): Promise<{ text: string; metadata: ChatAssistantMetadata; allowed: boolean } | undefined> {
-    const { text, metadata, requestedLocale, advancedRan, context } = args;
+    const { text, metadata, requestedLocale, providerRan, context } = args;
     if (!this.artTopicClassifier) return undefined;
 
     let isArt: boolean;
@@ -349,7 +351,7 @@ export class GuardrailEvaluationService {
         reason: 'unsafe_output',
         fullText: text,
         classifierRan: true,
-        advancedRan,
+        providerRan,
         context,
       });
       return buildBlockedOutputPayload({
@@ -364,7 +366,7 @@ export class GuardrailEvaluationService {
         reason: 'off_topic',
         fullText: text,
         classifierRan: true,
-        advancedRan,
+        providerRan,
         context,
       });
       return buildBlockedOutputPayload({
@@ -400,7 +402,7 @@ export class GuardrailEvaluationService {
     context?: GuardrailAuditContext;
   }): Promise<{ text: string; metadata: ChatAssistantMetadata; allowed: boolean }> {
     const { text, metadata, requestedLocale, context } = params;
-    const advancedRan = Boolean(this.advancedGuardrail);
+    const providerRan = Boolean(this.guardrailProvider);
     const classifierRan = Boolean(this.artTopicClassifier);
 
     // Safety keyword checks (insults, injections, empty).
@@ -419,7 +421,7 @@ export class GuardrailEvaluationService {
         reason: safetyDecision.reason,
         fullText: text,
         classifierRan: false,
-        advancedRan: false,
+        providerRan: false,
         context,
       });
       return buildBlockedOutputPayload({
@@ -429,26 +431,27 @@ export class GuardrailEvaluationService {
       });
     }
 
-    // Advanced V2 output check when configured (defense-in-depth after keywords).
-    const advanced = await this.evaluateAdvanced('output', async () => {
-      if (!this.advancedGuardrail) return { allow: true };
-      return await this.advancedGuardrail.checkOutput({
+    // Guardrail provider output check when configured (ADR-048;
+    // defense-in-depth after keywords).
+    const providerVerdict = await this.evaluateGuardrailProvider('output', async () => {
+      if (!this.guardrailProvider) return { allow: true };
+      return await this.guardrailProvider.checkOutput({
         text,
         metadata: metadata as unknown as Record<string, unknown>,
         locale: requestedLocale,
       });
     });
-    if (!advanced.allow) {
+    if (!providerVerdict.allow) {
       await this.logBlock({
         phase: 'output',
-        reason: advanced.reason,
+        reason: providerVerdict.reason,
         fullText: text,
         classifierRan: false,
-        advancedRan,
+        providerRan,
         context,
       });
       return buildBlockedOutputPayload({
-        reason: advanced.reason,
+        reason: providerVerdict.reason,
         requestedLocale,
         metadata,
       });
@@ -458,7 +461,7 @@ export class GuardrailEvaluationService {
       text,
       metadata,
       requestedLocale,
-      advancedRan,
+      providerRan,
       context,
     });
     if (classifierBlock) return classifierBlock;
@@ -466,7 +469,7 @@ export class GuardrailEvaluationService {
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, {
       phase: 'output',
       classifierRan,
-      advancedRan,
+      providerRan,
     });
     return { text, metadata, allowed: true };
   }

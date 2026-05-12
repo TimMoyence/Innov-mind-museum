@@ -3,6 +3,21 @@
     "onboarding_toast": "Musaium 是 AI 助手。回复由 AI 自动生成。",
     "chat_footer": "AI 生成的回复 — 可能包含错误。"
   },
+  "voice": {
+    "disclosure": {
+      "title": "您好，我是 Musaium 助手",
+      "aiNotice": "我是人工智能，可能会出错。",
+      "startButton": "开始",
+      "audioGreeting": "您好，您正在与 Musaium AI 助手交互。我可能会出错。让我们开始吧。",
+      "badgeLabel": "AI",
+      "badgeA11y": "AI 助手 — 轻触查看披露详情",
+      "modalTitle": "AI 披露",
+      "modalLearnMore": "了解更多",
+      "modalClose": "关闭",
+      "audioPreparing": "正在准备语音问候",
+      "audioFallback": "此设备暂不支持语音问候"
+    }
+  },
   "common": {
     "cancel": "取消",
     "error": "错误",

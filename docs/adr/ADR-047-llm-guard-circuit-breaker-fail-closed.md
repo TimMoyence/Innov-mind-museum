@@ -56,6 +56,20 @@ Reversing this ADR — i.e. allowing fail-OPEN under any condition — requires:
 
 The project doctrine `feedback_no_feature_flags_prelaunch` makes any "fail-OPEN flag" proposal a non-starter before B2B revenue. Post-launch the doctrine inverts and flags become available — but even then, this contract is load-bearing for the AI safety story (`docs/AI_SAFETY.md`) and any reversal must update that doc too.
 
+## Metrics SLO (amendment 2026-05-12 Phase 0)
+
+Operational thresholds for the alert rules in `docs/observability/alerts-llm-guard.yml`:
+
+| Alert | Expression (Prometheus) | Severity | Routing |
+|---|---|---|---|
+| `LLMGuardLatencyHigh` | `histogram_quantile(0.95, rate(musaium_llm_guard_scan_duration_seconds_bucket[5m])) > 0.6` for 2m | warning | Slack #ops-musaium |
+| `LLMGuardLatencyCritical` | `histogram_quantile(0.95, rate(musaium_llm_guard_scan_duration_seconds_bucket[5m])) > 0.8` for 2m | critical | Telegram on-call |
+| `LLMGuardBreakerOpen` | `musaium_llm_guard_circuit_breaker_state{state="open"} == 1` for 30s | critical | Telegram on-call |
+| `LLMGuardSkipsRateHigh` | `rate(musaium_llm_guard_circuit_breaker_skips_total[5m]) > 1` for 2m | warning | Slack #ops-musaium |
+| `LLMGuardScanErrorsHigh` | `rate(musaium_llm_guard_scan_duration_seconds_count{outcome="fail_closed"}[5m]) > 0.5` for 5m | warning | Slack #ops-musaium |
+
+Runbook entry for each alert: `docs/RUNBOOKS/guardrail-incidents.md` (scenarios S1-S7). Forensic procedure: `docs/RUNBOOKS/audit-chain-forensics.md`. Long-form sidecar-down playbook: `docs/OPS_INCIDENT_LLM_GUARD.md` (scenario S1).
+
 ## References
 
 - Parent run : `.claude/skills/team/team-state/2026-05-12-llm-guard-resilience-enterprise/`

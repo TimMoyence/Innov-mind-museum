@@ -135,6 +135,35 @@ Within 48 h of resolution :
 4. If the incident exposed a deeper safety gap (e.g., upstream filters caught threats the sidecar normally catches), amend `docs/AI_SAFETY.md` § Layered defense to document the gap.
 5. If the recovery required disabling the breaker (3.4), file an ADR follow-up explaining the bypass duration and why it was safe.
 
+## 6.5 Forensics — audit-log query
+
+When an incident-triage requires correlating breaker trips with chat blocks visible to users, run the following SQL against the prod audit-log replica (read-only credentials in `secrets:db_audit_ro`):
+
+```sql
+-- Breaker state transitions in the incident window
+SELECT created_at, payload->>'failureCount' AS fails,
+       payload->>'windowMs' AS window_ms,
+       payload->>'policyVersion' AS policy
+FROM audit_logs
+WHERE action = 'SECURITY_LLM_GUARD_BREAKER_OPEN'
+  AND created_at BETWEEN $1 AND $2
+ORDER BY created_at DESC;
+
+-- User-visible blocks during the same window
+SELECT created_at, actor_id, payload->>'reason' AS reason,
+       payload->>'category' AS category,
+       payload->>'localeHint' AS locale
+FROM audit_logs
+WHERE action IN ('GUARDRAIL_BLOCKED_INPUT', 'GUARDRAIL_BLOCKED_OUTPUT')
+  AND created_at BETWEEN $1 AND $2
+ORDER BY created_at DESC
+LIMIT 200;
+```
+
+For deeper inspection — hash-chain integrity, IP-anonymisation verification — follow `docs/RUNBOOKS/audit-chain-forensics.md` and run the `audit-chain` CLI (`museum-backend/src/shared/audit/audit-chain-cli-core.ts`). 13-month retention applies; older windows require restoring from snapshot per `docs/RUNBOOKS/V1_FALLBACKS.md` §audit-restore.
+
+Cross-references for the broader incident playbook (false-positive surge, breaker stuck OPEN, false-negative review, supply-chain compromise, policy mis-publication): `docs/RUNBOOKS/guardrail-incidents.md`.
+
 ## 7. Common false-positive triage
 
 - **Breaker trips but sidecar /health is OK from inside the backend container** — Docker DNS may be returning stale records ; restart the backend container, not the sidecar.

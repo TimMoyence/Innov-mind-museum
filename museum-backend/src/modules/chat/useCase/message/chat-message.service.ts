@@ -14,7 +14,6 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
-import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type {
   AudioTranscriptionResult,
   AudioTranscriber,
@@ -23,6 +22,7 @@ import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
@@ -111,8 +111,8 @@ export interface ChatEnrichmentDeps {
 /** Content-safety services bundled together (replaces 5 individual deps). */
 export interface ChatSafetyDeps {
   artTopicClassifier?: ArtTopicClassifierPort;
-  advancedGuardrail?: AdvancedGuardrail;
-  advancedGuardrailObserveOnly?: boolean;
+  guardrailProvider?: GuardrailProvider;
+  guardrailProviderObserveOnly?: boolean;
   audit?: AuditService;
   piiSanitizer?: PiiSanitizer;
   /** F4 — LLM judge callable wired to the chat orchestrator. */
@@ -208,8 +208,8 @@ export class ChatMessageService {
       repository: deps.repository,
       audit: safety.audit,
       artTopicClassifier: safety.artTopicClassifier,
-      advancedGuardrail: safety.advancedGuardrail,
-      advancedGuardrailObserveOnly: safety.advancedGuardrailObserveOnly,
+      guardrailProvider: safety.guardrailProvider,
+      guardrailProviderObserveOnly: safety.guardrailProviderObserveOnly,
       llmJudge: safety.llmJudge,
       llmJudgeEnabled: safety.llmJudgeEnabled,
     });

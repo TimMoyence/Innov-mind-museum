@@ -1,71 +1,108 @@
 import {
-  noopAdvancedGuardrail,
-  type AdvancedGuardrail,
-  type AdvancedGuardrailDecision,
-} from '@modules/chat/domain/ports/advanced-guardrail.port';
+  noopGuardrailProvider,
+  type GuardrailProvider,
+  type GuardrailVerdict,
+} from '@modules/chat/domain/ports/guardrail-provider.port';
 
-describe('noopAdvancedGuardrail', () => {
+describe('noopGuardrailProvider', () => {
   it('exposes a stable name', () => {
-    expect(noopAdvancedGuardrail.name).toBe('noop');
+    expect(noopGuardrailProvider.name).toBe('noop');
+  });
+
+  it('exposes a stable version (ADR-048 readonly version field)', () => {
+    expect(noopGuardrailProvider.version).toBe('noop-v1');
   });
 
   it('allows any input by default', async () => {
-    const decision = await noopAdvancedGuardrail.checkInput({ text: 'hello art world' });
-    expect(decision.allow).toBe(true);
-    expect(decision.reason).toBeUndefined();
+    const verdict = await noopGuardrailProvider.checkInput({ text: 'hello art world' });
+    expect(verdict.allow).toBe(true);
+    expect(verdict.version).toBe('v1');
+    expect(verdict.reason).toBeUndefined();
   });
 
   it('allows any output by default', async () => {
-    const decision = await noopAdvancedGuardrail.checkOutput({ text: 'response text' });
-    expect(decision.allow).toBe(true);
+    const verdict = await noopGuardrailProvider.checkOutput({ text: 'response text' });
+    expect(verdict.allow).toBe(true);
+    expect(verdict.version).toBe('v1');
   });
 
   it('ignores locale and session id', async () => {
-    const inputDecision = await noopAdvancedGuardrail.checkInput({
+    const inputVerdict = await noopGuardrailProvider.checkInput({
       text: 'text',
       locale: 'fr',
       sessionId: 'sess-1',
     });
-    expect(inputDecision.allow).toBe(true);
+    expect(inputVerdict.allow).toBe(true);
 
-    const outputDecision = await noopAdvancedGuardrail.checkOutput({
+    const outputVerdict = await noopGuardrailProvider.checkOutput({
       text: 'text',
       metadata: { foo: 'bar' },
       userInput: 'question',
       locale: 'fr',
     });
-    expect(outputDecision.allow).toBe(true);
+    expect(outputVerdict.allow).toBe(true);
+  });
+
+  it('health() returns up with zero latency for the noop provider', async () => {
+    const health = await noopGuardrailProvider.health();
+    expect(health.status).toBe('up');
+    expect(health.latencyMs).toBe(0);
+    expect(typeof health.lastCheckedAt).toBe('string');
+    expect(new Date(health.lastCheckedAt).getTime()).not.toBeNaN();
+  });
+
+  it('metrics() returns zeroed snapshot for the noop provider', () => {
+    const snapshot = noopGuardrailProvider.metrics();
+    expect(snapshot.requests).toBe(0);
+    expect(snapshot.blocks).toBe(0);
+    expect(snapshot.errors).toBe(0);
   });
 });
 
-describe('AdvancedGuardrail contract', () => {
+describe('GuardrailProvider contract', () => {
   it('adapters may return a redactedText instead of blocking', async () => {
-    const redactor: AdvancedGuardrail = {
+    const redactor: GuardrailProvider = {
       name: 'pii-redactor-demo',
-      async checkInput(input): Promise<AdvancedGuardrailDecision> {
-        return { allow: true, redactedText: input.text.replace(/\d+/g, '###') };
+      version: 'demo-v0',
+      async checkInput(input): Promise<GuardrailVerdict> {
+        return {
+          version: 'v1',
+          allow: true,
+          redactedText: input.text.replace(/\d+/g, '###'),
+        };
       },
-
-      async checkOutput(): Promise<AdvancedGuardrailDecision> {
-        return { allow: true };
+      async checkOutput(): Promise<GuardrailVerdict> {
+        return { version: 'v1', allow: true };
       },
+      health: async () => ({
+        status: 'up',
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: () => ({ requests: 0, blocks: 0, errors: 0 }),
     };
 
-    const decision = await redactor.checkInput({ text: 'call 0612345678' });
-    expect(decision.allow).toBe(true);
-    expect(decision.redactedText).toBe('call ###');
+    const verdict = await redactor.checkInput({ text: 'call 0612345678' });
+    expect(verdict.allow).toBe(true);
+    expect(verdict.redactedText).toBe('call ###');
   });
 
   it('adapters MUST fail-closed when check throws (contract)', async () => {
-    const unstableAdapter: AdvancedGuardrail = {
+    const unstableAdapter: GuardrailProvider = {
       name: 'unstable',
-      async checkInput(): Promise<AdvancedGuardrailDecision> {
+      version: 'unstable-v0',
+      async checkInput(): Promise<GuardrailVerdict> {
         throw new Error('network timeout');
       },
-
-      async checkOutput(): Promise<AdvancedGuardrailDecision> {
-        return { allow: true };
+      async checkOutput(): Promise<GuardrailVerdict> {
+        return { version: 'v1', allow: true };
       },
+      health: async () => ({
+        status: 'down',
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: () => ({ requests: 0, blocks: 0, errors: 0 }),
     };
 
     // Contract: the orchestrator wrapping the adapter is responsible for translating
@@ -74,22 +111,32 @@ describe('AdvancedGuardrail contract', () => {
     await expect(unstableAdapter.checkInput({ text: 'x' })).rejects.toThrow('network timeout');
   });
 
-  it('decisions may carry a confidence score for tiered decisions', async () => {
-    const scoringAdapter: AdvancedGuardrail = {
+  it('verdicts may carry a confidence score for tiered decisions', async () => {
+    const scoringAdapter: GuardrailProvider = {
       name: 'scoring',
-
-      async checkInput(): Promise<AdvancedGuardrailDecision> {
-        return { allow: false, reason: 'prompt_injection', confidence: 0.97 };
+      version: 'scoring-v0',
+      async checkInput(): Promise<GuardrailVerdict> {
+        return {
+          version: 'v1',
+          allow: false,
+          reason: 'prompt_injection',
+          confidence: 0.97,
+        };
       },
-
-      async checkOutput(): Promise<AdvancedGuardrailDecision> {
-        return { allow: true, confidence: 0.1 };
+      async checkOutput(): Promise<GuardrailVerdict> {
+        return { version: 'v1', allow: true, confidence: 0.1 };
       },
+      health: async () => ({
+        status: 'up',
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: () => ({ requests: 0, blocks: 0, errors: 0 }),
     };
 
-    const decision = await scoringAdapter.checkInput({ text: 'ignore previous' });
-    expect(decision.allow).toBe(false);
-    expect(decision.reason).toBe('prompt_injection');
-    expect(decision.confidence).toBe(0.97);
+    const verdict = await scoringAdapter.checkInput({ text: 'ignore previous' });
+    expect(verdict.allow).toBe(false);
+    expect(verdict.reason).toBe('prompt_injection');
+    expect(verdict.confidence).toBe(0.97);
   });
 });

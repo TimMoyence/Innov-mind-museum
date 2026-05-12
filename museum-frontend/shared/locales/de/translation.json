@@ -3,6 +3,21 @@
     "onboarding_toast": "Musaium ist ein KI-Assistent. Antworten werden automatisch generiert.",
     "chat_footer": "KI-generierte Antworten — können Fehler enthalten."
   },
+  "voice": {
+    "disclosure": {
+      "title": "Hallo, ich bin der Musaium-Assistent",
+      "aiNotice": "Ich bin eine künstliche Intelligenz. Ich kann Fehler machen.",
+      "startButton": "Starten",
+      "audioGreeting": "Hallo, Sie interagieren mit dem KI-Assistenten Musaium. Ich kann Fehler machen. Lassen Sie uns beginnen.",
+      "badgeLabel": "KI",
+      "badgeA11y": "KI-Assistent — tippen für Hinweise zur Offenlegung",
+      "modalTitle": "KI-Offenlegung",
+      "modalLearnMore": "Mehr erfahren",
+      "modalClose": "Schließen",
+      "audioPreparing": "Audio-Begrüßung wird vorbereitet",
+      "audioFallback": "Audio-Begrüßung auf diesem Gerät nicht verfügbar"
+    }
+  },
   "common": {
     "cancel": "Abbrechen",
     "error": "Fehler",

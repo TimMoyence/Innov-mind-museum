@@ -477,34 +477,41 @@ describe('GuardrailEvaluationService', () => {
     });
   });
 
-  describe('advanced guardrail integration', () => {
+  describe('guardrail provider integration (ADR-048)', () => {
     const makeAdvancedMock = (
       checkInputResult: { allow: boolean; reason?: string } | Error,
       checkOutputResult: { allow: boolean; reason?: string } | Error = { allow: true },
     ) => ({
       name: 'mock-adv',
+      version: 'mock-adv-v0',
       checkInput: jest
         .fn()
         .mockImplementation(() =>
           checkInputResult instanceof Error
             ? Promise.reject(checkInputResult)
-            : Promise.resolve(checkInputResult),
+            : Promise.resolve({ version: 'v1', ...checkInputResult }),
         ),
       checkOutput: jest
         .fn()
         .mockImplementation(() =>
           checkOutputResult instanceof Error
             ? Promise.reject(checkOutputResult)
-            : Promise.resolve(checkOutputResult),
+            : Promise.resolve({ version: 'v1', ...checkOutputResult }),
         ),
+      health: jest.fn().mockResolvedValue({
+        status: 'up' as const,
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: jest.fn().mockReturnValue({ requests: 0, blocks: 0, errors: 0 }),
     });
 
     it('allows text when advanced guardrail returns allow=true', async () => {
       const adv = makeAdvancedMock({ allow: true });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput('Tell me about the Mona Lisa');
@@ -517,8 +524,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'prompt_injection' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput('some subtle injection that bypasses keywords');
@@ -531,8 +538,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'prompt_injection' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: true,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: true,
       });
 
       const result = await service.evaluateInput('subtle phrasing');
@@ -544,7 +551,7 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'prompt_injection' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
+        guardrailProvider: adv,
       });
 
       const result = await service.evaluateInput('subtle phrasing');
@@ -556,8 +563,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock(new Error('sidecar timeout'));
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput('hello');
@@ -574,8 +581,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: true });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput(
@@ -591,8 +598,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: true }, { allow: false, reason: 'pii' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateOutput({
@@ -609,8 +616,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'jailbreak' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput('novel jailbreak phrase');
@@ -622,8 +629,8 @@ describe('GuardrailEvaluationService', () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'off_topic' });
       const service = new GuardrailEvaluationService({
         repository: createMockRepository(),
-        advancedGuardrail: adv,
-        advancedGuardrailObserveOnly: false,
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
       });
 
       const result = await service.evaluateInput('tell me about football scores');

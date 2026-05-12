@@ -3,6 +3,21 @@
     "onboarding_toast": "MusaiumはAIアシスタントです。返答は自動生成されます。",
     "chat_footer": "AI生成の返答 — 誤りを含む場合があります。"
   },
+  "voice": {
+    "disclosure": {
+      "title": "こんにちは、MusaiumのAIアシスタントです",
+      "aiNotice": "私は人工知能です。間違えることもあります。",
+      "startButton": "始める",
+      "audioGreeting": "こんにちは、MusaiumのAIアシスタントとお話しいただいています。間違えることもあります。始めましょう。",
+      "badgeLabel": "AI",
+      "badgeA11y": "AIアシスタント — タップして開示の詳細を表示",
+      "modalTitle": "AIに関する開示",
+      "modalLearnMore": "詳細を見る",
+      "modalClose": "閉じる",
+      "audioPreparing": "音声案内を準備しています",
+      "audioFallback": "この端末では音声案内をご利用いただけません"
+    }
+  },
   "common": {
     "cancel": "キャンセル",
     "error": "エラー",

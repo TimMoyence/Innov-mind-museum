@@ -25,10 +25,10 @@ import type {
   ReportReason,
 } from '@modules/chat/domain/chat.types';
 import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
-import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
@@ -96,8 +96,8 @@ export interface ChatServiceDeps {
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
-  advancedGuardrail?: AdvancedGuardrail;
-  advancedGuardrailObserveOnly?: boolean;
+  guardrailProvider?: GuardrailProvider;
+  guardrailProviderObserveOnly?: boolean;
   /** F4 — LLM judge callable. Wired by chat-module to bind the orchestrator. */
   llmJudge?: LlmJudgeFn;
   /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
@@ -162,8 +162,8 @@ export class ChatService {
       },
       safety: {
         artTopicClassifier: deps.artTopicClassifier,
-        advancedGuardrail: deps.advancedGuardrail,
-        advancedGuardrailObserveOnly: deps.advancedGuardrailObserveOnly,
+        guardrailProvider: deps.guardrailProvider,
+        guardrailProviderObserveOnly: deps.guardrailProviderObserveOnly,
         llmJudge: deps.llmJudge,
         llmJudgeEnabled: deps.llmJudgeEnabled,
         audit: deps.audit,
@@ -445,12 +445,7 @@ export class ChatService {
   }
 }
 
-type ChatRequestOutcome =
-  | 'success'
-  | 'error'
-  | 'guardrail_blocked'
-  | 'circuit_open'
-  | 'cache_hit';
+type ChatRequestOutcome = 'success' | 'error' | 'guardrail_blocked' | 'circuit_open' | 'cache_hit';
 
 /**
  * Wraps a chat request execution and records `chat_request_duration_seconds`

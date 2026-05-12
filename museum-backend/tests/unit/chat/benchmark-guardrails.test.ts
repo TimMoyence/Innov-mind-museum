@@ -1,4 +1,4 @@
-import { noopAdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
+import { noopGuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 
 import {
   benchmark,
@@ -81,7 +81,7 @@ describe('benchmark end-to-end on a small dataset', () => {
   ];
 
   it('noop adapter yields 100% allow → FP for expected blocks, TN for allows', async () => {
-    const report = await benchmark('noop', noopAdvancedGuardrail, prompts);
+    const report = await benchmark('noop', noopGuardrailProvider, prompts);
 
     expect(report.total).toBe(3);
     expect(report.trueNegatives).toBe(2);
@@ -96,8 +96,19 @@ describe('benchmark end-to-end on a small dataset', () => {
   it('adapter that blocks everything yields TP for blocks and FP for allows', async () => {
     const blockAll = {
       name: 'block-all',
-      checkInput: async () => ({ allow: false, reason: 'prompt_injection' as const }),
-      checkOutput: async () => ({ allow: true }),
+      version: 'block-all-v0',
+      checkInput: async () => ({
+        version: 'v1' as const,
+        allow: false,
+        reason: 'prompt_injection' as const,
+      }),
+      checkOutput: async () => ({ version: 'v1' as const, allow: true }),
+      health: async () => ({
+        status: 'up' as const,
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: () => ({ requests: 0, blocks: 0, errors: 0 }),
     };
 
     const report = await benchmark('block-all', blockAll, prompts);
@@ -110,10 +121,17 @@ describe('benchmark end-to-end on a small dataset', () => {
   it('records errors when adapter throws but still produces a report', async () => {
     const throwingAdapter = {
       name: 'throws',
-      checkInput: async () => {
+      version: 'throws-v0',
+      checkInput: async (): Promise<never> => {
         throw new Error('boom');
       },
-      checkOutput: async () => ({ allow: true }),
+      checkOutput: async () => ({ version: 'v1' as const, allow: true }),
+      health: async () => ({
+        status: 'down' as const,
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+      }),
+      metrics: () => ({ requests: 0, blocks: 0, errors: 0 }),
     };
 
     const report = await benchmark('throws', throwingAdapter, prompts);

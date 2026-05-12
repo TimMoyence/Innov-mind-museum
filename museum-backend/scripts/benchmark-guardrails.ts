@@ -1,6 +1,6 @@
 /**
  * NL-4.6 benchmark — runs the canonical prompts dataset through one or more
- * AdvancedGuardrail adapters and prints a comparison table.
+ * `GuardrailProvider` adapters (ADR-048) and prints a comparison table.
  *
  * Usage:
  *   pnpm exec tsx scripts/benchmark-guardrails.ts noop
@@ -15,12 +15,12 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import { LLMGuardAdapter } from '../src/modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
-import { noopAdvancedGuardrail } from '../src/modules/chat/domain/ports/advanced-guardrail.port';
+import { noopGuardrailProvider } from '../src/modules/chat/domain/ports/guardrail-provider.port';
 
 import type {
-  AdvancedGuardrail,
-  AdvancedGuardrailDecision,
-} from '../src/modules/chat/domain/ports/advanced-guardrail.port';
+  GuardrailProvider,
+  GuardrailVerdict,
+} from '../src/modules/chat/domain/ports/guardrail-provider.port';
 
 interface DatasetPrompt {
   id: string;
@@ -75,10 +75,7 @@ const percentile = (sorted: number[], p: number): number => {
 const expectedToAllow = (expected: string): boolean => expected === 'allow';
 
 /** Ground-truth comparison: adapter 'allow' vs expected 'allow'. */
-const classify = (
-  expected: string,
-  actualAllow: boolean,
-): 'TP' | 'FP' | 'TN' | 'FN' => {
+const classify = (expected: string, actualAllow: boolean): 'TP' | 'FP' | 'TN' | 'FN' => {
   const expectedAllow = expectedToAllow(expected);
   if (expectedAllow && actualAllow) return 'TN'; // correctly let it through
   if (!expectedAllow && !actualAllow) return 'TP'; // correctly blocked
@@ -86,17 +83,14 @@ const classify = (
   return 'FN'; // wrongly allowed (missed block)
 };
 
-async function runOne(
-  adapter: AdvancedGuardrail,
-  prompt: DatasetPrompt,
-): Promise<Measurement> {
+async function runOne(adapter: GuardrailProvider, prompt: DatasetPrompt): Promise<Measurement> {
   const start = performance.now();
-  let decision: AdvancedGuardrailDecision;
+  let verdict: GuardrailVerdict;
   let error: string | undefined;
   try {
-    decision = await adapter.checkInput({ text: prompt.text, locale: prompt.locale });
+    verdict = await adapter.checkInput({ text: prompt.text, locale: prompt.locale });
   } catch (err) {
-    decision = { allow: false, reason: 'error' };
+    verdict = { version: 'v1', allow: false, reason: 'error' };
     error = err instanceof Error ? err.message : String(err);
   }
   const latencyMs = performance.now() - start;
@@ -104,8 +98,8 @@ async function runOne(
     promptId: prompt.id,
     category: prompt.category,
     expectedDecision: prompt.expectedDecision,
-    actualAllow: decision.allow,
-    actualReason: decision.reason,
+    actualAllow: verdict.allow,
+    actualReason: verdict.reason,
     latencyMs,
     error,
   };
@@ -113,7 +107,7 @@ async function runOne(
 
 async function benchmark(
   name: string,
-  adapter: AdvancedGuardrail,
+  adapter: GuardrailProvider,
   prompts: DatasetPrompt[],
 ): Promise<AggregateReport> {
   const measurements: Measurement[] = [];
@@ -188,7 +182,9 @@ const formatReport = (report: AggregateReport): string => {
   );
   lines.push('per-category accuracy:');
   for (const [cat, stat] of Object.entries(report.perCategory)) {
-    lines.push(`  ${cat.padEnd(20)}  ${pct(stat.correct, stat.total)}  (${String(stat.correct)}/${String(stat.total)})`);
+    lines.push(
+      `  ${cat.padEnd(20)}  ${pct(stat.correct, stat.total)}  (${String(stat.correct)}/${String(stat.total)})`,
+    );
   }
   return lines.join('\n');
 };
@@ -225,8 +221,8 @@ const parseArgs = (argv: string[]): CliArgs => {
   return args;
 };
 
-const buildAdapter = (name: string, args: CliArgs): AdvancedGuardrail => {
-  if (name === 'noop') return noopAdvancedGuardrail;
+const buildAdapter = (name: string, args: CliArgs): GuardrailProvider => {
+  if (name === 'noop') return noopGuardrailProvider;
   if (name === 'llm-guard') {
     return new LLMGuardAdapter({ baseUrl: args.llmGuardUrl, timeoutMs: args.timeoutMs });
   }
@@ -259,7 +255,10 @@ async function main(): Promise<void> {
   if (args.outputPath) {
     const absolute = path.resolve(args.outputPath);
     await fs.mkdir(path.dirname(absolute), { recursive: true });
-    await fs.writeFile(absolute, JSON.stringify({ generatedAt: new Date().toISOString(), reports }, null, 2));
+    await fs.writeFile(
+      absolute,
+      JSON.stringify({ generatedAt: new Date().toISOString(), reports }, null, 2),
+    );
     console.error(`\nReport saved to ${absolute}`);
   }
 }

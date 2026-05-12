@@ -66,9 +66,9 @@ import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
-import type { AdvancedGuardrail } from '@modules/chat/domain/ports/advanced-guardrail.port';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
@@ -383,8 +383,8 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /** Creates the advanced guardrail V2 adapter when one is selected via env. */
-  private buildAdvancedGuardrail(): AdvancedGuardrail | undefined {
+  /** Creates the guardrail provider adapter when one is selected via env (ADR-048). */
+  private buildGuardrailProvider(): GuardrailProvider | undefined {
     const candidate = env.guardrails.candidate;
     if (candidate === 'off') return undefined;
 
@@ -424,6 +424,10 @@ export class ChatModule {
                   failureCount: snapshot.failureCount,
                   windowMs: env.guardrails.circuitBreaker.windowMs,
                   openedAt: snapshot.openedAt?.toISOString() ?? null,
+                  // ADR-048 Phase 0 anchor — stable literal until the per-tenant
+                  // policy resolver (Phase 2) populates real policy versions.
+                  // Anchors forensic replay across schema evolution.
+                  policyVersion: 'default-v0',
                 },
               }),
               'llm_guard_breaker_open_audit',
@@ -700,8 +704,8 @@ export class ChatModule {
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: new ArtTopicClassifier(),
-      advancedGuardrail: this.buildAdvancedGuardrail(),
-      advancedGuardrailObserveOnly: env.guardrails.observeOnly,
+      guardrailProvider: this.buildGuardrailProvider(),
+      guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.candidate === 'llm-judge',
       llmJudge: async (message: string) =>
         await judgeWithLlm(message, { orchestrator: deps.effectiveOrchestrator }),

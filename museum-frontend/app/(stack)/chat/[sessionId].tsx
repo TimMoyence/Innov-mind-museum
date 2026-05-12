@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
+import { useVoiceDisclosure } from '@/features/chat/hooks/useVoiceDisclosure';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefetch';
 import { useChatSessionActions } from '@/features/chat/application/useChatSessionActions';
@@ -28,6 +29,8 @@ import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ChatSessionModals } from '@/features/chat/ui/ChatSessionModals';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
 import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
+import { VoiceSessionIntro } from '@/features/chat/ui/VoiceSessionIntro';
+import { AiDisclosureModal } from '@/features/chat/ui/AiDisclosureModal';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
@@ -54,9 +57,20 @@ export default function ChatSessionScreen() {
   const [contextMenuMessage, setContextMenuMessage] = useState<ChatUiMessage | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [browserUrl, setBrowserUrl] = useState<string | null>(null);
+  const [showAiDisclosureRecap, setShowAiDisclosureRecap] = useState(false);
+  // Voice-disclosure gate state: when the user taps the mic for the first
+  // time we show `VoiceSessionIntro`. The actual recording action is queued
+  // until the user acknowledges. This satisfies EU AI Act Article 50 for
+  // every fresh voice session (see docs/legal/AI_DISCLOSURE.md).
+  const [pendingVoiceAction, setPendingVoiceAction] = useState(false);
 
   const { showAiConsent, setShowAiConsent, consentResolved, acceptAiConsent, recheckConsent } =
     useAiConsent();
+  const {
+    shouldShowDisclosure: shouldShowVoiceDisclosure,
+    isAcknowledged: voiceDisclosureAcknowledged,
+    acknowledge: acknowledgeVoiceDisclosure,
+  } = useVoiceDisclosure(sessionId);
 
   const {
     messages,
@@ -86,10 +100,34 @@ export default function ChatSessionScreen() {
     recordedAudioUri,
     recordedAudioBlob,
     isPlayingAudio,
-    toggleRecording,
+    toggleRecording: rawToggleRecording,
     playRecordedAudio,
     clearRecordedAudio,
   } = useAudioRecorder();
+
+  /**
+   * Wrapped `toggleRecording` that enforces the EU AI Act Article 50 voice
+   * disclosure gate. On the very first mic press of a session (when the user
+   * has not yet acknowledged the disclosure) we open `VoiceSessionIntro` and
+   * queue the recording — the actual `rawToggleRecording()` call fires from
+   * `onAcknowledgeVoiceDisclosure` below. Subsequent presses pass through
+   * untouched until the session ends.
+   */
+  const toggleRecording = useCallback(async () => {
+    if (!voiceDisclosureAcknowledged) {
+      setPendingVoiceAction(true);
+      return;
+    }
+    await rawToggleRecording();
+  }, [voiceDisclosureAcknowledged, rawToggleRecording]);
+
+  const onAcknowledgeVoiceDisclosure = useCallback(async () => {
+    await acknowledgeVoiceDisclosure();
+    if (pendingVoiceAction) {
+      setPendingVoiceAction(false);
+      await rawToggleRecording();
+    }
+  }, [acknowledgeVoiceDisclosure, pendingVoiceAction, rawToggleRecording]);
 
   const { selectedImage, onPickImage, onTakePicture, clearSelectedImage } = useImagePicker();
 
@@ -127,6 +165,8 @@ export default function ChatSessionScreen() {
     () => buildVisitSummary(messages, sessionTitle),
     [messages, sessionTitle],
   );
+
+  const voiceIntroVisible = shouldShowVoiceDisclosure && pendingVoiceAction;
 
   const inputHandlers = useChatSessionInputHandlers({
     sessionId,
@@ -179,6 +219,9 @@ export default function ChatSessionScreen() {
             audioDescriptionEnabled={effectiveAudioDesc}
             onToggleAudioDescription={() => {
               setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
+            }}
+            onOpenAiDisclosure={() => {
+              setShowAiDisclosureRecap(true);
             }}
           />
 
@@ -276,6 +319,23 @@ export default function ChatSessionScreen() {
         }}
         dailyLimitReached={dailyLimitReached}
         onDismissDailyLimit={clearDailyLimit}
+      />
+
+      <VoiceSessionIntro
+        visible={voiceIntroVisible}
+        onAcknowledge={() => void onAcknowledgeVoiceDisclosure()}
+        locale={locale}
+      />
+
+      <AiDisclosureModal
+        visible={showAiDisclosureRecap}
+        onClose={() => {
+          setShowAiDisclosureRecap(false);
+        }}
+        onLearnMore={() => {
+          setShowAiDisclosureRecap(false);
+          router.push('/(stack)/privacy');
+        }}
       />
     </LiquidScreen>
   );

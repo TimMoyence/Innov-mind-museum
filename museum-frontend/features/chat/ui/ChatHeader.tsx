@@ -15,6 +15,12 @@ interface ChatHeaderProps {
   onSummary?: () => void;
   audioDescriptionEnabled?: boolean;
   onToggleAudioDescription?: () => void;
+  /**
+   * Tap handler for the persistent "AI" badge that opens the on-demand
+   * disclosure recap modal. Required by EU AI Act Article 50 — see
+   * `docs/legal/AI_DISCLOSURE.md`. Omit only in non-chat contexts.
+   */
+  onOpenAiDisclosure?: () => void;
 }
 
 /** Chat session header with title, museum name, expertise badge, and close button. */
@@ -26,6 +32,7 @@ export function ChatHeader({
   onSummary,
   audioDescriptionEnabled,
   onToggleAudioDescription,
+  onOpenAiDisclosure,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -34,9 +41,28 @@ export function ChatHeader({
     <GlassCard style={styles.headerShell} intensity={58}>
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
-          <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>
-            {sessionTitle ?? t('chat.fallback_title')}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>
+              {sessionTitle ?? t('chat.fallback_title')}
+            </Text>
+            {onOpenAiDisclosure ? (
+              <Pressable
+                onPress={onOpenAiDisclosure}
+                style={[
+                  styles.aiBadge,
+                  { backgroundColor: theme.primaryTint, borderColor: theme.primary },
+                ]}
+                testID="ai-disclosure-badge"
+                accessibilityRole="button"
+                accessibilityLabel={t('voice.disclosure.badgeA11y')}
+                hitSlop={8}
+              >
+                <Text style={[styles.aiBadgeText, { color: theme.primary }]}>
+                  {t('voice.disclosure.badgeLabel')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
           {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
         </View>
         <View style={styles.headerActions}>
@@ -120,6 +146,23 @@ const styles = StyleSheet.create({
   header: {
     fontSize: fontSize['2xl'],
     fontWeight: '700',
+    flexShrink: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space['2'],
+  },
+  aiBadge: {
+    paddingHorizontal: space['2'],
+    paddingVertical: space['0.5'],
+    borderRadius: radius.full,
+    borderWidth: semantic.input.borderWidth,
+  },
+  aiBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   closeButton: {
     borderRadius: radius.full,
