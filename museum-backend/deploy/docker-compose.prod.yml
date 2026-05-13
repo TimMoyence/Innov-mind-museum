@@ -55,13 +55,13 @@ volumes:
 
 services:
   backend:
-    # IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
-    # Soft-default to `:latest` so operator manual `docker compose up` (no
-    # IMAGE_TAG exported) keeps working — CI always overrides via the
-    # `export IMAGE_TAG=${github.sha}` step in ci-cd-backend.yml deploy-prod.
-    # Migration to strict `:?` enforcement is tracked as a follow-up
-    # (requires every operator command to set IMAGE_TAG first).
-    image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:-latest}
+    # IMAGE_TAG is set by CI to the commit SHA AND persisted to /srv/museum/.env
+    # by the deploy step (see ci-cd-backend.yml deploy-prod). Strict `:?` enforces
+    # that ops set it explicitly — silent fallback to `:latest` caused a 4-day
+    # stale-image crash on 2026-05-13 because the local `:latest` never refreshed
+    # while CI always pulled `:<sha>` only. To run manually:
+    #   IMAGE_TAG=<full-sha> docker compose up -d backend
+    image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:?IMAGE_TAG required — set in /srv/museum/.env or export before docker compose. CI persists it on every deploy; for manual ops grab the latest from GHCR.}
     hostname: backend
     env_file:
       - .env
@@ -103,8 +103,11 @@ services:
   # To disable: set GUARDRAILS_V2_CANDIDATE=off in .env and restart backend
   # (backend will use noopAdvancedGuardrail; this service still runs but is idle).
   llm-guard:
-    # LLM_GUARD_IMAGE_TAG is set by CI to the commit SHA for deterministic
-    # deploys. Soft-default to `:latest` (see backend service note above).
+    # LLM_GUARD_IMAGE_TAG: NOT yet wired into the deploy persistence pattern that
+    # backend + museum-web use (no SSH deploy step in ci-cd-llm-guard.yml).
+    # Kept soft-default `:-latest` for now — TODO(infra): once ci-cd-llm-guard.yml
+    # ships an SSH deploy step that pulls the sidecar onto the VPS, switch to
+    # strict `:?` and persist LLM_GUARD_IMAGE_TAG to /srv/museum/.env there too.
     image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:-latest}
     hostname: llm-guard
     environment:
@@ -155,8 +158,12 @@ services:
     restart: unless-stopped
 
   museum-web:
-    # WEB_IMAGE_TAG is set by CI to the commit SHA for deterministic deploys.
-    # Soft-default to `:latest` (see backend service note above).
+    # WEB_IMAGE_TAG is set by CI to the commit SHA AND persisted to /srv/museum/.env
+    # by the deploy step (see ci-cd-web.yml deploy). Kept soft `:-latest` for now —
+    # web is not crash-looping today, and tightening before the next web deploy
+    # has had a chance to persist WEB_IMAGE_TAG to .env would risk breaking any
+    # out-of-band museum-web restart in the meantime. TODO(infra): switch to
+    # strict `:?` once at least one CI web deploy has populated /srv/museum/.env.
     image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:-latest}
     hostname: museum-web
     environment:
