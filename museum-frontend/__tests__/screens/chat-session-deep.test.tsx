@@ -81,6 +81,17 @@ jest.mock('@/features/chat/application/useAudioRecorder', () => ({
   useAudioRecorder: () => mockAudioRecorderState,
 }));
 
+// EU AI Act Article 50 voice disclosure (origin/main commit 59296c75): the
+// real hook gates the very first toggleRecording press on per-session
+// acknowledgement. These prop-forwarding tests don't probe the disclosure
+// flow, so we mark it pre-acknowledged + no-op the acknowledge call.
+jest.mock('@/features/chat/hooks/useVoiceDisclosure', () => ({
+  useVoiceDisclosure: () => ({
+    isAcknowledged: true,
+    acknowledge: jest.fn(async () => {}),
+  }),
+}));
+
 const mockImagePickerState = {
   selectedImage: null as string | null,
   onPickImage: jest.fn(),
