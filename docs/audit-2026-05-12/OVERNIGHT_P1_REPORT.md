@@ -77,15 +77,30 @@ Mistakes I made during this run, surfaced and corrected:
 | Sentry-scrubber sentinel | PASS |
 | 11 pre-push gates (gitleaks, env-policy, BE/FE/Web tsc, OpenAPI sync, ratchets, sentinels) | 11/11 pass in 82s |
 
+## CI outcome on main (final commit `641968ea`)
+
+| Workflow | Outcome | Notes |
+|---|---|---|
+| `backend` | ✅ SUCCESS (15m27s) | Includes Docker `deploy-prod` build. The 1st-push backend failed here at the `pnpm install --frozen-lockfile` Docker step because the workspace-protocol setup couldn't resolve `@musaium/shared` inside the per-app container; the 3rd push (`641968ea` "deploy fix") reverted to a file: protocol that mirrors the existing eslint-plugin precedent. |
+| `codeql` | ✅ SUCCESS | |
+| `web` | ❌ FAILURE (chronic pre-existing) | Every web run since `2026-05-11 14:07` (15+ commits before mine) has failed. Two distinct sub-failures: `playwright-pr` fails on `extension "vector" is not available` (pgvector missing in CI Postgres image — infra config issue), `deploy` fails at the curl-based landing-page smoke checks. Out of P1 scope. |
+| `sentinel-mirror` | ❌ FAILURE (chronic pre-existing) | Fails at `Install frontend deps` with `npm error code EUSAGE: package.json and package-lock.json out of sync`. Same failure mode on the prior commit (`89b116f8`) — predates my push. Out of P1 scope. |
+| `mobile` | ❌ FAILURE (1st push only — pre-existing test, TD-9) | `chat-session-deep.test.tsx > toggleRecording/playRecordedAudio` fails on `89b116f8c` (the commit before my push) — verified by reproduction in a separate worktree. Mobile workflow didn't run on subsequent pushes because they touched only docs/web. |
+
+**Regression I introduced and fixed:** the BE Docker `deploy-prod` build broke on my 1st push (`38ec96b0d`) because `pnpm install --frozen-lockfile` inside the BE container can't resolve `@musaium/shared: workspace:*` without a workspace context. The 2nd push didn't address it (BE workflow was skipped entirely — only `detect changes` ran on the docs-only push, which masked the issue). The 3rd push (`641968ea`) is the real fix: switched to `file:../packages/musaium-shared`, removed root `pnpm-workspace.yaml` + root `pnpm-lock.yaml`, restored per-app `pnpm.overrides` (with my followup's `@types/express-serve-static-core@5.0.6` pin moved into BE's overrides + the protobufjs `>=8.0.2` bump from origin/main preserved), taught BE Dockerfile to `COPY packages/musaium-shared`, restructured Web Dockerfile + CI to expect repo-root context with the same `COPY` pattern. Result: BE deploy goes from red to green in CI.
+
 ## What's next
 
-1. **CI on `main`** — watching the 5 workflows triggered by the push (backend ~17min, mobile, web, sentinel-mirror, codeql). `sentinel-mirror` was already failing on the prior commit (`89b116f8`); investigate separately if mine inherits the failure.
-2. **TD-7 (ESLint v10)** — subscribe to `eslint-plugin-react#3977`; one-hour fix when upstream lands.
-3. **TD-8 (P1-3 residue)** — re-attempt cull of the 3 single-impl chat ports on a quiet day.
-4. **`ChatSession` partial-entity casts** at `chat.repository.typeorm.ts:86` and `:189` — same pattern as P1-11. ~5 min fix; not in audit scope but the same UFR-013 lens applies.
+1. **TD-7 (ESLint v10)** — subscribe to `eslint-plugin-react#3977`; one-hour fix when upstream lands.
+2. **TD-8 (P1-3 residue)** — re-attempt cull of the 3 single-impl chat ports on a quiet day from the `backup-p1-night-pre-rebase` branch.
+3. **TD-9 (mobile test)** — `git bisect` the broken test or fix the wiring in `ChatSessionScreen`.
+4. **Web CI chronic red** — investigate separately. Worth filing as TD-10 if it's still red after a few days. The pgvector extension can be installed via a CI service-init or by switching to the `pgvector/pgvector:pg16` image; the deploy smoke needs more diagnostic context than what's in the log snippet.
+5. **`sentinel-mirror` `npm ci` drift** — investigate separately. Worth filing as TD-11 if persistent. Likely needs `npm ci --legacy-peer-deps` or a package-lock regen on someone's commit.
+6. **`ChatSession` partial-entity casts** at `chat.repository.typeorm.ts:86` and `:189` — same pattern as P1-11. ~5 min fix; not in audit scope but the same UFR-013 lens applies.
 
 ## Budget used
 
-- Sub-agent invocations: 6 of 50 (P1-5, P1-7-quota-failed, P1-11, P1-9, P1-10, P1-8-stop-blocker, P1-3, P1-6, P1-1+P1-2). The "P1-7-quota-failed" attempt produced no usable output but partial work persisted on disk (ADR draft + tilde-pin) which I salvaged inline.
-- Wall time: ~12h (mostly waiting for parallel agents + CI).
+- Sub-agent invocations: 6 successful + 1 quota-failed (P1-5, P1-7 [quota-failed, salvaged inline], P1-11, P1-9, P1-10, P1-8 [stop-with-blocker], P1-3, P1-6, P1-1+P1-2).
+- Wall time: ~14h (sub-agent runs + CI cycles + waiting). A stuck watcher accounted for several idle hours when its SHA-matching jq query exited early on an empty result set — surfaced honestly here.
 - Sub-agent token spend (sum of agents that reported): ~492k tokens.
+- Pushes: 3 (rebased P1 work, web OpenAPI regen + report + TD-8, deploy fix).
