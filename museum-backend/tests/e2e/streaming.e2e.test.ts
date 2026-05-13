@@ -10,9 +10,12 @@ const SSE_ROUTE_DEACTIVATED = true;
 const shouldRunE2E = process.env.RUN_E2E === 'true' && !SSE_ROUTE_DEACTIVATED;
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
-/** Parses raw SSE text into an array of { event, data } objects. */
-function parseSseEvents(raw: string): Array<{ event: string; data: string }> {
-  const events: Array<{ event: string; data: string }> = [];
+/**
+ * Parses raw SSE text into an array of { event, data } objects.
+ * @param raw
+ */
+function parseSseEvents(raw: string): { event: string; data: string }[] {
+  const events: { event: string; data: string }[] = [];
   const blocks = raw.split('\n\n').filter((b) => b.trim().length > 0);
 
   for (const block of blocks) {
@@ -42,9 +45,8 @@ describeE2E('SSE streaming e2e', () => {
   let harness: E2EHarness;
 
   beforeAll(async () => {
-    // FEATURE_FLAG_STREAMING was retired in V1 — SSE route is now @deprecated but
-    // remains accessible for the legacy clients we still want to test against.
-    // See docs/adr/ADR-001-sse-streaming-deprecated.md.
+    // SSE route deactivated post-V1 (see header). Suite skipped via
+    // SSE_ROUTE_DEACTIVATED above; this body never runs in CI.
     harness = await createE2EHarness();
   });
 
