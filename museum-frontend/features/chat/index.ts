@@ -1,16 +1,20 @@
 /**
- * Public API of the `chat` feature — single import surface for consumers
- * outside the feature.
+ * Chat feature surface — re-exports for callers that want a stable entry point.
  *
- * The conversation and museum features MUST import from this barrel instead of
- * reaching into `chat/domain/*` or `chat/infrastructure/*` directly. This is
- * the boundary that decouples the dashboard (conversation list) from chat
- * session internals (streaming, offline queue, cache, etc.).
+ * Deep imports into `chat/application/`, `chat/domain/`, `chat/infrastructure/`,
+ * `chat/ui/` are allowed (and currently the dominant pattern — see
+ * `features/README.md`). Add a re-export here only when a symbol becomes
+ * part of a stable cross-feature API and you want to insulate consumers
+ * from internal layout changes.
  *
- * **Do not re-export UI components or application hooks here.** UI lives in
- * `app/(stack)/chat/[sessionId].tsx` and should be the only consumer of
- * `ChatMessageBubble`, `ChatInput`, etc. The barrel only exposes data-layer
- * primitives the dashboard genuinely needs.
+ * What's exposed today is intentionally narrow (dashboard view-model + a
+ * couple of API methods); it is not an exhaustive public API.
+ *
+ * History: the previous docblock claimed conversation/museum "MUST" import
+ * from this barrel. Audit 2026-05-12 (P1-6) measured 265 cross-feature
+ * deep imports vs 8 barrel imports (~33:1) — chat itself was the top
+ * deep-import target. The doctrine was untruthful per UFR-013 and was
+ * retired — barrels are now opt-in, not mandatory.
  */
 
 // ── Dashboard session view-model (read-only data type) ─────────────────────
