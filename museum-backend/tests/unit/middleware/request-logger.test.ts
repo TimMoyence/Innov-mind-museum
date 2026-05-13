@@ -121,6 +121,28 @@ describe('requestLoggerMiddleware', () => {
     expect(logger.info).not.toHaveBeenCalled();
   });
 
+  it('does not log when the request targets the /health/deep endpoint', () => {
+    const req = mockReq({ originalUrl: '/health/deep' });
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    requestLoggerMiddleware(req, res, next);
+    finishHandler?.();
+
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
+  it('does not log when the request targets the /metrics endpoint (Prometheus scrape)', () => {
+    const req = mockReq({ originalUrl: '/metrics' });
+    const res = mockRes();
+    const next = jest.fn() as NextFunction;
+
+    requestLoggerMiddleware(req, res, next);
+    finishHandler?.();
+
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
   it('still logs other endpoints normally', () => {
     const req = mockReq({ originalUrl: '/api/anything-else' });
     const res = mockRes();

@@ -5,9 +5,9 @@ import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Paths whose successful traffic is too noisy to log (health checks polled by uptime monitors,
- * load balancers, and CI smoke tests). Matched against `req.originalUrl` exactly.
+ * load balancers, CI smoke tests, and Prometheus scrapes). Matched against `req.originalUrl` exactly.
  */
-const SILENT_PATHS: readonly string[] = ['/api/health', '/health'];
+const SILENT_PATHS: readonly string[] = ['/api/health', '/health', '/health/deep', '/metrics'];
 
 /**
  * F11 (2026-04-30) — Redacts sensitive query-string keys from a URL before logging.
