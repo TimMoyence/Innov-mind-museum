@@ -119,6 +119,8 @@ jest.mock('@modules/chat/chat-module', () => ({
   getCompareSessionAccessVerifier: () => undefined,
   getDescribeService: () => undefined,
   getLlmCircuitBreakerState: () => undefined,
+  getLlmGuardCircuitBreakerState: () => undefined,
+  getMessageExplanationUseCase: () => undefined,
   getUserMemoryService: () => undefined,
 }));
 jest.mock('@modules/daily-art', () => ({

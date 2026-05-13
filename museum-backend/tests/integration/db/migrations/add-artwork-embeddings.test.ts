@@ -59,7 +59,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
 
   describe('extension + table existence', () => {
     it('enables the pgvector extension', async () => {
-      const rows = await harness.dataSource.query<Array<{ extversion: string }>>(
+      const rows = await harness.dataSource.query<{ extversion: string }[]>(
         `SELECT extversion FROM pg_extension WHERE extname = 'vector'`,
       );
       expect(rows).toHaveLength(1);
@@ -70,7 +70,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
     });
 
     it('creates the `artwork_embeddings` table in the public schema', async () => {
-      const rows = await harness.dataSource.query<Array<{ table_name: string }>>(
+      const rows = await harness.dataSource.query<{ table_name: string }[]>(
         `SELECT table_name FROM information_schema.tables
          WHERE table_schema = 'public' AND table_name = 'artwork_embeddings'`,
       );
@@ -106,6 +106,12 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
           'image_source',
           'image_url',
           'license',
+          // `museum_id` added 2026-05-12 by `AddMuseumIdScopeToArtworkEmbeddings`
+          // (LLM08 cross-tenant isolation, ADR-050 / B6 of the perennial Phase 1
+          // implementation). Nullable INT FK to `museums.id` — preserves V1
+          // single-tenant backward-compat while unblocking Phase 2 per-tenant
+          // policy resolver.
+          'museum_id',
           'museum_qid',
           'qid',
           'title',
@@ -205,13 +211,13 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
       const idx = indexes.find(
         (i) =>
           /USING\s+btree/i.test(i.indexdef) &&
-          /\(museum_qid\)/.test(i.indexdef.replace(/\s+/g, '')),
+          i.indexdef.replace(/\s+/g, '').includes('(museum_qid)'),
       );
       expect(idx).toBeDefined();
     });
 
     it('exposes `qid` as the primary key', async () => {
-      const pk = await harness.dataSource.query<Array<{ attname: string }>>(
+      const pk = await harness.dataSource.query<{ attname: string }[]>(
         `SELECT a.attname
            FROM pg_index i
            JOIN pg_class c ON c.oid = i.indrelid
@@ -239,7 +245,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
     });
 
     it('restricts `image_source` to {wikimedia, museum_api, manual}', () => {
-      const sourceCheck = checks.find((c) => /image_source/.test(c.consrc));
+      const sourceCheck = checks.find((c) => c.consrc.includes('image_source'));
       expect(sourceCheck).toBeDefined();
       const def = sourceCheck?.consrc ?? '';
       expect(def).toMatch(/wikimedia/);
@@ -247,8 +253,8 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
       expect(def).toMatch(/manual/);
     });
 
-    it("restricts `license` to V1 allow-list ({public-domain, cc-0}) — spec §8 Q2", () => {
-      const licenseCheck = checks.find((c) => /license/.test(c.consrc));
+    it('restricts `license` to V1 allow-list ({public-domain, cc-0}) — spec §8 Q2', () => {
+      const licenseCheck = checks.find((c) => c.consrc.includes('license'));
       expect(licenseCheck).toBeDefined();
       const def = licenseCheck?.consrc ?? '';
       expect(def).toMatch(/public-domain/);
@@ -287,9 +293,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
         ],
       );
 
-      const persisted = await harness.dataSource.query<
-        Array<{ qid: string; embedding_dim: number }>
-      >(
+      const persisted = await harness.dataSource.query<{ qid: string; embedding_dim: number }[]>(
         `SELECT qid, vector_dims(embedding::vector) AS embedding_dim
            FROM artwork_embeddings WHERE qid = $1`,
         [row.qid],

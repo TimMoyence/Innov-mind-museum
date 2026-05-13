@@ -192,6 +192,9 @@ jest.mock('@modules/chat/chat-module', () => {
     getArtworkKnowledgeRepo: () => (isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined),
     getCompareImageUseCase: () => undefined,
     getCompareSessionAccessVerifier: () => undefined,
+    // Phase 1 (perennial design): GDPR Art. 22 explanation use-case accessor.
+    // Tests don't exercise the /messages/:id/explanation route so a stub is OK.
+    getMessageExplanationUseCase: () => undefined,
   };
 });
 jest.mock('@modules/daily-art', () => ({
