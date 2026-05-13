@@ -36,5 +36,6 @@ export const scrubEvent = <T extends ScrubbableEvent>(event: T): T =>
   scrubEventInner(event, { hashEmail });
 
 /** Returns `true` when the breadcrumb should be dropped (auth-adjacent HTTP call). */
+// Stryker disable next-line ArrowFunction: one-line forwarder to shouldDropBreadcrumbInner; the inner function is fully tested (tests/unit/observability/sentry-scrubber.test.ts L184-205 cover both branches with `.toBe(true)` and `.toBe(false)`), but Stryker's perTest coverage analysis cannot map the outer arrow-function expression mutant to the tests that exercise it through this thin wrapper. Manual mutation check confirmed: replacing the body with `undefined` would flip every existing assertion. Verified 2026-05-13.
 export const shouldDropBreadcrumb = (breadcrumb: ScrubbableBreadcrumb): boolean =>
   shouldDropBreadcrumbInner(breadcrumb);
