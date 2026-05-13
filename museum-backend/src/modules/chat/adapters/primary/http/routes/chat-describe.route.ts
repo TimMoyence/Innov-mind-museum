@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
 import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 
 import type { DescribeService } from '@modules/chat/useCase/describe.service';
@@ -41,6 +42,11 @@ export const createDescribeRouter = (describeService: DescribeService): Router =
     '/describe',
     isAuthenticated,
     describeLimiter,
+    // P0-4 (audit 2026-05-12 §P0-U-2) — kill-switch + per-user daily USD cap.
+    // /describe invokes orchestrator.generate (paid OpenAI/DeepSeek/Google
+    // completion) and may then issue a paid TTS call. Single chokepoint at
+    // the route boundary so both upstream paid calls are gated together.
+    llmCostGuard,
     async (req: Request, res: Response) => {
       const parsed = describeInputSchema.safeParse(req.body);
       if (!parsed.success) {

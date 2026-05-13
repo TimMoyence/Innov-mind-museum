@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 
 import { parsePostMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
@@ -11,6 +12,7 @@ import {
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
+import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
 import {
   bySession,
   byUserId,
@@ -189,6 +191,12 @@ export const createMessageRouter = (
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
+    // P0-4 (audit 2026-05-12 §P0-U-2) — kill-switch + per-user daily USD cap.
+    // Text/image chat triggers orchestrator.generate, a paid OpenAI/DeepSeek/Google
+    // completion. Placed AFTER rate limiters so volume control runs first
+    // (cheaper failure path) and BEFORE upload admission so a denied call does
+    // not occupy a multipart slot. Mirrors the chat-media.route.ts wire-up.
+    llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     extendTimeoutForUpload,
     upload.single('image'),
