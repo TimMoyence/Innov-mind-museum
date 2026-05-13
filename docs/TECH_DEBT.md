@@ -160,6 +160,35 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-7 — ESLint v10 major drift (BE on v10, FE+Web on v9) — blocked by upstream
+
+- [ ] **Statut** : ouvert (créé 2026-05-13, audit P1-8)
+- **Référence code** :
+  ```
+  museum-backend/package.json     "eslint": "^10.2.0"   (also @eslint/js@^10.0.1, eslint-plugin-jsdoc@^62.9.0 — v10-only)
+  museum-frontend/package.json    "eslint": "^9.39.4"
+  museum-web/package.json         "eslint": "^9.39.4"
+  ```
+- **Symptôme** : deux versions majeures d'ESLint en parallèle entre les 3 apps. Pas de bug runtime, mais double effort de configuration et risque de drift sur la sémantique des règles.
+- **Pourquoi non résolu en P1-8** : `eslint-plugin-react@7.37.5` (latest, publié 2025-04-03) est **runtime-incompatible** avec ESLint 10 — appelle `context.getFilename()` qui a été retiré en v10. Reproduit sur FE et Web :
+  ```
+  TypeError: contextOrFilename.getFilename is not a function
+    at resolveBasedir (eslint-plugin-react/lib/util/version.js:31:100)
+  ```
+  Upstream tracking : `eslint-plugin-react` issue #3977 (OPEN), PR #3979 (OPEN, non-mergée). `eslint-plugin-react-native@5.0.0` et `eslint-plugin-jsx-a11y@6.10.2` peer-cap sur `^9` également.
+- **Sprint d'origine** : audit 2026-05-12 (P1-8).
+- **Effort estimé** : 1 h une fois le blocker upstream résolu (bump 2 fichiers + lint). Pas de chemin viable aujourd'hui sans patch-package ou fork.
+- **Comment fermer** :
+  1. Surveiller la fermeture de `jsx-eslint/eslint-plugin-react#3977` (Renovate / GitHub Security Advisory subscription).
+  2. Quand un release `eslint-plugin-react` ≥ 7.38 (ou ce qu'ils publient comme v10-compat) est dispo : bump FE et Web sur `eslint@^10.x` + `eslint-plugin-react@^7.38+` + tout autre plugin react peer-cap.
+  3. Lint vert sur les 3 apps.
+  4. Cocher TD-7 ici.
+- **Alternatives considérées et rejetées** :
+  - **Downgrade BE → v9** : faisable (forcerait aussi `eslint-plugin-jsdoc` < 62.7), mais perd les améliorations v10 sur BE pour devoir re-bumper dans quelques mois quand upstream fix.
+  - **`patch-package` sur eslint-plugin-react** : maintenance overhead + risque de breakage à chaque release. Non justifié.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
