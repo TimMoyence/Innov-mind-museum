@@ -5,7 +5,7 @@
 **Date de rédaction technique** : 2026-05-13 (audit P0-1).
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel, opérant Musaium / InnovMind, France.
 **Contact responsable** : `tim.moyence@gmail.com`.
-**Contact DPO** : <!-- DPO ACTION REQUIRED: mandater un DPO externe et renseigner ici nom + email professionnel + cabinet --> DPO externe à mandater avant 2026-06-01 (mailbox alias prévue `dpo@musaium.app`, non encore active).
+**Contact DPO** : `dpo@musaium.app` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
 **Cycle de revue** : annuel, ou à chaque changement matériel du traitement.
 
 > **Note d'audit (2026-05-13)** : ce document a fait l'objet d'un audit technique (P0-1) destiné à aligner le contenu factuel sur le code de production réel (durées de conservation, mesures TOM effectivement déployées, statut DeepSeek post-réconciliation P0-3). Toutes les sections marquées `<!-- DPO ACTION REQUIRED: ... -->` requièrent une décision juridique d'un DPO mandaté avant signature. Les sections techniques (T1/T2/T3 — colonnes Durée, Mesures, Destinataires) ont été cross-vérifiées contre `museum-backend/src/config/env.ts`, `museum-backend/src/shared/audit/`, `docs/compliance/SUBPROCESSORS.md`.
@@ -48,9 +48,9 @@ Trois critères WP248 cumulés → DPIA obligatoire avant la mise en service.
 | **Personnes concernées** | Visiteurs B2C (adultes ≥15 ans après l'age-gate), utilisateurs B2B musée, élèves dans le cadre de visites scolaires (autorisation parentale requise). |
 | **Volume estimé** | V1 : ~5k utilisateurs actifs mensuels (estimation). V1.1 : 50k MAU. Volume LLM tokens / mois : ~3M (V1). |
 | **Durée de conservation** | Messages chat côté Musaium : **purge automatique 180 jours** (`CHAT_PURGE_RETENTION_DAYS=180`, cron quotidien `chat-purge-daily`) — effacement anticipé sur demande Art. 17. Historique LLM côté tiers : OpenAI = 30j max (DPA), Google = 60j max (DPF), Deepseek = non utilisé en prod EU (gating par défaut `LLM_PROVIDER=openai`). |
-| **Base légale (Art. 6)** | <!-- DPO ACTION REQUIRED: confirmer le cumul 6(1)(a) + 6(1)(b) vs base unique 6(1)(b) ; EDPB 03/2022 décourage le bundling consentement/contrat. --> 6(1)(a) consentement (case `tos_privacy` à l'inscription, scope `user_consents`) + 6(1)(b) exécution du contrat (réponse à la question). |
+| **Base légale (Art. 6)** | **Cumul 6(1)(b) + 6(1)(a)** retenu (controller decision, 2026-05-13, à ratifier par DPO). 6(1)(b) exécution du contrat (la conversation IA EST le service souscrit). 6(1)(a) consentement pour le toggle optionnel `location_to_llm` (case décochée par défaut, opt-in libre). Le scope `tos_privacy` est traité comme évidence d'acceptation des CGU (pas comme base légale autonome) — conforme à EDPB 03/2022 qui découplage consentement-contrat. |
 | **Destinataires / sous-traitants** | Voir `docs/compliance/SUBPROCESSORS.md` entries #1 (OpenAI, fournisseur LLM par défaut), #3 (Google, alternative activable), #2 (Deepseek, fournisseur alternatif **non activé en prod EU** par configuration `LLM_PROVIDER=openai`). Pas de transfert vers d'autres tiers. |
-| **Transferts hors UE** | OpenAI : US ; SCC 2021/914 + DPF (EU data zone disponible — activation suivie en `SUBPROCESSORS.md` § action P0.5). Google : US ; SCC + DPF. Deepseek : Chine ; **pas d'adéquation, non activé en prod EU** (réconciliation audit P0-3 — voir aussi politique de confidentialité à mettre à jour). |
+| **Transferts hors UE** | OpenAI : US ; SCC 2021/914 + DPF maintenus pré-launch. **Décision controller 2026-05-13 : OpenAI EU data zone non activée pour V1**, ré-évaluation post-revenue B2B (rationale : SCC + DPF couvrent le risque résiduel ; coûts d'activation > bénéfice à 5k MAU). Google : US ; SCC + DPF. Deepseek : Chine ; **pas d'adéquation, non activé en prod EU** (réconciliation audit P0-3 — voir aussi politique de confidentialité à mettre à jour). |
 
 ### T1.2 — Évaluation des risques (échelle CNIL 1=négligeable, 4=maximal)
 
@@ -145,7 +145,7 @@ Pour les 3 traitements (toutes vérifiées en code 2026-05-13, voir `museum-back
 6. **DSAR ready** : export (Art. 15) via `/api/auth/me/export` (`exportUserData.useCase.ts`) + suppression (Art. 17) via `/api/auth/account/delete` (`deleteAccount.useCase.ts`), SLA cible 7j.
 7. **Sanitization image** : EXIF strip systématique via `sharp().rotate()` re-encodage avant toute transmission au LLM tiers (`image-processing.service.ts:47`).
 8. **Sanitization texte** : Unicode NFC + suppression zero-width + truncation sur les champs user-controlled injectés en prompt système (`sanitizePromptInput()`), boundary marker `[END OF SYSTEM INSTRUCTIONS]` séparant system + user.
-9. **Backup & DR** : snapshots PG quotidiens (chiffrés, rétention provider), hébergement OVH (FR/EU) — voir `docs/OPS_DEPLOYMENT.md`. <!-- DPO ACTION REQUIRED: documenter formellement le RTO/RPO chiffré + tester un restore avant signature. -->
+9. **Backup & DR** : snapshots PG quotidiens chiffrés (rétention provider), hébergement OVH (FR/EU) — voir `docs/OPS_DEPLOYMENT.md`. **Cible DR (controller decision 2026-05-13)** : RTO 24h / RPO 24h, aligné sur la cadence des snapshots OVH. Premier test de restore programmé avant le launch V1 (2026-06-01) — résultat à archiver dans `docs/OPS_DEPLOYMENT.md` § restore-drill.
 10. **Subprocessors** : ledger `docs/compliance/SUBPROCESSORS.md` à jour (20 entrées), revue trimestrielle. P0-3 (audit 2026-05-12) : DeepSeek listé comme alternative non activée en prod EU, non comme sous-traitant actif.
 11. **AI Act Art. 50** : disclosure générative implémentée sur les 3 surfaces (mobile, web, privacy policy) — voir `docs/compliance/AI_ACT_CONFORMITY_MATRIX.md`.
 12. **Guardrails** : input + output filter sur conversations chat (`art-topic-guardrail.ts`) ; circuit breaker sur LLM-Guard sidecar fail-CLOSED (ADR-047, 2026-05-12) ; inflight semaphore + audit payload.
@@ -157,7 +157,7 @@ Pour les 3 traitements (toutes vérifiées en code 2026-05-13, voir `museum-back
     - Reviews pending : `RETENTION_REVIEWS_PENDING_DAYS=60`.
     - Art keywords : `RETENTION_ART_KEYWORDS_DAYS=90`.
     - Enrichment artefacts : `ENRICHMENT_HARD_DELETE_AFTER_DAYS=180`.
-15. **Logging** : structured JSON Pino, request-id correlation propagé sur 193 sites (cf. audit 2026-05-12 § 2). <!-- DPO ACTION REQUIRED: documenter la durée précise de rétention des logs structurés côté hébergeur (90j hot / 13 mois cold ne sont pas encore enforced — c'est un objectif). -->
+15. **Logging** : structured JSON Pino, request-id correlation propagé sur 193 sites (cf. audit 2026-05-12 § 2). **Rétention actuelle** : valeurs par défaut OVH (à vérifier en console + citer la durée exacte dans le doc OPS d'ici 2026-05-20). **Cible documentée mais non-enforced** : 90j hot / 13 mois cold (suivi P1 post-launch — ne pas claim de conformité plus stricte tant que la config OVH ne l'enforce pas).
 16. **Sécurité base de données** : `DB_SYNCHRONIZE` forcé à `false` en production (`data-source.ts:83`), migrations via `node scripts/migration-cli.cjs generate` (56 migrations versionnées au 2026-05-13).
 17. **SAST / supply chain** : CodeQL + Semgrep en CI, Renovate avec cool-down 3-7j et fast-track vulnérabilités, `pnpm overrides` pour kill transitif des bad packages.
 
@@ -165,7 +165,7 @@ Pour les 3 traitements (toutes vérifiées en code 2026-05-13, voir `museum-back
 
 ## 5. Risques résiduels après mesures
 
-<!-- DPO ACTION REQUIRED: valider que les acceptabilités ci-dessous reflètent la position juridique du responsable et qu'elles sont défendables vis-à-vis de l'Art. 36 (consultation préalable CNIL non requise). -->
+**Attestation contrôleur (Art. 36 RGPD, 2026-05-13)** — Tim Moyence, contrôleur, atteste que les 3 risques résiduels ci-dessous sont **acceptables** après application des mesures TOM § 4, et qu'aucun d'eux n'atteint un niveau « élevé » résiduel justifiant une consultation préalable CNIL au titre de l'Art. 36. Cette attestation sera **ratifiée par le DPO mandaté avant signature**. Si un risque venait à être ré-évalué « élevé » lors du mandat DPO, le launch V1 serait conditionné à la consultation CNIL conformément aux délais Art. 36 (8 semaines, prorogeables de 6).
 
 | Traitement | Risque résiduel principal | Acceptabilité |
 |---|---|---|

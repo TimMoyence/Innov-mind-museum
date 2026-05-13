@@ -1,9 +1,31 @@
 # DPIA + ROPA — Readiness Tracking
 
-**Owner** : Tech lead (Tim Moyence) + DPO externe (à mandater).
+**Owner** : Tech lead (Tim Moyence) + DPO externe (à mandater — deadline ferme 2026-05-25).
 **Date d'ouverture du tracking** : 2026-05-13 (audit P0-1).
 **Date cible de signature complète** : 2026-05-26 (J-6 avant launch V1 du 2026-06-01).
-**Statut global** : NON SIGNÉ — audit technique terminé, signature DPO en attente.
+**Statut global** : NON SIGNÉ — audit technique terminé, **13/13 décisions controller posées (2026-05-13)**, signature DPO en attente.
+
+## 0. Mise à jour 2026-05-13 — Décisions controller posées
+
+Le contrôleur (Tim Moyence) a tenu une session « DPO walkthrough » et a posé une **décision écrite à toutes les 13 questions** initialement marquées `<!-- DPO ACTION REQUIRED -->`. Le détail est dans les sections DPIA + ROPA elles-mêmes ; résumé :
+
+| Question | Décision controller (2026-05-13) |
+|---|---|
+| DPO mandate (DPIA:8 + ROPA:9) | **Deadline ferme 2026-05-25** ; cabinet en cours de shortlist ; mailbox `dpo@musaium.app` reliée par alias à `tim.moyence@gmail.com` |
+| Base légale Auth (ROPA TR-01) | **6(1)(b) uniquement** (exécution du contrat) — alignée EDPB 03/2022 |
+| Base légale Chat / T1 (DPIA T1.1 + ROPA TR-02) | **Cumul 6(1)(b) + 6(1)(a)** — service = contrat ; consentement uniquement sur toggle `location_to_llm` |
+| Rétention audit logs 13 mois (ROPA TR-01) | **Défendue** : CNIL anti-fraude + Art. 22 + cycle annuel d'audit |
+| Rétention tickets 365j (ROPA TR-05) | **Défendue** : fenêtre saisonnière < prescription civile FR 5 ans |
+| Rétention reviews rejetées 30j (ROPA TR-07) | **Défendue** : preuve via `audit_log` 13 mois |
+| Logs hébergeur (DPIA §4.15 + ROPA TR-06) | **Documenter le défaut OVH actuel d'ici 2026-05-20** ; cible 90j/13mo = P1 post-launch (non claimée pré-enforcement) |
+| OpenAI EU data zone (ROPA TR-02) | **Non activée pour V1** ; SCC + DPF maintenus ; ré-évaluation post-revenue B2B |
+| S3 cleanup (ROPA TR-03) | **Vérifié** : cascade orchestrée (`chat-purge.job.ts:23-28` + `chat-media-purger.ts` + `s3-orphan-purge.job.ts`) |
+| Adéquation UK (ROPA TR-04) | **Vérifié 2026-05-13** : Décision (UE) 2025/2531 du 17 décembre 2025 renouvelle jusqu'au 27 décembre 2031 |
+| RTO/RPO + restore test (DPIA §4.9) | **RTO 24h / RPO 24h** ; restore test programmé avant 2026-06-01 |
+| Art. 36 risques résiduels (DPIA §5) | **Attestation contrôleur posée** : tous risques résiduels acceptables, **pas de consultation préalable CNIL Art. 36 requise** ; à ratifier par DPO |
+| Signature ROPA (ROPA §174) | Bloc laissé vide intentionnellement, aucune pré-signature par agent |
+
+Le DPO mandaté ratifiera ces 13 décisions et signera. Si l'une est rejetée par le DPO, la décision sera réouverte ici avec date + motif.
 
 > Ce document existe pour donner au DPO une vue unique sur l'état des livrables réglementaires Musaium pré-launch V1. Il agrège les marqueurs `<!-- DPO ACTION REQUIRED: ... -->` posés dans DPIA + ROPA pendant l'audit P0-1 (2026-05-13) et trace le chemin de signature.
 
@@ -44,31 +66,18 @@ Sections techniques cross-vérifiées contre le code de production réel — ne 
 
 ---
 
-## 3. DPO actions required (consolidé DPIA + ROPA)
+## 3. DPO actions required — résolu 2026-05-13 (controller decisions)
 
-Liste extraite des marqueurs `<!-- DPO ACTION REQUIRED: ... -->`. **Toutes** doivent recevoir une décision écrite avant signature.
+Toutes les 13 actions initiales ont reçu une **décision écrite du contrôleur** (voir § 0). Statut : en attente de **ratification DPO** uniquement.
 
-### DPIA (`docs/legal/DPIA.md`)
+Reste à faire pour clôturer la phase signature :
 
-1. **§ Header** : mandater un DPO externe et renseigner nom + email professionnel + cabinet (la mailbox `dpo@musaium.app` n'est pas encore active).
-2. **§ T1.1 (Base légale Art. 6)** : confirmer le cumul 6(1)(a) + 6(1)(b) vs base unique 6(1)(b). L'EDPB 03/2022 décourage le bundling consentement/contrat.
-3. **§ 4 mesure 9 (Backup & DR)** : documenter formellement le RTO/RPO chiffré + tester un restore avant signature.
-4. **§ 4 mesure 15 (Logging)** : documenter la durée précise de rétention des logs structurés côté hébergeur (objectif 90j hot + 13 mois cold non encore enforced).
-5. **§ 5 (Risques résiduels)** : valider que les acceptabilités reflètent la position juridique du responsable et qu'elles sont défendables vis-à-vis de l'Art. 36 (pas de consultation préalable CNIL requise).
-
-### ROPA (`docs/legal/ROPA.md`)
-
-6. **§ Header** : renseigner le contact DPO (miroir de DPIA action #1).
-7. **TR-01 (Base légale)** : alignement obligatoire avec le choix retenu en DPIA T1 (action #2). Cumul 6(1)(b) + 6(1)(a) vs base unique 6(1)(b).
-8. **TR-01 (Durée audit logs)** : confirmer que 13 mois est conforme aux lignes directrices CNIL anti-fraude vs durée strictement nécessaire Art. 5(1)(e).
-9. **TR-02 (Base légale)** : alignement DPIA T1 — même choix de cumul ici et là.
-10. **TR-02 (Transferts hors UE)** : décider de l'activation de l'OpenAI EU data zone avant signature (réduit le périmètre Schrems II quasi à zéro).
-11. **TR-03 (Audio S3 cleanup)** : vérifier que le cleanup objet S3 est orchestré avec la purge DB (SUBPROCESSORS V5 a signalé un risque d'orphan post-purge).
-12. **TR-04 (Adéquation UK)** : confirmer que la décision d'adéquation UK 2021/1772 est toujours en vigueur à la date de signature (réexamen Commission fin 2025 / début 2026).
-13. **TR-05 (Rétention tickets 365j)** : confirmer la défensibilité vs prescription civile + fenêtre de réouverture utilisateur (vs 24 mois antérieurement documentés).
-14. **TR-06 (Rétention logs)** : miroir DPIA action #4 — durée précise hébergeur OVH à enforcer.
-15. **TR-07 (Rétention reviews rejetées 30j)** : confirmer suffisance comme preuve de modération en cas de contestation utilisateur ou réquisition judiciaire (vs 12 mois antérieurement documentés).
-16. **§ Signature ROPA** : bloc à laisser vide jusqu'à apposition manuelle DPO + responsable.
+1. **Mandater le DPO** d'ici 2026-05-25 (action bloquante n°1).
+2. Soumettre au DPO le DPIA + ROPA + cette readiness pour avis Art. 39 RGPD.
+3. Boucle de remédiation si le DPO rejette une décision controller (estimée 1-2 itérations).
+4. Apposition signature DPO (DPIA + ROPA).
+5. Contresignature responsable (Tim Moyence).
+6. (P0-2 séparé) signature responsable de la déclaration EAA après audit WCAG 2.1 AA exécuté — voir `accessibility-content.ts` (audit automatisé du 2026-05-13 : 1 violation 1.4.3 documentée, manual a11y audit pendant).
 
 ---
 
@@ -105,14 +114,11 @@ Scénarios concrets — chiffrés sur la base de la jurisprudence récente CNIL 
 
 ---
 
-## 6. Wire-up notes (out of P0-1/P0-2 scope)
+## 6. Wire-up status
 
-Pointe les références que les agents suivants devront effectuer une fois la doctrine signée :
-
-- **Mobile (P0-2 accessibility)** : `museum-frontend/features/legal/` contient `privacyPolicyContent.ts` + `termsOfServiceContent.ts` (fichiers TS). Ajouter une entrée `accessibilityStatementContent.ts` similaire + screen Expo Router. **Non fait** dans l'audit P0-2 car contrainte docs-only (no `.ts`/`.tsx`).
-- **Web (P0-2 accessibility)** : `museum-web/src/components/shared/Footer.tsx` rend en dur `privacy` + `support` uniquement. Ajouter une troisième `<Link>` pour `accessibility` est un edit TSX **non fait** dans l'audit P0-2 — la clé `footer.links.accessibility` est posée dans `fr.json`/`en.json` pour préparer le wire-up suivant.
-- **Web (P0-2 page)** : créer `museum-web/src/app/[locale]/accessibility/page.tsx` qui rend le contenu du markdown. Hors scope docs-only.
-- **Privacy policy update (P0-3 follow-up)** : ajouter une mention "Pour notre déclaration d'accessibilité, voir `/accessibility`" dans `docs/privacy-policy.html` une fois la page web déployée.
+- **Web (P0-2 accessibility)** : ✅ **fait 2026-05-13** — `museum-web/src/components/shared/Footer.tsx` ajoute la 3e `<Link>` accessibility, `museum-web/src/app/[locale]/accessibility/page.tsx` rend `accessibility-content.ts` (FR + EN), audit axe-core 4.11 contre 7 routes publiques, 1 violation WCAG 1.4.3 trouvée + ciblée pour 2026-06-30.
+- **Mobile (P0-2 accessibility)** : à faire post-launch — `museum-frontend/features/legal/accessibilityStatementContent.ts` + screen Expo Router. Décision controller 2026-05-13 : différer derrière le launch V1 (Footer mobile n'a pas de section legal liens cliquables structurée comme le Web).
+- **Privacy policy update (P0-3 follow-up)** : ajouter une mention "Pour notre déclaration d'accessibilité, voir `/accessibility`" dans `docs/privacy-policy.html` une fois la page web déployée. À faire dans la prochaine PR landing.
 
 ---
 
