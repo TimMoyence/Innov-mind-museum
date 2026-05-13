@@ -1,10 +1,18 @@
+# NOTE: build context is the REPO ROOT (not museum-web/), so the
+# `file:../packages/musaium-shared` dep in museum-web/package.json resolves
+# correctly. Mirrors the BE Dockerfile pattern (audit P1-1+P1-2 followup).
+
 # ---------- Deps stage ----------
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-COPY package.json pnpm-lock.yaml ./
+# Copy @musaium/shared FIRST so the file: path exists when pnpm resolves
+# the lockfile. Package is committed with its dist/ (audit P1-1+P1-2).
+COPY packages/musaium-shared /packages/musaium-shared
+
+COPY museum-web/package.json museum-web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ---------- Build stage ----------
@@ -13,8 +21,10 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
+COPY packages/musaium-shared /packages/musaium-shared
+
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY museum-web ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build

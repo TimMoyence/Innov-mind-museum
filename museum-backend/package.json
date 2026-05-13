@@ -66,6 +66,16 @@
   "ts-node": {
     "files": true
   },
+  "pnpm": {
+    "overrides": {
+      "@types/express-serve-static-core": "5.0.6",
+      "langsmith": ">=0.5.20",
+      "protobufjs": ">=8.0.2",
+      "handlebars": ">=4.7.9",
+      "fast-uri": ">=3.1.2",
+      "uuid": "^11.1.1"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@jest/types": "^29.6.3",
@@ -114,7 +124,7 @@
     "typescript-eslint": "^8.58.1"
   },
   "dependencies": {
-    "@musaium/shared": "workspace:*",
+    "@musaium/shared": "file:../packages/musaium-shared",
     "@langchain/core": "1.1.45",
     "@langchain/google-genai": "2.1.26",
     "@langchain/openai": "1.4.2",

@@ -211,6 +211,31 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-9 — Mobile test `chat-session-deep.test.tsx > toggleRecording/playRecordedAudio` failing on `main`
+
+- [ ] **Statut** : ouvert (créé 2026-05-13, surface par audit P1-1+P1-2 push qui a déclenché le mobile CI)
+- **Référence code** :
+  ```
+  museum-frontend/__tests__/screens/chat-session-deep.test.tsx:1043-1048
+  museum-frontend/app/(stack)/chat/[sessionId].tsx (Media wiring)
+  ```
+- **Symptôme** : 1 test échoue dans `ChatSessionScreen — MediaAttachmentPanel + MessageContextMenu wiring > forwards toggleRecording, playRecordedAudio, ...` :
+  ```
+  expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1)
+  Expected: 1, Received: 0
+  ```
+  Multiple "An update to ChatSessionScreen inside a test was not wrapped in act(...)" warnings. 51 autres tests du même fichier passent.
+- **Pourquoi ce n'est pas dû au push P1** : reproduit localement à la fois sur `audit/p1-night` et sur `89b116f8c` (origin/main AVANT le push P1). Le test était déjà rouge sur origin/main ; les pushes précédents ne touchaient pas mobile/ donc le workflow `mobile` ne tournait pas et le failure restait latent.
+- **Sprint d'origine** : inconnu (date d'introduction du break à investiguer via `git bisect` ou git log de `chat/[sessionId].tsx`).
+- **Effort estimé** : 30 min — soit fix the wiring dans `ChatSessionScreen` (forwarder le bon callback), soit ajuster le mock dans le test si la wiring est intentionnelle.
+- **Comment fermer** :
+  1. `git log -p museum-frontend/app/\(stack\)/chat/\[sessionId\].tsx` pour trouver le commit qui a changé la wiring de `toggleRecording`.
+  2. Décider : fix le screen ou fix le test mock.
+  3. Re-run `npx jest __tests__/screens/chat-session-deep.test.tsx` → 52/52 passants.
+  4. Cocher TD-9 ici.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

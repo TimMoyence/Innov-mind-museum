@@ -334,7 +334,7 @@ jobs:
       - name: Build image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-web
+          context: .
           file: ./museum-web/deploy/Dockerfile.prod
           load: true
           tags: museum-web:ci
@@ -352,7 +352,7 @@ jobs:
       - name: Push image to GHCR
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          context: ./museum-web
+          context: .
           file: ./museum-web/deploy/Dockerfile.prod
           push: true
           tags: |

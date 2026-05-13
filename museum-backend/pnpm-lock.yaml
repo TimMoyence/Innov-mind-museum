@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@types/express-serve-static-core': 5.0.6
   langsmith: '>=0.5.20'
   protobufjs: '>=8.0.2'
   handlebars: '>=4.7.9'
@@ -27,6 +28,9 @@ importers:
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
+      '@musaium/shared':
+        specifier: file:../packages/musaium-shared
+        version: file:../packages/musaium-shared(zod@4.4.3)
       '@opentelemetry/auto-instrumentations-node':
         specifier: ^0.75.0
         version: 0.75.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))
@@ -156,7 +160,7 @@ importers:
         specifier: ^2.8.19
         version: 2.8.19
       '@types/express':
-        specifier: ^5.0.1
+        specifier: 5.0.1
         version: 5.0.1
       '@types/jest':
         specifier: ^29.5.14
@@ -1042,6 +1046,11 @@ packages:
     resolution: {integrity: sha512-x0fWaQtYp4E6sktbsdAqnehxDgEc/VwM7uLsRCYWaiGu0ykYdZPiS8zCWdnjHwyiumousxfBm4SO31eXqwEZhQ==}
     cpu: [x64]
     os: [win32]
+
+  '@musaium/shared@file:../packages/musaium-shared':
+    resolution: {directory: ../packages/musaium-shared, type: directory}
+    peerDependencies:
+      zod: ^4.0.0
 
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
@@ -6049,6 +6058,10 @@ snapshots:
 
   '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3':
     optional: true
+
+  '@musaium/shared@file:../packages/musaium-shared(zod@4.4.3)':
+    dependencies:
+      zod: 4.4.3
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:

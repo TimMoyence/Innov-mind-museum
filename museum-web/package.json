@@ -24,7 +24,7 @@
     "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
-    "@musaium/shared": "workspace:*",
+    "@musaium/shared": "file:../packages/musaium-shared",
     "@sentry/nextjs": "^10.49.0",
     "framer-motion": "^12.38.0",
     "maplibre-gl": "^5.23.0",
@@ -66,5 +66,14 @@
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": "eslint --fix"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion@1": ">=1.1.12 <2",
+      "brace-expansion@2": "<6",
+      "protocol-buffers-schema": ">=3.6.1",
+      "postcss": ">=8.5.10",
+      "fast-uri": ">=3.1.2"
+    }
   }
 }

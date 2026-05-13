@@ -13,9 +13,10 @@ RUN apt-get update \
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# Copy the workspace plugin FIRST so the file:.. path exists when pnpm
-# resolves the lockfile. The plugin is committed with its dist/ (E3 fix).
+# Copy the workspace plugin AND @musaium/shared FIRST so file: paths exist
+# when pnpm resolves the lockfile. Both are committed with their dist/.
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
+COPY packages/musaium-shared /packages/musaium-shared
 
 COPY museum-backend/package.json museum-backend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -42,9 +43,11 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# The workspace plugin is a devDependency, but pnpm still walks the lockfile
-# during `--prod` install and verifies file: paths exist. Copy it here too.
+# pnpm walks the lockfile during `--prod` install and verifies file: paths
+# exist. Copy both the workspace plugin (devDep, listed in lockfile) AND
+# @musaium/shared (runtime dep) here too.
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
+COPY packages/musaium-shared /packages/musaium-shared
 
 COPY museum-backend/package.json museum-backend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
