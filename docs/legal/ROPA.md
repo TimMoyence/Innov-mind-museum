@@ -1,13 +1,16 @@
 # Registre des Activités de Traitement (ROPA — RGPD Art. 30)
 
 **Statut** : DRAFT v1.0 — à valider par DPO externe avant 2026-06-01.
-**Dernière revue** : 2026-05-12
+**Dernière revue éditoriale** : 2026-05-12
+**Date de rédaction technique** : 2026-05-13 (audit P0-1).
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel (InnovMind / Musaium).
 **Coordonnées** : `tim.moyence@gmail.com` — France.
 **Représentant UE** : non applicable (responsable de traitement établi en France).
-**DPO** : externe à mandater, contact prévu `dpo@musaium.app` (TBD).
+**Contact DPO** : <!-- DPO ACTION REQUIRED: mandater un DPO externe et renseigner ici nom + email professionnel + cabinet, en miroir de DPIA § header --> DPO externe à mandater avant 2026-06-01 (mailbox alias prévue `dpo@musaium.app`, non encore active).
 
 Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Règlement (UE) 2016/679) ainsi que les recommandations CNIL sur la tenue du registre des activités de traitement pour les responsables de traitement.
+
+> **Note d'audit (2026-05-13)** : ce document a fait l'objet d'un audit technique (P0-1) destiné à aligner les rubriques Art. 30 sur le code de production réel (durées de conservation cross-vérifiées contre `museum-backend/src/config/env.ts`, sous-traitants alignés sur `docs/compliance/SUBPROCESSORS.md` post-réconciliation P0-3 — DeepSeek non actif en prod EU, statut Tavily/S3/Sentry confirmé). Toutes les sections marquées `<!-- DPO ACTION REQUIRED: ... -->` requièrent une décision juridique d'un DPO mandaté avant signature. Le suivi consolidé DPIA + ROPA est tenu dans `docs/legal/DPIA_ROPA_READINESS.md`.
 
 > **Source de vérité technique** : ce registre s'appuie sur `docs/compliance/SUBPROCESSORS.md` (inventaire Art. 28) et `docs/compliance/DATA_FLOW_MAP.md` (cartographie des flux). Toute modification de traitement (ajout de sous-traitant, changement de finalité, extension de durée) doit déclencher une mise à jour ICI dans la même PR.
 
@@ -33,13 +36,13 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 |---|---|
 | **Nom du traitement** | Gestion des comptes utilisateurs (inscription, authentification, profil) |
 | **Finalité(s)** | Création de compte ; authentification email/password ou social login (Google/Apple) ; gestion du profil ; consentements RGPD ; suppression de compte (Art. 17). |
-| **Base légale (Art. 6)** | 6(1)(b) — exécution du contrat (CGU acceptées à l'inscription). 6(1)(a) — consentement pour le `tos_privacy` enregistré au scope `user_consents`. |
+| **Base légale (Art. 6)** | <!-- DPO ACTION REQUIRED: confirmer le cumul 6(1)(b) + 6(1)(a) ou bascule en base unique 6(1)(b) — alignement avec choix retenu sur DPIA T1. EDPB 03/2022 décourage le bundling consentement/contrat. --> 6(1)(b) — exécution du contrat (CGU acceptées à l'inscription). 6(1)(a) — consentement pour le `tos_privacy` enregistré au scope `user_consents`. |
 | **Catégories de personnes concernées** | Visiteurs B2C (≥15 ans), administrateurs musée (B2B), modérateurs internes. |
-| **Catégories de données** | Identifiants : email (unique), password bcrypt, identifiants Apple/Google (subject token), prénom/nom optionnels, date de naissance (DOB), date d'inscription. Sécurité : refresh tokens (hashés), MFA secrets (chiffrés), API keys (hashées, `msk_*`). Audit : audit_logs hash-chain. |
+| **Catégories de données** | Identifiants : email (unique), password bcrypt, identifiants Apple/Google (subject token), prénom/nom optionnels, date de naissance (DOB), date d'inscription. Sécurité : refresh tokens (hashés, `JWT_REFRESH_TTL=14d` absolu + sliding idle window `JWT_REFRESH_IDLE_WINDOW_SECONDS=86400`), MFA secrets (chiffrés AES-256-GCM via `MFA_ENCRYPTION_KEY`), API keys (hashées, `msk_*`). Audit : audit_logs hash-chain (IP anonymisée après 13 mois par `audit-ip-anonymizer.job.ts`). |
 | **Destinataires** | Personnel interne autorisé (Tim Moyence). Brevo (envoi email vérification + reset password). Apple/Google (vérification ID token). |
 | **Transferts hors UE** | Apple (US, DPF). Google (US, DPF). |
-| **Durée de conservation** | Compte : jusqu'à suppression utilisateur (Art. 17). Refresh tokens : 30j. Reset tokens : 24h. Audit logs : 13 mois (hot + cold). |
-| **Mesures de sécurité (Art. 32)** | TLS 1.3, bcrypt rounds=12, JWT 15min + refresh rotatif, MFA `admin`/`super_admin`, rate-limiting register/login (express-rate-limit + Redis), input validation Zod, secrets stockés en `expo-secure-store` côté FE. |
+| **Durée de conservation** | Compte : jusqu'à suppression utilisateur (Art. 17). Refresh tokens : **14 jours absolus** (durcissement F8 2026-04-30 ; antérieurement 30j) + sliding 24 h. Token de reset mot de passe : **1 heure** (`forgotPassword.useCase.ts:49`). Audit logs : 13 mois (hot + cold) — IP anonymisée à l'expiration. <!-- DPO ACTION REQUIRED: confirmer que la rétention audit 13 mois est conforme aux lignes directrices CNIL pour la lutte contre la fraude vs durée strictement nécessaire Art. 5(1)(e). --> |
+| **Mesures de sécurité (Art. 32)** | TLS 1.3 (HSTS prod), bcrypt `BCRYPT_ROUNDS=12`, JWT access 15min + refresh rotatif 14j, cookies HttpOnly + Secure + SameSite + CSRF double-submit (`CSRF_SECRET` obligatoire en prod), MFA `admin`/`super_admin`, rate-limiting register/login/forgot-password (express-rate-limit + Redis store), input validation Zod, secrets côté FE en `expo-secure-store`. |
 | **Sous-traitants associés** | SUBPROCESSORS #3 (Google), #4 (Apple), #5 (Brevo), #20 (OVH hosting), #6 (Sentry — observabilité). |
 
 ---
@@ -50,14 +53,14 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 |---|---|
 | **Nom du traitement** | Chat IA conversationnel — questions visiteur sur œuvres / musées + réponses générées par LLM tiers. |
 | **Finalité(s)** | Fournir des réponses culturelles contextuelles via LLM tiers ; améliorer la qualité du service (audit logs, mesures qualitatives anonymisées). |
-| **Base légale (Art. 6)** | 6(1)(a) consentement (`tos_privacy` au signup ; `location_to_llm` si géo activée). 6(1)(b) exécution du service. |
+| **Base légale (Art. 6)** | <!-- DPO ACTION REQUIRED: alignement obligatoire avec DPIA T1 — même choix de cumul ou base unique 6(1)(b) ici et là. --> 6(1)(a) consentement (`tos_privacy` au signup ; `location_to_llm` si géo activée). 6(1)(b) exécution du service. |
 | **Catégories de personnes concernées** | Visiteurs ≥ 15 ans ; visiteurs mineurs sous autorisation parentale (V1 : flux statique). |
-| **Catégories de données** | Texte de la question, historique conversation (12 derniers messages max), `userId` interne (corrélation), `sessionId`, `museumId` éventuel, `expertiseLevel` (tag soft), images uploadées (vision), audio (traité dans TR-03). |
-| **Destinataires** | LLM provider sélectionné : OpenAI (par défaut), Google (option), Deepseek (désactivé en prod EU). |
-| **Transferts hors UE** | OpenAI US (SCC 2021/914 + DPF, OpenAI EU data zone disponible mais pas activée par défaut). Google US (SCC + DPF). Deepseek CN : **pas d'adéquation, désactivé en prod EU**. |
-| **Durée de conservation** | Messages : durée de vie du compte (effacement Art. 17). Côté LLM tiers : OpenAI 30j max (DPA), Google 60j max (DPF). |
-| **Mesures de sécurité** | Input/output guardrails (`art-topic-guardrail`), prompt isolation (system avant user, boundary marker), sanitization Unicode + zero-width sur champs user-controlled, LLM cache layer (`LlmCacheServiceImpl` ADR-036), `LLM_PROVIDER=deepseek` bloqué en prod EU par configuration. AI Act Art. 50 disclosure visible sur 3 surfaces. |
-| **Sous-traitants associés** | SUBPROCESSORS #1 (OpenAI), #2 (Deepseek — désactivé), #3 (Google). |
+| **Catégories de données** | Texte de la question, historique conversation (12 derniers messages max), `userId` interne (corrélation), `sessionId`, `museumId` éventuel, `expertiseLevel` (tag soft), images uploadées (vision, EXIF stripé via `sharp().rotate()` re-encode), audio (traité dans TR-03). |
+| **Destinataires** | LLM provider sélectionné par configuration `LLM_PROVIDER` (défaut `openai`) : OpenAI (par défaut), Google (option activable), Deepseek (fournisseur alternatif **non activé en prod EU** par configuration — voir P0-3 réconciliation 2026-05-12). |
+| **Transferts hors UE** | OpenAI US (SCC 2021/914 + DPF) — **OpenAI EU data zone disponible mais pas activée par défaut, basculement tracé en `SUBPROCESSORS.md` § P0.5**. Google US (SCC + DPF). Deepseek CN : **pas d'adéquation, non activé en prod EU**. <!-- DPO ACTION REQUIRED: décider de l'activation de l'OpenAI EU data zone avant signature (réduit le périmètre Schrems II quasi à zéro pour LLM + STT + TTS) — voir DPIA § 4 mesure 10. --> |
+| **Durée de conservation** | Messages côté Musaium : **purge automatique 180 jours** (`CHAT_PURGE_RETENTION_DAYS=180`, cron quotidien `chat-purge-daily`) — effacement anticipé sur demande Art. 17 via `/api/auth/account/delete`. Côté LLM tiers : OpenAI 30j max (DPA), Google 60j max (DPF). Deepseek : non utilisé en prod EU. |
+| **Mesures de sécurité** | Input/output guardrails (`art-topic-guardrail`), circuit breaker LLM-Guard sidecar fail-CLOSED (ADR-047, 2026-05-12) + inflight semaphore + audit payload, prompt isolation (system avant user, boundary marker `[END OF SYSTEM INSTRUCTIONS]`), sanitization Unicode NFC + zero-width sur champs user-controlled (`sanitizePromptInput()`), LLM cache layer (`LlmCacheServiceImpl` ADR-036), `LLM_PROVIDER=deepseek` bloqué en prod EU par configuration. AI Act Art. 50 disclosure visible sur 3 surfaces. |
+| **Sous-traitants associés** | SUBPROCESSORS #1 (OpenAI — défaut), #3 (Google — alternative), #2 (Deepseek — alternative non activée en prod EU). |
 
 ---
 
@@ -72,9 +75,9 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Catégories de données** | Buffer audio entrant (MP3/M4A ≤12 Mo, en mémoire uniquement) ; texte transcrit (traité comme TR-02 ensuite) ; buffer audio TTS sortant (MP3, persisté S3 sous `ChatMessage.audioUrl`). |
 | **Destinataires** | OpenAI : `gpt-4o-mini-transcribe` (STT) + `gpt-4o-mini-tts` (TTS). |
 | **Transferts hors UE** | OpenAI US (SCC + DPF). |
-| **Durée de conservation** | Buffer entrée : durée de la requête HTTP (jamais persisté). Audio sortant TTS : durée du compte, effacement Art. 17 (URL S3 supprimée + cleanup objet). |
+| **Durée de conservation** | Buffer entrée : durée de la requête HTTP (jamais persisté). Audio sortant TTS : aligné sur le message parent (purge `CHAT_PURGE_RETENTION_DAYS=180` ; effacement Art. 17 supprime URL S3 + objet). <!-- DPO ACTION REQUIRED: vérifier que le cleanup objet S3 est bien orchestré avec la purge DB (audit SUBPROCESSORS V5 a signalé un risque d'orphan post-purge — confirmer le hook de cascade avant signature). --> |
 | **Mesures de sécurité** | TLS 1.3 obligatoire, certificate pinning iOS (R17), pas de persistance du buffer entrant, OpenAI DPA interdit usage entrées pour entraînement client. |
-| **Sous-traitants associés** | SUBPROCESSORS #1 (OpenAI STT + TTS), #8 (S3 object storage pour audio sortant). |
+| **Sous-traitants associés** | SUBPROCESSORS #1 (OpenAI STT + TTS), #8 (S3 object storage pour audio sortant — endpoint prod `s3.eu-west-3.amazonaws.com` AWS Paris, résolu 2026-05-12). |
 
 ---
 
@@ -88,9 +91,9 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Catégories de personnes concernées** | Visiteurs ayant explicitement activé le toggle `location_to_llm`. |
 | **Catégories de données** | Lat/lng brutes (arrondies côté serveur, NON persistées) ; ville + pays résolus via Nominatim (persistés sous `ChatMessage.locationContext`) ; `museum_id` si in-museum. |
 | **Destinataires** | Nominatim (reverse geocoding), Overpass API (POI lookup), OpenAI/Google (transmis dans le prompt LLM sous forme ville/pays uniquement). |
-| **Transferts hors UE** | Nominatim UK + DE mirrors (post-Brexit UK ; adéquation continue à confirmer). Overpass DE (EU). OpenAI/Google : transmis sous forme déjà coarsifiée, US (DPF). |
-| **Durée de conservation** | Lat/lng : jamais persisté. Coarse (ville/pays) : durée du message, effacement Art. 17. |
-| **Mesures de sécurité** | Arrondi côté serveur dans `LocationResolver`, sanitization avant prompt, consentement révocable. |
+| **Transferts hors UE** | Nominatim UK + DE mirrors (UK : décision d'adéquation 2021/1772 en vigueur, à re-confirmer au prochain réexamen quadriennal). Overpass DE (EU). OpenAI/Google : transmis sous forme déjà coarsifiée, US (DPF). <!-- DPO ACTION REQUIRED: confirmer que la décision d'adéquation UK 2021/1772 est toujours en vigueur à la date de signature (réexamen Commission attendu fin 2025 / début 2026). --> |
+| **Durée de conservation** | Lat/lng : jamais persisté (rounding serveur dans `LocationResolver`, payload jeté en fin de requête). Coarse (ville/pays) : durée du message parent (purge `CHAT_PURGE_RETENTION_DAYS=180`), effacement Art. 17 anticipé. |
+| **Mesures de sécurité** | Arrondi côté serveur dans `LocationResolver` (in-museum cache 20 min, city-level no-cache), sanitization avant prompt, consentement révocable à tout moment via le profil (toggle `location_to_llm` dans `user_consents`). |
 | **Sous-traitants associés** | SUBPROCESSORS #12 (Nominatim), #13 (Overpass), #1 (OpenAI), #3 (Google). |
 
 ---
@@ -106,7 +109,7 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Catégories de données** | Email, contenu du ticket (message + pièces jointes texte), statut, audit-trail des actions modérateur. |
 | **Destinataires** | Modérateurs internes (rôles `moderator`, `admin`, `super_admin`). Brevo pour envoi des réponses email. |
 | **Transferts hors UE** | Aucun (Brevo FR EU). |
-| **Durée de conservation** | 24 mois après clôture du ticket, puis purge automatique. |
+| **Durée de conservation** | **365 jours après création** (`RETENTION_SUPPORT_TICKETS_DAYS=365`, cron quotidien `15 3 * * *`), puis purge automatique. <!-- DPO ACTION REQUIRED: vérifier que 365j (vs les 24 mois antérieurement documentés) est défendable au regard de la prescription civile + valider la fenêtre de réouverture utilisateur. --> |
 | **Mesures de sécurité** | Accès gated par rôle (RBAC), MFA obligatoire admin/super_admin, audit-chain hash-link. |
 | **Sous-traitants associés** | SUBPROCESSORS #5 (Brevo). |
 
@@ -120,12 +123,12 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Finalité(s)** | Garantir la fiabilité du service, détecter les incidents de sécurité, fournir les éléments en cas d'enquête (Art. 32 RGPD). |
 | **Base légale (Art. 6)** | 6(1)(f) intérêt légitime — sécurité + fiabilité du service. |
 | **Catégories de personnes concernées** | Tous les utilisateurs (de manière indirecte, via les events Sentry). |
-| **Catégories de données** | Stack traces, request metadata (URL, méthode, status, headers post-scrubbing), user-agent, `userId` hashé (8-char fingerprint, pas l'email en clair), payloads scrubés (tokens/passwords/secrets redactés). |
-| **Destinataires** | Sentry (EU ingestion `*.eu.sentry.io`) ; OTLP collector éventuel (si activé, opérateur-contrôlé). |
-| **Transferts hors UE** | Sentry EU region confirmée. Aucun transfert hors UE. |
-| **Durée de conservation** | Sentry : 30j events / 90j attachments (plan). Logs structurés : 90j hot + 13 mois cold (audit). |
-| **Mesures de sécurité** | PII scrubber single-source-of-truth (`sentry-scrubber.ts` × BE/FE/Web aligné post-2026-05-12), email→SHA-256 fingerprint, breadcrumb drop sur paths auth-adjacents. |
-| **Sous-traitants associés** | SUBPROCESSORS #6 (Sentry), #7 (OTLP), #9 (Better Stack uptime). |
+| **Catégories de données** | Stack traces, request metadata (URL, méthode, status, headers post-scrubbing), user-agent, `userId` hashé (8-char fingerprint, pas l'email en clair), payloads scrubés (tokens/passwords/secrets/emails redactés, emails → SHA-256 fingerprint). |
+| **Destinataires** | Sentry (EU ingestion `*.eu.sentry.io` confirmée 2026-04-26) ; OTLP collector éventuel (si activé, opérateur-contrôlé). |
+| **Transferts hors UE** | Sentry EU region confirmée. Aucun transfert hors UE par défaut. |
+| **Durée de conservation** | Sentry : 30j events / 90j attachments (plan). Logs structurés Pino : objectif 90j hot + 13 mois cold (**rétention pas encore enforced côté hébergeur — c'est un objectif, voir DPIA § 4 mesure 15**). <!-- DPO ACTION REQUIRED: documenter la durée précise de rétention des logs hébergeur OVH et l'enforcement effectif avant signature. --> |
+| **Mesures de sécurité** | PII scrubber triplicé `sentry-scrubber.ts` × BE/FE/Web aligné post-2026-05-12 (P1-1 : dédup via `packages/musaium-shared` en post-launch), email→SHA-256 fingerprint, breadcrumb drop sur paths auth-adjacents. |
+| **Sous-traitants associés** | SUBPROCESSORS #6 (Sentry), #7 (OTLP optionnel), #9 (Better Stack uptime). |
 
 ---
 
@@ -140,7 +143,7 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Catégories de données** | Texte de review, `userId`, timestamp, statut (`pending`, `approved`, `rejected`), motif de rejet le cas échéant. |
 | **Destinataires** | Modérateurs internes (RBAC), service email pour notification de décision (opt-in `notifyOnReviewModeration`). |
 | **Transferts hors UE** | Aucun (Brevo EU). |
-| **Durée de conservation** | Reviews approuvées : durée du compte. Reviews rejetées : 12 mois (preuve de modération). |
+| **Durée de conservation** | Reviews approuvées : durée du compte (effacement Art. 17). Reviews rejetées : **30 jours** (`RETENTION_REVIEWS_REJECTED_DAYS=30`). Reviews en attente : **60 jours** (`RETENTION_REVIEWS_PENDING_DAYS=60`) — au-delà, purge automatique pour éviter l'accumulation. <!-- DPO ACTION REQUIRED: confirmer qu'une preuve de modération sur 30j (vs 12 mois antérieurement documentés) est suffisante en cas de contestation utilisateur ou réquisition judiciaire. --> |
 | **Mesures de sécurité** | RBAC, audit-chain hash-link, guardrail-based pre-flag pour les contenus suspects. |
 | **Sous-traitants associés** | SUBPROCESSORS #5 (Brevo notif). |
 
@@ -162,6 +165,20 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 - `docs/compliance/SUBPROCESSORS.md` — ledger Art. 28.
 - `docs/compliance/DATA_FLOW_MAP.md` — cartographie technique.
 - `docs/legal/DPIA.md` — analyse d'impact des traitements à risque élevé (T1/T2/T3 = TR-02/TR-03/TR-04).
+- `docs/legal/DPIA_ROPA_READINESS.md` — tracking consolidé DPIA + ROPA (audit P0-1, 2026-05-13).
+
+---
+
+## Signature
+
+<!-- DPO ACTION REQUIRED: ce bloc reste vide tant que la signature DPO n'est pas apposée. Aucune signature ne doit être pré-remplie par un agent. -->
+
+| Rôle | Nom | Date | Signature |
+|---|---|---|---|
+| Responsable du traitement | Tim Moyence (InnovMind / Musaium) | _________ | _________ |
+| DPO externe | _________ | _________ | _________ |
+
+**Ordre recommandé** : DPO signe en premier (avis Art. 39), responsable du traitement contresigne. La date cible de signature complète est **2026-05-26** (J-6 avant launch V1 2026-06-01) pour laisser une fenêtre de remédiation en cas de remarque substantielle.
 
 ---
 
