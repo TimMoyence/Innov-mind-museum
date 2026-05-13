@@ -189,6 +189,28 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-8 — Cull 3 remaining single-impl chat ports (image-processor, knowledge-router, llm-judge)
+
+- [ ] **Statut** : ouvert (créé 2026-05-13, audit P1-3 partial deferral)
+- **Référence code** :
+  ```
+  museum-backend/src/modules/chat/domain/ports/image-processor.port.ts
+  museum-backend/src/modules/chat/domain/ports/knowledge-router.port.ts
+  museum-backend/src/modules/chat/domain/ports/llm-judge.port.ts
+  ```
+- **Symptôme** : 3 ports d'interface avec une seule implémentation chacun (hexagonal cosplay per audit P1-3). ~150 LOC d'indirection sans valeur de test/prod swap.
+- **Pourquoi non résolu en P1-3** : le sub-agent a culled ces 3 + `AdvancedGuardrail` localement (commit `448973b5` sur la branche `backup-p1-night-pre-rebase`). Quand j'ai rebasé sur `origin/main` avant push, conflict 7-fichiers dans le surface guardrail/chat : `origin/main` était en train de refactorer la même zone (commits `5e0a4bd2`, `89b116f8`, etc. — renommage `advanced-guardrail.port` → `guardrail-provider.port`, fixes des 49 tests BE). Conflict resolution cost > value pour cette nuit. Le commit a été skippé pendant le rebase.
+- **Sprint d'origine** : audit 2026-05-12 (P1-3 partial).
+- **Effort estimé** : 30-60 min sur un jour calme — pattern bien établi par P1-3 sub-agent.
+- **Comment fermer** :
+  1. Récupérer le patch depuis `git show backup-p1-night-pre-rebase:<file>` pour les 3 ports + leurs sites d'usage (5-11 fichiers par port).
+  2. Réappliquer manuellement (les conflicts d'origin/main sur AdvancedGuardrail sont absorbés — leur rename `guardrail-provider.port` est le canonique maintenant ; ne pas le toucher).
+  3. tsc + lint verts sur BE.
+  4. Cocher TD-8 ici.
+- **Note** : la branche `backup-p1-night-pre-rebase` doit être préservée jusqu'à fermeture de TD-8.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
