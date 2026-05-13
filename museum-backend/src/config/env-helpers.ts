@@ -39,3 +39,15 @@ export const required = (name: string, value: string | undefined): string => {
 
   return value;
 };
+
+/**
+ * Clamps a number into the closed unit interval [0, 1]. NaN / non-finite
+ * inputs collapse to 0, > 1 saturates at 1. Pure — used for env-supplied
+ * probability knobs (e.g. chaos injection rate).
+ */
+export const clampUnitInterval = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+};

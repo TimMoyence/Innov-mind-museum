@@ -14,6 +14,7 @@ import {
   getCompareImageUseCase,
   getCompareSessionAccessVerifier,
   getDescribeService,
+  getGuardrailProvider,
   getLlmCircuitBreakerState,
   getLlmGuardCircuitBreakerState,
   getMessageExplanationUseCase,
@@ -29,9 +30,11 @@ import supportRouter from '@modules/support/adapters/primary/http/routes/support
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
+import type { ProviderHealth } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { Request, Response } from 'express';
 
 /** Dependencies required to build the top-level API router. */
 interface ApiRouterDeps {
@@ -203,10 +206,181 @@ export const createApiRouter = ({
     res.status(httpStatus).json(payload);
   });
 
+  // 2026-05-13 — Phase 1 perennial design: semantic deep-health probe. Unlike
+  // `/health`, this endpoint exercises the actual decision paths of each
+  // dependency (sidecar /scan, DB SELECT, Redis PING) and aggregates a
+  // qualitative verdict. Distinct from TCP-up: a sidecar that accepts
+  // connections but blocks every probe registers as `degraded`, not `up`.
+  // Returns 200 even on degraded/down — the body is the status report, not
+  // a gate. Future K8s-style readiness can hook the JSON.
+  router.get('/health/deep', createDeepHealthHandler({ healthCheck, cacheService }));
+
   mountDomainRouters(router, chatService, cacheService);
 
   return router;
 };
+
+/**
+ * Shape of one guardrail provider probe in `/api/health/deep`. Mirrors the
+ * `ProviderHealth` port type plus the provider's `name` so a multi-adapter
+ * stack (Phase 2) renders as an array of named verdicts.
+ */
+interface GuardrailHealthCheck extends ProviderHealth {
+  name: string;
+}
+
+/**
+ * Probes every registered `GuardrailProvider` via its `health()` method.
+ * Wraps each call in a try/catch so a single faulty adapter cannot crash
+ * the deep-health response. The adapter itself promises `never throws` per
+ * the port contract — this is defence-in-depth.
+ *
+ * V1 has one adapter (`llm-guard`) when configured; the array shape is
+ * forward-compatible with the Phase 2 multi-provider aggregator (ADR-048).
+ */
+async function probeGuardrailProviders(): Promise<GuardrailHealthCheck[]> {
+  const provider = getGuardrailProvider();
+  if (!provider) return [];
+  try {
+    const result = await provider.health();
+    return [{ name: provider.name, ...result }];
+  } catch (error) {
+    return [
+      {
+        name: provider.name,
+        status: 'down',
+        latencyMs: 0,
+        lastCheckedAt: new Date().toISOString(),
+        detail: error instanceof Error ? error.message : 'unknown_error',
+      },
+    ];
+  }
+}
+
+/**
+ * Qualitative health verdict shared by every dependency probe in `/health/deep`.
+ * Mirrors the `ProviderHealth.status` shape from the `GuardrailProvider` port
+ * (ADR-048) so the aggregator can rank a heterogeneous probe set uniformly.
+ */
+type HealthCheckStatus = 'up' | 'degraded' | 'down';
+
+interface DependencyCheck {
+  status: HealthCheckStatus;
+  latencyMs: number;
+  detail?: string;
+}
+
+/** Probes the DB via the injected `healthCheck` callback + measures latency. */
+async function probeDatabase(
+  healthCheck: () => Promise<{ database: 'up' | 'down' }>,
+): Promise<DependencyCheck> {
+  const start = Date.now();
+  try {
+    const result = await healthCheck();
+    return {
+      status: result.database === 'up' ? 'up' : 'down',
+      latencyMs: Date.now() - start,
+    };
+  } catch (error) {
+    return {
+      status: 'down',
+      latencyMs: Date.now() - start,
+      detail: error instanceof Error ? error.message : 'unknown_error',
+    };
+  }
+}
+
+/**
+ * Probes Redis via the cache port's `ping()` method. Returns `null` when no
+ * cache service is configured (or it's a Noop), letting the response payload
+ * encode the "redis skipped" branch as a JSON `null` rather than a synthetic
+ * up/down verdict.
+ */
+async function probeRedis(
+  cacheService: CacheService | undefined,
+  timeoutMs: number,
+): Promise<DependencyCheck | null> {
+  if (!cacheService || cacheService instanceof NoopCacheService) return null;
+  const start = Date.now();
+  try {
+    const ok = await Promise.race<boolean>([
+      cacheService.ping(),
+      new Promise<boolean>((resolve) =>
+        setTimeout(() => {
+          resolve(false);
+        }, timeoutMs),
+      ),
+    ]);
+    return {
+      status: ok ? 'up' : 'down',
+      latencyMs: Date.now() - start,
+    };
+  } catch (error) {
+    return {
+      status: 'down',
+      latencyMs: Date.now() - start,
+      detail: error instanceof Error ? error.message : 'unknown_error',
+    };
+  }
+}
+
+/**
+ * Aggregates the per-component verdicts into a single top-level status:
+ *   - any `down`     → `down`
+ *   - any `degraded` → `degraded`
+ *   - otherwise      → `up`
+ *
+ * Empty input collapses to `up` (no dependencies configured = nothing
+ * unhealthy). Pure — no I/O.
+ */
+function aggregateStatus(components: HealthCheckStatus[]): HealthCheckStatus {
+  if (components.includes('down')) return 'down';
+  if (components.includes('degraded')) return 'degraded';
+  return 'up';
+}
+
+/**
+ * Express handler factory for `GET /api/health/deep`. Kept as a top-level helper
+ * (rather than inline in `createApiRouter`) so the createApiRouter arrow stays
+ * within the `max-lines-per-function` lint budget AND the handler itself can be
+ * unit-tested with fake `healthCheck` + `cacheService` injections.
+ *
+ * Returns 200 even when aggregate is `degraded` or `down` — the body IS the
+ * status report; downstream readiness/liveness gates can inspect the JSON.
+ */
+function createDeepHealthHandler(deps: {
+  healthCheck: () => Promise<{ database: 'up' | 'down' }>;
+  cacheService: CacheService | undefined;
+}): (req: Request, res: Response) => Promise<void> {
+  const REDIS_PING_TIMEOUT_MS = 2_000;
+  return async (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const start = Date.now();
+
+    const guardrailHealthChecks = await probeGuardrailProviders();
+    const dbCheck = await probeDatabase(deps.healthCheck);
+    const redisCheck = await probeRedis(deps.cacheService, REDIS_PING_TIMEOUT_MS);
+
+    const components: HealthCheckStatus[] = [
+      dbCheck.status,
+      ...(redisCheck ? [redisCheck.status] : []),
+      ...guardrailHealthChecks.map((c) => c.status),
+    ];
+
+    res.status(200).json({
+      status: aggregateStatus(components),
+      checks: {
+        guardrails: guardrailHealthChecks,
+        db: dbCheck,
+        redis: redisCheck,
+      },
+      version: env.appVersion,
+      commitSha: env.commitSha ?? null,
+      checkedAt: new Date(start).toISOString(),
+      latencyMs: Date.now() - start,
+    });
+  };
+}
 
 /**
  * Singleton: holds the P3 enrichment use case + its BullMQ queue adapter.

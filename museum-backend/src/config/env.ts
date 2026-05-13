@@ -2,7 +2,14 @@ import path from 'node:path';
 
 import dotenv from 'dotenv';
 
-import { required, toBoolean, toList, toNumber, toOptionalString } from './env-helpers';
+import {
+  clampUnitInterval,
+  required,
+  toBoolean,
+  toList,
+  toNumber,
+  toOptionalString,
+} from './env-helpers';
 import {
   parseRedisUrlFallback,
   resolveAppVersion,
@@ -442,6 +449,23 @@ const env: AppEnv = {
       baseUrl: toOptionalString(process.env.LLAMA_PROMPT_GUARD_BASE_URL),
       timeoutMs: toNumber(process.env.LLAMA_PROMPT_GUARD_TIMEOUT_MS, 500),
       scoreThreshold: toNumber(process.env.LLAMA_PROMPT_GUARD_SCORE_THRESHOLD, 0.8),
+    },
+    // Chaos drill rate (0..1). Inactive by default; non-zero values
+    // intentionally abort LLM Guard /scan calls to exercise the fail-CLOSED
+    // path. Production MUST keep this at 0.
+    chaosRate: clampUnitInterval(toNumber(process.env.GUARDRAIL_CHAOS_RATE, 0)),
+    // 2026-05-13 — Scalability primitives for 100k clients prep (perennial
+    // design §11). Operational tunables, NOT feature flags
+    // (`feedback_no_feature_flags_prelaunch`). Defaults derived from
+    // CAPACITY_PLAN_100K.md cost / abuse risk modelling.
+    costCircuitBreaker: {
+      hourlyThresholdCents: toNumber(process.env.COST_CB_HOURLY_THRESHOLD_CENTS, 5_000),
+      dailyBudgetCents: toNumber(process.env.COST_CB_DAILY_BUDGET_CENTS, 50_000),
+      openDurationMs: toNumber(process.env.COST_CB_OPEN_DURATION_MS, 300_000),
+    },
+    tenantRateLimit: {
+      capacity: toNumber(process.env.TENANT_RATE_LIMIT_CAPACITY, 60),
+      refillPerSecond: toNumber(process.env.TENANT_RATE_LIMIT_REFILL_PER_SEC, 1),
     },
   },
   // Pre-launch V1: retention crons always-on; the `env.cache?.enabled` upstream

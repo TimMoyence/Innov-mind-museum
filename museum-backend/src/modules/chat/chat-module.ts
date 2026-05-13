@@ -9,12 +9,14 @@ import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embedd
 import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
 import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
+import { TenantRateLimiter } from '@modules/chat/adapters/secondary/guardrails/tenant-rate-limiter';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
   TesseractOcrService,
   type DisabledOcrService,
 } from '@modules/chat/adapters/secondary/image/ocr-service';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
+import { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
 import { ArtworkEmbeddingRepositoryPg } from '@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg';
 import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
@@ -63,8 +65,11 @@ import { AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN } from '@shared/audit/audit.types
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { logger } from '@shared/logger/logger';
 import {
+  llmCostCircuitBreakerState,
+  llmCostCircuitBreakerTripsTotal,
   llmGuardCircuitBreakerState,
   llmGuardCircuitBreakerTripsTotal,
+  tenantRateLimitRejectsTotal,
 } from '@shared/observability/prometheus-metrics';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
@@ -298,6 +303,24 @@ export class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
   private _guardrailCircuitBreaker: GuardrailCircuitBreaker | undefined;
+  /**
+   * 2026-05-13 — scalability primitives (perennial design §11). Wired here so
+   * /api/health can surface their state and tests can `getCostCircuitBreaker()`
+   * to assert. The cost breaker is process-scoped (in-memory rolling window).
+   * The tenant rate limiter is built but NOT wired into the request pipeline
+   * V1 — Phase 2 (B2B onset) consumes it from the chat use-case.
+   */
+  private _llmCostCircuitBreaker: LlmCostCircuitBreaker | undefined;
+  private _tenantRateLimiter: TenantRateLimiter | undefined;
+  /**
+   * 2026-05-13 — Phase 1 perennial design: surfaces the active
+   * `GuardrailProvider` adapter for `/api/health/deep` (semantic probe) and
+   * any future shadow-mode aggregator. Single-instance reference so the
+   * health probe and the use-case both target the SAME adapter (the metrics
+   * counters on the adapter are local — calling `.health()` from a fresh
+   * instance would dilute them).
+   */
+  private _guardrailProvider: GuardrailProvider | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
 
@@ -335,6 +358,46 @@ export class ChatModule {
       }
     | undefined {
     return this._guardrailCircuitBreaker?.getState();
+  }
+
+  /**
+   * 2026-05-13 — accessor for the LLM cost circuit breaker (perennial §11 D9).
+   * Surfaced for /api/health, tests, and any future hook that needs to
+   * `recordCharge`/`canAttempt` around a costed LLM call.
+   */
+  getLlmCostCircuitBreaker(): LlmCostCircuitBreaker | undefined {
+    return this._llmCostCircuitBreaker;
+  }
+
+  /**
+   * 2026-05-13 — accessor for the per-tenant rate limiter (perennial §11 D10).
+   * NOT wired V1 (single B2C tenant); ready for Phase 2 (B2B onset).
+   */
+  getTenantRateLimiter(): TenantRateLimiter | undefined {
+    return this._tenantRateLimiter;
+  }
+
+  /**
+   * 2026-05-13 — accessor for the active `GuardrailProvider` adapter.
+   * Returns `undefined` when no candidate is configured (default `off`) or
+   * when the module hasn't been built yet. Consumed by `/api/health/deep`
+   * to call `provider.health()` and `provider.metrics()` for the semantic
+   * probe payload (Phase 1).
+   */
+  getGuardrailProvider(): GuardrailProvider | undefined {
+    return this._guardrailProvider;
+  }
+
+  /**
+   * Idempotent accessor that lazily constructs the guardrail provider on first
+   * call and caches it on `this._guardrailProvider`. Used by the chat use-case
+   * factory so the `/api/health/deep` accessor and the chat hot path share ONE
+   * adapter instance (its local counters + breaker reference would diverge if
+   * we instantiated twice).
+   */
+  private getOrBuildGuardrailProvider(): GuardrailProvider | undefined {
+    this._guardrailProvider ??= this.buildGuardrailProvider();
+    return this._guardrailProvider;
   }
 
   /** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
@@ -471,6 +534,7 @@ export class ChatModule {
         timeoutMs: env.guardrails.timeoutMs,
         circuitBreaker: breaker,
         semaphore,
+        chaosRate: env.guardrails.chaosRate,
       });
     }
 
@@ -620,6 +684,39 @@ export class ChatModule {
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache });
 
+    // ─── Scalability primitives (perennial design §11, 100k clients prep) ───
+    // Both instances live for the lifetime of the process. The cost breaker is
+    // a singleton because its rolling window MUST be shared by every LLM call
+    // site (a per-callsite breaker would never see a system-wide spike). The
+    // tenant rate limiter is a singleton for the same fairness reason —
+    // sharding it would defeat per-tenant accounting.
+    this._llmCostCircuitBreaker = new LlmCostCircuitBreaker({
+      hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
+      dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
+      openDurationMs: env.guardrails.costCircuitBreaker.openDurationMs,
+      onStateChange: (next) => {
+        const nextLabel = next.toLowerCase();
+        for (const label of ['closed', 'half_open', 'open']) {
+          llmCostCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
+        }
+        if (next === 'OPEN') {
+          llmCostCircuitBreakerTripsTotal.inc();
+        }
+      },
+    });
+    // Seed gauges so dashboards see CLOSED before the first transition fires.
+    llmCostCircuitBreakerState.set({ state: 'closed' }, 1);
+    llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
+    llmCostCircuitBreakerState.set({ state: 'open' }, 0);
+
+    this._tenantRateLimiter = new TenantRateLimiter({
+      capacity: env.guardrails.tenantRateLimit.capacity,
+      refillPerSecond: env.guardrails.tenantRateLimit.refillPerSecond,
+      onReject: (tenantId) => {
+        tenantRateLimitRejectsTotal.inc({ tenant_id: tenantId });
+      },
+    });
+
     const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, effectiveOrchestrator);
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
@@ -729,7 +826,11 @@ export class ChatModule {
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: new ArtTopicClassifier(),
-      guardrailProvider: this.buildGuardrailProvider(),
+      // Cache the constructed provider on `this._guardrailProvider` so the
+      // `/api/health/deep` accessor and the chat use-case share ONE adapter
+      // instance — the adapter holds local counters (`metrics()`) and a
+      // circuit-breaker reference; a second instantiation would diverge them.
+      guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.candidate === 'llm-judge',
       llmJudge: async (message: string) =>
@@ -812,6 +913,17 @@ export const getLlmCircuitBreakerState = (): ReturnType<ChatModule['getLlmCircui
 export const getLlmGuardCircuitBreakerState = (): ReturnType<
   ChatModule['getLlmGuardCircuitBreakerState']
 > => getActiveChatModule().getLlmGuardCircuitBreakerState();
+
+/**
+ * 2026-05-13 — runtime accessor for the active `GuardrailProvider` adapter.
+ * Consumed by `/api/health/deep` (Phase 1 semantic probe). Returns
+ * `undefined` when the chat module hasn't been built yet OR when no
+ * candidate is configured — both cases collapse to "no semantic probe
+ * available", which the deep-health handler renders as an empty
+ * `checks.guardrails` array.
+ */
+export const getGuardrailProvider = (): GuardrailProvider | undefined =>
+  getActiveChatModule().getGuardrailProvider();
 
 export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
   getActiveChatModule().isBuilt()

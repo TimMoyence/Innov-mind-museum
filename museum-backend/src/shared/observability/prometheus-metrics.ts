@@ -404,6 +404,131 @@ export const chatUrlHeadProbeTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * Scalability primitives surface (perennial design §11 / 100k clients prep,
+ * 2026-05-13). Four series families, all with bounded cardinality :
+ *
+ *   - `musaium_guardrail_budget_redis_fallback_total` (Counter, labelless) —
+ *     incremented every time the guardrail-budget Redis backend has to
+ *     fail-CLOSED because the cache is unreachable / corrupted. Drives a
+ *     Redis-availability alert (LLM10 unbounded-consumption hardening from
+ *     ADR-030 §Phase 2 + ADR-015 known gap). 1 active series.
+ *
+ *   - `musaium_llm_cost_circuit_breaker_state{state}` (Gauge) — holds 1 for
+ *     the active state and 0 for the other two. `state` ∈ {closed,
+ *     half_open, open}. 3 active series.
+ *
+ *   - `musaium_llm_cost_circuit_breaker_trips_total` (Counter, labelless) —
+ *     incremented on each transition to OPEN (cost spike or daily cap
+ *     breach). 1 active series.
+ *
+ *   - `musaium_tenant_rate_limit_rejects_total{tenant_id}` (Counter) —
+ *     cardinality bounded by the live tenant population (Phase 2 ≤ ~20 +
+ *     `anonymous`); V1 not wired, so 0 active series until the multi-tenant
+ *     path lands.
+ *
+ * Total active series ≤ 5 in V1, +N tenants when wired (Phase 2).
+ */
+export const guardrailBudgetRedisFallbackTotal = new Counter({
+  name: 'musaium_guardrail_budget_redis_fallback_total',
+  help: 'Total guardrail-budget Redis backend fail-CLOSED fallbacks (unreachable / corrupted counter)',
+  registers: [registry],
+});
+
+export const llmCostCircuitBreakerState = new Gauge({
+  name: 'musaium_llm_cost_circuit_breaker_state',
+  help: 'Current state of the LLM cost circuit breaker. 1 = active state, 0 = inactive.',
+  labelNames: ['state'] as const,
+  registers: [registry],
+});
+
+export const llmCostCircuitBreakerTripsTotal = new Counter({
+  name: 'musaium_llm_cost_circuit_breaker_trips_total',
+  help: 'Total transitions of the LLM cost circuit breaker into OPEN (cost spike or daily cap breach)',
+  registers: [registry],
+});
+
+export const tenantRateLimitRejectsTotal = new Counter({
+  name: 'musaium_tenant_rate_limit_rejects_total',
+  help: 'Total per-tenant rate-limit rejects. Cardinality bounded by live tenant population.',
+  labelNames: ['tenant_id'] as const,
+  registers: [registry],
+});
+
+/**
+ * Per-locale bias monitoring foundation counter (FAIRNESS_METRICS_PLAN.md Phase 1,
+ * `team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-bias-monitoring.md`).
+ *
+ * Foundation source-of-truth for every block-rate derivation. The block rate
+ * per locale is NOT a separate gauge — it is a Prometheus recording rule
+ * computed as
+ *   `avg(rate(decisions{decision="block"}[1h]) / rate(decisions[1h])) by (locale)`.
+ * Using `total_blocks / total_requests` (without the per-locale avg) is the
+ * methodological pitfall flagged in the research subagent §3 — it inflates
+ * disparity for high-volume locales and hides it for low-volume ones.
+ *
+ * Cardinality (worst case):
+ *   - `locale`   ∈ {ar, de, en, es, fr, it, ja, zh, unknown}  → 9 values
+ *   - `layer`    ∈ {keyword, sidecar, judge, art-topic, sanitizer} → 5 values
+ *   - `decision` ∈ {allow, block}                                  → 2 values
+ * 9 × 5 × 2 = 90 active series — within the 200-budget set in the NFR table.
+ *
+ * Aligned with the AI Act Art. 10 (data governance) requirement for
+ * high-risk systems: providers must have in place "measures to detect,
+ * prevent and mitigate identified biases". A block-rate disparity with no
+ * monitoring record is a compliance gap regardless of cause.
+ */
+export const guardrailDecisionsTotal = new Counter({
+  name: 'musaium_guardrail_decisions_total',
+  help: 'Total guardrail decisions, labelled by locale, layer, decision. Foundation for block-rate derivations.',
+  labelNames: ['locale', 'layer', 'decision'] as const,
+  registers: [registry],
+});
+
+/**
+ * Per-locale category block volume — distinguishes false-positive inflation
+ * (calibration bug, e.g. a keyword bank tuned on French content over-flagging
+ * Arabic calligraphy discussions) from legitimate content concentration
+ * (some cultural corpora genuinely have more content touching sensitive
+ * historical events).
+ *
+ * Categories collapse `GuardrailBlockReason` into a stable bias taxonomy:
+ *   - `insult`             — direct user offence
+ *   - `prompt_injection`   — jailbreak / injection / data_exfiltration
+ *   - `off_topic`          — soft channel (art-topic classifier + judge off-topic)
+ *   - `unsafe_output`      — non-PII unsafe output (toxicity, bias, schema, etc.)
+ *   - `service_unavailable` — sidecar fail-CLOSED (not a content-quality block —
+ *                              still tracked for parity so locale disparity in
+ *                              upstream failure can be observed too)
+ *   - `other`              — any reason that does not map (safety net for future)
+ *
+ * Cardinality: 9 locales × ≤7 categories = ≤63 active series — within budget.
+ */
+export const guardrailCategoryBlocksTotal = new Counter({
+  name: 'musaium_guardrail_category_blocks_total',
+  help: 'Total guardrail blocks by locale and category. Diagnoses FP inflation vs legitimate concentration.',
+  labelNames: ['locale', 'category'] as const,
+  registers: [registry],
+});
+
+/**
+ * LLM Guard chaos-injection counter (Phase 1 chaos engineering primitive).
+ *
+ * Increments each time the configured `GUARDRAIL_CHAOS_RATE` triggers a
+ * simulated abort BEFORE the sidecar fetch. Pair with
+ * `musaium_llm_guard_scan_duration_seconds{outcome="timeout"}` and
+ * `musaium_guardrail_decisions_total{decision="block"}` to validate the
+ * fail-CLOSED path. `chaosRate` MUST be 0 in production — non-zero values
+ * intentionally degrade availability to exercise resilience drills.
+ *
+ * Cardinality: 1 active series (labelless).
+ */
+export const llmGuardChaosInjectionsTotal = new Counter({
+  name: 'musaium_llm_guard_chaos_injections_total',
+  help: 'Total LLM Guard /scan calls that were chaos-aborted before reaching the sidecar (GUARDRAIL_CHAOS_RATE).',
+  registers: [registry],
+});
+
 /** Returns the Prometheus-format metrics dump. */
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();

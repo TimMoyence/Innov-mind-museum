@@ -5,6 +5,7 @@ import {
 } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { logger } from '@shared/logger/logger';
 import {
+  llmGuardChaosInjectionsTotal,
   llmGuardCircuitBreakerSkipsTotal,
   llmGuardScanDurationSeconds,
 } from '@shared/observability/prometheus-metrics';
@@ -56,7 +57,33 @@ interface LLMGuardAdapterOptions {
    * env-configured instance, but tests can keep the default.
    */
   semaphore?: ScanInflightSemaphore;
+  /**
+   * Optional chaos injection rate in [0, 1]. Each `scan()` call samples a
+   * uniform random number; if it falls below `chaosRate`, the call is
+   * replaced by a simulated `AbortError` BEFORE leaving the adapter. The
+   * normal timeout/error path then absorbs the failure → fail-CLOSED (R1)
+   * preserved. Defaults to 0 (inactive).
+   */
+  chaosRate?: number;
+  /**
+   * Optional RNG override — defaults to `Math.random`. Injectable so unit
+   * tests can pin the sampled value to 0 (always-inject) or 1 (never-inject)
+   * without flakiness.
+   */
+  rng?: () => number;
 }
+
+/**
+ * Defensive [0, 1] clamp for the constructor-injected `chaosRate`. The env
+ * parser already clamps via `clampUnitInterval`; this re-clamp guards against
+ * direct constructor calls (tests) that bypass env.
+ */
+const clampUnit = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+};
 
 /**
  * Lookup table: substring in the sidecar reason → canonical block reason.
@@ -125,6 +152,10 @@ export class LLMGuardAdapter implements GuardrailProvider {
   private readonly fetchFn: typeof fetch;
   private readonly circuitBreaker: GuardrailCircuitBreaker;
   private readonly semaphore: ScanInflightSemaphore;
+  /** Phase 1 chaos primitive — see ADR-048 + GUARDRAIL_CHAOS_RATE env. */
+  private readonly chaosRate: number;
+  /** Injectable RNG for chaos sampling (defaults to Math.random in production). */
+  private readonly rng: () => number;
 
   // ── Local metrics counters (cumulative since process start). Shadow the
   // global Prometheus registry so `metrics()` exposes a self-contained view
@@ -144,6 +175,10 @@ export class LLMGuardAdapter implements GuardrailProvider {
     // don't care about concurrency don't have to construct one. Production
     // composition root in chat-module.ts always injects an env-bounded one.
     this.semaphore = options.semaphore ?? new ScanInflightSemaphore(1_000_000, 1_000_000);
+    // Chaos primitive — defaults inactive. Re-clamps defensively against
+    // direct constructor calls that bypass the env-side `clampUnitInterval`.
+    this.chaosRate = clampUnit(options.chaosRate ?? 0);
+    this.rng = options.rng ?? Math.random;
   }
 
   /** Snapshot of the breaker state for `/api/health` (R8). */
@@ -289,6 +324,16 @@ export class LLMGuardAdapter implements GuardrailProvider {
     }
   }
 
+  /**
+   * Returns `true` exactly when the chaos sampler fires for this attempt.
+   * `chaosRate === 0` short-circuits the RNG so the production hot path
+   * stays a single comparison.
+   */
+  private shouldChaosInject(): boolean {
+    if (this.chaosRate <= 0) return false;
+    return this.rng() < this.chaosRate;
+  }
+
   private async scanOverHttp(
     path: string,
     body: Record<string, unknown>,
@@ -297,6 +342,17 @@ export class LLMGuardAdapter implements GuardrailProvider {
     const timer = setTimeout(() => {
       controller.abort();
     }, this.timeoutMs);
+
+    // Phase 1 chaos hook — simulate upstream failure BEFORE the fetch so the
+    // existing timeout/error path is exercised end-to-end. The abort is
+    // observably identical to a real timeout, which is the point: chaos
+    // drills validate the fail-CLOSED contract using the same code that
+    // absorbs real outages, not a parallel branch.
+    if (this.shouldChaosInject()) {
+      llmGuardChaosInjectionsTotal.inc();
+      logger.warn('llm_guard_chaos_injected', { path, chaosRate: this.chaosRate });
+      controller.abort(new DOMException('Simulated chaos abort', 'AbortError'));
+    }
 
     try {
       const response = await this.fetchFn(`${this.baseUrl}${path}`, {

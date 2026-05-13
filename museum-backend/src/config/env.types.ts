@@ -609,5 +609,38 @@ export interface AppEnv {
       /** MALICIOUS score threshold above which a block verdict is emitted. Default 0.8. */
       scoreThreshold: number;
     };
+    /**
+     * Chaos drill probability in [0, 1] consumed by `LLMGuardAdapter`. Each
+     * scan call samples a uniform random; if the result < `chaosRate`, the
+     * call is aborted BEFORE the fetch (exercise of the fail-CLOSED path).
+     * Production MUST be 0.
+     */
+    chaosRate: number;
+    /**
+     * 2026-05-13 — LLM cost circuit breaker tunables (perennial design §11 D9
+     * RE2). Distinct from the latency `LLMCircuitBreaker`: trips on cost
+     * SPIKES (DDoS / scraping abuse) and daily-cap breach. ALWAYS-ON, no
+     * `*_ENABLED` flag (pré-launch V1 doctrine).
+     */
+    costCircuitBreaker: {
+      /** Cents-per-hour threshold above which the breaker trips OPEN. */
+      hourlyThresholdCents: number;
+      /** Cents-per-UTC-day cumulative cap above which the breaker trips OPEN. */
+      dailyBudgetCents: number;
+      /** Cooldown (ms) after which an OPEN breaker becomes HALF_OPEN. */
+      openDurationMs: number;
+    };
+    /**
+     * 2026-05-13 — per-tenant rate limiter tunables (perennial design §11
+     * D10 RE3). Primitive only — NOT wired V1 (single B2C tenant). Mounted
+     * Phase 2 (B2B onset). Token-bucket: bursts up to `capacity`, refill at
+     * `refillPerSecond` smoothly.
+     */
+    tenantRateLimit: {
+      /** Max tokens per bucket (burst capacity). */
+      capacity: number;
+      /** Tokens regenerated per second. 1.0 = one sustained req/s. */
+      refillPerSecond: number;
+    };
   };
 }
