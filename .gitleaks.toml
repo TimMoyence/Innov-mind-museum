@@ -104,6 +104,12 @@ paths = [
   # rule false-positives on minified function names like `getKeys`. Source code
   # under tools/eslint-plugin-musaium-test-discipline/src/ is still scanned.
   '''^tools/eslint-plugin-musaium-test-discipline/dist/''',
+  # Stryker incremental cache (generated build artifact). Persists mutant
+  # results including captured Jest failure traces that may inline test-
+  # fixture JWTs signed with the unit-test access-token secret. These tokens
+  # are synthesised per-test via makeToken() in tests/helpers/auth/token.helpers.ts
+  # using the test-only JWT_ACCESS_TOKEN_SECRET — never real credentials.
+  '''museum-backend/reports/stryker-incremental\.json$''',
 ]
 # Placeholder tokens used in docs / examples / tests. These must never
 # resemble real credentials; add a comment explaining each addition.
