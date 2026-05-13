@@ -143,7 +143,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-5 — `chaos-circuit-breaker.e2e` HALF_OPEN→CLOSED test cannot run without orchestrator stub-swap
+### TD-6 — `chaos-circuit-breaker.e2e` HALF_OPEN→CLOSED test cannot run without orchestrator stub-swap
 
 - [ ] **Statut** : ouvert (créé 2026-05-12, sprint audit-cleanup-2026-05-12 / D.4)
 - **Référence code** :
@@ -156,7 +156,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Comment fermer** :
   1. Add `harness.orchestratorReset(newOrchestrator)` in `tests/helpers/e2e/`.
   2. Replace the `it.todo` at chaos-circuit-breaker.e2e.test.ts:100 with a real `it(...)` that: trips breaker → swaps to success orchestrator → waits openDurationMs → asserts CLOSED on next call.
-  3. Cocher TD-5 ici.
+  3. Cocher TD-6 ici.
 
 ---
 
