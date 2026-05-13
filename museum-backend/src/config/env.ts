@@ -194,6 +194,16 @@ const env: AppEnv = {
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
+    // P0-4 (audit 2026-05-12) — operational kill-switch + per-user daily USD
+    // ceiling for paid LLM calls. NOT a feature flag: `killSwitch` is the
+    // global panic button (flip via env reload + restart, fail-CLOSED). Wired
+    // through `LlmCostGuard` at the HTTP seam (see
+    // `src/helpers/middleware/llm-cost-guard.middleware.ts`). Pré-launch V1
+    // doctrine: rollback path is `git revert`, not a flag.
+    costGuard: {
+      killSwitch: toBoolean(process.env.LLM_KILL_SWITCH, false),
+      userDailyCapUsd: toNumber(process.env.OPENAI_USER_DAILY_USD_CAP, 0.5),
+    },
   },
   rateLimit: {
     ipLimit: toNumber(process.env.RATE_LIMIT_IP, 200),

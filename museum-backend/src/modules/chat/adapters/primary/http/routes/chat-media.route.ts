@@ -1,7 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 
-import { Router } from 'express';
 
 import {
   parseFeedbackMessageRequest,
@@ -21,12 +20,14 @@ import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/stor
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
+import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
 import {
   bySession,
   byUserId,
   createRateLimitMiddleware,
 } from '@shared/middleware/rate-limit.middleware';
 import { env } from '@src/config/env';
+import { Router } from 'express';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
@@ -222,6 +223,11 @@ export const createMediaRouter = (
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
+    // P0-4 (audit 2026-05-12 §P0-U-2) — kill-switch + per-user daily USD cap.
+    // Audio turn triggers STT + LLM + TTS, all paid OpenAI calls. Placed AFTER
+    // rate limiters so volume control runs first (cheaper failure path) and
+    // BEFORE upload admission so a denied call does not occupy a multipart slot.
+    llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
     createAudioHandler(chatService),
@@ -249,6 +255,10 @@ export const createMediaRouter = (
     isAuthenticated,
     userLimiter,
     sessionLimiter,
+    // P0-4 (audit 2026-05-12 §P0-U-2) — paid OpenAI TTS call. Same chokepoint
+    // as the audio handler so the kill-switch globally gates every paid
+    // outbound LLM/audio call on this router.
+    llmCostGuard,
     createTtsHandler(chatService),
   );
   router.get('/messages/:messageId/image', createImageServeHandler(chatService));

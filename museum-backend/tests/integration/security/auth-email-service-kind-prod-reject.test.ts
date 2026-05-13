@@ -72,6 +72,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       maxAudioBytes: 12582912,
       maxOutputTokens: 800,
       includeDiagnostics: false,
+      costGuard: { killSwitch: false, userDailyCapUsd: 0.5 },
     },
     rateLimit: {
       ipLimit: 200,

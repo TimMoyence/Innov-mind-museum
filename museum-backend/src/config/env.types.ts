@@ -194,6 +194,19 @@ export interface AppEnv {
     openAiApiKey?: string;
     deepseekApiKey?: string;
     googleApiKey?: string;
+    /**
+     * P0-4 (audit 2026-05-12, `docs/audit-2026-05-12/details/04-kiss.md` §P0-U-2)
+     * cost guard tunables. NOT feature flags — `killSwitch` is an operational
+     * panic button (live ↔ kill via env reload + restart), `userDailyCapUsd`
+     * is the per-user daily USD ceiling. Wired through `LlmCostGuard` at the
+     * HTTP route seam (see `src/helpers/middleware/llm-cost-guard.middleware.ts`).
+     */
+    costGuard: {
+      /** Global panic button — when `true`, every paid LLM call is denied. */
+      killSwitch: boolean;
+      /** Per-authenticated-user daily USD ceiling (anonymous bypasses). */
+      userDailyCapUsd: number;
+    };
   };
   rateLimit: {
     ipLimit: number;

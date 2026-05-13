@@ -2,8 +2,6 @@ import './instrumentation';
 import 'reflect-metadata';
 import util from 'node:util';
 
-import { Queue } from 'bullmq';
-import Redis from 'ioredis';
 
 import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
@@ -25,8 +23,10 @@ import { registerSupportRetentionCron } from '@modules/support/jobs/support-rete
 import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cron.registrar';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-counter';
 import { logger } from '@shared/logger/logger';
 import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
+import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
 import {
   stopRateLimitSweep,
   setRedisRateLimitStore,
@@ -38,6 +38,8 @@ import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
+import { Queue } from 'bullmq';
+import Redis from 'ioredis';
 
 import { createApp } from './app';
 
@@ -95,6 +97,10 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     const redisRateLimitStore = new RedisRateLimitStore(redisClient);
     setRedisRateLimitStore(redisRateLimitStore);
     setDailyChatLimitCacheService(redisCacheService);
+    // P0-4 (audit 2026-05-12 §P0-U-2) — wire the per-user daily USD counter on
+    // the same ioredis client. The middleware fails OPEN if no counter is
+    // registered (dev/test), so this single setter is the only boot wiring.
+    setLlmCostCounter(new RedisLlmCostCounter(redisClient));
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };
