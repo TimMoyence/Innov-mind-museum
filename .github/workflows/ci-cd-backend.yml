@@ -761,15 +761,17 @@ jobs:
             # hotfix build because every CI pull resolved to `:<sha>`, never
             # `:latest`, so the daemon's local `:latest` never refreshed — and
             # any restart without IMAGE_TAG set rolled back 4 days of code.
-            # Backups go to ~/.museum-env-backups/ (out of /srv/museum/ to
-            # avoid the docker-compose.yml.bak.* accumulation pattern).
+            # /srv/museum/.env is root-owned (same chmod as the rollback.sh
+            # mv'd in the prior workflow step) — must go through sudo. Backups
+            # land in ~/.museum-env-backups/ (user-owned) to avoid the
+            # docker-compose.yml.bak.* accumulation pattern in /srv/museum/.
             ENV_FILE=/srv/museum/.env
             BACKUP_DIR="${HOME}/.museum-env-backups"
             mkdir -p "${BACKUP_DIR}"
-            cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
-            grep -v '^IMAGE_TAG=' "${ENV_FILE}" > "${ENV_FILE}.tmp" || true
-            echo "IMAGE_TAG=${IMAGE_TAG}" >> "${ENV_FILE}.tmp"
-            mv "${ENV_FILE}.tmp" "${ENV_FILE}"
+            sudo cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+            sudo grep -v '^IMAGE_TAG=' "${ENV_FILE}" | sudo tee "${ENV_FILE}.tmp" >/dev/null || true
+            echo "IMAGE_TAG=${IMAGE_TAG}" | sudo tee -a "${ENV_FILE}.tmp" >/dev/null
+            sudo mv "${ENV_FILE}.tmp" "${ENV_FILE}"
             echo "[deploy] persisted IMAGE_TAG=${IMAGE_TAG} to ${ENV_FILE}"
 
             IMAGE_REF="ghcr.io/${GHCR_USER}/museum-backend"
@@ -1267,13 +1269,15 @@ jobs:
 
             # Persist IMAGE_TAG to /srv/museum/.env — see prod deploy step
             # above for rationale (2026-05-13 OTel crash-loop forensics).
+            # /srv/museum/.env is root-owned, sudo required (same pattern as
+            # the rollback.sh `sudo mv` earlier in the workflow).
             ENV_FILE=/srv/museum/.env
             BACKUP_DIR="${HOME}/.museum-env-backups"
             mkdir -p "${BACKUP_DIR}"
-            cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
-            grep -v '^IMAGE_TAG=' "${ENV_FILE}" > "${ENV_FILE}.tmp" || true
-            echo "IMAGE_TAG=${IMAGE_TAG}" >> "${ENV_FILE}.tmp"
-            mv "${ENV_FILE}.tmp" "${ENV_FILE}"
+            sudo cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+            sudo grep -v '^IMAGE_TAG=' "${ENV_FILE}" | sudo tee "${ENV_FILE}.tmp" >/dev/null || true
+            echo "IMAGE_TAG=${IMAGE_TAG}" | sudo tee -a "${ENV_FILE}.tmp" >/dev/null
+            sudo mv "${ENV_FILE}.tmp" "${ENV_FILE}"
             echo "[deploy] persisted IMAGE_TAG=${IMAGE_TAG} to ${ENV_FILE}"
 
             STATE_DIR="${HOME}/.museum-rollback/backend-staging"

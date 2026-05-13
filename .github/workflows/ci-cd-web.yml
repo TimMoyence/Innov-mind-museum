@@ -391,13 +391,14 @@ jobs:
             # Same root cause + fix as backend (see ci-cd-backend.yml deploy-prod
             # comment) — 2026-05-13 OTel crash-loop showed the local `:latest`
             # can lag prod by days when CI always pulls `:<sha>` only.
+            # /srv/museum/.env is root-owned, sudo required.
             ENV_FILE=/srv/museum/.env
             BACKUP_DIR="${HOME}/.museum-env-backups"
             mkdir -p "${BACKUP_DIR}"
-            cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
-            grep -v '^WEB_IMAGE_TAG=' "${ENV_FILE}" > "${ENV_FILE}.tmp" || true
-            echo "WEB_IMAGE_TAG=${WEB_IMAGE_TAG}" >> "${ENV_FILE}.tmp"
-            mv "${ENV_FILE}.tmp" "${ENV_FILE}"
+            sudo cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+            sudo grep -v '^WEB_IMAGE_TAG=' "${ENV_FILE}" | sudo tee "${ENV_FILE}.tmp" >/dev/null || true
+            echo "WEB_IMAGE_TAG=${WEB_IMAGE_TAG}" | sudo tee -a "${ENV_FILE}.tmp" >/dev/null
+            sudo mv "${ENV_FILE}.tmp" "${ENV_FILE}"
             echo "[deploy] persisted WEB_IMAGE_TAG=${WEB_IMAGE_TAG} to ${ENV_FILE}"
 
             # 1. Pull the new image
