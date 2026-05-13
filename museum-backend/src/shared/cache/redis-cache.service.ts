@@ -137,6 +137,7 @@ export class RedisCacheService implements CacheService {
         String(Math.trunc(amount)),
         String(Math.trunc(ttlSeconds)),
       );
+      // Stryker disable next-line ConditionalExpression,StringLiteral: both mutants (`false ? r : Number(r)` and `typeof r === "" ? r : Number(r)`) collapse to always-Number(result) — observationally identical because Number(number)===number, Number(string-number)===that-number, and Number(non-numeric) returns NaN which Number.isFinite() rejects to null below. Manual verified equivalent: ioredis eval returns number|string|null|Buffer, and every input shape produces the same numeric|null outcome through either branch. Verified 2026-05-13.
       const numeric = typeof result === 'number' ? result : Number(result);
       return Number.isFinite(numeric) ? numeric : null;
     } catch {
