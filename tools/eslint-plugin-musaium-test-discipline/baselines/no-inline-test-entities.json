@@ -1,3 +1,21 @@
 {
-  "baseline": []
+  "_comment_": "P1-9 (2026-05-13) — baseline rebaselined from empty to the 15 BE files currently containing inline-entity violations. The previous {baseline:[]} was a ratchet that quietly let regressions slip in because `pnpm lint` only walked `src/`. The accompanying eslint.config.test-discipline.mjs now runs the rule against tests/ (incl. tests/integration/) via `pnpm lint:test-discipline`. Future PRs cannot add files to this list — the rule will fire as 'error' for any non-baselined path. Fixing the 15 underlying files is a separate backlog item, NOT this commit.",
+  "_schema_": "baseline = array of repo-root-relative paths whose musaium-test-discipline/no-inline-test-entities errors are grandfathered. Sorted alphabetically. Updated only by SHRINKING (Phase 7 migration to factories).",
+  "baseline": [
+    "museum-backend/tests/contract/openapi/openapi-response.contract.test.ts",
+    "museum-backend/tests/integration/chat/user-memory-personalization.integration.test.ts",
+    "museum-backend/tests/integration/chat/user-memory-recent-sessions.integration.test.ts",
+    "museum-backend/tests/unit/admin/audit-breach.test.ts",
+    "museum-backend/tests/unit/audit/audit-chain-migration-parity.test.ts",
+    "museum-backend/tests/unit/audit/audit-chain.test.ts",
+    "museum-backend/tests/unit/auth/export-user-data.test.ts",
+    "museum-backend/tests/unit/review/review-repository.test.ts",
+    "museum-backend/tests/unit/review/review-route.test.ts",
+    "museum-backend/tests/unit/security/stored-xss.test.ts",
+    "museum-backend/tests/unit/shared/audit/audit-chain-verifier.test.ts",
+    "museum-backend/tests/unit/support/addTicketMessage.useCase.test.ts",
+    "museum-backend/tests/unit/support/listAllTickets.useCase.test.ts",
+    "museum-backend/tests/unit/support/listUserTickets.useCase.test.ts",
+    "museum-backend/tests/unit/support/updateTicketStatus.useCase.test.ts"
+  ]
 }
