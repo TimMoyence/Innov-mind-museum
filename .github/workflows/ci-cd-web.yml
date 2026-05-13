@@ -84,7 +84,10 @@ jobs:
         working-directory: museum-web
     services:
       postgres:
-        image: postgres:16
+        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
+        # Required because BE migration AddArtworkEmbeddings1778406339944
+        # runs `CREATE EXTENSION IF NOT EXISTS vector`, which fails on vanilla postgres:16.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: museum_dev
           POSTGRES_PASSWORD: museum_dev_password
@@ -191,7 +194,10 @@ jobs:
         working-directory: museum-web
     services:
       postgres:
-        image: postgres:16
+        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
+        # Required because BE migration AddArtworkEmbeddings1778406339944
+        # runs `CREATE EXTENSION IF NOT EXISTS vector`, which fails on vanilla postgres:16.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: museum_dev
           POSTGRES_PASSWORD: museum_dev_password
