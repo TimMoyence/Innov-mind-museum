@@ -1,8 +1,9 @@
 
+import { z } from 'zod';
+
 import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-preference';
 import { TTS_VOICES } from '@modules/chat/domain/voice-catalog';
 import { SUPPORTED_LOCALES } from '@shared/i18n/locale';
-import { z } from 'zod';
 
 export const registerSchema = z.object({
   email: z.email(),

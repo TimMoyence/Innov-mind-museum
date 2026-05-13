@@ -1,11 +1,12 @@
 
+import { z } from 'zod';
+
 import { decodeJwtPayload } from '@shared/auth/jwt-decode';
 import {
   type EmailLocale,
   localeFromAcceptLanguage,
   resolveEmailLocale,
 } from '@shared/email/email-locale';
-import { z } from 'zod';
 
 import type { Request } from 'express';
 

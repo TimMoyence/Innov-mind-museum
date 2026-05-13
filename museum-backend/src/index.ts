@@ -3,6 +3,9 @@ import 'reflect-metadata';
 import util from 'node:util';
 
 
+import { Queue } from 'bullmq';
+import Redis from 'ioredis';
+
 import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
@@ -38,8 +41,6 @@ import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
-import { Queue } from 'bullmq';
-import Redis from 'ioredis';
 
 import { createApp } from './app';
 
