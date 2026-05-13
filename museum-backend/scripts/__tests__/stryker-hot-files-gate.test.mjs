@@ -92,12 +92,29 @@ describe('stryker-hot-files-gate', () => {
     expect(r.stderr + r.stdout).toMatch(/missing\.ts/);
   });
 
-  it('counts NoCoverage and Timeout as not-killed (denominator)', () => {
+  it('counts NoCoverage in denominator only (NoCoverage = gap, not a kill)', () => {
     writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
-    // 8 killed, 1 survived, 1 noCoverage = 8/10 = 80% — passes
+    // 8 killed, 1 survived, 1 noCoverage, 0 timeout → (8+0)/10 = 80% — passes
     writeMutationJson({ 'src/a.ts': makeFileMutants(8, 1, 1, 0) });
     const r = runScript();
     expect(r.code).toBe(0);
+  });
+
+  it('counts Timeout as a kill (official Stryker mutationScore convention)', () => {
+    writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
+    // 0 killed, 0 survived, 0 noCoverage, 10 timeout → (0+10)/10 = 100% — passes
+    writeMutationJson({ 'src/a.ts': makeFileMutants(0, 0, 0, 10) });
+    const r = runScript();
+    expect(r.code).toBe(0);
+  });
+
+  it('fails when survivors push the official score below threshold', () => {
+    writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
+    // 5 killed, 3 survived, 0 noCoverage, 0 timeout → 5/8 = 62.5% — fails
+    writeMutationJson({ 'src/a.ts': makeFileMutants(5, 3, 0, 0) });
+    const r = runScript();
+    expect(r.code).toBe(1);
+    expect(r.stderr + r.stdout).toMatch(/62\.5%.*<.*80%/);
   });
 
   it('exits 0 when registry is empty', () => {
