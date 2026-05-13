@@ -2,22 +2,48 @@
   "name": "@musaium/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-app shared utilities (geo, validation, i18n, errors, auth) — consumed by museum-backend, museum-web, and museum-frontend.",
-  "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Cross-app shared utilities (geo, validation, i18n, errors, auth, observability) — consumed by museum-backend, museum-web, and museum-frontend.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./geo": "./src/geo/index.ts",
-    "./validation": "./src/validation/index.ts",
-    "./i18n": "./src/i18n/index.ts",
-    "./errors": "./src/errors/index.ts",
-    "./auth": "./src/auth/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./geo": {
+      "types": "./dist/geo/index.d.ts",
+      "default": "./dist/geo/index.js"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "default": "./dist/validation/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "default": "./dist/i18n/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./observability": {
+      "types": "./dist/observability/index.d.ts",
+      "default": "./dist/observability/index.js"
+    }
   },
   "scripts": {
-    "test": "echo 'no tests yet'"
+    "build": "rm -rf dist && tsc",
+    "test": "node --experimental-strip-types --no-warnings --test src/observability/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

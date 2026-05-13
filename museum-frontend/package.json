@@ -26,6 +26,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@musaium/shared": "file:../packages/musaium-shared",
     "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^5.2.2",
     "@maplibre/maplibre-react-native": "11.0.0",

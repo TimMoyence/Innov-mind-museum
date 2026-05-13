@@ -14,6 +14,10 @@ module.exports = {
   },
   transformIgnorePatterns: [
     'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker|react-native-worklets)',
+    // `@musaium/shared` is wired via `file:../packages/musaium-shared` which
+    // resolves through a symlink → outside node_modules → would otherwise be
+    // re-transformed by babel-jest and pull in `@babel/runtime` it doesn't ship.
+    'packages/musaium-shared/dist/',
   ],
   collectCoverageFrom: [
     'features/**/*.{ts,tsx}',

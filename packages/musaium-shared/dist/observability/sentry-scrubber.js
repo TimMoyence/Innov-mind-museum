@@ -1,0 +1,142 @@
+"use strict";
+/**
+ * Cross-runtime Sentry PII scrubber — single source of truth for redaction logic.
+ *
+ * Sentry-SDK-free so it can be unit-tested with plain objects and reused
+ * across Node, React Native, and Next.js (client / server / edge) runtimes.
+ *
+ * The host injects its own `hashEmail` implementation (Node `crypto.createHash`
+ * on the backend, 32-bit fold elsewhere) — that is the ONLY platform-specific
+ * piece. Everything else (regex constants, traversal, URL/header/record
+ * scrubbing, breadcrumb dropping) is identical across runtimes and lives here.
+ *
+ * @see packages/musaium-shared/src/observability/sentry-scrubber.test.ts
+ *   golden-input/golden-output identity test that guards against silent drift.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.scrubRecord = exports.scrubHeaders = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
+/** Header names (case-insensitive) whose values must be redacted before leaving the app. */
+exports.SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/i;
+/** Body / extra field names whose values must be redacted before leaving the app. */
+exports.SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
+/** Query-string keys whose values must be stripped from captured URLs. */
+exports.SENSITIVE_QUERY_KEYS = new Set([
+    'access_token',
+    'api_key',
+    'apikey',
+    'password',
+    'refresh_token',
+    'secret',
+    'token',
+]);
+/** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
+exports.SENSITIVE_BREADCRUMB_PATHS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/reset-password',
+    '/auth/change-password',
+];
+/** Replacement marker written in place of redacted values. */
+exports.REDACTED = '[redacted]';
+/** Returns a copy of `headers` with sensitive values redacted. */
+const scrubHeaders = (headers) => {
+    const out = { ...headers };
+    for (const key of Object.keys(out)) {
+        if (exports.SENSITIVE_HEADER_REGEX.test(key)) {
+            out[key] = exports.REDACTED;
+        }
+    }
+    return out;
+};
+exports.scrubHeaders = scrubHeaders;
+/** Recursively redacts values under sensitive keys. Arrays and nested objects are walked. */
+const scrubRecord = (input) => {
+    if (Array.isArray(input)) {
+        return input.map((item) => (0, exports.scrubRecord)(item));
+    }
+    if (input !== null && typeof input === 'object') {
+        const src = input;
+        const out = {};
+        for (const [key, value] of Object.entries(src)) {
+            out[key] = exports.SENSITIVE_FIELD_REGEX.test(key) ? exports.REDACTED : (0, exports.scrubRecord)(value);
+        }
+        return out;
+    }
+    return input;
+};
+exports.scrubRecord = scrubRecord;
+/** Strips sensitive query-string values from a URL while preserving the rest. */
+const scrubUrl = (url) => {
+    const qIndex = url.indexOf('?');
+    if (qIndex === -1)
+        return url;
+    const base = url.slice(0, qIndex);
+    const qs = url.slice(qIndex + 1);
+    const parts = qs.split('&').map((pair) => {
+        const eq = pair.indexOf('=');
+        if (eq === -1)
+            return pair;
+        const key = pair.slice(0, eq);
+        if (exports.SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) {
+            return `${key}=${exports.REDACTED}`;
+        }
+        return pair;
+    });
+    return `${base}?${parts.join('&')}`;
+};
+exports.scrubUrl = scrubUrl;
+/** Returns a copy of `request` with sensitive headers / data / URL fields scrubbed. */
+const scrubRequest = (request) => {
+    const out = { ...request };
+    if (out.headers && typeof out.headers === 'object') {
+        out.headers = (0, exports.scrubHeaders)(out.headers);
+    }
+    if (out.data && typeof out.data === 'object') {
+        out.data = (0, exports.scrubRecord)(out.data);
+    }
+    if (typeof out.url === 'string') {
+        out.url = (0, exports.scrubUrl)(out.url);
+    }
+    return out;
+};
+/** Returns a copy of `user` with the raw email removed, replaced by a stable fingerprint. */
+const scrubUser = (user, deps) => {
+    const out = { ...user };
+    const fingerprint = deps.hashEmail(out.email ?? '');
+    delete out.email;
+    if (fingerprint) {
+        out.id = out.id ?? fingerprint;
+        out.email_hash = fingerprint;
+    }
+    return out;
+};
+/**
+ * Applies all scrubbing rules to a Sentry event (returns a new object).
+ *
+ * Email fingerprinting is delegated to `deps.hashEmail` — pass the runtime's
+ * implementation (Node crypto on backend, 32-bit fold elsewhere).
+ */
+const scrubEvent = (event, deps) => {
+    const next = { ...event };
+    if (next.request) {
+        next.request = scrubRequest(next.request);
+    }
+    if (next.user?.email) {
+        next.user = scrubUser(next.user, deps);
+    }
+    if (next.extra && typeof next.extra === 'object') {
+        next.extra = (0, exports.scrubRecord)(next.extra);
+    }
+    return next;
+};
+exports.scrubEvent = scrubEvent;
+/** Returns `true` when the breadcrumb should be dropped (auth-adjacent HTTP call). */
+const shouldDropBreadcrumb = (breadcrumb) => {
+    if (breadcrumb.category !== 'http')
+        return false;
+    const url = breadcrumb.data?.url;
+    if (typeof url !== 'string')
+        return false;
+    return exports.SENSITIVE_BREADCRUMB_PATHS.some((path) => url.includes(path));
+};
+exports.shouldDropBreadcrumb = shouldDropBreadcrumb;

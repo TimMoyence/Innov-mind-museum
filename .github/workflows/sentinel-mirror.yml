@@ -116,6 +116,9 @@ jobs:
       - name: 'Mirror Gate P8 — guardrails ratchet'
         run: node scripts/sentinels/guardrails-ratchet.mjs
 
+      - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
+        run: node scripts/sentinels/sentry-scrubber-parity.mjs
+
       - name: 'Mirror summary'
         if: success()
         run: echo "✅ All sentinels mirrored successfully — no local-bypass detected."

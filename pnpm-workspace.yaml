@@ -1,0 +1,5 @@
+packages:
+  - 'museum-backend'
+  - 'museum-web'
+  - 'design-system'
+  - 'packages/*'

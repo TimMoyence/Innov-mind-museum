@@ -18,7 +18,8 @@
 #   7. IDOR matrix smoke sentinel        — auto-skips if test absent
 #   8. Guardrails ratchet sentinel       — keyword count >= baseline
 #   9. as-any ratchet (full repo)        — count <= baseline
-#  10. Gitleaks scan on push range
+#  10. Sentry-scrubber parity sentinel   — PII redaction divergence guard
+#  11. Gitleaks scan on push range
 # =============================================================================
 set -e
 
@@ -81,8 +82,13 @@ gate_start "Gate 9/10 as-any ratchet (full repo)"
 node scripts/sentinels/as-any-ratchet.mjs || exit 1
 gate_end "Gate 9"
 
-# ─── Gate 10 — Gitleaks on push range ──────────────────────────────────────
-gate_start "Gate 10/10 gitleaks (push range)"
+# ─── Gate 10 — Sentry-scrubber parity ──────────────────────────────────────
+gate_start "Gate 10/11 sentry-scrubber parity sentinel"
+node scripts/sentinels/sentry-scrubber-parity.mjs || exit 1
+gate_end "Gate 10"
+
+# ─── Gate 11 — Gitleaks on push range ──────────────────────────────────────
+gate_start "Gate 11/11 gitleaks (push range)"
 upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo '')"
 if [ -n "$upstream" ]; then
   range="${upstream}..HEAD"
@@ -99,10 +105,10 @@ else
   echo "[pre-push] ✗ gitleaks binary not found — install: brew install gitleaks"
   exit 1
 fi
-gate_end "Gate 10"
+gate_end "Gate 11"
 
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 10 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 11 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"

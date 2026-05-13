@@ -24,6 +24,7 @@
     "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
+    "@musaium/shared": "workspace:*",
     "@sentry/nextjs": "^10.49.0",
     "framer-motion": "^12.38.0",
     "maplibre-gl": "^5.23.0",

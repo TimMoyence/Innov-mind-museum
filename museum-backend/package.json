@@ -123,6 +123,7 @@
     "typescript-eslint": "^8.58.1"
   },
   "dependencies": {
+    "@musaium/shared": "workspace:*",
     "@langchain/core": "1.1.45",
     "@langchain/google-genai": "2.1.26",
     "@langchain/openai": "1.4.2",

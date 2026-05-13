@@ -10,7 +10,8 @@
     "sentinel:migration-revertibility": "node scripts/sentinels/migration-revertibility.mjs",
     "sentinel:cache-key-parity": "node scripts/sentinels/cache-key-parity.mjs",
     "sentinel:idor-smoke": "node scripts/sentinels/idor-smoke.mjs",
-    "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs"
+    "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs",
+    "sentinel:sentry-scrubber-parity": "node scripts/sentinels/sentry-scrubber-parity.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7"
