@@ -1782,6 +1782,53 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/chat/messages/{messageId}/explanation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * GDPR Art. 22 right-to-explanation for a chat message
+     * @description Returns the localised decision, category, recourse path and audit reference for a chat message owned by the authenticated caller. Pre-emptive implementation of GDPR Art. 22 + AI Act Art. 14 / Art. 50; see `docs/GDPR_ART22_SCOPE.md`. Cross-tenant probes return 404 (security through obscurity).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional locale override (BCP47 or two-letter). Falls back to `Accept-Language`, then `en`. */
+          locale?: string;
+        };
+        header?: never;
+        path: {
+          messageId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Explanation payload */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ExplanationResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/chat/art-keywords': {
     parameters: {
       query?: never;
@@ -3474,6 +3521,11 @@ export interface components {
         /** @enum {string} */
         database: 'up' | 'down';
         llmConfigured: boolean;
+        /**
+         * @description LLM Guard sidecar circuit breaker state. Only surfaced in non-production responses (same redaction posture as llmCircuitBreaker). Additive 2026-05-12.
+         * @enum {string}
+         */
+        llmGuard?: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
       };
       environment: string;
       version: string;
@@ -3754,6 +3806,36 @@ export interface components {
       url: string;
       /** Format: date-time */
       expiresAt: string;
+    };
+    /** @description GDPR Article 22 + AI Act Art. 14 / Art. 50 — right-to-explanation payload for a chat message owned by the authenticated caller. See docs/GDPR_ART22_SCOPE.md. */
+    ExplanationResponse: {
+      /** @enum {string} */
+      decision: 'allowed' | 'blocked';
+      /** @enum {string|null} */
+      category:
+        | 'off_topic'
+        | 'prompt_injection'
+        | 'pii'
+        | 'service_unavailable'
+        | 'unsafe_output'
+        | null;
+      reasonSummary: string;
+      recourse: {
+        /** @enum {string} */
+        type: 'self-retry' | 'signal' | 'support';
+        description: string;
+        /** Format: uri */
+        supportUrl: string | null;
+      };
+      /** Format: uuid */
+      auditRef: string | null;
+      providedBy: {
+        name: string;
+        version: string;
+      } | null;
+      /** Format: date-time */
+      decisionAt: string;
+      policyVersion: string;
     };
     ApiKeyResponse: {
       apiKey: {
