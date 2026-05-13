@@ -62,7 +62,7 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) {year} Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help' },
+    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],
@@ -88,12 +88,14 @@ describe('Footer', () => {
     expect(screen.getByText('Made by InnovMind')).toBeInTheDocument();
   });
 
-  it('renders privacy and support links', () => {
+  it('renders privacy, support, and accessibility links', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     const privacyLink = screen.getByText('Privacy Policy');
     const supportLink = screen.getByText('Help');
+    const accessibilityLink = screen.getByText('Accessibility');
     expect(privacyLink).toHaveAttribute('href', '/fr/privacy');
     expect(supportLink).toHaveAttribute('href', '/fr/support');
+    expect(accessibilityLink).toHaveAttribute('href', '/fr/accessibility');
   });
 
   it('renders footer navigation landmark', () => {

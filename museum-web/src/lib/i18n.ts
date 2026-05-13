@@ -94,6 +94,7 @@ export interface Dictionary {
     links: {
       privacy: string;
       support: string;
+      accessibility: string;
     };
   };
   resetPassword: {

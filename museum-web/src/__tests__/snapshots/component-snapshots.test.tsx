@@ -86,7 +86,7 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) 2025 Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help' },
+    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],

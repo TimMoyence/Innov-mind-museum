@@ -52,6 +52,12 @@ export default function Footer({ dict, locale }: FooterProps) {
             >
               {dict.footer.links.support}
             </Link>
+            <Link
+              href={`/${locale}/accessibility`}
+              className="text-sm text-text-secondary transition-colors hover:text-primary-600"
+            >
+              {dict.footer.links.accessibility}
+            </Link>
           </nav>
         </div>
       </div>

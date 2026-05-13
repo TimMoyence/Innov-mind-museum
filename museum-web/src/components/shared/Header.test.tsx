@@ -73,7 +73,7 @@ const mockDict: Dictionary = {
     },
   },
   privacy: { title: '' },
-  footer: { copyright: '', madeBy: '', links: { privacy: '', support: '' } },
+  footer: { copyright: '', madeBy: '', links: { privacy: '', support: '', accessibility: '' } },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],
   confirmEmailChange: {} as Dictionary['confirmEmailChange'],
