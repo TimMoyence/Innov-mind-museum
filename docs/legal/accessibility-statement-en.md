@@ -1,0 +1,137 @@
+# Accessibility Statement — Musaium
+
+**Status**: DRAFT v0.1 — **partial** conformance, WCAG 2.1 AA audit pending.
+**Drafting date**: 2026-05-13 (audit P0-2).
+**Applicable version**: Musaium V1 (launch planned 2026-06-01).
+**Review cycle**: annual, or upon any material change to the service.
+
+> This statement is issued pursuant to **Directive (EU) 2019/882 of 17 April 2019** on the accessibility requirements for products and services (the « European Accessibility Act » — EAA, enforceable since 28 June 2025), and follows the harmonised standard **EN 301 549 V3.2.1** aligned with **WCAG 2.1 level AA**. For users in France, it also satisfies the requirements of Loi n° 2005-102 du 11 février 2005 (Art. 47) and Décret n° 2019-768 of 24 July 2019.
+
+> **Audit note (2026-05-13)**: this statement is published transparently **before** a formal WCAG 2.1 AA audit has been conducted. The declared conformance status is deliberately "partial". No claim of total or substantial conformance is made and none will be made until the audit (automated + manual + user testing with persons with disabilities) has been carried out and documented.
+
+---
+
+## 1. Service identification
+
+| Field | Value |
+|---|---|
+| Service name | Musaium — cultural companion for in-museum and outside-museum visits, mobile app + web site |
+| Operator | Tim Moyence — Sole Proprietor, operating InnovMind / Musaium |
+| Postal address | To be filled in before publication (registered with the French RCS) |
+| Accessibility contact email | `support@musaium.app` |
+| Surfaces in scope | Mobile app iOS + Android (`com.musaium.mobile`); web site `https://musaium.app` (landing + admin panel `/admin`); static privacy policy `https://musaium.app/privacy` |
+
+---
+
+## 2. Conformance status
+
+**PARTIAL — WCAG 2.1 AA audit pending.**
+
+Musaium V1 has **not yet** undergone a formal accessibility audit. The present statement documents honestly:
+- design elements already in place that contribute to accessibility (see § 4),
+- content and flows for which accessibility is not currently guaranteed (see § 3),
+- the planned audit methodology (see § 5).
+
+No claim of total or substantial conformance is made at this stage.
+
+---
+
+## 3. Non-accessible content
+
+<!-- AUDIT WCAG 2.1 AA REQUIRED: the list below is derived from inspection of the source code on 2026-05-13 and informal testing. A formal audit (auto + manual + user testing with persons with disabilities) is required to validate, complete, or refute each point. -->
+
+### 3.1 Identified non-conformances (to be confirmed by audit)
+
+- **Voice flows without a guaranteed equivalent text alternative**: the hands-free mode (incoming STT + outgoing TTS) returns the LLM transcription in parallel, but the persisted TTS audio (`ChatMessage.audioUrl`) has no formal audio description for blind users; the textual transcript of the outgoing audio is not consistently rendered as an independently readable element (WCAG 1.2.1, 1.2.3). To be audited.
+- **RTL rendering (Arabic) on the admin web panel**: the admin shell at `museum-web/src/app/[locale]/admin/*` does not declare `dir="rtl"` and has not been tested in the `ar` locale. Mobile RTL handling exists (`museum-frontend/shared/i18n/rtl.ts`) but has no verified web counterpart (WCAG 1.3.2). To be audited.
+- **Contrast and font sizing**: design-system tokens (`design-system/`) follow a base of Inter 16 px but have not been audited against WCAG 1.4.3 (4.5:1 minimum contrast for normal text) or 1.4.4 (200% zoom without content loss). To be audited.
+- **Mobile tap targets**: chat-interface buttons aim for ≥ 44 × 44 pt (Apple HIG) but have not been audited on iPad or with VoiceOver enabled (WCAG 2.5.5). To be audited.
+- **Generative-AI disclosure**: the `ai_disclosure` banner is rendered on all 3 surfaces (mobile, web, privacy policy) — to be verified that screen readers correctly announce the generative nature of responses (WCAG 4.1.2 + AI Act Art. 50).
+- **User photos and galleries**: visitor-uploaded artwork photos lack auto-generated `alt` text; the AI enrichment pipeline could produce a descriptive alt-text but is not wired for this purpose (WCAG 1.1.1). To be audited.
+- **Keyboard navigation (web)**: the Next.js landing page and the admin panel have not been tested under keyboard-only operation (Tab/Shift-Tab + Enter). No skip-link is implemented (WCAG 2.4.1). To be audited.
+- **Video captions**: demonstration videos on the landing page have no captions nor transcript (WCAG 1.2.2, 1.2.3). To be audited / captioned before launch or removed.
+
+### 3.2 Disproportionate-burden claims
+
+No disproportionate burden is currently claimed. Any future exemption must be documented case-by-case after the audit, with a proportionate justification (EAA Art. 14).
+
+### 3.3 Out-of-scope content
+
+- Third-party content (images from Wikidata / Wikimedia Commons / Unsplash) integrated in read-only — accessibility is the responsibility of the source.
+- Responses generated by third-party LLMs (OpenAI / Google) — linguistic quality is non-deterministic by nature; a simplicity guardrail is not a substitute for formal cognitive accessibility.
+
+---
+
+## 4. Design elements already accessible (before formal audit)
+
+Without prejudging the final conformance verdict, the following elements reflect a conscious accessibility effort already in the code:
+
+- 8-locale internationalisation on mobile (fr, en, ar, de, es, it, ja, zh) with an RTL mechanism on mobile (`museum-frontend/shared/i18n/rtl.ts` — `RTL_LOCALES = ['ar']`).
+- Icon system using Ionicons + PNG (no Unicode emoji in screens — internal rule "no Unicode emoji", avoids degraded screen-reader rendering).
+- Hands-free voice mode (STT + TTS) — beneficial for users with low vision or dyslexia, subject to audit § 3.1.
+- Generative-AI disclosure per AI Act Art. 50 visible on all 3 surfaces.
+- Inter font weights 300/400/500/600/700 — high legibility.
+- Centralised design tokens (`design-system/`) — facilitates a contrast/sizing upgrade across the codebase in a single commit.
+
+---
+
+## 5. Audit methodology (planned)
+
+A WCAG 2.1 AA audit is planned in three passes:
+
+1. **Automated audit** — tools: axe-core, Lighthouse CI (already wired for the web app in `.github/workflows/ci-cd-web.yml`), iOS Accessibility Inspector, Android Accessibility Scanner. Status: **not started**.
+2. **Manual audit** — by an external a11y expert or a trained developer: keyboard-only navigation, VoiceOver iOS, TalkBack Android, NVDA Windows, DOM inspection, ARIA verification. Status: **not started**.
+3. **User testing with persons with disabilities** — at least 3 panels (visual, hearing, motor impairment). Coordination via a partner association (to be appointed). Status: **not started**.
+
+<!-- AUDIT WCAG 2.1 AA REQUIRED: none of the 3 passes has been conducted as of the drafting date. The declaration cannot move from "partial" to "total" until the 3 passes are documented and blocking non-conformances are remediated. -->
+
+---
+
+## 6. Feedback channels and enforcement
+
+Users encountering an accessibility defect can contact:
+
+- **Musaium support service**: `support@musaium.app` — target response within 7 business days.
+- **Défenseur des droits** (France): https://www.defenseurdesdroits.fr — gracious or contentious appeal in case of no response from the operator.
+- **DGCCRF** (France): supervisory authority competent under Décret 2019-768 and the French EAA transposition — https://www.economie.gouv.fr/dgccrf.
+- **ARCOM**: subsidiary competence over online public communication services.
+
+Users outside France should contact the supervisory authority of their EU Member State implementing Directive 2019/882.
+
+---
+
+## 7. Statement updates
+
+- **Annual** review at the latest each 13 May.
+- **Event-driven** review triggered by:
+  - a major UI redesign of any of the 3 surfaces,
+  - the addition of a new media type (video, AR, etc.),
+  - a user complaint or supervisory-authority notice,
+  - the introduction of a new locale.
+- Versioning is tracked in Git — any material change bumps the version (v0.1 → v0.2 → v1.0 once first signed audit lands).
+
+---
+
+## 8. Signature
+
+<!-- AUDIT WCAG 2.1 AA REQUIRED: no signature shall be applied until the audit in § 5 has been conducted. -->
+
+| Role | Name | Date | Signature |
+|---|---|---|---|
+| Service operator | Tim Moyence (InnovMind / Musaium) | _________ | _________ |
+| External a11y auditor | _________ | _________ | _________ |
+
+---
+
+## 9. References
+
+- Directive (EU) 2019/882 (EAA) — https://eur-lex.europa.eu/eli/dir/2019/882/oj
+- French Loi n° 2005-102 du 11 février 2005, Art. 47.
+- French Décret n° 2019-768 of 24 July 2019.
+- Standard EN 301 549 V3.2.1.
+- WCAG 2.1 level AA — https://www.w3.org/TR/WCAG21/
+- AI Act EU 2024/1689 Art. 50 — transparency obligations for generated content.
+
+---
+
+**END declaration v0.1 DRAFT — Awaiting WCAG 2.1 AA audit + operator sign-off.**

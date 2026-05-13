@@ -190,7 +190,8 @@
     "madeBy": "Powered by artificial intelligence",
     "links": {
       "privacy": "Privacy",
-      "support": "Support"
+      "support": "Support",
+      "accessibility": "Accessibility"
     }
   },
   "resetPassword": {

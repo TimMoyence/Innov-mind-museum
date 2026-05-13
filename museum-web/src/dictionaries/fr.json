@@ -190,7 +190,8 @@
     "madeBy": "Propulsé par l'intelligence artificielle",
     "links": {
       "privacy": "Confidentialité",
-      "support": "Aide"
+      "support": "Aide",
+      "accessibility": "Accessibilité"
     }
   },
   "resetPassword": {
