@@ -3,8 +3,8 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 
 import {
-  clampUnitInterval,
   required,
+  resolveChaosRate,
   toBoolean,
   toList,
   toNumber,
@@ -452,8 +452,14 @@ const env: AppEnv = {
     },
     // Chaos drill rate (0..1). Inactive by default; non-zero values
     // intentionally abort LLM Guard /scan calls to exercise the fail-CLOSED
-    // path. Production MUST keep this at 0.
-    chaosRate: clampUnitInterval(toNumber(process.env.GUARDRAIL_CHAOS_RATE, 0)),
+    // path. Production MUST keep this at 0 — see `resolveChaosRate` runtime
+    // guard which refuses non-zero values in NODE_ENV=production unless the
+    // `MUSAIUM_ALLOW_PROD_CHAOS` escape hatch is set verbatim. Spec §6 RO3.
+    chaosRate: resolveChaosRate(
+      process.env.GUARDRAIL_CHAOS_RATE,
+      process.env.NODE_ENV,
+      process.env.MUSAIUM_ALLOW_PROD_CHAOS,
+    ),
     // 2026-05-13 — Scalability primitives for 100k clients prep (perennial
     // design §11). Operational tunables, NOT feature flags
     // (`feedback_no_feature_flags_prelaunch`). Defaults derived from

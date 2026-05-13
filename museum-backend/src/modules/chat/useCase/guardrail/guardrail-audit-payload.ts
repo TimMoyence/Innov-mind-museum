@@ -56,6 +56,10 @@ export function buildGuardrailBlockAuditEntry(params: {
       locale: context?.locale ?? null,
       classifierRan,
       providerRan,
+      // Phase 0 anchor (ADR-048) — every block audit carries the policy
+      // version that made the decision. V1 = single global default; Phase 2
+      // populates per-tenant policy versions resolved at request time.
+      policyVersion: 'default-v0',
     },
     ip: context?.ip ?? null,
     requestId: context?.requestId ?? null,

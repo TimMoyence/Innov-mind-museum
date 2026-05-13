@@ -1,6 +1,17 @@
 /**
  * Cost-based circuit breaker for LLM API spend (perennial design §11 D9 — RE2).
  *
+ * STATUS — PHASE 2 PRIMITIVE, NOT YET WIRED IN THE V1 HOT PATH.
+ * Same posture as `tenant-rate-limiter.ts`: the primitive is shipped, fully
+ * unit-tested, and instantiated as a singleton in the composition root so the
+ * `onStateChange` callback wires the Prometheus gauge + counter. **No
+ * production caller invokes `recordCharge()` yet.** Phase 2 (B2B onset, when
+ * cost attribution per-tenant becomes a real concern) wires it around the LLM
+ * orchestrator call site; until then it is dormant by design — a fast-follow
+ * PR replaces the dormant state with a real wrapper in 50-80 LOC once the
+ * shadow-mode runner is in place to compare break-then-recover signals
+ * against the latency CB.
+ *
  * Distinct from the latency `LLMCircuitBreaker` (ADR-047):
  *   - Latency CB trips on `failureThreshold` failures in a sliding window.
  *   - Cost CB trips on cost SPIKES (e.g. scraping abuse, DDoS amplification)
