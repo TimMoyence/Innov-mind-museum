@@ -193,7 +193,7 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
   if (!result.success) {
     throw badRequest(formatZodIssues(result.error.issues));
   }
-  return result.data as CreateSessionRequest;
+  return result.data;
 };
 
 /** Validates and transforms a raw request body into a {@link PostMessageRequest}. */

@@ -360,6 +360,6 @@ export const runSectionTasks = async <TValue>(
       latencyMs: 0,
       timeoutMs: tasks[index].timeoutMs,
       payloadBytes: tasks[index].payloadBytes,
-    } as SectionRunFailure;
+    };
   });
 };

@@ -23,7 +23,7 @@ export const httpMetricsMiddleware: RequestHandler = (req, res, next) => {
       routeVal !== null &&
       typeof routeVal === 'object' &&
       'path' in routeVal &&
-      typeof (routeVal as { path: unknown }).path === 'string'
+      typeof routeVal.path === 'string'
         ? (routeVal as { path: string }).path
         : undefined;
     const route = routePath ?? req.path;

@@ -14,7 +14,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
 function stableStringify(v: unknown): string {
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
   if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
-  const keys = Object.keys(v as Record<string, unknown>).sort((a, b) => a.localeCompare(b));
+  const keys = Object.keys(v).sort((a, b) => a.localeCompare(b));
   return (
     '{' +
     keys

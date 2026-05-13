@@ -85,7 +85,7 @@ async function runWithLimit<T>(limit: number, tasks: (() => Promise<T>)[]): Prom
       cursor += 1;
       // Bounded by the loop condition; non-null assertion preserves index typing
       // without a runtime guard the type system already rules out.
-      const task = tasks[i] as () => Promise<T>;
+      const task = tasks[i];
       results[i] = await task();
     }
   };

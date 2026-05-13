@@ -3,12 +3,7 @@ import * as Sentry from '@sentry/node';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import {
-  scrubEvent,
-  shouldDropBreadcrumb,
-  type ScrubbableBreadcrumb,
-  type ScrubbableEvent,
-} from './sentry-scrubber';
+import { scrubEvent, shouldDropBreadcrumb, type ScrubbableEvent } from './sentry-scrubber';
 
 import type { Span } from '@sentry/node';
 import type { Express } from 'express';
@@ -69,8 +64,7 @@ export const initSentry = (): void => {
     integrations: [...Sentry.getDefaultIntegrationsWithoutPerformance()],
     sendDefaultPii: false,
     beforeSend: (event) => scrubEvent(event as ScrubbableEvent) as typeof event,
-    beforeBreadcrumb: (breadcrumb) =>
-      shouldDropBreadcrumb(breadcrumb as ScrubbableBreadcrumb) ? null : breadcrumb,
+    beforeBreadcrumb: (breadcrumb) => (shouldDropBreadcrumb(breadcrumb) ? null : breadcrumb),
   });
 
   initialized = true;

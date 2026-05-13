@@ -103,6 +103,6 @@ export class Semaphore {
           /* swallow — timeout already surfaced the user-visible error */
         });
       }
-    }) as Promise<T>;
+    });
   }
 }

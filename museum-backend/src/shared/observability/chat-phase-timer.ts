@@ -124,7 +124,7 @@ export class ChatPhaseTimer {
       provider,
       requestId,
       startedAtMs,
-      trace: trace as LangfuseTraceLike | undefined,
+      trace: trace,
       options,
     });
   }
@@ -135,10 +135,7 @@ export class ChatPhaseTimer {
    * `outcome='error'`, also bumps `chat_phase_errors_total`. Calling `end()`
    * twice is a no-op (defensive).
    */
-  end(
-    outcome: ChatPhaseOutcome = 'success',
-    errorType: ChatPhaseErrorType = 'unknown',
-  ): void {
+  end(outcome: ChatPhaseOutcome = 'success', errorType: ChatPhaseErrorType = 'unknown'): void {
     if (this.ended) return;
     this.ended = true;
     const { phase, provider, requestId, startedAtMs, trace, options } = this.state;

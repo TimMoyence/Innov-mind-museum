@@ -83,7 +83,7 @@ export class TypeOrmChatRepository implements ChatRepository {
       locale: input.locale || null,
       museumMode: input.museumMode ?? false,
       intent: input.intent ?? 'default',
-      user: input.userId ? ({ id: input.userId } as ChatSession['user']) : null,
+      user: input.userId ? { id: input.userId } : null,
       museumId: input.museumId ?? null,
       museumName: input.museumName ?? null,
       title: input.museumName ?? null,
