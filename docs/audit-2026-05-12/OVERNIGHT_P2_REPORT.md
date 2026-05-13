@@ -20,11 +20,11 @@
 | P2-9 | FE README dead links | FIXED | `9e3c7189` |
 | P2-10 | CLAUDE.md drift (migrations count, env file, `.claude/tasks/`) | FIXED | `9e3c7189` |
 
-**Total commits on branch:** 8.
+**Total commits on branch:** 10 (8 P2 fixes + final report + post-merge openapi regen).
 
 ## Verification
 
-Run from worktree `../musaium-p2` at HEAD `6cdfc24b`:
+Run from worktree `../musaium-p2` at HEAD `886fca24`:
 
 | Check | Result |
 |---|---|
@@ -32,6 +32,7 @@ Run from worktree `../musaium-p2` at HEAD `6cdfc24b`:
 | `museum-backend/`: `pnpm exec eslint src/ --max-warnings=0` | exit 0 |
 | `museum-backend/`: full unit suite (`tests/unit/`) | 4630 passed / 14 skipped / 0 failed (clean second run, see "Honesty notes") |
 | `museum-web/`: `pnpm exec tsc --noEmit` | exit 0 |
+| `museum-web/`: `pnpm run generate:openapi-types` | exit 0 (regenerated types committed) |
 
 ## Per-finding detail
 
@@ -131,7 +132,32 @@ P2-2 and P2-3 were dispatched in parallel against the **same worktree**. P2-3 fi
 - **`pnpm run mutation` auto-discovery quirk** — `stryker run` with no path looks for `stryker.{conf,config}.{json,js,mjs,cjs}` at cwd; none exist at `museum-backend/` root (the configs live in `museum-backend/stryker/`). Pre-existing, unchanged by P2-4.
 - **`audit-2026-05-12/06-architecture-organization.md` not found** in `docs/audit-2026-05-12/` — only `01-projects/`, `04-research/`, `06-recommendations/` subdirs exist. P2-2/P2-3 sub-agents inferred scope from MASTER.md + task prompt; figures cited (e.g. "22 single-file dirs", "5/13 conforming") are from MASTER.md, not directly verified against a `06-*` source. P2-3 surfaced that the "5/13" count doesn't reconcile with either reading of the canonical shape.
 
+## Merge to main + CI
+
+Branch `audit/p2-night` pushed and fast-forwarded to `main` (db3ad7be3..886fca242) using direct push as specified in the overnight protocol. Origin/main had not advanced from the branch-point, so no rebase was required.
+
+**Required status checks for main** (`quality`, `ai-tests`, `CodeQL (javascript-typescript)`, `semgrep`, `sentinel-mirror`) on the final commit `886fca242`:
+
+| Required check | Conclusion |
+|---|---|
+| quality (backend) | success |
+| quality (web) | success |
+| ai-tests | skipped (no AI-relevant paths changed) |
+| CodeQL (javascript-typescript) | success |
+| sentinel-mirror | success |
+
+**Post-quality jobs (non-required)** failed on `886fca242`:
+
+- `web/deploy` → "Smoke test (functional)" → `FAIL: /api/health returned HTTP 502 (expected 200) — BE/FE integration broken`. Race condition between backend + web deploys hitting the same VPS within seconds. Not caused by any P2 code change; re-run triggered to confirm transience.
+- `web/playwright-pr` → "Run backend migrations" → `extension "vector" is not available` in the CI Postgres container. Pre-existing CI image configuration issue — the migrations need pgvector ≥ 0.7.0 (auto-memory confirms: `pnpm migration:run needs pgvector image`). Not introduced by P2.
+
+### Extra commit landed post-merge
+
+After the first push (`b46f19a4`), the web workflow surfaced a **pre-existing** OpenAPI types drift that had been latent since `9471649d` (audit-cleanup PR #271 added visual-similarity types to `museum-backend/openapi/openapi.json` but never regenerated `museum-web/src/lib/api/generated/openapi.ts`). The web workflow only triggers on `museum-web/**` changes, and no museum-web change had landed between #271 and this overnight P2. P2-7's `museum-web/tsconfig.json` edit was the first museum-web change to trigger the workflow.
+
+Fix landed as `886fca24`: regenerate the types via `pnpm generate:openapi-types` (+228 lines). Web `quality` job goes green on the regenerated types.
+
 ## What's next
 
-- Open question whether to land `audit/p2-night` into `main` (this branch's purpose) or to PR it. Decision left to the project lead — both options keep the branch ready.
-- The single observed flake in `auth.route.test.ts` deserves a follow-up issue; not in P2 scope.
+- The single observed flake in `tests/unit/routes/auth.route.test.ts:1065` (rate-limit bucket isolation between providers) deserves a follow-up issue. Not in P2 scope.
+- The `web/deploy` 502 smoke test and `web/playwright-pr` pgvector failures are pre-existing CI infra issues, not P2-caused. Worth a follow-up (CI image bump to `pgvector/pgvector:pg16`, and either staggering web+backend deploys or adding readiness checks before smoke).
