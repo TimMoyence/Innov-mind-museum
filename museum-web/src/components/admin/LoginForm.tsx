@@ -82,7 +82,12 @@ export default function LoginForm({ dict }: LoginFormProps) {
           <p className="mt-2 text-sm text-text-secondary">{dict.title}</p>
         </div>
 
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-5"
+        >
           <div>
             <label htmlFor="admin-email" className="sr-only">
               Email
@@ -94,7 +99,9 @@ export default function LoginForm({ dict }: LoginFormProps) {
               autoComplete="email"
               placeholder={dict.emailPlaceholder}
               value={email}
-              onChange={(e) => { setEmail(e.target.value); }}
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
           </div>
@@ -109,7 +116,9 @@ export default function LoginForm({ dict }: LoginFormProps) {
               autoComplete="current-password"
               placeholder={dict.passwordPlaceholder}
               value={password}
-              onChange={(e) => { setPassword(e.target.value); }}
+              onChange={(e) => {
+                setPassword(e.target.value);
+              }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
           </div>
@@ -127,7 +136,9 @@ export default function LoginForm({ dict }: LoginFormProps) {
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-primary-100" />
-          <span className="text-xs uppercase tracking-wide text-text-muted">{dict.divider}</span>
+          <span className="text-xs uppercase tracking-wide text-text-secondary">
+            {dict.divider}
+          </span>
           <div className="h-px flex-1 bg-primary-100" />
         </div>
 
