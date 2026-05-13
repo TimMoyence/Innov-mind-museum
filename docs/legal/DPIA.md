@@ -1,11 +1,14 @@
 # Analyse d'impact sur la protection des données (DPIA)
 
 **Statut** : DRAFT — à valider par DPO externe avant le launch V1 (2026-06-01).
-**Date** : 2026-05-12
-**Responsable du traitement** : Tim Moyence — Entrepreneur Individuel, opérant Musaium / InnovMind.
-**Contact DPO** : `tim.moyence@gmail.com` (DPO externe à mandater, TBD avant 2026-06-01).
 **Version** : 1.0 (initiale).
+**Date de rédaction technique** : 2026-05-13 (audit P0-1).
+**Responsable du traitement** : Tim Moyence — Entrepreneur Individuel, opérant Musaium / InnovMind, France.
+**Contact responsable** : `tim.moyence@gmail.com`.
+**Contact DPO** : <!-- DPO ACTION REQUIRED: mandater un DPO externe et renseigner ici nom + email professionnel + cabinet --> DPO externe à mandater avant 2026-06-01 (mailbox alias prévue `dpo@musaium.app`, non encore active).
 **Cycle de revue** : annuel, ou à chaque changement matériel du traitement.
+
+> **Note d'audit (2026-05-13)** : ce document a fait l'objet d'un audit technique (P0-1) destiné à aligner le contenu factuel sur le code de production réel (durées de conservation, mesures TOM effectivement déployées, statut DeepSeek post-réconciliation P0-3). Toutes les sections marquées `<!-- DPO ACTION REQUIRED: ... -->` requièrent une décision juridique d'un DPO mandaté avant signature. Les sections techniques (T1/T2/T3 — colonnes Durée, Mesures, Destinataires) ont été cross-vérifiées contre `museum-backend/src/config/env.ts`, `museum-backend/src/shared/audit/`, `docs/compliance/SUBPROCESSORS.md`.
 
 > Cette DPIA suit la trame CNIL « Guide PIA — Software » (version 2018, mise à jour 2024) et le formalisme du RGPD Art. 35. Elle couvre **3 traitements** identifiés comme « susceptibles d'engendrer un risque élevé pour les droits et libertés des personnes physiques » au titre de l'Art. 35-3 :
 > 1. **T1 — Chat IA conversationnel** (LLM tiers + historique de conversation)
@@ -44,10 +47,10 @@ Trois critères WP248 cumulés → DPIA obligatoire avant la mise en service.
 | **Catégories particulières** | Aucune n'est *collectée par design*. L'utilisateur PEUT poser des questions touchant à des sujets sensibles (santé, religion, opinions politiques au sujet d'une œuvre) ; cette saisie est filtrée en amont (`art-topic-guardrail`) mais non systématiquement bloquée. |
 | **Personnes concernées** | Visiteurs B2C (adultes ≥15 ans après l'age-gate), utilisateurs B2B musée, élèves dans le cadre de visites scolaires (autorisation parentale requise). |
 | **Volume estimé** | V1 : ~5k utilisateurs actifs mensuels (estimation). V1.1 : 50k MAU. Volume LLM tokens / mois : ~3M (V1). |
-| **Durée de conservation** | Texte de chat : conservation pendant la durée du compte (effacement sur demande Art. 17). Historique LLM côté tiers : OpenAI = 30j max (DPA), Google = 60j max (DPF), Deepseek = TBD (non utilisé en prod EU). |
-| **Base légale (Art. 6)** | 6(1)(a) consentement (case `tos_privacy` à l'inscription, scope `user_consents`) + 6(1)(b) exécution du contrat (réponse à la question). |
-| **Destinataires / sous-traitants** | Voir `docs/compliance/SUBPROCESSORS.md` entries #1 (OpenAI), #2 (Deepseek, désactivé EU), #3 (Google). Pas de transfert vers d'autres tiers. |
-| **Transferts hors UE** | OpenAI : US ; SCC 2021/914 + DPF. Google : US ; SCC + DPF. Deepseek : Chine ; pas d'adéquation, **désactivé en prod EU**. |
+| **Durée de conservation** | Messages chat côté Musaium : **purge automatique 180 jours** (`CHAT_PURGE_RETENTION_DAYS=180`, cron quotidien `chat-purge-daily`) — effacement anticipé sur demande Art. 17. Historique LLM côté tiers : OpenAI = 30j max (DPA), Google = 60j max (DPF), Deepseek = non utilisé en prod EU (gating par défaut `LLM_PROVIDER=openai`). |
+| **Base légale (Art. 6)** | <!-- DPO ACTION REQUIRED: confirmer le cumul 6(1)(a) + 6(1)(b) vs base unique 6(1)(b) ; EDPB 03/2022 décourage le bundling consentement/contrat. --> 6(1)(a) consentement (case `tos_privacy` à l'inscription, scope `user_consents`) + 6(1)(b) exécution du contrat (réponse à la question). |
+| **Destinataires / sous-traitants** | Voir `docs/compliance/SUBPROCESSORS.md` entries #1 (OpenAI, fournisseur LLM par défaut), #3 (Google, alternative activable), #2 (Deepseek, fournisseur alternatif **non activé en prod EU** par configuration `LLM_PROVIDER=openai`). Pas de transfert vers d'autres tiers. |
+| **Transferts hors UE** | OpenAI : US ; SCC 2021/914 + DPF (EU data zone disponible — activation suivie en `SUBPROCESSORS.md` § action P0.5). Google : US ; SCC + DPF. Deepseek : Chine ; **pas d'adéquation, non activé en prod EU** (réconciliation audit P0-3 — voir aussi politique de confidentialité à mettre à jour). |
 
 ### T1.2 — Évaluation des risques (échelle CNIL 1=négligeable, 4=maximal)
 
@@ -61,7 +64,7 @@ Trois critères WP248 cumulés → DPIA obligatoire avant la mise en service.
 
 ### T1.3 — Risque spécifique mineurs
 
-Audience scolaire prévue : la DPIA reconnaît un risque accru concernant les utilisateurs de moins de 15 ans (majorité numérique française — CNIL Délibération 2021-018).
+Audience scolaire prévue : la DPIA reconnaît un risque accru concernant les utilisateurs de moins de 15 ans (majorité numérique française — Loi n° 2023-566 du 7 juillet 2023, codifiant la majorité numérique à 15 ans ; voir également CNIL Délibération n° 2021-069 du 3 juin 2021 — **NB** : l'ancienne référence à la « Délibération 2021-018 » dans les drafts antérieurs était erronée et a été corrigée le 2026-05-13 suite à l'audit P0-1).
 
 **Mesures actives** :
 - Age-gate à l'inscription (champ `dateOfBirth`, calcul d'âge côté serveur, rejet 422 `MINOR_PARENTAL_CONSENT_REQUIRED` si < 15 ans).
@@ -126,28 +129,51 @@ Audience scolaire prévue : la DPIA reconnaît un risque accru concernant les ut
 
 ## 4. Mesures techniques et organisationnelles (TOM) communes
 
-Pour les 3 traitements :
+Pour les 3 traitements (toutes vérifiées en code 2026-05-13, voir `museum-backend/src/config/env.ts` + `src/shared/security/` + `src/shared/audit/`) :
 
-1. **Chiffrement** : TLS 1.3 in-transit, AES-256 at-rest (PG + S3), bcrypt pour mots de passe (rounds=12).
-2. **Contrôle d'accès** : JWT 15min + refresh 30j, MFA obligatoire `admin` + `super_admin`, API-keys hashées (msk_*).
-3. **Audit-chain** : hash-link 13 mois sur les actions admin et les flux GDPR (export, deletion, consent grant/revoke).
-4. **PII scrubbing** : Sentry events filtrés par `sentry-scrubber.ts` (BE + FE + Web), 7 query keys + body fields password/token/secret/refresh redactés.
-5. **DSAR ready** : export (Art. 15) + suppression (Art. 17) via `/api/auth/account/export` + `/api/auth/account/delete`, SLA 7j.
-6. **Backup & DR** : snapshots PG quotidiens (chiffrés, 35j de rétention), basé chez OVH (FR/EU).
-7. **Subprocessors** : ledger `docs/compliance/SUBPROCESSORS.md` à jour, revue trimestrielle.
-8. **AI Act Art. 50** : disclosure générative implémentée sur les 3 surfaces (mobile, web, privacy policy) — voir commit `compliance(ai-act)` du 2026-05-12.
-9. **Guardrails** : input + output filter sur les conversations chat (`art-topic-guardrail.ts`).
-10. **Logging** : structured JSON, request-id correlation, conservation 90j hot + 13 mois cold (audit).
+1. **Chiffrement** : TLS 1.3 in-transit (HSTS production), AES-256 at-rest (PG + S3 via provider), bcrypt pour mots de passe (`BCRYPT_ROUNDS=12`, `museum-backend/src/shared/security/bcrypt.ts:2`).
+2. **Contrôle d'accès** :
+   - JWT access token TTL **15 min** (`JWT_ACCESS_TTL=15m`).
+   - Refresh token TTL **14 jours absolus** (`JWT_REFRESH_TTL=14d`, durci de 30j → 14j en F8 2026-04-30).
+   - Sliding idle window **24 h** sur refresh (`JWT_REFRESH_IDLE_WINDOW_SECONDS=86400`).
+   - MFA TOTP obligatoire rôles `admin` + `super_admin`, secrets chiffrés AES-256-GCM (`MFA_ENCRYPTION_KEY`).
+   - API-keys hashées (`msk_*`).
+   - Token de reset mot de passe : **1 heure** (`forgotPassword.useCase.ts:49`).
+3. **Cookies + CSRF (F7)** : access token et refresh token en cookies HttpOnly + Secure + SameSite ; CSRF double-submit token (`CSRF_SECRET` obligatoire en prod, distinct des autres secrets — `env.production-validation.ts:184-201`).
+4. **Audit-chain** : hash-link sur les actions admin et flux GDPR (export, deletion, consent grant/revoke). **IP anonymisée après 13 mois** par cron quotidien (`audit-ip-anonymizer.job.ts:62`, intervalle PG `13 months`).
+5. **PII scrubbing** : Sentry events filtrés par `sentry-scrubber.ts` (BE + FE + Web — à dédupliquer post-launch via `packages/musaium-shared`, voir P1-1). Email → SHA-256 fingerprint, query keys + body fields password/token/secret/refresh/authorization/cookie/email redactés.
+6. **DSAR ready** : export (Art. 15) via `/api/auth/me/export` (`exportUserData.useCase.ts`) + suppression (Art. 17) via `/api/auth/account/delete` (`deleteAccount.useCase.ts`), SLA cible 7j.
+7. **Sanitization image** : EXIF strip systématique via `sharp().rotate()` re-encodage avant toute transmission au LLM tiers (`image-processing.service.ts:47`).
+8. **Sanitization texte** : Unicode NFC + suppression zero-width + truncation sur les champs user-controlled injectés en prompt système (`sanitizePromptInput()`), boundary marker `[END OF SYSTEM INSTRUCTIONS]` séparant system + user.
+9. **Backup & DR** : snapshots PG quotidiens (chiffrés, rétention provider), hébergement OVH (FR/EU) — voir `docs/OPS_DEPLOYMENT.md`. <!-- DPO ACTION REQUIRED: documenter formellement le RTO/RPO chiffré + tester un restore avant signature. -->
+10. **Subprocessors** : ledger `docs/compliance/SUBPROCESSORS.md` à jour (20 entrées), revue trimestrielle. P0-3 (audit 2026-05-12) : DeepSeek listé comme alternative non activée en prod EU, non comme sous-traitant actif.
+11. **AI Act Art. 50** : disclosure générative implémentée sur les 3 surfaces (mobile, web, privacy policy) — voir `docs/compliance/AI_ACT_CONFORMITY_MATRIX.md`.
+12. **Guardrails** : input + output filter sur conversations chat (`art-topic-guardrail.ts`) ; circuit breaker sur LLM-Guard sidecar fail-CLOSED (ADR-047, 2026-05-12) ; inflight semaphore + audit payload.
+13. **Rate-limiting** : `express-rate-limit` + store Redis sur endpoints sensibles (register/login/forgot-password) — `museum-backend/src/helpers/middleware/rate-limit.middleware.ts`.
+14. **Retention crons** (pré-launch V1, always-on) :
+    - Chat purge : `CHAT_PURGE_RETENTION_DAYS=180` (cron quotidien 04:00 UTC).
+    - Tickets support : `RETENTION_SUPPORT_TICKETS_DAYS=365`.
+    - Reviews rejetées : `RETENTION_REVIEWS_REJECTED_DAYS=30`.
+    - Reviews pending : `RETENTION_REVIEWS_PENDING_DAYS=60`.
+    - Art keywords : `RETENTION_ART_KEYWORDS_DAYS=90`.
+    - Enrichment artefacts : `ENRICHMENT_HARD_DELETE_AFTER_DAYS=180`.
+15. **Logging** : structured JSON Pino, request-id correlation propagé sur 193 sites (cf. audit 2026-05-12 § 2). <!-- DPO ACTION REQUIRED: documenter la durée précise de rétention des logs structurés côté hébergeur (90j hot / 13 mois cold ne sont pas encore enforced — c'est un objectif). -->
+16. **Sécurité base de données** : `DB_SYNCHRONIZE` forcé à `false` en production (`data-source.ts:83`), migrations via `node scripts/migration-cli.cjs generate` (56 migrations versionnées au 2026-05-13).
+17. **SAST / supply chain** : CodeQL + Semgrep en CI, Renovate avec cool-down 3-7j et fast-track vulnérabilités, `pnpm overrides` pour kill transitif des bad packages.
 
 ---
 
 ## 5. Risques résiduels après mesures
+
+<!-- DPO ACTION REQUIRED: valider que les acceptabilités ci-dessous reflètent la position juridique du responsable et qu'elles sont défendables vis-à-vis de l'Art. 36 (consultation préalable CNIL non requise). -->
 
 | Traitement | Risque résiduel principal | Acceptabilité |
 |---|---|---|
 | T1 | Hallucination LLM diffamatoire non détectée par guardrail | Accepté sous condition de monitoring mensuel (review équipe) + procédure de takedown sous 24h. |
 | T2 | Buffer audio interceptable si compromission cert pinning | Accepté — niveau standard industrie, kill-switch app activable. |
 | T3 | Cross-référence géo + chat révélant habitudes culturelles | Accepté — finalité légitime, consentement révocable, durée minimale. |
+
+> **Risque résiduel non listé pré-launch (audit P0-4)** : absence de plafond OpenAI par utilisateur + absence de kill-switch global. Risque opérationnel et financier (boucle abusive = facture imprévisible), pas un risque RGPD direct sur les personnes. Mitigation prévue avant 2026-06-01 (middleware cost-limit + Redis counter + flag global). Ce point est documenté ici pour transparence DPO mais ne relève pas formellement de l'Art. 35.
 
 ---
 
