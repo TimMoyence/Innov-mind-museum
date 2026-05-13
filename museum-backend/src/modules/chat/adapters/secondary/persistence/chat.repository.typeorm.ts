@@ -200,7 +200,7 @@ export class TypeOrmChatRepository implements ChatRepository {
         confidence: input.artworkMatch.confidence ?? 0,
         source: input.artworkMatch.source ?? null,
         room: input.artworkMatch.room ?? null,
-        message: { id: saved.id } as ChatMessage,
+        message: { id: saved.id },
       });
       await artworkMatchRepo.save(match);
     }
@@ -410,7 +410,7 @@ export class TypeOrmChatRepository implements ChatRepository {
    */
   async persistMessageReport(input: PersistMessageReportInput): Promise<void> {
     const entity = this.reportRepo.create({
-      message: { id: input.messageId } as ChatMessage,
+      message: { id: input.messageId },
       userId: input.userId,
       reason: input.reason,
       comment: input.comment ?? null,
