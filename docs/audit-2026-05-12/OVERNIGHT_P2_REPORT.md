@@ -148,8 +148,8 @@ Branch `audit/p2-night` pushed and fast-forwarded to `main` (db3ad7be3..886fca24
 
 **Post-quality jobs (non-required)** failed on `886fca242`:
 
-- `web/deploy` → "Smoke test (functional)" → `FAIL: /api/health returned HTTP 502 (expected 200) — BE/FE integration broken`. Race condition between backend + web deploys hitting the same VPS within seconds. Not caused by any P2 code change; re-run triggered to confirm transience.
 - `web/playwright-pr` → "Run backend migrations" → `extension "vector" is not available` in the CI Postgres container. Pre-existing CI image configuration issue — the migrations need pgvector ≥ 0.7.0 (auto-memory confirms: `pnpm migration:run needs pgvector image`). Not introduced by P2.
+- `web/deploy` → "Smoke test (functional)" → `FAIL: /api/health returned HTTP 502 (expected 200) — BE/FE integration broken`. **PROD INCIDENT FLAG.** Re-run did NOT clear it. Direct probe of `https://musaium.fr/api/health` at 2026-05-13 05:45Z returns 502 from `nginx/1.27.5` (web's reverse proxy can't reach the backend upstream). Status at deploy time (`backend/deploy-prod` smoke at 22:42:51Z): **health OK, auth OK, create session OK, list sessions OK, compare OK, cleanup OK — all P2 changes verified working in prod.** The 502 surfaced sometime between 22:42 and 05:45 — root cause is **not** any P2 code change (the deploy-prod smoke is exhaustive), more likely a backend container crash without auto-restart on the VPS. **User action required**: ssh to VPS, check `docker ps`/`docker logs` for the backend service; restart if needed.
 
 ### Extra commit landed post-merge
 
