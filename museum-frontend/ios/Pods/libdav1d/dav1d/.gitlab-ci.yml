@@ -4,56 +4,56 @@ stages:
     - test
 
 .debian-amd64-common:
-    image: registry.videolan.org/dav1d-debian-unstable:20230213200113
+    image: registry.videolan.org/dav1d-debian-unstable:20230213200113@sha256:277130583e5c51a7754244f2522a6731c29f19a16ffe863a824c79e92bdab6eb
     stage: build
     tags:
         - docker
         - amd64
 
 .debian-amd64-minimum:
-    image: registry.videolan.org/dav1d-debian-minimum:20230211045249
+    image: registry.videolan.org/dav1d-debian-minimum:20230211045249@sha256:a2f76e517a876bdead13d6aa29e7ef9efefc9b7db9989b61876289ca0041f7cf
     stage: build
     tags:
         - docker
         - amd64
 
 .debian-llvm-mingw-common:
-    image: registry.videolan.org/vlc-debian-llvm-msvcrt:20230212072216
+    image: registry.videolan.org/vlc-debian-llvm-msvcrt:20230212072216@sha256:dbd9904ebae2953ecdeedd46552ebef240d0cddfb48eb04b2b9c3ae8575250c5
     stage: build
     tags:
         - docker
         - amd64
 
 .debian-aarch64-common:
-    image: registry.videolan.org/dav1d-debian-bullseye-aarch64:20230211050329
+    image: registry.videolan.org/dav1d-debian-bullseye-aarch64:20230211050329@sha256:7981bf8232a6efe084220f8dbac8202f33240dec53ede392c80891dafcdc24a7
     stage: build
     tags:
         - docker
         - aarch64
 
 .debian-armv7-common:
-    image: registry.videolan.org/dav1d-debian-bullseye-armv7:20230211045904
+    image: registry.videolan.org/dav1d-debian-bullseye-armv7:20230211045904@sha256:778663df73010e1d5033a19f0a5240651ef6f8fc965dcfbec7ec3f339624798b
     stage: build
     tags:
         - docker
         - armv7
 
 .debian-ppc64le-common:
-    image: registry.videolan.org/dav1d-debian-unstable-ppc64le:20230211050439
+    image: registry.videolan.org/dav1d-debian-unstable-ppc64le:20230211050439@sha256:2ea7cf65077fc419a4c5208aa36d8429ed8446146be81d055ae15f73686b8ab5
     stage: build
     tags:
         - docker
         - ppc64le
 
 .android-common:
-    image: registry.videolan.org/vlc-debian-android:20230212071537
+    image: registry.videolan.org/vlc-debian-android:20230212071537@sha256:bbfe1c5bf8a25987270c12dc07d53628614abbb7a93298da7696409ecc53a75f
     stage: build
     tags:
         - docker
         - amd64
 
 .debian-wasm-emscripten-common:
-    image: registry.videolan.org/vlc-debian-wasm-emscripten:20221213104631
+    image: registry.videolan.org/vlc-debian-wasm-emscripten:20221213104631@sha256:29619cb549a9651597048c6e39b861730071a196aeed2b71e7c97dc98e9604a5
     stage: build
     tags:
         - docker

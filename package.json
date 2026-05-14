@@ -16,6 +16,6 @@
     "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "9.1.7"
   }
 }
