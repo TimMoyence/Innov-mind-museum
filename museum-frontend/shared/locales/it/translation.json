@@ -480,7 +480,17 @@
       "camera": "Scatta una foto",
       "gallery": "Scegli dalla galleria",
       "record_audio": "Registra messaggio vocale",
-      "stop_audio": "Ferma registrazione"
+      "stop_audio": "Ferma registrazione",
+      "scan_cartel": "Scansiona cartello"
+    },
+    "cartelScanner": {
+      "title": "Scansiona il QR del cartello",
+      "instructions": "Inquadra il codice QR sul cartello dell'opera",
+      "permission_title": "Accesso alla fotocamera richiesto",
+      "permission_body": "Musaium ha bisogno della fotocamera per scansionare i cartelli. Apri Impostazioni per autorizzarlo.",
+      "permission_open_settings": "Apri Impostazioni",
+      "cancel": "Annulla",
+      "lookup_template": "Parlami dell'opera con il codice cartello: {{code}}"
     },
     "artworkHero": {
       "untitled": "Opera senza titolo",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "Opzioni di allegato aperte"
+    },
+    "cartelScanner": {
+      "opened": "Scanner cartelli aperto",
+      "scan_success": "Codice cartello acquisito",
+      "viewfinder_hint": "Mirino fotocamera, punta sul codice QR",
+      "cancel_hint": "Chiude lo scanner senza inviare"
     }
   },
   "consent": {

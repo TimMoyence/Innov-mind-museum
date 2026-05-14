@@ -480,7 +480,17 @@
       "camera": "Foto aufnehmen",
       "gallery": "Aus Galerie wählen",
       "record_audio": "Sprachnachricht aufnehmen",
-      "stop_audio": "Aufnahme stoppen"
+      "stop_audio": "Aufnahme stoppen",
+      "scan_cartel": "Schild scannen"
+    },
+    "cartelScanner": {
+      "title": "QR-Code des Schilds scannen",
+      "instructions": "Richten Sie die Kamera auf den QR-Code am Schild des Werks",
+      "permission_title": "Kamerazugriff erforderlich",
+      "permission_body": "Musaium benötigt Kamerazugriff zum Scannen von Werkschildern. Öffnen Sie die Einstellungen, um ihn zu erlauben.",
+      "permission_open_settings": "Einstellungen öffnen",
+      "cancel": "Abbrechen",
+      "lookup_template": "Erzähl mir mehr über das Werk mit dem Schild-Code: {{code}}"
     },
     "artworkHero": {
       "untitled": "Werk ohne Titel",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "Anhangsoptionen geöffnet"
+    },
+    "cartelScanner": {
+      "opened": "Schild-Scanner geöffnet",
+      "scan_success": "Schild-Code erfasst",
+      "viewfinder_hint": "Kamera-Sucher, auf den QR-Code zielen",
+      "cancel_hint": "Schließt den Scanner ohne zu senden"
     }
   },
   "consent": {

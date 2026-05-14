@@ -26,6 +26,12 @@ interface AttachmentPickerSheetContentProps {
   readonly playRecordedAudio: () => Promise<void> | void;
   /** Clear all attached media (audio + image). Closes the sheet. */
   readonly clearMedia: () => void;
+  /**
+   * Open the QR-cartel scanner (B4 — 9th C4 route `cartel-scanner`). The
+   * screen wires it to `bottomSheetRouter.open('cartel-scanner', ...)`. The
+   * picker sheet closes itself when the user taps the action.
+   */
+  readonly onOpenScanner: () => void;
   /** Dismiss the bottom sheet — supplied by the C4 router. */
   readonly close: () => void;
 }
@@ -51,6 +57,7 @@ export function AttachmentPickerSheetContent({
   toggleRecording,
   playRecordedAudio,
   clearMedia,
+  onOpenScanner,
   close,
 }: AttachmentPickerSheetContentProps) {
   const { theme } = useTheme();
@@ -126,6 +133,25 @@ export function AttachmentPickerSheetContent({
             {isRecording
               ? t('chat.attachmentPicker.stop_audio')
               : t('chat.attachmentPicker.record_audio')}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            onOpenScanner();
+            close();
+          }}
+          testID="attachment-picker-scan-cartel"
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.attachmentPicker.scan_cartel')}
+          style={[
+            styles.actionButton,
+            { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+          ]}
+        >
+          <Ionicons name="qr-code-outline" size={20} color={theme.textPrimary} />
+          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+            {t('chat.attachmentPicker.scan_cartel')}
           </Text>
         </Pressable>
       </View>

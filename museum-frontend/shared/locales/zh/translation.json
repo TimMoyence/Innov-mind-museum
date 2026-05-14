@@ -480,7 +480,17 @@
       "camera": "拍照",
       "gallery": "从相册选择",
       "record_audio": "录制语音消息",
-      "stop_audio": "停止录制"
+      "stop_audio": "停止录制",
+      "scan_cartel": "扫描说明牌"
+    },
+    "cartelScanner": {
+      "title": "扫描说明牌二维码",
+      "instructions": "将相机对准作品说明牌上的二维码",
+      "permission_title": "需要相机访问权限",
+      "permission_body": "Musaium 需要相机权限来扫描作品说明牌。请打开设置以授权。",
+      "permission_open_settings": "打开设置",
+      "cancel": "取消",
+      "lookup_template": "请介绍说明牌编号为「{{code}}」的作品"
     },
     "artworkHero": {
       "untitled": "无题作品",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "已打开附件选项"
+    },
+    "cartelScanner": {
+      "opened": "已打开说明牌扫描器",
+      "scan_success": "已获取说明牌编号",
+      "viewfinder_hint": "相机取景器，请对准二维码",
+      "cancel_hint": "不发送并关闭扫描器"
     }
   },
   "consent": {

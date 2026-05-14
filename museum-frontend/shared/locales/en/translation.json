@@ -480,7 +480,17 @@
       "camera": "Take a photo",
       "gallery": "Pick from gallery",
       "record_audio": "Record voice message",
-      "stop_audio": "Stop recording"
+      "stop_audio": "Stop recording",
+      "scan_cartel": "Scan cartel"
+    },
+    "cartelScanner": {
+      "title": "Scan the cartel QR",
+      "instructions": "Point your camera at the QR code on the artwork's label",
+      "permission_title": "Camera access required",
+      "permission_body": "Musaium needs camera access to scan artwork cartels. Open Settings to enable it.",
+      "permission_open_settings": "Open Settings",
+      "cancel": "Cancel",
+      "lookup_template": "Tell me about the artwork with cartel code: {{code}}"
     },
     "artworkHero": {
       "untitled": "Untitled artwork",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "Attachment options opened"
+    },
+    "cartelScanner": {
+      "opened": "Cartel scanner opened",
+      "scan_success": "Cartel code captured",
+      "viewfinder_hint": "Camera viewfinder, point at the QR code",
+      "cancel_hint": "Closes the scanner without sending"
     }
   },
   "consent": {

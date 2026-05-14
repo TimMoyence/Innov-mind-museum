@@ -350,9 +350,28 @@ export default function ChatSessionScreen() {
     });
   }, [bottomSheetRouter]);
 
+  // B4 — when the user scans a cartel QR, push the sanitised code to the
+  // chat as a text message via the i18n lookup template. The orchestrator
+  // resolves the artwork via the existing `museumName` / `locationString`
+  // context — no BE endpoint added in V1 (Q1 V1.1+).
+  const handleCartelScanned = useCallback(
+    (code: string) => {
+      void sendMessage({ text: t('chat.cartelScanner.lookup_template', { code }) });
+    },
+    [sendMessage, t],
+  );
+
+  // B4 — open the 9th C4 route (fullscreen camera scanner). The route is
+  // closed automatically by `<CartelScannerSheetContent>` on a successful
+  // scan or via the cancel button.
+  const onOpenCartelScanner = useCallback(() => {
+    bottomSheetRouter.open('cartel-scanner', { onScanned: handleCartelScanned });
+  }, [bottomSheetRouter, handleCartelScanned]);
+
   // A1 — open the attachment-picker bottom sheet. Wires the audio + image
   // hooks through the router params so the sheet content can drive the
   // camera/gallery/record actions and the play/clear preview block.
+  // B4 extends the params with `onOpenScanner` (4th picker action).
   const onOpenAttachments = useCallback(() => {
     bottomSheetRouter.open('attachment-picker', {
       recordedAudioUri,
@@ -363,6 +382,7 @@ export default function ChatSessionScreen() {
       toggleRecording,
       playRecordedAudio: () => void playRecordedAudio(),
       clearMedia: inputHandlers.clearMedia,
+      onOpenScanner: onOpenCartelScanner,
     });
   }, [
     bottomSheetRouter,
@@ -374,6 +394,7 @@ export default function ChatSessionScreen() {
     toggleRecording,
     playRecordedAudio,
     inputHandlers.clearMedia,
+    onOpenCartelScanner,
   ]);
 
   return (

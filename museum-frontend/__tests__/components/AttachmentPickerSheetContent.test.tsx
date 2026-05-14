@@ -23,6 +23,7 @@ describe('AttachmentPickerSheetContent (A1)', () => {
     toggleRecording: jest.fn().mockResolvedValue(undefined),
     playRecordedAudio: jest.fn().mockResolvedValue(undefined),
     clearMedia: jest.fn(),
+    onOpenScanner: jest.fn(),
     close: jest.fn(),
   };
 

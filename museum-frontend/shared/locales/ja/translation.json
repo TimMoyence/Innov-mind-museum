@@ -480,7 +480,17 @@
       "camera": "写真を撮る",
       "gallery": "ギャラリーから選択",
       "record_audio": "音声メッセージを録音",
-      "stop_audio": "録音を停止"
+      "stop_audio": "録音を停止",
+      "scan_cartel": "解説をスキャン"
+    },
+    "cartelScanner": {
+      "title": "作品解説のQRをスキャン",
+      "instructions": "作品の解説プレートにあるQRコードにカメラを向けてください",
+      "permission_title": "カメラへのアクセスが必要です",
+      "permission_body": "作品解説をスキャンするにはカメラへのアクセスが必要です。設定を開いて許可してください。",
+      "permission_open_settings": "設定を開く",
+      "cancel": "キャンセル",
+      "lookup_template": "解説コード「{{code}}」の作品について教えてください"
     },
     "artworkHero": {
       "untitled": "無題の作品",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "添付オプションを開きました"
+    },
+    "cartelScanner": {
+      "opened": "解説スキャナーを開きました",
+      "scan_success": "解説コードを取得しました",
+      "viewfinder_hint": "カメラビューファインダー、QRコードに向けてください",
+      "cancel_hint": "送信せずにスキャナーを閉じます"
     }
   },
   "consent": {

@@ -480,7 +480,17 @@
       "camera": "Prendre une photo",
       "gallery": "Choisir dans la galerie",
       "record_audio": "Enregistrer un message vocal",
-      "stop_audio": "Arrêter l'enregistrement"
+      "stop_audio": "Arrêter l'enregistrement",
+      "scan_cartel": "Scanner le cartel"
+    },
+    "cartelScanner": {
+      "title": "Scanner le QR du cartel",
+      "instructions": "Pointez votre caméra vers le QR du cartel de l'œuvre",
+      "permission_title": "Accès à la caméra requis",
+      "permission_body": "Musaium a besoin d'accéder à la caméra pour scanner les cartels. Ouvrez les Réglages pour autoriser.",
+      "permission_open_settings": "Ouvrir les Réglages",
+      "cancel": "Annuler",
+      "lookup_template": "Parlez-moi de l'œuvre avec le code cartel : {{code}}"
     },
     "artworkHero": {
       "untitled": "Œuvre sans titre",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "Options de pièces jointes ouvertes"
+    },
+    "cartelScanner": {
+      "opened": "Scanner de cartel ouvert",
+      "scan_success": "Code cartel capturé",
+      "viewfinder_hint": "Viseur caméra, pointez vers le QR",
+      "cancel_hint": "Ferme le scanner sans envoyer"
     }
   },
   "consent": {

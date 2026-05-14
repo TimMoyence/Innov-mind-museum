@@ -480,7 +480,17 @@
       "camera": "التقاط صورة",
       "gallery": "اختيار من المعرض",
       "record_audio": "تسجيل رسالة صوتية",
-      "stop_audio": "إيقاف التسجيل"
+      "stop_audio": "إيقاف التسجيل",
+      "scan_cartel": "مسح اللافتة"
+    },
+    "cartelScanner": {
+      "title": "مسح رمز QR للافتة",
+      "instructions": "وجّه الكاميرا نحو رمز QR على لافتة العمل",
+      "permission_title": "يتطلب الوصول إلى الكاميرا",
+      "permission_body": "يحتاج Musaium إلى الوصول إلى الكاميرا لمسح لافتات الأعمال. افتح الإعدادات للسماح بذلك.",
+      "permission_open_settings": "فتح الإعدادات",
+      "cancel": "إلغاء",
+      "lookup_template": "أخبرني عن العمل برمز اللافتة: {{code}}"
     },
     "artworkHero": {
       "untitled": "عمل بدون عنوان",
@@ -954,6 +964,12 @@
     },
     "attachmentPicker": {
       "opened": "تم فتح خيارات المرفقات"
+    },
+    "cartelScanner": {
+      "opened": "تم فتح ماسح اللافتات",
+      "scan_success": "تم التقاط رمز اللافتة",
+      "viewfinder_hint": "محدد منظر الكاميرا، وجّه نحو رمز QR",
+      "cancel_hint": "يغلق الماسح دون إرسال"
     }
   },
   "consent": {

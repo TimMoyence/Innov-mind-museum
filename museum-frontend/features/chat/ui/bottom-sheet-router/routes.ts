@@ -6,6 +6,7 @@ import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
+import { CartelScannerSheetContent } from '@/features/chat/ui/CartelScannerSheetContent';
 import { DailyLimitSheetContent } from '@/features/chat/ui/DailyLimitSheetContent';
 import { MessageContextMenuSheetContent } from '@/features/chat/ui/MessageContextMenuSheetContent';
 import { VisitSummarySheetContent } from '@/features/chat/ui/VisitSummarySheetContent';
@@ -30,7 +31,8 @@ export type BottomSheetRouteId =
   | 'daily-limit'
   | 'voice-intro'
   | 'ai-disclosure'
-  | 'attachment-picker';
+  | 'attachment-picker'
+  | 'cartel-scanner';
 
 export interface BottomSheetRouteParams {
   browser: { url: string };
@@ -54,6 +56,10 @@ export interface BottomSheetRouteParams {
     toggleRecording: () => Promise<void> | void;
     playRecordedAudio: () => Promise<void> | void;
     clearMedia: () => void;
+    onOpenScanner: () => void;
+  };
+  'cartel-scanner': {
+    onScanned: (code: string) => void;
   };
 }
 
@@ -143,5 +149,12 @@ export const ROUTES: RoutesMap = {
     blocking: false,
     a11yAnnounceKey: 'a11y.attachmentPicker.opened',
     Content: AttachmentPickerSheetContent,
+  },
+  'cartel-scanner': {
+    id: 'cartel-scanner',
+    presentation: 'fullscreen',
+    blocking: false,
+    a11yAnnounceKey: 'a11y.cartelScanner.opened',
+    Content: CartelScannerSheetContent,
   },
 };
