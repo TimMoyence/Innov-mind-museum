@@ -100,7 +100,7 @@ export interface ChatServiceDeps {
   guardrailProviderObserveOnly?: boolean;
   /** F4 — LLM judge callable. Wired by chat-module to bind the orchestrator. */
   llmJudge?: LlmJudgeFn;
-  /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
+  /** F4 — true when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;

@@ -28,7 +28,8 @@ import { AuditLog } from '@shared/audit/auditLog.entity';
  *
  * Exit codes:
  *   0 — chain intact
- *   1 — chain break (a Slack alert is POSTed if DEPLOY_ALERT_SLACK_WEBHOOK is set)
+ *   1 — chain break (alerts POSTed in parallel to Slack via DEPLOY_ALERT_SLACK_WEBHOOK
+ *       and to Brevo email via BREVO_API_KEY + AUDIT_CHAIN_ALERT_EMAIL when set)
  *   2 — unexpected error (DB connect failure, malformed fixture, etc.)
  *
  * Stdout: a single line of JSON describing the verdict (status + counters).
@@ -59,6 +60,43 @@ async function postSlackAlert(webhookUrl: string | undefined, text: string): Pro
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[audit-chain-verify] slack POST error: ${msg}\n`);
+  }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function postBrevoAlert(
+  apiKey: string | undefined,
+  recipient: string | undefined,
+  text: string,
+): Promise<void> {
+  if (!apiKey || !recipient) return;
+
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'Musaium audit-chain', email: 'no-reply@musaium.com' },
+        to: [{ email: recipient }],
+        subject: '[Musaium] audit-chain break detected',
+        htmlContent: `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(text)}</pre>`,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      process.stderr.write(
+        `[audit-chain-verify] brevo POST failed: ${String(res.status)} ${res.statusText} ${body.slice(0, 400)}\n`,
+      );
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[audit-chain-verify] brevo POST error: ${msg}\n`);
   }
 }
 
@@ -108,7 +146,14 @@ async function main(): Promise<void> {
   emitStdout(result.payload);
 
   if (result.exitCode === 1 && result.alertText) {
-    await postSlackAlert(process.env.DEPLOY_ALERT_SLACK_WEBHOOK, result.alertText);
+    await Promise.all([
+      postSlackAlert(process.env.DEPLOY_ALERT_SLACK_WEBHOOK, result.alertText),
+      postBrevoAlert(
+        process.env.BREVO_API_KEY,
+        process.env.AUDIT_CHAIN_ALERT_EMAIL,
+        result.alertText,
+      ),
+    ]);
   }
 
   process.exit(result.exitCode);

@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 # reviewer-eval-shim.sh — promptfoo provider exec wrapper.
-# T1.5 ROADMAP_TEAM (KR3) — feeds reviewer agent via Anthropic API to score
+# T1.5 ROADMAP_TEAM (KR3) — feeds reviewer agent via OpenAI API to score
 # corpus diffs on 5 axes; outputs reviewer JSON to stdout.
+#
+# Provider swap 2026-05-14 (Anthropic → OpenAI/GPT) — repo has no
+# ANTHROPIC_API_KEY; Musaium backend already uses OPENAI_API_KEY for chat,
+# so we reuse the same secret for reviewer eval.
 #
 # promptfoo `exec:` provider sends the rendered prompt on stdin and reads
 # stdout as the response. We map the prompt-string vars back into a structured
 # user message + system prompt loaded from `.claude/agents/reviewer.md`.
 #
 # Modes:
-#   - REAL  (ANTHROPIC_API_KEY set + REVIEWER_EVAL_MODE != "mock"):
-#     POST /v1/messages with reviewer.md as system + corpus entry as user.
+#   - REAL  (OPENAI_API_KEY set + REVIEWER_EVAL_MODE != "mock"):
+#     POST /v1/chat/completions with reviewer.md as system + corpus entry as
+#     user, response_format={type:"json_object"} to constrain output.
 #     Parses model JSON output → emits reviewer.json schema.
 #   - MOCK  (default offline):
 #     Deterministic scores derived from feature_id hash → enables harness
@@ -78,8 +83,8 @@ mock_scores() {
 }
 
 real_scores() {
-  # Lightweight one-shot to Anthropic API.
-  local model="${REVIEWER_EVAL_MODEL:-claude-opus-4-7}"
+  # Lightweight one-shot to OpenAI Chat Completions API.
+  local model="${REVIEWER_EVAL_MODEL:-gpt-4o}"
   local sys_prompt
   sys_prompt=$(cat "$(dirname "${BASH_SOURCE[0]}")/../../../agents/reviewer.md" \
                2>/dev/null || echo "You are a code reviewer. Output JSON.")
@@ -95,24 +100,28 @@ Spec excerpt: $spec_excerpt
 Diff excerpt: $diff_excerpt
 EOF
 )
+  # response_format={type:"json_object"} forces valid JSON; OpenAI requires the
+  # word "JSON" somewhere in the prompt — present in the user message above.
   local payload
   payload=$(jq -nc --arg model "$model" --arg sys "$sys_prompt" --arg usr "$user_msg" \
-            '{model: $model, max_tokens: 2000, system: $sys, messages: [{role: "user", content: $usr}]}')
+            '{model: $model, max_tokens: 2000, response_format: {type: "json_object"},
+              messages: [
+                {role: "system", content: $sys},
+                {role: "user",   content: $usr}
+              ]}')
   local resp
-  resp=$(curl -fsS -X POST 'https://api.anthropic.com/v1/messages' \
+  resp=$(curl -fsS -X POST 'https://api.openai.com/v1/chat/completions' \
               --max-time 90 \
-              -H "x-api-key: $ANTHROPIC_API_KEY" \
-              -H 'anthropic-version: 2023-06-01' \
+              -H "Authorization: Bearer $OPENAI_API_KEY" \
               -H 'content-type: application/json' \
               -d "$payload" 2>/dev/null || echo '')
   if [ -z "$resp" ]; then
-    echo '{"error":"anthropic_unreachable","scoresOnFiveAxes":{"weightedMean":0}}'
+    echo '{"error":"openai_unreachable","scoresOnFiveAxes":{"weightedMean":0}}'
     return
   fi
-  # Extract first text block, strip code fences if present, validate JSON.
+  # response_format json_object => content is already parseable JSON.
   local text
-  text=$(echo "$resp" | jq -r '.content[0].text // empty' \
-         | sed -e 's/^```json//' -e 's/^```//' -e 's/```$//')
+  text=$(echo "$resp" | jq -r '.choices[0].message.content // empty')
   if echo "$text" | jq -e . >/dev/null 2>&1; then
     echo "$text" | jq -c .
   else
@@ -120,7 +129,7 @@ EOF
   fi
 }
 
-if [ -n "${ANTHROPIC_API_KEY:-}" ] && [ "${REVIEWER_EVAL_MODE:-real}" != "mock" ]; then
+if [ -n "${OPENAI_API_KEY:-}" ] && [ "${REVIEWER_EVAL_MODE:-real}" != "mock" ]; then
   real_scores
 else
   mock_scores

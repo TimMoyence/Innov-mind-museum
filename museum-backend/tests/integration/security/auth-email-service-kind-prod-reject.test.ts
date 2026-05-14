@@ -159,10 +159,9 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     museumEnrichmentSchedulerEnabled: false,
     redis: { host: 'localhost', port: 6379, clusterNodes: null },
     guardrails: {
-      candidate: 'off',
       timeoutMs: 300,
       observeOnly: false,
-      budgetCentsPerDay: 500,
+      budgetCentsPerDay: 0,
       judgeTimeoutMs: 500,
       judgeMinMessageLength: 50,
       budgetBackend: 'memory',

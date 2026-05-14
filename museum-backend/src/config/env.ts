@@ -16,7 +16,6 @@ import {
   resolveCommitSha,
   resolveDeploymentMode,
   resolveEmbeddingsProvider,
-  resolveGuardrailsCandidate,
   resolveLlmProvider,
   resolveNodeEnv,
   resolveStorageDriver,
@@ -39,7 +38,6 @@ if (process.env.NODE_ENV !== 'test') {
 
 const nodeEnv = resolveNodeEnv();
 const provider = resolveLlmProvider();
-const guardrailsCandidate = resolveGuardrailsCandidate();
 const storageDriver = resolveStorageDriver();
 const deploymentMode = resolveDeploymentMode();
 const embeddingsProvider: EmbeddingsProvider = resolveEmbeddingsProvider();
@@ -404,7 +402,6 @@ const env: AppEnv = {
     clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
   },
   guardrails: {
-    candidate: guardrailsCandidate,
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
     // 2026-05-12 — raised from 300/500ms after a prod incident where the
     // sidecar P95 inference on the CPU-only VPS exceeded 500ms, causing
@@ -415,7 +412,14 @@ const env: AppEnv = {
     // `team-state/2026-05-12-llm-guard-circuit-breaker/`.
     timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 1500),
     observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
-    // F4 (2026-04-30) — LLM judge layer config (defaults: 5€/day, 500ms, 50 chars)
+    // F4 (2026-04-30) — LLM judge layer daily cost cap (cents). Default 500
+    // (5€/day) preserves the historic budget-active behaviour AND existing
+    // test coverage on `judgeWithLlm` (which checks `if (cap <= 0) return null`).
+    // Set explicitly to `0` to disable the judge layer entirely (matches the
+    // old `GUARDRAILS_V2_CANDIDATE=off` semantics, retired 2026-05-14 — ADR-015
+    // amendment). Production callers that previously relied on `candidate=off`
+    // to disable both layers MUST now also set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0`
+    // explicitly in `/srv/museum/.env` to preserve that posture.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),

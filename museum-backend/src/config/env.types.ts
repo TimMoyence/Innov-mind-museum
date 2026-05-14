@@ -16,14 +16,11 @@ export type StorageDriver = 'local' | 's3';
  */
 export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
 
-/**
- * Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default).
- *
- * F4 (2026-04-30) — `llm-judge` adds a structured-output LLM second-layer verdict
- * AFTER the deterministic keyword guardrail, gated by message length and budget.
- * See `src/modules/chat/useCase/llm-judge-guardrail.ts`.
- */
-export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'llm-judge';
+// Note: the legacy `GuardrailsV2Candidate` enum was retired 2026-05-14 (ADR-015
+// amendment + ROADMAP_TEAM T1.7#2). Each V2 layer now self-activates from its
+// own config presence — `GUARDRAILS_V2_LLM_GUARD_URL` for the sidecar, and
+// `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` for the structured-output judge —
+// aligning with the no-feature-flags-pre-launch doctrine.
 
 /**
  * Deployment topology hint consumed by boot-time invariant checks.
@@ -532,27 +529,26 @@ export interface AppEnv {
     artKeywordsHitThreshold: number;
   };
   /**
-   * Advanced guardrail V2 configuration. Controls the optional semantic guardrail
-   * layer that runs AFTER the deterministic keyword guardrail (kept as first defense).
-   * `candidate: 'off'` (default) installs the noop adapter and is a no-op at runtime.
+   * Advanced guardrail V2 configuration. Each layer below self-activates from
+   * its own config presence (URL for the LLM Guard sidecar, budget>0 for the
+   * structured-output judge) — no master "candidate" flag (ADR-015 amendment
+   * 2026-05-14, ROADMAP_TEAM T1.7#2).
    */
   guardrails: {
-    /** Candidate adapter to activate. Defaults to 'off'. */
-    candidate: GuardrailsV2Candidate;
-    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). Only used when candidate === 'llm-guard'. */
+    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). When set, the LLMGuardAdapter is wired. */
     llmGuardUrl?: string;
     /** Hard request timeout (ms) for advanced guardrail checks. Fail-CLOSED on elapsed. */
     timeoutMs: number;
     /** When true, never block — only log decisions (Phase A "observe" mode). */
     observeOnly: boolean;
     /**
-     * F4 (2026-04-30) — daily cost cap (in cents) for the `llm-judge` candidate.
-     * Tracked in-memory with a UTC-midnight reset; once exceeded, the judge
-     * falls back to the keyword-only decision for the remainder of the day.
-     *
-     * NOTE: per-process counter — multi-instance prod will have per-instance
-     * budget, so cumulative spend across N replicas can be up to N×. Acceptable
-     * trade-off for v1; Phase 2 moves the counter to Redis (SET with TTL).
+     * F4 (2026-04-30) — daily cost cap (in cents) for the structured-output
+     * judge layer. Default `500` (5€/day) preserves historic post-flag
+     * behaviour AND existing `judgeWithLlm` test coverage (the budget gate
+     * disables the judge when `cap <= 0`). Set explicitly to `0` to disable
+     * the layer (matches the retired `GUARDRAILS_V2_CANDIDATE=off` semantics
+     * — ADR-015 amendment 2026-05-14). Tracked via the configured backend
+     * (memory per-process, or Redis shared-across-replicas).
      */
     budgetCentsPerDay: number;
     /**

@@ -9,14 +9,14 @@
 #   1. A Dockerfile must exist at `ops/llm-guard-sidecar/Dockerfile` (NOT YET BUILT —
 #      the current POC ran via local Python venv; see ops/llm-guard-sidecar/README.md).
 #   2. Set these env vars in `.env` (defaults kept Phase A safe):
-#        GUARDRAILS_V2_CANDIDATE=llm-guard
 #        GUARDRAILS_V2_LLM_GUARD_URL=http://llm-guard:8081
 #        GUARDRAILS_V2_OBSERVE_ONLY=true
 #   3. Start with the overlay:
 #        docker compose -f docker-compose.dev.yml -f docker-compose.guardrails.yml up -d
 #
-# When the overlay is not used, `env.guardrails.candidate` defaults to `off`
-# and the backend installs the noop adapter — no runtime cost, no dependency.
+# When the overlay is not used, `GUARDRAILS_V2_LLM_GUARD_URL` is unset and the
+# backend installs no V2 adapter — no runtime cost, no dependency. (The master
+# `GUARDRAILS_V2_CANDIDATE` flag was retired 2026-05-14, ADR-015 amendment.)
 
 services:
   llm-guard:
@@ -65,7 +65,6 @@ services:
 
   backend:
     environment:
-      - GUARDRAILS_V2_CANDIDATE=${GUARDRAILS_V2_CANDIDATE:-llm-guard}
       - GUARDRAILS_V2_LLM_GUARD_URL=${GUARDRAILS_V2_LLM_GUARD_URL:-http://llm-guard:8081}
       # 2026-05-12 incident response — raised from 500ms to 1500ms after a
       # prod incident where the sidecar P95 inference on the CPU-only VPS

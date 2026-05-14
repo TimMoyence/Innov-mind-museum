@@ -19,8 +19,8 @@
 # Required env vars in /srv/museum/.env:
 #   DB_USER, DB_PASSWORD, PGDATABASE, REDIS_PASSWORD,
 #   JWT_*, LLM_PROVIDER + matching API key,
-#   GUARDRAILS_V2_CANDIDATE, GUARDRAILS_V2_LLM_GUARD_URL,
-#   GUARDRAILS_V2_TIMEOUT_MS, GUARDRAILS_V2_OBSERVE_ONLY
+#   GUARDRAILS_V2_LLM_GUARD_URL (presence = adapter wired, retired CANDIDATE
+#   flag 2026-05-14), GUARDRAILS_V2_TIMEOUT_MS, GUARDRAILS_V2_OBSERVE_ONLY
 #   (full list in museum-backend/.env.production.example)
 #
 # Deploy sequence on VPS:
@@ -100,8 +100,8 @@ services:
   # Runs the LLM Guard scanners (PromptInjection, Anonymize, Toxicity) behind
   # an HTTP API the backend consumes via LLMGuardAdapter. Private network only —
   # never receives traffic from the internet, only from the backend container.
-  # To disable: set GUARDRAILS_V2_CANDIDATE=off in .env and restart backend
-  # (backend will use noopAdvancedGuardrail; this service still runs but is idle).
+  # To disable: unset GUARDRAILS_V2_LLM_GUARD_URL in .env and restart backend
+  # (backend installs no V2 adapter; this service still runs but is idle).
   llm-guard:
     # LLM_GUARD_IMAGE_TAG: NOT yet wired into the deploy persistence pattern that
     # backend + museum-web use (no SSH deploy step in ci-cd-llm-guard.yml).

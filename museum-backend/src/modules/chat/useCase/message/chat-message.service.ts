@@ -117,7 +117,7 @@ export interface ChatSafetyDeps {
   piiSanitizer?: PiiSanitizer;
   /** F4 — LLM judge callable wired to the chat orchestrator. */
   llmJudge?: LlmJudgeFn;
-  /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
+  /** F4 — true when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
 }
 

@@ -9,9 +9,12 @@
 #
 # CI: .github/workflows/team-quality-regression.yml (cron weekly).
 #
-# Offline (no Anthropic key): the eval shim returns deterministic mock scores —
+# Offline (no OpenAI key): the eval shim returns deterministic mock scores —
 # regression detection still runs against the same mock to catch harness drift.
-# Set ANTHROPIC_API_KEY to switch to real reviewer scoring.
+# Set OPENAI_API_KEY (already used by Musaium backend) to switch to real
+# reviewer scoring. Default model = gpt-4o, override via REVIEWER_EVAL_MODEL.
+# Provider was Anthropic until 2026-05-14 ; swapped because repo has no
+# ANTHROPIC_API_KEY secret (T1.5b ROADMAP_TEAM unblock).
 
 description: '/team reviewer 5-axis quality regression vs 20-feature corpus'
 

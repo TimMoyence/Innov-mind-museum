@@ -1,9 +1,35 @@
 # ADR-015 — Chat Guardrail v2: LLM Judge Layer + Multilingual Insults
 
-**Status**: Accepted (rolled out behind `GUARDRAILS_V2_CANDIDATE=llm-judge`)
-**Date**: 2026-04-30
+**Status**: Amended 2026-05-14 — master `GUARDRAILS_V2_CANDIDATE` flag retired. Each V2 layer self-activates from its own config presence (see Amendment below).
+**Date**: 2026-04-30 (original), 2026-05-14 (amendment)
 **Deciders**: Tech Lead (sec-hardening-2026-04-30 team), user gate
 **Numbering note**: Originally ADR-012 in the design spec. Renumbered because ADR-012 was concurrently taken by `ADR-012-test-pyramid-taxonomy.md` from a parallel workstream. Commit message `80e3e1cb` references the design-spec numbering; this file is the authoritative record.
+
+## Amendment 2026-05-14 — `GUARDRAILS_V2_CANDIDATE` retired (ROADMAP_TEAM T1.7#2)
+
+The master env flag `GUARDRAILS_V2_CANDIDATE` (`'off' | 'llm-guard' | 'llm-judge'`) is **removed**. The flag was a feature-flag in spirit — exactly the pattern `feedback_no_feature_flags_prelaunch` doctrine forbids until B2B revenue. Replacement: each V2 layer activates from its **own required config presence**.
+
+| Layer | Old activation | New activation |
+|---|---|---|
+| **LLM Guard sidecar** | `GUARDRAILS_V2_CANDIDATE === 'llm-guard'` AND `GUARDRAILS_V2_LLM_GUARD_URL` set | `GUARDRAILS_V2_LLM_GUARD_URL` set (URL presence is the toggle) |
+| **Structured-output judge** | `GUARDRAILS_V2_CANDIDATE === 'llm-judge'` (forced budget default 500 cents) | `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` (default kept at `500` cents = 5€/day cap to preserve test coverage and historic budget-active behaviour ; production callers that previously had `candidate=off` to disable both layers MUST now explicitly set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0`) |
+
+Code changes (commit accompanying this amendment):
+- `src/config/env-resolvers.ts` : `resolveGuardrailsCandidate` + `guardrailsCandidateSchema` removed
+- `src/config/env.types.ts` : `GuardrailsV2Candidate` type removed (legacy comment retained), `guardrails.candidate` field dropped
+- `src/config/env.ts` : `guardrails.candidate` field dropped, `budgetCentsPerDay` default kept at `500` (revert from initial `0` proposal — preserved test coverage on `judgeWithLlm`)
+- `src/modules/chat/chat-module.ts` : `buildGuardrailProvider` keyed off `env.guardrails.llmGuardUrl`; `llmJudgeEnabled` keyed off `budgetCentsPerDay > 0`
+- 3 comment sites updated (`chat.service.ts`, `chat-message.service.ts`, `guardrail-evaluation.service.ts`)
+- `tests/integration/security/auth-email-service-kind-prod-reject.test.ts` mock env block dropped `candidate: 'off'`
+- `museum-backend/.env.example`, `.env.production.example`, `deploy/docker-compose.prod.yml`, `docker-compose.guardrails.yml` : kept the legacy `GUARDRAILS_V2_CANDIDATE=…` line as dead config until the next ops review (the code no longer reads it; harmless but reminds operators of the original switch)
+
+**Behavioural impact** :
+- Production deploy that already sets `GUARDRAILS_V2_LLM_GUARD_URL` → no change for the sidecar layer (still wired, fail-CLOSED contract intact per ADR-047).
+- Production deploy that previously had `GUARDRAILS_V2_CANDIDATE=off` → the judge layer is now activated by default (budget 500). **Operators that want the old "both layers OFF" posture MUST explicitly set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0` in `/srv/museum/.env` before/with the next deploy.** This is a deliberate trade-off: keeping the default at 500 preserves the existing `judgeWithLlm` test coverage and matches the "judge ready to scale up" posture intended by F4. The opt-out is a single env line.
+- Production deploy that had `GUARDRAILS_V2_CANDIDATE=llm-judge` (judge ON, guard OFF) → judge stays ON via default budget 500; guard stays OFF until URL is set. Same effective behaviour.
+- Test mocks that asserted `candidate === 'off'` to skip both layers → behaviour-equivalent only when the test also sets `budgetCentsPerDay: 0`. Existing test files that simply omit the candidate field will now exercise the judge code path (budget 500).
+
+**Reversal path** : a new ADR amending or superseding this one. Any reintroduction of a master flag must explicitly justify why doctrine `feedback_no_feature_flags_prelaunch` no longer applies (typically because pre-launch is over).
 
 ## Context
 

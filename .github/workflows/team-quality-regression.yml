@@ -39,7 +39,9 @@ jobs:
       # PR runs default to mock (free, deterministic, harness-correctness check).
       # Cron + manual dispatch can override.
       REVIEWER_EVAL_MODE: ${{ github.event_name == 'schedule' && 'real' || (github.event.inputs.mode || 'mock') }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Provider swap 2026-05-14: Anthropic → OpenAI (no ANTHROPIC_API_KEY in
+      # repo; Musaium already uses OPENAI_API_KEY for chat).
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,8 +69,8 @@ jobs:
         working-directory: .claude/skills/team/team-promptfoo
         run: |
           echo "Mode: $REVIEWER_EVAL_MODE"
-          if [ "$REVIEWER_EVAL_MODE" = "real" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::REVIEWER_EVAL_MODE=real but ANTHROPIC_API_KEY secret is not set"
+          if [ "$REVIEWER_EVAL_MODE" = "real" ] && [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::REVIEWER_EVAL_MODE=real but OPENAI_API_KEY secret is not set"
             exit 1
           fi
           npx promptfoo eval --output output.json --no-cache

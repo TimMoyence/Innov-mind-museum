@@ -2,12 +2,15 @@ import './instrumentation';
 import 'reflect-metadata';
 import util from 'node:util';
 
-
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
 import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
+import {
+  RedisNonceStore,
+  setSocialNonceStore,
+} from '@modules/auth/adapters/secondary/social/nonce-store';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
@@ -102,6 +105,11 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     // the same ioredis client. The middleware fails OPEN if no counter is
     // registered (dev/test), so this single setter is the only boot wiring.
     setLlmCostCounter(new RedisLlmCostCounter(redisClient));
+    // F3 / T1.7#5 — upgrade OIDC nonce store from in-memory default to Redis
+    // so multi-instance deployments share a single atomic redemption surface
+    // (GETDEL primitive race-free across replicas). Single-instance dev/tests
+    // skip this branch and keep the InMemoryNonceStore default.
+    setSocialNonceStore(new RedisNonceStore(redisClient));
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };
