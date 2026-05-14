@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react-native';
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
+import { runAuthRefresh } from '@/shared/infrastructure/httpClient';
 
 const breadcrumb = (message: string, data?: Record<string, unknown>): void => {
   try {
@@ -44,25 +45,46 @@ export function BiometricGate({ children }: { children: ReactNode }) {
     isLockedRef.current = isBiometricLocked;
   }, [isBiometricLocked]);
 
-  // Pure orchestration: triggers the OS prompt and updates the failed
-  // state ONLY on the failure tail. The success branch never calls
-  // setState (unlockBiometric ultimately changes auth context, which
-  // unmounts this gate). Keeping the synchronous prefix free of setState
+  // Pure orchestration: triggers the OS prompt, validates the backend
+  // session via a preflight refresh, and updates the failed state ONLY
+  // on the failure tail. The success branch never calls setState
+  // (unlockBiometric ultimately changes auth context, which unmounts
+  // this gate). Keeping the synchronous prefix free of setState
   // satisfies react-hooks/set-state-in-effect on the auto-prompt path.
+  //
+  // Why preflight refresh: Face ID success only proves the user owns the
+  // device — it says nothing about whether the server-side refresh token
+  // is still valid. Without this check, we unlock the client, navigate to
+  // home, and the first authed request takes a 401 → silent refresh →
+  // potential invalid → unauthorizedHandler kicks back to /auth. The user
+  // experiences "Face ID does nothing." Running the refresh here makes
+  // the auth state authoritative before we drop the gate, and surfaces a
+  // backend-rejected session as a direct logout (visible breadcrumb).
   const tryUnlock = useCallback(async (): Promise<void> => {
     breadcrumb('prompt');
     const success = await authenticate();
-    if (success && isLockedRef.current) {
-      breadcrumb('unlocked');
+    if (!success) {
+      breadcrumb('failed');
+      setFailed(true);
+      return;
+    }
+
+    breadcrumb('refresh_preflight');
+    const refresh = await runAuthRefresh();
+    breadcrumb('refresh_result', { kind: refresh.kind });
+
+    // `invalid` → unauthorizedHandler already cleared the session and
+    // queued a navigate to /auth. We still unlock so the gate stops
+    // covering the Stack and the auth screen becomes visible.
+    // `transient` (network / 5xx) → unlock so the user can keep using
+    // the app offline; the next online request will retry the refresh.
+    // `success` → tokens are fresh, navigation will land on home.
+    if (isLockedRef.current) {
+      breadcrumb('unlocked', { refresh: refresh.kind });
       unlockBiometric();
       return;
     }
-    if (success) {
-      breadcrumb('stale_unlock_skipped');
-      return;
-    }
-    breadcrumb('failed');
-    setFailed(true);
+    breadcrumb('stale_unlock_skipped');
   }, [authenticate, unlockBiometric]);
 
   // Auto-prompt on mount when the session enters the locked state.

@@ -161,6 +161,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           identifySentryUser(cachedAccess);
         }
         setIsAuthenticated(true);
+        // A stored refresh token proves the user has logged in before; they
+        // are not first-launch. The accurate onboarding flag arrives with
+        // the first refresh response (authRefreshHandler) — defaulting to
+        // false here unblocks useProtectedRoute, which early-returns while
+        // isFirstLaunch === null and would otherwise leave the user stuck
+        // on /auth after a biometric unlock.
+        setIsFirstLaunch(false);
         const biometricOn = await getBiometricEnabled();
         if (biometricOn) setIsBiometricLocked(true);
         bootstrapBreadcrumb(cachedAccess ? 'token_hydrated' : 'token_pending_refresh', {
