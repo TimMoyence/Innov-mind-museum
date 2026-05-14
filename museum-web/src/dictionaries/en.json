@@ -79,7 +79,9 @@
     "appStore": "App Store",
     "googlePlay": "Google Play",
     "appStorePrefix": "Download on the",
-    "googlePlayPrefix": "Get it on"
+    "googlePlayPrefix": "Get it on",
+    "appStoreHref": "https://apps.apple.com/fr/app/musaium/id6761004268",
+    "googlePlayComingSoon": "Coming soon"
   },
   "chatShowcase": {
     "title": "Point. Discover. Understand.",
@@ -191,7 +193,8 @@
     "links": {
       "privacy": "Privacy",
       "support": "Support",
-      "accessibility": "Accessibility"
+      "accessibility": "Accessibility",
+      "security": "Security"
     }
   },
   "resetPassword": {

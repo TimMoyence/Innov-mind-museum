@@ -901,7 +901,8 @@
     "data_images": "您分享的照片（元数据已移除）",
     "data_audio": "语音消息（仅转录，音频不被AI存储）",
     "data_location": "您的位置（如果您选择分享）",
-    "data_profile": "您的艺术偏好和参观历史（用于个性化回复）"
+    "data_profile": "您的艺术偏好和参观历史（用于个性化回复）",
+    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek"
   },
   "dailyArt": {
     "title": "每日艺术",

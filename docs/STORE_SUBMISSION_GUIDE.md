@@ -263,3 +263,21 @@ Manual submission via `eas submit` is recommended for first release.
 - [ ] Test in-app purchase flow (N/A for v1.0 — free app)
 - [ ] Monitor crash-free rate in App Store Connect / Play Console
 - [ ] Respond to any reviewer questions within 24h
+
+---
+
+## 9. Public landing CTA URLs (musaium.com)
+
+Source of truth for the StoreButton hrefs on `/[locale]/page.tsx` (LandingDownloadCTA section).
+
+| Store | URL / state | Wired in dictionary key |
+|---|---|---|
+| Apple App Store (FR storefront) | `https://apps.apple.com/fr/app/musaium/id6761004268` | `download.appStoreHref` (en.json + fr.json) |
+| Google Play | **Coming soon** (no URL yet) | `download.googlePlayComingSoon` ("Coming soon" / "Bientôt disponible"). Button rendered as `<span role="link" aria-disabled="true">` — non-interactive. |
+
+**Update procedure when Google Play URL becomes available** :
+1. Add `download.googlePlayHref` to `museum-web/src/dictionaries/{en,fr}.json` with the real URL.
+2. Extend the `Dictionary.download` shape in `museum-web/src/lib/i18n.ts`.
+3. In `museum-web/src/components/marketing/LandingDownloadCTA.tsx`, drop the `disabled` flag on the Google StoreButton and pass `href={dict.googlePlayHref}` + restore `subLabel={dict.googlePlayPrefix}`.
+4. Run `pnpm lint && pnpm test` to refresh dictionary fixtures (Header/Footer/snapshots/a11y).
+5. Update this section to mark Google as wired.

@@ -901,7 +901,8 @@
     "data_images": "Photos que vous partagez (métadonnées supprimées)",
     "data_audio": "Messages vocaux (transcrits uniquement, audio non conservé par l'IA)",
     "data_location": "Votre localisation (si vous choisissez de la partager)",
-    "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)"
+    "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)",
+    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek"
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",

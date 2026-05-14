@@ -901,7 +901,8 @@
     "data_images": "Photos you share (metadata removed)",
     "data_audio": "Voice messages (transcribed only, audio not stored by AI)",
     "data_location": "Your location (if you choose to share it)",
-    "data_profile": "Your art preferences and visit history (to personalize responses)"
+    "data_profile": "Your art preferences and visit history (to personalize responses)",
+    "data_providers": "Processed by third-party AI services: OpenAI, Google, and DeepSeek"
   },
   "dailyArt": {
     "title": "Artwork of the Day",

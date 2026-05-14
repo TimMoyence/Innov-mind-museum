@@ -901,7 +901,8 @@
     "data_images": "共有する写真（メタデータは削除されます）",
     "data_audio": "音声メッセージ（文字起こしのみ、音声はAIに保存されません）",
     "data_location": "あなたの位置情報（共有を選択した場合）",
-    "data_profile": "アートの好みと訪問履歴（回答のパーソナライズに使用）"
+    "data_profile": "アートの好みと訪問履歴（回答のパーソナライズに使用）",
+    "data_providers": "第三者のAIサービスにより処理されます：OpenAI、Google、DeepSeek"
   },
   "dailyArt": {
     "title": "今日のアートワーク",

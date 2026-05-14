@@ -118,6 +118,7 @@ export const useAudioRecorder = () => {
     await setAudioModeAsync({
       allowsRecording: true,
       playsInSilentMode: true,
+      shouldPlayInBackground: true,
     });
 
     await nativeRecorder.prepareToRecordAsync();
@@ -161,6 +162,7 @@ export const useAudioRecorder = () => {
     await setAudioModeAsync({
       allowsRecording: false,
       playsInSilentMode: true,
+      shouldPlayInBackground: true,
     });
 
     if (uri) {

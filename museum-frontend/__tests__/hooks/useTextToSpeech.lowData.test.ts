@@ -16,6 +16,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 
 jest.mock('expo-audio', () => ({
   createAudioPlayer: (...args: unknown[]) => mockCreateAudioPlayer(...args),
+  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('expo-file-system/legacy', () => ({

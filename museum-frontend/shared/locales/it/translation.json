@@ -901,7 +901,8 @@
     "data_images": "Foto che condividi (metadati rimossi)",
     "data_audio": "Messaggi vocali (solo trascritti, l'audio non viene memorizzato dall'IA)",
     "data_location": "La tua posizione (se scegli di condividerla)",
-    "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)"
+    "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)",
+    "data_providers": "Trattati da servizi di IA di terze parti: OpenAI, Google e DeepSeek"
   },
   "dailyArt": {
     "title": "Opera del Giorno",

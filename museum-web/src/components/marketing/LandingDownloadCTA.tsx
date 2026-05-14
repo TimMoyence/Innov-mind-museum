@@ -10,6 +10,8 @@ interface LandingDownloadCTAProps {
     googlePlay: string;
     appStorePrefix: string;
     googlePlayPrefix: string;
+    appStoreHref: string;
+    googlePlayComingSoon: string;
   };
 }
 
@@ -54,8 +56,18 @@ export default function LandingDownloadCTA({ dict }: LandingDownloadCTAProps) {
 
         <AnimatedSection delay={0.2}>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <StoreButton store="apple" label={dict.appStore} subLabel={dict.appStorePrefix} />
-            <StoreButton store="google" label={dict.googlePlay} subLabel={dict.googlePlayPrefix} />
+            <StoreButton
+              store="apple"
+              label={dict.appStore}
+              subLabel={dict.appStorePrefix}
+              href={dict.appStoreHref}
+            />
+            <StoreButton
+              store="google"
+              label={dict.googlePlay}
+              subLabel={dict.googlePlayComingSoon}
+              disabled
+            />
           </div>
         </AnimatedSection>
       </div>

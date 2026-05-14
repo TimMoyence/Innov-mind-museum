@@ -54,6 +54,8 @@ export interface Dictionary {
     googlePlay: string;
     appStorePrefix: string;
     googlePlayPrefix: string;
+    appStoreHref: string;
+    googlePlayComingSoon: string;
   };
   chatShowcase: {
     title: string;
@@ -95,6 +97,7 @@ export interface Dictionary {
       privacy: string;
       support: string;
       accessibility: string;
+      security: string;
     };
   };
   resetPassword: {

@@ -39,6 +39,8 @@ const mockDict: Dictionary = {
     googlePlay: '',
     appStorePrefix: '',
     googlePlayPrefix: '',
+    appStoreHref: '',
+    googlePlayComingSoon: '',
   },
   chatShowcase: { title: '', subtitle: '', bullets: [], messages: [] },
   mapsShowcase: { title: '', subtitle: '', bullets: [] },
@@ -62,7 +64,12 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) {year} Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
+    links: {
+      privacy: 'Privacy Policy',
+      support: 'Help',
+      accessibility: 'Accessibility',
+      security: 'Security',
+    },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],
@@ -88,14 +95,16 @@ describe('Footer', () => {
     expect(screen.getByText('Made by InnovMind')).toBeInTheDocument();
   });
 
-  it('renders privacy, support, and accessibility links', () => {
+  it('renders privacy, support, accessibility, and security links', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     const privacyLink = screen.getByText('Privacy Policy');
     const supportLink = screen.getByText('Help');
     const accessibilityLink = screen.getByText('Accessibility');
+    const securityLink = screen.getByText('Security');
     expect(privacyLink).toHaveAttribute('href', '/fr/privacy');
     expect(supportLink).toHaveAttribute('href', '/fr/support');
     expect(accessibilityLink).toHaveAttribute('href', '/fr/accessibility');
+    expect(securityLink).toHaveAttribute('href', '/fr/security');
   });
 
   it('renders footer navigation landmark', () => {

@@ -59,6 +59,8 @@ const mockDict: Dictionary = {
     subtitle: '',
     appStore: '',
     googlePlay: '',
+    appStoreHref: '',
+    googlePlayComingSoon: '',
     appStorePrefix: '',
     googlePlayPrefix: '',
   },
@@ -84,7 +86,12 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) {year} Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
+    links: {
+      privacy: 'Privacy Policy',
+      support: 'Help',
+      accessibility: 'Accessibility',
+      security: 'Security',
+    },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],

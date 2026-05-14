@@ -79,7 +79,9 @@
     "appStore": "App Store",
     "googlePlay": "Google Play",
     "appStorePrefix": "Téléchargez sur",
-    "googlePlayPrefix": "Disponible sur"
+    "googlePlayPrefix": "Disponible sur",
+    "appStoreHref": "https://apps.apple.com/fr/app/musaium/id6761004268",
+    "googlePlayComingSoon": "Bientôt disponible"
   },
   "chatShowcase": {
     "title": "Photographiez. Comprenez.",
@@ -191,7 +193,8 @@
     "links": {
       "privacy": "Confidentialité",
       "support": "Aide",
-      "accessibility": "Accessibilité"
+      "accessibility": "Accessibilité",
+      "security": "Sécurité"
     }
   },
   "resetPassword": {
