@@ -866,7 +866,26 @@
       "share": "Nachricht teilen",
       "report": "Nachricht melden",
       "cancel": "Menü schließen",
-      "overlay_hint": "Tippen zum Schließen des Menüs"
+      "overlay_hint": "Tippen zum Schließen des Menüs",
+      "opened": "Menü für Nachrichtenaktionen geöffnet"
+    },
+    "consent": {
+      "opened": "Hinweis zur KI-Nutzung geöffnet"
+    },
+    "summary": {
+      "opened": "Besuchszusammenfassung geöffnet"
+    },
+    "dailyLimit": {
+      "opened": "Tageslimit erreicht"
+    },
+    "voiceIntro": {
+      "opened": "Einführung zur Sprachsitzung geöffnet"
+    },
+    "aiDisclosure": {
+      "opened": "KI-Hinweis geöffnet"
+    },
+    "browser": {
+      "opened": "In-App-Browser geöffnet"
     }
   },
   "consent": {

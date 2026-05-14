@@ -866,7 +866,26 @@
       "share": "分享消息",
       "report": "举报消息",
       "cancel": "关闭菜单",
-      "overlay_hint": "点击关闭菜单"
+      "overlay_hint": "点击关闭菜单",
+      "opened": "已打开消息操作菜单"
+    },
+    "consent": {
+      "opened": "已打开 AI 使用提示"
+    },
+    "summary": {
+      "opened": "已打开访问摘要"
+    },
+    "dailyLimit": {
+      "opened": "已达到每日上限"
+    },
+    "voiceIntro": {
+      "opened": "已打开语音会话介绍"
+    },
+    "aiDisclosure": {
+      "opened": "已打开 AI 披露说明"
+    },
+    "browser": {
+      "opened": "已打开应用内浏览器"
     }
   },
   "consent": {

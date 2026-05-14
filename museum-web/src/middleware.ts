@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/lib/i18n';
 
-/** Paths that should never be rewritten by the i18n middleware. */
-const IGNORED_PREFIXES = ['/_next', '/api', '/images', '/favicon.ico'];
+/**
+ * Paths that should never be rewritten by the i18n middleware.
+ *
+ * `/.well-known` is reserved by RFC 8615 for well-known URIs and MUST be
+ * served at the root (no locale prefix). Without this entry, a request to
+ * `/.well-known/security.txt` is redirected to `/fr/.well-known/security.txt`
+ * which 404s because the static file lives in `public/.well-known/`.
+ */
+const IGNORED_PREFIXES = ['/_next', '/api', '/images', '/favicon.ico', '/.well-known'];
 
 /** File extensions served directly from public/ (verification files, etc.). */
 const STATIC_EXTENSIONS = ['.xml', '.html', '.txt', '.ico', '.png', '.svg'];

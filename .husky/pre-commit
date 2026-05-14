@@ -14,6 +14,9 @@
 #   3. lint-staged — typecheck + ESLint on staged files only
 #   4. as-any ratchet — count cannot exceed baseline
 #   5. root-hygiene — block stray .md / .sql / .log at repo root
+#   6. workspace-links — only fires when commit touches packages/ or any
+#      <app>/package.json — verifies file: deps still resolve so consumers
+#      can build. Skipped on unrelated commits to keep latency low.
 # =============================================================================
 set -e
 
@@ -44,7 +47,7 @@ run_gitleaks() {
 }
 
 # ─── Gate 1 — gitleaks staged-diff scan ────────────────────────────────────
-echo "[pre-commit] ► Gate 1/5 gitleaks (staged diff)"
+echo "[pre-commit] ► Gate 1/6 gitleaks (staged diff)"
 if ! run_gitleaks; then
   echo ""
   echo "[pre-commit] ✗ gitleaks found one or more secrets in the staged diff."
@@ -56,12 +59,12 @@ rm -f "${GITLEAKS_REPORT}"
 echo "[pre-commit] ✓ Gate 1"
 
 # ─── Gate 2 — env-policy sentinel ──────────────────────────────────────────
-echo "[pre-commit] ► Gate 2/5 env-policy (forbidden .env + secret regex)"
+echo "[pre-commit] ► Gate 2/6 env-policy (forbidden .env + secret regex)"
 node scripts/sentinels/env-policy.mjs || exit 1
 echo "[pre-commit] ✓ Gate 2"
 
 # ─── Gate 3 — lint-staged per workspace ────────────────────────────────────
-echo "[pre-commit] ► Gate 3/5 lint-staged (tsc + ESLint on staged)"
+echo "[pre-commit] ► Gate 3/6 lint-staged (tsc + ESLint on staged)"
 if git diff --cached --name-only | grep -q '^museum-backend/'; then
   ( cd museum-backend && npx lint-staged ) || exit 1
 fi
@@ -74,12 +77,12 @@ fi
 echo "[pre-commit] ✓ Gate 3"
 
 # ─── Gate 4 — as-any ratchet ───────────────────────────────────────────────
-echo "[pre-commit] ► Gate 4/5 as-any ratchet (count must not exceed baseline)"
+echo "[pre-commit] ► Gate 4/6 as-any ratchet (count must not exceed baseline)"
 node scripts/sentinels/as-any-ratchet.mjs || exit 1
 echo "[pre-commit] ✓ Gate 4"
 
 # ─── Gate 5 — root-hygiene (stray .md / .sql / .log at repo root) ──────────
-echo "[pre-commit] ► Gate 5/5 root-hygiene"
+echo "[pre-commit] ► Gate 5/6 root-hygiene"
 ROOT_NEW=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+$' || true)
 ROOT_MD_ALLOW='^(AGENTS|CLAUDE|README|LICENSE|SECURITY|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT|GOVERNANCE|NOTICE)\.md$'
 for f in $ROOT_NEW; do
@@ -104,6 +107,20 @@ for f in $ROOT_NEW; do
 done
 echo "[pre-commit] ✓ Gate 5"
 
+# ─── Gate 6 — workspace-links (conditional) ────────────────────────────────
+# Fires only when the staged diff touches `packages/**` or any
+# `museum-*/package.json` / `museum-*/pnpm-lock.yaml` — i.e. exactly the
+# changes that can desync `file:` symlinks across the three apps. Other
+# commits skip this gate so the < 5s budget is preserved.
+STAGED=$(git diff --cached --name-only)
+if echo "$STAGED" | grep -qE '^(packages/|museum-[a-z]+/(package\.json|pnpm-lock\.yaml|package-lock\.json)$)'; then
+  echo "[pre-commit] ► Gate 6/6 workspace-links (file: protocol symlinks)"
+  node scripts/sentinels/workspace-links.mjs || exit 1
+  echo "[pre-commit] ✓ Gate 6"
+else
+  echo "[pre-commit] ⤿ Gate 6 skipped (no packages/ or app manifest changes)"
+fi
+
 echo "[pre-commit] ═══════════════════════════════════════════════════"
-echo "[pre-commit] ✅ All 5 gates passed — commit authorized"
+echo "[pre-commit] ✅ All gates passed — commit authorized"
 echo "[pre-commit] ═══════════════════════════════════════════════════"

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { useChatSession } from '@/features/chat/application/useChatSession';
+import { useChatSession, type ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
@@ -23,14 +23,11 @@ import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefet
 import { useChatSessionActions } from '@/features/chat/application/useChatSessionActions';
 import { useChatSessionInputHandlers } from '@/features/chat/application/useChatSessionInputHandlers';
 import { useChatSessionIntents } from '@/features/chat/application/useChatSessionIntents';
-import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
-import { ChatSessionModals } from '@/features/chat/ui/ChatSessionModals';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
 import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
-import { VoiceSessionIntro } from '@/features/chat/ui/VoiceSessionIntro';
-import { AiDisclosureModal } from '@/features/chat/ui/AiDisclosureModal';
+import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
@@ -54,16 +51,13 @@ export default function ChatSessionScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const [contextMenuMessage, setContextMenuMessage] = useState<ChatUiMessage | null>(null);
-  const [showSummary, setShowSummary] = useState(false);
-  const [browserUrl, setBrowserUrl] = useState<string | null>(null);
-  const [showAiDisclosureRecap, setShowAiDisclosureRecap] = useState(false);
   // Voice-disclosure gate state: when the user taps the mic for the first
-  // time we show `VoiceSessionIntro`. The actual recording action is queued
-  // until the user acknowledges. This satisfies EU AI Act Article 50 for
-  // every fresh voice session (see docs/legal/AI_DISCLOSURE.md).
+  // time we open the `voice-intro` sheet. The actual recording action is
+  // queued until the user acknowledges. This satisfies EU AI Act Article 50
+  // for every fresh voice session (see docs/legal/AI_DISCLOSURE.md).
   const [pendingVoiceAction, setPendingVoiceAction] = useState(false);
 
+  const bottomSheetRouter = useBottomSheetRouter();
   const { showAiConsent, setShowAiConsent, consentResolved, acceptAiConsent, recheckConsent } =
     useAiConsent();
   const {
@@ -108,10 +102,10 @@ export default function ChatSessionScreen() {
   /**
    * Wrapped `toggleRecording` that enforces the EU AI Act Article 50 voice
    * disclosure gate. On the very first mic press of a session (when the user
-   * has not yet acknowledged the disclosure) we open `VoiceSessionIntro` and
-   * queue the recording — the actual `rawToggleRecording()` call fires from
-   * `onAcknowledgeVoiceDisclosure` below. Subsequent presses pass through
-   * untouched until the session ends.
+   * has not yet acknowledged the disclosure) we mark the recording as pending
+   * — the `voice-intro` sheet then opens via the effect below, and the actual
+   * `rawToggleRecording()` call fires from `onAcknowledgeVoiceDisclosure`.
+   * Subsequent presses pass through untouched until the session ends.
    */
   const toggleRecording = useCallback(async () => {
     if (!voiceDisclosureAcknowledged) {
@@ -180,14 +174,128 @@ export default function ChatSessionScreen() {
     sendMessage,
   });
 
+  // Stable mutable holder for the report handler so the sheet-content
+  // callbacks (`onReport`, the alert chain, etc.) don't need to be recreated
+  // every render — the screen rewires it once `useChatSessionActions` returns
+  // below. Allocating it before `useMessageActions` keeps the lexical order
+  // sane: hooks read the ref but never its current value at hook-call time.
+  const reportMessageRef = useRef<((messageId: string) => void) | null>(null);
+
+  const { copyText, shareText } = useMessageActions({
+    onReport: (id: string) => {
+      reportMessageRef.current?.(id);
+    },
+  });
+
+  const openContextMenu = useCallback(
+    (msg: ChatUiMessage) => {
+      bottomSheetRouter.open('context-menu', {
+        message: msg,
+        onCopy: (m) => void copyText(m),
+        onShare: (m) => void shareText(m),
+        onReport: (messageId) => reportMessageRef.current?.(messageId),
+      });
+    },
+    [bottomSheetRouter, copyText, shareText],
+  );
+
+  const openBrowser = useCallback(
+    (url: string) => {
+      bottomSheetRouter.open('browser', { url });
+    },
+    [bottomSheetRouter],
+  );
+
+  const setBrowserUrlBridge = useCallback(
+    (url: string | null) => {
+      if (url) openBrowser(url);
+      else bottomSheetRouter.close();
+    },
+    [openBrowser, bottomSheetRouter],
+  );
+
   const sessionActions = useChatSessionActions({
     messages,
     refreshMessageImageUrl,
-    onMessageLongPress: setContextMenuMessage,
-    setBrowserUrl,
+    onMessageLongPress: openContextMenu,
+    setBrowserUrl: setBrowserUrlBridge,
   });
 
-  const { copyText, shareText } = useMessageActions({ onReport: sessionActions.onReportMessage });
+  // Wire the freshly-returned report handler into the ref so any sheet that
+  // already mounted captures it transparently on next invocation.
+  useEffect(() => {
+    reportMessageRef.current = sessionActions.onReportMessage;
+  }, [sessionActions.onReportMessage]);
+
+  // Open the AI consent sheet when `useAiConsent` flips it on. The hook owns
+  // the boolean; the screen reacts to it via the router. The sheet content
+  // itself calls `acceptAiConsent()` then closes, which clears `showAiConsent`
+  // through the hook's own callback chain.
+  useEffect(() => {
+    if (showAiConsent) {
+      bottomSheetRouter.open('consent', {
+        onAccept: () => {
+          void acceptAiConsent();
+        },
+        onPrivacy: () => {
+          setShowAiConsent(false);
+          bottomSheetRouter.close();
+          router.push('/(stack)/privacy');
+          const unsub = navigation.addListener('focus', () => {
+            unsub();
+            recheckConsent();
+          });
+        },
+      });
+    }
+    // We intentionally do NOT auto-close here when `showAiConsent` flips back
+    // to false — closing is owned by the sheet content's CTA. Adding a
+    // `close()` here would race the accept handler.
+  }, [
+    showAiConsent,
+    acceptAiConsent,
+    setShowAiConsent,
+    recheckConsent,
+    navigation,
+    bottomSheetRouter,
+  ]);
+
+  // Mirror `dailyLimitReached` → `daily-limit` sheet. The sheet's CTA calls
+  // `onDismiss` which routes to `clearDailyLimit`.
+  useEffect(() => {
+    if (dailyLimitReached) {
+      bottomSheetRouter.open('daily-limit', {
+        onDismiss: () => {
+          clearDailyLimit();
+        },
+      });
+    }
+  }, [dailyLimitReached, clearDailyLimit, bottomSheetRouter]);
+
+  // Mirror voice-intro pending state → `voice-intro` sheet.
+  useEffect(() => {
+    if (voiceIntroVisible) {
+      bottomSheetRouter.open('voice-intro', {
+        locale,
+        onAcknowledge: () => {
+          void onAcknowledgeVoiceDisclosure();
+        },
+      });
+    }
+  }, [voiceIntroVisible, locale, onAcknowledgeVoiceDisclosure, bottomSheetRouter]);
+
+  const openSummary = useCallback(() => {
+    bottomSheetRouter.open('summary', { summary: visitSummary });
+  }, [bottomSheetRouter, visitSummary]);
+
+  const openAiDisclosure = useCallback(() => {
+    bottomSheetRouter.open('ai-disclosure', {
+      onLearnMore: () => {
+        bottomSheetRouter.close();
+        router.push('/(stack)/privacy');
+      },
+    });
+  }, [bottomSheetRouter]);
 
   return (
     <LiquidScreen
@@ -213,16 +321,12 @@ export default function ChatSessionScreen() {
             onClose={() => {
               void inputHandlers.onClose();
             }}
-            onSummary={() => {
-              setShowSummary(true);
-            }}
+            onSummary={openSummary}
             audioDescriptionEnabled={effectiveAudioDesc}
             onToggleAudioDescription={() => {
               setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
             }}
-            onOpenAiDisclosure={() => {
-              setShowAiDisclosureRecap(true);
-            }}
+            onOpenAiDisclosure={openAiDisclosure}
           />
 
           {isWalkMode ? (
@@ -290,53 +394,7 @@ export default function ChatSessionScreen() {
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
 
-      <ChatSessionModals
-        browserUrl={browserUrl}
-        onCloseBrowser={() => {
-          setBrowserUrl(null);
-        }}
-        contextMenuMessage={contextMenuMessage}
-        onCloseContextMenu={() => {
-          setContextMenuMessage(null);
-        }}
-        onCopyMessage={(msg) => void copyText(msg)}
-        onShareMessage={(msg) => void shareText(msg)}
-        onReportMessage={sessionActions.onReportMessage}
-        showAiConsent={showAiConsent}
-        onAcceptAiConsent={() => void acceptAiConsent()}
-        onOpenPrivacy={() => {
-          setShowAiConsent(false);
-          router.push('/(stack)/privacy');
-          const unsub = navigation.addListener('focus', () => {
-            unsub();
-            recheckConsent();
-          });
-        }}
-        showSummary={showSummary}
-        visitSummary={visitSummary}
-        onCloseSummary={() => {
-          setShowSummary(false);
-        }}
-        dailyLimitReached={dailyLimitReached}
-        onDismissDailyLimit={clearDailyLimit}
-      />
-
-      <VoiceSessionIntro
-        visible={voiceIntroVisible}
-        onAcknowledge={() => void onAcknowledgeVoiceDisclosure()}
-        locale={locale}
-      />
-
-      <AiDisclosureModal
-        visible={showAiDisclosureRecap}
-        onClose={() => {
-          setShowAiDisclosureRecap(false);
-        }}
-        onLearnMore={() => {
-          setShowAiDisclosureRecap(false);
-          router.push('/(stack)/privacy');
-        }}
-      />
+      <BottomSheetRouter />
     </LiquidScreen>
   );
 }

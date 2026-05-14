@@ -866,7 +866,26 @@
       "share": "メッセージを共有",
       "report": "メッセージを報告",
       "cancel": "メニューを閉じる",
-      "overlay_hint": "タップしてメニューを閉じる"
+      "overlay_hint": "タップしてメニューを閉じる",
+      "opened": "メッセージアクションメニューを開きました"
+    },
+    "consent": {
+      "opened": "AI 利用に関するお知らせを開きました"
+    },
+    "summary": {
+      "opened": "訪問サマリーを開きました"
+    },
+    "dailyLimit": {
+      "opened": "1日の上限に達しました"
+    },
+    "voiceIntro": {
+      "opened": "音声セッションの説明を開きました"
+    },
+    "aiDisclosure": {
+      "opened": "AI 開示を開きました"
+    },
+    "browser": {
+      "opened": "アプリ内ブラウザを開きました"
     }
   },
   "consent": {

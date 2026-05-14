@@ -866,7 +866,26 @@
       "share": "Condividi messaggio",
       "report": "Segnala messaggio",
       "cancel": "Chiudi menù",
-      "overlay_hint": "Tocca per chiudere il menù"
+      "overlay_hint": "Tocca per chiudere il menù",
+      "opened": "Menu azioni messaggio aperto"
+    },
+    "consent": {
+      "opened": "Avviso uso IA aperto"
+    },
+    "summary": {
+      "opened": "Riepilogo visita aperto"
+    },
+    "dailyLimit": {
+      "opened": "Limite giornaliero raggiunto"
+    },
+    "voiceIntro": {
+      "opened": "Introduzione sessione vocale aperta"
+    },
+    "aiDisclosure": {
+      "opened": "Avviso IA aperto"
+    },
+    "browser": {
+      "opened": "Browser in-app aperto"
     }
   },
   "consent": {

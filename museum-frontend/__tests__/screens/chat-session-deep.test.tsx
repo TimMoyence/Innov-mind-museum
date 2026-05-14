@@ -13,13 +13,22 @@
  *   - onSend (via ChatInput): empty input is no-op; failure restores text
  *   - onMessageLinkPress: http URL opens InAppBrowser; mailto returns true; empty returns false
  *   - onMessageImageError: dedup, calls refreshMessageImageUrl once per id in flight
- *   - onMessageLongPress: opens MessageContextMenu with the matching message
+ *   - onMessageLongPress: opens the context-menu route with the matching message
  *   - onReportMessage: Alert.alert with 5 buttons; pressing 'offensive' → reportMessage('offensive')
  *   - reportMessage failure → second Alert with error copy
- *   - ChatHeader.onSummary → VisitSummaryModal becomes visible
+ *   - ChatHeader.onSummary → opens the summary route
  *   - ChatHeader.onToggleAudioDescription → toggles session override
  *   - AiConsentModal.onPrivacy → router.push to /(stack)/privacy
  *   - DailyLimitModal visible mirrors session.dailyLimitReached
+ *
+ * Bottom-sheet wiring (C4) :
+ *   The chat screen now drives every modal-like surface through the
+ *   `useBottomSheetRouter()` hook (see `features/chat/ui/bottom-sheet-router/`).
+ *   Rather than rendering the real router and walking the sheet content trees,
+ *   we mock the barrel and inspect the `router.open(route, params)` calls.
+ *   Each legacy assertion against `lastProps('AiConsentModal')` is preserved as
+ *   an equivalent assertion on the captured `params` of the matching
+ *   `router.open()` invocation.
  */
 
 import '../helpers/test-utils';
@@ -137,6 +146,41 @@ jest.mock('@/shared/ui/SkeletonChatBubble', () => {
   };
 });
 
+// ── Bottom-sheet router mock ────────────────────────────────────────────────
+// The chat screen now opens every modal via `useBottomSheetRouter().open()`.
+// We capture every call so each legacy assertion (visible-prop checks, modal
+// callback invocations, etc.) translates 1:1 to introspection of `mockRouterOpen`
+// / `mockRouterClose` and direct invocation of the captured `params` callbacks.
+const mockRouterOpen = jest.fn();
+const mockRouterClose = jest.fn();
+jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
+  BottomSheetRouter: () => null,
+  useBottomSheetRouter: () => ({
+    activeRoute: null,
+    open: mockRouterOpen,
+    close: mockRouterClose,
+  }),
+}));
+
+/**
+ * Returns the params object of the *last* `router.open(route, params)` call
+ * for the given route id, or `undefined` if the route was never opened.
+ * Replaces the legacy `lastProps<...>('AiConsentModal')` helper for sheets
+ * now routed through the bottom-sheet machine.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- test helper: T types the unsafe cast of params at call-site for ergonomic typed access (e.g. lastRouteParams<{ url: string }>('browser')). Disable is scoped to this single helper.
+function lastRouteParams<T = Record<string, unknown>>(routeId: string): T | undefined {
+  for (let i = mockRouterOpen.mock.calls.length - 1; i >= 0; i--) {
+    const call = mockRouterOpen.mock.calls[i];
+    if (call?.[0] === routeId) return call[1] as T;
+  }
+  return undefined;
+}
+
+function openedRoutes(): string[] {
+  return mockRouterOpen.mock.calls.map((c) => c[0] as string);
+}
+
 // ── Children mocked as jest.fn so we can capture and invoke their props ─────
 // Use a mock-prefixed factory that returns a render function which stores props
 // on the jest.fn itself via .mock.calls — avoids out-of-scope variable issues.
@@ -170,47 +214,11 @@ jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
     ),
   };
 });
-jest.mock('@/features/chat/ui/MessageContextMenu', () => {
-  const RN = require('react-native');
-  const ReactNS = require('react');
-  return {
-    MessageContextMenu: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-MessageContextMenu' }),
-    ),
-  };
-});
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
   return {
     OfflineBanner: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-OfflineBanner' })),
-  };
-});
-jest.mock('@/features/chat/ui/AiConsentModal', () => {
-  const RN = require('react-native');
-  const ReactNS = require('react');
-  return {
-    AiConsentModal: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-AiConsentModal' }),
-    ),
-  };
-});
-jest.mock('@/features/chat/ui/VisitSummaryModal', () => {
-  const RN = require('react-native');
-  const ReactNS = require('react');
-  return {
-    VisitSummaryModal: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-VisitSummaryModal' }),
-    ),
-  };
-});
-jest.mock('@/features/chat/ui/DailyLimitModal', () => {
-  const RN = require('react-native');
-  const ReactNS = require('react');
-  return {
-    DailyLimitModal: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-DailyLimitModal' }),
-    ),
   };
 });
 jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
@@ -220,13 +228,6 @@ jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
     WalkSuggestionChips: jest.fn(() =>
       ReactNS.createElement(RN.View, { testID: 'mock-WalkSuggestionChips' }),
     ),
-  };
-});
-jest.mock('@/shared/ui/InAppBrowser', () => {
-  const RN = require('react-native');
-  const ReactNS = require('react');
-  return {
-    InAppBrowser: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-InAppBrowser' })),
   };
 });
 
@@ -240,22 +241,11 @@ const childMockSpec: Record<string, { module: string; export: string }> = {
     module: '@/features/chat/ui/MediaAttachmentPanel',
     export: 'MediaAttachmentPanel',
   },
-  MessageContextMenu: {
-    module: '@/features/chat/ui/MessageContextMenu',
-    export: 'MessageContextMenu',
-  },
   OfflineBanner: { module: '@/features/chat/ui/OfflineBanner', export: 'OfflineBanner' },
-  AiConsentModal: { module: '@/features/chat/ui/AiConsentModal', export: 'AiConsentModal' },
-  VisitSummaryModal: {
-    module: '@/features/chat/ui/VisitSummaryModal',
-    export: 'VisitSummaryModal',
-  },
-  DailyLimitModal: { module: '@/features/chat/ui/DailyLimitModal', export: 'DailyLimitModal' },
   WalkSuggestionChips: {
     module: '@/features/chat/ui/WalkSuggestionChips',
     export: 'WalkSuggestionChips',
   },
-  InAppBrowser: { module: '@/shared/ui/InAppBrowser', export: 'InAppBrowser' },
 };
 
 function getChildMock(name: string): jest.Mock {
@@ -331,6 +321,8 @@ import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 beforeEach(() => {
   jest.clearAllMocks();
   clearAllChildMocks();
+  mockRouterOpen.mockClear();
+  mockRouterClose.mockClear();
   setParams();
   mockNavCanGoBack.mockReturnValue(true);
   mockAudioRecorderState.isRecording = false;
@@ -560,7 +552,7 @@ describe('ChatSessionScreen — onSend (via ChatInput wiring)', () => {
 });
 
 describe('ChatSessionScreen — markdown link tap', () => {
-  it('http URL routes to the in-app browser and returns false', () => {
+  it('http URL routes to the in-app browser route and returns false', () => {
     render(<ChatSessionScreen />);
     const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
       'ChatMessageList',
@@ -572,8 +564,8 @@ describe('ChatSessionScreen — markdown link tap', () => {
     });
 
     expect(result).toBe(false);
-    const browserProps = lastProps<{ url: string | null }>('InAppBrowser');
-    expect(browserProps.url).toBe('https://example.org/article');
+    const browserParams = lastRouteParams<{ url: string }>('browser');
+    expect(browserParams?.url).toBe('https://example.org/article');
   });
 
   it('mailto URL returns true (lets the markdown lib open it via Linking)', () => {
@@ -585,32 +577,14 @@ describe('ChatSessionScreen — markdown link tap', () => {
     expect(onLinkPress('mailto:test@example.com')).toBe(true);
   });
 
-  it('empty URL returns false and does NOT open the browser', () => {
+  it('empty URL returns false and does NOT open the browser route', () => {
     render(<ChatSessionScreen />);
     const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
       'ChatMessageList',
     ).onLinkPress;
 
     expect(onLinkPress('')).toBe(false);
-    expect(lastProps<{ url: string | null }>('InAppBrowser').url).toBeNull();
-  });
-
-  it('InAppBrowser onClose clears the browser URL', () => {
-    render(<ChatSessionScreen />);
-    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
-      'ChatMessageList',
-    ).onLinkPress;
-    act(() => {
-      onLinkPress('https://example.org');
-    });
-    expect(lastProps<{ url: string | null }>('InAppBrowser').url).toBe('https://example.org');
-
-    const close = lastProps<{ onClose: () => void }>('InAppBrowser').onClose;
-    act(() => {
-      close();
-    });
-
-    expect(lastProps<{ url: string | null }>('InAppBrowser').url).toBeNull();
+    expect(openedRoutes()).not.toContain('browser');
   });
 });
 
@@ -660,7 +634,7 @@ describe('ChatSessionScreen — onMessageImageError', () => {
 });
 
 describe('ChatSessionScreen — long press + report', () => {
-  it('opens MessageContextMenu with the matching message on long press', () => {
+  it('opens the context-menu route with the matching message on long press', () => {
     const targetMessage = makeAssistantMessage({ id: 'msg-99', text: 'hello' });
     mockUseChatSession.mockReturnValue(
       defaultSession({ messages: [targetMessage], isEmpty: false }),
@@ -668,16 +642,17 @@ describe('ChatSessionScreen — long press + report', () => {
 
     render(<ChatSessionScreen />);
 
-    expect(lastProps<{ message: ChatUiMessage | null }>('MessageContextMenu').message).toBeNull();
+    // No menu open yet → no `context-menu` route in the opens history.
+    expect(openedRoutes()).not.toContain('context-menu');
 
     const onReport = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
     act(() => {
       onReport('msg-99');
     });
 
-    const props = lastProps<{ message: ChatUiMessage | null }>('MessageContextMenu');
-    expect(props.message?.id).toBe('msg-99');
-    expect(props.message?.text).toBe('hello');
+    const params = lastRouteParams<{ message: ChatUiMessage }>('context-menu');
+    expect(params?.message.id).toBe('msg-99');
+    expect(params?.message.text).toBe('hello');
   });
 
   it('does nothing when long-pressed id does not match any message', () => {
@@ -694,18 +669,25 @@ describe('ChatSessionScreen — long press + report', () => {
       onReport('does-not-exist');
     });
 
-    expect(lastProps<{ message: ChatUiMessage | null }>('MessageContextMenu').message).toBeNull();
+    expect(openedRoutes()).not.toContain('context-menu');
   });
 
   it('Alert.alert from onReport surfaces 5 buttons (4 reasons + cancel)', () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
+    // Make a message available so the long-press picks one up; then invoke the
+    // sheet content's `onReport` callback (captured by the router mock).
+    const target = makeAssistantMessage({ id: 'msg-x' });
+    mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const ctxOnReport = lastProps<{ onReport: (id: string) => void }>(
-      'MessageContextMenu',
-    ).onReport;
+    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
     act(() => {
-      ctxOnReport('msg-x');
+      onLongPress('msg-x');
+    });
+    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    expect(params).toBeDefined();
+    act(() => {
+      params?.onReport('msg-x');
     });
 
     expect(alertSpy).toHaveBeenCalledTimes(1);
@@ -718,13 +700,17 @@ describe('ChatSessionScreen — long press + report', () => {
   it("pressing 'offensive' on the report Alert calls reportMessage with that reason", async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     mockReportMessage.mockResolvedValue({});
+    const target = makeAssistantMessage({ id: 'msg-x' });
+    mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const ctxOnReport = lastProps<{ onReport: (id: string) => void }>(
-      'MessageContextMenu',
-    ).onReport;
+    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
     act(() => {
-      ctxOnReport('msg-x');
+      onLongPress('msg-x');
+    });
+    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    act(() => {
+      params?.onReport('msg-x');
     });
     const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     act(() => {
@@ -743,13 +729,17 @@ describe('ChatSessionScreen — long press + report', () => {
   it('failed report shows an error Alert', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     mockReportMessage.mockRejectedValue(new Error('500'));
+    const target = makeAssistantMessage({ id: 'msg-x' });
+    mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const ctxOnReport = lastProps<{ onReport: (id: string) => void }>(
-      'MessageContextMenu',
-    ).onReport;
+    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
     act(() => {
-      ctxOnReport('msg-x');
+      onLongPress('msg-x');
+    });
+    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    act(() => {
+      params?.onReport('msg-x');
     });
     const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     act(() => {
@@ -766,32 +756,16 @@ describe('ChatSessionScreen — long press + report', () => {
 });
 
 describe('ChatSessionScreen — header callbacks', () => {
-  it('onSummary sets VisitSummaryModal.visible=true', () => {
+  it('onSummary opens the summary route', () => {
     render(<ChatSessionScreen />);
-    expect(lastProps<{ visible: boolean }>('VisitSummaryModal').visible).toBe(false);
+    expect(openedRoutes()).not.toContain('summary');
 
     const onSummary = lastProps<{ onSummary: () => void }>('ChatHeader').onSummary;
     act(() => {
       onSummary();
     });
 
-    expect(lastProps<{ visible: boolean }>('VisitSummaryModal').visible).toBe(true);
-  });
-
-  it('VisitSummaryModal.onClose flips visible back to false', () => {
-    render(<ChatSessionScreen />);
-    const onSummary = lastProps<{ onSummary: () => void }>('ChatHeader').onSummary;
-    act(() => {
-      onSummary();
-    });
-    expect(lastProps<{ visible: boolean }>('VisitSummaryModal').visible).toBe(true);
-
-    const onClose = lastProps<{ onClose: () => void }>('VisitSummaryModal').onClose;
-    act(() => {
-      onClose();
-    });
-
-    expect(lastProps<{ visible: boolean }>('VisitSummaryModal').visible).toBe(false);
+    expect(openedRoutes()).toContain('summary');
   });
 
   it('onToggleAudioDescription flips audioDescriptionEnabled prop on next render', () => {
@@ -827,15 +801,25 @@ describe('ChatSessionScreen — header callbacks', () => {
   });
 });
 
-describe('ChatSessionScreen — AiConsentModal wiring', () => {
-  it('onPrivacy hides the consent modal, navigates to /(stack)/privacy and registers a focus listener', () => {
+describe('ChatSessionScreen — consent route wiring', () => {
+  it('opens the consent route when showAiConsent flips true', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
+      expect(openedRoutes()).toContain('consent');
+    } finally {
+      mockAiConsentState.showAiConsent = false;
+    }
+  });
 
-      const onPrivacy = lastProps<{ onPrivacy: () => void }>('AiConsentModal').onPrivacy;
+  it('consent.onPrivacy hides the consent state, navigates to /(stack)/privacy and registers a focus listener', () => {
+    mockAiConsentState.showAiConsent = true;
+    try {
+      render(<ChatSessionScreen />);
+      const params = lastRouteParams<{ onPrivacy: () => void }>('consent');
+      expect(params).toBeDefined();
       act(() => {
-        onPrivacy();
+        params?.onPrivacy();
       });
 
       expect(mockAiConsentState.setShowAiConsent).toHaveBeenCalledWith(false);
@@ -846,13 +830,13 @@ describe('ChatSessionScreen — AiConsentModal wiring', () => {
     }
   });
 
-  it('onAccept invokes acceptAiConsent', () => {
+  it('consent.onAccept invokes acceptAiConsent', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const onAccept = lastProps<{ onAccept: () => void }>('AiConsentModal').onAccept;
+      const params = lastRouteParams<{ onAccept: () => void }>('consent');
       act(() => {
-        onAccept();
+        params?.onAccept();
       });
       expect(mockAiConsentState.acceptAiConsent).toHaveBeenCalledTimes(1);
     } finally {
@@ -861,25 +845,25 @@ describe('ChatSessionScreen — AiConsentModal wiring', () => {
   });
 });
 
-describe('ChatSessionScreen — daily limit modal', () => {
-  it('mirrors session.dailyLimitReached → DailyLimitModal.visible', () => {
+describe('ChatSessionScreen — daily limit route', () => {
+  it('opens the daily-limit route when session.dailyLimitReached is true', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ dailyLimitReached: true }));
 
     render(<ChatSessionScreen />);
 
-    expect(lastProps<{ visible: boolean }>('DailyLimitModal').visible).toBe(true);
+    expect(openedRoutes()).toContain('daily-limit');
   });
 
-  it('DailyLimitModal.onDismiss invokes clearDailyLimit', () => {
+  it('daily-limit.onDismiss invokes clearDailyLimit', () => {
     const clearDailyLimit = jest.fn();
     mockUseChatSession.mockReturnValue(
       defaultSession({ dailyLimitReached: true, clearDailyLimit }),
     );
 
     render(<ChatSessionScreen />);
-    const onDismiss = lastProps<{ onDismiss: () => void }>('DailyLimitModal').onDismiss;
+    const params = lastRouteParams<{ onDismiss: () => void }>('daily-limit');
     act(() => {
-      onDismiss();
+      params?.onDismiss();
     });
 
     expect(clearDailyLimit).toHaveBeenCalledTimes(1);
@@ -978,13 +962,17 @@ describe('ChatSessionScreen — report Alert button branches', () => {
     async (reason) => {
       const alertSpy = jest.spyOn(Alert, 'alert');
       mockReportMessage.mockResolvedValue({});
+      const target = makeAssistantMessage({ id: 'msg-x' });
+      mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
       render(<ChatSessionScreen />);
 
-      const ctxOnReport = lastProps<{ onReport: (id: string) => void }>(
-        'MessageContextMenu',
-      ).onReport;
+      const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
       act(() => {
-        ctxOnReport('msg-x');
+        onLongPress('msg-x');
+      });
+      const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+      act(() => {
+        params?.onReport('msg-x');
       });
 
       const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
@@ -1041,7 +1029,7 @@ describe('ChatSessionScreen — onSend full path', () => {
   });
 });
 
-describe('ChatSessionScreen — MediaAttachmentPanel + MessageContextMenu wiring', () => {
+describe('ChatSessionScreen — MediaAttachmentPanel + context-menu wiring', () => {
   it('forwards toggleRecording, playRecordedAudio, onPickImage, onTakePicture and clearMedia', () => {
     render(<ChatSessionScreen />);
     const props = lastProps<{
@@ -1067,28 +1055,6 @@ describe('ChatSessionScreen — MediaAttachmentPanel + MessageContextMenu wiring
     props.clearMedia();
     expect(mockImagePickerState.clearSelectedImage).toHaveBeenCalled();
     expect(mockAudioRecorderState.clearRecordedAudio).toHaveBeenCalled();
-  });
-
-  it('MessageContextMenu.onClose closes the menu', () => {
-    const targetMessage = makeAssistantMessage({ id: 'msg-99' });
-    mockUseChatSession.mockReturnValue(
-      defaultSession({ messages: [targetMessage], isEmpty: false }),
-    );
-    render(<ChatSessionScreen />);
-
-    const onReport = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
-    act(() => {
-      onReport('msg-99');
-    });
-    expect(
-      lastProps<{ message: ChatUiMessage | null }>('MessageContextMenu').message,
-    ).not.toBeNull();
-
-    const close = lastProps<{ onClose: () => void }>('MessageContextMenu').onClose;
-    act(() => {
-      close();
-    });
-    expect(lastProps<{ message: ChatUiMessage | null }>('MessageContextMenu').message).toBeNull();
   });
 });
 

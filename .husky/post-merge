@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Musaium post-merge — workspace-links sentinel (warn-only)
+# =============================================================================
+# Fires after `git pull` / `git merge`. Detects the common failure mode
+# where someone pulled main containing a `file:` protocol change (e.g.
+# packages/musaium-shared bumped, a new app dep added) and forgot to
+# `pnpm install` / `npm install`. Without this hook the next `pnpm build`
+# fails with an inscrutable `Module not found: @musaium/...` and the
+# diagnosis costs 15-60 min.
+#
+# Warn-only on purpose: a non-zero exit here would block the merge from
+# completing cleanly, which is annoying when the user knows they're
+# about to run `pnpm bootstrap` anyway. We surface the issue + the fix
+# command; the hard gate is in pre-commit (Gate 6).
+# =============================================================================
+set +e
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+[ -z "$repo_root" ] && exit 0
+cd "$repo_root"
+
+node scripts/sentinels/workspace-links.mjs
+if [ $? -ne 0 ]; then
+  echo "[post-merge] ⚠ workspace links are out of sync after this merge."
+  echo "[post-merge]   run \`pnpm bootstrap\` before your next build."
+fi
+
+exit 0

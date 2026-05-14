@@ -47,6 +47,20 @@ describe('middleware — i18n locale redirect', () => {
     const res = middleware(req);
     expect(res.status).toBe(200);
   });
+
+  it('passes through /.well-known/* without locale prefix (RFC 8615)', () => {
+    const req = buildRequest('https://musaium.com/.well-known/security.txt');
+    const res = middleware(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('passes through arbitrary /.well-known children', () => {
+    const req = buildRequest('https://musaium.com/.well-known/apple-app-site-association');
+    const res = middleware(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
 });
 
 describe('middleware — admin gate', () => {

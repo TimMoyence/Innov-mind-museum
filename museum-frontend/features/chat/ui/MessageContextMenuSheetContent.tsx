@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -15,23 +15,28 @@ interface MenuAction {
   onPress: () => void;
 }
 
-interface MessageContextMenuProps {
-  /** The message for which the menu is shown. `null` hides the menu. */
-  message: ChatUiMessage | null;
-  onCopy: (message: ChatUiMessage) => void;
-  onShare: (message: ChatUiMessage) => void;
-  onReport: (messageId: string) => void;
-  onClose: () => void;
+interface MessageContextMenuSheetContentProps {
+  message: ChatUiMessage;
+  close: () => void;
+  onCopy?: (message: ChatUiMessage) => void;
+  onShare?: (message: ChatUiMessage) => void;
+  onReport?: (messageId: string) => void;
 }
 
-/** Bottom-sheet style context menu for chat message actions. */
-export const MessageContextMenu = ({
+/**
+ * Bottom-sheet content for the long-press message action menu. Mounted by
+ * `<BottomSheetRouter>` when route `context-menu` is active. Mirrors the
+ * previous `<MessageContextMenu>` modal layout (handle bar, action rows,
+ * cancel) with the `<Modal>` wrapper stripped — the router now owns the
+ * surface, animation, and backdrop.
+ */
+export const MessageContextMenuSheetContent = ({
   message,
+  close,
   onCopy,
   onShare,
   onReport,
-  onClose,
-}: MessageContextMenuProps) => {
+}: MessageContextMenuSheetContentProps) => {
   const { t } = useTranslation();
   const { theme, isDark } = useTheme();
 
@@ -39,12 +44,10 @@ export const MessageContextMenu = ({
     (action: () => void) => {
       void Haptics.selectionAsync();
       action();
-      onClose();
+      close();
     },
-    [onClose],
+    [close],
   );
-
-  if (!message) return null;
 
   const isAssistant = message.role === 'assistant';
 
@@ -57,7 +60,7 @@ export const MessageContextMenu = ({
             label: t('messageMenu.copy'),
             onPress: () => {
               handleAction(() => {
-                onCopy(message);
+                onCopy?.(message);
               });
             },
           },
@@ -67,7 +70,7 @@ export const MessageContextMenu = ({
             label: t('conversations.share'),
             onPress: () => {
               handleAction(() => {
-                onShare(message);
+                onShare?.(message);
               });
             },
           },
@@ -81,7 +84,7 @@ export const MessageContextMenu = ({
             label: t('messageMenu.report'),
             onPress: () => {
               handleAction(() => {
-                onReport(message.id);
+                onReport?.(message.id);
               });
             },
           },
@@ -90,58 +93,44 @@ export const MessageContextMenu = ({
   ];
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        style={[styles.overlay, { backgroundColor: theme.modalOverlay }]}
-        onPress={onClose}
-        accessibilityLabel={t('a11y.contextMenu.overlay_hint')}
-      >
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: isDark ? theme.glassBackground : theme.primaryContrast },
-          ]}
+    <View
+      style={[
+        styles.sheet,
+        { backgroundColor: isDark ? theme.glassBackground : theme.primaryContrast },
+      ]}
+    >
+      <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
+      <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
+        {message.text.slice(0, 60) || t('chat.voice_message')}
+      </Text>
+      {actions.map((action) => (
+        <Pressable
+          key={action.id}
+          style={[styles.action, { borderBottomColor: theme.separator }]}
+          onPress={action.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
         >
-          <View style={[styles.handle, { backgroundColor: theme.cardBorder }]} />
-          <Text style={[styles.title, { color: theme.textSecondary }]} numberOfLines={1}>
-            {message.text.slice(0, 60) || t('chat.voice_message')}
-          </Text>
-          {actions.map((action) => (
-            <Pressable
-              key={action.id}
-              style={[styles.action, { borderBottomColor: theme.separator }]}
-              onPress={action.onPress}
-              accessibilityRole="button"
-              accessibilityLabel={action.label}
-            >
-              <Ionicons name={action.icon} size={20} color={theme.textPrimary} />
-              <Text style={[styles.actionLabel, { color: theme.textPrimary }]}>{action.label}</Text>
-            </Pressable>
-          ))}
-          <Pressable
-            style={styles.cancelAction}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.contextMenu.cancel')}
-          >
-            <Text style={[styles.cancelLabel, { color: theme.textSecondary }]}>
-              {t('common.cancel')}
-            </Text>
-          </Pressable>
-        </View>
+          <Ionicons name={action.icon} size={20} color={theme.textPrimary} />
+          <Text style={[styles.actionLabel, { color: theme.textPrimary }]}>{action.label}</Text>
+        </Pressable>
+      ))}
+      <Pressable
+        style={styles.cancelAction}
+        onPress={close}
+        accessibilityRole="button"
+        accessibilityLabel={t('a11y.contextMenu.cancel')}
+      >
+        <Text style={[styles.cancelLabel, { color: theme.textSecondary }]}>
+          {t('common.cancel')}
+        </Text>
       </Pressable>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
   sheet: {
-    borderTopLeftRadius: semantic.card.radius,
-    borderTopRightRadius: semantic.card.radius,
     paddingHorizontal: semantic.modal.padding,
     paddingTop: semantic.card.paddingCompact,
     paddingBottom: space['9'],
