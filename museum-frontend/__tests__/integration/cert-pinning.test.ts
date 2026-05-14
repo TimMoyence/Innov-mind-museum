@@ -1,19 +1,18 @@
-// Integration placeholder for the cert-pinning Phase 2 scaffold.
+// Integration test for the cert-pinning init flow.
 //
-// V1 ships with `EXPO_PUBLIC_CERT_PINNING_ENABLED=false`, so the real
-// pinning behaviour cannot be validated end-to-end without (a) a staging
-// TLS endpoint with known SPKI hashes wired into `cert-pinning.ts` and
-// (b) a real device or simulator that exercises the native module.
+// V1 activation status (2026-05-14):
+//   - `EXPO_PUBLIC_CERT_PINNING_ENABLED=true` ships in `.env.production`.
+//   - `PROD_SPKI_HASHES` in `shared/config/cert-pinning.ts` carries the
+//     real captures against `musaium.com:443` (leaf + LE E8 intermediate).
 //
-// Until both are in place, this file documents the **expected** end-to-end
-// behaviour as executable assertions against the public init API. The
-// underlying `react-native-ssl-public-key-pinning` is mocked so the suite
-// runs under the standard Jest harness — it is NOT a substitute for the
-// real-network E2E tracked under ADR-016 Phase 2 deliverable
-// "E2E validation under museum-frontend/__tests__/integration/cert-pinning.test.ts".
+// This suite exercises the JS init flow with the native module mocked
+// — it is NOT a substitute for the real-network end-to-end smoke test
+// that must run on a physical device against the prod TLS chain
+// (documented in `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` §Smoke).
 //
-// When the activation work lands, replace the mock with a TestContainer-style
-// HTTPS endpoint and assert against `addSslPinningErrorListener` real callbacks.
+// To convert to a real-network E2E, swap the `react-native-ssl-public-key-pinning`
+// mock for the actual native module on a TestContainer / device, then
+// assert against `addSslPinningErrorListener` real callbacks.
 jest.mock('@sentry/react-native', () => ({
   addBreadcrumb: jest.fn(),
   captureMessage: jest.fn(),
@@ -65,7 +64,7 @@ describe('cert-pinning integration (mocked native module)', () => {
   });
 
   it('V1 default boot — env flag absent → init is a no-op (no SDK calls)', async () => {
-    const outcome = await initCertPinning({ apiBaseUrl: 'https://api.musaium.app' });
+    const outcome = await initCertPinning({ apiBaseUrl: 'https://musaium.com' });
     expect(outcome).toEqual({ kind: 'skipped', reason: 'env-disabled' });
     expect(mockInitializeSslPinning).not.toHaveBeenCalled();
     expect(mockAddSslPinningErrorListener).not.toHaveBeenCalled();
@@ -79,7 +78,7 @@ describe('cert-pinning integration (mocked native module)', () => {
     } as Response);
 
     const outcome = await initCertPinning({
-      apiBaseUrl: 'https://api.musaium.app',
+      apiBaseUrl: 'https://musaium.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
       storageImpl: inMemoryStorage(),
     });
@@ -97,7 +96,7 @@ describe('cert-pinning integration (mocked native module)', () => {
     } as Response);
 
     const outcome = await initCertPinning({
-      apiBaseUrl: 'https://api.musaium.app',
+      apiBaseUrl: 'https://musaium.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
       storageImpl: inMemoryStorage(),
     });

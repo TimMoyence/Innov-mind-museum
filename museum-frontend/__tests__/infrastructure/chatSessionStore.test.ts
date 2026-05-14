@@ -3,14 +3,6 @@ import '@/__tests__/helpers/test-utils';
 import { makeChatUiMessage } from '@/__tests__/helpers/factories';
 import { nonNull } from '@/__tests__/helpers/nonNull';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn().mockResolvedValue(null),
-  setItem: jest.fn().mockResolvedValue(undefined),
-  removeItem: jest.fn().mockResolvedValue(undefined),
-}));
-
 import { useChatSessionStore } from '@/features/chat/infrastructure/chatSessionStore';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

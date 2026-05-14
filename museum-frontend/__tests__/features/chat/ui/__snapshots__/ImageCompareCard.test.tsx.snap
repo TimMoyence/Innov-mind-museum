@@ -76,13 +76,32 @@ exports[`ImageCompareCard (T8.2) matches the structural snapshot for a typical P
         ]
       }
     >
-      <Image
+      <ViewManagerAdapter_ExpoImage
         accessibilityIgnoresInvertColors={true}
-        resizeMode="cover"
-        source={
+        cachePolicy="memory-disk"
+        containerViewRef={"[React.ref]"}
+        contentFit="cover"
+        contentPosition={
           {
-            "uri": "https://example.com/dance.jpg",
+            "left": "50%",
+            "top": "50%",
           }
+        }
+        height={140}
+        nativeViewRef={"[React.ref]"}
+        onError={[Function]}
+        onLoad={[Function]}
+        onLoadStart={[Function]}
+        onProgress={[Function]}
+        placeholder={[]}
+        recyclingKey="Q1234"
+        sfEffect={null}
+        source={
+          [
+            {
+              "uri": "https://example.com/dance.jpg",
+            },
+          ]
         }
         style={
           {
@@ -90,6 +109,14 @@ exports[`ImageCompareCard (T8.2) matches the structural snapshot for a typical P
             "width": "100%",
           }
         }
+        symbolSize={null}
+        symbolWeight={null}
+        transition={
+          {
+            "duration": 150,
+          }
+        }
+        width="100%"
       />
     </View>
     <View

@@ -26,10 +26,10 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@musaium/shared": "file:../packages/musaium-shared",
     "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^5.2.2",
     "@maplibre/maplibre-react-native": "11.0.0",
+    "@musaium/shared": "file:../packages/musaium-shared",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.5.2",
     "@react-navigation/native": "^7.0.14",
@@ -53,6 +53,7 @@
     "expo-file-system": "~55.0.14",
     "expo-font": "~55.0.6",
     "expo-haptics": "~55.0.12",
+    "expo-image": "~55.0.10",
     "expo-image-manipulator": "~55.0.15",
     "expo-image-picker": "~55.0.16",
     "expo-linear-gradient": "~55.0.11",

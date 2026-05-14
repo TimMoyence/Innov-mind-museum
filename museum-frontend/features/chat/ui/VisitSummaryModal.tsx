@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -76,6 +77,9 @@ export const VisitSummaryModal = React.memo(function VisitSummaryModal({
                     <Image
                       source={{ uri: artwork.imageUrl }}
                       style={styles.thumbnail}
+                      contentFit="cover"
+                      recyclingKey={artwork.title}
+                      cachePolicy="memory-disk"
                       accessibilityLabel={artwork.title}
                     />
                   ) : (

@@ -288,6 +288,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       'expo-apple-authentication',
       'expo-font',
+      'expo-image',
       'expo-localization',
       'expo-secure-store',
       'expo-web-browser',
