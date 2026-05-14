@@ -518,6 +518,10 @@
       "headerLabel": "Visita guiada",
       "suggestionsLabel": "Sugerencias de la visita",
       "suggestionHint": "Envía esta sugerencia como tu próximo mensaje"
+    },
+    "askMore": {
+      "a11y_label": "Pregunta de seguimiento: {{text}}",
+      "a11y_hint": "Toca para hacer esta pregunta"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "Media",
       "low": "Baja"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Preguntas rápidas"
   },
   "recommendationChips": {
     "section_label": "Ideas para explorar"
@@ -811,7 +812,6 @@
       "assistant_message": "Mensaje del asistente",
       "user_message": "Tu mensaje",
       "long_press_hint": "Mantener pulsado para más opciones",
-      "follow_up_hint": "Envía esta pregunta de seguimiento",
       "recommendation_hint": "Rellena el campo con esta sugerencia",
       "suggestion_hint": "Inicia la conversación con este tema",
       "camera_suggestion_hint": "Abre la cámara para fotografiar una obra de arte",

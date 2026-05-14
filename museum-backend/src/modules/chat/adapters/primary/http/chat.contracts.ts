@@ -108,7 +108,13 @@ export interface PostMessageResponse {
     citations?: string[];
     deeperContext?: string;
     openQuestion?: string;
-    followUpQuestions?: string[];
+    /**
+     * B3 — Single follow-up question (≤80 chars) anchored to a fact in the
+     * answer, or omitted when no anchor exists. Replaces legacy
+     * `followUpQuestions: string[]` (deleted same commit per doctrine
+     * `feedback_bury_dead_code`).
+     */
+    suggestedFollowUp?: string;
     imageDescription?: string;
   };
 }

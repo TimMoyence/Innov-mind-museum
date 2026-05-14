@@ -518,6 +518,10 @@
       "headerLabel": "Geführte Tour",
       "suggestionsLabel": "Vorschläge für die Tour",
       "suggestionHint": "Schickt diesen Vorschlag als Ihre nächste Eingabe"
+    },
+    "askMore": {
+      "a11y_label": "Folgefrage: {{text}}",
+      "a11y_hint": "Tippen, um diese Frage zu stellen"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "Mittel",
       "low": "Niedrig"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Schnelle Fragen"
   },
   "recommendationChips": {
     "section_label": "Ideen zum Erkunden"
@@ -811,7 +812,6 @@
       "assistant_message": "Nachricht des Assistenten",
       "user_message": "Ihre Nachricht",
       "long_press_hint": "Lange drücken für weitere Optionen",
-      "follow_up_hint": "Sendet diese Folgefrage",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
       "suggestion_hint": "Startet die Unterhaltung mit diesem Thema",
       "camera_suggestion_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks",

@@ -37,7 +37,7 @@ describe('chat response contracts', () => {
         metadata: {
           deeperContext: 'Historical context here.',
           openQuestion: 'What do you notice about the composition?',
-          followUpQuestions: ['Tell me about the artist.', 'What period is this?'],
+          suggestedFollowUp: 'Tell me about the artist?',
           imageDescription: 'A painting showing a landscape.',
           diagnostics: {
             profile: 'single_section',

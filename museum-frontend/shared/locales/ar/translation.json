@@ -518,6 +518,10 @@
       "headerLabel": "جولة مرشدة",
       "suggestionsLabel": "اقتراحات الجولة",
       "suggestionHint": "إرسال هذا الاقتراح كرسالتك التالية"
+    },
+    "askMore": {
+      "a11y_label": "سؤال متابعة: {{text}}",
+      "a11y_hint": "انقر لطرح هذا السؤال"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "متوسطة",
       "low": "منخفضة"
     }
-  },
-  "followUpButtons": {
-    "section_label": "أسئلة سريعة"
   },
   "recommendationChips": {
     "section_label": "أفكار للاستكشاف"
@@ -811,7 +812,6 @@
       "assistant_message": "رسالة المساعد",
       "user_message": "رسالتك",
       "long_press_hint": "اضغط مطوّلًا لمزيد من الخيارات",
-      "follow_up_hint": "يرسل سؤال المتابعة هذا",
       "recommendation_hint": "يملأ حقل الإدخال بهذا الاقتراح",
       "suggestion_hint": "يبدأ المحادثة بهذا الموضوع",
       "camera_suggestion_hint": "يفتح الكاميرا لتصوير عمل فني",

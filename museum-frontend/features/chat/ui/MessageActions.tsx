@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
-import { FollowUpButtons } from '@/features/chat/ui/FollowUpButtons';
+import { AskMoreChip } from '@/features/chat/ui/AskMoreChip';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, lineHeightPx } from '@/shared/ui/tokens';
@@ -43,9 +43,9 @@ export const MessageActions = ({
 
   return (
     <View style={styles.container}>
-      {metadata.followUpQuestions?.length ? (
-        <FollowUpButtons
-          questions={metadata.followUpQuestions}
+      {metadata.suggestedFollowUp && metadata.suggestedFollowUp.length > 0 ? (
+        <AskMoreChip
+          text={metadata.suggestedFollowUp}
           onPress={onFollowUpPress}
           disabled={isSendingDisabled}
         />

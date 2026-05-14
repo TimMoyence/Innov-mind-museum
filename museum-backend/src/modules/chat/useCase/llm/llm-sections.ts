@@ -246,7 +246,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
   parts.push(
     'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
     'In openQuestion, ask a question that encourages the visitor to look more closely at the work (optional).',
-    'In followUpQuestions, suggest 1-2 natural follow-up questions the visitor might want to ask next, based on the current discussion. Keep them short and specific.',
+    'In suggestedFollowUp, propose ONE short follow-up question (≤80 chars) that references a SPECIFIC fact (name/date/place/technique) you mentioned in the answer. Never suggest a generic prompt like "Tell me more". Set to null when your answer has no factual anchor (refusal, short clarification, recap). NEVER multiple — singular field, singular question.',
     museumMode
       ? 'In recommendations, suggest 1-3 nearby artworks or rooms the visitor could explore next.'
       : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
@@ -266,7 +266,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     parts.push(
       'Write your answer as plain text first.',
       'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
-      '{"deeperContext":"string?","openQuestion":"string?","followUpQuestions":["string?"],"imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
+      '{"deeperContext":"string?","openQuestion":"string?","suggestedFollowUp":"string?","imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
       'Do not include the answer text in the JSON — it is already provided above.',
       'Do not add markdown fences around the JSON.',
     );

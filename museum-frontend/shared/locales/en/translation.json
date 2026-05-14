@@ -518,6 +518,10 @@
       "headerLabel": "Guided walk",
       "suggestionsLabel": "Walk suggestions",
       "suggestionHint": "Sends this suggestion as your next prompt"
+    },
+    "askMore": {
+      "a11y_label": "Ask follow-up: {{text}}",
+      "a11y_hint": "Tap to ask this follow-up"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "Medium",
       "low": "Low"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Quick questions"
   },
   "recommendationChips": {
     "section_label": "Ideas to explore"
@@ -811,7 +812,6 @@
       "assistant_message": "Assistant message",
       "user_message": "Your message",
       "long_press_hint": "Long press for more options",
-      "follow_up_hint": "Sends this follow-up question",
       "recommendation_hint": "Fills input with this suggestion",
       "suggestion_hint": "Starts conversation with this topic",
       "camera_suggestion_hint": "Opens camera to photograph artwork",

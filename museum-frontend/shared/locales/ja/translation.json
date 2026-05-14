@@ -518,6 +518,10 @@
       "headerLabel": "ガイドツアー",
       "suggestionsLabel": "ツアーの提案",
       "suggestionHint": "この提案を次のメッセージとして送信"
+    },
+    "askMore": {
+      "a11y_label": "フォローアップの質問: {{text}}",
+      "a11y_hint": "タップしてこの質問をする"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "中",
       "low": "低"
     }
-  },
-  "followUpButtons": {
-    "section_label": "クイック質問"
   },
   "recommendationChips": {
     "section_label": "探索のヒント"
@@ -811,7 +812,6 @@
       "assistant_message": "アシスタントのメッセージ",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
-      "follow_up_hint": "このフォローアップ質問を送信します",
       "recommendation_hint": "この提案で入力欄を埋めます",
       "suggestion_hint": "このトピックで会話を開始します",
       "camera_suggestion_hint": "カメラを開いて作品を撮影します",

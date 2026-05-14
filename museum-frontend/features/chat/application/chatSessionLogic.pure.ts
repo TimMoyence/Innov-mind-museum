@@ -59,7 +59,14 @@ export interface ChatUiMessageMetadata {
     confidence?: number;
   };
   recommendations?: string[];
-  followUpQuestions?: string[];
+  /**
+   * B3 — Single follow-up question (≤80 chars) anchored to a specific fact
+   * mentioned in the assistant answer. LLM-generated, singular by design.
+   * Replaces legacy `followUpQuestions: string[]` (deleted same commit per
+   * doctrine `feedback_bury_dead_code`, B3 dispatcher override Q4).
+   * See `docs/chat-ux-refonte/specs/B3.md` §1.3 (R11) and NFR13.
+   */
+  suggestedFollowUp?: string;
   expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
   deeperContext?: string;
   openQuestion?: string;

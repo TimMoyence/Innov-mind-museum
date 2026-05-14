@@ -27,7 +27,7 @@ export const makeApiMessage = (overrides?: Partial<ApiMessage>): ApiMessage => (
   ...overrides,
 });
 
-/** Creates an assistant message with metadata (detectedArtwork, recommendations, followUpQuestions). */
+/** Creates an assistant message with metadata (detectedArtwork, recommendations, suggestedFollowUp). */
 export const makeAssistantMessage = (
   overrides?: Partial<ChatUiMessage>,
   metadataOverrides?: Partial<ChatUiMessageMetadata>,
@@ -41,7 +41,8 @@ export const makeAssistantMessage = (
       confidence: faker.number.float({ min: 0.5, max: 1, fractionDigits: 2 }),
     },
     recommendations: [faker.lorem.sentence(), faker.lorem.sentence()],
-    followUpQuestions: [`${faker.lorem.sentence()}?`, `${faker.lorem.sentence()}?`],
+    // B3 — singular follow-up (≤80 chars), replaces legacy `followUpQuestions: string[]`.
+    suggestedFollowUp: faker.lorem.sentence({ min: 4, max: 8 }).slice(0, 79) + '?',
     expertiseSignal: faker.helpers.arrayElement(['beginner', 'intermediate', 'expert']),
     ...metadataOverrides,
   };

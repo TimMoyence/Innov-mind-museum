@@ -290,7 +290,16 @@ export interface ChatAssistantMetadata {
   sources?: CitationSource[];
   deeperContext?: string;
   openQuestion?: string;
-  followUpQuestions?: string[];
+  /**
+   * B3 — Single, factual-anchor follow-up question (≤80 chars) the visitor
+   * might want to ask next. LLM-generated, anchored to a specific fact
+   * mentioned in the assistant answer, or absent when no concrete anchor
+   * exists (refusal, clarification, recap). Singular by design — replaces
+   * the legacy `followUpQuestions: string[]` (deleted same commit per
+   * doctrine `feedback_bury_dead_code`, B3 dispatcher override Q4).
+   * See `docs/chat-ux-refonte/specs/B3.md` §0.7 / R7 / NFR13.
+   */
+  suggestedFollowUp?: string;
   imageDescription?: string;
   /** Enriched images fetched from external sources (Wikidata, Unsplash, Commons, Musaium). */
   images?: EnrichedImage[];

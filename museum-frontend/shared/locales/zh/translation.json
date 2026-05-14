@@ -518,6 +518,10 @@
       "headerLabel": "导览游",
       "suggestionsLabel": "导览建议",
       "suggestionHint": "将该建议作为您的下一条消息发送"
+    },
+    "askMore": {
+      "a11y_label": "后续问题：{{text}}",
+      "a11y_hint": "点击提出此问题"
     }
   },
   "dailyLimit": {
@@ -552,9 +556,6 @@
       "medium": "中",
       "low": "低"
     }
-  },
-  "followUpButtons": {
-    "section_label": "快捷提问"
   },
   "recommendationChips": {
     "section_label": "探索灵感"
@@ -811,7 +812,6 @@
       "assistant_message": "助手消息",
       "user_message": "您的消息",
       "long_press_hint": "长按以查看更多选项",
-      "follow_up_hint": "发送此后续问题",
       "recommendation_hint": "用此建议填充输入框",
       "suggestion_hint": "以此主题开始对话",
       "camera_suggestion_hint": "打开相机拍摄艺术品",

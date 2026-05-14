@@ -69,15 +69,36 @@ const toRecommendations = (value: unknown): string[] | undefined => {
   return filtered.length ? filtered : undefined;
 };
 
-const toFollowUpQuestions = (value: unknown): string[] | undefined => {
-  if (!Array.isArray(value)) {
+/**
+ * Maximum length (in characters) of a suggested follow-up question.
+ *
+ * Strings strictly longer than this are DROPPED (returned as `undefined`) —
+ * NOT silently sliced — so prompt drift surfaces early at the boundary
+ * rather than producing visually-truncated questions for the visitor.
+ * Mirrors `mainAssistantOutputSchema.suggestedFollowUp.max(80)` (B3 R5).
+ */
+const MAX_SUGGESTED_FOLLOWUP_CHARS = 80;
+
+/**
+ * B3 — Parse the singular `suggestedFollowUp` field emitted by the LLM.
+ *
+ * Returns the trimmed string when `typeof value === 'string'` AND
+ * `0 < trimmed.length ≤ 80`, `undefined` otherwise. Strict-drop on oversize
+ * (no silent slice) — see {@link MAX_SUGGESTED_FOLLOWUP_CHARS}.
+ *
+ * Singularity invariant : an array input is rejected outright (returns
+ * `undefined`), even if the LLM drifts from the structured-output schema.
+ * The B3 doctrine "JAMAIS 3 boutons — référence un fact précis ou rien" is
+ * enforced at 4 layers ; this is the runtime defence on the parser boundary.
+ */
+export const toSuggestedFollowUp = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
     return undefined;
   }
-
-  const filtered = value
-    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-    .slice(0, 3);
-  return filtered.length ? filtered : undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.length > MAX_SUGGESTED_FOLLOWUP_CHARS) return undefined;
+  return trimmed;
 };
 
 /**
@@ -95,9 +116,7 @@ const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
   if (!Array.isArray(value)) return undefined;
 
   const normalised = value
-    .filter(
-      (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
-    )
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
     .map((item): SuggestedImage | null => {
       const query = typeof item.query === 'string' ? item.query.trim() : '';
       const description = typeof item.description === 'string' ? item.description.trim() : '';
@@ -176,7 +195,7 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   metadata.sources = toSources(parsed.sources);
   metadata.deeperContext = toOptionalString(parsed.deeperContext);
   metadata.openQuestion = toOptionalString(parsed.openQuestion);
-  metadata.followUpQuestions = toFollowUpQuestions(parsed.followUpQuestions);
+  metadata.suggestedFollowUp = toSuggestedFollowUp(parsed.suggestedFollowUp);
   metadata.imageDescription = toOptionalString(parsed.imageDescription);
   metadata.suggestedImages = toSuggestedImages(parsed.suggestedImages);
 

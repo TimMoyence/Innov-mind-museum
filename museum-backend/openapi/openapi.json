@@ -503,11 +503,10 @@
               "openQuestion": {
                 "type": "string"
               },
-              "followUpQuestions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+              "suggestedFollowUp": {
+                "type": "string",
+                "maxLength": 80,
+                "description": "B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`."
               },
               "imageDescription": {
                 "type": "string"

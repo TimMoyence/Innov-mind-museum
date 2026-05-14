@@ -3695,7 +3695,8 @@ export interface components {
         }[];
         deeperContext?: string;
         openQuestion?: string;
-        followUpQuestions?: string[];
+        /** @description B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`. */
+        suggestedFollowUp?: string;
         imageDescription?: string;
         /** @description Enriched images from external sources (Wikidata, Unsplash, Wikimedia Commons, Musaium curated catalogue). C2 v2 (2026-05) adds rationale + commons/musaium sources. */
         images?: {

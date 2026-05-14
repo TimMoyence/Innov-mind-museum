@@ -70,7 +70,7 @@ export interface GuardrailInput {
 export interface GuardrailOutput {
   /** Final assistant text (post current output keyword guardrail). */
   text: string;
-  /** Optional metadata from the orchestrator (followUpQuestions, recommendations, etc.). */
+  /** Optional metadata from the orchestrator (suggestedFollowUp, recommendations, etc.). */
   metadata?: Record<string, unknown>;
   /** Originating user input (context for relevance checks, no PII stored beyond this call). */
   userInput?: string;

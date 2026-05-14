@@ -99,7 +99,8 @@ export const makePostMessageResponse = (
       artist: faker.person.fullName(),
     },
     recommendations: [faker.lorem.sentence()],
-    followUpQuestions: [`${faker.lorem.sentence()}?`],
+    // B3 — singular follow-up (≤80 chars), replaces legacy `followUpQuestions: string[]`.
+    suggestedFollowUp: faker.lorem.sentence({ min: 4, max: 8 }).slice(0, 79) + '?',
   },
   ...overrides,
 });
