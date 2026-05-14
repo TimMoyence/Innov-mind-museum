@@ -129,6 +129,23 @@ export class User {
   @Column({ type: 'date', nullable: true, name: 'date_of_birth' })
   dateOfBirth?: Date | null;
 
+  /**
+   * Operator-driven account freeze flag (P0 #9 admin user detail).
+   * `true` blocks login + refresh; existing 15-min access tokens expire
+   * naturally (ADR-050). Reversible via `unsuspendUser` admin action.
+   */
+  @Column({ type: 'boolean', default: false })
+  suspended!: boolean;
+
+  /**
+   * Soft-delete marker. When set, the account is treated as deleted across
+   * auth (login + refresh refuse) and admin list filtering, but the row
+   * stays for foreign-key integrity (chat_messages, audit_log) and forensic
+   * forensics. Hard erasure (RGPD Art. 17 full erase) deferred V1.1.
+   */
+  @Column({ type: 'timestamp', nullable: true, name: 'deleted_at' })
+  deletedAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;
 

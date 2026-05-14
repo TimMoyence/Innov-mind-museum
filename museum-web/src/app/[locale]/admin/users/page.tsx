@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
@@ -53,7 +55,9 @@ function useDebouncedValue(value: string, delay: number): string {
 export default function UsersPage() {
   const adminDict = useAdminDict();
   const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const pathname = usePathname();
+  const locale = pathname.split('/')[1] ?? 'fr';
 
   const [users, setUsers] = useState<AdminUserDTO[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -191,20 +195,15 @@ export default function UsersPage() {
                   <th className="px-6 py-3 font-medium text-text-secondary">
                     {adminDict.common.date}
                   </th>
-                  {isAdmin && (
-                    <th className="px-6 py-3 font-medium text-text-secondary">
-                      {adminDict.common.actions}
-                    </th>
-                  )}
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.common.actions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
                 {users.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={isAdmin ? 6 : 5}
-                      className="px-6 py-12 text-center text-text-muted"
-                    >
+                    <td colSpan={6} className="px-6 py-12 text-center text-text-muted">
                       {adminDict.usersPage.emptyState}
                     </td>
                   </tr>
@@ -240,20 +239,29 @@ export default function UsersPage() {
                           year: 'numeric',
                         })}
                       </td>
-                      {isAdmin && (
-                        <td className="whitespace-nowrap px-6 py-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingUser(u);
-                              setNewRole(u.role as UserRole);
-                            }}
+                      <td className="whitespace-nowrap px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/${locale}/admin/users/${String(u.id)}`}
+                            aria-label={adminDict.usersPage.viewAria}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
-                            {adminDict.usersPage.changeRole}
-                          </button>
-                        </td>
-                      )}
+                            {adminDict.usersPage.view}
+                          </Link>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingUser(u);
+                                setNewRole(u.role as UserRole);
+                              }}
+                              className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                            >
+                              {adminDict.usersPage.changeRole}
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}

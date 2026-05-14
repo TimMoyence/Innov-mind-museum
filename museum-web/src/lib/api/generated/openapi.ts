@@ -2101,6 +2101,174 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/admin/users/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a single user (admin & moderator) */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description User ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description User detail */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['AdminUserDTO'];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Soft-delete a user (super_admin only)
+     * @description Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-050). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description User ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description User soft-deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['AdminUserDTO'];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+        409: components['responses']['Conflict'];
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/users/{id}/suspend': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Suspend a user (super_admin only)
+     * @description Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description User ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description User suspended */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['AdminUserDTO'];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+        409: components['responses']['Conflict'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/users/{id}/unsuspend': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Lift a user suspension (super_admin only) */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description User ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Suspension lifted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['AdminUserDTO'];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/admin/users/{id}/role': {
     parameters: {
       query?: never;
@@ -4026,7 +4194,16 @@ export interface components {
       firstname?: string | null;
       lastname?: string | null;
       role: string;
+      /** @description B2B museum tenant identifier for museum_manager / admin roles; null for platform-wide accounts. */
+      museumId: number | null;
       emailVerified: boolean;
+      /** @description Operator-driven account freeze (admin endpoints can flip; blocks login + refresh). */
+      suspended: boolean;
+      /**
+       * Format: date-time
+       * @description Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-050).
+       */
+      deletedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */

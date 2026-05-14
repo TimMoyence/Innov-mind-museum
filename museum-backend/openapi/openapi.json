@@ -1277,7 +1277,17 @@
       },
       "AdminUserDTO": {
         "type": "object",
-        "required": ["id", "email", "role", "emailVerified", "createdAt", "updatedAt"],
+        "required": [
+          "id",
+          "email",
+          "role",
+          "museumId",
+          "emailVerified",
+          "suspended",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
         "properties": {
           "id": {
             "type": "integer"
@@ -1295,8 +1305,21 @@
           "role": {
             "type": "string"
           },
+          "museumId": {
+            "type": ["integer", "null"],
+            "description": "B2B museum tenant identifier for museum_manager / admin roles; null for platform-wide accounts."
+          },
           "emailVerified": {
             "type": "boolean"
+          },
+          "suspended": {
+            "type": "boolean",
+            "description": "Operator-driven account freeze (admin endpoints can flip; blocks login + refresh)."
+          },
+          "deletedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-050)."
           },
           "createdAt": {
             "type": "string",
@@ -4305,6 +4328,148 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get a single user (admin & moderator)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Soft-delete a user (super_admin only)",
+        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-050). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User soft-deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/suspend": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Suspend a user (super_admin only)",
+        "description": "Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/unsuspend": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Lift a user suspension (super_admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suspension lifted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },

@@ -59,6 +59,10 @@ export const AUDIT_GUARDRAIL_INPUT_REDACTED = 'GUARDRAIL_INPUT_REDACTED';
 // ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';
 export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
+// ─── Admin user lifecycle (P0 #9 admin user detail — audit-2026-05-12) ───
+export const AUDIT_ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED';
+export const AUDIT_ADMIN_USER_UNSUSPENDED = 'ADMIN_USER_UNSUSPENDED';
+export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
 
 // ─── Support ticket events ───
 export const AUDIT_SUPPORT_TICKET_CREATED = 'SUPPORT_TICKET_CREATED';

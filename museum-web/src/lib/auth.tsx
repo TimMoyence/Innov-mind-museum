@@ -269,7 +269,13 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     return null;
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  // `super_admin` implicitly satisfies any role check — mirrors the BE
+  // `requireRole` middleware (`require-role.middleware.ts:28`) and honors the
+  // JSDoc contract in `admin-types.ts:UserRole`. Closes audit-2026-05-12 P0-6
+  // + F4 Claim 1 latent bug (the previous `.includes()`-only check would
+  // wrongly 403 a super_admin against `allowedRoles={['admin']}`).
+  const hasRole = user && (user.role === 'super_admin' || allowedRoles.includes(user.role));
+  if (!user || !hasRole) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
         <div className="text-4xl font-bold text-text-secondary">403</div>

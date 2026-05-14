@@ -12,6 +12,8 @@ export const makeUser = (overrides: Partial<User> = {}): User =>
     email_verified: false,
     onboarding_completed: false,
     contentPreferences: [],
+    suspended: false,
+    deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

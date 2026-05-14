@@ -20,7 +20,11 @@ import {
 } from '@modules/admin/adapters/primary/http/schemas/admin.schemas';
 import {
   listUsersUseCase,
+  getUserByIdUseCase,
   changeUserRoleUseCase,
+  suspendUserUseCase,
+  unsuspendUserUseCase,
+  deleteUserUseCase,
   listAuditLogsUseCase,
   getStatsUseCase,
   listReportsUseCase,
@@ -66,6 +70,22 @@ adminRouter.get(
   },
 );
 
+// GET /api/admin/users/:id — Admin & moderator: single user detail (incl. soft-deleted)
+// Moderators read user detail for ticket triage; admin & super_admin for full ops.
+adminRouter.get(
+  '/users/:id',
+  isAuthenticated,
+  requireRole('admin', 'moderator'),
+  async (req: Request, res: Response) => {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+
+    const user = await getUserByIdUseCase.execute({ userId });
+
+    res.json({ user });
+  },
+);
+
 // PATCH /api/admin/users/:id/role — Admin only: change user role
 adminRouter.patch(
   '/users/:id/role',
@@ -87,6 +107,68 @@ adminRouter.patch(
     });
 
     res.json({ user: updated });
+  },
+);
+
+// POST /api/admin/users/:id/suspend — super_admin only: freeze a user account.
+// Reserved to super_admin so a rogue B2B admin cannot freeze a tenant peer.
+adminRouter.post(
+  '/users/:id/suspend',
+  isAuthenticated,
+  requireRole('super_admin'),
+  async (req: Request, res: Response) => {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+
+    const updated = await suspendUserUseCase.execute({
+      userId,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+
+    res.json({ user: updated });
+  },
+);
+
+// POST /api/admin/users/:id/unsuspend — super_admin only: lift the freeze.
+adminRouter.post(
+  '/users/:id/unsuspend',
+  isAuthenticated,
+  requireRole('super_admin'),
+  async (req: Request, res: Response) => {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+
+    const updated = await unsuspendUserUseCase.execute({
+      userId,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+
+    res.json({ user: updated });
+  },
+);
+
+// DELETE /api/admin/users/:id — super_admin only: soft-delete a user account.
+// Hard erasure (RGPD Art. 17 full erase) is deferred to V1.1 (ADR-050).
+adminRouter.delete(
+  '/users/:id',
+  isAuthenticated,
+  requireRole('super_admin'),
+  async (req: Request, res: Response) => {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+
+    const deleted = await deleteUserUseCase.execute({
+      userId,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+
+    res.json({ user: deleted });
   },
 );
 
