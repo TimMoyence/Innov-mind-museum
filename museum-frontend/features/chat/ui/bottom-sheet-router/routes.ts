@@ -5,6 +5,7 @@ import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
+import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
 import { DailyLimitSheetContent } from '@/features/chat/ui/DailyLimitSheetContent';
 import { MessageContextMenuSheetContent } from '@/features/chat/ui/MessageContextMenuSheetContent';
 import { VisitSummarySheetContent } from '@/features/chat/ui/VisitSummarySheetContent';
@@ -28,7 +29,8 @@ export type BottomSheetRouteId =
   | 'summary'
   | 'daily-limit'
   | 'voice-intro'
-  | 'ai-disclosure';
+  | 'ai-disclosure'
+  | 'attachment-picker';
 
 export interface BottomSheetRouteParams {
   browser: { url: string };
@@ -43,6 +45,16 @@ export interface BottomSheetRouteParams {
   'daily-limit': { onDismiss?: () => void };
   'voice-intro': { locale: string; onAcknowledge?: () => void };
   'ai-disclosure': { onLearnMore?: () => void };
+  'attachment-picker': {
+    recordedAudioUri: string | null;
+    isPlayingAudio: boolean;
+    isRecording: boolean;
+    onPickImage: () => void;
+    onTakePicture: () => void;
+    toggleRecording: () => Promise<void> | void;
+    playRecordedAudio: () => Promise<void> | void;
+    clearMedia: () => void;
+  };
 }
 
 export interface BottomSheetRouteDefinition<K extends BottomSheetRouteId> {
@@ -124,5 +136,12 @@ export const ROUTES: RoutesMap = {
     blocking: false,
     a11yAnnounceKey: 'a11y.aiDisclosure.opened',
     Content: AiDisclosureSheetContent,
+  },
+  'attachment-picker': {
+    id: 'attachment-picker',
+    presentation: 'sheet',
+    blocking: false,
+    a11yAnnounceKey: 'a11y.attachmentPicker.opened',
+    Content: AttachmentPickerSheetContent,
   },
 };

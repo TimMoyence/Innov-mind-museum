@@ -466,6 +466,22 @@
         "disclosure_body": "この回答はAIの一般的な知識に基づいており、特定の事実を裏付ける出典は取得されていません。詳細を信頼する前にご確認ください。"
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "添付ファイルを開く",
+        "open_attachments_hint": "カメラ、ギャラリー、音声",
+        "mic": "音声メッセージ",
+        "mic_recording": "録音を停止",
+        "audio_pill": "音声メッセージ準備完了、タップで確認"
+      }
+    },
+    "attachmentPicker": {
+      "title": "メッセージに添付",
+      "camera": "写真を撮る",
+      "gallery": "ギャラリーから選択",
+      "record_audio": "音声メッセージを録音",
+      "stop_audio": "録音を停止"
+    },
     "artworkHero": {
       "untitled": "無題の作品",
       "a11y_label": "作品: {{artist}}の{{title}}、タップで拡大",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "アプリ内ブラウザを開きました"
+    },
+    "attachmentPicker": {
+      "opened": "添付オプションを開きました"
     }
   },
   "consent": {

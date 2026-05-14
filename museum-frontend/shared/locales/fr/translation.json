@@ -466,6 +466,22 @@
         "disclosure_body": "Cette réponse repose sur le savoir général de l'IA. Aucune source n'a été récupérée. Vérifiez avant d'en dépendre."
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Ouvrir les pièces jointes",
+        "open_attachments_hint": "Caméra, galerie, audio",
+        "mic": "Message vocal",
+        "mic_recording": "Arrêter l'enregistrement",
+        "audio_pill": "Message vocal prêt"
+      }
+    },
+    "attachmentPicker": {
+      "title": "Joindre au message",
+      "camera": "Prendre une photo",
+      "gallery": "Choisir dans la galerie",
+      "record_audio": "Enregistrer un message vocal",
+      "stop_audio": "Arrêter l'enregistrement"
+    },
     "artworkHero": {
       "untitled": "Œuvre sans titre",
       "a11y_label": "Œuvre : {{title}} de {{artist}}, toucher pour agrandir",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "Navigateur intégré ouvert"
+    },
+    "attachmentPicker": {
+      "opened": "Options de pièces jointes ouvertes"
     }
   },
   "consent": {

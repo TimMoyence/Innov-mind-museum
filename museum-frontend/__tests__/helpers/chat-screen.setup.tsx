@@ -107,9 +107,9 @@ jest.mock('@/features/chat/ui/ChatHeader', () => {
   return { ChatHeader: () => <View testID="chat-header" /> };
 });
 
-jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
+jest.mock('@/features/chat/ui/Composer', () => {
   const { View } = require('react-native');
-  return { MediaAttachmentPanel: () => <View testID="media-attachment-panel" /> };
+  return { Composer: () => <View testID="composer" /> };
 });
 
 jest.mock('@/features/chat/ui/OfflineBanner', () => {

@@ -466,6 +466,22 @@
         "disclosure_body": "Questa risposta si basa sulla conoscenza generale dell'IA. Nessuna fonte è stata recuperata. Verifica prima di fidarti dei dettagli."
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Apri allegati",
+        "open_attachments_hint": "Fotocamera, galleria, audio",
+        "mic": "Messaggio vocale",
+        "mic_recording": "Ferma registrazione vocale",
+        "audio_pill": "Messaggio vocale pronto, tocca per rivedere"
+      }
+    },
+    "attachmentPicker": {
+      "title": "Allega al messaggio",
+      "camera": "Scatta una foto",
+      "gallery": "Scegli dalla galleria",
+      "record_audio": "Registra messaggio vocale",
+      "stop_audio": "Ferma registrazione"
+    },
     "artworkHero": {
       "untitled": "Opera senza titolo",
       "a11y_label": "Opera: {{title}} di {{artist}}, tocca per ingrandire",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "Browser in-app aperto"
+    },
+    "attachmentPicker": {
+      "opened": "Opzioni di allegato aperte"
     }
   },
   "consent": {

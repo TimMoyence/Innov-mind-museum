@@ -466,6 +466,22 @@
         "disclosure_body": "此回答基于AI的常识，未检索到支持具体事实的来源。请在依赖详情前自行核实。"
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "打开附件",
+        "open_attachments_hint": "相机、相册、音频选项",
+        "mic": "语音消息",
+        "mic_recording": "停止录音",
+        "audio_pill": "语音消息已就绪，点击查看"
+      }
+    },
+    "attachmentPicker": {
+      "title": "附加到消息",
+      "camera": "拍照",
+      "gallery": "从相册选择",
+      "record_audio": "录制语音消息",
+      "stop_audio": "停止录制"
+    },
     "artworkHero": {
       "untitled": "无题作品",
       "a11y_label": "作品：{{artist}}的{{title}}，点击放大",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "已打开应用内浏览器"
+    },
+    "attachmentPicker": {
+      "opened": "已打开附件选项"
     }
   },
   "consent": {

@@ -466,6 +466,22 @@
         "disclosure_body": "This answer is based on the AI's general knowledge. No source was retrieved to support specific facts. Verify before relying on details."
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Open attachments",
+        "open_attachments_hint": "Camera, gallery, audio options",
+        "mic": "Voice message",
+        "mic_recording": "Stop voice recording",
+        "audio_pill": "Voice message ready, tap to review"
+      }
+    },
+    "attachmentPicker": {
+      "title": "Attach to message",
+      "camera": "Take a photo",
+      "gallery": "Pick from gallery",
+      "record_audio": "Record voice message",
+      "stop_audio": "Stop recording"
+    },
     "artworkHero": {
       "untitled": "Untitled artwork",
       "a11y_label": "Artwork: {{title}} by {{artist}}, tap to expand",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "In-app browser opened"
+    },
+    "attachmentPicker": {
+      "opened": "Attachment options opened"
     }
   },
   "consent": {

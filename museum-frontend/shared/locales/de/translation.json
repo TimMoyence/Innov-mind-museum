@@ -466,6 +466,22 @@
         "disclosure_body": "Diese Antwort basiert auf dem allgemeinen Wissen der KI. Es wurde keine Quelle abgerufen. Bitte vor dem Vertrauen überprüfen."
       }
     },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Anhänge öffnen",
+        "open_attachments_hint": "Kamera, Galerie, Audio",
+        "mic": "Sprachnachricht",
+        "mic_recording": "Sprachaufnahme stoppen",
+        "audio_pill": "Sprachnachricht bereit, zum Prüfen tippen"
+      }
+    },
+    "attachmentPicker": {
+      "title": "An Nachricht anhängen",
+      "camera": "Foto aufnehmen",
+      "gallery": "Aus Galerie wählen",
+      "record_audio": "Sprachnachricht aufnehmen",
+      "stop_audio": "Aufnahme stoppen"
+    },
     "artworkHero": {
       "untitled": "Werk ohne Titel",
       "a11y_label": "Werk: {{title}} von {{artist}}, antippen zum Vergrößern",
@@ -928,6 +944,9 @@
     },
     "browser": {
       "opened": "In-App-Browser geöffnet"
+    },
+    "attachmentPicker": {
+      "opened": "Anhangsoptionen geöffnet"
     }
   },
   "consent": {

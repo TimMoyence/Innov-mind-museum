@@ -30,9 +30,8 @@ import { useChatSessionIntents } from '@/features/chat/application/useChatSessio
 import { ArtworkHeroCard } from '@/features/chat/ui/ArtworkHeroCard';
 import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
-import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
-import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
+import { Composer } from '@/features/chat/ui/Composer';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
@@ -339,6 +338,32 @@ export default function ChatSessionScreen() {
     });
   }, [bottomSheetRouter]);
 
+  // A1 — open the attachment-picker bottom sheet. Wires the audio + image
+  // hooks through the router params so the sheet content can drive the
+  // camera/gallery/record actions and the play/clear preview block.
+  const onOpenAttachments = useCallback(() => {
+    bottomSheetRouter.open('attachment-picker', {
+      recordedAudioUri,
+      isPlayingAudio,
+      isRecording,
+      onPickImage: () => void onPickImage(),
+      onTakePicture: () => void onTakePicture(),
+      toggleRecording,
+      playRecordedAudio: () => void playRecordedAudio(),
+      clearMedia: inputHandlers.clearMedia,
+    });
+  }, [
+    bottomSheetRouter,
+    recordedAudioUri,
+    isPlayingAudio,
+    isRecording,
+    onPickImage,
+    onTakePicture,
+    toggleRecording,
+    playRecordedAudio,
+    inputHandlers.clearMedia,
+  ]);
+
   return (
     <LiquidScreen
       background={pickMuseumBackground(4)}
@@ -413,29 +438,22 @@ export default function ChatSessionScreen() {
             onScroll={onListScroll}
           />
 
-          <MediaAttachmentPanel
-            recordedAudioUri={recordedAudioUri}
-            isPlayingAudio={isPlayingAudio}
-            isRecording={isRecording}
-            playRecordedAudio={playRecordedAudio}
-            clearMedia={inputHandlers.clearMedia}
-            onPickImage={() => void onPickImage()}
-            onTakePicture={() => void onTakePicture()}
-            toggleRecording={toggleRecording}
-          />
-
           <WalkSuggestionChips
             suggestions={lastWalkSuggestions}
             onSelect={inputHandlers.onWalkChipSelect}
           />
 
-          <ChatInput
-            value={inputHandlers.text}
+          <Composer
+            text={inputHandlers.text}
             onChangeText={inputHandlers.setText}
             onSend={() => void inputHandlers.onSend()}
             isSending={isSending || !consentResolved || showAiConsent}
             imageUri={selectedImage}
             onClearImage={clearSelectedImage}
+            recordedAudioUri={recordedAudioUri}
+            isRecording={isRecording}
+            toggleRecording={toggleRecording}
+            onOpenAttachments={onOpenAttachments}
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>

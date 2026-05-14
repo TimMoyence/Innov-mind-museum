@@ -1,0 +1,170 @@
+{
+  "feature": "A1",
+  "baseline": "36f3df4a7",
+  "loop": 1,
+  "verdict": "APPROVED",
+  "weightedMean": 93,
+  "scoresOnFiveAxes": {
+    "correctness": 95,
+    "scope-fidelity": 97,
+    "kiss-dry-hexagonal": 92,
+    "a11y-design-system": 93,
+    "security-honesty": 88
+  },
+  "weights": {
+    "correctness": 0.30,
+    "scope-fidelity": 0.20,
+    "kiss-dry-hexagonal": 0.15,
+    "a11y-design-system": 0.15,
+    "security-honesty": 0.20
+  },
+  "acsCovered": [
+    "AC1","AC2","AC3","AC4","AC5","AC6","AC7","AC8","AC9","AC10",
+    "AC11","AC12","AC13","AC14","AC15","AC16","AC17","AC18","AC19",
+    "AC20","AC21","AC22","AC23","AC24","AC25","AC26","AC27","AC28",
+    "AC29","AC30","AC31"
+  ],
+  "acsViolated": [],
+  "acsViolatedDetail": {
+    "AC10": "AC10 demande textuellement `React.memo` pour `<AttachmentPickerSheetContent>` ; l'impl ship en plain function (museum-frontend/features/chat/ui/AttachmentPickerSheetContent.tsx:45). Ré-interprété : non-violation car (a) le contract test `attachment-picker-route.test.ts:45` asserte `typeof Content === 'function'` — `React.memo` retourne un OBJET (`{ $$typeof, type, compare }`), pas une `function` (vérifié runtime via `node -e` dans museum-frontend), donc memo casserait le test, (b) 5/6 des sibling sheet contents (`AiConsentSheetContent`, `AiDisclosureSheetContent`, `DailyLimitSheetContent`, `MessageContextMenuSheetContent`, `VoiceSessionIntroSheetContent`) sont aussi des plain functions — seul `VisitSummarySheetContent` utilise memo. Pattern parity C4 respecté. Drift spec/impl documenté en tradeoff T1."
+  },
+  "easCovered": [
+    "R1","R2","R3","R4","R5","R6","R7","R8","R9","R10",
+    "R11","R12","R13","R14","R15","R16","R17","R18","R19","R20",
+    "R21","R22","R23","R24","R25","R26","R27","R28","R29","R30",
+    "R31","R32","R33"
+  ],
+  "easViolated": [],
+  "easViolatedDetail": {},
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "N1-spec-2.4-react-memo-stale",
+        "severity": "nice-to-have",
+        "title": "Spec A1.md §2.4 + AC10 spécifient `React.memo` pour AttachmentPickerSheetContent — incompatible avec le contract test typeof===function",
+        "where": "docs/chat-ux-refonte/specs/A1.md:460 (§2.4 'React.memo'), :736 (AC10). Impl plain function : museum-frontend/features/chat/ui/AttachmentPickerSheetContent.tsx:45.",
+        "evidence": "`React.memo(Foo)` retourne `{ $$typeof: Symbol(react.memo), type: Foo, compare: null }` — `typeof === 'object'`. Le test `attachment-picker-route.test.ts:45` asserte `typeof def?.Content === 'function'`. Si l'impl était memo, ce test échouerait. L'impl plain function est donc structurellement correcte et cohérente avec 5/6 sibling sheets C4 (seul `VisitSummarySheetContent` utilise memo, sans route-registry typeof test équivalent).",
+        "spec-ref": "A1.md §2.4 ligne 460, AC10 ligne 736.",
+        "honest-tradeoff": "Documentation drift pure. Tracking.md ligne 135 documente correctement l'override (« plain function — exigence runtime `typeof Content==='function'` per `attachment-picker-route.test.ts` AC21 »). Aucun impact runtime. Pattern correct.",
+        "remediation": "Optionnel : amender A1.md §2.4 (`React.memo` → `plain function`) + AC10 (retirer 'React.memo') + ajouter note explicative cohérente avec tracking.md."
+      },
+      {
+        "id": "N2-composer-prop-renaming-non-documented",
+        "severity": "nice-to-have",
+        "title": "Renaming `value` → `text` dans la prop signature ChatInput vs Composer non documenté côté ChatInput",
+        "where": "museum-frontend/features/chat/ui/Composer.tsx:12 (`text: string`) wraps museum-frontend/features/chat/ui/ChatInput.tsx (prop `value`). Adaptation au boundary Composer.tsx:84 (`value={text}`).",
+        "evidence": "Le `<ChatInput>` interne expose toujours `value` (R7 préservé, contract intact). Le `<Composer>` expose `text` — choix produit pour cohérent avec l'API screen (`inputHandlers.text`). 4 sites de test adaptés (`chat-session-deep.test.tsx` : `lastProps<{value}>('ChatInput')` → `lastProps<{text}>('Composer')` × 5 occurrences). Migration test-suite complète, vérifiée par 2323/2323 PASS.",
+        "spec-ref": "A1.md §2.3 (ComposerProps `text: string`) vs §0.6 (préservation `<ChatInput>`). R7 explicite.",
+        "honest-tradeoff": "Trade-off acceptable : aliasing au boundary garde le ChatInput externe stable (NFR5 backward-compat), permet à Composer d'avoir une API cohérente avec le screen. La conversion `value={text}` est explicite dans le wrapper. Risque : nouveau dev pourrait s'attendre à `value` sur Composer. Suffisamment cassé par TypeScript (interface `ComposerProps`).",
+        "remediation": "Aucune action requise. Optionnel : ajouter une ligne JSDoc sur `ComposerProps.text` mentionnant explicitement le rebrand (déjà 'forwarded to the embedded <ChatInput>'). Suffisant."
+      },
+      {
+        "id": "N3-walk-banner-relocation-not-mentioned-in-spec",
+        "severity": "nice-to-have",
+        "title": "Le `walk-mode-banner` reste rendu mais hors du layout §0.6 documenté",
+        "where": "museum-frontend/app/(stack)/chat/[sessionId].tsx:399-407 (banner) + :441 (WalkSuggestionChips) + :446 (Composer).",
+        "evidence": "Le layout final §0.6 ligne 116-126 montre `<walk-mode-banner />` avant `<OfflineBanner>`. L'impl le rend à la même position (ligne 399, avant OfflineBanner). Le `<WalkSuggestionChips>` est juste avant `<Composer>` (R23). Ordre cohérent. Mais le commentaire de spec lignes 593-598 dans §2.5 contient une instruction « In JSX, REPLACE ... » qui suggère retirer la `<ChatInput>` orpheline — la `<ChatInput>` legacy de `[sessionId].tsx` n'est plus rendue (vérifié grep — Composer absorbe).",
+        "spec-ref": "A1.md §0.6 ligne 116-126 + §2.5 ligne 593-610.",
+        "honest-tradeoff": "Aucune. Le layout est correct. Nice-to-have documentaire pour cross-checker.",
+        "remediation": "Aucune."
+      }
+    ]
+  },
+  "tradeoffsAssessment": {
+    "T1-attachment-picker-not-memo": {
+      "status": "acceptable",
+      "evidence": "Spec §2.4 + AC10 demandent `React.memo` ; impl plain function. JUSTIFIÉ par contract test `typeof Content === 'function'` (attachment-picker-route.test.ts:45) — React.memo retourne un objet (vérifié runtime `typeof memo(...) === 'object'`). Aussi pattern parity avec 5/6 sibling C4 sheets en plain function. Suggestion alternative : assouplir le test en `typeof === 'function' || typeof === 'object'`. Non bloquant. Voir N1."
+    },
+    "T2-composer-prop-text-vs-value": {
+      "status": "acceptable",
+      "evidence": "Composer expose `text` (Composer.tsx:12), wrap `<ChatInput value={text}>` (Composer.tsx:84). ChatInput intact (R7). 4 tests migrés `chat-session-deep.test.tsx` (`value` → `text`) — vérifié PASS 2323/2323. Aliasing au boundary cohérent avec inputHandlers.text. Voir N2."
+    },
+    "T3-chat-composer-mediaattachmentpanel-mock-removed": {
+      "status": "acceptable",
+      "evidence": "Le red test `chat-composer.test.tsx:141` retire le `jest.mock('@/features/chat/ui/MediaAttachmentPanel')` car le module est supprimé même commit. L'intent (vérifier absence du legacy) reste préservé via `queryByTestId('media-attachment-panel') → null` (ligne 221). Test PASS. Cohérent doctrine `feedback_bury_dead_code` (zéro mock fantôme)."
+    },
+    "T4-open-q1-q5-deferred-v1.1": {
+      "status": "acceptable",
+      "evidence": "Q1 (long-press push-to-talk) deferred — tap-to-toggle V1 cohérent comportement actuel, zéro refactor `useAudioRecorder`, gate EU AI Act `useVoiceDisclosure` préservée (lignes 137-152 [sessionId].tsx). Q2 (auto-suggest) rejected — doctrine `feedback_hybrid_product_philosophy`. Q3 (waveform pill) deferred — icon-only V1 (Composer.tsx:103). Q4 (6 locales) résolu : vraies traductions livrées ar/de/es/it/ja/zh (vérifié grep + check:i18n PASS 787 keys × 8 locales) — pas placeholders. Q5 (Sentry) deferred — `console.debug` cohérent A2/A6 (NB: pas d'instrument console.debug dans Composer.tsx final — design §2.3 le mentionnait mais green-agent l'a omis ; mineur, aucun AC ne l'exige). Tous V1.1+ trace dans tracking.md."
+    }
+  },
+  "musaiumGates": {
+    "noUnicodeEmoji": {
+      "status": "PASS",
+      "evidence": "Audit regex `/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27BF}]/u` sur 96 strings nouvelles (12 keys × 8 locales) → 0 match (script Node vérifié). Composer.tsx + AttachmentPickerSheetContent.tsx utilisent Ionicons exclusivement (`add-circle-outline`, `mic-outline`, `stop-circle-outline`, `musical-notes`, `camera-outline`, `images-outline`). Doctrine `feedback_no_unicode_emoji` respectée (R6, R20, R29)."
+    },
+    "noFeatureFlags": {
+      "status": "PASS",
+      "evidence": "grep `FEATURE_|_ENABLED` dans Composer.tsx, AttachmentPickerSheetContent.tsx, routes.ts, [sessionId].tsx → 0 résultat. R32 satisfait. Doctrine `feedback_no_feature_flags_prelaunch` respectée."
+    },
+    "buryDeadCode": {
+      "status": "PASS",
+      "evidence": "Verified EXHAUSTIVELY : (a) `museum-frontend/features/chat/ui/MediaAttachmentPanel.tsx` ABSENT (ls exit 1 — 'No such file or directory'), (b) `museum-frontend/__tests__/components/MediaAttachmentPanel.test.tsx` ABSENT (git status: ` D`), (c) ZERO import code prod vers MediaAttachmentPanel — grep retourne uniquement : 1 JSDoc comment dans AttachmentPickerSheetContent.tsx:39 (légitime — explique l'origine du copy block), 4 mentions dans 2 fichiers test (chat-composer.test.tsx:6/141/218, AttachmentPickerSheetContent.test.tsx:12) — toutes commentaires explicatifs de la suppression, pas d'imports runtime, (d) ZERO mock résiduel : chat-screen.setup.tsx + chat-session-deep.test.tsx + chat-artwork-hero.test.tsx + chat-status-rendering.test.tsx tous migrés `Composer` (diff vérifié), (e) ZERO marker `@deprecated`/`DEPRECATED`/`TODO`/`FIXME` dans les nouveaux fichiers A1, (f) ZERO i18n key legacy résiduelle (les MediaAttachmentPanel utilisaient `chat.gallery`/`chat.lens`/`chat.audio`/etc — réutilisés intacts par AttachmentPickerSheet, doctrine reuse). R24 strictement enforced."
+    },
+    "i18nCoverage": {
+      "status": "PASS",
+      "evidence": "8/8 locales contiennent les 12 nouvelles clés (vérifié via script Node iter sur tous les keys). Vraies traductions naturelles : FR `Ouvrir les pièces jointes` / EN `Open attachments` / DE `Anhänge öffnen` / ES `Abrir adjuntos` / IT `Apri allegati` / JA `添付ファイルを開く` / ZH `打开附件` / AR `فتح المرفقات`. R30 `chat.attachmentPicker.title` ≤ 30 chars : max = `An Nachricht anhängen` (21) ✓. Audio_pill IT = 43 chars (R30 n'applique pas — c'est l'a11y label, not the visual title). `npm run check:i18n` PASS : 787 keys × 8 locales OK. R28/R29 satisfaits."
+    },
+    "testFactoriesNoNewDeps": {
+      "status": "PASS",
+      "evidence": "Tests neufs : Composer.test.tsx + AttachmentPickerSheetContent.test.tsx + attachment-picker-route.test.ts + chat-composer.test.tsx. Tous utilisent `defaultProps` inline (composants UI atomiques, pas d'entités domaine — exclu du périmètre `eslint-plugin-musaium-test-discipline`). Aucun `as User`/`as ChatMessage` inventé. Helpers réutilisés (`test-utils`, `chat-screen.setup` pattern). package.json FE inchangé (git status: clean), package-lock.json clean. Aucune dep ajoutée. R31/AC31 satisfait."
+    }
+  },
+  "buildVerification": {
+    "fe-lint": {
+      "command": "cd museum-frontend && npm run lint",
+      "exit": 0,
+      "evidence": "ESLint --max-warnings=0 + tsc --noEmit exit 0 (aucun warning, aucun error). AC27 satisfait."
+    },
+    "fe-test-full": {
+      "command": "cd museum-frontend && npm test",
+      "exit": 0,
+      "evidence": "225/225 suites PASS, 2323/2323 tests PASS, 4/4 snapshots, 13.578s. Delta vs baseline 2297 : +33 nouveaux A1 (10 Composer + 13 AttachmentPickerSheet + 6 attachment-picker-route + 4 chat-composer wiring) - 7 MediaAttachmentPanel supprimés = +26 net. AC28 satisfait (`baseline_count - 7 + N_A1_new` respecté)."
+    },
+    "fe-i18n-check": {
+      "command": "cd museum-frontend && npm run check:i18n",
+      "exit": 0,
+      "evidence": "787 keys × 8 locales OK : ✓ ar/de/es/fr/it/ja/zh tous PASS. R28 strict."
+    },
+    "no-eslint-disable-no-as-any": {
+      "command": "grep 'eslint-disable\\|as any' museum-frontend/features/chat/ui/Composer.tsx museum-frontend/features/chat/ui/AttachmentPickerSheetContent.tsx museum-frontend/features/chat/ui/bottom-sheet-router/routes.ts <new tests>",
+      "exit": 1,
+      "evidence": "ZERO occurrence dans les fichiers A1 nouveaux + tests. AC29/AC30 satisfaits."
+    },
+    "legacy-deleted-verification": {
+      "command": "ls museum-frontend/features/chat/ui/MediaAttachmentPanel.tsx; ls museum-frontend/__tests__/components/MediaAttachmentPanel.test.tsx",
+      "exit": 1,
+      "evidence": "ls exit 1 (No such file or directory) sur les 2 paths. AC26 satisfait. R24 strict."
+    }
+  },
+  "honestyChecklist": {
+    "ufr-013-claims-verified": true,
+    "evidence": [
+      "Spec A1.md lue intégralement (793 lignes, 33 EARS R1-R33, 31 ACs AC1-AC31, 13 NFRs, 5 Open Qs).",
+      "Source files lus intégralement : Composer.tsx (162 lignes), AttachmentPickerSheetContent.tsx (231 lignes), routes.ts (148 lignes), [sessionId].tsx (467 lignes).",
+      "Tests nouveaux lus intégralement : Composer.test.tsx (105 lignes, 10 tests), AttachmentPickerSheetContent.test.tsx (127 lignes, 13 tests), attachment-picker-route.test.ts (47 lignes, 6 tests), chat-composer.test.tsx (265 lignes, 4 tests).",
+      "Tests migrés inspectés diff : chat-session-deep.test.tsx (5 hunks ChatInput→Composer + describe rename + childMockSpec MediaAttachmentPanel→Composer), chat-screen.setup.tsx, chat-artwork-hero.test.tsx, chat-status-rendering.test.tsx — tous migrés Composer mock cohérent.",
+      "Build commands exécutés et exit codes vérifiés : `npm run lint` (exit 0), `npm test` (225/225 suites PASS, 2323/2323 tests PASS), `npm run check:i18n` (787 × 8 PASS).",
+      "Audit emoji regex Node `/[\\u{1F000}-\\u{1FFFF}\\u{2600}-\\u{27BF}]/u` sur 12 clés × 8 locales = 96 strings → 0 match.",
+      "Audit zombies : `ls museum-frontend/features/chat/ui/MediaAttachmentPanel.tsx` → exit 1 No such file. `grep -rn MediaAttachmentPanel museum-frontend` → uniquement comments JSDoc (AttachmentPickerSheetContent.tsx:39) et tests negative-assertion (chat-composer.test.tsx + AttachmentPickerSheetContent.test.tsx). Aucun import runtime.",
+      "Audit React.memo runtime : `node -e` dans museum-frontend → typeof memo(Foo) === 'object', keys=$$typeof/type/compare. Confirme la justification T1.",
+      "Pattern parity vérifié : 5/6 sibling C4 SheetContents (AiConsent/AiDisclosure/DailyLimit/MessageContextMenu/VoiceSessionIntro) sont plain functions, 1 (VisitSummary) memo. AttachmentPicker plain = majoritaire.",
+      "package.json/package-lock.json FE clean (git status — pas dans les Modified).",
+      "i18n char-counts vérifiés sur 11 keys × 8 locales (max title 21 chars de allemand, R30 ≤ 30 satisfait).",
+      "EU AI Act gate `useVoiceDisclosure` préservée : [sessionId].tsx:137-152 montre toggleRecording wrappé identique, Composer reçoit la version wrappée."
+    ],
+    "claims-not-verified": [
+      "Telemetry `console.debug('[A1] composer_attach_opened')` annoncé §2.1 / Q5 NON présent dans Composer.tsx final — green-agent l'a omis. Aucun AC ne l'exigeait, scope-fidelity intact. Mineur.",
+      "Render visuel runtime (iOS dark mode, RTL Arabic, slide-up anim 60fps) non re-mesuré — tokens DS dark variants présumés OK (theme.surface/primary/error/cardBorder/primaryContrast cohérents avec MediaAttachmentPanel legacy).",
+      "Hit target 44dp vérifié au code (`semantic.media.sendButtonSize` constant) mais pas re-mesuré device runtime.",
+      "i18n traductions ar/de/es/it/ja/zh validées par script présence + char-count mais non re-validées produit (Q4 deferred dans spec mais green-agent a livré vraies traductions ≤35 chars — gain net vs spec).",
+      "TypeScript strict-mode propagation `accessibilityState.busy` non re-vérifiée — convention Pressable RN, jamais flag par tsc.",
+      "Performance React.memo Composer + l'absence de memo AttachmentPickerSheetContent : impact unmesured (mount ponctuel par open() suffit, pas de re-render loop)."
+    ]
+  },
+  "recommendation": "APPROVED. weightedMean=93/100. Implémentation propre, 33 EARS satisfaits (R1-R33 tous présents au code + tests), 31 ACs couverts (AC10 ré-interprété : plain function justifié par contract test `typeof===function` + pattern parity 5/6 C4 sheets). Build verification 5/5 PASS : lint exit 0, full test 2323/2323 PASS (baseline 2297 + 33 A1 - 7 legacy = +26 net), i18n 787×8 PASS, zero eslint-disable/as-any, legacy files DELETED (vérifié ls exit 1). Composer atomique React.memo, ChatInput intact (R7 non-régression), EU AI Act `useVoiceDisclosure` gate préservée. 4 tradeoffs honnêtement assumés : T1 acceptable (memo→plain function pattern parity), T2 acceptable (text/value boundary aliasing), T3 acceptable (mock removal cohérent legacy supprimé), T4 acceptable (Q1-Q5 deferred V1.1+ bonus Q4 livré). 5/5 Musaium gates PASS — pas d'emoji (96 strings audit clean), pas de feature flag, dead code totalement enterré (zero MediaAttachmentPanel runtime, mocks migrés, JSDoc-only refs), i18n 12 keys × 8 locales avec vraies traductions ≤35 chars, no new deps (package.json/lock clean). 0 blocker, 0 important, 3 nice-to-have (N1 spec §2.4 React.memo stale, N2 prop renaming non documenté, N3 walk-banner relocation note). Tech Lead recommandation : merge sans condition. Follow-up post-merge optionnel : (a) amender A1.md §2.4 + AC10 'React.memo' → 'plain function' pour cohérence doc/impl (N1, ~5 min), (b) ajouter JSDoc note sur ComposerProps.text mentionnant le rebrand value→text (N2). Bonus livré vs spec : vraies traductions 6 locales non-en/fr (Q4 deferred originellement).",
+  "reviewer": "review-agent-2026-05-14-A1-001",
+  "reviewedAt": "2026-05-14"
+}

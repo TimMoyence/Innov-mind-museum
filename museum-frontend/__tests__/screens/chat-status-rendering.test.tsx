@@ -52,13 +52,11 @@ jest.mock('@/features/chat/ui/ChatHeader', () => {
     ChatHeader: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-ChatHeader' })),
   };
 });
-jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
+jest.mock('@/features/chat/ui/Composer', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
   return {
-    MediaAttachmentPanel: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-MediaAttachmentPanel' }),
-    ),
+    Composer: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-Composer' })),
   };
 });
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
