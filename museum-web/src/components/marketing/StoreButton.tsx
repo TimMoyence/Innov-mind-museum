@@ -80,7 +80,7 @@ export default function StoreButton({
   }
 
   return (
-    <a href={href} className={className} style={baseStyle}>
+    <a href={href} aria-label={`${subLabel} ${label}`} className={className} style={baseStyle}>
       {inner}
     </a>
   );

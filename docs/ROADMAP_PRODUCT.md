@@ -126,6 +126,18 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [ ] **C7.2 S6.2 Chaos game-day** — `docs/CHAOS_RUNBOOKS.md` Redis kill + LLM down + DB readonly sur staging
 - [ ] **C7.3 S6.3 P0 bug zero** — triage Sentry + Linear, aucun ouvert avant 1er juin
 - [ ] **C7.4 S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` exécutée et signée
+- [ ] **C7.5 Smoke device — TTS backgrounded** (avant TestFlight submit, ~5 min) — sur iPhone réel : ouvrir chat → envoyer message → AI répond TTS → lock-screen pendant playback → vérifier que l'audio continue. Si silence après lock = `setAudioModeAsync({ shouldPlayInBackground: true })` dans `useTextToSpeech.ts:222-229` ne s'applique pas correctement (peut nécessiter `AVAudioSession.Category = .playback` côté natif). Issue source : commit `c4338ba1` (P0 #7 ferme la capability Info.plist + JS-side mais le runtime n'a pas été testé device).
+
+### C8 — Compliance VDP follow-up (CRA / GDPR — code + docs déjà mergés 2026-05-14)
+
+> Code livré 2026-05-14 (cf. STATUS row "EU CRA VDP" ✅). Reste les actions humaines/ops pour rendre le canal réellement actif. Détails dans [`docs/operations/VDP_RUNBOOK.md`](operations/VDP_RUNBOOK.md).
+
+- [ ] **C8.1 Mailbox `security@musaium.com`** — créer + forwarder vers founder primary inbox + Slack `#security` mobile push. Bloque launch 2026-06-01 (sans mailbox, `SECURITY.md` ment). Effort 30 min.
+- [ ] **C8.2 CNIL portal dry-run** — vérifier credentials sur <https://notifications.cnil.fr/notifications/>, faire un test breach notification end-to-end. Bloque launch 2026-06-01 (GDPR Art. 33 72h). Effort 60 min.
+- [ ] **C8.3 ENISA SRP onboarding** — créer un compte sur la plateforme de reporting unique, dry-run un test incident. Deadline réelle 2026-09-11 (CRA Art. 14). Target avant launch pour bake. Effort 60 min.
+- [ ] **C8.4 CERT-FR contact vérifié** — confirmer le point d'entrée `certfr-info@ssi.gouv.fr` + tel `+33 1 71 75 84 50` + ajouter au 1Password. Deadline 2026-09-11. Effort 15 min.
+- [ ] **C8.5 PGP key publication** — générer paire de clés `security@musaium.com`, publier la clé publique à `https://musaium.com/.well-known/pgp-key.txt`. Post-V1 (non bloquant launch, mais cité dans `SECURITY.md` § "PGP / encrypted reports"). Effort 30 min.
+- [ ] **C8.6 Renewal calendar reminder** — ajouter rappel récurrent 2027-04-15 (30 j avant `Expires: 2027-05-14`) pour regénérer `museum-web/public/.well-known/security.txt` avec une nouvelle date. Effort 5 min.
 
 ---
 
