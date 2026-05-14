@@ -3,6 +3,8 @@
 # docs
 **/docs/**
 !docs/
+!docs/chat-ux-refonte/
+!docs/chat-ux-refonte/**
 !docs/CI_CD_SECRETS.md
 !docs/MOBILE_INTERNAL_TESTING_FLOW.md
 !docs/privacy-policy.html
