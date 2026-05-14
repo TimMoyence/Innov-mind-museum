@@ -39,6 +39,7 @@ export function MfaWarningBanner({
       </View>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel="Enroll in two-factor authentication"
         onPress={onEnrollPress}
         style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
       >

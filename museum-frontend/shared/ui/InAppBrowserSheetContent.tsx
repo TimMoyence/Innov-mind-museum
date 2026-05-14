@@ -206,8 +206,8 @@ const styles = StyleSheet.create({
   errorOverlay: {
     position: 'absolute',
     top: semantic.media.safeAreaTop,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     position: 'absolute',
     top: semantic.media.safeAreaTop,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     alignItems: 'center',
     paddingTop: semantic.modal.padding,
     zIndex: 10,

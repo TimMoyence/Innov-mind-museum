@@ -1,13 +1,23 @@
 # Déclaration d'accessibilité — Musaium
 
-**Statut** : DRAFT v0.1 — conformité **partielle**, audit WCAG 2.1 AA en cours.
-**Date de rédaction** : 2026-05-13 (audit P0-2).
+**Statut** : v0.2 — conformité **partielle**, audit automatisé axe-core complété, passes manuelle + tests utilisateurs à venir.
+**Date de rédaction** : 2026-05-13 (audit P0-2). **Mise à jour** : 2026-05-14 (clôture du lot P0 #14).
 **Version applicable** : Musaium V1 (launch prévu 2026-06-01).
 **Cycle de revue** : annuel, ou à chaque évolution majeure du service.
 
 > Cette déclaration est rédigée en application de la **Directive (UE) 2019/882 du 17 avril 2019** relative aux exigences en matière d'accessibilité applicables aux produits et services (« European Accessibility Act » — EAA, opposable depuis le 28 juin 2025), de la **Loi française n° 2005-102 du 11 février 2005** (Art. 47) et du **Décret n° 2019-768 du 24 juillet 2019** relatif à l'accessibilité aux personnes handicapées des services de communication au public en ligne. Elle suit la norme harmonisée **EN 301 549 V3.2.1** alignée sur **WCAG 2.1 niveau AA**.
 
-> **Note d'audit (2026-05-13)** : cette déclaration est rédigée à titre transparent **avant** la conduite d'un audit WCAG 2.1 AA formel. Le statut de conformité affiché est volontairement « partiel ». Aucune affirmation de conformité totale ne pourra être faite tant que l'audit (auto + manuel + tests utilisateurs en situation de handicap) n'a pas été mené et documenté.
+> **Note d'audit (2026-05-14)** : cette déclaration est rédigée à titre transparent **avant** la conduite d'un audit WCAG 2.1 AA formel par un tiers indépendant. Un balayage axe-core automatisé interne couvrant 18 routes web a été conduit le 2026-05-14 (run `2026-05-14-i18n-a11y-eaa-batch`). Le statut de conformité reste volontairement « partiel » — les outils automatisés détectent environ 20 à 50 % des problèmes. Aucune affirmation de conformité totale ne sera faite tant que les passes manuelle + tests utilisateurs (cf. § 5) n'auront pas été menées et documentées.
+
+## Journal de version v0.2 (2026-05-14)
+
+La clôture du run `2026-05-14-i18n-a11y-eaa-batch` a livré les remédiations suivantes :
+
+- **Page d'enrôlement MFA** (`/admin/mfa`) — 22 chaînes anglaises codées en dur migrées vers les dictionnaires FR/EN ; conteneur QR équipé de `role="img"` + `aria-label` ; bouton « Tout copier » dont le fond passe d'`amber-500` à `amber-700` (contraste 2.45 → ≥ 4.5 : 1) (EAA Art. 4(3) ; WCAG 1.4.3 + 1.1.1 + 4.1.2 remédiés pour cette route).
+- **UI mobile RTL arabe** — 28 sites de mise en page dans `museum-frontend/{features,shared/ui}/` migrés des propriétés physiques (`left`/`right`/`marginLeft`/`marginRight`/`paddingLeft`/`paddingRight`/`borderLeft`/`borderRight`/`textAlign: 'left'|'right'`) vers les équivalents logiques (`start`/`end`). Trois tests de rendu RTL ajoutés (`ChatScreen`, `HomeScreen`, `DailyArtScreen`) sous `I18nManager.forceRTL(true)` (EN 301 549 § 9.1.3.2 — Séquence Significative — renforcée pour l'arabe).
+- **Couverture a11y automatisée** — `@axe-core/playwright` étendu de 6 routes (landing, privacy, support, admin/login, admin, admin/users) à 18 routes (+ /security, /accessibility, /verify-email, /confirm-email-change, /reset-password, /admin/mfa, /admin/audit-logs, /admin/tickets, /admin/support, /admin/analytics, /admin/reports, /admin/reviews). La CI échoue sur toute violation `serious` ou `critical` sous les jeux de règles WCAG 2.1 A + AA. Seuls l'iframe `/admin/ops/grafana` et le stub `/admin/users/[id]` demeurent non couverts (lots distincts).
+- **Backfill `accessibilityLabel` mobile** — couverture portée au-dessus de 80 % des `Pressable` / `TouchableOpacity` (≈ 58 % selon l'audit F10 § 5).
+- **Sitemap** — la route `/accessibility` est désormais émise pour toutes les locales aux fins de découvrabilité.
 
 ---
 
@@ -134,4 +144,4 @@ Les utilisateurs hors France doivent saisir l'autorité de surveillance de leur 
 
 ---
 
-**END declaration v0.1 DRAFT — Awaiting WCAG 2.1 AA audit + opérateur sign-off.**
+**END declaration v0.2 — Audit automatisé complété ; en attente des passes manuelle + tests utilisateurs + opérateur sign-off.**

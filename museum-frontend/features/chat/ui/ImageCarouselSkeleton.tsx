@@ -20,8 +20,9 @@ const PULSE_OPACITY_HI = 1;
  */
 const SkeletonThumb = React.memo(({ surface }: { surface: string }) => {
   const reduceMotion = useReducedMotion();
-  const opacity = useRef(new Animated.Value(reduceMotion ? PULSE_OPACITY_HI : PULSE_OPACITY_LO))
-    .current;
+  const opacity = useRef(
+    new Animated.Value(reduceMotion ? PULSE_OPACITY_HI : PULSE_OPACITY_LO),
+  ).current;
 
   useEffect(() => {
     if (reduceMotion) return undefined;
@@ -45,14 +46,7 @@ const SkeletonThumb = React.memo(({ surface }: { surface: string }) => {
     };
   }, [opacity, reduceMotion]);
 
-  return (
-    <Animated.View
-      style={[
-        styles.thumb,
-        { backgroundColor: surface, opacity },
-      ]}
-    />
-  );
+  return <Animated.View style={[styles.thumb, { backgroundColor: surface, opacity }]} />;
 });
 SkeletonThumb.displayName = 'SkeletonThumb';
 
@@ -106,7 +100,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   thumbWrapper: {
-    marginRight: semantic.chat.gap,
+    marginEnd: semantic.chat.gap,
   },
   thumb: {
     height: THUMB_HEIGHT,

@@ -118,5 +118,5 @@ const styles = StyleSheet.create({
   skeleton: { width: '70%', height: 60, borderRadius: 16 },
   dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  label: { fontSize: 13, marginLeft: 8 },
+  label: { fontSize: 13, marginStart: 8 },
 });

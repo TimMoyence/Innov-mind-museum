@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: semantic.chat.gap,
-    marginRight: semantic.card.gap,
+    marginEnd: semantic.card.gap,
   },
   title: {
     fontSize: semantic.card.titleSize,

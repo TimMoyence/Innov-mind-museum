@@ -23,7 +23,7 @@ exports[`ImageCarouselSkeleton (C2.4 v2) renders 3 placeholder thumbs inside a n
     <View
       style={
         {
-          "marginRight": 8,
+          "marginEnd": 8,
         }
       }
     >
@@ -44,7 +44,7 @@ exports[`ImageCarouselSkeleton (C2.4 v2) renders 3 placeholder thumbs inside a n
     <View
       style={
         {
-          "marginRight": 8,
+          "marginEnd": 8,
         }
       }
     >
@@ -65,7 +65,7 @@ exports[`ImageCarouselSkeleton (C2.4 v2) renders 3 placeholder thumbs inside a n
     <View
       style={
         {
-          "marginRight": 8,
+          "marginEnd": 8,
         }
       }
     >

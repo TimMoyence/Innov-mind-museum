@@ -94,6 +94,8 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
       {!otpauthUrl ? (
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Generate TOTP enrollment code"
+          accessibilityState={{ disabled: pending, busy: pending }}
           style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
           onPress={() => {
             void handleGenerate();
@@ -126,6 +128,7 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
           ))}
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Copy all recovery codes to clipboard"
             style={styles.copyBtn}
             onPress={() => {
               void handleCopyCodes();
@@ -150,6 +153,8 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
           />
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Verify 6-digit TOTP code"
+            accessibilityState={{ disabled: verifying || code.length !== 6, busy: verifying }}
             style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
             onPress={() => {
               void handleVerify();

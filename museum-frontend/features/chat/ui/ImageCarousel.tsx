@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   thumbPressable: {
-    marginRight: semantic.chat.gap,
+    marginEnd: semantic.chat.gap,
   },
   thumbContainer: {
     height: THUMB_HEIGHT,
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   attributionOverlay: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     backgroundColor: ATTRIBUTION_BG,
     paddingHorizontal: space['1'],
     paddingVertical: space['0.5'],

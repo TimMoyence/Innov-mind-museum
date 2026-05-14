@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   pressable: {
     minWidth: CARD_WIDTH,
     minHeight: CARD_MIN_HEIGHT,
-    marginRight: semantic.chat.gap,
+    marginEnd: semantic.chat.gap,
   },
   card: {
     width: CARD_WIDTH,

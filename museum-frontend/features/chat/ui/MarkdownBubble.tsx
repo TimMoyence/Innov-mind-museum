@@ -66,9 +66,9 @@ export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
           color: theme.primary,
         },
         blockquote: {
-          borderLeftWidth: 3,
-          borderLeftColor: theme.cardBorder,
-          paddingLeft: space['2.5'],
+          borderStartWidth: 3,
+          borderStartColor: theme.cardBorder,
+          paddingStart: space['2.5'],
           marginVertical: semantic.card.gapTiny,
         },
         code_inline: {

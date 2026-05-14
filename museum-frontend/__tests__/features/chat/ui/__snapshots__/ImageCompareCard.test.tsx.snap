@@ -43,7 +43,7 @@ exports[`ImageCompareCard (T8.2) matches the structural snapshot for a typical P
   onStartShouldSetResponder={[Function]}
   style={
     {
-      "marginRight": 8,
+      "marginEnd": 8,
       "minHeight": 260,
       "minWidth": 220,
     }

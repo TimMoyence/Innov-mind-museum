@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   thumbDismiss: {
     position: 'absolute',
     top: -6,
-    right: -6,
+    end: -6,
     width: space['5'],
     height: space['5'],
     borderRadius: radius.DEFAULT,

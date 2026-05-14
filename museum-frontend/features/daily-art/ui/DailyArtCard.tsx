@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space['4'],
     gap: space['1'],
     borderRadius: semantic.card.radiusCompact,
-    marginLeft: space['2'],
+    marginStart: space['2'],
   },
   saveActionText: {
     fontSize: semantic.button.fontSize,

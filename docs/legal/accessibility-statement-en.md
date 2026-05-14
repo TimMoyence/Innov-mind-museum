@@ -1,13 +1,23 @@
 # Accessibility Statement — Musaium
 
-**Status**: DRAFT v0.1 — **partial** conformance, WCAG 2.1 AA audit pending.
-**Drafting date**: 2026-05-13 (audit P0-2).
+**Status**: v0.2 — **partial** conformance, automated axe-core audit complete, manual + user-testing passes pending.
+**Drafting date**: 2026-05-13 (audit P0-2). **Updated**: 2026-05-14 (P0 #14 batch closure).
 **Applicable version**: Musaium V1 (launch planned 2026-06-01).
 **Review cycle**: annual, or upon any material change to the service.
 
 > This statement is issued pursuant to **Directive (EU) 2019/882 of 17 April 2019** on the accessibility requirements for products and services (the « European Accessibility Act » — EAA, enforceable since 28 June 2025), and follows the harmonised standard **EN 301 549 V3.2.1** aligned with **WCAG 2.1 level AA**. For users in France, it also satisfies the requirements of Loi n° 2005-102 du 11 février 2005 (Art. 47) and Décret n° 2019-768 of 24 July 2019.
 
-> **Audit note (2026-05-13)**: this statement is published transparently **before** a formal WCAG 2.1 AA audit has been conducted. The declared conformance status is deliberately "partial". No claim of total or substantial conformance is made and none will be made until the audit (automated + manual + user testing with persons with disabilities) has been carried out and documented.
+> **Audit note (2026-05-14)**: this statement is published transparently **before** a formal external WCAG 2.1 AA audit has been conducted by an independent third party. An internal automated axe-core sweep against 18 web routes was completed on 2026-05-14 (run `2026-05-14-i18n-a11y-eaa-batch`). The declared conformance status remains deliberately "partial" — automated tooling catches an estimated 20–50 % of issues. No claim of total or substantial conformance is made and none will be made until the manual + user-testing passes (see § 5) have been conducted and documented.
+
+## v0.2 changelog (2026-05-14)
+
+Closing run `2026-05-14-i18n-a11y-eaa-batch` shipped the following remediations:
+
+- **MFA enrolment page** (`/admin/mfa`) — 22 hardcoded English strings migrated to FR/EN dictionaries; QR code wrapper carries `role="img"` + `aria-label`; "Copy all" button background raised from `amber-500` to `amber-700` (contrast 2.45 → ≥ 4.5 : 1) (EAA Art. 4(3); WCAG 1.4.3 + 1.1.1 + 4.1.2 remediated for that route).
+- **RTL Arabic mobile UI** — 28 layout sites in `museum-frontend/{features,shared/ui}/` migrated from physical (`left`/`right`/`marginLeft`/`marginRight`/`paddingLeft`/`paddingRight`/`borderLeft`/`borderRight`/`textAlign: 'left'|'right'`) to logical (`start`/`end`) properties. Three RTL render tests added (`ChatScreen`, `HomeScreen`, `DailyArtScreen`) under `I18nManager.forceRTL(true)` (EN 301 549 § 9.1.3.2 — Meaningful Sequence — strengthened for Arabic).
+- **Automated a11y coverage** — `@axe-core/playwright` extended from 6 routes (landing, privacy, support, admin/login, admin, admin/users) to 18 routes (+ /security, /accessibility, /verify-email, /confirm-email-change, /reset-password, /admin/mfa, /admin/audit-logs, /admin/tickets, /admin/support, /admin/analytics, /admin/reports, /admin/reviews). CI fails on `serious` or `critical` violations under the WCAG 2.1 A + AA tag sets. Only the `/admin/ops/grafana` iframe + the `/admin/users/[id]` stub remain uncovered (separate runs).
+- **Mobile a11y label backfill** — `accessibilityLabel` raised above the 80 % coverage target on `Pressable` / `TouchableOpacity` element count (was ≈ 58 % per audit F10 § 5).
+- **Sitemap** — `/accessibility` route now emitted across locales for discoverability.
 
 ---
 
@@ -43,7 +53,7 @@ No claim of total or substantial conformance is made at this stage.
 ### 3.1 Identified non-conformances (to be confirmed by audit)
 
 - **Voice flows without a guaranteed equivalent text alternative**: the hands-free mode (incoming STT + outgoing TTS) returns the LLM transcription in parallel, but the persisted TTS audio (`ChatMessage.audioUrl`) has no formal audio description for blind users; the textual transcript of the outgoing audio is not consistently rendered as an independently readable element (WCAG 1.2.1, 1.2.3). To be audited.
-- **RTL rendering (Arabic) on the admin web panel**: the admin shell at `museum-web/src/app/[locale]/admin/*` does not declare `dir="rtl"` and has not been tested in the `ar` locale. Mobile RTL handling exists (`museum-frontend/shared/i18n/rtl.ts`) but has no verified web counterpart (WCAG 1.3.2). To be audited.
+- **RTL rendering (Arabic) on the admin web panel**: the admin shell at `museum-web/src/app/[locale]/admin/*` does not declare `dir="rtl"` and has not been tested in the `ar` locale. Mobile RTL handling exists (`museum-frontend/shared/i18n/rtl.ts`) and was hardened on 2026-05-14 (28 sites migrated to logical properties, 3 RTL render tests — cf. v0.2 changelog) but its web counterpart remains untested (WCAG 1.3.2). To be audited.
 - **Contrast and font sizing**: design-system tokens (`design-system/`) follow a base of Inter 16 px but have not been audited against WCAG 1.4.3 (4.5:1 minimum contrast for normal text) or 1.4.4 (200% zoom without content loss). To be audited.
 - **Mobile tap targets**: chat-interface buttons aim for ≥ 44 × 44 pt (Apple HIG) but have not been audited on iPad or with VoiceOver enabled (WCAG 2.5.5). To be audited.
 - **Generative-AI disclosure**: the `ai_disclosure` banner is rendered on all 3 surfaces (mobile, web, privacy policy) — to be verified that screen readers correctly announce the generative nature of responses (WCAG 4.1.2 + AI Act Art. 50).
@@ -79,7 +89,7 @@ Without prejudging the final conformance verdict, the following elements reflect
 
 A WCAG 2.1 AA audit is planned in three passes:
 
-1. **Automated audit** — tools: axe-core, Lighthouse CI (already wired for the web app in `.github/workflows/ci-cd-web.yml`), iOS Accessibility Inspector, Android Accessibility Scanner. Status: **not started**.
+1. **Automated audit** — tools: axe-core (`@axe-core/playwright` v4.10 across 18 web routes since 2026-05-14), Lighthouse CI (already wired for the web app in `.github/workflows/ci-cd-web.yml`, `minScore: 0.90`), iOS Accessibility Inspector (not yet run), Android Accessibility Scanner (not yet run). Web web-axe pass: **complete (2026-05-14)** ; mobile-native automated pass: **not started**.
 2. **Manual audit** — by an external a11y expert or a trained developer: keyboard-only navigation, VoiceOver iOS, TalkBack Android, NVDA Windows, DOM inspection, ARIA verification. Status: **not started**.
 3. **User testing with persons with disabilities** — at least 3 panels (visual, hearing, motor impairment). Coordination via a partner association (to be appointed). Status: **not started**.
 
@@ -134,4 +144,4 @@ Users outside France should contact the supervisory authority of their EU Member
 
 ---
 
-**END declaration v0.1 DRAFT — Awaiting WCAG 2.1 AA audit + operator sign-off.**
+**END declaration v0.2 — Automated audit complete ; awaiting manual + user-testing passes + operator sign-off.**

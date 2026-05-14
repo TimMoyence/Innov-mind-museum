@@ -8,7 +8,7 @@ exports[`ImageCompareCardSkeleton (T8.3) matches the structural snapshot for the
   style={
     {
       "borderRadius": 8,
-      "marginRight": 8,
+      "marginEnd": 8,
       "minHeight": 260,
       "overflow": "hidden",
       "width": 220,

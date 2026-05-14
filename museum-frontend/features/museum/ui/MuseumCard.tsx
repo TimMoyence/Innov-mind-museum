@@ -83,12 +83,12 @@ const styles = StyleSheet.create({
   address: {
     fontSize: semantic.form.labelSize,
     lineHeight: semantic.card.paddingLarge,
-    paddingLeft: semantic.screen.paddingXL,
+    paddingStart: semantic.screen.paddingXL,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: semantic.screen.paddingXL,
+    paddingStart: semantic.screen.paddingXL,
     marginTop: space['0.5'],
   },
   distanceBadge: {
