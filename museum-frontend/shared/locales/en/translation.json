@@ -538,6 +538,13 @@
     "askMore": {
       "a11y_label": "Ask follow-up: {{text}}",
       "a11y_hint": "Tap to ask this follow-up"
+    },
+    "sottoVoce": {
+      "a11y_label": "Sotto-voce mode",
+      "a11y_hint_on": "Audio muted — tap to re-enable",
+      "a11y_hint_off": "Mute audio for quiet spaces",
+      "announcement_on": "Sotto-voce on. Audio responses muted.",
+      "announcement_off": "Sotto-voce off. Audio responses resumed."
     }
   },
   "dailyLimit": {

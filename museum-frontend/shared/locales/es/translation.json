@@ -538,6 +538,13 @@
     "askMore": {
       "a11y_label": "Pregunta de seguimiento: {{text}}",
       "a11y_hint": "Toca para hacer esta pregunta"
+    },
+    "sottoVoce": {
+      "a11y_label": "Modo sotto-voce",
+      "a11y_hint_on": "Audio silenciado — pulsa para reactivar",
+      "a11y_hint_off": "Silenciar audio en lugares tranquilos",
+      "announcement_on": "Sotto-voce activado. Audio silenciado.",
+      "announcement_off": "Sotto-voce desactivado. Audio restaurado."
     }
   },
   "dailyLimit": {

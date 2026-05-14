@@ -22,6 +22,7 @@ import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
+import { useSottoVoce } from '@/features/chat/application/useSottoVoce';
 import { useVoiceDisclosure } from '@/features/chat/hooks/useVoiceDisclosure';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefetch';
@@ -159,8 +160,13 @@ export default function ChatSessionScreen() {
   const { selectedImage, onPickImage, onTakePicture, clearSelectedImage } = useImagePicker();
 
   const { enabled: audioDescEnabled } = useAudioDescriptionMode();
+  const { enabled: sottoVoce, toggle: toggleSottoVoce } = useSottoVoce();
   const [sessionAudioOverride, setSessionAudioOverride] = useState<boolean | null>(null);
-  const effectiveAudioDesc = sessionAudioOverride ?? audioDescEnabled;
+  // B5 — sotto-voce gate : when sotto-voce is ON, force-disable auto-TTS
+  // regardless of session override or global audio-description preference.
+  // `useAutoTts` runs its own cleanup (`stopPlayback`) when `enabled` flips
+  // to `false`, so this gate naturally stops in-flight playback.
+  const effectiveAudioDesc = (sessionAudioOverride ?? audioDescEnabled) && !sottoVoce;
 
   // A5 (R16) — auto-TTS hook exposes its in-flight `loading` signal so the
   // screen can surface `synthesizing-voice` in `<StatusIndicator>` while the
@@ -398,6 +404,10 @@ export default function ChatSessionScreen() {
             audioDescriptionEnabled={effectiveAudioDesc}
             onToggleAudioDescription={() => {
               setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
+            }}
+            sottoVoceEnabled={sottoVoce}
+            onToggleSottoVoce={() => {
+              void toggleSottoVoce();
             }}
             onOpenAiDisclosure={openAiDisclosure}
             collapsed={topBarCollapsed}

@@ -538,6 +538,13 @@
     "askMore": {
       "a11y_label": "フォローアップの質問: {{text}}",
       "a11y_hint": "タップしてこの質問をする"
+    },
+    "sottoVoce": {
+      "a11y_label": "ささやきモード",
+      "a11y_hint_on": "音声オフ — タップで再開",
+      "a11y_hint_off": "静かな場所で音声をオフ",
+      "announcement_on": "ささやきモード オン。音声応答をオフにしました。",
+      "announcement_off": "ささやきモード オフ。音声応答を再開しました。"
     }
   },
   "dailyLimit": {

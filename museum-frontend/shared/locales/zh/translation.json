@@ -538,6 +538,13 @@
     "askMore": {
       "a11y_label": "后续问题：{{text}}",
       "a11y_hint": "点击提出此问题"
+    },
+    "sottoVoce": {
+      "a11y_label": "轻声模式",
+      "a11y_hint_on": "音频已静音 — 点按重新启用",
+      "a11y_hint_off": "在安静场所静音音频",
+      "announcement_on": "轻声模式已开启。音频响应已静音。",
+      "announcement_off": "轻声模式已关闭。音频响应已恢复。"
     }
   },
   "dailyLimit": {
