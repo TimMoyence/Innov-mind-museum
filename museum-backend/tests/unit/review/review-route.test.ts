@@ -119,6 +119,25 @@ describe('Review Routes — Unit', () => {
       expect(mockCreateReview).not.toHaveBeenCalled();
     });
 
+    it('401 (author unresolved) carries the literal "User authentication required" message', async () => {
+      // Kills L67:28 StringLiteral survivor — message mutated to "" would
+      // still produce a 401 (handled by errorHandler) but FE relies on the
+      // human-readable text to drive the i18n fallback when no `code` mapping
+      // exists. Asserts the body, not just the status.
+      mockGetUserById.mockResolvedValueOnce(null);
+      const res = await request(app)
+        .post('/api/reviews')
+        .set('Authorization', `Bearer ${userToken()}`)
+        .send(validBody);
+
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error');
+      const { error } = res.body as { error: { code: string; message: string } };
+      expect(error.code).toBe('UNAUTHORIZED');
+      expect(error.message).toBe('User authentication required');
+      expect(mockCreateReview).not.toHaveBeenCalled();
+    });
+
     it('returns 400 for invalid body (missing rating)', async () => {
       const res = await request(app)
         .post('/api/reviews')

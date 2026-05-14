@@ -21,8 +21,6 @@ export const DEFAULT_EMAIL_LOCALE: EmailLocale = 'fr';
  */
 export function resolveEmailLocale(input: unknown): EmailLocale {
   if (input === 'en') return 'en';
-  // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral: L23 already handled 'en' and L25 default returns 'fr' (same value as this branch). Any mutation here is observationally identical — 'fr' inputs still land on `return 'fr'` via the default fallback, all other inputs still hit the default. Verified equivalent 2026-05-13.
-  if (input === 'fr') return 'fr';
   return DEFAULT_EMAIL_LOCALE;
 }
 

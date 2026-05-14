@@ -42,29 +42,39 @@ const mfaRouter: Router = Router();
 
 const RATE_LIMIT_OPTIONS = { limit: 5, windowMs: 15 * 60 * 1000 } as const;
 
+/** Typed prefixes for the per-bucket rate-limit keys produced by {@link bySessionOrIp}. */
+export const MFA_RATE_LIMIT_BUCKET_PREFIX = {
+  USER: 'user:',
+  MFA_SESSION: 'mfa-session:',
+  IP: 'ip:',
+} as const;
+
 /**
  * Resolve a rate-limit key from a body-bearing request:
  *   - First try `req.user.id` (authenticated routes).
  *   - Then try the body's `mfaSessionToken` (challenge / recovery).
  *   - Fall back to IP. Always prefixed so the buckets do not collide with
  *     the route-specific `bucketName`.
+ *
+ * Exported solely so unit tests in `tests/unit/routes/mfa.route.test.ts` can
+ * call it directly: the rate-limit middleware factory is mocked at the route
+ * unit-test layer, which means Stryker's perTest coverage cannot map mutants
+ * inside this helper to the tests that exercise it via the rate-limit
+ * integration suite. Direct unit tests fill that gap.
  */
-function bySessionOrIp(req: Request): string {
+export function bySessionOrIp(req: Request): string {
   const user = req.user;
-  // Stryker disable next-line ConditionalExpression: bySessionOrIp is a private rate-limit keyGenerator passed by reference to createRateLimitMiddleware. Route-level unit tests mock that middleware to a no-op (the keyGenerator is never invoked), so Stryker's perTest coverage cannot map the function body to any test even though the mutation would flip the bucket key from "user:${id}" to "ip:…". The branch is exercised by the rate-limit integration suite which Stryker doesn't model with perTest precision. Verified killable via a manual fixture call; equivalence here is a tooling gap, not a behavioral one. 2026-05-13.
-  if (user?.id) return `user:${String(user.id)}`;
+  if (user?.id) return `${MFA_RATE_LIMIT_BUCKET_PREFIX.USER}${String(user.id)}`;
   const token = (req.body as { mfaSessionToken?: unknown }).mfaSessionToken;
-  // Stryker disable next-line ConditionalExpression,EqualityOperator: the `> 0` arm and the `if (true)` collapse are both equivalent — verifyMfaSessionToken('') throws and the catch falls through to `ip:…`, producing the exact same bucket key as skipping the try-block entirely. Manual mutation check confirmed identical outcome for every (typeof token === 'string') × (length 0 vs >0) combination. 2026-05-13.
   if (typeof token === 'string' && token.length > 0) {
     try {
       const decoded = verifyMfaSessionToken(token);
-      return `mfa-session:${String(decoded.userId)}`;
+      return `${MFA_RATE_LIMIT_BUCKET_PREFIX.MFA_SESSION}${String(decoded.userId)}`;
     } catch {
       // fall through to IP
     }
   }
-  // Stryker disable next-line StringLiteral: same perTest blind spot as L54 — the `ip:` prefix would flip to `` for unauthenticated unmatched-token requests, which the rate-limit integration suite catches but route unit tests with mocked rate-limit middleware cannot detect (the keyGenerator function value is captured by reference and never invoked). 2026-05-13.
-  return `ip:${byIp(req)}`;
+  return `${MFA_RATE_LIMIT_BUCKET_PREFIX.IP}${byIp(req)}`;
 }
 
 const enrollLimiter = createRateLimitMiddleware({

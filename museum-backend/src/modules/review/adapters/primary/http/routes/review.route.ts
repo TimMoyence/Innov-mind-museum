@@ -11,6 +11,7 @@ import {
   getReviewStatsUseCase,
 } from '@modules/review/useCase';
 import { unauthorized } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
@@ -53,16 +54,14 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
     isAuthenticated,
     validateBody(createReviewSchema),
     async (req: Request, res: Response) => {
-      if (!req.user?.id) {
-        throw unauthorized('User authentication required');
-      }
+      const authedUser = requireUser(req);
 
       const { rating, comment } = req.body as {
         rating: number;
         comment: string;
       };
 
-      const author = await resolveAuthor(req.user.id);
+      const author = await resolveAuthor(authedUser.id);
       if (!author) {
         throw unauthorized('User authentication required');
       }

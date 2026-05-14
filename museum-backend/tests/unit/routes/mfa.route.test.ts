@@ -704,3 +704,81 @@ describe('MFA Routes — HTTP layer', () => {
     });
   });
 });
+
+// ─── bySessionOrIp helper — direct unit tests ──────────────────────────
+// The route-level mocking of createRateLimitMiddleware prevents Stryker's
+// perTest coverage from mapping mutants in this private helper. Direct
+// invocation makes every mutation observable.
+import type { Request } from 'express';
+import {
+  bySessionOrIp,
+  MFA_RATE_LIMIT_BUCKET_PREFIX,
+} from '@modules/auth/adapters/primary/http/routes/mfa.route';
+
+describe('bySessionOrIp — direct unit', () => {
+  const makeReq = (overrides: Partial<Request> = {}): Request =>
+    ({
+      body: {},
+      ip: '198.51.100.7',
+      socket: { remoteAddress: '198.51.100.7' },
+      ...overrides,
+    }) as unknown as Request;
+
+  it('returns "user:<id>" when req.user.id is set', () => {
+    const req = makeReq({ user: { id: 42, role: 'visitor', museumId: null } });
+    expect(bySessionOrIp(req)).toBe(`${MFA_RATE_LIMIT_BUCKET_PREFIX.USER}42`);
+    expect(bySessionOrIp(req)).toBe('user:42');
+  });
+
+  it('returns "user:<id>" even when an mfaSessionToken is also in the body (user wins)', () => {
+    const req = makeReq({
+      user: { id: 7, role: 'visitor', museumId: null },
+      body: { mfaSessionToken: issueMfaSessionToken(99) },
+    });
+    expect(bySessionOrIp(req)).toBe('user:7');
+  });
+
+  it('returns "mfa-session:<userId>" when token decodes and no user set', () => {
+    const token = issueMfaSessionToken(11);
+    const req = makeReq({ body: { mfaSessionToken: token } });
+    expect(bySessionOrIp(req)).toBe(`${MFA_RATE_LIMIT_BUCKET_PREFIX.MFA_SESSION}11`);
+    expect(bySessionOrIp(req)).toBe('mfa-session:11');
+  });
+
+  it('falls back to "ip:<ip>" when token decode throws', () => {
+    const req = makeReq({ body: { mfaSessionToken: 'not-a-valid-jwt' } });
+    expect(bySessionOrIp(req)).toBe(`${MFA_RATE_LIMIT_BUCKET_PREFIX.IP}198.51.100.7`);
+    expect(bySessionOrIp(req)).toBe('ip:198.51.100.7');
+  });
+
+  it('falls back to "ip:<ip>" when mfaSessionToken is empty string (length-0 short-circuit)', () => {
+    const req = makeReq({ body: { mfaSessionToken: '' } });
+    expect(bySessionOrIp(req)).toBe('ip:198.51.100.7');
+  });
+
+  it('falls back to "ip:<ip>" when mfaSessionToken is non-string (number)', () => {
+    const req = makeReq({ body: { mfaSessionToken: 12345 } });
+    expect(bySessionOrIp(req)).toBe('ip:198.51.100.7');
+  });
+
+  it('falls back to "ip:<ip>" when neither user nor token are present', () => {
+    const req = makeReq();
+    expect(bySessionOrIp(req)).toBe('ip:198.51.100.7');
+  });
+
+  it('uses socket.remoteAddress when req.ip is undefined', () => {
+    const req = makeReq({
+      ip: undefined,
+      socket: { remoteAddress: '203.0.113.9' } as Request['socket'],
+    });
+    expect(bySessionOrIp(req)).toBe('ip:203.0.113.9');
+  });
+
+  it('exposes the bucket prefixes as a typed const for downstream assertions', () => {
+    expect(MFA_RATE_LIMIT_BUCKET_PREFIX).toEqual({
+      USER: 'user:',
+      MFA_SESSION: 'mfa-session:',
+      IP: 'ip:',
+    });
+  });
+});
