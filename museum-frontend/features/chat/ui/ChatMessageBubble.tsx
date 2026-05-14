@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import type { CitationFamily } from '@/features/chat/application/citations';
+import { FAMILY_FOR_SOURCE_TYPE } from '@/features/chat/application/citations';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { CitationChips } from '@/features/chat/ui/CitationChips';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
@@ -74,6 +77,23 @@ export const ChatMessageBubble = React.memo(
     const sources = message.metadata?.sources;
     const hasSources = (sources?.length ?? 0) > 0;
 
+    /**
+     * A6 — tap on a provenance chip opens the FIRST source of that family
+     * via `Linking.openURL` (Q1 option (a) in spec). `ai-knowledge` is a
+     * synthetic family with no source → NO-OP. The confidence chip is also
+     * a NO-OP in V1 (the disclosure popover is deferred per Q5 / §2.7).
+     */
+    const onProvenancePress = useCallback(
+      (family: CitationFamily) => {
+        if (family === 'ai-knowledge') return;
+        const match = sources?.find((s) => FAMILY_FOR_SOURCE_TYPE[s.type] === family);
+        if (match?.url) {
+          void Linking.openURL(match.url);
+        }
+      },
+      [sources],
+    );
+
     const bubbleContent = (
       <>
         {isAssistant ? (
@@ -98,6 +118,9 @@ export const ChatMessageBubble = React.memo(
                   <SourceCitation key={`${s.url}-${String(i)}`} source={s} index={i + 1} />
                 ))}
               </View>
+            ) : null}
+            {!isStreaming ? (
+              <CitationChips metadata={message.metadata} onProvenancePress={onProvenancePress} />
             ) : null}
           </View>
         ) : (

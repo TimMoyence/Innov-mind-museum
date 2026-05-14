@@ -446,6 +446,26 @@
       "closeSheet": "关闭",
       "noQuote": "此来源无可用摘录。"
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "博物馆目录",
+        "reference-db": "参考数据库",
+        "web": "网络结果",
+        "ai-knowledge": "AI 知识"
+      },
+      "confidence": {
+        "high": "高置信度",
+        "medium": "中等置信度",
+        "low": "低 — 仅AI"
+      },
+      "chip": {
+        "a11y_hint": "点击查看来源详情"
+      },
+      "ai_only": {
+        "disclosure_title": "仅AI回答",
+        "disclosure_body": "此回答基于AI的常识，未检索到支持具体事实的来源。请在依赖详情前自行核实。"
+      }
+    },
     "compare": {
       "title": "相似作品",
       "empty": "未找到相似作品 — 请尝试更清晰的照片",

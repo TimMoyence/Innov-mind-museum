@@ -13,7 +13,7 @@ module.exports = {
     '^react-native-reanimated$': '<rootDir>/__tests__/mocks/react-native-reanimated.js',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker|react-native-worklets)',
+    'node_modules/(?!\\.pnpm|((jest-)?react-native|@react-native(-community)?(/.*)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|@shopify/flash-list|native-base|react-native-svg|@faker-js/faker|react-native-worklets|@ronradtke/react-native-markdown-display)',
     // `@musaium/shared` is wired via `file:../packages/musaium-shared` which
     // resolves through a symlink → outside node_modules → would otherwise be
     // re-transformed by babel-jest and pull in `@babel/runtime` it doesn't ship.

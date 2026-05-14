@@ -446,6 +446,26 @@
       "closeSheet": "Close",
       "noQuote": "No quote available for this source."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Museum catalogue",
+        "reference-db": "Reference database",
+        "web": "Web result",
+        "ai-knowledge": "AI knowledge"
+      },
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low — AI only"
+      },
+      "chip": {
+        "a11y_hint": "Tap to see the source details"
+      },
+      "ai_only": {
+        "disclosure_title": "AI-only response",
+        "disclosure_body": "This answer is based on the AI's general knowledge. No source was retrieved to support specific facts. Verify before relying on details."
+      }
+    },
     "compare": {
       "title": "Similar artworks",
       "empty": "No similar artwork found — try a clearer photo",

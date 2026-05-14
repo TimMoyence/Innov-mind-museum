@@ -446,6 +446,26 @@
       "closeSheet": "Schliessen",
       "noQuote": "Kein Zitat fur diese Quelle verfugbar."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Museumskatalog",
+        "reference-db": "Referenzdatenbank",
+        "web": "Web-Ergebnis",
+        "ai-knowledge": "KI-Wissen"
+      },
+      "confidence": {
+        "high": "Hohe Konfidenz",
+        "medium": "Mittlere Konfidenz",
+        "low": "Niedrig — nur KI"
+      },
+      "chip": {
+        "a11y_hint": "Tippen für Quelldetails"
+      },
+      "ai_only": {
+        "disclosure_title": "Nur-KI-Antwort",
+        "disclosure_body": "Diese Antwort basiert auf dem allgemeinen Wissen der KI. Es wurde keine Quelle abgerufen. Bitte vor dem Vertrauen überprüfen."
+      }
+    },
     "compare": {
       "title": "Ähnliche Werke",
       "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",

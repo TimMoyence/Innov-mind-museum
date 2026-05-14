@@ -446,6 +446,26 @@
       "closeSheet": "Cerrar",
       "noQuote": "No hay cita disponible para esta fuente."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Catálogo del museo",
+        "reference-db": "Base de referencia",
+        "web": "Resultado web",
+        "ai-knowledge": "Saber de la IA"
+      },
+      "confidence": {
+        "high": "Confianza alta",
+        "medium": "Confianza media",
+        "low": "Baja — solo IA"
+      },
+      "chip": {
+        "a11y_hint": "Toca para ver detalles"
+      },
+      "ai_only": {
+        "disclosure_title": "Respuesta solo IA",
+        "disclosure_body": "Esta respuesta se basa en el conocimiento general de la IA. No se recuperó ninguna fuente. Verifica antes de fiarte de los detalles."
+      }
+    },
     "compare": {
       "title": "Obras similares",
       "empty": "No se encontró ninguna obra similar — prueba con una foto más nítida",

@@ -446,6 +446,26 @@
       "closeSheet": "閉じる",
       "noQuote": "この出典には利用可能な引用がありません。"
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "美術館カタログ",
+        "reference-db": "参照データベース",
+        "web": "Web検索結果",
+        "ai-knowledge": "AIの知識"
+      },
+      "confidence": {
+        "high": "信頼度: 高",
+        "medium": "信頼度: 中",
+        "low": "低 — AIのみ"
+      },
+      "chip": {
+        "a11y_hint": "タップして出典の詳細を表示"
+      },
+      "ai_only": {
+        "disclosure_title": "AIのみの回答",
+        "disclosure_body": "この回答はAIの一般的な知識に基づいており、特定の事実を裏付ける出典は取得されていません。詳細を信頼する前にご確認ください。"
+      }
+    },
     "compare": {
       "title": "類似する作品",
       "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",
