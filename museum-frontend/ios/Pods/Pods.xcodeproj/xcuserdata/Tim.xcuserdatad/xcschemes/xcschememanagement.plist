@@ -194,6 +194,11 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>ExpoSpeech.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>ExpoSplashScreen.xcscheme</key>
 		<dict>
 			<key>isShown</key>

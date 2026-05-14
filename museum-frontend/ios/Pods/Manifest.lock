@@ -203,7 +203,7 @@ PODS:
     - ExpoModulesCore
   - ExpoHaptics (55.0.12):
     - ExpoModulesCore
-  - ExpoImage (55.0.8):
+  - ExpoImage (55.0.10):
     - ExpoModulesCore
     - libavif/libdav1d
     - SDWebImage (~> 5.21.0)
@@ -263,6 +263,8 @@ PODS:
     - ExpoModulesCore
     - RNScreens
   - ExpoSecureStore (55.0.11):
+    - ExpoModulesCore
+  - ExpoSpeech (55.0.14):
     - ExpoModulesCore
   - ExpoSplashScreen (55.0.15):
     - ExpoModulesCore
@@ -2626,6 +2628,7 @@ DEPENDENCIES:
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
+  - ExpoSpeech (from `../node_modules/expo-speech/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
@@ -2804,6 +2807,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-router/ios"
   ExpoSecureStore:
     :path: "../node_modules/expo-secure-store/ios"
+  ExpoSpeech:
+    :path: "../node_modules/expo-speech/ios"
   ExpoSplashScreen:
     :path: "../node_modules/expo-splash-screen/ios"
   ExpoStoreReview:
@@ -3013,7 +3018,7 @@ SPEC CHECKSUMS:
   ExpoFont: cdd7a1d574a376fa003c713eff49e0a4df8672c7
   ExpoGlassEffect: 72bcb9dc634262c59897ff7c53c16e2ff03990d0
   ExpoHaptics: c871fcc3507df90ea36dc6ee62d60f100caff0df
-  ExpoImage: ef931bba1fd3e907c2262216d17eb21095c9ac2b
+  ExpoImage: 74d26278507b0b0d85b1e50562412172603f59eb
   ExpoImageManipulator: ae0a562f2d405de275e011915c811564106baa70
   ExpoImagePicker: ca47c5ac15d1ccde2fbc765485e612c2a5a385d0
   ExpoKeepAwake: a1baf9810a2dee1905aa9bdd336852598f7220e9
@@ -3027,6 +3032,7 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: a998e176d28567273b540fa568505ff1c9aaacac
   ExpoRouter: 9d717e9d5b0e1ccff05b1b2fd7c031b6fbecc433
   ExpoSecureStore: 2410bec85e98b0718e21b8b012d4c3721ba8c0ed
+  ExpoSpeech: afff97450c029ce8a3cf0e2f122423870c756e59
   ExpoSplashScreen: 67f390cdc5cc93c9ca6d55be3e9055a9478541ac
   ExpoStoreReview: dab6e25f0641784bd6207f729f893423afbb6574
   ExpoSymbols: 8b63e859ba013df1f2fc666f535fddb3d5270569
@@ -3132,6 +3138,6 @@ SPEC CHECKSUMS:
   Yoga: e41d64347f52d634dd8c2f6bac33f95081959fd3
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 6c3a41855148da7b0d9251442006c98e65f7f004
+PODFILE CHECKSUM: 608b6eb3f611bc569d8bcae768038a3e52931e3d
 
 COCOAPODS: 1.16.2
