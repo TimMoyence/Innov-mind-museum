@@ -8,6 +8,20 @@ import type {
 } from '@modules/chat/domain/ports/image-processor.port';
 
 /**
+ * Defensive sharp constructor options applied to every decode in this module.
+ * `limitInputPixels` caps decoded-pixel count at 24 Mpx (~6000×4000 — exceeds
+ * any legitimate mobile upload after `imageUploadOptimization.ts` and is well
+ * below the 268 Mpx zip-bomb danger zone that a crafted 3 MB PNG can reach
+ * against the default cap). `failOn: 'error'` escalates sharp warnings into
+ * decode errors so the existing try/catch wraps them into `ImageDecodeError`.
+ * Audit ref: docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md §Claim 4.
+ */
+const SHARP_DECODE_OPTIONS = {
+  limitInputPixels: 24_000_000,
+  failOn: 'error' as const,
+};
+
+/**
  * Thrown when sharp cannot decode an image buffer (corrupt, truncated, or
  * not a real raster despite a matching magic byte signature). Always 400 —
  * never a 500 — because the input came from the user.
@@ -49,7 +63,7 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
   try {
     if (mime === 'image/gif') {
-      const { data, info } = await sharp(buffer, { animated: true })
+      const { data, info } = await sharp(buffer, { ...SHARP_DECODE_OPTIONS, animated: true })
         .gif()
         .toBuffer({ resolveWithObject: true });
       return { buffer: data, mime: 'image/gif', width: info.width, height: info.height };
@@ -57,14 +71,14 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
     if (mime === 'image/webp') {
       const pipeline = animated
-        ? sharp(buffer, { animated: true }).webp({ effort: 4 })
-        : sharp(buffer).rotate().webp({ effort: 4 });
+        ? sharp(buffer, { ...SHARP_DECODE_OPTIONS, animated: true }).webp({ effort: 4 })
+        : sharp(buffer, SHARP_DECODE_OPTIONS).rotate().webp({ effort: 4 });
       const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
       return { buffer: data, mime: 'image/webp', width: info.width, height: info.height };
     }
 
     if (mime === 'image/png') {
-      const { data, info } = await sharp(buffer)
+      const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
         .rotate()
         .png()
         .toBuffer({ resolveWithObject: true });
@@ -73,7 +87,7 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
     // Default: JPEG static pipeline (covers `image/jpeg` and any future
     // allowed static MIME — re-encode through JPEG strips EXIF wholesale).
-    const { data, info } = await sharp(buffer)
+    const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
       .rotate()
       .jpeg()
       .toBuffer({ resolveWithObject: true });

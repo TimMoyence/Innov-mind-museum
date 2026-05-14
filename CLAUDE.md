@@ -137,7 +137,7 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 - **`docs/` whitelisted dans .gitignore** — gitignored par défaut, sous-dossiers doivent être whitelistés explicitement (`!docs/<sub>/`). Si `git status` ne voit pas un nouveau sous-dossier dans `docs/`, c'est ça.
 - **GitNexus auto-inject `<!-- gitnexus:start -->` dans `CLAUDE.md` ET `AGENTS.md`** — `npx gitnexus analyze` expand le bloc dans les 2 fichiers par défaut. Depuis l'audit P1-16 (2026-05-12) on ne garde le bloc que dans `CLAUDE.md` ; le bloc d'`AGENTS.md` a été supprimé pour économiser ~1500 tokens par session. Si `analyze` ré-injecte le bloc dans `AGENTS.md`, le supprimer à nouveau (AGENTS.md est un pointeur fin vers CLAUDE.md, pas un duplicata).
 - **GitNexus skills installent en nested par défaut** — le binaire upstream installe à `.claude/skills/gitnexus/gitnexus-X/SKILL.md` (deux niveaux), or Claude Code skill loader ne recurse pas → skills jamais chargés. Patch local : `scripts/patch-gitnexus.sh` qui réécrit le binaire global pour pointer top-level. Re-lancer le script après tout `npm install -g gitnexus` / `npm update -g gitnexus`.
-- **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. Use `() => 'NULL'` raw expression. Bug verifyEmail 2026-05.
+- **TypeORM `.set({ field: undefined })` est silencieusement skip** — `UpdateQueryBuilder` ne génère PAS de `SET field = NULL` quand on passe `undefined`. **Affecte aussi `repo.update(criteria, partialEntity)` qui forwarde vers `EntityManager.update` → `createQueryBuilder().update().set()`** — même code path interne. Use `() => 'NULL'` raw expression. Bug verifyEmail 2026-05 (commit `9d1e971a5`). Audit F8 2026-05-13 a trouvé 3 sites résiduels (`consumeResetTokenAndUpdatePassword`, `consumeEmailChangeToken`, `updatePassword`) patched 2026-05-14. ESLint rule `musaium-test-discipline/no-typeorm-set-undefined` détecte les régressions (Pattern A `.set({})` + Pattern B `repo.update(_, {})`, scope `src/**/*.repository*.ts` + `src/**/*.repo.ts`).
 - **PgBouncer transaction mode interdit `LISTEN/NOTIFY`, session-scoped advisory locks, persistent prepared statements** — Musaium n'utilise rien de ça aujourd'hui (audit ADR-021), mais à vérifier au cas par cas.
 - **SWC + TypeORM cross-entity = ReferenceError circular** — fix = wrap les FK avec le type alias `Relation<T>`. Ne pas s'écarter de ce pattern sur les nouvelles entités.
 - **LLM response cache = `LlmCacheServiceImpl` only (ADR-036)** — un seul layer, use-case-level. Ne PAS réintroduire de décorateur adapter-level (`CachingChatOrchestrator` supprimé 2026-05-08 PR-B). Cache key shape = `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`. TTL tune = data-driven only, ≥7j bake + ADR-036 amendment requis (R11/R13).
@@ -253,7 +253,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (23671 symbols, 38741 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (27635 symbols, 43635 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

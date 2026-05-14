@@ -18,9 +18,10 @@ import {
 // SUT — does not yet exist (Phase 4 implementation). Import is intentional:
 // it must resolve once the editor lands the file. RED until then.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load to surface a useful Jest failure when the module is missing
-const { preprocessForSiglip } = require('@modules/chat/adapters/secondary/embeddings/image-preprocess') as {
-  preprocessForSiglip: (buffer: Buffer) => Promise<Float32Array>;
-};
+const { preprocessForSiglip } =
+  require('@modules/chat/adapters/secondary/embeddings/image-preprocess') as {
+    preprocessForSiglip: (buffer: Buffer) => Promise<Float32Array>;
+  };
 
 /** SigLIP-base-patch16-224 input: batch=1, channels=3, H=224, W=224. */
 const SIGLIP_TENSOR_LENGTH = 1 * 3 * 224 * 224;
@@ -74,5 +75,19 @@ describe('preprocessForSiglip (T4.1)', () => {
   it('throws on a corrupt buffer (no valid image magic header)', async () => {
     const corrupt = makeCorruptBuffer();
     await expect(preprocessForSiglip(corrupt)).rejects.toThrow();
+  });
+
+  // P0 #3 (audit F4 §Claim 4) — decompression-bomb DoS guard. Mirrors the
+  // `limitInputPixels` cap added in `image-processing.service.ts` so the
+  // SigLIP path can't be exploited as a parallel attack vector.
+  it('rejects an oversized image (>24 Mpx) before tensor allocation', async () => {
+    const sharp = (await import('sharp')).default;
+    const oversize = await sharp({
+      create: { width: 7000, height: 4000, channels: 3, background: { r: 0, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    await expect(preprocessForSiglip(oversize)).rejects.toThrow();
   });
 });

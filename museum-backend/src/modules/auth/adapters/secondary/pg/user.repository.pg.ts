@@ -110,10 +110,13 @@ export class UserRepositoryPg implements IUserRepository {
    */
   async updatePassword(userId: number, newPassword: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    // `repo.update` forwards to `.set()` internally, so `undefined` is silently
+    // skipped — use raw `() => 'NULL'` to actually emit `SET reset_token = NULL`.
+    // See verifyEmail (below) for full rationale.
     await this.repo.update(userId, {
       password: hashedPassword,
-      reset_token: undefined,
-      reset_token_expires: undefined,
+      reset_token: () => 'NULL',
+      reset_token_expires: () => 'NULL',
     });
     const user = await this.repo.findOne({ where: { id: userId } });
     if (!user) throw new Error('User not found after update');
@@ -131,13 +134,16 @@ export class UserRepositoryPg implements IUserRepository {
     token: string,
     hashedPassword: string,
   ): Promise<User | null> {
+    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
+    // verifyEmail (below) for the full mechanism. Raw `() => 'NULL'` forces
+    // the SET clause to actually clear the consumed reset-token columns.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
       .set({
         password: hashedPassword,
-        reset_token: undefined,
-        reset_token_expires: undefined,
+        reset_token: () => 'NULL',
+        reset_token_expires: () => 'NULL',
       })
       .where('reset_token = :token AND reset_token_expires > NOW()', { token })
       .returning('*')
@@ -222,14 +228,18 @@ export class UserRepositoryPg implements IUserRepository {
 
   /** Atomically consumes an email change token and updates the user's email. */
   async consumeEmailChangeToken(hashedToken: string): Promise<User | null> {
+    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
+    // verifyEmail (above) for the full mechanism. Raw `() => 'NULL'` forces
+    // the SET clause to actually clear pending_email + email-change token
+    // columns once the new email has been promoted.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
       .set({
         email: () => '"pending_email"',
-        pending_email: undefined,
-        email_change_token: undefined,
-        email_change_token_expiry: undefined,
+        pending_email: () => 'NULL',
+        email_change_token: () => 'NULL',
+        email_change_token_expiry: () => 'NULL',
       })
       .where('email_change_token = :hashedToken AND email_change_token_expiry > NOW()', {
         hashedToken,

@@ -511,6 +511,22 @@ export default tseslint.config(
   },
 
   // ═══════════════════════════════════════════════════════════════════
+  //  MUSAIUM REPOSITORY DISCIPLINE
+  //  TypeORM `.set({ x: undefined })` is silently skipped — surface the
+  //  gotcha as a lint error on repository adapter files. See audit
+  //  docs/audit-2026-05-12-raw/05-gaps/F8-typeorm-set-undefined-audit.md
+  //  and the verifyEmail/consumeReset*/consumeEmailChange* methods in
+  //  user.repository.pg.ts for the `() => 'NULL'` workaround.
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    files: ['src/**/*.repository*.ts', 'src/**/*.repo.ts'],
+    plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
+    rules: {
+      'musaium-test-discipline/no-typeorm-set-undefined': 'error',
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
   //  GRANDFATHER — baseline files exempt from no-inline-test-entities
   //  Phase 7 will migrate these. Until then, rule is 'off' for baselined
   //  paths so 'error' only fires on new code.

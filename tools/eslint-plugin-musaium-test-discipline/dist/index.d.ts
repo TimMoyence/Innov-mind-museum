@@ -9,6 +9,11 @@ declare const plugin: {
         }], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener> & {
             name: string;
         };
+        'no-typeorm-set-undefined': import("@typescript-eslint/utils/ts-eslint").RuleModule<"setUndefined" | "updateUndefined", [{
+            filePathPatterns?: string[];
+        }], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener> & {
+            name: string;
+        };
         'no-undisabled-test-discipline-disable': import("@typescript-eslint/utils/ts-eslint").RuleModule<"requireJustification", [], unknown, import("@typescript-eslint/utils/ts-eslint").RuleListener> & {
             name: string;
         };

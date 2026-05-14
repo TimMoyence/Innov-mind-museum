@@ -266,7 +266,7 @@ describe('UserRepositoryPg', () => {
 
   // ─── updatePassword ───
   describe('updatePassword', () => {
-    it('hashes new password, clears reset token, returns user', async () => {
+    it('hashes new password, clears reset token via raw NULL, returns user', async () => {
       const user = makeUser({ id: 5 });
       repo.update.mockResolvedValue({ affected: 1 } as UpdateResult);
       repo.findOne.mockResolvedValue(user);
@@ -274,11 +274,26 @@ describe('UserRepositoryPg', () => {
       const result = await sut.updatePassword(5, 'newPassword');
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newPassword', 12);
-      expect(repo.update).toHaveBeenCalledWith(5, {
-        password: '$2b$12$hashed_result',
-        reset_token: undefined,
-        reset_token_expires: undefined,
-      });
+      // `repo.update` forwards through QueryBuilder.set() which silently skips
+      // `undefined` values — we must pass `() => 'NULL'` raw expressions to
+      // actually clear the columns. Asserting object equality with function
+      // references doesn't survive a `toEqual` check; assert structure +
+      // NULL-emitter contract via the captured mock call.
+      expect(repo.update).toHaveBeenCalledTimes(1);
+      const [idArg, partial] = repo.update.mock.calls[0] as [
+        number,
+        {
+          password: string;
+          reset_token: () => string;
+          reset_token_expires: () => string;
+        },
+      ];
+      expect(idArg).toBe(5);
+      expect(partial.password).toBe('$2b$12$hashed_result');
+      expect(typeof partial.reset_token).toBe('function');
+      expect(partial.reset_token()).toBe('NULL');
+      expect(typeof partial.reset_token_expires).toBe('function');
+      expect(partial.reset_token_expires()).toBe('NULL');
       expect(result).toBe(user);
     });
 
@@ -292,18 +307,28 @@ describe('UserRepositoryPg', () => {
 
   // ─── consumeResetTokenAndUpdatePassword ───
   describe('consumeResetTokenAndUpdatePassword', () => {
-    it('updates password and clears token via query builder, returns user', async () => {
+    it('updates password and clears reset-token columns via raw NULL, returns user', async () => {
       const user = makeUser();
       qb.execute.mockResolvedValue({ raw: [user] });
 
       const result = await sut.consumeResetTokenAndUpdatePassword('tok', '$2b$12$newhash');
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      expect(qb.set).toHaveBeenCalledWith({
-        password: '$2b$12$newhash',
-        reset_token: undefined,
-        reset_token_expires: undefined,
-      });
+      // `reset_token` / `reset_token_expires` are passed as `() => 'NULL'` raw
+      // expressions so TypeORM emits `SET ... = NULL`. Function references
+      // can't be compared via `toEqual`; capture the call args and assert the
+      // NULL-emitter contract directly.
+      expect(qb.set).toHaveBeenCalledTimes(1);
+      const setArg = qb.set.mock.calls[0][0] as {
+        password: string;
+        reset_token: () => string;
+        reset_token_expires: () => string;
+      };
+      expect(setArg.password).toBe('$2b$12$newhash');
+      expect(typeof setArg.reset_token).toBe('function');
+      expect(setArg.reset_token()).toBe('NULL');
+      expect(typeof setArg.reset_token_expires).toBe('function');
+      expect(setArg.reset_token_expires()).toBe('NULL');
       expect(qb.where).toHaveBeenCalledWith(
         'reset_token = :token AND reset_token_expires > NOW()',
         { token: 'tok' },
@@ -463,19 +488,30 @@ describe('UserRepositoryPg', () => {
 
   // ─── consumeEmailChangeToken ───
   describe('consumeEmailChangeToken', () => {
-    it('updates email from pending_email and clears token fields', async () => {
+    it('promotes pending_email to email and clears token columns via raw NULL', async () => {
       const user = makeUser({ email: 'new@test.com' });
       qb.execute.mockResolvedValue({ raw: [user] });
 
       const result = await sut.consumeEmailChangeToken('hashed-tok');
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      expect(qb.set).toHaveBeenCalledWith({
-        email: expect.any(Function),
-        pending_email: undefined,
-        email_change_token: undefined,
-        email_change_token_expiry: undefined,
-      });
+      // All 4 set() values are raw `() => '...'` expressions — `email` copies
+      // the pending column literally and the three token columns emit NULL.
+      expect(qb.set).toHaveBeenCalledTimes(1);
+      const setArg = qb.set.mock.calls[0][0] as {
+        email: () => string;
+        pending_email: () => string;
+        email_change_token: () => string;
+        email_change_token_expiry: () => string;
+      };
+      expect(typeof setArg.email).toBe('function');
+      expect(setArg.email()).toBe('"pending_email"');
+      expect(typeof setArg.pending_email).toBe('function');
+      expect(setArg.pending_email()).toBe('NULL');
+      expect(typeof setArg.email_change_token).toBe('function');
+      expect(setArg.email_change_token()).toBe('NULL');
+      expect(typeof setArg.email_change_token_expiry).toBe('function');
+      expect(setArg.email_change_token_expiry()).toBe('NULL');
       expect(qb.where).toHaveBeenCalledWith(
         'email_change_token = :hashedToken AND email_change_token_expiry > NOW()',
         { hashedToken: 'hashed-tok' },

@@ -8,6 +8,10 @@ var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -24,6 +28,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // node_modules/.pnpm/@typescript-eslint+utils@8.59.1_eslint@10.2.1_typescript@5.9.3/node_modules/@typescript-eslint/utils/dist/eslint-utils/deepMerge.js
 var require_deepMerge = __commonJS({
@@ -165,11 +170,11 @@ var require_RuleCreator = __commonJS({
   "node_modules/.pnpm/@typescript-eslint+utils@8.59.1_eslint@10.2.1_typescript@5.9.3/node_modules/@typescript-eslint/utils/dist/eslint-utils/RuleCreator.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.RuleCreator = RuleCreator4;
+    exports2.RuleCreator = RuleCreator2;
     var applyDefault_1 = require_applyDefault();
-    function RuleCreator4(urlCreator) {
+    function RuleCreator2(urlCreator) {
       return function createNamedRule({ meta, name, ...rule }) {
-        const ruleWithDocs = createRule4({
+        const ruleWithDocs = createRule2({
           meta: {
             ...meta,
             docs: {
@@ -183,7 +188,7 @@ var require_RuleCreator = __commonJS({
         return ruleWithDocs;
       };
     }
-    function createRule4({
+    function createRule2({
       create,
       // Keep accepting deprecated defaultOptions for backward compatibility.
       // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -202,8 +207,8 @@ var require_RuleCreator = __commonJS({
         name
       };
     }
-    RuleCreator4.withoutDocs = function withoutDocs(args) {
-      return createRule4(args);
+    RuleCreator2.withoutDocs = function withoutDocs(args) {
+      return createRule2(args);
     };
   }
 });
@@ -238,171 +243,15 @@ var require_eslint_utils = __commonJS({
   }
 });
 
-// src/rules/no-inline-test-entities.ts
-var import_eslint_utils = __toESM(require_eslint_utils());
-var DEFAULT_ENTITIES = [
-  "User",
-  "ChatMessage",
-  "ChatSession",
-  "Review",
-  "SupportTicket",
-  "MuseumEntity",
-  "AuditEvent"
-];
-var DEFAULT_HELPER_PATHS = ["/tests/helpers/", "/__tests__/helpers/", "/tests/factories/"];
-var DEFAULT_FACTORY_HINTS = {
-  User: "makeUser() from tests/helpers/auth/user.fixtures.ts",
-  ChatMessage: "makeMessage() from tests/helpers/chat/message.fixtures.ts",
-  ChatSession: "makeSession() from tests/helpers/chat/message.fixtures.ts"
-};
-var DEFAULT_SHAPE_SIGNATURES = {
-  User: ["id", "email", "passwordHash"],
-  ChatMessage: ["id", "sessionId", "role", "text"],
-  ChatSession: ["id", "userId", "locale", "museumMode"],
-  Review: ["id", "rating", "comment"],
-  SupportTicket: ["id", "userId", "subject", "description", "status"],
-  MuseumEntity: ["id", "name", "city", "country"],
-  AuditEvent: ["id", "actorId", "action", "targetId"]
-};
-var createRule = (0, import_eslint_utils.RuleCreator)(
-  (name) => `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`
-);
-var no_inline_test_entities_default = createRule({
-  name: "no-inline-test-entities",
-  meta: {
-    type: "problem",
-    docs: {
-      description: "Forbid inline construction of domain entities in test files; require factories from tests/helpers/."
-    },
-    schema: [
-      {
-        type: "object",
-        properties: {
-          entities: { type: "array", items: { type: "string" } },
-          factoryHints: { type: "object", additionalProperties: { type: "string" } },
-          helperPaths: { type: "array", items: { type: "string" } },
-          detectShapeMatch: { type: "boolean" },
-          shapeSignatures: {
-            type: "object",
-            additionalProperties: { type: "array", items: { type: "string" } }
-          }
-        },
-        additionalProperties: false
-      }
-    ],
-    messages: {
-      inlineEntity: "Use {{factoryHint}} instead of inlining a {{entity}} object literal in a test file. See CLAUDE.md \u2192 Test Discipline."
-    }
-  },
-  defaultOptions: [{}],
-  create(context, [opts]) {
-    const filename = context.filename ?? context.getFilename?.();
-    const entities = opts?.entities ?? DEFAULT_ENTITIES;
-    const helperPaths = opts?.helperPaths ?? DEFAULT_HELPER_PATHS;
-    const factoryHints = { ...DEFAULT_FACTORY_HINTS, ...opts?.factoryHints ?? {} };
-    const detectShapeMatch = opts?.detectShapeMatch ?? false;
-    const shapeSignatures = { ...DEFAULT_SHAPE_SIGNATURES, ...opts?.shapeSignatures ?? {} };
-    if (helperPaths.some((p) => filename.includes(p))) {
-      return {};
-    }
-    const reportInlineEntity = (node, entity) => {
-      context.report({
-        node,
-        messageId: "inlineEntity",
-        data: {
-          entity,
-          factoryHint: factoryHints[entity] ?? `a factory for ${entity}`
-        }
-      });
-    };
-    const typeNameOf = (typeNode) => {
-      if (!typeNode) return null;
-      if (typeNode.type === "TSTypeReference" && typeNode.typeName.type === "Identifier") {
-        return typeNode.typeName.name;
-      }
-      return null;
-    };
-    function objectExpressionPropNames(node) {
-      const names = /* @__PURE__ */ new Set();
-      for (const prop of node.properties) {
-        if (prop.type === "Property" && prop.key.type === "Identifier") {
-          names.add(prop.key.name);
-        } else if (prop.type === "Property" && prop.key.type === "Literal" && typeof prop.key.value === "string") {
-          names.add(prop.key.value);
-        }
-      }
-      return names;
-    }
-    function matchingShapeEntity(node, signatures) {
-      const names = objectExpressionPropNames(node);
-      for (const [entity, signature] of Object.entries(signatures)) {
-        if (signature.every((p) => names.has(p))) {
-          return entity;
-        }
-      }
-      return null;
-    }
-    function isFactoryCallArgument(node) {
-      const parent = node.parent;
-      if (parent?.type !== "CallExpression") return false;
-      const callee = parent.callee;
-      if (callee.type === "Identifier") {
-        return /^(make|build|create)[A-Z]/.test(callee.name);
-      }
-      return false;
-    }
-    function isAlreadyCoveredByOtherPath(node) {
-      const parent = node.parent;
-      if (!parent) return false;
-      if (parent.type === "TSAsExpression" || parent.type === "TSTypeAssertion") return true;
-      if (parent.type === "VariableDeclarator") {
-        const decl = parent;
-        if (decl.id.type === "Identifier" && decl.id.typeAnnotation) return true;
-      }
-      return false;
-    }
-    return {
-      // pattern A: { ... } as User
-      TSAsExpression(node) {
-        const name = typeNameOf(node.typeAnnotation);
-        if (name && entities.includes(name) && node.expression.type === "ObjectExpression") {
-          reportInlineEntity(node, name);
-        }
-      },
-      // pattern B: <User>{ ... }
-      TSTypeAssertion(node) {
-        const name = typeNameOf(node.typeAnnotation);
-        if (name && entities.includes(name) && node.expression.type === "ObjectExpression") {
-          reportInlineEntity(node, name);
-        }
-      },
-      // pattern C: const u: User = { ...3+ properties... }
-      VariableDeclarator(node) {
-        if (node.init?.type === "ObjectExpression" && node.init.properties.length >= 3 && node.id.type === "Identifier" && node.id.typeAnnotation?.typeAnnotation) {
-          const name = typeNameOf(node.id.typeAnnotation.typeAnnotation);
-          if (name && entities.includes(name)) {
-            reportInlineEntity(node.init, name);
-          }
-        }
-      },
-      // pattern D (Phase 7): shape-match — ObjectExpression containing all signature props
-      ObjectExpression(node) {
-        if (!detectShapeMatch) return;
-        if (isFactoryCallArgument(node)) return;
-        if (isAlreadyCoveredByOtherPath(node)) return;
-        const entity = matchingShapeEntity(node, shapeSignatures);
-        if (entity) {
-          reportInlineEntity(node, entity);
-        }
-      }
-    };
-  }
-});
-
 // src/rules/no-typeorm-set-undefined.ts
-var import_eslint_utils2 = __toESM(require_eslint_utils());
+var no_typeorm_set_undefined_exports = {};
+__export(no_typeorm_set_undefined_exports, {
+  default: () => no_typeorm_set_undefined_default
+});
+module.exports = __toCommonJS(no_typeorm_set_undefined_exports);
+var import_eslint_utils = __toESM(require_eslint_utils());
 var DEFAULT_FILE_PATTERNS = [".repository.", ".repo."];
-var createRule2 = (0, import_eslint_utils2.RuleCreator)(
+var createRule = (0, import_eslint_utils.RuleCreator)(
   (name) => `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`
 );
 var isUndefinedLiteral = (node) => {
@@ -427,7 +276,7 @@ var propertyName = (prop) => {
   if (key.type === "Literal" && typeof key.value === "string") return key.value;
   return "<unknown>";
 };
-var no_typeorm_set_undefined_default = createRule2({
+var no_typeorm_set_undefined_default = createRule({
   name: "no-typeorm-set-undefined",
   meta: {
     type: "problem",
@@ -490,79 +339,3 @@ var no_typeorm_set_undefined_default = createRule2({
     };
   }
 });
-
-// src/rules/no-undisabled-test-discipline-disable.ts
-var import_eslint_utils3 = __toESM(require_eslint_utils());
-var AST_TOKEN_TYPES = {
-  Line: "Line",
-  Block: "Block"
-};
-var TARGET_PLUGIN = "musaium-test-discipline";
-var TARGET_RULES = [
-  "musaium-test-discipline/no-inline-test-entities",
-  "musaium-test-discipline/no-undisabled-test-discipline-disable"
-];
-var createRule3 = (0, import_eslint_utils3.RuleCreator)(
-  (name) => `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`
-);
-var no_undisabled_test_discipline_disable_default = createRule3({
-  name: "no-undisabled-test-discipline-disable",
-  meta: {
-    type: "problem",
-    docs: {
-      description: 'Disabling musaium-test-discipline rules requires both a "Justification:" reason and "Approved-by:" attestation in the comment body.'
-    },
-    schema: [],
-    messages: {
-      requireJustification: 'Disabling a musaium-test-discipline rule requires "Justification: <reason>" AND "Approved-by: <reviewer>" in the same comment. Per CLAUDE.md ESLint discipline.'
-    }
-  },
-  defaultOptions: [],
-  create(context) {
-    const sourceCode = context.sourceCode ?? context.getSourceCode?.();
-    return {
-      Program(programNode) {
-        const comments = programNode.comments ?? sourceCode.getAllComments();
-        for (const comment of comments) {
-          if (comment.type !== AST_TOKEN_TYPES.Line && comment.type !== AST_TOKEN_TYPES.Block) {
-            continue;
-          }
-          const value = comment.value.replace(/\s+/g, " ").trim();
-          const disableMatch = value.match(
-            /^eslint-disable(?:-next-line)?\s+([^\s]+(?:\s*,\s*[^\s]+)*)(?:\s+--\s+(.*))?$/
-          );
-          if (!disableMatch) continue;
-          const rulesText = disableMatch[1];
-          const justification = disableMatch[2] ?? "";
-          const disabledRules = rulesText.split(",").map((s) => s.trim());
-          const targetsOurPlugin = disabledRules.some(
-            (r) => TARGET_RULES.includes(r) || r.startsWith(TARGET_PLUGIN + "/")
-          );
-          if (!targetsOurPlugin) continue;
-          const justificationMatch = justification.match(
-            /Justification:\s*(.*?)(?:\s+Approved-by:|$)/
-          );
-          const approvedByMatch = justification.match(/Approved-by:\s*([^\n]*)/);
-          const hasJustification = !!justificationMatch && justificationMatch[1].trim().length >= 20;
-          const hasApprovedBy = !!approvedByMatch && approvedByMatch[1].trim().length >= 1;
-          if (!hasJustification || !hasApprovedBy) {
-            context.report({
-              node: comment,
-              messageId: "requireJustification"
-            });
-          }
-        }
-      }
-    };
-  }
-});
-
-// src/index.ts
-var plugin = {
-  rules: {
-    "no-inline-test-entities": no_inline_test_entities_default,
-    "no-typeorm-set-undefined": no_typeorm_set_undefined_default,
-    "no-undisabled-test-discipline-disable": no_undisabled_test_discipline_disable_default
-  }
-};
-module.exports = plugin;

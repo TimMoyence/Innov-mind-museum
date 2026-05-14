@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && esbuild src/index.ts src/rules/no-inline-test-entities.ts src/rules/no-undisabled-test-discipline-disable.ts --bundle --platform=node --format=cjs --target=node22 --external:eslint --outdir=dist",
+    "build": "tsc -p tsconfig.json --emitDeclarationOnly && esbuild src/index.ts src/rules/no-inline-test-entities.ts src/rules/no-typeorm-set-undefined.ts src/rules/no-undisabled-test-discipline-disable.ts --bundle --platform=node --format=cjs --target=node22 --external:eslint --outdir=dist",
     "test": "jest",
     "lint": "tsc --noEmit",
     "check-dist": "bash scripts/check-dist-fresh.sh"
