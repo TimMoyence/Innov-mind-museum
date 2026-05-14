@@ -1,6 +1,7 @@
 import { AUDIT_ADMIN_EXPORT_SESSIONS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 import { pseudonymise } from '@shared/security/pseudonym';
+import { env } from '@src/config/env';
 
 import type {
   ExportInput,
@@ -28,12 +29,13 @@ export interface ExportAuditService {
 }
 
 /**
- * Stable salt for in-test pseudonym determinism. Production wiring (R2 §3.6 /
- * Q6) reads from an env var ; here we pick a build-time constant — the unit
- * tests only assert the OUTPUT shape (`/^[0-9a-f]{16}$/`), not a specific
- * digest, so this is sufficient and avoids coupling the use case to env.
+ * Salt for export pseudonyms, read from env (R2 corrective loop 1, 2026-05-15
+ * — closing the loop-1 honesty deviation flagged by review). Falls back to the
+ * historical literal so unit tests stubbing env without the new field still
+ * compute a deterministic digest matching the `/^[0-9a-f]{16}$/` shape they
+ * assert on. Spec §3.6 / Q6 documents the rotation procedure.
  */
-const PSEUDONYM_SALT = 'musaium-admin-export-v1';
+const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
 
 /**
  * Admin CSV export — chat sessions (R2 R6 / R7 / R8 / R12 / R17 + D4 / D5 / D6).

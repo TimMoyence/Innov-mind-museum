@@ -49,10 +49,31 @@ jest.mock('@modules/admin/useCase', () => ({
   getEngagementAnalyticsUseCase: { execute: jest.fn() },
   adminReviewFacade: { list: jest.fn(), moderateReview: jest.fn() },
   adminSupportFacade: { list: jest.fn(), update: jest.fn() },
-  // R2 — new use cases.
-  exportChatSessionsUseCase: { execute: (...args: unknown[]) => mockSessions(...args) },
-  exportReviewsUseCase: { execute: (...args: unknown[]) => mockReviews(...args) },
-  exportSupportTicketsUseCase: { execute: (...args: unknown[]) => mockTickets(...args) },
+  // R2 — new use cases (lazy getters, corrective loop 1 2026-05-15).
+  getExportChatSessionsUseCase: () => ({
+    execute: (...args: unknown[]) => mockSessions(...args),
+  }),
+  getExportReviewsUseCase: () => ({
+    execute: (...args: unknown[]) => mockReviews(...args),
+  }),
+  getExportSupportTicketsUseCase: () => ({
+    execute: (...args: unknown[]) => mockTickets(...args),
+  }),
+}));
+
+// R2 corrective loop 1 (2026-05-15) — the route imports the lazy factories
+// directly from `useCase/export/composition` (separated from the eager barrel
+// so api-router-resolve.test stays env-stub-safe), so mock that path too.
+jest.mock('@modules/admin/useCase/export/composition', () => ({
+  getExportChatSessionsUseCase: () => ({
+    execute: (...args: unknown[]) => mockSessions(...args),
+  }),
+  getExportReviewsUseCase: () => ({
+    execute: (...args: unknown[]) => mockReviews(...args),
+  }),
+  getExportSupportTicketsUseCase: () => ({
+    execute: (...args: unknown[]) => mockTickets(...args),
+  }),
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────

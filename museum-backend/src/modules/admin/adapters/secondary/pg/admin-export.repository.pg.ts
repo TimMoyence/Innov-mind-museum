@@ -3,6 +3,7 @@ import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { Review } from '@modules/review/domain/review/review.entity';
 import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
 import { pseudonymise } from '@shared/security/pseudonym';
+import { env } from '@src/config/env';
 
 import type {
   ExportRowReview,
@@ -15,7 +16,11 @@ import type { ExportReviewsRepository } from '@modules/admin/useCase/export/expo
 import type { ExportTicketsRepository } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
 import type { DataSource, Repository } from 'typeorm';
 
-const PSEUDONYM_SALT = 'musaium-admin-export-v1';
+// R2 corrective loop 1 (2026-05-15) — read from env (cf. `env.exportPseudonymSalt`,
+// added in the same loop). Falls back to the historical literal so local dev /
+// boot stays ergonomic and unit tests using stubbed env without the new field
+// continue to pass.
+const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
 const CHUNK_SIZE = 500;
 
 /**

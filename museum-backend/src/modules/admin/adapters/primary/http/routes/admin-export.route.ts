@@ -5,10 +5,10 @@ import {
   exportQuerySchema,
 } from '@modules/admin/adapters/primary/http/schemas/admin-export.schemas';
 import {
-  exportChatSessionsUseCase,
-  exportReviewsUseCase,
-  exportSupportTicketsUseCase,
-} from '@modules/admin/useCase';
+  getExportChatSessionsUseCase,
+  getExportReviewsUseCase,
+  getExportSupportTicketsUseCase,
+} from '@modules/admin/useCase/export/composition';
 import { writeBomHeader, writeCsvRow } from '@shared/csv/csv-writer';
 import { badRequest, forbidden } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
@@ -175,7 +175,7 @@ adminExportRouter.get(
       ) {
         throw forbidden('No museum assigned');
       }
-      const stream = await exportChatSessionsUseCase.execute(actor);
+      const stream = await getExportChatSessionsUseCase().execute(actor);
       setCsvHeaders(res, 'sessions');
       await streamCsv(res, SESSIONS_HEADERS, stream);
       return;
@@ -186,13 +186,13 @@ adminExportRouter.get(
       throw forbidden(`${kind} export is restricted to super_admin`);
     }
     if (kind === 'reviews') {
-      const stream = await exportReviewsUseCase.execute(actor);
+      const stream = await getExportReviewsUseCase().execute(actor);
       setCsvHeaders(res, 'reviews');
       await streamCsv(res, REVIEWS_HEADERS, stream);
       return;
     }
     // kind === 'tickets'
-    const stream = await exportSupportTicketsUseCase.execute(actor);
+    const stream = await getExportSupportTicketsUseCase().execute(actor);
     setCsvHeaders(res, 'tickets');
     await streamCsv(res, TICKETS_HEADERS, stream);
   },

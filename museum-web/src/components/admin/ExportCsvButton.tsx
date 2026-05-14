@@ -38,13 +38,6 @@ const ROLE_VISIBILITY: Record<ExportKind, ReadonlySet<UserRole>> = {
 };
 
 /**
- * URL path segment for the admin CSV download endpoint. Assembled from char
- * codes so the literal word does not appear in any quoted source region —
- * keeps the R25 no-hardcoded-strings regex (AC17) clean.
- */
-const PATH_SEGMENT = String.fromCharCode(101, 120, 112, 111, 114, 116);
-
-/**
  * Extracts the filename from a `Content-Disposition` header per RFC 6266 §4.1
  * (`filename="..."` token). Returns null when no usable token is present so
  * the caller can fall back to a synthetic name.
@@ -99,7 +92,7 @@ export function ExportCsvButton({ kind }: ExportCsvButtonProps) {
     try {
       // Endpoint built character-wise to keep the literal word out of any
       // single quoted region (R25 no-hardcoded-strings scan).
-      const endpoint = ['/api/admin/', PATH_SEGMENT, '/', kind, '.csv'].join('');
+      const endpoint = `/api/admin/export/${kind}.csv`;
       const res = await fetch(endpoint, { credentials: 'include' });
       if (!res.ok) {
         setErrored(true);

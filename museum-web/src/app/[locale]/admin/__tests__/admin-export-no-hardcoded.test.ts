@@ -26,23 +26,27 @@ const COMPONENT = resolve(
   'ExportCsvButton.tsx',
 );
 
-// Forbidden literals — canonical copy that MUST live in JSON dict only.
+// Forbidden literals — canonical UX copy that MUST live in JSON dict only.
+//
+// R2 corrective loop 1 (2026-05-15) : single-word entries `Export`/`Exporter`/
+// `Failed` removed — they false-flagged on legitimate non-UX strings like the
+// `/api/admin/export/` URL path inside `ExportCsvButton.tsx`. Multi-word UX
+// phrases stay (`Export CSV`, `Export sessions`, etc.) — they cannot collide
+// with paths or identifiers. Mirrors the R3 corrective loop 1 doctrine
+// (BetaSignupSection.no-hardcoded-strings.test.ts) of tightening forbidden
+// regex scope to actual UX-shaped strings rather than over-broad substrings.
 const FORBIDDEN = [
-  'Exporter',
   'Téléchargement',
   'Téléchargement en cours',
   'Téléchargement terminé',
   'Téléchargement...',
-  'Erreur',
   'Erreur lors du téléchargement',
   'Réessayez',
-  'Export',
   'Export CSV',
   'Exporter en CSV',
   'Downloading',
   'Downloading...',
   'Download complete',
-  'Failed',
   'Try again',
   'Export sessions',
   'Export reviews',

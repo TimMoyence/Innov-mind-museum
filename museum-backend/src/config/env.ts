@@ -513,6 +513,11 @@ const env: AppEnv = {
     const parsed = Number(raw);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
   })(),
+  // R2 W3.4 — Salt for admin CSV export pseudonymization. Config value, NOT a
+  // feature flag (cf. AUDIT_CHAIN_ALERT_EMAIL precedent). Empty → composition
+  // root falls back to the legacy literal so local dev / boot stays ergonomic.
+  // Rotate manually after a breach.
+  exportPseudonymSalt: toOptionalString(process.env.EXPORT_PSEUDONYM_SALT),
   storage: {
     driver: storageDriver,
     // Resolved at parse time so downstream consumers always see an absolute path,

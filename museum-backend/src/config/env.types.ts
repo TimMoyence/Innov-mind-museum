@@ -246,6 +246,15 @@ export interface AppEnv {
    * monitor.
    */
   brevoBetaListId?: number;
+  /**
+   * R2 W3.4 — Salt used by `admin/export` to pseudonymize emails/user-IDs
+   * before they hit the CSV download. Rotate manually after a breach (rotating
+   * invalidates the link between pseudonym and identity in already-exported
+   * CSV files). Config value, NOT a feature flag — same precedent as
+   * `b2bInboxEmail`/`brevoBetaListId`/`AUDIT_CHAIN_ALERT_EMAIL`. When unset, the
+   * fallback `'musaium-admin-export-v1'` keeps local dev / boot ergonomic.
+   */
+  exportPseudonymSalt?: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;
