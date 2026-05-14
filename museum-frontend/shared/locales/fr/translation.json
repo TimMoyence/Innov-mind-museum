@@ -866,7 +866,26 @@
       "share": "Partager le message",
       "report": "Signaler le message",
       "cancel": "Fermer le menu",
-      "overlay_hint": "Appuyez pour fermer le menu"
+      "overlay_hint": "Appuyez pour fermer le menu",
+      "opened": "Menu d'actions du message ouvert"
+    },
+    "consent": {
+      "opened": "Avis d'utilisation de l'IA ouvert"
+    },
+    "summary": {
+      "opened": "Résumé de visite ouvert"
+    },
+    "dailyLimit": {
+      "opened": "Limite quotidienne atteinte"
+    },
+    "voiceIntro": {
+      "opened": "Présentation de la session vocale ouverte"
+    },
+    "aiDisclosure": {
+      "opened": "Information IA ouverte"
+    },
+    "browser": {
+      "opened": "Navigateur intégré ouvert"
     }
   },
   "consent": {

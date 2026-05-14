@@ -112,30 +112,22 @@ jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
   return { MediaAttachmentPanel: () => <View testID="media-attachment-panel" /> };
 });
 
-jest.mock('@/features/chat/ui/MessageContextMenu', () => {
-  const { View } = require('react-native');
-  return { MessageContextMenu: () => <View testID="message-context-menu" /> };
-});
-
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
   const { View } = require('react-native');
   return { OfflineBanner: () => <View testID="offline-banner" /> };
 });
 
-jest.mock('@/features/chat/ui/AiConsentModal', () => {
-  const { View } = require('react-native');
-  return { AiConsentModal: () => <View testID="ai-consent-modal" /> };
-});
-
-jest.mock('@/features/chat/ui/VisitSummaryModal', () => {
-  const { View } = require('react-native');
-  return { VisitSummaryModal: () => <View testID="visit-summary-modal" /> };
-});
-
-jest.mock('@/shared/ui/InAppBrowser', () => {
-  const { View } = require('react-native');
-  return { InAppBrowser: () => <View testID="in-app-browser" /> };
-});
+// Replace the bottom-sheet router with an inert stub so the chat-session
+// screen tree can render without mounting any sheet content (and without
+// pulling react-native-webview in tests that don't drive the browser route).
+jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
+  BottomSheetRouter: () => null,
+  useBottomSheetRouter: () => ({
+    activeRoute: null,
+    open: jest.fn(),
+    close: jest.fn(),
+  }),
+}));
 
 export function defaultChatSession() {
   return {

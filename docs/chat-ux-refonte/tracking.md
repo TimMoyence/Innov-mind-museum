@@ -70,7 +70,7 @@ Source de vérité pour l'état du chantier. **Toute mise à jour passe par ce f
 | B5 | Sotto-voce mode toggle | 1 | `pending` | [specs/B5.md](specs/B5.md) | — | Top bar toggle, audio mute, transcript live ; auto-suggest si ambient >70dB |
 | B6 | Free-form voice proactive géoloc | 3 | `pending` | [specs/B6.md](specs/B6.md) | — | LocationResolver in-museum déjà en place ; banner suggestion, pas push notif |
 | C3 | Cache LLM élargi scans œuvres répétitifs | 3 | `pending` | [specs/C3.md](specs/C3.md) | — | Cache key `(artworkSigLIPHash + locale + museumId + prefsHash)`, TTL 24h |
-| C4 | Modal soup cleanup → BottomSheetRouter | 1 | `pending` | [specs/C4.md](specs/C4.md) | — | `@gorhom/bottom-sheet` ou state machine maison |
+| C4 | Modal soup cleanup → BottomSheetRouter | 1 | `green` | [specs/C4.md](specs/C4.md) | green-code-agent-2026-05-14-001 (fresh) | Red OK : 3 test suites FAIL TS2307 ; 4 fichiers tests + harness ; reducer state shape étendu (`blocking` capture) — décision red-agent à valider en review |
 
 ---
 
@@ -115,3 +115,10 @@ Règles dures :
 | Date | Event |
 |---|---|
 | 2026-05-14 | Worktree créé, baseline `9dfd3178`, 14 features listed pending, audit consolidated `findings.md` |
+| 2026-05-14 | Dispatcher boot session, pioche **C4** en discovery (run id `2026-05-14-001`), inFlight=1/3 |
+| 2026-05-14 | C4 discovery → red. Spec READY (426 lignes, 21 EARS, 15 ACs). Archi = state machine maison + RN `<Modal>` (pas `@gorhom/bottom-sheet`). 7 surfaces overlay au lieu de 6 (corrige findings.md P3). Open questions Q1-Q6 tracées dans spec §7. |
+| 2026-05-14 | C4 red → green. Red OK (4 fichiers tests, 3 suites FAIL TS2307 at baseline). Spawning green-code-agent fresh-context. |
+| 2026-05-14 | C4 green-agent-1 retour : GREEN-PARTIAL (T1 PASS 19/19, T2-T7 SheetContents écrits + 2139/2139 FE PASS, lint exit 0) MAIS T8 deferred (screen `[sessionId].tsx` non migré, `chat-session-deep.test.tsx` non adapté, legacy modals présents). AC1/AC2/AC8 violés → dead code des SheetContent. Re-spawn green-agent-2 fresh dédié T8. |
+| 2026-05-14 | C4 T8 cleanup complet : 8 legacy modals + 4 legacy tests supprimés ; chat-session-deep.test.tsx fixes (mock hoisting + type param justifié). tsc PASS, lint exit 0, tests 2135/2135 PASS. AC1/AC2/AC8 satisfaits. Ready for review fresh-context. |
+| 2026-05-14 | C4 corrective loop 1 : R8 swipe-down (PanResponder gated par enableSwipeDown=sheet && !blocking) + R15/R16 focus capture/restore (opt-in triggerNodeHandle via useBottomSheetRouter().open(_,_,{triggerNodeHandle}) → AccessibilityInfo.setAccessibilityFocus on close) + R12 anim sequencing (OPEN_DONE/CLOSE_DONE dispatched par Container après Animated.timing.start callback, plus de sync chain dans le store) + dead expr `{blocking ? null : null}` retiré (prop blocking supprimée de BottomSheetContainerProps). tsc/lint PASS, tests 2145/2145 PASS (+10 nouveaux : 4 swipe-down + 3 focus-restore + 3 sequencing). Ready for re-review. |
+| 2026-05-14 | C4 review loop 2 → **APPROVED weightedMean 90/100** (Δ +7). Breakdown : correctness 92, scope-fidelity 90, kiss-dry-hexagonal 86, a11y-design-system 90, security-honesty 93. 4 findings boucle 1 RESOLVED, 0 regressions, 5/5 gates Musaium PASS. 3 nice-to-have hérités (store module-global, lazy browser wrapper, integration test mockée) acceptés post-launch. JSON `docs/chat-ux-refonte/reviews/C4-review-loop2.json`. Status feature C4 = **DONE**. |

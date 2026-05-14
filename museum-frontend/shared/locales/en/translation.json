@@ -866,7 +866,26 @@
       "share": "Share message",
       "report": "Report message",
       "cancel": "Close menu",
-      "overlay_hint": "Tap to close menu"
+      "overlay_hint": "Tap to close menu",
+      "opened": "Message actions menu opened"
+    },
+    "consent": {
+      "opened": "AI usage notice opened"
+    },
+    "summary": {
+      "opened": "Visit summary opened"
+    },
+    "dailyLimit": {
+      "opened": "Daily limit reached"
+    },
+    "voiceIntro": {
+      "opened": "Voice session intro opened"
+    },
+    "aiDisclosure": {
+      "opened": "AI disclosure opened"
+    },
+    "browser": {
+      "opened": "In-app browser opened"
     }
   },
   "consent": {
