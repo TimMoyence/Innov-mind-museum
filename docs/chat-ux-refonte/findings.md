@@ -1,7 +1,7 @@
 # Chat Musaium — Findings & Scope
 
 **Date** : 2026-05-14
-**Worktree** : `.claude/worktrees/feat+chat-ux-refonte/`
+**Worktree** : `/Users/Tim/Desktop/all/dev/Pro/InnovMind-chat-ux/` (sibling de `InnovMind/`)
 **Branch** : `worktree-feat+chat-ux-refonte`
 **Base** : `origin/main` @ `9dfd3178` (clean fork, autre agent travaille sur main)
 **Source** : audit multi-agents (5 sub-agents en parallèle, run du 2026-05-14)

@@ -2,7 +2,7 @@
 
 Source de vérité pour l'état du chantier. **Toute mise à jour passe par ce fichier** (append-only convention : on modifie le `Status`, on n'écrase pas l'historique des Notes).
 
-**Worktree** : `.claude/worktrees/feat+chat-ux-refonte/`
+**Worktree** : `/Users/Tim/Desktop/all/dev/Pro/InnovMind-chat-ux/` (sibling de `InnovMind/`)
 **Branch** : `worktree-feat+chat-ux-refonte`
 **Démarré** : 2026-05-14
 **Cible launch V1** : 2026-06-01 (memory : `feedback_no_solo_dev_estimates` — pas de calendrier)

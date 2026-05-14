@@ -10,7 +10,7 @@ Refondre le module chat Musaium (mobile React Native + backend Node.js/Express) 
 
 ## Contexte
 
-- **Worktree** : `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/worktrees/feat+chat-ux-refonte/`
+- **Worktree** : `/Users/Tim/Desktop/all/dev/Pro/InnovMind-chat-ux/` (sibling de `InnovMind/`, isole de l'agent sur `main`)
 - **Branch** : `worktree-feat+chat-ux-refonte` (isolé de `main` où un autre agent travaille sur C5 expo-image-manipulator)
 - **Base** : `origin/main` @ `9dfd3178`
 - **Cible** : V1 launch 2026-06-01 (memory `feedback_no_solo_dev_estimates` — pas de calendrier)
@@ -195,7 +195,7 @@ Spawn Agent (fresh):
        8. Path aliases utilisés ?
        9. Factories DRY pour tests (no inline entities) ?
        10. Si BE : Langfuse/Prometheus span ajoutés si nouveau code path latency-relevant ?
-     Output JSON à .claude/worktrees/feat+chat-ux-refonte/docs/chat-ux-refonte/reviews/<feature-id>.json :
+     Output JSON à docs/chat-ux-refonte/reviews/<feature-id>.json :
        {
          scoresOnFiveAxes: { correctness, doctrineCompliance, a11y, perfHygiene, testQuality } (0-100 each),
          weightedMean: number,
