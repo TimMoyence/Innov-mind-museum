@@ -102,6 +102,37 @@ describe('pruneSupportTickets — mutation kills', () => {
       expect(result.rowsAffected).toBe(0);
       expect(calls).toHaveLength(1);
     });
+
+    // ── L69:45 ConditionalExpression `typeof result[1] === 'number'` → `true`
+    // When result is an array but result[1] is NOT a number (driver edge case
+    // — older PG drivers return rows-only without the rowCount sentinel),
+    // original returns 0 and exits cleanly; the mutant returns the non-number
+    // value, contaminating totalDeleted (NaN/string concat) and looping until
+    // the 50-call guard throws. Either way breaks rowsAffected = 0.
+
+    it('terminates with rowsAffected = 0 when result[1] is undefined (kills typeof === "number" → true)', async () => {
+      // Array with undefined as second element — bypasses Array.isArray but
+      // fails the typeof check. Mutant returns undefined as chunkDeleted, NaN
+      // accumulates, infinite loop until guard.
+      const { ds, calls } = makeFakeDataSource([[[], undefined]]);
+
+      const result = await pruneSupportTickets(ds, { daysClosed: 365, batchLimit: 1000 });
+
+      expect(result.rowsAffected).toBe(0);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('terminates with rowsAffected = 0 when result[1] is a numeric string (kills typeof === "number" → true)', async () => {
+      // Some legacy drivers stringify rowCount. typeof "5" === 'number' is
+      // false, so original returns 0; mutant would treat it as the count and
+      // string-concat into totalDeleted ('05'), looping forever.
+      const { ds, calls } = makeFakeDataSource([[[], '5'] as unknown]);
+
+      const result = await pruneSupportTickets(ds, { daysClosed: 365, batchLimit: 1000 });
+
+      expect(result.rowsAffected).toBe(0);
+      expect(calls).toHaveLength(1);
+    });
   });
 
   // ── L71:9 ConditionalExpression `chunkDeleted > 0`
@@ -172,5 +203,41 @@ describe('pruneSupportTickets — mutation kills', () => {
       ([event]) => event === 'prune_support_tickets_chunk',
     );
     expect(chunkLogs).toHaveLength(1);
+  });
+
+  // ── L82:14 ObjectLiteral: `details: { cutoffDate, daysClosed }` → `details: {}`
+  // Strict assertion on both keys of the returned details payload kills the
+  // `{}` mutant. cutoffDate is `Date.now() - daysClosed * 24h * 60min * 60s *
+  // 1000ms`, asserted as a valid ISO string (mutant → undefined). daysClosed
+  // round-trips from the config (mutant → undefined). The default-pattern test
+  // also kills `details: undefined` mutants on later refactors.
+
+  describe('result.details payload shape (L82:14)', () => {
+    it('returns details = { cutoffDate: ISO string, daysClosed: <cfg.daysClosed> } (kills ObjectLiteral → {})', async () => {
+      const { ds } = makeFakeDataSource([tuple(0)]);
+
+      const result = await pruneSupportTickets(ds, { daysClosed: 365, batchLimit: 1000 });
+
+      // Two keys present + correct values — kills `{}` (both missing) and
+      // single-key partials.
+      expect(result.details).toEqual({
+        cutoffDate: expect.any(String),
+        daysClosed: 365,
+      });
+      // Defence: cutoffDate must parse as a Date so a future refactor cannot
+      // silently swap it for an arbitrary string.
+      expect(Number.isNaN(Date.parse(result.details.cutoffDate as string))).toBe(false);
+    });
+
+    it('propagates a different daysClosed value through to result.details (kills hard-coded literal mutants)', async () => {
+      const { ds } = makeFakeDataSource([tuple(0)]);
+
+      const result = await pruneSupportTickets(ds, { daysClosed: 30, batchLimit: 500 });
+
+      expect(result.details).toEqual({
+        cutoffDate: expect.any(String),
+        daysClosed: 30,
+      });
+    });
   });
 });

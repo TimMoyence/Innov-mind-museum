@@ -46,6 +46,20 @@ describe('ListUserTicketsUseCase — mutation kills', () => {
     });
   });
 
+  // ── L31:62 EqualityOperator: `input.limit > 100` → `input.limit >= 100`
+  // Mutant rejects the upper boundary value (100) which the original accepts.
+  // limit=101 is already asserted to throw — boundary check at 100 is the kill.
+
+  describe('limit upper boundary (L31:62)', () => {
+    it('accepts limit = 100 (kills `>` → `>=`)', async () => {
+      const result = await useCase.execute({ userId: 10, page: 1, limit: 100 });
+
+      expect(result.limit).toBe(100);
+      // Sanity: the single seeded ticket is returned.
+      expect(result.data).toHaveLength(1);
+    });
+  });
+
   // ── L32:24 StringLiteral: `'limit must be between 1 and 100'` → `""`
   // Kill by asserting the exact error message text.
 
