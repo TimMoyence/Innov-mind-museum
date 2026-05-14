@@ -231,6 +231,12 @@ export interface AppEnv {
   };
   brevoApiKey?: string;
   supportInboxEmail: string;
+  /**
+   * R4 W4.3 — B2B leads inbox. Optional config value (NOT a feature flag, per
+   * AUDIT_CHAIN_ALERT_EMAIL precedent). When unset, leads are routed to
+   * `supportInboxEmail` to avoid env churn in local dev.
+   */
+  b2bInboxEmail?: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;

@@ -98,6 +98,7 @@ export interface Dictionary {
       support: string;
       accessibility: string;
       security: string;
+      b2b: string;
     };
   };
   resetPassword: {
@@ -142,6 +143,36 @@ export interface Dictionary {
       title: string;
       subtitle: string;
       steps: { title: string; description: string }[];
+    };
+    b2b: {
+      metadata: { title: string; description: string };
+      hero: {
+        title: string;
+        subtitle: string;
+        ctaPrimary: string;
+        ctaSecondary: string;
+      };
+      problem: { title: string; body: string };
+      solution: { title: string; body: string };
+      differentiators: { title: string; description: string }[];
+      pricing: { title: string; tease: string; contactCta: string };
+      contact: {
+        title: string;
+        subtitle: string;
+        fieldEmail: string;
+        fieldName: string;
+        fieldMuseum: string;
+        fieldRole: string;
+        roleOptions: { director: string; curator: string; digital: string; other: string };
+        fieldMessage: string;
+        fieldConsent: string;
+        consentPrivacyLink: string;
+        submit: string;
+        sending: string;
+        success: string;
+        error: string;
+        errorValidation: string;
+      };
     };
   };
   admin: {

@@ -1,0 +1,52 @@
+import { type Request, type Response, Router } from 'express';
+
+import { submitB2bLeadSchema } from '@modules/leads/adapters/primary/http/schemas/leads.schemas';
+import { submitB2bLeadUseCase } from '@modules/leads/useCase';
+import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
+
+import type { B2bLeadRole } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
+
+const leadsRouter: Router = Router();
+
+// R12 — mirror `supportContactLimiter` (5 req / 600s / IP) per R4 §3.4.
+const b2bLeadLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 600_000,
+  keyGenerator: byIp,
+});
+
+// POST /api/leads/b2b — Public B2B-lead submission (R4 §1 R7, R10-R13)
+leadsRouter.post(
+  '/b2b',
+  b2bLeadLimiter,
+  validateBody(submitB2bLeadSchema),
+  async (req: Request, res: Response) => {
+    const body = req.body as {
+      email: string;
+      name: string;
+      museum: string;
+      role: B2bLeadRole;
+      message: string;
+      consent: true;
+      website?: string;
+    };
+
+    await submitB2bLeadUseCase.execute({
+      email: body.email,
+      name: body.name,
+      museum: body.museum,
+      role: body.role,
+      message: body.message,
+      consent: body.consent,
+      website: body.website,
+      ip: req.ip,
+      requestId: req.requestId,
+      userAgent: req.get('user-agent'),
+    });
+
+    res.status(202).json({ accepted: true });
+  },
+);
+
+export default leadsRouter;

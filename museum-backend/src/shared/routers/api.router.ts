@@ -21,6 +21,7 @@ import {
   getUserMemoryService,
 } from '@modules/chat/chat-module';
 import { createDailyArtRouter } from '@modules/daily-art';
+import leadsRouter from '@modules/leads/adapters/primary/http/routes/leads.route';
 import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/routes/low-data-pack.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/routes/museum.route';
@@ -469,4 +470,6 @@ function mountDomainRouters(
   }
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
+  // R4 W4.3 — B2B leads endpoint (POST /api/leads/b2b).
+  router.use('/leads', leadsRouter);
 }

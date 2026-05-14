@@ -69,8 +69,10 @@ const mockDict: Dictionary = {
       support: 'Help',
       accessibility: 'Accessibility',
       security: 'Security',
+      // R4 R18 / AC11 — B2B pitch page must be reachable from marketing chrome.
+      b2b: 'For museums',
     },
-  },
+  } as Dictionary['footer'],
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],
   confirmEmailChange: {} as Dictionary['confirmEmailChange'],
@@ -110,5 +112,18 @@ describe('Footer', () => {
   it('renders footer navigation landmark', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     expect(screen.getByLabelText('Footer')).toBeInTheDocument();
+  });
+
+  // R4 R18 / AC11 — Footer must surface a B2B link adjacent to existing public links.
+  it('renders the B2B pitch link pointing to /<locale>/b2b (R4 R18 / AC11)', () => {
+    render(<Footer dict={mockDict} locale="fr" />);
+    const b2bLink = screen.getByText('For museums');
+    expect(b2bLink).toHaveAttribute('href', '/fr/b2b');
+  });
+
+  it('renders the B2B link with the EN locale prefix', () => {
+    render(<Footer dict={mockDict} locale="en" />);
+    const b2bLink = screen.getByText('For museums');
+    expect(b2bLink).toHaveAttribute('href', '/en/b2b');
   });
 });

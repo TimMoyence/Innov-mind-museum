@@ -498,6 +498,10 @@ const env: AppEnv = {
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  // R4 W4.3 — B2B leads inbox. Config value, not a feature flag (cf.
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Falls back to supportInboxEmail in
+  // local dev so no env churn for solo contributors.
+  b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),
   storage: {
     driver: storageDriver,
     // Resolved at parse time so downstream consumers always see an absolute path,
