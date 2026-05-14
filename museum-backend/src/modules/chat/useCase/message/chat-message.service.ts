@@ -327,7 +327,14 @@ export class ChatMessageService {
   /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
   private async tryLlmCacheLookup(ctx: LlmCacheCtx): Promise<OrchestratorOutput | null> {
     const llmCache = this.llmCache;
-    if (!llmCache || ctx.input.image || ctx.orchestratorInput.image) return null;
+    if (!llmCache) return null;
+    // C3 (R11/R12) — image presence alone is no longer a bypass condition.
+    // Bypass only when an image is present BUT no visual signature was
+    // computable (url-source, or image processing failed). Text-only paths
+    // fall through identically to today (R8 — legacy keys preserved).
+    const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
+    const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
+    if (hasImage && !hasVisualSignature) return null;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
     if (!cacheInput) return null;
     const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
@@ -337,6 +344,8 @@ export class ChatMessageService {
         userId: ctx.prep.ownerId ?? 'anon',
         sessionId: ctx.sessionId,
         requestId: ctx.requestId,
+        // C3 (R24) — observability split text-only vs image-bearing hits.
+        hasImage,
       });
       return result.value;
     }
@@ -346,7 +355,11 @@ export class ChatMessageService {
   /** G — Stores fresh LLM result in cache (bypass on same conditions as lookup). */
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
-    if (!llmCache || ctx.input.image || ctx.orchestratorInput.image) return;
+    if (!llmCache) return;
+    // C3 (R13) — store bypass mirrors lookup bypass (invariant: miss→store→hit).
+    const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
+    const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
+    if (hasImage && !hasVisualSignature) return;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
     if (!cacheInput) return;
     await llmCache.store(cacheInput, aiResult);
@@ -355,6 +368,8 @@ export class ChatMessageService {
       userId: ctx.prep.ownerId ?? 'anon',
       sessionId: ctx.sessionId,
       requestId: ctx.requestId,
+      // C3 (R24) — same symmetry on miss logs.
+      hasImage,
     });
   }
 
@@ -470,6 +485,10 @@ export class ChatMessageService {
       },
       userPreferencesHash: prep.userMemoryBlock ? hashString16(prep.userMemoryBlock) : undefined,
       prompt: sanitizedText,
+      // C3 (R6/R8) — include the visual signature ONLY when available. When
+      // absent (text-only, url-source), canonical input is byte-identical to
+      // the pre-C3 shape (legacy keys preserved — see R8 / AC6).
+      imageContentHash: prep.imageContentHash,
     };
   }
 }

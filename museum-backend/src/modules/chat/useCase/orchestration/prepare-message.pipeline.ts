@@ -38,6 +38,15 @@ export interface PrepareReady {
   session: Awaited<ReturnType<typeof ensureSessionAccess>>;
   imageRef?: string;
   orchestratorImage?: PostMessageInput['image'];
+  /**
+   * C3 — SHA-256 hex prefix (32 chars) of the post-EXIF-strip image buffer,
+   * forwarded from `ImageProcessingService.processImage`. Present iff the
+   * request carried an `upload` or legacy-base64 image AND processing
+   * succeeded ; absent for `url` source (no buffer) or text-only requests.
+   * Threaded into `buildLlmCacheInput` to lift the image-bypass on the
+   * LLM cache lookup/store (R11/R12).
+   */
+  imageContentHash?: string;
   requestedLocale?: string;
   history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
   ownerId?: number;
@@ -184,7 +193,11 @@ export class PrepareMessagePipeline {
     image: PostMessageInput['image'],
     sessionId: string,
     ownerId: number | undefined,
-  ): Promise<{ imageRef?: string; orchestratorImage?: PostMessageInput['image'] }> {
+  ): Promise<{
+    imageRef?: string;
+    orchestratorImage?: PostMessageInput['image'];
+    imageContentHash?: string;
+  }> {
     if (!image) return {};
 
     const startedAtMs = Date.now();
@@ -199,7 +212,12 @@ export class PrepareMessagePipeline {
       evaluateUserInputGuardrail,
       sessionId,
     );
-    return { imageRef: processed.imageRef, orchestratorImage: processed.orchestratorImage };
+    return {
+      imageRef: processed.imageRef,
+      orchestratorImage: processed.orchestratorImage,
+      // C3 — propagate visual signature (undefined for url-source per R2).
+      imageContentHash: processed.imageContentHash,
+    };
   }
 
   /** Validates session, processes image, runs input guardrail, persists user message, fetches enrichment. */
@@ -216,7 +234,7 @@ export class PrepareMessagePipeline {
     const text = input.text?.trim();
     this.validateMessageInput(text, input.image);
 
-    const { imageRef, orchestratorImage } = await this.processInputImage(
+    const { imageRef, orchestratorImage, imageContentHash } = await this.processInputImage(
       input.image,
       sessionId,
       ownerId ?? currentUserId,
@@ -263,6 +281,7 @@ export class PrepareMessagePipeline {
       session,
       imageRef,
       orchestratorImage,
+      imageContentHash,
       requestedLocale,
       history,
       ownerId,

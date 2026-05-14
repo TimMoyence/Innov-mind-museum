@@ -17,6 +17,17 @@ export interface LlmCacheKeyInput {
   userPreferencesHash?: string;
   /** The user-typed prompt text. */
   prompt: string;
+  /**
+   * C3 — SHA-256 hex prefix (32 chars) of the post-EXIF-strip image buffer.
+   * Present iff the request carries an upload-source or legacy-base64 image
+   * (NOT a SigLIP / vector embedding hash — pure content-bytes hash, see
+   * UFR-013 honesty in spec C3 Q4). When present, the cache key derivation
+   * includes it in the canonical input hash, lifting the today's image-bypass
+   * and enabling repeat-scan hits. When absent (text-only or url-source),
+   * key derivation is byte-identical to today (R8 — no regression on legacy
+   * entries).
+   */
+  imageContentHash?: string;
 }
 
 /** Cache lookup result. */
