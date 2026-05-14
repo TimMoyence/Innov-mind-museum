@@ -1,8 +1,8 @@
 /**
  * R4 RED tests — B2bContactForm (client component).
  *
- * Pins R4 §1 R6-R11 + §1 R17 (a11y for live region) + R19 (Sentry breadcrumb) +
- * AC3(a-i) down BEFORE implementation.
+ * Pins R4 §1 R6-R11 + §1 R17 (a11y for live region) + AC3(a-i)
+ * down BEFORE implementation.
  *
  * - 6 visible labelled inputs : email / name / museum / role(select) / message / consent
  * - 1 hidden honeypot input `website` (NOT visible / not in tab order)
@@ -10,6 +10,8 @@
  * - happy path : POST `/api/leads/b2b` w/ correct JSON, then success screen
  * - 5xx response : error message displayed, form values preserved (not cleared)
  * - honeypot filled → submission still shows success (silent accept, R10)
+ *
+ * R19 Sentry breadcrumb deferred V1.1 (not covered by tests at this layer).
  *
  * MUST FAIL at baseline `bc49afee` — `B2bContactForm.tsx` does not exist yet.
  */
