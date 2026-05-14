@@ -2,6 +2,7 @@ import { validateSources } from '@modules/chat/useCase/orchestration/sources-val
 import { computeSessionUpdates } from '@modules/chat/useCase/session/visit-context';
 import { conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { chatSourcesEmittedTotal } from '@shared/observability/prometheus-metrics';
 import { sanitizePromptInput } from '@shared/validation/input';
 
@@ -271,6 +272,18 @@ export async function commitAssistantResponse(
     .map((s) => sanitizePromptInput(s, 60))
     .filter((s) => s.length > 0);
   const sanitizedSuggestions = mapped.length > 0 ? mapped : undefined;
+
+  // A5 (R1) — Mark the pipeline as having reached its terminal phase. Any
+  // refusal path that returns early from the orchestrator never reaches this
+  // line ; that branch is owned by `guardrail-evaluation.service` and decides
+  // its own `phase` value. On the success path uniformity wins : `done` means
+  // "the pipeline ran end-to-end, whatever it returned" (spec §1.1 R1).
+  assistantMetadata.phase = 'done';
+  // A5 (R9) — Emit a terminal `chat.phase.done` Langfuse trace so the
+  // timeline has a closing marker per chat request, sibling of the per-phase
+  // spans emitted by the pipeline + orchestrator + TTS adapter. Fail-open via
+  // `safeTrace`.
+  emitChatPhaseSpan('done', Date.now(), { sessionId });
 
   return {
     sessionId,

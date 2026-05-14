@@ -4,12 +4,13 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
-import { TypingIndicator } from '@/features/chat/ui/TypingIndicator';
+import { StatusIndicator } from '@/features/chat/ui/StatusIndicator';
 import { TypingPlaceholder } from '@/features/chat/ui/TypingPlaceholder';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -40,6 +41,13 @@ interface ChatMessageListProps {
   onRetry?: (message: ChatUiMessage) => void;
   /** Whether the assistant response is pending (between user submit and first token). */
   isAssistantPending?: boolean;
+  /**
+   * A5 — Current pipeline status phase driven by `useStatusPhase`. When non-null
+   * (and not `'done'`), renders the localised `<StatusIndicator>` in the list
+   * footer in place of the legacy 3-dot typing indicator. `null` hides the row
+   * entirely (silence-is-success — spec R17).
+   */
+  currentPhase?: ChatPipelinePhase | null;
 }
 
 /**
@@ -59,6 +67,7 @@ export const ChatMessageList = ({
   onLinkPress,
   onRetry,
   isAssistantPending = false,
+  currentPhase = null,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -206,8 +215,12 @@ export const ChatMessageList = ({
     ],
   );
 
-  // Show typing indicator only when sending but NOT streaming (streaming shows inline cursor)
-  const showTypingIndicator = isSending && !isStreaming;
+  // A5 — Status indicator displayed only when sending but NOT streaming
+  // (streaming shows inline cursor). Driven by `currentPhase` from the
+  // parent screen ; when the parent passes `null` the indicator unmounts
+  // (silence-is-success — spec R17). The legacy 3-dot `<TypingIndicator>`
+  // has been removed in the same chantier (doctrine `feedback_bury_dead_code`).
+  const showStatusIndicator = isSending && !isStreaming && currentPhase !== null;
 
   return (
     <FlashList
@@ -239,7 +252,7 @@ export const ChatMessageList = ({
       ListFooterComponent={
         <>
           <TypingPlaceholder visible={isAssistantPending} testID="chat-assistant-pending" />
-          {showTypingIndicator ? <TypingIndicator /> : null}
+          {showStatusIndicator ? <StatusIndicator phase={currentPhase} /> : null}
         </>
       }
       ItemSeparatorComponent={ItemSeparator}

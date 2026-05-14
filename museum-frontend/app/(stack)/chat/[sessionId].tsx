@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useChatSession, type ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { useStatusPhase } from '@/features/chat/application/useStatusPhase';
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
@@ -129,7 +130,21 @@ export default function ChatSessionScreen() {
   const [sessionAudioOverride, setSessionAudioOverride] = useState<boolean | null>(null);
   const effectiveAudioDesc = sessionAudioOverride ?? audioDescEnabled;
 
-  useAutoTts({ messages, enabled: effectiveAudioDesc });
+  // A5 (R16) — auto-TTS hook exposes its in-flight `loading` signal so the
+  // screen can surface `synthesizing-voice` in `<StatusIndicator>` while the
+  // assistant audio is being fetched + decoded. Without this wiring the
+  // phase would never be observable in runtime (review I2 finding).
+  const tts = useAutoTts({ messages, enabled: effectiveAudioDesc });
+
+  // A5 — drive the localised `<StatusIndicator>` shown while the assistant
+  // is composing a response. The hook synthesises a client-side phase
+  // sequence ; the real terminal phase lives on `metadata.phase` from the
+  // BE (consumed only for telemetry, R22).
+  const { phase: currentPhase } = useStatusPhase({
+    isSending,
+    hasImage: !!selectedImage,
+    ttsPending: tts.loading,
+  });
 
   const { isWalkMode } = useChatSessionIntents({
     intent: params.intent,
@@ -363,6 +378,7 @@ export default function ChatSessionScreen() {
             onLinkPress={sessionActions.onMessageLinkPress}
             onRetry={retryMessage}
             isAssistantPending={lastAssistantPending}
+            currentPhase={currentPhase}
             surfaceStyle={styles.chatSurface}
             skeletonStyle={styles.skeletonChat}
           />

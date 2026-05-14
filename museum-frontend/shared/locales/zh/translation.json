@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium正在思考..."
     },
+    "status": {
+      "analyzing-image": "正在查看作品…",
+      "searching-collection": "正在搜索藏品…",
+      "composing": "正在撰写回答…",
+      "synthesizing-voice": "正在准备语音…"
+    },
     "fallback_title": "艺术会话",
     "report_thanks_title": "感谢您",
     "report_thanks_body": "您的举报已提交。",

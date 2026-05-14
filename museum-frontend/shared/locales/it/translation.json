@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium sta pensando..."
     },
+    "status": {
+      "analyzing-image": "Analisi dell'opera…",
+      "searching-collection": "Consultazione delle fonti…",
+      "composing": "Composizione della risposta…",
+      "synthesizing-voice": "Preparazione della voce…"
+    },
     "fallback_title": "Sessione artistica",
     "report_thanks_title": "Grazie",
     "report_thanks_body": "La tua segnalazione è stata inviata.",

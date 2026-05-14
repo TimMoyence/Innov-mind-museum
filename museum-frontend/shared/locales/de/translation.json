@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium denkt nach..."
     },
+    "status": {
+      "analyzing-image": "Werk wird analysiert…",
+      "searching-collection": "Sammlung wird durchsucht…",
+      "composing": "Antwort wird verfasst…",
+      "synthesizing-voice": "Stimme wird vorbereitet…"
+    },
     "fallback_title": "Kunstsitzung",
     "report_thanks_title": "Vielen Dank",
     "report_thanks_body": "Ihre Meldung wurde übermittelt.",

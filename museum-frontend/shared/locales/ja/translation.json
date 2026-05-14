@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaiumが考えています..."
     },
+    "status": {
+      "analyzing-image": "作品を見ています…",
+      "searching-collection": "コレクションを検索中…",
+      "composing": "回答を作成中…",
+      "synthesizing-voice": "音声を準備中…"
+    },
     "fallback_title": "アートセッション",
     "report_thanks_title": "ありがとうございます",
     "report_thanks_body": "報告が送信されました。",

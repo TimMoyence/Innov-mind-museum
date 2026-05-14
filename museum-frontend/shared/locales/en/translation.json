@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium is thinking..."
     },
+    "status": {
+      "analyzing-image": "Looking at the artwork…",
+      "searching-collection": "Searching the collection…",
+      "composing": "Composing the answer…",
+      "synthesizing-voice": "Preparing the voice…"
+    },
     "fallback_title": "Art Session",
     "report_thanks_title": "Thank you",
     "report_thanks_body": "Your report has been submitted.",

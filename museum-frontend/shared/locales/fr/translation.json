@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium réfléchit..."
     },
+    "status": {
+      "analyzing-image": "Analyse de l'œuvre…",
+      "searching-collection": "Consultation des sources…",
+      "composing": "Rédaction de la réponse…",
+      "synthesizing-voice": "Préparation de la voix…"
+    },
     "fallback_title": "Session artistique",
     "report_thanks_title": "Merci",
     "report_thanks_body": "Votre signalement a été soumis.",

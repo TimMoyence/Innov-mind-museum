@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium يفكر..."
     },
+    "status": {
+      "analyzing-image": "جارٍ تحليل العمل…",
+      "searching-collection": "البحث في المجموعة…",
+      "composing": "صياغة الإجابة…",
+      "synthesizing-voice": "تحضير الصوت…"
+    },
     "fallback_title": "جلسة فنية",
     "report_thanks_title": "شكرًا",
     "report_thanks_body": "تم إرسال بلاغك.",

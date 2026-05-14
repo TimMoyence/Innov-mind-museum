@@ -3,6 +3,7 @@ import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-
 import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolver';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -186,7 +187,13 @@ export class PrepareMessagePipeline {
   ): Promise<{ imageRef?: string; orchestratorImage?: PostMessageInput['image'] }> {
     if (!image) return {};
 
+    const startedAtMs = Date.now();
     const processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
+    // A5 (R2/R3) — `chat.phase.analyzing-image` Langfuse span. Emitted ONLY
+    // when the request carries an image (R3 : the early-return guard above
+    // ensures no span is emitted on text-only paths). Fail-open via
+    // `safeTrace` so a Langfuse SDK outage never breaks the chat path.
+    emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId });
     await this.imageProcessor.runOcrGuard(
       processed.orchestratorImage,
       evaluateUserInputGuardrail,
@@ -300,6 +307,10 @@ export class PrepareMessagePipeline {
     routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
+    // A5 (R6) — `chat.phase.searching-collection` Langfuse span wraps the
+    // enrichment fan-out (KB + web search + image enrichment + DB lookup),
+    // which is the user-facing "searching the collection" window.
+    const enrichmentStartedAtMs = Date.now();
     const {
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -320,6 +331,10 @@ export class PrepareMessagePipeline {
       ownerId,
       locale: requestedLocale,
       museumMode: input.context?.museumMode ?? session.museumMode,
+    });
+    emitChatPhaseSpan('searching-collection', enrichmentStartedAtMs, {
+      sessionId: session.id,
+      hasMuseumMode: input.context?.museumMode ?? session.museumMode,
     });
 
     this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
 
+import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { AiDisclosureFooter } from './AiDisclosureFooter';
 import { ChatMessageList } from './ChatMessageList';
@@ -22,6 +23,12 @@ interface ChatSessionSurfaceProps {
   onLinkPress: (url: string) => boolean;
   onRetry?: (message: ChatUiMessage) => void;
   isAssistantPending: boolean;
+  /**
+   * A5 — Currently displayed pipeline phase, forwarded as-is to
+   * `<ChatMessageList>` for footer rendering. `null` hides the indicator
+   * (silence-is-success — spec R17).
+   */
+  currentPhase: ChatPipelinePhase | null;
   surfaceStyle: StyleProp<ViewStyle>;
   skeletonStyle: StyleProp<ViewStyle>;
 }
@@ -46,6 +53,7 @@ export const ChatSessionSurface = ({
   onLinkPress,
   onRetry,
   isAssistantPending,
+  currentPhase,
   surfaceStyle,
   skeletonStyle,
 }: ChatSessionSurfaceProps) => (
@@ -71,6 +79,7 @@ export const ChatSessionSurface = ({
           onLinkPress={onLinkPress}
           onRetry={onRetry}
           isAssistantPending={isAssistantPending}
+          currentPhase={currentPhase}
         />
         <AiDisclosureFooter />
       </>

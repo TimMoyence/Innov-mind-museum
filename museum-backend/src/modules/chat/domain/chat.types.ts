@@ -247,6 +247,18 @@ export const CitationSourceSchema = z.object({
   confidence: z.number().min(0).max(1).optional(),
 });
 
+/**
+ * A5 — Coarse pipeline phase exposed on `ChatAssistantMetadata.phase` and
+ * used by the FE `<StatusIndicator>` taxonomy. Keep in EXACT lockstep with
+ * `museum-frontend/features/chat/application/phases.ts`. Spec : A5.md §1.1 R7.
+ */
+export type ChatPipelinePhase =
+  | 'analyzing-image'
+  | 'searching-collection'
+  | 'composing'
+  | 'synthesizing-voice'
+  | 'done';
+
 /** Structured metadata extracted from an assistant response by the LLM pipeline. */
 export interface ChatAssistantMetadata {
   /** Artwork identified from user image or text. */
@@ -292,4 +304,11 @@ export interface ChatAssistantMetadata {
    */
   suggestedImages?: SuggestedImage[];
   diagnostics?: ChatAssistantDiagnostics;
+  /**
+   * A5 — Terminal phase reached by the pipeline. `'done'` on success,
+   * last attempted phase otherwise. Backward-compat optional (NFR8 — legacy
+   * persisted messages have no value). FE treats absence as silence and does
+   * not throw. See `docs/chat-ux-refonte/specs/A5.md` §1.1 R1/R8.
+   */
+  phase?: ChatPipelinePhase;
 }

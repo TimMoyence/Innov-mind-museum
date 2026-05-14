@@ -27,10 +27,11 @@ jest.mock('@/features/chat/ui/MessageActions', () => {
   };
 });
 
-jest.mock('@/features/chat/ui/TypingIndicator', () => {
+jest.mock('@/features/chat/ui/StatusIndicator', () => {
   const { View: RNView } = require('react-native');
   return {
-    TypingIndicator: () => <RNView testID="typing-indicator" />,
+    StatusIndicator: ({ phase }: { phase: string | null }) =>
+      phase ? <RNView testID="status-indicator" /> : null,
   };
 });
 
@@ -102,20 +103,36 @@ describe('ChatMessageList', () => {
     expect(screen.getByTestId('chat-empty-state')).toBeTruthy();
   });
 
-  it('shows TypingIndicator when isSending=true and isStreaming=false', () => {
-    render(<ChatMessageList {...defaultProps} messages={[]} isSending isStreaming={false} />);
+  it('shows StatusIndicator when isSending=true, isStreaming=false, and currentPhase is set', () => {
+    render(
+      <ChatMessageList
+        {...defaultProps}
+        messages={[]}
+        isSending
+        isStreaming={false}
+        currentPhase="searching-collection"
+      />,
+    );
 
-    expect(screen.getByTestId('typing-indicator')).toBeTruthy();
+    expect(screen.getByTestId('status-indicator')).toBeTruthy();
   });
 
-  it('does NOT show TypingIndicator when isStreaming=true', () => {
+  it('does NOT show StatusIndicator when isStreaming=true', () => {
     const messages: ChatUiMessage[] = [
       createMessage({ id: 'msg-1', role: 'assistant', text: 'Streaming...' }),
     ];
 
-    render(<ChatMessageList {...defaultProps} messages={messages} isSending isStreaming />);
+    render(
+      <ChatMessageList
+        {...defaultProps}
+        messages={messages}
+        isSending
+        isStreaming
+        currentPhase="composing"
+      />,
+    );
 
-    expect(screen.queryByTestId('typing-indicator')).toBeNull();
+    expect(screen.queryByTestId('status-indicator')).toBeNull();
   });
 
   it('does NOT show EmptyState when there are messages', () => {

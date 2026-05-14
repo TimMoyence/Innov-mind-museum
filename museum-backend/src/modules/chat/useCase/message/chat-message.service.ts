@@ -11,6 +11,7 @@ import { StreamBuffer } from '@modules/chat/useCase/orchestration/stream-buffer'
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { env } from '@src/config/env';
 
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
@@ -298,6 +299,11 @@ export class ChatMessageService {
       return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
     }
 
+    // A5 (R4) — `chat.phase.composing` Langfuse span wraps the orchestrator
+    // call (the dominant LLM window). Sibling, not replacement, of the existing
+    // `chat_phase_duration_seconds{phase=llm}` Prom dimension owned by the
+    // LangChain orchestrator adapter (spec §1.1 Q2 — distinct concerns).
+    const composingStartedAtMs = Date.now();
     let aiResult: OrchestratorOutput;
     try {
       aiResult = await this.orchestrator.generate(orchestratorInput);
@@ -308,6 +314,11 @@ export class ChatMessageService {
       // AppError subclasses (CircuitOpenError 503, etc.) verbatim.
       throw mapOrchestratorError(err, requestId);
     }
+    emitChatPhaseSpan('composing', composingStartedAtMs, {
+      sessionId,
+      requestId,
+      hasImage: Boolean(orchestratorInput.image),
+    });
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
     return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
