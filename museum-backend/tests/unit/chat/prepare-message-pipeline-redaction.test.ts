@@ -5,7 +5,7 @@
  * from the guardrail layer onto `PrepareReady` so the downstream call site
  * (ChatMessageService) can substitute it for the LLM payload.
  */
-import { makeSession } from 'tests/helpers/chat/message.fixtures';
+import { makeSession, makeSessionUser } from 'tests/helpers/chat/message.fixtures';
 import { makeChatRepo } from 'tests/helpers/chat/repo.fixtures';
 
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
@@ -43,7 +43,7 @@ describe('PrepareMessagePipeline — R3 redactedText propagation', () => {
   it('propagates guardrail.redactedText onto PrepareReady when provider scrubs PII', async () => {
     const session = makeSession({
       id: SESSION_UUID,
-      user: { id: 1 } as ChatSessionUser,
+      user: makeSessionUser(1),
     });
     const repository = makeChatRepo({
       getSessionById: jest.fn().mockResolvedValue(session),
@@ -84,7 +84,7 @@ describe('PrepareMessagePipeline — R3 redactedText propagation', () => {
   it('leaves redactedText undefined when the provider returns no sanitized variant', async () => {
     const session = makeSession({
       id: SESSION_UUID,
-      user: { id: 1 } as ChatSessionUser,
+      user: makeSessionUser(1),
     });
     const repository = makeChatRepo({
       getSessionById: jest.fn().mockResolvedValue(session),
@@ -115,10 +115,3 @@ describe('PrepareMessagePipeline — R3 redactedText propagation', () => {
     expect(prep.redactedText).toBeUndefined();
   });
 });
-
-// Minimal session-user shape needed for `ensureSessionAccess` ownership check.
-// Mirrors `tests/helpers/chat/message.fixtures.ts:makeSessionUser` without
-// importing the helper (avoids an extra `as ChatSession['user']` cast here).
-interface ChatSessionUser {
-  id: number;
-}

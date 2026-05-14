@@ -25,6 +25,7 @@
 import { UpdateTicketStatusUseCase } from '@modules/support/useCase/ticket-admin/updateTicketStatus.useCase';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
+import { makeTicket } from 'tests/helpers/support/ticket.fixtures';
 
 // Mock the audit module — the use case imports the singleton directly.
 jest.mock('@shared/audit', () => ({
@@ -41,14 +42,16 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
     repo = new InMemorySupportRepository();
     useCase = new UpdateTicketStatusUseCase(repo);
 
-    const seeded = repo.seed({
-      id: 'ticket-upd-mut-1',
-      userId: 10,
-      subject: 'Update test',
-      description: 'Testing updates',
-      status: 'open',
-      priority: 'medium',
-    });
+    const seeded = repo.seed(
+      makeTicket({
+        id: 'ticket-upd-mut-1',
+        userId: 10,
+        subject: 'Update test',
+        description: 'Testing updates',
+        status: 'open',
+        priority: 'medium',
+      }),
+    );
     ticketId = seeded.id;
     jest.clearAllMocks();
   });

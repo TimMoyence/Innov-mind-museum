@@ -16,6 +16,7 @@
 
 import { AddTicketMessageUseCase } from '@modules/support/useCase/ticket-user/addTicketMessage.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
+import { makeTicket } from 'tests/helpers/support/ticket.fixtures';
 
 describe('AddTicketMessageUseCase — mutation coverage', () => {
   let useCase: AddTicketMessageUseCase;
@@ -26,13 +27,15 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
     repo = new InMemorySupportRepository();
     useCase = new AddTicketMessageUseCase(repo);
 
-    const seeded = repo.seed({
-      id: 'ticket-msg-mut-1',
-      userId: 10,
-      subject: 'Mutation test',
-      description: 'desc',
-      status: 'open',
-    });
+    const seeded = repo.seed(
+      makeTicket({
+        id: 'ticket-msg-mut-1',
+        userId: 10,
+        subject: 'Mutation test',
+        description: 'desc',
+        status: 'open',
+      }),
+    );
     ticketId = seeded.id;
   });
 

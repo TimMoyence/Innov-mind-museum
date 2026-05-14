@@ -7,6 +7,7 @@
 import { ListUserTicketsUseCase } from '@modules/support/useCase/ticket-user/listUserTickets.useCase';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/ticket/support.types';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
+import { makeTicket } from 'tests/helpers/support/ticket.fixtures';
 
 describe('ListUserTicketsUseCase — mutation kills', () => {
   let useCase: ListUserTicketsUseCase;
@@ -15,14 +16,16 @@ describe('ListUserTicketsUseCase — mutation kills', () => {
   beforeEach(() => {
     repo = new InMemorySupportRepository();
     useCase = new ListUserTicketsUseCase(repo);
-    repo.seed({
-      id: 't1',
-      userId: 10,
-      subject: 'Ticket 1',
-      description: 'd1',
-      status: 'open',
-      priority: 'low',
-    });
+    repo.seed(
+      makeTicket({
+        id: 't1',
+        userId: 10,
+        subject: 'Ticket 1',
+        description: 'd1',
+        status: 'open',
+        priority: 'low',
+      }),
+    );
   });
 
   // ── L31:43 EqualityOperator: `input.limit < 1` → `input.limit <= 1`

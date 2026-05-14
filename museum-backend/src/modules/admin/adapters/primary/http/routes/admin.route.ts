@@ -44,6 +44,12 @@ import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 const adminRouter: Router = Router();
 
+function parseUserIdParam(req: Request): number {
+  const userId = Number.parseInt(req.params.id, 10);
+  if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+  return userId;
+}
+
 // GET /api/admin/users — Admin & moderator: paginated user list
 // Moderators need user lookup for ticket assignment / report triage.
 // Role mutation (PATCH /:id/role) remains admin-only below.
@@ -77,8 +83,7 @@ adminRouter.get(
   isAuthenticated,
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response) => {
-    const userId = Number.parseInt(req.params.id, 10);
-    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+    const userId = parseUserIdParam(req);
 
     const user = await getUserByIdUseCase.execute({ userId });
 
@@ -93,8 +98,7 @@ adminRouter.patch(
   requireRole('admin'),
   validateBody(changeUserRoleSchema),
   async (req: Request, res: Response) => {
-    const userId = Number.parseInt(req.params.id, 10);
-    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+    const userId = parseUserIdParam(req);
 
     const { role } = req.body as { role: string };
 
@@ -117,8 +121,7 @@ adminRouter.post(
   isAuthenticated,
   requireRole('super_admin'),
   async (req: Request, res: Response) => {
-    const userId = Number.parseInt(req.params.id, 10);
-    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+    const userId = parseUserIdParam(req);
 
     const updated = await suspendUserUseCase.execute({
       userId,
@@ -137,8 +140,7 @@ adminRouter.post(
   isAuthenticated,
   requireRole('super_admin'),
   async (req: Request, res: Response) => {
-    const userId = Number.parseInt(req.params.id, 10);
-    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+    const userId = parseUserIdParam(req);
 
     const updated = await unsuspendUserUseCase.execute({
       userId,
@@ -158,8 +160,7 @@ adminRouter.delete(
   isAuthenticated,
   requireRole('super_admin'),
   async (req: Request, res: Response) => {
-    const userId = Number.parseInt(req.params.id, 10);
-    if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+    const userId = parseUserIdParam(req);
 
     const deleted = await deleteUserUseCase.execute({
       userId,
