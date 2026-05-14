@@ -178,17 +178,22 @@ See [`docs/MIGRATION_GOVERNANCE.md`](docs/MIGRATION_GOVERNANCE.md) for full rule
 
 ## AI Safety
 
-Chat pipeline use layered defenses:
+Chat pipeline use layered defenses (defense-in-depth, ADR-015 amendment 2026-05-14 — dual V2 layers running in parallel):
 
-1. **Input guardrail** (`art-topic-guardrail.ts`) — keyword-based pre-filter for insults, off-topic, injection, external actions. Runs before LLM call.
+1. **V1 keyword guardrail** (`art-topic-guardrail.ts`) — fast keyword pre-filter for insults, off-topic, injection, external actions. ~5ms, synchronous. Runs first.
 2. **Structural prompt isolation** — system instructions + section prompts placed BEFORE user content in LLM message array. Boundary marker `[END OF SYSTEM INSTRUCTIONS]` separates system from user input.
 3. **Input sanitization** — user-controlled fields (`location`, `locale`) sanitized (Unicode normalization, zero-width char stripping, truncation) before prompt inclusion via `sanitizePromptInput()`.
-4. **Output guardrail** — same keyword approach on LLM output to catch leaks.
+4. **V2 LLM Guard sidecar** (`llm-guard.adapter.ts`) — ProtectAI Python sidecar (self-hosted, free), scans for prompt-injection / PII / toxicity / bias. Fail-CLOSED contract (ADR-047). Activates when `GUARDRAILS_V2_LLM_GUARD_URL` set. 1500ms timeout + circuit breaker.
+5. **V2 LLM judge** (`llm-judge-guardrail.ts`) — OpenAI-as-judge structured output with confidence score on uncertain V1 allows (msg ≥ 50 chars). Activates when `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0`. $5/day cap, 500ms timeout, fail-OPEN to V1 decision on timeout/error.
+6. **Output guardrail** — same keyword approach on LLM output to catch leaks.
+
+The 2 V2 layers were previously mutually exclusive via `GUARDRAILS_V2_CANDIDATE` flag; that flag was retired 2026-05-14 (ADR-015) so they now run together.
 
 When modifying chat pipeline:
 - Never inject user-controlled fields directly into system prompts
 - Keep message ordering: `[SystemMessage(system), SystemMessage(section), ...history, HumanMessage(user)]`
 - Guardrail in `chat.service.ts` = single source of truth for content filtering — no duplicate checks elsewhere
+- V2 layers are independent — disabling one MUST NOT touch the other's config
 
 ### Voice V1 (2026-04)
 
@@ -254,7 +259,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (27826 symbols, 43913 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (28098 symbols, 44331 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

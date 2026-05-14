@@ -1,35 +1,71 @@
 # ADR-015 — Chat Guardrail v2: LLM Judge Layer + Multilingual Insults
 
-**Status**: Amended 2026-05-14 — master `GUARDRAILS_V2_CANDIDATE` flag retired. Each V2 layer self-activates from its own config presence (see Amendment below).
+**Status**: Amended 2026-05-14 — master `GUARDRAILS_V2_CANDIDATE` flag retired; both V2 layers now activate independently and run **in parallel** as defense-in-depth (see Amendment below).
 **Date**: 2026-04-30 (original), 2026-05-14 (amendment)
 **Deciders**: Tech Lead (sec-hardening-2026-04-30 team), user gate
 **Numbering note**: Originally ADR-012 in the design spec. Renumbered because ADR-012 was concurrently taken by `ADR-012-test-pyramid-taxonomy.md` from a parallel workstream. Commit message `80e3e1cb` references the design-spec numbering; this file is the authoritative record.
 
-## Amendment 2026-05-14 — `GUARDRAILS_V2_CANDIDATE` retired (ROADMAP_TEAM T1.7#2)
+## Amendment 2026-05-14 — `GUARDRAILS_V2_CANDIDATE` retired ; dual-layer defense-in-depth enabled (ROADMAP_TEAM T1.7#2)
 
-The master env flag `GUARDRAILS_V2_CANDIDATE` (`'off' | 'llm-guard' | 'llm-judge'`) is **removed**. The flag was a feature-flag in spirit — exactly the pattern `feedback_no_feature_flags_prelaunch` doctrine forbids until B2B revenue. Replacement: each V2 layer activates from its **own required config presence**.
+### Motivation
+
+The master env flag `GUARDRAILS_V2_CANDIDATE` (`'off' | 'llm-guard' | 'llm-judge'`) is **removed** for two reasons :
+
+1. **Doctrine `feedback_no_feature_flags_prelaunch`** — the flag was a feature-flag in spirit, exactly the pattern forbidden pré-launch.
+2. **Mutual exclusivity was an artificial limit, not a design choice.** The original `candidate` enum forced operators to pick *either* the sidecar (`llm-guard`) *or* the structured-output judge (`llm-judge`). In production (`CANDIDATE=llm-guard`), the judge layer **never ran** — operators who believed they had defense-in-depth in fact had only the sidecar. The two layers operate at independent points of the chat pipeline and have no architectural reason to be mutually exclusive.
+
+### New activation model
+
+Each V2 layer activates from its **own required config presence**, and both run **simultaneously** when both are configured :
 
 | Layer | Old activation | New activation |
 |---|---|---|
-| **LLM Guard sidecar** | `GUARDRAILS_V2_CANDIDATE === 'llm-guard'` AND `GUARDRAILS_V2_LLM_GUARD_URL` set | `GUARDRAILS_V2_LLM_GUARD_URL` set (URL presence is the toggle) |
-| **Structured-output judge** | `GUARDRAILS_V2_CANDIDATE === 'llm-judge'` (forced budget default 500 cents) | `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` (default kept at `500` cents = 5€/day cap to preserve test coverage and historic budget-active behaviour ; production callers that previously had `candidate=off` to disable both layers MUST now explicitly set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0`) |
+| **LLM Guard sidecar** (ProtectAI, fail-CLOSED HTTP scanner) | `GUARDRAILS_V2_CANDIDATE === 'llm-guard'` AND `GUARDRAILS_V2_LLM_GUARD_URL` set | `GUARDRAILS_V2_LLM_GUARD_URL` set (URL presence is the toggle) |
+| **Structured-output judge** (LLM-as-judge with confidence score + JudgeDecision) | `GUARDRAILS_V2_CANDIDATE === 'llm-judge'` (mutually exclusive with sidecar) | `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` (default `500` cents = $5/day OpenAI cap) |
 
-Code changes (commit accompanying this amendment):
+Both layers run on top of the V1 keyword pre-filter (`art-topic-guardrail.ts`), structural prompt isolation, and input sanitization (`sanitizePromptInput()`). The pipeline order :
+
+1. **V1 keyword guardrail** (synchronous, ~5ms) — fast reject on insult / injection / off-topic
+2. **LLM Guard sidecar** (HTTP, fail-CLOSED, 1500ms timeout, circuit breaker ADR-047) — multi-scanner Python sidecar
+3. **LLM judge** (OpenAI structured output, 500ms timeout, fails-open) — confidence score + verdict on uncertain V1 allows (msg ≥ 50 chars, budget remaining)
+
+The keyword filter handles 100% of traffic ; the sidecar handles 100% ; the judge handles only V1-allow-but-uncertain on long messages, capped at $5/day.
+
+### Code changes (commit accompanying this amendment)
+
 - `src/config/env-resolvers.ts` : `resolveGuardrailsCandidate` + `guardrailsCandidateSchema` removed
-- `src/config/env.types.ts` : `GuardrailsV2Candidate` type removed (legacy comment retained), `guardrails.candidate` field dropped
-- `src/config/env.ts` : `guardrails.candidate` field dropped, `budgetCentsPerDay` default kept at `500` (revert from initial `0` proposal — preserved test coverage on `judgeWithLlm`)
-- `src/modules/chat/chat-module.ts` : `buildGuardrailProvider` keyed off `env.guardrails.llmGuardUrl`; `llmJudgeEnabled` keyed off `budgetCentsPerDay > 0`
+- `src/config/env.types.ts` : `GuardrailsV2Candidate` type removed, `guardrails.candidate` field dropped
+- `src/config/env.ts` : `guardrails.candidate` field dropped, `budgetCentsPerDay` default kept at `500` cents
+- `src/modules/chat/chat-module.ts` : `buildGuardrailProvider` keyed off `env.guardrails.llmGuardUrl` ; `llmJudgeEnabled` keyed off `budgetCentsPerDay > 0` (no longer mutually exclusive)
 - 3 comment sites updated (`chat.service.ts`, `chat-message.service.ts`, `guardrail-evaluation.service.ts`)
 - `tests/integration/security/auth-email-service-kind-prod-reject.test.ts` mock env block dropped `candidate: 'off'`
-- `museum-backend/.env.example`, `.env.production.example`, `deploy/docker-compose.prod.yml`, `docker-compose.guardrails.yml` : kept the legacy `GUARDRAILS_V2_CANDIDATE=…` line as dead config until the next ops review (the code no longer reads it; harmless but reminds operators of the original switch)
+- `museum-backend/.env.example`, `.env.production.example`, `deploy/docker-compose.prod.yml`, `docker-compose.guardrails.yml` : `GUARDRAILS_V2_CANDIDATE=…` line removed (dead config), `LLM_GUARDRAIL_*` judge layer vars added explicit to surface the dual-layer posture
 
-**Behavioural impact** :
-- Production deploy that already sets `GUARDRAILS_V2_LLM_GUARD_URL` → no change for the sidecar layer (still wired, fail-CLOSED contract intact per ADR-047).
-- Production deploy that previously had `GUARDRAILS_V2_CANDIDATE=off` → the judge layer is now activated by default (budget 500). **Operators that want the old "both layers OFF" posture MUST explicitly set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0` in `/srv/museum/.env` before/with the next deploy.** This is a deliberate trade-off: keeping the default at 500 preserves the existing `judgeWithLlm` test coverage and matches the "judge ready to scale up" posture intended by F4. The opt-out is a single env line.
-- Production deploy that had `GUARDRAILS_V2_CANDIDATE=llm-judge` (judge ON, guard OFF) → judge stays ON via default budget 500; guard stays OFF until URL is set. Same effective behaviour.
-- Test mocks that asserted `candidate === 'off'` to skip both layers → behaviour-equivalent only when the test also sets `budgetCentsPerDay: 0`. Existing test files that simply omit the candidate field will now exercise the judge code path (budget 500).
+### Production posture (2026-05-14, /srv/museum/.env)
 
-**Reversal path** : a new ADR amending or superseding this one. Any reintroduction of a master flag must explicitly justify why doctrine `feedback_no_feature_flags_prelaunch` no longer applies (typically because pre-launch is over).
+```bash
+# Sidecar (always wired pre-launch)
+GUARDRAILS_V2_LLM_GUARD_URL=http://llm-guard:8081
+GUARDRAILS_V2_TIMEOUT_MS=1500   # bumped from 500 after 2026-05-12 incident
+GUARDRAILS_V2_OBSERVE_ONLY=false # enforce mode
+
+# Judge layer (activated 2026-05-14 — was OFF before due to mutual-exclusivity)
+LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=500
+LLM_GUARDRAIL_JUDGE_TIMEOUT_MS=500
+LLM_GUARDRAIL_JUDGE_MIN_LENGTH=50
+GUARDRAIL_BUDGET_BACKEND=redis
+```
+
+### Behavioural impact
+
+- Production deploy that already sets `GUARDRAILS_V2_LLM_GUARD_URL` → sidecar layer behaviour unchanged (still wired, fail-CLOSED per ADR-047).
+- Production deploy that had `GUARDRAILS_V2_CANDIDATE=llm-guard` → judge layer now activates **in addition** to the sidecar (defense-in-depth). Net new OpenAI cost capped at `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY` ($5/day default).
+- Production deploy that wants to disable the judge layer → set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0` explicitly.
+- Test mocks that asserted `candidate === 'off'` to skip both layers → must omit the URL **and** set `budgetCentsPerDay: 0` to keep the same posture.
+
+### Reversal path
+
+A new ADR amending or superseding this one. Any reintroduction of a master flag must explicitly justify why doctrine `feedback_no_feature_flags_prelaunch` no longer applies (typically because pre-launch is over).
 
 ## Context
 

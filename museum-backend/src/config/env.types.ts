@@ -543,12 +543,11 @@ export interface AppEnv {
     observeOnly: boolean;
     /**
      * F4 (2026-04-30) — daily cost cap (in cents) for the structured-output
-     * judge layer. Default `500` (5€/day) preserves historic post-flag
-     * behaviour AND existing `judgeWithLlm` test coverage (the budget gate
-     * disables the judge when `cap <= 0`). Set explicitly to `0` to disable
-     * the layer (matches the retired `GUARDRAILS_V2_CANDIDATE=off` semantics
-     * — ADR-015 amendment 2026-05-14). Tracked via the configured backend
-     * (memory per-process, or Redis shared-across-replicas).
+     * judge layer. Default `500` ($5/day) activates the judge in parallel
+     * with the sidecar (defense-in-depth, ADR-015 amendment 2026-05-14 —
+     * dual-layer enabled). Budget gate disables the layer when `cap <= 0`.
+     * Tracked via the configured backend (memory per-process, or Redis
+     * shared-across-replicas).
      */
     budgetCentsPerDay: number;
     /**

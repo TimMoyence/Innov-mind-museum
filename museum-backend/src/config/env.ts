@@ -413,13 +413,10 @@ const env: AppEnv = {
     timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 1500),
     observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
     // F4 (2026-04-30) — LLM judge layer daily cost cap (cents). Default 500
-    // (5€/day) preserves the historic budget-active behaviour AND existing
-    // test coverage on `judgeWithLlm` (which checks `if (cap <= 0) return null`).
-    // Set explicitly to `0` to disable the judge layer entirely (matches the
-    // old `GUARDRAILS_V2_CANDIDATE=off` semantics, retired 2026-05-14 — ADR-015
-    // amendment). Production callers that previously relied on `candidate=off`
-    // to disable both layers MUST now also set `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY=0`
-    // explicitly in `/srv/museum/.env` to preserve that posture.
+    // ($5/day) activates the structured-output judge in parallel with the
+    // sidecar (defense-in-depth, ADR-015 amendment 2026-05-14 — both layers
+    // now run together rather than via the retired mutually-exclusive
+    // `GUARDRAILS_V2_CANDIDATE` flag). Set to `0` to disable the judge layer.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
