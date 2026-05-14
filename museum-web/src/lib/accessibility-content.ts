@@ -14,7 +14,7 @@ export interface AccessibilityContent {
 const en: AccessibilityContent = {
   title: 'Accessibility Statement',
   version: 'v0.2',
-  lastUpdated: '2026-05-13',
+  lastUpdated: '2026-05-14',
   sections: [
     {
       id: 'status',
@@ -37,8 +37,8 @@ const en: AccessibilityContent = {
       id: 'findings',
       title: '3. Identified non-conformances (automated audit, 2026-05-13)',
       paragraphs: [
-        'Color contrast — admin login divider (WCAG 1.4.3, Serious): the "or" / "ou" separator on /{locale}/admin/login uses the text-text-muted token (#94A3B8) on white (#FFFFFF), yielding a 2.56:1 contrast ratio instead of the required 4.5:1. Affects both /fr/admin/login and /en/admin/login. Target fix: 2026-06-30.',
-        'All other audited routes (/{locale}, /{locale}/support, /{locale}/privacy, /{locale}/reset-password, /{locale}/verify-email) returned zero automated violations under WCAG 2.1 A + AA tag sets. This does NOT imply full conformance — see § 4.',
+        'Color contrast — admin text-text-muted token (WCAG 1.4.3, Serious): the muted text token was raised from #94A3B8 to #5E7184 on 2026-05-14 (run 2026-05-14-i18n-a11y-eaa-batch), lifting the contrast on white from 2.56:1 to 4.78:1. Four status badges (gray-500 on gray-100, 4.39:1) on tickets/support/users/reports admin pages were also lifted to gray-600 (≥7:1). Eleven select elements across tickets/reports/analytics admin pages received explicit aria-label values to satisfy WCAG 4.1.2.',
+        'A live axe-core sweep on 18 routes (chromium, WCAG 2.1 A + AA tag sets) returned zero violations on 2026-05-14 — landing, security, accessibility, privacy, support, login, admin dashboard, admin users, admin mfa, admin audit-logs, admin tickets, admin support, admin analytics, admin reports, admin reviews, verify-email, confirm-email-change, reset-password. This does NOT imply full conformance — see § 4.',
       ],
     },
     {
@@ -72,7 +72,7 @@ const en: AccessibilityContent = {
 const fr: AccessibilityContent = {
   title: "Déclaration d'accessibilité",
   version: 'v0.2',
-  lastUpdated: '13 mai 2026',
+  lastUpdated: '14 mai 2026',
   sections: [
     {
       id: 'status',
@@ -95,8 +95,8 @@ const fr: AccessibilityContent = {
       id: 'findings',
       title: '3. Non-conformités identifiées (audit automatisé, 2026-05-13)',
       paragraphs: [
-        'Contraste de couleur — séparateur de la page de connexion admin (WCAG 1.4.3, Serious) : le séparateur « ou » / « or » sur /{locale}/admin/login utilise le token text-text-muted (#94A3B8) sur fond blanc (#FFFFFF), produisant un ratio de contraste de 2.56:1 au lieu des 4.5:1 requis. Affecte /fr/admin/login et /en/admin/login. Échéance de correction : 2026-06-30.',
-        "Toutes les autres routes auditées (/{locale}, /{locale}/support, /{locale}/privacy, /{locale}/reset-password, /{locale}/verify-email) n'ont retourné aucune violation automatisée sous les jeux de règles WCAG 2.1 A + AA. Cela n'implique PAS une conformité totale — cf. § 4.",
+        "Contraste de couleur — token text-text-muted admin (WCAG 1.4.3, Serious) : le token de texte « muted » a été remonté de #94A3B8 à #5E7184 le 2026-05-14 (run 2026-05-14-i18n-a11y-eaa-batch), portant le contraste sur fond blanc de 2.56:1 à 4.78:1. Quatre badges de statut (gray-500 sur gray-100, 4.39:1) sur les pages admin tickets/support/users/reports ont été relevés à gray-600 (≥7:1). Onze éléments select sur tickets/reports/analytics admin ont reçu un aria-label explicite pour satisfaire WCAG 4.1.2.",
+        "Un balayage axe-core en direct sur 18 routes (chromium, jeux de règles WCAG 2.1 A + AA) n'a remonté aucune violation le 2026-05-14 — landing, security, accessibility, privacy, support, login, admin dashboard, admin users, admin mfa, admin audit-logs, admin tickets, admin support, admin analytics, admin reports, admin reviews, verify-email, confirm-email-change, reset-password. Cela n'implique PAS une conformité totale — cf. § 4.",
       ],
     },
     {

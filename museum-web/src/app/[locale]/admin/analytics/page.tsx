@@ -243,6 +243,7 @@ export default function AnalyticsPage() {
 
             <div className="flex gap-3">
               <select
+                aria-label={adminDict.analyticsPage.usage}
                 value={granularity}
                 onChange={(e) => {
                   setGranularity(e.target.value as AnalyticsGranularity);
@@ -257,6 +258,7 @@ export default function AnalyticsPage() {
               </select>
 
               <select
+                aria-label={adminDict.analyticsPage.days}
                 value={days}
                 onChange={(e) => {
                   setDays(Number(e.target.value));

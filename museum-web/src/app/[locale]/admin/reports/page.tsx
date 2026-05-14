@@ -12,7 +12,7 @@ import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types'
 const STATUS_COLORS: Record<ReportStatus, string> = {
   pending: 'bg-amber-100 text-amber-700',
   reviewed: 'bg-green-100 text-green-700',
-  dismissed: 'bg-gray-100 text-gray-500',
+  dismissed: 'bg-gray-100 text-gray-600',
 };
 
 const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
@@ -99,6 +99,7 @@ export default function ReportsPage() {
       {/* Filter */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
+          aria-label={adminDict.common.allStatuses}
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value as ReportStatus | '');
@@ -256,6 +257,7 @@ export default function ReportsPage() {
             )}
 
             <select
+              aria-label={adminDict.reportsPage.review}
               value={newStatus}
               onChange={(e) => {
                 setNewStatus(e.target.value as ReportStatus);

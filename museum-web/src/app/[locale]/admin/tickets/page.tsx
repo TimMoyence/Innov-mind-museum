@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-700',
   in_progress: 'bg-amber-100 text-amber-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-500',
+  closed: 'bg-gray-100 text-gray-600',
 };
 
 const PRIORITY_COLORS: Record<TicketPriority, string> = {
@@ -107,6 +107,7 @@ export default function TicketsPage() {
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
+          aria-label={adminDict.common.allStatuses}
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value as TicketStatus | '');
@@ -122,6 +123,7 @@ export default function TicketsPage() {
         </select>
 
         <select
+          aria-label={adminDict.common.allPriorities}
           value={priorityFilter}
           onChange={(e) => {
             setPriorityFilter(e.target.value as TicketPriority | '');
@@ -282,6 +284,7 @@ export default function TicketsPage() {
               {adminDict.common.status}
             </label>
             <select
+              aria-label={adminDict.common.status}
               value={newStatus}
               onChange={(e) => {
                 setNewStatus(e.target.value as TicketStatus);
@@ -299,6 +302,7 @@ export default function TicketsPage() {
               {adminDict.common.priority}
             </label>
             <select
+              aria-label={adminDict.common.priority}
               value={newPriority}
               onChange={(e) => {
                 setNewPriority(e.target.value as TicketPriority);

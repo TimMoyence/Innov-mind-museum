@@ -30,7 +30,8 @@ export const textColors = {
   primary: '#0F172A',
   secondary: '#334155',
   tertiary: '#475569',
-  muted: '#94A3B8',
+  // 4.78:1 contrast on white — WCAG 1.4.3 AA. Was #94A3B8 (2.56:1).
+  muted: '#5E7184',
   placeholder: '#64748B',
 } as const;
 
