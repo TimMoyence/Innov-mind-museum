@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
@@ -13,10 +14,22 @@ import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton'
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { SourceCitation } from '@/features/chat/ui/SourceCitation';
+import { forceOpaque } from '@/shared/ui/colorUtils';
+import { useReducedTransparency } from '@/shared/ui/hooks/useReducedTransparency';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
 import { FeedbackSection, ImageSection, StreamingBody, TtsSection } from './bubbleSections';
+
+/**
+ * A3 — Local UI tuning value for the assistant bubble's frosted-glass effect.
+ *
+ * Chosen between `<GlassCard>` 52 (UI cards, low text density) and
+ * `<FloatingContextMenu>` 64 (tactical overlay). The bubble is text-dense, so
+ * we keep the blur lighter (42) to preserve readability. This is NOT a design
+ * token — pure local UI constant, per spec §1.8 R27.
+ */
+export const ASSISTANT_BUBBLE_BLUR_INTENSITY = 42;
 
 interface ChatMessageBubbleProps {
   message: ChatUiMessage;
@@ -66,6 +79,7 @@ export const ChatMessageBubble = React.memo(
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
+    const reduceTransparency = useReducedTransparency();
     const isAssistant = message.role === 'assistant';
     const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -162,30 +176,51 @@ export const ChatMessageBubble = React.memo(
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onReport(message.id);
             }}
-            style={[
-              styles.bubble,
-              // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
-              {
-                backgroundColor: theme.assistantBubble,
-                borderColor: theme.assistantBubbleBorder,
-                alignSelf: 'flex-start',
-              },
-            ]}
             accessibilityRole="text"
             accessibilityLabel={t('a11y.chat.assistant_message')}
             accessibilityHint={t('a11y.chat.long_press_hint')}
           >
-            {bubbleContent}
+            {reduceTransparency ? (
+              <View
+                testID="chat-bubble-assistant"
+                style={[
+                  styles.bubble,
+                  styles.bubbleAssistantOpaque,
+                  {
+                    backgroundColor: forceOpaque(theme.assistantBubble),
+                    borderColor: theme.assistantBubbleBorder,
+                  },
+                ]}
+              >
+                {bubbleContent}
+              </View>
+            ) : (
+              <BlurView
+                testID="chat-bubble-assistant"
+                intensity={ASSISTANT_BUBBLE_BLUR_INTENSITY}
+                tint={theme.blurTint}
+                style={[
+                  styles.bubble,
+                  styles.bubbleAssistantBlur,
+                  {
+                    backgroundColor: theme.assistantBubble,
+                    borderColor: theme.assistantBubbleBorder,
+                  },
+                ]}
+              >
+                {bubbleContent}
+              </BlurView>
+            )}
           </Pressable>
         ) : (
           <View
+            testID="chat-bubble-user"
             style={[
               styles.bubble,
-              // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
+              styles.bubbleUser,
               {
-                backgroundColor: theme.userBubble,
+                backgroundColor: forceOpaque(theme.userBubble),
                 borderColor: theme.userBubbleBorder,
-                alignSelf: 'flex-end',
               },
             ]}
             accessibilityRole="text"
@@ -269,6 +304,17 @@ const styles = StyleSheet.create({
     padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
     borderWidth: semantic.input.borderWidth,
+  },
+  bubbleUser: {
+    alignSelf: 'flex-end',
+  },
+  bubbleAssistantOpaque: {
+    alignSelf: 'flex-start',
+  },
+  bubbleAssistantBlur: {
+    alignSelf: 'flex-start',
+    // Required to clip the frosted-glass effect to the bubble's borderRadius.
+    overflow: 'hidden',
   },
   sourcesRow: {
     flexDirection: 'row',
