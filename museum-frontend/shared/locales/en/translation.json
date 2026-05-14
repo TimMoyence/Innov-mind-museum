@@ -466,6 +466,22 @@
         "disclosure_body": "This answer is based on the AI's general knowledge. No source was retrieved to support specific facts. Verify before relying on details."
       }
     },
+    "artworkHero": {
+      "untitled": "Untitled artwork",
+      "a11y_label": "Artwork: {{title}} by {{artist}}, tap to expand",
+      "a11y_label_untitled": "Artwork: untitled, tap to expand",
+      "a11y_hint": "Opens fullscreen with pinch-to-zoom",
+      "expand": "Expand",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identification pending"
+      },
+      "modal": {
+        "close": "Close",
+        "a11y_pinch_hint": "Pinch with two fingers to zoom",
+        "title_fallback": "Artwork preview"
+      }
+    },
     "compare": {
       "title": "Similar artworks",
       "empty": "No similar artwork found — try a clearer photo",

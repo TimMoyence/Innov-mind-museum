@@ -466,6 +466,22 @@
         "disclosure_body": "この回答はAIの一般的な知識に基づいており、特定の事実を裏付ける出典は取得されていません。詳細を信頼する前にご確認ください。"
       }
     },
+    "artworkHero": {
+      "untitled": "無題の作品",
+      "a11y_label": "作品: {{artist}}の{{title}}、タップで拡大",
+      "a11y_label_untitled": "無題の作品、タップで拡大",
+      "a11y_hint": "全画面を開き、ピンチでズーム",
+      "expand": "拡大",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "識別中"
+      },
+      "modal": {
+        "close": "閉じる",
+        "a11y_pinch_hint": "二本指でピンチして拡大",
+        "title_fallback": "作品プレビュー"
+      }
+    },
     "compare": {
       "title": "類似する作品",
       "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",

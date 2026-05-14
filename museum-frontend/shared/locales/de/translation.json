@@ -466,6 +466,22 @@
         "disclosure_body": "Diese Antwort basiert auf dem allgemeinen Wissen der KI. Es wurde keine Quelle abgerufen. Bitte vor dem Vertrauen überprüfen."
       }
     },
+    "artworkHero": {
+      "untitled": "Werk ohne Titel",
+      "a11y_label": "Werk: {{title}} von {{artist}}, antippen zum Vergrößern",
+      "a11y_label_untitled": "Werk ohne Titel, antippen zum Vergrößern",
+      "a11y_hint": "Öffnet Vollbild mit Pinch-Zoom",
+      "expand": "Vergrößern",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identifikation läuft"
+      },
+      "modal": {
+        "close": "Schließen",
+        "a11y_pinch_hint": "Mit zwei Fingern zum Zoomen ziehen",
+        "title_fallback": "Werkvorschau"
+      }
+    },
     "compare": {
       "title": "Ähnliche Werke",
       "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",

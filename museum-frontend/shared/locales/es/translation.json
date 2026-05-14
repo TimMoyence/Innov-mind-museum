@@ -466,6 +466,22 @@
         "disclosure_body": "Esta respuesta se basa en el conocimiento general de la IA. No se recuperó ninguna fuente. Verifica antes de fiarte de los detalles."
       }
     },
+    "artworkHero": {
+      "untitled": "Obra sin título",
+      "a11y_label": "Obra: {{title}} de {{artist}}, toca para ampliar",
+      "a11y_label_untitled": "Obra sin título, toca para ampliar",
+      "a11y_hint": "Abre a pantalla completa con zoom por pellizco",
+      "expand": "Ampliar",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identificación pendiente"
+      },
+      "modal": {
+        "close": "Cerrar",
+        "a11y_pinch_hint": "Pellizca con dos dedos para hacer zoom",
+        "title_fallback": "Vista previa de la obra"
+      }
+    },
     "compare": {
       "title": "Obras similares",
       "empty": "No se encontró ninguna obra similar — prueba con una foto más nítida",

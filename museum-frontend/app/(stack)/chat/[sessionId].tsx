@@ -5,6 +5,8 @@ import {
   Platform,
   Text,
   TouchableWithoutFeedback,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
@@ -13,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useChatSession, type ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { useStatusPhase } from '@/features/chat/application/useStatusPhase';
+import { deriveHeroCollapsed, useArtworkHero } from '@/features/chat/application/useArtworkHero';
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
@@ -24,6 +27,8 @@ import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefet
 import { useChatSessionActions } from '@/features/chat/application/useChatSessionActions';
 import { useChatSessionInputHandlers } from '@/features/chat/application/useChatSessionInputHandlers';
 import { useChatSessionIntents } from '@/features/chat/application/useChatSessionIntents';
+import { ArtworkHeroCard } from '@/features/chat/ui/ArtworkHeroCard';
+import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
@@ -89,6 +94,28 @@ export default function ChatSessionScreen() {
   } = useChatSession(sessionId);
 
   useMuseumPrefetch(museumName ?? null, locale);
+
+  // A2 — Artwork hero card pinned. The model is derived purely from the
+  // message list (first user image + first matching assistant detectedArtwork).
+  // `heroCollapsed` flips on scroll past 80dp / re-expands below 40dp
+  // (hysteresis). `heroModalVisible` opens the fullscreen pinch-zoom modal on
+  // tap. Both states are screen-local — no global store (R29).
+  const heroModel = useArtworkHero(messages);
+  const [heroCollapsed, setHeroCollapsed] = useState(false);
+  const [heroModalVisible, setHeroModalVisible] = useState(false);
+
+  const onHeroExpand = useCallback(() => {
+    setHeroModalVisible(true);
+  }, []);
+
+  const onHeroModalClose = useCallback(() => {
+    setHeroModalVisible(false);
+  }, []);
+
+  const onListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    setHeroCollapsed((prev) => deriveHeroCollapsed(y, prev));
+  }, []);
 
   const {
     isRecording,
@@ -364,6 +391,8 @@ export default function ChatSessionScreen() {
             />
           ) : null}
 
+          <ArtworkHeroCard model={heroModel} collapsed={heroCollapsed} onExpand={onHeroExpand} />
+
           <ChatSessionSurface
             isLoading={isLoading}
             messages={messages}
@@ -381,6 +410,7 @@ export default function ChatSessionScreen() {
             currentPhase={currentPhase}
             surfaceStyle={styles.chatSurface}
             skeletonStyle={styles.skeletonChat}
+            onScroll={onListScroll}
           />
 
           <MediaAttachmentPanel
@@ -411,6 +441,8 @@ export default function ChatSessionScreen() {
       </TouchableWithoutFeedback>
 
       <BottomSheetRouter />
+
+      <ArtworkHeroModal visible={heroModalVisible} model={heroModel} onClose={onHeroModalClose} />
     </LiquidScreen>
   );
 }

@@ -466,6 +466,22 @@
         "disclosure_body": "Cette réponse repose sur le savoir général de l'IA. Aucune source n'a été récupérée. Vérifiez avant d'en dépendre."
       }
     },
+    "artworkHero": {
+      "untitled": "Œuvre sans titre",
+      "a11y_label": "Œuvre : {{title}} de {{artist}}, toucher pour agrandir",
+      "a11y_label_untitled": "Œuvre sans titre, toucher pour agrandir",
+      "a11y_hint": "Ouvre en plein écran, zoom au pincement",
+      "expand": "Agrandir",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identification en cours"
+      },
+      "modal": {
+        "close": "Fermer",
+        "a11y_pinch_hint": "Pincez avec deux doigts pour zoomer",
+        "title_fallback": "Aperçu de l'œuvre"
+      }
+    },
     "compare": {
       "title": "Œuvres similaires",
       "empty": "Aucune œuvre similaire trouvée — essaie une photo plus nette",

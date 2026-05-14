@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +56,12 @@ interface ChatMessageListProps {
    * entirely (silence-is-success — spec R17).
    */
   currentPhase?: ChatPipelinePhase | null;
+  /**
+   * A2 — Forwarded scroll handler from the screen so the artwork hero card
+   * can collapse/expand based on `scrollY`. Optional ; non-A2 callers can
+   * keep the existing call sites unchanged.
+   */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
 /**
@@ -68,6 +82,7 @@ export const ChatMessageList = ({
   onRetry,
   isAssistantPending = false,
   currentPhase = null,
+  onScroll,
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -232,6 +247,7 @@ export const ChatMessageList = ({
       getItemType={getMessageType}
       contentContainerStyle={styles.listContent}
       onContentSizeChange={handleContentSizeChange}
+      onScroll={onScroll}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       accessibilityLabel={t('a11y.chat.messages_list')}

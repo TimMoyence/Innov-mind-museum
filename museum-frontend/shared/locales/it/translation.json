@@ -466,6 +466,22 @@
         "disclosure_body": "Questa risposta si basa sulla conoscenza generale dell'IA. Nessuna fonte è stata recuperata. Verifica prima di fidarti dei dettagli."
       }
     },
+    "artworkHero": {
+      "untitled": "Opera senza titolo",
+      "a11y_label": "Opera: {{title}} di {{artist}}, tocca per ingrandire",
+      "a11y_label_untitled": "Opera senza titolo, tocca per ingrandire",
+      "a11y_hint": "Apre a schermo intero con zoom a pizzico",
+      "expand": "Ingrandisci",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identificazione in corso"
+      },
+      "modal": {
+        "close": "Chiudi",
+        "a11y_pinch_hint": "Pizzica con due dita per ingrandire",
+        "title_fallback": "Anteprima dell'opera"
+      }
+    },
     "compare": {
       "title": "Opere simili",
       "empty": "Nessuna opera simile trovata — prova una foto più nitida",

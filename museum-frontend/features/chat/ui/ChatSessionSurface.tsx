@@ -1,4 +1,4 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent, StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -31,6 +31,12 @@ interface ChatSessionSurfaceProps {
   currentPhase: ChatPipelinePhase | null;
   surfaceStyle: StyleProp<ViewStyle>;
   skeletonStyle: StyleProp<ViewStyle>;
+  /**
+   * A2 — Forwarded scroll handler propagated to the inner `<FlashList>`. Lets
+   * the screen drive the artwork hero card collapse/expand state. Optional ;
+   * existing callers can omit it.
+   */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
 /**
@@ -56,6 +62,7 @@ export const ChatSessionSurface = ({
   currentPhase,
   surfaceStyle,
   skeletonStyle,
+  onScroll,
 }: ChatSessionSurfaceProps) => (
   <GlassCard style={surfaceStyle} intensity={42}>
     {isLoading ? (
@@ -80,6 +87,7 @@ export const ChatSessionSurface = ({
           onRetry={onRetry}
           isAssistantPending={isAssistantPending}
           currentPhase={currentPhase}
+          onScroll={onScroll}
         />
         <AiDisclosureFooter />
       </>
