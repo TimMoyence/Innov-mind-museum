@@ -259,6 +259,25 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-11 — `@types/express-serve-static-core` pin à 5.0.6 (param widening 5.1.x)
+
+- **Localisation** :
+  ```
+  museum-backend/package.json:pnpm.overrides.@types/express-serve-static-core = "5.0.6"
+  ```
+- **Symptôme** : la version 5.1.0 / 5.1.1 a élargi `req.params[key]` de `string` à `string | string[]` (pour refléter des cas légitimes de paramètres multi-segments). Cette upcasting déclenche 27+ erreurs `TS2322` / `TS2345` sur l'ensemble des `*.route.ts` BE qui font `useCase.execute({ id: req.params.id })` ou `\`bucket:${req.params.id}\`` template literal.
+- **Pourquoi non résolu en V1** : élargissement TYPE-only (pas de runtime change), pin à 5.0.6 conserve la sémantique observée 2026-05-13. Migration ~30 fichiers route, non-trivial.
+- **Sprint d'origine** : 2026-05-14 (rollback Renovate PR #277 absorbé puis neutralisé via override pin).
+- **Effort estimé** : 0.5 jour si on bumpe l'override + narrowing systématique au callsite (`typeof X === 'string' ? X : undefined`). Mieux : helper `parseStringParam(req, key): string | undefined` réutilisable.
+- **Comment fermer** :
+  1. Créer helper `parseStringParam(req, key): string | undefined` dans `src/shared/middleware/`.
+  2. Codemod sur les 27 callsites.
+  3. Bumper l'override à `5.1.x` (ou retirer pour laisser pnpm pick latest compatible).
+  4. Re-tester full BE suite + e2e.
+  5. Cocher TD-11.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
