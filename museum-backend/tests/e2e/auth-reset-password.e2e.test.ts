@@ -7,7 +7,10 @@
  * cleared on consume. Without the fix, the token could be replayed for the
  * full TTL after a successful reset.
  */
+import { clearRateLimitBuckets } from '@shared/middleware/rate-limit.middleware';
+
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
+import { registerUser } from 'tests/helpers/e2e/e2e-auth.helpers';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -21,23 +24,20 @@ describeE2E('auth password-reset e2e', () => {
     harness = await createE2EHarness();
   });
 
+  beforeEach(() => {
+    // passwordResetLimiter caps /forgot-password + /reset-password at 5 calls
+    // per IP / 5 min. Reset the in-memory bucket between tests so the IP-keyed
+    // counter doesn't accumulate across cases (test harness loops on 127.0.0.1).
+    clearRateLimitBuckets();
+  });
+
   afterAll(async () => {
     await harness?.stop();
   });
 
-  async function registerUser(email: string): Promise<void> {
-    const reg = await harness.request('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({
-        email,
-        password: 'OldPassword123!',
-        firstname: 'Reset',
-        lastname: 'Test',
-        gdprConsent: true,
-      }),
-    });
-    expect(reg.status).toBe(201);
-  }
+  // forgotPasswordUseCase silently skips unverified users (SEC-HARDENING M16),
+  // so e2e tests must register *and* mark email_verified=true — the shared
+  // `registerUser` helper does both in one call.
 
   async function requestResetToken(email: string): Promise<string> {
     const res = await harness.request('/api/auth/forgot-password', {
@@ -61,7 +61,7 @@ describeE2E('auth password-reset e2e', () => {
 
   it('happy path: consume token → 200, password updated, reset_token cleared to NULL', async () => {
     const email = `e2e-reset-happy-${Date.now()}@musaium.test`;
-    await registerUser(email);
+    await registerUser(harness, { email });
     const token = await requestResetToken(email);
 
     // Sanity: reset_token IS populated pre-consume.
@@ -85,7 +85,7 @@ describeE2E('auth password-reset e2e', () => {
 
   it('replay rejection: re-POST same token → 400', async () => {
     const email = `e2e-reset-replay-${Date.now()}@musaium.test`;
-    await registerUser(email);
+    await registerUser(harness, { email });
     const token = await requestResetToken(email);
 
     const first = await harness.request('/api/auth/reset-password', {
@@ -103,7 +103,7 @@ describeE2E('auth password-reset e2e', () => {
 
   it('tampered token → 400 + row state untouched', async () => {
     const email = `e2e-reset-tampered-${Date.now()}@musaium.test`;
-    await registerUser(email);
+    await registerUser(harness, { email });
     const token = await requestResetToken(email);
     const tampered = `${token.slice(0, -3)}AAA`;
 

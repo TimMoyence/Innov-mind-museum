@@ -7,6 +7,8 @@
  * those columns survived the consume and the token (or the dangling
  * `pending_email` ghost) could be exploited.
  */
+import { clearRateLimitBuckets } from '@shared/middleware/rate-limit.middleware';
+
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
@@ -20,6 +22,12 @@ describeE2E('auth change-email e2e', () => {
 
   beforeAll(async () => {
     harness = await createE2EHarness();
+  });
+
+  beforeEach(() => {
+    // changeEmailLimiter is per-user (fresh per test) but emailVerificationLimiter
+    // is IP-keyed; clear in-memory buckets to keep tests order-independent.
+    clearRateLimitBuckets();
   });
 
   afterAll(async () => {
