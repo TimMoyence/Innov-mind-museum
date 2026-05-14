@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import adminExportRouter from '@modules/admin/adapters/primary/http/routes/admin-export.route';
 import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
 import adminRouter from '@modules/admin/adapters/primary/http/routes/admin.route';
 import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/routes/cache-purge.route';
@@ -462,6 +463,8 @@ function mountDomainRouters(
 
   // Stryker disable StringLiteral: Express normalizes the empty string mount path to '/' but the admin sub-routers expose their own /<path> routes, making the '/admin' prefix literal unobservable from black-box supertest hits that go through the parent /api mount — both mutations leave the admin probe reachable in the test harness even though the production routing intent differs.
   router.use('/admin', adminRouter);
+  // R2 W3.4 — admin CSV export (sessions / reviews / tickets).
+  router.use('/admin', adminExportRouter);
   router.use('/admin', createCachePurgeRouter(resolvedCache));
   // Stryker restore StringLiteral
   const artworkKnowledgeRepo = getArtworkKnowledgeRepo();

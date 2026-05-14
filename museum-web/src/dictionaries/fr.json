@@ -548,6 +548,23 @@
       "topMuseums": "Musées les plus actifs",
       "museum": "Musée",
       "guardrailBlockRate": "Taux de blocage (guardrail)"
+    },
+    "export": {
+      "sessions": {
+        "label": "Exporter les sessions",
+        "downloading": "Téléchargement…",
+        "error": "Échec du téléchargement"
+      },
+      "reviews": {
+        "label": "Exporter les avis",
+        "downloading": "Téléchargement…",
+        "error": "Échec du téléchargement"
+      },
+      "tickets": {
+        "label": "Exporter les tickets",
+        "downloading": "Téléchargement…",
+        "error": "Échec du téléchargement"
+      }
     }
   }
 }

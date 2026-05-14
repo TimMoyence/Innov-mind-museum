@@ -5,6 +5,7 @@ import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
@@ -101,8 +102,13 @@ export default function TicketsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
-      <p className="mt-1 text-text-secondary">{adminDict.ticketsPage.subtitle}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
+          <p className="mt-1 text-text-secondary">{adminDict.ticketsPage.subtitle}</p>
+        </div>
+        <ExportCsvButton kind="tickets" />
+      </div>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

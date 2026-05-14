@@ -548,6 +548,23 @@
       "topMuseums": "Top Museums",
       "museum": "Museum",
       "guardrailBlockRate": "Guardrail Block Rate"
+    },
+    "export": {
+      "sessions": {
+        "label": "CSV — sessions",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      },
+      "reviews": {
+        "label": "CSV — reviews",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      },
+      "tickets": {
+        "label": "CSV — tickets",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      }
     }
   }
 }

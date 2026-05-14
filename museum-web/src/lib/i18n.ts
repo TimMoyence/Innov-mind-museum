@@ -396,5 +396,16 @@ export interface Dictionary {
       museum: string;
       guardrailBlockRate: string;
     };
+    /**
+     * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind
+     * so the FE button can be wired with a single `kind` prop. CSV column
+     * headers themselves stay English-only (parser stability) — only the
+     * button copy is localised.
+     */
+    export: {
+      sessions: { label: string; downloading: string; error: string };
+      reviews: { label: string; downloading: string; error: string };
+      tickets: { label: string; downloading: string; error: string };
+    };
   };
 }

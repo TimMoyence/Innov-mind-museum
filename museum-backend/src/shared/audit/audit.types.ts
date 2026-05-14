@@ -63,6 +63,13 @@ export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
 export const AUDIT_ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED';
 export const AUDIT_ADMIN_USER_UNSUSPENDED = 'ADMIN_USER_UNSUSPENDED';
 export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
+// ─── Admin CSV export (R2 W3.4) ───
+// Distinct from AUDIT_DATA_EXPORT (reserved for user-self DSAR) — mixing
+// user-self and admin-export rows under one action breaks audit-chain
+// filter semantics. Per-kind constants make `WHERE action = …` trivial.
+export const AUDIT_ADMIN_EXPORT_SESSIONS = 'ADMIN_EXPORT_SESSIONS';
+export const AUDIT_ADMIN_EXPORT_REVIEWS = 'ADMIN_EXPORT_REVIEWS';
+export const AUDIT_ADMIN_EXPORT_TICKETS = 'ADMIN_EXPORT_TICKETS';
 
 // ─── Support ticket events ───
 export const AUDIT_SUPPORT_TICKET_CREATED = 'SUPPORT_TICKET_CREATED';

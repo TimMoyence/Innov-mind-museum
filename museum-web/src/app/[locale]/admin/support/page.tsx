@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiGet, apiPost } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import type { TicketDetail, TicketMessage, TicketStatus, TicketPriority } from '@/lib/admin-types';
 
@@ -89,7 +90,10 @@ export default function AdminSupportPage() {
   if (!ticketId) {
     return (
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
+          <ExportCsvButton kind="tickets" />
+        </div>
         <div className="mt-8 rounded-xl border border-primary-100 bg-white p-12 text-center text-text-muted">
           <p>{adminDict.supportPage.selectTicket}</p>
           <Link

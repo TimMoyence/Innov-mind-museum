@@ -207,6 +207,11 @@ const mockAdminDict: Dictionary['admin'] = {
     museum: '',
     guardrailBlockRate: '',
   },
+  export: {
+    sessions: { label: '', downloading: '', error: '' },
+    reviews: { label: '', downloading: '', error: '' },
+    tickets: { label: '', downloading: '', error: '' },
+  },
 };
 
 function wrapper({ children }: { children: ReactNode }) {

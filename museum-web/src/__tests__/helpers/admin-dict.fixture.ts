@@ -210,4 +210,9 @@ export const mockAdminDict: Dictionary['admin'] = {
     museum: 'Museum',
     guardrailBlockRate: 'Block Rate',
   },
+  export: {
+    sessions: { label: 'CSV sessions', downloading: 'Preparing', error: 'Failed' },
+    reviews: { label: 'CSV reviews', downloading: 'Preparing', error: 'Failed' },
+    tickets: { label: 'CSV tickets', downloading: 'Preparing', error: 'Failed' },
+  },
 };

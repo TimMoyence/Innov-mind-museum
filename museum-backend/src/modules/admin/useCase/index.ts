@@ -5,12 +5,16 @@
  * primary adapter free of peer-module imports.
  */
 import { AppDataSource } from '@data/db/data-source';
+import { AdminExportRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin-export.repository.pg';
 import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';
 import { GetContentAnalyticsUseCase } from '@modules/admin/useCase/analytics/getContentAnalytics.useCase';
 import { GetEngagementAnalyticsUseCase } from '@modules/admin/useCase/analytics/getEngagementAnalytics.useCase';
 import { GetStatsUseCase } from '@modules/admin/useCase/analytics/getStats.useCase';
 import { GetUsageAnalyticsUseCase } from '@modules/admin/useCase/analytics/getUsageAnalytics.useCase';
 import { ListAuditLogsUseCase } from '@modules/admin/useCase/audit/listAuditLogs.useCase';
+import { ExportChatSessionsUseCase } from '@modules/admin/useCase/export/exportChatSessions.useCase';
+import { ExportReviewsUseCase } from '@modules/admin/useCase/export/exportReviews.useCase';
+import { ExportSupportTicketsUseCase } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
 import { AdminReviewFacade } from '@modules/admin/useCase/facades/admin-review.facade';
 import { AdminSupportFacade } from '@modules/admin/useCase/facades/admin-support.facade';
 import { ListReportsUseCase } from '@modules/admin/useCase/reports/listReports.useCase';
@@ -30,6 +34,7 @@ import {
   listAllTicketsUseCase as peerListAllTicketsUseCase,
   updateTicketStatusUseCase as peerUpdateTicketStatusUseCase,
 } from '@modules/support/useCase';
+import { auditService } from '@shared/audit';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
 // Composed locally — TypeORM Repository<T> is stateless, so re-instantiating
@@ -61,4 +66,18 @@ export const adminReviewFacade = new AdminReviewFacade(
 export const adminSupportFacade = new AdminSupportFacade(
   peerListAllTicketsUseCase,
   peerUpdateTicketStatusUseCase,
+);
+
+// R2 W3.4 — admin CSV export composition. Single repo backs the three
+// use cases (sessions / reviews / tickets) ; audit emission shares the
+// global auditService singleton.
+const adminExportRepository = new AdminExportRepositoryPg(AppDataSource);
+export const exportChatSessionsUseCase = new ExportChatSessionsUseCase(
+  adminExportRepository,
+  auditService,
+);
+export const exportReviewsUseCase = new ExportReviewsUseCase(adminExportRepository, auditService);
+export const exportSupportTicketsUseCase = new ExportSupportTicketsUseCase(
+  adminExportRepository,
+  auditService,
 );
