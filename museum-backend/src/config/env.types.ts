@@ -237,6 +237,15 @@ export interface AppEnv {
    * `supportInboxEmail` to avoid env churn in local dev.
    */
   b2bInboxEmail?: string;
+  /**
+   * R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Optional
+   * config value (NOT a feature flag, per AUDIT_CHAIN_ALERT_EMAIL precedent).
+   * When unset (local dev / pre-prod boot before list provisioning), the
+   * composition root falls back to `NoopBetaSignupNotifier` so the route still
+   * returns 202 and structured logs surface a noop warning the operator can
+   * monitor.
+   */
+  brevoBetaListId?: number;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;

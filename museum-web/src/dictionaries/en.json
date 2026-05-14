@@ -326,6 +326,18 @@
         "error": "Unable to send right now. Please retry.",
         "errorValidation": "Please complete every required field."
       }
+    },
+    "beta": {
+      "heading": "Join the pre-launch beta",
+      "subheading": "We're launching Musaium in June. The first 100 testers get on the waitlist.",
+      "fieldEmail": "Email address",
+      "fieldConsent": "I agree to receive Musaium product updates. One-click unsubscribe.",
+      "consentPrivacyLink": "See the privacy policy",
+      "submit": "Sign me up",
+      "sending": "Sending…",
+      "success": "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
+      "error": "Something went wrong. Please retry in a moment.",
+      "errorValidation": "Required field."
     }
   },
   "admin": {

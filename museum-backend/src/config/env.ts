@@ -502,6 +502,17 @@ const env: AppEnv = {
   // AUDIT_CHAIN_ALERT_EMAIL precedent). Falls back to supportInboxEmail in
   // local dev so no env churn for solo contributors.
   b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),
+  // R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Config
+  // value (numeric Brevo list ID), NOT a feature flag (mirror b2bInboxEmail /
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Empty (or non-numeric) → composition
+  // root wires the NoopBetaSignupNotifier so the route stays 202 and the
+  // operator gets a structured warn log to monitor.
+  brevoBetaListId: (() => {
+    const raw = toOptionalString(process.env.BREVO_BETA_LIST_ID);
+    if (!raw) return;
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  })(),
   storage: {
     driver: storageDriver,
     // Resolved at parse time so downstream consumers always see an absolute path,

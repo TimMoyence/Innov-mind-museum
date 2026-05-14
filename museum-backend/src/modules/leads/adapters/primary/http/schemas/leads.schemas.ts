@@ -24,3 +24,24 @@ export const submitB2bLeadSchema = z.object({
  *
  */
 export type SubmitB2bLeadInput = z.infer<typeof submitB2bLeadSchema>;
+
+/**
+ * Schema for `POST /api/leads/beta` (R3 §1 R6 + §3.4).
+ *
+ * - `consent` MUST literally be `true` (defense-in-depth on top of the FE
+ *   checkbox, R11) — `z.literal(true)` rejects `false`, `'true'`, undefined.
+ * - `website` is the honeypot field. Schema accepts it as an optional string
+ *   so silent-drop policing happens in the use case (R10), not the schema.
+ * - Single field shape (email + consent + honeypot) — friction maximally
+ *   low (R4 in spec wording).
+ */
+export const submitBetaSignupSchema = z.object({
+  email: z.email().trim().max(254),
+  consent: z.literal(true),
+  website: z.string().max(500).optional(),
+});
+
+/**
+ *
+ */
+export type SubmitBetaSignupInput = z.infer<typeof submitBetaSignupSchema>;

@@ -326,6 +326,18 @@
         "error": "Impossible d'envoyer pour le moment. Veuillez réessayer.",
         "errorValidation": "Merci de compléter tous les champs obligatoires."
       }
+    },
+    "beta": {
+      "heading": "Rejoins la bêta pré-lancement",
+      "subheading": "On lance Musaium début juin. Les 100 premiers testeurs entrent sur la liste d'attente.",
+      "fieldEmail": "Adresse e-mail",
+      "fieldConsent": "J'accepte de recevoir les nouveautés produit Musaium. Désinscription en un clic.",
+      "consentPrivacyLink": "Voir la politique de confidentialité",
+      "submit": "M'inscrire à la bêta",
+      "sending": "Envoi en cours…",
+      "success": "Merci ! On t'a envoyé un e-mail de confirmation — clique le lien pour valider ton inscription.",
+      "error": "Une erreur est survenue. Réessaie dans un instant.",
+      "errorValidation": "Champ requis."
     }
   },
   "admin": {

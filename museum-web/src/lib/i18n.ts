@@ -174,6 +174,18 @@ export interface Dictionary {
         errorValidation: string;
       };
     };
+    beta: {
+      heading: string;
+      subheading: string;
+      fieldEmail: string;
+      fieldConsent: string;
+      consentPrivacyLink: string;
+      submit: string;
+      sending: string;
+      success: string;
+      error: string;
+      errorValidation: string;
+    };
   };
   admin: {
     dashboard: string;
