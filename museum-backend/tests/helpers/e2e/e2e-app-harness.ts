@@ -11,6 +11,8 @@ import {
 } from 'tests/helpers/e2e/postgres-testcontainer';
 
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
+import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
@@ -93,6 +95,18 @@ export interface E2EHarnessOptions {
    * Replaces the harness's synthetic orchestrator with any compatible implementation.
    */
   chatOrchestratorOverride?: ChatOrchestrator;
+  /**
+   * LLM02 — inject a `GuardrailProvider` into ChatService so e2e tests can
+   * exercise the PII redaction propagation chain against a fake sidecar.
+   * Defaults to undefined (no provider wired — matches legacy behaviour).
+   */
+  guardrailProviderOverride?: GuardrailProvider;
+  /**
+   * LLM02 — inject an `AuditService` into ChatService so e2e tests can
+   * assert on the hash-chained `GUARDRAIL_INPUT_REDACTED` row without
+   * touching the DB. Defaults to undefined (no audit wired).
+   */
+  auditServiceOverride?: AuditService;
   /**
    * Phase 6 chaos: whether to start the BullMQ knowledge-extraction worker.
    * Default: false (worker is NOT started in e2e — matches existing behaviour because
@@ -312,6 +326,11 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
         };
       },
     },
+    // LLM02 — optional injection so e2e tests can drive the PII redaction
+    // chain end-to-end through the chat HTTP pipeline.
+    guardrailProvider: options?.guardrailProviderOverride,
+    guardrailProviderObserveOnly: false,
+    audit: options?.auditServiceOverride,
   });
 
   const app = createApp({ chatService });

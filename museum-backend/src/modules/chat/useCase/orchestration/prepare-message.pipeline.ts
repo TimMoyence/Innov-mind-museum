@@ -47,6 +47,14 @@ export interface PrepareReady {
   enrichedImages?: EnrichedImage[];
   resolvedLocation?: ResolvedLocation;
   /**
+   * LLM02 — sanitized version of the user input when the guardrail provider
+   * scrubbed PII (Anonymize / Presidio). When defined, the message service
+   * substitutes this for the original `input.text` before the LLM call so
+   * the provider never sees raw PII. `undefined` when no provider is wired
+   * or no PII was detected.
+   */
+  redactedText?: string;
+  /**
    * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`.
    * Threaded into `OrchestratorInput.facts` so every orchestrator entry point
    * (full-shot / streaming / walk) wraps them in the Spotlighting envelope.
@@ -259,6 +267,9 @@ export class PrepareMessagePipeline {
       requestedLocale,
       history,
       ownerId,
+      ...(userGuardrail.redactedText !== undefined
+        ? { redactedText: userGuardrail.redactedText }
+        : {}),
       ...enrichment,
     };
   }

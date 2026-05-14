@@ -277,7 +277,12 @@ export class ChatMessageService {
     const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
     if (prep.kind === 'refused') return prep.result;
 
-    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
+    // LLM02 — when the guardrail provider scrubbed PII (Anonymize / Presidio),
+    // substitute the sanitized version BEFORE the local Unicode-normalisation
+    // sanitizer so the LLM payload (and the LLM cache key derived from it)
+    // contains only placeholders, never raw PII.
+    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
+    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
     const orchestratorInput = this.pipeline.buildOrchestratorInput(
       prep,
       input,
@@ -380,7 +385,11 @@ export class ChatMessageService {
       onGuardrail,
     });
     buffer.onRelease(onToken);
-    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
+    // LLM02 — symmetric substitution with `postMessage`: redactedText (if
+    // present) replaces the original text before the orchestrator call so
+    // SSE streaming cannot become a back-door for PII exfiltration.
+    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
+    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
 
     const aiResult = await this.orchestrator.generateStream(
       this.pipeline.buildOrchestratorInput(prep, input, sanitizedText, requestId),

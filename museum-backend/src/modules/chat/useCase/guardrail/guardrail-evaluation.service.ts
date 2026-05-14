@@ -13,6 +13,7 @@ import {
   evaluateUserInputGuardrail,
 } from './art-topic-guardrail';
 import { buildGuardrailBlockAuditEntry } from './guardrail-audit-payload';
+import { logInputRedaction } from './guardrail-input-redaction';
 import { judgeVerdictToReason, mapProviderReason } from './guardrail-reason-mapping';
 import { buildBlockedOutputPayload } from './guardrail-refusal-builder';
 
@@ -39,6 +40,12 @@ export interface ArtTopicClassifierPort {
 interface InputGuardrailResult {
   allow: boolean;
   reason?: GuardrailBlockReason;
+  /**
+   * Sanitized version of the user input when the provider scrubbed PII
+   * (LLM02 — Anonymize / Presidio). Callers MUST pass this to the LLM
+   * instead of the original text. Never persisted in clear, never logged.
+   */
+  redactedText?: string;
 }
 
 /**
@@ -72,7 +79,7 @@ interface GuardrailEvaluationServiceDeps {
    */
   llmJudge?: LlmJudgeFn;
   /**
-   * F4 — toggle that mirrors `env.guardrails.candidate === 'llm-judge'`. Kept
+   * F4 — toggle that mirrors `env.guardrails.budgetCentsPerDay > 0`. Kept
    * as an explicit dep so tests can flip it without env mutation.
    */
   llmJudgeEnabled?: boolean;
@@ -160,11 +167,11 @@ export class GuardrailEvaluationService {
    */
   private async evaluateGuardrailProvider(
     phase: 'input' | 'output',
-    run: () => Promise<{ allow: boolean; reason?: string }>,
-  ): Promise<{ allow: boolean; reason?: GuardrailBlockReason }> {
+    run: () => Promise<{ allow: boolean; reason?: string; redactedText?: string }>,
+  ): Promise<{ allow: boolean; reason?: GuardrailBlockReason; redactedText?: string }> {
     if (!this.guardrailProvider) return { allow: true };
 
-    let raw: { allow: boolean; reason?: string };
+    let raw: { allow: boolean; reason?: string; redactedText?: string };
     try {
       raw = await run();
     } catch (error) {
@@ -176,7 +183,12 @@ export class GuardrailEvaluationService {
       raw = { allow: false, reason: 'error' };
     }
 
-    if (raw.allow) return { allow: true };
+    if (raw.allow) {
+      return {
+        allow: true,
+        ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
+      };
+    }
 
     const mappedReason = mapProviderReason(raw.reason);
 
@@ -187,7 +199,13 @@ export class GuardrailEvaluationService {
         rawReason: raw.reason,
         mappedReason,
       });
-      return { allow: true };
+      // Observe-only mode preserves any sanitized payload — operators can
+      // still validate the redaction pipeline end-to-end without flipping
+      // the candidate to enforce mode (LLM02 + ADR-048 Phase A).
+      return {
+        allow: true,
+        ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
+      };
     }
 
     logger.info('guardrail_provider_block', {
@@ -196,7 +214,11 @@ export class GuardrailEvaluationService {
       rawReason: raw.reason,
       mappedReason,
     });
-    return { allow: false, reason: mappedReason };
+    return {
+      allow: false,
+      reason: mappedReason,
+      ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
+    };
   }
 
   /**
@@ -255,6 +277,20 @@ export class GuardrailEvaluationService {
       return providerVerdict;
     }
 
+    // LLM02 — when the provider returned a sanitized variant that differs
+    // from the input, audit + meter the redaction (the substitution itself
+    // happens at the call site that consumes `redactedText`).
+    const redactedText = providerVerdict.redactedText;
+    if (redactedText !== undefined && redactedText !== (text ?? '') && this.guardrailProvider) {
+      await logInputRedaction({
+        redactedText,
+        locale,
+        provider: this.guardrailProvider,
+        audit: this.audit,
+        context,
+      });
+    }
+
     // F4 (2026-04-30) — LLM judge second layer. Selective invocation: only on
     // long inputs where the keyword pre-filter said allow. Cannot upgrade
     // keyword blocks (those returned earlier above). Hard-block channels —
@@ -277,13 +313,19 @@ export class GuardrailEvaluationService {
     if (preClassified === 'art') {
       recordBiasMetrics({ locale, layer: 'classifier', decision: { allow: true } });
       logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, { phase: 'input', preClassified: true });
-      return { allow: true };
+      return {
+        allow: true,
+        ...(redactedText !== undefined ? { redactedText } : {}),
+      };
     }
 
     // Default: no soft check in the synchronous guardrail (LLM classifier runs on output side)
     recordBiasMetrics({ locale, layer: 'keyword', decision: { allow: true } });
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, { phase: 'input', preClassified: false });
-    return decision;
+    return {
+      ...decision,
+      ...(redactedText !== undefined ? { redactedText } : {}),
+    };
   }
 
   /**

@@ -236,6 +236,29 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-10 — PII redaction non rétroactive sur l'history pré-fix (LLM02)
+
+- [ ] **Statut** : ouvert (créé 2026-05-14, lié au /team `2026-05-14-pii-redaction-llm02`)
+- **Référence code** :
+  ```
+  museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:283-287 (substitution sur NEW message uniquement)
+  museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:244 (history hydration sans rescan)
+  ```
+- **Symptôme** : depuis le fix LLM02 (2026-05-14), tout NEW message chat est scrubbé via le sidecar Anonymize avant le LLM call. MAIS les `ChatMessage.text` persistés AVANT le commit du fix restent en clair en BDD. À chaque tour suivant, `PrepareMessagePipeline.prepare()` re-hydrate cet history non scrubbé via `repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages)` (line 244) et le LLM le reçoit tel quel.
+- **Pourquoi non résolu en V1** : coût latency p95 inacceptable si on rescan chaque message d'history côté sidecar à chaque tour (× ~20 messages d'history typique). Décision design D2 dans `team-state/2026-05-14-pii-redaction-llm02/design.md`. RGPD Right-to-erasure intact via cascade delete session.
+- **Sprint d'origine** : 2026-05-14.
+- **Effort estimé** : 1 jour, dépend de la stratégie choisie :
+  - (a) Migration one-shot rétro qui rescanne tout `ChatMessage.text` user en BDD via le sidecar Anonymize, remplace par redactedText, append audit row par row migré.
+  - (b) Rescan lazy à l'hydration : moins d'overhead total mais hot path impacté.
+  - (c) Doctrine "accept tail risk" : si compliance ne demande pas, ne rien faire (les messages "où je suis dans le musée maintenant" perdent leur valeur en quelques minutes).
+- **Comment fermer** :
+  1. Trancher (a) vs (b) vs (c) avec DPO. Si (a), produire un script `scripts/backfill-pii-redaction.cjs`.
+  2. Implémenter, mesurer p95 sur un échantillon (1k messages).
+  3. Rapporter dans audit chain le nombre de rows migrées + le delta de placeholders observés.
+  4. Cocher TD-10 ici.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

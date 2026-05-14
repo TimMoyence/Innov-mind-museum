@@ -50,6 +50,11 @@ export const AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN = 'SECURITY_LLM_GUARD_BREAKER
 // without bloating the audit hash chain or echoing raw user/LLM payloads.
 export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
 export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
+// LLM02 (2026-05-14) — emitted when the guardrail provider returned a sanitized
+// input (PII scrubbed via Anonymize / Presidio). One hash-chained row per
+// effective redaction; payload carries only the post-scrub text + placeholder
+// counts (raw PII NEVER reaches the audit chain).
+export const AUDIT_GUARDRAIL_INPUT_REDACTED = 'GUARDRAIL_INPUT_REDACTED';
 
 // ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';

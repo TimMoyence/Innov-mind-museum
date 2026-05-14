@@ -512,6 +512,21 @@ export const guardrailCategoryBlocksTotal = new Counter({
 });
 
 /**
+ * LLM02 — count of effective PII redactions on chat input.
+ *
+ * Cardinality: 9 locales × ≤12 entity types (Presidio `ANONYMIZE_ENTITIES`
+ * list from `museum-backend/ops/llm-guard-sidecar/app.py:42-45` + `unknown`).
+ * Bounded ≤108 active series. Drives the operator alert on PII-attack waves
+ * (e.g. wallet harvesting via `CRYPTO` spikes).
+ */
+export const guardrailPiiRedactedTotal = new Counter({
+  name: 'musaium_guardrail_pii_redacted_total',
+  help: 'Total effective PII redactions on chat input, by locale and entity type (placeholder).',
+  labelNames: ['locale', 'placeholder_type'] as const,
+  registers: [registry],
+});
+
+/**
  * LLM Guard chaos-injection counter (Phase 1 chaos engineering primitive).
  *
  * Increments each time the configured `GUARDRAIL_CHAOS_RATE` triggers a
