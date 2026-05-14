@@ -63,6 +63,8 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Release Checklist | [`docs/RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) |
 | Scaling — design only | [`docs/adr/ADR-021-pgbouncer-transaction-mode.md`](adr/ADR-021-pgbouncer-transaction-mode.md), [`ADR-022`](adr/ADR-022-pg-read-replica-strategy.md), [`ADR-023`](adr/ADR-023-redis-cluster-vs-sentinel.md), [`ADR-024`](adr/ADR-024-cloudflare-cdn-strategy.md) |
 | Network hardening (security) | [`docs/security/network-hardening.md`](security/network-hardening.md) |
+| VDP triage & incident response (GDPR 72h + CRA 24h/72h/14d) | [`docs/operations/VDP_RUNBOOK.md`](operations/VDP_RUNBOOK.md) |
+| Vulnerability Disclosure Policy (root) | [`SECURITY.md`](../SECURITY.md) — published at `musaium.com/{fr,en}/security` + RFC 9116 at `/.well-known/security.txt` |
 | Grafana dashboard JSON | [`docs/observability/musaium-backend-dashboard.json`](observability/musaium-backend-dashboard.json) |
 
 ## Incidents & Compliance
@@ -73,7 +75,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Post-mortem template | [`docs/incidents/POST_MORTEM_TEMPLATE.md`](incidents/POST_MORTEM_TEMPLATE.md) |
 | Tabletop exercises | [`docs/incidents/tabletop/`](incidents/tabletop/) |
 | Data flow map | [`docs/compliance/DATA_FLOW_MAP.md`](compliance/DATA_FLOW_MAP.md) |
-| Subprocessors | [`docs/compliance/SUBPROCESSORS.md`](compliance/SUBPROCESSORS.md) |
+| Subprocessors (canonical Art. 28 ledger) | [`docs/compliance/SUBPROCESSORS.md`](compliance/SUBPROCESSORS.md) — pointer also at [`docs/legal/SUBPROCESSORS.md`](legal/SUBPROCESSORS.md) |
 
 ## Mobile & Store
 
