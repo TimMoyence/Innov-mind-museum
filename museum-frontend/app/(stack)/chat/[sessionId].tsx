@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useChatSession, type ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { useStatusPhase } from '@/features/chat/application/useStatusPhase';
 import { deriveHeroCollapsed, useArtworkHero } from '@/features/chat/application/useArtworkHero';
+import { deriveTopBarCollapsed } from '@/features/chat/application/useCollapsibleTopBar';
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
@@ -29,7 +30,7 @@ import { useChatSessionInputHandlers } from '@/features/chat/application/useChat
 import { useChatSessionIntents } from '@/features/chat/application/useChatSessionIntents';
 import { ArtworkHeroCard } from '@/features/chat/ui/ArtworkHeroCard';
 import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
-import { ChatHeader } from '@/features/chat/ui/ChatHeader';
+import { CollapsibleTopBar } from '@/features/chat/ui/CollapsibleTopBar';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
 import { Composer } from '@/features/chat/ui/Composer';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
@@ -102,6 +103,10 @@ export default function ChatSessionScreen() {
   const heroModel = useArtworkHero(messages);
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
+  // A4 — top bar collapses on scroll past 80dp / re-expands below 40dp.
+  // Shares the same `onListScroll` source as A2 (one scroll handler, two
+  // independent screen-local states — no global store).
+  const [topBarCollapsed, setTopBarCollapsed] = useState(false);
 
   const onHeroExpand = useCallback(() => {
     setHeroModalVisible(true);
@@ -114,6 +119,7 @@ export default function ChatSessionScreen() {
   const onListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = event.nativeEvent.contentOffset.y;
     setHeroCollapsed((prev) => deriveHeroCollapsed(y, prev));
+    setTopBarCollapsed((prev) => deriveTopBarCollapsed(y, prev));
   }, []);
 
   const {
@@ -381,7 +387,7 @@ export default function ChatSessionScreen() {
             </Text>
           ) : null}
 
-          <ChatHeader
+          <CollapsibleTopBar
             sessionTitle={sessionTitle}
             expertiseLevel={expertiseLevel}
             isClosing={inputHandlers.isClosing}
@@ -394,6 +400,7 @@ export default function ChatSessionScreen() {
               setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
             }}
             onOpenAiDisclosure={openAiDisclosure}
+            collapsed={topBarCollapsed}
           />
 
           {isWalkMode ? (
