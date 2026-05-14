@@ -555,6 +555,22 @@
       "a11y_hint_off": "Audio für ruhige Räume stummschalten",
       "announcement_on": "Sotto-voce an. Audio-Antworten stumm.",
       "announcement_off": "Sotto-voce aus. Audio-Antworten wieder aktiv."
+    },
+    "resumption": {
+      "title_with_artwork": "Weiter zu {{title}}",
+      "title_fallback": "Letztes Gespräch fortsetzen",
+      "subtitle_with_museum": "{{museumName}} — vor {{timeAgo}}",
+      "subtitle_no_museum": "vor {{timeAgo}}",
+      "a11y_label_with_artwork": "Gespräch über {{title}} im {{museumName}} fortsetzen",
+      "a11y_label_fallback": "Letztes Gespräch fortsetzen",
+      "a11y_hint": "Öffnet das vorherige Gespräch",
+      "a11y_dismiss": "Vorschlag ausblenden",
+      "time_ago": {
+        "just_now": "gerade eben",
+        "minutes": "{{count}} Min.",
+        "hours": "{{count}} Std.",
+        "days": "{{count}} T."
+      }
     }
   },
   "dailyLimit": {

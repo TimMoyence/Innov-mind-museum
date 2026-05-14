@@ -555,6 +555,22 @@
       "a11y_hint_off": "اكتم الصوت في الأماكن الهادئة",
       "announcement_on": "وضع الهمس مفعّل. تم كتم الردود الصوتية.",
       "announcement_off": "وضع الهمس معطّل. عادت الردود الصوتية."
+    },
+    "resumption": {
+      "title_with_artwork": "متابعة الحديث عن {{title}}",
+      "title_fallback": "متابعة محادثتك الأخيرة",
+      "subtitle_with_museum": "{{museumName}} — منذ {{timeAgo}}",
+      "subtitle_no_museum": "منذ {{timeAgo}}",
+      "a11y_label_with_artwork": "استئناف المحادثة حول {{title}} في {{museumName}}",
+      "a11y_label_fallback": "استئناف محادثتك الأخيرة",
+      "a11y_hint": "يفتح المحادثة السابقة",
+      "a11y_dismiss": "إخفاء اقتراح الاستئناف",
+      "time_ago": {
+        "just_now": "الآن",
+        "minutes": "{{count}} د",
+        "hours": "{{count}} س",
+        "days": "{{count}} ي"
+      }
     }
   },
   "dailyLimit": {

@@ -555,6 +555,22 @@
       "a11y_hint_off": "Couper l'audio pour les lieux silencieux",
       "announcement_on": "Mode sotto-voce activé. Audio des réponses coupé.",
       "announcement_off": "Mode sotto-voce désactivé. Audio des réponses repris."
+    },
+    "resumption": {
+      "title_with_artwork": "Reprendre {{title}}",
+      "title_fallback": "Reprendre votre dernière conversation",
+      "subtitle_with_museum": "{{museumName}} — il y a {{timeAgo}}",
+      "subtitle_no_museum": "il y a {{timeAgo}}",
+      "a11y_label_with_artwork": "Reprendre la conversation sur {{title}} au {{museumName}}",
+      "a11y_label_fallback": "Reprendre votre dernière conversation",
+      "a11y_hint": "Ouvre la conversation précédente",
+      "a11y_dismiss": "Masquer la suggestion de reprise",
+      "time_ago": {
+        "just_now": "à l'instant",
+        "minutes": "{{count}} min",
+        "hours": "{{count}} h",
+        "days": "{{count}} j"
+      }
     }
   },
   "dailyLimit": {

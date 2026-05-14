@@ -555,6 +555,22 @@
       "a11y_hint_off": "Silenzia l'audio nei luoghi silenziosi",
       "announcement_on": "Sotto-voce attivo. Audio disattivato.",
       "announcement_off": "Sotto-voce disattivato. Audio ripreso."
+    },
+    "resumption": {
+      "title_with_artwork": "Continua su {{title}}",
+      "title_fallback": "Continua l'ultima conversazione",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}} fa",
+      "subtitle_no_museum": "{{timeAgo}} fa",
+      "a11y_label_with_artwork": "Riprendi la conversazione su {{title}} al {{museumName}}",
+      "a11y_label_fallback": "Riprendi l'ultima conversazione",
+      "a11y_hint": "Apre la conversazione precedente",
+      "a11y_dismiss": "Ignora il suggerimento di ripresa",
+      "time_ago": {
+        "just_now": "ora",
+        "minutes": "{{count}} min",
+        "hours": "{{count}} h",
+        "days": "{{count}} g"
+      }
     }
   },
   "dailyLimit": {

@@ -555,6 +555,22 @@
       "a11y_hint_off": "在安静场所静音音频",
       "announcement_on": "轻声模式已开启。音频响应已静音。",
       "announcement_off": "轻声模式已关闭。音频响应已恢复。"
+    },
+    "resumption": {
+      "title_with_artwork": "继续了解 {{title}}",
+      "title_fallback": "继续上次对话",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}}前",
+      "subtitle_no_museum": "{{timeAgo}}前",
+      "a11y_label_with_artwork": "在 {{museumName}} 继续关于 {{title}} 的对话",
+      "a11y_label_fallback": "继续上次对话",
+      "a11y_hint": "打开之前的聊天",
+      "a11y_dismiss": "关闭继续对话提示",
+      "time_ago": {
+        "just_now": "刚刚",
+        "minutes": "{{count}} 分钟",
+        "hours": "{{count}} 小时",
+        "days": "{{count}} 天"
+      }
     }
   },
   "dailyLimit": {

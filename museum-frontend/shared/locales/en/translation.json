@@ -555,6 +555,22 @@
       "a11y_hint_off": "Mute audio for quiet spaces",
       "announcement_on": "Sotto-voce on. Audio responses muted.",
       "announcement_off": "Sotto-voce off. Audio responses resumed."
+    },
+    "resumption": {
+      "title_with_artwork": "Continue about {{title}}",
+      "title_fallback": "Continue your last conversation",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}}",
+      "subtitle_no_museum": "{{timeAgo}}",
+      "a11y_label_with_artwork": "Resume conversation about {{title}} at {{museumName}}",
+      "a11y_label_fallback": "Resume your last conversation",
+      "a11y_hint": "Opens the previous chat session",
+      "a11y_dismiss": "Dismiss resumption banner",
+      "time_ago": {
+        "just_now": "just now",
+        "minutes": "{{count}} min ago",
+        "hours": "{{count}} h ago",
+        "days": "{{count}} d ago"
+      }
     }
   },
   "dailyLimit": {

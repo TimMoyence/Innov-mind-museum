@@ -3762,6 +3762,10 @@ export interface components {
         museumMode: boolean;
         title?: string | null;
         museumName?: string | null;
+        /** @description Canonical museum identifier (B2 — conversation resumption banner). Optional/nullable for backward-compat with legacy clients and pre-museum sessions. */
+        museumId?: number | null;
+        /** @description Title of the most recently discussed artwork in the session (B2 — conversation resumption banner). `null` when no artwork has been discussed. */
+        lastArtworkTitle?: string | null;
         /** Format: date-time */
         createdAt: string;
         /** Format: date-time */

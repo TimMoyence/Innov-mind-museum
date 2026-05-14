@@ -228,6 +228,22 @@ export const isListSessionsResponseDTO = (payload: unknown): payload is ListSess
       return false;
     }
 
+    // B2 (R33) — optional, nullable, present → must be number|null / string|null.
+    if (
+      session.museumId !== undefined &&
+      session.museumId !== null &&
+      typeof session.museumId !== 'number'
+    ) {
+      return false;
+    }
+    if (
+      session.lastArtworkTitle !== undefined &&
+      session.lastArtworkTitle !== null &&
+      typeof session.lastArtworkTitle !== 'string'
+    ) {
+      return false;
+    }
+
     if (session.preview !== undefined) {
       if (!isRecord(session.preview)) {
         return false;

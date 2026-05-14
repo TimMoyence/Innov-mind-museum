@@ -555,6 +555,22 @@
       "a11y_hint_off": "静かな場所で音声をオフ",
       "announcement_on": "ささやきモード オン。音声応答をオフにしました。",
       "announcement_off": "ささやきモード オフ。音声応答を再開しました。"
+    },
+    "resumption": {
+      "title_with_artwork": "{{title}} の続きを見る",
+      "title_fallback": "前回の会話を続ける",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}}前",
+      "subtitle_no_museum": "{{timeAgo}}前",
+      "a11y_label_with_artwork": "{{museumName}} での {{title}} の会話を再開",
+      "a11y_label_fallback": "前回の会話を再開",
+      "a11y_hint": "前回のチャットを開きます",
+      "a11y_dismiss": "再開バナーを閉じる",
+      "time_ago": {
+        "just_now": "たった今",
+        "minutes": "{{count}} 分",
+        "hours": "{{count}} 時間",
+        "days": "{{count}} 日"
+      }
     }
   },
   "dailyLimit": {
