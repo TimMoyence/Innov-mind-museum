@@ -7,36 +7,21 @@ import type { Locale } from '@/lib/i18n';
 
 /**
  * Strict subset of `Dictionary['landing']['beta']` consumed by this component.
- *
- * `errorValidation` is intentionally optional so test fixtures can omit it
- * without breaking the type. When omitted, the component falls back to a
- * language-neutral `*` required-field marker (the test only checks that two
- * `role="alert"` elements are present, not their copy).
- *
- * The pending-button label is fetched via {@link PENDING_KEY} (a char array
- * joined at runtime) to keep this source file free of any contiguous
- * "s-e-n-d-i-n-g" substring — the hardcoded-string sentinel
- * (R3 R5 / AC5) is a naïve case-insensitive substring grep so even an
- * identifier like `dict.<that-key>` would be flagged. The dict JSON file
- * still uses the canonical key (dict-symmetry test R18 enforces it).
+ * Mirrors the canonical `Dictionary['landing']['beta']` shape at
+ * `museum-web/src/lib/i18n.ts:177-188`.
  */
-type BetaCopyDict = {
+interface BetaCopyDict {
   heading: string;
   subheading: string;
   fieldEmail: string;
   fieldConsent: string;
   consentPrivacyLink: string;
   submit: string;
+  sending: string;
   success: string;
   error: string;
-  errorValidation?: string;
-  // The 9th + 10th keys are accessed dynamically below so the literal does
-  // not appear in source. Type-level we widen via `Record<string, ...>` to
-  // satisfy structural compatibility with the canonical Dictionary slice.
-} & Record<string, string | undefined>;
-
-/** Key used to read the pending-button copy out of the dict. */
-const PENDING_KEY = (['s', 'e', 'n', 'd', 'i', 'n', 'g'] as const).join('');
+  errorValidation: string;
+}
 
 interface BetaSignupSectionProps {
   dict: BetaCopyDict;
@@ -71,8 +56,8 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const requiredMark = dict.errorValidation ?? '*';
-  const pendingLabel = dict[PENDING_KEY] ?? dict.submit;
+  const requiredMark = dict.errorValidation;
+  const pendingLabel = dict.sending;
 
   function validate(): Partial<Record<ValidationKey, string>> {
     const next: Partial<Record<ValidationKey, string>> = {};

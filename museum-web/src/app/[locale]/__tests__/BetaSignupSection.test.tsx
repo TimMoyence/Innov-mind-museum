@@ -33,6 +33,7 @@ const dictEN = {
   sending: 'Sending...',
   success: "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
   error: 'Something went wrong. Please retry in a moment.',
+  errorValidation: 'Required field.',
 };
 
 function fillValidForm() {
