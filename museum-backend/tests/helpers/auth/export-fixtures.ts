@@ -105,7 +105,9 @@ export async function seedUserWithFullDataset(
       reviews: 1,
       supportTickets: 1,
       supportMessages: 1,
-      consentRecords: 1,
+      // 2 = the seeded location_to_llm above + the tos_privacy consent that
+      // registration auto-records on signup (register.useCase.ts:recordTosConsent).
+      consentRecords: 2,
       mediaItems: 1, // one assistant audioUrl
     },
   };

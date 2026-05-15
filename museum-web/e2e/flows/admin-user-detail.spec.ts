@@ -22,7 +22,7 @@ test('admin opens a user detail page from the list', async ({ page }) => {
   await expect(page.getByText(email)).toBeVisible({ timeout: 10_000 });
 
   // Each row exposes a "View" link to /admin/users/:id (admin + moderator + super_admin).
-  const viewLink = page.getByRole('link', { name: /view/i }).first();
+  const viewLink = page.getByRole('link', { name: /view user details/i }).first();
   await viewLink.click();
 
   // Land on the detail page — heading is the user's display name OR email.
@@ -42,7 +42,10 @@ test('admin opens the change-role modal from detail page', async ({ page }) => {
   await page.goto('/en/admin/users');
   await expect(page.getByText(email)).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole('link', { name: /view/i }).first().click();
+  await page
+    .getByRole('link', { name: /view user details/i })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/admin\/users\/\d+$/);
 
   const changeRoleBtn = page.getByRole('button', { name: /change role/i });
