@@ -26,7 +26,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-1 — `userProfileApi.ts` utilise `httpRequest` raw au lieu de `openApiRequest`
 
-- [ ] **Statut** : ouvert (vérifié 2026-05-07)
+- [x] **Statut** : fermé 2026-05-15
 - **Référence code** :
   ```
   museum-frontend/features/settings/infrastructure/userProfileApi.ts:1
@@ -47,6 +47,11 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   3. Remplacer `httpRequest` par `openApiRequest` dans `userProfileApi.ts`.
   4. Mettre à jour les tests `userProfileApi.test.ts`.
   5. Cocher TD-1 ici.
+- **Closure note (2026-05-15)** :
+  - PATH `PATCH /api/auth/content-preferences` ajouté à `museum-backend/openapi/openapi.json` (peer de `/api/auth/tts-voice`).
+  - `museum-frontend/features/settings/infrastructure/userProfileApi.ts` migré vers `openApiRequest` (atomic swap, pas de fallback).
+  - **Finding obsolète :** la note "museum/daily-art/lowDataPack using raw httpRequest" est obsolète — vérifié 2026-05-15, `museum-frontend/features/museum/infrastructure/lowDataPackApi.ts:1` importe DÉJÀ `openApiRequest`. Pas de dette résiduelle.
+  - **Finding obsolète :** la mention "Mettre à jour les tests `userProfileApi.test.ts`" était basée sur une supposition — il n'existe pas de fichier `userProfileApi.test.ts` (le coverage passe par `useContentPreferences.test.ts` qui mocke le module au niveau public). Pas de test à éditer.
 
 ---
 

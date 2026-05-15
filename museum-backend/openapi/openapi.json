@@ -3142,6 +3142,67 @@
         }
       }
     },
+    "/api/auth/content-preferences": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "Replace the authenticated user's content preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["preferences"],
+                "properties": {
+                  "preferences": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "string",
+                      "enum": ["history", "technique", "artist"]
+                    },
+                    "description": "Replacement set of content preferences. Empty array clears all preferences. Backend deduplicates and returns canonical order."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted (deduplicated, canonically ordered) preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["contentPreferences"],
+                  "properties": {
+                    "contentPreferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["history", "technique", "artist"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/api/users/me/export": {
       "get": {
         "tags": ["Auth"],
