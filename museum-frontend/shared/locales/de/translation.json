@@ -994,6 +994,10 @@
       "scan_success": "Schild-Code erfasst",
       "viewfinder_hint": "Kamera-Sucher, auf den QR-Code zielen",
       "cancel_hint": "Schließt den Scanner ohne zu senden"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, Besuch öffnen",
+      "continue_hint": "Öffnet diesen vergangenen Besuch zum Lesen"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "Noch keine Gespräche",
       "description": "Deine bisherigen Gespräche erscheinen hier.",
       "actionLabel": "Gespräch starten"
+    }
+  },
+  "carnet": {
+    "title": "Mein Besuchsnotizbuch",
+    "linkLabel": "Mein Besuchsnotizbuch",
+    "untitledSession": "Besuch ohne Titel",
+    "unknownMuseum": "Unbekanntes Museum",
+    "continueButton": "Dieses Gespräch fortsetzen",
+    "sectionArtworks": "Besprochene Werke",
+    "sectionTranscript": "Transkript",
+    "noArtworks": "Bei diesem Besuch wurde kein Werk gescannt.",
+    "minutesShort": "{{count}} Min.",
+    "minutesShort_zero": "< 1 Min.",
+    "messagesCount": "{{count}} Nachrichten",
+    "empty": {
+      "title": "Noch keine Besuche",
+      "description": "Starte ein Gespräch und dein Besuch erscheint hier."
     }
   }
 }

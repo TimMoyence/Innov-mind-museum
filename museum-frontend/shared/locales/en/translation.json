@@ -994,6 +994,10 @@
       "scan_success": "Cartel code captured",
       "viewfinder_hint": "Camera viewfinder, point at the QR code",
       "cancel_hint": "Closes the scanner without sending"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, open visit",
+      "continue_hint": "Opens this past visit for reading"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "No conversations yet",
       "description": "Your past chats will appear here.",
       "actionLabel": "Start a conversation"
+    }
+  },
+  "carnet": {
+    "title": "My visit notebook",
+    "linkLabel": "My visit notebook",
+    "untitledSession": "Untitled visit",
+    "unknownMuseum": "Unknown museum",
+    "continueButton": "Continue this conversation",
+    "sectionArtworks": "Artworks discussed",
+    "sectionTranscript": "Transcript",
+    "noArtworks": "No artworks scanned during this visit.",
+    "minutesShort": "{{count}} min",
+    "minutesShort_zero": "< 1 min",
+    "messagesCount": "{{count}} messages",
+    "empty": {
+      "title": "No visits yet",
+      "description": "Start a conversation and your visit will appear here."
     }
   }
 }

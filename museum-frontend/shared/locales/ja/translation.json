@@ -994,6 +994,10 @@
       "scan_success": "解説コードを取得しました",
       "viewfinder_hint": "カメラビューファインダー、QRコードに向けてください",
       "cancel_hint": "送信せずにスキャナーを閉じます"
+    },
+    "carnet": {
+      "session_card": "{{title}}、{{museum}}、{{date}}、訪問を開く",
+      "continue_hint": "この過去の訪問を読み取り専用で開きます"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "会話はまだありません",
       "description": "過去の会話がここに表示されます。",
       "actionLabel": "会話を始める"
+    }
+  },
+  "carnet": {
+    "title": "訪問ノート",
+    "linkLabel": "訪問ノート",
+    "untitledSession": "無題の訪問",
+    "unknownMuseum": "不明な美術館",
+    "continueButton": "この会話を続ける",
+    "sectionArtworks": "話題になった作品",
+    "sectionTranscript": "会話履歴",
+    "noArtworks": "この訪問では作品をスキャンしていません。",
+    "minutesShort": "{{count}} 分",
+    "minutesShort_zero": "< 1 分",
+    "messagesCount": "{{count}} 件のメッセージ",
+    "empty": {
+      "title": "まだ訪問がありません",
+      "description": "会話を始めると、訪問がここに表示されます。"
     }
   }
 }

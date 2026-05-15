@@ -994,6 +994,10 @@
       "scan_success": "已获取说明牌编号",
       "viewfinder_hint": "相机取景器，请对准二维码",
       "cancel_hint": "不发送并关闭扫描器"
+    },
+    "carnet": {
+      "session_card": "{{title}}，{{museum}}，{{date}}，打开参观",
+      "continue_hint": "以只读方式打开此过往参观"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "尚无对话",
       "description": "您的过往对话将显示于此。",
       "actionLabel": "开始对话"
+    }
+  },
+  "carnet": {
+    "title": "我的参观手册",
+    "linkLabel": "我的参观手册",
+    "untitledSession": "无标题参观",
+    "unknownMuseum": "未知博物馆",
+    "continueButton": "继续此对话",
+    "sectionArtworks": "讨论过的作品",
+    "sectionTranscript": "对话记录",
+    "noArtworks": "本次参观未扫描任何作品。",
+    "minutesShort": "{{count}} 分钟",
+    "minutesShort_zero": "< 1 分钟",
+    "messagesCount": "{{count}} 条消息",
+    "empty": {
+      "title": "暂无参观",
+      "description": "开始一段对话，您的参观将显示于此。"
     }
   }
 }

@@ -994,6 +994,10 @@
       "scan_success": "Code cartel capturé",
       "viewfinder_hint": "Viseur caméra, pointez vers le QR",
       "cancel_hint": "Ferme le scanner sans envoyer"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, ouvrir la visite",
+      "continue_hint": "Ouvre cette visite passée en lecture"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "Aucune conversation",
       "description": "Tes conversations passées apparaîtront ici.",
       "actionLabel": "Démarrer une conversation"
+    }
+  },
+  "carnet": {
+    "title": "Mon carnet de visite",
+    "linkLabel": "Mon carnet de visite",
+    "untitledSession": "Visite sans titre",
+    "unknownMuseum": "Musée inconnu",
+    "continueButton": "Continuer cette conversation",
+    "sectionArtworks": "Œuvres scannées",
+    "sectionTranscript": "Conversation",
+    "noArtworks": "Aucune œuvre scannée pendant cette visite.",
+    "minutesShort": "{{count}} min",
+    "minutesShort_zero": "< 1 min",
+    "messagesCount": "{{count}} messages",
+    "empty": {
+      "title": "Aucune visite",
+      "description": "Démarre une conversation et ta visite apparaîtra ici."
     }
   }
 }

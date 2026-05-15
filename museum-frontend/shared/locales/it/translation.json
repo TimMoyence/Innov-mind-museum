@@ -994,6 +994,10 @@
       "scan_success": "Codice cartello acquisito",
       "viewfinder_hint": "Mirino fotocamera, punta sul codice QR",
       "cancel_hint": "Chiude lo scanner senza inviare"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, apri visita",
+      "continue_hint": "Apre questa visita passata in sola lettura"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "Nessuna conversazione",
       "description": "Le conversazioni passate appariranno qui.",
       "actionLabel": "Inizia una conversazione"
+    }
+  },
+  "carnet": {
+    "title": "Il mio diario di visita",
+    "linkLabel": "Il mio diario di visita",
+    "untitledSession": "Visita senza titolo",
+    "unknownMuseum": "Museo sconosciuto",
+    "continueButton": "Continua questa conversazione",
+    "sectionArtworks": "Opere discusse",
+    "sectionTranscript": "Trascrizione",
+    "noArtworks": "Nessuna opera scansionata in questa visita.",
+    "minutesShort": "{{count}} min",
+    "minutesShort_zero": "< 1 min",
+    "messagesCount": "{{count}} messaggi",
+    "empty": {
+      "title": "Ancora nessuna visita",
+      "description": "Inizia una conversazione e la tua visita apparirà qui."
     }
   }
 }

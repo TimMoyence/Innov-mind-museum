@@ -994,6 +994,10 @@
       "scan_success": "تم التقاط رمز اللافتة",
       "viewfinder_hint": "محدد منظر الكاميرا، وجّه نحو رمز QR",
       "cancel_hint": "يغلق الماسح دون إرسال"
+    },
+    "carnet": {
+      "session_card": "{{title}}، {{museum}}، {{date}}، فتح الزيارة",
+      "continue_hint": "يفتح هذه الزيارة السابقة للقراءة"
     }
   },
   "consent": {
@@ -1099,6 +1103,23 @@
       "title": "لا توجد محادثات بعد",
       "description": "ستظهر محادثاتك السابقة هنا.",
       "actionLabel": "بدء محادثة"
+    }
+  },
+  "carnet": {
+    "title": "دفتر زياراتي",
+    "linkLabel": "دفتر زياراتي",
+    "untitledSession": "زيارة بدون عنوان",
+    "unknownMuseum": "متحف غير معروف",
+    "continueButton": "متابعة هذه المحادثة",
+    "sectionArtworks": "الأعمال التي نوقشت",
+    "sectionTranscript": "المحادثة",
+    "noArtworks": "لم يتم مسح أي عمل خلال هذه الزيارة.",
+    "minutesShort": "{{count}} د",
+    "minutesShort_zero": "< 1 د",
+    "messagesCount": "{{count}} رسائل",
+    "empty": {
+      "title": "لا توجد زيارات بعد",
+      "description": "ابدأ محادثة وستظهر زيارتك هنا."
     }
   }
 }

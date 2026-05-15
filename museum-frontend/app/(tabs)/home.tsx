@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -132,6 +133,32 @@ export default function HomeScreen() {
           />
         ) : null}
 
+        {/* B1 — Visit notebook link. Always visible (decision §0.5 + Q7) — leads to the empty state when no past sessions exist. */}
+        <Pressable
+          onPress={() => {
+            router.push('/(stack)/carnet');
+          }}
+          style={({ pressed }) => [
+            styles.carnetLink,
+            {
+              backgroundColor: theme.cardBackground,
+              borderColor: theme.cardBorder,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('carnet.linkLabel')}
+          testID="home-carnet-link"
+        >
+          <Ionicons name="journal-outline" size={22} color={theme.primary} />
+          <Text style={[styles.carnetLinkText, { color: theme.textPrimary }]}>
+            {t('carnet.linkLabel')}
+          </Text>
+          <View style={styles.carnetLinkChevron}>
+            <Ionicons name="chevron-forward" size={20} color={theme.textTertiary} />
+          </View>
+        </Pressable>
+
         <HomeIntentChips onPress={handleIntentPress} disabled={isCreating} />
 
         {error ? (
@@ -208,5 +235,23 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: semantic.button.fontSizeLarge,
     fontWeight: '700',
+  },
+  carnetLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: semantic.card.gap,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: semantic.card.paddingCompact,
+    borderRadius: semantic.card.radius,
+    borderWidth: semantic.input.borderWidth,
+  },
+  carnetLinkText: {
+    flex: 1,
+    fontSize: semantic.button.fontSize,
+    fontWeight: '600',
+  },
+  carnetLinkChevron: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
