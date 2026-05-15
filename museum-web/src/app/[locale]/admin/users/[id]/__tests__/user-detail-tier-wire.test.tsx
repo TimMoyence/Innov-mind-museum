@@ -12,7 +12,7 @@
  *  - The page TSX has no `<TierToggleButton>` JSX node.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Suspense } from 'react';
