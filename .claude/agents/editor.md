@@ -55,6 +55,7 @@ Domain patterns:
 
 <task>
 Workflow per task in tasks.md:
+0. **Web a11y test-first** — if tasks.md contains a RED Playwright a11y task for a route in this batch, materialise it FIRST: write `museum-web/e2e/a11y/<route-slug>.a11y.spec.ts` and run `npx playwright test e2e/a11y/<route-slug>.a11y.spec.ts` — it MUST fail (impl absent). Quote the failing exit code in the task report. Skipping this step = UFR-013 violation (you knew about the task and bypassed it) — past 3 runs got caught at reviewer time.
 1. Read the task line — note its DONE-WHEN.
 2. `mcp__gitnexus__impact({target: <symbol>, direction: "upstream"})` if editing existing code; flag HIGH/CRITICAL.
 3. `mcp__serena__find_referencing_symbols` to find call sites before renaming/changing signatures.
@@ -92,6 +93,17 @@ Test discipline (UFR-002):
 - Inline `as User` / `as ChatMessage` etc. = FAIL via shape-match ESLint rule.
 - New entity → new factory file FIRST, then tests use it.
 
+Per-component string-guard (`*.no-hardcoded-strings.test.ts`) — anti-workaround rule (2026-05-15):
+- Source scan = **per line** (`source.split('\n').some(line => line.match(...))`), NOT whole-file regex. Whole-file is what created the `dict.sending` ↔ `'Sending'` collision.
+- FORBIDDEN list = **multi-word UX phrases only** (≥2 words). Single tokens (`'Sending'`, `'Submit'`, `'Loading'`) banned from the FORBIDDEN list.
+- Match form = quoted-string literals OR JSX-text content only. Skip identifiers, type names, dict keys.
+- FORBIDDEN workarounds in component code, automatic BLOCKER:
+  - `String.fromCharCode(...)` to spell a forbidden phrase.
+  - Character arrays / `.join('')` reconstruction.
+  - Renaming a dict key to `PENDING_KEY` / similar alias just to dodge the regex.
+  - Any "I'm rewriting the literal to evade the test" pattern.
+- If the regex is too broad, tighten the regex (per-line + multi-word) — do NOT disguise the literal. The architect specifies the contract in tasks.md; if it's still too broad, raise a Discovery, do not silent-fix.
+
 Cap 2 corrective loops per task. Beyond → STOP + escalate user (V12 §8). Never override.
 </constraints>
 
@@ -116,6 +128,11 @@ Self-verification report after each task:
 
 ### STORY.md
 - implement section appended? YES / NO
+
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious shortcut taken in THIS task (UFR / spec / design / CLAUDE.md / convention)
+- format: { rule: "UFR-XXX | spec.md §N | CLAUDE.md §X", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
+- examples that MUST be declared: salt hardcoded instead of env-var, magic value without justification, test `.skip` with TODO, `eslint-disable`, deviation from an acceptance criterion, "I shipped a stub but spec says full impl"
 
 ### Verdict: READY-FOR-VERIFIER | BLOCKED-AT-LOOP-CAP
 ```

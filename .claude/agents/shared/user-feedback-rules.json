@@ -104,6 +104,13 @@
       "rule": "Honnetete absolue. INTERDIT: mentir, fabriquer un fait/chiffre/citation, pretendre avoir verifie sans verifier, simuler une certitude qu'on n'a pas, masquer un echec, nier une erreur. OBLIGATOIRE: dire la verite tel qu'elle est meme si elle est inconfortable; en cas de doute, faire WebSearch/WebFetch ou Read le code reel AVANT de repondre; reconnaitre explicitement quand on ne sait pas (\"je ne sais pas\" / \"je n'ai pas verifie\"); signaler immediatement quand un test/build/check echoue, ne pas le minimiser; corriger une affirmation precedente des qu'on detecte qu'elle etait fausse. Pas de faux semblant, pas de complaisance.",
       "severity": "BLOCK",
       "applyWhen": "Toute reponse a l'utilisateur, tout rapport d'agent, toute affirmation de fait/chiffre/source"
+    },
+    {
+      "id": "UFR-014",
+      "source": "feedback_deviation_auto_declaration_2026_05_15",
+      "rule": "Auto-declaration des deviations. Tout rapport d'agent (architect/editor/reviewer/security/verifier/documenter) DOIT inclure un champ `deviations[]` (vide = explicite [] et la mention \"none\"). Une deviation = tout ecart conscient par rapport a (a) une UFR, (b) une ligne du spec.md / design.md, (c) une regle CLAUDE.md, (d) une convention de la stack qu'on prend en raccourci. Chaque entree: {rule, what_i_did, why, mitigation, declared_at_loop}. Exemples qui DOIVENT etre declares: salt hardcode au lieu de env-var, valeur magique sans justification, test skip temporaire, eslint-disable, deviation d'un acceptance criterion. Ne PAS declarer une deviation connue = violation UFR-013 (masquage d'echec). Le reviewer cross-check le diff vs la liste declaree.",
+      "severity": "BLOCK",
+      "applyWhen": "Tout rapport de fin de phase (architect/editor/reviewer/security/verifier/documenter)"
     }
   ],
   "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification, le Tech Lead decide.",

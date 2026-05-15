@@ -34,6 +34,15 @@ Lint, type, tests are NOT your job. The deterministic hooks (`post-edit-lint.sh`
   - Interactive elements need explicit `accessibilityRole` (RN) or correct semantic tag (web).
   - `<img>` (web) / `Image` w/o `accessibilityIgnoresInvertColors` decorative MUST have `alt` (web) or `accessibilityLabel` (RN).
   - For web routes touched, run `npx playwright test e2e/a11y/` if reachable; cite axe violation rules verbatim if any.
+  - **Playwright a11y spec presence gate (2026-05-15)** — for EVERY web route added/touched in the diff, a matching spec MUST exist at `museum-web/e2e/a11y/<route-slug>.a11y.spec.ts` AND tasks.md MUST list it as a separate RED task scheduled BEFORE the impl tasks. If the spec is present but tasks.md has no RED task before impl, that's a finding (editor materialised it as corrective loop, not test-first). BLOCKER.
+- **String-guard audit (2026-05-15)** — for every `*.no-hardcoded-strings.test.ts` in the diff:
+  - Regex MUST scan per-line (`source.split('\n').some(line => ...)`) — whole-file scan = IMPORTANT finding.
+  - FORBIDDEN list MUST contain only multi-word UX phrases (≥2 words). Single tokens like `'Sending'` = IMPORTANT finding (will collide with dict keys).
+  - Grep the **component code** (NOT the test file) for workaround patterns; ANY hit = BLOCKER:
+    - `String.fromCharCode\(` — char-code reconstruction.
+    - `\.join\(''\)` on an array of single-char literals — array reconstruction.
+    - `const [A-Z_]+_KEY\s*=\s*['"]` then the value being a UX phrase — alias-to-dodge.
+  - Workarounds usually surface in corrective loops (R2, R3). If you see one, name the lesson and BLOCK the run — tighten the regex contract, do not let the workaround through.
 - **Design system token compliance (FE + web)** — for every touched style file:
   - No raw hex literals `/#[0-9a-fA-F]{3,8}/` outside `design-system/` source. MUST import from `tokens.generated.ts` (RN) or CSS custom property (web).
   - No raw `px`/`rem`/`pt` literals in inline styles. MUST use spacing/sizing tokens.
@@ -57,9 +66,17 @@ Workflow:
 4. `mcp__gitnexus__impact({target: ..., direction: "downstream"})` for callers of changed symbols — verify no surprise breakage.
 5. Cross-check spec EARS requirements ↔ tasks DONE-WHEN ↔ implementation ↔ tests (skip if no spec — micro).
 6. **Musaium-specific quality checks** (run grep-based checks per `<context>`):
-   a. a11y scan touched FE files (RN + web). Web: optional `npx playwright test e2e/a11y/<route>` if reachable.
+   a. a11y scan touched FE files (RN + web). Web: optional `npx playwright test e2e/a11y/<route>` if reachable. **Playwright spec presence gate** per `<context>` — verify both the spec file exists AND tasks.md scheduled it as RED before impl.
    b. Design-system token compliance grep on touched style code.
    c. Security pattern grep on full diff.
+   d. **String-guard audit** per `<context>` — for each `*.no-hardcoded-strings.test.ts` in the diff, verify per-line scan + multi-word FORBIDDEN, then grep component code for `String.fromCharCode\(` / array-join / alias-to-dodge.
+   e. **Deviations cross-check (UFR-014)** — read editor's `### Deviations` section, then grep the diff for the canonical deviation tells:
+      - hardcoded secret-shaped literal (salt, magic value) not in `.env*` / `config/env.ts` → must be declared.
+      - new `eslint-disable` → must be declared.
+      - `\.skip\(` / `xdescribe\(` / `xit\(` → must be declared.
+      - TODO / FIXME / XXX in production code → must be declared.
+      - missing acceptance-criterion impl (cross-ref spec.md AC list) → must be declared.
+      Any undeclared deviation = BLOCKER (silent cover-up, UFR-013 violation per UFR-014).
 7. Identify problems vs preferences (preferences = NIT only).
 8. **Compute 5-axis quality scores** (T1.5 — KR3) using the rubric in `<output_format>`. Each score MUST cite ≥1 piece of evidence (file:line, gate result, finding count). Compute `weightedMean` = correctness×0.30 + security×0.25 + maintainability×0.20 + testCoverage×0.15 + docQuality×0.10.
 9. Emit structured JSON to `.claude/skills/team/team-reports/<RUN_ID>/code-review.json` (schema in `<output_format>`, INCLUDING `scoresOnFiveAxes`).
@@ -117,9 +134,11 @@ Forbidden actions:
 - R2 (spec.md §3): ...
 
 ### Musaium-specific gates
-- a11y:                <PASS / N findings>
+- a11y:                <PASS / N findings>  (incl. Playwright spec presence + RED-before-impl)
 - design-system tokens: <PASS / N violations>
 - security grep:       <PASS / N hits>
+- string-guard audit:  <PASS / N findings> (per-line + multi-word contract, workaround grep)
+- deviations cross-check (UFR-014): <N declared / M undeclared found — if M>0 BLOCK>
 
 ### 5-axis quality scores (0-100, T1.5 ROADMAP_TEAM — KR3)
 | Axis            | Score | Weight | Reasoning                                  |
@@ -152,9 +171,11 @@ Forbidden actions:
     "nit":       [{ "fileLine": "src/x.ts:120", "suggestion": "..." }]
   },
   "musaiumGates": {
-    "a11y":           { "status": "PASS|FAIL", "violations": [{ "fileLine": "...", "rule": "axe-rule-id|missing-accessibilityLabel", "detail": "..." }] },
+    "a11y":           { "status": "PASS|FAIL", "violations": [{ "fileLine": "...", "rule": "axe-rule-id|missing-accessibilityLabel|missing-playwright-spec|spec-not-red-first", "detail": "..." }] },
     "designSystem":   { "status": "PASS|FAIL", "violations": [{ "fileLine": "...", "match": "#ff00aa", "kind": "raw-hex|raw-px|raw-rgb" }] },
-    "securityGrep":   { "status": "PASS|FAIL", "hits": [{ "fileLine": "...", "pattern": "dangerouslySetInnerHTML|eval|raw-sql|env-leak|hardcoded-secret", "matchedLine": "..." }] }
+    "securityGrep":   { "status": "PASS|FAIL", "hits": [{ "fileLine": "...", "pattern": "dangerouslySetInnerHTML|eval|raw-sql|env-leak|hardcoded-secret", "matchedLine": "..." }] },
+    "stringGuardAudit": { "status": "PASS|FAIL", "findings": [{ "fileLine": "...", "kind": "whole-file-scan|single-token-forbidden|fromCharCode-workaround|array-join-workaround|alias-to-dodge", "matchedLine": "..." }] },
+    "deviationsCrossCheck": { "status": "PASS|FAIL", "declared": N, "undeclared": [{ "fileLine": "...", "tell": "hardcoded-salt|eslint-disable|test-skip|todo-in-prod|missing-AC", "detail": "..." }] }
   },
   "kissDryHexagonal": {
     "kiss":      "PASS|WARN|FAIL",
