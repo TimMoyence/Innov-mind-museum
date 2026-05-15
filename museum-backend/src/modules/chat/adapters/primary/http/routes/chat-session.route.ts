@@ -27,15 +27,18 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   const router = Router();
 
   // POST /sessions — create a new chat session
-  // R1 (C6) — `monthlySessionQuota` enforces the soft-paywall on session
-  // creation only (R10). Mounted AFTER `isAuthenticated` (R9 — anonymous
-  // never reaches the quota gate) and BEFORE the body validator so unauth'd
-  // and quota-exhausted requests short-circuit before zod runs.
+  // R1 corrective F1 (2026-05-16, ultrareview bug_001) — validateBody runs
+  // BEFORE monthlySessionQuota so Zod 400s short-circuit BEFORE the atomic
+  // counter UPDATE. Burning a free-tier slot on an invalid body would
+  // (a) lock out users for a session they never created, and (b) corrupt the
+  // KR4 funnel signal that feeds the Stripe go/no-go decision. R1 §3.3 D3
+  // prior ordering superseded ; concurrent-race invariant (R1 §3.3 D2)
+  // preserved byte-for-byte (PostgreSQL row-lock serialises the UPDATE).
   router.post(
     '/sessions',
     isAuthenticated,
-    monthlySessionQuota,
     validateBody(createSessionSchema),
+    monthlySessionQuota,
     async (req, res) => {
       const currentUser = getRequestUser(req);
       const payload = req.body as CreateSessionBody;
