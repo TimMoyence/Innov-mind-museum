@@ -54,6 +54,7 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /**
  * Maps a thrown orchestrator/LLM provider error to a user-facing AppError.
@@ -303,22 +304,31 @@ export class ChatMessageService {
     // call (the dominant LLM window). Sibling, not replacement, of the existing
     // `chat_phase_duration_seconds{phase=llm}` Prom dimension owned by the
     // LangChain orchestrator adapter (spec §1.1 Q2 — distinct concerns).
+    //
+    // bug `merged_bug_004` — span MUST also be emitted on failure (time-to-
+    // failure is exactly the window engineers need). Pattern mirrors
+    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
+    // + `outcome: 'success' | 'error'` attribute.
     const composingStartedAtMs = Date.now();
     let aiResult: OrchestratorOutput;
+    let outcome: ChatPhaseOutcome = 'success';
     try {
       aiResult = await this.orchestrator.generate(orchestratorInput);
     } catch (err) {
+      outcome = 'error';
       // Surface orchestrator errors as 503 SERVICE_UNAVAILABLE rather than a
       // generic 500. Banking-grade contract: a downstream LLM provider failure
       // is a degraded-dependency state, not an internal server bug. Preserves
       // AppError subclasses (CircuitOpenError 503, etc.) verbatim.
       throw mapOrchestratorError(err, requestId);
+    } finally {
+      emitChatPhaseSpan('composing', composingStartedAtMs, {
+        sessionId,
+        requestId,
+        hasImage: Boolean(orchestratorInput.image),
+        outcome,
+      });
     }
-    emitChatPhaseSpan('composing', composingStartedAtMs, {
-      sessionId,
-      requestId,
-      hasImage: Boolean(orchestratorInput.image),
-    });
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
     return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });

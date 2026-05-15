@@ -31,6 +31,7 @@ import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
+import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /** Preparation succeeded — all data needed to invoke the LLM. */
 export interface PrepareReady {
@@ -200,13 +201,27 @@ export class PrepareMessagePipeline {
   }> {
     if (!image) return {};
 
-    const startedAtMs = Date.now();
-    const processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
     // A5 (R2/R3) — `chat.phase.analyzing-image` Langfuse span. Emitted ONLY
     // when the request carries an image (R3 : the early-return guard above
     // ensures no span is emitted on text-only paths). Fail-open via
     // `safeTrace` so a Langfuse SDK outage never breaks the chat path.
-    emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId });
+    //
+    // bug `merged_bug_004` — span MUST also be emitted on failure (any
+    // `badRequest` / sharp EXIF-strip / S3 upload error). Pattern mirrors
+    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
+    // + `outcome: 'success' | 'error'` attribute. Note: `runOcrGuard` stays
+    // OUTSIDE the wrap — span scope is strictly `processImage` per A5 R2/R3.
+    const startedAtMs = Date.now();
+    let outcome: ChatPhaseOutcome = 'success';
+    let processed: Awaited<ReturnType<ImageProcessingService['processImage']>>;
+    try {
+      processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
+    } catch (err) {
+      outcome = 'error';
+      throw err;
+    } finally {
+      emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId, outcome });
+    }
     await this.imageProcessor.runOcrGuard(
       processed.orchestratorImage,
       evaluateUserInputGuardrail,
