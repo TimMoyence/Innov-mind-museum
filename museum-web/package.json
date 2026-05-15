@@ -6,7 +6,7 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@10.8.0",
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build",
