@@ -336,19 +336,20 @@ describe('ChatMessageService', () => {
       // when `deps.cache` is undefined (env disabled cache). The service then
       // short-circuits via `if (!llmCache)` in `tryLlmCacheLookup`.
       const composition = readFileSync(
-        resolve(
-          __dirname,
-          '../../../src/modules/chat/useCase/orchestration/chat.service.ts',
-        ),
+        resolve(__dirname, '../../../src/modules/chat/useCase/orchestration/chat.service.ts'),
         'utf8',
       );
+      // Skip when running under Stryker — instrumentation prepends
+      // `// @ts-nocheck` + `stryNS_…()` wrappers that break the regex-on-source
+      // technique used here. The structural guard is for the canonical
+      // (unmodified) tree; Stryker mutates the file under test which is the
+      // wrong target for this guard.
+      if (composition.startsWith('// @ts-nocheck')) return;
+
       expect(composition).toMatch(/llmCache:\s*deps\.cache\s*\?\s*new\s+LlmCacheServiceImpl/);
 
       const service = readFileSync(
-        resolve(
-          __dirname,
-          '../../../src/modules/chat/useCase/message/chat-message.service.ts',
-        ),
+        resolve(__dirname, '../../../src/modules/chat/useCase/message/chat-message.service.ts'),
         'utf8',
       );
       // Both code paths (lookup + store) must guard on `!llmCache` so a
