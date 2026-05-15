@@ -51,7 +51,7 @@ import type {
 import type {
   KnowledgeRouterPort,
   KnowledgeRouterResult,
-} from '@modules/chat/domain/ports/knowledge-router.port';
+} from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 /**
  * Build an orchestrator stub that captures every `OrchestratorInput` it sees
@@ -204,7 +204,9 @@ describe('chat citations end-to-end integration (T6.1)', () => {
 
   it('case 3 — LLM omits sources[] → response metadata.sources is undefined (graceful)', async () => {
     const { orchestrator } = makeRecordingOrchestrator({
-      metadata: { /* no sources field at all */ },
+      metadata: {
+        /* no sources field at all */
+      },
     });
     const service = buildChatTestService({ orchestrator });
     const session = await service.createSession({ locale: 'en-US', museumMode: true });

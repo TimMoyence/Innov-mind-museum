@@ -8,8 +8,8 @@
  * only needs `{confidence, decision: allow|block|review}`.
  *
  * Contract :
- *   - new file `domain/ports/llm-judge.port.ts` exposes `LlmJudgePort.evaluate`
- *     + `LlmJudgeResult`.
+ *   - `useCase/llm/llm-judge-guardrail.ts` exposes `LlmJudgePort.evaluate`
+ *     + `LlmJudgeResult` (inlined alongside the sole impl — TD-8 cull 2026-05-15).
  *   - a wrapper class `LlmJudgeGuardrail` in `useCase/llm/llm-judge-guardrail.ts`
  *     implements `LlmJudgePort`, mapping the internal `JudgeDecision` shape to
  *     `LlmJudgeResult`. Fail-open of the underlying function (`null` →
@@ -17,16 +17,10 @@
  *   - the function `judgeWithLlm` MUST remain exported untouched (backward
  *     compat — 5 call-sites in production code still consume it).
  */
-import {
-  LlmJudgeGuardrail,
-  judgeWithLlm,
-} from '@modules/chat/useCase/llm/llm-judge-guardrail';
+import { LlmJudgeGuardrail, judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import { resetBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 
-import type {
-  LlmJudgePort,
-  LlmJudgeResult,
-} from '@modules/chat/domain/ports/llm-judge.port';
+import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
 interface FakeOrchestratorBehaviour {

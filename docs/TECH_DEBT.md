@@ -196,7 +196,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-8 — Cull 3 remaining single-impl chat ports (image-processor, knowledge-router, llm-judge)
 
-- [ ] **Statut** : ouvert (créé 2026-05-13, audit P1-3 partial deferral)
+- [x] **Statut** : fermé 2026-05-15
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/domain/ports/image-processor.port.ts
@@ -207,12 +207,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Pourquoi non résolu en P1-3** : le sub-agent a culled ces 3 + `AdvancedGuardrail` localement (commit `448973b5` sur la branche `backup-p1-night-pre-rebase`). Quand j'ai rebasé sur `origin/main` avant push, conflict 7-fichiers dans le surface guardrail/chat : `origin/main` était en train de refactorer la même zone (commits `5e0a4bd2`, `89b116f8`, etc. — renommage `advanced-guardrail.port` → `guardrail-provider.port`, fixes des 49 tests BE). Conflict resolution cost > value pour cette nuit. Le commit a été skippé pendant le rebase.
 - **Sprint d'origine** : audit 2026-05-12 (P1-3 partial).
 - **Effort estimé** : 30-60 min sur un jour calme — pattern bien établi par P1-3 sub-agent.
-- **Comment fermer** :
-  1. Récupérer le patch depuis `git show backup-p1-night-pre-rebase:<file>` pour les 3 ports + leurs sites d'usage (5-11 fichiers par port).
-  2. Réappliquer manuellement (les conflicts d'origin/main sur AdvancedGuardrail sont absorbés — leur rename `guardrail-provider.port` est le canonique maintenant ; ne pas le toucher).
-  3. tsc + lint verts sur BE.
-  4. Cocher TD-8 ici.
-- **Note** : la branche `backup-p1-night-pre-rebase` doit être préservée jusqu'à fermeture de TD-8.
+- **Closure note (2026-05-15)** : Pattern récupéré depuis dangling commit `448973b5` (P1-3 sub-agent, 2026-05-13) — la branche `backup-p1-night-pre-rebase` ayant été perdue entre-temps. 3 ports inlinés dans leurs sole consumers (`SharpImageProcessor` / `KnowledgeRouterService` / `LlmJudgeGuardrail`) ; 14 importers redirigés (production + tests) ; `AdvancedGuardrail` non touché (déjà absorbé par `GuardrailProvider` via `5e0a4bd2`). Reverse-domain import de `KnowledgeRouterSource` dans `chat-orchestrator.port.ts` redirigé vers le service. `tsc` + `lint` verts, chat unit suite 2009/2011 passed (2 skipped, unchanged baseline). `compare.use-case.ts` `ImageProcessorPort` (signature `process` ≠ `stripExif`) conservé OUT-OF-SCOPE.
 
 ---
 

@@ -12,12 +12,11 @@
 import type {
   KnowledgeRouterPort,
   KnowledgeRouterResult,
-} from '@modules/chat/domain/ports/knowledge-router.port';
+} from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 describe('KnowledgeRouterPort (T3.1)', () => {
   it('exposes a resolve(searchTerm, signal?) method returning KnowledgeRouterResult', () => {
     const stub: KnowledgeRouterPort = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- type-only smoke test
       async resolve(searchTerm: string, _signal?: AbortSignal): Promise<KnowledgeRouterResult> {
         return {
           facts: [`fact for ${searchTerm}`],
@@ -60,7 +59,6 @@ describe('KnowledgeRouterPort (T3.1)', () => {
 
   it('allows the signal parameter to be omitted', async () => {
     const stub: KnowledgeRouterPort = {
-      // eslint-disable-next-line @typescript-eslint/require-await -- type-only smoke test
       async resolve(searchTerm: string): Promise<KnowledgeRouterResult> {
         return {
           facts: [],
