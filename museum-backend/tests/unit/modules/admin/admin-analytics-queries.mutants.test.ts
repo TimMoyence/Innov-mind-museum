@@ -28,13 +28,14 @@ import {
 } from '@modules/admin/adapters/secondary/pg/admin-analytics-queries';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
+import type { AuditLog } from '@shared/audit/auditLog.entity';
 import type { DataSource, Repository } from 'typeorm';
 
 interface AnalyticsRepositoriesShape {
   dataSource: DataSource;
   sessionRepo: Repository<ChatSession>;
   messageRepo: Repository<ChatMessage>;
-  auditRepo: Repository<unknown>;
+  auditRepo: Repository<AuditLog>;
 }
 
 interface TestHarness {
@@ -81,7 +82,7 @@ function buildHarness(): TestHarness {
 
   const sessionRepo = { createQueryBuilder: sessionCreate } as unknown as Repository<ChatSession>;
   const messageRepo = { createQueryBuilder: messageCreate } as unknown as Repository<ChatMessage>;
-  const auditRepo = { createQueryBuilder: auditCreate } as unknown as Repository<unknown>;
+  const auditRepo = { createQueryBuilder: auditCreate } as unknown as Repository<AuditLog>;
   const artworkRepo = { createQueryBuilder: artworkCreate };
 
   const dataSourceQuery = jest.fn().mockResolvedValue([{ returning_users: '0' }]);

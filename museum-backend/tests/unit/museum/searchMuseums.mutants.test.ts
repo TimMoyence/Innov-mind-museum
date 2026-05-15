@@ -13,6 +13,7 @@
 import { SearchMuseumsUseCase } from '@modules/museum/useCase/search/searchMuseums.useCase';
 import { InMemoryMuseumRepository } from 'tests/helpers/museum/inMemoryMuseumRepository';
 
+import type { CacheService } from '@shared/cache/cache.port';
 import type { OverpassMuseumResult } from '@shared/http/overpass.client';
 import type { NominatimGeocodingResult } from '@shared/http/nominatim.client';
 
@@ -62,11 +63,11 @@ function makeOsm(
   overrides: Partial<OverpassMuseumResult> &
     Pick<OverpassMuseumResult, 'name' | 'latitude' | 'longitude'>,
 ): OverpassMuseumResult {
+  // Spread overrides first so the explicit `name` / `latitude` / `longitude`
+  // from the Pick block win over the defaults below (TS2783 otherwise — the
+  // defaults would be flagged as overwritten).
   return {
-    name: 'OSM Default',
     address: null,
-    latitude: PARIS.lat,
-    longitude: PARIS.lng,
     museumType: 'museum' as const,
     ...overrides,
   } as OverpassMuseumResult;
@@ -86,7 +87,10 @@ async function seedLocal(
     await repo.create({
       name: m.name,
       slug: m.slug,
-      address: m.address ?? null,
+      // CreateMuseumInput.address is `string | undefined`; the test fixture
+      // models nullable input via `string | null | undefined`, so coerce
+      // `null` → `undefined` for the contract.
+      address: m.address ?? undefined,
       latitude: m.latitude,
       longitude: m.longitude,
     });
@@ -579,7 +583,7 @@ describe('SearchMuseumsUseCase — mutation kills', () => {
         get: jest.fn(),
         set: jest.fn(),
         del: jest.fn(),
-      } as unknown as Parameters<typeof SearchMuseumsUseCase.prototype.constructor>[1];
+      } as unknown as CacheService;
 
       const uc = new SearchMuseumsUseCase(repo, fakeCache);
       mockQueryOverpassMuseums.mockResolvedValue([]);
