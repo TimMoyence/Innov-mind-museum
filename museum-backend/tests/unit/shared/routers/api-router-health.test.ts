@@ -125,6 +125,37 @@ jest.mock('@modules/auth/adapters/primary/http/routes/mfa.route', () => ({
     return r;
   })(),
 }));
+// R2 W3.4 — `admin-export.route` imports `authenticated.middleware` which
+// transitively pulls `auth/useCase` → `AppDataSource`. Same env.db.host trap
+// as me.route / mfa.route — stub the router out (mirrors corrective in
+// api-router-resolve.test.ts).
+jest.mock('@modules/admin/adapters/primary/http/routes/admin-export.route', () => ({
+  __esModule: true,
+  default: (() => {
+    const { Router } = jest.requireActual<typeof import('express')>('express');
+    const r = Router();
+    r.get('/__probe', (_req, res) => {
+      res.status(200).json({ label: 'admin-export' });
+    });
+    return r;
+  })(),
+}));
+// R1 C6 + R3/R4 — `leads.route` imports `leads/useCase/index.ts` which
+// eagerly reads `env` at module load (composition root for submitBeta/
+// submitB2bLead/submitPaywallInterest useCases). The test's `get env()`
+// returns `envMock` which isn't initialized yet at module-load time, so we
+// stub the router out (same pattern as me.route / mfa.route / admin-export).
+jest.mock('@modules/leads/adapters/primary/http/routes/leads.route', () => ({
+  __esModule: true,
+  default: (() => {
+    const { Router } = jest.requireActual<typeof import('express')>('express');
+    const r = Router();
+    r.get('/__probe', (_req, res) => {
+      res.status(200).json({ label: 'leads' });
+    });
+    return r;
+  })(),
+}));
 jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
   createChatRouter: jest.fn(() => makeProbeRouter('chat')),
 }));
