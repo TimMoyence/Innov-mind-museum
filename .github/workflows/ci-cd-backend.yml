@@ -132,15 +132,118 @@ jobs:
             exit 1
           fi
 
-      - name: Unit/Integration Tests (non-E2E) with coverage gate
-        # Phase 8: `test:coverage` script invokes Jest with --coverage and
-        # --selectProjects unit-integration, so the global coverage threshold
-        # in jest.config.ts hard-fails the PR if BE drops below 90/78/85/90.
-        run: pnpm run test:coverage
+      # NOTE: test:coverage moved to dedicated sharded job + coverage-merge
+      # below (2026-05-15) — 4-shard matrix divides wall-clock by ~4x while
+      # keeping the same threshold gate (88/74/86/89). The merge step
+      # validates the threshold against the union of all shards.
+
+  # ─── 1b. Test coverage — sharded matrix (4 shards, parallel) ───────────
+  test-coverage:
+    needs: [changes, quality]
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests with coverage (shard ${{ matrix.shard }}/4)
+        run: |
+          pnpm exec jest --watchman=false --runInBand \
+            --selectProjects unit-integration \
+            --shard=${{ matrix.shard }}/4 \
+            --coverage --coverageReporters=json \
+            --coverageDirectory=coverage-shard-${{ matrix.shard }} \
+            --testTimeout=15000
+
+      - name: Upload coverage shard
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: museum-backend/coverage-shard-${{ matrix.shard }}/coverage-final.json
+          retention-days: 7
+
+  # ─── 1c. Coverage merge + threshold gate ───────────────────────────────
+  coverage-merge:
+    needs: test-coverage
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+
+      - name: Download all coverage shards
+        uses: actions/download-artifact@v5
+        with:
+          pattern: coverage-shard-*
+          path: museum-backend/coverage-shards/
+
+      - name: Stage shard coverage in .nyc_output
+        run: |
+          mkdir -p .nyc_output
+          for d in coverage-shards/coverage-shard-*/; do
+            shard=$(basename "$d")
+            cp "$d/coverage-final.json" ".nyc_output/${shard}.json"
+          done
+          ls -la .nyc_output
+
+      - name: Merge coverage + emit summary
+        # `nyc report` auto-merges all JSON files in .nyc_output into a single
+        # report. `json-summary` emits coverage/coverage-summary.json which the
+        # threshold-check step below reads.
+        run: |
+          npx --yes nyc@15 report --reporter=json-summary --reporter=text-summary --temp-dir=.nyc_output --report-dir=coverage
+
+      - name: Validate threshold (BE — Phase 8 / Phase 11 Sprint 11.2)
+        # Thresholds MUST match museum-backend/jest.config.ts:117-120.
+        # Update both if you tune coverage policy.
+        run: |
+          npx --yes nyc@15 check-coverage \
+            --statements 88 --branches 74 --functions 86 --lines 89 \
+            --temp-dir=.nyc_output
+
+      - name: Upload merged coverage artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: coverage-merged
+          path: museum-backend/coverage/
+          retention-days: 30
 
   # ─── 2. Integration tests (real PG via Docker testcontainer) ─────────
   integration:
-    needs: quality
+    needs: [quality, coverage-merge]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -167,7 +270,7 @@ jobs:
 
   # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
   mutation:
-    needs: quality
+    needs: [quality, coverage-merge]
     # FULLY DISABLED 2026-05-09 — a dedicated local cache-builder agent
     # is regenerating the Stryker incremental cache offline (long-running
     # job). Once that cache is committed + pushed, flip `if: false` back
@@ -253,7 +356,7 @@ jobs:
 
   # ─── 4. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
-    needs: quality
+    needs: [quality, coverage-merge]
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -291,7 +394,7 @@ jobs:
 
   # ─── 5. AI integration tests (manual only) ───────────────────────────
   ai-tests:
-    needs: quality
+    needs: [quality, coverage-merge]
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -333,7 +436,7 @@ jobs:
   # points (NFR3 / spec G3 gate).
   halluc-eval:
     name: halluc regression (C4.3)
-    needs: [changes, quality]
+    needs: [changes, quality, coverage-merge]
     # Run when backend code changes (PR / push) or on the dedicated cron slots.
     if: |
       needs.changes.outputs.backend == 'true' ||
@@ -521,7 +624,7 @@ jobs:
 
   # ─── 6. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
-    needs: quality
+    needs: [quality, coverage-merge]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
@@ -1049,7 +1152,7 @@ jobs:
 
   # ─── 7. Deploy to staging (push to staging) ──────────────────────────
   deploy-staging:
-    needs: quality
+    needs: [quality, coverage-merge]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
