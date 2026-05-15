@@ -42,9 +42,12 @@ export const deriveLastArtworkTitle = (
     return null;
   }
   const last = artworks[artworks.length - 1];
-  // `title` is typed required on VisitedArtwork ; coerce empty/whitespace
-  // titles (jsonb data drift defence) to null for downstream B2 banner gating.
-  const title = last.title.trim();
+  // `title` is typed required on VisitedArtwork, but `visit_context` is a
+  // nullable jsonb column with no DB-level shape validation. Guard against
+  // missing / null / non-string drift (would otherwise throw TypeError from
+  // inside `listSessions().sessions.map(...)` and 500 the whole carnet) and
+  // coerce empty/whitespace titles to null for downstream B2 banner gating.
+  const title = typeof last.title === 'string' ? last.title.trim() : '';
   return title.length > 0 ? title : null;
 };
 
