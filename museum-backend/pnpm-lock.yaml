@@ -121,13 +121,6 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
-    optionalDependencies:
-      replicate:
-        specifier: ^1.4.0
-        version: 1.4.0
-      tesseract.js:
-        specifier: ^7.0.0
-        version: 7.0.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -172,7 +165,7 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       '@types/node':
-        specifier: ^22.15.21
+        specifier: ^22.19.17
         version: 22.19.17
       '@types/opossum':
         specifier: ^8.1.9
@@ -264,6 +257,13 @@ importers:
       typescript-eslint:
         specifier: ^8.58.1
         version: 8.58.1(eslint@10.2.0)(typescript@5.9.3)
+    optionalDependencies:
+      replicate:
+        specifier: ^1.4.0
+        version: 1.4.0
+      tesseract.js:
+        specifier: ^7.0.0
+        version: 7.0.0
 
 packages:
 
