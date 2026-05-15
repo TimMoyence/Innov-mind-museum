@@ -150,7 +150,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-6 — `chaos-circuit-breaker.e2e` HALF_OPEN→CLOSED test cannot run without orchestrator stub-swap
 
-- [ ] **Statut** : ouvert (créé 2026-05-12, sprint audit-cleanup-2026-05-12 / D.4)
+- [x] **Statut** : CLOSED 2026-05-15 (run `2026-05-15-td6-chaos-circuit-breaker-half-open`). HALF_OPEN→CLOSED transition now verified end-to-end via `harness.orchestratorReset` swap-proxy (option b). Failing + success orchestrators share the same `LLMCircuitBreaker` instance so the post-swap state observed by the new model is the real post-trip OPEN state. Zero production-surface change. See `museum-backend/tests/helpers/e2e/e2e-app-harness.ts` (`createSwappableOrchestrator` + `orchestratorReset`) and `museum-backend/tests/e2e/chaos-circuit-breaker.e2e.test.ts` (test `after openDurationMs, breaker → HALF_OPEN; success closes it`).
 - **Référence code** :
   ```
   museum-backend/tests/e2e/chaos-circuit-breaker.e2e.test.ts:100

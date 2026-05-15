@@ -51,13 +51,6 @@ const SHARED_JEST_PROJECTS = [
     displayName: 'unit-integration',
     testEnvironment: 'node',
     transform: { '^.+\\.tsx?$': '@swc/jest' },
-    // Jest's default 5s testTimeout is too tight for Stryker sandbox runs:
-    // overnight load (multiple concurrent agents + 4 Jest workers under
-    // Stryker) can stretch a normal-fast test like bcrypt.hash() with
-    // rounds=12 past 5s, failing the dry-run on what was a flake. 30s
-    // gives plenty of headroom without masking real slow tests (normal
-    // tests still complete in <100ms).
-    testTimeout: 30_000,
     moduleNameMapper: {
       '^@src/(.*)$': '<rootDir>/src/$1',
       '^@modules/(.*)$': '<rootDir>/src/modules/$1',

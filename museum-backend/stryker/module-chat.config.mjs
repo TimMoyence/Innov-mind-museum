@@ -1,26 +1,19 @@
 /**
- * module/chat scope — AI orchestrator (LangChain LLM pipeline + voice STT/TTS,
- * guardrails V1/V2, art-keyword extraction, image processing, visual-similarity
- * search, sessions, memory, retention jobs).
+ * module/chat scope — full chat module (155 mutable files, ~12k mutants).
  *
- * Mutates `src/modules/chat/**` (~140-155 mutable files across domain,
- * useCase, primary/secondary adapters, jobs).
+ * ⚠️ DO NOT RUN END-TO-END. The 2026-05-15 first-pass attempt produced
+ * 1405 timeouts in 3778 tested mutants (37% timeout rate) at 6h elapsed
+ * with a projected 4-day completion. Likely cause: some chat code paths
+ * (image processing, embedding preprocessing, retry loops in
+ * guardrails) produce mutant variants that hit Jest's default 5s
+ * testTimeout, multiplying wall-clock cost. Carve-outs in the same
+ * directory (module-chat-guardrails / module-chat-persistence /
+ * module-chat-llm / module-chat-jobs) are the supported way to exercise
+ * chat under Stryker. This file is kept as documentation of the full
+ * scope and as a fallback for future incremental re-runs once the
+ * carve-outs have raised the baseline coverage.
  *
- * First-pass expectations: largest module scope in the codebase by far —
- * estimated 5000+ mutants and 4-6h initial runtime. Survivors clustered in
- * llm-sections (section prompt templates), guardrails (keyword arrays + V2
- * sidecar wrappers), embeddings (numerical preprocessing), and persistence
- * (TypeORM repository SQL fragments).
- *
- * Usage: `pnpm stryker run stryker/module-chat.config.mjs`
- *
- * Carve-out candidates if the full scope is impractical to keep at 0
- * survivors:
- *   - chat/useCase/llm/llm-sections/* (prompt templates are dense StringLiteral
- *     targets that need fixture-driven assertions)
- *   - chat/adapters/secondary/embeddings/* (SigLIP / preprocessing — see
- *     ADR-037 note in CLAUDE.md about FP16 normalization gotchas)
- *   - chat/useCase/guardrail/* (V1 + V2 layered defense, ADR-015)
+ * Usage: prefer the carve-outs (see other stryker/module-chat-*.config.mjs).
  */
 import { defineConfig } from './config.mjs';
 
