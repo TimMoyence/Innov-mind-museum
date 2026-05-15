@@ -213,26 +213,16 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-9 — Mobile test `chat-session-deep.test.tsx > toggleRecording/playRecordedAudio` failing on `main`
 
-- [ ] **Statut** : ouvert (créé 2026-05-13, surface par audit P1-1+P1-2 push qui a déclenché le mobile CI)
+- [x] **Statut** : fermé 2026-05-15 — déjà fixé en amont, ticket stale.
+- **Cause racine** : commit `59296c75e` (2026-05-12, Art.50 voice disclosure gate) a wrappé `toggleRecording` d'un early-return jusqu'à acknowledge user → le test prop-forwarding line 1044 tombait sur ce wrapper et recevait 0 call au lieu de 1.
+- **Fix** : commit `f795ed4dc` (2026-05-13 16:23, `test(mobile): mock useVoiceDisclosure in chat-session-deep prop-forwarding test`) ajoute `jest.mock('@/features/chat/hooks/useVoiceDisclosure')` retournant `isAcknowledged: true` dans le test, bypass le gate, contract prop-forwarding redevient vérifiable.
+- **Vérification 2026-05-15** : `cd museum-frontend && npx jest __tests__/screens/chat-session-deep.test.tsx` → `Tests: 50 passed, 50 total` en 1.353 s. Zero `act()` warning. (TD-9 mentionnait 52 tests — chiffre stale, le fichier en a 50 aujourd'hui.)
+- **Pourquoi pas coché à l'époque** : le fix `f795ed4dc` est landé pendant la phase d'audit P1 ; le ticket TD-9 a été créé en parallèle (2026-05-13) sans synchronisation avec ce commit. Erreur de coordination, pas un vrai bug ouvert.
 - **Référence code** :
   ```
-  museum-frontend/__tests__/screens/chat-session-deep.test.tsx:1043-1048
-  museum-frontend/app/(stack)/chat/[sessionId].tsx (Media wiring)
+  museum-frontend/__tests__/screens/chat-session-deep.test.tsx (ligne du mock useVoiceDisclosure)
+  museum-frontend/app/(stack)/chat/[sessionId].tsx (Art.50 wrapper, intact)
   ```
-- **Symptôme** : 1 test échoue dans `ChatSessionScreen — MediaAttachmentPanel + MessageContextMenu wiring > forwards toggleRecording, playRecordedAudio, ...` :
-  ```
-  expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1)
-  Expected: 1, Received: 0
-  ```
-  Multiple "An update to ChatSessionScreen inside a test was not wrapped in act(...)" warnings. 51 autres tests du même fichier passent.
-- **Pourquoi ce n'est pas dû au push P1** : reproduit localement à la fois sur `audit/p1-night` et sur `89b116f8c` (origin/main AVANT le push P1). Le test était déjà rouge sur origin/main ; les pushes précédents ne touchaient pas mobile/ donc le workflow `mobile` ne tournait pas et le failure restait latent.
-- **Sprint d'origine** : inconnu (date d'introduction du break à investiguer via `git bisect` ou git log de `chat/[sessionId].tsx`).
-- **Effort estimé** : 30 min — soit fix the wiring dans `ChatSessionScreen` (forwarder le bon callback), soit ajuster le mock dans le test si la wiring est intentionnelle.
-- **Comment fermer** :
-  1. `git log -p museum-frontend/app/\(stack\)/chat/\[sessionId\].tsx` pour trouver le commit qui a changé la wiring de `toggleRecording`.
-  2. Décider : fix le screen ou fix le test mock.
-  3. Re-run `npx jest __tests__/screens/chat-session-deep.test.tsx` → 52/52 passants.
-  4. Cocher TD-9 ici.
 
 ---
 
