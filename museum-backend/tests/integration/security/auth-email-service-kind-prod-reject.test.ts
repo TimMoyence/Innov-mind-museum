@@ -96,6 +96,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       cacheTtlSeconds: 86400,
     },
     freeTierDailyChatLimit: 100,
+    freeTierMonthlySessionLimit: 3,
     overpassCacheTtlSeconds: 86400,
     overpass: { cacheTtlSeconds: 86400, negativeCacheTtlSeconds: 3600 },
     chatPurgeRetentionDays: 180,
