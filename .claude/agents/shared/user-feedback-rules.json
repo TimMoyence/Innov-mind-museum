@@ -180,6 +180,14 @@
       "rule": "Ne pas estimer Musaium en jours-dev solo. Multi-prompt parallelisme /team compresse 70-80j-dev solo vers ~7j elapsed. Estimates 50-70% over-inflated quand framees calendrier. Frame les trade-offs en risque technique / chaine de dependances / scope / surface de regression — JAMAIS en calendrier. Si un estime time est demande, framer en agent-cycle units (`5-10 cycles /team standard`), pas en jours.",
       "severity": "WARN",
       "applyWhen": "Estimer un effort, proposer un decoupage roadmap, justifier un report"
+    },
+    {
+      "id": "UFR-020",
+      "family": "orchestration",
+      "source": "feedback_ban_no_verify_bypass_2026_05_15",
+      "rule": "BYPASS HOOK INTERDIT. JAMAIS utiliser `--no-verify` ni aucune autre forme de contournement de hook : ni `git commit --no-verify`, ni `git commit -n`, ni `git push --no-verify`, ni `SKIP_PRE_COMMIT=1`, ni `core.hookspath=/dev/null`. Les hooks pre-commit/pre-push de Musaium sont la couche shift-left qui catch les regressions avant CI (~30s-2min pre-push) ; les bypass annulent la valeur du systeme et poussent du code rouge en CI (15min wasted) puis sur main. Si un hook bloque legitimement (faux positif, environnement local cassé), fix le hook ou la condition, ne le bypass JAMAIS. Si la pression deadline tente, escalade au Tech Lead. Enforcement code : `.claude/settings.json` deny rules + `.claude/settings.local.json` deny rules + sentinel-mirror.yml workflow CI qui re-run tous les gates et fail la PR si bypass detecté.",
+      "severity": "BLOCK",
+      "applyWhen": "Toute operation git commit / git push / equivalent qui touche au hooks system"
     }
   ],
   "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification (UFR-014 deviations[]), le Tech Lead decide.",

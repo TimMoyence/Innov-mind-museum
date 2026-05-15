@@ -159,6 +159,22 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 3. Frontend need: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
 4. Backend DB exposed on port **5433** (not 5432) when using docker-compose
 
+## Hook bypass interdit (UFR-020)
+
+**BYPASS HOOK INTERDIT.** Aucune forme de contournement n'est tolérée :
+
+- `git commit --no-verify` ❌
+- `git commit -n` ❌
+- `git push --no-verify` ❌
+- `SKIP_PRE_COMMIT=1` / `SKIP_PRE_PUSH=1` env-var ❌
+- `git -c core.hookspath=/dev/null ...` ❌
+
+**Pourquoi** — les hooks pre-commit (< 5s) + pre-push (~30s-2min) sont le shift-left de Musaium : ils catchent les régressions AVANT la CI (15 min) et AVANT main. Un bypass annule cette valeur, pousse du rouge en CI, et finit chez l'utilisateur. La doctrine : préférer 2 min local à 15 min CI rouge.
+
+**Enforcement code** : `.claude/settings.json` + `.claude/settings.local.json` `permissions.deny` rules + `.github/workflows/sentinel-mirror.yml` qui re-run tous les gates côté serveur et fail la PR si le bypass passe quand même.
+
+**Si un hook bloque légitimement** (faux positif, env local cassé) : fix le hook ou la condition, ne le bypass JAMAIS. Si pression deadline, escalade Tech Lead.
+
 ## Honesty + truth-telling (UFR-013)
 
 **Non-negotiable.** Applies to every response, every agent report. Twinned with the machine-readable `UFR-013` rule in `.claude/agents/shared/user-feedback-rules.json` (consumed by /team agents) — this section is the prose canonical; the JSON is the structural rule.
@@ -265,7 +281,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (28098 symbols, 44331 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (28309 symbols, 44747 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
