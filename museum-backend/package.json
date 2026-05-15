@@ -68,7 +68,6 @@
   },
   "pnpm": {
     "overrides": {
-      "@types/express-serve-static-core": "5.0.6",
       "langsmith": ">=0.6.3",
       "protobufjs": ">=8.0.2",
       "handlebars": ">=4.7.9",
@@ -88,6 +87,7 @@
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "5.0.1",
+    "@types/express-serve-static-core": "^5.1.1",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
@@ -124,11 +124,11 @@
     "typescript-eslint": "^8.58.1"
   },
   "dependencies": {
-    "@musaium/shared": "file:../packages/musaium-shared",
     "@langchain/core": "1.1.45",
     "@langchain/google-genai": "2.1.26",
     "@langchain/openai": "1.4.2",
     "@mozilla/readability": "^0.6.0",
+    "@musaium/shared": "file:../packages/musaium-shared",
     "@opentelemetry/auto-instrumentations-node": "^0.75.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
     "@opentelemetry/resources": "^2.7.0",

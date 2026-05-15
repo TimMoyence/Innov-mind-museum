@@ -13,7 +13,9 @@ import {
   getTicketDetailUseCase,
   addTicketMessageUseCase,
 } from '@modules/support/useCase';
+import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
@@ -105,8 +107,10 @@ supportRouter.get(
 
 // GET /api/support/tickets/:id — Authenticated user: get ticket detail (ownership check)
 supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Response) => {
+  const ticketId = parseStringParam(req, 'id');
+  if (!ticketId) throw badRequest('ticket id param is required');
   const ticket = await getTicketDetailUseCase.execute({
-    ticketId: req.params.id,
+    ticketId,
     userId: req.user?.id ?? 0,
     userRole: req.user?.role ?? 'visitor',
   });
@@ -121,9 +125,11 @@ supportRouter.post(
   validateBody(addTicketMessageSchema),
   async (req: Request, res: Response) => {
     const { text } = req.body as { text: string };
+    const ticketId = parseStringParam(req, 'id');
+    if (!ticketId) throw badRequest('ticket id param is required');
 
     const message = await addTicketMessageUseCase.execute({
-      ticketId: req.params.id,
+      ticketId,
       senderId: req.user?.id ?? 0,
       senderRole: req.user?.role ?? 'visitor',
       text,

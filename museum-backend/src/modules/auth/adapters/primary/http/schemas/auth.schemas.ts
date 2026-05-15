@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-preference';
@@ -103,3 +102,21 @@ export const updateContentPreferencesSchema = z.object({
 export const updateTtsVoiceSchema = z.object({
   voice: z.union([z.null(), z.enum(TTS_VOICES)]),
 });
+
+// TD-2 — Batch update for the 5 profile preferences exposed via
+// `PATCH /api/auth/me/preferences`. All 5 fields optional; the `.refine`
+// rejects an empty body so the client always supplies at least one change.
+// Enum fields (`guideLevel`, `dataMode`) are validated tightly; `defaultLocale`
+// is a permissive 2..8 char string (BCP-47-ish) so new locales don't require a
+// schema bump — the FE keeps the canonical whitelist (`SUPPORTED_LOCALES`).
+export const updateProfilePreferencesSchema = z
+  .object({
+    defaultLocale: z.string().min(2).max(8).optional(),
+    defaultMuseumMode: z.boolean().optional(),
+    guideLevel: z.enum(['beginner', 'intermediate', 'expert']).optional(),
+    dataMode: z.enum(['auto', 'low', 'normal']).optional(),
+    audioDescriptionMode: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at least one preference field is required',
+  });

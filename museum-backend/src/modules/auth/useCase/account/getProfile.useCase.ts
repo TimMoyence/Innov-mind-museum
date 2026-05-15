@@ -15,6 +15,16 @@ interface UserProfile {
    * `@modules/chat/domain/voice-catalog`). `null` means "use the env-level default".
    */
   ttsVoice: string | null;
+  /** TD-2 — BCP-47 default locale. NOT NULL, default `en-US`. */
+  defaultLocale: string;
+  /** TD-2 — Auto-detect museum mode on launch. NOT NULL, default `true`. */
+  defaultMuseumMode: boolean;
+  /** TD-2 — Self-declared expertise level. NOT NULL, default `beginner`. */
+  guideLevel: 'beginner' | 'intermediate' | 'expert';
+  /** TD-2 — Data-saver heuristic. NOT NULL, default `auto`. */
+  dataMode: 'auto' | 'low' | 'normal';
+  /** TD-2 — Audio-description accessibility flag. NOT NULL, default `false`. */
+  audioDescriptionMode: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +49,12 @@ export class GetProfileUseCase {
       // Migration ensures NOT NULL DEFAULT '{}', so entity type guarantees this is never null.
       contentPreferences: user.contentPreferences,
       ttsVoice: user.ttsVoice ?? null,
+      // TD-2 — 5 NOT NULL DEFAULT columns; entity type guarantees non-null.
+      defaultLocale: user.defaultLocale,
+      defaultMuseumMode: user.defaultMuseumMode,
+      guideLevel: user.guideLevel,
+      dataMode: user.dataMode,
+      audioDescriptionMode: user.audioDescriptionMode,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

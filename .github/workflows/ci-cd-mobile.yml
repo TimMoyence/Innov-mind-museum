@@ -78,6 +78,10 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Validate offline map style JSON (TD-3 drift guard)
+        working-directory: ${{ github.workspace }}
+        run: node -e "JSON.parse(require('fs').readFileSync('docs/maplibre/cartodb-raster-style.json','utf8'))"
+
       - name: Expo Doctor
         run: npx expo-doctor
         continue-on-error: true

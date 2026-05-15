@@ -7,8 +7,10 @@ import {
   revokeConsentUseCase,
   userConsentRepository,
 } from '@modules/auth/useCase';
+import { badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /** Zod schema for POST /api/auth/consent. */
@@ -46,7 +48,8 @@ consentRouter.post(
 
 consentRouter.delete('/:scope', isAuthenticated, async (req: Request, res: Response) => {
   const jwtUser = requireUser(req);
-  const { scope } = req.params;
+  const scope = parseStringParam(req, 'scope');
+  if (!scope) throw badRequest('scope param is required');
   await revokeConsentUseCase.execute(jwtUser.id, scope);
   res.status(200).json({ revoked: true, scope });
 });

@@ -38,6 +38,8 @@
 !docs/incidents/**
 !docs/RUNBOOKS/
 !docs/RUNBOOKS/**
+!docs/maplibre/
+!docs/maplibre/**
 !docs/plans/
 !docs/plans/**
 !docs/MIGRATION_GOVERNANCE.md

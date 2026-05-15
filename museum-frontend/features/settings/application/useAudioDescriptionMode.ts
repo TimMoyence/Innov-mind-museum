@@ -1,40 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
-import { storage } from '@/shared/infrastructure/storage';
-
-const STORAGE_KEY = 'settings.audio_description_mode';
+import { useAudioDescriptionStore } from '@/features/settings/infrastructure/audioDescriptionStore';
 
 /**
- * Manages the audio description mode toggle state with AsyncStorage persistence.
+ * Manages the audio description mode toggle state.
+ *
+ * Compat shim (TD-2 Option B 2026-05-15) — delegates to
+ * {@link useAudioDescriptionStore} (Zustand persist + cross-device hydration).
+ * Public shape (`{ enabled, isLoading, toggle }`) is preserved verbatim so
+ * existing call sites (SettingsAccessibilityCard, useChatSession,
+ * chat/[sessionId]) keep working with zero changes.
+ *
  * When enabled, AI responses are automatically read aloud via TTS.
  */
 export function useAudioDescriptionMode() {
-  const [enabled, setEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const enabled = useAudioDescriptionStore((s) => s.enabled);
+  const hydrated = useAudioDescriptionStore((s) => s._hydrated);
+  const isLoading = !hydrated;
 
-  useEffect(() => {
-    let cancelled = false;
-    void storage
-      .getItem(STORAGE_KEY)
-      .then((value) => {
-        if (!cancelled) {
-          setEnabled(value === 'true');
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const toggle = useCallback((): Promise<void> => {
+    useAudioDescriptionStore.getState().toggle();
+    return Promise.resolve();
   }, []);
-
-  const toggle = useCallback(async () => {
-    const next = !enabled;
-    setEnabled(next);
-    await storage.setItem(STORAGE_KEY, String(next));
-  }, [enabled]);
 
   return { enabled, isLoading, toggle };
 }

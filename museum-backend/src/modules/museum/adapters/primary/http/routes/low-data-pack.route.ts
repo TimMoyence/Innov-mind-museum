@@ -1,6 +1,8 @@
 import { Router } from 'express';
 
+import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 
 import type { LowDataPackService } from '@modules/museum/useCase/search/low-data-pack.service';
@@ -27,7 +29,10 @@ export function createLowDataPackRouter(service: LowDataPackService): Router {
     lowDataPackLimiter,
     async (req, res, next) => {
       try {
-        const museumId = req.params.id;
+        const museumId = parseStringParam(req, 'id');
+        if (!museumId) {
+          throw badRequest('museum id param is required');
+        }
         const locale = typeof req.query.locale === 'string' ? req.query.locale : 'fr';
         const pack = await service.getLowDataPack(museumId, locale);
         res.set('Cache-Control', 'public, max-age=3600');

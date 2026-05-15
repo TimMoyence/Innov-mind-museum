@@ -134,6 +134,38 @@
             "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
             "nullable": true,
             "description": "Spec C T2.4 — visitor's preferred TTS voice. `null` means inherit the env-level default."
+          },
+          "contentPreferences": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["history", "technique", "artist"]
+            },
+            "description": "Visitor's content preferences (zero or more). Returned by GET /auth/me, written by PATCH /auth/content-preferences."
+          },
+          "defaultLocale": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 8,
+            "description": "TD-2 — Visitor's preferred BCP-47 locale. Server defaults to `en-US`. FE validates against `SUPPORTED_LOCALES`."
+          },
+          "defaultMuseumMode": {
+            "type": "boolean",
+            "description": "TD-2 — Whether the visitor opts into auto museum-mode detection on launch."
+          },
+          "guideLevel": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "expert"],
+            "description": "TD-2 — Visitor's self-declared expertise level. Tunes LLM vocabulary and depth."
+          },
+          "dataMode": {
+            "type": "string",
+            "enum": ["auto", "low", "normal"],
+            "description": "TD-2 — Data-saver heuristic preference. Drives FE image quality + prefetch."
+          },
+          "audioDescriptionMode": {
+            "type": "boolean",
+            "description": "TD-2 — Audio-description accessibility flag (cross-device, persisted server-side)."
           }
         }
       },
@@ -3127,6 +3159,97 @@
                         },
                         { "type": "null" }
                       ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/me/preferences": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "TD-2 — Batch-update the authenticated user's profile preferences",
+        "description": "Persists a partial patch of the 5 profile preferences (defaultLocale, defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "defaultLocale": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 8
+                  },
+                  "defaultMuseumMode": {
+                    "type": "boolean"
+                  },
+                  "guideLevel": {
+                    "type": "string",
+                    "enum": ["beginner", "intermediate", "expert"]
+                  },
+                  "dataMode": {
+                    "type": "string",
+                    "enum": ["auto", "low", "normal"]
+                  },
+                  "audioDescriptionMode": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated; returns the canonical post-write state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "defaultLocale",
+                    "defaultMuseumMode",
+                    "guideLevel",
+                    "dataMode",
+                    "audioDescriptionMode"
+                  ],
+                  "properties": {
+                    "defaultLocale": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 8
+                    },
+                    "defaultMuseumMode": {
+                      "type": "boolean"
+                    },
+                    "guideLevel": {
+                      "type": "string",
+                      "enum": ["beginner", "intermediate", "expert"]
+                    },
+                    "dataMode": {
+                      "type": "string",
+                      "enum": ["auto", "low", "normal"]
+                    },
+                    "audioDescriptionMode": {
+                      "type": "boolean"
                     }
                   }
                 }

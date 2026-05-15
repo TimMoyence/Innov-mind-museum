@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 
 import { parsePostMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
@@ -13,6 +12,7 @@ import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import {
   bySession,
   byUserId,
@@ -77,8 +77,13 @@ function createPostMessageHandler(chatService: ChatService) {
         }
       : imageFromBody;
 
+    const sessionId = parseStringParam(req, 'id');
+    if (!sessionId) {
+      throw badRequest('session id param is required');
+    }
+
     const result = await chatService.postMessage(
-      req.params.id,
+      sessionId,
       {
         text: bodyPayload.text,
         image,

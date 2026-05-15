@@ -10,8 +10,9 @@ import {
   createSessionSchema,
   type CreateSessionBody,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
-import { AppError } from '@shared/errors/app.error';
+import { AppError, badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
@@ -54,8 +55,12 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   // GET /sessions/:id — get session with paginated messages
   router.get('/sessions/:id', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
+    const sessionId = parseStringParam(req, 'id');
+    if (!sessionId) {
+      throw badRequest('session id param is required');
+    }
     const result = await chatService.getSession(
-      req.params.id,
+      sessionId,
       {
         cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
         limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
@@ -87,7 +92,11 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   // DELETE /sessions/:id — delete an empty session
   router.delete('/sessions/:id', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
-    const result = await chatService.deleteSessionIfEmpty(req.params.id, currentUser?.id);
+    const sessionId = parseStringParam(req, 'id');
+    if (!sessionId) {
+      throw badRequest('session id param is required');
+    }
+    const result = await chatService.deleteSessionIfEmpty(sessionId, currentUser?.id);
     res.status(200).json(result);
   });
 

@@ -18,6 +18,7 @@ import {
 } from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
 import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
+import { UpdateProfilePreferencesUseCase } from '@modules/auth/useCase/account/updateProfilePreferences.useCase';
 import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
 import { ListApiKeysUseCase } from '@modules/auth/useCase/api-keys/listApiKeys.useCase';
 import { RevokeApiKeyUseCase } from '@modules/auth/useCase/api-keys/revokeApiKey.useCase';
@@ -213,6 +214,8 @@ const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
 /** Singleton instance of {@link UpdateTtsVoiceUseCase}. */
 const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
+/** TD-2 — Singleton instance of {@link UpdateProfilePreferencesUseCase} (batch endpoint). */
+const updateProfilePreferencesUseCase = new UpdateProfilePreferencesUseCase(userRepository);
 
 // API Key use cases — always wired (B2B API key programme, msk_* auth).
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
@@ -275,6 +278,7 @@ export {
   listApiKeysUseCase,
   updateContentPreferencesUseCase,
   updateTtsVoiceUseCase,
+  updateProfilePreferencesUseCase,
   completeOnboarding,
   grantConsentUseCase,
   revokeConsentUseCase,

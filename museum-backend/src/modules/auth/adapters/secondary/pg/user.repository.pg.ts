@@ -6,7 +6,10 @@ import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
-import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type {
+  IUserRepository,
+  ProfilePreferencesPatch,
+} from '@modules/auth/domain/user/user.repository.interface';
 
 /** TypeORM implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {
@@ -264,6 +267,34 @@ export class UserRepositoryPg implements IUserRepository {
   /** Persists the user's preferred TTS voice or clears it (`null`). */
   async updateTtsVoice(userId: number, voice: string | null): Promise<void> {
     await this.repo.update(userId, { ttsVoice: voice });
+  }
+
+  /**
+   * TD-2 — Persists a partial patch of the 5 profile-preference columns.
+   *
+   * Pre-filters `undefined` fields before delegating to `repo.update` because
+   * TypeORM's `UpdateQueryBuilder.set()` silently skips columns whose value is
+   * `undefined` — leaving them unchanged rather than writing `NULL`. The 5
+   * columns are all `NOT NULL DEFAULT`, so we don't need raw `() => 'NULL'`
+   * expressions here (no clearing semantics) — pre-filtering keeps the patch
+   * shape simple and the assertion "fields present in the patch ARE written"
+   * holds. See `feedback_typeorm_set_undefined_repo_update`.
+   *
+   * No-op (no SQL) when the patch is fully empty after filtering — caller
+   * (use case) is responsible for surfacing 400 to the client via the Zod
+   * `.refine(non-empty)` on the route schema.
+   */
+  async updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void> {
+    const update: Partial<User> = {};
+    if (patch.defaultLocale !== undefined) update.defaultLocale = patch.defaultLocale;
+    if (patch.defaultMuseumMode !== undefined) update.defaultMuseumMode = patch.defaultMuseumMode;
+    if (patch.guideLevel !== undefined) update.guideLevel = patch.guideLevel;
+    if (patch.dataMode !== undefined) update.dataMode = patch.dataMode;
+    if (patch.audioDescriptionMode !== undefined) {
+      update.audioDescriptionMode = patch.audioDescriptionMode;
+    }
+    if (Object.keys(update).length === 0) return;
+    await this.repo.update(userId, update);
   }
 
   /**

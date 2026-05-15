@@ -5,6 +5,7 @@ on:
     branches: ['main']
     paths:
       - 'docs/privacy-policy.html'
+      - 'docs/maplibre/**'
       - '.github/workflows/deploy-privacy-policy.yml'
 
 permissions:
@@ -25,8 +26,9 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Prepare pages artifact
         run: |
-          mkdir _site
+          mkdir -p _site/maplibre
           cp docs/privacy-policy.html _site/privacy-policy.html
+          cp docs/maplibre/cartodb-raster-style.json _site/maplibre/cartodb-raster-style.json
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5
       - name: Deploy to GitHub Pages
