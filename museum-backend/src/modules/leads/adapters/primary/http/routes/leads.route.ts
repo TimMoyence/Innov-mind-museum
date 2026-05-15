@@ -3,8 +3,13 @@ import { type Request, type Response, Router } from 'express';
 import {
   submitB2bLeadSchema,
   submitBetaSignupSchema,
+  submitPaywallInterestSchema,
 } from '@modules/leads/adapters/primary/http/schemas/leads.schemas';
-import { submitB2bLeadUseCase, submitBetaSignupUseCase } from '@modules/leads/useCase';
+import {
+  submitB2bLeadUseCase,
+  submitBetaSignupUseCase,
+  submitPaywallInterestUseCase,
+} from '@modules/leads/useCase';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
@@ -23,6 +28,15 @@ const b2bLeadLimiter = createRateLimitMiddleware({
 // isolated counters so a spike on /beta does not starve /b2b. Same byIp
 // keyGenerator (counters are per-instance regardless).
 const betaSignupLimiter = createRateLimitMiddleware({
+  limit: 5,
+  windowMs: 600_000,
+  keyGenerator: byIp,
+});
+
+// R1 (C6) — dedicated limiter for the paywall-interest endpoint. Same
+// envelope (5 req / 600s / IP) as `/beta` ; isolated counters so a spike on
+// the paywall modal can't starve the landing form (or vice versa).
+const paywallInterestLimiter = createRateLimitMiddleware({
   limit: 5,
   windowMs: 600_000,
   keyGenerator: byIp,
@@ -74,6 +88,34 @@ leadsRouter.post(
     };
 
     await submitBetaSignupUseCase.execute({
+      email: body.email,
+      consent: body.consent,
+      website: body.website,
+      ip: req.ip,
+      requestId: req.requestId,
+      userAgent: req.get('user-agent'),
+    });
+
+    res.status(202).json({ accepted: true });
+  },
+);
+
+// POST /api/leads/paywall-interest — Public paywall email-capture (R1 §1 R18-R23)
+// Mirror shape of /beta : honeypot silent-drop policed inside the use case
+// (R23, mirror R3 R10) ; rate-limit isolated per limiter ; CSRF-exempt per
+// N16 (unauthenticated public endpoint, no cookie-auth context).
+leadsRouter.post(
+  '/paywall-interest',
+  paywallInterestLimiter,
+  validateBody(submitPaywallInterestSchema),
+  async (req: Request, res: Response) => {
+    const body = req.body as {
+      email: string;
+      consent: true;
+      website?: string;
+    };
+
+    await submitPaywallInterestUseCase.execute({
       email: body.email,
       consent: body.consent,
       website: body.website,

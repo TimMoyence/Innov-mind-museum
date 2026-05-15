@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 
 import type { UserRole } from './user-role';
+import type { UserTier } from './user-tier';
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 /** Represents a registered user account. Mapped to `users`. */
@@ -145,6 +146,36 @@ export class User {
    */
   @Column({ type: 'timestamp', nullable: true, name: 'deleted_at' })
   deletedAt!: Date | null;
+
+  /**
+   * Soft-paywall tier (R1 / C6). `'free'` users are subject to the monthly
+   * session quota enforced by `monthlySessionQuota` middleware on
+   * `POST /api/sessions`. `'premium'` users bypass the quota. Flipped via
+   * `PATCH /api/admin/users/:id/tier` (super_admin only). NOT linked to
+   * Stripe in V1 — the column itself is the canonical grant signal until
+   * the funnel data unblocks Stripe (R1 §0.1).
+   */
+  @Column({ type: 'varchar', length: 16, default: 'free' })
+  tier!: UserTier;
+
+  /**
+   * Monthly session-creation counter for the soft-paywall (R1 / C6). Bumped
+   * by an atomic UPDATE in `monthlySessionQuota` middleware on each
+   * `POST /api/sessions` for a `tier='free'` user. Reset to 1 (not 0) on the
+   * first session of a new UTC month (R6 — same SQL increments & resets).
+   * Never touched on tier flip (R17). Premium ignores this counter entirely.
+   */
+  @Column({ type: 'integer', default: 0, name: 'sessions_month_count' })
+  sessionsMonthCount!: number;
+
+  /**
+   * First-day-of-current-UTC-month sentinel for the monthly quota window
+   * (R1 / C6). Nullable for users created before R1 shipped — the first
+   * post-deploy session-create initialises it. UTC-only per N5 (no per-user
+   * timezone adjustment in V1, see Q2).
+   */
+  @Column({ type: 'date', nullable: true, name: 'sessions_month_start' })
+  sessionsMonthStart!: Date | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   createdAt!: Date;

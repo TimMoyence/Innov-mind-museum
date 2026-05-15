@@ -16,6 +16,7 @@ import { AdminSupportFacade } from '@modules/admin/useCase/facades/admin-support
 import { ListReportsUseCase } from '@modules/admin/useCase/reports/listReports.useCase';
 import { ResolveReportUseCase } from '@modules/admin/useCase/reports/resolveReport.useCase';
 import { ChangeUserRoleUseCase } from '@modules/admin/useCase/users/changeUserRole.useCase';
+import { ChangeUserTierUseCase } from '@modules/admin/useCase/users/changeUserTier.useCase';
 import { DeleteUserUseCase } from '@modules/admin/useCase/users/deleteUser.useCase';
 import { GetUserByIdUseCase } from '@modules/admin/useCase/users/getUserById.useCase';
 import { ListUsersUseCase } from '@modules/admin/useCase/users/listUsers.useCase';
@@ -40,6 +41,7 @@ const adminRefreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 export const listUsersUseCase = new ListUsersUseCase(adminRepository);
 export const getUserByIdUseCase = new GetUserByIdUseCase(adminRepository);
 export const changeUserRoleUseCase = new ChangeUserRoleUseCase(adminRepository);
+export const changeUserTierUseCase = new ChangeUserTierUseCase(adminRepository);
 export const suspendUserUseCase = new SuspendUserUseCase(adminRepository);
 export const unsuspendUserUseCase = new UnsuspendUserUseCase(adminRepository);
 export const deleteUserUseCase = new DeleteUserUseCase(

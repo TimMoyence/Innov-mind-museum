@@ -309,6 +309,14 @@ export interface AppEnv {
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
+  /**
+   * Maximum chat sessions a `tier='free'` user can CREATE per UTC month.
+   * Drives the soft-paywall middleware (R1 / C6). Numeric config value, NOT
+   * a feature flag — disabling the paywall = revert R1, never set this to a
+   * very high number (per `feedback_no_feature_flags_prelaunch`).
+   * Falls back to 3 when unset / non-numeric (R1 §1 R13).
+   */
+  freeTierMonthlySessionLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
   /**

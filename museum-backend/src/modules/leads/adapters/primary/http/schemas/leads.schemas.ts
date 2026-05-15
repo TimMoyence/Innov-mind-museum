@@ -45,3 +45,22 @@ export const submitBetaSignupSchema = z.object({
  *
  */
 export type SubmitBetaSignupInput = z.infer<typeof submitBetaSignupSchema>;
+
+/**
+ * Schema for `POST /api/leads/paywall-interest` (R1 §1 R18 + R22).
+ *
+ * Same shape as `submitBetaSignupSchema` — email + literal-true consent +
+ * optional honeypot. Per Q5/N6 the modal still requires an explicit consent
+ * checkbox even though the user clicked an upsell CTA ; the schema mirrors
+ * R3 doctrine and does NOT auto-derive `consent` from the modal context.
+ */
+export const submitPaywallInterestSchema = z.object({
+  email: z.email().trim().max(254),
+  consent: z.literal(true),
+  website: z.string().max(500).optional(),
+});
+
+/**
+ *
+ */
+export type SubmitPaywallInterestInput = z.infer<typeof submitPaywallInterestSchema>;

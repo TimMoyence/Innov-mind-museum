@@ -308,6 +308,19 @@ export interface Dictionary {
       successUnsuspended: string;
       successDeleted: string;
       newRoleLabel: string;
+      tier: {
+        label: string;
+        currentFree: string;
+        currentPremium: string;
+        toggleToPremium: string;
+        toggleToFree: string;
+        confirmTitle: string;
+        confirmBody: string;
+        confirmCta: string;
+        cancel: string;
+        success: string;
+        error: string;
+      };
     };
     mfaPage: {
       successTitle: string;

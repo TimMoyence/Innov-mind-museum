@@ -460,7 +460,20 @@
       "successSuspended": "Utilisateur suspendu.",
       "successUnsuspended": "Utilisateur réactivé.",
       "successDeleted": "Utilisateur supprimé.",
-      "newRoleLabel": "Nouveau rôle"
+      "newRoleLabel": "Nouveau rôle",
+      "tier": {
+        "label": "Forfait",
+        "currentFree": "Forfait gratuit",
+        "currentPremium": "Forfait premium",
+        "toggleToPremium": "Passer en premium",
+        "toggleToFree": "Repasser en gratuit",
+        "confirmTitle": "Changer le forfait ?",
+        "confirmBody": "Le changement est tracé dans la chaîne d'audit. L'utilisateur n'est pas notifié automatiquement.",
+        "confirmCta": "Confirmer le changement",
+        "cancel": "Annuler",
+        "success": "Forfait mis à jour.",
+        "error": "Impossible de mettre à jour le forfait."
+      }
     },
     "mfaPage": {
       "successTitle": "Authentification à deux facteurs activée",

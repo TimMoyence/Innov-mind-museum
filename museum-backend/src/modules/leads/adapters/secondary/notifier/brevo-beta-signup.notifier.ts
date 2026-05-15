@@ -46,7 +46,10 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
         attributes: {
           OPT_IN: true,
           OPT_IN_AT: new Date().toISOString(),
-          OPT_IN_SOURCE: 'landing_beta_waitlist',
+          // R1 §3.9 D9 — per-call funnel cohort discriminator. R3 callers omit
+          // `source` → backward-compat default `'landing_beta_waitlist'`. R1
+          // `submitPaywallInterest.useCase` passes `'paywall_premium_interest'`.
+          OPT_IN_SOURCE: payload.source ?? 'landing_beta_waitlist',
         },
       }),
     });

@@ -12,6 +12,7 @@ import {
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 import { AppError } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { monthlySessionQuota } from '@shared/middleware/monthly-session-quota.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
@@ -26,18 +27,28 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   const router = Router();
 
   // POST /sessions — create a new chat session
-  router.post('/sessions', isAuthenticated, validateBody(createSessionSchema), async (req, res) => {
-    const currentUser = getRequestUser(req);
-    const payload = req.body as CreateSessionBody;
-    const session = await chatService.createSession({
-      ...payload,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: payload.locale || req.clientLocale,
-      userId: currentUser?.id,
-      museumId: payload.museumId ?? req.museumId ?? undefined,
-    });
-    res.status(201).json({ session });
-  });
+  // R1 (C6) — `monthlySessionQuota` enforces the soft-paywall on session
+  // creation only (R10). Mounted AFTER `isAuthenticated` (R9 — anonymous
+  // never reaches the quota gate) and BEFORE the body validator so unauth'd
+  // and quota-exhausted requests short-circuit before zod runs.
+  router.post(
+    '/sessions',
+    isAuthenticated,
+    monthlySessionQuota,
+    validateBody(createSessionSchema),
+    async (req, res) => {
+      const currentUser = getRequestUser(req);
+      const payload = req.body as CreateSessionBody;
+      const session = await chatService.createSession({
+        ...payload,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: payload.locale || req.clientLocale,
+        userId: currentUser?.id,
+        museumId: payload.museumId ?? req.museumId ?? undefined,
+      });
+      res.status(201).json({ session });
+    },
+  );
 
   // GET /sessions — list user's sessions
   router.get('/sessions', isAuthenticated, async (req, res) => {

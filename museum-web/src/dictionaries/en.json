@@ -460,7 +460,20 @@
       "successSuspended": "User suspended.",
       "successUnsuspended": "User reactivated.",
       "successDeleted": "User deleted.",
-      "newRoleLabel": "New role"
+      "newRoleLabel": "New role",
+      "tier": {
+        "label": "Tier",
+        "currentFree": "Free tier",
+        "currentPremium": "Premium tier",
+        "toggleToPremium": "Promote to premium",
+        "toggleToFree": "Demote to free",
+        "confirmTitle": "Change user tier?",
+        "confirmBody": "This change is logged in the audit chain. The user is not notified automatically.",
+        "confirmCta": "Confirm tier change",
+        "cancel": "Cancel",
+        "success": "Tier updated.",
+        "error": "Could not update tier."
+      }
     },
     "mfaPage": {
       "successTitle": "Two-factor authentication enabled",

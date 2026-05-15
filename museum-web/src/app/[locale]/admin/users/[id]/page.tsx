@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { TierToggleButton } from '@/components/admin/TierToggleButton';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -97,9 +98,7 @@ function SimpleConfirmModal({
             disabled={busy}
             onClick={onConfirm}
             className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 ${
-              destructive
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-primary-600 hover:bg-primary-700'
+              destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-600 hover:bg-primary-700'
             }`}
           >
             {busy ? '…' : confirmLabel}
@@ -224,10 +223,7 @@ export default function UserDetailPage({ params }: PageProps) {
   const onConfirmUnsuspend = useCallback(() => {
     void runMutation(
       () =>
-        apiPost<{ user: AdminUserDTO }>(
-          `/api/admin/users/${String(userId)}/unsuspend`,
-          undefined,
-        ),
+        apiPost<{ user: AdminUserDTO }>(`/api/admin/users/${String(userId)}/unsuspend`, undefined),
       dict.successUnsuspended,
     );
   }, [userId, runMutation, dict.successUnsuspended]);
@@ -264,10 +260,7 @@ export default function UserDetailPage({ params }: PageProps) {
   if (error && !user) {
     return (
       <div className="max-w-xl">
-        <Link
-          href={`/${locale}/admin/users`}
-          className="text-sm text-primary-600 hover:underline"
-        >
+        <Link href={`/${locale}/admin/users`} className="text-sm text-primary-600 hover:underline">
           ← {dict.backToList}
         </Link>
         <div className="mt-6 rounded-xl bg-red-50 p-6 text-red-700">{error}</div>
@@ -286,10 +279,7 @@ export default function UserDetailPage({ params }: PageProps) {
 
   return (
     <div>
-      <Link
-        href={`/${locale}/admin/users`}
-        className="text-sm text-primary-600 hover:underline"
-      >
+      <Link href={`/${locale}/admin/users`} className="text-sm text-primary-600 hover:underline">
         ← {dict.backToList}
       </Link>
 
@@ -297,18 +287,12 @@ export default function UserDetailPage({ params }: PageProps) {
       <p className="mt-1 text-text-secondary">{dict.subtitle}</p>
 
       {flash && (
-        <div
-          role="status"
-          className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700"
-        >
+        <div role="status" className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           {flash}
         </div>
       )}
       {error && (
-        <div
-          role="alert"
-          className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
+        <div role="alert" className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -344,6 +328,20 @@ export default function UserDetailPage({ params }: PageProps) {
             <DescRow
               label={dict.fieldMuseum}
               value={user.museumId !== null ? `#${String(user.museumId)}` : dict.noValue}
+            />
+            {/* R1 (C6) — soft-paywall tier toggle. Read-only label for non
+                super_admin viewers ; the component handles its own visibility. */}
+            <DescRow
+              label={dict.tier.label}
+              valueNode={
+                <TierToggleButton
+                  user={user}
+                  viewerRole={currentUser?.role ?? 'visitor'}
+                  onUpdated={(next) => {
+                    setUser(next);
+                  }}
+                />
+              }
             />
           </dl>
         </section>
@@ -386,8 +384,7 @@ export default function UserDetailPage({ params }: PageProps) {
                 label={dict.fieldDeletedAt}
                 valueNode={
                   <span className="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                    {dict.badgeDeleted} ·{' '}
-                    {formatDateTime(user.deletedAt as string, dateLocale)}
+                    {dict.badgeDeleted} · {formatDateTime(user.deletedAt as string, dateLocale)}
                   </span>
                 }
               />
@@ -407,14 +404,8 @@ export default function UserDetailPage({ params }: PageProps) {
             {dict.sectionLifecycle}
           </h2>
           <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-            <DescRow
-              label={dict.fieldCreated}
-              value={formatDateTime(user.createdAt, dateLocale)}
-            />
-            <DescRow
-              label={dict.fieldUpdated}
-              value={formatDateTime(user.updatedAt, dateLocale)}
-            />
+            <DescRow label={dict.fieldCreated} value={formatDateTime(user.createdAt, dateLocale)} />
+            <DescRow label={dict.fieldUpdated} value={formatDateTime(user.updatedAt, dateLocale)} />
           </dl>
         </section>
       </div>
@@ -719,10 +710,7 @@ function DeleteConfirmModal({
             {targetEmail}
           </code>
         </p>
-        <label
-          htmlFor="confirm-delete-email"
-          className="mt-4 block text-sm text-text-secondary"
-        >
+        <label htmlFor="confirm-delete-email" className="mt-4 block text-sm text-text-secondary">
           {dict.confirmDeleteTypeEmailLabel}
         </label>
         <input

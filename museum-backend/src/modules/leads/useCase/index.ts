@@ -21,6 +21,7 @@ import {
 } from '@modules/leads/adapters/secondary/notifier/brevo-beta-signup.notifier';
 import { SubmitB2bLeadUseCase } from '@modules/leads/useCase/submitB2bLead.useCase';
 import { SubmitBetaSignupUseCase } from '@modules/leads/useCase/submitBetaSignup.useCase';
+import { SubmitPaywallInterestUseCase } from '@modules/leads/useCase/submitPaywallInterest.useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { env } from '@src/config/env';
 
@@ -42,3 +43,8 @@ const betaSignupNotifier =
     : new NoopBetaSignupNotifier();
 
 export const submitBetaSignupUseCase = new SubmitBetaSignupUseCase(betaSignupNotifier);
+
+// R1 (C6) — paywall email capture reuses the SAME `betaSignupNotifier`
+// singleton (same Brevo adapter / noop fallback). The discriminator is the
+// `source: 'paywall_premium_interest'` field injected by the use case (D9).
+export const submitPaywallInterestUseCase = new SubmitPaywallInterestUseCase(betaSignupNotifier);

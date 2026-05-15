@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from 'express';
 
 import {
   changeUserRoleSchema,
+  changeUserTierSchema,
   resolveReportSchema,
   updateTicketSchema,
   listUsersQuerySchema,
@@ -22,6 +23,7 @@ import {
   listUsersUseCase,
   getUserByIdUseCase,
   changeUserRoleUseCase,
+  changeUserTierUseCase,
   suspendUserUseCase,
   unsuspendUserUseCase,
   deleteUserUseCase,
@@ -105,6 +107,31 @@ adminRouter.patch(
     const updated = await changeUserRoleUseCase.execute({
       userId,
       newRole: role,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+    });
+
+    res.json({ user: updated });
+  },
+);
+
+// PATCH /api/admin/users/:id/tier — super_admin only: flip soft-paywall tier
+// (R1 §1 R14-R16). `admin` and `museum_manager` are NOT allowed (per spec
+// brief — see R1 §0.3) ; super_admin override only.
+adminRouter.patch(
+  '/users/:id/tier',
+  isAuthenticated,
+  requireRole('super_admin'),
+  validateBody(changeUserTierSchema),
+  async (req: Request, res: Response) => {
+    const userId = parseUserIdParam(req);
+
+    const { tier } = req.body as { tier: 'free' | 'premium' };
+
+    const updated = await changeUserTierUseCase.execute({
+      userId,
+      newTier: tier,
       actorId: req.user?.id ?? 0,
       ip: req.ip,
       requestId: req.requestId,
