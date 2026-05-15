@@ -227,3 +227,212 @@ fixture-matrix patterns batch-kill many at once:
   because the global coverage threshold trips — this is *not* a test
   failure, just Jest's coverage gate kicking in on a partial run. Check
   the `Tests: X passed` line, not the exit code.
+
+---
+
+# Follow-up 2026-05-16
+
+Second-pass on the 3 module/* scopes that landed first-pass cached above,
+plus an unrelated chat-jobs carve-out done earlier in the day. Driven by
+the 45 admin-analytics-queries kill tests shipped under `d8b73ffa` and
+the review/support/auth/email refactor merged via `07aea6eff` — both of
+which expanded the admin/* test surface and required re-baselining.
+
+## Modules shipped (4 commits)
+
+| # | Commit | Scope | Killed (Δ vs prior) | Surv (Δ vs prior) | Score (total / covered-only) | Runtime |
+|---|--------|-------|---------------------|-------------------|------------------------------|--------:|
+| 5 | `155a62ea` | module-chat-jobs (carve-out) | n/a (5 files only) | 5 / — | n/a | n/a |
+| 6 | `cefa480f` | module-admin (second-pass) | 241 (+) | **118 (-20)** | 78.17 % / 84.08 % | 48m39s |
+| 7 | `c9cbfa86` | module-museum (second-pass) | 303 (+) | **92 (-8)**   | 73.27 % / 91.09 % | 32m41s |
+| 8 | `abd7db6e` | module-knowledge-extraction (second-pass) | 164 (stable) | **70 (stable)** | 57.45 % / 85.01 % | 2m41s (incremental hit) |
+
+The "covered-only" column is the trustworthy number when the total is
+deflated by no-cov mutants in repos that Stryker's unit-integration
+project deliberately excludes (TypeORM repos exercised by integration
+tests only).
+
+## Anomaly hunted to root: 100 % mutant timeout
+
+First attempt at the admin second-pass (`stryker-admin-night-2.log`,
+2026-05-15 17:11 → 18:30) stalled at **172/207 tested, 168 timed out,
+0 killed, 0 survived** — every single mutant timing out. Process exited
+silently at 18:30 (likely OOM kill, sandbox `pgO3IM` left abandoned).
+
+Root cause traced via `jest --detectOpenHandles`:
+
+```
+●  TCPWRAP
+    at new BullmqMuseumEnrichmentQueueAdapter
+       (src/modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter.ts:29:18)
+    at resolveEnrichMuseumUseCase (src/shared/routers/api.router.ts:408:19)
+    at createApp (src/app.ts:233:34)
+    at createRouteTestApp (tests/helpers/http/route-test-setup.ts:13:24)
+    at tests/unit/admin/rbac-matrix.test.ts:77:35
+```
+
+Every admin route test boots `createRouteTestApp()` → `createApp()` →
+`mountDomainRouters()` which eagerly news up
+`BullmqMuseumEnrichmentQueueAdapter` when `EXTRACTION_WORKER_ENABLED=true`
+(the default for the `unit-integration` jest project). The adapter's
+ctor opens an ioredis TCP connection that is never `.unref()`d. Under
+`pnpm test`, `forceExit:true` masks the leak; under Stryker's mandatory
+`forceExit:false` (see `stryker/config.mjs` CRITICAL note), Jest waits
+on the open TCPWRAP handle forever → every mutant times out at the
+worker-cleanup step regardless of what was mutated.
+
+## Fix (zero source change)
+
+Three artefacts in commit `cefa480f`:
+
+1. **`tests/helpers/admin/jest-env.setup.ts`** — mirrors the e2e pattern
+   at `tests/helpers/e2e/jest-env.setup.ts`. Pins
+   `EXTRACTION_WORKER_ENABLED=false` + `CACHE_ENABLED=false` BEFORE the
+   sandbox loads any `@src/config/env`-reading module.
+
+2. **`stryker/config.mjs`** — two new `defineConfig` knobs:
+   - `setupFiles: string[]` — inject per-scope `jest.setupFiles` into a
+     CLONED `SHARED_JEST_PROJECTS` block (avoids mutating the shared
+     constant, so other scopes are untouched).
+   - `extraTestPathIgnorePatterns: string[]` — append per-scope skips
+     to the cloned project's `testPathIgnorePatterns`. Required because
+     pinning `EXTRACTION_WORKER_ENABLED=false` makes
+     `tests/unit/routes/museum-enrichment.route.test.ts` 404 (the
+     route is unmounted), and the unrelated
+     `tests/unit/shared/redis-cache-service.test.ts` line 240 also
+     leaks an ioredis handle from a manual `new RedisCacheService(...)`.
+     Both excluded tests cover ZERO file under `mutate: src/modules/admin/**`
+     so Stryker's perTest coverage analysis would never have routed an
+     admin mutant to them — the skip costs no signal.
+
+3. **`stryker/module-admin.config.mjs`** — wires both knobs with a
+   full doc-comment explaining the BullMQ leak chain.
+
+Validation after fix: admin baseline test runtime **10:47 → 3.9 s**
+with zero `Force exiting Jest` warning. Admin Stryker run #4 produced
+a complete report (84.69 % All files / 78.17 % admin scope) where the
+3 prior attempts had all 100 % timed out.
+
+## Why scope scores dropped (despite surv ↓)
+
+- module-admin: 90.60 % (first-pass) → 78.17 % (second-pass), surv 138 → 118 (-20 killed).
+- module-museum: 87.28 % (first-pass) → 73.27 % (second-pass), surv 100 → 92 (-8 killed).
+- module-knowledge-extraction: 84.57 % (first-pass) → 57.45 % total / 85.01 % covered (second-pass), surv stable.
+
+Mechanism: the test surface expanded between first-pass and second-pass
+(45 new admin-analytics-queries kill tests + the review/support/auth/email
+refactor at `07aea6eff` widened the per-test coverage map). More
+admin/museum lines now reach the mutant set → larger denominator → score
+drops even though absolute kills went up. Not a regression in test
+quality.
+
+For KE the drop is sharper because the post-cleanup mutate scope picked
+up 224 mutants in three TypeORM repos
+(`typeorm-artwork-knowledge.repo.ts`,
+`typeorm-museum-enrichment.repo.ts`,
+`typeorm-extracted-content.repo.ts`) that have no unit tests — they're
+exercised by `tests/integration/**`, which Stryker's `unit-integration`
+project deliberately excludes (testcontainer spin-up per mutant = 40+ min
+overhead). Covered-only score (85.01 %) is stable.
+
+## Caveats (UFR-013)
+
+1. **Timeouts counted as "killed-equivalent" inflate scores.** Every
+   second-pass scope has a large timeout block (382 admin, 637 museum,
+   233 KE) that Stryker treats as kills (assumed infinite-loop). On
+   this repo a `jest --forceExit=false` baseline of the full
+   unit-integration project fails **845 tests in 102 suites** — meaning
+   ~12 % of suites have un-`.unref()`d resources. A subset of the
+   counted-as-killed timeouts may be false positives from worker-hang
+   rather than genuine infinite-loop kills. The 78/73/85 % numbers are
+   therefore best-effort upper bounds. Floor is somewhere between
+   55-75 % per scope depending on how many timeouts are false positives.
+2. **Investigating the timeouts individually is deferred.** Sampling 5
+   admin timeout mutants and re-running each in isolation would distinguish
+   real kills from handle-hang false positives, but that's a 30-45 min
+   follow-up not done tonight.
+3. **The open-handle discipline issue is repo-wide, not admin-specific.**
+   The 102 failing suites under `forceExit:false` is a separate
+   TECH_DEBT-worthy item — admin happened to be the first sandbox where
+   it became load-bearing because of the BullMQ adapter's ctor side
+   effect. Mediating it long-term means either lazy-init in the BullMQ
+   adapter (one-line `.unref()` on the underlying socket) or a global
+   `afterAll` that drains the cached `enrichMuseumUseCase`. Out of
+   scope for this session per the no-source-modify constraint.
+
+## Cumulative metrics (post-2026-05-16)
+
+- **Stryker score** (All files, incremental cache): 84.57 % (post-2026-05-15)
+  → **84.82 %** (post-2026-05-16). Numerator gains from the -28 killed
+  surv (admin -20 + museum -8) offset by the 224 KE no-cov mutants
+  surfacing.
+- **Survivors total**: 310 (post-2026-05-15) → **287** (post-2026-05-16,
+  -23: admin -20, museum -8, KE stable, +5 chat-jobs carve-out).
+- **New unit tests added this session**: 0 (the 45 admin-analytics +
+  the chat-jobs carve-outs shipped before this session under `d8b73ffa`
+  / `155a62ea`).
+- **Source files modified**: 0 (held the constraint).
+- **`as any`**: 0 (baseline ratchet still PASS).
+- **`eslint-disable`**: 0 net additions.
+- **Pre-commit gates**: 5/5 green on every commit (Gate 6 skipped — no
+  package manifest changes).
+
+## Done criteria checklist
+
+- [x] module-admin second-pass cached + survivors documented.
+- [x] module-museum second-pass cached + survivors documented.
+- [x] module-knowledge-extraction second-pass cached + survivors documented.
+- [x] BullMQ open-handle root cause traced + fixed with zero source change.
+- [x] `defineConfig({ setupFiles, extraTestPathIgnorePatterns })`
+      extension landed for future scopes that hit the same leak pattern.
+- [x] No source code modified.
+- [x] Pre-commit gates green on every commit.
+- [x] Recap (this section).
+
+## Remaining backlog (carry-over to next session)
+
+Ranked by ROI:
+
+1. **module-admin: 118 surv — densest targets:**
+   - 42 `admin-analytics-queries.ts` (StringLiteral on `.select` /
+     `.where` / `.addSelect` chains). The 45 tests added this session
+     killed 23 in the same file (65 → 42); the remaining 42 likely
+     need the same strict `toHaveBeenCalledWith` pattern, just on
+     different query branches.
+   - 23 `admin.repository.pg.ts` (qb chain StringLiteral).
+   - 15 `admin.route.ts` (handler-body / response-shape).
+2. **module-museum: 92 surv — densest targets:**
+   - 26 `opening-hours-parser.ts` (unchanged — needs the fixture matrix
+     per opening-hours format: 24/7, Mo-Fr 09:00-17:00, comma list, off
+     ranges).
+   - 24 `searchMuseums.useCase.ts` (-8 already killed; remaining are
+     Haversine/scoring boundary mutants).
+   - 13 `wikidata-museum.client.ts` (request URL/headers StringLiteral).
+3. **module-knowledge-extraction: 70 surv (covered) + 224 no-cov.**
+   - 47 `html-scraper.ts` adversarial-fixture matrix (highest dense
+     target — same hot spot as first-pass).
+   - 224 no-cov in TypeORM repos: NOT a mutation-testing gap, a
+     **scope boundary** — integration tests cover those repos but are
+     excluded from Stryker's unit-integration project by design.
+     Documenting here so the count isn't mistaken for missing tests.
+4. **Open-handle discipline repo-wide (TECH_DEBT candidate).**
+   102 test suites fail under `forceExit:false`. Either lazy-init the
+   BullMQ adapters or add `afterAll` drains in shared test helpers.
+   Affects future Stryker scopes whose tests boot `createApp()`.
+
+## Friction notes for the next session
+
+- **`--detectOpenHandles` is the right tool** when Stryker reports 100 %
+  timed out with 0 killed. Always check the open-handle trace BEFORE
+  bumping `timeoutMS` — bumping just lets the run last longer for the
+  same null result.
+- **Sandbox residue (`.stryker-tmp/sandbox-*`)** survives when Stryker
+  crashes mid-flight (OOM, kill). Always `rm -rf .stryker-tmp` before
+  retrying or the new run picks up stale fixtures from the dead sandbox.
+- **`git commit --only PATHS`** is the safe way to commit Stryker cache
+  updates when the working tree already has 50+ unrelated staged files
+  from parallel sessions — it commits exactly those paths without
+  touching the staging area for the rest.
+- **GitNexus stale warnings after a Stryker cache commit can be ignored** —
+  the only file changed is `reports/stryker-incremental.json` which
+  isn't in the symbol graph anyway.
