@@ -1,0 +1,100 @@
+{
+  "feature": "B6",
+  "spec": "docs/chat-ux-refonte/specs/B6.md",
+  "baseline": "325873b3",
+  "reviewer": "review-agent-2026-05-15-B6-002 (fresh, loop 2)",
+  "date": "2026-05-15",
+  "loop": 2,
+  "previousLoop": 1,
+  "previousVerdict": "CHANGES_REQUESTED",
+  "previousWeightedMean": 80,
+  "verdict": "APPROVED",
+  "weightedMean": 95,
+  "delta": "+15 (80 → 95)",
+  "axes": {
+    "correctness": {
+      "score": 95,
+      "weight": 0.30,
+      "summary": "F1 RESOLVED — useStartConversation.ts:67-69 restores the filter `if (intent === 'default' || intent === 'walk') payload.intent = intent;` exactly as on baseline 325873b3. Inline comment (lines 64-66) documents the BE Zod enum constraint and why UI-level 'audio'/'camera' must NOT round-trip via payload. `museumName` propagation is preserved (line 60) — that addition was legitimate. F2 RESOLVED — home-proactive-museum-banner.test.tsx:262 now asserts `expect(payload.intent).toBeUndefined()`, with explicit comment lines 260-261 explaining the URL-query is the actual AC22 propagation surface. The follow-up test (lines 268-294) asserts router.push URL contains `intent=audio`. Hook (`useProactiveMuseumSuggestion.ts`) and banner (`ProactiveMuseumBanner.tsx`) untouched vs loop 1 (R1-R26 + AC1-AC20 still satisfied — 2666 tests including 41 B6 still PASS). Wire in (tabs)/home.tsx unchanged (R27 still passes intent: 'audio' which is now correctly downcast in the payload while propagating via URL).",
+      "findings": []
+    },
+    "scope-fidelity": {
+      "score": 95,
+      "weight": 0.20,
+      "summary": "F3 RESOLVED — contracts.ts:12 narrowed back to `intent?: 'default' | 'walk'` (verified: zero diff vs baseline 325873b3 for this file). FE/BE wire contract is once again strictly aligned with `CHAT_SESSION_INTENTS = ['default', 'walk']` (museum-backend/src/modules/chat/domain/chat.types.ts:46). The local `ConversationIntent = 'default' | 'camera' | 'audio' | 'walk'` alias in useStartConversation.ts:10 remains as the caller-facing intent enum and downcasts to the wire DTO via the restored filter. Spec R30 `NO BE CHANGE` honoured. AC24 (`ZERO new BE files, ZERO new BE OpenAPI fields, ZERO new BE migrations`) still PASS — `git status museum-backend/` empty.",
+      "findings": []
+    },
+    "kiss-dry-hexagonal": {
+      "score": 92,
+      "weight": 0.15,
+      "summary": "Hook and banner unchanged from loop 1 — preserves the score: useLocation façade (R32 honoured, no direct expo-location import), type guard `isEligibleEntry` cleanly narrows fields without non-null assertions, closure-cell cancellation accessor documented in-source. React.memo banner with double-Pressable + stopPropagation (R21). No reach-around to chatApi from banner (R33). The corrective edits in loop 2 only revert + clarify, no new abstraction surface introduced.",
+      "findings": []
+    },
+    "a11y-design-system": {
+      "score": 95,
+      "weight": 0.15,
+      "summary": "Unchanged from loop 1. Card root + dismiss carry distinct accessibilityRole='button' + labels (R21, AC18). hitSlop=12 on dismiss → ≥44dp effective hit target (WCAG 2.5.5). Ionicons location/close only — no Unicode emoji (R25, NFR10). DS tokens preserved.",
+      "findings": []
+    },
+    "security-honesty": {
+      "score": 95,
+      "weight": 0.20,
+      "summary": "F4 RESOLVED — tracking.md line 73 (2026-05-15) now records the loop 1 issue honestly: `B6 corrective loop 1 : revert intent regression (filter restauré dans useStartConversation, DTO union strict 'default'|'walk', test AC22 ajusté URL-query vs payload). Spec AC22 amendé.` The wording `revert intent regression` explicitly frames the prior filter removal as a regression to undo, not a fix. Spec B6.md:615 AC22 also amended to make the FE/BE intent split contract-explicit (`intent='audio' is downcast (omitted) in the payload to keep the BE contract strict` + `Amendment 2026-05-15 (corrective loop 1) — original wording asserted payload.intent === 'audio' which would yield 400 in prod`). No PII leakage in telemetry (bucket-only). No new permission surface. Verified: only 4 files changed in the corrective loop (useStartConversation.ts revert, contracts.ts revert, test ajusté, spec/tracking amendés). Hook + banner files untouched (`git diff` confirms only intended files modified).",
+      "findings": []
+    }
+  },
+  "findingsResolved": [
+    {
+      "id": "F1",
+      "severity": "HIGH",
+      "status": "RESOLVED",
+      "evidence": "museum-frontend/features/chat/application/useStartConversation.ts:67-69 restores `if (intent === 'default' || intent === 'walk') { payload.intent = intent; }`. Inline comment lines 64-66 documents BE constraint."
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "evidence": "museum-frontend/__tests__/screens/home-proactive-museum-banner.test.tsx:262 asserts `expect(payload.intent).toBeUndefined();`. Lines 260-261 comment documents URL-query is the actual AC22 propagation surface. Adjacent test at lines 268-294 asserts router.push URL contains `intent=audio` (the truthful AC22 surface)."
+    },
+    {
+      "id": "F3",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "evidence": "museum-frontend/features/chat/domain/contracts.ts:12 narrowed back to `intent?: 'default' | 'walk'`. `git diff 325873b3 -- museum-frontend/features/chat/domain/contracts.ts` is empty — fully reverted."
+    },
+    {
+      "id": "F4",
+      "severity": "LOW",
+      "status": "RESOLVED",
+      "evidence": "docs/chat-ux-refonte/tracking.md:73 (2026-05-15 row) explicitly labels the loop 1 work as `revert intent regression`. Spec B6.md AC22 amended (line 615) with `Amendment 2026-05-15 (corrective loop 1)` note explaining the original wording would yield a 400."
+    }
+  ],
+  "findingsRemaining": [],
+  "regressions": "NONE — Hook (useProactiveMuseumSuggestion.ts) and banner (ProactiveMuseumBanner.tsx) untouched in loop 2 (verified via `git status` — neither shows in modified working tree files beyond the original red-test artefacts already counted in loop 1). Loop 1 PASSING gates (R1-R26, AC1-AC23, lint, i18n, full test suite 2666) all still PASS in loop 2. No new files. No new deps. No BE files modified.",
+  "hookAndBannerIntegrity": {
+    "useProactiveMuseumSuggestion.ts": "UNCHANGED vs loop 1 — 233 lines. Still matches R1-R14 + AC1-AC13.",
+    "ProactiveMuseumBanner.tsx": "UNCHANGED vs loop 1 — 158 lines. Still matches R15-R26 + AC14-AC20.",
+    "home.tsx wire": "UNCHANGED vs loop 1 — still passes intent:'audio' + museumId/museumName/coordinates to startConversation. The downcast happens inside useStartConversation now thanks to the restored filter."
+  },
+  "be_alignment": {
+    "be_enum": "museum-backend/src/modules/chat/domain/chat.types.ts:46 — CHAT_SESSION_INTENTS = ['default', 'walk'] as const",
+    "be_zod_schema": "museum-backend/src/modules/chat/adapters/primary/http/schemas/chat-session.schemas.ts:98 — intent: z.enum(CHAT_SESSION_INTENTS).optional()",
+    "fe_wire_dto": "museum-frontend/features/chat/domain/contracts.ts:12 — intent?: 'default' | 'walk'",
+    "verdict": "STRICTLY ALIGNED — FE wire DTO matches BE enum exactly. UI-level intents ('audio', 'camera') only live in the FE-local ConversationIntent alias and propagate via URL query."
+  },
+  "gates": {
+    "no_unicode_emoji": "PASS — Ionicons only (location/close).",
+    "no_feature_flag": "PASS — no *_ENABLED flag introduced.",
+    "bury_dead_code": "PASS — no deletions, no zombie stubs.",
+    "i18n_translations_real": "PASS — 822 keys OK in all 8 locales (ar/de/en/es/fr/it/ja/zh).",
+    "no_new_deps": "PASS — no package.json changes."
+  },
+  "build_verification": {
+    "lint": "PASS — `npm run lint` exit 0 (eslint --max-warnings=0 && tsc --noEmit).",
+    "tests_full_suite": "PASS — 244 suites / 2666 tests / 4 snapshots passed (Time: 12.661s).",
+    "i18n": "PASS — `npm run check:i18n` : 822 keys OK in all 8 locales.",
+    "be_unchanged": "PASS — `git status museum-backend/` shows zero modified files."
+  },
+  "weighted_calculation": "0.30*95 + 0.20*95 + 0.15*92 + 0.15*95 + 0.20*95 = 28.5 + 19 + 13.8 + 14.25 + 19 = 94.55 → rounded 95 (APPROVED threshold ≥ 85).",
+  "recommendation": "APPROVED — All 4 loop 1 findings RESOLVED with zero regressions. The corrective loop strictly reverted the runtime regression (F1), narrowed back the DTO drift (F3), adjusted the test to assert the truthful split between payload (no intent) and URL query (intent=audio) (F2), and honestly documented the loop 1 mistake in tracking.md + spec amendment (F4). Hook + banner + i18n + home wire all preserved (zero regression on the 95+/95+/92/95 axes from loop 1 that were already excellent). Full FE test suite 2666/2666 PASS. Lint clean. i18n complete. BE strictly untouched. B6 ready to merge → status `done`."
+}

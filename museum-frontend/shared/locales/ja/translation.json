@@ -571,6 +571,14 @@
         "hours": "{{count}} 時間",
         "days": "{{count}} 日"
       }
+    },
+    "proactive_museum": {
+      "title": "{{museumName}} にいます",
+      "subtitle": "アシスタントに聞きますか？",
+      "cta_a11y_label": "{{museumName}} について音声会話を開始",
+      "cta_a11y_hint": "新しい音声会話を開きます",
+      "a11y_dismiss": "美術館の提案を閉じる",
+      "icon_a11y_label": "位置マーカー"
     }
   },
   "dailyLimit": {

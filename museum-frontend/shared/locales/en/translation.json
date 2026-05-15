@@ -571,6 +571,14 @@
         "hours": "{{count}} h ago",
         "days": "{{count}} d ago"
       }
+    },
+    "proactive_museum": {
+      "title": "You're at {{museumName}}",
+      "subtitle": "Ask the assistant?",
+      "cta_a11y_label": "Start a voice conversation about {{museumName}}",
+      "cta_a11y_hint": "Opens a new voice conversation",
+      "a11y_dismiss": "Dismiss museum suggestion",
+      "icon_a11y_label": "Location marker"
     }
   },
   "dailyLimit": {

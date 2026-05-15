@@ -6,9 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 
 import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
+import { useProactiveMuseumSuggestion } from '@/features/chat/application/useProactiveMuseumSuggestion';
 import { useResumableSession } from '@/features/chat/application/useResumableSession';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { ConversationResumptionBanner } from '@/features/chat/ui/ConversationResumptionBanner';
+import { ProactiveMuseumBanner } from '@/features/chat/ui/ProactiveMuseumBanner';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import { HeroSettingsButton } from '@/features/home/ui/HeroSettingsButton';
@@ -40,6 +42,8 @@ export default function HomeScreen() {
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
   const { session: resumableSession, dismiss: dismissResumption } = useResumableSession();
+  const { museum: proactiveMuseum, dismiss: dismissProactiveMuseum } =
+    useProactiveMuseumSuggestion();
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -92,6 +96,22 @@ export default function HomeScreen() {
           }}
           onDismiss={() => {
             void dismissResumption();
+          }}
+        />
+
+        {/* B6 — Proactive in-museum suggestion banner. Renders null when no in-museum match. */}
+        <ProactiveMuseumBanner
+          museum={proactiveMuseum}
+          onStart={(m) => {
+            void startConversation({
+              intent: 'audio',
+              museumId: m.id,
+              museumName: m.name,
+              coordinates: { lat: m.latitude, lng: m.longitude },
+            });
+          }}
+          onDismiss={() => {
+            void dismissProactiveMuseum();
           }}
         />
 

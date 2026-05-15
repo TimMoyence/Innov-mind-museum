@@ -571,6 +571,14 @@
         "hours": "{{count}} 小时",
         "days": "{{count}} 天"
       }
+    },
+    "proactive_museum": {
+      "title": "您在 {{museumName}}",
+      "subtitle": "问问助手？",
+      "cta_a11y_label": "开始关于 {{museumName}} 的语音对话",
+      "cta_a11y_hint": "打开新的语音对话",
+      "a11y_dismiss": "关闭博物馆建议",
+      "icon_a11y_label": "位置标记"
     }
   },
   "dailyLimit": {

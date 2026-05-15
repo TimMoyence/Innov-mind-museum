@@ -571,6 +571,14 @@
         "hours": "{{count}} Std.",
         "days": "{{count}} T."
       }
+    },
+    "proactive_museum": {
+      "title": "Sie sind im {{museumName}}",
+      "subtitle": "Den Assistenten fragen?",
+      "cta_a11y_label": "Sprachgespräch über {{museumName}} starten",
+      "cta_a11y_hint": "Öffnet ein neues Sprachgespräch",
+      "a11y_dismiss": "Museumsvorschlag ausblenden",
+      "icon_a11y_label": "Standortmarkierung"
     }
   },
   "dailyLimit": {

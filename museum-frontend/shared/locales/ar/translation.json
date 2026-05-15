@@ -571,6 +571,14 @@
         "hours": "{{count}} س",
         "days": "{{count}} ي"
       }
+    },
+    "proactive_museum": {
+      "title": "أنت في {{museumName}}",
+      "subtitle": "هل تريد سؤال المساعد؟",
+      "cta_a11y_label": "ابدأ محادثة صوتية عن {{museumName}}",
+      "cta_a11y_hint": "يفتح محادثة صوتية جديدة",
+      "a11y_dismiss": "إخفاء اقتراح المتحف",
+      "icon_a11y_label": "علامة الموقع"
     }
   },
   "dailyLimit": {
