@@ -34,10 +34,13 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
 }));
 
 // Sentry breadcrumb sink — captured for R25 assertion.
-const mockAddBreadcrumb = jest.fn();
-jest.mock('@sentry/react-native', () => ({
-  addBreadcrumb: (b: unknown) => mockAddBreadcrumb(b),
-}));
+// R1 corrective (2026-05-15) — Sentry mock comes from the global test-utils.tsx
+// (which exports addBreadcrumb: jest.fn() since the same R1 corrective loop).
+// Per-file re-mock removed because jest hoisting causes the global mock —
+// imported via test-utils — to override the per-file one and break assertions.
+// We retrieve the spy via `jest.requireMock` so `expect` assertions still work.
+const mockAddBreadcrumb = (jest.requireMock('@sentry/react-native') as { addBreadcrumb: jest.Mock })
+  .addBreadcrumb;
 
 // The application surface under test. Module load fails at HEAD → RED.
 import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
