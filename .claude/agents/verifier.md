@@ -143,6 +143,11 @@ End-of-phase summary report:
 - BE testCount: baseline=N current=M (delta +K)
 - as-any: baseline=0 current=0 (no change)
 
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious deviation in HOW gates were verified (skipped command, accepted a partial pass, downgraded a FAIL to WARN, etc.)
+- format: { rule: "UFR-XXX | gate-contract", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
+- examples that MUST be declared: ran `pnpm test --bail` instead of full suite, marked mutation gate PASS without running it because cap reached, accepted ratchet drift +1
+
 ### Verdict: READY-FOR-REVIEWER | BLOCKED-FAIL
 ```
 </output_format>

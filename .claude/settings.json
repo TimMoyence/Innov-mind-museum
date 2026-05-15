@@ -1,4 +1,31 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm tsc)",
+      "Bash(pnpm tsc *)",
+      "Bash(pnpm openapi:validate)",
+      "Bash(pnpm test:contract:openapi)",
+      "Bash(npm run check:openapi-types)",
+      "mcp__gitnexus__impact",
+      "mcp__gitnexus__query",
+      "mcp__gitnexus__context",
+      "mcp__gitnexus__detect_changes",
+      "mcp__gitnexus__cypher",
+      "mcp__gitnexus__route_map",
+      "mcp__gitnexus__api_impact",
+      "mcp__gitnexus__shape_check",
+      "mcp__gitnexus__list_repos",
+      "mcp__gitnexus__group_list",
+      "mcp__gitnexus__tool_map",
+      "mcp__repomix__pack_codebase",
+      "mcp__repomix__grep_repomix_output",
+      "mcp__repomix__read_repomix_output",
+      "mcp__repomix__file_system_read_directory",
+      "mcp__repomix__file_system_read_file"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

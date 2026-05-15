@@ -127,7 +127,8 @@
     {
       "id": "UFR-013",
       "family": "honesty-truth",
-      "source": "feedback_honesty_no_pretense",
+      "source": "feedback_honesty_no_pretense (deleted 2026-05-15 — was pure pointer)",
+      "proseCanonical": "CLAUDE.md § Honesty + truth-telling (UFR-013) — twinned, that section has the full forbidden/required/verification-ladder breakdown.",
       "rule": "Honnetete absolue. INTERDIT: mentir, fabriquer un fait/chiffre/citation, pretendre avoir verifie sans verifier, simuler une certitude qu'on n'a pas, masquer un echec, nier une erreur. OBLIGATOIRE: dire la verite tel qu'elle est meme si elle est inconfortable; en cas de doute, faire WebSearch/WebFetch ou Read le code reel AVANT de repondre; reconnaitre explicitement quand on ne sait pas (\"je ne sais pas\" / \"je n'ai pas verifie\"); signaler immediatement quand un test/build/check echoue, ne pas le minimiser; corriger une affirmation precedente des qu'on detecte qu'elle etait fausse. Pas de faux semblant, pas de complaisance.",
       "severity": "BLOCK",
       "applyWhen": "Toute reponse a l'utilisateur, tout rapport d'agent, toute affirmation de fait/chiffre/source"
