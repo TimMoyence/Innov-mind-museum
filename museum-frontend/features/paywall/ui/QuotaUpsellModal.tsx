@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
@@ -63,6 +63,39 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
   // auto-fill every field forward a non-empty value → BE silent-drops (R23).
   const [website, setWebsite] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
+
+  // F2 corrective (2026-05-16, ultrareview bug_005) — Reset modal-local state on
+  // every visible→false transition. The modal subtree stays mounted across the
+  // app session (PaywallModalHost in _layout.tsx renders unconditionally), so
+  // RN <Modal visible={false}> only hides the native chrome — useState slots
+  // would otherwise persist into the next open with stale email + ticked consent
+  // + stale success/error banner.
+  //
+  // GDPR Art. 7 (consent renewal) is the non-negotiable driver : a consent tick
+  // inherited from a prior submission is NOT "specific + freely given" for the
+  // NEW operation. The email + banner resets are justified separately by UX
+  // trust (no zombie success/error on reopen) and KR4 funnel signal cleanliness
+  // (one paywall_email_captured per actual submit, not phantom-inherited UX).
+  //
+  // Justification (eslint-disable react-hooks/set-state-in-effect) : the rule's
+  // "you-might-not-need-an-effect" guidance does not apply here — `visible` is
+  // a parent-owned prop driven by an out-of-tree event (axios 402 interceptor
+  // → PaywallProvider.open). The reset is precisely the "synchronize React
+  // state with an external system boundary event" pattern the rule's docs
+  // exempt. Options (b) conditional mount and (c) key={openCounter} were
+  // rejected per F2.md §3.1 (iOS RN Modal unmount-mid-animation race + late
+  // setState warnings + TextInput focus loss). F2.md is the spec gate.
+  // Approved-by: docs/roadmap-night/specs/F2.md §5 T2 (D1 option (a)).
+  useEffect(() => {
+    if (!visible) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setEmail('');
+      setConsent(false);
+      setWebsite('');
+      setState('idle');
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+  }, [visible]);
 
   const onSubmit = async (): Promise<void> => {
     if (!consent) return; // N6 — submit disabled until explicit consent.

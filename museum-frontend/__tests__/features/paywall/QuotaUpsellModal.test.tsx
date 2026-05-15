@@ -23,6 +23,7 @@
  */
 import '@/__tests__/helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { TextInput } from 'react-native';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -183,5 +184,137 @@ describe('QuotaUpsellModal (R1 §1 R26-R29 + N6 + Q7)', () => {
       expect(typeof en[key]).toBe('string');
       expect(typeof fr[key]).toBe('string');
     }
+  });
+});
+
+/**
+ * F2 RED — QuotaUpsellModal state reset on visible transition (bug_005).
+ *
+ * Pins F2.R1 / R6 / R7 / R12 + AC1/AC2/AC3/AC5 down BEFORE implementation.
+ * Baseline `26a30424` keeps the 4 useState slots across open/close cycles
+ * (RN <Modal visible={false}> hides chrome but does not unmount children).
+ * The five sequence assertions below MUST FAIL at HEAD — green-code-agent
+ * lands the `useEffect(reset, [visible])` fix per D1=(a).
+ */
+describe('QuotaUpsellModal F2 — state reset on visible transition (bug_005)', () => {
+  beforeEach(() => {
+    mockPost.mockReset();
+    mockAddBreadcrumb.mockReset();
+  });
+
+  // ── Test A — Email reset on reopen (F2.R7 / F2.AC1) ─────────────────
+
+  it('F2.A: email field is empty on reopen after typing + close', () => {
+    const { rerender } = render(
+      <QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />,
+    );
+    fireEvent.changeText(screen.getByLabelText('paywall.fieldEmail'), 'user1@example.com');
+    expect(screen.getByLabelText('paywall.fieldEmail').props.value).toBe('user1@example.com');
+
+    rerender(<QuotaUpsellModal visible={false} reason={fixtureReason()} onClose={jest.fn()} />);
+    rerender(<QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />);
+
+    // F2.R7 — email must reset to '' on every false→true transition.
+    expect(screen.getByLabelText('paywall.fieldEmail').props.value).toBe('');
+  });
+
+  // ── Test B — Consent reset on reopen (F2.R6 / F2.AC2) ───────────────
+
+  it('F2.B: consent checkbox is unchecked on reopen after ticking + close', () => {
+    // F2.AC2 GDPR Art. 7 enforcement — consent inheritance forbidden between opens
+    const { rerender } = render(
+      <QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />,
+    );
+    fireEvent.press(screen.getByLabelText('paywall.consent'));
+    expect(screen.getByLabelText('paywall.consent').props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: true }),
+    );
+
+    rerender(<QuotaUpsellModal visible={false} reason={fixtureReason()} onClose={jest.fn()} />);
+    rerender(<QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />);
+
+    // F2.R6 — consent must reset to false on every open ; GDPR Art. 7 per-act.
+    expect(screen.getByLabelText('paywall.consent').props.accessibilityState).toEqual(
+      expect.objectContaining({ checked: false }),
+    );
+  });
+
+  // ── Test C — Success banner not inherited on reopen (F2.R4 / F2.AC1) ─
+
+  it('F2.C: success banner not visible on reopen after a prior successful submit', async () => {
+    mockPost.mockResolvedValueOnce({ data: { accepted: true } });
+    const { rerender } = render(
+      <QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('paywall.fieldEmail'), 'user1@example.com');
+    fireEvent.press(screen.getByLabelText('paywall.consent'));
+    fireEvent.press(screen.getByText('paywall.submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('paywall.success')).toBeTruthy();
+    });
+
+    rerender(<QuotaUpsellModal visible={false} reason={fixtureReason()} onClose={jest.fn()} />);
+    rerender(<QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />);
+
+    // F2.R4 — success banner is per-open, must not bleed across visible transitions.
+    expect(screen.queryByText('paywall.success')).toBeNull();
+  });
+
+  // ── Test D — Error banner not inherited on reopen (F2.R5 / F2.AC3) ──
+
+  it('F2.D: error banner not visible on reopen after a prior failed submit', async () => {
+    mockPost.mockRejectedValueOnce(new Error('network down'));
+    const { rerender } = render(
+      <QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />,
+    );
+
+    fireEvent.changeText(screen.getByLabelText('paywall.fieldEmail'), 'user1@example.com');
+    fireEvent.press(screen.getByLabelText('paywall.consent'));
+    fireEvent.press(screen.getByText('paywall.submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('paywall.error')).toBeTruthy();
+    });
+
+    rerender(<QuotaUpsellModal visible={false} reason={fixtureReason()} onClose={jest.fn()} />);
+    rerender(<QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />);
+
+    // F2.R5 — error banner is per-open, must not bleed across visible transitions.
+    expect(screen.queryByText('paywall.error')).toBeNull();
+  });
+
+  // ── Test E — Honeypot reset on reopen (F2.R1 / F2.AC5 / Risk5) ──────
+
+  it('F2.E: honeypot field is empty on reopen after a bot-fill simulation', () => {
+    // Per Risk5 — honeypot is style.display='none', not reachable via accessible
+    // queries. We target via UNSAFE_getAllByType(TextInput) + style filter on
+    // `display: 'none'` to pick the hidden trap.
+    const findHoneypot = (): ReturnType<typeof screen.UNSAFE_getAllByType>[number] => {
+      const inputs = screen.UNSAFE_getAllByType(TextInput);
+      const honeypot = inputs.find((input) => {
+        const style = input.props.style as { display?: string } | undefined;
+        return style?.display === 'none';
+      });
+      if (!honeypot) {
+        throw new Error('honeypot TextInput not found via UNSAFE_getAllByType + style filter');
+      }
+      return honeypot;
+    };
+
+    const { rerender } = render(
+      <QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />,
+    );
+
+    // Simulate bot-fill — fireEvent.changeText triggers setWebsite + re-render.
+    fireEvent.changeText(findHoneypot(), 'bot-tripped-this');
+    expect(findHoneypot().props.value).toBe('bot-tripped-this');
+
+    rerender(<QuotaUpsellModal visible={false} reason={fixtureReason()} onClose={jest.fn()} />);
+    rerender(<QuotaUpsellModal visible reason={fixtureReason()} onClose={jest.fn()} />);
+
+    // F2.R1 — `website` slot must reset to '' on every false→true transition.
+    expect(findHoneypot().props.value).toBe('');
   });
 });
