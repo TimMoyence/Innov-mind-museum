@@ -186,6 +186,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Tests with coverage (shard ${{ matrix.shard }}/4)
+        env:
+          # Tell jest.config.ts to skip the per-run coverageThreshold check —
+          # each shard only exercises ~1/4 of tests so its aggregate is ~25%
+          # of full coverage and would always fail the global 88/74/86/89 gate.
+          # The downstream `coverage-merge` job validates the same thresholds
+          # against the union of all 4 shards via `nyc check-coverage`.
+          SHARDED_COVERAGE: '1'
         run: |
           pnpm exec jest --watchman=false --runInBand \
             --selectProjects unit-integration \
