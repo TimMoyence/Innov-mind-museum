@@ -39,8 +39,9 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
 // Per-file re-mock removed because jest hoisting causes the global mock —
 // imported via test-utils — to override the per-file one and break assertions.
 // We retrieve the spy via `jest.requireMock` so `expect` assertions still work.
-const mockAddBreadcrumb = (jest.requireMock('@sentry/react-native') as { addBreadcrumb: jest.Mock })
-  .addBreadcrumb;
+const mockAddBreadcrumb = jest.requireMock<{ addBreadcrumb: jest.Mock }>(
+  '@sentry/react-native',
+).addBreadcrumb;
 
 // The application surface under test. Module load fails at HEAD → RED.
 import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
