@@ -29,6 +29,8 @@
 !docs/PHASE_HISTORY.md
 !docs/_archive/
 !docs/_archive/**
+!docs/roadmap-night/
+!docs/roadmap-night/**
 !docs/adr/
 !docs/adr/**
 !docs/CONTRIBUTING.md

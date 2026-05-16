@@ -64,6 +64,12 @@ export default function Footer({ dict, locale }: FooterProps) {
             >
               {dict.footer.links.security}
             </Link>
+            <Link
+              href={`/${locale}/b2b`}
+              className="text-sm text-text-secondary transition-colors hover:text-primary-600"
+            >
+              {dict.footer.links.b2b}
+            </Link>
           </nav>
         </div>
       </div>

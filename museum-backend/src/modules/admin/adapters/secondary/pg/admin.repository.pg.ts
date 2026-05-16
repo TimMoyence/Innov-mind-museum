@@ -42,6 +42,9 @@ function mapUser(user: User): AdminUserDTO {
     emailVerified: user.email_verified,
     suspended: user.suspended,
     deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
+    // R1 (C6) — surface tier on the admin DTO so the user-detail page can
+    // render the current value + the toggle button (super_admin only).
+    tier: user.tier,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
@@ -148,6 +151,21 @@ export class AdminRepositoryPg implements IAdminRepository {
     if (!user) return null;
 
     user.role = newRole as User['role'];
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
+  }
+
+  /**
+   * R1 (C6) — Flips `users.tier` to the new value via a `save` round-trip
+   * that ONLY mutates the `tier` column. `sessionsMonthCount` and
+   * `sessionsMonthStart` are loaded back from the row but not modified
+   * (R17 — counter preserved across flips). Returns `null` when the user
+   * row doesn't exist.
+   */
+  async changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
+    user.tier = newTier;
     const saved = await this.userRepo.save(user);
     return mapUser(saved);
   }

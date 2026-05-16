@@ -14,6 +14,7 @@ import LandingMapsShowcase from '@/components/marketing/LandingMapsShowcase';
 import LandingFeatureGrid from '@/components/marketing/LandingFeatureGrid';
 import LandingDownloadCTA from '@/components/marketing/LandingDownloadCTA';
 import { AiDisclosureBanner } from '@/components/ai-disclosure/AiDisclosureBanner';
+import BetaSignupSection from './BetaSignupSection';
 
 interface LandingPageProps {
   params: Promise<{ locale: string }>;
@@ -66,6 +67,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
       <FAQSection title={dict.faq.title} items={dict.faq.items} />
 
       <LandingDownloadCTA dict={dict.download} />
+
+      <BetaSignupSection dict={dict.landing.beta} locale={locale as Locale} />
     </>
   );
 }

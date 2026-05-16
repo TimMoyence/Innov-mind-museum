@@ -1,0 +1,12 @@
+{
+  "modalTitle": "Límite mensual gratuito alcanzado",
+  "modalBody": "Has usado todas las conversaciones incluidas en tu plan gratuito este mes. Déjanos tu correo y te avisaremos en cuanto abra el premium.",
+  "fieldEmail": "Correo electrónico",
+  "submit": "Unirme a la lista premium",
+  "sending": "Enviando…",
+  "success": "Gracias — te contactaremos.",
+  "error": "Algo salió mal. Por favor, inténtalo de nuevo.",
+  "dismiss": "Cerrar",
+  "consent": "Acepto recibir un correo cuando se lance premium.",
+  "resetsOn": "Se reinicia el"
+}

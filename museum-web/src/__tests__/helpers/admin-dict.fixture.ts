@@ -122,6 +122,19 @@ export const mockAdminDict: Dictionary['admin'] = {
     successUnsuspended: 'User reactivated.',
     successDeleted: 'User deleted.',
     newRoleLabel: 'New role',
+    tier: {
+      label: 'Tier',
+      currentFree: 'Free tier',
+      currentPremium: 'Premium tier',
+      toggleToPremium: 'Promote to premium',
+      toggleToFree: 'Demote to free',
+      confirmTitle: 'Change user tier?',
+      confirmBody: 'Audit-logged change.',
+      confirmCta: 'Confirm tier change',
+      cancel: 'Cancel',
+      success: 'Tier updated.',
+      error: 'Could not update tier.',
+    },
   },
   mfaPage: {
     successTitle: 'Two-factor authentication enabled',
@@ -209,5 +222,10 @@ export const mockAdminDict: Dictionary['admin'] = {
     topMuseums: 'Top Museums',
     museum: 'Museum',
     guardrailBlockRate: 'Block Rate',
+  },
+  export: {
+    sessions: { label: 'CSV sessions', downloading: 'Preparing', error: 'Failed' },
+    reviews: { label: 'CSV reviews', downloading: 'Preparing', error: 'Failed' },
+    tickets: { label: 'CSV tickets', downloading: 'Preparing', error: 'Failed' },
   },
 };

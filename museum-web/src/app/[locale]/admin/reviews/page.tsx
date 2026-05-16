@@ -5,6 +5,7 @@ import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
@@ -108,8 +109,13 @@ export default function AdminReviewsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary">{adminDict.reviewsAdmin}</h1>
-      <p className="mt-1 text-text-secondary">{adminDict.reviewsPage.subtitle}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.reviewsAdmin}</h1>
+          <p className="mt-1 text-text-secondary">{adminDict.reviewsPage.subtitle}</p>
+        </div>
+        <ExportCsvButton kind="reviews" />
+      </div>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

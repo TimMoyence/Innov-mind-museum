@@ -125,6 +125,19 @@ const mockAdminDict: Dictionary['admin'] = {
     successUnsuspended: '',
     successDeleted: '',
     newRoleLabel: '',
+    tier: {
+      label: '',
+      currentFree: '',
+      currentPremium: '',
+      toggleToPremium: '',
+      toggleToFree: '',
+      confirmTitle: '',
+      confirmBody: '',
+      confirmCta: '',
+      cancel: '',
+      success: '',
+      error: '',
+    },
   },
   mfaPage: {
     successTitle: '',
@@ -206,6 +219,11 @@ const mockAdminDict: Dictionary['admin'] = {
     topMuseums: '',
     museum: '',
     guardrailBlockRate: '',
+  },
+  export: {
+    sessions: { label: '', downloading: '', error: '' },
+    reviews: { label: '', downloading: '', error: '' },
+    tickets: { label: '', downloading: '', error: '' },
   },
 };
 

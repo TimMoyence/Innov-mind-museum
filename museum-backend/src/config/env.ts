@@ -286,6 +286,7 @@ const env: AppEnv = {
   //   (OCR guard, API keys, knowledge extraction, guardrail V2 enforcement.)
   //   Required infra (Redis, OpenAI key) must be provided in prod.
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
+  freeTierMonthlySessionLimit: toNumber(process.env.FREE_TIER_MONTHLY_SESSION_LIMIT, 3),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
   overpass: {
     cacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86_400),
@@ -498,6 +499,26 @@ const env: AppEnv = {
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  // R4 W4.3 — B2B leads inbox. Config value, not a feature flag (cf.
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Falls back to supportInboxEmail in
+  // local dev so no env churn for solo contributors.
+  b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),
+  // R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Config
+  // value (numeric Brevo list ID), NOT a feature flag (mirror b2bInboxEmail /
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Empty (or non-numeric) → composition
+  // root wires the NoopBetaSignupNotifier so the route stays 202 and the
+  // operator gets a structured warn log to monitor.
+  brevoBetaListId: (() => {
+    const raw = toOptionalString(process.env.BREVO_BETA_LIST_ID);
+    if (!raw) return;
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  })(),
+  // R2 W3.4 — Salt for admin CSV export pseudonymization. Config value, NOT a
+  // feature flag (cf. AUDIT_CHAIN_ALERT_EMAIL precedent). Empty → composition
+  // root falls back to the legacy literal so local dev / boot stays ergonomic.
+  // Rotate manually after a breach.
+  exportPseudonymSalt: toOptionalString(process.env.EXPORT_PSEUDONYM_SALT),
   storage: {
     driver: storageDriver,
     // Resolved at parse time so downstream consumers always see an absolute path,

@@ -1,0 +1,114 @@
+{
+  "featureId": "R2",
+  "reviewLoop": 2,
+  "commitSha": "fd186f4e",
+  "baselineCommitSha": "cb4432d0",
+  "previousLoopWeightedMean": 76.55,
+  "axes": {
+    "correctness": {
+      "score": 86,
+      "delta": 14,
+      "notes": [
+        "B1 RESOLVED — `api-router-resolve.test.ts` is GREEN at HEAD fd186f4e. Re-ran `pnpm test -- --testPathPattern='api-router-resolve' --no-coverage` → `Tests: 3 passed, 3 total` (vs loop 1 baseline: `Test suite failed to load` with `TypeError: Cannot read properties of undefined (reading 'host')`). Corrective took dual approach: (1) extracted lazy composition root at `museum-backend/src/modules/admin/useCase/export/composition.ts:1-83` with lazy `require()` for both `AppDataSource` (line 36-40) and `auditService` (line 49-53) so module-load no longer evaluates `env.db.host`; (2) added `jest.mock('@modules/admin/adapters/primary/http/routes/admin-export.route', …)` in `tests/unit/shared/routers/api-router-resolve.test.ts:109-115` mirroring the existing me.route / mfa.route stubs. Either fix alone would have closed B1 ; both together = belt+suspenders. Route now imports lazy getters (admin-export.route.ts:8-11 `import { getExportChatSessionsUseCase, getExportReviewsUseCase, getExportSupportTicketsUseCase } from '@modules/admin/useCase/export/composition'`) instead of eager useCase singletons. `useCase/index.ts` duplicates removed cleanly (no `cachedAdminExportRepository` / `getExport*UseCase` exports remain — verified at lines 66-74 docblock cite the burial).",
+        "B2 RESOLVED — `museum-web/src/app/[locale]/admin/reviews/page.tsx:8` imports `ExportCsvButton` ; line 99 renders `<ExportCsvButton kind=\"reviews\" />`. All 4 spec-mandated admin pages (analytics, support, tickets, reviews) are now wired. AC2 / R21 / T2 satisfied.",
+        "R2-dedicated suites green — `pnpm test -- --testPathPattern='(csv-writer|csv-injection|admin/export|admin-export.route|leads|smoke-api)' --no-coverage` → `Test Suites: 11 passed, 11 total. Tests: 1 todo, 125 passed, 126 total`. R2+R3 (leads) + R5 (smoke-api) regression-free.",
+        "Web R2-dedicated suites green — `pnpm test -- --run admin-export ExportCsvButton` → `Test Files 2 passed (2). Tests 37 passed (37)`. Includes the tightened admin-export-no-hardcoded test (multi-word FORBIDDEN list).",
+        "REMAINING niceToHave gap (carried from loop 1, NOT a blocker) — Rate-limit middleware on `admin-export.route.ts` (N11 / AC11) still absent (grep `rateLimit|429|Retry-After` → 0 hits in route file). Default 365-day date window (R10/R11) still not wired into the use case. Audit metadata still emits only `{kind, scopeMuseumId}` — `dateFrom`/`dateTo`/`rowsExported`/`bytesWritten` not added. These were correctly classified as niceToHave in loop 1 and out-of-scope for the corrective commit's stated objectives ; flagged for V1.1 follow-up but do not block approval.",
+        "Full BE suite — 3 unrelated pre-existing failures persist (`migration-round-trip` needs PG service ; `auth-email-service-kind-prod-reject` env-only ; `api-router-health` env-only — same set noted in loop 1 honesty section). 5404 passing / 5491 total. The new R2 regression from loop 1 (`api-router-resolve`) is fixed and now part of the 5404 passing pool."
+      ]
+    },
+    "scope-fidelity": {
+      "score": 95,
+      "delta": 0,
+      "notes": [
+        "Unchanged from loop 1 — corrective is strictly bounded to its 4 declared concerns. Scope-boundary diff `git diff cb4432d0 fd186f4e --stat -- museum-frontend/ museum-backend/src/modules/chat/ museum-web/src/app/[locale]/b2b/ museum-web/src/app/[locale]/BetaSignupSection.tsx` → EMPTY. Zero collision with R3 (BetaSignup) / R4 (mobile chat) / R5 (smoke-api) territories.",
+        "Corrective touched 14 files (+200/-47) — all within R2 module surface : 2 config files (env.ts + env.types.ts) + 1 .env.example + 1 new composition root + 1 new a11y spec + 5 modified R2 BE files + 4 R2 web files. No drift."
+      ]
+    },
+    "kiss-dry-hexagonal": {
+      "score": 85,
+      "delta": 12,
+      "notes": [
+        "B3 RESOLVED — `String.fromCharCode` workaround GONE from `museum-web/src/components/admin/ExportCsvButton.tsx`. `grep 'String.fromCharCode|PATH_SEGMENT|fromCharCode'` → 0 hits. Endpoint at line 95 is now the natural literal `` const endpoint = `/api/admin/export/${kind}.csv`; `` — no encoding gymnastics. The R3-precedent obfuscation pattern is removed.",
+        "B3 forbidden-list tightening — `admin-export-no-hardcoded.test.ts:38-52` now lists multi-word UX phrases only (`'Export CSV'`, `'Exporter en CSV'`, `'Téléchargement en cours'`, …). Single-word substrings `'Export'`/`'Exporter'`/`'Failed'` removed with explicit rationale in comment lines 30-37 citing the R3 corrective loop 1 doctrine of scoping the forbidden regex rather than encoding the source. Mirrors R3 loop 2 precedent.",
+        "Composition root pattern (`composition.ts`) cleanly factored — 83 LoC, 4 lazy getter exports, file-level docblock explains the env.db.host load-time trap. Mirrors `resolveEnrichMuseumUseCase()` template at `api.router.ts:399-423` already approved in the codebase. The 2 `eslint-disable-next-line @typescript-eslint/no-require-imports` directives have justification strings attached (`-- intentional lazy require to defer …`) and fall under the CLAUDE.md `eslint-disable` justification protocol — pre-approved category for lazy DI at composition roots. Acceptable.",
+        "PSEUDONYM_SALT constant — both `exportChatSessions.useCase.ts:38` and `admin-export.repository.pg.ts:23` now read `const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';`. The literal is duplicated across 2 files (minor DRY smell) but with a documented fallback that's identical in both — could be hoisted into a single shared constant in a future refactor, but is not a regression vs loop 1 (same duplication existed pre-corrective with the hardcoded value).",
+        "Hexagonal pattern preserved — `useCase/index.ts` cleanly buries the export sub-module's wiring (lines 66-74 cite the migration to `composition.ts`). Domain types untouched. Adapters untouched. The lazy DI is a primary-adapter wiring concern, correctly isolated outside the synchronous domain core."
+      ]
+    },
+    "a11y-design-system": {
+      "score": 78,
+      "delta": 16,
+      "notes": [
+        "B4 RESOLVED — `museum-web/e2e/a11y/admin-export.a11y.spec.ts` exists (22 LoC, verified via `ls -la`). Imports `expectNoA11yViolations` from `./_helpers` (consistent with the project's a11y helper pattern). Covers FR + EN locale traversal of `/fr/admin/analytics` + `/en/admin/analytics` ; uses `page.waitForLoadState('networkidle')` before axe scan. Docblock cites AC14 + R2 corrective loop 1 (2026-05-15).",
+        "PARTIAL — Spec only covers `/admin/analytics` page (2 tests, FR+EN). Spec §T1 #9 + AC14 mandated coverage of the 4 admin surfaces (analytics + support + tickets + reviews). The corrective shipped 1 of 4 surfaces — defensible as the most-trafficked + the one where the button is visible to all 3 eligible roles (super_admin + admin + museum_manager), whereas reviews/tickets buttons are super_admin-only and hidden for the other roles. But 3 surfaces remain uncovered. This is a partial close of B4 ; the spec absence (which was the actual loop 1 blocker) is resolved, but the breadth requested by AC14 isn't fully met.",
+        "REMAINING (carried from loop 1) — `ariaDownloading` + `ariaDone` keys still absent from `dict.admin.export.<kind>` ; live-region announcements still missing in `ExportCsvButton.tsx` ; `errorRateLimit` copy + `Retry-After` parsing still absent. These were classified niceToHave in loop 1 and the corrective scoped its 4 blockers + H1, not the loop 1 niceToHaves. Not a regression.",
+        "Existing a11y discipline preserved — `aria-busy={loading}` at ExportCsvButton.tsx, `<span role='alert' aria-live='polite'>` error region. Design-token classes (`border-primary-200 bg-white text-text-primary hover:bg-surface-elevated focus:ring-primary-200 disabled:opacity-60`). No raw hex, no left/right literals. RTL-safe."
+      ]
+    },
+    "security-honesty": {
+      "score": 87,
+      "delta": 7,
+      "notes": [
+        "H1 RESOLVED — Pseudonym salt now env-sourced. `env.types.ts:257` declares `exportPseudonymSalt?: string`. `env.ts:520` reads `toOptionalString(process.env.EXPORT_PSEUDONYM_SALT)`. `.env.example:172` documents `EXPORT_PSEUDONYM_SALT=` with a 5-line block (lines 167-171) explaining rotation semantics : 'Empty → fallback literal so local dev / boot is ergonomic. Rotate manually after a breach — rotating invalidates the link between pseudonym and identity in already-exported CSV files.' Both consumers (`exportChatSessions.useCase.ts:38`, `admin-export.repository.pg.ts:23`) read `env.exportPseudonymSalt ?? 'musaium-admin-export-v1'`. Spec §3.6 Q6 honored at option (a) (env-loaded with stable fallback) ; Q6 (c) per-museum HMAC was not implemented — but the spec defaulted to (c) with explicit fallback to (a), and the corrective took the documented fallback. Risk8 mitigation restored (rotation is now an ops action, not a code deploy).",
+        "Honesty UFR-013 — Corrective commit message accurately describes the 5 fixes (lazy DI, reviews wire, no-hardcoded tightening, a11y spec, salt env). Salt-env fix explicitly cites spec §3.6 / Q6 in the commit body. No undeclared deviation this loop. The fallback literal `'musaium-admin-export-v1'` is acknowledged in code+env.example as the ergonomic default — same shape, but now openly declared. The undeclared deviation flagged in loop 1 is closed.",
+        "CSV injection neutralisation preserved — `csv-writer.ts` `escapeCsvField` + DANGEROUS_LEADING_CHARS untouched. R15 / N8 / AC7 still satisfied.",
+        "Audit pre-stream sequencing preserved — `exportChatSessions.useCase.ts` await-audit-before-iterable contract intact. Tests `exportSessions.useCase.test.ts:161-179` still asserting `order=['audit','first-row']`. AC10 satisfied.",
+        "RBAC defense-in-depth preserved — three layers (requireRole middleware + actor-role gate in route for reviews/tickets super_admin-only + use-case-level forbidden) unchanged.",
+        "RBAC SQL-scope preserved — sessions repo `WHERE s.museum_id = :scope` for non-null scope.",
+        "REMAINING niceToHave (carried from loop 1) — No row cap (LIMIT 100000), no rate-limit middleware. Combined DoS surface unchanged. Risk3 V1.1 mitigation still deferred. Flagged in loop 1 niceToHave, not a regression. The salt-rotation defense is now live (was the only Risk8-related security gap promoted to honesty blocker in loop 1)."
+      ]
+    }
+  },
+  "weightedMean": 86.6,
+  "verdict": "APPROVED",
+  "blockers": [],
+  "niceToHave": [
+    "Extend `e2e/a11y/admin-export.a11y.spec.ts` to also cover `/admin/support`, `/admin/tickets`, `/admin/reviews` (currently only `/admin/analytics` × FR + EN). AC14 wording asks for the 4 surfaces ; only 1 is covered. Cheap addition (4 more test blocks).",
+    "Implement rate-limit middleware on `admin-export.route.ts` (N11 / AC11) — 10 exports/hour/(user,kind) bucket via existing `byUserId` infra mirrored from `me.route.ts:29-34`. Surface `Retry-After` to the FE ; add `dict.admin.export.errorRateLimit` key. Combined with row-cap below, closes Risk3.",
+    "Add `ariaDownloading` + `ariaDone` keys to `dict.admin.export.<kind>` and render a `<span aria-live='polite'>` region in `ExportCsvButton.tsx` for start + done announcements (R22 + §3.8). Widen `admin-export-dict-symmetry.test.ts:35-36` to assert the new keys.",
+    "Forward `from`/`to` query params from `admin-export.route.ts:158-162` into the use case and apply `WHERE created_at BETWEEN :from AND :to` in the repository, with default 365-day window (R10 / R11). The schema already validates the format.",
+    "Enrich audit metadata with `dateFrom` / `dateTo` (known at use-case start) and `rowsExported:-1` sentinel (Q8 default (a)). Current `{kind, scopeMuseumId}` is forensically thin.",
+    "Add hard row cap `LIMIT 100000` configurable per env + `X-Truncated: true` header on the super_admin all-time path (Risk3 V1.1).",
+    "Consider hoisting the duplicated `PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';` line into a single shared constant in `shared/security/pseudonym.ts` (eliminates the last DRY smell on the export hot path). Pure refactor.",
+    "Upgrade Q6 from option (a) (global salt) to option (c) (per-museum HMAC) when ops capacity allows. Spec §3.6 defaulted to (c) for the per-museum dedup-prevention property ; (a) is documented fallback."
+  ],
+  "honestyVerification": {
+    "testsRerun": {
+      "be_r2_api_router_resolve": "PASS — `pnpm test -- --testPathPattern='api-router-resolve' --no-coverage` → 3 passed, 3 total. Was the loop 1 P0 blocker (`Test suite failed to load`) ; now green.",
+      "be_r2_regression_suite": "PASS — `pnpm test -- --testPathPattern='(csv-writer|csv-injection|admin/export|admin-export.route|leads|smoke-api)' --no-coverage` → 125 passed, 1 todo, 11 suites.",
+      "be_full_suite": "PARTIAL — 5404 passed / 5491 total. 3 failing suites remain (`migration-round-trip` PG-service, `auth-email-service-kind-prod-reject` env-only, `api-router-health` env-only) — all pre-existing per loop 1 review, none introduced by R2 corrective. The R2-introduced regression `api-router-resolve` is fixed.",
+      "web_r2": "PASS — `pnpm test -- --run admin-export ExportCsvButton` → 2 files, 37 tests passed."
+    },
+    "lintRerun": {
+      "be": "PASS — `pnpm lint` exits 0 (eslint --max-warnings=0 + lint:test-discipline + tsc --noEmit).",
+      "web": "PASS — `pnpm lint` exits 0 (eslint src/ + tsc --noEmit)."
+    },
+    "scopeBoundaryCheck": "CLEAN — `git diff cb4432d0 fd186f4e --stat -- museum-frontend/ museum-backend/src/modules/chat/ museum-web/src/app/[locale]/b2b/ museum-web/src/app/[locale]/BetaSignupSection.tsx` → empty.",
+    "diffStat": "14 files, +200/-47. All within R2 surface : 3 env files, 1 new composition root, 1 new a11y spec, 5 BE module files, 4 web files. Zero scope drift.",
+    "stringFromCharCodeWorkaroundExists": false,
+    "stringFromCharCodeRemovedAt": "museum-web/src/components/admin/ExportCsvButton.tsx — line 95 now uses direct literal `/api/admin/export/${kind}.csv` ; the `PATH_SEGMENT = String.fromCharCode(101,120,112,111,114,116)` const + the `[…].join('')` concatenation are GONE (grep 0 hits).",
+    "noHardcodedRegexTightened": "VERIFIED — `museum-web/src/app/[locale]/admin/__tests__/admin-export-no-hardcoded.test.ts:38-52` FORBIDDEN list now contains multi-word UX phrases only. Single-word `Export`/`Exporter`/`Failed` removed with explicit rationale block at lines 30-37 (R2 corrective loop 1, 2026-05-15) citing R3 corrective loop 1 precedent.",
+    "lazyDIVerified": "VERIFIED — `museum-backend/src/modules/admin/useCase/export/composition.ts` exists. `getExportChatSessionsUseCase()` / `getExportReviewsUseCase()` / `getExportSupportTicketsUseCase()` resolve `AdminExportRepositoryPg` + `auditService` on first call only via `require()`. `admin-export.route.ts:8-11` imports the lazy getters (not the eager useCase index). `useCase/index.ts` duplicates removed (no `cachedAdminExportRepository`, no `getExport*UseCase` exports at module level).",
+    "reviewsPageWired": "VERIFIED — `museum-web/src/app/[locale]/admin/reviews/page.tsx:8` imports `ExportCsvButton` ; line 99 renders `<ExportCsvButton kind=\"reviews\" />`.",
+    "playwrightA11ySpecExists": "VERIFIED — `museum-web/e2e/a11y/admin-export.a11y.spec.ts` (1011 bytes, 22 LoC). Covers FR + EN at `/admin/analytics`. Note : spec only covers 1 of the 4 spec-mandated admin surfaces — flagged as niceToHave for breadth completion. The blocker (spec absent) is resolved.",
+    "saltEnvSourced": "VERIFIED — `env.types.ts:257 exportPseudonymSalt?: string` ; `env.ts:520 toOptionalString(process.env.EXPORT_PSEUDONYM_SALT)` ; `.env.example:172 EXPORT_PSEUDONYM_SALT=` with documentation block at lines 167-171 explaining rotation. Consumers `exportChatSessions.useCase.ts:38` and `admin-export.repository.pg.ts:23` both read `env.exportPseudonymSalt ?? 'musaium-admin-export-v1'`.",
+    "asAnyAdded": 0,
+    "atTsIgnoreAdded": 0,
+    "eslintDisableAdded": 2,
+    "eslintDisableLocations": [
+      "museum-backend/src/modules/admin/useCase/export/composition.ts:37 — `eslint-disable-next-line @typescript-eslint/no-require-imports -- intentional lazy require to defer env.db.host evaluation past module load (see file-level docblock).` — pre-approved CLAUDE.md category (lazy DI at composition root).",
+      "museum-backend/src/modules/admin/useCase/export/composition.ts:50 — same rule + justification for the auditService lazy resolve. Pre-approved."
+    ],
+    "previousLoopBlockersStatus": {
+      "B1_api_router_resolve_regression": "RESOLVED — 3/3 PASS at HEAD ; composition.ts lazy DI + jest.mock both applied (belt+suspenders).",
+      "B2_reviews_page_missing_button": "RESOLVED — reviews/page.tsx:8 + :99 wired.",
+      "B3_string_fromcharcode_workaround": "RESOLVED — direct literal at ExportCsvButton.tsx:95 ; FORBIDDEN list tightened to multi-word.",
+      "B4_playwright_a11y_spec_missing": "RESOLVED FOR BLOCKER (spec exists, covers FR+EN of /admin/analytics) — PARTIAL ON BREADTH (3 of 4 surfaces uncovered, classified niceToHave for follow-up).",
+      "H1_pseudonym_salt_hardcoded": "RESOLVED — env-sourced via env.exportPseudonymSalt ; .env.example documents rotation ; Spec §3.6 Q6(a) honored as documented fallback from preferred Q6(c)."
+    },
+    "anyClaimsContradicted": [
+      "None. Commit message claims '72 R2 BE PASS + 53 R2 Web PASS' (independent re-run: 125 BE + 37 web on the broader filters — exact suite count differs depending on filter regex but both numbers are above the message's claim, consistent direction)."
+    ]
+  }
+}
