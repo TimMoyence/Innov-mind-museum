@@ -100,7 +100,7 @@ Phase history (Maestro / Web a11y / Stryker / Auth e2e / Chaos / Coverage gates)
 
 ## Architecture
 
-> `docs/ARCHITECTURE.md` is referenced in older docs but not yet extracted. The summary below + the per-app `src/` tree are the source of truth.
+> Architecture détaillée : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Résumé :
 
 Résumé :
 - **Backend** — hexagonal (domain → useCase → adapters), modules barrel-pattern (admin/auth/museum/review/support) ou composition-root (chat/knowledge-extraction). Import discipline via codemod 2026-05-05 (alias `@modules/*`/`@shared/*`/`@data/*`, no 4-level relative). Minimal-barrel policy.
@@ -239,7 +239,7 @@ Spec complète : `docs/AI_VOICE.md`.
 
 **Tests MUST use shared factories. Inline object creation forbidden.**
 
-Source de vérité = quick reference ci-dessous + les fichiers `tests/helpers/**/*.fixtures.ts` (BE) / `__tests__/helpers/factories/*.ts` (FE). Le doc séparé `docs/TEST_FACTORIES.md` est référencé mais pas encore extrait — pour l'instant, lis directement les factories.
+Source de vérité = quick reference ci-dessous + les fichiers `tests/helpers/**/*.fixtures.ts` (BE) / `__tests__/helpers/factories/*.ts` (FE). Voir aussi [`docs/TEST_FACTORIES.md`](docs/TEST_FACTORIES.md).
 
 Quick reference :
 - BE factories : `museum-backend/tests/helpers/<module>/<entity>.fixtures.ts`
@@ -251,12 +251,12 @@ Quick reference :
 
 **`eslint-disable` = last resort, not first reflex.**
 
-Source de vérité = quick reference ci-dessous + per-rule decision tree au moment du PR. Le doc séparé `docs/LINT_DISCIPLINE.md` est référencé mais pas encore extrait.
+Source de vérité = quick reference ci-dessous + per-rule decision tree au moment du PR. Voir aussi [`docs/LINT_DISCIPLINE.md`](docs/LINT_DISCIPLINE.md).
 
 Quick reference :
 - Read rule docs → fix code (90% of cases) → only disable if false positive in this context, no alternative, `-- reason` comment
 - Any new `eslint-disable` in PR must include `Justification: ≥20 chars` + `Approved-by: <reviewer/SHA>` paragraphs
-- Pre-approved categories (TBD when `docs/LINT_DISCIPLINE.md` is extracted) are the only ones not requiring per-PR justification
+- Pre-approved categories (cf. `docs/LINT_DISCIPLINE.md`) are the only ones not requiring per-PR justification
 
 ## Team reports lifecycle
 
@@ -286,7 +286,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (14496 symbols, 18572 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (29150 symbols, 46408 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

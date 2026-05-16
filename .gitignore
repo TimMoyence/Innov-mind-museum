@@ -29,6 +29,9 @@
 !docs/TECH_DEBT.md
 !docs/GITHUB_ACTIONS_SHA_PINS.md
 !docs/PHASE_HISTORY.md
+!docs/ARCHITECTURE.md
+!docs/LINT_DISCIPLINE.md
+!docs/TEST_FACTORIES.md
 !docs/_archive/
 !docs/_archive/**
 !docs/roadmap-night/
