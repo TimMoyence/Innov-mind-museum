@@ -27,6 +27,13 @@ export interface IAdminRepository {
   /** Change a user's role. Returns the updated user or null if not found. */
   changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null>;
 
+  /**
+   * R1 (C6) — Change a user's soft-paywall tier. Returns the updated DTO or
+   * null when the user is unknown. MUST NOT touch `sessionsMonthCount` or
+   * `sessionsMonthStart` (R17 — counter preserved across flips).
+   */
+  changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null>;
+
   /** Flip the suspended flag to true. Idempotent. Returns updated DTO or null if not found. */
   suspendUser(userId: number): Promise<AdminUserDTO | null>;
 

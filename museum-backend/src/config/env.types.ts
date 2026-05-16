@@ -231,6 +231,30 @@ export interface AppEnv {
   };
   brevoApiKey?: string;
   supportInboxEmail: string;
+  /**
+   * R4 W4.3 — B2B leads inbox. Optional config value (NOT a feature flag, per
+   * AUDIT_CHAIN_ALERT_EMAIL precedent). When unset, leads are routed to
+   * `supportInboxEmail` to avoid env churn in local dev.
+   */
+  b2bInboxEmail?: string;
+  /**
+   * R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Optional
+   * config value (NOT a feature flag, per AUDIT_CHAIN_ALERT_EMAIL precedent).
+   * When unset (local dev / pre-prod boot before list provisioning), the
+   * composition root falls back to `NoopBetaSignupNotifier` so the route still
+   * returns 202 and structured logs surface a noop warning the operator can
+   * monitor.
+   */
+  brevoBetaListId?: number;
+  /**
+   * R2 W3.4 — Salt used by `admin/export` to pseudonymize emails/user-IDs
+   * before they hit the CSV download. Rotate manually after a breach (rotating
+   * invalidates the link between pseudonym and identity in already-exported
+   * CSV files). Config value, NOT a feature flag — same precedent as
+   * `b2bInboxEmail`/`brevoBetaListId`/`AUDIT_CHAIN_ALERT_EMAIL`. When unset, the
+   * fallback `'musaium-admin-export-v1'` keeps local dev / boot ergonomic.
+   */
+  exportPseudonymSalt?: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;
@@ -285,6 +309,14 @@ export interface AppEnv {
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
+  /**
+   * Maximum chat sessions a `tier='free'` user can CREATE per UTC month.
+   * Drives the soft-paywall middleware (R1 / C6). Numeric config value, NOT
+   * a feature flag — disabling the paywall = revert R1, never set this to a
+   * very high number (per `feedback_no_feature_flags_prelaunch`).
+   * Falls back to 3 when unset / non-numeric (R1 §1 R13).
+   */
+  freeTierMonthlySessionLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
   /**

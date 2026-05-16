@@ -1,0 +1,102 @@
+{
+  "featureId": "F1",
+  "reviewLoop": 1,
+  "commitSha": "26a30424b5640147fa6334fa15ea3fd7b1ebb0ab",
+  "baselineSha": "2d9dfaa1",
+  "ultrareviewRun": "r0wykavnv",
+  "bugRef": "bug_001",
+  "axes": {
+    "correctness": {
+      "score": 92,
+      "notes": [
+        "Route swap correct: chat-session.route.ts:39-41 declares `isAuthenticated → validateBody(createSessionSchema) → monthlySessionQuota → handler` in that exact order. Verified via `grep -n` (line 40 validateBody, line 41 monthlySessionQuota). Closes EARS F1.R1 (Zod 400 short-circuits before counter mutation).",
+        "Atomic counter UPDATE preserved byte-for-byte: middleware file `monthly-session-quota.middleware.ts` AND repo `monthly-session-quota.repo.pg.ts` are NOT in the diff (`git diff 26a30424~1 26a30424 -- museum-backend/src/shared/middleware/monthly-session-quota.middleware.ts` returns empty). R1 §3.3 D2 concurrent-race invariant is mechanically preserved — PG row-lock on the atomic `UPDATE ... WHERE id=$1 AND tier='free' AND ... < $limit RETURNING ...` is untouched. EARS F1.R5 + AC7 covered.",
+        "All EARS R1..R8 hold under the new order: R1 (zod400 no mutation) closed by the swap; R2/R6 (valid body increments once) covered by F1.AC6 integration assertion `tryConsume.toHaveBeenCalledTimes(1)`; R3 (over-limit 402) preserved by middleware unchanged; R4 (handler-throw inflation) honestly accepted via it.todo + §3.3 D3 contract; R5 (race) covered by the parallel-Promise.all test; R7 (no JWT short-circuit) preserved by isAuthenticated staying first; R8 (premium bypass) preserved by middleware's tier check unchanged.",
+        "AC1-AC6 verified: integration test `chat-session-quota-ordering.test.ts` lines 95-112 covers AC1 (`[]`) / AC2 (`museumId:-1`) / AC3 (`lat:91`) / AC4 (`intent:'invalid_intent'`) parametrically and asserts both `repo.tryConsume not.toHaveBeenCalled()` AND `mockCreateSession not.toHaveBeenCalled()` — double invariant. AC6 (lines 116-137) verifies the exact bug scenario: 3× `[]` → 400 + 4th `{}` → 201 + tryConsume called exactly once.",
+        "Test C (race re-verify) PASS: lines 141-172 seed user at `count = limit - 1 = 2`, mock tryConsume to return `{count: 3}` then `null`, then Promise.all 2 posts → asserts sorted statuses `[201, 402]` AND 402 body shape `{ code: 'QUOTA_EXCEEDED', tier: 'free', limit: 3 }` pinned (F1.N5 mobile interceptor contract). R1 §3.3 D2 invariant survives F1.",
+        "Sentinel test correctness: `chat-session-route-middleware-order.test.ts` reads route file as text, anchors on `router.post(\\n    '/sessions'`, then asserts `indexOf('validateBody(createSessionSchema)') < indexOf('monthlySessionQuota')` inside the POST block. Regex tolerant (won't false-positive on whitespace/comment churn). Second `it` block (lines 62-69) re-asserts both identifiers still match via tolerant regex — catches accidental rename refactors.",
+        "Test suite verification: `pnpm test --testPathPattern='(chat-session-quota-ordering|chat-session-route-middleware-order)'` → 2 suites, 1 todo, 8 passed, 9 total. Matches spec expectation exactly.",
+        "R1-R5 regression suite: `pnpm test --testPathPattern='(monthlySessionQuota|changeUserTier|admin-users-tier|leads|smoke-api|admin/export|csv-)'` → 16 suites, 147 passed, 1 todo. Spec required ≥147 PASS. Met."
+      ]
+    },
+    "scope-fidelity": {
+      "score": 90,
+      "notes": [
+        "Diff scope = 6 files, all in F1 scope-IN: chat-session.route.ts (route swap + comment rewrite), 2 new tests, CLAUDE.md (doctrine bullet), R1.md (supersession note), F1.md (the spec itself). Zero R2-R5 territory touched. `git diff 26a30424~1 26a30424 --stat` confirmed.",
+        "Middleware files byte-unchanged confirms option (a) honestly applied (no option-b reserve+commit drift, no option-c try/catch decrement drift). Spec §3.1 decision honored mechanically.",
+        "No API contract change: 402 response shape `{ code, tier, limit, currentCount, resetAt, message }` unchanged (middleware unchanged). 201 response body `{ session }` unchanged. EARS F1.N5 mobile interceptor contract preserved without FE touch (also covered explicitly by test C assertion).",
+        "Comment rewrite (lines 30-36) replaces the misleading 'short-circuit before zod runs' anti-doc with 6 honest lines naming bug_001 + the corruption it causes (KR4 funnel signal) + R1 §3.3 D3 supersession. Q4 spec default = YES, honored.",
+        "MINOR SCOPE GAP — Q3 (`docs/TECH_DEBT.md` entry for the handler-5xx residual hole) was the spec's stated default-YES but the green commit did NOT add a TECH_DEBT.md row (`grep -n 'F1 residual\\|handler-5xx' docs/TECH_DEBT.md` returns empty). The residual hole is NOT lost — it is named in (a) the route comment, (b) the CLAUDE.md doctrine bullet's reserve+commit alternative, (c) the test corpus via `it.todo('F1.Risk1 V1.1 — handler 5xx after counter increment leaves counter inflated; promote to reserve+commit ...')`. Three guardrails are arguably sufficient for V1, but the spec Q3 default was YES. Soft scope-fidelity ding, not a blocker.",
+        "Spec §0.3 listed `monthlySessionQuota.middleware.test.ts` as a MODIFY target (extend with Zod 400 + handler-throw cases) but the green agent chose to put the Zod-400 + race tests in a NEW integration file `chat-session-quota-ordering.test.ts` (under tests/integration/routes/) instead. Equivalent coverage (the supertest in-process composition IS the route-level guarantee) but a stylistic deviation from the spec's stated file plan. The handler-throw case became an `it.todo` rather than an active test that asserts the documented residual. The spec §3.5 T1 item 2 explicitly wanted that assertion to make the trade-off visible in CI — currently it's an it.todo placeholder, which is a weaker guardrail.",
+        "Tracker update deferred to verify-agent per spec §0.3 last bullet — F1 row in ultrareview-fixes.md currently `review`, not `green` or `closed`. Correct."
+      ]
+    },
+    "kiss-dry-hexagonal": {
+      "score": 95,
+      "notes": [
+        "Minimal diff: route file change is literally 2 lines swapped (line 40 ↔ line 41) + 7 lines of new comment replacing 4 lines of old buggy comment. KISS-maximal — the smallest possible diff that closes the named bug.",
+        "Comment rewrite is clear, accurate, names bug_001 + the cause (atomic counter UPDATE) + the consequences (lockout + KR4 corruption) + the preserved invariant (R1 §3.3 D2 row-lock). Six lines, no fluff, no inaccuracies.",
+        "CLAUDE.md doctrine bullet (line 148) is sensible + actionable: states the generalized rule (mutating middleware AFTER validators), names the failure mode (counter inflation on invalid requests), names the alternative pattern (reserve+commit, verify-then-commit-in-handler), and references the canonical example for future archaeology. Slightly trimmed from the spec template (drops the explicit 'free-tier lockout + KR4 corruption' phrasing) but the gist is preserved.",
+        "Sentinel test cheap: 70 LoC + zero runtime cost (file-text read at startup, two indexOf calls). Maintainable — uses tolerant indexOf anchors, not brittle line-number assertions, so cosmetic whitespace/comment changes won't false-positive.",
+        "Integration test reuses existing factories (`makeToken`, `resetRateLimits`, `stopRateLimitSweep`) per F1.N8 + AC10. No inline `{ id, tier, ... } as User` violations. ESLint `musaium-test-discipline` plugin baseline did NOT grow (lint exit 0).",
+        "No new dependency, no new module, no port widening — F1.N6 honored mechanically (middleware files unchanged)."
+      ]
+    },
+    "a11y-design-system": {
+      "score": 100,
+      "notes": [
+        "N/A — F1 is a pure BE middleware ordering fix. No UI surface, no design tokens, no a11y concerns."
+      ]
+    },
+    "security-honesty": {
+      "score": 88,
+      "notes": [
+        "Race invariant honestly preserved: middleware + repo files byte-unchanged. The PG atomic `UPDATE ... WHERE ... < $limit RETURNING` row-lock semantics are mechanically the same as R1 baseline. Test C (parallel Promise.all) re-verifies this — exactly one 201 + one 402 + counter at `limit` (not `limit+1`). EARS F1.R5 mechanically preserved, not just asserted.",
+        "Handler-5xx tail HONESTLY captured as residual debt via three independent surfaces: (a) F1.md §3.3 D3 full taxonomy table documenting which throw classes inflate vs which are correct; (b) CLAUDE.md doctrine bullet naming the reserve+commit alternative; (c) it.todo line 176-178 with explicit V1.1 promotion criteria ('post-bake telemetry >1% inflation tail'). Test file lines 174-178 carries the V1.1 promotion path as a discoverable placeholder.",
+        "Original buggy comment honestly REWRITTEN, not silently deleted. Diff lines 30-36 show the full replacement: old comment 'short-circuit before zod runs' is gone AND the new comment explains WHY the order changed + cites bug_001 + names R1 §3.3 D3 as superseded. UFR-013 transparency exemplary.",
+        "CLAUDE.md doctrine references this F1 commit transparently: 'corrigé 2026-05-16 par ultrareview F1, cf. docs/roadmap-night/specs/F1.md'. Future devs land on the canonical spec via grep.",
+        "R1 §3.3 D3 supersession note is honest and explicit: 'the order documented above (monthlySessionQuota → validateBody) was reversed because invalid bodies could inflate the counter'. Preserves historical accuracy (R1.md still describes the original buggy order so spec-archaeology works) while pointing to the corrective.",
+        "KR4 funnel signal integrity claim verified: the `quota_check_hit_limit` log fires inside the middleware's 402-response branch (R12 in R1.md); since the middleware itself is byte-unchanged, the log still only fires on TRUE 402s. EARS F1.R9 mechanically preserved.",
+        "MINOR HONESTY NIT — the it.todo on lines 176-178 asserts a future-V1.1 plan but does NOT exercise the option-(a) current behavior. F1.md §3.5 T1.2 explicitly wanted `F1.T-handler-throw-documents-residual-hole` as an ACTIVE test that asserts `tryConsume WAS called` + handler 500, making the trade-off visible in the test corpus rather than hidden behind an it.todo. Demoting that to a placeholder is a small honesty regression vs spec intent — the V1.1 promotion criterion is named but the current-behavior baseline (counter bumped on 500) is NOT pinned, so a future option-(b) refactor could change that contract silently. Not a blocker (the residual is well-documented elsewhere) but worth flagging.",
+        "No new feature flag: F1 introduces zero env vars and zero *_ENABLED toggles. `feedback_no_feature_flags_prelaunch` doctrine honored.",
+        "Zero new eslint-disable in F1 diff: pre-existing line-48 `prefer-nullish-coalescing` disable is from R1 baseline (verified via `git show 2d9dfaa1:.../chat-session.route.ts | grep eslint-disable`). F1 author honestly disclosed this in the tracker note."
+      ]
+    }
+  },
+  "weightedMean": 92.8,
+  "weightedMeanCalc": "0.30*92 + 0.20*90 + 0.20*95 + 0.15*100 + 0.15*88 = 27.6 + 18.0 + 19.0 + 15.0 + 13.2 = 92.8",
+  "verdict": "APPROVED",
+  "blockers": [],
+  "niceToHave": [
+    "Promote the it.todo on chat-session-quota-ordering.test.ts:176 to an ACTIVE test asserting current option-(a) behavior (handler throws 500 → tryConsume WAS called, counter bumped). Naming: `F1.T-handler-throw-documents-residual-hole`. Pins the trade-off in CI per spec §3.5 T1.2 + prevents silent option-(b) refactor without an ADR. ~20 LoC.",
+    "Add a docs/TECH_DEBT.md entry per spec Q3 default YES — title 'F1 residual : handler-5xx counter inflation under monthlySessionQuota option (a)' linked to the post-bake telemetry criterion (V1.1 promote-to-(b) if free-tier `count > 3` rows with `< 3` chat_sessions in same month).",
+    "Apply the same ordering-doctrine audit to `dailyChatLimit` on chat-message.route.ts:191 (cited as out-of-scope in F1 spec but called out in §7 V1.1 follow-up). Same bug class on a different surface.",
+    "Consider a pre-commit lint rule (V1.1) that flags `router.<method>(...)` patterns where a known-mutating middleware identifier (`monthlySessionQuota`, `dailyChatLimit`) precedes `validateBody(...)`. Mechanizes the CLAUDE.md doctrine."
+  ],
+  "handler5xxResidualVerdict": {
+    "decision": "LEGITIMATE_DEFERRAL",
+    "rationale": "The handler-5xx tail is honestly documented in three independent surfaces: spec §3.3 D3 (full taxonomy + frequency analysis), CLAUDE.md doctrine bullet (names reserve+commit alternative), it.todo placeholder (V1.1 promotion criterion). The middleware is byte-unchanged so the residual hole is the SAME size as it was pre-R1 (R1 introduced the bug, F1 closes the easier half) — promoting to option (b) would introduce a NEW failure mode (orphan session row on commit refusal) that is not strictly more correct per §3.1 honesty disclosure. Pre-launch frequency is low (handler 5xx is rare in steady state); V1.1 promotion is keyed on telemetry, not assumption. The only soft gap is that the it.todo should arguably be an ACTIVE test pinning current behavior (per spec §3.5 T1.2), but that is a refinement, not a regression-risk on the bug actually being fixed.",
+    "promoteToCorrective": false
+  },
+  "honestyVerification": {
+    "testsRerun": {
+      "F1NewTests": "PASS — `pnpm test -- --testPathPattern='(chat-session-quota-ordering|chat-session-route-middleware-order)' --no-coverage` → 2 suites, 1 todo, 8 passed, 9 total. Tail: 'Test Suites: 2 passed, 2 total / Tests: 1 todo, 8 passed, 9 total'.",
+      "R1R5Regression": "PASS — `pnpm test -- --testPathPattern='(monthlySessionQuota|changeUserTier|admin-users-tier|leads|smoke-api|admin/export|csv-)' --no-coverage` → 16 suites, 147 passed, 1 todo, 148 total. Meets spec ≥147 PASS bar.",
+      "Lint": "PASS — `pnpm lint` exit 0 (eslint src + eslint tests test-discipline + tsc --noEmit all green). No new eslint-disable introduced."
+    },
+    "scopeBoundaryCheck": "CLEAN — 6 files changed: CLAUDE.md, F1.md (new spec), R1.md (one-line supersession note), chat-session.route.ts (swap+comment), 2 new tests. Middleware files monthly-session-quota.middleware.ts and monthly-session-quota.repo.pg.ts are NOT in the diff (option (a) byte-unchanged middleware confirmed).",
+    "routeSwapVerified": "YES — chat-session.route.ts lines 40-41 show `validateBody(createSessionSchema)` (line 40) BEFORE `monthlySessionQuota` (line 41). Pre-fix order was line 40 = `monthlySessionQuota`, line 41 = `validateBody(...)` (verified via git show 2d9dfaa1).",
+    "claudeMdDoctrineVerified": "YES — CLAUDE.md:148 contains '**Mutating middleware ordering**' bullet naming the pattern, the failure mode, the alternative (reserve+commit), and the canonical example (R1 §3.3 D3 + F1.md reference).",
+    "r1SupersessionVerified": "YES — R1.md:285 contains '**Superseded 2026-05-16 (ultrareview F1)**' note linking forward to F1.md without rewriting historical R1 content.",
+    "buggyCommentRewriteVerified": "YES — `grep 'short-circuit before zod' chat-session.route.ts` returns empty. Old 4-line comment (R1) was replaced with new 7-line comment (F1) that names bug_001 + the corruption pathway + R1 §3.3 D3 supersession.",
+    "newFeatureFlag": false,
+    "newEnvVars": 0,
+    "newEslintDisables": 0,
+    "preExistingEslintDisable": "Line 48 `@typescript-eslint/prefer-nullish-coalescing` is from R1 baseline (verified `git show 2d9dfaa1:.../chat-session.route.ts | grep eslint-disable`). Honestly flagged in the tracker note.",
+    "anyClaimsContradicted": [],
+    "softGapsNoted": [
+      "Spec Q3 default-YES TECH_DEBT.md entry not added; residual is documented in 3 other surfaces but spec stated this as default.",
+      "Spec §3.5 T1.2 wanted handler-throw case as ACTIVE assertion ('counter bumped on 500') to pin trade-off in CI; green-agent demoted it to it.todo placeholder. The V1.1 criterion is named but current behavior is not pinned."
+    ]
+  }
+}

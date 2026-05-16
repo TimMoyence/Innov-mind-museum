@@ -1,0 +1,99 @@
+{
+  "featureId": "R3",
+  "reviewLoop": 1,
+  "commitSha": "e3a91c78",
+  "axes": {
+    "correctness": {
+      "score": 84,
+      "notes": [
+        "76/76 R3 tests green on re-run: 52 web Vitest (4 files: BetaSignupSection.test.tsx 11 it, BetaSignupSection.dict-symmetry.test.ts 27 it.each + named, BetaSignupSection.no-hardcoded-strings.test.ts 14 it.each, BetaSignupSection.mount.test.tsx 3 it) + 24 BE Jest (3 files: submitBetaSignup.useCase.test.ts 10 it, brevo-beta-signup.notifier.test.ts 7 it, leads.route.beta.test.ts 7 it).",
+        "R6 wire shape verified — BetaSignupSection.tsx:88-96 POSTs application/json to '/api/leads/beta' with `{ email: email.trim(), consent: true, website }` matching AC3.c and R6 contract. Endpoint path matches the BE route at leads.route.ts:66.",
+        "R10 honeypot policy honored end-to-end — submitBetaSignup.useCase.ts:55-61 silently returns when `input.website?.trim().length > 0`; route still 202s (leads.route.beta.test.ts:108-119). Whitespace-only treated as empty (submitBetaSignup.useCase.test.ts:121-124).",
+        "R13/R16/R15 notifier contract honored — BrevoBetaSignupNotifier returns `{ outcome: 'subscribed' }` on 2xx, `{ outcome: 'duplicate' }` on 400+duplicate_parameter (brevo-beta-signup.notifier.ts:54-69), throws with status+sliced-body on other errors (line 74-76); api key never appended (notifier.test.ts:123-134 verifies).",
+        "Brevo POST shape verified at brevo-beta-signup.notifier.ts:40-51 — `{ email, listIds: [listId], updateEnabled: true, attributes: { OPT_IN, OPT_IN_AT, OPT_IN_SOURCE: 'landing_beta_waitlist' } }` matches spec §3.4 exactly.",
+        "R19 (Playwright axe-core on /fr#beta-signup AND /en#beta-signup) is UNVERIFIED at this commit — public-beta-signup.a11y.spec.ts is absent from museum-web/e2e/a11y/. AC6 cannot be satisfied without it. Same gap as R4 loop 0 had, which was a CHANGES_REQUESTED blocker fixed in R4 loop 1 (d5919dd3). Spec §0.3 lists this file as NEW scope-IN.",
+        "R9 (sending label visible while pending) is functionally correct via PENDING_KEY indirection — pendingLabel = dict[PENDING_KEY] resolves dict.sending at runtime — but BetaSignupSection.tsx:39+75 ships a dynamic-key indirection that obfuscates the contract. Tests pass (BetaSignupSection.test.tsx:151-169) but the indirection is a code smell, not a correctness defect."
+      ]
+    },
+    "scope-fidelity": {
+      "score": 97,
+      "notes": [
+        "git diff e3a91c78~1 e3a91c78 --stat -- museum-frontend/ museum-backend/src/modules/chat/ museum-web/src/app/[locale]/b2b/ museum-web/src/components/shared/Footer.tsx → empty. Zero collisions with museum-frontend, chat module, R4 b2b page, or the Footer.",
+        "Dictionary parity test `Footer is NOT modified by R3 (scope OUT)` at BetaSignupSection.dict-symmetry.test.ts:93-102 enforces footer.links does NOT add a `beta` entry — passes.",
+        "R4 regression-free: 42 web b2b PASS + 19 BE leads-route+useCase PASS on re-run (post-commit). No drift introduced.",
+        "No new feature flag — env.brevoBetaListId is parsed as optional integer (env.ts:510-515) with explicit comment 'NOT a feature flag (mirror b2bInboxEmail / AUDIT_CHAIN_ALERT_EMAIL precedent)' at env.ts:505-509. .env.example carries the matching AC12 comment.",
+        "Diff stays inside R3 scope-IN list (specs/R3.md §0.3): new museum-backend/src/modules/leads/{useCase/submitBetaSignup, domain/ports/beta-signup-notifier, adapters/secondary/notifier/brevo-beta-signup}, schema extension, route extension, env wiring, factory + 3 test files BE + 4 test files web + new BetaSignupSection.tsx + dict-FR/EN + i18n type + page.tsx 1 import + 1 JSX line. No drift."
+      ]
+    },
+    "kiss-dry-hexagonal": {
+      "score": 78,
+      "notes": [
+        "Hexagonal pattern textbook clean — port `BetaSignupNotifier` at domain/ports/beta-signup-notifier.port.ts mirrors `B2bLeadNotifier`; `BrevoBetaSignupNotifier` + `NoopBetaSignupNotifier` mirror `EmailB2bLeadNotifier` + `NoopB2bLeadNotifier` dual-adapter shape; composition root at useCase/index.ts:39-44 selects on env.brevoApiKey && env.brevoBetaListId (parallel to R4 b2b notifier wiring lines 29-33).",
+        "Raw fetch to Brevo /v3/contacts in brevo-beta-signup.notifier.ts:33-52 (no @getbrevo/brevo SDK install — N9 respected). Pattern parallel to BrevoEmailService raw-fetch.",
+        "Use case validation pattern mirrors submitB2bLead exactly (consent literal check + email normalize + honeypot trim + structured log).",
+        "DRY gap — rate-limit instantiation duplicated at leads.route.ts:16-29 (`b2bLeadLimiter` + `betaSignupLimiter` with identical params). Acceptable per spec §T2 default ('dedicated limiter to allow tuning independently if R3 volume spikes'), but the rationale comment is correctly inlined at lines 22-24. Code smell: minor.",
+        "PENDING_KEY workaround at BetaSignupSection.tsx:39 — `const PENDING_KEY = (['s', 'e', 'n', 'd', 'i', 'n', 'g'] as const).join('')` is a CODE SMELL (deduction ~15pts on this axis). The component fetches the pending-button label as `dict[PENDING_KEY] ?? dict.submit` (line 75) instead of `dict.sending`. The root cause is that the no-hardcoded-strings red test forbids 'Sending' as a case-insensitive substring (BetaSignupSection.no-hardcoded-strings.test.ts:32), which collides with the dict key `sending`. The correct fix was to scope the forbidden list (word-boundary regex, or quoted-literal anchor) and keep `dict.sending` direct. Green-agent declared this smell honestly in the tracker but chose the obfuscation over fixing the test.",
+        "BetaCopyDict type at BetaSignupSection.tsx:23-36 widens to `Record<string, string | undefined>` to make `dict[PENDING_KEY]` typecheck — this loses static safety on every dict access in the component (no compile-time guarantee that `dict.heading` exists). Direct consequence of the PENDING_KEY indirection."
+      ]
+    },
+    "a11y-design-system": {
+      "score": 78,
+      "notes": [
+        "Form a11y solid — every visible input has <label htmlFor> (BetaSignupSection.tsx:154-160 email, 200-209 consent), aria-required='true' on both, aria-invalid + aria-describedby on email error, role='alert' on per-field error <p>, role='status' aria-live='polite' on success block (line 145-146), aria-live='polite' container on error region (line 244).",
+        "Honeypot correctly hidden — div with position:absolute left:-10000px height:0 width:0 overflow:hidden AND aria-hidden='true' AND tabIndex={-1} AND autoComplete='off' (lines 218-241). Out of tab order, not announced to AT.",
+        "Consent checkbox wired via aria-describedby='beta-consent-help' (line 193) pointing at the privacy link anchor id='beta-consent-help' (line 203). Privacy link routes to `/${locale}/privacy` (line 204) — locale-correct.",
+        "Design tokens used (bg-primary-50 indirectly via theme, focus:ring-primary-200, text-text-primary) — no raw hex/px in BetaSignupSection.tsx. Submit button uses the shared `Button.tsx` component per R4 R17 discipline.",
+        "BLOCKER — Playwright a11y spec museum-web/e2e/a11y/public-beta-signup.a11y.spec.ts is ABSENT (verified by ls). Spec §0.3 lists it as NEW scope-IN scope. AC6 requires `pnpm test:a11y -- public-beta-signup.a11y.spec.ts` PASS — impossible without the file. This is the SAME gap that blocked R4 loop 0 and required a corrective loop (d5919dd3 added public-b2b.a11y.spec.ts). Identical fix shape needed.",
+        "errorValidation typed as optional at BetaSignupSection.tsx:32 with fallback `*` at line 74 — the dict JSON has the key as required (fr.json:340 / en.json:340 both ship 'Champ requis.' / 'Required field.'), and the dictionary TYPE in i18n.ts:174/187 declares it required. The component's local BetaCopyDict optional override exists only to accommodate the test fixture at BetaSignupSection.test.tsx:26-36 which omits the key. The correct fix was to add `errorValidation: 'Required'` to the test fixture, not widen the component. Minor smell, not a blocker."
+      ]
+    },
+    "security-honesty": {
+      "score": 90,
+      "notes": [
+        "Anti-enumeration honored (R16) — Brevo 400+duplicate_parameter → use case resolves silently → route 202 (brevo-beta-signup.notifier.ts:63-69, leads.route.beta.test.ts:123-131). FE shows identical success copy (BetaSignupSection.test.tsx:133-149 'no leak about already / again').",
+        "Honeypot policy: silent success UX even when filled (BetaSignupSection.tsx:113-118), BE silent-drop with logger.warn (submitBetaSignup.useCase.ts:55-61). Body still POSTed with the honeypot value so response timing matches a legit submit.",
+        "PII discipline: email lowercased + trimmed at submitBetaSignup.useCase.ts:48 BEFORE notifier call; structured log `beta_signup_submitted` only emits `{ requestId, honeypotTriggered }` — no email and not even emailDomain at the use-case level (lines 65-68). Test at submitBetaSignup.useCase.test.ts:145-164 enforces full email never appears in log payload.",
+        "API key custody: BrevoBetaSignupNotifier constructor accepts apiKey + listId from env (env.ts:499 + 510-515); never logged; thrown error messages slice body to 800 chars and contain NO apiKey concatenation (notifier.ts:74-76). Notifier test at brevo-beta-signup.notifier.test.ts:123-134 enforces api-key absence from thrown error.",
+        "RGPD opt-in honored: consent unchecked by default (BetaSignupSection.tsx:65 `useState(false)`), z.literal(true) at schemas:40, defense-in-depth `!input.consent` throw at useCase:44-46. Brevo payload sends `OPT_IN: true, OPT_IN_AT: <iso>, OPT_IN_SOURCE: 'landing_beta_waitlist'` (notifier:46-50) — auditable consent timestamp.",
+        "UFR-013 honesty on success copy: FR 'Merci ! On t'a envoyé un e-mail de confirmation — clique le lien pour valider ton inscription.' / EN 'Thanks! We've sent you a confirmation email — click the link to finalize your signup.' (fr.json:338 / en.json:338). Honest about Brevo's double-opt-in next step — N5 satisfied; dict-symmetry test enforces `success.toLowerCase() match /confirm/` at BetaSignupSection.dict-symmetry.test.ts:78-90.",
+        "Green-agent PENDING_KEY workaround was self-declared in tracking.md line 177 (honesty acknowledgments a/b/c). UFR-013 respected — no concealment.",
+        "Noop fallback is deploy-safe but operationally invisible — env.brevoBetaListId is empty → BE silently 202s and `beta_signup_notifier_noop` warns logged but no Sentry alert is wired (consistent with R4). Risk5 of the spec (silent prod noop) is documented but no monitoring is added in this commit. Acceptable for pre-launch volume."
+      ]
+    }
+  },
+  "weightedMean": 84.6,
+  "verdict": "CHANGES_REQUESTED",
+  "blockers": [
+    "Add museum-web/e2e/a11y/public-beta-signup.a11y.spec.ts (Playwright + axe-core, mirror museum-web/e2e/a11y/public-b2b.a11y.spec.ts adapted to /fr and /en landing where BetaSignupSection mounts at the #beta-signup anchor). Spec §0.3 lists this file as NEW scope-IN, AC6 requires `pnpm test:a11y -- public-beta-signup.a11y.spec.ts` PASS, and the file path is currently 404. This is the same gap R4 loop 0 had (b2b spec missing) that was caught by review and fixed in d5919dd3. R3 inherits the identical class of defect.",
+    "Replace the PENDING_KEY char-array workaround at BetaSignupSection.tsx:39 + 75 with a direct `dict.sending` access AND fix the no-hardcoded-strings forbidden list (BetaSignupSection.no-hardcoded-strings.test.ts:32) so that 'Sending' is matched only as a contiguous quoted marketing literal rather than as a substring (use a word-boundary regex like `/\\bSending\\b/i` AND scope to JSX text by including surrounding quote chars). The current obfuscation is a documented code smell (lines 16-22 of the component) that the green-agent self-declared; it costs static type safety on the dict (forced `Record<string, string | undefined>` widening at line 36) and makes the source-grep test useless for the only case it was meant to catch. Either fix is acceptable, but the dynamic-key indirection MUST NOT ship."
+  ],
+  "niceToHave": [
+    "Add `errorValidation: 'Required field.'` to the test fixture dictEN at BetaSignupSection.test.tsx:26-36 (and a parallel dictFR if a future EN/FR rendering test is added) so the local BetaCopyDict type at BetaSignupSection.tsx:23-36 can drop the optional `errorValidation?: string` + the `Record<string, string | undefined>` widening. The JSON dicts already ship the key (fr.json:340 / en.json:340) and the canonical Dictionary type at i18n.ts:174 declares it required — the component is the only place that pretends it is optional.",
+    "Consider extracting a shared `validateLeadCommonFields()` helper (consent literal check + email normalize + honeypot trim + structured log) used by both submitB2bLead.useCase.ts and submitBetaSignup.useCase.ts. The rule-of-3 wait is fair (only 2 use sites today), but the duplication is now visible enough that the third (C6.3 / R1 modal) should not be the trigger — schedule it as a Q1 refactor item, not a V1.1 deferral.",
+    "Verify Lighthouse AC9 (≥95 Performance/A11y/Best Practices/SEO on /fr and /en with the new section) — not run at this review. Should be checked via the next ci-cd-web.yml run or local `lhci autorun`.",
+    "Document the noop-in-prod risk (spec Risk5) in OPS_DEPLOYMENT.md or a release checklist item: a missing BREVO_BETA_LIST_ID in prod env causes silent 202s with `beta_signup_notifier_noop` warnings. Pre-launch checklist should grep the prod env for this var.",
+    "Brevo template configuration (Q6) — confirm in RELEASE_CHECKLIST.md (C7.4) that the Brevo list double-opt-in confirmation email template is configured before traffic hits prod. Out of code scope but tied to N5 honesty of the success copy."
+  ],
+  "honestyVerification": {
+    "testsRerun": "PASS",
+    "lintRerun": "PASS",
+    "scopeBoundaryCheck": "CLEAN",
+    "r4RegressionCheck": "PASS_42_web_b2b_PASS_19_BE_leads",
+    "asAnyAdded": 0,
+    "eslintDisableAdded": 0,
+    "pendingKeyWorkaroundExists": true,
+    "pendingKeyWorkaroundLine": "BetaSignupSection.tsx:39 — const PENDING_KEY = (['s', 'e', 'n', 'd', 'i', 'n', 'g'] as const).join('');",
+    "pendingKeyWorkaroundCost": "Type widening (Record<string, string | undefined> on BetaCopyDict) drops compile-time safety for every dict key access; the indirection has a 6-line docblock explaining itself.",
+    "errorValidationOptionalExists": true,
+    "errorValidationOptionalNote": "BetaSignupSection.tsx:32 types it optional with `*` fallback at line 74; JSON dicts ship the key and the canonical Dictionary type at i18n.ts:174/187 declares it required — only the component pretends it is optional, to accommodate the test fixture at BetaSignupSection.test.tsx:26-36 which omits it.",
+    "playwrightA11ySpecAbsent": true,
+    "playwrightA11ySpecAbsenceReproduced": "ls -la museum-web/e2e/a11y/public-beta-signup.a11y.spec.ts → No such file or directory. Spec §0.3 lists it as NEW scope-IN; AC6 cannot be satisfied without it.",
+    "successCopyHonestyVerified": {
+      "fr": "Merci ! On t'a envoyé un e-mail de confirmation — clique le lien pour valider ton inscription.",
+      "en": "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
+      "verdict": "Both locales explicitly call out the confirmation email and the click-the-link step — N5 / UFR-013 satisfied. Dict-symmetry test enforces `/confirm/i` presence."
+    },
+    "greenAgentSelfDeclaredHonesty": "Green-agent self-declared all three honesty acknowledgments (PENDING_KEY workaround, errorValidation optional widening, public-beta-signup.a11y.spec.ts absent) in tracking.md:177 — UFR-013 fully respected at the meta level even if two of the three signal a corrective loop is needed.",
+    "anyClaimsContradicted": []
+  }
+}

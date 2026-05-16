@@ -91,6 +91,7 @@ const mockDict: Dictionary = {
       support: 'Help',
       accessibility: 'Accessibility',
       security: 'Security',
+      b2b: 'For museums',
     },
   },
   resetPassword: {} as Dictionary['resetPassword'],

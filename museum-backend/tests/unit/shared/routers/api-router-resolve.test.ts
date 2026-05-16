@@ -106,6 +106,13 @@ jest.mock('@modules/auth/adapters/primary/http/routes/mfa.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
+// `admin-export.route` imports `authenticated.middleware` which transitively
+// pulls `auth/useCase` → `AppDataSource`. Same env.db.host trap as me.route /
+// mfa.route — stub the router out (R2 corrective loop 1, 2026-05-15).
+jest.mock('@modules/admin/adapters/primary/http/routes/admin-export.route', () => {
+  const { Router } = jest.requireActual<typeof import('express')>('express');
+  return { __esModule: true, default: Router() };
+});
 jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
   createChatRouter: () => {
     const { Router } = jest.requireActual<typeof import('express')>('express');

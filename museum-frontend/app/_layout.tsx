@@ -26,6 +26,8 @@ import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKe
 import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import i18n from '@/shared/i18n/i18n';
 import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
+import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
+import { QuotaUpsellModal } from '@/features/paywall/ui/QuotaUpsellModal';
 import { setErrorTranslate } from '@/shared/lib/errors';
 
 // Wire i18n into error message formatting so getErrorMessage() returns localised strings.
@@ -85,6 +87,16 @@ function AuthenticationGuard({ children }: { children: ReactNode }) {
 function ThemedStatusBar() {
   const { isDark } = useTheme();
   return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
+/**
+ * R1 (C6) — Bridge between `<PaywallProvider>` context state and the
+ * RN-native `<Modal>`. Lives at the layout root so the modal renders ABOVE
+ * any screen without importing anything from `features/chat/`.
+ */
+function PaywallModalHost() {
+  const { isOpen, reason, close } = usePaywall();
+  return <QuotaUpsellModal visible={isOpen} reason={reason} onClose={close} />;
 }
 
 /** Renders the root navigation layout with startup configuration validation, runtime settings bootstrap, and auth guard. */
@@ -156,45 +168,48 @@ function RootLayout() {
         }}
       >
         <I18nProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <ConnectivityProvider>
-                <DataModeProvider>
-                  <BiometricGate>
-                    <AuthenticationGuard>
-                      <Stack screenOptions={{ headerShown: false }}>
-                        <Stack.Screen name="auth" />
-                        <Stack.Screen name="(tabs)" />
-                        <Stack.Screen
-                          name="(stack)/chat/[sessionId]"
-                          options={{
-                            headerShown: false,
-                            gestureEnabled: true,
-                          }}
-                        />
-                        <Stack.Screen name="(stack)/settings" />
-                        <Stack.Screen name="(stack)/change-password" />
-                        <Stack.Screen name="(stack)/preferences" />
-                        <Stack.Screen name="(stack)/guided-museum-mode" />
-                        <Stack.Screen name="(stack)/offline-maps" />
-                        <Stack.Screen name="(stack)/discover" />
-                        <Stack.Screen name="(stack)/museum-detail" />
-                        <Stack.Screen name="(stack)/support" />
-                        <Stack.Screen name="(stack)/tickets" />
-                        <Stack.Screen name="(stack)/ticket-detail" />
-                        <Stack.Screen name="(stack)/create-ticket" />
-                        <Stack.Screen name="(stack)/privacy" />
-                        <Stack.Screen name="(stack)/terms" />
-                        <Stack.Screen name="(stack)/onboarding" />
-                        <Stack.Screen name="+not-found" />
-                      </Stack>
-                      <ThemedStatusBar />
-                    </AuthenticationGuard>
-                  </BiometricGate>
-                </DataModeProvider>
-              </ConnectivityProvider>
-            </AuthProvider>
-          </ThemeProvider>
+          <PaywallProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <ConnectivityProvider>
+                  <DataModeProvider>
+                    <BiometricGate>
+                      <AuthenticationGuard>
+                        <Stack screenOptions={{ headerShown: false }}>
+                          <Stack.Screen name="auth" />
+                          <Stack.Screen name="(tabs)" />
+                          <Stack.Screen
+                            name="(stack)/chat/[sessionId]"
+                            options={{
+                              headerShown: false,
+                              gestureEnabled: true,
+                            }}
+                          />
+                          <Stack.Screen name="(stack)/settings" />
+                          <Stack.Screen name="(stack)/change-password" />
+                          <Stack.Screen name="(stack)/preferences" />
+                          <Stack.Screen name="(stack)/guided-museum-mode" />
+                          <Stack.Screen name="(stack)/offline-maps" />
+                          <Stack.Screen name="(stack)/discover" />
+                          <Stack.Screen name="(stack)/museum-detail" />
+                          <Stack.Screen name="(stack)/support" />
+                          <Stack.Screen name="(stack)/tickets" />
+                          <Stack.Screen name="(stack)/ticket-detail" />
+                          <Stack.Screen name="(stack)/create-ticket" />
+                          <Stack.Screen name="(stack)/privacy" />
+                          <Stack.Screen name="(stack)/terms" />
+                          <Stack.Screen name="(stack)/onboarding" />
+                          <Stack.Screen name="+not-found" />
+                        </Stack>
+                        <ThemedStatusBar />
+                        <PaywallModalHost />
+                      </AuthenticationGuard>
+                    </BiometricGate>
+                  </DataModeProvider>
+                </ConnectivityProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </PaywallProvider>
         </I18nProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>

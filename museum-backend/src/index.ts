@@ -33,6 +33,8 @@ import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-count
 import { logger } from '@shared/logger/logger';
 import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
 import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
+import { setMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.middleware';
+import { PgMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.repo.pg';
 import {
   stopRateLimitSweep,
   setRedisRateLimitStore,
@@ -468,6 +470,12 @@ const start = async (): Promise<void> => {
       host: env.db.host,
       database: env.db.database,
     });
+
+    // R1 (C6) — wire the soft-paywall monthly quota repo as soon as the
+    // DataSource is ready. The middleware fails-OPEN if no repo is registered
+    // (see `monthly-session-quota.middleware.ts`), so this single boot wiring
+    // is the canonical activation point.
+    setMonthlyQuotaRepo(new PgMonthlyQuotaRepo(AppDataSource));
 
     // Expose the live DataSource to Prometheus collectors that depend on a
     // DB query at scrape time (T9.2 — `artwork_embeddings_count` gauge).

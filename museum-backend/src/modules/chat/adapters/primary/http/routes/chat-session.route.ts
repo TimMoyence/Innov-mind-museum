@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 
 import { parseListSessionsQuery } from '@modules/chat/adapters/primary/http/chat.contracts';
@@ -12,6 +13,7 @@ import {
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { monthlySessionQuota } from '@shared/middleware/monthly-session-quota.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
@@ -27,18 +29,31 @@ export const createSessionRouter = (chatService: ChatService): Router => {
   const router = Router();
 
   // POST /sessions — create a new chat session
-  router.post('/sessions', isAuthenticated, validateBody(createSessionSchema), async (req, res) => {
-    const currentUser = getRequestUser(req);
-    const payload = req.body as CreateSessionBody;
-    const session = await chatService.createSession({
-      ...payload,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: payload.locale || req.clientLocale,
-      userId: currentUser?.id,
-      museumId: payload.museumId ?? req.museumId ?? undefined,
-    });
-    res.status(201).json({ session });
-  });
+  // R1 corrective F1 (2026-05-16, ultrareview bug_001) — validateBody runs
+  // BEFORE monthlySessionQuota so Zod 400s short-circuit BEFORE the atomic
+  // counter UPDATE. Burning a free-tier slot on an invalid body would
+  // (a) lock out users for a session they never created, and (b) corrupt the
+  // KR4 funnel signal that feeds the Stripe go/no-go decision. R1 §3.3 D3
+  // prior ordering superseded ; concurrent-race invariant (R1 §3.3 D2)
+  // preserved byte-for-byte (PostgreSQL row-lock serialises the UPDATE).
+  router.post(
+    '/sessions',
+    isAuthenticated,
+    validateBody(createSessionSchema),
+    monthlySessionQuota,
+    async (req, res) => {
+      const currentUser = getRequestUser(req);
+      const payload = req.body as CreateSessionBody;
+      const session = await chatService.createSession({
+        ...payload,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        locale: payload.locale || req.clientLocale,
+        userId: currentUser?.id,
+        museumId: payload.museumId ?? req.museumId ?? undefined,
+      });
+      res.status(201).json({ session });
+    },
+  );
 
   // GET /sessions — list user's sessions
   router.get('/sessions', isAuthenticated, async (req, res) => {

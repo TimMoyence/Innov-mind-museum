@@ -99,6 +99,76 @@ async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAUL
   }
 }
 
+/**
+ * POST/GET an endpoint that returns a binary body (used for `/messages/:id/tts`
+ * which streams raw `audio/mpeg` per `createTtsHandler` in chat-media.route.ts).
+ * Mirrors `fetchJson` but does NOT `JSON.parse` the response — that would throw
+ * on MP3 magic-bytes. On non-expected status it surfaces the text body for
+ * diagnostic (typical error envelope shape `{ error: { code, message } }`).
+ *
+ * Returns `{ status, buffer, contentType, json }` where `json` is the parsed
+ * error envelope on failure (or `null` on success — binary path stays in
+ * `buffer`).
+ *
+ * R5 (C7.1) — see docs/roadmap-night/specs/R5.md §3.6 (D5).
+ */
+async function fetchBinary({ baseUrl, path, method = 'POST', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+  const url = buildUrl(baseUrl, path);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const headers = {
+      // Accept both binary (happy path) and JSON (error envelope) — the server
+      // chooses based on outcome, so we list both rather than forcing one.
+      Accept: 'audio/mpeg, application/json',
+    };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+      redirect: 'manual',
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    const expectedCodes = Array.isArray(expected) ? expected : [expected];
+
+    if (!expectedCodes.includes(response.status)) {
+      // Failure path — try to parse the body as JSON to surface error.code for
+      // R6/R7 caller diagnostics. If it's not JSON, fall back to truncated text.
+      const text = await response.text();
+      let json = null;
+      if (text) {
+        try {
+          json = JSON.parse(text);
+        } catch (error) {
+          // Non-JSON error body — keep `json` null, caller falls back to status.
+        }
+      }
+      return { status: response.status, buffer: Buffer.alloc(0), contentType, json, rawText: text };
+    }
+
+    // Success path — binary buffer.
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      status: response.status,
+      buffer: Buffer.from(arrayBuffer),
+      contentType,
+      json: null,
+      rawText: '',
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchJson({ baseUrl, path, method = 'GET', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
@@ -390,18 +460,121 @@ async function main() {
     console.log('[smoke:api] compare SKIPPED (SMOKE_COMPARE_ENABLED=false)');
   }
 
-  const deleted = await fetchJson({
-    baseUrl,
-    path: `/api/chat/sessions/${createdSessionId}`,
-    method: 'DELETE',
-    token: accessToken,
-    timeoutMs,
-    expected: 200,
-  });
-  if (deleted.json?.deleted !== true) {
-    throw new Error(`Delete session response invalid: ${JSON.stringify(deleted.json)}`);
+  // R5 (C7.1) — TTS voice round-trip (docs/roadmap-night/specs/R5.md).
+  //
+  // ALWAYS runs (no env flag per N1 + feedback_no_feature_flags_prelaunch).
+  // Sequenced AFTER compare so a compare regression does not mask TTS, and
+  // BEFORE the DELETE cleanup so the session still exists for the chat POST.
+  // The whole stage is wrapped in try/finally so the DELETE cleanup runs
+  // unconditionally even when TTS fails (R10 / AC8).
+  try {
+    // 1. POST a fixed FR art prompt to drive an assistant reply (R1).
+    //    Textbook art topic so guardrails pass (V1 keyword + V2 LLM Guard).
+    const chatPost = await fetchJson({
+      baseUrl,
+      path: `/api/chat/sessions/${createdSessionId}/messages`,
+      method: 'POST',
+      token: accessToken,
+      body: { text: 'Bonjour, parle-moi de la Joconde.', context: {} },
+      timeoutMs,
+      expected: 201,
+    });
+    const assistantMessageId = chatPost.json?.message?.id;
+    const assistantRole = chatPost.json?.message?.role;
+    const assistantText = chatPost.json?.message?.text;
+    if (typeof assistantMessageId !== 'string' || assistantMessageId.length === 0) {
+      throw new Error(
+        `Chat POST 201 missing message.id: ${JSON.stringify(chatPost.json).slice(0, 300)}`,
+      );
+    }
+    if (assistantRole !== 'assistant') {
+      throw new Error(
+        `Chat POST 201 message.role=${JSON.stringify(assistantRole)} (expected 'assistant')`,
+      );
+    }
+    if (typeof assistantText !== 'string' || assistantText.trim().length === 0) {
+      throw new Error(
+        `Chat POST 201 message.text empty: ${JSON.stringify(chatPost.json).slice(0, 300)}`,
+      );
+    }
+
+    // 2. POST /messages/:id/tts → binary MP3 (R3).
+    //    Accept 200 happy-path here; we explicitly check 204/501 below to emit
+    //    R6/R7 contractual failure messages with the exact required wording.
+    const ttsResult = await fetchBinary({
+      baseUrl,
+      path: `/api/chat/messages/${assistantMessageId}/tts`,
+      method: 'POST',
+      token: accessToken,
+      timeoutMs,
+      expected: [200, 204, 501],
+    });
+
+    if (ttsResult.status === 501 && ttsResult.json?.error?.code === 'FEATURE_UNAVAILABLE') {
+      // R7 / N3 — DisabledTextToSpeechService active → deploy is broken.
+      throw new Error('TTS unavailable (501 FEATURE_UNAVAILABLE)');
+    }
+    if (ttsResult.status === 204) {
+      // R6 — empty assistant text surfaced via createTtsHandler's `res.status(204).end()`.
+      throw new Error('TTS returned 204 (empty assistant text)');
+    }
+    if (ttsResult.status !== 200) {
+      // R8 — any other unexpected status (cost guard 402, rate limit 429, etc.).
+      const bodyPreview = ttsResult.json
+        ? JSON.stringify(ttsResult.json).slice(0, 300)
+        : (ttsResult.rawText || '<empty>').slice(0, 300);
+      throw new Error(`TTS unexpected status ${ttsResult.status}: ${bodyPreview}`);
+    }
+
+    // 3. Content-Type must be audio/* (R3).
+    if (!ttsResult.contentType.toLowerCase().startsWith('audio/')) {
+      throw new Error(
+        `TTS 200 response Content-Type not audio/*: ${JSON.stringify(ttsResult.contentType)}`,
+      );
+    }
+
+    // 4. Magic-byte validation per R4 / D2.
+    //    Accept either ID3v2 header ("ID3" = 0x49 0x44 0x33) or MPEG frame-sync
+    //    (0xFF followed by 0xF*, i.e. (b1 & 0xE0) === 0xE0). No ffprobe.
+    const buf = ttsResult.buffer;
+    if (buf.length < 3) {
+      throw new Error(`TTS audio too short for magic-byte check (length=${buf.length})`);
+    }
+    const isId3 = buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33;
+    const isMpegFrameSync = buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0;
+    if (!isId3 && !isMpegFrameSync) {
+      const head = Array.from(buf.subarray(0, 4))
+        .map((b) => `0x${b.toString(16).padStart(2, '0')}`)
+        .join(' ');
+      throw new Error(`TTS audio magic bytes invalid (head=${head}, expected ID3 or 0xFF 0xE?)`);
+    }
+
+    // 5. Length floor per R5 — sub-1KB body almost always = error envelope
+    //    misrouted as binary or truncated stream.
+    if (buf.length < 1024) {
+      throw new Error(`TTS audio length ${buf.length} < 1024 (suspect truncated or error envelope)`);
+    }
+
+    // 6. Happy log per R9 / AC9 — exact one-line shape, anchored regex in test.
+    console.log(
+      `[smoke:api] tts OK (bytes=${buf.length}, contentType=${ttsResult.contentType}, msgId=${assistantMessageId.slice(0, 8)})`,
+    );
+  } finally {
+    // R10 / AC8 — DELETE cleanup runs UNCONDITIONALLY, even on TTS failure.
+    // Keeping the smoke session around across 100 prod deploys = admin-panel clutter.
+    const deleted = await fetchJson({
+      baseUrl,
+      path: `/api/chat/sessions/${createdSessionId}`,
+      method: 'DELETE',
+      token: accessToken,
+      timeoutMs,
+      expected: 200,
+    });
+    if (deleted.json?.deleted !== true) {
+      throw new Error(`Delete session response invalid: ${JSON.stringify(deleted.json)}`);
+    }
+    console.log('[smoke:api] cleanup delete session OK');
   }
-  console.log('[smoke:api] cleanup delete session OK');
 
   console.log('[smoke:api] PASS');
 }
