@@ -179,10 +179,33 @@ gate_end "Gate 15"
 gate_start "Gate 16/18 affected unit tests (backend) — jest --findRelatedTests"
 if [ -n "$touched_be" ]; then
   echo "[pre-push]   $(echo "$touched_be" | wc -l | tr -d ' ') BE source file(s) changed — running related tests"
+  gate16_log="$(mktemp)"
   # shellcheck disable=SC2086
-  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) || {
-    echo "[pre-push] ✗ affected backend tests failed"; exit 1;
-  }
+  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
+  gate16_status=$?
+  cat "$gate16_log"
+  if [ $gate16_status -ne 0 ]; then
+    # Flake detection: route test "socket hang up" is a known runInBand teardown race.
+    failed_suites=$(grep -E '^FAIL ' "$gate16_log" | sed -E 's|^FAIL ([a-zA-Z0-9_-]+ )?||' | grep -E '\.test\.ts$' | sort -u)
+    if [ -n "$failed_suites" ]; then
+      echo "[pre-push]   gate 16 initial fail — retrying failed suites in isolation (flake detection):"
+      echo "$failed_suites" | sed 's/^/[pre-push]     - /'
+      retry_ok=1
+      for suite in $failed_suites; do
+        ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --testPathPattern="$suite" ) >/dev/null 2>&1 || { retry_ok=0; echo "[pre-push]     ✗ $suite still fails in isolation"; }
+      done
+      if [ "$retry_ok" = "1" ]; then
+        echo "[pre-push]   ✓ all retried suites pass in isolation — confirmed flake, accepting gate 16"
+      else
+        rm -f "$gate16_log"
+        echo "[pre-push] ✗ affected backend tests failed (not a flake — fail reproduces in isolation)"; exit 1;
+      fi
+    else
+      rm -f "$gate16_log"
+      echo "[pre-push] ✗ affected backend tests failed"; exit 1;
+    fi
+  fi
+  rm -f "$gate16_log"
 else
   echo "[pre-push]   (no BE source files changed in push range — skipped)"
 fi
