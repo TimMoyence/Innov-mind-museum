@@ -13,7 +13,7 @@
     "start": "next start --port 3001",
     "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o src/lib/api/generated/openapi.ts && prettier --write src/lib/api/generated/openapi.ts",
     "check:openapi-types": "pnpm generate:openapi-types && git diff --exit-code -- src/lib/api/generated/openapi.ts",
-    "lint": "eslint src/ && tsc --noEmit",
+    "lint": "eslint src/ --cache --cache-location node_modules/.cache/eslint/src --cache-strategy content && tsc --noEmit",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
