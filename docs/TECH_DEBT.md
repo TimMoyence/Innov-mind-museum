@@ -259,6 +259,30 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-11 — `monthlySessionQuota.loggedHits` Set never-evicted cache (R1 / ultrareview F4)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, ultrareview bug_013 nit-severity)
+- **Référence code** :
+  ```
+  museum-backend/src/shared/middleware/monthly-session-quota.middleware.ts:62-72 (module-level Set<string>, docblock acknowledges la trade-off)
+  museum-backend/src/shared/middleware/monthly-session-quota.middleware.ts:147 (loggedHits.add — only write site)
+  museum-backend/src/shared/middleware/monthly-session-quota.middleware.ts:66-68 (setMonthlyQuotaRepo(null) — only clear path, test-only)
+  ```
+- **Symptôme** : `loggedHits = new Set<string>()` accumule une entrée `${userId}:${YYYY-MM}` la première fois qu'un user `tier='free'` hit la limite. Après rollover de mois (juin), les entrées de mai restent pinned indéfiniment. Croissance monotone bornée par `users × months` sur la lifetime du process.
+- **Pourquoi non résolu en V1** : impact négligeable au scale launch (~100 beta users × 12 mois × ~50 bytes/entrée = **6 KB/an**). Modern container/k8s deploy cadence recycle le process bien avant. Le docblock du code acknowledges l'invariant explicitement. Reviewer ultrareview classé `nit` severity (« worth tracking », pas « worth shipping un fix overkill »). Au hypothetical 100k MAU × 5% × 36 months = ~9 MB après 3 ans uninterrupted — toujours small relatif aux budgets heap Node.
+- **Sprint d'origine** : 2026-05-15 (R1 ship) → 2026-05-16 (ultrareview r0wykavnv bug_013).
+- **Effort estimé** : ~30 minutes. Pattern (a) recommandé par reviewer :
+  - (a) **`Map<userId, lastLoggedMonth>`** — at-most-one entrée per user. Memory : O(users) vs O(users×months). Behaviour byte-équivalent. 4-line diff. Replace `Set<string>` par `Map<number, string>`. Update `loggedHits.has(dedupKey)` → `loggedHits.get(actorId) !== currentMonth`. Update `loggedHits.add(dedupKey)` → `loggedHits.set(actorId, currentMonth)`.
+  - (b) Stale-month sweep on rollover — O(N) par session-create.
+  - (c) LRU cap (lru-cache lib) — non recommandé (ajoute dep pour petit problème).
+- **Comment fermer** :
+  1. Implémenter pattern (a) : 4-line diff dans `monthly-session-quota.middleware.ts`.
+  2. Test : `loggedHits.size` ne croît pas après 2 mois consécutifs pour le même user.
+  3. Update docblock lines 62-65 (retirer la note « bounded by users × months »).
+  4. Cocher TD-11 ici.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
