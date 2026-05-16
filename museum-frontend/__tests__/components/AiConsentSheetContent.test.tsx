@@ -24,15 +24,17 @@ describe('AiConsentSheetContent', () => {
     expect(getByText('consent.title')).toBeTruthy();
   });
 
-  // The accept button uses LiquidButton, which fires haptic feedback before
-  // invoking onPress in an async chain. fireEvent.press resolves synchronously,
-  // so the assertion must wait for the microtask queue to drain.
-  it('calls onAccept (and close) when accept button is pressed', async () => {
+  // S4-P0-02 — the legacy single-button "consent.accept" is replaced by
+  // "consent.save_and_continue" (per Apple Guideline 5.1.2(i) granular gate).
+  // Defaults give text→OpenAI consent (the only REQUIRED scope), so pressing
+  // Save without further interaction calls onAccept with that one scope.
+  it('calls onAccept with the granted scopes (and close) when save is pressed', async () => {
     const { getByText } = render(<AiConsentSheetContent {...defaultProps} />);
-    fireEvent.press(getByText('consent.accept'));
+    fireEvent.press(getByText('consent.save_and_continue'));
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
     });
+    expect(defaultProps.onAccept).toHaveBeenCalledWith(['third_party_ai_text_openai']);
     expect(defaultProps.close).toHaveBeenCalledTimes(1);
   });
 

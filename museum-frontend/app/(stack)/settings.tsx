@@ -9,6 +9,7 @@ import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSe
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
 import { SettingsThemeCard } from '@/features/settings/ui/SettingsThemeCard';
 import { SettingsSecurityCard } from '@/features/settings/ui/SettingsSecurityCard';
+import { SettingsAiConsentCard } from '@/features/settings/ui/SettingsAiConsentCard';
 import { SettingsPrivacyCard } from '@/features/settings/ui/SettingsPrivacyCard';
 import { SettingsAccessibilityCard } from '@/features/settings/ui/SettingsAccessibilityCard';
 import { DataModeSettingsSection } from '@/features/settings/ui/DataModeSettingsSection';
@@ -208,6 +209,8 @@ export default function SettingsScreen() {
         </GlassCard>
 
         <SettingsPrivacyCard />
+
+        <SettingsAiConsentCard />
 
         <SettingsAccessibilityCard />
 

@@ -3,6 +3,7 @@ import type { ParseKeys } from 'i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
+import type { ThirdPartyAiScope } from '@/features/chat/application/thirdPartyAiConsent';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
@@ -42,7 +43,10 @@ export interface BottomSheetRouteParams {
     onShare?: (message: ChatUiMessage) => void;
     onReport?: (messageId: string) => void;
   };
-  consent: { onAccept?: () => void; onPrivacy?: () => void };
+  consent: {
+    onAccept?: (grantedScopes?: readonly ThirdPartyAiScope[]) => void;
+    onPrivacy?: () => void;
+  };
   summary: { summary: VisitSummary };
   'daily-limit': { onDismiss?: () => void };
   'voice-intro': { locale: string; onAcknowledge?: () => void };
