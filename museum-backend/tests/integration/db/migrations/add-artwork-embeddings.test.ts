@@ -107,7 +107,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
           'image_url',
           'license',
           // `museum_id` added 2026-05-12 by `AddMuseumIdScopeToArtworkEmbeddings`
-          // (LLM08 cross-tenant isolation, ADR-050 / B6 of the perennial Phase 1
+          // (LLM08 cross-tenant isolation, ADR-051 / B6 of the perennial Phase 1
           // implementation). Nullable INT FK to `museums.id` — preserves V1
           // single-tenant backward-compat while unblocking Phase 2 per-tenant
           // policy resolver.

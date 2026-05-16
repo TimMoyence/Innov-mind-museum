@@ -1,4 +1,4 @@
-# Opt-in docker-compose overlay for the ADR-050 Microsoft Presidio sidecar
+# Opt-in docker-compose overlay for the ADR-051 Microsoft Presidio sidecar
 # (Phase 1 shadow-mode candidate — NOT activated by default).
 #
 # Coverage: OWASP LLM02 (Sensitive Information Disclosure) gap detection.
@@ -10,7 +10,7 @@
 # Activation status: adapter exists at
 #   src/modules/chat/adapters/secondary/guardrails/presidio.adapter.ts
 # but is NOT wired in chat-module.ts composition root pre-launch. See
-# ADR-050 for the Phase 1 promotion criteria (≥7d shadow, decision-match
+# ADR-051 for the Phase 1 promotion criteria (≥7d shadow, decision-match
 # thresholds, latency gates).
 #
 # Activation when promotion criteria pass:

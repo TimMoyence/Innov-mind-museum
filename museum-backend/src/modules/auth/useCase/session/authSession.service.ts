@@ -112,7 +112,7 @@ export class AuthSessionService {
 
     // Suspension / soft-delete gate runs BEFORE email_verified so the operator
     // signal (ACCOUNT_SUSPENDED / ACCOUNT_DELETED) takes precedence over the
-    // verification banner. See ADR-050 — admin user lifecycle.
+    // verification banner. See ADR-052 — admin user lifecycle.
     if (user.deletedAt) {
       clearLoginAttempts(normalizedEmail);
       throw new AppError({
@@ -198,7 +198,7 @@ export class AuthSessionService {
       throw unauthorized('User not found', 'INVALID_REFRESH_TOKEN');
     }
 
-    // ADR-050 — refresh refuses suspended / soft-deleted users. The family is
+    // ADR-052 — refresh refuses suspended / soft-deleted users. The family is
     // revoked on delete (no recovery path) but kept on suspend so unsuspending
     // restores the session pair without a full re-login.
     if (user.deletedAt) {

@@ -1,4 +1,4 @@
-# ADR-050 — User suspend + soft-delete strategy for admin user management
+# ADR-052 — User suspend + soft-delete strategy for admin user management
 
 **Status:** Accepted
 **Date:** 2026-05-14

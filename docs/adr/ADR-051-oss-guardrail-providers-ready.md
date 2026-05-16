@@ -1,4 +1,4 @@
-# ADR-050: OSS GuardrailProvider adapters ready (Presidio + Llama Prompt Guard 2) — not activated
+# ADR-051: OSS GuardrailProvider adapters ready (Presidio + Llama Prompt Guard 2) — not activated
 
 > **Status:** Accepted
 > **Date:** 2026-05-12

@@ -2249,7 +2249,7 @@ export interface paths {
     post?: never;
     /**
      * Soft-delete a user (super_admin only)
-     * @description Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-050). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.
+     * @description Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.
      */
     delete: {
       parameters: {
@@ -4327,7 +4327,7 @@ export interface components {
       suspended: boolean;
       /**
        * Format: date-time
-       * @description Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-050).
+       * @description Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-052).
        */
       deletedAt: string | null;
       /** Format: date-time */

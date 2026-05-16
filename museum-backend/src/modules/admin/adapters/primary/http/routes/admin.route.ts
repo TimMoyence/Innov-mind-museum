@@ -184,7 +184,7 @@ adminRouter.post(
 );
 
 // DELETE /api/admin/users/:id — super_admin only: soft-delete a user account.
-// Hard erasure (RGPD Art. 17 full erase) is deferred to V1.1 (ADR-050).
+// Hard erasure (RGPD Art. 17 full erase) is deferred to V1.1 (ADR-052).
 adminRouter.delete(
   '/users/:id',
   isAuthenticated,

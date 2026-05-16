@@ -176,7 +176,7 @@ export class User {
   /**
    * Operator-driven account freeze flag (P0 #9 admin user detail).
    * `true` blocks login + refresh; existing 15-min access tokens expire
-   * naturally (ADR-050). Reversible via `unsuspendUser` admin action.
+   * naturally (ADR-052). Reversible via `unsuspendUser` admin action.
    */
   @Column({ type: 'boolean', default: false })
   suspended!: boolean;

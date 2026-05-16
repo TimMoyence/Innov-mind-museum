@@ -23,7 +23,7 @@ import type {
  *   - NRP — nationality / religious / political group references, listed
  *     for OWASP LLM06 (Excessive Agency / discrimination signals) breadth.
  *
- * Conservative defaults; ADR-050 documents the criteria for adjusting this
+ * Conservative defaults; ADR-051 documents the criteria for adjusting this
  * list pre-promotion to active.
  */
 const DEFAULT_ENTITY_TYPES: readonly string[] = [
@@ -101,7 +101,7 @@ interface MicrosoftPresidioAdapterOptions {
  *
  * Form factor: matches the existing `LLMGuardAdapter` shape so wiring in the
  * chat-module composition root is a constructor swap; not activated yet
- * (ADR-050 — adapters ready, no shadow run, no production traffic).
+ * (ADR-051 — adapters ready, no shadow run, no production traffic).
  *
  * Fail-CLOSED contract (per ADR-047 + ADR-048): network error, non-OK HTTP,
  * malformed JSON, or timeout → `{ allow: false, reason: 'service_unavailable',

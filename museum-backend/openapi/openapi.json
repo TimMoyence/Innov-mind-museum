@@ -1358,7 +1358,7 @@
           "deletedAt": {
             "type": ["string", "null"],
             "format": "date-time",
-            "description": "Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-050)."
+            "description": "Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-052)."
           },
           "createdAt": {
             "type": "string",
@@ -4559,7 +4559,7 @@
       "delete": {
         "tags": ["Admin"],
         "summary": "Soft-delete a user (super_admin only)",
-        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-050). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
+        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
