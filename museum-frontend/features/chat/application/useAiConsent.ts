@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 
 import { grantConsentScope, type ThirdPartyAiScope } from './thirdPartyAiConsent';
 
@@ -16,9 +17,13 @@ const CONSENT_KEY = 'consent.ai_accepted';
  * (no scopes) is preserved for back-compat with existing test mocks, but the
  * production sheet now ALWAYS calls `acceptAiConsent(scopes)` with the
  * per-category × per-provider set so the granular consent gesture is
- * provable from the audit chain. Per-scope BE failures are swallowed (best
- * effort) — AsyncStorage still flips so the user is not re-prompted ; the
- * next launch's reconcile pass can retry.
+ * provable from the audit chain.
+ *
+ * Failure handling : per-scope BE failures are caught and reported to Sentry
+ * (tags : flow=consent.grant, scope) WITHOUT aborting the remaining grants.
+ * AsyncStorage still flips so the user is not re-prompted on every cold
+ * start — the canonical record lives server-side in `user_consents`, the
+ * AsyncStorage flag is a UX-only "we already asked you" memo.
  */
 export const useAiConsent = () => {
   const [showAiConsent, setShowAiConsent] = useState(false);
@@ -41,15 +46,16 @@ export const useAiConsent = () => {
     if (grantedScopes && grantedScopes.length > 0) {
       // S4-P0-02 — emit one BE round-trip per granted scope so every grant
       // gets its own hash-chained audit row. Sequential awaits keep the audit
-      // chain ordering deterministic ; an individual scope failure does not
-      // abort the remaining grants nor the AsyncStorage write.
+      // chain ordering deterministic ; an individual scope failure is logged
+      // to Sentry (so DPO drift dashboards surface AsyncStorage vs BE divergence)
+      // but does not abort the remaining grants.
       for (const scope of grantedScopes) {
         try {
           await grantConsentScope(scope);
-        } catch {
-          // Best effort — surfacing per-scope errors would defeat the purpose
-          // of the gate (user already gave consent in the UI). A reconcile job
-          // can retry missing scopes from the next /api/auth/consent fetch.
+        } catch (grantError) {
+          Sentry.captureException(grantError, {
+            tags: { flow: 'consent.grant', scope },
+          });
         }
       }
     }

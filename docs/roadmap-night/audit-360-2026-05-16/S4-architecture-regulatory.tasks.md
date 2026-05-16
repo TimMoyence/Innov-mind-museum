@@ -14,6 +14,7 @@
 - **Risque** : Si DPO ré-évalue "risque élevé" → consultation préalable CNIL Art. 36 (8 sem.) = launch reporté.
 - **Effort** : L (procédural, dépend cabinet externe)
 - **Owner suggéré** : Founder + legal counsel
+- [x] 2026-05-16 — deferred to S2.T-S2-8 worktree (S2-docs-memory backlog owns DPO/DPIA/ROPA sign-off ; S2 file not yet on origin/main, ownership transferred per pick rule §3)
 
 ### S4-P0-02 — Audit + remédiation Apple Guideline 5.1.2(i) consent third-party AI
 - **Source** : `docs/legal/AI_DISCLOSURE.md` + DPIA T1.1 (base légale "tos_privacy" bundled)
@@ -21,6 +22,7 @@
 - **Risque** : App Store rejection post EAS submission (5.1.2(i) révisé nov 2025).
 - **Effort** : M (audit S + remédiation M si manquant)
 - **Owner suggéré** : Frontend lead
+- [x] 2026-05-16 — done commit:b2a2c53d+a11e157b+docs-commit [type:B] — BE foundation (7 audit constants + 8 third_party_ai scopes + audit-chain wire + register propagation) + FE granular gate (per-row Switches default OFF, BE-backed + Sentry-instrumented) + revocation surface in Settings + 8-locale i18n + ADR-053 + AI_DISCLOSURE §8. Follow-ups tracked in ADR-053 § Follow-ups : T-S4-P0-02-bis-reconcile, T-S4-P0-02-bis-enforce, T-S4-P0-02-bis-dpia, T-S4-P0-02-bis-audit-reconcile, T2.6-bis.
 
 ### S4-P0-03 — DSA Art. 16 notice-and-action mécanisme documenté + audité
 - **Source** : `museum-frontend/features/chat/ui/ChatMessageBubble.tsx` (Signaler button), `museum-backend/src/modules/review/` modération, `museum-backend/src/modules/support/`

@@ -106,31 +106,21 @@ const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 
 const REQUIRED_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
 
-const initialState = (): Record<ThirdPartyAiScope, boolean> => {
-  const seed = Object.fromEntries(THIRD_PARTY_AI_SCOPES.map((s) => [s, false])) as Record<
+const initialState = (): Record<ThirdPartyAiScope, boolean> =>
+  Object.fromEntries(THIRD_PARTY_AI_SCOPES.map((s) => [s, false])) as Record<
     ThirdPartyAiScope,
     boolean
   >;
-  // The text→OpenAI scope is the minimum required to use chat (DeepSeek is
-  // EU-blocked ; Google is optional secondary). Defaulting it ON matches
-  // Apple 5.1.2(i) "explicit, informed" — the user still sees the toggle
-  // and can flip it off (which disables the Save button), preserving the
-  // affirmative-action requirement.
-  seed[REQUIRED_SCOPE] = true;
-  return seed;
-};
 
 /**
  * Bottom-sheet content (full-screen presentation) for the granular third-party
  * AI consent gate. S4-P0-02 — Apple Guideline 5.1.2(i) requires explicit,
  * separate, non-bundled consent per (data category × AI provider). Each row
- * is an independent Switch ; Save is gated on at least the mandatory
- * `third_party_ai_text_openai` scope.
- *
- * Local switch state is reset every time the sheet is mounted (CLAUDE.md
- * `RN Modal persistent host state` gotcha — the BottomSheetRouter forces
- * remount via `key=state.route`, but defensive `useEffect(reset, [])`
- * ensures no stale grants leak across opens.
+ * is an independent Switch defaulting OFF (no pre-checked boxes — GDPR Art.
+ * 4(11) + Art. 7(1) "unambiguous indication by a statement or clear
+ * affirmative action"). Save stays disabled until the user actively toggles
+ * the mandatory `third_party_ai_text_openai` scope ON ; the required-row
+ * label carries a `(required)` badge so the gate is discoverable.
  */
 export const AiConsentSheetContent = ({
   close,

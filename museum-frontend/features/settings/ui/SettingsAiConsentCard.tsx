@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -108,7 +109,13 @@ export const SettingsAiConsentCard = () => {
           await revokeConsentScope(scope);
         }
         await refresh();
-      } catch {
+      } catch (toggleError) {
+        Sentry.captureException(toggleError, {
+          tags: {
+            flow: next ? 'consent.grant.settings' : 'consent.revoke.settings',
+            scope,
+          },
+        });
         setRows(previous);
       } finally {
         setPendingScope(null);
