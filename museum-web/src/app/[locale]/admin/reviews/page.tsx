@@ -88,6 +88,24 @@ export default function AdminReviewsPage() {
   // -- Modal backdrop ref ─────────────────────────────────────────────
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  const modalOpen = moderating !== null && decision !== null;
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) {
+        setModerating(null);
+        setDecision(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [modalOpen, saving]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reviewsAdmin}</h1>
@@ -233,7 +251,7 @@ export default function AdminReviewsPage() {
 
       {/* Moderation confirm modal */}
       {moderating && decision && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- intentional: outside-click + Esc on the backdrop is standard modal behavior
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -241,12 +259,6 @@ export default function AdminReviewsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) {
-              setModerating(null);
-              setDecision(null);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
               setModerating(null);
               setDecision(null);
             }

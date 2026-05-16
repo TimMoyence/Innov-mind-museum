@@ -91,6 +91,20 @@ export default function ReportsPage() {
   // -- Ref for modal backdrop -----------------------------------------------------
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    if (!editingReport) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submitting) setEditingReport(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editingReport, submitting]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reports}</h1>
@@ -226,7 +240,7 @@ export default function ReportsPage() {
 
       {/* Review Modal */}
       {editingReport && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -234,9 +248,6 @@ export default function ReportsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingReport(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditingReport(null);
           }}
         >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
