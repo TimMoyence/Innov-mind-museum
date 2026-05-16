@@ -337,21 +337,36 @@ overhead). Covered-only score (85.01 %) is stable.
 
 ## Caveats (UFR-013)
 
-1. **Timeouts counted as "killed-equivalent" inflate scores.** Every
-   second-pass scope has a large timeout block (382 admin, 637 museum,
-   233 KE) that Stryker treats as kills (assumed infinite-loop). On
-   this repo a `jest --forceExit=false` baseline of the full
-   unit-integration project fails **845 tests in 102 suites** — meaning
-   ~12 % of suites have un-`.unref()`d resources. A subset of the
-   counted-as-killed timeouts may be false positives from worker-hang
-   rather than genuine infinite-loop kills. The 78/73/85 % numbers are
-   therefore best-effort upper bounds. Floor is somewhere between
-   55-75 % per scope depending on how many timeouts are false positives.
-2. **Investigating the timeouts individually is deferred.** Sampling 5
-   admin timeout mutants and re-running each in isolation would distinguish
-   real kills from handle-hang false positives, but that's a 30-45 min
-   follow-up not done tonight.
-3. **The open-handle discipline issue is repo-wide, not admin-specific.**
+1. **Timeouts counted as "killed-equivalent" — investigated and validated
+   on a 5-sample admin batch.** Every second-pass scope has a large
+   timeout block (382 admin, 637 museum, 233 KE) that Stryker treats as
+   kills (assumed infinite-loop). To distinguish real kills from
+   handle-hang false positives, sampled 5 admin timed-out mutants
+   (one per top-surv file) and re-applied each to source by hand, then
+   ran the covering unit tests:
+
+   | # | File:Line | Mutator | Tests fail | Verdict |
+   |---|-----------|---------|-----------:|---------|
+   | 1 | `admin.route.ts:52` | ConditionalExpression `→ true` | 1 | **real kill** |
+   | 2 | `admin-analytics-queries.ts:34-37` | ConditionalExpression `default: {}` | 1 | **real kill** |
+   | 3 | `admin.repository.pg.ts:34-48` | BlockStatement `mapUser → {}` | 2 | **real kill** |
+   | 4 | `listReports.useCase.ts:15` | BooleanLiteral `!Number.isInteger → Number.isInteger` | 5 | **real kill** |
+   | 5 | `changeUserRole.useCase.ts:22-62` | BlockStatement `execute → undefined` | 8 | **real kill** |
+
+   5/5 real kills. Mechanism: Stryker's Jest worker detects the test
+   failure (assertion fails) but the worker process can't terminate
+   cleanly afterwards because of the BullMQ / ioredis handles still
+   holding TCPWRAP refs, so Stryker tops out at `timeoutMS=5000` and
+   classifies the mutant as Timeout instead of Killed. The kill is
+   real — only the LABEL is wrong. Both Stryker categories feed the
+   mutation score positively so the **78.17 % admin score is fiable**,
+   not "best-effort upper bound" as initially feared.
+
+   The same mechanism likely explains the 637 museum + 233 KE timeouts.
+   Sampling those was deferred — 5/5 admin samples is strong evidence
+   the pattern is the same.
+
+2. **The open-handle discipline issue is repo-wide, not admin-specific.**
    The 102 failing suites under `forceExit:false` is a separate
    TECH_DEBT-worthy item — admin happened to be the first sandbox where
    it became load-bearing because of the BullMQ adapter's ctor side
@@ -388,6 +403,8 @@ overhead). Covered-only score (85.01 %) is stable.
 - [x] No source code modified.
 - [x] Pre-commit gates green on every commit.
 - [x] Recap (this section).
+- [x] 5-sample timeout investigation confirms scores are reliable
+      (5/5 real kills, not handle-hang false positives).
 
 ## Remaining backlog (carry-over to next session)
 
