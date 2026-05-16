@@ -33,7 +33,10 @@ consentRouter.post(
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
     const { scope, version } = req.body as z.infer<typeof grantConsentSchema>;
-    const record = await grantConsentUseCase.execute(jwtUser.id, scope, version, 'api');
+    const record = await grantConsentUseCase.execute(jwtUser.id, scope, version, 'api', {
+      ip: req.ip,
+      requestId: req.requestId,
+    });
     res.status(201).json({
       consent: {
         id: record.id,
@@ -50,7 +53,10 @@ consentRouter.delete('/:scope', isAuthenticated, async (req: Request, res: Respo
   const jwtUser = requireUser(req);
   const scope = parseStringParam(req, 'scope');
   if (!scope) throw badRequest('scope param is required');
-  await revokeConsentUseCase.execute(jwtUser.id, scope);
+  await revokeConsentUseCase.execute(jwtUser.id, scope, {
+    ip: req.ip,
+    requestId: req.requestId,
+  });
   res.status(200).json({ revoked: true, scope });
 });
 

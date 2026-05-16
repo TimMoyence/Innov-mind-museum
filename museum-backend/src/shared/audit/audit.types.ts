@@ -96,3 +96,17 @@ export const AUDIT_MFA_CHALLENGE_SUCCESS = 'MFA_CHALLENGE_SUCCESS';
 export const AUDIT_MFA_CHALLENGE_FAILED = 'MFA_CHALLENGE_FAILED';
 export const AUDIT_MFA_RECOVERY_USED = 'MFA_RECOVERY_USED';
 export const AUDIT_MFA_WARNING_STARTED = 'MFA_WARNING_STARTED';
+
+// ─── GDPR consent events (S4-P0-02 — Apple Guideline 5.1.2(i) + GDPR Art. 7) ───
+// Hash-chained audit row emitted from GrantConsentUseCase / RevokeConsentUseCase
+// after the user_consents mutation lands but before the HTTP response. Metadata
+// payload: `{ scope, version, source }` minimum ; third-party AI rows also
+// carry `{ provider, category }`. Generic CONSENT_GRANTED / CONSENT_REVOKED
+// catches scopes outside the specialised families (analytics, marketing).
+export const AUDIT_CONSENT_GRANTED = 'CONSENT_GRANTED';
+export const AUDIT_CONSENT_REVOKED = 'CONSENT_REVOKED';
+export const AUDIT_CONSENT_GRANTED_TOS = 'CONSENT_GRANTED_TOS';
+export const AUDIT_CONSENT_GRANTED_THIRD_PARTY_AI = 'CONSENT_GRANTED_THIRD_PARTY_AI';
+export const AUDIT_CONSENT_REVOKED_THIRD_PARTY_AI = 'CONSENT_REVOKED_THIRD_PARTY_AI';
+export const AUDIT_CONSENT_GRANTED_LOCATION_TO_LLM = 'CONSENT_GRANTED_LOCATION_TO_LLM';
+export const AUDIT_CONSENT_REVOKED_LOCATION_TO_LLM = 'CONSENT_REVOKED_LOCATION_TO_LLM';
