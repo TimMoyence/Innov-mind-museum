@@ -180,7 +180,7 @@ gate_start "Gate 16/18 affected unit tests (backend) — jest --findRelatedTests
 if [ -n "$touched_be" ]; then
   echo "[pre-push]   $(echo "$touched_be" | wc -l | tr -d ' ') BE source file(s) changed — running related tests"
   # shellcheck disable=SC2086
-  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --findRelatedTests --passWithNoTests --coverage=false --selectProjects unit-integration $(echo "$touched_be" | sed 's|^museum-backend/||') ) || {
+  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) || {
     echo "[pre-push] ✗ affected backend tests failed"; exit 1;
   }
 else
