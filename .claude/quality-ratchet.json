@@ -22,5 +22,12 @@
   "coverageStatementsWeb": 68.51,
   "coverageBranchesWeb": 54.82,
   "coverageFunctionsWeb": 64.44,
-  "coverageLinesWeb": 70.39
+  "coverageLinesWeb": 70.39,
+  "mutationScore": 30,
+  "mutationScoreKilled": 2169,
+  "mutationScoreSurvived": 287,
+  "mutationScoreTimeout": 4594,
+  "mutationScoreRuntimeError": 12,
+  "mutationScoreNoCoverage": 923,
+  "_comment_mutation": "Baseline 2026-05-16 audit-360 T3.3 (computed killed/(killed+survived+timeout+runtimeError) = 2169/7062 = 30.71%, sourced from museum-backend/reports/stryker-incremental.json — the only on-disk report at introduction; full json reporter writes reports/mutation/mutation.json). Floor 30 = exact baseline (anti-regression only) for the introduction commit; a follow-up commit bumps to 35 (audit-360 spec pre-launch floor). Target post-mitigation Phase 4 once T3.1/T3.2 open-handle leak is absorbed (will lift the 4594 Timeout bucket): 40%. Enterprise: 80%. NoCoverage (923) excluded from denominator — those mutants are uncoverable by current tests and would pollute the metric. No SKIP_MUTATION_RATCHET env-var — UFR-020."
 }
