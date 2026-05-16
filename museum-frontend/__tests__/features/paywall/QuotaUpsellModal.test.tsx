@@ -318,3 +318,135 @@ describe('QuotaUpsellModal F2 — state reset on visible transition (bug_005)', 
     expect(findHoneypot().props.value).toBe('');
   });
 });
+
+// ── F3 §1 R3..R8 — resetAt locale-aware formatting ──
+//
+// Pins F3.R1..R8 + AC1/AC2/AC3/AC5/AC7 down BEFORE implementation. Baseline
+// `b6e4dd46` renders the raw ISO `reason.resetAt` verbatim — the four happy
+// path + locale-switch assertions below FAIL. The defensive-fallback case
+// (F3.C) accidentally passes pre-fix because the raw ISO is rendered as-is ;
+// we keep the "no Invalid Date string" guard so the assertion still pins
+// behaviour post-fix without losing meaning. RED-ness of the file comes from
+// F3.A / F3.B / F3.D / F3.E.
+describe('QuotaUpsellModal resetAt formatting (F3 §1 R3..R8)', () => {
+  // The test-utils i18n mock exports `useTranslation` as a function returning
+  // a hardcoded `{ language: 'en' }`. To swap locale per-test we mutate the
+  // mock module's `useTranslation` property — Jest property assignment is
+  // honored by the component's import binding at call time.
+  interface I18nMock {
+    useTranslation: (...args: unknown[]) => {
+      t: (key: string) => string;
+      i18n: { language: string };
+    };
+  }
+  const i18nMock = jest.requireMock<I18nMock>('react-i18next');
+  const originalUseTranslation = i18nMock.useTranslation;
+  const setLanguage = (lang: string): void => {
+    i18nMock.useTranslation = () => ({ t: (key: string) => key, i18n: { language: lang } });
+  };
+
+  beforeEach(() => {
+    mockPost.mockReset();
+    mockAddBreadcrumb.mockReset();
+  });
+  afterEach(() => {
+    i18nMock.useTranslation = originalUseTranslation;
+  });
+
+  // ── F3.A — Raw ISO MUST NOT be visible (F3.R1 / AC1) ──────────────
+  it('F3.A: raw ISO 2026-06-01T00:00:00.000Z is NOT rendered anywhere', () => {
+    setLanguage('en');
+    render(
+      <QuotaUpsellModal
+        visible
+        reason={fixtureReason({ resetAt: '2026-06-01T00:00:00.000Z' })}
+        onClose={jest.fn()}
+      />,
+    );
+    // RNTL `queryAllByText` only accepts string | RegExp — regex with the ISO
+    // literal scans every rendered Text node ; any hit is a render violation.
+    // Use length-based assertion (not toEqual([])) — RNTL elements contain
+    // circular host refs and Jest's diff serializer blows the stack on them.
+    expect(screen.queryAllByText(/2026-06-01T00:00:00\.000Z/).length).toBe(0);
+  });
+
+  // ── F3.B — EN locale renders human date (F3.R1 / AC1) ─────────────
+  it('F3.B: EN locale renders human-readable "June" + "2026"', () => {
+    setLanguage('en');
+    render(
+      <QuotaUpsellModal
+        visible
+        reason={fixtureReason({ resetAt: '2026-06-01T00:00:00.000Z' })}
+        onClose={jest.fn()}
+      />,
+    );
+    // Permissive regex — accepts "June 1, 2026" (en-US) OR "1 June 2026" (en-GB)
+    // OR any future ICU revision that still includes the month + year tokens.
+    expect(screen.queryAllByText(/June.*2026|2026.*June/).length).toBeGreaterThan(0);
+  });
+
+  // ── F3.C — FR locale renders human date (F3.R1 / AC2) ─────────────
+  it('F3.C: FR locale renders human-readable "juin" + "2026"', () => {
+    setLanguage('fr');
+    render(
+      <QuotaUpsellModal
+        visible
+        reason={fixtureReason({ resetAt: '2026-06-01T00:00:00.000Z' })}
+        onClose={jest.fn()}
+      />,
+    );
+    expect(screen.queryAllByText(/juin.*2026|2026.*juin/).length).toBeGreaterThan(0);
+  });
+
+  // ── F3.D — Defensive fallback on invalid ISO (F3.R3 / AC3) ────────
+  it('F3.D: invalid ISO falls back to raw string, no crash, no "Invalid Date"', () => {
+    setLanguage('en');
+    expect(() =>
+      render(
+        <QuotaUpsellModal
+          visible
+          reason={fixtureReason({ resetAt: 'NOT-A-VALID-DATE' })}
+          onClose={jest.fn()}
+        />,
+      ),
+    ).not.toThrow();
+
+    // Raw fallback IS rendered (ugly-but-safe per F3.R3 — surfaces BE bug to QA).
+    expect(screen.queryAllByText(/NOT-A-VALID-DATE/).length).toBeGreaterThan(0);
+
+    // "Invalid Date" (the toString() of NaN-Date) MUST NOT leak through.
+    expect(screen.queryAllByText(/Invalid Date/).length).toBe(0);
+  });
+
+  // ── F3.E — Memoization sentinel : stable across re-renders (F3.R6) ─
+  it('F3.E: re-render with identical resetAt yields identical formatted output', () => {
+    setLanguage('en');
+    const { rerender } = render(
+      <QuotaUpsellModal
+        visible
+        reason={fixtureReason({ resetAt: '2026-06-01T00:00:00.000Z' })}
+        onClose={jest.fn()}
+      />,
+    );
+    const firstHit = screen.queryAllByText(/June.*2026|2026.*June/);
+    expect(firstHit.length).toBeGreaterThan(0);
+    const firstNode = firstHit[0];
+    if (!firstNode) throw new Error('F3.E: expected at least one June 2026 hit on first render');
+    const firstText = JSON.stringify(firstNode.props.children);
+
+    // Re-render with the SAME resetAt — output must be byte-identical (no flicker,
+    // no formatter thrash). This is a smoke test, not a strict perf assertion.
+    rerender(
+      <QuotaUpsellModal
+        visible
+        reason={fixtureReason({ resetAt: '2026-06-01T00:00:00.000Z' })}
+        onClose={jest.fn()}
+      />,
+    );
+    const secondHit = screen.queryAllByText(/June.*2026|2026.*June/);
+    expect(secondHit.length).toBeGreaterThan(0);
+    const secondNode = secondHit[0];
+    if (!secondNode) throw new Error('F3.E: expected at least one June 2026 hit on second render');
+    expect(JSON.stringify(secondNode.props.children)).toEqual(firstText);
+  });
+});

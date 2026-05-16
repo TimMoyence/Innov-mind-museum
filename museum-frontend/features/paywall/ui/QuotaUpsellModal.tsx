@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
@@ -56,7 +56,7 @@ interface QuotaUpsellModalProps {
 type SubmitState = 'idle' | 'sending' | 'success' | 'error';
 
 export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
   // Honeypot — invisible to humans, hidden via `display: 'none'`. Bots that
@@ -96,6 +96,38 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
       /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [visible]);
+
+  // F3 corrective (2026-05-16, ultrareview bug_010) — Format the BE-supplied
+  // ISO `resetAt` via Intl.DateTimeFormat. R1 §3.4 D4 explicitly mandated this
+  // but the original R1 green-agent shipped raw ISO interpolation, so users saw
+  // "Resets on 2026-06-01T00:00:00.000Z" verbatim. The memoized formatter keys
+  // on [resetAt, i18n.language] to avoid re-format thrash. Defensive fallback
+  // returns raw ISO on parse or Intl failure (NOT empty string — surfaces BE
+  // drift to QA rather than silently degrading).
+  //
+  // Dep extraction (resetAtIso primitive) — the React Compiler's
+  // preserve-manual-memoization rule rejects the `reason?.resetAt` optional
+  // chain in a deps array because it infers `reason` as the broader dep
+  // (object-level). Lifting `resetAt` to a primitive const lets the compiler
+  // and our memo agree on the same granular key, satisfying F3.N5 (per-tuple
+  // memo) without weakening to `[reason, i18n.language]` reference instability.
+  const resetAtIso = reason?.resetAt ?? '';
+  const formattedReset = useMemo(() => {
+    if (!resetAtIso) return '';
+    try {
+      const date = new Date(resetAtIso);
+      if (Number.isNaN(date.getTime())) {
+        // Defensive : invalid ISO → fall back to raw so a BE drift is visible
+        // to QA rather than rendering "Invalid Date" or empty string.
+        return resetAtIso;
+      }
+      return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(date);
+    } catch {
+      // Hermes Intl shouldn't throw on supported locales, but defensive fallback
+      // keeps the modal usable if Intl is unexpectedly stripped (R1 §3.5 N3).
+      return resetAtIso;
+    }
+  }, [resetAtIso, i18n.language]);
 
   const onSubmit = async (): Promise<void> => {
     if (!consent) return; // N6 — submit disabled until explicit consent.
@@ -141,7 +173,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
           <Text style={styles.body}>{t('paywall.modalBody')}</Text>
           {reason !== null && (
             <Text style={styles.meta}>
-              {t('paywall.resetsOn')} {reason.resetAt}
+              {t('paywall.resetsOn')} {formattedReset}
             </Text>
           )}
 
