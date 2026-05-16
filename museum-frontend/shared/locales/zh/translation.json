@@ -993,5 +993,17 @@
       "description": "您的过往对话将显示于此。",
       "actionLabel": "开始对话"
     }
+  },
+  "paywall": {
+    "modalTitle": "已达本月免费使用上限",
+    "modalBody": "您本月已用完免费方案中的所有聊天会话。请留下您的电子邮件,我们将在高级版开放时通知您。",
+    "fieldEmail": "电子邮件地址",
+    "submit": "加入高级版等待列表",
+    "sending": "正在发送…",
+    "success": "谢谢 — 我们会与您联系。",
+    "error": "出现错误。请稍后再试。",
+    "dismiss": "关闭",
+    "consent": "我同意在高级版上线时接收电子邮件。",
+    "resetsOn": "重置日期"
   }
 }

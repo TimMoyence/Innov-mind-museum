@@ -993,5 +993,17 @@
       "description": "Deine bisherigen Gespräche erscheinen hier.",
       "actionLabel": "Gespräch starten"
     }
+  },
+  "paywall": {
+    "modalTitle": "Kostenloses Monatslimit erreicht",
+    "modalBody": "Du hast alle in deinem kostenlosen Plan enthaltenen Chat-Sitzungen diesen Monat genutzt. Hinterlasse deine E-Mail-Adresse und wir benachrichtigen dich, sobald Premium verfügbar ist.",
+    "fieldEmail": "E-Mail-Adresse",
+    "submit": "Premium-Warteliste beitreten",
+    "sending": "Wird gesendet…",
+    "success": "Danke — wir melden uns bei dir.",
+    "error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "dismiss": "Schließen",
+    "consent": "Ich stimme zu, eine E-Mail beim Premium-Start zu erhalten.",
+    "resetsOn": "Setzt zurück am"
   }
 }
