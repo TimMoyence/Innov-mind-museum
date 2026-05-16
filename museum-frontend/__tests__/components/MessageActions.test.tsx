@@ -4,23 +4,18 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import type { ChatUiMessageMetadata } from '@/features/chat/application/chatSessionLogic.pure';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 
-jest.mock('@/features/chat/ui/FollowUpButtons', () => {
+jest.mock('@/features/chat/ui/AskMoreChip', () => {
   const { Text, Pressable } = require('react-native');
   return {
-    FollowUpButtons: ({
-      questions,
-      onPress,
-    }: {
-      questions: string[];
-      onPress: (text: string) => void;
-    }) => (
-      <>
-        {questions.map((q: string) => (
-          <Pressable key={q} onPress={() => { onPress(q); }} testID={`followup-${q}`}>
-            <Text>{q}</Text>
-          </Pressable>
-        ))}
-      </>
+    AskMoreChip: ({ text, onPress }: { text: string; onPress: (text: string) => void }) => (
+      <Pressable
+        onPress={() => {
+          onPress(text);
+        }}
+        testID={`askmore-${text}`}
+      >
+        <Text>{text}</Text>
+      </Pressable>
     ),
   };
 });
@@ -37,7 +32,13 @@ jest.mock('@/features/chat/ui/RecommendationChips', () => {
     }) => (
       <>
         {recommendations.map((r: string) => (
-          <Pressable key={r} onPress={() => { onPress(r); }} testID={`rec-${r}`}>
+          <Pressable
+            key={r}
+            onPress={() => {
+              onPress(r);
+            }}
+            testID={`rec-${r}`}
+          >
             <Text>{r}</Text>
           </Pressable>
         ))}
@@ -67,13 +68,13 @@ describe('MessageActions', () => {
     expect(toJSON()).toBeNull();
   });
 
-  it('renders follow-up buttons and fires onFollowUpPress', () => {
+  it('renders AskMoreChip for suggestedFollowUp and fires onFollowUpPress (B3)', () => {
     const metadata: ChatUiMessageMetadata = {
-      followUpQuestions: ['What year was it painted?'],
+      suggestedFollowUp: 'What year was it painted?',
     };
 
     render(<MessageActions {...baseProps} metadata={metadata} />);
-    const btn = screen.getByTestId('followup-What year was it painted?');
+    const btn = screen.getByTestId('askmore-What year was it painted?');
     fireEvent.press(btn);
     expect(baseProps.onFollowUpPress).toHaveBeenCalledWith('What year was it painted?');
   });

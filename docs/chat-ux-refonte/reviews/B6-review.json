@@ -1,0 +1,95 @@
+{
+  "feature": "B6",
+  "spec": "docs/chat-ux-refonte/specs/B6.md",
+  "baseline": "325873b3",
+  "reviewer": "review-agent-2026-05-15-B6-001 (fresh)",
+  "date": "2026-05-15",
+  "loop": 1,
+  "verdict": "CHANGES_REQUESTED",
+  "weightedMean": 80,
+  "axes": {
+    "correctness": {
+      "score": 70,
+      "weight": 0.30,
+      "summary": "Hook + banner are spec-faithful (R1-R26 met, AC1-AC20 pass, 41/41 B6 tests green). Wire R27/AC22 verified — home wires `intent: 'audio'` + museumId/museumName/coordinates to startConversation. HOWEVER : the green agent's collateral edit to `useStartConversation.ts` introduces a runtime regression — `payload.intent = intent;` is now unconditional, so `intent: 'audio'` and `intent: 'camera'` are forwarded to the BE. The BE Zod schema (`createSessionSchema.intent = z.enum(CHAT_SESSION_INTENTS).optional()` with `CHAT_SESSION_INTENTS = ['default','walk']`) will reject these payloads with a 400 — breaking B6's own tap action AND the pre-existing HomeIntentChips vocal/camera chips (which previously relied on the deliberate `if (intent === 'default' || intent === 'walk')` filter to strip non-BE intents while still passing them as URL query params).",
+      "findings": [
+        {
+          "id": "F1",
+          "severity": "HIGH",
+          "evidence": "museum-frontend/features/chat/application/useStartConversation.ts:64 now does `payload.intent = intent;` unconditionally vs prior filter `if (intent === 'default' || intent === 'walk') payload.intent = intent;`. BE schema museum-backend/src/modules/chat/adapters/primary/http/schemas/chat-session.schemas.ts:98 enforces `z.enum(CHAT_SESSION_INTENTS).optional()` and museum-backend/src/modules/chat/domain/chat.types.ts:46 declares `CHAT_SESSION_INTENTS = ['default','walk']`. Sending `intent: 'audio'` or `intent: 'camera'` will trigger a 400 contract violation at runtime — affecting BOTH B6's banner tap AND the pre-existing HomeIntentChips (home-intent-chip-vocal / home-intent-chip-camera).",
+          "recommendation": "Revert the `useStartConversation.ts` filter change to its original form OR extend BE `CHAT_SESSION_INTENTS` to include `'audio' | 'camera'` (a real BE change, contradicting spec R30 NO BE CHANGE). FE-only fix preferred : keep `if (intent === 'default' || intent === 'walk') { payload.intent = intent; }` AND independently preserve `payload.museumName = options?.museumName;` (that addition is correct). The router.push query suffix `?intent=audio|camera|walk` is the proper FE-only channel for these — it does not need to round-trip via the BE payload."
+        },
+        {
+          "id": "F2",
+          "severity": "MEDIUM",
+          "evidence": "No FE test asserts the *absence* of `intent: 'audio'|'camera'` in `mockCreateSession` payload — __tests__/screens/home.test.tsx:143-160 only asserts router.push URL contains `?intent=audio|camera`, not the createSession body. The B6 home test (__tests__/screens/home-proactive-museum-banner.test.tsx:251) asserts `payload.intent === 'audio'` IS sent — which becomes the source-of-truth that codifies the regression.",
+          "recommendation": "After reverting F1 : adjust AC22 expectation in the test (and spec §1.3 R27) so the createSession payload is asserted WITHOUT `intent: 'audio'` (URL query keeps `?intent=audio`). The intent is an FE-side directive for `useChatSessionIntents` post-navigation, not a BE contract value."
+        }
+      ]
+    },
+    "scope-fidelity": {
+      "score": 70,
+      "weight": 0.20,
+      "summary": "Hook + banner scope is clean (FE-only, BE untouched). HOWEVER the `useStartConversation` rewrite + `CreateSessionRequestDTO.intent` union extension is mis-justified as a 'gap fix' — the BE contract is `'default' | 'walk'` and was never updated. Extending the FE type to `'default' | 'walk' | 'audio' | 'camera'` mirrors the FE-side `ConversationIntent` type that already existed in useStartConversation.ts:10, but the request DTO claims to be a wire contract — so widening it lies to callers about what the BE accepts. Other gates met : zero BE files modified (verified `git status museum-backend/` empty), no push notif, no GPS auto-prompt, no new dep.",
+      "findings": [
+        {
+          "id": "F3",
+          "severity": "MEDIUM",
+          "evidence": "museum-frontend/features/chat/domain/contracts.ts:12 widened from `intent?: 'default' | 'walk'` to `intent?: 'default' | 'walk' | 'audio' | 'camera'`. The generated OpenAPI types (shared/api/generated/openapi.ts:3777) still constrain `intent: 'default' | 'walk'`. The DTO is the wire contract — widening it without a matching BE schema change creates a type-vs-runtime drift.",
+          "recommendation": "Narrow `CreateSessionRequestDTO.intent` back to `'default' | 'walk'` (matches BE). Keep the local FE alias `ConversationIntent = 'default' | 'camera' | 'audio' | 'walk'` in useStartConversation.ts as the input contract for callers — it converts down to the wire DTO via the existing filter. This was the prior, correct design."
+        }
+      ]
+    },
+    "kiss-dry-hexagonal": {
+      "score": 92,
+      "weight": 0.15,
+      "summary": "Hook is well-isolated, uses `useLocation` façade (R32), no direct expo-location import. Type guard `isEligibleEntry` cleanly narrows fields (avoids non-null assertions). The closure-cell cancellation-flag pattern (`state.cancelled` + accessor) is unusual but documented in-source as a workaround for typescript-eslint flow narrowing of `let cancelled = false` post-await. `lastFetchedTileRef` deduplicates fetches per ~111m tile — pragmatic. Banner is React.memo (R26), double-Pressable with stopPropagation (R21). No reach-around to chatApi from the banner (R33).",
+      "findings": []
+    },
+    "a11y-design-system": {
+      "score": 95,
+      "weight": 0.15,
+      "summary": "Card root + dismiss have separate `accessibilityRole='button'` and distinct labels (R21, AC18). hitSlop=12 on the dismiss gives ≥44dp effective hit target (WCAG 2.5.5). Ionicons `location` + `close` (no Unicode emoji — R25, NFR10). DS tokens used : `theme.cardBackground` / `theme.surface` / `theme.primary` / `theme.textPrimary` / `theme.textSecondary` + `space`/`radius`/`semantic`. `numberOfLines={1}` on title/subtitle preserves VoiceOver via root label. No animation → useReducedMotion N/A (per spec NFR2).",
+      "findings": []
+    },
+    "security-honesty": {
+      "score": 90,
+      "weight": 0.20,
+      "summary": "Telemetry is bucket-only (`'0-50'|'50-100'|'100-150'|'150-200'`) — no museum id, no museum name, no exact distance, no coords (NFR4 honoured). Storage key value is an ISO timestamp (non-sensitive). API errors caught silently with `console.debug` reason only (no stack leakage). No TODO/FIXME in B6 code. The `useStartConversation.ts` regression is honestly documented in tracking.md as a green-agent decision, so it is not hidden — but the framing as 'bug fix mandated by R27/AC22' overstates the case : R27/AC22 only mandate the wire intent be 'audio'; the BE contract was not consulted. The type guard `isEligibleEntry` is preferable to blind `!` assertions. No new permissions surface introduced (banner reuses existing GPS via useLocation façade).",
+      "findings": [
+        {
+          "id": "F4",
+          "severity": "LOW",
+          "evidence": "tracking.md line for 2026-05-15 B6 red → review frames the useStartConversation rewrite as 'forward intent always (was filtered to default/walk)' as if the prior filter were a defect. The prior filter was an intentional reflection of the BE Zod enum — verified at museum-backend/src/modules/chat/domain/chat.types.ts:46.",
+          "recommendation": "Update tracking.md to record that the filter removal is a regression to revert (post-loop2)."
+        }
+      ]
+    }
+  },
+  "gates": {
+    "no_unicode_emoji": "PASS — Ionicons only (location/close).",
+    "no_feature_flag": "PASS — no *_ENABLED flag introduced.",
+    "bury_dead_code": "N/A — no deletions, no zombie stubs.",
+    "i18n_translations_real": "PASS — 6 keys × 8 locales = 48 strings, genuine translations per locale (ar/de/en/es/fr/it/ja/zh) with proper `{{museumName}}` interpolation. `check:i18n` reports 822 keys OK across all 8 locales.",
+    "no_new_deps": "PASS — no package.json changes."
+  },
+  "build_verification": {
+    "lint": "PASS — `npm run lint` exit 0 (eslint --max-warnings=0 && tsc --noEmit).",
+    "tests_full_suite": "PASS — 244 suites / 2666 tests (matches dispatcher claim ; baseline post-B2 was 2625, +41 new B6 tests).",
+    "tests_b6_scoped": "PASS — 41 B6 tests across 3 files (22 in useProactiveMuseumSuggestion.test.tsx + 14 in ProactiveMuseumBanner.test.tsx + 5 in home-proactive-museum-banner.test.tsx). Verified via `grep -c '^\\s*it('`.",
+    "i18n": "PASS — `npm run check:i18n` : 822 keys OK in all 8 locales."
+  },
+  "scope_expansion_assessment": {
+    "subject": "Extension of `CreateSessionRequestDTO.intent` union to include `'audio' | 'camera'` + removal of the filter in useStartConversation.ts",
+    "verdict": "NOT_LEGITIMATE",
+    "rationale": "The dispatcher framed this as 'a real bug fix mandated by R27/AC22'. R27/AC22 mandate that B6's tap action calls createSession with `intent: 'audio'`. But the spec NEVER verified that the BE accepts that value. Verified : museum-backend/src/modules/chat/domain/chat.types.ts:46 `CHAT_SESSION_INTENTS = ['default','walk']` + museum-backend/src/modules/chat/adapters/primary/http/schemas/chat-session.schemas.ts:98 `z.enum(CHAT_SESSION_INTENTS).optional()`. The prior FE filter `if (intent === 'default' || intent === 'walk')` was the deliberate FE-side adapter that downcast the rich FE-intent enum (`'default'|'camera'|'audio'|'walk'`) to the BE-accepted subset, while still surfacing the full intent via the `?intent=...` URL query for `useChatSessionIntents` to consume on the chat screen. Removing the filter sends `intent: 'audio'` / `intent: 'camera'` to the BE, which will return 400 in production. This breaks (a) B6's own tap action AND (b) the pre-existing HomeIntentChips vocal/camera chips that share the same code path. Spec R30 explicitly says NO BE CHANGE — so the proper resolution is to restore the FE filter, keep `museumName` propagation (which IS a legitimate addition), and adjust the B6 home integration test to assert intent is conveyed via URL query (already the case) rather than via createSession payload."
+  },
+  "top_findings_ranked": [
+    "F1 (HIGH) — useStartConversation removes the intent filter ; BE will 400 on audio/camera intents.",
+    "F2 (MEDIUM) — B6 integration test (AC22) codifies the regression by asserting payload.intent === 'audio'.",
+    "F3 (MEDIUM) — CreateSessionRequestDTO widened to include audio/camera, drifting from BE Zod enum.",
+    "F4 (LOW) — tracking.md frames the filter removal as a fix rather than a regression."
+  ],
+  "recommendation": "CHANGES_REQUESTED — return to green for a focused fix : (1) revert useStartConversation.ts to filter intent forward as `'default'|'walk'` only (keep museumName propagation, that part is correct) ; (2) revert CreateSessionRequestDTO.intent to `'default' | 'walk'` ; (3) amend home-proactive-museum-banner.test.tsx AC22 expectation so the createSession payload does NOT carry `intent: 'audio'` — instead assert the URL query contains `intent=audio` (already covered in a separate test case at line 282). The hook + banner themselves are excellent (R1-R26 satisfied, 41 tests green, KISS/DRY/a11y exemplary). Estimated rework : 1 file revert (useStartConversation.ts), 1 file revert (contracts.ts), 1 test assertion adjustment, no spec change needed (R27 says the *URL query* must carry intent=audio, not the wire payload — re-read with that lens). Approve loop 2 once the regression is gone.",
+  "weighted_calculation": "0.30*70 + 0.20*70 + 0.15*92 + 0.15*95 + 0.20*90 = 21 + 14 + 13.8 + 14.25 + 18 = 81.05 → rounded 80 (CHANGES_REQUESTED threshold < 85)."
+}

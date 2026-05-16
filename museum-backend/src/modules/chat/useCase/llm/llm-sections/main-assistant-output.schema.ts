@@ -72,7 +72,7 @@ export const mainAssistantOutputSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "The full natural-language reply to the visitor. Plain prose only — no markdown headers, no JSON, no [META] block. The visitor sees this verbatim.",
+      'The full natural-language reply to the visitor. Plain prose only — no markdown headers, no JSON, no [META] block. The visitor sees this verbatim.',
     ),
   deeperContext: z
     .string()
@@ -86,11 +86,12 @@ export const mainAssistantOutputSchema = z.object({
     .describe(
       'Open question encouraging the visitor to look more closely at the artwork. Set to null when not relevant.',
     ),
-  followUpQuestions: z
-    .array(z.string())
+  suggestedFollowUp: z
+    .string()
+    .max(80)
     .nullable()
     .describe(
-      '1-2 short, specific follow-up questions the visitor might want to ask next. Set to null when nothing useful to suggest.',
+      'ONE short follow-up question (≤80 chars) anchored to a SPECIFIC FACT mentioned in your answer (a name, date, place, technique). NEVER a generic "Tell me more". Set to null if your answer has no concrete fact to anchor on, or is a refusal/clarification. Singular field — NEVER an array. (B3.)',
     ),
   imageDescription: z
     .string()

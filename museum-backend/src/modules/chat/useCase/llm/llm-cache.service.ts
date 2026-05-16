@@ -137,7 +137,11 @@ export class LlmCacheServiceImpl implements LlmCacheService {
 
 /** Canonical SHA-256 over the cache-relevant fields of the input. Order-stable. */
 function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
-  const canonical = {
+  // R8 / AC6 — `imageContentHash` is included ONLY when present (conditional
+  // spread). Legacy text-only entries produce the SAME canonical JSON as today
+  // (no `imageContentHash` key in the serialized form), so the post-C3 cache
+  // remains backward-compatible with pre-C3 stored entries.
+  const canonical: Record<string, unknown> = {
     model: input.model,
     systemSection: input.systemSection,
     locale: input.locale,
@@ -145,6 +149,9 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
     userPreferencesHash: input.userPreferencesHash ?? null,
     prompt: input.prompt,
   };
+  if (input.imageContentHash !== undefined) {
+    canonical.imageContentHash = input.imageContentHash;
+  }
   // Sort keys for deterministic JSON. localeCompare for stable ordering.
   const sortedJson = JSON.stringify(
     canonical,

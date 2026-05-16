@@ -354,6 +354,12 @@ export class GuardrailEvaluationService {
     // Logging again here would double-write to the hash chain.
     const refusalText = buildGuardrailRefusal(requestedLocale, reason);
     const refusalMetadata = withPolicyCitation({}, reason);
+    // A5 (Q1 decision 2026-05-14) — refusals follow the standard
+    // `composing → done` path. The terminal phase is `done` regardless of
+    // whether the pipeline returned a real answer or a refusal — uniformity
+    // simplifies FE handling (StatusIndicator unmounts on response in both
+    // cases). Spec §1.1 R1 + dispatcher Q1.
+    refusalMetadata.phase = 'done';
     const { refusal } = await this.repository.persistBlockedExchange({
       userMessage,
       refusal: {

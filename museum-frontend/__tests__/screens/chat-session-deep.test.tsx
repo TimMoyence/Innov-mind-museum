@@ -205,13 +205,11 @@ jest.mock('@/features/chat/ui/ChatHeader', () => {
     ChatHeader: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-ChatHeader' })),
   };
 });
-jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
+jest.mock('@/features/chat/ui/Composer', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
   return {
-    MediaAttachmentPanel: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-MediaAttachmentPanel' }),
-    ),
+    Composer: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-Composer' })),
   };
 });
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
@@ -237,10 +235,7 @@ const childMockSpec: Record<string, { module: string; export: string }> = {
   ChatMessageList: { module: '@/features/chat/ui/ChatMessageList', export: 'ChatMessageList' },
   ChatInput: { module: '@/features/chat/ui/ChatInput', export: 'ChatInput' },
   ChatHeader: { module: '@/features/chat/ui/ChatHeader', export: 'ChatHeader' },
-  MediaAttachmentPanel: {
-    module: '@/features/chat/ui/MediaAttachmentPanel',
-    export: 'MediaAttachmentPanel',
-  },
+  Composer: { module: '@/features/chat/ui/Composer', export: 'Composer' },
   OfflineBanner: { module: '@/features/chat/ui/OfflineBanner', export: 'OfflineBanner' },
   WalkSuggestionChips: {
     module: '@/features/chat/ui/WalkSuggestionChips',
@@ -508,10 +503,10 @@ describe('ChatSessionScreen — onClose', () => {
   });
 });
 
-describe('ChatSessionScreen — onSend (via ChatInput wiring)', () => {
-  it('passes a stable onSend callback to ChatInput', () => {
+describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
+  it('passes a stable onSend callback to Composer', () => {
     render(<ChatSessionScreen />);
-    const props = lastProps<{ onSend: () => void }>('ChatInput');
+    const props = lastProps<{ onSend: () => void }>('Composer');
     expect(typeof props.onSend).toBe('function');
   });
 
@@ -520,7 +515,7 @@ describe('ChatSessionScreen — onSend (via ChatInput wiring)', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ sendMessage }));
 
     render(<ChatSessionScreen />);
-    const onSend = lastProps<{ onSend: () => void }>('ChatInput').onSend;
+    const onSend = lastProps<{ onSend: () => void }>('Composer').onSend;
     onSend();
     // microtask drain
     await Promise.resolve();
@@ -528,22 +523,22 @@ describe('ChatSessionScreen — onSend (via ChatInput wiring)', () => {
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
-  it('disables ChatInput while consent is unresolved', () => {
+  it('disables Composer while consent is unresolved', () => {
     mockAiConsentState.consentResolved = false;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean }>('ChatInput');
+      const props = lastProps<{ isSending: boolean }>('Composer');
       expect(props.isSending).toBe(true);
     } finally {
       mockAiConsentState.consentResolved = true;
     }
   });
 
-  it('disables ChatInput while consent modal is showing', () => {
+  it('disables Composer while consent modal is showing', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean }>('ChatInput');
+      const props = lastProps<{ isSending: boolean }>('Composer');
       expect(props.isSending).toBe(true);
     } finally {
       mockAiConsentState.showAiConsent = false;
@@ -995,12 +990,12 @@ describe('ChatSessionScreen — onSend full path', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ sendMessage }));
     render(<ChatSessionScreen />);
 
-    // Drive the input value through ChatInput's onChangeText, then press onSend.
-    const onChangeText = lastProps<{ onChangeText: (s: string) => void }>('ChatInput').onChangeText;
+    // Drive the input value through Composer's onChangeText, then press onSend.
+    const onChangeText = lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText;
     act(() => {
       onChangeText('Tell me more');
     });
-    const onSend = lastProps<{ onSend: () => void }>('ChatInput').onSend;
+    const onSend = lastProps<{ onSend: () => void }>('Composer').onSend;
     await act(async () => {
       onSend();
       await Promise.resolve();
@@ -1008,7 +1003,7 @@ describe('ChatSessionScreen — onSend full path', () => {
 
     expect(sendMessage).toHaveBeenCalledWith({ text: 'Tell me more' });
     // Input value cleared after send.
-    expect(lastProps<{ value: string }>('ChatInput').value).toBe('');
+    expect(lastProps<{ text: string }>('Composer').text).toBe('');
   });
 
   it('restores the typed text when sendMessage rejects (returns falsy)', async () => {
@@ -1017,62 +1012,85 @@ describe('ChatSessionScreen — onSend full path', () => {
     render(<ChatSessionScreen />);
 
     act(() => {
-      lastProps<{ onChangeText: (s: string) => void }>('ChatInput').onChangeText('failing text');
+      lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText('failing text');
     });
     await act(async () => {
-      lastProps<{ onSend: () => void }>('ChatInput').onSend();
+      lastProps<{ onSend: () => void }>('Composer').onSend();
       await Promise.resolve();
     });
 
     expect(sendMessage).toHaveBeenCalledWith({ text: 'failing text' });
-    expect(lastProps<{ value: string }>('ChatInput').value).toBe('failing text');
+    expect(lastProps<{ text: string }>('Composer').text).toBe('failing text');
   });
 });
 
-describe('ChatSessionScreen — MediaAttachmentPanel + context-menu wiring', () => {
-  it('forwards toggleRecording, playRecordedAudio, onPickImage, onTakePicture and clearMedia', () => {
+describe('ChatSessionScreen — Composer media wiring (A1)', () => {
+  it('forwards toggleRecording, recordedAudioUri and isRecording to Composer (R23)', () => {
     render(<ChatSessionScreen />);
     const props = lastProps<{
-      toggleRecording: () => void;
-      playRecordedAudio: () => void;
+      toggleRecording: () => Promise<void> | void;
+      recordedAudioUri: string | null;
+      isRecording: boolean;
+      onOpenAttachments: () => void;
+    }>('Composer');
+
+    expect(typeof props.toggleRecording).toBe('function');
+    expect(typeof props.onOpenAttachments).toBe('function');
+
+    // Recording toggle is wired through the audio recorder hook (the screen
+    // wraps it behind the EU AI Act gate; with disclosure pre-acknowledged
+    // the raw recorder hook fires synchronously).
+    void props.toggleRecording();
+    expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the attachment-picker route with wired media + audio handles (R22)', () => {
+    render(<ChatSessionScreen />);
+    const { onOpenAttachments } = lastProps<{
+      onOpenAttachments: () => void;
+    }>('Composer');
+
+    onOpenAttachments();
+    const openedCall = mockRouterOpen.mock.calls.find((c) => c[0] === 'attachment-picker');
+    expect(openedCall).toBeDefined();
+    const params = openedCall?.[1] as {
       onPickImage: () => void;
       onTakePicture: () => void;
+      toggleRecording: () => Promise<void> | void;
+      playRecordedAudio: () => Promise<void> | void;
       clearMedia: () => void;
-    }>('MediaAttachmentPanel');
+    };
 
-    props.toggleRecording();
-    expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1);
-
-    props.playRecordedAudio();
-    expect(mockAudioRecorderState.playRecordedAudio).toHaveBeenCalledTimes(1);
-
-    props.onPickImage();
+    params.onPickImage();
     expect(mockImagePickerState.onPickImage).toHaveBeenCalledTimes(1);
 
-    props.onTakePicture();
+    params.onTakePicture();
     expect(mockImagePickerState.onTakePicture).toHaveBeenCalledTimes(1);
 
-    props.clearMedia();
+    void params.playRecordedAudio();
+    expect(mockAudioRecorderState.playRecordedAudio).toHaveBeenCalledTimes(1);
+
+    params.clearMedia();
     expect(mockImagePickerState.clearSelectedImage).toHaveBeenCalled();
     expect(mockAudioRecorderState.clearRecordedAudio).toHaveBeenCalled();
   });
 });
 
-describe('ChatSessionScreen — ChatInput value change', () => {
+describe('ChatSessionScreen — Composer value change', () => {
   it('passes a fresh value down after onChangeText is invoked', () => {
     render(<ChatSessionScreen />);
-    expect(lastProps<{ value: string }>('ChatInput').value).toBe('');
+    expect(lastProps<{ text: string }>('Composer').text).toBe('');
 
     act(() => {
-      lastProps<{ onChangeText: (s: string) => void }>('ChatInput').onChangeText('typing...');
+      lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText('typing...');
     });
 
-    expect(lastProps<{ value: string }>('ChatInput').value).toBe('typing...');
+    expect(lastProps<{ text: string }>('Composer').text).toBe('typing...');
   });
 
   it('onClearImage clears the selected image via the image picker hook', () => {
     render(<ChatSessionScreen />);
-    const onClearImage = lastProps<{ onClearImage: () => void }>('ChatInput').onClearImage;
+    const onClearImage = lastProps<{ onClearImage: () => void }>('Composer').onClearImage;
     onClearImage();
     expect(mockImagePickerState.clearSelectedImage).toHaveBeenCalledTimes(1);
   });

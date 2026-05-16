@@ -7,6 +7,7 @@ import {
 } from '../chatSessionLogic.pure';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
 import { handleSendError } from './sendStrategy.shared';
+import { logPhaseTelemetry } from './phase-telemetry';
 import type { SendMessageContext, SendResult } from './sendStrategy.types';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
@@ -81,6 +82,15 @@ export const sendMessageStreaming = async (
         const finalText = context.streamTextRef.current;
         context.resetStreaming();
 
+        // A5 (R22) — telemetry-only consume of `metadata.phase`. The phase is
+        // a BE-owned audit signal ; the FE displays its own simulated phase
+        // via `useStatusPhase` (R10-R17). When the field is absent (legacy
+        // messages, R23) we silently skip — no throw, no log.
+        logPhaseTelemetry(payload.metadata, {
+          sessionId: context.sessionId,
+          messageId: payload.messageId,
+        });
+
         context.setMessages((prev) =>
           prev.map((m) =>
             m.id === streamingPlaceholderId
@@ -106,6 +116,12 @@ export const sendMessageStreaming = async (
     // Non-streaming fallback (image messages or streaming not available)
     if (response && (!context.streamingIdRef.current || attempt.imageUri)) {
       context.resetStreaming();
+      // A5 (R22) — same telemetry hook as the SSE `onDone` branch above. The
+      // BE today returns sync (SSE deprecated), so this is the live path.
+      logPhaseTelemetry(response.metadata, {
+        sessionId: context.sessionId,
+        messageId: response.message.id,
+      });
       // Invariant: when SSE streaming completes via onDone in chatApi.sendMessageSmart,
       // it returns result.message.text === '' so this fallback block is skipped.
       // If chatApi ever returns partial streamed text on onDone, this guard breaks.

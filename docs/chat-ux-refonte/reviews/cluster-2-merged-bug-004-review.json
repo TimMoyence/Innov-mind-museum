@@ -1,0 +1,138 @@
+{
+  "finding_id": "merged_bug_004",
+  "title": "A5 chat.phase.* spans drop on failure path (composing + analyzing-image)",
+  "reviewer": "fresh-context-reviewer (cluster-2 post-merge)",
+  "review_date": "2026-05-15",
+  "baseline": "c650fca32",
+  "branch": "worktree-feat+chat-ux-refonte",
+  "verdict": "APPROVED",
+  "weighted_mean": 92,
+  "axes": {
+    "correctness": {
+      "score": 95,
+      "weight": 0.35,
+      "notes": "try/finally + outcome ladder strictly mirrors TTS pattern. Composing: outcome flips to 'error' in catch BEFORE mapOrchestratorError throws, finally emits span unconditionally with hasImage + outcome. Analyzing-image: outcome flips, re-throw preserves stack, finally emits with sessionId + outcome. Both sites capture startedAtMs BEFORE the await — durationMs is positive in failure path (time-to-failure visible). ChatPhaseOutcome imported as type-only from chat-phase-timer (single source of truth, no duplication)."
+    },
+    "scope_fidelity": {
+      "score": 95,
+      "weight": 0.25,
+      "notes": "A5 R2/R3 strictly respected: analyzing-image span wraps `processImage` ONLY — `runOcrGuard` stays outside the finally block (line 225). Comment explicitly calls this out ('runOcrGuard stays OUTSIDE the wrap — span scope is strictly processImage per A5 R2/R3'). No drift into LLM-internal phases or sibling spans. Composing wrap is tight on `orchestrator.generate` only — `tryLlmCacheStore` and `commitResponse` remain outside. Out-of-scope items correctly deferred (classifyError + Prom error counter for these phases — finding scope was Langfuse drop only)."
+    },
+    "kiss": {
+      "score": 88,
+      "weight": 0.2,
+      "notes": "Pattern replication, not abstraction — KISS-aligned. ~15 lines added per site, no extracted helper (good: 2 sites do not warrant abstraction yet). One minor cost: `Awaited<ReturnType<ImageProcessingService['processImage']>>` indirection on the `processed` variable declaration (acceptable — avoids importing the private `ProcessedImage` return type from an adjacent service and keeps the existing public surface unchanged). Mock-first test strategy (`jest.mock('@shared/observability/chat-phase-span', ...)` with `__getRecordedCalls` helpers) is pragmatic and lets assertions inspect the metadata payload — labels alone would miss `outcome`."
+    },
+    "a11y": {
+      "score": null,
+      "weight": 0,
+      "notes": "N/A — backend observability fix, no UI surface."
+    },
+    "security_honesty": {
+      "score": 94,
+      "weight": 0.2,
+      "notes": "No new PII surfaces: composing metadata = { sessionId, requestId, hasImage, outcome }; analyzing-image metadata = { sessionId, outcome }. No textLength, no raw image bytes, no user content. Fail-open posture preserved via `safeTrace` inside `emitChatPhaseSpan`. `throw err` in analyzing-image catch preserves stack; `mapOrchestratorError(err, requestId)` re-thrown in composing catch preserves AppError subclasses (UPSTREAM_UNAVAILABLE 503, CircuitOpenError, etc.). UFR-013 honesty: comments cite exact line ranges of TTS reference (`text-to-speech.openai.ts:115-132`) — verified in source."
+    }
+  },
+  "site_1_composing": {
+    "path": "museum-backend/src/modules/chat/useCase/message/chat-message.service.ts",
+    "tts_pattern_conformity": "FULL",
+    "evidence": [
+      "let outcome: ChatPhaseOutcome = 'success' declared before try",
+      "outcome = 'error' flipped in catch BEFORE re-throw via mapOrchestratorError",
+      "finally block emits emitChatPhaseSpan('composing', composingStartedAtMs, { sessionId, requestId, hasImage, outcome })",
+      "ChatPhaseOutcome imported as type-only from @shared/observability/chat-phase-timer (line 57)"
+    ],
+    "delta_vs_baseline": "+8 / -4 lines, comment block (4 lines) cites merged_bug_004 + TTS reference"
+  },
+  "site_2_analyzing_image": {
+    "path": "museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts",
+    "tts_pattern_conformity": "FULL",
+    "evidence": [
+      "let outcome: ChatPhaseOutcome = 'success' declared before try",
+      "processed declared via Awaited<ReturnType<ImageProcessingService['processImage']>> to avoid importing private return type",
+      "outcome = 'error'; throw err sequence in catch (re-throw preserves stack)",
+      "finally block emits emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId, outcome })",
+      "runOcrGuard remains OUTSIDE the try/finally (line 225, after the closing brace) — A5 R2/R3 scope respected"
+    ],
+    "delta_vs_baseline": "+14 / -3 lines, comment block calls out runOcrGuard exclusion explicitly"
+  },
+  "tradeoffs_evaluated": [
+    {
+      "tradeoff": "No classifyError + Prom counter for composing / analyzing-image phases",
+      "verdict": "ACCEPTED",
+      "rationale": "Out of scope for merged_bug_004 (finding was Langfuse drop only). chatPhaseErrorsTotal Prom dimension is owned by ChatPhaseTimer for {stt,llm,tts} only — extending to {analyzing-image,composing,...} would expand the phase label set and break the existing Prom contract. Track as separate observability follow-up if engineers need error-class alerting on these phases."
+    },
+    {
+      "tradeoff": "`Awaited<ReturnType<ImageProcessingService['processImage']>>` indirection vs importing ProcessedImage",
+      "verdict": "ACCEPTED",
+      "rationale": "ProcessedImage is a private structural type inside ImageProcessingService. Promoting it to a public domain type just to declare `let processed: ProcessedImage` would expand the port surface for purely local use. The Awaited indirection is a standard TypeScript idiom, fully resolved at compile time, and keeps the hexagonal boundary tight."
+    },
+    {
+      "tradeoff": "Mock `emitChatPhaseSpan` directly vs `safeTrace` label capture (a la existing A5 tests)",
+      "verdict": "ACCEPTED",
+      "rationale": "safeTrace labels do not surface the metadata payload — outcome verification requires inspecting the metadata object. Direct mock of @shared/observability/chat-phase-span with __getRecordedCalls helpers gives the test precise access to (phase, startedAtMs, metadata) triples. Pattern is isolated to this one test file; existing A5 span tests via safeTrace remain valid for their label-only assertions."
+    }
+  ],
+  "verification": {
+    "lint": {
+      "command": "pnpm lint",
+      "exit_code": 0,
+      "outcome": "PASS (eslint src/ + lint:test-discipline + tsc --noEmit all clean)"
+    },
+    "tests_targeted": {
+      "command": "pnpm test -- --testPathPattern=chat-phase-spans",
+      "outcome": "PASS",
+      "details": "Test Suites: 2 passed (existing chat-phase-spans + new chat-phase-spans-failure), Tests: 12 passed (6 existing + 6 new) — exact match to expected 12/12. ELIFECYCLE artifact is global coverage threshold (88% global) not met when running scoped tests; not a real failure."
+    },
+    "tests_chat_scope": {
+      "command": "pnpm test -- --testPathPattern=chat/",
+      "outcome": "PASS",
+      "details": "Test Suites: 169 passed, 6 skipped. Tests: 2131 passed, 49 skipped, 0 failed. Zero regression on chat scope."
+    },
+    "tests_frontend": {
+      "command": "npm test (museum-frontend)",
+      "outcome": "PASS",
+      "details": "Test Suites: 249 passed. Tests: 2704 passed (unchanged from baseline). Snapshots: 4 passed."
+    }
+  },
+  "red_tests_coverage_check": {
+    "composing_success_outcome": "COVERED (test 1)",
+    "composing_error_outcome": "COVERED (test 2 — orchestrator.generate rejects with AppError 503 UPSTREAM_UNAVAILABLE)",
+    "analyzing_image_success_outcome": "COVERED (test 4)",
+    "analyzing_image_error_outcome": "COVERED (test 5 — stripExif rejects with AppError 400 IMAGE_DECODE_FAILED, propagates out of processImage)",
+    "duration_ms_positive_smoke": "COVERED (test 3 composing both outcomes + test 6 analyzing-image both outcomes — startedAtMs typeof number, > 0, <= Date.now())",
+    "metadata_payload_integrity": "COVERED (every test asserts metadata.outcome via the spanMock.__getRecordedCalls() helper, not just label presence)",
+    "verdict": "All 6 expected red cases present and aligned to finding rubric."
+  },
+  "top_findings": [
+    {
+      "severity": "info",
+      "title": "ChatPhaseOutcome type reuse from chat-phase-timer",
+      "description": "Both sites correctly import ChatPhaseOutcome as a type-only import from @shared/observability/chat-phase-timer — single source of truth. No type duplication risk."
+    },
+    {
+      "severity": "info",
+      "title": "runOcrGuard scope guard documented inline",
+      "description": "prepare-message.pipeline.ts line 213 comment explicitly states 'runOcrGuard stays OUTSIDE the wrap — span scope is strictly processImage per A5 R2/R3'. Excellent guardrail for future drift."
+    },
+    {
+      "severity": "info",
+      "title": "TTS pattern reference cited at exact line range",
+      "description": "Both comments cite text-to-speech.openai.ts:115-132. Verified in source: matches the synthesizing-voice try/finally + outcome block. Future readers can cross-reference."
+    },
+    {
+      "severity": "nit",
+      "title": "Optional follow-up: classifyError for composing/analyzing-image",
+      "description": "Out of scope for this finding, but as a future iteration the chatPhaseErrorsTotal Prom dimension could be extended to {analyzing-image,composing} with a stable error_type taxonomy (timeout / upstream_5xx / image_decode_failed / etc.). Track separately if alerting need surfaces."
+    }
+  ],
+  "recommendation": {
+    "action": "COMMIT_AND_PUSH",
+    "rationale": "Fix is minimal, mirrors a proven pattern from the same A5 PR (synthesizing-voice TTS), introduces no regressions across backend (2131 chat-scope tests pass) or frontend (2704 unchanged), all 12/12 targeted phase-span tests pass (6 existing + 6 new), lint clean. Comments are honest and verifiable (UFR-013 compliant). Tradeoffs are correctly scoped (no over-engineering with Prom error counters out of finding scope). Weighted mean 92 / 100 — clears the 85 APPROVED bar.",
+    "follow_ups": [
+      "Optional: extend chatPhaseErrorsTotal taxonomy to non-LLM phases in a separate observability ticket (not blocking).",
+      "Consider adding a lightweight ESLint custom rule or doc note that any new emitChatPhaseSpan call site MUST be inside a try/finally with an outcome attribute — would prevent future regressions of this exact class."
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import { AppError } from '@shared/errors/app.error';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import {
   ChatPhaseTimer,
   type ChatPhaseErrorType,
@@ -103,6 +104,11 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       model: env.tts.model,
       metadata: { textLength: text.length, voice },
     });
+    // A5 (R5) — `chat.phase.synthesizing-voice` Langfuse span. Sibling, not
+    // replacement, of the existing `chat_phase_duration_seconds{phase=tts}`
+    // Prom dimension owned by `ChatPhaseTimer` above (spec §1.1 Q2 — distinct
+    // concerns : Prom = histogram cardinality, Langfuse = API-contract phase).
+    const synthesisStartedAtMs = Date.now();
 
     let outcome: ChatPhaseOutcome = 'success';
     let errorType: ChatPhaseErrorType = 'unknown';
@@ -117,6 +123,12 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       throw err;
     } finally {
       timer.end(outcome, errorType);
+      emitChatPhaseSpan('synthesizing-voice', synthesisStartedAtMs, {
+        requestId,
+        voice,
+        textLength: text.length,
+        outcome,
+      });
     }
   }
 }
@@ -126,10 +138,7 @@ function classifyTtsError(err: unknown): ChatPhaseErrorType {
     if (err.code === 'UPSTREAM_TIMEOUT') return 'timeout';
     if (err.code === 'UPSTREAM_TTS_ERROR') return 'upstream_5xx';
   }
-  if (
-    err instanceof DOMException &&
-    (err.name === 'TimeoutError' || err.name === 'AbortError')
-  ) {
+  if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
     return err.name === 'TimeoutError' ? 'timeout' : 'abort';
   }
   return 'unknown';

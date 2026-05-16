@@ -11,6 +11,7 @@ import { StreamBuffer } from '@modules/chat/useCase/orchestration/stream-buffer'
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { env } from '@src/config/env';
 
 import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
@@ -53,6 +54,7 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /**
  * Maps a thrown orchestrator/LLM provider error to a user-facing AppError.
@@ -303,15 +305,34 @@ export class ChatMessageService {
       return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
     }
 
+    // A5 (R4) — `chat.phase.composing` Langfuse span wraps the orchestrator
+    // call (the dominant LLM window). Sibling, not replacement, of the existing
+    // `chat_phase_duration_seconds{phase=llm}` Prom dimension owned by the
+    // LangChain orchestrator adapter (spec §1.1 Q2 — distinct concerns).
+    //
+    // bug `merged_bug_004` — span MUST also be emitted on failure (time-to-
+    // failure is exactly the window engineers need). Pattern mirrors
+    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
+    // + `outcome: 'success' | 'error'` attribute.
+    const composingStartedAtMs = Date.now();
     let aiResult: OrchestratorOutput;
+    let outcome: ChatPhaseOutcome = 'success';
     try {
       aiResult = await this.orchestrator.generate(orchestratorInput);
     } catch (err) {
+      outcome = 'error';
       // Surface orchestrator errors as 503 SERVICE_UNAVAILABLE rather than a
       // generic 500. Banking-grade contract: a downstream LLM provider failure
       // is a degraded-dependency state, not an internal server bug. Preserves
       // AppError subclasses (CircuitOpenError 503, etc.) verbatim.
       throw mapOrchestratorError(err, requestId);
+    } finally {
+      emitChatPhaseSpan('composing', composingStartedAtMs, {
+        sessionId,
+        requestId,
+        hasImage: Boolean(orchestratorInput.image),
+        outcome,
+      });
     }
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
@@ -321,7 +342,14 @@ export class ChatMessageService {
   /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
   private async tryLlmCacheLookup(ctx: LlmCacheCtx): Promise<OrchestratorOutput | null> {
     const llmCache = this.llmCache;
-    if (!llmCache || ctx.input.image || ctx.orchestratorInput.image) return null;
+    if (!llmCache) return null;
+    // C3 (R11/R12) — image presence alone is no longer a bypass condition.
+    // Bypass only when an image is present BUT no visual signature was
+    // computable (url-source, or image processing failed). Text-only paths
+    // fall through identically to today (R8 — legacy keys preserved).
+    const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
+    const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
+    if (hasImage && !hasVisualSignature) return null;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
     if (!cacheInput) return null;
     const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
@@ -331,6 +359,8 @@ export class ChatMessageService {
         userId: ctx.prep.ownerId ?? 'anon',
         sessionId: ctx.sessionId,
         requestId: ctx.requestId,
+        // C3 (R24) — observability split text-only vs image-bearing hits.
+        hasImage,
       });
       return result.value;
     }
@@ -340,7 +370,11 @@ export class ChatMessageService {
   /** G — Stores fresh LLM result in cache (bypass on same conditions as lookup). */
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
-    if (!llmCache || ctx.input.image || ctx.orchestratorInput.image) return;
+    if (!llmCache) return;
+    // C3 (R13) — store bypass mirrors lookup bypass (invariant: miss→store→hit).
+    const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
+    const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
+    if (hasImage && !hasVisualSignature) return;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
     if (!cacheInput) return;
     await llmCache.store(cacheInput, aiResult);
@@ -349,6 +383,8 @@ export class ChatMessageService {
       userId: ctx.prep.ownerId ?? 'anon',
       sessionId: ctx.sessionId,
       requestId: ctx.requestId,
+      // C3 (R24) — same symmetry on miss logs.
+      hasImage,
     });
   }
 
@@ -468,6 +504,10 @@ export class ChatMessageService {
       },
       userPreferencesHash: prep.userMemoryBlock ? hashString16(prep.userMemoryBlock) : undefined,
       prompt: sanitizedText,
+      // C3 (R6/R8) — include the visual signature ONLY when available. When
+      // absent (text-only, url-source), canonical input is byte-identical to
+      // the pre-C3 shape (legacy keys preserved — see R8 / AC6).
+      imageContentHash: prep.imageContentHash,
     };
   }
 }

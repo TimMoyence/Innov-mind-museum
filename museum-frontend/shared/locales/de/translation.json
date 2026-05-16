@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium denkt nach..."
     },
+    "status": {
+      "analyzing-image": "Werk wird analysiert…",
+      "searching-collection": "Sammlung wird durchsucht…",
+      "composing": "Antwort wird verfasst…",
+      "synthesizing-voice": "Stimme wird vorbereitet…"
+    },
     "fallback_title": "Kunstsitzung",
     "report_thanks_title": "Vielen Dank",
     "report_thanks_body": "Ihre Meldung wurde übermittelt.",
@@ -440,6 +446,68 @@
       "closeSheet": "Schliessen",
       "noQuote": "Kein Zitat fur diese Quelle verfugbar."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Museumskatalog",
+        "reference-db": "Referenzdatenbank",
+        "web": "Web-Ergebnis",
+        "ai-knowledge": "KI-Wissen"
+      },
+      "confidence": {
+        "high": "Hohe Konfidenz",
+        "medium": "Mittlere Konfidenz",
+        "low": "Niedrig — nur KI"
+      },
+      "chip": {
+        "a11y_hint": "Tippen für Quelldetails"
+      },
+      "ai_only": {
+        "disclosure_title": "Nur-KI-Antwort",
+        "disclosure_body": "Diese Antwort basiert auf dem allgemeinen Wissen der KI. Es wurde keine Quelle abgerufen. Bitte vor dem Vertrauen überprüfen."
+      }
+    },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Anhänge öffnen",
+        "open_attachments_hint": "Kamera, Galerie, Audio",
+        "mic": "Sprachnachricht",
+        "mic_recording": "Sprachaufnahme stoppen",
+        "audio_pill": "Sprachnachricht bereit, zum Prüfen tippen"
+      }
+    },
+    "attachmentPicker": {
+      "title": "An Nachricht anhängen",
+      "camera": "Foto aufnehmen",
+      "gallery": "Aus Galerie wählen",
+      "record_audio": "Sprachnachricht aufnehmen",
+      "stop_audio": "Aufnahme stoppen",
+      "scan_cartel": "Schild scannen"
+    },
+    "cartelScanner": {
+      "title": "QR-Code des Schilds scannen",
+      "instructions": "Richten Sie die Kamera auf den QR-Code am Schild des Werks",
+      "permission_title": "Kamerazugriff erforderlich",
+      "permission_body": "Musaium benötigt Kamerazugriff zum Scannen von Werkschildern. Öffnen Sie die Einstellungen, um ihn zu erlauben.",
+      "permission_open_settings": "Einstellungen öffnen",
+      "cancel": "Abbrechen",
+      "lookup_template": "Erzähl mir mehr über das Werk mit dem Schild-Code: {{code}}"
+    },
+    "artworkHero": {
+      "untitled": "Werk ohne Titel",
+      "a11y_label": "Werk: {{title}} von {{artist}}, antippen zum Vergrößern",
+      "a11y_label_untitled": "Werk ohne Titel, antippen zum Vergrößern",
+      "a11y_hint": "Öffnet Vollbild mit Pinch-Zoom",
+      "expand": "Vergrößern",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identifikation läuft"
+      },
+      "modal": {
+        "close": "Schließen",
+        "a11y_pinch_hint": "Mit zwei Fingern zum Zoomen ziehen",
+        "title_fallback": "Werkvorschau"
+      }
+    },
     "compare": {
       "title": "Ähnliche Werke",
       "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",
@@ -476,6 +544,41 @@
       "headerLabel": "Geführte Tour",
       "suggestionsLabel": "Vorschläge für die Tour",
       "suggestionHint": "Schickt diesen Vorschlag als Ihre nächste Eingabe"
+    },
+    "askMore": {
+      "a11y_label": "Folgefrage: {{text}}",
+      "a11y_hint": "Tippen, um diese Frage zu stellen"
+    },
+    "sottoVoce": {
+      "a11y_label": "Sotto-voce-Modus",
+      "a11y_hint_on": "Audio aus — tippen zum Aktivieren",
+      "a11y_hint_off": "Audio für ruhige Räume stummschalten",
+      "announcement_on": "Sotto-voce an. Audio-Antworten stumm.",
+      "announcement_off": "Sotto-voce aus. Audio-Antworten wieder aktiv."
+    },
+    "resumption": {
+      "title_with_artwork": "Weiter zu {{title}}",
+      "title_fallback": "Letztes Gespräch fortsetzen",
+      "subtitle_with_museum": "{{museumName}} — vor {{timeAgo}}",
+      "subtitle_no_museum": "vor {{timeAgo}}",
+      "a11y_label_with_artwork": "Gespräch über {{title}} im {{museumName}} fortsetzen",
+      "a11y_label_fallback": "Letztes Gespräch fortsetzen",
+      "a11y_hint": "Öffnet das vorherige Gespräch",
+      "a11y_dismiss": "Vorschlag ausblenden",
+      "time_ago": {
+        "just_now": "gerade eben",
+        "minutes": "{{count}} Min.",
+        "hours": "{{count}} Std.",
+        "days": "{{count}} T."
+      }
+    },
+    "proactive_museum": {
+      "title": "Sie sind im {{museumName}}",
+      "subtitle": "Den Assistenten fragen?",
+      "cta_a11y_label": "Sprachgespräch über {{museumName}} starten",
+      "cta_a11y_hint": "Öffnet ein neues Sprachgespräch",
+      "a11y_dismiss": "Museumsvorschlag ausblenden",
+      "icon_a11y_label": "Standortmarkierung"
     }
   },
   "dailyLimit": {
@@ -510,9 +613,6 @@
       "medium": "Mittel",
       "low": "Niedrig"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Schnelle Fragen"
   },
   "recommendationChips": {
     "section_label": "Ideen zum Erkunden"
@@ -769,14 +869,14 @@
       "assistant_message": "Nachricht des Assistenten",
       "user_message": "Ihre Nachricht",
       "long_press_hint": "Lange drücken für weitere Optionen",
-      "follow_up_hint": "Sendet diese Folgefrage",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
       "suggestion_hint": "Startet die Unterhaltung mit diesem Thema",
       "camera_suggestion_hint": "Öffnet die Kamera zum Fotografieren eines Kunstwerks",
       "fullscreen_close": "Schließen",
       "previous_image": "Vorheriges Bild",
       "next_image": "Nächstes Bild",
-      "messages_list": "Chat-Nachrichten"
+      "messages_list": "Chat-Nachrichten",
+      "follow_up_hint": "Sendet diese Folgefrage"
     },
     "onboarding": {
       "skip": "Einführung überspringen",
@@ -886,6 +986,19 @@
     },
     "browser": {
       "opened": "In-App-Browser geöffnet"
+    },
+    "attachmentPicker": {
+      "opened": "Anhangsoptionen geöffnet"
+    },
+    "cartelScanner": {
+      "opened": "Schild-Scanner geöffnet",
+      "scan_success": "Schild-Code erfasst",
+      "viewfinder_hint": "Kamera-Sucher, auf den QR-Code zielen",
+      "cancel_hint": "Schließt den Scanner ohne zu senden"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, Besuch öffnen",
+      "continue_hint": "Öffnet diesen vergangenen Besuch zum Lesen"
     }
   },
   "consent": {
@@ -993,6 +1106,26 @@
       "description": "Deine bisherigen Gespräche erscheinen hier.",
       "actionLabel": "Gespräch starten"
     }
+  },
+  "carnet": {
+    "title": "Mein Besuchsnotizbuch",
+    "linkLabel": "Mein Besuchsnotizbuch",
+    "untitledSession": "Besuch ohne Titel",
+    "unknownMuseum": "Unbekanntes Museum",
+    "continueButton": "Dieses Gespräch fortsetzen",
+    "sectionArtworks": "Besprochene Werke",
+    "sectionTranscript": "Transkript",
+    "noArtworks": "Bei diesem Besuch wurde kein Werk gescannt.",
+    "minutesShort": "{{count}} Min.",
+    "minutesShort_zero": "< 1 Min.",
+    "messagesCount": "{{count}} Nachrichten",
+    "empty": {
+      "title": "Noch keine Besuche",
+      "description": "Starte ein Gespräch und dein Besuch erscheint hier."
+    }
+  },
+  "followUpButtons": {
+    "section_label": "Schnelle Fragen"
   },
   "paywall": {
     "modalTitle": "Kostenloses Monatslimit erreicht",

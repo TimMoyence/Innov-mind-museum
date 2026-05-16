@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium يفكر..."
     },
+    "status": {
+      "analyzing-image": "جارٍ تحليل العمل…",
+      "searching-collection": "البحث في المجموعة…",
+      "composing": "صياغة الإجابة…",
+      "synthesizing-voice": "تحضير الصوت…"
+    },
     "fallback_title": "جلسة فنية",
     "report_thanks_title": "شكرًا",
     "report_thanks_body": "تم إرسال بلاغك.",
@@ -440,6 +446,68 @@
       "closeSheet": "إغلاق",
       "noQuote": "لا يوجد اقتباس متاح لهذا المصدر."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "كتالوج المتحف",
+        "reference-db": "قاعدة مرجعية",
+        "web": "نتيجة ويب",
+        "ai-knowledge": "معرفة الذكاء"
+      },
+      "confidence": {
+        "high": "ثقة عالية",
+        "medium": "ثقة متوسطة",
+        "low": "منخفض — الذكاء فقط"
+      },
+      "chip": {
+        "a11y_hint": "اضغط لعرض تفاصيل المصدر"
+      },
+      "ai_only": {
+        "disclosure_title": "إجابة بالذكاء فقط",
+        "disclosure_body": "تستند هذه الإجابة إلى المعرفة العامة للذكاء الاصطناعي. لم يتم استرجاع أي مصدر لدعم تفاصيل محددة. تحقّق قبل الاعتماد عليها."
+      }
+    },
+    "composer": {
+      "a11y": {
+        "open_attachments": "فتح المرفقات",
+        "open_attachments_hint": "الكاميرا، المعرض، الصوت",
+        "mic": "رسالة صوتية",
+        "mic_recording": "إيقاف التسجيل الصوتي",
+        "audio_pill": "الرسالة الصوتية جاهزة، انقر للمراجعة"
+      }
+    },
+    "attachmentPicker": {
+      "title": "إرفاق بالرسالة",
+      "camera": "التقاط صورة",
+      "gallery": "اختيار من المعرض",
+      "record_audio": "تسجيل رسالة صوتية",
+      "stop_audio": "إيقاف التسجيل",
+      "scan_cartel": "مسح اللافتة"
+    },
+    "cartelScanner": {
+      "title": "مسح رمز QR للافتة",
+      "instructions": "وجّه الكاميرا نحو رمز QR على لافتة العمل",
+      "permission_title": "يتطلب الوصول إلى الكاميرا",
+      "permission_body": "يحتاج Musaium إلى الوصول إلى الكاميرا لمسح لافتات الأعمال. افتح الإعدادات للسماح بذلك.",
+      "permission_open_settings": "فتح الإعدادات",
+      "cancel": "إلغاء",
+      "lookup_template": "أخبرني عن العمل برمز اللافتة: {{code}}"
+    },
+    "artworkHero": {
+      "untitled": "عمل بدون عنوان",
+      "a11y_label": "العمل: {{title}} للفنان {{artist}}، اضغط للتكبير",
+      "a11y_label_untitled": "عمل بدون عنوان، اضغط للتكبير",
+      "a11y_hint": "يفتح بملء الشاشة مع التكبير بالقرص",
+      "expand": "تكبير",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "قيد التعرّف"
+      },
+      "modal": {
+        "close": "إغلاق",
+        "a11y_pinch_hint": "اقرص بإصبعين للتكبير",
+        "title_fallback": "معاينة العمل"
+      }
+    },
     "compare": {
       "title": "أعمال مماثلة",
       "empty": "لم يتم العثور على عمل مماثل — جرّب صورة أوضح",
@@ -476,6 +544,41 @@
       "headerLabel": "جولة مرشدة",
       "suggestionsLabel": "اقتراحات الجولة",
       "suggestionHint": "إرسال هذا الاقتراح كرسالتك التالية"
+    },
+    "askMore": {
+      "a11y_label": "سؤال متابعة: {{text}}",
+      "a11y_hint": "انقر لطرح هذا السؤال"
+    },
+    "sottoVoce": {
+      "a11y_label": "وضع الهمس",
+      "a11y_hint_on": "الصوت مكتوم — انقر لإعادة التفعيل",
+      "a11y_hint_off": "اكتم الصوت في الأماكن الهادئة",
+      "announcement_on": "وضع الهمس مفعّل. تم كتم الردود الصوتية.",
+      "announcement_off": "وضع الهمس معطّل. عادت الردود الصوتية."
+    },
+    "resumption": {
+      "title_with_artwork": "متابعة الحديث عن {{title}}",
+      "title_fallback": "متابعة محادثتك الأخيرة",
+      "subtitle_with_museum": "{{museumName}} — منذ {{timeAgo}}",
+      "subtitle_no_museum": "منذ {{timeAgo}}",
+      "a11y_label_with_artwork": "استئناف المحادثة حول {{title}} في {{museumName}}",
+      "a11y_label_fallback": "استئناف محادثتك الأخيرة",
+      "a11y_hint": "يفتح المحادثة السابقة",
+      "a11y_dismiss": "إخفاء اقتراح الاستئناف",
+      "time_ago": {
+        "just_now": "الآن",
+        "minutes": "{{count}} د",
+        "hours": "{{count}} س",
+        "days": "{{count}} ي"
+      }
+    },
+    "proactive_museum": {
+      "title": "أنت في {{museumName}}",
+      "subtitle": "هل تريد سؤال المساعد؟",
+      "cta_a11y_label": "ابدأ محادثة صوتية عن {{museumName}}",
+      "cta_a11y_hint": "يفتح محادثة صوتية جديدة",
+      "a11y_dismiss": "إخفاء اقتراح المتحف",
+      "icon_a11y_label": "علامة الموقع"
     }
   },
   "dailyLimit": {
@@ -510,9 +613,6 @@
       "medium": "متوسطة",
       "low": "منخفضة"
     }
-  },
-  "followUpButtons": {
-    "section_label": "أسئلة سريعة"
   },
   "recommendationChips": {
     "section_label": "أفكار للاستكشاف"
@@ -769,14 +869,14 @@
       "assistant_message": "رسالة المساعد",
       "user_message": "رسالتك",
       "long_press_hint": "اضغط مطوّلًا لمزيد من الخيارات",
-      "follow_up_hint": "يرسل سؤال المتابعة هذا",
       "recommendation_hint": "يملأ حقل الإدخال بهذا الاقتراح",
       "suggestion_hint": "يبدأ المحادثة بهذا الموضوع",
       "camera_suggestion_hint": "يفتح الكاميرا لتصوير عمل فني",
       "fullscreen_close": "إغلاق",
       "previous_image": "الصورة السابقة",
       "next_image": "الصورة التالية",
-      "messages_list": "رسائل الدردشة"
+      "messages_list": "رسائل الدردشة",
+      "follow_up_hint": "يرسل سؤال المتابعة هذا"
     },
     "onboarding": {
       "skip": "تخطي المقدمة",
@@ -886,6 +986,19 @@
     },
     "browser": {
       "opened": "تم فتح المتصفح داخل التطبيق"
+    },
+    "attachmentPicker": {
+      "opened": "تم فتح خيارات المرفقات"
+    },
+    "cartelScanner": {
+      "opened": "تم فتح ماسح اللافتات",
+      "scan_success": "تم التقاط رمز اللافتة",
+      "viewfinder_hint": "محدد منظر الكاميرا، وجّه نحو رمز QR",
+      "cancel_hint": "يغلق الماسح دون إرسال"
+    },
+    "carnet": {
+      "session_card": "{{title}}، {{museum}}، {{date}}، فتح الزيارة",
+      "continue_hint": "يفتح هذه الزيارة السابقة للقراءة"
     }
   },
   "consent": {
@@ -993,6 +1106,26 @@
       "description": "ستظهر محادثاتك السابقة هنا.",
       "actionLabel": "بدء محادثة"
     }
+  },
+  "carnet": {
+    "title": "دفتر زياراتي",
+    "linkLabel": "دفتر زياراتي",
+    "untitledSession": "زيارة بدون عنوان",
+    "unknownMuseum": "متحف غير معروف",
+    "continueButton": "متابعة هذه المحادثة",
+    "sectionArtworks": "الأعمال التي نوقشت",
+    "sectionTranscript": "المحادثة",
+    "noArtworks": "لم يتم مسح أي عمل خلال هذه الزيارة.",
+    "minutesShort": "{{count}} د",
+    "minutesShort_zero": "< 1 د",
+    "messagesCount": "{{count}} رسائل",
+    "empty": {
+      "title": "لا توجد زيارات بعد",
+      "description": "ابدأ محادثة وستظهر زيارتك هنا."
+    }
+  },
+  "followUpButtons": {
+    "section_label": "أسئلة سريعة"
   },
   "paywall": {
     "modalTitle": "تم بلوغ الحد الشهري المجاني",

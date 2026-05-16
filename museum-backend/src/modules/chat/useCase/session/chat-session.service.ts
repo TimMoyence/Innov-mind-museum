@@ -25,6 +25,32 @@ import type {
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
+/**
+ * Returns the title of the most recently discussed artwork for a session, or
+ * `null` when no visit context is recorded or the `artworksDiscussed` array is
+ * empty/missing. Surfaced via `ListSessionsResult.sessions[].lastArtworkTitle`
+ * for B2 (conversation resumption banner).
+ *
+ * Pure helper, no I/O — reads `visitContext.artworksDiscussed[length-1].title`
+ * already loaded from the entity row's jsonb column.
+ */
+export const deriveLastArtworkTitle = (
+  visitContext: VisitContext | null | undefined,
+): string | null => {
+  const artworks = visitContext?.artworksDiscussed;
+  if (!Array.isArray(artworks) || artworks.length === 0) {
+    return null;
+  }
+  const last = artworks[artworks.length - 1];
+  // `title` is typed required on VisitedArtwork, but `visit_context` is a
+  // nullable jsonb column with no DB-level shape validation. Guard against
+  // missing / null / non-string drift (would otherwise throw TypeError from
+  // inside `listSessions().sessions.map(...)` and 500 the whole carnet) and
+  // coerce empty/whitespace titles to null for downstream B2 banner gating.
+  const title = typeof last.title === 'string' ? last.title.trim() : '';
+  return title.length > 0 ? title : null;
+};
+
 const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
   id: session.id,
   locale: session.locale,
@@ -249,6 +275,8 @@ export class ChatSessionService {
         museumMode: row.session.museumMode,
         title: row.session.title ?? null,
         museumName: row.session.museumName ?? null,
+        museumId: row.session.museumId ?? null,
+        lastArtworkTitle: deriveLastArtworkTitle(row.session.visitContext),
         createdAt: row.session.createdAt.toISOString(),
         updatedAt: row.session.updatedAt.toISOString(),
         intent: row.session.intent,

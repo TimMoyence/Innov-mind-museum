@@ -190,7 +190,9 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
         invoke: jest.fn().mockImplementation(
           (_messages: unknown, options?: { signal?: AbortSignal }) =>
             new Promise<{ content: unknown }>((resolve, reject) => {
-              const timer = setTimeout(() => resolve({ content: 'too late' }), 60000);
+              const timer = setTimeout(() => {
+                resolve({ content: 'too late' });
+              }, 60000);
               options?.signal?.addEventListener(
                 'abort',
                 () => {
@@ -204,9 +206,7 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
         stream: jest.fn(),
       };
 
-      const { env } = jest.requireMock('@src/config/env') as {
-        env: { llm: Record<string, unknown> };
-      };
+      const { env } = jest.requireMock('@src/config/env');
       const originalTimeout = env.llm.timeoutSummaryMs;
       const originalBudget = env.llm.totalBudgetMs;
       const originalRetries = env.llm.retries;
@@ -236,7 +236,7 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
           content: JSON.stringify({
             answer: 'This is an Impressionist painting.',
             deeperContext: 'The light play is characteristic of Monet.',
-            followUpQuestions: ['What year was it painted?'],
+            suggestedFollowUp: 'What year was it painted?',
           }),
         }),
         stream: jest.fn(),
@@ -268,7 +268,7 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
       expect(result.text).toBe('This is an Impressionist painting.');
       expect(result.metadata.deeperContext).toBe('The light play is characteristic of Monet.');
-      expect(result.metadata.followUpQuestions).toEqual(['What year was it painted?']);
+      expect(result.metadata.suggestedFollowUp).toBe('What year was it painted?');
     });
   });
 
@@ -390,9 +390,7 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
           }),
       };
 
-      const { env } = jest.requireMock('@src/config/env') as {
-        env: { llm: Record<string, unknown> };
-      };
+      const { env } = jest.requireMock('@src/config/env');
       const originalTimeout = env.llm.timeoutSummaryMs;
       env.llm.timeoutSummaryMs = 50;
 
@@ -418,9 +416,7 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
         stream: jest.fn(),
       };
 
-      const { env } = jest.requireMock('@src/config/env') as {
-        env: { llm: Record<string, unknown> };
-      };
+      const { env } = jest.requireMock('@src/config/env');
       const originalRetries = env.llm.retries;
       env.llm.retries = 1;
 

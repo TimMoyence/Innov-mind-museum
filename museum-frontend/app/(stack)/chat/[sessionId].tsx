@@ -5,6 +5,8 @@ import {
   Platform,
   Text,
   TouchableWithoutFeedback,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
@@ -12,21 +14,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useChatSession, type ChatUiMessage } from '@/features/chat/application/useChatSession';
+import { useStatusPhase } from '@/features/chat/application/useStatusPhase';
+import { deriveHeroCollapsed, useArtworkHero } from '@/features/chat/application/useArtworkHero';
+import { deriveTopBarCollapsed } from '@/features/chat/application/useCollapsibleTopBar';
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
+import { useSottoVoce } from '@/features/chat/application/useSottoVoce';
 import { useVoiceDisclosure } from '@/features/chat/hooks/useVoiceDisclosure';
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { useMuseumPrefetch } from '@/features/museum/application/useMuseumPrefetch';
 import { useChatSessionActions } from '@/features/chat/application/useChatSessionActions';
 import { useChatSessionInputHandlers } from '@/features/chat/application/useChatSessionInputHandlers';
 import { useChatSessionIntents } from '@/features/chat/application/useChatSessionIntents';
-import { ChatHeader } from '@/features/chat/ui/ChatHeader';
-import { ChatInput } from '@/features/chat/ui/ChatInput';
+import { ArtworkHeroCard } from '@/features/chat/ui/ArtworkHeroCard';
+import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
+import { CollapsibleTopBar } from '@/features/chat/ui/CollapsibleTopBar';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
-import { MediaAttachmentPanel } from '@/features/chat/ui/MediaAttachmentPanel';
+import { Composer } from '@/features/chat/ui/Composer';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
@@ -89,6 +96,33 @@ export default function ChatSessionScreen() {
 
   useMuseumPrefetch(museumName ?? null, locale);
 
+  // A2 — Artwork hero card pinned. The model is derived purely from the
+  // message list (first user image + first matching assistant detectedArtwork).
+  // `heroCollapsed` flips on scroll past 80dp / re-expands below 40dp
+  // (hysteresis). `heroModalVisible` opens the fullscreen pinch-zoom modal on
+  // tap. Both states are screen-local — no global store (R29).
+  const heroModel = useArtworkHero(messages);
+  const [heroCollapsed, setHeroCollapsed] = useState(false);
+  const [heroModalVisible, setHeroModalVisible] = useState(false);
+  // A4 — top bar collapses on scroll past 80dp / re-expands below 40dp.
+  // Shares the same `onListScroll` source as A2 (one scroll handler, two
+  // independent screen-local states — no global store).
+  const [topBarCollapsed, setTopBarCollapsed] = useState(false);
+
+  const onHeroExpand = useCallback(() => {
+    setHeroModalVisible(true);
+  }, []);
+
+  const onHeroModalClose = useCallback(() => {
+    setHeroModalVisible(false);
+  }, []);
+
+  const onListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = event.nativeEvent.contentOffset.y;
+    setHeroCollapsed((prev) => deriveHeroCollapsed(y, prev));
+    setTopBarCollapsed((prev) => deriveTopBarCollapsed(y, prev));
+  }, []);
+
   const {
     isRecording,
     recordedAudioUri,
@@ -126,10 +160,29 @@ export default function ChatSessionScreen() {
   const { selectedImage, onPickImage, onTakePicture, clearSelectedImage } = useImagePicker();
 
   const { enabled: audioDescEnabled } = useAudioDescriptionMode();
+  const { enabled: sottoVoce, toggle: toggleSottoVoce } = useSottoVoce();
   const [sessionAudioOverride, setSessionAudioOverride] = useState<boolean | null>(null);
-  const effectiveAudioDesc = sessionAudioOverride ?? audioDescEnabled;
+  // B5 — sotto-voce gate : when sotto-voce is ON, force-disable auto-TTS
+  // regardless of session override or global audio-description preference.
+  // `useAutoTts` runs its own cleanup (`stopPlayback`) when `enabled` flips
+  // to `false`, so this gate naturally stops in-flight playback.
+  const effectiveAudioDesc = (sessionAudioOverride ?? audioDescEnabled) && !sottoVoce;
 
-  useAutoTts({ messages, enabled: effectiveAudioDesc });
+  // A5 (R16) — auto-TTS hook exposes its in-flight `loading` signal so the
+  // screen can surface `synthesizing-voice` in `<StatusIndicator>` while the
+  // assistant audio is being fetched + decoded. Without this wiring the
+  // phase would never be observable in runtime (review I2 finding).
+  const tts = useAutoTts({ messages, enabled: effectiveAudioDesc });
+
+  // A5 — drive the localised `<StatusIndicator>` shown while the assistant
+  // is composing a response. The hook synthesises a client-side phase
+  // sequence ; the real terminal phase lives on `metadata.phase` from the
+  // BE (consumed only for telemetry, R22).
+  const { phase: currentPhase } = useStatusPhase({
+    isSending,
+    hasImage: !!selectedImage,
+    ttsPending: tts.loading,
+  });
 
   const { isWalkMode } = useChatSessionIntents({
     intent: params.intent,
@@ -297,6 +350,53 @@ export default function ChatSessionScreen() {
     });
   }, [bottomSheetRouter]);
 
+  // B4 — when the user scans a cartel QR, push the sanitised code to the
+  // chat as a text message via the i18n lookup template. The orchestrator
+  // resolves the artwork via the existing `museumName` / `locationString`
+  // context — no BE endpoint added in V1 (Q1 V1.1+).
+  const handleCartelScanned = useCallback(
+    (code: string) => {
+      void sendMessage({ text: t('chat.cartelScanner.lookup_template', { code }) });
+    },
+    [sendMessage, t],
+  );
+
+  // B4 — open the 9th C4 route (fullscreen camera scanner). The route is
+  // closed automatically by `<CartelScannerSheetContent>` on a successful
+  // scan or via the cancel button.
+  const onOpenCartelScanner = useCallback(() => {
+    bottomSheetRouter.open('cartel-scanner', { onScanned: handleCartelScanned });
+  }, [bottomSheetRouter, handleCartelScanned]);
+
+  // A1 — open the attachment-picker bottom sheet. Wires the audio + image
+  // hooks through the router params so the sheet content can drive the
+  // camera/gallery/record actions and the play/clear preview block.
+  // B4 extends the params with `onOpenScanner` (4th picker action).
+  const onOpenAttachments = useCallback(() => {
+    bottomSheetRouter.open('attachment-picker', {
+      recordedAudioUri,
+      isPlayingAudio,
+      isRecording,
+      onPickImage: () => void onPickImage(),
+      onTakePicture: () => void onTakePicture(),
+      toggleRecording,
+      playRecordedAudio: () => void playRecordedAudio(),
+      clearMedia: inputHandlers.clearMedia,
+      onOpenScanner: onOpenCartelScanner,
+    });
+  }, [
+    bottomSheetRouter,
+    recordedAudioUri,
+    isPlayingAudio,
+    isRecording,
+    onPickImage,
+    onTakePicture,
+    toggleRecording,
+    playRecordedAudio,
+    inputHandlers.clearMedia,
+    onOpenCartelScanner,
+  ]);
+
   return (
     <LiquidScreen
       background={pickMuseumBackground(4)}
@@ -314,7 +414,7 @@ export default function ChatSessionScreen() {
             </Text>
           ) : null}
 
-          <ChatHeader
+          <CollapsibleTopBar
             sessionTitle={sessionTitle}
             expertiseLevel={expertiseLevel}
             isClosing={inputHandlers.isClosing}
@@ -326,7 +426,12 @@ export default function ChatSessionScreen() {
             onToggleAudioDescription={() => {
               setSessionAudioOverride((prev) => !(prev ?? audioDescEnabled));
             }}
+            sottoVoceEnabled={sottoVoce}
+            onToggleSottoVoce={() => {
+              void toggleSottoVoce();
+            }}
             onOpenAiDisclosure={openAiDisclosure}
+            collapsed={topBarCollapsed}
           />
 
           {isWalkMode ? (
@@ -349,6 +454,8 @@ export default function ChatSessionScreen() {
             />
           ) : null}
 
+          <ArtworkHeroCard model={heroModel} collapsed={heroCollapsed} onExpand={onHeroExpand} />
+
           <ChatSessionSurface
             isLoading={isLoading}
             messages={messages}
@@ -363,19 +470,10 @@ export default function ChatSessionScreen() {
             onLinkPress={sessionActions.onMessageLinkPress}
             onRetry={retryMessage}
             isAssistantPending={lastAssistantPending}
+            currentPhase={currentPhase}
             surfaceStyle={styles.chatSurface}
             skeletonStyle={styles.skeletonChat}
-          />
-
-          <MediaAttachmentPanel
-            recordedAudioUri={recordedAudioUri}
-            isPlayingAudio={isPlayingAudio}
-            isRecording={isRecording}
-            playRecordedAudio={playRecordedAudio}
-            clearMedia={inputHandlers.clearMedia}
-            onPickImage={() => void onPickImage()}
-            onTakePicture={() => void onTakePicture()}
-            toggleRecording={toggleRecording}
+            onScroll={onListScroll}
           />
 
           <WalkSuggestionChips
@@ -383,18 +481,24 @@ export default function ChatSessionScreen() {
             onSelect={inputHandlers.onWalkChipSelect}
           />
 
-          <ChatInput
-            value={inputHandlers.text}
+          <Composer
+            text={inputHandlers.text}
             onChangeText={inputHandlers.setText}
             onSend={() => void inputHandlers.onSend()}
             isSending={isSending || !consentResolved || showAiConsent}
             imageUri={selectedImage}
             onClearImage={clearSelectedImage}
+            recordedAudioUri={recordedAudioUri}
+            isRecording={isRecording}
+            toggleRecording={toggleRecording}
+            onOpenAttachments={onOpenAttachments}
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
 
       <BottomSheetRouter />
+
+      <ArtworkHeroModal visible={heroModalVisible} model={heroModel} onClose={onHeroModalClose} />
     </LiquidScreen>
   );
 }

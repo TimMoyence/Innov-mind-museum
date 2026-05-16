@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaiumが考えています..."
     },
+    "status": {
+      "analyzing-image": "作品を見ています…",
+      "searching-collection": "コレクションを検索中…",
+      "composing": "回答を作成中…",
+      "synthesizing-voice": "音声を準備中…"
+    },
     "fallback_title": "アートセッション",
     "report_thanks_title": "ありがとうございます",
     "report_thanks_body": "報告が送信されました。",
@@ -440,6 +446,68 @@
       "closeSheet": "閉じる",
       "noQuote": "この出典には利用可能な引用がありません。"
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "美術館カタログ",
+        "reference-db": "参照データベース",
+        "web": "Web検索結果",
+        "ai-knowledge": "AIの知識"
+      },
+      "confidence": {
+        "high": "信頼度: 高",
+        "medium": "信頼度: 中",
+        "low": "低 — AIのみ"
+      },
+      "chip": {
+        "a11y_hint": "タップして出典の詳細を表示"
+      },
+      "ai_only": {
+        "disclosure_title": "AIのみの回答",
+        "disclosure_body": "この回答はAIの一般的な知識に基づいており、特定の事実を裏付ける出典は取得されていません。詳細を信頼する前にご確認ください。"
+      }
+    },
+    "composer": {
+      "a11y": {
+        "open_attachments": "添付ファイルを開く",
+        "open_attachments_hint": "カメラ、ギャラリー、音声",
+        "mic": "音声メッセージ",
+        "mic_recording": "録音を停止",
+        "audio_pill": "音声メッセージ準備完了、タップで確認"
+      }
+    },
+    "attachmentPicker": {
+      "title": "メッセージに添付",
+      "camera": "写真を撮る",
+      "gallery": "ギャラリーから選択",
+      "record_audio": "音声メッセージを録音",
+      "stop_audio": "録音を停止",
+      "scan_cartel": "解説をスキャン"
+    },
+    "cartelScanner": {
+      "title": "作品解説のQRをスキャン",
+      "instructions": "作品の解説プレートにあるQRコードにカメラを向けてください",
+      "permission_title": "カメラへのアクセスが必要です",
+      "permission_body": "作品解説をスキャンするにはカメラへのアクセスが必要です。設定を開いて許可してください。",
+      "permission_open_settings": "設定を開く",
+      "cancel": "キャンセル",
+      "lookup_template": "解説コード「{{code}}」の作品について教えてください"
+    },
+    "artworkHero": {
+      "untitled": "無題の作品",
+      "a11y_label": "作品: {{artist}}の{{title}}、タップで拡大",
+      "a11y_label_untitled": "無題の作品、タップで拡大",
+      "a11y_hint": "全画面を開き、ピンチでズーム",
+      "expand": "拡大",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "識別中"
+      },
+      "modal": {
+        "close": "閉じる",
+        "a11y_pinch_hint": "二本指でピンチして拡大",
+        "title_fallback": "作品プレビュー"
+      }
+    },
     "compare": {
       "title": "類似する作品",
       "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",
@@ -476,6 +544,41 @@
       "headerLabel": "ガイドツアー",
       "suggestionsLabel": "ツアーの提案",
       "suggestionHint": "この提案を次のメッセージとして送信"
+    },
+    "askMore": {
+      "a11y_label": "フォローアップの質問: {{text}}",
+      "a11y_hint": "タップしてこの質問をする"
+    },
+    "sottoVoce": {
+      "a11y_label": "ささやきモード",
+      "a11y_hint_on": "音声オフ — タップで再開",
+      "a11y_hint_off": "静かな場所で音声をオフ",
+      "announcement_on": "ささやきモード オン。音声応答をオフにしました。",
+      "announcement_off": "ささやきモード オフ。音声応答を再開しました。"
+    },
+    "resumption": {
+      "title_with_artwork": "{{title}} の続きを見る",
+      "title_fallback": "前回の会話を続ける",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}}前",
+      "subtitle_no_museum": "{{timeAgo}}前",
+      "a11y_label_with_artwork": "{{museumName}} での {{title}} の会話を再開",
+      "a11y_label_fallback": "前回の会話を再開",
+      "a11y_hint": "前回のチャットを開きます",
+      "a11y_dismiss": "再開バナーを閉じる",
+      "time_ago": {
+        "just_now": "たった今",
+        "minutes": "{{count}} 分",
+        "hours": "{{count}} 時間",
+        "days": "{{count}} 日"
+      }
+    },
+    "proactive_museum": {
+      "title": "{{museumName}} にいます",
+      "subtitle": "アシスタントに聞きますか？",
+      "cta_a11y_label": "{{museumName}} について音声会話を開始",
+      "cta_a11y_hint": "新しい音声会話を開きます",
+      "a11y_dismiss": "美術館の提案を閉じる",
+      "icon_a11y_label": "位置マーカー"
     }
   },
   "dailyLimit": {
@@ -510,9 +613,6 @@
       "medium": "中",
       "low": "低"
     }
-  },
-  "followUpButtons": {
-    "section_label": "クイック質問"
   },
   "recommendationChips": {
     "section_label": "探索のヒント"
@@ -769,14 +869,14 @@
       "assistant_message": "アシスタントのメッセージ",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
-      "follow_up_hint": "このフォローアップ質問を送信します",
       "recommendation_hint": "この提案で入力欄を埋めます",
       "suggestion_hint": "このトピックで会話を開始します",
       "camera_suggestion_hint": "カメラを開いて作品を撮影します",
       "fullscreen_close": "閉じる",
       "previous_image": "前の画像",
       "next_image": "次の画像",
-      "messages_list": "チャットメッセージ"
+      "messages_list": "チャットメッセージ",
+      "follow_up_hint": "このフォローアップ質問を送信します"
     },
     "onboarding": {
       "skip": "紹介をスキップ",
@@ -886,6 +986,19 @@
     },
     "browser": {
       "opened": "アプリ内ブラウザを開きました"
+    },
+    "attachmentPicker": {
+      "opened": "添付オプションを開きました"
+    },
+    "cartelScanner": {
+      "opened": "解説スキャナーを開きました",
+      "scan_success": "解説コードを取得しました",
+      "viewfinder_hint": "カメラビューファインダー、QRコードに向けてください",
+      "cancel_hint": "送信せずにスキャナーを閉じます"
+    },
+    "carnet": {
+      "session_card": "{{title}}、{{museum}}、{{date}}、訪問を開く",
+      "continue_hint": "この過去の訪問を読み取り専用で開きます"
     }
   },
   "consent": {
@@ -993,6 +1106,26 @@
       "description": "過去の会話がここに表示されます。",
       "actionLabel": "会話を始める"
     }
+  },
+  "carnet": {
+    "title": "訪問ノート",
+    "linkLabel": "訪問ノート",
+    "untitledSession": "無題の訪問",
+    "unknownMuseum": "不明な美術館",
+    "continueButton": "この会話を続ける",
+    "sectionArtworks": "話題になった作品",
+    "sectionTranscript": "会話履歴",
+    "noArtworks": "この訪問では作品をスキャンしていません。",
+    "minutesShort": "{{count}} 分",
+    "minutesShort_zero": "< 1 分",
+    "messagesCount": "{{count}} 件のメッセージ",
+    "empty": {
+      "title": "まだ訪問がありません",
+      "description": "会話を始めると、訪問がここに表示されます。"
+    }
+  },
+  "followUpButtons": {
+    "section_label": "クイック質問"
   },
   "paywall": {
     "modalTitle": "今月の無料利用上限に達しました",

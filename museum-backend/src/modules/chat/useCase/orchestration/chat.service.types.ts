@@ -84,6 +84,19 @@ export interface ListSessionsResult {
     museumMode: boolean;
     title?: string | null;
     museumName?: string | null;
+    /**
+     * Canonical museum identifier when known. Optional/nullable for backward-compat with
+     * legacy clients and pre-museum sessions. Mirrors `ChatSession.museumId`.
+     * Surfaced for B2 (conversation resumption banner) and future in-museum gating.
+     */
+    museumId?: number | null;
+    /**
+     * Title of the last artwork discussed during the session (latest entry of
+     * `visitContext.artworksDiscussed`). `null` when no artwork has been
+     * discussed yet or when visit context is absent.
+     * Surfaced for B2 (conversation resumption banner).
+     */
+    lastArtworkTitle?: string | null;
     createdAt: string;
     updatedAt: string;
     /** Session-level intent — drives prompt strategy and walk-mode UX. */

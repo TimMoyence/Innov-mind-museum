@@ -54,29 +54,26 @@ describe('parseAssistantResponse', () => {
     expect(parsed.metadata.openQuestion).toBe('What do you notice about the light?');
   });
 
-  it('extracts followUpQuestions from valid JSON', () => {
+  it('extracts suggestedFollowUp from valid JSON (B3 singular replacement of legacy followUpQuestions)', () => {
     const parsed = parseAssistantResponse(
       JSON.stringify({
         answer: 'Main answer',
-        followUpQuestions: ['Tell me about the artist.', 'What period is this from?'],
+        suggestedFollowUp: 'Tell me about the artist?',
       }),
     );
 
-    expect(parsed.metadata.followUpQuestions).toEqual([
-      'Tell me about the artist.',
-      'What period is this from?',
-    ]);
+    expect(parsed.metadata.suggestedFollowUp).toBe('Tell me about the artist?');
   });
 
-  it('ignores followUpQuestions when not an array', () => {
+  it('ignores suggestedFollowUp when not a string (singularity invariant — array rejected)', () => {
     const parsed = parseAssistantResponse(
       JSON.stringify({
         answer: 'Main answer',
-        followUpQuestions: 'not an array',
+        suggestedFollowUp: ['array', 'forbidden'],
       }),
     );
 
-    expect(parsed.metadata.followUpQuestions).toBeUndefined();
+    expect(parsed.metadata.suggestedFollowUp).toBeUndefined();
   });
 
   it('extracts imageDescription from valid JSON', () => {
@@ -102,7 +99,7 @@ describe('parseAssistantResponse', () => {
     expect(parsed.answer).toBe('Simple answer');
     expect(parsed.metadata.deeperContext).toBeUndefined();
     expect(parsed.metadata.openQuestion).toBeUndefined();
-    expect(parsed.metadata.followUpQuestions).toBeUndefined();
+    expect(parsed.metadata.suggestedFollowUp).toBeUndefined();
     expect(parsed.metadata.imageDescription).toBeUndefined();
   });
 
@@ -112,7 +109,7 @@ describe('parseAssistantResponse', () => {
         answer: 'Full response',
         deeperContext: 'Deep context.',
         openQuestion: 'Look closer?',
-        followUpQuestions: ['Q1'],
+        suggestedFollowUp: 'Why was Q1 chosen?',
         imageDescription: 'A sculpture.',
         recommendations: ['Visit room 3'],
         expertiseSignal: 'intermediate',
@@ -122,7 +119,7 @@ describe('parseAssistantResponse', () => {
     expect(parsed.answer).toBe('Full response');
     expect(parsed.metadata.deeperContext).toBe('Deep context.');
     expect(parsed.metadata.openQuestion).toBe('Look closer?');
-    expect(parsed.metadata.followUpQuestions).toEqual(['Q1']);
+    expect(parsed.metadata.suggestedFollowUp).toBe('Why was Q1 chosen?');
     expect(parsed.metadata.imageDescription).toBe('A sculpture.');
     expect(parsed.metadata.recommendations).toEqual(['Visit room 3']);
     expect(parsed.metadata.expertiseSignal).toBe('intermediate');
@@ -196,7 +193,7 @@ describe('parseAssistantResponse', () => {
     const meta = extractMetadata({
       deeperContext: 'Deep.',
       openQuestion: 'See this?',
-      followUpQuestions: ['Q1', 'Q2'],
+      suggestedFollowUp: 'Why is Q1 important?',
       imageDescription: 'Oil on canvas.',
       recommendations: ['Room 5'],
       expertiseSignal: 'expert',
@@ -213,7 +210,7 @@ describe('parseAssistantResponse', () => {
 
     expect(meta.deeperContext).toBe('Deep.');
     expect(meta.openQuestion).toBe('See this?');
-    expect(meta.followUpQuestions).toEqual(['Q1', 'Q2']);
+    expect(meta.suggestedFollowUp).toBe('Why is Q1 important?');
     expect(meta.imageDescription).toBe('Oil on canvas.');
     expect(meta.recommendations).toEqual(['Room 5']);
     expect(meta.expertiseSignal).toBe('expert');
@@ -294,16 +291,16 @@ describe('parseAssistantResponse', () => {
     expect(meta.recommendations).toHaveLength(5);
   });
 
-  it('returns undefined followUpQuestions when all items are empty strings', () => {
-    const meta = extractMetadata({ followUpQuestions: ['', '   '] });
-    expect(meta.followUpQuestions).toBeUndefined();
+  it('returns undefined suggestedFollowUp when value is empty / whitespace (B3)', () => {
+    expect(extractMetadata({ suggestedFollowUp: '' }).suggestedFollowUp).toBeUndefined();
+    expect(extractMetadata({ suggestedFollowUp: '   ' }).suggestedFollowUp).toBeUndefined();
   });
 
-  it('caps followUpQuestions at 3 items', () => {
+  it('rejects suggestedFollowUp strings strictly over 80 chars (B3 strict drop)', () => {
     const meta = extractMetadata({
-      followUpQuestions: ['q1', 'q2', 'q3', 'q4'],
+      suggestedFollowUp: 'x'.repeat(81),
     });
-    expect(meta.followUpQuestions).toHaveLength(3);
+    expect(meta.suggestedFollowUp).toBeUndefined();
   });
 
   it('returns undefined for empty-string deeperContext', () => {

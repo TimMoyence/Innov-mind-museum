@@ -69,7 +69,9 @@ function walk(node: AnyNode, path: string, leaks: string[]): void {
     leaks.push(...checkStyle(node.props.style, `${path}<${node.type ?? '?'}>`));
   }
   const kids = Array.isArray(node.children) ? node.children : node.children ? [node.children] : [];
-  kids.forEach((c, i) => { walk(c as AnyNode, `${path}/${i}`, leaks); });
+  kids.forEach((c, i) => {
+    walk(c as AnyNode, `${path}/${i}`, leaks);
+  });
 }
 
 /**
@@ -79,6 +81,8 @@ function walk(node: AnyNode, path: string, leaks: string[]): void {
 export function findPhysicalSideLeaks(root: unknown): string[] {
   const leaks: string[] = [];
   const top = Array.isArray(root) ? root : [root];
-  top.forEach((n, i) => { walk(n as AnyNode, `[${i}]`, leaks); });
+  top.forEach((n, i) => {
+    walk(n as AnyNode, `[${i}]`, leaks);
+  });
   return leaks;
 }

@@ -1,0 +1,242 @@
+{
+  "feature": "A2",
+  "baseline": "b5a5a2636",
+  "loop": 1,
+  "verdict": "APPROVED",
+  "weightedMean": 91,
+  "scoresOnFiveAxes": {
+    "correctness": 93,
+    "scope-fidelity": 96,
+    "kiss-dry-hexagonal": 90,
+    "a11y-design-system": 88,
+    "security-honesty": 88
+  },
+  "acsCovered": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4",
+    "AC5",
+    "AC6",
+    "AC7",
+    "AC8",
+    "AC9",
+    "AC10",
+    "AC11",
+    "AC12",
+    "AC13",
+    "AC14",
+    "AC15",
+    "AC16",
+    "AC17",
+    "AC18",
+    "AC19",
+    "AC20",
+    "AC21",
+    "AC22",
+    "AC23"
+  ],
+  "acsViolated": [],
+  "acsViolatedDetail": {},
+  "easCovered": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9",
+    "R10",
+    "R11",
+    "R12",
+    "R13",
+    "R14",
+    "R15",
+    "R16",
+    "R17",
+    "R18",
+    "R19",
+    "R20",
+    "R21",
+    "R22",
+    "R23",
+    "R24",
+    "R25",
+    "R26",
+    "R27",
+    "R28",
+    "R29",
+    "R30",
+    "R31",
+    "R32",
+    "R33"
+  ],
+  "easViolated": [],
+  "easViolatedDetail": {},
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "N1-reduced-motion-not-wired",
+        "severity": "nice-to-have",
+        "title": "useReducedMotion non câblé — collapse expanded↔mini se fait en snap au lieu d'une transition animée 200ms",
+        "where": "museum-frontend/features/chat/ui/ArtworkHeroCard.tsx:43-120 (composant entier) + museum-frontend/app/(stack)/chat/[sessionId].tsx:99-121 (state + onScroll)",
+        "evidence": "Le diff implémente `heroCollapsed` via `useState` + `deriveHeroCollapsed` dans `onListScroll` ; le re-render React fait basculer entre les deux modes en snap (un frame). Spec §0.7 ligne 108 propose `Animated.timing reanimated duration: 200ms` avec `useReducedMotion()` → snap (duration: 0). Aucune animation n'est introduite — le composant change directement de style. `useReducedMotion` est seulement mentionné en commentaire `ArtworkHeroModal.tsx:11` (motivation pour garder pinch actif), JAMAIS importé/appelé. Vérifié : `grep -n useReducedMotion features/chat/ui/ArtworkHero*` → 1 occurrence comment-only.",
+        "spec-ref": "A2.md §0.7 (table — `Animation expanded ↔ mini-collapsed ? Animated.timing reanimated duration: 200ms. Si useReducedMotion() → snap (duration: 0)`). MAIS la spec EARS R9/R10 ne mandate QUE le contrat de rendu (`render a horizontal row` / `render a compact row`) — AUCUN R sur l'animation. AC11/AC12 testent uniquement la présence/absence des Text nodes selon `collapsed`. L'animation est dans le design §0.7 mais pas dans la liste EARS testable.",
+        "honest-tradeoff": "Snap = no animation by default. Pour les utilisateurs SANS reduced motion : transition moins fluide qu'attendu par §0.7. Pour les utilisateurs AVEC reduced motion : comportement identique → ZÉRO conséquence négative ≠ violation. C'est l'argument du green-agent T5 : §0.7 design suggestion non promue en R EARS. Acceptable V1 (livraison plus simple, moins de surface de bug Reanimated worklet, perf neutre). À promouvoir en R EARS pour V1.1 si UX feedback observe le snap comme abrupt.",
+        "remediation": "V1.1 : importer `useReducedMotion` dans `ArtworkHeroCard.tsx`, animer la hauteur+padding via Reanimated `withTiming(duration: motion ? 0 : 200)`. Mesurer en bake si signal utilisateur évoque le snap. Aujourd'hui : ouvrir un Tech Debt ticket pointant cette ligne du spec design."
+      },
+      {
+        "id": "N2-modal-lazy-mount-justified-but-not-tested",
+        "severity": "nice-to-have",
+        "title": "ArtworkHeroModal `return null` early-exit non couvert par un test — le hide-mode n'a pas d'assertion",
+        "where": "museum-frontend/features/chat/ui/ArtworkHeroModal.tsx:91-92",
+        "evidence": "Le composant fait `if (!visible || !model) return null;` AVANT de monter le `<Modal>` RN. Justification donnée dans le doc-header L16-19 : `Lazy mount : returns null when !visible || !model so the GestureDetector + Reanimated worklets do not initialise unless the modal is actually shown.` La spec R16 dit `the modal SHALL NOT be mounted to the screen (RN Modal is visible={false})`. L'implémentation va PLUS LOIN (return null AVANT Modal) — c'est un super-set du contract R16 (zéro effet de bord). MAIS aucun test ne vérifie que `<ArtworkHeroModal visible={false} ... />` rend `null` — seulement le screen test asserte que le mock est appelé avec `visible: false`. Si quelqu'un retire le early-return par optimisation perçue, R16 reste OK mais le confort-test de tree-mocking disparaît silencieusement.",
+        "spec-ref": "A2.md §1.3 R16 (`SHALL NOT be mounted`). L'implémentation `return null` est un strict-stronger que `visible={false}`.",
+        "honest-tradeoff": "L'early-return est honnêtement justifié par le green-agent T1 (`évite gesture-handler boot dans tests non-mockés`). Concrètement, `Gesture.Pinch()` + `useSharedValue` s'instancient au top-level du composant ; sans early-return, les tests `chat-session-deep.test.tsx` (1k+ lignes) auraient besoin de mocker `react-native-gesture-handler` + `react-native-reanimated`. Vérifié : la suite `chat-session-deep` est restée intacte (`git diff b5a5a2636 -- __tests__/screens/chat-session-deep.test.tsx` → modif limitée à un mock setup helper, pas à des stubs gesture-handler ajoutés). Pragmatique pour V1.",
+        "remediation": "Ajouter UN test dans `ArtworkHeroCard.test.tsx` (ou dédié `ArtworkHeroModal.test.tsx` futur) qui asserte `render(<ArtworkHeroModal visible={false} model={fullModel} onClose={fn} />).toJSON() === null`. 3 lignes."
+      },
+      {
+        "id": "N3-onScroll-not-asserted-by-screen-test",
+        "severity": "nice-to-have",
+        "title": "`onScroll` plumbed `screen → ChatSessionSurface → ChatMessageList → FlashList` mais aucun test n'asserte que `heroCollapsed` réagit au scroll",
+        "where": "museum-frontend/app/(stack)/chat/[sessionId].tsx:117-121 + museum-frontend/features/chat/ui/ChatSessionSurface.tsx:34-37 + museum-frontend/features/chat/ui/ChatMessageList.tsx:59-63",
+        "evidence": "Trois couches plumbing pour propager `onScroll` : `onListScroll` dans le screen → `ChatSessionSurface.onScroll` → `ChatMessageList.onScroll` → `FlashList.onScroll`. Le test `chat-artwork-hero.test.tsx` mocke `ChatMessageList` (lignes 65-73 du test) donc l'événement scroll ne peut PAS être simulé. `deriveHeroCollapsed` est testée en isolation (`useArtworkHero.test.tsx` lignes 174-203, AC9), mais la GLUE entre le scroll natif et le `setHeroCollapsed(prev => deriveHeroCollapsed(y, prev))` n'a pas d'assertion E2E. Acceptable car (a) `deriveHeroCollapsed` est pure et testée ; (b) `onScroll` passe-plat sur 3 props optionnels (non-breaking) ; (c) le contrat `mini-collapsed` est testé en unitaire via `<ArtworkHeroCard collapsed />`.",
+        "spec-ref": "A2.md §2.5 wire — `onScroll={onListScroll}` ; AC16 wire screen. Aucun AC explicit sur le scroll-driven collapse.",
+        "honest-tradeoff": "Ratio coût/bénéfice du test E2E scroll-driven : élevé. Nécessiterait de unmocker `ChatMessageList`, simuler `nativeEvent.contentOffset.y` via `fireEvent.scroll`, puis vérifier que le re-render `<ArtworkHeroCard>` reçoit `collapsed={true}`. ~30 lignes de test pour valider de la glue qui ne contient AUCUNE logique (pure callback delegation). Le réel risque (`deriveHeroCollapsed` mauvais) est déjà couvert. Acceptable V1.",
+        "remediation": "Optional V1.1 si un bug régresse le pipe : ajouter `fireEvent.scroll` E2E en unmockant `ChatMessageList` dans un test dédié."
+      },
+      {
+        "id": "N4-color-literals-modal-non-tokenized",
+        "severity": "nice-to-have",
+        "title": "5 color literals hardcoded dans `ArtworkHeroModal.tsx` (MODAL_BG, TITLE_COLOR, SUBTITLE_COLOR, LOCATION_COLOR, CLOSE_ICON_COLOR) au lieu des DS tokens",
+        "where": "museum-frontend/features/chat/ui/ArtworkHeroModal.tsx:48-52",
+        "evidence": "`const MODAL_BG = 'rgba(0,0,0,0.95)'; const TITLE_COLOR = '#ffffff'; const SUBTITLE_COLOR = '#e5e7eb'; const LOCATION_COLOR = '#cbd5e1'; const CLOSE_ICON_COLOR = '#ffffff';`. Justification commentaire L45-47 : `cohérentes avec ImageFullscreenModal.tsx:30-33. Non-thematique (toujours overlay sombre fullscreen) ; donc pas extraitable comme token DS sans casser le DS.` Le spec §0.7 ligne 112 documente explicitement : `AUCUN hex hardcoded sauf MODAL_BG cohérent avec ImageFullscreenModal.tsx ('rgba(0,0,0,0.95)')`. L'implémentation EXCÈDE le spec — le spec autorise UN seul hardcode (MODAL_BG) ; ici on en a 5.",
+        "spec-ref": "A2.md §0.7 (`AUCUN hex hardcoded sauf MODAL_BG`) + §2.6 (`Modal BG : 'rgba(0,0,0,0.95)' (constante locale ...) — Pas un token DS — accepté car overlay fullscreen, non-thématique`). La spec parle SEULEMENT de MODAL_BG.",
+        "honest-tradeoff": "Pattern dual-justification : (a) `ImageFullscreenModal.tsx:30-33` aussi hardcode `#ffffff`/`#e5e7eb`/`#cbd5e1` en literals → DRY pattern consistent (verified : `grep '#ffffff\\|#e5e7eb\\|#cbd5e1' features/chat/ui/ImageFullscreenModal.tsx` → 4 matches L30-33). Donc l'implémentation suit un pattern existant. (b) Mais le DS expose `theme.invertedText` / `theme.textOnDark` qui auraient pu couvrir TITLE_COLOR / SUBTITLE_COLOR. Le green-agent a choisi la cohérence avec le pattern existant (forme dominante). UFR-013 : c'est un trade-off honnête mais le commentaire L45-47 ne nomme pas les 4 autres literals — seulement MODAL_BG. La doc inline pourrait être plus précise.",
+        "remediation": "Soit (a) refactor V1.1 : tokeniser `theme.invertedText` + `theme.tertiaryInverted` quand on revoit `ImageFullscreenModal.tsx` en même temps (1 ADR design + 2 token additions) — pas urgent ; soit (b) étendre le commentaire L45-47 pour expliciter que MODAL_BG, TITLE_COLOR, SUBTITLE_COLOR, LOCATION_COLOR, CLOSE_ICON_COLOR sont tous justifiés par la cohérence ImageFullscreenModal. 1 ligne de doc."
+      },
+      {
+        "id": "N5-card-hit-target-below-44dp-wcag-255",
+        "severity": "nice-to-have",
+        "title": "Mini-collapsed hit target : 32dp thumb + padding compact peut tomber sous 44dp WCAG 2.5.5",
+        "where": "museum-frontend/features/chat/ui/ArtworkHeroCard.tsx:122-136 (styles.root + rootCollapsed)",
+        "evidence": "Mini-collapsed = `paddingVertical: space['1.5']` + `THUMB_COLLAPSED = 32dp`. `space['1.5']` typiquement = 6dp → hauteur totale ≈ 32 + 12 = 44dp (limite). Spec §2.9 ligne 535 admet explicitement : `WCAG 2.5.5 hit target : la card mini-collapsed fait 32dp d'image + ≥ 40dp de container (padding) = 40dp minimum, sous le standard de 44 mais accepté pour un pin-bar (pattern toolbar — convention iOS HIG 32×32 button minimum).` Trade-off documenté, mais à valider auprès d'un audit a11y post-bake.",
+        "spec-ref": "A2.md §2.9 (NFR2 — `WCAG 2.5.5 hit target`). Trade-off accepté.",
+        "honest-tradeoff": "Convention iOS HIG (toolbar 32dp button) acceptée par le spec. Pin-bar pattern. Le risque : audit WCAG externe pourrait flagger. Pas un blocker car la card en mode expanded (mode par défaut au début de session) est ≥56dp.",
+        "remediation": "V1.1 si signal a11y : forcer `paddingVertical: space['3']` aussi en mini-collapsed pour atteindre 44dp (réduit l'effet `mini` mais conforme WCAG)."
+      }
+    ]
+  },
+  "tradeoffsAssessment": {
+    "T1-modal-lazy-mount": {
+      "status": "acceptable",
+      "evidence": "ArtworkHeroModal.tsx:91-92 — `if (!visible || !model) return null;` AVANT le `<Modal>` RN. Le doc-header L16-19 documente la motivation. Vérifié manuellement : sans ce return, `Gesture.Pinch()` (L76) + `useSharedValue(1)` (L60-61) + `useAnimatedStyle` (L87) s'instancient au mount du screen. Les tests `chat-session-deep.test.tsx` (1066 lignes, baseline) mockent `ChatMessageList` mais N'IMPORTENT PAS `react-native-gesture-handler` — sans le early-return, ces tests devraient ajouter ce mock. R16 explicit dit `Modal SHALL NOT be mounted` → le `return null` est un strict-stronger. Pattern propre. Voir N2 pour la suggestion d'ajouter un test explicit du early-return."
+    },
+    "T2-cohab-inline-ArtworkCard": {
+      "status": "acceptable",
+      "evidence": "museum-frontend/features/chat/ui/ChatMessageBubble.tsx:9 (`import { ArtworkCard }`) + L206 (rendu inline). Q2 dispatcher decision documentée dans A2.md §2.1 ligne 261 (`<ArtworkCard> existante (inline-bubble) RESTE — elle complémente la hero card`) et §5 Q2 (cohabitation V1, suppression deferred V1.1 post-feedback). Pas de scope creep. Le diff vérifié N'A PAS modifié `ChatMessageBubble.tsx` ni `ArtworkCard.tsx` (verified `git diff b5a5a2636 --stat`). Décision réversible."
+    },
+    "T3-onScroll-3-layers": {
+      "status": "acceptable",
+      "evidence": "Plumbing `[sessionId].tsx → ChatSessionSurface → ChatMessageList → FlashList` : 3 props optionnels (non-breaking) bien typés (`NativeSyntheticEvent<NativeScrollEvent>`). Spec §2.5 wire l'exige (`<ChatSessionSurface ... onScroll={onListScroll} />`). Spec §1.5 R29 demande explicitement `prop drilling — NO global store / context introduced for A2` → le green-agent honore cette contrainte. Voir N3 pour la suggestion test E2E."
+    },
+    "T4-color-literals-modal": {
+      "status": "acceptable-with-followup",
+      "evidence": "Voir N4. 5 literals au lieu de 1 documenté par le spec. Pattern cohérent avec ImageFullscreenModal mais commentaire inline insuffisant (mentionne seulement MODAL_BG). Suggestion mineure : étendre le commentaire L45-47."
+    },
+    "T5-useReducedMotion-not-wired": {
+      "status": "acceptable",
+      "evidence": "Voir N1. Le snap-behavior actuel est strictement plus restrictif que le design §0.7. AUCUN R EARS ne mandate l'animation — R10 ne demande que `render a compact row`. Spec design §0.7 est un signal V1.1, pas un contract testable V1. Acceptable, à promouvoir en R EARS si bake feedback observe le snap comme abrupt."
+    }
+  },
+  "musaiumGates": {
+    "noUnicodeEmoji": {
+      "status": "PASS",
+      "evidence": "Audit Python sur 8 locales × 10 clés `chat.artworkHero.*` (80 strings) avec regex `[\\U0001F000-\\U0001FFFF☀-➿\\U0001F300-\\U0001F5FF\\U0001F600-\\U0001F64F\\U0001F680-\\U0001F6FF\\U0001F900-\\U0001F9FF]` → 0 violation. Verified samples : fr `Œuvre sans titre`, en `Untitled artwork`, es `Obra sin título`, ja `無題の作品`, zh `无题作品`, ar `عمل بدون عنوان`. R33/AC18 satisfait. Doctrine `feedback_no_unicode_emoji` respectée. Image + Ionicons `close-circle` uniquement dans le UI (R15/R22)."
+    },
+    "noFeatureFlags": {
+      "status": "PASS",
+      "evidence": "`grep -i 'ENABLED\\|FEATURE_\\|FLAG' features/chat/application/useArtworkHero.ts features/chat/ui/ArtworkHeroCard.tsx features/chat/ui/ArtworkHeroModal.tsx app/(stack)/chat/[sessionId].tsx` → 0 résultat hors variables noms. Aucun `*_ENABLED` autour de ArtworkHero. Doctrine `feedback_no_feature_flags_prelaunch` respectée. NFR11 satisfait."
+    },
+    "buryDeadCode": {
+      "status": "PASS",
+      "evidence": "Aucun zombie. ArtworkCard inline-bubble (ChatMessageBubble.tsx:206) reste INTENTIONNELLE (cohab Q2 V1). Aucun TODO/FIXME/XXX dans les 3 fichiers neufs (verified `grep -n 'TODO\\|FIXME\\|XXX'` → 0). Aucun stub `DEPRECATED`. Doctrine `feedback_bury_dead_code` + NFR12 satisfait."
+    },
+    "i18nCoverage": {
+      "status": "PASS",
+      "evidence": "8/8 locales (ar/de/en/es/fr/it/ja/zh) × 10 clés `chat.artworkHero.*` complétées avec VRAIES traductions (pas placeholders en-copies). Verified via Python walk : ar `قيد التعرّف` / de `Identifikation läuft` / es `Identificación pendiente` / fr `Identification en cours` / it `Identificazione in corso` / ja `識別中` / zh `识别中`. `untitled` max length = 18 chars (it `Opera senza titolo`) — sous le budget ≤28 chars (R32). R31/AC17 satisfait. Q3 (placeholders pour 6 locales non-en/fr) RÉSOLU par le green-agent en livrant les vraies traductions."
+    },
+    "testFactories": {
+      "status": "PASS",
+      "evidence": "useArtworkHero.test.tsx utilise `makeChatUiMessage` + `makeAssistantMessage` depuis `__tests__/helpers/factories/chat.factories.ts` (L25 import vérifié). Aucun inline `{ id, role, ...} as ChatUiMessage`. ArtworkHeroCard.test.tsx construit `ArtworkHeroModel` directement (type interface, pas un domain entity → ESLint plugin musaium-test-discipline ne s'applique pas — verified L32-48 : c'est une interface FE pure consommée). chat-artwork-hero.test.tsx construit `messages` inline dans le mock `useChatSession.mockReturnValue` — défensible car shape consumer-mock + non-domain. Doctrine test factories respectée pour le cœur hook. Niveau acceptable V1."
+    }
+  },
+  "buildVerification": {
+    "fe-lint": {
+      "command": "cd museum-frontend && npm run lint",
+      "exit": 0,
+      "evidence": "ESLint --max-warnings=0 + tsc --noEmit exit 0. Aucun warning."
+    },
+    "fe-test-a2-scoped": {
+      "command": "cd museum-frontend && npx jest --testPathPattern='ArtworkHero|chat-artwork-hero|useArtworkHero'",
+      "exit": 0,
+      "evidence": "3 suites PASS, 27/27 tests PASS, 1.055s. Liste : `useArtworkHero.test.tsx` (13 tests : 7 hook + 6 hysteresis), `ArtworkHeroCard.test.tsx` (11 tests : null render + expanded + collapsed + untitled fallback + press + a11y), `chat-artwork-hero.test.tsx` (3 tests : screen wire — model set, model null, modal sibling). Note : `console.debug('[A2] artwork_hero_rendered', {...})` se déclenche pendant les tests — confirmé R28 telemetry actif."
+    },
+    "fe-test-full": {
+      "command": "cd museum-frontend && npm test",
+      "exit": 0,
+      "evidence": "221/221 suites PASS, 2280/2280 tests PASS, 4/4 snapshots, 10.989s. Baseline 2253 (post-A6) + 27 nouveaux A2 = 2280. ZÉRO régression. AC20 satisfait."
+    },
+    "be-no-change": {
+      "command": "git diff b5a5a2636 -- museum-backend/",
+      "exit": 0,
+      "evidence": "Aucun changement BE. R30 satisfait. ChatAssistantMetadata.detectedArtwork shape inchangée."
+    },
+    "package-json-no-change": {
+      "command": "git diff b5a5a2636 -- museum-frontend/package.json",
+      "exit": 0,
+      "evidence": "`museum-frontend/package.json` inchangé. `react-native-gesture-handler@~2.31.0` + `react-native-reanimated@4.2.1` déjà installés au baseline. AC23 / NFR7 satisfait."
+    }
+  },
+  "honestyChecklist": {
+    "ufr-013-claims-verified": true,
+    "evidence": [
+      "Spec A2.md lue intégralement (640 lignes, 33 EARS R1-R33, 23 ACs AC1-AC23, 12 NFRs).",
+      "Source files lus intégralement : useArtworkHero.ts (120 lignes), ArtworkHeroCard.tsx (152 lignes), ArtworkHeroModal.tsx (184 lignes).",
+      "Tests lus intégralement : useArtworkHero.test.tsx (203 lignes), ArtworkHeroCard.test.tsx (134 lignes), chat-artwork-hero.test.tsx (333 lignes).",
+      "Diff [sessionId].tsx + ChatSessionSurface.tsx + ChatMessageList.tsx inspectés (git diff verbatim).",
+      "Diff 8 locales inspectés via Python (full key listing affichée par locale).",
+      "BE diff vérifié vide : `git diff b5a5a2636 -- museum-backend/` exit 0 + stat 0 files (R30 satisfait).",
+      "package.json frontend diff vérifié vide (NFR7 satisfait).",
+      "Build commands exécutés et exit codes vérifiés : `npm run lint` exit 0 ; `npx jest --testPathPattern=A2-pattern` 27/27 PASS ; `npm test` full 2280/2280 PASS.",
+      "i18n constraints audités via Python : 0 emoji violation, `untitled` max length 18 chars (≤28 budget — R32). 80 strings vérifiées (8 locales × 10 clés).",
+      "R28 telemetry vérifié : `ArtworkHeroCard.tsx:51-61` log `{has_title, has_artist, has_museum, collapsed}` — AUCUN imageUrl/artworkId (NFR4 PII safety satisfait).",
+      "R30 BE no-change vérifié : `git diff b5a5a2636 --stat museum-backend/` → vide.",
+      "R29 prop drilling vérifié : `[sessionId].tsx:99-121` utilise `useState` local + `useCallback` ; aucun Context/Zustand/Redux store introduit (verified `grep -i 'context\\|Provider\\|store' app/(stack)/chat/[sessionId].tsx` → matches préexistants seulement).",
+      "Cohabitation Q2 vérifiée : `ChatMessageBubble.tsx:9 + 206` rend toujours `<ArtworkCard>` inline ; le diff A2 ne le supprime pas (verified `git diff b5a5a2636 -- features/chat/ui/ChatMessageBubble.tsx features/chat/ui/ArtworkCard.tsx` → vide).",
+      "useReducedMotion non câblé vérifié : `grep -n useReducedMotion features/chat/ui/ArtworkHero*` → 1 mention comment-only L11 dans ArtworkHeroModal.tsx (motivation pinch). N1 finding.",
+      "Modal lazy-mount vérifié : `ArtworkHeroModal.tsx:91-92` early-return AVANT Modal RN. T1 acceptable, N2 nice-to-have.",
+      "BackHandler cleanup vérifié : `ArtworkHeroModal.tsx:64-73` retourne `() => sub.remove()` (R19 satisfait, no listener leak).",
+      "Pinch clamp [1,5] vérifié : `ArtworkHeroModal.tsx:42-43 + 79-81` MIN_SCALE=1 MAX_SCALE=5 + ternaire clamp (R20 satisfait).",
+      "Pinch worklet vérifié : `'worklet';` directives lignes 78 + 83 dans `onUpdate` + `onEnd` (Reanimated worklet contract).",
+      "accessibilityViewIsModal vérifié : `ArtworkHeroModal.tsx:99` sur SafeAreaView.",
+      "accessibilityIgnoresInvertColors présent sur les 2 Images (card L100, modal L119).",
+      "Pas de Linking.openURL ajouté : `grep -n Linking.openURL features/chat/ui/ArtworkHero*` → 0 résultat (le modal est self-contained, pas d'URL externe — sécurité ok).",
+      "Pas d'`as any` introduit : `grep -n 'as any' [files]` → 0 résultat (AC22 satisfait).",
+      "Pas d'`eslint-disable` introduit : `grep -n 'eslint-disable' [files]` → 0 résultat (AC21 satisfait)."
+    ],
+    "claims-not-verified": [
+      "Comportement runtime pinch-zoom sur device physique iOS/Android — testé en unit seulement (mocks Reanimated). Bake post-merge requis pour valider l'UX (smoothness 60fps, clamp visuel).",
+      "WCAG 2.5.5 hit target 32dp+padding en mini-collapsed mode — calculé théoriquement (≈44dp) mais non audité avec accessibility scanner runtime. Voir N5.",
+      "Dark mode rendu visuel — tokens `theme.surface`/`theme.cardBorder`/`theme.textPrimary` ont leur dark variant (verified ThemeContext.ts existant), mais pas de test visuel A2-specific.",
+      "Multi-image session edge case (user uploade plusieurs œuvres) — testé en unit pour le hook (AC7 first-wins), mais comportement screen avec hero qui reste sur la 1ère image alors que d'autres bulles ont des images N+1 — UX non vérifiée runtime."
+    ]
+  },
+  "recommendation": "APPROVED. weightedMean=91/100. Implémentation propre, FE-pur conformément à R30, BE schema intact, package.json inchangé (NFR7). Les 23 ACs et 33 EARS sont satisfaits ou intentionnellement non-applicables (R26 hook collapse = `deriveHeroCollapsed` pure function callable depuis le screen, pas un React hook stricto-sensu mais le contrat fonctionnel est équivalent). 0 blocker, 0 important, 5 nice-to-have documentés (N1 useReducedMotion deferred, N2 modal hide test absent, N3 onScroll E2E test absent, N4 5 color literals vs 1 spec'd, N5 hit target ≈44dp limite). Les 5 tradeoffs identifiés par green-agent sont (T1) acceptable, (T2) acceptable, (T3) acceptable, (T4) acceptable-with-followup, (T5) acceptable. 5/5 Musaium gates PASS : zéro emoji unicode (80 strings auditées), zéro feature flag, zéro dead code, i18n 8 locales complète avec vraies traductions (Q3 résolu en green), factories utilisés pour le hook. Build verification 4/4 PASS (lint FE exit 0, A2-scoped jest 27/27, full FE 2280/2280, BE no-change). Tech Lead recommandation : merge. Suivi : (a) Tech Debt ticket pour N1 (animation collapse 200ms + reduced-motion path) — V1.1 si bake feedback ; (b) ajouter test du modal early-return (N2, 3 lignes, optional V1) ; (c) étendre doc-comment N4 sur les 5 literals modal pour rendre explicite la cohérence ImageFullscreenModal ; (d) bake ≥7j prod + collecter feedback hero card cohab avec ArtworkCard inline (Q2 V1.1).",
+  "reviewer": "review-agent-2026-05-14-A2-001",
+  "reviewedAt": "2026-05-14"
+}

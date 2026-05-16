@@ -1,19 +1,35 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
+import type { CitationFamily } from '@/features/chat/application/citations';
+import { FAMILY_FOR_SOURCE_TYPE } from '@/features/chat/application/citations';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
+import { CitationChips } from '@/features/chat/ui/CitationChips';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { SourceCitation } from '@/features/chat/ui/SourceCitation';
+import { forceOpaque } from '@/shared/ui/colorUtils';
+import { useReducedTransparency } from '@/shared/ui/hooks/useReducedTransparency';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
 import { FeedbackSection, ImageSection, StreamingBody, TtsSection } from './bubbleSections';
+
+/**
+ * A3 — Local UI tuning value for the assistant bubble's frosted-glass effect.
+ *
+ * Chosen between `<GlassCard>` 52 (UI cards, low text density) and
+ * `<FloatingContextMenu>` 64 (tactical overlay). The bubble is text-dense, so
+ * we keep the blur lighter (42) to preserve readability. This is NOT a design
+ * token — pure local UI constant, per spec §1.8 R27.
+ */
+export const ASSISTANT_BUBBLE_BLUR_INTENSITY = 42;
 
 interface ChatMessageBubbleProps {
   message: ChatUiMessage;
@@ -63,6 +79,7 @@ export const ChatMessageBubble = React.memo(
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
+    const reduceTransparency = useReducedTransparency();
     const isAssistant = message.role === 'assistant';
     const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -73,6 +90,23 @@ export const ChatMessageBubble = React.memo(
     const showSkeleton = isStreaming && !hasImages;
     const sources = message.metadata?.sources;
     const hasSources = (sources?.length ?? 0) > 0;
+
+    /**
+     * A6 — tap on a provenance chip opens the FIRST source of that family
+     * via `Linking.openURL` (Q1 option (a) in spec). `ai-knowledge` is a
+     * synthetic family with no source → NO-OP. The confidence chip is also
+     * a NO-OP in V1 (the disclosure popover is deferred per Q5 / §2.7).
+     */
+    const onProvenancePress = useCallback(
+      (family: CitationFamily) => {
+        if (family === 'ai-knowledge') return;
+        const match = sources?.find((s) => FAMILY_FOR_SOURCE_TYPE[s.type] === family);
+        if (match?.url) {
+          void Linking.openURL(match.url);
+        }
+      },
+      [sources],
+    );
 
     const bubbleContent = (
       <>
@@ -98,6 +132,9 @@ export const ChatMessageBubble = React.memo(
                   <SourceCitation key={`${s.url}-${String(i)}`} source={s} index={i + 1} />
                 ))}
               </View>
+            ) : null}
+            {!isStreaming ? (
+              <CitationChips metadata={message.metadata} onProvenancePress={onProvenancePress} />
             ) : null}
           </View>
         ) : (
@@ -139,30 +176,51 @@ export const ChatMessageBubble = React.memo(
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onReport(message.id);
             }}
-            style={[
-              styles.bubble,
-              // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
-              {
-                backgroundColor: theme.assistantBubble,
-                borderColor: theme.assistantBubbleBorder,
-                alignSelf: 'flex-start',
-              },
-            ]}
             accessibilityRole="text"
             accessibilityLabel={t('a11y.chat.assistant_message')}
             accessibilityHint={t('a11y.chat.long_press_hint')}
           >
-            {bubbleContent}
+            {reduceTransparency ? (
+              <View
+                testID="chat-bubble-assistant"
+                style={[
+                  styles.bubble,
+                  styles.bubbleAssistantOpaque,
+                  {
+                    backgroundColor: forceOpaque(theme.assistantBubble),
+                    borderColor: theme.assistantBubbleBorder,
+                  },
+                ]}
+              >
+                {bubbleContent}
+              </View>
+            ) : (
+              <BlurView
+                testID="chat-bubble-assistant"
+                intensity={ASSISTANT_BUBBLE_BLUR_INTENSITY}
+                tint={theme.blurTint}
+                style={[
+                  styles.bubble,
+                  styles.bubbleAssistantBlur,
+                  {
+                    backgroundColor: theme.assistantBubble,
+                    borderColor: theme.assistantBubbleBorder,
+                  },
+                ]}
+              >
+                {bubbleContent}
+              </BlurView>
+            )}
           </Pressable>
         ) : (
           <View
+            testID="chat-bubble-user"
             style={[
               styles.bubble,
-              // eslint-disable-next-line react-native/no-inline-styles -- dynamic alignment
+              styles.bubbleUser,
               {
-                backgroundColor: theme.userBubble,
+                backgroundColor: forceOpaque(theme.userBubble),
                 borderColor: theme.userBubbleBorder,
-                alignSelf: 'flex-end',
               },
             ]}
             accessibilityRole="text"
@@ -246,6 +304,17 @@ const styles = StyleSheet.create({
     padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
     borderWidth: semantic.input.borderWidth,
+  },
+  bubbleUser: {
+    alignSelf: 'flex-end',
+  },
+  bubbleAssistantOpaque: {
+    alignSelf: 'flex-start',
+  },
+  bubbleAssistantBlur: {
+    alignSelf: 'flex-start',
+    // Required to clip the frosted-glass effect to the bubble's borderRadius.
+    overflow: 'hidden',
   },
   sourcesRow: {
     flexDirection: 'row',

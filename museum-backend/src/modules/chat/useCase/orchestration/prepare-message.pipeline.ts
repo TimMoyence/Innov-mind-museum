@@ -3,6 +3,7 @@ import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-
 import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolver';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
+import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -30,6 +31,7 @@ import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
+import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /** Preparation succeeded — all data needed to invoke the LLM. */
 export interface PrepareReady {
@@ -37,6 +39,15 @@ export interface PrepareReady {
   session: Awaited<ReturnType<typeof ensureSessionAccess>>;
   imageRef?: string;
   orchestratorImage?: PostMessageInput['image'];
+  /**
+   * C3 — SHA-256 hex prefix (32 chars) of the post-EXIF-strip image buffer,
+   * forwarded from `ImageProcessingService.processImage`. Present iff the
+   * request carried an `upload` or legacy-base64 image AND processing
+   * succeeded ; absent for `url` source (no buffer) or text-only requests.
+   * Threaded into `buildLlmCacheInput` to lift the image-bypass on the
+   * LLM cache lookup/store (R11/R12).
+   */
+  imageContentHash?: string;
   requestedLocale?: string;
   history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
   ownerId?: number;
@@ -191,16 +202,45 @@ export class PrepareMessagePipeline {
     image: PostMessageInput['image'],
     sessionId: string,
     ownerId: number | undefined,
-  ): Promise<{ imageRef?: string; orchestratorImage?: PostMessageInput['image'] }> {
+  ): Promise<{
+    imageRef?: string;
+    orchestratorImage?: PostMessageInput['image'];
+    imageContentHash?: string;
+  }> {
     if (!image) return {};
 
-    const processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
+    // A5 (R2/R3) — `chat.phase.analyzing-image` Langfuse span. Emitted ONLY
+    // when the request carries an image (R3 : the early-return guard above
+    // ensures no span is emitted on text-only paths). Fail-open via
+    // `safeTrace` so a Langfuse SDK outage never breaks the chat path.
+    //
+    // bug `merged_bug_004` — span MUST also be emitted on failure (any
+    // `badRequest` / sharp EXIF-strip / S3 upload error). Pattern mirrors
+    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
+    // + `outcome: 'success' | 'error'` attribute. Note: `runOcrGuard` stays
+    // OUTSIDE the wrap — span scope is strictly `processImage` per A5 R2/R3.
+    const startedAtMs = Date.now();
+    let outcome: ChatPhaseOutcome = 'success';
+    let processed: Awaited<ReturnType<ImageProcessingService['processImage']>>;
+    try {
+      processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
+    } catch (err) {
+      outcome = 'error';
+      throw err;
+    } finally {
+      emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId, outcome });
+    }
     await this.imageProcessor.runOcrGuard(
       processed.orchestratorImage,
       evaluateUserInputGuardrail,
       sessionId,
     );
-    return { imageRef: processed.imageRef, orchestratorImage: processed.orchestratorImage };
+    return {
+      imageRef: processed.imageRef,
+      orchestratorImage: processed.orchestratorImage,
+      // C3 — propagate visual signature (undefined for url-source per R2).
+      imageContentHash: processed.imageContentHash,
+    };
   }
 
   /** Validates session, processes image, runs input guardrail, persists user message, fetches enrichment. */
@@ -217,7 +257,7 @@ export class PrepareMessagePipeline {
     const text = input.text?.trim();
     this.validateMessageInput(text, input.image);
 
-    const { imageRef, orchestratorImage } = await this.processInputImage(
+    const { imageRef, orchestratorImage, imageContentHash } = await this.processInputImage(
       input.image,
       sessionId,
       ownerId ?? currentUserId,
@@ -264,6 +304,7 @@ export class PrepareMessagePipeline {
       session,
       imageRef,
       orchestratorImage,
+      imageContentHash,
       requestedLocale,
       history,
       ownerId,
@@ -311,6 +352,10 @@ export class PrepareMessagePipeline {
     routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
+    // A5 (R6) — `chat.phase.searching-collection` Langfuse span wraps the
+    // enrichment fan-out (KB + web search + image enrichment + DB lookup),
+    // which is the user-facing "searching the collection" window.
+    const enrichmentStartedAtMs = Date.now();
     const {
       userMemoryBlock,
       knowledgeBaseBlock,
@@ -331,6 +376,10 @@ export class PrepareMessagePipeline {
       ownerId,
       locale: requestedLocale,
       museumMode: input.context?.museumMode ?? session.museumMode,
+    });
+    emitChatPhaseSpan('searching-collection', enrichmentStartedAtMs, {
+      sessionId: session.id,
+      hasMuseumMode: input.context?.museumMode ?? session.museumMode,
     });
 
     this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);

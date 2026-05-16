@@ -57,9 +57,13 @@ export const useStartConversation = (): UseStartConversationReturn => {
         payload.locale = defaultLocale;
         payload.museumMode = options?.museumMode ?? defaultMuseumMode;
         payload.museumId = options?.museumId;
+        payload.museumName = options?.museumName;
         payload.coordinates = options?.coordinates;
       }
 
+      // BE Zod enum (`CHAT_SESSION_INTENTS` in museum-backend/src/modules/chat/domain/chat.types.ts)
+      // only accepts 'default' | 'walk'. UI-level intents like 'audio' / 'camera' propagate via
+      // the URL query string below, NOT via the payload — sending them would yield 400.
       if (intent === 'default' || intent === 'walk') {
         payload.intent = intent;
       }

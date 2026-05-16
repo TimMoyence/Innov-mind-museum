@@ -535,11 +535,10 @@
               "openQuestion": {
                 "type": "string"
               },
-              "followUpQuestions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+              "suggestedFollowUp": {
+                "type": "string",
+                "maxLength": 80,
+                "description": "B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`."
               },
               "imageDescription": {
                 "type": "string"
@@ -691,6 +690,14 @@
                 },
                 "museumName": {
                   "type": ["string", "null"]
+                },
+                "museumId": {
+                  "type": ["integer", "null"],
+                  "description": "Canonical museum identifier (B2 — conversation resumption banner). Optional/nullable for backward-compat with legacy clients and pre-museum sessions."
+                },
+                "lastArtworkTitle": {
+                  "type": ["string", "null"],
+                  "description": "Title of the most recently discussed artwork in the session (B2 — conversation resumption banner). `null` when no artwork has been discussed."
                 },
                 "createdAt": {
                   "type": "string",

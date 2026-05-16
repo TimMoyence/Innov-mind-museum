@@ -44,7 +44,7 @@ describe('llm-sections', () => {
     expect(plan[0].prompt).not.toContain('[IMAGE ANALYSIS]');
   });
 
-  it('includes followUpQuestions in JSON schema', () => {
+  it('includes suggestedFollowUp in JSON schema (B3 — singular replaces legacy followUpQuestions)', () => {
     const plan = createLlmSectionPlan({
       locale: 'en-US',
       museumMode: false,
@@ -52,9 +52,11 @@ describe('llm-sections', () => {
       timeoutSummaryMs: 10000,
     });
 
-    expect(plan[0].prompt).toContain('followUpQuestions');
+    expect(plan[0].prompt).toContain('suggestedFollowUp');
     expect(plan[0].prompt).toContain('deeperContext');
     expect(plan[0].prompt).toContain('openQuestion');
+    // Legacy plural field gone — singularity invariant (B3 NFR13).
+    expect(plan[0].prompt).not.toContain('followUpQuestions');
   });
 
   it('emits the v2 SuggestedImage shape (rationale + caption REQUIRED) — C2 R6', () => {

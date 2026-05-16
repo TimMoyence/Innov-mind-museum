@@ -3,11 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
+import { SottoVoceToggle } from '@/features/chat/ui/SottoVoceToggle';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
-interface ChatHeaderProps {
+export interface ChatHeaderProps {
   sessionTitle: string | null;
   expertiseLevel?: 'beginner' | 'intermediate' | 'expert';
   isClosing: boolean;
@@ -16,11 +17,29 @@ interface ChatHeaderProps {
   audioDescriptionEnabled?: boolean;
   onToggleAudioDescription?: () => void;
   /**
+   * B5 — Sotto-voce mode (silent room, audio muted). When `onToggleSottoVoce`
+   * is provided the `<SottoVoceToggle>` is rendered inside `headerActions`
+   * (between audio-description toggle and summary). Both props are optional
+   * and backward-compatible — omitting `onToggleSottoVoce` hides the toggle
+   * entirely (R20, AC13).
+   * Spec : `docs/chat-ux-refonte/specs/B5.md` §1.3 (R18-R21).
+   */
+  sottoVoceEnabled?: boolean;
+  onToggleSottoVoce?: () => void;
+  /**
    * Tap handler for the persistent "AI" badge that opens the on-demand
    * disclosure recap modal. Required by EU AI Act Article 50 — see
    * `docs/legal/AI_DISCLOSURE.md`. Omit only in non-chat contexts.
    */
   onOpenAiDisclosure?: () => void;
+  /**
+   * A4 — Collapsed mini-bar mode driven by scroll. When `true`, the title
+   * uses `fontSize.base` (16sp) instead of `fontSize['2xl']` (24sp) and the
+   * `<ExpertiseBadge>` is hidden. The AI disclosure badge and action buttons
+   * remain visible and tappable in both modes (EU AI Act Art.50 R10/R19).
+   * Defaults to `false` (expanded) — backward-compatible.
+   */
+  collapsed?: boolean;
 }
 
 /** Chat session header with title, museum name, expertise badge, and close button. */
@@ -32,7 +51,10 @@ export function ChatHeader({
   onSummary,
   audioDescriptionEnabled,
   onToggleAudioDescription,
+  sottoVoceEnabled,
+  onToggleSottoVoce,
   onOpenAiDisclosure,
+  collapsed = false,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -42,7 +64,14 @@ export function ChatHeader({
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
-            <Text style={[styles.header, { color: theme.textPrimary }]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.header,
+                collapsed ? styles.headerCollapsed : null,
+                { color: theme.textPrimary },
+              ]}
+              numberOfLines={1}
+            >
               {sessionTitle ?? t('chat.fallback_title')}
             </Text>
             {onOpenAiDisclosure ? (
@@ -63,7 +92,7 @@ export function ChatHeader({
               </Pressable>
             ) : null}
           </View>
-          {expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
+          {!collapsed && expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
         </View>
         <View style={styles.headerActions}>
           {onToggleAudioDescription ? (
@@ -87,6 +116,9 @@ export function ChatHeader({
                 color={audioDescriptionEnabled ? theme.primary : theme.textSecondary}
               />
             </Pressable>
+          ) : null}
+          {onToggleSottoVoce ? (
+            <SottoVoceToggle enabled={sottoVoceEnabled ?? false} onToggle={onToggleSottoVoce} />
           ) : null}
           {onSummary ? (
             <Pressable
@@ -147,6 +179,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize['2xl'],
     fontWeight: '700',
     flexShrink: 1,
+  },
+  headerCollapsed: {
+    fontSize: fontSize.base,
   },
   titleRow: {
     flexDirection: 'row',

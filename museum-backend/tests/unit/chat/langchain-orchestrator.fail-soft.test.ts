@@ -25,7 +25,7 @@ class FakeSectionModel {
         content: JSON.stringify({
           answer: 'Summary answer',
           deeperContext: 'More context here.',
-          followUpQuestions: ['What technique was used?'],
+          suggestedFollowUp: 'What technique was used?',
           citations: ['catalog-ref'],
         }),
       };
@@ -111,7 +111,7 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     expect(result.text).toContain('Summary answer');
     expect(result.metadata.citations).toEqual(['catalog-ref']);
     expect(result.metadata.deeperContext).toBe('More context here.');
-    expect(result.metadata.followUpQuestions).toEqual(['What technique was used?']);
+    expect(result.metadata.suggestedFollowUp).toBe('What technique was used?');
     expect(result.metadata.diagnostics?.profile).toBe('single_section');
     expect(result.metadata.diagnostics?.sections).toHaveLength(1);
     expect(result.metadata.diagnostics?.degraded).toBe(false);

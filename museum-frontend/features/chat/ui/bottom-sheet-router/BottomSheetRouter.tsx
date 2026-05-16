@@ -138,7 +138,17 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
     const phase: BottomSheetContainerPhase = state.kind;
     const enableSwipeDown = definition.presentation === 'sheet' && !definition.blocking;
     return (
+      // `key={state.route}` forces React to UNMOUNT the previous container and
+      // MOUNT a fresh one when the route id flips (chained replace via
+      // `closing(prev) → opening(queued)`). Without this key the same
+      // `<BottomSheetContainer>` instance is reused across the route swap, its
+      // mount-only entrance `useEffect` (deps `[]`) never re-fires, the stale
+      // Animated.Values stay at (opacity=0, translateY=40) from the exit anim,
+      // and `OPEN_DONE` is never dispatched — leaving the reducer wedged in
+      // `opening(queued)` with the new content invisible. See bug_010 (B4
+      // cartel-scanner flow) and `chained-replace.test.tsx`.
       <BottomSheetContainer
+        key={state.route}
         presentation={definition.presentation}
         enableSwipeDown={enableSwipeDown}
         phase={phase}

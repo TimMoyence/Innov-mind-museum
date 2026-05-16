@@ -107,27 +107,19 @@ jest.mock('@/features/chat/ui/ChatHeader', () => {
   return { ChatHeader: () => <View testID="chat-header" /> };
 });
 
-jest.mock('@/features/chat/ui/MediaAttachmentPanel', () => {
-  const { View } = require('react-native');
-  return { MediaAttachmentPanel: () => <View testID="media-attachment-panel" /> };
-});
-
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
   const { View } = require('react-native');
   return { OfflineBanner: () => <View testID="offline-banner" /> };
 });
 
-// Replace the bottom-sheet router with an inert stub so the chat-session
-// screen tree can render without mounting any sheet content (and without
-// pulling react-native-webview in tests that don't drive the browser route).
-jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
-  BottomSheetRouter: () => null,
-  useBottomSheetRouter: () => ({
-    activeRoute: null,
-    open: jest.fn(),
-    close: jest.fn(),
-  }),
-}));
+// NOTE: `<Composer>` and the bottom-sheet-router are NOT mocked here. Tests
+// that need to capture composer props or intercept `router.open(...)` calls
+// (e.g. `chat-cartel-scanner.test.tsx`) define their own jest.mock() factories
+// at the top of the file — those win because babel-jest hoists them above
+// this helper's import. Tests that don't care about these surfaces still pass
+// because the real `<Composer>` is lightweight (its `ChatInput` child is
+// mocked just below) and the real `<BottomSheetRouter>` renders to `null`
+// while `activeRoute === null`.
 
 export function defaultChatSession() {
   return {

@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium is thinking..."
     },
+    "status": {
+      "analyzing-image": "Looking at the artwork…",
+      "searching-collection": "Searching the collection…",
+      "composing": "Composing the answer…",
+      "synthesizing-voice": "Preparing the voice…"
+    },
     "fallback_title": "Art Session",
     "report_thanks_title": "Thank you",
     "report_thanks_body": "Your report has been submitted.",
@@ -440,6 +446,68 @@
       "closeSheet": "Close",
       "noQuote": "No quote available for this source."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Museum catalogue",
+        "reference-db": "Reference database",
+        "web": "Web result",
+        "ai-knowledge": "AI knowledge"
+      },
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low — AI only"
+      },
+      "chip": {
+        "a11y_hint": "Tap to see the source details"
+      },
+      "ai_only": {
+        "disclosure_title": "AI-only response",
+        "disclosure_body": "This answer is based on the AI's general knowledge. No source was retrieved to support specific facts. Verify before relying on details."
+      }
+    },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Open attachments",
+        "open_attachments_hint": "Camera, gallery, audio options",
+        "mic": "Voice message",
+        "mic_recording": "Stop voice recording",
+        "audio_pill": "Voice message ready, tap to review"
+      }
+    },
+    "attachmentPicker": {
+      "title": "Attach to message",
+      "camera": "Take a photo",
+      "gallery": "Pick from gallery",
+      "record_audio": "Record voice message",
+      "stop_audio": "Stop recording",
+      "scan_cartel": "Scan cartel"
+    },
+    "cartelScanner": {
+      "title": "Scan the cartel QR",
+      "instructions": "Point your camera at the QR code on the artwork's label",
+      "permission_title": "Camera access required",
+      "permission_body": "Musaium needs camera access to scan artwork cartels. Open Settings to enable it.",
+      "permission_open_settings": "Open Settings",
+      "cancel": "Cancel",
+      "lookup_template": "Tell me about the artwork with cartel code: {{code}}"
+    },
+    "artworkHero": {
+      "untitled": "Untitled artwork",
+      "a11y_label": "Artwork: {{title}} by {{artist}}, tap to expand",
+      "a11y_label_untitled": "Artwork: untitled, tap to expand",
+      "a11y_hint": "Opens fullscreen with pinch-to-zoom",
+      "expand": "Expand",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identification pending"
+      },
+      "modal": {
+        "close": "Close",
+        "a11y_pinch_hint": "Pinch with two fingers to zoom",
+        "title_fallback": "Artwork preview"
+      }
+    },
     "compare": {
       "title": "Similar artworks",
       "empty": "No similar artwork found — try a clearer photo",
@@ -476,6 +544,41 @@
       "headerLabel": "Guided walk",
       "suggestionsLabel": "Walk suggestions",
       "suggestionHint": "Sends this suggestion as your next prompt"
+    },
+    "askMore": {
+      "a11y_label": "Ask follow-up: {{text}}",
+      "a11y_hint": "Tap to ask this follow-up"
+    },
+    "sottoVoce": {
+      "a11y_label": "Sotto-voce mode",
+      "a11y_hint_on": "Audio muted — tap to re-enable",
+      "a11y_hint_off": "Mute audio for quiet spaces",
+      "announcement_on": "Sotto-voce on. Audio responses muted.",
+      "announcement_off": "Sotto-voce off. Audio responses resumed."
+    },
+    "resumption": {
+      "title_with_artwork": "Continue about {{title}}",
+      "title_fallback": "Continue your last conversation",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}}",
+      "subtitle_no_museum": "{{timeAgo}}",
+      "a11y_label_with_artwork": "Resume conversation about {{title}} at {{museumName}}",
+      "a11y_label_fallback": "Resume your last conversation",
+      "a11y_hint": "Opens the previous chat session",
+      "a11y_dismiss": "Dismiss resumption banner",
+      "time_ago": {
+        "just_now": "just now",
+        "minutes": "{{count}} min ago",
+        "hours": "{{count}} h ago",
+        "days": "{{count}} d ago"
+      }
+    },
+    "proactive_museum": {
+      "title": "You're at {{museumName}}",
+      "subtitle": "Ask the assistant?",
+      "cta_a11y_label": "Start a voice conversation about {{museumName}}",
+      "cta_a11y_hint": "Opens a new voice conversation",
+      "a11y_dismiss": "Dismiss museum suggestion",
+      "icon_a11y_label": "Location marker"
     }
   },
   "dailyLimit": {
@@ -510,9 +613,6 @@
       "medium": "Medium",
       "low": "Low"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Quick questions"
   },
   "recommendationChips": {
     "section_label": "Ideas to explore"
@@ -769,14 +869,14 @@
       "assistant_message": "Assistant message",
       "user_message": "Your message",
       "long_press_hint": "Long press for more options",
-      "follow_up_hint": "Sends this follow-up question",
       "recommendation_hint": "Fills input with this suggestion",
       "suggestion_hint": "Starts conversation with this topic",
       "camera_suggestion_hint": "Opens camera to photograph artwork",
       "fullscreen_close": "Close",
       "previous_image": "Previous image",
       "next_image": "Next image",
-      "messages_list": "Chat messages"
+      "messages_list": "Chat messages",
+      "follow_up_hint": "Sends this follow-up question"
     },
     "onboarding": {
       "skip": "Skip onboarding",
@@ -886,6 +986,19 @@
     },
     "browser": {
       "opened": "In-app browser opened"
+    },
+    "attachmentPicker": {
+      "opened": "Attachment options opened"
+    },
+    "cartelScanner": {
+      "opened": "Cartel scanner opened",
+      "scan_success": "Cartel code captured",
+      "viewfinder_hint": "Camera viewfinder, point at the QR code",
+      "cancel_hint": "Closes the scanner without sending"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, open visit",
+      "continue_hint": "Opens this past visit for reading"
     }
   },
   "consent": {
@@ -993,6 +1106,26 @@
       "description": "Your past chats will appear here.",
       "actionLabel": "Start a conversation"
     }
+  },
+  "carnet": {
+    "title": "My visit notebook",
+    "linkLabel": "My visit notebook",
+    "untitledSession": "Untitled visit",
+    "unknownMuseum": "Unknown museum",
+    "continueButton": "Continue this conversation",
+    "sectionArtworks": "Artworks discussed",
+    "sectionTranscript": "Transcript",
+    "noArtworks": "No artworks scanned during this visit.",
+    "minutesShort": "{{count}} min",
+    "minutesShort_zero": "< 1 min",
+    "messagesCount": "{{count}} messages",
+    "empty": {
+      "title": "No visits yet",
+      "description": "Start a conversation and your visit will appear here."
+    }
+  },
+  "followUpButtons": {
+    "section_label": "Quick questions"
   },
   "paywall": {
     "modalTitle": "Free monthly limit reached",

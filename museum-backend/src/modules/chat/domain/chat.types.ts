@@ -247,6 +247,18 @@ export const CitationSourceSchema = z.object({
   confidence: z.number().min(0).max(1).optional(),
 });
 
+/**
+ * A5 — Coarse pipeline phase exposed on `ChatAssistantMetadata.phase` and
+ * used by the FE `<StatusIndicator>` taxonomy. Keep in EXACT lockstep with
+ * `museum-frontend/features/chat/application/phases.ts`. Spec : A5.md §1.1 R7.
+ */
+export type ChatPipelinePhase =
+  | 'analyzing-image'
+  | 'searching-collection'
+  | 'composing'
+  | 'synthesizing-voice'
+  | 'done';
+
 /** Structured metadata extracted from an assistant response by the LLM pipeline. */
 export interface ChatAssistantMetadata {
   /** Artwork identified from user image or text. */
@@ -278,7 +290,16 @@ export interface ChatAssistantMetadata {
   sources?: CitationSource[];
   deeperContext?: string;
   openQuestion?: string;
-  followUpQuestions?: string[];
+  /**
+   * B3 — Single, factual-anchor follow-up question (≤80 chars) the visitor
+   * might want to ask next. LLM-generated, anchored to a specific fact
+   * mentioned in the assistant answer, or absent when no concrete anchor
+   * exists (refusal, clarification, recap). Singular by design — replaces
+   * the legacy `followUpQuestions: string[]` (deleted same commit per
+   * doctrine `feedback_bury_dead_code`, B3 dispatcher override Q4).
+   * See `docs/chat-ux-refonte/specs/B3.md` §0.7 / R7 / NFR13.
+   */
+  suggestedFollowUp?: string;
   imageDescription?: string;
   /** Enriched images fetched from external sources (Wikidata, Unsplash, Commons, Musaium). */
   images?: EnrichedImage[];
@@ -292,4 +313,11 @@ export interface ChatAssistantMetadata {
    */
   suggestedImages?: SuggestedImage[];
   diagnostics?: ChatAssistantDiagnostics;
+  /**
+   * A5 — Terminal phase reached by the pipeline. `'done'` on success,
+   * last attempted phase otherwise. Backward-compat optional (NFR8 — legacy
+   * persisted messages have no value). FE treats absence as silence and does
+   * not throw. See `docs/chat-ux-refonte/specs/A5.md` §1.1 R1/R8.
+   */
+  phase?: ChatPipelinePhase;
 }

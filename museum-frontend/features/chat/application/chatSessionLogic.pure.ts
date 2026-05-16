@@ -59,7 +59,14 @@ export interface ChatUiMessageMetadata {
     confidence?: number;
   };
   recommendations?: string[];
-  followUpQuestions?: string[];
+  /**
+   * B3 — Single follow-up question (≤80 chars) anchored to a specific fact
+   * mentioned in the assistant answer. LLM-generated, singular by design.
+   * Replaces legacy `followUpQuestions: string[]` (deleted same commit per
+   * doctrine `feedback_bury_dead_code`, B3 dispatcher override Q4).
+   * See `docs/chat-ux-refonte/specs/B3.md` §1.3 (R11) and NFR13.
+   */
+  suggestedFollowUp?: string;
   expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
   deeperContext?: string;
   openQuestion?: string;
@@ -192,6 +199,75 @@ export const buildVisitSummary = (
     messageCount: sorted.length,
     expertiseLevel: lastExpertise,
   };
+};
+
+/**
+ * B1 — Visit notebook (carnet) detail view-model.
+ *
+ * Composes {@link buildVisitSummary} (artworks list + duration + meta) with a
+ * chronologically-ordered transcript and locale-aware labels. Pure helper
+ * driven by `buildVisitCarnetDetail` — no side effect, no `Date.now`.
+ *
+ * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.5 R30-R33, §4 AC8, AC9, AC13.
+ */
+export interface VisitCarnetDetail {
+  summary: VisitSummary;
+  transcript: ChatUiMessage[];
+  dateLabel: string;
+  durationLabel: string;
+}
+
+/** Minimal session shape consumed by {@link buildVisitCarnetDetail}. */
+export interface VisitCarnetSessionInput {
+  id: string;
+  locale?: string | null;
+  museumMode?: boolean;
+  museumName?: string | null;
+  title?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  intent?: 'default' | 'walk' | null;
+}
+
+/**
+ * Builds the carnet detail view-model from a session + its messages (R30-R33).
+ *
+ * Reuses {@link buildVisitSummary} verbatim for the artworks list (AC9 dedupe
+ * is therefore inherited). The transcript is the same messages sorted ASC by
+ * `createdAt`. Labels are locale-formatted via `Date.toLocaleString` (no
+ * third-party date lib — NFR2).
+ *
+ * Pure function : same input → strictly equal output across calls (AC13).
+ */
+export const buildVisitCarnetDetail = (
+  session: VisitCarnetSessionInput,
+  messages: ChatUiMessage[],
+  locale: string,
+): VisitCarnetDetail => {
+  const summary = buildVisitSummary(messages, session.title ?? null);
+  const transcript = sortByTime(messages);
+
+  let dateLabel: string;
+  const updatedAtDate = new Date(session.updatedAt);
+  if (Number.isNaN(updatedAtDate.getTime())) {
+    dateLabel = session.updatedAt;
+  } else {
+    try {
+      dateLabel = updatedAtDate.toLocaleString(locale, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      dateLabel = updatedAtDate.toISOString();
+    }
+  }
+
+  // R33 — return the integer minutes as a string; the screen interpolates
+  // via i18n. `0` → screen renders "< 1 min".
+  const durationLabel = String(summary.duration.minutes);
+
+  return { summary, transcript, dateLabel, durationLabel };
 };
 
 /**

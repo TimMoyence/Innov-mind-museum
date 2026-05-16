@@ -398,6 +398,12 @@
     "typing": {
       "label": "Musaium sta pensando..."
     },
+    "status": {
+      "analyzing-image": "Analisi dell'opera…",
+      "searching-collection": "Consultazione delle fonti…",
+      "composing": "Composizione della risposta…",
+      "synthesizing-voice": "Preparazione della voce…"
+    },
     "fallback_title": "Sessione artistica",
     "report_thanks_title": "Grazie",
     "report_thanks_body": "La tua segnalazione è stata inviata.",
@@ -440,6 +446,68 @@
       "closeSheet": "Chiudi",
       "noQuote": "Nessun estratto disponibile per questa fonte."
     },
+    "citation": {
+      "family": {
+        "museum-catalog": "Catalogo del museo",
+        "reference-db": "Base di riferimento",
+        "web": "Risultato web",
+        "ai-knowledge": "Sapere dell'IA"
+      },
+      "confidence": {
+        "high": "Alta affidabilità",
+        "medium": "Media affidabilità",
+        "low": "Bassa — solo IA"
+      },
+      "chip": {
+        "a11y_hint": "Tocca per i dettagli"
+      },
+      "ai_only": {
+        "disclosure_title": "Risposta solo IA",
+        "disclosure_body": "Questa risposta si basa sulla conoscenza generale dell'IA. Nessuna fonte è stata recuperata. Verifica prima di fidarti dei dettagli."
+      }
+    },
+    "composer": {
+      "a11y": {
+        "open_attachments": "Apri allegati",
+        "open_attachments_hint": "Fotocamera, galleria, audio",
+        "mic": "Messaggio vocale",
+        "mic_recording": "Ferma registrazione vocale",
+        "audio_pill": "Messaggio vocale pronto, tocca per rivedere"
+      }
+    },
+    "attachmentPicker": {
+      "title": "Allega al messaggio",
+      "camera": "Scatta una foto",
+      "gallery": "Scegli dalla galleria",
+      "record_audio": "Registra messaggio vocale",
+      "stop_audio": "Ferma registrazione",
+      "scan_cartel": "Scansiona cartello"
+    },
+    "cartelScanner": {
+      "title": "Scansiona il QR del cartello",
+      "instructions": "Inquadra il codice QR sul cartello dell'opera",
+      "permission_title": "Accesso alla fotocamera richiesto",
+      "permission_body": "Musaium ha bisogno della fotocamera per scansionare i cartelli. Apri Impostazioni per autorizzarlo.",
+      "permission_open_settings": "Apri Impostazioni",
+      "cancel": "Annulla",
+      "lookup_template": "Parlami dell'opera con il codice cartello: {{code}}"
+    },
+    "artworkHero": {
+      "untitled": "Opera senza titolo",
+      "a11y_label": "Opera: {{title}} di {{artist}}, tocca per ingrandire",
+      "a11y_label_untitled": "Opera senza titolo, tocca per ingrandire",
+      "a11y_hint": "Apre a schermo intero con zoom a pizzico",
+      "expand": "Ingrandisci",
+      "museum_room": "{{museum}} — {{room}}",
+      "attribution": {
+        "untitled": "Identificazione in corso"
+      },
+      "modal": {
+        "close": "Chiudi",
+        "a11y_pinch_hint": "Pizzica con due dita per ingrandire",
+        "title_fallback": "Anteprima dell'opera"
+      }
+    },
     "compare": {
       "title": "Opere simili",
       "empty": "Nessuna opera simile trovata — prova una foto più nitida",
@@ -476,6 +544,41 @@
       "headerLabel": "Visita guidata",
       "suggestionsLabel": "Suggerimenti per la visita",
       "suggestionHint": "Invia questo suggerimento come prossima richiesta"
+    },
+    "askMore": {
+      "a11y_label": "Domanda di approfondimento: {{text}}",
+      "a11y_hint": "Tocca per fare questa domanda"
+    },
+    "sottoVoce": {
+      "a11y_label": "Modalità sotto-voce",
+      "a11y_hint_on": "Audio disattivato — tocca per riattivare",
+      "a11y_hint_off": "Silenzia l'audio nei luoghi silenziosi",
+      "announcement_on": "Sotto-voce attivo. Audio disattivato.",
+      "announcement_off": "Sotto-voce disattivato. Audio ripreso."
+    },
+    "resumption": {
+      "title_with_artwork": "Continua su {{title}}",
+      "title_fallback": "Continua l'ultima conversazione",
+      "subtitle_with_museum": "{{museumName}} — {{timeAgo}} fa",
+      "subtitle_no_museum": "{{timeAgo}} fa",
+      "a11y_label_with_artwork": "Riprendi la conversazione su {{title}} al {{museumName}}",
+      "a11y_label_fallback": "Riprendi l'ultima conversazione",
+      "a11y_hint": "Apre la conversazione precedente",
+      "a11y_dismiss": "Ignora il suggerimento di ripresa",
+      "time_ago": {
+        "just_now": "ora",
+        "minutes": "{{count}} min",
+        "hours": "{{count}} h",
+        "days": "{{count}} g"
+      }
+    },
+    "proactive_museum": {
+      "title": "Sei al {{museumName}}",
+      "subtitle": "Chiedere all'assistente?",
+      "cta_a11y_label": "Avvia una conversazione vocale su {{museumName}}",
+      "cta_a11y_hint": "Apre una nuova conversazione vocale",
+      "a11y_dismiss": "Ignora il suggerimento del museo",
+      "icon_a11y_label": "Indicatore di posizione"
     }
   },
   "dailyLimit": {
@@ -510,9 +613,6 @@
       "medium": "Media",
       "low": "Bassa"
     }
-  },
-  "followUpButtons": {
-    "section_label": "Domande rapide"
   },
   "recommendationChips": {
     "section_label": "Spunti da esplorare"
@@ -769,14 +869,14 @@
       "assistant_message": "Messaggio dell'assistente",
       "user_message": "Il tuo messaggio",
       "long_press_hint": "Premi a lungo per altre opzioni",
-      "follow_up_hint": "Invia questa domanda di approfondimento",
       "recommendation_hint": "Compila il campo con questo suggerimento",
       "suggestion_hint": "Avvia la conversazione su questo argomento",
       "camera_suggestion_hint": "Apre la fotocamera per fotografare un'opera d'arte",
       "fullscreen_close": "Chiudi",
       "previous_image": "Immagine precedente",
       "next_image": "Immagine successiva",
-      "messages_list": "Messaggi chat"
+      "messages_list": "Messaggi chat",
+      "follow_up_hint": "Invia questa domanda di approfondimento"
     },
     "onboarding": {
       "skip": "Salta l'introduzione",
@@ -886,6 +986,19 @@
     },
     "browser": {
       "opened": "Browser in-app aperto"
+    },
+    "attachmentPicker": {
+      "opened": "Opzioni di allegato aperte"
+    },
+    "cartelScanner": {
+      "opened": "Scanner cartelli aperto",
+      "scan_success": "Codice cartello acquisito",
+      "viewfinder_hint": "Mirino fotocamera, punta sul codice QR",
+      "cancel_hint": "Chiude lo scanner senza inviare"
+    },
+    "carnet": {
+      "session_card": "{{title}}, {{museum}}, {{date}}, apri visita",
+      "continue_hint": "Apre questa visita passata in sola lettura"
     }
   },
   "consent": {
@@ -993,6 +1106,26 @@
       "description": "Le conversazioni passate appariranno qui.",
       "actionLabel": "Inizia una conversazione"
     }
+  },
+  "carnet": {
+    "title": "Il mio diario di visita",
+    "linkLabel": "Il mio diario di visita",
+    "untitledSession": "Visita senza titolo",
+    "unknownMuseum": "Museo sconosciuto",
+    "continueButton": "Continua questa conversazione",
+    "sectionArtworks": "Opere discusse",
+    "sectionTranscript": "Trascrizione",
+    "noArtworks": "Nessuna opera scansionata in questa visita.",
+    "minutesShort": "{{count}} min",
+    "minutesShort_zero": "< 1 min",
+    "messagesCount": "{{count}} messaggi",
+    "empty": {
+      "title": "Ancora nessuna visita",
+      "description": "Inizia una conversazione e la tua visita apparirà qui."
+    }
+  },
+  "followUpButtons": {
+    "section_label": "Domande rapide"
   },
   "paywall": {
     "modalTitle": "Limite mensile gratuito raggiunto",

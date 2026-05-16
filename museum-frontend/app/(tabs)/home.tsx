@@ -1,10 +1,16 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 
 import { TAB_BAR_FLOATING_GAP } from '@/app/(tabs)/_layout';
+import { useProactiveMuseumSuggestion } from '@/features/chat/application/useProactiveMuseumSuggestion';
+import { useResumableSession } from '@/features/chat/application/useResumableSession';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
+import { ConversationResumptionBanner } from '@/features/chat/ui/ConversationResumptionBanner';
+import { ProactiveMuseumBanner } from '@/features/chat/ui/ProactiveMuseumBanner';
 import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import { HeroSettingsButton } from '@/features/home/ui/HeroSettingsButton';
@@ -35,6 +41,9 @@ export default function HomeScreen() {
   const { isCreating, error, setError, startConversation } = useStartConversation();
   const { locale, museumMode } = useRuntimeSettings();
   const { artwork, isLoading: isDailyArtLoading, isSaved, dismissed, save, skip } = useDailyArt();
+  const { session: resumableSession, dismiss: dismissResumption } = useResumableSession();
+  const { museum: proactiveMuseum, dismiss: dismissProactiveMuseum } =
+    useProactiveMuseumSuggestion();
 
   const handleIntentPress = (intent: HomeIntent): void => {
     void startConversation({ intent: INTENT_MAP[intent] });
@@ -72,6 +81,33 @@ export default function HomeScreen() {
           </Text>
         </GlassCard>
 
+        {/* B2 — Conversation resumption banner. Renders null when no eligible session. */}
+        <ConversationResumptionBanner
+          session={resumableSession}
+          onResume={(id) => {
+            router.push(`/(stack)/chat/${id}`);
+          }}
+          onDismiss={() => {
+            void dismissResumption();
+          }}
+        />
+
+        {/* B6 — Proactive in-museum suggestion banner. Renders null when no in-museum match. */}
+        <ProactiveMuseumBanner
+          museum={proactiveMuseum}
+          onStart={(m) => {
+            void startConversation({
+              intent: 'audio',
+              museumId: m.id,
+              museumName: m.name,
+              coordinates: { lat: m.latitude, lng: m.longitude },
+            });
+          }}
+          onDismiss={() => {
+            void dismissProactiveMuseum();
+          }}
+        />
+
         {artwork && !dismissed && !isDailyArtLoading ? (
           <DailyArtCard
             artwork={artwork}
@@ -87,6 +123,32 @@ export default function HomeScreen() {
             testID="daily-art-empty-state"
           />
         ) : null}
+
+        {/* B1 — Visit notebook link. Always visible (decision §0.5 + Q7) — leads to the empty state when no past sessions exist. */}
+        <Pressable
+          onPress={() => {
+            router.push('/(stack)/carnet');
+          }}
+          style={({ pressed }) => [
+            styles.carnetLink,
+            {
+              backgroundColor: theme.cardBackground,
+              borderColor: theme.cardBorder,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('carnet.linkLabel')}
+          testID="home-carnet-link"
+        >
+          <Ionicons name="journal-outline" size={22} color={theme.primary} />
+          <Text style={[styles.carnetLinkText, { color: theme.textPrimary }]}>
+            {t('carnet.linkLabel')}
+          </Text>
+          <View style={styles.carnetLinkChevron}>
+            <Ionicons name="chevron-forward" size={20} color={theme.textTertiary} />
+          </View>
+        </Pressable>
 
         <HomeIntentChips onPress={handleIntentPress} disabled={isCreating} />
 
@@ -164,5 +226,23 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: semantic.button.fontSizeLarge,
     fontWeight: '700',
+  },
+  carnetLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: semantic.card.gap,
+    paddingHorizontal: semantic.card.padding,
+    paddingVertical: semantic.card.paddingCompact,
+    borderRadius: semantic.card.radius,
+    borderWidth: semantic.input.borderWidth,
+  },
+  carnetLinkText: {
+    flex: 1,
+    fontSize: semantic.button.fontSize,
+    fontWeight: '600',
+  },
+  carnetLinkChevron: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
