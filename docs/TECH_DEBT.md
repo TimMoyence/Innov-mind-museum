@@ -280,6 +280,120 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-12 — `audit-ip-anonymizer` job sans integration test real-PG
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 3 post-TD-4)
+- **Référence code** :
+  ```
+  museum-backend/src/shared/audit/audit-ip-anonymizer.job.ts:72-86
+    const result = await manager.query<UpdateResult>(`UPDATE "audit_logs" SET "ip" = CASE ...`, [ids]);
+    // reads result[1] via Array.isArray && typeof result[1] === 'number' guard (L86)
+  museum-backend/tests/unit/audit/audit-ip-anonymizer.test.ts   # unit-only, mock faithful but pas vraie PG
+  ```
+- **Symptôme** : le job consomme le tuple pg-driver `[rows, rowCount]` côté `result[1]` (même archetype que l'incident retention 2026-05-08 fixé par TD-4). MAIS le caller `audit-cron.registrar.ts:107` (BullMQ worker) est single-shot par tick — **pas de `while` drain loop** — donc une régression du shape ne peut pas busy-loop. Worst-case = un tick under-count, pas une outage. Le job est défendu par `SET LOCAL app.audit_anonymization_allowed` + trigger `prevent_audit_log_mutation`.
+- **Sprint d'origine** : audit Pattern 3 (post-TD-4 retention integration), 2026-05-16.
+- **Pourquoi c'est important** : la métrique `anonymized` est le **signal d'audit CNIL/RGPD** (combien d'audit logs ont eu leur IP anonymisée après 13 mois). Une régression silencieuse (count drift) compromet la conformité reportée, même sans outage.
+- **Effort estimé** : ~30 minutes (réutiliser pattern TD-4 retention integration tests).
+- **Comment fermer** :
+  1. Créer `museum-backend/tests/integration/audit/audit-ip-anonymizer.integration.test.ts` avec `createIntegrationHarness()`.
+  2. Fixture : ~1k audit_logs avec `created_at < NOW() - INTERVAL '13 months' AND ip IS NOT NULL`.
+  3. Run job, assert `anonymized` matches actual mutated count + idempotent re-run yields 0.
+  4. Vérifier que les rows avec `created_at < 13 months` ont `ip` = `NULL` post-run.
+  5. Cocher TD-12 ici.
+
+---
+
+### TD-13 — Compléter migration `httpRequest` → `openApiRequest` (4 callsites résiduels)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 4 post-TD-1)
+- **Référence code** :
+  ```
+  # Migratable now (endpoint déjà déclaré dans openapi.json)
+  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:80   # postAudioMessage → openapi.json:3802
+  museum-frontend/features/chat/infrastructure/chatApi/send.ts:143   # postMessage    → openapi.json:3674
+  
+  # BE-blocked (endpoint pas déclaré OU type binary non supporté)
+  museum-frontend/features/museum/infrastructure/museumApi.ts:151,166  # getEnrichment + getEnrichmentStatus, openapi.json ABSENT
+  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:94   # synthesizeSpeech, openapi.json:4014 mais return audio/mpeg binary que openApiRequest ne type pas
+  ```
+- **Symptôme** : TD-1 a migré `userProfileApi.ts` mais la doctrine type-safe API client n'est pas codebase-wide. 4 callsites consomment encore `httpRequest` brut, drift potentiel entre BE response shape et FE consumers non détectable au tsc.
+- **Sprint d'origine** : audit Pattern 4 (post-TD-1 / TD-2 BE work), 2026-05-16.
+- **Effort estimé** : 
+  - **Phase 1 (migratable now)** : ~30 minutes pour les 2 callsites chat (pattern = `authApi.ts:1-19`).
+  - **Phase 2 (BE-blocked)** : ~2 heures — déclarer 2 paths museum/enrichment dans `museum-backend/openapi/openapi.json` (template = `/auth/tts-voice` ligne 3113), regen FE types, migrate. Pour `synthesizeSpeech` binary : étendre `openApiRequest` avec option `responseType: 'arraybuffer'` OU documenter comme exception permanente.
+- **Comment fermer** :
+  1. **Phase 1** : migrer `postAudioMessage` + `postMessage` vers `openApiRequest` (FormData support déjà OK via short-circuit `Content-Type` dans `httpRequest.ts:38`).
+  2. **Phase 2.1** : déclarer `GET /api/museums/{id}/enrichment` + `/enrichment/status` dans `openapi.json` (template `/auth/tts-voice`).
+  3. **Phase 2.2** : regenerate FE types via `npm run generate:openapi-types`, migrer `museumApi.ts:151,166`, supprimer le typage manuel `MuseumEnrichmentResponse`.
+  4. **Phase 2.3** : trancher pour `synthesizeSpeech` — soit étendre `openApiRequest` (`responseType: 'arraybuffer'` + return type non-JSON) soit l'exception permanente documentée.
+  5. Cocher TD-13 ici.
+
+---
+
+### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)
+- **Référence code** :
+  ```
+  museum-frontend/features/chat/ui/OfflineBanner.tsx                # chat-only, importé seulement dans app/(stack)/chat/[sessionId].tsx
+  museum-frontend/features/settings/dataModeStore.ts                # manque _hydrated flag + onRehydrateStorage callback (drift vs userProfile/runtimeSettings/audioDescription stores)
+  .github/workflows/ci-cd-mobile.yml                                # Matrix Maestro existe mais 0 scenario airplane-mode pour offline pack tiles
+  docs/<absent>                                                     # Aucun contrat offline centralisé (mentions éparses dans TD-2/TD-3 + CLAUDE.md § Voice V1)
+  ```
+- **Symptôme** : Le mode offline est **réel** (5 features fonctionnelles : 4 stores persist, chat queue 50 msg, chatLocalCache 200 entries, MapLibre OfflineManager + geofence pre-cache, AuthContext token preservation), mais :
+  - L'utilisateur sur museum/settings/home n'a aucun feedback visuel quand offline (banner chat-only).
+  - `dataModeStore.read()` avant rehydration retourne le default `'auto'` (race possible au boot).
+  - Aucun test e2e airplane-mode pour valider end-to-end que les tuiles MapLibre downloaded sont effectivement servies offline.
+  - Le contrat offline n'est documenté nulle part centralement → maintenance difficile.
+- **Sprint d'origine** : audit Pattern 6 (post-TD-2 bootstrapProfile + TD-3 MapLibre style), 2026-05-16.
+- **Effort estimé** : ~1 jour total décomposable.
+- **Comment fermer** :
+  1. Extraire `OfflineBanner` du chat-only scope → composant `GlobalOfflineBanner` mounté dans `app/_layout.tsx` (probablement sous `ConnectivityProvider`). Couvre museum/settings/home/chat uniformément. Vérifier que le banner chat-only `pendingCount` reste fonctionnel (queue source distinct).
+  2. Aligner `dataModeStore` sur le pattern `_hydrated` + `onRehydrateStorage` (cf. `userProfileStore` lignes 29/91 + `audioDescriptionStore` lignes 26/57 comme reference).
+  3. Ajouter scenario Maestro `flows/offline-pack-airplane.yaml` : (a) telecharger pack pour une ville, (b) toggle airplane mode (Maestro `runFlow` avec adb shell), (c) ouvrir map, assert tiles raster visibles, (d) toggle off airplane. Brancher dans `ci-cd-mobile.yml` quality job.
+  4. Créer `docs/OFFLINE_CONTRACT.md` qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
+  5. Cocher TD-14 ici.
+
+---
+
+### TD-15 — Low-data mode user-facing copy ment (UFR-013 violation)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 7 — **PRIORITAIRE UFR-013**)
+- **Référence code** :
+  ```
+  # User-facing copy qui ment
+  museum-frontend/shared/locales/fr/translation.json:471             # "TTS désactivé, images compressées"
+  museum-frontend/shared/locales/en/translation.json:<même clé>      # equivalent EN
+  
+  # Branches data-mode RÉELLES (3 + 1 partiel)
+  museum-frontend/features/chat/application/useTextToSpeech.ts:152-156         # TTS skip OK
+  museum-frontend/features/museum/application/useMuseumPrefetch.ts:41          # prefetch skip on cellular OK
+  museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:129-133    # "100-150 words max" OK
+  museum-frontend/features/chat/application/chatSessionStrategies.pure.ts:51-58 # cache-first first-turn museum text-only (narrow)
+  
+  # Branches PROMISES par le banner mais ABSENTES
+  museum-frontend/features/<various>                # ZERO image compression upload (multipart full-res reste)
+  museum-frontend/features/<map>                    # ZERO MapLibre maxZoom cap quand isLowData
+  museum-frontend/features/<animations>             # ZERO reduction animation basé isLowData (seul useReducedMotion OS-level)
+  museum-backend/src/modules/chat/useCase/.../message-commit.ts:91-96  # enrichedImages path ignore lowDataMode
+  ```
+- **Symptôme** : Le banner FR "Mode économie de données actif — TTS désactivé, **images compressées**" est **un mensonge codebase-wide** :
+  - **Aucun code path** côté FE ou BE ne compresse les images quand `lowDataMode=true`. Les uploads multipart partent en pleine résolution caméra (2-5 MB typiquement), les images BE retournées ne sont pas demandées en variant low-res.
+  - Coverage réel : 3/10 features data-affecting gatées (~30 %).
+  - **Violation directe UFR-013** (memory `feedback_honesty_no_pretense`) : "FORBIDDEN: lying or fabricating any fact / number / citation / file path / line / function / command output / test result / source". Le user-facing copy est dans cette catégorie.
+- **Sprint d'origine** : audit Pattern 7 (post-TD-2 + TD-1 BE/FE expansion), 2026-05-16.
+- **Effort estimé** :
+  - **Option (a) fix copy honest** : **5 minutes** — retirer "images compressées" du label, remplacer par vérité : "TTS désactivé, réponses plus courtes, prefetch wifi uniquement". UFR-013 immediate compliance.
+  - **Option (b) implémenter les branches manquantes** : **1-2 jours** — `expo-image-manipulator` pour compress uploads ≥1MB à 70% quality / 1920px max ; image variants daily-art/museum (BE serve `?w=512` resized via Sharp middleware ou S3+CloudFront resizer) ; MapLibre `maxZoom` cap à 14 quand isLowData (vs default 19) ; integration tests jest+msw pour chaque gate.
+- **Comment fermer (priorité décroissante)** :
+  1. **IMMÉDIAT (option a — 5 min)** : edit `translation.json` FR + EN, retirer le mensonge "images compressées", reformuler avec ce qui est vraiment implémenté. Cocher partiellement TD-15.
+  2. **POST-LAUNCH V1 (option b — 1-2j)** : implémenter en priorité l'image compression upload (`expo-image-manipulator` resize si >1MB, 70% JPEG quality) — c'est le plus gros data saver effectivement manquant. Puis MapLibre maxZoom cap. Puis BE image variants.
+  3. Tests : 1 test integration par real gate (jest + msw, toggle `low`, assert `useTextToSpeech` ne call pas `chatApi.synthesizeSpeech` ; assert `useMuseumPrefetch` ne call pas `fetchLowDataPack` on cellular).
+  4. Cocher TD-15 ici.
+- **Note UFR-013** : tant que l'option (a) n'est pas faite, on viole "ne pas mentir au user". À traiter avant le 2026-06-01 launch V1.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
