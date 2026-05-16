@@ -1,0 +1,35 @@
+# Semgrep ignore file — exclude paths that produce false positives.
+#
+# Rationale : security rules (detect-non-literal-fs-filename, non-literal-regexp,
+# non-literal-require, etc.) routinely false-positive on test code that
+# legitimately uses dynamic paths, regex constructed from fixtures, or
+# parameterized fs reads. Tests are not production attack surface.
+#
+# Established standard : Semgrep, ESLint security plugin, and SonarQube all
+# recommend excluding `__tests__/`, `tests/`, and `*.test.{ts,tsx}` patterns
+# from security-rule scans.
+
+# Test directories anywhere in the tree
+**/__tests__/**
+**/tests/**
+**/test/**
+
+# Test files by suffix
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.jsx
+
+# Test helpers / fixtures
+**/test-utils/**
+**/test-helpers/**
+**/__mocks__/**
+**/fixtures/**
+
+# Generated code (already auto-produced from authoritative sources)
+**/generated/**
+**/*.generated.ts
