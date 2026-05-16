@@ -1,4 +1,4 @@
-# Opt-in docker-compose overlay for the ADR-050 Llama Prompt Guard 2 86M
+# Opt-in docker-compose overlay for the ADR-051 Llama Prompt Guard 2 86M
 # sidecar (Phase 1 shadow-mode candidate — NOT activated by default).
 #
 # Coverage: OWASP LLM01 (Prompt Injection) + LLM07 (System Prompt Leakage)
@@ -15,7 +15,7 @@
 # Activation status: adapter exists at
 #   src/modules/chat/adapters/secondary/guardrails/llama-prompt-guard.adapter.ts
 # but is NOT wired in chat-module.ts composition root pre-launch. See
-# ADR-050 for the Phase 1 promotion criteria.
+# ADR-051 for the Phase 1 promotion criteria.
 #
 # A Dockerfile must be authored at `ops/llama-prompt-guard-sidecar/Dockerfile`
 # before this overlay can `docker compose up` cleanly — left to Phase 1.

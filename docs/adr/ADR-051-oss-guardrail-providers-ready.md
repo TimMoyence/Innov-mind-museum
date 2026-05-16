@@ -1,4 +1,4 @@
-# ADR-050: OSS GuardrailProvider adapters ready (Presidio + Llama Prompt Guard 2) — not activated
+# ADR-051: OSS GuardrailProvider adapters ready (Presidio + Llama Prompt Guard 2) — not activated
 
 > **Status:** Accepted
 > **Date:** 2026-05-12
@@ -66,7 +66,7 @@ Before either adapter is activated in `chat-module.ts`, **all** of the following
 7. **PII entity F1 (Presidio only):** > 0.80 on a 100-entity French reference set.
 8. **Decision-match vs LLM-Guard incumbent:** tracked, not gated — its purpose is surfacing edge cases for manual audit.
 
-Failure of any criterion blocks promotion; the adapter stays infra-ready, the chat path keeps the LLM-Guard incumbent. ADR-051 (or a Phase 1 follow-up) will codify the actual promotion decision when telemetry passes.
+Failure of any criterion blocks promotion; the adapter stays infra-ready, the chat path keeps the LLM-Guard incumbent. A follow-up ADR will codify the actual promotion decision when telemetry passes.
 
 ## Rollout notes
 

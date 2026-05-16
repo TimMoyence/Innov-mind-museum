@@ -1,3 +1,9 @@
+---
+name: test-writer
+description: "/test-writer — Generateur de tests cible"
+last-verified: 2026-05-16
+---
+
 # /test-writer — Generateur de tests cible
 
 Genere des tests pour les fichiers modifies. Standalone ou integre dans /team Phase 2.5.

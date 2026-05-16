@@ -5,7 +5,7 @@
 
 ---
 
-## T-S2-1 — Décider sort 3 fichiers docs/ untracked
+## ✅ T-S2-1 — Décider sort 3 fichiers docs/ untracked — DONE 2026-05-16 (commit `f62c9697`)
 
 **Fichiers** :
 - `docs/ARCHITECTURE.md` (8.8 KB, créé 2026-05-07, jamais committé)
@@ -23,7 +23,7 @@
 
 ---
 
-## T-S2-2 — Renommer ADR-050 triplicité
+## ✅ T-S2-2 — Renommer ADR-050 triplicité — DONE 2026-05-16 (commit `3095bf43`)
 
 **Problème** : 3 ADRs partagent l'ID 050 — ambiguité pour toolchain + référencement.
 
@@ -43,7 +43,7 @@ Effort : 30 min. Confidence cleanup : 95%.
 
 ---
 
-## T-S2-3 — Décider sort 5 skills user-slash 0 agent invocations
+## ✅ T-S2-3 — Décider sort 5 skills user-slash 0 agent invocations — DONE 2026-05-16 (commit `997a9fb2`, verdict KEEP 5/5)
 
 **Skills (lignes, statut)** :
 - `.claude/skills/recap/` (68 L) — `/recap` Daily Recap Musaium
@@ -62,7 +62,7 @@ Effort : 10 min (décision) + 5 min (exec). UFR-016 si dead.
 
 ---
 
-## T-S2-4 — Purger working/ orphelin 2026-05-05-recap-investigation
+## ✅ T-S2-4 — Purger working/ orphelin 2026-05-05-recap-investigation — DONE 2026-05-16 (filesystem mv, verdict PROMOTE, 28% coverage, gitignored dir → pas de commit)
 
 **Path** : `.claude/skills/team/team-reports/working/2026-05-05-recap-investigation/`
 **Contents** : 4 review reports (code, security, doc, package) = 195 KB.
@@ -75,7 +75,7 @@ Effort : 15-30 min (review contenu). UFR-016 + règle CLAUDE.md team reports lif
 
 ---
 
-## T-S2-5 — CLAUDE.md slim : retirer "not yet extracted" (couplé T-S2-1)
+## ✅ T-S2-5 — CLAUDE.md slim : retirer "not yet extracted" (couplé T-S2-1) — DONE 2026-05-16 (commit `f62c9697` + dedup fix `dbfed57c`)
 
 **Couplé à T-S2-1.** Si docs commits OK :
 
@@ -90,7 +90,7 @@ Effort : 10 min.
 
 ---
 
-## T-S2-6 — Updater CLAUDE.md "Note 2026-05-15" — déclarer cleanup S2 absorbé
+## ✅ T-S2-6 — Updater MEMORY.md "Note 2026-05-15" — déclarer cleanup S2 absorbé — DONE 2026-05-16 (user-global memory, hors repo, pas de commit)
 
 **Path** : `/Users/Tim/.claude/projects/-Users-Tim-Desktop-all-dev-Pro-InnovMind/memory/MEMORY.md` (bas du fichier).
 
@@ -135,7 +135,7 @@ Effort : 30 min (création compte) + 5 min (update code). Blocker B2C launch ?
 
 ---
 
-## T-S2-10 — Lancer gitnexus_detect_changes après suppression 6 skills
+## ✅ T-S2-10 — Lancer gitnexus_detect_changes après suppression 6 skills — DONE 2026-05-16 (risk=LOW, 0 affected processes, 0 broken cross-refs)
 
 **Pourquoi** : vérifier qu'aucune cross-référence dans le repo ne pointait vers les 6 skills supprimés (langchain-fundamentals, langchain-middleware, langchain-rag, pentest-checklist, vulnerability-scanner, browser-use).
 

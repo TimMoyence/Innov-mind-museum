@@ -1,3 +1,9 @@
+---
+name: verify-schema
+description: "/verify-schema — Audit schema TypeORM"
+last-verified: 2026-05-16
+---
+
 # /verify-schema — Audit schema TypeORM
 
 Verifie la coherence entre les entites TypeORM, les migrations, et la base de donnees.

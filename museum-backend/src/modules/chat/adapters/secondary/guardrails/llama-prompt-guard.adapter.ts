@@ -68,7 +68,7 @@ interface LlamaPromptGuardAdapterOptions {
  * VPS hardware envelope without GPU.
  *
  * Form factor: matches `LLMGuardAdapter` so wiring in the chat-module
- * composition root is a constructor swap. Not activated yet (ADR-050) —
+ * composition root is a constructor swap. Not activated yet (ADR-051) —
  * the adapter is infra-ready, no shadow run, no production traffic.
  *
  * Fail-CLOSED contract (per ADR-047 + ADR-048): network error, non-OK HTTP,

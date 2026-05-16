@@ -9,7 +9,7 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Token-revocation at suspend/delete relies on the existing
  * `auth_refresh_tokens.revokeFamily` mechanism — no schema change there. The
- * 15-min access-token TTL provides the natural revocation window (ADR-050).
+ * 15-min access-token TTL provides the natural revocation window (ADR-052).
  */
 export class AddUserSuspendAndSoftDelete1778800000000 implements MigrationInterface {
   name = 'AddUserSuspendAndSoftDelete1778800000000';

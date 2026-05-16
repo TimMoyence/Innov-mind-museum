@@ -11,7 +11,7 @@ export interface AdminUserDTO {
   emailVerified: boolean;
   /** Operator-driven account freeze (blocks login + refresh; reversible). */
   suspended: boolean;
-  /** Soft-delete timestamp (ISO 8601) or null when active. See ADR-050. */
+  /** Soft-delete timestamp (ISO 8601) or null when active. See ADR-052. */
   deletedAt: string | null;
   /**
    * Soft-paywall tier (R1 / C6). `'free'` is subject to the monthly session

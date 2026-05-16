@@ -19,11 +19,11 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-046) | [`docs/adr/`](adr/) |
-| Architecture (BE hex / FE Expo / Web Next.js) | `CLAUDE.md` § Architecture (summary) — `docs/ARCHITECTURE.md` not yet extracted |
+| ADRs (002-052) | [`docs/adr/`](adr/) |
+| Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
-| Test discipline — DRY factories | `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` — `docs/TEST_FACTORIES.md` not yet extracted |
-| ESLint discipline | `CLAUDE.md` § ESLint Discipline (quick ref) — `docs/LINT_DISCIPLINE.md` not yet extracted |
+| Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) + `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` |
+| ESLint discipline | [`docs/LINT_DISCIPLINE.md`](LINT_DISCIPLINE.md) + `CLAUDE.md` § ESLint Discipline (quick ref) |
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |

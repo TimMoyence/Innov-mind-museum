@@ -16,7 +16,7 @@ interface DeleteUserInput {
 
 /**
  * Soft-deletes a user (`deleted_at = NOW()`) and revokes every active refresh
- * token. Hard erasure (RGPD Art. 17 full erase) deferred V1.1 (ADR-050).
+ * token. Hard erasure (RGPD Art. 17 full erase) deferred V1.1 (ADR-052).
  *
  * Guards:
  *   - Refuse if the target is the last admin / super_admin (last-privileged guard).

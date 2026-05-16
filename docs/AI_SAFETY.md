@@ -41,7 +41,7 @@ When any `GuardrailProvider` fails (timeout, network error, malformed response, 
 { version: 'v1', allow: false, reason: 'service_unavailable' }
 ```
 
-The user sees a localised "service temporarily unavailable" message (FR/EN ship; other locales fall back to EN until ADR-050 extends the i18n surface). This is the `service_unavailable` mapped reason added at ADR-047 — distinct from `unsafe_output` so the UI no longer says "your content was flagged" on infrastructure failures.
+The user sees a localised "service temporarily unavailable" message (FR/EN ship; other locales fall back to EN until a future ADR extends the i18n surface). This is the `service_unavailable` mapped reason added at ADR-047 — distinct from `unsafe_output` so the UI no longer says "your content was flagged" on infrastructure failures.
 
 **Rationale.** In pre-launch V1 and indefinitely thereafter (per `feedback_no_feature_flags_prelaunch`), there is **no `*_FAIL_OPEN`, no `*_BREAKER_ENABLED`, no kill-switch** for the guardrail or the fail-CLOSED policy. Tuning is via thresholds (`LLM_GUARD_CB_FAILURE_THRESHOLD`, `LLM_GUARD_MAX_INFLIGHT`, `LLM_GUARD_QUEUE_MAX`, etc.) — those are operational knobs of an always-on behaviour, not feature flags.
 
@@ -155,7 +155,7 @@ Bottlenecks: sidecar CPU on single-VPS; Postgres write amplification on audit lo
 |---|---|
 | Modify any of L1-L5 | ADR + this doc updated |
 | Change a threshold in `env.guardrails.*` | 1-line PR; this doc updated only if doctrine impact |
-| Add a provider | ADR (e.g. ADR-050 for first new provider) + shadow mode procedure (Phase 1) |
+| Add a provider | ADR (e.g. ADR-051 for first new provider) + shadow mode procedure (Phase 1) |
 | Add a new layer (e.g. content classifier between L4 and L5) | ADR + new section in this doc |
 | Legal / compliance question | Engage counsel (D2 trigger) |
 | Reclassify B2B as high-risk Annex III | Trigger conformity assessment + ship Phase 2 audit/explanation infrastructure ahead of contract signing |
