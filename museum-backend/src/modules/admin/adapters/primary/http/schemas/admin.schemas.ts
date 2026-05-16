@@ -10,6 +10,16 @@ export const changeUserRoleSchema = z.object({
   role: z.enum(validRoles),
 });
 
+/**
+ * R1 (C6) — Body schema for `PATCH /api/admin/users/:id/tier`. Pins the
+ * tier value to `{free, premium}` literally so the route returns 400 on
+ * `{tier:'enterprise'}` (R16). No optional fields ; empty body fails the
+ * `tier` presence check.
+ */
+export const changeUserTierSchema = z.object({
+  tier: z.enum(['free', 'premium']),
+});
+
 export const resolveReportSchema = z.object({
   status: z.enum(['pending', 'reviewed', 'dismissed']),
   reviewerNotes: z.string().max(2000).optional(),

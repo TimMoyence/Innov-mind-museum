@@ -38,7 +38,13 @@ function mapUser(user: User): AdminUserDTO {
     firstname: user.firstname ?? null,
     lastname: user.lastname ?? null,
     role: user.role,
+    museumId: user.museumId ?? null,
     emailVerified: user.email_verified,
+    suspended: user.suspended,
+    deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
+    // R1 (C6) — surface tier on the admin DTO so the user-detail page can
+    // render the current value + the toggle button (super_admin only).
+    tier: user.tier,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
@@ -111,6 +117,10 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('u.role = :role', { role: filters.role });
     }
 
+    // Exclude soft-deleted users from the list view (still reachable via direct
+    // getUserById for forensics — see admin user detail page).
+    qb.andWhere('u.deleted_at IS NULL');
+
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
@@ -129,12 +139,60 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
+  /** Fetch a single user (including soft-deleted rows) for admin detail / audit. */
+  async getUserById(userId: number): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    return user ? mapUser(user) : null;
+  }
+
   /** Updates the role of a user and returns the updated record. */
   async changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
 
     user.role = newRole as User['role'];
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
+  }
+
+  /**
+   * R1 (C6) — Flips `users.tier` to the new value via a `save` round-trip
+   * that ONLY mutates the `tier` column. `sessionsMonthCount` and
+   * `sessionsMonthStart` are loaded back from the row but not modified
+   * (R17 — counter preserved across flips). Returns `null` when the user
+   * row doesn't exist.
+   */
+  async changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
+    user.tier = newTier;
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
+  }
+
+  /** Flip suspended=true (idempotent). */
+  async suspendUser(userId: number): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
+    user.suspended = true;
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
+  }
+
+  /** Flip suspended=false (idempotent). */
+  async unsuspendUser(userId: number): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
+    user.suspended = false;
+    const saved = await this.userRepo.save(user);
+    return mapUser(saved);
+  }
+
+  /** Soft-delete: deleted_at = NOW(). Idempotent — re-deleting refreshes the timestamp. */
+  async softDeleteUser(userId: number): Promise<AdminUserDTO | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) return null;
+    user.deletedAt = new Date();
     const saved = await this.userRepo.save(user);
     return mapUser(saved);
   }

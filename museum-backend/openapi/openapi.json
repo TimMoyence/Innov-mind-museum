@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Musaium API",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Active API surface for Musaium mobile backend (health, auth, chat, daily-art, reviews, admin, museum, support)."
   },
   "servers": [
@@ -134,6 +134,38 @@
             "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
             "nullable": true,
             "description": "Spec C T2.4 — visitor's preferred TTS voice. `null` means inherit the env-level default."
+          },
+          "contentPreferences": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["history", "technique", "artist"]
+            },
+            "description": "Visitor's content preferences (zero or more). Returned by GET /auth/me, written by PATCH /auth/content-preferences."
+          },
+          "defaultLocale": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 8,
+            "description": "TD-2 — Visitor's preferred BCP-47 locale. Server defaults to `en-US`. FE validates against `SUPPORTED_LOCALES`."
+          },
+          "defaultMuseumMode": {
+            "type": "boolean",
+            "description": "TD-2 — Whether the visitor opts into auto museum-mode detection on launch."
+          },
+          "guideLevel": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "expert"],
+            "description": "TD-2 — Visitor's self-declared expertise level. Tunes LLM vocabulary and depth."
+          },
+          "dataMode": {
+            "type": "string",
+            "enum": ["auto", "low", "normal"],
+            "description": "TD-2 — Data-saver heuristic preference. Drives FE image quality + prefetch."
+          },
+          "audioDescriptionMode": {
+            "type": "boolean",
+            "description": "TD-2 — Audio-description accessibility flag (cross-device, persisted server-side)."
           }
         }
       },
@@ -1284,7 +1316,17 @@
       },
       "AdminUserDTO": {
         "type": "object",
-        "required": ["id", "email", "role", "emailVerified", "createdAt", "updatedAt"],
+        "required": [
+          "id",
+          "email",
+          "role",
+          "museumId",
+          "emailVerified",
+          "suspended",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ],
         "properties": {
           "id": {
             "type": "integer"
@@ -1302,8 +1344,21 @@
           "role": {
             "type": "string"
           },
+          "museumId": {
+            "type": ["integer", "null"],
+            "description": "B2B museum tenant identifier for museum_manager / admin roles; null for platform-wide accounts."
+          },
           "emailVerified": {
             "type": "boolean"
+          },
+          "suspended": {
+            "type": "boolean",
+            "description": "Operator-driven account freeze (admin endpoints can flip; blocks login + refresh)."
+          },
+          "deletedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Soft-delete timestamp. Hard erasure is deferred V1.1 (ADR-050)."
           },
           "createdAt": {
             "type": "string",
@@ -3126,6 +3181,158 @@
         }
       }
     },
+    "/api/auth/me/preferences": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "TD-2 — Batch-update the authenticated user's profile preferences",
+        "description": "Persists a partial patch of the 5 profile preferences (defaultLocale, defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "defaultLocale": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 8
+                  },
+                  "defaultMuseumMode": {
+                    "type": "boolean"
+                  },
+                  "guideLevel": {
+                    "type": "string",
+                    "enum": ["beginner", "intermediate", "expert"]
+                  },
+                  "dataMode": {
+                    "type": "string",
+                    "enum": ["auto", "low", "normal"]
+                  },
+                  "audioDescriptionMode": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated; returns the canonical post-write state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "defaultLocale",
+                    "defaultMuseumMode",
+                    "guideLevel",
+                    "dataMode",
+                    "audioDescriptionMode"
+                  ],
+                  "properties": {
+                    "defaultLocale": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 8
+                    },
+                    "defaultMuseumMode": {
+                      "type": "boolean"
+                    },
+                    "guideLevel": {
+                      "type": "string",
+                      "enum": ["beginner", "intermediate", "expert"]
+                    },
+                    "dataMode": {
+                      "type": "string",
+                      "enum": ["auto", "low", "normal"]
+                    },
+                    "audioDescriptionMode": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/content-preferences": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "Replace the authenticated user's content preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["preferences"],
+                "properties": {
+                  "preferences": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "string",
+                      "enum": ["history", "technique", "artist"]
+                    },
+                    "description": "Replacement set of content preferences. Empty array clears all preferences. Backend deduplicates and returns canonical order."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted (deduplicated, canonically ordered) preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["contentPreferences"],
+                  "properties": {
+                    "contentPreferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["history", "technique", "artist"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/api/users/me/export": {
       "get": {
         "tags": ["Auth"],
@@ -4312,6 +4519,148 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get a single user (admin & moderator)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Soft-delete a user (super_admin only)",
+        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-050). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User soft-deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/suspend": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Suspend a user (super_admin only)",
+        "description": "Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/unsuspend": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Lift a user suspension (super_admin only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Suspension lifted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },

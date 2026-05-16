@@ -1,9 +1,26 @@
 # ADR-029 — Documenter agent swap to Sonnet 4.6
 
-- **Status** : Accepted (2026-05-03)
+- **Status** : Reverted 2026-05-14 (see Amendment 2026-05-14 below)
 - **Ticket** : ROADMAP_TEAM T1.3
 - **Supersedes** : N/A
-- **Amends** : UFR-010 (`feedback_all_agents_opus`)
+- **Amends** : UFR-010 (`feedback_all_agents_opus`) — amendment removed when reverted
+
+## Amendment 2026-05-14 — REVERTED
+
+User trancha 2026-05-14 : Documenter revient à `claude-opus-4-6`. La 5-run Sonnet vs Opus verification protocol prévue (tasks.md R6) n'a jamais été exécutée — le user a préféré la cohérence "tous-Opus pour qualité prod" à l'économie potentielle ($3/M vs $15/M input, gain projeté ~$0.05/run documenter, négligeable face au risque qualité prélaunch).
+
+**Effets du revert (commit accompagnant ce revert) :**
+- `.claude/agents/documenter.md:2` : `claude-sonnet-4-6` → `claude-opus-4-6`
+- `.claude/agents/shared/user-feedback-rules.json` UFR-010 : `exceptions[]` vidé, ancienne dérogation archivée dans `history[]`
+- `.claude/skills/team/SKILL.md` REGLES §2 : retire mention `documenter = sonnet-4.6`
+- `.claude/skills/team/lib/cost-estimate.sh:62` : `AGENT_MODEL[documenter]=opus-4.6`
+- `docs/ROADMAP_TEAM.md` : T1.3 déplacé en KILLED avec date
+
+L'ADR reste publié pour traçabilité (la décision d'amender UFR-010 et le mécanisme `exceptions[]` ont existé). Aucune nouvelle exception UFR-010 n'est ouverte ; tout futur swap modèle devra repartir d'un nouvel ADR + amendment + verification protocol exécutée AVANT bascule.
+
+---
+
+## Original decision (2026-05-03, no longer in effect)
 
 ## Context
 

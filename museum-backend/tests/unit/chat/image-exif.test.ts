@@ -222,4 +222,47 @@ describe('image EXIF strip pipeline', () => {
       expect(await verifyExifStripped(out.buffer)).toBe(true);
     });
   });
+
+  // ─── P0 #3 (audit F4 §Claim 4): decompression-bomb DoS guard ───
+  // sharp's default `limitInputPixels` is 268_402_689 (~16k×16k). A 3 MB
+  // crafted PNG can decode to 268M pixels ≈ 768 MB heap → SIGKILL the
+  // Node process under concurrent load. We pin sharp to 24 Mpx
+  // (~6000×4000) which exceeds any legit mobile upload (post mobile
+  // optimization) and bounds the attack surface. The pixel-cap error
+  // is wrapped by the existing try/catch → ImageDecodeError 400.
+  describe('limitInputPixels DoS guard', () => {
+    it('rejects a 7000×4000 PNG (28 Mpx, above 24 Mpx cap) as ImageDecodeError', async () => {
+      const oversizePng = await sharp({
+        create: { width: 7000, height: 4000, channels: 3, background: { r: 0, g: 0, b: 0 } },
+      })
+        .png()
+        .toBuffer();
+
+      await expect(stripExifFromImage(oversizePng, 'image/png')).rejects.toBeInstanceOf(
+        ImageDecodeError,
+      );
+
+      try {
+        await stripExifFromImage(oversizePng, 'image/png');
+      } catch (error) {
+        const e = error as ImageDecodeError;
+        expect(e.statusCode).toBe(400);
+        expect(e.code).toBe('IMAGE_DECODE_FAILED');
+      }
+    });
+
+    it('accepts a typical mobile-sized 2000×1500 JPEG (3 Mpx, well under cap)', async () => {
+      const okJpeg = await sharp({
+        create: { width: 2000, height: 1500, channels: 3, background: { r: 10, g: 20, b: 30 } },
+      })
+        .jpeg({ quality: 75 })
+        .toBuffer();
+
+      const stripped = await stripExifFromImage(okJpeg, 'image/jpeg');
+
+      expect(stripped.mime).toBe('image/jpeg');
+      expect(stripped.width).toBe(2000);
+      expect(stripped.height).toBe(1500);
+    });
+  });
 });

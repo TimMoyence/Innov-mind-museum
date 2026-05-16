@@ -1,6 +1,21 @@
 import type { User } from './user.entity';
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
+/**
+ * TD-2 — Partial patch for the 5 profile preferences exposed via the batch
+ * `PATCH /api/auth/me/preferences` endpoint. All fields optional; only those
+ * present are persisted. The repo implementation MUST pre-filter `undefined`
+ * fields before forwarding to `repo.update` to avoid the TypeORM silent-skip
+ * gotcha (see `feedback_typeorm_set_undefined_repo_update`).
+ */
+export interface ProfilePreferencesPatch {
+  defaultLocale?: string;
+  defaultMuseumMode?: boolean;
+  guideLevel?: 'beginner' | 'intermediate' | 'expert';
+  dataMode?: 'auto' | 'low' | 'normal';
+  audioDescriptionMode?: boolean;
+}
+
 /** Port for user persistence operations. Implemented by {@link UserRepositoryPg}. */
 export interface IUserRepository {
   /**
@@ -159,6 +174,19 @@ export interface IUserRepository {
    * @param voice - Catalog voice id, or `null` to reset to the env default.
    */
   updateTtsVoice(userId: number, voice: string | null): Promise<void>;
+
+  /**
+   * TD-2 — Persist a partial patch of the 5 profile-preference columns. Only
+   * the fields present in {@link ProfilePreferencesPatch} (i.e. `!== undefined`)
+   * are written; the rest are left untouched. The implementation MUST
+   * pre-filter `undefined` to sidestep the `repo.update(_, { field: undefined })`
+   * silent-skip gotcha — passing the unfiltered patch directly would no-op
+   * for any missing fields without raising.
+   *
+   * @param userId - The user's ID.
+   * @param patch - Partial preferences to write.
+   */
+  updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void>;
 
   /**
    * Set or clear the MFA enrollment deadline column. Used by the warning-window

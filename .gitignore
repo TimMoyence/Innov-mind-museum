@@ -31,6 +31,8 @@
 !docs/PHASE_HISTORY.md
 !docs/_archive/
 !docs/_archive/**
+!docs/roadmap-night/
+!docs/roadmap-night/**
 !docs/adr/
 !docs/adr/**
 !docs/CONTRIBUTING.md
@@ -40,6 +42,8 @@
 !docs/incidents/**
 !docs/RUNBOOKS/
 !docs/RUNBOOKS/**
+!docs/maplibre/
+!docs/maplibre/**
 !docs/plans/
 !docs/plans/**
 !docs/MIGRATION_GOVERNANCE.md
@@ -58,6 +62,8 @@
 !docs/audit-cleanup-2026-05-12/**
 !docs/audit-2026-05-12/
 !docs/audit-2026-05-12/**
+!docs/audit-2026-05-12-raw/
+!docs/audit-2026-05-12-raw/**
 
 # frontend docs
 !museum-frontend/docs/

@@ -80,10 +80,10 @@ import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestra
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
+import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location-resolver';
 import type {
   ChatPersistencePort,
@@ -379,10 +379,10 @@ export class ChatModule {
 
   /**
    * 2026-05-13 — accessor for the active `GuardrailProvider` adapter.
-   * Returns `undefined` when no candidate is configured (default `off`) or
-   * when the module hasn't been built yet. Consumed by `/api/health/deep`
-   * to call `provider.health()` and `provider.metrics()` for the semantic
-   * probe payload (Phase 1).
+   * Returns `undefined` when `GUARDRAILS_V2_LLM_GUARD_URL` is unset or when
+   * the module hasn't been built yet. Consumed by `/api/health/deep` to call
+   * `provider.health()` and `provider.metrics()` for the semantic probe
+   * payload (Phase 1).
    */
   getGuardrailProvider(): GuardrailProvider | undefined {
     return this._guardrailProvider;
@@ -462,83 +462,70 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /** Creates the guardrail provider adapter when one is selected via env (ADR-048). */
+  /** Creates the guardrail provider adapter when GUARDRAILS_V2_LLM_GUARD_URL is set (ADR-048; ADR-015 amendment 2026-05-14). */
   private buildGuardrailProvider(): GuardrailProvider | undefined {
-    const candidate = env.guardrails.candidate;
-    if (candidate === 'off') return undefined;
+    const baseUrl = env.guardrails.llmGuardUrl;
+    if (!baseUrl) return undefined;
 
-    if (candidate === 'llm-guard') {
-      const baseUrl = env.guardrails.llmGuardUrl;
-      if (!baseUrl) {
-        logger.warn('advanced_guardrail_misconfigured', {
-          candidate,
-          detail: 'GUARDRAILS_V2_LLM_GUARD_URL is required when candidate=llm-guard',
-        });
-        return undefined;
-      }
+    // Single breaker instance per process — shared between the input and
+    // output scan paths so a sidecar degradation trips ONE breaker, not two
+    // unsynchronised ones. Metrics are wired here via onStateChange so the
+    // breaker primitive itself stays Prometheus-free.
+    const breaker = new GuardrailCircuitBreaker({
+      failureThreshold: env.guardrails.circuitBreaker.failureThreshold,
+      windowMs: env.guardrails.circuitBreaker.windowMs,
+      openDurationMs: env.guardrails.circuitBreaker.openDurationMs,
+      halfOpenMaxProbes: env.guardrails.circuitBreaker.halfOpenMaxProbes,
+      onStateChange: (next) => {
+        const nextLabel = next.toLowerCase();
+        for (const label of ['closed', 'half_open', 'open']) {
+          llmGuardCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
+        }
+        if (next === 'OPEN') {
+          llmGuardCircuitBreakerTripsTotal.inc();
+          const snapshot = breaker.getState();
+          // Audit trail (ADR-047 R6) — no PII, metadata only.
+          fireAndForget(
+            auditService.log({
+              action: AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
+              actorType: 'system',
+              metadata: {
+                failureCount: snapshot.failureCount,
+                windowMs: env.guardrails.circuitBreaker.windowMs,
+                openedAt: snapshot.openedAt?.toISOString() ?? null,
+                // ADR-048 Phase 0 anchor — stable literal until the per-tenant
+                // policy resolver (Phase 2) populates real policy versions.
+                // Anchors forensic replay across schema evolution.
+                policyVersion: 'default-v0',
+              },
+            }),
+            'llm_guard_breaker_open_audit',
+          );
+        }
+      },
+    });
+    this._guardrailCircuitBreaker = breaker;
 
-      // Single breaker instance per process — shared between the input and
-      // output scan paths so a sidecar degradation trips ONE breaker, not two
-      // unsynchronised ones. Metrics are wired here via onStateChange so the
-      // breaker primitive itself stays Prometheus-free.
-      const breaker = new GuardrailCircuitBreaker({
-        failureThreshold: env.guardrails.circuitBreaker.failureThreshold,
-        windowMs: env.guardrails.circuitBreaker.windowMs,
-        openDurationMs: env.guardrails.circuitBreaker.openDurationMs,
-        halfOpenMaxProbes: env.guardrails.circuitBreaker.halfOpenMaxProbes,
-        onStateChange: (next) => {
-          const nextLabel = next.toLowerCase();
-          for (const label of ['closed', 'half_open', 'open']) {
-            llmGuardCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
-          }
-          if (next === 'OPEN') {
-            llmGuardCircuitBreakerTripsTotal.inc();
-            const snapshot = breaker.getState();
-            // Audit trail (ADR-047 R6) — no PII, metadata only.
-            fireAndForget(
-              auditService.log({
-                action: AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
-                actorType: 'system',
-                metadata: {
-                  failureCount: snapshot.failureCount,
-                  windowMs: env.guardrails.circuitBreaker.windowMs,
-                  openedAt: snapshot.openedAt?.toISOString() ?? null,
-                  // ADR-048 Phase 0 anchor — stable literal until the per-tenant
-                  // policy resolver (Phase 2) populates real policy versions.
-                  // Anchors forensic replay across schema evolution.
-                  policyVersion: 'default-v0',
-                },
-              }),
-              'llm_guard_breaker_open_audit',
-            );
-          }
-        },
-      });
-      this._guardrailCircuitBreaker = breaker;
+    // Seed gauges so dashboards see the healthy state before the first
+    // transition (onStateChange only fires on transitions, not construction).
+    llmGuardCircuitBreakerState.set({ state: 'closed' }, 1);
+    llmGuardCircuitBreakerState.set({ state: 'half_open' }, 0);
+    llmGuardCircuitBreakerState.set({ state: 'open' }, 0);
 
-      // Seed gauges so dashboards see the healthy state before the first
-      // transition (onStateChange only fires on transitions, not construction).
-      llmGuardCircuitBreakerState.set({ state: 'closed' }, 1);
-      llmGuardCircuitBreakerState.set({ state: 'half_open' }, 0);
-      llmGuardCircuitBreakerState.set({ state: 'open' }, 0);
+    // Single semaphore instance per process — shared across input + output
+    // legs so the concurrency cap matches actual sidecar fan-out.
+    const semaphore = new ScanInflightSemaphore(
+      env.guardrails.maxInflight,
+      env.guardrails.queueMax,
+    );
 
-      // Single semaphore instance per process — shared across input + output
-      // legs so the concurrency cap matches actual sidecar fan-out.
-      const semaphore = new ScanInflightSemaphore(
-        env.guardrails.maxInflight,
-        env.guardrails.queueMax,
-      );
-
-      return new LLMGuardAdapter({
-        baseUrl,
-        timeoutMs: env.guardrails.timeoutMs,
-        circuitBreaker: breaker,
-        semaphore,
-        chaosRate: env.guardrails.chaosRate,
-      });
-    }
-
-    return undefined;
+    return new LLMGuardAdapter({
+      baseUrl,
+      timeoutMs: env.guardrails.timeoutMs,
+      circuitBreaker: breaker,
+      semaphore,
+      chaosRate: env.guardrails.chaosRate,
+    });
   }
 
   /** Creates the user memory service (always active in V1). */
@@ -832,7 +819,7 @@ export class ChatModule {
       // circuit-breaker reference; a second instantiation would diverge them.
       guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
-      llmJudgeEnabled: env.guardrails.candidate === 'llm-judge',
+      llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
       llmJudge: async (message: string) =>
         await judgeWithLlm(message, { orchestrator: deps.effectiveOrchestrator }),
       piiSanitizer: new RegexPiiSanitizer(),
@@ -917,10 +904,10 @@ export const getLlmGuardCircuitBreakerState = (): ReturnType<
 /**
  * 2026-05-13 — runtime accessor for the active `GuardrailProvider` adapter.
  * Consumed by `/api/health/deep` (Phase 1 semantic probe). Returns
- * `undefined` when the chat module hasn't been built yet OR when no
- * candidate is configured — both cases collapse to "no semantic probe
- * available", which the deep-health handler renders as an empty
- * `checks.guardrails` array.
+ * `undefined` when the chat module hasn't been built yet OR when
+ * `GUARDRAILS_V2_LLM_GUARD_URL` is unset — both cases collapse to
+ * "no semantic probe available", which the deep-health handler renders as
+ * an empty `checks.guardrails` array.
  */
 export const getGuardrailProvider = (): GuardrailProvider | undefined =>
   getActiveChatModule().getGuardrailProvider();

@@ -39,6 +39,8 @@ const mockDict: Dictionary = {
     googlePlay: '',
     appStorePrefix: '',
     googlePlayPrefix: '',
+    appStoreHref: '',
+    googlePlayComingSoon: '',
   },
   chatShowcase: { title: '', subtitle: '', bullets: [], messages: [] },
   mapsShowcase: { title: '', subtitle: '', bullets: [] },
@@ -62,8 +64,15 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) {year} Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
-  },
+    links: {
+      privacy: 'Privacy Policy',
+      support: 'Help',
+      accessibility: 'Accessibility',
+      security: 'Security',
+      // R4 R18 / AC11 — B2B pitch page must be reachable from marketing chrome.
+      b2b: 'For museums',
+    },
+  } as Dictionary['footer'],
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],
   confirmEmailChange: {} as Dictionary['confirmEmailChange'],
@@ -88,18 +97,33 @@ describe('Footer', () => {
     expect(screen.getByText('Made by InnovMind')).toBeInTheDocument();
   });
 
-  it('renders privacy, support, and accessibility links', () => {
+  it('renders privacy, support, accessibility, and security links', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     const privacyLink = screen.getByText('Privacy Policy');
     const supportLink = screen.getByText('Help');
     const accessibilityLink = screen.getByText('Accessibility');
+    const securityLink = screen.getByText('Security');
     expect(privacyLink).toHaveAttribute('href', '/fr/privacy');
     expect(supportLink).toHaveAttribute('href', '/fr/support');
     expect(accessibilityLink).toHaveAttribute('href', '/fr/accessibility');
+    expect(securityLink).toHaveAttribute('href', '/fr/security');
   });
 
   it('renders footer navigation landmark', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     expect(screen.getByLabelText('Footer')).toBeInTheDocument();
+  });
+
+  // R4 R18 / AC11 — Footer must surface a B2B link adjacent to existing public links.
+  it('renders the B2B pitch link pointing to /<locale>/b2b (R4 R18 / AC11)', () => {
+    render(<Footer dict={mockDict} locale="fr" />);
+    const b2bLink = screen.getByText('For museums');
+    expect(b2bLink).toHaveAttribute('href', '/fr/b2b');
+  });
+
+  it('renders the B2B link with the EN locale prefix', () => {
+    render(<Footer dict={mockDict} locale="en" />);
+    const b2bLink = screen.getByText('For museums');
+    expect(b2bLink).toHaveAttribute('href', '/en/b2b');
   });
 });

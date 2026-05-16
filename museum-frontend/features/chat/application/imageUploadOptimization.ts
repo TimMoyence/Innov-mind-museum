@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-deprecated -- expo-image-manipulator API migration pending */
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 
@@ -13,16 +13,14 @@ interface ImageDimensions {
 }
 
 const getImageDimensions = async (uri: string): Promise<ImageDimensions | null> => {
+  // expo-image equivalent of RN `Image.getSize(uri, cb, err)` is
+  // `Image.loadAsync({ uri }) → Promise<ImageRef>` where `width`/`height`
+  // are exposed on the ImageRef (logical pixels, multiply by `scale` for
+  // device pixels — we want logical here so longest-side resize ratios
+  // remain correct against MAX_IMAGE_DIMENSION_PX).
   try {
-    return await new Promise<ImageDimensions>((resolve, reject) => {
-      Image.getSize(
-        uri,
-        (width, height) => {
-          resolve({ width, height });
-        },
-        reject,
-      );
-    });
+    const ref = await Image.loadAsync({ uri });
+    return { width: ref.width, height: ref.height };
   } catch {
     return null;
   }

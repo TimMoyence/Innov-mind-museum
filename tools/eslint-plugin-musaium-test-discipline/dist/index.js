@@ -165,11 +165,11 @@ var require_RuleCreator = __commonJS({
   "node_modules/.pnpm/@typescript-eslint+utils@8.59.1_eslint@10.2.1_typescript@5.9.3/node_modules/@typescript-eslint/utils/dist/eslint-utils/RuleCreator.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.RuleCreator = RuleCreator3;
+    exports2.RuleCreator = RuleCreator4;
     var applyDefault_1 = require_applyDefault();
-    function RuleCreator3(urlCreator) {
+    function RuleCreator4(urlCreator) {
       return function createNamedRule({ meta, name, ...rule }) {
-        const ruleWithDocs = createRule3({
+        const ruleWithDocs = createRule4({
           meta: {
             ...meta,
             docs: {
@@ -183,7 +183,7 @@ var require_RuleCreator = __commonJS({
         return ruleWithDocs;
       };
     }
-    function createRule3({
+    function createRule4({
       create,
       // Keep accepting deprecated defaultOptions for backward compatibility.
       // eslint-disable-next-line @typescript-eslint/no-deprecated
@@ -202,8 +202,8 @@ var require_RuleCreator = __commonJS({
         name
       };
     }
-    RuleCreator3.withoutDocs = function withoutDocs(args) {
-      return createRule3(args);
+    RuleCreator4.withoutDocs = function withoutDocs(args) {
+      return createRule4(args);
     };
   }
 });
@@ -399,8 +399,100 @@ var no_inline_test_entities_default = createRule({
   }
 });
 
-// src/rules/no-undisabled-test-discipline-disable.ts
+// src/rules/no-typeorm-set-undefined.ts
 var import_eslint_utils2 = __toESM(require_eslint_utils());
+var DEFAULT_FILE_PATTERNS = [".repository.", ".repo."];
+var createRule2 = (0, import_eslint_utils2.RuleCreator)(
+  (name) => `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`
+);
+var isUndefinedLiteral = (node) => {
+  if (!node) return false;
+  return node.type === "Identifier" && node.name === "undefined";
+};
+var propertiesWithUndefined = (obj) => {
+  const offenders = [];
+  for (const prop of obj.properties) {
+    if (prop.type !== "Property") continue;
+    if (prop.shorthand) continue;
+    if (prop.computed) continue;
+    if (isUndefinedLiteral(prop.value)) {
+      offenders.push(prop);
+    }
+  }
+  return offenders;
+};
+var propertyName = (prop) => {
+  const key = prop.key;
+  if (key.type === "Identifier") return key.name;
+  if (key.type === "Literal" && typeof key.value === "string") return key.value;
+  return "<unknown>";
+};
+var no_typeorm_set_undefined_default = createRule2({
+  name: "no-typeorm-set-undefined",
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Forbid `field: undefined` in TypeORM `.set()` and `repo.update()` calls \u2014 silently skipped, leaves columns unchanged. Use `field: () => 'NULL'` instead."
+    },
+    schema: [
+      {
+        type: "object",
+        properties: {
+          filePathPatterns: { type: "array", items: { type: "string" } }
+        },
+        additionalProperties: false
+      }
+    ],
+    messages: {
+      setUndefined: "`{{field}}: undefined` in `.set()` is silently skipped by TypeORM (UpdateQueryBuilder filters undefined values before generating SQL). The column will not be cleared \u2014 leading to replayable one-time tokens. Use `{{field}}: () => 'NULL'` instead. See user.repository.pg.ts verifyEmail for reference.",
+      updateUndefined: "`{{field}}: undefined` in `repo.update()` is silently skipped by TypeORM \u2014 `repo.update()` forwards to `.set()` internally. Use `{{field}}: () => 'NULL'` instead. See user.repository.pg.ts verifyEmail for reference."
+    }
+  },
+  defaultOptions: [{}],
+  create(context, [opts]) {
+    const filename = context.filename ?? context.getFilename?.() ?? "";
+    const patterns = opts?.filePathPatterns ?? DEFAULT_FILE_PATTERNS;
+    if (!patterns.some((p) => filename.includes(p))) {
+      return {};
+    }
+    return {
+      // Pattern A: <anything>.set({ field: undefined, ... })
+      CallExpression(node) {
+        if (node.callee.type !== "MemberExpression") return;
+        const prop = node.callee.property;
+        if (prop.type !== "Identifier") return;
+        if (prop.name === "set" && node.arguments.length === 1) {
+          const arg = node.arguments[0];
+          if (arg?.type === "ObjectExpression") {
+            for (const offender of propertiesWithUndefined(arg)) {
+              context.report({
+                node: offender,
+                messageId: "setUndefined",
+                data: { field: propertyName(offender) }
+              });
+            }
+          }
+          return;
+        }
+        if (prop.name === "update" && node.arguments.length >= 2) {
+          const arg = node.arguments[1];
+          if (arg?.type === "ObjectExpression") {
+            for (const offender of propertiesWithUndefined(arg)) {
+              context.report({
+                node: offender,
+                messageId: "updateUndefined",
+                data: { field: propertyName(offender) }
+              });
+            }
+          }
+        }
+      }
+    };
+  }
+});
+
+// src/rules/no-undisabled-test-discipline-disable.ts
+var import_eslint_utils3 = __toESM(require_eslint_utils());
 var AST_TOKEN_TYPES = {
   Line: "Line",
   Block: "Block"
@@ -410,10 +502,10 @@ var TARGET_RULES = [
   "musaium-test-discipline/no-inline-test-entities",
   "musaium-test-discipline/no-undisabled-test-discipline-disable"
 ];
-var createRule2 = (0, import_eslint_utils2.RuleCreator)(
+var createRule3 = (0, import_eslint_utils3.RuleCreator)(
   (name) => `https://github.com/innovmind/musaium/blob/main/tools/eslint-plugin-musaium-test-discipline/README.md#${name}`
 );
-var no_undisabled_test_discipline_disable_default = createRule2({
+var no_undisabled_test_discipline_disable_default = createRule3({
   name: "no-undisabled-test-discipline-disable",
   meta: {
     type: "problem",
@@ -469,6 +561,7 @@ var no_undisabled_test_discipline_disable_default = createRule2({
 var plugin = {
   rules: {
     "no-inline-test-entities": no_inline_test_entities_default,
+    "no-typeorm-set-undefined": no_typeorm_set_undefined_default,
     "no-undisabled-test-discipline-disable": no_undisabled_test_discipline_disable_default
   }
 };

@@ -79,7 +79,9 @@
     "appStore": "App Store",
     "googlePlay": "Google Play",
     "appStorePrefix": "Download on the",
-    "googlePlayPrefix": "Get it on"
+    "googlePlayPrefix": "Get it on",
+    "appStoreHref": "https://apps.apple.com/fr/app/musaium/id6761004268",
+    "googlePlayComingSoon": "Coming soon"
   },
   "chatShowcase": {
     "title": "Point. Discover. Understand.",
@@ -191,7 +193,9 @@
     "links": {
       "privacy": "Privacy",
       "support": "Support",
-      "accessibility": "Accessibility"
+      "accessibility": "Accessibility",
+      "security": "Security",
+      "b2b": "For museums"
     }
   },
   "resetPassword": {
@@ -253,6 +257,87 @@
           "description": "Suggestions guide you to the next discovery, gallery after gallery."
         }
       ]
+    },
+    "b2b": {
+      "metadata": {
+        "title": "Musaium for museums — conversational AI for cultural sites",
+        "description": "The conversational AI companion for museums — multilingual, voice-first, multi-venue."
+      },
+      "hero": {
+        "title": "Conversational AI built for museums",
+        "subtitle": "A multilingual, voice-first companion for your visitors — on-site and beyond.",
+        "ctaPrimary": "Talk to us",
+        "ctaSecondary": "See the visitor app"
+      },
+      "problem": {
+        "title": "Audio guides are stuck in 2005",
+        "body": "Costly hardware, limited languages, no visitor insight, one fragmented app per venue. Today's visitors expect a conversation, not a pre-recorded commentary."
+      },
+      "solution": {
+        "title": "A companion in every pocket",
+        "body": "Musaium speaks the visitor's language, listens to their questions, recognises artworks from a photo and adapts its tone to every moment of the visit — powered by your collection data."
+      },
+      "differentiators": [
+        {
+          "title": "Multilingual conversational AI",
+          "description": "Eight languages on day one, including English, French, Spanish and Arabic."
+        },
+        {
+          "title": "Visual similarity engine",
+          "description": "Visitors snap an artwork and explore comparable pieces across the collection."
+        },
+        {
+          "title": "Multi-museum, single visitor",
+          "description": "One app, many partner museums — the visitor's story follows them venue to venue."
+        },
+        {
+          "title": "Voice, hands-free",
+          "description": "Visitors speak; Musaium answers out loud — no need to keep eyes on the screen."
+        },
+        {
+          "title": "Designed for before, during, and after the visit",
+          "description": "A future-ready out-of-museum companion to prepare the visit and extend the journey."
+        }
+      ],
+      "pricing": {
+        "title": "Pricing",
+        "tease": "Custom pricing tailored to museum size",
+        "contactCta": "Request a quote"
+      },
+      "contact": {
+        "title": "Get in touch",
+        "subtitle": "Tell us about your museum and we'll reply within two business days.",
+        "fieldEmail": "Work email",
+        "fieldName": "Your name",
+        "fieldMuseum": "Museum name",
+        "fieldRole": "Your role",
+        "roleOptions": {
+          "director": "Director",
+          "curator": "Curator",
+          "digital": "Digital lead",
+          "other": "Other"
+        },
+        "fieldMessage": "Message",
+        "fieldConsent": "I agree to be contacted about Musaium.",
+        "consentPrivacyLink": "Privacy policy",
+        "submit": "Send",
+        "sending": "Sending…",
+        "success": "Thanks — we will reply within two business days.",
+        "error": "Unable to send right now. Please retry.",
+        "errorValidation": "Please complete every required field."
+      }
+    },
+    "beta": {
+      "heading": "Join the pre-launch beta",
+      "subheading": "We're launching Musaium in June. The first 100 testers get on the waitlist.",
+      "fieldEmail": "Email address",
+      "fieldConsent": "I agree to receive Musaium product updates. One-click unsubscribe.",
+      "consentPrivacyLink": "See the privacy policy",
+      "submit": "Sign me up",
+      "sending": "Sending…",
+      "success": "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
+      "error": "Something went wrong. Please retry in a moment.",
+      "errorValidation": "Required field."
     }
   },
   "admin": {
@@ -325,7 +410,90 @@
       "columnStatus": "Status",
       "columnLastLogin": "Last Login",
       "emptyState": "No users found.",
-      "changeRole": "Change Role"
+      "changeRole": "Change Role",
+      "view": "View",
+      "viewAria": "View user details"
+    },
+    "userDetailPage": {
+      "subtitle": "Detailed user view.",
+      "backToList": "Back to users",
+      "loading": "Loading user…",
+      "errorNotFound": "User not found.",
+      "errorGeneric": "Could not load this user.",
+      "errorLastAdmin": "Cannot delete the last admin.",
+      "errorSelfAction": "You cannot perform this action on your own account.",
+      "sectionIdentity": "Identity",
+      "sectionStatus": "Status",
+      "sectionLifecycle": "Lifecycle",
+      "fieldId": "ID",
+      "fieldEmail": "Email",
+      "fieldName": "Full name",
+      "fieldRole": "Role",
+      "fieldMuseum": "Museum",
+      "fieldVerified": "Email verified",
+      "fieldSuspended": "Suspended",
+      "fieldDeletedAt": "Deleted at",
+      "fieldCreated": "Created",
+      "fieldUpdated": "Updated",
+      "badgeVerified": "Verified",
+      "badgeUnverified": "Unverified",
+      "badgeSuspended": "Suspended",
+      "badgeActive": "Active",
+      "badgeDeleted": "Deleted",
+      "noValue": "—",
+      "actionsTitle": "Actions",
+      "actionChangeRole": "Change role",
+      "actionSuspend": "Suspend",
+      "actionUnsuspend": "Unsuspend",
+      "actionDelete": "Delete",
+      "confirmSuspendTitle": "Suspend this user?",
+      "confirmSuspendBody": "The user will not be able to log in until you lift the suspension. Existing access tokens expire within 15 minutes.",
+      "confirmSuspendButton": "Suspend",
+      "confirmUnsuspendTitle": "Lift suspension?",
+      "confirmUnsuspendBody": "The user will be able to log in again on their next attempt.",
+      "confirmUnsuspendButton": "Unsuspend",
+      "confirmDeleteTitle": "Delete this user?",
+      "confirmDeleteBody": "This soft-deletes the account: refresh tokens are revoked and the user can no longer log in. The row is kept for audit and GDPR forensics. Type the user's email to confirm.",
+      "confirmDeleteTypeEmailLabel": "Type email to confirm",
+      "confirmDeleteButton": "Delete",
+      "successRoleChanged": "Role updated.",
+      "successSuspended": "User suspended.",
+      "successUnsuspended": "User reactivated.",
+      "successDeleted": "User deleted.",
+      "newRoleLabel": "New role",
+      "tier": {
+        "label": "Tier",
+        "currentFree": "Free tier",
+        "currentPremium": "Premium tier",
+        "toggleToPremium": "Promote to premium",
+        "toggleToFree": "Demote to free",
+        "confirmTitle": "Change user tier?",
+        "confirmBody": "This change is logged in the audit chain. The user is not notified automatically.",
+        "confirmCta": "Confirm tier change",
+        "cancel": "Cancel",
+        "success": "Tier updated.",
+        "error": "Could not update tier."
+      }
+    },
+    "mfaPage": {
+      "successTitle": "Two-factor authentication enabled",
+      "successBody": "You will be asked for a code from your authenticator app on every future login.",
+      "backToDashboard": "Back to dashboard",
+      "setupTitle": "Set up two-factor authentication",
+      "setupIntro": "Scan the QR code with Google Authenticator, 1Password, or any TOTP app.",
+      "generateButton": "Generate",
+      "generating": "Generating…",
+      "qrAriaLabel": "TOTP enrollment QR code",
+      "manualSecretIntro": "Or enter this key manually:",
+      "recoveryTitle": "Recovery codes",
+      "recoveryWarning": "Save these now — each can be used once if you lose access to your authenticator. We cannot show them again.",
+      "copyAll": "Copy all",
+      "copyAllAria": "Copy all recovery codes to clipboard",
+      "codeLabel": "Enter the 6-digit code",
+      "codePlaceholder": "123456",
+      "verifyButton": "Verify",
+      "verifying": "Verifying…",
+      "errorPrefix": "Error: "
     },
     "reportsPage": {
       "subtitle": "Review and moderate content reports.",
@@ -393,6 +561,23 @@
       "topMuseums": "Top Museums",
       "museum": "Museum",
       "guardrailBlockRate": "Guardrail Block Rate"
+    },
+    "export": {
+      "sessions": {
+        "label": "CSV — sessions",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      },
+      "reviews": {
+        "label": "CSV — reviews",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      },
+      "tickets": {
+        "label": "CSV — tickets",
+        "downloading": "Preparing…",
+        "error": "Could not retrieve file"
+      }
     }
   }
 }

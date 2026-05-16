@@ -26,8 +26,9 @@ const PULSE_OPACITY_HI = 1;
  */
 const SkeletonThumb = React.memo(({ surface }: { surface: string }) => {
   const reduceMotion = useReducedMotion();
-  const opacity = useRef(new Animated.Value(reduceMotion ? PULSE_OPACITY_HI : PULSE_OPACITY_LO))
-    .current;
+  const opacity = useRef(
+    new Animated.Value(reduceMotion ? PULSE_OPACITY_HI : PULSE_OPACITY_LO),
+  ).current;
 
   // WCAG 2.3.3: when reduce-motion turns on (possibly after the initial async
   // resolution of AccessibilityInfo.isReduceMotionEnabled()), pin the opacity
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     minHeight: CARD_MIN_HEIGHT,
-    marginRight: semantic.chat.gap,
+    marginEnd: semantic.chat.gap,
     borderRadius: radius.md,
     overflow: 'hidden',
   },

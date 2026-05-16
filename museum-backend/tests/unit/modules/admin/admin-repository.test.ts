@@ -155,7 +155,10 @@ describe('AdminRepositoryPg', () => {
         firstname: 'Jane',
         lastname: 'Doe',
         role: 'visitor',
+        museumId: null,
         emailVerified: true,
+        suspended: false,
+        deletedAt: null,
         createdAt: '2025-01-01T00:00:00.000Z',
         updatedAt: '2025-06-01T00:00:00.000Z',
       });

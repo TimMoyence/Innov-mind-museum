@@ -52,4 +52,22 @@ describe('StoreButton', () => {
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', 'https://play.google.com');
   });
+
+  it('renders a non-interactive role="link" with aria-disabled when disabled', () => {
+    render(
+      <StoreButton
+        store="google"
+        label="Google Play"
+        subLabel="Coming soon"
+        disabled
+      />,
+    );
+
+    const node = screen.getByRole('link');
+    expect(node).toHaveAttribute('aria-disabled', 'true');
+    expect(node).not.toHaveAttribute('href');
+    expect(node.tagName.toLowerCase()).toBe('span');
+    expect(screen.getByText('Google Play')).toBeInTheDocument();
+    expect(screen.getByText('Coming soon')).toBeInTheDocument();
+  });
 });

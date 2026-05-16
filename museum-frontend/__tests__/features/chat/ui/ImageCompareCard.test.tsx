@@ -15,7 +15,7 @@
  */
 import '../../../helpers/test-utils';
 import type { ComponentType } from 'react';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { components } from '@/shared/api/generated/openapi';
@@ -129,7 +129,10 @@ describe('ImageCompareCard (T8.2)', () => {
       top?: number;
       bottom?: number;
     }
-    const props = pressable.props as { style?: FlexStyle | (FlexStyle | false | null)[]; hitSlop?: HitSlop };
+    const props = pressable.props as {
+      style?: FlexStyle | (FlexStyle | false | null)[];
+      hitSlop?: HitSlop;
+    };
     const flatStyle: FlexStyle = Array.isArray(props.style)
       ? Object.assign({}, ...props.style.filter((s): s is FlexStyle => Boolean(s)))
       : (props.style ?? {});

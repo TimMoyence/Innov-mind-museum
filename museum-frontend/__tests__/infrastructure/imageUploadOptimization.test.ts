@@ -4,8 +4,7 @@ import { optimizeImageForUpload } from '@/features/chat/application/imageUploadO
 
 const mockGetInfoAsync = jest.fn();
 const mockManipulateAsync = jest.fn();
-let mockGetSizeCallback: ((width: number, height: number) => void) | undefined;
-let mockGetSizeErrorCallback: ((error: unknown) => void) | undefined;
+const mockLoadAsync = jest.fn();
 
 jest.mock('expo-file-system/legacy', () => ({
   getInfoAsync: (...args: unknown[]) => mockGetInfoAsync(...args),
@@ -16,20 +15,25 @@ jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
 }));
 
-jest.mock('react-native', () => ({
+// expo-image's `Image.loadAsync({ uri })` is the equivalent of the legacy
+// `Image.getSize` callback API. The SUT (`imageUploadOptimization.ts`) was
+// migrated 2026-05-14 (P0 #10 expo-image batch). Mock returns the
+// ImageRef-shaped object exposing `width` + `height`.
+jest.mock('expo-image', () => ({
   Image: {
-    getSize: (
-      _uri: string,
-      onSuccess: (w: number, h: number) => void,
-      onError: (e: unknown) => void,
-    ) => {
-      mockGetSizeCallback = onSuccess;
-      mockGetSizeErrorCallback = onError;
-    },
+    loadAsync: (...args: unknown[]) => mockLoadAsync(...args),
   },
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+const setLoadAsyncDimensions = (width: number, height: number) => {
+  mockLoadAsync.mockImplementation(() => Promise.resolve({ width, height }));
+};
+
+const setLoadAsyncError = (error: Error) => {
+  mockLoadAsync.mockImplementation(() => Promise.reject(error));
+};
 
 const setupImageMocks = (opts: {
   fileSize: number;
@@ -37,18 +41,7 @@ const setupImageMocks = (opts: {
   height: number;
   optimizedSize?: number;
 }) => {
-  mockGetInfoAsync.mockImplementation((_uri: string, _options?: unknown) => {
-    return Promise.resolve({ exists: true, size: opts.fileSize });
-  });
-
-  // Override getSize to resolve synchronously via microtask
-  const { Image } = require('react-native');
-  Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-    // Resolve via microtask to simulate async
-    Promise.resolve().then(() => {
-      onSuccess(opts.width, opts.height);
-    });
-  };
+  setLoadAsyncDimensions(opts.width, opts.height);
 
   const optimizedFileSize = opts.optimizedSize ?? 1_000_000;
   mockManipulateAsync.mockImplementation(() =>
@@ -77,13 +70,7 @@ describe('imageUploadOptimization', () => {
     const smallUri = 'file:///tmp/small-photo.jpg';
 
     mockGetInfoAsync.mockResolvedValue({ exists: true, size: 500_000 }); // 500KB < 2.7MB
-
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(800, 600);
-      }); // < 1600px
-    };
+    setLoadAsyncDimensions(800, 600); // < 1600px
 
     const result = await optimizeImageForUpload(smallUri);
     expect(result).toBe(smallUri);
@@ -130,12 +117,7 @@ describe('imageUploadOptimization', () => {
       return Promise.resolve({ exists: true, size: 2_000_000 }); // below target
     });
 
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(1200, 900);
-      }); // no resize needed
-    };
+    setLoadAsyncDimensions(1200, 900); // no resize needed
 
     mockManipulateAsync.mockResolvedValue({ uri: 'file:///tmp/optimized.jpg' });
 
@@ -162,12 +144,7 @@ describe('imageUploadOptimization', () => {
       return Promise.resolve({ exists: true, size: 2_000_000 }); // below 2.7MB target
     });
 
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(1200, 900);
-      });
-    };
+    setLoadAsyncDimensions(1200, 900);
 
     mockManipulateAsync.mockResolvedValue({ uri: 'file:///tmp/optimized.jpg' });
 
@@ -179,13 +156,7 @@ describe('imageUploadOptimization', () => {
 
   it('returns the original URI when dimensions cannot be determined', async () => {
     mockGetInfoAsync.mockResolvedValue({ exists: true, size: 500_000 });
-
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, _onSuccess: unknown, onError: (e: unknown) => void) => {
-      Promise.resolve().then(() => {
-        onError(new Error('Cannot get size'));
-      });
-    };
+    setLoadAsyncError(new Error('Cannot load image'));
 
     const result = await optimizeImageForUpload('file:///tmp/unknown.jpg');
 
@@ -196,13 +167,7 @@ describe('imageUploadOptimization', () => {
   it('returns undefined from getFileSize when file does not exist', async () => {
     // File doesn't exist: getFileSize returns undefined -> no optimization
     mockGetInfoAsync.mockResolvedValue({ exists: false });
-
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(800, 600);
-      });
-    };
+    setLoadAsyncDimensions(800, 600);
 
     const result = await optimizeImageForUpload('file:///tmp/nonexistent.jpg');
 
@@ -214,13 +179,7 @@ describe('imageUploadOptimization', () => {
   it('returns last workingUri after all quality steps are exhausted', async () => {
     // File stays above target through all 5 quality steps
     mockGetInfoAsync.mockResolvedValue({ exists: true, size: 10_000_000 }); // Always 10MB
-
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(1200, 900);
-      }); // No resize needed
-    };
+    setLoadAsyncDimensions(1200, 900); // No resize needed
 
     mockManipulateAsync.mockResolvedValue({ uri: 'file:///tmp/still-large.jpg' });
 
@@ -243,12 +202,7 @@ describe('imageUploadOptimization', () => {
       return Promise.resolve({ exists: false });
     });
 
-    const { Image } = require('react-native');
-    Image.getSize = (_uri: string, onSuccess: (w: number, h: number) => void) => {
-      Promise.resolve().then(() => {
-        onSuccess(1200, 900);
-      });
-    };
+    setLoadAsyncDimensions(1200, 900);
 
     mockManipulateAsync.mockResolvedValue({ uri: 'file:///tmp/optimized.jpg' });
 

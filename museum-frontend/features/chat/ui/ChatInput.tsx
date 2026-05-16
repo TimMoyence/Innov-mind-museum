@@ -1,4 +1,5 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +45,8 @@ export const ChatInput = ({
           <Image
             source={{ uri: imageUri }}
             style={[styles.thumb, { borderColor: theme.inputBorder }]}
+            contentFit="cover"
+            cachePolicy="memory"
           />
           <Pressable
             style={[styles.thumbDismiss, { backgroundColor: theme.error }]}
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
   thumbDismiss: {
     position: 'absolute',
     top: -6,
-    right: -6,
+    end: -6,
     width: space['5'],
     height: space['5'],
     borderRadius: radius.DEFAULT,

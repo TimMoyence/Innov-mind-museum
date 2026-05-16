@@ -67,13 +67,8 @@ describe('evaluateUserInputGuardrail', () => {
     expect(result).toEqual({ allow: true });
   });
 
-  // 3-char keyword boundary matching
-  it('blocks 3-char insult "con" with word boundary', () => {
-    const result = evaluateUserInputGuardrail({ text: 'espece de con' });
-    expect(result).toEqual({ allow: false, reason: 'insult' });
-  });
-
-  it('does NOT false-positive "construct" for 3-char keyword "con"', () => {
+  // Word-boundary regression: short tokens must not collide with longer words
+  it('does NOT false-positive "construct" for short keywords', () => {
     const result = evaluateUserInputGuardrail({ text: 'This is a construct of art' });
     expect(result).toEqual({ allow: true });
   });

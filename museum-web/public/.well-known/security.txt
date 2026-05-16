@@ -1,0 +1,13 @@
+# Musaium security disclosure contact (RFC 9116).
+# Full policy: https://musaium.com/fr/security  ·  https://musaium.com/en/security
+# SECURITY.md (authoritative): https://github.com/InnovMind/musaium/blob/main/SECURITY.md
+# Renewal reminder: regenerate this file before 2027-04-15 (30 days pre-expiry).
+
+Contact: mailto:security@musaium.com
+Contact: https://musaium.com/fr/security
+Expires: 2027-05-14T00:00:00Z
+Preferred-Languages: en, fr
+Canonical: https://musaium.com/.well-known/security.txt
+Policy: https://musaium.com/fr/security
+Acknowledgments: https://musaium.com/fr/security#hall-of-fame
+# Encryption: PGP key TBD; email security@musaium.com to request key exchange.

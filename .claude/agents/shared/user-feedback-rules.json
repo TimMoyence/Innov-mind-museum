@@ -1,10 +1,19 @@
 {
-  "version": "1.0",
-  "description": "Regles non-negociables issues des retours utilisateur cumules (memory feedback_*). Reference unique pour tous les agents. Violation = FAIL immediat.",
-  "lastUpdated": "2026-05-02",
+  "version": "2.0",
+  "description": "Regles non-negociables issues des retours utilisateur cumules (memory feedback_*). Reference unique pour tous les agents. Violation = FAIL immediat sauf marquage `deprecated: true`.",
+  "lastUpdated": "2026-05-15",
+  "families": {
+    "honesty-truth": "Verite, verification prealable, declaration des deviations, anti-fabrication. Socle du systeme — toute autre famille s'effondre sans elle.",
+    "quality-doctrine": "Anti-raccourci, anti-duplication, anti-empilement. Solution qualite > solution rapide.",
+    "test-discipline": "Discipline de test: factories, shape-match, pas d'inline, pas de skip silencieux.",
+    "product-alignment": "Alignement avec le stade de vie du produit (pre-launch V1 / B2B / post-revenue). Pas de fake social proof, pas de flag par defaut, methodologie dev product-driven.",
+    "orchestration": "Regles propres au runtime /team v12: spawn agents, modeles, rapports, scoring autonomie, configuration CI/build qui impacte le pipeline.",
+    "communication": "Comment formuler les analyses, propositions et estimations pour ce contexte specifique (solo + /team intensif)."
+  },
   "rules": [
     {
       "id": "UFR-001",
+      "family": "quality-doctrine",
       "source": "feedback_ban_minimal_fixes",
       "rule": "NE JAMAIS proposer de 'minimal fix' comme option viable. Toujours la solution qualite, meme si elle touche plus de fichiers.",
       "severity": "BLOCK",
@@ -12,20 +21,23 @@
     },
     {
       "id": "UFR-002",
+      "family": "test-discipline",
       "source": "feedback_dry_test_factories",
-      "rule": "Tous les tests DOIVENT utiliser les factories partagees dans tests/helpers/ (BE) ou __tests__/helpers/ (FE). Jamais d'entites inline.",
+      "rule": "Tous les tests DOIVENT utiliser les factories partagees dans tests/helpers/ (BE) ou __tests__/helpers/ (FE). Jamais d'entites inline. ESLint plugin `eslint-plugin-musaium-test-discipline` bloque les nouvelles violations via baseline.",
       "severity": "BLOCK",
       "applyWhen": "Ecrire un test"
     },
     {
       "id": "UFR-003",
+      "family": "quality-doctrine",
       "source": "feedback_eslint_disable_discipline",
-      "rule": "eslint-disable est un DERNIER recours, pas un premier reflexe. Lire la doc de la regle, refactorer, puis disable avec raison explicite en commentaire.",
+      "rule": "eslint-disable est un DERNIER recours, pas un premier reflexe. Lire la doc de la regle, refactorer, puis disable avec raison explicite en commentaire. Tout nouveau eslint-disable en PR DOIT inclure `Justification: >=20 chars` + `Approved-by: <reviewer/SHA>`.",
       "severity": "WARN",
       "applyWhen": "ESLint signale une erreur"
     },
     {
       "id": "UFR-004",
+      "family": "quality-doctrine",
       "source": "feedback_no_code_piling",
       "rule": "Verifier GitNexus AVANT de creer un composant. Remplacer plutot que empiler. Supprimer l'ancien quand on remplace.",
       "severity": "BLOCK",
@@ -33,64 +45,80 @@
     },
     {
       "id": "UFR-005",
+      "family": "honesty-truth",
       "source": "feedback_verify_before_validate",
-      "rule": "Ne jamais prendre une doc ou un audit pour argent comptant. Toujours verifier contre le code/config reels AVANT de valider.",
+      "rule": "Ne jamais prendre une doc ou un audit pour argent comptant. Toujours verifier contre le code/config reels AVANT de valider. Verification ladder: memory < Read file < Grep/gitnexus < run command (exit code + output) < WebSearch/WebFetch (cite URL).",
       "severity": "BLOCK",
       "applyWhen": "Baser une decision sur une doc ou un rapport"
     },
     {
       "id": "UFR-006",
+      "family": "quality-doctrine",
       "source": "feedback_product_first",
-      "rule": "Dev product-driven: tester les routes, verifier la DB, iterer, demander l'utilisateur en cas de doute. ESLint continu. Migrations via CLI seulement.",
+      "rule": "Dev iteratif product-driven: tester les routes en live, verifier la DB apres chaque migration, fixer ESLint en continu (pas a la fin), migrations TypeORM via `scripts/migration-cli.cjs` exclusivement (jamais a la main). Ne pas pretendre que ca marche sans avoir teste la feature de bout en bout.",
       "severity": "WARN",
       "applyWhen": "Ajouter/modifier une feature metier"
     },
     {
       "id": "UFR-007",
+      "family": "product-alignment",
       "source": "feedback_product_lifecycle_coherence",
-      "rule": "Aligner les propositions avec le stade de vie du produit. Pas de fake social proof pour une app en launch-phase.",
+      "rule": "Aligner les propositions UX/marketing avec le stade de vie du produit. Pas de fake social proof (`>1000 visiteurs ce mois`, `4.8/5 sur App Store`) tant que la base utilisateur n'existe pas. Pre-launch V1 = honnetete sur le statut beta.",
       "severity": "WARN",
       "applyWhen": "Proposer une feature UX/marketing"
     },
     {
       "id": "UFR-008",
+      "family": "orchestration",
       "source": "feedback_autonomy_100_only",
-      "rule": "Autonomie L2+ exige 100/100 score. L3 interdit en dessous.",
+      "rule": "Autonomie L2+ exige 100/100 score. L3 interdit en dessous. Pas de promotion d'autonomie sur une moyenne ponderee 95-99.",
       "severity": "BLOCK",
       "applyWhen": "Evaluer l'autonomie de livraison"
     },
     {
       "id": "UFR-009",
+      "family": "honesty-truth",
       "source": "feedback_env_files_not_vuln",
-      "rule": "Les .env locaux sont gitignored — ne JAMAIS les classer comme vulnerabilite.",
+      "rule": "(DEPRECATED 2026-05-15 — kept for ID stability) Les .env locaux sont gitignored — ne JAMAIS les classer comme vulnerabilite.",
       "severity": "BLOCK",
-      "applyWhen": "Scanner pour vulnerabilites"
+      "applyWhen": "Scanner pour vulnerabilites",
+      "deprecated": true,
+      "deprecatedAt": "2026-05-15",
+      "replacedBy": "tools/sentinels/env-policy.mjs (pre-commit gate 2) + .gitleaks.toml (allowlist) — enforcement deplace au niveau code, plus besoin d'une UFR pour le rappel agent."
     },
     {
       "id": "UFR-010",
+      "family": "orchestration",
       "source": "feedback_all_agents_opus",
-      "rule": "Tous les agents /team DOIVENT utiliser model: opus, SAUF exceptions explicites listees dans .exceptions. Excellence operationnelle, pas economie de tokens.",
+      "rule": "Tous les agents /team DOIVENT utiliser model: opus. Excellence operationnelle, pas economie de tokens.",
       "severity": "BLOCK",
       "applyWhen": "Spawner un agent",
-      "exceptions": [
+      "exceptions": [],
+      "history": [
         {
-          "role": "documenter",
-          "model": "claude-sonnet-4-6",
+          "id": "documenter-sonnet-swap",
           "amendedAt": "2026-05-03",
-          "ticket": "ROADMAP_TEAM T1.3",
-          "rationale": "Output formate simple (ADR template, STORY.md append, CHANGELOG bullets). Pas de raisonnement architectural complexe — architect a deja decide. Sonnet-4.6 fournit synthese suffisante a ~3x moins cher (input $3/M vs $15/M Opus 2026-05). Revert obligatoire si regression qualite detectee sur 5-run check (Sonnet vs Opus comparison). Aucune autre exception autorisee : architect/editor/verifier/security/reviewer restent Opus."
+          "revertedAt": "2026-05-14",
+          "ticket": "ROADMAP_TEAM T1.3 (ADR-029)",
+          "outcome": "reverted",
+          "rationale": "Documenter swap Opus->Sonnet shipped 2026-05-03 mais 5-run verification protocol jamais execute. User a tranche 2026-05-14 : rester Opus pour qualite prod. Voir docs/adr/ADR-029-documenter-sonnet-swap.md (amendment)."
         }
       ]
     },
     {
       "id": "UFR-011",
+      "family": "orchestration",
       "source": "feedback_ios_pods_xcloud",
-      "rule": "iOS buildent sur Xcode Cloud — Pods/ DOIT rester committe, pas de pod install au build time.",
+      "rule": "(DEPRECATED 2026-05-15 — kept for ID stability) iOS buildent sur Xcode Cloud — Pods/ DOIT rester committe, pas de pod install au build time.",
       "severity": "BLOCK",
-      "applyWhen": "Toucher a iOS build config"
+      "applyWhen": "Toucher a iOS build config",
+      "deprecated": true,
+      "deprecatedAt": "2026-05-15",
+      "replacedBy": "memory `reference_ios_build_chain.md` + CLAUDE.md (Pieges connus) + museum-frontend/ios/.gitignore (Pods/ committe explicit) — gotcha operationnel, plus une regle agent."
     },
     {
       "id": "UFR-012",
+      "family": "orchestration",
       "source": "feedback_process_auditor_report",
       "rule": "Process Auditor DOIT toujours ecrire son rapport dans team-reports/ — jamais skipper.",
       "severity": "BLOCK",
@@ -98,16 +126,78 @@
     },
     {
       "id": "UFR-013",
-      "source": "feedback_honesty_no_pretense",
+      "family": "honesty-truth",
+      "source": "feedback_honesty_no_pretense (deleted 2026-05-15 — was pure pointer)",
+      "proseCanonical": "CLAUDE.md § Honesty + truth-telling (UFR-013) — twinned, that section has the full forbidden/required/verification-ladder breakdown.",
       "rule": "Honnetete absolue. INTERDIT: mentir, fabriquer un fait/chiffre/citation, pretendre avoir verifie sans verifier, simuler une certitude qu'on n'a pas, masquer un echec, nier une erreur. OBLIGATOIRE: dire la verite tel qu'elle est meme si elle est inconfortable; en cas de doute, faire WebSearch/WebFetch ou Read le code reel AVANT de repondre; reconnaitre explicitement quand on ne sait pas (\"je ne sais pas\" / \"je n'ai pas verifie\"); signaler immediatement quand un test/build/check echoue, ne pas le minimiser; corriger une affirmation precedente des qu'on detecte qu'elle etait fausse. Pas de faux semblant, pas de complaisance.",
       "severity": "BLOCK",
       "applyWhen": "Toute reponse a l'utilisateur, tout rapport d'agent, toute affirmation de fait/chiffre/source"
+    },
+    {
+      "id": "UFR-014",
+      "family": "honesty-truth",
+      "source": "feedback_deviation_auto_declaration_2026_05_15",
+      "rule": "Auto-declaration des deviations. Tout rapport d'agent (architect/editor/reviewer/security/verifier/documenter) DOIT inclure un champ `deviations[]` (vide = explicite [] et la mention \"none\"). Une deviation = tout ecart conscient par rapport a (a) une UFR, (b) une ligne du spec.md / design.md, (c) une regle CLAUDE.md, (d) une convention de la stack qu'on prend en raccourci. Chaque entree: {rule, what_i_did, why, mitigation, declared_at_loop}. Exemples qui DOIVENT etre declares: salt hardcode au lieu de env-var, valeur magique sans justification, test skip temporaire, eslint-disable, deviation d'un acceptance criterion. Ne PAS declarer une deviation connue = violation UFR-013 (masquage d'echec). Le reviewer cross-check le diff vs la liste declaree.",
+      "severity": "BLOCK",
+      "applyWhen": "Tout rapport de fin de phase (architect/editor/reviewer/security/verifier/documenter)"
+    },
+    {
+      "id": "UFR-015",
+      "family": "product-alignment",
+      "source": "feedback_no_feature_flags_prelaunch",
+      "rule": "Pas de feature flag par defaut pre-launch V1. Toute nouvelle feature V1 ship LIVE (comportement par defaut), pas de `*_ENABLED` env var, pas de kill-switch. Rollback = `git revert <sha>` + redeploy, pas un toggle runtime. Exception : risque concret articulable (paiement, PII, scaling-sensitive infra, third-party quota cliff) — defaut sinon NO-FLAG. Doctrine s'inverse post-revenu B2B (premier museum payant onboarded).",
+      "severity": "BLOCK",
+      "applyWhen": "Proposer ou implementer une nouvelle feature en periode pre-launch (avant 2026-06-01 + jusqu'au 1er client B2B paying)"
+    },
+    {
+      "id": "UFR-016",
+      "family": "quality-doctrine",
+      "source": "feedback_bury_dead_code",
+      "rule": "Code mort = supprime dans le meme commit que son remplacement. INTERDIT : `// DEPRECATED`, `// @deprecated`, `// removed - see X` breadcrumbs, zombie files (re-export only), fonctions gardees `for backwards compat` quand rien n'appelle. Avant suppression : grep/gitnexus pour confirmer zero importer/caller. Ne PAS softener le langage (`deprecated`, `legacy`, `kept for compat`) si le code est vraiment unused.",
+      "severity": "BLOCK",
+      "applyWhen": "Remplacer du code ou supprimer une feature"
+    },
+    {
+      "id": "UFR-017",
+      "family": "honesty-truth",
+      "source": "feedback_check_tests_before_bug_classification",
+      "rule": "Avant d'endorser un finding agent du type 'this is a bug' sur un comportement persist/order/state-machine, grep le test suite pour des assertions explicites du comportement actuel. Si un `it()` decrit litteralement le comportement ('persists X even when Y'), traiter comme intentionnel sauf design doc separe disant l'inverse. Specifique Musaium: chat guardrail tests = `museum-backend/tests/unit/chat/chat-message-service.test.ts`.",
+      "severity": "BLOCK",
+      "applyWhen": "Endorser un bug-classification d'agent sur un comportement order/state/persist"
+    },
+    {
+      "id": "UFR-018",
+      "family": "honesty-truth",
+      "source": "feedback_check_configs_before_assuming",
+      "rule": "Valeur hardcodee qui ressemble a un placeholder ? Grep `.env*`, `eas.json`, `docker-compose*.yml`, `.github/workflows/` AVANT de demander l'utilisateur. La valeur canonique est presque toujours commit quelque part — le placeholder est souvent un scaffold oublie que l'env value supersede deja. AskUserQuestion seulement si (a) la valeur est genuinely undefined nowhere, (b) le choix est produit pas infra.",
+      "severity": "BLOCK",
+      "applyWhen": "Trouver une valeur qui ressemble a un placeholder dans le code"
+    },
+    {
+      "id": "UFR-019",
+      "family": "communication",
+      "source": "feedback_no_solo_dev_estimates",
+      "rule": "Ne pas estimer Musaium en jours-dev solo. Multi-prompt parallelisme /team compresse 70-80j-dev solo vers ~7j elapsed. Estimates 50-70% over-inflated quand framees calendrier. Frame les trade-offs en risque technique / chaine de dependances / scope / surface de regression — JAMAIS en calendrier. Si un estime time est demande, framer en agent-cycle units (`5-10 cycles /team standard`), pas en jours.",
+      "severity": "WARN",
+      "applyWhen": "Estimer un effort, proposer un decoupage roadmap, justifier un report"
+    },
+    {
+      "id": "UFR-020",
+      "family": "orchestration",
+      "source": "feedback_ban_no_verify_bypass_2026_05_15",
+      "rule": "BYPASS HOOK INTERDIT. JAMAIS utiliser `--no-verify` ni aucune autre forme de contournement de hook : ni `git commit --no-verify`, ni `git commit -n`, ni `git push --no-verify`, ni `SKIP_PRE_COMMIT=1`, ni `core.hookspath=/dev/null`. Les hooks pre-commit/pre-push de Musaium sont la couche shift-left qui catch les regressions avant CI (~30s-2min pre-push) ; les bypass annulent la valeur du systeme et poussent du code rouge en CI (15min wasted) puis sur main. Si un hook bloque legitimement (faux positif, environnement local cassé), fix le hook ou la condition, ne le bypass JAMAIS. Si la pression deadline tente, escalade au Tech Lead. Enforcement code : `.claude/settings.json` deny rules + `.claude/settings.local.json` deny rules + sentinel-mirror.yml workflow CI qui re-run tous les gates et fail la PR si bypass detecté.",
+      "severity": "BLOCK",
+      "applyWhen": "Toute operation git commit / git push / equivalent qui touche au hooks system"
     }
   ],
-  "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification, le Tech Lead decide.",
+  "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification (UFR-014 deviations[]), le Tech Lead decide.",
   "refs": {
     "memoryPath": "~/.claude/projects/<project-hash>/memory/",
     "indexFile": "MEMORY.md",
-    "note": "Memory is local/non-versioned. This JSON encodes the feedback_* memory content as portable rules."
-  }
+    "note": "Memory is local/non-versioned. This JSON encodes the feedback_* memory content as portable rules. Deprecated UFRs are kept for ID stability (no renumbering) but their enforcement has moved elsewhere — see replacedBy."
+  },
+  "changelog": [
+    { "version": "2.0", "date": "2026-05-15", "changes": "Add `family` taxonomy (6 families). Add UFR-015 (no feature flags pre-launch), UFR-016 (bury dead code), UFR-017 (check tests before bug classification), UFR-018 (check configs before assuming), UFR-019 (no solo-dev estimates). Deprecate UFR-009 (replaced by env-policy sentinel) and UFR-011 (replaced by CLAUDE.md gotcha + memory). Sharpen UFR-003 (eslint-disable justification format) and UFR-006 (dev methodology distinct from UFR-005)." },
+    { "version": "1.0", "date": "2026-05-02", "changes": "Initial 13 UFRs. UFR-014 added 2026-05-15 in v1.x patch (deviation auto-declaration)." }
+  ]
 }

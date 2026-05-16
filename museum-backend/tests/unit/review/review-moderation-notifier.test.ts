@@ -76,4 +76,32 @@ describe('NoopReviewModerationNotifier', () => {
     const notifier = new NoopReviewModerationNotifier();
     await expect(notifier.notify(basePayload)).resolves.toBeUndefined();
   });
+
+  it('logs a structured warn with the literal event name "review_moderation_notifier_noop"', async () => {
+    // Kills L34:17 StringLiteral survivor — event name mutated to "" would
+    // strip the searchable log key used by Grafana/Sentry to surface
+    // dev-only no-op deliveries. Logger pipes structured JSON through
+    // console.warn, so spying there is sufficient.
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const notifier = new NoopReviewModerationNotifier();
+      await notifier.notify({ ...basePayload, reviewId: 'r-noop-42' });
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      const rawLine = warnSpy.mock.calls[0][0] as string;
+      expect(typeof rawLine).toBe('string');
+      const parsed = JSON.parse(rawLine) as {
+        level: string;
+        message: string;
+        reviewId: string;
+        afterStatus: string;
+      };
+      expect(parsed.level).toBe('warn');
+      expect(parsed.message).toBe('review_moderation_notifier_noop');
+      expect(parsed.reviewId).toBe('r-noop-42');
+      expect(parsed.afterStatus).toBe('approved');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });

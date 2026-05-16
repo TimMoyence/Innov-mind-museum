@@ -149,6 +149,30 @@ describe('ReviewRepositoryPg', () => {
       expect(result?.status).toBe('approved');
     });
 
+    it('re-fetches by id with strict { where: { id } } shape after update', async () => {
+      // Kills L84:44 + L84:53 ObjectLiteral survivors — empty-object mutants
+      // would otherwise survive because the existing happy-path test only
+      // asserts `result?.status`, never the findOne argument shape.
+      const entity = makeReview({ id: 'review-xyz', status: 'rejected' });
+      repo.update.mockResolvedValue({ affected: 1 } as UpdateResult);
+      repo.findOne.mockResolvedValue(entity);
+
+      await sut.moderateReview({
+        reviewId: 'review-xyz',
+        status: 'rejected',
+      });
+
+      expect(repo.findOne).toHaveBeenCalledTimes(1);
+      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 'review-xyz' } });
+      // Belt-and-suspenders: the call argument is exactly the nested object,
+      // not the empty `{}` produced by the ObjectLiteral mutator.
+      const callArg = repo.findOne.mock.calls[0][0] as { where: { id: string } };
+      expect(callArg).toEqual({ where: { id: 'review-xyz' } });
+      expect(callArg.where).toEqual({ id: 'review-xyz' });
+      expect(Object.keys(callArg)).toEqual(['where']);
+      expect(Object.keys(callArg.where)).toEqual(['id']);
+    });
+
     it('returns null when review not found (affected=0)', async () => {
       repo.update.mockResolvedValue({ affected: 0 } as UpdateResult);
 
@@ -183,6 +207,11 @@ describe('ReviewRepositoryPg', () => {
 
       const result = await sut.getAverageRating();
 
+      // Kills L100:27 StringLiteral survivor — alias passed to createQueryBuilder
+      // must be exactly 'review' (not "") so the SQL refs (`review.rating`,
+      // `review.id`, `review.status`) resolve to a real FROM-clause alias.
+      expect(repo.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(repo.createQueryBuilder).toHaveBeenCalledTimes(1);
       expect(qb.select).toHaveBeenCalledWith('COALESCE(AVG(review.rating), 0)', 'average');
       expect(qb.addSelect).toHaveBeenCalledWith('COUNT(review.id)', 'count');
       expect(qb.where).toHaveBeenCalledWith('review.status = :status', { status: 'approved' });

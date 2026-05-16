@@ -59,7 +59,7 @@ AGENT_MODEL[editor]=opus-4.6;      BASELINE_IN[editor]=15000;     BASELINE_OUT[e
 AGENT_MODEL[verifier]=opus-4.6;    BASELINE_IN[verifier]=6000;    BASELINE_OUT[verifier]=2000
 AGENT_MODEL[security]=opus-4.6;    BASELINE_IN[security]=8000;    BASELINE_OUT[security]=3000
 AGENT_MODEL[reviewer]=opus-4.7;    BASELINE_IN[reviewer]=10000;   BASELINE_OUT[reviewer]=4000
-AGENT_MODEL[documenter]=sonnet-4.6;BASELINE_IN[documenter]=5000;  BASELINE_OUT[documenter]=2000
+AGENT_MODEL[documenter]=opus-4.6;  BASELINE_IN[documenter]=5000;  BASELINE_OUT[documenter]=2000
 
 # Pipeline multiplier — captures fan-out + corrective-loop reality.
 case "$PIPELINE" in

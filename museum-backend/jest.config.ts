@@ -80,46 +80,56 @@ const config: Config.InitialOptions = {
   collectCoverage: true,
   coverageReporters: ['text-summary', 'lcov'],
   coveragePathIgnorePatterns: sharedCoveragePathIgnorePatterns,
-  coverageThreshold: {
-    global: {
-      // Phase 11 Sprint 11.2 close: thresholds re-pinned to SWC-jest actuals.
-      // The SWC transform's `decoratorMetadata: true` emits more instrumentable
-      // nodes than ts-jest (TypeORM @Column / @ManyToOne lines that ts-jest
-      // type-stripped now appear in the lcov report), shifting global aggregates
-      // ~1pt lower under default `pnpm run test:coverage` even with the same
-      // tests. Default actuals (post pre-roadmap green-fix 2026-05-03):
-      // 88.91 stmt / 75.74 br / 87.25 fn / 89.87 lines (rises to 90+/77+/88+/91+
-      // with `RUN_INTEGRATION=true`).
-      //
-      // Pre-roadmap green-fix introduced new resilience code paths (resilient
-      // cache wrapper, mapOrchestratorError, isAppErrorLike duck-type) which
-      // shifted aggregates ~0.1pt lower; thresholds re-pinned to actuals.
-      //
-      // Branches re-pinned to 74 (was 75) on 2026-05-10 — Phase 9 (C3 visual
-      // similarity) added ~30 fail-open optional-chain branches in
-      // `similarity.service.ts` (Langfuse span instrumentation per ADR-037 +
-      // T9.1). Each `parent?.span(...)` and `parent?.update(...)` carries 2
-      // branches; the Langfuse-disabled (test) path covers the falsy side, the
-      // 4 added Langfuse-enabled tests (T9.1 happy / cache-hit / encoder-out /
-      // no-neighbour) cover the truthy side, but residual branches sit in
-      // helper-method default-arg paths that aren't reachable from the unit
-      // surface. Per ADR-007 + the Phase-4 Stryker policy (≥80% mutation kill
-      // on hot files = the load-bearing signal), pushing branches via cosmetic
-      // tests would be net-negative. Drop is intentional, bounded (1 pt), and
-      // restored to 75 once Phase 11 catalog-metrics CRON job (T9.2) lands —
-      // that adds branches under coverage and re-floats the aggregate.
-      // P2-5 (audit 2026-05-12): deleted tautological user-memory-entity
-      // test (22 LOC asserting TypeORM @Column metadata exists). The test
-      // proved nothing about behavior but its `import { UserMemory }`
-      // counted UserMemory's auto-generated getters/setters as
-      // "covered functions". Real behavior coverage is unchanged;
-      // measured aggregate drops 87.19 → 86.93 (-0.26pp). Pin to floor.
-      statements: 88,
-      branches: 74,
-      functions: 86,
-      lines: 89,
-    },
-  },
+  // When `SHARDED_COVERAGE=1` is set (matrix shards in ci-cd-backend.yml
+  // test-coverage job), skip the per-run threshold — each shard only
+  // exercises ~1/4 of test files and naturally produces ~25% of full
+  // coverage. The `coverage-merge` job downstream re-validates the same
+  // thresholds against the union of all shards via `nyc check-coverage`
+  // (statements 88, branches 74, functions 86, lines 89). Local
+  // `pnpm run test:coverage` still gets full per-run threshold checking.
+  coverageThreshold:
+    process.env.SHARDED_COVERAGE === '1'
+      ? undefined
+      : {
+          global: {
+            // Phase 11 Sprint 11.2 close: thresholds re-pinned to SWC-jest actuals.
+            // The SWC transform's `decoratorMetadata: true` emits more instrumentable
+            // nodes than ts-jest (TypeORM @Column / @ManyToOne lines that ts-jest
+            // type-stripped now appear in the lcov report), shifting global aggregates
+            // ~1pt lower under default `pnpm run test:coverage` even with the same
+            // tests. Default actuals (post pre-roadmap green-fix 2026-05-03):
+            // 88.91 stmt / 75.74 br / 87.25 fn / 89.87 lines (rises to 90+/77+/88+/91+
+            // with `RUN_INTEGRATION=true`).
+            //
+            // Pre-roadmap green-fix introduced new resilience code paths (resilient
+            // cache wrapper, mapOrchestratorError, isAppErrorLike duck-type) which
+            // shifted aggregates ~0.1pt lower; thresholds re-pinned to actuals.
+            //
+            // Branches re-pinned to 74 (was 75) on 2026-05-10 — Phase 9 (C3 visual
+            // similarity) added ~30 fail-open optional-chain branches in
+            // `similarity.service.ts` (Langfuse span instrumentation per ADR-037 +
+            // T9.1). Each `parent?.span(...)` and `parent?.update(...)` carries 2
+            // branches; the Langfuse-disabled (test) path covers the falsy side, the
+            // 4 added Langfuse-enabled tests (T9.1 happy / cache-hit / encoder-out /
+            // no-neighbour) cover the truthy side, but residual branches sit in
+            // helper-method default-arg paths that aren't reachable from the unit
+            // surface. Per ADR-007 + the Phase-4 Stryker policy (≥80% mutation kill
+            // on hot files = the load-bearing signal), pushing branches via cosmetic
+            // tests would be net-negative. Drop is intentional, bounded (1 pt), and
+            // restored to 75 once Phase 11 catalog-metrics CRON job (T9.2) lands —
+            // that adds branches under coverage and re-floats the aggregate.
+            // P2-5 (audit 2026-05-12): deleted tautological user-memory-entity
+            // test (22 LOC asserting TypeORM @Column metadata exists). The test
+            // proved nothing about behavior but its `import { UserMemory }`
+            // counted UserMemory's auto-generated getters/setters as
+            // "covered functions". Real behavior coverage is unchanged;
+            // measured aggregate drops 87.19 → 86.93 (-0.26pp). Pin to floor.
+            statements: 88,
+            branches: 74,
+            functions: 86,
+            lines: 89,
+          },
+        },
 
   // Two projects:
   // - `unit-integration`: everything except tests/e2e/. NO global env pinning,

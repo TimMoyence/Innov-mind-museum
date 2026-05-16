@@ -145,3 +145,37 @@ export const createNonceStore = (redis?: Redis): NonceStore => {
   }
   return new InMemoryNonceStore();
 };
+
+/**
+ * Stable delegating wrapper. Auth composition root constructs use cases with
+ * this singleton at module load (before the shared Redis client exists);
+ * `src/index.ts` then upgrades the inner adapter to {@link RedisNonceStore}
+ * once Redis is wired. Same shape as `setRedisRateLimitStore` /
+ * `setLlmCostCounter` patterns elsewhere — module-level swap point so the
+ * already-constructed {@link SocialLoginUseCase} keeps a stable reference.
+ */
+class DelegatingNonceStore implements NonceStore {
+  private inner: NonceStore = new InMemoryNonceStore();
+  setDelegate(store: NonceStore): void {
+    this.inner = store;
+  }
+  issue(): Promise<string> {
+    return this.inner.issue();
+  }
+  consume(nonce: string): Promise<boolean> {
+    return this.inner.consume(nonce);
+  }
+}
+
+const delegatingNonceStore = new DelegatingNonceStore();
+
+/** Singleton wrapper consumed by the auth composition root. */
+export const socialNonceStore: NonceStore = delegatingNonceStore;
+
+/**
+ * Swap the active nonce store at boot. Idempotent; subsequent calls overwrite.
+ * Single-instance deployments may skip this and run on the in-memory default.
+ */
+export const setSocialNonceStore = (store: NonceStore): void => {
+  delegatingNonceStore.setDelegate(store);
+};

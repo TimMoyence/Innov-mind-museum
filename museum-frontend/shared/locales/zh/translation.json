@@ -875,7 +875,8 @@
       "fullscreen_close": "关闭",
       "previous_image": "上一张图片",
       "next_image": "下一张图片",
-      "messages_list": "聊天消息"
+      "messages_list": "聊天消息",
+      "follow_up_hint": "发送此后续问题"
     },
     "onboarding": {
       "skip": "跳过引导",
@@ -1013,7 +1014,8 @@
     "data_images": "您分享的照片（元数据已移除）",
     "data_audio": "语音消息（仅转录，音频不被AI存储）",
     "data_location": "您的位置（如果您选择分享）",
-    "data_profile": "您的艺术偏好和参观历史（用于个性化回复）"
+    "data_profile": "您的艺术偏好和参观历史（用于个性化回复）",
+    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek"
   },
   "dailyArt": {
     "title": "每日艺术",
@@ -1121,5 +1123,20 @@
       "title": "暂无参观",
       "description": "开始一段对话，您的参观将显示于此。"
     }
+  },
+  "followUpButtons": {
+    "section_label": "快捷提问"
+  },
+  "paywall": {
+    "modalTitle": "已达本月免费使用上限",
+    "modalBody": "您本月已用完免费方案中的所有聊天会话。请留下您的电子邮件,我们将在高级版开放时通知您。",
+    "fieldEmail": "电子邮件地址",
+    "submit": "加入高级版等待列表",
+    "sending": "正在发送…",
+    "success": "谢谢 — 我们会与您联系。",
+    "error": "出现错误。请稍后再试。",
+    "dismiss": "关闭",
+    "consent": "我同意在高级版上线时接收电子邮件。",
+    "resetsOn": "重置日期"
   }
 }

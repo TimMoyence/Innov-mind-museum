@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 8,
-    right: 8,
+    end: 8,
     backgroundColor: HUD_BACKGROUND,
     paddingHorizontal: 8,
     paddingVertical: 6,

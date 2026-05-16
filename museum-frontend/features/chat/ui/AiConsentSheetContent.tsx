@@ -107,6 +107,12 @@ export const AiConsentSheetContent = ({
               {t('consent.data_profile')}
             </Text>
           </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="cloud-outline" size={20} color={theme.primary} />
+            <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+              {t('consent.data_providers')}
+            </Text>
+          </View>
         </View>
 
         <Pressable

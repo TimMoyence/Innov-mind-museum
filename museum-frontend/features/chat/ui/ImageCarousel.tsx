@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs -- Animated.Value refs are stable objects read once at creation; safe RN pattern */
 import React, { useRef } from 'react';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
@@ -72,7 +73,9 @@ const CarouselThumb = React.memo(
             <Image
               source={{ uri: image.thumbnailUrl }}
               style={styles.thumbImage}
-              resizeMode="cover"
+              contentFit="cover"
+              recyclingKey={image.url}
+              cachePolicy="memory-disk"
               onLoad={handleLoad}
             />
           </Animated.View>
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   thumbPressable: {
-    marginRight: semantic.chat.gap,
+    marginEnd: semantic.chat.gap,
   },
   thumbContainer: {
     height: THUMB_HEIGHT,
@@ -146,8 +149,8 @@ const styles = StyleSheet.create({
   attributionOverlay: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     backgroundColor: ATTRIBUTION_BG,
     paddingHorizontal: space['1'],
     paddingVertical: space['0.5'],

@@ -137,6 +137,8 @@ You produce **0..N + 1** files:
 
 Final chat reply: 1-paragraph summary stating `lessonsScanned`, `amendmentsProposed`, `amendmentsSkippedDuplicate`, `diagnosisOnly`. Plus full path to batch summary file. No verbose recap of each pattern — that lives in the batch summary file.
 
+Append to the batch summary file a **`## Deviations (UFR-014)`** section listing any conscious deviation from the curator contract (D1-D7 in design.md) — empty = explicit `none`. Examples that MUST be declared: skipped Step 3 pattern detection for one tag group, proposed an amendment that touches a forbidden file (then escalated), accepted a hash collision as not-duplicate without manual diff. Format per entry: `{ rule, what_i_did, why, mitigation, declared_at_loop }`.
+
 If you encounter an internal error (e.g. cannot read lessons dir), **report it verbatim** and stop. Do not fabricate a "successful" batch (UFR-013).
 
 </output_format>

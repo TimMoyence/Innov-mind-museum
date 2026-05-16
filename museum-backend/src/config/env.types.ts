@@ -16,14 +16,11 @@ export type StorageDriver = 'local' | 's3';
  */
 export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
 
-/**
- * Advanced guardrail candidate for the V2 POC. `off` = noop adapter (default).
- *
- * F4 (2026-04-30) — `llm-judge` adds a structured-output LLM second-layer verdict
- * AFTER the deterministic keyword guardrail, gated by message length and budget.
- * See `src/modules/chat/useCase/llm-judge-guardrail.ts`.
- */
-export type GuardrailsV2Candidate = 'off' | 'llm-guard' | 'llm-judge';
+// Note: the legacy `GuardrailsV2Candidate` enum was retired 2026-05-14 (ADR-015
+// amendment + ROADMAP_TEAM T1.7#2). Each V2 layer now self-activates from its
+// own config presence — `GUARDRAILS_V2_LLM_GUARD_URL` for the sidecar, and
+// `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` for the structured-output judge —
+// aligning with the no-feature-flags-pre-launch doctrine.
 
 /**
  * Deployment topology hint consumed by boot-time invariant checks.
@@ -234,6 +231,30 @@ export interface AppEnv {
   };
   brevoApiKey?: string;
   supportInboxEmail: string;
+  /**
+   * R4 W4.3 — B2B leads inbox. Optional config value (NOT a feature flag, per
+   * AUDIT_CHAIN_ALERT_EMAIL precedent). When unset, leads are routed to
+   * `supportInboxEmail` to avoid env churn in local dev.
+   */
+  b2bInboxEmail?: string;
+  /**
+   * R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Optional
+   * config value (NOT a feature flag, per AUDIT_CHAIN_ALERT_EMAIL precedent).
+   * When unset (local dev / pre-prod boot before list provisioning), the
+   * composition root falls back to `NoopBetaSignupNotifier` so the route still
+   * returns 202 and structured logs surface a noop warning the operator can
+   * monitor.
+   */
+  brevoBetaListId?: number;
+  /**
+   * R2 W3.4 — Salt used by `admin/export` to pseudonymize emails/user-IDs
+   * before they hit the CSV download. Rotate manually after a breach (rotating
+   * invalidates the link between pseudonym and identity in already-exported
+   * CSV files). Config value, NOT a feature flag — same precedent as
+   * `b2bInboxEmail`/`brevoBetaListId`/`AUDIT_CHAIN_ALERT_EMAIL`. When unset, the
+   * fallback `'musaium-admin-export-v1'` keeps local dev / boot ergonomic.
+   */
+  exportPseudonymSalt?: string;
   storage: {
     driver: StorageDriver;
     localUploadsDir: string;
@@ -288,6 +309,14 @@ export interface AppEnv {
   };
   /** Maximum chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
+  /**
+   * Maximum chat sessions a `tier='free'` user can CREATE per UTC month.
+   * Drives the soft-paywall middleware (R1 / C6). Numeric config value, NOT
+   * a feature flag — disabling the paywall = revert R1, never set this to a
+   * very high number (per `feedback_no_feature_flags_prelaunch`).
+   * Falls back to 3 when unset / non-numeric (R1 §1 R13).
+   */
+  freeTierMonthlySessionLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
   /**
@@ -532,27 +561,25 @@ export interface AppEnv {
     artKeywordsHitThreshold: number;
   };
   /**
-   * Advanced guardrail V2 configuration. Controls the optional semantic guardrail
-   * layer that runs AFTER the deterministic keyword guardrail (kept as first defense).
-   * `candidate: 'off'` (default) installs the noop adapter and is a no-op at runtime.
+   * Advanced guardrail V2 configuration. Each layer below self-activates from
+   * its own config presence (URL for the LLM Guard sidecar, budget>0 for the
+   * structured-output judge) — no master "candidate" flag (ADR-015 amendment
+   * 2026-05-14, ROADMAP_TEAM T1.7#2).
    */
   guardrails: {
-    /** Candidate adapter to activate. Defaults to 'off'. */
-    candidate: GuardrailsV2Candidate;
-    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). Only used when candidate === 'llm-guard'. */
+    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). When set, the LLMGuardAdapter is wired. */
     llmGuardUrl?: string;
     /** Hard request timeout (ms) for advanced guardrail checks. Fail-CLOSED on elapsed. */
     timeoutMs: number;
     /** When true, never block — only log decisions (Phase A "observe" mode). */
     observeOnly: boolean;
     /**
-     * F4 (2026-04-30) — daily cost cap (in cents) for the `llm-judge` candidate.
-     * Tracked in-memory with a UTC-midnight reset; once exceeded, the judge
-     * falls back to the keyword-only decision for the remainder of the day.
-     *
-     * NOTE: per-process counter — multi-instance prod will have per-instance
-     * budget, so cumulative spend across N replicas can be up to N×. Acceptable
-     * trade-off for v1; Phase 2 moves the counter to Redis (SET with TTL).
+     * F4 (2026-04-30) — daily cost cap (in cents) for the structured-output
+     * judge layer. Default `500` ($5/day) activates the judge in parallel
+     * with the sidecar (defense-in-depth, ADR-015 amendment 2026-05-14 —
+     * dual-layer enabled). Budget gate disables the layer when `cap <= 0`.
+     * Tracked via the configured backend (memory per-process, or Redis
+     * shared-across-replicas).
      */
     budgetCentsPerDay: number;
     /**

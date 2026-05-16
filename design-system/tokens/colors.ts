@@ -44,7 +44,8 @@ export const colors = {
     primary: '#0F172A',
     secondary: '#334155',
     tertiary: '#475569',
-    muted: '#94A3B8',
+    // 4.78:1 contrast on white (#FFFFFF), WCAG 1.4.3 AA — was #94A3B8 (2.56:1).
+    muted: '#5E7184',
     placeholder: '#64748B',
   },
 

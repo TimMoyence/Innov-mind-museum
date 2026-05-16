@@ -189,3 +189,10 @@ After merge, the following must hold:
 - PromptInject (Perez & Ribeiro 2022) — https://reference.garak.ai/en/stable/garak.probes.promptinject.html
 - Research file:
   `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-owasp-llm-top10.md`
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-05-14 | **Phase 1.5 closed** ahead of schedule. `llm-security-garak.yml` swapped from `huggingface.Pipeline` (Phi-3-mini-4k-instruct) target to `rest` generator pointed at `POST /api/chat/sessions/:id/messages` via `museum-backend/scripts/llm-security/musaium-garak-rest.json` (response path `$.message.text`, body `{"text":"$INPUT"}`, `ratelimit_codes:[429]`). Probe set widened 3 → 6 (`promptinject,leakreplay,encoding,dan,tap,xss`) — closes G2 (multi-turn via `dan`+`tap`) and G4 (encoding bypass via `encoding`) from the 2026-05-14 verification audit. `--parallel_attempts` dropped 2 → 1 to stay below OpenAI rate-limit on ~750 calls/run. Session-per-probe freshness loop (bash) prevents cross-probe history contamination. New `Content check` step fails the workflow if zero records carry a non-empty `output` field (defense vs silent JSON-shape drift if BE renames `message.text` in a future refactor). Severity-eval Python widened from single-report to multi-report glob. Run: `2026-05-14-garak-musaium-rest-swap`. PR: #TBD. First successful workflow run: TBD (Tech Lead fills at merge). |
+| 2026-05-14 | Known coverage gap (deferred to Phase 2): LLM Guard sidecar is NOT deployed in CI (no service container, `GUARDRAILS_V2_LLM_GUARD_URL` unset). Both Garak and promptfoo therefore exercise the keyword guardrail (`art-topic-guardrail.ts`) + sanitization + LLM call, but not the sidecar PII Anonymize / output classifier path. Phase 2 will boot the sidecar as a service container or use a stub. |

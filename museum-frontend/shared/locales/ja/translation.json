@@ -875,7 +875,8 @@
       "fullscreen_close": "閉じる",
       "previous_image": "前の画像",
       "next_image": "次の画像",
-      "messages_list": "チャットメッセージ"
+      "messages_list": "チャットメッセージ",
+      "follow_up_hint": "このフォローアップ質問を送信します"
     },
     "onboarding": {
       "skip": "紹介をスキップ",
@@ -1013,7 +1014,8 @@
     "data_images": "共有する写真（メタデータは削除されます）",
     "data_audio": "音声メッセージ（文字起こしのみ、音声はAIに保存されません）",
     "data_location": "あなたの位置情報（共有を選択した場合）",
-    "data_profile": "アートの好みと訪問履歴（回答のパーソナライズに使用）"
+    "data_profile": "アートの好みと訪問履歴（回答のパーソナライズに使用）",
+    "data_providers": "第三者のAIサービスにより処理されます：OpenAI、Google、DeepSeek"
   },
   "dailyArt": {
     "title": "今日のアートワーク",
@@ -1121,5 +1123,20 @@
       "title": "まだ訪問がありません",
       "description": "会話を始めると、訪問がここに表示されます。"
     }
+  },
+  "followUpButtons": {
+    "section_label": "クイック質問"
+  },
+  "paywall": {
+    "modalTitle": "今月の無料利用上限に達しました",
+    "modalBody": "今月の無料プランに含まれるチャットセッションをすべて使い切りました。メールアドレスをご登録いただければ、プレミアム提供開始時にお知らせします。",
+    "fieldEmail": "メールアドレス",
+    "submit": "プレミアム待機リストに登録",
+    "sending": "送信中…",
+    "success": "ありがとうございます — 後ほどご連絡します。",
+    "error": "エラーが発生しました。後でもう一度お試しください。",
+    "dismiss": "閉じる",
+    "consent": "プレミアム提供開始時のメール受信に同意します。",
+    "resetsOn": "リセット日"
   }
 }

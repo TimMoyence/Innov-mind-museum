@@ -42,13 +42,13 @@ describe('accessibility-content.ts', () => {
     expect(enIds).toEqual(frIds);
   });
 
-  it('documents the WCAG 1.4.3 contrast finding on admin login', () => {
+  it('documents the WCAG 1.4.3 contrast remediation', () => {
     const en = getAccessibilityContent('en');
     const findings = en.sections.find((s) => s.id === 'findings');
     expect(findings).toBeDefined();
     if (!findings) return;
     const joined = findings.paragraphs.join(' ');
     expect(joined).toContain('1.4.3');
-    expect(joined).toContain('admin/login');
+    expect(joined).toContain('4.78:1');
   });
 });

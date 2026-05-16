@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     gap: space['0.5'],
-    paddingRight: space['3'],
+    paddingEnd: space['3'],
   },
   label: {
     fontWeight: '600',

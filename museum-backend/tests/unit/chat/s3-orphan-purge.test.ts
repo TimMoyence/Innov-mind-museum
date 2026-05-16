@@ -1,10 +1,17 @@
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { runS3OrphanPurge } from '@modules/chat/jobs/s3-orphan-purge.job';
+import { logger } from '@shared/logger/logger';
 
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 
 import type { S3ImageStorageConfig } from '@modules/chat/adapters/secondary/storage/s3-operations';
 import type { DataSource } from 'typeorm';
+
+jest.mock('@shared/logger/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+
+const mockedLogger = logger as jest.Mocked<typeof logger>;
 
 const FAKE_S3_CONFIG: S3ImageStorageConfig = {
   endpoint: 'https://s3.example.com',
@@ -236,6 +243,46 @@ describe('runS3OrphanPurge', () => {
 
     expect(batchDeleter).not.toHaveBeenCalled();
     expect(result).toEqual({
+      scanned: 0,
+      deleted: 0,
+      referenced: 0,
+      tooFresh: 0,
+      failed: 0,
+    });
+  });
+
+  // ─── Mutation kills (s3-orphan-purge.job.ts L230) ──────────────────
+  // 2 first-pass survivors documented in commit 155a62ea on the
+  // terminal logger.info call — event-name StringLiteral and payload
+  // ObjectLiteral mutants. Existing behavioural tests assert on `result`
+  // but never check the observability tap.
+
+  it('logs s3_orphan_sweep_completed with retentionDays + result payload (kills L230 StringLiteral + ObjectLiteral mutants)', async () => {
+    mockedLogger.info.mockClear();
+    const { dataSource, pageLister, batchDeleter } = buildOrphanMocks({
+      pagesByPrefix: {
+        'chat-images/': [{ objects: [] }],
+        'chat-audios/': [{ objects: [] }],
+      },
+      referencedRefs: [],
+    });
+
+    await runS3OrphanPurge(dataSource, {
+      s3Config: FAKE_S3_CONFIG,
+      retentionDays: 42,
+      pageLister,
+      batchDeleter,
+    });
+
+    const completedCall = mockedLogger.info.mock.calls.find(
+      ([event]) => event === 's3_orphan_sweep_completed',
+    );
+    expect(completedCall).toBeDefined();
+    expect(completedCall![0]).toBe('s3_orphan_sweep_completed');
+    // Payload must include both retentionDays and the spread `result` keys —
+    // kills the ObjectLiteral → {} mutant.
+    expect(completedCall![1]).toEqual({
+      retentionDays: 42,
       scanned: 0,
       deleted: 0,
       referenced: 0,

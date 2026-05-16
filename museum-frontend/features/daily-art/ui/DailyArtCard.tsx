@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated as RNAnimated, Pressable, StyleSheet, Text, View } from 'react-native';
-import ReAnimated, {
-  useAnimatedStyle,
-  interpolate,
-  Extrapolation,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { Animated as RNAnimated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -23,9 +17,6 @@ interface DailyArtCardProps {
   isSaved: boolean;
   onSave: () => void;
   onSkip: () => void;
-  /** Optional shared value from parent ScrollView. When provided, the hero image
-   *  translates up at 50% of scroll speed and scales 1.0 → 1.05 over 100 px. */
-  scrollY?: SharedValue<number>;
   /** When false, the swipe-to-save gesture is disabled (e.g. in saved-list view). Defaults to true. */
   swipeToSave?: boolean;
 }
@@ -36,7 +27,6 @@ export const DailyArtCard = ({
   isSaved,
   onSave,
   onSkip,
-  scrollY,
   swipeToSave = true,
 }: DailyArtCardProps) => {
   const { t } = useTranslation();
@@ -61,17 +51,6 @@ export const DailyArtCard = ({
       useNativeDriver: true,
     }).start();
   }, [fadeAnim, reduceMotion]);
-
-  const imageAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY) return {};
-    const y = scrollY.value;
-    return {
-      transform: [
-        { translateY: interpolate(y, [0, 200], [0, -100], Extrapolation.CLAMP) },
-        { scale: interpolate(y, [0, 100], [1.0, 1.05], Extrapolation.CLAMP) },
-      ],
-    };
-  });
 
   const handleSwipeSave = useCallback(async () => {
     await toggleSavedArtwork(artwork);
@@ -105,9 +84,9 @@ export const DailyArtCard = ({
       </Text>
 
       {artwork.imageUrl && !imageError ? (
-        <ReAnimated.Image
+        <Image
           source={{ uri: artwork.imageUrl }}
-          style={[styles.image, imageAnimatedStyle]}
+          style={styles.image}
           resizeMode="cover"
           onError={() => {
             setImageError(true);
@@ -295,7 +274,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space['4'],
     gap: space['1'],
     borderRadius: semantic.card.radiusCompact,
-    marginLeft: space['2'],
+    marginStart: space['2'],
   },
   saveActionText: {
     fontSize: semantic.button.fontSize,

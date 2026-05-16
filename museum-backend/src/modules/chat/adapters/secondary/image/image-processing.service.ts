@@ -2,10 +2,59 @@ import sharp from 'sharp';
 
 import { AppError } from '@shared/errors/app.error';
 
-import type {
-  ImageProcessorPort,
-  StrippedImage,
-} from '@modules/chat/domain/ports/image-processor.port';
+/**
+ * Result of stripping EXIF / metadata from an uploaded image.
+ *
+ * `buffer` is the cleaned binary, `mime` reflects the format we re-encoded to
+ * (always equal to or a normalised form of the input MIME), and `width` /
+ * `height` come from the decoded raster dimensions (useful for downstream
+ * audit logs and analytics, no PII).
+ */
+export interface StrippedImage {
+  /** Cleaned raw image buffer with EXIF / metadata removed. */
+  buffer: Buffer;
+  /** Re-encoded MIME type (jpeg/png/webp/gif). */
+  mime: string;
+  /** Decoded width in pixels. */
+  width: number;
+  /** Decoded height in pixels. */
+  height: number;
+}
+
+/**
+ * Port that strips privacy-sensitive metadata (EXIF GPS, device, timestamp,
+ * tEXt chunks, ICC except orientation) from an uploaded image.
+ *
+ * Required for GDPR Art. 5(1)(c) — data minimisation — and STRIDE I4
+ * (information disclosure) on the chat-image upload pipeline.
+ *
+ * Implementations MUST preserve animation for `image/gif` and `image/webp`.
+ */
+export interface ImageProcessorPort {
+  /**
+   * Strips EXIF / metadata from the given image buffer.
+   *
+   * @param buffer - Raw image bytes (post-magic-byte validation).
+   * @param mime - Declared / sniffed MIME type.
+   * @returns Cleaned buffer, MIME, and decoded raster dimensions.
+   * @throws {AppError} 400 / `IMAGE_DECODE_FAILED` when the input is corrupt.
+   */
+  stripExif(buffer: Buffer, mime: string): Promise<StrippedImage>;
+}
+
+/**
+ * Defensive sharp constructor options applied to every decode in this module.
+ * `limitInputPixels` caps decoded-pixel count at 24 Mpx (~6000×4000 — exceeds
+ * any legitimate mobile upload after `imageUploadOptimization.ts` and is well
+ * below the 268 Mpx zip-bomb danger zone that a crafted 3 MB PNG can reach
+ * against the default cap). `failOn: 'error'` escalates sharp warnings into
+ * decode errors so the existing try/catch wraps them into `ImageDecodeError`.
+ * Audit ref: docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md §Claim 4.
+ */
+const SHARP_DECODE_OPTIONS = {
+  limitInputPixels: 24_000_000,
+  failOn: 'error' as const,
+};
 
 /**
  * Thrown when sharp cannot decode an image buffer (corrupt, truncated, or
@@ -49,7 +98,7 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
   try {
     if (mime === 'image/gif') {
-      const { data, info } = await sharp(buffer, { animated: true })
+      const { data, info } = await sharp(buffer, { ...SHARP_DECODE_OPTIONS, animated: true })
         .gif()
         .toBuffer({ resolveWithObject: true });
       return { buffer: data, mime: 'image/gif', width: info.width, height: info.height };
@@ -57,14 +106,14 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
     if (mime === 'image/webp') {
       const pipeline = animated
-        ? sharp(buffer, { animated: true }).webp({ effort: 4 })
-        : sharp(buffer).rotate().webp({ effort: 4 });
+        ? sharp(buffer, { ...SHARP_DECODE_OPTIONS, animated: true }).webp({ effort: 4 })
+        : sharp(buffer, SHARP_DECODE_OPTIONS).rotate().webp({ effort: 4 });
       const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
       return { buffer: data, mime: 'image/webp', width: info.width, height: info.height };
     }
 
     if (mime === 'image/png') {
-      const { data, info } = await sharp(buffer)
+      const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
         .rotate()
         .png()
         .toBuffer({ resolveWithObject: true });
@@ -73,7 +122,7 @@ export async function stripExifFromImage(buffer: Buffer, mime: string): Promise<
 
     // Default: JPEG static pipeline (covers `image/jpeg` and any future
     // allowed static MIME — re-encode through JPEG strips EXIF wholesale).
-    const { data, info } = await sharp(buffer)
+    const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
       .rotate()
       .jpeg()
       .toBuffer({ resolveWithObject: true });

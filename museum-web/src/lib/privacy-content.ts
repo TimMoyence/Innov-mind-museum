@@ -114,7 +114,7 @@ const en: PrivacyContent = {
       id: 'ai-disclosure',
       title: '12. AI Generative Content (EU AI Act Art. 50)',
       paragraphs: [
-        'When you interact with Musaium, you are interacting with a generative AI assistant powered by third-party large language models (OpenAI, Google, Deepseek). Replies are produced automatically and may contain errors, omissions, or factual inaccuracies — please verify critical information with primary sources.',
+        'When you interact with Musaium, you are interacting with a generative AI assistant powered by third-party large language models (OpenAI, Google, DeepSeek). Replies are produced automatically and may contain errors, omissions, or factual inaccuracies — please verify critical information with primary sources.',
         'Voice messages are transcribed by a speech-to-text model; spoken replies are synthesized by a text-to-speech model. Audio buffers are not stored beyond the request lifecycle.',
         'This disclosure is provided pursuant to Article 50 of the EU AI Act (Regulation (EU) 2024/1689).',
       ],
@@ -232,7 +232,7 @@ const fr: PrivacyContent = {
       id: 'ai-disclosure',
       title: '12. Contenu généré par IA (AI Act UE Art. 50)',
       paragraphs: [
-        'Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, Deepseek). Les réponses sont produites automatiquement et peuvent contenir des erreurs, des omissions ou des inexactitudes — veuillez vérifier les informations critiques auprès de sources primaires.',
+        'Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, DeepSeek). Les réponses sont produites automatiquement et peuvent contenir des erreurs, des omissions ou des inexactitudes — veuillez vérifier les informations critiques auprès de sources primaires.',
         'Les messages vocaux sont transcrits par un modèle de reconnaissance vocale ; les réponses orales sont synthétisées par un modèle text-to-speech. Les tampons audio ne sont pas conservés au-delà du cycle de la requête.',
         "Cette information est fournie conformément à l'article 50 du règlement UE sur l'intelligence artificielle (Règlement (UE) 2024/1689).",
       ],

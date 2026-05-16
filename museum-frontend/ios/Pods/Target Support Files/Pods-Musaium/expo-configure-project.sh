@@ -46,8 +46,8 @@ with_node \
   --eval "require('expo/bin/autolinking')" \
   expo-modules-autolinking \
   generate-modules-provider  \
-  --target "/Users/Tim/Desktop/all/dev/Pro/InnovMind.worktrees/audit-cleanup-2026-05-12/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
-  --entitlement "/Users/Tim/Desktop/all/dev/Pro/InnovMind.worktrees/audit-cleanup-2026-05-12/museum-frontend/ios/Musaium/Musaium.entitlements" \
+  --target "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
+  --entitlement "/Users/Tim/Desktop/all/dev/Pro/InnovMind/museum-frontend/ios/Musaium/Musaium.entitlements" \
    \
   --platform "apple" \
-  --packages "@expo/dom-webview" "expo" "expo-apple-authentication" "expo-asset" "expo-audio" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-dev-launcher" "expo-dev-menu" "expo-eas-client" "expo-file-system" "expo-font" "expo-glass-effect" "expo-haptics" "expo-image" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-splash-screen" "expo-store-review" "expo-symbols" "expo-system-ui" "expo-updates" "expo-web-browser"
+  --packages "@expo/dom-webview" "expo" "expo-apple-authentication" "expo-asset" "expo-audio" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-dev-launcher" "expo-dev-menu" "expo-eas-client" "expo-file-system" "expo-font" "expo-glass-effect" "expo-haptics" "expo-image" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-speech" "expo-splash-screen" "expo-store-review" "expo-symbols" "expo-system-ui" "expo-updates" "expo-web-browser"

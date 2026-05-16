@@ -875,7 +875,8 @@
       "fullscreen_close": "Schließen",
       "previous_image": "Vorheriges Bild",
       "next_image": "Nächstes Bild",
-      "messages_list": "Chat-Nachrichten"
+      "messages_list": "Chat-Nachrichten",
+      "follow_up_hint": "Sendet diese Folgefrage"
     },
     "onboarding": {
       "skip": "Einführung überspringen",
@@ -1013,7 +1014,8 @@
     "data_images": "Fotos, die Sie teilen (Metadaten entfernt)",
     "data_audio": "Sprachnachrichten (nur transkribiert, Audio wird nicht von der KI gespeichert)",
     "data_location": "Ihr Standort (wenn Sie ihn teilen möchten)",
-    "data_profile": "Ihre Kunstpräferenzen und Besuchshistorie (zur Personalisierung der Antworten)"
+    "data_profile": "Ihre Kunstpräferenzen und Besuchshistorie (zur Personalisierung der Antworten)",
+    "data_providers": "Verarbeitet durch KI-Dienste von Drittanbietern: OpenAI, Google und DeepSeek"
   },
   "dailyArt": {
     "title": "Kunstwerk des Tages",
@@ -1121,5 +1123,20 @@
       "title": "Noch keine Besuche",
       "description": "Starte ein Gespräch und dein Besuch erscheint hier."
     }
+  },
+  "followUpButtons": {
+    "section_label": "Schnelle Fragen"
+  },
+  "paywall": {
+    "modalTitle": "Kostenloses Monatslimit erreicht",
+    "modalBody": "Du hast alle in deinem kostenlosen Plan enthaltenen Chat-Sitzungen diesen Monat genutzt. Hinterlasse deine E-Mail-Adresse und wir benachrichtigen dich, sobald Premium verfügbar ist.",
+    "fieldEmail": "E-Mail-Adresse",
+    "submit": "Premium-Warteliste beitreten",
+    "sending": "Wird gesendet…",
+    "success": "Danke — wir melden uns bei dir.",
+    "error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "dismiss": "Schließen",
+    "consent": "Ich stimme zu, eine E-Mail beim Premium-Start zu erhalten.",
+    "resetsOn": "Setzt zurück am"
   }
 }

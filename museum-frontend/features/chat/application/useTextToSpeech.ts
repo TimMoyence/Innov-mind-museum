@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { createAudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { AudioPlayer } from 'expo-audio';
 
@@ -215,6 +215,17 @@ export function useTextToSpeech(): UseTextToSpeech {
     },
     [activeMessageId, stopPlayback, cleanup],
   );
+
+  // Configure the audio session once so TTS keeps playing when the device locks
+  // or the app backgrounds. Native-only — web uses HTMLAudioElement which is
+  // governed by the browser's autoplay/background policy.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void setAudioModeAsync({
+      shouldPlayInBackground: true,
+      playsInSilentMode: true,
+    });
+  }, []);
 
   // Cleanup on unmount: stop playback and release audio resources
   useEffect(() => {

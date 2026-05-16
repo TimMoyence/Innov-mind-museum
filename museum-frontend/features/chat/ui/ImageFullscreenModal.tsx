@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     top: space['12.5'],
-    right: semantic.screen.padding,
+    end: semantic.screen.padding,
     zIndex: 10,
   },
   imageArea: {
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   tapZoneRight: {
     position: 'absolute',
-    right: 0,
+    end: 0,
     width: '30%',
     height: '100%',
   },

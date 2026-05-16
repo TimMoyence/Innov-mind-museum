@@ -5,6 +5,7 @@ import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
@@ -14,7 +15,7 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-700',
   in_progress: 'bg-amber-100 text-amber-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-500',
+  closed: 'bg-gray-100 text-gray-600',
 };
 
 const PRIORITY_COLORS: Record<TicketPriority, string> = {
@@ -99,14 +100,34 @@ export default function TicketsPage() {
   // -- Modal backdrop ref ─────────────────────────────────────────────
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    if (!editingTicket) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) setEditingTicket(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editingTicket, saving]);
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
-      <p className="mt-1 text-text-secondary">{adminDict.ticketsPage.subtitle}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.tickets}</h1>
+          <p className="mt-1 text-text-secondary">{adminDict.ticketsPage.subtitle}</p>
+        </div>
+        <ExportCsvButton kind="tickets" />
+      </div>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
+          aria-label={adminDict.common.allStatuses}
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value as TicketStatus | '');
@@ -122,6 +143,7 @@ export default function TicketsPage() {
         </select>
 
         <select
+          aria-label={adminDict.common.allPriorities}
           value={priorityFilter}
           onChange={(e) => {
             setPriorityFilter(e.target.value as TicketPriority | '');
@@ -259,7 +281,7 @@ export default function TicketsPage() {
 
       {/* Update Ticket Modal */}
       {editingTicket && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -267,9 +289,6 @@ export default function TicketsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingTicket(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditingTicket(null);
           }}
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
@@ -282,6 +301,7 @@ export default function TicketsPage() {
               {adminDict.common.status}
             </label>
             <select
+              aria-label={adminDict.common.status}
               value={newStatus}
               onChange={(e) => {
                 setNewStatus(e.target.value as TicketStatus);
@@ -299,6 +319,7 @@ export default function TicketsPage() {
               {adminDict.common.priority}
             </label>
             <select
+              aria-label={adminDict.common.priority}
               value={newPriority}
               onChange={(e) => {
                 setNewPriority(e.target.value as TicketPriority);

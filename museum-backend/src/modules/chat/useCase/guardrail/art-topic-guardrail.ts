@@ -44,7 +44,6 @@ const INSULT_KEYWORDS = [
   // English
   'idiot',
   'stupid',
-  'dumb',
   'moron',
   'fuck',
   'shit',
@@ -52,7 +51,6 @@ const INSULT_KEYWORDS = [
   'asshole',
   // French
   'connard',
-  'con',
   'salope',
   'pute',
   'encule',

@@ -28,6 +28,11 @@ export const AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED = 'AUTH_EMAIL_CHANGE_CONFIRMED';
 export const AUDIT_AUTH_ONBOARDING_COMPLETED = 'AUTH_ONBOARDING_COMPLETED';
 export const AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED = 'AUTH_CONTENT_PREFERENCES_UPDATED';
 export const AUDIT_AUTH_TTS_VOICE_UPDATED = 'AUTH_TTS_VOICE_UPDATED';
+// TD-2 — batch update of the 5 profile preferences (defaultLocale,
+// defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode) via the
+// `/api/auth/me/preferences` endpoint. Metadata carries the raw patch (no
+// PII) so operators can reconstruct toggle-by-toggle history.
+export const AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED = 'AUTH_PROFILE_PREFERENCES_UPDATED';
 
 // ─── Account lifecycle ───
 export const AUDIT_ACCOUNT_DELETED = 'ACCOUNT_DELETED';
@@ -50,10 +55,31 @@ export const AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN = 'SECURITY_LLM_GUARD_BREAKER
 // without bloating the audit hash chain or echoing raw user/LLM payloads.
 export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
 export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
+// LLM02 (2026-05-14) — emitted when the guardrail provider returned a sanitized
+// input (PII scrubbed via Anonymize / Presidio). One hash-chained row per
+// effective redaction; payload carries only the post-scrub text + placeholder
+// counts (raw PII NEVER reaches the audit chain).
+export const AUDIT_GUARDRAIL_INPUT_REDACTED = 'GUARDRAIL_INPUT_REDACTED';
 
 // ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';
 export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
+// ─── Admin user lifecycle (P0 #9 admin user detail — audit-2026-05-12) ───
+export const AUDIT_ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED';
+export const AUDIT_ADMIN_USER_UNSUSPENDED = 'ADMIN_USER_UNSUSPENDED';
+export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
+// R1 (C6) — admin tier override on `users.tier`. Emitted by
+// `ChangeUserTierUseCase` AFTER the mutation, BEFORE returning (N3 ordering).
+// Metadata = `{ from, to }` ; no counter state in the audit row (per N9 R2
+// doctrine — state stays on the user row, audit carries the transition only).
+export const AUDIT_ADMIN_USER_TIER_CHANGED = 'ADMIN_USER_TIER_CHANGED';
+// ─── Admin CSV export (R2 W3.4) ───
+// Distinct from AUDIT_DATA_EXPORT (reserved for user-self DSAR) — mixing
+// user-self and admin-export rows under one action breaks audit-chain
+// filter semantics. Per-kind constants make `WHERE action = …` trivial.
+export const AUDIT_ADMIN_EXPORT_SESSIONS = 'ADMIN_EXPORT_SESSIONS';
+export const AUDIT_ADMIN_EXPORT_REVIEWS = 'ADMIN_EXPORT_REVIEWS';
+export const AUDIT_ADMIN_EXPORT_TICKETS = 'ADMIN_EXPORT_TICKETS';
 
 // ─── Support ticket events ───
 export const AUDIT_SUPPORT_TICKET_CREATED = 'SUPPORT_TICKET_CREATED';

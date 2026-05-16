@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect } from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { radius, semantic, space } from '@/shared/ui/tokens';
@@ -59,7 +60,9 @@ export const ImageSection = memo(function ImageSection({
         styles.messageImage,
         { borderColor: theme.separator, backgroundColor: theme.surface },
       ]}
-      resizeMode="cover"
+      contentFit="cover"
+      recyclingKey={messageId}
+      cachePolicy="memory-disk"
       onError={handleImageError}
     />
   );

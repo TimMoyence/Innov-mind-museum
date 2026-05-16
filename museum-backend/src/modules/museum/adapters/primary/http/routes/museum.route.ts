@@ -17,6 +17,7 @@ import {
 import { auditService } from '@shared/audit';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
@@ -28,6 +29,9 @@ import type {
 } from '@modules/museum/domain/museum/museum.types';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
+
+/** Shared 400 message — keeps sonarjs/no-duplicate-string happy. */
+const INVALID_MUSEUM_ID = 'Invalid museum ID';
 
 /** Handler: GET /api/museums/directory — public directory of active museums. */
 const handleGetDirectory = async (_req: Request, res: Response) => {
@@ -113,21 +117,24 @@ const handleListMuseums = async (_req: Request, res: Response) => {
 
 /** Handler: GET /api/museums/:idOrSlug — get museum by id or slug. */
 const handleGetMuseum = async (req: Request, res: Response) => {
-  const museum = await getMuseumUseCase.execute(req.params.idOrSlug);
+  const idOrSlug = parseStringParam(req, 'idOrSlug');
+  if (!idOrSlug) throw badRequest('idOrSlug param is required');
+  const museum = await getMuseumUseCase.execute(idOrSlug);
   res.json({ museum });
 };
 
 /** Parses numeric `:id` param or throws 400. Shared by enrichment handlers. */
-const parseMuseumIdParam = (raw: string): number => {
+const parseMuseumIdParam = (raw: string | undefined): number => {
+  if (!raw) throw badRequest(INVALID_MUSEUM_ID);
   const id = Number.parseInt(raw, 10);
-  if (Number.isNaN(id) || id <= 0) throw badRequest('Invalid museum ID');
+  if (Number.isNaN(id) || id <= 0) throw badRequest(INVALID_MUSEUM_ID);
   return id;
 };
 
 /** Creates the handler for GET /api/museums/:id/enrichment. */
 const buildHandleGetEnrichment = (useCase: EnrichMuseumUseCase) => {
   return async (req: Request, res: Response) => {
-    const museumId = parseMuseumIdParam(req.params.id);
+    const museumId = parseMuseumIdParam(parseStringParam(req, 'id'));
     const { locale } = res.locals.validatedQuery as { locale: string };
     const result = await useCase.execute({ museumId, locale });
     res.status(result.status === 'ready' ? 200 : 202).json(result);
@@ -137,7 +144,7 @@ const buildHandleGetEnrichment = (useCase: EnrichMuseumUseCase) => {
 /** Creates the handler for GET /api/museums/:id/enrichment/status. */
 const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
   return async (req: Request, res: Response) => {
-    const museumId = parseMuseumIdParam(req.params.id);
+    const museumId = parseMuseumIdParam(parseStringParam(req, 'id'));
     const { locale, jobId } = res.locals.validatedQuery as { locale: string; jobId: string };
     const result = await useCase.getJobStatus({ museumId, locale, jobId });
     res.status(result.status === 'ready' ? 200 : 202).json(result);
@@ -146,8 +153,10 @@ const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
 
 /** Handler: PUT /api/museums/:id — update museum (admin only). */
 const handleUpdateMuseum = async (req: Request, res: Response) => {
-  const id = Number.parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) throw badRequest('Invalid museum ID');
+  const rawId = parseStringParam(req, 'id');
+  if (!rawId) throw badRequest(INVALID_MUSEUM_ID);
+  const id = Number.parseInt(rawId, 10);
+  if (Number.isNaN(id)) throw badRequest(INVALID_MUSEUM_ID);
   const museum = await updateMuseumUseCase.execute(id, req.body as UpdateMuseumInput);
   await auditService.log({
     action: 'MUSEUM_UPDATED',

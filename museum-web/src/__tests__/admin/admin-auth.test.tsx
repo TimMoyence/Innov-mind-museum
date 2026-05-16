@@ -219,6 +219,56 @@ describe('RoleGuard', () => {
     });
   });
 
+  // Regression for audit-2026-05-12 P0-6 + F4 Claim 1: a `super_admin` user
+  // must satisfy ANY role check, even when `allowedRoles` only lists 'admin'.
+  // Before the auth.tsx fix the `.includes()`-only check would 403 here.
+  it('allows super_admin implicitly even when allowedRoles only lists admin', async () => {
+    const { apiPost } = await import('@/lib/api');
+    const mockedApiPost = vi.mocked(apiPost);
+    mockedApiPost.mockResolvedValueOnce({
+      accessToken: 'at',
+      refreshToken: 'rt',
+      expiresIn: 900,
+      refreshExpiresIn: 86400,
+      user: {
+        id: 99,
+        email: 'tim@musaium.fr',
+        firstname: 'Tim',
+        lastname: 'Owner',
+        role: 'super_admin',
+        onboardingCompleted: true,
+      },
+    });
+
+    function TestComponent() {
+      const { login, isAuthenticated } = useAuth();
+      return (
+        <div>
+          <button onClick={() => void login('tim@musaium.fr', 'pass')}>Login</button>
+          {isAuthenticated && (
+            <RoleGuard allowedRoles={['admin']}>
+              <div>Admin-Only Surface</div>
+            </RoleGuard>
+          )}
+        </div>
+      );
+    }
+
+    render(
+      <Providers>
+        <TestComponent />
+      </Providers>,
+    );
+
+    fireEvent.click(screen.getByText('Login'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin-Only Surface')).toBeInTheDocument();
+    });
+    // And the 403 surface must NOT appear.
+    expect(screen.queryByText('403')).not.toBeInTheDocument();
+  });
+
   it('allows authenticated moderator through', async () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);

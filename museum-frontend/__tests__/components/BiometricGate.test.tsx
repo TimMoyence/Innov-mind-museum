@@ -20,8 +20,14 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render, waitFor, act, screen, fireEvent } from '@testing-library/react-native';
 
+type RefreshResult =
+  | { kind: 'success'; accessToken: string }
+  | { kind: 'invalid' }
+  | { kind: 'transient' };
+
 const mockAuthenticate = jest.fn<Promise<boolean>, []>();
 const mockUnlockBiometric = jest.fn();
+const mockRunAuthRefresh = jest.fn<Promise<RefreshResult>, []>();
 const authState = { locked: true };
 
 jest.mock('@/features/auth/application/useBiometricAuth', () => ({
@@ -43,6 +49,10 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
     },
     unlockBiometric: mockUnlockBiometric,
   }),
+}));
+
+jest.mock('@/shared/infrastructure/httpClient', () => ({
+  runAuthRefresh: () => mockRunAuthRefresh(),
 }));
 
 jest.mock('@/shared/ui/ThemeContext', () => ({
@@ -73,6 +83,10 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
   beforeEach(() => {
     mockAuthenticate.mockReset();
     mockUnlockBiometric.mockReset();
+    mockRunAuthRefresh.mockReset();
+    // Default: refresh succeeds. Tests that exercise alternate refresh
+    // outcomes (invalid / transient) override per-case.
+    mockRunAuthRefresh.mockResolvedValue({ kind: 'success', accessToken: 'tok' });
     authState.locked = true;
   });
 
@@ -216,6 +230,68 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
 
       await waitFor(() => {
         expect(mockAuthenticate).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
+
+  describe('preflight refresh (Face ID → backend session validation)', () => {
+    it('runs runAuthRefresh exactly once after a successful Face ID prompt', async () => {
+      mockAuthenticate.mockResolvedValueOnce(true);
+
+      render(
+        <BiometricGate>
+          <TestChild />
+        </BiometricGate>,
+      );
+
+      await waitFor(() => {
+        expect(mockRunAuthRefresh).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('skips runAuthRefresh when Face ID fails — no point refreshing if user did not unlock', async () => {
+      mockAuthenticate.mockResolvedValueOnce(false);
+
+      render(
+        <BiometricGate>
+          <TestChild />
+        </BiometricGate>,
+      );
+
+      await waitFor(() => {
+        expect(mockAuthenticate).toHaveBeenCalledTimes(1);
+      });
+      expect(mockRunAuthRefresh).not.toHaveBeenCalled();
+      expect(mockUnlockBiometric).not.toHaveBeenCalled();
+    });
+
+    it('still unlocks when refresh returns invalid — unauthorizedHandler navigates to /auth, gate must stop covering the Stack', async () => {
+      mockAuthenticate.mockResolvedValueOnce(true);
+      mockRunAuthRefresh.mockResolvedValueOnce({ kind: 'invalid' });
+
+      render(
+        <BiometricGate>
+          <TestChild />
+        </BiometricGate>,
+      );
+
+      await waitFor(() => {
+        expect(mockUnlockBiometric).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('still unlocks when refresh returns transient — offline tolerance, next online request will retry', async () => {
+      mockAuthenticate.mockResolvedValueOnce(true);
+      mockRunAuthRefresh.mockResolvedValueOnce({ kind: 'transient' });
+
+      render(
+        <BiometricGate>
+          <TestChild />
+        </BiometricGate>,
+      );
+
+      await waitFor(() => {
+        expect(mockUnlockBiometric).toHaveBeenCalledTimes(1);
       });
     });
   });

@@ -91,6 +91,7 @@ describe('useAudioRecorder', () => {
     expect(mockSetAudioMode).toHaveBeenCalledWith({
       allowsRecording: true,
       playsInSilentMode: true,
+      shouldPlayInBackground: true,
     });
     expect(mockRecorderPrepare).toHaveBeenCalledTimes(1);
     expect(mockRecorderRecord).toHaveBeenCalledTimes(1);
@@ -674,6 +675,7 @@ describe('useAudioRecorder', () => {
       expect(mockSetAudioMode).toHaveBeenLastCalledWith({
         allowsRecording: false,
         playsInSilentMode: true,
+        shouldPlayInBackground: true,
       });
     });
 

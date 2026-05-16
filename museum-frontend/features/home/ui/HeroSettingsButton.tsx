@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   button: {
     position: 'absolute',
     top: space['3'],
-    right: space['3'],
+    end: space['3'],
     width: space['10'],
     height: space['10'],
     borderRadius: semantic.badge.radiusFull,

@@ -130,5 +130,31 @@ describe('BrevoEmailService', () => {
       };
       expect(body.htmlContent).toBe(html);
     });
+
+    // Mutation kills — Stryker survivors in brevo-email.service.ts
+    it('produces an error message ending exactly with the status colon-space when text() rejects (catch fallback must be empty string)', async () => {
+      mockFetch.mockResolvedValueOnce(
+        makeErrorResponse(503, { reject: new Error('stream error') }),
+      );
+
+      await expect(
+        service.sendEmail('user@test.com', 'Subject', '<p>Body</p>'),
+      ).rejects.toMatchObject({
+        message: 'Brevo email failed (503): ',
+      });
+    });
+
+    it('truncates the response body to 800 chars in the thrown error message', async () => {
+      // Build a 1000-char body: 800 "a"s then 200 "b"s — only the "a"s must survive.
+      const longBody = 'a'.repeat(800) + 'b'.repeat(200);
+      mockFetch.mockResolvedValueOnce(makeErrorResponse(502, longBody));
+
+      const expectedMessage = `Brevo email failed (502): ${'a'.repeat(800)}`;
+      await expect(
+        service.sendEmail('user@test.com', 'Subject', '<p>Body</p>'),
+      ).rejects.toMatchObject({
+        message: expectedMessage,
+      });
+    });
   });
 });

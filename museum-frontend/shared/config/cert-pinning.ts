@@ -1,48 +1,65 @@
 /**
- * Cert pinning configuration — Phase 2 scaffold (V1 ship-disabled).
+ * Cert pinning configuration — production pinset for `musaium.com`.
  *
- * Security trade-off documented in ADR-016 (library selected) and
- * ADR-031 (kill-switch architecture). Activation is gated by the env
- * var `EXPO_PUBLIC_CERT_PINNING_ENABLED`; default `false` means no
- * pinning is initialised at boot, so a missing kill-switch endpoint
- * cannot brick the V1 launch.
+ * Library + decision: ADR-016 (`react-native-ssl-public-key-pinning`).
+ * Kill-switch architecture: ADR-031 (`/api/config/cert-pinning-enabled`,
+ * 1h cache, fail-open semantics).
  *
- * **Before flipping the env to `true` for any production build**, the
- * placeholder SPKI hashes below MUST be replaced with the real
- * base64-encoded SHA-256 hashes of the production leaf cert + a
- * backup CA. See `docs/RUNBOOKS/CERT_ROTATION.md` for the capture
- * procedure (`openssl s_client … | openssl x509 -pubkey | openssl rsa
- * -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64`).
+ * Activation:
+ *   `EXPO_PUBLIC_CERT_PINNING_ENABLED=true` in `.env.production`
+ *   (and equivalents). When unset / `false`, `cert-pinning-init.ts`
+ *   no-ops at boot.
+ *
+ * Pin selection rationale (captured 2026-05-14 against musaium.com:443):
+ *   - Pin #1 = current leaf SPKI. Let's Encrypt issues 90-day certs;
+ *     this pin breaks at the next renewal unless the renewed leaf
+ *     reuses the same keypair OR Pin #2 still matches.
+ *   - Pin #2 = Let's Encrypt E8 intermediate SPKI. E8 is the ECDSA
+ *     intermediate currently signing musaium.com leaves; stable until
+ *     2027-03-12. Acts as the "backup that absorbs leaf rotation" —
+ *     as long as the next leaf is signed by E8, TLS still validates.
+ *
+ *   When E8 rotates (expected ~late 2026 based on Let's Encrypt's
+ *   historical intermediate cadence), bump the app with the new
+ *   intermediate SPKI BEFORE the prod cert chain switches. See
+ *   `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` for the 7-step
+ *   rotation procedure.
  */
 import type { PinningOptions } from 'react-native-ssl-public-key-pinning';
 
 /** Production API host. The mobile client only needs to pin this one. */
-export const PINNED_HOST = 'api.musaium.app' as const;
+export const PINNED_HOST = 'musaium.com' as const;
 
 /**
- * SPKI hashes for the production leaf cert + backup CA.
+ * SPKI SHA-256 base64 hashes pinned for `musaium.com`.
  *
- * **PLACEHOLDERS — DO NOT ACTIVATE.** These are syntactically valid
- * base64 SHA-256 strings but they do NOT match the production cert.
- * Replace with real captures captured against the production endpoint
- * before flipping `EXPO_PUBLIC_CERT_PINNING_ENABLED` to `true`.
+ * Captured 2026-05-14 with:
+ *   openssl s_client -connect musaium.com:443 -servername musaium.com </dev/null 2>/dev/null \
+ *     | openssl x509 -pubkey -noout \
+ *     | openssl pkey -pubin -outform DER \
+ *     | openssl dgst -sha256 -binary \
+ *     | openssl enc -base64
  *
- * The two-pin requirement is iOS-mandatory (TrustKit refuses single-pin
- * configurations) and operationally mandatory (kill-switch + rotation
- * needs both leaf + backup so we can rotate the leaf without re-shipping).
+ * Pin #1 = leaf cert (Let's Encrypt, notAfter 2026-06-19, ECDSA P-256).
+ * Pin #2 = intermediate CA E8 (Let's Encrypt, notAfter 2027-03-12, ECDSA P-384).
+ *
+ * The two-pin layout is iOS-mandatory (TrustKit refuses single-pin
+ * configurations) and operationally protects against the LE 90-day
+ * leaf rotation: as long as the rotated leaf is signed by E8, the
+ * intermediate pin keeps validation green even if pin #1 ages out.
  */
-export const PLACEHOLDER_SPKI_HASHES_TBD_PROD = [
-  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', // leaf — TBD
-  'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=', // backup — TBD
+export const PROD_SPKI_HASHES = [
+  'ZDRgYM8cmWD/dXjUsAFfxIfU1sMuaUCykdASVIJb8MY=', // leaf — musaium.com, LE, exp 2026-06-19
+  'iFvwVyJSxnQdyaUvUERIf+8qk7gRze3612JMwoO3zdU=', // intermediate — Let's Encrypt E8, exp 2027-03-12
 ] as const;
 
 /**
  * Builds the {@link PinningOptions} payload consumed by
  * `initializeSslPinning`. Kept as a function (not a const) so the
- * placeholder list can be swapped in tests via dependency injection.
+ * pinset can be swapped in tests via dependency injection.
  */
 export const buildPinningOptions = (
-  hashes: readonly string[] = PLACEHOLDER_SPKI_HASHES_TBD_PROD,
+  hashes: readonly string[] = PROD_SPKI_HASHES,
 ): PinningOptions => ({
   [PINNED_HOST]: {
     publicKeyHashes: [...hashes],

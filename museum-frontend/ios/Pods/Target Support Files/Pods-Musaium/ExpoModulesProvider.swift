@@ -31,6 +31,7 @@ internal import ExpoLocalization
 internal import ExpoLocation
 internal import ExpoRouter
 internal import ExpoSecureStore
+internal import ExpoSpeech
 internal import ExpoSplashScreen
 internal import ExpoStoreReview
 internal import ExpoSymbols
@@ -76,6 +77,7 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: LinkPreviewNativeModule.self, name: nil),
       (module: RouterToolbarModule.self, name: nil),
       (module: SecureStoreModule.self, name: nil),
+      (module: SpeechModule.self, name: nil),
       (module: SplashScreenModule.self, name: nil),
       (module: StoreReviewModule.self, name: nil),
       (module: SymbolModule.self, name: nil),
@@ -118,6 +120,7 @@ internal class ExpoModulesProvider: ModulesProvider {
       (module: LinkPreviewNativeModule.self, name: nil),
       (module: RouterToolbarModule.self, name: nil),
       (module: SecureStoreModule.self, name: nil),
+      (module: SpeechModule.self, name: nil),
       (module: SplashScreenModule.self, name: nil),
       (module: StoreReviewModule.self, name: nil),
       (module: SymbolModule.self, name: nil),

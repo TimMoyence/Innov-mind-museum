@@ -1,6 +1,18 @@
 import sharp from 'sharp';
 
 /**
+ * Defensive sharp options shared by the SigLIP preprocessing path. 24 Mpx
+ * (~6000×4000) cap mirrors `image-processing.service.ts` — exceeds any
+ * legitimate mobile upload and bounds the zip-bomb decompression-DoS
+ * surface. `failOn: 'error'` ensures malformed inputs reject early.
+ * Audit ref: docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md §Claim 4.
+ */
+const SHARP_DECODE_OPTIONS = {
+  limitInputPixels: 24_000_000,
+  failOn: 'error' as const,
+};
+
+/**
  * SigLIP-base-patch16-224 input contract:
  * - batch = 1
  * - channels = 3 (RGB, alpha dropped)
@@ -50,7 +62,7 @@ const SIGLIP_STD = 0.5;
  *   / `IMAGE_DECODE_FAILED` as appropriate.
  */
 export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array> {
-  const { data, info } = await sharp(buffer)
+  const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
     .removeAlpha()
     .resize(SIGLIP_INPUT_SIZE, SIGLIP_INPUT_SIZE, { fit: 'fill' })
     .raw()

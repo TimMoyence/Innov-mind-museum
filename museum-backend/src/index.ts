@@ -2,12 +2,15 @@ import './instrumentation';
 import 'reflect-metadata';
 import util from 'node:util';
 
-
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
 import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
+import {
+  RedisNonceStore,
+  setSocialNonceStore,
+} from '@modules/auth/adapters/secondary/social/nonce-store';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
@@ -30,6 +33,8 @@ import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-count
 import { logger } from '@shared/logger/logger';
 import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
 import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
+import { setMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.middleware';
+import { PgMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.repo.pg';
 import {
   stopRateLimitSweep,
   setRedisRateLimitStore,
@@ -102,6 +107,11 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     // the same ioredis client. The middleware fails OPEN if no counter is
     // registered (dev/test), so this single setter is the only boot wiring.
     setLlmCostCounter(new RedisLlmCostCounter(redisClient));
+    // F3 / T1.7#5 — upgrade OIDC nonce store from in-memory default to Redis
+    // so multi-instance deployments share a single atomic redemption surface
+    // (GETDEL primitive race-free across replicas). Single-instance dev/tests
+    // skip this branch and keep the InMemoryNonceStore default.
+    setSocialNonceStore(new RedisNonceStore(redisClient));
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };
@@ -460,6 +470,12 @@ const start = async (): Promise<void> => {
       host: env.db.host,
       database: env.db.database,
     });
+
+    // R1 (C6) — wire the soft-paywall monthly quota repo as soon as the
+    // DataSource is ready. The middleware fails-OPEN if no repo is registered
+    // (see `monthly-session-quota.middleware.ts`), so this single boot wiring
+    // is the canonical activation point.
+    setMonthlyQuotaRepo(new PgMonthlyQuotaRepo(AppDataSource));
 
     // Expose the live DataSource to Prometheus collectors that depend on a
     // DB query at scrape time (T9.2 — `artwork_embeddings_count` gauge).

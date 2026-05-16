@@ -6,7 +6,10 @@ import { conflict } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
-import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
+import type {
+  IUserRepository,
+  ProfilePreferencesPatch,
+} from '@modules/auth/domain/user/user.repository.interface';
 
 /** TypeORM implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {
@@ -110,10 +113,13 @@ export class UserRepositoryPg implements IUserRepository {
    */
   async updatePassword(userId: number, newPassword: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    // `repo.update` forwards to `.set()` internally, so `undefined` is silently
+    // skipped — use raw `() => 'NULL'` to actually emit `SET reset_token = NULL`.
+    // See verifyEmail (below) for full rationale.
     await this.repo.update(userId, {
       password: hashedPassword,
-      reset_token: undefined,
-      reset_token_expires: undefined,
+      reset_token: () => 'NULL',
+      reset_token_expires: () => 'NULL',
     });
     const user = await this.repo.findOne({ where: { id: userId } });
     if (!user) throw new Error('User not found after update');
@@ -131,13 +137,16 @@ export class UserRepositoryPg implements IUserRepository {
     token: string,
     hashedPassword: string,
   ): Promise<User | null> {
+    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
+    // verifyEmail (below) for the full mechanism. Raw `() => 'NULL'` forces
+    // the SET clause to actually clear the consumed reset-token columns.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
       .set({
         password: hashedPassword,
-        reset_token: undefined,
-        reset_token_expires: undefined,
+        reset_token: () => 'NULL',
+        reset_token_expires: () => 'NULL',
       })
       .where('reset_token = :token AND reset_token_expires > NOW()', { token })
       .returning('*')
@@ -222,14 +231,18 @@ export class UserRepositoryPg implements IUserRepository {
 
   /** Atomically consumes an email change token and updates the user's email. */
   async consumeEmailChangeToken(hashedToken: string): Promise<User | null> {
+    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
+    // verifyEmail (above) for the full mechanism. Raw `() => 'NULL'` forces
+    // the SET clause to actually clear pending_email + email-change token
+    // columns once the new email has been promoted.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
       .set({
         email: () => '"pending_email"',
-        pending_email: undefined,
-        email_change_token: undefined,
-        email_change_token_expiry: undefined,
+        pending_email: () => 'NULL',
+        email_change_token: () => 'NULL',
+        email_change_token_expiry: () => 'NULL',
       })
       .where('email_change_token = :hashedToken AND email_change_token_expiry > NOW()', {
         hashedToken,
@@ -254,6 +267,34 @@ export class UserRepositoryPg implements IUserRepository {
   /** Persists the user's preferred TTS voice or clears it (`null`). */
   async updateTtsVoice(userId: number, voice: string | null): Promise<void> {
     await this.repo.update(userId, { ttsVoice: voice });
+  }
+
+  /**
+   * TD-2 — Persists a partial patch of the 5 profile-preference columns.
+   *
+   * Pre-filters `undefined` fields before delegating to `repo.update` because
+   * TypeORM's `UpdateQueryBuilder.set()` silently skips columns whose value is
+   * `undefined` — leaving them unchanged rather than writing `NULL`. The 5
+   * columns are all `NOT NULL DEFAULT`, so we don't need raw `() => 'NULL'`
+   * expressions here (no clearing semantics) — pre-filtering keeps the patch
+   * shape simple and the assertion "fields present in the patch ARE written"
+   * holds. See `feedback_typeorm_set_undefined_repo_update`.
+   *
+   * No-op (no SQL) when the patch is fully empty after filtering — caller
+   * (use case) is responsible for surfacing 400 to the client via the Zod
+   * `.refine(non-empty)` on the route schema.
+   */
+  async updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void> {
+    const update: Partial<User> = {};
+    if (patch.defaultLocale !== undefined) update.defaultLocale = patch.defaultLocale;
+    if (patch.defaultMuseumMode !== undefined) update.defaultMuseumMode = patch.defaultMuseumMode;
+    if (patch.guideLevel !== undefined) update.guideLevel = patch.guideLevel;
+    if (patch.dataMode !== undefined) update.dataMode = patch.dataMode;
+    if (patch.audioDescriptionMode !== undefined) {
+      update.audioDescriptionMode = patch.audioDescriptionMode;
+    }
+    if (Object.keys(update).length === 0) return;
+    await this.repo.update(userId, update);
   }
 
   /**

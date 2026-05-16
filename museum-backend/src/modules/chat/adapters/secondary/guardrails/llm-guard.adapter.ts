@@ -132,7 +132,7 @@ type ScanOutcome = 'success' | 'fail_closed' | 'timeout' | 'breaker_skip' | 'ove
  * malformed JSON, breaker open, queue overflow) — see ADR-047 for the
  * no-fail-OPEN contract.
  *
- * Activation: `env.guardrails.candidate === 'llm-guard'` in chat-module.ts.
+ * Activation: `env.guardrails.llmGuardUrl` set in chat-module.ts (ADR-015 amendment 2026-05-14 retired the master candidate flag).
  */
 export class LLMGuardAdapter implements GuardrailProvider {
   readonly name = 'llm-guard';

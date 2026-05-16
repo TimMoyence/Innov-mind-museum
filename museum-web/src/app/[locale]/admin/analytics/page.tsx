@@ -16,6 +16,7 @@ import {
 import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { EmptyChartPlaceholder } from '@/components/admin/EmptyChartPlaceholder';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import type {
   UsageAnalytics,
   ContentAnalytics,
@@ -168,8 +169,13 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary">{adminDict.analytics}</h1>
-      <p className="mt-1 text-text-secondary">{adminDict.analyticsPage.subtitle}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.analytics}</h1>
+          <p className="mt-1 text-text-secondary">{adminDict.analyticsPage.subtitle}</p>
+        </div>
+        <ExportCsvButton kind="sessions" />
+      </div>
 
       {/* Loading */}
       {loading && (
@@ -243,6 +249,7 @@ export default function AnalyticsPage() {
 
             <div className="flex gap-3">
               <select
+                aria-label={adminDict.analyticsPage.usage}
                 value={granularity}
                 onChange={(e) => {
                   setGranularity(e.target.value as AnalyticsGranularity);
@@ -257,6 +264,7 @@ export default function AnalyticsPage() {
               </select>
 
               <select
+                aria-label={adminDict.analyticsPage.days}
                 value={days}
                 onChange={(e) => {
                   setDays(Number(e.target.value));

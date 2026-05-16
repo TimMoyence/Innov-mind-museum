@@ -21,7 +21,6 @@ export const DEFAULT_EMAIL_LOCALE: EmailLocale = 'fr';
  */
 export function resolveEmailLocale(input: unknown): EmailLocale {
   if (input === 'en') return 'en';
-  if (input === 'fr') return 'fr';
   return DEFAULT_EMAIL_LOCALE;
 }
 

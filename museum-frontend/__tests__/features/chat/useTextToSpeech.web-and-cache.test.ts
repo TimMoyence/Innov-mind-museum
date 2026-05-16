@@ -24,6 +24,7 @@ const mockCreateAudioPlayer = jest.fn().mockReturnValue({
 
 jest.mock('expo-audio', () => ({
   createAudioPlayer: (...args: unknown[]) => mockCreateAudioPlayer(...args),
+  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 // expo-file-system/legacy: in-memory fake supporting a cacheDirectory + per-path

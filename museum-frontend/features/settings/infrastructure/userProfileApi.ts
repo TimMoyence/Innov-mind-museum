@@ -1,24 +1,23 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import {
+  openApiRequest,
+  type OpenApiJsonRequestBodyFor,
+  type OpenApiResponseFor,
+} from '@/shared/api/openapiClient';
 import { CONTENT_PREFERENCES, type ContentPreference } from '@/shared/types/content-preference';
 
 // Re-export to preserve the existing import paths across the app.
 // New code should import directly from '@/shared/types/content-preference'.
 export { CONTENT_PREFERENCES, type ContentPreference };
 
-interface UpdateContentPreferencesResponse {
-  contentPreferences: ContentPreference[];
-}
+type UpdateContentPreferencesPayload = OpenApiJsonRequestBodyFor<
+  '/api/auth/content-preferences',
+  'patch'
+>;
+type UpdateContentPreferencesResponse = OpenApiResponseFor<
+  '/api/auth/content-preferences',
+  'patch'
+>;
 
-/**
- * User profile API — currently scoped to content preferences management.
- *
- * **TODO(openapi-regen):** migrate from raw `httpRequest` to `openApiRequest`
- * once the backend swagger decorators expose `PATCH /auth/content-preferences`
- * in `shared/api/generated/openapi.ts`. Blocks the full OpenAPI-first contract
- * coverage tracked in the 2026-04-15 dependency audit (findings on
- * museum/daily-art/lowDataPack using raw httpRequest — this file joins that
- * set as known technical debt).
- */
 export const userProfileApi = {
   /**
    * Replaces the user's content preferences with the given set. Empty array
@@ -26,16 +25,15 @@ export const userProfileApi = {
    * ordered) preferences.
    *
    * @param preferences - One or more of 'history', 'technique', 'artist'.
-   * @returns The persisted preferences as confirmed by the backend.
+   * @returns The persisted preferences confirmed by the backend.
    */
   async updateContentPreferences(preferences: ContentPreference[]): Promise<ContentPreference[]> {
-    const data = await httpRequest<UpdateContentPreferencesResponse>(
-      '/api/auth/content-preferences',
-      {
-        method: 'PATCH',
-        body: { preferences },
-      },
-    );
+    const payload: UpdateContentPreferencesPayload = { preferences };
+    const data: UpdateContentPreferencesResponse = await openApiRequest({
+      path: '/api/auth/content-preferences',
+      method: 'patch',
+      body: JSON.stringify(payload),
+    });
     return data.contentPreferences;
   },
 };

@@ -12,6 +12,8 @@ import {
   createNonceStore,
   InMemoryNonceStore,
   RedisNonceStore,
+  setSocialNonceStore,
+  socialNonceStore,
 } from '@modules/auth/adapters/secondary/social/nonce-store';
 
 import type Redis from 'ioredis';
@@ -201,5 +203,45 @@ describe('createNonceStore — composition root branch coverage', () => {
 
   it('returns RedisNonceStore when a Redis client is provided', () => {
     expect(createNonceStore(stubRedis({}))).toBeInstanceOf(RedisNonceStore);
+  });
+});
+
+/**
+ * T1.7#5 — socialNonceStore delegating singleton.
+ *
+ * The auth composition root captures a stable reference at module load (before
+ * the shared Redis client exists); `src/index.ts` upgrades the inner adapter
+ * via setSocialNonceStore once Redis is wired. The contract under test: the
+ * exported reference stays the same identity but its behavior follows the
+ * latest delegate.
+ */
+describe('socialNonceStore — delegating singleton swap', () => {
+  afterEach(() => {
+    // Reset to the in-memory default so other test files don't see drift.
+    setSocialNonceStore(new InMemoryNonceStore());
+  });
+
+  it('defaults to in-memory behavior before any swap', async () => {
+    const nonce = await socialNonceStore.issue();
+    expect(nonce).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    await expect(socialNonceStore.consume(nonce)).resolves.toBe(true);
+    await expect(socialNonceStore.consume(nonce)).resolves.toBe(false);
+  });
+
+  it('routes issue/consume through the new delegate after setSocialNonceStore', async () => {
+    const set = jest.fn().mockResolvedValue('OK');
+    const getdel = jest.fn().mockResolvedValue('1');
+    setSocialNonceStore(new RedisNonceStore(stubRedis({ set, getdel })));
+
+    const nonce = await socialNonceStore.issue();
+    expect(set).toHaveBeenCalledWith(
+      expect.stringMatching(/^oidc:nonce:/),
+      '1',
+      'EX',
+      expect.any(Number),
+      'NX',
+    );
+    await expect(socialNonceStore.consume(nonce)).resolves.toBe(true);
+    expect(getdel).toHaveBeenCalledWith(`oidc:nonce:${nonce}`);
   });
 });

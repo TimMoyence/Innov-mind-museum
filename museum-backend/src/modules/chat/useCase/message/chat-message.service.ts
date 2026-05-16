@@ -14,6 +14,7 @@ import { logger } from '@shared/logger/logger';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { env } from '@src/config/env';
 
+import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type {
   AudioTranscriptionResult,
@@ -24,9 +25,7 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
-import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
-import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
@@ -37,6 +36,7 @@ import type {
 } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/llm/llm-cache.types';
 import type {
   LocationConsentChecker,
@@ -119,7 +119,7 @@ export interface ChatSafetyDeps {
   piiSanitizer?: PiiSanitizer;
   /** F4 — LLM judge callable wired to the chat orchestrator. */
   llmJudge?: LlmJudgeFn;
-  /** F4 — true when env.guardrails.candidate === 'llm-judge'. */
+  /** F4 — true when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
 }
 
@@ -279,7 +279,12 @@ export class ChatMessageService {
     const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
     if (prep.kind === 'refused') return prep.result;
 
-    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
+    // LLM02 — when the guardrail provider scrubbed PII (Anonymize / Presidio),
+    // substitute the sanitized version BEFORE the local Unicode-normalisation
+    // sanitizer so the LLM payload (and the LLM cache key derived from it)
+    // contains only placeholders, never raw PII.
+    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
+    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
     const orchestratorInput = this.pipeline.buildOrchestratorInput(
       prep,
       input,
@@ -416,7 +421,11 @@ export class ChatMessageService {
       onGuardrail,
     });
     buffer.onRelease(onToken);
-    const sanitizedText = this.piiSanitizer.sanitize(input.text?.trim() ?? '').sanitizedText;
+    // LLM02 — symmetric substitution with `postMessage`: redactedText (if
+    // present) replaces the original text before the orchestrator call so
+    // SSE streaming cannot become a back-door for PII exfiltration.
+    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
+    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
 
     const aiResult = await this.orchestrator.generateStream(
       this.pipeline.buildOrchestratorInput(prep, input, sanitizedText, requestId),

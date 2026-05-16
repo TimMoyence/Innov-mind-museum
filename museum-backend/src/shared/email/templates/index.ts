@@ -6,6 +6,7 @@ export {
   buildSupportContactEmail,
   type SupportContactEmailInput,
 } from './support-contact.template';
+export { buildB2bLeadEmail, type B2bLeadEmailInput } from './b2b-lead.template';
 export {
   buildReviewModerationEmail,
   REVIEW_LOCALES,

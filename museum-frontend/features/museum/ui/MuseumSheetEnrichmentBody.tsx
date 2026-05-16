@@ -1,4 +1,5 @@
-import { ActivityIndicator, Image, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -57,7 +58,8 @@ export const MuseumSheetEnrichmentBody = ({
         <Image
           source={{ uri: enriched.imageUrl }}
           style={[styles.heroImage, { backgroundColor: theme.surface }]}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
           accessible
           accessibilityRole="image"
           accessibilityLabel={museum.name}

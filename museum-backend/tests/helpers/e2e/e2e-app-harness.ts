@@ -11,6 +11,8 @@ import {
 } from 'tests/helpers/e2e/postgres-testcontainer';
 
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
+import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
@@ -79,6 +81,30 @@ export interface E2EResponse {
 }
 
 /**
+ * Internal helper for `orchestratorReset` (TD-6, 2026-05-15). Wraps a
+ * ChatOrchestrator in a proxy whose inner delegate can be swapped at runtime
+ * without rebuilding the surrounding ChatService / Express app. Test-only.
+ */
+interface SwappableOrchestrator extends ChatOrchestrator {
+  __swap(next: ChatOrchestrator): void;
+}
+
+function createSwappableOrchestrator(initial: ChatOrchestrator): SwappableOrchestrator {
+  let delegate: ChatOrchestrator = initial;
+  return {
+    async generate(input) {
+      return delegate.generate(input);
+    },
+    async generateStream(input, onChunk) {
+      return delegate.generateStream(input, onChunk);
+    },
+    __swap(next: ChatOrchestrator): void {
+      delegate = next;
+    },
+  };
+}
+
+/**
  * Options accepted by {@link createE2EHarness}.
  * All fields are optional — omitting them preserves the existing default behaviour.
  */
@@ -93,6 +119,18 @@ export interface E2EHarnessOptions {
    * Replaces the harness's synthetic orchestrator with any compatible implementation.
    */
   chatOrchestratorOverride?: ChatOrchestrator;
+  /**
+   * LLM02 — inject a `GuardrailProvider` into ChatService so e2e tests can
+   * exercise the PII redaction propagation chain against a fake sidecar.
+   * Defaults to undefined (no provider wired — matches legacy behaviour).
+   */
+  guardrailProviderOverride?: GuardrailProvider;
+  /**
+   * LLM02 — inject an `AuditService` into ChatService so e2e tests can
+   * assert on the hash-chained `GUARDRAIL_INPUT_REDACTED` row without
+   * touching the DB. Defaults to undefined (no audit wired).
+   */
+  auditServiceOverride?: AuditService;
   /**
    * Phase 6 chaos: whether to start the BullMQ knowledge-extraction worker.
    * Default: false (worker is NOT started in e2e — matches existing behaviour because
@@ -120,6 +158,15 @@ export interface E2EHarness {
    * Use to retrieve verification tokens after registration in e2e tests.
    */
   testEmailService: import('@src/shared/email/test-email-service').TestEmailService | null;
+  /**
+   * Phase 6 chaos — TD-6 (2026-05-15): swap the chat orchestrator at runtime
+   * without restarting the HTTP server. Test-only. See
+   * `tests/e2e/chaos-circuit-breaker.e2e.test.ts` for the canonical use case
+   * (driving the breaker through HALF_OPEN -> CLOSED).
+   *
+   * Throws if called after `stop()` has been awaited.
+   */
+  orchestratorReset: (newOverride: ChatOrchestrator) => void;
 }
 
 /**
@@ -270,22 +317,28 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
 
   // Phase 6 chaos: allow callers to override the orchestrator.
   // Falls back to the existing synthetic stub when no override is provided.
-  const orchestrator = options?.chatOrchestratorOverride ?? {
-    async generate() {
-      return {
-        text: 'Synthetic assistant response for e2e',
-        metadata: { citations: ['e2e'] },
-      };
-    },
-    async generateStream(_input: unknown, onChunk: (t: string) => void) {
-      const result = {
-        text: 'Synthetic assistant response for e2e',
-        metadata: { citations: ['e2e'] },
-      };
-      onChunk(result.text);
-      return result;
-    },
-  };
+  const resolvedOrchestrator: ChatOrchestrator =
+    options?.chatOrchestratorOverride ??
+    ({
+      async generate() {
+        return {
+          text: 'Synthetic assistant response for e2e',
+          metadata: { citations: ['e2e'] },
+        };
+      },
+      async generateStream(_input: unknown, onChunk: (t: string) => void) {
+        const result = {
+          text: 'Synthetic assistant response for e2e',
+          metadata: { citations: ['e2e'] },
+        };
+        onChunk(result.text);
+        return result;
+      },
+    } as ChatOrchestrator);
+
+  // TD-6 (2026-05-15): wrap in a swap proxy so `orchestratorReset` can mutate
+  // the orchestrator at runtime without rebuilding ChatService / Express.
+  const swappableOrchestrator = createSwappableOrchestrator(resolvedOrchestrator);
 
   const { ResilientCacheWrapper } = await import('@shared/cache/resilient-cache.wrapper');
   // Wrap any caller-provided cacheService (e.g. BrokenRedisCache from the chaos
@@ -298,8 +351,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   const chatService = new ChatService({
     repository: new TypeOrmChatRepository(appDataSource),
     // Phase 6 chaos: orchestrator and cache are configurable via options.
-
-    orchestrator: orchestrator as any,
+    orchestrator: swappableOrchestrator,
     // Phase 6 chaos: cacheService override (undefined = no cache, matching existing behaviour).
     cache: wrappedCache,
     imageStorage: new LocalImageStorage(),
@@ -312,6 +364,11 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
         };
       },
     },
+    // LLM02 — optional injection so e2e tests can drive the PII redaction
+    // chain end-to-end through the chat HTTP pipeline.
+    guardrailProvider: options?.guardrailProviderOverride,
+    guardrailProviderObserveOnly: false,
+    audit: options?.auditServiceOverride,
   });
 
   const app = createApp({ chatService });
@@ -322,6 +379,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   const testEmailService = authModule.__testEmailService ?? null;
 
   let server: Server;
+  let stopped = false;
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
       resolve();
@@ -370,6 +428,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   };
 
   const stop = async (): Promise<void> => {
+    stopped = true;
     if (server!) {
       await new Promise<void>((resolve, reject) => {
         server!.close((error) => {
@@ -395,5 +454,17 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
     }
   };
 
-  return { baseUrl, request, dataSource: appDataSource, stop, testEmailService };
+  return {
+    baseUrl,
+    request,
+    dataSource: appDataSource,
+    stop,
+    testEmailService,
+    orchestratorReset: (newOverride: ChatOrchestrator) => {
+      if (stopped) {
+        throw new Error('orchestratorReset called after harness.stop() — invalid usage');
+      }
+      swappableOrchestrator.__swap(newOverride);
+    },
+  };
 }

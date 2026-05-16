@@ -11,10 +11,6 @@ import type { PostMessageResult } from './chat.service.types';
 import type { EnrichedImage, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type {
-  KnowledgeRouterPort,
-  KnowledgeRouterSource,
-} from '@modules/chat/domain/ports/knowledge-router.port';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
@@ -22,6 +18,10 @@ import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import type {
+  KnowledgeRouterPort,
+  KnowledgeRouterSource,
+} from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type {
   LocationConsentChecker,
   LocationResolver,
@@ -57,6 +57,14 @@ export interface PrepareReady {
   webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
   resolvedLocation?: ResolvedLocation;
+  /**
+   * LLM02 — sanitized version of the user input when the guardrail provider
+   * scrubbed PII (Anonymize / Presidio). When defined, the message service
+   * substitutes this for the original `input.text` before the LLM call so
+   * the provider never sees raw PII. `undefined` when no provider is wired
+   * or no PII was detected.
+   */
+  redactedText?: string;
   /**
    * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`.
    * Threaded into `OrchestratorInput.facts` so every orchestrator entry point
@@ -300,6 +308,9 @@ export class PrepareMessagePipeline {
       requestedLocale,
       history,
       ownerId,
+      ...(userGuardrail.redactedText !== undefined
+        ? { redactedText: userGuardrail.redactedText }
+        : {}),
       ...enrichment,
     };
   }

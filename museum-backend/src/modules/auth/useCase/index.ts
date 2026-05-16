@@ -9,7 +9,7 @@ import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/s
 import { TotpSecretRepositoryPg } from '@modules/auth/adapters/secondary/pg/totp-secret.repository.pg';
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
 import { UserConsentRepositoryPg } from '@modules/auth/adapters/secondary/pg/userConsent.repository.pg';
-import { InMemoryNonceStore } from '@modules/auth/adapters/secondary/social/nonce-store';
+import { socialNonceStore } from '@modules/auth/adapters/secondary/social/nonce-store';
 import { InMemorySocialOtcStore } from '@modules/auth/adapters/secondary/social/social-otc-store';
 import { SocialTokenVerifierAdapter } from '@modules/auth/adapters/secondary/social/social-token-verifier.adapter';
 import {
@@ -18,6 +18,7 @@ import {
 } from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
 import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
+import { UpdateProfilePreferencesUseCase } from '@modules/auth/useCase/account/updateProfilePreferences.useCase';
 import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
 import { ListApiKeysUseCase } from '@modules/auth/useCase/api-keys/listApiKeys.useCase';
 import { RevokeApiKeyUseCase } from '@modules/auth/useCase/api-keys/revokeApiKey.useCase';
@@ -43,10 +44,7 @@ import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCa
 import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
-import {
-  setApiKeyRepository,
-  setUserRoleResolver,
-} from '@shared/middleware/apiKey.middleware';
+import { setApiKeyRepository, setUserRoleResolver } from '@shared/middleware/apiKey.middleware';
 import { env } from '@src/config/env';
 
 import type {
@@ -102,14 +100,13 @@ const recoveryMfaUseCase = new RecoveryMfaUseCase(
   authSessionService,
 );
 /**
- * F3 — OIDC nonce store. The Redis-backed adapter is preferred when a Redis
- * client is available (multi-instance correctness) but the auth composition
- * root runs at module load before the rate-limit Redis client is registered;
- * for now wire the in-memory adapter and let a future migration upgrade to
- * Redis once a shared client is exposed at module-init time. Single-instance
- * deployments (current default) are unaffected.
+ * F3 — OIDC nonce store. Uses the delegating singleton so the boot sequence
+ * in `src/index.ts` can upgrade the inner adapter to {@link RedisNonceStore}
+ * once the shared Redis client is wired (`setSocialNonceStore`). Initial
+ * delegate is {@link InMemoryNonceStore} — keeps single-instance dev/tests
+ * working untouched.
  */
-const nonceStore = new InMemoryNonceStore();
+const nonceStore = socialNonceStore;
 
 /**
  * F11-mobile — short-lived store for the mobile-redirect OAuth flow. Holds
@@ -217,6 +214,8 @@ const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
 /** Singleton instance of {@link UpdateTtsVoiceUseCase}. */
 const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
+/** TD-2 — Singleton instance of {@link UpdateProfilePreferencesUseCase} (batch endpoint). */
+const updateProfilePreferencesUseCase = new UpdateProfilePreferencesUseCase(userRepository);
 
 // API Key use cases — always wired (B2B API key programme, msk_* auth).
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
@@ -279,6 +278,7 @@ export {
   listApiKeysUseCase,
   updateContentPreferencesUseCase,
   updateTtsVoiceUseCase,
+  updateProfilePreferencesUseCase,
   completeOnboarding,
   grantConsentUseCase,
   revokeConsentUseCase,

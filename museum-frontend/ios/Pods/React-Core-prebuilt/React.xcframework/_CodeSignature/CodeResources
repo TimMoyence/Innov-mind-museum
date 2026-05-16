@@ -8938,7 +8938,7 @@
 		</data>
 		<key>ios-arm64/React.framework/React</key>
 		<data>
-		UYiiJ5151WohWc0k7XTiOx0OV8Y=
+		HG0K5nSjaM4ASrEE2uBaN3trqpk=
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Headers/FBLazyVector/FBLazyIterator.h</key>
 		<data>
@@ -13406,7 +13406,7 @@
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/React</key>
 		<data>
-		d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+		xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Resources/Info.plist</key>
 		<data>
@@ -13414,7 +13414,7 @@
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/A/React</key>
 		<data>
-		d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+		xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/A/Resources/Info.plist</key>
 		<data>
@@ -13422,7 +13422,7 @@
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/Current/React</key>
 		<data>
-		d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+		xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 		</data>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/Current/Resources/Info.plist</key>
 		<data>
@@ -17898,7 +17898,7 @@
 		</data>
 		<key>ios-arm64_x86_64-simulator/React.framework/React</key>
 		<data>
-		8e2bnnAorzvCBuUcobdZBXadG8U=
+		9uyu5/Z7kublwasWsp7YCfUWVqw=
 		</data>
 		<key>ios-arm64_x86_64-simulator/React.framework/_CodeSignature/CodeResources</key>
 		<data>
@@ -42474,11 +42474,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			UYiiJ5151WohWc0k7XTiOx0OV8Y=
+			HG0K5nSjaM4ASrEE2uBaN3trqpk=
 			</data>
 			<key>hash2</key>
 			<data>
-			iyw1rvLNjqG2KjIeFX3ug7GbFybW6iZ07DukSpnmUjw=
+			9ceMUbfsB1D3yP7GWaVNTL2128b3HAdYw4ft1c/WIx0=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Headers/FBLazyVector/FBLazyIterator.h</key>
@@ -54761,11 +54761,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+			xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 			</data>
 			<key>hash2</key>
 			<data>
-			zCP4vs0SvN9su5dnp0APTc+yTVFkLCo1jbXE11hgCqs=
+			8g54ttM0BwQ7t1Ifm0t7B1NwhLPWrS468sBI3RDdLYI=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Resources/Info.plist</key>
@@ -54783,11 +54783,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+			xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 			</data>
 			<key>hash2</key>
 			<data>
-			zCP4vs0SvN9su5dnp0APTc+yTVFkLCo1jbXE11hgCqs=
+			8g54ttM0BwQ7t1Ifm0t7B1NwhLPWrS468sBI3RDdLYI=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/A/Resources/Info.plist</key>
@@ -54805,11 +54805,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			d+AH0AeY+ZQL/G+zTQjRk7QJcKo=
+			xBuZdBfzgxnZsW0tpdEyoIyyLWU=
 			</data>
 			<key>hash2</key>
 			<data>
-			zCP4vs0SvN9su5dnp0APTc+yTVFkLCo1jbXE11hgCqs=
+			8g54ttM0BwQ7t1Ifm0t7B1NwhLPWrS468sBI3RDdLYI=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-maccatalyst/React.framework/Versions/Current/Resources/Info.plist</key>
@@ -67114,11 +67114,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			8e2bnnAorzvCBuUcobdZBXadG8U=
+			9uyu5/Z7kublwasWsp7YCfUWVqw=
 			</data>
 			<key>hash2</key>
 			<data>
-			HMOrOJUQCbzAOc2qVVCaEuX4pkWdNS3UzTBq72jQkMg=
+			pnPLtJamhyIMLyk19c2XFxhLI/L5h4UoBehQ5wjSAXs=
 			</data>
 		</dict>
 		<key>ios-arm64_x86_64-simulator/React.framework/_CodeSignature/CodeResources</key>

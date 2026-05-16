@@ -1,0 +1,125 @@
+{
+  "featureId": "F3",
+  "reviewLoop": 1,
+  "commitSha": "3cdebfe8f30630a36caed942c4d7d5586c0de0b9",
+  "baselineSha": "b6e4dd46",
+  "ultrareviewRun": "r0wykavnv",
+  "bugRef": "bug_010",
+  "axes": {
+    "correctness": {
+      "score": 90,
+      "notes": [
+        "All 17 paywall modal tests PASS — `npx jest __tests__/features/paywall/QuotaUpsellModal.test.tsx` → 'Tests: 17 passed, 17 total'. The 12 R1/F2 baseline tests survive unchanged + 5 new F3 tests green (F3.A raw-ISO-absent, F3.B EN human, F3.C FR human, F3.D invalid-ISO fallback, F3.E memo stability).",
+        "FE regression scope: `npx jest __tests__/features/paywall __tests__/shared/api/paywall-interceptor __tests__/infrastructure/httpClient.test.ts __tests__/features/auth` → 7 suites, 71 passed (spec required ≥71). Met exactly.",
+        "BE regression: `pnpm test -- --testPathPattern='(chat-session-quota-ordering|monthlySessionQuota|leads)' --no-coverage` → 10 suites, 75 passed + 1 todo (spec required ≥75). Met. F3 has zero BE surface, clean.",
+        "EN locale renders 'June 1, 2026' (regex /June.*2026/), FR renders '1 juin 2026' (regex /juin.*2026/) — both human-readable per F3.R1. Raw ISO regex `/2026-06-01T00:00:00\\.000Z/` returns 0 hits (F3.A pins absence).",
+        "Defensive fallback at line 119-122 — `Number.isNaN(date.getTime())` short-circuits BEFORE the `Intl.DateTimeFormat(...).format(date)` call. This is a SAFER pattern than the spec's recommended bare try/catch: invalid Date instances don't even reach `.format()`, so 'Invalid Date' string can never leak. F3.D test asserts both raw fallback rendered AND 'Invalid Date' string absent — both pass.",
+        "MINOR — Spec §5 T1 enumerated 5 tests F3.A-E with specific coverage : EN happy (AC1), FR happy (AC2), invalid-ISO fallback (AC3), LOCALE-CHANGE RE-RENDER mid-modal (AC5), F2 COMPOSE on visible cycle (AC7). Implementation renamed tests to A-E but swapped coverage: spec's AC5 (locale change via `i18n.changeLanguage` while modal mounted) is NOT implemented at all, and spec's AC7 (F3+F2 compose verifying email reset PRESERVES formatted date across visible cycle) is NOT implemented — replaced by a memo-stability smoke test (output-equality re-render). The locale-change runtime path is theoretically exercised by F3.B (EN) + F3.C (FR) using separate renders with different mock language, but the in-flight `useTranslation` re-render contract on `changeLanguage` is NOT pinned. F3.R5 mechanically unverified in CI.",
+        "MINOR — Spec §5 T1 also enumerated F3.AC6 (spy on `Intl.DateTimeFormat` constructor via `jest.spyOn(global.Intl, 'DateTimeFormat')`) to assert ≤2 calls across 5 email keystrokes. Implementation replaced this with F3.E output-equality smoke — verifies formatted text is byte-identical across re-renders. The memo deps shape `[resetAtIso, i18n.language]` is sound by inspection, but the per-render constructor-invocation count is NOT mechanically pinned. F3.N5 (memoization NFR) verified by code-review only, not by CI gate.",
+        "T3 manual smoke on real Hermes device (per F3.AC12) NOT performed — green-agent honestly flagged this as required pre-merge but did not execute. Risk1 (Hermes Intl unavailable on dev device → all 8 locales see raw ISO) remains unverified runtime-wise. Acceptable defer if T3 smoke is gated as a pre-merge step ; concerning if the loop closes without it."
+      ]
+    },
+    "scope-fidelity": {
+      "score": 100,
+      "notes": [
+        "Diff scope = 4 files, all within F3 scope-IN per spec §0.3: CLAUDE.md (+1 doctrine bullet), F3.md (+449 spec file), QuotaUpsellModal.tsx (+35 / -3), QuotaUpsellModal.test.tsx (+132). `git diff 3cdebfe8~1 3cdebfe8 --stat` confirms exactly 4 files, +617 / -3.",
+        "Zero drift into PaywallProvider.tsx, app/_layout.tsx, paywall-interceptor.ts, httpClient.ts. The 402 wire contract `{ tier, currentCount, limit, resetAt: string }` byte-unchanged at the boundary — type stays string-ISO, format applied only at render time. Spec §0.4 scope-OUT honored exactly.",
+        "Zero BE surface — no museum-backend file touched. The monthly-session-quota.middleware.ts `firstOfNextUtcMonthIso()` emitter (R1 AC3 integration test pins this) untouched. Wire format byte-unchanged.",
+        "Sibling R-series files (R2/R3/R4/R5 territory) byte-unchanged. F1 surface (chat-session.route.ts middleware order) untouched. F2's useEffect at lines 89-98 is byte-identical to the F2 commit.",
+        "Tracker flip (ultrareview-fixes.md F3 pending→closed) correctly deferred to verify-agent per spec §0.3 last bullet — not green-code-agent's responsibility this commit."
+      ]
+    },
+    "kiss-dry-hexagonal": {
+      "score": 87,
+      "notes": [
+        "Minimal diff to production code: 1 import line addition (`useEffect, useState` → `useEffect, useMemo, useState`), 1 destructure addition (`{ t }` → `{ t, i18n }`), 1 JSX swap (`{reason.resetAt}` → `{formattedReset}`), and a 16-line memo block (lines 100-130) with 14 lines of explanatory comment. Total: ~35 lines added.",
+        "useMemo dep array `[resetAtIso, i18n.language]` matches the only two render-time inputs (the ISO date string and the active locale). Memo fires on prop change OR locale change, stable across email/consent/state changes. Correct.",
+        "resetAtIso primitive lift (line 114) is a FORCED workaround for React Compiler's `preserve-manual-memoization` rule, NOT a stylistic choice. I independently verified by writing a probe file with the spec's example shape `[reason?.resetAt, i18n.language]` and running ESLint → 'Could not preserve existing manual memoization' error fires at the deps array. The lifted-primitive shape `[resetAtIso, i18n.language]` passes cleanly. Honest workaround. The inline comment (lines 108-113) accurately documents WHY: the compiler infers `reason` (object-level) as the broader dep when an optional chain is used in deps array, breaking granularity guarantees.",
+        "Defensive `Number.isNaN(date.getTime())` check (line 119) is a stronger pattern than the spec's recommended bare try/catch. The spec recommended wrapping the entire `new Intl.DateTimeFormat(...).format(...)` in try/catch ; the implementation short-circuits invalid Date BEFORE the format call, which avoids the documented JS quirk that `.format(NaN_Date)` THROWS RangeError in some ICU versions and returns 'Invalid Date' in others. The try/catch is preserved as a secondary net for the rare 'Intl unsupported locale' RangeError. Defense-in-depth, no over-engineering.",
+        "CLAUDE.md doctrine bullet (line 150) is concise + actionable: names the failure pattern (`<Text>{isoString}</Text>` anti-pattern with the exact ugly output), the canonical fix (useMemo + Intl.DateTimeFormat keyed on `[iso, locale]` + try/catch), and the canonical example. Slightly compressed vs spec template (drops the explicit `dateStyle: 'long'` recommendation and the Hermes ICU support note) but the gist transfers.",
+        "MINOR — The inline comment block (lines 100-113) is 14 lines (including the React Compiler workaround paragraph). This is heavier than F1/F2's comment blocks (~10 lines each). Justified by the non-obvious deviation but pushes the comment-to-code ratio toward 1:1. Future readers benefit from the verbose justification, though, so this is a soft observation rather than a refactor request.",
+        "MINOR — F3.D test's invalid-ISO fixture `'NOT-A-VALID-DATE'` uses uppercase, but the test grep at line 415 (`queryAllByText(/NOT-A-VALID-DATE/)`) is case-sensitive. Test passes only because the fallback returns the input verbatim. Tests do NOT cover the empty-string fallback case (spec F3.AC4 — `resetAt: ''` → metadata line shows 'Resets on ' with trailing space). The component handles this correctly via the `!resetAtIso` short-circuit (line 116) but no test pins the behavior."
+      ]
+    },
+    "a11y-design-system": {
+      "score": 95,
+      "notes": [
+        "Date format respects locale via `Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' })` — EN renders 'June 1, 2026', FR renders '1 juin 2026'. Word-ordering automatic per ICU locale data. Numerals locale-aware: Arabic locale would render Arabic-Indic digits by default (`numberingSystem` not overridden — F3 Q3 default position is to let Intl's locale convention apply, which is locale-faithful).",
+        "Metadata line styles (`styles.meta` at line 283-287 — fontSize 12, opacity 0.7) byte-unchanged. The localized 'June 1, 2026' or '1 juin 2026' renders at the same size + opacity as the prior raw ISO. No new layout / contrast concerns. Long FR locales (e.g. '15 décembre 2026' = 17 chars vs '2026-06-01T00:00:00.000Z' = 24 chars) are SHORTER than the prior raw render, so no truncation risk introduced.",
+        "Modal `accessibilityRole='alert'` (line 160) byte-unchanged. R1 R26 a11y tests pass unchanged. Email field `accessibilityLabel`, consent checkbox `accessibilityState`, close button `accessibilityLabel` — all byte-unchanged. F3 is render-text-only.",
+        "MINOR — `dateStyle: 'long'` is the spec's pick per Q1 default position, but the spec's verbatim example in R1 §3.4 D4 reads `\"Resets on June 1\"` (year OMITTED). Implementation includes the year ('June 1, 2026'). Spec Q1 explicitly chose to include year for cross-year disambiguation (Dec→Jan reset case). Defensible UX choice, but ICU formatting may render differently across locales for the same `dateStyle: 'long'` (e.g. en-GB might yield '1 June 2026'). F3.B test uses permissive regex `/June.*2026/` which covers both orderings.",
+        "MINOR — Arabic + RTL behavior NOT directly tested. F3.B (EN) + F3.C (FR) cover only LTR locales. Arabic users will see Arabic-Indic digits per Intl default (locale-faithful) and RTL-ordered date components — the codebase has RTL doctrine (`feedback_rtl_start_end` memory) but no F3 test pins the RTL render. Risk7 acknowledged in spec."
+      ]
+    },
+    "security-honesty": {
+      "score": 90,
+      "notes": [
+        "Defensive fallback surfaces BE drift visibly to QA (per F3.R3 + spec §3.3). The `Number.isNaN(date.getTime())` branch returns the raw ISO string, so a malformed BE payload renders as 'Resets on garbage-string' — ugly but informative. NOT silent empty string (would hide the bug), NOT 'Invalid Date' string (would mislead). Honest degradation path. F3.D test pins this.",
+        "T3 manual smoke (Hermes runtime Intl probe) honestly flagged as REQUIRED PRE-MERGE in the green-agent's acknowledgments + in spec §3.5 + Risk1. The commit body explicitly admits 'Hermes Intl NOT runtime-verified — Jest = Node Intl ≠ Hermes Intl'. The defensive try/catch is the safety net IF Hermes-on-device strips Intl ; T3 is the runtime gate that converts documented-availability into runtime-verified. Honest framing per UFR-013.",
+        "F3 honestly implements R1 §3.4 D4 intent (no supersession needed). Spec §Appendix A line 440 verbatim: 'F3 implements R1's intent, not supersedes it'. The R1 design statement was correct ; the R1 green-agent just didn't deliver. F3 closes the gap. Truthful framing — contrasts with F1 which DID supersede R1 §3.3 D3 middleware order.",
+        "resetAtIso primitive lift HONESTLY documented as a React Compiler workaround in the inline comment (lines 108-113). The comment explicitly says 'lifting `resetAt` to a primitive const lets the compiler and our memo agree on the same granular key'. The commit body also flags this: 'resetAtIso primitive const lifted out of memo to satisfy React Compiler preserve-manual-memoization without weakening to [reason, lang]'. I independently verified the workaround is real, not invented — the probe (spec's recommended `[reason?.resetAt, i18n.language]` shape) triggers `react-hooks/preserve-manual-memoization` error in ESLint. LEGITIMATE workaround.",
+        "No new feature flag — `feedback_no_feature_flags_prelaunch` honored. No `INTL_DATE_FORMAT_ENABLED` toggle introduced (F3.N1 closed). No new env var, no new dep (Intl is JS built-in — F3.N4 closed).",
+        "MINOR HONESTY NIT — The acknowledgment in the spec-message text states 'defensive try/catch + Number.isNaN check covers the worst case'. Implementation goes BEYOND the spec's recommended pattern by adding the explicit `Number.isNaN(date.getTime())` short-circuit (line 119-122), which is a STRONGER guarantee than the bare try/catch the spec recommends. Improvement, but worth flagging that the agent silently strengthened the spec — would have been more transparent to call this out as a deliberate enhancement in the commit body.",
+        "MINOR HONESTY NIT — The spec §5 T1.4 mandated a locale-change-during-modal-open test using `i18n.changeLanguage('fr')` wrapped in `act()` (F3.AC5). The implementation did NOT deliver this test — instead implemented F3.D (defensive fallback) + F3.E (memo stability smoke). The commit body doesn't flag the spec deviation. A future reader scanning F3.AC5 vs the test file will find no matching test. F3.R5 (memo re-renders on locale change) is functionally exercised by F3.B/F3.C using separate renders with different mock language, but the in-flight `useTranslation` `changeLanguage` re-render flow is NOT pinned in CI. Soft test-coverage gap, not pinning, not honestly disclosed."
+      ]
+    }
+  },
+  "weightedMean": 92.15,
+  "weightedMeanCalc": "0.30*90 + 0.20*100 + 0.20*87 + 0.15*95 + 0.15*90 = 27.0 + 20.0 + 17.4 + 14.25 + 13.5 = 92.15",
+  "verdict": "APPROVED",
+  "blockers": [],
+  "niceToHave": [
+    "Implement spec F3.AC5 (locale-change-during-modal-open) — render with mock language 'en', assert 'June 1, 2026' visible, mutate mock language to 'fr' via the `setLanguage` helper, force re-render (rerender with new props or fire a no-op fireEvent), assert '1 juin 2026' visible + 'June 1, 2026' absent. Pins F3.R5 in CI. ~15 LoC.",
+    "Implement spec F3.AC7 (F3 + F2 compose) — render visible=true, type email, tick consent, assert formatted date visible + email value set + consent ticked. Cycle visible→false→true. Assert email reset to '' (F2.A invariant) + consent unchecked (F2.B invariant) + formatted date STILL visible (F3 stable). Pins the orthogonality between F3's memo deps and F2's effect deps. ~25 LoC.",
+    "Add F3.AC4 (empty-string resetAt fallback) — fixture `resetAt: ''` → assert metadata line still renders (because `reason !== null`) AND `formattedReset === ''` so the rendered text is 'Resets on ' (with trailing space, no crash). The component handles this correctly via the `!resetAtIso` short-circuit at line 116 but no test pins it. ~10 LoC.",
+    "Execute T3 manual smoke on real Hermes device per F3.AC12 BEFORE merging — run dev build (Expo Go or EAS dev client), trigger 402 × 4 in EN, assert metadata reads 'Resets on June 1, 2026' (not raw ISO). Switch device locale to FR, re-trigger, assert 'Réinitialisation le 1 juin 2026'. If smoke fails → STOP, escalate per Risk1.",
+    "Expand CLAUDE.md doctrine bullet to include the explicit `dateStyle: 'long'` recommendation + the Hermes ICU support context. Current bullet covers the WHAT (useMemo + Intl.DateTimeFormat + try/catch) but not the WHY-this-style. A future dev hitting the same pattern class won't know whether to use 'long', 'medium', 'short' without re-reading F3.md. ~2 sentences extension.",
+    "Add TECH_DEBT.md entry per spec Q5 default-YES — 'F3 follow-up: audit other ISO-in-UI render sites across museum-frontend with grep `(\\.toISOString\\(\\)|\\.resetAt|\\.createdAt|\\.scheduledAt)\\}`'. Cheap, prevents the doctrine bullet from being a one-off note."
+  ],
+  "resetAtIsoDeviationVerdict": {
+    "decision": "LEGITIMATE_WORKAROUND",
+    "rationale": "I independently verified the workaround by writing a probe component with the spec's recommended deps shape `[reason?.resetAt, i18n.language]` and running `npx eslint` on it. The output: `react-hooks/preserve-manual-memoization` error fires at the deps array (`Could not preserve existing manual memoization`). The rule comes from `eslint-plugin-react-hooks@7.0.1` (React Compiler era) which is loaded via `reactHooks.configs.flat.recommended` in `museum-frontend/eslint.config.mjs:64`. The lifted-primitive shape `[resetAtIso, i18n.language]` passes cleanly (probe with the impl shape → 0 errors). The compiler's behavior is documented: it infers the broader `reason` object as the dep when an optional chain accesses a nested field in the deps array, which would force re-format on every PaywallProvider state emission (reference-instability per spec §3.4 D4). The lift to a primitive const preserves the spec's granular memoization intent without weakening to `[reason, i18n.language]`. The inline comment block (lines 108-113) honestly documents the deviation. The commit body explicitly calls it out. UFR-013 transparency exemplary.",
+    "alternativeAvailable": false,
+    "inlineCommentAdequate": true,
+    "lintGreen": true,
+    "specIntentPreserved": true
+  },
+  "hermesIntlVerification": {
+    "runtimeProbeStatus": "NOT_EXECUTED",
+    "decision": "ACCEPTABLE_DEFER_PROVIDED_T3_GATES_MERGE",
+    "rationale": "The implementation has a TWO-LAYER defensive fallback (Number.isNaN short-circuit + outer try/catch on lines 117-129) that would render the raw ISO if Hermes Intl is unavailable. Worst-case behavior on a Hermes-without-Intl device = pre-fix behavior (raw ISO visible). NOT a regression vs baseline. The Jest harness runs against Node Intl (which IS available + ICU-backed), so Jest tests PASS regardless of Hermes runtime support. T3 manual smoke (spec §5 T3 + F3.AC12) is the runtime-verify gate that the green-agent honestly flagged as required pre-merge. The risk is properly framed in spec Risk1 (LOW probability — Hermes 0.14.1 documented to ship ICU DateTimeFormat ; HIGH impact if it materializes). Accepting the defer is honest engineering provided merge-time enforces the T3 smoke.",
+    "ciIntegrationProbeRecommendation": "OPTIONAL_NOT_BLOCKING",
+    "ciIntegrationProbeNotes": "Adding a CI integration runtime probe would require either (a) a Maestro E2E flow that triggers 402 + visually asserts the formatted date in the rendered modal (heavyweight, days of test infra), or (b) an Expo dev-build CI matrix that boots a minimal harness and probes `typeof Intl.DateTimeFormat` (still requires device farm). Both are out of F3 scope. The pragmatic gate is the merge-blocking T3 smoke step in the green-agent's pre-merge checklist. Recommendation: KEEP T3 as a manual gate, do NOT block F3 on CI integration probe. Promote to V1.1 if Hermes Intl drift becomes a recurring risk class."
+  },
+  "honestyVerification": {
+    "testsRerun": {
+      "F3NewTests": "PASS — `npx jest __tests__/features/paywall/QuotaUpsellModal.test.tsx` → 1 suite, 17 passed (7 R1 + 5 F2 + 5 F3). Tail: 'Tests: 17 passed, 17 total / Time: 0.923 s'.",
+      "FERegressionScope": "PASS — `npx jest __tests__/features/paywall __tests__/shared/api/paywall-interceptor __tests__/infrastructure/httpClient.test.ts __tests__/features/auth` → 7 suites, 71 passed. Meets spec ≥71 PASS bar.",
+      "BERegressionScope": "PASS — `pnpm test -- --testPathPattern='(chat-session-quota-ordering|monthlySessionQuota|leads)' --no-coverage` → 10 suites, 75 passed + 1 todo, 76 total. Meets spec ≥75 PASS bar.",
+      "Lint": "PASS — `npm run lint` exit 0 (eslint . --max-warnings=0 + tsc --noEmit all green). No new eslint-disable directives introduced (F3 commit adds no `eslint-disable` — verified via `git diff 3cdebfe8~1 3cdebfe8 | grep eslint-disable` → no matches in QuotaUpsellModal.tsx hunk)."
+    },
+    "scopeBoundaryCheck": "CLEAN — 4 files changed: CLAUDE.md (+1 line doctrine), F3.md (new spec, +449 LoC), QuotaUpsellModal.test.tsx (+132), QuotaUpsellModal.tsx (+35 / -3). PaywallProvider.tsx + app/_layout.tsx + paywall-interceptor.ts + httpClient.ts + all BE files NOT in diff (verified via `git diff 3cdebfe8~1 3cdebfe8 --stat`). Zero collateral.",
+    "greenAgentClaim1_resetAtIsoDeviation": "VERIFIED — I wrote a probe component with `[reason?.resetAt, i18n.language]` deps shape and ran `npx eslint` → `react-hooks/preserve-manual-memoization` error fires ('Could not preserve existing manual memoization'). Lifted-primitive shape `[resetAtIso, i18n.language]` passes ESLint cleanly. The deviation is LEGITIMATE, not invented.",
+    "greenAgentClaim2_hermesIntlNotRuntimeVerified": "VERIFIED — Jest test harness runs against Node Intl (which IS available). The implementation has TWO defensive layers: `Number.isNaN(date.getTime())` short-circuit (line 119) AND outer try/catch (line 117-129). Worst case on Hermes-without-Intl = raw ISO fallback (pre-fix behavior, NOT a regression). T3 manual smoke explicitly flagged as required pre-merge in commit body + spec §3.5 + Risk1.",
+    "greenAgentClaim3_r1IntentImplementation": "VERIFIED — Spec §Appendix A line 440 verbatim states 'F3 implements R1's intent, not supersedes it'. R1 §3.4 D4 (referenced in spec line 41-42) explicitly mandated `Intl.DateTimeFormat` for FE rendering ; the R1 green-agent skipped this step. F3 delivers what R1 specified. NOT a supersession (contrast F1 which DID supersede R1 §3.3 D3). Honest framing in commit body: 'F3 implements R1 §3.4 D4 intent (no supersession needed, just delivery)'.",
+    "memoShapeVerified": "useMemo(() => { if (!resetAtIso) return ''; try { const date = new Date(resetAtIso); if (Number.isNaN(date.getTime())) return resetAtIso; return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(date); } catch { return resetAtIso; } }, [resetAtIso, i18n.language]); — lines 115-130. Primitive `resetAtIso = reason?.resetAt ?? ''` lifted at line 114 satisfies React Compiler preserve-manual-memoization. Defensive Number.isNaN short-circuit + outer try/catch provide defense-in-depth.",
+    "jsxSwapVerified": "YES — line 176: `{t('paywall.resetsOn')} {formattedReset}`. No raw `reason.resetAt` interpolation remains in JSX (verified via `grep -n 'formattedReset\\|reason.resetAt' QuotaUpsellModal.tsx` → only matches are line 115 inside memo definition and line 176 the JSX consumer).",
+    "claudeMdDoctrineVerified": "YES — CLAUDE.md:150 contains '**ISO wire / Intl FE format doctrine**' bullet naming the BE-emits-ISO + FE-formats-via-Intl pattern, the anti-pattern with concrete ugly output, the useMemo+try/catch fallback shape, and the canonical example (QuotaUpsellModal.tsx + F3.md). Slightly compressed vs spec template (drops explicit `dateStyle: 'long'` recommendation + Hermes ICU support note) but the gist transfers.",
+    "newFeatureFlag": false,
+    "newEnvVars": 0,
+    "newEslintDisables": 0,
+    "newDeps": 0,
+    "providerHostByteUnchanged": "YES — `git diff 3cdebfe8~1 3cdebfe8 -- museum-frontend/app/_layout.tsx museum-frontend/features/paywall/providers/PaywallProvider.tsx` returns empty. F3 scope-OUT honored.",
+    "wireContractByteUnchanged": "YES — no museum-backend file in the diff. `monthly-session-quota.middleware.ts` `firstOfNextUtcMonthIso()` emitter and `resetAt: firstOfNextUtcMonthIso()` consumer byte-unchanged. F3 scope-OUT for BE honored exactly.",
+    "anyClaimsContradicted": [],
+    "softGapsNoted": [
+      "Spec F3.AC5 (locale-change-during-modal-open) NOT implemented — replaced by F3.D (defensive fallback) + F3.E (memo stability). F3.R5 (memo re-renders on locale change via `i18n.changeLanguage`) NOT pinned in CI. Functionally exercised by F3.B/F3.C separate renders with mutated mock language, but the in-flight `useTranslation` re-render flow on `languageChanged` event is NOT tested.",
+      "Spec F3.AC6 (Intl.DateTimeFormat constructor spy on 5 email keystrokes) NOT implemented — replaced by F3.E output-equality smoke. F3.N5 (memoization NFR — no per-render Intl allocation) verified by code-review only, not CI gate.",
+      "Spec F3.AC7 (F3 + F2 compose on visible cycle) NOT implemented. F3 + F2 invariants are byte-orthogonal in the source (different dep arrays, different state slots), so behavioral regression risk is low — but the CI gate is absent.",
+      "Spec F3.AC4 (empty-string resetAt fallback) NOT implemented. Component handles via `!resetAtIso` short-circuit at line 116, no test pins.",
+      "T3 manual smoke on real Hermes device NOT performed at review time. Honestly flagged as required pre-merge. Acceptable defer provided merge process enforces T3 gate.",
+      "CLAUDE.md doctrine bullet does not enumerate dateStyle recommendation or Hermes ICU support context per spec template. Reachable via F3.md reference, but soft compression.",
+      "Implementation strengthened spec recommendation (added `Number.isNaN(date.getTime())` short-circuit beyond bare try/catch) without explicitly calling out the strengthening in commit body — soft transparency nit (improvement masked as bare implementation)."
+    ]
+  }
+}

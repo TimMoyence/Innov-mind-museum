@@ -1,5 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,11 +45,6 @@ export default function HomeScreen() {
   const { museum: proactiveMuseum, dismiss: dismissProactiveMuseum } =
     useProactiveMuseumSuggestion();
 
-  const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
-  });
-
   const handleIntentPress = (intent: HomeIntent): void => {
     void startConversation({ intent: INTENT_MAP[intent] });
   };
@@ -61,9 +55,7 @@ export default function HomeScreen() {
 
   return (
     <LiquidScreen background={pickMuseumBackground(0)}>
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
+      <ScrollView
         contentContainerStyle={[
           styles.screen,
           {
@@ -122,7 +114,6 @@ export default function HomeScreen() {
             isSaved={isSaved}
             onSave={() => void save()}
             onSkip={() => void skip()}
-            scrollY={scrollY}
           />
         ) : dismissed && !isDailyArtLoading ? (
           <EmptyState
@@ -192,7 +183,7 @@ export default function HomeScreen() {
             </Text>
           )}
         </Pressable>
-      </Animated.ScrollView>
+      </ScrollView>
     </LiquidScreen>
   );
 }

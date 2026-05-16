@@ -29,11 +29,34 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type {
-  LlmJudgeDecision,
-  LlmJudgePort,
-  LlmJudgeResult,
-} from '@modules/chat/domain/ports/llm-judge.port';
+
+/** Coarse triage label suitable for a downstream cascade. */
+export type LlmJudgeDecision = 'allow' | 'block' | 'review';
+
+/** Validated, port-shaped result returned by the LLM judge. */
+export interface LlmJudgeResult {
+  /** Model self-reported confidence clamped to `[0, 1]`. */
+  confidence: number;
+  /** Triage decision. `'review'` = the judge could not produce a verdict. */
+  decision: LlmJudgeDecision;
+  /** Optional pass-through of the internal verdict label for telemetry only. */
+  reason?: string;
+}
+
+/**
+ * Port for the LLM judge. Implementations must :
+ *   - never throw (fail-open : on any failure, return
+ *     `{ confidence: 0, decision: 'review' }`).
+ *   - honor `signal` cancellation by short-circuiting to `'review'`.
+ */
+export interface LlmJudgePort {
+  /**
+   * Evaluate a prompt and return a triage result. Backward-compat note : the
+   * concrete adapter (`LlmJudgeGuardrail`) wraps the legacy `judgeWithLlm`
+   * function which all five existing call-sites continue to consume directly.
+   */
+  evaluate(prompt: string, signal?: AbortSignal): Promise<LlmJudgeResult>;
+}
 
 /** One of four canonical verdicts emitted by the judge. */
 export type JudgeVerdict = 'allow' | 'block:offtopic' | 'block:injection' | 'block:abuse';

@@ -28,7 +28,7 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
-import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
+import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import { AppError } from '@shared/errors/app.error';
 
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';

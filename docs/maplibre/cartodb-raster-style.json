@@ -1,0 +1,27 @@
+{
+  "version": 8,
+  "name": "Musaium offline raster mirror (CartoDB Positron)",
+  "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  "sources": {
+    "osm-raster": {
+      "type": "raster",
+      "tiles": [
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors, © <a href=\"https://carto.com/\">CARTO</a>",
+      "minzoom": 0,
+      "maxzoom": 19
+    }
+  },
+  "layers": [
+    {
+      "id": "osm-raster-layer",
+      "type": "raster",
+      "source": "osm-raster"
+    }
+  ]
+}

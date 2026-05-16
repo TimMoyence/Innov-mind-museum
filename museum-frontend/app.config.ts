@@ -147,6 +147,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           NSAllowsLocalNetworking: variant === 'development',
           NSRequiresCertificateTransparency: variant === 'production',
         },
+        // Background audio capability — required for TTS playback to continue
+        // when the device locks or the app backgrounds. Backed by
+        // `setAudioModeAsync({ shouldPlayInBackground: true })` in
+        // `useTextToSpeech.ts` (Apple Forum #95216 — declaring without using
+        // triggers App Store reject).
+        UIBackgroundModes: ['audio'],
       },
       privacyManifests: {
         NSPrivacyTracking: false,
@@ -288,6 +294,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       'expo-apple-authentication',
       'expo-font',
+      'expo-image',
       'expo-localization',
       'expo-secure-store',
       'expo-web-browser',

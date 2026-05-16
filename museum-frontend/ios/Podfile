@@ -128,5 +128,28 @@ target 'Musaium' do
       end
       installer.pods_project.save if patched_phase
     end
+
+    # @musaium/xcode26-swift-wholemodule-race
+    # Xcode 26 build system parallelizes the "Copy Swift module" phase
+    # before the wholemodule Swift driver finishes emitting .swiftmodule
+    # for CocoaPods Swift pod targets. Symptom: intermittent
+    #   "Objects-normal/arm64/<Pod>.swiftmodule copy(...): No such file
+    #    or directory (2)"
+    # ExpoModulesCore is hit first because it's the largest Swift pod and
+    # the longest emit window — but any future Swift-heavy pod will trip
+    # the same race.
+    #
+    # Forcing SWIFT_COMPILATION_MODE = singlefile in Debug serializes
+    # per-file emit + copy ordering. Release stays on wholemodule for
+    # binary optimization. Loops every pod target so newly-added packages
+    # inherit the fix automatically — no maintenance when deps change.
+    # Seen 2026-05-14 (Xcode 26.5 / macOS 26.4.1). Remove only after
+    # Apple/CocoaPods publish a confirmed fix for the wholemodule race.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        next unless config.name == 'Debug'
+        config.build_settings['SWIFT_COMPILATION_MODE'] = 'singlefile'
+      end
+    end
   end
 end

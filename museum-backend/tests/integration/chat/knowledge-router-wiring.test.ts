@@ -78,7 +78,7 @@ import { ChatModule } from '@modules/chat/chat-module';
 import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
+import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
 
 /**
@@ -115,9 +115,7 @@ describe('chat-module knowledge router wiring (T3.3 integration)', () => {
     // Wiring contract — the router must be exposed on the built module so
     // upstream observability / debugging / tests can inspect the cascade.
     if (!built.knowledgeRouter) {
-      throw new Error(
-        'BuiltChatModule.knowledgeRouter is undefined — T3.3 wiring missing',
-      );
+      throw new Error('BuiltChatModule.knowledgeRouter is undefined — T3.3 wiring missing');
     }
     router = built.knowledgeRouter;
   });

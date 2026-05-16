@@ -875,7 +875,8 @@
       "fullscreen_close": "Fermer",
       "previous_image": "Image précédente",
       "next_image": "Image suivante",
-      "messages_list": "Messages du chat"
+      "messages_list": "Messages du chat",
+      "follow_up_hint": "Envoie cette question de suivi"
     },
     "onboarding": {
       "skip": "Passer l'introduction",
@@ -1013,7 +1014,8 @@
     "data_images": "Photos que vous partagez (métadonnées supprimées)",
     "data_audio": "Messages vocaux (transcrits uniquement, audio non conservé par l'IA)",
     "data_location": "Votre localisation (si vous choisissez de la partager)",
-    "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)"
+    "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)",
+    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek"
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",
@@ -1121,5 +1123,20 @@
       "title": "Aucune visite",
       "description": "Démarre une conversation et ta visite apparaîtra ici."
     }
+  },
+  "followUpButtons": {
+    "section_label": "Questions rapides"
+  },
+  "paywall": {
+    "modalTitle": "Limite mensuelle atteinte",
+    "modalBody": "Tu as utilisé toutes les conversations incluses dans ton offre gratuite ce mois-ci. Laisse-nous ton email, on te préviendra dès l'ouverture du premium.",
+    "fieldEmail": "Adresse email",
+    "submit": "Rejoindre la liste premium",
+    "sending": "Envoi…",
+    "success": "Merci — on revient vers toi.",
+    "error": "Une erreur est survenue. Réessaye plus tard.",
+    "dismiss": "Fermer",
+    "consent": "J'accepte de recevoir un email à l'ouverture du premium.",
+    "resetsOn": "Réinitialisation le"
   }
 }

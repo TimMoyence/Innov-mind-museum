@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
@@ -53,7 +55,9 @@ function useDebouncedValue(value: string, delay: number): string {
 export default function UsersPage() {
   const adminDict = useAdminDict();
   const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const pathname = usePathname();
+  const locale = pathname.split('/')[1] ?? 'fr';
 
   const [users, setUsers] = useState<AdminUserDTO[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -126,6 +130,20 @@ export default function UsersPage() {
   // ── Ref for modal backdrop ───────────────────────────────────────────
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    if (!editingUser) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !changingRole) setEditingUser(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editingUser, changingRole]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.users}</h1>
@@ -191,20 +209,15 @@ export default function UsersPage() {
                   <th className="px-6 py-3 font-medium text-text-secondary">
                     {adminDict.common.date}
                   </th>
-                  {isAdmin && (
-                    <th className="px-6 py-3 font-medium text-text-secondary">
-                      {adminDict.common.actions}
-                    </th>
-                  )}
+                  <th className="px-6 py-3 font-medium text-text-secondary">
+                    {adminDict.common.actions}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
                 {users.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={isAdmin ? 6 : 5}
-                      className="px-6 py-12 text-center text-text-muted"
-                    >
+                    <td colSpan={6} className="px-6 py-12 text-center text-text-muted">
                       {adminDict.usersPage.emptyState}
                     </td>
                   </tr>
@@ -227,7 +240,7 @@ export default function UsersPage() {
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             u.emailVerified
                               ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'
+                              : 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {u.emailVerified ? adminDict.common.active : adminDict.common.inactive}
@@ -240,20 +253,29 @@ export default function UsersPage() {
                           year: 'numeric',
                         })}
                       </td>
-                      {isAdmin && (
-                        <td className="whitespace-nowrap px-6 py-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingUser(u);
-                              setNewRole(u.role as UserRole);
-                            }}
+                      <td className="whitespace-nowrap px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/${locale}/admin/users/${String(u.id)}`}
+                            aria-label={adminDict.usersPage.viewAria}
                             className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                           >
-                            {adminDict.usersPage.changeRole}
-                          </button>
-                        </td>
-                      )}
+                            {adminDict.usersPage.view}
+                          </Link>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingUser(u);
+                                setNewRole(u.role as UserRole);
+                              }}
+                              className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
+                            >
+                              {adminDict.usersPage.changeRole}
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -273,7 +295,7 @@ export default function UsersPage() {
 
       {/* Change Role Modal */}
       {editingUser && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -281,9 +303,6 @@ export default function UsersPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingUser(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditingUser(null);
           }}
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">

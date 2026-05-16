@@ -17,12 +17,15 @@ process.env.LLM_CB_OPEN_DURATION_MS ??= '500';
  * Build a LangChainChatOrchestrator wired with a fake model that always throws.
  * The real circuit breaker inside the orchestrator trips after LLM_CB_FAILURE_THRESHOLD
  * consecutive failures — this is what the circuit-breaker chaos tests exercise.
+ * Returns BOTH the orchestrator and its breaker instance so callers can share
+ * the breaker across an orchestrator swap (TD-6 — HALF_OPEN → CLOSED test).
  * @param errorMessage - Message of the synthetic error thrown by the fake model on every call.
- * @returns A ChatOrchestrator whose model always rejects with `errorMessage`.
+ * @returns The orchestrator and the breaker it was constructed with.
  */
-async function buildFailingOrchestrator(
-  errorMessage = 'LLM provider 500',
-): Promise<ChatOrchestrator> {
+async function buildFailingOrchestrator(errorMessage = 'LLM provider 500'): Promise<{
+  orchestrator: ChatOrchestrator;
+  breaker: import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker').LLMCircuitBreaker;
+}> {
   const { LangChainChatOrchestrator } =
     await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
   const { LLMCircuitBreaker } =
@@ -42,10 +45,14 @@ async function buildFailingOrchestrator(
     },
   } as unknown as LangChainChatOrchestratorDeps['model'];
 
-  return new LangChainChatOrchestrator({
-    model: alwaysFailModel,
-    circuitBreaker: new LLMCircuitBreaker(),
-  });
+  const breaker = new LLMCircuitBreaker();
+  return {
+    orchestrator: new LangChainChatOrchestrator({
+      model: alwaysFailModel,
+      circuitBreaker: breaker,
+    }),
+    breaker,
+  };
 }
 
 describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
@@ -66,7 +73,7 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
   }
 
   it('3 consecutive failures → breaker OPEN; 4th call returns 503 immediately', async () => {
-    const orchestrator = await buildFailingOrchestrator();
+    const { orchestrator } = await buildFailingOrchestrator();
     const harness = await createE2EHarness({ chatOrchestratorOverride: orchestrator });
     try {
       const { token } = await registerAndLogin(harness);
@@ -98,14 +105,65 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
     }
   });
 
-  // TD-5 (docs/TECH_DEBT.md): pending the harness orchestrator stub-swap.
-  // LangChainChatOrchestrator holds the failing model by reference; mid-run swap to a
-  // success model is unsupported. Promote this placeholder to a real `it(...)` once the
-  // harness gains `orchestratorReset(newOverride)`.
-  it.todo('after openDurationMs, breaker → HALF_OPEN; success closes it');
+  it('after openDurationMs, breaker → HALF_OPEN; success closes it', async () => {
+    const { orchestrator: failingOrchestrator, breaker } = await buildFailingOrchestrator();
+    const harness = await createE2EHarness({ chatOrchestratorOverride: failingOrchestrator });
+    try {
+      const { token } = await registerAndLogin(harness);
+      const sessionRes = await harness.request(
+        '/api/chat/sessions',
+        { method: 'POST', body: JSON.stringify({ locale: 'en-US', museumMode: false }) },
+        token,
+      );
+      const sid = (sessionRes.body as { session: { id: string } }).session.id;
+
+      // Trip the breaker: 3 failing calls -> OPEN.
+      for (let i = 0; i < 3; i += 1) await chatOnce(harness, token, sid, `trip-${i}`);
+      const blocked = await chatOnce(harness, token, sid, 'check-open');
+      expect(blocked.status).toBe(503);
+      expect(breaker.getState().state).toBe('OPEN');
+
+      // Build a success orchestrator that SHARES the same breaker, so the post-trip
+      // OPEN state is what the new model observes — without this, a fresh breaker
+      // would start CLOSED and the test would not exercise HALF_OPEN -> CLOSED.
+      const { LangChainChatOrchestrator } =
+        await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
+      const successModel = {
+        invoke: async () => ({ content: 'recovered response' }),
+        stream: async function* () {
+          yield { content: 'recovered stream' };
+        },
+      };
+      const successOrchestrator = new LangChainChatOrchestrator({
+        model: successModel as unknown as LangChainChatOrchestratorDeps['model'],
+        circuitBreaker: breaker, // SAME breaker instance — critical invariant
+      });
+
+      // Wait past openDurationMs so the breaker auto-transitions OPEN -> HALF_OPEN
+      // on the next state read.
+      const openDuration = Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 500);
+      await new Promise((r) => setTimeout(r, openDuration + 100));
+
+      // Swap to the success orchestrator.
+      harness.orchestratorReset(successOrchestrator);
+
+      // Next call: breaker reads HALF_OPEN, probes the (now success) model,
+      // probe succeeds, breaker transitions CLOSED.
+      const recovered = await chatOnce(harness, token, sid, 'after-recovery');
+      expect([200, 201]).toContain(recovered.status);
+      expect(breaker.getState().state).toBe('CLOSED');
+
+      // Sanity: a second call also passes (breaker stays CLOSED, not re-tripped).
+      const stillClosed = await chatOnce(harness, token, sid, 'confirm-closed');
+      expect([200, 201]).toContain(stillClosed.status);
+      expect(breaker.getState().state).toBe('CLOSED');
+    } finally {
+      await harness.stop();
+    }
+  });
 
   it('repeated failure cycles: breaker re-opens after each round', async () => {
-    const orchestrator = await buildFailingOrchestrator();
+    const { orchestrator } = await buildFailingOrchestrator();
     const harness = await createE2EHarness({ chatOrchestratorOverride: orchestrator });
     try {
       const { token } = await registerAndLogin(harness);
@@ -188,7 +246,7 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
   });
 
   it('CIRCUIT_BREAKER_OPEN response code is 503 (banking-grade — correct status code)', async () => {
-    const orchestrator = await buildFailingOrchestrator();
+    const { orchestrator } = await buildFailingOrchestrator();
     const harness = await createE2EHarness({ chatOrchestratorOverride: orchestrator });
     try {
       const { token } = await registerAndLogin(harness);
@@ -208,7 +266,7 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
   });
 
   it('breaker open response body includes a structured error code, not a stack trace', async () => {
-    const orchestrator = await buildFailingOrchestrator();
+    const { orchestrator } = await buildFailingOrchestrator();
     const harness = await createE2EHarness({ chatOrchestratorOverride: orchestrator });
     try {
       const { token } = await registerAndLogin(harness);

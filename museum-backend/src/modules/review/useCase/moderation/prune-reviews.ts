@@ -28,6 +28,51 @@ export interface PruneReviewsConfig {
 }
 
 /**
+ * Run one chunked DELETE pass for the given status. Returns the total number
+ * of rows deleted across all chunks.
+ *
+ * Uses a do/while loop so the first DELETE always fires (even on an empty
+ * table), and exits cleanly when a chunk reports 0 affected rows. TypeORM
+ * 0.3.x returns DELETE results as `[rows, rowCount]` — see
+ * prune-support-tickets.ts for the production-incident background (2026-05-08).
+ */
+async function prunePass(
+  dataSource: DataSource,
+  status: 'rejected' | 'pending',
+  cutoff: Date,
+  batchLimit: number,
+  logKey: string,
+): Promise<number> {
+  // `status` is a TS literal-typed argument (`'rejected' | 'pending'`) — compiler-enforced,
+  // never user input — so interpolating it into the SQL string is safe and keeps the
+  // EXPLAIN plan identical to the pre-refactor literal-status query.
+  const sql = `DELETE FROM "reviews"
+       WHERE id IN (
+         SELECT id FROM "reviews"
+         WHERE "status" = '${status}'
+           AND "updatedAt" < $1
+         ORDER BY "updatedAt" ASC
+         LIMIT $2
+       )
+       RETURNING id`;
+  let totalDeleted = 0;
+  let chunkDeleted: number;
+  do {
+    const result = await dataSource.query<[unknown[], number] | undefined>(sql, [
+      cutoff.toISOString(),
+      batchLimit,
+    ]);
+    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
+    totalDeleted += chunkDeleted;
+    if (chunkDeleted > 0) {
+      logger.info(logKey, { deleted: chunkDeleted, totalSoFar: totalDeleted });
+      await sleep(CHUNK_THROTTLE_MS);
+    }
+  } while (chunkDeleted > 0);
+  return totalDeleted;
+}
+
+/**
  * Hard-deletes reviews in two passes:
  *   1. status = 'rejected' AND updatedAt < NOW() - rejectedDays
  *   2. status = 'pending'  AND updatedAt < NOW() - pendingDays
@@ -49,61 +94,20 @@ export async function pruneReviews(
   const rejectedCutoff = new Date(Date.now() - cfg.rejectedDays * 24 * 60 * 60 * 1000);
   const pendingCutoff = new Date(Date.now() - cfg.pendingDays * 24 * 60 * 60 * 1000);
 
-  // Pass 1: rejected reviews
-  let rejectedDeleted = 0;
-  let chunkDeleted = -1;
-  while (chunkDeleted !== 0) {
-    // TypeORM 0.3.x DELETE result is `[rows, rowCount]` — see prune-support-tickets.ts
-    // for the production-incident background (2026-05-08).
-    const result = await dataSource.query<[unknown[], number] | undefined>(
-      `DELETE FROM "reviews"
-       WHERE id IN (
-         SELECT id FROM "reviews"
-         WHERE "status" = 'rejected'
-           AND "updatedAt" < $1
-         ORDER BY "updatedAt" ASC
-         LIMIT $2
-       )
-       RETURNING id`,
-      [rejectedCutoff.toISOString(), cfg.batchLimit],
-    );
-    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
-    rejectedDeleted += chunkDeleted;
-    if (chunkDeleted > 0) {
-      logger.info('prune_reviews_rejected_chunk', {
-        deleted: chunkDeleted,
-        totalSoFar: rejectedDeleted,
-      });
-      await sleep(CHUNK_THROTTLE_MS);
-    }
-  }
-
-  // Pass 2: pending reviews
-  let pendingDeleted = 0;
-  chunkDeleted = -1;
-  while (chunkDeleted !== 0) {
-    const result = await dataSource.query<[unknown[], number] | undefined>(
-      `DELETE FROM "reviews"
-       WHERE id IN (
-         SELECT id FROM "reviews"
-         WHERE "status" = 'pending'
-           AND "updatedAt" < $1
-         ORDER BY "updatedAt" ASC
-         LIMIT $2
-       )
-       RETURNING id`,
-      [pendingCutoff.toISOString(), cfg.batchLimit],
-    );
-    chunkDeleted = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : 0;
-    pendingDeleted += chunkDeleted;
-    if (chunkDeleted > 0) {
-      logger.info('prune_reviews_pending_chunk', {
-        deleted: chunkDeleted,
-        totalSoFar: pendingDeleted,
-      });
-      await sleep(CHUNK_THROTTLE_MS);
-    }
-  }
+  const rejectedDeleted = await prunePass(
+    dataSource,
+    'rejected',
+    rejectedCutoff,
+    cfg.batchLimit,
+    'prune_reviews_rejected_chunk',
+  );
+  const pendingDeleted = await prunePass(
+    dataSource,
+    'pending',
+    pendingCutoff,
+    cfg.batchLimit,
+    'prune_reviews_pending_chunk',
+  );
 
   return {
     rowsAffected: rejectedDeleted + pendingDeleted,

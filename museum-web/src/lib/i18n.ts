@@ -54,6 +54,8 @@ export interface Dictionary {
     googlePlay: string;
     appStorePrefix: string;
     googlePlayPrefix: string;
+    appStoreHref: string;
+    googlePlayComingSoon: string;
   };
   chatShowcase: {
     title: string;
@@ -95,6 +97,8 @@ export interface Dictionary {
       privacy: string;
       support: string;
       accessibility: string;
+      security: string;
+      b2b: string;
     };
   };
   resetPassword: {
@@ -139,6 +143,48 @@ export interface Dictionary {
       title: string;
       subtitle: string;
       steps: { title: string; description: string }[];
+    };
+    b2b: {
+      metadata: { title: string; description: string };
+      hero: {
+        title: string;
+        subtitle: string;
+        ctaPrimary: string;
+        ctaSecondary: string;
+      };
+      problem: { title: string; body: string };
+      solution: { title: string; body: string };
+      differentiators: { title: string; description: string }[];
+      pricing: { title: string; tease: string; contactCta: string };
+      contact: {
+        title: string;
+        subtitle: string;
+        fieldEmail: string;
+        fieldName: string;
+        fieldMuseum: string;
+        fieldRole: string;
+        roleOptions: { director: string; curator: string; digital: string; other: string };
+        fieldMessage: string;
+        fieldConsent: string;
+        consentPrivacyLink: string;
+        submit: string;
+        sending: string;
+        success: string;
+        error: string;
+        errorValidation: string;
+      };
+    };
+    beta: {
+      heading: string;
+      subheading: string;
+      fieldEmail: string;
+      fieldConsent: string;
+      consentPrivacyLink: string;
+      submit: string;
+      sending: string;
+      success: string;
+      error: string;
+      errorValidation: string;
     };
   };
   admin: {
@@ -212,6 +258,89 @@ export interface Dictionary {
       columnLastLogin: string;
       emptyState: string;
       changeRole: string;
+      view: string;
+      viewAria: string;
+    };
+    userDetailPage: {
+      subtitle: string;
+      backToList: string;
+      loading: string;
+      errorNotFound: string;
+      errorGeneric: string;
+      errorLastAdmin: string;
+      errorSelfAction: string;
+      sectionIdentity: string;
+      sectionStatus: string;
+      sectionLifecycle: string;
+      fieldId: string;
+      fieldEmail: string;
+      fieldName: string;
+      fieldRole: string;
+      fieldMuseum: string;
+      fieldVerified: string;
+      fieldSuspended: string;
+      fieldDeletedAt: string;
+      fieldCreated: string;
+      fieldUpdated: string;
+      badgeVerified: string;
+      badgeUnverified: string;
+      badgeSuspended: string;
+      badgeActive: string;
+      badgeDeleted: string;
+      noValue: string;
+      actionsTitle: string;
+      actionChangeRole: string;
+      actionSuspend: string;
+      actionUnsuspend: string;
+      actionDelete: string;
+      confirmSuspendTitle: string;
+      confirmSuspendBody: string;
+      confirmSuspendButton: string;
+      confirmUnsuspendTitle: string;
+      confirmUnsuspendBody: string;
+      confirmUnsuspendButton: string;
+      confirmDeleteTitle: string;
+      confirmDeleteBody: string;
+      confirmDeleteTypeEmailLabel: string;
+      confirmDeleteButton: string;
+      successRoleChanged: string;
+      successSuspended: string;
+      successUnsuspended: string;
+      successDeleted: string;
+      newRoleLabel: string;
+      tier: {
+        label: string;
+        currentFree: string;
+        currentPremium: string;
+        toggleToPremium: string;
+        toggleToFree: string;
+        confirmTitle: string;
+        confirmBody: string;
+        confirmCta: string;
+        cancel: string;
+        success: string;
+        error: string;
+      };
+    };
+    mfaPage: {
+      successTitle: string;
+      successBody: string;
+      backToDashboard: string;
+      setupTitle: string;
+      setupIntro: string;
+      generateButton: string;
+      generating: string;
+      qrAriaLabel: string;
+      manualSecretIntro: string;
+      recoveryTitle: string;
+      recoveryWarning: string;
+      copyAll: string;
+      copyAllAria: string;
+      codeLabel: string;
+      codePlaceholder: string;
+      verifyButton: string;
+      verifying: string;
+      errorPrefix: string;
     };
     reportsPage: {
       subtitle: string;
@@ -279,6 +408,17 @@ export interface Dictionary {
       topMuseums: string;
       museum: string;
       guardrailBlockRate: string;
+    };
+    /**
+     * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind
+     * so the FE button can be wired with a single `kind` prop. CSV column
+     * headers themselves stay English-only (parser stability) — only the
+     * button copy is localised.
+     */
+    export: {
+      sessions: { label: string; downloading: string; error: string };
+      reviews: { label: string; downloading: string; error: string };
+      tickets: { label: string; downloading: string; error: string };
     };
   };
 }

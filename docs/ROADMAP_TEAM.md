@@ -75,11 +75,11 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 - [x] Output structured : `.claude/skills/team/team-reports/<run>/code-review.json` schema défini dans reviewer.md `<output_format>`
 - [x] Décision : pas de fichier `code-reviewer.md` séparé — réutiliser reviewer.md existant (lint/tsc/tests délégués aux hooks par règle V12 #9)
 
-### T1.3 Sonnet swap Documenter (C2)
+### ~~T1.3 Sonnet swap Documenter (C2)~~ — REVERTED 2026-05-14, voir KILLED
 
-- [x] Edit `.claude/agents/documenter.md` — `model: claude-sonnet-4-6` (+ inline justification ligne 11). state.schema.json enum étendu. SKILL.md REGLES §2 cohérent.
-- [x] UFR-010 amendment — `.exceptions[]` array sur UFR-010 listant explicit role `documenter` + amendedAt + ticket + rationale. ADR-029 publié.
-- [ ] Verify regression — 5 runs documenter Sonnet vs Opus, compare output qualité (manuel multi-cycle, voir ADR-029 §Verification protocol)
+- [x] ~~Edit `.claude/agents/documenter.md` — `model: claude-sonnet-4-6`~~ revert → `claude-opus-4-6`
+- [x] ~~UFR-010 amendment `exceptions[]`~~ revert → `exceptions: []`, history conservé. ADR-029 amendé "reverted 2026-05-14".
+- [x] ~~Verify regression 5 runs~~ — non exécuté, user a tranché de rester Opus partout pour qualité prod. Économie projetée (~$0.05/run) négligeable face au risque pré-launch.
 
 ### T1.4 Spec Kit mandatoire enforcement (KR2)
 
@@ -98,8 +98,11 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 
 ### T1.5b Real-mode baseline rebake + bake helper
 
-- [ ] After first Mon-04:00 UTC real Anthropic-API cron run lands, write `lib/quality-baseline-bake.sh` to derive new `baseline-scores.json` from a real-mode `output.json` (axisMeans + perFeature)
-- [ ] Re-commit baseline w/ `calibrationMode: "real-anthropic-opus-4.7"` and timestamp
+> **Provider swap 2026-05-14** : T1.5b root cause unblocked — le cron Mon 2026-05-04 et Mon 2026-05-11 ont firé mais TOUS en failure (`ANTHROPIC_API_KEY secret is not set` — non provisionné sur le repo GitHub). Sur instruction user "pas de clef Anthropic, utiliser GPT à la place", `lib/reviewer-eval-shim.sh` + `.github/workflows/team-quality-regression.yml` + `team-promptfoo/promptfooconfig.yaml` ont été swappés Anthropic `/v1/messages` → OpenAI `/v1/chat/completions` (modèle `gpt-4o` par défaut, override via `REVIEWER_EVAL_MODEL`). Action restante côté toi : `gh secret set OPENAI_API_KEY` (le repo a 0 secret OpenAI actuellement). Une fois le secret poussé, le cron Mon 2026-05-18 produira le premier `output.json` réel.
+
+- [ ] Confirmer `OPENAI_API_KEY` secret repo poussé (action manuelle user — bloque le prochain cron)
+- [ ] After first Mon-04:00 UTC real OpenAI-API cron run lands, write `lib/quality-baseline-bake.sh` to derive new `baseline-scores.json` from a real-mode `output.json` (axisMeans + perFeature)
+- [ ] Re-commit baseline w/ `calibrationMode: "real-openai-gpt-4o"` and timestamp
 - [ ] Document rebake protocol in `team-promptfoo/README.md` (replace mock-bootstrap section with real-baked steps)
 
 ### T1.6 Auto-consolidation roadmap (intégration ROADMAP × /team) — ✅ done 2026-05-03
@@ -110,16 +113,16 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 
 Run de référence : `team-state/2026-05-03-t1-6-roadmap-auto-consolidation/` (spec + design + tasks + STORY).
 
-### T1.7 Deploy ops follow-ups (sprint 2026-05-05 review)
+### T1.7 Deploy ops follow-ups (sprint 2026-05-05 review) — ✅ closed 2026-05-14 (5/6 + 1 confirmé user)
 
-> Issus de la revue pédagogique du sprint 2026-04-30 → 2026-05-05 (cf. `docs/explications-sprint-2026-05-05/`). Tous à boucler avant ou immédiatement après le launch 2026-06-01.
+> Issus de la revue pédagogique du sprint 2026-04-30 → 2026-05-05 (cf. `docs/explications-sprint-2026-05-05/`). Bouclés 2026-05-14 sauf RedisNonceStore qui était listé "skip pré-launch" mais a finalement été wiré dans la session.
 
-- [ ] **Audit-chain alerting — wire email Brevo (option B)** — le cron `audit-chain-nightly` pingue actuellement `DEPLOY_ALERT_SLACK_WEBHOOK`, secret jamais set → alerte perdue. Patch `museum-backend/scripts/audit-chain-verify.ts` pour ajouter un fallback email via `BREVO_API_KEY` (déjà présent), destinataire `m.rivet@expertgcl.fr`. Cf. `docs/explications-sprint-2026-05-05/03-audit-chain-slack.md` § Option B. ~10 min de patch + 1 commit.
-- [ ] **Guardrails V2 calibrage V1** — flipper `GUARDRAILS_V2_CANDIDATE=off` dans `/srv/museum/.env` prod pour ne garder que le keyword pre-filter (~5 ms) + Promptfoo CI. Optionnel : commenter le service `llm-guard` dans `museum-backend/deploy/docker-compose.prod.yml` pour libérer ~2 GB RAM. Cf. `docs/explications-sprint-2026-05-05/04-guardrails-juges-promptfoo-latence.md`. ~5 min de modif env + restart backend.
-- [ ] **GHCR_TOKEN scope check** — vérifier que le PAT GitHub a `read:packages` en plus de `write:packages` pour que `cosign verify` puisse télécharger les signatures attachées. GitHub → Developer settings → Personal access tokens. ~2 min.
-- [ ] **Trim INSULT_KEYWORDS français** (optionnel, à valider) — retirer `con` et `dumb` qui produisent des faux positifs sur des phrases familières inoffensives ("ce con de Cézanne"). PR ~5 min.
-- [ ] **Wire `RedisNonceStore`** (uniquement si scale multi-instance prévu post-launch) — remplacer `new InMemoryNonceStore()` ligne 111 de `museum-backend/src/modules/auth/useCase/index.ts`. Single-instance V1 = OK sans ce fix. Multi-instance avec rotation LB = social login casse sans ce fix.
-- [ ] **Tighten `@xmldom/xmldom` override** `^0.8.10` → `^0.8.12` dans `museum-frontend/package.json` pour fermer la fenêtre théorique sous le 0.8.12 advisory fix. ~30 sec de modif.
+- [x] **Audit-chain alerting — wire email Brevo (option B)** — `museum-backend/scripts/audit-chain-verify.ts` : `postBrevoAlert()` ajouté, fire en parallèle de `postSlackAlert()` quand `BREVO_API_KEY` + `AUDIT_CHAIN_ALERT_EMAIL` sont set (défault prod = `m.rivet@expertgcl.fr` dans `.env.production.example`).
+- [x] **Guardrails V2 — flag retirée + defense-in-depth dual-layer activée**. `GUARDRAILS_V2_CANDIDATE` supprimé du code (env-resolvers + env.types + env.ts + chat-module). L'ancien design imposait une mutualité exclusive sidecar OU judge ; en prod (`CANDIDATE=llm-guard`) le judge n'a **jamais** tourné. Nouveau design : sidecar self-activé via présence URL, judge self-activé via `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` (défaut 500c = $5/jour cap OpenAI), **les deux tournent en parallèle**. Prod `/srv/museum/.env` mise à jour 2026-05-14 (TIMEOUT_MS=1500 post-incident, judge layer activé avec cap $5/jour OpenAI + budgetBackend=redis). ADR-015 amendée 2026-05-14 (defense-in-depth explicite), ADR-047 reste valide. Cohérent `feedback_no_feature_flags_prelaunch`.
+- [x] **GHCR_TOKEN scope check** — confirmé user 2026-05-14 "je l'ai ce token", read:packages présent.
+- [x] **Trim INSULT_KEYWORDS français** — `dumb` (EN) + `con` (FR) retirés de `museum-backend/src/modules/chat/useCase/guardrail/art-topic-guardrail.ts`. Test `blocks 3-char insult "con"` supprimé. 98/98 tests `art-topic-guardrail*` passent.
+- [x] **Wire `RedisNonceStore`** — pulled forward (V1 single-instance ok sans, mais user a tranché de wirer maintenant pour défense multi-instance opportuniste). Pattern setter-based comme `setRedisRateLimitStore` : `socialNonceStore` singleton délégant + `setSocialNonceStore()` swap au boot dans `src/index.ts` quand le client Redis est prêt. 19/19 tests `nonce-store` passent (incl. 2 nouveaux pour le swap).
+- [x] **Tighten `@xmldom/xmldom` override** `^0.8.10` → `^0.8.12` dans `museum-frontend/package.json`. Sécurise CDATASection injection (GHSA-wh4c-j3r5-mjhp).
 
 ---
 
@@ -165,7 +168,9 @@ Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décisi
 |---|---|---|
 | `-30%/3×` cost claim research report (UFR-010 cancellation) | 2026-05-02 | Tous-Opus override pour qualité prod |
 | 9-agent layout pré-V12 | 2026-05-02 | Consolidé en 6 agents (architect/editor/verifier/security/reviewer/documenter) |
-| Tous-Opus rigide pour tous rôles | 2026-05-03 | Sonnet OK pour Documenter (T1.3) |
+| ~~Tous-Opus rigide pour tous rôles~~ | ~~2026-05-03~~ | (reverted 2026-05-14 — T1.3 Sonnet swap Documenter annulé, retour Tous-Opus strict) |
+| T1.3 Documenter Sonnet swap | 2026-05-14 | 5-run verification jamais exécuté, user a tranché qualité prod > économie négligeable (~$0.05/run). ADR-029 amendé "reverted". |
+| GUARDRAILS_V2_CANDIDATE master flag | 2026-05-14 | T1.7#2 — feature-flag interdit pré-launch (`feedback_no_feature_flags_prelaunch`). Remplacé par self-activation par config presence (URL pour llm-guard sidecar, budget>0 pour judge layer). ADR-015 amendée. |
 
 ---
 

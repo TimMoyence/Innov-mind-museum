@@ -245,6 +245,7 @@ export function renderEmailLayout(input: EmailLayoutInput): string {
   const fallbackPrompt = FALLBACK_PROMPT[locale];
   const preheader = input.preheader ?? '';
   const logoUrl = resolveLogoUrl(input.logoUrl);
+  // Stryker disable next-line StringLiteral: trailing `?? ''` reached only when both fallbackUrl and ctaUrl are nullish; in that state buildCtaTable returns '' at the `!ctaUrl` guard (L232) without ever rendering fallbackUrl, so mutating the literal is unobservable. Verified equivalent 2026-05-13.
   const fallbackUrl = input.fallbackUrl ?? input.ctaUrl ?? '';
   const ctaTable = buildCtaTable(input.ctaLabel, input.ctaUrl, fallbackUrl, fallbackPrompt);
   const footerNoteBlock = input.footerNote ? renderFooterNote(input.footerNote) : '';

@@ -7,19 +7,26 @@
 # every gate below (.github/workflows/sentinel-mirror.yml) so any bypass is
 # caught at PR time. See docs/CONTRIBUTING.md § Pre-push hooks (NO BYPASS).
 #
-# Budget: < 30 seconds typical.
+# Budget: < 2 minutes typical (shift-left doctrine — 2 min local > 15 min CI rouge).
 # Gates (each fails fast via `set -e`):
 #   1. Backend tsc          — pnpm lint
 #   2. Frontend tsc         — npm run lint
 #   3. Web tsc              — pnpm lint
 #   4. OpenAPI sync         — backend validate + frontend types check
 #   5. Migration revertibility sentinel
-#   6. Cache-key parity sentinel (FE/BE) — auto-skips if test absent
-#   7. IDOR matrix smoke sentinel        — auto-skips if test absent
-#   8. Guardrails ratchet sentinel       — keyword count >= baseline
-#   9. as-any ratchet (full repo)        — count <= baseline
-#  10. Sentry-scrubber parity sentinel   — PII redaction divergence guard
+#   6. Cache-key parity sentinel (FE/BE)            — auto-skips if test absent
+#   7. IDOR matrix smoke sentinel                   — auto-skips if test absent
+#   8. Guardrails ratchet sentinel                  — keyword count >= baseline
+#   9. as-any ratchet (full repo)                   — count <= baseline
+#  10. Sentry-scrubber parity sentinel              — PII redaction divergence guard
 #  11. Gitleaks scan on push range
+#  12. Contract OpenAPI test (BE)                   — pnpm test:contract:openapi
+#  13. Migration down() body non-trivial (BE)       — node check-migration-down.cjs
+#  14. ast-grep rules                               — auto-skips if ast-grep absent
+#  15. OpenAPI breaking changes vs upstream         — auto-skips if oasdiff absent
+#  16. Affected unit tests BE                       — jest --findRelatedTests
+#  17. Affected tests FE                            — jest --findRelatedTests
+#  18. Affected tests Web                           — vitest run --changed
 # =============================================================================
 set -e
 
@@ -107,8 +114,107 @@ else
 fi
 gate_end "Gate 11"
 
+# ─── Resolve push range for affected-tests gates ───────────────────────────
+upstream_ref="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo '')"
+if [ -n "$upstream_ref" ]; then
+  push_base="$upstream_ref"
+else
+  push_base="HEAD~10"
+fi
+# Files touched in push range — used by affected-tests gates below.
+# Exclude deletions (`-d` diff filter is added per-language since exclusions differ).
+touched_be=$(git diff --name-only --diff-filter=d "$push_base..HEAD" -- 'museum-backend/src/**/*.ts' 'museum-backend/src/**/*.tsx' 2>/dev/null | grep -vE '\.(d\.ts|test\.ts|test\.tsx)$' | grep -vE '/__tests__/' || true)
+touched_fe=$(git diff --name-only --diff-filter=d "$push_base..HEAD" -- 'museum-frontend/**/*.ts' 'museum-frontend/**/*.tsx' 2>/dev/null | grep -vE '\.(d\.ts|test\.ts|test\.tsx)$' | grep -vE '/__tests__/|/shared/api/generated/' || true)
+touched_web=$(git diff --name-only --diff-filter=d "$push_base..HEAD" -- 'museum-web/src/**/*.ts' 'museum-web/src/**/*.tsx' 2>/dev/null | grep -vE '\.test\.(ts|tsx)$' | grep -vE '/__tests__/' || true)
+
+# ─── Gate 12 — Contract OpenAPI test (BE) ──────────────────────────────────
+gate_start "Gate 12/18 contract OpenAPI test (backend)"
+( cd museum-backend && pnpm run test:contract:openapi ) || {
+  echo "[pre-push] ✗ contract OpenAPI test failed — handler ↔ spec divergence"; exit 1;
+}
+gate_end "Gate 12"
+
+# ─── Gate 13 — Migration down() body non-trivial (BE) ──────────────────────
+gate_start "Gate 13/18 migration down() body non-trivial (backend)"
+( cd museum-backend && node scripts/check-migration-down.cjs ) || {
+  echo "[pre-push] ✗ a migration has an empty or throwing down() — auto-rollback would break"; exit 1;
+}
+gate_end "Gate 13"
+
+# ─── Gate 14 — ast-grep rules ──────────────────────────────────────────────
+gate_start "Gate 14/18 ast-grep rules (tools/ast-grep-rules/)"
+if command -v ast-grep >/dev/null 2>&1; then
+  # Scan all source files against committed rules (rules YAML files declare their own scope)
+  ast-grep scan --config sgconfig.yml --error 2>&1 | tee /tmp/ast-grep-output.txt
+  if grep -qE '^(error|warning)' /tmp/ast-grep-output.txt; then
+    echo "[pre-push] ✗ ast-grep flagged a rule violation — see output above"; exit 1
+  fi
+else
+  echo "[pre-push] ⚠ ast-grep binary not found — install: brew install ast-grep (gate skipped)"
+fi
+gate_end "Gate 14"
+
+# ─── Gate 15 — OpenAPI breaking changes vs upstream ────────────────────────
+gate_start "Gate 15/18 OpenAPI breaking changes vs upstream"
+if command -v oasdiff >/dev/null 2>&1; then
+  if echo "$touched_be" | grep -q "openapi.json" || git diff --name-only "$push_base..HEAD" 2>/dev/null | grep -q "museum-backend/openapi/openapi.json"; then
+    upstream_sha="$(git rev-parse "$push_base" 2>/dev/null || echo '')"
+    if [ -n "$upstream_sha" ]; then
+      git show "$upstream_sha:museum-backend/openapi/openapi.json" > /tmp/openapi-base.json 2>/dev/null || true
+      if [ -s /tmp/openapi-base.json ]; then
+        oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR || {
+          echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
+        }
+      fi
+    fi
+  else
+    echo "[pre-push]   (no openapi.json changes in push range — skipped)"
+  fi
+else
+  echo "[pre-push] ⚠ oasdiff binary not found — install: curl -fsSL https://raw.githubusercontent.com/oasdiff/oasdiff/main/install.sh | sh (gate skipped)"
+fi
+gate_end "Gate 15"
+
+# ─── Gate 16 — Affected unit tests (BE) ────────────────────────────────────
+gate_start "Gate 16/18 affected unit tests (backend) — jest --findRelatedTests"
+if [ -n "$touched_be" ]; then
+  echo "[pre-push]   $(echo "$touched_be" | wc -l | tr -d ' ') BE source file(s) changed — running related tests"
+  # shellcheck disable=SC2086
+  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) || {
+    echo "[pre-push] ✗ affected backend tests failed"; exit 1;
+  }
+else
+  echo "[pre-push]   (no BE source files changed in push range — skipped)"
+fi
+gate_end "Gate 16"
+
+# ─── Gate 17 — Affected tests (FE) ─────────────────────────────────────────
+gate_start "Gate 17/18 affected tests (frontend) — jest --findRelatedTests"
+if [ -n "$touched_fe" ]; then
+  echo "[pre-push]   $(echo "$touched_fe" | wc -l | tr -d ' ') FE source file(s) changed — running related tests"
+  # shellcheck disable=SC2086
+  ( cd museum-frontend && npx jest --watchman=false --runInBand --findRelatedTests --passWithNoTests --coverage=false $(echo "$touched_fe" | sed 's|^museum-frontend/||') ) || {
+    echo "[pre-push] ✗ affected frontend tests failed"; exit 1;
+  }
+else
+  echo "[pre-push]   (no FE source files changed in push range — skipped)"
+fi
+gate_end "Gate 17"
+
+# ─── Gate 18 — Affected tests (Web) ────────────────────────────────────────
+gate_start "Gate 18/18 affected tests (web) — vitest run --changed"
+if [ -n "$touched_web" ]; then
+  echo "[pre-push]   $(echo "$touched_web" | wc -l | tr -d ' ') web source file(s) changed — running vitest --changed"
+  ( cd museum-web && pnpm exec vitest run --changed "$push_base" --passWithNoTests ) || {
+    echo "[pre-push] ✗ affected web tests failed"; exit 1;
+  }
+else
+  echo "[pre-push]   (no web source files changed in push range — skipped)"
+fi
+gate_end "Gate 18"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 11 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 18 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"

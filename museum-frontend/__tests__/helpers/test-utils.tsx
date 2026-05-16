@@ -133,6 +133,12 @@ jest.mock('expo-linear-gradient', () => {
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
   wrap: (component: unknown) => component,
+  // R1 C6 (2026-05-15) — `addBreadcrumb` is called by the paywall provider +
+  // modal for `paywall_modal_shown` / `paywall_cta_clicked` / `paywall_email_captured`
+  // telemetry. Mock returns void so tests using `safeAddBreadcrumb` shim detect
+  // the method as present and call through (allowing per-file `addBreadcrumb`
+  // spy via `jest.requireMock('@sentry/react-native').addBreadcrumb`).
+  addBreadcrumb: jest.fn(),
 }));
 
 // ── expo-updates ─────────────────────────────────────────────────────────────

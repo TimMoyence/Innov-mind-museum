@@ -23,9 +23,14 @@ const mockCreateAudioPlayer = jest.fn().mockReturnValue({
   addListener: mockPlayerAddListener,
 });
 
+const mockSetAudioMode = jest.fn().mockResolvedValue(undefined);
+
 jest.mock('expo-audio', () => ({
   get createAudioPlayer() {
     return mockCreateAudioPlayer;
+  },
+  get setAudioModeAsync() {
+    return mockSetAudioMode;
   },
 }));
 
@@ -63,6 +68,30 @@ describe('useTextToSpeech', () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.activeMessageId).toBeNull();
     expect(result.current.failedMessageId).toBeNull();
+  });
+
+  // P0 #7 — UIBackgroundModes=audio capability is only legitimate if the JS
+  // runtime keeps the AVAudioSession alive when the device backgrounds. If a
+  // future refactor drops the mount effect or omits the flag, App Store would
+  // reject (Apple Forum #95216). This assertion locks the contract.
+  it('configures expo-audio for background playback on mount (native)', async () => {
+    renderHook(() => useTextToSpeech());
+
+    await waitFor(() => {
+      expect(mockSetAudioMode).toHaveBeenCalledWith({
+        shouldPlayInBackground: true,
+        playsInSilentMode: true,
+      });
+    });
+  });
+
+  it('skips background audio config on web (browser controls playback)', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
+    mockSetAudioMode.mockClear();
+
+    renderHook(() => useTextToSpeech());
+
+    expect(mockSetAudioMode).not.toHaveBeenCalled();
   });
 
   it('togglePlayback starts audio for a message', async () => {

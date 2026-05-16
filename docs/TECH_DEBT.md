@@ -26,7 +26,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-1 — `userProfileApi.ts` utilise `httpRequest` raw au lieu de `openApiRequest`
 
-- [ ] **Statut** : ouvert (vérifié 2026-05-07)
+- [x] **Statut** : fermé 2026-05-15
 - **Référence code** :
   ```
   museum-frontend/features/settings/infrastructure/userProfileApi.ts:1
@@ -47,32 +47,38 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   3. Remplacer `httpRequest` par `openApiRequest` dans `userProfileApi.ts`.
   4. Mettre à jour les tests `userProfileApi.test.ts`.
   5. Cocher TD-1 ici.
+- **Closure note (2026-05-15)** :
+  - PATH `PATCH /api/auth/content-preferences` ajouté à `museum-backend/openapi/openapi.json` (peer de `/api/auth/tts-voice`).
+  - `museum-frontend/features/settings/infrastructure/userProfileApi.ts` migré vers `openApiRequest` (atomic swap, pas de fallback).
+  - **Finding obsolète :** la note "museum/daily-art/lowDataPack using raw httpRequest" est obsolète — vérifié 2026-05-15, `museum-frontend/features/museum/infrastructure/lowDataPackApi.ts:1` importe DÉJÀ `openApiRequest`. Pas de dette résiduelle.
+  - **Finding obsolète :** la mention "Mettre à jour les tests `userProfileApi.test.ts`" était basée sur une supposition — il n'existe pas de fichier `userProfileApi.test.ts` (le coverage passe par `useContentPreferences.test.ts` qui mocke le module au niveau public). Pas de test à éditer.
 
 ---
 
 ### TD-2 — `bootstrapProfile()` cross-device hydration manquante
 
-- [ ] **Statut** : ouvert (vérifié 2026-05-07, `grep bootstrapProfile museum-frontend/` → aucun résultat).
+- [x] **Statut** : fermé 2026-05-15 — Option B full scope BE + FE shippé (run `2026-05-15-td2-bootstrap-profile-cross-device`).
+- **Closure note 2026-05-15** :
+  - **BE** : migration `1778869480178-AddProfilePreferencesToUsers.ts` ajoute 5 colonnes scalar à `users` (`default_locale varchar(8) NOT NULL DEFAULT 'en-US'`, `default_museum_mode bool NOT NULL DEFAULT true`, `guide_level varchar(16) NOT NULL DEFAULT 'beginner'`, `data_mode varchar(8) NOT NULL DEFAULT 'auto'`, `audio_description_mode bool NOT NULL DEFAULT false`). `/auth/me` réponse étendue avec les 5 prefs + 2 existantes (`contentPreferences` + `ttsVoice`). Nouveau endpoint batch `PATCH /api/auth/me/preferences` (Zod partial body avec `.refine` non-empty, audit log `AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED` sans PII, owner-only via JWT `req.user.id`). OpenAPI spec étendu (74 paths/83 ops, validate PASS). Mitigation `feedback_typeorm_set_undefined_repo_update` : handler pré-filtre `undefined` avant `repo.update`. BE tests 703/703 PASS.
+  - **FE** : `useAudioDescriptionMode.ts` refactor `useState`+storage → Zustand store `audioDescriptionStore.ts` (64 LoC) + compat shim (27 LoC) préserve les 4 call sites existants (`SettingsAccessibilityCard`, `useChatSession`, `chat/[sessionId]`, jest.mock). `mergeFromServer` ajouté à 3 autres stores (`userProfileStore` +13, `runtimeSettingsStore` +29 avec 3-field independent guards atomic, `dataModeStore` +13 avec whitelist `VALID_DATA_MODES`). `shared/infrastructure/bootstrapProfile.ts` 113 LoC : fail-open, idempotent (`hasBootstrappedThisSession` + `inFlight` promise dedup), breadcrumbs Sentry (`bootstrap_profile.{start,done,failed,skipped_already_done}` + métrique `bootstrap_profile_completed_ms`). Wiré dans `AuthContext` à 3 sites (`loginWithSession`, `bootstrap()` IIFE, `logout`) + `setUnauthorizedHandler`. 6 fichiers tests, 50/50 PASS verbatim (broader sweep 156/156 PASS, 16 suites verts).
+  - **Cross-stack** : FE OpenAPI types regenerated, drift check PASS, tsc FE clean, lint FE clean, 1 corrective loop (require-await sur async shim).
+  - **Audit /team enterprise** : architect PLAN-READY (Option B.1 + PATCH.1), editor BE TD2-BE-DONE-STAGED (17 files), editor FE TD2-FE-DONE-STAGED (14 files, 50/50 tests + 156/156 broader), verifier en cours, security SECURITY-CLEAR (9/9, 0 HIGH), reviewer APPROVED après tick correction (weightedMean 87.3 cross-stack avec correctness×2).
 - **Référence code** :
   ```
-  museum-frontend/features/settings/infrastructure/userProfileStore.ts (JSDoc top)
-    "Future refactor should introduce a unified bootstrapProfile()
-     call hydrating all local-first stores from /me."
+  museum-backend/src/data/db/migrations/1778869480178-AddProfilePreferencesToUsers.ts
+  museum-backend/src/modules/auth/domain/user/User.entity.ts (5 new cols)
+  museum-backend/src/modules/auth/.../auth-profile.route.ts (GET /me + new PATCH /me/preferences)
+  museum-frontend/shared/infrastructure/bootstrapProfile.ts (new)
+  museum-frontend/features/settings/infrastructure/audioDescriptionStore.ts (new Zustand)
+  museum-frontend/features/settings/infrastructure/{userProfileStore,runtimeSettingsStore,dataModeStore}.ts (mergeFromServer added)
+  museum-frontend/features/auth/context/AuthContext.tsx (wired at 3 sites)
   ```
-- **Symptôme** : un user qui change ses préférences sur l'app mobile A et ouvre l'app mobile B (autre device, même compte) ne voit pas ses préférences. Stores affectés : `userProfileStore`, `runtimeSettingsStore`, `dataModeStore`, store audio description.
-- **Sprint d'origine** : 2026-04-15.
-- **Effort estimé** : 1 jour (créer `shared/infrastructure/bootstrapProfile.ts` qui hydrate les 4 stores depuis `/auth/me`, hooker dans `app/_layout.tsx` après login, gérer le merge avec valeurs locales).
-- **Comment fermer** :
-  1. Créer `shared/infrastructure/bootstrapProfile.ts` exposant `bootstrapProfile(userId): Promise<void>`.
-  2. Appeler depuis le hook `useMe` (ou équivalent) au boot post-login.
-  3. Tests : 4 stores doivent être hydratés depuis `/me` sans écraser les changements locaux pending.
-  4. Cocher TD-2 ici.
 
 ---
 
 ### TD-3 — MapLibre `OFFLINE_STYLE_URL` pointe vers demotiles au lieu d'un self-hosted CartoDB
 
-- [ ] **Statut** : ouvert (vérifié 2026-05-07).
+- [x] **Statut** : fermé 2026-05-15 — RUN_ID `2026-05-15-td3-maplibre-self-hosted-style`. Mirror at `docs/maplibre/cartodb-raster-style.json` (861 bytes, raster CartoDB Positron, 4 subdomains, structurally equivalent to `buildOsmRasterStyle(false)`), served by GitHub Pages via `.github/workflows/deploy-privacy-policy.yml` (Pages workflow extended to copy the maplibre dir into `_site/maplibre/`). `OFFLINE_STYLE_URL` now points at `https://timmoyence.github.io/Innov-mind-museum/maplibre/cartodb-raster-style.json`. Drift guard in `museum-frontend/__tests__/features/museum/mapStyleUrl.test.ts` (5 assertions : URL shape, version, first tile URL, tileSize/minzoom/maxzoom/attribution, layer count, subdomain order). CI syntactic guard added to `.github/workflows/ci-cd-mobile.yml` quality job. Option A (GH Pages, zero new infra) retained over CartoDB direct (rejected — official style is vector, would not fix the raster mismatch). Manual airplane-mode smoke documented in spec.md § Tests.
 - **Référence code** :
   ```ts
   // museum-frontend/features/museum/infrastructure/mapStyleUrl.ts:6-11
@@ -100,29 +106,26 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-5 — Bake `CHAT_ENRICHMENT_V2_ENABLED` puis flip default code
 
-- [ ] **Statut** : ouvert (créé 2026-05-10 post-implémentation C2 v2 image-chat-finition)
-- **Référence code** :
+- [x] **Statut** : fermé 2026-05-16 — déjà fixé en amont, ticket stale.
+- **Cause racine** : doctrine `feedback_no_feature_flags_prelaunch` (zero `*_ENABLED` flag pre-launch V1, "Live or revert"). Le kill-switch `CHAT_ENRICHMENT_V2_ENABLED` violait cette doctrine — il était documenté dans TD-5 mais son retrait était la bonne action, pas le bake-then-flip décrit dans l'entrée.
+- **Fix** : commit `fa4048a0a` (2026-05-10 19:33, `refactor(C2): remove CHAT_ENRICHMENT_V2_ENABLED kill-switch`) — **same day** que la création de TD-5. `chat-module.ts:buildImageEnrichment` wire toujours `WikimediaCommonsClient` + `MusaiumCatalogueClient` (plus de ternaire `v2Enabled ? : undefined`). `enrichment-fetcher.fetchImages` prend toujours la v2 fan-out branche. Env var `CHAT_ENRICHMENT_V2_ENABLED` n'est plus lue nulle part. Le commit message cite explicitement `feedback_no_feature_flags_prelaunch` comme rationale.
+- **Vérification 2026-05-16** :
+  - `grep -rn "CHAT_ENRICHMENT_V2\|v2Enabled\|isV2Enabled" museum-backend/src/` → 0 résultat (seul résidu : commentaire dans `security/promptfoo/c2-enrichment.yaml:3` "Run locally (BE up with CHAT_ENRICHMENT_V2_ENABLED=true):" — orphelin de test fixture, pas du code prod).
+  - `grep -n "imageEnrichment" museum-backend/src/config/env.ts` → bloc présent (lignes 339-345) avec `cacheTtlMs`, `cacheMaxEntries`, `fetchTimeoutMs`, `maxImagesPerResponse`, `unsplashAccessKey` — pas de `v2Enabled`.
+- **Pourquoi pas coché à l'époque** : TD-5 a été créé le 2026-05-10 (post run `/team 2026-05-10-c2-image-chat-finition`) basé sur le plan initial "bake 7j puis flip". Le refactor `fa4048a0a` le même jour (19:33) a invalidé ce plan via la doctrine, mais TECH_DEBT.md n'a pas été synchronisé. Erreur de coordination, pas un vrai bug ouvert. (Pattern identique à TD-9.)
+- **Référence code (post-fix)** :
   ```
-  museum-backend/src/config/env.ts:imageEnrichment.v2Enabled
-  museum-backend/src/modules/chat/chat-module.ts:buildImageEnrichment
-  museum-backend/src/modules/chat/useCase/enrichment/enrichment-fetcher.ts:fetchImages
+  museum-backend/src/modules/chat/chat-module.ts:540-553 (buildImageEnrichment — sources hardcoded, no flag)
+  museum-backend/src/modules/chat/useCase/enrichment/enrichment-fetcher.ts (fetchImages — v2 fan-out toujours actif)
+  museum-backend/src/config/env.ts:339-345 (imageEnrichment block — no v2Enabled field)
   ```
-- **Sprint d'origine** : 2026-05-10 (run `/team 2026-05-10-c2-image-chat-finition`).
-- **Pourquoi pas fait dans le sprint d'origine** : memory `project_no_staging_v1` impose un bake ≥7j avant flip default ; l'env var permet rollback instantané sans code revert.
-- **Pourquoi c'est important** : v2 ajoute 2 sources externes (Wikimedia Commons + Musaium catalogue) + un fan-out parallèle qui multiplie le RPS sortant ; un canary à `CHAT_ENRICHMENT_V2_ENABLED=true` doit valider le NFR p95 ≤500ms total + l'absence de régression sur le `chat_request_duration_seconds` avant qu'on flippe le default code.
-- **Effort estimé** : 0 jour de dev (operator action).
-- **Comment fermer** :
-  1. Set `CHAT_ENRICHMENT_V2_ENABLED=true` en prod (env update only, pas de redeploy code).
-  2. Observer `chat_enrichment_source_calls_total{outcome}` + `chat_enrichment_source_latency_seconds{source}` sur Grafana ≥7 jours pleins.
-  3. Vérifier `chat_request_duration_seconds` p95 stable (pas de régression > +100ms vs 7 jours pré-flip).
-  4. Si OK : promouvoir le default code de `false` à `true` dans `env.ts:282` (literal flip, PR + bake encore 7j).
-  5. Cocher TD-5 ici.
+- **Doctrine confirmée 2026-05-16** : pour Musaium pre-launch V1, **Live or revert**. Pas de kill-switch. Si V2 doit être annulé, c'est un code revert (`git revert ff5d107ff` ou équivalent), pas un toggle env. La doctrine inverse post-B2B revenue.
 
 ---
 
 ### TD-4 — Pas de test d'intégration real-PG sur les 3 prune retention use cases
 
-- [ ] **Statut** : ouvert (créé 2026-05-08 post-incident `2026-05-08-prune-hardening`)
+- [x] **Statut** : CLOSED 2026-05-15 (run `2026-05-15-td4-prune-retention-integration-tests`). Trois fichiers `tests/integration/retention/prune-{support-tickets,stale-art-keywords,reviews}.integration.test.ts` exercent les 3 prune use cases contre une vraie testcontainer Postgres via `createIntegrationHarness`. Chaque fichier couvre 3 scénarios : (a) 50 eligible + 50 non-eligible mix, (b) empty-table `rowsAffected === 0` + sub-1s terminate guard contre l'infinite-loop incident-2026-05-08, (c) multi-chunk `batchLimit=20` forçant la consommation du tuple `[rows, rowCount]` driver-level. Factory `tests/helpers/chat/artKeyword.fixtures.ts` créée (`makeArtKeyword`). Aucun changement au code prod (`museum-backend/src/`) ni au CI (`.github/workflows/`).
 - **Référence code** :
   ```
   museum-backend/src/modules/support/useCase/retention/prune-support-tickets.ts
@@ -145,7 +148,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-6 — `chaos-circuit-breaker.e2e` HALF_OPEN→CLOSED test cannot run without orchestrator stub-swap
 
-- [ ] **Statut** : ouvert (créé 2026-05-12, sprint audit-cleanup-2026-05-12 / D.4)
+- [x] **Statut** : CLOSED 2026-05-15 (run `2026-05-15-td6-chaos-circuit-breaker-half-open`). HALF_OPEN→CLOSED transition now verified end-to-end via `harness.orchestratorReset` swap-proxy (option b). Failing + success orchestrators share the same `LLMCircuitBreaker` instance so the post-swap state observed by the new model is the real post-trip OPEN state. Zero production-surface change. See `museum-backend/tests/helpers/e2e/e2e-app-harness.ts` (`createSwappableOrchestrator` + `orchestratorReset`) and `museum-backend/tests/e2e/chaos-circuit-breaker.e2e.test.ts` (test `after openDurationMs, breaker → HALF_OPEN; success closes it`).
 - **Référence code** :
   ```
   museum-backend/tests/e2e/chaos-circuit-breaker.e2e.test.ts:100
@@ -178,6 +181,10 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   Upstream tracking : `eslint-plugin-react` issue #3977 (OPEN), PR #3979 (OPEN, non-mergée). `eslint-plugin-react-native@5.0.0` et `eslint-plugin-jsx-a11y@6.10.2` peer-cap sur `^9` également.
 - **Sprint d'origine** : audit 2026-05-12 (P1-8).
 - **Effort estimé** : 1 h une fois le blocker upstream résolu (bump 2 fichiers + lint). Pas de chemin viable aujourd'hui sans patch-package ou fork.
+- **Upstream check 2026-05-15** (vérifié via `gh issue/pr view`) :
+  - Issue [`jsx-eslint/eslint-plugin-react#3977`](https://github.com/jsx-eslint/eslint-plugin-react/issues/3977) "ESLint v10 compatibility" — **STILL OPEN**, pas de `closedAt`.
+  - PR [`jsx-eslint/eslint-plugin-react#3979`](https://github.com/jsx-eslint/eslint-plugin-react/pull/3979) "Fix ESLint v10 RuleContext API removal (follow-up to #3972)" — **STILL OPEN**, pas de `mergedAt`.
+  - Verdict : reste bloqué upstream. Prochain check : 2026-06-01 (avant launch V1). Si toujours OPEN à 2026-06-15, ré-évaluer alternatives (downgrade BE v9 ou patch-package).
 - **Comment fermer** :
   1. Surveiller la fermeture de `jsx-eslint/eslint-plugin-react#3977` (Renovate / GitHub Security Advisory subscription).
   2. Quand un release `eslint-plugin-react` ≥ 7.38 (ou ce qu'ils publient comme v10-compat) est dispo : bump FE et Web sur `eslint@^10.x` + `eslint-plugin-react@^7.38+` + tout autre plugin react peer-cap.
@@ -191,7 +198,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-8 — Cull 3 remaining single-impl chat ports (image-processor, knowledge-router, llm-judge)
 
-- [ ] **Statut** : ouvert (créé 2026-05-13, audit P1-3 partial deferral)
+- [x] **Statut** : fermé 2026-05-15
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/domain/ports/image-processor.port.ts
@@ -202,37 +209,188 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Pourquoi non résolu en P1-3** : le sub-agent a culled ces 3 + `AdvancedGuardrail` localement (commit `448973b5` sur la branche `backup-p1-night-pre-rebase`). Quand j'ai rebasé sur `origin/main` avant push, conflict 7-fichiers dans le surface guardrail/chat : `origin/main` était en train de refactorer la même zone (commits `5e0a4bd2`, `89b116f8`, etc. — renommage `advanced-guardrail.port` → `guardrail-provider.port`, fixes des 49 tests BE). Conflict resolution cost > value pour cette nuit. Le commit a été skippé pendant le rebase.
 - **Sprint d'origine** : audit 2026-05-12 (P1-3 partial).
 - **Effort estimé** : 30-60 min sur un jour calme — pattern bien établi par P1-3 sub-agent.
-- **Comment fermer** :
-  1. Récupérer le patch depuis `git show backup-p1-night-pre-rebase:<file>` pour les 3 ports + leurs sites d'usage (5-11 fichiers par port).
-  2. Réappliquer manuellement (les conflicts d'origin/main sur AdvancedGuardrail sont absorbés — leur rename `guardrail-provider.port` est le canonique maintenant ; ne pas le toucher).
-  3. tsc + lint verts sur BE.
-  4. Cocher TD-8 ici.
-- **Note** : la branche `backup-p1-night-pre-rebase` doit être préservée jusqu'à fermeture de TD-8.
+- **Closure note (2026-05-15)** : Pattern récupéré depuis dangling commit `448973b5` (P1-3 sub-agent, 2026-05-13) — la branche `backup-p1-night-pre-rebase` ayant été perdue entre-temps. 3 ports inlinés dans leurs sole consumers (`SharpImageProcessor` / `KnowledgeRouterService` / `LlmJudgeGuardrail`) ; 14 importers redirigés (production + tests) ; `AdvancedGuardrail` non touché (déjà absorbé par `GuardrailProvider` via `5e0a4bd2`). Reverse-domain import de `KnowledgeRouterSource` dans `chat-orchestrator.port.ts` redirigé vers le service. `tsc` + `lint` verts, chat unit suite 2009/2011 passed (2 skipped, unchanged baseline). `compare.use-case.ts` `ImageProcessorPort` (signature `process` ≠ `stripExif`) conservé OUT-OF-SCOPE.
 
 ---
 
 ### TD-9 — Mobile test `chat-session-deep.test.tsx > toggleRecording/playRecordedAudio` failing on `main`
 
-- [ ] **Statut** : ouvert (créé 2026-05-13, surface par audit P1-1+P1-2 push qui a déclenché le mobile CI)
+- [x] **Statut** : fermé 2026-05-15 — déjà fixé en amont, ticket stale.
+- **Cause racine** : commit `59296c75e` (2026-05-12, Art.50 voice disclosure gate) a wrappé `toggleRecording` d'un early-return jusqu'à acknowledge user → le test prop-forwarding line 1044 tombait sur ce wrapper et recevait 0 call au lieu de 1.
+- **Fix** : commit `f795ed4dc` (2026-05-13 16:23, `test(mobile): mock useVoiceDisclosure in chat-session-deep prop-forwarding test`) ajoute `jest.mock('@/features/chat/hooks/useVoiceDisclosure')` retournant `isAcknowledged: true` dans le test, bypass le gate, contract prop-forwarding redevient vérifiable.
+- **Vérification 2026-05-15** : `cd museum-frontend && npx jest __tests__/screens/chat-session-deep.test.tsx` → `Tests: 50 passed, 50 total` en 1.353 s. Zero `act()` warning. (TD-9 mentionnait 52 tests — chiffre stale, le fichier en a 50 aujourd'hui.)
+- **Pourquoi pas coché à l'époque** : le fix `f795ed4dc` est landé pendant la phase d'audit P1 ; le ticket TD-9 a été créé en parallèle (2026-05-13) sans synchronisation avec ce commit. Erreur de coordination, pas un vrai bug ouvert.
 - **Référence code** :
   ```
-  museum-frontend/__tests__/screens/chat-session-deep.test.tsx:1043-1048
-  museum-frontend/app/(stack)/chat/[sessionId].tsx (Media wiring)
+  museum-frontend/__tests__/screens/chat-session-deep.test.tsx (ligne du mock useVoiceDisclosure)
+  museum-frontend/app/(stack)/chat/[sessionId].tsx (Art.50 wrapper, intact)
   ```
-- **Symptôme** : 1 test échoue dans `ChatSessionScreen — MediaAttachmentPanel + MessageContextMenu wiring > forwards toggleRecording, playRecordedAudio, ...` :
+
+---
+
+### TD-10 — PII redaction non rétroactive sur l'history pré-fix (LLM02)
+
+- [ ] **Statut** : ouvert (créé 2026-05-14, lié au /team `2026-05-14-pii-redaction-llm02`)
+- **Référence code** :
   ```
-  expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1)
-  Expected: 1, Received: 0
+  museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:283-287 (substitution sur NEW message uniquement)
+  museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:244 (history hydration sans rescan)
   ```
-  Multiple "An update to ChatSessionScreen inside a test was not wrapped in act(...)" warnings. 51 autres tests du même fichier passent.
-- **Pourquoi ce n'est pas dû au push P1** : reproduit localement à la fois sur `audit/p1-night` et sur `89b116f8c` (origin/main AVANT le push P1). Le test était déjà rouge sur origin/main ; les pushes précédents ne touchaient pas mobile/ donc le workflow `mobile` ne tournait pas et le failure restait latent.
-- **Sprint d'origine** : inconnu (date d'introduction du break à investiguer via `git bisect` ou git log de `chat/[sessionId].tsx`).
-- **Effort estimé** : 30 min — soit fix the wiring dans `ChatSessionScreen` (forwarder le bon callback), soit ajuster le mock dans le test si la wiring est intentionnelle.
+- **Symptôme** : depuis le fix LLM02 (2026-05-14), tout NEW message chat est scrubbé via le sidecar Anonymize avant le LLM call. MAIS les `ChatMessage.text` persistés AVANT le commit du fix restent en clair en BDD. À chaque tour suivant, `PrepareMessagePipeline.prepare()` re-hydrate cet history non scrubbé via `repository.listSessionHistory(sessionId, env.llm.maxHistoryMessages)` (line 244) et le LLM le reçoit tel quel.
+- **Pourquoi non résolu en V1** : coût latency p95 inacceptable si on rescan chaque message d'history côté sidecar à chaque tour (× ~20 messages d'history typique). Décision design D2 dans `team-state/2026-05-14-pii-redaction-llm02/design.md`. RGPD Right-to-erasure intact via cascade delete session.
+- **Sprint d'origine** : 2026-05-14.
+- **Effort estimé** : 1 jour, dépend de la stratégie choisie :
+  - (a) Migration one-shot rétro qui rescanne tout `ChatMessage.text` user en BDD via le sidecar Anonymize, remplace par redactedText, append audit row par row migré.
+  - (b) Rescan lazy à l'hydration : moins d'overhead total mais hot path impacté.
+  - (c) Doctrine "accept tail risk" : si compliance ne demande pas, ne rien faire (les messages "où je suis dans le musée maintenant" perdent leur valeur en quelques minutes).
 - **Comment fermer** :
-  1. `git log -p museum-frontend/app/\(stack\)/chat/\[sessionId\].tsx` pour trouver le commit qui a changé la wiring de `toggleRecording`.
-  2. Décider : fix le screen ou fix le test mock.
-  3. Re-run `npx jest __tests__/screens/chat-session-deep.test.tsx` → 52/52 passants.
-  4. Cocher TD-9 ici.
+  1. Trancher (a) vs (b) vs (c) avec DPO. Si (a), produire un script `scripts/backfill-pii-redaction.cjs`.
+  2. Implémenter, mesurer p95 sur un échantillon (1k messages).
+  3. Rapporter dans audit chain le nombre de rows migrées + le delta de placeholders observés.
+  4. Cocher TD-10 ici.
+- **Decision brief 2026-05-15** (Tim est solo founder + DPO, décision interne) :
+
+  | Option | Coût dev | Coût latency p95 | RGPD risk | Recommandation |
+  |---|---|---|---|---|
+  | **(a) one-shot migration rétro** | 1 jour script `scripts/backfill-pii-redaction.cjs` + 1 h test sur fixture 1k messages | Zéro impact runtime post-migration (history persisted déjà scrubbé) | Compliance complète. Reset deltas auditables. | **Recommandée si compliance audit prévu < 6 mois** |
+  | **(b) rescan lazy à l'hydration** | 0.5 jour wire dans `PrepareMessagePipeline.prepare()` + cache LRU des messages déjà scrubbés (eviter rescan répété) | +50-150 ms p95 sur premier hydration session legacy (~20 messages × sidecar latency). Cache LRU absorbe les calls suivants. | Compliance graduelle. Audit chain inexistant. | **Pire des deux mondes : impact runtime + complexité** |
+  | **(c) accept tail risk** | 0 dev | 0 latency | Tail risk : messages user pré-2026-05-14 (probablement < 50k rows sur la lifetime pré-launch) restent en clair en BDD. Mitigation existante = cascade delete session via Right-to-erasure RGPD. La nature des messages ("où je suis dans le musée maintenant") = valeur expirée en quelques minutes. | **Recommandée pour pre-launch V1**, à reconsidérer post-B2B revenue quand un DPO externe sera commissioned |
+
+  **Décision retenue 2026-05-15 (Tim)** : **OPTION (c) accept tail risk** jusqu'à la première demande compliance/audit B2B. Tracker reste OPEN comme reminder. Cascade delete session via Right-to-erasure RGPD couvre le cas legal. À ré-évaluer **2026-09-01** (1er trimestre post-launch) ou plus tôt si un audit B2B compliance arrive.
+
+---
+
+### TD-11 — `@types/express-serve-static-core` pin à 5.0.6 (param widening 5.1.x) [x]
+
+- **Localisation** :
+  ```
+  museum-backend/package.json:pnpm.overrides.@types/express-serve-static-core = "5.0.6"
+  ```
+- **Symptôme** : la version 5.1.0 / 5.1.1 a élargi `req.params[key]` de `string` à `string | string[]` (pour refléter des cas légitimes de paramètres multi-segments). Cette upcasting déclenche 27+ erreurs `TS2322` / `TS2345` sur l'ensemble des `*.route.ts` BE qui font `useCase.execute({ id: req.params.id })` ou `\`bucket:${req.params.id}\`` template literal.
+- **Pourquoi non résolu en V1** : élargissement TYPE-only (pas de runtime change), pin à 5.0.6 conserve la sémantique observée 2026-05-13. Migration ~30 fichiers route, non-trivial.
+- **Sprint d'origine** : 2026-05-14 (rollback Renovate PR #277 absorbé puis neutralisé via override pin).
+- **Effort estimé** : 0.5 jour si on bumpe l'override + narrowing systématique au callsite (`typeof X === 'string' ? X : undefined`). Mieux : helper `parseStringParam(req, key): string | undefined` réutilisable.
+- **Closure 2026-05-15** :
+  1. Suppression de la clé `pnpm.overrides."@types/express-serve-static-core"` (doctrine bury-dead-code : pas de bump-puis-pin obsolète, override retiré net) + ajout explicite de `@types/express-serve-static-core: ^5.1.1` en `devDependencies` pour forcer le lockfile à re-résoudre (sinon `@types/express@5.0.1` re-pinne la transitive à 5.0.6).
+  2. Helper `parseStringParam(req, key): string | undefined` créé dans `museum-backend/src/shared/middleware/parseStringParam.ts` (16 lignes, rejette `string[]` et `''`).
+  3. Codemod sur 11 fichiers route, 22 call sites narrowed (admin-ke, admin, cache-purge, auth-api-keys, consent, chat-media, chat-message, chat-session, low-data-pack, museum, support) + 1 helper interne (`bySession` dans `rate-limit.middleware.ts` qui consommait `req.params.id` dans un template literal).
+  4. tsc final : 0 erreurs (28 erreurs `TS2322`/`TS2345` réelles mesurées sur HEAD, pas 27+ comme estimé).
+  5. Lint final : 0 warnings (3 warnings sonarjs introduits par les nouveaux strings dupliqués → factorisés via `MESSAGE_ID_REQUIRED` et `INVALID_MUSEUM_ID` constants).
+  6. BE test suite : 5404 passed / 5497 total (93 skipped pré-existants, 0 fail).
+
+---
+
+### TD-12 — `audit-ip-anonymizer` job sans integration test real-PG
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 3 post-TD-4)
+- **Référence code** :
+  ```
+  museum-backend/src/shared/audit/audit-ip-anonymizer.job.ts:72-86
+    const result = await manager.query<UpdateResult>(`UPDATE "audit_logs" SET "ip" = CASE ...`, [ids]);
+    // reads result[1] via Array.isArray && typeof result[1] === 'number' guard (L86)
+  museum-backend/tests/unit/audit/audit-ip-anonymizer.test.ts   # unit-only, mock faithful but pas vraie PG
+  ```
+- **Symptôme** : le job consomme le tuple pg-driver `[rows, rowCount]` côté `result[1]` (même archetype que l'incident retention 2026-05-08 fixé par TD-4). MAIS le caller `audit-cron.registrar.ts:107` (BullMQ worker) est single-shot par tick — **pas de `while` drain loop** — donc une régression du shape ne peut pas busy-loop. Worst-case = un tick under-count, pas une outage. Le job est défendu par `SET LOCAL app.audit_anonymization_allowed` + trigger `prevent_audit_log_mutation`.
+- **Sprint d'origine** : audit Pattern 3 (post-TD-4 retention integration), 2026-05-16.
+- **Pourquoi c'est important** : la métrique `anonymized` est le **signal d'audit CNIL/RGPD** (combien d'audit logs ont eu leur IP anonymisée après 13 mois). Une régression silencieuse (count drift) compromet la conformité reportée, même sans outage.
+- **Effort estimé** : ~30 minutes (réutiliser pattern TD-4 retention integration tests).
+- **Comment fermer** :
+  1. Créer `museum-backend/tests/integration/audit/audit-ip-anonymizer.integration.test.ts` avec `createIntegrationHarness()`.
+  2. Fixture : ~1k audit_logs avec `created_at < NOW() - INTERVAL '13 months' AND ip IS NOT NULL`.
+  3. Run job, assert `anonymized` matches actual mutated count + idempotent re-run yields 0.
+  4. Vérifier que les rows avec `created_at < 13 months` ont `ip` = `NULL` post-run.
+  5. Cocher TD-12 ici.
+
+---
+
+### TD-13 — Compléter migration `httpRequest` → `openApiRequest` (4 callsites résiduels)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 4 post-TD-1)
+- **Référence code** :
+  ```
+  # Migratable now (endpoint déjà déclaré dans openapi.json)
+  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:80   # postAudioMessage → openapi.json:3802
+  museum-frontend/features/chat/infrastructure/chatApi/send.ts:143   # postMessage    → openapi.json:3674
+  
+  # BE-blocked (endpoint pas déclaré OU type binary non supporté)
+  museum-frontend/features/museum/infrastructure/museumApi.ts:151,166  # getEnrichment + getEnrichmentStatus, openapi.json ABSENT
+  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:94   # synthesizeSpeech, openapi.json:4014 mais return audio/mpeg binary que openApiRequest ne type pas
+  ```
+- **Symptôme** : TD-1 a migré `userProfileApi.ts` mais la doctrine type-safe API client n'est pas codebase-wide. 4 callsites consomment encore `httpRequest` brut, drift potentiel entre BE response shape et FE consumers non détectable au tsc.
+- **Sprint d'origine** : audit Pattern 4 (post-TD-1 / TD-2 BE work), 2026-05-16.
+- **Effort estimé** : 
+  - **Phase 1 (migratable now)** : ~30 minutes pour les 2 callsites chat (pattern = `authApi.ts:1-19`).
+  - **Phase 2 (BE-blocked)** : ~2 heures — déclarer 2 paths museum/enrichment dans `museum-backend/openapi/openapi.json` (template = `/auth/tts-voice` ligne 3113), regen FE types, migrate. Pour `synthesizeSpeech` binary : étendre `openApiRequest` avec option `responseType: 'arraybuffer'` OU documenter comme exception permanente.
+- **Comment fermer** :
+  1. **Phase 1** : migrer `postAudioMessage` + `postMessage` vers `openApiRequest` (FormData support déjà OK via short-circuit `Content-Type` dans `httpRequest.ts:38`).
+  2. **Phase 2.1** : déclarer `GET /api/museums/{id}/enrichment` + `/enrichment/status` dans `openapi.json` (template `/auth/tts-voice`).
+  3. **Phase 2.2** : regenerate FE types via `npm run generate:openapi-types`, migrer `museumApi.ts:151,166`, supprimer le typage manuel `MuseumEnrichmentResponse`.
+  4. **Phase 2.3** : trancher pour `synthesizeSpeech` — soit étendre `openApiRequest` (`responseType: 'arraybuffer'` + return type non-JSON) soit l'exception permanente documentée.
+  5. Cocher TD-13 ici.
+
+---
+
+### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)
+- **Référence code** :
+  ```
+  museum-frontend/features/chat/ui/OfflineBanner.tsx                # chat-only, importé seulement dans app/(stack)/chat/[sessionId].tsx
+  museum-frontend/features/settings/dataModeStore.ts                # manque _hydrated flag + onRehydrateStorage callback (drift vs userProfile/runtimeSettings/audioDescription stores)
+  .github/workflows/ci-cd-mobile.yml                                # Matrix Maestro existe mais 0 scenario airplane-mode pour offline pack tiles
+  docs/<absent>                                                     # Aucun contrat offline centralisé (mentions éparses dans TD-2/TD-3 + CLAUDE.md § Voice V1)
+  ```
+- **Symptôme** : Le mode offline est **réel** (5 features fonctionnelles : 4 stores persist, chat queue 50 msg, chatLocalCache 200 entries, MapLibre OfflineManager + geofence pre-cache, AuthContext token preservation), mais :
+  - L'utilisateur sur museum/settings/home n'a aucun feedback visuel quand offline (banner chat-only).
+  - `dataModeStore.read()` avant rehydration retourne le default `'auto'` (race possible au boot).
+  - Aucun test e2e airplane-mode pour valider end-to-end que les tuiles MapLibre downloaded sont effectivement servies offline.
+  - Le contrat offline n'est documenté nulle part centralement → maintenance difficile.
+- **Sprint d'origine** : audit Pattern 6 (post-TD-2 bootstrapProfile + TD-3 MapLibre style), 2026-05-16.
+- **Effort estimé** : ~1 jour total décomposable.
+- **Comment fermer** :
+  1. Extraire `OfflineBanner` du chat-only scope → composant `GlobalOfflineBanner` mounté dans `app/_layout.tsx` (probablement sous `ConnectivityProvider`). Couvre museum/settings/home/chat uniformément. Vérifier que le banner chat-only `pendingCount` reste fonctionnel (queue source distinct).
+  2. Aligner `dataModeStore` sur le pattern `_hydrated` + `onRehydrateStorage` (cf. `userProfileStore` lignes 29/91 + `audioDescriptionStore` lignes 26/57 comme reference).
+  3. Ajouter scenario Maestro `flows/offline-pack-airplane.yaml` : (a) telecharger pack pour une ville, (b) toggle airplane mode (Maestro `runFlow` avec adb shell), (c) ouvrir map, assert tiles raster visibles, (d) toggle off airplane. Brancher dans `ci-cd-mobile.yml` quality job.
+  4. Créer `docs/OFFLINE_CONTRACT.md` qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
+  5. Cocher TD-14 ici.
+
+---
+
+### TD-15 — Low-data mode user-facing copy ment (UFR-013 violation)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 7 — **PRIORITAIRE UFR-013**)
+- **Référence code** :
+  ```
+  # User-facing copy qui ment
+  museum-frontend/shared/locales/fr/translation.json:471             # "TTS désactivé, images compressées"
+  museum-frontend/shared/locales/en/translation.json:<même clé>      # equivalent EN
+  
+  # Branches data-mode RÉELLES (3 + 1 partiel)
+  museum-frontend/features/chat/application/useTextToSpeech.ts:152-156         # TTS skip OK
+  museum-frontend/features/museum/application/useMuseumPrefetch.ts:41          # prefetch skip on cellular OK
+  museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:129-133    # "100-150 words max" OK
+  museum-frontend/features/chat/application/chatSessionStrategies.pure.ts:51-58 # cache-first first-turn museum text-only (narrow)
+  
+  # Branches PROMISES par le banner mais ABSENTES
+  museum-frontend/features/<various>                # ZERO image compression upload (multipart full-res reste)
+  museum-frontend/features/<map>                    # ZERO MapLibre maxZoom cap quand isLowData
+  museum-frontend/features/<animations>             # ZERO reduction animation basé isLowData (seul useReducedMotion OS-level)
+  museum-backend/src/modules/chat/useCase/.../message-commit.ts:91-96  # enrichedImages path ignore lowDataMode
+  ```
+- **Symptôme** : Le banner FR "Mode économie de données actif — TTS désactivé, **images compressées**" est **un mensonge codebase-wide** :
+  - **Aucun code path** côté FE ou BE ne compresse les images quand `lowDataMode=true`. Les uploads multipart partent en pleine résolution caméra (2-5 MB typiquement), les images BE retournées ne sont pas demandées en variant low-res.
+  - Coverage réel : 3/10 features data-affecting gatées (~30 %).
+  - **Violation directe UFR-013** (memory `feedback_honesty_no_pretense`) : "FORBIDDEN: lying or fabricating any fact / number / citation / file path / line / function / command output / test result / source". Le user-facing copy est dans cette catégorie.
+- **Sprint d'origine** : audit Pattern 7 (post-TD-2 + TD-1 BE/FE expansion), 2026-05-16.
+- **Effort estimé** :
+  - **Option (a) fix copy honest** : **5 minutes** — retirer "images compressées" du label, remplacer par vérité : "TTS désactivé, réponses plus courtes, prefetch wifi uniquement". UFR-013 immediate compliance.
+  - **Option (b) implémenter les branches manquantes** : **1-2 jours** — `expo-image-manipulator` pour compress uploads ≥1MB à 70% quality / 1920px max ; image variants daily-art/museum (BE serve `?w=512` resized via Sharp middleware ou S3+CloudFront resizer) ; MapLibre `maxZoom` cap à 14 quand isLowData (vs default 19) ; integration tests jest+msw pour chaque gate.
+- **Comment fermer (priorité décroissante)** :
+  1. **IMMÉDIAT (option a — 5 min)** : edit `translation.json` FR + EN, retirer le mensonge "images compressées", reformuler avec ce qui est vraiment implémenté. Cocher partiellement TD-15.
+  2. **POST-LAUNCH V1 (option b — 1-2j)** : implémenter en priorité l'image compression upload (`expo-image-manipulator` resize si >1MB, 70% JPEG quality) — c'est le plus gros data saver effectivement manquant. Puis MapLibre maxZoom cap. Puis BE image variants.
+  3. Tests : 1 test integration par real gate (jest + msw, toggle `low`, assert `useTextToSpeech` ne call pas `chatApi.synthesizeSpeech` ; assert `useMuseumPrefetch` ne call pas `fetchLowDataPack` on cellular).
+  4. Cocher TD-15 ici.
+- **Note UFR-013** : tant que l'option (a) n'est pas faite, on viole "ne pas mentir au user". À traiter avant le 2026-06-01 launch V1.
 
 ---
 

@@ -16,7 +16,13 @@ import { AdminSupportFacade } from '@modules/admin/useCase/facades/admin-support
 import { ListReportsUseCase } from '@modules/admin/useCase/reports/listReports.useCase';
 import { ResolveReportUseCase } from '@modules/admin/useCase/reports/resolveReport.useCase';
 import { ChangeUserRoleUseCase } from '@modules/admin/useCase/users/changeUserRole.useCase';
+import { ChangeUserTierUseCase } from '@modules/admin/useCase/users/changeUserTier.useCase';
+import { DeleteUserUseCase } from '@modules/admin/useCase/users/deleteUser.useCase';
+import { GetUserByIdUseCase } from '@modules/admin/useCase/users/getUserById.useCase';
 import { ListUsersUseCase } from '@modules/admin/useCase/users/listUsers.useCase';
+import { SuspendUserUseCase } from '@modules/admin/useCase/users/suspendUser.useCase';
+import { UnsuspendUserUseCase } from '@modules/admin/useCase/users/unsuspendUser.useCase';
+import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import {
   listAllReviewsUseCase as peerListAllReviewsUseCase,
   moderateReviewUseCase as peerModerateReviewUseCase,
@@ -27,9 +33,21 @@ import {
 } from '@modules/support/useCase';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
+// Composed locally — TypeORM Repository<T> is stateless, so re-instantiating
+// the refresh-token repo is free and avoids exporting an internal auth-module
+// singleton. Used by DeleteUserUseCase to revoke every active session.
+const adminRefreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 
 export const listUsersUseCase = new ListUsersUseCase(adminRepository);
+export const getUserByIdUseCase = new GetUserByIdUseCase(adminRepository);
 export const changeUserRoleUseCase = new ChangeUserRoleUseCase(adminRepository);
+export const changeUserTierUseCase = new ChangeUserTierUseCase(adminRepository);
+export const suspendUserUseCase = new SuspendUserUseCase(adminRepository);
+export const unsuspendUserUseCase = new UnsuspendUserUseCase(adminRepository);
+export const deleteUserUseCase = new DeleteUserUseCase(
+  adminRepository,
+  adminRefreshTokenRepository,
+);
 export const listAuditLogsUseCase = new ListAuditLogsUseCase(adminRepository);
 export const getStatsUseCase = new GetStatsUseCase(adminRepository);
 export const listReportsUseCase = new ListReportsUseCase(adminRepository);
@@ -46,3 +64,13 @@ export const adminSupportFacade = new AdminSupportFacade(
   peerListAllTicketsUseCase,
   peerUpdateTicketStatusUseCase,
 );
+
+// R2 W3.4 — admin CSV export composition. Single repo backs the three
+// use cases (sessions / reviews / tickets) ; audit emission shares the
+// global auditService singleton.
+//
+// R2 corrective loop 1 (2026-05-15) — admin CSV export lazy getters moved to
+// `@modules/admin/useCase/export/composition.ts` (deeper laziness, defers
+// `AppDataSource` AND `auditService` until first request). Doctrine
+// `feedback_bury_dead_code` — original duplicates here removed once the
+// route + tests migrated.

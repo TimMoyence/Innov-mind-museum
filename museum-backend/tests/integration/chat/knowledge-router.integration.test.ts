@@ -38,7 +38,7 @@ import type {
 import type {
   KnowledgeRouterPort,
   KnowledgeRouterResult,
-} from '@modules/chat/domain/ports/knowledge-router.port';
+} from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 /**
  * Build an orchestrator that records every `OrchestratorInput` it sees so tests
@@ -114,10 +114,7 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
   });
 
   it('case 2 — KB miss + judge low + WS hit: source=web, fallback=true', async () => {
-    const wsFacts = [
-      'About Mona Lisa: a 16th-century portrait.',
-      'Mona Lisa site: A description.',
-    ];
+    const wsFacts = ['About Mona Lisa: a 16th-century portrait.', 'Mona Lisa site: A description.'];
     const routerResult: KnowledgeRouterResult = {
       facts: wsFacts,
       source: 'web',

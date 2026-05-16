@@ -17,6 +17,15 @@ interface RuntimeSettingsState extends RuntimeSettings {
   setDefaultMuseumMode: (enabled: boolean) => void;
   /** Update the guide expertise level. */
   setGuideLevel: (level: GuideLevel) => void;
+  /**
+   * Merge the server-side preferences into the local store (TD-2 Option B,
+   * server-wins-first per session — R3). Each field is set independently when
+   * the server payload contains a typed value; absent/`undefined`/wrong-shape
+   * fields are silently skipped (R5 schema tolerance).
+   */
+  mergeFromServer: (
+    server: Partial<Pick<RuntimeSettings, 'defaultLocale' | 'defaultMuseumMode' | 'guideLevel'>>,
+  ) => void;
 }
 
 export const useRuntimeSettingsStore = create<RuntimeSettingsState>()(
@@ -32,6 +41,26 @@ export const useRuntimeSettingsStore = create<RuntimeSettingsState>()(
       setDefaultMuseumMode: (enabled) => set({ defaultMuseumMode: enabled }),
 
       setGuideLevel: (level) => set({ guideLevel: level }),
+
+      mergeFromServer: (server) => {
+        const next: Partial<RuntimeSettings> = {};
+        if (typeof server.defaultLocale === 'string' && server.defaultLocale.length > 0) {
+          next.defaultLocale = server.defaultLocale;
+        }
+        if (typeof server.defaultMuseumMode === 'boolean') {
+          next.defaultMuseumMode = server.defaultMuseumMode;
+        }
+        if (
+          server.guideLevel === 'beginner' ||
+          server.guideLevel === 'intermediate' ||
+          server.guideLevel === 'expert'
+        ) {
+          next.guideLevel = server.guideLevel;
+        }
+        if (Object.keys(next).length > 0) {
+          set(next);
+        }
+      },
     }),
     {
       name: 'musaium.runtimeSettings',

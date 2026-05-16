@@ -110,6 +110,27 @@ export class AuthSessionService {
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
+    // Suspension / soft-delete gate runs BEFORE email_verified so the operator
+    // signal (ACCOUNT_SUSPENDED / ACCOUNT_DELETED) takes precedence over the
+    // verification banner. See ADR-050 — admin user lifecycle.
+    if (user.deletedAt) {
+      clearLoginAttempts(normalizedEmail);
+      throw new AppError({
+        message: 'Account deleted',
+        statusCode: 403,
+        code: 'ACCOUNT_DELETED',
+      });
+    }
+
+    if (user.suspended) {
+      clearLoginAttempts(normalizedEmail);
+      throw new AppError({
+        message: 'Account suspended. Contact support to restore access.',
+        statusCode: 403,
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
+
     if (!user.email_verified) {
       clearLoginAttempts(normalizedEmail);
       throw new AppError({
@@ -175,6 +196,17 @@ export class AuthSessionService {
     if (!user) {
       await this.refreshTokenRepository.revokeFamily(stored.familyId);
       throw unauthorized('User not found', 'INVALID_REFRESH_TOKEN');
+    }
+
+    // ADR-050 — refresh refuses suspended / soft-deleted users. The family is
+    // revoked on delete (no recovery path) but kept on suspend so unsuspending
+    // restores the session pair without a full re-login.
+    if (user.deletedAt) {
+      await this.refreshTokenRepository.revokeFamily(stored.familyId);
+      throw unauthorized('Account deleted', 'ACCOUNT_DELETED');
+    }
+    if (user.suspended) {
+      throw unauthorized('Account suspended', 'ACCOUNT_SUSPENDED');
     }
 
     return await this.sessionIssuer.issueSession({

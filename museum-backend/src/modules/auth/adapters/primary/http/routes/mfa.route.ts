@@ -42,26 +42,39 @@ const mfaRouter: Router = Router();
 
 const RATE_LIMIT_OPTIONS = { limit: 5, windowMs: 15 * 60 * 1000 } as const;
 
+/** Typed prefixes for the per-bucket rate-limit keys produced by {@link bySessionOrIp}. */
+export const MFA_RATE_LIMIT_BUCKET_PREFIX = {
+  USER: 'user:',
+  MFA_SESSION: 'mfa-session:',
+  IP: 'ip:',
+} as const;
+
 /**
  * Resolve a rate-limit key from a body-bearing request:
  *   - First try `req.user.id` (authenticated routes).
  *   - Then try the body's `mfaSessionToken` (challenge / recovery).
  *   - Fall back to IP. Always prefixed so the buckets do not collide with
  *     the route-specific `bucketName`.
+ *
+ * Exported solely so unit tests in `tests/unit/routes/mfa.route.test.ts` can
+ * call it directly: the rate-limit middleware factory is mocked at the route
+ * unit-test layer, which means Stryker's perTest coverage cannot map mutants
+ * inside this helper to the tests that exercise it via the rate-limit
+ * integration suite. Direct unit tests fill that gap.
  */
-function bySessionOrIp(req: Request): string {
+export function bySessionOrIp(req: Request): string {
   const user = req.user;
-  if (user?.id) return `user:${String(user.id)}`;
+  if (user?.id) return `${MFA_RATE_LIMIT_BUCKET_PREFIX.USER}${String(user.id)}`;
   const token = (req.body as { mfaSessionToken?: unknown }).mfaSessionToken;
   if (typeof token === 'string' && token.length > 0) {
     try {
       const decoded = verifyMfaSessionToken(token);
-      return `mfa-session:${String(decoded.userId)}`;
+      return `${MFA_RATE_LIMIT_BUCKET_PREFIX.MFA_SESSION}${String(decoded.userId)}`;
     } catch {
       // fall through to IP
     }
   }
-  return `ip:${byIp(req)}`;
+  return `${MFA_RATE_LIMIT_BUCKET_PREFIX.IP}${byIp(req)}`;
 }
 
 const enrollLimiter = createRateLimitMiddleware({

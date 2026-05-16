@@ -16,7 +16,6 @@ import {
   resolveCommitSha,
   resolveDeploymentMode,
   resolveEmbeddingsProvider,
-  resolveGuardrailsCandidate,
   resolveLlmProvider,
   resolveNodeEnv,
   resolveStorageDriver,
@@ -39,7 +38,6 @@ if (process.env.NODE_ENV !== 'test') {
 
 const nodeEnv = resolveNodeEnv();
 const provider = resolveLlmProvider();
-const guardrailsCandidate = resolveGuardrailsCandidate();
 const storageDriver = resolveStorageDriver();
 const deploymentMode = resolveDeploymentMode();
 const embeddingsProvider: EmbeddingsProvider = resolveEmbeddingsProvider();
@@ -288,6 +286,7 @@ const env: AppEnv = {
   //   (OCR guard, API keys, knowledge extraction, guardrail V2 enforcement.)
   //   Required infra (Redis, OpenAI key) must be provided in prod.
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
+  freeTierMonthlySessionLimit: toNumber(process.env.FREE_TIER_MONTHLY_SESSION_LIMIT, 3),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
   overpass: {
     cacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86_400),
@@ -404,7 +403,6 @@ const env: AppEnv = {
     clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
   },
   guardrails: {
-    candidate: guardrailsCandidate,
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
     // 2026-05-12 — raised from 300/500ms after a prod incident where the
     // sidecar P95 inference on the CPU-only VPS exceeded 500ms, causing
@@ -415,7 +413,11 @@ const env: AppEnv = {
     // `team-state/2026-05-12-llm-guard-circuit-breaker/`.
     timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 1500),
     observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
-    // F4 (2026-04-30) — LLM judge layer config (defaults: 5€/day, 500ms, 50 chars)
+    // F4 (2026-04-30) — LLM judge layer daily cost cap (cents). Default 500
+    // ($5/day) activates the structured-output judge in parallel with the
+    // sidecar (defense-in-depth, ADR-015 amendment 2026-05-14 — both layers
+    // now run together rather than via the retired mutually-exclusive
+    // `GUARDRAILS_V2_CANDIDATE` flag). Set to `0` to disable the judge layer.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
@@ -497,6 +499,26 @@ const env: AppEnv = {
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  // R4 W4.3 — B2B leads inbox. Config value, not a feature flag (cf.
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Falls back to supportInboxEmail in
+  // local dev so no env churn for solo contributors.
+  b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),
+  // R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Config
+  // value (numeric Brevo list ID), NOT a feature flag (mirror b2bInboxEmail /
+  // AUDIT_CHAIN_ALERT_EMAIL precedent). Empty (or non-numeric) → composition
+  // root wires the NoopBetaSignupNotifier so the route stays 202 and the
+  // operator gets a structured warn log to monitor.
+  brevoBetaListId: (() => {
+    const raw = toOptionalString(process.env.BREVO_BETA_LIST_ID);
+    if (!raw) return;
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  })(),
+  // R2 W3.4 — Salt for admin CSV export pseudonymization. Config value, NOT a
+  // feature flag (cf. AUDIT_CHAIN_ALERT_EMAIL precedent). Empty → composition
+  // root falls back to the legacy literal so local dev / boot stays ergonomic.
+  // Rotate manually after a breach.
+  exportPseudonymSalt: toOptionalString(process.env.EXPORT_PSEUDONYM_SALT),
   storage: {
     driver: storageDriver,
     // Resolved at parse time so downstream consumers always see an absolute path,

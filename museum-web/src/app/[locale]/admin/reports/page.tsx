@@ -12,7 +12,7 @@ import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types'
 const STATUS_COLORS: Record<ReportStatus, string> = {
   pending: 'bg-amber-100 text-amber-700',
   reviewed: 'bg-green-100 text-green-700',
-  dismissed: 'bg-gray-100 text-gray-500',
+  dismissed: 'bg-gray-100 text-gray-600',
 };
 
 const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
@@ -91,6 +91,20 @@ export default function ReportsPage() {
   // -- Ref for modal backdrop -----------------------------------------------------
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    if (!editingReport) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submitting) setEditingReport(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editingReport, submitting]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reports}</h1>
@@ -99,6 +113,7 @@ export default function ReportsPage() {
       {/* Filter */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
+          aria-label={adminDict.common.allStatuses}
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value as ReportStatus | '');
@@ -225,7 +240,7 @@ export default function ReportsPage() {
 
       {/* Review Modal */}
       {editingReport && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -233,9 +248,6 @@ export default function ReportsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingReport(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditingReport(null);
           }}
         >
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -256,6 +268,7 @@ export default function ReportsPage() {
             )}
 
             <select
+              aria-label={adminDict.reportsPage.review}
               value={newStatus}
               onChange={(e) => {
                 setNewStatus(e.target.value as ReportStatus);

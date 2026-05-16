@@ -86,6 +86,8 @@ export function MfaChallengeScreen({
       />
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={mode === 'totp' ? 'Verify authenticator code' : 'Verify recovery code'}
+        accessibilityState={{ disabled: pending || value.length === 0, busy: pending }}
         style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
         onPress={() => {
           void handleSubmit();
@@ -96,6 +98,9 @@ export function MfaChallengeScreen({
       </Pressable>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={
+          mode === 'totp' ? 'Switch to recovery code entry' : 'Switch to authenticator code entry'
+        }
         onPress={() => {
           setMode((prev) => (prev === 'totp' ? 'recovery' : 'totp'));
           setValue('');

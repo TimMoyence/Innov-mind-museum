@@ -8,6 +8,7 @@ import type { AuditLogEntry } from '@shared/audit/audit.types';
 import {
   AUDIT_GUARDRAIL_BLOCKED_INPUT,
   AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
+  AUDIT_GUARDRAIL_INPUT_REDACTED,
 } from '@shared/audit/audit.types';
 import { makeChatRepo } from 'tests/helpers/chat/repo.fixtures';
 
@@ -479,8 +480,10 @@ describe('GuardrailEvaluationService', () => {
 
   describe('guardrail provider integration (ADR-048)', () => {
     const makeAdvancedMock = (
-      checkInputResult: { allow: boolean; reason?: string } | Error,
-      checkOutputResult: { allow: boolean; reason?: string } | Error = { allow: true },
+      checkInputResult: { allow: boolean; reason?: string; redactedText?: string } | Error,
+      checkOutputResult: { allow: boolean; reason?: string; redactedText?: string } | Error = {
+        allow: true,
+      },
     ) => ({
       name: 'mock-adv',
       version: 'mock-adv-v0',
@@ -636,6 +639,124 @@ describe('GuardrailEvaluationService', () => {
       const result = await service.evaluateInput('tell me about football scores');
 
       expect(result.reason).toBe('off_topic');
+    });
+
+    // LLM02 (2026-05-14) — PII redaction propagation. The sidecar Anonymize
+    // scanner returns a sanitized prompt; the use-case must forward it on
+    // `allow=true` so the chat orchestrator can substitute it for the LLM
+    // payload. The chain was broken until this fix; tests R1/R2/R5/R7/R8
+    // guard against regression.
+    describe('LLM02 — redactedText propagation', () => {
+      it('R1 propagates redactedText on allow=true', async () => {
+        const adv = makeAdvancedMock({
+          allow: true,
+          redactedText: 'email <EMAIL_ADDRESS_1>',
+        });
+        const service = new GuardrailEvaluationService({
+          repository: createMockRepository(),
+          guardrailProvider: adv,
+          guardrailProviderObserveOnly: false,
+        });
+
+        const result = await service.evaluateInput('email tim@example.com');
+
+        expect(result.allow).toBe(true);
+        expect(result.redactedText).toBe('email <EMAIL_ADDRESS_1>');
+      });
+
+      it('R2 preserves redactedText through the observe-only downgrade', async () => {
+        const adv = makeAdvancedMock({
+          allow: false,
+          reason: 'pii',
+          redactedText: 'email <EMAIL_ADDRESS_1>',
+        });
+        const service = new GuardrailEvaluationService({
+          repository: createMockRepository(),
+          guardrailProvider: adv,
+          guardrailProviderObserveOnly: true,
+        });
+
+        const result = await service.evaluateInput('email tim@example.com');
+
+        expect(result.allow).toBe(true);
+        expect(result.redactedText).toBe('email <EMAIL_ADDRESS_1>');
+      });
+
+      it('R5 emits AUDIT_GUARDRAIL_INPUT_REDACTED with pii_redacted=true when scrub differs from input', async () => {
+        const adv = makeAdvancedMock({
+          allow: true,
+          redactedText: 'email <EMAIL_ADDRESS_1> card <CREDIT_CARD_1>',
+        });
+        const audit = createMockAudit();
+        const service = new GuardrailEvaluationService({
+          repository: createMockRepository(),
+          guardrailProvider: adv,
+          guardrailProviderObserveOnly: false,
+          audit,
+        });
+
+        await service.evaluateInput('email tim@example.com card 4111-1111-1111-1111', undefined, {
+          sessionId: 'session-pii',
+          userId: 99,
+          locale: 'fr',
+        });
+
+        const redactionCalls = audit.log.mock.calls.filter(
+          ([entry]: [AuditLogEntry]) => entry.action === AUDIT_GUARDRAIL_INPUT_REDACTED,
+        );
+        expect(redactionCalls).toHaveLength(1);
+        const entry: AuditLogEntry = redactionCalls[0][0];
+        expect(entry.actorId).toBe(99);
+        expect(entry.targetId).toBe('session-pii');
+        const meta = entry.metadata!;
+        expect(meta.pii_redacted).toBe(true);
+        expect(meta.placeholder_count).toBe(2);
+        expect(meta.locale).toBe('fr');
+        // Forensic invariant: the raw PII MUST never reach the audit chain.
+        const serialized = JSON.stringify(entry);
+        expect(serialized).not.toContain('tim@example.com');
+        expect(serialized).not.toContain('4111-1111-1111-1111');
+      });
+
+      it('R7 absent provider: no redactedText, no redaction audit row', async () => {
+        const audit = createMockAudit();
+        const service = new GuardrailEvaluationService({
+          repository: createMockRepository(),
+          audit,
+        });
+
+        const result = await service.evaluateInput('email tim@example.com');
+
+        expect(result.allow).toBe(true);
+        expect(result.redactedText).toBeUndefined();
+        const redactionCalls = audit.log.mock.calls.filter(
+          ([entry]: [AuditLogEntry]) => entry.action === AUDIT_GUARDRAIL_INPUT_REDACTED,
+        );
+        expect(redactionCalls).toHaveLength(0);
+      });
+
+      it('R8 redactedText === input (no scrub effective): propagated but NOT audited', async () => {
+        const adv = makeAdvancedMock({
+          allow: true,
+          redactedText: 'foo bar',
+        });
+        const audit = createMockAudit();
+        const service = new GuardrailEvaluationService({
+          repository: createMockRepository(),
+          guardrailProvider: adv,
+          guardrailProviderObserveOnly: false,
+          audit,
+        });
+
+        const result = await service.evaluateInput('foo bar');
+
+        expect(result.allow).toBe(true);
+        expect(result.redactedText).toBe('foo bar');
+        const redactionCalls = audit.log.mock.calls.filter(
+          ([entry]: [AuditLogEntry]) => entry.action === AUDIT_GUARDRAIL_INPUT_REDACTED,
+        );
+        expect(redactionCalls).toHaveLength(0);
+      });
     });
   });
 

@@ -24,10 +24,24 @@ export type AuthRefreshResult =
 type AuthRefreshHandler = () => Promise<AuthRefreshResult>;
 type TokenProvider = () => string | null;
 
+/**
+ * R1 (C6) — Paywall handler shape. Invoked from the response interceptor
+ * when a 402 carries `code:'QUOTA_EXCEEDED'`. The `PaywallProvider` mobile
+ * component registers a closure that opens the upsell modal ; the
+ * interceptor stays decoupled from React.
+ */
+type PaywallHandler = (info: {
+  tier: string;
+  currentCount: number;
+  limit: number;
+  resetAt: string;
+}) => void;
+
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let authRefreshHandler: AuthRefreshHandler | null = null;
 let inflightRefresh: Promise<AuthRefreshResult> | null = null;
 let tokenProvider: TokenProvider | null = null;
+let paywallHandler: PaywallHandler | null = null;
 
 /**
  * Registers a provider function that returns the current access token.
@@ -45,6 +59,17 @@ export const setTokenProvider = (fn: TokenProvider | null): void => {
  */
 export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null): void => {
   unauthorizedHandler = handler;
+};
+
+/**
+ * R1 (C6) — Registers the soft-paywall handler invoked by the response
+ * interceptor when a 402 + `code:'QUOTA_EXCEEDED'` is seen. Mirror of
+ * `setUnauthorizedHandler` / `setAuthRefreshHandler` setter-injection
+ * pattern — keeps `shared/infrastructure` decoupled from `features/paywall`.
+ * Pass `null` to unregister (provider unmount).
+ */
+export const setPaywallHandler = (handler: PaywallHandler | null): void => {
+  paywallHandler = handler;
 };
 
 /**
@@ -216,7 +241,11 @@ httpClient.interceptors.response.use(
     if (__DEV__) {
       console.debug('[HTTP] <-', response.status, response.config.url);
     }
-    emitHttpBreadcrumb(response.config as typeof response.config & HttpRequestConfig, response.status, 'info');
+    emitHttpBreadcrumb(
+      response.config as typeof response.config & HttpRequestConfig,
+      response.status,
+      'info',
+    );
     return response;
   },
   async (error: unknown) => {
@@ -228,6 +257,33 @@ httpClient.interceptors.response.use(
     const requestUrl = String(config.url ?? '');
     const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
     const isAuthRequired = config.requiresAuth !== false;
+
+    // R1 (C6) — Soft-paywall 402 branch. Body shape is pinned by the BE
+    // contract (`code:'QUOTA_EXCEEDED'`) ; the interceptor forwards the
+    // payload to the registered paywall handler (via `setPaywallHandler`)
+    // and STILL propagates the error so the calling code's `.catch()` can
+    // surface its own fallback (R24 — additive, not exclusive).
+    if (status === 402) {
+      const body = axiosError?.response?.data as
+        | {
+            code?: string;
+            tier?: string;
+            currentCount?: number;
+            limit?: number;
+            resetAt?: string;
+          }
+        | undefined;
+      if (body?.code === 'QUOTA_EXCEEDED' && paywallHandler) {
+        paywallHandler({
+          tier: typeof body.tier === 'string' ? body.tier : 'free',
+          currentCount: typeof body.currentCount === 'number' ? body.currentCount : 0,
+          limit: typeof body.limit === 'number' ? body.limit : 0,
+          resetAt: typeof body.resetAt === 'string' ? body.resetAt : '',
+        });
+      }
+      // Fall through to mapAxiosError + reject — the calling code still
+      // sees a rejected Promise.
+    }
 
     if (
       status === 401 &&

@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && esbuild src/index.ts src/rules/no-inline-test-entities.ts src/rules/no-undisabled-test-discipline-disable.ts --bundle --platform=node --format=cjs --target=node22 --external:eslint --outdir=dist",
+    "build": "tsc -p tsconfig.json --emitDeclarationOnly && esbuild src/index.ts src/rules/no-inline-test-entities.ts src/rules/no-typeorm-set-undefined.ts src/rules/no-undisabled-test-discipline-disable.ts --bundle --platform=node --format=cjs --target=node22 --external:eslint --outdir=dist",
     "test": "jest",
     "lint": "tsc --noEmit",
     "check-dist": "bash scripts/check-dist-fresh.sh"
@@ -20,8 +20,8 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^22.0.0",
-    "@typescript-eslint/parser": "^8.58.1",
-    "@typescript-eslint/rule-tester": "^8.58.1",
+    "@typescript-eslint/parser": "^8.59.1",
+    "@typescript-eslint/rule-tester": "^8.59.1",
     "esbuild": "^0.28.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",

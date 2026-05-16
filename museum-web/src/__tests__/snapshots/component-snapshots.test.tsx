@@ -63,6 +63,8 @@ const mockDict: Dictionary = {
     googlePlay: '',
     appStorePrefix: '',
     googlePlayPrefix: '',
+    appStoreHref: '',
+    googlePlayComingSoon: '',
   },
   chatShowcase: { title: '', subtitle: '', bullets: [], messages: [] },
   mapsShowcase: { title: '', subtitle: '', bullets: [] },
@@ -86,7 +88,13 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '(c) 2025 Musaium',
     madeBy: 'Made by InnovMind',
-    links: { privacy: 'Privacy Policy', support: 'Help', accessibility: 'Accessibility' },
+    links: {
+      privacy: 'Privacy Policy',
+      support: 'Help',
+      accessibility: 'Accessibility',
+      security: 'Security',
+      b2b: 'For museums',
+    },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],

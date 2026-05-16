@@ -20,7 +20,6 @@ import { toOptionalString } from './env-helpers';
 import type {
   DeploymentMode,
   EmbeddingsProvider,
-  GuardrailsV2Candidate,
   LlmProvider,
   NodeEnv,
   StorageDriver,
@@ -28,7 +27,6 @@ import type {
 
 const nodeEnvSchema = z.enum(['development', 'test', 'production']);
 const llmProviderSchema = z.enum(['openai', 'deepseek', 'google']);
-const guardrailsCandidateSchema = z.enum(['off', 'llm-guard', 'llm-judge']);
 const storageDriverSchema = z.enum(['local', 's3']);
 const embeddingsProviderSchema = z.enum(['siglip-onnx', 'replicate']);
 
@@ -142,12 +140,6 @@ export function resolveNodeEnv(): NodeEnv {
 export function resolveLlmProvider(): LlmProvider {
   const raw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
   return llmProviderSchema.safeParse(raw).data ?? 'openai';
-}
-
-/** Whitelist-narrows `GUARDRAILS_V2_CANDIDATE`; defaults to off. */
-export function resolveGuardrailsCandidate(): GuardrailsV2Candidate {
-  const raw = (process.env.GUARDRAILS_V2_CANDIDATE || 'off').toLowerCase();
-  return guardrailsCandidateSchema.safeParse(raw).data ?? 'off';
 }
 
 /** Whitelist-narrows `OBJECT_STORAGE_DRIVER`; defaults to local. */

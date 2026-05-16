@@ -8,6 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '', changeFrequency: 'weekly' as const, priority: 1.0 },
     { path: '/support', changeFrequency: 'monthly' as const, priority: 0.7 },
     { path: '/privacy', changeFrequency: 'yearly' as const, priority: 0.3 },
+    { path: '/security', changeFrequency: 'monthly' as const, priority: 0.4 },
+    { path: '/accessibility', changeFrequency: 'yearly' as const, priority: 0.3 },
   ];
 
   return pages.flatMap((page) =>

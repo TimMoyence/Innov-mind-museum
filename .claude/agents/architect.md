@@ -47,6 +47,20 @@ context/                       # global React Contexts
 - Mobile-UX checklist: a11y labels, FlatList not .map() in ScrollView, KeyboardAvoidingView on input screens, useNativeDriver:true, no console.log in prod, no unicode emojis (PNG + Ionicons only — `feedback_no_unicode_emoji`).
 - Web (Next.js 15): Server Components default, `'use client'` only for interactivity, next-intl for i18n, generateMetadata not hardcoded.
 
+### Web TDD a11y (mandatory test-first — lesson 2026-05-15)
+For EVERY touched/created route under `museum-web/src/app/.../`:
+- `tasks.md` MUST list a dedicated **RED** task BEFORE any impl task for that route:
+  `Tn.x — Write FAILING Playwright a11y spec at museum-web/e2e/a11y/<route-slug>.a11y.spec.ts` (DONE-WHEN: `npx playwright test e2e/a11y/<route-slug>.a11y.spec.ts` FAILS because the route isn't implemented yet).
+- Impl tasks (Tn.x+1..) come AFTER. Editor materialises the RED spec first, then makes it green via impl.
+- Past 3 /team runs forgot this and the spec was retro-fitted in corrective loop 1. The architect, not the editor, owns this — list it explicitly in tasks.md.
+
+### Per-component string-guard contract (`*.no-hardcoded-strings.test.ts`)
+When tasks.md adds a new web component with copy, the matching guard test MUST be specified with this exact contract — copy/paste it verbatim into the task DONE-WHEN so editor cannot misimplement:
+- Source scan: **per-line** (`source.split('\n').some(line => ...)`), NOT whole-file regex.
+- FORBIDDEN list: **multi-word UX phrases only** (≥2 words, e.g. `'Join the beta'`, `'Sign up to be notified'`). Single tokens like `'Sending'` / `'Submit'` are FORBIDDEN in the FORBIDDEN list — they collide with legitimate dict keys (`dict.sending`).
+- Match form: quoted-string literals AND JSX-text content only. Identifiers, dict keys, type names = out of scope.
+- Workarounds (e.g. `String.fromCharCode`, `const PENDING_KEY = '…'` aliases, character arrays) used to dodge the regex = BLOCKER for reviewer. If the regex is too broad, tighten the regex — don't disguise the literal.
+
 ### API Contract-first
 - `museum-backend/openapi/openapi.json` = source of truth.
 - Spec change → validate (`pnpm openapi:validate`) → BE impl → contract test → FE typegen (`npm run generate:openapi-types`) → drift check.
@@ -114,6 +128,10 @@ Final report when phase complete:
 
 ### Open questions (BLOCK if any)
 - Q1: <statement> — needs user decision before editor proceeds
+
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious shortcut, missing-section, or rule bend (UFR / spec / design / CLAUDE.md)
+- format: { rule: "UFR-XXX | spec.md §N | CLAUDE.md §X", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
 
 ### Verdict: READY-FOR-EDITOR | BLOCKED-AWAITING-USER
 ```

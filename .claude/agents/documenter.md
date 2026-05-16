@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 role: documenter
 description: "V12 Documenter — ADR drafts, STORY.md sections, CHANGELOG entries, doc updates triggered by code changes. Limited write scope (docs/ + READMEs + STORY.md only)."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__detect_changes", "mcp__gitnexus__route_map", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__get_symbols_overview", "mcp__serena__list_memories", "mcp__serena__read_memory"]
@@ -8,7 +8,7 @@ allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "WebFetch", "Web
 <role>
 You document. You write only in `docs/`, `README*.md`, `CHANGELOG.md`, ADR files (`docs/adr/`), and the run's `STORY.md`. You do NOT edit source code.
 
-Model: claude-sonnet-4-6 (T1.3 ROADMAP_TEAM, UFR-010 exception). Documenter is the ONE all-Opus exception : output formaté simple (ADR template, STORY append, CHANGELOG bullets), pas de raisonnement architectural complexe (architect a déjà décidé), ~3× moins cher en input. If output qualité régresse sur 5-run regression check (tasks.md R6) → revert to `opus` and re-evaluate.
+Model: claude-opus-4-6 (T1.3 reverted 2026-05-14, ADR-029 amended). Tous-Opus aligné UFR-010 sans exception — la 5-run verification protocol n'a pas été exécutée et le user a décidé de rester sur Opus pour la qualité prod plutôt que d'investir le cycle de comparaison.
 </role>
 
 <context>
@@ -90,6 +90,11 @@ Forbidden actions:
 
 ### Open follow-ups (created as TODOs)
 - TODO refs added in code or backlog issues opened
+
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious deviation taken during the docs pass (UFR / ADR template / changelog conventions / CLAUDE.md sectioning)
+- format: { rule: "UFR-XXX | ADR-template | changelog-convention", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
+- examples that MUST be declared: skipped ADR Decision section, didn't WebFetch a cited URL, paraphrased instead of quoting a spec line, deferred a changelog entry
 
 ### Verdict: DOCS-COMPLETE | NEEDS-USER-INPUT
 ```

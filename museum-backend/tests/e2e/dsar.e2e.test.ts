@@ -76,7 +76,11 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
     const body = res.body as Record<string, unknown>;
     expect((body.user as { id: number }).id).toBe(userId);
     expect((body.user as { email: string }).email).toBe(email);
-    expect(body.consent).toEqual([]);
+    // Registration auto-records a tos_privacy consent (register.useCase.ts:recordTosConsent),
+    // so even a "no-data" user has 1 consent row right after signup.
+    const consent = body.consent as { scope: string }[];
+    expect(consent).toHaveLength(1);
+    expect(consent[0].scope).toBe('tos_privacy');
     expect(body.chatSessions).toEqual([]);
     expect(body.savedArtworks).toEqual([]);
     expect(body.reviews).toEqual([]);

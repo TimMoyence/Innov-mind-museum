@@ -875,7 +875,8 @@
       "fullscreen_close": "Chiudi",
       "previous_image": "Immagine precedente",
       "next_image": "Immagine successiva",
-      "messages_list": "Messaggi chat"
+      "messages_list": "Messaggi chat",
+      "follow_up_hint": "Invia questa domanda di approfondimento"
     },
     "onboarding": {
       "skip": "Salta l'introduzione",
@@ -1013,7 +1014,8 @@
     "data_images": "Foto che condividi (metadati rimossi)",
     "data_audio": "Messaggi vocali (solo trascritti, l'audio non viene memorizzato dall'IA)",
     "data_location": "La tua posizione (se scegli di condividerla)",
-    "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)"
+    "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)",
+    "data_providers": "Trattati da servizi di IA di terze parti: OpenAI, Google e DeepSeek"
   },
   "dailyArt": {
     "title": "Opera del Giorno",
@@ -1121,5 +1123,20 @@
       "title": "Ancora nessuna visita",
       "description": "Inizia una conversazione e la tua visita apparirà qui."
     }
+  },
+  "followUpButtons": {
+    "section_label": "Domande rapide"
+  },
+  "paywall": {
+    "modalTitle": "Limite mensile gratuito raggiunto",
+    "modalBody": "Hai usato tutte le conversazioni incluse nel tuo piano gratuito questo mese. Lasciaci la tua email e ti avviseremo non appena premium sarà disponibile.",
+    "fieldEmail": "Indirizzo email",
+    "submit": "Unisciti alla lista premium",
+    "sending": "Invio in corso…",
+    "success": "Grazie — ti contatteremo.",
+    "error": "Qualcosa è andato storto. Riprova più tardi.",
+    "dismiss": "Chiudi",
+    "consent": "Accetto di ricevere un'email al lancio di premium.",
+    "resetsOn": "Si reimposta il"
   }
 }

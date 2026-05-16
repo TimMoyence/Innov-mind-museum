@@ -5,6 +5,7 @@ import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
+import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
@@ -88,10 +89,33 @@ export default function AdminReviewsPage() {
   // -- Modal backdrop ref ─────────────────────────────────────────────
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  const modalOpen = moderating !== null && decision !== null;
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) {
+        setModerating(null);
+        setDecision(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [modalOpen, saving]);
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary">{adminDict.reviewsAdmin}</h1>
-      <p className="mt-1 text-text-secondary">{adminDict.reviewsPage.subtitle}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">{adminDict.reviewsAdmin}</h1>
+          <p className="mt-1 text-text-secondary">{adminDict.reviewsPage.subtitle}</p>
+        </div>
+        <ExportCsvButton kind="reviews" />
+      </div>
 
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -233,7 +257,7 @@ export default function AdminReviewsPage() {
 
       {/* Moderation confirm modal */}
       {moderating && decision && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- intentional: outside-click + Esc on the backdrop is standard modal behavior
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -241,12 +265,6 @@ export default function AdminReviewsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) {
-              setModerating(null);
-              setDecision(null);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
               setModerating(null);
               setDecision(null);
             }

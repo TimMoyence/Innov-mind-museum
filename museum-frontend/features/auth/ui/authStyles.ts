@@ -43,11 +43,11 @@ export const authStyles = StyleSheet.create({
   title: {
     fontSize: fontSize.xl,
     fontWeight: '700',
-    textAlign: 'left',
+    textAlign: 'auto',
   },
   subtitle: {
     fontSize: fontSize.sm,
-    textAlign: 'left',
+    textAlign: 'auto',
     lineHeight: lineHeightPx['21'],
   },
   form: {
@@ -167,7 +167,7 @@ export const authStyles = StyleSheet.create({
     opacity: 0.6,
   },
   faceIdButtonIcon: {
-    marginRight: 0,
+    marginEnd: 0,
   },
   faceIdButtonLabel: {
     fontWeight: '700',

@@ -29,9 +29,11 @@ ADRs produced: ADR-014 (MFA all roles), ADR-015 (LLM-judge guardrail v2), ADR-01
 
 Debrief (training material): `docs/_archive/training-2026-05/explications-sprint-2026-05-05/` (22 fichiers, 6239L).
 
-## Phase 12 — Stryker mutation testing — banking-grade hit (2026-05-08 → 2026-05-11)
+## Phase 12 — Stryker mutation testing — banking-grade hit (2026-05-08 → 2026-05-11, audit-corrected 2026-05-14)
 
-Stryker incremental rollout per-module config (shared-db, shared-http, module-auth-totp, etc.). Final autonomous night run 2026-05-10 → 2026-05-11 produced **0 survivors / 4999 mutants / 99.75% official mutation score** — above the ≥95% target. 481 NoCoverage files remain as next-sprint backlog (mfa.route 62, audit-cron 39, redis-cache 38, langfuse 34, login-handler 33, totp-secret repo 22, etc.).
+Stryker incremental rollout per-module config (shared-db, shared-http, module-auth-totp, etc.). Autonomous night run 2026-05-10 → 2026-05-11 produced **0 survivors / 4067 covered mutants / 100.00 % mutation score on covered code** (classical Stryker formula counting 481 NoCoverage as undetected = 89.42 %). The **`99.75 %` figure originally posted here was not reproducible** from any committed artifact — corrected by audit `2026-05-14 verification batch`.
+
+Subsequent cleanup commit `07aea6ef` (chore: Stryker survivor cleanup — review/support/auth/email + 4 module configs) refreshed the per-module configs ; current `reports/stryker-incremental.json` (mtime 2026-05-14 11:42) reports **Killed=1387 / Timeout=3190 / Survived=28 / NoCoverage=298 / Ignored=701 / RuntimeError=9 (total 5613)**, i.e. **classical = 93.35 % ; covered-only = 99.39 %**. The 28 survivors are the next-sprint mutation backlog ; CI nightly continues to enforce per-hot-file thresholds via `museum-backend/.stryker-hot-files.json`.
 
 Banking-grade hot files config: `museum-backend/.stryker-hot-files.json` (chat schemas, auth, llm-judge guardrail, sanitizePromptInput). Mutation score per hot file enforced in CI nightly.
 
@@ -40,3 +42,9 @@ Commits: `daa3ef20` (final 0 survivors on shared/* + module-auth-totp), prior ch
 ## Phase 13 — Chaos circuit breaker e2e (deferred to next sprint)
 
 `tests/e2e/chaos-circuit-breaker.e2e.test.ts` skipped pending coordination with the LLMCircuitBreaker / opossum refactor. Activation tracked as a TECH_DEBT entry.
+
+## Phase 14 — Garak REST swap (2026-05-14)
+
+ADR-049 §Rollout Phase 1.5 closed ahead of schedule. `llm-security-garak.yml` swapped from a `huggingface.Pipeline` (Phi-3-mini-4k-instruct) baseline target to a `rest` generator pointed at the live Musaium chat endpoint (`POST /api/chat/sessions/:id/messages`), booted in-job via pgvector + Redis service containers (same pattern as `llm-security-promptfoo.yml`). Probe set widened 3 → 6 (`promptinject,leakreplay,encoding,dan,tap,xss`) — closes audit gaps G2 (multi-turn via `dan` + `tap`) and G4 (encoding bypass) from `2026-05-14-verification-batch`. Session-per-probe freshness loop prevents history contamination. New `Content check` step defends against silent JSON-shape drift; severity-eval Python widened to multi-report glob. `--parallel_attempts=1`. Known coverage gap deferred to Phase 2: LLM Guard sidecar not deployed in CI (same gap in promptfoo).
+
+Run: `2026-05-14-garak-musaium-rest-swap`. New file: `museum-backend/scripts/llm-security/musaium-garak-rest.json`. ADR-049 changelog footer + STATUS.md row updated at merge.
