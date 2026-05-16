@@ -40,9 +40,15 @@ async function seedAdminUser(email: string, password: string): Promise<void> {
   });
   await pg.connect();
   try {
-    await pg.query("UPDATE users SET role = 'admin', email_verified = true WHERE email = $1", [
-      email,
-    ]);
+    // Seeded as `super_admin` (not plain `admin`) so a11y/flow specs can
+    // exercise super_admin-gated affordances (R1 tier toggle modal,
+    // admin-export, role-change). `super_admin` implicitly satisfies any
+    // `requireRole(...)` check (see require-role.middleware.ts:28), so this
+    // remains a superset of the prior `admin` seed for non-tier specs.
+    await pg.query(
+      "UPDATE users SET role = 'super_admin', email_verified = true WHERE email = $1",
+      [email],
+    );
   } finally {
     await pg.end();
   }
