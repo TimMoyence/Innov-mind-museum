@@ -4,25 +4,12 @@ import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import { AppError } from '@shared/errors/app.error';
 
 import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/pg/museum.repository.pg';
+import { makeMuseum } from 'tests/helpers/museum/museum.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
-// ─── Museum factory ───
-function makeMuseum(overrides: Partial<Museum> = {}): Museum {
-  return {
-    id: 1,
-    name: 'Louvre',
-    slug: 'louvre',
-    address: '75001 Paris',
-    description: 'Famous museum',
-    config: {},
-    latitude: 48.8606,
-    longitude: 2.3376,
-    isActive: true,
-    createdAt: new Date('2025-01-01'),
-    updatedAt: new Date('2025-01-01'),
-    ...overrides,
-  } as Museum;
-}
+// T3.4 (2026-05-16) — Local makeMuseum() removed: replaced by the shared factory
+// at tests/helpers/museum/museum.fixtures.ts, which uses Object.assign(new Museum(), ...)
+// instead of an `as Museum` cast and gives every test the same default shape.
 
 function buildMocks() {
   const { repo } = makeMockTypeOrmRepo<Museum>();
@@ -114,7 +101,7 @@ describe('MuseumRepositoryPg', () => {
     it('updates existing museum fields', async () => {
       const existing = makeMuseum();
       repo.findOne.mockResolvedValue(existing);
-      repo.save.mockResolvedValue({ ...existing, name: 'Updated' } as Museum);
+      repo.save.mockResolvedValue(makeMuseum({ ...existing, name: 'Updated' }));
 
       const result = await sut.update(1, { name: 'Updated' });
 
