@@ -1,4 +1,6 @@
 
+import { Router } from 'express';
+
 import { parseListSessionsQuery } from '@modules/chat/adapters/primary/http/chat.contracts';
 import {
   getRequestUser,
@@ -14,7 +16,6 @@ import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { monthlySessionQuota } from '@shared/middleware/monthly-session-quota.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
-import { Router } from 'express';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
