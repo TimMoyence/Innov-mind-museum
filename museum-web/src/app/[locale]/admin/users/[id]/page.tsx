@@ -601,8 +601,20 @@ function RoleChangeModal({
   onConfirm: () => void;
 }) {
   const backdropRef = useRef<HTMLDivElement>(null);
+  // Window-level Escape: the dialog div is not focusable, so a div-scoped
+  // onKeyDown never fires when focus stays on the action button that opened
+  // the modal. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [busy, onCancel]);
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- backdrop click + Escape handled
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
     <div
       ref={backdropRef}
       role="dialog"
@@ -611,9 +623,6 @@ function RoleChangeModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === backdropRef.current && !busy) onCancel();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && !busy) onCancel();
       }}
     >
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
@@ -684,8 +693,20 @@ function DeleteConfirmModal({
   onConfirm: () => void;
 }) {
   const backdropRef = useRef<HTMLDivElement>(null);
+  // Window-level Escape: the dialog div is not focusable, so a div-scoped
+  // onKeyDown never fires when focus stays on the action button that opened
+  // the modal. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [busy, onCancel]);
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- backdrop click + Escape handled
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
     <div
       ref={backdropRef}
       role="dialog"
@@ -694,9 +715,6 @@ function DeleteConfirmModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
       onClick={(e) => {
         if (e.target === backdropRef.current && !busy) onCancel();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && !busy) onCancel();
       }}
     >
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">

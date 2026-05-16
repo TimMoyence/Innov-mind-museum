@@ -77,6 +77,25 @@ describe('SupportRepositoryPg — mutation kills', () => {
     });
   });
 
+  // ── L76:51 StringLiteral: createQueryBuilder alias `'t'` → `""`
+  // The alias is the prefix every subsequent .andWhere('t.userId = …') and
+  // .orderBy('t.updatedAt', …) clause depends on. Mock returns the same qb
+  // regardless of arg, so behavioural tests miss this — we assert the call arg
+  // directly. Pairs with the existing andWhere/orderBy literal assertions which
+  // already pin 't.' as the prefix.
+
+  describe('listTickets createQueryBuilder alias (L76:51)', () => {
+    it('passes the literal alias "t" to ticketRepo.createQueryBuilder (kills StringLiteral → "")', async () => {
+      qb.getCount.mockResolvedValue(0);
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
+
+      await sut.listTickets({ pagination: { page: 1, limit: 10 } });
+
+      expect(ticketRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
+      expect(ticketRepo.createQueryBuilder).toHaveBeenCalledWith('t');
+    });
+  });
+
   // ── L95:10 StringLiteral: addSelect alias `'messageCount'` → `""`
   // The alias is what TypeORM uses as the raw-row property name; with `""` the
   // raw row would carry an empty-string key instead of `messageCount`.

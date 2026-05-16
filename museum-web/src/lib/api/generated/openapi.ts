@@ -1126,6 +1126,53 @@ export interface paths {
     };
     trace?: never;
   };
+  '/api/auth/content-preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Replace the authenticated user's content preferences */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Replacement set of content preferences. Empty array clears all preferences. Backend deduplicates and returns canonical order. */
+            preferences: ('history' | 'technique' | 'artist')[];
+          };
+        };
+      };
+      responses: {
+        /** @description Persisted (deduplicated, canonically ordered) preferences */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              contentPreferences: ('history' | 'technique' | 'artist')[];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    trace?: never;
+  };
   '/api/users/me/export': {
     parameters: {
       query?: never;

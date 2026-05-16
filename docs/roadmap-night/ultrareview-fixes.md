@@ -26,7 +26,7 @@
 | **F3** | bug_010 | `done` | [specs/F3.md](specs/F3.md) | green-code-agent-2026-05-16-F3-001 (fresh) | APPROVED loop 1 **weightedMean 92.15**. Commit `3cdebfe8`. Breakdown : correctness 90 / scope 100 / kiss-dry 87 / a11y 95 / security-honesty 90. 0 blockers. resetAtIso deviation = LEGITIMATE_WORKAROUND (probed indépendamment). T3 Hermes manual smoke = ACCEPTABLE_DEFER (two-layer fallback couvre worst-case = pre-fix behavior, pas régression). Nice-to-have : F3.AC4/5/7 supplemental tests, CLAUDE.md dateStyle:'long' + Hermes ICU context expansion, TECH_DEBT audit autres ISO-in-UI sites. |
 | **F2** | bug_005 | `pending` | specs/F2.md | — | Mobile modal state reset + GDPR Art. 7 enforcement. |
 | **F3** | bug_010 | `pending` | specs/F3.md | — | Mobile Intl.DateTimeFormat resetAt. Spec D4 enforcement. |
-| **F4** | bug_013 | `deferred V1.1 (TD-11)` | — | dispatcher | `docs/TECH_DEBT.md` TD-11 ajouté avec fix sketch pattern (a) `Map<userId, lastLoggedMonth>`, effort 30 min, V1.1 backlog. Reviewer ultrareview classé nit (~6 KB/an V1 scale, ~9 MB / 3 ans à 100k MAU — toujours small relatif aux budgets heap Node). Docblock code-source acknowledges déjà l'invariant. Discipline enterprise-grade : tech debt visible, fix sketch concret, pas de fix overkill. |
+| **F4** | bug_013 | `deferred V1.1 (TD-12)` | — | dispatcher | `docs/TECH_DEBT.md` TD-12 ajouté avec fix sketch pattern (a) `Map<userId, lastLoggedMonth>`, effort 30 min, V1.1 backlog (renumbered from TD-11 post-merge collision with main TD-11 `@types/express-serve-static-core`). Reviewer ultrareview classé nit (~6 KB/an V1 scale, ~9 MB / 3 ans à 100k MAU). Discipline enterprise-grade : tech debt visible, fix sketch concret, pas de fix overkill. |
 
 ---
 

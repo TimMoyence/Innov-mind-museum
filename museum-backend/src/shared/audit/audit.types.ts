@@ -28,6 +28,11 @@ export const AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED = 'AUTH_EMAIL_CHANGE_CONFIRMED';
 export const AUDIT_AUTH_ONBOARDING_COMPLETED = 'AUTH_ONBOARDING_COMPLETED';
 export const AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED = 'AUTH_CONTENT_PREFERENCES_UPDATED';
 export const AUDIT_AUTH_TTS_VOICE_UPDATED = 'AUTH_TTS_VOICE_UPDATED';
+// TD-2 — batch update of the 5 profile preferences (defaultLocale,
+// defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode) via the
+// `/api/auth/me/preferences` endpoint. Metadata carries the raw patch (no
+// PII) so operators can reconstruct toggle-by-toggle history.
+export const AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED = 'AUTH_PROFILE_PREFERENCES_UPDATED';
 
 // ─── Account lifecycle ───
 export const AUDIT_ACCOUNT_DELETED = 'ACCOUNT_DELETED';

@@ -118,6 +118,19 @@ function resolveConcurrency({ localDefault, allowEnvOverride }) {
  * @param {number} [opts.dryRunTimeoutMinutes]
  *   - Bump for scopes whose initial dry-run is long under concurrent load
  *     (shared-db bumped to 10min — see its wrapper).
+ * @param {string[]} [opts.setupFiles]
+ *   - Per-scope `jest.setupFiles` to inject into the cloned project block.
+ *     Used by scopes whose tests boot `createApp()` and would otherwise
+ *     leak open BullMQ/ioredis handles under Stryker's mandatory
+ *     `forceExit:false` (see module-admin wrapper for the canonical case).
+ * @param {string[]} [opts.extraTestPathIgnorePatterns]
+ *   - Per-scope test paths to exclude from the sandbox dry-run. Used in
+ *     tandem with `setupFiles` when the env pin those files install would
+ *     break unrelated tests that fall under the same `unit-integration`
+ *     project (e.g. pinning EXTRACTION_WORKER_ENABLED=false for the admin
+ *     scope unmounts the museum-enrichment route → its route tests 404).
+ *     Skipping is safe when the excluded tests don't cover any file in
+ *     `mutate` (Stryker perTest coverage would skip them anyway).
  * @returns {import('@stryker-mutator/api/core').PartialStrykerOptions}
  */
 export function defineConfig(opts) {
@@ -129,7 +142,27 @@ export function defineConfig(opts) {
     allowEnvConcurrency = true,
     localConcurrency = DEFAULT_CONCURRENCY_LOCAL_TIGHT,
     dryRunTimeoutMinutes,
+    setupFiles,
+    extraTestPathIgnorePatterns,
   } = opts;
+
+  const needsProjectsClone =
+    (setupFiles && setupFiles.length > 0) ||
+    (extraTestPathIgnorePatterns && extraTestPathIgnorePatterns.length > 0);
+  const projects = needsProjectsClone
+    ? SHARED_JEST_PROJECTS.map((project) => ({
+        ...project,
+        ...(setupFiles && setupFiles.length > 0 ? { setupFiles } : {}),
+        ...(extraTestPathIgnorePatterns && extraTestPathIgnorePatterns.length > 0
+          ? {
+              testPathIgnorePatterns: [
+                ...project.testPathIgnorePatterns,
+                ...extraTestPathIgnorePatterns,
+              ],
+            }
+          : {}),
+      }))
+    : SHARED_JEST_PROJECTS;
 
   const config = {
     packageManager: 'pnpm',
@@ -140,7 +173,7 @@ export function defineConfig(opts) {
       enableFindRelatedTests: false,
       config: {
         forceExit: false,
-        projects: SHARED_JEST_PROJECTS,
+        projects,
       },
     },
     coverageAnalysis: 'perTest',

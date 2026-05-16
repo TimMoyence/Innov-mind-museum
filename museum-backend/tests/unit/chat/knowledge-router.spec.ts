@@ -25,14 +25,8 @@ import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
 } from '@modules/chat/domain/ports/knowledge-base.port';
-import type {
-  LlmJudgePort,
-  LlmJudgeResult,
-} from '@modules/chat/domain/ports/llm-judge.port';
-import type {
-  SearchResult,
-  WebSearchProvider,
-} from '@modules/chat/domain/ports/web-search.port';
+import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/useCase/llm/llm-judge-guardrail';
+import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 
 // Silence logger output during tests.
 jest.mock('@shared/logger/logger', () => ({
@@ -82,9 +76,7 @@ const defaultConfig = {
   wsTimeoutMs: 1500,
 };
 
-const makeService = (
-  config: Partial<typeof defaultConfig> = {},
-): MockedDeps => {
+const makeService = (config: Partial<typeof defaultConfig> = {}): MockedDeps => {
   const kb = { lookup: jest.fn() } as unknown as jest.Mocked<KnowledgeBaseProvider>;
   const ws = { search: jest.fn() } as unknown as jest.Mocked<WebSearchProvider>;
   const judge = { evaluate: jest.fn() } as unknown as jest.Mocked<LlmJudgePort>;
@@ -172,7 +164,10 @@ describe('KnowledgeRouterService — cascade KB → judge → WebSearch', () => 
     const { kb, ws, judge, service } = makeService();
     kb.lookup.mockResolvedValueOnce(null);
     judge.evaluate.mockResolvedValueOnce(makeJudgeResult({ confidence: 0.3 }));
-    ws.search.mockResolvedValueOnce([makeSearchResult(), makeSearchResult({ url: 'https://example.org/2' })]);
+    ws.search.mockResolvedValueOnce([
+      makeSearchResult(),
+      makeSearchResult({ url: 'https://example.org/2' }),
+    ]);
 
     const result = await service.resolve('obscure artist');
 
@@ -271,7 +266,12 @@ describe('KnowledgeRouterService — cascade KB → judge → WebSearch', () => 
     const { kb, judge, service } = makeService({ kbTimeoutMs: 20 });
     // KB hangs longer than the 20 ms budget.
     kb.lookup.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(null), 200)),
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(null);
+          }, 200),
+        ),
     );
     judge.evaluate.mockResolvedValueOnce(makeJudgeResult({ confidence: 0.9 }));
 

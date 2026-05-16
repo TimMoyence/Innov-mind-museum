@@ -40,6 +40,7 @@ import {
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
@@ -47,7 +48,9 @@ import { validateQuery } from '@shared/middleware/validate-query.middleware';
 const adminRouter: Router = Router();
 
 function parseUserIdParam(req: Request): number {
-  const userId = Number.parseInt(req.params.id, 10);
+  const raw = parseStringParam(req, 'id');
+  if (!raw) throw badRequest('Invalid user ID');
+  const userId = Number.parseInt(raw, 10);
   if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
   return userId;
 }
@@ -279,7 +282,8 @@ adminRouter.patch(
   requireRole('admin', 'moderator'),
   validateBody(resolveReportSchema),
   async (req: Request, res: Response) => {
-    const reportId = req.params.id;
+    const reportId = parseStringParam(req, 'id');
+    if (!reportId) throw badRequest('Invalid report ID');
     const { status, reviewerNotes } = req.body as {
       status: string;
       reviewerNotes?: string;
@@ -379,7 +383,8 @@ adminRouter.patch(
   requireRole('admin', 'moderator'),
   validateBody(updateTicketSchema),
   async (req: Request, res: Response) => {
-    const ticketId = req.params.id;
+    const ticketId = parseStringParam(req, 'id');
+    if (!ticketId) throw badRequest('Invalid ticket ID');
     const { status, priority, assignedTo } = req.body as {
       status?: string;
       priority?: string;
@@ -428,7 +433,8 @@ adminRouter.patch(
   requireRole('admin', 'moderator'),
   validateBody(moderateReviewSchema),
   async (req: Request, res: Response) => {
-    const reviewId = req.params.id;
+    const reviewId = parseStringParam(req, 'id');
+    if (!reviewId) throw badRequest('Invalid review ID');
     const { status } = req.body as { status: string };
     const actorId = req.user?.id;
     if (!actorId) {

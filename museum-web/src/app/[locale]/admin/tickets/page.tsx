@@ -100,6 +100,20 @@ export default function TicketsPage() {
   // -- Modal backdrop ref ─────────────────────────────────────────────
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Window-level Escape close: the dialog div is not focusable, so a
+  // div-scoped onKeyDown never fires while focus stays on the trigger
+  // button. Window listener catches Escape regardless of focus location.
+  useEffect(() => {
+    if (!editingTicket) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) setEditingTicket(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [editingTicket, saving]);
+
   return (
     <div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -267,7 +281,7 @@ export default function TicketsPage() {
 
       {/* Update Ticket Modal */}
       {editingTicket && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
         <div
           ref={modalRef}
           role="dialog"
@@ -275,9 +289,6 @@ export default function TicketsPage() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
           onClick={(e) => {
             if (e.target === modalRef.current) setEditingTicket(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditingTicket(null);
           }}
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">

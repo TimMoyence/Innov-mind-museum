@@ -189,4 +189,124 @@ describe('bottomSheetReducer', () => {
       });
     });
   });
+
+  // ─── Branch backfill — no-op return paths ────────────────────────────────
+  // These exercise the trailing `return state;` and the early-bail blocking
+  // conflict checks that the rule-numbered tests above don't reach (they
+  // mostly drive the happy-path transitions). Covers reducer lines 64, 80,
+  // 103, 133, 151, and 161.
+
+  describe('no-op events leave the state untouched', () => {
+    it('idle + CLOSE → idle (irrelevant event, no transition)', () => {
+      const state: BottomSheetState = { kind: 'idle' };
+      const next = bottomSheetReducer(state, { type: 'CLOSE' });
+      expect(next).toBe(state);
+    });
+
+    it('idle + OPEN_DONE → idle', () => {
+      const state: BottomSheetState = { kind: 'idle' };
+      const next = bottomSheetReducer(state, { type: 'OPEN_DONE' });
+      expect(next).toBe(state);
+    });
+
+    it('opening(blocking) + OPEN(non-blocking) → unchanged (R6 in flight)', () => {
+      const state: BottomSheetState = {
+        kind: 'opening',
+        route: 'consent',
+        params: {},
+        blocking: true,
+      };
+      const next = bottomSheetReducer(state, {
+        type: 'OPEN',
+        route: 'context-menu',
+        params: {},
+        blocking: false,
+      });
+      expect(next).toBe(state);
+    });
+
+    it('opening + CLOSE_DONE → opening (irrelevant event)', () => {
+      const state: BottomSheetState = {
+        kind: 'opening',
+        route: 'consent',
+        params: {},
+        blocking: true,
+      };
+      const next = bottomSheetReducer(state, { type: 'CLOSE_DONE' });
+      expect(next).toBe(state);
+    });
+
+    it('open + CLOSE_DONE → open (transition only fires from closing)', () => {
+      const state: BottomSheetState = {
+        kind: 'open',
+        route: 'context-menu',
+        params: {},
+        blocking: false,
+      };
+      const next = bottomSheetReducer(state, { type: 'CLOSE_DONE' });
+      expect(next).toBe(state);
+    });
+
+    it('closing(blocking) + OPEN(non-blocking) → unchanged (R6 even mid-close)', () => {
+      const state: BottomSheetState = {
+        kind: 'closing',
+        route: 'consent',
+        params: {},
+        blocking: true,
+        nextQueued: null,
+      };
+      const next = bottomSheetReducer(state, {
+        type: 'OPEN',
+        route: 'context-menu',
+        params: {},
+        blocking: false,
+      });
+      expect(next).toBe(state);
+    });
+
+    it('closing + CLOSE → closing (CLOSE-while-closing is a no-op)', () => {
+      const state: BottomSheetState = {
+        kind: 'closing',
+        route: 'context-menu',
+        params: {},
+        blocking: false,
+        nextQueued: null,
+      };
+      const next = bottomSheetReducer(state, { type: 'CLOSE' });
+      expect(next).toBe(state);
+    });
+  });
+
+  describe('closing + OPEN replaces the queued route', () => {
+    it('closing(non-blocking) + OPEN(any) → same closing state with new nextQueued', () => {
+      const state: BottomSheetState = {
+        kind: 'closing',
+        route: 'context-menu',
+        params: { messageId: 'm1' },
+        blocking: false,
+        nextQueued: {
+          route: 'consent',
+          params: { foo: 'old' },
+          blocking: true,
+        },
+      };
+      const next = bottomSheetReducer(state, {
+        type: 'OPEN',
+        route: 'voice-intro',
+        params: { foo: 'new' },
+        blocking: true,
+      });
+      expect(next).toEqual({
+        kind: 'closing',
+        route: 'context-menu',
+        params: { messageId: 'm1' },
+        blocking: false,
+        nextQueued: {
+          route: 'voice-intro',
+          params: { foo: 'new' },
+          blocking: true,
+        },
+      });
+    });
+  });
 });

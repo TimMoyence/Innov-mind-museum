@@ -13,12 +13,10 @@ import type { ContentPreference } from '@/shared/types/content-preference';
  * device source of truth, writes are optimistically saved locally and
  * eventually consistent with the backend via dedicated PATCH endpoints.
  *
- * **Cross-device limitation (known):** this store is NOT hydrated from
- * `GET /me` after login. A user who changes preferences on device A will see
- * empty toggles on a fresh install of device B until they re-toggle. This is
- * consistent with how every other runtime setting behaves. A future refactor
- * should introduce a unified `bootstrapProfile()` call that hydrates all
- * local-first stores from `/me` on app start.
+ * **Cross-device hydration (TD-2 Option B 2026-05-15):** `mergeFromServer` is
+ * called by `bootstrapProfile()` after login / session resume so devices see
+ * their persisted server-side preferences instead of empty defaults. R3
+ * server-wins-first applies on first hydration of the session.
  *
  * **Forward-looking naming:** the store is called `userProfile` (not
  * `contentPreferences`) because future profile fields (displayName, avatar,
@@ -40,6 +38,12 @@ interface UserProfileState {
   clearContentPreferences: () => void;
   /** Mark onboarding as seen (or reset it for testing/re-onboarding). */
   setHasSeenOnboarding: (value: boolean) => void;
+  /**
+   * Merge the server-side preferences into the local store (server-wins-first
+   * per session — R3). No-op when the server payload omits the field or
+   * carries a non-array value (R5 schema tolerance).
+   */
+  mergeFromServer: (server: { contentPreferences?: ContentPreference[] }) => void;
 }
 
 export const useUserProfileStore = create<UserProfileState>()(
@@ -68,6 +72,12 @@ export const useUserProfileStore = create<UserProfileState>()(
 
       setHasSeenOnboarding: (value) => {
         set({ hasSeenOnboarding: value });
+      },
+
+      mergeFromServer: (server) => {
+        if (Array.isArray(server.contentPreferences)) {
+          set({ contentPreferences: server.contentPreferences });
+        }
       },
     }),
     {

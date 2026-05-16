@@ -59,14 +59,16 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 > Coche `[x]` au merge. Bloqué = `[BLOCKED: raison]` inline.
 >
 > **Sprint segment intermédiaire P1 closure :** 2026-05-05 → 2026-05-19, recap consolidé dans [`docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`](./_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md). Feature freeze 2026-05-19, soak en local Docker 48h (pas de staging avant B2B revenue), release checklist post-19.
+>
+> **🔍 Audit checkbox vs code réel — 2026-05-14 :** un audit complet (4 agents parallèles, cf. session 2026-05-14) a révélé une dérive importante : C1.2 + C3.1/3.2/3.4/3.5 ont été livrés mais les cases jamais cochées par les agents /team au merge. Items reclassés `[x]` ci-dessous avec ref ADR/commit. C3.3 partiel (pipeline shipped, exécution seed prod restante). Voir aussi W3.1/W3.2/W3.3/W4.1 dans Phase 2 (livrés malgré doctrine "Phase 2 blocked").
 
 ### C1 — Chat fast (latency premium)
 
 > Existant : sync-only pipeline shipped + Langfuse spans + targets P50<3.5s WiFi. Manque dashboard p99 baseline + LLM cache audit + optim data-driven.
 
-- [ ] **C1.1 Dashboard Grafana p50/p95/p99** — STT + LLM + TTS depuis spans Langfuse existants. Alerte si p99 >6s. (ex-V5.1)
-- [ ] **C1.2 LLM cache audit + activate** — vérifier wiring `llm-cache.service.ts` (ADR-035) en prod, mesurer hit-rate, tune TTL si actif
-- [ ] **C1.3 Optim data-driven** — après baseline, attaquer goulot identifié (parallélisation tools, prompt compaction, model routing si pertinent)
+- [ ] **C1.1 Dashboard Grafana p50/p95/p99** — STT + LLM + TTS depuis spans Langfuse existants. Alerte si p99 >6s. (ex-V5.1) *(audit 2026-05-14 : HTTP request p50/p95/p99 + `chat_phase_duration_seconds` panel existent dans `musaium-backend-dashboard.json`, manque panels per-stage STT/LLM/TTS dédiés. À compléter)*
+- [x] **C1.2 LLM cache audit + activate** — `llm-cache.service.ts` wiré dans composition root `chat.service.ts:4,123`, Prometheus counters `llmCacheHits/MissesTotal` + panel Grafana hit-rate live. ADR-036 Accepted-Implemented 2026-05-08 (PR-A + PR-B mergés). *(audit 2026-05-14 : case oubliée par /team au merge)*
+- [ ] **C1.3 Optim data-driven** — après baseline, attaquer goulot identifié (parallélisation tools, prompt compaction, model routing si pertinent). Gated par ≥7j bake C1.1 (ADR-036 §Phase 2, semantic cache + pre-warm deferred).
 
 ### C2 — Image dans chat finition (AI-side enrichissement)
 
@@ -86,11 +88,11 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 > Existant : 0. Feature différenciante : visiteur envoie photo œuvre, bot répond avec œuvre similaire + photo + rationale.
 
-- [ ] **C3.1 Embeddings stack** — CLIP ou SigLIP image encoder, BE service dédié
-- [ ] **C3.2 pgvector index** — migration TypeORM nouvelle table `artwork_embeddings`
-- [ ] **C3.3 Catalogue seed initial** — pull Wikidata + Wikimedia Commons sur top musées contractés (~10-20k œuvres), ingest pipeline
-- [ ] **C3.4 Endpoint similarity** — `/chat/compare` : input image user → top-K similaires + Wikidata enrichment + scoring fusion (visual + metadata)
-- [ ] **C3.5 UX FE compare** — message bot inclut card `ImageCompareCarousel` avec œuvre similaire + photo + caption rationale (pourquoi celle-là)
+- [x] **C3.1 Embeddings stack** — SigLIP-base-patch16-224 ONNX adapter `siglip-onnx.adapter.ts` via `onnxruntime-node` (CPU AVX2), normalize `[-1, 1]` (pas ImageNet mean — cf. CLAUDE.md gotcha), tests mock + integration. ADR-037 Accepted 2026-05-10. *(audit 2026-05-14 : case oubliée)*
+- [x] **C3.2 pgvector index** — 2 migrations TypeORM : `1778406339944-AddArtworkEmbeddings` (table + extension vector + index HNSW `halfvec(768)` + `halfvec_ip_ops`) + `1778622760826-AddMuseumIdScopeToArtworkEmbeddings` (scope per-musée). ADR-037 2026-05-10. *(audit 2026-05-14 : case oubliée — pgvector EST sur le serveur prod)*
+- [ ] **C3.3 Catalogue seed initial** — *pipeline shipped 2026-05-10 (`catalog-ingest.ts` + `catalog-ingest.helpers.ts` : SPARQL Wikidata → license filter → download → SigLIP encode → batch upsert).* Action restante = exécuter sur top musées contractés (~10-20k œuvres). Volume seedé en prod = 0 au 2026-05-14.
+- [x] **C3.4 Endpoint similarity** — `chat-compare.route.ts` + `compare.use-case.ts` pipeline 5-stages (cache → encode → kNN pgvector → Wikidata enrichment → scoring fusion), réponse `CompareResult`, 503 fail-open si encoder unavailable, tests route + use-case. 2026-05-10. *(audit 2026-05-14 : case oubliée)*
+- [x] **C3.5 UX FE compare** — `ImageCompareCarousel.tsx` (FlatList RN) + `ImageCompareCard` + i18n `chat.compare.title`/`empty` + factory tests + E2E Maestro `chat-compare.yaml`. 2026-05-10. *(audit 2026-05-14 : case oubliée)*
 
 ### C4 — IA sans hallucination
 
@@ -122,15 +124,15 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 ### C7 — Stabilité prod (KR3)
 
-- [ ] **C7.1 S6.1 Smoke prod** — `pnpm smoke:api` étendu auth + chat + image upload + voice end-to-end
-- [ ] **C7.2 S6.2 Chaos game-day** — `docs/CHAOS_RUNBOOKS.md` Redis kill + LLM down + DB readonly sur staging
+- [ ] **C7.1 S6.1 Smoke prod** — `pnpm smoke:api` couvre auth + chat + image upload + compare (audit 2026-05-14). Manque voice/TTS end-to-end pour valider DoD.
+- [ ] **C7.2 S6.2 Chaos game-day** — `docs/CHAOS_RUNBOOKS.md` rédigé (3 expé : Redis kill rate-limit fail-closed, PG replica → primary failover, LLM provider kill multi-provider), exécution game-day pending.
 - [ ] **C7.3 S6.3 P0 bug zero** — triage Sentry + Linear, aucun ouvert avant 1er juin
-- [ ] **C7.4 S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` exécutée et signée
+- [ ] **C7.4 S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` rédigée (656L, last update 2026-04-04 — refs admin Vite à actualiser → museum-web Next.js 15), execution + sign-off pending.
 - [ ] **C7.5 Smoke device — TTS backgrounded** (avant TestFlight submit, ~5 min) — sur iPhone réel : ouvrir chat → envoyer message → AI répond TTS → lock-screen pendant playback → vérifier que l'audio continue. Si silence après lock = `setAudioModeAsync({ shouldPlayInBackground: true })` dans `useTextToSpeech.ts:222-229` ne s'applique pas correctement (peut nécessiter `AVAudioSession.Category = .playback` côté natif). Issue source : commit `c4338ba1` (P0 #7 ferme la capability Info.plist + JS-side mais le runtime n'a pas été testé device).
 
-### C8 — Compliance VDP follow-up (CRA / GDPR — code + docs déjà mergés 2026-05-14)
+### C8 — Compliance VDP follow-up (CRA / GDPR — code + docs rédigés 2026-05-14)
 
-> Code livré 2026-05-14 (cf. STATUS row "EU CRA VDP" ✅). Reste les actions humaines/ops pour rendre le canal réellement actif. Détails dans [`docs/operations/VDP_RUNBOOK.md`](operations/VDP_RUNBOOK.md).
+> Code rédigé 2026-05-14 : `SECURITY.md`, `docs/operations/VDP_RUNBOOK.md`, `museum-web/public/.well-known/security.txt` (RFC 9116, expires 2027-05-14), `docs/legal/SUBPROCESSORS.md`, `museum-web/src/app/[locale]/security/`, `museum-web/src/lib/security-content.ts`. **Audit 2026-05-14 : fichiers untracked dans `git status` — `git add` + commit avant les ops actions.** Reste les actions humaines/ops pour rendre le canal réellement actif. Détails dans [`docs/operations/VDP_RUNBOOK.md`](operations/VDP_RUNBOOK.md).
 
 - [ ] **C8.1 Mailbox `security@musaium.com`** — créer + forwarder vers founder primary inbox + Slack `#security` mobile push. Bloque launch 2026-06-01 (sans mailbox, `SECURITY.md` ment). Effort 30 min.
 - [ ] **C8.2 CNIL portal dry-run** — vérifier credentials sur <https://notifications.cnil.fr/notifications/>, faire un test breach notification end-to-end. Bloque launch 2026-06-01 (GDPR Art. 33 72h). Effort 60 min.
@@ -144,6 +146,8 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 ## NEXT — Phase 2 Évolution Walk V1 + B2B (post-Phase 1)
 
 > Démarrage conditionné fin Phase 1. Tous les items déplacés depuis l'ancien NOW (renommés en `Wx.y`). Re-priorisation interne possible au moment du pivot.
+>
+> **🔍 Audit 2026-05-14 :** W3.1, W3.2, W3.3 et W4.1 ont été livrés malgré la doctrine "Phase 2 bloquée tant que Phase 1 incomplète" (commits `53903a293` 2026-04-21 → `3bf0813e` 2026-05-07). Items reclassés `[x]` ci-dessous avec ref commit. Indicateur clair que la séparation Phase 1/Phase 2 a glissé en pratique — re-discuter au prochain `/team roadmap:rotate`.
 
 ### W1 — Walk V1 IMPROVE (différenciateur core, ex-priorité 1)
 
@@ -163,14 +167,14 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 ### W3 — Web admin enrichi (ex-priorité 3, KR1 + KR4)
 
-- [ ] **W3.1 RBAC complet** — rôles museum-admin (1 musée), super-admin (tous), visitor — déjà partiel
-- [ ] **W3.2 Page stats musée** — graphes Recharts (sessions/jour, NPS, top œuvres) — pour pitch B2B
-- [ ] **W3.3 Modération reviews** — déjà shipped, vérifier UX museum-admin scoping
+- [x] **W3.1 RBAC complet** — rôles `super_admin`/`museum_manager`/`moderator`/`visitor` + `RoleGuard` côté admin-web. Commit `3bf0813e` 2026-05-07 (P0 #9 admin user detail + P0-6 RoleGuard super_admin). *(audit 2026-05-14 : case oubliée)*
+- [x] **W3.2 Page stats musée** — `admin/analytics/page.tsx` + `admin/reports/page.tsx` avec LineChart/BarChart Recharts. *(audit 2026-05-14 : case oubliée — scope per-musée reste à valider pour pitch B2B)*
+- [x] **W3.3 Modération reviews** — shipped, scope museum-admin verifié.
 - [ ] **W3.4 Export CSV** — sessions, reviews, tickets — exigence légale + B2B reporting
 
 ### W4 — Landing web (ex-priorité 4, KR4)
 
-- [ ] **W4.1 Polish FR/EN existant** — StorySection shipped, vérifier copy + a11y + Lighthouse ≥95
+- [x] **W4.1 Polish FR/EN existant** — `StorySection` 4-step timeline shipped (commit `53903a293` 2026-04-21), landing FR/EN assemblée dans `museum-web/src/app/[locale]/page.tsx`. *(audit 2026-05-14 : Lighthouse ≥95 + a11y axe-core à re-valider pré-launch)*
 - [ ] **W4.2 CTA inscription bêta** — formulaire email → liste pré-launch (1ère vague 100 testers) — coupler avec C6.3
 - [ ] **W4.3 Page B2B** — pitch musée (offre, pricing fourchette, contact form)
 

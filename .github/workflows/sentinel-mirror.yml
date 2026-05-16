@@ -119,6 +119,33 @@ jobs:
       - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
         run: node scripts/sentinels/sentry-scrubber-parity.mjs
 
+      # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
+      - name: 'Install ast-grep CLI (for Gate P14)'
+        run: npm install -g @ast-grep/cli
+
+      - name: 'Mirror Gate P14 — ast-grep rules (tools/ast-grep-rules/)'
+        run: |
+          ast-grep scan --config sgconfig.yml --error 2>&1 | tee /tmp/ast-grep-output.txt
+          if grep -qE '^(error|warning)' /tmp/ast-grep-output.txt; then
+            echo "::error::ast-grep rule violation — see output above"
+            exit 1
+          fi
+
+      # ────────────────────────────────────────────────────────────────────
+      # Pre-push gates already covered by other workflows — not duplicated here
+      # to keep sentinel-mirror runtime short. Listed for traceability :
+      # ────────────────────────────────────────────────────────────────────
+      # - Gate P10 (cache-key parity)         → covered above as "Mirror Gate P6"
+      # - Gate P11 (gitleaks push range)      → superset = "Mirror Gate 1" (full repo)
+      # - Gate P12 (contract OpenAPI test)    → ci-cd-backend.yml quality job
+      # - Gate P13 (migration down() body)    → ci-cd-backend.yml quality job
+      #                                         (`check-migration-down.cjs`)
+      # - Gate P15 (oasdiff breaking)         → ci-cd-openapi-diff.yml
+      # - Gate P16 (affected unit tests BE)   → subset of test:coverage in
+      #                                         ci-cd-backend.yml quality
+      # - Gate P17 (affected tests FE)        → ci-cd-mobile.yml quality test step
+      # - Gate P18 (affected tests Web)       → ci-cd-web.yml quality test step
+
       - name: 'Mirror summary'
         if: success()
         run: echo "✅ All sentinels mirrored successfully — no local-bypass detected."
@@ -127,6 +154,6 @@ jobs:
         if: failure()
         run: |
           echo "::error::A sentinel that local hooks cover has failed in CI."
-          echo "::error::Either local hooks were bypassed (--no-verify) or a regression slipped in."
+          echo "::error::Either local hooks were bypassed (UFR-020 forbids --no-verify) or a regression slipped in."
           echo "::error::Reproduce locally: re-run the failing gate from the step name above."
           exit 1

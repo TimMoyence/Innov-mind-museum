@@ -44,10 +44,7 @@ describeE2E('registration consent (GDPR)', () => {
 
     const rows = await harness.dataSource.query<
       { scope: string; version: string; source: string; revoked_at: Date | null }[]
-    >(
-      `SELECT scope, version, source, revoked_at FROM user_consents WHERE user_id = $1`,
-      [userId],
-    );
+    >(`SELECT scope, version, source, revoked_at FROM user_consents WHERE user_id = $1`, [userId]);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual(
@@ -83,7 +80,12 @@ describeE2E('registration consent (GDPR)', () => {
     });
 
     expect(res.status).toBe(422);
-    expect((res.body as { code?: string }).code).toBe('MINOR_PARENTAL_CONSENT_REQUIRED');
+    // error.middleware.ts wraps AppError into { error: { code, message, requestId, ... } }
+    // (see src/shared/middleware/error.middleware.ts ErrorResponseShape) ; the previous
+    // assertion read body.code which never existed in that shape.
+    expect((res.body as { error?: { code?: string } }).error?.code).toBe(
+      'MINOR_PARENTAL_CONSENT_REQUIRED',
+    );
 
     const rows = await harness.dataSource.query<{ id: number }[]>(
       `SELECT uc.id FROM user_consents uc

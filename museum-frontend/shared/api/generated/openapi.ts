@@ -1126,6 +1126,114 @@ export interface paths {
     };
     trace?: never;
   };
+  '/api/auth/me/preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * TD-2 — Batch-update the authenticated user's profile preferences
+     * @description Persists a partial patch of the 5 profile preferences (defaultLocale, defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            defaultLocale?: string;
+            defaultMuseumMode?: boolean;
+            /** @enum {string} */
+            guideLevel?: 'beginner' | 'intermediate' | 'expert';
+            /** @enum {string} */
+            dataMode?: 'auto' | 'low' | 'normal';
+            audioDescriptionMode?: boolean;
+          };
+        };
+      };
+      responses: {
+        /** @description Preferences updated; returns the canonical post-write state. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              defaultLocale: string;
+              defaultMuseumMode: boolean;
+              /** @enum {string} */
+              guideLevel: 'beginner' | 'intermediate' | 'expert';
+              /** @enum {string} */
+              dataMode: 'auto' | 'low' | 'normal';
+              audioDescriptionMode: boolean;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    trace?: never;
+  };
+  '/api/auth/content-preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Replace the authenticated user's content preferences */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Replacement set of content preferences. Empty array clears all preferences. Backend deduplicates and returns canonical order. */
+            preferences: ('history' | 'technique' | 'artist')[];
+          };
+        };
+      };
+      responses: {
+        /** @description Persisted (deduplicated, canonically ordered) preferences */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              contentPreferences: ('history' | 'technique' | 'artist')[];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    trace?: never;
+  };
   '/api/users/me/export': {
     parameters: {
       query?: never;
@@ -3720,6 +3828,24 @@ export interface components {
        * @enum {string|null}
        */
       ttsVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | null;
+      /** @description Visitor's content preferences (zero or more). Returned by GET /auth/me, written by PATCH /auth/content-preferences. */
+      contentPreferences?: ('history' | 'technique' | 'artist')[];
+      /** @description TD-2 — Visitor's preferred BCP-47 locale. Server defaults to `en-US`. FE validates against `SUPPORTED_LOCALES`. */
+      defaultLocale?: string;
+      /** @description TD-2 — Whether the visitor opts into auto museum-mode detection on launch. */
+      defaultMuseumMode?: boolean;
+      /**
+       * @description TD-2 — Visitor's self-declared expertise level. Tunes LLM vocabulary and depth.
+       * @enum {string}
+       */
+      guideLevel?: 'beginner' | 'intermediate' | 'expert';
+      /**
+       * @description TD-2 — Data-saver heuristic preference. Drives FE image quality + prefetch.
+       * @enum {string}
+       */
+      dataMode?: 'auto' | 'low' | 'normal';
+      /** @description TD-2 — Audio-description accessibility flag (cross-device, persisted server-side). */
+      audioDescriptionMode?: boolean;
     };
     AuthSessionResponse: {
       accessToken: string;

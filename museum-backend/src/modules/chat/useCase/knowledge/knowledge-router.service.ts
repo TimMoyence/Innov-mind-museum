@@ -39,15 +39,57 @@ import { getLangfuse } from '@shared/observability/langfuse.client';
 import { chatWebsearchFallbackTotal } from '@shared/observability/prometheus-metrics';
 import { safeTrace } from '@shared/observability/safeTrace';
 
-import type {
-  KnowledgeBaseProvider,
-} from '@modules/chat/domain/ports/knowledge-base.port';
-import type {
-  KnowledgeRouterPort,
-  KnowledgeRouterResult,
-} from '@modules/chat/domain/ports/knowledge-router.port';
-import type { LlmJudgePort } from '@modules/chat/domain/ports/llm-judge.port';
+import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
+import type { LlmJudgePort } from '@modules/chat/useCase/llm/llm-judge-guardrail';
+
+/** Provenance label for the leg that produced the facts. */
+export type KnowledgeRouterSource = 'wikidata' | 'web' | 'none';
+
+/**
+ * Result of one router resolution. `fallback_triggered` is `true` when the
+ * WebSearch leg ran (regardless of outcome), `false` otherwise. `judge_confidence`
+ * is populated only when the judge leg ran. Latencies are populated per leg
+ * actually exercised (kb / judge / web) so observability can render a flame
+ * timeline.
+ */
+export interface KnowledgeRouterResult {
+  /** Verified fact strings to be wrapped in the Spotlighting envelope (R3). */
+  facts: string[];
+  /** Which leg produced the facts. `'none'` when nothing is grounded. */
+  source: KnowledgeRouterSource;
+  /** True when the WebSearch leg was actually exercised. */
+  fallback_triggered: boolean;
+  /** Judge confidence in `[0, 1]` when the judge leg ran; undefined otherwise. */
+  judge_confidence?: number;
+  /** Observability bundle — kept opaque to the chat orchestrator. */
+  metadata?: {
+    /** The (already-sanitised) search term that produced this result. */
+    searchTerm: string;
+    /** Per-leg latencies in ms. Missing keys = leg not exercised. */
+    latencyMs: {
+      kb?: number;
+      judge?: number;
+      web?: number;
+    };
+  };
+}
+
+/**
+ * Port for the knowledge router use-case. Implementations must :
+ *   - never throw (fail-open per R9/R10 — return `source: 'none'`).
+ *   - honor `signal` cancellation by aborting any in-flight leg.
+ */
+export interface KnowledgeRouterPort {
+  /**
+   * Resolve facts for the given search term.
+   *
+   * @param searchTerm sanitised lookup string (caller's responsibility).
+   * @param signal optional parent abort signal — combined with the per-leg
+   *               timeout via `AbortSignal.any` inside the implementation.
+   */
+  resolve(searchTerm: string, signal?: AbortSignal): Promise<KnowledgeRouterResult>;
+}
 
 /**
  * Tuning configuration for the cascade. All fields are TUNING ONLY — none
@@ -337,9 +379,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       outcome: pickWebsearchOutcome(wsErrored, webResults.length),
     });
 
-    const webFacts = webResults
-      .slice(0, MAX_WEB_FACTS)
-      .map((r) => `${r.title}: ${r.snippet}`);
+    const webFacts = webResults.slice(0, MAX_WEB_FACTS).map((r) => `${r.title}: ${r.snippet}`);
 
     return { webFacts, webResultCount: webResults.length, latencyWeb };
   }

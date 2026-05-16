@@ -12,6 +12,7 @@ import { AUDIT_API_KEY_CREATED, AUDIT_API_KEY_REVOKED } from '@shared/audit/audi
 import { badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticatedJwtOnly } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
@@ -55,7 +56,11 @@ authApiKeysRouter.delete(
   isAuthenticatedJwtOnly,
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
-    const keyId = Number.parseInt(req.params.id, 10);
+    const rawId = parseStringParam(req, 'id');
+    if (!rawId) {
+      throw badRequest('Invalid API key ID');
+    }
+    const keyId = Number.parseInt(rawId, 10);
     if (Number.isNaN(keyId)) {
       throw badRequest('Invalid API key ID');
     }

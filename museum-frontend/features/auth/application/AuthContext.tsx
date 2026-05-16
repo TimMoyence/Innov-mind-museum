@@ -26,6 +26,10 @@ import {
   setTokenProvider,
   setUnauthorizedHandler,
 } from '@/shared/infrastructure/httpClient';
+import {
+  bootstrapProfile,
+  resetBootstrapProfileGuard,
+} from '@/shared/infrastructure/bootstrapProfile';
 import { queryClient, resetPersistedCache } from '@/shared/data/queryClient';
 
 import {
@@ -127,6 +131,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(true);
     setIsFirstLaunch(!session.user.onboardingCompleted);
     identifySentryUser(session.accessToken);
+    // TD-2 (2026-05-15) — hydrate the 4 local-first preference stores from
+    // GET /auth/me so devices see server-persisted prefs instead of local
+    // defaults. Fire-and-forget; never throws.
+    void bootstrapProfile();
   }, []);
 
   const markOnboardingComplete = useCallback(async () => {
@@ -168,6 +176,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // isFirstLaunch === null and would otherwise leave the user stuck
         // on /auth after a biometric unlock.
         setIsFirstLaunch(false);
+        // TD-2 (2026-05-15) — hydrate prefs from /auth/me on session resume
+        // (cold start with valid refresh token). Mirrors the login path.
+        // Fire-and-forget; idempotence guard prevents double-fire if
+        // loginWithSession runs later in the same session.
+        void bootstrapProfile();
         const biometricOn = await getBiometricEnabled();
         if (biometricOn) setIsBiometricLocked(true);
         bootstrapBreadcrumb(cachedAccess ? 'token_hydrated' : 'token_pending_refresh', {
@@ -225,6 +238,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         setIsFirstLaunch(!session.user.onboardingCompleted);
         identifySentryUser(session.accessToken);
+        // TD-2 (2026-05-15) — intentionally NOT calling bootstrapProfile()
+        // on the refresh path. Refresh fires whenever the access token
+        // expires (every 15 min) and would otherwise re-overwrite any local
+        // pending writes that happened between login and refresh, violating
+        // R3 (server-wins-first per session, not per token rotation). The
+        // session-scoped guard inside bootstrapProfile would short-circuit
+        // anyway, but skipping the call avoids the unnecessary breadcrumb.
         return { kind: 'success', accessToken: session.accessToken };
       } catch (error) {
         if (isAuthInvalidError(error)) {
@@ -243,6 +263,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       void clearPerUserFeatureStorage();
       setIsAuthenticated(false);
       setIsFirstLaunch(null);
+      // TD-2 (2026-05-15) — server-forced logout (401 with no recoverable
+      // refresh) is equivalent to logout; release the bootstrap guard so
+      // the next login re-hydrates from /auth/me.
+      resetBootstrapProfileGuard();
       Sentry.setUser(null);
       router.replace(AUTH_ROUTE);
     });
@@ -271,6 +295,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await clearPerUserFeatureStorage();
     setIsAuthenticated(false);
     setIsFirstLaunch(null);
+    // TD-2 (2026-05-15) — reset the session-scoped bootstrap guard so the
+    // next login re-hydrates the 4 preference stores from /auth/me.
+    resetBootstrapProfileGuard();
     Sentry.setUser(null);
     router.replace(AUTH_ROUTE);
 

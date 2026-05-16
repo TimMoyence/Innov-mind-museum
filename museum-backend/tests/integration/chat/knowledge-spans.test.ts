@@ -44,7 +44,7 @@ import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
 } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/domain/ports/llm-judge.port';
+import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 
 // Silence logger.
@@ -164,9 +164,7 @@ describe('chat.knowledge.lookup Langfuse span (T7.1)', () => {
     const service = makeService({
       kbReturn: null,
       judgeReturn: { confidence: 0.1, decision: 'review' as const },
-      wsReturn: [
-        { url: 'https://example.org', title: 'About Mona Lisa', snippet: 'A portrait.' },
-      ],
+      wsReturn: [{ url: 'https://example.org', title: 'About Mona Lisa', snippet: 'A portrait.' }],
     });
 
     await service.resolve('obscure topic');

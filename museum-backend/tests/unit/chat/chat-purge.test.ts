@@ -310,4 +310,44 @@ describe('runChatPurge', () => {
     expect(result.purgedSessions).toBe(1);
     expect(result.purgedMedia).toBe(0);
   });
+
+  // ─── Mutation kills (chat-purge.job.ts L64-65) ────────────────────
+  // 3 first-pass survivors documented in commit 155a62ea on the
+  // collectMediaRefs() select+where chain. The behavioural tests above
+  // exercise the path but don't pin the exact SQL fragment strings.
+
+  it('collectMediaRefs uses exact [imageRef AS, audioUrl AS] select pair and msg.sessionId = :id where', async () => {
+    const staleSession = makeSession({
+      id: 'media-select-assertion-session',
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    });
+    void staleSession;
+
+    const { dataSource, mediaQb } = buildMocks({
+      candidateIds: [staleSession.id],
+      deleteAffected: 1,
+      mediaRefsBySession: {
+        [staleSession.id]: [{ imageRef: 's3://chat-images/x.jpg', audioUrl: null }],
+      },
+    });
+
+    const purger: ChatMediaPurger = {
+      deleteRefs: jest.fn().mockResolvedValue({ deleted: 1, failed: 0, skipped: 0 }),
+    };
+
+    await runChatPurge(dataSource, { mediaPurger: purger });
+
+    // Kills the 2× StringLiteral mutants on the .select([...]) array
+    // (L64:14 'msg.imageRef AS "imageRef"' → "" and L64:44 'msg.audioUrl AS "audioUrl"' → "").
+    expect(mediaQb.select).toHaveBeenCalledWith([
+      'msg.imageRef AS "imageRef"',
+      'msg.audioUrl AS "audioUrl"',
+    ]);
+    // Kills the StringLiteral mutant on L65:12 'msg.sessionId = :id' → "".
+    expect(mediaQb.where).toHaveBeenCalledWith('msg.sessionId = :id', { id: staleSession.id });
+    // Defence: the IS NOT NULL andWhere also survives literally.
+    expect(mediaQb.andWhere).toHaveBeenCalledWith(
+      '(msg.imageRef IS NOT NULL OR msg.audioUrl IS NOT NULL)',
+    );
+  });
 });

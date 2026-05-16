@@ -2,8 +2,9 @@ import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 
 import { auditService } from '@shared/audit';
-import { notFound } from '@shared/errors/app.error';
+import { badRequest, notFound } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
@@ -39,7 +40,10 @@ export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
     isAuthenticated,
     requireRole('admin', 'moderator'),
     async (req: Request, res: Response) => {
-      const { id } = req.params;
+      const id = parseStringParam(req, 'id');
+      if (!id) {
+        throw badRequest('id param is required');
+      }
       const adminId = req.user?.id ?? null;
 
       const item = await repo.approve(id);

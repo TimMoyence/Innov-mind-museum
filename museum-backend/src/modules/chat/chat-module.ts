@@ -80,10 +80,10 @@ import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestra
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
+import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location-resolver';
 import type {
   ChatPersistencePort,

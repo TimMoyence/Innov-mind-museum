@@ -112,6 +112,11 @@ Severity rubric:
 - semgrep p/owasp-top-ten: <N> findings (relevant ones above)
 - semgrep p/llm-security: <N> findings
 
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious shortcut taken during the security review itself (UFR / ADR-047 / threat model)
+- format: { rule: "UFR-XXX | ADR-NNN | threat-model §N", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
+- examples that MUST be declared: skipping a probe family for time, accepting a MEDIUM as PASS because of business context, partial coverage of an attack surface
+
 ### Verdict: PASS / WARN / FAIL
 ```
 </output_format>

@@ -91,6 +91,11 @@ Forbidden actions:
 ### Open follow-ups (created as TODOs)
 - TODO refs added in code or backlog issues opened
 
+### Deviations (UFR-014 — empty = explicit `[]` with the word "none")
+- list every conscious deviation taken during the docs pass (UFR / ADR template / changelog conventions / CLAUDE.md sectioning)
+- format: { rule: "UFR-XXX | ADR-template | changelog-convention", what_i_did: "...", why: "...", mitigation: "...", declared_at_loop: 0|1|2 }
+- examples that MUST be declared: skipped ADR Decision section, didn't WebFetch a cited URL, paraphrased instead of quoting a spec line, deferred a changelog entry
+
 ### Verdict: DOCS-COMPLETE | NEEDS-USER-INPUT
 ```
 </output_format>

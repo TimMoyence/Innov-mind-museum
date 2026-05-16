@@ -1,5 +1,6 @@
 import { AppError, tooManyRequests } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 import { env } from '@src/config/env';
@@ -184,8 +185,7 @@ export const byIp = (req: Parameters<RequestHandler>[0]): string => {
 export const bySession = (req: Parameters<RequestHandler>[0]): string => {
   // `req.body` is `any` in @types/express; narrow to the shape we read.
   const body = req.body as { sessionId?: string } | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: params.id may be undefined; String() ensures type safety
-  const sessionId = req.params.id ?? body?.sessionId ?? req.header('x-session-id');
+  const sessionId = parseStringParam(req, 'id') ?? body?.sessionId ?? req.header('x-session-id');
   return sessionId ? `session:${sessionId}` : byIp(req);
 };
 

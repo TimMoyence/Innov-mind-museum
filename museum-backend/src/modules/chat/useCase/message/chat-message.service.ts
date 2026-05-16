@@ -13,6 +13,7 @@ import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.err
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type {
   AudioTranscriptionResult,
@@ -23,9 +24,7 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
-import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
-import type { KnowledgeRouterPort } from '@modules/chat/domain/ports/knowledge-router.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
@@ -36,6 +35,7 @@ import type {
 } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
+import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/llm/llm-cache.types';
 import type {
   LocationConsentChecker,

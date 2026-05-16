@@ -1,7 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 
-
 import { Router } from 'express';
 
 import {
@@ -23,6 +22,7 @@ import { AppError, badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
+import { parseStringParam } from '@shared/middleware/parseStringParam';
 import {
   bySession,
   byUserId,
@@ -32,6 +32,9 @@ import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
+
+/** Shared error message — keeps sonarjs/no-duplicate-string happy. */
+const MESSAGE_ID_REQUIRED = 'messageId param is required';
 
 /** Handler factory: POST /sessions/:id/audio */
 function createAudioHandler(chatService: ChatService) {
@@ -48,8 +51,13 @@ function createAudioHandler(chatService: ChatService) {
       throw badRequest('audio file is required');
     }
 
+    const sessionId = parseStringParam(req, 'id');
+    if (!sessionId) {
+      throw badRequest('session id param is required');
+    }
+
     const result = await chatService.postAudioMessage(
-      req.params.id,
+      sessionId,
       {
         audio: {
           base64: req.file.buffer.toString('base64'),
@@ -70,8 +78,12 @@ function createAudioHandler(chatService: ChatService) {
 /** Handler factory: GET /messages/:messageId/image */
 function createImageServeHandler(chatService: ChatService) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    const messageId = parseStringParam(req, 'messageId');
+    if (!messageId) {
+      throw badRequest(MESSAGE_ID_REQUIRED);
+    }
     const verification = verifySignedChatImageReadUrl({
-      messageId: req.params.messageId,
+      messageId,
       token: typeof req.query.token === 'string' ? req.query.token : undefined,
       signature: typeof req.query.sig === 'string' ? req.query.sig : undefined,
     });
@@ -82,11 +94,11 @@ function createImageServeHandler(chatService: ChatService) {
 
     // HMAC + TTL already verified above — authorization is delegated to the signed token.
     // Use the bypass path so we don't re-enforce session ownership against an anonymous req.
-    const image = await chatService.getMessageImageRefBySignedToken(req.params.messageId);
+    const image = await chatService.getMessageImageRefBySignedToken(messageId);
     if (isS3ImageRef(image.imageRef)) {
       const signed = buildImageReadUrl({
         baseUrl: resolveRequestBaseUrl(req),
-        messageId: req.params.messageId,
+        messageId,
         imageRef: image.imageRef,
       });
       if (!signed) {
@@ -131,9 +143,13 @@ function createReportHandler(chatService: ChatService) {
     if (!currentUser?.id) {
       throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
     }
+    const messageId = parseStringParam(req, 'messageId');
+    if (!messageId) {
+      throw badRequest(MESSAGE_ID_REQUIRED);
+    }
     const payload = parseReportMessageRequest(req.body ?? {});
     const result = await chatService.reportMessage(
-      req.params.messageId,
+      messageId,
       payload.reason,
       currentUser.id,
       payload.comment,
@@ -149,12 +165,12 @@ function createFeedbackHandler(chatService: ChatService) {
     if (!currentUser?.id) {
       throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
     }
+    const messageId = parseStringParam(req, 'messageId');
+    if (!messageId) {
+      throw badRequest(MESSAGE_ID_REQUIRED);
+    }
     const payload = parseFeedbackMessageRequest(req.body ?? {});
-    const result = await chatService.setMessageFeedback(
-      req.params.messageId,
-      currentUser.id,
-      payload.value,
-    );
+    const result = await chatService.setMessageFeedback(messageId, currentUser.id, payload.value);
     res.status(200).json(result);
   };
 }
@@ -163,10 +179,14 @@ function createFeedbackHandler(chatService: ChatService) {
 function createImageUrlHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
-    const image = await chatService.getMessageImageRef(req.params.messageId, currentUser?.id);
+    const messageId = parseStringParam(req, 'messageId');
+    if (!messageId) {
+      throw badRequest(MESSAGE_ID_REQUIRED);
+    }
+    const image = await chatService.getMessageImageRef(messageId, currentUser?.id);
     const signed = buildImageReadUrl({
       baseUrl: resolveRequestBaseUrl(req),
-      messageId: req.params.messageId,
+      messageId,
       imageRef: image.imageRef,
     });
     if (!signed) {
@@ -180,7 +200,11 @@ function createImageUrlHandler(chatService: ChatService) {
 function createTtsHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
-    const result = await chatService.synthesizeSpeech(req.params.messageId, currentUser?.id);
+    const messageId = parseStringParam(req, 'messageId');
+    if (!messageId) {
+      throw badRequest(MESSAGE_ID_REQUIRED);
+    }
+    const result = await chatService.synthesizeSpeech(messageId, currentUser?.id);
     if (!result) {
       res.status(204).end();
       return;

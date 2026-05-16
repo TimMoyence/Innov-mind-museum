@@ -86,6 +86,49 @@ export class User {
   @Column({ type: 'varchar', length: 32, nullable: true, name: 'tts_voice' })
   ttsVoice!: string | null;
 
+  /**
+   * TD-2 — Visitor's preferred default locale (BCP-47). Validated FE-side
+   * against `SUPPORTED_LOCALES`. BE accepts any 2-8 char string for
+   * forward-compat (new locales don't require migration).
+   */
+  @Column({ type: 'varchar', length: 8, nullable: false, default: 'en-US', name: 'default_locale' })
+  defaultLocale!: string;
+
+  /**
+   * TD-2 — Whether the visitor opts into "museum mode" by default (auto-detect
+   * proximity to museums + suggest in-museum walks).
+   */
+  @Column({ type: 'boolean', nullable: false, default: true, name: 'default_museum_mode' })
+  defaultMuseumMode!: boolean;
+
+  /**
+   * TD-2 — Visitor's self-declared expertise level. Used to tune LLM
+   * vocabulary + depth. Zod-enum validated at the route boundary.
+   */
+  @Column({
+    type: 'varchar',
+    length: 16,
+    nullable: false,
+    default: 'beginner',
+    name: 'guide_level',
+  })
+  guideLevel!: 'beginner' | 'intermediate' | 'expert';
+
+  /**
+   * TD-2 — Visitor's data-mode preference (auto/low/normal). Drives the FE
+   * data-saver heuristic (image quality, prefetch). Zod-enum validated.
+   */
+  @Column({ type: 'varchar', length: 8, nullable: false, default: 'auto', name: 'data_mode' })
+  dataMode!: 'auto' | 'low' | 'normal';
+
+  /**
+   * TD-2 — Visitor's audio-description accessibility flag. Migrated from a
+   * FE-only AsyncStorage hook to a Zustand store + server-persisted column
+   * so the preference survives reinstall + propagates across devices.
+   */
+  @Column({ type: 'boolean', nullable: false, default: false, name: 'audio_description_mode' })
+  audioDescriptionMode!: boolean;
+
   @Column({ nullable: true })
   verification_token?: string;
 
