@@ -100,7 +100,7 @@ Phase history (Maestro / Web a11y / Stryker / Auth e2e / Chaos / Coverage gates)
 
 ## Architecture
 
-> Architecture détaillée : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Résumé :
+> Architecture détaillée : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 Résumé :
 - **Backend** — hexagonal (domain → useCase → adapters), modules barrel-pattern (admin/auth/museum/review/support) ou composition-root (chat/knowledge-extraction). Import discipline via codemod 2026-05-05 (alias `@modules/*`/`@shared/*`/`@data/*`, no 4-level relative). Minimal-barrel policy.
@@ -286,7 +286,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (29150 symbols, 46408 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (29172 symbols, 46435 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
