@@ -19,7 +19,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-046) | [`docs/adr/`](adr/) |
+| ADRs (002-052) | [`docs/adr/`](adr/) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) + `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` |
