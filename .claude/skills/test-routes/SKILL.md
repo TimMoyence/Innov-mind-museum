@@ -1,3 +1,9 @@
+---
+name: test-routes
+description: "/test-routes — Validation comportementale des endpoints API"
+last-verified: 2026-05-16
+---
+
 # /test-routes — Validation comportementale des endpoints API
 
 Teste les routes API contre le serveur local et compare avec la spec OpenAPI.

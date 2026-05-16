@@ -1,3 +1,9 @@
+---
+name: security-scan
+description: "/security-scan — Audit securite leger"
+last-verified: 2026-05-16
+---
+
 # /security-scan — Audit securite leger
 
 Scan securite cible sur les fichiers modifies ou un module specifie. Plus leger qu'un `/team audit` complet.

@@ -1,3 +1,9 @@
+---
+name: recap
+description: "/recap — Daily Recap Musaium"
+last-verified: 2026-05-16
+---
+
 # /recap — Daily Recap Musaium
 
 Genere un recapitulatif quotidien base UNIQUEMENT sur des sources verifiables.
