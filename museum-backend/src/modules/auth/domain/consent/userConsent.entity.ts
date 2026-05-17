@@ -17,12 +17,25 @@ import type { Relation } from 'typeorm';
  * personal-data flows go live; the enum-like union is intentionally open for
  * forward compatibility (we store the scope as a free-form VARCHAR so adding
  * a scope doesn't require a DB migration — only a constant update here).
+ *
+ * `third_party_ai_<category>_<provider>` (S4-P0-02 — Apple Guideline 5.1.2(i))
+ * captures per-category × per-provider consent for personal-data flow to the
+ * external AI inference vendor. DeepSeek scopes intentionally omitted because
+ * the CI sentinel (S4-P0-04) blocks `LLM_PROVIDER=deepseek` in EU prod.
  */
 export const CONSENT_SCOPES = [
   'location_to_llm',
   'analytics',
   'marketing',
   'tos_privacy',
+  'third_party_ai_text_openai',
+  'third_party_ai_image_openai',
+  'third_party_ai_audio_openai',
+  'third_party_ai_profile_openai',
+  'third_party_ai_text_google',
+  'third_party_ai_image_google',
+  'third_party_ai_audio_google',
+  'third_party_ai_profile_google',
 ] as const;
 
 /**

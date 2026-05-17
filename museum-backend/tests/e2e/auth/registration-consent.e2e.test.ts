@@ -55,6 +55,24 @@ describeE2E('registration consent (GDPR)', () => {
         revoked_at: null,
       }),
     );
+
+    // S4-P0-02 — registration MUST also produce a hash-chained audit row
+    // (`CONSENT_GRANTED_TOS`) so Apple 5.1.2(i) compliance + DPO dashboards
+    // can replay the chain to prove an explicit consent step happened.
+    const auditRows = await harness.dataSource.query<
+      { action: string; metadata: Record<string, unknown> | null }[]
+    >(
+      `SELECT action, metadata
+       FROM audit_logs
+       WHERE actor_id = $1 AND action = 'CONSENT_GRANTED_TOS'`,
+      [userId],
+    );
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0].metadata).toMatchObject({
+      scope: 'tos_privacy',
+      version: POLICY_VERSION,
+      source: 'registration',
+    });
   });
 
   it('rejects registration with dateOfBirth < 15 years and emits no user_consents row', async () => {

@@ -80,3 +80,54 @@ Removing or weakening the modal, badge, or audio greeting requires:
 - Backend disclosure rendering (web admin panel and email templates) — tracked separately.
 - Public privacy policy page hosting the "Learn more" target — current implementation falls back to the in-app `/privacy` route; switch to a stable external URL when the marketing site goes live.
 - GPAI provider disclosures (OpenAI, Deepseek, Google) — they are responsible for their own Article 53 documentation; Musaium does not redistribute their models.
+
+## 8. Granular third-party AI consent (S4-P0-02 — Apple Guideline 5.1.2(i))
+
+> Added 2026-05-16 by audit-360 S4 worktree. Effective backend `v1.2.3` ; mobile build after this branch ships. See **ADR-053** for the full design.
+> Layered on top of the existing AI-interaction disclosure (Article 50 §1) — does NOT replace it.
+
+### Why a separate consent layer
+
+AI Act Art. 50 (covered in §1–6 above) is a **transparency** obligation : tell the user they are interacting with AI. Apple App Store Review Guideline 5.1.2(i), tightened on 2025-11-13, is a **consent** obligation : capture explicit, separate, non-bundled user agreement before transmitting personal data to third-party AI providers. The two are orthogonal — Musaium ships both. GDPR Art. 7(1)/(2)/(3) reinforces this by requiring consent to be freely given, specific, informed, unambiguous, granular, and as easy to withdraw as to give.
+
+### Scope catalogue
+
+Per-data-category × per-provider grants persisted in `user_consents` and replayable from `audit_logs` :
+
+| Scope identifier                            | Data category               | Provider |
+|---------------------------------------------|-----------------------------|----------|
+| `third_party_ai_text_openai` **(required)** | Text messages               | OpenAI   |
+| `third_party_ai_image_openai`               | Photos                      | OpenAI   |
+| `third_party_ai_audio_openai`               | Voice transcripts           | OpenAI   |
+| `third_party_ai_profile_openai`             | Preferences + visit history | OpenAI   |
+| `third_party_ai_text_google`                | Text messages               | Google AI|
+| `third_party_ai_image_google`               | Photos                      | Google AI|
+| `third_party_ai_audio_google`               | Voice transcripts           | Google AI|
+| `third_party_ai_profile_google`             | Preferences + visit history | Google AI|
+
+DeepSeek scopes intentionally omitted — already blocked in EU prod by the S4-P0-04 CI sentinel. If DeepSeek is later reactivated for a non-EU deployment, four additional scopes (`third_party_ai_<category>_deepseek`) must be added in `userConsent.entity.ts CONSENT_SCOPES` + i18n keys + this catalogue.
+
+### Consent capture flow
+
+1. First chat-session open after registration (or after `AsyncStorage` `consent.ai_accepted` is cleared) :
+   - The `AiConsentSheetContent` bottom-sheet opens, full-screen, blocking.
+   - All 8 Switches default OFF (no pre-checked boxes — Art. 4(11)).
+   - The `third_party_ai_text_openai` row carries a `(required)` badge ; Save stays disabled until it is toggled ON.
+   - On Save : FE POSTs `/api/auth/consent` once per granted scope ; each call writes a `user_consents` row + a hash-chained `CONSENT_GRANTED_THIRD_PARTY_AI` audit row. Per-scope BE failures are captured to Sentry (tags `flow=consent.grant`, `scope=<scope>`) without blocking the remaining grants. `AsyncStorage` flips to `'true'` so the sheet is not re-prompted on next launch.
+2. Subsequent revocation : Settings → "Third-party AI providers" card → toggle off any row. The card calls `DELETE /api/auth/consent/:scope` which stamps `revoked_at` on the active row + emits a `CONSENT_REVOKED_THIRD_PARTY_AI` audit row. Optimistic UI ; rollback on BE failure with Sentry capture (tags `flow=consent.revoke.settings`).
+
+### What is *not* claimed (UFR-013 honesty)
+
+This section will be read by DPO + App Store reviewers, so the gaps are documented up front :
+
+- **The chat pipeline does NOT functionally short-circuit on revoke.** Today only `location_to_llm` is enforced. A user who revokes `third_party_ai_text_openai` AFTER first granting it will still receive chat replies from OpenAI on subsequent messages. The consent layer is **persistence + audit + UX intent** ; full enforcement = account-deletion path (DSAR / `DELETE /api/auth/account`). Documented as a known gap in ADR-053 § Follow-ups (T-S4-P0-02-bis-enforce) and **must** be remediated before any second App Store submission cycle if Apple challenges it.
+- **The DPIA T1.1 lawful-basis narrative is not changed.** The canonical basis stays `6(1)(b)` contract performance. The new granular layer is **additional** evidence under `6(1)(a)` for the Apple gate. DPO ratification of the layering decision is pending (blocked on S2.T-S2-8 DPO mandate). A `## Addendum 2026-05-16` will be added to `docs/legal/DPIA.md` § T1.1 once DPO is mandated.
+- **`tos_privacy` registration bundle is unchanged.** ToS + Privacy stay bundled in `auth.agree_terms_rich` ; the new layer concerns ONLY third-party AI consent, which is now separated out from the bundle. This was the actual audit C2 finding.
+
+### Reviewer-facing checklist (for App Store submission)
+
+- [x] Consent is **explicit** — user must tap each Switch (default OFF) and tap Save.
+- [x] Consent is **separate** — distinct screen from registration ToS/Privacy.
+- [x] Consent is **non-bundled** — per (category × provider) tuple, 8 independent Switches.
+- [x] Consent is **withdrawable** — one-tap toggle in Settings → "Third-party AI providers".
+- [x] Audit trail is hash-chained and replayable (`audit_logs`, action `CONSENT_GRANTED_THIRD_PARTY_AI` / `CONSENT_REVOKED_THIRD_PARTY_AI`).

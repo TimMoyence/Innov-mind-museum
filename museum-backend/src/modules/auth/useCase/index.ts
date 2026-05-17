@@ -42,6 +42,7 @@ import { EnrollMfaUseCase } from '@modules/auth/useCase/totp/enrollMfa.useCase';
 import { GetMfaStatusUseCase } from '@modules/auth/useCase/totp/getMfaStatus.useCase';
 import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCase';
 import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
+import { auditService } from '@shared/audit';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
 import { setApiKeyRepository, setUserRoleResolver } from '@shared/middleware/apiKey.middleware';
@@ -223,9 +224,11 @@ const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 
-// GDPR consent use cases (userConsentRepository is initialised earlier alongside the DSAR export use case).
-const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository);
-const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository);
+// GDPR consent use cases (userConsentRepository is initialised earlier alongside
+// the DSAR export use case). Audit sink wired in so every grant / revoke writes a
+// hash-chained row in `audit_logs` (S4-P0-02 — Apple Guideline 5.1.2(i) compliance).
+const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository, auditService);
+const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository, auditService);
 
 /**
  * Singleton instance of {@link RegisterUseCase}. Wired after `grantConsentUseCase`

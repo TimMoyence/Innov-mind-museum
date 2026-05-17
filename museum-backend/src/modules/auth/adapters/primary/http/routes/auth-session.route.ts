@@ -90,6 +90,8 @@ authSessionRouter.post(
       lastname,
       locale,
       dateOfBirth,
+      ip: req.ip,
+      requestId: req.requestId,
     });
     await auditService.log({
       action: AUDIT_AUTH_REGISTER,

@@ -287,8 +287,8 @@ export default function ChatSessionScreen() {
   useEffect(() => {
     if (showAiConsent) {
       bottomSheetRouter.open('consent', {
-        onAccept: () => {
-          void acceptAiConsent();
+        onAccept: (grantedScopes) => {
+          void acceptAiConsent(grantedScopes);
         },
         onPrivacy: () => {
           setShowAiConsent(false);

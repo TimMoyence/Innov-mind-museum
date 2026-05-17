@@ -41,6 +41,10 @@ export interface RegisterInput {
   locale?: EmailLocale;
   /** YYYY-MM-DD. When present, gates the registration on CNIL digital-majority age. */
   dateOfBirth?: string;
+  /** Request IP — forwarded to the consent audit row (S4-P0-02 forensics). */
+  ip?: string | null;
+  /** Request correlation id — forwarded to the consent audit row. */
+  requestId?: string | null;
 }
 
 /** Orchestrates new user registration with email/password. */
@@ -94,8 +98,15 @@ export class RegisterUseCase {
       input.dateOfBirth,
     );
 
-    await this.recordTosConsent(user.id);
-    await this.sendVerificationEmail(user.id, normalizedEmail, input.locale ?? DEFAULT_EMAIL_LOCALE);
+    await this.recordTosConsent(user.id, {
+      ip: input.ip ?? null,
+      requestId: input.requestId ?? null,
+    });
+    await this.sendVerificationEmail(
+      user.id,
+      normalizedEmail,
+      input.locale ?? DEFAULT_EMAIL_LOCALE,
+    );
 
     return user;
   }
@@ -113,7 +124,8 @@ export class RegisterUseCase {
     }
     if (calculateAgeYears(parsed) < MINIMUM_AGE_FOR_REGISTRATION) {
       throw new AppError({
-        message: 'Standalone registration is not available below 15 years; parental consent is required.',
+        message:
+          'Standalone registration is not available below 15 years; parental consent is required.',
         statusCode: 422,
         code: 'MINOR_PARENTAL_CONSENT_REQUIRED',
       });
@@ -127,10 +139,19 @@ export class RegisterUseCase {
    * lives in `user_consents`. Failure is logged but does not abort registration
    * (legal proof is on the FE checkbox; missing row will surface in DPO dashboards).
    */
-  private async recordTosConsent(userId: number): Promise<void> {
+  private async recordTosConsent(
+    userId: number,
+    auditContext?: { ip?: string | null; requestId?: string | null },
+  ): Promise<void> {
     if (!this.grantConsentUseCase) return;
     try {
-      await this.grantConsentUseCase.execute(userId, 'tos_privacy', POLICY_VERSION, 'registration');
+      await this.grantConsentUseCase.execute(
+        userId,
+        'tos_privacy',
+        POLICY_VERSION,
+        'registration',
+        auditContext,
+      );
     } catch (error) {
       logger.error('registration_consent_record_failed', {
         userId,
@@ -144,7 +165,11 @@ export class RegisterUseCase {
    * Non-blocking verification email. SEC (H2): we email the raw token but
    * persist only its SHA-256 hash, mirroring the reset-password flow.
    */
-  private async sendVerificationEmail(userId: number, email: string, locale: EmailLocale): Promise<void> {
+  private async sendVerificationEmail(
+    userId: number,
+    email: string,
+    locale: EmailLocale,
+  ): Promise<void> {
     try {
       const token = crypto.randomBytes(32).toString('hex');
       const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
