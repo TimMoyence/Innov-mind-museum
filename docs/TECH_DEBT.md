@@ -485,6 +485,236 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-21 — `museum-backend/src/modules/chat/adapters/primary/http/helpers/sse.helpers.ts` résiduel post-SSE-cull
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12 P1-5 follow-up)
+- **Référence code** : `museum-backend/src/modules/chat/adapters/primary/http/helpers/sse.helpers.ts` (45 LOC).
+- **Sprint d'origine** : audit-2026-05-12 P1-5 follow-up.
+- **Effort estimé** : 15 min (grep usage → delete or document).
+- **Comment fermer** : ADR-001 supprimée 2026-05-03, SSE pipeline @deprecated dans CLAUDE.md — vérifier que `sse.helpers.ts` est mort (grep call sites) ou justifier sa survie. Si zombie, `git rm` + check TD-16 closure synchronisée (chevauchement de scope).
+
+---
+
+### TD-22 — 13 chat ports single-impl à inliner (suite TD-8)
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12 P1-3)
+- **Référence code** :
+  ```
+  museum-backend/src/modules/chat/domain/ports/audio-storage.port.ts
+  museum-backend/src/modules/chat/domain/ports/audio-transcriber.port.ts
+  museum-backend/src/modules/chat/domain/ports/chat-orchestrator.port.ts
+  museum-backend/src/modules/chat/domain/ports/embeddings.port.ts
+  museum-backend/src/modules/chat/domain/ports/guardrail-provider.port.ts
+  museum-backend/src/modules/chat/domain/ports/image-source.port.ts
+  museum-backend/src/modules/chat/domain/ports/image-storage.port.ts
+  museum-backend/src/modules/chat/domain/ports/ocr.port.ts
+  museum-backend/src/modules/chat/domain/ports/pii-sanitizer.port.ts
+  museum-backend/src/modules/chat/domain/ports/tts.port.ts
+  museum-backend/src/modules/chat/domain/ports/wikidata-kb-dump.port.ts
+  ```
+- **Sprint d'origine** : audit-2026-05-12 P1-3 (TD-8 closed 3 ports, 13 remaining).
+- **Effort estimé** : 1-2 jours sélectifs. ~700 LOC d'indirection à supprimer.
+- **Comment fermer** : appliquer policy ADR-058 (selective hexagonal ports) — pour chaque port single-impl sans valeur swap (prod-vs-test), inliner dans le sole consumer. Garder uniquement ceux ayant un fake/stub utile en test (ex: `audio-transcriber.port.ts` si OpenAI Whisper est mocké via fake in-memory).
+
+---
+
+### TD-23 — `@musaium/shared` sentry-scrubber extraction (ADR-045 deferred)
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G3)
+- **Référence code** :
+  ```
+  museum-backend/src/.../sentry-scrubber.ts:1-2
+  museum-frontend/src/.../sentry-scrubber.ts:1-2
+  museum-web/src/.../sentry-scrubber.ts:1-2
+  ```
+- **Symptôme** : 3 fichiers manuellement synchronisés. Email-hash inconsistency : BE = sha256-8hex, FE+Web = 32-bit fold-8hex. Drift potentiel à chaque update.
+- **Sprint d'origine** : audit-2026-05-12-raw F9 G3.
+- **Effort estimé** : 1-2 jours.
+- **Comment fermer** : extraire vers `packages/musaium-shared/sentry-scrubber/` (pattern déjà validé pour `@musaium/shared/observability`). ADR-045 documente la décision de différer — fichier ADR existe, pas un ADR manquant, juste extraction non encore faite. Aligner sur sha256-8hex (BE source de vérité).
+
+---
+
+### TD-24 — Metro4Shell CVE-2025-11953 audit (`@react-native-community/cli-server-api`)
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw R11 §1.2)
+- **Référence code** : transitive dep RN. `npm ls @react-native-community/cli-server-api` audit non fait.
+- **Sprint d'origine** : audit-2026-05-12-raw R11 §1.2.
+- **Effort estimé** : 15 min audit + bump éventuel.
+- **Comment fermer** : CISA KEV depuis 2026-02-05, fix dispo `cli-server-api@20.0.0+`. Vérifier version transitive dans `museum-frontend/`, bump si < 20.0.0.
+
+---
+
+### TD-25 — Sentry+OTel trace propagation BE↔FE split
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G2)
+- **Référence code** : F9 G2 — mobile/web injectent `sentry-trace`, BE OTel lit `traceparent`, no `SentryPropagator` registered.
+- **Symptôme** : trace tree jamais reconvergent entre client (Sentry header) et serveur (OTel W3C header). Debugging cross-stack impossible.
+- **Sprint d'origine** : audit-2026-05-12-raw F9 G2.
+- **Effort estimé** : 1 jour (cheap : `tracePropagationTargets` explicite + doc) OU 1-2 jours (full bridge : Sentry `httpIntegration` w/ `spans:false` + `SentryPropagator` dans OTel SDK).
+- **Comment fermer** : trancher cheap vs full bridge selon le besoin observability post-launch. Cheap path = pragmatic V1.
+
+---
+
+### TD-26 — 15 Sentry alerts non-provisionnées
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G6)
+- **Référence code** : 15 alerts référencées dans `docs/AI_VISUAL_SIMILARITY.md`, `docs/adr/ADR-011-rate-limit-fail-closed.md`, `docs/incidents/BREACH_PLAYBOOK.md`, `docs/RUNBOOKS/CERT_ROTATION.md`.
+- **Symptôme** : docs prescrivent des alertes Sentry mais aucune n'est actuellement provisionnée côté Sentry UI.
+- **Sprint d'origine** : audit-2026-05-12-raw F9 G6.
+- **Effort estimé** : 0.5 jour.
+- **Comment fermer** : provisioning manuel UI Sentry ou via sentry-terraform. Cross-check chaque alert mentionnée dans les 4 docs sources.
+
+---
+
+### TD-27 — Audit chain post-restore verification manquante
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw R25 §1)
+- **Référence code** : R25 §1 audit-2026-05-12-raw. Monthly drill workflow only runs `count(audit_logs)` smoke, no `audit-chain verify`.
+- **Symptôme** : RPO bounded at 24h (no WAL archiving). Restore drill ne vérifie pas l'intégrité de la chaîne hash post-restore.
+- **Sprint d'origine** : audit-2026-05-12-raw R25.
+- **Effort estimé** : 1h ajouter `audit-chain verify` step au drill workflow.
+- **Comment fermer** : éditer le drill workflow (`.github/workflows/restore-drill.yml` ou équivalent) pour ajouter step `node scripts/audit-chain-verify.cjs` après restore.
+
+---
+
+### TD-28 — TTS cache key voice-aware (correctness bug)
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F2 + C9.12)
+- **Référence code** : C9.12c ROADMAP_PRODUCT — `tts:<messageId>` clé ne contient pas la voice.
+- **Symptôme** : user change voice setting → stale audio Redis retourné (clé invariant sur voice). Bug correctness, pas perf.
+- **Sprint d'origine** : audit-2026-05-12-raw F2 + C9.12.
+- **Effort estimé** : 30 min.
+- **Comment fermer** : key shape `tts:<messageId>:<voice>` + invalidation legacy (purge keys old shape ou TTL expire naturellement). Verifier rate-limit cache hit pas dégradé.
+
+---
+
+### TD-29 — bcrypt → argon2 migration
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit §Abandoned)
+- **Référence code** : 7 use sites dans `museum-backend`.
+- **Symptôme** : bcrypt abandonné upstream. argon2id = OWASP recommended (memory-hard, side-channel resistant). Verdict audit : "DEFER-POST-LAUNCH high".
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
+- **Effort estimé** : 1-2 sprints (design + migration + rehash on next login window).
+- **Comment fermer** : design dual-hash period (verify bcrypt, write argon2id on next login) → migration backfill → drop bcrypt dep. Post-launch V1.
+
+---
+
+### TD-30 — `framer-motion` → `motion` rename
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit)
+- **Référence code** : `museum-web/` 12 imports + 1 vi.mock.
+- **Symptôme** : package renommé upstream (`framer-motion` → `motion`). Defer post-launch — rename mécanique, zéro valeur produit.
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
+- **Effort estimé** : 5 min mécanique (codemod sed import paths + vi.mock string).
+- **Comment fermer** : `pnpm rm framer-motion && pnpm add motion` + codemod imports. Tests web pass.
+
+---
+
+### TD-31 — `prom-client` → `@opentelemetry/exporter-prometheus`
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit)
+- **Référence code** : `museum-backend/` prom-client.
+- **Symptôme** : prom-client abandonné. Swap security-positive (OTel exporter mieux maintenu, aligné avec stack OTel existante).
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
+- **Effort estimé** : 1 jour.
+- **Comment fermer** : migrer chaque metric (counters, gauges, histograms) vers OTel API. Tester scrape Prometheus rendu identique.
+
+---
+
+### TD-32 — `swagger-ui-express` → Scalar
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit)
+- **Référence code** : `museum-backend/` swagger-ui-express.
+- **Symptôme** : swagger-ui-express abandonné. Scalar = alternative moderne (better UX, OpenAPI 3.1 native).
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
+- **Effort estimé** : 0.5 jour.
+- **Comment fermer** : swap dep + remplacer middleware mount dans `app.ts`. Vérifier `/api/docs` rendu OK.
+
+---
+
+### TD-33 — `@mozilla/readability` → Defuddle
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit)
+- **Référence code** : `museum-backend/` scraper layer.
+- **Symptôme** : `@mozilla/readability` abandonné. Defuddle = drop-in moderne mieux maintenu.
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
+- **Effort estimé** : 0.5 jour.
+- **Comment fermer** : swap dep + adapter le call site. Tester sur ~10 URLs réf que la qualité extraction soit équivalente.
+
+---
+
+### TD-34 — Maestro path discrepancy
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #1)
+- **Référence code** : `museum-frontend/maestro/` (4 new flows) vs `museum-frontend/.maestro/` (CI shards.json reader).
+- **Symptôme** : flows ajoutés à `maestro/` (sans dot) ne sont jamais picked up par CI qui lit `.maestro/shards.json`. Silent skip = false sense of coverage.
+- **Sprint d'origine** : audit-360 S3 follow-up #1.
+- **Effort estimé** : 30 min.
+- **Comment fermer** : relocate les 4 flows vers `.maestro/flows/` + ajouter au shard manifest. Vérifier la sentinelle CI `shard-manifest` ne crie pas.
+
+---
+
+### TD-35 — Stale `.maestro/audio-recording-flow.yaml`
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #2)
+- **Référence code** : `museum-frontend/.maestro/audio-recording-flow.yaml` — référence label "Hold to talk" + env hook `MAESTRO_AUDIO_FIXTURE` jamais wired.
+- **Symptôme** : flow Maestro pointe vers UI label obsolète + env hook fantôme. UFR-016 burial candidate ("il est mort on l'enterre").
+- **Sprint d'origine** : audit-360 S3 follow-up #2.
+- **Effort estimé** : 15 min.
+- **Comment fermer** : `git rm` le flow si dead, sinon rewire avec label actuel + env hook fonctionnel.
+
+---
+
+### TD-36 — `QuotaUpsellModal` manque testIDs
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #3)
+- **Référence code** : `museum-frontend/features/paywall/ui/QuotaUpsellModal.tsx`.
+- **Symptôme** : modal sans testIDs → Maestro flows ne peuvent pas asserter ses éléments avec précision (fallback texte → fragile i18n).
+- **Sprint d'origine** : audit-360 S3 follow-up #3.
+- **Effort estimé** : 30 min V1.1.
+- **Comment fermer** : add testIDs `paywall-modal-{root,email,consent,submit,dismiss,reset-meta}` sur les nodes correspondants. Mettre à jour les flows Maestro pour utiliser ces ids.
+
+---
+
+### TD-37 — 🔥 HOT `ratchet-check.sh` cap mutationScore=35 vs measured 30.71%
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 Phase 4 BLOQUÉ — **BLOQUE LES COMMITS**)
+- **Référence code** :
+  ```
+  .claude/quality-ratchet.json     "mutationScore": 35
+  .claude/hooks/ratchet-check.sh:122   enforce cap
+  ```
+- **Symptôme** : mesure actuelle 30.71% (post-Stryker carve-out — open-handles leak masque les vrais kills, cf. CLAUDE.md § Pièges connus). Le prochain commit main FAIL le pre-commit hook.
+- **Sprint d'origine** : audit-360 S3 Phase 4 BLOQUÉ.
+- **Effort estimé** : 1-2 jours (fix Stryker DryRunExecutor timeouts) OU 5 min (dial cap back temporairement à 30 + comment justif).
+- **Comment fermer** : 
+  1. **Court terme (5 min)** : `mutationScore: 30` dans `.claude/quality-ratchet.json` + commentaire daté justifiant le rollback + reminder TD-37.
+  2. **Long terme (1-2j)** : fixer les open handles Stryker (cf. CLAUDE.md piège Stryker forceExit:false), re-mesurer, restore cap à 35+.
+
+---
+
+### TD-38 — 🔥 HOT `ratchet-check.sh` REPO_ROOT hardcoded
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #5)
+- **Référence code** : `.claude/hooks/ratchet-check.sh:22` → `REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"`.
+- **Symptôme** : REPO_ROOT hardcodé en absolu = le gate skip silencieux sur les worktrees actifs (audit-360-s1, audit-360-S4, museum-s3-exec). Faux sens de sécurité sur les branches worktree.
+- **Sprint d'origine** : audit-360 S3 follow-up #5.
+- **Effort estimé** : 5 min.
+- **Comment fermer** : remplacer par `REPO_ROOT="$(git rev-parse --show-toplevel)"`. Vérifier que le script reste idempotent sur main + worktrees.
+
+---
+
+### TD-39 — `module-auth` umbrella Stryker wrapper manquant
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #7)
+- **Référence code** : seuls 3 sub-wrappers (`login-handler`, `mfa-route`, `totp`) existent dans Stryker scope `module-auth`.
+- **Symptôme** : pas d'umbrella wrapper qui agrège — impossible de run Stryker sur l'ensemble module-auth en une commande, fragmentation des rapports.
+- **Sprint d'origine** : audit-360 S3 follow-up #7.
+- **Effort estimé** : 30 min.
+- **Comment fermer** : ajouter wrapper umbrella `module-auth` qui inclut les 3 sub-scopes + n'importe quel additional file `src/modules/auth/**/*.ts` non couvert.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
