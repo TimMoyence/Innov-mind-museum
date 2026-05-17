@@ -607,15 +607,11 @@ export class ChatModule {
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
     this.buildArtKeywordRefresh(artKeywordRepo);
 
-    const orchestrator = new LangChainChatOrchestrator();
-    this._orchestrator = orchestrator;
-    const effectiveOrchestrator: ChatOrchestrator = orchestrator;
-    configureGuardrailBudget({ cache });
-
     // Scalability primitives (perennial design §11, 100k clients prep).
     // Cost breaker = singleton because its rolling window MUST be shared by
     // every LLM call site (per-callsite breaker would miss system-wide spikes).
     // Tenant rate limiter singleton for the same fairness reason.
+    // Built BEFORE the orchestrator so it can be injected as a dep (C9.4).
     this._llmCostCircuitBreaker = new LlmCostCircuitBreaker({
       hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
       dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
@@ -634,6 +630,13 @@ export class ChatModule {
     llmCostCircuitBreakerState.set({ state: 'closed' }, 1);
     llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
     llmCostCircuitBreakerState.set({ state: 'open' }, 0);
+
+    const orchestrator = new LangChainChatOrchestrator({
+      costBreaker: this._llmCostCircuitBreaker,
+    });
+    this._orchestrator = orchestrator;
+    const effectiveOrchestrator: ChatOrchestrator = orchestrator;
+    configureGuardrailBudget({ cache });
 
     this._tenantRateLimiter = new TenantRateLimiter({
       capacity: env.guardrails.tenantRateLimit.capacity,

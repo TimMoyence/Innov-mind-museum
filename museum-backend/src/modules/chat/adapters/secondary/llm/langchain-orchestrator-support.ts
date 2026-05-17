@@ -61,6 +61,10 @@ export interface InvokeSectionInput {
     schema: z.ZodType;
     name: string;
   };
+  /** C9.4 — Prom gauge label scoping. `null` ⇒ label value `'none'`. */
+  museumId?: number | null;
+  /** C9.4 — Prom gauge label. V1: `'anonymous'` | `'free'`. */
+  tier?: string;
 }
 
 export interface AssembleResponseInput {
