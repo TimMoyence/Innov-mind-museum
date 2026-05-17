@@ -118,15 +118,15 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 > Existant : 0. Hypothèse 3 sessions/mois free → premium illimité = à valider AVANT Stripe full. Stub V1 = compteur + écran upsell sans paiement.
 
-- [ ] **C6.1 BE compteur sessions/mois par user** — table tracking + middleware quota check pré-orchestrator
-- [ ] **C6.2 Tier model `free | premium` sur User entity** — migration TypeORM, pas de Stripe yet
-- [ ] **C6.3 FE écran upsell** — modal sur quota dépassé, CTA "rejoindre liste premium" → email capture (Brevo list)
-- [ ] **C6.4 Admin override** — toggle premium manuel pour pilots B2B testers (cf. M2.x Phase 2)
-- [ ] **C6.5 Telemetry conversion funnel** — combien hit quota, combien click upsell, combien email captured
+- [x] **C6.1 BE compteur sessions/mois par user** — table tracking + middleware quota check pré-orchestrator. *(merge `6893a6ab` 2026-05-16 R1 paywall stub, audit 2026-05-17 : case oubliée par /team au merge)*
+- [x] **C6.2 Tier model `free | premium` sur User entity** — migration TypeORM, pas de Stripe yet. *(merge `6893a6ab` 2026-05-16, audit 2026-05-17 tick-audit)*
+- [x] **C6.3 FE écran upsell** — modal sur quota dépassé, CTA "rejoindre liste premium" → email capture (Brevo list). *(merge `6893a6ab` 2026-05-16, audit 2026-05-17 tick-audit)*
+- [x] **C6.4 Admin override** — toggle premium manuel pour pilots B2B testers (cf. M2.x Phase 2). *(merge `6893a6ab` 2026-05-16, audit 2026-05-17 tick-audit)*
+- [ ] **C6.5 Telemetry conversion funnel** — combien hit quota, combien click upsell, combien email captured *(reste ouvert — analytics pas wired au merge 6893a)*
 
 ### C7 — Stabilité prod (KR3)
 
-- [ ] **C7.1 S6.1 Smoke prod** — `pnpm smoke:api` couvre auth + chat + image upload + compare (audit 2026-05-14). Manque voice/TTS end-to-end pour valider DoD.
+- [x] **C7.1 S6.1 Smoke prod** — `pnpm smoke:api` couvre auth + chat + image upload + compare + voice/TTS end-to-end. *(merge `6893a6ab` 2026-05-16 R5 TTS smoke round-trip, audit 2026-05-17 tick-audit)*
 - [ ] **C7.2 S6.2 Chaos game-day** — `docs/CHAOS_RUNBOOKS.md` rédigé (3 expé : Redis kill rate-limit fail-closed, PG replica → primary failover, LLM provider kill multi-provider), exécution game-day pending.
 - [ ] **C7.3 S6.3 P0 bug zero** — triage Sentry + Linear, aucun ouvert avant 1er juin
 - [ ] **C7.4 S6.4 Release checklist run** — `docs/RELEASE_CHECKLIST.md` rédigée (656L, last update 2026-04-04 — refs admin Vite à actualiser → museum-web Next.js 15), execution + sign-off pending.
@@ -152,7 +152,8 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [ ] **C9.0 Activer Langfuse prod + exporter Prom baseline 7j** — précondition à toute optim. Sans ça, gains ci-dessous sont hypothèses non vérifiées. Effort 0.5j + 7j bake parallèle. *(NORTHSTAR BL1)*
 - [x] **C9.1 Fix copy mensonge "images compressées"** UFR-013 violation — fermé 2026-05-17, edit FR + EN `museum-frontend/shared/locales/{fr,en}/translation.json:552` (TTS désactivé / réponses plus courtes / prefetch wifi uniquement). Cf. TD-15. *(NORTHSTAR + H §5.1 SEV1 + dispatcher)*
 - [ ] **C9.2 `imageDescription` rendu en audio-desc mode** — SEV1 a11y bug : visiteur mal-voyant upload image, bot répond mais ne lit jamais la description. WCAG 2.1 Level A + EN 301 549 §9.1.1.1 violation latente. `imageDescription` est émis BE (`assistant-response.ts:199`) mais jamais consommé FE. Effort 2j. *(H POC-3 SEV1)*
-- [ ] **C9.3 EU AI Act Art.50 voice disclosure badge persistant** sur bouton TTS — vérifier scope `AiConsentSheetContent.tsx` existant couvre déjà ; sinon implémenter. Grace period 2026-12-02 pour systèmes pré-2026-08-02. **Legal review obligatoire**. Effort 0.5-3j selon état actuel. *(E R-LEGAL-1 BLOCKER potentiel)*
+- [x] **C9.3a Granular AI consent sheet (Apple 5.1.2(i) + GDPR Art. 7)** — per-category × per-provider toggles, default OFF, audit chain emission, settings revocation. ADR-053. *(merge `bfcd0743` 2026-05-17 S4-P0-02, audit 2026-05-17 tick-audit split)*
+- [ ] **C9.3b EU AI Act Art.50 voice disclosure badge persistant** sur bouton TTS — distinct de C9.3a : vérifier si `AiConsentSheetContent.tsx` rend un badge AI persistant pendant playback (pas seulement opt-in first-use). Si non, implémenter. Grace period 2026-12-02 pour systèmes pré-2026-08-02. **Legal review obligatoire**. Effort 0.5-3j selon état actuel. *(E R-LEGAL-1 BLOCKER potentiel — à vérifier Session 1)*
 - [ ] **C9.4 Wire Cost Circuit Breaker + Langfuse generation()** — unified changeset : migrer `lf.trace` → `lf.generation({input, output, usage, model})` dans `langchain-orchestrator-tracing.ts` + propager `userId/sessionId/museumId` (5 LOC) + wire `recordCharge(estimateCostCents(...))` dans `langchain.orchestrator.invokeSection` + ajouter Prom gauge `llm_cost_eur_per_hour{tier,museumId}` + 3 alerts manquantes (cache-hit-rate-too-low, llm_cost_breaker_open, llm_guard_breaker_open). Effort 2j, gain : cost observability + safety net hard cap (50$/h spike, 500$/jour). *(NORTHSTAR Convergent.1 — B Gap-9 + D §10 + G converge)*
 - [ ] **C9.5 Stable-prefix message ordering** — restructurer `buildSectionMessages` (`llm-prompt-builder.ts:321-397`) : mettre system+section AVANT visitor_context+memory+enrichment+history+user. Précondition prefix ≥1024 tokens identique byte-à-byte. Logger `prompt_tokens_details.cached_tokens` (OpenAI L2 auto-cache). Effort 1j, gain attendu **-30 à -40% input cost gratuit** si cache hit ratio ≥ 0.4 sur sessions > 2 turns. *(B T1-A.2 + T1-A.3 + D QW3)*
 - [ ] **C9.6 Promise.all enrichment + location + router** — `prepare-message.pipeline.ts:355-408` 3 awaits séquentiels indépendants (`fetchEnrichmentData` || `resolveLocationForMessage` || `resolveRouterFacts`). Effort 0.5j, gain **-200 à -500ms P50**. *(D-QW1)*
@@ -173,6 +174,30 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [ ] **C9.18 `detectedArtwork.artworkId` deep-link B2B** — champ BE émis (`assistant-response.ts:175`), FE re-déclare pas dans `ChatUiMessageMetadata` → impossible deep-link `/museum/:id/artwork/:artworkId`. Critique pour stratégie B2B intra-museum routing. Effort 2j. *(H POC-5 / §1.2)*
 
 **Total Phase A P0 strict** : ~22 j-h dev sur 15 j calendaires (au 2026-05-17), parallélisable 4 axes : code-burial (C9.15-17) || perf+observability (C9.0/4/5/6/7) || media+voice (C9.10/12-14) || AI-safety+i18n (C9.2/3/8/9/11/18). **C9.0 baseline obligatoire AVANT toute mesure de gain.**
+
+### C10 — Chat UX refonte 2026-05-16 (livrée hors-roadmap, doctrine itérative assumée)
+
+> 14 features TDD fresh-context shippées dans le merge `cc0b21c8` (2026-05-16 16:32) sans entrée roadmap pré-merge. Bloc créé 2026-05-17 par tick-audit pour traçabilité UFR-013. ADR-055 (BottomSheetRouter state machine) + ADR-056 (A5 phase client-side simulated). Doctrine Phase 1/2 séquentielle assouplie au profit d'un re-plan itératif (décision user 2026-05-17).
+
+**A — Composer + bubbles + chrome**
+- [x] **C10.A1** unified composer + attachment-picker
+- [x] **C10.A2** artwork hero card + modal
+- [x] **C10.A3** bubbles UI polish
+- [x] **C10.A4** collapsible top bar
+- [x] **C10.A5** status pipeline contextuels (cf. ADR-056 client-side simulated)
+- [x] **C10.A6** citation chips
+
+**B — Post-visite + resumption + in-museum**
+- [x] **C10.B1** carnet de visite post-visite
+- [x] **C10.B2** conversation resumption (session reprise)
+- [x] **C10.B3** ask-more inline
+- [x] **C10.B4** QR cartel scanner
+- [x] **C10.B5** sotto-voce TTS mute toggle
+- [x] **C10.B6** in-museum suggestion proactive
+
+**C — Cache + router (réutilisation libellés C3/C4 sans collision — distinct des clusters image-compare / anti-hallu)**
+- [x] **C10.C3** cache LLM hit côté UI (≠ C3 image compare)
+- [x] **C10.C4** BottomSheetRouter UI unification — ADR-055 (≠ C4 anti-hallucination)
 
 ---
 
@@ -203,13 +228,13 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [x] **W3.1 RBAC complet** — rôles `super_admin`/`museum_manager`/`moderator`/`visitor` + `RoleGuard` côté admin-web. Commit `3bf0813e` 2026-05-07 (P0 #9 admin user detail + P0-6 RoleGuard super_admin). *(audit 2026-05-14 : case oubliée)*
 - [x] **W3.2 Page stats musée** — `admin/analytics/page.tsx` + `admin/reports/page.tsx` avec LineChart/BarChart Recharts. *(audit 2026-05-14 : case oubliée — scope per-musée reste à valider pour pitch B2B)*
 - [x] **W3.3 Modération reviews** — shipped, scope museum-admin verifié.
-- [ ] **W3.4 Export CSV** — sessions, reviews, tickets — exigence légale + B2B reporting
+- [x] **W3.4 Export CSV** — sessions, reviews, tickets — exigence légale + B2B reporting. *(merge `6893a6ab` 2026-05-16 R2 admin CSV export, audit 2026-05-17 tick-audit)*
 
 ### W4 — Landing web (ex-priorité 4, KR4)
 
 - [x] **W4.1 Polish FR/EN existant** — `StorySection` 4-step timeline shipped (commit `53903a293` 2026-04-21), landing FR/EN assemblée dans `museum-web/src/app/[locale]/page.tsx`. *(audit 2026-05-14 : Lighthouse ≥95 + a11y axe-core à re-valider pré-launch)*
-- [ ] **W4.2 CTA inscription bêta** — formulaire email → liste pré-launch (1ère vague 100 testers) — coupler avec C6.3
-- [ ] **W4.3 Page B2B** — pitch musée (offre, pricing fourchette, contact form)
+- [x] **W4.2 CTA inscription bêta** — formulaire email → liste pré-launch (1ère vague 100 testers) — couplé avec C6.3. *(merge `6893a6ab` 2026-05-16 R3 beta signup + Brevo list, audit 2026-05-17 tick-audit)*
+- [x] **W4.3 Page B2B** — pitch musée (offre, pricing fourchette, contact form). *(merge `6893a6ab` 2026-05-16 R4 B2B pitch page + leads module, audit 2026-05-17 tick-audit)*
 
 ### W5 — Voice decision review (ex-priorité 5)
 
