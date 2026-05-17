@@ -15,7 +15,10 @@
 #   - workflow_dispatch:          Manual re-run from the Actions UI.
 #
 # Budget
-#   ~20-25 min on ubuntu-latest. Hard cap via `timeout-minutes: 30`.
+#   ~45-55 min on ubuntu-latest. Hard cap via `timeout-minutes: 60`.
+#   (Auparavant 30min cap, mais avec 6 probes × OpenAI 5-10s/call × N test cases,
+#   un seul probe peut consommer 30min — vu run 25990197927 où promptinject
+#   a saturé le cap à lui seul. Bump à 60 + JWT_ACCESS_TTL=1h matched.)
 #
 # Cost
 #   ~750 OpenAI gpt-4o-mini calls/run × ~$0.001 ≈ $0.50/run × 4 runs/month
@@ -63,7 +66,7 @@ jobs:
   garak:
     name: NVIDIA Garak adversarial scan (REST target)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     services:
       postgres:
