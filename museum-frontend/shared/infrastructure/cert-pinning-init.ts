@@ -33,20 +33,15 @@ import {
   parseKillSwitchPayload,
   type KillSwitchState,
 } from '@/shared/config/cert-pinning';
+import { readEnvString } from '@/shared/lib/env';
 import { storage } from './storage';
 
 const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
 
-// `typeof v === 'string'` narrowing — bridges local/CI typing divergence
-// (local sees `process.env.X` as `string | undefined`, CI sees `any`). Cast
-// or `String()` triggers a rule on one side or the other; an explicit type-
-// narrowing predicate is silent on both.
+// Bridges local/CI typing divergence on `process.env.X` reads via the
+// canonical `readEnvString` helper. See museum-frontend/shared/lib/env.ts.
 const isEnvEnabled = (): boolean => {
-  // Explicit `: unknown` so CI's `any` typing on process.env doesn't leak into
-  // `raw` and trigger no-unsafe-assignment. Local sees string | undefined →
-  // unknown is a safe widening, no rule fires either side.
-  const raw: unknown = process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED;
-  return typeof raw === 'string' && raw.toLowerCase() === 'true';
+  return readEnvString(process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED)?.toLowerCase() === 'true';
 };
 
 const isCacheFresh = (state: KillSwitchState): boolean => {

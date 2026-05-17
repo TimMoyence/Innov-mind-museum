@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+
 import { DataSource } from 'typeorm';
 
 import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
@@ -87,31 +88,49 @@ export const AppDataSource = new DataSource({
   },
 });
 
+/** Runtime shape exposed by the pg driver under TypeORM. */
+interface PgPoolStats {
+  totalCount: number;
+  idleCount: number;
+  waitingCount: number;
+}
+
+/**
+ * Type predicate replacing the prior `as unknown as` cast: confirms the
+ * TypeORM driver carries the pg-specific `master` pool stats object before
+ * the monitor reads numeric counters off it.
+ */
+export function hasPgPool(driver: unknown): driver is { master: PgPoolStats } {
+  if (typeof driver !== 'object' || driver === null) return false;
+  if (!('master' in driver)) return false;
+  const master: unknown = (driver as { master: unknown }).master;
+  if (typeof master !== 'object' || master === null) return false;
+  const stats = master as Record<string, unknown>;
+  return (
+    typeof stats.totalCount === 'number' &&
+    typeof stats.idleCount === 'number' &&
+    typeof stats.waitingCount === 'number'
+  );
+}
+
 /** Logs pool utilization every 60s when pool usage exceeds 80%. */
 export function startPoolMonitor(intervalMs = 60_000): NodeJS.Timeout {
   return setInterval(() => {
     if (!AppDataSource.isInitialized) return;
-    try {
-      const driver = AppDataSource.driver as unknown as {
-        master?: { totalCount: number; idleCount: number; waitingCount: number };
-      };
-      const pool = driver.master;
-      if (!pool) return;
+    const driver: unknown = AppDataSource.driver;
+    if (!hasPgPool(driver)) return;
 
-      const { totalCount, idleCount, waitingCount } = pool;
-      const active = totalCount - idleCount;
-      const utilization = totalCount > 0 ? active / env.db.poolMax : 0;
-      if (utilization >= 0.8) {
-        logger.warn('db_pool_high_utilization', {
-          active,
-          idle: idleCount,
-          waiting: waitingCount,
-          max: env.db.poolMax,
-          utilization: Math.round(utilization * 100),
-        });
-      }
-    } catch {
-      // Pool stats unavailable — skip silently
+    const { totalCount, idleCount, waitingCount } = driver.master;
+    const active = totalCount - idleCount;
+    const utilization = totalCount > 0 ? active / env.db.poolMax : 0;
+    if (utilization >= 0.8) {
+      logger.warn('db_pool_high_utilization', {
+        active,
+        idle: idleCount,
+        waiting: waitingCount,
+        max: env.db.poolMax,
+        utilization: Math.round(utilization * 100),
+      });
     }
   }, intervalMs);
 }

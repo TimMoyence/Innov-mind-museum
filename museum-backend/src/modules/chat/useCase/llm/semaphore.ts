@@ -83,7 +83,11 @@ export class Semaphore {
         });
 
     const run = this.limit(async () => {
-      if (timedOut) return undefined as unknown as T;
+      // When the timeout already fired, the race winner is the rejected
+      // timeoutPromise — the value returned here is never read (Promise.race
+      // already settled with the rejection). `as never` keeps TS happy without
+      // the noisier `as unknown as T` lossy cast.
+      if (timedOut) return undefined as never;
       // Promote from waiting → in-flight when the slot frees up.
       if (!acquiredImmediately) {
         if (this._waiting > 0) this._waiting -= 1;

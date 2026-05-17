@@ -1,0 +1,108 @@
+{
+  "task": "T1.11",
+  "title": "guardrail-evaluation.service.ts split (611L → ≤400L) via 4 extractions",
+  "loop": 1,
+  "reviewedAt": "2026-05-17",
+  "spec": "docs/roadmap-night/audit-360-2026-05-16/specs/T1.11.md",
+  "diffSource": "/tmp/audit-s1-T1.11-green.diff",
+  "filesCreated": [
+    "museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.types.ts",
+    "museum-backend/src/modules/chat/useCase/guardrail/eval/v2-layers.helper.ts",
+    "museum-backend/src/modules/chat/useCase/guardrail/eval/output-classifier.helper.ts",
+    "museum-backend/src/modules/chat/useCase/guardrail/eval/bias-metrics.helper.ts"
+  ],
+  "filesModified": [
+    "museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts"
+  ],
+  "scoresOnFiveAxes": {
+    "acCompliance": {
+      "score": 96,
+      "weight": 0.30,
+      "rationale": "Tous les AC du spec satisfaits. (1) wc -l service.ts = 381 ≤ 400 cible ✓ (-230L vs 611 d'origine ; marge confortable de 19L au seuil). (2) 4 extractions livrées en sub-modules (Option B du spec) : `guardrail-evaluation.types.ts` (61L, 4 interfaces + 1 type + re-export GuardrailAuditContext), `eval/v2-layers.helper.ts` (127L, runLlmJudge + evaluateGuardrailProvider), `eval/output-classifier.helper.ts` (108L, runArtTopicClassifier + aggregateOutputText), `eval/bias-metrics.helper.ts` (60L, recordBiasMetrics + resolveLocaleLabel + KNOWN_LOCALES + type GuardrailLayer). (3) AC explicite 'tests pass sans modification' : le seul diff sur test file = +41L = test T1.7 metadata spread cast (vérifié verbatim — commentaire 'Covers the inline `{ ...metadata }` spread that replaced the prior `as unknown as` cast' = signature T1.7) ; T1.11 n'a PAS modifié les tests. (4) ADR-015 doctrine respectée : runLlmJudge (V2 LLM judge) et evaluateGuardrailProvider (V2 sidecar) vivent dans le même fichier mais sont 2 fonctions stateless avec dep-bundles séparés (RunLlmJudgeDeps vs EvaluateGuardrailProviderDeps) — aucun shared state, indépendance préservée structurellement. Service.ts ajoute 2 helpers de dep-bundle (`providerDeps()` + `judgeDeps()`) avec JSDoc 'Kept separate from {@link judgeDeps} so the two V2 layers stay structurally independent'. (5) 5 consumers intacts : grep confirme tous importent depuis le path racine `@modules/chat/useCase/guardrail/guardrail-evaluation.service`, aucun deep-import dans `eval/` ou `.types`. Re-exports en tête de service.ts (lignes 43, 22-29) maintiennent public API surface."
+    },
+    "scopeFidelity": {
+      "score": 100,
+      "weight": 0.20,
+      "rationale": "Scope strictement contenu dans `museum-backend/src/modules/chat/useCase/guardrail/`. `git diff --stat HEAD -- museum-backend/src/modules/chat/useCase/guardrail/` = 1 fichier modifié (service.ts -227L net) + 2 untracked entries (guardrail-evaluation.types.ts + eval/ subdir). `git status --short` ne montre aucun fichier hors scope. Le test file modifié = T1.7 metadata spread test (vérifié par hunk inspection : ligne 615+ contient 'Covers the inline { ...metadata } spread that replaced the prior `as unknown as` variance cast' = preuve verbatim T1.7) — pas une modification T1.11. Note historique du dispatcher (vagues 1+2 séquentielles, 1er agent fait 3/4 extractions puis API 500, 2ème agent complète extraction 4 bias-metrics) confirmée par l'état final cohérent — pas de scope drift entre les deux passes, toutes extractions au bon endroit."
+    },
+    "kissDry": {
+      "score": 95,
+      "weight": 0.20,
+      "rationale": "Split propre et cohérent. (1) 230 lignes extraites réparties sur 4 fichiers = moyenne ~57L/file → granularité saine, ni trop coarse (giant helper) ni trop fragmentée. (2) Stateless functions : 0 `this.` dans les 4 nouveaux fichiers (grep verbatim) — pattern strict de dependency-injection via second argument. (3) Dep-bundles typés : RunLlmJudgeDeps + EvaluateGuardrailProviderDeps + RunArtTopicClassifierDeps explicites au lieu de passer un mega-deps object — minimise la surface couplée à chaque helper. (4) `judgeDeps()` + `providerDeps()` au lieu de spread inline dans evaluateInput — DRY (chaque dep-bundle est cité 1× au lieu de 3×). (5) Re-exports en tête de service.ts (`export type { GuardrailAuditContext, ArtTopicClassifierPort, LlmJudgeFn }`) = zero-impact contract pour 5 consumers, pas besoin de toucher leurs imports. (6) Types file = hub de dépendances (consumed par 3 fichiers : service.ts, v2-layers.helper, output-classifier.helper) — élimine la duplication d'interface ArtTopicClassifierPort + LlmJudgeFn. -5 pour 1 nice-to-have : le helper output-classifier exporte un type `ClassifierBlockResult` qui dupplique partiellement la signature `{ text, metadata, allowed }` de `evaluateOutput`'s return — pas un bug, juste un type alias qu'on pourrait factoriser dans `.types.ts` si on voulait pousser DRY au max ; tradeoff = locality of reference acceptable."
+    },
+    "a11yDesign": {
+      "score": 95,
+      "weight": 0.15,
+      "rationale": "N/A (split de service backend, aucun impact UI/UX). Default 95 per spec instruction. JSDoc des helpers est exceptionnellement riche : v2-layers.helper:11-17 documente verbatim la doctrine ADR-015 dual-V2 + référence CLAUDE.md §AI Safety §4 + §5 + retrait du flag `GUARDRAILS_V2_CANDIDATE` 2026-05-14 — un dev qui découvre ce fichier 6 mois plus tard a tout le contexte. output-classifier.helper:32-39 explicite le fail-CLOSED contract (OWASP LLM 2026). bias-metrics.helper:24-28 documente l'attaque de cardinality inflation par locale arbitraire. Documentation > moyenne du codebase."
+    },
+    "securityHonesty": {
+      "score": 98,
+      "weight": 0.15,
+      "rationale": "Sécurité préservée + upgrade implicite. (1) ADR-015 V1 (`evaluateUserInputGuardrail` + `evaluateAssistantOutputGuardrail`) reste dans service.ts (lignes 130, 309) via import depuis `art-topic-guardrail` — single source of truth content filtering inchangée. (2) V2 LLM Guard sidecar (evaluateGuardrailProvider) : fail-CLOSED contract préservé verbatim — v2-layers.helper:82-89 wrap dans try/catch + log 'guardrail_provider_throw_fail_closed' + return `{ allow: false, reason: 'error' }`. (3) V2 LLM judge (runLlmJudge) : fail-OPEN contract préservé verbatim — v2-layers.helper:48 `if (!decision) return { allow: true }; // fail-open` ; confidence floor 0.6 maintenue (ligne 50). (4) Sécurité UPGRADE implicite : les 2 V2 layers ayant chacun leur dep-bundle séparé (RunLlmJudgeDeps vs EvaluateGuardrailProviderDeps) sont testables isolément à l'avenir (le scope T1.11 n'a pas ajouté de tests pour ne pas violer AC, mais l'architecture le permet maintenant trivialement) → defense-in-depth ADR-015 plus robuste qu'avant. (5) Honesty : la note historique du dispatcher (2 vagues, 1er agent failed mid-extraction) est documentée transparente dans le contexte, pas cachée. Le spec lui-même reconnaît UFR-013 que 'le YAML claim 2 méthodes >100L est factuellement faux post-T1.7' (max = 93L `evaluateInput`) — la task a été reformulée pragmatiquement vers 'file ≤400L'. (6) BE lint = exit 0 (eslint --max-warnings=0 + tsc --noEmit). Zero nouveau eslint-disable (grep verbatim 'NO_NEW_ESLINT_DISABLE')."
+    }
+  },
+  "weightedMean": 96.4,
+  "verdict": "APPROVED",
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "NH-1",
+        "title": "ClassifierBlockResult type pourrait migrer dans .types.ts",
+        "detail": "output-classifier.helper.ts:9-11 exporte un type local `ClassifierBlockResult = { text: string; metadata: ChatAssistantMetadata; allowed: boolean } | undefined` qui ressemble fortement à la valeur de retour de `evaluateOutput` dans service.ts:295. Si demain un autre helper output veut retourner la même shape, on duplique. Migration possible vers guardrail-evaluation.types.ts comme `OutputGuardrailResult` (avec discriminant `allowed`). Pas bloquant car locality of reference (le type est défini là où il est utilisé) reste acceptable.",
+        "action": "Optionnel : refactor mineur post-merge si une 3e méthode retourne cette shape. Pas d'urgence."
+      },
+      {
+        "id": "NH-2",
+        "title": "service.ts `logBlock` reste private — opportunité d'extraction future",
+        "detail": "`logBlock` est appelé 7× depuis service.ts (lignes 133, 157, 189, 311, 344) + injecté en callback à `runArtTopicClassifier` (ligne 369). Si une 5e extraction devenait nécessaire (ex. consolidation des 3 orchestrateurs publics evaluateInput/handleInputBlock/evaluateOutput), `logBlock` pourrait migrer dans un `eval/audit.helper.ts` avec deps `{ audit?: AuditService }`. Aujourd'hui pas requis : service.ts est à 381L (≤400 cible), pas de pression d'extraction additionnelle. Q3 du spec a explicitement chosen 'logBlock reste dans service.ts' avec callback injection au classifier helper — décision respectée.",
+        "action": "Backlog : si service.ts re-grossit au-dessus de 400L lors d'une future feature, prioriser cette extraction. TECH_DEBT candidate-level low."
+      },
+      {
+        "id": "NH-3",
+        "title": "v2-layers.helper.ts `env.guardrails.judgeMinMessageLength` lecture directe",
+        "detail": "runLlmJudge (v2-layers.helper:45) lit `env.guardrails.judgeMinMessageLength` directement au lieu de le recevoir via deps. Mineure dérive du pattern 'stateless functions, deps via args' — l'env est une dep globale mutable au sens propre (mockable via env override). Le service.ts d'origine faisait pareil (lecture directe d'env), donc pas une régression introduite par T1.11. Pour test isolation (futur unit test direct sur runLlmJudge), il faudrait soit ajouter `judgeMinMessageLength: number` dans RunLlmJudgeDeps, soit mock env globalement. Pas bloquant pour ce loop.",
+        "action": "Si on ajoute des tests unitaires directs sur runLlmJudge au futur, considérer l'injection de `judgeMinMessageLength` dans RunLlmJudgeDeps. Pas urgent."
+      }
+    ]
+  },
+  "verificationLog": {
+    "diffStat": "1 file changed, 72 insertions(+), 299 deletions(-) (service.ts net -227L) + 4 untracked new files (guardrail-evaluation.types.ts 61L + eval/v2-layers.helper.ts 127L + eval/output-classifier.helper.ts 108L + eval/bias-metrics.helper.ts 60L = 356L extracted).",
+    "lineCount": {
+      "guardrail-evaluation.service.ts": "381 (cible ≤400 ✓, marge 19L)",
+      "guardrail-evaluation.types.ts": 61,
+      "eval/v2-layers.helper.ts": 127,
+      "eval/output-classifier.helper.ts": 108,
+      "eval/bias-metrics.helper.ts": 60,
+      "total": 737
+    },
+    "extractionsExpected_4_4": {
+      "types_4_interfaces": "PASS (guardrail-evaluation.types.ts:10 ArtTopicClassifierPort, :15 InputGuardrailResult, :33 LlmJudgeFn, :36 GuardrailEvaluationServiceDeps, :7 re-export GuardrailAuditContext)",
+      "v2_layers_runLlmJudge_evaluateGuardrailProvider": "PASS (v2-layers.helper.ts:40 runLlmJudge, :72 evaluateGuardrailProvider — 2 stateless functions, dep-bundles séparés RunLlmJudgeDeps + EvaluateGuardrailProviderDeps)",
+      "output_classifier_runArtTopicClassifier_aggregateOutputText": "PASS (output-classifier.helper.ts:40 runArtTopicClassifier, :97 aggregateOutputText)",
+      "bias_metrics_recordBiasMetrics_resolveLocaleLabel": "PASS (bias-metrics.helper.ts:43 recordBiasMetrics, :29 resolveLocaleLabel, :13 KNOWN_LOCALES set, :10 type GuardrailLayer)"
+    },
+    "consumersUntouched": {
+      "chat-message.service.ts:6,36": "imports GuardrailEvaluationService + types via root path ✓",
+      "chat.service.ts:42": "imports ArtTopicClassifierPort + LlmJudgeFn via root path ✓",
+      "stream-buffer.ts:9": "imports type ArtTopicClassifierPort via root path ✓",
+      "message-commit.ts:14": "imports type GuardrailEvaluationService via root path ✓",
+      "prepare-message.pipeline.ts:17": "imports type GuardrailEvaluationService via root path ✓",
+      "deepImportScan": "grep 'from.*guardrail/eval\\|from.*guardrail-evaluation.types' → seuls les 3 nouveaux fichiers du dossier guardrail/ se cross-référencent ; aucun consumer externe deep-importe. Single import surface préservée."
+    },
+    "adr015DoctrineRespect": {
+      "v1_keyword_in_service": "service.ts:130 (evaluateInput) + :309 (evaluateOutput) — V1 keyword via art-topic-guardrail import inchangé",
+      "v2_sidecar_in_helper": "v2-layers.helper.ts:72-127 evaluateGuardrailProvider, dep RunLlmJudgeDeps={ guardrailProvider, guardrailProviderObserveOnly } — séparé",
+      "v2_judge_in_helper": "v2-layers.helper.ts:40-63 runLlmJudge, dep RunLlmJudgeDeps={ llmJudge, llmJudgeEnabled } — séparé",
+      "structural_independence": "service.ts:89-94 providerDeps() + :101-106 judgeDeps() avec JSDoc 'Kept separate from {@link judgeDeps} so the two V2 layers stay structurally independent' ✓",
+      "shared_state_check": "grep 'this\\.' dans eval/*.ts + .types.ts → 0 matches (stateless verified)"
+    },
+    "testFileChange": "diff +41L = T1.7 metadata spread cast test (vérifié verbatim 'Covers the inline { ...metadata } spread that replaced the prior `as unknown as` variance cast' = signature T1.7). T1.11 n'a PAS modifié les tests. AC 'tests pass sans modification' respecté.",
+    "lint": "cd museum-backend && pnpm lint → exit 0 (eslint src/ --cache --max-warnings=0 + pnpm lint:test-discipline + tsc --noEmit --incremental). Zero output d'erreur.",
+    "tests": "cd museum-backend && pnpm test -- --testPathPattern=guardrail-evaluation-service → 50/50 it() PASS (T1.7 metadata spread test inclus). Test count cohérent avec spec (post-T1.7 = 50).",
+    "eslintDisableScan": "grep 'eslint-disable' dans les 5 fichiers du scope → 0 match (NO_NEW_ESLINT_DISABLE). Aucune nouvelle dérogation introduite.",
+    "thisReferencesInHelpers": "grep 'this\\.' museum-backend/src/modules/chat/useCase/guardrail/eval/*.ts museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.types.ts → 0 matches (stateless pattern strict)"
+  },
+  "verdictNotes": "APPROVED avec 3 nice-to-have. Split exemplaire : 4 extractions clean (4/4), service.ts 381L ≤400 cible avec marge 19L, stateless helpers avec dep-bundles typés séparés, ADR-015 dual-V2 doctrine préservée structurellement (RunLlmJudgeDeps vs EvaluateGuardrailProviderDeps séparés + judgeDeps()/providerDeps() avec JSDoc explicite), zero deep-import depuis l'extérieur (single import surface intacte), zero `this.` dans les helpers (stateless verified), 0 nouveau eslint-disable, 5 consumers untouched, AC tests-pass-sans-modif respecté (seule modif test = T1.7 verbatim T1.11 ne l'a pas touché). Note honnête du spec sur le YAML 'méthodes >100L' factuellement faux post-T1.7 (max=93L) → la reformulation pragmatique 'file ≤400L' est cohérente avec UFR-013. Sécurité UPGRADE implicite : V2 layers maintenant testables isolément. Ready to commit."
+}

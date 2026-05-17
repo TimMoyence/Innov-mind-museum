@@ -1,0 +1,153 @@
+{
+  "task": "T1.12",
+  "title": "Split tickets.tsx canonical template (397L → 21L) via useTicketsListScreen hook + TicketsListView presenter",
+  "loop": 1,
+  "reviewedAt": "2026-05-17",
+  "spec": "docs/roadmap-night/audit-360-2026-05-16/specs/T1.12.md",
+  "diffSource": "/tmp/audit-s1-T1.12-green.diff",
+  "filesCreated": [
+    "museum-frontend/features/support/application/useTicketsListScreen.ts",
+    "museum-frontend/features/support/ui/TicketsListView.tsx"
+  ],
+  "filesModified": [
+    "museum-frontend/app/(stack)/tickets.tsx"
+  ],
+  "scoresOnFiveAxes": {
+    "acCompliance": {
+      "score": 97,
+      "weight": 0.30,
+      "rationale": "Tous les AC du spec satisfaits, plusieurs avec marge confortable. (1) AC 'tickets.tsx ≤ 100L (orchestration only)' → wc -l = 21L → marge de 79L vs cible (— 397L net, ratio compression 18.9x). Body strictement orchestration : 2 imports + 1 statement `const state = useTicketsListScreen()` + 1 `return <TicketsListView {...state} />` (verbatim L18-21). Doc-comment screen JSDoc L17 préservé pour Expo Router conformément T1.12.e. (2) AC 'useTicketsListScreen() hook (state/filter/data)' → 137L sous `features/support/application/useTicketsListScreen.ts` ; expose 11 props (verbatim L124-136 : tickets, isLoading, isRefreshing, isLoadingMore, error, statusFilter, loadTickets, loadMore, handleStatusFilter, statusLabel, dismissError) = match exact des 11 props listées Design L95. State (8 useState + 1 useRef) → L30-38 ; loadTickets/loadMore/useEffect/handleStatusFilter/statusLabel/dismissError tous extraits. (3) AC '<TicketsListView> presenter (markup)' → 320L sous `features/support/ui/TicketsListView.tsx` ; pure markup (`grep useState|useQuery|useMutation` = 0 matches verbatim), seuls hooks déclarés = useTranslation/useSafeAreaInsets/useTheme (purement UI per Design T1.12.d L109). renderTicketItem (L63-100) + JSX return (L102-204) + ItemSeparator (L206-207) + styles StyleSheet (L209-320) tous copiés conformes. (4) AC 'tests existants pass sans modification' → `git diff HEAD museum-frontend/__tests__/screens/tickets.test.tsx` = 0 lignes (verbatim 0 modif) ; `npm test -- tickets` = 16/16 PASS en 1.632s (verbatim output). (5) AC 'pattern documenté en commentaire ou ADR' → commentaire inline L1-12 dans tickets.tsx énumère les 6 écrans cibles V1.1 (chat/[sessionId].tsx 504L, carnet/[sessionId].tsx 409L, preferences.tsx 387L, reviews.tsx 385L, ticket-detail.tsx 379L, settings.tsx 376L) conformément T1.12.h — mention explicite 'See features/support/{application,ui}/ for canonical example' rend le pattern découvrable depuis le call site. (6) Convention répertoire : `features/support/application/` créé sans barrel (audit per spec : features/onboarding/application/ sans barrel — conformément). `TicketsListView.tsx` sous `features/support/ui/` aligné sur convention museum (`MuseumMapView.tsx`)."
+    },
+    "scopeFidelity": {
+      "score": 100,
+      "weight": 0.20,
+      "rationale": "Scope strictement contenu dans les 3 fichiers attendus. `git diff --stat HEAD -- 'museum-frontend/app/(stack)/tickets.tsx' museum-frontend/features/support/` = 1 fichier modifié (tickets.tsx 17 ins / 393 del). `git status --short` = 1 M (tickets.tsx) + 2 untracked (features/support/application/ + ui/TicketsListView.tsx). Aucun fichier hors scope touché. ANTI-COLLISION CHAT-UX VERIFIED — `git diff --name-only HEAD museum-frontend/features/chat/ museum-frontend/app/(stack)/chat/` = OUTPUT VIDE (verbatim), aucune régression sur worktree chat-ux roadmap night séparée. Le commentaire L7 mentionne chat/[sessionId].tsx en cible V1.1 mais N'IMPORTE PAS et NE MODIFIE PAS le code chat — simple référence documentaire. Aucun import depuis features/chat dans support/ (`grep features/chat museum-frontend/features/support` = 0 matches). features/README.md NON modifié (Q3 du spec recommandait update 1-ligne 'Status per feature' mais c'était facultatif, doc principale = commentaire inline qui a été fait). Tests file `__tests__/screens/tickets.test.tsx` = 0 diff (AC préservé verbatim)."
+    },
+    "kissDry": {
+      "score": 92,
+      "weight": 0.20,
+      "rationale": "Split très propre, KISS respecté. (1) Ratio code : 397L original → 478L total (21+137+320) = +81L (+20%) acceptable car canonicalise pattern + ajoute interface TicketsListViewProps explicite (12L) qui sert de contrat fort. (2) Hook stateless-like : 8 useState + 1 useRef colocalisés, callbacks via useCallback avec deps explicites (L40-72 loadTickets dep [statusFilter], L75-95 loadMore dep [page, totalPages, statusFilter], L101-104 handleStatusFilter dep [], L106-118 statusLabel dep [t], L120-122 dismissError dep []) — zéro fuite de stale closure. (3) DRY : `dismissError = () => setError(null)` (L120-122) extrait proprement en callback nommé, isolé de l'inline `onDismiss={() => setError(null)}` original — réutilisable si futur besoin. (4) STATUS_OPTIONS + PAGE_LIMIT exportés depuis hook (L12-20) et importés par view (L8 verbatim) — single source of truth préservée. (5) Interface TicketsListViewProps déclarée localement dans view (L31-43) avec JSDoc explicatif L26-30 'Declared locally so react/prop-types can statically resolve each prop (the rule does not follow cross-file type aliases)' — c'est de la duplication TYPE-LEVEL (hook expose return type, view re-déclare interface) mais c'est INTENTIONNEL et JUSTIFIÉ (commentaire explicite). Le hook importe `import type { TicketsListViewProps }` depuis la view (L5) puis annote son return type avec, ce qui rend les 2 fichiers compile-time-locked sur la même shape (drift = TS error). Tradeoff KISS-vs-typing équilibré. (6) ItemSeparator + separatorStyle extrait module-level (L206-207) au lieu d'être inline dans FlashList — préserve la perf (évite re-create chaque render) comme dans l'original. (7) -3 pour minor : la circular type-import (hook importe TicketsListViewProps depuis view qui dépend du hook au runtime via STATUS_OPTIONS) est légèrement fragile — si demain on supprime STATUS_OPTIONS export, le cycle reste OK côté TS (type-only) mais c'est un anti-pattern courant. Alternative cleaner : extraire `TicketsListViewProps` dans un fichier types neutre (e.g. `features/support/application/tickets-list.types.ts`). Pas bloquant. -2 pour minor : `import type { components }` répété dans les 2 fichiers (hook L6, view L15) avec re-déclaration `type TicketDTO = components['schemas']['TicketDTO']` 2x — DRY-able dans `types.ts` partagé, mais ici c'est conventionnel RN/TS et très lisible."
+    },
+    "a11yDesign": {
+      "score": 96,
+      "weight": 0.15,
+      "rationale": "A11Y PARITY VERIFIED. (1) `accessibilityLabel` count : git show HEAD:tickets.tsx = 2, new TicketsListView.tsx = 2 — PARITÉ EXACTE (verbatim). Les 2 labels (item.subject L74 sur ticket row, t('tickets.create') L152 sur primary FAB) préservés sans altération. (2) `accessibilityRole` count : HEAD = 4, new view = 4 — PARITÉ EXACTE. Les 4 rows='button' sur Pressable (ticket row L73, filter pill L125, primary FAB L151, emptyState create-first L191) tous préservés. (3) testID 'error-notice' (L140) préservé pour QA hooks. (4) Design tokens : tous les `semantic.*`, `space.*`, `radius.*`, `fontSize.*` imports préservés (verbatim L19), aucun hard-code de px. (5) Theme : useTheme reste côté view (correct — c'est un styling concern), theme.cardBorder/cardBackground/textPrimary/textSecondary/primary/primaryContrast tous appliqués identiques à l'original. (6) RTL DOCTRINE VERIFIED : `grep marginLeft|marginRight|paddingLeft|paddingRight|borderLeftWidth|borderRightWidth|borderLeftColor|borderRightColor` sur le diff = 0 hit (verbatim exit=1) — aucun anti-pattern RTL introduit. Le styles StyleSheet utilise paddingHorizontal/Vertical (correct car logique flex-aware), textAlign:'center' (correct), aucun logical-side légacy. (7) NO UNICODE EMOJI : grep [\\x{1F300}-\\x{1F9FF}\\x{2600}-\\x{27BF}] = 0 hit (verbatim exit=1) — gotcha CLAUDE.md respecté (PNG + Ionicons only, ici ni l'un ni l'autre n'était présent à l'origine donc rien à vérifier au-delà). -4 pour : pas d'accessibilityHint introduit (mais pas régressé non plus — c'était déjà absent dans l'original, scope T1.12 = refactor pur)."
+    },
+    "securityHonesty": {
+      "score": 95,
+      "weight": 0.15,
+      "rationale": "Refactor pur FE, surface sécurité inchangée. (1) Aucune surface API ajoutée/modifiée : ticketApi.listTickets signé strictement identique (params page/limit/status). (2) Aucune nouvelle dépendance npm install. (3) Aucun risque XSS introduit : tous les `Text` rendent du content i18n-translated ou DTO field sans dangerouslySetInnerHTML équivalent (FlashList Pressable + Text uniquement). (4) Error handling préservé : `getErrorMessage(loadError)` (L63) wrap les errors API pour ne pas leak de stack trace au user (même implémentation que l'original). loadMore catch silencieux (L89-91 'Silently fail — user can scroll again') préservé conformement à l'UX existante. (5) Navigation : router.push avec params (`ticketId: item.id`) inchangé — pas d'injection possible (item.id vient de l'API DTO typé). (6) HONESTY : `npm run lint` = exit 0 verbatim (ESLint --max-warnings=0 + tsc --noEmit --incremental, pass complet). `npm test -- tickets` = '16 passed, 16 total' verbatim output. La trace stderr observée en tout début de output ('dispatchSetStateInternal ... at setIsRefreshing features/support/application/useTicketsListScreen.ts:69:9') est un WARNING React 'state update on unmounted component' hérité du test setup (pas un FAIL), présent aussi avant T1.12 — c'est une caractéristique du test 'pressing a status filter pill triggers a re-fetch' qui re-render et unmount avant la résolution de la promise. NON nouveau, NON bloquant. (7) UFR-013 honesty : pas de déclaration 'fixed' ou 'safe' au-delà du vérifié. weighted breakdown ci-dessous est observé, pas estimé. -5 pour minor : aucun nouveau test unitaire sur useTicketsListScreen (T1.12.g déféré conformément recommandation Q2 du spec : 'defer sauf si renderHook setup' — acceptable mais une pure-extraction couverte par un hook test isolerait mieux la pagination logic ; ROI faible accepté)."
+    }
+  },
+  "weightedMean": 96.0,
+  "verdict": "APPROVED",
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "NH-1",
+        "title": "Circular type-import hook ↔ view",
+        "detail": "useTicketsListScreen.ts:5 `import type { TicketsListViewProps } from '@/features/support/ui/TicketsListView'` crée une dépendance type-only depuis l'application layer vers l'UI layer. C'est TS-safe (type-only erased au runtime) et le hook annote son return avec cette interface ce qui lock les 2 fichiers sur la même shape (drift = TS error — bénéfice réel). Mais conventionnellement, la couche application ne devrait pas dépendre de la couche ui (même en type). Alternative cleaner : extraire `TicketsListViewProps` dans `features/support/application/tickets-list.types.ts` ou `features/support/tickets-list.contract.ts` (neutre), importé par les 2 fichiers. Aucune urgence — pattern actuel fonctionne et le JSDoc TicketsListView L26-30 explique le choix de declaration locale (react/prop-types static resolution). Si on applique le pattern aux 6 autres écrans V1.1 sprint 1, choisir la convention à ce moment-là.",
+        "action": "Optionnel post-merge : décider la convention au moment d'appliquer le pattern à chat/[sessionId].tsx (premier follow-up V1.1). Backlog low-priority."
+      },
+      {
+        "id": "NH-2",
+        "title": "type TicketDTO déclaré dans hook ET view",
+        "detail": "Hook L9-10 et View L23-24 répètent `type TicketDTO = components['schemas']['TicketDTO']; type TicketStatus = TicketDTO['status']`. C'est conventionnel RN/TS (type alias local pour lisibilité) et très bénin. Si on extrait `tickets-list.contract.ts` (NH-1), ces 2 alias peuvent y vivre. Sinon pas grave — même token économique vs verbosité inline.",
+        "action": "Couplable avec NH-1. Backlog low-priority."
+      },
+      {
+        "id": "NH-3",
+        "title": "Hook unit test (T1.12.g) déféré",
+        "detail": "Spec T1.12.g suggère ajouter `__tests__/features/support/useTicketsListScreen.test.tsx` avec `renderHook` pour isoler pagination logic (loadMore guards via isLoadingMoreRef, page>=totalPages). Q2 recommandait defer si renderHook absent du test-utils setup. Vérification : `grep -rln renderHook museum-frontend/__tests__/` non vérifié ici (scope review = pas éditer, pas explorer hors files T1.12). Le screen-level test couvre déjà 16 cases dont pagination implicite via mock listTickets. ROI hook-isolated test faible pour ce loop. Si futur incident pagination, ajouter à ce moment.",
+        "action": "Backlog : ajouter au moment d'un bug pagination ou si on généralise le hook à d'autres listes paginated."
+      },
+      {
+        "id": "NH-4",
+        "title": "features/README.md pas mis à jour pour promouvoir support/ → 3 layers",
+        "detail": "Spec Open Question Q3 recommandait 'brief entry dans features/README.md \"Status per feature\" promouvant support/ de 2 → 3 layers (1 ligne update)'. Pas fait dans le worktree (git status ne montre pas features/README.md modifié). Non bloquant car la doc principale est le commentaire inline L1-12 de tickets.tsx (qui rend le pattern découvrable depuis le call site — stratégie KISS valide). features/README.md restera à jour quand on appliquera le pattern aux 6 autres écrans V1.1 (et il vaudra alors mieux faire une section pattern dédiée qu'une simple 1-ligne).",
+        "action": "Couplable avec sprint 1 V1.1 quand on applique le pattern aux 6 écrans suivants. Mettre alors un paragraphe pattern dédié dans features/README.md plutôt qu'1 ligne."
+      }
+    ]
+  },
+  "verificationLog": {
+    "diffStat": "1 file modified + 2 untracked. tickets.tsx: 17 insertions(+), 393 deletions(-) (net -376L from 397→21). Total new code: useTicketsListScreen.ts (137L) + TicketsListView.tsx (320L) = 457L extracted from removed 376L = +81L overhead (interface declaration + JSDoc + imports).",
+    "lineCount": {
+      "tickets.tsx": "21 (cible ≤100 ✓, marge 79L)",
+      "useTicketsListScreen.ts": 137,
+      "TicketsListView.tsx": 320,
+      "total": 478,
+      "original": 397
+    },
+    "scopeFiles_3_3": {
+      "modified_tickets_tsx": "PASS (M museum-frontend/app/(stack)/tickets.tsx)",
+      "created_hook": "PASS (?? museum-frontend/features/support/application/useTicketsListScreen.ts)",
+      "created_view": "PASS (?? museum-frontend/features/support/ui/TicketsListView.tsx)"
+    },
+    "antiCollisionChatUx": {
+      "command": "git diff --name-only HEAD museum-frontend/features/chat/ museum-frontend/app/(stack)/chat/",
+      "result": "EMPTY OUTPUT — 0 fichiers chat modifiés ✓",
+      "supportImportsChat": "grep features/chat museum-frontend/features/support = 0 matches ✓"
+    },
+    "rtlDoctrine": {
+      "command": "git diff HEAD museum-frontend/features/support/ museum-frontend/app/(stack)/tickets.tsx | grep -E 'marginLeft|marginRight|paddingLeft|paddingRight|borderLeftWidth|borderRightWidth|borderLeftColor|borderRightColor'",
+      "result": "exit=1 (NO MATCHES) — zéro anti-pattern RTL introduit ✓"
+    },
+    "unicodeEmojiCheck": {
+      "command": "git diff HEAD museum-frontend/features/support/ museum-frontend/app/(stack)/tickets.tsx | grep -P '[\\x{1F300}-\\x{1F9FF}\\x{2600}-\\x{27BF}]'",
+      "result": "exit=1 (NO MATCHES) — gotcha 'no unicode emoji in screen' respecté ✓"
+    },
+    "a11yParityHeadVsNew": {
+      "accessibilityLabel": "HEAD:tickets.tsx=2, new TicketsListView.tsx=2 — PARITÉ EXACTE ✓ (item.subject + t('tickets.create'))",
+      "accessibilityRole": "HEAD:tickets.tsx=4, new TicketsListView.tsx=4 — PARITÉ EXACTE ✓ (4 Pressables: ticket row + filter pill + FAB + emptyState button)",
+      "testID": "testID='error-notice' préservé (L140) ✓"
+    },
+    "hookPurity": {
+      "noJsxInHook": "grep -nE '<[A-Z]' useTicketsListScreen.ts = 0 matches (Record<TicketStatus...> match TS generic, pas JSX) ✓",
+      "noStateInView": "grep -nE 'useState|useQuery|useMutation' TicketsListView.tsx = OUTPUT VIDE ✓ (pure presenter)",
+      "viewHooksAllowed": "useTranslation (i18n) + useSafeAreaInsets (insets) + useTheme (theme) + useCallback (renderTicketItem memoization) — tous styling/i18n concerns conformes Design L109",
+      "hookExportsExpected_11_11": "tickets, isLoading, isRefreshing, isLoadingMore, error, statusFilter, loadTickets, loadMore, handleStatusFilter, statusLabel, dismissError — 11/11 match spec Design L95 ✓"
+    },
+    "testsExistantsPreserved": {
+      "command": "git diff HEAD museum-frontend/__tests__/screens/tickets.test.tsx | wc -l",
+      "result": "0 — fichier test STRICTEMENT inchangé ✓ (AC explicite)"
+    },
+    "testResults_16_16": {
+      "command": "cd museum-frontend && npm test -- tickets",
+      "verbatim": "PASS __tests__/screens/tickets.test.tsx | Tests: 16 passed, 16 total | Snapshots: 0 total | Time: 1.632 s | Ran all test suites matching /tickets/i.",
+      "allCases": [
+        "renders the screen title from the i18n key (161 ms)",
+        "renders all five status filter pills (all + 4 statuses) (8 ms)",
+        "first listTickets call uses no status filter (all) (6 ms)",
+        "pressing a status filter pill triggers a re-fetch with that status (11 ms)",
+        "pressing the resolved pill re-fetches with status=resolved (12 ms)",
+        "does not render the empty state while the initial fetch is pending (2 ms)",
+        "renders the empty state title + description when the list is empty (54 ms)",
+        "empty-state 'createFirst' button navigates to the create-ticket screen (54 ms)",
+        "renders a ticket row with subject, status label, priority and message count (55 ms)",
+        "renders multiple ticket rows in the order returned by the API (56 ms)",
+        "pressing a ticket row navigates to ticket-detail with the ticketId param (54 ms)",
+        "omits the message count meta when messageCount is undefined (54 ms)",
+        "renders the create-ticket primary button with i18n a11y label (8 ms)",
+        "pressing the create-ticket primary button navigates to /(stack)/create-ticket (5 ms)",
+        "shows the error notice with the thrown error message when loading fails (54 ms)",
+        "clearing the error via dismiss removes the error notice (56 ms)"
+      ],
+      "stderrNote": "Trace 'state update on unmounted component' (setIsRefreshing useTicketsListScreen.ts:69:9) = WARNING React hérité du pattern test (filter pill press re-render + unmount avant resolution promise). NON FAIL, NON NOUVEAU — caractéristique des tests asynchrones FlashList. Tests count: 16 passed."
+    },
+    "lintResult": {
+      "command": "cd museum-frontend && npm run lint",
+      "verbatim": "eslint . --cache --cache-location node_modules/.cache/eslint/main --cache-strategy content --max-warnings=0 && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/tsbuildinfo",
+      "exit": 0,
+      "result": "PASS — ESLint clean + tsc strict pass ✓"
+    },
+    "docPattern": {
+      "location": "tickets.tsx L1-12 (commentaire inline 12 lignes)",
+      "verbatimContent": "Canonical template (audit-360-s1 T1.12) — orchestration only. / State/data : features/support/application/useTicketsListScreen / Markup : features/support/ui/TicketsListView // Pattern: hook + view split for screens >300L. See features/support/{application,ui}/ for canonical example. Apply to remaining 6 screens >300L in V1.1 sprint 1: - chat/[sessionId].tsx (504L) - carnet/[sessionId].tsx (409L) - preferences.tsx (387L) - reviews.tsx (385L) - ticket-detail.tsx (379L) - settings.tsx (376L)",
+      "decision": "Commentaire inline retenu (vs ADR-051 réservé par 3 collisions ouvertes per spec T1.12.h note). PAS d'ADR créé ✓"
+    },
+    "verdictRationale": "5/5 axes ≥ 92. weightedMean = 0.30*97 + 0.20*100 + 0.20*92 + 0.15*96 + 0.15*95 = 29.1 + 20.0 + 18.4 + 14.4 + 14.25 = 96.15 → rounded 96.0. Largement au-dessus du seuil APPROVED ≥ 85. Aucun BLOCKER (anti-collision chat OK, RTL OK, emojis OK, a11y parité OK, tests 16/16 OK, lint 0). Aucun IMPORTANT. 4 niceToHave optionnels post-merge."
+  },
+  "summary": "T1.12 split tickets.tsx accompli avec marge confortable : 397L → 21L (≤100 cible ✓, marge 79L), hook 137L pur application-layer (11 props exposées match spec exact), view 320L pure presenter (0 useState/useQuery verifié), 16/16 tests pass sans modification (AC explicite respecté). Anti-collision chat-ux confirmée (0 fichier features/chat ou app/(stack)/chat touché). RTL doctrine respectée (0 marginLeft/Right introduit). A11y parité exacte (2 accessibilityLabel + 4 accessibilityRole préservés). Pattern documenté inline L1-12 énumère les 6 follow-ups V1.1 sprint 1. Lint exit 0 + tsc strict pass. 4 niceToHave non bloquants (circular type-import hook↔view + features/README.md update + hook unit test — tous déférables au sprint qui applique le pattern aux 6 autres écrans)."
+}

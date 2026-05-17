@@ -43,9 +43,7 @@ import {
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 import { initCertPinning } from '@/shared/infrastructure/cert-pinning-init';
-
-const readEnvString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
+import { readEnvString } from '@/shared/lib/env';
 
 const sentryDsn: string | undefined =
   Platform.OS === 'android'

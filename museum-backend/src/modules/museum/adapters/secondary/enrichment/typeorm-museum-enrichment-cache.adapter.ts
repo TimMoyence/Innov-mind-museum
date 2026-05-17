@@ -148,12 +148,15 @@ function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView)
 /**
  * Bridges the typed view model `ParsedOpeningHours` (museum bounded context)
  * to the JSONB storage shape `Record<string, unknown>` declared on the
- * `museum_enrichment` entity (knowledge-extraction bounded context). Single
- * cast site for the variance gap — keeps the adapter mapper layer honest about
- * the boundary crossing without sprinkling unknown casts across call sites.
+ * `museum_enrichment` entity (knowledge-extraction bounded context).
+ *
+ * Shallow spread copies the public, enumerable keys of `ParsedOpeningHours`
+ * into a fresh object assignable to `Record<string, unknown>` — bridges the
+ * variance gap WITHOUT any `as unknown as` cast and yields a defensive copy
+ * (downstream JSONB mutation can't leak back into the caller's view model).
  */
 function parsedToJsonb(value: ParsedOpeningHours | null): Record<string, unknown> | null {
-  return value as unknown as Record<string, unknown> | null;
+  return value === null ? null : { ...value };
 }
 
 function toView(row: MuseumEnrichment): MuseumEnrichmentView {

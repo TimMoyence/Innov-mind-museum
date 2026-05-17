@@ -165,7 +165,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-7 — ESLint v10 major drift (BE on v10, FE+Web on v9) — blocked by upstream
 
-- [ ] **Statut** : ouvert (créé 2026-05-13, audit P1-8)
+- [ ] **Statut** : partiellement clos — BE rebaselined v9.39.4 (2026-05-16, T1.4), drift FE/Web/BE → v10 reste deferred upstream `jsx-eslint/eslint-plugin-react#3979`
 - **Référence code** :
   ```
   museum-backend/package.json     "eslint": "^10.2.0"   (also @eslint/js@^10.0.1, eslint-plugin-jsdoc@^62.9.0 — v10-only)
@@ -191,7 +191,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   3. Lint vert sur les 3 apps.
   4. Cocher TD-7 ici.
 - **Alternatives considérées et rejetées** :
-  - **Downgrade BE → v9** : faisable (forcerait aussi `eslint-plugin-jsdoc` < 62.7), mais perd les améliorations v10 sur BE pour devoir re-bumper dans quelques mois quand upstream fix.
+  - **Downgrade BE → v9** : faisable (vérifié 2026-05-16 — `eslint-plugin-jsdoc@62.9` peer = `^7..^10`, aucune cascade nécessaire), mais perd les améliorations v10 sur BE pour devoir re-bumper dans quelques mois quand upstream fix. **Retenu et appliqué 2026-05-16 par T1.4** (audit-360-S1) après ré-évaluation J-16 launch.
   - **`patch-package` sur eslint-plugin-react** : maintenance overhead + risque de breakage à chaque release. Non justifié.
 
 ---
@@ -712,6 +712,29 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Sprint d'origine** : audit-360 S3 follow-up #7.
 - **Effort estimé** : 30 min.
 - **Comment fermer** : ajouter wrapper umbrella `module-auth` qui inclut les 3 sub-scopes + n'importe quel additional file `src/modules/auth/**/*.ts` non couvert.
+### TD-40 — `noUncheckedIndexedAccess` absent côté backend (drift vs FE/Web)
+
+- [ ] **Statut** : ouvert (créé 2026-05-16, audit-360 S1 § 4.2 ; renumber TD-16→TD-40 au merge 2026-05-17 car S3 avait pris TD-16 entre temps)
+- **Référence code** :
+  ```
+  museum-backend/tsconfig.json:1-35   # compilerOptions.noUncheckedIndexedAccess ABSENT
+  museum-frontend/tsconfig.json       # noUncheckedIndexedAccess: true (cf audit § 4.1)
+  museum-web/tsconfig.json            # noUncheckedIndexedAccess: true (cf audit § 4.1)
+  ```
+- **Symptôme** : drift tsconfig entre les 3 apps. FE + Web ont `noUncheckedIndexedAccess: true` (cf audit S1 § 4.1), BE non. Conséquence : `array[i]` est typé `T` au lieu de `T | undefined`, masquant potentiellement des `TypeError: Cannot read property of undefined` runtime sur les optional indexes (top-K, pagination, validators arrays).
+- **Pourquoi non résolu pré-launch** : 35-50 sites estimés à patcher (per audit Subagent A — array indexing : `topK[0]`, pagination, validators arrays dans `similarity.service.ts`, `chat-repository-queries.ts`, `chat.repository.typeorm.ts`, `jsonb-validator.ts`, `sources-validator.ts`). Effort 8-12h. Pré-launch J-16, on a P0 langfuse v3 EOL (T1.1) + P0-8 JWKS Zod casts (T1.2) plus prioritaires. ROI MEDIUM — le pattern existant `?.` est suffisamment défensif per audit 05-12.
+- **Sprint d'origine** : audit 2026-05-16 (S1 § 4.2).
+- **Effort estimé** : 8-12h.
+- **Trigger** : toute mention `noUncheckedIndexedAccess` en code review, OU lecture audit 2026-05-16 § 4.2, OU détection d'un `TypeError: Cannot read property X of undefined` runtime sur un index array BE.
+- **Deadline** : post-V1 sprint 1 (fenêtre 2026-06-01 → 2026-06-30).
+- **Owner** : Tim (single-dev pre-launch).
+- **Comment fermer** :
+  1. Ajouter `"noUncheckedIndexedAccess": true` dans `museum-backend/tsconfig.json` (compilerOptions).
+  2. Run `cd museum-backend && pnpm lint` (= `tsc --noEmit`) — recenser sites en erreur.
+  3. Pour chaque site : ajouter guard `if (!item) continue;` OU narrowing destructuring `const [first] = arr; if (!first) ...` OU `as const` assertion si literal tuple.
+  4. Vérifier `pnpm test` BE pass.
+  5. Cocher TD-40 ici.
+- **Note** : les sites cités dans l'audit (similarity.service.ts, chat-repository-queries.ts, chat.repository.typeorm.ts) ont 0 occurrence directe `[0]` au moment de la création du ticket — les patterns d'indexing sont probablement indirects (`.at()`, destructuring, `slice`). Comptage rigoureux à faire au moment de l'activation, l'estimation 35-50 est BE-wide (38 fichiers contiennent `[0]` au total).
 
 ---
 

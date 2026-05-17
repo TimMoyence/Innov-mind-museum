@@ -1,1 +1,0 @@
-export { haversineDistanceMeters } from './haversine';

@@ -205,6 +205,46 @@ describe('Semaphore', () => {
     expect(sem.queueSize).toBe(0);
   });
 
+  it('short-circuits the inner runner when the slot frees AFTER timeout already fired', async () => {
+    // Covers the `if (timedOut) return undefined as never` branch in semaphore.ts:
+    // p2 times out while waiting, then p1 finishes and the slot becomes
+    // available — the deferred runner MUST return without invoking the task.
+    jest.useRealTimers();
+    const sem = new Semaphore({
+      maxConcurrent: 1,
+      maxQueueSize: 100,
+      acquireTimeoutMs: 20,
+    });
+
+    let resolveFirst!: () => void;
+    const blocker = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    const p1 = sem.use(async () => {
+      await blocker;
+    });
+
+    let p2TaskRan = false;
+    const p2 = sem.use(async () => {
+      p2TaskRan = true;
+      return 'should-never-run';
+    });
+
+    await expect(p2).rejects.toThrow(SemaphoreTimeoutError);
+
+    // Now release p1 — p-limit will dequeue the deferred p2 runner, which
+    // must hit the timedOut short-circuit and return without calling task().
+    resolveFirst();
+    await p1;
+    // Let the deferred runner microtask flush
+    await new Promise((r) => setImmediate(r));
+
+    expect(p2TaskRan).toBe(false);
+    expect(sem.inFlightCount).toBe(0);
+    jest.useFakeTimers();
+  });
+
   it('releases slot to next queued task in FIFO order', async () => {
     const sem = new Semaphore(1);
     const order: number[] = [];
