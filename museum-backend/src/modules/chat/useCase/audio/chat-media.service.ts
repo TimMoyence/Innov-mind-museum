@@ -18,7 +18,6 @@ import type {
 } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Dependencies for the media sub-service. */
 interface ChatMediaServiceDeps {
   repository: ChatRepository;
   tts?: TextToSpeechService;
@@ -26,9 +25,6 @@ interface ChatMediaServiceDeps {
   audioStorage?: AudioStorage;
 }
 
-/**
- * Handles media-related operations: image reference resolution, message reporting, and TTS synthesis.
- */
 export class ChatMediaService {
   private readonly repository: ChatRepository;
   private readonly tts?: TextToSpeechService;
@@ -42,14 +38,7 @@ export class ChatMediaService {
     this.audioStorage = deps.audioStorage;
   }
 
-  /**
-   * Resolves the image reference for a message, including local file name and content type when applicable.
-   *
-   * @param messageId - UUID of the message containing the image.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The image reference, and optionally the local file name and content type.
-   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
-   */
+  /** @throws {AppError} 400 invalid id, 404 message/image not found. */
   async getMessageImageRef(
     messageId: string,
     currentUserId?: number,
@@ -68,16 +57,9 @@ export class ChatMediaService {
   }
 
   /**
-   * Resolves the image reference for a message when the caller has already proven authorization
-   * via a verified HMAC token (see `verifySignedChatImageReadUrl`). Skips the session-ownership
-   * check because the signed token IS the authorization — it was issued to the legitimate owner
-   * and is short-lived.
-   *
-   * Path-only validation (UUID) is still enforced. Use this ONLY after HMAC + TTL verification.
-   *
-   * @param messageId - UUID of the message containing the image.
-   * @returns The image reference, and optionally the local file name and content type.
-   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
+   * Skips session-ownership: signed HMAC token IS authorization (short-lived,
+   * issued to legitimate owner). Use ONLY after `verifySignedChatImageReadUrl`.
+   * UUID path validation still enforced.
    */
   async getMessageImageRefBySignedToken(messageId: string): Promise<{
     imageRef: string;
@@ -100,7 +82,6 @@ export class ChatMediaService {
     return this.toImageRefResult(row.message.imageRef);
   }
 
-  /** Shared mapping of an `imageRef` storage string to the response shape. */
   private toImageRefResult(imageRef: string): {
     imageRef: string;
     fileName?: string;
@@ -114,16 +95,6 @@ export class ChatMediaService {
     return { imageRef };
   }
 
-  /**
-   * Reports an assistant message for moderation.
-   *
-   * @param messageId - UUID of the assistant message to report.
-   * @param reason - Reason for the report (offensive, inaccurate, inappropriate, other).
-   * @param currentUserId - Authenticated user id filing the report.
-   * @param comment - Optional free-text comment.
-   * @returns Confirmation that the message was reported.
-   * @throws {AppError} 400 on invalid id/reason or non-assistant message, 404 if not found.
-   */
   async reportMessage(
     messageId: string,
     reason: ReportReason,
@@ -156,16 +127,7 @@ export class ChatMediaService {
     return { messageId, reported: true };
   }
 
-  /**
-   * Sets or toggles feedback (thumbs up/down) on an assistant message.
-   * If the existing feedback matches the submitted value, it is removed (toggle off).
-   *
-   * @param messageId - UUID of the assistant message to rate.
-   * @param currentUserId - Authenticated user id providing feedback.
-   * @param value - Feedback value ('positive' or 'negative').
-   * @returns The feedback status: 'created', 'updated', or 'removed'.
-   * @throws {AppError} 400 on invalid id or non-assistant message, 404 if not found.
-   */
+  /** Submitting same value as existing toggles it off. */
   async setMessageFeedback(
     messageId: string,
     currentUserId: number,
@@ -193,7 +155,7 @@ export class ChatMediaService {
     return { messageId, status: existing ? 'updated' : 'created' };
   }
 
-  /** Invalidates the cached LLM response for the question that preceded this assistant message. Fail-open. */
+  /** Fail-open: invalidates LLM cache for the question preceding this assistant msg. */
   private async invalidateCacheForFeedback(
     messageId: string,
     row: Awaited<ReturnType<typeof ensureMessageAccess>>,
@@ -205,10 +167,8 @@ export class ChatMediaService {
       const userMsg = assistantIdx > 0 ? history[assistantIdx - 1] : null;
 
       if (userMsg?.text && userMsg.role === 'user' && row.session.museumId) {
-        // R1 hybrid scoping: best-effort delete BOTH the global and the
-        // user-scoped key shapes the entry could have been written under.
-        // At feedback time we don't know which shape was used (depends on
-        // geo / attachments at write-time), so we del both.
+        // R1 hybrid scoping — del BOTH global and user-scoped shapes (write-time
+        // shape depends on geo/attachments, unknown at feedback time).
         const ownerId = row.session.user?.id;
         const baseInput = {
           text: userMsg.text,
@@ -245,25 +205,16 @@ export class ChatMediaService {
         }
       }
     } catch {
-      // fail-open: cache invalidation failure must not affect the feedback response
+      // fail-open: invalidation failure must not affect feedback response
     }
   }
 
   /**
-   * Synthesizes speech from an assistant message's text content.
+   * Cache: Redis `tts:<messageId>` (default 1d) → fresh synth + fire-and-forget
+   * S3 persistence (audioUrl + voice + ts) on ChatMessage for offline replay /
+   * walk pre-fetch.
    *
-   * Cache strategy (most-recent first):
-   *   1. Redis hot cache (`tts:<messageId>`, default 1d) — sub-100ms repeat hits.
-   *   2. (After fresh synth) Persists S3 audio reference + voice + timestamp on the
-   *      `ChatMessage` row so downstream offline replay or pre-cache can reuse it.
-   *      Persistence is fire-and-forget — TTS request always returns the buffer.
-   *
-   * @param messageId - UUID of the assistant message to synthesize.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Audio buffer with content type, or null if the message has no text.
-   * @throws {AppError} 400 if the message is not from the assistant.
-   * @throws {AppError} 501 if TTS is not available.
-   * @throws {AppError} 404 if message not found or not owned.
+   * @throws {AppError} 400 not assistant, 501 TTS unavailable, 404 not found/owned.
    */
   async synthesizeSpeech(
     messageId: string,
@@ -323,7 +274,7 @@ export class ChatMediaService {
           audioVoice: targetVoice,
         });
       } catch (error: unknown) {
-        // fail-open: audio persistence is best-effort, must not affect TTS response
+        // fail-open: audio persistence best-effort, must not affect TTS response
         logger.warn('audio_storage_persist_failed', {
           messageId,
           error: error instanceof Error ? error.message : String(error),
@@ -334,16 +285,7 @@ export class ChatMediaService {
     return result;
   }
 
-  /**
-   * Returns a signed read URL for a message's cached TTS audio (if previously synthesized).
-   *
-   * Used by the mobile client to download audio directly from object storage,
-   * bypassing the API server (offline cache, lock-screen replay, walks pre-fetch).
-   *
-   * @param messageId - UUID of the assistant message.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Signed URL with expiry, or null if no cached audio exists or storage is not configured.
-   */
+  /** Direct object-storage download (offline cache, lock-screen, walk pre-fetch). */
   async getMessageAudioUrl(
     messageId: string,
     currentUserId?: number,

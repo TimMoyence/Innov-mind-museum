@@ -10,7 +10,6 @@ import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 
-/** Dependencies needed by fetchEnrichmentData (subset of ChatMessageServiceDeps). */
 interface EnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
@@ -20,8 +19,7 @@ interface EnrichmentDeps {
 }
 
 /**
- * Extracts a search term for knowledge base lookup from conversation history or input text.
- * Searches for the last assistant message with a detected artwork title, falling back to input text if 3+ words.
+ * Last assistant message with detectedArtwork.title, else input text if ≥3 words.
  */
 export function extractSearchTerm(
   history: { role: string; metadata?: Record<string, unknown> | null }[],
@@ -42,13 +40,7 @@ export function extractSearchTerm(
   return null;
 }
 
-/**
- * Walks history backward and returns the LAST assistant turn's
- * `suggestedImages[]` entries (LLM-authored fan-out queries with caption +
- * rationale). Returns `null` when no v2 entries are found.
- *
- * R1 + R15 — capped at 4 entries (defence-in-depth on top of LLM prompt cap).
- */
+/** R1+R15 — capped at 4 entries (defence-in-depth on top of LLM prompt cap). */
 export function extractSuggestedImageEntries(
   history: { role: string; metadata?: Record<string, unknown> | null }[],
 ): SuggestedImage[] | null {
@@ -76,14 +68,13 @@ function isV2SuggestedImage(entry: unknown): entry is SuggestedImage {
   );
 }
 
-/** Wraps a promise so any error is swallowed (fail-open). Resolves to `undefined` on error. */
+/** Fail-open: error → undefined. */
 function failOpen<T>(p: Promise<T>): Promise<T | undefined> {
   return p.catch<undefined>(() => Promise.resolve() as Promise<undefined>);
 }
 
 const NONE: Promise<undefined> = Promise.resolve() as Promise<undefined>;
 
-/** Fetches user memory block (or empty) — fail-open. */
 function fetchMemory(
   deps: EnrichmentDeps,
   ownerId: number | undefined,
@@ -92,7 +83,6 @@ function fetchMemory(
   return failOpen(deps.userMemory.getMemoryForPrompt(ownerId));
 }
 
-/** Fetches knowledge-base prompt block (or empty) — fail-open. */
 function fetchKnowledgeBase(
   deps: EnrichmentDeps,
   searchTerm: string | null,
@@ -101,7 +91,6 @@ function fetchKnowledgeBase(
   return failOpen(deps.knowledgeBase.lookup(searchTerm));
 }
 
-/** Fetches raw KB facts for image merging — fail-open. */
 function fetchKbFacts(
   deps: EnrichmentDeps,
   searchTerm: string | null,
@@ -112,13 +101,7 @@ function fetchKbFacts(
   return failOpen(deps.knowledgeBase.lookupFacts(searchTerm));
 }
 
-/**
- * Fetches image enrichment — fail-open.
- *
- * When the last assistant turn carries a `suggestedImages[]` array, fan out
- * one `enrich()` call per entry with LLM-authored caption + rationale carried
- * through. Otherwise falls back to the legacy single-term path (R2).
- */
+/** Fan-out per suggested entry when present, else legacy single-term (R2). */
 interface FetchImagesArgs {
   searchTerm: string | null;
   suggestedEntries: SuggestedImage[] | null;
@@ -145,10 +128,11 @@ function fetchImages(
     );
   }
   if (!searchTerm) return NONE;
-  return failOpen(deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode, requestId));
+  return failOpen(
+    deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode, requestId),
+  );
 }
 
-/** Fetches raw web search results for prompt building and URL enqueuing — fail-open. */
 function fetchWebSearchRaw(
   deps: EnrichmentDeps,
   searchTerm: string | null,
@@ -157,7 +141,6 @@ function fetchWebSearchRaw(
   return failOpen(deps.webSearch.searchRaw(searchTerm));
 }
 
-/** Fetches local knowledge block from the extraction DB — fail-open. */
 function fetchLocalKnowledge(
   deps: EnrichmentDeps,
   searchTerm: string | null,
@@ -167,10 +150,6 @@ function fetchLocalKnowledge(
   return failOpen(deps.dbLookup.lookup(searchTerm, locale));
 }
 
-/**
- * Args bundle for {@link fetchEnrichmentData}. Bundled to keep the function
- * under the codebase max-params bar (5).
- */
 export interface FetchEnrichmentArgs {
   deps: EnrichmentDeps;
   history: { role: string; metadata?: Record<string, unknown> | null }[];
@@ -181,7 +160,7 @@ export interface FetchEnrichmentArgs {
   requestId?: string;
 }
 
-/** Fetches all enrichment sources in parallel (fail-open): memory, KB, local knowledge, web search, images. */
+/** Parallel fan-out: memory, KB, local knowledge, web search, images. All fail-open. */
 export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
   userMemoryBlock: string;
   knowledgeBaseBlock: string;
@@ -214,7 +193,6 @@ export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
   // Build web search prompt block from raw results
   let webSearchBlock = '';
   if (safeWebResults.length > 0 && deps.webSearch) {
-    // Re-use the prompt builder that WebSearchService.search() uses internally
     const { buildWebSearchPromptBlock } =
       await import('@modules/chat/useCase/web-search/web-search.prompt');
     webSearchBlock = buildWebSearchPromptBlock(safeWebResults);

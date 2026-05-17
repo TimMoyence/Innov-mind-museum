@@ -8,7 +8,6 @@ import {
 import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 
-/** Configuration options for the StreamBuffer. */
 interface StreamBufferOptions {
   classifier?: ArtTopicClassifierPort;
   tokenThreshold?: number;
@@ -25,13 +24,8 @@ const META_MARKER = '\n[META]';
 const META_MARKER_NO_NEWLINE = '[META]';
 
 /**
- * Two-phase jitter buffer for LLM token streaming.
- *
- * **Phase 1 (buffering):** Tokens accumulate while an optional art-topic
- * classifier runs in parallel. Nothing is released to the client.
- *
- * **Phase 2 (draining):** Tokens are released at a steady interval for
- * smooth typing UX. New tokens continue to accumulate via `push()`.
+ * Two-phase: (1) buffer + classify in parallel (nothing released); (2) drain
+ * at steady interval for smooth typing UX, new tokens still accumulate.
  */
 export class StreamBuffer {
   private readonly classifier?: ArtTopicClassifierPort;
@@ -59,15 +53,10 @@ export class StreamBuffer {
 
   constructor(opts?: StreamBufferOptions) {
     this.classifier = opts?.classifier;
-    // Reduced from 100→20 tokens (Sprint D micro-buffering fix): the classifier
-    // only needs ~1-2 sentences to decide, and waiting for 100 tokens produced a
-    // visible 3-5s "wall of text" delay before the first token reached the user.
-    // With 20 tokens, the initial delay drops to ~500ms.
+    // 20 tokens — classifier needs ~1-2 sentences; 100 produced 3-5s wall.
     this.tokenThreshold = opts?.tokenThreshold ?? 20;
-    // Aligned with frontend FLUSH_INTERVAL_MS (30ms) to eliminate a beat-frequency
-    // stutter between backend release rate and frontend flush rate.
+    // Aligned with frontend FLUSH_INTERVAL_MS=30 (avoids beat-freq stutter).
     this.releaseIntervalMs = opts?.releaseIntervalMs ?? 30;
-    // Fail-open faster (1.5s vs 3s) to avoid prolonging the initial wait.
     this.classifierTimeoutMs = opts?.classifierTimeoutMs ?? 1500;
     this.onGuardrailCb = opts?.onGuardrail;
     this.locale = opts?.locale;
@@ -92,26 +81,19 @@ export class StreamBuffer {
     }
   }
 
-  /** Register the callback invoked each time a token is released in phase 2. */
   onRelease(cb: (text: string) => void): void {
     this.releaseCb = cb;
   }
 
-  /**
-   * Receive a token chunk from the LLM stream.
-   * During phase 1 the token is queued; during phase 2 it is appended to the drain queue.
-   */
   push(chunk: string): void {
     if (this.phase === 'blocked' || this.phase === 'done') return;
     if (this.metaDetected) return; // ignore everything after [META]
 
-    // Check for [META] marker in accumulated text + new chunk
     const accumulated = this.queue.join('') + chunk;
     let metaIdx = accumulated.indexOf(META_MARKER);
     if (metaIdx === -1) metaIdx = accumulated.indexOf(META_MARKER_NO_NEWLINE);
 
     if (metaIdx !== -1) {
-      // Keep only the answer text before [META]
       this.queue.length = 0;
       const answerText = accumulated.slice(0, metaIdx);
       if (answerText) {
@@ -129,7 +111,7 @@ export class StreamBuffer {
     this.queue.push(chunk);
     this.tokenCount++;
 
-    // Incremental guardrail: check for insults/injections on accumulated text
+    // Incremental guardrail on accumulated text.
     const fullText = this.queue.join('');
     const normalizedText = normalize(fullText);
 
@@ -142,7 +124,6 @@ export class StreamBuffer {
       return;
     }
 
-    // Check if we should run the classifier
     if (
       this.phase === 'buffering' &&
       !this.classifierRunning &&
@@ -152,7 +133,6 @@ export class StreamBuffer {
     }
   }
 
-  /** Signal that the LLM stream is complete. */
   finish(): void {
     this.streamFinished = true;
 
@@ -160,28 +140,23 @@ export class StreamBuffer {
       this.triggerClassifier();
     }
 
-    // If already draining and queue is empty, we're done
     if (this.phase === 'draining' && this.queue.length === 0) {
       this.setDone();
     }
   }
 
-  /** Wait for phase 1 to complete (for callers that need to await it). */
   async awaitPhase1(): Promise<void> {
     await this.phase1Promise;
   }
 
-  /** Wait for the buffer to finish draining or be blocked. */
   async awaitDone(): Promise<void> {
     await this.donePromise;
   }
 
-  /** True when draining is complete or the buffer was blocked. */
   isDone(): boolean {
     return this.phase === 'done' || this.phase === 'blocked';
   }
 
-  /** Cleanup timers and abort listener. */
   destroy(): void {
     if (this.drainTimer !== undefined) {
       clearInterval(this.drainTimer);
@@ -203,7 +178,6 @@ export class StreamBuffer {
 
   private triggerClassifier(): void {
     if (!this.classifier) {
-      // No classifier — skip straight to draining
       this.startDraining();
       return;
     }
@@ -224,17 +198,15 @@ export class StreamBuffer {
 
     void classifierResult
       .then((isArt) => {
-        if (this.phase !== 'buffering') return; // already blocked/done
-
+        if (this.phase !== 'buffering') return;
         if (!isArt) {
           this.block('off_topic');
           return;
         }
-
         this.startDraining();
       })
       .catch(() => {
-        // Fail-open: classifier error or timeout → start draining
+        // Fail-open: error/timeout → drain.
         if (this.phase === 'buffering') {
           this.startDraining();
         }
@@ -264,7 +236,6 @@ export class StreamBuffer {
         }
       }
 
-      // Check if we're done draining
       if (this.queue.length === 0 && (this.streamFinished || this.metaDetected)) {
         this.setDone();
       }
@@ -278,10 +249,8 @@ export class StreamBuffer {
   private setDone(): void {
     this.phase = 'done';
     this.destroy();
-    // Resolve phase1 in case it hasn't been resolved yet
     this.phase1Resolve?.();
     this.phase1Resolve = undefined;
-    // Resolve done promise
     this.doneResolve?.();
     this.doneResolve = undefined;
   }

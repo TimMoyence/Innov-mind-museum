@@ -6,12 +6,10 @@ import type { AuditService } from '@shared/audit/audit.service';
 
 export type { GuardrailAuditContext } from './guardrail-audit-payload';
 
-/** Minimal interface for the art-topic classifier used by the guardrail service. */
 export interface ArtTopicClassifierPort {
   isArtRelated(text: string): Promise<boolean>;
 }
 
-/** Result of an input guardrail evaluation. */
 export interface InputGuardrailResult {
   allow: boolean;
   reason?: GuardrailBlockReason;
@@ -32,7 +30,6 @@ export interface InputGuardrailResult {
  */
 export type LlmJudgeFn = (message: string) => Promise<JudgeDecision | null>;
 
-/** Dependencies for the guardrail evaluation service. */
 export interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;
   audit?: AuditService;

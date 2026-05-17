@@ -19,7 +19,6 @@ import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 
-/** Result of image processing: the storage reference and the orchestrator-ready payload. */
 export interface ProcessedImage {
   imageRef: string;
   orchestratorImage: NonNullable<PostMessageInput['image']>;
@@ -40,7 +39,6 @@ export interface ProcessedImage {
   imageContentHash?: string;
 }
 
-/** Dependencies for the image processing service. */
 interface ImageProcessingServiceDeps {
   imageStorage: ImageStorage;
   ocr?: OcrService;
@@ -53,10 +51,6 @@ interface ImageProcessingServiceDeps {
   imageProcessor?: ImageProcessorPort;
 }
 
-/**
- * Encapsulates the image processing pipeline: URL validation, base64 decoding,
- * MIME/size assertion, storage persistence, and OCR injection guard.
- */
 export class ImageProcessingService {
   private readonly imageStorage: ImageStorage;
   private readonly ocr?: OcrService;
@@ -68,16 +62,6 @@ export class ImageProcessingService {
     this.imageProcessor = deps.imageProcessor;
   }
 
-  /**
-   * Processes an image input: validates, decodes, stores, and returns the storage reference
-   * along with the orchestrator-ready payload.
-   *
-   * @param image - The raw image input from the user message.
-   * @param sessionId - Session identifier for storage key generation.
-   * @param ownerId - User identifier for storage key generation.
-   * @returns The processed image reference and orchestrator payload.
-   * @throws {AppError} 400 on invalid URL, missing MIME type, size exceeded, etc.
-   */
   async processImage(
     image: NonNullable<PostMessageInput['image']>,
     sessionId: string,
@@ -167,13 +151,9 @@ export class ImageProcessingService {
   }
 
   /**
-   * Strips EXIF / metadata via the injected processor. When no processor is
-   * configured (legacy unit tests), the input is returned untouched — this
-   * branch is intentionally observable so wiring regressions surface in CI.
-   *
-   * @param base64 - Magic-byte-validated base64 payload.
-   * @param mimeType - Declared MIME type.
-   * @returns Cleaned base64, MIME, and post-strip byte size.
+   * When no processor is configured (legacy unit tests), the input is returned
+   * untouched — this branch is intentionally observable so wiring regressions
+   * surface in CI.
    */
   private async stripExif(
     base64: string,
@@ -193,15 +173,7 @@ export class ImageProcessingService {
     };
   }
 
-  /**
-   * Runs OCR on the processed image and validates the extracted text against the input guardrail.
-   * Fails open: if OCR extraction itself errors, the request proceeds.
-   *
-   * @param orchestratorImage - The orchestrator-ready image payload.
-   * @param evaluateGuardrail - The guardrail evaluation function to check OCR text.
-   * @param sessionId - Session identifier for logging.
-   * @throws {AppError} 400 if OCR text contains disallowed content.
-   */
+  /** Fails open: if OCR extraction itself errors, the request proceeds. */
   async runOcrGuard(
     orchestratorImage: NonNullable<PostMessageInput['image']>,
     evaluateGuardrail: typeof evaluateUserInputGuardrail,

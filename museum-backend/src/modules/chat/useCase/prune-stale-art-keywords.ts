@@ -11,13 +11,11 @@ import type { DataSource } from 'typeorm';
  */
 const CHUNK_THROTTLE_MS = 50;
 
-/** Result of a single prune run. */
 export interface PruneArtKeywordsResult {
   rowsAffected: number;
   details: Record<string, unknown>;
 }
 
-/** Configuration knobs for the art_keywords prune (env-driven). */
 export interface PruneStaleArtKeywordsConfig {
   /** Days since `updatedAt` before a low-hit keyword becomes eligible. Default 90. */
   days: number;

@@ -16,15 +16,6 @@ const emptyContext = (): VisitContext => ({
   lastUpdated: new Date().toISOString(),
 });
 
-/**
- * Incrementally updates the visit context with artwork, room, museum, and expertise data
- * extracted from the assistant's metadata.
- *
- * @param existing - The current visit context (or null/undefined for a fresh context).
- * @param metadata - Assistant response metadata containing detected artwork and expertise.
- * @param messageId - Id of the assistant message that produced this metadata.
- * @returns A new VisitContext reflecting the accumulated visit state.
- */
 export const updateVisitContext = (
   existing: VisitContext | null | undefined,
   metadata: ChatAssistantMetadata,
@@ -77,15 +68,7 @@ export const updateVisitContext = (
   return ctx;
 };
 
-/**
- * Derives a human-readable session title from the first detected artwork or confident museum name.
- * Returns null if the session already has a title or no suitable title can be derived.
- *
- * @param session - The current chat session.
- * @param metadata - Assistant response metadata.
- * @param visitContext - The accumulated visit context.
- * @returns A title string (max 256 chars), or null.
- */
+/** Returns null if the session already has a title or no suitable title can be derived. */
 export const deriveSessionTitle = (
   session: ChatSession,
   metadata: ChatAssistantMetadata,
@@ -125,13 +108,6 @@ const MAX_MUSEUM_DESCRIPTION_CHARS = 600;
  */
 const MAX_VISIT_CONTEXT_BLOCK_CHARS = 1600;
 
-/**
- * Builds a sanitized `[VISIT CONTEXT]` prompt block summarizing the museum, artworks discussed,
- * rooms visited, and detected expertise level. Returns an empty string when there is no context.
- *
- * @param ctx - The accumulated visit context.
- * @returns A prompt-safe text block (max 1600 chars), or empty string.
- */
 export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefined): string => {
   if (!ctx || (!ctx.museumName && ctx.artworksDiscussed.length === 0)) {
     return '';
@@ -185,22 +161,12 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
   return lines.join('\n').slice(0, MAX_VISIT_CONTEXT_BLOCK_CHARS);
 };
 
-/** Fields to patch on the session entity after an assistant response. */
 export interface SessionUpdates {
   title?: string;
   museumName?: string;
   visitContext?: VisitContext;
 }
 
-/**
- * Computes all session-level updates (visit context, title, museum name) to apply
- * after an assistant response.
- *
- * @param session - The current chat session.
- * @param metadata - Assistant response metadata.
- * @param messageId - Id of the assistant message (may be "pending" before persistence).
- * @returns The session fields to update.
- */
 export const computeSessionUpdates = (
   session: ChatSession,
   metadata: ChatAssistantMetadata,

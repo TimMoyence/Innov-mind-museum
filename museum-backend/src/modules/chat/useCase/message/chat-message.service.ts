@@ -57,11 +57,8 @@ import type { CacheService } from '@shared/cache/cache.port';
 import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /**
- * Maps a thrown orchestrator/LLM provider error to a user-facing AppError.
- * AppError instances (CircuitOpenError 503, validation 400, etc.) and any
- * Error already carrying a numeric `statusCode` + string `code` shape are
- * preserved verbatim; everything else becomes 503 LLM_UNAVAILABLE so the
- * response stays banking-grade (no 500 leak, no provider-name leak).
+ * SEC — AppError + {statusCode,code} shape preserved verbatim; everything else
+ * becomes 503 LLM_UNAVAILABLE (no 500 leak, no provider-name leak).
  */
 const mapOrchestratorError = (err: unknown, requestId?: string): Error => {
   if (err instanceof AppError) return err;
@@ -80,7 +77,6 @@ const mapOrchestratorError = (err: unknown, requestId?: string): Error => {
   return serviceUnavailable('LLM provider unavailable', { code: 'LLM_UNAVAILABLE' });
 };
 
-/** Context bundle passed to internal LLM-cache helpers to avoid long parameter lists. */
 interface LlmCacheCtx {
   prep: PrepareReady;
   sanitizedText: string;
@@ -90,43 +86,30 @@ interface LlmCacheCtx {
   requestId: string | undefined;
 }
 
-/** Content-enrichment services bundled together (replaces 7 individual deps). */
 export interface ChatEnrichmentDeps {
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
-  /**
-   * C4.1 (T3.3) — `KnowledgeRouterPort` injection. Additive : the legacy
-   * `knowledgeBase` field stays for 1 cycle (NFR8 backward-compat) ; T3.4
-   * will plumb the router into `PrepareMessagePipeline` and remove the
-   * legacy field at C4.2.
-   */
   knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
-  /** GDPR consent port — gates whether location reaches the LLM at all. */
+  /** GDPR — gates whether location reaches LLM at all. */
   locationConsentChecker?: LocationConsentChecker;
 }
 
-/** Content-safety services bundled together (replaces 5 individual deps). */
 export interface ChatSafetyDeps {
   artTopicClassifier?: ArtTopicClassifierPort;
   guardrailProvider?: GuardrailProvider;
   guardrailProviderObserveOnly?: boolean;
   audit?: AuditService;
   piiSanitizer?: PiiSanitizer;
-  /** F4 — LLM judge callable wired to the chat orchestrator. */
   llmJudge?: LlmJudgeFn;
-  /** F4 — true when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
+  /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
 }
 
-/**
- * Dependencies for the message sub-service — 8 top-level deps (down from 18) via two
- * feature bundles: {@link ChatEnrichmentDeps} and {@link ChatSafetyDeps}.
- */
 export interface ChatMessageServiceDeps {
   repository: ChatRepository; // 1 — session + message persistence
   orchestrator: ChatOrchestrator; // 2 — LLM call
@@ -134,26 +117,16 @@ export interface ChatMessageServiceDeps {
   audioTranscriber?: AudioTranscriber; // 4 — STT (postAudioMessage path)
   cache?: CacheService; // 5 — response caching
   ocr?: OcrService; // 6 — OCR text extraction from images
-  enrichment?: ChatEnrichmentDeps; // 7 — knowledge / web / memory / location
-  safety?: ChatSafetyDeps; // 8 — guardrails + PII sanitiser
-  /** EXIF / metadata stripper (GDPR Art. 5(1)(c)). */
+  enrichment?: ChatEnrichmentDeps;
+  safety?: ChatSafetyDeps;
+  /** GDPR Art. 5(1)(c) EXIF/metadata stripper. */
   imageProcessor?: ImageProcessorPort;
-  /**
-   * G (2026-05-01) — LLM response cache. When provided, non-streaming text
-   * responses are looked up before the LLM call and stored on miss.
-   * Bypass conditions: streaming path, env.llm.cacheEnabled=false, image present.
-   */
+  /** Bypass: streaming path, env.llm.cacheEnabled=false, image present. */
   llmCache?: LlmCacheService;
-  /**
-   * C4 (T2.6) — URL reachability probe. Optional ; when injected, drops
-   * citations whose URLs do not respond 2xx within 800 ms. Held back at V1
-   * composition root pending p99 baking (per launch-no-staging doctrine —
-   * see `chat-module.ts`). NFR8 backward-compat : undefined → no-op.
-   */
   urlHeadProbe?: UrlHeadProbe;
 }
 
-/** Awaits stream drain with a safety timeout to prevent indefinite hangs. */
+/** Safety timeout prevents indefinite hangs. */
 async function awaitDrainWithTimeout(buffer: StreamBuffer, timeoutMs = 30_000): Promise<void> {
   let drainTimeoutId: ReturnType<typeof setTimeout> | undefined;
   await Promise.race([
@@ -169,10 +142,7 @@ async function awaitDrainWithTimeout(buffer: StreamBuffer, timeoutMs = 30_000): 
   });
 }
 
-/**
- * Orchestrates the message lifecycle: delegates pre-LLM preparation to
- * {@link PrepareMessagePipeline}, then invokes the LLM and commits the response.
- */
+/** Delegates pre-LLM to PrepareMessagePipeline, then orchestrator + commit. */
 export class ChatMessageService {
   private readonly repository: ChatRepository;
   private readonly orchestrator: ChatOrchestrator;
@@ -244,11 +214,6 @@ export class ChatMessageService {
         repository: this.repository,
         cache: this.cache,
         userMemory: this.userMemory,
-        // C4 (T2.6) — URL HEAD probe optional. Currently not injected at
-        // composition root (V1 latency budget — see chat-module.ts comment),
-        // so V1 ships with quote-substring grounding only ; URL reachability
-        // wiring will flip on after the V1.1 p99 baking window. The seam is
-        // here so the V1.1 flip is a one-line composition root change.
         urlHeadProbe: this.urlHeadProbe,
       },
       sessionId,
@@ -260,15 +225,11 @@ export class ChatMessageService {
         enrichedImages: prep.enrichedImages,
         requestId: auditCtx?.requestId,
         ip: auditCtx?.ip,
-        // C4 (T2.6) — Thread router-supplied facts through so the post-LLM
-        // grounding gate can run substring-match validation. Empty / absent
-        // routerFacts → grounding gate becomes a no-op (NFR8 backward-compat).
         routerFacts: prep.routerFacts,
       },
     );
   }
 
-  /** Posts a message and returns the assistant response (non-streaming). */
   async postMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -279,10 +240,8 @@ export class ChatMessageService {
     const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
     if (prep.kind === 'refused') return prep.result;
 
-    // LLM02 — when the guardrail provider scrubbed PII (Anonymize / Presidio),
-    // substitute the sanitized version BEFORE the local Unicode-normalisation
-    // sanitizer so the LLM payload (and the LLM cache key derived from it)
-    // contains only placeholders, never raw PII.
+    // LLM02 — substitute provider-scrubbed PII BEFORE local sanitizer so LLM
+    // payload + cache key carry only placeholders, never raw PII.
     const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
     const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
     const orchestratorInput = this.pipeline.buildOrchestratorInput(
@@ -305,15 +264,8 @@ export class ChatMessageService {
       return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
     }
 
-    // A5 (R4) — `chat.phase.composing` Langfuse span wraps the orchestrator
-    // call (the dominant LLM window). Sibling, not replacement, of the existing
-    // `chat_phase_duration_seconds{phase=llm}` Prom dimension owned by the
-    // LangChain orchestrator adapter (spec §1.1 Q2 — distinct concerns).
-    //
-    // bug `merged_bug_004` — span MUST also be emitted on failure (time-to-
-    // failure is exactly the window engineers need). Pattern mirrors
-    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
-    // + `outcome: 'success' | 'error'` attribute.
+    // A5 R4 — composing span. merged_bug_004 — try/finally emits on success
+    // AND failure (time-to-failure is the window engineers need).
     const composingStartedAtMs = Date.now();
     let aiResult: OrchestratorOutput;
     let outcome: ChatPhaseOutcome = 'success';
@@ -321,10 +273,8 @@ export class ChatMessageService {
       aiResult = await this.orchestrator.generate(orchestratorInput);
     } catch (err) {
       outcome = 'error';
-      // Surface orchestrator errors as 503 SERVICE_UNAVAILABLE rather than a
-      // generic 500. Banking-grade contract: a downstream LLM provider failure
-      // is a degraded-dependency state, not an internal server bug. Preserves
-      // AppError subclasses (CircuitOpenError 503, etc.) verbatim.
+      // 503 SERVICE_UNAVAILABLE not 500 — provider failure is degraded
+      // dependency, not internal bug. AppError subclasses preserved.
       throw mapOrchestratorError(err, requestId);
     } finally {
       emitChatPhaseSpan('composing', composingStartedAtMs, {
@@ -359,7 +309,6 @@ export class ChatMessageService {
         userId: ctx.prep.ownerId ?? 'anon',
         sessionId: ctx.sessionId,
         requestId: ctx.requestId,
-        // C3 (R24) — observability split text-only vs image-bearing hits.
         hasImage,
       });
       return result.value;
@@ -367,11 +316,10 @@ export class ChatMessageService {
     return null;
   }
 
-  /** G — Stores fresh LLM result in cache (bypass on same conditions as lookup). */
+  /** Bypass mirrors lookup (invariant: miss→store→hit). */
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
     if (!llmCache) return;
-    // C3 (R13) — store bypass mirrors lookup bypass (invariant: miss→store→hit).
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return;
@@ -383,17 +331,11 @@ export class ChatMessageService {
       userId: ctx.prep.ownerId ?? 'anon',
       sessionId: ctx.sessionId,
       requestId: ctx.requestId,
-      // C3 (R24) — same symmetry on miss logs.
       hasImage,
     });
   }
 
-  /**
-   * Posts a message with token-by-token streaming and incremental guardrail checks.
-   *
-   * Status: DEACTIVATED — SSE streaming paused post-V1 (token-fluidity issues, cf. ADR-001).
-   *   Revival scheduled for V2.1 post-Walk feature. Use `postMessage` for all current flows.
-   */
+  /** @deprecated SSE paused post-V1 (token-fluidity). Use {@link ChatMessageService.postMessage}. */
   async postMessageStream(
     sessionId: string,
     input: PostMessageInput,

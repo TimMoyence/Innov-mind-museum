@@ -1,41 +1,14 @@
 /**
- * T5.3 — `VisualSimilarityService` orchestrator for the `/chat/compare`
- * pipeline.
+ * VisualSimilarityService — orchestrates `/chat/compare`. Pure orchestration
+ * over encoder + pgvector kNN + Wikidata enricher + scoring/fusion + templater.
  *
- * Wires together the four collaborators introduced in Phase 4 + Phase 5:
- *
- *   1. {@link EmbeddingsPort.encode}  — image buffer → L2-normalised vector.
- *   2. {@link ArtworkEmbeddingRepository.findNearest} — pgvector kNN top-N.
- *   3. {@link WikidataEnricher.enrichBatch} — hydrate verified facts per QID.
- *   4. {@link computeMetadataScore} + {@link fuse} — score + linear fusion.
- *   5. {@link templateRationale} — deterministic FR / EN rationale phrase.
- *
- * Pipeline contract (locked by `tests/unit/chat/visual-similarity/similarity.service.test.ts`,
- * mirrors design.md §1 + spec R1, R3, R4, R5, R10, R11):
- *
- *   - **Cache lookup first** (D9 RETAINED top-K cache) — keyed by
- *     `sha256(buffer) + locale + topK + sorted(museumQids)` so an identical
- *     re-submission short-circuits encode + repo + enrich. TTL = 1h.
- *   - **Encode** — `EmbeddingsPort.encode(input)`. On `EncoderUnavailableError`,
- *     return `matches: []` + `fallbackReason: 'encoder_unavailable'` WITHOUT
- *     touching the repo or enricher (R11).
- *   - **Find nearest** — `topN = max(20, 4 * topK)` (R3). Forwards `museumQids`
- *     filter (R4).
- *   - **Empty neighbours** — return `matches: []` + `fallbackReason:
- *     'no_visual_neighbor'` (R10).
- *   - **Enrich** — `enrichBatch(qids, locale)`. Candidates with no resolved
- *     facts are dropped (UFR-013: never fabricate a Wikidata payload).
- *   - **Score + fuse** — V1 has NO query facts (the user image is not
- *     reverse-resolved), so `metadataScore` always evaluates to 0 per
- *     {@link computeMetadataScore} contract; `finalScore` collapses to
- *     `wVisual * visualScore`. Wired explicitly so V2 can pass query facts
- *     through without changing the call site.
- *   - **Sort + truncate** — descending `finalScore`, take top-K.
- *   - **Template rationale** — per-locale templated phrase (no LLM, design D5).
- *   - **Cache write** — best-effort, fail-soft (errors logged, swallowed).
- *
- * Pure orchestration — no domain logic lives here. Everything below the
- * `compare` method delegates to the dedicated collaborators.
+ * Pipeline contract (spec R1/R3/R4/R5/R10/R11, design.md §1):
+ * - Cache lookup first (TTL 1h, key includes sha256(buffer)+locale+topK+sorted(museumQids)+museumId).
+ * - Encode → on `EncoderUnavailableError`: `fallbackReason: 'encoder_unavailable'` (R11).
+ * - findNearest with `topN = max(20, 4*topK)` (R3); empty → `'no_visual_neighbor'` (R10).
+ * - Enrich; candidates with no resolved facts dropped (UFR-013: never fabricate).
+ * - V1: NO query facts → metadataScore=0, finalScore=wVisual*visualScore. V2 wires query through.
+ * - Sort desc, truncate, template (no LLM, D5). Cache write fail-soft.
  */
 import { createHash } from 'node:crypto';
 
@@ -69,80 +42,51 @@ import type {
 } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Default top-K applied when the caller doesn't specify one (mirrors design §5). */
 const DEFAULT_TOP_K = 5;
-/** Hard floor for the kNN candidate pool — design.md §1 + spec R3. */
+/** R3 — kNN candidate pool floor. */
 const MIN_TOP_N = 20;
-/** Multiplier of `topK` used to compute the kNN candidate pool when `4*topK > 20`. */
 const TOP_N_TOPK_MULTIPLIER = 4;
-/** Top-K result cache TTL — design D9. */
 const RESULT_CACHE_TTL_SECONDS = 60 * 60;
-/** Cache key namespace. Bump the version segment on payload-shape changes. */
+/** Bump version segment on payload-shape changes. */
 const RESULT_CACHE_KEY_PREFIX = 'visual-similarity:compare:v1';
 
-/**
- * Minimal structural shape required from the Wikidata enricher.
- *
- * The production `WikidataEnricher` class (T4.6) implements a wider surface
- * (concurrency cap, cache-aside, …) but the orchestrator only needs the
- * batch lookup. Typing the dep structurally keeps the service trivially
- * mockable in unit tests while still letting the composition root inject
- * the production implementation 1:1.
- */
 export interface EnricherLike {
   /**
-   * Resolve Wikidata QIDs to verified facts. Missing entities MUST be absent
-   * from the returned map (no `null` placeholders) — the orchestrator uses
-   * `.has(qid)` to drop unenrichable candidates.
+   * Missing entities MUST be absent from the map (no null placeholders) —
+   * orchestrator uses `.has(qid)` to drop unenrichable candidates.
    */
   enrichBatch(qids: string[], lang: string): Promise<Map<string, ArtworkFacts>>;
 }
 
-/** Constructor dependencies for {@link VisualSimilarityService}. */
 export interface VisualSimilarityServiceDeps {
-  /** Visual encoder port — image buffer → L2-normalised vector. */
   encoder: EmbeddingsPort;
-  /** pgvector kNN repository. */
   repo: ArtworkEmbeddingRepository;
-  /** Batch Wikidata enricher (or any structural match — see {@link EnricherLike}). */
   enricher: EnricherLike;
-  /** Top-K result cache backend (Redis in prod, in-memory in tests). */
   cache: CacheService;
-  /** Linear fusion weights (typically `{ wVisual: 0.7, wMeta: 0.3 }`). */
+  /** Typically `{ wVisual: 0.7, wMeta: 0.3 }`. */
   weights: { wVisual: number; wMeta: number };
-  /** Override the default kNN candidate pool size (`max(20, 4 * topK)`). */
+  /** Override default kNN candidate pool size (`max(20, 4*topK)`). */
   topN?: number;
-  /** Override the default top-K (5). */
   topK?: number;
 }
 
-/** One call to {@link VisualSimilarityService.compare}. */
 export interface CompareInput {
-  /** Raw image bytes — already EXIF-stripped + magic-byte validated upstream. */
+  /** Raw bytes — already EXIF-stripped + magic-byte validated upstream. */
   buffer: Buffer;
-  /** Validated MIME type. */
   mimeType: EmbeddingImageMimeType;
-  /** Number of matches the caller wants back, post-sort + post-truncate. */
   topK: number;
-  /** Resolved language for rationale + Wikidata enrichment. */
   locale: 'fr' | 'en';
-  /** Optional **Wikidata QID** filter forwarded to the kNN search (external public axis). */
+  /** External public-axis filter forwarded to kNN. */
   museumQids?: string[];
   /**
-   * Optional **internal tenant** scope (`museums.id`) forwarded to the kNN
-   * search. OWASP LLM08 — global public catalog rows (museum_id IS NULL) are
-   * always visible; tenant-private rows of OTHER museums are never returned.
-   * V1 single-tenant ships unscoped (a warn is logged at the repo layer) but
-   * the field is plumbed so B2B onboarding flips a single call site.
+   * Internal tenant scope (`museums.id`). OWASP LLM08 — global rows
+   * (museum_id IS NULL) always visible; tenant-private rows of OTHER museums
+   * never returned. V1 single-tenant ships unscoped (repo logs warn).
    */
   museumId?: number | null;
 }
 
-/**
- * Narrow structural shape of the parent Langfuse trace surface the service
- * consumes. Decouples from the SDK type so the file does not require the
- * full `Langfuse` typings on every call site (and stays mockable in tests).
- */
+/** Mockable shape decoupled from full Langfuse SDK type. */
 interface VisualCompareTrace {
   span(args: {
     name: string;
@@ -153,11 +97,7 @@ interface VisualCompareTrace {
   update(args: { output?: unknown; metadata?: Record<string, unknown> }): void;
 }
 
-/**
- * Records a child stage span on the parent trace AND the per-stage Prometheus
- * histogram. Both fail-open so a Langfuse / Prom-registry outage never breaks
- * the chat path.
- */
+/** Span + Prom histogram, both fail-open (Langfuse/Prom outage cannot break chat). */
 function recordStageSpan(
   parent: VisualCompareTrace | undefined,
   name: string,
@@ -178,7 +118,6 @@ function recordStageSpan(
   });
 }
 
-/** Updates the parent trace with a final output + metadata, fail-open. */
 function updateParentTrace(
   parent: VisualCompareTrace | undefined,
   output: Record<string, unknown>,
@@ -189,10 +128,7 @@ function updateParentTrace(
   });
 }
 
-/**
- * Compute the topN candidate-pool size from a topK, honouring the spec floor
- * `max(20, 4 * topK)` (R3).
- */
+/** R3 — `max(20, 4*topK)`. */
 function resolveTopN(topK: number, override: number | undefined): number {
   if (override !== undefined) {
     return Math.max(override, MIN_TOP_N);
@@ -201,15 +137,9 @@ function resolveTopN(topK: number, override: number | undefined): number {
 }
 
 /**
- * Build the deterministic top-K result cache key for an input.
- *
- * Includes `sha256(buffer)` so a re-submission of an identical image
- * short-circuits the whole pipeline. `locale` + `topK` + sorted `museumQids`
- * + `museumId` are folded in so different request shapes don't collide.
- *
- * CRITICAL — `museumId` MUST be in the key (OWASP LLM08). Without it,
- * tenant A's cached result could be served to tenant B for the same image
- * + locale + topK, defeating the repository-layer tenant scope.
+ * SEC — `museumId` MUST be in the key (OWASP LLM08). Without it, tenant A's
+ * cached result could be served to tenant B for the same image+locale+topK,
+ * defeating the repo-layer tenant scope.
  */
 function resultCacheKey(input: CompareInput): string {
   const hash = createHash('sha256').update(input.buffer).digest('hex');
@@ -223,19 +153,9 @@ function resultCacheKey(input: CompareInput): string {
 }
 
 /**
- * In V1 the user's image is NOT reverse-enriched — `query` is undefined and
- * {@link computeMetadataScore} returns 0 so `finalScore` collapses to the
- * weighted visual term. The `sharedAttributes` list is empty by the same
- * reasoning (no query facts → no overlap to detect), and
- * {@link templateRationale} renders the FR / EN fallback literal.
- *
- * Hardcoding `[]` here (rather than threading it through every collaborator)
- * keeps the call sites honest: when V2 lands query enrichment, only the
- * `query` argument changes and the `sharedAttributes` array is recomputed
- * from the same query facts.
- *
- * Returned in a stable shape so tests can assert structural invariants
- * regardless of metadata signal availability.
+ * V1: query facts undefined → metadataScore=0 → finalScore = wVisual*visualScore.
+ * sharedAttributes hardcoded `[]` (no query → no overlap); V2 will recompute
+ * from query facts without changing call sites.
  */
 function scoreCandidate(
   neighbour: NearestResult,
@@ -247,8 +167,6 @@ function scoreCandidate(
   const metadataScore = computeMetadataScore(queryFacts, facts);
   const finalScore = fuse(neighbour.visualScore, metadataScore, weights);
 
-  // V1: no query facts → no shared attributes → templater returns the
-  // locale-specific fallback ("Œuvre similaire" / "Similar artwork").
   const sharedAttributes: SharedAttribute[] = [];
   const rationale = templateRationale(facts, locale, sharedAttributes);
 
@@ -263,8 +181,7 @@ function scoreCandidate(
     facts,
   };
 
-  // Spread optional fields without setting them to `undefined` (keeps the
-  // serialised JSON tidy and the type `exactOptionalPropertyTypes`-friendly).
+  // exactOptionalPropertyTypes: don't set keys to `undefined`.
   if (neighbour.metadata.thumbnailUrl !== undefined) {
     match.thumbnailUrl = neighbour.metadata.thumbnailUrl;
   }
@@ -275,12 +192,7 @@ function scoreCandidate(
   return match;
 }
 
-/**
- * Orchestrator for the `/chat/compare` pipeline.
- *
- * Construct one instance per process at the composition root — the class
- * holds no per-request state, only references to its collaborators.
- */
+/** Single instance per process — no per-request state. */
 export class VisualSimilarityService {
   private readonly encoder: EmbeddingsPort;
   private readonly repo: ArtworkEmbeddingRepository;
@@ -290,11 +202,6 @@ export class VisualSimilarityService {
   private readonly topNOverride: number | undefined;
   private readonly defaultTopK: number;
 
-  /**
-   * Wire the orchestrator to its collaborators.
-   *
-   * @param deps - See {@link VisualSimilarityServiceDeps}.
-   */
   public constructor(deps: VisualSimilarityServiceDeps) {
     this.encoder = deps.encoder;
     this.repo = deps.repo;
@@ -305,29 +212,17 @@ export class VisualSimilarityService {
     this.defaultTopK = deps.topK ?? DEFAULT_TOP_K;
   }
 
-  /**
-   * Run the full visual-similarity pipeline for a single input image.
-   *
-   * Behaviour per spec R1, R3, R4, R5, R10, R11 + design.md §1 — see file
-   * header for the full contract.
-   *
-   * @param input - Input payload (buffer + mime + topK + locale + optional museum filter).
-   * @returns The top-K matches, durationMs, modelVersion, and an optional
-   *          fallbackReason when the pipeline could not produce results.
-   */
+  /** See file header for full pipeline contract (spec R1/R3/R4/R5/R10/R11). */
   public async compare(input: CompareInput): Promise<CompareResult> {
     const startedAt = Date.now();
     const topK = input.topK > 0 ? input.topK : this.defaultTopK;
     const cacheKey = resultCacheKey({ ...input, topK });
 
-    // §10 NFR — total throughput counter. Increment exactly once per compare
-    // call (post-rate-limit, post-auth: this is the use-case entry point).
+    // Increment once per compare call (post-rate-limit/auth entry point).
     safeTrace('visualSimilarity.metric.requests', () => {
       compareRequestsTotal.inc();
     });
 
-    // T9.1 — open the parent Langfuse span for the whole compare op. Every
-    // stage opens a child span via the `recordStageSpan` helper, all fail-open.
     const parentSpan = this.openParentSpan(input, topK);
 
     const cacheHit = await this.tryCache(cacheKey, parentSpan, startedAt);
@@ -339,11 +234,9 @@ export class VisualSimilarityService {
 
     const searchStart = Date.now();
     const topN = resolveTopN(topK, this.topNOverride);
-    // Build `findOpts` field-by-field so each property is only set when defined
-    // — keeps `exactOptionalPropertyTypes` happy and lets the repo distinguish
-    // "not provided" (legacy global read + warn for V1, OWASP LLM08) from an
-    // explicit scope value. Passing an empty object instead of `undefined` when
-    // neither filter is set keeps the call shape uniform.
+    // exactOptionalPropertyTypes: only set fields when defined so repo can
+    // distinguish "not provided" (legacy global read + warn, OWASP LLM08)
+    // from explicit scope.
     const findOpts: FindNearestOptions = {};
     if (input.museumQids !== undefined) {
       findOpts.museumQids = input.museumQids;
@@ -412,7 +305,6 @@ export class VisualSimilarityService {
     return result;
   }
 
-  /** Opens the parent Langfuse trace for one compare call. */
   private openParentSpan(input: CompareInput, topK: number): VisualCompareTrace | undefined {
     const lf = getLangfuse();
     return safeTrace(
@@ -430,7 +322,6 @@ export class VisualSimilarityService {
     );
   }
 
-  /** Returns the cached result if present, else `undefined`. */
   private async tryCache(
     cacheKey: string,
     parentSpan: VisualCompareTrace | undefined,
@@ -458,11 +349,7 @@ export class VisualSimilarityService {
     return undefined;
   }
 
-  /**
-   * Encodes the input image, returning the vector + modelVersion or — on
-   * `EncoderUnavailableError` — the contractual fallback `CompareResult`
-   * wrapped in a `{ fallback }` discriminator.
-   */
+  /** On `EncoderUnavailableError`: returns `{ fallback }` discriminator. */
   private async encodeOrFallback(
     input: CompareInput,
     parentSpan: VisualCompareTrace | undefined,
@@ -505,7 +392,6 @@ export class VisualSimilarityService {
     }
   }
 
-  /** Score, fuse, sort, truncate, and package — emits the fusion stage span. */
   private scoreAndPackage(args: {
     neighbours: NearestResult[];
     factsByQid: Map<string, ArtworkFacts>;
@@ -536,10 +422,7 @@ export class VisualSimilarityService {
     };
   }
 
-  /**
-   * Best-effort top-K result cache write. Errors are logged and swallowed
-   * so a Redis outage cannot break the response contract.
-   */
+  /** Fail-soft: Redis outage cannot break response contract. */
   private async writeCache(key: string, value: CompareResult): Promise<void> {
     try {
       await this.cache.set(key, value, RESULT_CACHE_TTL_SECONDS);

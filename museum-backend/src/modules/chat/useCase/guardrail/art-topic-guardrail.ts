@@ -2,13 +2,10 @@ import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 import { resolveLocale } from '@shared/i18n/locale';
 
 /**
- * Reason why the guardrail blocked or flagged a message.
- *
- * `service_unavailable` is distinct from `unsafe_output` — it signals that the
- * upstream LLM Guard sidecar could not produce a verdict (timeout, non-OK
- * response, breaker open, semaphore overflow). The user-facing copy is then
- * honest ("Service temporarily unavailable, please retry") instead of the
- * misleading "your content was flagged" framing. See ADR-047.
+ * ADR-047 — `service_unavailable` distinct from `unsafe_output`: signals
+ * sidecar could not produce a verdict (timeout/non-OK/breaker/semaphore).
+ * User-facing copy is honest ("Service unavailable, retry") instead of
+ * misleading "your content was flagged".
  */
 export type GuardrailBlockReason =
   | 'insult'
@@ -17,10 +14,6 @@ export type GuardrailBlockReason =
   | 'unsafe_output'
   | 'service_unavailable';
 
-/**
- * Result of a guardrail evaluation.
- * When `allow` is false the message is blocked.
- */
 export interface GuardrailDecision {
   allow: boolean;
   reason?: GuardrailBlockReason;
@@ -35,11 +28,9 @@ export const normalize = (value: string): string => {
     .trim();
 };
 
-// F4 (2026-04-30) — multilingual insult coverage matches INJECTION_PATTERNS reach
-// (8 languages). Closes the asymmetry where attackers using DE/ES/IT/JA/ZH/AR
-// insults bypassed the keyword pre-filter while injection attempts in the same
-// languages were blocked. Order: English, French, German, Spanish, Italian,
-// Japanese, Chinese, Arabic. CJK / Arabic entries matched via includes().
+// F4 — 8-language coverage matches INJECTION_PATTERNS reach (closes asymmetry
+// where DE/ES/IT/JA/ZH/AR insults bypassed pre-filter while injection didn't).
+// CJK/Arabic matched via includes().
 const INSULT_KEYWORDS = [
   // English
   'idiot',
@@ -191,8 +182,7 @@ const isArabic = (s: string): boolean =>
   /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/.test(s);
 
 const containsKeyword = (normalizedText: string, keyword: string): boolean => {
-  // Apply the same normalization to the keyword as to the input text so NFD
-  // decomposition (e.g. Japanese dakuten, Latin accents) is consistent on both sides.
+  // NFD on both sides: consistent decomposition (dakuten, Latin accents).
   const normalizedKeyword = normalize(keyword);
 
   // CJK and Arabic scripts don't have ASCII word boundaries — always use includes().
@@ -223,14 +213,7 @@ export const hasPromptInjectionSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, INJECTION_PATTERNS);
 };
 
-/**
- * Evaluates user input against guardrail rules.
- * Hard-blocks insults and prompt injections; everything else is allowed.
- *
- * @param root0 - The user text to evaluate.
- * @param root0.text - User message text to evaluate.
- * @returns A guardrail decision indicating whether the message is allowed.
- */
+/** Hard-blocks insults + prompt injections; everything else allowed. */
 export const evaluateUserInputGuardrail = ({ text }: { text?: string }): GuardrailDecision => {
   const normalizedText = normalize(text ?? '');
   if (!normalizedText) return { allow: true };
@@ -241,40 +224,21 @@ export const evaluateUserInputGuardrail = ({ text }: { text?: string }): Guardra
   return { allow: true };
 };
 
-/**
- * Evaluates assistant LLM output for unsafe content, insults, or injection leaks.
- * Blocks the response if it fails any check.
- *
- * @param root0 - The assistant text to evaluate.
- * @param root0.text - Assistant response text to evaluate.
- * @returns A guardrail decision indicating whether the response is safe to return.
- */
+/** Blocks empty / insult / injection leaks in LLM output. */
 export const evaluateAssistantOutputGuardrail = ({ text }: { text: string }): GuardrailDecision => {
   const normalizedText = normalize(text);
-  // 1. Empty -> block
   if (!normalizedText) {
     return { allow: false, reason: 'unsafe_output' };
   }
-  // 2. Insult -> block
   if (hasInsultSignal(normalizedText)) {
     return { allow: false, reason: 'unsafe_output' };
   }
-  // 3. Injection -> block
   if (hasPromptInjectionSignal(normalizedText)) {
     return { allow: false, reason: 'unsafe_output' };
   }
-  // 4. Default -> allow
   return { allow: true };
 };
 
-/**
- * Builds a localized refusal message for the user when the guardrail blocks a message.
- * Supports all 7 locales via the GUARDRAIL_REFUSALS dictionary.
- *
- * @param locale - User locale tag (e.g. "fr-FR", "de", "ja").
- * @param reason - The guardrail block reason, used to select the specific refusal wording.
- * @returns A human-readable refusal string.
- */
 export const buildGuardrailRefusal = (
   locale: string | undefined,
   reason?: GuardrailBlockReason,
@@ -287,16 +251,7 @@ export const buildGuardrailRefusal = (
   return messages.default;
 };
 
-/**
- * Builds a policy citation string (e.g. `"policy:insult"`) for metadata tagging.
- *
- * @param reason - The guardrail block reason.
- * @returns A citation string, or undefined when no reason is provided.
- */
 export const buildGuardrailCitation = (reason?: GuardrailBlockReason): string | undefined => {
-  if (!reason) {
-    return undefined;
-  }
-
+  if (!reason) return undefined;
   return `policy:${reason}`;
 };

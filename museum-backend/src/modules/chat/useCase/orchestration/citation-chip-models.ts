@@ -47,7 +47,6 @@ export { CitationSourceSchema } from '@modules/chat/domain/chat.types';
  */
 export type CitationFamily = 'museum-catalog' | 'reference-db' | 'web' | 'ai-knowledge';
 
-/** Chip-level confidence aggregated from `sources[].type` + optional `confidence`. */
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
 /** Stable enumeration order used by `selectCitationChipModels` to lay out chips. */
@@ -74,7 +73,6 @@ export const FAMILY_FOR_SOURCE_TYPE: Record<
   web: 'web',
 };
 
-/** Discriminated union returned by `selectCitationChipModels`. */
 export type CitationChipModel =
   | { readonly kind: 'confidence'; readonly level: ConfidenceLevel }
   | { readonly kind: 'provenance'; readonly family: CitationFamily; readonly count: number };

@@ -21,7 +21,6 @@ import type {
 import type { WikidataKbDumpRepositoryPort } from '@modules/chat/domain/ports/wikidata-kb-dump.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Internal cache entry storing facts. */
 interface CacheEntry {
   facts: ArtworkFacts | null;
 }
@@ -56,14 +55,8 @@ export class KnowledgeBaseService {
   ) {}
 
   /**
-   * Looks up artwork facts and returns the raw data.
-   *
    * Returns `null` on any failure (timeout, provider error, empty search term,
    * or when the provider returns `null`). Results are cached.
-   *
-   * @param searchTerm - The artwork name or identifier to look up.
-   * @param language - Optional language code for localised results.
-   * @returns Raw artwork facts, or `null`.
    */
   async lookupFacts(searchTerm: string, language?: string): Promise<ArtworkFacts | null> {
     const key = searchTerm.toLowerCase().trim();
@@ -98,10 +91,7 @@ export class KnowledgeBaseService {
    * only on a true workload miss — read errors are fail-open infrastructure
    * incidents and deliberately do NOT bump the miss counter.
    */
-  private async tryCacheHit(
-    cacheKey: string,
-    key: string,
-  ): Promise<CacheEntry | undefined> {
+  private async tryCacheHit(cacheKey: string, key: string): Promise<CacheEntry | undefined> {
     if (!this.cacheService) return undefined;
     try {
       const cached = await this.cacheService.get<CacheEntry>(cacheKey);
@@ -254,16 +244,7 @@ export class KnowledgeBaseService {
     return Date.now() - state.openSince >= soak;
   }
 
-  /**
-   * Looks up artwork facts and returns a formatted prompt block.
-   *
-   * Returns `''` on any failure (timeout, provider error, empty search term,
-   * or when the provider returns `null`).
-   *
-   * @param searchTerm - The artwork name or identifier to look up.
-   * @param language - Optional language code for localised results.
-   * @returns A formatted `[KNOWLEDGE BASE]` prompt block, or `''`.
-   */
+  /** Returns `''` on any failure (timeout, provider error, empty search term). */
   async lookup(searchTerm: string, language?: string): Promise<string> {
     const facts = await this.lookupFacts(searchTerm, language);
     return buildKnowledgeBasePromptBlock(facts);

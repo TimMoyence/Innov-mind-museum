@@ -9,7 +9,6 @@ import type {
 } from '@modules/chat/domain/ports/web-search.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Internal cache entry storing search results. */
 interface CacheEntry {
   results: SearchResult[];
 }
@@ -30,15 +29,7 @@ export class WebSearchService {
     private readonly cacheService?: CacheService,
   ) {}
 
-  /**
-   * Searches the web and returns the raw results.
-   *
-   * Returns an empty array on any failure (timeout, provider error, empty query).
-   * Results are cached.
-   *
-   * @param searchQuery - The search term to look up.
-   * @returns Search results, or empty array.
-   */
+  /** Fail-open: returns [] on any failure (timeout, provider error, empty query). */
   async searchRaw(searchQuery: string): Promise<SearchResult[]> {
     const key = searchQuery.toLowerCase().trim();
     if (!key) return [];
@@ -110,14 +101,7 @@ export class WebSearchService {
     }
   }
 
-  /**
-   * Searches the web and returns a formatted prompt block.
-   *
-   * Returns `''` on any failure or no results.
-   *
-   * @param searchQuery - The search term to look up.
-   * @returns A formatted `[WEB SEARCH]` prompt block, or `''`.
-   */
+  /** Fail-open: returns `''` on any failure or no results. */
   async search(searchQuery: string): Promise<string> {
     const results = await this.searchRaw(searchQuery);
     return buildWebSearchPromptBlock(results);

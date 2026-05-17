@@ -1,11 +1,8 @@
-// Pure scoring function for image enrichment candidates.
-//
 // C2 v2 (2026-05): adds Wikimedia Commons + Musaium catalogue sources, and
 // alias-aware title matching (FR/EN alt-labels from Wikidata SPARQL).
 
 import type { EnrichedImageSource } from '@modules/chat/domain/chat.types';
 
-/** A candidate image to be scored for enrichment quality. */
 export interface ImageCandidate {
   caption: string;
   source: EnrichedImageSource;
@@ -23,11 +20,7 @@ export interface ImageCandidate {
 const WEIGHTS = { titleMatch: 0.4, resolution: 0.25, source: 0.2, position: 0.15 } as const;
 
 export const normalizeForScoring = (text: string): string =>
-  text
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+  text.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 const titleMatchScore = (
   caption: string,

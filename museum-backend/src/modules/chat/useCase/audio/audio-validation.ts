@@ -3,10 +3,7 @@ import { env } from '@src/config/env';
 
 import type { PostAudioMessageInput } from '@modules/chat/domain/chat.types';
 
-/**
- * Validates an incoming audio payload against size, mime type, and format constraints.
- * Throws an {@link AppError} with a 400 status if any rule fails.
- */
+/** @throws {AppError} 400 on size / mime / format violation. */
 export function validateAudioInput(audio: PostAudioMessageInput['audio']): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
   if (!audio?.base64?.trim()) {

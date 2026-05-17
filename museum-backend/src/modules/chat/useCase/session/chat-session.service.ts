@@ -62,16 +62,12 @@ const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
   intent: session.intent,
 });
 
-/** Dependencies for the session sub-service. */
 interface ChatSessionServiceDeps {
   repository: ChatRepository;
   cache?: CacheService;
   museumRepository?: IMuseumRepository;
 }
 
-/**
- * Handles session CRUD: create, get (with paginated messages), list, and delete-if-empty.
- */
 export class ChatSessionService {
   private readonly repository: ChatRepository;
   private readonly cache?: CacheService;
@@ -84,18 +80,10 @@ export class ChatSessionService {
   }
 
   /**
-   * Creates a new chat session. When a museumId is provided and a museum repository
-   * is available, resolves museum name/address/description from the database and seeds
-   * the visit context. When coordinates are provided, finds nearby museums via haversine.
-   *
    * Note: when museumId is provided, a DB lookup is always performed to fetch the
    * museum description (seeded into visitContext.museumDescription for the first-message
    * intro), even if the caller already supplies museumName. Caller-provided museumName
    * still takes precedence over the DB name via the `??=` operator.
-   *
-   * @param input - Session creation parameters (userId, locale, museumMode, museumId, coordinates).
-   * @returns The newly created session.
-   * @throws {AppError} 400 if userId is not a positive integer.
    */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     if (input.userId !== undefined && (!Number.isInteger(input.userId) || input.userId <= 0)) {
@@ -179,15 +167,6 @@ export class ChatSessionService {
     return { museumName, visitContext };
   }
 
-  /**
-   * Retrieves a session with its paginated messages.
-   *
-   * @param sessionId - UUID of the session to retrieve.
-   * @param page - Cursor-based pagination parameters (limit, cursor).
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The session details and a page of messages.
-   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
-   */
   async getSession(
     sessionId: string,
     page: MessagePageQuery,
@@ -235,14 +214,6 @@ export class ChatSessionService {
     return result;
   }
 
-  /**
-   * Lists all sessions for the authenticated user with cursor-based pagination.
-   *
-   * @param page - Cursor-based pagination parameters (limit, cursor).
-   * @param currentUserId - Authenticated user id (required).
-   * @returns Paginated sessions with message previews.
-   * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
-   */
   async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     if (currentUserId === undefined || !Number.isInteger(currentUserId) || currentUserId <= 0) {
       throw badRequest('Authenticated user id is required');
@@ -304,14 +275,6 @@ export class ChatSessionService {
     return result;
   }
 
-  /**
-   * Deletes a session only if it contains no messages.
-   *
-   * @param sessionId - UUID of the session to delete.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Whether the session was actually deleted.
-   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
-   */
   async deleteSessionIfEmpty(
     sessionId: string,
     currentUserId?: number,

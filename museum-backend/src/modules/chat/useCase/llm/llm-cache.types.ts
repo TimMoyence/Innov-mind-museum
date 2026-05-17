@@ -1,7 +1,6 @@
 /** Adaptive context class — drives the cache TTL per spec section 3.3. */
 export type LlmContextClass = 'generic' | 'museum-mode' | 'personalized';
 
-/** Inputs the cache key derives from. */
 export interface LlmCacheKeyInput {
   /** OpenAI / Deepseek / Google model id (e.g. 'gpt-4o-mini'). */
   model: string;
@@ -30,7 +29,6 @@ export interface LlmCacheKeyInput {
   imageContentHash?: string;
 }
 
-/** Cache lookup result. */
 export interface LlmCacheLookupResult<T> {
   hit: boolean;
   value: T | null;
@@ -44,12 +42,8 @@ export interface LlmCacheLookupResult<T> {
  * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  */
 export interface LlmCacheService {
-  /** Classifies the input into a ContextClass for adaptive TTL. */
   classify(input: LlmCacheKeyInput): LlmContextClass;
-  /** Looks up an entry. Returns hit=false on miss. */
-
   lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>>;
-  /** Stores an entry with the TTL appropriate for its context class. */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains the stored value shape (matches CacheService.set pattern)
   store<T>(input: LlmCacheKeyInput, value: T): Promise<void>;
   /** Drops all entries scoped to a museum (admin update hook). */

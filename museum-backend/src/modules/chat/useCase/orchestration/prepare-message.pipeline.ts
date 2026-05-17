@@ -33,19 +33,15 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
-/** Preparation succeeded — all data needed to invoke the LLM. */
 export interface PrepareReady {
   kind: 'ready';
   session: Awaited<ReturnType<typeof ensureSessionAccess>>;
   imageRef?: string;
   orchestratorImage?: PostMessageInput['image'];
   /**
-   * C3 — SHA-256 hex prefix (32 chars) of the post-EXIF-strip image buffer,
-   * forwarded from `ImageProcessingService.processImage`. Present iff the
-   * request carried an `upload` or legacy-base64 image AND processing
-   * succeeded ; absent for `url` source (no buffer) or text-only requests.
-   * Threaded into `buildLlmCacheInput` to lift the image-bypass on the
-   * LLM cache lookup/store (R11/R12).
+   * SHA-256[:32] of post-EXIF-strip buffer. Present iff request carried
+   * `upload`/legacy-base64 image AND processing succeeded. Threaded into
+   * `buildLlmCacheInput` to lift image-bypass on LLM cache (R11/R12).
    */
   imageContentHash?: string;
   requestedLocale?: string;
@@ -58,53 +54,29 @@ export interface PrepareReady {
   enrichedImages?: EnrichedImage[];
   resolvedLocation?: ResolvedLocation;
   /**
-   * LLM02 — sanitized version of the user input when the guardrail provider
-   * scrubbed PII (Anonymize / Presidio). When defined, the message service
-   * substitutes this for the original `input.text` before the LLM call so
-   * the provider never sees raw PII. `undefined` when no provider is wired
-   * or no PII was detected.
+   * LLM02 — sanitized user input when provider scrubbed PII. Message service
+   * substitutes for `input.text` before LLM call so provider never sees raw PII.
    */
   redactedText?: string;
-  /**
-   * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`.
-   * Threaded into `OrchestratorInput.facts` so every orchestrator entry point
-   * (full-shot / streaming / walk) wraps them in the Spotlighting envelope.
-   * Empty / undefined when no router is wired or no facts grounded.
-   */
+  /** Facts wrapped in Spotlighting envelope at orchestrator. */
   routerFacts?: readonly string[];
-  /**
-   * C4.1 (T3.5) — Provenance label from `KnowledgeRouterResult.source`. Maps to
-   * `OrchestratorInput.factsSource`. `'none'` short-circuits the envelope.
-   */
+  /** `'none'` short-circuits envelope. */
   routerSource?: KnowledgeRouterSource;
 }
 
-/** Guardrail-refused preparation — contains the ready-to-return refusal result. */
 export interface PrepareRefused {
   kind: 'refused';
   result: PostMessageResult;
 }
 
-/**
- *
- */
 export type PrepareResult = PrepareReady | PrepareRefused;
 
-/**
- *
- */
 export interface PrepareMessagePipelineDeps {
   repository: ChatRepository;
   imageProcessor: ImageProcessingService;
   guardrail: GuardrailEvaluationService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
-  /**
-   * C4.1 (T3.3) — additive injection of the `KnowledgeRouterPort`. Not
-   * consumed yet inside `enrichAndResolveLocation` ; T3.4 will replace the
-   * direct `knowledgeBase` call in `fetchEnrichmentData` with this port and
-   * drop the legacy field at C4.2.
-   */
   knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
@@ -112,19 +84,15 @@ export interface PrepareMessagePipelineDeps {
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
   /**
-   * GDPR consent port. When supplied, location is only propagated to the LLM
-   * prompt if the user has granted the `location_to_llm` scope. Without this
-   * port the legacy behaviour (always propagate) stands — useful for tests
-   * that pre-date the consent table.
+   * GDPR — when supplied, location propagated to LLM prompt only if user
+   * granted `location_to_llm` scope. Without port: legacy always-propagate.
    */
   locationConsentChecker?: LocationConsentChecker;
 }
 
 /**
- * Pre-LLM pipeline: validates input, processes image, runs input guardrail,
- * persists the user message, fetches enrichment, and resolves location.
- *
- * Extracted from ChatMessageService to keep each use-case file ≤ 300 LOC.
+ * Pre-LLM: validate → process image → input guardrail → persist user →
+ * enrichment → location. Extracted from ChatMessageService for file size cap.
  */
 export class PrepareMessagePipeline {
   private readonly repository: ChatRepository;
@@ -132,11 +100,6 @@ export class PrepareMessagePipeline {
   private readonly guardrail: GuardrailEvaluationService;
   private readonly userMemory?: UserMemoryService;
   private readonly knowledgeBase?: KnowledgeBaseService;
-  /**
-   * C4.1 (T3.3) — held until T3.4 plumbs it into `enrichAndResolveLocation`.
-   * Exposed via {@link getKnowledgeRouter} so the additive wiring step passes
-   * `noUnusedLocals` while keeping the field private to the use-case.
-   */
   private readonly knowledgeRouter?: KnowledgeRouterPort;
   private readonly imageEnrichment?: ImageEnrichmentService;
   private readonly webSearch?: WebSearchService;
@@ -160,12 +123,6 @@ export class PrepareMessagePipeline {
     this.locationConsentChecker = deps.locationConsentChecker;
   }
 
-  /**
-   * C4.1 (T3.3) — read-only accessor for the wired router. Consumed by T3.4
-   * (LLM prompt builder) + integration tests asserting the wiring is healthy.
-   * Returns `undefined` only on legacy test harnesses that build the pipeline
-   * without the C4 port.
-   */
   getKnowledgeRouter(): KnowledgeRouterPort | undefined {
     return this.knowledgeRouter;
   }
@@ -187,9 +144,8 @@ export class PrepareMessagePipeline {
     if (!this.extractionQueue || results.length === 0 || !locale) return;
     const queue = this.extractionQueue;
     const searchTerm = text ?? '';
-    // Wrap in Promise.resolve().then so a sync throw (e.g. queue closed with
-    // enableOfflineQueue: false when Redis is down) becomes a rejection that
-    // fireAndForget logs, instead of bubbling into the chat hot path.
+    // Promise.resolve().then converts sync throw (queue closed w/ enableOfflineQueue:false
+    // when Redis down) into rejection so fireAndForget logs it instead of bubbling.
     fireAndForget(
       Promise.resolve().then(() =>
         queue.enqueueUrls(results.slice(0, 5).map((r) => ({ url: r.url, searchTerm, locale }))),
@@ -209,16 +165,10 @@ export class PrepareMessagePipeline {
   }> {
     if (!image) return {};
 
-    // A5 (R2/R3) — `chat.phase.analyzing-image` Langfuse span. Emitted ONLY
-    // when the request carries an image (R3 : the early-return guard above
-    // ensures no span is emitted on text-only paths). Fail-open via
-    // `safeTrace` so a Langfuse SDK outage never breaks the chat path.
-    //
-    // bug `merged_bug_004` — span MUST also be emitted on failure (any
-    // `badRequest` / sharp EXIF-strip / S3 upload error). Pattern mirrors
-    // `synthesizing-voice` at `text-to-speech.openai.ts:115-132` : try/finally
-    // + `outcome: 'success' | 'error'` attribute. Note: `runOcrGuard` stays
-    // OUTSIDE the wrap — span scope is strictly `processImage` per A5 R2/R3.
+    // A5 R2/R3 — analyzing-image span emitted ONLY when image present.
+    // merged_bug_004 — span MUST emit on failure too (try/finally + outcome
+    // attr; mirrors text-to-speech.openai.ts:115-132). runOcrGuard stays
+    // OUTSIDE wrap — span scope is strictly processImage.
     const startedAtMs = Date.now();
     let outcome: ChatPhaseOutcome = 'success';
     let processed: Awaited<ReturnType<ImageProcessingService['processImage']>>;
@@ -238,12 +188,11 @@ export class PrepareMessagePipeline {
     return {
       imageRef: processed.imageRef,
       orchestratorImage: processed.orchestratorImage,
-      // C3 — propagate visual signature (undefined for url-source per R2).
+      // C3 — undefined for url-source per R2.
       imageContentHash: processed.imageContentHash,
     };
   }
 
-  /** Validates session, processes image, runs input guardrail, persists user message, fetches enrichment. */
   async prepare(
     sessionId: string,
     input: PostMessageInput,
@@ -275,8 +224,8 @@ export class PrepareMessagePipeline {
     });
 
     if (!userGuardrail.allow) {
-      // Both user attempt and refusal are always persisted — the user row is the moderation
-      // audit trail. Atomic TX guarantees neither row lands without the other.
+      // Both user attempt + refusal always persisted (user row = moderation
+      // audit trail). Atomic TX: neither row lands without the other.
       const result = await this.guardrail.handleInputBlock({
         sessionId,
         reason: userGuardrail.reason,
@@ -315,12 +264,7 @@ export class PrepareMessagePipeline {
     };
   }
 
-  /**
-   * C4.1 (T3.5) — Resolve verified facts via `KnowledgeRouter` when wired.
-   * Fail-open per port contract (the router NEVER throws — see ADR-035). Returns
-   * `{ routerFacts: [], routerSource: 'none' }` when no router is injected
-   * (legacy / test harness) or when no search term is available.
-   */
+  /** Fail-open per port (router NEVER throws — ADR-035). */
   private async resolveRouterFacts(
     inputText: string | undefined,
   ): Promise<{ routerFacts: readonly string[]; routerSource: KnowledgeRouterSource }> {
@@ -333,7 +277,6 @@ export class PrepareMessagePipeline {
     return { routerFacts: result.facts, routerSource: result.source };
   }
 
-  /** Post-validation enrichment + location resolution (extracted to keep `prepare` under max-lines). */
   private async enrichAndResolveLocation(args: {
     input: PostMessageInput;
     session: ChatSession;
@@ -352,9 +295,7 @@ export class PrepareMessagePipeline {
     routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
-    // A5 (R6) — `chat.phase.searching-collection` Langfuse span wraps the
-    // enrichment fan-out (KB + web search + image enrichment + DB lookup),
-    // which is the user-facing "searching the collection" window.
+    // A5 R6 — searching-collection span wraps enrichment fan-out.
     const enrichmentStartedAtMs = Date.now();
     const {
       userMemoryBlock,
@@ -408,7 +349,6 @@ export class PrepareMessagePipeline {
     };
   }
 
-  /** Builds the OrchestratorInput shape from a successful prepare result. */
   buildOrchestratorInput(
     prep: PrepareReady,
     input: PostMessageInput,
@@ -435,16 +375,11 @@ export class PrepareMessagePipeline {
       lowDataMode: input.context?.lowDataMode ?? false,
       resolvedLocation: prep.resolvedLocation,
       contentPreferences: input.context?.contentPreferences,
-      // Cache scoping (R1): museumId + userId let the caching orchestrator
-      // pick the correct global-vs-user-scoped key namespace.
+      // R1 cache scoping: museumId+userId pick global-vs-user-scoped key namespace.
       museumId: prep.session.museumId ?? null,
       userId: prep.ownerId ?? null,
-      // Walk-intent routing: propagated so the orchestrator can select the
-      // walk prompt section and return structured suggestions.
+      // Walk-intent routing for walk prompt section + structured suggestions.
       intent: prep.session.intent,
-      // C4.1 (T3.5) — KnowledgeRouter facts + provenance threaded through to
-      // every orchestrator entry point. Optional; absent on legacy harnesses
-      // that build the pipeline without a `KnowledgeRouterPort`.
       facts: prep.routerFacts,
       factsSource: prep.routerSource,
     };

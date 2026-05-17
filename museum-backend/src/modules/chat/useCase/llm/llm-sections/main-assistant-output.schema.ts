@@ -126,5 +126,4 @@ export const mainAssistantOutputSchema = z.object({
     .describe('Optional source identifiers used to ground the answer. Null when none.'),
 });
 
-/** Inferred TypeScript type matching {@link mainAssistantOutputSchema}. */
 export type MainAssistantOutput = z.infer<typeof mainAssistantOutputSchema>;

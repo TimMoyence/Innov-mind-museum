@@ -17,7 +17,6 @@ import type {
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
 
-/** Configuration for the image enrichment service. */
 export interface ImageEnrichmentConfig {
   cacheTtlMs: number;
   cacheMaxEntries: number;
@@ -25,17 +24,11 @@ export interface ImageEnrichmentConfig {
   maxImagesPerResponse: number;
 }
 
-/** Internal cache entry storing enriched images and expiration timestamp. */
 interface CacheEntry {
   images: EnrichedImage[];
   expiresAt: number;
 }
 
-/**
- * Narrow subset of the Langfuse trace API the service consumes. Kept inline
- * so the module isn't coupled to the full SDK type — `update` is optional
- * (the SDK may expose it absent in some test fakes).
- */
 interface LangfuseTraceLike {
   update?(args: { output?: unknown; metadata?: Record<string, unknown> }): void;
 }
@@ -86,17 +79,10 @@ export class ImageEnrichmentService {
   ) {}
 
   /**
-   * Enriches one or more search terms with images from all wired sources.
-   *
    * v2 overload accepts `searchTerms: string[]` (one fan-out per entry). The
    * legacy single-term path forwards to this overload via `[searchTerm]` to
-   * keep the public surface stable.
-   *
-   * @param searchTermOrTerms - artwork or topic name(s).
-   * @param wikidataImageUrl - optional P18 URL pre-resolved by the KB lookup.
-   * @param annotations - optional LLM-authored caption/rationale per query.
-   * @param museumMode - when true and a Musaium catalogue hit exists, hoist it to position 0 (R13).
-   * @param requestId - parent trace ID for Langfuse span correlation.
+   * keep the public surface stable. `museumMode` (R13) hoists any Musaium hit
+   * to position 0.
    */
   async enrich(
     searchTermOrTerms: string | string[],
@@ -161,10 +147,6 @@ export class ImageEnrichmentService {
     }
   }
 
-  /**
-   * Merges a Wikidata image into an existing enriched images list.
-   * Re-sorts by score and deduplicates by URL.
-   */
   mergeWikidataImage(
     existing: EnrichedImage[],
     wikidataImageUrl: string,
@@ -218,9 +200,6 @@ export class ImageEnrichmentService {
   }
 
   /**
-   * Fetches photos from one source-client with a hard timeout. Wraps the call
-   * in a Langfuse span and emits Prometheus counters / histograms.
-   *
    * Fail-open: any throw / timeout / malformed-result resolves to `[]` for
    * this (source, term) pair. Other tasks in the fan-out are unaffected.
    */
@@ -285,11 +264,6 @@ export class ImageEnrichmentService {
     }
   }
 
-  /**
-   * Sort + dedup candidates, applying source-priority on duplicate URLs and
-   * (when `museumMode`) hoisting any Musaium hit to position 0 regardless of
-   * score.
-   */
   private sortAndDedup(candidates: EnrichedImage[], museumMode: boolean): EnrichedImage[] {
     candidates.sort((a, b) => b.score - a.score);
 
@@ -303,7 +277,10 @@ export class ImageEnrichmentService {
       // Tie-break: keep higher source-priority, falling back to higher score.
       const existingRank = SOURCE_PRIORITY[existing.source];
       const incomingRank = SOURCE_PRIORITY[img.source];
-      if (incomingRank > existingRank || (incomingRank === existingRank && img.score > existing.score)) {
+      if (
+        incomingRank > existingRank ||
+        (incomingRank === existingRank && img.score > existing.score)
+      ) {
         byUrl.set(img.url, img);
       }
     }
@@ -386,11 +363,6 @@ function buildAttribution(
   return {};
 }
 
-/**
- * Caption selection for non-Unsplash sources: prefer the LLM-authored
- * caption when present and non-empty; otherwise the photo's own caption;
- * otherwise the searchTerm itself.
- */
 function pickNonUnsplashCaption(
   photo: ImageSourcePhoto,
   annotation: SuggestedImageAnnotation | undefined,
