@@ -416,6 +416,8 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ user: { id: 42, email: 'new@test.com' } });
       // Options-object signature; `locale` is resolved from the request (defaults to 'fr').
+      // `ip` and `requestId` are propagated from the Express request for audit trail
+      // (cf. auth-session.route.ts:93-94, added with S4 regulatory audit work).
       expect(mockRegister).toHaveBeenCalledWith({
         email: 'new@test.com',
         password: 'ValidPass1',
@@ -423,6 +425,8 @@ describe('Auth Routes — HTTP Layer', () => {
         lastname: 'Doe',
         locale: 'fr',
         dateOfBirth: undefined,
+        ip: expect.any(String),
+        requestId: expect.any(String),
       });
     });
 
