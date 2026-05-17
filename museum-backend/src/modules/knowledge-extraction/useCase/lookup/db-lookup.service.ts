@@ -6,8 +6,8 @@ import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/dom
 import type { MuseumEnrichmentRepoPort } from '@modules/knowledge-extraction/domain/ports/museum-enrichment-repo.port';
 
 /**
- * Queries the local knowledge DB for artwork/museum data and returns a formatted prompt block.
- * Used as a 6th enrichment source in the chat pipeline. Fail-open: always returns a string.
+ * 6th enrichment source in the chat pipeline. Fail-open: always returns a
+ * string (empty on miss or error).
  */
 export class DbLookupService {
   constructor(
@@ -15,10 +15,6 @@ export class DbLookupService {
     private readonly museumRepo: MuseumEnrichmentRepoPort,
   ) {}
 
-  /**
-   * Looks up local knowledge by search term and returns a formatted `[LOCAL KNOWLEDGE]` prompt
-   * block, or empty string when nothing is found or an error occurs.
-   */
   async lookup(searchTerm: string, locale: string): Promise<string> {
     if (!searchTerm.trim()) return '';
     try {

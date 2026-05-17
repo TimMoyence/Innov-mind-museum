@@ -2,13 +2,9 @@ import type { MuseumEnrichment } from '@modules/knowledge-extraction/domain/muse
 import type { MuseumEnrichmentRepoPort } from '@modules/knowledge-extraction/domain/ports/museum-enrichment-repo.port';
 import type { Repository } from 'typeorm';
 
-/**
- *
- */
 export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
   constructor(private readonly repo: Repository<MuseumEnrichment>) {}
 
-  /** Finds museum enrichment by exact name match (case-insensitive) and locale. */
   async findByNameAndLocale(name: string, locale: string): Promise<MuseumEnrichment | null> {
     return await this.repo
       .createQueryBuilder('me')
@@ -17,10 +13,6 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
       .getOne();
   }
 
-  /**
-   *
-   */
-  /** Fuzzy-searches museums by name using ILIKE, ordered by confidence. */
   async searchByName(searchTerm: string, locale: string, limit = 3): Promise<MuseumEnrichment[]> {
     return await this.repo
       .createQueryBuilder('me')
@@ -33,10 +25,7 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
       .getMany();
   }
 
-  /**
-   *
-   */
-  /** Inserts or merges classified museum data; higher confidence overwrites, lower fills nulls. */
+  /** Higher confidence overwrites; lower fills nulls only. Mutates existing row. */
   async upsertFromClassification(
     data: Omit<MuseumEnrichment, 'id' | 'museum' | 'createdAt' | 'updatedAt'>,
     sourceUrl: string,

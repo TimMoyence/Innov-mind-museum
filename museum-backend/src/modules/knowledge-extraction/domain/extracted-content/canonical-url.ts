@@ -1,7 +1,5 @@
 /**
- * Returns a canonical form of a URL for stable deduplication:
- * - strips trailing slash from the pathname (except root "/")
- * - sorts query parameters alphabetically for a stable fingerprint
+ * Canonical URL for dedup: strips trailing slash (except root), sorts query params.
  */
 export function canonicalizeUrl(raw: string): string {
   const url = new URL(raw);

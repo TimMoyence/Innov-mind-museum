@@ -16,7 +16,7 @@ import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/dom
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DataSource } from 'typeorm';
 
-/** Built module output -- consumed by ChatModule and admin routes. */
+/** Consumed by ChatModule and admin routes. */
 export interface BuiltKnowledgeExtractionModule {
   dbLookup: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
@@ -24,9 +24,7 @@ export interface BuiltKnowledgeExtractionModule {
   close: () => Promise<void>;
 }
 
-/** Builds and wires the knowledge-extraction module. */
 export class KnowledgeExtractionModule {
-  /** Builds all services from a DataSource. */
   build(dataSource: DataSource): BuiltKnowledgeExtractionModule {
     const contentRepo = new TypeOrmExtractedContentRepo(dataSource.getRepository(ExtractedContent));
     const artworkRepo = new TypeOrmArtworkKnowledgeRepo(dataSource.getRepository(ArtworkKnowledge));
@@ -35,7 +33,6 @@ export class KnowledgeExtractionModule {
 
     // EXTRACTION_WORKER_ENABLED=false short-circuits BEFORE any BullMQ / Redis
     // wiring so test environments without Redis don't open ioredis clients.
-    // Chat module degrades to db-lookup-only — same shape as the missing-key path.
     if (!env.extractionWorkerEnabled) {
       logger.info('knowledge_extraction_disabled', { reason: 'extraction_worker_flag_off' });
       return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
@@ -53,7 +50,6 @@ export class KnowledgeExtractionModule {
     return this.buildPipeline(dbLookup, openaiKey, contentRepo, artworkRepo, museumRepo);
   }
 
-  /** Wires the full extraction pipeline (scraper + classifier + worker). */
   private buildPipeline(
     dbLookup: DbLookupService,
     openaiKey: string,

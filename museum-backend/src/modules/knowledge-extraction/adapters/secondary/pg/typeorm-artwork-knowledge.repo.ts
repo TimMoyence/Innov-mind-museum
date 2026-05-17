@@ -2,13 +2,9 @@ import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artw
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { Repository } from 'typeorm';
 
-/**
- *
- */
 export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
   constructor(private readonly repo: Repository<ArtworkKnowledge>) {}
 
-  /** Finds artwork by exact title match (case-insensitive) and locale. */
   async findByTitleAndLocale(title: string, locale: string): Promise<ArtworkKnowledge | null> {
     return await this.repo
       .createQueryBuilder('ak')
@@ -17,10 +13,6 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
       .getOne();
   }
 
-  /**
-   *
-   */
-  /** Fuzzy-searches artworks by title using ILIKE, ordered by confidence. */
   async searchByTitle(searchTerm: string, locale: string, limit = 3): Promise<ArtworkKnowledge[]> {
     return await this.repo
       .createQueryBuilder('ak')
@@ -33,10 +25,7 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
       .getMany();
   }
 
-  /**
-   *
-   */
-  /** Inserts or merges classified artwork data; higher confidence overwrites, lower fills nulls. */
+  /** Higher confidence overwrites; lower fills nulls only. Mutates existing row. */
   async upsertFromClassification(
     data: Omit<ArtworkKnowledge, 'id' | 'createdAt' | 'updatedAt'>,
     sourceUrl: string,
@@ -83,7 +72,6 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
     return await this.repo.save(this.repo.create({ ...data, sourceUrls: [sourceUrl] }));
   }
 
-  /** Returns all artwork knowledge items flagged for human review, newest first. */
   async findNeedsReview(limit = 50): Promise<ArtworkKnowledge[]> {
     return await this.repo.find({
       where: { needsReview: true },
@@ -92,7 +80,7 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
     });
   }
 
-  /** Clears the needsReview flag for a given item. Returns null if the item does not exist. */
+  /** Returns null if the id does not exist. */
   async approve(id: string): Promise<ArtworkKnowledge | null> {
     const item = await this.repo.findOne({ where: { id } });
     if (!item) return null;

@@ -35,12 +35,7 @@ interface ExtractionWorkerConfig {
   };
 }
 
-/**
- * BullMQ-based extraction queue and worker.
- *
- * Implements {@link ExtractionQueuePort} for enqueuing URLs (fire-and-forget)
- * and runs a worker that processes jobs via {@link ExtractionJobService}.
- */
+/** BullMQ-based extraction queue + worker. Implements {@link ExtractionQueuePort}. */
 export class ExtractionWorker implements ExtractionQueuePort {
   private readonly queue: Queue<ExtractionJobPayload>;
   private worker?: Worker<ExtractionJobPayload>;

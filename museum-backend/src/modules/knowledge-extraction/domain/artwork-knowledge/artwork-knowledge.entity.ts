@@ -7,9 +7,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-/**
- *
- */
 @Entity({ name: 'artwork_knowledge' })
 @Index('IDX_artwork_knowledge_title_artist_locale', ['title', 'artist', 'locale'], {
   unique: true,

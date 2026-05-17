@@ -5,7 +5,6 @@ import type { MuseumEnrichment } from '@modules/knowledge-extraction/domain/muse
 
 const MAX_BLOCK_LENGTH = 1500;
 
-/** Formats a single artwork into prompt lines. */
 function formatArtwork(art: ArtworkKnowledge): string[] {
   const lines: string[] = [`\nArtwork: "${sanitizePromptInput(art.title, 200)}"`];
   const fields: [string | null | undefined, string, number][] = [
@@ -25,7 +24,6 @@ function formatArtwork(art: ArtworkKnowledge): string[] {
   return lines;
 }
 
-/** Formats a single museum into prompt lines. */
 function formatMuseum(museum: MuseumEnrichment): string[] {
   const lines: string[] = [`\nMuseum: "${sanitizePromptInput(museum.name, 200)}"`];
   if (museum.website) lines.push(`  Website: ${museum.website}`);
@@ -40,10 +38,7 @@ function formatMuseum(museum: MuseumEnrichment): string[] {
   return lines;
 }
 
-/**
- * Builds a `[LOCAL KNOWLEDGE]` prompt block from DB-stored artwork and museum data.
- * Returns empty string if no data available.
- */
+/** Builds `[LOCAL KNOWLEDGE]` prompt block. Empty string when no data. */
 export function buildLocalKnowledgeBlock(
   artworks: ArtworkKnowledge[],
   museums: MuseumEnrichment[],

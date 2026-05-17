@@ -12,9 +12,6 @@ import type {
   ScraperPort,
 } from '@modules/knowledge-extraction/domain/ports/scraper.port';
 
-/**
- * Configuration for the HTML scraper adapter.
- */
 export interface HtmlScraperConfig {
   timeoutMs: number;
   maxContentBytes: number;
@@ -26,9 +23,8 @@ const USER_AGENT = 'MusaiumBot/1.0 (+https://musaium.app; museum-knowledge-enric
 const MAX_REDIRECTS = 5;
 
 /**
- * Hostnames that resolve to cloud-provider metadata endpoints. The IPv4
- * short-circuit on `169.254.0.0/16` already blocks them, but we reject the
- * DNS name before lookup to make policy violations visible in logs.
+ * SEC: cloud-provider metadata endpoints. The 169.254.0.0/16 IPv4 check already
+ * blocks them; reject the DNS name pre-lookup to surface policy violations in logs.
  */
 const BLOCKED_HOSTNAMES = new Set([
   'metadata.google.internal',
@@ -39,19 +35,11 @@ const BLOCKED_HOSTNAMES = new Set([
 ]);
 
 /**
- * Decodes an IPv4-mapped IPv6 address back to its IPv4 dotted form.
- *
- * Handles two wire shapes that point at the same network:
- *   - Decimal:                 `::ffff:127.0.0.1`
- *   - WHATWG-canonicalised hex: `::ffff:7f00:1` (Node URL parser emits this)
- *
- * Returns `null` when the input is not an IPv4-mapped IPv6 literal so callers
- * can keep treating the address as a generic IPv6.
- *
- * Why: previously `normalizeIp` only stripped the `::ffff:` prefix and relied
- * on string-prefix checks (`startsWith('127.')`). The hex form bypassed every
- * range test (`7f00:1` matches no IPv4 prefix), opening an SSRF path on the
- * scraper. Tracked as W1.T2-followup; see ssrf-matrix tests cases 10-11.
+ * SEC: decodes IPv4-mapped IPv6 in both wire shapes (decimal `::ffff:127.0.0.1`
+ * and WHATWG hex `::ffff:7f00:1` emitted by Node URL parser). Returns null for
+ * non-mapped addresses. Why: prior `normalizeIp` only stripped `::ffff:` prefix —
+ * hex form bypassed all IPv4 range checks, opening SSRF path. W1.T2-followup,
+ * ssrf-matrix tests cases 10-11.
  */
 function ipv6MappedToIpv4(address: string): string | null {
   const HEX_FORM = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/;
@@ -82,12 +70,8 @@ function ipv6MappedToIpv4(address: string): string | null {
 }
 
 /**
- * Normalises an IP-like string:
- *   - Strips IPv6 URL brackets: `[::1]` → `::1`
- *   - Unwraps IPv4-mapped IPv6 in BOTH wire shapes (decimal `::ffff:1.2.3.4`
- *     and hex-canonical `::ffff:0102:0304`) so range checks below see a single
- *     dotted IPv4.
- *   - Lowercases hex digits
+ * Strips IPv6 URL brackets, unwraps IPv4-mapped IPv6 (both wire shapes), lowercases hex.
+ * Output: range checks below see a single canonical form.
  */
 function normalizeIp(address: string): string {
   let value = address.toLowerCase();
@@ -101,11 +85,10 @@ function normalizeIp(address: string): string {
   return value;
 }
 
-/** Returns true if `ip` is in a private/reserved IPv4 range. */
 function isPrivateIpv4(ip: string): boolean {
   if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('0.')) return true;
   if (ip.startsWith('192.168.')) return true;
-  // 169.254.0.0/16 covers AWS/Azure/GCP IMDS at 169.254.169.254
+  // SEC: 169.254.0.0/16 covers AWS/Azure/GCP IMDS at 169.254.169.254
   if (ip.startsWith('169.254.')) return true;
   if (ip.startsWith('172.')) {
     const second = Number.parseInt(ip.split('.')[1] ?? '', 10);
@@ -114,13 +97,11 @@ function isPrivateIpv4(ip: string): boolean {
   return false;
 }
 
-/** Returns true if `ip` is in a private/reserved IPv6 range. */
 function isPrivateIpv6(ip: string): boolean {
-  // IPv6 loopback (::1), ULA (fc00::/7), link-local (fe80::/10)
+  // loopback (::1), ULA (fc00::/7), link-local (fe80::/10)
   return ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80');
 }
 
-/** Returns true if the IP belongs to a private, reserved, loopback, or link-local range. */
 function isPrivateIp(rawIp: string): boolean {
   const ip = normalizeIp(rawIp);
   return isPrivateIpv4(ip) || isPrivateIpv6(ip);
@@ -135,22 +116,16 @@ type HostnameCheck =
     };
 
 /**
- * Matches a dotted IPv4 literal. Written as four fixed octet groups (no nested
- * quantifier) so `eslint-plugin-security/detect-unsafe-regex` stays clear —
- * the anchored form with `{1,3}` is still not backtrack-prone, but expanding it
- * removes the false-positive at the source.
+ * Four fixed octet groups (no nested quantifier) to avoid
+ * `eslint-plugin-security/detect-unsafe-regex` false-positive.
  */
 const IPV4_LITERAL = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 /**
- * Resolves a hostname and classifies it as safe or unsafe (SSRF-wise).
- * Called at every redirect hop to block `302 → internal IP` bypasses.
- *
- * When the `hostname` is already an IP literal (IPv4 dotted or IPv6 in
- * brackets stripped by `URL.hostname`), DNS lookup is skipped — it would
- * resolve to itself and adds no value. This also closes a subtle bypass
- * where `169.254.169.254` as a literal would otherwise hit whatever the
- * system DNS resolver returned for the string form.
+ * SEC: classifies hostname safe/unsafe (SSRF). Called at every redirect hop
+ * to block `302 → internal IP` bypasses. Skips DNS lookup for IP literals
+ * (would self-resolve + closes a bypass where `169.254.169.254` literal
+ * could hit a misconfigured system resolver).
  */
 async function validateHostname(hostname: string): Promise<HostnameCheck> {
   if (BLOCKED_HOSTNAMES.has(hostname.toLowerCase())) {
@@ -177,7 +152,7 @@ async function validateHostname(hostname: string): Promise<HostnameCheck> {
   }
 }
 
-/** Drains a response body so the keep-alive TCP connection can be reused. Silent on error. */
+/** Drains body so keep-alive TCP can be reused. Silent on error. */
 async function drainResponseBody(response: Response): Promise<void> {
   try {
     await response.arrayBuffer();
@@ -191,9 +166,9 @@ type RedirectOutcome =
   | { blocked: false; response: Response; finalUrl: string };
 
 /**
- * Performs `fetch` with a manual redirect loop so each `Location` header is
- * re-validated against the SSRF policy. Closes DNS rebinding + cloud metadata
- * + scheme-downgrade bypasses that a single pre-fetch check misses.
+ * SEC: manual redirect loop so every `Location` is re-validated. Closes DNS
+ * rebinding + cloud metadata + scheme-downgrade bypasses missed by a single
+ * pre-fetch check.
  */
 async function fetchWithSafeRedirects(
   initialUrl: string,
@@ -235,19 +210,13 @@ async function fetchWithSafeRedirects(
 }
 
 /**
- * HTML scraper adapter implementing {@link ScraperPort}.
- *
- * Uses native `fetch` (Node 18+) and Mozilla Readability for article extraction,
- * falling back to linkedom DOM body-text extraction for non-article pages.
- * Never throws from public methods — any error returns null so the caller can fail-open.
+ * Mozilla Readability for articles, linkedom body-text fallback otherwise.
+ * Public methods never throw — errors return null (caller fails open).
  */
 export class HtmlScraper implements ScraperPort {
   constructor(private readonly config: HtmlScraperConfig) {}
 
-  /**
-   * Validates the *initial* URL against SSRF policy. Each redirect hop is
-   * re-validated inside {@link fetchWithSafeRedirects}.
-   */
+  /** SEC: validates initial URL. Redirect hops re-validated in {@link fetchWithSafeRedirects}. */
   private async validateUrl(url: string): Promise<boolean> {
     let parsed: URL;
     try {
@@ -278,7 +247,6 @@ export class HtmlScraper implements ScraperPort {
     return true;
   }
 
-  /** Scrapes the given URL, returning extracted content or null on failure. */
   async scrape(url: string, signal?: AbortSignal): Promise<ScrapedPage | null> {
     if (!url.trim()) return null;
 
