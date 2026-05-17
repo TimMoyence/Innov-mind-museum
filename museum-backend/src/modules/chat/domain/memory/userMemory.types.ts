@@ -1,4 +1,3 @@
-/** An artwork that was notably discussed across sessions. */
 export interface NotableArtwork {
   title: string;
   artist?: string;
@@ -7,7 +6,7 @@ export interface NotableArtwork {
   discussedAt: string;
 }
 
-/** Shape used for GDPR data export of user memory. */
+/** GDPR data export. */
 export interface UserMemoryExportData {
   preferredExpertise: string;
   favoritePeriods: string[];

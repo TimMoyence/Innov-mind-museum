@@ -16,7 +16,6 @@ import { jsonbValidator } from '@shared/db/jsonb-validator';
 import type { NotableArtwork } from './userMemory.types';
 import type { Relation } from 'typeorm';
 
-/** Persists cross-session memory for a user (expertise, favourite artists/periods, etc.). Mapped to `user_memories`. */
 @Entity({ name: 'user_memories' })
 export class UserMemory {
   @PrimaryGeneratedColumn('uuid')
@@ -73,16 +72,11 @@ export class UserMemory {
   sessionDurationP90Minutes!: number | null;
 
   /**
-   * Optimistic-lock version. Currently passive on the primary `upsert()` path —
-   * TypeORM only auto-increments `@VersionColumn` via `.save()` / `.update()`,
-   * not via the query-builder `.insert().orUpdate()` used by `UserMemoryRepository.upsert()`.
-   * Kept for two reasons:
-   *
-   * 1. **Defensive guard**: any future code path that switches to `.save()` will
-   *    gain optimistic-lock protection automatically without a schema change.
-   * 2. **Passive counter**: the column is seeded at `1` on first insert (via any
-   *    `.save()` path). Use `updatedAt` for cache invalidation on the UPSERT path
-   *    since `version` does not increment there.
+   * Optimistic-lock version. PASSIVE on primary `upsert()` path — TypeORM only
+   * auto-increments via `.save()`/`.update()`, NOT via `.insert().orUpdate()`
+   * used by `UserMemoryRepository.upsert()`. Use `updatedAt` for cache
+   * invalidation on UPSERT path. Kept so future `.save()` paths gain optimistic
+   * lock automatically without schema change.
    */
   @VersionColumn()
   version!: number;

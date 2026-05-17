@@ -1,44 +1,31 @@
-/** A single search result from a web search provider. */
 export interface SearchResult {
-  /** URL of the matching webpage. */
   url: string;
-  /** Title of the result. */
   title: string;
-  /** Snippet or excerpt from the page. */
   snippet: string;
 }
 
-/** Query input for web search. */
 export interface WebSearchQuery {
-  /** Search term. */
   query: string;
-  /** Maximum results to return (capped at 10). */
+  /** Capped at 10. */
   maxResults?: number;
-  /** Optional abort signal so callers can cancel an in-flight request when their timeout fires. */
+  /** So callers can cancel in-flight when their timeout fires. */
   signal?: AbortSignal;
 }
 
-/** Configuration for the web search service. */
 export interface WebSearchServiceConfig {
-  /** Timeout in milliseconds for search requests. */
   timeoutMs: number;
-  /** Cache time-to-live in seconds. */
   cacheTtlSeconds: number;
-  /** Max search results per query. */
   maxResults: number;
 }
 
-/** Port for web search providers (e.g., Tavily). */
 export interface WebSearchProvider {
-  /** Human-readable provider name for logging. */
   readonly name?: string;
-  /** Searches the web. Returns empty array if not found or on any error. */
+  /** Returns empty array if not found or on any error. */
   search(query: WebSearchQuery): Promise<SearchResult[]>;
 }
 
-/** Disabled stub that always returns empty array (fail-open). */
+/** Fail-open. */
 export class DisabledWebSearchProvider implements WebSearchProvider {
-  /** Returns empty array — web search is disabled. */
   // eslint-disable-next-line @typescript-eslint/require-await -- null-object pattern: interface requires async signature
   async search(): Promise<SearchResult[]> {
     return [];

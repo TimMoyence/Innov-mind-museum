@@ -16,7 +16,6 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { ChatSessionIntent, VisitContext } from '@modules/chat/domain/chat.types';
 import type { Relation } from 'typeorm';
 
-/** Represents a chat session between a visitor and the assistant. Mapped to `chat_sessions`. */
 @Entity({ name: 'chat_sessions' })
 export class ChatSession {
   @PrimaryGeneratedColumn('uuid')
@@ -66,9 +65,8 @@ export class ChatSession {
   updatedAt!: Date;
 
   /**
-   * Timestamp at which session messages were purged by the retention cron
-   * (GDPR data minimization). `null` means the session is live; once set the
-   * purge worker skips the row on subsequent ticks (idempotent).
+   * Set by retention cron (GDPR data minimization). `null` = live; once set,
+   * purge worker skips the row (idempotent).
    */
   @Column({ type: 'timestamptz', nullable: true, name: 'purged_at' })
   purgedAt?: Date | null;

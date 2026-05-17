@@ -1,10 +1,6 @@
 import { AppError } from '@shared/errors/app.error';
 
-/**
- * Thrown when an LLM semaphore acquirer waited longer than the configured
- * timeout before a slot freed up. Extends `AppError` so the global error
- * middleware returns 503.
- */
+/** Extends `AppError` → 503 via global error middleware. */
 export class SemaphoreTimeoutError extends AppError {
   constructor(timeoutMs: number) {
     super({

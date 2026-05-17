@@ -11,7 +11,6 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 
 import type { Relation } from 'typeorm';
 
-/** Represents an artwork identified from a user message (image or text). Mapped to `artwork_matches`. */
 @Entity({ name: 'artwork_matches' })
 export class ArtworkMatch {
   @PrimaryGeneratedColumn('uuid')

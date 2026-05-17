@@ -1,4 +1,4 @@
-/** A museum within range of the user's coordinates, with haversine distance. */
+/** Haversine distance. */
 export interface NearbyMuseum {
   name: string;
   distance: number;

@@ -8,7 +8,6 @@ import type { ResolvedLocation } from '@modules/chat/domain/location/resolvedLoc
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { KnowledgeRouterSource } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
-/** Input for the LLM orchestrator. */
 export interface OrchestratorInput {
   history: ChatMessage[];
   text?: string;
@@ -28,68 +27,52 @@ export interface OrchestratorInput {
   userMemoryBlock?: string;
   knowledgeBaseBlock?: string;
   webSearchBlock?: string;
-  /** Pre-verified local knowledge block from the extraction DB (highest priority enrichment). */
+  /** Pre-verified from extraction DB (highest priority enrichment). */
   localKnowledgeBlock?: string;
-  /** When true, prompts include accessibility-oriented audio description instructions. */
   audioDescriptionMode?: boolean;
-  /** When true, generate a shorter response (low-data mode). */
   lowDataMode?: boolean;
-  /** Session-level museum ID, used for cache key scoping. */
+  /** For cache key scoping. */
   museumId?: number | null;
   /**
-   * Authenticated user id of the requester. Used by the cache layer to
-   * scope user-specific entries (STRIDE I1 / R1 remediation). Null/absent
-   * disables user-scoped caching for this turn.
+   * Cache user-scope key (STRIDE I1 / R1). Null/absent disables user-scoped
+   * caching for this turn.
    */
   userId?: number | null;
-  /** Resolved geolocation context from per-message GPS coordinates. */
   resolvedLocation?: ResolvedLocation;
-  /**
-   * User's content preferences — which aspects of an artwork they want emphasized
-   * (history, technique, artist). Read-only hint for the LLM; does not filter content.
-   */
+  /** Read-only hint for the LLM; does not filter content. */
   contentPreferences?: readonly ContentPreference[];
   /**
-   * Session-level intent that controls which orchestration path is used.
-   * When 'walk', injects WALK_TOUR_GUIDE_SECTION and uses structured output
-   * to return up to 3 next-artwork suggestions alongside the answer.
+   * When 'walk', injects WALK_TOUR_GUIDE_SECTION and uses structured output to
+   * return up to 3 next-artwork suggestions alongside the answer.
    */
   intent?: ChatSessionIntent;
   /**
-   * C4.1 (T3.5) — Verified fact strings produced by `KnowledgeRouter.resolve()`
+   * C4.1 (T3.5) — Verified facts produced by `KnowledgeRouter.resolve()`
    * upstream in `PrepareMessagePipeline`. Threaded into `buildSectionMessages`
-   * by every orchestrator entry point (full-shot / streaming / walk) so the
-   * Spotlighting datamarking envelope (T2.3) wraps these facts as the SECOND
-   * SystemMessage. Empty / undefined → envelope NOT emitted (legacy path).
+   * by every orchestrator entry point. Spotlighting datamarking envelope (T2.3)
+   * wraps these as SECOND SystemMessage. Empty/undefined → envelope NOT emitted.
    */
   facts?: readonly string[];
   /**
-   * C4.1 (T3.5) — Provenance label propagated from
-   * `KnowledgeRouterResult.source`. `'none'` short-circuits the envelope
-   * (envelope NOT emitted even if `facts` is non-empty).
+   * C4.1 (T3.5) — Propagated from `KnowledgeRouterResult.source`. `'none'`
+   * short-circuits the envelope even if `facts` is non-empty.
    */
   factsSource?: KnowledgeRouterSource;
 }
 
-/** Result returned by {@link ChatOrchestrator.generate}. */
 export interface OrchestratorOutput {
-  /** LLM-generated response text. */
   text: string;
-  /** Structured metadata extracted from the LLM response (citations, diagnostics, etc.). */
   metadata: ChatAssistantMetadata;
   /**
-   * Next-artwork suggestions returned only when intent='walk'. Up to 3 short strings
-   * (each ≤60 chars), validated by walkAssistantOutputSchema before being set here.
-   * Undefined for all other intents.
+   * Returned only when intent='walk'. Up to 3 strings (each ≤60 chars),
+   * validated by walkAssistantOutputSchema. Undefined for other intents.
    */
   suggestions?: string[];
 }
 
-/** Port for LLM orchestration -- generates assistant responses from conversation context. */
 export interface ChatOrchestrator {
-  /** Generates an assistant response for the given input. */
   generate(input: OrchestratorInput): Promise<OrchestratorOutput>;
-  /** Generates a streaming assistant response, calling onChunk for each text token. Returns final output when complete. */
+  /** Calls onChunk for each text token. Returns final output when complete. */
   generateStream(
     input: OrchestratorInput,
     onChunk: (text: string) => void,
