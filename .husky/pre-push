@@ -181,8 +181,13 @@ if [ -n "$touched_be" ]; then
   echo "[pre-push]   $(echo "$touched_be" | wc -l | tr -d ' ') BE source file(s) changed — running related tests"
   gate16_log="$(mktemp)"
   # shellcheck disable=SC2086
+  # `set +e` is required: with `set -e` (line 31), a non-zero jest exit would
+  # short-circuit the script BEFORE flake detection runs. We need to capture
+  # status, dump output, then decide flake-vs-real ourselves.
+  set +e
   ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
   gate16_status=$?
+  set -e
   cat "$gate16_log"
   if [ $gate16_status -ne 0 ]; then
     # Flake detection: route test "socket hang up" is a known runInBand teardown race.
