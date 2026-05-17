@@ -252,12 +252,22 @@ const env: AppEnv = {
       }
     : undefined,
   // JUSTIFIED: Langfuse SaaS — keys not available in local dev. Explicit opt-in.
+  // Host resolution supports both Musaium internal naming (LANGFUSE_HOST) and
+  // upstream SDK convention (LANGFUSE_BASEURL / LANGFUSE_BASE_URL) so a copy-paste
+  // from Langfuse official docs does not silently fall back to localhost. Default
+  // points to cloud (fail-loud auth error in logs) rather than localhost:3002
+  // (fail-silent drop into the void). 2026-05-17 hotfix — see Langfuse activation
+  // post-mortem in this commit message.
   langfuse: toBoolean(process.env.LANGFUSE_ENABLED, false)
     ? {
         enabled: true,
         publicKey: toOptionalString(process.env.LANGFUSE_PUBLIC_KEY),
         secretKey: toOptionalString(process.env.LANGFUSE_SECRET_KEY),
-        host: process.env.LANGFUSE_HOST || 'http://localhost:3002',
+        host:
+          process.env.LANGFUSE_HOST ||
+          process.env.LANGFUSE_BASEURL ||
+          process.env.LANGFUSE_BASE_URL ||
+          'https://cloud.langfuse.com',
       }
     : undefined,
   // 2026-04-22: all feature flags retired — every feature is always-on.
