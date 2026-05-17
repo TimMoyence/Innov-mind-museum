@@ -103,6 +103,7 @@ if [[ "$CONFIGURATION" == "Debug" ]]; then
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoLocalization/ExpoLocalization_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoSystemUI/ExpoSystemUI_privacy.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RCT-Folly/RCT-Folly_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ReachabilitySwift/ReachabilitySwift.bundle"
@@ -111,8 +112,10 @@ if [[ "$CONFIGURATION" == "Debug" ]]; then
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/Sentry/Sentry.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/TrustKit/TrustKit.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/glog/glog_privacy.bundle"
 fi
 if [[ "$CONFIGURATION" == "Release" ]]; then
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle"
@@ -121,6 +124,7 @@ if [[ "$CONFIGURATION" == "Release" ]]; then
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoLocalization/ExpoLocalization_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ExpoSystemUI/ExpoSystemUI_privacy.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RCT-Folly/RCT-Folly_privacy.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/ReachabilitySwift/ReachabilitySwift.bundle"
@@ -129,6 +133,8 @@ if [[ "$CONFIGURATION" == "Release" ]]; then
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/Sentry/Sentry.bundle"
   install_resource "${PODS_CONFIGURATION_BUILD_DIR}/TrustKit/TrustKit.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle"
+  install_resource "${PODS_CONFIGURATION_BUILD_DIR}/glog/glog_privacy.bundle"
 fi
 
 mkdir -p "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"

@@ -12,7 +12,7 @@
     "git": "https://github.com/facebook/react-native.git",
     "tag": "v0.83.6"
   },
-  "source_files": "*.{h}",
+  "source_files": "*.{cpp,h}",
   "pod_target_xcconfig": {
     "HEADER_SEARCH_PATHS": ""
   },

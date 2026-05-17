@@ -16,7 +16,21 @@
   "source_files": "**/*.{h,mm,cpp}",
   "exclude_files": "RCTAppDependencyProvider.{h,mm}",
   "pod_target_xcconfig": {
-    "HEADER_SEARCH_PATHS": "\"$(PODS_ROOT)/ReactNativeDependencies\" \"${PODS_ROOT}/Headers/Public/ReactCodegen/react/renderer/components\" \"$(PODS_ROOT)/Headers/Private/React-Fabric\" \"$(PODS_ROOT)/Headers/Private/React-RCTFabric\" \"$(PODS_ROOT)/Headers/Private/Yoga\" \"$(PODS_TARGET_SRCROOT)\"",
+    "HEADER_SEARCH_PATHS": [
+      "\"$(PODS_ROOT)/ReactNativeDependencies\"",
+      "\"${PODS_ROOT}/Headers/Public/ReactCodegen/react/renderer/components\"",
+      "\"$(PODS_ROOT)/Headers/Private/React-Fabric\"",
+      "\"$(PODS_ROOT)/Headers/Private/React-RCTFabric\"",
+      "\"$(PODS_ROOT)/Headers/Private/Yoga\"",
+      "\"$(PODS_TARGET_SRCROOT)\"",
+      "$(PODS_ROOT)/glog",
+      "$(PODS_ROOT)/boost",
+      "$(PODS_ROOT)/DoubleConversion",
+      "$(PODS_ROOT)/fast_float/include",
+      "$(PODS_ROOT)/fmt/include",
+      "$(PODS_ROOT)/SocketRocket",
+      "$(PODS_ROOT)/RCT-Folly"
+    ],
     "FRAMEWORK_SEARCH_PATHS": [],
     "OTHER_CPLUSPLUSFLAGS": "$(inherited) -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -Wno-comma -Wno-shorten-64-to-32 -Wno-documentation"
   },
@@ -38,8 +52,14 @@
     "React-featureflags": [],
     "React-RCTAppDelegate": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": []
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   },
   "script_phases": {
     "name": "Generate Specs",

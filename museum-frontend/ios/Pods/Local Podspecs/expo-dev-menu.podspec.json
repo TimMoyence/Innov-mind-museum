@@ -33,7 +33,23 @@
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES",
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
-    "HEADER_SEARCH_PATHS": "\"${PODS_ROOT}/Headers/Private/React-Core\" \"$(PODS_CONFIGURATION_BUILD_DIR)/ExpoModulesCore/Swift Compatibility Header\" \"$(PODS_CONFIGURATION_BUILD_DIR)/expo-dev-menu-interface/Swift Compatibility Header\" \"$(PODS_ROOT)/Headers/Private/Yoga\"",
+    "HEADER_SEARCH_PATHS": [
+      "\"${PODS_ROOT}/Headers/Private/React-Core\"",
+      "\"$(PODS_CONFIGURATION_BUILD_DIR)/ExpoModulesCore/Swift",
+      "Compatibility",
+      "Header\"",
+      "\"$(PODS_CONFIGURATION_BUILD_DIR)/expo-dev-menu-interface/Swift",
+      "Compatibility",
+      "Header\"",
+      "\"$(PODS_ROOT)/Headers/Private/Yoga\"",
+      "$(PODS_ROOT)/glog",
+      "$(PODS_ROOT)/boost",
+      "$(PODS_ROOT)/DoubleConversion",
+      "$(PODS_ROOT)/fast_float/include",
+      "$(PODS_ROOT)/fmt/include",
+      "$(PODS_ROOT)/SocketRocket",
+      "$(PODS_ROOT)/RCT-Folly"
+    ],
     "OTHER_CPLUSPLUSFLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED=1 ",
     "OTHER_SWIFT_FLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED"
   },
@@ -58,8 +74,14 @@
     "React-jsi": [],
     "React-renderercss": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": []
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   },
   "source_files": "ios/**/*.{h,m,mm,swift}",
   "preserve_paths": "ios/**/*.{h,m,mm,swift}",
@@ -102,7 +124,7 @@
     {
       "name": "Main",
       "pod_target_xcconfig": {
-        "HEADER_SEARCH_PATHS": "\"${PODS_ROOT}/React-jsinspector\""
+        "HEADER_SEARCH_PATHS": "\"${PODS_CONFIGURATION_BUILD_DIR}/React-jsinspector/jsinspector_modern.framework/Headers\""
       },
       "dependencies": {
         "React-Core": [],

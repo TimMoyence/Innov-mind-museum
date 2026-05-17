@@ -26,7 +26,16 @@
   "pod_target_xcconfig": {
     "OTHER_CPLUSPLUSFLAGS": "$(inherited) -DRNS_GAMMA_ENABLED=1 -DRCT_NEW_ARCH_ENABLED=1 ",
     "DEFINES_MODULE": "YES",
-    "HEADER_SEARCH_PATHS": "\"$(PODS_ROOT)/Headers/Private/Yoga\"",
+    "HEADER_SEARCH_PATHS": [
+      "\"$(PODS_ROOT)/Headers/Private/Yoga\"",
+      "$(PODS_ROOT)/glog",
+      "$(PODS_ROOT)/boost",
+      "$(PODS_ROOT)/DoubleConversion",
+      "$(PODS_ROOT)/fast_float/include",
+      "$(PODS_ROOT)/fmt/include",
+      "$(PODS_ROOT)/SocketRocket",
+      "$(PODS_ROOT)/RCT-Folly"
+    ],
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
     "OTHER_SWIFT_FLAGS": "$(inherited) -DRCT_NEW_ARCH_ENABLED"
   },
@@ -51,8 +60,14 @@
     "React-jsi": [],
     "React-renderercss": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": [],
     "React-RCTImage": []
   },
   "subspecs": [

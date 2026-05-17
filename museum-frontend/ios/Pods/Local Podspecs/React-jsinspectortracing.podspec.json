@@ -12,10 +12,21 @@
     "git": "https://github.com/facebook/react-native.git",
     "tag": "v0.83.6"
   },
-  "source_files": "*.h",
+  "source_files": "*.{cpp,h}",
   "header_dir": "jsinspector-modern/tracing",
   "pod_target_xcconfig": {
-    "HEADER_SEARCH_PATHS": "\"${PODS_ROOT}/React-jsinspectornetwork\" \"${PODS_ROOT}/React-utils\" \"${PODS_ROOT}/React-utils/react/utils/platform/ios\"",
+    "HEADER_SEARCH_PATHS": [
+      "\"${PODS_CONFIGURATION_BUILD_DIR}/React-jsinspectornetwork/jsinspector_modernnetwork.framework/Headers\"",
+      "\"${PODS_CONFIGURATION_BUILD_DIR}/React-utils/React_utils.framework/Headers\"",
+      "\"${PODS_CONFIGURATION_BUILD_DIR}/React-utils/React_utils.framework/Headers/react/utils/platform/ios\"",
+      "$(PODS_ROOT)/glog",
+      "$(PODS_ROOT)/boost",
+      "$(PODS_ROOT)/DoubleConversion",
+      "$(PODS_ROOT)/fast_float/include",
+      "$(PODS_ROOT)/fmt/include",
+      "$(PODS_ROOT)/SocketRocket",
+      "$(PODS_ROOT)/RCT-Folly"
+    ],
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
     "DEFINES_MODULE": "YES"
   },
@@ -26,7 +37,13 @@
     "React-timing": [],
     "React-utils": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": []
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   }
 }
