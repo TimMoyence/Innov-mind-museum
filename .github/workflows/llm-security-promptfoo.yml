@@ -156,7 +156,7 @@ jobs:
             -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
           SID=$(curl --fail-with-body -sS -X POST http://localhost:3000/api/chat/sessions \
             -H "Authorization: Bearer $TOKEN" \
-            -H 'Content-Type: application/json' -d '{"locale":"en","museumMode":false}' | jq -r '.id')
+            -H 'Content-Type: application/json' -d '{"locale":"en","museumMode":false}' | jq -r '.session.id')
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
           echo "session=$SID" >> "$GITHUB_OUTPUT"
 
