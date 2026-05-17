@@ -1,0 +1,39 @@
+# Forbid direct `process.env.X` reads in museum-frontend code (.tsx files).
+# Sibling of `use-readenv-helper.yml` — see that file for full rationale.
+# Split into two rules because ast-grep treats `typescript` and `tsx` as
+# distinct grammars and each rule has a single `language:` directive.
+
+id: use-readenv-helper-tsx
+language: tsx
+severity: warning
+message: |
+  Direct `process.env.X` read detected. Wrap via the canonical helper
+  `readEnvString` from `@/shared/lib/env` to bridge local/CI typing
+  divergence (local: string | undefined ; CI: any → fires no-unsafe-*).
+
+note: |
+  Examples:
+    Bad : const url = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://...';
+    Good: import { readEnvString } from '@/shared/lib/env';
+          const url = readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL) ?? 'http://...';
+
+  Allowed bypass for env-enum parsers (custom validator returning a
+  narrowed union type, e.g. apiConfig.ts `normalizeApiEnvironment`):
+  the wrapper itself owes the same `typeof` narrowing.
+
+rule:
+  pattern: process.env.$NAME
+  not:
+    inside:
+      any:
+        - pattern: readEnvString($$$)
+        - pattern: normalizeApiEnvironment($$$)
+      stopBy: end
+
+files:
+  - 'museum-frontend/**/*.tsx'
+
+ignores:
+  - '**/*.test.tsx'
+  - '**/__tests__/**'
+  - '**/__mocks__/**'

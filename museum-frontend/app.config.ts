@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+import { readEnvString } from '@/shared/lib/env';
+
 type AppVariant = 'development' | 'preview' | 'production';
 type ApiEnvironment = 'staging' | 'production';
 
@@ -45,12 +47,6 @@ const resolveVariant = (env: RuntimeEnv): AppVariant => {
 
   return 'development';
 };
-
-// Narrows `unknown`/`any` to `string` without a cast — used on `process.env.X`
-// reads where the resolved type differs local (string | undefined) vs CI (any).
-// Returns undefined for non-strings so `?? 'default'` still applies.
-const typeofString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
 
 const nonEmpty = (value?: string): string | undefined => {
   if (!value) {
@@ -301,8 +297,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@sentry/react-native/expo',
         {
-          organization: typeofString(process.env.SENTRY_ORG) ?? 'asili-design',
-          project: typeofString(process.env.SENTRY_PROJECT) ?? 'apple-ios',
+          organization: readEnvString(process.env.SENTRY_ORG) ?? 'asili-design',
+          project: readEnvString(process.env.SENTRY_PROJECT) ?? 'apple-ios',
         },
       ],
       ['./plugins/withNetworkSecurity', { variant }],

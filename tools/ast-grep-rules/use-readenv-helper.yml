@@ -1,0 +1,59 @@
+# Forbid direct `process.env.X` reads in museum-frontend code (.ts files).
+# Audit 2026-05-16 (T1.9) unified 3 historical helpers (typeofString /
+# trimOrUndefined / readEnvString locaux) into a single canonical
+# `readEnvString` exported from `museum-frontend/shared/lib/env.ts`.
+#
+# Why: local Expo `metro-require` ambient types `process.env.X` as
+# `string | undefined`, but CI lint pass sees `any` → fires
+# `@typescript-eslint/no-unsafe-*`. Wrapping the read in `readEnvString`
+# is the only solution that survives BOTH gates AND `eslint --fix`.
+#
+# The rule fires only on RAW reads — `readEnvString(process.env.X)` and
+# `normalizeApiEnvironment(process.env.X)` (the env-enum validator in
+# apiConfig.ts) are explicitly allowed via `not.inside`.
+#
+# Companion rule for .tsx files: use-readenv-helper-tsx.yml
+# See CLAUDE.md § "Pièges connus" → bullet `process.env.X`.
+
+id: use-readenv-helper
+language: typescript
+severity: warning
+message: |
+  Direct `process.env.X` read detected. Wrap via the canonical helper
+  `readEnvString` from `@/shared/lib/env` to bridge local/CI typing
+  divergence (local: string | undefined ; CI: any → fires no-unsafe-*).
+
+note: |
+  Examples:
+    Bad : const url = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://...';
+    Good: import { readEnvString } from '@/shared/lib/env';
+          const url = readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL) ?? 'http://...';
+
+  Allowed bypass for env-enum parsers (custom validator returning a
+  narrowed union type, e.g. apiConfig.ts `normalizeApiEnvironment`):
+  the wrapper itself owes the same `typeof` narrowing.
+
+rule:
+  pattern: process.env.$NAME
+  not:
+    inside:
+      any:
+        - pattern: readEnvString($$$)
+        - pattern: normalizeApiEnvironment($$$)
+      stopBy: end
+
+files:
+  - 'museum-frontend/**/*.ts'
+
+ignores:
+  - '**/*.test.ts'
+  - '**/__tests__/**'
+  - '**/__mocks__/**'
+  - 'museum-frontend/jest.config.js'
+  - 'museum-frontend/jest.setup.js'
+  # Definition site of the canonical helper.
+  - 'museum-frontend/shared/lib/env.ts'
+  # T1.9 deferred — the chat-ux refactor branch owns this file. Once that
+  # PR lands, migrate `isChatStreamingEnabled` to `readEnvString(...)` and
+  # remove this ignore. Tracked in TECH_DEBT.
+  - 'museum-frontend/features/chat/infrastructure/chatApi/_internals.ts'

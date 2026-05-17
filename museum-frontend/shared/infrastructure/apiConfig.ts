@@ -1,5 +1,7 @@
 import Constants from 'expo-constants';
 
+import { readEnvString } from '@/shared/lib/env';
+
 /** Target API environment the app is configured to communicate with. */
 type ApiEnvironment = 'staging' | 'production' | 'custom';
 
@@ -37,15 +39,6 @@ const ensureLeadingSlash = (path: string): string => {
   return path.startsWith('/') ? path : `/${path}`;
 };
 
-const trimOrUndefined = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : undefined;
-};
-
 const normalizeBaseUrl = (value: string): string => {
   return value.replace(/\/+$/, '');
 };
@@ -56,10 +49,10 @@ const readExtra = (): Record<string, unknown> => {
 
 const resolveBuildVariant = (): BuildVariant => {
   const extra = readExtra();
-  const fromExtra = trimOrUndefined(extra.APP_VARIANT);
+  const fromExtra = readEnvString(extra.APP_VARIANT);
   const raw: string = (
-    trimOrUndefined(process.env.APP_VARIANT) ??
-    trimOrUndefined(process.env.EAS_BUILD_PROFILE) ??
+    readEnvString(process.env.APP_VARIANT) ??
+    readEnvString(process.env.EAS_BUILD_PROFILE) ??
     fromExtra ??
     'development'
   ).toLowerCase();
@@ -81,15 +74,15 @@ const resolveConfiguredBaseUrls = (): {
 } => {
   const extra = readExtra();
   const explicit =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL) ?? trimOrUndefined(extra.API_BASE_URL);
+    readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL) ?? readEnvString(extra.API_BASE_URL);
 
   const staging =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ??
-    trimOrUndefined(extra.API_BASE_URL_STAGING);
+    readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ??
+    readEnvString(extra.API_BASE_URL_STAGING);
 
   const production =
-    trimOrUndefined(process.env.EXPO_PUBLIC_API_BASE_URL_PROD) ??
-    trimOrUndefined(extra.API_BASE_URL_PRODUCTION);
+    readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL_PROD) ??
+    readEnvString(extra.API_BASE_URL_PRODUCTION);
 
   return {
     explicit: explicit ? normalizeBaseUrl(explicit) : undefined,
@@ -140,7 +133,7 @@ const getDefaultApiEnvironment = (): ApiEnvironment => {
  */
 const resolveRuntimeApiBaseUrl = (environment: ApiEnvironment, customUrl?: string): string => {
   const configured = resolveConfiguredBaseUrls();
-  const custom = trimOrUndefined(customUrl);
+  const custom = readEnvString(customUrl);
 
   if (environment === 'custom') {
     return normalizeBaseUrl(custom ?? configured.fallback);
