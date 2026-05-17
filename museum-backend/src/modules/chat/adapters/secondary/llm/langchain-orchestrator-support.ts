@@ -16,15 +16,13 @@ import type { LlmSectionName } from '@modules/chat/useCase/llm/llm-sections';
 import type { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import type { z } from 'zod';
 
-/** Fallback response when LLM produces no usable text after all retries/parsing. */
 export const EMPTY_RESPONSE_FALLBACK =
   'I can help with artworks, artist context, and guided museum visits.';
 
-/** Fallback response when no LLM API key is configured. */
 export const MISSING_LLM_KEY_FALLBACK =
   'Musaium is running without an LLM key. Configure provider keys to enable live AI responses.';
 
-/** Minimal contract for LLM models — satisfied by LangChain BaseChatModel and test fakes. */
+/** Minimal contract — satisfied by LangChain BaseChatModel and test fakes. */
 export interface ChatModel {
   invoke(messages: unknown, options?: { signal?: AbortSignal }): Promise<{ content: unknown }>;
   stream(
@@ -32,15 +30,11 @@ export interface ChatModel {
     options?: { signal?: AbortSignal },
   ): Promise<AsyncIterable<{ content: unknown }>>;
   /**
-   * Optional structured-output adapter. Satisfied by LangChain BaseChatModel's
-   * `withStructuredOutput<T>(schema, opts?)`. Used by the walk-intent path to
-   * receive `{ answer, suggestions }` validated by walkAssistantOutputSchema.
-   * Test fakes implement this only when exercising the structured path.
+   * Used by walk-intent for `{ answer, suggestions }` validated by walkAssistantOutputSchema.
    *
-   * Method-shorthand syntax is intentional: TS strictFunctionTypes leaves
-   * method parameters bivariant, so LangChain's stricter `BaseLanguageModelInput`
-   * input type remains assignable to our `unknown` parameter here without an
-   * explicit cast in `toModel()`.
+   * Method-shorthand syntax intentional: TS strictFunctionTypes leaves method params
+   * bivariant, so LangChain's stricter `BaseLanguageModelInput` stays assignable to
+   * our `unknown` parameter here without an explicit cast in `toModel()`.
    */
   withStructuredOutput?<T>(
     schema: z.ZodType<T>,
@@ -50,7 +44,6 @@ export interface ChatModel {
   };
 }
 
-/** Parameters for a single section LLM invocation. */
 export interface InvokeSectionInput {
   model: ChatModel;
   sectionMessages: unknown;
@@ -59,12 +52,9 @@ export interface InvokeSectionInput {
   timeoutMs: number;
   payloadBytes: number;
   /**
-   * Optional structured-output schema. When provided AND the model exposes
-   * `withStructuredOutput`, the invocation is routed through the adapter and
-   * the parsed object is re-serialised as `{ answer, ...metadata }` so the
-   * existing legacy-JSON parser branch consumes it transparently. Mismatches
-   * (no `withStructuredOutput`) gracefully fall back to the plain-text
-   * `[META]` path.
+   * When provided AND model exposes `withStructuredOutput`, routes through adapter and
+   * re-serialises as `{ answer, ...metadata }` so legacy-JSON parser branch consumes
+   * transparently. Falls back to plain-text `[META]` path if missing.
    */
   outputSchema?: {
     schema: z.ZodType;
@@ -72,7 +62,6 @@ export interface InvokeSectionInput {
   };
 }
 
-/** Parameters for assembling the final orchestrator response. */
 export interface AssembleResponseInput {
   input: OrchestratorInput;
   sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'];
@@ -82,16 +71,12 @@ export interface AssembleResponseInput {
   startedAt: number;
 }
 
-/**
- *
- */
 export interface LangChainChatOrchestratorDeps {
   model?: ChatModel | null;
   semaphore?: Semaphore;
   circuitBreaker?: LLMCircuitBreaker;
 }
 
-/** Creates the appropriate LangChain chat model from environment config. */
 export const toModel = (): ChatModel | null => {
   if (env.llm.provider === 'google' && env.llm.googleApiKey) {
     return new ChatGoogleGenerativeAI({
@@ -125,7 +110,6 @@ export const toModel = (): ChatModel | null => {
   return null;
 };
 
-/** Checks whether an LLM error is transient and safe to retry. */
 export const isRetryableError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -189,5 +173,4 @@ const buildLoggingHooks = (): SectionRunnerHooks => ({
   },
 });
 
-/** Pre-built logging hooks for the section runner. */
 export const sectionRunnerHooks = buildLoggingHooks();

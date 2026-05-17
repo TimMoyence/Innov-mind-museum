@@ -3,9 +3,6 @@ import { logger } from '@shared/logger/logger';
 
 export { CircuitOpenError };
 
-/**
- *
- */
 type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitBreakerOptions {
@@ -14,7 +11,6 @@ interface CircuitBreakerOptions {
   openDurationMs?: number;
 }
 
-/** Three-state circuit breaker (CLOSED → OPEN → HALF_OPEN) for LLM API resilience. */
 export class LLMCircuitBreaker {
   private readonly failureThreshold: number;
   private readonly windowMs: number;
@@ -25,10 +21,9 @@ export class LLMCircuitBreaker {
   private openedAt: number | null = null;
 
   constructor(options?: CircuitBreakerOptions) {
-    // Env-var overrides allow chaos e2e tests to tune the breaker to short windows
-    // for fast deterministic tests (LLM_CB_FAILURE_THRESHOLD=3, LLM_CB_WINDOW_MS=1000,
-    // LLM_CB_OPEN_DURATION_MS=500). Production deployments leave these unset so the
-    // safe defaults (5 / 60 000 / 30 000) apply unchanged.
+    // Env-var overrides let chaos e2e tune short windows (LLM_CB_FAILURE_THRESHOLD=3,
+    // LLM_CB_WINDOW_MS=1000, LLM_CB_OPEN_DURATION_MS=500). Prod leaves unset → defaults
+    // 5 / 60000 / 30000.
     this.failureThreshold =
       options?.failureThreshold ?? Number(process.env.LLM_CB_FAILURE_THRESHOLD ?? 5);
     this.windowMs = options?.windowMs ?? Number(process.env.LLM_CB_WINDOW_MS ?? 60_000);
@@ -36,7 +31,7 @@ export class LLMCircuitBreaker {
       options?.openDurationMs ?? Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 30_000);
   }
 
-  /** Returns current state, transitioning from OPEN to HALF_OPEN when the cooldown expires. */
+  /** Transitions OPEN → HALF_OPEN when cooldown expires (side-effecting getter). */
   get state(): CircuitState {
     if (this.currentState === 'OPEN' && this.openedAt !== null) {
       const elapsed = Date.now() - this.openedAt;
@@ -49,7 +44,7 @@ export class LLMCircuitBreaker {
     return this.currentState;
   }
 
-  /** Wraps an async call: throws CircuitOpenError if OPEN, records success/failure otherwise. */
+  /** Throws CircuitOpenError if OPEN; records success/failure otherwise. */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.state === 'OPEN') {
       throw new CircuitOpenError();
@@ -65,7 +60,7 @@ export class LLMCircuitBreaker {
     }
   }
 
-  /** Records a successful call; transitions HALF_OPEN → CLOSED. */
+  /** HALF_OPEN → CLOSED on success. */
   recordSuccess(): void {
     if (this.currentState === 'HALF_OPEN') {
       this.currentState = 'CLOSED';
@@ -74,7 +69,7 @@ export class LLMCircuitBreaker {
     }
   }
 
-  /** Records a failure; trips to OPEN if threshold exceeded in the sliding window. */
+  /** Trips to OPEN if threshold exceeded in the sliding window. */
   recordFailure(): void {
     const now = Date.now();
     this.failures.push(now);
@@ -90,7 +85,6 @@ export class LLMCircuitBreaker {
     }
   }
 
-  /** Returns a snapshot of the breaker's internal state for observability. */
   getState(): { state: CircuitState; failureCount: number; lastFailureAt: Date | null } {
     return {
       state: this.state, // triggers OPEN → HALF_OPEN transition if cooldown expired
@@ -100,7 +94,6 @@ export class LLMCircuitBreaker {
     };
   }
 
-  /** Resets the breaker to CLOSED with no recorded failures. */
   reset(): void {
     this.currentState = 'CLOSED';
     this.failures = [];

@@ -41,10 +41,8 @@ import type { DataSource, EntityManager, Repository } from 'typeorm';
 const messageCursor = new CursorCodec(z.object({ createdAt: z.string(), id: z.string() }));
 const sessionCursor = new CursorCodec(z.object({ updatedAt: z.string(), id: z.string() }));
 
-/** Maximum number of items per page for cursor-based pagination queries. */
 const MAX_PAGE_SIZE = 50;
 
-/** Applies optional session update fields to a session entity. */
 const applySessionUpdates = (
   session: ChatSession,
   updates: PersistMessageInput['sessionUpdates'],
@@ -56,14 +54,12 @@ const applySessionUpdates = (
   if (updates.locale !== undefined) session.locale = updates.locale;
 };
 
-/** TypeORM/PG implementation of {@link ChatRepository}. */
 export class TypeOrmChatRepository implements ChatRepository {
   private readonly sessionRepo: Repository<ChatSession>;
   private readonly messageRepo: Repository<ChatMessage>;
   private readonly reportRepo: Repository<MessageReport>;
   private readonly feedbackRepo: Repository<MessageFeedback>;
 
-  /** Creates a new TypeORM chat repository. \@param dataSource - Active TypeORM DataSource used to obtain entity repositories. */
   constructor(dataSource: DataSource) {
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.messageRepo = dataSource.getRepository(ChatMessage);
@@ -71,12 +67,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     this.feedbackRepo = dataSource.getRepository(MessageFeedback);
   }
 
-  /**
-   * Creates a new chat session.
-   *
-   * @param input - Session creation parameters (locale, museumMode, intent, userId).
-   * @returns The persisted ChatSession entity.
-   */
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
     const session = this.sessionRepo.create({
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
@@ -94,12 +84,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     return await this.sessionRepo.save(session);
   }
 
-  /**
-   * Retrieves a chat session by its ID, including the owning user relation.
-   *
-   * @param sessionId - UUID of the session.
-   * @returns The session or `null` if not found.
-   */
   async getSessionById(sessionId: string): Promise<ChatSession | null> {
     return await this.sessionRepo.findOne({
       where: { id: sessionId },
@@ -109,12 +93,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  /**
-   * Retrieves a message together with its session and owning user.
-   *
-   * @param messageId - UUID of the message.
-   * @returns The message with session ownership info, or `null` if not found.
-   */
   async getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null> {
     const message = await this.messageRepo.findOne({
       where: { id: messageId },
@@ -135,12 +113,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
-  /**
-   * Deletes a session only if it contains no messages (transactional).
-   *
-   * @param sessionId - UUID of the session to delete.
-   * @returns `true` if the session was deleted, `false` otherwise.
-   */
+  /** Transactional — deletes only if message count is zero. */
   async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
     return await this.sessionRepo.manager.transaction(async (transactionManager) => {
       const sessionRepository = transactionManager.getRepository(ChatSession);
@@ -168,12 +141,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  /**
-   * Persists a chat message, optional artwork match, and session updates within the
-   * provided TypeORM {@link EntityManager}. Extracted from {@link persistMessage}
-   * so multi-message atomic operations (e.g. {@link persistBlockedExchange}) can
-   * share the same transaction scope.
-   */
+  /** Shared by persistMessage + persistBlockedExchange so they can use one tx. */
   private async persistMessageWithinTx(
     transactionManager: EntityManager,
     input: PersistMessageInput,
@@ -215,28 +183,13 @@ export class TypeOrmChatRepository implements ChatRepository {
     return saved;
   }
 
-  /**
-   * Persists a chat message, optional artwork match, and session updates in a single transaction.
-   *
-   * @param input - Message content, role, optional artwork match, and session update fields.
-   * @returns The persisted ChatMessage entity.
-   */
   async persistMessage(input: PersistMessageInput): Promise<ChatMessage> {
     return await this.messageRepo.manager.transaction((tx) =>
       this.persistMessageWithinTx(tx, input),
     );
   }
 
-  /**
-   * Atomically persists the blocked user message and the assistant refusal in one
-   * transaction. If either write fails both rows are rolled back — no orphan user
-   * row can survive on its own.
-   *
-   * @param input - User message and refusal message to persist atomically.
-   * @param input.userMessage - The user's blocked attempt to persist.
-   * @param input.refusal - The assistant refusal message to persist.
-   * @returns The two persisted rows.
-   */
+  /** Atomic — both rolled back on failure (no orphan user row). */
   async persistBlockedExchange(input: {
     userMessage: PersistMessageInput;
     refusal: PersistMessageInput;
@@ -248,15 +201,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  /**
-   * Lists messages for a session with cursor-based pagination (newest first, returned in chronological order).
-   *
-   * @param root0 - Session ID, limit, and optional cursor.
-   * @param root0.sessionId - UUID of the session.
-   * @param root0.limit - Maximum number of messages to return.
-   * @param root0.cursor - Optional pagination cursor.
-   * @returns A page of messages with `hasMore` flag and `nextCursor`.
-   */
+  /** Cursor pagination, newest first; returned reversed to chronological order. */
   async listSessionMessages({
     sessionId,
     limit,
@@ -302,13 +247,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
-  /**
-   * Returns the most recent messages for a session in chronological order (used for LLM history context).
-   *
-   * @param sessionId - UUID of the session.
-   * @param limit - Maximum number of messages (clamped to 1..MAX_PAGE_SIZE).
-   * @returns Array of messages ordered oldest-first.
-   */
+  /** Most-recent N messages, returned oldest-first (LLM context). limit clamped to MAX_PAGE_SIZE. */
   async listSessionHistory(sessionId: string, limit: number): Promise<ChatMessage[]> {
     const rows = await this.messageRepo
       .createQueryBuilder('message')
@@ -322,15 +261,7 @@ export class TypeOrmChatRepository implements ChatRepository {
     return [...rows].reverse();
   }
 
-  /**
-   * Lists chat sessions for a user with cursor-based pagination, including message count and latest-message preview.
-   *
-   * @param root0 - User ID, limit, and optional cursor.
-   * @param root0.userId - Owning user ID.
-   * @param root0.limit - Maximum number of sessions to return.
-   * @param root0.cursor - Optional pagination cursor.
-   * @returns A page of sessions with previews, message counts, `hasMore` flag, and `nextCursor`.
-   */
+  /** Cursor pagination — sessions + message counts + latest-message preview. */
   async listSessions({ userId, limit, cursor }: ListSessionsParams): Promise<ChatSessionsPage> {
     const effectiveLimit = Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
     const queryBuilder = this.sessionRepo
@@ -389,13 +320,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
-  /**
-   * Checks whether a report already exists for a given message and user.
-   *
-   * @param messageId - UUID of the message.
-   * @param userId - Numeric user ID.
-   * @returns `true` if a report exists.
-   */
   async hasMessageReport(messageId: string, userId: number): Promise<boolean> {
     const count = await this.reportRepo.count({
       where: { message: { id: messageId }, userId },
@@ -403,11 +327,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     return count > 0;
   }
 
-  /**
-   * Persists a user report against a message.
-   *
-   * @param input - Message ID, user ID, reason, and optional comment.
-   */
   async persistMessageReport(input: PersistMessageReportInput): Promise<void> {
     const entity = this.reportRepo.create({
       message: { id: input.messageId },
@@ -419,17 +338,11 @@ export class TypeOrmChatRepository implements ChatRepository {
     await this.reportRepo.save(entity);
   }
 
-  /**
-   * Exports all chat sessions and messages for a user (GDPR data portability).
-   *
-   * @param userId - Numeric user ID.
-   * @returns Structured export payload containing all sessions and their messages.
-   */
+  /** GDPR data portability (Art. 20). */
   async exportUserData(userId: number): Promise<UserChatExportData> {
     return await exportUserChatData(this.sessionRepo, userId);
   }
 
-  /** Inserts or updates a feedback entry for a message/user pair. */
   async upsertMessageFeedback(
     messageId: string,
     userId: number,
@@ -438,12 +351,10 @@ export class TypeOrmChatRepository implements ChatRepository {
     await upsertMessageFeedback(this.feedbackRepo, messageId, userId, value);
   }
 
-  /** Deletes a feedback entry for a message/user pair. */
   async deleteMessageFeedback(messageId: string, userId: number): Promise<void> {
     await deleteMessageFeedback(this.feedbackRepo, messageId, userId);
   }
 
-  /** Retrieves the current feedback for a message by a user. */
   async getMessageFeedback(
     messageId: string,
     userId: number,
@@ -451,7 +362,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     return await getMessageFeedback(this.feedbackRepo, messageId, userId);
   }
 
-  /** Persists a TTS audio reference for a message (assistant only). */
   async updateMessageAudio(
     messageId: string,
     input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
@@ -459,16 +369,13 @@ export class TypeOrmChatRepository implements ChatRepository {
     await updateMessageAudio(this.messageRepo, messageId, input);
   }
 
-  /** Clears the cached TTS audio reference for a message. */
   async clearMessageAudio(messageId: string): Promise<void> {
     await clearMessageAudio(this.messageRepo, messageId);
   }
 
   /**
-   * Returns every non-null `imageRef` tied to messages whose session belongs to the user.
-   * Used by the GDPR right-to-erasure cleanup to reach keys that predate the
-   * user-scoped S3 path format. MUST be invoked BEFORE the user row is deleted
-   * (CASCADE wipes messages/sessions).
+   * GDPR right-to-erasure — returns imageRefs predating user-scoped S3 paths.
+   * MUST be called BEFORE user delete (CASCADE wipes messages/sessions).
    */
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
     return await findLegacyImageRefsByUserId(this.messageRepo, userId);

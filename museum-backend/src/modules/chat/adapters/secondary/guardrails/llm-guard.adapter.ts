@@ -22,14 +22,8 @@ import type {
 } from '@modules/chat/domain/ports/guardrail-provider.port';
 
 /**
- * Wire-level response expected from the LLM Guard sidecar.
- *
- * The POC sidecar (python-llm-guard FastAPI wrapper) exposes:
- *   POST {baseUrl}/scan/prompt  → ScanResponse
- *   POST {baseUrl}/scan/output  → ScanResponse
- *
- * The field names mirror LLM Guard's own naming so the adapter stays a thin
- * translator — any shape drift in the sidecar is isolated to this file.
+ * Sidecar wire (POST {baseUrl}/scan/prompt | /scan/output).
+ * Field names mirror LLM Guard's — shape drift isolated to this file.
  */
 interface ScanResponse {
   is_valid: boolean;
@@ -41,43 +35,30 @@ interface ScanResponse {
 interface LLMGuardAdapterOptions {
   baseUrl: string;
   timeoutMs: number;
-  /** Optional fetch override — enables unit testing without an HTTP server. */
   fetchFn?: typeof fetch;
   /**
-   * Optional circuit breaker — defaults to a fresh `GuardrailCircuitBreaker`
-   * reading its tunables from the `LLM_GUARD_CB_*` env vars. The composition
-   * root (`chat-module.ts`) injects a single shared instance per process so
-   * the state survives across the input + output legs of one request.
+   * Shared per-process instance (composition root injects); state must survive
+   * across input + output legs of one request. Defaults to a fresh one reading
+   * `LLM_GUARD_CB_*` env vars.
    */
   circuitBreaker?: GuardrailCircuitBreaker;
   /**
-   * Optional in-flight concurrency semaphore — caps concurrent /scan calls
-   * to prevent surge-amplified latency on the sidecar (ADR-047). Defaults
-   * to an unbounded sentinel (1e6, 1e6) — composition root injects the
-   * env-configured instance, but tests can keep the default.
+   * ADR-047 — caps concurrent /scan calls; overflow → fail-CLOSED, no fan-out
+   * to a saturated sidecar. Default sentinel (1e6/1e6 = unbounded) — prod
+   * injects env-bounded.
    */
   semaphore?: ScanInflightSemaphore;
   /**
-   * Optional chaos injection rate in [0, 1]. Each `scan()` call samples a
-   * uniform random number; if it falls below `chaosRate`, the call is
-   * replaced by a simulated `AbortError` BEFORE leaving the adapter. The
-   * normal timeout/error path then absorbs the failure → fail-CLOSED (R1)
-   * preserved. Defaults to 0 (inactive).
+   * Chaos rate ∈ [0, 1]. When sample < rate, replaces the call with a
+   * simulated AbortError BEFORE the fetch — exercises the SAME fail-CLOSED
+   * path as real outages (not a parallel branch). Default 0 (inactive).
    */
   chaosRate?: number;
-  /**
-   * Optional RNG override — defaults to `Math.random`. Injectable so unit
-   * tests can pin the sampled value to 0 (always-inject) or 1 (never-inject)
-   * without flakiness.
-   */
+  /** RNG override (default Math.random); pin to 0/1 in tests. */
   rng?: () => number;
 }
 
-/**
- * Defensive [0, 1] clamp for the constructor-injected `chaosRate`. The env
- * parser already clamps via `clampUnitInterval`; this re-clamp guards against
- * direct constructor calls (tests) that bypass env.
- */
+/** Defensive — env parser clamps via clampUnitInterval, this guards direct ctor. */
 const clampUnit = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
   if (value <= 0) return 0;
@@ -85,11 +66,7 @@ const clampUnit = (value: number): number => {
   return value;
 };
 
-/**
- * Lookup table: substring in the sidecar reason → canonical block reason.
- * Order matters — first match wins, so narrower/higher-priority patterns
- * (jailbreak, PII) come before broader ones (inject).
- */
+/** Order matters — first match wins, narrower (jailbreak/pii) before broader (inject). */
 const REASON_PATTERNS: readonly [substring: string, mapped: GuardrailBlockReason][] = [
   ['jailbreak', 'jailbreak'],
   ['dan', 'jailbreak'],
@@ -107,12 +84,8 @@ const REASON_PATTERNS: readonly [substring: string, mapped: GuardrailBlockReason
 ];
 
 /**
- * Maps LLM Guard's free-form reason string to our finite block reason union.
- *
- * Unknown reasons collapse to 'prompt_injection' (safest default) rather than
- * 'error' — the sidecar did respond, it just flagged a category we don't track
- * explicitly. 'error' is reserved for fail-CLOSED cases where we could NOT
- * determine safety.
+ * Unknown → 'prompt_injection' (sidecar did respond — just unmapped category).
+ * 'error' is reserved for fail-CLOSED where safety could NOT be determined.
  */
 const mapReason = (raw: string | undefined): GuardrailBlockReason => {
   if (!raw) return 'prompt_injection';
@@ -126,24 +99,19 @@ const mapReason = (raw: string | undefined): GuardrailBlockReason => {
 type ScanOutcome = 'success' | 'fail_closed' | 'timeout' | 'breaker_skip' | 'overflow';
 
 /**
- * Secondary adapter: wraps the LLM Guard Python sidecar behind our hexagonal
- * `GuardrailProvider` port (ADR-048). Every network operation honours the
- * configured timeout and fails CLOSED on any error (network, HTTP ≥ 400,
- * malformed JSON, breaker open, queue overflow) — see ADR-047 for the
- * no-fail-OPEN contract.
+ * GuardrailProvider port over the LLM Guard Python sidecar (ADR-048).
+ * Fail-CLOSED on every error path (network, HTTP ≥ 400, malformed JSON,
+ * breaker open, queue overflow) per ADR-047 — no-fail-OPEN contract.
  *
- * Activation: `env.guardrails.llmGuardUrl` set in chat-module.ts (ADR-015 amendment 2026-05-14 retired the master candidate flag).
+ * Activation: `env.guardrails.llmGuardUrl` set in chat-module.ts (ADR-015
+ * amendment 2026-05-14 retired the master candidate flag).
  */
 export class LLMGuardAdapter implements GuardrailProvider {
   readonly name = 'llm-guard';
 
   /**
-   * Behavioural version stamp. Phase 0 hardcodes the upstream pip pin
-   * (`llm-guard>=0.3.14,<0.4` per `ops/llm-guard-sidecar/requirements.txt`;
-   * the 0.3.16 patch revision tracks the deployed wheel at the time of
-   * writing). Phase 1 will read this dynamically from a sidecar
-   * `GET /version` endpoint once the sidecar exposes one — ADR-048 §"Health
-   * probe" + ADR-049 (TBD) on schema evolution.
+   * Phase 0 — hardcoded pin (matches `ops/llm-guard-sidecar/requirements.txt`
+   * `llm-guard>=0.3.14,<0.4`). Phase 1 → dynamic from sidecar `GET /version`.
    */
   readonly version = 'llm-guard-0.3.16';
 
@@ -152,14 +120,12 @@ export class LLMGuardAdapter implements GuardrailProvider {
   private readonly fetchFn: typeof fetch;
   private readonly circuitBreaker: GuardrailCircuitBreaker;
   private readonly semaphore: ScanInflightSemaphore;
-  /** Phase 1 chaos primitive — see ADR-048 + GUARDRAIL_CHAOS_RATE env. */
+  /** ADR-048 + GUARDRAIL_CHAOS_RATE env. */
   private readonly chaosRate: number;
-  /** Injectable RNG for chaos sampling (defaults to Math.random in production). */
   private readonly rng: () => number;
 
-  // ── Local metrics counters (cumulative since process start). Shadow the
-  // global Prometheus registry so `metrics()` exposes a self-contained view
-  // without coupling to `prom-client` internals. See ADR-048 §"Metrics".
+  // Local metrics — cumulative since process start. Shadow Prometheus registry
+  // so metrics() decouples from prom-client internals (ADR-048 §"Metrics").
   private _metricsRequests = 0;
   private _metricsBlocks = 0;
   private _metricsErrors = 0;
@@ -171,27 +137,23 @@ export class LLMGuardAdapter implements GuardrailProvider {
     this.timeoutMs = options.timeoutMs;
     this.fetchFn = options.fetchFn ?? fetch;
     this.circuitBreaker = options.circuitBreaker ?? new GuardrailCircuitBreaker();
-    // Sentinel default (effectively unbounded) so existing unit tests that
-    // don't care about concurrency don't have to construct one. Production
-    // composition root in chat-module.ts always injects an env-bounded one.
+    // Sentinel default (unbounded) for tests; prod injects env-bounded.
     this.semaphore = options.semaphore ?? new ScanInflightSemaphore(1_000_000, 1_000_000);
-    // Chaos primitive — defaults inactive. Re-clamps defensively against
-    // direct constructor calls that bypass the env-side `clampUnitInterval`.
     this.chaosRate = clampUnit(options.chaosRate ?? 0);
     this.rng = options.rng ?? Math.random;
   }
 
-  /** Snapshot of the breaker state for `/api/health` (R8). */
+  /** Breaker snapshot for `/api/health` (R8). */
   getCircuitBreakerState(): GuardrailCircuitBreakerSnapshot {
     return this.circuitBreaker.getState();
   }
 
-  /** Scans user input against the sidecar's prompt endpoint. Fail-CLOSED on error. */
+  /** Fail-CLOSED on error. */
   async checkInput(input: GuardrailInput): Promise<GuardrailVerdict> {
     return await this.scan('/scan/prompt', { prompt: input.text, locale: input.locale });
   }
 
-  /** Scans LLM output against the sidecar's output endpoint. Fail-CLOSED on error. */
+  /** Fail-CLOSED on error. */
   async checkOutput(output: GuardrailOutput): Promise<GuardrailVerdict> {
     return await this.scan('/scan/output', {
       prompt: output.userInput ?? '',
@@ -201,19 +163,9 @@ export class LLMGuardAdapter implements GuardrailProvider {
   }
 
   /**
-   * Deep health probe — exercises `/scan/prompt` with a known-benign payload
-   * and reports the observed latency + breaker state. Distinct from a TCP-up
-   * check: a sidecar that accepts connections but blocks every scan as
-   * "service_unavailable" registers as `degraded` here, not `up`.
-   *
-   * Status mapping:
-   *   - Breaker OPEN                 → `down`     (regardless of probe outcome)
-   *   - Breaker HALF_OPEN            → `degraded` (recovery in progress)
-   *   - Breaker CLOSED + probe OK    → `up`
-   *   - Breaker CLOSED + probe fail  → `degraded` (transient — breaker would
-   *                                                eventually trip if it persists)
-   *
-   * Never throws. Caller (Phase 1 `/api/health/deep`) gets a verdict every time.
+   * Deep probe — runs `/scan/prompt` with benign payload. Never throws.
+   * Status: OPEN → down; HALF_OPEN → degraded; CLOSED + probe ok → up;
+   * CLOSED + probe fail → degraded.
    */
   async health(): Promise<ProviderHealth> {
     const lastCheckedAt = new Date().toISOString();
@@ -233,8 +185,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
     let probeDetail: string | undefined;
     try {
       const verdict = await this.scan('/scan/prompt', { prompt: 'health-probe' });
-      // A `service_unavailable` verdict means the scan path itself failed
-      // (timeout, semaphore overflow, breaker skip just before the read).
+      // `service_unavailable` = scan-path failure (timeout/overflow/breaker race).
       probeOk = verdict.allow || verdict.reason !== 'service_unavailable';
       if (!probeOk) probeDetail = `probe_returned_${verdict.reason ?? 'unknown'}`;
     } catch (error) {
@@ -257,11 +208,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
     return { status: 'up', latencyMs, lastCheckedAt };
   }
 
-  /**
-   * Local metrics snapshot. Cumulative-since-process-start. Counters are
-   * updated synchronously inside `scan()` so the snapshot is always
-   * consistent with the most recently completed call.
-   */
+  /** Cumulative since process start; updated synchronously inside scan(). */
   metrics(): ProviderMetricsSnapshot {
     return {
       requests: this._metricsRequests,
@@ -275,7 +222,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
   private async scan(path: string, body: Record<string, unknown>): Promise<GuardrailVerdict> {
     this._metricsRequests += 1;
 
-    // Fail-CLOSED contract preserved during breaker OPEN window — see ADR-047.
+    // ADR-047 fail-CLOSED during breaker OPEN window.
     if (!this.circuitBreaker.canAttempt()) {
       logger.warn('llm_guard_circuit_breaker_skip', {
         state: this.circuitBreaker.state,
@@ -288,8 +235,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
       return this.failClosed('service_unavailable');
     }
 
-    // Concurrency cap. Overflow → fail-CLOSED (ADR-047), no fan-out to a
-    // saturated sidecar.
+    // ADR-047 — overflow → fail-CLOSED, no fan-out to saturated sidecar.
     try {
       await this.semaphore.acquire();
     } catch (e) {
@@ -324,11 +270,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
     }
   }
 
-  /**
-   * Returns `true` exactly when the chaos sampler fires for this attempt.
-   * `chaosRate === 0` short-circuits the RNG so the production hot path
-   * stays a single comparison.
-   */
+  /** Hot path short-circuits RNG when chaosRate=0. */
   private shouldChaosInject(): boolean {
     if (this.chaosRate <= 0) return false;
     return this.rng() < this.chaosRate;
@@ -343,11 +285,8 @@ export class LLMGuardAdapter implements GuardrailProvider {
       controller.abort();
     }, this.timeoutMs);
 
-    // Phase 1 chaos hook — simulate upstream failure BEFORE the fetch so the
-    // existing timeout/error path is exercised end-to-end. The abort is
-    // observably identical to a real timeout, which is the point: chaos
-    // drills validate the fail-CLOSED contract using the same code that
-    // absorbs real outages, not a parallel branch.
+    // Chaos hook — abort BEFORE fetch so chaos drills exercise the SAME
+    // fail-CLOSED path as real outages (observably identical timeout).
     if (this.shouldChaosInject()) {
       llmGuardChaosInjectionsTotal.inc();
       logger.warn('llm_guard_chaos_injected', { path, chaosRate: this.chaosRate });
@@ -391,12 +330,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
     }
   }
 
-  /**
-   * Builds a fail-CLOSED verdict stamped with this adapter's identity so the
-   * audit log + downstream aggregator can attribute the decision. Centralised
-   * so the `version: 'v1'` literal and `providedBy` stamp stay consistent
-   * across every return site.
-   */
+  /** Centralised so `version: 'v1'` + providedBy stamp stay consistent. */
   private failClosed(reason: 'error' | 'service_unavailable'): GuardrailVerdict {
     return {
       version: 'v1',
@@ -406,7 +340,6 @@ export class LLMGuardAdapter implements GuardrailProvider {
     };
   }
 
-  /** Build the `GuardrailVerdict` from a well-formed sidecar payload. */
   private verdictFromSidecar(raw: Partial<ScanResponse>): GuardrailVerdict {
     const stamp = { name: this.name, version: this.version };
     if (raw.is_valid) {

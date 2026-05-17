@@ -12,7 +12,7 @@ import type {
   SignedAudioReadUrl,
 } from '@modules/chat/domain/ports/audio-storage.port';
 
-/** Configuration alias — TTS audio reuses the same S3 backend as images. */
+/** TTS audio reuses the same S3 backend as images. */
 export type S3AudioStorageConfig = S3ImageStorageConfig;
 
 const AUDIO_PREFIX = 'chat-audios';
@@ -25,21 +25,17 @@ const extensionByContentType: Record<string, string> = {
   'audio/webm': 'webm',
 };
 
-/** Parses an `s3://...` audio reference, returning the object key or null. */
 export const parseS3AudioRef = (ref: string): { key: string } | null => {
   const match = /^s3:\/\/(.+)$/.exec(ref);
   if (!match?.[1]) return null;
   return { key: match[1] };
 };
 
-/** Builds an `s3://<key>` reference. */
 export const buildS3AudioRef = (key: string): string => `s3://${key}`;
 
-/** S3-compatible implementation of {@link AudioStorage}. */
 export class S3CompatibleAudioStorage implements AudioStorage {
   constructor(private readonly config: S3AudioStorageConfig) {}
 
-  /** Uploads audio buffer to S3 and returns an `s3://<key>` storage reference. */
   async save(input: SaveAudioInput): Promise<string> {
     return await startSpan({ name: 'audio.upload.s3', op: 'storage.upload' }, async () => {
       const extension = extensionByContentType[input.contentType] ?? 'mp3';
@@ -75,7 +71,6 @@ export class S3CompatibleAudioStorage implements AudioStorage {
     });
   }
 
-  /** Returns a time-limited signed URL for the given `s3://` reference, or null if ref is invalid. */
   // eslint-disable-next-line @typescript-eslint/require-await -- buildS3PresignedReadUrl is synchronous; async required by AudioStorage interface
   async getSignedReadUrl(ref: string, ttlSeconds?: number): Promise<SignedAudioReadUrl | null> {
     const parsed = parseS3AudioRef(ref);
@@ -87,7 +82,7 @@ export class S3CompatibleAudioStorage implements AudioStorage {
     });
   }
 
-  /** Deletes the object referenced by an `s3://` ref; no-op if ref is invalid or not found. */
+  /** No-op if ref is invalid or not found. */
   async deleteByRef(ref: string): Promise<void> {
     const parsed = parseS3AudioRef(ref);
     if (!parsed) return;

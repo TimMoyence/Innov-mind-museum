@@ -10,11 +10,7 @@ import { env } from '@src/config/env';
 
 import type { Request, RequestHandler } from 'express';
 
-/**
- * Disables the global response timeout for multipart uploads (image messages).
- * Must be placed BEFORE multer so the timeout doesn't fire during a slow upload.
- * Uses a finite ceiling (LLM budget + 10 s headroom) instead of 0 (unlimited).
- */
+/** MUST mount BEFORE multer; uses finite ceiling (budget + 10s), not 0/unlimited. */
 export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
   if (req.is('multipart/form-data')) {
     res.setTimeout(env.llm.totalBudgetMs + 10_000);
@@ -22,7 +18,6 @@ export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
   next();
 };
 
-/** Parsed visitor context extracted from request body. */
 interface ParsedContext {
   location?: string;
   museumMode?: boolean;
@@ -30,19 +25,10 @@ interface ParsedContext {
   locale?: string;
 }
 
-/**
- * Default MIME types accepted by the image uploader when no explicit allowlist
- * is configured via `env.upload.allowedMimeTypes`. Matches the formats enforced
- * by `ImageProcessingService.assertMimeType` (jpeg / png / webp), which is what
- * the downstream LLM vision pipeline can process.
- */
+/** Matches ImageProcessingService.assertMimeType (LLM vision pipeline). */
 const DEFAULT_IMAGE_MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
-/**
- * Default MIME types accepted by the audio uploader. Covers the common mobile
- * recorder outputs (iOS m4a, Android 3gp/webm, generic mp4/mpeg/wav) aligned
- * with `env.upload.allowedAudioMimeTypes`.
- */
+/** iOS m4a, Android 3gp/webm, generic mp4/mpeg/wav. */
 const DEFAULT_AUDIO_MIME_TYPES: readonly string[] = [
   'audio/mp4',
   'audio/mpeg',
@@ -64,14 +50,10 @@ const resolveAllowedAudioMimeTypes = (): Set<string> => {
 };
 
 /**
- * Multer fileFilter that rejects an upload *before* it is buffered in memory
- * when the declared Content-Type is not in the allowlist. This is a pre-flight
- * guard to cap memory pressure under concurrent upload load (SEC-M2); the
- * authoritative validation (magic bytes + size) still runs in
- * `ImageProcessingService` / audio ingestion for defense-in-depth.
- *
- * Note: the allowlist is resolved lazily on the first call (then memoized) so
- * that test suites can mock `@src/config/env` after the module has loaded.
+ * SEC-M2 pre-flight — reject by declared Content-Type BEFORE buffering to cap
+ * memory under upload bursts. Authoritative magic-byte + size validation runs
+ * in ImageProcessingService / audio ingestion (defense-in-depth).
+ * Allowlist memoised lazily so tests can mock env post-module-load.
  */
 let cachedAllowedImageMimeTypes: Set<string> | null = null;
 let cachedAllowedAudioMimeTypes: Set<string> | null = null;
@@ -96,7 +78,6 @@ const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, 
   cb(badRequest(`Unsupported audio content type: ${file.mimetype || 'unknown'}`));
 };
 
-/** Multer instance for image uploads (single file, size-limited, MIME-filtered). */
 export const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -106,7 +87,6 @@ export const upload = multer({
   fileFilter: imageFileFilter,
 });
 
-/** Multer instance for audio uploads (single file, size-limited, MIME-filtered). */
 export const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -118,7 +98,6 @@ export const audioUpload = multer({
 
 const MAX_CONTEXT_LENGTH = 2000;
 
-/** Throws 400 if the serialised context exceeds the size cap. */
 const enforceContextSizeLimit = (input: unknown): void => {
   let len = 0;
   if (typeof input === 'string') len = input.length;
@@ -128,7 +107,6 @@ const enforceContextSizeLimit = (input: unknown): void => {
   }
 };
 
-/** Parses a JSON string or passes through a non-string value, validating it is an object. */
 const parseRawContextObject = (input: unknown): Record<string, unknown> => {
   let raw = input;
   if (typeof input === 'string') {
@@ -146,14 +124,13 @@ const parseRawContextObject = (input: unknown): Record<string, unknown> => {
   return raw as Record<string, unknown>;
 };
 
-/** Validates and extracts context.location. */
 const parseLocation = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw badRequest('context.location must be a string');
   return value;
 };
 
-/** Validates and extracts context.museumMode (boolean or boolean-string). */
+/** Accepts boolean or boolean-string ('true'/'false'). */
 const parseMuseumMode = (value: unknown): boolean | undefined => {
   if (value === undefined) return undefined;
   if (typeof value === 'boolean') return value;
@@ -165,7 +142,6 @@ const parseMuseumMode = (value: unknown): boolean | undefined => {
   throw badRequest('context.museumMode must be a boolean');
 };
 
-/** Validates and extracts context.guideLevel. */
 const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw badRequest('context.guideLevel must be a string');
@@ -175,7 +151,7 @@ const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefine
   return value as 'beginner' | 'intermediate' | 'expert';
 };
 
-/** Validates and extracts context.locale (length + charset cap; whitelist happens downstream via resolveLocale). */
+/** Length + charset cap only; whitelist downstream via resolveLocale. */
 const parseLocale = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw badRequest('context.locale must be a string');
@@ -186,7 +162,6 @@ const parseLocale = (value: unknown): string | undefined => {
   return value;
 };
 
-/** Parses and validates the optional context object from the request body. */
 export const parseContext = (input: unknown): ParsedContext | undefined => {
   if (input === undefined || input === null || input === '') {
     return undefined;
@@ -212,7 +187,6 @@ export const parseContext = (input: unknown): ParsedContext | undefined => {
   return context;
 };
 
-/** Determines if an image value is a URL or base64. */
 export const toImageSource = (imageValue: string): 'url' | 'base64' => {
   if (imageValue.startsWith('http://') || imageValue.startsWith('https://')) {
     return 'url';
@@ -220,7 +194,6 @@ export const toImageSource = (imageValue: string): 'url' | 'base64' => {
   return 'base64';
 };
 
-/** Resolves the base URL from the incoming request. */
 export const resolveRequestBaseUrl = (req: {
   protocol?: string;
   get?: (name: string) => string | undefined;
@@ -235,7 +208,6 @@ export const resolveRequestBaseUrl = (req: {
   return `${protocol}://${host}`;
 };
 
-/** Content type mapping by file extension. */
 export const contentTypeByExtension: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -243,12 +215,11 @@ export const contentTypeByExtension: Record<string, string> = {
   webp: 'image/webp',
 };
 
-/** Extracts the authenticated user from the request. */
 export const getRequestUser = (req: Request): { id?: number } | undefined => {
   return req.user;
 };
 
-/** Builds a signed read URL for a chat message image (S3 or local). */
+/** Returns S3-signed URL if `imageRef` is S3, else local signed URL. */
 export const buildImageReadUrl = (params: {
   baseUrl: string | null;
   messageId: string;

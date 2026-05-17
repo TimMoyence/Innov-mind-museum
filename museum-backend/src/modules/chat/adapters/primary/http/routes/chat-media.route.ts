@@ -33,10 +33,8 @@ import { env } from '@src/config/env';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 
-/** Shared error message — keeps sonarjs/no-duplicate-string happy. */
 const MESSAGE_ID_REQUIRED = 'messageId param is required';
 
-/** Handler factory: POST /sessions/:id/audio */
 function createAudioHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -75,7 +73,6 @@ function createAudioHandler(chatService: ChatService) {
   };
 }
 
-/** Handler factory: GET /messages/:messageId/image */
 function createImageServeHandler(chatService: ChatService) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const messageId = parseStringParam(req, 'messageId');
@@ -92,8 +89,7 @@ function createImageServeHandler(chatService: ChatService) {
       throw badRequest(verification.reason);
     }
 
-    // HMAC + TTL already verified above — authorization is delegated to the signed token.
-    // Use the bypass path so we don't re-enforce session ownership against an anonymous req.
+    // Auth delegated to signed token (HMAC+TTL verified above); bypass session ownership check.
     const image = await chatService.getMessageImageRefBySignedToken(messageId);
     if (isS3ImageRef(image.imageRef)) {
       const signed = buildImageReadUrl({
@@ -136,7 +132,6 @@ function createImageServeHandler(chatService: ChatService) {
   };
 }
 
-/** Handler factory: POST /messages/:messageId/report */
 function createReportHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -158,7 +153,6 @@ function createReportHandler(chatService: ChatService) {
   };
 }
 
-/** Handler factory: POST /messages/:messageId/feedback */
 function createFeedbackHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -175,7 +169,6 @@ function createFeedbackHandler(chatService: ChatService) {
   };
 }
 
-/** Handler factory: POST /messages/:messageId/image-url */
 function createImageUrlHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -196,7 +189,6 @@ function createImageUrlHandler(chatService: ChatService) {
   };
 }
 
-/** Handler factory: POST /messages/:messageId/tts */
 function createTtsHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -216,13 +208,6 @@ function createTtsHandler(chatService: ChatService) {
   };
 }
 
-/**
- * Creates the media sub-router (audio upload, image serving, report, TTS).
- *
- * @param chatService - Injected chat application service.
- * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
- * @returns Router handling audio, image, report, and TTS endpoints.
- */
 export const createMediaRouter = (
   chatService: ChatService,
   uploadAdmission?: RequestHandler,
@@ -248,10 +233,7 @@ export const createMediaRouter = (
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
-    // P0-4 (audit 2026-05-12 §P0-U-2) — kill-switch + per-user daily USD cap.
-    // Audio turn triggers STT + LLM + TTS, all paid OpenAI calls. Placed AFTER
-    // rate limiters so volume control runs first (cheaper failure path) and
-    // BEFORE upload admission so a denied call does not occupy a multipart slot.
+    // P0-4 — gates STT+LLM+TTS USD spend; ordering: AFTER rate-limit (cheap fail), BEFORE admission (don't take slot).
     llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
@@ -280,9 +262,7 @@ export const createMediaRouter = (
     isAuthenticated,
     userLimiter,
     sessionLimiter,
-    // P0-4 (audit 2026-05-12 §P0-U-2) — paid OpenAI TTS call. Same chokepoint
-    // as the audio handler so the kill-switch globally gates every paid
-    // outbound LLM/audio call on this router.
+    // P0-4 — TTS paid call; same chokepoint as audio handler.
     llmCostGuard,
     createTtsHandler(chatService),
   );

@@ -11,7 +11,7 @@ import {
 } from './s3-path-utils';
 import { sha256Hex, toAmzDate, buildCanonicalHeaders, signString } from './s3-signing';
 
-/** Configuration for an S3-compatible storage backend (images and audio). */
+/** Shared across image and audio adapters. */
 export interface S3ImageStorageConfig {
   endpoint: string;
   region: string;
@@ -25,7 +25,7 @@ export interface S3ImageStorageConfig {
   requestTimeoutMs?: number;
 }
 
-/** Sorts and encodes query-string pairs per the AWS SigV4 canonical format. */
+/** AWS SigV4 canonical format. */
 export const canonicalQueryString = (query: [string, string][]): string => {
   return [...query]
     .sort((a, b) => {
@@ -36,7 +36,6 @@ export const canonicalQueryString = (query: [string, string][]): string => {
     .join('&');
 };
 
-/** Performs a low-level HTTP request and returns status + body. */
 const httpRequest = async (params: {
   method: string;
   url: URL;
@@ -89,7 +88,7 @@ const httpRequest = async (params: {
   });
 };
 
-/** Performs an HTTP PUT and throws if the response is not 2xx. */
+/** Throws if response is not 2xx. */
 export const httpPut = async (params: {
   url: URL;
   headers: Record<string, string>;
@@ -109,7 +108,6 @@ export const httpPut = async (params: {
   }
 };
 
-/** Builds SigV4-signed headers and URL for an S3 PUT request. */
 export const buildS3SignedHeadersForPut = (params: {
   config: S3ImageStorageConfig;
   key: string;
@@ -178,7 +176,6 @@ export const buildS3SignedHeadersForPut = (params: {
   };
 };
 
-/** Builds SigV4-signed headers for an arbitrary S3 request. */
 export const buildS3SignedHeaders = (params: {
   config: S3ImageStorageConfig;
   method: string;
@@ -258,7 +255,6 @@ const extractXmlValue = (xml: string, tag: string): string | undefined => {
   return match?.[1];
 };
 
-/** Lists S3 objects by key prefix using the ListObjectsV2 API. */
 export const listObjectsByPrefix = async (
   config: S3ImageStorageConfig,
   prefix: string,
@@ -314,7 +310,6 @@ export const listObjectsByPrefix = async (
   return { keys, nextToken };
 };
 
-/** Deletes a batch of S3 objects using the DeleteObjects (multi-delete) API. */
 export const deleteObjectsBatch = async (
   config: S3ImageStorageConfig,
   keys: string[],
@@ -373,10 +368,7 @@ export const deleteObjectsBatch = async (
   }
 };
 
-/**
- * Generates an AWS SigV4 pre-signed GET URL for an S3 object.
- * Shared by image and audio storage adapters — extracted here to avoid adapter→adapter coupling.
- */
+/** Shared by image + audio adapters — extracted to avoid adapter→adapter coupling. */
 export const buildS3PresignedReadUrl = (params: {
   key: string;
   config: S3ImageStorageConfig;

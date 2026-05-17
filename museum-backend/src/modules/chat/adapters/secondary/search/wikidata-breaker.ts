@@ -20,20 +20,16 @@ import type {
 export type { BreakerState, BreakerStateName };
 
 /**
- * Tuning knobs for the Wikidata SPARQL/API circuit breaker.
- *
- * C5 doctrine pré-launch V1 — no `enabled` flag : rollback = `git revert` of
- * the Step 2.3 wiring, not a runtime toggle. Every field is a tuning value
- * (timeouts, thresholds, capacity), never a switch.
+ * C5 doctrine pré-launch V1 — no `enabled` flag: rollback = `git revert` of Step 2.3
+ * wiring, not a runtime toggle. Every field is a tuning value, never a switch.
  */
 export interface WikidataBreakerConfig {
-  /** Per-call timeout (ms) before opossum rejects with timeout error. */
   timeoutMs: number;
-  /** Error % within the rolling window required to open the breaker. */
+  /** Error % in rolling window required to open the breaker. */
   errorThresholdPercentage: number;
-  /** Cooldown (ms) before transitioning OPEN → HALF_OPEN. */
+  /** Cooldown before OPEN → HALF_OPEN. */
   resetTimeoutMs: number;
-  /** Minimum number of calls in the rolling window before % is evaluated. */
+  /** Minimum calls in rolling window before % is evaluated. */
   volumeThreshold: number;
   /** Maximum concurrent in-flight calls (bulkhead). */
   capacity: number;
@@ -42,57 +38,40 @@ export interface WikidataBreakerConfig {
 type LookupFn = (query: KnowledgeBaseQuery) => Promise<ArtworkFacts | null>;
 
 /**
- * Stable taxonomy for the `outcome` Prom label on
- * `wikidata_sparql_requests_total`. Kept small (5) to bound the active series
- * count surfaced via `/metrics`. Adding a variant requires updating the
- * Grafana dashboard + alerting rules together (`infra/grafana/`).
+ * Bounded to 5 to cap `/metrics` series. Adding a variant requires Grafana dashboard
+ * + alerting rules update (`infra/grafana/`).
  */
 type SparqlOutcome = 'success' | 'error' | 'timeout' | 'circuit_open' | 'rate_limit';
 
-/** Opossum 9.x timeout error message. Used to dedupe `failure` follow-ups. */
+/** Opossum 9.x timeout error message — used to dedupe `failure` follow-ups. */
 const OPOSSUM_TIMEOUT_RE = /^Timed out after \d+ms$/;
 
 const STATE_LABEL_VALUES = ['closed', 'open', 'half_open'] as const;
 type CircuitStateLabel = (typeof STATE_LABEL_VALUES)[number];
 
 /**
- * Decorator wrapping {@link WikidataClient.lookupOrThrow} with an
- * [opossum](https://nodeshift.dev/opossum) circuit breaker. Implements
- * {@link KnowledgeBaseProvider} so it is a drop-in replacement for the
- * raw client at the {@link KnowledgeBaseService} injection point.
+ * Opossum circuit breaker around `WikidataClient.lookupOrThrow`. Drop-in
+ * `KnowledgeBaseProvider` for `KnowledgeBaseService`.
  *
- * Semantics :
- * - {@link WikidataTransientError} thrown from the inner client (network /
- *   408 / 429 / 5xx) counts toward `errorThresholdPercentage`.
- * - Legitimate `null` returns (no match, 4xx-non-retryable, invalid QID)
- *   resolve as success and do NOT trip the breaker.
- * - When OPEN, the opossum `fallback` returns `null` without invoking
- *   the inner client — fail-open preserved (ADR-035 contract).
+ * Semantics: `WikidataTransientError` (network/408/429/5xx) counts toward
+ * `errorThresholdPercentage`. Legitimate `null` (no match, 4xx-non-retryable,
+ * invalid QID) resolves as success, does NOT trip. When OPEN, opossum `fallback`
+ * returns `null` without invoking inner — fail-open preserved (ADR-035).
  *
- * Observability (C5 Phase 6.2) — opossum events are bridged to the
- * Prometheus surface declared in `shared/observability/prometheus-metrics.ts` :
- * - `success(_, latencyMs)` → `wikidata_sparql_requests_total{outcome="success"}`
- *   + `wikidata_sparql_request_duration_seconds` observation.
- * - `failure(err, latencyMs)` → classify : opossum's own timeout error
- *   (`/Timed out after \d+ms/`) becomes `outcome="timeout"` ; a wrapped
- *   429 transient becomes `outcome="rate_limit"` ; everything else is
- *   `outcome="error"`. Duration is observed for all three.
- * - `reject()` → `outcome="circuit_open"` (no duration — the action never
- *   ran). Fires whenever the breaker is OPEN or capacity is exceeded.
- * - `open` / `halfOpen` / `close` → set the corresponding label on
- *   `wikidata_sparql_circuit_state` to 1 and the others to 0.
- * - Every metric write is wrapped in try/catch ; a prom-client throw
- *   never propagates into the chat path (fail-open per UFR-013, same
- *   pattern as `chat-phase-timer.ts:159-165`).
+ * Observability (C5 Phase 6.2) bridges opossum events to Prometheus:
+ * - success/timeout/rate_limit/error → `wikidata_sparql_requests_total{outcome}` +
+ *   `wikidata_sparql_request_duration_seconds`.
+ * - reject → `outcome="circuit_open"` (no duration, action never ran).
+ * - open/halfOpen/close → set `wikidata_sparql_circuit_state` label.
+ * - Every metric write try/catched — prom-client throw never propagates to chat
+ *   path (fail-open UFR-013, same as `chat-phase-timer.ts:159-165`).
  */
 export class WikidataBreakerClient implements KnowledgeBaseProvider {
   private readonly breaker: CircuitBreaker<[KnowledgeBaseQuery], ArtworkFacts | null>;
   private openSince?: number;
   /**
-   * Sentinel marking the latest call that has already been counted as
-   * `outcome="timeout"`. Opossum emits both `timeout` and `failure` for the
-   * same call ; the `failure` listener consults this flag and exits early
-   * when set, avoiding double-count.
+   * Opossum emits BOTH `timeout` AND `failure` for the same call — `failure`
+   * listener consults this flag and exits early to avoid double-count.
    */
   private timeoutDedupe = false;
 
@@ -138,23 +117,20 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
     this.breaker.on('timeout', () => {
       this.timeoutDedupe = true;
       this.recordOutcome('timeout');
-      // @types/opossum 8.x types the timeout listener with only `(err: Error)`,
-      // but the opossum 9.x runtime also passes latency as the 2nd arg. We
-      // approximate via the configured `timeoutMs` (precise enough — timeout
-      // is the bound, actual latency is ≤ that bound by construction).
+      // @types/opossum 8.x types listener as `(err)` only; opossum 9.x runtime also
+      // passes latency. Approximate via configured `timeoutMs` (bound, actual ≤).
       this.observeDuration(config.timeoutMs);
     });
 
     this.breaker.on('failure', (err, latencyMs) => {
       if (this.timeoutDedupe) {
-        // 'timeout' fired for this same call ; opossum follows up with
+        // 'timeout' already fired for this call; opossum follows with
         // 'failure(Error("Timed out after Nms"))'. Already counted.
         this.timeoutDedupe = false;
         return;
       }
-      // Defensive secondary check : if the breaker's per-call timeout fires
-      // without our handler observing it first (e.g. a future opossum quirk),
-      // the error message still pattern-matches.
+      // Defensive: if per-call timeout fires without 'timeout' observed first
+      // (future opossum quirk), error message still pattern-matches.
       if (err instanceof Error && OPOSSUM_TIMEOUT_RE.test(err.message)) {
         this.recordOutcome('timeout');
         this.observeDuration(latencyMs);
@@ -171,17 +147,15 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
     });
   }
 
-  /** Delegates to the inner client through the breaker ; returns `null` when OPEN. */
+  /** Returns `null` when OPEN. */
   async lookup(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     const result = await this.breaker.fire(query);
     return result ?? null;
   }
 
   /**
-   * Snapshot of the breaker state for the downstream cascade (Step 5.1).
-   * `openSince` is set when the breaker enters OPEN and cleared on CLOSE ;
-   * during HALF_OPEN it carries the original OPEN timestamp so the
-   * `LOCAL_DUMP_FALLBACK_AFTER_MS` soak window remains anchored.
+   * `openSince` set on OPEN, cleared on CLOSE; during HALF_OPEN carries original
+   * OPEN timestamp so `LOCAL_DUMP_FALLBACK_AFTER_MS` soak window stays anchored.
    */
   getState(): BreakerState {
     if (this.breaker.opened) return { name: 'OPEN', openSince: this.openSince };

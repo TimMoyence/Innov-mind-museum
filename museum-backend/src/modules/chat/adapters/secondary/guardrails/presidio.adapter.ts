@@ -10,21 +10,10 @@ import type {
 } from '@modules/chat/domain/ports/guardrail-provider.port';
 
 /**
- * Default Presidio entity types covered for Musaium. Curated to align with
- * the OWASP LLM02 (Sensitive Information Disclosure) gap analysis in
- * `team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-owasp-llm-top10.md`:
- *
- *   - Email, phone, IP, IBAN, credit card, SSN, passport, crypto wallet —
- *     financial/contact PII the current `RegexPiiSanitizer` does not cover.
- *   - PERSON, LOCATION — soft PII flagged for redaction with a *lower*
- *     score threshold by default (artist names, museum cities are valid art
- *     content, NOT PII at high confidence). The composition root will tune
- *     thresholds per the Phase 1 shadow-mode bake.
- *   - NRP — nationality / religious / political group references, listed
- *     for OWASP LLM06 (Excessive Agency / discrimination signals) breadth.
- *
- * Conservative defaults; ADR-051 documents the criteria for adjusting this
- * list pre-promotion to active.
+ * OWASP LLM02 (Sensitive Information Disclosure) coverage. PERSON/LOCATION
+ * are soft PII (artist names / museum cities are valid art content) → tune
+ * threshold lower. NRP covers OWASP LLM06 discrimination signals.
+ * Conservative defaults — ADR-051 governs pre-promotion adjustments.
  */
 const DEFAULT_ENTITY_TYPES: readonly string[] = [
   'EMAIL_ADDRESS',
@@ -40,12 +29,7 @@ const DEFAULT_ENTITY_TYPES: readonly string[] = [
   'NRP',
 ];
 
-/**
- * Wire-level entity entry returned by `POST /analyze`. Mirrors the Presidio
- * `RecognizerResult.to_dict()` shape (see
- * https://microsoft.github.io/presidio/api/analyzer_python/ + the Flask
- * REST wrapper).
- */
+/** Presidio `RecognizerResult.to_dict()` shape. */
 interface PresidioAnalyzeEntity {
   entity_type: string;
   start: number;
@@ -53,73 +37,44 @@ interface PresidioAnalyzeEntity {
   score: number;
 }
 
-/**
- * Wire-level response from `POST /anonymize`. The Flask wrapper returns a
- * JSON object with a `text` field carrying the redacted output, plus an
- * `items` array describing the operations applied. Only `text` is required
- * by this adapter — `items` is ignored at the port boundary.
- */
+/** Flask wrapper response — only `text` is used at this boundary. */
 interface PresidioAnonymizeResponse {
   text: string;
   items?: unknown[];
 }
 
-/** Options accepted by {@link MicrosoftPresidioAdapter}. */
 interface MicrosoftPresidioAdapterOptions {
-  /** Base URL of the Presidio analyzer + anonymizer service(s). */
   baseUrl: string;
-  /** Hard request timeout (ms). Fail-CLOSED on elapsed. */
+  /** Hard request timeout in ms. Fail-CLOSED on elapsed. */
   timeoutMs: number;
-  /** Optional fetch override — enables unit testing without an HTTP server. */
   fetchFn?: typeof fetch;
-  /**
-   * Per-entity score threshold passed to Presidio's analyzer. Entities
-   * whose `score` is below this are NOT returned (analyzer-side filter).
-   * Defaults to 0.5 per Presidio's own documentation default; tunable via
-   * env so operators can dial sensitivity per-tenant in Phase 2.
-   */
+  /** Analyzer-side filter (Presidio default 0.5). */
   scoreThreshold?: number;
   /**
-   * High-confidence block threshold applied locally to the analyzer
-   * response. Any entity with `score >= blockThreshold` flips the verdict
-   * to `{ allow: false, reason: 'pii' }`. Lower-confidence hits trigger
-   * redaction via `/anonymize` and pass through as `{ allow: true,
-   * redactedText }`.
+   * Local block cutoff. score >= blockThreshold → block (reason='pii');
+   * else → /anonymize redact + allow + redactedText.
    */
   blockThreshold?: number;
-  /** Entity types Presidio is asked to detect. Defaults to {@link DEFAULT_ENTITY_TYPES}. */
   allowedEntityTypes?: readonly string[];
 }
 
 /**
- * Secondary adapter wrapping a Microsoft Presidio analyzer + anonymizer
- * sidecar pair behind the ADR-048 `GuardrailProvider` port.
+ * Microsoft Presidio analyzer + anonymizer behind GuardrailProvider port
+ * (ADR-048). Coverage extends OWASP LLM02 beyond regex (email/phone only) to
+ * PERSON, LOCATION, CREDIT_CARD, IBAN, IP, SSN, passport, crypto, NRP.
  *
- * Coverage: PII NER detection (OWASP LLM02 gap — current `RegexPiiSanitizer`
- * is email + phone only; Presidio adds PERSON, LOCATION, CREDIT_CARD, IBAN,
- * IP, SSN, passport, crypto, NRP and is actively maintained by Microsoft).
+ * Fail-CLOSED on every error (ADR-047) — network, non-OK, malformed, timeout
+ * → `{ allow: false, reason: 'service_unavailable' }`. Never allow on error.
  *
- * Form factor: matches the existing `LLMGuardAdapter` shape so wiring in the
- * chat-module composition root is a constructor swap; not activated yet
- * (ADR-051 — adapters ready, no shadow run, no production traffic).
+ * Constructor-swap compatible with LLMGuardAdapter. Not activated yet
+ * (ADR-051 — adapters ready, no shadow run).
  *
- * Fail-CLOSED contract (per ADR-047 + ADR-048): network error, non-OK HTTP,
- * malformed JSON, or timeout → `{ allow: false, reason: 'service_unavailable',
- * providedBy }`. Never returns `allow: true` on error.
- *
- * Local-only metrics counters (no Prometheus coupling — the port's
- * `metrics()` snapshot is consumed by `/api/health/deep` and the bias-
- * monitoring aggregator).
+ * Local metrics only (no Prometheus); consumed by /api/health/deep + bias aggregator.
  */
 export class MicrosoftPresidioAdapter implements GuardrailProvider {
-  /** Stable port-level identifier — used for telemetry, env-flag matching, logs. */
   readonly name = 'microsoft-presidio';
 
-  /**
-   * Behavioural version stamp. `presidio-2.2` reflects the docker-compose-
-   * pinned analyzer/anonymizer image major.minor. Bump on any pin change or
-   * recognizer set change that may shift decisions (ADR-048 contract).
-   */
+  /** Bump on docker-compose pin / recognizer-set change (ADR-048). */
   readonly version = 'presidio-2.2';
 
   private readonly baseUrl: string;
@@ -129,7 +84,7 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
   private readonly blockThreshold: number;
   private readonly entityTypes: readonly string[];
 
-  // ── Local cumulative-since-process-start counters (mirror LLMGuardAdapter).
+  // Local cumulative-since-process-start counters.
   private _metricsRequests = 0;
   private _metricsBlocks = 0;
   private _metricsErrors = 0;
@@ -144,32 +99,21 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
   }
 
   /**
-   * Scans user input for PII. Fail-CLOSED on any error.
-   *
-   * Decision ladder:
-   *   1. Any entity with `score >= blockThreshold`  → block, reason='pii'.
-   *   2. Any entity with `score >= scoreThreshold`  → allow + redactedText.
-   *   3. No entities returned                       → allow.
+   * Decision ladder (shared with checkOutput — symmetric threat model):
+   *   1. score >= blockThreshold → block, reason='pii'
+   *   2. score >= scoreThreshold → allow + redactedText
+   *   3. no entities              → allow
+   * Fail-CLOSED on any error.
    */
   async checkInput(input: GuardrailInput): Promise<GuardrailVerdict> {
     return await this.analyzeAndDecide(input.text, input.locale);
   }
 
-  /**
-   * Scans assistant output for PII leakage. Same decision ladder as
-   * {@link checkInput} — the threat model (leaking a user-supplied PII back
-   * into the conversation, or fabricating one) is symmetric.
-   */
   async checkOutput(output: GuardrailOutput): Promise<GuardrailVerdict> {
     return await this.analyzeAndDecide(output.text, output.locale);
   }
 
-  /**
-   * Deep health probe — exercises `/analyze` with a known-benign payload
-   * and reports observed latency. Distinct from a TCP-up check: a service
-   * that returns 200 with an unexpected shape registers as `degraded`, not
-   * `up`. Never throws.
-   */
+  /** Deep probe — never throws. */
   async health(): Promise<ProviderHealth> {
     const lastCheckedAt = new Date().toISOString();
     const start = process.hrtime.bigint();
@@ -187,7 +131,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     }
   }
 
-  /** Local cumulative-since-process-start metrics snapshot. */
   metrics(): ProviderMetricsSnapshot {
     return {
       requests: this._metricsRequests,
@@ -196,10 +139,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     };
   }
 
-  /**
-   * Core decision pipeline shared by `checkInput` / `checkOutput`. Centralised
-   * so the fail-CLOSED contract and metrics bookkeeping stay consistent.
-   */
   private async analyzeAndDecide(
     text: string,
     locale: string | undefined,
@@ -233,9 +172,7 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
       };
     }
 
-    // Lower-confidence hits: ask the anonymizer for a sanitized variant and
-    // pass it downstream. If anonymization itself fails, fail-CLOSED — we
-    // refuse to leak the original text just because the redactor is sick.
+    // Anonymizer failure → fail-CLOSED (don't leak original on redactor crash).
     try {
       const redactedText = await this.callAnonymize(text, language, entities);
       return {
@@ -254,7 +191,7 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     }
   }
 
-  /** POST /analyze with timeout. Throws on non-OK / network / abort / malformed. */
+  /** @throws on non-OK / network / abort / malformed. */
   private async callAnalyze(text: string, language: string): Promise<PresidioAnalyzeEntity[]> {
     const payload = {
       text,
@@ -267,14 +204,10 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     if (!Array.isArray(raw)) {
       throw new Error('malformed_analyze_response');
     }
-    // Defensive shape narrowing — Presidio occasionally returns rows missing
-    // optional fields. Anything that does not match `{entity_type, start,
-    // end, score}` is dropped silently rather than throw, matching the
-    // wider "be liberal in what you accept" REST contract.
+    // Drop incomplete rows silently (Presidio occasionally omits optionals).
     return raw.filter(this.isAnalyzeEntity);
   }
 
-  /** POST /anonymize with timeout. Returns redacted text. */
   private async callAnonymize(
     text: string,
     language: string,
@@ -296,7 +229,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     return raw.text;
   }
 
-  /** Shared `fetch` wrapper applying the configured timeout + base URL. */
   private async requestWithTimeout(path: string, body: Record<string, unknown>): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -318,7 +250,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     }
   }
 
-  /** Type guard for `PresidioAnalyzeEntity` — defensive on REST responses. */
   private readonly isAnalyzeEntity = (e: unknown): e is PresidioAnalyzeEntity => {
     if (typeof e !== 'object' || e === null) return false;
     const candidate = e as Record<string, unknown>;
@@ -330,15 +261,12 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     );
   };
 
-  /** Map locale hint to Presidio language code, defaulting to English. */
+  /** Presidio expects 2-letter codes; strip region (`fr-FR` → `fr`). */
   private normalizeLocale(locale: string | undefined): string {
     if (!locale) return 'en';
-    // Presidio expects 2-letter codes ('en', 'fr', 'es'...) and ships
-    // predefined French recognizers. Strip region tags (`fr-FR` → `fr`).
     return locale.toLowerCase().split('-')[0] ?? 'en';
   }
 
-  /** Distinguish AbortError (timeout) from other failure kinds for logging. */
   private classifyError(error: unknown): 'timeout' | 'network' | 'malformed' {
     const message = error instanceof Error ? error.message : String(error);
     if (message.toLowerCase().includes('abort')) return 'timeout';
@@ -346,7 +274,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     return 'network';
   }
 
-  /** Builds the fail-CLOSED verdict stamp once, used across error sites. */
   private failClosed(reason: 'service_unavailable'): GuardrailVerdict {
     return {
       version: 'v1',
@@ -356,7 +283,6 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     };
   }
 
-  /** Allow-no-redaction verdict stamp. */
   private allow(): GuardrailVerdict {
     return {
       version: 'v1',

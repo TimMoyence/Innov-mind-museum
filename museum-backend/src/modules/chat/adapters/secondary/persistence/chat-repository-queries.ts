@@ -6,12 +6,10 @@ import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type { ChatRole } from '@modules/chat/domain/chat.types';
 import type { UserChatExportData } from '@modules/chat/domain/session/chat.repository.interface';
 
-/** Maximum number of items per page for cursor-based pagination queries. */
 const MAX_PAGE_SIZE = 50;
 
 const SESSION_ID_COLUMN = 'message.sessionId';
 
-/** Fetches message counts per session in a single query. */
 export async function fetchMessageCounts(
   messageRepo: Repository<ChatMessage>,
   sessionIds: string[],
@@ -31,7 +29,7 @@ export async function fetchMessageCounts(
   return countBySessionId;
 }
 
-/** Fetches latest-message previews per session using DISTINCT ON. */
+/** DISTINCT ON per session, latest by createdAt. */
 export async function fetchMessagePreviews(
   messageRepo: Repository<ChatMessage>,
   sessionIds: string[],
@@ -68,13 +66,7 @@ export async function fetchMessagePreviews(
   return previewBySessionId;
 }
 
-/**
- * Exports all chat sessions and messages for a user (GDPR data portability).
- *
- * @param sessionRepo - TypeORM repository for ChatSession.
- * @param userId - Numeric user ID.
- * @returns Structured export payload containing all sessions and their messages.
- */
+/** GDPR data portability. */
 export async function exportUserChatData(
   sessionRepo: Repository<ChatSession>,
   userId: number,

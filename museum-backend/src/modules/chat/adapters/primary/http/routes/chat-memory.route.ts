@@ -12,16 +12,9 @@ const memoryPreferenceSchema = z.object({
   enabled: z.boolean(),
 });
 
-/**
- * Creates the memory-preference sub-router.
- *
- * @param userMemoryService - Injected user memory service.
- * @returns Router handling GET/PATCH /memory/preference.
- */
 export const createMemoryRouter = (userMemoryService: UserMemoryService): Router => {
   const router = Router();
 
-  // GET /memory/preference — returns current memory opt-out state
   router.get('/memory/preference', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
     if (!currentUser?.id) {
@@ -32,7 +25,6 @@ export const createMemoryRouter = (userMemoryService: UserMemoryService): Router
     res.status(200).json({ enabled: !disabled });
   });
 
-  // PATCH /memory/preference — toggle memory opt-out
   router.patch(
     '/memory/preference',
     isAuthenticated,

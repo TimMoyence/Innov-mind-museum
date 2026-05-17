@@ -8,7 +8,6 @@ import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-pr
 
 type Prepared = ReturnType<typeof buildOrchestratorMessages>;
 
-/** Builds messages for the first section of a plan (used in streaming). */
 export function buildFirstSectionMessages(
   section: Prepared['sectionPlan'][0],
   prepared: Prepared,
@@ -31,7 +30,6 @@ export function buildFirstSectionMessages(
   );
 }
 
-/** Creates an AbortController + timeout pair for stream time-limiting. */
 export function createStreamTimeout(timeoutMs: number): {
   controller: AbortController;
   clearStreamTimeout: () => void;
@@ -54,7 +52,6 @@ interface BuildRunnerOptionsParams {
   shouldRetry: (error: unknown, status: string) => boolean;
 }
 
-/** Builds runner options for section task execution. */
 export function buildRunnerOptions(params: BuildRunnerOptionsParams): {
   maxConcurrent: number;
   retries: number;

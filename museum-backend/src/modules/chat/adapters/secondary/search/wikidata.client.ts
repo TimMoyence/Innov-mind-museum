@@ -13,13 +13,9 @@ const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 
 /**
- * Transient error wrapping a network or server-side Wikidata failure
- * (fetch reject, 408, 429, 5xx). Distinct from legitimate "no match" /
- * malformed-entity / 4xx-non-retryable cases which still resolve to `null`.
- *
- * The C5 circuit breaker (`WikidataBreakerClient`) counts these as failures
- * for opening; the public `WikidataClient.lookup()` catches them to preserve
- * its fail-open contract.
+ * Network / 408 / 429 / 5xx. Distinct from "no match" / malformed-entity /
+ * 4xx-non-retryable which resolve to `null`. C5 breaker counts these as failures;
+ * public `lookup()` catches them for fail-open.
  */
 export class WikidataTransientError extends Error {
   constructor(
@@ -35,9 +31,7 @@ const isTransientStatus = (status: number): boolean =>
   status === 408 || status === 429 || (status >= 500 && status < 600);
 
 /**
- * Validates a Wikidata language code (2-3 lowercase letters, optional region).
- * Loose prefilter — kept for early rejection before throw-on-fail assertions
- * downstream. Defense-in-depth: {@link assertLang} is the actual trust boundary.
+ * Loose prefilter for early rejection. `assertLang` downstream is the actual trust boundary.
  */
 function isValidLanguageCode(lang: string): boolean {
   return /^[a-z]{2,3}$/i.test(lang) || /^[a-z]{2,3}-[a-z]{2,4}$/i.test(lang);
@@ -69,23 +63,17 @@ const ART_KEYWORDS = [
   'oeuvre',
 ];
 
-/** Wikidata adapter implementing {@link KnowledgeBaseProvider}. The public `lookup()` never throws. */
+/** Public `lookup()` never throws. */
 export class WikidataClient implements KnowledgeBaseProvider {
-  // ES2022 private field — kept off the instance's own-property surface so the
-  // SSRF matrix (`tests/integration/security/ssrf-matrix.integration.test.ts`)
-  // continues to assert `Object.keys(new WikidataClient()) === []`. The
-  // User-Agent is configurable at construction time but is NOT a URL knob
-  // (header value only, no SSRF surface).
+  // ES2022 private field — kept off instance own-property surface so SSRF matrix
+  // (`tests/integration/security/ssrf-matrix.integration.test.ts`) keeps asserting
+  // `Object.keys(new WikidataClient()) === []`. User-Agent is header-only, no SSRF surface.
   readonly #userAgent: string;
 
   constructor(options: { userAgent?: string } = {}) {
     this.#userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
   }
-  /**
-   * Looks up artwork facts and swallows all errors — preserves the
-   * fail-open contract relied on by direct callers and existing tests.
-   * The C5 breaker should call {@link lookupOrThrow} instead.
-   */
+  /** Swallows all errors — fail-open contract. C5 breaker should call {@link lookupOrThrow}. */
   async lookup(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     try {
       return await this.lookupOrThrow(query);
@@ -98,10 +86,8 @@ export class WikidataClient implements KnowledgeBaseProvider {
   }
 
   /**
-   * Looks up artwork facts, propagating {@link WikidataTransientError} on
-   * network / 408 / 429 / 5xx so that a circuit breaker can count failures.
-   * Legitimate empties (no match, invalid QID, non-art descriptions, 4xx-non-retryable)
-   * still resolve to `null` without throwing.
+   * Propagates `WikidataTransientError` on network/408/429/5xx so breaker counts failures.
+   * Legitimate empties (no match, invalid QID, non-art, 4xx-non-retryable) resolve to `null`.
    */
   async lookupOrThrow(query: KnowledgeBaseQuery): Promise<ArtworkFacts | null> {
     const rawLang = query.language ?? 'en';
@@ -111,16 +97,7 @@ export class WikidataClient implements KnowledgeBaseProvider {
     return await this.fetchProperties(entity.id, entity.label, lang);
   }
 
-  /**
-   * Searches Wikidata for an entity matching the given term.
-   *
-   * Returns the first result whose description contains an art-related keyword,
-   * or `null` if no matching entity is found.
-   *
-   * @param term - Free-text search term (e.g., "Mona Lisa").
-   * @param language - Wikidata language code (e.g., "en", "fr").
-   * @returns Entity ID and label, or `null`.
-   */
+  /** Returns first result whose description contains an art keyword, or null. */
   private async searchEntity(
     term: string,
     language: string,
@@ -140,7 +117,6 @@ export class WikidataClient implements KnowledgeBaseProvider {
         headers: { 'User-Agent': this.#userAgent },
       });
     } catch (err) {
-      // Network failure (fetch reject) — transient, breaker should count it
       throw new WikidataTransientError(err, 'search');
     }
 
@@ -155,7 +131,6 @@ export class WikidataClient implements KnowledgeBaseProvider {
       search: { id: string; label: string; description?: string }[];
     };
 
-    // Find first result whose description matches an art keyword
     const match = data.search.find(
       (item) =>
         item.description != null &&
@@ -165,25 +140,14 @@ export class WikidataClient implements KnowledgeBaseProvider {
     return match ? { id: match.id, label: match.label } : null;
   }
 
-  /**
-   * Fetches structured artwork properties from Wikidata via SPARQL.
-   *
-   * Queries creator, inception date, material, collection, movement, and genre
-   * for the given entity. Validates the QID format before interpolation.
-   *
-   * @param qid - Wikidata entity ID (e.g., "Q12418").
-   * @param label - Display label for the artwork title.
-   * @param language - Language code for localized labels.
-   * @returns Parsed artwork facts, or `null` if QID is invalid or query fails.
-   */
+  // eslint-disable-next-line max-lines-per-function -- SPARQL query body + Wikidata response parsing inline; splitting would fragment a single read-path
   private async fetchProperties(
     qid: string,
     label: string,
     language: string,
   ): Promise<ArtworkFacts | null> {
-    // Defense-in-depth: strict assert before SPARQL interpolation. Throws
-    // ValidationError on tampered ids — caught by the public `lookup()` wrapper
-    // (fail-open). Protects direct callers + any future consumer.
+    // Defense-in-depth: strict assert before SPARQL interpolation. Throws on
+    // tampered ids — caught by `lookup()` wrapper (fail-open).
     try {
       assertEntityId(qid);
       assertLang(language);
@@ -192,9 +156,8 @@ export class WikidataClient implements KnowledgeBaseProvider {
       throw err;
     }
 
-    // C2 v2 (2026-05) — adds `aliases` projection via skos:altLabel +
-    // schema:alternateName, GROUP_CONCAT-joined on `|`. Empty / missing when
-    // the entity has no aliases in the requested language. No extra round-trip.
+    // C2 v2 (2026-05) — `aliases` projection via skos:altLabel + schema:alternateName,
+    // GROUP_CONCAT on `|`. No extra round-trip.
     const sparql = `
       SELECT
         ?creatorLabel ?inception ?materialLabel ?collectionLabel ?movementLabel ?genreLabel ?image
@@ -244,14 +207,20 @@ export class WikidataClient implements KnowledgeBaseProvider {
     const val = (key: string): string | undefined =>
       (bindings[key] as { value: string } | undefined)?.value;
     const inception = val('inception');
-    // Use UTC year to avoid timezone drift (e.g., "1503-01-01T00:00:00Z" becomes
-    // 1502 when interpreted in Europe/Paris pre-1891 local mean time).
+    // UTC year avoids timezone drift (e.g., "1503-01-01T00:00:00Z" becomes 1502
+    // when interpreted in Europe/Paris pre-1891 local mean time).
     const date = inception ? `c. ${new Date(inception).getUTCFullYear().toString()}` : undefined;
 
-    // C2 v2 — split GROUP_CONCAT on `|`, drop empty fragments, dedup.
     const aliasesRaw = val('aliases');
     const aliases = aliasesRaw
-      ? Array.from(new Set(aliasesRaw.split('|').map((s) => s.trim()).filter(Boolean)))
+      ? Array.from(
+          new Set(
+            aliasesRaw
+              .split('|')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        )
       : undefined;
 
     return {

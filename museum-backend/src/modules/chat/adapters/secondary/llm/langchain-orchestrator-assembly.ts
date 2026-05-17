@@ -21,9 +21,6 @@ import type { SectionRunResult } from '@modules/chat/useCase/llm/llm-section-run
 
 type SectionPlan = ReturnType<typeof buildOrchestratorMessages>['sectionPlan'];
 
-/**
- *
- */
 export interface AssembleResponseInput {
   input: OrchestratorInput;
   sectionPlan: SectionPlan;
@@ -40,7 +37,6 @@ interface ResolvedSummary {
   fallbackApplied: boolean;
 }
 
-/** Resolves summary text + metadata from section results, applying fallback when needed. */
 export function resolveSummary(
   bySection: Map<LlmSectionName, SectionRunResult<string>>,
   input: OrchestratorInput,
@@ -82,7 +78,6 @@ export function resolveSummary(
   };
 }
 
-/** Builds per-section diagnostics entries for observability metadata. */
 export function buildDiagnosticsSections(
   sectionPlan: SectionPlan,
   bySection: Map<LlmSectionName, SectionRunResult<string>>,
@@ -115,7 +110,6 @@ export function buildDiagnosticsSections(
   });
 }
 
-/** Assembles diagnostics sections and logs orchestration completion. */
 export function assembleResponse(params: AssembleResponseInput): OrchestratorOutput {
   const { input, sectionPlan, bySection, recentHistory, normalizedText, startedAt } = params;
   const {
@@ -158,7 +152,6 @@ export function assembleResponse(params: AssembleResponseInput): OrchestratorOut
   return { text, metadata };
 }
 
-/** Parses raw streamed content into the final response, optionally attaching diagnostics. */
 export function buildStreamSuccessResponse(
   rawContent: string,
   requestId?: string,

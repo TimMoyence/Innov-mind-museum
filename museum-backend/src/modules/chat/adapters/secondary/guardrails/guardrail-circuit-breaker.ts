@@ -1,27 +1,14 @@
 import { logger } from '@shared/logger/logger';
 
 /**
- * Three-state circuit breaker for the LLM Guard sidecar HTTP calls.
- *
- * Mirrors the proven shape of `adapters/secondary/llm/llm-circuit-breaker.ts`
- * but lives next to the guardrail adapter — distinct concern (sidecar HTTP vs
- * LLM provider API), distinct config namespace (`LLM_GUARD_CB_*`), distinct
- * lifecycle. We deliberately do NOT extract a shared abstraction yet (KISS,
- * `feedback_quality_doctrine` Rule 4 — premature with only two consumers).
- *
- * The breaker is ALWAYS-ON — there is no `*_ENABLED` flag
- * (`feedback_no_feature_flags_prelaunch`). The four env knobs below are
- * operational tunables, not a kill-switch.
- *
- * Adds one capability the LLM-side breaker doesn't have : a half-open probe
- * slot accountant (`halfOpenMaxProbes`) so we don't hammer a recovering
- * sidecar with concurrent probes.
+ * 3-state circuit breaker for LLM Guard sidecar HTTP (CLOSED → OPEN → HALF_OPEN).
+ * Always-on (no enable flag); LLM_GUARD_CB_* env vars are tunables, not kill-switch.
+ * Adds `halfOpenMaxProbes` accountant vs llm-circuit-breaker to avoid concurrent
+ * probe hammering. Kept separate (KISS — only 2 consumers).
  */
 
-/** State of the breaker FSM. */
 export type GuardrailCircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
-/** Snapshot returned by `getState()` for /api/health and observability. */
 export interface GuardrailCircuitBreakerSnapshot {
   state: GuardrailCircuitState;
   failureCount: number;
@@ -29,13 +16,12 @@ export interface GuardrailCircuitBreakerSnapshot {
   openedAt: Date | null;
 }
 
-/** Constructor options — every field has a safe default. */
 export interface GuardrailCircuitBreakerOptions {
   failureThreshold?: number;
   windowMs?: number;
   openDurationMs?: number;
   halfOpenMaxProbes?: number;
-  /** Fired on every state transition. Used by the composition root to wire metrics. */
+  /** Wired by composition root for metrics. */
   onStateChange?: (next: GuardrailCircuitState, prev: GuardrailCircuitState) => void;
 }
 
@@ -44,11 +30,7 @@ const DEFAULT_WINDOW_MS = 60_000;
 const DEFAULT_OPEN_DURATION_MS = 30_000;
 const DEFAULT_HALF_OPEN_MAX_PROBES = 1;
 
-/**
- * Parses a positive finite number from an env value. Falls back to the safe
- * default for NaN / ≤ 0 / non-finite — operator typos must NOT degrade the
- * breaker into a useless config (e.g. threshold=0 would trip on every call).
- */
+/** NaN / ≤0 / non-finite → fallback (operator typo must not degrade breaker). */
 function parsePositiveNumber(raw: string | undefined, fallback: number): number {
   if (raw === undefined) return fallback;
   const parsed = Number(raw);
@@ -56,7 +38,6 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
   return parsed;
 }
 
-/** Three-state circuit breaker (CLOSED → OPEN → HALF_OPEN) for the LLM Guard sidecar. */
 export class GuardrailCircuitBreaker {
   private readonly failureThreshold: number;
   private readonly windowMs: number;
@@ -70,13 +51,7 @@ export class GuardrailCircuitBreaker {
   private currentState: GuardrailCircuitState = 'CLOSED';
   private failures: number[] = [];
   private openedAt: number | null = null;
-  /**
-   * Wall-clock epoch (ms) at which the breaker transitioned OPEN→HALF_OPEN.
-   * Used to compute `probeDurationMs` on the subsequent CLOSE event
-   * (design.md §10 — observability fields). Cleared after the CLOSE log to
-   * prevent stale carry-over into a future probe. NOT readonly — mutated on
-   * every lazy OPEN→HALF_OPEN transition and on every CLOSE.
-   */
+  /** OPEN→HALF_OPEN timestamp; feeds probeDurationMs on CLOSE (design.md §10). */
   private halfOpenedAt: number | null = null;
   private availableProbes: number;
 
@@ -100,21 +75,14 @@ export class GuardrailCircuitBreaker {
     this.availableProbes = this.halfOpenMaxProbes;
   }
 
-  /**
-   * Returns current state, transitioning OPEN → HALF_OPEN lazily when the
-   * cooldown elapses. Reads must be cheap; this getter is called per scan.
-   */
+  /** Cheap getter — called per scan. Lazy OPEN→HALF_OPEN on cooldown elapse. */
   get state(): GuardrailCircuitState {
     if (this.currentState === 'OPEN' && this.openedAt !== null) {
       const elapsed = Date.now() - this.openedAt;
       if (elapsed >= this.openDurationMs) {
-        // Capture `openedAt` BEFORE clearing it so the half_open log can emit
-        // the ISO timestamp of when the breaker tripped (design.md §10).
         const openedAtIso = new Date(this.openedAt).toISOString();
         this.transitionTo('HALF_OPEN');
         this.openedAt = null;
-        // Track when the probe window started so the subsequent CLOSE log
-        // can emit `probeDurationMs` (design.md §10).
         this.halfOpenedAt = Date.now();
         this.availableProbes = this.halfOpenMaxProbes;
         logger.info('llm_guard_circuit_breaker_half_open', {
@@ -126,11 +94,7 @@ export class GuardrailCircuitBreaker {
     return this.currentState;
   }
 
-  /**
-   * Returns true when a call may proceed. CLOSED → always true. OPEN → false.
-   * HALF_OPEN → true only while probe slots remain (slot is decremented
-   * synchronously so concurrent callers cannot all sneak through).
-   */
+  /** HALF_OPEN slot decremented synchronously so concurrent callers can't all sneak through. */
   canAttempt(): boolean {
     const state = this.state;
     if (state === 'CLOSED') return true;
@@ -140,12 +104,9 @@ export class GuardrailCircuitBreaker {
     return true;
   }
 
-  /** Records a successful call. HALF_OPEN → CLOSED. Idempotent when already CLOSED. */
+  /** HALF_OPEN → CLOSED; idempotent when already CLOSED. */
   recordSuccess(): void {
     if (this.currentState === 'HALF_OPEN') {
-      // Compute probe duration BEFORE clearing `halfOpenedAt` (design.md §10).
-      // Fallback to 0 if somehow null — shouldn't happen on this path because
-      // every HALF_OPEN transition sets the field, but null-safe by design.
       const probeDurationMs = this.halfOpenedAt !== null ? Date.now() - this.halfOpenedAt : 0;
       this.transitionTo('CLOSED');
       this.failures = [];
@@ -155,10 +116,7 @@ export class GuardrailCircuitBreaker {
     }
   }
 
-  /**
-   * Records a failure. If the sliding window exceeds the threshold OR the
-   * call was a HALF_OPEN probe, trips OPEN.
-   */
+  /** Trips OPEN if sliding window exceeds threshold OR call was HALF_OPEN probe. */
   recordFailure(): void {
     const now = Date.now();
     this.failures.push(now);
@@ -174,10 +132,9 @@ export class GuardrailCircuitBreaker {
     }
   }
 
-  /** Snapshot of internal state for /api/health and observability. */
   getState(): GuardrailCircuitBreakerSnapshot {
     return {
-      state: this.state, // triggers lazy OPEN → HALF_OPEN transition if cooldown expired
+      state: this.state, // lazy OPEN→HALF_OPEN on expired cooldown
       failureCount: this.failures.length,
       lastFailureAt:
         this.failures.length > 0 ? new Date(this.failures[this.failures.length - 1]) : null,
@@ -185,7 +142,7 @@ export class GuardrailCircuitBreaker {
     };
   }
 
-  /** Restores the breaker to CLOSED with no recorded failures. Used by tests. */
+  /** Test-only. */
   reset(): void {
     const prev = this.currentState;
     this.currentState = 'CLOSED';
@@ -201,9 +158,7 @@ export class GuardrailCircuitBreaker {
   private trip(now: number, from: GuardrailCircuitState): void {
     this.transitionTo('OPEN');
     this.openedAt = now;
-    // Probe window ended (failed) — clear so the next HALF_OPEN sets a fresh
-    // baseline, and so any stray observer reading the field can't see a stale
-    // value while the breaker is OPEN.
+    // Probe window ended; clear so next HALF_OPEN sets fresh baseline.
     this.halfOpenedAt = null;
     this.availableProbes = this.halfOpenMaxProbes;
     logger.warn('llm_guard_circuit_breaker_open', {

@@ -8,10 +8,8 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
 /**
- * Wraps an orchestration call with a top-level Langfuse trace. Fail-open via
- * `safeTrace`: any exception in the Langfuse SDK is swallowed and the chat
- * path continues. When `LANGFUSE_ENABLED=false` (default), `getLangfuse()`
- * returns `null` and this is a near-zero-cost no-op (one nullable read).
+ * Fail-open via `safeTrace` (Langfuse SDK exceptions swallowed, chat path continues).
+ * When `LANGFUSE_ENABLED=false` (default), `getLangfuse()` returns null — near-zero-cost no-op.
  */
 export async function withLangfuseTrace<T extends OrchestratorOutput>(
   name: string,

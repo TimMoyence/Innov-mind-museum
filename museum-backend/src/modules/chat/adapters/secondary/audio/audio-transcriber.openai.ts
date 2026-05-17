@@ -36,7 +36,6 @@ interface OpenAiTranscriptionPayload {
   };
 }
 
-/** Throws if the current LLM provider is not OpenAI or the API key is missing. */
 const assertOpenAiAvailable = (): void => {
   if (env.llm.provider !== 'openai' || !env.llm.openAiApiKey) {
     throw new AppError({
@@ -47,7 +46,7 @@ const assertOpenAiAvailable = (): void => {
   }
 };
 
-/** Decodes base64 audio to a Buffer, throwing 400 on empty/invalid input. */
+/** @throws 400 on empty/invalid input. */
 const decodeAudioPayload = (base64: string): Buffer => {
   const normalizedBase64 = base64.trim();
   if (!normalizedBase64) {
@@ -61,7 +60,6 @@ const decodeAudioPayload = (base64: string): Buffer => {
   return audioBuffer;
 };
 
-/** Builds the multipart FormData for the OpenAI transcription API. */
 const buildTranscriptionFormData = (
   input: AudioTranscriberInput,
   audioBuffer: Buffer,
@@ -81,7 +79,7 @@ const buildTranscriptionFormData = (
   return formData;
 };
 
-/** Sends the transcription request, wrapping timeout errors into AppError. */
+/** Wraps timeout/abort → AppError(504). */
 const fetchTranscription = async (formData: FormData): Promise<Response> => {
   try {
     return await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -107,7 +105,6 @@ const fetchTranscription = async (formData: FormData): Promise<Response> => {
   }
 };
 
-/** Parses and validates the API response, returning the transcribed text. */
 const parseTranscriptionResponse = async (response: Response): Promise<string> => {
   const payload = (await response.json().catch(() => null)) as OpenAiTranscriptionPayload | null;
 
@@ -136,20 +133,11 @@ const parseTranscriptionResponse = async (response: Response): Promise<string> =
 };
 
 /**
- * OpenAI transcription implementation of {@link AudioTranscriber}.
- *
- * Uses `gpt-4o-mini-transcribe` by default (configurable via `env.llm.audioTranscriptionModel`).
- * Reuses the shared `OPENAI_API_KEY` — no separate Whisper key.
+ * Default `gpt-4o-mini-transcribe` (env.llm.audioTranscriptionModel).
+ * Reuses shared `OPENAI_API_KEY`.
  */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
-  /**
-   * Sends audio to the OpenAI transcription API and returns the transcribed text.
-   *
-   * @param input - Base64 audio, MIME type, and optional locale hint.
-   * @returns Transcription result.
-   * @throws {AppError} With code `FEATURE_UNAVAILABLE` if provider is not OpenAI.
-   * @throws {AppError} With code `UPSTREAM_AUDIO_TRANSCRIPTION_ERROR` on API failure.
-   */
+  /** @throws AppError FEATURE_UNAVAILABLE | UPSTREAM_AUDIO_TRANSCRIPTION_ERROR */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     const requestId = input.requestId ?? 'unknown';
     const timer = ChatPhaseTimer.start('stt', 'openai', requestId, {
@@ -181,7 +169,7 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
             provider: 'openai',
           };
         },
-      ); // end startSpan('audio.transcribe')
+      );
     } catch (err) {
       outcome = 'error';
       errorType = classifySttError(err);
@@ -202,10 +190,7 @@ function classifySttError(err: unknown): ChatPhaseErrorType {
       return 'upstream_5xx';
     }
   }
-  if (
-    err instanceof DOMException &&
-    (err.name === 'TimeoutError' || err.name === 'AbortError')
-  ) {
+  if (err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
     return err.name === 'TimeoutError' ? 'timeout' : 'abort';
   }
   return 'unknown';

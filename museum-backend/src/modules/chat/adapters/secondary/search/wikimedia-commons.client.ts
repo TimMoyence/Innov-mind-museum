@@ -6,13 +6,9 @@ import type {
 } from '@modules/chat/domain/ports/image-source.port';
 
 /**
- * Wikimedia Commons Search API client (C2 v2 — 2026-05).
- *
- * Implements the existing `ImageSourceClient` port. Pattern mirrors the
- * UnsplashClient: hard timeout via AbortController, fail-open on any failure
- * (returns `[]`). No auth required; OSMF policy mandates a descriptive
- * User-Agent (matches the WikidataClient header). Public endpoint, fixed host,
- * so no SSRF surface.
+ * C2 v2 (2026-05). Mirrors UnsplashClient pattern: AbortController hard timeout, fail-open
+ * (`[]`). OSMF policy mandates descriptive User-Agent (matches WikidataClient header).
+ * Public endpoint, fixed host — no SSRF surface.
  */
 export class WikimediaCommonsClient implements ImageSourceClient {
   private readonly searchUrl = 'https://commons.wikimedia.org/w/api.php';
@@ -23,15 +19,7 @@ export class WikimediaCommonsClient implements ImageSourceClient {
     this.timeoutMs = timeoutMs;
   }
 
-  /**
-   * Searches Wikimedia Commons for File: pages matching the query, then resolves
-   * each match's `imageinfo` (URL + license + author).
-   *
-   * Returns `[]` on any failure (network, HTTP error, malformed JSON, timeout).
-   *
-   * @param query - free-text search term (LLM-produced, not visitor-controlled).
-   * @param perPage - max results to request (capped server-side at 50).
-   */
+  /** `query` is LLM-produced (not visitor-controlled). `perPage` capped server-side at 50. */
   async searchPhotos(query: string, perPage = 5): Promise<ImageSourcePhoto[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
@@ -56,7 +44,6 @@ export class WikimediaCommonsClient implements ImageSourceClient {
     }
   }
 
-  /** Stage 1 — list:search to find matching File: pages. */
   private async searchFileTitles(
     query: string,
     perPage: number,
@@ -90,11 +77,7 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       .filter((title): title is string => title !== null);
   }
 
-  /** Stage 2 — query+imageinfo on the matched titles to resolve URL + license. */
-  private async fetchImageInfo(
-    titles: string[],
-    signal: AbortSignal,
-  ): Promise<ImageSourcePhoto[]> {
+  private async fetchImageInfo(titles: string[], signal: AbortSignal): Promise<ImageSourcePhoto[]> {
     const params = new URLSearchParams({
       action: 'query',
       titles: titles.join('|'),
@@ -204,9 +187,11 @@ function readMetaValue(field: unknown): string {
 
 /** Minimal HTML strip — Commons returns rich HTML in extmetadata. */
 function stripHtml(html: string): string {
-  return html
-    // eslint-disable-next-line sonarjs/slow-regex -- Justification: bounded by negated class `[^>]+` with single quantifier; not nested, no backtracking risk; payload is third-party Commons HTML capped by API response size. Approved-by: tim@2026-05-10
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return (
+    html
+      // eslint-disable-next-line sonarjs/slow-regex -- Justification: bounded by negated class `[^>]+` with single quantifier; not nested, no backtracking risk; payload is third-party Commons HTML capped by API response size. Approved-by: tim@2026-05-10
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 }

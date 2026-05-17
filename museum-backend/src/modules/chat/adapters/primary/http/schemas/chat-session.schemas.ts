@@ -7,16 +7,13 @@ import {
 import { CHAT_SESSION_INTENTS } from '@modules/chat/domain/chat.types';
 
 /**
- * Zod schemas for chat HTTP routes.
- *
- * Semantics preserved from the prior hand-rolled parsers in `chat.contracts.ts`:
- * - Empty string (`''`) counts as "absent" for optional fields.
- * - Boolean accepts native boolean or the strings `'true'` / `'false'`.
- * - Number accepts native finite number or a numeric string.
- * - Error messages keep the historic wording for test compatibility.
+ * Semantics (preserved from prior hand-rolled parsers):
+ * - `''` counts as absent.
+ * - Boolean: native or 'true'/'false' string.
+ * - Number: native finite or numeric string.
+ * - Error wording pinned for test compatibility.
  */
 
-/** Treats `''` / `null` / `undefined` as undefined; otherwise passes through. */
 const emptyStringAsUndefined = (value: unknown): unknown =>
   value === '' || value === null ? undefined : value;
 
@@ -85,7 +82,6 @@ const coordinatesSchema = z.object(
 
 const optionalCoordinates = z.preprocess(emptyStringAsUndefined, coordinatesSchema.optional());
 
-/** Zod schema for `POST /sessions` request body. */
 export const createSessionSchema = z.object(
   {
     userId: optionalFiniteNumber,
@@ -100,7 +96,6 @@ export const createSessionSchema = z.object(
   { message: 'Payload must be an object' },
 );
 
-/** Inferred TS type for `POST /sessions` request body. */
 export type CreateSessionBody = z.infer<typeof createSessionSchema>;
 
 const guideLevelValues = ['beginner', 'intermediate', 'expert'] as const;
@@ -140,7 +135,6 @@ const contextSchema = z
   )
   .optional();
 
-/** Zod schema for `POST /sessions/:id/messages` request body. */
 export const postMessageSchema = z.object(
   {
     text: optionalNonEmptyString,
@@ -150,5 +144,4 @@ export const postMessageSchema = z.object(
   { message: 'Payload must be an object' },
 );
 
-/** Inferred TS type for `POST /sessions/:id/messages` request body. */
 export type PostMessageBody = z.infer<typeof postMessageSchema>;
