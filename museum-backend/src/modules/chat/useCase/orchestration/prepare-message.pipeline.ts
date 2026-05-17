@@ -428,6 +428,8 @@ export class PrepareMessagePipeline {
       // R1 cache scoping: museumId+userId pick global-vs-user-scoped key namespace.
       museumId: prep.session.museumId ?? null,
       userId: prep.ownerId ?? null,
+      // C9.0 — Propagated to Langfuse `trace.sessionId` by `withLangfuseTrace`.
+      sessionId: prep.session.id,
       // Walk-intent routing for walk prompt section + structured suggestions.
       intent: prep.session.intent,
       facts: prep.routerFacts,
