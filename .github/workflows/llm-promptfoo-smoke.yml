@@ -115,30 +115,30 @@ jobs:
           cat /tmp/backend.log
           exit 1
 
-      - name: Bootstrap throwaway visitor + chat session
+      - name: Seed pre-verified smoke account
+        # Use the existing seed-smoke-account.ts script (canonical for prod
+        # post-deploy smoke). Creates a visitor with email_verified=true,
+        # onboarding_completed=true, role=visitor — bypasses the EMAIL_NOT_VERIFIED
+        # 403 gate that blocks fresh register→login flows
+        # (auth-session.service.ts:142). Idempotent : safe across CI runs.
+        # Pérein 10y : one canonical seed pattern for all CI smoke flows.
+        working-directory: museum-backend
+        env:
+          SMOKE_TEST_EMAIL: smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+          SMOKE_TEST_PASSWORD: Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}
+        run: pnpm exec ts-node scripts/seed-smoke-account.ts
+
+      - name: Bootstrap chat session
         id: bootstrap
+        env:
+          SMOKE_TEST_EMAIL: smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+          SMOKE_TEST_PASSWORD: Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          # Use an ephemeral email per CI run (timestamp-based) to avoid two
-          # collisions with the canonical Musaium auth flow:
-          # (1) Backend schema requires lowercase `firstname`/`lastname` (not
-          #     camelCase), cf. museum-backend/.../auth.schemas.ts:10.
-          # (2) Static `smoke+ci@musaium.test` accumulates MFA-enrollment
-          #     history → past-deadline check returns 403 mfaEnrollmentRequired
-          #     (auth-session.route.ts:131). Fresh user per run = clean state.
-          # Pérein : every workflow run gets its own throwaway account.
-          EMAIL="smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test"
-          REG_BODY="{\"email\":\"${EMAIL}\",\"password\":\"Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}\",\"firstname\":\"Smk\",\"lastname\":\"Ci\"}"
-          # Diagnostic: capture body on failure so we can see WHY a 4xx/5xx happens
-          # (HIBP password breach, rate-limit, MFA enrollment, etc.). Without
-          # --fail-with-body, curl -fsS hides the response payload on errors.
-          curl --fail-with-body -sS -X POST http://localhost:3000/api/auth/register \
-            -H 'Content-Type: application/json' -d "$REG_BODY"
-          LOGIN_BODY="{\"email\":\"${EMAIL}\",\"password\":\"Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}\"}"
+          LOGIN_BODY="{\"email\":\"${SMOKE_TEST_EMAIL}\",\"password\":\"${SMOKE_TEST_PASSWORD}\"}"
           TOKEN=$(curl --fail-with-body -sS -X POST http://localhost:3000/api/auth/login \
-            -H 'Content-Type: application/json' -d "$LOGIN_BODY" | tee /tmp/login.json | jq -r '.accessToken')
-          cat /tmp/login.json
-          SID=$(curl -fsS -X POST http://localhost:3000/api/chat/sessions \
+            -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
+          SID=$(curl --fail-with-body -sS -X POST http://localhost:3000/api/chat/sessions \
             -H "Authorization: Bearer $TOKEN" \
             -H 'Content-Type: application/json' -d '{"locale":"en","museumMode":false}' | jq -r '.id')
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"

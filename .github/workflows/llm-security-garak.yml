@@ -168,18 +168,24 @@ jobs:
           python -m pip install "garak>=0.10,<0.12"
           garak --version
 
-      - name: Bootstrap throwaway visitor + base JWT
+      - name: Seed pre-verified smoke account
+        # Same pattern as llm-promptfoo-smoke.yml — seed canonical avoids
+        # EMAIL_NOT_VERIFIED 403 sur login fresh register.
+        working-directory: museum-backend
+        env:
+          SMOKE_TEST_EMAIL: garak+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+          SMOKE_TEST_PASSWORD: Garak!CI-${{ github.run_id }}-${{ github.run_attempt }}
+        run: pnpm exec ts-node scripts/seed-smoke-account.ts
+
+      - name: Bootstrap base JWT
         id: bootstrap
+        env:
+          SMOKE_TEST_EMAIL: garak+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+          SMOKE_TEST_PASSWORD: Garak!CI-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
-          # Ephemeral email per CI run + lowercase fields (schema)
-          # Cf. llm-promptfoo-smoke.yml pour la rationale détaillée.
-          EMAIL="garak+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test"
-          REG_BODY="{\"email\":\"${EMAIL}\",\"password\":\"GarakCI2026!\",\"firstname\":\"Garak\",\"lastname\":\"Ci\"}"
-          curl -fsS -X POST http://localhost:3000/api/auth/register \
-            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null
-          LOGIN_BODY="{\"email\":\"${EMAIL}\",\"password\":\"GarakCI2026!\"}"
-          TOKEN=$(curl -fsS -X POST http://localhost:3000/api/auth/login \
+          LOGIN_BODY="{\"email\":\"${SMOKE_TEST_EMAIL}\",\"password\":\"${SMOKE_TEST_PASSWORD}\"}"
+          TOKEN=$(curl --fail-with-body -sS -X POST http://localhost:3000/api/auth/login \
             -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
           if [ -z "${TOKEN:-}" ] || [ "${TOKEN}" = "null" ]; then
             echo "::error::Bootstrap failed to mint a Musaium JWT — login response was empty/null"
