@@ -175,7 +175,7 @@ jobs:
         env:
           SMOKE_TEST_EMAIL: garak+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
           SMOKE_TEST_PASSWORD: Garak!CI-${{ github.run_id }}-${{ github.run_attempt }}
-        run: pnpm exec ts-node scripts/seed-smoke-account.ts
+        run: pnpm run seed:smoke-account
 
       - name: Bootstrap base JWT
         id: bootstrap
