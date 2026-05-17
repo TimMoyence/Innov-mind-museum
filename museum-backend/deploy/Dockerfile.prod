@@ -57,6 +57,19 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Apply latest security patches to the base Debian system packages.
+# Required because `node:22-bookworm-slim` is rebuilt monthly upstream, but
+# new HIGH/CRITICAL CVEs land in glibc/libc6/libcap/systemd between releases.
+# Trivy fail-on-HIGH gate (cf. .github/workflows/ci-cd-backend.yml) catches
+# the gap and fails CI — `apt upgrade` keeps us aligned with Debian's
+# latest patched versions without changing the base image.
+# Seen 2026-05-17: CVE-2026-0861 (glibc memalign), CVE-2026-4878 (libcap
+# TOCTOU), CVE-2026-29111 (systemd IPC) all fixed in bookworm but not yet
+# in upstream node image. Trivy fail-on-HIGH triggered.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copier uniquement package.json pour traçabilité
 COPY museum-backend/package.json ./
 
