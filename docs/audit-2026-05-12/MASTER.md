@@ -51,7 +51,7 @@
 | **P0-4** | Aucun plafond OpenAI par utilisateur + aucun kill-switch global | 04 | 1 jour | **Boucle abusive = facture catastrophique**. C'est le sous-engineering le plus dangereux. |
 | **P0-5** | `SUPPORTED_LOCALES` diverge BE(7) / FE(8 avec `ar`) / Web(2) ; Zod auth BE bloque `['fr','en']` → utilisateurs AR FE reçoivent **HTTP 400 en signup** | 03 | 1 h | Bug silencieux production immédiat |
 | **P0-6** ✅ RESOLVED 2026-05-14 | `museum-web/src/lib/admin-types.ts:UserRole` super_admin / RBAC silencieux. Re-vérifié au commit du fix : `admin-types.ts:86` contenait déjà `super_admin` au moment de l'audit ; le bug résiduel était dans `auth.tsx:RoleGuard.includes()` qui ne promouvait pas implicitement `super_admin` malgré le JSDoc contract + BE `requireRole` middleware. /team run `2026-05-14-admin-user-detail-page` corrige `RoleGuard` (`auth.tsx:272`) + ajoute test de régression Vitest (`admin-auth.test.tsx`: `RoleGuard allowedRoles={['admin']}` + super_admin user → children rendered). Co-traité avec F4 Claim 1. ADR-050. | 03 | 30 min | Mauvaise vérification rôle admin Web |
-| **P0-7** | Zombie no-op exports `setTokens` / `clearTokens` / `getAccessToken` dans `museum-web/src/lib/api.ts:38-56` — viole `feedback_bury_dead_code.md` et trompe les callers | 02 | 30 min | Faux sentiment de sécurité auth Web |
+| **P0-7** ✅ RESOLVED 2026-05-16 | Zombie no-op exports `setTokens` / `clearTokens` / `getAccessToken` dans `museum-web/src/lib/api.ts:38-56` — viole `feedback_bury_dead_code.md` et trompe les callers → resolved 2026-05-16 : zombie exports supprimés ; `api.ts` actuel contient `registerLogoutHandler` (l.34) + `readCsrfToken` (l.41) + `STATE_CHANGING_METHODS` (l.48), aucun `setTokens`/`clearTokens`/`getAccessToken`. Lignes ont migré (38-56 → 34-48 — décalage de la suppression des zombies eux-mêmes). | 02 | 30 min | Faux sentiment de sécurité auth Web |
 | **P0-8** | `JwksResponse` + `GoogleTokenResponse` cast `as X` sans validation Zod à `social-token-verifier.ts:56` / `google-token-exchange.ts:80` — paths auth critiques font confiance à la shape externe | 01 | 2 h | Crash runtime ou bypass auth si tier change shape |
 
 **Effort total P0 : ~10-12 jours** distribués entre code + counsel + édito. Tenable avant 2026-06-01 si attaqué cette semaine.
@@ -62,13 +62,13 @@
 
 | # | Finding | Source | Action |
 |---|---|---|---|
-| P1-1 | `sentry-scrubber.ts` triplicé (~170 L × 3 BE/FE/Web) avec commentaires "kept in sync" et **aucun gate CI** — dérive PII attendue | 03 | Extraire vers `packages/musaium-shared` + CI hash-equal gate |
+| P1-1 ✅ RESOLVED 2026-05-16 | `sentry-scrubber.ts` triplicé (~170 L × 3 BE/FE/Web) avec commentaires "kept in sync" et **aucun gate CI** — dérive PII attendue → resolved 2026-05-16 : sentry-scrubber centralisé dans `packages/musaium-shared/src/observability/sentry-scrubber.ts`. BE/FE/Web re-exportent via `@musaium/shared` / `@musaium/shared/observability`. Parité gardée par `scripts/sentinels/sentry-scrubber-parity.mjs`. | 03 | Extraire vers `packages/musaium-shared` + CI hash-equal gate |
 | P1-2 | `packages/musaium-shared/` créé 2026-05-12 (commit 58b12c6b) mais **consommé par 0 fichier** — phantom. "live or revert" doctrine | 03 | Wirer cette semaine OU rollback du scaffold |
 | P1-3 | 16 interfaces de repo BE + 7 ports chat avec **une seule** implémentation chacun (`chat-module.ts` admet la fake-split anti-`max-lines:400`) | 04 | Inliner les 23 et garder uniquement `WebSearchProvider` + `KnowledgeBaseProvider` (vrais polymorphes) |
 | P1-4 | 10 `FEATURE_FLAG_*` env vars morts, violent `feedback_no_feature_flags_prelaunch.md` | 04 | Supprimer en 1 commit |
 | P1-5 | 253 LOC SSE-dormant restants alors qu'ADR-001 a été supprimée (`chat-message.sse-dormant.ts`) — viole `feedback_bury_dead_code.md` | 06 | Delete |
 | P1-6 | FE doctrine barrel : chaque `features/*/index.ts` docblock dit "cross-feature MUST go through barrel" — réalité : **203 imports profonds vs 8 imports barrel** (25:1) | 06 | Soit aligner le code (codemod), soit retirer la doctrine de la docblock (mais : choisir, pas laisser mentir) |
-| P1-7 | `langfuse@v3` deprecated, aucun patch sécurité futur | 08 | Migrer v3→v5 OU ADR accept-EOL daté |
+| P1-7 ✅ RESOLVED 2026-05-13 | `langfuse@v3` deprecated, aucun patch sécurité futur — resolved 2026-05-13 : ADR-050 accept-EOL daté 2026-05-13, sunset 2026-09-01, tilde-pin + Renovate (cf. audit-360 S1 T1.1 reflag 2026-05-16) | 08 | Migrer v3→v5 OU ADR accept-EOL daté |
 | P1-8 | ESLint major drift : BE 10.2.0 vs FE/Web 9.39.4 — **deux systèmes de config en parallèle** | 08 | Aligner les 3 sur v10 |
 | P1-9 | Inline factory ratchet baseline `{ "baseline": [] }` mais 7 violations existent en BE — ESLint ne couvre pas `tests/integration/` | 07 | Étendre coverage ESLint + reset baseline |
 | P1-10 | Stryker gate : `killRatio = killed / (killed+survived+nocoverage+timeout)` exclut Timeout des kills → **19,8% affiché vs 82,3% réel**. Métrique trompeuse, échantillon 20 mutants nécessaire | 07 | Recalibrer ou documenter |
@@ -90,8 +90,8 @@
 | P2-3 | FE feature shape inconsistant : seules 5/13 features suivent la forme 4-folder de référence | 06 |
 | P2-4 | 24 fichiers Stryker config + 4 stacks observability (Sentry + OTel + Prom + Langfuse) — beaucoup d'orchestration | 04 |
 | P2-5 | Test `user-memory-entity.test.ts` teste les décorateurs TypeORM `@Column` via `getMetadataArgsStorage()` — **tautologie**, à supprimer | 07 |
-| P2-6 | 2 packages "extraneous" dans `museum-frontend/node_modules` (`react-native-confetti-cannon`, `@react-native-google-signin/google-signin`) — supprimés de package.json mais pas du store | 08 |
-| P2-7 | Web tsconfig sans `noUncheckedIndexedAccess` (BE+FE l'ont) | 01 |
+| P2-6 ✅ RESOLVED 2026-05-16 | 2 packages "extraneous" dans `museum-frontend/node_modules` (`react-native-confetti-cannon`, `@react-native-google-signin/google-signin`) — supprimés de package.json mais pas du store → resolved 2026-05-16 : validé par S1 dryskiss § 5.5 (`npm ls` FE = empty, extraneous partis). À re-confirmer par user au green-code-time. | 08 |
+| P2-7 ❌ INCORRECT (re-checked 2026-05-16) | Web tsconfig sans `noUncheckedIndexedAccess` (BE+FE l'ont) → re-checked 2026-05-16 : `museum-web/tsconfig.json:8` = `"noUncheckedIndexedAccess": true`. L'audit 05-12 a été erroné sur ce point — Web l'a depuis au moins 2026-05-16 (git blame pas exécuté, hors scope T1.8). | 01 |
 | P2-8 | README.md référence ADR-001 supprimée + multi-tenancy déférée (ADR-044) | 09 |
 | P2-9 | `museum-frontend/README.md` liens vers `QUALITY_GUIDE.md` et `ARCHITECTURE_MAP.md` supprimés aujourd'hui | 09 |
 | P2-10 | CLAUDE.md dit "34 migrations" — réalité 56 ; mentionne `.env.local.example` (n'existe pas, c'est `.env.example`) ; mentionne `.claude/tasks/` (n'existe pas) | 10 |
