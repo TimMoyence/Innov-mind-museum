@@ -165,11 +165,7 @@ jobs:
           python -m pip install --upgrade pip
           # Pin a known-working minor; the harness installs the latest patch.
           # Bumping to 0.12+ requires a dedicated ADR (audit §3 pinning concern).
-          # Pin to <0.11 — Garak 0.11.0 a renommé --target_type → --model_type
-          # et reorganisé la generator API (REST included). 2026-05-17 le CI
-          # tombait sur "unrecognized arguments: --target_type rest". Le bump
-          # 0.11+ adoption demande un ADR (cf. audit §3 pinning concern).
-          python -m pip install "garak>=0.10,<0.11"
+          python -m pip install "garak>=0.10,<0.12"
           garak --version
 
       - name: Seed pre-verified smoke account
@@ -229,7 +225,7 @@ jobs:
             echo "session=${SID}"
             export SESSION_ID="${SID}"
             garak \
-              --target_type rest \
+              --model_type rest \
               --generator_option_file "${GITHUB_WORKSPACE}/museum-backend/scripts/llm-security/musaium-garak-rest.json" \
               --probes "${probe}" \
               --report_prefix "musaium-garak-${probe}" \

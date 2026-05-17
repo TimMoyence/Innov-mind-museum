@@ -153,12 +153,16 @@ jobs:
           MUSAIUM_API_BASE_URL: http://localhost:3000
           MUSAIUM_API_KEY: ${{ steps.bootstrap.outputs.token }}
           MUSAIUM_SESSION_ID: ${{ steps.bootstrap.outputs.session }}
+        # promptfoo exit code = 100 if ANY single test fails (even at 99% pass).
+        # On veut que ce soit le step "Enforce ≥80 % pass-rate" qui décide,
+        # pas le exit code binaire. `|| true` swallow le 100 ; le report JSON
+        # est écrit avant l'exit donc l'analyse Python aval lit la vérité.
         run: |
           mkdir -p reports
           promptfoo eval \
             --config promptfoo-daily-art-smoke.yaml \
             --max-concurrency 2 \
-            --output reports/promptfoo-daily-art-smoke.json
+            --output reports/promptfoo-daily-art-smoke.json || true
 
       - name: Enforce ≥80 % pass-rate
         working-directory: museum-backend/scripts/llm-security
