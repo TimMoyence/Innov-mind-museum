@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 import { FormInput } from '@/shared/ui/FormInput';
 import { LiquidButton } from '@/shared/ui/LiquidButton';
 
@@ -53,9 +54,11 @@ export function RegisterForm({
 }: RegisterFormProps) {
   const { t } = useTranslation();
 
-  // CNIL Délibération 2021-018 — block submit if no DOB or DOB is malformed.
-  // Server re-validates and computes age; this is only a UX guard.
-  const dobLooksValid = /^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth);
+  // CNIL Délibération 2021-018 — block submit if DOB cannot be parsed
+  // into a real calendar date. Accepts YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY,
+  // DD.MM.YYYY (parser at shared/lib/dateOfBirth). Server re-validates +
+  // computes age; this is a UX guard, not the authoritative check.
+  const dobLooksValid = parseDateOfBirth(dateOfBirth) !== null;
   const disabled = isLoading || isSocialLoading || !gdprAccepted || !dobLooksValid;
 
   return (

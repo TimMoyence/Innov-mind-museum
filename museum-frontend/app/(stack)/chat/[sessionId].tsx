@@ -43,7 +43,7 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
-import { styles } from './chatSession.styles';
+import { styles } from './_chatSession.styles';
 
 /** Renders the chat session screen with message history, text/image/audio input, and assistant response display. */
 export default function ChatSessionScreen() {

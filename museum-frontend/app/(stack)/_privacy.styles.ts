@@ -1,12 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import {
-  fontSize,
-  lineHeightPx,
-  radius,
-  semantic,
-  space,
-} from '@/shared/ui/tokens';
+import { fontSize, lineHeightPx, radius, semantic, space } from '@/shared/ui/tokens';
 
 export const styles = StyleSheet.create({
   screen: {
