@@ -141,7 +141,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     },
     enrichment: { hardDeleteAfterDays: 180 },
     webSearch: {
-      searxngInstances: [],
       timeoutMs: 3000,
       cacheTtlSeconds: 3600,
       maxResults: 5,
