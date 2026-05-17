@@ -186,7 +186,9 @@ if [ -n "$touched_be" ]; then
   cat "$gate16_log"
   if [ $gate16_status -ne 0 ]; then
     # Flake detection: route test "socket hang up" is a known runInBand teardown race.
-    failed_suites=$(grep -E '^FAIL ' "$gate16_log" | sed -E 's|^FAIL ([a-zA-Z0-9_-]+ )?||' | grep -E '\.test\.ts$' | sort -u)
+    # Robust against jest timing annotations ("(18.704 s)") and project prefix ("unit-integration").
+    # Pattern: extract any "tests/.../*.test.tsx?" path that follows a FAIL marker, dedup.
+    failed_suites=$(grep -E '^FAIL ' "$gate16_log" | grep -oE 'tests/[A-Za-z0-9_./-]+\.test\.tsx?' | sort -u)
     if [ -n "$failed_suites" ]; then
       echo "[pre-push]   gate 16 initial fail — retrying failed suites in isolation (flake detection):"
       echo "$failed_suites" | sed 's/^/[pre-push]     - /'
