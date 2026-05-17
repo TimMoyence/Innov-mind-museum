@@ -4,14 +4,35 @@ WORKDIR /app
 # pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# Copier manifests
-COPY package.json pnpm-lock.yaml ./
+# museum-backend's package.json declares TWO `file:` deps that point outside
+# the museum-backend dir (see CLAUDE.md "Pièges connus" — workspace was
+# reverted to file: in commit 641968ea4) :
+#   "@musaium/shared": "file:../packages/musaium-shared"
+#   "eslint-plugin-musaium-test-discipline": "file:../tools/eslint-plugin-musaium-test-discipline"
+#
+# The build context for this image is the repo root (`context: ..` in
+# museum-backend/docker-compose.dev.yml), so the workspace package layout
+# INSIDE the container mirrors the host repo : /app/museum-backend,
+# /app/packages/musaium-shared, and /app/tools/eslint-plugin-musaium-test-discipline
+# all coexist, and pnpm resolves the `file:` symlink targets during
+# `pnpm install --frozen-lockfile`.
+#
+# Copy the file: deps FIRST (their committed `dist/` is the consumed artefact —
+# see packages/musaium-shared/package.json `main`/`exports`), then the backend
+# manifests, then install. The compose volume mount (`.:/app/museum-backend`)
+# overlays source-code edits at runtime but preserves /app/museum-backend/node_modules
+# and /app/packages + /app/tools from the image.
+COPY packages/musaium-shared /app/packages/musaium-shared
+COPY tools/eslint-plugin-musaium-test-discipline /app/tools/eslint-plugin-musaium-test-discipline
+COPY museum-backend/package.json museum-backend/pnpm-lock.yaml /app/museum-backend/
 
-# Installer toutes les deps
+WORKDIR /app/museum-backend
+
 RUN pnpm install --frozen-lockfile
 
-# Copier le code (sera écrasé par le volume en compose)
-COPY . .
+# Copy the remaining backend sources. Overridden by the bind mount at
+# runtime, useful only for `docker build` standalone consumers / cache layers.
+COPY museum-backend/ /app/museum-backend/
 
 EXPOSE 3000
 CMD ["pnpm", "run", "dev"]

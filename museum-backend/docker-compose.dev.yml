@@ -1,9 +1,17 @@
 services:
   backend:
+    # Build context widened to the repo root so the Dockerfile can COPY the
+    # `file:../packages/musaium-shared` workspace dependency declared in
+    # museum-backend/package.json (CLAUDE.md "Pièges connus" — the workspace
+    # was reverted to a `file:` dep in commit 641968ea4, so `pnpm install`
+    # MUST see /app/packages/musaium-shared alongside /app/museum-backend).
+    # Root-level `.dockerignore` excludes museum-frontend / museum-web /
+    # ios/Pods to keep context transfer reasonable (~5 MB instead of ~1 GB).
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ..
+      dockerfile: museum-backend/Dockerfile.dev
     container_name: dev-backend
+    working_dir: /app/museum-backend
     ports:
       - '3000:3000'
     env_file:
@@ -12,8 +20,13 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - .:/app
-      - /app/node_modules
+      # Mount the backend source AT /app/museum-backend so the file: symlink
+      # to ../packages/musaium-shared keeps resolving inside the container.
+      - .:/app/museum-backend
+      # Anonymous volumes that preserve image-baked node_modules / dist of
+      # the shared package across host source-code edits.
+      - /app/museum-backend/node_modules
+      - /app/packages/musaium-shared/node_modules
     restart: unless-stopped
 
   db:

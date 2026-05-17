@@ -1,0 +1,61 @@
+# Root-level .dockerignore — applied when a Dockerfile build uses repo root
+# as its context (e.g. museum-backend/docker-compose.dev.yml `context: ..`
+# so the `file:../packages/musaium-shared` workspace dep can be COPYed
+# before `pnpm install`).
+#
+# Excludes everything outside the backend build surface so the context
+# transfer does not balloon (museum-frontend/ios/Pods is ~1 GB of native
+# binaries alone).
+#
+# Per-app .dockerignore files (museum-backend/.dockerignore etc.) remain
+# authoritative when those Dockerfiles use a narrower context.
+
+# ─── Heavy / unrelated apps ────────────────────────────────────────────────
+museum-frontend
+museum-web
+design-system
+docs
+infra
+team-reports
+
+# ─── Tool / VCS / agent state ──────────────────────────────────────────────
+.git
+.github
+.husky
+.claude
+.cursor
+.vscode
+.idea
+.DS_Store
+
+# ─── Per-pkg build artefacts + caches (musaium-shared/dist IS shipped) ─────
+**/node_modules
+**/coverage
+**/.cache
+**/.turbo
+**/.next
+**/dist-server
+**/.expo
+**/.expo-shared
+**/.eas
+**/build
+**/.test-dist
+**/.stryker-tmp
+**/.stryker-run
+
+# ─── Env / secrets ─────────────────────────────────────────────────────────
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+!**/.env.host-mode
+
+# ─── Logs / debug ──────────────────────────────────────────────────────────
+**/*.log
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log
+
+# ─── Misc ──────────────────────────────────────────────────────────────────
+**/*.tsbuildinfo
+**/Thumbs.db
