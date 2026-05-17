@@ -1,6 +1,21 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-import { readEnvString } from '@/shared/lib/env';
+// `readEnvString` est inliné ici plutôt qu'importé depuis `shared/lib/env.ts` :
+// `app.config.ts` est loadé par Expo CLI (Node.js require) qui (a) n'honore
+// PAS l'alias TS `@/*` (Metro bundler le résout pour l'app, pas Expo prebuild),
+// et (b) ne compile pas transitivement les modules TS imports — l'app.config
+// elle-même est compilée mais ses imports `.ts` deviennent introuvables.
+// Cf. CI mobile run 25987246319 (audit-s1 T1.9 refactor → prebuild fail).
+// Pérein 10y : tout helper utilisé dans app.config DOIT être inliné ou
+// re-exporté via un `.js` co-located. Le helper canonique reste dans
+// `shared/lib/env.ts` pour le reste de l'app — voir doc là-bas.
+const readEnvString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
 
 type AppVariant = 'development' | 'preview' | 'production';
 type ApiEnvironment = 'staging' | 'production';
