@@ -213,7 +213,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       };
     }
 
-    // Leg 3 — WebSearch (Brave → Tavily → SearXNG, 1500ms).
+    // Leg 3 — WebSearch (Tavily → Brave fallback, 1500ms). C9.15 retired SearXNG.
     const { webFacts, webResultCount, latencyWeb } = await this.runWebSearchLeg(
       searchTermNormalised,
       parentSignal,
