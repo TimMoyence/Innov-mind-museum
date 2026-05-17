@@ -169,6 +169,10 @@
       "prettier --write",
       "eslint --fix"
     ],
+    "tests/**/*.test.ts": [
+      "prettier --write",
+      "eslint -c eslint.config.test-discipline.mjs --no-config-lookup --no-inline-config --max-warnings=0"
+    ],
     "tests/**/*.ts": [
       "prettier --write"
     ]
