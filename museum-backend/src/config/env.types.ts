@@ -425,10 +425,7 @@ export interface AppEnv {
   };
   webSearch: {
     tavilyApiKey?: string;
-    googleCseApiKey?: string;
-    googleCseId?: string;
     braveSearchApiKey?: string;
-    searxngInstances: string[];
     timeoutMs: number;
     cacheTtlSeconds: number;
     maxResults: number;

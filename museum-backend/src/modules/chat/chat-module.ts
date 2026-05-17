@@ -24,11 +24,8 @@ import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/pe
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
 import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
-import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
 import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
-import { GoogleCseClient } from '@modules/chat/adapters/secondary/search/google-cse.client';
 import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
-import { SearXNGClient } from '@modules/chat/adapters/secondary/search/searxng.client';
 import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.client';
 import { UnsplashClient } from '@modules/chat/adapters/secondary/search/unsplash.client';
 import { WikidataBreakerClient } from '@modules/chat/adapters/secondary/search/wikidata-breaker';
@@ -515,7 +512,11 @@ export class ChatModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /** Shared with `KnowledgeRouterService` (T3.3). DuckDuckGo always last-resort. */
+  /**
+   * Shared with `KnowledgeRouterService` (T3.3).
+   * C9.15 (2026-05-17) — Google CSE / SearXNG / DuckDuckGo adapters retired
+   * (never activated in any deployment). Tavily + Brave only.
+   */
   private buildWebSearch(cache?: CacheService): {
     service: WebSearchService;
     provider: WebSearchProvider;
@@ -525,16 +526,9 @@ export class ChatModule {
     if (env.webSearch.tavilyApiKey) {
       providers.push(new TavilyClient(env.webSearch.tavilyApiKey));
     }
-    if (env.webSearch.googleCseApiKey && env.webSearch.googleCseId) {
-      providers.push(new GoogleCseClient(env.webSearch.googleCseApiKey, env.webSearch.googleCseId));
-    }
     if (env.webSearch.braveSearchApiKey) {
       providers.push(new BraveSearchClient(env.webSearch.braveSearchApiKey));
     }
-    if (env.webSearch.searxngInstances.length > 0) {
-      providers.push(new SearXNGClient(env.webSearch.searxngInstances));
-    }
-    providers.push(new DuckDuckGoClient());
 
     logger.info('web_search_providers_configured', {
       providers: providers.map((p) => p.name ?? 'unknown'),
