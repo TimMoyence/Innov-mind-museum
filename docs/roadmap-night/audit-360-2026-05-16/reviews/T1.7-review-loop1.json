@@ -1,0 +1,184 @@
+{
+  "task": "T1.7",
+  "title": "BE 5 `as unknown as` cleanup → helpers typés",
+  "loop": 1,
+  "review_agent": "fresh-context-review (Opus 4.7, 1M)",
+  "review_date": "2026-05-16",
+  "worktree": "/Users/Tim/Desktop/all/dev/Pro/InnovMind-audit-360-s1/",
+  "spec_path": "docs/roadmap-night/audit-360-2026-05-16/specs/T1.7.md",
+  "diff_scope": {
+    "command": "git diff HEAD -- museum-backend/src museum-backend/tests",
+    "files_touched": 10,
+    "files_expected": "5 src + 3 modified test + 2 new test = 10",
+    "scope_match": true,
+    "files": [
+      "M museum-backend/src/data/db/data-source.ts",
+      "M museum-backend/src/modules/auth/adapters/secondary/social/social-otc-store.ts",
+      "M museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts",
+      "M museum-backend/src/modules/chat/useCase/llm/semaphore.ts",
+      "M museum-backend/src/modules/museum/adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter.ts",
+      "M museum-backend/tests/unit/auth/social-otc-store.test.ts",
+      "M museum-backend/tests/unit/chat/guardrail-evaluation-service.test.ts",
+      "M museum-backend/tests/unit/chat/semaphore.test.ts",
+      "?? museum-backend/tests/unit/data/db/start-pool-monitor.test.ts",
+      "?? museum-backend/tests/unit/museum/typeorm-museum-enrichment-cache.adapter.test.ts"
+    ]
+  },
+  "axes": {
+    "correctness": {
+      "score": 96,
+      "weight": 0.30,
+      "notes": "All 5 sites cleanly replace the type-loss casts with semantically equivalent constructs. Site 1: `as never` is sound — TS-narrowing-correct, no runtime change, branch unreachable by Promise.race ordering. Site 2: shallow spread `{ ...metadata }` lifts ChatAssistantMetadata to Record<string, unknown> AND adds defensive-copy semantics (provider mutation cannot leak back). Site 3: `parsedToJsonb` rewrite handles null + non-null + ref-inequality contract with explicit doc-string update. Site 4: `hasPgPool` predicate validates every numeric counter (totalCount, idleCount, waitingCount) — strictly stronger than the prior implicit cast that assumed presence. Site 5: Zod schema injection on RedisSocialOtcStore. Poisoned-cache blob now triggers safeParse() failure → fallback to in-memory consume() (not a leaked unknown payload). InMemorySocialOtcStore unchanged (no Redis-side parse), so backward compatible with the auth composition root that uses InMemory directly. Outer try/catch unchanged (Redis I/O errors still degrade to fallback)."
+    },
+    "tests": {
+      "score": 94,
+      "weight": 0.25,
+      "notes": "5 new test cases + 1 enriched suite; all 6 suites pass (88 tests). (1) `semaphore.test.ts` +1: 'short-circuits the inner runner when slot frees AFTER timeout' — uses real timers + blocker pattern + setImmediate flush to deterministically prove the deferred runner never invokes task() (asserts p2TaskRan === false). Excellent branch coverage. (2) `guardrail-evaluation-service.test.ts` +1: validates (a) Record-indexability of forwarded keys, (b) ref-inequality (spread semantics), (c) immutability of caller metadata via JSON.stringify snapshot — covers all 3 contracts of the inline spread. (3) `typeorm-museum-enrichment-cache.adapter.test.ts` NEW (3 cases): INSERT non-null/null + UPDATE path — fake repo captures saved rows, asserts ref-inequality + key parity + null pass-through. Indirect coverage (helper is module-internal, no export) is appropriate. (4) `start-pool-monitor.test.ts` NEW (10 cases): exhaustive predicate matrix (null, primitives, missing master, wrong-typed master, missing/non-numeric counters, narrowing compile-test) + 1 smoke test on interval handle shape. Cleanup via clearInterval prevents leak. (5) `social-otc-store.test.ts` +3 (RedisSocialOtcStore suite NEW): happy-path schema accept, poisoned-blob schema reject + atomic getdel removal, no-entry-no-fallback. Fake Redis stub minimal but sufficient. Minor nit: start-pool-monitor.test.ts:79 uses `as unknown as { ref?: unknown }` in a test (acceptable in test scope, not src — no policy violation)."
+    },
+    "kiss_dry": {
+      "score": 93,
+      "weight": 0.20,
+      "notes": "Helpers stay co-localized per spec recommendation (no premature shared/utils/type-helpers.ts extraction). Site 1: 1-line edit, no helper. Site 2: inline spread instead of extracted `metadataToRecord` helper — justified because (a) single call-site, (b) helper would add indirection without reuse benefit, (c) the spec explicitly allowed `inline spread` as the green-agent variant. The 4-line comment above the spread documents the semantic upgrade (variance + defensive copy). guardrail-evaluation.service.ts is 611 lines (not the 400 mentioned in green-agent notes), but max-lines isn't enforced at 400 here — lint passes anyway, so inline-vs-extract is purely a KISS judgment, and the green-agent picked the simpler path. Site 3: parsedToJsonb rewrite removes the cast AND upgrades doc-string. Site 4: PgPoolStats interface + hasPgPool predicate are co-localized in data-source.ts — predicate exported for testability (only caller outside the module is the test file, confirmed via grep). Site 5: schema field added to existing ctor options bag (no new class hierarchy), createSocialOtcStore signature now requires `schema` only when Redis path is taken — InMemory fallback skips it cleanly. No DRY violations introduced."
+    },
+    "security_honesty": {
+      "score": 98,
+      "weight": 0.15,
+      "notes": "Site 5 (social-otc-store Zod) is a defense-in-depth UPGRADE: a poisoned cache entry (post-deploy shape drift, Redis MITM, attacker write) used to silently round-trip as `TPayload` and leak into RedeemSocialOtcUseCase. Now `safeParse` fails, the entry is dropped via getdel, the fallback in-memory store is tried, and a null return signals 'unredeemable code' to the caller. Hard security improvement. Site 4 (hasPgPool predicate) similarly upgrades runtime safety: the prior cast assumed `master.totalCount` was numeric; the predicate now validates all 3 counters are numbers before reading them, eliminating a NaN risk in the warn log payload. Honesty (UFR-013): all 5 fixes verified by reading the modified line in context + grep confirming `as unknown as` and `as TPayload` are GONE from src (only present in comments documenting the historical pattern). Tests run + pass verbatim — output below: `Test Suites: 6 passed, 6 total | Tests: 88 passed, 88 total`. No fabrication. No new `eslint-disable` introduced (grep `^\\+.*eslint-disable` on diff returns 0)."
+    },
+    "a11y_design": {
+      "score": 95,
+      "weight": 0.10,
+      "notes": "N/A — backend-only refactor (no UI surface). Default 95 per review guidelines."
+    }
+  },
+  "weightedMean": 95.05,
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "info",
+      "site": "museum-backend/src/modules/chat/useCase/llm/semaphore.ts:91",
+      "claim": "`return undefined as never;` replaces `return undefined as unknown as T;`. Comment block (lines 87-90) explains the unreachable-path rationale (Promise.race already settled with rejected timeoutPromise).",
+      "verified_via": "Read file_path:semaphore.ts offset:80 limit:20 — confirmed verbatim."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts:498-500",
+      "claim": "`metadata: { ...metadata }` shallow spread replaces `metadata as unknown as Record<string, unknown>`. Inline (no helper extracted) — justified by single-call-site + KISS; semantic upgrade (defensive copy) documented in inline comment.",
+      "verified_via": "git diff HEAD -- guardrail-evaluation.service.ts."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/src/modules/museum/adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter.ts:158-160",
+      "claim": "`parsedToJsonb` rewritten as `value === null ? null : { ...value }`. Doc-string upgraded (lines 148-156) to describe defensive-copy semantics + explicitly note the cast is gone.",
+      "verified_via": "git diff HEAD -- typeorm-museum-enrichment-cache.adapter.ts."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/src/data/db/data-source.ts:91-114",
+      "claim": "Exported `hasPgPool(driver: unknown): driver is { master: PgPoolStats }` predicate added with strict runtime validation of all 3 counters. `startPoolMonitor` refactored to use predicate + early-return pattern (try/catch removed since predicate now validates the shape before reading).",
+      "verified_via": "git diff + grep confirming `hasPgPool` only consumed by data-source.ts:121 + new test file (no external src callers)."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/src/modules/auth/adapters/secondary/social/social-otc-store.ts:109-145",
+      "claim": "RedisSocialOtcStore ctor now requires `{ schema: ZodType<TPayload> }`. consume() runs `schema.safeParse(JSON.parse(value))` and falls through to fallback on parse failure. createSocialOtcStore signature updated; only call-site outside module is the test file (composition root uses InMemorySocialOtcStore directly — backward compatible since InMemory unchanged).",
+      "verified_via": "git diff + grep `createSocialOtcStore\\|new RedisSocialOtcStore`."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/tests/unit/chat/semaphore.test.ts +40",
+      "claim": "New test 'short-circuits the inner runner when slot frees AFTER timeout already fired' deterministically proves `task()` is never invoked when `timedOut === true` via blocker promise + setImmediate flush. Covers the `as never` branch verbatim.",
+      "verified_via": "git diff."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/tests/unit/chat/guardrail-evaluation-service.test.ts +41",
+      "claim": "New test validates 3 contracts of the inline spread: (1) Record-indexability, (2) ref-inequality, (3) caller metadata immutability via JSON.stringify snapshot diff.",
+      "verified_via": "git diff."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/tests/unit/museum/typeorm-museum-enrichment-cache.adapter.test.ts NEW (177 lines, 3 cases)",
+      "claim": "Indirect coverage of internal `parsedToJsonb` via upsert INSERT (non-null + null) + UPDATE paths. Fake repo + DataSource pattern, captures `save` calls to assert ref-inequality + key parity. parsedToJsonb is module-internal — indirect coverage is the only viable approach.",
+      "verified_via": "Read full file (177L)."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/tests/unit/data/db/start-pool-monitor.test.ts NEW (82 lines, 10 cases)",
+      "claim": "Exhaustive predicate matrix: null/undefined/primitives/object-without-master/master-null/master-non-object/missing-counters/wrong-typed-counter/fully-shaped/narrowing-compile-test + 1 lifecycle smoke. clearInterval cleanup prevents handle leak.",
+      "verified_via": "Read full file (82L)."
+    },
+    {
+      "severity": "info",
+      "site": "museum-backend/tests/unit/auth/social-otc-store.test.ts +79",
+      "claim": "New RedisSocialOtcStore suite (3 cases): schema-accept happy path, schema-reject poisoned blob + atomic getdel removal verification, no-entry null return. Fake Redis stub (Map-backed) sufficient for branch coverage.",
+      "verified_via": "git diff."
+    }
+  ],
+  "verifications": [
+    {
+      "check": "git diff --stat HEAD -- museum-backend/src museum-backend/tests",
+      "outcome": "10 files changed, 238 insertions(+), 33 deletions(-) — matches expected scope (5 src + 3 modified test + 2 new test)",
+      "exit_code": 0
+    },
+    {
+      "check": "grep -rn 'as unknown as' museum-backend/src --include='*.ts' | grep -v migrations",
+      "outcome": "4 hits, all in doc-comments (semaphore.ts:90, guardrail.service.ts:498, typeorm-museum-enrichment-cache.adapter.ts:155, data-source.ts:99) documenting the PRIOR cast — no executable code remains. Zero src code casts.",
+      "exit_code": 0
+    },
+    {
+      "check": "grep -rn 'as TPayload' museum-backend/src --include='*.ts'",
+      "outcome": "2 hits, both in doc-comments (social-otc-store.ts:104, social-otc-store.ts:151) documenting the prior cast — no executable code remains.",
+      "exit_code": 0
+    },
+    {
+      "check": "cd museum-backend && pnpm lint (eslint + lint:test-discipline + tsc --noEmit)",
+      "outcome": "PASS — no output errors, exit 0. ESLint --max-warnings=0 enforced on both src/ and tests/.",
+      "exit_code": 0
+    },
+    {
+      "check": "node scripts/sentinels/as-any-ratchet.mjs",
+      "outcome": "[sentinel:as-any] PASS — backend=0<=0 frontend=0<=0 web=0<=0",
+      "exit_code": 0
+    },
+    {
+      "check": "pnpm test -- --testPathPattern='(semaphore|guardrail-evaluation|typeorm-museum-enrichment-cache|start-pool-monitor|social-otc-store)'",
+      "outcome": "Test Suites: 6 passed, 6 total | Tests: 88 passed, 88 total — all T1.7 suites green. Per-test-run coverage threshold failure is expected (subset scope) and orthogonal to test pass/fail.",
+      "exit_code": "0 for tests (1 for jest global coverage gate which is OOS for this scope)"
+    },
+    {
+      "check": "grep -E '^\\+.*eslint-disable' on full diff",
+      "outcome": "0 new eslint-disable introduced — T1.7 contract respected.",
+      "exit_code": 0
+    },
+    {
+      "check": "grep callers of hasPgPool",
+      "outcome": "Only 2 callers: data-source.ts:121 (intra-module) + tests/unit/data/db/start-pool-monitor.test.ts (test). No undesired external src caller. Export discipline respected.",
+      "exit_code": 0
+    },
+    {
+      "check": "grep callers of createSocialOtcStore / new RedisSocialOtcStore",
+      "outcome": "Composition root (src/modules/auth/useCase/index.ts:117) uses `new InMemorySocialOtcStore` directly — no schema arg needed, unchanged signature. createSocialOtcStore only called from test. No prod call-site breakage.",
+      "exit_code": 0
+    }
+  ],
+  "blockers": [],
+  "warnings": [],
+  "summary": "T1.7 ships cleanly. All 5 sites eliminated (4 `as unknown as` + 1 `as TPayload`) with semantically equivalent or stronger constructs (Site 4 hasPgPool predicate strictly tightens runtime validation; Site 5 Zod schema adds defense-in-depth against poisoned-cache leaks). Helpers stay co-localized per KISS doctrine; the green-agent's choice of inline spread at Site 2 (instead of extracted helper) is justified by single-call-site + clear inline doc. Tests are deterministic, comprehensive (88 pass), and cover both happy + fallback paths for every site. Lint + sentinel + tests all green. No eslint-disable. No external src caller breakage. weightedMean=95.05 → APPROVED.",
+  "metrics": {
+    "sites_expected": 5,
+    "sites_clean": 5,
+    "tests_added_total": 18,
+    "test_files_new": 2,
+    "test_files_modified": 3,
+    "src_files_touched": 5,
+    "as_unknown_as_in_src_executable_code": 0,
+    "as_tpayload_in_src_executable_code": 0,
+    "new_eslint_disable_count": 0,
+    "lint_exit_code": 0,
+    "sentinel_status": "PASS backend=0 frontend=0 web=0",
+    "test_suites_passed": 6,
+    "tests_passed": 88,
+    "tests_failed": 0
+  }
+}

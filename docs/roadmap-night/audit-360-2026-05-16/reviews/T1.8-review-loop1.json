@@ -1,0 +1,145 @@
+{
+  "task": "T1.8",
+  "title": "Stale audit 05-12 entries: reflag MASTER.md (P0-6/7, P1-1, P2-6/7)",
+  "loop": 1,
+  "reviewedAt": "2026-05-16",
+  "spec": "docs/roadmap-night/audit-360-2026-05-16/specs/T1.8.md",
+  "diffSource": "/tmp/audit-s1-T1.8-green.diff",
+  "filesModified": [
+    "docs/audit-2026-05-12/MASTER.md"
+  ],
+  "scoresOnFiveAxes": {
+    "acCompliance": {
+      "score": 98,
+      "weight": 0.30,
+      "rationale": "All 5 AC met verbatim: P0-6 NO-OP preserved (line 53 still bears '✅ RESOLVED 2026-05-14' + full original text), P0-7 marked '✅ RESOLVED 2026-05-16' with zombie-suppression evidence, P1-1 marked '✅ RESOLVED 2026-05-16' with shared-package evidence, P2-6 marked '✅ RESOLVED 2026-05-16' with S1 dryskiss reference + user re-confirm caveat, P2-7 marked '❌ INCORRECT (re-checked 2026-05-16)' with tsconfig:8 evidence. Insertion pattern matches spec § Design (label prefix + '→ resolved/re-checked 2026-05-16 : <preuve>' suffix appended to existing Finding cell). Original historical text preserved in every edited cell."
+    },
+    "scopeFidelity": {
+      "score": 100,
+      "weight": 0.20,
+      "rationale": "git diff --stat = '1 file changed, 4 insertions(+), 4 deletions(-)' — strictly docs/audit-2026-05-12/MASTER.md. 4 line-level edits cover the 4 cells expected (P0-7, P1-1, P2-6, P2-7); P0-6 NO-OP correctly skipped. Diff matches /tmp/audit-s1-T1.8-green.diff byte-for-byte. No collateral edits, no code touched, no scripts touched. Worktree-only other dirty state (docs/TECH_DEBT.md from T1.3 + untracked audit-360 dir) explicitly out of scope per review instructions and not in this commit."
+    },
+    "kissDry": {
+      "score": 95,
+      "weight": 0.20,
+      "rationale": "Minimal edit: one line replaced per cell, no rewrite, no header restructure, no table reordering. Preserves table column count (5 cols for P0, 4 for P1, 3 for P2). Reuses existing P0-6 pattern as design referent. No duplication introduced. -5 only because the appended preuve in P0-7 is dense (slight readability cost in a Markdown table cell with multiple backtick spans), but this is intrinsic to the format chosen by the spec and not a defect."
+    },
+    "a11yDesign": {
+      "score": 95,
+      "weight": 0.15,
+      "rationale": "N/A (Markdown documentation file, no UI). Default score 95 per spec instruction. Markdown structure (table syntax, code-spans, arrow '→' separator) remains well-formed; no broken pipes, no leaked newlines inside cells, no empty cells."
+    },
+    "securityHonesty": {
+      "score": 98,
+      "weight": 0.15,
+      "rationale": "Every cited fact verified by grep/read: (1) api.ts:34 = registerLogoutHandler ✓, api.ts:41 = readCsrfToken ✓, api.ts:48 = STATE_CHANGING_METHODS ✓, no setTokens/clearTokens/getAccessToken in file ✓. (2) packages/musaium-shared/src/observability/sentry-scrubber.ts exists ✓, 3 re-exports confirmed (BE line 16, FE line 15, Web line 16) ✓, scripts/sentinels/sentry-scrubber-parity.mjs exists ✓. (3) museum-web/tsconfig.json:8 = '\"noUncheckedIndexedAccess\": true' ✓. (4) P2-6 transparently flags 'À re-confirmer par user au green-code-time' — UFR-013 honest stance, no false assertion of having run npm ls. (5) P2-7 self-discloses 'git blame pas exécuté, hors scope T1.8' — UFR-018 compliant. Zero hallucinated file:line citations."
+    }
+  },
+  "weightedMean": 97.45,
+  "verdict": "APPROVED",
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "NH-1",
+        "title": "P0-7 cell est dense — pourrait être scindée en 2 phrases",
+        "detail": "La phrase appendée à P0-7 (~3 lignes Markdown rendues) contient 5 backtick-spans + une parenthèse explicative du drift (38-56 → 34-48). Lisible mais à la limite de la densité acceptable pour une cellule de tableau. Acceptable en l'état car (a) le spec § T1.8.b dicte exactement ce wording, (b) toute simplification réduirait la traçabilité (UFR-016/018).",
+        "action": "Aucune action requise. Note pour futures reflag-passes : favoriser preuves ≤1 phrase compacte quand possible."
+      },
+      {
+        "id": "NH-2",
+        "title": "Pas de mention du commit fix P0-7 dans la preuve",
+        "detail": "Pour P0-6, la cellule cite explicitement '/team run 2026-05-14-admin-user-detail-page' et 'ADR-050'. Pour P0-7, la preuve ne pointe pas vers le commit de suppression des zombies (probable car non identifié dans la spec). C'est cohérent avec la spec mais légèrement asymétrique en traçabilité.",
+        "action": "Aucune action requise pour T1.8. Si tracking historique souhaité, créer une T1.8.bis (git log -p museum-web/src/lib/api.ts pour identifier le commit suppression)."
+      }
+    ]
+  },
+  "verifications": [
+    {
+      "check": "git diff --stat HEAD docs/audit-2026-05-12/MASTER.md",
+      "expected": "1 file changed, 4 insertions(+), 4 deletions(-)",
+      "actual": "1 file changed, 4 insertions(+), 4 deletions(-)",
+      "status": "PASS"
+    },
+    {
+      "check": "Diff worktree vs /tmp/audit-s1-T1.8-green.diff",
+      "expected": "Identical",
+      "actual": "Identical (line-by-line match on 3 hunks @@ -51 @@ -62 @@ -90)",
+      "status": "PASS"
+    },
+    {
+      "check": "P0-6 NO-OP — '✅ RESOLVED 2026-05-14' preserved at line 53",
+      "expected": "Marker present + original cell text untouched",
+      "actual": "Confirmed: full cell text unchanged, marker intact",
+      "status": "PASS"
+    },
+    {
+      "check": "P0-7 cell — '✅ RESOLVED 2026-05-16' + zombie-removal preuve",
+      "expected": "Label prefix + verbatim preuve from spec § Design",
+      "actual": "Match: 'registerLogoutHandler (l.34) + readCsrfToken (l.41) + STATE_CHANGING_METHODS (l.48)' + '(38-56 → 34-48 — décalage de la suppression des zombies eux-mêmes)' present",
+      "status": "PASS"
+    },
+    {
+      "check": "P0-7 factual — api.ts:34/41/48 contain claimed symbols",
+      "expected": "registerLogoutHandler@34, readCsrfToken@41, STATE_CHANGING_METHODS@48, no setTokens/clearTokens/getAccessToken",
+      "actual": "Verified via sed museum-web/src/lib/api.ts + grep -n 'setTokens|clearTokens|getAccessToken' (empty)",
+      "status": "PASS"
+    },
+    {
+      "check": "P1-1 cell — '✅ RESOLVED 2026-05-16' + centralisation preuve",
+      "expected": "Label prefix + 'packages/musaium-shared/src/observability/sentry-scrubber.ts' + 'scripts/sentinels/sentry-scrubber-parity.mjs'",
+      "actual": "Match: both paths cited verbatim, BE/FE/Web re-export pattern noted",
+      "status": "PASS"
+    },
+    {
+      "check": "P1-1 factual — shared package + 3 re-exports + parity sentinel exist",
+      "expected": "Files present on disk",
+      "actual": "Verified: packages/musaium-shared/src/observability/sentry-scrubber.ts exists, scripts/sentinels/sentry-scrubber-parity.mjs exists, BE:16 / FE:15 / Web:16 all import from @musaium/shared{,/observability}",
+      "status": "PASS"
+    },
+    {
+      "check": "P2-6 cell — '✅ RESOLVED 2026-05-16' + S1 dryskiss reference + user re-confirm caveat",
+      "expected": "Label prefix + 'validé par S1 dryskiss § 5.5' + 'À re-confirmer par user'",
+      "actual": "Match: 'validé par S1 dryskiss § 5.5 (npm ls FE = empty, extraneous partis). À re-confirmer par user au green-code-time.'",
+      "status": "PASS"
+    },
+    {
+      "check": "P2-7 cell — '❌ INCORRECT (re-checked 2026-05-16)' + tsconfig evidence",
+      "expected": "Label prefix + 'museum-web/tsconfig.json:8' + '\"noUncheckedIndexedAccess\": true' + git blame disclaimer",
+      "actual": "Match: cell carries all three elements verbatim from spec",
+      "status": "PASS"
+    },
+    {
+      "check": "P2-7 factual — museum-web/tsconfig.json:8 = noUncheckedIndexedAccess true",
+      "expected": "Flag enabled at line 8",
+      "actual": "Verified: line 8 = '    \"noUncheckedIndexedAccess\": true,' (strict:true also at line 7)",
+      "status": "PASS"
+    },
+    {
+      "check": "No code changed, no script changed, no other doc changed in commit scope",
+      "expected": "git diff --stat HEAD scoped to MASTER.md only (ignoring out-of-scope worktree drift)",
+      "actual": "Only docs/audit-2026-05-12/MASTER.md appears in this task's diff hunk",
+      "status": "PASS"
+    },
+    {
+      "check": "Honesty (UFR-013) — preuves are verifiable, no fabrications",
+      "expected": "Every file:line citation in the appended preuves is grep-confirmable",
+      "actual": "100% confirmed (5/5 factual claims verified above)",
+      "status": "PASS"
+    },
+    {
+      "check": "Bury dead code doctrine (UFR-016) — historical cells preserved with annotations",
+      "expected": "Original findings kept as historical record, annotated not deleted",
+      "actual": "Original P0-7, P1-1, P2-6, P2-7 text preserved verbatim with '→ resolved/re-checked' suffix appended — correct annotate-don't-erase pattern",
+      "status": "PASS"
+    },
+    {
+      "check": "Verification-before-assertion (UFR-018) — uncertain claims explicitly flagged",
+      "expected": "P2-6 caveat ('À re-confirmer'), P2-7 caveat ('git blame pas exécuté')",
+      "actual": "Both caveats present in the appended preuves",
+      "status": "PASS"
+    }
+  ],
+  "summary": "T1.8 green diff matches spec line-for-line. All 5 cells handled per spec (4 reflag edits + 1 NO-OP). All cited evidence (api.ts:34/41/48, packages/musaium-shared sentry-scrubber, parity sentinel, tsconfig:8) verified factually on disk. Scope strictly limited to docs/audit-2026-05-12/MASTER.md (4 add / 4 remove). Honesty discipline respected (P2-6 + P2-7 caveats explicitly flag what was NOT re-verified by this task). APPROVED for commit."
+}

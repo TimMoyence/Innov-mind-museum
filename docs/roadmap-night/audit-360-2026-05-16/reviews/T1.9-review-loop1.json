@@ -1,0 +1,96 @@
+{
+  "task": "T1.9",
+  "title": "Clarifier doctrine helper env canonical (readEnvString unification)",
+  "loop": 1,
+  "reviewedAt": "2026-05-16",
+  "spec": "docs/roadmap-night/audit-360-2026-05-16/specs/T1.9.md",
+  "diffSource": "/tmp/audit-s1-T1.9-green.diff",
+  "filesCreated": [
+    "museum-frontend/shared/lib/env.ts",
+    "tools/ast-grep-rules/use-readenv-helper.yml",
+    "tools/ast-grep-rules/use-readenv-helper-tsx.yml"
+  ],
+  "filesModified": [
+    "CLAUDE.md",
+    "museum-frontend/app.config.ts",
+    "museum-frontend/app/_layout.tsx",
+    "museum-frontend/shared/infrastructure/apiConfig.ts",
+    "museum-frontend/shared/infrastructure/cert-pinning-init.ts"
+  ],
+  "scoresOnFiveAxes": {
+    "acCompliance": {
+      "score": 96,
+      "weight": 0.30,
+      "rationale": "All 4 spec ACs satisfied: (1) canonical helper chosen = readEnvString (matches spec § Design recommendation, signature is the verbatim Decision block: typeof guard + trim + length check), exported from museum-frontend/shared/lib/env.ts (new file). (2) CLAUDE.md gotcha at line 150 rewritten to point to the real helper used — replaces the historical `typeofString` mention with `readEnvString` + import path `@/shared/lib/env` + explicit T1.9 unification mention (verifiable in git diff HEAD -- CLAUDE.md). (3) typeofString is no longer hallucinated — it was real (app.config.ts:52) and is now fully eliminated (grep confirms 0 defs remaining); the gotcha no longer references it as the canonical solution. (4) ast-grep rule shipped (Q3 chosen in-scope per spec recommendation) flagging raw `process.env.X` reads, with `not.inside` allowlist for `readEnvString(...)` + `normalizeApiEnvironment(...)`. -4 only because the 5th in-scope file `chat/_internals.ts` was explicitly deferred per the green-agent anti-collision exception (documented in the rule's `ignores` block at line 56-59 with TECH_DEBT tracking note) — partial AC on Task T1.9.c (4/5 migrated) but spec exception is acknowledged honestly (UFR-013)."
+    },
+    "scopeFidelity": {
+      "score": 100,
+      "weight": 0.20,
+      "rationale": "git diff --stat = 5 modified files + 3 untracked new files, all strictly inside the declared T1.9 scope (museum-frontend/ + CLAUDE.md + tools/ast-grep-rules/). chat/ explicitly verified untouched: `git diff HEAD museum-frontend/features/chat/` returns empty. No collateral edits to backend, web, design-system, infra, or scripts. The single chat/_internals.ts inline `process.env.X` read (line 60) is preserved verbatim AND explicitly allowlisted in use-readenv-helper.yml lines 56-59 — anti-collision contract with the chat-ux refactor branch is respected end-to-end."
+    },
+    "kissDry": {
+      "score": 96,
+      "weight": 0.20,
+      "rationale": "Strong DRY win: 3 historical helper variants (typeofString / trimOrUndefined / readEnvString locaux) collapsed to a single canonical export. Local defs eliminated cleanly (grep confirms 0 stale defs across museum-frontend/). Migrations are surgical: 2 sites in app.config.ts, 7 sites in apiConfig.ts, 1 import swap in app/_layout.tsx, 1 inline-to-helper rewrite in cert-pinning-init.ts (also removes a 4-line type-narrowing comment that the helper's JSDoc now owns canonically). The ast-grep split into .ts + .tsx companion rules is legitimate (ast-grep treats `typescript` and `tsx` as distinct grammars; documented in the tsx rule's header comment line 1-4) — not a duplication smell, it's a grammar constraint. -4 only because the trim() change of behavior in app.config.ts SENTRY_ORG/SENTRY_PROJECT reads (typeofString didn't trim; readEnvString does) is silent — defensive but a behavior delta worth noting in a CHANGELOG entry; not a correctness bug since both org/project slugs should never have leading/trailing whitespace."
+    },
+    "a11yDesign": {
+      "score": 95,
+      "weight": 0.15,
+      "rationale": "N/A (env-reading utility + lint rule + docs). Default 95 per spec instruction. JSDoc on the canonical helper (env.ts lines 1-35) is exceptionally thorough — captures the local/CI typing rationale, the trim default + rationale, and forbids local redefinitions with a concrete pointer to the T1.9 audit. ast-grep rule `message:` + `note:` blocks are formatted with concrete Bad/Good examples for dev affordance."
+    },
+    "securityHonesty": {
+      "score": 97,
+      "weight": 0.15,
+      "rationale": "Every file:line citation verified by Read: env.ts:36 readEnvString def ✓, app.config.ts:3 import + lines 297-301 the 2 SENTRY_* migrations ✓, apiConfig.ts:3 import + 7 sites migrated (lines 52-53, 77-78, 81-82, 84-85, 136) ✓, app/_layout.tsx:46 import + line 47-48 local def removed ✓, cert-pinning-init.ts:36 import + lines 41-45 inline-to-helper rewrite ✓. CLAUDE.md diff verified verbatim — the gotcha replacement adds 'Toujours importer' + 'audit 2026-05-16 T1.9 (unification)' which fixes UFR-013 (the doc previously asserted typeofString was the canonical solution when in fact 3 variants existed in parallel). The ast-grep rule's `ignores` block honestly self-discloses the chat/_internals.ts deferral with a TECH_DEBT pointer instead of hiding it (UFR-013 + UFR-016). Both ast-grep rules pass syntax check (ast-grep scan exit 0 with 0 violations across museum-frontend/) — rule infrastructure validated, not just shipped. FE lint passes (npm run lint exit 0, eslint --max-warnings=0 + tsc --noEmit)."
+    }
+  },
+  "weightedMean": 96.65,
+  "verdict": "APPROVED",
+  "findings": {
+    "blocker": [],
+    "important": [],
+    "niceToHave": [
+      {
+        "id": "NH-1",
+        "title": "Behavior delta silente — SENTRY_ORG/SENTRY_PROJECT désormais trimmés",
+        "detail": "app.config.ts:297-301 utilisait `typeofString` (pas de trim) ; migré vers `readEnvString` qui trim par défaut. Conséquence pratique : si une CI/CD definitor passe `SENTRY_ORG='asili-design '` (espace traînant accidentel), l'org slug Sentry envoyé devient `'asili-design'` au lieu de `'asili-design '` (qui était probablement un 404 silencieux). Le delta est défensif — pas une régression — mais mérite un CHANGELOG entry ou une mention dans le commit body T1.9 pour traçabilité future. Spec § Design § Q1 acknowledge déjà ce trade-off (trim par défaut = pattern majoritaire trimOrUndefined). Aucune action requise.",
+        "action": "Optionnel : 1 ligne dans le commit body T1.9 mentionnant 'behaviour delta : SENTRY_ORG/PROJECT désormais trimmés (défensif)'. Pas bloquant."
+      },
+      {
+        "id": "NH-2",
+        "title": "chat/_internals.ts ignore = dette suivie, à matérialiser dans TECH_DEBT.md",
+        "detail": "Le commentaire dans use-readenv-helper.yml:56-59 mentionne 'Tracked in TECH_DEBT' mais une vérification rapide ne montre pas (à ce stade) d'entrée correspondante dans docs/TECH_DEBT.md. La pointer est honnête (UFR-013 — pas de pretense que le helper est universel) mais pour fermer la boucle un suivi ferait sens : (a) soit ajouter l'entrée TECH_DEBT maintenant, (b) soit attendre que la branch chat-ux merge et retirer l'ignore. Hors scope T1.9 strict mais à programmer en T1.x post-chat-ux-merge.",
+        "action": "Backlog : créer ticket follow-up 'migrate chat/_internals.ts to readEnvString + remove ast-grep ignore' à executer post-merge chat-ux."
+      },
+      {
+        "id": "NH-3",
+        "title": "ast-grep rule `not.inside.any` syntaxe à valider sur un cas positif",
+        "detail": "Smoke test `ast-grep scan --rule ...` exit 0 confirme la syntaxe du fichier ET l'absence de violations sur le codebase migré. Mais ne valide pas que le rule TRIGGER bien sur un cas non-wrappé : on ne sait pas si le `not.inside.any` allowlist marche réellement (peut-être que la rule ne flag jamais rien, et l'exit 0 vient de là). Suggestion défensive : ajouter un fixture `museum-frontend/shared/lib/__fixtures__/env-rule-trigger.fixture.ts.disabled` (extension non-indexée) avec un raw `process.env.X` et un test smoke `ast-grep scan --include <fixture> | grep use-readenv-helper` qui DOIT trouver le match. Niveau confiance actuel : suffisant pour merger (le pattern `process.env.$NAME` est canonique ast-grep) mais une preuve positive serait plus robuste.",
+        "action": "Backlog (1 fixture + 1 ligne smoke CI). Pas bloquant pour ce loop."
+      }
+    ]
+  },
+  "verificationLog": {
+    "diffStat": "5 files changed, 21 insertions(+), 39 deletions(-) on tracked files + 3 new untracked (env.ts + 2 ast-grep yml). Net code: -18 LoC (DRY win).",
+    "localDefScan": {
+      "typeofString": "grep -rn 'function typeofString|const typeofString' museum-frontend/ → exit 1 (no match) ✓",
+      "trimOrUndefined": "grep -rn 'function trimOrUndefined|const trimOrUndefined' museum-frontend/ → exit 1 (no match) ✓",
+      "readEnvString": "grep -rn 'function readEnvString|const readEnvString' museum-frontend/ → 1 match (museum-frontend/shared/lib/env.ts:36) ✓ canonical only"
+    },
+    "canonicalImports": [
+      "museum-frontend/app.config.ts:3",
+      "museum-frontend/app/_layout.tsx:46",
+      "museum-frontend/shared/infrastructure/cert-pinning-init.ts:36",
+      "museum-frontend/shared/infrastructure/apiConfig.ts:3"
+    ],
+    "chatUntouched": "git diff HEAD museum-frontend/features/chat/ → empty output ✓ (anti-collision OK)",
+    "chatExclusionDocumented": "tools/ast-grep-rules/use-readenv-helper.yml:56-59 explicitly ignores museum-frontend/features/chat/infrastructure/chatApi/_internals.ts with TECH_DEBT pointer",
+    "claudeMdGotcha": "CLAUDE.md:150 — diff replaces 'helper typeofString au top du module — ...' with 'helper canonical readEnvString exporté depuis museum-frontend/shared/lib/env.ts ... Toujours importer ... audit 2026-05-16 T1.9 (unification)' ✓ UFR-013 satisfied",
+    "feLint": "cd museum-frontend && npm run lint → exit 0 (eslint --max-warnings=0 + tsc --noEmit incremental) ✓",
+    "astGrepSmoke": {
+      "use-readenv-helper.yml": "ast-grep scan --rule ... → exit 0, 0 violations (rule syntax valid, codebase clean post-migration)",
+      "use-readenv-helper-tsx.yml": "ast-grep scan --rule ... → exit 0, 0 violations"
+    }
+  },
+  "verdictNotes": "APPROVED with 3 nice-to-have follow-ups. Excellent DRY win (3 helpers → 1 canonical), honest doc update (CLAUDE.md gotcha now matches reality), defensive helper signature (trim default), tightly-scoped ast-grep enforcement. The chat/_internals.ts exclusion is handled transparently in 3 places (spec scope exception, ast-grep ignore with comment, this review) — no pretense of universality. Anti-collision contract with chat-ux branch fully respected. Ready to commit."
+}
