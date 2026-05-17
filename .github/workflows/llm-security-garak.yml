@@ -225,10 +225,12 @@ jobs:
             echo "session=${SID}"
             export SESSION_ID="${SID}"
             # Garak RestGenerator ne fait PAS de substitution `$VAR` dans le
-            # JSON config — il faut envsubst au préalable. Sinon l'URI et le
-            # header Authorization gardent leurs placeholders littéraux →
-            # /api/chat/sessions/$SESSION_ID/messages → BE 401 / 404.
-            envsubst < "${GITHUB_WORKSPACE}/museum-backend/scripts/llm-security/musaium-garak-rest.json" > /tmp/garak-rest-${probe}.json
+            # JSON config — il faut envsubst au préalable. MAIS l'envsubst doit
+            # être SÉLECTIF : `$INPUT` est un placeholder garak rempli au runtime
+            # avec le prompt actuel. Si on l'envsubst il devient empty string →
+            # BE schema `optionalNonEmptyString` rejette → 400 Bad Request.
+            # Syntaxe `envsubst 'VAR1 VAR2'` ne substitue que les vars listées.
+            envsubst '$SESSION_ID $MUSAIUM_JWT' < "${GITHUB_WORKSPACE}/museum-backend/scripts/llm-security/musaium-garak-rest.json" > /tmp/garak-rest-${probe}.json
             garak \
               --model_type rest \
               --generator_option_file "/tmp/garak-rest-${probe}.json" \

@@ -924,8 +924,12 @@ jobs:
             echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
             echo "[deploy] migrations applied this deploy: ${APPLIED}"
 
-            # 3. Restart with 30s grace period for in-flight requests to drain
-            docker compose up -d --remove-orphans --timeout 30 backend
+            # 3. Restart with 30s grace period for in-flight requests to drain.
+            # `--no-deps` isole le restart à backend seul. Sans ça, mise à jour
+            # de .env (BACKEND_IMAGE_TAG patch) cascade vers museum-web via
+            # depends_on → race "container name already in use" (vu côté web
+            # workflow ci-cd-web.yml run 25987976752 — même fix appliqué là-bas).
+            docker compose up -d --no-deps --remove-orphans --timeout 30 backend
 
             # 4. Wait for the new container to pass its healthcheck
             echo "Waiting for backend healthcheck..."
@@ -1427,8 +1431,9 @@ jobs:
             echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
             echo "[deploy] migrations applied this deploy: ${APPLIED}"
 
-            # 3. Restart with 30s grace period for in-flight requests to drain
-            docker compose up -d --remove-orphans --timeout 30 backend-staging
+            # 3. Restart with 30s grace period for in-flight requests to drain.
+            # `--no-deps` : même rationale que la version prod ci-dessus.
+            docker compose up -d --no-deps --remove-orphans --timeout 30 backend-staging
 
             # 4. Wait for the new container to pass its healthcheck
             echo "Waiting for backend-staging healthcheck..."

@@ -404,8 +404,15 @@ jobs:
             # 1. Pull the new image
             docker compose pull museum-web
 
-            # 2. Restart with 30s grace period for in-flight requests to drain
-            docker compose up -d --remove-orphans --timeout 30 museum-web
+            # 2. Restart with 30s grace period for in-flight requests to drain.
+            # `--no-deps` est CRITIQUE : sans lui compose voit que .env a changé
+            # (WEB_IMAGE_TAG patch) et décide de recréer aussi museum-backend
+            # par cascade dependencies → race condition "Container name
+            # /museum-backend-1 is already in use" (vu run 25987976752 + 25987305512).
+            # `--no-deps` isole le restart à museum-web seul, backend reste
+            # intact. Pérein 10y : tout deploy service-spécifique DOIT utiliser
+            # --no-deps si .env est partagé entre services.
+            docker compose up -d --no-deps --remove-orphans --timeout 30 museum-web
 
             # 3. Wait for the new container to pass its healthcheck
             echo "Waiting for museum-web healthcheck..."
