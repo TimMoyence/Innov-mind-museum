@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 **Deciders:** Tech Lead (decision pending post-launch validation)
 **Closes:** audit-2026-05-12 R27 (audit chain scaling redesign), R8 (capacity model)
-**Source preserved:** This ADR is the canonical home of the R27 design rationale; the `docs/audit-2026-05-12-raw/04-research/R27-audit-chain-redesign.md` source folder is slated for deletion.
+**Source preserved:** This ADR is the canonical home of the R27 design rationale; the `docs/audit-2026-05-12-raw/04-research/R27-audit-chain-redesign.md` source folder is deleted 2026-05-17, retrieve via `git log`.
 
 ---
 
@@ -177,7 +177,7 @@ Per-phase reversibility is the explicit design property that makes the redesign 
 
 ## References
 
-- `docs/audit-2026-05-12-raw/04-research/R27-audit-chain-redesign.md` — full research source (slated for deletion; rationale preserved here)
+- `docs/audit-2026-05-12-raw/04-research/R27-audit-chain-redesign.md` — full research source (deleted 2026-05-17, retrieve via `git log`; rationale preserved here)
 - `museum-backend/src/shared/audit/audit.repository.pg.ts:30-98` — current implementation
 - `museum-backend/src/shared/audit/audit-chain.ts:42-63` — current chain construction
 - `museum-backend/src/shared/audit/audit-chain-verifier.ts` — verifier (will be extended in Phase 2)

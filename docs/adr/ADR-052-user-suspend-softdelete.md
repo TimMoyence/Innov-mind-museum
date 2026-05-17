@@ -100,7 +100,7 @@ Tested by a new Vitest regression case `admin-auth.test.tsx`: `RoleGuard allowed
 
 ## Sources
 
-- Audit `docs/audit-2026-05-12-raw/04-research/R20-web-auth-admin.md` (§§ 1.5, 3.5, 6).
-- Audit `docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md` (Claim 1).
-- Audit `docs/audit-2026-05-12/MASTER.md` (P0-6, P0 #9 entries).
+- Audit `docs/audit-2026-05-12-raw/04-research/R20-web-auth-admin.md` (§§ 1.5, 3.5, 6) — source deleted 2026-05-17, retrieve via `git log`.
+- Audit `docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md` (Claim 1) — source deleted 2026-05-17, retrieve via `git log`.
+- Audit `docs/audit-2026-05-12/MASTER.md` (P0-6, P0 #9 entries) — source deleted 2026-05-17, retrieve via `git log`.
 - Run state: `.claude/skills/team/team-state/2026-05-14-admin-user-detail-page/{spec,design,tasks}.md`.

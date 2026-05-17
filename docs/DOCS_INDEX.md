@@ -1,7 +1,8 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Last cleanup: **2026-05-12** (sprint audit-cleanup-2026-05-12 — archive `docs/_archive/` introduit, `explications-sprint-2026-05-05/` + `SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` déplacés en archive, ADR-033+034 mergés, 5 plans périmés supprimés, 3 docs museum-frontend stales supprimés, 18+ dangling refs corrigés, 6 stubs ADR deferred V1.1 créés).
+> Last cleanup: **2026-05-17** (Deep absorption pass — 4 audit/worktree sources extraites puis supprimées : `docs/audit-2026-05-12/`, `docs/audit-2026-05-12-raw/`, `docs/chat-ux-refonte/`, `docs/roadmap-night/`, `docs/plans/`, `stryker-admin-night.log`, 24 team-reports subdirs absorbés + `working/`. Extractions : 5 ADRs (054-058), 19 TDs (TD-21..39), 5 gotchas CLAUDE.md, 3 doctrines MEMORY.md. `team-reports/2026-05-05-recap-investigation/` promu repo-root archive.).
+> Previous cleanup: 2026-05-12 (sprint audit-cleanup-2026-05-12 — archive `docs/_archive/` introduit, `explications-sprint-2026-05-05/` + `SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` déplacés en archive, ADR-033+034 mergés, 5 plans périmés supprimés, 3 docs museum-frontend stales supprimés, 18+ dangling refs corrigés, 6 stubs ADR deferred V1.1 créés).
 > Previous cleanup: 2026-05-07 (purge complète de `docs/archive/`, suppression HORIZONTAL_SCALING, CDN_CLOUDFLARE_SETUP, FEATURE_KNOWLEDGE_BASE_WIKIDATA).
 > Previous cleanup: 2026-05-05 (backend hexagonal cleanup, codemod imports, god-files split).
 
@@ -19,7 +20,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-052) | [`docs/adr/`](adr/) |
+| ADRs (002-058) | [`docs/adr/`](adr/) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) + `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` |

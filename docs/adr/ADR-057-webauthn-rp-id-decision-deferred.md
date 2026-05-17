@@ -3,7 +3,7 @@
 **Status:** Proposed / Deferred
 **Date:** 2026-05-17
 **Deciders:** Tech Lead — decision required BEFORE any WebAuthn code lands
-**Deferred to:** V1.1 scope discovery (audit `docs/audit-2026-05-12-raw/04-research/R26-web-auth-admin.md` recommendation)
+**Deferred to:** V1.1 scope discovery (audit R26 recommendation — source `docs/audit-2026-05-12-raw/04-research/R26-web-auth-admin.md` deleted 2026-05-17, retrieve via `git log`)
 **Blocking:** W9 WebAuthn admin V1.1 feature
 
 ---
@@ -118,7 +118,7 @@ When this ADR is updated to `Accepted`, the following sections will be filled:
 
 ## References
 
-- `docs/audit-2026-05-12-raw/04-research/R26-web-auth-admin.md` — original audit recommendation (B2B admin WebAuthn at V1.1)
+- `docs/audit-2026-05-12-raw/04-research/R26-web-auth-admin.md` — original audit recommendation (B2B admin WebAuthn at V1.1) — deleted 2026-05-17, retrieve via `git log`
 - ADR-052 — V1 admin auth (password + 15-min JWT + super_admin guard)
 - ADR-053 — granular consent audit pattern (mirror for WebAuthn enrollment audit)
 - `museum-backend/src/modules/auth/` — current auth module structure (where WebAuthn use cases will live)

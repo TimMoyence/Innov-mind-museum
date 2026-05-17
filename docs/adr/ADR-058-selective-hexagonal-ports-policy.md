@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 **Deciders:** Tech Lead (selective inlining = 1–2 days of focused work, decision pending)
 **Closes:** audit-2026-05-12 P1-3, TD-18 (chat ports inline review)
-**Source preserved:** Rationale derives from `docs/audit-2026-05-12/MASTER.md` P1-3 + `docs/audit-2026-05-12-raw/` findings (slated for deletion).
+**Source preserved:** Rationale derives from `docs/audit-2026-05-12/MASTER.md` P1-3 + `docs/audit-2026-05-12-raw/` findings (deleted 2026-05-17, retrieve via `git log`).
 
 ---
 
@@ -139,7 +139,7 @@ Each port inline is one independent commit; rollback granularity = one port at a
 ## References
 
 - `docs/audit-2026-05-12/MASTER.md` — P1-3 (selective ports policy)
-- `docs/audit-2026-05-12-raw/` — supporting findings (slated for deletion; key numbers preserved here: 16 BE single-impl repo interfaces, 13 chat ports post-TD-8, ~2000 LOC indirection)
+- `docs/audit-2026-05-12-raw/` — supporting findings (deleted 2026-05-17, retrieve via `git log`; key numbers preserved here: 16 BE single-impl repo interfaces, 13 chat ports post-TD-8, ~2000 LOC indirection)
 - TD-8 — already-inlined precedent (image-processor, knowledge-router, llm-judge)
 - TD-18 — chat ports inline review (this ADR closes TD-18)
 - ADR-048 — guardrail strategy (gates the guardrail-port inline timing)

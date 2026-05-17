@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 **Deciders:** Chat UX refonte worktree, /team C4 spec author
 **Implemented in:** commits `67a49a280` + `e91cb34db`, merged via PR #284
-**Source preserved:** This ADR is the canonical home for the C4 architectural rationale; `docs/chat-ux-refonte/specs/C4.md` is slated for deletion.
+**Source preserved:** This ADR is the canonical home for the C4 architectural rationale; `docs/chat-ux-refonte/specs/C4.md` is deleted 2026-05-17, retrieve via `git log`.
 
 ---
 
@@ -128,7 +128,7 @@ Per UFR-015 (no feature flags pre-launch), the change is hard-flipped. If a crit
 
 ## References
 
-- `docs/chat-ux-refonte/specs/C4.md` — full discovery spec (slated for deletion; rationale preserved here)
+- `docs/chat-ux-refonte/specs/C4.md` — full discovery spec (deleted 2026-05-17, retrieve via `git log`; rationale preserved here)
 - `museum-frontend/features/chat/ui/bottom-sheet-router/` — implementation directory
   - `BottomSheetRouter.tsx`, `useBottomSheetRouter.ts`, `routes.ts`, `bottomSheetMachine.ts`, `BottomSheetContainer.tsx`, `BottomSheetBackdrop.tsx`
 - ADR-053 — Apple Guideline 5.1.2(i) granular consent (consumes this router for the consent sheet)

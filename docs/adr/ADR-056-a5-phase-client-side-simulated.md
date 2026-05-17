@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 **Deciders:** Chat UX refonte worktree, /team A5 spec author
 **Implemented in:** commits `989395ca1` + `ef9b66178` (dual-emit fix for phase span on success AND failure)
-**Source preserved:** This ADR is the canonical home for the A5 architectural rationale; `docs/chat-ux-refonte/specs/A5.md` is slated for deletion.
+**Source preserved:** This ADR is the canonical home for the A5 architectural rationale; `docs/chat-ux-refonte/specs/A5.md` is deleted 2026-05-17, retrieve via `git log`.
 
 ---
 
@@ -129,7 +129,7 @@ Per UFR-015, hard-flipped without flag. If a critical regression:
 
 ## References
 
-- `docs/chat-ux-refonte/specs/A5.md` — full discovery spec (slated for deletion; rationale preserved here)
+- `docs/chat-ux-refonte/specs/A5.md` — full discovery spec (deleted 2026-05-17, retrieve via `git log`; rationale preserved here)
 - `museum-backend/src/modules/chat/domain/chat.types.ts` — `ChatPipelinePhase` type + `ChatAssistantMetadata.phase`
 - `museum-backend/src/shared/observability/chat-phase-timer.ts` — sibling `ChatPhase` for Prometheus
 - `museum-frontend/features/chat/application/phases.ts` — FE drift-caught type
