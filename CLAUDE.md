@@ -93,7 +93,7 @@ GitHub Actions workflows (`.github/workflows/`):
 - `codeql.yml` — CodeQL security analysis
 - `semgrep.yml` — SAST static analysis
 - `llm-security-promptfoo.yml` — OWASP LLM07 system-prompt-leak adversarial corpus (85 prompts × 8 locales × 10 attack families) against live chat endpoint; fails PR if pass-rate < 95 % (cron Mon 04:00 UTC + PR on chat/guardrail paths). ADR-049.
-- `llm-security-garak.yml` — NVIDIA Garak `promptinject` + `xss` + `leakreplay` probes; fails on HIGH/CRITICAL severity (cron Mon 04:00 UTC + PR on chat/guardrail paths). Phase 1.5 will plug into LLMGuard sidecar via custom REST probe. ADR-049.
+- ~~`llm-security-garak.yml`~~ **Supprimé 2026-05-17** — coût réel ~$120/mois (256 prompts × 6 probes × ~18s/call orchestrator full → ~8h wall-clock + ~$30 OpenAI tokens × 4 runs/mois) vs $2/mois estimé. Deferred V2.1 quand LLM Guard sidecar in CI permettra un fast-path target sans full orchestrator. Cf. ADR-049 amendment 2026-05-17.
 - `llm-promptfoo-smoke.yml` — non-adversarial daily-art recall smoke (10 reference prompts); fails if recall < 80 % (cron 03:30 UTC daily). Catches over-blocking by guardrail tightening.
 
 Phase history (Maestro / Web a11y / Stryker / Auth e2e / Chaos / Coverage gates) consolidé dans **`docs/PHASE_HISTORY.md`**.
@@ -291,7 +291,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (31292 symbols, 48634 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (27310 symbols, 44397 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

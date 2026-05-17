@@ -1,11 +1,50 @@
 # ADR-049 — LLM security CI gates: Garak + promptfoo
 
-- Status: **Accepted** (2026-05-12)
+- Status: **Accepted (Amended 2026-05-17 — Garak deferred V2.1)**
 - Authors: editor agent (run `2026-05-12-llm-guard-perennial-implementation`)
 - Stakeholders: Backend lead, Security lead, Tech Lead
 - Supersedes: —
 - Superseded by: —
 - Related: ADR-047 (LLM-Guard circuit breaker), ADR-038 (anti-hallucination)
+
+## Amendment 2026-05-17 — Garak workflow supprimé, deferred V2.1
+
+Le `llm-security-garak.yml` workflow a été supprimé du repo (commit ce
+sprint). La doctrine "Phase 1.5 swap target → LLMGuard sidecar" reste
+correcte sur le principe mais a sous-estimé le coût réel du Phase 0
+(REST target vers le chat endpoint Musaium full orchestrator) :
+
+- **Coût initial estimé** : ~$2/mois (10min/run × 4 runs/mois × $0.001
+  GPT-4o-mini)
+- **Coût réel mesuré 2026-05-17** : ~$30/run × 4 runs/mois = **~$120/mois**.
+  Cause root : 256 prompts × 6 probes × ~18s/call (orchestrator full +
+  guardrails + Wikidata + LLM) = ~8h wall-clock par run. La timeout cap
+  30min ne couvrait même pas 1 probe complet. Bump à 60min ne tient pas
+  non plus (vu cancel `25990940268` à 30min sur 1er probe à 8% completion).
+
+**Décision** : drop garak entièrement maintenant, revivre en V2.1 quand
+LLM Guard sidecar in CI permettra un fast-path target (sans full
+orchestrator latency 18s, ramené à ~1s sidecar-only). Promptfoo
+systemprompt-leak (85 prompts × 10 attack families) garde la couverture
+OWASP LLM07 critique au 95% pass-rate threshold.
+
+**Couverture résiduelle** (post-amendment) :
+- ✅ LLM07 system-prompt-leak via `llm-security-promptfoo.yml`
+- ✅ Reference recall via `llm-promptfoo-smoke.yml`
+- ❌ NIST-validated Garak probes (promptinject, leakreplay, etc.) →
+  deferred V2.1
+- ✅ Keyword guardrail + LLM Guard sidecar + LLM judge layers (ADR-015 v2)
+  inchangées
+
+**Reactivation criteria V2.1** :
+- LLM Guard sidecar deployable en CI service container
+- Generator REST target pointe direct sur sidecar `/scan` endpoint
+  (bypass orchestrator), latence ~1-2s/call
+- Budget OpenAI mensuel réservé < $20/mois pour ce workflow
+
+**Refs** :
+- Commit suppression workflow : ce sprint
+- Tracking : pre-launch budget audit 2026-05-17
 
 ## Context
 

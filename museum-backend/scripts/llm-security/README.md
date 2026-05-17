@@ -1,11 +1,14 @@
-# LLM security gates — Garak + promptfoo
+# LLM security gates — promptfoo (Garak deferred V2.1)
 
 Adversarial CI gates for the Musaium AI guardrail stack. Closes the
 **LLM07 (System Prompt Leakage)** gap identified in the
 `compliance-research-owasp-llm-top10.md` audit (2026-05-12) and the
 **LLM01 (Prompt Injection)** coverage gap on indirect / paraphrased attacks.
 
-See `docs/adr/ADR-049-llm-security-ci-gates.md` for the design rationale.
+See `docs/adr/ADR-049-llm-security-ci-gates.md` for the design rationale +
+2026-05-17 amendment (Garak workflow supprimé pre-launch — coût réel
+~$120/mois vs $2/mois estimé. Revivre V2.1 quand LLM Guard sidecar permet
+un fast-path target en CI).
 
 ## Layout
 
@@ -94,7 +97,7 @@ Pass-rate < 80 % fails the nightly smoke workflow.
 
 | Workflow | Cadence | PR trigger | Threshold |
 |----------|---------|------------|-----------|
-| `llm-security-garak.yml` | Mon 04:00 UTC | guardrail / chat code | 0 HIGH/CRITICAL |
+| ~~`llm-security-garak.yml`~~ **deferred V2.1** | — | — | ADR-049 amendment 2026-05-17 |
 | `llm-security-promptfoo.yml` | Mon 04:00 UTC | guardrail / chat / corpus | pass-rate ≥ 95 % |
 | `llm-promptfoo-smoke.yml` | Daily 03:30 UTC | — | pass-rate ≥ 80 % |
 
@@ -129,22 +132,23 @@ MUSAIUM_SESSION_ID="$SID" \
 cd scripts/llm-security && npx promptfoo view
 ```
 
-### Garak (system Python, slow first run)
+### ~~Garak (deferred V2.1)~~
+
+Le workflow CI `llm-security-garak.yml` a été supprimé 2026-05-17 (cf.
+ADR-049 amendment). Coût réel mesuré ~$120/mois vs $2/mois annoncé
+(256 prompts × 6 probes × ~18s/call orchestrator full = ~8h/run + tokens
+OpenAI). Reactivation V2.1 quand LLM Guard sidecar permet fast-path
+target sans full orchestrator latency.
+
+Si tu veux quand même run Garak local pour exploration (pas en CI) :
 
 ```bash
 python3.11 -m venv .venv-garak
 source .venv-garak/bin/activate
 pip install "garak>=0.10,<0.12"
-mkdir -p garak-reports && cd garak-reports
-garak \
-  --target_type huggingface.Pipeline \
-  --target_name microsoft/Phi-3-mini-4k-instruct \
-  --probes promptinject,xss,leakreplay \
-  --report_prefix musaium-garak
+# Cible recommandée : LLM Guard sidecar local (rapide), PAS le chat
+# endpoint Musaium (latence 18s × N prompts = soirée perdue).
 ```
-
-First invocation downloads ~7 GB of model weights — cache them at
-`~/.cache/huggingface/`.
 
 ## Adding a new adversarial prompt
 
