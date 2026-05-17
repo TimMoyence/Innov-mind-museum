@@ -16,7 +16,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { styles } from './_museum-detail.styles';
+import { styles } from './_styles/museum-detail';
 
 /** Renders the museum detail screen showing info and a "Start Chat Here" button. */
 export default function MuseumDetailScreen() {

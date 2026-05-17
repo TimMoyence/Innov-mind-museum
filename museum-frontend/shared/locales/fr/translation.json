@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Connexion Apple interrompue. Veuillez réessayer.",
       "ios_unavailable": "La connexion Google n'est pas disponible sur cette version. Utilisez Apple ou email."
     },
+    "auth": {
+      "password_breached": "Ce mot de passe figure dans des fuites de données connues. Choisissez-en un autre.",
+      "email_already_taken": "Un compte existe déjà avec cette adresse email.",
+      "invalid_credentials": "Email ou mot de passe incorrect.",
+      "email_not_verified": "Vérifiez votre email avant de vous connecter. Consultez votre boîte de réception.",
+      "account_suspended": "Votre compte a été suspendu. Contactez le support.",
+      "account_deleted": "Ce compte a été supprimé.",
+      "locked_out": "Trop de tentatives échouées. Réessayez dans quelques minutes.",
+      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
+    },
     "chat": {
       "contract_invalid": "Réponse du serveur invalide. Veuillez réessayer.",
       "audio_missing": "Aucun audio à envoyer.",

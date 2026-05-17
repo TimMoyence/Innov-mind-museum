@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Apple 登录已中断，请重试。",
       "ios_unavailable": "此版本不支持 Google 登录，请使用 Apple 或邮箱。"
     },
+    "auth": {
+      "password_breached": "此密码已出现在已知的数据泄露中，请选择其他密码。",
+      "email_already_taken": "该邮箱已存在账户。",
+      "invalid_credentials": "邮箱或密码错误。",
+      "email_not_verified": "登录前请先验证邮箱，请查看收件箱。",
+      "account_suspended": "您的账户已被暂停，请联系客服。",
+      "account_deleted": "该账户已被删除。",
+      "locked_out": "失败次数过多，请几分钟后重试。",
+      "minor_parental_consent_required": "注册仅限15岁及以上用户（法国数字成年年龄）。"
+    },
     "chat": {
       "contract_invalid": "服务器返回无效响应，请重试。",
       "audio_missing": "没有可发送的音频。",

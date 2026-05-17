@@ -15,7 +15,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { styles } from './_privacy.styles';
+import { styles } from './_styles/privacy';
 
 interface MetaItem {
   label: string;

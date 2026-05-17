@@ -145,6 +145,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
     return createAppError({
       kind: 'Unauthorized',
       message: 'Authentication required',
+      code: apiErrorCode,
       status,
       details: axiosLike.response?.data,
       requestId,
@@ -156,6 +157,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
       return createAppError({
         kind: 'Unauthorized',
         message: 'Authentication required',
+        code: apiErrorCode,
         status,
         details: responseData,
         requestId,
@@ -165,6 +167,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
     return createAppError({
       kind: 'Forbidden',
       message: 'Access denied',
+      code: apiErrorCode,
       status,
       details: responseData,
       requestId,
@@ -205,6 +208,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
     return createAppError({
       kind: 'Validation',
       message: 'Request validation error',
+      code: apiErrorCode,
       status,
       details: axiosLike.response?.data,
       requestId,

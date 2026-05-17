@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Appleサインインが中断されました。もう一度お試しください。",
       "ios_unavailable": "このビルドではGoogleサインインを利用できません。Appleまたはメールをご利用ください。"
     },
+    "auth": {
+      "password_breached": "このパスワードは既知のデータ漏えいに含まれています。別のものを選択してください。",
+      "email_already_taken": "このメールアドレスのアカウントはすでに存在します。",
+      "invalid_credentials": "メールアドレスまたはパスワードが正しくありません。",
+      "email_not_verified": "サインインする前にメールアドレスを確認してください。受信トレイをチェックしてください。",
+      "account_suspended": "アカウントは停止されました。サポートにご連絡ください。",
+      "account_deleted": "このアカウントは削除されました。",
+      "locked_out": "失敗回数が多すぎます。数分後に再度お試しください。",
+      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。"
+    },
     "chat": {
       "contract_invalid": "サーバーの応答が無効です。もう一度お試しください。",
       "audio_missing": "送信する音声がありません。",

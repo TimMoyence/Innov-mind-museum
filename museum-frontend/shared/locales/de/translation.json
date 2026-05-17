@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Apple-Anmeldung wurde unterbrochen. Bitte erneut versuchen.",
       "ios_unavailable": "Google-Anmeldung ist in dieser Version nicht verfügbar. Verwenden Sie Apple oder E-Mail."
     },
+    "auth": {
+      "password_breached": "Dieses Passwort kommt in bekannten Datenlecks vor. Wähle ein anderes.",
+      "email_already_taken": "Mit dieser E-Mail-Adresse existiert bereits ein Konto.",
+      "invalid_credentials": "E-Mail oder Passwort falsch.",
+      "email_not_verified": "Bestätige deine E-Mail vor der Anmeldung. Prüfe dein Postfach.",
+      "account_suspended": "Dein Konto wurde gesperrt. Wende dich an den Support.",
+      "account_deleted": "Dieses Konto wurde gelöscht.",
+      "locked_out": "Zu viele fehlgeschlagene Versuche. Bitte in einigen Minuten erneut versuchen.",
+      "minor_parental_consent_required": "Die Registrierung ist für Nutzer ab 15 Jahren vorgesehen (französische digitale Volljährigkeit)."
+    },
     "chat": {
       "contract_invalid": "Unerwartete Serverantwort. Bitte erneut versuchen.",
       "audio_missing": "Kein Audio zum Senden vorhanden.",

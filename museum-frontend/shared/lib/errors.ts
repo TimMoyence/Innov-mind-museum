@@ -146,6 +146,47 @@ const reviewMessage = (code: string | undefined): string => {
 };
 
 /**
+ * Map a structured backend error code (e.g. `PASSWORD_BREACHED`) to a
+ * user-facing string. Returns `null` when no specific message exists,
+ * so callers can fall back to the generic per-kind translation.
+ * Catalog mirrors museum-backend auth/account error codes.
+ */
+const authCodeMessage = (code: string | undefined): string | null => {
+  switch (code) {
+    case 'PASSWORD_BREACHED':
+      return t(
+        'error.auth.password_breached',
+        'This password appears in known data breaches. Choose a different one.',
+      );
+    case 'CONFLICT':
+      return t('error.auth.email_already_taken', 'An account already exists with this email.');
+    case 'INVALID_CREDENTIALS':
+      return t('error.auth.invalid_credentials', 'Wrong email or password.');
+    case 'EMAIL_NOT_VERIFIED':
+      return t(
+        'error.auth.email_not_verified',
+        'Verify your email before signing in. Check your inbox.',
+      );
+    case 'ACCOUNT_SUSPENDED':
+      return t('error.auth.account_suspended', 'Your account has been suspended. Contact support.');
+    case 'ACCOUNT_DELETED':
+      return t('error.auth.account_deleted', 'This account has been deleted.');
+    case 'AUTH_LOCKED_OUT':
+      return t('error.auth.locked_out', 'Too many failed attempts. Try again in a few minutes.');
+    case 'MINOR_PARENTAL_CONSENT_REQUIRED':
+      return t(
+        'error.auth.minor_parental_consent_required',
+        'Sign-up is reserved for users aged 15 and over (French digital majority).',
+      );
+    case 'BAD_REQUEST':
+      // Generic 400 — fall back to the kind-level translation.
+      return null;
+    default:
+      return null;
+  }
+};
+
+/**
  * Extracts a user-facing error message from an unknown thrown value.
  * Returns a localized hint for known {@link AppError} kinds, falls back to a generic message otherwise.
  * @param error - The caught error value.
@@ -156,14 +197,20 @@ export const getErrorMessage = (error: unknown): string => {
     switch (error.kind) {
       case 'Network':
         return t('error.network', 'Network unavailable. Check your connection and try again.');
-      case 'Unauthorized':
-        return t('error.unauthorized', 'Session expired. Please log in again.');
-      case 'Forbidden':
-        return t('error.forbidden', 'You do not have access to this action.');
+      case 'Unauthorized': {
+        const authSpecific = authCodeMessage(error.code);
+        return authSpecific ?? t('error.unauthorized', 'Session expired. Please log in again.');
+      }
+      case 'Forbidden': {
+        const authSpecific = authCodeMessage(error.code);
+        return authSpecific ?? t('error.forbidden', 'You do not have access to this action.');
+      }
       case 'NotFound':
         return t('error.notFound', 'Content not found.');
-      case 'Validation':
-        return t('error.validation', 'Please review your input and try again.');
+      case 'Validation': {
+        const authSpecific = authCodeMessage(error.code);
+        return authSpecific ?? t('error.validation', 'Please review your input and try again.');
+      }
       case 'RateLimited':
         return t('error.rateLimited', 'Too many requests. Please wait a moment.');
       case 'DailyLimitReached':

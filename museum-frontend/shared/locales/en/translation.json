@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Apple sign-in was interrupted. Please try again.",
       "ios_unavailable": "Google sign-in is unavailable on this build. Use Apple or email instead."
     },
+    "auth": {
+      "password_breached": "This password appears in known data breaches. Choose a different one.",
+      "email_already_taken": "An account already exists with this email.",
+      "invalid_credentials": "Wrong email or password.",
+      "email_not_verified": "Verify your email before signing in. Check your inbox.",
+      "account_suspended": "Your account has been suspended. Contact support.",
+      "account_deleted": "This account has been deleted.",
+      "locked_out": "Too many failed attempts. Try again in a few minutes.",
+      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority)."
+    },
     "chat": {
       "contract_invalid": "Unexpected server response. Please try again.",
       "audio_missing": "No audio to send.",

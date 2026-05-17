@@ -671,6 +671,16 @@
       "apple_no_identity_token": "Accesso Apple interrotto. Riprova.",
       "ios_unavailable": "L'accesso Google non è disponibile in questa build. Usa Apple o email."
     },
+    "auth": {
+      "password_breached": "Questa password appare in violazioni di dati note. Scegline un'altra.",
+      "email_already_taken": "Esiste già un account con questa email.",
+      "invalid_credentials": "Email o password errati.",
+      "email_not_verified": "Verifica la tua email prima di accedere. Controlla la tua casella di posta.",
+      "account_suspended": "Il tuo account è stato sospeso. Contatta l'assistenza.",
+      "account_deleted": "Questo account è stato eliminato.",
+      "locked_out": "Troppi tentativi falliti. Riprova tra qualche minuto.",
+      "minor_parental_consent_required": "La registrazione è riservata agli utenti di età pari o superiore a 15 anni (maggiore età digitale francese)."
+    },
     "chat": {
       "contract_invalid": "Risposta del server non valida. Riprova.",
       "audio_missing": "Nessun audio da inviare.",
