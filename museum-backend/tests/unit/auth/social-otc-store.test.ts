@@ -8,16 +8,27 @@
  * payload via POST /api/auth/social-redeem. Single-use semantics make a
  * leaked deeplink unredeemable past the first /redeem call.
  */
+import { z } from 'zod';
+
 import {
   createSocialOtcStore,
   InMemorySocialOtcStore,
+  RedisSocialOtcStore,
 } from '@modules/auth/adapters/secondary/social/social-otc-store';
+
+import type Redis from 'ioredis';
 
 interface FakeSession {
   accessToken: string;
   refreshToken: string;
   user: { id: number };
 }
+
+const fakeSessionSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  user: z.object({ id: z.number() }),
+});
 
 const fakeSession = (overrides: Partial<FakeSession> = {}): FakeSession => ({
   accessToken: 'access-tok',
@@ -76,9 +87,75 @@ describe('InMemorySocialOtcStore — F11-mobile single-use redeem', () => {
   });
 
   it('createSocialOtcStore() falls back to the in-memory adapter when no Redis is provided', async () => {
-    const store = createSocialOtcStore<FakeSession>();
+    const store = createSocialOtcStore<FakeSession>({ schema: fakeSessionSchema });
     const session = fakeSession();
     const code = await store.issue(session);
     await expect(store.consume(code)).resolves.toEqual(session);
+  });
+});
+
+describe('RedisSocialOtcStore — T1.7 Zod schema validation on consume', () => {
+  /**
+   * Fake Redis surface: a `Map<string, string>` plus the two methods the
+   * adapter touches (`set`, `getdel`). Strictly enough to drive the
+   * happy-path + poisoned-cache branches without an ioredis dependency.
+   */
+  function makeFakeRedis() {
+    const store = new Map<string, string>();
+    return {
+      store,
+      set: jest.fn(async (key: string, value: string) => {
+        store.set(key, value);
+        return 'OK';
+      }),
+      getdel: jest.fn(async (key: string) => {
+        const v = store.get(key) ?? null;
+        store.delete(key);
+        return v;
+      }),
+    } as unknown as Redis & {
+      store: Map<string, string>;
+      getdel: jest.Mock;
+    };
+  }
+
+  it('consume() returns the parsed payload when the schema accepts the Redis blob', async () => {
+    const redis = makeFakeRedis();
+    const adapter = new RedisSocialOtcStore<FakeSession>(redis, {
+      schema: fakeSessionSchema,
+    });
+    const session = fakeSession();
+    const code = await adapter.issue(session);
+
+    await expect(adapter.consume(code)).resolves.toEqual(session);
+  });
+
+  it('consume() falls through to the in-memory fallback (returns null) when the schema REJECTS a poisoned Redis blob', async () => {
+    // Covers the T1.7 fix: replace `JSON.parse(value) as TPayload` with
+    // `schema.safeParse(...)`. A blob that does NOT match the schema (post-
+    // deploy shape drift, corrupted entry, attacker-controlled write, …) MUST
+    // NOT leak through to the use case as a typed `TPayload`.
+    const redis = makeFakeRedis();
+    const adapter = new RedisSocialOtcStore<FakeSession>(redis, {
+      schema: fakeSessionSchema,
+    });
+
+    // Seed Redis directly with a JSON blob that misses the required `user.id`
+    // field — schema.safeParse(...) MUST reject it.
+    const poisonedCode = 'poisoned-code-xyz';
+    redis.store.set(`oidc:otc:${poisonedCode}`, JSON.stringify({ wrong: 'shape' }));
+
+    await expect(adapter.consume(poisonedCode)).resolves.toBeNull();
+    // The poisoned entry was atomically removed by getdel — Redis no longer
+    // holds it after the failed consume.
+    expect(redis.store.has(`oidc:otc:${poisonedCode}`)).toBe(false);
+  });
+
+  it('consume() returns null when Redis has no entry and no fallback entry exists', async () => {
+    const redis = makeFakeRedis();
+    const adapter = new RedisSocialOtcStore<FakeSession>(redis, {
+      schema: fakeSessionSchema,
+    });
+    await expect(adapter.consume('never-issued')).resolves.toBeNull();
   });
 });

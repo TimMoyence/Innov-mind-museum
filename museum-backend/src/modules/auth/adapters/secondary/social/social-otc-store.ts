@@ -19,6 +19,7 @@ import crypto from 'node:crypto';
 
 import type { SocialOtcStore } from '@modules/auth/domain/ports/social-otc-store.port';
 import type Redis from 'ioredis';
+import type { ZodType } from 'zod';
 
 const OTC_BYTES = 16; // 128 bits — same floor as nonce store.
 const KEY_PREFIX = 'oidc:otc:';
@@ -96,11 +97,19 @@ export class InMemorySocialOtcStore<TPayload> implements SocialOtcStore<TPayload
 export class RedisSocialOtcStore<TPayload> implements SocialOtcStore<TPayload> {
   private readonly redis: Redis;
   private readonly ttlSeconds: number;
+  private readonly schema: ZodType<TPayload>;
   private readonly fallback: InMemorySocialOtcStore<TPayload>;
 
-  constructor(redis: Redis, options: { ttlSeconds?: number } = {}) {
+  /**
+   * `schema` is REQUIRED — replaces the prior `as TPayload` generic cast in
+   * `consume()`. The Redis blob is parsed and validated against the schema;
+   * a parse fail (poisoned cache entry, post-deploy shape drift, …) falls
+   * through to the in-memory fallback instead of leaking an unknown payload.
+   */
+  constructor(redis: Redis, options: { ttlSeconds?: number; schema: ZodType<TPayload> }) {
     this.redis = redis;
     this.ttlSeconds = resolveTtlSeconds(options.ttlSeconds);
+    this.schema = options.schema;
     this.fallback = new InMemorySocialOtcStore<TPayload>({ ttlSeconds: this.ttlSeconds });
   }
 
@@ -122,7 +131,11 @@ export class RedisSocialOtcStore<TPayload> implements SocialOtcStore<TPayload> {
     try {
       const value = await this.redis.getdel(key);
       if (value !== null) {
-        return JSON.parse(value) as TPayload;
+        const parsed = this.schema.safeParse(JSON.parse(value) as unknown);
+        if (parsed.success) return parsed.data;
+        // Drop the poisoned entry, then try the in-memory fallback in case
+        // the same code was also issued there during a partial Redis outage.
+        return await this.fallback.consume(code);
       }
       return await this.fallback.consume(code);
     } catch {
@@ -134,11 +147,15 @@ export class RedisSocialOtcStore<TPayload> implements SocialOtcStore<TPayload> {
 /**
  * Convenience builder used by the auth composition root. Picks the Redis
  * adapter when a {@link Redis} client is provided, otherwise the in-memory
- * fallback.
+ * fallback. `schema` is required by the Redis path (runtime validation
+ * replaces the prior `as TPayload` cast on `JSON.parse`).
  */
-export const createSocialOtcStore = <TPayload>(redis?: Redis): SocialOtcStore<TPayload> => {
-  if (redis) {
-    return new RedisSocialOtcStore<TPayload>(redis);
+export const createSocialOtcStore = <TPayload>(options: {
+  redis?: Redis;
+  schema: ZodType<TPayload>;
+}): SocialOtcStore<TPayload> => {
+  if (options.redis) {
+    return new RedisSocialOtcStore<TPayload>(options.redis, { schema: options.schema });
   }
   return new InMemorySocialOtcStore<TPayload>();
 };
