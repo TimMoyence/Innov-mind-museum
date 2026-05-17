@@ -41,6 +41,8 @@ export class DescribeService {
       throw badRequest('Either text or image is required');
     }
 
+    // C9.0 — describe is a one-shot endpoint with no chat session, so
+    // `sessionId` is omitted by design (spec R7: no fabrication).
     const aiResult: OrchestratorOutput = await this.orchestrator.generate({
       history: [],
       text: input.text,

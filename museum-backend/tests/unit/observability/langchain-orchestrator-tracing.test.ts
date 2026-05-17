@@ -147,11 +147,15 @@ describe('withLangfuseTrace (C9.0 — trace + nested generation)', () => {
         startTime: expect.any(Date),
       });
 
+      // NOTE: `endTime` is auto-set by the Langfuse SDK inside `.end()` —
+      // the SDK omits `endTime` from the body type for exactly this reason
+      // (langfuse-core LangfuseGenerationClient.end signature). We only
+      // assert on `output` here; the creation-side `startTime` above is the
+      // time-discipline anchor.
       expect(generationEnd).toHaveBeenCalledTimes(1);
       const endArg = generationEnd.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(endArg).toMatchObject({
         output: expect.objectContaining({ textLength: output.text.length }),
-        endTime: expect.any(Date),
       });
     });
   });
@@ -170,12 +174,12 @@ describe('withLangfuseTrace (C9.0 — trace + nested generation)', () => {
         }),
       ).rejects.toBe(boom);
 
+      // `endTime` set implicitly by the SDK on `.end()` (see R2 note).
       expect(generationEnd).toHaveBeenCalledTimes(1);
       const endArg = generationEnd.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(endArg).toMatchObject({
         level: 'ERROR',
         statusMessage: 'provider timeout',
-        endTime: expect.any(Date),
       });
     });
   });
