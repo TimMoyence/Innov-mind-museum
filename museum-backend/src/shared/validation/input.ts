@@ -23,7 +23,7 @@ const NAME_PATTERN = /^[\p{L}\p{M}\s'-]+$/u;
 /**
  * Trim, max-length check, reject chars outside NAME_PATTERN.
  *
- * @throws if exceeds maxLength or contains disallowed chars.
+ * @throws {Error} if exceeds maxLength or contains disallowed chars.
  */
 export const validateNameField = (
   value: string | undefined,

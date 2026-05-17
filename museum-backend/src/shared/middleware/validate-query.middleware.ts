@@ -6,7 +6,7 @@ import type { z } from 'zod';
 /**
  * Parsed data → `res.locals.validatedQuery` (Express 5 made `req.query` read-only).
  *
- * @throws AppError 400 BAD_REQUEST on validation failure.
+ * @throws {Error} AppError 400 BAD_REQUEST on validation failure.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateQuery<T extends z.ZodType>(schema: T) {

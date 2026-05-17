@@ -139,7 +139,7 @@ export class LlamaPromptGuardAdapter implements GuardrailProvider {
     return 'prompt_injection';
   }
 
-  /** @throws on non-OK / network / abort / malformed. */
+  /** @throws {Error} on non-OK / network / abort / malformed. */
   private async callClassify(text: string): Promise<PromptGuardResponse> {
     const controller = new AbortController();
     const timer = setTimeout(() => {

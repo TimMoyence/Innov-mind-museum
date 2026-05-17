@@ -72,7 +72,7 @@ const parseSpeechResponse = async (response: Response): Promise<Buffer> => {
 
 /** POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {
-  /** @throws AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
+  /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
   async synthesize(input: {
     text: string;
     voice?: string;

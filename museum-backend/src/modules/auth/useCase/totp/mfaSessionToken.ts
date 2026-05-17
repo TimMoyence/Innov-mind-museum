@@ -34,7 +34,7 @@ export function issueMfaSessionToken(userId: number): string {
 const unauthorized = (message: string, code = 'INVALID_MFA_SESSION'): AppError =>
   new AppError({ message, statusCode: 401, code });
 
-/** @throws 401 on any inconsistency. */
+/** @throws {Error} 401 on any inconsistency. */
 export function verifyMfaSessionToken(token: string): { userId: number } {
   try {
     const decoded = jwt.verify(token, env.auth.mfaSessionTokenSecret, {

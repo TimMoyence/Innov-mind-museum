@@ -17,7 +17,7 @@ import type { AppEnv } from '@src/config/env.types';
 /** Pinned to match the local ONNX model (vectors must stay comparable). */
 const REPLICATE_SIGLIP_MODEL = 'lucataco/siglip-base-patch16-224';
 
-/** @throws on missing REPLICATE_API_TOKEN (when provider='replicate') or unknown provider. */
+/** @throws {Error} on missing REPLICATE_API_TOKEN (when provider='replicate') or unknown provider. */
 export function createEmbeddingsAdapter(env: AppEnv): EmbeddingsPort {
   const visual = env.visualSimilarity;
 

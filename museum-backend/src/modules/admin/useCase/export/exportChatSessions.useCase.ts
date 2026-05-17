@@ -75,7 +75,11 @@ function computeSessionsScope(input: ExportInput): number | null {
   throw forbidden('Export not allowed for this role');
 }
 
-/** R17/D6 — rewrites `user_id` per role. Streams 1-by-1, no extra memory. */
+/**
+ * R17/D6 — rewrites `user_id` per role. Streams 1-by-1, no extra memory.
+ *
+ * @yields {ExportRowSessions} role-aware row with pseudonymised user_id.
+ */
 async function* mapSessionsRows(
   source: AsyncIterable<ExportRowSessions>,
   actorRole: ExportInput['actorRole'],

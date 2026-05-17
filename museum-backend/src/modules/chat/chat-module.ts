@@ -299,7 +299,7 @@ export class ChatModule {
     return this._built !== undefined;
   }
 
-  /** @throws if {@link build} hasn't been called. */
+  /** @throws {Error} if {@link build} hasn't been called. */
   getBuilt(): BuiltChatModule {
     if (!this._built) {
       throw new Error('ChatModule.build() must be called before accessing services');

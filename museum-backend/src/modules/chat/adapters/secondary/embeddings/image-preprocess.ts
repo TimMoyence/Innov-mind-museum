@@ -27,7 +27,7 @@ const SIGLIP_STD = 0.5;
  * SigLIP-normalise → NCHW float32.
  *
  * @returns Float32Array(150528) wrap-ready for Tensor('float32', data, [1,3,224,224]).
- * @throws sharp decode error — callers wrap as EncoderUnavailableError / IMAGE_DECODE_FAILED.
+ * @throws {Error} sharp decode error — callers wrap as EncoderUnavailableError / IMAGE_DECODE_FAILED.
  */
 export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array> {
   const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)

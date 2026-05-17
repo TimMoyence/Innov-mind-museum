@@ -30,7 +30,7 @@ function resolveCredential(req: Request): { token: string; source: 'bearer' | 'c
  * `msk_` Bearer → B2B API-key path. Cookie tokens always JWTs (cookies never carry API keys;
  * stray `msk_*` cookie value indicates tampering).
  *
- * @throws 401 on missing/invalid credential.
+ * @throws {Error} 401 on missing/invalid credential.
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
   const credential = resolveCredential(req);

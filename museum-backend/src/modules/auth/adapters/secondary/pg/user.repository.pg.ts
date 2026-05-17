@@ -28,7 +28,7 @@ export class UserRepositoryPg implements IUserRepository {
     return await this.repo.findOne({ where: { id } });
   }
 
-  /** @throws if user with this email already exists. */
+  /** @throws {Error} if user with this email already exists. */
   async registerUser(
     email: string,
     password: string,

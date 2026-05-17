@@ -69,7 +69,7 @@ function safeEqual(a: string, b: string): boolean {
   return eq && aBuf.length === bBuf.length;
 }
 
-/** @throws AppError 403 CSRF_INVALID. */
+/** @throws {Error} AppError 403 CSRF_INVALID. */
 export function csrfMiddleware(req: Request, _res: Response, next: NextFunction): void {
   if (SAFE_METHODS.has(req.method.toUpperCase())) {
     next();

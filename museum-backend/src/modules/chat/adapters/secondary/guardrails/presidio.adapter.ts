@@ -191,7 +191,7 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
     }
   }
 
-  /** @throws on non-OK / network / abort / malformed. */
+  /** @throws {Error} on non-OK / network / abort / malformed. */
   private async callAnalyze(text: string, language: string): Promise<PresidioAnalyzeEntity[]> {
     const payload = {
       text,

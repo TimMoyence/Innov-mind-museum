@@ -7,7 +7,7 @@ import type { z } from 'zod';
 /**
  * Mutates `req.body` with the parsed/transformed result.
  *
- * @throws AppError 400 BAD_REQUEST (wire format via {@link formatZodIssues}).
+ * @throws {Error} AppError 400 BAD_REQUEST (wire format via {@link formatZodIssues}).
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateBody<T extends z.ZodType>(schema: T) {

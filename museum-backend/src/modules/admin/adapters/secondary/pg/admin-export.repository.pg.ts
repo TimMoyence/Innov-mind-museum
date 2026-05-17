@@ -90,7 +90,11 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /** Pseudonymises userId before yielding. */
+  /**
+   * Pseudonymises userId before yielding.
+   *
+   * @yields {ExportRowReview} pseudonymised review row.
+   */
   async *streamReviews(): AsyncIterable<ExportRowReview> {
     let skip = 0;
     for (;;) {
@@ -119,7 +123,11 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /** Pseudonymises user email for every role (incl. super_admin — R19/D6/Q7). */
+  /**
+   * Pseudonymises user email for every role (incl. super_admin — R19/D6/Q7).
+   *
+   * @yields {ExportRowTicket} pseudonymised support ticket row.
+   */
   async *streamSupportTickets(): AsyncIterable<ExportRowTicket> {
     let skip = 0;
     for (;;) {

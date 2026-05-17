@@ -59,7 +59,7 @@ export class TokenJwtService {
   readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
 
-  /** @throws 401 AppError on any failure. */
+  /** @throws {Error} 401 AppError on any failure. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
@@ -85,7 +85,7 @@ export class TokenJwtService {
     }
   }
 
-  /** @throws 401 AppError on any failure. */
+  /** @throws {Error} 401 AppError on any failure. */
   verifyRefreshToken(token: string): RefreshTokenClaims {
     try {
       const decoded = jwt.verify(token, env.auth.refreshTokenSecret, {

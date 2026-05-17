@@ -46,7 +46,7 @@ const assertOpenAiAvailable = (): void => {
   }
 };
 
-/** @throws 400 on empty/invalid input. */
+/** @throws {Error} 400 on empty/invalid input. */
 const decodeAudioPayload = (base64: string): Buffer => {
   const normalizedBase64 = base64.trim();
   if (!normalizedBase64) {
@@ -137,7 +137,7 @@ const parseTranscriptionResponse = async (response: Response): Promise<string> =
  * Reuses shared `OPENAI_API_KEY`.
  */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
-  /** @throws AppError FEATURE_UNAVAILABLE | UPSTREAM_AUDIO_TRANSCRIPTION_ERROR */
+  /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_AUDIO_TRANSCRIPTION_ERROR */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     const requestId = input.requestId ?? 'unknown';
     const timer = ChatPhaseTimer.start('stt', 'openai', requestId, {

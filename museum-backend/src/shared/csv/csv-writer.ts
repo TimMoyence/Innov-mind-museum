@@ -53,6 +53,8 @@ export function writeBomHeader(): Buffer {
 /**
  * Header + rows. Decoupled from `res.write` so route can pipe to any sink.
  * Route is responsible for leading BOM via `writeBomHeader()`.
+ *
+ * @yields {string} the header line first, then one serialised CSV row per chunk.
  */
 export async function* writeCsvStream(
   headers: readonly string[],

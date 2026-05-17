@@ -70,7 +70,7 @@ export interface ArtworkEmbeddingRepository {
    * `visualScore` already mapped to `[0, 1]`.
    *
    * @param query - L2-normalised, length must match `EMBEDDINGS_DIM`.
-   * @throws nothing — empty array when catalog empty or no row matches filters.
+   * @throws {Error} nothing — empty array when catalog empty or no row matches filters.
    */
   findNearest(
     query: Float32Array,

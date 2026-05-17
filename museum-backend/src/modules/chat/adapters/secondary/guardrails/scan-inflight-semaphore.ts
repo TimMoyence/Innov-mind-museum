@@ -40,7 +40,7 @@ export class ScanInflightSemaphore {
    * Caller MUST pair every successful acquire with exactly one release
    * (try/finally to avoid slot leak on cancellation).
    *
-   * @throws ScanSemaphoreOverflowError when queue full.
+   * @throws {Error} ScanSemaphoreOverflowError when queue full.
    */
   async acquire(): Promise<void> {
     if (this.inFlight < this.maxInflight) {

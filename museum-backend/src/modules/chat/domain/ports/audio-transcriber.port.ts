@@ -20,7 +20,7 @@ export interface AudioTranscriber {
 
 /** Always throws — used when transcription is disabled. */
 export class DisabledAudioTranscriber implements AudioTranscriber {
-  /** @throws AppError code `FEATURE_UNAVAILABLE`. */
+  /** @throws {Error} AppError code `FEATURE_UNAVAILABLE`. */
   // eslint-disable-next-line @typescript-eslint/require-await -- null-object pattern: interface requires async signature
   async transcribe(): Promise<AudioTranscriptionResult> {
     throw new AppError({
