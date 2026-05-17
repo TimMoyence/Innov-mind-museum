@@ -16,19 +16,39 @@ cd ../museum-frontend
 npm install
 ```
 
-## Lancer mobile en local (chaque session)
+## Lancer mobile en local — tout-en-un (recommandé)
+
+Depuis la **racine du repo** :
 
 ```bash
-cd museum-frontend
-npm run dev:local
+pnpm dev:stack
 ```
 
-Le script `dev:local` :
-1. Active `.env.local-dev` (localhost, cert pinning OFF, APP_VARIANT=development)
-2. Vérifie que `dev-backend` Docker répond sur `localhost:3000` — sinon il échoue avec instructions
-3. Lance `expo start` (Metro sur 8081)
+Le script `scripts/dev-stack.sh` orchestre tout :
+1. Vérifie que Docker daemon est UP
+2. Démarre le stack `museum-backend/docker-compose.dev.yml` (backend + Postgres + Redis + Adminer) si pas déjà up
+3. Attend que `/api/health` réponde 200 (timeout 30s)
+4. Switch `museum-frontend/.env` → `.env.local-dev` (localhost, cert pinning OFF, APP_VARIANT=development)
+5. Ouvre `museum-frontend/ios/Musaium.xcworkspace` dans Xcode (arrière-plan)
+6. Lance Metro en premier plan sur `:8081`
 
-Ouvre l'app dans le Simulator iOS via la touche `i` dans le terminal Expo.
+Une fois Metro affiché → dans Xcode : `Cmd+R` pour build + run sur simulator. Hot reload actif.
+
+**Quand tu finis** :
+- `Ctrl+C` dans le terminal Metro → arrête Metro uniquement (Docker reste up pour la prochaine session)
+- `pnpm dev:stack:down` → arrête le stack Docker proprement (volumes Postgres préservés)
+
+## Alternative : juste Metro (sans toucher Docker ni Xcode)
+
+Depuis `museum-frontend/` :
+
+```bash
+npm run env:local    # switch .env vers local-dev (instant)
+npm run dev:check    # vérifie Docker backend healthy (instant)
+npm run dev          # lance Metro (foreground)
+```
+
+Pratique si Docker tourne déjà et que tu veux juste re-démarrer Metro après un crash.
 
 ## Switcher entre local et prod-test
 
