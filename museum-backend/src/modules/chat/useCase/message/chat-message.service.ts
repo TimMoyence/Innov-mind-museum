@@ -7,7 +7,6 @@ import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guar
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
-import { StreamBuffer } from '@modules/chat/useCase/orchestration/stream-buffer';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
@@ -29,7 +28,6 @@ import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import type {
   ArtTopicClassifierPort,
   LlmJudgeFn,
@@ -126,22 +124,6 @@ export interface ChatMessageServiceDeps {
   urlHeadProbe?: UrlHeadProbe;
 }
 
-/** Safety timeout prevents indefinite hangs. */
-async function awaitDrainWithTimeout(buffer: StreamBuffer, timeoutMs = 30_000): Promise<void> {
-  let drainTimeoutId: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([
-    buffer.awaitDone(),
-    new Promise<void>((resolve) => {
-      drainTimeoutId = setTimeout(() => {
-        buffer.destroy();
-        resolve();
-      }, timeoutMs);
-    }),
-  ]).finally(() => {
-    if (drainTimeoutId !== undefined) clearTimeout(drainTimeoutId);
-  });
-}
-
 /** Delegates pre-LLM to PrepareMessagePipeline, then orchestrator + commit. */
 export class ChatMessageService {
   private readonly repository: ChatRepository;
@@ -151,7 +133,6 @@ export class ChatMessageService {
   private readonly audioTranscriber: AudioTranscriber;
   private readonly cache?: CacheService;
   private readonly userMemory?: UserMemoryService;
-  private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly piiSanitizer: PiiSanitizer;
   private readonly llmCache?: LlmCacheService;
   private readonly urlHeadProbe?: UrlHeadProbe;
@@ -167,7 +148,6 @@ export class ChatMessageService {
     this.llmCache = deps.llmCache;
     this.urlHeadProbe = deps.urlHeadProbe;
     this.userMemory = enrichment.userMemory;
-    this.artTopicClassifier = safety.artTopicClassifier;
     this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
 
     const imageProcessor = new ImageProcessingService({
@@ -333,54 +313,6 @@ export class ChatMessageService {
       requestId: ctx.requestId,
       hasImage,
     });
-  }
-
-  /** @deprecated SSE paused post-V1 (token-fluidity). Use {@link ChatMessageService.postMessage}. */
-  async postMessageStream(
-    sessionId: string,
-    input: PostMessageInput,
-    callbacks: {
-      onToken: (text: string) => void;
-      onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
-      requestId?: string;
-      currentUserId?: number;
-      signal?: AbortSignal;
-      ip?: string;
-    },
-  ): Promise<PostMessageResult> {
-    const { onToken, onGuardrail, requestId, currentUserId, signal, ip } = callbacks;
-    const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
-    if (prep.kind === 'refused') return prep.result;
-
-    if (signal?.aborted) {
-      throw new AppError({ message: 'Request aborted', statusCode: 499, code: 'ABORTED' });
-    }
-
-    const buffer = new StreamBuffer({
-      classifier: this.artTopicClassifier,
-      locale: prep.requestedLocale,
-      signal,
-      onGuardrail,
-    });
-    buffer.onRelease(onToken);
-    // LLM02 — symmetric substitution with `postMessage`: redactedText (if
-    // present) replaces the original text before the orchestrator call so
-    // SSE streaming cannot become a back-door for PII exfiltration.
-    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
-    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
-
-    const aiResult = await this.orchestrator.generateStream(
-      this.pipeline.buildOrchestratorInput(prep, input, sanitizedText, requestId),
-      (chunk) => {
-        buffer.push(chunk);
-      },
-    );
-
-    buffer.finish();
-    await buffer.awaitPhase1();
-    await awaitDrainWithTimeout(buffer);
-
-    return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
   }
 
   /** Transcribes an audio message then delegates to postMessage for LLM processing. */

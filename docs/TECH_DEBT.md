@@ -401,23 +401,28 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-16 — Dead code SSE residuals (ADR-001 retired 2026-05-03) — PARTIELLEMENT FERMÉ 2026-05-17
+### TD-16 — Dead code SSE residuals (ADR-001 retired 2026-05-03) — FERMÉ 2026-05-17
 
-- [~] **Statut** : 4/5 items fermés sur cleanup/comment-purge ; reste `stream-buffer.ts` (NEEDS HUMAN REVIEW).
+- [x] **Statut** : FERMÉ 2026-05-17 via kill cascade complet sur cleanup/comment-purge.
+- **Closed via** : commit suivant sur `cleanup/comment-purge` (kill cascade post-revue stream-buffer.ts décision = enterrer). Réf orchestrateur SHA dans message commit.
 - **Items fermés (cleanup/comment-purge 2026-05-17)** :
   ```
   ✅ sse.helpers.ts (38 LOC) — git rm + test associé (TD-21 closed en parallèle)
   ✅ chat-message.route.ts L94 + L185 — commentaires mensongers sse-dormant.ts supprimés (UFR-013)
-  ✅ chat-message.service.ts:postMessageStream JSDoc — ADR-001 ref retirée, pointe sur ChatMessageService.postMessage
-  ✅ chat.service.ts:postMessageStream JSDoc — idem + retire référence chat-message.sse-dormant.ts
+  ✅ chat-message.service.ts:postMessageStream + awaitDrainWithTimeout helper supprimés
+  ✅ chat.service.ts:postMessageStream wrapper + eslint-disable supprimés
+  ✅ stream-buffer.ts (257 LOC) — git rm
+  ✅ tests/unit/chat/stream-buffer.test.ts (358 LOC) — git rm cascade
+  ✅ tests/unit/chat/chat-service-stream.test.ts (156 LOC) — git rm
+  ✅ chat-orchestrator.port.ts — generateStream supprimé de l'interface
+  ✅ langchain.orchestrator.ts — generateStream method + streamSection + _executeGuarded supprimés
+  ✅ langchain-orchestrator-stream.ts — buildFirstSectionMessages + createStreamTimeout supprimés (buildRunnerOptions conservé, utilisé par generate())
+  ✅ langchain-orchestrator-assembly.ts — buildStreamSuccessResponse supprimé
+  ✅ message-commit.ts — JSDoc "Shared by postMessage + postMessageStream" mise à jour
+  ✅ 14 fichiers de tests nettoyés des stubs generateStream/postMessageStream (chat-message-service, chat-service, chat-media-route, chat-phase-spans*, chat-pipeline-phase, langchain-orchestrator*, llm-judge*, walk-intent, orchestrator-walk-section, orchestrator-router-threading, e2e-app-harness, chat-citations, knowledge-router)
   ```
-- **Reste à arbitrer** :
-  ```
-  ❌ stream-buffer.ts (288 LOC) — importé par chat-message.service.ts:10, utilisé par postMessageStream() encore wired via chat.service.ts. Roadmap C9.16 dit "dead" mais import graph contredit.
-     Décision requise : enterrer postMessageStream() entier (cascade kill) OU justifier sa survie.
-  ```
+- **LOC removed total** : ~720L source + ~514L tests = ~1234L net.
 - **Sprint d'origine** : audit /team 360° chat backend 2026-05-16 (Agent A §3.2 + §3.4).
-- **Note 2026-05-17** : audit axe 1 (commentaires menteurs) sur cleanup/comment-purge a confirmé `sse-dormant.ts` inexistant + ADR-001 supprimée, fixes appliqués sur la branche. Si décision = kill `postMessageStream()` cascade : `git rm stream-buffer.ts` + suppression `postMessageStream()` dans chat-message.service.ts + chat.service.ts + tests associés.
 
 ---
 

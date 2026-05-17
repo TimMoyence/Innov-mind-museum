@@ -72,9 +72,4 @@ export interface OrchestratorOutput {
 
 export interface ChatOrchestrator {
   generate(input: OrchestratorInput): Promise<OrchestratorOutput>;
-  /** Calls onChunk for each text token. Returns final output when complete. */
-  generateStream(
-    input: OrchestratorInput,
-    onChunk: (text: string) => void,
-  ): Promise<OrchestratorOutput>;
 }

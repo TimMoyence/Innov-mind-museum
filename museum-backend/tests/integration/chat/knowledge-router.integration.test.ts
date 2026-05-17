@@ -64,14 +64,6 @@ function makeRecordingOrchestrator(overrideOutput?: Partial<OrchestratorOutput>)
       capturedInputs.push(input);
       return fakeOutput;
     },
-    async generateStream(
-      input: OrchestratorInput,
-      onChunk: (text: string) => void,
-    ): Promise<OrchestratorOutput> {
-      capturedInputs.push(input);
-      onChunk(fakeOutput.text);
-      return fakeOutput;
-    },
   };
   return { orchestrator, capturedInputs };
 }

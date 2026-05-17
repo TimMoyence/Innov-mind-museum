@@ -116,7 +116,6 @@ const makeRepo = (
 
 const makeOrchestrator = (): jest.Mocked<ChatOrchestrator> => ({
   generate: jest.fn().mockResolvedValue(makeArtOutput()),
-  generateStream: jest.fn().mockResolvedValue(makeArtOutput()),
 });
 
 const makeImageStorage = (): jest.Mocked<ImageStorage> => ({

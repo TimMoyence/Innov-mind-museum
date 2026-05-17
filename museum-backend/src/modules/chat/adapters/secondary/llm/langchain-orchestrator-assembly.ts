@@ -151,32 +151,3 @@ export function assembleResponse(params: AssembleResponseInput): OrchestratorOut
 
   return { text, metadata };
 }
-
-export function buildStreamSuccessResponse(
-  rawContent: string,
-  requestId?: string,
-): OrchestratorOutput {
-  const parsed = parseAssistantResponse(rawContent);
-
-  logger.info('llm_stream_complete', {
-    requestId,
-    provider: env.llm.provider,
-    model: env.llm.model,
-    textLength: rawContent.length,
-  });
-
-  let metadata = parsed.metadata;
-  if (env.llm.includeDiagnostics) {
-    metadata = {
-      ...metadata,
-      diagnostics: {
-        profile: 'single_section' as const,
-        degraded: false,
-        totalLatencyMs: 0,
-        sections: [],
-      },
-    };
-  }
-
-  return { text: parsed.answer, metadata };
-}

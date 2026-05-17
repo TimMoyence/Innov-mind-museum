@@ -12,26 +12,16 @@ import {
   type SectionTask,
 } from '@modules/chat/useCase/llm/llm-section-runner';
 import {
-  createSummaryFallback,
-  type LlmSectionName,
-  type LlmSectionDefinition,
-} from '@modules/chat/useCase/llm/llm-sections';
-import {
   WALK_TOUR_GUIDE_SECTION,
   walkAssistantOutputSchema,
 } from '@modules/chat/useCase/llm/llm-sections/walk-tour-guide';
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
-import { parseAssistantResponse } from '@modules/chat/useCase/orchestration/assistant-response';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
-import { assembleResponse, buildStreamSuccessResponse } from './langchain-orchestrator-assembly';
-import {
-  buildFirstSectionMessages,
-  buildRunnerOptions,
-  createStreamTimeout,
-} from './langchain-orchestrator-stream';
+import { assembleResponse } from './langchain-orchestrator-assembly';
+import { buildRunnerOptions } from './langchain-orchestrator-stream';
 import {
   MISSING_LLM_KEY_FALLBACK,
   toModel,
@@ -50,6 +40,7 @@ import type {
   OrchestratorOutput,
   ChatOrchestrator,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { LlmSectionName, LlmSectionDefinition } from '@modules/chat/useCase/llm/llm-sections';
 
 /**
  * Maps schema `text → answer` for the legacy parseAssistantResponse JSON
@@ -118,27 +109,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         return toContentString(result.content);
       },
     );
-  }
-
-  /** Mutates `accumulator.text` so caller can access partial content on error. */
-  private async streamSection(
-    model: ChatModel,
-    sectionMessages: unknown,
-    signal: AbortSignal,
-    onChunk: (text: string) => void,
-    accumulator: { text: string },
-  ): Promise<string> {
-    return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
-      const stream = await model.stream(sectionMessages, { signal });
-      for await (const chunk of stream) {
-        const chunkText = toContentString(chunk.content);
-        if (chunkText) {
-          accumulator.text += chunkText;
-          onChunk(chunkText);
-        }
-      }
-      return accumulator.text;
-    });
   }
 
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
@@ -248,88 +218,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           }),
       };
     });
-  }
-
-  /** Keeps call sites one nesting level shallow (sonarjs/no-nested-functions). */
-  private async _executeGuarded<T>(fn: () => Promise<T>): Promise<T> {
-    return await this.circuitBreaker.execute(() => this.semaphore.use(fn));
-  }
-
-  async generateStream(
-    input: OrchestratorInput,
-    onChunk: (text: string) => void,
-  ): Promise<OrchestratorOutput> {
-    return await withLangfuseTrace('llm.orchestrate.stream', input, () =>
-      startSpan(
-        {
-          name: 'llm.orchestrate.stream',
-          op: 'ai.orchestrate',
-          attributes: {
-            'llm.provider': env.llm.provider,
-            'llm.model': env.llm.model,
-            'llm.has_image': !!input.image,
-          },
-        },
-        async () => {
-          if (input.intent === 'walk') {
-            const walkResult = await this.generateWalk(input);
-            onChunk(walkResult.text);
-            return walkResult;
-          }
-
-          const prepared = buildOrchestratorMessages(input);
-          const { normalizedText, recentHistory, sectionPlan } = prepared;
-
-          const model = this.model;
-          if (!model) {
-            onChunk(MISSING_LLM_KEY_FALLBACK);
-            return {
-              text: MISSING_LLM_KEY_FALLBACK,
-              metadata: { citations: ['system:missing-llm-api-key'] },
-            };
-          }
-
-          const section = sectionPlan[0];
-          const sectionMessages = buildFirstSectionMessages(section, prepared, input);
-
-          const { controller, clearStreamTimeout } = createStreamTimeout(section.timeoutMs);
-          const accumulator = { text: '' };
-
-          try {
-            const rawContent = await this._executeGuarded(() =>
-              this.streamSection(model, sectionMessages, controller.signal, onChunk, accumulator),
-            );
-
-            clearStreamTimeout();
-            return buildStreamSuccessResponse(rawContent, input.requestId);
-          } catch (error) {
-            clearStreamTimeout();
-
-            logger.warn('llm_stream_error', {
-              requestId: input.requestId,
-              provider: env.llm.provider,
-              model: env.llm.model,
-              error: (error as Error).message,
-            });
-
-            if (accumulator.text.length > 0) {
-              const parsed = parseAssistantResponse(accumulator.text);
-              return { text: parsed.answer, metadata: parsed.metadata };
-            }
-
-            const fallbackText = createSummaryFallback({
-              history: recentHistory,
-              question: normalizedText,
-              location: input.context?.location,
-              locale: input.locale,
-              museumMode: input.museumMode,
-            });
-
-            return { text: fallbackText, metadata: {} };
-          }
-        },
-      ),
-    );
   }
 
   /**

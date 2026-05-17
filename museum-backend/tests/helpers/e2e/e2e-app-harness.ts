@@ -95,9 +95,6 @@ function createSwappableOrchestrator(initial: ChatOrchestrator): SwappableOrches
     async generate(input) {
       return delegate.generate(input);
     },
-    async generateStream(input, onChunk) {
-      return delegate.generateStream(input, onChunk);
-    },
     __swap(next: ChatOrchestrator): void {
       delegate = next;
     },
@@ -325,14 +322,6 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
           text: 'Synthetic assistant response for e2e',
           metadata: { citations: ['e2e'] },
         };
-      },
-      async generateStream(_input: unknown, onChunk: (t: string) => void) {
-        const result = {
-          text: 'Synthetic assistant response for e2e',
-          metadata: { citations: ['e2e'] },
-        };
-        onChunk(result.text);
-        return result;
       },
     } as ChatOrchestrator);
 

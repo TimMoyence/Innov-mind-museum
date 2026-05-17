@@ -17,7 +17,6 @@ const MockedMediaService = ChatMediaService as jest.MockedClass<typeof ChatMedia
 
 const makeOrchestrator = (): ChatOrchestrator => ({
   generate: jest.fn(),
-  generateStream: jest.fn(),
 });
 
 const makeImageStorage = (): ImageStorage => ({
@@ -64,7 +63,6 @@ describe('ChatService (facade)', () => {
       'listSessions',
       'deleteSessionIfEmpty',
       'postMessage',
-      'postMessageStream',
       'postAudioMessage',
       'getMessageImageRef',
       'reportMessage',

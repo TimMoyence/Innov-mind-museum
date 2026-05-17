@@ -20,7 +20,7 @@ import type {
 export type { BreakerState, BreakerStateName };
 
 /**
- * C5 doctrine pré-launch V1 — no `enabled` flag: rollback = `git revert` of Step 2.3
+ * C5 doctrine pre-launch V1 — no `enabled` flag: rollback = `git revert` of Step 2.3
  * wiring, not a runtime toggle. Every field is a tuning value, never a switch.
  */
 export interface WikidataBreakerConfig {

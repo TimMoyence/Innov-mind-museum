@@ -2,7 +2,7 @@
  * C4.1 — `KnowledgeRouterService` cascades KB → judge → WebSearch with per-leg
  * AbortSignal.any budgets (D4 — Node ≥ 22.3). Fail-open (ADR-035): every leg
  * wrapped in `.catch`; `resolve()` NEVER throws — errors become `source: 'none'`.
- * No feature flag (D11 — pré-launch V1); env vars are tuning-only.
+ * No feature flag (D11 — pre-launch V1); env vars are tuning-only.
  */
 
 import { createHash } from 'node:crypto';

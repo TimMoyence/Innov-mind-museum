@@ -154,7 +154,7 @@ async function persistAssistantMessage(
   }
 }
 
-/** Shared by postMessage + postMessageStream. */
+/** Commits an assistant response (guardrail + persist + cache + memory). */
 export async function commitAssistantResponse(
   deps: CommitDeps,
   sessionId: string,

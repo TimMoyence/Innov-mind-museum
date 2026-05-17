@@ -139,58 +139,6 @@ describe('LangChainChatOrchestrator', () => {
     });
   });
 
-  describe('generateStream', () => {
-    it('streams chunks via callback', async () => {
-      const model = makeFakeModel('The painting is beautiful.');
-      const orchestrator = new LangChainChatOrchestrator({ model });
-      const chunks: string[] = [];
-
-      const result = await orchestrator.generateStream(makeInput(), (chunk) => {
-        chunks.push(chunk);
-      });
-
-      expect(chunks.length).toBeGreaterThan(0);
-      expect(result.text).toBeTruthy();
-    });
-
-    it('returns fallback message when model is null', async () => {
-      const orchestrator = new LangChainChatOrchestrator({ model: null });
-      const chunks: string[] = [];
-
-      const result = await orchestrator.generateStream(makeInput(), (chunk) => {
-        chunks.push(chunk);
-      });
-
-      expect(result.text).toContain('without an LLM key');
-      expect(chunks.length).toBe(1);
-      expect(chunks[0]).toContain('without an LLM key');
-    });
-
-    it('returns partial content on stream error', async () => {
-      const model = {
-        invoke: jest.fn().mockResolvedValue({ content: '' }),
-        stream: jest.fn().mockResolvedValue(
-          (async function* () {
-            yield { content: 'Partial ' };
-            yield { content: 'response ' };
-            throw new Error('Stream interrupted');
-          })(),
-        ),
-      };
-
-      const circuitBreaker = new LLMCircuitBreaker({ failureThreshold: 100 });
-      const orchestrator = new LangChainChatOrchestrator({ model, circuitBreaker });
-      const chunks: string[] = [];
-
-      const result = await orchestrator.generateStream(makeInput(), (chunk) => {
-        chunks.push(chunk);
-      });
-
-      // Should have partial content or a fallback
-      expect(result.text).toBeTruthy();
-    });
-  });
-
   describe('circuit breaker integration', () => {
     it('records failures and opens circuit breaker', async () => {
       const failingModel = {

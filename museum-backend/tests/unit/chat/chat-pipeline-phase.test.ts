@@ -103,7 +103,6 @@ const makeOrchestrator = (
   output: OrchestratorOutput = makeArtOutput(),
 ): jest.Mocked<ChatOrchestrator> => ({
   generate: jest.fn().mockResolvedValue(output),
-  generateStream: jest.fn().mockResolvedValue(output),
 });
 
 const makeImageStorage = (): jest.Mocked<ImageStorage> => ({

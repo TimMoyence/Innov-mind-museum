@@ -195,24 +195,4 @@ describe('LangChainChatOrchestrator — walk intent', () => {
       expect(result.metadata.citations).toContain('system:missing-llm-api-key');
     });
   });
-
-  describe('generateStream() with intent=walk', () => {
-    it('emits full text as a single chunk and returns suggestions', async () => {
-      const model = new FakeWalkModel({
-        answer: 'Walk stream answer',
-        suggestions: ['The Scream'],
-      });
-      const orchestrator = new LangChainChatOrchestrator({ model: model as never });
-      const chunks: string[] = [];
-
-      const result = await orchestrator.generateStream(makeInput({ intent: 'walk' }), (chunk) => {
-        chunks.push(chunk);
-      });
-
-      expect(result.text).toBe('Walk stream answer');
-      expect(result.suggestions).toEqual(['The Scream']);
-      // Single chunk emitted (the whole answer)
-      expect(chunks).toEqual(['Walk stream answer']);
-    });
-  });
 });

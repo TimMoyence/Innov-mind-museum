@@ -106,7 +106,6 @@ const makeOrchestrator = (
   override?: Partial<jest.Mocked<ChatOrchestrator>>,
 ): jest.Mocked<ChatOrchestrator> => ({
   generate: jest.fn().mockResolvedValue(makeArtOutput()),
-  generateStream: jest.fn().mockResolvedValue(makeArtOutput()),
   ...override,
 });
 

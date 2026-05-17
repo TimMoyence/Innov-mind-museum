@@ -35,7 +35,6 @@ import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import type {
   ArtTopicClassifierPort,
   LlmJudgeFn,
@@ -219,33 +218,6 @@ export class ChatService {
     return await measureChatRequest(() =>
       this.messages.postMessage(sessionId, input, requestId, currentUserId, ip),
     );
-  }
-
-  /**
-   * @deprecated SSE streaming paused post-V1 (token-fluidity). Use {@link postMessage}.
-   * `ip` threaded into audit chain on guardrail blocks.
-   */
-  async postMessageStream(
-    sessionId: string,
-    input: PostMessageInput,
-    callbacks: {
-      onToken: (text: string) => void;
-      onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
-      requestId?: string;
-      currentUserId?: number;
-      signal?: AbortSignal;
-      ip?: string;
-    },
-  ): Promise<PostMessageResult> {
-    logger.info('chat_service_call', {
-      method: 'postMessageStream',
-      sessionId,
-      userId: callbacks.currentUserId,
-      requestId: callbacks.requestId,
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-deprecated, sonarjs/deprecation -- wrapper of @deprecated postMessageStream; both go together at TD-16 closure
-    return await this.messages.postMessageStream(sessionId, input, callbacks);
   }
 
   /** Transcribes audio → delegates to {@link postMessage}. */
