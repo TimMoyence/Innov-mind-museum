@@ -45,6 +45,18 @@ maestro test .maestro/auth-register-happy.yaml   # Phase 1 — written tonight
 
 > Status legend : ✅ green, 🟡 written-not-run-yet, ❌ red, ⏭️ skipped, ▶️ running
 
+> **Known runtime issue (2026-05-17, to fix next session) :**
+> Maestro `launchApp: clearState: true` on the Expo Dev Build launches the
+> Expo Dev Launcher screen (`Musaium — Development Build`), NOT the actual
+> app. Flow then fails on the first assertion. Two workarounds for next
+> session :
+> 1. After clearState, tap on the dev server URL (host-specific, e.g.
+>    `http://192.168.1.68:8081`) — not portable across machines.
+> 2. Build a Release variant of the app for Maestro runs (no Dev Launcher,
+>    JS bundle embedded). Add a `pnpm test:maestro:build-release` script.
+> Currently flows omit clearState — they assume the app is at the auth
+> screen pre-run. Manual reset between flows required until next session.
+
 ### AUTH (`museum-frontend/.maestro/auth-*.yaml`)
 
 | Flow | Status | Last run | Notes |

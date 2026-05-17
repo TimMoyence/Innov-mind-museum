@@ -21,9 +21,6 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 # Phase 2: Fill credentials
 # ──────────────────────────────────────────────
-- runScript:
-    script: |
-      output.email = (typeof MAESTRO_LOGIN_EMAIL !== 'undefined' && MAESTRO_LOGIN_EMAIL)
         ? MAESTRO_LOGIN_EMAIL
         : 'apple.test@apple.com';
       output.password = (typeof MAESTRO_LOGIN_PASSWORD !== 'undefined' && MAESTRO_LOGIN_PASSWORD)

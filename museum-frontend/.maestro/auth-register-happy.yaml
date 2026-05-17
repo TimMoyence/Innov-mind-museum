@@ -49,12 +49,9 @@ appId: com.musaium.mobile.preview
 - inputText: "Tester"
 
 # Email — unique per concurrent run via MAESTRO_RUN_ID env, default if unset
-- runScript:
-    script: |
-      output.runId = (typeof MAESTRO_RUN_ID !== 'undefined' && MAESTRO_RUN_ID) ? MAESTRO_RUN_ID : Date.now().toString();
 - tapOn:
     id: "email-input"
-- inputText: "maestro+register-${output.runId}@local.dev"
+- inputText: "maestro+register-${MAESTRO_RUN_ID:-default}@local.dev"
 
 # Password (complex, not in breach corpus)
 - tapOn:

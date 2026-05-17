@@ -35,12 +35,9 @@ appId: com.musaium.mobile.preview
     text: "Last name|Nom"
 - inputText: "Tester"
 
-- runScript:
-    script: |
-      output.runId = (typeof MAESTRO_RUN_ID !== 'undefined' && MAESTRO_RUN_ID) ? MAESTRO_RUN_ID : Date.now().toString();
 - tapOn:
     id: "email-input"
-- inputText: "maestro+minor-${output.runId}@local.dev"
+- inputText: "maestro+minor-${MAESTRO_RUN_ID:-default}@local.dev"
 
 - tapOn:
     id: "password-input"
