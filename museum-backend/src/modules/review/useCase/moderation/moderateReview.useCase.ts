@@ -9,7 +9,6 @@ import type { IReviewRepository } from '@modules/review/domain/review/review.rep
 import type { ReviewDTO, ReviewStatus } from '@modules/review/domain/review/review.types';
 import type { AuditService } from '@shared/audit';
 
-/** Minimal user snapshot needed to build the moderation notification. */
 export interface ReviewAuthorSnapshot {
   id: number;
   email: string;
@@ -17,10 +16,8 @@ export interface ReviewAuthorSnapshot {
   notifyOnReviewModeration: boolean;
 }
 
-/** Async lookup for the review author. Adapter decides how to resolve (PG repo in prod). */
 export type ReviewAuthorLookup = (userId: number) => Promise<ReviewAuthorSnapshot | null>;
 
-/** Input for the moderate-review use case. */
 export interface ModerateReviewUseCaseInput {
   reviewId: string;
   status: string;
@@ -31,7 +28,6 @@ export interface ModerateReviewUseCaseInput {
 
 const MODERATION_STATUSES: ReviewStatus[] = ['approved', 'rejected'];
 
-/** Extra dependencies for the moderate-review use case (all optional — safe defaults in prod). */
 export interface ModerateReviewUseCaseDeps {
   audit?: Pick<AuditService, 'log'>;
   notifier?: ReviewModerationNotifier;
@@ -39,12 +35,9 @@ export interface ModerateReviewUseCaseDeps {
 }
 
 /**
- * Moderates a review (approve/reject), emits an audit log, and — if the author
- * has opted-in — sends a notification email (fire-and-forget).
- *
  * Compliance: SOC2 CC7.2 + GDPR Art. 30 + NIST SP 800-53 AU-2 — every privileged
- * action on user-generated content is auditable. Notification delivery is best-effort
- * so a failed email does not fail the moderation (see ADR-notifications-best-effort).
+ * action on user-generated content is auditable. Notification delivery is
+ * best-effort: a failed email must NOT fail the moderation (ADR-notifications-best-effort).
  */
 export class ModerateReviewUseCase {
   private readonly audit: Pick<AuditService, 'log'>;
@@ -55,7 +48,7 @@ export class ModerateReviewUseCase {
     private readonly repository: IReviewRepository,
     depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log'> = {},
   ) {
-    // Accept either a full deps object OR a bare audit stub (back-compat with existing tests).
+    // Back-compat: accept either a full deps object OR a bare audit stub (existing tests).
     const deps: ModerateReviewUseCaseDeps =
       'log' in depsOrAudit ? { audit: depsOrAudit } : depsOrAudit;
     this.audit = deps.audit ?? defaultAuditService;
@@ -63,7 +56,6 @@ export class ModerateReviewUseCase {
     this.authorLookup = deps.authorLookup;
   }
 
-  /** Validates the status enum, updates the review, emits audit, notifies the author. */
   async execute(input: ModerateReviewUseCaseInput): Promise<ReviewDTO> {
     if (!MODERATION_STATUSES.includes(input.status as ReviewStatus)) {
       throw badRequest(`status must be one of: ${MODERATION_STATUSES.join(', ')}`);
@@ -102,7 +94,7 @@ export class ModerateReviewUseCase {
     return updated;
   }
 
-  /** Best-effort: fire-and-forget email to the author, gated on their opt-in flag. */
+  /** Fire-and-forget: best-effort email to author, gated on their opt-in flag. */
   private scheduleAuthorNotification(updated: ReviewDTO): void {
     if (!this.notifier || !this.authorLookup) return;
     const terminalStatus = updated.status;

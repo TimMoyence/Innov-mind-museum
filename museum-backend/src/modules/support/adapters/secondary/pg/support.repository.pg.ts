@@ -14,7 +14,6 @@ import type {
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
-/** Map a SupportTicket entity to a TicketDTO. */
 function toTicketDTO(entity: SupportTicket, messageCount?: number): TicketDTO {
   return {
     id: entity.id,
@@ -31,7 +30,6 @@ function toTicketDTO(entity: SupportTicket, messageCount?: number): TicketDTO {
   };
 }
 
-/** Map a TicketMessage entity to a TicketMessageDTO. */
 function toMessageDTO(entity: TicketMessage): TicketMessageDTO {
   return {
     id: entity.id,
@@ -43,7 +41,6 @@ function toMessageDTO(entity: TicketMessage): TicketMessageDTO {
   };
 }
 
-/** TypeORM implementation of the support repository. */
 export class SupportRepositoryPg implements ISupportRepository {
   private readonly ticketRepo: Repository<SupportTicket>;
   private readonly messageRepo: Repository<TicketMessage>;
@@ -55,7 +52,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     this.messageRepo = dataSource.getRepository(TicketMessage);
   }
 
-  /** Inserts a new support ticket and returns the created record. */
   async createTicket(input: CreateTicketInput): Promise<TicketDTO> {
     const entity = this.ticketRepo.create({
       userId: input.userId,
@@ -68,7 +64,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     return toTicketDTO(saved);
   }
 
-  /** Retrieves a paginated list of support tickets with optional filters. */
   async listTickets(filters: ListTicketsFilters): Promise<PaginatedResult<TicketDTO>> {
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
@@ -87,7 +82,6 @@ export class SupportRepositoryPg implements ISupportRepository {
 
     const total = await qb.getCount();
 
-    // Add message count subquery
     const dataQb = qb
       .clone()
       .addSelect((subQuery) => {
@@ -111,7 +105,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     };
   }
 
-  /** Retrieves a ticket with its associated messages by ticket ID. */
   async getTicketById(ticketId: string): Promise<TicketDetailDTO | null> {
     const ticket = await this.ticketRepo.findOne({ where: { id: ticketId } });
     if (!ticket) return null;
@@ -127,7 +120,7 @@ export class SupportRepositoryPg implements ISupportRepository {
     };
   }
 
-  /** Inserts a new message into a ticket and bumps the ticket's updatedAt timestamp. */
+  /** Atomic: insert message + bump parent ticket's updatedAt in one transaction. */
   async addMessage(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
     return await this.dataSource.transaction(async (manager) => {
       const msgRepo = manager.getRepository(TicketMessage);
@@ -141,14 +134,12 @@ export class SupportRepositoryPg implements ISupportRepository {
       });
       const saved = await msgRepo.save(entity);
 
-      // Bump the ticket's updatedAt
       await tktRepo.update(input.ticketId, { updatedAt: new Date() });
 
       return toMessageDTO(saved);
     });
   }
 
-  /** Dynamically updates ticket fields (status, priority, assignedTo) and returns the updated record. */
   async updateTicket(input: UpdateTicketInput): Promise<TicketDTO | null> {
     const updates: Partial<SupportTicket> = {};
 
@@ -165,7 +156,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     return ticket ? toTicketDTO(ticket) : null;
   }
 
-  /** Checks whether a user is the owner of a given support ticket. */
   async isTicketOwner(ticketId: string, userId: number): Promise<boolean> {
     const count = await this.ticketRepo.count({
       where: { id: ticketId, userId },
@@ -174,9 +164,8 @@ export class SupportRepositoryPg implements ISupportRepository {
   }
 
   /**
-   * Lists every ticket owned by a user with all attached messages — used by
-   * the GDPR DSAR export. Two queries (tickets + messages-by-ticket-id IN ())
-   * minimise round-trips on bounded data sets.
+   * GDPR DSAR — tickets + messages. Two queries (IN (...)) to minimise
+   * round-trips on bounded data sets.
    */
   async listForUser(userId: number): Promise<TicketDetailDTO[]> {
     const tickets = await this.ticketRepo.find({

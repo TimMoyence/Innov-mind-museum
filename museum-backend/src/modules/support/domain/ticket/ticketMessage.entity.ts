@@ -1,8 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
-/**
- *
- */
 @Entity({ name: 'ticket_messages' })
 export class TicketMessage {
   @PrimaryGeneratedColumn('uuid')

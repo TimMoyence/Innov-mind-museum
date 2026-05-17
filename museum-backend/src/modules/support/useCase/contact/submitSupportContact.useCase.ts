@@ -6,7 +6,6 @@ import type {
   SupportContactPayload,
 } from '@modules/support/domain/ports/support-contact-notifier.port';
 
-/** Input accepted from the public support-contact endpoint. */
 interface SubmitSupportContactInput {
   name: string;
   email: string;
@@ -16,11 +15,9 @@ interface SubmitSupportContactInput {
   userAgent?: string;
 }
 
-/** Validates and forwards public support-contact submissions through the notifier port. */
 export class SubmitSupportContactUseCase {
   constructor(private readonly notifier: SupportContactNotifier) {}
 
-  /** Validates a public support-contact request and forwards it to the notifier adapter. */
   async execute(input: SubmitSupportContactInput): Promise<void> {
     const name = input.name.trim();
     if (!name || name.length > 120) {

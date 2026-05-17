@@ -6,9 +6,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-/**
- * Represents a user review of the application.
- */
 @Entity({ name: 'reviews' })
 export class Review {
   @PrimaryGeneratedColumn('uuid')

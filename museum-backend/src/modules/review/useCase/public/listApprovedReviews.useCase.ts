@@ -4,17 +4,15 @@ import type { IReviewRepository } from '@modules/review/domain/review/review.rep
 import type { ReviewDTO, ListReviewsFilters } from '@modules/review/domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Input for listing approved reviews (public). */
 interface ListApprovedReviewsInput {
   page: number;
   limit: number;
 }
 
-/** Lists only approved reviews, paginated, ordered by createdAt DESC. */
+/** Approved reviews only, paginated, ordered by createdAt DESC. */
 export class ListApprovedReviewsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 
-  /** Validates pagination and retrieves approved reviews. */
   async execute(input: ListApprovedReviewsInput): Promise<PaginatedResult<ReviewDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');

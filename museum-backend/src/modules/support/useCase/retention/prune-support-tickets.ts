@@ -5,39 +5,29 @@ import { logger } from '@shared/logger/logger';
 import type { DataSource } from 'typeorm';
 
 /**
- * Pause inserted between non-empty chunks so a runaway purge cannot monopolise
- * pgbouncer (incident 2026-05-08 hardening — see /team run
- * `2026-05-08-prune-hardening`). Tuned to ~10× a nominal PG query so other
- * traffic gets a clear window without meaningfully slowing typical (<10k rows)
- * runs.
+ * Throttle between non-empty chunks so a runaway purge cannot monopolise
+ * pgbouncer (incident 2026-05-08 hardening — /team run `2026-05-08-prune-hardening`).
+ * ~10× a nominal PG query so other traffic gets a clear window.
  */
 const CHUNK_THROTTLE_MS = 50;
 
-/** Result of a single prune run. */
 export interface PruneResult {
   rowsAffected: number;
   details: Record<string, unknown>;
 }
 
-/** Configuration knobs for the support-tickets prune (env-driven). */
 export interface PruneSupportTicketsConfig {
-  /** Days since `updatedAt` before a closed/resolved ticket becomes eligible. Default 365. */
+  /** Default 365. */
   daysClosed: number;
-  /** Max rows deleted per chunk (single transaction). Default 1000. */
+  /** Rows per chunk (single transaction). Default 1000. */
   batchLimit: number;
 }
 
 /**
  * Hard-deletes support_tickets where status IN ('closed', 'resolved')
- * AND updatedAt < NOW() - daysClosed days. Cascades to ticket_messages
- * via existing FK. Idempotent — re-running deletes only newly eligible rows.
+ * AND updatedAt < NOW() - daysClosed. Cascades to ticket_messages via FK.
+ * Idempotent — re-running deletes only newly eligible rows.
  *
- * Chunked DELETE LIMIT N per transaction so each chunk holds the row lock
- * for milliseconds. Loop until RETURNING returns 0 rows.
- *
- * Returns total rowsAffected + details (cutoffDate ISO string).
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
  * ADR: docs/adr/ADR-018-support-tickets-retention.md
  */
 export async function pruneSupportTickets(
@@ -49,11 +39,10 @@ export async function pruneSupportTickets(
   let chunkDeleted = -1;
 
   while (chunkDeleted !== 0) {
-    // TypeORM 0.3.x normalizes DELETE/UPDATE results to `[rows, rowCount]`
-    // (PostgresQueryRunner.js, raw.command switch). Earlier code read
-    // `result.length` which is always 2 for this tuple → infinite loop and
-    // production DB saturation (incident 2026-05-08). Same shape handling as
-    // shared/audit/audit-ip-anonymizer.job.ts.
+    // WHY: TypeORM 0.3.x normalizes DELETE/UPDATE results to `[rows, rowCount]`
+    // (PostgresQueryRunner.js, raw.command switch). Reading `result.length` is
+    // always 2 → infinite loop + prod DB saturation (incident 2026-05-08).
+    // Same shape handling as shared/audit/audit-ip-anonymizer.job.ts.
     const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "support_tickets"
        WHERE id IN (

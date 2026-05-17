@@ -3,14 +3,12 @@ import { badRequest, unauthorized } from '@shared/errors/app.error';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type { CreateReviewInput, ReviewDTO } from '@modules/review/domain/review/review.types';
 
-/** Authenticated user profile used to derive the display name server-side. */
 export interface ReviewAuthorProfile {
   id: number;
   firstname?: string | null;
   lastname?: string | null;
 }
 
-/** Input for the create-review use case. */
 interface CreateReviewUseCaseInput {
   user: ReviewAuthorProfile;
   rating: number;
@@ -18,8 +16,7 @@ interface CreateReviewUseCaseInput {
 }
 
 /**
- * Derives a public display name from an authenticated user profile.
- * Shape: "Firstname L." (first initial of the last name), or just the firstname when absent.
+ * Shape: "Firstname L." (first initial of last name), or just the firstname when absent.
  * Falls back to "Anonymous" if neither firstname nor lastname exists.
  */
 export function buildReviewDisplayName(user: ReviewAuthorProfile): string {
@@ -30,11 +27,10 @@ export function buildReviewDisplayName(user: ReviewAuthorProfile): string {
   return firstname || `${lastname.charAt(0)}.`;
 }
 
-/** Validates inputs and creates a new review with status 'pending'. */
+/** Creates a new review with status 'pending'. */
 export class CreateReviewUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 
-  /** Validates rating range and comment, derives userName from user profile, then persists. */
   async execute(input: CreateReviewUseCaseInput): Promise<ReviewDTO> {
     if (!input.user.id) {
       throw unauthorized('User authentication required');

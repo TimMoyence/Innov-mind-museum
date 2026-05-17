@@ -7,14 +7,12 @@ import type {
 } from '@modules/support/domain/ports/support-contact-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
-/** Sends public support-contact submissions to the configured support inbox. */
 export class EmailSupportContactNotifier implements SupportContactNotifier {
   constructor(
     private readonly emailService: EmailService,
     private readonly supportInboxEmail: string,
   ) {}
 
-  /** Sends one support-contact payload through the configured email provider. */
   async notify(payload: SupportContactPayload): Promise<void> {
     const subject = `[Musaium Support] ${payload.name} <${payload.email}>`.slice(0, 200);
     const html = buildSupportContactEmail({
@@ -29,9 +27,8 @@ export class EmailSupportContactNotifier implements SupportContactNotifier {
   }
 }
 
-/** No-op notifier used when email delivery is not configured (local/dev fallback). */
+/** No-op notifier used when email delivery is not configured (local/dev). */
 export class NoopSupportContactNotifier implements SupportContactNotifier {
-  /** Logs support-contact submissions when email delivery is disabled. */
   notify(payload: SupportContactPayload): Promise<void> {
     logger.warn('support_contact_notifier_noop', {
       requestId: payload.requestId,

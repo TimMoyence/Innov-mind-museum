@@ -10,7 +10,6 @@ import type {
 } from '@modules/support/domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Input for listing all support tickets (admin/moderator view). */
 export interface ListAllTicketsInput {
   status?: string;
   priority?: string;
@@ -18,11 +17,10 @@ export interface ListAllTicketsInput {
   limit: number;
 }
 
-/** Validates pagination and lists all tickets (admin/moderator use). */
+/** Admin/moderator use only. */
 export class ListAllTicketsUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
-  /** Validates pagination and filter enums, then retrieves a paginated list of all tickets. */
   async execute(input: ListAllTicketsInput): Promise<PaginatedResult<TicketDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');

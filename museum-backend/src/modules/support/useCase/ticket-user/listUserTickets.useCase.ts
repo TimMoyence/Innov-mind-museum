@@ -10,7 +10,6 @@ import type {
 } from '@modules/support/domain/ticket/support.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Input for listing a specific user's support tickets. */
 interface ListUserTicketsInput {
   userId: number;
   status?: string;
@@ -19,11 +18,9 @@ interface ListUserTicketsInput {
   limit: number;
 }
 
-/** Validates pagination and lists tickets for a specific user. */
 export class ListUserTicketsUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
-  /** Validates pagination and filter enums, then retrieves a paginated list of the user's tickets. */
   async execute(input: ListUserTicketsInput): Promise<PaginatedResult<TicketDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');

@@ -1,7 +1,3 @@
-/**
- * Review module composition root.
- * Wires the PG repository to use-case classes and exports ready-to-use singletons.
- */
 import { AppDataSource } from '@data/db/data-source';
 import { userRepository } from '@modules/auth/useCase';
 import {

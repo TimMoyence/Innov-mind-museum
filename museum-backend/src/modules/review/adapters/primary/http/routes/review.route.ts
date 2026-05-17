@@ -18,7 +18,6 @@ import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
 import type { ReviewAuthorProfile } from '@modules/review/useCase/public/createReview.useCase';
 
-/** Resolves the author profile used to derive the review display name. */
 export type ReviewAuthorResolver = (userId: number) => Promise<ReviewAuthorProfile | null>;
 
 const defaultAuthorResolver: ReviewAuthorResolver = async (userId) => {
@@ -31,24 +30,16 @@ const defaultAuthorResolver: ReviewAuthorResolver = async (userId) => {
   };
 };
 
-/** Dependencies for the review router — accepts an optional author resolver for tests. */
 export interface CreateReviewRouterDeps {
   authorResolver?: ReviewAuthorResolver;
 }
 
-/**
- * Builds the review Express router.
- *
- * @param deps - Optional injected dependencies (author profile resolver).
- * @returns Configured Express Router.
- */
 export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router => {
   const reviewRouter: Router = Router();
   const resolveAuthor = deps.authorResolver ?? defaultAuthorResolver;
 
-  // POST /api/reviews — Authenticated user: create a review.
-  // userName is NOT accepted from the client — it is derived server-side from
-  // the authenticated user's profile to prevent impersonation / spoofing.
+  // SEC: userName is derived server-side from the authenticated user's profile
+  // (never accepted from client) to prevent impersonation / spoofing.
   reviewRouter.post(
     '/',
     isAuthenticated,
@@ -76,7 +67,6 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
     },
   );
 
-  // GET /api/reviews — Public: list approved reviews (paginated)
   reviewRouter.get(
     '/',
     validateQuery(listReviewsQuerySchema),
@@ -92,7 +82,6 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
     },
   );
 
-  // GET /api/reviews/stats — Public: get average rating + count
   reviewRouter.get('/stats', async (_req: Request, res: Response) => {
     const stats = await getReviewStatsUseCase.execute();
     res.json(stats);
@@ -101,7 +90,6 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
   return reviewRouter;
 };
 
-/** Default review router instance (uses PG-backed author resolver). */
 const reviewRouter: Router = createReviewRouter();
 
 export default reviewRouter;

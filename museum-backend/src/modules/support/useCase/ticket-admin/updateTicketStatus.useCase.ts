@@ -9,7 +9,6 @@ import type {
   TicketPriority,
 } from '@modules/support/domain/ticket/support.types';
 
-/** Input for the update-ticket-status use case. */
 export interface UpdateTicketStatusInput {
   ticketId: string;
   status?: string;
@@ -20,11 +19,9 @@ export interface UpdateTicketStatusInput {
   requestId?: string;
 }
 
-/** Validates enum values, delegates update to the repository, and logs an audit event. */
 export class UpdateTicketStatusUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
-  /** Validates enum values, delegates the update, and emits an audit event. */
   async execute(input: UpdateTicketStatusInput): Promise<TicketDTO> {
     if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
       throw badRequest(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
