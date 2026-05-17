@@ -179,7 +179,7 @@ const env: AppEnv = {
     // P0-4 (audit 2026-05-12) — operational kill-switch + per-user daily USD
     // ceiling. NOT a feature flag: `killSwitch` = global panic button (env
     // reload + restart, fail-CLOSED). Wired through `LlmCostGuard` at the HTTP
-    // seam. Rollback = `git revert` (pré-launch V1 doctrine).
+    // seam. Rollback = `git revert` (pre-launch V1 doctrine).
     costGuard: {
       killSwitch: toBoolean(process.env.LLM_KILL_SWITCH, false),
       userDailyCapUsd: toNumber(process.env.OPENAI_USER_DAILY_USD_CAP, 0.5),
@@ -274,7 +274,7 @@ const env: AppEnv = {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
-    // C5.1 Wikidata circuit-breaker — no *_ENABLED switch (pré-launch V1).
+    // C5.1 Wikidata circuit-breaker — no *_ENABLED switch (pre-launch V1).
     breaker: {
       timeoutMs: toNumber(process.env.WIKIDATA_CB_TIMEOUT_MS, 5000),
       errorThresholdPercentage: toNumber(process.env.WIKIDATA_CB_ERROR_THRESHOLD_PCT, 50),
@@ -291,7 +291,7 @@ const env: AppEnv = {
       'Musaium/1.0 (https://musaium.app; contact@musaium.app)',
   },
   // C4.1 (2026-05-11) — KnowledgeRouter. TUNING-ONLY: no `*_ENABLED` flag may
-  // be added (D11 / pré-launch V1 doctrine). Rollback = `git revert`.
+  // be added (D11 / pre-launch V1 doctrine). Rollback = `git revert`.
   // `KNOWLEDGE_ROUTER_*` namespace avoids colliding with `KB_TIMEOUT_MS` (500ms,
   // outer cache wrapper). Router enforces per-leg budget on top (200ms, design D4).
   knowledgeRouter: {
@@ -390,7 +390,7 @@ const env: AppEnv = {
     // tests pin 'memory' to avoid coupling to Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
     // 2026-05-12 — LLM Guard sidecar circuit breaker. NOT a feature flag —
-    // always-on (pré-launch V1). Emergency disable =
+    // always-on (pre-launch V1). Emergency disable =
     // `LLM_GUARD_CB_FAILURE_THRESHOLD=1000000`. Real rollback = `git revert`.
     circuitBreaker: {
       failureThreshold: toNumber(process.env.LLM_GUARD_CB_FAILURE_THRESHOLD, 5),

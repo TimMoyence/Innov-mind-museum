@@ -42,9 +42,9 @@ interface ArtworkHeroModalProps {
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 
-// Modal overlay palette — local constants cohérentes avec
-// `ImageFullscreenModal.tsx:30-33`. Non-thematique (toujours overlay sombre
-// fullscreen) ; donc pas extraitable comme token DS sans casser le DS.
+// Modal overlay palette — local constants kept consistent with
+// `ImageFullscreenModal.tsx:30-33`. Non-thematic (always full-screen dark
+// overlay), so not extractable as a DS token without breaking the DS.
 const MODAL_BG = 'rgba(0,0,0,0.95)';
 const TITLE_COLOR = '#ffffff';
 const SUBTITLE_COLOR = '#e5e7eb';

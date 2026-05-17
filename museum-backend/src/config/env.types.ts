@@ -301,7 +301,7 @@ export interface AppEnv {
     cacheMaxEntries: number;
     /**
      * Circuit-breaker tuning around Wikidata SPARQL/API client (C5.1).
-     * No `enabled` flag — rollback is `git revert` (pré-launch V1 doctrine).
+     * No `enabled` flag — rollback is `git revert` (pre-launch V1 doctrine).
      */
     breaker: {
       timeoutMs: number;
@@ -524,7 +524,7 @@ export interface AppEnv {
     /**
      * 2026-05-12 — LLM Guard sidecar circuit breaker
      * (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
-     * NOT a feature flag — always-on (pré-launch V1 doctrine).
+     * NOT a feature flag — always-on (pre-launch V1 doctrine).
      */
     circuitBreaker: {
       /** Failures within `windowMs` that trip breaker OPEN. */
@@ -575,7 +575,7 @@ export interface AppEnv {
     /**
      * 2026-05-13 — LLM cost circuit breaker (perennial design §11 D9 RE2).
      * Distinct from latency `LLMCircuitBreaker`: trips on cost SPIKES (DDoS /
-     * scraping abuse) and daily-cap breach. ALWAYS-ON (pré-launch V1 doctrine).
+     * scraping abuse) and daily-cap breach. ALWAYS-ON (pre-launch V1 doctrine).
      */
     costCircuitBreaker: {
       /** Cents-per-hour threshold above which breaker trips OPEN. */
