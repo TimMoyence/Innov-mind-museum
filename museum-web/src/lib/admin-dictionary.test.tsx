@@ -64,6 +64,7 @@ const mockAdminDict: Dictionary['admin'] = {
     columnResource: '',
     columnDetails: '',
     emptyState: '',
+    tableAriaLabel: '',
   },
   usersPage: {
     subtitle: '',

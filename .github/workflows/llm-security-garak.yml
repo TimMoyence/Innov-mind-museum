@@ -172,10 +172,13 @@ jobs:
         id: bootstrap
         run: |
           set -euo pipefail
-          REG_BODY='{"email":"garak+ci@musaium.test","password":"GarakCI2026!","firstName":"Garak","lastName":"Ci"}'
+          # Ephemeral email per CI run + lowercase fields (schema)
+          # Cf. llm-promptfoo-smoke.yml pour la rationale détaillée.
+          EMAIL="garak+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test"
+          REG_BODY="{\"email\":\"${EMAIL}\",\"password\":\"GarakCI2026!\",\"firstname\":\"Garak\",\"lastname\":\"Ci\"}"
           curl -fsS -X POST http://localhost:3000/api/auth/register \
-            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null || true
-          LOGIN_BODY='{"email":"garak+ci@musaium.test","password":"GarakCI2026!"}'
+            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null
+          LOGIN_BODY="{\"email\":\"${EMAIL}\",\"password\":\"GarakCI2026!\"}"
           TOKEN=$(curl -fsS -X POST http://localhost:3000/api/auth/login \
             -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
           if [ -z "${TOKEN:-}" ] || [ "${TOKEN}" = "null" ]; then

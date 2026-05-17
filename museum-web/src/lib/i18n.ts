@@ -247,6 +247,7 @@ export interface Dictionary {
       columnResource: string;
       columnDetails: string;
       emptyState: string;
+      tableAriaLabel: string;
     };
     usersPage: {
       subtitle: string;

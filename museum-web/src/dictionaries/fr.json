@@ -399,7 +399,8 @@
       "columnAction": "Action",
       "columnResource": "Ressource",
       "columnDetails": "Détails",
-      "emptyState": "Aucun journal trouvé."
+      "emptyState": "Aucun journal trouvé.",
+      "tableAriaLabel": "Tableau des journaux d'audit (défilement horizontal)"
     },
     "usersPage": {
       "subtitle": "Gérez les utilisateurs de la plateforme.",

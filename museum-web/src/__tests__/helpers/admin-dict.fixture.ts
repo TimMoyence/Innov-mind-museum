@@ -61,6 +61,7 @@ export const mockAdminDict: Dictionary['admin'] = {
     columnResource: 'Resource',
     columnDetails: 'Details',
     emptyState: 'No audit logs found.',
+    tableAriaLabel: 'Audit logs table (scroll horizontally)',
   },
   usersPage: {
     subtitle: 'Manage platform users.',

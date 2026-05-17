@@ -119,10 +119,19 @@ jobs:
         id: bootstrap
         run: |
           set -euo pipefail
-          REG_BODY='{"email":"smoke+ci@musaium.test","password":"SmokeCI2026!","firstName":"Smk","lastName":"Ci"}'
+          # Use an ephemeral email per CI run (timestamp-based) to avoid two
+          # collisions with the canonical Musaium auth flow:
+          # (1) Backend schema requires lowercase `firstname`/`lastname` (not
+          #     camelCase), cf. museum-backend/.../auth.schemas.ts:10.
+          # (2) Static `smoke+ci@musaium.test` accumulates MFA-enrollment
+          #     history → past-deadline check returns 403 mfaEnrollmentRequired
+          #     (auth-session.route.ts:131). Fresh user per run = clean state.
+          # Pérein : every workflow run gets its own throwaway account.
+          EMAIL="smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test"
+          REG_BODY="{\"email\":\"${EMAIL}\",\"password\":\"SmokeCI2026!\",\"firstname\":\"Smk\",\"lastname\":\"Ci\"}"
           curl -fsS -X POST http://localhost:3000/api/auth/register \
-            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null || true
-          LOGIN_BODY='{"email":"smoke+ci@musaium.test","password":"SmokeCI2026!"}'
+            -H 'Content-Type: application/json' -d "$REG_BODY" > /dev/null
+          LOGIN_BODY="{\"email\":\"${EMAIL}\",\"password\":\"SmokeCI2026!\"}"
           TOKEN=$(curl -fsS -X POST http://localhost:3000/api/auth/login \
             -H 'Content-Type: application/json' -d "$LOGIN_BODY" | jq -r '.accessToken')
           SID=$(curl -fsS -X POST http://localhost:3000/api/chat/sessions \

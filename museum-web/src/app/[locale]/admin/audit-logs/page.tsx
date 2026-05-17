@@ -83,7 +83,19 @@ export default function AuditLogsPage() {
       {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
-          <div className="overflow-x-auto">
+          {/* WCAG 2.1 AA: scrollable region must be keyboard-reachable (axe-core
+              `scrollable-region-focusable` rule). tabIndex={0} + role=region +
+              aria-label make this table-container focusable via Tab key.
+              Justification: axe-core REQUIRES tabIndex on scrollable containers;
+              jsx-a11y's no-noninteractive-tabindex doesn't know it's scrollable.
+              Approved-by: pre-launch CI green audit 2026-05-17. */}
+          <div
+            className="overflow-x-auto"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- axe-core scrollable-region-focusable WCAG 2.1 AA
+            tabIndex={0}
+            role="region"
+            aria-label={adminDict.auditLogsPage.tableAriaLabel}
+          >
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
