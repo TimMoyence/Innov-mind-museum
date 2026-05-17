@@ -184,6 +184,31 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 
 **Si un hook bloque légitimement** (faux positif, env local cassé) : fix le hook ou la condition, ne le bypass JAMAIS. Si pression deadline, escalade Tech Lead.
 
+## Post-feature test coverage (UFR-021)
+
+**Tout écran user-facing nouveau ou modifié DOIT shipper avec au moins un Maestro flow exerçant son chemin happy critique.** Les tests unitaires Jest au niveau composant NE sont PAS suffisants — ils peuvent mocker l'interaction même qui casse (regex sur text input, navigation guard, animated state transition).
+
+**Pourquoi** — Bug DOB-2026-05-17 : le formulaire signup est resté bloqué (bouton disabled) parce qu'un regex `^\d{4}-\d{2}-\d{2}$` rejette les `DD/MM/YYYY` que tape un user FR. Le test Jest unitaire mockait l'input → vert. Aucun Maestro flow ne tapait une vraie date. Régression shippée en TestFlight, 1h de debug + hotfix push. Le green-light du test composant a créé une fausse confiance.
+
+**Scope** : `museum-frontend/app/**/*.tsx` (routes Expo Router, sauf `_*.tsx` / `+*.tsx` / `_styles/`) + `museum-frontend/features/**/ui/*Screen.tsx`. Out of scope : sub-composants purement présentationnels, modales composées dans un écran déjà couvert, routes dev-only.
+
+**Ce qui compte comme coverage** : un `museum-frontend/.maestro/*.yaml` qui référence soit (a) un `testID` literal déclaré dans la source de l'écran, soit (b) le route path Expo Router (`/auth`, `/chat/:sessionId`), soit (c) le nom de l'écran via magic comment `# screen: <Name>` dans l'en-tête du flow.
+
+**Opt-out** : ajoute `// e2e-skip: <raison ≥ 30 chars>` au top de la source de l'écran. Raisons valides : "dev-only debug route", "covered transitively by parent flow X", "third-party native screen we cannot drive via Maestro". Raisons invalides : "TODO add test", "low priority", "P2 backlog".
+
+**Enforcement** :
+- `pnpm sentinel:screen-test-coverage` localement (run before push)
+- `museum-frontend/.maestro/coverage-baseline.json` grandfathers les écrans pré-UFR-021 ; **ne JAMAIS ajouter de nouvelle entrée**, removals only (audité hebdo)
+- Phase 2 (à wirer après validation user) : pre-push hook gate + CI mirror via `sentinel-mirror.yml`
+
+**Comment l'appliquer** :
+1. Tu ajoutes/modifies un écran → tu ajoutes/étends un `.yaml` dans `museum-frontend/.maestro/`
+2. Le flow DOIT tap-through le happy path critique (form submit, primary CTA, navigation). "L'écran s'affiche sans crasher" NE compte PAS.
+3. Run `pnpm sentinel:screen-test-coverage` avant push. Fail = ajoute le flow OU justifie via `// e2e-skip:`
+4. Le tier-baseline (`coverage-baseline.json`) ne grandit jamais. Si tu rends un écran out-of-scope, retire-le du baseline dans le même commit.
+
+Specs détaillées : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL.md). Inventory : [`docs/TEST_COVERAGE_INVENTORY.md`](docs/TEST_COVERAGE_INVENTORY.md). Phase 2 plan : [`docs/TESTING_PHASE2_PLAN.md`](docs/TESTING_PHASE2_PLAN.md).
+
 ## Honesty + truth-telling (UFR-013)
 
 **Non-negotiable.** Applies to every response, every agent report. Twinned with the machine-readable `UFR-013` rule in `.claude/agents/shared/user-feedback-rules.json` (consumed by /team agents) — this section is the prose canonical; the JSON is the structural rule.
@@ -290,7 +315,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (27333 symbols, 44428 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (27307 symbols, 42954 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

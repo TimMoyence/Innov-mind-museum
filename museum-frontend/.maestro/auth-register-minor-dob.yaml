@@ -1,0 +1,85 @@
+appId: com.musaium.mobile.preview
+---
+# Auth — Register as a minor (under 15)
+#
+# CNIL Délibération 2021-018 — French digital majority is 15. The backend
+# computes the age from DOB and rejects registrations under 15 with
+# MINOR_PARENTAL_CONSENT_REQUIRED, mapped client-side to
+# error.auth.minor_parental_consent_required.
+#
+# DOB: 01/01/2015 — at the time this test runs (2026+) the user is under 15.
+# Note: the FE-side `parseDateOfBirth` is a format check only, NOT an age
+# check, so the form submit proceeds and the backend returns the error.
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach auth screen + switch to register
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+- tapOn:
+    text: "No account\\? Sign up|Pas de compte \\? S'inscrire"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Create your account|Créez votre compte"
+
+# ──────────────────────────────────────────────
+# Phase 2: Fill form with DOB under digital majority
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "First name|Prénom"
+- inputText: "Maestro"
+
+- tapOn:
+    text: "Last name|Nom"
+- inputText: "Tester"
+
+- runScript:
+    script: |
+      output.runId = (typeof MAESTRO_RUN_ID !== 'undefined' && MAESTRO_RUN_ID) ? MAESTRO_RUN_ID : Date.now().toString();
+- tapOn:
+    id: "email-input"
+- inputText: "maestro+minor-${output.runId}@local.dev"
+
+- tapOn:
+    id: "password-input"
+- inputText: "MuseumMaestro!2026X"
+
+# Under 15 — parser accepts the format but server rejects via age check
+- tapOn:
+    id: "date-of-birth-input"
+- inputText: "01/01/2015"
+
+- hideKeyboard
+
+- tapOn:
+    text: "I agree to the.*|J'accepte les.*"
+
+- scrollUntilVisible:
+    element:
+      id: "auth-submit"
+    direction: DOWN
+    timeout: 5000
+
+- tapOn:
+    id: "auth-submit"
+
+# ──────────────────────────────────────────────
+# Phase 3: Expect minor-consent error, no navigation
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "auth-error-state"
+    timeout: 10000
+
+# EN: "Sign-up is reserved for users aged 15 and over (French digital majority)."
+# FR: "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
+- assertVisible:
+    text: "aged 15 and over|15 ans et plus"
+
+# Sanity: still on register screen
+- assertVisible:
+    text: "Create your account|Créez votre compte"
+- assertNotVisible:
+    text: "Your museum companion|Votre compagnon de musée"

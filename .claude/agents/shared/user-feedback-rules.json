@@ -188,6 +188,15 @@
       "rule": "BYPASS HOOK INTERDIT. JAMAIS utiliser `--no-verify` ni aucune autre forme de contournement de hook : ni `git commit --no-verify`, ni `git commit -n`, ni `git push --no-verify`, ni `SKIP_PRE_COMMIT=1`, ni `core.hookspath=/dev/null`. Les hooks pre-commit/pre-push de Musaium sont la couche shift-left qui catch les regressions avant CI (~30s-2min pre-push) ; les bypass annulent la valeur du systeme et poussent du code rouge en CI (15min wasted) puis sur main. Si un hook bloque legitimement (faux positif, environnement local cassé), fix le hook ou la condition, ne le bypass JAMAIS. Si la pression deadline tente, escalade au Tech Lead. Enforcement code : `.claude/settings.json` deny rules + `.claude/settings.local.json` deny rules + sentinel-mirror.yml workflow CI qui re-run tous les gates et fail la PR si bypass detecté.",
       "severity": "BLOCK",
       "applyWhen": "Toute operation git commit / git push / equivalent qui touche au hooks system"
+    },
+    {
+      "id": "UFR-021",
+      "family": "test-discipline",
+      "source": "feedback_post_feature_test_coverage_2026_05_17",
+      "rule": "Tout ecran user-facing nouveau ou modifie DOIT shipper avec au moins un Maestro flow exercant son chemin happy critique. Les tests Jest unitaires au niveau composant NE sont PAS suffisants car ils peuvent mocker l'interaction meme qui casse (regex sur text input, navigation guard, animated state transition). Bug DOB-2026-05-17 : signup form bloque (bouton disabled) car regex YYYY-MM-DD rejette DD/MM/YYYY que tape un user FR ; le test Jest mockait l'input ; aucun Maestro flow ne tapait une date ; regression shipped en TestFlight. Scope = museum-frontend/app/**/*.tsx (sauf _*.tsx / +*.tsx / _styles/) + museum-frontend/features/**/ui/*Screen.tsx. Coverage HIT si un .maestro/*.yaml reference (a) un testID literal de la source, (b) le route path Expo Router, ou (c) le screen name via magic comment `# screen: <Name>`. Opt-out : `// e2e-skip: <raison >= 30 chars>` au top du fichier. Raisons valides = dev-only/transitively covered/third-party native. Invalides = TODO/low priority/P2 backlog. Baseline grandfathers les ecrans pre-UFR-021 dans museum-frontend/.maestro/coverage-baseline.json, ne JAMAIS y ajouter de nouvelle entree (removals only, audit hebdo). Enforcement : pnpm sentinel:screen-test-coverage en local ; Phase 2 wirera pre-push hook gate + sentinel-mirror.yml CI mirror.",
+      "severity": "BLOCK",
+      "applyWhen": "Toute creation ou modification d'un fichier matching museum-frontend/app/**/*.tsx (excl _*.tsx / +*.tsx / _styles/) ou museum-frontend/features/**/ui/*Screen.tsx",
+      "exceptions": "Ecrans dans le baseline museum-frontend/.maestro/coverage-baseline.json (grandfathered, scope shrink-only). Routes dev-only avec `// e2e-skip:` justifie. Sub-composants couverts transitivement par un parent flow documente."
     }
   ],
   "fallback": "Si un cas specifique semble justifier une exception, ne PAS l'appliquer silencieusement. Signale-le dans le rapport de self-verification (UFR-014 deviations[]), le Tech Lead decide.",

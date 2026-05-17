@@ -1,0 +1,86 @@
+appId: com.musaium.mobile.preview
+---
+# Auth — Register with duplicate email
+#
+# Submit a registration with an email that already has an account.
+# Expect backend CONFLICT (409 / 400 code:"CONFLICT") → FE renders
+# error.auth.email_already_taken.
+#
+# Pre-seeded account:
+#   - Email: maestro+register-duplicate@local.dev
+#   - This account MUST already exist before running this flow.
+#     Recommended seeding:
+#       cd museum-backend && pnpm seed:smoke-account -- \
+#         --email=maestro+register-duplicate@local.dev \
+#         --password=DuplicateSeed!2026X
+#     OR equivalent direct insert. Document any local override in
+#     AUTH_FLOWS_NOTES.md.
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach auth screen + switch to register
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+- tapOn:
+    text: "No account\\? Sign up|Pas de compte \\? S'inscrire"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Create your account|Créez votre compte"
+
+# ──────────────────────────────────────────────
+# Phase 2: Fill form with a known-existing email
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "First name|Prénom"
+- inputText: "Maestro"
+
+- tapOn:
+    text: "Last name|Nom"
+- inputText: "Tester"
+
+- tapOn:
+    id: "email-input"
+- inputText: "maestro+register-duplicate@local.dev"
+
+- tapOn:
+    id: "password-input"
+- inputText: "MuseumMaestro!2026X"
+
+- tapOn:
+    id: "date-of-birth-input"
+- inputText: "10/08/1994"
+
+- hideKeyboard
+
+- tapOn:
+    text: "I agree to the.*|J'accepte les.*"
+
+- scrollUntilVisible:
+    element:
+      id: "auth-submit"
+    direction: DOWN
+    timeout: 5000
+
+- tapOn:
+    id: "auth-submit"
+
+# ──────────────────────────────────────────────
+# Phase 3: Expect duplicate-email error, no navigation
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "auth-error-state"
+    timeout: 10000
+
+# EN: "An account already exists with this email."
+# FR: "Un compte existe déjà avec cette adresse email."
+- assertVisible:
+    text: "already exists with this email|existe déjà avec cette adresse"
+
+# Sanity: still on register screen
+- assertVisible:
+    text: "Create your account|Créez votre compte"
+- assertNotVisible:
+    text: "Your museum companion|Votre compagnon de musée"

@@ -1,0 +1,68 @@
+appId: com.musaium.mobile.preview
+---
+# Auth — Login (happy path)
+#
+# Login with the pre-seeded smoke-test account from museum-frontend/.env:
+#   TEST_EMAIL=apple.test@apple.com
+#   TEST_PASSWORD=Apple1234!
+#
+# Expect navigation past the auth screen into onboarding/home.
+#
+# Env override: set MAESTRO_LOGIN_EMAIL / MAESTRO_LOGIN_PASSWORD to use a
+# different account (the values default to the seeded smoke creds).
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach auth screen (login mode by default)
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+# ──────────────────────────────────────────────
+# Phase 2: Fill credentials
+# ──────────────────────────────────────────────
+- runScript:
+    script: |
+      output.email = (typeof MAESTRO_LOGIN_EMAIL !== 'undefined' && MAESTRO_LOGIN_EMAIL)
+        ? MAESTRO_LOGIN_EMAIL
+        : 'apple.test@apple.com';
+      output.password = (typeof MAESTRO_LOGIN_PASSWORD !== 'undefined' && MAESTRO_LOGIN_PASSWORD)
+        ? MAESTRO_LOGIN_PASSWORD
+        : 'Apple1234!';
+
+- tapOn:
+    id: "email-input"
+- inputText: "${output.email}"
+
+- tapOn:
+    id: "password-input"
+- inputText: "${output.password}"
+
+- hideKeyboard
+
+- tapOn:
+    id: "auth-submit"
+
+# ──────────────────────────────────────────────
+# Phase 3: Verify post-login navigation
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Onboarding may appear on first launch — skip if it does
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# Home screen hero is the canonical "we made it" signal
+- extendedWaitUntil:
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 10000
+
+# Sanity: auth screen is gone
+- assertNotVisible:
+    text: "Welcome back|Bon retour"
+- assertNotVisible:
+    id: "auth-submit"

@@ -1,0 +1,96 @@
+appId: com.musaium.mobile.preview
+---
+# Tab navigation — Roundtrip across all 3 tabs
+#
+# NOTE: The bottom tab bar only exposes 3 tabs (see app/(tabs)/_layout.tsx):
+#   - Dashboard (conversations)
+#   - Museums
+#   - Home
+# There are NO "Discover", "Carnet", or "Settings" tabs — those are stack
+# routes reached via Home (settings gear / carnet link / intent chips).
+# This flow only exercises the 3 real tabs to catch tab-bar regressions.
+#
+# Validates:
+#   - Each tab is tappable by its label.
+#   - Each tab renders a unique screen-level marker (title or hero text).
+#   - Round-trip back to Home returns to the hero title.
+#
+# Regression catches:
+#   - Renamed tab labels (i18n key drift on tabs.dashboard/museums/home).
+#   - Missing screen for a tab (broken _layout / route file).
+#   - Tab bar not rendering at all (BlurView / layout crash).
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Ensure authenticated session, on Home
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 2: Dashboard tab
+# ──────────────────────────────────────────────
+- tapOn: "Dashboard"
+- waitForAnimationToEnd
+
+# Dashboard screen title key: conversations.title => "Dashboard".
+# To disambiguate the tab label vs the screen title we wait for the
+# subtitle that is unique to the dashboard screen.
+- extendedWaitUntil:
+    visible: "Your recent museum sessions"
+    timeout: 8000
+
+# ──────────────────────────────────────────────
+# Phase 3: Museums tab
+# ──────────────────────────────────────────────
+- tapOn: "Museums"
+- waitForAnimationToEnd
+
+# Museum screen header: museumDirectory.title => "Nearby Museums".
+- extendedWaitUntil:
+    visible: "Nearby Museums"
+    timeout: 8000
+
+# ──────────────────────────────────────────────
+# Phase 4: Home tab (return)
+# ──────────────────────────────────────────────
+- tapOn: "Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 8000
+
+# ──────────────────────────────────────────────
+# Phase 5: Re-confirm round-trip by tapping Dashboard once more
+# (catches stuck-tab regressions where second tap on already-active tab
+# fails to navigate elsewhere)
+# ──────────────────────────────────────────────
+- tapOn: "Dashboard"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your recent museum sessions"
+    timeout: 8000
+
+- tapOn: "Home"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Your museum companion"
+    timeout: 8000

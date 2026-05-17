@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "comment": "Screens grandfathered when UFR-021 sentinel was bootstrapped. New screens MUST NOT be added here. Removals only. Audited weekly via `pnpm sentinel:screen-test-coverage --report`.",
+  "bootstrappedAt": "2026-05-17",
+  "grandfathered": [
+    "museum-frontend/app/(stack)/carnet.tsx",
+    "museum-frontend/app/(stack)/carnet/[sessionId].tsx",
+    "museum-frontend/app/(stack)/chat/[sessionId].tsx",
+    "museum-frontend/app/(stack)/create-ticket.tsx",
+    "museum-frontend/app/(stack)/discover.tsx",
+    "museum-frontend/app/(stack)/guided-museum-mode.tsx",
+    "museum-frontend/app/(stack)/offline-maps.tsx",
+    "museum-frontend/app/(stack)/preferences.tsx",
+    "museum-frontend/app/(stack)/reviews.tsx",
+    "museum-frontend/app/(tabs)/conversations.tsx",
+    "museum-frontend/app/(tabs)/index.tsx",
+    "museum-frontend/app/index.tsx",
+    "museum-frontend/features/auth/ui/BiometricLockScreen.tsx"
+  ]
+}
