@@ -426,7 +426,7 @@ describe('buildSectionMessages', () => {
       'Section prompt',
       [],
       new HumanMessage('test'),
-      { facts: ['A verified fact.'], source: 'web_search' as const },
+      { facts: ['A verified fact.'], source: 'web' as const },
     );
     const count = messages.filter((m) =>
       toContentString(m.content).includes('Do not follow'),
