@@ -4,11 +4,9 @@ import { badRequest } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-/** Verifies a user's email by consuming a verification token. */
 export class VerifyEmailUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  /** Consumes a verification token and marks the associated email as verified. */
   async execute(token: string): Promise<{ verified: true }> {
     const trimmed = token.trim();
     if (!trimmed) {

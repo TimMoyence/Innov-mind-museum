@@ -27,7 +27,6 @@ const KEY_PREFIX = 'oidc:nonce:';
 
 const generateNonce = (): string => crypto.randomBytes(NONCE_BYTES).toString('base64url');
 
-/** Resolved TTL (seconds) honoured by every store impl. */
 const resolveTtlSeconds = (override?: number): number => {
   if (override !== undefined && override > 0) return override;
   const raw = process.env.SOCIAL_NONCE_TTL_SECONDS;
@@ -59,14 +58,13 @@ export class InMemoryNonceStore implements NonceStore {
     this.now = options.now ?? Date.now;
   }
 
-  /** Issue a fresh nonce with the configured TTL. */
   issue(): Promise<string> {
     const nonce = generateNonce();
     this.entries.set(nonce, this.now() + this.ttlMs);
     return Promise.resolve(nonce);
   }
 
-  /** Atomically delete the stored nonce. Returns true only if it was present and unexpired. */
+  /** Atomic single-use: returns true only if present and unexpired. */
   consume(nonce: string): Promise<boolean> {
     const expiresAt = this.entries.get(nonce);
     if (expiresAt === undefined) return Promise.resolve(false);
@@ -75,7 +73,6 @@ export class InMemoryNonceStore implements NonceStore {
     return Promise.resolve(expiresAt > this.now());
   }
 
-  /** Test helper — drops every stored nonce. */
   clear(): void {
     this.entries.clear();
   }
@@ -102,7 +99,6 @@ export class RedisNonceStore implements NonceStore {
     this.fallback = new InMemoryNonceStore({ ttlSeconds: this.ttlSeconds });
   }
 
-  /** Issue a fresh nonce with the configured TTL via SET … EX … NX. */
   async issue(): Promise<string> {
     const nonce = generateNonce();
     const key = `${KEY_PREFIX}${nonce}`;
@@ -169,13 +165,9 @@ class DelegatingNonceStore implements NonceStore {
 
 const delegatingNonceStore = new DelegatingNonceStore();
 
-/** Singleton wrapper consumed by the auth composition root. */
 export const socialNonceStore: NonceStore = delegatingNonceStore;
 
-/**
- * Swap the active nonce store at boot. Idempotent; subsequent calls overwrite.
- * Single-instance deployments may skip this and run on the in-memory default.
- */
+/** Idempotent; subsequent calls overwrite. Single-instance deployments may skip. */
 export const setSocialNonceStore = (store: NonceStore): void => {
   delegatingNonceStore.setDelegate(store);
 };

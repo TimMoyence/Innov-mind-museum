@@ -6,10 +6,9 @@ import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
- * Confirms an email change by consuming a one-time token (atomic consume + update).
- * Revokes all active refresh tokens on success (SEC-HARDENING M13): on email
- * change, existing sessions must be invalidated so a previously-captured refresh
- * token cannot continue to authenticate under the new identity.
+ * Atomic consume + update. SEC-HARDENING M13: revokes all active refresh
+ * tokens so a previously-captured token cannot continue to authenticate
+ * under the new identity.
  */
 export class ConfirmEmailChangeUseCase {
   constructor(
@@ -17,13 +16,7 @@ export class ConfirmEmailChangeUseCase {
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
-  /**
-   * Validate an email change token and update the user's email atomically.
-   *
-   * @param token - The plain-text email change token sent to the new address.
-   * @returns Confirmation result.
-   * @throws {AppError} 400 if the token is invalid or expired.
-   */
+  /** @throws {AppError} 400 if token invalid or expired. */
   async execute(token: string): Promise<{ confirmed: true }> {
     if (!token.trim()) {
       throw badRequest('Email change token is required');

@@ -15,10 +15,6 @@ import { isAuthenticatedJwtOnly } from '@shared/middleware/authenticated.middlew
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
-/**
- * Sub-router for the B2B API-key programme:
- * POST /api-keys, GET /api-keys, DELETE /api-keys/:id.
- */
 const authApiKeysRouter: Router = Router();
 
 authApiKeysRouter.post(

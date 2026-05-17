@@ -1,29 +1,24 @@
 /**
- * Domain types and ports for the GDPR Article 15 (right of access) +
- * Article 20 (data portability) data-subject access request (DSAR) flow.
- *
- * The export aggregates every personal-data record the user is entitled to
- * receive: profile, consent history, chat sessions + messages, public reviews,
- * support tickets (and their messages). Saved artworks live only on-device
- * (mobile local storage) and are therefore not part of this server-side export.
+ * Domain types + ports for GDPR Article 15 (right of access) + Article 20
+ * (data portability) DSAR flow. Saved artworks live only on-device (mobile
+ * local storage) and are NOT part of this server-side export.
  */
 
-/** Port for accessing chat data from the auth module (lazy-bound to avoid circular init). */
+/** Lazy-bound to avoid circular init. */
 export interface ChatDataExportPort {
   getAllUserData(userId: number): Promise<UserChatExportData>;
 }
 
-/** Port for accessing public-review data from the auth module (lazy-bound). */
+/** Lazy-bound. */
 export interface ReviewDataExportPort {
   listForUser(userId: number): Promise<UserReviewExportEntry[]>;
 }
 
-/** Port for accessing support-ticket data from the auth module (lazy-bound). */
+/** Lazy-bound. */
 export interface SupportDataExportPort {
   listForUser(userId: number): Promise<UserSupportTicketExportEntry[]>;
 }
 
-/** Public review row, scoped to a single user (DSAR-safe shape). */
 export interface UserReviewExportEntry {
   id: string;
   rating: number;
@@ -33,7 +28,6 @@ export interface UserReviewExportEntry {
   createdAt: string;
 }
 
-/** Support ticket + nested messages, scoped to a single user (DSAR-safe shape). */
 export interface UserSupportTicketExportEntry {
   id: string;
   subject: string;
@@ -51,7 +45,6 @@ export interface UserSupportTicketExportEntry {
   }[];
 }
 
-/** Chat sessions and messages owned by the user. */
 export interface UserChatExportData {
   sessions: {
     id: string;
@@ -73,7 +66,7 @@ export interface UserChatExportData {
   }[];
 }
 
-/** Single recorded consent grant (history-preserving — revoked rows still appear). */
+/** History-preserving — revoked rows still appear. */
 export interface UserConsentExportEntry {
   scope: string;
   version: string;

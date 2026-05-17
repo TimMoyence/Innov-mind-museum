@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 import { decodeJwtPayload } from '@shared/auth/jwt-decode';
@@ -11,15 +10,9 @@ import {
 import type { Request } from 'express';
 
 /**
- * Pick the email locale for outgoing transactional emails.
- *
- * Priority order:
- *   1. Explicit `locale` field in the request body. The Zod schemas accept any
- *      `SupportedLocale` (8 user locales incl. 'ar'), but transactional emails
- *      ship in only fr/en today — anything other than `'fr' | 'en'` falls
- *      through to the next step rather than failing the request.
- *   2. `Accept-Language` header (simple fr/en heuristic).
- *   3. Default (`'fr'`).
+ * Priority: body.locale (fr/en only — transactional emails ship in 2 locales,
+ * other SupportedLocale values fall through rather than fail) → Accept-Language
+ * (fr/en heuristic) → default 'fr'.
  */
 export function pickEmailLocale(req: Request): EmailLocale {
   const bodyLocale = (req.body as { locale?: unknown }).locale;
@@ -36,10 +29,9 @@ export const toPositiveInt = (value: string | undefined, fallback: number): numb
 };
 
 /**
- * Decodes the `familyId` claim from a refresh-token JWT WITHOUT verifying the
- * signature. Used by the refresh rate limiter to bucket per-family before the
- * cryptographic verification runs in the handler. A parse failure cannot
- * bypass the limit because the caller falls back to IP-only keying.
+ * Decodes `familyId` from refresh JWT WITHOUT verifying signature. Used by
+ * refresh rate limiter to bucket per-family before crypto verify in handler.
+ * Parse failure cannot bypass — caller falls back to IP-only keying.
  */
 const familyIdPayloadSchema = z.object({ familyId: z.string() });
 

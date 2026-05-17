@@ -23,10 +23,6 @@ import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { env } from '@src/config/env';
 
-/**
- * Sub-router for password endpoints:
- * PUT /change-password, POST /forgot-password, POST /reset-password.
- */
 const authPasswordRouter: Router = Router();
 
 authPasswordRouter.put(
@@ -67,8 +63,7 @@ authPasswordRouter.post(
     });
     res.json({
       message: 'If this email exists, a reset link has been sent.',
-      // SEC-HARDENING (L7): debug token only surfaces in the test environment
-      // (see /change-email for rationale).
+      // SEC-HARDENING (L7): debug token only in test env (cf. /change-email).
       ...(env.nodeEnv === 'test' ? { debugResetToken: token } : {}),
     });
   },

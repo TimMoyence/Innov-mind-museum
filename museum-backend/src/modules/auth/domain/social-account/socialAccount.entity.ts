@@ -13,7 +13,6 @@ import { User } from '@modules/auth/domain/user/user.entity';
 
 import type { Relation } from 'typeorm';
 
-/** Represents a linked social identity (Apple, Google) for a user. Mapped to `social_accounts`. */
 @Entity({ name: 'social_accounts' })
 @Unique(['provider', 'providerUserId'])
 export class SocialAccount {
@@ -28,11 +27,10 @@ export class SocialAccount {
   @Column({ type: 'integer' })
   userId!: number;
 
-  /** Social provider identifier (e.g. `"apple"`, `"google"`). */
+  /** `"apple"` | `"google"`. */
   @Column({ type: 'varchar', length: 20 })
   provider!: string;
 
-  /** User ID on the external provider (opaque string). */
   @Column({ type: 'varchar', length: 255 })
   providerUserId!: string;
 

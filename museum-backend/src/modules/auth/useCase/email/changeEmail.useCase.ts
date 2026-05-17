@@ -11,10 +11,6 @@ import { validateEmail } from '@shared/validation/email';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 
-/**
- * Initiates the email change flow: verifies current password, checks availability
- * of the new email, generates a confirmation token, and sends a verification email.
- */
 export class ChangeEmailUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
@@ -22,15 +18,7 @@ export class ChangeEmailUseCase {
     private readonly frontendUrl?: string,
   ) {}
 
-  /**
-   * Start the email change process.
-   *
-   * @param userId - The authenticated user's ID.
-   * @param newEmail - The desired new email address.
-   * @param currentPassword - The user's current password for re-authentication.
-   * @param locale - Email locale for building the confirmation URL (defaults to `'fr'`).
-   * @returns The plain-text token (useful in dev/test; production relies on email).
-   */
+  /** @returns plain-text token (useful in dev/test; prod relies on email). */
   async execute(
     userId: number,
     newEmail: string,
@@ -66,7 +54,7 @@ export class ChangeEmailUseCase {
       throw badRequest('This email is already in use');
     }
 
-    // Generate token: 32 random bytes → hex string; store SHA-256 hash in DB
+    // 32-byte raw → hex; SHA-256 hash persisted (raw sent in email).
     const token = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const expires = new Date(Date.now() + 3600000); // 1 hour

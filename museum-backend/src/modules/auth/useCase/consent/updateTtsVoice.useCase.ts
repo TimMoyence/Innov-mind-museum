@@ -3,21 +3,13 @@ import { badRequest, notFound } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-/**
- * Persists a user's preferred TTS voice. `null` resets the user back to the
- * env-level default (`env.tts.voice`). The voice is validated against the
- * shared {@link TTS_VOICES} catalog before any persistence.
- */
+/** `null` resets to env-level default (`env.tts.voice`). Validated against {@link TTS_VOICES}. */
 export class UpdateTtsVoiceUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
   /**
-   * Validates and persists the requested voice.
-   *
-   * @param userId - Authenticated user id.
-   * @param voice - Catalog voice id, or `null` to reset to the env default.
-   * @throws {AppError} 400 if the voice is not in the catalog.
-   * @throws {AppError} 404 if the user does not exist.
+   * @throws {AppError} 400 if voice not in catalog.
+   * @throws {AppError} 404 if user does not exist.
    */
   async execute(userId: number, voice: TtsVoice | null): Promise<{ ttsVoice: TtsVoice | null }> {
     if (voice !== null && !isTtsVoice(voice)) {

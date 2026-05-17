@@ -8,22 +8,12 @@ import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 
-/**
- * Express router for current-user (`req.user`) GDPR endpoints.
- *
- * Currently exposes the Article 15 (right of access) + Article 20 (data
- * portability) export at `GET /me/export`. Mounted by the API router at
- * `/users`, so the public path is `GET /api/users/me/export`.
- */
+/** Mounted at `/users`; public path `GET /api/users/me/export`. */
 const meRouter: Router = Router();
 
 /**
- * Per-user rate limit for the GDPR DSAR export.
- *
- * Confirmed restrictive policy: 1 export per 7-day rolling window. Heavy
- * payloads + signed-URL fan-out across S3 means abuse must stay impossible.
- * On 429 the existing rate-limit middleware sets `Retry-After` so the client
- * sees when the next attempt is allowed.
+ * 1 export per 7-day rolling window. Heavy payload + signed-URL S3 fan-out =
+ * abuse must stay impossible. 429 carries `Retry-After`.
  */
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const exportLimiter = createRateLimitMiddleware({
@@ -34,44 +24,30 @@ const exportLimiter = createRateLimitMiddleware({
 });
 
 /**
- * Streaming threshold (bytes). When the serialised payload exceeds this size
- * the handler switches from `res.json(...)` to a chunked write so we never
- * buffer multi-megabyte JSON in memory.
- *
- * 10 MB matches the audit-mandated cutover. Most users sit far below; the
- * threshold is intentionally low so we exercise the streaming path on heavy
- * accounts (long-tenure visitors with thousands of chat messages).
+ * Above this, switch from `res.json` to chunked write — avoid multi-MB JSON
+ * heap pressure. Intentionally low so streaming path runs on heavy accounts.
  */
 const STREAMING_THRESHOLD_BYTES = 10 * 1024 * 1024;
 
 /**
- * `GET /me/export` — GDPR Article 15 (access) + Article 20 (portability).
- *
- * - Auth: `isAuthenticated`. The user is always taken from `req.user.id`,
- *   never from a query/path param (anti-IDOR).
- * - Rate limit: 1 export per user / 7 days (sliding window).
- * - Audit: emits `DATA_EXPORT` to the hashed audit chain on success, with the
- *   payload byte size and per-category counts to support Art. 30 records.
- * - Cache: `Cache-Control: no-store` always — payload is sensitive.
- * - Streaming: small payloads use `res.json`. Above 10 MB the handler streams
- *   the JSON in chunks (Transfer-Encoding: chunked) to avoid heap pressure.
- *
- * Empty arrays are returned for users with no data (never 404). Sessions
- * already purged by the retention cron are NOT listed (consistent with
- * retention semantics).
+ * `GET /me/export` — GDPR Art.15 + Art.20.
+ * - User from `req.user.id`, never query/path (anti-IDOR).
+ * - 1/user/7d sliding window.
+ * - Audit `DATA_EXPORT` with byte size + per-category counts (Art.30 records).
+ * - Always `Cache-Control: no-store`.
+ * - >10 MB streams `Transfer-Encoding: chunked`.
+ * Empty arrays for no-data users (never 404). Sessions purged by retention
+ * cron NOT listed (consistent with retention semantics).
  */
 meRouter.get('/me/export', isAuthenticated, exportLimiter, async (req: Request, res: Response) => {
   const jwtUser = requireUser(req);
 
-  // Always cache-bust — DSAR payloads contain personal data; no intermediary
-  // proxy or browser cache should retain them.
+  // DSAR payloads contain personal data — no proxy/browser cache.
   res.setHeader('Cache-Control', 'no-store');
 
   const user = await userRepository.getUserById(jwtUser.id);
   if (!user) {
-    // Per audit § 2: a missing user after a valid JWT is an auth-level
-    // anomaly, not a 404 (account may have just been deleted between issuing
-    // the token and the export request). Treat as 401 to force re-auth.
+    // Audit §2 — missing user after valid JWT = auth anomaly (deleted mid-flight), not 404.
     throw new AppError({ message: 'User not found', statusCode: 401, code: 'UNAUTHORIZED' });
   }
 
@@ -80,8 +56,7 @@ meRouter.get('/me/export', isAuthenticated, exportLimiter, async (req: Request, 
   const serialised = JSON.stringify(payload);
   const byteSize = Buffer.byteLength(serialised, 'utf8');
 
-  // Audit MUST be durable before the response is observable (SOC2 CC7.2 /
-  // GDPR Art. 30). Awaited so the hashed chain captures this access event.
+  // Audit MUST be durable before response is observable (SOC2 CC7.2 / GDPR Art. 30).
   await auditService.log({
     action: AUDIT_DATA_EXPORT,
     actorType: 'user',
@@ -111,9 +86,7 @@ meRouter.get('/me/export', isAuthenticated, exportLimiter, async (req: Request, 
     return;
   }
 
-  // Chunked streaming path for >10 MB payloads. Express omits the
-  // Content-Length header automatically when we use res.write/end, so the
-  // response uses Transfer-Encoding: chunked.
+  // Express omits Content-Length when using res.write/end → Transfer-Encoding: chunked.
   res.write(serialised);
   res.end();
 });

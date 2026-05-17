@@ -17,18 +17,16 @@ const isConsentScope = (value: string): value is ConsentScope =>
 const isConsentSource = (value: string): value is ConsentSource =>
   (CONSENT_SOURCES as readonly string[]).includes(value);
 
-/** Subset of AuditService the use case depends on (decoupled for tests). */
+/** Subset of AuditService (decoupled for tests). */
 export interface ConsentAuditSink {
   log(entry: AuditLogEntry): Promise<void>;
 }
 
-/** Optional per-request context the route passes through for the audit row. */
 export interface ConsentAuditContext {
   ip?: string | null;
   requestId?: string | null;
 }
 
-/** Records a new active consent for a user. */
 export class GrantConsentUseCase {
   constructor(
     private readonly repository: IUserConsentRepository,
@@ -36,18 +34,9 @@ export class GrantConsentUseCase {
   ) {}
 
   /**
-   * Validates scope/source/version and records a new active consent grant.
-   * On success, emits an `AUDIT_CONSENT_GRANTED_*` hash-chained audit row
-   * (action chosen per `mapScopeToGrantAuditAction`). Audit emission is
-   * awaited but never throws — a failing audit pipeline must not break
-   * registration or revocation calls (the consent row itself is already
-   * durable).
-   *
-   * @param userId - Authenticated user id.
-   * @param scope - Consent scope (must be one of CONSENT_SCOPES).
-   * @param version - Policy version at time of grant.
-   * @param source - Capture source (ui / api / registration).
-   * @param auditContext - Optional `{ ip, requestId }` from the request.
+   * Emits an `AUDIT_CONSENT_GRANTED_*` hash-chained audit row on success.
+   * Audit emission is awaited but never throws — a failing audit pipeline
+   * must not break registration/revocation (the consent row is already durable).
    */
   async execute(
     userId: number,

@@ -13,17 +13,12 @@ import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
-/** Zod schema for POST /api/auth/consent. */
 export const grantConsentSchema = z.object({
   scope: z.enum(CONSENT_SCOPES as readonly [string, ...string[]]),
   version: z.string().min(1).max(32),
 });
 
-/**
- * Express router for GDPR Art.7 consent management. Grants, revokes, and lists
- * are authenticated JWT endpoints — visitors (and all roles) may manage their
- * own consents.
- */
+/** GDPR Art.7 consent. All authenticated roles may manage their own consents. */
 const consentRouter: Router = Router();
 
 consentRouter.post(

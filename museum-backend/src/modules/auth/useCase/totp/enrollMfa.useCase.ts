@@ -7,29 +7,20 @@ import { generateTotpSecret } from './totpService';
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-/** Result of starting (or rotating) an MFA enrollment. */
 export interface EnrollMfaResult {
-  /** `otpauth://totp/...` URI for QR rendering. */
+  /** `otpauth://totp/...` URI for QR. */
   otpauthUrl: string;
-  /** Base32 secret — surfaced for users without a QR scanner (manual entry). */
+  /** Base32 secret for manual entry (users without QR scanner). */
   manualSecret: string;
-  /**
-   * One-time view of the 10 plain recovery codes. The backend never returns
-   * these again; the frontend must ensure the user persists them before
-   * leaving the screen.
-   */
+  /** One-time view — backend never returns these again; FE MUST persist before user leaves. */
   recoveryCodes: string[];
 }
 
 /**
- * Issues (or rotates) a TOTP shared secret + recovery codes for the caller.
- *
- * Idempotency: calling twice before completing `verifyMfa` rotates both
- * pieces — old QR / codes are useless. After a successful `verifyMfa`,
- * calling enroll again is rejected with 409 so the user has to disable MFA
- * first (re-auth required) before re-enrolling. This prevents an attacker
- * who hijacked an authenticated admin session from silently rotating MFA
- * material away from the legitimate user.
+ * Idempotency: calling twice before `verifyMfa` rotates both — old QR/codes useless.
+ * After successful `verifyMfa`, re-enroll is rejected with 409 — user must disable
+ * first (re-auth required). Prevents a hijacked admin session from silently rotating
+ * MFA material away from the legitimate user.
  */
 export class EnrollMfaUseCase {
   constructor(
@@ -37,7 +28,6 @@ export class EnrollMfaUseCase {
     private readonly totpRepository: ITotpSecretRepository,
   ) {}
 
-  /** Generate fresh secret + codes and persist them encrypted/hashed. */
   async execute(userId: number): Promise<EnrollMfaResult> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {

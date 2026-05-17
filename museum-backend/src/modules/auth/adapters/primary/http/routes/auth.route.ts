@@ -8,13 +8,7 @@ import authProfileRouter from './auth-profile.route';
 import authSessionRouter from './auth-session.route';
 import superAdminCheckRouter from './super-admin-check.route';
 
-/**
- * Express router for authentication endpoints. Composes 5 sub-routers
- * (session lifecycle, profile, password, email, API keys) so each
- * concern lives in its own file under ./auth-*.router.ts. The full URL
- * surface mounted at /api/auth is preserved verbatim — see ADR-003 for
- * the split rationale.
- */
+/** Composes sub-routers (session/profile/password/email/api-keys) — see ADR-003. */
 const authRouter: Router = Router();
 
 authRouter.use(authSessionRouter);

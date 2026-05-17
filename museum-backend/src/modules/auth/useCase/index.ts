@@ -1,7 +1,4 @@
-/**
- * Auth module composition root.
- * Wires repository implementations to use-case classes and exports ready-to-use singleton instances.
- */
+/** Auth module composition root — wires repos to use-cases, exports singletons. */
 import { AppDataSource } from '@data/db/data-source';
 import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/pg/apiKey.repository.pg';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
@@ -74,11 +71,9 @@ export const __testEmailService = testEmailService;
 
 const frontendUrl = env.frontendUrl;
 
-/** Singleton instance of {@link ForgotPasswordUseCase}. */
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
-/** Singleton instance of {@link ResetPasswordUseCase}. Revokes refresh tokens on reset (OWASP). */
+/** Revokes refresh tokens on reset (OWASP). */
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository, refreshTokenRepository);
-/** Singleton instance of {@link AuthSessionService}. */
 const authSessionService = new AuthSessionService(
   userRepository,
   refreshTokenRepository,
@@ -101,23 +96,19 @@ const recoveryMfaUseCase = new RecoveryMfaUseCase(
   authSessionService,
 );
 /**
- * F3 — OIDC nonce store. Uses the delegating singleton so the boot sequence
- * in `src/index.ts` can upgrade the inner adapter to {@link RedisNonceStore}
- * once the shared Redis client is wired (`setSocialNonceStore`). Initial
- * delegate is {@link InMemoryNonceStore} — keeps single-instance dev/tests
- * working untouched.
+ * F3 — OIDC nonce store. Delegating singleton: `src/index.ts` boot can upgrade
+ * to {@link RedisNonceStore} via `setSocialNonceStore` once shared Redis is
+ * wired. Initial delegate {@link InMemoryNonceStore} keeps dev/tests working.
  */
 const nonceStore = socialNonceStore;
 
 /**
- * F11-mobile — short-lived store for the mobile-redirect OAuth flow. Holds
- * the issued AuthSessionResponse keyed by a single-use opaque code that
- * travels back to the mobile client via the /google/callback deeplink and
- * is exchanged for the actual session via POST /api/auth/social-redeem.
+ * F11-mobile — store for the mobile-redirect OAuth flow. Holds the issued
+ * AuthSessionResponse keyed by a single-use opaque code that travels back via
+ * the /google/callback deeplink and is exchanged via POST /api/auth/social-redeem.
  */
 const socialOtcStore = new InMemorySocialOtcStore<AuthSessionResponse>();
 
-/** Singleton instance of {@link SocialLoginUseCase}. */
 const socialLoginUseCase = new SocialLoginUseCase(
   userRepository,
   socialAccountRepository,
@@ -126,19 +117,17 @@ const socialLoginUseCase = new SocialLoginUseCase(
   nonceStore,
 );
 
-/** Singleton instance of {@link RedeemSocialOtcUseCase}. */
 const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
-/** Singleton instance of {@link DeleteAccountUseCase}. Lazy image cleanup via chat module's shared storage. */
+/** Lazy image cleanup via chat module — late-bind to avoid circular init. */
 const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(prefix: string): Promise<void> {
-    // Late-bind to avoid circular init: chat module initializes after auth module
     const { getImageStorage } = await import('@modules/chat/chat-module');
     await getImageStorage().deleteByPrefix(prefix);
   },
 };
 const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageCleanupProxy);
 
-/** Lazy-bound proxy for GDPR data export — resolves the chat repository at call time. */
+/** Lazy-bound — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
   async getAllUserData(userId: number) {
     const { getChatRepository } = await import('@modules/chat/chat-module');
@@ -146,7 +135,7 @@ const chatDataExportProxy: ChatDataExportPort = {
   },
 };
 
-/** Lazy-bound proxy for GDPR review export — resolves the review repository at call time. */
+/** Lazy-bound — resolves the review repository at call time. */
 const reviewDataExportProxy: ReviewDataExportPort = {
   async listForUser(userId: number): Promise<UserReviewExportEntry[]> {
     const { ReviewRepositoryPg } =
@@ -164,7 +153,7 @@ const reviewDataExportProxy: ReviewDataExportPort = {
   },
 };
 
-/** Lazy-bound proxy for GDPR support-ticket export — resolves the support repository at call time. */
+/** Lazy-bound — resolves the support repository at call time. */
 const supportDataExportProxy: SupportDataExportPort = {
   async listForUser(userId: number): Promise<UserSupportTicketExportEntry[]> {
     const { SupportRepositoryPg } =
@@ -198,43 +187,32 @@ const exportUserDataUseCase = new ExportUserDataUseCase({
   supportDataExport: supportDataExportProxy,
   userConsentRepository,
 });
-/** Singleton instance of {@link GetProfileUseCase}. */
 const getProfileUseCase = new GetProfileUseCase(userRepository);
-/** Singleton instance of {@link ChangePasswordUseCase}. */
 const changePasswordUseCase = new ChangePasswordUseCase(userRepository, refreshTokenRepository);
-/** Singleton instance of {@link ChangeEmailUseCase}. */
 const changeEmailUseCase = new ChangeEmailUseCase(userRepository, emailService, frontendUrl);
-/** Singleton instance of {@link ConfirmEmailChangeUseCase}. Revokes refresh tokens on success (M13). */
+/** Revokes refresh tokens on success (M13). */
 const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(
   userRepository,
   refreshTokenRepository,
 );
-/** Singleton instance of {@link VerifyEmailUseCase}. */
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
-/** Singleton instance of {@link UpdateContentPreferencesUseCase}. */
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
-/** Singleton instance of {@link UpdateTtsVoiceUseCase}. */
 const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
-/** TD-2 — Singleton instance of {@link UpdateProfilePreferencesUseCase} (batch endpoint). */
+/** TD-2 — batch endpoint. */
 const updateProfilePreferencesUseCase = new UpdateProfilePreferencesUseCase(userRepository);
 
-// API Key use cases — always wired (B2B API key programme, msk_* auth).
+// B2B API key programme (msk_* auth).
 const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
 const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
 const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
 const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
 
-// GDPR consent use cases (userConsentRepository is initialised earlier alongside
-// the DSAR export use case). Audit sink wired in so every grant / revoke writes a
-// hash-chained row in `audit_logs` (S4-P0-02 — Apple Guideline 5.1.2(i) compliance).
+// GDPR consent — every grant/revoke writes a hash-chained `audit_logs` row
+// (S4-P0-02 — Apple Guideline 5.1.2(i) compliance).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository, auditService);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository, auditService);
 
-/**
- * Singleton instance of {@link RegisterUseCase}. Wired after `grantConsentUseCase`
- * because registration now records the ToS/privacy consent server-side
- * (`user_consents.scope = 'tos_privacy'`) as part of the registration flow.
- */
+/** Wired after `grantConsentUseCase` — records ToS/privacy consent server-side. */
 const registerUseCase = new RegisterUseCase(
   userRepository,
   emailService,
@@ -243,7 +221,6 @@ const registerUseCase = new RegisterUseCase(
 );
 
 /**
- * Registers the API-key middleware globals (apiKeyRepository + userRoleResolver).
  * Called from `createApp()` so module import alone has no side effects on the
  * shared middleware state — keeps test isolation predictable.
  */
@@ -255,7 +232,6 @@ const wireAuthMiddleware = (): void => {
   });
 };
 
-/** Marks the user's onboarding as completed in the database. */
 const completeOnboarding = async (userId: number): Promise<void> => {
   await userRepository.markOnboardingCompleted(userId);
 };

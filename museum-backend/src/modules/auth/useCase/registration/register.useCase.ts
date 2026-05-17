@@ -15,11 +15,7 @@ import type { IUserRepository } from '@modules/auth/domain/user/user.repository.
 import type { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
 import type { EmailService } from '@shared/email/email.port';
 
-/**
- * French digital majority (CNIL Délibération 2021-018). Standalone account
- * creation requires the user to be at least this old; below the threshold,
- * the FE flow must route the user to a parental-consent screen instead.
- */
+/** French digital majority (CNIL Délibération 2021-018). Below this, FE must route to parental-consent. */
 const MINIMUM_AGE_FOR_REGISTRATION = 15;
 
 const calculateAgeYears = (dob: Date, now: Date = new Date()): number => {
@@ -31,23 +27,19 @@ const calculateAgeYears = (dob: Date, now: Date = new Date()): number => {
   return age;
 };
 
-/** Input contract for {@link RegisterUseCase.execute}. */
 export interface RegisterInput {
   email: string;
   password: string;
   firstname?: string;
   lastname?: string;
-  /** Email locale for the verification URL. Defaults to {@link DEFAULT_EMAIL_LOCALE}. */
   locale?: EmailLocale;
-  /** YYYY-MM-DD. When present, gates the registration on CNIL digital-majority age. */
+  /** YYYY-MM-DD. When present, gates on CNIL digital-majority age. */
   dateOfBirth?: string;
-  /** Request IP — forwarded to the consent audit row (S4-P0-02 forensics). */
+  /** Forwarded to consent audit row (S4-P0-02 forensics). */
   ip?: string | null;
-  /** Request correlation id — forwarded to the consent audit row. */
   requestId?: string | null;
 }
 
-/** Orchestrates new user registration with email/password. */
 export class RegisterUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
@@ -56,12 +48,7 @@ export class RegisterUseCase {
     private readonly grantConsentUseCase?: GrantConsentUseCase,
   ) {}
 
-  /**
-   * Validate email format, password strength, and name fields, then register a new user.
-   * Sends a verification email if an email service is configured (non-blocking).
-   *
-   * @throws {AppError} 400 if validation fails, 422 if user is below the digital majority age.
-   */
+  /** @throws {AppError} 400 validation, 422 if below digital-majority age. */
   async execute(input: RegisterInput): Promise<User> {
     const normalizedEmail = input.email.trim().toLowerCase();
 
@@ -76,9 +63,9 @@ export class RegisterUseCase {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
 
-    // F10 (2026-04-30) — block known-breached passwords at registration via HIBP
-    // k-anonymity. Throws AppError(PASSWORD_BREACHED, 400) on hit; fails open
-    // with a Sentry warning if HIBP itself is unavailable (no SLA).
+    // F10 — block known-breached passwords via HIBP k-anonymity. Throws
+    // AppError(PASSWORD_BREACHED, 400) on hit; fails open with Sentry warning
+    // if HIBP unavailable (no SLA).
     await assertPasswordNotBreached(input.password);
 
     let sanitizedFirstname: string | undefined;
@@ -112,8 +99,7 @@ export class RegisterUseCase {
   }
 
   /**
-   * CNIL Délibération 2021-018 — reject standalone registration below 15 years.
-   * Returns a stable code so the FE can route the user to the parental-consent
+   * CNIL Délibération 2021-018 — stable code so FE can route to parental-consent
    * screen instead of showing a generic validation error.
    */
   private assertDigitalMajority(dateOfBirth: string | undefined): void {
@@ -133,11 +119,10 @@ export class RegisterUseCase {
   }
 
   /**
-   * GDPR — register the ToS/privacy consent at policy version POLICY_VERSION.
-   * The mobile/web flows block submission unless the user ticked the GDPR
-   * checkbox, so reaching this code path is proof of consent. Audit trail
-   * lives in `user_consents`. Failure is logged but does not abort registration
-   * (legal proof is on the FE checkbox; missing row will surface in DPO dashboards).
+   * GDPR — records ToS/privacy at POLICY_VERSION. FE blocks submit unless GDPR
+   * checkbox ticked, so reaching here is proof of consent. Failure logged but
+   * does NOT abort registration (legal proof is on FE; missing row surfaces in
+   * DPO dashboards).
    */
   private async recordTosConsent(
     userId: number,
@@ -161,10 +146,7 @@ export class RegisterUseCase {
     }
   }
 
-  /**
-   * Non-blocking verification email. SEC (H2): we email the raw token but
-   * persist only its SHA-256 hash, mirroring the reset-password flow.
-   */
+  /** Non-blocking. SEC (H2): raw token emailed, SHA-256 hash persisted (mirrors reset flow). */
   private async sendVerificationEmail(
     userId: number,
     email: string,

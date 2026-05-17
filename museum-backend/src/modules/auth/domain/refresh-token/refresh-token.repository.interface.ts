@@ -1,4 +1,4 @@
-/** Row shape for a persisted refresh token in the `auth_refresh_tokens` table. */
+/** Row shape for `auth_refresh_tokens`. */
 export interface StoredRefreshTokenRow {
   id: string;
   userId: number;
@@ -9,9 +9,9 @@ export interface StoredRefreshTokenRow {
   expiresAt: Date;
   rotatedAt: Date | null;
   /**
-   * Last rotation activity on the session chain this token belongs to.
-   * Used for the sliding idle-window check. `null` on legacy rows predating
-   * the column; consumers should fall back to `createdAt` / `issuedAt` in that case.
+   * Last rotation activity on the session chain (sliding idle-window check).
+   * `null` on legacy rows predating the column; consumers should fall back
+   * to `createdAt` / `issuedAt`.
    */
   lastRotatedAt: Date | null;
   revokedAt: Date | null;
@@ -20,7 +20,6 @@ export interface StoredRefreshTokenRow {
   createdAt: Date;
 }
 
-/** Input for inserting a new refresh token. */
 export interface InsertRefreshTokenInput {
   userId: number;
   jti: string;
@@ -28,74 +27,30 @@ export interface InsertRefreshTokenInput {
   tokenHash: string;
   issuedAt: Date;
   expiresAt: Date;
-  /**
-   * Optional — the timestamp to persist as `lastRotatedAt`. When omitted the
-   * repository defaults to `issuedAt` (fresh login) so every new row has a
-   * deterministic anchor for the sliding window check.
-   */
+  /** Defaults to `issuedAt` (fresh login) — deterministic anchor for sliding window. */
   lastRotatedAt?: Date;
 }
 
-/** Port for refresh-token lifecycle persistence operations. Implemented by {@link RefreshTokenRepositoryPg}. */
+/** Port for refresh-token lifecycle. Implemented by {@link RefreshTokenRepositoryPg}. */
 export interface IRefreshTokenRepository {
-  /**
-   * Inserts a new refresh token row.
-   *
-   * @param input - Token metadata (userId, jti, familyId, hash, dates).
-   * @returns The inserted row.
-   */
   insert(input: InsertRefreshTokenInput): Promise<StoredRefreshTokenRow>;
 
-  /**
-   * Finds a refresh token by its JTI claim.
-   *
-   * @param jti - JWT ID.
-   * @returns The token row or `null`.
-   */
   findByJti(jti: string): Promise<StoredRefreshTokenRow | null>;
 
-  /**
-   * Atomically rotates a refresh token: inserts the new token and marks the current one as rotated.
-   *
-   * @param params - Current token ID and next token input.
-   * @param params.currentTokenId - ID of the current token being rotated out.
-   * @param params.next - Metadata for the new replacement token.
-   * @returns The newly inserted token row.
-   */
+  /** Atomic — inserts the new token and marks `currentTokenId` as rotated. */
   rotate(params: {
     currentTokenId: string;
     next: InsertRefreshTokenInput;
   }): Promise<StoredRefreshTokenRow>;
 
-  /**
-   * Revokes a single refresh token by its JTI.
-   *
-   * @param jti - JWT ID of the token to revoke.
-   */
   revokeByJti(jti: string): Promise<void>;
 
-  /**
-   * Deletes expired refresh tokens in a bounded batch.
-   *
-   * @param limit - Maximum rows to delete per invocation.
-   * @returns The number of rows actually deleted.
-   */
+  /** @returns rows actually deleted. */
   deleteExpiredTokens(limit?: number): Promise<number>;
 
-  /**
-   * Revokes all active refresh tokens for a user, optionally excluding one JTI.
-   * Used after password change to invalidate all existing sessions.
-   *
-   * @param userId - The user's ID.
-   * @param excludeJti - Optional JTI to exclude (e.g. the current session).
-   */
+  /** Used after password change to invalidate all existing sessions. */
   revokeAllForUser(userId: number, excludeJti?: string): Promise<void>;
 
-  /**
-   * Revokes all tokens in a token family, optionally marking reuse detection.
-   *
-   * @param familyId - Token family identifier.
-   * @param reuseDetected - When `true`, also sets `reuseDetectedAt` on all family members.
-   */
+  /** `reuseDetected=true` also sets `reuseDetectedAt` on all family members. */
   revokeFamily(familyId: string, reuseDetected?: boolean): Promise<void>;
 }

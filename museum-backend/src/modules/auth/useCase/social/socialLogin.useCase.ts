@@ -22,10 +22,6 @@ const invalidNonce = (): AppError =>
     code: 'INVALID_NONCE',
   });
 
-/**
- * Orchestrates social sign-in (Apple / Google): verifies the provider ID token,
- * links or creates the user account, and issues an auth session.
- */
 export class SocialLoginUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
@@ -35,18 +31,14 @@ export class SocialLoginUseCase {
     private readonly nonceStore?: NonceStore,
   ) {}
 
-  /**
-   * F3 — atomically consume the server-issued nonce, or fail fast when
-   * enforcement is on and none was provided. Extracted so the main `execute`
-   * flow stays under the cyclomatic-complexity ceiling.
-   */
+  /** F3 — atomic consume; fail fast when enforcement on but none provided. */
   private async assertNonce(nonce: string | undefined): Promise<void> {
     if (nonce === undefined) {
       if (env.auth.oidcNonceEnforce) throw invalidNonce();
       return;
     }
     if (!this.nonceStore) {
-      // Wiring error: a nonce was sent but no store exists to validate it.
+      // Wiring error: nonce sent but no store to validate it.
       throw invalidNonce();
     }
     const consumed = await this.nonceStore.consume(nonce);
@@ -54,26 +46,17 @@ export class SocialLoginUseCase {
   }
 
   /**
-   * Authenticate via a social provider's ID token.
+   * Flow: verify → find link → link by email → create. Apple private-relay
+   * emails are NOT used for account linking.
    *
-   * Flow: verify token -> find existing link -> link by email -> create new user.
-   * Apple private-relay emails are not used for account linking.
+   * F3 — `nonce` (when set) is atomically consumed BEFORE verifier invocation
+   * (single-use revocation, ID-token replay defence) and threaded through to
+   * {@link SocialTokenVerifier.verify} so the JWT-claim check runs against the
+   * same value (defence-in-depth). Absent + `oidcNonceEnforce=true` → fail fast
+   * INVALID_NONCE before hitting verifier.
    *
-   * F3 — when `nonce` is provided, the use case atomically consumes the
-   * server-issued nonce *before* the verifier is invoked (single-use
-   * revocation, defends against ID-token replay) and threads the same value
-   * through to {@link SocialTokenVerifier.verify} so the JWT-claim check
-   * runs against the same expected value (defence-in-depth).
-   *
-   * When `nonce` is absent and `env.auth.oidcNonceEnforce` is `true`, the
-   * use case fails fast with `INVALID_NONCE` *before* hitting the verifier.
-   *
-   * @param provider - The social provider (`"apple"` or `"google"`).
-   * @param idToken - The raw ID token from the provider.
-   * @param nonce - Optional server-issued nonce (raw value, pre-hash for Apple).
-   * @returns Access/refresh tokens and user info.
-   * @throws {AppError} 400 if `idToken` is missing, 401 if the linked user is not found,
-   *   401 `INVALID_NONCE` on replay / missing-when-enforced.
+   * @throws {AppError} 400 missing idToken, 401 USER_NOT_FOUND on linked user,
+   *   401 INVALID_NONCE on replay/missing-when-enforced.
    */
   async execute(
     provider: SocialProvider,
@@ -92,7 +75,6 @@ export class SocialLoginUseCase {
 
     const payload = await this.socialTokenVerifier.verify(provider, idToken, nonce);
 
-    // Look up existing social account
     const existingLink = await this.socialAccountRepository.findByProviderAndProviderUserId(
       provider,
       payload.providerUserId,
@@ -110,7 +92,7 @@ export class SocialLoginUseCase {
       return await this.authSessionService.socialLogin(user);
     }
 
-    // Check if email matches existing user (account linking)
+    // Email match → link to existing user.
     const normalizedEmail = payload.email?.trim().toLowerCase();
     const isApplePrivateRelay =
       provider === 'apple' && normalizedEmail?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
@@ -118,7 +100,6 @@ export class SocialLoginUseCase {
     if (normalizedEmail && !isApplePrivateRelay && payload.emailVerified) {
       const existingUser = await this.userRepository.getUserByEmail(normalizedEmail);
       if (existingUser) {
-        // Link social account to existing user
         await this.socialAccountRepository.create({
           userId: existingUser.id,
           provider,
@@ -129,7 +110,7 @@ export class SocialLoginUseCase {
       }
     }
 
-    // Create new user + social account
+    // Create new user + social account.
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
     const email = normalizedEmail || `${payload.providerUserId}@${provider}.social`;
     const newUser = await this.userRepository.registerSocialUser(

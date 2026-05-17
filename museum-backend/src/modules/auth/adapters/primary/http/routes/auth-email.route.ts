@@ -26,10 +26,6 @@ import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { env } from '@src/config/env';
 
-/**
- * Sub-router for email management endpoints:
- * PUT /change-email, POST /confirm-email-change, POST /verify-email.
- */
 const authEmailRouter: Router = Router();
 
 authEmailRouter.put(
@@ -54,9 +50,8 @@ authEmailRouter.put(
     });
     res.status(200).json({
       message: 'A confirmation email has been sent to the new address.',
-      // SEC-HARDENING (L7): debug token only surfaces in the test environment.
-      // Leaking it in dev (which can point at shared staging DBs) would enable
-      // account takeover via log inspection.
+      // SEC-HARDENING (L7): test env only. Leaking in dev (shared staging DBs)
+      // enables account takeover via log inspection.
       ...(env.nodeEnv === 'test' ? { debugToken: token } : {}),
     });
   },

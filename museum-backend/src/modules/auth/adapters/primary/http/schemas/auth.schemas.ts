@@ -10,10 +10,8 @@ export const registerSchema = z.object({
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
-  // CNIL Délibération 2021-018 — digital majority is 15 years. Standalone
-  // registration is rejected below the threshold (parental flow handled by
-  // the BE returning `MINOR_PARENTAL_CONSENT_REQUIRED`). YYYY-MM-DD wire
-  // format; the use case parses and computes the age server-side.
+  // CNIL Délibération 2021-018 — digital majority 15y. Below → BE returns
+  // MINOR_PARENTAL_CONSENT_REQUIRED. Use case parses + computes age server-side.
   dateOfBirth: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD')
@@ -36,18 +34,12 @@ export const logoutSchema = z.object({
 export const socialLoginSchema = z.object({
   provider: z.enum(['apple', 'google']),
   idToken: z.string().min(1),
-  // F3 — optional during the mobile rollout window. Once `OIDC_NONCE_ENFORCE`
-  // flips to true, the use case rejects requests omitting this field.
-  // Bounds: 16 chars (~96 bits even for poorly-chosen nonces) up to 256 chars
-  // to leave headroom for client-side hashed variants without enabling DoS
-  // payloads.
+  // F3 — optional during mobile rollout; rejected when `OIDC_NONCE_ENFORCE=true`.
+  // 16 chars floor (~96 bits), 256 ceiling for client-hashed variants (no DoS).
   nonce: z.string().min(16).max(256).optional(),
 });
 
-// F11-mobile — single-use code minted by /google/callback for the mobile
-// platform branch. Bounds match the OTC issuer: base64url 22 chars at the
-// floor (16 raw bytes), 64 ceiling so a future entropy bump stays in-bounds
-// without re-deploying the schema.
+// F11-mobile — bounds match OTC issuer: 22 chars (16 raw bytes) to 64 (entropy headroom).
 export const socialRedeemSchema = z.object({
   code: z
     .string()
@@ -96,19 +88,13 @@ export const updateContentPreferencesSchema = z.object({
     .max(CONTENT_PREFERENCES.length),
 });
 
-// Spec C T2.4 — Visitor's preferred TTS voice. `null` resets to the env-level
-// default. Accepts only voices listed in the shared TTS_VOICES catalog; any
-// other value (unknown voice, non-string, missing field) → 400 from Zod.
+// Spec C T2.4 — `null` resets to env default. Unknown voice / non-string / missing → 400.
 export const updateTtsVoiceSchema = z.object({
   voice: z.union([z.null(), z.enum(TTS_VOICES)]),
 });
 
-// TD-2 — Batch update for the 5 profile preferences exposed via
-// `PATCH /api/auth/me/preferences`. All 5 fields optional; the `.refine`
-// rejects an empty body so the client always supplies at least one change.
-// Enum fields (`guideLevel`, `dataMode`) are validated tightly; `defaultLocale`
-// is a permissive 2..8 char string (BCP-47-ish) so new locales don't require a
-// schema bump — the FE keeps the canonical whitelist (`SUPPORTED_LOCALES`).
+// TD-2 — All fields optional; `.refine` blocks empty body. `defaultLocale`
+// permissive 2..8 char (BCP-47-ish) — FE keeps canonical whitelist.
 export const updateProfilePreferencesSchema = z
   .object({
     defaultLocale: z.string().min(2).max(8).optional(),

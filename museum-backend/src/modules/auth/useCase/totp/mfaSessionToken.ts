@@ -4,12 +4,10 @@ import { AppError } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 /**
- * Short-lived bearer token issued between the password step and the TOTP
- * challenge (R16). Carries enough state to identify the user without
- * granting any access until the `/auth/mfa/challenge` step succeeds.
- *
- * Signed with `MFA_SESSION_TOKEN_SECRET` — distinct from the access/refresh
- * secrets so a leak of one cannot replay the others.
+ * Short-lived bearer between password step and TOTP challenge (R16). Identifies
+ * the user without granting access until `/auth/mfa/challenge` succeeds.
+ * Signed with `MFA_SESSION_TOKEN_SECRET` (distinct from access/refresh — a leak
+ * of one cannot replay the others).
  */
 
 interface MfaSessionClaims extends JwtPayload {
@@ -18,7 +16,6 @@ interface MfaSessionClaims extends JwtPayload {
   mfaPending: true;
 }
 
-/** Issue a fresh MFA session token for the given user id. */
 export function issueMfaSessionToken(userId: number): string {
   return jwt.sign(
     {
@@ -37,11 +34,7 @@ export function issueMfaSessionToken(userId: number): string {
 const unauthorized = (message: string, code = 'INVALID_MFA_SESSION'): AppError =>
   new AppError({ message, statusCode: 401, code });
 
-/**
- * Verify and decode a token issued by {@link issueMfaSessionToken}. Throws
- * `401` on any inconsistency so callers can `next(error)` straight into the
- * Express error pipeline.
- */
+/** @throws 401 on any inconsistency. */
 export function verifyMfaSessionToken(token: string): { userId: number } {
   try {
     const decoded = jwt.verify(token, env.auth.mfaSessionTokenSecret, {
@@ -49,11 +42,7 @@ export function verifyMfaSessionToken(token: string): { userId: number } {
     }) as MfaSessionClaims;
 
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: jwt payload runtime shape */
-    if (
-      decoded.type !== 'mfa_session' ||
-      !decoded.mfaPending ||
-      typeof decoded.sub !== 'string'
-    ) {
+    if (decoded.type !== 'mfa_session' || !decoded.mfaPending || typeof decoded.sub !== 'string') {
       throw unauthorized('Invalid MFA session token');
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */

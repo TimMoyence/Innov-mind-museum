@@ -1,25 +1,18 @@
 /**
- * F11 (2026-05) — Server-driven Google OAuth flow.
+ * F11 (2026-05) — Server-driven Google OAuth.
  *
- * Two routes, two platform branches:
- *   GET /google/initiate?returnTo=/fr/admin&platform=web|mobile
- *     Issues an OIDC nonce + signed state JWT and 302s to Google's auth screen.
- *     `platform=mobile` (F11-mobile, 2026-05) tags the state so the callback
- *     completes via deeplink instead of cookies.
- *   GET /google/callback?code=...&state=...
- *     Verifies state, exchanges the code for an id_token, hands it to the
- *     existing SocialLoginUseCase (which consumes the nonce, links/loads the
- *     user, and issues the session). Then:
- *       - state.platform=web   → set auth cookies + admin-authz hint cookie,
- *                                redirect to `${frontendUrl}${returnTo}`.
- *       - state.platform=mobile → store the session in the OTC store, redirect
- *                                 to `musaium://auth/google/callback?code=<otc>`.
- *                                 The mobile client exchanges the OTC for the
- *                                 session via POST /api/auth/social-redeem.
+ *   GET /google/initiate?returnTo=&platform=web|mobile
+ *     Issues OIDC nonce + signed state JWT, 302s to Google. `platform=mobile`
+ *     tags state so callback completes via deeplink instead of cookies.
+ *   GET /google/callback?code=&state=
+ *     Verifies state, exchanges code → id_token, hands to SocialLoginUseCase
+ *     (consumes nonce, links/loads user, issues session). Then:
+ *       - web    → set auth cookies + admin-authz hint cookie, redirect to ${frontendUrl}${returnTo}.
+ *       - mobile → store session in OTC, redirect to musaium://auth/google/callback?code=<otc>.
+ *                  Mobile exchanges OTC via POST /api/auth/social-redeem.
  *
- * The legacy mobile path (POST /social-login with idToken) is preserved for
- * Apple Sign-In, which binds the nonce client-side via expo-apple-authentication
- * and does not need the redirect dance.
+ * Legacy mobile path (POST /social-login with idToken) preserved for Apple
+ * Sign-In, which binds nonce client-side via expo-apple-authentication.
  */
 import { type Request, type Response, Router } from 'express';
 
@@ -46,11 +39,8 @@ const ADMIN_AUTHZ_COOKIE = 'admin-authz';
 const ADMIN_AUTHZ_TTL_SECONDS = 8 * 60 * 60;
 
 /**
- * F11-mobile — hardcoded deeplink the callback redirects to for the mobile
- * platform branch. Hardcoding (rather than letting the client pass an
- * arbitrary scheme) closes off the open-redirect class cleanly: an attacker
- * cannot coerce the callback into delivering the session OTC to a hostile
- * scheme.
+ * F11-mobile — hardcoded (not client-supplied) closes off open-redirect class:
+ * attacker cannot coerce callback into delivering session OTC to hostile scheme.
  */
 const MOBILE_DEEPLINK_SUCCESS = 'musaium://auth/google/callback';
 const MOBILE_DEEPLINK_ERROR = 'musaium://auth/google/error';
@@ -60,11 +50,7 @@ const GOOGLE_OAUTH_SCOPE = 'openid email profile';
 
 const authGoogleOauthRouter: Router = Router();
 
-/**
- * Validate the `returnTo` query param. Must be a same-origin relative path
- * (`/...`) — protocol-relative URLs (`//evil.com`) and absolute URLs are
- * rejected so the callback redirect cannot be coerced into an open-redirect.
- */
+/** Must be same-origin relative path; protocol-relative + absolute rejected (open-redirect defence). */
 function sanitizeReturnTo(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length === 0 || raw.length > 256) {
     return DEFAULT_RETURN_TO;
@@ -75,22 +61,14 @@ function sanitizeReturnTo(raw: unknown): string {
   return raw;
 }
 
-/**
- * Web base URL the callback redirects to after a successful login. Falls back
- * to the first configured CORS origin so dev environments without an explicit
- * FRONTEND_URL keep working.
- */
+/** Falls back to first CORS origin so dev envs without FRONTEND_URL keep working. */
 function resolveWebBaseUrl(): string | null {
   if (env.frontendUrl) return env.frontendUrl.replace(/\/$/, '');
   if (env.corsOrigins.length > 0) return env.corsOrigins[0].replace(/\/$/, '');
   return null;
 }
 
-/**
- * 503 helper used when GOOGLE_OAUTH_WEB_CLIENT_ID / SECRET / REDIRECT_URI are
- * not all set. Returning JSON keeps the failure mode debuggable; the web
- * frontend will treat this like every other 503.
- */
+/** Used when GOOGLE_OAUTH_WEB_CLIENT_ID/SECRET/REDIRECT_URI not all set. */
 function respondNotConfigured(res: Response): void {
   res.status(503).json({
     error: 'GOOGLE_OAUTH_NOT_CONFIGURED',
@@ -98,37 +76,23 @@ function respondNotConfigured(res: Response): void {
   });
 }
 
-/** Builds the post-callback redirect URL back to the museum-web login page. */
 function loginErrorRedirect(reason: string): string {
   const webBase = resolveWebBaseUrl();
   const returnTarget = `${DEFAULT_RETURN_TO}/login?oauth_error=${encodeURIComponent(reason)}`;
   return webBase ? `${webBase}${returnTarget}` : returnTarget;
 }
 
-/**
- * F11-mobile — error redirect target for the mobile platform branch. Carries
- * the same `reason` query convention as the web error redirect so the mobile
- * client can render parity error copy.
- */
+/** F11-mobile — same `reason` query as web for parity error copy. */
 function mobileErrorRedirect(reason: string): string {
   return `${MOBILE_DEEPLINK_ERROR}?reason=${encodeURIComponent(reason)}`;
 }
 
-/**
- * F11-mobile — accept only the canonical `web` / `mobile` strings; treat
- * anything else (typo, attacker-supplied junk) as `web` so we keep the
- * existing default behaviour rather than failing closed.
- */
+/** F11-mobile — anything other than 'mobile' defaults to 'web' (existing behaviour). */
 function parsePlatformQuery(raw: unknown): GoogleOAuthPlatform {
   return raw === 'mobile' ? 'mobile' : 'web';
 }
 
-/**
- * Wraps a step of the callback pipeline so any thrown error is converted into
- * a stable {@link OAuthCallbackError} carrying the redirect reason. Keeps the
- * route handler flat (no nested try/catch chain) and well under the
- * complexity ceiling.
- */
+/** Stable error carrying redirect reason; keeps route flat (no nested try/catch). */
 class OAuthCallbackError extends Error {
   constructor(public readonly reason: string) {
     super(reason);
@@ -154,11 +118,7 @@ type CallbackPrelude =
   | { kind: 'not_configured' }
   | { kind: 'ok'; ctx: CallbackContext };
 
-/**
- * Validates the inbound /callback request: env config presence, Google's own
- * `?error=` indicator, and the {code, state} query pair. Returns either a
- * redirect reason for the route to short-circuit on, or the parsed context.
- */
+/** Validates env config, Google's `?error=`, and {code,state}. */
 function parseCallback(req: Request): CallbackPrelude {
   const oauthConfig = env.auth.googleWebOauth;
   const clientId = oauthConfig?.clientId;
@@ -197,11 +157,9 @@ interface CallbackOutcome {
 }
 
 /**
- * Step 1 of the callback pipeline. Pulled out so the route handler can read
- * the platform BEFORE later failures, which lets mobile errors redirect via
- * the musaium:// deeplink and close the in-app browser cleanly. State
- * verification failure is a special case: we cannot tell the platform, so
- * the caller defaults to the web error path.
+ * Pulled out so route reads platform BEFORE later failures (mobile errors
+ * redirect via deeplink, closing in-app browser cleanly). State verify failure
+ * = platform unknown → caller defaults to web error path.
  */
 function verifyState(stateRaw: string): VerifiedState | null {
   try {
@@ -216,11 +174,7 @@ function verifyState(stateRaw: string): VerifiedState | null {
   }
 }
 
-/**
- * Steps 2-3 of the callback pipeline given an already-verified state: code
- * exchange + social login. Throws an {@link OAuthCallbackError} carrying the
- * redirect reason on either step's failure.
- */
+/** Code exchange + social login. Throws {@link OAuthCallbackError} on either failure. */
 async function loginFromVerifiedState(
   ctx: CallbackContext,
   state: VerifiedState,
@@ -239,21 +193,13 @@ async function loginFromVerifiedState(
   return { session, returnTo: sanitizeReturnTo(state.returnTo), platform: state.platform };
 }
 
-/**
- * F11-mobile — completes the mobile branch of the callback by stashing the
- * session under a fresh OTC and 302'ing back to the hardcoded deeplink with
- * the code in the query string.
- */
+/** F11-mobile — stash session under OTC, 302 to hardcoded deeplink with code. */
 async function completeMobileCallback(res: Response, session: AuthSessionResponse): Promise<void> {
   const code = await socialOtcStore.issue(session);
   res.redirect(302, `${MOBILE_DEEPLINK_SUCCESS}?code=${encodeURIComponent(code)}`);
 }
 
-/**
- * F11 (web) — completes the web branch of the callback by setting auth
- * cookies + the `admin-authz` middleware hint cookie, then 302'ing to the
- * frontend `returnTo`.
- */
+/** F11 (web) — set auth cookies + `admin-authz` hint cookie, 302 to `returnTo`. */
 function completeWebCallback(res: Response, session: CookieSessionInput, returnTo: string): void {
   setAuthCookies(res, session);
   res.cookie(ADMIN_AUTHZ_COOKIE, '1', {
@@ -291,9 +237,7 @@ authGoogleOauthRouter.get(
       scope: GOOGLE_OAUTH_SCOPE,
       state,
       nonce,
-      // `select_account` lets the user pick a Google account explicitly even if
-      // they only have one already signed in, which avoids the "I'm logged in
-      // as the wrong account" confusion on shared workstations.
+      // Avoid "logged in as wrong account" on shared workstations.
       prompt: 'select_account',
       access_type: 'online',
       include_granted_scopes: 'true',
@@ -303,11 +247,7 @@ authGoogleOauthRouter.get(
   },
 );
 
-/**
- * Picks the right error redirect target given the (possibly unknown)
- * platform. Mobile failures land on the deeplink so the in-app browser
- * closes; everything else lands on the web error page.
- */
+/** Mobile failures → deeplink (closes in-app browser); everything else → web error page. */
 function errorRedirectFor(platform: GoogleOAuthPlatform | null, reason: string): string {
   return platform === 'mobile' ? mobileErrorRedirect(reason) : loginErrorRedirect(reason);
 }
@@ -322,14 +262,14 @@ authGoogleOauthRouter.get(
       return;
     }
     if (prelude.kind === 'redirect') {
-      // Pre-state failure: cannot tell the platform yet — default to web.
+      // Pre-state failure: platform unknown → default to web.
       res.redirect(302, errorRedirectFor(null, prelude.reason));
       return;
     }
 
     const state = verifyState(prelude.ctx.stateRaw);
     if (state === null) {
-      // State did not verify (signature, expiry, shape): platform unknown.
+      // State did not verify (sig/expiry/shape): platform unknown.
       res.redirect(302, errorRedirectFor(null, 'session_expired'));
       return;
     }

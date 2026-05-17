@@ -1,38 +1,26 @@
 /**
- * Distributed per-email login rate limiter (SEC-05 + H6 hardening).
+ * Distributed per-email login rate limiter (SEC-05 + H6).
  *
- * Defends against brute-force password guessing with two independent mechanisms,
- * both multi-instance safe via Redis and both exposed through a synchronous
- * public API (consumers in `authSession.service` stay untouched):
+ * Two independent mechanisms, multi-instance safe via Redis, synchronous public API:
  *
- * 1. **Sliding window counter** — `MAX_ATTEMPTS` failures allowed within
- *    `WINDOW_MS`. Identical to the original H6 behavior.
- *
- * 2. **Exponential lockout** — after `LOCKOUT_THRESHOLD` consecutive failures on
- *    the same email, subsequent attempts are blocked for
- *    `min(2^(failures - LOCKOUT_THRESHOLD) * BASE_LOCKOUT_MS, MAX_LOCKOUT_MS)`.
- *    The counter resets on `clearLoginAttempts` (called after a successful
- *    login). Stored under a SHA-1-hashed key so raw emails never appear in
- *    Redis logs. Blocked responses carry a `Retry-After` header via
- *    `AppError.headers` (applied by the global error middleware).
+ * 1. **Sliding window** — `MAX_ATTEMPTS` within `WINDOW_MS` (original H6).
+ * 2. **Exponential lockout** — after `LOCKOUT_THRESHOLD` consecutive failures,
+ *    block for `min(2^(failures - LOCKOUT_THRESHOLD) * BASE_LOCKOUT_MS, MAX_LOCKOUT_MS)`.
+ *    Counter resets on `clearLoginAttempts` (after successful login). SHA-1-hashed
+ *    key so raw emails never appear in Redis logs. Blocked responses carry
+ *    `Retry-After` via `AppError.headers`.
  *
  * Distributed correctness:
- * - Sliding window uses `RedisRateLimitStore.increment` (atomic Lua INCR+PEXPIRE).
- * - Lockout counter uses a dedicated Lua EVAL that atomically INCR + PEXPIRE
- *   the counter key and returns the authoritative value.
- * - The sync public API fires Redis ops in background; replies MIRROR the
- *   authoritative count back into a local snapshot so peer-instance failures
- *   become visible on subsequent `checkLoginRateLimit` calls on this instance.
+ * - Sliding window: `RedisRateLimitStore.increment` (atomic Lua INCR+PEXPIRE).
+ * - Lockout counter: dedicated Lua EVAL atomically INCR + PEXPIRE.
+ * - Sync API fires Redis ops in background; replies MIRROR the authoritative
+ *   count back to a local snapshot so peer-instance failures become visible
+ *   on subsequent `checkLoginRateLimit` here.
  *
- * Fail-closed behavior (H6-specific):
- * - If a recent Redis op failed for this email (< DEGRADED_WINDOW_MS ago) AND
- *   the local snapshot has no trustworthy data, `checkLoginRateLimit` throws
- *   503 `AUTH_RATE_LIMIT_UNAVAILABLE` instead of silently allowing the attempt.
- *   This prevents a distributed botnet from bypassing the limiter by flooding
- *   an instance whose Redis connection just dropped — for login specifically
- *   we refuse rather than trust only-local state.
- *
- * @module auth/useCase/login-rate-limiter
+ * Fail-closed (H6): if recent Redis op failed (<DEGRADED_WINDOW_MS) AND local
+ * snapshot is empty, `checkLoginRateLimit` throws 503 `AUTH_RATE_LIMIT_UNAVAILABLE`
+ * instead of allowing — prevents a botnet from bypassing the limiter by flooding
+ * an instance whose Redis link just dropped.
  */
 
 import { createHash } from 'node:crypto';
@@ -44,32 +32,25 @@ import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
 import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 
-// --- Sliding window ---------------------------------------------------------
+// Sliding window
 const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const KEY_PREFIX = 'login-attempts:';
 
-// --- Exponential lockout ----------------------------------------------------
+// Exponential lockout
 const LOCKOUT_THRESHOLD = 5;
-const BASE_LOCKOUT_MS = 30 * 1000; // 30s
-const MAX_LOCKOUT_MS = 15 * 60 * 1000; // 15 min
-/** Failure counter TTL — long enough to track a brute-force burst, bounded. */
-const LOCKOUT_COUNTER_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const BASE_LOCKOUT_MS = 30 * 1000;
+const MAX_LOCKOUT_MS = 15 * 60 * 1000;
+const LOCKOUT_COUNTER_TTL_MS = 24 * 60 * 60 * 1000;
 const LOCKOUT_KEY_PREFIX = 'auth:lockout:';
 
-// --- Degraded-mode detection ------------------------------------------------
-/** How long a Redis failure marks an email "unsafe to check from local only". */
+/** How long a Redis failure marks an email "unsafe from local only". */
 const DEGRADED_WINDOW_MS = 30 * 1000;
 
 /**
- * Atomic Lua script for the lockout counter: INCR + refresh TTL + return new
- * authoritative value. One round-trip prevents an instance crash between INCR
- * and PEXPIRE from leaking a TTL-less counter.
- *
- * KEYS[1] = counter key
- * ARGV[1] = counter TTL in ms
- *
- * Returns the counter value as integer.
+ * Atomic INCR + PEXPIRE — one round-trip prevents an instance crash between
+ * INCR and PEXPIRE from leaking a TTL-less counter.
+ * KEYS[1]=counter key, ARGV[1]=TTL ms. Returns counter int.
  */
 const LOCKOUT_INCR_LUA = `
 local count = redis.call('INCR', KEYS[1])
@@ -95,23 +76,12 @@ const lockoutStore = new InMemoryBucketStore<LockoutEntry>({
   isExpired: (entry, now) => now - entry.lastFailureAt > LOCKOUT_COUNTER_TTL_MS,
 });
 
-/**
- * Per-email timestamp until which Redis is considered degraded for this email.
- * Used to fail-closed with 503 when Redis is unreachable AND we have no local
- * snapshot to fall back on.
- */
+/** Per-email timestamp until Redis is degraded — fail-closed 503 when no local snapshot. */
 const degradedUntil = new Map<string, number>();
 
 let overrideStore: RedisRateLimitStore | null | undefined;
 
-/**
- * Register a Redis-backed rate-limit store for distributed login rate limiting.
- * Mainly useful for tests; in production the limiter auto-discovers the shared
- * store registered in `src/index.ts` via `getRedisRateLimitStore()`.
- * Pass `null` to force in-memory-only mode (used by tests).
- *
- * @param store - The Redis-backed rate-limit store, or `null` to disable Redis.
- */
+/** Pass `null` to force in-memory-only mode (tests). Prod auto-discovers via `getRedisRateLimitStore()`. */
 export const setLoginRateLimitStore = (store: RedisRateLimitStore | null): void => {
   overrideStore = store;
 };
@@ -125,17 +95,14 @@ const normalize = (email: string): string => email.toLowerCase().trim();
 
 const slidingRedisKey = (email: string): string => `${KEY_PREFIX}${email}`;
 
-/** Hash the email to avoid leaking raw identifiers into Redis or log dumps. */
+/** Hash to avoid leaking raw identifiers into Redis/log dumps. */
 const lockoutRedisKey = (email: string): string => {
   // eslint-disable-next-line sonarjs/hashing -- SHA-1 used only as a non-cryptographic key identifier, never for password storage or signing
   const hash = createHash('sha1').update(email).digest('hex');
   return `${LOCKOUT_KEY_PREFIX}${hash}`;
 };
 
-/**
- * Compute the lockout duration (ms) after `failures` consecutive failures.
- * Returns 0 if the threshold is not met yet.
- */
+/** Returns 0 if threshold not met yet. */
 const computeLockoutMs = (failures: number): number => {
   if (failures < LOCKOUT_THRESHOLD) return 0;
   const overshoot = failures - LOCKOUT_THRESHOLD;
@@ -149,10 +116,8 @@ const mirrorSlidingWindow = (key: string, count: number, resetAt: number): void 
 };
 
 /**
- * Mirror the authoritative lockout counter back into the local snapshot.
- * `lastFailureAt` is set to now so the local unlock clock starts when the
- * caller on THIS instance observed the failure — matching semantics of the
- * synchronous local-first update.
+ * `lastFailureAt=now` so local unlock clock starts when THIS instance observed
+ * the failure (matches sync local-first update semantics).
  */
 const mirrorLockoutCounter = (key: string, failures: number): void => {
   lockoutStore.set(key, { failures, lastFailureAt: Date.now() });
@@ -177,12 +142,8 @@ const isRedisDegraded = (key: string): boolean => {
 };
 
 /**
- * Checks whether the given email has exceeded the maximum login attempts or is
- * currently locked out from exponential backoff.
- *
- * @param email - The email address to check.
- * @throws {AppError} 429 if rate-limited / locked out. 503 if Redis is degraded
- *   AND no local snapshot is available (fail-closed for login).
+ * @throws {AppError} 429 if rate-limited / locked out. 503 if Redis degraded
+ *   AND no local snapshot (fail-closed for login).
  */
 export const checkLoginRateLimit = (email: string): void => {
   const key = normalize(email);
@@ -204,11 +165,11 @@ export const checkLoginRateLimit = (email: string): void => {
         },
       );
     }
-    // Lockout window expired — fall through to sliding-window. The counter
-    // stays in place and only clears on a successful login or TTL expiry.
+    // Lockout window expired — fall through. Counter stays; clears only on
+    // successful login or TTL expiry.
   }
 
-  // 2. Sliding window (original H6 behavior).
+  // 2. Sliding window.
   const entry = slidingStore.get(key);
   if (entry) {
     if (now - entry.firstAttemptAt > WINDOW_MS) {
@@ -223,9 +184,8 @@ export const checkLoginRateLimit = (email: string): void => {
     }
   }
 
-  // 3. Fail-closed if Redis is configured but degraded AND we have no local
-  //    snapshot. Blocks a botnet from piling attempts on an instance whose
-  //    Redis link just dropped — for login we refuse rather than guess.
+  // 3. Fail-closed if Redis degraded AND no local snapshot. Blocks a botnet
+  //    piling on an instance whose Redis link just dropped.
   if (resolveStore() && isRedisDegraded(key) && !entry && !lockEntry) {
     throw serviceUnavailable('Authentication temporarily unavailable. Please retry shortly.', {
       retryAfterSec: 5,
@@ -235,18 +195,14 @@ export const checkLoginRateLimit = (email: string): void => {
 };
 
 /**
- * Records a failed login attempt for the given email.
- * Synchronously bumps both local snapshots (sliding window + lockout counter)
- * and fires background Redis ops that mirror the authoritative counts back
- * so peer-instance failures become visible on subsequent checks here.
- *
- * @param email - The email address that failed to authenticate.
+ * Sync bumps local snapshots; fires background Redis ops that mirror
+ * authoritative counts back so peer-instance failures become visible here.
  */
 export const recordFailedLogin = (email: string): void => {
   const key = normalize(email);
   const now = Date.now();
 
-  // 1. Sync sliding-window update (unchanged semantics).
+  // 1. Sync sliding window.
   const entry = slidingStore.get(key);
   if (!entry || now - entry.firstAttemptAt > WINDOW_MS) {
     slidingStore.set(key, { count: 1, firstAttemptAt: now });
@@ -254,7 +210,7 @@ export const recordFailedLogin = (email: string): void => {
     entry.count += 1;
   }
 
-  // 2. Sync lockout counter update — next `checkLoginRateLimit` sees it.
+  // 2. Sync lockout counter.
   const lockEntry = lockoutStore.get(key);
   if (!lockEntry) {
     lockoutStore.set(key, { failures: 1, lastFailureAt: now });
@@ -266,7 +222,7 @@ export const recordFailedLogin = (email: string): void => {
   const store = resolveStore();
   if (!store) return;
 
-  // 3. Background Redis sliding window (atomic Lua INCR+PEXPIRE in store).
+  // 3. Background Redis sliding window (atomic Lua INCR+PEXPIRE).
   void store
     .increment(slidingRedisKey(key), WINDOW_MS)
     .then(({ count, resetAt }) => {
@@ -280,7 +236,7 @@ export const recordFailedLogin = (email: string): void => {
       });
     });
 
-  // 4. Background atomic lockout counter (dedicated Lua EVAL).
+  // 4. Background atomic lockout counter (Lua EVAL).
   void incrementLockoutCounter(store, lockoutRedisKey(key))
     .then((failures) => {
       if (failures === null) {
@@ -299,13 +255,10 @@ export const recordFailedLogin = (email: string): void => {
 };
 
 /**
- * Atomically increments the per-email lockout counter in Redis using a Lua
- * EVAL so INCR + PEXPIRE cannot be split across instances (the classic race
- * that would leak a counter without TTL and pin memory indefinitely).
+ * Atomic Lua EVAL so INCR + PEXPIRE cannot be split across instances (classic
+ * race leaking a TTL-less counter, pinning memory indefinitely).
  *
- * @param store - The Redis-backed rate-limit store.
- * @param key - Fully-prefixed lockout counter key.
- * @returns The new counter value, or `null` if Redis EVAL fails.
+ * @returns counter value, or `null` if EVAL fails.
  */
 const incrementLockoutCounter = async (
   store: RedisRateLimitStore,
@@ -325,13 +278,7 @@ const incrementLockoutCounter = async (
   }
 };
 
-/**
- * Clears all recorded failed attempts for the given email (called on successful
- * login). Synchronously clears both local snapshots and fires background
- * Redis `DEL`s for the sliding-window and lockout counter keys.
- *
- * @param email - The email address to clear.
- */
+/** Called on successful login. Sync clears local + background Redis DELs. */
 export const clearLoginAttempts = (email: string): void => {
   const key = normalize(email);
   slidingStore.delete(key);
@@ -341,14 +288,13 @@ export const clearLoginAttempts = (email: string): void => {
   const store = resolveStore();
   if (!store) return;
 
-  // Sliding window
   void store.reset(slidingRedisKey(key)).catch((err: unknown) => {
     logger.warn('login_rate_limit_clear_fallback', {
       reason: err instanceof Error ? err.message : 'unknown',
     });
   });
 
-  // Lockout counter — use the raw Redis client since the store prefixes keys.
+  // Raw Redis client — store prefixes keys.
   void clearLockoutCounter(store, lockoutRedisKey(key)).catch((err: unknown) => {
     logger.warn('login_rate_limit_lockout_clear_fallback', {
       reason: err instanceof Error ? err.message : 'unknown',
@@ -373,12 +319,8 @@ export const _resetAllAttempts = (): void => {
 };
 
 /**
- * Exposed for testing only: clears the local sliding-window + lockout snapshots
- * for a specific email WITHOUT clearing the degraded marker. Used to simulate a
- * "cold instance" scenario (snapshot cleared or never populated) while Redis is
- * still degraded for this email — which must trigger the fail-closed 503 path.
- *
- * @param email - The email whose local snapshot should be cleared.
+ * Test-only — clears local snapshots WITHOUT clearing the degraded marker.
+ * Simulates "cold instance" while Redis still degraded → must trigger fail-closed 503.
  */
 export const _clearLocalOnlyForTest = (email: string): void => {
   const key = normalize(email);

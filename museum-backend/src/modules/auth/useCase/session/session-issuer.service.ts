@@ -9,7 +9,7 @@ import type {
 } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 
-/** PII-safe projection of `User` returned to the client in auth envelopes. */
+/** PII-safe `User` projection for auth envelopes. */
 export interface SafeUser {
   id: number;
   email: string;
@@ -20,22 +20,18 @@ export interface SafeUser {
   onboardingCompleted: boolean;
 }
 
-/** Token pair and user info returned after successful authentication. */
 export interface AuthSessionResponse {
   accessToken: string;
   refreshToken: string;
-  /** Access token lifetime in seconds. */
+  /** seconds */
   expiresIn: number;
-  /** Refresh token lifetime in seconds. */
+  /** seconds */
   refreshExpiresIn: number;
   user: SafeUser;
   /**
-   * R16 — when an admin is inside the MFA warning window, the login response
-   * carries the number of days remaining so the frontend can render a
-   * persistent banner. Absent (undefined) when:
-   *   - the user is not an admin, or
-   *   - the user is already enrolled, or
-   *   - MFA is already enforced (response shape becomes `MfaRequiredResponse`).
+   * R16 — present when admin is inside MFA warning window. Absent when not
+   * admin, already enrolled, or MFA already enforced (then shape becomes
+   * `MfaRequiredResponse`).
    */
   mfaWarningDaysRemaining?: number;
 }
@@ -49,17 +45,12 @@ const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
 };
 
 /**
- * Owns the refresh-token rotation contract: issue a fresh JWT pair (with
- * persistence + sliding-window anchor) and reject reuse / expiry / idle-timeout
- * before any new pair is emitted. Banking-grade — co-pinned with
- * `refresh-token.repository.pg.ts` as a Stryker hot file.
+ * Refresh-token rotation contract: issue a fresh JWT pair (persist +
+ * sliding-window anchor), reject reuse / expiry / idle-timeout before emit.
+ * Banking-grade — co-pinned with `refresh-token.repository.pg.ts` as Stryker hot file.
  */
 export class SessionIssuerService {
-  /**
-   * Sliding-window threshold (ms). When the elapsed time since the previous
-   * rotation on the session chain exceeds this value, the next refresh attempt
-   * is rejected and the family revoked.
-   */
+  /** Sliding-window threshold (ms). Exceeded → next refresh rejected + family revoked. */
   private readonly refreshIdleWindowMs: number;
 
   constructor(
@@ -70,11 +61,7 @@ export class SessionIssuerService {
     this.refreshIdleWindowMs = refreshIdleWindowSeconds * 1000;
   }
 
-  /**
-   * Issue a fresh `(accessToken, refreshToken)` pair, persist the refresh row
-   * (insert for first issue, rotate when `rotateFrom` is set), and return the
-   * envelope consumed by the auth route handlers.
-   */
+  /** Insert on first issue, rotate when `rotateFrom` set. */
   async issueSession(params: {
     user: SafeUser;
     familyId?: string;
@@ -107,7 +94,7 @@ export class SessionIssuerService {
       tokenHash: this.tokenJwt.sha256(refreshToken),
       issuedAt,
       expiresAt: refreshExpiresAt,
-      // Stamp the sliding-window anchor at rotation / issue time.
+      // Sliding-window anchor at issue/rotation time.
       lastRotatedAt: issuedAt,
     };
 
@@ -131,11 +118,7 @@ export class SessionIssuerService {
     return response;
   }
 
-  /**
-   * Enforce the rotation contract on a stored refresh-token row before issuing
-   * the next pair. Throws 401 with a precise code on any policy violation;
-   * revokes the family on reuse / replay / idle-timeout to break the chain.
-   */
+  /** Throws 401 with precise code on violation; revokes family on reuse/replay/idle. */
   async assertRefreshTokenUsable(
     stored: StoredRefreshTokenRow,
     providedToken: string,
@@ -156,9 +139,8 @@ export class SessionIssuerService {
       throw unauthorized('Refresh token expired', 'REFRESH_TOKEN_EXPIRED');
     }
 
-    // Sliding idle window — if no rotation activity happened within the
-    // configured threshold, force re-auth. Fallback anchor for legacy rows
-    // predating the `last_rotated_at` column: createdAt (non-null by schema).
+    // Sliding idle window — no rotation within threshold → force re-auth.
+    // Legacy rows pre-`last_rotated_at`: fallback to createdAt (non-null by schema).
     const idleAnchor = stored.lastRotatedAt ?? stored.createdAt;
     const idleMs = Date.now() - idleAnchor.getTime();
     if (idleMs > this.refreshIdleWindowMs) {
