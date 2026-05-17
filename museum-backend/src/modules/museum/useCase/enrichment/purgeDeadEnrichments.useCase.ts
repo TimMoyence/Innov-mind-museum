@@ -4,31 +4,21 @@ import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/mus
 
 const MS_PER_DAY = 24 * 60 * 60 * 1_000;
 
-/** Aggregate counters returned by a purge pass — useful for tests + logs. */
 export interface PurgeDeadEnrichmentsResult {
   deleted: number;
 }
 
 /**
- * Deletes every enrichment cache row whose `fetchedAt` predates
- * `now − thresholdDays`. Acts as the hard-delete ceiling of the hybrid TTL
- * policy: the refresh scan (`RefreshStaleEnrichmentsUseCase`) re-fetches rows
- * still in the active museum set; anything still untouched after the purge
- * window is considered dead and reclaimed to keep the table bounded.
- *
- * Invoked daily AFTER the refresh scan so newly-refreshed rows are never
- * caught by the same pass. Fail-open: persistence errors are logged and
- * swallowed, mirroring `RefreshStaleEnrichmentsUseCase`.
+ * Hard-delete ceiling of the hybrid TTL policy. Invoked daily AFTER the
+ * refresh scan so newly-refreshed rows are never caught by the same pass.
+ * Fail-open: persistence errors logged + swallowed.
  */
 export class PurgeDeadEnrichmentsUseCase {
   constructor(private readonly cache: MuseumEnrichmentCachePort) {}
 
   /**
-   * Runs a single purge pass.
-   *
-   * @param now Clock override for deterministic tests. Defaults to `new Date()`.
-   * @param thresholdDays Hard-delete window in days. Rows older than
-   *   `now − thresholdDays` are removed.
+   * @param now Clock override for tests. Defaults to `new Date()`.
+   * @param thresholdDays Rows older than `now − thresholdDays` are removed.
    */
   async execute(
     now: Date = new Date(),

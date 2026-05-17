@@ -10,9 +10,6 @@ interface CachedEntry {
   metadata?: Record<string, unknown>;
 }
 
-/**
- *
- */
 export interface LowDataPackEntry {
   question: string;
   answer: string;
@@ -21,9 +18,6 @@ export interface LowDataPackEntry {
   source: 'cache' | 'seeded';
 }
 
-/**
- *
- */
 export interface LowDataPack {
   museumId: string;
   locale: string;
@@ -31,7 +25,7 @@ export interface LowDataPack {
   entries: LowDataPackEntry[];
 }
 
-/** Assembles a low-data pack by merging popular cached answers with seeded Q&A entries. */
+/** Merges popular cached answers with seeded Q&A entries. */
 export class LowDataPackService {
   constructor(
     private readonly cache: CacheService,
@@ -39,7 +33,6 @@ export class LowDataPackService {
     private readonly maxEntries: number,
   ) {}
 
-  /** Builds a low-data pack for the given museum and locale. */
   async getLowDataPack(museumId: string, locale: string): Promise<LowDataPack> {
     let cachedAnswers: LowDataPackEntry[] = [];
 

@@ -8,31 +8,24 @@ import type { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrich
 import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
 import type { ConnectionOptions } from 'bullmq';
 
-/** Dedicated queue used only by the stale-enrichment scan scheduler. */
 export const ENRICHMENT_SCHEDULER_QUEUE_NAME = 'museum-enrichment-scheduler';
 
-/** Stable scheduler key — BullMQ upserts on this id so re-boot = idempotent. */
+/** BullMQ upserts on this id so re-boot = idempotent. */
 export const STALE_ENRICHMENT_SCAN_SCHEDULER_ID = 'stale-enrichment-scan';
 
-/** Daily at 03:00 UTC — off-peak window, well before Wikidata replication (06:00 UTC). */
+/** Daily 03:00 UTC — off-peak, well before Wikidata replication (06:00 UTC). */
 export const DEFAULT_STALE_ENRICHMENT_CRON = '0 3 * * *';
 
-/** Config injected at boot — keeps the adapter test-friendly. */
 export interface BullmqEnrichmentSchedulerConfig {
   connection: ConnectionOptions;
-  /** Cron pattern override. Defaults to {@link DEFAULT_STALE_ENRICHMENT_CRON}. */
+  /** Defaults to {@link DEFAULT_STALE_ENRICHMENT_CRON}. */
   cron?: string;
 }
 
 /**
- * BullMQ-backed implementation of {@link EnrichmentSchedulerPort}.
- *
- * Uses `Queue.upsertJobScheduler` (BullMQ v5) to register a recurring job that
- * fires the `RefreshStaleEnrichmentsUseCase`. A dedicated `Worker` consumes
- * the fired jobs and invokes the use case — we deliberately run this on its
- * own queue (not the main `museum-enrichment` queue) so scheduler ticks never
- * interleave with on-demand enrichment jobs or compete for the same worker
- * concurrency budget.
+ * Runs on a dedicated queue (not the main `museum-enrichment` queue) so
+ * scheduler ticks never interleave with on-demand enrichment jobs or compete
+ * for the same concurrency budget. Uses BullMQ v5 `upsertJobScheduler`.
  */
 export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort {
   private readonly queue: Queue;
@@ -54,11 +47,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
     });
   }
 
-  /**
-   * Registers the recurring scheduler on the queue + spawns the worker that
-   * executes each tick. Idempotent across restarts thanks to
-   * `upsertJobScheduler` and the stable scheduler id.
-   */
+  /** Idempotent across restarts via `upsertJobScheduler` + stable scheduler id. */
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
@@ -90,9 +79,8 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       ENRICHMENT_SCHEDULER_QUEUE_NAME,
       async () => {
         const result = await this.useCase.execute();
-        // Purge runs AFTER the refresh so rows newly re-fetched in this tick
-        // are never caught by the same pass. Skipped when no purge use case or
-        // threshold was wired — keeps the scheduler backward-compatible.
+        // Purge AFTER refresh so rows newly re-fetched are never caught by the
+        // same pass. Skipped when no purge use case / threshold wired.
         let purged = 0;
         if (this.purgeUseCase && this.purgeThresholdDays !== undefined) {
           const purgeResult = await this.purgeUseCase.execute(new Date(), this.purgeThresholdDays);
@@ -115,11 +103,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
     });
   }
 
-  /**
-   * Removes the scheduler + closes the worker + queue connections. Safe to
-   * call during graceful shutdown — best-effort on each step so a failure
-   * draining one resource doesn't leak the others.
-   */
+  /** Best-effort on each step so a failure draining one resource doesn't leak the others. */
   async stop(): Promise<void> {
     if (!this.started) return;
     this.started = false;

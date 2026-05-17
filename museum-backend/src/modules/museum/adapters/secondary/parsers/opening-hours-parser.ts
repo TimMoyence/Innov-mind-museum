@@ -1,17 +1,17 @@
 /**
- * Lightweight OSM `opening_hours` parser — covers the ~90% subset encountered
- * on French museums (day ranges, multi-range days, `24/7`, `off`) without
- * pulling in the 3.9 MB `opening_hours` npm package.
+ * Lightweight OSM `opening_hours` parser — covers ~90% subset on French
+ * museums (day ranges, multi-range days, `24/7`, `off`) without pulling in
+ * the 3.9 MB `opening_hours` npm package.
  *
  * Grammar supported:
  *   - `Mo-Fr 10:00-18:00; Sa-Su 10:00-19:00`
  *   - `Mo-Su 10:00-18:00`
  *   - `Tu-Su 10:00-18:00; Mo off`
  *   - `24/7`
- *   - `Mo-Fr 10:00-12:00, 14:00-18:00` (split midday — keeps last range as primary)
+ *   - `Mo-Fr 10:00-12:00, 14:00-18:00` (split midday — keeps LAST range as primary)
  *
- * Anything outside this grammar returns `status: 'unknown'` with
- * `statusReason: 'unparseable'` and keeps the raw value intact.
+ * Outside this grammar → `status: 'unknown'` / `statusReason: 'unparseable'`,
+ * raw value preserved.
  */
 
 import type {
@@ -42,7 +42,7 @@ const DAY_INDEX: Record<OpeningDay, number> = {
   sun: 6,
 };
 
-/** Maps a JS `Date.getDay()` (Sun=0..Sat=6) to our Mon-first index. */
+/** JS `Date.getDay()` (Sun=0..Sat=6) → Mon-first index. */
 const jsDayToIndex = (d: number): number => (d + 6) % 7;
 
 const unparseable = (raw: string, reason: 'unparseable' | 'no_data'): ParsedOpeningHours => ({
@@ -63,7 +63,6 @@ const allOpen = (raw: string): ParsedOpeningHours => ({
   weekly: WEEK.map<ParsedOpeningDay>((day) => ({ day, opens: '00:00', closes: '23:59' })),
 });
 
-/** Expands a single "Mo" or "Mo-Fr" fragment into day indices. */
 function expandDayFragment(fragment: string): number[] | null {
   if (fragment.includes('-')) {
     return expandDayRange(fragment);
@@ -73,7 +72,7 @@ function expandDayFragment(fragment: string): number[] | null {
   return [DAY_INDEX[day]];
 }
 
-/** Expands a "Mo-Fr" range with optional wrap-around (e.g. "Fr-Mo"). */
+/** Supports wrap-around (e.g. "Fr-Mo"). */
 function expandDayRange(range: string): number[] | null {
   const [from, to] = range.split('-').map((s) => s.trim());
   const fromDay = DAY_TOKENS[from];
@@ -91,11 +90,7 @@ function expandDayRange(range: string): number[] | null {
   return result;
 }
 
-/**
- * Expands a day spec token ("Mo", "Mo-Fr", "Mo,We,Fr") into an ordered list
- * of day indices. Returns `null` on any unknown token — the whole expression
- * is then marked unparseable.
- */
+/** Returns null on any unknown token (whole expression marked unparseable). */
 function expandDaySpec(spec: string): number[] | null {
   const result: number[] = [];
   for (const part of spec.split(',').map((s) => s.trim())) {
@@ -108,7 +103,7 @@ function expandDaySpec(spec: string): number[] | null {
 
 const TIME_RANGE_REGEX = /^([0-2]\d:[0-5]\d)-([0-2]\d:[0-5]\d)$/;
 
-/** Returns [opens, closes] for the **last** time-range of a comma-separated list. */
+/** Returns [opens, closes] of the **last** range in a comma list. */
 function parseTimeRanges(rangesSpec: string): { opens: string; closes: string } | null {
   const parts = rangesSpec.split(',').map((s) => s.trim());
   const last = parts.at(-1);
@@ -119,10 +114,7 @@ function parseTimeRanges(rangesSpec: string): { opens: string; closes: string } 
   return { opens, closes };
 }
 
-/**
- * Applies one `<daySpec> <timeRanges>|off` clause to the weekly accumulator.
- * Returns `false` if the clause is malformed.
- */
+/** Returns false if malformed. Mutates `weekly`. */
 function applyClause(clause: string, weekly: (ParsedOpeningDay | null)[]): boolean {
   const trimmed = clause.trim();
   if (!trimmed) return true;
@@ -157,12 +149,9 @@ function applyClause(clause: string, weekly: (ParsedOpeningDay | null)[]): boole
 }
 
 /**
- * Computes "currently_open / currently_closed" against a supplied `now`.
- * We assume `HH:mm` strings are **in the museum's local time** — the caller
- * is expected to normalise `now` into that timezone if required.
- *
- * For V1 we compare naively against the server/JS local time of `now`; a
- * tz-aware upgrade is tracked as a known limitation.
+ * `HH:mm` strings are **in the museum's local time** — caller must normalise
+ * `now` into that timezone if required. V1 compares naively against JS local
+ * time of `now`; tz-aware upgrade tracked as known limitation.
  */
 function computeStatus(
   weekly: ParsedOpeningDay[],
@@ -193,17 +182,13 @@ function computeStatus(
   };
 }
 
-/**
- * Parses an OSM `opening_hours` tag into a structured schedule + current
- * open/closed status. Never throws — unknown input maps to `status: 'unknown'`.
- */
+/** Never throws — unknown input → `status: 'unknown'`. */
 export function parseOpeningHours(raw: string, now: Date = new Date()): ParsedOpeningHours {
   const trimmed = raw.trim();
   if (!trimmed) return unparseable(raw, 'no_data');
 
   if (trimmed === '24/7') return allOpen(raw);
 
-  // Week accumulator — all days closed until proven open.
   const weekly: (ParsedOpeningDay | null)[] = WEEK.map((day) => ({
     day,
     opens: null,

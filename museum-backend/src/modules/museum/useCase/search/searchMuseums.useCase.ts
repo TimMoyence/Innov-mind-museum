@@ -18,11 +18,7 @@ import type { CacheService } from '@shared/cache/cache.port';
 
 export type { MuseumCategory } from '@shared/http/overpass.client';
 
-/**
- * Input for the museum search use case. Either `bbox` (rectangular search) or
- * the `lat`/`lng`/`radiusMeters` triplet (circular search around a point) is
- * accepted. When both are present, `bbox` wins.
- */
+/** When both `bbox` and `lat/lng/radiusMeters` are present, `bbox` wins. */
 export interface SearchMuseumsInput {
   lat?: number;
   lng?: number;
@@ -31,7 +27,6 @@ export interface SearchMuseumsInput {
   bbox?: BoundingBox;
 }
 
-/** A single museum entry in the search results. */
 export interface SearchMuseumEntry {
   name: string;
   address: string | null;
@@ -40,12 +35,7 @@ export interface SearchMuseumEntry {
   distance: number;
   source: 'local' | 'osm';
   museumType: MuseumCategory;
-  /**
-   * Optional OSM-sourced metadata. Present only on `source: 'osm'` entries
-   * when the originating OSM element carried the corresponding tag. Local
-   * DB-backed entries leave these undefined — clients can fall back to the
-   * dedicated enrichment endpoint for richer data.
-   */
+  /** Present only on `source: 'osm'` entries when OSM tag exists. */
   openingHours?: string;
   website?: string;
   phone?: string;
@@ -55,7 +45,6 @@ export interface SearchMuseumEntry {
   wheelchair?: string;
 }
 
-/** Search results returned by the use case. */
 export interface SearchMuseumsResult {
   museums: SearchMuseumEntry[];
   count: number;
@@ -63,11 +52,11 @@ export interface SearchMuseumsResult {
 
 const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
-/** Pure-distance threshold: two OSM entries this close are always merged (covers duplicate OSM nodes for the same building). */
+/** Two OSM entries within this distance are always merged (duplicate OSM nodes for the same building). */
 const DEDUP_OSM_OSM_METERS = 100;
-/** Pure-distance threshold for OSM vs local: below this, drop the OSM entry regardless of name. */
+/** OSM vs local: below this, drop the OSM entry regardless of name. */
 const DEDUP_OSM_LOCAL_PURE_METERS = 100;
-/** Name-gated distance threshold for OSM vs local: up to this distance, drop the OSM entry only if names match. */
+/** OSM vs local: up to this distance, drop the OSM entry only if names match. */
 const DEDUP_OSM_LOCAL_DISTANCE_METERS = 500;
 
 interface LocalMuseumWithCoords {
@@ -78,7 +67,6 @@ interface LocalMuseumWithCoords {
   museumType: MuseumCategory;
 }
 
-/** Fetches active local museums from the DB, returning only those with coordinates. */
 async function fetchLocalMuseumsWithCoords(
   repository: IMuseumRepository,
 ): Promise<LocalMuseumWithCoords[]> {
@@ -106,29 +94,20 @@ async function fetchLocalMuseumsWithCoords(
 }
 
 /**
- * Collapses OSM-only duplicates using 2-pass clustering.
- *
- * Pass 1 (union-find): two OSM entries are unioned if EITHER
- *   - their names pass the similarity check (`museumNamesAreSimilar`), OR
- *   - they sit within `DEDUP_OSM_OSM_METERS` of each other.
- *
- * Pass 2 (representative pick): for each cluster, keep the entry with the
- * longest address (richer metadata); tiebreak on longest name.
- *
- * Deterministic: input order is preserved for representative selection when
- * lengths tie, because `clusters` is built by scanning indices in order.
+ * Collapses OSM-only duplicates via union-find: unions two entries when names
+ * match (museumNamesAreSimilar) OR coords ≤ DEDUP_OSM_OSM_METERS. Picks
+ * representative = longest address, tiebreak longest name. Deterministic:
+ * input order preserved on length ties.
  */
 function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumResult[] {
   const n = osmResults.length;
   if (n <= 1) return [...osmResults];
 
-  // Union-find over indices.
   const parent: number[] = Array.from({ length: n }, (_, i) => i);
 
   const find = (i: number): number => {
     let root = i;
     while (parent[root] !== root) root = parent[root];
-    // Path compression.
     let cur = i;
     while (parent[cur] !== root) {
       const next = parent[cur];
@@ -155,7 +134,6 @@ function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumRes
     }
   }
 
-  // Group indices by cluster root.
   const clusters = new Map<number, number[]>();
   for (let i = 0; i < n; i++) {
     const root = find(i);
@@ -164,7 +142,6 @@ function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumRes
     else clusters.set(root, [i]);
   }
 
-  // Pick one representative per cluster: longest address, tiebreak longest name.
   const picked: OverpassMuseumResult[] = [];
   for (const indices of clusters.values()) {
     let bestIdx = indices[0];
@@ -187,16 +164,8 @@ function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumRes
 }
 
 /**
- * Tests whether an OSM entry duplicates any local museum.
- *
- * An OSM entry is considered a duplicate if EITHER:
- *   - it sits within `DEDUP_OSM_LOCAL_PURE_METERS` of a local museum (pure
- *     distance, names don't need to match — covers the case where OSM and
- *     local agree on coords but names diverge), OR
- *   - it sits within `DEDUP_OSM_LOCAL_DISTANCE_METERS` of a local museum AND
- *     the names pass the similarity check (covers the case where OSM places
- *     a museum several hundred meters off from the local record, but the
- *     name makes clear they refer to the same institution).
+ * Duplicate iff coords ≤ DEDUP_OSM_LOCAL_PURE_METERS (name-agnostic), OR
+ * coords ≤ DEDUP_OSM_LOCAL_DISTANCE_METERS AND names match.
  */
 function osmDuplicatesLocal(
   osm: OverpassMuseumResult,
@@ -221,13 +190,8 @@ function osmDuplicatesLocal(
 }
 
 /**
- * Merges local + OSM results into `SearchMuseumEntry` list, applying:
- *   1. OSM<->OSM deduplication (clusters duplicate OSM nodes).
- *   2. OSM vs local deduplication (drops OSM entries that duplicate a local).
- *   3. Optional radius filtering on locals (radius search only).
- *
- * Distance is measured from (`centerLat`, `centerLng`) for every output entry.
- * When `radius` is `null`, no radius filter is applied on locals (bbox mode).
+ * Merges local + OSM with OSM<->OSM dedup, OSM vs local dedup, and optional
+ * radius filter on locals. `radius=null` skips the radius filter (bbox mode).
  */
 function mergeAndDedupe(
   centerLat: number,
@@ -275,25 +239,16 @@ function mergeAndDedupe(
 }
 
 /**
- * Optional dependencies for {@link SearchMuseumsUseCase}.
- *
- * The Overpass search is injected as a pre-cached function so the TTLs,
- * sentinel wrapping and probabilistic early-expiration live in
- * `shared/http/overpass.client.ts` (the infrastructure boundary) — this use
- * case is no longer aware of cache key shapes. Passing `cache` alone is
- * supported for backwards-compat: the factory wires the cached fn for you.
+ * Cache key shapes / TTLs / sentinel wrapping live in
+ * `shared/http/overpass.client.ts`. Passing `cache` alone is supported: the
+ * factory wires the cached fn for you. `overpassSearch` is primarily for test
+ * injection.
  */
 export interface SearchMuseumsDeps {
   cache?: CacheService;
-  /**
-   * Pre-built cached Overpass search fn (usually from
-   * {@link createCachedOverpassClient}). Primarily for test injection; in
-   * production wiring it is derived from `cache`.
-   */
   overpassSearch?: CachedOverpassSearchFn;
 }
 
-/** Searches for museums near a location by merging Overpass API and local DB results. */
 export class SearchMuseumsUseCase {
   private readonly overpassSearch: CachedOverpassSearchFn;
 
@@ -310,13 +265,12 @@ export class SearchMuseumsUseCase {
     } else if (deps.cache) {
       this.overpassSearch = createCachedOverpassClient(deps.cache);
     } else {
-      // No cache and no explicit fn — fall back to raw live calls.
-      // Only hit in tests / scripts; production wiring always passes cache.
+      // No cache and no explicit fn — raw live calls. Tests/scripts only;
+      // production wiring always passes cache.
       this.overpassSearch = (params) => queryOverpassMuseums(params);
     }
   }
 
-  /** Executes the search, merging OSM and local results with deduplication and distance sorting. */
   async execute(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
     if (input.bbox) {
       return await this.executeBboxSearch(input.bbox, input.q);
@@ -324,7 +278,7 @@ export class SearchMuseumsUseCase {
     return await this.executeRadiusSearch(input);
   }
 
-  /** Executes a rectangular bbox search; distance is measured from the bbox center. */
+  /** Distance measured from the bbox center. */
   private async executeBboxSearch(
     bbox: BoundingBox,
     q: string | undefined,
@@ -356,12 +310,10 @@ export class SearchMuseumsUseCase {
     return { museums: filtered, count: filtered.length };
   }
 
-  /** Executes the original center+radius search (with optional geocoding fallback). */
   private async executeRadiusSearch(input: SearchMuseumsInput): Promise<SearchMuseumsResult> {
     const { q } = input;
     let { lat, lng } = input;
 
-    // If no coordinates provided, attempt geocoding from text query
     if ((lat == null || lng == null) && q) {
       const geocoded = await geocodeWithNominatim(q);
       if (geocoded) {
@@ -373,7 +325,7 @@ export class SearchMuseumsUseCase {
 
     const localMuseums = await fetchLocalMuseumsWithCoords(this.repository);
 
-    // If we still have no coordinates, return local DB museums only (no Overpass)
+    // No coords → return local DB museums only (no Overpass).
     if (lat == null || lng == null) {
       let filtered = localMuseums.map((m) => ({
         ...m,
@@ -405,7 +357,7 @@ export class SearchMuseumsUseCase {
     return { museums: filtered, count: filtered.length };
   }
 
-  /** Loads local museums whose coordinates fall inside the bbox; non-fatal on failure. */
+  /** Non-fatal on failure. */
   private async fetchLocalInBbox(bbox: BoundingBox): Promise<
     {
       name: string;
@@ -439,11 +391,6 @@ export class SearchMuseumsUseCase {
   }
 }
 
-/**
- * Narrow a constructor argument to the deps-bag shape. Plain CacheService
- * objects expose functions like `get`, never `cache` / `overpassSearch`, so
- * presence of either sentinel key means it's a deps bag.
- */
 function isSearchDeps(arg: CacheService | SearchMuseumsDeps | undefined): arg is SearchMuseumsDeps {
   if (!arg) return false;
   return 'cache' in arg || 'overpassSearch' in arg;

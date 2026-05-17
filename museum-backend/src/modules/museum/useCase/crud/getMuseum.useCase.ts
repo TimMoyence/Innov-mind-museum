@@ -3,11 +3,10 @@ import { notFound } from '@shared/errors/app.error';
 import type { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 
-/** Retrieves a museum by numeric ID or slug. */
 export class GetMuseumUseCase {
   constructor(private readonly repository: IMuseumRepository) {}
 
-  /** Resolves a museum by numeric ID or slug string, throwing if not found. */
+  /** Throws 404 if not found. */
   async execute(idOrSlug: string): Promise<Museum> {
     const isNumeric = /^\d+$/.test(idOrSlug);
     const museum = isNumeric

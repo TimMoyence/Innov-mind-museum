@@ -3,7 +3,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 import { MuseumQaSeedMetadataSchema } from '@shared/db/jsonb-schemas/museum-qa-seed-metadata.schema';
 import { jsonbValidator } from '@shared/db/jsonb-validator';
 
-/** Seeded Q&A entries for museum low-data packs. Mapped to `museum_qa_seed`. */
+/** Seeded Q&A entries for museum low-data packs. */
 @Entity({ name: 'museum_qa_seed' })
 @Index(['museumId', 'locale'])
 export class MuseumQaSeed {
@@ -11,15 +11,9 @@ export class MuseumQaSeed {
   id!: string;
 
   /**
-   * Free-form museum/pack identifier. **NOT a foreign key to `museums.id`.**
-   *
-   * Offline low-data packs ship with stable string identifiers (e.g. `'louvre'`,
-   * `'orsay'`) that are independent of the `museums` table primary key. The
-   * column is `varchar(64)` deliberately — adding a real FK to `museums.id`
-   * (integer) would break the offline pack distribution model.
-   *
-   * If a future spec changes this design, also remove the JSDoc note in
-   * `1775557229138-AddMuseumQaSeed.ts`.
+   * Free-form pack identifier (e.g. `'louvre'`). **NOT a FK to `museums.id`**:
+   * offline packs need stable string ids independent of integer PK. If spec
+   * ever changes, also update `1775557229138-AddMuseumQaSeed.ts`.
    */
   @Column({ type: 'varchar', length: 64 })
   museumId!: string;

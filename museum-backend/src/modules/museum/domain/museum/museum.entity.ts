@@ -12,7 +12,7 @@ import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 import type { MuseumCategory } from '@shared/http/overpass.client';
 
-/** Represents a museum tenant in the B2B multi-tenancy model. Mapped to `museums`. */
+/** B2B multi-tenancy tenant. */
 @Entity({ name: 'museums' })
 export class Museum {
   @PrimaryGeneratedColumn()
@@ -55,11 +55,7 @@ export class Museum {
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 
-  /**
-   * Optimistic-locking version column. Auto-incremented by TypeORM on every
-   * save. Detects concurrent admin edits — see withOptimisticLockRetry helper
-   * in src/shared/db/optimistic-lock-retry.ts.
-   */
+  /** Detects concurrent admin edits — see withOptimisticLockRetry helper. */
   @VersionColumn()
   version!: number;
 }

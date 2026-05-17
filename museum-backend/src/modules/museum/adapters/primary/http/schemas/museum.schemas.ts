@@ -27,21 +27,17 @@ export const updateMuseumSchema = z.object({
 
 /**
  * bbox format: "minLng,minLat,maxLng,maxLat" (WGS84). Mutually exclusive with
- * lat/lng/radius — when bbox is supplied, the use case ignores center+radius
- * and queries inside the rectangle instead. Used by the map view's "search in
- * this area" button so users can explore zones away from their GPS position.
+ * lat/lng/radius — when bbox is supplied, the use case queries inside the
+ * rectangle. Anchored + bounded (exactly 4 comma-separated decimals), no
+ * ReDoS surface.
  */
-// Anchored + bounded (exactly 4 comma-separated decimals), so no ReDoS surface —
-// each number's length is linearly bounded by the overall input length.
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored + bounded, no catastrophic backtracking
 const BBOX_REGEX = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
 
-/** Query for GET /museums/:id/enrichment — `locale` drives per-language cache lookup. */
 export const getEnrichmentQuerySchema = z.object({
   locale: z.string().min(2).max(10),
 });
 
-/** Query for GET /museums/:id/enrichment/status — explicit `jobId` reuse from prior 202. */
 export const getEnrichmentStatusQuerySchema = z.object({
   locale: z.string().min(2).max(10),
   jobId: z.string().min(1).max(128),

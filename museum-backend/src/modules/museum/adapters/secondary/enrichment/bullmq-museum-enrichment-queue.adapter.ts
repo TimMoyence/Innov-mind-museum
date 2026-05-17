@@ -16,11 +16,8 @@ const jobIdFor = (input: MuseumEnrichmentJob): string =>
   `mus:${String(input.museumId)}:${input.locale}`;
 
 /**
- * BullMQ-backed adapter for {@link MuseumEnrichmentQueuePort}.
- *
- * Uses the jobId as dedup key — BullMQ rejects a second `add()` with the same
- * jobId while the first is still active, which gives us free idempotency on
- * `(museumId, locale)`.
+ * jobId doubles as dedup key — BullMQ rejects a second `add()` with the same
+ * jobId while the first is active, giving free idempotency on `(museumId, locale)`.
  */
 export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueuePort {
   private readonly queue: Queue<MuseumEnrichmentJob>;
@@ -38,10 +35,8 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
   }
 
   /**
-   * Adds an enrichment job to the queue using a deterministic jobId so
-   * duplicate `(museumId, locale)` requests collapse into a single active job.
-   * Fail-open: logs and returns the jobId even if the enqueue fails — the
-   * caller then sees a "pending" response and can retry on the next request.
+   * Fail-open: logs and returns the jobId even if the enqueue fails — caller
+   * sees a "pending" response and can retry on the next request.
    */
   async enqueue(input: MuseumEnrichmentJob): Promise<string> {
     const jobId = jobIdFor(input);
@@ -57,10 +52,6 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     return jobId;
   }
 
-  /**
-   * Maps the live BullMQ job state onto the port-level status enum
-   * (`completed` / `failed` / `active` / `notfound`).
-   */
   async getJobStatus(jobId: string): Promise<MuseumEnrichmentJobStatus> {
     const job = await this.queue.getJob(jobId);
     if (!job) return 'notfound';
@@ -70,11 +61,7 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     return 'active';
   }
 
-  /**
-   * Returns the jobId of an in-flight job for the given (museumId, locale)
-   * pair, or `null` if no active job exists (including completed/failed
-   * terminal states, which are treated as "no longer running").
-   */
+  /** Returns null when no active job (completed/failed treated as "not running"). */
   async isJobActive(input: MuseumEnrichmentJob): Promise<string | null> {
     const jobId = jobIdFor(input);
     const job = await this.queue.getJob(jobId);
@@ -84,7 +71,6 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     return jobId;
   }
 
-  /** Gracefully releases the queue connection. Call on app shutdown. */
   async close(): Promise<void> {
     await this.queue.close();
   }

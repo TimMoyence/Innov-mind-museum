@@ -10,10 +10,10 @@ const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 const DEFAULT_TIMEOUT_MS = 5_000;
-/** Max distance (metres) between museum coords and a Wikidata candidate to be considered a match. */
+/** Max metres between museum coords and a Wikidata candidate to be considered a match. */
 const COORDS_MATCH_RADIUS_M = 500;
 
-/** Result of a QID lookup — `confidence` decays with the fallback method used. */
+/** `confidence` decays with the fallback method used. */
 export interface WikidataMuseumMatch {
   qid: string;
   label: string;
@@ -21,7 +21,6 @@ export interface WikidataMuseumMatch {
   method: 'name+city' | 'name+coords' | 'name-only';
 }
 
-/** Structured facts extracted from a Wikidata museum entity. */
 export interface WikidataMuseumFacts {
   qid: string;
   label: string;
@@ -32,7 +31,6 @@ export interface WikidataMuseumFacts {
   wikipediaTitle: string | null;
 }
 
-/** Port-like interface so the use case + tests can substitute a stub client. */
 export interface WikidataMuseumClient {
   findMuseumQid(input: {
     name: string;
@@ -44,20 +42,11 @@ export interface WikidataMuseumClient {
   fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null>;
 }
 
-/**
- * Loose pre-filter — kept for early rejection at the call site before the
- * authoritative {@link assertLang} runs downstream. Now BCP47-aware (e.g. `zh-Hant`).
- */
+/** Loose pre-filter — authoritative {@link assertLang} runs downstream. BCP47-aware. */
 function isValidLanguageCode(lang: string): boolean {
   return /^[a-z]{2,3}$/i.test(lang) || /^[a-z]{2,3}-[a-z]{2,4}$/i.test(lang);
 }
 
-/**
- * Escapes a user-supplied value for safe SPARQL string literal interpolation.
- *
- * Delegates to the shared {@link strictEscapeSparqlLiteral} which strips control
- * chars and rejects non-strings. Local wrapper preserves the existing call sites.
- */
 function escapeSparqlLiteral(value: string): string {
   return strictEscapeSparqlLiteral(value);
 }
@@ -91,7 +80,7 @@ async function fetchWithTimeout(url: string, init: FetchWithTimeoutInit): Promis
   }
 }
 
-/** Haversine distance (metres). */
+/** Haversine, metres. */
 function distanceMetres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6_371_000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -103,19 +92,13 @@ function distanceMetres(a: { lat: number; lng: number }, b: { lat: number; lng: 
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/**
- * Default HTTP-backed implementation of {@link WikidataMuseumClient}.
- * Fail-open on every external call — returns `null` instead of throwing.
- */
+/** Fail-open on every external call — returns `null` instead of throwing. */
 export class HttpWikidataMuseumClient implements WikidataMuseumClient {
   /**
-   * Resolves a museum name → Wikidata QID. Strategy:
-   *
-   *   1. SPARQL against `P31/P279* wd:Q33506` (museum class hierarchy) filtering
-   *      entities whose localised label matches the name.
-   *   2. If coordinates supplied and several candidates returned, keep the
-   *      one within {@link COORDS_MATCH_RADIUS_M} metres.
-   *   3. Last-resort fallback: `wbsearchentities` free-text search.
+   * Strategy:
+   *   1. SPARQL `P31/P279* wd:Q33506` (museum class) filtered by localised label.
+   *   2. If coords + multiple candidates: pick one within {@link COORDS_MATCH_RADIUS_M}.
+   *   3. Fallback: `wbsearchentities` free-text search.
    */
   async findMuseumQid(input: {
     name: string;
@@ -139,10 +122,10 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     }
   }
 
-  /** Fetches structured facts for a resolved QID. Fail-open. */
+  /** Fail-open. */
   async fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null> {
-    // Strict assert at the trust boundary — replaces loose `/^Q\d+$/` prefilter.
-    // Caught + fail-open below to preserve existing contract (never throws).
+    // Strict assert at trust boundary; caught + fail-open below to preserve
+    // never-throws contract.
     try {
       assertEntityId(input.qid);
     } catch (err) {
@@ -166,13 +149,11 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     }
   }
 
-  // ── internals ────────────────────────────────────────────────
-
   private async sparqlByLabel(
     name: string,
     language: string,
   ): Promise<{ qid: string; label: string; lat?: number; lng?: number }[]> {
-    // Strict assert at the trust boundary before SPARQL string composition.
+    // SEC: strict assert at trust boundary before SPARQL composition.
     assertLang(language);
     const safeName = escapeSparqlLiteral(name);
     const sparql = `
@@ -278,7 +259,7 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     qid: string,
     language: string,
   ): Promise<Omit<WikidataMuseumFacts, 'wikipediaTitle'> | null> {
-    // Strict assert at the trust boundary before SPARQL string composition.
+    // SEC: strict assert at trust boundary before SPARQL composition.
     assertEntityId(qid);
     assertLang(language);
     const sparql = `
@@ -313,7 +294,7 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
   }
 
   private async fetchSitelinkTitle(qid: string, language: string): Promise<string | null> {
-    // Strict assert before composing the `${language}wiki` sitelink + the `ids=` URL param.
+    // SEC: strict assert before composing `${language}wiki` sitelink + `ids=` URL param.
     assertEntityId(qid);
     assertLang(language);
     const site = `${language}wiki`;
@@ -333,7 +314,7 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
   }
 }
 
-/** Parses Wikidata WKT Point("Point(lng lat)") into a JS `{lat,lng}` pair. */
+/** Parses Wikidata WKT `Point(lng lat)` → `{lat,lng}`. */
 function parseWktPoint(value: string | undefined): { lat: number; lng: number } | null {
   if (!value) return null;
   const m = /^Point\(([-0-9.]+) ([-0-9.]+)\)$/.exec(value);
