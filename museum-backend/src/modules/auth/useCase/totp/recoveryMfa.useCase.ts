@@ -11,13 +11,10 @@ import type {
 } from '@modules/auth/useCase/session/authSession.service';
 
 /**
- * Recovery-code path of the MFA login flow: exchange `mfaSessionToken +
- * recoveryCode` for a real JWT pair, marking the consumed code as such.
- *
- * One-time use is enforced server-side: the matched entry's `consumedAt` is
- * stamped within the same persistence call that issues JWTs. A second
- * submission of the same code rejects with `INVALID_RECOVERY_CODE` because
- * `findRecoveryCodeIndex` skips already-consumed entries.
+ * Recovery-code path: exchange `mfaSessionToken + recoveryCode` for JWT pair.
+ * One-time use server-enforced: matched entry's `consumedAt` stamped in same
+ * persistence call as JWT issuance. Resubmission rejects with INVALID_RECOVERY_CODE
+ * because `findRecoveryCodeIndex` skips consumed entries.
  */
 export class RecoveryMfaUseCase {
   constructor(
@@ -26,7 +23,6 @@ export class RecoveryMfaUseCase {
     private readonly authSessionService: AuthSessionService,
   ) {}
 
-  /** Consume one recovery code and issue JWTs. */
   async execute(input: {
     mfaSessionToken: string;
     recoveryCode: string;

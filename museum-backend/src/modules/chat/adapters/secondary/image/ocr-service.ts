@@ -6,10 +6,10 @@ import { env } from '@src/config/env';
 import type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { Scheduler } from 'tesseract.js';
 
-// Re-export domain port types so existing consumers that imported from here keep working
+// Re-export for back-compat
 export type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 
-/** Tesseract.js-based OCR implementation with pooled Scheduler (2 workers). */
+/** Pooled Scheduler (2 workers). */
 export class TesseractOcrService implements OcrService {
   private schedulerPromise: Promise<Scheduler> | null = null;
 
@@ -26,7 +26,6 @@ export class TesseractOcrService implements OcrService {
     return this.schedulerPromise;
   }
 
-  /** Runs Tesseract OCR on a base64-encoded image and returns the extracted text with confidence. */
   async extractText(imageBase64: string): Promise<OcrResult | null> {
     return await startSpan({ name: 'ocr.extract', op: 'ai.ocr' }, async () => {
       try {
@@ -46,9 +45,8 @@ export class TesseractOcrService implements OcrService {
           if (timeoutId !== undefined) clearTimeout(timeoutId);
         });
 
-        // tesseract.js types `data.text` as `string` but the runtime may return
-        // undefined when the buffer is fully blank — the test
-        // `returns null when text is undefined` pins this contract.
+        // tesseract.js runtime returns undefined when buffer is blank despite `string` type.
+        // Test `returns null when text is undefined` pins this contract.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime types diverge from declared types
         const text = data.text?.trim();
         if (!text) return null;
@@ -68,7 +66,6 @@ export class TesseractOcrService implements OcrService {
     });
   }
 
-  /** Terminates the Tesseract worker pool and releases resources. */
   async destroy(): Promise<void> {
     if (this.schedulerPromise) {
       try {
@@ -82,9 +79,7 @@ export class TesseractOcrService implements OcrService {
   }
 }
 
-/** No-op OCR service for when OCR guard is disabled. */
 export class DisabledOcrService implements OcrService {
-  /** Returns null immediately since OCR is disabled. */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async interface signature
   async extractText(): Promise<OcrResult | null> {
     return null;

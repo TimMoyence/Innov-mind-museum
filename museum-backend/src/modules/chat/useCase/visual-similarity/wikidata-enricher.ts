@@ -48,13 +48,6 @@ export interface WikidataEnricherDeps {
   cacheTtlSeconds?: number;
 }
 
-/**
- * Build the deterministic cache key for a (lang, qid) tuple.
- *
- * @param lang - Language code (e.g. "en", "fr").
- * @param qid  - Wikidata entity ID (e.g. "Q12418").
- * @returns Versioned, namespaced cache key.
- */
 function cacheKey(lang: string, qid: string): string {
   return `${CACHE_KEY_PREFIX}:${lang}:${qid}`;
 }
@@ -112,12 +105,7 @@ export class WikidataEnricher {
   private readonly concurrency: number;
   private readonly cacheTtlSeconds: number;
 
-  /**
-   * Wire the enricher to its collaborators. The cache is treated as fail-soft
-   * (errors logged + swallowed); the client is the source of truth for facts.
-   *
-   * @param deps - See {@link WikidataEnricherDeps}.
-   */
+  /** Cache is fail-soft (errors logged + swallowed); client is source of truth. */
   constructor(deps: WikidataEnricherDeps) {
     this.client = deps.client;
     this.cache = deps.cache;

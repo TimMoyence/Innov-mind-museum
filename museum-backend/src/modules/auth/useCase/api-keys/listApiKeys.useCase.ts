@@ -1,6 +1,6 @@
 import type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 
-/** Public API key info — never includes hash or salt. */
+/** Never includes hash or salt. */
 interface ApiKeyListItem {
   id: number;
   prefix: string;
@@ -11,16 +11,9 @@ interface ApiKeyListItem {
   isActive: boolean;
 }
 
-/** Lists a user's API keys with safe, masked output. */
 export class ListApiKeysUseCase {
   constructor(private readonly apiKeyRepository: ApiKeyRepository) {}
 
-  /**
-   * List all API keys for a user.
-   *
-   * @param userId - The authenticated user's ID.
-   * @returns Array of key metadata (hash and salt are never exposed).
-   */
   async execute(userId: number): Promise<{ apiKeys: ApiKeyListItem[] }> {
     const keys = await this.apiKeyRepository.findByUserId(userId);
 

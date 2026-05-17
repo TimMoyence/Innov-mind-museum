@@ -4,15 +4,10 @@ import type { OverpassMuseumResult, OverpassSearchParams } from './overpass-type
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
- * Cache envelope wrapping a value + the epoch (ms) at which it was stored.
- * We store the timestamp alongside the value so we can implement probabilistic
- * early expiration in a TTL-unaware cache port (Redis tells us it exists, not
- * how much of its TTL has elapsed).
- *
- * `value: []` is used for BOTH "live call returned empty" and "live call failed"
- * — both trigger the short negative TTL so we don't hammer Overpass on quiet
- * regions or transient outages. Distinct from a cache miss because the entry
- * exists in the cache store.
+ * `value: []` covers BOTH "live returned empty" and "live failed" — both trigger short
+ * negative TTL to shield Overpass from quiet-region / transient-outage hammering.
+ * Distinct from cache miss (entry exists in store). `storedAtMs` enables probabilistic
+ * refresh on TTL-unaware cache port.
  */
 export interface OverpassCacheEntry {
   value: OverpassMuseumResult[];
@@ -26,14 +21,8 @@ const CACHE_KEY_RADIUS_KM_PRECISION = 1;
 const EARLY_REFRESH_THRESHOLD = 0.9;
 
 /**
- * Builds a deterministic cache key for an Overpass search.
- *
- * Radius-mode keys round lat/lng to 3 decimals (~111m) and radius to 0.1 km so
- * GPS jitter and off-by-a-few-meters radii don't produce new keys on every
- * chat message. Bbox-mode keys round the four corners to 2 decimals.
- *
- * Text filter (`q`) is part of the key so name-filtered results don't collide
- * with the unfiltered variant.
+ * Radius-mode: lat/lng to 3dp (~111m) + radius to 0.1km — absorbs GPS jitter.
+ * Bbox-mode: corners to 2dp. `q` filter is part of the key (no collision with unfiltered).
  */
 export function buildOverpassCacheKey(params: OverpassSearchParams): string | null {
   const qSuffix = params.q ? `:q=${params.q.toLowerCase()}` : '';
@@ -61,7 +50,6 @@ export function buildOverpassCacheKey(params: OverpassSearchParams): string | nu
   return null;
 }
 
-/** Arguments for the background refresh helper. Bagged to stay under max-params: 5. */
 export interface OverpassBackgroundRefreshArgs {
   cache: CacheService;
   params: OverpassSearchParams;
@@ -71,11 +59,7 @@ export interface OverpassBackgroundRefreshArgs {
   refresh: (params: OverpassSearchParams) => Promise<OverpassMuseumResult[]>;
 }
 
-/**
- * Fires a background refresh of a soon-to-expire entry. Never throws — any
- * failure is swallowed and logged as a warning. Intended for use by the
- * probabilistic early-expiration path only.
- */
+/** Fire-and-forget. Never throws. */
 export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArgs): void {
   const { cache, params, cacheKey, positiveTtlSeconds, negativeTtlSeconds, refresh } = args;
   void (async () => {
@@ -96,15 +80,7 @@ export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArg
   })();
 }
 
-/**
- * Returns true when the cached entry has consumed at least
- * {@link EARLY_REFRESH_THRESHOLD} of its TTL and a probabilistic roll
- * elects to kick off a background refresh.
- *
- * Smooths out the thundering-herd at TTL expiry: callers late in the window
- * serve the cached value *and* opportunistically refresh it in the background,
- * so the next cold miss is rare.
- */
+/** Smooths thundering-herd at TTL expiry. Probabilistic refresh in last 10% TTL. */
 export function shouldOverpassEarlyRefresh(entry: OverpassCacheEntry, nowMs: number): boolean {
   const elapsedMs = nowMs - entry.storedAtMs;
   const ttlMs = entry.ttlSeconds * 1_000;

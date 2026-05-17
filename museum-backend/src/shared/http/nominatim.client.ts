@@ -4,30 +4,20 @@ import { env } from '@src/config/env';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
- * Low-level Nominatim (OpenStreetMap) HTTP adapter.
+ * Nominatim (OSM) HTTP adapter.
  *
- * DDD note: the bare `geocodeWithNominatim` / `reverseGeocodeWithNominatim`
- * functions are the low-level adapter. They enforce ONLY the OSMF per-process
- * policy constraints that MUST be applied at the transport level:
- *   - A single global rate limiter (>= `env.nominatim.minRequestIntervalMs`
- *     between two outbound fetches from this Node process, per OSMF policy).
- *   - A valid User-Agent header identifying Musaium + a contact email.
- *
- * Application-level caching (key shape, positive/negative TTLs, probabilistic
- * early expiration, fail-open policy) is layered on top by the factory
- * `createCachedNominatimClient`, which is what call sites SHOULD use in
- * production wiring. The raw functions remain exported for non-cached uses
- * (e.g. one-shot geocoding of a free-text query) and to keep test-level
- * fetch-mocking ergonomic.
+ * Raw `geocodeWithNominatim` / `reverseGeocodeWithNominatim` enforce only transport-
+ * level OSMF policy: global rate limiter (≥ `env.nominatim.minRequestIntervalMs`) +
+ * required User-Agent. Production wiring SHOULD use `createCachedNominatimClient`
+ * which layers OSMF mandatory caching (key shape, +/- TTLs, probabilistic refresh,
+ * fail-open).
  */
 
-/** Geocoding result from Nominatim. */
 export interface NominatimGeocodingResult {
   lat: number;
   lng: number;
 }
 
-/** Reverse geocoding result from Nominatim. */
 export interface NominatimReverseResult {
   displayName: string;
   address: {
@@ -40,7 +30,6 @@ export interface NominatimReverseResult {
   name?: string;
 }
 
-/** Signature of a cached reverse-geocode function. */
 export type CachedReverseGeocodeFn = (
   lat: number,
   lng: number,
@@ -51,7 +40,6 @@ interface NominatimResponseItem {
   lon: string;
 }
 
-/** Nominatim reverse API response shape. */
 interface NominatimReverseResponseItem {
   display_name: string;
   name?: string;
@@ -73,23 +61,15 @@ const CACHE_KEY_COORD_PRECISION = 3;
 const EARLY_REFRESH_THRESHOLD = 0.9;
 
 /**
- * Promise-chained global rate limiter enforcing >= `minIntervalMs`
- * between any two outbound Nominatim fetches in this Node process.
- *
- * OSMF Usage Policy explicitly caps clients at 1 req/s absolute.
- * This is intentionally a module singleton: every exported function
- * in this file funnels through it, so the limit is enforced regardless
- * of how many call sites fire concurrently.
+ * Promise-chained global rate limiter — OSMF Usage Policy caps clients at 1 req/s
+ * absolute. Module singleton: every exported function funnels through it, so the
+ * limit holds regardless of concurrent call-site count.
  */
 class RateLimiter {
   private tail: Promise<void> = Promise.resolve();
 
   constructor(private readonly minIntervalMs: number) {}
 
-  /**
-   * Acquires a slot in the rate limiter. Resolves once `minIntervalMs`
-   * has elapsed since the previous acquisition completed its own wait.
-   */
   async acquire(): Promise<void> {
     const previousTail = this.tail;
     let release!: () => void;
@@ -109,26 +89,12 @@ class RateLimiter {
 
 const rateLimiter = new RateLimiter(env.nominatim.minRequestIntervalMs);
 
-/**
- * Builds the Nominatim User-Agent header per OSMF policy.
- *
- * Format: `Musaium/<appVersion> (contact: <email>)`
- *
- * OSMF explicitly bans stock-library User-Agent strings; ours must
- * identify both the application and a reachable operator contact.
- */
+/** OSMF bans stock UA strings — must identify app + reachable contact. */
 function buildUserAgent(): string {
   return `Musaium/${env.appVersion} (contact: ${env.nominatim.contactEmail})`;
 }
 
-/**
- * Geocodes a text query to coordinates via the Nominatim (OpenStreetMap) API.
- * Returns the first result as `{ lat, lng }`, or `null` if no result or on failure.
- *
- * @param query - Free-text location query (e.g. "Lyon", "Bordeaux").
- * @param timeoutMs - HTTP request timeout in milliseconds (default 5000).
- * @returns Geocoded coordinates or null.
- */
+/** Returns `null` on any failure (fail-open). `timeoutMs` default 5000. */
 export async function geocodeWithNominatim(
   query: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
@@ -191,9 +157,6 @@ export async function geocodeWithNominatim(
   }
 }
 
-/**
- * Builds the Nominatim reverse geocoding URL for the given coordinates.
- */
 function buildReverseUrl(lat: number, lng: number): URL {
   const url = new URL(NOMINATIM_REVERSE_URL);
   url.searchParams.set('lat', String(lat));
@@ -204,9 +167,6 @@ function buildReverseUrl(lat: number, lng: number): URL {
   return url;
 }
 
-/**
- * Maps a raw Nominatim reverse API response into the typed result shape.
- */
 function mapReverseResponse(data: NominatimReverseResponseItem): NominatimReverseResult | null {
   if (!data.display_name) return null;
   const city = data.address?.city ?? data.address?.town ?? data.address?.village;
@@ -223,15 +183,7 @@ function mapReverseResponse(data: NominatimReverseResponseItem): NominatimRevers
   };
 }
 
-/**
- * Reverse geocodes coordinates to a street-level address via the Nominatim API.
- * Returns structured address data, or `null` on failure/empty result.
- *
- * @param lat - Latitude of the point to reverse geocode.
- * @param lng - Longitude of the point to reverse geocode.
- * @param timeoutMs - HTTP request timeout in milliseconds (default 5000).
- * @returns Reverse geocoding result or null.
- */
+/** Returns `null` on failure/empty (fail-open). `timeoutMs` default 5000. */
 export async function reverseGeocodeWithNominatim(
   lat: number,
   lng: number,
@@ -278,14 +230,9 @@ export async function reverseGeocodeWithNominatim(
 }
 
 /**
- * Cache envelope wrapping a value + the epoch (ms) at which it was stored.
- * We store the timestamp alongside the value so we can implement probabilistic
- * early expiration in a TTL-unaware cache port (Redis tells us it exists, not
- * how much of its TTL has elapsed).
- *
- * `value: null` is a SENTINEL — distinct from a cache miss. It means the live
- * call returned null (unknown location / empty response) and we cached that
- * short-term to shield Nominatim from repeated misses on the same coordinate.
+ * `value: null` is a SENTINEL (distinct from cache miss) — caches the empty live
+ * response short-term to shield Nominatim from repeat misses. `storedAtMs` enables
+ * probabilistic early expiration on the TTL-unaware cache port.
  */
 interface ReverseGeocodeCacheEntry {
   value: NominatimReverseResult | null;
@@ -293,19 +240,13 @@ interface ReverseGeocodeCacheEntry {
   ttlSeconds: number;
 }
 
-/**
- * Builds the positive-cache key for a given coordinate pair.
- *
- * Rounded to {@link CACHE_KEY_COORD_PRECISION} decimal places (~111m at the
- * equator) so tiny GPS jitter doesn't produce new keys on every chat message.
- */
+/** Rounded to ~111m precision so GPS jitter doesn't produce new keys per chat message. */
 function buildCacheKey(lat: number, lng: number): string {
   return `nominatim:rev:${lat.toFixed(CACHE_KEY_COORD_PRECISION)}:${lng.toFixed(
     CACHE_KEY_COORD_PRECISION,
   )}`;
 }
 
-/** Arguments for the background refresh helper. Bagged to stay under max-params: 5. */
 interface BackgroundRefreshArgs {
   cache: CacheService;
   lat: number;
@@ -315,11 +256,7 @@ interface BackgroundRefreshArgs {
   negativeTtlSeconds: number;
 }
 
-/**
- * Fires a background refresh of a soon-to-expire entry. Never throws — any
- * failure is swallowed and logged as a warning. Intended for use by the
- * probabilistic early-expiration path only.
- */
+/** Fire-and-forget. Never throws — failure logged as warning. */
 function fireBackgroundRefresh(args: BackgroundRefreshArgs): void {
   const { cache, lat, lng, cacheKey, positiveTtlSeconds, negativeTtlSeconds } = args;
   void (async () => {
@@ -341,13 +278,8 @@ function fireBackgroundRefresh(args: BackgroundRefreshArgs): void {
 }
 
 /**
- * Returns true when the cached entry has consumed at least
- * {@link EARLY_REFRESH_THRESHOLD} of its TTL and a probabilistic roll
- * elects to kick off a background refresh.
- *
- * This smooths out the thundering-herd at TTL expiry: callers late in the
- * window serve the cached value *and* opportunistically refresh it in the
- * background, so the next cold miss is rare.
+ * Smooths thundering-herd at TTL expiry — late-window callers serve cached value
+ * AND opportunistically refresh in background, so next cold miss is rare.
  */
 function shouldEarlyRefresh(entry: ReverseGeocodeCacheEntry, nowMs: number): boolean {
   const elapsedMs = nowMs - entry.storedAtMs;
@@ -361,22 +293,11 @@ function shouldEarlyRefresh(entry: ReverseGeocodeCacheEntry, nowMs: number): boo
 }
 
 /**
- * Builds a reverse-geocode function that is cached against the given
- * {@link CacheService}, enforcing the OSMF mandatory-caching policy.
- *
- * Behaviour:
- *   - Cache key: `nominatim:rev:<lat.toFixed(3)>:<lng.toFixed(3)>` — rounded
- *     coordinates absorb GPS jitter between consecutive chat messages.
- *   - Positive TTL: `env.nominatim.cacheTtlSeconds` (default 24h).
- *   - Negative TTL: `env.nominatim.negativeCacheTtlSeconds` (default 1h), with
- *     a sentinel-wrapped `null` so cache miss vs. cached-null is unambiguous.
- *   - Probabilistic early expiration: in the last 10% of TTL, a weighted coin
- *     flip fires a background refresh (fail-silent).
- *   - Fail-open: any cache read/write error is logged as a warning and the
- *     live call proceeds — availability > cache coherence for this adapter.
- *
- * @param cache - CacheService implementation (Redis in prod, memory in tests).
- * @returns A function `(lat, lng) => Promise<NominatimReverseResult | null>`.
+ * OSMF mandatory caching. Key shape `nominatim:rev:<lat.toFixed(3)>:<lng.toFixed(3)>`.
+ * Positive TTL `env.nominatim.cacheTtlSeconds` (default 24h); negative TTL
+ * `env.nominatim.negativeCacheTtlSeconds` (default 1h) wraps sentinel `null`
+ * (cache-miss vs cached-null unambiguous). Probabilistic refresh in last 10% TTL.
+ * Fail-open: cache R/W errors logged + fall through to live call.
  */
 export function createCachedNominatimClient(cache: CacheService): CachedReverseGeocodeFn {
   const positiveTtlSeconds = env.nominatim.cacheTtlSeconds;

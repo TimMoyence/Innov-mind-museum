@@ -78,9 +78,7 @@ const FALLBACK_TEMPLATES: Record<SupportedLocale, FallbackTemplates> = {
   },
 };
 
-/**
- * Builds a localized fallback text when the LLM fails, using pre-translated templates.
- */
+/** Localized fallback text when the LLM fails. */
 export function buildLocalizedFallback(
   locale: SupportedLocale,
   opts: {

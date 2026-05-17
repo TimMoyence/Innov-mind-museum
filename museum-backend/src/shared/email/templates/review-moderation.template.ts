@@ -1,18 +1,9 @@
 import { escapeHtml } from '../escape-html';
 import { renderEmailLayout } from './layout';
 
-/**
- *
- */
 export type ReviewLocale = 'fr' | 'en';
-/**
- *
- */
 export type ReviewStatus = 'approved' | 'rejected';
 
-/**
- *
- */
 export interface ReviewModerationEmailInput {
   recipientName: string;
   rating: number;
@@ -80,7 +71,6 @@ const renderRatingStars = (rating: number): string => {
   return `<span style="color:#C49A3C;letter-spacing:0.08em;font-size:18px;">${filled}</span><span style="color:#CBD5E1;letter-spacing:0.08em;font-size:18px;">${empty}</span>`;
 };
 
-/** Build the HTML body for the review-moderation outcome email sent to the review author. */
 export function buildReviewModerationEmail(input: ReviewModerationEmailInput): string {
   const copy = REVIEW_LOCALES[input.locale];
   const isApproved = input.status === 'approved';

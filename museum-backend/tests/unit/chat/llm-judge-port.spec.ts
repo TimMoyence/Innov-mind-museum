@@ -41,9 +41,6 @@ const buildOrchestrator = (behaviour: FakeOrchestratorBehaviour): ChatOrchestrat
         metadata: {},
       };
     },
-    async generateStream() {
-      throw new Error('not used');
-    },
   };
 };
 

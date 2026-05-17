@@ -5,7 +5,6 @@ import { badRequest, notFound, conflict } from '@shared/errors/app.error';
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 
-/** Input for the change-user-role use case. */
 interface ChangeUserRoleInput {
   userId: number;
   newRole: string;
@@ -14,11 +13,9 @@ interface ChangeUserRoleInput {
   requestId?: string;
 }
 
-/** Validates the new role, prevents removing the last admin, and updates the user's role. */
 export class ChangeUserRoleUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Executes the role change after validating the new role and preventing removal of the last admin. */
   async execute(input: ChangeUserRoleInput): Promise<AdminUserDTO> {
     const validRoles: string[] = Object.values(UserRole);
 
@@ -26,11 +23,10 @@ export class ChangeUserRoleUseCase {
       throw badRequest(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
     }
 
-    // Guard: prevent removing the last admin
+    // Guard: prevent removing the last admin.
     if (input.newRole !== UserRole.ADMIN) {
       const adminCount = await this.repository.countAdmins();
       if (adminCount <= 1) {
-        // Check whether the target user is the sole remaining admin
         const result = await this.repository.listUsers({
           pagination: { page: 1, limit: 1 },
           role: UserRole.ADMIN,

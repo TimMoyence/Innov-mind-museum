@@ -9,13 +9,10 @@ import { AppError, notFound } from '@shared/errors/app.error';
 import type { Request, RequestHandler, Response } from 'express';
 
 /**
- * GDPR Article 22 + AI Act Art. 14 / Art. 50 — Express handler factory for
- * `GET /api/chat/messages/:id/explanation`.
- *
- * Auth is enforced upstream by `isAuthenticated`; this handler defensively
- * re-checks `req.user.id` so a regression in the router cannot accidentally
- * surface explanations to anonymous traffic. Cross-tenant probes are mapped
- * to 404 (security-through-obscurity per `docs/GDPR_ART22_SCOPE.md`).
+ * GDPR Art. 22 + AI Act Art. 14 / Art. 50. Auth enforced upstream by `isAuthenticated`;
+ * defensive re-check of `req.user.id` prevents router regression from surfacing
+ * explanations to anonymous traffic. Cross-tenant probes mapped to 404
+ * (security-through-obscurity per `docs/GDPR_ART22_SCOPE.md`).
  */
 export function createExplanationHandler(useCase: GetMessageExplanationUseCase): RequestHandler {
   return async (req: Request, res: Response) => {
@@ -26,9 +23,8 @@ export function createExplanationHandler(useCase: GetMessageExplanationUseCase):
 
     const { messageId } = parseExplanationParams(req.params);
 
-    // Locale resolution: prefer the explicit `?locale=` query (set by mobile
-    // when the user changes locale mid-session) over the request-scoped
-    // locale derived from Accept-Language by the upstream i18n middleware.
+    // Prefer explicit `?locale=` query (mobile mid-session change) over request-scoped
+    // locale from upstream Accept-Language i18n middleware.
     const queryLocale = typeof req.query.locale === 'string' ? req.query.locale : undefined;
     const clientLocale = (req as { clientLocale?: string }).clientLocale;
     const effectiveLocale = queryLocale ?? clientLocale;

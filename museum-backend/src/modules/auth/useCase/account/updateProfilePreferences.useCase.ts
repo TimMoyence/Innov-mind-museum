@@ -5,12 +5,7 @@ import type {
   ProfilePreferencesPatch,
 } from '@modules/auth/domain/user/user.repository.interface';
 
-/**
- * TD-2 — Effective state of the 5 profile-preference columns after a patch.
- * Returned to the HTTP layer so the client can echo the canonical post-write
- * shape (including fields that weren't part of the patch but matter for the
- * client cache).
- */
+/** TD-2 — effective state after patch (includes unchanged fields for client cache). */
 export interface ProfilePreferences {
   defaultLocale: string;
   defaultMuseumMode: boolean;
@@ -20,28 +15,16 @@ export interface ProfilePreferences {
 }
 
 /**
- * TD-2 — Persists a partial patch of the 5 profile-preference columns and
- * returns the full effective state (patch fields override server fields).
- *
- * Validation contract:
- *  - Field-level value enums (`guideLevel`, `dataMode`) are validated upstream
- *    by the Zod schema attached to the route. The use case trusts the patch
- *    shape post-validation.
- *  - Empty patch (`{}`) is rejected at the route level by the Zod
- *    `.refine(non-empty)` rule; if the use case is invoked with `{}` directly
- *    (unit-test code path), it MUST stay safe — the repo no-ops on empty.
+ * TD-2 — Validation contract:
+ *  - Value enums (`guideLevel`, `dataMode`) validated upstream by Zod schema;
+ *    use case trusts post-validation shape.
+ *  - Empty patch `{}` rejected at route by `.refine(non-empty)`; if invoked
+ *    directly (unit-test path), MUST stay safe — repo no-ops on empty.
  */
 export class UpdateProfilePreferencesUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  /**
-   * Validates user existence, persists the patch, and returns the canonical
-   * effective preferences.
-   *
-   * @param userId - Authenticated user id.
-   * @param patch - Partial preferences. Only defined keys are written.
-   * @throws {AppError} 404 if the user does not exist.
-   */
+  /** @throws {AppError} 404 if user does not exist. */
   async execute(userId: number, patch: ProfilePreferencesPatch): Promise<ProfilePreferences> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {

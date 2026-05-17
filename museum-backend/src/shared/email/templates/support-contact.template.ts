@@ -1,9 +1,6 @@
 import { escapeHtml } from '../escape-html';
 import { renderEmailLayout } from './layout';
 
-/**
- *
- */
 export interface SupportContactEmailInput {
   name: string;
   email: string;
@@ -20,7 +17,6 @@ const renderFieldRow = (label: string, value: string): string => `
     </tr>
   `;
 
-/** Build the HTML body for the internal support-contact notification email. */
 export function buildSupportContactEmail(input: SupportContactEmailInput): string {
   const safeName = escapeHtml(input.name);
   const safeEmail = escapeHtml(input.email);

@@ -6,7 +6,6 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { TextToSpeechService, TtsResult } from '@modules/chat/domain/ports/tts.port';
 
-/** Input for standalone artwork description. */
 export interface DescribeInput {
   image?: { source: 'base64' | 'url'; value: string; mimeType?: string };
   text?: string;
@@ -15,7 +14,6 @@ export interface DescribeInput {
   format: 'text' | 'audio' | 'both';
 }
 
-/** Output of standalone artwork description. */
 export interface DescribeOutput {
   description: string;
   audio?: Buffer;
@@ -23,28 +21,21 @@ export interface DescribeOutput {
   metadata: Record<string, unknown>;
 }
 
-/** Dependencies for the describe service. */
 interface DescribeServiceDeps {
   orchestrator: ChatOrchestrator;
   tts?: TextToSpeechService;
 }
 
-/**
- * Standalone description service: takes an image/text input and produces
- * an audio-description-optimised response, optionally with TTS audio.
- * Reuses the ChatOrchestrator with minimal input (no history, museum + audio mode).
- */
+/** Reuses ChatOrchestrator with no history, museum + audio mode. */
 export class DescribeService {
   private readonly orchestrator: ChatOrchestrator;
   private readonly tts?: TextToSpeechService;
 
-  /** Creates a new DescribeService wired to the given orchestrator and optional TTS. */
   constructor(deps: DescribeServiceDeps) {
     this.orchestrator = deps.orchestrator;
     this.tts = deps.tts;
   }
 
-  /** Generates a standalone artwork description, optionally with TTS audio. */
   async describe(input: DescribeInput): Promise<DescribeOutput> {
     if (!input.text && !input.image) {
       throw badRequest('Either text or image is required');

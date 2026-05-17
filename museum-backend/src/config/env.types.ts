@@ -1,48 +1,36 @@
-/** Allowed Node.js runtime environments. */
 export type NodeEnv = 'development' | 'test' | 'production';
 
-/** Supported LLM provider identifiers. */
 export type LlmProvider = 'openai' | 'deepseek' | 'google';
 
-/** Supported object-storage driver identifiers. */
 export type StorageDriver = 'local' | 's3';
 
 /**
- * C3 (2026-05) — supported image-embedding providers for the visual-similarity
- * pipeline (`/chat/compare`). `'siglip-onnx'` self-hosts SigLIP base ONNX on
- * CPU (no per-call cost, ~0.6–1.5s/encode, ~500MB RAM); `'replicate'` is the
- * managed fallback used when self-host is unavailable (per-call cost, network
- * latency). See design D1/D3 in `team-state/2026-05-08-c3-image-comparative/design.md`.
+ * C3 (2026-05) — image-embedding providers for `/chat/compare`.
+ * `'siglip-onnx'` self-hosts SigLIP base ONNX on CPU (no per-call cost,
+ * ~0.6–1.5s/encode, ~500MB RAM); `'replicate'` is the managed fallback (ADR-037).
  */
 export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
 
-// Note: the legacy `GuardrailsV2Candidate` enum was retired 2026-05-14 (ADR-015
-// amendment + ROADMAP_TEAM T1.7#2). Each V2 layer now self-activates from its
-// own config presence — `GUARDRAILS_V2_LLM_GUARD_URL` for the sidecar, and
-// `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` for the structured-output judge —
-// aligning with the no-feature-flags-pre-launch doctrine.
+// Legacy `GuardrailsV2Candidate` enum retired 2026-05-14 (ADR-015 amendment).
+// Each V2 layer now self-activates from its own config presence
+// (`GUARDRAILS_V2_LLM_GUARD_URL` for sidecar, `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` for judge).
 
 /**
  * Deployment topology hint consumed by boot-time invariant checks.
- *
  * - `single`: one process / replica. In-memory rate-limit and LLM cache are safe.
- * - `multi`: horizontally scaled (PM2 cluster, K8s replicas, etc.). Shared Redis
- *   is REQUIRED in production to avoid per-replica rate-limit bypass and
- *   per-replica LLM cache fragmentation.
+ * - `multi`: horizontally scaled. Shared Redis REQUIRED in production to avoid
+ *   per-replica rate-limit bypass and per-replica LLM cache fragmentation.
  */
 export type DeploymentMode = 'single' | 'multi';
 
-/** Application configuration loaded from environment variables. */
 export interface AppEnv {
   nodeEnv: NodeEnv;
-  /** Deployment topology hint for boot-time invariant checks. */
   deploymentMode: DeploymentMode;
   port: number;
-  /** Resolved application version (APP_VERSION → npm_package_version → 'unknown'). */
+  /** Resolved from APP_VERSION → npm_package_version → 'unknown'. */
   appVersion: string;
-  /** Git commit SHA from CI (COMMIT_SHA or GITHUB_SHA), undefined locally. */
+  /** From COMMIT_SHA or GITHUB_SHA, undefined locally. */
   commitSha?: string;
-  /** Frontend base URL for email links (e.g. password reset). */
   frontendUrl?: string;
   trustProxy: boolean;
   corsOrigins: string[];
@@ -58,7 +46,7 @@ export interface AppEnv {
     password?: string;
     database: string;
     poolMax: number;
-    /** Optional read-replica connection URL. When set, dataSourceRouter.read uses it. */
+    /** Optional read-replica URL. When set, dataSourceRouter.read uses it. */
     replicaUrl: string | null;
   };
   auth: {
@@ -76,98 +64,78 @@ export interface AppEnv {
     appleClientId: string;
     googleClientIds: string[];
     /**
-     * AES-256-GCM key (32 raw bytes, supplied base64-encoded) used to encrypt
-     * the per-user TOTP shared secret at rest. Distinct from `JWT_*` and
-     * `MEDIA_SIGNING_SECRET` per the SEC-HARDENING H12 / L3 secret-separation
-     * pattern (`env.production-validation.ts` enforces distinctness in prod).
-     *
-     * Optional in dev/test (a deterministic dev key is injected); REQUIRED in
-     * production.
+     * AES-256-GCM key (32 raw bytes, base64-encoded) used to encrypt the
+     * per-user TOTP shared secret at rest. SEC-HARDENING H12 / L3
+     * secret-separation: distinct from `JWT_*` and `MEDIA_SIGNING_SECRET`
+     * (`env.production-validation.ts` enforces in prod).
+     * Optional in dev/test (dev key injected); REQUIRED in production.
      */
     mfaEncryptionKey: string;
     /**
      * Short-lived JWT secret used to sign the `mfaSessionToken` issued between
      * the password step and the TOTP challenge. Distinct from access/refresh
-     * secrets so a leak of one cannot replay the other. Optional in dev/test;
-     * required in production. Defaults to a derived dev value when absent.
+     * secrets so a leak of one cannot replay the other. Required in production.
      */
     mfaSessionTokenSecret: string;
-    /**
-     * TTL of the `mfaSessionToken` in seconds. Default 5 minutes — long enough
-     * for the user to retrieve a code, short enough that an interception window
-     * stays small.
-     */
+    /** TTL of `mfaSessionToken` in seconds. Default 5 minutes. */
     mfaSessionTokenTtlSeconds: number;
     /**
-     * Length of the warning window (in days) granted to existing admins who
-     * land on a build that requires MFA but have not yet enrolled. Default 30
-     * (user-confirmed). Past the deadline, login is soft-blocked.
+     * Warning-window length (days) granted to existing admins on a build that
+     * requires MFA but haven't enrolled. Default 30. Past deadline, login is
+     * soft-blocked.
      */
     mfaEnrollmentWarningDays: number;
     /**
-     * Phase 5 — JWKS endpoint URL for Apple Sign-In token verification.
-     * Defaults to Apple's canonical URL in production. Overridable in tests
-     * to point at the local `startSocialJwtSpoof()` HTTP server.
+     * Phase 5 — Apple Sign-In JWKS endpoint. Defaults to Apple canonical URL.
+     * Overridable in tests for `startSocialJwtSpoof()`.
      */
     appleJwksUrl: string;
     /**
-     * Phase 5 — JWKS endpoint URL for Google Sign-In token verification.
-     * Defaults to Google's canonical URL in production. Overridable in tests
-     * to point at the local `startSocialJwtSpoof()` HTTP server.
+     * Phase 5 — Google Sign-In JWKS endpoint. Defaults to Google canonical URL.
+     * Overridable in tests for `startSocialJwtSpoof()`.
      */
     googleJwksUrl: string;
     /**
      * F3 (2026-04-30) — when `true`, `/social-login` MUST receive a nonce and
-     * the verifier MUST find a matching `nonce` claim in the ID token (Google
-     * direct, Apple via SHA-256). When `false` (default), missing nonces are
-     * accepted so legacy mobile clients keep working through the rollout. Flip
-     * to `true` once every supported mobile build ships the nonce flow.
+     * the verifier MUST find a matching `nonce` claim (Google direct, Apple
+     * via SHA-256). When `false` (default), missing nonces accepted for legacy
+     * clients. Flip to `true` once every supported mobile build ships nonce flow.
      */
     oidcNonceEnforce: boolean;
     /**
-     * F7 (2026-04-30) — HMAC key used to bind a CSRF double-submit token to
-     * the active access-token cookie. Distinct from JWT_* / MEDIA_SIGNING_SECRET
-     * / MFA_* per the H12 / L3 secret-separation pattern. REQUIRED in
-     * production, dev/test fall back to a deterministic local value.
-     *
-     * The CSRF cookie value = HMAC-SHA256(access_token cookie, csrfSecret).
+     * F7 (2026-04-30) — HMAC key binding a CSRF double-submit token to the
+     * active access-token cookie. H12 / L3 secret-separation (distinct from
+     * `JWT_*`, `MEDIA_SIGNING_SECRET`, `MFA_*`). REQUIRED in production.
+     * CSRF cookie value = HMAC-SHA256(access_token cookie, csrfSecret).
      * Validation is constant-time (`crypto.timingSafeEqual`).
      */
     csrfSecret: string;
     /**
-     * Phase 5 — selects the email service implementation at composition-root
-     * init time. `'test'` activates the in-memory `TestEmailService` for e2e
-     * tests. `'brevo'` (default) uses `BrevoEmailService` when `brevoApiKey`
-     * is set. `'noop'` disables email delivery silently.
-     *
-     * NEVER set to `'test'` in production — a sentinel in
-     * `env.production-validation.ts` rejects it loudly at startup.
+     * Phase 5 — email service implementation at composition-root init.
+     * `'test'` activates in-memory `TestEmailService` for e2e tests.
+     * `'brevo'` (default) uses `BrevoEmailService` when `brevoApiKey` is set.
+     * `'noop'` disables email delivery silently.
+     * NEVER set to `'test'` in production — `env.production-validation.ts` rejects it.
      */
     emailServiceKind: 'test' | 'brevo' | 'noop';
     /**
-     * F11 (2026-05) — Server-driven Google OAuth flow used by museum-web admin
-     * login. Distinct from the mobile flow, which uses native google-signin to
-     * obtain an id_token directly. All four fields are required together to
-     * activate the /api/auth/google/initiate + /callback routes; when any is
-     * missing the routes return 503 GOOGLE_OAUTH_NOT_CONFIGURED. Mobile path
-     * (POST /social-login with idToken) is unaffected.
+     * F11 (2026-05) — Server-driven Google OAuth flow for museum-web admin.
+     * All four fields REQUIRED together to activate /api/auth/google/initiate
+     * + /callback; when any missing the routes return 503
+     * GOOGLE_OAUTH_NOT_CONFIGURED. Mobile path (POST /social-login with
+     * idToken) unaffected.
      */
     googleWebOauth?: {
-      /** Web OAuth Client ID (distinct from mobile audience IDs in `googleClientIds`). */
+      /** Web OAuth Client ID (distinct from mobile audiences in `googleClientIds`). */
       clientId?: string;
-      /** Web OAuth Client Secret — only required for the redirect-flow code exchange. */
       clientSecret?: string;
-      /** Exact redirect URI registered in Google Cloud Console for this client. */
       redirectUri?: string;
     };
     /**
-     * F10 — toggle for the HIBP Pwned Passwords k-anonymity check.
-     * Default `true` everywhere except e2e tests, where the harness overrides
-     * it to `false` to avoid a network round-trip on every register/reset call
-     * (and to keep canonical fixture passwords like `Password123!` usable).
-     *
-     * Production rejects `false` loudly via `env.production-validation.ts` —
-     * disabling the breach gate in prod would weaken the registration pipeline.
+     * F10 — HIBP Pwned Passwords k-anonymity check.
+     * Default `true` everywhere except e2e (harness overrides false to avoid
+     * network and keep fixtures like `Password123!` usable).
+     * Production rejects `false` via `env.production-validation.ts`.
      */
     passwordBreachCheckEnabled: boolean;
   };
@@ -192,14 +160,13 @@ export interface AppEnv {
     deepseekApiKey?: string;
     googleApiKey?: string;
     /**
-     * P0-4 (audit 2026-05-12, `docs/audit-2026-05-12/details/04-kiss.md` §P0-U-2)
-     * cost guard tunables. NOT feature flags — `killSwitch` is an operational
-     * panic button (live ↔ kill via env reload + restart), `userDailyCapUsd`
-     * is the per-user daily USD ceiling. Wired through `LlmCostGuard` at the
-     * HTTP route seam (see `src/helpers/middleware/llm-cost-guard.middleware.ts`).
+     * P0-4 (audit 2026-05-12 §P0-U-2) cost guard. NOT feature flags —
+     * `killSwitch` is an operational panic button (env reload + restart),
+     * `userDailyCapUsd` is per-user daily USD ceiling. Wired through
+     * `LlmCostGuard` at the HTTP route seam.
      */
     costGuard: {
-      /** Global panic button — when `true`, every paid LLM call is denied. */
+      /** When `true`, every paid LLM call is denied. */
       killSwitch: boolean;
       /** Per-authenticated-user daily USD ceiling (anonymous bypasses). */
       userDailyCapUsd: number;
@@ -209,19 +176,17 @@ export interface AppEnv {
     ipLimit: number;
     sessionLimit: number;
     /**
-     * Per-authenticated-user message budget within `windowMs`.
-     * Complements `sessionLimit`: catches abuse spread across many sessions
-     * (a single user could otherwise multiply throughput by spawning sessions).
-     * SEC-20 (2026-04-08).
+     * Per-authenticated-user message budget within `windowMs`. Complements
+     * `sessionLimit`: catches abuse spread across many sessions (a user could
+     * otherwise multiply throughput by spawning sessions). SEC-20 (2026-04-08).
      */
     userLimit: number;
     windowMs: number;
     /**
-     * F2 (2026-04-30) — when `true` and the Redis store is configured but
-     * unreachable, rate-limit middlewares respond 503 instead of degrading
-     * to per-instance in-memory buckets (which silently disable distributed
-     * limits in multi-instance deployments). Production default = `true`,
-     * dev/test default = `false` so local stacks without Redis still work.
+     * F2 (2026-04-30) — when `true` and Redis store unreachable, rate-limit
+     * middlewares respond 503 instead of degrading to per-instance in-memory
+     * buckets (which silently disable distributed limits in multi-instance).
+     * Production default = `true`, dev/test default = `false`.
      */
     failClosed: boolean;
   };
@@ -232,27 +197,21 @@ export interface AppEnv {
   brevoApiKey?: string;
   supportInboxEmail: string;
   /**
-   * R4 W4.3 — B2B leads inbox. Optional config value (NOT a feature flag, per
-   * AUDIT_CHAIN_ALERT_EMAIL precedent). When unset, leads are routed to
-   * `supportInboxEmail` to avoid env churn in local dev.
+   * R4 W4.3 — B2B leads inbox. Config value (NOT a feature flag).
+   * When unset, leads route to `supportInboxEmail` to avoid env churn in dev.
    */
   b2bInboxEmail?: string;
   /**
-   * R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Optional
-   * config value (NOT a feature flag, per AUDIT_CHAIN_ALERT_EMAIL precedent).
-   * When unset (local dev / pre-prod boot before list provisioning), the
-   * composition root falls back to `NoopBetaSignupNotifier` so the route still
-   * returns 202 and structured logs surface a noop warning the operator can
-   * monitor.
+   * R3 W4.2 — Brevo contact-list ID for the public beta waitlist. Config
+   * value (NOT a feature flag). When unset, composition root falls back to
+   * `NoopBetaSignupNotifier`; route still returns 202 with warning log.
    */
   brevoBetaListId?: number;
   /**
-   * R2 W3.4 — Salt used by `admin/export` to pseudonymize emails/user-IDs
-   * before they hit the CSV download. Rotate manually after a breach (rotating
-   * invalidates the link between pseudonym and identity in already-exported
-   * CSV files). Config value, NOT a feature flag — same precedent as
-   * `b2bInboxEmail`/`brevoBetaListId`/`AUDIT_CHAIN_ALERT_EMAIL`. When unset, the
-   * fallback `'musaium-admin-export-v1'` keeps local dev / boot ergonomic.
+   * R2 W3.4 — Salt for `admin/export` pseudonymization of emails/user-IDs in
+   * CSV downloads. Rotate manually after breach (rotation invalidates link
+   * between pseudonym and identity in already-exported CSVs). Config value,
+   * NOT a feature flag. Fallback `'musaium-admin-export-v1'` for dev.
    */
   exportPseudonymSalt?: string;
   storage: {
@@ -281,11 +240,11 @@ export interface AppEnv {
   cache?: {
     enabled: boolean;
     url: string;
-    /** Optional password used to authenticate against Redis (overrides URL-embedded password). */
+    /** Overrides URL-embedded password. */
     password?: string;
     sessionTtlSeconds: number;
     listTtlSeconds: number;
-    /** Maximum entries per museum in low-data pack. Default 30. */
+    /** Max entries per museum in low-data pack. Default 30. */
     lowDataPackMaxEntries: number;
   };
   sentry?: {
@@ -307,52 +266,42 @@ export interface AppEnv {
     secretKey: string | undefined;
     host: string;
   };
-  /** Maximum chat messages a free-tier user can send per calendar day. */
+  /** Max chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
   /**
-   * Maximum chat sessions a `tier='free'` user can CREATE per UTC month.
-   * Drives the soft-paywall middleware (R1 / C6). Numeric config value, NOT
-   * a feature flag — disabling the paywall = revert R1, never set this to a
-   * very high number (per `feedback_no_feature_flags_prelaunch`).
-   * Falls back to 3 when unset / non-numeric (R1 §1 R13).
+   * Max chat sessions a `tier='free'` user can CREATE per UTC month. Drives
+   * the soft-paywall middleware (R1 / C6). Config value, NOT a feature flag —
+   * disabling the paywall = revert R1, never set this to a very high number
+   * (per `feedback_no_feature_flags_prelaunch`). Falls back to 3 when unset.
    */
   freeTierMonthlySessionLimit: number;
   /** TTL in seconds for Overpass API museum search cache entries. */
   overpassCacheTtlSeconds: number;
   /**
-   * Overpass API (OpenStreetMap) museum-search client configuration.
-   *
-   * Complements the legacy flat {@link overpassCacheTtlSeconds} with an explicit
-   * negative-cache window so empty / null responses can be memoised short-term
-   * without poisoning the positive-cache window. Used by
-   * `createCachedOverpassClient` in `src/shared/http/overpass.client.ts`.
+   * Overpass API client. Complements legacy {@link overpassCacheTtlSeconds}
+   * with explicit negative-cache window so empty/null responses can be
+   * memoised short-term without poisoning the positive-cache window.
    */
   overpass: {
-    /** Positive-cache TTL for non-empty Overpass responses (seconds). Default 24h. */
+    /** Positive-cache TTL for non-empty responses (seconds). Default 24h. */
     cacheTtlSeconds: number;
-    /** Negative-cache TTL for empty/failed Overpass responses (seconds). Default 1h. */
+    /** Negative-cache TTL for empty/failed responses (seconds). Default 1h. */
     negativeCacheTtlSeconds: number;
   };
   /**
-   * Retention window (in days) for chat sessions before the daily purge cron
-   * deletes their messages and flags the session via `purged_at`. Default 180
-   * (6 months) aligned with GDPR data-minimization policy.
+   * Retention window (days) for chat sessions before daily purge cron deletes
+   * messages and flags via `purged_at`. Default 180 (6 months) — GDPR
+   * data-minimization.
    */
   chatPurgeRetentionDays: number;
-  /**
-   * Opt-in weekly S3 orphan-sweep job for chat-images + chat-audios prefixes.
-   * Default `false` — flip on after the in-cron media purge ships to clean
-   * historical orphans, then leave it on as a long-term safety net.
-   */
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;
     cacheTtlSeconds: number;
     cacheMaxEntries: number;
     /**
-     * Circuit-breaker tuning around the Wikidata SPARQL/API client (C5.1).
-     * No `enabled` flag — rollback is `git revert` of the wiring, doctrine
-     * pré-launch V1 (`feedback_no_feature_flags_prelaunch`).
+     * Circuit-breaker tuning around Wikidata SPARQL/API client (C5.1).
+     * No `enabled` flag — rollback is `git revert` (pre-launch V1 doctrine).
      */
     breaker: {
       timeoutMs: number;
@@ -362,9 +311,8 @@ export interface AppEnv {
       capacity: number;
     };
     /**
-     * Soak window (ms) the breaker must stay OPEN before the cascade
-     * consults the local Wikidata dump (Step 5.1). Tuning value, not a
-     * switch — `0` means "consult immediately on OPEN".
+     * Soak window (ms) the breaker must stay OPEN before cascade consults the
+     * local Wikidata dump (Step 5.1). `0` = consult immediately on OPEN.
      */
     localDumpFallbackAfterMs: number;
   };
@@ -373,13 +321,11 @@ export interface AppEnv {
     userAgent: string;
   };
   /**
-   * C4.1 (2026-05-11) — KnowledgeRouter cascade tuning. TUNING-ONLY block — no
-   * `*_ENABLED` switch exists or may be added per the pré-launch V1 doctrine
-   * (see `feedback_no_feature_flags_prelaunch.md`). Defaults mirror
-   * `team-state/2026-05-11-c4-anti-hallucination/design.md` §D4.
+   * C4.1 (2026-05-11) — KnowledgeRouter cascade tuning. TUNING-ONLY — no
+   * `*_ENABLED` switch may be added (pre-launch V1 doctrine, ADR-039).
    */
   knowledgeRouter: {
-    /** Confidence cutoff in `[0..1]` above which WebSearch is skipped (default 0.7). */
+    /** Confidence cutoff in [0..1] above which WebSearch is skipped (default 0.7). */
     threshold: number;
     /** KB lookup per-leg budget in ms (default 200). */
     kbTimeoutMs: number;
@@ -389,26 +335,21 @@ export interface AppEnv {
     wsTimeoutMs: number;
   };
   /**
-   * Nominatim (OpenStreetMap) reverse-geocoding client configuration.
-   *
-   * Enforces the OSMF Nominatim Usage Policy:
-   *   - >= 1 s between outbound requests (global in-process rate limiter)
-   *   - Mandatory client-side caching (positive + negative TTLs)
-   *   - Valid User-Agent built from `appVersion` + `contactEmail`
-   *
-   * See `src/shared/http/nominatim.client.ts`.
+   * Nominatim (OSM) reverse-geocoding client. Enforces OSMF Nominatim Usage
+   * Policy: >= 1s between outbound requests, mandatory client-side caching,
+   * valid User-Agent built from `appVersion` + `contactEmail`.
    */
   nominatim: {
-    /** Contact email embedded in the Nominatim User-Agent header. */
+    /** Contact email embedded in Nominatim User-Agent. */
     contactEmail: string;
-    /** Positive-cache TTL for successful reverse-geocode results (seconds). Default 24h. */
+    /** Positive-cache TTL for successful results (seconds). Default 24h. */
     cacheTtlSeconds: number;
-    /** Negative-cache TTL for null/failed reverse-geocode lookups (seconds). Default 1h. */
+    /** Negative-cache TTL for null/failed lookups (seconds). Default 1h. */
     negativeCacheTtlSeconds: number;
-    /** Minimum interval (ms) between any two outbound Nominatim fetches. Default 1000ms per OSMF policy. */
+    /** Min interval (ms) between any two outbound fetches. Default 1000ms per OSMF policy. */
     minRequestIntervalMs: number;
   };
-  /** Image enrichment (Unsplash + Wikidata P18 + v2 sources) configuration. */
+  /** Image enrichment (Unsplash + Wikidata P18 + v2 sources). */
   imageEnrichment: {
     unsplashAccessKey?: string;
     cacheTtlMs: number;
@@ -417,78 +358,71 @@ export interface AppEnv {
     maxImagesPerResponse: number;
   };
   /**
-   * C3 (2026-05) — visual similarity engine (`/chat/compare`) configuration.
-   *
-   * The pipeline encodes an uploaded image to a fixed-dim embedding (default
-   * SigLIP base patch16-224 → 768d), searches `artwork_embeddings` via pgvector
-   * HNSW for top-N=20 nearest, enriches metadata via Wikidata, then fuses a
-   * weighted (`wVisual` × visualScore + `wMeta` × metadataScore) final score
-   * before truncating to top-K. See `team-state/2026-05-08-c3-image-comparative/design.md`.
+   * C3 (2026-05) — visual similarity engine (`/chat/compare`, ADR-037).
+   * Pipeline: encodes upload to fixed-dim embedding (default SigLIP base
+   * patch16-224 → 768d), searches `artwork_embeddings` via pgvector HNSW for
+   * top-N=20, enriches metadata via Wikidata, then fuses weighted
+   * (`wVisual` × visualScore + `wMeta` × metadataScore) final score before
+   * truncating to top-K.
    */
   visualSimilarity: {
     /**
-     * Selects the encoder adapter. `'siglip-onnx'` (default) is the self-host
-     * CPU path; `'replicate'` switches to the managed fallback. Both adapters
-     * implement `EmbeddingsPort` so the use case is provider-agnostic.
+     * `'siglip-onnx'` (default) = self-host CPU; `'replicate'` = managed
+     * fallback. Both implement `EmbeddingsPort` (provider-agnostic use case).
      */
     provider: EmbeddingsProvider;
     /**
-     * Filesystem path to the SigLIP ONNX bundle on disk. Relative paths resolve
-     * from `process.cwd()`. Default `./models/siglip-base-patch16-224.onnx`
-     * (downloaded at Docker build by `scripts/fetch-models.sh`). Ignored when
-     * `provider === 'replicate'`.
+     * Path to SigLIP ONNX bundle. Relative paths resolve from `process.cwd()`.
+     * Default `./models/siglip-base-patch16-224.onnx` (downloaded at Docker
+     * build by `scripts/fetch-models.sh`). Ignored when `provider === 'replicate'`.
      */
     siglipOnnxModelPath: string;
-    /** Replicate API token, only consumed when `provider === 'replicate'`. */
+    /** Only consumed when `provider === 'replicate'`. */
     replicateApiToken?: string;
     /**
-     * Embedding dimension. Default 768 matches SigLIP-base. Changing this
-     * REQUIRES re-ingesting `artwork_embeddings` and a new migration to widen
-     * the `halfvec(N)` column — do not flip casually.
+     * Embedding dimension. Default 768 matches SigLIP-base. Changing REQUIRES
+     * re-ingesting `artwork_embeddings` and a new migration to widen
+     * `halfvec(N)` column — do not flip casually.
      */
     embeddingsDim: number;
-    /** ANN search top-N candidates fetched from pgvector before re-ranking. Default 20. */
+    /** ANN top-N candidates fetched from pgvector before re-ranking. Default 20. */
     topN: number;
-    /** Default top-K returned to the client after fusion. Capped server-side. Default 5. */
+    /** Default top-K returned after fusion. Capped server-side. Default 5. */
     topKDefault: number;
-    /** Fusion weight applied to the visual cosine score. Defaults sum to 1 (0.7 + 0.3). */
+    /** Fusion weight applied to visual cosine score. Defaults sum to 1 (0.7 + 0.3). */
     wVisual: number;
-    /** Fusion weight applied to the metadata score (license + freshness). Default 0.3. */
+    /** Fusion weight applied to metadata score (license + freshness). Default 0.3. */
     wMeta: number;
     /**
-     * Visual score threshold below which the result is degraded to the
-     * `no_visual_neighbor` fallback path (no compare results, generic prompt).
-     * Default 0.4. Raise to bias precision; lower to bias recall.
+     * Visual score threshold below which result is degraded to
+     * `no_visual_neighbor` fallback (no compare results, generic prompt).
+     * Default 0.4. Raise for precision, lower for recall.
      */
     fallbackVisualThreshold: number;
     /**
-     * TTL (ms) for the in-memory + Redis embedding cache (queries dedup'd by
-     * SHA256 of the input bytes). Default 1h. Raise for stable catalogs.
+     * TTL (ms) for in-memory + Redis embedding cache (queries dedup'd by
+     * SHA256 of input bytes). Default 1h. Raise for stable catalogs.
      */
     embeddingsCacheTtlMs: number;
     /**
-     * Hard timeout (ms) on a single encoder call. On elapsed, the use case
-     * surfaces `EncoderUnavailableError` and the route returns the
-     * `encoder_unavailable` fallback. Default 3000ms (covers SigLIP-base CPU
-     * p99 with margin).
+     * Hard timeout (ms) on a single encoder call. On elapsed, use case surfaces
+     * `EncoderUnavailableError` and route returns `encoder_unavailable`
+     * fallback. Default 3000ms (covers SigLIP-base CPU p99 with margin).
      */
     encodeTimeoutMs: number;
   };
   /**
-   * Museum enrichment cache retention policy. Complements the refresh scan
-   * (which re-fetches rows older than its own threshold) by hard-deleting rows
-   * untouched for longer than `hardDeleteAfterDays`. See
-   * `PurgeDeadEnrichmentsUseCase`.
+   * Museum enrichment cache retention. Complements refresh scan (which
+   * re-fetches rows older than its own threshold) by hard-deleting rows
+   * untouched longer than `hardDeleteAfterDays`. See `PurgeDeadEnrichmentsUseCase`.
    */
   enrichment: {
     /**
-     * Age threshold (in days) past which an enrichment cache row is deleted
-     * outright. MUST be >= the refresh window so live rows are never purged.
-     * Default 180 (6 months).
+     * Age threshold (days) past which an enrichment cache row is deleted.
+     * MUST be >= refresh window so live rows are never purged. Default 180.
      */
     hardDeleteAfterDays: number;
   };
-  /** Web search multi-provider configuration. */
   webSearch: {
     tavilyApiKey?: string;
     googleCseApiKey?: string;
@@ -499,7 +433,6 @@ export interface AppEnv {
     cacheTtlSeconds: number;
     maxResults: number;
   };
-  /** Knowledge extraction pipeline configuration. */
   extraction: {
     queueConcurrency: number;
     queueRateLimit: number;
@@ -511,170 +444,151 @@ export interface AppEnv {
     reviewThreshold: number;
   };
   /**
-   * When false, the BullMQ extraction worker and the knowledge-extraction queue
-   * are NOT started. The chat module degrades to db-lookup-only (same fallback
-   * as the missing-OpenAI-key path), so no `new Redis(...)` ioredis client is
-   * created from the extraction path.
-   *
-   * Use in test environments without Redis (e.g. e2e harness). Default `true`
-   * so production behavior is unchanged when the env var is unset.
-   *
-   * NOTE: This flag no longer gates the museum-enrichment scheduler — see
-   * `museumEnrichmentSchedulerEnabled` for that.
+   * When false, BullMQ extraction worker and knowledge-extraction queue NOT
+   * started. Chat module degrades to db-lookup-only (same fallback as missing
+   * OpenAI key path), so no `new Redis(...)` ioredis client is created from
+   * extraction path. Use in test environments without Redis (e.g. e2e harness).
+   * Default `true`. Does NOT gate museum-enrichment scheduler — see
+   * `museumEnrichmentSchedulerEnabled`.
    */
   extractionWorkerEnabled: boolean;
   /**
-   * Gates the BullMQ producer that schedules `museum-enrichment` jobs (stale
-   * cache refresh + dead-row purge). The matching `MuseumEnrichmentWorker`
-   * consumer is defined but not yet instantiated at boot, so leaving the
-   * producer on causes Redis job accumulation. Default `false` until a worker
-   * is wired.
+   * Gates BullMQ producer that schedules `museum-enrichment` jobs (stale-cache
+   * refresh + dead-row purge). Matching `MuseumEnrichmentWorker` consumer is
+   * defined but not instantiated at boot, so leaving producer on causes Redis
+   * job accumulation. Default `false` until worker is wired.
    */
   museumEnrichmentSchedulerEnabled: boolean;
-  /** Redis connection configuration for BullMQ and other Redis-backed services. */
   redis: {
     host: string;
     port: number;
     password?: string;
-    /** Comma-separated host:port pairs for Redis Cluster mode. When set, ioredis Cluster client is used. */
+    /** Comma-separated host:port pairs for Redis Cluster mode (ioredis Cluster client). */
     clusterNodes: string | null;
   };
   /**
-   * Data-retention prune configuration (ADR-018 / ADR-019 / ADR-020).
-   * Controls the three daily housekeeping crons that hard-delete stale rows
-   * from support_tickets, reviews, and art_keywords.
+   * Data-retention prune (ADR-018/019/020). Controls three daily housekeeping
+   * crons that hard-delete stale rows from support_tickets, reviews, art_keywords.
    */
   retention: {
     /** BullMQ cron pattern shared by all three retention jobs. Default '15 3 * * *'. */
     cronPattern: string;
     /** Max rows deleted per chunked DELETE transaction. Default 1000. */
     batchLimit: number;
-    /** Days since updatedAt before a closed/resolved support ticket is purged. Default 365. */
+    /** Days since updatedAt before closed/resolved support ticket purged. Default 365. */
     supportTicketsDays: number;
-    /** Days since updatedAt before a rejected review is purged. Default 30. */
+    /** Days since updatedAt before rejected review purged. Default 30. */
     reviewsRejectedDays: number;
-    /** Days since updatedAt before a pending review is purged. Default 60. */
+    /** Days since updatedAt before pending review purged. Default 60. */
     reviewsPendingDays: number;
-    /** Days since updatedAt before a low-hit art keyword is purged. Default 90. */
+    /** Days since updatedAt before low-hit art keyword purged. Default 90. */
     artKeywordsDays: number;
-    /** hitCount threshold — art keywords with hitCount <= this are candidates. Default 1. */
+    /** hitCount <= this is candidate. Default 1. */
     artKeywordsHitThreshold: number;
   };
   /**
-   * Advanced guardrail V2 configuration. Each layer below self-activates from
-   * its own config presence (URL for the LLM Guard sidecar, budget>0 for the
-   * structured-output judge) — no master "candidate" flag (ADR-015 amendment
-   * 2026-05-14, ROADMAP_TEAM T1.7#2).
+   * Advanced guardrail V2. Each layer below self-activates from its own
+   * config presence (URL for sidecar, budget>0 for judge) — no master
+   * "candidate" flag (ADR-015 amendment 2026-05-14, T1.7#2).
    */
   guardrails: {
-    /** Base URL of the LLM Guard sidecar (e.g. http://llm-guard:8081). When set, the LLMGuardAdapter is wired. */
+    /** Base URL of LLM Guard sidecar. When set, LLMGuardAdapter is wired. */
     llmGuardUrl?: string;
-    /** Hard request timeout (ms) for advanced guardrail checks. Fail-CLOSED on elapsed. */
+    /** Hard request timeout (ms). Fail-CLOSED on elapsed. */
     timeoutMs: number;
     /** When true, never block — only log decisions (Phase A "observe" mode). */
     observeOnly: boolean;
     /**
-     * F4 (2026-04-30) — daily cost cap (in cents) for the structured-output
-     * judge layer. Default `500` ($5/day) activates the judge in parallel
-     * with the sidecar (defense-in-depth, ADR-015 amendment 2026-05-14 —
-     * dual-layer enabled). Budget gate disables the layer when `cap <= 0`.
-     * Tracked via the configured backend (memory per-process, or Redis
+     * F4 (2026-04-30) — daily cost cap (cents) for structured-output judge.
+     * Default `500` ($5/day) activates judge in parallel with sidecar
+     * (defense-in-depth, ADR-015 amendment). Budget gate disables layer when
+     * `cap <= 0`. Tracked via configured backend (memory per-process or Redis
      * shared-across-replicas).
      */
     budgetCentsPerDay: number;
     /**
-     * F4 — hard timeout (ms) for an individual LLM judge call. On elapsed, the
-     * judge returns null and the caller falls back to the keyword decision.
-     * p99 ≤ 500ms target.
+     * F4 — hard timeout (ms) per LLM judge call. On elapsed, judge returns null
+     * and caller falls back to keyword decision. p99 ≤ 500ms target.
      */
     judgeTimeoutMs: number;
     /**
-     * F4 — minimum message length (chars) below which the judge is NOT invoked.
-     * Short messages are decided by keyword-only signal — keeps the cost <15%
-     * of total chat traffic.
+     * F4 — min message length (chars) below which judge is NOT invoked. Short
+     * messages decided by keyword-only signal — keeps cost <15% of chat traffic.
      */
     judgeMinMessageLength: number;
     /**
-     * ADR-030 (2026-05-05) — backend store for the cumulative judge budget
-     * counter. 'memory' = per-process (legacy F4 behaviour); 'redis' = shared
-     * counter across replicas via SET INCRBY + TTL.
+     * ADR-030 (2026-05-05) — backend store for cumulative judge budget counter.
+     * 'memory' = per-process (legacy F4); 'redis' = shared via SET INCRBY + TTL.
      */
     budgetBackend: 'memory' | 'redis';
     /**
-     * 2026-05-12 — operational tunables for the LLM Guard sidecar circuit
-     * breaker (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
-     * These are NOT feature flags — the breaker is always-on per pré-launch
-     * V1 doctrine (`feedback_no_feature_flags_prelaunch`).
+     * 2026-05-12 — LLM Guard sidecar circuit breaker
+     * (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
+     * NOT a feature flag — always-on (pre-launch V1 doctrine).
      */
     circuitBreaker: {
-      /** Number of failures within `windowMs` that trip the breaker OPEN. */
+      /** Failures within `windowMs` that trip breaker OPEN. */
       failureThreshold: number;
-      /** Sliding-window length (ms) for the failure count. */
+      /** Sliding-window length (ms) for failure count. */
       windowMs: number;
-      /** Cooldown (ms) after which an OPEN breaker becomes HALF_OPEN. */
+      /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
       openDurationMs: number;
-      /** Max concurrent probe calls admitted while HALF_OPEN. */
+      /** Max concurrent probes admitted while HALF_OPEN. */
       halfOpenMaxProbes: number;
     };
     /**
      * 2026-05-12 (ADR-047) — concurrent /scan call cap per backend process.
-     * Prevents a surge from amplifying sidecar latency into a death spiral.
+     * Prevents surge amplifying sidecar latency into death spiral.
      * Overflow → fail-CLOSED (safety preserved).
      */
     maxInflight: number;
     /** Surge queue depth before overflow → fail-CLOSED. */
     queueMax: number;
     /**
-     * ADR-051 (2026-05-13) — Microsoft Presidio analyzer + anonymizer sidecar
-     * config. Adapter is implemented but NOT wired into the composition root
-     * pre-launch; these knobs are operational config awaiting Phase 1 shadow
-     * promotion.
+     * ADR-051 (2026-05-13) — Microsoft Presidio analyzer+anonymizer sidecar.
+     * Adapter implemented but NOT wired pre-launch; knobs await Phase 1
+     * shadow promotion.
      */
     presidio: {
-      /** Base URL of the Presidio service (e.g. http://presidio:3000). */
       baseUrl?: string;
       /** Hard request timeout (ms) for /analyze + /anonymize. Fail-CLOSED on elapsed. */
       timeoutMs: number;
     };
     /**
-     * ADR-051 (2026-05-13) — Llama Prompt Guard 2 86M (Meta) sidecar config.
-     * Same not-wired-yet status as Presidio above. Score threshold is the
-     * MALICIOUS probability above which the adapter returns a block verdict.
+     * ADR-051 (2026-05-13) — Llama Prompt Guard 2 86M (Meta) sidecar.
+     * Same not-wired-yet status as Presidio. Score threshold is MALICIOUS
+     * probability above which adapter returns block verdict.
      */
     llamaPromptGuard: {
-      /** Base URL of the Prompt Guard 2 sidecar (e.g. http://llama-prompt-guard:8082). */
       baseUrl?: string;
       /** Hard request timeout (ms) for /classify. Fail-CLOSED on elapsed. */
       timeoutMs: number;
-      /** MALICIOUS score threshold above which a block verdict is emitted. Default 0.8. */
+      /** MALICIOUS score threshold above which block verdict emitted. Default 0.8. */
       scoreThreshold: number;
     };
     /**
      * Chaos drill probability in [0, 1] consumed by `LLMGuardAdapter`. Each
-     * scan call samples a uniform random; if the result < `chaosRate`, the
-     * call is aborted BEFORE the fetch (exercise of the fail-CLOSED path).
-     * Production MUST be 0.
+     * scan samples uniform random; if < `chaosRate`, call aborted BEFORE fetch
+     * (exercise of fail-CLOSED path). Production MUST be 0.
      */
     chaosRate: number;
     /**
-     * 2026-05-13 — LLM cost circuit breaker tunables (perennial design §11 D9
-     * RE2). Distinct from the latency `LLMCircuitBreaker`: trips on cost
-     * SPIKES (DDoS / scraping abuse) and daily-cap breach. ALWAYS-ON, no
-     * `*_ENABLED` flag (pré-launch V1 doctrine).
+     * 2026-05-13 — LLM cost circuit breaker (perennial design §11 D9 RE2).
+     * Distinct from latency `LLMCircuitBreaker`: trips on cost SPIKES (DDoS /
+     * scraping abuse) and daily-cap breach. ALWAYS-ON (pre-launch V1 doctrine).
      */
     costCircuitBreaker: {
-      /** Cents-per-hour threshold above which the breaker trips OPEN. */
+      /** Cents-per-hour threshold above which breaker trips OPEN. */
       hourlyThresholdCents: number;
-      /** Cents-per-UTC-day cumulative cap above which the breaker trips OPEN. */
+      /** Cents-per-UTC-day cumulative cap above which breaker trips OPEN. */
       dailyBudgetCents: number;
-      /** Cooldown (ms) after which an OPEN breaker becomes HALF_OPEN. */
+      /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
       openDurationMs: number;
     };
     /**
-     * 2026-05-13 — per-tenant rate limiter tunables (perennial design §11
-     * D10 RE3). Primitive only — NOT wired V1 (single B2C tenant). Mounted
-     * Phase 2 (B2B onset). Token-bucket: bursts up to `capacity`, refill at
-     * `refillPerSecond` smoothly.
+     * 2026-05-13 — per-tenant rate limiter (perennial design §11 D10 RE3).
+     * Primitive only — NOT wired V1 (single B2C tenant). Mounted Phase 2 (B2B
+     * onset). Token-bucket: bursts up to `capacity`, refill at `refillPerSecond`.
      */
     tenantRateLimit: {
       /** Max tokens per bucket (burst capacity). */

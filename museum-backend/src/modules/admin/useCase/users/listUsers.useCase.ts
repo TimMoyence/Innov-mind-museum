@@ -4,11 +4,9 @@ import type { IAdminRepository } from '@modules/admin/domain/admin/admin.reposit
 import type { AdminUserDTO, ListUsersFilters } from '@modules/admin/domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Validates pagination, sanitizes search input, and delegates to the repository. */
 export class ListUsersUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Validates pagination, sanitizes search input, and retrieves a paginated user list. */
   async execute(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
     const { page, limit } = filters.pagination;
 

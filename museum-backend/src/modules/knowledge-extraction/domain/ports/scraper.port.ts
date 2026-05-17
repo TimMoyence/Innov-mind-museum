@@ -1,4 +1,3 @@
-/** Result of scraping a single URL. */
 export interface ScrapedPage {
   url: string;
   title: string;
@@ -6,8 +5,7 @@ export interface ScrapedPage {
   contentHash: string;
 }
 
-/** Port for HTML scraping adapters. */
 export interface ScraperPort {
-  /** Scrapes the given URL. Returns null if scraping fails or is disallowed. */
+  /** Returns null if scraping fails or is disallowed (SSRF policy). */
   scrape(url: string, signal?: AbortSignal): Promise<ScrapedPage | null>;
 }

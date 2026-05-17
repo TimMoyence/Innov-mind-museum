@@ -14,7 +14,6 @@ interface ClassifierModel {
   invoke(messages: unknown): Promise<{ content: unknown }>;
 }
 
-/** Builds the cheapest available model for binary classification. */
 const buildClassifierModel = (): ClassifierModel | null => {
   if (env.llm.openAiApiKey) {
     return new ChatOpenAI({
@@ -46,7 +45,6 @@ const buildClassifierModel = (): ClassifierModel | null => {
   return null;
 };
 
-/** Minimal LLM classifier that decides if a user message is art-related. */
 export class ArtTopicClassifier {
   private readonly model: ClassifierModel | null;
 
@@ -54,10 +52,7 @@ export class ArtTopicClassifier {
     this.model = buildClassifierModel();
   }
 
-  /**
-   * Returns true if the message is art/museum/culture-related.
-   * Fails-open (returns true) on any error — never blocks the user.
-   */
+  /** Fails-open (returns true) on any error — never blocks the user. */
   async isArtRelated(text: string): Promise<boolean> {
     if (!this.model) return true; // fail-open: no model configured
     try {

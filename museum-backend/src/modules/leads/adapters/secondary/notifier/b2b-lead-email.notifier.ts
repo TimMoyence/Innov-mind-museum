@@ -7,14 +7,13 @@ import type {
 } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
-/** Sends B2B-lead submissions to the configured B2B inbox via the email service (R4 §3.4). */
+/** R4 §3.4 — emails B2B leads to the configured inbox. */
 export class EmailB2bLeadNotifier implements B2bLeadNotifier {
   constructor(
     private readonly emailService: EmailService,
     private readonly b2bInboxEmail: string,
   ) {}
 
-  /** Sends one B2B-lead payload through the configured email provider. */
   async notify(payload: B2bLeadPayload): Promise<void> {
     const subject = `[Musaium B2B] ${payload.museum} — ${payload.role} ${payload.name}`.slice(
       0,
@@ -34,9 +33,8 @@ export class EmailB2bLeadNotifier implements B2bLeadNotifier {
   }
 }
 
-/** No-op notifier used when email delivery is not configured (local/dev fallback, R14). */
+/** R14 — local/dev fallback when email delivery is not configured. */
 export class NoopB2bLeadNotifier implements B2bLeadNotifier {
-  /** Logs B2B-lead submissions when email delivery is disabled. */
   notify(payload: B2bLeadPayload): Promise<void> {
     logger.warn('b2b_lead_notifier_noop', {
       requestId: payload.requestId,

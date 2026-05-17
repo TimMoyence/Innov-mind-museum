@@ -5,13 +5,12 @@ import type {
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
 
-/** Unsplash API client for searching artwork-related photos. Never throws from public methods. */
+/** Never throws — returns `[]` on any failure. */
 export class UnsplashClient implements ImageSourceClient {
   private readonly baseUrl = 'https://api.unsplash.com';
 
   constructor(private readonly accessKey: string) {}
 
-  /** Searches Unsplash for photos matching the query. Returns `[]` on any failure. */
   async searchPhotos(query: string, perPage = 5): Promise<ImageSourcePhoto[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => {

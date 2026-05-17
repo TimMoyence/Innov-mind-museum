@@ -1,6 +1,5 @@
 import type { ChatSessionIntent, ContentPreference } from '@modules/chat/domain/chat.types';
 
-/** Reusable session info shape shared across multiple chat HTTP contract types. */
 export interface SessionInfo {
   id: string;
   locale?: string | null;
@@ -9,18 +8,16 @@ export interface SessionInfo {
   museumName?: string | null;
   createdAt: string;
   updatedAt: string;
-  /** Session-level intent — drives prompt strategy and walk-mode UX. */
+  /** Drives prompt strategy + walk-mode UX. */
   intent: ChatSessionIntent;
 }
 
-/** Reusable pagination info shape shared across paginated chat HTTP responses. */
 export interface PaginationInfo {
   nextCursor: string | null;
   hasMore: boolean;
   limit: number;
 }
 
-/** Reusable chat message response shape used by PostMessageResponse and GetSessionResponse. */
 export interface ChatMessageResponse {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -34,16 +31,11 @@ export interface ChatMessageResponse {
   metadata?: Record<string, unknown> | null;
 }
 
-/** Visitor context sent with message requests. */
 export interface VisitorContext {
   location?: string;
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
-  /**
-   * User's content preferences (cached from /me by the frontend): which aspects
-   * of an artwork the visitor wants emphasized. Backend does not store per message;
-   * the source of truth is the users.content_preferences column.
-   */
+  /** Cached from /me by FE; source of truth = users.content_preferences col. */
   contentPreferences?: ContentPreference[];
 }

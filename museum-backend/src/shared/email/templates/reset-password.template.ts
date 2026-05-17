@@ -1,8 +1,5 @@
 import { renderEmailLayout } from './layout';
 
-/**
- *
- */
 export interface ResetPasswordEmailInput {
   resetUrl: string;
   locale?: 'fr' | 'en';
@@ -44,7 +41,6 @@ const COPY: Record<
   },
 };
 
-/** Build the HTML body for the password-reset email sent on forgot-password requests. */
 export function buildResetPasswordEmail(input: ResetPasswordEmailInput): string {
   const locale = input.locale ?? 'en';
   const copy = COPY[locale];

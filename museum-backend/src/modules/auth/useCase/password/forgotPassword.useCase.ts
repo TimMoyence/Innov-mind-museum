@@ -8,7 +8,6 @@ import { env } from '@src/config/env';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
 
-/** Orchestrates the "forgot password" flow: generates a reset token if the user exists. */
 export class ForgotPasswordUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
@@ -16,15 +15,7 @@ export class ForgotPasswordUseCase {
     private readonly frontendUrl?: string,
   ) {}
 
-  /**
-   * Generate a password-reset token for the given email.
-   * If an email service is configured, sends a reset link; otherwise logs the token (dev only).
-   * Returns `undefined` silently if the user does not exist (to prevent enumeration).
-   *
-   * @param email - The email to initiate reset for.
-   * @param locale - Email locale for building the reset URL (defaults to `'fr'`).
-   * @returns The reset token string, or `undefined` if the user was not found.
-   */
+  /** Returns `undefined` silently if user does not exist (prevents enumeration). */
   async execute(
     email: string,
     locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
@@ -37,8 +28,7 @@ export class ForgotPasswordUseCase {
     if (!user) return;
 
     // SEC-HARDENING (M16): require verified email before issuing reset token.
-    // Silently skip (keep generic response) to avoid enumerating verified
-    // vs. unverified accounts.
+    // Silently skip to avoid enumerating verified vs. unverified accounts.
     if (!user.email_verified) {
       logger.warn('forgot_password_unverified_skipped', { email: normalizedEmail });
       return;

@@ -16,9 +16,6 @@ import { AppError } from '@shared/errors/app.error';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const TOKEN_EXCHANGE_TIMEOUT_MS = 5_000;
 
-/**
- *
- */
 export interface GoogleTokenExchangeParams {
   code: string;
   clientId: string;
@@ -48,11 +45,7 @@ const GoogleTokenResponseSchema = z.object({
   token_type: z.string().optional(),
 });
 
-/**
- * Exchange the authorization code for an ID token. Returns just the
- * `id_token` since that is all SocialLoginUseCase needs. Throws an
- * AppError 401 on any error so the route handler can short-circuit.
- */
+/** Throws AppError 401 on any error so the route handler can short-circuit. */
 export async function exchangeGoogleAuthCode(params: GoogleTokenExchangeParams): Promise<string> {
   const body = new URLSearchParams({
     code: params.code,

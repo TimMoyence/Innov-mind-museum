@@ -7,9 +7,6 @@ export enum ExtractedContentStatus {
   LOW_CONFIDENCE = 'low_confidence',
 }
 
-/**
- *
- */
 @Entity({ name: 'extracted_content' })
 export class ExtractedContent {
   @PrimaryGeneratedColumn('uuid')

@@ -3,15 +3,12 @@ import Redis from 'ioredis';
 import type { CacheService, CacheValueSchema } from './cache.port';
 
 interface RedisCacheOptions {
-  /** Redis connection URL (e.g. redis://localhost:6379). */
   url: string;
-  /** Optional password — overrides any password embedded in the URL. */
+  /** Overrides URL-embedded password. */
   password?: string;
-  /** Default TTL in seconds when not specified per-call. */
   defaultTtlSeconds?: number;
 }
 
-/** Redis-backed cache service with JSON serialization and prefix-based deletion. */
 export class RedisCacheService implements CacheService {
   private readonly redis: Redis;
   private readonly defaultTtl: number;
@@ -26,28 +23,24 @@ export class RedisCacheService implements CacheService {
     this.defaultTtl = options.defaultTtlSeconds ?? 300;
   }
 
-  /** Opens the Redis connection. */
   async connect(): Promise<void> {
     await this.redis.connect();
   }
 
-  /** Gracefully closes the Redis connection. */
   async disconnect(): Promise<void> {
     await this.redis.quit();
   }
 
-  /** Alias of disconnect() — satisfies the CacheService.destroy shutdown contract. */
+  /** Alias of disconnect() — CacheService.destroy contract. */
   async destroy(): Promise<void> {
     await this.disconnect();
   }
 
-  /** Retrieves and deserializes a cached value by key, returning null on miss or error. */
   async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     try {
       const raw = await this.redis.get(key);
-      // Stryker equivalent mutant: removing this guard would still return null
-      // when raw is null because JSON.parse(null) -> JSON.parse('null') -> null,
-      // then `null as T` -> null. Same observable behavior.
+      // Stryker equivalent: removing guard still returns null because
+      // JSON.parse(null) -> JSON.parse('null') -> null -> null as T.
       // Stryker disable next-line ConditionalExpression
       if (raw === null) return null;
       const parsed = JSON.parse(raw) as unknown;
@@ -61,7 +54,6 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /** Serializes and stores a value with an optional TTL (defaults to the configured default). */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     const ttl = ttlSeconds ?? this.defaultTtl;
@@ -72,16 +64,14 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /** Deletes a single cached entry by key. */
   async del(key: string): Promise<void> {
     try {
       await this.redis.del(key);
     } catch {
-      // Cache delete failure is non-fatal
+      // non-fatal
     }
   }
 
-  /** Scans and deletes all keys matching a given prefix. */
   async delByPrefix(prefix: string): Promise<void> {
     try {
       let cursor = '0';
@@ -103,7 +93,6 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /** Atomically sets a key only if it does not already exist (SET NX), with a TTL. */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
   async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
     try {
@@ -115,13 +104,11 @@ export class RedisCacheService implements CacheService {
   }
 
   /**
-   * Atomic INCRBY + (re-)apply TTL via a Lua script so the increment and the
-   * expiry are committed together. Returns the new value or null on Redis
-   * failure (caller treats null as "skip update" — fail-soft).
-   *
-   * Lua is used instead of pipelined INCRBY+EXPIRE because pipelines are not
-   * atomic across replicas; a failure between the two commands would leave a
-   * key without a TTL (memory leak).
+   * Atomic INCRBY + (re-)apply TTL via Lua script — increment and expiry
+   * commit together. Returns new value or null on Redis failure (fail-soft).
+   * Lua instead of pipelined INCRBY+EXPIRE because pipelines aren't atomic
+   * across replicas; failure between commands would leave key without TTL
+   * (memory leak).
    */
   async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
     if (!Number.isFinite(amount) || amount === 0) return null;
@@ -137,7 +124,7 @@ export class RedisCacheService implements CacheService {
         String(Math.trunc(amount)),
         String(Math.trunc(ttlSeconds)),
       );
-      // Stryker disable next-line ConditionalExpression,StringLiteral: both mutants (`false ? r : Number(r)` and `typeof r === "" ? r : Number(r)`) collapse to always-Number(result) — observationally identical because Number(number)===number, Number(string-number)===that-number, and Number(non-numeric) returns NaN which Number.isFinite() rejects to null below. Manual verified equivalent: ioredis eval returns number|string|null|Buffer, and every input shape produces the same numeric|null outcome through either branch. Verified 2026-05-13.
+      // Stryker disable next-line ConditionalExpression,StringLiteral: both mutants collapse to always-Number(result) — equivalent because Number.isFinite filter below rejects NaN/non-numeric to null. Verified 2026-05-13.
       const numeric = typeof result === 'number' ? result : Number(result);
       return Number.isFinite(numeric) ? numeric : null;
     } catch {
@@ -145,7 +132,6 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /** Check if Redis is reachable. */
   async ping(): Promise<boolean> {
     try {
       await this.redis.ping();
@@ -155,16 +141,14 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /** Increments a member's score in a sorted set using ZINCRBY. */
   async zadd(key: string, member: string, increment: number): Promise<void> {
     try {
       await this.redis.zincrby(key, increment, member);
     } catch {
-      // Cache write failure is non-fatal
+      // non-fatal
     }
   }
 
-  /** Returns the top N members of a sorted set by score descending using ZREVRANGE. */
   async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {
     try {
       const raw = await this.redis.zrevrange(key, 0, n - 1, 'WITHSCORES');

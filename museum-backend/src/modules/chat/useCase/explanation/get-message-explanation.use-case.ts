@@ -17,40 +17,32 @@ import type { ChatRepository } from '@modules/chat/domain/session/chat.repositor
 import type { DataSource } from 'typeorm';
 
 /**
- * GDPR Article 22 + AI Act Art. 14 / Art. 50 — input payload for the
- * right-to-explanation use case.
- *
- * `userId` is mandatory: anonymous traffic cannot consume this endpoint.
- * Authorisation failures map to NotFoundError per privacy-by-design (we never
- * leak "this message exists but is not yours"; see `docs/GDPR_ART22_SCOPE.md`).
+ * GDPR Art 22 + AI Act Art 14/50 input. `userId` mandatory (no anon). Authz
+ * failures → NotFoundError (privacy-by-design, never leak "exists but not yours";
+ * see `docs/GDPR_ART22_SCOPE.md`).
  */
 export interface GetMessageExplanationInput {
   messageId: string;
   userId: number;
-  /** Raw locale candidate (BCP47 or two-letter). Falls back to EN. */
+  /** BCP47 or two-letter; falls back to EN. */
   locale?: string;
 }
 
-/** Decision branch returned by the explanation endpoint. */
 export type ExplanationDecision = 'allowed' | 'blocked';
 
-/** Recourse payload — what the user can do next. */
 export interface ExplanationRecourse {
   type: RecourseType;
   description: string;
   supportUrl: string | null;
 }
 
-/** Provider that emitted the decision (stamped by guardrail adapters per ADR-048). */
+/** Stamped by guardrail adapters per ADR-048. */
 export interface ExplanationProvidedBy {
   name: string;
   version: string;
 }
 
-/**
- * Response shape — mirrors `ExplanationResponseSchema` in `chat.contracts.ts`.
- * Co-located here so the use-case has zero dependency on the HTTP layer.
- */
+/** Mirrors `ExplanationResponseSchema` in chat.contracts.ts. */
 export interface MessageExplanation {
   decision: ExplanationDecision;
   category: ExplanationCategory | null;
@@ -62,11 +54,7 @@ export interface MessageExplanation {
   policyVersion: string;
 }
 
-/**
- * Error raised when the message id is unknown OR not owned by the caller.
- * Mapped to a 404 response by the controller — `docs/GDPR_ART22_SCOPE.md`
- * mandates security-through-obscurity for cross-tenant probes.
- */
+/** 404 — never differentiates "not found" from "not yours" (GDPR_ART22_SCOPE). */
 export class MessageNotFoundForExplanationError extends Error {
   constructor(messageId: string) {
     super(`Message ${messageId} not found or not owned by caller`);
@@ -78,18 +66,11 @@ const POLICY_VERSION_DEFAULT = 'default-v0';
 const SUPPORT_URL_DEFAULT: string | null = null;
 const AUDIT_CORRELATION_WINDOW_MS = 60_000;
 
-/** Subset of {@link ChatRepository} consumed by the explanation use-case. */
 export interface ExplanationChatRepository {
   getMessageById: ChatRepository['getMessageById'];
 }
 
-/**
- * Port for audit-log correlation. Returns the most recent guardrail-block (or
- * LLM-Guard breaker-open) row that matches the caller within
- * `AUDIT_CORRELATION_WINDOW_MS` of the decision time. Returns `null` when no
- * matching row exists — perfectly normal for `allowed` decisions and for
- * messages older than the audit rollout.
- */
+/** Returns most recent block row within `AUDIT_CORRELATION_WINDOW_MS`; null normal. */
 export interface ExplanationAuditCorrelator {
   findCorrelatedAuditRef(params: {
     userId: number;
@@ -98,35 +79,17 @@ export interface ExplanationAuditCorrelator {
   }): Promise<string | null>;
 }
 
-/** Dependencies of {@link GetMessageExplanationUseCase}. */
 export interface GetMessageExplanationDeps {
   repository: ExplanationChatRepository;
-  /**
-   * Optional support URL appended to the recourse payload when the recourse
-   * type is `support`. Sourced from `env` at composition time; left optional
-   * so unit tests do not need to mutate env state.
-   */
   supportUrl?: string | null;
-  /** Optional audit correlator. When absent, `auditRef` is always null. */
+  /** When absent, `auditRef` is always null. */
   auditCorrelator?: ExplanationAuditCorrelator;
 }
 
 /**
- * GDPR Article 22 right-to-explanation use case.
- *
- * Pure read-only orchestration:
- *   1. Load the message by id (TypeORM, including session+owner relations).
- *   2. Verify the caller owns the message — leak nothing on mismatch.
- *   3. If the message is a user message, return a stub (no audit-relevant
- *      content — the user is the author).
- *   4. Otherwise, derive the decision (`allowed` | `blocked`) + category from
- *      `message.metadata`, build the localised explanation, and best-effort
- *      correlate with `audit_logs` for the forensic `auditRef`.
- *
- * Never mutates state. Never throws on audit-correlation failures — those
- * degrade gracefully to `auditRef: null` so a hiccup in the audit pipeline
- * cannot break the explanation endpoint (UFR-013 honesty: we return an honest
- * "no correlation row found" rather than a 5xx).
+ * GDPR Art 22 right-to-explanation. Pure read; never mutates. Audit
+ * correlation degrades to `auditRef: null` on failure (UFR-013 honest
+ * "no correlation row" rather than 5xx).
  */
 export class GetMessageExplanationUseCase {
   private readonly repository: ExplanationChatRepository;
@@ -139,7 +102,6 @@ export class GetMessageExplanationUseCase {
     this.auditCorrelator = deps.auditCorrelator;
   }
 
-  /** Resolves the explanation for a single chat message. */
   async execute(input: GetMessageExplanationInput): Promise<MessageExplanation> {
     const locale = resolveLocale([input.locale]);
     const loaded = await this.repository.getMessageById(input.messageId);
@@ -150,7 +112,6 @@ export class GetMessageExplanationUseCase {
     const ownerId = loaded.session.user?.id;
     if (ownerId !== input.userId) {
       // Privacy-by-design: never differentiate "not found" from "not yours".
-      // See `docs/GDPR_ART22_SCOPE.md` § "Current implementation".
       throw new MessageNotFoundForExplanationError(input.messageId);
     }
 
@@ -158,10 +119,7 @@ export class GetMessageExplanationUseCase {
     const decisionAt = message.createdAt.toISOString();
 
     if (message.role === 'user') {
-      // The user authored this message — there is no automated decision to
-      // explain. Return a stub that points to self-retry as the obvious
-      // recourse (the user can simply rephrase). No audit lookup, no
-      // providedBy stamping.
+      // User-authored → no automated decision; stub points to self-retry.
       const strings = getExplanationStrings(locale, 'allowed');
       return {
         decision: 'allowed',
@@ -205,13 +163,12 @@ export class GetMessageExplanationUseCase {
     };
   }
 
-  /** Wraps the recourse strings + the optional support URL into the wire shape. */
   private buildRecourse(type: RecourseType, description: string): ExplanationRecourse {
     const supportUrl = type === 'support' ? this.supportUrl : null;
     return { type, description, supportUrl };
   }
 
-  /** Best-effort audit correlation; never throws into the use-case flow. */
+  /** Best-effort; never throws. */
   private async safeCorrelate(params: {
     userId: number;
     sessionId: string;
@@ -231,12 +188,10 @@ export class GetMessageExplanationUseCase {
   }
 }
 
-/** Extracts the decision from message metadata. Defaults to `allowed`. */
+/** Defaults to `allowed`. */
 function extractDecision(metadata: Record<string, unknown>): ExplanationDecision {
-  // The guardrail pipeline stamps `metadata.guardrailReason` (via
-  // `withPolicyCitation` → `buildGuardrailCitation`) on blocked assistant
-  // messages. We also accept the explicit `metadata.blocked` boolean for
-  // future-proofing.
+  // Guardrail pipeline stamps `metadata.guardrailReason` on blocked assistant
+  // messages; we also accept explicit `metadata.blocked` for future-proofing.
   if (typeof metadata.blocked === 'boolean') {
     return metadata.blocked ? 'blocked' : 'allowed';
   }
@@ -252,7 +207,6 @@ function extractDecision(metadata: Record<string, unknown>): ExplanationDecision
   return 'allowed';
 }
 
-/** Extracts the explanation category from message metadata, mapped through the public taxonomy. */
 function extractCategory(metadata: Record<string, unknown>): ExplanationCategory | null {
   const candidate =
     extractStringField(metadata, 'category') ??
@@ -262,7 +216,6 @@ function extractCategory(metadata: Record<string, unknown>): ExplanationCategory
   return mapToExplanationCategory(candidate);
 }
 
-/** Extracts the `providedBy` provider stamp, if any. */
 function extractProvidedBy(metadata: Record<string, unknown>): ExplanationProvidedBy | null {
   const raw = metadata.providedBy;
   if (raw === null || raw === undefined || typeof raw !== 'object') return null;
@@ -273,36 +226,21 @@ function extractProvidedBy(metadata: Record<string, unknown>): ExplanationProvid
   return { name, version };
 }
 
-/** Extracts the policy version, defaulting to `default-v0` (the ADR-048 Phase 0 anchor). */
+/** ADR-048 Phase 0 anchor. */
 function extractPolicyVersion(metadata: Record<string, unknown>): string {
   return extractStringField(metadata, 'policyVersion') ?? POLICY_VERSION_DEFAULT;
 }
 
-/** Safe string extraction from a JSONB-loaded record. */
 function extractStringField(source: Record<string, unknown>, key: string): string | undefined {
   const value = source[key];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Audit correlator implementation (TypeORM-backed)
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
- * TypeORM-backed audit correlator. Looks up the most recent
- * `AUDIT_GUARDRAIL_BLOCKED_INPUT` / `AUDIT_GUARDRAIL_BLOCKED_OUTPUT` /
- * `AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN` row whose `actor_id` matches the
- * caller within ±`AUDIT_CORRELATION_WINDOW_MS` of the decision time.
- *
- * Scope:
- *   - `actor_id = userId`
- *   - `target_id = sessionId` when present (guardrail rows stamp the session
- *     id as `target_id`; breaker-open rows do not, so we widen via `OR`)
- *   - `created_at BETWEEN decisionAt - window AND decisionAt + window`
- *
- * Ordered by `created_at DESC` to surface the most recent forensic anchor.
- * Returns `null` on any error or when no row matches — the explanation
- * endpoint MUST degrade gracefully.
+ * Looks up most recent block row within ±AUDIT_CORRELATION_WINDOW_MS where
+ * `actor_id = userId` AND (`target_id = sessionId` OR `target_id IS NULL`
+ * for breaker-open rows). Returns `null` on any error or no match — endpoint
+ * MUST degrade gracefully.
  */
 export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
   private readonly dataSource: DataSource;
@@ -311,10 +249,6 @@ export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
     this.dataSource = dataSource;
   }
 
-  /**
-   * Issues the correlation query. Pure read; returns `null` if no row matches
-   * or if the underlying query throws.
-   */
   async findCorrelatedAuditRef(params: {
     userId: number;
     sessionId: string;
@@ -356,12 +290,10 @@ export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
   }
 }
 
-/** Convenience factory used by the chat-module composition root. */
 export function createGetMessageExplanationUseCase(
   deps: GetMessageExplanationDeps,
 ): GetMessageExplanationUseCase {
   return new GetMessageExplanationUseCase(deps);
 }
 
-/** Re-exports for the controller / contracts layer. */
 export type { SupportedLocale };

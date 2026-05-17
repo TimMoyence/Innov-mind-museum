@@ -7,11 +7,9 @@ import type {
 } from '@modules/review/domain/ports/review-moderation-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
-/** Sends review-moderation outcomes to the review author via email. */
 export class EmailReviewModerationNotifier implements ReviewModerationNotifier {
   constructor(private readonly emailService: EmailService) {}
 
-  /** Sends one moderation notification through the configured email provider. */
   async notify(payload: ReviewModerationPayload): Promise<void> {
     if (payload.afterStatus === 'pending') return;
     const copy = REVIEW_LOCALES[payload.locale];
@@ -27,9 +25,8 @@ export class EmailReviewModerationNotifier implements ReviewModerationNotifier {
   }
 }
 
-/** No-op notifier for when email delivery is disabled (dev/local). */
+/** No-op notifier used when email delivery is disabled (dev/local). */
 export class NoopReviewModerationNotifier implements ReviewModerationNotifier {
-  /** Logs the moderation outcome without sending an email. */
   notify(payload: ReviewModerationPayload): Promise<void> {
     logger.warn('review_moderation_notifier_noop', {
       reviewId: payload.reviewId,

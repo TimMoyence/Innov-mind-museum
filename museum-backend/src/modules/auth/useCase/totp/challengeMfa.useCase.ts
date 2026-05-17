@@ -12,10 +12,8 @@ import type {
 } from '@modules/auth/useCase/session/authSession.service';
 
 /**
- * Step 2 of the MFA login flow: exchange `mfaSessionToken + 6-digit code` for
- * a real JWT pair. Failures map to 401 — the route also rate-limits attempts
- * by user id (see `mfa.route.ts`) so brute-forcing the 6-digit space is
- * bounded to 5 tries / 15 min.
+ * MFA login step 2: exchange `mfaSessionToken + 6-digit code` for JWT pair.
+ * Failures 401. Route rate-limits by user id (5 tries / 15 min) — see `mfa.route.ts`.
  */
 export class ChallengeMfaUseCase {
   constructor(
@@ -24,7 +22,6 @@ export class ChallengeMfaUseCase {
     private readonly authSessionService: AuthSessionService,
   ) {}
 
-  /** Validate the code, mark the secret used, and issue JWTs. */
   async execute(input: {
     mfaSessionToken: string;
     code: string;

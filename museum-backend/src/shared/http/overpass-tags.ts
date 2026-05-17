@@ -1,6 +1,5 @@
 import type { MuseumCategory, OverpassElement, OverpassMuseumResult } from './overpass-types';
 
-/** Extracts a formatted address string from OSM tags, or null if insufficient data. */
 export const extractAddress = (tags: Record<string, string> | undefined): string | null => {
   if (!tags) return null;
 
@@ -20,7 +19,6 @@ export const extractAddress = (tags: Record<string, string> | undefined): string
   return parts.length > 0 ? parts.join(', ') : null;
 };
 
-/** Maps an OSM `museum` tag value to a normalized category. */
 export const classifyMuseumType = (tags: Record<string, string> | undefined): MuseumCategory => {
   // Stryker disable next-line StringLiteral: the fallback value is unobservable — any non-matching string lowercases to a value that fails every includes() check below and yields 'general'.
   const raw = tags?.museum ?? tags?.subject ?? '';
@@ -47,11 +45,7 @@ export const classifyMuseumType = (tags: Record<string, string> | undefined): Mu
   return 'general';
 };
 
-/**
- * Returns the first non-empty tag value among the given keys, or undefined.
- * Used to pick between primary OSM tags (`website`, `phone`) and their
- * `contact:*` namespaced counterparts.
- */
+/** First non-empty tag value. Used to fallback `website`→`contact:website`, etc. */
 export const pickTag = (
   tags: Record<string, string> | undefined,
   keys: readonly string[],
@@ -64,15 +58,7 @@ export const pickTag = (
   return undefined;
 };
 
-/**
- * Extracts optional descriptive tags (opening_hours, website, phone, image,
- * description, wheelchair) from a raw OSM element.
- *
- * Description prefers any localized variant present (`description:<lang>`)
- * over the bare `description` tag. The function does NOT pick a specific
- * locale because Overpass returns raw tags here — the calling layer can
- * still surface the bare `description` for UI without re-querying.
- */
+/** Prefers any localized `description:<lang>` over bare `description` (locale-agnostic). */
 export const extractOptionalTags = (
   tags: Record<string, string> | undefined,
 ): Pick<
@@ -95,7 +81,6 @@ export const extractOptionalTags = (
   };
 };
 
-/** Parses a single Overpass element into a museum result, or null if unusable. */
 export const parseElement = (el: OverpassElement): OverpassMuseumResult | null => {
   const name = el.tags?.name;
   if (!name) return null;

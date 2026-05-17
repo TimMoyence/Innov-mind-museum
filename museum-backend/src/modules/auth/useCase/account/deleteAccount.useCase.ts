@@ -7,29 +7,20 @@ import type {
   LegacyImageKeyFetcher,
 } from '@shared/ports/image-cleanup.port';
 
-/**
- * Read-only projection of the chat repository needed by {@link DeleteAccountUseCase}.
- *
- * Narrow surface (one method) to keep auth ↔ chat coupling minimal and to let
- * tests inject a trivial mock without mounting the full TypeORM repository.
- */
+/** Narrow chat-repo projection — keeps auth↔chat coupling minimal, trivial to mock. */
 export interface LegacyImageRefLookup {
-  /** Return every `imageRef` tied to messages whose session belongs to the user. */
+  /** Every `imageRef` tied to messages whose session belongs to the user. */
   findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
 }
 
 /**
- * Minimal image-cleanup port consumed by {@link DeleteAccountUseCase}.
- *
- * Re-exported here for backwards compatibility with existing call sites.
- * The canonical definition lives in `@shared/ports/image-cleanup.port` so
- * the auth module no longer takes a static-type dependency on the chat
- * module's `ImageStorage` adapter; chat's `ImageStorage` still implements
- * this shape structurally.
+ * Re-exported for back-compat. Canonical def in `@shared/ports/image-cleanup.port`
+ * so auth no longer takes a static-type dep on chat's `ImageStorage` adapter
+ * (still implements this shape structurally).
  */
 export type ImageCleanupPort = SharedImageCleanupPort;
 
-/** Orchestrates permanent user account deletion (GDPR right-to-erasure). */
+/** GDPR right-to-erasure orchestrator. */
 export class DeleteAccountUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
@@ -38,15 +29,12 @@ export class DeleteAccountUseCase {
   ) {}
 
   /**
-   * Delete a user and all associated data (sessions, messages, tokens, social accounts, images).
+   * Ordering is load-bearing — object-storage cleanup MUST run BEFORE DB rows
+   * are wiped. `chat_sessions` are removed first in {@link IUserRepository.deleteUser}
+   * (CASCADE → `chat_messages`); after that the `imageRef` column is gone and
+   * the legacy lookup returns an empty list.
    *
-   * Ordering is load-bearing — object-storage cleanup MUST run BEFORE the DB
-   * rows are wiped. `chat_sessions` are removed first in {@link IUserRepository.deleteUser}
-   * and CASCADE through `chat_messages`; once that happens the `imageRef` column
-   * is gone and the legacy lookup returns an empty list.
-   *
-   * @param userId - The ID of the user to delete.
-   * @throws {AppError} 404 if the user does not exist.
+   * @throws {AppError} 404 if user does not exist.
    */
   async execute(userId: number): Promise<void> {
     const user = await this.userRepository.getUserById(userId);
@@ -58,9 +46,8 @@ export class DeleteAccountUseCase {
       });
     }
 
-    // 1. Delete stored images (RGPD compliance — SEC-23).
-    //    Run BEFORE DB cascade so `findLegacyImageRefsByUserId` can still resolve
-    //    refs for records written under the pre-user-scoped key format.
+    // 1. Delete stored images (RGPD — SEC-23). MUST run BEFORE DB cascade so
+    //    `findLegacyImageRefsByUserId` can still resolve refs for legacy keys.
     if (this.imageStorage) {
       try {
         const legacyFetcher = this.buildLegacyFetcher();
@@ -73,16 +60,12 @@ export class DeleteAccountUseCase {
       }
     }
 
-    // 2. Full RGPD deletion — transaction:
-    //    - chat_sessions (CASCADE → messages, artwork_matches, reports)
-    //    - users (CASCADE → refresh_tokens, social_accounts)
+    // 2. Full RGPD deletion — txn: chat_sessions (CASCADE → messages,
+    //    artwork_matches, reports), users (CASCADE → refresh_tokens, social_accounts).
     await this.userRepository.deleteUser(userId);
   }
 
-  /**
-   * Build the {@link LegacyImageKeyFetcher} passed to the storage adapter, or
-   * `undefined` when no lookup dependency is wired (tests, non-DB contexts).
-   */
+  /** `undefined` when no lookup dependency is wired (tests, non-DB contexts). */
   private buildLegacyFetcher(): LegacyImageKeyFetcher | undefined {
     const lookup = this.legacyImageRefLookup;
     if (!lookup) return undefined;

@@ -12,26 +12,16 @@ import {
   type SectionTask,
 } from '@modules/chat/useCase/llm/llm-section-runner';
 import {
-  createSummaryFallback,
-  type LlmSectionName,
-  type LlmSectionDefinition,
-} from '@modules/chat/useCase/llm/llm-sections';
-import {
   WALK_TOUR_GUIDE_SECTION,
   walkAssistantOutputSchema,
 } from '@modules/chat/useCase/llm/llm-sections/walk-tour-guide';
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
-import { parseAssistantResponse } from '@modules/chat/useCase/orchestration/assistant-response';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
-import { assembleResponse, buildStreamSuccessResponse } from './langchain-orchestrator-assembly';
-import {
-  buildFirstSectionMessages,
-  buildRunnerOptions,
-  createStreamTimeout,
-} from './langchain-orchestrator-stream';
+import { assembleResponse } from './langchain-orchestrator-assembly';
+import { buildRunnerOptions } from './langchain-orchestrator-stream';
 import {
   MISSING_LLM_KEY_FALLBACK,
   toModel,
@@ -50,23 +40,16 @@ import type {
   OrchestratorOutput,
   ChatOrchestrator,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
+import type { LlmSectionName, LlmSectionDefinition } from '@modules/chat/useCase/llm/llm-sections';
 
 /**
- * Serialises the parsed structured-output object so the existing
- * {@link parseAssistantResponse} legacy-JSON branch consumes it transparently.
- *
- * The schema produced by `mainAssistantOutputSchema` carries the visitor reply
- * in the `text` field, but the legacy parser keys off `answer`. Map `text →
- * answer`, drop the original `text` key to avoid carrying it forward as
- * unrecognised metadata, and stringify the result. `JSON.stringify` skips
- * `undefined` values, so optional metadata fields the model omitted stay
- * absent in the legacy parser's output (matches existing semantics).
+ * Maps schema `text → answer` for the legacy parseAssistantResponse JSON
+ * branch. Non-object input → raw string (provider regression fallback to
+ * plain-text path). JSON.stringify skips undefined → omitted optionals stay
+ * absent (preserves existing semantics).
  */
 const serializeStructuredOutput = (parsed: unknown): string => {
   if (typeof parsed !== 'object' || parsed === null) {
-    // Defensive: a structured-output adapter that returns a non-object
-    // (provider regression, schema misuse) — surface as raw string so the
-    // legacy parser falls through to the plain-text path.
     return typeof parsed === 'string' ? parsed : '';
   }
   const { text, ...metadata } = parsed as { text?: unknown } & Record<string, unknown>;
@@ -74,25 +57,21 @@ const serializeStructuredOutput = (parsed: unknown): string => {
   return JSON.stringify({ answer, ...metadata });
 };
 
-/** LangChain-based implementation of {@link ChatOrchestrator} that delegates to OpenAI, Google, or Deepseek models. */
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
   private readonly semaphore: Semaphore;
   private readonly circuitBreaker: LLMCircuitBreaker;
 
-  /** Creates a new LangChain orchestrator instance. \@param deps - Optional overrides for the LLM model and concurrency semaphore (useful for testing). */
   constructor(deps: LangChainChatOrchestratorDeps = {}) {
     this.model = deps.model === undefined ? toModel() : deps.model;
     this.semaphore = deps.semaphore ?? new Semaphore(Math.max(1, env.llm.maxConcurrent));
     this.circuitBreaker = deps.circuitBreaker ?? new LLMCircuitBreaker();
   }
 
-  /** Returns the circuit breaker's observable state for health-check endpoints. */
   getCircuitBreakerState(): ReturnType<LLMCircuitBreaker['getState']> {
     return this.circuitBreaker.getState();
   }
 
-  /** Invokes the LLM for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span. */
   private async invokeSection(input: InvokeSectionInput): Promise<string> {
     return await startSpan(
       {
@@ -106,31 +85,22 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         },
       },
       async () => {
-        // Structured-output fast path: when both the section ships a schema
-        // AND the model exposes `withStructuredOutput`, route through the
-        // adapter so OpenAI / Gemini honour `response_format: json_schema`
-        // and return a parsed object directly. Re-stringifies the object as
-        // `{ answer, ...metadata }` so the existing
-        // `parseAssistantResponse` legacy-JSON branch consumes it without
-        // change. Fixes gpt-4o-mini ignoring the `[META]` directive on the
-        // first turn (promptfoo C2-enrichment 2026-05).
+        // Structured-output fast path → OpenAI/Gemini `response_format: json_schema`.
+        // Re-stringified as `{answer,...metadata}` for legacy parser.
+        // Fixes gpt-4o-mini ignoring [META] on first turn (promptfoo 2026-05).
         if (input.outputSchema && input.model.withStructuredOutput) {
-          const structured = input.model.withStructuredOutput(
-            input.outputSchema.schema,
-            { name: input.outputSchema.name },
-          );
+          const structured = input.model.withStructuredOutput(input.outputSchema.schema, {
+            name: input.outputSchema.name,
+          });
           const parsed = await this.circuitBreaker.execute(() =>
             this.semaphore.use(
-              async () =>
-                await structured.invoke(input.sectionMessages, { signal: input.signal }),
+              async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
             ),
           );
           return serializeStructuredOutput(parsed);
         }
 
-        // Legacy text + [META] path — exercised by test fakes that don't
-        // implement `withStructuredOutput` and by providers that lack
-        // structured-output support.
+        // Legacy text + [META] — test fakes / providers without structured output.
         const result = await this.circuitBreaker.execute(() =>
           this.semaphore.use(
             async () => await input.model.invoke(input.sectionMessages, { signal: input.signal }),
@@ -141,36 +111,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     );
   }
 
-  /**
-   * Streams LLM output for a single section behind circuit-breaker + semaphore, wrapped in a Sentry span.
-   * Appends every chunk to `accumulator` so the caller can access partial content on error.
-   */
-  private async streamSection(
-    model: ChatModel,
-    sectionMessages: unknown,
-    signal: AbortSignal,
-    onChunk: (text: string) => void,
-    accumulator: { text: string },
-  ): Promise<string> {
-    return await startSpan({ name: 'llm.stream', op: 'ai.stream' }, async () => {
-      const stream = await model.stream(sectionMessages, { signal });
-      for await (const chunk of stream) {
-        const chunkText = toContentString(chunk.content);
-        if (chunkText) {
-          accumulator.text += chunkText;
-          onChunk(chunkText);
-        }
-      }
-      return accumulator.text;
-    });
-  }
-
-  /**
-   * Builds section-based prompts, invokes the LLM with retry/timeout logic, and assembles the final response.
-   *
-   * @param input - Conversation history, user text/image, locale, museum context, etc.
-   * @returns Generated text and metadata (citations, diagnostics).
-   */
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
     return await withLangfuseTrace('llm.orchestrate', input, () =>
       startSpan(
@@ -189,9 +129,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             return await this.generateWalk(input);
           }
 
-          // Banking-grade fast-fail: if the breaker is OPEN at orchestration entry,
-          // surface the CIRCUIT_BREAKER_OPEN 503 immediately so callers stop retrying
-          // and the synthetic per-section fallback can't mask a degraded provider.
+          // Breaker fast-fail at entry → surface 503; section fallback can't mask a degraded provider.
           if (this.circuitBreaker.state === 'OPEN') {
             throw new CircuitOpenError();
           }
@@ -222,13 +160,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             }),
           );
 
-          // (Section-level errors degrade gracefully via the fallback path in
-          // resolveSummary — see unit tests "fallback when section errors".
-          // The breaker fast-fail at orchestrator entry above is the only
-          // path that surfaces 503 to the caller for the LLM-provider-down
-          // contract; once the breaker is OPEN, individual failed sections
-          // never even start invoking the model.)
-
+          // Section errors degrade via resolveSummary fallback; only breaker fast-fail above surfaces 503.
           const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
           for (const result of sectionResults) {
             bySection.set(result.name as LlmSectionName, result);
@@ -247,7 +179,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     );
   }
 
-  /** Builds section tasks from the plan for use with the section runner. */
   private buildSectionTasks(
     model: ChatModel,
     prepared: ReturnType<typeof buildOrchestratorMessages>,
@@ -290,107 +221,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   }
 
   /**
-   * Runs `fn` behind the LLM circuit breaker and the per-request semaphore.
-   * Extracted into a single helper so call sites stay one nesting level shallow
-   * (sonarjs/no-nested-functions + max-nested-callbacks).
-   */
-  private async _executeGuarded<T>(fn: () => Promise<T>): Promise<T> {
-    return await this.circuitBreaker.execute(() => this.semaphore.use(fn));
-  }
-
-  /**
-   * Streams assistant response tokens via the onChunk callback while building the full response.
-   * Uses the same system prompt, sections, semaphore, and retry logic as generate().
-   *
-   * @param input - Conversation history, user text/image, locale, museum context, etc.
-   * @param onChunk - Called with each text token as it arrives from the LLM.
-   * @returns Generated text and metadata after the stream completes.
-   */
-  async generateStream(
-    input: OrchestratorInput,
-    onChunk: (text: string) => void,
-  ): Promise<OrchestratorOutput> {
-    return await withLangfuseTrace('llm.orchestrate.stream', input, () =>
-      startSpan(
-        {
-          name: 'llm.orchestrate.stream',
-          op: 'ai.orchestrate',
-          attributes: {
-            'llm.provider': env.llm.provider,
-            'llm.model': env.llm.model,
-            'llm.has_image': !!input.image,
-          },
-        },
-        async () => {
-          if (input.intent === 'walk') {
-            const walkResult = await this.generateWalk(input);
-            onChunk(walkResult.text);
-            return walkResult;
-          }
-
-          const prepared = buildOrchestratorMessages(input);
-          const { normalizedText, recentHistory, sectionPlan } = prepared;
-
-          const model = this.model;
-          if (!model) {
-            onChunk(MISSING_LLM_KEY_FALLBACK);
-            return {
-              text: MISSING_LLM_KEY_FALLBACK,
-              metadata: { citations: ['system:missing-llm-api-key'] },
-            };
-          }
-
-          const section = sectionPlan[0];
-          const sectionMessages = buildFirstSectionMessages(section, prepared, input);
-
-          const { controller, clearStreamTimeout } = createStreamTimeout(section.timeoutMs);
-          const accumulator = { text: '' };
-
-          try {
-            const rawContent = await this._executeGuarded(() =>
-              this.streamSection(model, sectionMessages, controller.signal, onChunk, accumulator),
-            );
-
-            clearStreamTimeout();
-            return buildStreamSuccessResponse(rawContent, input.requestId);
-          } catch (error) {
-            clearStreamTimeout();
-
-            logger.warn('llm_stream_error', {
-              requestId: input.requestId,
-              provider: env.llm.provider,
-              model: env.llm.model,
-              error: (error as Error).message,
-            });
-
-            // If we have partial content, try to parse what we have
-            if (accumulator.text.length > 0) {
-              const parsed = parseAssistantResponse(accumulator.text);
-              return { text: parsed.answer, metadata: parsed.metadata };
-            }
-
-            // Fallback
-            const fallbackText = createSummaryFallback({
-              history: recentHistory,
-              question: normalizedText,
-              location: input.context?.location,
-              locale: input.locale,
-              museumMode: input.museumMode,
-            });
-
-            return { text: fallbackText, metadata: {} };
-          }
-        },
-      ),
-    );
-  }
-
-  /**
-   * Dedicated orchestration path for intent='walk'. Injects WALK_TOUR_GUIDE_SECTION
-   * as an additional system message and uses LangChain withStructuredOutput to return
-   * a { answer, suggestions } object validated by walkAssistantOutputSchema.
-   *
-   * No section runner, no retry logic — exceptions propagate to the caller.
+   * intent='walk' — injects WALK_TOUR_GUIDE_SECTION as system msg + uses
+   * withStructuredOutput → walkAssistantOutputSchema. No section runner / retry —
+   * exceptions propagate.
    */
   private async generateWalk(input: OrchestratorInput): Promise<OrchestratorOutput> {
     const model = this.model;
@@ -402,9 +235,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       };
     }
 
-    // Guard: structured output is optional on the ChatModel port. Test fakes and
-    // older provider adapters may omit it. Fall back gracefully with a distinct
-    // citation marker so this case is observable in metadata.
+    // ChatModel.withStructuredOutput is optional (test fakes / older providers).
+    // Distinct citation marker keeps this observable in metadata.
     if (!model.withStructuredOutput) {
       logger.warn('llm_walk_no_structured_output', {
         requestId: input.requestId,
@@ -421,11 +253,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const prepared = buildOrchestratorMessages(input);
     const { systemPrompt, historyMessages, userMessage, sectionPlan } = prepared;
 
-    // Use the first section prompt (summary) as the base section prompt.
     const sectionPrompt = sectionPlan[0]?.prompt ?? '';
 
-    // Build message array mirroring buildSectionMessages layout but inserting
-    // WALK_TOUR_GUIDE_SECTION as a SystemMessage right before the user message.
     const messages = buildSectionMessages(
       systemPrompt,
       sectionPrompt,
@@ -442,9 +271,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       },
     );
 
-    // Insert WALK_TOUR_GUIDE_SECTION AFTER existing system instructions and BEFORE
-    // the user's HumanMessage. buildSectionMessages also appends a trailing reminder
-    // SystemMessage after the HumanMessage, so we cannot rely on length-1 here.
+    // Insert WALK_TOUR_GUIDE_SECTION AFTER system instructions, BEFORE HumanMessage.
+    // buildSectionMessages also appends a trailing reminder SystemMessage → can't use length-1.
     const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
     const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
     messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
@@ -456,8 +284,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     const result = await structured.invoke(messages, { signal });
 
-    // Schema applies `.default([])` so suggestions is always present at runtime.
-    // Zod 4 infers this correctly as required, so no defensive coalesce needed.
+    // Schema `.default([])` → always present (Zod 4 infers as required).
     const suggestions = result.suggestions;
 
     logger.info('llm_walk_orchestration_complete', {

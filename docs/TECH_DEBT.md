@@ -401,21 +401,28 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-16 — Dead code SSE residuals (4 fichiers, ~700 LOC) non purgés (ADR-001 retired 2026-05-03)
+### TD-16 — Dead code SSE residuals (ADR-001 retired 2026-05-03) — FERMÉ 2026-05-17
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent A §3.2 + UFR-013 commentaire mensonger)
-- **Référence code** :
+- [x] **Statut** : FERMÉ 2026-05-17 via kill cascade complet sur cleanup/comment-purge.
+- **Closed via** : commit suivant sur `cleanup/comment-purge` (kill cascade post-revue stream-buffer.ts décision = enterrer). Réf orchestrateur SHA dans message commit.
+- **Items fermés (cleanup/comment-purge 2026-05-17)** :
   ```
-  museum-backend/src/modules/chat/adapters/primary/http/helpers/sse.helpers.ts  # 51 LOC, jamais exporté en prod
-  museum-backend/src/modules/chat/useCase/orchestration/stream-buffer.ts        # 288 LOC, buffer SSE jamais consommé
-  museum-backend/src/modules/chat/adapters/primary/http/routes/chat-message.route.ts:101  # commentaire mensonger "moved to sse-dormant.ts" — fichier inexistant (UFR-013)
-  museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:394   # JSDoc référence ADR-001 supprimée
-  museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:426   # idem
+  ✅ sse.helpers.ts (38 LOC) — git rm + test associé (TD-21 closed en parallèle)
+  ✅ chat-message.route.ts L94 + L185 — commentaires mensongers sse-dormant.ts supprimés (UFR-013)
+  ✅ chat-message.service.ts:postMessageStream + awaitDrainWithTimeout helper supprimés
+  ✅ chat.service.ts:postMessageStream wrapper + eslint-disable supprimés
+  ✅ stream-buffer.ts (257 LOC) — git rm
+  ✅ tests/unit/chat/stream-buffer.test.ts (358 LOC) — git rm cascade
+  ✅ tests/unit/chat/chat-service-stream.test.ts (156 LOC) — git rm
+  ✅ chat-orchestrator.port.ts — generateStream supprimé de l'interface
+  ✅ langchain.orchestrator.ts — generateStream method + streamSection + _executeGuarded supprimés
+  ✅ langchain-orchestrator-stream.ts — buildFirstSectionMessages + createStreamTimeout supprimés (buildRunnerOptions conservé, utilisé par generate())
+  ✅ langchain-orchestrator-assembly.ts — buildStreamSuccessResponse supprimé
+  ✅ message-commit.ts — JSDoc "Shared by postMessage + postMessageStream" mise à jour
+  ✅ 14 fichiers de tests nettoyés des stubs generateStream/postMessageStream (chat-message-service, chat-service, chat-media-route, chat-phase-spans*, chat-pipeline-phase, langchain-orchestrator*, llm-judge*, walk-intent, orchestrator-walk-section, orchestrator-router-threading, e2e-app-harness, chat-citations, knowledge-router)
   ```
-- **Symptôme** : ADR-001 SSE streaming retired 2026-05-03 (décision produit ferme — voice path 100% sync), mais ~700 LOC SSE zombie code reste répartis sur 4 fichiers. Le commentaire `chat-message.route.ts:101` ment ("moved to sse-dormant.ts" — `find . -name "*sse-dormant*"` retourne vide). Doctrine UFR-016 *"il est mort on l'enterre"* + UFR-013 anti-mensonge.
+- **LOC removed total** : ~720L source + ~514L tests = ~1234L net.
 - **Sprint d'origine** : audit /team 360° chat backend 2026-05-16 (Agent A §3.2 + §3.4).
-- **Effort estimé** : **1 jour** (C9.16 dans ROADMAP_PRODUCT) — `git rm` 2 fichiers + sed JSDoc + delete commentaire mensonger. Risk LOW (0 caller hors `tests/`). Si revival future Walk V1 streaming, sera nouvelle impl LangChain v1 `.astream()` per-node, pas SSE legacy.
-- **Comment fermer** : exécuter C9.16 → ROADMAP_PRODUCT cocher en parallèle TD-16.
 
 ---
 
@@ -485,13 +492,10 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-21 — `museum-backend/src/modules/chat/adapters/primary/http/helpers/sse.helpers.ts` résiduel post-SSE-cull
+### TD-21 — `sse.helpers.ts` résiduel post-SSE-cull ✅ CLOSED 2026-05-17
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12 P1-5 follow-up)
-- **Référence code** : `museum-backend/src/modules/chat/adapters/primary/http/helpers/sse.helpers.ts` (45 LOC).
-- **Sprint d'origine** : audit-2026-05-12 P1-5 follow-up.
-- **Effort estimé** : 15 min (grep usage → delete or document).
-- **Comment fermer** : ADR-001 supprimée 2026-05-03, SSE pipeline @deprecated dans CLAUDE.md — vérifier que `sse.helpers.ts` est mort (grep call sites) ou justifier sa survie. Si zombie, `git rm` + check TD-16 closure synchronisée (chevauchement de scope).
+- [x] **Statut** : closed 2026-05-17 (cleanup/comment-purge branch).
+- **Résolution** : zero production importers confirmés (seul test `tests/unit/chat/sse-helpers.test.ts` consommait). `git rm` des deux fichiers (38 LOC source + test associé). TD-16 reste séparé (StreamBuffer dans `chat-message.service.ts:postMessageStream` toujours wired via `chat.service.ts`).
 
 ---
 

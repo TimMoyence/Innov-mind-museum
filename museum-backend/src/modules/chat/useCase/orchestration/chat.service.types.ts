@@ -1,6 +1,5 @@
 import type { ChatAssistantMetadata, ChatSessionIntent } from '@modules/chat/domain/chat.types';
 
-/** Returned after a new chat session is created. */
 export interface CreateSessionResult {
   id: string;
   locale?: string | null;
@@ -13,7 +12,6 @@ export interface CreateSessionResult {
   intent: ChatSessionIntent;
 }
 
-/** Returned after a user message is processed and the assistant replies. */
 export interface PostMessageResult {
   sessionId: string;
   message: {
@@ -27,7 +25,6 @@ export interface PostMessageResult {
   metadata: ChatAssistantMetadata;
 }
 
-/** Extends {@link PostMessageResult} with the speech-to-text transcription details. */
 export interface PostAudioMessageResult extends PostMessageResult {
   transcription: {
     text: string;
@@ -36,25 +33,21 @@ export interface PostAudioMessageResult extends PostMessageResult {
   };
 }
 
-/** Returned after attempting to delete an empty session. */
 export interface DeleteSessionResult {
   sessionId: string;
   deleted: boolean;
 }
 
-/** Returned after a user reports an assistant message. */
 export interface ReportMessageResult {
   messageId: string;
   reported: boolean;
 }
 
-/** Returned after a user sets or toggles feedback on an assistant message. */
 export interface FeedbackMessageResult {
   messageId: string;
   status: 'created' | 'updated' | 'removed';
 }
 
-/** A single session with its paginated messages. */
 export interface SessionResult {
   session: CreateSessionResult;
   messages: {
@@ -76,7 +69,6 @@ export interface SessionResult {
   };
 }
 
-/** Paginated list of sessions for a given user, each with a message preview. */
 export interface ListSessionsResult {
   sessions: {
     id: string;

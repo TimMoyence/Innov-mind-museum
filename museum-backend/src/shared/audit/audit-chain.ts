@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 
-/** Genesis prev_hash for the very first audit log row (64 hex zeros). */
+/** Genesis prev_hash for first audit log row (64 hex zeros). */
 export const AUDIT_CHAIN_GENESIS_HASH = '0'.repeat(64);
 
-/** Minimal row shape used by the hash chain. Deliberately decoupled from the TypeORM entity. */
+/** Hash chain row shape. Decoupled from TypeORM entity. */
 export interface AuditChainRow {
   id: string;
   actorId: number | null;
@@ -16,7 +16,7 @@ export interface AuditChainRow {
   rowHash: string;
 }
 
-/** Fields needed to compute a row_hash (prevHash provided separately). */
+/** Fields needed to compute row_hash (prevHash separate). */
 export interface AuditChainInput {
   id: string;
   actorId: number | null;
@@ -28,16 +28,13 @@ export interface AuditChainInput {
 }
 
 /**
- * Computes the canonical SHA-256 hash for an audit row.
+ * Canonical SHA-256 hash for an audit row.
  *
  * Layout (pipe-separated, UTF-8):
  *   id | actor_id | action | target_type | target_id | metadata_json | created_at_iso | prev_hash
  *
- * Null/undefined fields serialize as empty string. Metadata is JSON-stringified
- * with sorted keys so object key order doesn't break the chain.
- *
- * @param input Row fields.
- * @param prevHash Hash of the immediately preceding row (or genesis for row #1).
+ * Null/undefined → empty string. Metadata JSON-stringified with sorted keys
+ * so object key order doesn't break the chain.
  */
 export function computeRowHash(input: AuditChainInput, prevHash: string): string {
   const metadataJson =
@@ -62,23 +59,18 @@ export function computeRowHash(input: AuditChainInput, prevHash: string): string
   return createHash('sha256').update(payload).digest('hex');
 }
 
-/** Result of verifyAuditChain: indicates overall validity + first break index. */
 export interface AuditChainVerifyResult {
   valid: boolean;
-  /** Zero-based index of the first broken row; null when chain intact. */
+  /** Zero-based index of first broken row; null when chain intact. */
   firstBreakAt: number | null;
-  /** Row id at the break, if any. */
   firstBreakId: string | null;
   /** Total rows walked. */
   checked: number;
 }
 
 /**
- * Walks the given rows (oldest → newest) and verifies each row_hash + prev_hash link.
- *
- * Returns early on first mismatch. An empty input array is considered valid.
- *
- * @param rows Rows in creation order.
+ * Walks rows (oldest → newest), verifies each row_hash + prev_hash link.
+ * Returns early on first mismatch. Empty input is valid.
  */
 export function verifyAuditChain(rows: readonly AuditChainRow[]): AuditChainVerifyResult {
   let expectedPrev = AUDIT_CHAIN_GENESIS_HASH;

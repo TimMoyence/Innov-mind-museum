@@ -5,21 +5,13 @@ import type {
 import type { ExtractedContentRepoPort } from '@modules/knowledge-extraction/domain/ports/extracted-content-repo.port';
 import type { Repository } from 'typeorm';
 
-/**
- *
- */
 export class TypeOrmExtractedContentRepo implements ExtractedContentRepoPort {
   constructor(private readonly repo: Repository<ExtractedContent>) {}
 
-  /** Finds extracted content by its source URL. */
   async findByUrl(url: string): Promise<ExtractedContent | null> {
     return await this.repo.findOne({ where: { url } });
   }
 
-  /**
-   *
-   */
-  /** Inserts or updates extracted content by URL. */
   async upsert(data: {
     url: string;
     title: string;
@@ -39,10 +31,6 @@ export class TypeOrmExtractedContentRepo implements ExtractedContentRepoPort {
     return await this.repo.save(this.repo.create(data));
   }
 
-  /**
-   *
-   */
-  /** Updates the processing status of an extracted content entry. */
   async updateStatus(url: string, status: ExtractedContentStatus): Promise<void> {
     await this.repo.update({ url }, { status });
   }

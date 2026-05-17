@@ -15,13 +15,8 @@ import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestr
 import type { ResolvedLocation } from '@modules/chat/useCase/location-resolver';
 
 /**
- * Applies the prompt-injection guardrail to a free-text context field (e.g. `location`).
- * If the value fails the guardrail (insult or injection pattern), the entire block
- * is dropped rather than included — preventing semantic injection via context fields
- * that bypass the user-message guardrail (audit finding M4).
- *
- * @param raw - Raw user-controlled context value, or undefined.
- * @returns Sanitized value safe to inject, or null if the value was blocked/absent.
+ * SEC — audit M4: drop entire block on guardrail fail (prevents semantic
+ * injection via context fields that bypass user-message guardrail).
  */
 const safeContextValue = (raw: string | undefined): string | null => {
   if (!raw) return null;
@@ -30,13 +25,7 @@ const safeContextValue = (raw: string | undefined): string | null => {
   return sanitizePromptInput(raw);
 };
 
-/**
- *
- */
 export type ConversationPhase = 'greeting' | 'active' | 'deep';
-/**
- *
- */
 export type ChatModelMessage = HumanMessage | AIMessage | SystemMessage;
 
 export const deriveConversationPhase = (historyLength: number): ConversationPhase => {
@@ -45,7 +34,6 @@ export const deriveConversationPhase = (historyLength: number): ConversationPhas
   return 'deep';
 };
 
-/** Appends conversational rules for short/ambiguous visitor inputs to the prompt parts array. */
 const appendConversationalRules = (parts: string[]): void => {
   parts.push(
     'CONVERSATIONAL RULES — when the visitor sends a short or ambiguous input:',
@@ -144,7 +132,6 @@ export const buildSystemPrompt = (
   return parts.join(' ');
 };
 
-/** All derived values needed by the orchestrator for a single LLM request. */
 interface OrchestratorPrepared {
   normalizedText: string;
   recentHistory: ChatMessage[];
@@ -158,16 +145,9 @@ interface OrchestratorPrepared {
   sectionPlan: ReturnType<typeof createLlmSectionPlan>;
 }
 
-/**
- * Formats nearby museums into a concise list for prompt injection.
- */
 const formatNearbyMuseumsList = (nearbyMuseums: ResolvedLocation['nearbyMuseums']): string =>
   nearbyMuseums.map((m) => `${m.name} (${(m.distance / 1000).toFixed(1)}km)`).join(', ');
 
-/**
- * Builds the `<visitor_context>` line injected into the user message based on
- * the resolved location (preferred) or the raw location string (fallback).
- */
 const buildVisitorContextLine = (input: OrchestratorInput): string => {
   const rl = input.resolvedLocation;
   if (!rl) {
@@ -180,9 +160,8 @@ const buildVisitorContextLine = (input: OrchestratorInput): string => {
     return `<visitor_context>The visitor is currently inside or very near: ${rl.nearbyMuseums[0].name}. Any artwork photo is most likely from this museum's collection.</visitor_context>`;
   }
   if (rl.reverseGeocodeCoarse) {
-    // GDPR: only the coarse (city + country) value is ever shipped to the
-    // third-party LLM. The full street-level `rl.reverseGeocode` stays inside
-    // the backend for analytics/audit. See location-resolver.ts.
+    // GDPR — only coarse (city+country) ever ships to LLM. Full street-level
+    // stays backend-only for analytics/audit (see location-resolver.ts).
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
     const nearbySuffix = nearbyList ? ` Nearby museums: ${nearbyList}.` : '';
     return `<visitor_context>The visitor is outdoors in: ${rl.reverseGeocodeCoarse}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
@@ -194,11 +173,6 @@ const buildVisitorContextLine = (input: OrchestratorInput): string => {
   return '';
 };
 
-/**
- * Derives all shared values from an OrchestratorInput: normalised text,
- * recent history window, system prompt, LangChain history/user messages,
- * and the LLM section plan.
- */
 export const buildOrchestratorMessages = (input: OrchestratorInput): OrchestratorPrepared => {
   const normalizedText = (input.text ?? '').trim();
   const recentHistory = applyHistoryWindow(input.history, env.llm.maxHistoryMessages);
@@ -271,52 +245,24 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
   };
 };
 
-/**
- * Escapes XML special characters so untrusted content cannot terminate the
- * `<untrusted_content>` wrapper or open a new tag (V12 W5 §3.1 — indirect
- * injection defense). Order matters: `&` first, then `<` and `>`.
- */
+/** SEC V12 W5 §3.1 — order matters: `&` first, then `<` and `>`. */
 const escapeForXml = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
- * Wraps externally-sourced content (Brave search, Wikidata, OCR, third-party
- * KB) in an `<untrusted_content>` XML envelope so the LLM treats it as data,
- * not as instructions. Defends against OWASP LLM01 indirect injection.
- *
- * @param source - Stable label identifying the data source (`web_search`,
- *                 `knowledge_base`, `local_knowledge`, ...). Hardcoded by the
- *                 caller, never user-derived, so does not require escaping.
- * @param content - Raw text from the external source. XML-escaped before
- *                  wrapping so it cannot break out of the envelope.
+ * SEC OWASP LLM01 — `<untrusted_content>` envelope for indirect injection.
+ * `source` MUST be hardcoded by caller (never user-derived → no escaping).
+ * `content` XML-escaped to prevent envelope break-out.
  */
 const wrapUntrusted = (source: string, content: string): string =>
   `<untrusted_content source="${source}">\n${escapeForXml(content)}\n</untrusted_content>`;
 
 /**
- * Assembles the full message array for a single LLM section call:
- * system prompt, optional Spotlighting envelope, section prompt, optional
- * memory/redirect blocks, conversation history, user message, and
- * anti-injection reminder.
- *
- * External-content blocks (`localKnowledgeBlock`, `knowledgeBaseBlock`,
- * `webSearchBlock`) are wrapped with `<untrusted_content>` per V12 W5 §3.1.
- * `userMemoryBlock` is NOT wrapped — sourced from our own DB / past
- * conversations after guardrail checks; treated as trusted derived data.
- *
- * C4 / T3.4 — When `facts.length > 0` AND `source !== 'none'`, the
- * `buildContextSection` Spotlighting envelope (T2.3) is injected as the
- * **second** SystemMessage of the array, immediately after the main system
- * prompt and BEFORE the section prompt. This placement preserves the
- * `[END OF SYSTEM INSTRUCTIONS]` boundary at the end of the first
- * SystemMessage (CLAUDE.md AI Safety §2) and surfaces the grounded facts to
- * the LLM as authoritative DATA before any user-derived content is rendered.
- *
- * The nonce is generated ONCE per `buildSectionMessages` call via
- * `generateNonce()` and threaded into both the BEGIN and END markers of the
- * envelope. When no facts are supplied (empty array or `source === 'none'`),
- * NO envelope is emitted and `generateNonce()` is NOT called — avoiding both
- * prompt-token waste and unnecessary entropy consumption.
+ * C4 T3.4 — Spotlighting envelope as 2nd SystemMessage when facts present
+ * (preserves `[END OF SYSTEM INSTRUCTIONS]` boundary on 1st). Nonce generated
+ * ONCE per call only when envelope needed (entropy + token frugality).
+ * `userMemoryBlock` NOT wrapped — own-DB derived data; external blocks
+ * (local_knowledge/knowledge_base/web_search) wrapped per V12 W5 §3.1.
  */
 export const buildSectionMessages = (
   systemPrompt: string,
@@ -328,17 +274,9 @@ export const buildSectionMessages = (
     knowledgeBaseBlock?: string;
     webSearchBlock?: string;
     localKnowledgeBlock?: string;
-    /**
-     * Verified fact strings produced by `KnowledgeRouter.resolve()` (T3.2).
-     * Wrapped in the Spotlighting datamarking envelope when non-empty and
-     * `source !== 'none'`. Each fact is rendered verbatim — sanitisation
-     * MUST happen upstream.
-     */
+    /** Verbatim — sanitisation MUST happen upstream. */
     facts?: readonly string[];
-    /**
-     * Provenance label propagated from `KnowledgeRouterResult.source`.
-     * `'none'` short-circuits the envelope (envelope NOT emitted).
-     */
+    /** `'none'` short-circuits envelope. */
     source?: SpotlightingSource;
   },
 ): ChatModelMessage[] => {
@@ -352,13 +290,7 @@ export const buildSectionMessages = (
   } = options ?? {};
   const messages: ChatModelMessage[] = [new SystemMessage(systemPrompt)];
 
-  // C4 / T3.4 — Spotlighting envelope as the 2nd SystemMessage (when facts
-  // are grounded). Inject BEFORE the section prompt so the envelope sits in
-  // the system-instruction stack adjacent to the main prompt, with the
-  // [END OF SYSTEM INSTRUCTIONS] boundary still terminating the first
-  // SystemMessage (CLAUDE.md AI Safety §2). `generateNonce()` is called
-  // exactly once per invocation when the envelope is needed; otherwise it
-  // is skipped to avoid wasting entropy.
+  // C4 T3.4 — see fn docstring; envelope before section prompt.
   if (facts && facts.length > 0 && source && source !== 'none') {
     const nonce = generateNonce();
     const envelope = buildContextSection(Array.from(facts), source, nonce);
@@ -373,7 +305,7 @@ export const buildSectionMessages = (
     messages.push(new SystemMessage(userMemoryBlock));
   }
 
-  // Local knowledge (verified DB data) has highest enrichment priority — placed before Wikidata KB
+  // Local DB has highest enrichment priority (before Wikidata KB).
   if (localKnowledgeBlock) {
     messages.push(new SystemMessage(wrapUntrusted('local_knowledge', localKnowledgeBlock)));
   }
@@ -396,7 +328,6 @@ export const buildSectionMessages = (
   return messages;
 };
 
-/** Converts LangChain message content (string, array, object) to a plain string. */
 export const toContentString = (content: unknown): string => {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {
@@ -420,7 +351,7 @@ export const toContentString = (content: unknown): string => {
     try {
       return JSON.stringify(content);
     } catch {
-      // Object that can't be JSON-stringified — extract toString if available
+      // Non-JSON-stringifiable — extract toString if available
       const toStr = (content as { toString?: () => string }).toString;
       if (typeof toStr === 'function' && toStr !== Object.prototype.toString) {
         return toStr.call(content);
@@ -435,7 +366,6 @@ export const toContentString = (content: unknown): string => {
   return '';
 };
 
-/** Estimates the byte size of a message array for diagnostics/logging. */
 export const estimatePayloadBytes = (messages: ChatModelMessage[]): number => {
   const serialized = messages
     .map((message) => {

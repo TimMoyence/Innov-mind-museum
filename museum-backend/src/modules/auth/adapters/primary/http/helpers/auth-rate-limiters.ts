@@ -23,11 +23,9 @@ export const loginLimiter: RequestHandler = createRateLimitMiddleware({
 });
 
 /**
- * /login — per-account bucket sitting in front of {@link loginLimiter}. Catches
- * CGNAT bypass: when many users share an IP, the IP bucket is too coarse to
- * detect "one account being hammered from dozens of distinct IPs". Returns 429
- * before the password compare so the response shape doesn't leak which
- * accounts exist (UFR — keep enumeration oracle closed).
+ * /login per-account bucket. Catches CGNAT bypass (one account hammered from
+ * dozens of distinct IPs). Returns 429 BEFORE password compare so response
+ * doesn't leak which accounts exist (UFR — enumeration oracle closed).
  */
 export const loginByAccountLimiter: RequestHandler = createRateLimitMiddleware({
   limit: toPositiveInt(process.env.AUTH_LOGIN_ACCOUNT_RATE_LIMIT, 20),
@@ -42,10 +40,9 @@ export const loginByAccountLimiter: RequestHandler = createRateLimitMiddleware({
 });
 
 /**
- * F1 — /refresh limiter keyed by IP+familyId. familyId is decoded best-effort
- * from the JWT body without verifying the signature (verification happens
- * later in the handler). Falls back to IP-only when the token is malformed so
- * a parse failure cannot bypass the limit.
+ * F1 — /refresh keyed by IP+familyId. familyId decoded best-effort from JWT
+ * body (verification later in handler). Falls back to IP-only on malformed
+ * token so a parse failure cannot bypass the limit.
  */
 export const refreshLimiter: RequestHandler = createRateLimitMiddleware({
   limit: toPositiveInt(process.env.AUTH_REFRESH_RATE_LIMIT, 30),

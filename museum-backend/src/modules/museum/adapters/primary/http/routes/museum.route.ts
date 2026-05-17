@@ -33,7 +33,6 @@ import type { CacheService } from '@shared/cache/cache.port';
 /** Shared 400 message — keeps sonarjs/no-duplicate-string happy. */
 const INVALID_MUSEUM_ID = 'Invalid museum ID';
 
-/** Handler: GET /api/museums/directory — public directory of active museums. */
 const handleGetDirectory = async (_req: Request, res: Response) => {
   const museums = await listMuseumsUseCase.execute({ activeOnly: true });
   const directory: MuseumDirectoryDTO[] = museums.map((m) => ({
@@ -49,7 +48,6 @@ const handleGetDirectory = async (_req: Request, res: Response) => {
   res.json({ museums: directory });
 };
 
-/** Creates the handler for GET /api/museums/search. */
 const buildHandleSearch = (searchMuseumsUseCase: ReturnType<typeof buildSearchMuseumsUseCase>) => {
   return async (_req: Request, res: Response) => {
     const { lat, lng, radius, q, bbox } = res.locals.validatedQuery as {
@@ -76,7 +74,6 @@ const buildHandleSearch = (searchMuseumsUseCase: ReturnType<typeof buildSearchMu
   };
 };
 
-/** Handler: POST /api/museums — create a museum (admin only). */
 const handleCreateMuseum = async (req: Request, res: Response) => {
   const { name, slug, address, description, config, museumType } = req.body as {
     name: string;
@@ -109,13 +106,11 @@ const handleCreateMuseum = async (req: Request, res: Response) => {
   res.status(201).json({ museum });
 };
 
-/** Handler: GET /api/museums — list all museums (admin/moderator). */
 const handleListMuseums = async (_req: Request, res: Response) => {
   const museums = await listMuseumsUseCase.execute();
   res.json({ museums });
 };
 
-/** Handler: GET /api/museums/:idOrSlug — get museum by id or slug. */
 const handleGetMuseum = async (req: Request, res: Response) => {
   const idOrSlug = parseStringParam(req, 'idOrSlug');
   if (!idOrSlug) throw badRequest('idOrSlug param is required');
@@ -123,7 +118,7 @@ const handleGetMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
-/** Parses numeric `:id` param or throws 400. Shared by enrichment handlers. */
+/** Throws 400 if missing/NaN/≤0. */
 const parseMuseumIdParam = (raw: string | undefined): number => {
   if (!raw) throw badRequest(INVALID_MUSEUM_ID);
   const id = Number.parseInt(raw, 10);
@@ -131,7 +126,6 @@ const parseMuseumIdParam = (raw: string | undefined): number => {
   return id;
 };
 
-/** Creates the handler for GET /api/museums/:id/enrichment. */
 const buildHandleGetEnrichment = (useCase: EnrichMuseumUseCase) => {
   return async (req: Request, res: Response) => {
     const museumId = parseMuseumIdParam(parseStringParam(req, 'id'));
@@ -141,7 +135,6 @@ const buildHandleGetEnrichment = (useCase: EnrichMuseumUseCase) => {
   };
 };
 
-/** Creates the handler for GET /api/museums/:id/enrichment/status. */
 const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
   return async (req: Request, res: Response) => {
     const museumId = parseMuseumIdParam(parseStringParam(req, 'id'));
@@ -151,7 +144,6 @@ const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
   };
 };
 
-/** Handler: PUT /api/museums/:id — update museum (admin only). */
 const handleUpdateMuseum = async (req: Request, res: Response) => {
   const rawId = parseStringParam(req, 'id');
   if (!rawId) throw badRequest(INVALID_MUSEUM_ID);
@@ -170,20 +162,12 @@ const handleUpdateMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
-/** Dependencies accepted by {@link createMuseumRouter}. */
 export interface CreateMuseumRouterDeps {
   cacheService?: CacheService;
   /** When undefined, the two `/enrichment` endpoints return 503. */
   enrichMuseumUseCase?: EnrichMuseumUseCase;
 }
 
-/**
- * Builds the museum Express router with all CRUD, search, and hybrid
- * enrichment endpoints.
- *
- * @param deps - Optional injected dependencies (cache + enrichment use case).
- * @returns Configured Express Router.
- */
 export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router => {
   const museumRouter: Router = Router();
 

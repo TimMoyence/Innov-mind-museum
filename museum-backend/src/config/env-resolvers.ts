@@ -1,18 +1,9 @@
-/**
- * Pre-computed env-derived values used by the AppEnv literal in env.ts.
- *
- * Extracted from env.ts so the literal can stay focused on shape and so the
- * resolver logic — which has its own units (Redis URL parsing, deployment
- * autodetect, app version fallback chain) — can be tested in isolation.
- *
- * Side-effects to be aware of:
- *   - `resolveDeploymentMode()` writes a single JSON info line to stderr when
- *     it autodetects 'multi'. Intentional: operators see how the mode was
- *     inferred without us depending on `@shared/logger` (which would import
- *     env and create a circular init).
- *   - `warnLegacyJwtSecret()` writes a single JSON warn line to stderr when
- *     production still has JWT_SECRET set. Same circular-init reason.
- */
+// Pre-computed env-derived values used by AppEnv in env.ts.
+//
+// Side effects:
+//   - `resolveDeploymentMode()` writes JSON info to stderr on autodetect 'multi'.
+//   - `warnLegacyJwtSecret()` writes JSON warn to stderr when prod still has JWT_SECRET.
+// Uses stderr directly (NOT @shared/logger): logger imports env → circular init.
 import { z } from 'zod';
 
 import { toOptionalString } from './env-helpers';
@@ -31,14 +22,11 @@ const storageDriverSchema = z.enum(['local', 's3']);
 const embeddingsProviderSchema = z.enum(['siglip-onnx', 'replicate']);
 
 /**
- * Resolves Redis connection config with a URL fallback.
- *
- * Priority:
- *   1. REDIS_HOST (+ REDIS_PORT / REDIS_PASSWORD) — explicit discrete vars
- *   2. REDIS_URL — parsed via URL() for managed-Redis providers (e.g. prod)
+ * Resolves Redis config. Priority:
+ *   1. REDIS_HOST (+ REDIS_PORT / REDIS_PASSWORD)
+ *   2. REDIS_URL parsed via URL() for managed-Redis providers
  *   3. localhost:6379 defaults
- *
- * Prevents ECONNREFUSED floods when only REDIS_URL is set in production.
+ * Prevents ECONNREFUSED floods when only REDIS_URL set in prod.
  */
 export function parseRedisUrlFallback(): {
   host: string;
@@ -80,20 +68,12 @@ export function parseRedisUrlFallback(): {
 }
 
 /**
- * Resolves the deployment topology consumed by `assertDeploymentInvariants`.
- *
- * Precedence:
- *   1. Explicit `DEPLOYMENT_MODE` env var (`single` | `multi`). Invalid values
- *      are ignored and fall through to auto-detection.
- *   2. Auto-detect from known multi-instance hints:
- *        - PM2 cluster mode: `NODE_APP_INSTANCE` or `pm_id`
- *        - Kubernetes: `KUBERNETES_SERVICE_HOST` or `K8S_POD_NAME`
- *   3. Default to `single`.
- *
- * When auto-detection triggers (no explicit override), a single JSON info line
- * is written to stderr so operators can see how the mode was inferred. We
- * intentionally do NOT use `@shared/logger` here: the logger imports `env`,
- * so using it would create a circular init.
+ * Resolves deployment topology for `assertDeploymentInvariants`. Precedence:
+ *   1. Explicit `DEPLOYMENT_MODE` (`single` | `multi`); invalid → auto-detect.
+ *   2. Auto-detect: PM2 (`NODE_APP_INSTANCE`/`pm_id`) or K8s
+ *      (`KUBERNETES_SERVICE_HOST`/`K8S_POD_NAME`).
+ *   3. Default `single`.
+ * Autodetect emits JSON info line to stderr (NOT logger — circular init).
  */
 export function resolveDeploymentMode(): DeploymentMode {
   const explicit = toOptionalString(process.env.DEPLOYMENT_MODE)?.toLowerCase();
@@ -126,7 +106,7 @@ export function resolveDeploymentMode(): DeploymentMode {
   return 'single';
 }
 
-/** Validates and narrows `NODE_ENV`. Throws on invalid values. */
+/** Throws on invalid `NODE_ENV`. */
 export function resolveNodeEnv(): NodeEnv {
   const raw = process.env.NODE_ENV || 'development';
   const result = nodeEnvSchema.safeParse(raw);
@@ -136,24 +116,19 @@ export function resolveNodeEnv(): NodeEnv {
   return result.data;
 }
 
-/** Whitelist-narrows `LLM_PROVIDER` to a known provider; defaults to openai. */
 export function resolveLlmProvider(): LlmProvider {
   const raw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
   return llmProviderSchema.safeParse(raw).data ?? 'openai';
 }
 
-/** Whitelist-narrows `OBJECT_STORAGE_DRIVER`; defaults to local. */
 export function resolveStorageDriver(): StorageDriver {
   const raw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
   return storageDriverSchema.safeParse(raw).data ?? 'local';
 }
 
 /**
- * C3 (2026-05) — whitelist-narrows `EMBEDDINGS_PROVIDER` for the visual
- * similarity engine. Defaults to `'siglip-onnx'` so dev/prod default to the
- * self-hosted CPU path (no per-call cost). Unknown values fall back to the
- * default rather than throwing — keeps behaviour aligned with the other
- * resolvers in this file.
+ * C3 (2026-05) — `EMBEDDINGS_PROVIDER`. Default `'siglip-onnx'` (self-hosted
+ * CPU, no per-call cost). Unknown values fall back to default rather than throw.
  */
 export function resolveEmbeddingsProvider(): EmbeddingsProvider {
   const raw = (process.env.EMBEDDINGS_PROVIDER || 'siglip-onnx').toLowerCase();
@@ -161,11 +136,9 @@ export function resolveEmbeddingsProvider(): EmbeddingsProvider {
 }
 
 /**
- * SEC-HARDENING (H12): emit a stderr warn line if production still has
- * `JWT_SECRET` set. We no longer fall back to it, so any orchestration still
- * injecting it almost certainly forgot to rotate to JWT_ACCESS_SECRET +
- * JWT_REFRESH_SECRET. Using stderr directly because `@shared/logger` imports
- * env and would create a circular init.
+ * SEC-HARDENING (H12): warn if prod still has `JWT_SECRET` set. No longer
+ * honored — orchestration injecting it forgot to rotate to JWT_ACCESS_SECRET +
+ * JWT_REFRESH_SECRET. Stderr direct (logger imports env → circular init).
  */
 export function warnLegacyJwtSecret(isProduction: boolean): void {
   if (!isProduction) return;
@@ -179,7 +152,7 @@ export function warnLegacyJwtSecret(isProduction: boolean): void {
   );
 }
 
-/** Resolves the application version: APP_VERSION → npm_package_version → 'unknown'. */
+/** APP_VERSION → npm_package_version → 'unknown'. */
 export function resolveAppVersion(): string {
   const explicit = toOptionalString(process.env.APP_VERSION);
   if (explicit) return explicit;
@@ -188,7 +161,7 @@ export function resolveAppVersion(): string {
   return 'unknown';
 }
 
-/** Resolves the commit SHA from COMMIT_SHA / GITHUB_SHA — undefined if neither set. */
+/** COMMIT_SHA / GITHUB_SHA — undefined if neither set. */
 export function resolveCommitSha(): string | undefined {
   const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
   const trimmed = source?.trim();

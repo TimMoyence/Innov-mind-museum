@@ -6,26 +6,19 @@ import type { WikidataKbDumpRepositoryPort } from '@modules/chat/domain/ports/wi
 import type { DataSource, Repository } from 'typeorm';
 
 /**
- * TypeORM-backed implementation of {@link WikidataKbDumpRepositoryPort}.
+ * C5.3 write-through cache (ADR-039 D4) — every successful live Wikidata lookup mirrors
+ * its facts here via `WikidataWriteThroughProvider`; cascade reads them when breaker
+ * has been OPEN past `LOCAL_DUMP_FALLBACK_AFTER_MS`.
  *
- * Persistence layer for the C5.3 write-through cache (ADR-039 D4) — every
- * successful live Wikidata lookup mirrors its facts here via the
- * `WikidataWriteThroughProvider` decorator, and the cascade reads them back
- * when the breaker has been OPEN past `LOCAL_DUMP_FALLBACK_AFTER_MS`.
+ * Key normalisation `searchTerm.toLowerCase().trim()` mirrors `knowledge-base.service.ts`
+ * (`kb:wikidata:<key>`) — MUST normalise on both reads and writes.
  *
- * Key normalisation : `searchTerm.toLowerCase().trim()` matches the cache
- * key shape used in `knowledge-base.service.ts` (`kb:wikidata:<key>`). The
- * repo MUST normalise on both reads and writes so callers cannot accidentally
- * stash one capitalisation and miss the other.
+ * `language` sentinel: entity column is `NOT NULL DEFAULT ''` because PG treats NULL as
+ * distinct in UNIQUE indexes — leaving NULL would accumulate duplicates. `undefined`
+ * coerced to `''`.
  *
- * `language` sentinel : the entity column is `NOT NULL DEFAULT ''` because
- * PostgreSQL treats `NULL` as distinct in `UNIQUE` indexes — leaving
- * `language` NULL would allow the write-through to accumulate duplicates.
- * `undefined` from callers is coerced to `''` before any SQL touches the row.
- *
- * Fail-open : every operation swallows DB errors (logs `kb_dump_*_error` for
- * Loki). `findFactsBySearchTerm` returns `null` on error ; `upsert` returns
- * `void`. The chat path treats a degraded dump as if it were empty.
+ * Fail-open: every op swallows DB errors (logs `kb_dump_*_error`). Chat path treats
+ * a degraded dump as empty.
  */
 export class WikidataKbDumpRepositoryTypeOrm implements WikidataKbDumpRepositoryPort {
   private readonly repo: Repository<WikidataKbDump>;
@@ -34,11 +27,7 @@ export class WikidataKbDumpRepositoryTypeOrm implements WikidataKbDumpRepository
     this.repo = dataSource.getRepository(WikidataKbDump);
   }
 
-  /** {@inheritDoc WikidataKbDumpRepositoryPort.findFactsBySearchTerm} */
-  async findFactsBySearchTerm(
-    searchTerm: string,
-    language?: string,
-  ): Promise<ArtworkFacts | null> {
+  async findFactsBySearchTerm(searchTerm: string, language?: string): Promise<ArtworkFacts | null> {
     const key = WikidataKbDumpRepositoryTypeOrm.normaliseKey(searchTerm);
     if (!key) return null;
     try {
@@ -56,7 +45,6 @@ export class WikidataKbDumpRepositoryTypeOrm implements WikidataKbDumpRepository
     }
   }
 
-  /** {@inheritDoc WikidataKbDumpRepositoryPort.upsert} */
   async upsert(
     searchTerm: string,
     language: string | undefined,
@@ -65,10 +53,7 @@ export class WikidataKbDumpRepositoryTypeOrm implements WikidataKbDumpRepository
     const key = WikidataKbDumpRepositoryTypeOrm.normaliseKey(searchTerm);
     if (!key) return;
     try {
-      // Postgres `INSERT ... ON CONFLICT (search_term, language) DO UPDATE`.
-      // TypeORM emits the matching SQL via `Repository.upsert` with
-      // `conflictPaths` aligned to the entity column names. `updated_at`
-      // bumps automatically via the `@UpdateDateColumn` decorator.
+      // `updated_at` bumps automatically via `@UpdateDateColumn`.
       await this.repo.upsert(
         {
           searchTerm: key,
@@ -91,9 +76,8 @@ export class WikidataKbDumpRepositoryTypeOrm implements WikidataKbDumpRepository
   }
 
   /**
-   * Mirror of the cache key normalisation in `knowledge-base.service.ts:64`.
-   * Returning the empty string is the "no lookup, no write" signal — both
-   * `findFactsBySearchTerm` and `upsert` short-circuit on it.
+   * Mirrors `knowledge-base.service.ts:64`. Empty string = "no lookup, no write" signal —
+   * both `findFactsBySearchTerm` and `upsert` short-circuit on it.
    */
   private static normaliseKey(searchTerm: string): string {
     return searchTerm.toLowerCase().trim();

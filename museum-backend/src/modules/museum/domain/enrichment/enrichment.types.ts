@@ -1,24 +1,19 @@
-/**
- * Domain types for the hybrid museum enrichment flow (per-locale cache +
- * async refresh via BullMQ). See `EnrichMuseumUseCase`.
- */
+// Domain types for the hybrid museum enrichment flow (per-locale cache +
+// async refresh via BullMQ). See `EnrichMuseumUseCase`.
 
-/** Day-of-week short codes used by the OSM opening-hours parser. */
 export type OpeningDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
-/** High-level status derived from the weekly schedule + current time. */
 export type OpeningDayStatus = 'open' | 'closed' | 'unknown';
 
 /** One weekly row (null opens/closes = closed that day). */
 export interface ParsedOpeningDay {
   day: OpeningDay;
-  /** `HH:mm` local time, or null when closed that day. */
+  /** `HH:mm` local time, null when closed. */
   opens: string | null;
-  /** `HH:mm` local time, or null when closed that day. */
+  /** `HH:mm` local time, null when closed. */
   closes: string | null;
 }
 
-/** Shape returned by `parseOpeningHours` — structured OSM opening_hours tag. */
 export interface ParsedOpeningHours {
   /** Original OSM value, kept for debugging + offline fallback. */
   raw: string;
@@ -28,11 +23,10 @@ export interface ParsedOpeningHours {
   closesAtLocal: string | null;
   /** `HH:mm` local time the museum opens today, or null. */
   opensAtLocal: string | null;
-  /** Full week schedule (Mon→Sun). */
+  /** Mon→Sun. */
   weekly: ParsedOpeningDay[];
 }
 
-/** Projection exposed to clients — persisted cache row flattened. */
 export interface MuseumEnrichmentView {
   museumId: number;
   locale: string;
@@ -45,7 +39,6 @@ export interface MuseumEnrichmentView {
   fetchedAt: string;
 }
 
-/** Result returned by `EnrichMuseumUseCase.execute` and `.getJobStatus`. */
 export type EnrichMuseumResult =
   | { status: 'ready'; data: MuseumEnrichmentView }
   | { status: 'pending'; jobId: string };

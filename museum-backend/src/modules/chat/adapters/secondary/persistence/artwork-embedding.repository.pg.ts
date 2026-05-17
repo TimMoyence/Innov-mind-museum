@@ -1,30 +1,19 @@
 /**
- * C3 Phase 4 — `ArtworkEmbeddingRepositoryPg` — PostgreSQL + pgvector adapter.
+ * C3 Phase 4 — `ArtworkEmbeddingRepositoryPg` (ADR-037).
  *
- * Implements {@link ArtworkEmbeddingRepository} on top of the `artwork_embeddings`
- * table created by migration `1778406339944-AddArtworkEmbeddings`.
+ * Backs migration `1778406339944-AddArtworkEmbeddings`.
  *
- * Key design points (cf. design.md §3 / §4 / §9 D2 — see also tasks.md T4.5):
- *   - The `embedding` column is `halfvec(768)`. TypeORM has no native halfvec
- *     type, so all I/O on this column goes through raw SQL with explicit
- *     `::halfvec` casts. Vectors are serialised as the pgvector text literal
- *     `"[v1,v2,…]"` form on the way in and parsed lazily on the way out.
- *   - kNN search uses the inner-product operator `<#>`, which returns the
- *     negative inner product. Embeddings are L2-normalised at encode time,
- *     so `<#>` ranges over `[-1, 1]` and `(1 - (embedding <#> query)) / 2`
- *     rescales it into `[0, 1]` (1 = identical, 0.5 = orthogonal, 0 =
- *     opposite) — equivalent to cosine similarity remapped from `[-1, 1]`
- *     into `[0, 1]`. `ORDER BY <#>` ascending therefore puts the closest
- *     match first.
- *   - {@link upsertBatch} is idempotent: rows whose `(vector, model_version)`
- *     pair matches what is already persisted are reported as `skipped` and
- *     never UPDATEd, so reruns of the catalog ingest CLI do not bump
- *     `updated_at` for rows that did not actually change. Inserted vs
- *     updated vs skipped is determined up-front via a single CTE round-trip
- *     against `artwork_embeddings`, then a second `INSERT … ON CONFLICT (qid)
- *     DO UPDATE` writes only the non-skipped rows. The whole sequence runs
- *     inside a single transaction so a partial crash never leaves the
- *     catalog half-ingested.
+ * Schema/gotchas:
+ *  - `embedding` column is `halfvec(768)` (FP16, pgvector ≥ 0.7.0). TypeORM
+ *    has no native halfvec type → all I/O is raw SQL with `::halfvec` casts.
+ *    Vectors serialise to pgvector text literal `"[v1,v2,…]"`.
+ *  - kNN uses inner-product op `<#>` (returns NEGATIVE IP). Vectors are
+ *    L2-unit at encode time, so `<#>` ∈ [-1, 1]; we rescale to [0, 1] via
+ *    `(1 - (e <#> q)) / 2` (1=identical, 0.5=orthogonal). `ORDER BY <#> ASC`
+ *    puts closest first.
+ *  - upsertBatch is idempotent: rows with identical `(vector, model_version)`
+ *    are `skipped` (not UPDATEd) so `updated_at` is preserved across re-runs
+ *    of the catalog ingest CLI. Classification + write share one transaction.
  */
 import { logger } from '@shared/logger/logger';
 
@@ -41,11 +30,6 @@ import type {
 } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { DataSource, EntityManager } from 'typeorm';
 
-/**
- * Shape of a single SQL row returned by the `findNearest` / `findByQid`
- * SELECT statements. Mirrors the column list emitted by the queries below so
- * the row → domain mapping stays exhaustive when a column is added later.
- */
 interface ArtworkEmbeddingSqlRow {
   qid: string;
   museum_qid: string | null;
@@ -60,24 +44,14 @@ interface ArtworkEmbeddingSqlRow {
   updated_at: Date;
 }
 
-/** Shape of the row returned by `findNearest` (adds the computed similarity). */
 interface ArtworkEmbeddingNearestSqlRow extends ArtworkEmbeddingSqlRow {
-  /** `(1 - (embedding <#> query)) / 2` cast to JS number by node-postgres. */
+  /** `(1 - (embedding <#> query)) / 2` — node-postgres may yield string for numeric. */
   similarity: number | string;
 }
 
-/**
- * Serialise a `Float32Array` into the pgvector text literal expected by a
- * `::halfvec` cast. `Array.from(...).join(',')` formats every component with
- * `Number#toString` (no trailing zeros), which matches the format pgvector
- * accepts as input. The output is wrapped in `[…]`.
- */
+/** Serialises a vector to pgvector text literal `[v1,v2,…]` (consumed by ::halfvec). */
 const serialiseVector = (vector: Float32Array): string => `[${Array.from(vector).join(',')}]`;
 
-/**
- * Map a flat SQL row onto the domain {@link ArtworkEmbedding} entity. Used by
- * `findByQid` — `findNearest` returns the lighter {@link NearestResult} shape.
- */
 const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   qid: row.qid,
   museumQid: row.museum_qid,
@@ -92,12 +66,7 @@ const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   updatedAt: row.updated_at,
 });
 
-/**
- * Hydrate the {@link ArtworkMetadata} snapshot returned by `findNearest` from
- * the flat catalog columns. The catalog stores only the subset needed to
- * render a card (title + imageUrl + museumQid); richer Wikidata facts are
- * hydrated on the read path by the Wikidata enricher (see tasks.md T4.6).
- */
+/** Catalog stores card-render subset; full Wikidata facts hydrated downstream (T4.6). */
 const toNearestMetadata = (row: ArtworkEmbeddingSqlRow): ArtworkMetadata => {
   const metadata: ArtworkMetadata = {
     title: row.title,
@@ -110,49 +79,21 @@ const toNearestMetadata = (row: ArtworkEmbeddingSqlRow): ArtworkMetadata => {
 };
 
 /**
- * pgvector / TypeORM/pg adapter for the `artwork_embeddings` catalog. All
- * methods are safe to call from concurrent requests — implementations rely
- * exclusively on Postgres transactional semantics, no in-process locks.
+ * Concurrent-safe; relies exclusively on Postgres transactional semantics
+ * (no in-process locks).
  */
 export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository {
-  /**
-   * Build the repository on top of an initialised TypeORM `DataSource`.
-   *
-   * The constructor stores the data source on a readonly field; the
-   * underlying connection pool is used for read-only raw queries
-   * (`dataSource.query`), and multi-statement writes are wrapped in
-   * `dataSource.transaction(...)` so a partial crash never leaves the
-   * catalog half-ingested.
-   *
-   * @param dataSource - Initialised TypeORM `DataSource` bound to a Postgres
-   *   instance with the `vector` extension installed (see migration
-   *   `1778406339944-AddArtworkEmbeddings`).
-   */
   constructor(private readonly dataSource: DataSource) {}
 
   /**
-   * Returns the `topN` closest catalog rows to the query embedding, ordered
-   * by ascending pgvector inner-product distance (closest first). The
-   * `visualScore` field is mapped into `[0, 1]` via `(1 - <#>) / 2`
-   * (pgvector `<#>` returns the negative inner product, which ranges over
-   * `[-1, 1]` for L2-unit vectors — the rescaling lands identical = 1,
-   * orthogonal = 0.5, opposite = 0).
-   *
-   * Two orthogonal filters can be applied:
-   *
-   *   - `museumQids` (Wikidata external axis) — `museum_qid = ANY($2)`,
-   *     served by `IDX_artwork_embeddings_museum_qid`.
-   *   - `museumId` (internal tenant axis, OWASP LLM08) — `museum_id IS NULL
-   *     OR museum_id = $4`, served by `IDX_artwork_embeddings_museum_id`.
-   *     The NULL branch covers the global public catalog (visible to every
-   *     tenant); the equality branch covers the requesting tenant's private
-   *     rows. **When `museumId` is `undefined`** the predicate is omitted
-   *     entirely (legacy global read) and a `warn` is logged so the B2B
-   *     onboarding checklist surfaces every remaining unscoped call site
-   *     before the first tenant goes live. V1 single-tenant has zero rows
-   *     with a non-NULL `museum_id`, so the unscoped path is currently
-   *     leakage-free by construction — but the warn must be silenced before
-   *     B2B.
+   * Two orthogonal filters:
+   *  - `museumQids` (Wikidata external axis) → `museum_qid = ANY($2)`
+   *  - `museumId` (OWASP LLM08 internal tenant axis) →
+   *    `museum_id IS NULL OR museum_id = $4`. NULL branch = global public
+   *    catalog. **`museumId === undefined`** → predicate omitted (legacy
+   *    global read) + warn logged so B2B onboarding can grep + fix before
+   *    first tenant. V1 single-tenant has no non-NULL museum_id rows so
+   *    unscoped path is leakage-free by construction (silence warn before B2B).
    */
   async findNearest(
     query: Float32Array,
@@ -161,16 +102,11 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   ): Promise<NearestResult[]> {
     const queryLiteral = serialiseVector(query);
     const museumQids = opts.museumQids ?? null;
-    // `museumId === undefined` → legacy global read (warn). `null` is treated
-    // identically to `undefined` here — explicit "I want the public catalog
-    // only" callers must pass an empty-array filter convention if we add one
-    // later. Today's contract: only a positive integer tenant id activates
-    // the scope.
+    // Only a positive integer activates tenant scope; null/undefined both = legacy global read.
     const museumId = typeof opts.museumId === 'number' ? opts.museumId : null;
     if (museumId === null) {
+      // OWASP LLM08 — grep this line to fix unscoped callers before B2B.
       logger.warn('artwork_embeddings_find_nearest_unscoped', {
-        // OWASP LLM08 — flag every unscoped call so the B2B onboarding
-        // checklist can grep this log line and trace it back to its caller.
         reason: 'museumId not provided — global read (cross-tenant scope disabled)',
         topN,
         museumQidsCount: museumQids?.length ?? 0,
@@ -198,19 +134,10 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   }
 
   /**
-   * Idempotent batch upsert keyed by `qid`. Runs in two stages inside a
-   * single transaction:
-   *
-   *   1. Classify every input row as `inserted` / `updated` / `skipped` by
-   *      joining a VALUES CTE against the existing catalog. A row is
-   *      `skipped` iff it already exists with the same vector AND the same
-   *      `embedding_model_version`.
-   *   2. Issue a single `INSERT … ON CONFLICT (qid) DO UPDATE` for the
-   *      non-skipped rows so `updated_at` is only bumped on rows that
-   *      actually changed.
-   *
-   * Returns aggregate counts. An empty input yields `{0,0,0}` without
-   * touching the database.
+   * Idempotent (key=qid). Single transaction: (1) classify via VALUES CTE on
+   * `(vector, model_version)` → skipped iff identical; (2) write non-skipped
+   * via `INSERT … ON CONFLICT (qid) DO UPDATE`. `updated_at` only bumps on
+   * actual changes. Empty input short-circuits without a DB call.
    */
   async upsertBatch(rows: ArtworkEmbeddingRow[]): Promise<UpsertBatchResult> {
     if (rows.length === 0) {
@@ -231,15 +158,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     });
   }
 
-  /**
-   * Classify every input row by comparing it to its existing row (if any) on
-   * `(embedding, embedding_model_version)`. Done in a single round-trip via
-   * a VALUES-driven CTE so the upsert path is `O(rows)` SELECTs even for
-   * 100-row batches.
-   *
-   * The returned `skipMask[i] === true` means "row i must NOT be written
-   * back" and the caller should drop it from the INSERT batch.
-   */
+  /** `skipMask[i]=true` → drop row i from the INSERT batch (already up-to-date). */
   private async classifyRows(
     manager: EntityManager,
     rows: ArtworkEmbeddingRow[],
@@ -249,8 +168,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     skipped: number;
     skipMask: boolean[];
   }> {
-    // Build one VALUES tuple per row : (qid, embedding, model_version).
-    // Each row contributes 3 placeholders, ordered (qid, embedding, model_version).
+    // 3 placeholders per row: (qid, embedding, model_version).
     const valuesClauses: string[] = [];
     const params: string[] = [];
     for (const [idx, row] of rows.entries()) {
@@ -278,7 +196,6 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
       params,
     );
 
-    // Re-index the result by qid so we can walk `rows` in original order.
     const byQid = new Map<string, { is_insert: boolean; is_skip: boolean }>();
     for (const row of classified) {
       byQid.set(row.qid, { is_insert: row.is_insert, is_skip: row.is_skip });
@@ -291,9 +208,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     for (const [idx, row] of rows.entries()) {
       const verdict = byQid.get(row.qid);
       if (!verdict) {
-        // Defensive : a missing CTE row would only happen if the SQL diverged
-        // from the input shape. Treat as "must insert" so we still write the
-        // row and let the DB raise on any genuine conflict.
+        // Defensive — SQL/input shape divergence; treat as insert, let DB raise on conflict.
         inserted += 1;
         continue;
       }
@@ -311,17 +226,9 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   }
 
   /**
-   * Write the non-skipped rows via a single multi-VALUES `INSERT … ON
-   * CONFLICT (qid) DO UPDATE`. Each row contributes nine placeholders
-   * (qid, museum_qid, museum_id, title, image_url, license, image_source,
-   * embedding, embedding_model_version) — the tenth column `updated_at` is
-   * bumped via `now()` on the conflict path so concurrent ingests cannot
-   * regress it.
-   *
-   * `museum_id` (OWASP LLM08 tenant axis — `museums.id`) is sourced from
-   * `row.museumId` and defaults to NULL when the catalog ingest CLI does not
-   * supply one (i.e. global public catalog ingest). Distinct from
-   * `museum_qid` (Wikidata public reference, sourced from `metadata.museumQid`).
+   * 9 placeholders/row + `updated_at = now()` on conflict (concurrent ingests
+   * cannot regress it). `museum_id` (OWASP LLM08 tenant, `museums.id`) ≠
+   * `museum_qid` (Wikidata public ref). Both default NULL.
    */
   private async writeBatch(manager: EntityManager, rows: ArtworkEmbeddingRow[]): Promise<void> {
     const valuesClauses: string[] = [];
@@ -365,10 +272,6 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     await manager.query(sql, params);
   }
 
-  /**
-   * Look up a single catalog row by Wikidata QID. Returns `null` when no row
-   * matches — the read path is read-only so no transaction wrapper is needed.
-   */
   async findByQid(qid: string): Promise<ArtworkEmbedding | null> {
     const rows: ArtworkEmbeddingSqlRow[] = await this.dataSource.query(
       `SELECT qid, museum_qid, museum_id, title, image_url, license, image_source,
@@ -384,11 +287,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     return toEntity(rows[0]);
   }
 
-  /**
-   * Return the total number of rows in the catalog. Backs the
-   * `artwork_embeddings_count` Grafana gauge (design §10) — we therefore
-   * keep this on a dedicated method rather than paginating callers.
-   */
+  /** Backs `artwork_embeddings_count` Grafana gauge (design §10). */
   async count(): Promise<number> {
     const rows: { count: string }[] = await this.dataSource.query(
       `SELECT COUNT(*)::text AS count FROM artwork_embeddings`,

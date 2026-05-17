@@ -1,28 +1,13 @@
 import { z } from 'zod';
 
-/**
- * Path parameter schema for the admin CSV export routes (R2 §0.3).
- *
- * `<kind>.csv` is the suffix of every endpoint ; the Zod enum narrows it to
- * exactly the three supported kinds and any other value triggers 400 via
- * the standard `validateQuery` / `validateParams` pipeline.
- */
+/** R2 §0.3 — `<kind>.csv` suffix of every export endpoint. */
 export const exportKindParamSchema = z.object({
   kind: z.enum(['sessions', 'reviews', 'tickets']),
 });
 
-/**
- *
- */
 export type ExportKindParam = z.infer<typeof exportKindParamSchema>;
 
-/**
- * Optional query parameters — `?from=YYYY-MM-DD&to=YYYY-MM-DD` (R10 / R11).
- *
- * Accepted shape stays loose for V1 : we ONLY validate the format ; the
- * downstream use case applies the default 365-day window when both are
- * absent (R11). Tightening to a max range would be premature.
- */
+/** R10/R11 — format only ; use case applies default 365d window when absent. */
 export const exportQuerySchema = z.object({
   from: z
     .string()
@@ -34,7 +19,4 @@ export const exportQuerySchema = z.object({
     .optional(),
 });
 
-/**
- *
- */
 export type ExportQuery = z.infer<typeof exportQuerySchema>;

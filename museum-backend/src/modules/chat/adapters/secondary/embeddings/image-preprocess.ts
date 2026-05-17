@@ -1,65 +1,33 @@
 import sharp from 'sharp';
 
 /**
- * Defensive sharp options shared by the SigLIP preprocessing path. 24 Mpx
- * (~6000×4000) cap mirrors `image-processing.service.ts` — exceeds any
- * legitimate mobile upload and bounds the zip-bomb decompression-DoS
- * surface. `failOn: 'error'` ensures malformed inputs reject early.
- * Audit ref: docs/audit-2026-05-12-raw/05-gaps/F4-critical-bugs-verified.md §Claim 4.
+ * SEC: 24 Mpx cap mirrors image-processing.service.ts — bounds zip-bomb DoS.
+ * `failOn: 'error'` rejects malformed inputs early.
  */
 const SHARP_DECODE_OPTIONS = {
   limitInputPixels: 24_000_000,
   failOn: 'error' as const,
 };
 
-/**
- * SigLIP-base-patch16-224 input contract:
- * - batch = 1
- * - channels = 3 (RGB, alpha dropped)
- * - height = 224
- * - width = 224
- *
- * The exported tensor has length `1 * 3 * 224 * 224 = 150528` float32 values.
- */
+/** SigLIP input: 1×3×224×224 → 150528 float32. */
 const SIGLIP_INPUT_SIZE = 224;
 const SIGLIP_CHANNELS = 3;
 
 /**
- * SigLIP HF processor config (`google/siglip-base-patch16-224`):
- * `image_mean = [0.5, 0.5, 0.5]`, `image_std = [0.5, 0.5, 0.5]`.
- * For a uint8 pixel `x ∈ [0, 255]`, the normalised value is
- * `((x / 255) - 0.5) / 0.5` which lives in `[-1, 1]`.
+ * ADR-037 — SigLIP HF processor `image_mean=image_std=[0.5,0.5,0.5]` →
+ * normalise to [-1, 1] via `((x/255) - 0.5) / 0.5`. NOT ImageNet mean/std
+ * (different from CLIP/ResNet/DINOv2). Wrong normalize → silent recall collapse.
  */
 const SIGLIP_MEAN = 0.5;
 const SIGLIP_STD = 0.5;
 
 /**
- * Resizes / re-encodes an arbitrary image buffer (JPEG, PNG, WebP, …) into the
- * `Float32Array` tensor expected by the SigLIP-base-patch16-224 ONNX model.
+ * Pipeline: sharp decode → removeAlpha → resize 224×224 (`fit:'fill'`, not
+ * HF centre-crop — within recall budget design.md §11) → HWC uint8 →
+ * SigLIP-normalise → NCHW float32.
  *
- * Pipeline:
- * 1. `sharp` auto-detects the input format (JPEG / PNG / WebP / GIF / …) and
- *    decodes it. Alpha is dropped via `removeAlpha()` so PNG / RGBA inputs
- *    surface as flat RGB without transparency leaks.
- * 2. Resize to 224×224 using `fit: 'fill'` so the encoder receives the exact
- *    geometry it was trained on. SigLIP's HF processor performs an
- *    aspect-ratio-preserving resize + centre-crop, but for the V1 adapter we
- *    keep the simpler `fill` strategy — empirically within recall budget on
- *    the held-out set documented in design.md §11.
- * 3. Extract raw bytes via `.raw().toBuffer()` — that gives us interleaved
- *    HWC uint8 (`[R0,G0,B0, R1,G1,B1, …]`).
- * 4. Convert each channel to float32, normalise via SigLIP mean/std (so each
- *    pixel ends up in roughly `[-1, 1]`) and rewrite into NCHW layout
- *    (`[R0,R1,…, G0,G1,…, B0,B1,…]`) — that's what `onnxruntime` consumes for
- *    the `pixel_values` input.
- *
- * @param buffer - Raw image bytes. Format auto-detected by sharp.
- * @returns A `Float32Array` of length `150528` in NCHW layout, ready to wrap
- *   in an ONNX `Tensor('float32', data, [1, 3, 224, 224])`.
- * @throws {Error} Propagates sharp's decoding error when the buffer is not a
- *   valid image (corrupt header, truncated stream, unsupported format).
- *   Callers in the embeddings adapter wrap this into `EncoderUnavailableError`
- *   / `IMAGE_DECODE_FAILED` as appropriate.
+ * @returns Float32Array(150528) wrap-ready for Tensor('float32', data, [1,3,224,224]).
+ * @throws sharp decode error — callers wrap as EncoderUnavailableError / IMAGE_DECODE_FAILED.
  */
 export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array> {
   const { data, info } = await sharp(buffer, SHARP_DECODE_OPTIONS)
@@ -68,10 +36,7 @@ export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array>
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // Defensive: sharp must yield exactly 224×224×3 bytes after the pipeline
-  // above. If it doesn't (e.g. unexpected channel count after a future
-  // sharp upgrade), bail out loudly rather than silently corrupting the
-  // tensor.
+  // Defensive — bail loudly on size/channel drift from sharp upgrades.
   const expectedBytes = SIGLIP_INPUT_SIZE * SIGLIP_INPUT_SIZE * SIGLIP_CHANNELS;
   if (info.channels !== SIGLIP_CHANNELS || data.length !== expectedBytes) {
     throw new Error(
@@ -85,9 +50,7 @@ export async function preprocessForSiglip(buffer: Buffer): Promise<Float32Array>
   const channelOffsetG = pixelCount;
   const channelOffsetB = pixelCount * 2;
 
-  // sharp emits HWC interleaved uint8 — reshape to NCHW float32 in a single
-  // pass. Inverting `255` once instead of dividing per-pixel is a tiny perf
-  // win on a 50k-iteration loop.
+  // HWC uint8 → NCHW float32 in one pass; `inv255` once = small perf win.
   const inv255 = 1 / 255;
   for (let i = 0; i < pixelCount; i += 1) {
     const base = i * SIGLIP_CHANNELS;

@@ -7,19 +7,10 @@ import { badRequest, notFound } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-/**
- * Persists a user's content preferences (which aspects of an artwork they
- * prefer to learn about: history, technique, artist). Validates the input,
- * deduplicates, and caps at the exhaustive set.
- */
 export class UpdateContentPreferencesUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
   /**
-   * Validates, deduplicates, and persists the user's content preferences.
-   *
-   * @param userId - Authenticated user id.
-   * @param preferences - Raw preferences payload (validated at runtime).
    * @throws {AppError} 400 if payload is not an array or any value is invalid.
    * @throws {AppError} 404 if the user does not exist.
    */
@@ -30,9 +21,7 @@ export class UpdateContentPreferencesUseCase {
     if (!Array.isArray(preferences)) {
       throw badRequest('preferences must be an array');
     }
-    // Sanity cap to prevent a malicious client from sending a giant payload.
-    // The dedup step below guarantees the final persisted array has at most
-    // CONTENT_PREFERENCES.length (3) items, so duplicates in the raw input are fine.
+    // Anti-DoS cap — dedup below guarantees final array ≤ CONTENT_PREFERENCES.length (3).
     if (preferences.length > MAX_RAW_PAYLOAD_LENGTH) {
       throw badRequest(`preferences payload too large`);
     }
@@ -44,7 +33,7 @@ export class UpdateContentPreferencesUseCase {
       }
     }
 
-    // Dedupe while preserving the canonical order defined in CONTENT_PREFERENCES.
+    // Dedupe preserving canonical CONTENT_PREFERENCES order.
     const selected = new Set<ContentPreference>(preferences);
     const deduped = CONTENT_PREFERENCES.filter((p) => selected.has(p));
 
@@ -58,5 +47,4 @@ export class UpdateContentPreferencesUseCase {
   }
 }
 
-/** Anti-DoS cap on the raw preferences payload (before dedup). */
 const MAX_RAW_PAYLOAD_LENGTH = 50;

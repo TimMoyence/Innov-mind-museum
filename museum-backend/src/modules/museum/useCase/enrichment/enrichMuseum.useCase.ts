@@ -11,21 +11,18 @@ import type { MuseumEnrichmentQueuePort } from '@modules/museum/domain/ports/mus
 /** Default 30-day TTL on cached enrichment rows. */
 const DEFAULT_FRESH_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000;
 
-/** Input accepted by both `execute` and `getJobStatus`. */
 export interface EnrichMuseumInput {
   museumId: number;
   locale: string;
 }
 
 /**
- * Orchestrates the hybrid museum-enrichment flow:
- *
  *   1. Fresh DB cache hit → `status: 'ready'`.
- *   2. Miss + already-queued job → `status: 'pending'` with the existing jobId.
+ *   2. Miss + already-queued job → `status: 'pending'` + existing jobId.
  *   3. Miss + no active job → enqueue new BullMQ job, `status: 'pending'`.
  *
- * The actual fetch (Wikidata + Wikipedia + OSM opening-hours) is performed
- * off-band by {@link MuseumEnrichmentWorker}, which upserts the cache row.
+ * Actual fetch (Wikidata + Wikipedia + OSM) performed off-band by
+ * {@link MuseumEnrichmentWorker}.
  */
 export class EnrichMuseumUseCase {
   constructor(
@@ -36,7 +33,6 @@ export class EnrichMuseumUseCase {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  /** Entry point hit by `GET /museums/:id/enrichment`. */
   async execute(input: EnrichMuseumInput): Promise<EnrichMuseumResult> {
     await this.assertMuseumExists(input.museumId);
 
@@ -55,7 +51,6 @@ export class EnrichMuseumUseCase {
     return { status: 'pending', jobId };
   }
 
-  /** Entry point hit by `GET /museums/:id/enrichment/status?jobId=...`. */
   async getJobStatus(input: EnrichMuseumInput & { jobId: string }): Promise<EnrichMuseumResult> {
     await this.assertMuseumExists(input.museumId);
 

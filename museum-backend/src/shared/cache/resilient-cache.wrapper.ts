@@ -3,23 +3,15 @@ import { logger } from '@shared/logger/logger';
 import type { CacheService, CacheValueSchema } from './cache.port';
 
 /**
- * Wraps any {@link CacheService} so that backend failures (Redis ECONNREFUSED,
- * timeouts, malformed payloads, etc.) degrade gracefully instead of bubbling up
- * as 500s. Read ops return `null` on failure (treated as cache miss). Write +
- * delete ops swallow the error. `ping` returns `false`.
- *
- * Banking-grade contract: cache is a performance accelerator, not a primary
- * dependency — request handlers must keep working when Redis is unreachable.
+ * Wraps {@link CacheService} so backend failures (ECONNREFUSED, timeouts,
+ * malformed payloads) degrade gracefully instead of bubbling 500s. Read ops
+ * return null (cache miss); write/delete ops swallow; `ping` returns false.
+ * Banking contract: cache is performance accelerator, not primary dep —
+ * handlers must work when Redis unreachable.
  */
 export class ResilientCacheWrapper implements CacheService {
-  /**
-   * Wraps the given inner cache so its failures degrade gracefully.
-   *
-   * @param inner - Underlying cache implementation whose failures should be silenced.
-   */
   constructor(private readonly inner: CacheService) {}
 
-  /** Read; returns null on backend failure (cache-miss semantics). */
   async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     try {
       return await this.inner.get<T>(key, schema);
@@ -29,7 +21,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Write; swallows backend failure. */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains input
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     try {
@@ -39,7 +30,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Delete; swallows backend failure. */
   async del(key: string): Promise<void> {
     try {
       await this.inner.del(key);
@@ -48,7 +38,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Prefix-delete; swallows backend failure. */
   async delByPrefix(prefix: string): Promise<void> {
     try {
       await this.inner.delByPrefix(prefix);
@@ -57,7 +46,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Conditional-set; returns false on backend failure (lock-not-acquired semantics). */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains input
   async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
     try {
@@ -68,7 +56,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Atomic numeric increment with TTL; returns null on backend failure. */
   async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
     try {
       return await this.inner.incrBy(key, amount, ttlSeconds);
@@ -78,7 +65,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Health probe; returns false on backend failure (treat as unreachable). */
   async ping(): Promise<boolean> {
     try {
       return await this.inner.ping();
@@ -88,7 +74,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Sorted-set increment; swallows backend failure. */
   async zadd(key: string, member: string, increment: number): Promise<void> {
     try {
       await this.inner.zadd(key, member, increment);
@@ -97,7 +82,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Sorted-set top-N; returns empty array on backend failure. */
   async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {
     try {
       return await this.inner.ztop(key, n);
@@ -107,7 +91,6 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  /** Resource cleanup; swallows backend failure. */
   async destroy(): Promise<void> {
     try {
       await this.inner.destroy?.();

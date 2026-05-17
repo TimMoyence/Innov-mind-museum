@@ -30,19 +30,15 @@ import {
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
- * R16 MFA endpoints (SOC2 CC6.1).
- *
- * Rate limits keyed by **user id where known** (so an admin behind CGNAT
- * cannot lock everyone out of the same office). For unauthenticated routes
- * (`/challenge` and `/recovery`) the user id is recovered from the
- * `mfaSessionToken` in the body — when absent / invalid, fall back to IP so
- * we still bound brute-force attempts.
+ * R16 MFA (SOC2 CC6.1). Rate-limit keyed by user id where known (admin behind
+ * CGNAT can't lock everyone in the office). For `/challenge` + `/recovery`,
+ * userId recovered from body `mfaSessionToken`; falls back to IP if absent/invalid.
  */
 const mfaRouter: Router = Router();
 
 const RATE_LIMIT_OPTIONS = { limit: 5, windowMs: 15 * 60 * 1000 } as const;
 
-/** Typed prefixes for the per-bucket rate-limit keys produced by {@link bySessionOrIp}. */
+/** Prefixes produced by {@link bySessionOrIp}. */
 export const MFA_RATE_LIMIT_BUCKET_PREFIX = {
   USER: 'user:',
   MFA_SESSION: 'mfa-session:',
@@ -50,17 +46,10 @@ export const MFA_RATE_LIMIT_BUCKET_PREFIX = {
 } as const;
 
 /**
- * Resolve a rate-limit key from a body-bearing request:
- *   - First try `req.user.id` (authenticated routes).
- *   - Then try the body's `mfaSessionToken` (challenge / recovery).
- *   - Fall back to IP. Always prefixed so the buckets do not collide with
- *     the route-specific `bucketName`.
- *
- * Exported solely so unit tests in `tests/unit/routes/mfa.route.test.ts` can
- * call it directly: the rate-limit middleware factory is mocked at the route
- * unit-test layer, which means Stryker's perTest coverage cannot map mutants
- * inside this helper to the tests that exercise it via the rate-limit
- * integration suite. Direct unit tests fill that gap.
+ * Order: req.user.id → body.mfaSessionToken → IP. Always prefixed to avoid
+ * cross-bucket collision. Exported for direct unit tests — the rate-limit
+ * factory is mocked at route unit-test layer, so Stryker perTest can't map
+ * mutants inside this helper otherwise.
  */
 export function bySessionOrIp(req: Request): string {
   const user = req.user;
@@ -115,12 +104,8 @@ const recoverySchema = z.object({
 const disableSchema = z.object({ currentPassword: z.string().min(1) });
 
 /**
- * F9 — admin envelope GET /auth/mfa/status. Self-scoped read of the calling
- * user's MFA enrollment state. Drives the "Enable / Disable MFA" toggle on
- * the mobile + admin clients without exposing the encrypted secret.
- *
- * RBAC: authenticated user only — `req.user.id` IS the user being read. No
- * admin-impersonation path; admin-on-other-user goes through the audit log.
+ * F9 — self-scoped read. `req.user.id` IS the user being read; no admin
+ * impersonation (admin-on-other-user goes through audit log).
  */
 mfaRouter.get('/status', isAuthenticated, async (req: Request, res: Response) => {
   const user = requireUser(req);
@@ -140,10 +125,8 @@ mfaRouter.post('/enroll', isAuthenticated, enrollLimiter, async (req: Request, r
     ip: req.ip,
     requestId: req.requestId,
   });
-  // The plain `recoveryCodes` array is intentionally returned ONCE here.
-  // The frontend MUST surface them for the user to copy/save before they
-  // navigate away — server cannot recover them later (they are bcrypt-hashed
-  // at rest).
+  // Plain `recoveryCodes` returned ONCE — FE MUST surface for save; server
+  // cannot recover (bcrypt-hashed at rest).
   res.status(200).json(result);
 });
 
@@ -189,7 +172,7 @@ mfaRouter.post(
       res.status(200).json(session);
     } catch (error) {
       if (error instanceof AppError && error.code === 'INVALID_MFA_CODE') {
-        // Best-effort attribution for the failure audit row.
+        // Best-effort attribution.
         try {
           const decoded = verifyMfaSessionToken(mfaSessionToken);
           await auditService.log({

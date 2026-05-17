@@ -16,10 +16,8 @@ interface ThirdPartyAiBreakdown {
 }
 
 /**
- * Decomposes a `third_party_ai_<category>_<provider>` scope into its parts.
- *
- * Returns `null` when the scope does not match the prefix or carries an
- * unknown category/provider combination. Callers MUST treat `null` as a
+ * Decomposes `third_party_ai_<category>_<provider>`. Returns `null` on prefix
+ * mismatch or unknown category/provider — callers MUST treat `null` as a
  * non-third-party-AI scope (e.g. `tos_privacy`, `analytics`).
  */
 export function parseThirdPartyAiScope(scope: string): ThirdPartyAiBreakdown | null {
@@ -36,9 +34,8 @@ export function parseThirdPartyAiScope(scope: string): ThirdPartyAiBreakdown | n
 }
 
 /**
- * Picks the canonical audit action name for a consent grant. Specialised
- * actions (`*_TOS`, `*_THIRD_PARTY_AI`, `*_LOCATION_TO_LLM`) make
- * `WHERE action = …` queries trivial during DPO investigations ; the generic
+ * Specialised actions (`*_TOS`, `*_THIRD_PARTY_AI`, `*_LOCATION_TO_LLM`) make
+ * `WHERE action = …` trivial during DPO investigations; generic
  * `CONSENT_GRANTED` catches scopes outside those families.
  */
 export function mapScopeToGrantAuditAction(scope: string): string {
@@ -49,10 +46,9 @@ export function mapScopeToGrantAuditAction(scope: string): string {
 }
 
 /**
- * Picks the canonical audit action name for a consent revoke. Mirrors
- * {@link mapScopeToGrantAuditAction} for the revoke side ; the `*_TOS`
- * scope intentionally has no revoke variant (ToS acceptance is contractually
- * tied to the account lifecycle and revokes flow through account-deletion).
+ * Mirrors {@link mapScopeToGrantAuditAction}. `*_TOS` intentionally has no
+ * revoke variant — ToS acceptance is tied to account lifecycle; revokes flow
+ * through account-deletion.
  */
 export function mapScopeToRevokeAuditAction(scope: string): string {
   if (scope === 'location_to_llm') return AUDIT_CONSENT_REVOKED_LOCATION_TO_LLM;
@@ -60,11 +56,7 @@ export function mapScopeToRevokeAuditAction(scope: string): string {
   return AUDIT_CONSENT_REVOKED;
 }
 
-/**
- * Builds the metadata payload for a consent audit row. Third-party AI rows
- * carry `{ provider, category }` so DPO dashboards can pivot by vendor and
- * data class without re-parsing the scope string.
- */
+/** Third-party AI rows carry `{ provider, category }` so DPO dashboards can pivot without re-parsing. */
 export function buildConsentAuditMetadata(
   scope: string,
   version: string,

@@ -1,32 +1,12 @@
 /**
- * Replicate-hosted SigLIP embeddings adapter (R8 fallback).
+ * Replicate-hosted SigLIP embeddings (R8 fallback, ADR-037).
+ * Activated via `EMBEDDINGS_PROVIDER=replicate` when local ONNX is unavailable.
  *
- * Hits the Replicate Predictions API to encode an image into a 768-dim
- * SigLIP embedding. This adapter is the fallback path documented in
- * design §3 / §9 D6 — activated via `EMBEDDINGS_PROVIDER=replicate` when
- * the local ONNX runtime is unavailable (cold start failures, AVX2 missing,
- * VPS without the model file shipped, etc.).
+ * Flow: POST /v1/predictions → poll urls.get until terminal → L2-normalise (IP==cosine).
+ * All failures (4xx/5xx, status='failed'|'canceled', timeout) → EncoderUnavailableError.
  *
- * Wire flow:
- *   1. POST `/v1/predictions` with `{ version | model, input: { image } }`.
- *   2. If status `'succeeded'` synchronously → use returned `output`.
- *   3. Otherwise poll `urls.get` until terminal status, with a global
- *      `AbortSignal` deadline derived from `timeoutMs`.
- *   4. L2-normalise the 768-dim vector (repository search assumes
- *      inner-product == cosine).
- *
- * Error mapping → {@link EncoderUnavailableError}:
- *   - HTTP 4xx (auth / bad request)
- *   - HTTP 5xx (provider down)
- *   - Replicate prediction status `'failed'` / `'canceled'`
- *   - AbortSignal fires (timeout exceeded)
- *
- * The adapter uses native `fetch` directly (Node 22 built-in) rather than
- * the `replicate` npm package so:
- *   - Tests can mock `global.fetch` (codebase pattern, see
- *     `searxng.client.ts` for reference).
- *   - The `replicate` package stays in `optionalDependencies` (R8 — only
- *     loaded if/when the official client is required).
+ * Native fetch (not `replicate` npm) so tests can mock global.fetch + the
+ * package stays in optionalDependencies.
  */
 
 import {
@@ -41,17 +21,11 @@ const REPLICATE_PREDICTIONS_URL = 'https://api.replicate.com/v1/predictions';
 const POLL_INTERVAL_MS = 25;
 const EXPECTED_VECTOR_LEN = 768;
 
-/** Constructor options for {@link ReplicateEmbeddingsAdapter}. */
 export interface ReplicateEmbeddingsAdapterOptions {
-  /** Replicate API token (`r8_...`). Sent in `Authorization: Token …`. */
   apiToken: string;
-  /**
-   * Replicate model identifier — typically `<owner>/<name>` (e.g.
-   * `lucataco/siglip-base-patch16-224`) or a pinned `<owner>/<name>:<sha>`.
-   * The bare name segment is what surfaces in {@link EncodeOutput.modelVersion}.
-   */
+  /** `<owner>/<name>` or `<owner>/<name>:<sha>`. */
   model: string;
-  /** Hard deadline for `encode()` (create + polling). */
+  /** Hard deadline in ms for create + polling. */
   timeoutMs: number;
 }
 
@@ -63,33 +37,19 @@ interface ReplicatePrediction {
   urls?: { get?: string };
 }
 
-/**
- * Adapter implementing {@link EmbeddingsPort} on top of the Replicate
- * Predictions REST API.
- */
 export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
   private readonly apiToken: string;
   private readonly model: string;
   private readonly timeoutMs: number;
 
-  /**
-   * Builds the adapter. The token is held in memory only — never logged.
-   *
-   * @param opts - API token, target model id, and timeout budget.
-   */
+  /** SEC: apiToken held in memory only, never logged. */
   public constructor(opts: ReplicateEmbeddingsAdapterOptions) {
     this.apiToken = opts.apiToken;
     this.model = opts.model;
     this.timeoutMs = opts.timeoutMs;
   }
 
-  /**
-   * Encodes an image into a 768-dim L2-normalised SigLIP vector via Replicate.
-   *
-   * @param input - Buffer + validated MIME type (already EXIF-stripped upstream).
-   * @returns L2-normalised Float32Array + Replicate-flavoured `modelVersion`.
-   * @throws {EncoderUnavailableError} On HTTP 4xx / 5xx, terminal failure, or timeout.
-   */
+  /** @throws {EncoderUnavailableError} 4xx/5xx/terminal/timeout */
   public async encode(input: EncodeInput): Promise<EncodeOutput> {
     const controller = new AbortController();
     const timeoutHandle = setTimeout(() => {
@@ -110,7 +70,6 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
       };
     } catch (err) {
       if (err instanceof EncoderUnavailableError) throw err;
-      // AbortError from the AbortController firing → timeout.
       if (isAbortError(err)) {
         throw new EncoderUnavailableError(
           `Replicate prediction timed out after ${this.timeoutMs}ms`,
@@ -126,7 +85,6 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
     }
   }
 
-  /** POSTs the create-prediction request and returns the parsed body. */
   private async createPrediction(
     dataUri: string,
     signal: AbortSignal,
@@ -134,7 +92,7 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
     const body: Record<string, unknown> = {
       input: { image: dataUri },
     };
-    // Replicate accepts either `version` (sha-pinned) or `model` (`owner/name`).
+    // `version` (sha-pinned) vs `model` (owner/name).
     if (this.model.includes(':')) {
       body.version = this.model.split(':')[1];
     } else {
@@ -155,10 +113,7 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
     return await parseResponseOrFail(response, 'create');
   }
 
-  /**
-   * Polls `urls.get` until the prediction reaches a terminal status. Returns
-   * the initial prediction directly if it is already `'succeeded'`.
-   */
+  /** Returns immediately if initial is 'succeeded'; else polls `urls.get`. */
   private async awaitTerminal(
     initial: ReplicatePrediction,
     signal: AbortSignal,
@@ -205,15 +160,11 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
   }
 }
 
-/** Encodes the image bytes as a `data:` URI suitable for Replicate `input.image`. */
 function bufferToDataUri(buffer: Buffer, mimeType: string): string {
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
-/**
- * Parses a Replicate API response. Maps non-2xx to {@link EncoderUnavailableError}
- * (4xx and 5xx alike — both indicate the encoder is unavailable from our PoV).
- */
+/** Non-2xx (both 4xx + 5xx) → EncoderUnavailableError. */
 async function parseResponseOrFail(
   response: Response,
   stage: 'create' | 'poll',
@@ -238,12 +189,7 @@ async function parseResponseOrFail(
   return (await response.json()) as ReplicatePrediction;
 }
 
-/**
- * Pulls the 768-dim vector out of a successful Replicate prediction.
- *
- * Replicate models can return either a flat `number[]` or a single-batch
- * `number[][]` — handle both for forward-compatibility.
- */
+/** Accepts both `number[]` and `number[][]` (single-batch) output shapes. */
 function extractVector(prediction: ReplicatePrediction): number[] {
   const { output } = prediction;
   if (output == null) {
@@ -268,7 +214,6 @@ function extractVector(prediction: ReplicatePrediction): number[] {
   return flat;
 }
 
-/** L2-normalises a numeric vector into a Float32Array (zero-vector → zero). */
 function l2Normalise(vec: number[]): Float32Array {
   let sumSq = 0;
   for (const v of vec) {
@@ -283,18 +228,13 @@ function l2Normalise(vec: number[]): Float32Array {
   return out;
 }
 
-/**
- * Builds the {@link EncodeOutput.modelVersion} string. Strips the optional
- * Replicate owner prefix and version suffix to surface a stable identifier
- * shaped like `siglip-base-patch16-224@replicate-v1`.
- */
+/** Output shape: `siglip-base-patch16-224@replicate-v1` (owner+sha stripped). */
 function buildModelVersion(model: string): string {
   const noOwner = model.includes('/') ? (model.split('/')[1] ?? model) : model;
   const noSha = noOwner.includes(':') ? (noOwner.split(':')[0] ?? noOwner) : noOwner;
   return `${noSha}@replicate-v1`;
 }
 
-/** Sleeps `ms` milliseconds, aborting early if the supplied signal fires. */
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
@@ -313,7 +253,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-/** Detects an AbortError in a way that survives transpile + cross-realm checks. */
+/** Cross-realm-safe AbortError detection. */
 function isAbortError(err: unknown): boolean {
   if (err instanceof Error && err.name === 'AbortError') return true;
   if (

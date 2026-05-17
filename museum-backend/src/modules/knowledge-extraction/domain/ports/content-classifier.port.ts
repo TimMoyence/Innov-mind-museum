@@ -1,4 +1,3 @@
-/** Artwork data extracted by the classifier. */
 export interface ClassifiedArtworkData {
   title: string;
   artist: string | null;
@@ -10,7 +9,6 @@ export interface ClassifiedArtworkData {
   currentLocation: string | null;
 }
 
-/** Museum data extracted by the classifier. */
 export interface ClassifiedMuseumData {
   name: string;
   openingHours: Record<string, unknown> | null;
@@ -21,14 +19,12 @@ export interface ClassifiedMuseumData {
   accessibility: Record<string, unknown> | null;
 }
 
-/** Result of classifying scraped content. */
 export type ClassificationResult =
   | { type: 'artwork'; confidence: number; data: ClassifiedArtworkData }
   | { type: 'museum'; confidence: number; data: ClassifiedMuseumData }
   | { type: 'irrelevant'; confidence: number; data: null };
 
-/** Port for LLM-based content classification. */
 export interface ContentClassifierPort {
-  /** Classifies scraped text content. Returns null on any LLM error. */
+  /** Returns null on any LLM error. */
   classify(textContent: string, locale: string): Promise<ClassificationResult | null>;
 }

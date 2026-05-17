@@ -6,18 +6,12 @@ import type {
   WebSearchQuery,
 } from '@modules/chat/domain/ports/web-search.port';
 
-/**
- * Chains multiple {@link WebSearchProvider} implementations and tries them
- * sequentially. Returns the first non-empty result set. Falls through on
- * empty results or thrown errors, and returns [] if all providers are
- * exhausted.
- */
+/** Tries providers sequentially; returns first non-empty result set. Falls through on empty/error. */
 export class FallbackSearchProvider implements WebSearchProvider {
   readonly name = 'fallback';
 
   constructor(private readonly providers: WebSearchProvider[]) {}
 
-  /** Tries each provider in order, returning the first non-empty result set. */
   async search(query: WebSearchQuery): Promise<SearchResult[]> {
     for (const provider of this.providers) {
       const providerName = provider.name ?? 'unknown';

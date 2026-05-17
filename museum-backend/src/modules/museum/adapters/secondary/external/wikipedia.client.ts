@@ -3,7 +3,6 @@ import { logger } from '@shared/logger/logger';
 const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
 const DEFAULT_TIMEOUT_MS = 5_000;
 
-/** Wikipedia REST summary — minimal projection we need. */
 export interface WikipediaSummary {
   title: string;
   extract: string;
@@ -11,7 +10,6 @@ export interface WikipediaSummary {
   pageUrl: string;
 }
 
-/** Port-like interface so the use case + tests can substitute a stub client. */
 export interface WikipediaClient {
   fetchSummary(input: { title: string; locale: string }): Promise<WikipediaSummary | null>;
 }
@@ -35,13 +33,9 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   }
 }
 
-/** Default HTTP-backed implementation. Fail-open on every error path. */
+/** Fail-open on every error path. */
 export class HttpWikipediaClient implements WikipediaClient {
-  /**
-   * Fetches the lead-section summary for `title` from the localised Wikipedia
-   * REST endpoint. Returns `null` on any failure (bad locale, 404, timeout,
-   * malformed JSON) so the caller can silently degrade.
-   */
+  /** Returns null on any failure (bad locale, 404, timeout, malformed JSON). */
   async fetchSummary(input: { title: string; locale: string }): Promise<WikipediaSummary | null> {
     if (!input.title.trim()) return null;
     const language = isValidLanguageCode(input.locale) ? input.locale.toLowerCase() : 'en';

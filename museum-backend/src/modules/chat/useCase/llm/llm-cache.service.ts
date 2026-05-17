@@ -14,21 +14,14 @@ import type { CacheService } from '@shared/cache/cache.port';
 const KEY_VERSION = 'v1';
 const KEY_PREFIX = 'llm';
 
-/** TTL per context class (seconds). Constants per spec section 3.3. */
-const TTL_GENERIC_S = 7 * 24 * 60 * 60; // 7 days
-const TTL_MUSEUM_MODE_S = 24 * 60 * 60; // 1 day
-const TTL_PERSONALIZED_S = 60 * 60; // 1 hour
+const TTL_GENERIC_S = 7 * 24 * 60 * 60;
+const TTL_MUSEUM_MODE_S = 24 * 60 * 60;
+const TTL_PERSONALIZED_S = 60 * 60;
 
-/**
- * Adaptive LLM response cache. Exact-match key derivation; semantic
- * similarity matching is deferred to G Phase 2.
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
- */
+/** Exact-match key derivation; semantic similarity deferred to G Phase 2. */
 export class LlmCacheServiceImpl implements LlmCacheService {
   constructor(private readonly cache: CacheService) {}
 
-  /** Classifies the input into a ContextClass for adaptive TTL. */
   classify(input: LlmCacheKeyInput): LlmContextClass {
     if (input.userPreferencesHash) {
       return 'personalized';
@@ -39,11 +32,7 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return 'generic';
   }
 
-  /**
-   * Looks up a cached LLM response. Returns hit=false on miss OR on a cache-
-   * layer exception (fail-open per ADR-036 + spec R8). The chat path never
-   * throws because of the cache.
-   */
+  /** Fail-open (ADR-036/R8): cache-layer exception → hit=false. */
   async lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>> {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
@@ -67,11 +56,7 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return { hit: value !== null, value, contextClass };
   }
 
-  /**
-   * Stores an LLM response under the derived key with the TTL for its
-   * context class. Fail-open: a cache-layer exception is caught and logged,
-   * never propagates (ADR-036 + spec R8).
-   */
+  /** Fail-open (ADR-036/R8). */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains the stored value shape
   async store<T>(input: LlmCacheKeyInput, value: T): Promise<void> {
     const contextClass = this.classify(input);
@@ -88,12 +73,10 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     }
   }
 
-  /** Drops all museum-scoped entries (museum-mode + personalized). Called from museum admin update. */
+  /** Drops museum-mode + personalized entries; called from museum admin update. */
   async invalidateMuseum(museumId: number): Promise<void> {
-    // Key shape for museum-scoped entries:
-    //   llm:v1:{contextClass}:{museumId}:{userId|anon}:{hash}
-    // (museumId sits BEFORE userId so delByPrefix can target a specific museum
-    // without scanning all user namespaces.)
+    // museumId BEFORE userId in key so delByPrefix can target a museum
+    // across all user namespaces.
     const contextClasses: LlmContextClass[] = ['museum-mode', 'personalized'];
     for (const ctxClass of contextClasses) {
       const prefix = `${KEY_PREFIX}:${KEY_VERSION}:${ctxClass}:${String(museumId)}:`;
@@ -110,7 +93,6 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     }
   }
 
-  /** TTL (seconds) for a given context class. */
   private ttlFor(contextClass: LlmContextClass): number {
     if (contextClass === 'generic') return TTL_GENERIC_S;
     if (contextClass === 'museum-mode') return TTL_MUSEUM_MODE_S;
@@ -118,14 +100,9 @@ export class LlmCacheServiceImpl implements LlmCacheService {
   }
 
   /**
-   * Builds the deterministic cache key per spec section 3.2.
-   *
-   * Key shape: `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`
-   *
-   * museumId is placed before userId so that `delByPrefix` can target all entries
-   * for a specific museum across all users (invalidateMuseum). The spec's conceptual
-   * shape places userId first, but the storage shape inverts them to enable the
-   * prefix-based invalidation pattern.
+   * Key: `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
+   * museumId BEFORE userId for `delByPrefix` invalidateMuseum pattern (inverts
+   * spec's conceptual order).
    */
   private buildKey(input: LlmCacheKeyInput, contextClass: LlmContextClass): string {
     const userIdSeg = input.userId === 'anon' ? 'anon' : String(input.userId);
@@ -135,12 +112,9 @@ export class LlmCacheServiceImpl implements LlmCacheService {
   }
 }
 
-/** Canonical SHA-256 over the cache-relevant fields of the input. Order-stable. */
 function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
-  // R8 / AC6 — `imageContentHash` is included ONLY when present (conditional
-  // spread). Legacy text-only entries produce the SAME canonical JSON as today
-  // (no `imageContentHash` key in the serialized form), so the post-C3 cache
-  // remains backward-compatible with pre-C3 stored entries.
+  // R8/AC6 — imageContentHash only when present so legacy text-only entries
+  // produce the SAME canonical JSON (post-C3 backward-compat with pre-C3 entries).
   const canonical: Record<string, unknown> = {
     model: input.model,
     systemSection: input.systemSection,
@@ -152,7 +126,7 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
   if (input.imageContentHash !== undefined) {
     canonical.imageContentHash = input.imageContentHash;
   }
-  // Sort keys for deterministic JSON. localeCompare for stable ordering.
+  // Sort keys for deterministic JSON (localeCompare = stable).
   const sortedJson = JSON.stringify(
     canonical,
     Object.keys(canonical).sort((a, b) => a.localeCompare(b)),

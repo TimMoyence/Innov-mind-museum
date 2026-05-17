@@ -8,7 +8,6 @@ import type {
   SignedAudioReadUrl,
 } from '@modules/chat/domain/ports/audio-storage.port';
 
-/** Default directory for local TTS audio files (`<cwd>/tmp/audios`). */
 export const DEFAULT_LOCAL_AUDIOS_DIR = path.join(process.cwd(), 'tmp', 'audios');
 
 const extensionByContentType: Record<string, string> = {
@@ -19,7 +18,6 @@ const extensionByContentType: Record<string, string> = {
   'audio/webm': 'webm',
 };
 
-/** Resolves a `local-audio://...` reference to an absolute filesystem path. */
 export const resolveLocalAudioFilePath = (
   ref: string,
   audiosDir = DEFAULT_LOCAL_AUDIOS_DIR,
@@ -29,11 +27,10 @@ export const resolveLocalAudioFilePath = (
   return path.join(audiosDir, match[1]);
 };
 
-/** Local-filesystem implementation of {@link AudioStorage} for dev. */
+/** Dev-only local-filesystem `AudioStorage`. */
 export class LocalAudioStorage implements AudioStorage {
   constructor(private readonly audiosDir = DEFAULT_LOCAL_AUDIOS_DIR) {}
 
-  /** Writes audio buffer to the local audios directory and returns a `local-audio://` reference. */
   async save({ buffer, contentType, objectKey }: SaveAudioInput): Promise<string> {
     await mkdir(this.audiosDir, { recursive: true });
     const extension = extensionByContentType[contentType] ?? 'mp3';
@@ -44,7 +41,6 @@ export class LocalAudioStorage implements AudioStorage {
     return `local-audio://${fileName}`;
   }
 
-  /** Returns a `file://` URL for the given `local-audio://` reference, or null if not found. */
   async getSignedReadUrl(ref: string): Promise<SignedAudioReadUrl | null> {
     const filePath = resolveLocalAudioFilePath(ref, this.audiosDir);
     if (!filePath) return null;
@@ -59,7 +55,6 @@ export class LocalAudioStorage implements AudioStorage {
     };
   }
 
-  /** Deletes the local audio file referenced by a `local-audio://` ref; no-op on failure. */
   async deleteByRef(ref: string): Promise<void> {
     const filePath = resolveLocalAudioFilePath(ref, this.audiosDir);
     if (!filePath) return;

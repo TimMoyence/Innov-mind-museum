@@ -17,9 +17,7 @@ const IN_MUSEUM_THRESHOLD_M = 200;
 const IN_MUSEUM_CACHE_TTL_S = 20 * 60; // 20 minutes
 const REVERSE_GEOCODE_TIMEOUT_MS = 3_000;
 
-/** Optional dependencies for {@link LocationResolver}. */
 export interface LocationResolverDeps {
-  /** Shared cache service; used to memoise both in-museum results and Nominatim reverse lookups. */
   cache?: CacheService;
   /**
    * Pre-built cached Nominatim reverse-geocoder (usually from
@@ -29,7 +27,6 @@ export interface LocationResolverDeps {
   reverseGeocode?: CachedReverseGeocodeFn;
 }
 
-/** Port used by {@link resolveLocationForMessage} to gate location on consent. */
 export interface LocationConsentChecker {
   isGranted(userId: number, scope: 'location_to_llm'): Promise<boolean>;
 }
@@ -73,23 +70,14 @@ export class LocationResolver {
     }
   }
 
-  /**
-   * Resolves the given coordinates into nearby museums and (optionally) a reverse-geocoded address.
-   *
-   * @param lat - Latitude in degrees.
-   * @param lng - Longitude in degrees.
-   * @returns The resolved location context ready for LLM prompt injection.
-   */
   async resolve(lat: number, lng: number): Promise<ResolvedLocation> {
     const cacheKey = `geo:resolve:${lat.toFixed(3)}:${lng.toFixed(3)}`;
 
-    // Check cache first
     if (this.cache) {
       const cached = await this.cache.get<ResolvedLocation>(cacheKey);
       if (cached) return cached;
     }
 
-    // Resolve nearby museums
     const nearbyMuseums = await findNearbyMuseums(lat, lng, this.museumRepository);
     const nearestMuseumDistance = nearbyMuseums.length > 0 ? nearbyMuseums[0].distance : null;
     const isInsideMuseum =
@@ -172,7 +160,6 @@ function buildCoarseReverseGeocode(result: {
 }
 
 /**
- * Narrow a constructor argument to the options bag shape.
  * Plain CacheService objects expose functions like `get`, never `cache` /
  * `reverseGeocode`, so presence of either sentinel key means it's a deps bag.
  */
@@ -181,7 +168,6 @@ function isDeps(arg: CacheService | LocationResolverDeps | undefined): arg is Lo
   return 'cache' in arg || 'reverseGeocode' in arg;
 }
 
-/** Options bag for {@link resolveLocationForMessage}. */
 export interface ResolveLocationOptions {
   /**
    * Authenticated user id. If omitted (anonymous chat) or if the consent
@@ -194,16 +180,10 @@ export interface ResolveLocationOptions {
 }
 
 /**
- * Parses a raw location string from the chat message context, resolves it via
- * the provided {@link LocationResolver}, and merges the nearby museums into the
- * session's transient visit context.
- *
  * GDPR gate: when a `consentChecker` is supplied, the resolver is only invoked
  * when the user has actively granted the `location_to_llm` scope. Without
  * consent this function returns `undefined` (equivalent to the user not
  * sharing a location at all), so the LLM prompt carries no geolocation signal.
- *
- * @returns The resolved location, or undefined if the resolver or location string is absent/invalid/denied.
  */
 export async function resolveLocationForMessage(
   resolver: LocationResolver | undefined,

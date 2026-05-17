@@ -16,66 +16,43 @@ import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory
 import type { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Dependencies needed by commitAssistantResponse. */
 interface CommitDeps {
   guardrail: GuardrailEvaluationService;
   repository: ChatRepository;
   cache?: CacheService;
   userMemory?: UserMemoryService;
   /**
-   * C4 (T2.6) — Optional URL reachability probe. When injected, after the
-   * substring-match validator has dropped hallucinated quotes, the surviving
-   * `metadata.sources` URLs are HEAD-probed and unreachable ones filtered out.
-   * Left undefined at V1 composition root (Option C — see STORY.md decision)
-   * because the per-URL ≤ 800 ms timeout is additive to chat p99 latency and
-   * the upstream hosts (Wikidata, Louvre, Wikimedia) have variable response
-   * profiles ; turning it on is a V1.1 rollout after p99 baking.
-   *
-   * Backward-compat (NFR8) : undefined → skip silently, no behaviour change.
+   * C4 — left undefined at V1 root; per-URL ≤800ms is additive to p99.
+   * V1.1 rollout after baking. NFR8: undefined → skip silently.
    */
   urlHeadProbe?: UrlHeadProbe;
 }
 
 /**
- * C4 (T2.6) — Post-LLM grounding gate.
- *
- * Mutates `metadata.sources` in place to retain only the citations whose
- * `quote` is a verbatim substring of the router-supplied fact corpus.
- * No-op when either the LLM emitted no `sources[]` (parser returned
- * `undefined` per `assistant-response.toSources` convention) OR the request
- * has no fact context (legacy harnesses without `KnowledgeRouterPort`, or
- * the router returned `source: 'none'`).
- *
- * The validator itself is pure (no I/O, NFR2-safe — adds < 1 ms p99) so
- * wiring it unconditionally is safe ; the optional `urlHeadProbe` HEAD
- * filtering is gated behind a separate DI seam (NFR2 cost).
- *
- * Spec   : `team-state/2026-05-11-c4-anti-hallucination/spec.md` §R4 / R5.
- * Design : `team-state/2026-05-11-c4-anti-hallucination/design.md` §S5.
+ * C4 — post-LLM grounding gate. Mutates `metadata.sources` in place to retain
+ * only citations whose `quote` is verbatim substring of router-supplied facts.
+ * No-op when LLM emitted no sources OR no fact context. Validator is pure
+ * (<1ms p99); urlHeadProbe gated separately (NFR2 cost).
  */
 async function applyAntiHallucinationFilters(
   metadata: ReturnType<typeof buildCommitPayload>['assistantMetadata'],
   routerFacts: readonly string[] | undefined,
   urlHeadProbe: UrlHeadProbe | undefined,
 ): Promise<void> {
-  // Validator pass — drop hallucinated quotes (R4).
+  // R4 — drop hallucinated quotes.
   if (metadata.sources && metadata.sources.length > 0 && routerFacts && routerFacts.length > 0) {
     const { valid } = validateSources(metadata.sources, [...routerFacts]);
     metadata.sources = valid.length > 0 ? valid : undefined;
   }
 
-  // HEAD probe pass — drop unreachable URLs (R5). Optional ; injected only in
-  // environments that have accepted the latency cost (V1.1+).
+  // R5 — drop unreachable URLs. Injected only where latency cost accepted.
   if (metadata.sources && metadata.sources.length > 0 && urlHeadProbe) {
     const probeMap = await urlHeadProbe.probeBatch(metadata.sources.map((s) => s.url));
     const reachable = metadata.sources.filter((s) => probeMap.get(s.url)?.reachable === true);
     metadata.sources = reachable.length > 0 ? reachable : undefined;
   }
 
-  // C4 T7.3 — count every source that survived the anti-hallucination filters
-  // (post-validator, post-HEAD-probe). Partitioned by `type` so Grafana can
-  // chart citation rate per provenance (wikidata / web / commons / museum-catalog).
-  // Cardinality bounded by `CitationSource.type` literal-union (≤ 4 values).
+  // Cardinality bounded by CitationSource.type literal-union (≤ 4 values).
   if (metadata.sources && metadata.sources.length > 0) {
     for (const s of metadata.sources) {
       chatSourcesEmittedTotal.inc({ type: s.type });
@@ -83,7 +60,6 @@ async function applyAntiHallucinationFilters(
   }
 }
 
-/** Builds session updates and artwork match from the guardrail output and LLM result. */
 function buildCommitPayload(
   session: Awaited<ReturnType<typeof ensureSessionAccess>>,
   outputCheck: Awaited<ReturnType<GuardrailEvaluationService['evaluateOutput']>>,
@@ -122,7 +98,6 @@ function buildCommitPayload(
   return { assistantText: outputCheck.text, assistantMetadata, sessionUpdates, artworkMatch };
 }
 
-/** Invalidates caches and triggers fire-and-forget user memory update. */
 export async function postCommitSideEffects(
   deps: { cache?: CacheService; userMemory?: UserMemoryService },
   sessionId: string,
@@ -147,23 +122,10 @@ export async function postCommitSideEffects(
 }
 
 /**
- * Persist the assistant message row. Extracted so the optimistic-lock
- * translation policy (long-form comment below) lives in one place AND
- * `commitAssistantResponse` stays under the 80-line cap.
- *
- * ChatSession optimistic-lock policy — surface 409, do NOT auto-retry.
- *
- * The assistant reply was generated against an older session snapshot (visit
- * context, museum mode, intent, etc.). Retrying the persistMessage call
- * against a refreshed session would commit a reply that may disagree with
- * the current session state — silent inconsistency.
- *
- * The 409 forces the client to refresh and re-prompt, so the next generation
- * runs against the up-to-date session.
- *
- * The Museum admin path (C.1, withOptimisticLockRetry) auto-retries because
- * admin edits are a single short transaction ; here the prior LLM call
- * cannot be safely re-run.
+ * Optimistic-lock policy: surface 409, do NOT auto-retry — reply was generated
+ * against older session snapshot; retrying would silently commit a reply that
+ * disagrees with current session state. Client must refresh + re-prompt.
+ * (Admin C.1 auto-retries because edits are a single short tx.)
  */
 async function persistAssistantMessage(
   repository: ChatRepository,
@@ -192,9 +154,7 @@ async function persistAssistantMessage(
   }
 }
 
-/**
- * Persists the assistant response and returns the result. Shared by postMessage and postMessageStream.
- */
+/** Commits an assistant response (guardrail + persist + cache + memory). */
 export async function commitAssistantResponse(
   deps: CommitDeps,
   sessionId: string,
@@ -206,13 +166,7 @@ export async function commitAssistantResponse(
     enrichedImages?: EnrichedImage[];
     requestId?: string;
     ip?: string;
-    /**
-     * C4 (T2.6) — Verified fact strings from `KnowledgeRouter.resolve()` that
-     * fed the same LLM call. Used by the post-LLM grounding gate to drop
-     * citations whose `quote` is not a verbatim substring of any fact. Absent
-     * (undefined or empty) → grounding gate skipped (NFR8 backward-compat for
-     * legacy harnesses without a `KnowledgeRouterPort`).
-     */
+    /** Absent → grounding gate skipped (NFR8 backward-compat). */
     routerFacts?: readonly string[];
   },
 ): Promise<PostMessageResult> {
@@ -238,10 +192,8 @@ export async function commitAssistantResponse(
     enrichedImages,
   );
 
-  // C4 (T2.6) — Post-LLM anti-hallucination filters. Run after the guardrail
-  // built `assistantMetadata` so the dropped sources never reach the persisted
-  // row OR the API response. In-place mutation matches the rest of the commit
-  // flow (e.g. `assistantMetadata.images = enrichedImages` above).
+  // C4 — run after guardrail so dropped sources never reach persisted row or
+  // API response. In-place mutation matches rest of commit flow.
   await applyAntiHallucinationFilters(assistantMetadata, routerFacts, deps.urlHeadProbe);
 
   const assistantMessage = await persistAssistantMessage(deps.repository, sessionId, {
@@ -273,16 +225,10 @@ export async function commitAssistantResponse(
     .filter((s) => s.length > 0);
   const sanitizedSuggestions = mapped.length > 0 ? mapped : undefined;
 
-  // A5 (R1) — Mark the pipeline as having reached its terminal phase. Any
-  // refusal path that returns early from the orchestrator never reaches this
-  // line ; that branch is owned by `guardrail-evaluation.service` and decides
-  // its own `phase` value. On the success path uniformity wins : `done` means
-  // "the pipeline ran end-to-end, whatever it returned" (spec §1.1 R1).
+  // A5 R1 — `done` = pipeline ran E2E (success path). Refusal path owned by
+  // guardrail-evaluation.service decides its own phase.
   assistantMetadata.phase = 'done';
-  // A5 (R9) — Emit a terminal `chat.phase.done` Langfuse trace so the
-  // timeline has a closing marker per chat request, sibling of the per-phase
-  // spans emitted by the pipeline + orchestrator + TTS adapter. Fail-open via
-  // `safeTrace`.
+  // A5 R9 — terminal Langfuse span (fail-open via safeTrace).
   emitChatPhaseSpan('done', Date.now(), { sessionId });
 
   return {

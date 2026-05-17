@@ -6,7 +6,6 @@ import type {
 } from '@modules/auth/domain/social-account/socialAccount.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
-/** Helper to convert a SocialAccount entity to a plain SocialAccountRow DTO. */
 function toRow(entity: SocialAccount): SocialAccountRow {
   return {
     id: entity.id,
@@ -18,7 +17,6 @@ function toRow(entity: SocialAccount): SocialAccountRow {
   };
 }
 
-/** TypeORM implementation of {@link ISocialAccountRepository}. */
 export class SocialAccountRepositoryPg implements ISocialAccountRepository {
   private readonly repo: Repository<SocialAccount>;
 
@@ -26,13 +24,6 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     this.repo = dataSource.getRepository(SocialAccount);
   }
 
-  /**
-   * Finds a social account by provider and provider-specific user ID.
-   *
-   * @param provider - OAuth provider name (e.g. `apple`, `google`).
-   * @param providerUserId - The user's ID within the provider.
-   * @returns The matching row or `null`.
-   */
   async findByProviderAndProviderUserId(
     provider: string,
     providerUserId: string,
@@ -43,12 +34,6 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     return entity ? toRow(entity) : null;
   }
 
-  /**
-   * Lists all social accounts linked to a user.
-   *
-   * @param userId - Numeric user ID.
-   * @returns Array of social account rows.
-   */
   async findByUserId(userId: number): Promise<SocialAccountRow[]> {
     const entities = await this.repo.find({
       where: { userId },
@@ -56,16 +41,6 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     return entities.map(toRow);
   }
 
-  /**
-   * Links a new social account to an existing user.
-   *
-   * @param params - User ID, provider, providerUserId, and optional email.
-   * @param params.userId - ID of the user to link.
-   * @param params.provider - OAuth provider name.
-   * @param params.providerUserId - User ID from the OAuth provider.
-   * @param params.email - Email associated with the social account.
-   * @returns The inserted social account row.
-   */
   async create(params: {
     userId: number;
     provider: string;
@@ -82,11 +57,6 @@ export class SocialAccountRepositoryPg implements ISocialAccountRepository {
     return toRow(saved);
   }
 
-  /**
-   * Deletes all social accounts linked to a user.
-   *
-   * @param userId - Numeric user ID.
-   */
   async deleteByUserId(userId: number): Promise<void> {
     await this.repo.delete({ userId });
   }

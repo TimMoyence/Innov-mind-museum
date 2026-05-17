@@ -5,7 +5,7 @@ import { badRequest, notFound } from '@shared/errors/app.error';
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 
-/** Input for the change-user-tier use case (R1 §3.5 D5). */
+/** R1 §3.5 D5 */
 interface ChangeUserTierInput {
   userId: number;
   newTier: 'free' | 'premium';
@@ -15,20 +15,14 @@ interface ChangeUserTierInput {
 }
 
 /**
- * R1 (C6) — Admin tier override use case. Mirrors `ChangeUserRoleUseCase`
- * shape (validate → mutate → audit → return) but :
- *  - Uses `changeUserTier` repo method (single UPDATE, RETURNING DTO).
- *  - Emits `AUDIT_ADMIN_USER_TIER_CHANGED` with `{ from, to }` metadata
- *    AFTER the mutation, BEFORE returning (N3 audit ordering).
- *  - Idempotent no-op when `previous.tier === newTier` (R1 §3.5 D5) — no
- *    audit row, no repo write.
- *  - No "last admin" invariant (no equivalent for tier).
- *  - MUST NOT touch the monthly counter (R17 — handled by the repo).
+ * R1 (C6) — Admin tier override. validate → mutate → audit → return.
+ * - Idempotent no-op when previous.tier === newTier (R1 §3.5 D5) — no audit, no write.
+ * - Audit emitted AFTER mutation, BEFORE return (N3 audit ordering).
+ * - MUST NOT touch the monthly counter (R17 — handled by repo).
  */
 export class ChangeUserTierUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Validates + flips the user's tier, emitting the audit row on success. */
   async execute(input: ChangeUserTierInput): Promise<AdminUserDTO> {
     const validTiers: string[] = Object.values(UserTier);
     if (!validTiers.includes(input.newTier)) {
@@ -40,9 +34,7 @@ export class ChangeUserTierUseCase {
       throw notFound('User not found');
     }
 
-    // R1 §3.5 D5 — no-op skip. Returning the existing DTO without an audit
-    // row keeps double-clicks from inflating the chain ; the user state is
-    // unchanged from the admin's perspective.
+    // R1 §3.5 D5 — no-op skip prevents double-click audit chain inflation.
     if (previous.tier === input.newTier) {
       return previous;
     }

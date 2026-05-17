@@ -1,7 +1,7 @@
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { Repository } from 'typeorm';
 
-/** Persists a TTS audio reference for a message (assistant only). */
+/** Assistant messages only. */
 export async function updateMessageAudio(
   messageRepo: Repository<ChatMessage>,
   messageId: string,
@@ -17,7 +17,6 @@ export async function updateMessageAudio(
   );
 }
 
-/** Clears the cached TTS audio reference for a message. */
 export async function clearMessageAudio(
   messageRepo: Repository<ChatMessage>,
   messageId: string,
@@ -29,11 +28,9 @@ export async function clearMessageAudio(
 }
 
 /**
- * Returns every non-null `imageRef` tied to messages whose session belongs to the user.
- *
- * Used by the GDPR right-to-erasure cleanup to reach keys that predate the
- * user-scoped S3 path format (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`).
- * MUST be invoked BEFORE the user row is deleted (CASCADE wipes messages/sessions).
+ * GDPR right-to-erasure: reaches keys predating user-scoped S3 path format
+ * (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`). MUST run BEFORE user row delete
+ * (CASCADE wipes messages/sessions).
  */
 export async function findLegacyImageRefsByUserId(
   messageRepo: Repository<ChatMessage>,

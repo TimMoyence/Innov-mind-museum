@@ -19,11 +19,8 @@ interface SearXNGApiResponse {
 }
 
 /**
- * SearXNG multi-instance adapter implementing {@link WebSearchProvider}.
- *
- * Rotates through provided instances round-robin, falling back to the next
- * instance on any error. Uses native `fetch` (Node 18+). Never throws from
- * public methods — any error returns an empty array so the caller can fail-open.
+ * Round-robin across instances, falling back to next on any error. Never throws —
+ * empty array on all-failures so caller can fail-open.
  */
 export class SearXNGClient implements WebSearchProvider {
   readonly name = 'searxng';
@@ -32,14 +29,6 @@ export class SearXNGClient implements WebSearchProvider {
 
   constructor(private readonly instances: string[]) {}
 
-  /**
-   * Searches the web via a SearXNG instance.
-   *
-   * Tries each instance in rotation order, advancing on failure.
-   *
-   * @param query - Search term and max results.
-   * @returns Search results, or empty array if all instances fail.
-   */
   async search(query: WebSearchQuery): Promise<SearchResult[]> {
     if (!query.query.trim()) return [];
     if (this.instances.length === 0) return [];
@@ -70,14 +59,12 @@ export class SearXNGClient implements WebSearchProvider {
             instance: baseUrl,
             query: query.query,
           });
-          // Try next instance
           continue;
         }
 
         const data = (await response.json()) as SearXNGApiResponse;
         const rawResults = data.results ?? [];
 
-        // Advance the rotation pointer so the next call starts from the next instance
         this.nextIndex = (index + 1) % this.instances.length;
 
         return rawResults.slice(0, maxResults).map((r) => ({
@@ -91,7 +78,6 @@ export class SearXNGClient implements WebSearchProvider {
           instance: baseUrl,
           query: query.query,
         });
-        // Try next instance
       }
     }
 

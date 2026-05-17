@@ -16,19 +16,14 @@ interface ExportUserDataDeps {
 }
 
 /**
- * Assembles the GDPR Article 15 (access) + Article 20 (portability) export
- * payload for the requesting user.
- *
+ * GDPR Art. 15 (access) + Art. 20 (portability) payload assembler.
  * Pulls from each module via its registered port — never queries DB directly,
- * so this stays inside the hexagonal contract for the auth module.
- *
- * Saved artworks (mobile local storage) are intentionally absent: they are
- * never persisted server-side, so they cannot leak through this endpoint.
+ * stays inside the hexagonal contract. Saved artworks (mobile-local) absent
+ * by design: never persisted server-side.
  */
 export class ExportUserDataUseCase {
   constructor(private readonly deps: ExportUserDataDeps) {}
 
-  /** Builds the full export payload for the given persisted user record. */
   async execute(user: User): Promise<UserExportPayload> {
     const [chatData, reviews, supportTickets, consentRows] = await Promise.all([
       this.deps.chatDataExport.getAllUserData(user.id),
@@ -54,9 +49,7 @@ export class ExportUserDataUseCase {
         role: user.role,
         firstname: user.firstname ?? null,
         lastname: user.lastname ?? null,
-        // Per-user locale isn't a profile column today; the field is reserved in
-        // the schema for forward compat (matches mobile preference). Stays null
-        // until persisted.
+        // Reserved for forward compat (matches mobile preference). Stays null until persisted.
         locale: null,
         emailVerified: user.email_verified,
         onboardingCompleted: user.onboarding_completed,

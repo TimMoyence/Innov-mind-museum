@@ -1,26 +1,11 @@
 /**
- * In-flight concurrency limiter for LLM Guard `/scan` HTTP calls.
- *
- * Sits between `LLMGuardAdapter.scan()` and the sidecar so a traffic surge
- * does not amplify sidecar latency into a death spiral (100 concurrent /scan
- * → P95 explodes → all time out → breaker trips → 100 % fail-CLOSED). The
- * semaphore caps the fan-out to a number the sidecar can sustain
- * (`maxInflight`, default 8 per process) and queues the next `queueMax`
- * (default 32). Beyond the queue, callers receive `ScanSemaphoreOverflowError`
- * and the adapter MUST translate it into a fail-CLOSED return so the safety
- * contract is preserved (ADR-047).
- *
- * Always-on. NOT a feature flag — both bounds are operational tunables
- * (`LLM_GUARD_MAX_INFLIGHT`, `LLM_GUARD_QUEUE_MAX`).
- *
- * The release path always hands the freed slot directly to the queue head
- * without decrementing then re-incrementing `inFlight`, which keeps the
- * accounting race-free under microtask interleaving.
+ * ADR-047 — caps fan-out to LLM Guard /scan (maxInflight, default 8) + queues
+ * (queueMax, default 32). Beyond queue → ScanSemaphoreOverflowError; adapter
+ * MUST translate to fail-CLOSED. Prevents surge → P95 explosion → death spiral.
+ * Always-on; both bounds are operational tunables (LLM_GUARD_MAX_INFLIGHT/QUEUE_MAX).
+ * release() hands freed slot directly to queue head (race-free under microtasks).
  */
 
-/**
- *
- */
 export class ScanSemaphoreOverflowError extends Error {
   constructor() {
     super('LLM Guard scan semaphore queue full — fail-closing to protect the sidecar');
@@ -28,9 +13,6 @@ export class ScanSemaphoreOverflowError extends Error {
   }
 }
 
-/**
- *
- */
 export interface ScanInflightSemaphoreStats {
   inFlight: number;
   queued: number;
@@ -38,9 +20,6 @@ export interface ScanInflightSemaphoreStats {
   queueMax: number;
 }
 
-/**
- *
- */
 export class ScanInflightSemaphore {
   private inFlight = 0;
   private readonly queue: (() => void)[] = [];
@@ -58,13 +37,10 @@ export class ScanInflightSemaphore {
   }
 
   /**
-   * Reserve a slot. Resolves immediately if `inFlight < maxInflight`,
-   * otherwise queues FIFO until a `release()` hands the slot over. Throws
-   * `ScanSemaphoreOverflowError` if the queue is already full.
+   * Caller MUST pair every successful acquire with exactly one release
+   * (try/finally to avoid slot leak on cancellation).
    *
-   * Callers MUST pair every successful `acquire()` with exactly one
-   * `release()` — preferably via a `try { ... } finally { release(); }`
-   * block so cancellations do not leak slots.
+   * @throws ScanSemaphoreOverflowError when queue full.
    */
   async acquire(): Promise<void> {
     if (this.inFlight < this.maxInflight) {
@@ -79,10 +55,7 @@ export class ScanInflightSemaphore {
     });
   }
 
-  /**
-   * Free a slot. If a caller is queued, the slot is handed directly to it —
-   * `inFlight` stays at the same value. Otherwise `inFlight` decrements.
-   */
+  /** Hands slot directly to queue head (no inFlight decrement/increment race). */
   release(): void {
     const next = this.queue.shift();
     if (next) {
@@ -92,10 +65,6 @@ export class ScanInflightSemaphore {
     if (this.inFlight > 0) this.inFlight--;
   }
 
-  /**
-   *
-   */
-  /** Returns a snapshot of current inflight + queued counts, for logs + observability. */
   getStats(): ScanInflightSemaphoreStats {
     return {
       inFlight: this.inFlight,

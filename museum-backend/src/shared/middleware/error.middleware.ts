@@ -6,7 +6,6 @@ import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import type { ErrorRequestHandler, Response, Request } from 'express';
 
-/** Shape of the JSON error response sent to clients. */
 interface ErrorResponseShape {
   error: {
     code: string;
@@ -17,12 +16,9 @@ interface ErrorResponseShape {
 }
 
 /**
- * Duck-typed AppError check. Plain `instanceof AppError` breaks across module
- * boundaries when Jest calls `jest.resetModules()` (e2e harness reset for
- * multi-container test files): the orchestrator and middleware end up holding
- * two distinct AppError class identities, so an AppError thrown by code from
- * pre-reset modules looks "unknown" to the middleware and degrades to 500.
- * The `name` + `statusCode` shape uniquely identifies our errors.
+ * Duck-typed — `instanceof AppError` breaks across module boundaries when Jest calls
+ * `jest.resetModules()` (e2e harness reset). Two distinct AppError class identities
+ * end up coexisting; pre-reset AppError throws look "unknown" → degrade to 500.
  */
 const isAppErrorLike = (error: unknown): error is AppError => {
   if (error instanceof AppError) return true;
@@ -85,12 +81,7 @@ const logServerError = (error: unknown, req: Request, requestId: string | undefi
   });
 };
 
-/**
- * Logs auth-path 4xx with the AppError `code` so we can see *why* an
- * `/api/auth/...` call rejected without scraping the response body. Scoped to
- * `/api/auth/` to avoid flooding logs with every wrong password attempt across
- * the surface; widen if a future incident demands it.
- */
+/** Scoped to `/api/auth/` only — avoid flooding logs with every wrong password attempt. */
 const logAuth4xx = (
   error: unknown,
   req: Request,
@@ -109,7 +100,6 @@ const logAuth4xx = (
   });
 };
 
-/** Express error-handling middleware that maps AppError instances to structured JSON responses and logs 5xx errors. */
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const normalizedError = normalizeError(error);
   const requestId = (req as { requestId?: string } | undefined)?.requestId ?? undefined;

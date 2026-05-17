@@ -11,8 +11,8 @@ import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
- * Orchestrates password reset using a one-time token (atomic consume + update).
- * Revokes all active refresh tokens on success (OWASP Forgot Password Cheat Sheet).
+ * Atomic consume + update. Revokes all active refresh tokens on success
+ * (OWASP Forgot Password Cheat Sheet).
  */
 export class ResetPasswordUseCase {
   constructor(
@@ -20,14 +20,7 @@ export class ResetPasswordUseCase {
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
-  /**
-   * Validate a reset token, update the user's password, and revoke all sessions.
-   *
-   * @param token - The password-reset token.
-   * @param newPassword - The new plain-text password.
-   * @returns The updated user.
-   * @throws {AppError} 400 if the token is invalid/expired or password is too weak.
-   */
+  /** @throws {AppError} 400 if token invalid/expired or password too weak. */
   async execute(token: string, newPassword: string) {
     const pw = validatePassword(newPassword);
     if (!pw.valid) {

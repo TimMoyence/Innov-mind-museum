@@ -19,10 +19,7 @@ interface LoginSuccessSession extends CookieSessionInput {
   mfaWarningDaysRemaining?: number;
 }
 
-/**
- * Emits the audit chain for a successful login (MFA warning on first login
- * that anchored the deadline + LOGIN_SUCCESS) and sets dual-mode auth cookies.
- */
+/** Audit chain (MFA warning on anchor login + LOGIN_SUCCESS) + dual-mode cookies. */
 export async function finalizeLoginSuccess(
   req: Request,
   res: Response,
@@ -52,16 +49,11 @@ export async function finalizeLoginSuccess(
     ip: req.ip,
     requestId: req.requestId,
   });
-  // F7 — dual-mode: emit BOTH the JSON envelope (mobile reads it) AND the
-  // httpOnly cookies (web reads them). JSON shape unchanged.
+  // F7 — dual-mode: JSON envelope (mobile) + httpOnly cookies (web). JSON unchanged.
   setAuthCookies(res, session);
 }
 
-/**
- * Emits LOGIN_FAILED / RATE_LIMIT audits when the login error matches a
- * known AppError code. Silent for any other error type — the global error
- * handler still logs and forwards the response.
- */
+/** Silent for non-AppError — global error handler still logs/forwards. */
 export async function auditLoginError(req: Request, error: unknown): Promise<void> {
   if (!(error instanceof AppError)) return;
   const email = (req.body as { email?: unknown } | undefined)?.email;

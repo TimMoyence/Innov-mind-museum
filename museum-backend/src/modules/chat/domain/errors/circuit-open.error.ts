@@ -1,10 +1,6 @@
 import { AppError } from '@shared/errors/app.error';
 
-/**
- * Thrown when the LLM circuit breaker is in OPEN state and calls are blocked.
- * Extends `AppError` so the global error middleware emits a 503 response
- * uniformly across degraded-dependency paths.
- */
+/** Extends `AppError` → 503 via global error middleware. */
 export class CircuitOpenError extends AppError {
   constructor() {
     super({

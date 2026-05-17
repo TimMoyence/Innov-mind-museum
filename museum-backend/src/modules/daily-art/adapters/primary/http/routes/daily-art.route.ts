@@ -12,12 +12,6 @@ import type { Request, Response } from 'express';
 
 const CACHE_TTL_SECONDS = 86_400; // 24 hours
 
-/**
- * Creates the daily-art Express router.
- *
- * @param cacheService - Optional cache service for Redis-backed 24h caching.
- * @returns Configured Express Router mounted at `/api/daily-art`.
- */
 export const createDailyArtRouter = (cacheService?: CacheService): Router => {
   const dailyArtRouter: Router = Router();
 
@@ -27,7 +21,6 @@ export const createDailyArtRouter = (cacheService?: CacheService): Router => {
     const dateStr = toDateString(now);
     const cacheKey = `daily-art:${dateStr}`;
 
-    // Try cache first
     if (cacheService) {
       const cached = await cacheService.get<Artwork>(cacheKey);
       if (cached) {
@@ -38,7 +31,6 @@ export const createDailyArtRouter = (cacheService?: CacheService): Router => {
 
     const artwork = selectArtworkForDate(now);
 
-    // Store in cache if available
     if (cacheService) {
       await cacheService.set(cacheKey, artwork, CACHE_TTL_SECONDS);
     }

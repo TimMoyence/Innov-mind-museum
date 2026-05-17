@@ -11,7 +11,6 @@ import type { ChatService } from '@modules/chat/useCase/orchestration/chat.servi
 // ── Mock ChatService ────────────────────────────────────────────────
 
 const mockPostMessage = jest.fn();
-const mockPostMessageStream = jest.fn();
 const mockCreateSession = jest.fn();
 const mockListSessions = jest.fn();
 const mockGetSession = jest.fn();
@@ -29,7 +28,6 @@ const mockChatService: Partial<ChatService> = {
   getSession: mockGetSession,
   deleteSessionIfEmpty: mockDeleteSessionIfEmpty,
   postMessage: mockPostMessage,
-  postMessageStream: mockPostMessageStream,
   reportMessage: mockReportMessage,
   getMessageImageRef: mockGetMessageImageRef,
   getMessageImageRefBySignedToken: mockGetMessageImageRefBySignedToken,

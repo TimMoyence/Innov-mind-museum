@@ -4,11 +4,9 @@ import type { IAdminRepository } from '@modules/admin/domain/admin/admin.reposit
 import type { AdminReportDTO, ListReportsFilters } from '@modules/admin/domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Validates pagination and delegates to the repository. */
 export class ListReportsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Validates pagination constraints and retrieves a paginated list of message reports. */
   async execute(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
     const { page, limit } = filters.pagination;
 

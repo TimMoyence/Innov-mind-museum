@@ -25,7 +25,6 @@ import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/mus
 import type { MuseumEnrichmentJob } from '@modules/museum/domain/ports/museum-enrichment-queue.port';
 import type { ConnectionOptions, Job } from 'bullmq';
 
-/** Collaborators injected into the worker — pure port interfaces for testability. */
 export interface MuseumEnrichmentWorkerDeps {
   museumRepo: IMuseumRepository;
   cache: MuseumEnrichmentCachePort;
@@ -38,10 +37,9 @@ export interface MuseumEnrichmentWorkerDeps {
 }
 
 /**
- * Pure pipeline used by the BullMQ worker handler AND the unit tests —
- * never touches BullMQ, only the injected ports. Each external step is
- * fail-open: a null return from Wikidata / Wikipedia / OSM downgrades the
- * output but never aborts the job.
+ * Pure pipeline used by the BullMQ worker AND unit tests. Fail-open: a null
+ * return from Wikidata / Wikipedia / OSM downgrades the output but never
+ * aborts the job.
  */
 export async function processMuseumEnrichmentJob(
   job: MuseumEnrichmentJob,
@@ -177,9 +175,8 @@ interface MuseumEnrichmentWorkerConfig {
 }
 
 /**
- * Worker `failed` event handler — delegates to the shared DLQ policy.
- * Exported so unit tests can drive the failure path without spinning up
- * a real BullMQ worker.
+ * Delegates to the shared DLQ policy. Exported so unit tests can drive the
+ * failure path without spinning up a real BullMQ worker.
  */
 export const onMuseumEnrichmentJobFailed = (
   job: Job<MuseumEnrichmentJob> | undefined,
@@ -209,9 +206,8 @@ export const onMuseumEnrichmentJobFailed = (
 };
 
 /**
- * BullMQ worker wrapper around {@link processMuseumEnrichmentJob}. Thin —
- * the real pipeline lives in the pure function so unit tests stay
- * BullMQ-free.
+ * Thin BullMQ wrapper around {@link processMuseumEnrichmentJob} so unit
+ * tests stay BullMQ-free.
  */
 export class MuseumEnrichmentWorker {
   private worker?: Worker<MuseumEnrichmentJob>;
@@ -221,7 +217,7 @@ export class MuseumEnrichmentWorker {
     private readonly config: MuseumEnrichmentWorkerConfig,
   ) {}
 
-  /** Starts the underlying BullMQ worker. Safe to call once at boot. */
+  /** Safe to call once at boot. */
   start(): void {
     this.worker = new Worker<MuseumEnrichmentJob>(
       MUSEUM_ENRICHMENT_QUEUE_NAME,
@@ -241,7 +237,7 @@ export class MuseumEnrichmentWorker {
     this.worker.on('failed', onMuseumEnrichmentJobFailed);
   }
 
-  /** Gracefully stops the underlying BullMQ worker. Idempotent. */
+  /** Idempotent graceful shutdown. */
   async close(): Promise<void> {
     await this.worker?.close();
   }

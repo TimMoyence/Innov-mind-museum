@@ -26,7 +26,6 @@ const KEY_PREFIX = 'oidc:otc:';
 
 const generateCode = (): string => crypto.randomBytes(OTC_BYTES).toString('base64url');
 
-/** Resolved TTL (seconds) honoured by every store impl. */
 const resolveTtlSeconds = (override?: number): number => {
   if (override !== undefined && override > 0) return override;
   const raw = process.env.SOCIAL_OTC_TTL_SECONDS;
@@ -64,14 +63,13 @@ export class InMemorySocialOtcStore<TPayload> implements SocialOtcStore<TPayload
     this.now = options.now ?? Date.now;
   }
 
-  /** Issue a fresh OTC bound to {@link payload} with the configured TTL. */
   issue(payload: TPayload): Promise<string> {
     const code = generateCode();
     this.entries.set(code, { payload, expiresAt: this.now() + this.ttlMs });
     return Promise.resolve(code);
   }
 
-  /** Atomically delete the stored entry and return its payload (single-use). */
+  /** Atomic single-use: deletes entry and returns its payload. */
   consume(code: string): Promise<TPayload | null> {
     const entry = this.entries.get(code);
     if (entry === undefined) return Promise.resolve(null);
@@ -81,7 +79,6 @@ export class InMemorySocialOtcStore<TPayload> implements SocialOtcStore<TPayload
     return Promise.resolve(entry.payload);
   }
 
-  /** Test helper — drops every stored code. */
   clear(): void {
     this.entries.clear();
   }
@@ -113,7 +110,6 @@ export class RedisSocialOtcStore<TPayload> implements SocialOtcStore<TPayload> {
     this.fallback = new InMemorySocialOtcStore<TPayload>({ ttlSeconds: this.ttlSeconds });
   }
 
-  /** Issue a fresh OTC keyed in Redis (with in-memory fallback on I/O errors). */
   async issue(payload: TPayload): Promise<string> {
     const code = generateCode();
     const key = `${KEY_PREFIX}${code}`;

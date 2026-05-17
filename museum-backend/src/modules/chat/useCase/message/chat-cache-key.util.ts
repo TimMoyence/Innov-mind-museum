@@ -31,9 +31,6 @@ export const GENERIC_TEXT_MAX_LEN = 280;
 /** Maximum allowed cache-key string length (Redis key safety guard). */
 export const MAX_CACHE_KEY_BYTES = 256;
 
-/**
- * Inputs needed to derive the cache key.
- */
 export interface CacheKeyInput {
   text: string;
   museumId: string;
@@ -54,10 +51,6 @@ export interface CacheKeyInput {
   geoBucket?: string | null;
 }
 
-/**
- * Normalizes a question for cache key computation.
- * Lowercases, trims, and collapses consecutive whitespace to a single space.
- */
 export function normalizeQuestion(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ');
 }
@@ -100,8 +93,6 @@ function shortDigest(components: readonly string[]): string {
 }
 
 /**
- * Builds a deterministic Redis cache key for an LLM response.
- *
  * @see isGenericQuery for the global-vs-scoped decision.
  * @throws {Error} when scoping is required but no requester id is provided.
  */

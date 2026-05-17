@@ -21,66 +21,26 @@ export {
   type MainAssistantOutput,
 } from './llm-sections/main-assistant-output.schema';
 
-/**
- * Provenance label for an untrusted fact block. Mirrors `CitationSourceType`
- * plus the explicit `'none'` short-circuit used by `KnowledgeRouter` when no
- * provider returned facts (see design.md D1/D3 cascade contract).
- *
- * Kept here as a string union (not imported as a value) to keep `llm-sections`
- * dependency-free of the domain `CitationSourceType` runtime export — this
- * module is purely string-templating.
- */
+/** `'none'` is the short-circuit used by KnowledgeRouter when no provider returned facts. */
 export type SpotlightingSource = CitationSourceType | 'none';
 
 /**
- * Generate a per-request nonce for the Spotlighting envelope.
- *
- * Uses `randomBytes(8)` (CSPRNG via `node:crypto`) hex-encoded → 16 lowercase
- * hex chars / 2^64 entropy. Per Microsoft Spotlighting (CEUR-WS 2024 Vol-3920
- * paper03.pdf), a fresh nonce per request defeats replay-style prompt
- * injection where an attacker pre-encodes the envelope markers in their
- * payload to escape the untrusted block.
- *
- * Security notes:
- *  - MUST NOT be derived from `Math.random` or any predictable source.
- *  - MUST NOT be logged or persisted — the nonce is a per-request secret used
- *    only to render the prompt envelope, then discarded.
- *  - MUST NOT incorporate any user-controlled input.
+ * SEC — per-request nonce defeats replay prompt-injection where attacker
+ * pre-encodes envelope markers (Microsoft Spotlighting, CEUR-WS 2024 Vol-3920).
+ * MUST NOT be derived from Math.random, MUST NOT be logged/persisted, MUST NOT
+ * incorporate user input. `randomBytes(8)` → 16 hex chars / 2^64 entropy.
  */
 export const generateNonce = (): string => randomBytes(8).toString('hex');
 
 /**
- * Build the Spotlighting datamarking envelope around an untrusted fact block.
+ * SEC — Spotlighting datamarking envelope (design D3): outer `[BEGIN/END
+ * UNTRUSTED EXTERNAL DATA — nonce=HEX]` markers + inner `<untrusted_content
+ * source nonce>` tag + DATA-not-INSTRUCTIONS reminder. Em-dash and exact
+ * spelling are contract — `sources-validator` greps these literals.
  *
- * The returned string carries three concentric layers of marking so the LLM
- * can be reliably instructed to treat the inner content as DATA, not
- * instructions (design.md D3):
- *
- *  1. Outer markers `[BEGIN UNTRUSTED EXTERNAL DATA — nonce=HEX]` and
- *     `[END UNTRUSTED EXTERNAL DATA — nonce=HEX]` carrying the per-request
- *     nonce for in-band integrity. The em-dash and exact spelling are part of
- *     the contract — `sources-validator` and the security agent grep for
- *     these literals.
- *  2. Inner `<untrusted_content source="..." nonce="...">...</untrusted_content>`
- *     tag surfacing the provenance label inside the block.
- *  3. Explicit DATA-not-INSTRUCTIONS reminder lines after the close marker —
- *     mirrors the source plan §F Step 2.3 Green template verbatim.
- *
- * Returns an empty string in two cases — the orchestrator MUST NOT inject the
- * empty result into the prompt (no marker, no envelope, no wasted tokens):
- *  - `facts` is the empty array — nothing to wrap.
- *  - `source === 'none'` — `KnowledgeRouter` short-circuited without facts;
- *    emitting the envelope would advertise the marker surface for no
- *    defensive benefit.
- *
- * @param facts  - Untrusted external data blocks (e.g. Wikidata SPARQL
- *                 snippets, WebSearch result excerpts). Each fact is rendered
- *                 verbatim — sanitisation MUST happen upstream.
- * @param source - Provenance label. `'wikidata' | 'web' | 'museum-catalog' |
- *                 'commons'` surface inside the envelope; `'none'` short-
- *                 circuits to empty string.
- * @param nonce  - Per-request nonce — generate with `generateNonce()`. Caller
- *                 owns the lifecycle; this function performs NO regeneration.
+ * Returns '' when `facts=[]` or `source='none'` (orchestrator MUST NOT inject
+ * empty envelope — would advertise marker surface for no defensive benefit).
+ * Facts rendered verbatim — sanitisation MUST happen upstream.
  */
 export const buildContextSection = (
   facts: string[],
@@ -107,22 +67,16 @@ export const buildContextSection = (
   ].join('\n');
 };
 
-/** Defines a single LLM section with its name, timeout budget, and prompt text. */
 export interface LlmSectionDefinition {
   name: LlmSectionName;
   timeoutMs: number;
-  /** Whether the orchestrator must fail when this section fails. */
+  /** Whether orchestrator must fail when this section fails. */
   required: boolean;
   prompt: string;
   /**
-   * Optional structured-output schema. When provided AND the underlying model
-   * exposes `withStructuredOutput`, the orchestrator invokes the LLM through
-   * that adapter and parses the result directly. Falls back to the legacy
-   * `text + [META] {json}` parsing path when either condition is unmet (test
-   * fakes, providers without structured-output support).
-   *
-   * The schema name is propagated to the adapter call as `name` for
-   * observability (OpenAI surfaces it in tool-call traces).
+   * When set AND model exposes `withStructuredOutput`, orchestrator parses via
+   * that adapter. Falls back to legacy `text + [META] {json}` parser otherwise
+   * (test fakes, older providers). `name` surfaces in OpenAI tool-call traces.
    */
   outputSchema?: {
     schema: z.ZodType;
@@ -130,18 +84,15 @@ export interface LlmSectionDefinition {
   };
 }
 
-/** Input parameters used to build the LLM section plan. */
 interface LlmSectionPlanInput {
   locale?: string;
   museumMode: boolean;
   guideLevel: ExpertiseLevel;
   timeoutSummaryMs: number;
-  /** Pre-built visit context block to inject into the prompt. */
   visitContextBlock?: string;
   hasImage?: boolean;
-  /** When true, increases word limits for richer audio-friendly descriptions. */
+  /** Increases word limits for audio-friendly descriptions. */
   audioDescriptionMode?: boolean;
-  /** User's content preference hints: 'history' | 'technique' | 'artist'. */
   contentPreferences?: readonly ContentPreference[];
 }
 
@@ -157,17 +108,13 @@ const buildGuideLevelHint = (guideLevel: 'beginner' | 'intermediate' | 'expert')
   return 'Use simple, clear, beginner-friendly language.';
 };
 
-/** Human-readable description of each content preference, used in the prompt hint. */
 const PREFERENCE_LABELS: Record<ContentPreference, string> = {
   history: 'historical context and provenance of the work',
   technique: 'visual representation, style, materials, and composition',
   artist: "the artist's biography, influences, and life events",
 };
 
-/**
- * Builds a non-forcing hint line from the user's content preferences.
- * Returns an empty string when no preferences are set (respects zero-friction default).
- */
+/** Empty string when no preferences set (respects zero-friction default). */
 const buildContentPreferencesHint = (
   preferences: readonly ContentPreference[] | undefined,
 ): string => {
@@ -189,12 +136,7 @@ interface BuildSummaryPromptInput {
   hasImage?: boolean;
   audioDescriptionMode?: boolean;
   contentPreferences?: readonly ContentPreference[];
-  /**
-   * When true, emit a prompt that delegates output formatting to the
-   * structured-output schema (no `[META]` marker, no JSON example). The
-   * orchestrator wires the schema separately. When false, the legacy
-   * `text + [META] {json}` markup path is emitted for fallback compatibility.
-   */
+  /** When false, emits legacy `text + [META] {json}` markup path. */
   structuredOutput: boolean;
 }
 
@@ -242,7 +184,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     );
   }
 
-  // Behavioural reminders — apply to both structured and legacy paths.
+  // Behavioural reminders — both structured and legacy paths.
   parts.push(
     'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
     'In openQuestion, ask a question that encourages the visitor to look more closely at the work (optional).',
@@ -255,14 +197,11 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
   );
 
   if (structuredOutput) {
-    // Structured-output path: the schema enforces shape + types. No JSON
-    // example, no [META] marker — the model fills the schema fields directly.
     parts.push(
       'Place your visitor-facing reply in the `text` field. Fill the other fields per their description; omit any optional field you have nothing to add for.',
     );
   } else {
-    // Legacy path retained for providers / test fakes that lack
-    // `withStructuredOutput`. Emits the [META] markup the parser falls back to.
+    // Legacy [META] markup for providers/test fakes lacking withStructuredOutput.
     parts.push(
       'Write your answer as plain text first.',
       'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
@@ -276,24 +215,10 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
 };
 
 /**
- * Creates the ordered list of LLM section definitions to execute for a single request.
- * Currently produces a single required "summary" section.
- *
- * The summary section ships with a structured-output schema
- * ({@link mainAssistantOutputSchema}); the orchestrator uses it via
- * `model.withStructuredOutput` when the underlying model supports it (OpenAI
- * gpt-4o family ≥ 2024-08, Gemini), and falls back to parsing the legacy
- * `text + [META]` markup when it doesn't (test fakes, older providers).
- *
- * The prompt itself is emitted in `structuredOutput=true` form by default —
- * matches what the live providers consume. Test fakes that don't implement
- * `withStructuredOutput` exercise the legacy `[META]` parser via the same
- * prompt: they ignore the structured directive and the parser tolerates a
- * plain-text-only response (it returns `metadata: {}`, then the orchestrator
- * uses the `createSummaryFallback` text path on the next turn).
- *
- * @param input - Configuration for locale, guide level, museum mode, and timeouts.
- * @returns An array of section definitions.
+ * V1: single required "summary" section with structured-output schema.
+ * Orchestrator uses `model.withStructuredOutput` when supported (OpenAI gpt-4o
+ * ≥ 2024-08, Gemini), falls back to legacy `[META]` parser otherwise. Prompt
+ * is always emitted in structured form — fallback parser tolerates plain text.
  */
 export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefinition[] => {
   const summary: LlmSectionDefinition = {
@@ -319,7 +244,6 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
   return [summary];
 };
 
-/** Input for building a best-effort summary fallback when the LLM section fails. */
 interface SummaryFallbackInput {
   history: ChatMessage[];
   question?: string;
@@ -335,13 +259,7 @@ const lastNonEmptyTexts = (history: ChatMessage[], limit = 3): string[] => {
     .map((message) => (message.text ?? '').trim());
 };
 
-/**
- * Generates a localized fallback summary from conversation history when the LLM call fails.
- * Stitches together recent non-empty messages with location context and a next-step suggestion.
- *
- * @param input - History, question, location, locale, and museum mode.
- * @returns A human-readable fallback text.
- */
+/** Stitches recent non-empty messages + location + next-step when LLM fails. */
 export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const locale = resolveLocale([input.locale]);
   const snippets = lastNonEmptyTexts(input.history, 3);

@@ -15,7 +15,6 @@ interface AccessTokenClaims extends JwtPayload {
   museumId?: number | null;
 }
 
-/** Decoded shape of a refresh JWT after `verifyRefreshToken` narrows it. */
 export interface RefreshTokenClaims extends JwtPayload {
   sub: string;
   type: 'refresh';
@@ -55,18 +54,12 @@ const ttlToSeconds = (value: string): number => {
   return amount * multipliers[unit];
 };
 
-/**
- * JWT plumbing for the auth session pipeline: signs/verifies access + refresh
- * tokens, hashes refresh-token plaintext for tamper detection, and exposes
- * resolved TTLs (in seconds) so siblings don't re-parse `env.auth.*TokenTtl`.
- *
- * Stateless and DB-free. Reads `env.auth.*` once at construction.
- */
+/** Stateless, DB-free. Reads `env.auth.*` once at construction. */
 export class TokenJwtService {
   readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
 
-  /** Verify and narrow an access JWT. Throws 401 AppError on any failure. */
+  /** @throws 401 AppError on any failure. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
       const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
@@ -92,7 +85,7 @@ export class TokenJwtService {
     }
   }
 
-  /** Verify and narrow a refresh JWT. Throws 401 AppError on any failure. */
+  /** @throws 401 AppError on any failure. */
   verifyRefreshToken(token: string): RefreshTokenClaims {
     try {
       const decoded = jwt.verify(token, env.auth.refreshTokenSecret, {
@@ -118,7 +111,6 @@ export class TokenJwtService {
     }
   }
 
-  /** Sign an access JWT for `userId` with the given claim envelope. */
   signAccessToken(params: {
     userId: number;
     role: UserRole;
@@ -138,7 +130,7 @@ export class TokenJwtService {
     );
   }
 
-  /** Sign a refresh JWT bound to a token family. */
+  /** Bound to a token family. */
   signRefreshToken(params: { userId: number; jti: string; familyId: string }): string {
     return jwt.sign(
       {
@@ -152,7 +144,7 @@ export class TokenJwtService {
     );
   }
 
-  /** SHA-256 hex digest. Used to persist a tamper-detectable copy of the refresh JWT. */
+  /** SHA-256 hex — tamper-detectable copy of the refresh JWT. */
   sha256(value: string): string {
     return crypto.createHash('sha256').update(value).digest('hex');
   }

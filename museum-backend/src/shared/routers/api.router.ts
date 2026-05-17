@@ -38,17 +38,14 @@ import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enr
 import type { CacheService } from '@shared/cache/cache.port';
 import type { Request, Response } from 'express';
 
-/** Dependencies required to build the top-level API router. */
 interface ApiRouterDeps {
   chatService: ChatService;
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
   cacheService?: CacheService;
 }
 
-/** Shared circuit-breaker state shape, surfaced for both LLM provider + LLM Guard sidecar. */
 type CircuitBreakerHealthState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
-/** Shape of the JSON response returned by the GET /api/health endpoint. */
 export interface HealthPayload {
   status: 'ok' | 'degraded';
   checks: {
@@ -56,11 +53,7 @@ export interface HealthPayload {
     llmConfigured?: boolean;
     redis?: 'up' | 'down' | 'skipped';
     llmCircuitBreaker?: CircuitBreakerHealthState;
-    /**
-     * LLM Guard sidecar circuit breaker state. Additive 2026-05-12 ; same
-     * redaction posture as `llmCircuitBreaker` — only surfaced in
-     * non-production responses.
-     */
+    /** Additive 2026-05-12 ; same redaction posture as llmCircuitBreaker — non-prod only. */
     llmGuard?: CircuitBreakerHealthState;
   };
   environment?: string;
@@ -70,19 +63,7 @@ export interface HealthPayload {
   responseTimeMs?: number;
 }
 
-/**
- * Builds a health-check response payload from the current system state.
- *
- * @param params - Database status and LLM configuration flag.
- * @param params.checks - Health check results.
- * @param params.checks.database - Database connectivity status.
- * @param params.checks.redis - Optional Redis connectivity status.
- * @param params.checks.llmCircuitBreaker - Optional LLM circuit breaker state.
- * @param params.checks.llmGuard - Optional LLM Guard sidecar circuit breaker state.
- * @param params.llmConfigured - Whether at least one LLM provider is configured.
- * @param params.nodeEnv - Optional environment override for testing; defaults to `env.nodeEnv`.
- * @returns Structured health payload with version and timestamp.
- */
+/** SEC L4: production redacts commitSha/environment/version/llmConfigured/circuit-breakers/redis. */
 export const buildHealthPayload = (params: {
   checks: {
     database: 'up' | 'down';
@@ -91,21 +72,12 @@ export const buildHealthPayload = (params: {
     llmGuard?: CircuitBreakerHealthState;
   };
   llmConfigured: boolean;
-  /**
-   * Environment override for testing. Defaults to `env.nodeEnv`. In
-   * production, sensitive metadata (commitSha, environment, version,
-   * llmConfigured, llmCircuitBreaker, redis) is redacted (L4).
-   */
   nodeEnv?: string;
 }): HealthPayload => {
   const dbUp = params.checks.database === 'up';
   const redisDown = params.checks.redis === 'down';
   const degraded = !dbUp || redisDown;
 
-  // SEC-HARDENING (L4): redact metadata in production to avoid
-  // leaking commit SHA, environment, version, LLM provider state, or
-  // circuit-breaker state to unauthenticated clients. Full payload is
-  // still returned in non-production environments for operational use.
   const resolvedNodeEnv = params.nodeEnv ?? env.nodeEnv;
   const isProd = resolvedNodeEnv === 'production';
 
@@ -142,15 +114,6 @@ export const buildHealthPayload = (params: {
   return payload;
 };
 
-/**
- * Creates the top-level Express router that mounts /health, /chat, and /auth sub-routers.
- *
- * @param root0 - Injected dependencies.
- * @param root0.chatService - Chat service instance for the chat sub-router.
- * @param root0.healthCheck - Async function returning database health status.
- * @param root0.cacheService - Optional cache service for health check and route-level caching.
- * @returns Configured Express Router.
- */
 export const createApiRouter = ({
   chatService,
   healthCheck,
@@ -198,8 +161,7 @@ export const createApiRouter = ({
       },
       llmConfigured,
     });
-    // SEC-HARDENING (L4): responseTimeMs is a minor side-channel — only
-    // expose it outside production.
+    // SEC L4: responseTimeMs is a side-channel — non-prod only.
     if (env.nodeEnv !== 'production') {
       payload.responseTimeMs = responseTimeMs;
     }
@@ -208,13 +170,10 @@ export const createApiRouter = ({
     res.status(httpStatus).json(payload);
   });
 
-  // 2026-05-13 — Phase 1 perennial design: semantic deep-health probe. Unlike
-  // `/health`, this endpoint exercises the actual decision paths of each
-  // dependency (sidecar /scan, DB SELECT, Redis PING) and aggregates a
-  // qualitative verdict. Distinct from TCP-up: a sidecar that accepts
-  // connections but blocks every probe registers as `degraded`, not `up`.
-  // Returns 200 even on degraded/down — the body is the status report, not
-  // a gate. Future K8s-style readiness can hook the JSON.
+  // Semantic deep-health (Phase 1 perennial). Exercises decision paths (sidecar /scan,
+  // DB SELECT, Redis PING), aggregates qualitative verdict. Distinct from TCP-up — a
+  // sidecar accepting connections but blocking every probe = `degraded`, not `up`.
+  // Returns 200 even on down — body IS the status report.
   router.get('/health/deep', createDeepHealthHandler({ healthCheck, cacheService }));
 
   mountDomainRouters(router, chatService, cacheService);
@@ -222,23 +181,13 @@ export const createApiRouter = ({
   return router;
 };
 
-/**
- * Shape of one guardrail provider probe in `/api/health/deep`. Mirrors the
- * `ProviderHealth` port type plus the provider's `name` so a multi-adapter
- * stack (Phase 2) renders as an array of named verdicts.
- */
 interface GuardrailHealthCheck extends ProviderHealth {
   name: string;
 }
 
 /**
- * Probes every registered `GuardrailProvider` via its `health()` method.
- * Wraps each call in a try/catch so a single faulty adapter cannot crash
- * the deep-health response. The adapter itself promises `never throws` per
- * the port contract — this is defence-in-depth.
- *
- * V1 has one adapter (`llm-guard`) when configured; the array shape is
- * forward-compatible with the Phase 2 multi-provider aggregator (ADR-048).
+ * Defence-in-depth try/catch — adapter promises `never throws` per port contract.
+ * Forward-compatible with Phase 2 multi-provider aggregator (ADR-048).
  */
 async function probeGuardrailProviders(): Promise<GuardrailHealthCheck[]> {
   const provider = getGuardrailProvider();
@@ -259,11 +208,7 @@ async function probeGuardrailProviders(): Promise<GuardrailHealthCheck[]> {
   }
 }
 
-/**
- * Qualitative health verdict shared by every dependency probe in `/health/deep`.
- * Mirrors the `ProviderHealth.status` shape from the `GuardrailProvider` port
- * (ADR-048) so the aggregator can rank a heterogeneous probe set uniformly.
- */
+/** Mirrors `ProviderHealth.status` shape from GuardrailProvider port (ADR-048). */
 type HealthCheckStatus = 'up' | 'degraded' | 'down';
 
 interface DependencyCheck {
@@ -272,7 +217,6 @@ interface DependencyCheck {
   detail?: string;
 }
 
-/** Probes the DB via the injected `healthCheck` callback + measures latency. */
 async function probeDatabase(
   healthCheck: () => Promise<{ database: 'up' | 'down' }>,
 ): Promise<DependencyCheck> {
@@ -292,12 +236,7 @@ async function probeDatabase(
   }
 }
 
-/**
- * Probes Redis via the cache port's `ping()` method. Returns `null` when no
- * cache service is configured (or it's a Noop), letting the response payload
- * encode the "redis skipped" branch as a JSON `null` rather than a synthetic
- * up/down verdict.
- */
+/** Returns `null` when no cache or Noop — payload encodes "skipped" branch as JSON null. */
 async function probeRedis(
   cacheService: CacheService | undefined,
   timeoutMs: number,
@@ -326,30 +265,14 @@ async function probeRedis(
   }
 }
 
-/**
- * Aggregates the per-component verdicts into a single top-level status:
- *   - any `down`     → `down`
- *   - any `degraded` → `degraded`
- *   - otherwise      → `up`
- *
- * Empty input collapses to `up` (no dependencies configured = nothing
- * unhealthy). Pure — no I/O.
- */
+/** any `down`→down, any `degraded`→degraded, else `up`. Empty → up (no deps = nothing unhealthy). */
 function aggregateStatus(components: HealthCheckStatus[]): HealthCheckStatus {
   if (components.includes('down')) return 'down';
   if (components.includes('degraded')) return 'degraded';
   return 'up';
 }
 
-/**
- * Express handler factory for `GET /api/health/deep`. Kept as a top-level helper
- * (rather than inline in `createApiRouter`) so the createApiRouter arrow stays
- * within the `max-lines-per-function` lint budget AND the handler itself can be
- * unit-tested with fake `healthCheck` + `cacheService` injections.
- *
- * Returns 200 even when aggregate is `degraded` or `down` — the body IS the
- * status report; downstream readiness/liveness gates can inspect the JSON.
- */
+/** Returns 200 even when aggregate is degraded/down — body IS the status report. */
 function createDeepHealthHandler(deps: {
   healthCheck: () => Promise<{ database: 'up' | 'down' }>;
   cacheService: CacheService | undefined;
@@ -385,16 +308,11 @@ function createDeepHealthHandler(deps: {
 }
 
 /**
- * Singleton: holds the P3 enrichment use case + its BullMQ queue adapter.
- * Lazy so tests injecting their own chatService don't pay the Redis connect
- * cost, and so a missing Redis config degrades to 503 on /enrichment rather
- * than crashing boot.
- *
- * Gated by `env.extractionWorkerEnabled`: when false (e.g. e2e harness without
- * Redis), the BullMQ queue adapter is NEVER instantiated so no ioredis client
- * is opened and ECONNREFUSED log floods are avoided. The /museums/:id/enrichment
- * endpoint then degrades to "no use case" — same fail-open path as a Redis-down
- * production environment.
+ * Lazy singleton — tests injecting own chatService skip Redis connect cost; missing
+ * Redis config degrades to 503 rather than crashing boot.
+ * Gated by `env.extractionWorkerEnabled`: false → BullMQ adapter NEVER instantiated
+ * (no ioredis client, no ECONNREFUSED floods). /museums/:id/enrichment degrades to
+ * "no use case" — same fail-open path as Redis-down prod.
  */
 let cachedEnrichUseCase: EnrichMuseumUseCase | null | undefined;
 
@@ -422,7 +340,6 @@ function resolveEnrichMuseumUseCase(): EnrichMuseumUseCase | undefined {
   }
 }
 
-/** Mounts all domain sub-routers onto the top-level API router. */
 function mountDomainRouters(
   router: Router,
   chatService: ChatService,
@@ -441,14 +358,12 @@ function mountDomainRouters(
     ),
   );
   router.use('/auth/consent', consentRouter);
-  // R16 — MFA endpoints mounted before the catch-all auth router so the
-  // `/auth/mfa/*` paths resolve to the dedicated TOTP router instead of
-  // 404-ing through `authRouter`.
+  // Ordering R16: MFA mounted BEFORE catch-all `/auth` so `/auth/mfa/*` resolves to
+  // dedicated TOTP router instead of 404-ing through authRouter.
   router.use('/auth/mfa', mfaRouter);
   router.use('/auth', authRouter);
-  // GDPR DSAR (Art 15 + 20) — `GET /api/users/me/export`. Always uses
-  // `req.user.id`, never a path param, so an authenticated visitor cannot ask
-  // for someone else's dossier (anti-IDOR per security audit § 3 T2).
+  // GDPR DSAR Art 15+20 — `GET /api/users/me/export`. Always uses `req.user.id`,
+  // never a path param (anti-IDOR per security audit § 3 T2).
   router.use('/users', meRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use(

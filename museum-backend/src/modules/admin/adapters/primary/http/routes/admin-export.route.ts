@@ -17,21 +17,11 @@ import { requireRole } from '@shared/middleware/require-role.middleware';
 import type { ExportActorRole } from '@modules/admin/domain/export/csv-export.types';
 
 /**
- * Admin CSV export router — three endpoints (sessions / reviews / tickets).
- *
- * Pipeline per request :
- *   1. `isAuthenticated` → 401 on missing / invalid JWT.
- *   2. `requireRole('admin', 'museum_manager')` → 403 on visitor / moderator
- *      (super_admin implicitly satisfies, see require-role.middleware:28).
- *   3. Validate `:kind` enum (sessions / reviews / tickets) → 400 otherwise.
- *   4. Delegate to the matching use case which awaits the audit row BEFORE
- *      returning the data stream (N6 / AC10 — audit log durable before
- *      first byte).
- *   5. Set CSV headers + write UTF-8 BOM + header row + data rows.
- *
- * Use case throws AppError(403) for Q1 BLOCKER cases (museum_manager /
- * admin on reviews/tickets) and R9 NO_MUSEUM_ASSIGNED — the global error
- * middleware translates to the proper JSON shape.
+ * Admin CSV export — sessions / reviews / tickets.
+ * Pipeline: isAuthenticated → requireRole(admin, museum_manager) → :kind enum
+ * validate → use case (awaits audit row BEFORE returning stream, N6/AC10) →
+ * BOM + header + data rows. Use case throws 403 for Q1 BLOCKER (manager/admin
+ * on reviews/tickets) and R9 NO_MUSEUM_ASSIGNED.
  */
 const adminExportRouter: Router = Router();
 
@@ -67,7 +57,7 @@ const TICKETS_HEADERS = [
   'updated_at',
 ] as const;
 
-/** Builds the standardised CSV download response headers (R1 / R13 / N10). */
+/** R1 / R13 / N10 — standardised CSV download response headers. */
 function setCsvHeaders(res: Response, kind: 'sessions' | 'reviews' | 'tickets'): void {
   const date = new Date().toISOString().slice(0, 10);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -75,7 +65,6 @@ function setCsvHeaders(res: Response, kind: 'sessions' | 'reviews' | 'tickets'):
   res.setHeader('Cache-Control', 'no-store');
 }
 
-/** Maps a typed row to the ordered string record consumed by `writeCsvRow`. */
 function toRecord(headers: readonly string[], row: object): Record<string, string> {
   const out: Record<string, string> = {};
   const indexed = row as Record<string, unknown>;
@@ -85,12 +74,7 @@ function toRecord(headers: readonly string[], row: object): Record<string, strin
   return out;
 }
 
-/**
- * Coerces an unknown cell value to a CSV-safe string. Numbers + booleans
- * stringify naturally ; objects / arrays / null / undefined collapse to
- * empty so an accidental DTO leak never lands a raw `[object Object]` in
- * a downloaded CSV (no-base-to-string lint).
- */
+/** Collapses objects/arrays/nullish to empty so DTO leaks can't render `[object Object]`. */
 function coerceCell(value: unknown): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
@@ -100,15 +84,12 @@ function coerceCell(value: unknown): string {
   return '';
 }
 
-/** Resolves the actor role + museum scope from the authenticated request. */
 function resolveActor(req: Request): {
   actorId: number;
   actorRole: ExportActorRole;
   museumScope: number | null;
 } {
-  // isAuthenticated has populated req.user ; the global error middleware
-  // converts a missing one into 401 upstream so this never fires in
-  // practice, but defensive null check keeps the type narrow.
+  // Defensive — isAuthenticated already 401s upstream, but narrows the type.
   const user = req.user;
   if (!user) {
     throw forbidden('Authenticated user context missing');
@@ -120,13 +101,7 @@ function resolveActor(req: Request): {
   };
 }
 
-/**
- * Streams an `AsyncIterable` of rows as CSV chunks onto the response.
- *
- * Performs : BOM → header row → data rows. The use case has already awaited
- * its audit row, so by the time we reach this helper the audit is durable
- * (N6 / AC10).
- */
+/** BOM → header → data rows. Use case has awaited audit row (N6/AC10). */
 async function streamCsv(
   res: Response,
   headers: readonly string[],
@@ -153,9 +128,7 @@ adminExportRouter.get(
     if (!parsed.success) {
       throw badRequest('Unsupported export kind');
     }
-    // Query params (from / to) accepted for forward-compat (R10) but not
-    // forwarded into V1 use cases (R11 default 365d window applies inside
-    // the repository). Validate anyway so a bad format still 400s.
+    // R10 forward-compat — from/to accepted, V1 ignores (R11 365d default in repo).
     const query = exportQuerySchema.safeParse(req.query);
     if (!query.success) {
       throw badRequest('Invalid export query');
@@ -164,10 +137,8 @@ adminExportRouter.get(
     const { kind } = parsed.data;
     const actor = resolveActor(req);
 
-    // Defense-in-depth (D4 / Risk2) — the route enforces the SAME RBAC
-    // table as the use case so a future refactor that swaps the use case
-    // for a thin pass-through cannot leak data. The use case still owns
-    // the canonical denial path ; this is a redundant guard.
+    // D4/Risk2 defense-in-depth — redundant RBAC mirror so a future thin
+    // pass-through refactor of the use case cannot leak data.
     if (kind === 'sessions') {
       if (
         (actor.actorRole === 'museum_manager' || actor.actorRole === 'admin') &&
@@ -180,8 +151,7 @@ adminExportRouter.get(
       await streamCsv(res, SESSIONS_HEADERS, stream);
       return;
     }
-    // Q1 BLOCKER — reviews + tickets entities lack `museum_id` ; only
-    // super_admin may export those two kinds in V1.
+    // Q1 BLOCKER — reviews + tickets lack `museum_id`, super_admin only in V1.
     if (actor.actorRole !== 'super_admin') {
       throw forbidden(`${kind} export is restricted to super_admin`);
     }

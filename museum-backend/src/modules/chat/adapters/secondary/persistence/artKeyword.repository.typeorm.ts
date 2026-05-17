@@ -3,9 +3,6 @@ import { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.entity';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
-/**
- *
- */
 export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
   private readonly repo: Repository<ArtKeyword>;
 
@@ -13,7 +10,6 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     this.repo = dataSource.getRepository(ArtKeyword);
   }
 
-  /** Finds art keywords by locale, ordered by hit count descending. */
   async findByLocale(locale: string): Promise<ArtKeyword[]> {
     if (locale === '%') {
       return await this.repo.find({ order: { hitCount: 'DESC' } });
@@ -21,7 +17,6 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return await this.repo.find({ where: { locale }, order: { hitCount: 'DESC' } });
   }
 
-  /** Finds art keywords updated after the given date, optionally filtered by locale. */
   async findByLocaleSince(locale: string, since: Date): Promise<ArtKeyword[]> {
     const qb = this.repo
       .createQueryBuilder('kw')
@@ -33,11 +28,7 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return await qb.getMany();
   }
 
-  /**
-   * Atomically inserts a keyword or increments its `hitCount` if the
-   * `(keyword, locale)` pair already exists. Single round-trip — no
-   * read-modify-write race under concurrent callers.
-   */
+  /** Atomic INSERT...ON CONFLICT — single round-trip, no read-modify-write race. */
   async upsert(keyword: string, locale: string): Promise<ArtKeyword> {
     const normalized = keyword.toLowerCase().trim();
 
@@ -53,7 +44,6 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return (rows as ArtKeyword[])[0];
   }
 
-  /** Bulk upserts multiple keywords, incrementing hit counts on conflict. */
   async bulkUpsert(keywords: string[], locale: string): Promise<void> {
     if (keywords.length === 0) return;
     const normalized = [...new Set(keywords.map((k) => k.toLowerCase().trim()).filter(Boolean))];

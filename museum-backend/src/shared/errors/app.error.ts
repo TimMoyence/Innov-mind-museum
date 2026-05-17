@@ -1,9 +1,8 @@
-/** Represents a structured application error with an HTTP status code and machine-readable code. */
 export class AppError extends Error {
   readonly statusCode: number;
   readonly code: string;
   readonly details?: unknown;
-  /** Optional HTTP response headers (e.g. Retry-After on 429) applied by the error middleware. */
+  /** Applied by error middleware (e.g. Retry-After on 429). */
   readonly headers?: Record<string, string>;
 
   constructor(params: {
@@ -23,14 +22,9 @@ export class AppError extends Error {
 }
 
 /**
- * Thrown when caller-supplied input fails strict validation
- * (e.g. Wikidata QID format, SPARQL literal control chars).
- *
- * Distinct subclass so tests can assert on type via `toThrow(ValidationError)`
- * without falsely matching unrelated 400 errors. Always 400/`VALIDATION_ERROR`.
- *
- * Extends `AppError` so the global error middleware maps it to a 400 response
- * automatically (previously it inherited `Error` directly and degraded to 500).
+ * Strict-input validation failure (e.g. Wikidata QID, SPARQL literal control chars).
+ * Distinct subclass for `toThrow(ValidationError)` assertions. Always 400/`VALIDATION_ERROR`.
+ * Extends AppError so error middleware maps to 400 (previously degraded to 500).
  */
 export class ValidationError extends AppError {
   constructor(message: string, details?: unknown) {
@@ -39,13 +33,6 @@ export class ValidationError extends AppError {
   }
 }
 
-/**
- * Creates a 400 Bad Request AppError.
- *
- * @param message - Human-readable error description.
- * @param details - Optional payload with validation details.
- * @returns AppError with status 400.
- */
 export const badRequest = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,
@@ -55,13 +42,6 @@ export const badRequest = (message: string, details?: unknown): AppError => {
   });
 };
 
-/**
- * Creates a 404 Not Found AppError.
- *
- * @param message - Human-readable error description.
- * @param details - Optional additional context.
- * @returns AppError with status 404.
- */
 export const notFound = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,
@@ -71,12 +51,6 @@ export const notFound = (message: string, details?: unknown): AppError => {
   });
 };
 
-/**
- * Creates a 409 Conflict AppError.
- *
- * @param message - Human-readable error description.
- * @returns AppError with status 409.
- */
 export const conflict = (message: string): AppError => {
   return new AppError({
     message,
@@ -85,12 +59,6 @@ export const conflict = (message: string): AppError => {
   });
 };
 
-/**
- * Creates a 403 Forbidden AppError.
- *
- * @param message - Human-readable error description.
- * @returns AppError with status 403.
- */
 export const forbidden = (message: string): AppError => {
   return new AppError({
     message,
@@ -99,16 +67,7 @@ export const forbidden = (message: string): AppError => {
   });
 };
 
-/**
- * Creates a 429 Too Many Requests AppError.
- *
- * @param message - Human-readable error description.
- * @param options - Optional modifiers for the error payload.
- * @param options.retryAfterSec - Seconds until the client may retry; sets the Retry-After header.
- * @param options.code - Overrides the default `TOO_MANY_REQUESTS` machine code.
- * @param options.details - Structured details to attach to the error response.
- * @returns AppError with status 429.
- */
+/** `retryAfterSec` sets Retry-After header (clamped ≥1s). */
 export const tooManyRequests = (
   message: string,
   options?: { retryAfterSec?: number; code?: string; details?: unknown },
@@ -128,16 +87,7 @@ export const tooManyRequests = (
   });
 };
 
-/**
- * Creates a 503 Service Unavailable AppError.
- *
- * @param message - Human-readable error description.
- * @param options - Optional modifiers for the error payload.
- * @param options.retryAfterSec - Seconds until the client may retry; sets the Retry-After header.
- * @param options.code - Overrides the default `SERVICE_UNAVAILABLE` machine code.
- * @param options.details - Structured details to attach to the error response.
- * @returns AppError with status 503.
- */
+/** `retryAfterSec` sets Retry-After header (clamped ≥1s). */
 export const serviceUnavailable = (
   message: string,
   options?: { retryAfterSec?: number; code?: string; details?: unknown },
@@ -156,12 +106,6 @@ export const serviceUnavailable = (
   });
 };
 
-/**
- * Creates a 401 Unauthorized error.
- *
- * @param message - Error description.
- * @returns AppError with status 401.
- */
 export const unauthorized = (message: string): AppError => {
   return new AppError({
     message,
@@ -170,18 +114,7 @@ export const unauthorized = (message: string): AppError => {
   });
 };
 
-/**
- * C3 Visual Similarity — 400 with code `COMPARE_INVALID_IMAGE`.
- *
- * Used by `POST /chat/compare` when the uploaded image is missing, has an
- * unsupported MIME, or fails the magic-byte / OCR-injection checks performed
- * by the shared `ImageProcessingService` (R6 / R12). FE clients branch on
- * this code to prompt the user to retake the photo (design.md §5).
- *
- * @param message - Human-readable error description.
- * @param details - Optional structured details (e.g. zod issues).
- * @returns AppError with status 400 and code `COMPARE_INVALID_IMAGE`.
- */
+/** C3 — POST /chat/compare: missing image / unsupported MIME / magic-byte / OCR-injection fail (R6/R12). FE branches on code to prompt retake. */
 export const compareInvalidImage = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,
@@ -191,17 +124,7 @@ export const compareInvalidImage = (message: string, details?: unknown): AppErro
   });
 };
 
-/**
- * C3 Visual Similarity — 400 with code `COMPARE_INVALID_TOPK`.
- *
- * Emitted by `POST /chat/compare` when the `topK` body field falls outside
- * the `[1, 10]` range pinned by R17. FE clients branch on this code to clamp
- * the carousel size selector (design.md §5).
- *
- * @param message - Human-readable error description.
- * @param details - Optional structured details (e.g. zod issues for topK).
- * @returns AppError with status 400 and code `COMPARE_INVALID_TOPK`.
- */
+/** C3 — POST /chat/compare: topK outside [1, 10] (R17). FE branches on code to clamp carousel. */
 export const compareInvalidTopK = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,
@@ -211,18 +134,7 @@ export const compareInvalidTopK = (message: string, details?: unknown): AppError
   });
 };
 
-/**
- * C3 Visual Similarity — 400 with code `COMPARE_GUARDRAIL_BLOCKED`.
- *
- * Emitted by `POST /chat/compare` when the shared `ImageProcessingService`
- * rejects the upload via its OCR / prompt-injection guardrail (R18). FE
- * clients branch on this code to surface the guardrail message verbatim
- * (design.md §5).
- *
- * @param message - Human-readable error description.
- * @param details - Optional structured details.
- * @returns AppError with status 400 and code `COMPARE_GUARDRAIL_BLOCKED`.
- */
+/** C3 — POST /chat/compare: OCR/prompt-injection guardrail blocked (R18). FE surfaces message verbatim. */
 export const compareGuardrailBlocked = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,

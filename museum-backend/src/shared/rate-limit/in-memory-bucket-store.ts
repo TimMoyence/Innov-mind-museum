@@ -1,20 +1,13 @@
-/**
- * Generic in-memory bucket store with periodic sweep and bounded size.
- * Used by rate-limit middleware and login rate limiter to avoid code duplication.
- *
- * @template T - Shape of a bucket entry.
- */
+// Periodic sweep + bounded size. Used by rate-limit middleware + login limiter.
 
 interface InMemoryBucketStoreOptions<T> {
-  /** Maximum number of entries before oldest-first eviction (default: 100_000). */
+  /** Default 100_000. Oldest-first eviction. */
   maxSize?: number;
-  /** Interval between sweep passes in ms (default: 5 min). */
+  /** Default 5 min. */
   sweepIntervalMs?: number;
-  /** Predicate to determine if an entry has expired and should be swept. */
   isExpired: (entry: T, now: number) => boolean;
 }
 
-/** Generic in-memory key-value store with periodic expired-entry sweeping and bounded size. */
 export class InMemoryBucketStore<T> {
   private readonly buckets = new Map<string, T>();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
@@ -28,12 +21,11 @@ export class InMemoryBucketStore<T> {
     this.isExpired = options.isExpired;
   }
 
-  /** Retrieves a bucket entry by key, or undefined if not present. */
   get(key: string): T | undefined {
     return this.buckets.get(key);
   }
 
-  /** Stores or updates a bucket entry, evicting the oldest entry if at capacity. */
+  /** Evicts oldest at capacity. */
   set(key: string, value: T): void {
     if (!this.buckets.has(key) && this.buckets.size >= this.maxSize) {
       const oldest = this.buckets.keys().next().value;
@@ -43,23 +35,21 @@ export class InMemoryBucketStore<T> {
     this.ensureSweep();
   }
 
-  /** Removes a single bucket entry by key. */
   delete(key: string): void {
     this.buckets.delete(key);
   }
 
-  /** Removes all entries and stops the sweep timer. */
+  /** Clears entries + stops sweep timer. */
   clear(): void {
     this.buckets.clear();
     this.stopSweep();
   }
 
-  /** Returns the current number of entries in the store. */
   get size(): number {
     return this.buckets.size;
   }
 
-  /** Stops the periodic sweep timer without clearing entries. */
+  /** Doesn't clear entries. */
   stopSweep(): void {
     if (this.sweepTimer) {
       clearInterval(this.sweepTimer);
@@ -80,14 +70,10 @@ export class InMemoryBucketStore<T> {
         this.stopSweep();
       }
     }, this.sweepIntervalMs);
-    // The guard exists for non-Node runtimes (e.g. browser setInterval returns
-    // a number, no .unref). In every supported environment for this backend
-    // (Node + Jest fake timers) both sub-expressions are statically true, so
-    // the `&&` vs `||` distinction and the "always-true" mutants are not
-    // observable from any black-box test — both produce the same single
-    // unref() call. Behaviour-skipping mutants (false, !==, '', empty block)
-    // are killed by the unrefStub test in in-memory-bucket-store.test.ts.
-    // Stryker disable next-line ConditionalExpression,LogicalOperator: defensive guard for non-Node runtimes; in Node setInterval always returns an object with unref, so true/||-flips are observationally identical (see test "invokes unref exactly once").
+    // Guard for non-Node runtimes (browser setInterval returns number, no .unref).
+    // In Node both sub-expressions true → &&/|| flips unobservable. Behaviour-skip
+    // mutants killed by unrefStub test in in-memory-bucket-store.test.ts.
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: defensive guard for non-Node runtimes.
     if (typeof this.sweepTimer === 'object' && 'unref' in this.sweepTimer) {
       this.sweepTimer.unref();
     }

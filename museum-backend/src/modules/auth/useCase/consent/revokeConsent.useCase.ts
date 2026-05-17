@@ -10,7 +10,6 @@ import type { IUserConsentRepository } from '@modules/auth/domain/consent/userCo
 const isConsentScope = (value: string): value is ConsentScope =>
   (CONSENT_SCOPES as readonly string[]).includes(value);
 
-/** Revokes any active consent for the given (user, scope) pair. */
 export class RevokeConsentUseCase {
   constructor(
     private readonly repository: IUserConsentRepository,
@@ -18,13 +17,8 @@ export class RevokeConsentUseCase {
   ) {}
 
   /**
-   * Validates scope and stamps `revokedAt` on the active grant for (userId, scope).
-   * Emits an `AUDIT_CONSENT_REVOKED_*` audit row when a row was effectively
-   * revoked. Idempotent no-op when no active grant exists — no audit row.
-   *
-   * @param userId - Authenticated user id.
-   * @param scope - Consent scope to revoke.
-   * @param auditContext - Optional `{ ip, requestId }` from the request.
+   * Emits `AUDIT_CONSENT_REVOKED_*` only when a row was effectively revoked.
+   * Idempotent no-op when no active grant exists.
    */
   async execute(userId: number, scope: string, auditContext?: ConsentAuditContext): Promise<void> {
     if (!isConsentScope(scope)) {

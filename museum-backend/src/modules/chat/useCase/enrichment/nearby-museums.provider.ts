@@ -8,14 +8,6 @@ export type { NearbyMuseum };
 const MAX_NEARBY = 5;
 const MAX_DISTANCE_METERS = 30_000;
 
-/**
- * Finds the nearest museums within {@link MAX_DISTANCE_METERS} of the given coordinates.
- *
- * @param lat - Latitude of the user's position.
- * @param lng - Longitude of the user's position.
- * @param repository - Museum repository for fetching active museums.
- * @returns Up to {@link MAX_NEARBY} museums sorted by ascending distance.
- */
 export async function findNearbyMuseums(
   lat: number,
   lng: number,

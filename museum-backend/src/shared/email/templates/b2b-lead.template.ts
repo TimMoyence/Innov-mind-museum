@@ -20,7 +20,6 @@ const renderFieldRow = (label: string, value: string): string => `
     </tr>
   `;
 
-/** Build the HTML body for the internal B2B-lead notification email. */
 export function buildB2bLeadEmail(input: B2bLeadEmailInput): string {
   const safeName = escapeHtml(input.name);
   const safeEmail = escapeHtml(input.email);

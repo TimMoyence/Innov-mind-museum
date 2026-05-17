@@ -9,18 +9,16 @@ import type {
 } from '@modules/review/domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Input for listing all reviews (admin view). */
 export interface ListAllReviewsInput {
   status?: string;
   page: number;
   limit: number;
 }
 
-/** Lists all reviews regardless of status, with optional filter. Admin use only. */
+/** Admin use only — lists all reviews regardless of status. */
 export class ListAllReviewsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 
-  /** Validates pagination and filter enums, then retrieves a paginated list of all reviews. */
   async execute(input: ListAllReviewsInput): Promise<PaginatedResult<ReviewDTO>> {
     if (!Number.isInteger(input.page) || input.page < 1) {
       throw badRequest('page must be a positive integer');

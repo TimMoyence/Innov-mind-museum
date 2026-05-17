@@ -40,15 +40,6 @@ class WalkAwareOrchestrator implements ChatOrchestrator {
       metadata: { citations: ['test'] },
     };
   }
-
-  async generateStream(
-    input: OrchestratorInput,
-    onChunk: (text: string) => void,
-  ): Promise<OrchestratorOutput> {
-    const result = await this.generate(input);
-    onChunk(result.text);
-    return result;
-  }
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -101,14 +92,6 @@ describe('chat walk-intent integration (service-level)', () => {
           metadata: { citations: ['walk:empty'] },
           suggestions: [],
         };
-      },
-      async generateStream(
-        input: OrchestratorInput,
-        onChunk: (text: string) => void,
-      ): Promise<OrchestratorOutput> {
-        const result = await emptyOrchestrator.generate(input);
-        onChunk(result.text);
-        return result;
       },
     };
 

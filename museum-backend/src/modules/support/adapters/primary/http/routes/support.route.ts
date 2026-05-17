@@ -28,7 +28,6 @@ const supportContactLimiter = createRateLimitMiddleware({
   keyGenerator: byIp,
 });
 
-// POST /api/support/contact — Public contact form submission
 supportRouter.post(
   '/contact',
   supportContactLimiter,
@@ -53,7 +52,6 @@ supportRouter.post(
   },
 );
 
-// POST /api/support/tickets — Authenticated user: create a support ticket
 supportRouter.post(
   '/tickets',
   isAuthenticated,
@@ -80,7 +78,6 @@ supportRouter.post(
   },
 );
 
-// GET /api/support/tickets — Authenticated user: list own tickets
 supportRouter.get(
   '/tickets',
   isAuthenticated,
@@ -105,7 +102,6 @@ supportRouter.get(
   },
 );
 
-// GET /api/support/tickets/:id — Authenticated user: get ticket detail (ownership check)
 supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Response) => {
   const ticketId = parseStringParam(req, 'id');
   if (!ticketId) throw badRequest('ticket id param is required');
@@ -118,7 +114,6 @@ supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Res
   res.json({ ticket });
 });
 
-// POST /api/support/tickets/:id/messages — Authenticated user: add message (ownership check)
 supportRouter.post(
   '/tickets/:id/messages',
   isAuthenticated,

@@ -1,11 +1,8 @@
 import type { AppEnv } from './env.types';
 
 /**
- * Minimal logger surface used by the invariants guard.
- *
- * Decoupled from `@shared/logger` so tests can inject a spy without stubbing
- * the singleton and so this module stays import-safe during early boot
- * (logger itself imports `env`).
+ * Decoupled from `@shared/logger` so tests can inject a spy and module stays
+ * import-safe during early boot (logger imports `env`).
  */
 export interface InvariantsLogger {
   info(message: string, context?: Record<string, unknown>): void;
@@ -13,20 +10,13 @@ export interface InvariantsLogger {
   error(message: string, context?: Record<string, unknown>): void;
 }
 
-/** Injectable deps for `assertDeploymentInvariants`. Enables testable exits. */
 export interface DeploymentInvariantsDeps {
   logger: InvariantsLogger;
-  /**
-   * Called when the invariant is violated in production. Default implementation
-   * prints to stderr and exits the process with code 1. Tests inject a spy.
-   */
+  /** Called on invariant violation in prod. Default = process.exit(1). Tests inject spy. */
   exit: (code: number) => never;
 }
 
-/**
- * Fail-fast misconfiguration message printed to stderr before exit.
- * Kept in sync with the legacy warning at `index.ts:78` for operator continuity.
- */
+// Kept in sync with legacy warning at `index.ts:78` for operator continuity.
 const UNSAFE_MULTI_INSTANCE_MESSAGE =
   'Deployment invariant violation: DEPLOYMENT_MODE=multi (or auto-detected ' +
   'via PM2/K8s) requires shared Redis in production, but CACHE_ENABLED is false. ' +
@@ -35,18 +25,12 @@ const UNSAFE_MULTI_INSTANCE_MESSAGE =
   'Fix: set CACHE_ENABLED=true and REDIS_URL=redis://... ' +
   '(or override with DEPLOYMENT_MODE=single if this really is a single-instance deployment).';
 
-/**
- * Default exit implementation. Isolated so tests can inject a spy without
- * monkey-patching `process.exit`.
- */
 const defaultExit = ((code: number): never => {
   process.exit(code);
-  // `process.exit` is typed as `never` but TS needs the explicit throw below
-  // when called through a narrowed signature in some configurations.
+  // process.exit typed `never`, but TS needs explicit throw via narrowed signature.
   throw new Error('process.exit did not terminate');
 }) as (code: number) => never;
 
-/** Fallback logger used when no logger is injected (keeps the guard usable in isolation). */
 const noopLog = (_message: string, _context?: Record<string, unknown>): void => undefined;
 const noopLogger: InvariantsLogger = {
   info: noopLog,
@@ -55,26 +39,20 @@ const noopLogger: InvariantsLogger = {
 };
 
 /**
- * Asserts that the declared/auto-detected deployment topology is consistent
- * with the shared-infrastructure configuration.
+ * Asserts declared/auto-detected topology is consistent with shared infra.
  *
  * Rules:
- *   - `deploymentMode === 'multi'` AND `cache.enabled !== true` AND `NODE_ENV === 'production'`
- *     → hard fail (`process.exit(1)` via `deps.exit`), so the pod fails the
- *     readiness probe fast and the orchestrator stops rolling out.
- *   - `deploymentMode === 'multi'` AND `cache.enabled !== true` in
- *     `development`/`test` → warning only; dev ergonomics preserved.
- *   - `deploymentMode === 'single'` → no-op; the legacy in-memory fallback is
- *     still safe for a single replica.
+ *   - `multi` + `cache.enabled !== true` + `production` → hard fail
+ *     (`process.exit(1)`), readiness probe fails, orchestrator stops rollout.
+ *   - `multi` + `cache.enabled !== true` + dev/test → warn only.
+ *   - `single` → no-op (in-memory fallback safe for single replica).
  *
- * Rate-limit store note: this backend does not expose a separate
- * `RATE_LIMIT_STORE` knob. The Redis rate-limit store (`RedisRateLimitStore`)
- * is wired in `src/index.ts` iff `env.cache.enabled === true` and shares the
- * same Redis connection as the cache. Therefore the single `cache.enabled`
- * check covers both concerns.
+ * Rate-limit note: no separate `RATE_LIMIT_STORE` knob. `RedisRateLimitStore`
+ * wired in `src/index.ts` iff `env.cache.enabled === true` and shares Redis
+ * with cache. Single `cache.enabled` check covers both.
  *
- * MUST be called BEFORE `server.listen()` so failed invariants result in a
- * fast crash rather than a half-booted, silently-misconfigured server.
+ * MUST be called BEFORE `server.listen()` so failed invariants crash fast
+ * instead of half-booted silently-misconfigured server.
  */
 export function assertDeploymentInvariants(
   env: Pick<AppEnv, 'deploymentMode' | 'nodeEnv' | 'cache'>,

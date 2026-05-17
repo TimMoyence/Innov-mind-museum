@@ -1,13 +1,10 @@
 import type { ConsentScope, ConsentSource, UserConsent } from './userConsent.entity';
 
 /**
- * Port for the GDPR consent store. Implementations are append-mostly: each
- * grant opens a new active row and each revoke stamps `revokedAt` on the
- * currently-active row for the (user, scope) pair. `isGranted` returns true
- * iff at least one row exists with `revokedAt IS NULL` for that pair.
+ * Append-mostly GDPR consent store. Each grant opens a new active row;
+ * revoke stamps `revokedAt` on the currently-active row for (user, scope).
  */
 export interface IUserConsentRepository {
-  /** Record a new consent grant. Returns the persisted record. */
   grant(
     userId: number,
     scope: ConsentScope,
@@ -15,12 +12,12 @@ export interface IUserConsentRepository {
     source: ConsentSource,
   ): Promise<UserConsent>;
 
-  /** Stamp revokedAt on the current active grant (no-op if none active). */
+  /** No-op if no active grant. */
   revoke(userId: number, scope: ConsentScope): Promise<void>;
 
-  /** True iff at least one active (revokedAt IS NULL) grant exists. */
+  /** True iff at least one row with `revokedAt IS NULL` for (user, scope). */
   isGranted(userId: number, scope: ConsentScope): Promise<boolean>;
 
-  /** All rows for this user, ordered by granted_at DESC (history + current). */
+  /** Ordered by `granted_at DESC` (history + current). */
   listForUser(userId: number): Promise<UserConsent[]>;
 }

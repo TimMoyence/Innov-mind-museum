@@ -4,11 +4,9 @@ import type { Request, Response, NextFunction } from 'express';
 import type { z } from 'zod';
 
 /**
- * Express middleware factory that validates `req.query` against a Zod schema.
- * On success the parsed (and potentially coerced) data is stored in `res.locals.validatedQuery`.
- * On failure a 400 `BAD_REQUEST` AppError is thrown.
+ * Parsed data → `res.locals.validatedQuery` (Express 5 made `req.query` read-only).
  *
- * Note: Express 5 makes `req.query` read-only, so we use `res.locals` instead.
+ * @throws AppError 400 BAD_REQUEST on validation failure.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic T constrains the Zod schema and infers the output type
 export function validateQuery<T extends z.ZodType>(schema: T) {

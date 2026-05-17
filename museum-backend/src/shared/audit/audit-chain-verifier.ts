@@ -1,18 +1,13 @@
 import { computeRowHash, AUDIT_CHAIN_GENESIS_HASH, type AuditChainRow } from './audit-chain';
 
-/**
- * Result of verifying the audit-log hash chain from the genesis to the latest row.
- */
 export interface AuditChainVerificationResult {
-  /** Number of rows examined (excludes genesis sentinel). */
+  /** Excludes genesis sentinel. */
   rowsScanned: number;
-  /** True iff every row's `prev_hash` and `row_hash` match the chain. */
   intact: boolean;
   /**
-   * First detected break. `null` if `intact === true`. The break is reported on
-   * the row that fails verification — that row's `prevHash` did not equal the
-   * previous row's `rowHash`, or its own `rowHash` did not equal the recomputed
-   * hash from its fields.
+   * First detected break. `null` if intact. Reported on the row that failed:
+   * either `prevHash !== previous row's rowHash`, or own `rowHash !==`
+   * recomputed hash from its fields.
    */
   break: {
     rowId: string;
@@ -25,17 +20,10 @@ export interface AuditChainVerificationResult {
 }
 
 /**
- * Verifies the integrity of an audit-log hash chain.
- *
- * V12 W8 helper. Run periodically (cron) against `audit_log` ordered by
- * `created_at ASC, id ASC`. Tamper-evidence guarantee: any row inserted out
- * of band, or any field mutated post-insert, surfaces as a break with the
- * exact failing row id.
- *
- * Pure function — does not query the DB. Caller fetches the rows in order.
- *
- * @param rowsInOrder Rows ordered chronologically (created_at ASC, id ASC).
- * @returns Verification result. `intact: true` ⇒ chain is consistent.
+ * V12 W8 helper. Run periodically (cron) against `audit_log` ordered
+ * `created_at ASC, id ASC`. Tamper-evidence: any row inserted out of band, or
+ * any field mutated post-insert, surfaces as break with exact failing row id.
+ * Pure — does not query DB. Caller fetches rows in order.
  */
 export function verifyAuditChain(
   rowsInOrder: readonly AuditChainRow[],

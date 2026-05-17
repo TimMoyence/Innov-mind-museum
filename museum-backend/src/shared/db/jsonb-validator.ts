@@ -5,19 +5,13 @@ import type { ValueTransformer } from 'typeorm';
 import type { z } from 'zod';
 
 /**
- * Builds a TypeORM column transformer that runs the supplied Zod schema's
- * `.safeParse()` on every write (`to` direction). Invalid writes throw an
- * `AppError(422)` with `details.field` and `details.issues[]` so the global
- * error middleware can surface a structured 422 response. Reads (`from`) are
- * identity — stale rows in the DB are tolerated; consumers handle them at
- * the use case layer if strict reads are needed.
+ * TypeORM transformer that runs Zod `.safeParse()` on every write. Invalid
+ * writes throw `AppError(422)` with `details.field` + `details.issues[]`.
+ * Reads are identity — stale rows tolerated; consumers handle at use-case
+ * layer if strict reads needed.
  *
- * Use as the `transformer` option on a TypeORM `jsonb` column decorator.
- * Pass the schema and a `<table>.<column>` field name identifier.
  * Example: `transformer: jsonbValidator(OpeningHoursSchema, 'museum_enrichment.openingHours')`
- *
- * The fieldName argument is used in log lines and error details — use the
- * `<table>.<column>` convention for grep-ability across logs.
+ * Convention: `<table>.<column>` for grep-ability in logs.
  */
 export function jsonbValidator(schema: z.ZodType, fieldName: string): ValueTransformer {
   return {

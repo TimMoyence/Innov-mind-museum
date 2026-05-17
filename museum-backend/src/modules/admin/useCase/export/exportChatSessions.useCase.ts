@@ -10,47 +10,34 @@ import type {
 } from '@modules/admin/domain/export/csv-export.types';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-/**
- * Repository port consumed by the sessions export use case.
- *
- * Returns an `AsyncIterable<ExportRowSessions>` so the route can pipe directly
- * to the HTTP response without buffering the whole result set (R13).
- */
+/** Async stream so route pipes to HTTP response without buffering (R13). */
 export interface ExportSessionsRepository {
   streamChatSessions(filter: ExportSessionsFilter): AsyncIterable<ExportRowSessions>;
 }
 
-/**
- * Audit service port — only the `log` surface is needed here. Decoupled from
- * the concrete `AuditService` so unit tests can pass a `jest.fn()` spy.
- */
+/** Narrowed surface so unit tests can pass a `jest.fn()` spy. */
 export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;
 }
 
-/**
- * Salt for export pseudonyms, read from env (R2 corrective loop 1, 2026-05-15
- * — closing the loop-1 honesty deviation flagged by review). Falls back to the
- * historical literal so unit tests stubbing env without the new field still
- * compute a deterministic digest matching the `/^[0-9a-f]{16}$/` shape they
- * assert on. Spec §3.6 / Q6 documents the rotation procedure.
- */
+// R2 corrective loop 1 (2026-05-15) — fallback literal preserved so unit tests
+// stubbing env without the field still compute a deterministic /^[0-9a-f]{16}$/
+// digest. Rotation procedure: spec §3.6 / Q6.
 const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
 
 /**
- * Admin CSV export — chat sessions (R2 R6 / R7 / R8 / R12 / R17 + D4 / D5 / D6).
+ * Admin CSV export — chat sessions (R2 R6/R7/R8/R12/R17 + D4/D5/D6).
  *
- * RBAC gates :
- *   - super_admin            → scope = null (all tenants).
- *   - museum_manager / admin → scope = req.user.museumId ; 403 if null.
- *   - moderator / visitor    → 403 BEFORE any repo call (R4 / Q3).
+ * RBAC gates:
+ *   - super_admin            → scope = null (all tenants)
+ *   - museum_manager / admin → scope = req.user.museumId ; 403 if null
+ *   - moderator / visitor    → 403 BEFORE any repo call (R4 / Q3)
  *
- * Audit row is `await`-ed BEFORE the first data row is yielded (N6 / AC10).
+ * Ordering: audit row is `await`-ed BEFORE the first data row yields (N6/AC10).
  * Metadata payload NEVER contains row contents (N9 — no free-text PII).
  *
- * Pseudonymisation policy (R17 / D6) :
- *   - super_admin sees the raw `user_id`.
- *   - museum_manager / admin see a 16-hex-char SHA-256 pseudonym.
+ * Pseudonymisation (R17/D6): super_admin sees raw user_id ; manager/admin see
+ * a 16-hex-char SHA-256 pseudonym.
  */
 export class ExportChatSessionsUseCase {
   constructor(
@@ -58,13 +45,6 @@ export class ExportChatSessionsUseCase {
     private readonly audit: ExportAuditService,
   ) {}
 
-  /**
-   * Executes the sessions export pipeline : RBAC scope → audit await →
-   * repository stream → role-aware row mapping.
-   *
-   * @param input - Authenticated actor context (id + role + museum scope).
-   * @returns AsyncIterable yielding {@link ExportRowSessions} rows.
-   */
   async execute(input: ExportInput): Promise<AsyncIterable<ExportRowSessions>> {
     const scopeMuseumId = computeSessionsScope(input);
 
@@ -83,14 +63,7 @@ export class ExportChatSessionsUseCase {
   }
 }
 
-/**
- * Computes the SQL-side museum scope for the sessions export.
- *
- * Pure function so the use case stays composition-only and the RBAC table
- * is unit-testable in isolation. Mirrors R2 §3.4 D4 inline snippet.
- *
- * @throws {AppError} 403 Forbidden for visitor / moderator / unscoped manager.
- */
+/** R2 §3.4 D4. Throws 403 for visitor/moderator/unscoped manager. */
 function computeSessionsScope(input: ExportInput): number | null {
   if (input.actorRole === 'super_admin') return null;
   if (input.actorRole === 'museum_manager' || input.actorRole === 'admin') {
@@ -102,16 +75,7 @@ function computeSessionsScope(input: ExportInput): number | null {
   throw forbidden('Export not allowed for this role');
 }
 
-/**
- * Wraps the repository stream to re-write `user_id` per role (R17 / D6).
- *
- * Yields rows one-by-one — the upstream repository is the only source of
- * back-pressure, so this transform pays no extra memory cost.
- *
- * @param source - Upstream raw row stream from the repository.
- * @param actorRole - Authenticated role driving pseudonymisation.
- * @yields {ExportRowSessions} Optionally pseudonymised session rows.
- */
+/** R17/D6 — rewrites `user_id` per role. Streams 1-by-1, no extra memory. */
 async function* mapSessionsRows(
   source: AsyncIterable<ExportRowSessions>,
   actorRole: ExportInput['actorRole'],

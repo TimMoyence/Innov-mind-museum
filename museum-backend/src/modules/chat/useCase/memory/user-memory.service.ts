@@ -13,7 +13,7 @@ import type { NotableArtwork } from '@modules/chat/domain/memory/userMemory.type
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Array cap constants to prevent unbounded growth. */
+// Array caps prevent unbounded growth.
 const MAX_ARTISTS = 10;
 const MAX_MUSEUMS = 10;
 const MAX_ARTWORKS = 20;
@@ -25,16 +25,14 @@ const MAX_PERIODS = 10;
  */
 const RECENT_SESSIONS_LIMIT = 20;
 
-/** Minimum non-null session count required to compute a p90 duration. */
 const MIN_SESSIONS_FOR_P90 = 5;
 
-/** Hard cap (in minutes) applied to the chosen p90 — not to individual durations. */
+/** Applied to the chosen p90 — not to individual durations. */
 const MAX_DURATION_MINUTES = 240;
 
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 const CACHE_PREFIX = 'memory:prompt:';
 
-/** Merges preferred expertise from the visit context if enough signals were observed. */
 const mergeExpertise = (updates: UserMemoryUpdates, visitContext: VisitContext): void => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: detectedExpertise may be empty string at runtime
   if (visitContext.detectedExpertise && visitContext.expertiseSignals >= 3) {
@@ -42,7 +40,6 @@ const mergeExpertise = (updates: UserMemoryUpdates, visitContext: VisitContext):
   }
 };
 
-/** Appends a new museum to the visited list if not already present, capped at MAX_MUSEUMS. */
 const mergeMuseums = (
   updates: UserMemoryUpdates,
   existing: UserMemory | null,
@@ -56,7 +53,6 @@ const mergeMuseums = (
   }
 };
 
-/** Merges artworks discussed in this session into the persistent notable artworks list. */
 const mergeArtworks = (
   updates: UserMemoryUpdates,
   existing: UserMemory | null,
@@ -77,7 +73,6 @@ const mergeArtworks = (
     (existing?.totalArtworksDiscussed ?? 0) + visitContext.artworksDiscussed.length;
 };
 
-/** Merges unique artist names from discussed artworks, capped at MAX_ARTISTS. */
 const mergeArtists = (
   updates: UserMemoryUpdates,
   existing: UserMemory | null,
@@ -109,10 +104,6 @@ export interface UserMemoryServiceOptionalDeps {
   artworkRepo?: ArtworkKnowledgeRepoPort;
 }
 
-/**
- * Application service for cross-session user memory.
- * Reads/writes user memory, builds prompt blocks, and manages cache invalidation.
- */
 export class UserMemoryService {
   private readonly repository: UserMemoryRepository;
   private readonly cache?: CacheService;
@@ -128,10 +119,6 @@ export class UserMemoryService {
     this.artworkRepo = optional?.artworkRepo;
   }
 
-  /**
-   * Returns the prompt block for a user, reading from cache first.
-   * Returns empty string if the user has no memory yet.
-   */
   async getMemoryForPrompt(userId: number): Promise<string> {
     const cacheKey = `${CACHE_PREFIX}${String(userId)}`;
 
@@ -151,16 +138,6 @@ export class UserMemoryService {
     return block;
   }
 
-  /**
-   * Merges data from the completed session into the user's persistent memory.
-   * Caps arrays to prevent unbounded growth.
-   *
-   * @param userId - Owner of the memory row.
-   * @param visitContext - Aggregated session signals (museum, artworks, expertise).
-   * @param sessionId - Source session id (recorded as `lastSessionId`).
-   * @param locale - Session locale used for artwork-knowledge lookups
-   *   (defaults to `'en'` so existing call sites keep working).
-   */
   async updateAfterSession(
     userId: number,
     visitContext: VisitContext | null | undefined,
@@ -344,30 +321,27 @@ export class UserMemoryService {
     updates.sessionDurationP90Minutes = p90;
   }
 
-  /** Hard-deletes the user's memory (GDPR erasure) and invalidates cache. */
+  /** GDPR erasure. */
   async deleteUserMemory(userId: number): Promise<void> {
     await this.repository.deleteByUserId(userId);
     await this.invalidateCache(userId);
   }
 
-  /** Returns the raw entity for GDPR data export. */
+  /** GDPR data export. */
   async getUserMemory(userId: number): Promise<UserMemory | null> {
     return await this.repository.getByUserId(userId);
   }
 
-  /** Sets or clears the user's opt-out flag for memory-powered personalisation. */
   async setDisabledByUser(userId: number, disabled: boolean): Promise<void> {
     await this.repository.upsert(userId, { disabledByUser: disabled });
     await this.invalidateCache(userId);
   }
 
-  /** Returns whether the user has opted out of memory-powered personalisation. */
   async isDisabledByUser(userId: number): Promise<boolean> {
     const memory = await this.repository.getByUserId(userId);
     return memory?.disabledByUser ?? false;
   }
 
-  /** Invalidates cached prompt block for a user. */
   async invalidateCache(userId: number): Promise<void> {
     if (this.cache) {
       await this.cache.del(`${CACHE_PREFIX}${String(userId)}`);

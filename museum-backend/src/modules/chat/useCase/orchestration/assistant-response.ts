@@ -6,7 +6,6 @@ import {
   type SuggestedImage,
 } from '@modules/chat/domain/chat.types';
 
-/** Parsed answer text and structured metadata extracted from the LLM's raw output. */
 interface ParsedAssistantResponse {
   answer: string;
   metadata: ChatAssistantMetadata;
@@ -26,21 +25,9 @@ const toCitations = (value: unknown): string[] | undefined => {
 };
 
 /**
- * Citations v2 (C4) — parses `sources[]` via `CitationSourceSchema.safeParse`
- * (R2 + NFR8).
- *
- * Behaviour:
- * - Non-array (e.g. malformed LLM output `"not-an-array"`) → `undefined`
- *   (graceful, no throw).
- * - Per-entry validation via Zod `safeParse`; malformed entries are SILENTLY
- *   dropped, valid ones retained.
- * - Empty result after filtering (every entry invalid OR empty input array)
- *   → `undefined` (do NOT surface empty arrays; FE convention is "absent =
- *   no sources to render").
- *
- * Backward-compat (NFR8): legacy `citations: string[]` is still parsed by
- * `toCitations` above; both fields may coexist in the same metadata for
- * one release cycle.
+ * R2/NFR8 — non-array → undefined; per-entry Zod safeParse drops invalid;
+ * empty after filter → undefined (FE convention: absent = no sources).
+ * Backward-compat: legacy `citations: string[]` parsed by toCitations above.
  */
 const toSources = (value: unknown): CitationSource[] | undefined => {
   if (!Array.isArray(value)) {
@@ -70,26 +57,15 @@ const toRecommendations = (value: unknown): string[] | undefined => {
 };
 
 /**
- * Maximum length (in characters) of a suggested follow-up question.
- *
- * Strings strictly longer than this are DROPPED (returned as `undefined`) —
- * NOT silently sliced — so prompt drift surfaces early at the boundary
- * rather than producing visually-truncated questions for the visitor.
+ * Strict-drop oversize (no silent slice) so prompt drift surfaces at boundary.
  * Mirrors `mainAssistantOutputSchema.suggestedFollowUp.max(80)` (B3 R5).
  */
 const MAX_SUGGESTED_FOLLOWUP_CHARS = 80;
 
 /**
- * B3 — Parse the singular `suggestedFollowUp` field emitted by the LLM.
- *
- * Returns the trimmed string when `typeof value === 'string'` AND
- * `0 < trimmed.length ≤ 80`, `undefined` otherwise. Strict-drop on oversize
- * (no silent slice) — see {@link MAX_SUGGESTED_FOLLOWUP_CHARS}.
- *
- * Singularity invariant : an array input is rejected outright (returns
- * `undefined`), even if the LLM drifts from the structured-output schema.
- * The B3 doctrine "JAMAIS 3 boutons — référence un fact précis ou rien" is
- * enforced at 4 layers ; this is the runtime defence on the parser boundary.
+ * B3 — singularity invariant: arrays rejected outright (even if LLM drifts
+ * from schema). Doctrine "JAMAIS 3 boutons" enforced at 4 layers; this is
+ * the parser-boundary runtime defence.
  */
 export const toSuggestedFollowUp = (value: unknown): string | undefined => {
   if (typeof value !== 'string') {
@@ -101,15 +77,7 @@ export const toSuggestedFollowUp = (value: unknown): string | undefined => {
   return trimmed;
 };
 
-/**
- * Sentinel placeholder for missing/empty `rationale` and `caption` strings on
- * a SuggestedImage entry. Carried through the metadata so the FE can swap it
- * for the localised i18n fallback (`chat.enrichment.rationale_fallback`).
- *
- * The empty-string sentinel is intentional: matches the same convention used
- * for `EnrichedImage.rationale` set by adapters that pre-date the LLM-authored
- * field (Unsplash, raw Wikidata P18). Truthiness check on FE → fallback.
- */
+/** Empty-string sentinel; FE truthiness check → i18n fallback. */
 const RATIONALE_FALLBACK_MARKER = '';
 
 const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
@@ -123,9 +91,7 @@ const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
       if (!query || !description) return null;
       const rationaleRaw = typeof item.rationale === 'string' ? item.rationale.trim() : '';
       const captionRaw = typeof item.caption === 'string' ? item.caption.trim() : '';
-      // R7 — if the LLM omits rationale or caption, fall back gracefully:
-      // - caption defaults to description (already validated non-empty above)
-      // - rationale defaults to RATIONALE_FALLBACK_MARKER (resolved by FE i18n)
+      // R7 — caption defaults to description; rationale → marker (FE resolves).
       return {
         query,
         description,
@@ -134,7 +100,7 @@ const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
       };
     })
     .filter((item): item is SuggestedImage => item !== null)
-    // R15 — defence-in-depth cap to 4 entries (LLM prompt also instructs ≤4).
+    // R15 — defence-in-depth cap (LLM prompt also instructs ≤4).
     .slice(0, 4);
 
   return normalised.length > 0 ? normalised : undefined;
@@ -156,7 +122,6 @@ const toExpertiseSignal = (value: unknown): ExpertiseLevel | undefined => {
   return undefined;
 };
 
-/** Extracts structured metadata fields from a parsed JSON object. */
 export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantMetadata => {
   const metadata: ChatAssistantMetadata = {};
 
@@ -202,21 +167,13 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   return metadata;
 };
 
-/** Delimiter separating the answer text from the JSON metadata section. */
 const META_DELIMITER = '\n[META]';
 
 /**
- * Parses the raw LLM output string into a structured response.
- * Supports two formats:
- * 1. **Text + [META] JSON** (streaming format): answer text, then `\n[META]` delimiter, then JSON metadata.
- * 2. **Legacy JSON** (pre-streaming): a JSON object with an `answer` field.
- * Falls back to using the raw string as the answer when neither format matches.
- *
- * @param raw - Raw LLM output.
- * @returns The parsed answer text and extracted metadata.
+ * Supports: (1) text + `\n[META]` + JSON (streaming-era), (2) legacy JSON
+ * object with `answer` field. Falls back to raw string when neither matches.
  */
 export const parseAssistantResponse = (raw: string): ParsedAssistantResponse => {
-  // 1. Try [META] delimiter format (streaming-era)
   const metaIndex = raw.indexOf(META_DELIMITER);
   if (metaIndex !== -1) {
     const answer = raw.slice(0, metaIndex).trim();
@@ -227,12 +184,11 @@ export const parseAssistantResponse = (raw: string): ParsedAssistantResponse => 
         return { answer, metadata: extractMetadata(parsed) };
       }
     } catch {
-      // Malformed meta JSON — return the answer text with empty metadata
+      // Malformed meta JSON — return answer with empty metadata
     }
     return { answer, metadata: {} };
   }
 
-  // 2. Legacy JSON format fallback
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!isObject(parsed) || typeof parsed.answer !== 'string') {

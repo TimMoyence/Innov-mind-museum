@@ -21,23 +21,12 @@ interface BraveApiResponse {
   };
 }
 
-/**
- * Brave Search API adapter implementing {@link WebSearchProvider}.
- *
- * Uses native `fetch` (Node 18+). Never throws from public methods —
- * any error returns an empty array so the caller can fail-open.
- */
+/** Never throws — any error returns empty array so caller can fail-open. */
 export class BraveSearchClient implements WebSearchProvider {
   readonly name = 'brave';
 
   constructor(private readonly apiKey: string) {}
 
-  /**
-   * Searches the web via Brave Search API.
-   *
-   * @param query - Search term and max results.
-   * @returns Search results, or empty array on any failure.
-   */
   async search(query: WebSearchQuery): Promise<SearchResult[]> {
     if (!query.query.trim()) return [];
 

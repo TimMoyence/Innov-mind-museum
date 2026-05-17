@@ -97,11 +97,6 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 import type { CacheService } from '@shared/cache/cache.port';
 import type { DataSource } from 'typeorm';
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Public typed result of build() ===
-// ═══════════════════════════════════════════════════════════════════
-
-/** Typed result of building the chat module — all services guaranteed initialized. */
 export interface BuiltChatModule {
   chatService: ChatService;
   describeService: DescribeService;
@@ -124,19 +119,13 @@ export interface BuiltChatModule {
   getMessageExplanationUseCase: GetMessageExplanationUseCase;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Wikidata stack wiring (ex chat-module.wikidata-wiring.ts) ===
-//
-//  Composition (outermost → innermost):
-//    WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
-//      └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
-//           └─ WikidataClient      ← raw HTTP / SPARQL
-//
-//  Both downstream consumers — `KnowledgeBaseService` AND `KnowledgeRouterService`
-//  — share the same `kbProvider` reference so the breaker state and dump write-
-//  through are shared. Doctrine pré-launch V1 : no `*_ENABLED` flag, rollback
-//  = `git revert` of the wiring.
-// ═══════════════════════════════════════════════════════════════════
+// Wikidata stack — composition (outer → inner):
+//   WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
+//     └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
+//          └─ WikidataClient      ← raw HTTP / SPARQL
+// Both KnowledgeBaseService AND KnowledgeRouterService share the same kbProvider
+// reference so breaker state + dump write-through are shared. Pre-launch V1
+// doctrine: no `*_ENABLED` flag, rollback = `git revert` of the wiring.
 
 interface WikidataStack {
   readonly kbProvider: KnowledgeBaseProvider;
@@ -162,13 +151,9 @@ function buildWikidataStack(dataSource: DataSource, cache?: CacheService): Wikid
   return { kbProvider, knowledgeBase };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Knowledge router wiring (ex chat-module.knowledge-router-wiring.ts) ===
-//
-//  C4.1 — `KnowledgeRouterService` cascade: KB → LLM judge → WebSearch.
-//  Each leg's per-leg budget is sourced from `env.knowledgeRouter.*` —
-//  TUNING-ONLY by doctrine (D11 / pré-launch V1). NO `*_ENABLED` switch.
-// ═══════════════════════════════════════════════════════════════════
+// C4.1 KnowledgeRouterService cascade: KB → LLM judge → WebSearch. Per-leg
+// budgets sourced from `env.knowledgeRouter.*` — TUNING-ONLY (D11 / pre-launch
+// V1), NO `*_ENABLED` switch.
 
 function buildKnowledgeRouter(
   kbProvider: KnowledgeBaseProvider,
@@ -188,12 +173,8 @@ function buildKnowledgeRouter(
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Compare wiring (ex chat-module.compare-wiring.ts) ===
-//
-//  C3 Visual Similarity — composition root for the `POST /chat/compare` pipeline.
-//  See `compare.use-case.ts` for the orchestration contract.
-// ═══════════════════════════════════════════════════════════════════
+// C3 Visual Similarity — composition root for `POST /chat/compare`.
+// See `compare.use-case.ts` for the orchestration contract.
 
 function buildCompareImageProcessor(
   imageStorage: ImageStorage,
@@ -291,45 +272,34 @@ function buildCompareSessionAccessVerifier(
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  === ChatModule class — the composition root proper ===
-// ═══════════════════════════════════════════════════════════════════
-
 /**
  * Encapsulates the chat module dependency graph and lifecycle.
- * Call {@link build} to wire all dependencies; access them via {@link getBuilt}.
+ * Call {@link build} to wire dependencies; access via {@link getBuilt}.
  */
 export class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
   private _guardrailCircuitBreaker: GuardrailCircuitBreaker | undefined;
   /**
-   * 2026-05-13 — scalability primitives (perennial design §11). Wired here so
-   * /api/health can surface their state and tests can `getCostCircuitBreaker()`
-   * to assert. The cost breaker is process-scoped (in-memory rolling window).
-   * The tenant rate limiter is built but NOT wired into the request pipeline
-   * V1 — Phase 2 (B2B onset) consumes it from the chat use-case.
+   * Scalability primitives (perennial design §11). Cost breaker is
+   * process-scoped (in-memory rolling window). Tenant rate limiter is built but
+   * NOT wired V1 — Phase 2 (B2B onset) consumes it from the chat use-case.
    */
   private _llmCostCircuitBreaker: LlmCostCircuitBreaker | undefined;
   private _tenantRateLimiter: TenantRateLimiter | undefined;
   /**
-   * 2026-05-13 — Phase 1 perennial design: surfaces the active
-   * `GuardrailProvider` adapter for `/api/health/deep` (semantic probe) and
-   * any future shadow-mode aggregator. Single-instance reference so the
-   * health probe and the use-case both target the SAME adapter (the metrics
-   * counters on the adapter are local — calling `.health()` from a fresh
-   * instance would dilute them).
+   * Single-instance reference so health probe + use-case target the SAME
+   * adapter — local metrics counters would dilute if we instantiated twice.
    */
   private _guardrailProvider: GuardrailProvider | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
 
-  /** Returns true if the module has been built. */
   isBuilt(): boolean {
     return this._built !== undefined;
   }
 
-  /** Returns the built module or throws if {@link build} hasn't been called. */
+  /** @throws if {@link build} hasn't been called. */
   getBuilt(): BuiltChatModule {
     if (!this._built) {
       throw new Error('ChatModule.build() must be called before accessing services');
@@ -337,18 +307,13 @@ export class ChatModule {
     return this._built;
   }
 
-  /** Returns the LLM circuit breaker state for the health endpoint. */
   getLlmCircuitBreakerState():
     | { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'; failureCount: number; lastFailureAt: Date | null }
     | undefined {
     return this._orchestrator?.getCircuitBreakerState();
   }
 
-  /**
-   * Returns the LLM Guard sidecar circuit breaker state for the health endpoint.
-   * Mirrors `getLlmCircuitBreakerState()` shape so the response payload stays
-   * uniform across the two breakers exposed at `/api/health` (R8).
-   */
+  /** Mirrors `getLlmCircuitBreakerState()` shape so /api/health stays uniform (R8). */
   getLlmGuardCircuitBreakerState():
     | {
         state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
@@ -360,47 +325,33 @@ export class ChatModule {
     return this._guardrailCircuitBreaker?.getState();
   }
 
-  /**
-   * 2026-05-13 — accessor for the LLM cost circuit breaker (perennial §11 D9).
-   * Surfaced for /api/health, tests, and any future hook that needs to
-   * `recordCharge`/`canAttempt` around a costed LLM call.
-   */
+  /** Perennial §11 D9. */
   getLlmCostCircuitBreaker(): LlmCostCircuitBreaker | undefined {
     return this._llmCostCircuitBreaker;
   }
 
-  /**
-   * 2026-05-13 — accessor for the per-tenant rate limiter (perennial §11 D10).
-   * NOT wired V1 (single B2C tenant); ready for Phase 2 (B2B onset).
-   */
+  /** Perennial §11 D10. NOT wired V1 (single B2C tenant); ready Phase 2. */
   getTenantRateLimiter(): TenantRateLimiter | undefined {
     return this._tenantRateLimiter;
   }
 
   /**
-   * 2026-05-13 — accessor for the active `GuardrailProvider` adapter.
-   * Returns `undefined` when `GUARDRAILS_V2_LLM_GUARD_URL` is unset or when
-   * the module hasn't been built yet. Consumed by `/api/health/deep` to call
-   * `provider.health()` and `provider.metrics()` for the semantic probe
-   * payload (Phase 1).
+   * Returns `undefined` when `GUARDRAILS_V2_LLM_GUARD_URL` unset or module not
+   * built. Consumed by `/api/health/deep` for semantic probe (Phase 1).
    */
   getGuardrailProvider(): GuardrailProvider | undefined {
     return this._guardrailProvider;
   }
 
   /**
-   * Idempotent accessor that lazily constructs the guardrail provider on first
-   * call and caches it on `this._guardrailProvider`. Used by the chat use-case
-   * factory so the `/api/health/deep` accessor and the chat hot path share ONE
-   * adapter instance (its local counters + breaker reference would diverge if
-   * we instantiated twice).
+   * Lazy + cached so `/api/health/deep` accessor and chat hot path share ONE
+   * adapter — local counters + breaker reference would diverge otherwise.
    */
   private getOrBuildGuardrailProvider(): GuardrailProvider | undefined {
     this._guardrailProvider ??= this.buildGuardrailProvider();
     return this._guardrailProvider;
   }
 
-  /** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
   stopArtKeywordsRefresh(): void {
     if (this._artKeywordsRefreshTimer) {
       clearInterval(this._artKeywordsRefreshTimer);
@@ -408,12 +359,10 @@ export class ChatModule {
     }
   }
 
-  /** Gracefully shuts down the knowledge extraction BullMQ worker. */
   async stopKnowledgeExtraction(): Promise<void> {
     await this._knowledgeExtractionClose?.();
   }
 
-  /** Creates the image storage adapter (S3 or local) based on env config. */
   private buildImageStorage(): LocalImageStorage | S3CompatibleImageStorage {
     if (env.storage.driver === 's3') {
       const s3 = env.storage.s3;
@@ -439,7 +388,6 @@ export class ChatModule {
     return new LocalImageStorage(env.storage.localUploadsDir);
   }
 
-  /** Creates the audio storage adapter (S3 or local). */
   private buildAudioStorage(): AudioStorage | undefined {
     if (env.storage.driver === 's3') {
       const s3 = env.storage.s3;
@@ -462,15 +410,15 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /** Creates the guardrail provider adapter when GUARDRAILS_V2_LLM_GUARD_URL is set (ADR-048; ADR-015 amendment 2026-05-14). */
+  /** ADR-048; ADR-015 amendment 2026-05-14. Active when GUARDRAILS_V2_LLM_GUARD_URL set. */
   private buildGuardrailProvider(): GuardrailProvider | undefined {
     const baseUrl = env.guardrails.llmGuardUrl;
     if (!baseUrl) return undefined;
 
-    // Single breaker instance per process — shared between the input and
-    // output scan paths so a sidecar degradation trips ONE breaker, not two
-    // unsynchronised ones. Metrics are wired here via onStateChange so the
-    // breaker primitive itself stays Prometheus-free.
+    // Single breaker per process — shared between input + output scan paths so
+    // a sidecar degradation trips ONE breaker, not two unsynchronised ones.
+    // Metrics wired here via onStateChange so the breaker primitive stays
+    // Prometheus-free.
     const breaker = new GuardrailCircuitBreaker({
       failureThreshold: env.guardrails.circuitBreaker.failureThreshold,
       windowMs: env.guardrails.circuitBreaker.windowMs,
@@ -493,9 +441,9 @@ export class ChatModule {
                 failureCount: snapshot.failureCount,
                 windowMs: env.guardrails.circuitBreaker.windowMs,
                 openedAt: snapshot.openedAt?.toISOString() ?? null,
-                // ADR-048 Phase 0 anchor — stable literal until the per-tenant
-                // policy resolver (Phase 2) populates real policy versions.
-                // Anchors forensic replay across schema evolution.
+                // ADR-048 Phase 0 anchor — stable literal until per-tenant
+                // policy resolver (Phase 2). Anchors forensic replay across
+                // schema evolution.
                 policyVersion: 'default-v0',
               },
             }),
@@ -506,14 +454,14 @@ export class ChatModule {
     });
     this._guardrailCircuitBreaker = breaker;
 
-    // Seed gauges so dashboards see the healthy state before the first
-    // transition (onStateChange only fires on transitions, not construction).
+    // Seed gauges so dashboards see CLOSED before the first transition
+    // (onStateChange only fires on transitions, not construction).
     llmGuardCircuitBreakerState.set({ state: 'closed' }, 1);
     llmGuardCircuitBreakerState.set({ state: 'half_open' }, 0);
     llmGuardCircuitBreakerState.set({ state: 'open' }, 0);
 
-    // Single semaphore instance per process — shared across input + output
-    // legs so the concurrency cap matches actual sidecar fan-out.
+    // Single semaphore per process — shared across input + output legs so the
+    // concurrency cap matches actual sidecar fan-out.
     const semaphore = new ScanInflightSemaphore(
       env.guardrails.maxInflight,
       env.guardrails.queueMax,
@@ -528,7 +476,7 @@ export class ChatModule {
     });
   }
 
-  /** Creates the user memory service (always active in V1). */
+  /** Always active in V1. */
   private buildUserMemory(
     dataSource: DataSource,
     cache?: CacheService,
@@ -557,15 +505,11 @@ export class ChatModule {
     );
   }
 
-  /** Builds the knowledge extraction module (DB lookup + background pipeline). */
   private buildKnowledgeExtraction(dataSource: DataSource): BuiltKnowledgeExtractionModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /**
-   * Creates web search with multi-provider fallback chain (shared with the
-   * `KnowledgeRouterService` per T3.3). DuckDuckGo is always last-resort.
-   */
+  /** Shared with `KnowledgeRouterService` (T3.3). DuckDuckGo always last-resort. */
   private buildWebSearch(cache?: CacheService): {
     service: WebSearchService;
     provider: WebSearchProvider;
@@ -604,7 +548,6 @@ export class ChatModule {
     return { service, provider: fallbackProvider };
   }
 
-  /** Sets up the dynamic art keyword set with periodic refresh from the database. */
   private buildArtKeywordRefresh(artKeywordRepo: TypeOrmArtKeywordRepository): {
     dynamicArtKeywords: Set<string>;
     onArtKeywordDiscovered: (keyword: string, locale: string) => void;
@@ -639,14 +582,6 @@ export class ChatModule {
     return { dynamicArtKeywords, onArtKeywordDiscovered };
   }
 
-  /**
-   * Wires the chat module dependency graph and returns all services as a typed object.
-   *
-   * @param dataSource - Initialized TypeORM DataSource for repository creation.
-   * @param cache - Optional cache service for session/memory caching.
-   * @param museumRepository - Optional museum repository for resolving museum info.
-   * @returns Built module with all services guaranteed initialized.
-   */
   // eslint-disable-next-line max-lines-per-function -- Justification: composition root that intentionally wires every dependency in one place; ordering invariants documented inline (artKeyword → orchestrator → guardrail-budget → userMemory). Approved-by: tim@2026-05-05
   build(
     dataSource: DataSource,
@@ -671,12 +606,10 @@ export class ChatModule {
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache });
 
-    // ─── Scalability primitives (perennial design §11, 100k clients prep) ───
-    // Both instances live for the lifetime of the process. The cost breaker is
-    // a singleton because its rolling window MUST be shared by every LLM call
-    // site (a per-callsite breaker would never see a system-wide spike). The
-    // tenant rate limiter is a singleton for the same fairness reason —
-    // sharding it would defeat per-tenant accounting.
+    // Scalability primitives (perennial design §11, 100k clients prep).
+    // Cost breaker = singleton because its rolling window MUST be shared by
+    // every LLM call site (per-callsite breaker would miss system-wide spikes).
+    // Tenant rate limiter singleton for the same fairness reason.
     this._llmCostCircuitBreaker = new LlmCostCircuitBreaker({
       hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
       dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
@@ -691,7 +624,7 @@ export class ChatModule {
         }
       },
     });
-    // Seed gauges so dashboards see CLOSED before the first transition fires.
+    // Seed gauges so dashboards see CLOSED before the first transition.
     llmCostCircuitBreakerState.set({ state: 'closed' }, 1);
     llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
     llmCostCircuitBreakerState.set({ state: 'open' }, 0);
@@ -748,9 +681,8 @@ export class ChatModule {
     );
     const compareSessionAccessVerifier = buildCompareSessionAccessVerifier(repository);
 
-    // GDPR Art. 22 + AI Act Art. 14 — right-to-explanation use case.
-    // Wired with a TypeORM-backed audit correlator so the response can return
-    // the forensic `auditRef` linking back to the hash-chained audit row.
+    // GDPR Art. 22 + AI Act Art. 14 — right-to-explanation. TypeORM-backed
+    // audit correlator returns `auditRef` linking to the hash-chained audit row.
     const getMessageExplanationUseCase = new GetMessageExplanationUseCase({
       repository,
       auditCorrelator: new TypeOrmAuditCorrelator(dataSource),
@@ -775,9 +707,8 @@ export class ChatModule {
   }
 
   /**
-   * Wires ChatService with all its dependencies. Extracted from build() to keep
-   * the orchestration flow (storage → caches → orchestrator → service) scannable
-   * in a single screen without tripping the max-lines-per-function rule.
+   * Extracted from build() to keep the orchestration flow (storage → caches →
+   * orchestrator → service) scannable without tripping max-lines-per-function.
    */
   private buildChatService(deps: {
     repository: TypeOrmChatRepository;
@@ -813,10 +744,8 @@ export class ChatModule {
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
       artTopicClassifier: new ArtTopicClassifier(),
-      // Cache the constructed provider on `this._guardrailProvider` so the
-      // `/api/health/deep` accessor and the chat use-case share ONE adapter
-      // instance — the adapter holds local counters (`metrics()`) and a
-      // circuit-breaker reference; a second instantiation would diverge them.
+      // Share ONE adapter — local `metrics()` counters + breaker reference
+      // would diverge across instances.
       guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
@@ -833,9 +762,8 @@ export class ChatModule {
 }
 
 /**
- * Builds the GDPR consent checker used by the chat pipeline to gate location
- * propagation to the third-party LLM. Lazy-imports the auth module so we don't
- * create a circular init between chat and auth at boot.
+ * GDPR consent checker that gates location propagation to the third-party LLM.
+ * Lazy-imports auth to avoid a circular init between chat and auth at boot.
  */
 function buildLocationConsentChecker(): LocationConsentChecker {
   return {
@@ -846,37 +774,26 @@ function buildLocationConsentChecker(): LocationConsentChecker {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Singleton (ex chat-module-singleton.ts) ===
-// ═══════════════════════════════════════════════════════════════════
-
 /**
- * Active chat module reference. Defaults to a fresh singleton on import so
- * existing call sites keep working, but `setActiveChatModule()` lets
- * `createApp()` and tests substitute their own instance.
+ * Active chat module. Defaults to a fresh singleton on import so call sites
+ * work, but `setActiveChatModule()` lets `createApp()` + tests substitute.
  */
 let active: ChatModule = new ChatModule();
 
-/** Returns the active chat module — used by wiring accessors and the chat barrel. */
 export const getActiveChatModule = (): ChatModule => active;
 
-/** Swaps the active chat module. Call at boot inside `createApp()` or in tests. */
+/** Call at boot inside `createApp()` or in tests. */
 export const setActiveChatModule = (next: ChatModule): void => {
   active = next;
 };
 
-/** Resets to a fresh module — primarily for test teardown. */
+/** For test teardown. */
 export const resetActiveChatModule = (): void => {
   active = new ChatModule();
 };
 
-// ═══════════════════════════════════════════════════════════════════
-//  === Runtime accessors (ex wiring.ts) ===
-//
-//  Used for lazy access to built services at request time
-//  (e.g. api.router.ts, auth callbacks). For lifecycle management,
-//  use the main barrel (`@modules/chat`).
-// ═══════════════════════════════════════════════════════════════════
+// Runtime accessors for lazy access at request time (api.router.ts, auth
+// callbacks). For lifecycle management use the main barrel (`@modules/chat`).
 
 export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;
 
@@ -902,12 +819,9 @@ export const getLlmGuardCircuitBreakerState = (): ReturnType<
 > => getActiveChatModule().getLlmGuardCircuitBreakerState();
 
 /**
- * 2026-05-13 — runtime accessor for the active `GuardrailProvider` adapter.
- * Consumed by `/api/health/deep` (Phase 1 semantic probe). Returns
- * `undefined` when the chat module hasn't been built yet OR when
- * `GUARDRAILS_V2_LLM_GUARD_URL` is unset — both cases collapse to
- * "no semantic probe available", which the deep-health handler renders as
- * an empty `checks.guardrails` array.
+ * Consumed by `/api/health/deep` (Phase 1 semantic probe). Undefined when
+ * module not built OR `GUARDRAILS_V2_LLM_GUARD_URL` unset — both collapse to
+ * "no semantic probe available" → empty `checks.guardrails` array.
  */
 export const getGuardrailProvider = (): GuardrailProvider | undefined =>
   getActiveChatModule().getGuardrailProvider();
@@ -929,10 +843,8 @@ export const getCompareSessionAccessVerifier =
       : undefined;
 
 /**
- * GDPR Art. 22 + AI Act Art. 14 — runtime accessor for the right-to-explanation
- * use case (`GET /api/chat/messages/:id/explanation`). Returns `undefined` when
- * the chat module has not been built yet — consumers should mount the endpoint
- * conditionally so tests/composition order remain flexible.
+ * GDPR Art. 22 + AI Act Art. 14 — `GET /api/chat/messages/:id/explanation`.
+ * Undefined when module not built — mount the endpoint conditionally.
  */
 export const getMessageExplanationUseCase = (): GetMessageExplanationUseCase | undefined =>
   getActiveChatModule().isBuilt()

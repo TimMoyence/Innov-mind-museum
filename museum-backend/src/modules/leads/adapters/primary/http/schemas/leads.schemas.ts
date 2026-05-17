@@ -3,12 +3,9 @@ import { z } from 'zod';
 import { B2B_LEAD_ROLES } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
 
 /**
- * Schema for `POST /api/leads/b2b` (R4 §1 R6 + §3.4).
- *
- * - `consent` MUST literally be `true` (defense-in-depth on top of the FE
- *   checkbox, R11) — `z.literal(true)` rejects `false`, `'true'`, undefined.
- * - `website` is the honeypot field. Schema accepts it as an optional string
- *   so silent-drop policing happens in the use case (R10), not the schema.
+ * `POST /api/leads/b2b` (R4 §1 R6 + §3.4). `consent` MUST be literal `true`
+ * (R11 defense-in-depth — rejects `false`, `'true'`, undefined). `website`
+ * is honeypot; silent-drop policed in use case (R10), not schema.
  */
 export const submitB2bLeadSchema = z.object({
   email: z.email().trim().max(254),
@@ -20,20 +17,11 @@ export const submitB2bLeadSchema = z.object({
   website: z.string().max(500).optional(),
 });
 
-/**
- *
- */
 export type SubmitB2bLeadInput = z.infer<typeof submitB2bLeadSchema>;
 
 /**
- * Schema for `POST /api/leads/beta` (R3 §1 R6 + §3.4).
- *
- * - `consent` MUST literally be `true` (defense-in-depth on top of the FE
- *   checkbox, R11) — `z.literal(true)` rejects `false`, `'true'`, undefined.
- * - `website` is the honeypot field. Schema accepts it as an optional string
- *   so silent-drop policing happens in the use case (R10), not the schema.
- * - Single field shape (email + consent + honeypot) — friction maximally
- *   low (R4 in spec wording).
+ * `POST /api/leads/beta` (R3 §1 R6 + §3.4). Same consent / honeypot rules
+ * as B2B. Minimal shape (email + consent + honeypot) for low friction.
  */
 export const submitBetaSignupSchema = z.object({
   email: z.email().trim().max(254),
@@ -41,18 +29,12 @@ export const submitBetaSignupSchema = z.object({
   website: z.string().max(500).optional(),
 });
 
-/**
- *
- */
 export type SubmitBetaSignupInput = z.infer<typeof submitBetaSignupSchema>;
 
 /**
- * Schema for `POST /api/leads/paywall-interest` (R1 §1 R18 + R22).
- *
- * Same shape as `submitBetaSignupSchema` — email + literal-true consent +
- * optional honeypot. Per Q5/N6 the modal still requires an explicit consent
- * checkbox even though the user clicked an upsell CTA ; the schema mirrors
- * R3 doctrine and does NOT auto-derive `consent` from the modal context.
+ * `POST /api/leads/paywall-interest` (R1 §1 R18 + R22). Same shape as
+ * `submitBetaSignupSchema`. Q5/N6 — modal still requires explicit consent
+ * checkbox; schema does NOT auto-derive `consent` from modal context.
  */
 export const submitPaywallInterestSchema = z.object({
   email: z.email().trim().max(254),
@@ -60,7 +42,4 @@ export const submitPaywallInterestSchema = z.object({
   website: z.string().max(500).optional(),
 });
 
-/**
- *
- */
 export type SubmitPaywallInterestInput = z.infer<typeof submitPaywallInterestSchema>;

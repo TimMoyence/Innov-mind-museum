@@ -11,13 +11,10 @@ import { env } from '@src/config/env';
 export interface SocialTokenPayload {
   /** Provider-specific unique user identifier (`sub` claim). */
   providerUserId: string;
-  /** User email from the token, or `null` if unavailable. */
   email: string | null;
-  /** Whether the provider has verified the email address. */
   emailVerified: boolean;
-  /** First name (may be absent, e.g. Apple only sends name on first auth). */
+  /** May be absent, e.g. Apple only sends name on first auth. */
   firstname?: string;
-  /** Last name. */
   lastname?: string;
 }
 
@@ -208,12 +205,9 @@ const assertNonce = (
 };
 
 /**
- * Verifies an Apple Sign-In ID token using Apple's public JWKS.
+ * F3 — when `expectedNonce` is provided, must match `sha256(expectedNonce)`
+ * lowercase hex against the token's `nonce` claim (Apple hashes server-side).
  *
- * @param idToken - Raw JWT string from Apple.
- * @param expectedNonce - F3 server-issued nonce; when present, must match
- *   `sha256(expectedNonce)` lowercase hex against the `nonce` claim.
- * @returns Decoded identity claims.
  * @throws {Error} If the token is invalid, expired, or the signing key cannot be found.
  */
 export const verifyAppleIdToken = async (
@@ -244,12 +238,9 @@ export const verifyAppleIdToken = async (
 };
 
 /**
- * Verifies a Google Sign-In ID token using Google's public JWKS.
+ * F3 — when `expectedNonce` is provided, must match the token's `nonce` claim
+ * verbatim (Google does NOT hash, unlike Apple).
  *
- * @param idToken - Raw JWT string from Google.
- * @param expectedNonce - F3 server-issued nonce; when present, must match
- *   the `nonce` claim verbatim (Google does NOT hash).
- * @returns Decoded identity claims.
  * @throws {Error} If the token is invalid, expired, or the signing key cannot be found.
  */
 export const verifyGoogleIdToken = async (
@@ -284,14 +275,9 @@ export const verifyGoogleIdToken = async (
 export type SocialProvider = 'apple' | 'google';
 
 /**
- * Dispatches ID-token verification to the appropriate provider verifier.
+ * F3 — `expectedNonce` is bound against the ID token's `nonce` claim
+ * (see {@link verifyAppleIdToken} / {@link verifyGoogleIdToken}).
  *
- * @param provider - Social provider (`apple` or `google`).
- * @param idToken - Raw JWT string from the provider.
- * @param expectedNonce - F3 — server-issued nonce to bind against the ID
- *   token's `nonce` claim (see {@link verifyAppleIdToken} /
- *   {@link verifyGoogleIdToken}).
- * @returns Decoded identity claims.
  * @throws {Error} For unsupported providers or invalid tokens.
  */
 export const verifySocialIdToken = async (

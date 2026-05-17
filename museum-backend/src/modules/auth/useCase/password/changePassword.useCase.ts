@@ -8,11 +8,9 @@ import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
 /**
- * Changes a user's password after verifying the current one.
- * Revokes all refresh tokens to force re-authentication on other devices.
- *
- * CRITICAL: Do NOT hash the new password here — `updatePassword()` hashes internally.
- * Passing a pre-hashed value would cause double-hashing → unverifiable passwords.
+ * CRITICAL: do NOT hash newPassword here — `updatePassword()` hashes internally.
+ * Pre-hashing would cause double-hashing → unverifiable passwords.
+ * Revokes all refresh tokens to force re-auth on other devices.
  */
 export class ChangePasswordUseCase {
   constructor(
@@ -20,7 +18,6 @@ export class ChangePasswordUseCase {
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
-  /** Verifies the current password, validates the new one, and updates it across all sessions. */
   async execute(userId: number, currentPassword: string, newPassword: string): Promise<void> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
@@ -41,8 +38,7 @@ export class ChangePasswordUseCase {
       throw badRequest(pw.reason ?? 'Invalid password');
     }
 
-    // F10 — block breached new passwords at change. Banking-grade default;
-    // re-assess if support tickets pile up.
+    // F10 — block breached new passwords at change (banking-grade default).
     await assertPasswordNotBreached(newPassword);
 
     const isSame = await bcrypt.compare(newPassword, user.password);
@@ -50,7 +46,7 @@ export class ChangePasswordUseCase {
       throw badRequest('New password must be different from current password');
     }
 
-    // updatePassword() hashes internally — pass plain-text
+    // updatePassword() hashes internally — pass plain-text.
     await this.userRepository.updatePassword(userId, newPassword);
     await this.refreshTokenRepository.revokeAllForUser(userId);
   }

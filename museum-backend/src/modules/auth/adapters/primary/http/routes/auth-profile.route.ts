@@ -28,11 +28,6 @@ import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { ProfilePreferencesPatch } from '@modules/auth/domain/user/user.repository.interface';
 
-/**
- * Sub-router for profile + account endpoints:
- * GET /me, PATCH /content-preferences, PATCH /tts-voice,
- * PATCH /onboarding-complete, DELETE /account.
- */
 const authProfileRouter: Router = Router();
 
 authProfileRouter.get('/me', isAuthenticated, async (req: Request, res: Response) => {
@@ -52,8 +47,7 @@ authProfileRouter.get('/me', isAuthenticated, async (req: Request, res: Response
       onboardingCompleted: profile.onboardingCompleted,
       contentPreferences: profile.contentPreferences,
       ttsVoice: profile.ttsVoice,
-      // TD-2 — 5 NOT NULL profile preference columns, hydrated to FE Zustand
-      // stores via `bootstrapProfile()` on login + session resume.
+      // TD-2 — hydrated to FE Zustand stores via `bootstrapProfile()` on login + resume.
       defaultLocale: profile.defaultLocale,
       defaultMuseumMode: profile.defaultMuseumMode,
       guideLevel: profile.guideLevel,
@@ -85,9 +79,7 @@ authProfileRouter.patch(
   },
 );
 
-// Spec C T2.4 — Persist visitor's preferred TTS voice. Schema validation +
-// catalog enforcement live in updateTtsVoiceSchema (auth.schemas.ts);
-// `null` resets to the env-level default.
+// Spec C T2.4 — schema + catalog validation in updateTtsVoiceSchema. `null` resets to env default.
 authProfileRouter.patch(
   '/tts-voice',
   isAuthenticated,
@@ -110,12 +102,9 @@ authProfileRouter.patch(
   },
 );
 
-// TD-2 — Batch update for the 5 profile preferences (defaultLocale,
-// defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). FE writes
-// happen field-by-field on user toggle; the BE accepts a partial body so the
-// individual store actions can each fire a single PATCH without coordinating
-// with siblings. Zod `.refine(non-empty)` blocks empty bodies before the use
-// case runs. Audit metadata carries the raw patch (no PII).
+// TD-2 — Batch update of 5 prefs. FE writes field-by-field on toggle; BE
+// accepts partial so store actions each fire one PATCH without coordinating.
+// Zod `.refine(non-empty)` blocks empty bodies. Audit metadata carries raw patch (no PII).
 authProfileRouter.patch(
   '/me/preferences',
   isAuthenticated,

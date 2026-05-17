@@ -12,7 +12,6 @@ import type { DataSource } from 'typeorm';
 /** Stable BullMQ repeatable-job id — `upsertJobScheduler` makes reboot idempotent. */
 export const AUDIT_IP_ANONYMIZE_SCHEDULER_ID = 'audit-ip-anonymize';
 
-/** Worker `failed` event handler — delegates to shared DLQ policy with cron semantics. */
 const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
   handleJobFailure(
     job
@@ -32,8 +31,7 @@ const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
     },
     {
       queueName: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
-      // Cron carries no per-job payload — explicit empty summary so the
-      // shared handler does not fall into the legacy KE `url` default.
+      // Empty summary — cron has no per-job payload; avoids legacy KE `url` default.
       summarize: () => ({}),
       // Cron has no retries — every failure must page Sentry.
       treatNoAttemptsAsFinal: true,
@@ -44,31 +42,20 @@ const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
 /** Daily at 03:00 UTC — off-peak, before other retention / enrichment sweeps. */
 export const DEFAULT_AUDIT_IP_CRON = '0 3 * * *';
 
-/** Config injected by the boot wire-up so tests can override connection + cron. */
 export interface AuditCronConfig {
-  /** BullMQ connection reused to spawn the worker consuming scheduler ticks. */
   connection: ConnectionOptions;
-  /** Cron pattern override. Defaults to {@link DEFAULT_AUDIT_IP_CRON}. */
+  /** Defaults to {@link DEFAULT_AUDIT_IP_CRON}. */
   cron?: string;
 }
 
-/** Resources returned so the caller can shut them down on SIGTERM. */
 export interface AuditCronHandle {
-  /** Best-effort unregister + close of the worker consuming audit cron ticks. */
+  /** Best-effort unregister + worker close on SIGTERM. */
   stop: () => Promise<void>;
 }
 
 /**
- * Registers the daily audit-IP anonymization cron on the provided BullMQ queue
- * and spawns a dedicated worker to process its ticks.
- *
- * Mirrors the structure of `BullmqEnrichmentSchedulerAdapter` so operators see
- * one consistent pattern across all repeatable housekeeping jobs.
- *
- * @param queue BullMQ queue that owns the repeatable scheduler and feeds the worker.
- * @param dataSource Live TypeORM DataSource used by the anonymization job.
- * @param config Connection + cron pattern overrides.
- * @returns Handle exposing a `stop()` hook for graceful shutdown.
+ * Registers daily audit-IP anonymization cron + dedicated worker.
+ * Mirrors `BullmqEnrichmentSchedulerAdapter` for operator consistency.
  */
 export async function registerAuditCron(
   queue: Queue,
@@ -99,7 +86,7 @@ export async function registerAuditCron(
       schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
     });
     return {
-      // no-op — scheduler never registered, nothing to tear down
+      // no-op — scheduler never registered
       stop: () => Promise.resolve(),
     };
   }

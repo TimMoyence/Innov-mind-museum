@@ -11,7 +11,6 @@ import { ChatMessage } from './chatMessage.entity';
 
 import type { Relation } from 'typeorm';
 
-/** Represents a user-submitted report on a chat message. Mapped to `message_reports`. */
 @Entity({ name: 'message_reports' })
 @Unique(['message', 'userId'])
 export class MessageReport {

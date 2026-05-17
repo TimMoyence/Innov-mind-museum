@@ -3,28 +3,16 @@ import { type NextFunction, type Request, type Response, Router } from 'express'
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
 /**
- * GET /api/auth/super-admin-check — single-purpose RBAC gate consumed by
- * the production nginx `auth_request` directive that fronts `/grafana/*`.
+ * Consumed by nginx `auth_request` fronting `/grafana/*`. 204 iff `super_admin`,
+ * 401 otherwise (admin/visitor/anon). 5xx here would risk nginx fail-open via
+ * `auth_request_set` misconfig — trade verbosity for determinism. No body —
+ * nginx reads status only.
  *
- * Contract intentionally narrow: 204 if the authenticated user holds
- * `super_admin`, 401 otherwise. Anything else (an authenticated `admin`,
- * a `visitor`, an anonymous request) gets 401. nginx forwards a 401
- * downstream → the iframe renders the museum-web denied state. A 5xx
- * here would risk nginx falling open via `auth_request_set` if mis-
- * configured; we trade verbosity for determinism.
- *
- * Cache-Control: `private, no-store` is set BEFORE `isAuthenticated`
- * runs — that way an anonymous 401 emitted by the auth middleware (which
- * never reaches the final handler) still carries the no-cache header.
- * This closes the theoretical gap where a CDN ever ended up in front of
- * `/api/auth/super-admin-check`.
- *
- * No body on either response: nginx reads the status only, and emitting
- * a body would tempt callers (or proxies) to inspect it.
+ * Cache-Control set BEFORE `isAuthenticated` so anon 401 emitted by auth
+ * middleware still carries no-cache (CDN protection if one ever fronts this).
  */
 const superAdminCheckRouter: Router = Router();
 
-/** Stamps the no-cache header before any auth check runs. */
 function setNoStore(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader('Cache-Control', 'private, no-store');
   next();

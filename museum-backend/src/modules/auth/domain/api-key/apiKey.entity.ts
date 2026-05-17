@@ -12,23 +12,24 @@ import { User } from '@modules/auth/domain/user/user.entity';
 
 import type { Relation } from 'typeorm';
 
-/** Represents a B2B API key for programmatic access. Mapped to `api_keys`. */
 @Entity('api_keys')
 export class ApiKey {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  /** First 8 chars of key — used for DB lookup. */
   @Column({ length: 8, unique: true })
-  prefix!: string; // First 8 chars of key, used for DB lookup
+  prefix!: string;
 
+  /** HMAC-SHA256(full_key, salt). */
   @Column()
-  hash!: string; // HMAC-SHA256(full_key, salt)
+  hash!: string;
 
   @Column({ length: 64 })
   salt!: string;
 
   @Column({ length: 100 })
-  name!: string; // Human-readable label
+  name!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })

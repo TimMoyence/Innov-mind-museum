@@ -8,39 +8,28 @@ import type { NextFunction, Request, Response } from 'express';
 
 interface DailyBucket {
   count: number;
-  /** ISO date string (YYYY-MM-DD) this bucket belongs to. */
+  /** ISO YYYY-MM-DD (UTC). */
   dateStr: string;
 }
 
 const store = new InMemoryBucketStore<DailyBucket>({
-  // Expire entries from previous calendar days.
   isExpired: (entry) => entry.dateStr !== todayStr(),
 });
 
-/** Returns today's date as YYYY-MM-DD (UTC). */
 const todayStr = (): string => new Date().toISOString().slice(0, 10);
 
-/** Shared cache service for distributed daily-limit counting. */
 let cacheService: CacheService | null = null;
 
-/**
- * Register a CacheService for distributed daily-limit counting.
- * When set, the middleware will use Redis-backed counting with in-memory fallback.
- */
+/** When set, distributed Redis counting with in-memory fallback. */
 export const setDailyChatLimitCacheService = (cs: CacheService): void => {
   cacheService = cs;
 };
 
-/**
- * Resets the cache service reference. Intended for test teardown only.
- *
- * @internal
- */
+/** @internal */
 export const _resetDailyChatLimitCacheService = (): void => {
   cacheService = null;
 };
 
-/** Seconds remaining until midnight UTC — used as Redis key TTL. */
 const secondsUntilMidnightUtc = (): number => {
   const now = new Date();
   const midnight = new Date(
@@ -49,10 +38,7 @@ const secondsUntilMidnightUtc = (): number => {
   return Math.max(1, Math.ceil((midnight.getTime() - now.getTime()) / 1000));
 };
 
-/**
- * In-memory daily-limit check (synchronous). Used as primary path when no
- * CacheService is configured, or as fallback when Redis fails.
- */
+/** Primary path when no CacheService; fallback when Redis fails. */
 const checkInMemory = (key: string, limit: number, dateStr: string, next: NextFunction): void => {
   const current = store.get(key);
 
@@ -75,20 +61,13 @@ const checkInMemory = (key: string, limit: number, dateStr: string, next: NextFu
     return;
   }
 
-  // First message today for this user.
   store.set(key, { count: 1, dateStr });
   next();
 };
 
 /**
- * Creates a middleware that enforces a daily chat message limit per authenticated user.
- * Must be applied AFTER `isAuthenticated` so that `req.user` is available.
- *
- * When a CacheService is registered (via `setDailyChatLimitCacheService`), counting is
- * distributed via Redis. Falls back to the in-memory store when Redis is unavailable.
- *
- * When the limit is reached, responds with 429 and a JSON body containing
- * `{ code: 'DAILY_LIMIT_REACHED', limit, message }`.
+ * Ordering: AFTER `isAuthenticated` (`req.user` required).
+ * 429 `{ code: 'DAILY_LIMIT_REACHED', limit, message }` on cap.
  */
 export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction): void => {
   const user = req.user;
@@ -107,8 +86,7 @@ export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction)
     return;
   }
 
-  // Distributed path: use Redis for counting.
-  // Capture in local const so TypeScript knows it stays non-null inside the async chain.
+  // Capture local const so TS narrows non-null inside async chain.
   const cache = cacheService;
   void cache
     .get<number>(key)
@@ -129,15 +107,13 @@ export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction)
 
       const ttl = secondsUntilMidnightUtc();
       return cache.set(key, count + 1, ttl).then(() => {
-        // Keep in-memory store in sync for fallback
+        // Keep in-memory store in sync for fallback.
         store.set(key, { count: count + 1, dateStr });
         next();
       });
     })
     .catch(() => {
-      // Redis failed — fall back to in-memory counting. Wrap to prevent any
-      // sync throw from `checkInMemory` (or its mutated variants under Stryker)
-      // from becoming an unhandled rejection that crashes the worker.
+      // Redis failed → in-memory fallback. Wrap to prevent sync throw becoming unhandled rejection.
       logger.warn('daily_chat_limit_redis_fallback', { userId: user.id });
       try {
         checkInMemory(key, limit, dateStr, next);
@@ -147,7 +123,7 @@ export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction)
     });
 };
 
-/** Clears all daily-limit buckets and stops the sweep timer. Intended for test teardown. */
+/** @internal */
 export const clearDailyChatLimitBuckets = (): void => {
   store.clear();
 };

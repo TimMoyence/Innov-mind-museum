@@ -7,13 +7,12 @@
  * to `buildSectionMessages`. The Spotlighting envelope (T2.3 / T3.4) is the
  * SECOND SystemMessage when `facts.length > 0 && factsSource !== 'none'`.
  *
- * Entry points covered (3 of 3 — see editor notes — there is NO separate
+ * Entry points covered (2 of 2 — see editor notes — there is NO separate
  * orchestrator-level "repair" or "judge fallback" path; the judge lives
  * inside `KnowledgeRouterService`, not in the orchestrator):
  *
  *   1. `generate` (full-shot)   → `buildSectionTasks` → `buildSectionMessages`
- *   2. `generateStream`        → `buildFirstSectionMessages` → `buildSectionMessages`
- *   3. `generate` (walk intent) → `generateWalk`           → `buildSectionMessages`
+ *   2. `generate` (walk intent) → `generateWalk`      → `buildSectionMessages`
  *
  * Backward-compat (NFR8): when `facts`/`factsSource` are absent on
  * `OrchestratorInput`, the legacy `knowledgeBaseBlock` / `webSearchBlock` path
@@ -78,7 +77,10 @@ interface CapturedCall {
   messages: SystemMessage[];
 }
 
-function makeFakeModel(response: string, captured: CapturedCall[]): {
+function makeFakeModel(
+  response: string,
+  captured: CapturedCall[],
+): {
   invoke: jest.Mock;
   stream: jest.Mock;
   withStructuredOutput: jest.Mock;
@@ -90,7 +92,7 @@ function makeFakeModel(response: string, captured: CapturedCall[]): {
     }),
     stream: jest.fn().mockImplementation((messages: SystemMessage[]) => {
       captured.push({ messages });
-      // eslint-disable-next-line @typescript-eslint/require-await -- async generator
+
       return Promise.resolve(
         (async function* () {
           for (const word of response.split(' ')) {
@@ -192,45 +194,6 @@ describe('LangChainChatOrchestrator — KnowledgeRouter facts threading (T3.5)',
           factsSource: 'none',
         }),
       );
-
-      expect(captured.length).toBeGreaterThan(0);
-      const envelope = findEnvelope(captured[0].messages);
-      expect(envelope).toBeNull();
-    });
-  });
-
-  describe('streaming path (generateStream)', () => {
-    it('injects Spotlighting envelope into the streaming section messages', async () => {
-      const captured: CapturedCall[] = [];
-      const model = makeFakeModel(
-        'Streamed reply about Picasso.',
-        captured,
-      );
-      const orchestrator = new LangChainChatOrchestrator({ model });
-
-      const onChunk = jest.fn();
-      await orchestrator.generateStream(
-        makeInput({
-          text: 'Tell me about Picasso',
-          facts: ['Pablo Picasso (Wikidata Q5593).', 'Artist born 1881.'],
-          factsSource: 'wikidata',
-        }),
-        onChunk,
-      );
-
-      expect(captured.length).toBeGreaterThan(0);
-      const envelope = findEnvelope(captured[0].messages);
-      expect(envelope).not.toBeNull();
-      expect(envelope).toContain('<untrusted_content source="wikidata"');
-      expect(envelope).toContain('Pablo Picasso (Wikidata Q5593).');
-    });
-
-    it('preserves legacy streaming behavior when facts absent', async () => {
-      const captured: CapturedCall[] = [];
-      const model = makeFakeModel('Reply.', captured);
-      const orchestrator = new LangChainChatOrchestrator({ model });
-
-      await orchestrator.generateStream(makeInput({ webSearchBlock: 'Legacy web search content' }), jest.fn());
 
       expect(captured.length).toBeGreaterThan(0);
       const envelope = findEnvelope(captured[0].messages);

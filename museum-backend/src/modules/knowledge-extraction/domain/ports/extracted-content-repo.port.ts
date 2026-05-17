@@ -3,7 +3,6 @@ import type {
   ExtractedContentStatus,
 } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 
-/** Port for extracted content persistence. */
 export interface ExtractedContentRepoPort {
   findByUrl(url: string): Promise<ExtractedContent | null>;
   upsert(data: {

@@ -10,7 +10,6 @@ import type {
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
-/** Map a Review entity to a ReviewDTO. */
 function toDTO(entity: Review): ReviewDTO {
   return {
     id: entity.id,
@@ -23,7 +22,6 @@ function toDTO(entity: Review): ReviewDTO {
   };
 }
 
-/** TypeORM implementation of the review repository. */
 export class ReviewRepositoryPg implements IReviewRepository {
   private readonly repo: Repository<Review>;
 
@@ -31,7 +29,6 @@ export class ReviewRepositoryPg implements IReviewRepository {
     this.repo = dataSource.getRepository(Review);
   }
 
-  /** Inserts a new review and returns the created record. */
   async createReview(input: CreateReviewInput): Promise<ReviewDTO> {
     const entity = this.repo.create({
       userId: input.userId,
@@ -43,7 +40,6 @@ export class ReviewRepositoryPg implements IReviewRepository {
     return toDTO(saved);
   }
 
-  /** Retrieves a paginated list of reviews with optional status filter. */
   async listReviews(filters: ListReviewsFilters): Promise<PaginatedResult<ReviewDTO>> {
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
@@ -67,13 +63,11 @@ export class ReviewRepositoryPg implements IReviewRepository {
     };
   }
 
-  /** Retrieves a review by ID. */
   async getReviewById(reviewId: string): Promise<ReviewDTO | null> {
     const entity = await this.repo.findOne({ where: { id: reviewId } });
     return entity ? toDTO(entity) : null;
   }
 
-  /** Updates a review's status (approve/reject). */
   async moderateReview(input: ModerateReviewInput): Promise<ReviewDTO | null> {
     const result = await this.repo.update(input.reviewId, {
       status: input.status,
@@ -85,7 +79,7 @@ export class ReviewRepositoryPg implements IReviewRepository {
     return entity ? toDTO(entity) : null;
   }
 
-  /** Lists every review authored by a user, most-recent first (GDPR DSAR). */
+  /** GDPR DSAR — every review authored by a user, most-recent first. */
   async listForUser(userId: number): Promise<ReviewDTO[]> {
     const rows = await this.repo.find({
       where: { userId },
@@ -94,7 +88,6 @@ export class ReviewRepositoryPg implements IReviewRepository {
     return rows.map(toDTO);
   }
 
-  /** Computes the average rating and total count of approved reviews. */
   async getAverageRating(): Promise<{ average: number; count: number }> {
     const result = await this.repo
       .createQueryBuilder('review')

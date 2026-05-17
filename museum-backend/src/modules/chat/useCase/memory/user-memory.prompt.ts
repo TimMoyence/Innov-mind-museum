@@ -4,13 +4,6 @@ import type { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 
 const MAX_PROMPT_BLOCK_LENGTH = 600;
 
-/**
- * Builds a sanitized `[USER MEMORY]` prompt block summarizing cross-session knowledge about the user.
- * Returns an empty string when the memory has no meaningful content (sessionCount === 0).
- *
- * @param memory - The user memory entity.
- * @returns A prompt-safe text block (max 600 chars), or empty string.
- */
 export const buildUserMemoryPromptBlock = (memory: UserMemory | null | undefined): string => {
   if (!memory || memory.sessionCount === 0) {
     return '';

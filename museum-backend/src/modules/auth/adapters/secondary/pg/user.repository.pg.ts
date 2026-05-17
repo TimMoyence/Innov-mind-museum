@@ -11,7 +11,6 @@ import type {
   ProfilePreferencesPatch,
 } from '@modules/auth/domain/user/user.repository.interface';
 
-/** TypeORM implementation of {@link IUserRepository}. */
 export class UserRepositoryPg implements IUserRepository {
   private readonly repo: Repository<User>;
   private readonly dataSource: DataSource;
@@ -21,36 +20,15 @@ export class UserRepositoryPg implements IUserRepository {
     this.repo = dataSource.getRepository(User);
   }
 
-  /**
-   * Finds a user by email address.
-   *
-   * @param email - User email.
-   * @returns The user or `null` if not found.
-   */
   async getUserByEmail(email: string): Promise<User | null> {
     return await this.repo.findOne({ where: { email } });
   }
 
-  /**
-   * Finds a user by numeric ID.
-   *
-   * @param id - User primary key.
-   * @returns The user or `null` if not found.
-   */
   async getUserById(id: number): Promise<User | null> {
     return await this.repo.findOne({ where: { id } });
   }
 
-  /**
-   * Registers a new user with an email/password credential.
-   *
-   * @param email - User email (must be unique).
-   * @param password - Plain-text password (hashed with bcrypt before storage).
-   * @param firstname - Optional first name.
-   * @param lastname - Optional last name.
-   * @returns The newly created user.
-   * @throws {Error} If a user with the given email already exists.
-   */
+  /** @throws if user with this email already exists. */
   async registerUser(
     email: string,
     password: string,
@@ -74,14 +52,6 @@ export class UserRepositoryPg implements IUserRepository {
     return await this.repo.save(entity);
   }
 
-  /**
-   * Sets a password-reset token and its expiry on the user row.
-   *
-   * @param email - User email.
-   * @param token - Reset token value.
-   * @param expires - Expiry date for the token.
-   * @returns The updated user.
-   */
   async setResetToken(email: string, token: string, expires: Date): Promise<User> {
     await this.repo.update({ email }, { reset_token: token, reset_token_expires: expires });
     const user = await this.repo.findOne({ where: { email } });
@@ -89,12 +59,6 @@ export class UserRepositoryPg implements IUserRepository {
     return user;
   }
 
-  /**
-   * Finds a user by a non-expired reset token.
-   *
-   * @param token - Password-reset token.
-   * @returns The matching user or `null`.
-   */
   async getUserByResetToken(token: string): Promise<User | null> {
     return await this.repo.findOne({
       where: {
@@ -104,18 +68,10 @@ export class UserRepositoryPg implements IUserRepository {
     });
   }
 
-  /**
-   * Updates a user's password and clears any reset token.
-   *
-   * @param userId - User primary key.
-   * @param newPassword - New plain-text password (hashed before storage).
-   * @returns The updated user.
-   */
   async updatePassword(userId: number, newPassword: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    // `repo.update` forwards to `.set()` internally, so `undefined` is silently
-    // skipped — use raw `() => 'NULL'` to actually emit `SET reset_token = NULL`.
-    // See verifyEmail (below) for full rationale.
+    // `repo.update` → `.set()` silently skips `undefined` — use `() => 'NULL'`
+    // to actually emit `SET reset_token = NULL`. Cf. verifyEmail below.
     await this.repo.update(userId, {
       password: hashedPassword,
       reset_token: () => 'NULL',
@@ -126,20 +82,11 @@ export class UserRepositoryPg implements IUserRepository {
     return user;
   }
 
-  /**
-   * Atomically consume a reset token and update the user's password.
-   *
-   * @param token - The reset token to consume.
-   * @param hashedPassword - The new bcrypt-hashed password.
-   * @returns The updated user or `null` if the token is invalid/expired.
-   */
   async consumeResetTokenAndUpdatePassword(
     token: string,
     hashedPassword: string,
   ): Promise<User | null> {
-    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
-    // verifyEmail (below) for the full mechanism. Raw `() => 'NULL'` forces
-    // the SET clause to actually clear the consumed reset-token columns.
+    // `undefined` silently skipped by `.set()` — `() => 'NULL'` forces clear of consumed token cols.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -156,10 +103,7 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /**
-   * Stores the SHA-256 hash of an email verification token and its expiry on a user record.
-   * SEC (H2): only the hash is persisted — the raw token is sent to the user by email.
-   */
+  /** SEC (H2): only the hash is persisted — raw token sent to user by email. */
   async setVerificationToken(userId: number, hashedToken: string, expires: Date): Promise<void> {
     await this.repo.update(userId, {
       verification_token: hashedToken,
@@ -167,17 +111,11 @@ export class UserRepositoryPg implements IUserRepository {
     });
   }
 
-  /**
-   * Marks a user's email as verified by consuming the verification token hash.
-   * SEC (H2): the caller must SHA-256-hash the raw token received from the user before calling.
-   */
+  /** SEC (H2): caller MUST SHA-256-hash the raw token before calling. */
   async verifyEmail(hashedToken: string): Promise<User | null> {
-    // TypeORM UpdateQueryBuilder.set() SKIPS columns whose value is `undefined`,
-    // so writing `verification_token: undefined` would leave the consumed token
-    // intact and allow infinite replays. Use raw `() => 'NULL'` expressions to
-    // force the SET clause to actually clear both columns. Without this the
-    // 200 OK from replaying the same token is impossible to distinguish from
-    // the legitimate first verification.
+    // TypeORM `.set()` SKIPS `undefined` columns → `verification_token: undefined`
+    // would leave consumed token intact, enabling infinite replays. `() => 'NULL'`
+    // forces clear; without it 200 OK on replay is indistinguishable from first verify.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -196,14 +134,7 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /**
-   * Registers a user originating from social login (no password, email_verified = true).
-   *
-   * @param email - User email.
-   * @param firstname - Optional first name.
-   * @param lastname - Optional last name.
-   * @returns The newly created user.
-   */
+  /** No password, `email_verified=true`. */
   async registerSocialUser(email: string, firstname?: string, lastname?: string): Promise<User> {
     const entity = this.repo.create({
       email,
@@ -215,7 +146,6 @@ export class UserRepositoryPg implements IUserRepository {
     return await this.repo.save(entity);
   }
 
-  /** Stores an email change token, pending email, and expiry on a user record. */
   async setEmailChangeToken(
     userId: number,
     hashedToken: string,
@@ -229,12 +159,8 @@ export class UserRepositoryPg implements IUserRepository {
     });
   }
 
-  /** Atomically consumes an email change token and updates the user's email. */
+  /** Atomic. Promotes pending_email, clears change-token cols (`() => 'NULL'` — cf. verifyEmail). */
   async consumeEmailChangeToken(hashedToken: string): Promise<User | null> {
-    // `undefined` literals are silently skipped by TypeORM's `.set()` — see
-    // verifyEmail (above) for the full mechanism. Raw `() => 'NULL'` forces
-    // the SET clause to actually clear pending_email + email-change token
-    // columns once the new email has been promoted.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -254,35 +180,23 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /** Marks a user's onboarding as completed. */
   async markOnboardingCompleted(userId: number): Promise<void> {
     await this.repo.update(userId, { onboarding_completed: true });
   }
 
-  /** Replaces the user's content preferences with the provided set. */
   async updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void> {
     await this.repo.update(userId, { contentPreferences: preferences });
   }
 
-  /** Persists the user's preferred TTS voice or clears it (`null`). */
   async updateTtsVoice(userId: number, voice: string | null): Promise<void> {
     await this.repo.update(userId, { ttsVoice: voice });
   }
 
   /**
-   * TD-2 — Persists a partial patch of the 5 profile-preference columns.
-   *
-   * Pre-filters `undefined` fields before delegating to `repo.update` because
-   * TypeORM's `UpdateQueryBuilder.set()` silently skips columns whose value is
-   * `undefined` — leaving them unchanged rather than writing `NULL`. The 5
-   * columns are all `NOT NULL DEFAULT`, so we don't need raw `() => 'NULL'`
-   * expressions here (no clearing semantics) — pre-filtering keeps the patch
-   * shape simple and the assertion "fields present in the patch ARE written"
-   * holds. See `feedback_typeorm_set_undefined_repo_update`.
-   *
-   * No-op (no SQL) when the patch is fully empty after filtering — caller
-   * (use case) is responsible for surfacing 400 to the client via the Zod
-   * `.refine(non-empty)` on the route schema.
+   * TD-2 — Pre-filters `undefined` because `.set()` silently skips them (leaves
+   * unchanged, doesn't write NULL). 5 cols all `NOT NULL DEFAULT` so no clearing
+   * semantics needed. No-op when empty after filter — caller (use case) surfaces
+   * 400 via Zod `.refine(non-empty)`. Cf. `feedback_typeorm_set_undefined_repo_update`.
    */
   async updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void> {
     const update: Partial<User> = {};
@@ -297,20 +211,12 @@ export class UserRepositoryPg implements IUserRepository {
     await this.repo.update(userId, update);
   }
 
-  /**
-   * Set or clear the MFA enrollment deadline column (R16). Mirrored from the
-   * port doc: pass a Date to start/extend the warning window, or `null` to
-   * clear once enrollment succeeds.
-   */
+  /** R16. Date to start/extend warning window, `null` to clear on enroll success. */
   async setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void> {
     await this.repo.update(userId, { mfaEnrollmentDeadline: deadline });
   }
 
-  /**
-   * Deletes a user and all related data (sessions, tokens, social accounts) in a transaction.
-   *
-   * @param userId - User primary key.
-   */
+  /** Transactional. Cascades sessions/tokens/social accounts. */
   async deleteUser(userId: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       // Chat sessions -> FK cascade: messages, artwork_matches, message_reports

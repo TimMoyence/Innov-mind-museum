@@ -32,9 +32,6 @@ const SNIPPET_PREVIEW_MAX_CHARS = 64;
  * full payload, the preview is a best-effort visual aid, and we never normalise
  * or transcode the preview (no `Buffer.from(text, 'utf8').slice()` which would
  * mid-byte-cut multibyte sequences and produce U+FFFD).
- *
- * @param fullText - Raw user / LLM text that the guardrail blocked.
- * @returns Preview (≤64 UTF-16 code units) + sha256 hex fingerprint of the full text.
  */
 export function redactSnippetForAudit(fullText: string): GuardrailSnippet {
   const snippetPreview = fullText.slice(0, SNIPPET_PREVIEW_MAX_CHARS);

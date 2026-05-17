@@ -28,5 +28,4 @@ export const walkAssistantOutputSchema = z.object({
   suggestions: z.array(z.string().min(1).max(60)).max(3).default([]),
 });
 
-/** Inferred TypeScript type for the structured walk-mode assistant output. */
 export type WalkAssistantOutput = z.infer<typeof walkAssistantOutputSchema>;

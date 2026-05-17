@@ -25,9 +25,6 @@ const STATE_TTL_SECONDS = 5 * 60;
 /** OAuth callback target — `web` (cookies + frontend redirect) or `mobile` (deeplink + OTC redeem). */
 export type GoogleOAuthPlatform = 'web' | 'mobile';
 
-/**
- *
- */
 export interface GoogleOAuthStatePayload {
   nonce: string;
   returnTo: string;
@@ -41,7 +38,6 @@ interface SignGoogleOAuthStateInput {
   platform?: GoogleOAuthPlatform;
 }
 
-/** Sign a state JWT bound to the given nonce + returnTo. Expires after 5 minutes. */
 export function signGoogleOAuthState(payload: SignGoogleOAuthStateInput): string {
   const platform: GoogleOAuthPlatform = payload.platform ?? 'web';
   return jwt.sign(
@@ -55,9 +51,8 @@ export function signGoogleOAuthState(payload: SignGoogleOAuthStateInput): string
 }
 
 /**
- * Verify the state JWT and return the embedded payload. Throws on invalid
- * signature, wrong issuer, expired token, or malformed payload. States minted
- * before the `platform` field existed re-verify as `platform: 'web'`
+ * Throws on invalid signature, wrong issuer, expired token, or malformed payload.
+ * States minted before the `platform` field existed re-verify as `platform: 'web'`
  * (backward compat with admin redirects already in flight at deploy time).
  */
 export function verifyGoogleOAuthState(token: string): GoogleOAuthStatePayload {

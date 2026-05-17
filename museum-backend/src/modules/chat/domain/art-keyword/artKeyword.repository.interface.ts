@@ -1,6 +1,5 @@
 import type { ArtKeyword } from './artKeyword.entity';
 
-/** Port for persisting and querying crowdsourced art keywords. */
 export interface ArtKeywordRepository {
   findByLocale(locale: string): Promise<ArtKeyword[]>;
   findByLocaleSince(locale: string, since: Date): Promise<ArtKeyword[]>;

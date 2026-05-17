@@ -23,22 +23,12 @@ interface DuckDuckGoApiResponse {
 }
 
 /**
- * DuckDuckGo Instant Answer API adapter implementing {@link WebSearchProvider}.
- *
- * Parses the AbstractText (if present) as a top result, then expands
- * RelatedTopics (including nested Topic groups) for additional results.
- * Uses native `fetch` (Node 18+). Never throws from public methods —
- * any error returns an empty array so the caller can fail-open.
+ * Parses AbstractText (top result) + flattens RelatedTopics (incl. nested Topic groups).
+ * Never throws — any error returns empty array so caller can fail-open.
  */
 export class DuckDuckGoClient implements WebSearchProvider {
   readonly name = 'duckduckgo';
 
-  /**
-   * Searches the web via DuckDuckGo Instant Answer API.
-   *
-   * @param query - Search term and max results.
-   * @returns Search results, or empty array on any failure.
-   */
   async search(query: WebSearchQuery): Promise<SearchResult[]> {
     if (!query.query.trim()) return [];
 
@@ -76,7 +66,6 @@ export class DuckDuckGoClient implements WebSearchProvider {
     }
   }
 
-  /** Assembles SearchResult[] from a raw DDG Instant Answer response. */
   private parseResults(
     data: DuckDuckGoApiResponse,
     queryText: string,
@@ -84,7 +73,6 @@ export class DuckDuckGoClient implements WebSearchProvider {
   ): SearchResult[] {
     const results: SearchResult[] = [];
 
-    // Abstract result (the main instant answer)
     if (data.AbstractText && data.AbstractURL) {
       results.push({
         url: data.AbstractURL,
@@ -93,7 +81,6 @@ export class DuckDuckGoClient implements WebSearchProvider {
       });
     }
 
-    // Related topics — flatten nested Topic groups
     const flatTopics = this.flattenTopics(data.RelatedTopics ?? []);
 
     for (const topic of flatTopics) {
@@ -105,7 +92,6 @@ export class DuckDuckGoClient implements WebSearchProvider {
     return results.slice(0, maxResults);
   }
 
-  /** Converts a single RelatedTopic entry into a SearchResult. */
   private topicToResult(firstURL: string, text: string): SearchResult {
     // Text format: "Title — description" or just plain text
     const separatorIndex = text.indexOf(' \u2014 ');
@@ -114,7 +100,6 @@ export class DuckDuckGoClient implements WebSearchProvider {
     return { url: firstURL, title, snippet };
   }
 
-  /** Recursively flattens nested RelatedTopics groups into a flat array. */
   private flattenTopics(topics: DuckDuckGoRelatedTopic[]): DuckDuckGoRelatedTopic[] {
     const flat: DuckDuckGoRelatedTopic[] = [];
     for (const topic of topics) {

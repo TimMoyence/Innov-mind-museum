@@ -10,15 +10,7 @@ const signPayload = (payload: string): string => {
   return crypto.createHmac('sha256', env.storage.signingSecret).update(payload).digest('base64url');
 };
 
-/**
- * Generates a signed URL for reading a chat message image via the local image endpoint.
- *
- * @param params - Base URL, message ID, and optional TTL in seconds.
- * @param params.baseUrl - Base URL of the API server.
- * @param params.messageId - UUID of the chat message.
- * @param params.ttlSeconds - Optional TTL in seconds for the signed URL.
- * @returns The signed URL and its ISO-8601 expiry timestamp.
- */
+/** ttlSeconds floor: 30. */
 export const buildSignedChatImageReadUrl = (params: {
   baseUrl: string;
   messageId: string;
@@ -40,16 +32,6 @@ export const buildSignedChatImageReadUrl = (params: {
   };
 };
 
-/**
- * Verifies the HMAC signature and expiry of a signed chat image URL.
- *
- * @param params - Message ID, token, and signature from the query string.
- * @param params.messageId - UUID of the chat message.
- * @param params.token - Base64url-encoded token from the query string.
- * @param params.signature - HMAC signature from the query string.
- * @returns `{ ok: true, expiresAtMs }` on success, or `{ ok: false, reason }` on failure.
- */
-/** Decodes and validates a base64url token, returning the payload string. */
 const decodeToken = (
   token: string,
   expectedMessageId: string,
@@ -69,7 +51,7 @@ const decodeToken = (
   return { ok: true, payload: decoded };
 };
 
-/** Verifies the HMAC signature matches the expected value. */
+/** Constant-time comparison (timingSafeEqual). */
 const verifySignature = (payload: string, signature: string): boolean => {
   const expectedSignature = signPayload(payload);
   const sigBuffer = Buffer.from(signature);

@@ -11,10 +11,8 @@ import { ChatMessage } from './chatMessage.entity';
 
 import type { Relation } from 'typeorm';
 
-/** Allowed feedback values for a message. */
 export type FeedbackValue = 'positive' | 'negative';
 
-/** Represents a user's thumbs-up/down feedback on an assistant message. Mapped to `message_feedback`. */
 @Entity({ name: 'message_feedback' })
 @Unique(['message', 'userId'])
 export class MessageFeedback {

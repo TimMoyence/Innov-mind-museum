@@ -9,10 +9,8 @@ import { env } from '@src/config/env';
 
 import type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 
-// Re-export domain port types so existing consumers that imported from here keep working
 export type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 
-/** Returns the OpenAI API key, throwing if unavailable. */
 const requireApiKey = (): string => {
   const apiKey = env.llm.openAiApiKey;
   if (!apiKey) {
@@ -25,7 +23,7 @@ const requireApiKey = (): string => {
   return apiKey;
 };
 
-/** Sends the TTS request, wrapping timeout errors into AppError. */
+/** Wraps timeout/abort → AppError(504). */
 const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise<Response> => {
   try {
     return await fetch('https://api.openai.com/v1/audio/speech', {
@@ -58,7 +56,6 @@ const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise
   }
 };
 
-/** Validates the TTS response and extracts the audio buffer. */
 const parseSpeechResponse = async (response: Response): Promise<Buffer> => {
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'Unknown error');
@@ -73,24 +70,9 @@ const parseSpeechResponse = async (response: Response): Promise<Buffer> => {
   return Buffer.from(arrayBuffer);
 };
 
-/** OpenAI TTS implementation using POST https://api.openai.com/v1/audio/speech */
+/** POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {
-  /**
-   * Sends text to the OpenAI TTS API and returns the synthesized audio.
-   *
-   * Wraps the synthesis call in a {@link ChatPhaseTimer} so the `tts` phase
-   * latency lands in `chat_phase_duration_seconds{phase="tts",provider="openai"}`
-   * and a `audio.tts.synthesize` Langfuse span is emitted (fail-open).
-   *
-   * @param input - Text to synthesize and optional voice override.
-   * @param input.text - Text content to synthesize.
-   * @param input.voice - Optional voice identifier override.
-   * @param input.requestId - Optional request id used to correlate the span
-   *   with the parent chat request. Falls back to `'unknown'` when missing.
-   * @returns MP3 audio buffer.
-   * @throws {AppError} With code `FEATURE_UNAVAILABLE` if OpenAI API key is missing.
-   * @throws {AppError} With code `UPSTREAM_TTS_ERROR` on API failure.
-   */
+  /** @throws AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
   async synthesize(input: {
     text: string;
     voice?: string;
@@ -104,10 +86,7 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       model: env.tts.model,
       metadata: { textLength: text.length, voice },
     });
-    // A5 (R5) — `chat.phase.synthesizing-voice` Langfuse span. Sibling, not
-    // replacement, of the existing `chat_phase_duration_seconds{phase=tts}`
-    // Prom dimension owned by `ChatPhaseTimer` above (spec §1.1 Q2 — distinct
-    // concerns : Prom = histogram cardinality, Langfuse = API-contract phase).
+    // A5 R5 — Langfuse span `chat.phase.synthesizing-voice` (sibling of Prom dim, distinct concerns).
     const synthesisStartedAtMs = Date.now();
 
     let outcome: ChatPhaseOutcome = 'success';
@@ -144,9 +123,8 @@ function classifyTtsError(err: unknown): ChatPhaseErrorType {
   return 'unknown';
 }
 
-/** Stub TTS service that always throws — used when text-to-speech is disabled. */
+/** Always throws — TTS disabled. */
 export class DisabledTextToSpeechService implements TextToSpeechService {
-  /** Always throws because text-to-speech is disabled. \@throws {AppError} With code `FEATURE_UNAVAILABLE`. */
   // eslint-disable-next-line @typescript-eslint/require-await
   async synthesize(): Promise<TtsResult> {
     throw new AppError({

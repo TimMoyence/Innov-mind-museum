@@ -14,7 +14,6 @@ import type {
 } from '@modules/museum/domain/museum/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
-/** TypeORM implementation of the museum repository. */
 export class MuseumRepositoryPg implements IMuseumRepository {
   private readonly repo: Repository<Museum>;
 
@@ -22,7 +21,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     this.repo = dataSource.getRepository(Museum);
   }
 
-  /** Inserts a new museum row and returns the persisted record. */
   async create(input: CreateMuseumInput): Promise<Museum> {
     try {
       const entity = this.repo.create({
@@ -43,7 +41,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     }
   }
 
-  /** Dynamically updates museum fields and returns the updated record. */
   async update(id: number, input: UpdateMuseumInput): Promise<Museum | null> {
     const found = await this.findById(id);
     if (!found) return null;
@@ -71,7 +68,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     }
   }
 
-  /** Applies partial update fields onto an existing Museum entity in place. */
+  /** Mutates `entity`. */
   private applyUpdates(entity: Museum, input: UpdateMuseumInput): void {
     if (input.name !== undefined) entity.name = input.name;
     if (input.slug !== undefined) entity.slug = input.slug;
@@ -83,17 +80,14 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     if (input.isActive !== undefined) entity.isActive = input.isActive;
   }
 
-  /** Finds a museum by its numeric ID. */
   async findById(id: number): Promise<Museum | null> {
     return await this.repo.findOne({ where: { id } });
   }
 
-  /** Finds a museum by its URL-friendly slug. */
   async findBySlug(slug: string): Promise<Museum | null> {
     return await this.repo.findOne({ where: { slug } });
   }
 
-  /** Lists all museums, optionally filtering to active-only. */
   async findAll(opts?: { activeOnly?: boolean }): Promise<Museum[]> {
     const where = opts?.activeOnly ? { isActive: true } : {};
     return await this.repo.find({
@@ -103,10 +97,8 @@ export class MuseumRepositoryPg implements IMuseumRepository {
   }
 
   /**
-   * Finds active museums inside a bounding box. Uses simple BETWEEN filters on
-   * the latitude/longitude columns — no PostGIS dependency required. Antimeridian
-   * crossing (minLng > maxLng) is intentionally not supported; the frontend never
-   * produces such bboxes in practice.
+   * Simple BETWEEN filters on lat/lng — no PostGIS dependency. Antimeridian
+   * crossing (minLng > maxLng) intentionally not supported.
    */
   async findInBoundingBox(bbox: BoundingBox): Promise<Museum[]> {
     const [minLng, minLat, maxLng, maxLat] = bbox;
@@ -120,7 +112,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     });
   }
 
-  /** Permanently deletes a museum by its numeric ID. */
   async delete(id: number): Promise<void> {
     await this.repo.delete(id);
   }

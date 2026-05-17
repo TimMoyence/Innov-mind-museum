@@ -8,11 +8,9 @@ interface CacheEntry {
 }
 
 /**
- * In-memory cache with TTL support.
- * Used as fallback when Redis is not available (CACHE_ENABLED=false).
- * Prevents hammering external APIs (Overpass, etc.) with duplicate requests.
- *
- * Not suitable for multi-instance deployments — each process has its own cache.
+ * In-memory TTL cache. Fallback when Redis unavailable. Prevents hammering
+ * external APIs (Overpass etc.) with duplicates.
+ * NOT for multi-instance — each process has its own cache.
  */
 export class MemoryCacheService implements CacheService {
   private readonly store = new Map<string, CacheEntry>();
@@ -31,7 +29,6 @@ export class MemoryCacheService implements CacheService {
     this.gcTimer.unref();
   }
 
-  /** Retrieves a value by key, returning null on miss or expiry. */
   // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map lookup must match async CacheService interface
   async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     const entry = this.store.get(key);
@@ -49,7 +46,7 @@ export class MemoryCacheService implements CacheService {
     return entry.value as T;
   }
 
-  /** Stores a value with TTL. Evicts oldest entry at capacity. */
+  /** Evicts oldest entry at capacity. */
   // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unnecessary-type-parameters -- synchronous Map write must match async CacheService interface; T constrains input per interface contract
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (this.store.size >= this.maxEntries && !this.store.has(key)) {
@@ -65,13 +62,11 @@ export class MemoryCacheService implements CacheService {
     });
   }
 
-  /** Deletes a single cached key. */
   // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map delete must match async CacheService interface
   async del(key: string): Promise<void> {
     this.store.delete(key);
   }
 
-  /** Deletes all keys matching a prefix. */
   // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map iteration must match async CacheService interface
   async delByPrefix(prefix: string): Promise<void> {
     for (const key of this.store.keys()) {
@@ -81,7 +76,6 @@ export class MemoryCacheService implements CacheService {
     }
   }
 
-  /** Sets key only if absent (in-process lock pattern). */
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T constrains input per interface contract
   async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
     const existing = await this.get(key);
@@ -91,7 +85,6 @@ export class MemoryCacheService implements CacheService {
     return true;
   }
 
-  /** Atomically increments a numeric value by `amount` and refreshes the TTL. */
   async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
     if (!Number.isFinite(amount) || amount === 0) return null;
     if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) return null;
@@ -101,20 +94,17 @@ export class MemoryCacheService implements CacheService {
     return next;
   }
 
-  /** Always returns true — in-memory cache is always reachable. */
   // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
   async ping(): Promise<boolean> {
     return true;
   }
 
-  /** Increments a member score in a sorted-set-like structure. */
   async zadd(key: string, member: string, increment: number): Promise<void> {
     const sorted = (await this.get<Record<string, number>>(key)) ?? {};
     sorted[member] = (sorted[member] ?? 0) + increment;
     await this.set(key, sorted, this.defaultTtlSeconds);
   }
 
-  /** Returns top N members by score descending. */
   async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {
     const sorted = (await this.get<Record<string, number>>(key)) ?? {};
     return Object.entries(sorted)
@@ -137,7 +127,7 @@ export class MemoryCacheService implements CacheService {
     }
   }
 
-  /** Clears the GC timer and empties the store. Safe to call multiple times. */
+  /** Idempotent. */
   // eslint-disable-next-line @typescript-eslint/require-await -- matches async CacheService.destroy signature
   async destroy(): Promise<void> {
     if (this.gcTimer !== null) {

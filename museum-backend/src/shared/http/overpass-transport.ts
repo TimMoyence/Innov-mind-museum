@@ -5,7 +5,6 @@ import { parseElement } from './overpass-tags';
 
 import type { OverpassMuseumResult, OverpassResponse } from './overpass-types';
 
-/** POSTs a query to a single Overpass endpoint with timeout + User-Agent. */
 export async function postQuery(
   endpoint: string,
   query: string,
@@ -31,17 +30,7 @@ export async function postQuery(
   }
 }
 
-/**
- * Executes the built Overpass query against a single endpoint and parses the result.
- * Returns null if the endpoint should be skipped (non-OK status or unexpected shape);
- * the caller then falls through to the next endpoint.
- *
- * @param endpoint - Overpass endpoint URL.
- * @param query - Pre-built Overpass QL query.
- * @param timeoutMs - HTTP request timeout in milliseconds.
- * @param q - Optional name-substring filter applied after parsing.
- * @returns Parsed museum results on success, or null to try next endpoint.
- */
+/** Returns `null` on non-OK / unexpected shape → caller falls through to next endpoint. */
 export async function fetchFromEndpoint(
   endpoint: string,
   query: string,

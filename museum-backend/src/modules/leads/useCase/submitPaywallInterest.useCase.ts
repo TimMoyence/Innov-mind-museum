@@ -9,15 +9,11 @@ import type {
 } from '@modules/leads/domain/ports/beta-signup-notifier.port';
 
 /**
- * R1 (C6) — Paywall email-capture use case. Mirrors `SubmitBetaSignupUseCase`
- * (R3) but tags the Brevo contact with `OPT_IN_SOURCE='paywall_premium_interest'`
- * so the funnel-side cohort analytics can differentiate landing-beta vs
- * paywall-driven signups (R1 §0.1 + §3.9 D9). Reuses the same
- * `BetaSignupNotifier` port + Brevo adapter — no new adapter, no new env var.
- *
- * Validation matches R3 doctrine : explicit `consent === true` literal,
- * trimmed-lowercased email, honeypot silent-drop, PII discipline on logs
- * (full email NEVER logged — only the domain after `@`).
+ * R1 (C6) — paywall email capture. Mirrors `SubmitBetaSignupUseCase` (R3) but
+ * tags Brevo contact with `OPT_IN_SOURCE='paywall_premium_interest'` (R1 §0.1
+ * + §3.9 D9). Reuses `BetaSignupNotifier` port + Brevo adapter (no new
+ * adapter / env var). Validation = R3 doctrine: literal consent, lowercased
+ * email, honeypot silent-drop, full email NEVER logged.
  */
 interface SubmitPaywallInterestInput {
   email: string;
@@ -28,11 +24,9 @@ interface SubmitPaywallInterestInput {
   userAgent?: string;
 }
 
-/** Wraps a `BetaSignupNotifier` to capture paywall-driven premium interest. */
 export class SubmitPaywallInterestUseCase {
   constructor(private readonly notifier: BetaSignupNotifier) {}
 
-  /** Validates the payload, applies the cohort discriminator, forwards to the notifier. */
   async execute(input: SubmitPaywallInterestInput): Promise<void> {
     if (!input.consent) {
       throw badRequest('consent must be true');
@@ -43,8 +37,7 @@ export class SubmitPaywallInterestUseCase {
       throw badRequest('email must be valid');
     }
 
-    // R23 — honeypot silent drop (mirror R3 R10). Whitespace-only does NOT
-    // trigger the drop (password-manager autofill safety).
+    // R23 — honeypot silent drop (mirror R3 R10). Whitespace-only NOT a hit.
     if (typeof input.website === 'string' && input.website.trim().length > 0) {
       logger.warn('paywall_interest_honeypot_triggered', {
         requestId: input.requestId,
@@ -60,9 +53,7 @@ export class SubmitPaywallInterestUseCase {
       ip: input.ip,
       requestId: input.requestId,
       userAgent: input.userAgent,
-      // R19 — funnel cohort discriminator. The Brevo adapter forwards this
-      // verbatim as `OPT_IN_SOURCE`. Hardcoded literal here — the route
-      // never reads it from the wire (only from the use case).
+      // R19 — funnel cohort. Hardcoded literal; route never reads from wire.
       source: 'paywall_premium_interest',
     };
 
@@ -70,8 +61,7 @@ export class SubmitPaywallInterestUseCase {
     const brevoOutcome: BetaSignupOutcome | 'unknown' =
       outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
 
-    // R21 — structured log with requestId + emailDomain + brevoOutcome. Full
-    // email value MUST NOT appear (PII discipline ; mirror R3 R17).
+    // R21 — log requestId + emailDomain + brevoOutcome. Full email forbidden (R17 PII).
     const emailDomain = email.split('@')[1] ?? 'unknown';
     logger.info('paywall_email_captured', {
       requestId: input.requestId,

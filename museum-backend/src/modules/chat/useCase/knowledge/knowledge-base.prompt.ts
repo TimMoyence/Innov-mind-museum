@@ -4,13 +4,6 @@ import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.por
 
 const MAX_BLOCK_LENGTH = 400;
 
-/**
- * Builds a sanitized `[KNOWLEDGE BASE]` prompt block from verified artwork facts.
- * Returns an empty string when no facts are available.
- *
- * @param facts - Verified artwork facts from Wikidata, or null if unavailable.
- * @returns A prompt-safe text block (max 400 chars), or empty string.
- */
 export function buildKnowledgeBasePromptBlock(facts: ArtworkFacts | null): string {
   if (!facts) return '';
 

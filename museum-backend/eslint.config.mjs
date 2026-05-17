@@ -188,33 +188,28 @@ export default tseslint.config(
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  3. JSDOC — mandatory on all exports
+  //  3. JSDOC — quality-when-present (cleanup/comment-purge 2026-05-17)
+  //
+  //  Doctrine : "default to writing no comments" (CLAUDE.md global).
+  //  Types TS + nommage portent la sémantique. JSDoc ajouté UNIQUEMENT
+  //  quand le WHY est non-obvious (gotcha, SEC, ADR ref, contrat async).
+  //  Donc require-jsdoc + require-description désactivés ; on garde la
+  //  qualité formelle (tag-lines, check-param-names) pour les JSDoc
+  //  effectivement écrites.
   // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { jsdoc },
     rules: {
-      'jsdoc/require-jsdoc': [
-        'error',
-        {
-          publicOnly: true,
-          require: {
-            FunctionDeclaration: true,
-            MethodDefinition: true,
-            ClassDeclaration: true,
-          },
-          contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration'],
-          checkConstructors: false,
-        },
-      ],
-      'jsdoc/require-description': 'error',
-      'jsdoc/require-param-description': 'error',
-      'jsdoc/require-returns-description': 'error',
+      'jsdoc/require-jsdoc': 'off',
+      'jsdoc/require-description': 'off',
+      'jsdoc/require-param-description': 'off',
+      'jsdoc/require-returns-description': 'off',
       'jsdoc/check-param-names': 'error',
-      'jsdoc/no-undefined-types': 'off', // TypeScript handles types
-      'jsdoc/require-param': 'off', // TypeScript handles param types
-      'jsdoc/require-returns': 'off', // TypeScript handles return types
-      'jsdoc/require-throws': 'off', // TS handles error types; @throws enforcement is noisy
+      'jsdoc/no-undefined-types': 'off',
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-returns': 'off',
+      'jsdoc/require-throws': 'off',
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
     },
   },

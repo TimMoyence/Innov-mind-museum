@@ -1,11 +1,6 @@
 /**
- * Langfuse client wrapper — V12 W1 telemetry.
- *
- * Lazily instantiates a singleton Langfuse client when LANGFUSE_ENABLED=true
- * and both LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY are present. Returns
- * `null` otherwise so call sites stay branch-free via `safeTrace()`.
- *
- * @module shared/observability/langfuse.client
+ * Langfuse singleton (V12 W1). Returns `null` when disabled or keys missing — wrap
+ * call sites with `safeTrace()` so SDK throws never bubble into chat path (UFR fail-open).
  */
 
 import { logger } from '@shared/logger/logger';
@@ -18,10 +13,8 @@ let _warnedMissingKeys = false;
 let _LangfuseCtor: (new (cfg: ConstructorParameters<typeof Langfuse>[0]) => Langfuse) | null = null;
 
 /**
- * Lazily loads the `langfuse` runtime module. Deferred so the SDK (which uses
- * `dynamicImport` internally and trips Jest under SWC at module bootstrap) is
- * only required when telemetry is actually enabled. Returns `null` if the SDK
- * fails to load — chat path stays alive (UFR fail-open).
+ * Lazy load — SDK uses `dynamicImport` internally which trips Jest+SWC at module
+ * bootstrap if loaded eagerly. Returns `null` on load failure (fail-open).
  */
 function loadLangfuseCtor():
   | (new (cfg: ConstructorParameters<typeof Langfuse>[0]) => Langfuse)
@@ -40,16 +33,6 @@ function loadLangfuseCtor():
   }
 }
 
-/**
- * Returns the shared Langfuse client, or `null` if disabled / unconfigured.
- *
- * - Returns `null` when LANGFUSE_ENABLED=false (default).
- * - Returns `null` and logs once when ENABLED=true but keys are missing.
- * - Otherwise constructs the client lazily on first call.
- *
- * Always wrap call sites with `safeTrace()` from `./safeTrace.ts` so a runtime
- * exception in the SDK never bubbles into the chat path.
- */
 export function getLangfuse(): Langfuse | null {
   if (!env.langfuse?.enabled) return null;
 
@@ -80,13 +63,9 @@ export function getLangfuse(): Langfuse | null {
 }
 
 /**
- * Graceful shutdown — flush pending spans before the process exits.
- *
- * MUST be called AFTER `httpServer.close()` and BullMQ worker `.close()` so
- * spans created during the in-flight drain window are queued before flush.
- * Calling this BEFORE httpServer drain will lose those spans.
- *
- * Safe to call multiple times; the second call is a no-op.
+ * Ordering: MUST be called AFTER `httpServer.close()` + BullMQ worker `.close()` so
+ * spans created during in-flight drain are queued before flush. Calling BEFORE
+ * httpServer drain loses those spans. Idempotent.
  */
 export async function shutdownLangfuse(): Promise<void> {
   if (!_client) return;

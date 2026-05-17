@@ -1,24 +1,19 @@
 /**
- * Section runner designed for parallel execution of N LLM sections.
- * Currently only 'summary' is used, but the architecture supports
- * adding analysis, metadata extraction, or multi-language sections
- * without changing the runner infrastructure.
+ * Parallel LLM section runner. V1 = only 'summary'; architecture supports
+ * adding analysis/metadata/multi-language sections without infra changes.
  */
 import { Semaphore } from './semaphore';
 
-/** Terminal status of a single section execution attempt. */
 type SectionRunStatus = 'success' | 'timeout' | 'error';
 
-/** A unit of work to execute within the section runner (typically a single LLM call). */
 export interface SectionTask<TValue> {
   name: string;
   timeoutMs: number;
   payloadBytes: number;
-  /** Executes the task; receives an AbortSignal that fires on timeout. */
+  /** Receives an AbortSignal that fires on timeout. */
   run: (signal: AbortSignal) => Promise<TValue>;
 }
 
-/** Successful section result carrying the resolved value. */
 interface SectionRunSuccess<TValue> {
   name: string;
   status: 'success';
@@ -29,7 +24,6 @@ interface SectionRunSuccess<TValue> {
   payloadBytes: number;
 }
 
-/** Failed section result carrying the error description. */
 interface SectionRunFailure {
   name: string;
   status: 'timeout' | 'error';
@@ -40,7 +34,6 @@ interface SectionRunFailure {
   payloadBytes: number;
 }
 
-/** Discriminated union of a section's success or failure outcome. */
 export type SectionRunResult<TValue> = SectionRunSuccess<TValue> | SectionRunFailure;
 
 interface SectionStartEvent {
@@ -65,7 +58,6 @@ interface SectionFailureEvent extends SectionStartEvent {
   error: string;
 }
 
-/** Lifecycle hooks fired during section execution for logging and observability. */
 export interface SectionRunnerHooks {
   onStart?: (event: SectionStartEvent) => void;
   onSuccess?: (event: SectionSuccessEvent) => void;
@@ -74,20 +66,17 @@ export interface SectionRunnerHooks {
   onError?: (event: SectionFailureEvent) => void;
 }
 
-/** Configuration for the section runner including concurrency, retry policy, and time budget. */
 interface SectionRunnerOptions {
   maxConcurrent: number;
   retries: number;
   retryBaseDelayMs: number;
-  /** Total wall-clock budget in ms for all sections combined. */
+  /** Total wall-clock budget (ms) across all sections. */
   totalBudgetMs: number;
   requestId?: string;
   hooks?: SectionRunnerHooks;
-  /** Optional predicate to control which errors are retryable. Defaults to no retries. */
+  /** Defaults to no retries. */
   shouldRetry?: (error: unknown, status: SectionRunStatus) => boolean;
-  /** Clock function override for testing. */
   now?: () => number;
-  /** Sleep function override for testing. */
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -121,7 +110,6 @@ const jitteredDelay = (baseMs: number, attempt: number, remainingBudgetMs: numbe
   return Math.min(exponential + jitter, Math.max(0, remainingBudgetMs - 1));
 };
 
-/** Common fields used in hook events and failure results. */
 interface AttemptContext {
   taskName: string;
   attempt: number;
@@ -130,7 +118,6 @@ interface AttemptContext {
   requestId?: string;
 }
 
-/** Fires the appropriate failure hook (onTimeout or onError) and returns a failure result. */
 const buildFailureResult = (
   ctx: AttemptContext,
   latencyMs: number,
@@ -165,7 +152,7 @@ const buildFailureResult = (
   };
 };
 
-/** Creates an AbortController + timeout-promise pair. Caller must clearTimeout when done. */
+/** Caller MUST clearTimeout when done. */
 const createTimeoutRace = (
   effectiveTimeoutMs: number,
 ): { controller: AbortController; timeoutId: NodeJS.Timeout; timeoutPromise: Promise<never> } => {
@@ -180,7 +167,6 @@ const createTimeoutRace = (
   return { controller, timeoutId, timeoutPromise };
 };
 
-/** Classifies a caught error as timeout or generic error with a human-readable message. */
 const classifyAttemptError = (
   controller: AbortController,
   error: unknown,
@@ -193,7 +179,6 @@ const classifyAttemptError = (
   };
 };
 
-/** Fires failure + retry hooks for a retryable error. */
 const fireRetryHooks = (
   hooks: SectionRunnerHooks | undefined,
   ctx: AttemptContext,
@@ -218,7 +203,6 @@ const fireRetryHooks = (
   hooks?.onRetry?.(event);
 };
 
-/** Converts AttemptContext to a hook start event. */
 const toStartEvent = (ctx: AttemptContext): SectionStartEvent => ({
   name: ctx.taskName,
   attempt: ctx.attempt,
@@ -227,7 +211,7 @@ const toStartEvent = (ctx: AttemptContext): SectionStartEvent => ({
   requestId: ctx.requestId,
 });
 
-/** Sleeps for a jittered exponential-backoff delay, capped by remaining budget. */
+/** Jittered exponential backoff, capped by remaining budget. */
 const sleepWithBackoff = async (
   sleepFn: (ms: number) => Promise<void>,
   baseMs: number,
@@ -323,14 +307,7 @@ const executeTask = async <TValue>(
   };
 };
 
-/**
- * Executes section tasks concurrently (bounded by {@link SectionRunnerOptions.maxConcurrent})
- * with per-task timeouts, jittered exponential-backoff retries, and a global time budget.
- *
- * @param tasks - The section tasks to run.
- * @param options - Runner configuration (concurrency, retries, budget, hooks).
- * @returns An array of results in the same order as the input tasks.
- */
+/** Bounded concurrency + per-task timeouts + jittered backoff + global budget. */
 export const runSectionTasks = async <TValue>(
   tasks: SectionTask<TValue>[],
   options: SectionRunnerOptions,

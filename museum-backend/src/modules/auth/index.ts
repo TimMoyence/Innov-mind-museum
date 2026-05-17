@@ -1,10 +1,3 @@
-/**
- * Auth module barrel.
- * Re-exports use-case singletons and key domain types for cross-module consumption.
- */
-
-// ── Use-case singletons (composition root) ──────────────────────────────────
-
 export {
   registerUseCase,
   forgotPasswordUseCase,
@@ -28,8 +21,6 @@ export {
   userConsentRepository,
   wireAuthMiddleware,
 } from './useCase';
-
-// ── Domain types ─────────────────────────────────────────────────────────────
 
 export { User } from '@modules/auth/domain/user/user.entity';
 export {

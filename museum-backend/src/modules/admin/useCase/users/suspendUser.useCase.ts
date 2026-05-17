@@ -4,7 +4,6 @@ import { AppError, notFound } from '@shared/errors/app.error';
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 
-/** Input for the suspend-user admin use case. */
 interface SuspendUserInput {
   userId: number;
   actorId: number;
@@ -12,15 +11,13 @@ interface SuspendUserInput {
   requestId?: string;
 }
 
-/** Set users.suspended=true. Refuses self-suspension (operator lock-out guard). */
+/** Refuses self-suspension (operator lock-out guard). */
 export class SuspendUserUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Suspend the target user and emit a hash-chained audit row. */
   async execute(input: SuspendUserInput): Promise<AdminUserDTO> {
     if (input.userId === input.actorId) {
-      // Custom error code so the Web admin page can pattern-match on the
-      // message in 409 responses (see RoleGuard + admin detail page).
+      // Custom code so Web admin can pattern-match on 409 (see RoleGuard).
       throw new AppError({
         message: 'CANNOT_SUSPEND_SELF',
         statusCode: 409,

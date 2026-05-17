@@ -16,7 +16,6 @@ import type {
 import type { ChatSessionIntent, ReportReason } from '@modules/chat/domain/chat.types';
 import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
 
-// Re-export shared types so existing consumers keep working
 export type {
   ChatMessageResponse,
   PaginationInfo,
@@ -58,7 +57,6 @@ const optionalNumber = (payload: RecordValue, key: string): number | undefined =
   throw badRequest(`${key} must be a number`);
 };
 
-/** Validated body for `POST /sessions`. */
 export interface CreateSessionRequest {
   userId?: number;
   locale?: string;
@@ -70,19 +68,16 @@ export interface CreateSessionRequest {
   intent?: ChatSessionIntent;
 }
 
-/** Response shape for `POST /sessions`. */
 export interface CreateSessionResponse {
   session: SessionInfo;
 }
 
-/** Validated body for `POST /sessions/:id/messages`. */
 export interface PostMessageRequest {
   text?: string;
   image?: string;
   context?: VisitorContext;
 }
 
-/** Response shape for `POST /sessions/:id/messages`. */
 export interface PostMessageResponse {
   sessionId: string;
   message: {
@@ -90,7 +85,7 @@ export interface PostMessageResponse {
     role: 'assistant';
     text: string;
     createdAt: string;
-    /** Next-artwork suggestion chips, present only for intent='walk' sessions. Sanitized, max 60 chars each. */
+    /** Walk-intent only. Sanitized, max 60 chars each. */
     suggestions?: string[];
   };
   metadata: {
@@ -108,18 +103,12 @@ export interface PostMessageResponse {
     citations?: string[];
     deeperContext?: string;
     openQuestion?: string;
-    /**
-     * B3 — Single follow-up question (≤80 chars) anchored to a fact in the
-     * answer, or omitted when no anchor exists. Replaces legacy
-     * `followUpQuestions: string[]` (deleted same commit per doctrine
-     * `feedback_bury_dead_code`).
-     */
+    /** B3 — ≤80 chars, anchored to a fact in answer; omit when no anchor. */
     suggestedFollowUp?: string;
     imageDescription?: string;
   };
 }
 
-/** Response shape for `POST /sessions/:id/audio` — extends {@link PostMessageResponse} with transcription data. */
 export interface PostAudioMessageResponse extends PostMessageResponse {
   transcription: {
     text: string;
@@ -128,20 +117,17 @@ export interface PostAudioMessageResponse extends PostMessageResponse {
   };
 }
 
-/** Response shape for `GET /sessions/:id` (session metadata + paginated messages). */
 export interface GetSessionResponse {
   session: SessionInfo;
   messages: ChatMessageResponse[];
   page: PaginationInfo;
 }
 
-/** Validated query parameters for `GET /sessions`. */
 export interface ListSessionsQuery {
   cursor?: string;
   limit?: number;
 }
 
-/** Response shape for `GET /sessions` (paginated session list with previews). */
 export interface ListSessionsResponse {
   sessions: (SessionInfo & {
     preview?: {
@@ -154,30 +140,25 @@ export interface ListSessionsResponse {
   page: PaginationInfo;
 }
 
-/** Response shape for `DELETE /sessions/:id`. */
 export interface DeleteSessionResponse {
   sessionId: string;
   deleted: boolean;
 }
 
-/** Validated body for `POST /messages/:messageId/report`. */
 export interface ReportMessageRequest {
   reason: ReportReason;
   comment?: string;
 }
 
-/** Response shape for `POST /messages/:messageId/report`. */
 export interface ReportMessageResponse {
   messageId: string;
   reported: boolean;
 }
 
-/** Validated body for `POST /messages/:messageId/feedback`. */
 export interface FeedbackMessageRequest {
   value: FeedbackValue;
 }
 
-/** Response shape for `POST /messages/:messageId/feedback`. */
 export interface FeedbackMessageResponse {
   messageId: string;
   status: 'created' | 'updated' | 'removed';
@@ -193,7 +174,6 @@ export interface ApiErrorResponse {
   };
 }
 
-/** Validates and transforms a raw request body into a {@link CreateSessionRequest}. */
 export const parseCreateSessionRequest = (payload: unknown): CreateSessionRequest => {
   const result = createSessionSchema.safeParse(payload);
   if (!result.success) {
@@ -202,7 +182,6 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
   return result.data;
 };
 
-/** Validates and transforms a raw request body into a {@link PostMessageRequest}. */
 export const parsePostMessageRequest = (payload: unknown): PostMessageRequest => {
   const result = postMessageSchema.safeParse(payload);
   if (!result.success) {
@@ -211,7 +190,6 @@ export const parsePostMessageRequest = (payload: unknown): PostMessageRequest =>
   return result.data as PostMessageRequest;
 };
 
-/** Validates and transforms raw query params into a {@link ListSessionsQuery}. */
 export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
   if (!isRecord(payload)) {
     throw badRequest('Query must be an object');
@@ -237,7 +215,6 @@ export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
   };
 };
 
-/** Validates and transforms a raw request body into a {@link ReportMessageRequest}. */
 export const parseReportMessageRequest = (payload: unknown): ReportMessageRequest => {
   if (!isRecord(payload)) {
     throw badRequest('Payload must be an object');
@@ -264,7 +241,6 @@ export const parseReportMessageRequest = (payload: unknown): ReportMessageReques
   };
 };
 
-/** Validates and transforms a raw request body into a {@link FeedbackMessageRequest}. */
 export const parseFeedbackMessageRequest = (payload: unknown): FeedbackMessageRequest => {
   if (!isRecord(payload)) {
     throw badRequest('Payload must be an object');
@@ -283,7 +259,6 @@ export const parseFeedbackMessageRequest = (payload: unknown): FeedbackMessageRe
   return { value: value as FeedbackValue };
 };
 
-// Re-export type guards from dedicated module
 export {
   isCreateSessionResponse,
   isPostMessageResponse,
@@ -295,16 +270,8 @@ export {
   isListSessionsResponse,
 } from './chat.type-guards';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GDPR Art. 22 — right-to-explanation contract
-//   - `ExplanationResponseSchema` is the wire-format Zod schema
-//   - `ExplanationResponse` is the inferred TS type (matches the use-case
-//     return shape `MessageExplanation`)
-//   - `parseExplanationParams` validates the path-param shape (UUID)
-//   See `docs/GDPR_ART22_SCOPE.md` + ADR-048.
-// ─────────────────────────────────────────────────────────────────────────────
+// GDPR Art. 22 right-to-explanation contract — see docs/GDPR_ART22_SCOPE.md + ADR-048.
 
-/** Stable category taxonomy exposed by the explanation endpoint. */
 export const EXPLANATION_CATEGORIES = [
   'off_topic',
   'prompt_injection',
@@ -313,23 +280,20 @@ export const EXPLANATION_CATEGORIES = [
   'unsafe_output',
 ] as const;
 
-/** Recourse channels surfaced by the explanation endpoint. */
 export const EXPLANATION_RECOURSE_TYPES = ['self-retry', 'signal', 'support'] as const;
 
-/** Zod schema for the recourse object nested in the response. */
 const ExplanationRecourseSchema = z.object({
   type: z.enum(EXPLANATION_RECOURSE_TYPES),
   description: z.string().max(200),
   supportUrl: z.union([z.url(), z.null()]),
 });
 
-/** Zod schema for the provider-stamp object nested in the response. */
 const ExplanationProvidedBySchema = z.object({
   name: z.string().min(1).max(128),
   version: z.string().min(1).max(64),
 });
 
-/** Wire-format response Zod schema for `GET /api/chat/messages/:id/explanation`. */
+/** Wire schema for `GET /api/chat/messages/:id/explanation`. */
 export const ExplanationResponseSchema = z.object({
   decision: z.enum(['allowed', 'blocked']),
   category: z.union([z.enum(EXPLANATION_CATEGORIES), z.null()]),
@@ -341,23 +305,17 @@ export const ExplanationResponseSchema = z.object({
   policyVersion: z.string().min(1).max(64),
 });
 
-/** TS type inferred from {@link ExplanationResponseSchema}. */
 export type ExplanationResponse = z.infer<typeof ExplanationResponseSchema>;
 
-/** Zod schema for the `:id` path parameter. */
 const ExplanationParamsSchema = z.object({
   id: z.uuid({ message: 'message id must be a UUID' }),
 });
 
-/** Validated path parameters for the explanation endpoint. */
 export interface ExplanationParams {
   messageId: string;
 }
 
-/**
- * Validates and transforms raw path params into {@link ExplanationParams}.
- * Throws 400 if `:id` is not a well-formed UUID.
- */
+/** Throws 400 if `:id` is not a UUID. */
 export const parseExplanationParams = (params: unknown): ExplanationParams => {
   const result = ExplanationParamsSchema.safeParse(params);
   if (!result.success) {

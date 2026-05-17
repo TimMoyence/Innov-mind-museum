@@ -35,7 +35,6 @@ import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type { GuardrailBlockReason } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import type {
   ArtTopicClassifierPort,
   LlmJudgeFn,
@@ -56,7 +55,6 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
-// Re-export all public types so external consumers keep the same import path
 export type {
   CreateSessionResult,
   PostMessageResult,
@@ -67,16 +65,11 @@ export type {
   ListSessionsResult,
 } from './chat.service.types';
 
-/** Dependencies for constructing a ChatService instance. */
 export interface ChatServiceDeps {
   repository: ChatRepository;
   orchestrator: ChatOrchestrator;
   imageStorage: ImageStorage;
-  /**
-   * EXIF / metadata stripper for uploaded images. Required in production for
-   * GDPR Art. 5(1)(c) — omitting it disables the strip step (legacy unit
-   * tests only).
-   */
+  /** GDPR Art. 5(1)(c) — EXIF stripper. Omitting disables strip (legacy tests only). */
   imageProcessor?: ImageProcessorPort;
   audioTranscriber?: AudioTranscriber;
   audioStorage?: AudioStorage;
@@ -86,21 +79,14 @@ export interface ChatServiceDeps {
   audit?: AuditService;
   userMemory?: UserMemoryService;
   knowledgeBase?: KnowledgeBaseService;
-  /**
-   * C4.1 (T3.3) — additive `KnowledgeRouterPort` injection. Travels alongside
-   * the legacy `knowledgeBase` dep for NFR8 backward-compat (1 cycle); T3.4
-   * will plumb it into `fetchEnrichmentData` and remove the legacy field at
-   * C4.2.
-   */
   knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   artTopicClassifier?: ArtTopicClassifierPort;
   guardrailProvider?: GuardrailProvider;
   guardrailProviderObserveOnly?: boolean;
-  /** F4 — LLM judge callable. Wired by chat-module to bind the orchestrator. */
   llmJudge?: LlmJudgeFn;
-  /** F4 — true when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
+  /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
@@ -109,21 +95,12 @@ export interface ChatServiceDeps {
   locationResolver?: LocationResolver;
   /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
-  /**
-   * C4 (T2.6) — Optional URL reachability probe for the post-LLM grounding
-   * gate. Held back at V1 composition root pending p99 latency baking ; the
-   * DI seam is live so V1.1 only needs `new UrlHeadProbe({cache})` here.
-   */
   urlHeadProbe?: UrlHeadProbe;
 }
 
 /**
- * Facade that orchestrates the chat lifecycle by delegating to specialised sub-services:
- * - {@link ChatSessionService}  — session CRUD
- * - {@link ChatMessageService}  — message posting (text, image, audio, streaming)
- * - {@link ChatMediaService}    — image refs, reporting, TTS
- *
- * The public API surface is unchanged — callers interact with the same methods as before.
+ * Facade delegating to {@link ChatSessionService} (CRUD),
+ * {@link ChatMessageService} (posting/streaming), {@link ChatMediaService} (refs/TTS).
  */
 export class ChatService {
   private readonly sessions: ChatSessionService;
@@ -179,29 +156,15 @@ export class ChatService {
     });
   }
 
-  // ── Session CRUD ──────────────────────────────────────────────────────
+  // ── Session CRUD ──
 
-  /**
-   * Creates a new chat session.
-   *
-   * @param input - Session creation parameters (userId, locale, museumMode).
-   * @returns The newly created session.
-   * @throws {AppError} 400 if userId is not a positive integer.
-   */
+  /** @throws {AppError} 400 if userId is not a positive integer. */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     logger.info('chat_service_call', { method: 'createSession', userId: input.userId });
     return await this.sessions.createSession(input);
   }
 
-  /**
-   * Retrieves a session with its paginated messages.
-   *
-   * @param sessionId - UUID of the session to retrieve.
-   * @param page - Cursor-based pagination parameters (limit, cursor).
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The session details and a page of messages.
-   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
-   */
+  /** @throws {AppError} 400 on invalid id, 404 if not found or not owned. */
   async getSession(
     sessionId: string,
     page: MessagePageQuery,
@@ -210,25 +173,15 @@ export class ChatService {
     return await this.sessions.getSession(sessionId, page, currentUserId);
   }
 
-  /**
-   * Lists all sessions for the authenticated user with cursor-based pagination.
-   *
-   * @param page - Cursor-based pagination parameters (limit, cursor).
-   * @param currentUserId - Authenticated user id (required).
-   * @returns Paginated sessions with message previews.
-   * @throws {AppError} 400 if userId is missing/invalid or cursor is malformed.
-   */
+  /** @throws {AppError} 400 if userId missing/invalid or cursor malformed. */
   async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     return await this.sessions.listSessions(page, currentUserId);
   }
 
   /**
-   * Deletes a session only if it contains no messages.
+   * Deletes session only if it contains no messages.
    *
-   * @param sessionId - UUID of the session to delete.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Whether the session was actually deleted.
-   * @throws {AppError} 400 on invalid id, 404 if session not found or not owned.
+   * @throws {AppError} 400 on invalid id, 404 if not found or not owned.
    */
   async deleteSessionIfEmpty(
     sessionId: string,
@@ -242,18 +195,12 @@ export class ChatService {
     return await this.sessions.deleteSessionIfEmpty(sessionId, currentUserId);
   }
 
-  // ── Message posting ───────────────────────────────────────────────────
+  // ── Message posting ──
 
   /**
-   * Processes a user text/image message: runs input guardrail, persists the user message,
-   * invokes the LLM orchestrator, applies the output guardrail, and persists the assistant reply.
+   * Input guardrail → persist user → LLM → output guardrail → persist assistant.
    *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - User message payload (text and/or image).
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The assistant's reply with metadata.
-   * @throws {AppError} 400 on invalid input, 404 if session not found, 409 on optimistic lock conflict.
+   * @throws {AppError} 400 invalid, 404 not found, 409 optimistic lock conflict.
    */
   async postMessage(
     sessionId: string,
@@ -273,58 +220,7 @@ export class ChatService {
     );
   }
 
-  /**
-   * Streams assistant response tokens via onToken callback while processing the message.
-   * Uses shared prepareMessage/commitAssistantResponse logic.
-   *
-   * Status: DEACTIVATED — SSE streaming paused post-V1 (token-fluidity issues, cf. ADR-001).
-   *   Handler extracted to `chat-message.sse-dormant.ts`; revival scheduled for V2.1
-   *   post-Walk feature. Use {@link postMessage} for all current flows.
-   *   See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
-   *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - User message payload (text only for streaming).
-   * @param callbacks - Streaming callbacks and optional parameters.
-   * @param callbacks.onToken - Called for each streamed token.
-   * @param callbacks.onGuardrail - Called when a guardrail blocks content.
-   * @param callbacks.requestId - Optional correlation id for tracing.
-   * @param callbacks.currentUserId - Authenticated user id for ownership checks.
-   * @param callbacks.signal - Optional abort signal.
-   * @param callbacks.ip - Originating client IP, threaded into the audit chain on guardrail blocks.
-   * @returns The assistant's reply with metadata.
-   */
-  async postMessageStream(
-    sessionId: string,
-    input: PostMessageInput,
-    callbacks: {
-      onToken: (text: string) => void;
-      onGuardrail?: (text: string, reason: GuardrailBlockReason) => void;
-      requestId?: string;
-      currentUserId?: number;
-      signal?: AbortSignal;
-      ip?: string;
-    },
-  ): Promise<PostMessageResult> {
-    logger.info('chat_service_call', {
-      method: 'postMessageStream',
-      sessionId,
-      userId: callbacks.currentUserId,
-      requestId: callbacks.requestId,
-    });
-
-    return await this.messages.postMessageStream(sessionId, input, callbacks);
-  }
-
-  /**
-   * Transcribes an audio message to text, then delegates to {@link postMessage}.
-   *
-   * @param sessionId - UUID of the target chat session.
-   * @param input - Audio payload with base64 data, mime type, and size.
-   * @param requestId - Optional correlation id for tracing.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The assistant's reply plus the transcription details.
-   * @throws {AppError} 400 on invalid audio input, 404 if session not found.
-   */
+  /** Transcribes audio → delegates to {@link postMessage}. */
   async postAudioMessage(
     sessionId: string,
     input: PostAudioMessageInput,
@@ -337,16 +233,8 @@ export class ChatService {
     );
   }
 
-  // ── Media & reporting ─────────────────────────────────────────────────
+  // ── Media & reporting ──
 
-  /**
-   * Resolves the image reference for a message, including local file name and content type when applicable.
-   *
-   * @param messageId - UUID of the message containing the image.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns The image reference, and optionally the local file name and content type.
-   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
-   */
   async getMessageImageRef(
     messageId: string,
     currentUserId?: number,
@@ -359,15 +247,8 @@ export class ChatService {
   }
 
   /**
-   * Resolves the image reference for a message when the caller has already verified an HMAC
-   * signed read URL. Bypasses session-ownership because the signed token (short-lived, issued
-   * to the legitimate owner) IS the authorization on this code path.
-   *
+   * Bypasses session-ownership: the signed HMAC token IS the authorization.
    * MUST only be called after `verifySignedChatImageReadUrl` returns ok.
-   *
-   * @param messageId - UUID of the message containing the image.
-   * @returns The image reference, and optionally the local file name and content type.
-   * @throws {AppError} 400 on invalid id, 404 if message or image not found.
    */
   async getMessageImageRefBySignedToken(messageId: string): Promise<{
     imageRef: string;
@@ -377,16 +258,6 @@ export class ChatService {
     return await this.media.getMessageImageRefBySignedToken(messageId);
   }
 
-  /**
-   * Reports an assistant message for moderation.
-   *
-   * @param messageId - UUID of the assistant message to report.
-   * @param reason - Reason for the report (offensive, inaccurate, inappropriate, other).
-   * @param currentUserId - Authenticated user id filing the report.
-   * @param comment - Optional free-text comment.
-   * @returns Confirmation that the message was reported.
-   * @throws {AppError} 400 on invalid id/reason or non-assistant message, 404 if not found.
-   */
   async reportMessage(
     messageId: string,
     reason: ReportReason,
@@ -396,15 +267,7 @@ export class ChatService {
     return await this.media.reportMessage(messageId, reason, currentUserId, comment);
   }
 
-  /**
-   * Sets or toggles feedback (thumbs up/down) on an assistant message.
-   *
-   * @param messageId - UUID of the assistant message to rate.
-   * @param currentUserId - Authenticated user id providing feedback.
-   * @param value - Feedback value ('positive' or 'negative').
-   * @returns The feedback status: 'created', 'updated', or 'removed'.
-   * @throws {AppError} 400 on invalid id or non-assistant message, 404 if not found.
-   */
+  /** @returns 'created' | 'updated' | 'removed'. */
   async setMessageFeedback(
     messageId: string,
     currentUserId: number,
@@ -414,14 +277,8 @@ export class ChatService {
   }
 
   /**
-   * Synthesizes speech from an assistant message's text content.
-   *
-   * @param messageId - UUID of the assistant message to synthesize.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Audio buffer with content type, or null if the message has no text.
-   * @throws {AppError} 400 if the message is not from the assistant.
-   * @throws {AppError} 501 if TTS is not available.
-   * @throws {AppError} 404 if message not found or not owned.
+   * @returns Audio buffer or null when message has no text.
+   * @throws {AppError} 400 not assistant, 501 TTS unavailable, 404 not found/owned.
    */
   async synthesizeSpeech(
     messageId: string,
@@ -430,13 +287,6 @@ export class ChatService {
     return await this.media.synthesizeSpeech(messageId, currentUserId);
   }
 
-  /**
-   * Returns a signed read URL for a message's cached TTS audio (storage-backed).
-   *
-   * @param messageId - UUID of the assistant message.
-   * @param currentUserId - Authenticated user id for ownership checks.
-   * @returns Signed URL with expiry + voice + generation timestamp, or null if no cached audio.
-   */
   async getMessageAudioUrl(
     messageId: string,
     currentUserId?: number,
@@ -448,16 +298,10 @@ export class ChatService {
 type ChatRequestOutcome = 'success' | 'error' | 'guardrail_blocked' | 'circuit_open' | 'cache_hit';
 
 /**
- * Wraps a chat request execution and records `chat_request_duration_seconds`
- * with the resolved outcome label. Fail-open: a Prom client throw cannot
- * propagate into the chat path.
- *
- * The `cache_hit` and `guardrail_blocked` outcomes are reachable today only
- * via thrown errors; success-path detection of those two states needs a
- * structured signal from {@link ChatMessageService} (e.g. an attached
- * `outcome` field on the result). That extension lands in PR-B alongside
- * the L2 removal so the signal can be wired through the cache code in one
- * change instead of churning the metadata schema twice.
+ * Records `chat_request_duration_seconds` with outcome label. Fail-open: Prom
+ * client throws cannot propagate. `cache_hit` / `guardrail_blocked` outcomes
+ * are only reachable today via thrown errors — success-path detection still
+ * needs a structured signal from {@link ChatMessageService}.
  */
 async function measureChatRequest<T>(fn: () => Promise<T>): Promise<T> {
   const startedAtMs = Date.now();

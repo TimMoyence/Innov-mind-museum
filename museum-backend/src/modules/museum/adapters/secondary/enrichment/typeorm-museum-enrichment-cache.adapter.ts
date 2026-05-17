@@ -9,12 +9,9 @@ import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/mus
 import type { DataSource, Repository } from 'typeorm';
 
 /**
- * TypeORM adapter for {@link MuseumEnrichmentCachePort}.
- *
- * Shares the `museum_enrichment` table with the legacy
- * knowledge-extraction repository — new rows written by the hybrid flow have
- * a non-null `museumId` (and so never collide on the legacy name-based unique
- * index since they come with a distinct museum-specific locale key).
+ * Shares the `museum_enrichment` table with the legacy knowledge-extraction
+ * repo. New rows have a non-null `museumId` so they never collide on the
+ * legacy name-based unique index.
  */
 export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCachePort {
   private readonly repo: Repository<MuseumEnrichment>;
@@ -25,11 +22,7 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     this.museumRepo = dataSource.getRepository(museumEntity);
   }
 
-  /**
-   * Looks up a cached enrichment row that is still within `freshWindowMs`
-   * of `now`. Returns `null` if the row is missing or stale so the use case
-   * can fall back to enqueuing a refresh job.
-   */
+  /** Returns null if missing or stale (older than `freshWindowMs`). */
   async findFresh(input: {
     museumId: number;
     locale: string;
@@ -50,9 +43,8 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
   }
 
   /**
-   * Inserts or updates the cached enrichment row for `(museumId, locale)`.
-   * Uses a read-then-save strategy (rather than `INSERT ... ON CONFLICT`) so
-   * we can preserve legacy columns set by the knowledge-extraction flow.
+   * Read-then-save (not `INSERT ... ON CONFLICT`) to preserve legacy columns
+   * set by the knowledge-extraction flow.
    */
   async upsert(input: MuseumEnrichmentView): Promise<void> {
     const existing = await this.repo
@@ -92,11 +84,7 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     await this.repo.save(fresh);
   }
 
-  /**
-   * Returns the oldest stale rows for the daily refresh scan. Only rows with
-   * a non-null `museumId` are considered — legacy name-keyed rows predate the
-   * hybrid flow and are excluded from scheduled refresh.
-   */
+  /** Excludes legacy name-keyed rows (`museumId IS NULL`) from scheduled refresh. */
   async findStaleRows(
     thresholdDate: Date,
     limit: number,
@@ -115,14 +103,10 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
       .map((row) => ({ museumId: row.museumId, locale: row.locale }));
   }
 
-  /**
-   * Deletes every hybrid-flow enrichment row older than `threshold`. Legacy
-   * name-keyed rows (`museumId IS NULL`) are left untouched — they predate the
-   * hybrid flow and are outside the scope of the scheduled purge.
-   */
+  /** Legacy name-keyed rows (`museumId IS NULL`) are left untouched. */
   async deleteStaleSince(threshold: Date): Promise<number> {
-    // Column identifiers are quoted to preserve camelCase casing — bare
-    // references would be lowercased by Postgres and fail to resolve.
+    // Column identifiers quoted to preserve camelCase — bare references
+    // would be lowercased by Postgres and fail to resolve.
     const result = await this.repo
       .createQueryBuilder()
       .delete()
@@ -146,14 +130,9 @@ function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView)
 }
 
 /**
- * Bridges the typed view model `ParsedOpeningHours` (museum bounded context)
- * to the JSONB storage shape `Record<string, unknown>` declared on the
- * `museum_enrichment` entity (knowledge-extraction bounded context).
- *
- * Shallow spread copies the public, enumerable keys of `ParsedOpeningHours`
- * into a fresh object assignable to `Record<string, unknown>` — bridges the
- * variance gap WITHOUT any `as unknown as` cast and yields a defensive copy
- * (downstream JSONB mutation can't leak back into the caller's view model).
+ * Shallow spread bridges variance gap (ParsedOpeningHours →
+ * Record<string,unknown>) without `as unknown as` cast, and yields a
+ * defensive copy so downstream JSONB mutation can't leak back to caller.
  */
 function parsedToJsonb(value: ParsedOpeningHours | null): Record<string, unknown> | null {
   return value === null ? null : { ...value };

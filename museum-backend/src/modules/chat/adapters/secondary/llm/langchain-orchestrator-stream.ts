@@ -1,60 +1,12 @@
-import { buildSectionMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import { env } from '@src/config/env';
 
 import { sectionRunnerHooks } from './langchain-orchestrator-support';
-
-import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
-
-type Prepared = ReturnType<typeof buildOrchestratorMessages>;
-
-/** Builds messages for the first section of a plan (used in streaming). */
-export function buildFirstSectionMessages(
-  section: Prepared['sectionPlan'][0],
-  prepared: Prepared,
-  input: OrchestratorInput,
-): ReturnType<typeof buildSectionMessages> {
-  return buildSectionMessages(
-    prepared.systemPrompt,
-    section.prompt,
-    prepared.historyMessages,
-    prepared.userMessage,
-    {
-      userMemoryBlock: input.userMemoryBlock,
-      knowledgeBaseBlock: input.knowledgeBaseBlock,
-      webSearchBlock: input.webSearchBlock,
-      localKnowledgeBlock: input.localKnowledgeBlock,
-      // C4.1 (T3.5) — thread `KnowledgeRouter` result from upstream pipeline.
-      facts: input.facts,
-      source: input.factsSource,
-    },
-  );
-}
-
-/** Creates an AbortController + timeout pair for stream time-limiting. */
-export function createStreamTimeout(timeoutMs: number): {
-  controller: AbortController;
-  clearStreamTimeout: () => void;
-} {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, timeoutMs);
-
-  return {
-    controller,
-    clearStreamTimeout: () => {
-      clearTimeout(timeoutId);
-    },
-  };
-}
 
 interface BuildRunnerOptionsParams {
   requestId: string | undefined;
   shouldRetry: (error: unknown, status: string) => boolean;
 }
 
-/** Builds runner options for section task execution. */
 export function buildRunnerOptions(params: BuildRunnerOptionsParams): {
   maxConcurrent: number;
   retries: number;

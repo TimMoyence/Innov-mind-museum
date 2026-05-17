@@ -10,17 +10,14 @@ import type {
 const BREVO_CONTACTS_ENDPOINT = 'https://api.brevo.com/v3/contacts';
 
 /**
- * Brevo-backed beta-signup notifier (R3 §3.4).
+ * R3 §3.4 — calls Brevo `POST /v3/contacts` directly (NOT `BrevoEmailService`,
+ * which only does transactional mail).
  *
- * Calls the Brevo `POST /v3/contacts` API directly — NOT a reuse of
- * `BrevoEmailService` (which only exposes `sendEmail` for transactional mail).
- *
- * Outcomes :
- *  - 2xx → `{ outcome: 'subscribed' }`
- *  - 400 with body `code: "duplicate_parameter"` → `{ outcome: 'duplicate' }`
- *    (R16 idempotent anti-enumeration).
- *  - any other non-2xx → throws an Error with status + truncated body slice
- *    (R15). The api key is NEVER included in the error message.
+ * Outcomes:
+ *  - 2xx → `subscribed`
+ *  - 400 + body `code: "duplicate_parameter"` → `duplicate` (R16 idempotent
+ *    anti-enumeration).
+ *  - other non-2xx → throws with status + body slice (R15); api key NEVER in error.
  */
 export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
   constructor(
@@ -28,7 +25,6 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
     private readonly listId: number,
   ) {}
 
-  /** Subscribes one email to the configured Brevo waitlist. */
   async subscribe(payload: BetaSignupPayload): Promise<{ outcome: BetaSignupOutcome }> {
     const response = await fetch(BREVO_CONTACTS_ENDPOINT, {
       method: 'POST',
@@ -40,15 +36,13 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
       body: JSON.stringify({
         email: payload.email,
         listIds: [this.listId],
-        // Idempotent add-or-update so re-submits don't error on existing
-        // contacts in the standard path.
+        // Idempotent add-or-update so re-submits don't error on existing contacts.
         updateEnabled: true,
         attributes: {
           OPT_IN: true,
           OPT_IN_AT: new Date().toISOString(),
-          // R1 §3.9 D9 — per-call funnel cohort discriminator. R3 callers omit
-          // `source` → backward-compat default `'landing_beta_waitlist'`. R1
-          // `submitPaywallInterest.useCase` passes `'paywall_premium_interest'`.
+          // R1 §3.9 D9 — funnel cohort. R3 callers omit `source` → default
+          // `'landing_beta_waitlist'`. Paywall use case passes `'paywall_premium_interest'`.
           OPT_IN_SOURCE: payload.source ?? 'landing_beta_waitlist',
         },
       }),
@@ -61,8 +55,7 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
     const bodyText = await response.text().catch(() => '');
 
     // R16 — Brevo signals "already on list" via 400 + code: "duplicate_parameter".
-    // Treat as idempotent success so the route handler returns 202 and no
-    // enumeration signal leaks to the wire.
+    // Treat as idempotent success (route returns 202, no enumeration leak).
     if (response.status === 400 && bodyText.includes('duplicate_parameter')) {
       logger.info('beta_signup_already_subscribed', {
         requestId: payload.requestId,
@@ -71,9 +64,7 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
       return { outcome: 'duplicate' };
     }
 
-    // R15 — anything else is an error the route maps to 5xx. Slice the body so
-    // a huge HTML error page doesn't end up in the log. The api key is NEVER
-    // appended to the error message.
+    // R15 — slice body to avoid huge HTML pages in logs. api key NEVER appended.
     throw new Error(
       `Brevo contacts add failed (${String(response.status)}): ${bodyText.slice(0, 800)}`,
     );
@@ -81,13 +72,10 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
 }
 
 /**
- * No-op notifier used when Brevo credentials are absent (R14 — local dev,
- * pre-prod boot before the list ID is provisioned). Resolves silently with a
- * `noop` outcome so the route still returns 202 and structured logs surface a
- * warning the operator can monitor.
+ * R14 — used when Brevo creds absent (local dev, pre-prod). Resolves silently
+ * with `noop`; route still returns 202; structured log surfaces a warning.
  */
 export class NoopBetaSignupNotifier implements BetaSignupNotifier {
-  /** Returns `noop` without performing any network call. */
   subscribe(payload: BetaSignupPayload): Promise<{ outcome: BetaSignupOutcome }> {
     logger.warn('beta_signup_notifier_noop', {
       requestId: payload.requestId,

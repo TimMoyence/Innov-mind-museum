@@ -8,7 +8,7 @@ import { env } from '@src/config/env';
 import type { RedisRateLimitStore } from './redis-rate-limit-store';
 import type { Request, RequestHandler } from 'express';
 
-/** Retry-After header value (seconds) returned when failing closed on Redis outage. */
+/** Retry-After seconds on fail-CLOSED. */
 const FAIL_CLOSED_RETRY_AFTER_SECONDS = 30;
 
 interface Bucket {
@@ -20,18 +20,12 @@ const store = new InMemoryBucketStore<Bucket>({
   isExpired: (entry, now) => entry.resetAt <= now,
 });
 
-/** Shared Redis rate-limit store, set once during app bootstrap. */
 let redisStore: RedisRateLimitStore | null = null;
 
-/**
- * Register a Redis-backed rate-limit store for distributed rate limiting.
- * When set, all rate-limit middleware instances will use Redis with in-memory fallback.
- */
 export const setRedisRateLimitStore = (s: RedisRateLimitStore): void => {
   redisStore = s;
 };
 
-/** Returns the active Redis rate-limit store, or null if not configured. */
 export const getRedisRateLimitStore = (): RedisRateLimitStore | null => redisStore;
 
 interface RateLimitOptions {
@@ -39,11 +33,9 @@ interface RateLimitOptions {
   windowMs: number;
   keyGenerator: (req: Parameters<RequestHandler>[0]) => string;
   /**
-   * Optional bucket namespace. Each middleware instance needs a distinct prefix so
-   * limiters sharing the same keyGenerator (e.g. multiple `byIp` middlewares) do not
-   * share the same bucket counter. Defaults to an auto-incremented sequence — callers
-   * with a semantic name (e.g. `"register"`) should pass it explicitly for clarity
-   * and for stable Redis keys across deployments.
+   * Distinct prefix per instance — limiters sharing keyGenerator (e.g. multiple `byIp`)
+   * must not share bucket counters. Pass explicit name (e.g. `"register"`) for stable
+   * Redis keys across deployments.
    */
   bucketName?: string;
 }
@@ -54,18 +46,6 @@ const nextAnonymousBucketName = (): string => {
   return `anon-${String(anonymousBucketSeq)}`;
 };
 
-/**
- * Creates a sliding-window rate-limit middleware.
- * Uses Redis when a RedisRateLimitStore has been registered via `setRedisRateLimitStore`,
- * otherwise falls back to the in-memory bucket store.
- *
- * @param root0 - Rate-limit options.
- * @param root0.limit - Maximum number of requests per window.
- * @param root0.windowMs - Window duration in milliseconds.
- * @param root0.keyGenerator - Function to extract a bucket key from the request.
- * @param root0.bucketName - Optional bucket namespace for isolation from sibling limiters.
- * @returns Express middleware that rejects excess requests with 429.
- */
 type Next = Parameters<RequestHandler>[2];
 type Res = Parameters<RequestHandler>[1];
 
@@ -77,7 +57,6 @@ interface BucketContext {
   next: Next;
 }
 
-/** Drains the in-memory bucket for `key`. */
 const consumeMemoryBucket = (ctx: BucketContext): void => {
   const { key, limit, windowMs, res, next } = ctx;
   const now = Date.now();
@@ -102,9 +81,8 @@ const consumeMemoryBucket = (ctx: BucketContext): void => {
 };
 
 /**
- * F2 — Handles a Redis-store rejection. Two paths:
- *   - failClosed=true  (prod default): respond 503 + Sentry alert.
- *   - failClosed=false (dev default): degrade to per-instance memory bucket.
+ * F2 — failClosed=true (prod): 503 + Sentry alert. failClosed=false (dev):
+ * degrade to per-instance memory bucket.
  */
 const handleRedisFailure = (redisError: unknown, ctx: BucketContext): void => {
   const { key, res, next } = ctx;
@@ -165,59 +143,37 @@ export const createRateLimitMiddleware = ({
   };
 };
 
-/**
- * Rate-limit key generator that identifies clients by IP address.
- *
- * @param req - Express request.
- * @returns Client IP string used as the bucket key.
- */
 export const byIp = (req: Parameters<RequestHandler>[0]): string => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: req.ip may be undefined behind certain proxy configurations
   return req.ip ?? req.socket?.remoteAddress ?? 'unknown-ip';
 };
 
-/**
- * Rate-limit key generator that identifies clients by chat session ID, falling back to IP.
- *
- * @param req - Express request.
- * @returns Session-prefixed or IP-based bucket key.
- */
+/** Session-prefixed key, falls back to IP. */
 export const bySession = (req: Parameters<RequestHandler>[0]): string => {
-  // `req.body` is `any` in @types/express; narrow to the shape we read.
   const body = req.body as { sessionId?: string } | undefined;
   const sessionId = parseStringParam(req, 'id') ?? body?.sessionId ?? req.header('x-session-id');
   return sessionId ? `session:${sessionId}` : byIp(req);
 };
 
-/**
- * Rate-limit key generator that identifies clients by authenticated user ID, falling back to IP.
- * Must be applied AFTER authentication middleware so that req.user is available.
- *
- * @param req - Express request (with user set by auth middleware).
- * @returns User-prefixed or IP-based bucket key.
- */
+/** Ordering: AFTER auth middleware (req.user required). Falls back to IP. */
 export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
   const user = (req as Request).user;
   return user?.id ? `user:${String(user.id)}` : byIp(req);
 };
 
-/** Clears all in-memory rate-limit buckets and stops the sweep timer. Intended for test teardown. */
+/** @internal */
 export const clearRateLimitBuckets = (): void => {
   store.clear();
   redisStore?.clear();
 };
 
-/** Stops the periodic sweep timer. Call during graceful shutdown. */
+/** Graceful shutdown. */
 export const stopRateLimitSweep = (): void => {
   store.stopSweep();
   redisStore?.stopSweep();
 };
 
-/**
- * Resets the Redis store reference. Intended for test teardown only.
- *
- * @internal
- */
+/** @internal */
 export const _resetRedisStore = (): void => {
   redisStore = null;
 };

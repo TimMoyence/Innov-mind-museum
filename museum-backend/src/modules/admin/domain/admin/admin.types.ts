@@ -23,14 +23,12 @@ export interface AdminUserDTO {
   updatedAt: string;
 }
 
-/** Filters for the list-users admin endpoint. */
 export interface ListUsersFilters {
   search?: string;
   role?: string;
   pagination: PaginationParams;
 }
 
-/** Audit log DTO exposed by admin endpoints. */
 export interface AdminAuditLogDTO {
   id: string;
   action: string;
@@ -43,7 +41,6 @@ export interface AdminAuditLogDTO {
   createdAt: string;
 }
 
-/** Filters for the list-audit-logs admin endpoint. */
 export interface ListAuditLogsFilters {
   action?: string;
   actorId?: number;
@@ -53,7 +50,6 @@ export interface ListAuditLogsFilters {
   pagination: PaginationParams;
 }
 
-/** Aggregated dashboard statistics. */
 export interface AdminStats {
   totalUsers: number;
   usersByRole: Record<string, number>;
@@ -63,12 +59,9 @@ export interface AdminStats {
   recentSessions: number;
 }
 
-// ─── Content Moderation (S4-03) ───
-
-/** Allowed statuses for a message report. */
+// S4-03 Content Moderation
 export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
 
-/** Full report DTO exposed by admin endpoints. */
 export interface AdminReportDTO {
   id: string;
   messageId: string;
@@ -85,7 +78,6 @@ export interface AdminReportDTO {
   sessionId: string;
 }
 
-/** Filters for the list-reports admin endpoint. */
 export interface ListReportsFilters {
   status?: ReportStatus;
   reason?: string;
@@ -94,7 +86,6 @@ export interface ListReportsFilters {
   pagination: PaginationParams;
 }
 
-/** Input to resolve (review/dismiss) a report. */
 export interface ResolveReportInput {
   reportId: string;
   status: ReportStatus;
@@ -102,18 +93,14 @@ export interface ResolveReportInput {
   reviewedBy: number;
 }
 
-// ─── Analytics API (S4-04) ───
-
-/** Time-series aggregation granularity. */
+// S4-04 Analytics
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
 
-/** A single time-series data point. */
 interface TimeSeriesPoint {
   date: string;
   count: number;
 }
 
-/** Usage analytics payload. */
 export interface UsageAnalytics {
   period: { from: string; to: string };
   granularity: AnalyticsGranularity;
@@ -122,7 +109,6 @@ export interface UsageAnalytics {
   activeUsers: TimeSeriesPoint[];
 }
 
-/** Filters for the usage analytics endpoint. */
 export interface UsageAnalyticsFilters {
   granularity?: AnalyticsGranularity;
   from?: string;
@@ -130,21 +116,18 @@ export interface UsageAnalyticsFilters {
   days?: number;
 }
 
-/** Content analytics payload. */
 export interface ContentAnalytics {
   topArtworks: { title: string; artist: string | null; count: number }[];
   topMuseums: { name: string; count: number }[];
   guardrailBlockRate: number;
 }
 
-/** Filters for the content analytics endpoint. */
 export interface ContentAnalyticsFilters {
   from?: string;
   to?: string;
   limit?: number;
 }
 
-/** Engagement analytics payload. */
 export interface EngagementAnalytics {
   avgMessagesPerSession: number;
   avgSessionDurationMinutes: number;
@@ -153,7 +136,6 @@ export interface EngagementAnalytics {
   returningUsers: number;
 }
 
-/** Filters for the engagement analytics endpoint. */
 export interface EngagementAnalyticsFilters {
   from?: string;
   to?: string;

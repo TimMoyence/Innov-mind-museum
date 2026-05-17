@@ -1,6 +1,5 @@
 import type { MuseumCategory } from '@shared/http/overpass.client';
 
-/** Input for creating a new museum. */
 export interface CreateMuseumInput {
   name: string;
   slug: string;
@@ -12,7 +11,6 @@ export interface CreateMuseumInput {
   museumType?: MuseumCategory;
 }
 
-/** Input for updating an existing museum. */
 export interface UpdateMuseumInput {
   name?: string;
   slug?: string;
@@ -25,7 +23,6 @@ export interface UpdateMuseumInput {
   museumType?: MuseumCategory;
 }
 
-/** Museum DTO returned to clients. */
 export interface MuseumDTO {
   id: number;
   name: string;
@@ -41,7 +38,7 @@ export interface MuseumDTO {
   updatedAt: string;
 }
 
-/** Public-facing museum directory entry (no internal config or admin fields). */
+/** Public — no internal config or admin fields. */
 export interface MuseumDirectoryDTO {
   id: number;
   name: string;

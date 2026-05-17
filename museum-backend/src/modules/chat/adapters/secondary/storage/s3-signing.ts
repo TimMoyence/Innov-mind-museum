@@ -1,22 +1,14 @@
 import crypto from 'node:crypto';
 
-/**
- * Computes the SHA-256 hex digest of the given value.
- */
 export const sha256Hex = (value: Buffer | string): string => {
   return crypto.createHash('sha256').update(value).digest('hex');
 };
 
-/**
- * Computes an HMAC-SHA256 digest.
- */
 export const hmac = (key: Buffer | string, value: string): Buffer => {
   return crypto.createHmac('sha256', key).update(value).digest();
 };
 
-/**
- * Derives a SigV4 signing key for the `s3` service.
- */
+/** SigV4 signing key for the `s3` service. */
 export const deriveSigningKey = (
   secretAccessKey: string,
   dateStamp: string,
@@ -28,9 +20,7 @@ export const deriveSigningKey = (
   return hmac(kService, 'aws4_request');
 };
 
-/**
- * Converts a `Date` to the AMZ date format (`YYYYMMDDTHHMMSSZ`) and date stamp (`YYYYMMDD`).
- */
+/** AMZ date (`YYYYMMDDTHHMMSSZ`) + date stamp (`YYYYMMDD`). */
 export const toAmzDate = (date: Date): { amzDate: string; dateStamp: string } => {
   const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, '');
   return {
@@ -39,9 +29,6 @@ export const toAmzDate = (date: Date): { amzDate: string; dateStamp: string } =>
   };
 };
 
-/**
- * Normalizes and sorts headers into canonical format for SigV4 signing.
- */
 export const buildCanonicalHeaders = (
   headers: Record<string, string>,
 ): {
@@ -58,9 +45,6 @@ export const buildCanonicalHeaders = (
   };
 };
 
-/**
- * Signs a canonical request using AWS SigV4 and returns the scope and hex signature.
- */
 export const signString = (params: {
   secretAccessKey: string;
   dateStamp: string;

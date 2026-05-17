@@ -2,9 +2,7 @@ import { artworks } from '@modules/daily-art/adapters/secondary/catalog/artworks
 
 import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
-/**
- * Returns the day-of-year (1-366) for a given date.
- */
+/** Day-of-year (1-366). */
 const getDayOfYear = (date: Date): number => {
   const start = new Date(date.getFullYear(), 0, 0);
   const diff = date.getTime() - start.getTime();
@@ -12,14 +10,10 @@ const getDayOfYear = (date: Date): number => {
   return Math.floor(diff / oneDay);
 };
 
-/**
- * Returns a `YYYY-MM-DD` date string used as the cache key suffix.
- */
+/** `YYYY-MM-DD` — used as cache key suffix. */
 export const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
 
-/**
- * Selects today's artwork from the curated list using deterministic rotation.
- */
+/** Deterministic rotation: `artworks[dayOfYear % length]`. */
 export const selectArtworkForDate = (date: Date): Artwork => {
   const dayOfYear = getDayOfYear(date);
   return artworks[dayOfYear % artworks.length];

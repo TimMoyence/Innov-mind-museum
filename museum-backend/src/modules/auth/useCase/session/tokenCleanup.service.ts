@@ -8,7 +8,7 @@ const LOCK_TTL_SECONDS = 300;
 const BATCH_LIMIT = 10000;
 const DEFAULT_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-/** Periodically deletes expired refresh tokens with distributed-lock protection. */
+/** Periodic expired-token deletion with distributed-lock protection. */
 export class TokenCleanupService {
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -17,7 +17,7 @@ export class TokenCleanupService {
     private readonly cacheService?: CacheService,
   ) {}
 
-  /** Run a single cleanup pass. Acquires a distributed lock if cache is available. */
+  /** Acquires distributed lock if cache available. */
   async runCleanup(): Promise<number> {
     if (this.cacheService) {
       const acquired = await this.cacheService.setNx(LOCK_KEY, true, LOCK_TTL_SECONDS);
@@ -39,7 +39,6 @@ export class TokenCleanupService {
     }
   }
 
-  /** Start the periodic cleanup scheduler. */
   startScheduler(intervalMs = DEFAULT_INTERVAL_MS): void {
     if (this.timer) return;
     this.timer = setInterval(() => {
@@ -49,7 +48,6 @@ export class TokenCleanupService {
     logger.info('token_cleanup_scheduler_started', { intervalMs });
   }
 
-  /** Stop the scheduler. */
   stopScheduler(): void {
     if (this.timer) {
       clearInterval(this.timer);

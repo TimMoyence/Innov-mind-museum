@@ -34,9 +34,6 @@ const privateHostPatterns = [
  * provider's API as an image reference. DNS rebinding attacks target the fetching host,
  * so the SSRF surface is on the provider side, not ours. If server-side fetching is ever
  * added (thumbnailing, caching), DNS resolution validation must be introduced here.
- *
- * @param value - The URL string to validate.
- * @returns True if the URL uses HTTPS and does not target a private host.
  */
 export const isSafeImageUrl = (value: string): boolean => {
   try {
@@ -49,13 +46,7 @@ export const isSafeImageUrl = (value: string): boolean => {
   }
 };
 
-/**
- * Decodes a base64-encoded image from either a data-URL or raw base64 string.
- * Falls back to `image/jpeg` when no MIME type prefix is present.
- *
- * @param input - A data-URL (`data:image/...;base64,...`) or raw base64 string.
- * @returns The decoded MIME type, clean base64 payload, and byte size.
- */
+/** Falls back to `image/jpeg` when no MIME type prefix is present. */
 export const decodeBase64Image = (input: string): DecodedImage => {
   const dataUrlMatch = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(input);
   if (dataUrlMatch) {
@@ -77,33 +68,18 @@ export const decodeBase64Image = (input: string): DecodedImage => {
   };
 };
 
-/**
- * Throws a 400 error if the image exceeds the allowed byte size.
- *
- * @param sizeBytes - Actual image size in bytes.
- * @param maxBytes - Maximum allowed size in bytes.
- * @throws {AppError} 400 when sizeBytes > maxBytes.
- */
 export const assertImageSize = (sizeBytes: number, maxBytes: number): void => {
   if (sizeBytes > maxBytes) {
     throw badRequest(`Image exceeds max size of ${String(maxBytes)} bytes`);
   }
 };
 
-/**
- * Throws a 400 error if the MIME type is not in the allowed list.
- *
- * @param mimeType - The image MIME type to validate.
- * @param allowed - Array of permitted MIME types.
- * @throws {AppError} 400 when the MIME type is not allowed.
- */
 export const assertMimeType = (mimeType: string, allowed: string[]): void => {
   if (!allowed.includes(mimeType)) {
     throw badRequest(`Unsupported image mime type: ${mimeType}`);
   }
 };
 
-/** Known image format magic byte signatures. */
 const IMAGE_SIGNATURES: { mime: string; bytes: number[]; offset?: number }[] = [
   { mime: 'image/jpeg', bytes: [0xff, 0xd8, 0xff] },
   { mime: 'image/png', bytes: [0x89, 0x50, 0x4e, 0x47] },
@@ -111,12 +87,6 @@ const IMAGE_SIGNATURES: { mime: string; bytes: number[]; offset?: number }[] = [
   { mime: 'image/webp', bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 },
 ];
 
-/**
- * Detects the MIME type of a base64-encoded image by inspecting its leading magic bytes.
- *
- * @param base64 - Raw base64-encoded image data (no data-URL prefix).
- * @returns The detected MIME type string, or null if no known signature matches.
- */
 export const detectImageMimeFromBytes = (base64: string): string | null => {
   const buffer = Buffer.from(base64, 'base64');
   if (buffer.length < 12) return null;
@@ -131,13 +101,7 @@ export const detectImageMimeFromBytes = (base64: string): string | null => {
   return null;
 };
 
-/**
- * Throws a 400 error if the base64 data does not start with a known image magic byte signature.
- * This is a defense-in-depth check that validates actual file content, not just the declared MIME type.
- *
- * @param base64 - Raw base64-encoded image data (no data-URL prefix).
- * @throws {AppError} 400 when no known image signature is found.
- */
+/** Defense-in-depth: validates actual file content, not just declared MIME type. */
 export const assertMagicBytes = (base64: string): void => {
   const detected = detectImageMimeFromBytes(base64);
   if (!detected) {

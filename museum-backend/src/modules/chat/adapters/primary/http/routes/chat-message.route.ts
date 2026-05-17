@@ -26,15 +26,9 @@ import type { ChatService } from '@modules/chat/useCase/orchestration/chat.servi
 import type { Request, Response, RequestHandler } from 'express';
 
 /**
- * Parses and validates message input from an Express request.
- *
- * NOTE on the validation pattern: this route accepts both JSON and multipart
- * form-data (image upload), and `context` arrives as a JSON string via
- * multipart. The Zod schema (`postMessageSchema`) expects a parsed object,
- * so we cannot use `validateBody(postMessageSchema)` middleware directly —
- * we have to JSON-parse `context` first. The error wire format stays
- * consistent with `validateBody` because `parsePostMessageRequest` and
- * `validateBody` both delegate to the shared `formatZodIssues` formatter.
+ * Cannot use `validateBody` middleware: route accepts multipart with `context`
+ * as a JSON-string field, so we parse it manually first. Error wire format
+ * stays aligned via the shared formatZodIssues formatter.
  */
 function parseMessageInput(req: Request): {
   bodyPayload: PostMessageRequest;
@@ -55,7 +49,6 @@ function parseMessageInput(req: Request): {
   return { bodyPayload, context };
 }
 
-/** Handler factory: POST /sessions/:id/messages (non-streaming). */
 function createPostMessageHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
@@ -98,10 +91,6 @@ function createPostMessageHandler(chatService: ChatService) {
   };
 }
 
-// SSE streaming handler moved to `./chat-message.sse-dormant.ts` (DEACTIVATED post-V1,
-// revival scheduled for V2.1 post-Walk feature). See `docs/adr/ADR-001-sse-streaming-deprecated.md`.
-
-/** Handler factory: GET /art-keywords (list keywords by locale, optional since filter). */
 function createListArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
   return async (req: Request, res: Response): Promise<void> => {
     if (!artKeywordRepo) {
@@ -129,7 +118,6 @@ function createListArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
   };
 }
 
-/** Handler factory: POST /art-keywords (bulk upsert with input validation). */
 function createBulkUpsertArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
   return async (req: Request, res: Response): Promise<void> => {
     if (!artKeywordRepo) {
@@ -157,14 +145,6 @@ function createBulkUpsertArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepositor
   };
 }
 
-/**
- * Creates the message sub-router (send, stream, list, art-keywords).
- *
- * @param chatService - Injected chat application service.
- * @param artKeywordRepo - Optional art keyword repository for keyword endpoints.
- * @param uploadAdmission - Shared upload-admission middleware (concurrency limiter).
- * @returns Router handling message operations and art-keyword endpoints.
- */
 export const createMessageRouter = (
   chatService: ChatService,
   artKeywordRepo?: ArtKeywordRepository,
@@ -178,29 +158,21 @@ export const createMessageRouter = (
     keyGenerator: bySession,
   });
 
-  // SEC-20 (2026-04-08): per-authenticated-user limiter complementing the
-  // per-session limiter. Without this, a single user can multiply throughput
-  // by spawning many sessions in parallel (each gets its own session bucket).
-  // Mounted AFTER `isAuthenticated` so byUserId resolves req.user; falls back
-  // to byIp for any code path that bypasses auth (defensive).
+  // SEC-20 — per-user limiter; without it a user multiplies throughput by spawning sessions.
+  // Mount AFTER isAuthenticated so byUserId resolves; defensive byIp fallback for auth-bypass paths.
   const userLimiter = createRateLimitMiddleware({
     limit: env.rateLimit.userLimit,
     windowMs: env.rateLimit.windowMs,
     keyGenerator: byUserId,
   });
 
-  // POST /sessions/:id/messages — send a message (non-streaming)
   router.post(
     '/sessions/:id/messages',
     isAuthenticated,
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
-    // P0-4 (audit 2026-05-12 §P0-U-2) — kill-switch + per-user daily USD cap.
-    // Text/image chat triggers orchestrator.generate, a paid OpenAI/DeepSeek/Google
-    // completion. Placed AFTER rate limiters so volume control runs first
-    // (cheaper failure path) and BEFORE upload admission so a denied call does
-    // not occupy a multipart slot. Mirrors the chat-media.route.ts wire-up.
+    // P0-4 — gates LLM USD spend; ordering: AFTER rate-limit, BEFORE admission. Mirrors chat-media.
     llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     extendTimeoutForUpload,
@@ -208,19 +180,6 @@ export const createMessageRouter = (
     createPostMessageHandler(chatService),
   );
 
-  // POST /sessions/:id/messages/stream — SSE streaming (DEACTIVATED, revival V2.1 post-Walk).
-  //   Route intentionally unmounted. Handler `createStreamHandler` + service method kept for revival.
-  //   To reactivate: uncomment the `router.post(...)` block below + set EXPO_PUBLIC_CHAT_STREAMING=true on mobile.
-  // router.post(
-  //   '/sessions/:id/messages/stream',
-  //   isAuthenticated,
-  //   dailyChatLimit,
-  //   userLimiter,
-  //   sessionLimiter,
-  //   createStreamHandler(chatService),
-  // );
-
-  // Art-keywords offline-sync endpoints (handlers extracted for max-lines-per-function compliance).
   router.get('/art-keywords', isAuthenticated, createListArtKeywordsHandler(artKeywordRepo));
   router.post('/art-keywords', isAuthenticated, createBulkUpsertArtKeywordsHandler(artKeywordRepo));
 

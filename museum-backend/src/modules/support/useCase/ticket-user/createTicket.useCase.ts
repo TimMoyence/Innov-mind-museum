@@ -4,7 +4,6 @@ import { badRequest } from '@shared/errors/app.error';
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type { CreateTicketInput, TicketDTO } from '@modules/support/domain/ticket/support.types';
 
-/** Input for the create-ticket use case. */
 interface CreateTicketUseCaseInput {
   userId: number;
   subject: string;
@@ -15,11 +14,9 @@ interface CreateTicketUseCaseInput {
   requestId?: string;
 }
 
-/** Validates inputs and creates a new support ticket. */
 export class CreateTicketUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
-  /** Validates inputs, creates the ticket, and emits an audit event. */
   async execute(input: CreateTicketUseCaseInput): Promise<TicketDTO> {
     const subject = input.subject.trim();
     if (!subject || subject.length < 1 || subject.length > 256) {

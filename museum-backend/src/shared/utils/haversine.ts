@@ -1,15 +1,7 @@
 const EARTH_RADIUS_M = 6_371_000;
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
 
-/**
- * Calculates the great-circle distance between two points using the haversine formula.
- *
- * @param lat1 - Latitude of point 1 (degrees).
- * @param lon1 - Longitude of point 1 (degrees).
- * @param lat2 - Latitude of point 2 (degrees).
- * @param lon2 - Longitude of point 2 (degrees).
- * @returns Distance in meters.
- */
+/** Haversine great-circle distance. Inputs degrees, output meters. */
 export function haversineDistanceMeters(
   lat1: number,
   lon1: number,

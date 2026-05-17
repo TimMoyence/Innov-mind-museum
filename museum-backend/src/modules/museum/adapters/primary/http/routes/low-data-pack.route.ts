@@ -7,12 +7,6 @@ import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.m
 
 import type { LowDataPackService } from '@modules/museum/useCase/search/low-data-pack.service';
 
-/**
- * Builds the low-data pack Express router.
- *
- * @param service - LowDataPackService instance.
- * @returns Express Router with GET /museums/:id/low-data-pack.
- */
 export function createLowDataPackRouter(service: LowDataPackService): Router {
   const router = Router();
 

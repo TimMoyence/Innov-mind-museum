@@ -18,23 +18,13 @@ import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-/**
- * Creates the session CRUD sub-router.
- *
- * @param chatService - Injected chat application service.
- * @returns Router handling session create, list, get, delete.
- */
 export const createSessionRouter = (chatService: ChatService): Router => {
   const router = Router();
 
-  // POST /sessions — create a new chat session
-  // R1 corrective F1 (2026-05-16, ultrareview bug_001) — validateBody runs
-  // BEFORE monthlySessionQuota so Zod 400s short-circuit BEFORE the atomic
-  // counter UPDATE. Burning a free-tier slot on an invalid body would
-  // (a) lock out users for a session they never created, and (b) corrupt the
-  // KR4 funnel signal that feeds the Stripe go/no-go decision. R1 §3.3 D3
-  // prior ordering superseded ; concurrent-race invariant (R1 §3.3 D2)
-  // preserved byte-for-byte (PostgreSQL row-lock serialises the UPDATE).
+  // R1 F1 (2026-05-16 ultrareview bug_001) — validateBody MUST run BEFORE
+  // monthlySessionQuota: a Zod 400 must short-circuit BEFORE the atomic UPDATE
+  // counter (else free-tier slot burned on invalid body → KR4 funnel corruption).
+  // Concurrent-race invariant (R1 §3.3 D2) preserved by PG row-lock.
   router.post(
     '/sessions',
     isAuthenticated,
@@ -54,7 +44,6 @@ export const createSessionRouter = (chatService: ChatService): Router => {
     },
   );
 
-  // GET /sessions — list user's sessions
   router.get('/sessions', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
     if (!currentUser?.id) {
@@ -66,7 +55,6 @@ export const createSessionRouter = (chatService: ChatService): Router => {
     res.status(200).json(result);
   });
 
-  // GET /sessions/:id — get session with paginated messages
   router.get('/sessions/:id', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
     const sessionId = parseStringParam(req, 'id');
@@ -103,7 +91,6 @@ export const createSessionRouter = (chatService: ChatService): Router => {
     res.status(200).json(result);
   });
 
-  // DELETE /sessions/:id — delete an empty session
   router.delete('/sessions/:id', isAuthenticated, async (req, res) => {
     const currentUser = getRequestUser(req);
     const sessionId = parseStringParam(req, 'id');

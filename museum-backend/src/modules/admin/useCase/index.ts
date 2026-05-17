@@ -1,9 +1,3 @@
-/**
- * Admin module composition root.
- * Wires the PG repository to use-case classes and exports ready-to-use singletons.
- * Cross-module facades (review, support) are also composed here to keep the
- * primary adapter free of peer-module imports.
- */
 import { AppDataSource } from '@data/db/data-source';
 import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';
 import { GetContentAnalyticsUseCase } from '@modules/admin/useCase/analytics/getContentAnalytics.useCase';
@@ -33,9 +27,7 @@ import {
 } from '@modules/support/useCase';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
-// Composed locally — TypeORM Repository<T> is stateless, so re-instantiating
-// the refresh-token repo is free and avoids exporting an internal auth-module
-// singleton. Used by DeleteUserUseCase to revoke every active session.
+// Re-instantiated locally to avoid exporting an internal auth-module singleton.
 const adminRefreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 
 export const listUsersUseCase = new ListUsersUseCase(adminRepository);
@@ -65,12 +57,6 @@ export const adminSupportFacade = new AdminSupportFacade(
   peerUpdateTicketStatusUseCase,
 );
 
-// R2 W3.4 — admin CSV export composition. Single repo backs the three
-// use cases (sessions / reviews / tickets) ; audit emission shares the
-// global auditService singleton.
-//
-// R2 corrective loop 1 (2026-05-15) — admin CSV export lazy getters moved to
-// `@modules/admin/useCase/export/composition.ts` (deeper laziness, defers
-// `AppDataSource` AND `auditService` until first request). Doctrine
-// `feedback_bury_dead_code` — original duplicates here removed once the
-// route + tests migrated.
+// R2 W3.4 corrective loop 1 (2026-05-15) — admin CSV export composition lives in
+// `@modules/admin/useCase/export/composition.ts` (lazy getters defer AppDataSource
+// + auditService until first request). Doctrine `feedback_bury_dead_code`.

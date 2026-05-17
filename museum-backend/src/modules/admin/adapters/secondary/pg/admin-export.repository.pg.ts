@@ -16,26 +16,18 @@ import type { ExportReviewsRepository } from '@modules/admin/useCase/export/expo
 import type { ExportTicketsRepository } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
 import type { DataSource, Repository } from 'typeorm';
 
-// R2 corrective loop 1 (2026-05-15) — read from env (cf. `env.exportPseudonymSalt`,
-// added in the same loop). Falls back to the historical literal so local dev /
-// boot stays ergonomic and unit tests using stubbed env without the new field
-// continue to pass.
+// R2 corrective loop 1 (2026-05-15) — env-sourced w/ historical literal fallback
+// so unit tests stubbing env without the field keep working.
 const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
 const CHUNK_SIZE = 500;
 
 /**
- * PG adapter for the admin CSV export feature (R2 §3.3 / §3.4 / D3 / D4).
+ * PG adapter for admin CSV export (R2 §3.3/§3.4/D3/D4). Streams in chunks of
+ * CHUNK_SIZE via TypeORM `take+skip` — HTTP handler pipes without buffering.
  *
- * Implements three streaming methods : sessions / reviews / tickets. Each
- * yields rows one chunk at a time (TypeORM `take + skip` paging) so the HTTP
- * response handler can pipe directly to the wire without buffering the whole
- * result set in memory.
- *
- * Sessions enforces the `WHERE museum_id = $scope` predicate server-side
- * (R6 / D4 defense-in-depth). Reviews + tickets are unscoped at the SQL
- * layer because the corresponding entities lack a `museum_id` column today
- * (Q1 BLOCKER — Appendix A) ; the use case layer prevents non-super_admin
- * roles from reaching the repo.
+ * Sessions enforces `WHERE museum_id = $scope` server-side (R6/D4 defense-in-depth).
+ * Reviews + tickets are SQL-unscoped (Q1 BLOCKER — no `museum_id` column);
+ * use case layer prevents non-super_admin from reaching the repo.
  */
 export class AdminExportRepositoryPg
   implements ExportSessionsRepository, ExportReviewsRepository, ExportTicketsRepository
@@ -52,12 +44,6 @@ export class AdminExportRepositoryPg
     this.userRepo = dataSource.getRepository(User);
   }
 
-  /**
-   * Streams chat sessions, optionally filtered by museum scope.
-   *
-   * @param filter - Repo-side scope filter (museum_id WHERE clause or no-op).
-   * @yields {ExportRowSessions} One DTO per `chat_sessions` row in chunks of {@link CHUNK_SIZE}.
-   */
   async *streamChatSessions(filter: ExportSessionsFilter): AsyncIterable<ExportRowSessions> {
     let skip = 0;
     for (;;) {
@@ -104,11 +90,7 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /**
-   * Streams reviews (pseudonymising userId before yielding).
-   *
-   * @yields {ExportRowReview} One DTO per `reviews` row, salted-hash pseudonym.
-   */
+  /** Pseudonymises userId before yielding. */
   async *streamReviews(): AsyncIterable<ExportRowReview> {
     let skip = 0;
     for (;;) {
@@ -137,11 +119,7 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /**
-   * Streams support tickets (pseudonymising user email for every role).
-   *
-   * @yields {ExportRowTicket} One DTO per `support_tickets` row.
-   */
+  /** Pseudonymises user email for every role (incl. super_admin — R19/D6/Q7). */
   async *streamSupportTickets(): AsyncIterable<ExportRowTicket> {
     let skip = 0;
     for (;;) {
@@ -153,8 +131,7 @@ export class AdminExportRepositoryPg
         .getMany();
       if (rows.length === 0) return;
 
-      // Resolve user emails in batch — pseudonymise BEFORE returning so the
-      // raw email never leaves this method.
+      // Pseudonymise BEFORE return so raw email never leaves this method.
       const userIds = Array.from(new Set(rows.map((r) => r.userId)));
       const users = await this.userRepo
         .createQueryBuilder('u')
@@ -187,10 +164,8 @@ export class AdminExportRepositoryPg
   }
 }
 
-/** Coerces a Postgres-returned timestamp value to ISO-8601 string. */
 function toIso(value: Date | string | null): string {
   if (value === null) return '';
   if (value instanceof Date) return value.toISOString();
-  // raw query path returns string ; trust the upstream serialisation.
   return new Date(value).toISOString();
 }

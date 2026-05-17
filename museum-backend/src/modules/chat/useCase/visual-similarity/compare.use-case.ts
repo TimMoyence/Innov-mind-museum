@@ -1,42 +1,16 @@
 /**
- * T5.4 — `compareImageUseCase` orchestration wrapper for `POST /chat/compare`.
+ * compareImageUseCase — POST /chat/compare orchestrator: imageProcessor →
+ * similarity → optional persist.
  *
- * Composes three collaborators around a single user-supplied image:
+ * Failure semantics (locked by compare.use-case.test.ts):
+ * - processor throws → propagate; no similarity call, no persist.
+ * - similarity returns `fallbackReason: 'encoder_unavailable'` (R11) → return
+ *   WITHOUT persisting (route maps to 503; no phantom assistant turn).
+ * - any other fallbackReason (`no_visual_neighbor`, `quota_exceeded`) → persist
+ *   assistant message so FE empty-result UX has a stable record (R10).
  *
- *   1. {@link ImageProcessorPort.process} — re-uses the existing chat image
- *      pre-processing pipeline (EXIF strip, magic-byte check, MIME validation,
- *      OCR injection guardrail). R12 explicitly forbids duplicating any of
- *      that logic here — we ALWAYS go through the shared processor.
- *   2. {@link SimilarityServicePort.compare} — the T5.3
- *      {@link import('./similarity.service').VisualSimilarityService} pipeline
- *      (cache → encode → kNN → enrich → score+fuse → top-K).
- *   3. {@link ChatPersistencePort.appendAssistantMessage} — persists the
- *      assistant turn carrying the {@link CompareResult} so the conversation
- *      audit trail (R1) and downstream FE rendering both have a stable record,
- *      including empty-result fallbacks (R10 — Q7 empty UX needs the
- *      `fallbackReason` to surface).
- *
- * Failure semantics (locked by `compare.use-case.test.ts`):
- *
- *   - `imageProcessor.process` throws → propagate; do NOT call
- *     `similarityService.compare`, do NOT persist anything (the user message
- *     was rejected pre-pipeline, so no assistant turn exists).
- *   - `similarityService.compare` returns
- *     `{ matches: [], fallbackReason: 'encoder_unavailable' }` → R11. The
- *     route maps this to a 503 and the audit trail must NOT contain a phantom
- *     assistant turn for an outage. Return the result WITHOUT persisting.
- *   - `similarityService.compare` returns `{ matches: [], fallbackReason }`
- *     for ANY OTHER reason (`no_visual_neighbor`, `quota_exceeded`) → STILL
- *     persist an assistant message carrying the `fallbackReason` so the FE
- *     can render the empty-result UX (R10) and the audit log retains the trace.
- *
- * Wiring boundary: this file declares **structural ports** for each
- * dependency. The composition root (Phase 5.5 / Phase 6) is responsible for
- * adapting the production `ChatService` / `ImageProcessingService` /
- * `VisualSimilarityService` to these ports. We do NOT import `ChatService`
- * directly — it would couple the use-case to the wider chat module surface
- * (PostMessageInput shape, message authoring rules, …) and forbid editing
- * `chat.service.ts` from this T5.4 task.
+ * Structural ports: composition root adapts production services. No direct
+ * ChatService import (would couple to wider chat module surface).
  */
 
 import { createHash } from 'node:crypto';
@@ -45,29 +19,13 @@ import { logger } from '@shared/logger/logger';
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
-/**
- * Supported MIME types for the compare pipeline. Mirrors the EmbeddingsPort
- * contract — kept narrow so the structural ports below stay aligned with the
- * downstream `VisualSimilarityService.compare` signature.
- */
 export type CompareMimeType = 'image/jpeg' | 'image/png' | 'image/webp';
 
-/**
- * Minimal structural port for the image processing pipeline.
- *
- * Adapted at the composition root from the existing
- * {@link import('@modules/chat/useCase/image/image-processing.service').ImageProcessingService}
- * (R12: no duplicated EXIF / magic / MIME / OCR logic here). The adapter is
- * trivial — it forwards the buffer + mimeType to `processImage` (after
- * wrapping the buffer in a base64 `upload` payload) and returns the cleaned
- * buffer + cleaned MIME for the similarity service to consume.
- */
 export interface ImageProcessorPort {
   /**
-   * Sanitise + validate the user-supplied image. Implementations MUST throw
-   * on any of: invalid magic bytes, disallowed MIME, oversize after strip,
-   * OCR injection. Successful resolution returns the cleaned buffer and the
-   * (possibly transcoded) MIME type ready for embedding.
+   * R12 — re-uses shared chat image pipeline (EXIF/magic/MIME/OCR). MUST throw
+   * on invalid magic, disallowed MIME, oversize-post-strip, or OCR injection.
+   * May transcode MIME (e.g. HEIC → JPEG); callers must use returned `mimeType`.
    */
   process(input: {
     sessionId: string;
@@ -77,12 +35,6 @@ export interface ImageProcessorPort {
   }): Promise<{ buffer: Buffer; mimeType: CompareMimeType }>;
 }
 
-/**
- * Minimal structural port for the visual-similarity pipeline.
- *
- * Adapted at the composition root from the T5.3
- * {@link import('./similarity.service').VisualSimilarityService}.
- */
 export interface SimilarityServicePort {
   compare(input: {
     buffer: Buffer;
@@ -90,19 +42,11 @@ export interface SimilarityServicePort {
     topK: number;
     locale: 'fr' | 'en';
     museumQids?: string[];
-    /** OWASP LLM08 internal tenant scope (`museums.id`); see {@link CompareUseCaseInput.museumId}. */
+    /** OWASP LLM08 internal tenant scope (`museums.id`). */
     museumId?: number | null;
   }): Promise<CompareResult>;
 }
 
-/**
- * Minimal structural port for assistant-message persistence.
- *
- * Adapted at the composition root from the production `ChatService`. We
- * accept a small surface so this use-case is independent of the wider chat
- * module (and so the test suite can mock it without rebuilding the whole
- * `ChatService` graph).
- */
 export interface ChatPersistencePort {
   appendAssistantMessage(input: {
     sessionId: string;
@@ -111,49 +55,30 @@ export interface ChatPersistencePort {
   }): Promise<{ id: string }>;
 }
 
-/** Constructor dependencies for {@link compareImageUseCase}. */
 export interface CompareUseCaseDeps {
   imageProcessor: ImageProcessorPort;
   similarityService: SimilarityServicePort;
   chatService: ChatPersistencePort;
 }
 
-/** Single-call input payload accepted by the compare use-case. */
 export interface CompareUseCaseInput {
-  /** Chat session id — threads the assistant turn into the conversation. */
   sessionId: string;
-  /** Raw user-supplied image bytes (BEFORE any sanitisation). */
+  /** Raw bytes BEFORE sanitisation. */
   buffer: Buffer;
-  /** Declared MIME type (validated by the image processor). */
   mimeType: CompareMimeType;
-  /** Number of matches to return after fusion + truncation. */
   topK: number;
-  /** Resolved locale for rationale + Wikidata enrichment. */
   locale: 'fr' | 'en';
-  /** Optional Wikidata QID filter forwarded to the kNN search (R4 — external public axis). */
+  /** R4 external public-axis filter forwarded to kNN. */
   museumQids?: string[];
   /**
-   * Optional internal tenant scope (`museums.id`) forwarded to the kNN search.
-   * OWASP LLM08 — resolved by the route from `ChatSession.museumId` so the
-   * use-case does not need a chat-repository handle. V1 single-tenant ships
-   * with this `undefined` (a warn is logged at the repo layer); the field is
-   * plumbed end-to-end so B2B onboarding flips a single call site.
+   * OWASP LLM08 internal tenant scope (resolved by route from `ChatSession.museumId`).
+   * V1 single-tenant ships undefined; repo layer logs warn.
    */
   museumId?: number | null;
-  /** Optional uploader user id (storage key + audit trail). */
   ownerId?: number;
 }
 
-/**
- * Build the compare use-case. The returned function executes the pipeline
- * once per call and is safe to share across requests (no per-call state
- * lives on the closure).
- *
- * @param deps - Structural ports — see {@link CompareUseCaseDeps}.
- * @returns A function that runs the compare pipeline for a single input
- *          and returns the {@link CompareResult} after persisting the
- *          assistant message.
- */
+/** Returned function holds no per-call state — safe to share across requests. */
 export function compareImageUseCase(
   deps: CompareUseCaseDeps,
 ): (input: CompareUseCaseInput) => Promise<CompareResult> {
@@ -161,18 +86,12 @@ export function compareImageUseCase(
 
   return async function runCompare(input: CompareUseCaseInput): Promise<CompareResult> {
     const startedAt = Date.now();
-    // R14 audit log — the image hash is precomputed BEFORE the processor runs
-    // so the audit trail keys on the bytes the user actually submitted (not
-    // the post-EXIF-strip buffer, which would diverge on every re-upload of
-    // the same photo with different EXIF). Hashing once up front also avoids
-    // the cost on the encoder cache-hit path. SHA-256 is overkill for a log
-    // dedup key but matches the cache-key hash function so an operator can
-    // grep the audit log by the same hex digest the cache uses.
+    // Hash BEFORE processor so audit keys on user-submitted bytes (post-EXIF
+    // would diverge on every re-upload of the same photo). Matches cache-key
+    // hash function so operators can grep by same hex digest.
     const queryEmbeddingHash = createHash('sha256').update(input.buffer).digest('hex');
 
-    // 1) Re-use the shared image processing pipeline (R12). Any failure here
-    //    aborts the request — the user message was rejected, so no assistant
-    //    turn is persisted.
+    // R12 — shared pipeline. Failure aborts; no assistant turn persisted.
     const processed = await imageProcessor.process({
       sessionId: input.sessionId,
       buffer: input.buffer,
@@ -180,33 +99,23 @@ export function compareImageUseCase(
       ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}),
     });
 
-    // 2) Run the visual-similarity pipeline against the SANITISED buffer.
-    //    The processor may transcode the MIME (e.g. HEIC → JPEG) — forward
-    //    its output 1:1 so the embedding step never sees a stale MIME.
+    // Forward processor mimeType 1:1 (may have transcoded e.g. HEIC→JPEG).
     const compareInput: Parameters<SimilarityServicePort['compare']>[0] = {
       buffer: processed.buffer,
       mimeType: processed.mimeType,
       topK: input.topK,
       locale: input.locale,
       ...(input.museumQids !== undefined ? { museumQids: input.museumQids } : {}),
-      // OWASP LLM08 — forward the resolved tenant scope. `null` is treated
-      // identically to `undefined` downstream (legacy global read + warn);
-      // only a positive integer activates the WHERE clause at the repo layer.
+      // OWASP LLM08 — null treated as undefined downstream (legacy global read
+      // + warn); only a positive integer activates the WHERE clause.
       ...(input.museumId !== undefined && input.museumId !== null
         ? { museumId: input.museumId }
         : {}),
     };
     const result = await similarityService.compare(compareInput);
 
-    // 3) R11 — encoder outage: the route will map this to a 503. Do NOT
-    //    persist a ChatMessage so the conversation audit trail stays clean
-    //    (no phantom assistant turn for a service-unavailable response).
-    //    Other fallback reasons (`no_visual_neighbor`, `quota_exceeded`)
-    //    DO persist below so the FE empty-result UX has a stable record.
+    // R11 — encoder outage maps to 503; no persist (avoid phantom audit turn).
     if (result.fallbackReason === 'encoder_unavailable') {
-      // R14 audit log even on the no-persist path — operators need to see the
-      // outage hit per session (not just the aggregate Prom counter). No
-      // matchesCount field because the result is empty by contract.
       logger.info('compare_request', {
         sessionId: input.sessionId,
         userId: input.ownerId ?? null,
@@ -219,11 +128,8 @@ export function compareImageUseCase(
       return result;
     }
 
-    // 4) Persist the assistant turn — even on empty matches (R10 / Q7 UX).
-    //    `metadata.compareResults` carries the full result envelope so the
-    //    FE can rebuild the carousel from the audit log alone, and
-    //    `metadata.fallbackReason` mirrors the top-level field for
-    //    consumers that only inspect the flat metadata bag.
+    // R10/Q7 — persist even on empty matches so FE empty-result UX has stable
+    // record. `metadata.fallbackReason` mirrors top-level for flat consumers.
     const metadata: Record<string, unknown> = {
       compareResults: result,
     };
@@ -235,10 +141,7 @@ export function compareImageUseCase(
       metadata,
     });
 
-    // R14 audit log — emit AFTER persistence so the message id is on the
-    // conversation row by the time an operator searches the log. Fields
-    // mirror spec.md R14 verbatim ({userId|guest, sessionId, queryEmbeddingHash,
-    // topK, durationMs}) plus matchesCount + fallbackReason for triage.
+    // R14 audit AFTER persistence so message id is on row when operator greps.
     logger.info('compare_request', {
       sessionId: input.sessionId,
       userId: input.ownerId ?? null,

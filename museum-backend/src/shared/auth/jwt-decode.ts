@@ -25,11 +25,7 @@ export function decodeJwtPayload<T>(token: string | undefined, schema: ZodType<T
   }
 }
 
-/**
- * Decodes a JWT *header* without verifying the signature. Used by OIDC
- * verifiers to discover the `kid` for JWKS lookup before signature
- * verification proper.
- */
+/** Decodes JWT header WITHOUT verifying. Used by OIDC verifiers to discover `kid` for JWKS lookup before signature verification. */
 export function decodeJwtHeader<T>(token: string, schema: ZodType<T>): T | null {
   if (typeof token !== 'string') return null;
   const parts = token.split('.');

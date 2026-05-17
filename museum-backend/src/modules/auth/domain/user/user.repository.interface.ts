@@ -2,11 +2,8 @@ import type { User } from './user.entity';
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 /**
- * TD-2 — Partial patch for the 5 profile preferences exposed via the batch
- * `PATCH /api/auth/me/preferences` endpoint. All fields optional; only those
- * present are persisted. The repo implementation MUST pre-filter `undefined`
- * fields before forwarding to `repo.update` to avoid the TypeORM silent-skip
- * gotcha (see `feedback_typeorm_set_undefined_repo_update`).
+ * TD-2 — Partial patch for `PATCH /api/auth/me/preferences`. All fields optional.
+ * Repo impl MUST pre-filter `undefined` before `repo.update` (TypeORM silent-skip).
  */
 export interface ProfilePreferencesPatch {
   defaultLocale?: string;
@@ -16,34 +13,13 @@ export interface ProfilePreferencesPatch {
   audioDescriptionMode?: boolean;
 }
 
-/** Port for user persistence operations. Implemented by {@link UserRepositoryPg}. */
+/** Port for user persistence. Implemented by {@link UserRepositoryPg}. */
 export interface IUserRepository {
-  /**
-   * Find a user by email address.
-   *
-   * @param email - The email to look up.
-   * @returns The user, or `null` if not found.
-   */
   getUserByEmail(email: string): Promise<User | null>;
 
-  /**
-   * Find a user by numeric ID.
-   *
-   * @param id - The user's primary key.
-   * @returns The user, or `null` if not found.
-   */
   getUserById(id: number): Promise<User | null>;
 
-  /**
-   * Register a new user with email/password credentials.
-   *
-   * @param email - Unique email address.
-   * @param password - Plain-text password (hashed before storage).
-   * @param firstname - Optional first name.
-   * @param lastname - Optional last name.
-   * @param dateOfBirth - Optional ISO `YYYY-MM-DD`. Persisted to `date_of_birth` for the digital-majority age-gate.
-   * @returns The newly created user.
-   */
+  /** `dateOfBirth` is ISO `YYYY-MM-DD` persisted to `date_of_birth` for the digital-majority age-gate. */
   registerUser(
     email: string,
     password: string,
@@ -52,87 +28,26 @@ export interface IUserRepository {
     dateOfBirth?: string,
   ): Promise<User>;
 
-  /**
-   * Store a password-reset token and its expiration for a user.
-   *
-   * @param email - The user's email.
-   * @param token - The reset token.
-   * @param expires - Token expiration timestamp.
-   * @returns The updated user.
-   */
   setResetToken(email: string, token: string, expires: Date): Promise<User>;
 
-  /**
-   * Find a user by a valid (non-expired) password-reset token.
-   *
-   * @param token - The reset token.
-   * @returns The user, or `null` if the token is invalid or expired.
-   */
   getUserByResetToken(token: string): Promise<User | null>;
 
-  /**
-   * Update a user's password.
-   *
-   * @param userId - The user's ID.
-   * @param newPassword - Plain-text password (hashed before storage).
-   * @returns The updated user.
-   */
   updatePassword(userId: number, newPassword: string): Promise<User>;
 
-  /**
-   * Register a new user via social sign-in (no password).
-   *
-   * @param email - Email from the social provider.
-   * @param firstname - Optional first name from the provider.
-   * @param lastname - Optional last name from the provider.
-   * @returns The newly created user.
-   */
   registerSocialUser(email: string, firstname?: string, lastname?: string): Promise<User>;
 
-  /**
-   * Atomically consume a reset token and update the user's password in a single query.
-   * Prevents race conditions where two requests use the same token.
-   *
-   * @param token - The reset token to consume.
-   * @param hashedPassword - The new bcrypt-hashed password.
-   * @returns The updated user, or `null` if the token is invalid or expired.
-   */
+  /** Atomic — prevents race when two requests use the same token. */
   consumeResetTokenAndUpdatePassword(token: string, hashedPassword: string): Promise<User | null>;
 
-  /**
-   * Permanently delete a user and all associated data (GDPR).
-   *
-   * @param userId - The user's ID.
-   */
+  /** Permanently delete a user and all associated data (GDPR). */
   deleteUser(userId: number): Promise<void>;
 
-  /**
-   * Store the SHA-256 hash of an email verification token with an expiration timestamp.
-   * SEC (H2): only the hash is persisted — the raw token is sent to the user by email.
-   *
-   * @param userId - The user's ID.
-   * @param hashedToken - SHA-256 hash of the verification token.
-   * @param expires - Token expiration timestamp.
-   */
+  /** SEC (H2): only the hash is persisted — raw token sent to user by email. */
   setVerificationToken(userId: number, hashedToken: string, expires: Date): Promise<void>;
 
-  /**
-   * Atomically consume a verification token hash and mark the email as verified.
-   * SEC (H2): callers must SHA-256-hash the raw token received from the user before calling.
-   *
-   * @param hashedToken - SHA-256 hash of the verification token to consume.
-   * @returns The user if the hash matched a valid (non-expired) token, or `null` otherwise.
-   */
+  /** Atomic. SEC (H2): callers MUST SHA-256-hash the raw token before calling. */
   verifyEmail(hashedToken: string): Promise<User | null>;
 
-  /**
-   * Store an email change token, pending email, and expiry on the user record.
-   *
-   * @param userId - The user's ID.
-   * @param hashedToken - SHA-256 hash of the email change token.
-   * @param pendingEmail - The new email to be confirmed.
-   * @param expires - Token expiration timestamp.
-   */
   setEmailChangeToken(
     userId: number,
     hashedToken: string,
@@ -140,62 +55,23 @@ export interface IUserRepository {
     expires: Date,
   ): Promise<void>;
 
-  /**
-   * Atomically consume an email change token and update the user's email.
-   * Clears pending_email, email_change_token, and email_change_token_expiry.
-   *
-   * @param hashedToken - SHA-256 hash of the email change token.
-   * @returns The updated user, or `null` if the token is invalid or expired.
-   */
+  /** Atomic. Clears pending_email, email_change_token, email_change_token_expiry. */
   consumeEmailChangeToken(hashedToken: string): Promise<User | null>;
 
-  /**
-   * Mark the user's onboarding as completed.
-   *
-   * @param userId - The user's ID.
-   */
   markOnboardingCompleted(userId: number): Promise<void>;
 
-  /**
-   * Replace the user's content preferences with the provided set.
-   * Empty array clears all preferences.
-   *
-   * @param userId - The user's ID.
-   * @param preferences - The new preferences (deduplicated & validated upstream).
-   */
+  /** Empty array clears all preferences. */
   updateContentPreferences(userId: number, preferences: ContentPreference[]): Promise<void>;
 
-  /**
-   * Persist the user's preferred TTS voice (catalog id) or clear it (`null`).
-   * The caller is expected to have validated the value against the shared
-   * voice catalog beforehand.
-   *
-   * @param userId - The user's ID.
-   * @param voice - Catalog voice id, or `null` to reset to the env default.
-   */
+  /** `null` clears the voice (reset to env default). Caller validates against catalog. */
   updateTtsVoice(userId: number, voice: string | null): Promise<void>;
 
   /**
-   * TD-2 — Persist a partial patch of the 5 profile-preference columns. Only
-   * the fields present in {@link ProfilePreferencesPatch} (i.e. `!== undefined`)
-   * are written; the rest are left untouched. The implementation MUST
-   * pre-filter `undefined` to sidestep the `repo.update(_, { field: undefined })`
-   * silent-skip gotcha — passing the unfiltered patch directly would no-op
-   * for any missing fields without raising.
-   *
-   * @param userId - The user's ID.
-   * @param patch - Partial preferences to write.
+   * TD-2 — Partial write of profile-preference columns. Impl MUST pre-filter
+   * `undefined` to sidestep the `repo.update(_, { field: undefined })` silent-skip gotcha.
    */
   updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void>;
 
-  /**
-   * Set or clear the MFA enrollment deadline column. Used by the warning-window
-   * login flow:
-   *   - On first admin login post-deploy without MFA: pass `now + 30d`.
-   *   - After successful enrollment: pass `null` to clear the deadline.
-   *
-   * @param userId - The user's ID.
-   * @param deadline - Absolute deadline timestamp, or `null` to clear.
-   */
+  /** `null` clears the MFA enrollment deadline; pass `now + 30d` on first admin login post-deploy. */
   setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void>;
 }

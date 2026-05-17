@@ -1,16 +1,10 @@
-/**
- * RFC 3986 percent-encodes a string, including characters `!'()*` that
- * `encodeURIComponent` leaves unencoded.
- */
+/** RFC 3986 — also encodes `!'()*` which `encodeURIComponent` leaves unencoded. */
 export const encodeRfc3986 = (value: string): string => {
   return encodeURIComponent(value).replace(/[!'()*]/g, (c) => {
     return `%${c.charCodeAt(0).toString(16).toUpperCase()}`;
   });
 };
 
-/**
- * Percent-encodes each non-empty segment of a `/`-delimited path.
- */
 export const encodePathSegments = (value: string): string => {
   return value
     .split('/')
@@ -19,9 +13,6 @@ export const encodePathSegments = (value: string): string => {
     .join('/');
 };
 
-/**
- * Parses and validates an S3 endpoint URL, stripping trailing slashes from the pathname.
- */
 export const normalizeEndpoint = (endpoint: string): URL => {
   const trimmed = endpoint.trim();
   if (!trimmed) {
@@ -36,9 +27,6 @@ export const normalizeEndpoint = (endpoint: string): URL => {
   return url;
 };
 
-/**
- * Builds a full S3 object path from bucket, key, and optional endpoint base path.
- */
 export const buildObjectPath = (params: {
   bucket: string;
   key: string;
@@ -51,9 +39,6 @@ export const buildObjectPath = (params: {
   return `${base}/${bucketPart}/${keyPart}`.replace(/\/{2,}/g, '/');
 };
 
-/**
- * Joins non-empty key parts into a single `/`-delimited object key.
- */
 export const joinKeyParts = (...parts: (string | undefined)[]): string => {
   return parts
     .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
@@ -63,10 +48,7 @@ export const joinKeyParts = (...parts: (string | undefined)[]): string => {
     .join('/');
 };
 
-/**
- * Normalizes an object key, optionally prepending a prefix, and validates
- * against path-traversal attacks.
- */
+/** SEC: validates against path-traversal attacks (`..` segment). */
 export const normalizeObjectKey = (params: { key: string; objectKeyPrefix?: string }): string => {
   const normalized = joinKeyParts(params.objectKeyPrefix, params.key);
   if (!normalized) {
@@ -79,8 +61,7 @@ export const normalizeObjectKey = (params: { key: string; objectKeyPrefix?: stri
 };
 
 /**
- * Resolves the base URL and full object path for a read (GET) operation,
- * accounting for public base URL overrides, bucket-in-host, and bucket-in-path
+ * Handles public base URL override + bucket-in-host (virtual-hosted) AND bucket-in-path
  * endpoint styles.
  */
 export const buildReadBaseUrlAndPath = (params: {
