@@ -17,6 +17,7 @@ import {
 } from '@modules/chat/useCase/llm/llm-sections/walk-tour-guide';
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import { logger } from '@shared/logger/logger';
+import { llmCostEurPerHour } from '@shared/observability/prometheus-metrics';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
@@ -29,12 +30,14 @@ import {
 } from './langchain-orchestrator-support';
 import { withLangfuseTrace } from './langchain-orchestrator-tracing';
 import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
+import { estimateCostCents } from './llm-cost-pricing';
 
 import type {
   ChatModel,
   InvokeSectionInput,
   LangChainChatOrchestratorDeps,
 } from './langchain-orchestrator-support';
+import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -61,11 +64,40 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
   private readonly semaphore: Semaphore;
   private readonly circuitBreaker: LLMCircuitBreaker;
+  private readonly costBreaker: LlmCostCircuitBreaker | null;
 
   constructor(deps: LangChainChatOrchestratorDeps = {}) {
     this.model = deps.model === undefined ? toModel() : deps.model;
     this.semaphore = deps.semaphore ?? new Semaphore(Math.max(1, env.llm.maxConcurrent));
     this.circuitBreaker = deps.circuitBreaker ?? new LLMCircuitBreaker();
+    this.costBreaker = deps.costBreaker ?? null;
+  }
+
+  /**
+   * C9.4 — records a conservative cost estimate against the cost circuit
+   * breaker and updates the Prom gauge. Fail-open: any failure is logged but
+   * does not propagate into the chat path.
+   */
+  private recordSectionCost(
+    payloadBytes: number,
+    museumId: number | null | undefined,
+    tier: string | undefined,
+  ): void {
+    if (!this.costBreaker) return;
+    try {
+      const cents = estimateCostCents(payloadBytes, env.llm.model, env.llm.maxOutputTokens);
+      if (cents <= 0) return;
+      this.costBreaker.recordCharge(cents);
+      const labels = {
+        tier: tier ?? 'anonymous',
+        museum_id: museumId != null ? String(museumId) : 'none',
+      };
+      llmCostEurPerHour.set(labels, this.costBreaker.getState().hourlySpendCents / 100);
+    } catch (err) {
+      logger.warn('llm_cost_record_failed', {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   getCircuitBreakerState(): ReturnType<LLMCircuitBreaker['getState']> {
@@ -97,6 +129,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
             ),
           );
+          // C9.4 — record cost only on success (R2: no charge on error).
+          this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
           return serializeStructuredOutput(parsed);
         }
 
@@ -106,6 +140,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             async () => await input.model.invoke(input.sectionMessages, { signal: input.signal }),
           ),
         );
+        // C9.4 — record cost only on success.
+        this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
         return toContentString(result.content);
       },
     );
@@ -202,6 +238,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         },
       );
       const payloadBytes = estimatePayloadBytes(sectionMessages);
+      // C9.4 — V1 tier derivation. D5: anonymous when userId absent, free otherwise.
+      const tier = input.userId == null ? 'anonymous' : 'free';
       return {
         name: section.name,
         timeoutMs: section.timeoutMs,
@@ -215,6 +253,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             timeoutMs: section.timeoutMs,
             payloadBytes,
             outputSchema: section.outputSchema,
+            museumId: input.museumId ?? null,
+            tier,
           }),
       };
     });
@@ -282,7 +322,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     });
 
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
+    const walkPayloadBytes = estimatePayloadBytes(messages);
     const result = await structured.invoke(messages, { signal });
+
+    // C9.4 — record cost on walk path (bypasses invokeSection). R2: only on success.
+    const walkTier = input.userId == null ? 'anonymous' : 'free';
+    this.recordSectionCost(walkPayloadBytes, input.museumId ?? null, walkTier);
 
     // Schema `.default([])` → always present (Zod 4 infers as required).
     const suggestions = result.suggestions;
