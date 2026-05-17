@@ -1,89 +1,46 @@
 import { withPolicyCitation } from '@modules/chat/useCase/image/chat-image.helpers';
 import { AUDIT_SECURITY_GUARDRAIL_PASS } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
-import {
-  guardrailCategoryBlocksTotal,
-  guardrailDecisionsTotal,
-} from '@shared/observability/prometheus-metrics';
-import { env } from '@src/config/env';
 
 import {
   buildGuardrailRefusal,
   evaluateAssistantOutputGuardrail,
   evaluateUserInputGuardrail,
 } from './art-topic-guardrail';
+import { recordBiasMetrics, resolveLocaleLabel } from './eval/bias-metrics.helper';
+import { aggregateOutputText, runArtTopicClassifier } from './eval/output-classifier.helper';
+import {
+  evaluateGuardrailProvider,
+  runLlmJudge,
+  type EvaluateGuardrailProviderDeps,
+  type RunLlmJudgeDeps,
+} from './eval/v2-layers.helper';
 import { buildGuardrailBlockAuditEntry } from './guardrail-audit-payload';
 import { logInputRedaction } from './guardrail-input-redaction';
-import { judgeVerdictToReason, mapProviderReason } from './guardrail-reason-mapping';
 import { buildBlockedOutputPayload } from './guardrail-refusal-builder';
 
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { GuardrailAuditContext } from './guardrail-audit-payload';
+import type {
+  ArtTopicClassifierPort,
+  GuardrailEvaluationServiceDeps,
+  InputGuardrailResult,
+  LlmJudgeFn,
+} from './guardrail-evaluation.types';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type {
   ChatRepository,
   PersistMessageInput,
 } from '@modules/chat/domain/session/chat.repository.interface';
-import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { AuditService } from '@shared/audit/audit.service';
 
-export type { GuardrailAuditContext } from './guardrail-audit-payload';
-
-/** Minimal interface for the art-topic classifier used by the guardrail service. */
-export interface ArtTopicClassifierPort {
-  isArtRelated(text: string): Promise<boolean>;
-}
-
-/** Result of an input guardrail evaluation. */
-interface InputGuardrailResult {
-  allow: boolean;
-  reason?: GuardrailBlockReason;
-  /**
-   * Sanitized version of the user input when the provider scrubbed PII
-   * (LLM02 — Anonymize / Presidio). Callers MUST pass this to the LLM
-   * instead of the original text. Never persisted in clear, never logged.
-   */
-  redactedText?: string;
-}
-
-/**
- * F4 (2026-04-30) — callable shape for the LLM-judge second layer. Returns a
- * validated decision or `null` to signal fail-open (timeout / parse / budget).
- *
- * Wired in production by `chat-module.ts` to bind the orchestrator. Tests pass
- * a `jest.fn()` with the same signature.
- */
-export type LlmJudgeFn = (message: string) => Promise<JudgeDecision | null>;
-
-/** Dependencies for the guardrail evaluation service. */
-interface GuardrailEvaluationServiceDeps {
-  repository: ChatRepository;
-  audit?: AuditService;
-  artTopicClassifier?: ArtTopicClassifierPort;
-  /**
-   * Optional guardrail provider layer (ADR-048). Runs AFTER the deterministic
-   * keyword guardrail and uses the hexagonal `GuardrailProvider` port. When
-   * `observeOnly` is true the service logs decisions but never blocks —
-   * useful for Phase A rollout of a new candidate.
-   */
-  guardrailProvider?: GuardrailProvider;
-  guardrailProviderObserveOnly?: boolean;
-  /**
-   * F4 — LLM judge callable. Runs ONLY when `llmJudgeEnabled` is true AND the
-   * keyword pre-filter returned allow AND the message length is above the
-   * configured threshold. The judge cannot upgrade keyword blocks to allow.
-   *
-   * `null` from the judge = fail-open (caller falls back to keyword decision).
-   */
-  llmJudge?: LlmJudgeFn;
-  /**
-   * F4 — toggle that mirrors `env.guardrails.budgetCentsPerDay > 0`. Kept
-   * as an explicit dep so tests can flip it without env mutation.
-   */
-  llmJudgeEnabled?: boolean;
-}
+// Re-export the public API surface from `guardrail-evaluation.types.ts` so the
+// 5 downstream consumers (chat-message.service, chat.service, stream-buffer,
+// message-commit, prepare-message.pipeline) keep importing from this module
+// path. Zero-impact refactor: deep imports into `.types.ts` are not required.
+export type { GuardrailAuditContext, ArtTopicClassifierPort, LlmJudgeFn };
 
 /**
  * Evaluates input and output guardrails, logs audit events for blocked messages,
@@ -109,39 +66,6 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * F4 — runs the LLM judge after the keyword pre-filter has already returned
-   * allow. The judge can ONLY downgrade allow → block; never upgrade block →
-   * allow (the caller never invokes this when keyword decision is already
-   * blocking).
-   *
-   * Confidence floor of 0.6 — below that, the judge's verdict is too weak to
-   * justify overriding the deterministic keyword pass.
-   */
-  private async runLlmJudge(
-    text: string,
-  ): Promise<{ allow: true } | { allow: false; reason: GuardrailBlockReason }> {
-    if (!this.llmJudgeEnabled || !this.llmJudge) return { allow: true };
-    if (text.length <= env.guardrails.judgeMinMessageLength) return { allow: true };
-
-    const decision = await this.llmJudge(text);
-    if (!decision) return { allow: true }; // fail-open
-
-    if (decision.decision === 'allow' || decision.confidence < 0.6) {
-      return { allow: true };
-    }
-
-    const reason = judgeVerdictToReason(decision.decision);
-
-    logger.info('guardrail_judge_block', {
-      verdict: decision.decision,
-      confidence: decision.confidence,
-      mappedReason: reason,
-    });
-
-    return { allow: false, reason };
-  }
-
-  /**
    * Routes a guardrail block to the audit chain (V13 / STRIDE R3). Single
    * forensic entry per block; never throws — `auditService.log()` swallows
    * pipeline errors so a hiccup in audit insert can't break the chat hot path.
@@ -159,65 +83,25 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * Runs the configured guardrail provider check (ADR-048) with a safety net:
-   * any throw is translated to a fail-CLOSED blocking decision. In
-   * observe-only mode, blocking decisions are downgraded to `allow: true`
-   * after logging — letting operators validate a new candidate on production
-   * traffic without user-visible refusals.
+   * ADR-015 — exposes ONLY the V2 LLM Guard sidecar deps. Kept separate from
+   * {@link judgeDeps} so the two V2 layers stay structurally independent.
    */
-  private async evaluateGuardrailProvider(
-    phase: 'input' | 'output',
-    run: () => Promise<{ allow: boolean; reason?: string; redactedText?: string }>,
-  ): Promise<{ allow: boolean; reason?: GuardrailBlockReason; redactedText?: string }> {
-    if (!this.guardrailProvider) return { allow: true };
-
-    let raw: { allow: boolean; reason?: string; redactedText?: string };
-    try {
-      raw = await run();
-    } catch (error) {
-      logger.warn('guardrail_provider_throw_fail_closed', {
-        adapter: this.guardrailProvider.name,
-        phase,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      raw = { allow: false, reason: 'error' };
-    }
-
-    if (raw.allow) {
-      return {
-        allow: true,
-        ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
-      };
-    }
-
-    const mappedReason = mapProviderReason(raw.reason);
-
-    if (this.guardrailProviderObserveOnly) {
-      logger.info('guardrail_provider_observe_would_block', {
-        adapter: this.guardrailProvider.name,
-        phase,
-        rawReason: raw.reason,
-        mappedReason,
-      });
-      // Observe-only mode preserves any sanitized payload — operators can
-      // still validate the redaction pipeline end-to-end without flipping
-      // the candidate to enforce mode (LLM02 + ADR-048 Phase A).
-      return {
-        allow: true,
-        ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
-      };
-    }
-
-    logger.info('guardrail_provider_block', {
-      adapter: this.guardrailProvider.name,
-      phase,
-      rawReason: raw.reason,
-      mappedReason,
-    });
+  private providerDeps(): EvaluateGuardrailProviderDeps {
     return {
-      allow: false,
-      reason: mappedReason,
-      ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
+      guardrailProvider: this.guardrailProvider,
+      guardrailProviderObserveOnly: this.guardrailProviderObserveOnly,
+    };
+  }
+
+  /**
+   * ADR-015 — exposes ONLY the V2 LLM judge deps. Separate from
+   * {@link providerDeps} so flipping the judge cannot accidentally affect the
+   * sidecar provider and vice versa.
+   */
+  private judgeDeps(): RunLlmJudgeDeps {
+    return {
+      llmJudge: this.llmJudge,
+      llmJudgeEnabled: this.llmJudgeEnabled,
     };
   }
 
@@ -260,10 +144,14 @@ export class GuardrailEvaluationService {
     // Guardrail provider layer (LLM-Guard sidecar, future Llama Prompt Guard 2,
     // Lakera, etc. — ADR-048) when configured. Runs in addition to the
     // deterministic guardrail above, never replacing it.
-    const providerVerdict = await this.evaluateGuardrailProvider('input', async () => {
-      if (!this.guardrailProvider) return { allow: true };
-      return await this.guardrailProvider.checkInput({ text: text ?? '' });
-    });
+    const providerVerdict = await evaluateGuardrailProvider(
+      'input',
+      async () => {
+        if (!this.guardrailProvider) return { allow: true };
+        return await this.guardrailProvider.checkInput({ text: text ?? '' });
+      },
+      this.providerDeps(),
+    );
     if (!providerVerdict.allow) {
       recordBiasMetrics({ locale, layer: 'provider', decision: providerVerdict });
       await this.logBlock({
@@ -295,7 +183,7 @@ export class GuardrailEvaluationService {
     // long inputs where the keyword pre-filter said allow. Cannot upgrade
     // keyword blocks (those returned earlier above). Hard-block channels —
     // insult / prompt_injection — always trump the preClassified='art' hint.
-    const judgeDecision = await this.runLlmJudge(text ?? '');
+    const judgeDecision = await runLlmJudge(text ?? '', this.judgeDeps());
     if (!judgeDecision.allow) {
       recordBiasMetrics({ locale, layer: 'judge', decision: judgeDecision });
       await this.logBlock({
@@ -383,60 +271,6 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * Runs the optional art-topic classifier as the last layer of the output
-   * guardrail. Fail-CLOSED on error: if the classifier throws, suppress the
-   * LLM output and return a generic `unsafe_output` refusal (OWASP LLM 2026
-   * guidance — never pass unverified model output when a safety check fails
-   * to execute). Returns `undefined` when allowed, the refusal payload when
-   * blocked. Audit rows are emitted on every block branch.
-   */
-  private async runArtTopicClassifier(args: {
-    text: string;
-    metadata: ChatAssistantMetadata;
-    requestedLocale?: string;
-    providerRan: boolean;
-    context?: GuardrailAuditContext;
-  }): Promise<{ text: string; metadata: ChatAssistantMetadata; allowed: boolean } | undefined> {
-    const { text, metadata, requestedLocale, providerRan, context } = args;
-    if (!this.artTopicClassifier) return undefined;
-
-    let isArt: boolean;
-    try {
-      isArt = await this.artTopicClassifier.isArtRelated(text);
-    } catch {
-      await this.logBlock({
-        phase: 'output',
-        reason: 'unsafe_output',
-        fullText: text,
-        classifierRan: true,
-        providerRan,
-        context,
-      });
-      return buildBlockedOutputPayload({
-        reason: 'unsafe_output',
-        requestedLocale,
-        metadata,
-      });
-    }
-    if (!isArt) {
-      await this.logBlock({
-        phase: 'output',
-        reason: 'off_topic',
-        fullText: text,
-        classifierRan: true,
-        providerRan,
-        context,
-      });
-      return buildBlockedOutputPayload({
-        reason: 'off_topic',
-        requestedLocale,
-        metadata,
-      });
-    }
-    return undefined;
-  }
-
-  /**
    * Evaluates the assistant output guardrail. If the output is blocked, returns
    * the sanitized refusal text and metadata; otherwise returns the original.
    *
@@ -491,14 +325,21 @@ export class GuardrailEvaluationService {
 
     // Guardrail provider output check when configured (ADR-048;
     // defense-in-depth after keywords).
-    const providerVerdict = await this.evaluateGuardrailProvider('output', async () => {
-      if (!this.guardrailProvider) return { allow: true };
-      return await this.guardrailProvider.checkOutput({
-        text,
-        metadata: metadata as unknown as Record<string, unknown>,
-        locale: requestedLocale,
-      });
-    });
+    const providerVerdict = await evaluateGuardrailProvider(
+      'output',
+      async () => {
+        if (!this.guardrailProvider) return { allow: true };
+        // Spread lifts ChatAssistantMetadata → Record<string, unknown> (variance
+        // gap) and yields a fresh top-level object so provider mutation can't
+        // leak back. Replaces prior `as unknown as` cast.
+        return await this.guardrailProvider.checkOutput({
+          text,
+          metadata: { ...metadata },
+          locale: requestedLocale,
+        });
+      },
+      this.providerDeps(),
+    );
     if (!providerVerdict.allow) {
       await this.logBlock({
         phase: 'output',
@@ -515,13 +356,19 @@ export class GuardrailEvaluationService {
       });
     }
 
-    const classifierBlock = await this.runArtTopicClassifier({
-      text,
-      metadata,
-      requestedLocale,
-      providerRan,
-      context,
-    });
+    const classifierBlock = await runArtTopicClassifier(
+      {
+        text,
+        metadata,
+        requestedLocale,
+        providerRan,
+        context,
+      },
+      {
+        classifier: this.artTopicClassifier,
+        logBlock: (logParams) => this.logBlock(logParams),
+      },
+    );
     if (classifierBlock) return classifierBlock;
 
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, {
@@ -530,79 +377,5 @@ export class GuardrailEvaluationService {
       providerRan,
     });
     return { text, metadata, allowed: true };
-  }
-}
-
-/**
- * Aggregates the answer text with LLM-authored caption + rationale strings
- * from `metadata.images[]` and `metadata.suggestedImages[]`.
- *
- * D3 (2026-05) — those fields flow back to the user as visible text via
- * `ImageCarousel.<Text>`; they must pass through the same keyword guardrail
- * as the answer body so injection / PII leaks in either surface are caught.
- */
-function aggregateOutputText(text: string, metadata: ChatAssistantMetadata): string {
-  const parts: string[] = [text];
-  for (const img of metadata.images ?? []) {
-    if (img.caption) parts.push(img.caption);
-    if (img.rationale) parts.push(img.rationale);
-  }
-  for (const sugg of metadata.suggestedImages ?? []) {
-    if (sugg.caption) parts.push(sugg.caption);
-    if (sugg.rationale) parts.push(sugg.rationale);
-  }
-  return parts.join(' ');
-}
-
-/** Closed set of layers exposed as a Prometheus label (bounded cardinality). */
-type GuardrailLayer = 'keyword' | 'provider' | 'judge' | 'classifier';
-
-/** Closed set of locale labels (8 supported + `unknown`). */
-const KNOWN_LOCALES: ReadonlySet<string> = new Set([
-  'ar',
-  'de',
-  'en',
-  'es',
-  'fr',
-  'it',
-  'ja',
-  'zh',
-]);
-
-/**
- * Resolves a Prometheus-safe locale label from the audit context. Clips to
- * the closed 8-locale set + `unknown` to keep cardinality bounded — a hostile
- * client cannot inflate label cardinality by sending arbitrary locale strings.
- */
-function resolveLocaleLabel(context: GuardrailAuditContext | undefined): string {
-  const raw = context?.locale?.toLowerCase();
-  if (raw && KNOWN_LOCALES.has(raw)) return raw;
-  return 'unknown';
-}
-
-/**
- * Increments the bias-monitoring counters at decision time. Foundation for
- * `docs/compliance/FAIRNESS_METRICS_PLAN.md` Phase 1 — per-locale block-rate
- * derivation in Prometheus uses these as the base series. Methodology note:
- * baseline for alerts is `avg(block_rate per locale)`, NOT global
- * `total_blocks / total_requests` (a single locale dominating blocks would
- * contaminate the global mean, hiding per-locale anomalies).
- */
-function recordBiasMetrics(params: {
-  locale: string;
-  layer: GuardrailLayer;
-  decision: { allow: boolean; reason?: GuardrailBlockReason };
-}): void {
-  const decisionLabel = params.decision.allow ? 'allowed' : 'blocked';
-  guardrailDecisionsTotal.inc({
-    locale: params.locale,
-    layer: params.layer,
-    decision: decisionLabel,
-  });
-  if (!params.decision.allow && params.decision.reason) {
-    guardrailCategoryBlocksTotal.inc({
-      locale: params.locale,
-      category: params.decision.reason,
-    });
   }
 }

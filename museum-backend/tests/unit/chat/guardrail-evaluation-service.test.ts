@@ -615,6 +615,47 @@ describe('GuardrailEvaluationService', () => {
       expect(adv.checkOutput).toHaveBeenCalled();
     });
 
+    it('forwards a SHALLOW-COPIED metadata Record to the guardrail provider (no reference leak from variance spread)', async () => {
+      // Covers the inline `{ ...metadata }` spread that replaced the prior
+      // `as unknown as Record<string, unknown>` variance cast.
+      // Two contracts to enforce:
+      //   1) The provider receives the same key/value pairs as the structured
+      //      ChatAssistantMetadata, indexable by string key (Record shape).
+      //   2) Mutation by the provider on its argument MUST NOT leak back into
+      //      the caller's metadata (spread copies a fresh top-level object).
+      const adv = makeAdvancedMock({ allow: true }, { allow: true });
+      const service = new GuardrailEvaluationService({
+        repository: createMockRepository(),
+        guardrailProvider: adv,
+        guardrailProviderObserveOnly: false,
+      });
+
+      const originalCitations = ['policy:none'];
+      const metadata = {
+        citations: originalCitations,
+        intent: 'describe',
+      } as const;
+      const metadataSnapshot = JSON.parse(JSON.stringify(metadata)) as unknown;
+
+      await service.evaluateOutput({
+        text: 'Hello world about Monet',
+        metadata,
+        requestedLocale: 'en',
+      });
+
+      expect(adv.checkOutput).toHaveBeenCalledTimes(1);
+      const callArg = adv.checkOutput.mock.calls[0]?.[0] as {
+        metadata: Record<string, unknown>;
+      };
+      // 1) Contains the same keys, accessible via string index.
+      expect(callArg.metadata.intent).toBe('describe');
+      expect(callArg.metadata.citations).toEqual(['policy:none']);
+      // 2) Provider received a fresh top-level object (spread, not ref-equal).
+      expect(callArg.metadata).not.toBe(metadata);
+      // 3) Original metadata unchanged by the call (no mutation leaked back).
+      expect(JSON.parse(JSON.stringify(metadata))).toEqual(metadataSnapshot);
+    });
+
     it('maps jailbreak reason to prompt_injection', async () => {
       const adv = makeAdvancedMock({ allow: false, reason: 'jailbreak' });
       const service = new GuardrailEvaluationService({
