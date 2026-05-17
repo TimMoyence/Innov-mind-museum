@@ -7,32 +7,25 @@ import { handleJobFailure, type JobFailureSinks } from './job-failure.handler';
 
 import type { ConnectionOptions } from 'bullmq';
 
-/** Result returned by a scheduled-job handler — surfaced in logs and audit trails. */
 export interface ScheduledJobResult {
-  /** Number of rows / items processed. Used for log + metrics. */
+  /** Used for log + metrics. */
   rowsAffected: number;
-  /** Free-form per-job details (e.g. per-rule breakdown for retention prune). */
+  /** E.g. per-rule breakdown for retention prune. */
   details?: Record<string, unknown>;
 }
 
-/** Configuration for a single recurring job. */
 export interface ScheduledJobConfig {
-  /** Logical name (queue + log event). E.g. 'retention-prune-support-tickets'. */
+  /** Logical name = queue + log event. E.g. 'retention-prune-support-tickets'. */
   name: string;
-  /** BullMQ cron pattern. E.g. '15 3 * * *' = 03:15 UTC daily. */
+  /** E.g. '15 3 * * *' = 03:15 UTC daily. */
   cronPattern: string;
-  /** The work to perform on each fire. Must be idempotent. */
+  /** MUST be idempotent. */
   handler: () => Promise<ScheduledJobResult>;
-  /** Redis connection options (reuse the project's BullMQ connection). */
   connection: ConnectionOptions;
-  /**
-   * Optional override of attempts. Defaults to 1 — scheduled jobs prefer
-   * next-tick retry over inline retry to avoid blocking the queue.
-   */
+  /** Default 1 — scheduled jobs prefer next-tick retry over inline (don't block queue). */
   attempts?: number;
 }
 
-/** Lifecycle handle for a registered scheduled job. */
 export interface ScheduledJobHandle {
   start(): Promise<void>;
   close(): Promise<void>;
@@ -40,7 +33,7 @@ export interface ScheduledJobHandle {
 
 const DEFAULT_ATTEMPTS = 1;
 
-/** Runs the given async teardown step, logging any error under `label` without rethrowing. */
+/** Logs error under `label`, never rethrows. */
 async function safeClose(label: string, step: () => Promise<unknown>): Promise<void> {
   try {
     await step();
@@ -49,10 +42,7 @@ async function safeClose(label: string, step: () => Promise<unknown>): Promise<v
   }
 }
 
-/**
- * Registers the repeatable BullMQ scheduler entry. Returns `true` when live,
- * `false` when registration failed (caller must not spawn a worker).
- */
+/** Returns false on registration failure → caller must not spawn worker. */
 async function registerScheduler(queue: Queue, cfg: ScheduledJobConfig): Promise<boolean> {
   try {
     await queue.upsertJobScheduler(
@@ -75,7 +65,6 @@ async function registerScheduler(queue: Queue, cfg: ScheduledJobConfig): Promise
   }
 }
 
-/** Builds the shared failure-sinks for this job's worker. */
 function buildSinks(): JobFailureSinks {
   return {
     log: (event, meta) => {
@@ -85,7 +74,6 @@ function buildSinks(): JobFailureSinks {
   };
 }
 
-/** Spawns the BullMQ worker that runs `cfg.handler` on every cron tick. */
 function spawnWorker(cfg: ScheduledJobConfig): Worker {
   const sinks = buildSinks();
 
@@ -132,18 +120,11 @@ function spawnWorker(cfg: ScheduledJobConfig): Worker {
 }
 
 /**
- * Registers a single recurring BullMQ job. Mirrors the pattern of
- * `audit-cron.registrar.ts` and `chat-purge-cron.registrar.ts`:
- * `upsertJobScheduler` for idempotent reboot, `removeOnComplete: 100`,
- * `removeOnFail: 500`, Sentry-on-final-failure via shared `handleJobFailure`.
- *
- * Each fire calls `handler()` once. Successful runs emit a structured
- * `scheduled_job_completed` log event with `rowsAffected` and `details`.
- * Failures are routed through `handleJobFailure` (logs warn + Sentry on final
- * since `treatNoAttemptsAsFinal: true` — scheduled jobs have no retries).
- *
- * BullMQ's Redis-backed scheduler guarantees only one worker fires the handler
- * per scheduled tick across replicas.
+ * Mirrors `audit-cron.registrar.ts` / `chat-purge-cron.registrar.ts`:
+ * `upsertJobScheduler` (idempotent reboot), `removeOnComplete: 100`,
+ * `removeOnFail: 500`, Sentry-on-final via shared `handleJobFailure`.
+ * `treatNoAttemptsAsFinal: true` (no retries). BullMQ Redis-backed scheduler
+ * guarantees one worker per tick across replicas.
  */
 export function registerScheduledJob(cfg: ScheduledJobConfig): ScheduledJobHandle {
   const queue = new Queue(cfg.name, {

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- OpenTelemetry conditional loading requires CJS require() */
 import { env } from '@src/config/env';
 
-/** Structural subset of `@opentelemetry/sdk-node`'s NodeSDK that this module touches. */
 interface OtelSdkLike {
   start: () => void;
   shutdown: () => Promise<void>;
@@ -9,25 +8,16 @@ interface OtelSdkLike {
 
 let sdkInstance: OtelSdkLike | null = null;
 
-/**
- * Initializes the OpenTelemetry SDK with auto-instrumentation and OTLP trace export.
- * No-op when `OTEL_ENABLED` is not set — the app runs identically without OTel.
- *
- * Uses dynamic `require()` so OTel packages are only loaded when the feature is enabled,
- * avoiding import errors if the packages aren't installed in some environments.
- */
+/** Dynamic `require()` so OTel packages only load when enabled. */
 export function initOpenTelemetry(): void {
   if (!env.otel?.enabled) return;
 
-  // Dynamic imports to avoid loading OTel packages when disabled
   const { NodeSDK } = require('@opentelemetry/sdk-node');
   const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
   const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-  // `@opentelemetry/resources` v2 removed the `Resource` class constructor —
-  // use the `resourceFromAttributes(...)` factory instead (Renovate PR #224
-  // bumped the OTel monorepo to ^0.217.0 without migrating this call site,
-  // which crashed every container start in prod with "Resource is not a
-  // constructor" — see 2026-05-12 hotfix).
+  // `@opentelemetry/resources` v2 removed `Resource` constructor — use
+  // `resourceFromAttributes()` factory (Renovate PR #224 hotfix 2026-05-12,
+  // "Resource is not a constructor" crashed every container start in prod).
   const { resourceFromAttributes } = require('@opentelemetry/resources');
   const {
     ATTR_SERVICE_NAME,
@@ -50,16 +40,11 @@ export function initOpenTelemetry(): void {
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },
         '@opentelemetry/instrumentation-dns': { enabled: false },
-        // Root cause of `MaxListenersExceededWarning: 11 finish listeners`
-        // (2026-05-12). RouterInstrumentation attaches a `prependListener('finish')`
-        // PER router layer to scope its span — Express has ~15 middlewares
-        // (requestLogger, cors, rate-limit, helmet, compression, json,
-        // urlencoded, cookieParser, csrf, …), so every request stacks 11+
-        // finish listeners on its ServerResponse. We keep instrumentation-http
-        // (1 span/request) + instrumentation-express (middleware chain span);
-        // per-layer router spans are redundant for our needs and pay a high
-        // listener-cost. Stack trace captured via process.on('warning') hook
-        // in src/instrumentation.ts pointed straight here.
+        // Disabled: RouterInstrumentation attaches `prependListener('finish')` PER router
+        // layer → with ~15 middlewares stacks 11+ finish listeners on ServerResponse,
+        // tripping MaxListenersExceededWarning (2026-05-12). instrumentation-http (1 span/
+        // request) + instrumentation-express (chain span) cover our needs. DO NOT re-enable;
+        // bumping setMaxListeners is NOT the fix.
         '@opentelemetry/instrumentation-router': { enabled: false },
       }),
     ],
@@ -75,10 +60,6 @@ export function initOpenTelemetry(): void {
   });
 }
 
-/**
- * Gracefully shuts down the OpenTelemetry SDK, flushing pending spans.
- * No-op when the SDK was never started.
- */
 export async function shutdownOpenTelemetry(): Promise<void> {
   if (sdkInstance) {
     try {

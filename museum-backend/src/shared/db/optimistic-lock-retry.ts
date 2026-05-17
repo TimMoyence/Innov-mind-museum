@@ -1,19 +1,14 @@
 import { logger } from '@shared/logger/logger';
 
-/** Options for {@link withOptimisticLockRetry}. */
 export interface OptimisticLockRetryOptions<T> {
-  /** The mutation to attempt — typically a `repository.save(entity)` call. */
+  /** Typically `repository.save(entity)`. */
   mutation: () => Promise<T>;
-  /**
-   * Refetches and reconciles the entity after a version-mismatch retry.
-   * Called between failed attempts so the next mutation operates on fresh state.
-   */
+  /** Called between failed attempts so next mutation has fresh state. */
   refetch: () => Promise<void>;
-  /** Maximum number of attempts. Default 3. */
+  /** Default 3. */
   maxAttempts?: number;
-  /** Base delay before the first retry in ms. Default 50. */
+  /** First retry base delay (ms). Default 50. */
   baseDelayMs?: number;
-  /** Optional context tag for log lines. */
   context?: string;
 }
 
@@ -21,16 +16,10 @@ const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_BASE_DELAY_MS = 50;
 
 /**
- * Runs `mutation` with optimistic-lock retry. On
- * `OptimisticLockVersionMismatchError` (TypeORM), refetches the entity (so the
- * caller's reference is fresh), waits jittered exponential backoff, and
- * retries. After `maxAttempts` exhausted attempts, the original error is
- * rethrown so the HTTP layer can surface a 409.
- *
- * Other errors are rethrown immediately — no retry on unrelated failures.
- *
- * Used to absorb short-lived admin contention (two operators saving the same
- * museum simultaneously). Sustained contention surfaces a 409 to the caller.
+ * Retries on `OptimisticLockVersionMismatchError` (TypeORM): refetch entity,
+ * jittered exponential backoff. After `maxAttempts`, original error rethrown
+ * for HTTP 409. Other errors rethrown immediately. Absorbs short-lived admin
+ * contention (two operators saving same museum); sustained → 409.
  */
 export async function withOptimisticLockRetry<T>(opts: OptimisticLockRetryOptions<T>): Promise<T> {
   const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;

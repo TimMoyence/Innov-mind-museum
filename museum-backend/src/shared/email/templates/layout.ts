@@ -1,25 +1,17 @@
 /**
- * Musaium email layout — single source of truth for the email charte graphique.
+ * Musaium email layout — single source of truth for charte graphique.
+ * Mirrors mobile app design (museum-frontend/shared/ui/).
  *
- * Mirrors the mobile app design language (`museum-frontend/shared/ui/`) :
- * - Pastel header gradient (matches `lightTheme.pageGradient` in `themes.ts`).
- * - Hosted logo image (`<FRONTEND_URL>/images/logo.png`, mirror of
- *   `museum-frontend/assets/images/logo.png`).
- * - Brand voice strings imported from the same i18n keys used in mobile copy
- *   (translation.json `welcome.subtitle`, `home.hero_title`, etc.).
- *
- * Design constraints (NOT mobile but emails-specific):
+ * Email-specific constraints:
  * - Table-based layout (Outlook desktop = Word render engine, requires tables).
- * - Inline CSS only, except a single `<style>` block in `<head>` for `@media`
- *   queries (mobile breakpoint) and Outlook fallbacks.
- * - Bulletproof CTA: VML mso conditional for Outlook + standard `<a>` for the rest.
+ * - Inline CSS only, except single `<style>` block in `<head>` for `@media`
+ *   queries and Outlook fallbacks.
+ * - Bulletproof CTA: VML mso conditional for Outlook + standard `<a>` rest.
  * - No backdrop-filter / glass effects (not supported by ANY email client).
  *
- * Color values MIRROR `design-system/tokens/colors.ts` (primary600 used for CTA
- * because that's what mobile `lightTheme.primary` resolves to). Hard-coded
- * here because the design-system package is not consumed at backend runtime.
- * The unit test `tests/unit/shared/email/templates/palette-mirror.test.ts`
- * guards against drift.
+ * Colors MIRROR design-system/tokens/colors.ts (primary600 = mobile
+ * lightTheme.primary). Hard-coded — design-system not consumed at backend
+ * runtime. Drift guarded by tests/unit/shared/email/templates/palette-mirror.test.ts.
  */
 
 const PALETTE = {
@@ -45,25 +37,22 @@ const FONT_STACK = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 const DEFAULT_LOGO_URL = 'https://musaium.com/images/logo.png';
 
-/** Input shape for {@link renderEmailLayout}. */
 export interface EmailLayoutInput {
-  /** Heading shown at top of body card. Static or pre-escaped. */
+  /** Static or pre-escaped. */
   heading: string;
-  /** HTML for the message body (paragraphs, blockquote, etc.). Pre-escaped where user data is involved. */
+  /** Pre-escaped where user data involved. */
   bodyHtml: string;
-  /** Optional CTA button label. */
   ctaLabel?: string;
-  /** Optional CTA target URL (server-built, no escaping needed for href). */
+  /** Server-built, no escaping needed for href. */
   ctaUrl?: string;
-  /** Plaintext fallback URL displayed under the CTA for clients that block buttons. Defaults to ctaUrl. */
+  /** Defaults to ctaUrl. For clients that block buttons. */
   fallbackUrl?: string;
-  /** Hidden inbox preview snippet. Plain text only, ≤120 chars. */
+  /** Hidden inbox preview, plain text only, ≤120 chars. */
   preheader?: string;
-  /** Locale used for the html lang attribute and footer copy. */
   locale?: 'fr' | 'en';
-  /** Optional context line in the footer ("Why am I receiving this?"). */
+  /** Footer context line ("Why am I receiving this?"). */
   footerNote?: string;
-  /** Override the hosted logo URL. Defaults to `<FRONTEND_URL>/images/logo.png`. */
+  /** Defaults to `<FRONTEND_URL>/images/logo.png`. */
   logoUrl?: string;
 }
 
@@ -86,10 +75,7 @@ const FALLBACK_PROMPT: Record<'fr' | 'en', string> = {
   en: 'Button not showing? Copy this link:',
 };
 
-/**
- * Compute the hosted logo URL.
- * Priority: explicit `logoUrl` arg > env `FRONTEND_URL` > musaium.com default.
- */
+/** Priority: explicit `logoUrl` > env `FRONTEND_URL` > musaium.com default. */
 const resolveLogoUrl = (override: string | undefined): string => {
   if (override) return override;
   const frontendUrl = process.env.FRONTEND_URL;
@@ -234,18 +220,14 @@ const buildCtaTable = (
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;">${inner}</table>`;
 };
 
-/**
- * Render the full HTML document for an email built on the Musaium charte.
- * Combines pastel header band with hosted logo, body card with optional CTA,
- * and footer with brand mention.
- */
+/** Pastel header + hosted logo, body card with optional CTA, footer with brand. */
 export function renderEmailLayout(input: EmailLayoutInput): string {
   const locale = input.locale ?? 'en';
   const footer = FOOTER_COPY[locale];
   const fallbackPrompt = FALLBACK_PROMPT[locale];
   const preheader = input.preheader ?? '';
   const logoUrl = resolveLogoUrl(input.logoUrl);
-  // Stryker disable next-line StringLiteral: trailing `?? ''` reached only when both fallbackUrl and ctaUrl are nullish; in that state buildCtaTable returns '' at the `!ctaUrl` guard (L232) without ever rendering fallbackUrl, so mutating the literal is unobservable. Verified equivalent 2026-05-13.
+  // Stryker disable next-line StringLiteral: trailing `?? ''` reached only when fallbackUrl AND ctaUrl nullish; buildCtaTable returns '' at !ctaUrl guard without rendering fallbackUrl. Verified equivalent 2026-05-13.
   const fallbackUrl = input.fallbackUrl ?? input.ctaUrl ?? '';
   const ctaTable = buildCtaTable(input.ctaLabel, input.ctaUrl, fallbackUrl, fallbackPrompt);
   const footerNoteBlock = input.footerNote ? renderFooterNote(input.footerNote) : '';

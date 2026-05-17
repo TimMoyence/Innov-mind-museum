@@ -6,18 +6,12 @@ import {
 
 import type { RequestHandler } from 'express';
 
-/**
- * Express middleware that records request rate + duration into Prometheus
- * metrics. Mount BEFORE route handlers so it sees every request.
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
- */
+/** Ordering: mount BEFORE route handlers so it sees every request. */
 export const httpMetricsMiddleware: RequestHandler = (req, res, next) => {
   const startNs = process.hrtime.bigint();
   res.on('finish', () => {
     const durationS = Number(process.hrtime.bigint() - startNs) / 1e9;
-    // req.route is typed as `any` by @types/express — narrow explicitly.
-    // Use the matched route pattern when available, fall back to req.path.
+    // req.route is typed as `any` by @types/express — narrow + fall back to req.path.
     const routeVal: unknown = req.route;
     const routePath =
       routeVal !== null &&

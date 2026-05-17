@@ -4,13 +4,6 @@ import type { EmailService } from './email.port';
 export class BrevoEmailService implements EmailService {
   constructor(private readonly apiKey: string) {}
 
-  /**
-   * Send a single transactional email via Brevo REST API.
-   *
-   * @param to - Recipient email address.
-   * @param subject - Email subject line.
-   * @param htmlContent - HTML body content.
-   */
   async sendEmail(to: string, subject: string, htmlContent: string): Promise<void> {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',

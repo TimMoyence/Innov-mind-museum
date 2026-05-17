@@ -1,7 +1,5 @@
-/** Audit actor types. */
 type AuditActorType = 'user' | 'system' | 'anonymous';
 
-/** Structured input for creating an audit log entry. */
 export interface AuditLogEntry {
   action: string;
   actorType: AuditActorType;
@@ -28,10 +26,8 @@ export const AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED = 'AUTH_EMAIL_CHANGE_CONFIRMED';
 export const AUDIT_AUTH_ONBOARDING_COMPLETED = 'AUTH_ONBOARDING_COMPLETED';
 export const AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED = 'AUTH_CONTENT_PREFERENCES_UPDATED';
 export const AUDIT_AUTH_TTS_VOICE_UPDATED = 'AUTH_TTS_VOICE_UPDATED';
-// TD-2 — batch update of the 5 profile preferences (defaultLocale,
-// defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode) via the
-// `/api/auth/me/preferences` endpoint. Metadata carries the raw patch (no
-// PII) so operators can reconstruct toggle-by-toggle history.
+// TD-2 — batch update of 5 profile preferences via `/api/auth/me/preferences`.
+// Metadata = raw patch (no PII) for toggle-by-toggle history reconstruction.
 export const AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED = 'AUTH_PROFILE_PREFERENCES_UPDATED';
 
 // ─── Account lifecycle ───
@@ -47,18 +43,15 @@ export const AUDIT_SECURITY_RATE_LIMIT = 'SECURITY_RATE_LIMIT';
 export const AUDIT_SECURITY_GUARDRAIL_BLOCK = 'SECURITY_GUARDRAIL_BLOCK';
 export const AUDIT_SECURITY_GUARDRAIL_PASS = 'SECURITY_GUARDRAIL_PASS';
 // ADR-047 (2026-05-12) — emitted on every LLM Guard sidecar circuit-breaker
-// transition into OPEN. Metadata-only payload (no raw prompts); operators
-// correlate with /metrics. Follows the standard audit pipeline (Sentry).
+// transition into OPEN. Metadata-only (no raw prompts); correlate with /metrics.
 export const AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN = 'SECURITY_LLM_GUARD_BREAKER_OPEN';
-// V13 / STRIDE R3 — phase-scoped guardrail blocks for retro-analysis (input vs output).
-// Carry redacted snippet (≤64 chars) + sha256 fingerprint to enable forensic dedup
-// without bloating the audit hash chain or echoing raw user/LLM payloads.
+// V13 / STRIDE R3 — phase-scoped (input vs output). Redacted snippet (≤64
+// chars) + sha256 fingerprint for forensic dedup without echoing raw payloads.
 export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
 export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
-// LLM02 (2026-05-14) — emitted when the guardrail provider returned a sanitized
-// input (PII scrubbed via Anonymize / Presidio). One hash-chained row per
-// effective redaction; payload carries only the post-scrub text + placeholder
-// counts (raw PII NEVER reaches the audit chain).
+// LLM02 (2026-05-14) — guardrail returned sanitized input (PII scrubbed via
+// Anonymize / Presidio). Payload = post-scrub text + placeholder counts ONLY
+// (raw PII NEVER reaches the audit chain).
 export const AUDIT_GUARDRAIL_INPUT_REDACTED = 'GUARDRAIL_INPUT_REDACTED';
 
 // ─── Admin events (future RBAC) ───
@@ -68,15 +61,13 @@ export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
 export const AUDIT_ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED';
 export const AUDIT_ADMIN_USER_UNSUSPENDED = 'ADMIN_USER_UNSUSPENDED';
 export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
-// R1 (C6) — admin tier override on `users.tier`. Emitted by
-// `ChangeUserTierUseCase` AFTER the mutation, BEFORE returning (N3 ordering).
-// Metadata = `{ from, to }` ; no counter state in the audit row (per N9 R2
-// doctrine — state stays on the user row, audit carries the transition only).
+// R1 (C6) — admin tier override on `users.tier`. Emitted by `ChangeUserTierUseCase`
+// AFTER mutation, BEFORE returning (N3 ordering). Metadata = `{ from, to }`;
+// no counter state (N9 R2: state on user row, audit carries transition only).
 export const AUDIT_ADMIN_USER_TIER_CHANGED = 'ADMIN_USER_TIER_CHANGED';
 // ─── Admin CSV export (R2 W3.4) ───
-// Distinct from AUDIT_DATA_EXPORT (reserved for user-self DSAR) — mixing
-// user-self and admin-export rows under one action breaks audit-chain
-// filter semantics. Per-kind constants make `WHERE action = …` trivial.
+// Distinct from AUDIT_DATA_EXPORT (user-self DSAR) — mixing breaks audit-chain
+// filter semantics. Per-kind constants make `WHERE action =` trivial.
 export const AUDIT_ADMIN_EXPORT_SESSIONS = 'ADMIN_EXPORT_SESSIONS';
 export const AUDIT_ADMIN_EXPORT_REVIEWS = 'ADMIN_EXPORT_REVIEWS';
 export const AUDIT_ADMIN_EXPORT_TICKETS = 'ADMIN_EXPORT_TICKETS';
@@ -98,11 +89,10 @@ export const AUDIT_MFA_RECOVERY_USED = 'MFA_RECOVERY_USED';
 export const AUDIT_MFA_WARNING_STARTED = 'MFA_WARNING_STARTED';
 
 // ─── GDPR consent events (S4-P0-02 — Apple Guideline 5.1.2(i) + GDPR Art. 7) ───
-// Hash-chained audit row emitted from GrantConsentUseCase / RevokeConsentUseCase
-// after the user_consents mutation lands but before the HTTP response. Metadata
-// payload: `{ scope, version, source }` minimum ; third-party AI rows also
-// carry `{ provider, category }`. Generic CONSENT_GRANTED / CONSENT_REVOKED
-// catches scopes outside the specialised families (analytics, marketing).
+// Hash-chained row from GrantConsentUseCase/RevokeConsentUseCase after
+// user_consents mutation, before HTTP response. Payload: `{ scope, version,
+// source }` min; third-party AI rows add `{ provider, category }`. Generic
+// CONSENT_GRANTED/CONSENT_REVOKED catches scopes outside specialised families.
 export const AUDIT_CONSENT_GRANTED = 'CONSENT_GRANTED';
 export const AUDIT_CONSENT_REVOKED = 'CONSENT_REVOKED';
 export const AUDIT_CONSENT_GRANTED_TOS = 'CONSENT_GRANTED_TOS';

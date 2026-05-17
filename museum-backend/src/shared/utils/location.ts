@@ -1,13 +1,6 @@
-/**
- * Parses a location string in the format "lat:<number>,lng:<number>"
- * into a typed coordinate object.
- *
- * @param raw - Raw location string from the client (e.g. "lat:48.8606,lng:2.3376").
- * @returns Parsed coordinates, or null if the input is invalid/out-of-range.
- */
+/** "lat:48.8606,lng:2.3376" → coords; null on invalid/out-of-range. */
 export function parseLocationString(raw?: string): { lat: number; lng: number } | null {
   if (!raw) return null;
-  // Expected format: "lat:48.8606,lng:2.3376"
   const match = /^lat:([-\d.]+),lng:([-\d.]+)$/.exec(raw.trim());
   if (!match) return null;
   const lat = Number.parseFloat(match[1]);

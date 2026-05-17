@@ -1,8 +1,5 @@
 import { renderEmailLayout } from './layout';
 
-/**
- *
- */
 export interface ChangeEmailEmailInput {
   confirmUrl: string;
   locale?: 'fr' | 'en';
@@ -44,7 +41,6 @@ const COPY: Record<
   },
 };
 
-/** Build the HTML body for the email-change confirmation email sent to the new address. */
 export function buildChangeEmailEmail(input: ChangeEmailEmailInput): string {
   const locale = input.locale ?? 'en';
   const copy = COPY[locale];

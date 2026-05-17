@@ -4,10 +4,7 @@ import { env } from '@src/config/env';
 
 import type { ClusterNode, ClusterOptions } from 'ioredis';
 
-/**
- * Parses a comma-separated "host:port" string into ioredis ClusterNode array.
- * Entries with no port default to 6379.
- */
+/** "host:port,..." → ClusterNode[]. No port → 6379. */
 const parseClusterNodes = (raw: string): ClusterNode[] =>
   raw
     .split(',')
@@ -19,28 +16,13 @@ const parseClusterNodes = (raw: string): ClusterNode[] =>
     });
 
 /**
- * Creates an ioredis Cluster client when `REDIS_CLUSTER_NODES` is set.
- * Returns `null` when the env var is absent — callers fall back to the
- * single-instance Redis connection unchanged.
- *
- * Usage pattern:
- *   const cluster = createRedisClusterClient();
- *   if (cluster) {
- *     // use cluster client
- *   } else {
- *     // use existing single-instance client
- *   }
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
- * ADR: docs/adr/ADR-023-redis-cluster-topology.md
+ * ioredis Cluster client when `REDIS_CLUSTER_NODES` set; null otherwise
+ * (caller falls back to single-instance). ADR-023.
  */
 export function createRedisClusterClient(opts?: ClusterOptions): Cluster | null {
   const raw = env.redis.clusterNodes;
-  // Stryker mutant on `if (!raw)` cannot be killed by a unit test because
-  // `env` is captured at module-load time and tests run with REDIS_CLUSTER_NODES
-  // unset (raw === null). Toggling at runtime would require a process-wide
-  // env reset, which the test suite intentionally avoids — see existing test
-  // header "env.ts caches values at module load time…".
+  // Stryker: cannot kill — env captured at module-load and tests run with
+  // REDIS_CLUSTER_NODES unset (raw === null). Process-wide env reset avoided.
   // Stryker disable next-line ConditionalExpression
   if (!raw) return null;
   const nodes = parseClusterNodes(raw);

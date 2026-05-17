@@ -1,8 +1,5 @@
 import { renderEmailLayout } from './layout';
 
-/**
- *
- */
 export interface VerifyEmailInput {
   verifyUrl: string;
   locale?: 'fr' | 'en';
@@ -38,7 +35,6 @@ const COPY: Record<
   },
 };
 
-/** Build the HTML body for the email-verification email sent at registration. */
 export function buildVerifyEmail(input: VerifyEmailInput): string {
   const locale = input.locale ?? 'en';
   const copy = COPY[locale];

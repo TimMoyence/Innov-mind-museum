@@ -3,19 +3,10 @@ import { REDACTED, SENSITIVE_QUERY_KEYS } from '@shared/observability/sentry-scr
 
 import type { Request, Response, NextFunction } from 'express';
 
-/**
- * Paths whose successful traffic is too noisy to log (health checks polled by uptime monitors,
- * load balancers, CI smoke tests, and Prometheus scrapes). Matched against `req.originalUrl` exactly.
- */
+/** Health/metrics polling paths — too noisy to log. Matched against `req.originalUrl` exactly. */
 const SILENT_PATHS: readonly string[] = ['/api/health', '/health', '/health/deep', '/metrics'];
 
-/**
- * F11 (2026-04-30) — Redacts sensitive query-string keys from a URL before logging.
- * Mirrors the redaction list owned by `sentry-scrubber.ts` so the request logger and
- * the Sentry transport apply the same rules (single source of truth).
- *
- * @param originalUrl - Express `req.originalUrl` (path + querystring).
- */
+/** F11 — Mirrors sentry-scrubber redaction list (single source of truth). */
 function redactQueryString(originalUrl: string): string {
   const queryIndex = originalUrl.indexOf('?');
   if (queryIndex < 0) return originalUrl;
@@ -38,7 +29,6 @@ function redactQueryString(originalUrl: string): string {
   return `${path}?${redactedPairs}`;
 }
 
-/** Logs each completed HTTP request with method, path, status, latency, and request ID. */
 export const requestLoggerMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   const startedAt = Date.now();
   const requestId = req.requestId;

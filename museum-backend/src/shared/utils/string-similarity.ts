@@ -1,20 +1,8 @@
-/**
- * String similarity helpers for museum name deduplication.
- *
- * Used by the museum search use case to merge local + OSM results and to
- * collapse duplicate OSM nodes that represent the same physical museum but
- * sit a few hundred meters apart in OpenStreetMap.
- */
+// String similarity helpers for museum name dedup (local + OSM merge,
+// collapsing OSM nodes ~hundreds-of-meters apart representing same museum).
 
-/**
- * French museum-name noise tokens to strip before comparison.
- *
- * Applied after lowercase + NFD diacritic stripping so that "Musée", "musee",
- * and "Musee" all reduce to "musee" and can be removed consistently.
- *
- * Kept deliberately small — adding too many words (e.g. "art", "histoire")
- * would merge unrelated museums.
- */
+// French noise tokens stripped after lowercase + NFD diacritic stripping.
+// Kept small — adding too many (e.g. "art", "histoire") would merge unrelated.
 // Stryker disable StringLiteral,ArrayDeclaration: static module-load init — every literal verified killable via tests/unit/shared/string-similarity.test.ts (stop-token table + manual mutation check confirmed each value flips the asserted output), but Stryker's perTest coverage cannot map static-context mutants to the tests that exercise them, so the run leaves them as Survived. Re-checked 2026-05-11.
 const FRENCH_STOP_TOKENS = new Set<string>([
   'musee',
@@ -33,26 +21,14 @@ const FRENCH_STOP_TOKENS = new Set<string>([
 ]);
 // Stryker restore StringLiteral,ArrayDeclaration
 
-/** Default Jaro-Winkler similarity threshold for museum name matching. */
+/** Default Jaro-Winkler similarity threshold. */
 export const DEFAULT_NAME_SIMILARITY_THRESHOLD = 0.85;
 
 /**
- * Normalize a museum name for similarity comparison.
- *
- * Steps:
- *  1. Lowercase.
- *  2. Strip diacritics via NFD normalization + combining-mark removal.
- *  3. Tokenize on non-alphanumeric characters.
- *  4. Drop French stop tokens (articles, "musee", "museum", ...).
- *  5. Re-join with single spaces.
- *
- * Empty-safe fallback: if the normalized form has fewer than 2 chars after
- * stripping (e.g. "Musée" → "" or "Le" → "" or "l" → ""), returns the
- * simple lowercase+diacritic-stripped form instead. This prevents two
- * unrelated names that both reduce to "" from being treated as equal.
- *
- * @param name - Raw museum name.
- * @returns Normalized form suitable for similarity comparison.
+ * Lowercase → NFD strip → tokenize on non-alnum → drop French stop tokens
+ * → join. Fallback: if normalized form < 2 chars (e.g. "Musée"/"Le" → ""),
+ * returns lowercase+diacritic-stripped form to avoid two unrelated names
+ * collapsing to the same empty bucket.
  */
 export const normalizeMuseumName = (name: string): string => {
   const lowered = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -66,20 +42,13 @@ export const normalizeMuseumName = (name: string): string => {
   const stripped = tokens.join(' ').trim();
 
   if (stripped.length < 2) {
-    // Fallback: return the simple form (no stop-word stripping) to avoid
-    // collapsing unrelated short names to the same empty bucket.
+    // Fallback to simple form to avoid empty-bucket collisions.
     return lowered.replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
   return stripped;
 };
 
-/**
- * Scans `a` vs `b` within the matching window, marking matched positions
- * in `aMatches` / `bMatches`.
- *
- * @returns Total number of matches found.
- */
 const markJaroMatches = (
   a: string,
   b: string,
@@ -104,10 +73,7 @@ const markJaroMatches = (
   return matches;
 };
 
-/**
- * Counts transpositions on matched characters: pairs of matched positions
- * in `a` and `b` that disagree character-wise when traversed in order.
- */
+/** Transpositions = matched positions in a/b that disagree char-wise in order. */
 const countJaroTranspositions = (
   a: string,
   b: string,
@@ -126,12 +92,9 @@ const countJaroTranspositions = (
 };
 
 /**
- * Jaro similarity in [0, 1] between two strings.
- *
- * Standard algorithm:
- *  - Matching window: floor(max(|a|, |b|) / 2) - 1, clamped to >= 0.
- *  - Two chars match if equal and within the matching window.
- *  - Transpositions counted on matched chars preserving order.
+ * Jaro similarity in [0, 1]. Match window = floor(max(|a|,|b|)/2)-1 ≥ 0.
+ * Two chars match iff equal AND within window. Transpositions count on
+ * matched chars preserving order.
  */
 const jaroSimilarity = (a: string, b: string): number => {
   // Stryker disable next-line ConditionalExpression: removing this early-return path still produces 1 for equal non-empty inputs via the full algorithm (matches=a.length, transpositions=0 → (1+1+1)/3=1).
@@ -152,14 +115,7 @@ const jaroSimilarity = (a: string, b: string): number => {
   return (matches / a.length + matches / b.length + (matches - transpositions / 2) / matches) / 3;
 };
 
-/**
- * Jaro-Winkler similarity in [0, 1] between two strings.
- *
- * Adds a prefix boost (p = 0.1, max 4 chars) on top of the Jaro score,
- * favoring pairs that share a common prefix.
- *
- * Pure function, no dependencies.
- */
+/** Jaro-Winkler [0, 1]: Jaro + prefix boost (p = 0.1, max 4 chars). Pure. */
 export const jaroWinklerSimilarity = (a: string, b: string): number => {
   // Stryker disable next-line ConditionalExpression: removing this early-return falls through to jaroSimilarity(equal) which itself short-circuits to 1, and the commonPrefix loop runs but the prefix bonus times (1 - 1) is 0, so the final result is still 1.
   if (a === b) return 1;
@@ -179,22 +135,9 @@ export const jaroWinklerSimilarity = (a: string, b: string): number => {
 };
 
 /**
- * Museum name similarity check with substring fallback.
- *
- * Returns true if either:
- *  - Jaro-Winkler similarity of the normalized forms is >= `threshold`, OR
- *  - one normalized form contains the other as a substring (catches cases
- *    like "CAPC" vs "CAPC musée d'art contemporain" where JW drops below
- *    threshold because of the large length difference).
- *
- * The substring check is run on the normalized forms (diacritics stripped,
- * stop words removed) so it also catches "Louvre" vs "Musée du Louvre"
- * after normalization.
- *
- * @param rawA - First raw name.
- * @param rawB - Second raw name.
- * @param threshold - Jaro-Winkler minimum similarity (default 0.85).
- * @returns true if the names likely refer to the same museum.
+ * True if JW similarity >= threshold OR one normalized form contains the
+ * other (catches short/long form e.g. "CAPC" vs "CAPC musée d'art
+ * contemporain", or "Louvre" vs "Musée du Louvre" post-normalization).
  */
 export const museumNamesAreSimilar = (
   rawA: string,

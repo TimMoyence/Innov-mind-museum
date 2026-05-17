@@ -1,11 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Notable artworks stored in user_memories.notableArtworks.
- *
- * Shape matches the NotableArtwork interface in
- * src/modules/chat/domain/userMemory.types.ts. The array defaults to []
- * on first insert. artist, museum are optional.
+ * `user_memories.notableArtworks`. Shape matches NotableArtwork in
+ * src/modules/chat/domain/userMemory.types.ts. Defaults `[]` on first insert.
  */
 export const NotableArtworkSchema = z.object({
   title: z.string().min(1),
@@ -16,11 +13,5 @@ export const NotableArtworkSchema = z.object({
 });
 
 export const NotableArtworksSchema = z.array(NotableArtworkSchema);
-/**
- *
- */
 export type NotableArtwork = z.infer<typeof NotableArtworkSchema>;
-/**
- *
- */
 export type NotableArtworks = z.infer<typeof NotableArtworksSchema>;

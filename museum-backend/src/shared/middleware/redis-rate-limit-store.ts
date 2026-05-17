@@ -9,15 +9,9 @@ interface Bucket {
 }
 
 /**
- * Lua script performing an atomic INCR + PEXPIRE + PTTL in a single Redis call.
- * Guarantees that concurrent increments from multiple instances cannot race
- * between the INCR and EXPIRE — which would leak a key without TTL and allow
- * an unbounded bucket to persist in Redis.
- *
- * KEYS[1] = bucket key
- * ARGV[1] = window TTL in ms
- *
- * Returns `[count, pttl]`.
+ * Atomic INCR + PEXPIRE + PTTL in one Redis call. Prevents race between INCR + EXPIRE
+ * across instances → would leak TTL-less key + unbounded bucket persistence.
+ * KEYS[1]=key, ARGV[1]=windowMs. Returns [count, pttl].
  */
 const INCR_EXPIRE_LUA = `
 local count = redis.call('INCR', KEYS[1])
@@ -33,10 +27,7 @@ end
 return {count, pttl}
 `;
 
-/**
- * Redis-backed rate-limit store using an atomic Lua script for INCR + EXPIRE.
- * Falls back to an in-memory store when Redis is unavailable.
- */
+/** In-memory fallback when Redis unavailable. */
 export class RedisRateLimitStore {
   private readonly redis: Redis;
   private readonly fallback: InMemoryBucketStore<Bucket>;
@@ -49,14 +40,6 @@ export class RedisRateLimitStore {
     });
   }
 
-  /**
-   * Atomically increment the request count for a key within a time window.
-   * Uses a Lua EVAL so INCR + PEXPIRE are guaranteed atomic across instances.
-   *
-   * @param key - Bucket key (will be prefixed with `ratelimit:`).
-   * @param windowMs - Window duration in milliseconds.
-   * @returns The current count after increment and the absolute reset timestamp.
-   */
   async increment(key: string, windowMs: number): Promise<{ count: number; resetAt: number }> {
     const redisKey = `${this.keyPrefix}${key}`;
 
@@ -80,22 +63,12 @@ export class RedisRateLimitStore {
     }
   }
 
-  /**
-   * Exposes the underlying ioredis client so callers (e.g. the login lockout
-   * counter) can run specialized atomic Lua scripts without duplicating the
-   * connection lifecycle.
-   *
-   * @returns The underlying ioredis client.
-   */
+  /** Exposes ioredis so callers (login lockout) can run specialized Lua scripts. */
   getRedisClient(): Redis {
     return this.redis;
   }
 
-  /**
-   * Reset a specific key (e.g. after successful auth).
-   *
-   * @param key - Bucket key to delete (will be prefixed with `ratelimit:`).
-   */
+  /** e.g. after successful auth. */
   async reset(key: string): Promise<void> {
     const redisKey = `${this.keyPrefix}${key}`;
     try {
@@ -106,12 +79,10 @@ export class RedisRateLimitStore {
     this.fallback.delete(key);
   }
 
-  /** Stop the in-memory fallback sweep timer. */
   stopSweep(): void {
     this.fallback.stopSweep();
   }
 
-  /** Clear the in-memory fallback store. */
   clear(): void {
     this.fallback.clear();
   }

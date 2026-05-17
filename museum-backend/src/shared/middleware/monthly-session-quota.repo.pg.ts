@@ -7,17 +7,13 @@ import type {
 import type { DataSource } from 'typeorm';
 
 /**
- * R1 (C6) — PostgreSQL-backed implementation of `MonthlyQuotaRepo`.
- *
- * `tryConsume` runs the single atomic SQL of R1 §3.2 D2 — counter is either
- * bumped (RETURNING the post-update row) or refused (0 rows) when the WHERE
- * clause sees `sessions_month_count >= limit` on the same month. No
- * read-modify-write race window (R11).
+ * R1 (C6) — atomic single-SQL increment/reset (R1 §3.2 D2). WHERE clause refuses (0 rows)
+ * when `sessions_month_count >= limit` on same month → no read-modify-write race (R11).
+ * CASE handles same-month-increment AND month-rollover-reset in one round trip.
  */
 export class PgMonthlyQuotaRepo implements MonthlyQuotaRepo {
   constructor(private readonly dataSource: DataSource) {}
 
-  /** Loads the minimal projection (id, tier, counters) for the user row. */
   async loadUser(userId: number): Promise<MonthlyQuotaUserRow | null> {
     const repo = this.dataSource.getRepository(User);
     const row = await repo.findOne({
@@ -33,13 +29,7 @@ export class PgMonthlyQuotaRepo implements MonthlyQuotaRepo {
     };
   }
 
-  /**
-   * Atomic increment / reset of the monthly counter. Returns the post-update
-   * counters or `null` when the WHERE clause refused (quota exhausted on the
-   * same month). Driven by the SQL from R1 §3.2 D2 — the CASE expression
-   * handles both same-month-increment AND month-rollover-reset in one round
-   * trip.
-   */
+  /** Returns post-update counters or `null` when WHERE refused (quota exhausted same month). */
   async tryConsume(
     userId: number,
     monthStart: Date,

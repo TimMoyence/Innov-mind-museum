@@ -10,28 +10,15 @@
 import { SUPPORTED_LOCALES, type SupportedLocale } from './locale';
 
 /**
- * GDPR Article 22 + AI Act Art. 14 / Art. 50 — i18n map of human-readable
- * decision explanations and recourse paths exposed by
- * `GET /api/chat/messages/:id/explanation`.
- *
- * Categories mirror `GuardrailBlockReason` (input + output) plus the
- * pseudo-categories `allowed` (the message was not blocked) and `unknown`
- * (decision predates the metadata schema, or category was not stamped).
- *
- * Strings are kept short (≤ 200 chars) so they are usable as-is in chat UI
- * bubbles and modals. Translations were sourced via WebSearch against the
- * canonical legal terminology of each locale ("right to explanation" =
- * "droit à l'explication" / "Recht auf Erklärung" / "derecho a explicación"
- * / "diritto a una spiegazione" / "説明を受ける権利" / "解释权").
- *
- * Source: `docs/GDPR_ART22_SCOPE.md` + research notes at
- * `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-audit-log-patterns.md` §B.
+ * GDPR Art 22 + AI Act Art 14 / 50 — i18n explanations + recourse paths for
+ * `GET /api/chat/messages/:id/explanation`. Categories mirror
+ * `GuardrailBlockReason` (input + output) plus `allowed` and `unknown`.
+ * Strings ≤ 200 chars (chat UI). See `docs/GDPR_ART22_SCOPE.md`.
  */
 
 /**
- * Categories surfaced by the explanation endpoint. Superset of
- * `GuardrailBlockReason` mapped through `mapToExplanationCategory` so the
- * external contract is decoupled from the internal block-reason taxonomy.
+ * Superset of `GuardrailBlockReason` mapped via `mapToExplanationCategory` so
+ * external contract decoupled from internal taxonomy.
  */
 export type ExplanationCategory =
   | 'off_topic'
@@ -40,17 +27,11 @@ export type ExplanationCategory =
   | 'service_unavailable'
   | 'unsafe_output';
 
-/**
- * Internal map keys: explanation categories + `allowed` (no block) + `unknown`
- * (block reason was not preserved or category falls outside the user-facing
- * taxonomy).
- */
+/** Adds `allowed` + `unknown` to the public categories. */
 type ExplanationKey = ExplanationCategory | 'allowed' | 'unknown';
 
-/** Recourse channels surfaced to the user when an explanation is requested. */
 export type RecourseType = 'self-retry' | 'signal' | 'support';
 
-/** A localised explanation entry — summary + recourse pair. */
 export interface ExplanationStrings {
   summary: string;
   recourse: {
@@ -59,17 +40,12 @@ export interface ExplanationStrings {
   };
 }
 
-/** Locale-keyed dictionary of explanation strings (category → strings). */
 export type ExplanationReasonMap = Record<
   SupportedLocale,
   Record<ExplanationKey, ExplanationStrings>
 >;
 
-/**
- * Source-of-truth localised strings. All locales kept in sync; FR + EN are the
- * primary targets per CLAUDE.md, the others mirror the same shape and were
- * authored alongside the existing `guardrail-refusals.ts` map.
- */
+// FR + EN primary (CLAUDE.md), others mirror same shape (see guardrail-refusals.ts).
 export const EXPLANATION_REASONS: ExplanationReasonMap = {
   en: {
     allowed: {
@@ -520,21 +496,12 @@ export const EXPLANATION_REASONS: ExplanationReasonMap = {
   },
 };
 
-/**
- * Compile-time guarantee that every supported locale has an entry — the
- * indexed-access on `EXPLANATION_REASONS[K]` would error if a locale was
- * missing. No runtime use required (no `void` operator, no dead binding).
- */
+/** Compile-time guarantee every locale has an entry. */
 export type ExplanationReasonsType = {
   [K in SupportedLocale]: (typeof EXPLANATION_REASONS)[K];
 };
 
-/**
- * Lookup table backing {@link mapToExplanationCategory}. Keys are raw
- * `GuardrailBlockReason` strings (and a few historic synonyms); values are the
- * public `ExplanationCategory` they map to. Anything not in this table maps to
- * `null` (truly unknown → no user-facing taxonomy match).
- */
+/** Raw `GuardrailBlockReason` + historic synonyms → public category. */
 const CATEGORY_MAPPING: Readonly<Record<string, ExplanationCategory>> = {
   off_topic: 'off_topic',
   prompt_injection: 'prompt_injection',
@@ -549,11 +516,7 @@ const CATEGORY_MAPPING: Readonly<Record<string, ExplanationCategory>> = {
   unsafe_output: 'unsafe_output',
 };
 
-/**
- * Maps a raw internal `GuardrailBlockReason` (or arbitrary string from older
- * audit rows) to the externally-stable `ExplanationCategory`. Returns `null`
- * when the reason does not correspond to a user-facing category.
- */
+/** null when reason has no user-facing category. */
 export function mapToExplanationCategory(
   reason: string | null | undefined,
 ): ExplanationCategory | null {
@@ -561,11 +524,6 @@ export function mapToExplanationCategory(
   return CATEGORY_MAPPING[reason] ?? null;
 }
 
-/**
- * Resolves a localised explanation entry. Indexed lookup is total because the
- * `_AllLocalesCovered` type guarantees every (`SupportedLocale`, `ExplanationKey`)
- * pair has an entry at compile time.
- */
 export function getExplanationStrings(
   locale: SupportedLocale,
   key: ExplanationKey,
@@ -573,5 +531,4 @@ export function getExplanationStrings(
   return EXPLANATION_REASONS[locale][key];
 }
 
-/** Re-export the supported-locales list for callers that need to iterate. */
 export { SUPPORTED_LOCALES };

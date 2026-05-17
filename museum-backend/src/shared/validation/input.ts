@@ -1,17 +1,9 @@
-/**
- * Input sanitization and validation helpers for prompt injection prevention and field validation.
- * Single source of truth — replaces duplicates in langchain.orchestrator.ts and visit-context.ts.
- *
- * @module shared/validation/input
- */
+// SEC: prompt-injection / field validation. Single source of truth —
+// replaces duplicates in langchain.orchestrator.ts and visit-context.ts.
 
 /**
- * Sanitizes a string for safe inclusion in LLM prompts.
- * Applies Unicode NFC normalization, strips zero-width/control characters, trims, and truncates.
- *
- * @param value - The raw input string.
- * @param maxLength - Maximum allowed length after sanitization (default 200).
- * @returns The sanitized string.
+ * Sanitizes string for safe LLM prompt inclusion. NFC normalize, strip
+ * zero-width + control chars, trim, truncate to `maxLength` (default 200).
  */
 export const sanitizePromptInput = (value: string, maxLength = 200): string => {
   return (
@@ -25,18 +17,13 @@ export const sanitizePromptInput = (value: string, maxLength = 200): string => {
   );
 };
 
-/** Unicode letter pattern for name fields: letters, combining marks, spaces, hyphens, apostrophes. */
+/** Letters, combining marks, spaces, hyphens, apostrophes. */
 const NAME_PATTERN = /^[\p{L}\p{M}\s'-]+$/u;
 
 /**
- * Validates and sanitizes a user name field (first name, last name).
- * Trims whitespace, enforces a max length, and rejects characters outside the allowed set.
+ * Trim, max-length check, reject chars outside NAME_PATTERN.
  *
- * @param value - The raw name input (may be undefined).
- * @param fieldName - Human-readable field name for error messages (e.g. "firstname").
- * @param maxLength - Maximum allowed length (default 100).
- * @returns The trimmed name, or undefined if the input was empty/undefined.
- * @throws {Error} If the name exceeds maxLength or contains disallowed characters.
+ * @throws if exceeds maxLength or contains disallowed chars.
  */
 export const validateNameField = (
   value: string | undefined,
@@ -47,10 +34,8 @@ export const validateNameField = (
     return undefined;
   }
 
-  // Stryker equivalent mutants — `value` is typed `string | undefined` and the
-  // `value == null` early-return above eliminates undefined, so the `else`
-  // branch (`String(value)`) is unreachable for typed callers and produces an
-  // identical result for valid string input.
+  // Stryker equivalent: typed `string | undefined`, early-return on null
+  // eliminates undefined → `else` (String(value)) unreachable for typed callers.
   // Stryker disable next-line ConditionalExpression,StringLiteral
   const str = typeof value === 'string' ? value : String(value);
   const trimmed = str.trim();

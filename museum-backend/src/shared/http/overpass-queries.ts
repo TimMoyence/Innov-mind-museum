@@ -2,14 +2,7 @@ import { QL_TIMEOUT_SECONDS } from './overpass-constants';
 
 import type { OverpassBoundingBox } from './overpass-types';
 
-/**
- * Builds an Overpass QL query for museums within a radius of a given point.
- *
- * Uses the `nwr` shortcut purely for readability (same execution plan as
- * `(node; way; relation;)` — Overpass-API issue #504). The real fix for
- * the 504s is the `[timeout:180]` admission budget — see QL_TIMEOUT_SECONDS
- * for the full explanation.
- */
+/** `nwr` = readability shortcut for `(node;way;relation;)` (Overpass-API #504, same plan). */
 export const buildRadiusQuery = (lat: number, lng: number, radiusMeters: number): string => {
   const r = String(radiusMeters);
   const coords = `${String(lat)},${String(lng)}`;
@@ -20,10 +13,7 @@ export const buildRadiusQuery = (lat: number, lng: number, radiusMeters: number)
   ].join('\n');
 };
 
-/**
- * Builds an Overpass QL query for museums inside a bounding box.
- * Overpass uses (south,west,north,east) ordering — opposite to GeoJSON.
- */
+/** Overpass uses (S,W,N,E) ordering — opposite to GeoJSON. */
 export const buildBboxQuery = (bbox: OverpassBoundingBox): string => {
   const [minLng, minLat, maxLng, maxLat] = bbox;
   const filter = `${String(minLat)},${String(minLng)},${String(maxLat)},${String(maxLng)}`;
@@ -34,7 +24,6 @@ export const buildBboxQuery = (bbox: OverpassBoundingBox): string => {
   ].join('\n');
 };
 
-/** Builds a tag-only Overpass QL query asking for `opening_hours` near a point. */
 export const buildOpeningHoursQuery = (lat: number, lng: number, radiusMeters: number): string => {
   return [
     `[out:json][timeout:${String(QL_TIMEOUT_SECONDS)}];`,

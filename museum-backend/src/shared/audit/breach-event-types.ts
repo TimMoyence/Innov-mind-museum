@@ -1,17 +1,12 @@
 /**
  * Canonical breach event names — one per containment runbook in
- * `docs/incidents/BREACH_PLAYBOOK.md` § 5.
+ * `docs/incidents/BREACH_PLAYBOOK.md` § 5. Use ONLY these when calling
+ * {@link AuditService.auditCriticalSecurityEvent}. Free-form `breach_*` not
+ * allowed: every breach must map to a documented runbook.
  *
- * Use these constants exclusively when calling
- * {@link AuditService.auditCriticalSecurityEvent}. Free-form strings starting
- * with `breach_` are deliberately not allowed: every breach must map onto a
- * documented runbook so the on-call response is unambiguous.
- *
- * Adding a new breach scenario requires:
- *   1. A new constant here (snake_case, length ≤ 64 — fits the
- *      `audit_logs.action` VARCHAR(64) column).
- *   2. A new § 5.x runbook in `BREACH_PLAYBOOK.md`.
- *   3. A `severity` mapping that the caller passes when invoking the helper.
+ * New scenario requires: (1) constant here (snake_case, ≤ 64 chars =
+ * audit_logs.action VARCHAR(64)); (2) new §5.x runbook in BREACH_PLAYBOOK.md;
+ * (3) severity mapping passed by caller.
  */
 export const BREACH_EVENTS = {
   /** § 5.a — JWT signing secret leaked (e.g., committed to git). */
@@ -28,8 +23,7 @@ export const BREACH_EVENTS = {
   SUPPLY_CHAIN: 'breach_supply_chain',
 } as const;
 
-/** Union of all canonical breach event names. */
 export type BreachEventName = (typeof BREACH_EVENTS)[keyof typeof BREACH_EVENTS];
 
-/** Set used at runtime to guard against free-form `breach_*` strings. */
+/** Runtime guard against free-form `breach_*` strings. */
 export const BREACH_EVENT_SET: ReadonlySet<string> = new Set<string>(Object.values(BREACH_EVENTS));

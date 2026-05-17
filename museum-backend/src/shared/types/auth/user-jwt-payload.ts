@@ -1,6 +1,5 @@
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 
-/** Claims embedded in a signed JWT access token identifying the authenticated user. */
 export interface UserJwtPayload {
   id: number;
   role: UserRole;

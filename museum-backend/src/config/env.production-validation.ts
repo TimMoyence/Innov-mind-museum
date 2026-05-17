@@ -1,6 +1,5 @@
 import type { AppEnv } from './env.types';
 
-/** Throws if `name`'s `value` is empty/missing. */
 const required = (name: string, value: string | undefined): string => {
   if (!value?.trim()) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -8,10 +7,9 @@ const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
-/** Minimum length for JWT signing secrets in production (L2). */
+/** Min length for JWT signing secrets in prod (L2). */
 const MIN_JWT_SECRET_LENGTH = 32;
 
-/** Throws if the given JWT secret is shorter than {@link MIN_JWT_SECRET_LENGTH}. */
 function assertSecretLength(name: string, value: string): void {
   if (value.length >= MIN_JWT_SECRET_LENGTH) return;
   const required = String(MIN_JWT_SECRET_LENGTH);
@@ -21,16 +19,13 @@ function assertSecretLength(name: string, value: string): void {
   );
 }
 
-/** Validates JWT secrets are set, distinct, and sufficiently long in production. */
 function validateJwtSecrets(env: AppEnv): void {
-  // SEC-HARDENING (H12): legacy JWT_SECRET fallback is disabled in prod.
-  // Require the discrete secrets explicitly.
+  // SEC-HARDENING (H12): legacy JWT_SECRET fallback disabled in prod.
   required('JWT_ACCESS_SECRET', process.env.JWT_ACCESS_SECRET);
   required('JWT_REFRESH_SECRET', process.env.JWT_REFRESH_SECRET);
 
-  // SEC-HARDENING (H12): loudly warn operators if the legacy JWT_SECRET is
-  // still exported in production — it is silently ignored and should be
-  // removed from the environment to avoid confusion during incident response.
+  // SEC-HARDENING (H12): warn operators if legacy JWT_SECRET still exported
+  // (silently ignored — remove to avoid incident-response confusion).
   if (process.env.JWT_SECRET?.trim()) {
     console.warn(
       'JWT_SECRET is set in production but is no longer honored. ' +
@@ -38,10 +33,9 @@ function validateJwtSecrets(env: AppEnv): void {
     );
   }
 
-  // SEC-HARDENING: Access and refresh token secrets MUST differ.
-  // Sharing the same secret defeats token type separation — a stolen access token
-  // signature could theoretically be replayed as a refresh token (only the 'type'
-  // claim differs). Enforced at startup to fail fast on misconfiguration.
+  // SEC-HARDENING: access/refresh secrets MUST differ — sharing defeats type
+  // separation (a stolen access-token signature could replay as refresh; only
+  // the 'type' claim differs).
   if (env.auth.accessTokenSecret === env.auth.refreshTokenSecret) {
     throw new Error(
       'JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be distinct values. ' +
@@ -49,14 +43,12 @@ function validateJwtSecrets(env: AppEnv): void {
     );
   }
 
-  // SEC-HARDENING (L2): JWT secrets MUST be at least 32 chars (~256 bits of
-  // entropy for hex/base64-derived secrets). Short secrets are trivially
-  // brute-forced offline once a token is captured.
+  // SEC-HARDENING (L2): >= 32 chars (~256 bits entropy). Short secrets trivially
+  // brute-forced offline once a token captured.
   assertSecretLength('JWT_ACCESS_SECRET', env.auth.accessTokenSecret);
   assertSecretLength('JWT_REFRESH_SECRET', env.auth.refreshTokenSecret);
 }
 
-/** Validates the LLM provider's API key is set. */
 function validateLlmProviderKey(env: AppEnv): void {
   switch (env.llm.provider) {
     case 'openai':
@@ -71,7 +63,6 @@ function validateLlmProviderKey(env: AppEnv): void {
   }
 }
 
-/** Validates S3 storage credentials when the S3 driver is selected. */
 function validateS3Storage(env: AppEnv): void {
   if (env.storage.driver !== 's3') return;
   required('S3_ENDPOINT', env.storage.s3?.endpoint);
@@ -81,22 +72,18 @@ function validateS3Storage(env: AppEnv): void {
   required('S3_SECRET_ACCESS_KEY', env.storage.s3?.secretAccessKey);
 }
 
-/** Validates Redis credentials when cache is enabled. */
 function validateRedis(env: AppEnv): void {
   if (!env.cache?.enabled) return;
   const password = required('REDIS_PASSWORD', env.cache.password);
   required('REDIS_URL or REDIS_HOST', process.env.REDIS_URL || process.env.REDIS_HOST);
 
-  // P3.1: enforce >=32 char Redis password in production. Rate-limit buckets
-  // and the LLM cache live in Redis; a weak password == hijackable session
-  // store. Rotation playbook: docs/RUNBOOKS/redis-rotation.md (quarterly).
+  // P3.1: >=32 char Redis password. Rate-limit buckets + LLM cache live in
+  // Redis; weak password == hijackable session store. Rotation:
+  // docs/RUNBOOKS/redis-rotation.md (quarterly).
   assertSecretLength('REDIS_PASSWORD', password);
 
-  // Reject sharing the Redis password with any signing secret. Operators have
-  // copy-pasted secrets across services in past incidents; this catches it.
-  // The 3 comparisons below run ONCE at boot from in-memory env values — not
-  // a network-exposed surface — so plain `===` is fine; constant-time
-  // comparison is irrelevant when there is no remote attacker to time.
+  // Reject sharing Redis password with any signing secret. Boot-time check
+  // from in-memory env values (no remote attacker) → plain `===` is fine.
   /* eslint-disable security/detect-possible-timing-attacks -- boot-time secret-shape check, not a network-exposed comparison */
   if (password === process.env.JWT_ACCESS_SECRET) {
     throw new Error(
@@ -114,15 +101,12 @@ function validateRedis(env: AppEnv): void {
 }
 
 /**
- * Validates required environment variables for production deployments.
- * Called from env.ts only when `NODE_ENV === 'production'`.
- *
- * Throws on missing/invalid configuration to fail fast on startup.
+ * Validates required env vars for prod. Called from env.ts only when
+ * `NODE_ENV === 'production'`. Throws to fail fast on startup.
  */
 export function validateProductionEnv(env: AppEnv): void {
-  // Phase 5 sentinel: 'test' email service is forbidden in production.
-  // It silently swallows all outbound emails into an in-memory store, so any
-  // misconfiguration would cause real verification emails to be lost.
+  // Phase 5 sentinel: 'test' email forbidden in prod — silently swallows
+  // outbound emails into in-memory store; misconfig would lose real verification mails.
   if (env.auth.emailServiceKind === 'test') {
     throw new Error(
       "AUTH_EMAIL_SERVICE_KIND='test' is forbidden in production. " +
@@ -130,9 +114,8 @@ export function validateProductionEnv(env: AppEnv): void {
     );
   }
 
-  // F10 sentinel: disabling the HIBP breach gate is forbidden in production.
-  // Allowing breached passwords at registration would defeat NIST SP 800-63B-4
-  // §3.1.1.2 password screening and let attackers reuse leaked credentials.
+  // F10 sentinel: HIBP breach gate disable forbidden in prod — would defeat
+  // NIST SP 800-63B-4 §3.1.1.2 password screening.
   if (!env.auth.passwordBreachCheckEnabled) {
     throw new Error(
       'PASSWORD_BREACH_CHECK_ENABLED=false is forbidden in production. ' +
@@ -149,9 +132,8 @@ export function validateProductionEnv(env: AppEnv): void {
   required('PGDATABASE', process.env.PGDATABASE);
   required('CORS_ORIGINS', process.env.CORS_ORIGINS);
 
-  // SEC-HARDENING (L3): MEDIA_SIGNING_SECRET must be set explicitly in
-  // production — no fallback to JWT_ACCESS_SECRET / JWT_SECRET. It must
-  // also be distinct from the JWT secrets so a rotation/leak of one does
+  // SEC-HARDENING (L3): MEDIA_SIGNING_SECRET MUST be explicit in prod — no
+  // fallback to JWT_*. Must also be distinct so rotation/leak of one does
   // not compromise the other.
   const mediaSigningSecret = required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
   if (mediaSigningSecret === process.env.JWT_ACCESS_SECRET) {
@@ -164,16 +146,14 @@ export function validateProductionEnv(env: AppEnv): void {
     throw new Error('MEDIA_SIGNING_SECRET must be distinct from JWT_REFRESH_SECRET in production.');
   }
 
-  // R16 MFA (W2.T4): MFA_ENCRYPTION_KEY must be present, distinct from every
-  // other signing secret, and >= 32 chars (256 bits of entropy). Sharing a
-  // signing key across MFA / JWT / media defeats key rotation: leaking one
-  // would compromise all three trust domains.
+  // R16 MFA (W2.T4): MFA_ENCRYPTION_KEY present, distinct from every other
+  // signing secret, >= 32 chars. Sharing across MFA/JWT/media defeats
+  // rotation — leaking one compromises three trust domains.
   validateMfaSecrets(env);
 
-  // F7 (2026-04-30): CSRF_SECRET MUST be present, distinct from every other
-  // signing secret, and >= 32 chars. Same threat model as MFA / media: if it
-  // collides with JWT_ACCESS_SECRET, an attacker who learns the access token
-  // (or its signing key) can also forge the CSRF token.
+  // F7 (2026-04-30): CSRF_SECRET present, distinct, >= 32 chars. If collides
+  // with JWT_ACCESS_SECRET, attacker with access-token (or its signing key)
+  // can forge the CSRF token.
   validateCsrfSecret(env);
 
   validateLlmProviderKey(env);
@@ -181,7 +161,6 @@ export function validateProductionEnv(env: AppEnv): void {
   validateRedis(env);
 }
 
-/** Enforces CSRF_SECRET presence, length, and distinctness in production (F7). */
 function validateCsrfSecret(env: AppEnv): void {
   const csrf = required('CSRF_SECRET', process.env.CSRF_SECRET);
   assertSecretLength('CSRF_SECRET', csrf);
@@ -205,13 +184,12 @@ function validateCsrfSecret(env: AppEnv): void {
     throw new Error('CSRF_SECRET must be distinct from MFA_SESSION_TOKEN_SECRET in production.');
   }
 
-  // Cross-check: parsed env agrees with raw env var (drift detection).
+  // Drift detection: parsed env agrees with raw env var.
   if (env.auth.csrfSecret !== csrf) {
     throw new Error('env.auth.csrfSecret is out of sync with CSRF_SECRET — env.ts wiring drift.');
   }
 }
 
-/** Enforces MFA secret presence + distinctness from JWT / media signing secrets in production. */
 function validateMfaSecrets(env: AppEnv): void {
   const mfaKey = required('MFA_ENCRYPTION_KEY', process.env.MFA_ENCRYPTION_KEY);
   const mfaSession = required('MFA_SESSION_TOKEN_SECRET', process.env.MFA_SESSION_TOKEN_SECRET);
@@ -250,9 +228,9 @@ function validateMfaSecrets(env: AppEnv): void {
     );
   }
 
-  // Cross-check: the parsed env value MUST agree with the raw env var so a
-  // future refactor that drops the env.ts wiring fails fast here instead of
-  // silently bypassing the secret-distinctness contract.
+  // Drift detection: parsed env MUST agree with raw env var so a future
+  // refactor dropping env.ts wiring fails fast instead of silently bypassing
+  // the secret-distinctness contract.
   if (env.auth.mfaEncryptionKey !== mfaKey) {
     throw new Error(
       'env.auth.mfaEncryptionKey is out of sync with MFA_ENCRYPTION_KEY — env.ts wiring drift.',
