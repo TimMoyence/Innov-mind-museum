@@ -103,6 +103,12 @@ jobs:
       DB_SYNCHRONIZE: 'false'
       JWT_ACCESS_SECRET: ci-access-secret-garak
       JWT_REFRESH_SECRET: ci-refresh-secret-garak
+      # Garak runs 6 probes séquentiels × ~3min each = ~18min total. Default
+      # JWT access TTL (15min) expire avant la fin → 401 sur les derniers
+      # probes (vu run 25989732626). Bump à 1h couvre la durée du job sans
+      # impacter prod (le token CI est éphémère, image build avec ce TTL ne
+      # sert qu'à ce job).
+      JWT_ACCESS_TTL: 1h
       MEDIA_SIGNING_SECRET: ci-media-secret-garak
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       NODE_ENV: test
