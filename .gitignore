@@ -129,6 +129,10 @@ coverage/
 # Environment variables
 .env
 **/.env
+# Per-developer env template variants (.env.local-dev, .env.prod-test, .env.staging...)
+# but keep tracked *.example templates as scaffold.
+**/.env.*
+!**/.env.*.example
 expo-env.d.ts
 **/.expo/
 

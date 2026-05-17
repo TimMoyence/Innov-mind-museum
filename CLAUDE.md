@@ -164,10 +164,9 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 
 ## Environment Setup
 
-1. Copy `.env.example` → `.env` in `museum-backend/`, and `.env.local.example` → `.env` in `museum-frontend/`
-2. Backend need: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets
-3. Frontend need: `EXPO_PUBLIC_API_BASE_URL` pointing to backend
-4. Backend DB exposed on port **5433** (not 5432) when using docker-compose
+1. Copy `.env.example` → `.env` in `museum-backend/`. Backend need: PostgreSQL (via docker-compose or local), at least one LLM API key (`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GOOGLE_API_KEY`), JWT secrets.
+2. Backend DB exposed on port **5433** (not 5432) when using docker-compose.
+3. Frontend mobile local dev : **voir [`museum-frontend/RUN_LOCAL.md`](museum-frontend/RUN_LOCAL.md)** (3-file template pattern `.env` / `.env.local-dev` / `.env.prod-test` + `npm run dev:local` qui pre-flight le Docker stack). Quickstart : `cd museum-frontend && npm run env:local && npm run dev:local`.
 
 ## Hook bypass interdit (UFR-020)
 
@@ -291,7 +290,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (27310 symbols, 44397 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (27333 symbols, 44428 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
