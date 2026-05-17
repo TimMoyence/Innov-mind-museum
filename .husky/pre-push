@@ -188,7 +188,12 @@ if [ -n "$touched_be" ]; then
   ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
   gate16_status=$?
   set -e
-  cat "$gate16_log"
+  # NEVER `cat "$gate16_log"` full: ~10MB output causes SIGPIPE when git's
+  # read buffer closes mid-write → script killed → flake retry never runs.
+  # Print only the actionable summary; the full log stays at "$gate16_log"
+  # for debug (preserved on failure, cleaned on success).
+  grep -E '^(FAIL|PASS).*\.test\.tsx?' "$gate16_log" | tail -20 || true
+  grep -E '^Tests:|^Test Suites:' "$gate16_log" | tail -2 || true
   if [ $gate16_status -ne 0 ]; then
     # Flake detection: route test "socket hang up" is a known runInBand teardown race.
     # Robust against jest timing annotations ("(18.704 s)") and project prefix ("unit-integration").
