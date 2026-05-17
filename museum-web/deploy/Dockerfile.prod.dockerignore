@@ -1,0 +1,63 @@
+# Per-Dockerfile dockerignore for museum-web prod build.
+# Docker BuildKit picks `<dockerfile>.dockerignore` over the root `.dockerignore`
+# when present (cf. https://docs.docker.com/build/concepts/context/#dockerignore-files).
+#
+# Why this file exists : the root /.dockerignore (committed 2026-05-17 commit
+# `20161545`) excludes `museum-web/` to keep the BACKEND build context small.
+# Without this override, the web build (which also uses repo-root context to
+# reach `packages/musaium-shared/`) couldn't COPY museum-web/package.json
+# → build failed with "/museum-web/pnpm-lock.yaml not found"
+# (cf. CI web run 25987665015).
+#
+# Pattern : every Dockerfile that uses repo-root context MUST ship its own
+# co-located .dockerignore.
+
+# ─── Heavy / unrelated apps ────────────────────────────────────────────────
+museum-frontend
+museum-backend
+design-system
+docs
+infra
+team-reports
+
+# ─── Tool / VCS / agent state ──────────────────────────────────────────────
+.git
+.github
+.husky
+.claude
+.cursor
+.vscode
+.idea
+.DS_Store
+
+# ─── Per-pkg build artefacts + caches (musaium-shared/dist IS shipped) ─────
+**/node_modules
+**/coverage
+**/.cache
+**/.turbo
+**/.next
+**/dist-server
+**/.expo
+**/.expo-shared
+**/.eas
+**/build
+**/.test-dist
+**/.stryker-tmp
+**/.stryker-run
+
+# ─── Env / secrets ─────────────────────────────────────────────────────────
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+!**/.env.host-mode
+
+# ─── Logs / debug ──────────────────────────────────────────────────────────
+**/*.log
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log
+
+# ─── Misc ──────────────────────────────────────────────────────────────────
+**/*.tsbuildinfo
+**/Thumbs.db
