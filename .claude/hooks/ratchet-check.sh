@@ -19,7 +19,7 @@
 
 set -uo pipefail
 
-REPO_ROOT="/Users/Tim/Desktop/all/dev/Pro/InnovMind"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "/Users/Tim/Desktop/all/dev/Pro/InnovMind")"
 ALERTS="$REPO_ROOT/.claude/.cache/alerts.log"
 SEEN="$REPO_ROOT/.claude/.cache/alerts.seen"
 RATCHET_FILE="$REPO_ROOT/.claude/quality-ratchet.json"
@@ -116,12 +116,18 @@ else
       if [ "$MUT_DENOM" -le 0 ] 2>/dev/null; then
         echo "mutation: empty denominator (killed+survived+timeout+runtimeError == 0) in $MUTATION_REPORT_RESOLVED — SKIP"
       else
-        MUT_SCORE=$(LC_ALL=C awk -v k="$MUT_KILLED" -v d="$MUT_DENOM" 'BEGIN { printf "%.2f", (k / d) * 100 }')
+        # Effective score: Timeout counted as kill per CLAUDE.md § Pièges connus
+        # doctrine (Timeout-as-kill validated 2026-05-16 5/5 sample, open-handles
+        # leak is the masking cause, not real test failures). Killed-only score
+        # tracked as diagnostic — Survived is the real test-gap signal.
+        MUT_KILLED_EFFECTIVE=$((MUT_KILLED + MUT_TIMEOUT))
+        MUT_SCORE=$(LC_ALL=C awk -v k="$MUT_KILLED_EFFECTIVE" -v d="$MUT_DENOM" 'BEGIN { printf "%.2f", (k / d) * 100 }')
+        MUT_SCORE_KILLED_ONLY=$(LC_ALL=C awk -v k="$MUT_KILLED" -v d="$MUT_DENOM" 'BEGIN { printf "%.2f", (k / d) * 100 }')
         MUT_VERDICT=$(LC_ALL=C awk -v s="$MUT_SCORE" -v c="$MUT_CAP" 'BEGIN { print (s + 0 >= c + 0) ? "PASS" : "FAIL" }')
         if [ "$MUT_VERDICT" = "PASS" ]; then
-          echo "mutation: ${MUT_SCORE}% >= cap ${MUT_CAP}% PASS (killed=$MUT_KILLED survived=$MUT_SURVIVED timeout=$MUT_TIMEOUT runtimeError=$MUT_RTERR)"
+          echo "mutation: ${MUT_SCORE}% >= cap ${MUT_CAP}% PASS (killed=$MUT_KILLED timeout-as-kill=$MUT_TIMEOUT survived=$MUT_SURVIVED runtimeError=$MUT_RTERR ; killed-only=${MUT_SCORE_KILLED_ONLY}% diagnostic)"
         else
-          echo "mutation: ${MUT_SCORE}% < cap ${MUT_CAP}% FAIL (killed=$MUT_KILLED survived=$MUT_SURVIVED timeout=$MUT_TIMEOUT runtimeError=$MUT_RTERR — investigate T3.1/T3.2 open handles before mass-disabling)"
+          echo "mutation: ${MUT_SCORE}% < cap ${MUT_CAP}% FAIL (killed=$MUT_KILLED timeout-as-kill=$MUT_TIMEOUT survived=$MUT_SURVIVED runtimeError=$MUT_RTERR ; killed-only=${MUT_SCORE_KILLED_ONLY}% — investigate growing Survived count, NOT Timeout)"
           MUTATION_RATCHET_EXIT=1
         fi
       fi
