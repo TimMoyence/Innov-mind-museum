@@ -7,6 +7,8 @@
     "build:tokens": "cd design-system && npm run build",
     "dev:stack": "bash scripts/dev-stack.sh",
     "dev:stack:down": "bash scripts/dev-stack-down.sh",
+    "dev:migration-check": "bash scripts/dev-migration-check.sh",
+    "smoke:api": "node scripts/smoke-api.mjs",
     "sentinel:as-any": "node scripts/sentinels/as-any-ratchet.mjs",
     "sentinel:env-policy": "node scripts/sentinels/env-policy.mjs",
     "sentinel:openapi-sync": "node scripts/sentinels/openapi-sync.mjs",

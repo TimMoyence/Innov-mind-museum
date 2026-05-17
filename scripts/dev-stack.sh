@@ -75,6 +75,26 @@ if [ "$ELAPSED" -ge "$HEALTH_TIMEOUT" ]; then
   fail "Backend never became healthy after ${HEALTH_TIMEOUT}s. Check: $DOCKER_COMPOSE logs backend"
 fi
 
+# ---- 3.5. Migration sync (catches schema drift before the FE talks to a stale DB) ----
+step "3.5/5 Checking DB schema sync (migrations table vs source)"
+if bash "$ROOT/scripts/dev-migration-check.sh"; then
+  : # in sync, all good
+else
+  STATUS=$?
+  if [ "$STATUS" = "1" ]; then
+    warn "Pending migrations. Apply now? [Y/n]"
+    read -r REPLY
+    if [ -z "$REPLY" ] || [ "$REPLY" = "Y" ] || [ "$REPLY" = "y" ]; then
+      docker exec dev-backend pnpm migration:run
+      ok "Migrations applied"
+    else
+      fail "Aborted. Run 'docker exec dev-backend pnpm migration:run' manually then re-run dev:stack."
+    fi
+  else
+    fail "Migration check setup failure (exit $STATUS). See output above."
+  fi
+fi
+
 # ---- 4. Frontend .env switch ----
 step "4/5 Switching museum-frontend/.env → .env.local-dev"
 if [ ! -f "$FRONTEND/.env.local-dev" ]; then
