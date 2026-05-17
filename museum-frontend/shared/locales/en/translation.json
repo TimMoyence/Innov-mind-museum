@@ -549,7 +549,7 @@
       "image_placeholder": "Image sent",
       "voice_placeholder": "Voice message"
     },
-    "lowDataDetails": "Data saver on — TTS disabled, images compressed",
+    "lowDataDetails": "Data saver on — TTS disabled, shorter replies, prefetch on Wi-Fi only",
     "tts": {
       "disabled_low_data": "Disabled in data saver mode. Change mode in Settings."
     },

@@ -549,7 +549,7 @@
       "image_placeholder": "Image envoyée",
       "voice_placeholder": "Message vocal"
     },
-    "lowDataDetails": "Mode data économe : TTS désactivé, images compressées",
+    "lowDataDetails": "Mode data économe : TTS désactivé, réponses plus courtes, prefetch wifi uniquement",
     "tts": {
       "disabled_low_data": "Désactivé en mode data économe. Changez de mode dans Réglages."
     },
