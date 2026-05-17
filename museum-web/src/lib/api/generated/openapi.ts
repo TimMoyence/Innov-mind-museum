@@ -3989,7 +3989,8 @@ export interface components {
         }[];
         deeperContext?: string;
         openQuestion?: string;
-        followUpQuestions?: string[];
+        /** @description B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`. */
+        suggestedFollowUp?: string;
         imageDescription?: string;
         /** @description Enriched images from external sources (Wikidata, Unsplash, Wikimedia Commons, Musaium curated catalogue). C2 v2 (2026-05) adds rationale + commons/musaium sources. */
         images?: {
@@ -4055,6 +4056,10 @@ export interface components {
         museumMode: boolean;
         title?: string | null;
         museumName?: string | null;
+        /** @description Canonical museum identifier (B2 — conversation resumption banner). Optional/nullable for backward-compat with legacy clients and pre-museum sessions. */
+        museumId?: number | null;
+        /** @description Title of the most recently discussed artwork in the session (B2 — conversation resumption banner). `null` when no artwork has been discussed. */
+        lastArtworkTitle?: string | null;
         /** Format: date-time */
         createdAt: string;
         /** Format: date-time */
