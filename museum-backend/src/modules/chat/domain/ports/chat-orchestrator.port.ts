@@ -38,6 +38,12 @@ export interface OrchestratorInput {
    * caching for this turn.
    */
   userId?: number | null;
+  /**
+   * Chat session id (string UUID). Propagated to Langfuse `trace.sessionId`
+   * by `withLangfuseTrace` (C9.0). Undefined => trace has no sessionId — no
+   * fabrication (C9.0 spec R7).
+   */
+  sessionId?: string;
   resolvedLocation?: ResolvedLocation;
   /** Read-only hint for the LLM; does not filter content. */
   contentPreferences?: readonly ContentPreference[];
