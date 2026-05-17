@@ -5,6 +5,7 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { LLMCircuitBreaker } from './llm-circuit-breaker';
+import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
@@ -75,6 +76,12 @@ export interface LangChainChatOrchestratorDeps {
   model?: ChatModel | null;
   semaphore?: Semaphore;
   circuitBreaker?: LLMCircuitBreaker;
+  /**
+   * Cost-based circuit breaker (C9.4). When provided, orchestrator records
+   * an `estimateCostCents()` charge per successful section invoke. When
+   * omitted, no cost recording happens (legacy callers / tests).
+   */
+  costBreaker?: LlmCostCircuitBreaker | null;
 }
 
 export const toModel = (): ChatModel | null => {

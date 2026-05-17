@@ -312,6 +312,20 @@ export const llmCostCircuitBreakerTripsTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * C9.4 — Rolling 1h LLM spend in EUR-equivalent, partitioned by user tier +
+ * museum. V1 uses USD list prices as a EUR proxy (1 USD ≈ 1 EUR within ±10%
+ * — acceptable for spike detection alerting, NOT for billing reconciliation).
+ * Source: `LlmCostCircuitBreaker.getState().hourlySpendCents / 100`.
+ * Cardinality budget: 4 tiers × ~51 museum_ids ≤ 204 series.
+ */
+export const llmCostEurPerHour = new Gauge({
+  name: 'musaium_llm_cost_eur_per_hour',
+  help: 'Rolling 1h LLM spend in EUR (V1 uses USD pricing as EUR proxy, ±10%). NOT for billing.',
+  labelNames: ['tier', 'museum_id'] as const,
+  registers: [registry],
+});
+
 export const tenantRateLimitRejectsTotal = new Counter({
   name: 'musaium_tenant_rate_limit_rejects_total',
   help: 'Total per-tenant rate-limit rejects. Cardinality bounded by live tenant population.',
