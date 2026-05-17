@@ -32,4 +32,9 @@ export default defineConfig({
     '<rootDir>/tests/unit/routes/museum-enrichment.route.test.ts',
     '<rootDir>/tests/unit/shared/redis-cache-service.test.ts',
   ],
+  // 5302-test dry-run exceeds Stryker's 5min default on contended runners
+  // (audit-360 S3 Phase 4 timed out 4x: 5min default + 15min retry under
+  // STRYKER_CONCURRENCY=1). Bump to 15min for headroom — pure timeout knob,
+  // does not change mutation logic or sandboxing.
+  dryRunTimeoutMinutes: 15,
 });
