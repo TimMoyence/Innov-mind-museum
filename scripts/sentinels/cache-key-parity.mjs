@@ -31,6 +31,33 @@ if (!fs.existsSync(testFile)) {
   process.exit(0);
 }
 
+// The parity test is pure (deterministic hash builder, no Redis/BullMQ/DB),
+// but its top-level imports transitively load `@src/config/env` which — when
+// the developer's `.env` points at the Docker-internal `redis:` hostname
+// (resolved inside the dev-backend container but not from the host) — kicks
+// off an ioredis retry loop that never resolves and hangs jest before the
+// first test runs. Pin the same env defaults the e2e setupFiles uses
+// (`tests/helpers/e2e/jest-env.setup.ts`) so the sentinel works regardless
+// of which `.env` the host carries.
+//
+// Override rule: if REDIS_URL points at the Docker-internal hostname
+// (`redis://redis:6379` or `redis://:pwd@redis:6379`) we clear it so ioredis
+// does not attempt to dial-and-retry on a host that won't resolve. Any other
+// explicit value (e.g. `redis://localhost:6379`) is preserved — the user may
+// have a working host-side Redis. CACHE_ENABLED / EXTRACTION_WORKER_ENABLED /
+// GUARDRAIL_BUDGET_BACKEND are pinned to test-safe defaults if the parent
+// shell did not override them explicitly.
+const isDockerInternalRedis = /^redis:\/\/(?:[^@]*@)?redis(?::|\/)/.test(
+  process.env.REDIS_URL ?? '',
+);
+const sentinelEnv = {
+  ...process.env,
+  CACHE_ENABLED: process.env.CACHE_ENABLED ?? 'false',
+  EXTRACTION_WORKER_ENABLED: process.env.EXTRACTION_WORKER_ENABLED ?? 'false',
+  GUARDRAIL_BUDGET_BACKEND: process.env.GUARDRAIL_BUDGET_BACKEND ?? 'memory',
+  ...(isDockerInternalRedis ? { REDIS_URL: '' } : {}),
+};
+
 const result = spawnSync(
   'pnpm',
   [
@@ -42,7 +69,7 @@ const result = spawnSync(
     '--coverage=false',
     '--testPathPattern=tests/contract/cache-key-parity',
   ],
-  { cwd: backend, stdio: 'inherit', shell: false },
+  { cwd: backend, stdio: 'inherit', shell: false, env: sentinelEnv },
 );
 
 if (result.status !== 0) {
