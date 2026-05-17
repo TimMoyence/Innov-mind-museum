@@ -14,14 +14,10 @@ const pendingQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
-/**
- * Builds the admin knowledge-extraction review router.
- * Closes the loop on ArtworkKnowledge entries flagged with needsReview=true.
- */
+/** Closes the loop on ArtworkKnowledge entries flagged needsReview=true. */
 export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
   const router = Router();
 
-  // GET /api/admin/ke/pending — list items awaiting human review
   router.get(
     '/ke/pending',
     isAuthenticated,
@@ -34,7 +30,6 @@ export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
     },
   );
 
-  // PATCH /api/admin/ke/:id/approve — clear needsReview flag
   router.patch(
     '/ke/:id/approve',
     isAuthenticated,

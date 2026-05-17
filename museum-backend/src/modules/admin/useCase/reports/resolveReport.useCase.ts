@@ -4,7 +4,6 @@ import { badRequest, notFound } from '@shared/errors/app.error';
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminReportDTO, ReportStatus } from '@modules/admin/domain/admin/admin.types';
 
-/** Input for the resolve-report use case. */
 interface ResolveReportUseCaseInput {
   reportId: string;
   status: string;
@@ -16,11 +15,9 @@ interface ResolveReportUseCaseInput {
 
 const VALID_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
 
-/** Validates status enum, delegates to the repository, and emits an audit event. */
 export class ResolveReportUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Validates the report status, updates the report, and emits an audit event. */
   async execute(input: ResolveReportUseCaseInput): Promise<AdminReportDTO> {
     if (!VALID_STATUSES.includes(input.status as ReportStatus)) {
       throw badRequest(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);

@@ -55,7 +55,6 @@ function parseUserIdParam(req: Request): number {
   return userId;
 }
 
-// GET /api/admin/users — Admin & moderator: paginated user list
 // Moderators need user lookup for ticket assignment / report triage.
 // Role mutation (PATCH /:id/role) remains admin-only below.
 adminRouter.get(
@@ -81,8 +80,7 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/users/:id — Admin & moderator: single user detail (incl. soft-deleted)
-// Moderators read user detail for ticket triage; admin & super_admin for full ops.
+// Includes soft-deleted rows. Moderators read for ticket triage.
 adminRouter.get(
   '/users/:id',
   isAuthenticated,
@@ -96,7 +94,6 @@ adminRouter.get(
   },
 );
 
-// PATCH /api/admin/users/:id/role — Admin only: change user role
 adminRouter.patch(
   '/users/:id/role',
   isAuthenticated,
@@ -119,9 +116,8 @@ adminRouter.patch(
   },
 );
 
-// PATCH /api/admin/users/:id/tier — super_admin only: flip soft-paywall tier
-// (R1 §1 R14-R16). `admin` and `museum_manager` are NOT allowed (per spec
-// brief — see R1 §0.3) ; super_admin override only.
+// R1 §1 R14-R16 — super_admin override only. `admin` + `museum_manager` NOT
+// allowed (per spec brief R1 §0.3).
 adminRouter.patch(
   '/users/:id/tier',
   isAuthenticated,
@@ -144,8 +140,7 @@ adminRouter.patch(
   },
 );
 
-// POST /api/admin/users/:id/suspend — super_admin only: freeze a user account.
-// Reserved to super_admin so a rogue B2B admin cannot freeze a tenant peer.
+// super_admin-only: prevents a rogue B2B admin from freezing a tenant peer.
 adminRouter.post(
   '/users/:id/suspend',
   isAuthenticated,
@@ -164,7 +159,6 @@ adminRouter.post(
   },
 );
 
-// POST /api/admin/users/:id/unsuspend — super_admin only: lift the freeze.
 adminRouter.post(
   '/users/:id/unsuspend',
   isAuthenticated,
@@ -183,8 +177,7 @@ adminRouter.post(
   },
 );
 
-// DELETE /api/admin/users/:id — super_admin only: soft-delete a user account.
-// Hard erasure (RGPD Art. 17 full erase) is deferred to V1.1 (ADR-052).
+// Soft-delete only. Hard erasure (RGPD Art. 17 full erase) deferred V1.1 (ADR-052).
 adminRouter.delete(
   '/users/:id',
   isAuthenticated,
@@ -203,7 +196,6 @@ adminRouter.delete(
   },
 );
 
-// GET /api/admin/audit-logs — Admin only: paginated audit logs (security-sensitive)
 adminRouter.get(
   '/audit-logs',
   isAuthenticated,
@@ -234,7 +226,6 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/stats — Admin & moderator: dashboard statistics
 adminRouter.get(
   '/stats',
   isAuthenticated,
@@ -245,9 +236,7 @@ adminRouter.get(
   },
 );
 
-// ─── Content Moderation (S4-03) ───
-
-// GET /api/admin/reports — Admin & moderator: paginated report list
+// S4-03 Content Moderation
 adminRouter.get(
   '/reports',
   isAuthenticated,
@@ -275,7 +264,6 @@ adminRouter.get(
   },
 );
 
-// PATCH /api/admin/reports/:id — Admin & moderator: resolve a report
 adminRouter.patch(
   '/reports/:id',
   isAuthenticated,
@@ -302,9 +290,7 @@ adminRouter.patch(
   },
 );
 
-// ─── Analytics API (S4-04) ───
-
-// GET /api/admin/analytics/usage — Admin only: usage time-series
+// S4-04 Analytics
 adminRouter.get(
   '/analytics/usage',
   isAuthenticated,
@@ -324,7 +310,6 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/analytics/content — Admin only: content analytics
 adminRouter.get(
   '/analytics/content',
   isAuthenticated,
@@ -339,7 +324,6 @@ adminRouter.get(
   },
 );
 
-// GET /api/admin/analytics/engagement — Admin only: engagement analytics
 adminRouter.get(
   '/analytics/engagement',
   isAuthenticated,
@@ -354,9 +338,7 @@ adminRouter.get(
   },
 );
 
-// ─── Support Tickets (S4-11) ───
-
-// GET /api/admin/tickets — Admin & moderator: paginated ticket list
+// S4-11 Support Tickets
 adminRouter.get(
   '/tickets',
   isAuthenticated,
@@ -376,7 +358,6 @@ adminRouter.get(
   },
 );
 
-// PATCH /api/admin/tickets/:id — Admin & moderator: update ticket status/priority/assignment
 adminRouter.patch(
   '/tickets/:id',
   isAuthenticated,
@@ -405,9 +386,7 @@ adminRouter.patch(
   },
 );
 
-// ─── Reviews Moderation ───
-
-// GET /api/admin/reviews — Admin & moderator: paginated review list (filterable by status)
+// Reviews Moderation
 adminRouter.get(
   '/reviews',
   isAuthenticated,
@@ -426,7 +405,6 @@ adminRouter.get(
   },
 );
 
-// PATCH /api/admin/reviews/:id — Admin & moderator: moderate a review (approve/reject)
 adminRouter.patch(
   '/reviews/:id',
   isAuthenticated,

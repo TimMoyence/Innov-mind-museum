@@ -6,7 +6,6 @@ import type { IAdminRepository } from '@modules/admin/domain/admin/admin.reposit
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
-/** Input for the delete-user admin use case. */
 interface DeleteUserInput {
   userId: number;
   actorId: number;
@@ -15,14 +14,11 @@ interface DeleteUserInput {
 }
 
 /**
- * Soft-deletes a user (`deleted_at = NOW()`) and revokes every active refresh
- * token. Hard erasure (RGPD Art. 17 full erase) deferred V1.1 (ADR-052).
+ * Soft-delete (`deleted_at = NOW()`) + revoke active refresh tokens. Hard erasure
+ * (RGPD Art. 17 full erase) deferred V1.1 (ADR-052).
  *
- * Guards:
- *   - Refuse if the target is the last admin / super_admin (last-privileged guard).
- *   - Self-delete is *permitted* on purpose: a super_admin asking to wipe their
- *     own account hits the last-admin guard if alone, and is otherwise valid
- *     (matches the existing user-side `deleteAccount.useCase` semantics).
+ * Guards: refuse if target is last admin/super_admin. Self-delete is permitted
+ * (matches user-side `deleteAccount.useCase`); last-admin guard still applies.
  */
 export class DeleteUserUseCase {
   constructor(
@@ -30,10 +26,8 @@ export class DeleteUserUseCase {
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
-  /** Soft-delete + token revocation + audit. */
   async execute(input: DeleteUserInput): Promise<AdminUserDTO> {
-    // We need to know the target role BEFORE deleting so we can guard the
-    // last-privileged-user case. Fetch first.
+    // Fetch BEFORE delete so last-privileged guard sees the target role.
     const target = await this.repository.getUserById(input.userId);
     if (!target) {
       throw notFound('User not found');
@@ -54,7 +48,7 @@ export class DeleteUserUseCase {
 
     const deleted = await this.repository.softDeleteUser(input.userId);
     if (!deleted) {
-      // Race condition: row vanished between the two queries. Rare; surface 404.
+      // Race: row vanished between the two queries. Surface 404.
       throw notFound('User not found');
     }
 

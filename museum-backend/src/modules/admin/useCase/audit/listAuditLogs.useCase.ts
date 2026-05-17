@@ -7,11 +7,9 @@ import type {
 } from '@modules/admin/domain/admin/admin.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 
-/** Validates pagination and delegates to the repository. */
 export class ListAuditLogsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  /** Validates pagination constraints and retrieves a paginated list of audit logs. */
   async execute(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {
     const { page, limit } = filters.pagination;
 

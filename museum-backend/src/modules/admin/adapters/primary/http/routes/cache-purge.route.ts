@@ -9,16 +9,9 @@ import { requireRole } from '@shared/middleware/require-role.middleware';
 
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * Builds the admin cache purge router.
- *
- * @param cache - Cache service for key deletion.
- * @returns Express Router with POST /museums/:id/cache/purge.
- */
 export function createCachePurgeRouter(cache: CacheService): Router {
   const router = Router();
 
-  // POST /api/admin/museums/:id/cache/purge — Admin only: purge LLM cache for a museum
   router.post(
     '/museums/:id/cache/purge',
     isAuthenticated,

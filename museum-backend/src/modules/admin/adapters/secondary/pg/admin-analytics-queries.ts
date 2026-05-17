@@ -15,13 +15,9 @@ import type { AuditLog } from '@shared/audit/auditLog.entity';
 import type { DataSource, Repository } from 'typeorm';
 
 /**
- * Map a granularity string to a PostgreSQL date_trunc unit.
- *
- * Defense-in-depth against SQL template-literal injection (finding M7/H-2):
- * the HTTP layer validates `granularity` with a Zod enum, but if that guard
- * is ever bypassed (direct internal caller, future regression), this runtime
- * `default` throws rather than silently returning `undefined` which would
- * inject `"undefined"` into the `date_trunc()` call.
+ * M7/H-2 defense-in-depth — exhaustive switch throws if HTTP Zod guard is
+ * bypassed by an internal caller, prevents `undefined` interpolation into
+ * `date_trunc()`.
  */
 function granularityToTrunc(g: AnalyticsGranularity): string {
   switch (g) {
@@ -38,7 +34,6 @@ function granularityToTrunc(g: AnalyticsGranularity): string {
   }
 }
 
-/** Repository bundle passed to analytics query functions. */
 interface AnalyticsRepositories {
   dataSource: DataSource;
   sessionRepo: Repository<ChatSession>;
@@ -46,7 +41,6 @@ interface AnalyticsRepositories {
   auditRepo: Repository<AuditLog>;
 }
 
-/** Computes time-series usage analytics (sessions, messages, active users) for a date range. */
 export async function queryUsageAnalytics(
   repos: AnalyticsRepositories,
   filters: UsageAnalyticsFilters,
@@ -55,9 +49,8 @@ export async function queryUsageAnalytics(
   const trunc = granularityToTrunc(granularity);
   const days = filters.days ?? 30;
 
-  // Build date filter conditions and parameters.
-  // The fallback cutoff is precomputed in JS to avoid interpolating `days`
-  // into an SQL INTERVAL string (prevents SQL-injection via numeric input).
+  // Cutoff precomputed in JS — avoids interpolating `days` into an SQL
+  // INTERVAL string (prevents SQL-injection via numeric input).
   const cutoff = new Date(Date.now() - days * 86_400_000);
   const buildDateFilter = (
     alias: string,
@@ -82,9 +75,8 @@ export async function queryUsageAnalytics(
   const messageFilter = buildDateFilter('message');
   const activeFilter = buildDateFilter('session');
 
-  // SAFETY: `trunc` is derived from `granularityToTrunc()` which maps the
-  // TypeScript union `AnalyticsGranularity` ('daily'|'weekly'|'monthly') to
-  // a fixed set of literals ('day'|'week'|'month'). It never contains user input.
+  // SAFETY: `trunc` is from granularityToTrunc() — fixed literal set
+  // ('day'|'week'|'month'), never user input.
   const [sessionsResult, messagesResult, activeUsersResult] = await Promise.all([
     repos.sessionRepo
       .createQueryBuilder('session')
@@ -133,14 +125,12 @@ export async function queryUsageAnalytics(
   };
 }
 
-/** Computes content analytics including top artworks, museums, and guardrail block rate. */
 export async function queryContentAnalytics(
   repos: AnalyticsRepositories,
   filters: ContentAnalyticsFilters,
 ): Promise<ContentAnalytics> {
   const topN = filters.limit ?? 10;
 
-  // Build date filter for artwork_matches and chat_sessions
   const artworkQb = repos.dataSource
     .getRepository(ArtworkMatch)
     .createQueryBuilder('a')
@@ -238,12 +228,11 @@ const addDateFilters = (
   }
 };
 
-/** Computes engagement metrics including average messages, session duration, and return rate. */
 export async function queryEngagementAnalytics(
   repos: AnalyticsRepositories,
   filters: EngagementAnalyticsFilters,
 ): Promise<EngagementAnalytics> {
-  // Average messages per session
+  // Average messages per session.
   const avgMsgQb = repos.sessionRepo
     .createQueryBuilder('s')
     .select('COALESCE(AVG(sub.msg_count), 0)', 'avg_msg')
@@ -263,7 +252,7 @@ export async function queryEngagementAnalytics(
       return sq;
     }, 'sub');
 
-  // Average session duration in minutes
+  // Average session duration (minutes).
   const avgDurationQb = repos.sessionRepo
     .createQueryBuilder('s')
     .select(
@@ -272,14 +261,14 @@ export async function queryEngagementAnalytics(
     );
   addDateFilters(avgDurationQb, 's', filters);
 
-  // Return rate: unique users vs returning users
+  // Return rate: unique users vs returning users.
   const returnRateMainQb = repos.sessionRepo
     .createQueryBuilder('s')
     .select('COUNT(DISTINCT s."userId")', 'total_unique')
     .where('s."userId" IS NOT NULL');
   addDateFilters(returnRateMainQb, 's', filters);
 
-  // Build the returning users subquery as raw SQL to avoid complexity
+  // Returning users subquery — raw SQL avoids QB complexity.
   const returningParams: unknown[] = [];
   let returningWhere = '';
   if (filters.from) {

@@ -30,7 +30,6 @@ import type {
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
 
-/** Map a User entity to an AdminUserDTO with ISO date strings. */
 function mapUser(user: User): AdminUserDTO {
   return {
     id: user.id,
@@ -42,15 +41,12 @@ function mapUser(user: User): AdminUserDTO {
     emailVerified: user.email_verified,
     suspended: user.suspended,
     deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
-    // R1 (C6) — surface tier on the admin DTO so the user-detail page can
-    // render the current value + the toggle button (super_admin only).
-    tier: user.tier,
+    tier: user.tier, // R1 (C6)
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
 }
 
-/** Map a raw report row (JOINed with chat_messages) to an AdminReportDTO. */
 function mapReport(report: MessageReport, message?: ChatMessage): AdminReportDTO {
   return {
     id: report.id,
@@ -69,7 +65,6 @@ function mapReport(report: MessageReport, message?: ChatMessage): AdminReportDTO
   };
 }
 
-/** Map an AuditLog entity to an AdminAuditLogDTO with ISO date strings. */
 function mapAuditLog(log: AuditLog): AdminAuditLogDTO {
   return {
     id: log.id,
@@ -84,7 +79,6 @@ function mapAuditLog(log: AuditLog): AdminAuditLogDTO {
   };
 }
 
-/** PostgreSQL implementation of the admin repository using TypeORM. */
 export class AdminRepositoryPg implements IAdminRepository {
   private readonly userRepo: Repository<User>;
   private readonly auditRepo: Repository<AuditLog>;
@@ -100,10 +94,8 @@ export class AdminRepositoryPg implements IAdminRepository {
     this.messageRepo = dataSource.getRepository(ChatMessage);
   }
 
-  /** Retrieves a paginated list of users with optional search and role filters. */
   async listUsers(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
-    // Alias `u` (not `user`) — `user` is a reserved keyword in PostgreSQL (= CURRENT_USER)
-    // and breaks raw SQL fragments. See getStats() for the same pattern.
+    // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), breaks raw SQL.
     const qb = this.userRepo.createQueryBuilder('u');
 
     if (filters.search) {
@@ -117,8 +109,7 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('u.role = :role', { role: filters.role });
     }
 
-    // Exclude soft-deleted users from the list view (still reachable via direct
-    // getUserById for forensics — see admin user detail page).
+    // Soft-deleted reachable via getUserById for forensics.
     qb.andWhere('u.deleted_at IS NULL');
 
     const { page, limit } = filters.pagination;
@@ -139,13 +130,12 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
-  /** Fetch a single user (including soft-deleted rows) for admin detail / audit. */
+  /** Includes soft-deleted rows. */
   async getUserById(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     return user ? mapUser(user) : null;
   }
 
-  /** Updates the role of a user and returns the updated record. */
   async changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -155,13 +145,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /**
-   * R1 (C6) — Flips `users.tier` to the new value via a `save` round-trip
-   * that ONLY mutates the `tier` column. `sessionsMonthCount` and
-   * `sessionsMonthStart` are loaded back from the row but not modified
-   * (R17 — counter preserved across flips). Returns `null` when the user
-   * row doesn't exist.
-   */
+  /** R1 (C6) — only mutates `tier`. R17 — `sessionsMonthCount`/`sessionsMonthStart` preserved. */
   async changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -170,7 +154,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Flip suspended=true (idempotent). */
+  /** Idempotent. */
   async suspendUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -179,7 +163,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Flip suspended=false (idempotent). */
+  /** Idempotent. */
   async unsuspendUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -188,7 +172,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Soft-delete: deleted_at = NOW(). Idempotent — re-deleting refreshes the timestamp. */
+  /** Idempotent — re-deleting refreshes the timestamp. */
   async softDeleteUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -198,14 +182,10 @@ export class AdminRepositoryPg implements IAdminRepository {
   }
 
   /**
-   * Returns the count of users carrying any privileged role (`admin` OR
-   * `super_admin`). Used by the last-admin guard in
-   * `ChangeUserRoleUseCase` — `super_admin` is the highest privilege
-   * (Musaium platform owner) so demoting the only `admin` while a
-   * `super_admin` still exists is safe ; the inverse is also safe.
-   * Counting both prevents a false "last admin" conflict in the V1
-   * single-platform-owner state where Tim is `super_admin` and no B2B
-   * `admin` exists yet.
+   * Counts admin + super_admin together for the last-admin guard. Demoting
+   * the only `admin` while `super_admin` exists is safe; the inverse too.
+   * V1 has Tim as super_admin only, no B2B admin yet — counting both
+   * prevents a false "last admin" conflict.
    */
   async countAdmins(): Promise<number> {
     return (
@@ -214,7 +194,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     );
   }
 
-  /** Retrieves a paginated list of audit log entries with optional filters. */
   async listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {
     const qb = this.auditRepo.createQueryBuilder('log');
 
@@ -256,12 +235,10 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
-  /** Aggregates dashboard statistics including user counts, sessions, and messages. */
   async getStats(): Promise<AdminStats> {
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
       this.userRepo
-        // Alias `u` (not `user`) — `user` is a reserved keyword in PostgreSQL
-        // (= CURRENT_USER); raw SQL fragments emit `user.role` literally and fail.
+        // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), raw SQL breaks.
         .createQueryBuilder('u')
         .select('u.role', 'role')
         .addSelect('COUNT(*)', 'total')
@@ -304,9 +281,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
-  // ─── Content Moderation (S4-03) ───
-
-  /** Retrieves a paginated list of message reports with optional status/reason filters. */
+  // S4-03 Content Moderation
   async listReports(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
     const qb = this.reportRepo
       .createQueryBuilder('report')
@@ -346,7 +321,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
-  /** Updates a message report's status with reviewer information. */
   async resolveReport(input: ResolveReportInput): Promise<AdminReportDTO | null> {
     const report = await this.reportRepo.findOne({
       where: { id: input.reportId },
@@ -364,9 +338,7 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapReport(saved, saved.message);
   }
 
-  // ─── Analytics (S4-04) ───
-
-  /** Computes time-series usage analytics (sessions, messages, active users) for a date range. */
+  // S4-04 Analytics
   async getUsageAnalytics(filters: UsageAnalyticsFilters): Promise<UsageAnalytics> {
     return await queryUsageAnalytics(
       {
@@ -379,7 +351,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     );
   }
 
-  /** Computes content analytics including top artworks, museums, and guardrail block rate. */
   async getContentAnalytics(filters: ContentAnalyticsFilters): Promise<ContentAnalytics> {
     return await queryContentAnalytics(
       {
@@ -392,7 +363,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     );
   }
 
-  /** Computes engagement metrics including average messages, session duration, and return rate. */
   async getEngagementAnalytics(filters: EngagementAnalyticsFilters): Promise<EngagementAnalytics> {
     return await queryEngagementAnalytics(
       {
