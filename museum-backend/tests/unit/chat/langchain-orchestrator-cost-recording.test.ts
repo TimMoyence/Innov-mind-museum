@@ -57,20 +57,36 @@ import { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
 function makeFakeModel(response: string) {
+  const structuredInvoke = jest.fn().mockResolvedValue({
+    text: response,
+    deeperContext: null,
+    openQuestion: null,
+    suggestedFollowUp: null,
+    imageDescription: null,
+    suggestedImages: null,
+    detectedArtwork: null,
+    recommendations: null,
+    expertiseSignal: null,
+    citations: null,
+    sources: null,
+  });
   return {
-    invoke: jest.fn().mockResolvedValue({ content: response }),
+    invoke: jest.fn(),
     stream: jest.fn().mockResolvedValue(
       (async function* () {
         yield { content: response };
       })(),
     ),
+    withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
   };
 }
 
 function makeThrowingModel(err: Error) {
+  const structuredInvoke = jest.fn().mockRejectedValue(err);
   return {
     invoke: jest.fn().mockRejectedValue(err),
     stream: jest.fn().mockRejectedValue(err),
+    withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
   };
 }
 

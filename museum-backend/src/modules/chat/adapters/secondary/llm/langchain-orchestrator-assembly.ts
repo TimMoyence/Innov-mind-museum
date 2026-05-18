@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 
-import { createSummaryFallback, type LlmSectionName } from '@modules/chat/useCase/llm/llm-sections';
-import { parseAssistantResponse } from '@modules/chat/useCase/orchestration/assistant-response';
+import { createSummaryFallback } from '@modules/chat/useCase/llm/llm-sections';
+import { extractMetadata } from '@modules/chat/useCase/orchestration/assistant-response';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -18,13 +18,14 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import type { SectionRunResult } from '@modules/chat/useCase/llm/llm-section-runner';
+import type { LlmSectionName, MainAssistantOutput } from '@modules/chat/useCase/llm/llm-sections';
 
 type SectionPlan = ReturnType<typeof buildOrchestratorMessages>['sectionPlan'];
 
 export interface AssembleResponseInput {
   input: OrchestratorInput;
   sectionPlan: SectionPlan;
-  bySection: Map<LlmSectionName, SectionRunResult<string>>;
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>;
   recentHistory: ChatMessage[];
   normalizedText: string | undefined;
   startedAt: number;
@@ -38,7 +39,7 @@ interface ResolvedSummary {
 }
 
 export function resolveSummary(
-  bySection: Map<LlmSectionName, SectionRunResult<string>>,
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>,
   input: OrchestratorInput,
   recentHistory: ChatMessage[],
   normalizedText: string | undefined,
@@ -46,10 +47,11 @@ export function resolveSummary(
   const summaryResult = bySection.get('summary');
 
   if (summaryResult?.status === 'success') {
-    const parsed = parseAssistantResponse(summaryResult.value);
+    const { text, ...rest } = summaryResult.value;
+    const metadata = extractMetadata(rest as Record<string, unknown>);
     return {
-      text: parsed.answer || EMPTY_RESPONSE_FALLBACK,
-      metadata: parsed.metadata,
+      text: text || EMPTY_RESPONSE_FALLBACK,
+      metadata,
       degraded: false,
       fallbackApplied: false,
     };
@@ -80,7 +82,7 @@ export function resolveSummary(
 
 export function buildDiagnosticsSections(
   sectionPlan: SectionPlan,
-  bySection: Map<LlmSectionName, SectionRunResult<string>>,
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>,
   fallbackApplied: boolean,
 ): ChatAssistantDiagnostics['sections'] {
   return sectionPlan.map((section) => {
