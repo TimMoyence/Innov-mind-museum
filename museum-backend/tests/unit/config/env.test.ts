@@ -501,4 +501,75 @@ describe('env.ts module', () => {
       expect(env.visualSimilarity.replicateApiToken).toBeUndefined();
     });
   });
+
+  // C9.13 (2026-05-18) — cross-encoder reranker block (T2.1).
+  describe('rerank defaults', () => {
+    it('applies all spec defaults when no RERANK_* env vars are set', () => {
+      const env = loadEnv({
+        RERANK_PROVIDER: undefined,
+        RERANK_MODEL_PATH: undefined,
+        RERANK_TIMEOUT_MS: undefined,
+        RERANK_TOP_K_CANDIDATES: undefined,
+        RERANK_TOP_N_FINAL: undefined,
+      });
+      expect(env.rerank).toEqual({
+        provider: 'null',
+        modelPath: './models/bge-reranker-v2-m3.onnx',
+        timeoutMs: 2000,
+        topKCandidates: 50,
+        topNFinal: 5,
+      });
+    });
+  });
+
+  describe('rerank provider whitelist (resolveRerankerProvider)', () => {
+    it('selects bge-reranker-v2-m3 when RERANK_PROVIDER=bge-reranker-v2-m3', () => {
+      const env = loadEnv({ RERANK_PROVIDER: 'bge-reranker-v2-m3' });
+      expect(env.rerank.provider).toBe('bge-reranker-v2-m3');
+    });
+
+    it('selects null when RERANK_PROVIDER=null', () => {
+      const env = loadEnv({ RERANK_PROVIDER: 'null' });
+      expect(env.rerank.provider).toBe('null');
+    });
+
+    it('is case-insensitive on RERANK_PROVIDER', () => {
+      const env = loadEnv({ RERANK_PROVIDER: 'BGE-Reranker-V2-M3' });
+      expect(env.rerank.provider).toBe('bge-reranker-v2-m3');
+    });
+
+    // Fail-open contract: a misconfigured RERANK_PROVIDER must not brick boot.
+    // resolveRerankerProvider() falls back to 'null' on unknown values.
+    it('falls back to "null" for unknown provider value (fail-open)', () => {
+      const env = loadEnv({ RERANK_PROVIDER: 'cohere-rerank' });
+      expect(env.rerank.provider).toBe('null');
+    });
+  });
+
+  describe('rerank numeric overrides', () => {
+    it('overrides RERANK_TIMEOUT_MS from env', () => {
+      const env = loadEnv({ RERANK_TIMEOUT_MS: '500' });
+      expect(env.rerank.timeoutMs).toBe(500);
+    });
+
+    it('overrides RERANK_TOP_K_CANDIDATES from env', () => {
+      const env = loadEnv({ RERANK_TOP_K_CANDIDATES: '25' });
+      expect(env.rerank.topKCandidates).toBe(25);
+    });
+
+    it('overrides RERANK_TOP_N_FINAL from env', () => {
+      const env = loadEnv({ RERANK_TOP_N_FINAL: '8' });
+      expect(env.rerank.topNFinal).toBe(8);
+    });
+
+    it('falls back to default 2000 when RERANK_TIMEOUT_MS is non-numeric', () => {
+      const env = loadEnv({ RERANK_TIMEOUT_MS: 'fast' });
+      expect(env.rerank.timeoutMs).toBe(2000);
+    });
+
+    it('overrides RERANK_MODEL_PATH from env', () => {
+      const env = loadEnv({ RERANK_MODEL_PATH: '/srv/models/bge-rerank.onnx' });
+      expect(env.rerank.modelPath).toBe('/srv/models/bge-rerank.onnx');
+    });
+  });
 });

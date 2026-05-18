@@ -19,6 +19,8 @@ import {
   type RerankResult,
   type RerankerPort,
 } from '@modules/chat/domain/ports/reranker.port';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import { rerankFallbackTotal } from '@shared/observability/prometheus-metrics';
 
 import type {
   ArtworkFacts,
@@ -30,6 +32,12 @@ import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
+
+jest.mock('@shared/observability/langfuse.client', () => ({
+  getLangfuse: jest.fn(() => null),
+}));
+
+const getLangfuseMock = getLangfuse as jest.MockedFunction<typeof getLangfuse>;
 
 const makeSearchResult = (i: number): SearchResult => ({
   url: `https://example.org/r${i}`,
@@ -53,6 +61,20 @@ const defaultConfig = {
   rerankTimeoutMs: 800,
 };
 
+/**
+ * Reads the current value of `musaium_rerank_fallback_total` filtered by the
+ * given label match. Mirrors the prom-client pattern used in
+ * `guardrail-budget-redis.test.ts` — assertions stay against the real
+ * registry, not a hand-rolled mock.
+ */
+async function fallbackCounterValue(match: { caller: string; reason: string }): Promise<number> {
+  const snapshot = await rerankFallbackTotal.get();
+  const matched = snapshot.values.find(
+    (v) => v.labels.caller === match.caller && v.labels.reason === match.reason,
+  );
+  return matched?.value ?? 0;
+}
+
 const makeService = (): Deps => {
   const kb = {
     lookup: jest.fn().mockResolvedValue(null as ArtworkFacts | null),
@@ -74,6 +96,12 @@ const makeService = (): Deps => {
 };
 
 describe('KnowledgeRouterService — rerank fail-open (C9.13)', () => {
+  beforeEach(() => {
+    rerankFallbackTotal.reset();
+    getLangfuseMock.mockReset();
+    getLangfuseMock.mockReturnValue(null);
+  });
+
   it('reorders webResults when reranker returns a valid permutation', async () => {
     const { ws, reranker, service } = makeService();
     const results = [0, 1, 2, 3, 4].map((i) => makeSearchResult(i));
@@ -109,6 +137,79 @@ describe('KnowledgeRouterService — rerank fail-open (C9.13)', () => {
     expect(out.source).toBe('web');
     expect(out.facts[0]).toContain('Result 0'); // baseline preserved
     expect(out.facts[1]).toContain('Result 1');
+  });
+
+  // R5 — telemetry side-effect must be observable: counter increments AND
+  // Langfuse `chat.rerank` span is emitted with the design §10 metadata
+  // contract. Mocks the real prom-client registry (no hand-rolled mock) and
+  // swaps `getLangfuse()` to return a spy client.
+  it('increments musaium_rerank_fallback_total{caller=knowledge-router} and emits chat.rerank span on fail-open', async () => {
+    const clientTrace = jest.fn();
+    const fakeClient = { trace: clientTrace };
+    getLangfuseMock.mockReturnValue(fakeClient as unknown as ReturnType<typeof getLangfuse>);
+
+    const { ws, reranker, service } = makeService();
+    const results = [0, 1, 2, 3, 4].map((i) => makeSearchResult(i));
+    ws.search.mockResolvedValueOnce(results);
+    reranker.rerank.mockRejectedValueOnce(
+      new RerankerUnavailableError('disabled by configuration'),
+    );
+
+    const before = await fallbackCounterValue({
+      caller: 'knowledge-router',
+      reason: 'unavailable',
+    });
+    await service.resolve('mona lisa');
+    const after = await fallbackCounterValue({
+      caller: 'knowledge-router',
+      reason: 'unavailable',
+    });
+
+    // R5/R7 acceptance — counter incremented by exactly one fail-open hit.
+    expect(after - before).toBe(1);
+
+    // R8 acceptance — `chat.rerank` span emitted with the metadata contract.
+    const rerankCalls = clientTrace.mock.calls.filter(
+      (call) => (call[0] as { name?: string } | undefined)?.name === 'chat.rerank',
+    );
+    expect(rerankCalls.length).toBe(1);
+    const rerankSpanArg = rerankCalls[0]?.[0] as
+      | { name: string; metadata?: Record<string, unknown> }
+      | undefined;
+    expect(rerankSpanArg?.name).toBe('chat.rerank');
+    expect(rerankSpanArg?.metadata).toMatchObject({
+      'rerank.caller': 'knowledge-router',
+      'rerank.candidate_count': 5,
+      'rerank.top_n': 5,
+      'rerank.outcome': 'fallback',
+      'rerank.reason': 'unavailable',
+    });
+    // queryHash = sha256(query)[:16] — design D6 PII contract.
+    const queryHash = (rerankSpanArg?.metadata?.['rerank.query_hash'] as string | undefined) ?? '';
+    expect(queryHash).toMatch(/^[a-f0-9]{16}$/);
+    expect(queryHash).not.toContain('mona');
+  });
+
+  // R5 — distinct reason label when the cause is a timeout (synthetic abort).
+  it('uses reason="timeout" when the reranker fails with a timed-out RerankerUnavailableError', async () => {
+    const { ws, reranker, service } = makeService();
+    const results = [0, 1, 2, 3, 4].map((i) => makeSearchResult(i));
+    ws.search.mockResolvedValueOnce(results);
+    reranker.rerank.mockRejectedValueOnce(
+      new RerankerUnavailableError('rerank timed out after 800ms'),
+    );
+
+    const before = await fallbackCounterValue({
+      caller: 'knowledge-router',
+      reason: 'timeout',
+    });
+    await service.resolve('mona lisa');
+    const after = await fallbackCounterValue({
+      caller: 'knowledge-router',
+      reason: 'timeout',
+    });
+
+    expect(after - before).toBe(1);
   });
 
   it('does not call reranker when webResults.length <= 1', async () => {

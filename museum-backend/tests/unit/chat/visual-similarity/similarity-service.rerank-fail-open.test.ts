@@ -23,6 +23,8 @@ import {
 } from '../../../helpers/chat/visual-similarity/compare.fixtures';
 
 import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import { rerankFallbackTotal } from '@shared/observability/prometheus-metrics';
 
 import type { RerankResult, RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type { EmbeddingsPort, EncodeOutput } from '@modules/chat/domain/ports/embeddings.port';
@@ -40,6 +42,21 @@ import type { CacheService } from '@shared/cache/cache.port';
 jest.mock('@shared/observability/langfuse.client', () => ({
   getLangfuse: jest.fn(() => null),
 }));
+
+const getLangfuseMock = getLangfuse as jest.MockedFunction<typeof getLangfuse>;
+
+/**
+ * Reads the current value of `musaium_rerank_fallback_total` filtered by the
+ * given label match. Same prom-client snapshot pattern as
+ * `guardrail-budget-redis.test.ts` — exercises the real registry.
+ */
+async function fallbackCounterValue(match: { caller: string; reason: string }): Promise<number> {
+  const snapshot = await rerankFallbackTotal.get();
+  const matched = snapshot.values.find(
+    (v) => v.labels.caller === match.caller && v.labels.reason === match.reason,
+  );
+  return matched?.value ?? 0;
+}
 
 interface VsCtorArgs {
   encoder: EmbeddingsPort;
@@ -133,6 +150,12 @@ describe('VisualSimilarityService — rerank fail-open (C9.13)', () => {
     buffer = await makeSiglipJpegBuffer();
   });
 
+  beforeEach(() => {
+    rerankFallbackTotal.reset();
+    getLangfuseMock.mockReset();
+    getLangfuseMock.mockReturnValue(null);
+  });
+
   it('does NOT call reranker when queryText is undefined (V1 default)', async () => {
     const { encoder, repo, enricher, cache, reranker } = buildMocks();
     const service = new VisualSimilarityService({
@@ -215,5 +238,70 @@ describe('VisualSimilarityService — rerank fail-open (C9.13)', () => {
     // when V1 has metadataScore=0). Highest is qid Q1000.
     expect(result.matches[0]?.qid).toBe('Q1000');
     expect(reranker.rerank).toHaveBeenCalledTimes(1);
+  });
+
+  // R7 — telemetry side-effect must be observable: counter increments AND
+  // Langfuse `chat.rerank` span is emitted with the design §10 metadata
+  // contract (caller='visual-similarity').
+  it('increments musaium_rerank_fallback_total{caller=visual-similarity} and emits chat.rerank span on fail-open', async () => {
+    const clientTrace = jest.fn();
+    const fakeClient = { trace: clientTrace };
+    getLangfuseMock.mockReturnValue(fakeClient as unknown as ReturnType<typeof getLangfuse>);
+
+    const { encoder, repo, enricher, cache, reranker } = buildMocks();
+    reranker.rerank.mockRejectedValueOnce(
+      new RerankerUnavailableError('disabled by configuration'),
+    );
+
+    const service = new VisualSimilarityService({
+      encoder,
+      repo,
+      enricher,
+      cache,
+      reranker,
+      weights: { wVisual: 0.7, wMeta: 0.3 },
+    });
+
+    const before = await fallbackCounterValue({
+      caller: 'visual-similarity',
+      reason: 'unavailable',
+    });
+    await service.compare({
+      buffer,
+      mimeType: 'image/jpeg',
+      topK: 5,
+      locale: 'fr',
+      queryText: 'mona lisa portrait',
+    });
+    const after = await fallbackCounterValue({
+      caller: 'visual-similarity',
+      reason: 'unavailable',
+    });
+
+    // R7 acceptance — counter incremented by exactly one fail-open hit.
+    expect(after - before).toBe(1);
+
+    // R8 acceptance — `chat.rerank` span emitted with the metadata contract.
+    const rerankCalls = clientTrace.mock.calls.filter(
+      (call) => (call[0] as { name?: string } | undefined)?.name === 'chat.rerank',
+    );
+    expect(rerankCalls.length).toBe(1);
+    const rerankSpanArg = rerankCalls[0]?.[0] as
+      | { name: string; metadata?: Record<string, unknown> }
+      | undefined;
+    expect(rerankSpanArg?.name).toBe('chat.rerank');
+    expect(rerankSpanArg?.metadata).toMatchObject({
+      'rerank.caller': 'visual-similarity',
+      'rerank.outcome': 'fallback',
+      'rerank.reason': 'unavailable',
+    });
+    // candidate_count must match the topMatches input size (the service
+    // limits to topN before rerank).
+    expect(rerankSpanArg?.metadata?.['rerank.candidate_count']).toEqual(expect.any(Number));
+    expect(rerankSpanArg?.metadata?.['rerank.top_n']).toEqual(expect.any(Number));
+    // queryHash = sha256(queryText)[:16] — design D6 PII contract.
+    const queryHash = (rerankSpanArg?.metadata?.['rerank.query_hash'] as string | undefined) ?? '';
+    expect(queryHash).toMatch(/^[a-f0-9]{16}$/);
+    expect(queryHash).not.toContain('mona');
   });
 });
