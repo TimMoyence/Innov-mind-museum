@@ -13,6 +13,7 @@ import {
 import {
   WALK_TOUR_GUIDE_SECTION,
   walkAssistantOutputSchema,
+  type WalkAssistantOutput,
 } from '@modules/chat/useCase/llm/llm-sections/walk-tour-guide';
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import { logger } from '@shared/logger/logger';
@@ -26,6 +27,8 @@ import {
   MISSING_LLM_KEY_FALLBACK,
   toModel,
   isRetryableError,
+  isIncludeRawShape,
+  recordPromptCacheTelemetry,
 } from './langchain-orchestrator-support';
 import { withLangfuseTrace } from './langchain-orchestrator-tracing';
 import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
@@ -35,6 +38,8 @@ import type {
   ChatModel,
   InvokeSectionInput,
   LangChainChatOrchestratorDeps,
+  UsageMetadata,
+  UsageRef,
 } from './langchain-orchestrator-support';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
 import type {
@@ -117,14 +122,53 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         }
 
         // Structured-output fast path → OpenAI/Gemini `response_format: json_schema`.
+        // C9.5 — `includeRaw: true` exposes the raw AIMessage's
+        // `usage_metadata.input_token_details.cache_read` for prompt-cache
+        // telemetry. R10 fallback handles fakes / older SDKs that return the
+        // legacy parsed-only shape.
         const structured = input.model.withStructuredOutput(input.outputSchema.schema, {
           name: input.outputSchema.name,
+          includeRaw: true,
         });
-        const parsed = (await this.circuitBreaker.execute(() =>
+        const result = (await this.circuitBreaker.execute(() =>
           this.semaphore.use(
             async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
           ),
-        )) as MainAssistantOutput;
+        )) as
+          | MainAssistantOutput
+          | { raw: { usage_metadata?: UsageMetadata }; parsed: MainAssistantOutput | null };
+
+        let parsed: MainAssistantOutput;
+        let usage: UsageMetadata | undefined;
+        if (isIncludeRawShape<MainAssistantOutput>(result)) {
+          if (result.parsed === null) {
+            // C9.17 R2 — structured-output parse failure surfaces as a section
+            // error; the runner catches it and ships the canned fallback.
+            throw new Error('structured output parse failure — parsed: null');
+          }
+          parsed = result.parsed;
+          usage = result.raw.usage_metadata;
+        } else {
+          // R10 — fake / older SDK / provider ignored `includeRaw: true` and
+          // returned the parsed-only shape. Telemetry degrades to `'miss'`
+          // (no usage metadata available); chat path stays healthy.
+          parsed = result;
+          usage = undefined;
+        }
+
+        // C9.5 — R8/R9/R11/R12 emit Prom + log + Langfuse usage block.
+        // All side-effects are swallowed internally; this call never throws.
+        recordPromptCacheTelemetry(
+          {
+            requestId: input.requestId,
+            sectionName: input.sectionName,
+            provider: env.llm.provider,
+            model: env.llm.model,
+            usage,
+          },
+          input.usageRef,
+        );
+
         // C9.4 — record cost only on success (R2: no charge on error).
         this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
         return parsed;
@@ -133,70 +177,78 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   }
 
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return await withLangfuseTrace('llm.orchestrate', input, () =>
-      startSpan(
-        {
-          name: 'llm.orchestrate',
-          op: 'ai.orchestrate',
-          attributes: {
-            'llm.provider': env.llm.provider,
-            'llm.model': env.llm.model,
-            'llm.has_image': !!input.image,
-            'llm.history_length': input.history.length,
+    // C9.5 D7 — `usageRef` ferries the section's `usage_metadata` (cache_read
+    // + input/output tokens) up to the enclosing Langfuse generation.end()
+    // call without polluting the public `OrchestratorOutput` port.
+    const usageRef: UsageRef = {};
+    return await withLangfuseTrace(
+      'llm.orchestrate',
+      input,
+      () =>
+        startSpan(
+          {
+            name: 'llm.orchestrate',
+            op: 'ai.orchestrate',
+            attributes: {
+              'llm.provider': env.llm.provider,
+              'llm.model': env.llm.model,
+              'llm.has_image': !!input.image,
+              'llm.history_length': input.history.length,
+            },
           },
-        },
-        async () => {
-          if (input.intent === 'walk') {
-            return await this.generateWalk(input);
-          }
+          async () => {
+            if (input.intent === 'walk') {
+              return await this.generateWalk(input, usageRef);
+            }
 
-          // Breaker fast-fail at entry → surface 503; section fallback can't mask a degraded provider.
-          if (this.circuitBreaker.state === 'OPEN') {
-            throw new CircuitOpenError();
-          }
+            // Breaker fast-fail at entry → surface 503; section fallback can't mask a degraded provider.
+            if (this.circuitBreaker.state === 'OPEN') {
+              throw new CircuitOpenError();
+            }
 
-          const startedAt = Date.now();
+            const startedAt = Date.now();
 
-          const prepared = buildOrchestratorMessages(input);
-          const { normalizedText, recentHistory, sectionPlan } = prepared;
+            const prepared = buildOrchestratorMessages(input);
+            const { normalizedText, recentHistory, sectionPlan } = prepared;
 
-          const model = this.model;
-          if (!model) {
-            return {
-              text: MISSING_LLM_KEY_FALLBACK,
-              metadata: { citations: ['system:missing-llm-api-key'] },
-            };
-          }
+            const model = this.model;
+            if (!model) {
+              return {
+                text: MISSING_LLM_KEY_FALLBACK,
+                metadata: { citations: ['system:missing-llm-api-key'] },
+              };
+            }
 
-          const tasks = this.buildSectionTasks(model, prepared, input);
+            const tasks = this.buildSectionTasks(model, prepared, input, usageRef);
 
-          const sectionResults = await runSectionTasks(
-            tasks,
-            buildRunnerOptions({
-              requestId: input.requestId,
-              shouldRetry: (error: unknown, status: string) => {
-                if (status === 'timeout') return true;
-                return isRetryableError(error);
-              },
-            }),
-          );
+            const sectionResults = await runSectionTasks(
+              tasks,
+              buildRunnerOptions({
+                requestId: input.requestId,
+                shouldRetry: (error: unknown, status: string) => {
+                  if (status === 'timeout') return true;
+                  return isRetryableError(error);
+                },
+              }),
+            );
 
-          // Section errors degrade via resolveSummary fallback; only breaker fast-fail above surfaces 503.
-          const bySection = new Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>();
-          for (const result of sectionResults) {
-            bySection.set(result.name as LlmSectionName, result);
-          }
+            // Section errors degrade via resolveSummary fallback; only breaker fast-fail above surfaces 503.
+            const bySection = new Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>();
+            for (const result of sectionResults) {
+              bySection.set(result.name as LlmSectionName, result);
+            }
 
-          return assembleResponse({
-            input,
-            sectionPlan,
-            bySection,
-            recentHistory,
-            normalizedText,
-            startedAt,
-          });
-        },
-      ),
+            return assembleResponse({
+              input,
+              sectionPlan,
+              bySection,
+              recentHistory,
+              normalizedText,
+              startedAt,
+            });
+          },
+        ),
+      usageRef,
     );
   }
 
@@ -204,6 +256,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     model: ChatModel,
     prepared: ReturnType<typeof buildOrchestratorMessages>,
     input: OrchestratorInput,
+    usageRef: UsageRef,
   ): SectionTask<MainAssistantOutput>[] {
     const { sectionPlan, systemPrompt, historyMessages, userMessage } = prepared;
     return sectionPlan.map((section: LlmSectionDefinition) => {
@@ -240,6 +293,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             outputSchema: section.outputSchema,
             museumId: input.museumId ?? null,
             tier,
+            // C9.5 — thread for cache-status telemetry.
+            requestId: input.requestId,
+            usageRef,
           }),
       };
     });
@@ -249,8 +305,20 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * intent='walk' — injects WALK_TOUR_GUIDE_SECTION as system msg + uses
    * withStructuredOutput → walkAssistantOutputSchema. No section runner / retry —
    * exceptions propagate.
+   *
+   * C9.5 asymmetry — the walk path intentionally does NOT switch to
+   * `includeRaw: true` + `recordPromptCacheTelemetry`. The editor scope for
+   * C9.5 limits cache telemetry to the default-path `invokeSection`. The walk
+   * intent is session-pinned and would benefit equally from prompt caching;
+   * adding telemetry there is a follow-up (tracked in design §D5.a). `usageRef`
+   * is accepted here for signature parity with the default path but stays
+   * untouched — Langfuse generation.end() will report no `usage` block for
+   * walk turns until that follow-up lands.
    */
-  private async generateWalk(input: OrchestratorInput): Promise<OrchestratorOutput> {
+  private async generateWalk(
+    input: OrchestratorInput,
+    _usageRef: UsageRef,
+  ): Promise<OrchestratorOutput> {
     const model = this.model;
     if (!model) {
       return {
@@ -302,13 +370,26 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
     messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
 
+    // C9.5 — walk path stays on the legacy parsed-only shape (no
+    // `includeRaw: true`) per the asymmetry comment on `generateWalk`. The
+    // `ChatModel.withStructuredOutput` return type is a union accommodating
+    // both shapes; here we narrow at runtime via `isIncludeRawShape`.
     const structured = model.withStructuredOutput(walkAssistantOutputSchema, {
       name: 'WalkAssistantOutput',
     });
 
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     const walkPayloadBytes = estimatePayloadBytes(messages);
-    const result = await structured.invoke(messages, { signal });
+    const rawResult = await structured.invoke(messages, { signal });
+    let result: WalkAssistantOutput;
+    if (isIncludeRawShape<WalkAssistantOutput>(rawResult)) {
+      if (rawResult.parsed === null) {
+        throw new Error('walk structured output parse failure — parsed: null');
+      }
+      result = rawResult.parsed;
+    } else {
+      result = rawResult;
+    }
 
     // C9.4 — record cost on walk path (bypasses invokeSection). R2: only on success.
     const walkTier = input.userId == null ? 'anonymous' : 'free';

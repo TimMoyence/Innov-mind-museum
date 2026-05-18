@@ -2,6 +2,9 @@ import { getLangfuse } from '@shared/observability/langfuse.client';
 import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
+import { classifyCacheStatus } from './langchain-orchestrator-support';
+
+import type { UsageRef } from './langchain-orchestrator-support';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -20,11 +23,19 @@ import type {
  * PII discipline (C9.0 spec R6): `input` and `output` carry ONLY lengths,
  * booleans, locale, intent enum, model name — never raw user text, image
  * bytes, or LLM response text.
+ *
+ * C9.5 R9 — optional `usageRef` ferries the section's prompt-cache usage
+ * metadata (cache_read + input/output tokens) into the same generation.end()
+ * call. The orchestrator's `recordPromptCacheTelemetry` mutates `usageRef.current`
+ * inside the wrapped `fn()`. When set, we spread a `usage` block + a
+ * `metadata.cacheStatus` enum onto the success-path payload. Numeric usage data
+ * is non-PII — the R6 discipline above stays satisfied.
  */
 export async function withLangfuseTrace<T extends OrchestratorOutput>(
   name: string,
   input: OrchestratorInput,
   fn: () => Promise<T>,
+  usageRef?: UsageRef,
 ): Promise<T> {
   const lf = getLangfuse();
 
@@ -70,8 +81,24 @@ export async function withLangfuseTrace<T extends OrchestratorOutput>(
     safeTrace('langfuse.generation.end', () => {
       // `endTime` is set implicitly by the SDK when `.end()` is called (the
       // SDK omits `endTime` from the body type for exactly this reason).
+      const usage = usageRef?.current;
       generation?.end({
         output: { textLength: result.text.length },
+        // C9.5 R9 — only spread when `usage` is set; absent fields omitted
+        // (e.g. cache_read undefined → omitted, not 0).
+        ...(usage
+          ? {
+              usage: {
+                ...(usage.input_tokens !== undefined ? { input: usage.input_tokens } : {}),
+                ...(usage.output_tokens !== undefined ? { output: usage.output_tokens } : {}),
+                ...(usage.total_tokens !== undefined ? { total: usage.total_tokens } : {}),
+                ...(usage.input_token_details?.cache_read !== undefined
+                  ? { cache_read: usage.input_token_details.cache_read }
+                  : {}),
+              },
+              metadata: { cacheStatus: classifyCacheStatus(usage) },
+            }
+          : {}),
       });
     });
     return result;
