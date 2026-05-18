@@ -83,6 +83,8 @@ lib-docs/**
 !lib-docs/.gitignore
 !lib-docs/*/
 !lib-docs/*/LESSONS.md
+!lib-docs/@*/*/
+!lib-docs/@*/*/LESSONS.md
 
 # frontend docs
 !museum-frontend/docs/

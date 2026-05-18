@@ -2,8 +2,1341 @@
   "$schema": "https://musaium.app/lib-docs/INDEX.schema.json",
   "version": "1.0",
   "description": "UFR-022 lib-docs manifest. Source of truth for which libraries have a cached PATTERNS.md + LESSONS.md + raw snapshot. Tracked in git. Per-lib snapshots/PATTERNS.md/sources.json/VERSION = untracked, regenerated locally on demand by doc-fetcher + doc-curator agents.",
-  "lastUpdated": "2026-05-18T00:00:00Z",
-  "libs": {},
+  "lastUpdated": "2026-05-18T10:12:57Z",
+  "libs": {
+    "typeorm": {
+      "version": "0.3.28",
+      "fetched": "2026-05-18T08:01:00Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:01:00Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "017efd825138716ed723c7adbefdc682f29812c55a91e41d97098965d6f728d5",
+      "patternsSha256": "862266265de596e9f79055c65c296775698b4f1e4b525f76143b99b9ebf393df",
+      "sourceUrls": [
+        "https://typeorm.io/",
+        "https://typeorm.io/docs/getting-started"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "https://typeorm.io/docs/working-with-repository/repository-api"
+        },
+        {
+          "reason": "404",
+          "url": "https://typeorm.io/docs/working-with-repository/find-options"
+        }
+      ]
+    },
+    "express": {
+      "version": "5.2.1",
+      "fetched": "2026-05-18T08:11:33Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:11:33Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "02f242d008ba9ad8e70a39b0a4d3661ba108d36ed22c5441eba48ff4633d0672",
+      "patternsSha256": "3c57311fd43e61e147c33d9c6632e49a97636a81f2dcdc427c747db7a9ff7b04",
+      "sourceUrls": [
+        "https://expressjs.com/en/5x/api.html",
+        "https://expressjs.com/en/guide/migrating-5.html"
+      ],
+      "warnings": []
+    },
+    "langchain": {
+      "version": "1.x-family",
+      "fetched": "2026-05-18T08:11:33Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:11:33Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "39177912fb523ac5e2badbbe97908c212f9366ba0ad3b9b779e45b66675b1c4e",
+      "patternsSha256": "7e13306a1d67de9b80f33b256346e8afb145b5b6bc6a61b784d7bbcdac2f4b78",
+      "sourceUrls": [
+        "https://docs.langchain.com/oss/javascript/releases/langchain-v1",
+        "https://js.langchain.com/docs/"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "https://docs.langchain.com/oss/javascript/quickstart"
+        }
+      ],
+      "family": [
+        "@langchain/core@1.1.45",
+        "@langchain/openai@1.4.2",
+        "@langchain/google-genai@2.1.26"
+      ]
+    },
+    "pg": {
+      "version": "8.20.0",
+      "fetched": "2026-05-18T08:11:33Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:11:33Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "6d9ed6a96787b81f3127c0ecbfdf589c601ac9c5f01b67dd15c9e2ce29f82f28",
+      "patternsSha256": "361d485e5750f7b2aa09c6dd1b67eb60bb3d11c1d51958b91e1b2d9a4c5b083e",
+      "sourceUrls": [
+        "https://node-postgres.com/",
+        "https://node-postgres.com/apis/pool"
+      ],
+      "warnings": []
+    },
+    "bcrypt": {
+      "version": "6.0.0",
+      "fetched": "2026-05-18T08:11:33Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:11:33Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "dcdcde1f07fb54e4383f249541605d31073a0b5ce3654919d4dff08bda33d315",
+      "patternsSha256": "1896b3981b427c7fe9c646ac73ed3c146813ddff56eeb95c650306bd4755d09d",
+      "sourceUrls": [
+        "https://github.com/kelektiv/node.bcrypt.js",
+        "https://raw.githubusercontent.com/kelektiv/node.bcrypt.js/master/SECURITY.md"
+      ],
+      "warnings": [
+        {
+          "reason": "403-anti-bot",
+          "url": "https://www.npmjs.com/package/bcrypt"
+        }
+      ]
+    },
+    "jsonwebtoken": {
+      "version": "9.0.3",
+      "fetched": "2026-05-18T08:11:33Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:11:33Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "aa8facfdd1e16a8943620371c3f8fe37d0c5fb96e800ac719547fc2cad9a418c",
+      "patternsSha256": "50b45d06a94348f002ed1015ca951523a4fba0886a351841abed2547cc44553e",
+      "sourceUrls": [
+        "https://github.com/auth0/node-jsonwebtoken",
+        "https://github.com/auth0/node-jsonwebtoken/wiki/Migration-Notes:-v8-to-v9"
+      ],
+      "warnings": [
+        {
+          "reason": "403-forbidden",
+          "url": "https://www.npmjs.com/package/jsonwebtoken"
+        }
+      ]
+    },
+    "bullmq": {
+      "version": "5.74.1",
+      "fetched": "2026-05-18T08:24:52Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:24:52Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "21a82798affab42f5c3966909b1866121699a812e6796f33facdfdec7924c84c",
+      "patternsSha256": "7400efd2e11a8ff6c4082afbca908af2192096ffc2b259edb47631d387ce5d74",
+      "sourceUrls": [
+        "https://docs.bullmq.io/guide/introduction",
+        "https://docs.bullmq.io/guide/connections"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "https://docs.bullmq.io/guide/queueevents"
+        }
+      ]
+    },
+    "ioredis": {
+      "version": "5.10.1",
+      "fetched": "2026-05-18T08:24:52Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:24:52Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "1002dba0ac51d5376188288c388f7adfea0d94f8136c1d16d78c60cac918cd87",
+      "patternsSha256": "4ce02936fc22bea1e99b8ff44bd9b566c27776857c9d4c0f4a8884b825a62813",
+      "sourceUrls": [
+        "https://github.com/redis/ioredis",
+        "https://github.com/redis/ioredis/wiki/Upgrading-from-v4-to-v5"
+      ],
+      "warnings": [
+        {
+          "reason": "404-expected",
+          "url": "redis.github.io typedoc options page"
+        }
+      ]
+    },
+    "@sentry/node": {
+      "version": "10.49.0",
+      "fetched": "2026-05-18T08:24:52Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:24:52Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "9abed1ff0f6a6d233bcd540c324eb13af32967c3e96a6daeaf0eb77132c6d32f",
+      "patternsSha256": "a211e5372cbfc7379905fa50019ac92ddd4633a8afd5013e2124309fd35d52e4",
+      "sourceUrls": [
+        "https://docs.sentry.io/platforms/javascript/guides/node/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "/platforms/javascript/guides/node/best-practices/"
+        },
+        {
+          "reason": "api-undocumented",
+          "note": "getDefaultIntegrationsWithoutPerformance used by project but not on canonical v10 page"
+        }
+      ]
+    },
+    "opentelemetry": {
+      "version": "0.217.x-family",
+      "fetched": "2026-05-18T08:24:52Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:24:52Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "e3dfcabb68990778bc819d23773380e76426f463643d1ec6bc3ca8496c14cee7",
+      "patternsSha256": "fc9bf734b486b06b66576220a67d87c21d00214572e45178134806eaa742362a",
+      "sourceUrls": [
+        "https://opentelemetry.io/docs/languages/js/",
+        "https://opentelemetry.io/docs/languages/js/instrumentation/"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "https://opentelemetry.io/docs/languages/js/migration/"
+        },
+        {
+          "reason": "discrepancy",
+          "note": "instrumentation-router not in v0.75.0 auto-instrumentations-node bundle README"
+        }
+      ],
+      "family": [
+        "@opentelemetry/sdk-node@0.217.0",
+        "@opentelemetry/auto-instrumentations-node@0.75.0",
+        "@opentelemetry/exporter-trace-otlp-http@0.217.0",
+        "@opentelemetry/resources@2.7.0",
+        "@opentelemetry/semantic-conventions@1.40.0"
+      ]
+    },
+    "react-native": {
+      "version": "0.83.6",
+      "fetched": "2026-05-18T08:24:52Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:24:52Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "32061a6ce9196227411c4b051ed3134865e9a73c289c32ee22364b9dc3883a0f",
+      "patternsSha256": "0d9d0dbd52fc844f2a43d799675f2e67f38235cc734f45ae61672511d09ca71f",
+      "sourceUrls": [
+        "https://reactnative.dev/blog/2025/12/16/react-native-0.83",
+        "https://reactnative.dev/architecture/landing-page"
+      ],
+      "warnings": []
+    },
+    "expo": {
+      "version": "55.0.x-family",
+      "fetched": "2026-05-18T08:39:31Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "834198298e94056d6fa7b358404bf75eac626b4c7fe3771b6f5de2fe71ee3217",
+      "patternsSha256": "abcc002ce7ec36839828f71dcbef9b727c45439e4c0d69e7fc57331ba8e25cd6",
+      "sourceUrls": [
+        "https://expo.dev/changelog/sdk-55",
+        "https://docs.expo.dev/router/introduction/"
+      ],
+      "warnings": [
+        {
+          "note": "31 packages collapsed; per-module deep dives deferred to upstream"
+        }
+      ],
+      "family": [
+        "expo@55.0.11",
+        "expo-router@55.0.10",
+        "expo-camera@55.0.13",
+        "expo-audio@55.0.11",
+        "expo-image@55.0.10",
+        "expo-image-picker@55.0.16",
+        "expo-image-manipulator@55.0.15",
+        "expo-location@55.1.6",
+        "expo-secure-store@55.0.11",
+        "expo-file-system@55.0.14",
+        "expo-blur@55.0.12",
+        "expo-haptics@55.0.12",
+        "expo-linear-gradient@55.0.11",
+        "expo-linking@55.0.11",
+        "expo-local-authentication@55.0.13",
+        "expo-localization@55.0.13",
+        "expo-speech@55.0.11",
+        "expo-splash-screen@55.0.15",
+        "expo-status-bar@55.0.5",
+        "expo-store-review@55.0.13",
+        "expo-system-ui@55.0.15",
+        "expo-updates@55.0.18",
+        "expo-web-browser@55.0.15",
+        "expo-apple-authentication@55.0.11",
+        "expo-asset@55.0.12",
+        "expo-build-properties@55.0.11",
+        "expo-clipboard@55.0.11",
+        "expo-constants@55.0.14",
+        "expo-font@55.0.6",
+        "@expo/vector-icons@15.0.3",
+        "babel-preset-expo@~55.0.8"
+      ]
+    },
+    "react": {
+      "version": "19.2.6",
+      "fetched": "2026-05-18T08:39:31Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "72ac998d24f66c3805c21066513d76c0a28fe17772e60ddec01a95f524906eae",
+      "patternsSha256": "ba4c1d4ed5fae9c49aff4971a22247a743c30a756125d5d891506bd073c6c0a0",
+      "sourceUrls": [
+        "https://react.dev/learn",
+        "https://react.dev/reference/react/hooks"
+      ],
+      "warnings": [],
+      "family": [
+        "react@19.2.6",
+        "react-dom@19.2.6"
+      ]
+    },
+    "@tanstack/react-query": {
+      "version": "5.100.x-family",
+      "fetched": "2026-05-18T08:39:31Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "7090414173ab472aaf39e09b82fb34711a6ee9c9be8ea85989f9237325d8dd08",
+      "patternsSha256": "b5e8ae267041a0b55f2e3322d396a727a9467a2a056f4858d4bbd0244796872a",
+      "sourceUrls": [
+        "https://tanstack.com/query/latest/docs/framework/react/overview",
+        "https://tanstack.com/query/latest/docs/framework/react/guides/migrating-to-v5"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "/docs/framework/react/reference/QueryClient"
+        }
+      ],
+      "family": [
+        "@tanstack/react-query@5.100.10",
+        "@tanstack/react-query-persist-client@5.100.10",
+        "@tanstack/query-async-storage-persister@5.99.2"
+      ]
+    },
+    "react-hook-form": {
+      "version": "7.74.x-family",
+      "fetched": "2026-05-18T08:39:31Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "02955fc6f98d291781e8ac6b5482394462bc90f7a8cc7ab46e932fcf104abff4",
+      "patternsSha256": "398f2669179006dccb96db3819dd9648985b623081ab1bb5bfb3f6d97748cdd6",
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/react-hook-form/documentation/master/src/content/docs/get-started.mdx",
+        "https://github.com/react-hook-form/resolvers"
+      ],
+      "warnings": [
+        {
+          "reason": "403-cloudflare",
+          "url": "react-hook-form.com (recovered via GitHub raw MDX)"
+        }
+      ],
+      "family": [
+        "react-hook-form@7.74.0",
+        "@hookform/resolvers@5.2.2"
+      ]
+    },
+    "axios": {
+      "version": "1.16.0",
+      "fetched": "2026-05-18T08:39:31Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "ce5212bd780072fad49921a9a3936b116217a77da2940e365ad507bee7de3149",
+      "patternsSha256": "29e6996def5ab612f41d9c51b8cf1b4ca63a37fa94ac5c08955275d7859e1f2e",
+      "sourceUrls": [
+        "https://axios.rest/pages/getting-started/first-steps",
+        "https://axios.rest/pages/advanced/interceptors"
+      ],
+      "warnings": [
+        {
+          "reason": "host-migrated",
+          "note": "axios-http.com -> axios.rest as of 2026-05-18"
+        }
+      ]
+    },
+    "@sentry/react-native": {
+      "version": "8.9.1",
+      "fetched": "2026-05-18T08:55:18Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:55:18Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "3a7cf464aa0f90ddda7e8ffc4495433499f77032a0fcde5f87b4070eb17aa48d",
+      "patternsSha256": "e9601f5eb04f4c13a23d8858472388f13de429c3ee9479e4c59dca0d407912c0",
+      "sourceUrls": [
+        "https://docs.sentry.io/platforms/react-native/",
+        "https://docs.sentry.io/platforms/react-native/migration/"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "/platforms/react-native/features/error-boundary/"
+        }
+      ]
+    },
+    "react-native-reanimated": {
+      "version": "4.x-family",
+      "fetched": "2026-05-18T08:55:18Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:55:18Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "65e91aa1a7d6e7b19d2f5cad9c9202b78d0e0cb038bd6de53e6e01271f229f5c",
+      "patternsSha256": "e63b13d31a9fcf26fc8842c78365e870ed111f6f84bc0563dac137094ea06ec3",
+      "sourceUrls": [
+        "https://docs.swmansion.com/react-native-reanimated/docs/",
+        "https://docs.swmansion.com/react-native-worklets/docs/"
+      ],
+      "warnings": [],
+      "family": [
+        "react-native-reanimated@4.2.1",
+        "react-native-worklets@0.7.4"
+      ]
+    },
+    "i18next": {
+      "version": "v26+v17-family",
+      "fetched": "2026-05-18T08:55:18Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:55:18Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "09b1cec219da3487f8c436272d9bb00d321ccbb6ba790d09a5590c52163232a0",
+      "patternsSha256": "16aefa46de7d41767c82d692df006947961ee1308c269237fe5ad43313fbad79",
+      "sourceUrls": [
+        "https://www.i18next.com/overview/getting-started",
+        "https://react.i18next.com/latest/usetranslation-hook"
+      ],
+      "warnings": [],
+      "family": [
+        "i18next@26.0.6",
+        "react-i18next@17.0.4",
+        "intl-pluralrules@2.0.1"
+      ]
+    },
+    "zod": {
+      "version": "4.4.1",
+      "fetched": "2026-05-18T08:55:18Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:55:18Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "072f3ecf8f62ad6aa18adab95d1767218f820f51b0a6de11ccc12ef18997d0ed",
+      "patternsSha256": "caf5de5515be56026d8a157f48223ef5664554785c3cc015c4e9c99b4f5a045e",
+      "sourceUrls": [
+        "https://zod.dev/v4",
+        "https://zod.dev/v4/changelog"
+      ],
+      "warnings": []
+    },
+    "next": {
+      "version": "15.5.18",
+      "fetched": "2026-05-18T08:55:18Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:55:18Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "e8646665ad4b42ef7005d79b649a5b1b26e852b26e167ae7cce1a4bf2c04e78c",
+      "patternsSha256": "6165f246bf28a1b1fe2d39d52c4795b634030cbbeefb6c1355a1b4f5cf7b887e",
+      "sourceUrls": [
+        "https://nextjs.org/docs/app",
+        "https://nextjs.org/docs/app/guides/upgrading/version-15"
+      ],
+      "warnings": [
+        {
+          "reason": "version-drift",
+          "note": "canonical site at v16; project at v15.5.18 — Upgrading-to-v15 page is authoritative"
+        }
+      ]
+    },
+    "framer-motion": {
+      "version": "12.38.0",
+      "fetched": "2026-05-18T09:06:39Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:06:39Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "bbcc2913ac89fe2640d67e94b91ebbbac7750a97e91b47416aaf40039cda0c62",
+      "patternsSha256": "7b1e83b28b65538fd87d0cce5c5a5cd058624f96aaff364558d6046d674c0e0f",
+      "sourceUrls": [
+        "https://motion.dev/docs/react",
+        "https://motion.dev/docs/upgrade-guide"
+      ],
+      "warnings": [
+        {
+          "note": "framer-motion renamed to motion package; import from motion/react"
+        }
+      ]
+    },
+    "@sentry/nextjs": {
+      "version": "10.49.0",
+      "fetched": "2026-05-18T09:06:39Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:06:39Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "870d52d093034907b536c7ab975074c536339bbff0bb5fe6ca635eabaeececa8",
+      "patternsSha256": "f0dbe30d22f9b1963b6cb04c71e6481ae527cbad1201904afe682c8239918383",
+      "sourceUrls": [
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/",
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/migration/v9-to-v10/"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "/configuration/edge-runtime/"
+        }
+      ]
+    },
+    "maplibre-gl": {
+      "version": "5.23.0",
+      "fetched": "2026-05-18T09:06:39Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:06:39Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "9d5699e7525854d8caf3ba1768cb79800830a692129a881beb0bed0b8808320d",
+      "patternsSha256": "26ecedf802679e3b96f63c3c84fa1d211fb7b76863ae02aa6827bb414d969b33",
+      "sourceUrls": [
+        "https://maplibre.org/maplibre-gl-js/docs/",
+        "https://github.com/maplibre/maplibre-gl-js/releases/tag/v5.0.0"
+      ],
+      "warnings": [
+        {
+          "reason": "partial",
+          "note": "only NavigationControl detailed; other controls listed by name"
+        }
+      ]
+    },
+    "recharts": {
+      "version": "3.8.1",
+      "fetched": "2026-05-18T09:06:39Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:06:39Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "1e7b011fb4ad0af34e4d784f4374c3bfa7c441076c6dc7d07d59190c3c0705ea",
+      "patternsSha256": "b307ce2ae62c247b9095a977dccd293909f6d67f7035f910cafee1a7205fd7fd",
+      "sourceUrls": [
+        "https://recharts.github.io/en-US/",
+        "https://github.com/recharts/recharts/wiki/3.0-migration-guide"
+      ],
+      "warnings": [
+        {
+          "reason": "host-migrated",
+          "note": "recharts.org -> recharts.github.io"
+        }
+      ]
+    },
+    "sharp": {
+      "version": "0.34.0",
+      "fetched": "2026-05-18T09:06:39Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:06:39Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "4f686fc3a0b5bb2f20948e3ffcdeb2aacd98181c55064736656b1dd5dcda2e78",
+      "patternsSha256": "226224ce964f7fcb4887ca929f6258415de8575d0dcc750ae001a760aeb08632",
+      "sourceUrls": [
+        "https://sharp.pixelplumbing.com/",
+        "https://sharp.pixelplumbing.com/api-resize/"
+      ],
+      "warnings": []
+    },
+    "opossum": {
+      "version": "9.0.0",
+      "fetched": "2026-05-18T09:16:07Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:16:07Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "68881ad5794e8fa0e89605a27b9384ba2b853252aab604927140d0979ec6ee57",
+      "patternsSha256": "19663bc9a9cecbe5b2a12cec3a20c9b2fc047a30038f7c2016a6b91b7721c1ed",
+      "sourceUrls": [
+        "https://github.com/nodeshift/opossum",
+        "https://github.com/nodeshift/opossum/blob/main/README.md"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "note": "JSDoc class pages flattened to index"
+        }
+      ]
+    },
+    "otpauth": {
+      "version": "9.4.1",
+      "fetched": "2026-05-18T09:16:07Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:16:07Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "630e9a69a93032c353af7e2f3f07145f5ea28ef1ddfaf43d7ba6c4fcabafdc4f",
+      "patternsSha256": "e86232677d729a7ccd80578d99598fb2716efb2bad6b1d8e9fa74fb4067c6f07",
+      "sourceUrls": [
+        "https://github.com/hectorm/otpauth",
+        "https://hectorm.github.io/otpauth/"
+      ],
+      "warnings": []
+    },
+    "helmet": {
+      "version": "8.1.0",
+      "fetched": "2026-05-18T09:16:07Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:16:07Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "dcc8fa6e6f5de81e0b0f4a154cb5af0eb7346533e0baafa596a246f9ff79eecb",
+      "patternsSha256": "4e5786d774f5a6388177706a4ff78ad4418f95ff2d9ff4140078629fc7186a66",
+      "sourceUrls": [
+        "https://helmetjs.github.io/",
+        "https://github.com/helmetjs/helmet/blob/main/CHANGELOG.md"
+      ],
+      "warnings": []
+    },
+    "multer": {
+      "version": "2.1.1",
+      "fetched": "2026-05-18T09:16:07Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:16:07Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "0bc858bebef4881f4c5d981866c6b92e907a7038305f5787ba7fcf47183b8363",
+      "patternsSha256": "f0eb0ff71cf4de0a85bb3c2d142d7037235db247af20976b1e668a4ea7ff3417",
+      "sourceUrls": [
+        "https://github.com/expressjs/multer",
+        "https://github.com/advisories/GHSA-44fp-w29j-9vj5"
+      ],
+      "warnings": [
+        {
+          "reason": "security-critical",
+          "note": "only 2.1.1 safe; 1.x and 2.0.x have unpatched DoS CVEs"
+        }
+      ]
+    },
+    "swagger-ui-express": {
+      "version": "5.0.1",
+      "fetched": "2026-05-18T09:16:07Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:16:07Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "973c5c6fd0bfd9b0c514197b2349aa79002076f229946af05a2f85b044b1b868",
+      "patternsSha256": "5ea62ed9f9c3207487d2ac4dcc27389a8b857d02a6fbee464231dddf1e5cb5b2",
+      "sourceUrls": [
+        "https://github.com/scottie1984/swagger-ui-express",
+        "https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/"
+      ],
+      "warnings": []
+    },
+    "onnxruntime-node": {
+      "version": "1.26.0",
+      "fetched": "2026-05-18T09:31:03Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:31:03Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "9459714fd0a4d5cf80b11c8e42fac520a87eb19b897be5eb07343af909ba15bb",
+      "patternsSha256": "3c9ba662ae54a85346b9237556c47d9be7bf3295fc36ea6f0e925a071120e831",
+      "sourceUrls": [
+        "https://onnxruntime.ai/docs/get-started/with-javascript/node.html",
+        "https://onnxruntime.ai/docs/api/js/"
+      ],
+      "warnings": []
+    },
+    "langfuse": {
+      "version": "3.38.20",
+      "fetched": "2026-05-18T09:31:03Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:31:03Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "17c3c550bd3cfd3c83a0199cb697c765d29257bf24b8cf5b0a67b116a92bc590",
+      "patternsSha256": "2fd964ee19eee614ecf08055e3c528b81ac76a4845f8078efdc150ea86c7993c",
+      "sourceUrls": [
+        "https://github.com/langfuse/langfuse-js/tree/v3.38.20",
+        "https://langfuse.com/docs/sdk/typescript"
+      ],
+      "warnings": [
+        {
+          "reason": "deprecated",
+          "note": "v3.x deprecated; project pins v3.38.20; v5 docs differ"
+        }
+      ]
+    },
+    "express-middleware-thin": {
+      "version": "mixed-family",
+      "fetched": "2026-05-18T09:31:03Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:31:03Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "f542a3ed2159be926681db71633f06386e4547b230e79f7b85e139dab96eb7f9",
+      "patternsSha256": "cc2d1595729ba01f8286b0dec938714ba89f5c4bbbc39deb49b6095dd7c97c0f",
+      "sourceUrls": [
+        "https://github.com/expressjs/cors",
+        "https://github.com/motdotla/dotenv"
+      ],
+      "warnings": [
+        {
+          "note": "p-limit@3 last CJS; Renovate cap"
+        }
+      ],
+      "family": [
+        "cors@2.8.6",
+        "compression@1.8.1",
+        "dotenv@17.4.1",
+        "reflect-metadata@0.2.2",
+        "p-limit@3"
+      ]
+    },
+    "prom-client": {
+      "version": "15.1.3",
+      "fetched": "2026-05-18T09:31:03Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:31:03Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "5912dfbd30310d71181e9af1a5879c9f3b57ad1271f26acab0e3156ec842ffe2",
+      "patternsSha256": "0e92c8ad0cc56782999f853b506023a2b8c7efe2c6ecc68e9880e9c00da1886a",
+      "sourceUrls": [
+        "https://github.com/siimon/prom-client"
+      ],
+      "warnings": []
+    },
+    "linkedom": {
+      "version": "0.x+0.6-family",
+      "fetched": "2026-05-18T09:31:03Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:31:03Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "2b4be749da7b80b35d6833c4536cf2a015b10d5f6cd63a7343331169eb5481a1",
+      "patternsSha256": "649a12b5c57fbd3b67bf36f2389a5db2a3553bcb74c53369adf4ade0cea2759a",
+      "sourceUrls": [
+        "https://github.com/WebReflection/linkedom",
+        "https://github.com/mozilla/readability"
+      ],
+      "warnings": [],
+      "family": [
+        "linkedom@0.18.12",
+        "@mozilla/readability@0.6.0"
+      ]
+    },
+    "react-native-gesture-handler": {
+      "version": "2.31.0",
+      "fetched": "2026-05-18T09:43:16Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:43:16Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "480620cd3536e2c972c09cbc7bd6131f86aa10977fd24c426b489ff4fa5dde0b",
+      "patternsSha256": "79e8933ea62421daa7abdbb5c9e2c4c73c9cf19deef51488121ecf2b7e5f0b4c",
+      "sourceUrls": [
+        "https://docs.swmansion.com/react-native-gesture-handler/docs/legacy-gestures/"
+      ],
+      "warnings": [
+        {
+          "note": "v2 surface at /legacy-gestures/; v3 paths return v3 content"
+        }
+      ]
+    },
+    "react-native-safe-area-context": {
+      "version": "5.7.0",
+      "fetched": "2026-05-18T09:43:16Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:43:16Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "812da2efdaa4bdb4e94af95dfe52d54d40de0c53314cdd3a829ed5a659280259",
+      "patternsSha256": "3151e78dfb85e9c3e028a3f7670d8538a34627f5faf79927e5e16b5f6a584eb0",
+      "sourceUrls": [
+        "https://appandflow.github.io/react-native-safe-area-context/"
+      ],
+      "warnings": []
+    },
+    "react-native-screens": {
+      "version": "4.24.0",
+      "fetched": "2026-05-18T09:43:16Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:43:16Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "bc2de1e8d9fdeabc69c7acef634e72a5dda7114917c015f21aac86b5164eeda6",
+      "patternsSha256": "369238975ab4ec2c2146723086eb620674775bd9700918f3196cb04eb66958a9",
+      "sourceUrls": [
+        "https://github.com/software-mansion/react-native-screens",
+        "https://reactnavigation.org/docs/native-stack-navigator/"
+      ],
+      "warnings": [
+        {
+          "note": "upstream docs site has TODO stubs"
+        }
+      ]
+    },
+    "react-native-svg": {
+      "version": "15.13.0",
+      "fetched": "2026-05-18T09:43:16Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:43:16Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "8c78f141f8a1e5e276005b8a178cac7f8ed525db77fa859982ec8becff1bc380",
+      "patternsSha256": "69441f77ff6cdeb0c64cc8e899abf894f35772626b01edeb5a8d9cfd164a7d3f",
+      "sourceUrls": [
+        "https://github.com/software-mansion/react-native-svg/blob/main/USAGE.md"
+      ],
+      "warnings": []
+    },
+    "react-native-webview": {
+      "version": "13.16.0",
+      "fetched": "2026-05-18T09:43:16Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:43:16Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "b33938926b685dcfaa4e74c602ff311750b12680b82fe648aa9f6001c210a433",
+      "patternsSha256": "f3f6e642e171c3d17ec8cadf1ad82a2f8c232d4a8c6e7fc3c1bb5dcdabe16208",
+      "sourceUrls": [
+        "https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md",
+        "https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md"
+      ],
+      "warnings": [
+        {
+          "reason": "404",
+          "url": "Threat-Model.md"
+        }
+      ]
+    },
+    "react-native-web": {
+      "version": "0.21.0",
+      "fetched": "2026-05-18T09:52:14Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:52:14Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "9d022488c71ffbf3dab5617589670ff1dccafef99e05d506525333cbee711c8a",
+      "patternsSha256": "35d4a676decf55b9155a2648e37ff93935fdc05336c85fd6b24cc532f66f0506",
+      "sourceUrls": [
+        "https://necolas.github.io/react-native-web/docs/"
+      ],
+      "warnings": []
+    },
+    "react-native-qrcode-svg": {
+      "version": "6.3.15",
+      "fetched": "2026-05-18T09:52:14Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:52:14Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "4c0761c2de0be0bf60af0e5e965fdac078a3cb0cd7f1e41c194a492d3e4d5f57",
+      "patternsSha256": "b8b621ee85c5cfc20c594932a7d9a20f2c687340912787f5ecd05a026c6c3da7",
+      "sourceUrls": [
+        "https://github.com/Expensify/react-native-qrcode-svg"
+      ],
+      "warnings": [
+        {
+          "note": "repo moved awesomejerry/ -> Expensify/; no formal releases for 6.3.x"
+        }
+      ]
+    },
+    "react-native-ssl-public-key-pinning": {
+      "version": "1.2.6",
+      "fetched": "2026-05-18T09:52:14Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:52:14Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "6aa46a5ef0effd805066ae95ee3c6a92d803efbfd99392925c93d7902120c8ff",
+      "patternsSha256": "d9f37907f7605e16b7a93830ad5a3dcd15a109e482c0a9d866b36d71407ac9a6",
+      "sourceUrls": [
+        "https://github.com/frw/react-native-ssl-public-key-pinning",
+        "https://github.com/datatheorem/TrustKit/blob/master/docs/getting-started.md"
+      ],
+      "warnings": []
+    },
+    "@ronradtke/react-native-markdown-display": {
+      "version": "8.1.0",
+      "fetched": "2026-05-18T09:52:14Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:52:14Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "fb3613e3b28ed198ea376a06b9761803285cd4935839f7ffa21227f8e132f88d",
+      "patternsSha256": "82e2acdbbbbf41f221efc74b20e5cc7aabf1aefbea17c3abe5fe49f4f0205848",
+      "sourceUrls": [
+        "https://github.com/RonRadtke/react-native-markdown-display"
+      ],
+      "warnings": []
+    },
+    "@react-native-async-storage/async-storage": {
+      "version": "2.2.0",
+      "fetched": "2026-05-18T09:52:14Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T09:52:14Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "8691e895d8a19f3f277ca00c524fec216c29cad8f2c3fcd4967b6e365473b383",
+      "patternsSha256": "bdafae07e0d4a535f65d9169aa6add33938fa740730320d891ad5eb8a787faf2",
+      "sourceUrls": [
+        "https://react-native-async-storage.github.io/async-storage/2.0/"
+      ],
+      "warnings": []
+    },
+    "@react-native-community/netinfo": {
+      "version": "11.5.2",
+      "fetched": "2026-05-18T10:00:56Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:00:56Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "200c9a39b9f2a175bf07bd83563e4da222455e3de5cb252a5ae2fca2c3a51e17",
+      "patternsSha256": "3563fe95e1485ba602e6edee9a2a09598b705c0ab0cf53e6da6bfafe20fac1b0",
+      "sourceUrls": [
+        "https://github.com/react-native-netinfo/react-native-netinfo",
+        "https://docs.expo.dev/versions/latest/sdk/netinfo/"
+      ],
+      "warnings": []
+    },
+    "@react-navigation/native": {
+      "version": "7.0.14",
+      "fetched": "2026-05-18T10:00:56Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:00:56Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "397c4e45ec82f973af4785214ad4e6cd350c5cefb701407cf02451f4119a36f3",
+      "patternsSha256": "8722f5c1549d864960ba9e707db849f642db20d9b043f637a14a8a0326251cb4",
+      "sourceUrls": [
+        "https://reactnavigation.org/docs/getting-started",
+        "https://reactnavigation.org/docs/upgrading-from-6.x"
+      ],
+      "warnings": []
+    },
+    "@shopify/flash-list": {
+      "version": "2.0.2",
+      "fetched": "2026-05-18T10:00:56Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:00:56Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "24625918f5eae615a84f59cfff569b01e8e95bc4692120c55429db5afe1ad5b9",
+      "patternsSha256": "545e099dccb9dd529ade58e9c78477020a8c39d71ad338e25cef8bdbad407539",
+      "sourceUrls": [
+        "https://shopify.github.io/flash-list/docs/",
+        "https://shopify.github.io/flash-list/docs/v2-migration/"
+      ],
+      "warnings": [
+        {
+          "note": "v2 removes estimatedItemSize; new-arch only"
+        }
+      ]
+    },
+    "@maplibre/maplibre-react-native": {
+      "version": "11.0.0",
+      "fetched": "2026-05-18T10:00:56Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:00:56Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "afba5fd5611d220e7e71190e93dd70f704db4c55ec0f6182219e61ebc3926b5d",
+      "patternsSha256": "a544153d93656a960eb785c5c34a5b84c1bce10e66ea859975d3d2cfb3b2ad34",
+      "sourceUrls": [
+        "https://maplibre.org/maplibre-react-native/",
+        "https://github.com/maplibre/maplibre-react-native/releases/tag/v11.0.0"
+      ],
+      "warnings": [
+        {
+          "note": "v11 renames: MapView->Map, ShapeSource->GeoJSONSource, per-type Layer -> unified"
+        }
+      ]
+    },
+    "js-sha256": {
+      "version": "0.11.1",
+      "fetched": "2026-05-18T10:00:56Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:00:56Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "e0eca936c013ec7b9b99ccda12585309fba70905635e0e9c2a13f0e815e10431",
+      "patternsSha256": "f418e6b161f0be8dc0d2f5fddaeb7ba46c238f2ce7e23bfb304d21db28ec64f9",
+      "sourceUrls": [
+        "https://github.com/emn178/js-sha256"
+      ],
+      "warnings": []
+    },
+    "zustand": {
+      "version": "5.0.12",
+      "fetched": "2026-05-18T10:11:42Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:11:42Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "f7316d55620ed49e1cfac10af56f7d79654fd8a9dd67d0b9477039dd9a33f1ed",
+      "patternsSha256": "79d7dfc59e87b987ab827337e920e6b0c44bc207b95bbd15d34515efa307cedb",
+      "sourceUrls": [
+        "https://github.com/pmndrs/zustand",
+        "https://github.com/pmndrs/zustand/blob/main/docs/reference/migrations/migrating-to-v5.md"
+      ],
+      "warnings": []
+    },
+    "uuid": {
+      "version": "11.1.0",
+      "fetched": "2026-05-18T10:11:42Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:11:42Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "1597ffe3019df150f9611da3b7893f51e12af09cdc8fe6cfeb133aa810a33e22",
+      "patternsSha256": "0adb4cbf1579f80cc76b53c41ac39179c540f7e75d18d3021263b514dabe3207",
+      "sourceUrls": [
+        "https://github.com/uuidjs/uuid"
+      ],
+      "warnings": [
+        {
+          "note": "ESM-only since v10; v11.1.1 has GHSA-w5hq-g745-h8pq security fix"
+        }
+      ]
+    },
+    "qrcode": {
+      "version": "1.5.4",
+      "fetched": "2026-05-18T10:11:42Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:11:42Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "7835bf7ad2f00c0e1154ec3863d30e5b103335bf91ce407fab3e751b9dac46d9",
+      "patternsSha256": "e904f09372ffc9f57062e25da8a8010ff1386e1b4c62d7e4e0197cdf9f46166d",
+      "sourceUrls": [
+        "https://github.com/soldair/node-qrcode"
+      ],
+      "warnings": [
+        {
+          "note": "no bundled TS types; upstream CHANGELOG stale since 1.3.3"
+        }
+      ]
+    },
+    "@langchain/core": {
+      "coveredBy": "langchain",
+      "version": "1.1.45",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@langchain/openai": {
+      "coveredBy": "langchain",
+      "version": "1.4.2",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@langchain/google-genai": {
+      "coveredBy": "langchain",
+      "version": "2.1.26",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@opentelemetry/sdk-node": {
+      "coveredBy": "opentelemetry",
+      "version": "0.217.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@opentelemetry/auto-instrumentations-node": {
+      "coveredBy": "opentelemetry",
+      "version": "0.75.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@opentelemetry/exporter-trace-otlp-http": {
+      "coveredBy": "opentelemetry",
+      "version": "0.217.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@opentelemetry/resources": {
+      "coveredBy": "opentelemetry",
+      "version": "2.7.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@opentelemetry/semantic-conventions": {
+      "coveredBy": "opentelemetry",
+      "version": "1.40.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-router": {
+      "coveredBy": "expo",
+      "version": "55.0.10",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-camera": {
+      "coveredBy": "expo",
+      "version": "55.0.13",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-audio": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-image": {
+      "coveredBy": "expo",
+      "version": "55.0.10",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-image-picker": {
+      "coveredBy": "expo",
+      "version": "55.0.16",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-image-manipulator": {
+      "coveredBy": "expo",
+      "version": "55.0.15",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-location": {
+      "coveredBy": "expo",
+      "version": "55.1.6",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-secure-store": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-file-system": {
+      "coveredBy": "expo",
+      "version": "55.0.14",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-blur": {
+      "coveredBy": "expo",
+      "version": "55.0.12",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-haptics": {
+      "coveredBy": "expo",
+      "version": "55.0.12",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-linear-gradient": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-linking": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-local-authentication": {
+      "coveredBy": "expo",
+      "version": "55.0.13",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-localization": {
+      "coveredBy": "expo",
+      "version": "55.0.13",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-speech": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-splash-screen": {
+      "coveredBy": "expo",
+      "version": "55.0.15",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-status-bar": {
+      "coveredBy": "expo",
+      "version": "55.0.5",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-store-review": {
+      "coveredBy": "expo",
+      "version": "55.0.13",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-system-ui": {
+      "coveredBy": "expo",
+      "version": "55.0.15",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-updates": {
+      "coveredBy": "expo",
+      "version": "55.0.18",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-web-browser": {
+      "coveredBy": "expo",
+      "version": "55.0.15",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-apple-authentication": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-asset": {
+      "coveredBy": "expo",
+      "version": "55.0.12",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-build-properties": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-clipboard": {
+      "coveredBy": "expo",
+      "version": "55.0.11",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-constants": {
+      "coveredBy": "expo",
+      "version": "55.0.14",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "expo-font": {
+      "coveredBy": "expo",
+      "version": "55.0.6",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@expo/vector-icons": {
+      "coveredBy": "expo",
+      "version": "15.0.3",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "babel-preset-expo": {
+      "coveredBy": "expo",
+      "version": "55.0.8",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "react-dom": {
+      "coveredBy": "react",
+      "version": "19.2.6",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/react/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@tanstack/react-query-persist-client": {
+      "coveredBy": "@tanstack/react-query",
+      "version": "5.100.10",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@tanstack/query-async-storage-persister": {
+      "coveredBy": "@tanstack/react-query",
+      "version": "5.99.2",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@hookform/resolvers": {
+      "coveredBy": "react-hook-form",
+      "version": "5.2.2",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/react-hook-form/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "react-native-worklets": {
+      "coveredBy": "react-native-reanimated",
+      "version": "0.7.4",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/react-native-reanimated/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "react-i18next": {
+      "coveredBy": "i18next",
+      "version": "17.0.4",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "intl-pluralrules": {
+      "coveredBy": "i18next",
+      "version": "2.0.1",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "cors": {
+      "coveredBy": "express-middleware-thin",
+      "version": "2.8.6",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "compression": {
+      "coveredBy": "express-middleware-thin",
+      "version": "1.8.1",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "dotenv": {
+      "coveredBy": "express-middleware-thin",
+      "version": "17.4.1",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "reflect-metadata": {
+      "coveredBy": "express-middleware-thin",
+      "version": "0.2.2",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "p-limit": {
+      "coveredBy": "express-middleware-thin",
+      "version": "3",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+    },
+    "@mozilla/readability": {
+      "coveredBy": "linkedom",
+      "version": "0.6.0",
+      "fetched": "2026-05-18T10:12:57Z",
+      "fetchedBy": "stub",
+      "note": "stub PATTERNS.md points to lib-docs/linkedom/PATTERNS.md (UFR-022 collapse policy)"
+    }
+  },
   "devOnlyLibs": [
     "@types/node",
     "@types/jest",

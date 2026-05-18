@@ -1,0 +1,17 @@
+# Lessons — react-native-safe-area-context (v5.7.0)
+
+Audit 2026-05-18 : **PASS_WITH_FINDINGS**.
+
+## ⚠️ F1 MEDIUM : Overuse `useSafeAreaInsets` (23/25 screens) → re-render churn
+- PATTERNS §3 + §4 DON'T : 'prefer SafeAreaView over useSafeAreaInsets — hook flags occasional layout flickers, reserve for programmatic logic'.
+- 23 screens utilisent le hook pour straight `padding = insets.X` patterns. Seulement 3 sites utilisent SafeAreaView (SourceCitation, ArtworkHeroModal, ImageFullscreenModal).
+- **Fix TD-SAFE-01** : audit + swap straight padding usages à `<SafeAreaView edges={['top']}>` ou `EdgeMode {top:'maximum'}`. Garder le hook seulement pour conditional math (e.g. BiometricSetupSheet `Math.max(insets.bottom, 16)`).
+
+## ⚠️ F2 LOW : Hand-rolled Jest mock (test-utils.tsx:72-79)
+- PATTERNS §4 DON'T 'partial hand-mocks'. Current mock missing SafeAreaListener + useSafeAreaFrame → future test crash silently.
+- **Fix TD-SAFE-02** : `const mock = require('react-native-safe-area-context/jest/mock'); return mock;`.
+
+## ✅ Positives
+- SafeAreaProvider auto-mounted by Expo Router (ExpoRoot.js initialMetrics for web/test)
+- `edges={['bottom']}` partial-edge override correct (SourceCitation.tsx:81)
+- Version 5.7.0 satisfies floor (RN 0.83 ≥ 0.74)
