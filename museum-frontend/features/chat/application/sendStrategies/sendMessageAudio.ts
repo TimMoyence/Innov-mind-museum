@@ -40,6 +40,9 @@ export const sendMessageAudio = async (
       locale: context.locale,
       location: context.locationString,
       audioDescriptionMode: context.audioDescriptionMode ? true : undefined,
+      // C9.10 (2026-05-17) — STT inputs always opt into voice-first prompt
+      // (60-80w prose answer) because the response will be TTS-played back.
+      voiceMode: true,
       contentPreferences:
         context.contentPreferences.length > 0
           ? ([...context.contentPreferences] as ContentPreference[])

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { DisabledPiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import { validateAudioInput } from '@modules/chat/useCase/audio/audio-validation';
+import { buildSttPromptBiasFromVisitContext } from '@modules/chat/useCase/audio/stt-prompt-bias';
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
@@ -326,6 +327,10 @@ export class ChatMessageService {
 
     validateAudioInput(input.audio);
 
+    // W7.4 (2026-05-17) — bias STT toward the artist/title proper nouns
+    // already discussed in this session. Public museum data only — no PII.
+    const sttPromptBias = buildSttPromptBiasFromVisitContext(session.visitContext);
+
     let transcription: AudioTranscriptionResult;
     try {
       transcription = await this.audioTranscriber.transcribe({
@@ -334,6 +339,7 @@ export class ChatMessageService {
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
         locale: input.context?.locale || session.locale || undefined,
         requestId,
+        prompt: sttPromptBias,
       });
     } catch (err) {
       if (err instanceof AppError) throw err;

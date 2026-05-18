@@ -10,10 +10,7 @@ import type {
   CreateSessionResponseDTO,
   PostMessageResponseDTO,
 } from '../../domain/contracts';
-import {
-  isCreateSessionResponseDTO,
-  isPostMessageResponseDTO,
-} from '../../domain/contracts';
+import { isCreateSessionResponseDTO, isPostMessageResponseDTO } from '../../domain/contracts';
 import type { PostMessageStreamParams } from './stream';
 import {
   CHAT_BASE,
@@ -33,6 +30,11 @@ export interface PostMessageParams {
   locale?: string;
   preClassified?: 'art';
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — set by the STT-message path to opt the response into
+   * a 60-80w prose-only branch suited to TTS playback.
+   */
+  voiceMode?: boolean;
   lowDataMode?: boolean;
   contentPreferences?: ContentPreference[];
 }
@@ -79,9 +81,7 @@ export const createSessionOrThrow = async (
  * Posts a text or image message and returns the assistant response. Builds a
  * multipart form when an image URI is provided; falls back to JSON otherwise.
  */
-export const postMessage = async (
-  params: PostMessageParams,
-): Promise<PostMessageResponseDTO> => {
+export const postMessage = async (params: PostMessageParams): Promise<PostMessageResponseDTO> => {
   const {
     sessionId,
     text,
@@ -92,6 +92,7 @@ export const postMessage = async (
     locale,
     preClassified,
     audioDescriptionMode,
+    voiceMode,
     lowDataMode,
     contentPreferences,
   } = params;
@@ -115,6 +116,7 @@ export const postMessage = async (
         locale,
         preClassified,
         audioDescriptionMode,
+        voiceMode,
         contentPreferences,
       }),
     );
@@ -135,6 +137,7 @@ export const postMessage = async (
         locale,
         preClassified,
         audioDescriptionMode,
+        voiceMode,
         contentPreferences,
       },
     });
@@ -165,7 +168,8 @@ interface SmartSendDeps {
  * Dependencies are injected so the index façade can wire them while keeping
  * each capability module decoupled.
  */
-export const sendMessageSmart = (deps: SmartSendDeps) =>
+export const sendMessageSmart =
+  (deps: SmartSendDeps) =>
   async (params: SendMessageSmartParams): Promise<PostMessageResponseDTO | null> => {
     if (params.imageUri) {
       return deps.postMessage(params);

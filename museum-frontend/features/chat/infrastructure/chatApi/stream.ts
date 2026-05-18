@@ -22,6 +22,8 @@ export interface PostMessageStreamParams {
   locale?: string;
   preClassified?: 'art';
   audioDescriptionMode?: boolean;
+  /** C9.10 (2026-05-17) — voice-first STT entry-point flag. */
+  voiceMode?: boolean;
   lowDataMode?: boolean;
   contentPreferences?: ContentPreference[];
   onToken: (text: string) => void;
@@ -99,6 +101,7 @@ export const postMessageStream = async (params: PostMessageStreamParams): Promis
         locale: params.locale,
         preClassified: params.preClassified,
         audioDescriptionMode: params.audioDescriptionMode,
+        voiceMode: params.voiceMode,
         contentPreferences: params.contentPreferences,
       },
     }),

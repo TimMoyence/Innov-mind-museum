@@ -88,6 +88,12 @@ interface ChatRequestContext {
   /** When 'art', backend skips the LLM art-topic classifier. */
   preClassified?: 'art';
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — Voice-first walk-mode prompt branch. When `true`, the
+   * LLM is constrained to a 60-80 word prose-only answer (no markdown, no
+   * bullets, no headers). Mobile FE sets this when the input was STT.
+   */
+  voiceMode?: boolean;
   lowDataMode?: boolean;
   /**
    * Cached from /me to avoid an extra user lookup per message. DB (via

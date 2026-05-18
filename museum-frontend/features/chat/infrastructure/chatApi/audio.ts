@@ -18,6 +18,11 @@ export interface PostAudioMessageParams {
   locale?: string;
   preClassified?: 'art';
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — auto-set to `true` by the STT path. Constrains the
+   * LLM response to a 60-80w prose-only branch for natural TTS playback.
+   */
+  voiceMode?: boolean;
   contentPreferences?: ContentPreference[];
 }
 
@@ -38,6 +43,7 @@ export const postAudioMessage = async (
     locale,
     preClassified,
     audioDescriptionMode,
+    voiceMode,
     contentPreferences,
   } = params;
 
@@ -56,7 +62,7 @@ export const postAudioMessage = async (
   const extension = fileName.includes('.')
     ? (fileName.split('.').pop()?.toLowerCase() ?? fallbackExt)
     : fallbackExt;
-  const mimeType = audioBlob?.type ?? (audioMimeByExtension[extension] ?? 'audio/mp4');
+  const mimeType = audioBlob?.type ?? audioMimeByExtension[extension] ?? 'audio/mp4';
 
   const formData = new FormData();
   formData.append(
@@ -68,6 +74,7 @@ export const postAudioMessage = async (
       locale,
       preClassified,
       audioDescriptionMode,
+      voiceMode,
       contentPreferences,
     }),
   );

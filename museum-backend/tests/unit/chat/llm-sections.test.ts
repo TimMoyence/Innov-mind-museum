@@ -288,4 +288,49 @@ describe('createSummaryFallback — edge cases', () => {
     });
     expect(fallback).not.toContain('You are currently near');
   });
+
+  // C9.10 (2026-05-17) — voiceMode prompt branch.
+  describe('voiceMode (C9.10)', () => {
+    it('includes [VOICE_MODE] instruction and 80-word cap when voiceMode=true', () => {
+      const plan = createLlmSectionPlan({
+        locale: 'en-US',
+        museumMode: false,
+        guideLevel: 'beginner',
+        timeoutSummaryMs: 10000,
+        voiceMode: true,
+      });
+
+      expect(plan[0].prompt).toContain('[VOICE_MODE]');
+      expect(plan[0].prompt).toContain('under 80 words');
+      expect(plan[0].prompt).toContain('no markdown');
+    });
+
+    it('omits [VOICE_MODE] when voiceMode is false/undefined and applies default word limit', () => {
+      const plan = createLlmSectionPlan({
+        locale: 'en-US',
+        museumMode: false,
+        guideLevel: 'beginner',
+        timeoutSummaryMs: 10000,
+      });
+
+      expect(plan[0].prompt).not.toContain('[VOICE_MODE]');
+      // Default non-museum + non-audio mode = 250 word cap.
+      expect(plan[0].prompt).toContain('under 250 words');
+    });
+
+    it('voiceMode overrides audioDescriptionMode word limit (80w wins)', () => {
+      const plan = createLlmSectionPlan({
+        locale: 'en-US',
+        museumMode: true,
+        guideLevel: 'beginner',
+        timeoutSummaryMs: 10000,
+        audioDescriptionMode: true,
+        voiceMode: true,
+      });
+
+      // audioDescriptionMode in museumMode would otherwise be 300w, but voiceMode caps at 80w.
+      expect(plan[0].prompt).toContain('under 80 words');
+      expect(plan[0].prompt).not.toContain('under 300 words');
+    });
+  });
 });

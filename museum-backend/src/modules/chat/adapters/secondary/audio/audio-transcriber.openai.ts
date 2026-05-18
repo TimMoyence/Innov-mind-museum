@@ -76,6 +76,15 @@ const buildTranscriptionFormData = (
   if (languageHint) {
     formData.append('language', languageHint);
   }
+  // W7.4 (2026-05-17) — bias toward expected proper nouns. Hard-capped at
+  // 896 chars (~224 OpenAI tokens) defensively even if the caller already
+  // truncated.
+  if (input.prompt) {
+    const capped = input.prompt.length > 896 ? input.prompt.slice(0, 896).trimEnd() : input.prompt;
+    if (capped) {
+      formData.append('prompt', capped);
+    }
+  }
   return formData;
 };
 

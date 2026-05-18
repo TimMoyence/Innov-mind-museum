@@ -41,9 +41,7 @@ export const useChatSession = (sessionId: string) => {
   const cachedSession = useChatSessionStore((s) => s.sessions[sessionId]);
   const storeUpdateMessages = useChatSessionStore((s) => s.updateMessages);
 
-  const [messages, setMessages] = useState<ChatUiMessage[]>(
-    () => cachedSession?.messages ?? [],
-  );
+  const [messages, setMessages] = useState<ChatUiMessage[]>(() => cachedSession?.messages ?? []);
   const [isSending, setIsSending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
@@ -96,6 +94,34 @@ export const useChatSession = (sessionId: string) => {
     if (messages.length === 0) return;
     storeUpdateMessages(sessionId, messages);
   }, [messages, sessionId, storeUpdateMessages]);
+
+  // C9.2 (2026-05-17) — Audio-description autoplay.
+  // WCAG 2.1 Level A § 1.1.1 (Non-text content): when audioDescriptionMode is
+  // enabled and the assistant attached an `imageDescription`, immediately read
+  // it aloud via expo-speech (device-native TTS). Bypasses the server TTS path
+  // because the description text lives in metadata, not in the message body.
+  // Once per message: tracked in `autoPlayedImageDescIdsRef` to avoid replay
+  // on re-renders / pagination.
+  const autoPlayedImageDescIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!audioDescriptionMode) return;
+    if (isStreamingRef.current) return;
+    const last = messages[messages.length - 1];
+    if (last?.role !== 'assistant') return;
+    const desc = last.metadata?.imageDescription;
+    if (!desc || autoPlayedImageDescIdsRef.current.has(last.id)) return;
+    autoPlayedImageDescIdsRef.current.add(last.id);
+    try {
+      // Lazy-require — mirrors the existing pattern in
+      // `VoiceSessionIntroSheetContent.tsx` so absence of expo-speech in
+      // test/web bundles does not crash the chat screen.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
+      const Speech = require('expo-speech') as typeof import('expo-speech');
+      Speech.speak(desc, { language: locale });
+    } catch {
+      // best-effort autoplay; failure must not break the chat UX.
+    }
+  }, [messages, audioDescriptionMode, locale]);
 
   const runWithSending = useCallback(async (fn: () => Promise<boolean>): Promise<boolean> => {
     setIsSending(true);

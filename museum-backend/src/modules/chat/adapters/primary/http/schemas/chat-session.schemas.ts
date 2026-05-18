@@ -117,6 +117,8 @@ const contextSchema = z
       museumMode: optionalBoolean,
       guideLevel: guideLevelSchema,
       locale: optionalNonEmptyString,
+      // C9.10 (2026-05-17) — Voice-first walk-mode flag (60-80w prose answer).
+      voiceMode: optionalBoolean,
       contentPreferences: z
         .array(
           z.unknown().refine(isContentPreference, {

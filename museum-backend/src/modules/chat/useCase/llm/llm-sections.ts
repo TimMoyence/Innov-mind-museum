@@ -103,6 +103,12 @@ interface LlmSectionPlanInput {
   hasImage?: boolean;
   /** Increases word limits for audio-friendly descriptions. */
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — When `true`, caps the answer to 60-80 words and
+   * forbids markdown/lists. Overrides audioDescriptionMode + museumMode word
+   * limits (voice TTS playback time is what matters, not screen layout).
+   */
+  voiceMode?: boolean;
   contentPreferences?: readonly ContentPreference[];
 }
 
@@ -133,7 +139,14 @@ const buildContentPreferencesHint = (
   return `USER CONTENT PREFERENCES: the visitor prefers to learn about — ${labels}. Emphasize these angles when naturally relevant to the current topic, but do not force them if the question is about something else.`;
 };
 
-const resolveWordLimit = (museumMode: boolean, audioDescriptionMode?: boolean): number => {
+const resolveWordLimit = (
+  museumMode: boolean,
+  audioDescriptionMode?: boolean,
+  voiceMode?: boolean,
+): number => {
+  // C9.10 (2026-05-17) — voiceMode caps at 80w regardless of other modes
+  // because TTS playback time is the binding constraint.
+  if (voiceMode) return 80;
   if (audioDescriptionMode) return museumMode ? 300 : 400;
   return museumMode ? 150 : 250;
 };
@@ -145,6 +158,7 @@ interface BuildSummaryPromptInput {
   visitContextBlock?: string;
   hasImage?: boolean;
   audioDescriptionMode?: boolean;
+  voiceMode?: boolean;
   contentPreferences?: readonly ContentPreference[];
 }
 
@@ -156,6 +170,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     visitContextBlock,
     hasImage,
     audioDescriptionMode,
+    voiceMode,
     contentPreferences,
   } = input;
   const language = localeToLanguageName(resolveLocale([locale]));
@@ -163,7 +178,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     ? 'Visitor is in guided museum mode: include one concrete next-step recommendation.'
     : 'Visitor is in regular mode: stay concise and practical.';
 
-  const wordLimit = resolveWordLimit(museumMode, audioDescriptionMode);
+  const wordLimit = resolveWordLimit(museumMode, audioDescriptionMode, voiceMode);
 
   const parts = [
     '[SECTION:summary]',
@@ -184,6 +199,15 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
   parts.push(
     `Write as if speaking face-to-face. Be specific: names, dates, techniques, visual details. Avoid filler like "This is an interesting work" — say what makes it interesting. Keep the answer under ${String(wordLimit)} words.`,
   );
+
+  if (voiceMode) {
+    // C9.10 (2026-05-17) — voice-first walk-mode. TTS playback length matters
+    // more than visual rendering: forbid markdown that will be read aloud as
+    // garbage by the TTS engine.
+    parts.push(
+      '[VOICE_MODE] This answer will be read aloud by a text-to-speech engine. Use ONE flowing paragraph of prose only — no markdown, no bullets, no numbered lists, no headers, no asterisks, no dashes at line start. Aim for 60-80 words. Pronounceable proper nouns only (no abbreviations unless spoken naturally).',
+    );
+  }
 
   if (hasImage) {
     parts.push(
@@ -226,6 +250,7 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
       visitContextBlock: input.visitContextBlock,
       hasImage: input.hasImage,
       audioDescriptionMode: input.audioDescriptionMode,
+      voiceMode: input.voiceMode,
       contentPreferences: input.contentPreferences,
     }),
     outputSchema: {

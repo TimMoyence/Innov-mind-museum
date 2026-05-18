@@ -8,6 +8,7 @@ import {
 import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
+import { MicrosoftPresidioAdapter } from '@modules/chat/adapters/secondary/guardrails/presidio.adapter';
 import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { TenantRateLimiter } from '@modules/chat/adapters/secondary/guardrails/tenant-rate-limiter';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
@@ -432,6 +433,18 @@ export class ChatModule {
 
   /** ADR-048; ADR-015 amendment 2026-05-14. Active when GUARDRAILS_V2_LLM_GUARD_URL set. */
   private buildGuardrailProvider(): GuardrailProvider | undefined {
+    // C9.8 (2026-05-17) — when PRESIDIO_ENABLED=true + baseUrl set, Presidio
+    // takes over as the V2 provider. The existing observe-only bake
+    // (`env.guardrails.observeOnly`) carries through unchanged so we get the
+    // full LLM02 coverage (EMAIL/PHONE/PERSON/IBAN/CARD/IP/SSN/etc.) without
+    // blocking responses during the 4-7d bake. ADR-051 promotion path.
+    if (env.guardrails.presidio.enabled && env.guardrails.presidio.baseUrl) {
+      return new MicrosoftPresidioAdapter({
+        baseUrl: env.guardrails.presidio.baseUrl,
+        timeoutMs: env.guardrails.presidio.timeoutMs,
+      });
+    }
+
     const baseUrl = env.guardrails.llmGuardUrl;
     if (!baseUrl) return undefined;
 

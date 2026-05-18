@@ -46,6 +46,13 @@ interface ChatMessageBubbleProps {
   onRetry?: (message: ChatUiMessage) => void;
   feedbackValue?: 'positive' | 'negative' | null;
   onFeedback?: (messageId: string, value: 'positive' | 'negative') => void;
+  /**
+   * C9.18 (2026-05-17) — B2B deep-link callback fired when the user taps the
+   * detected-artwork chip. Parent owns the actual navigation (it knows the
+   * session museumId). `detectedArtwork` payload (including `artworkId`) is
+   * accessible via `message.metadata`.
+   */
+  onArtworkPress?: (message: ChatUiMessage) => void;
 }
 
 /**
@@ -76,6 +83,7 @@ export const ChatMessageBubble = React.memo(
     onRetry,
     feedbackValue,
     onFeedback,
+    onArtworkPress,
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
@@ -244,6 +252,14 @@ export const ChatMessageBubble = React.memo(
             museum={message.metadata.detectedArtwork.museum}
             room={message.metadata.detectedArtwork.room}
             confidence={message.metadata.detectedArtwork.confidence}
+            artworkId={message.metadata.detectedArtwork.artworkId}
+            onPress={
+              onArtworkPress
+                ? () => {
+                    onArtworkPress(message);
+                  }
+                : undefined
+            }
           />
         ) : null}
 
