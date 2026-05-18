@@ -15,6 +15,7 @@ import {
   TesseractOcrService,
   type DisabledOcrService,
 } from '@modules/chat/adapters/secondary/image/ocr-service';
+import { toModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import { TypeOrmArtKeywordRepository } from '@modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm';
@@ -72,6 +73,7 @@ import {
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
+import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
@@ -158,15 +160,16 @@ function buildWikidataStack(dataSource: DataSource, cache?: CacheService): Wikid
 // budgets sourced from `env.knowledgeRouter.*` — TUNING-ONLY (D11 / pre-launch
 // V1), NO `*_ENABLED` switch.
 
+// C9.7 — judge takes a raw ChatModel (detached path), not the full orchestrator.
 function buildKnowledgeRouter(
   kbProvider: KnowledgeBaseProvider,
   wsProvider: WebSearchProvider,
-  orchestrator: ChatOrchestrator,
+  judgeModel: ChatModel | null,
 ): KnowledgeRouterService {
   return new KnowledgeRouterService({
     kb: kbProvider,
     ws: wsProvider,
-    judge: new LlmJudgeGuardrail({ orchestrator }),
+    judge: new LlmJudgeGuardrail({ model: judgeModel }),
     config: {
       threshold: env.knowledgeRouter.threshold,
       kbTimeoutMs: env.knowledgeRouter.kbTimeoutMs,
@@ -625,7 +628,11 @@ export class ChatModule {
     llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
     llmCostCircuitBreakerState.set({ state: 'open' }, 0);
 
+    // C9.7 — share a single ChatModel handle: orchestrator uses it for sections,
+    // judge uses it directly via withStructuredOutput (detached path).
+    const llmModel = toModel();
     const orchestrator = new LangChainChatOrchestrator({
+      model: llmModel,
       costBreaker: this._llmCostCircuitBreaker,
     });
     this._orchestrator = orchestrator;
@@ -640,7 +647,7 @@ export class ChatModule {
       },
     });
 
-    const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, effectiveOrchestrator);
+    const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, llmModel);
     const locationResolver = museumRepository
       ? new LocationResolver(museumRepository, cache)
       : undefined;
@@ -658,6 +665,7 @@ export class ChatModule {
     const chatService = this.buildChatService({
       repository,
       effectiveOrchestrator,
+      judgeModel: llmModel,
       imageStorage,
       tts,
       cache,
@@ -721,6 +729,8 @@ export class ChatModule {
   private buildChatService(deps: {
     repository: TypeOrmChatRepository;
     effectiveOrchestrator: ChatOrchestrator;
+    /** C9.7 — raw ChatModel used by the detached LLM-judge path. */
+    judgeModel: ChatModel | null;
     imageStorage: LocalImageStorage | S3CompatibleImageStorage;
     tts: OpenAiTextToSpeechService | DisabledTextToSpeechService;
     cache?: CacheService;
@@ -760,7 +770,7 @@ export class ChatModule {
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
       llmJudge: async (message: string) =>
-        await judgeWithLlm(message, { orchestrator: deps.effectiveOrchestrator }),
+        await judgeWithLlm(message, { model: deps.judgeModel ?? undefined }),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository: deps.museumRepository,
       dbLookup: deps.knowledgeExtraction.dbLookup,

@@ -2,13 +2,19 @@
  * F4 — LLM-judge guardrail (ADR-015). Defense-in-depth layer running only when
  * keyword pre-filter is "uncertain" (allow + length above threshold).
  *
- * SEC FAIL-OPEN: timeout / parse failure / schema violation / budget exhaustion /
- * orchestrator throw — all return `null`; caller falls back to keyword decision.
+ * SEC FAIL-OPEN: timeout / schema violation / budget exhaustion / model throw —
+ * all return `null`; caller falls back to keyword decision.
  * Latency: p99 ≤ 500ms. Cost budget tracked in `guardrail-budget.ts`.
  * Caller MUST gate on `message.length > env.guardrails.judgeMinMessageLength`.
  * Prompt isolation: SystemMessage BEFORE user content + `[END OF SYSTEM
  * INSTRUCTIONS]` boundary marker (matches `llm-sections.ts` pattern).
+ *
+ * C9.7 (2026-05-18) — detached from full chat orchestrator. Uses
+ * `model.withStructuredOutput(JudgeDecisionSchema).invoke(...)` directly so
+ * the judge no longer pays ~50–100 ms of section / Langfuse / Sentry /
+ * circuit-breaker overhead per call.
  */
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 
 import {
@@ -19,7 +25,6 @@ import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
-import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
 export type LlmJudgeDecision = 'allow' | 'block' | 'review';
 
@@ -74,59 +79,17 @@ export const JUDGE_SYSTEM_PROMPT = [
  */
 const ESTIMATED_COST_CENTS_PER_CALL = 1;
 
-const stripCodeFence = (raw: string): string => {
-  const trimmed = raw.trim();
-  if (!trimmed.startsWith('```')) return trimmed;
-  const withoutOpening = trimmed.replace(/^```[a-zA-Z]*\s*\n?/, '');
-  return withoutOpening.replace(/\n?```\s*$/, '');
-};
-
-const parseJudgeJson = (raw: string): JudgeDecision | null => {
-  try {
-    const cleaned = stripCodeFence(raw);
-    const parsed: unknown = JSON.parse(cleaned);
-    const result = JudgeDecisionSchema.safeParse(parsed);
-    if (!result.success) {
-      logger.warn('guardrail_judge_parse_error', {
-        kind: 'schema_violation',
-        issue: result.error.issues[0]?.code ?? 'unknown',
-      });
-      return null;
-    }
-    return result.data;
-  } catch (error) {
-    logger.warn('guardrail_judge_parse_error', {
-      kind: 'invalid_json',
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-};
-
 export interface JudgeWithLlmOptions {
   /** Default: `env.guardrails.judgeTimeoutMs`. */
   timeoutMs?: number;
-  /** C9.7 — detached path. When provided, judge uses `model.withStructuredOutput` directly. */
+  /** C9.7 — detached path. Judge uses `model.withStructuredOutput` directly. */
   model?: ChatModel;
-  orchestrator?: ChatOrchestrator;
 }
 
-/** Resolves to `null` on timeout. */
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> => {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race<T | null>([
-      promise,
-      new Promise<null>((resolve) => {
-        timeoutId = setTimeout(() => {
-          resolve(null);
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutId !== undefined) clearTimeout(timeoutId);
-  }
-};
+const isTimeoutError = (error: unknown): boolean =>
+  typeof DOMException !== 'undefined' &&
+  error instanceof DOMException &&
+  error.name === 'TimeoutError';
 
 /** Fail-open: returns `null` on any failure (caller uses keyword decision). */
 export const judgeWithLlm = async (
@@ -140,10 +103,12 @@ export const judgeWithLlm = async (
     return null;
   }
 
-  const orchestrator = opts.orchestrator;
-  if (!orchestrator) {
+  const model = opts.model;
+  if (!model?.withStructuredOutput) {
     logger.warn('guardrail_judge_misconfigured', {
-      detail: 'no orchestrator injected — judge requires LangChain orchestrator',
+      detail: model
+        ? 'no structured-output support — judge requires withStructuredOutput-capable model'
+        : 'no model injected — judge requires ChatModel',
     });
     return null;
   }
@@ -157,41 +122,31 @@ export const judgeWithLlm = async (
   await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
 
   const startedAt = Date.now();
-  let raw: string | null;
   try {
-    const generatePromise = orchestrator
-      .generate({
-        // SEC — empty history: judge sees message in isolation (defense-in-depth
-        // + zero leakage of prior turns into moderator).
-        history: [],
-        text: message,
-        locale: undefined,
-        museumMode: false,
-      })
-      .then((output) => output.text);
-
-    raw = await withTimeout(generatePromise, timeoutMs);
-    if (raw === null) {
+    const structured = model.withStructuredOutput(JudgeDecisionSchema, { name: 'JudgeDecision' });
+    const signal = AbortSignal.timeout(timeoutMs);
+    const messages = [new SystemMessage(JUDGE_SYSTEM_PROMPT), new HumanMessage(message)];
+    return await structured.invoke(messages, { signal });
+  } catch (error) {
+    if (isTimeoutError(error)) {
       logger.warn('guardrail_judge_timeout', {
         timeoutMs,
         elapsedMs: Date.now() - startedAt,
       });
-      return null;
+    } else {
+      logger.warn('guardrail_judge_error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-  } catch (error) {
-    logger.warn('guardrail_judge_error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
     return null;
   }
-
-  return parseJudgeJson(raw);
 };
 
 export interface LlmJudgeGuardrailOptions {
-  orchestrator: ChatOrchestrator;
   /** Default: `env.guardrails.judgeTimeoutMs`. */
   timeoutMs?: number;
+  /** C9.7 — detached path. `null` is accepted (judge will fail-open). */
+  model: ChatModel | null;
 }
 
 /**
@@ -204,11 +159,11 @@ export interface LlmJudgeGuardrailOptions {
  * Legacy `judgeWithLlm` export retained for chat-module + guardrail-evaluation.
  */
 export class LlmJudgeGuardrail implements LlmJudgePort {
-  private readonly orchestrator: ChatOrchestrator;
+  private readonly model: ChatModel | null;
   private readonly timeoutMs?: number;
 
   constructor(opts: LlmJudgeGuardrailOptions) {
-    this.orchestrator = opts.orchestrator;
+    this.model = opts.model;
     this.timeoutMs = opts.timeoutMs;
   }
 
@@ -217,8 +172,12 @@ export class LlmJudgeGuardrail implements LlmJudgePort {
       return { confidence: 0, decision: 'review', reason: 'aborted' };
     }
 
+    if (!this.model) {
+      return { confidence: 0, decision: 'review' };
+    }
+
     const decision = await judgeWithLlm(prompt, {
-      orchestrator: this.orchestrator,
+      model: this.model,
       timeoutMs: this.timeoutMs,
     });
 
