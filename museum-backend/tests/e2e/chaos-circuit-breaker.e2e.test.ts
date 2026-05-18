@@ -31,18 +31,28 @@ async function buildFailingOrchestrator(errorMessage = 'LLM provider 500'): Prom
   const { LLMCircuitBreaker } =
     await import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker');
 
-  // Fake ChatModel: every invoke/stream call throws to simulate provider down.
+  // Fake ChatModel: every invoke/stream/withStructuredOutput call throws to
+  // simulate provider down. C9.17 (2026-05-18) — post legacy-[META] sunset,
+  // the orchestrator routes through `withStructuredOutput(schema).invoke()`
+  // exclusively; this fake must expose the structured-output adapter so the
+  // breaker's `.execute()` wraps the failing invoke as intended.
+  const makeError = () => {
+    const err = new Error(errorMessage);
+    (err as Error & { statusCode: number }).statusCode = 500;
+    return err;
+  };
   const alwaysFailModel: LangChainChatOrchestratorDeps['model'] = {
     invoke: async () => {
-      const err = new Error(errorMessage);
-      (err as Error & { statusCode: number }).statusCode = 500;
-      throw err;
+      throw makeError();
     },
     stream: async () => {
-      const err = new Error(errorMessage);
-      (err as Error & { statusCode: number }).statusCode = 500;
-      throw err;
+      throw makeError();
     },
+    withStructuredOutput: () => ({
+      invoke: async () => {
+        throw makeError();
+      },
+    }),
   } as unknown as LangChainChatOrchestratorDeps['model'];
 
   const breaker = new LLMCircuitBreaker();
@@ -128,11 +138,28 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       // would start CLOSED and the test would not exercise HALF_OPEN -> CLOSED.
       const { LangChainChatOrchestrator } =
         await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
+      // C9.17 (2026-05-18) — must expose withStructuredOutput so the
+      // breaker's `.execute()` wraps a real recoverable invocation.
       const successModel = {
         invoke: async () => ({ content: 'recovered response' }),
         stream: async function* () {
           yield { content: 'recovered stream' };
         },
+        withStructuredOutput: () => ({
+          invoke: async () => ({
+            text: 'recovered response',
+            deeperContext: null,
+            openQuestion: null,
+            suggestedFollowUp: null,
+            imageDescription: null,
+            suggestedImages: null,
+            detectedArtwork: null,
+            recommendations: null,
+            expertiseSignal: null,
+            citations: null,
+            sources: null,
+          }),
+        }),
       };
       const successOrchestrator = new LangChainChatOrchestrator({
         model: successModel as unknown as LangChainChatOrchestratorDeps['model'],
