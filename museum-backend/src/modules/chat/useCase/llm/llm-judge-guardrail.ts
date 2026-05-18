@@ -126,7 +126,10 @@ export const judgeWithLlm = async (
     const structured = model.withStructuredOutput(JudgeDecisionSchema, { name: 'JudgeDecision' });
     const signal = AbortSignal.timeout(timeoutMs);
     const messages = [new SystemMessage(JUDGE_SYSTEM_PROMPT), new HumanMessage(message)];
-    return await structured.invoke(messages, { signal });
+    // C9.5 — `ChatModel.withStructuredOutput` return type is now a union
+    // `T | { raw, parsed }` because the orchestrator opts into `includeRaw`.
+    // Judge does NOT opt in, so the runtime shape is always `T`; cast here.
+    return (await structured.invoke(messages, { signal })) as JudgeDecision;
   } catch (error) {
     if (isTimeoutError(error)) {
       logger.warn('guardrail_judge_timeout', {
