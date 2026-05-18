@@ -24,16 +24,14 @@ import type {
 } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
 /** Canonical model version stamp used by the SigLIP-base default. */
-export const DEFAULT_MODEL_VERSION = 'siglip-base-patch16-224@v1';
+export const DEFAULT_MODEL_VERSION = 'siglip2-base-patch16-224@v1';
 
 /**
  * Build an {@link ArtworkMetadata} payload with sensible defaults.
  *
  * @param overrides - partial overrides; missing keys fall back to the Mona Lisa.
  */
-export const makeArtworkMetadata = (
-  overrides: Partial<ArtworkMetadata> = {},
-): ArtworkMetadata => ({
+export const makeArtworkMetadata = (overrides: Partial<ArtworkMetadata> = {}): ArtworkMetadata => ({
   title: 'Mona Lisa',
   artist: 'Leonardo da Vinci',
   date: 'c. 1503',
@@ -42,7 +40,8 @@ export const makeArtworkMetadata = (
   movement: 'High Renaissance',
   genre: 'portrait',
   imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa.jpg',
-  thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/300px-Mona_Lisa.jpg',
+  thumbnailUrl:
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/300px-Mona_Lisa.jpg',
   ...overrides,
 });
 
@@ -51,9 +50,7 @@ export const makeArtworkMetadata = (
  *
  * @param overrides - partial overrides; missing keys fall back to the Mona Lisa.
  */
-export const makeNearestResult = (
-  overrides: Partial<NearestResult> = {},
-): NearestResult => ({
+export const makeNearestResult = (overrides: Partial<NearestResult> = {}): NearestResult => ({
   qid: 'Q12418',
   visualScore: 0.9,
   metadata: makeArtworkMetadata(),
@@ -66,13 +63,12 @@ export const makeNearestResult = (
  *
  * @param overrides - partial overrides; missing keys fall back to the Mona Lisa.
  */
-export const makeCompareMatch = (
-  overrides: Partial<CompareMatch> = {},
-): CompareMatch => ({
+export const makeCompareMatch = (overrides: Partial<CompareMatch> = {}): CompareMatch => ({
   qid: 'Q12418',
   title: 'Mona Lisa',
   imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa.jpg',
-  thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/300px-Mona_Lisa.jpg',
+  thumbnailUrl:
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/300px-Mona_Lisa.jpg',
   visualScore: 0.9,
   metadataScore: 0,
   finalScore: 0.63,
@@ -86,9 +82,7 @@ export const makeCompareMatch = (
  *
  * @param overrides - partial overrides; missing keys default to one Mona Lisa match.
  */
-export const makeCompareResult = (
-  overrides: Partial<CompareResult> = {},
-): CompareResult => ({
+export const makeCompareResult = (overrides: Partial<CompareResult> = {}): CompareResult => ({
   matches: [makeCompareMatch()],
   durationMs: 1234,
   modelVersion: DEFAULT_MODEL_VERSION,
@@ -104,9 +98,7 @@ export const makeCompareResult = (
  *
  * @param overrides - partial overrides; vector defaults to seedIndex 0.
  */
-export const makeEncodeOutput = (
-  overrides: Partial<EncodeOutput> = {},
-): EncodeOutput => ({
+export const makeEncodeOutput = (overrides: Partial<EncodeOutput> = {}): EncodeOutput => ({
   vector: makeNormalisedFloat32(0, EMBEDDING_DIM),
   modelVersion: DEFAULT_MODEL_VERSION,
   ...overrides,

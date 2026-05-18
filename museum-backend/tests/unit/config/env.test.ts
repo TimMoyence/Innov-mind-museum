@@ -432,7 +432,7 @@ describe('env.ts module', () => {
       });
       expect(env.visualSimilarity).toEqual({
         provider: 'siglip-onnx',
-        siglipOnnxModelPath: './models/siglip-base-patch16-224.onnx',
+        siglipOnnxModelPath: './models/siglip2-base-patch16-224.onnx',
         replicateApiToken: undefined,
         embeddingsDim: 768,
         topN: 20,

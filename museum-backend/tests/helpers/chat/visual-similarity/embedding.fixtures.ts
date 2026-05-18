@@ -15,7 +15,10 @@
  * rows inserted via raw SQL we wrap the literal in `::halfvec` — the helper
  * only produces the string body so callers stay explicit about the cast.
  */
-import type { ArtworkImageLicense, ArtworkImageSource } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
+import type {
+  ArtworkImageLicense,
+  ArtworkImageSource,
+} from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 
 /** SigLIP-base-patch16-224 output dimensionality (design.md §9 D1). */
 export const EMBEDDING_DIM = 768;
@@ -80,11 +83,12 @@ export const makeArtworkEmbeddingRow = (
   qid: 'Q12418', // Wikidata QID for "Mona Lisa"
   museum_qid: 'Q19675', // Wikidata QID for "Louvre"
   title: 'Mona Lisa',
-  image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/600px-Mona_Lisa.jpg',
+  image_url:
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa.jpg/600px-Mona_Lisa.jpg',
   license: 'public-domain',
   image_source: 'wikimedia',
   embedding: makeHalfvecLiteral(),
-  embedding_model_version: 'siglip-base-patch16-224@v1',
+  embedding_model_version: 'siglip2-base-patch16-224@v1',
   ...overrides,
 });
 
@@ -105,10 +109,7 @@ export const makeArtworkEmbeddingRow = (
  * @param seedIndex - 0-based component to set to 1. Default 0.
  * @param dim - Vector dimension. Default {@link EMBEDDING_DIM} (768).
  */
-export const makeNormalisedFloat32 = (
-  seedIndex = 0,
-  dim: number = EMBEDDING_DIM,
-): Float32Array => {
+export const makeNormalisedFloat32 = (seedIndex = 0, dim: number = EMBEDDING_DIM): Float32Array => {
   const vec = new Float32Array(dim);
   vec[seedIndex % dim] = 1;
   return vec;
@@ -125,10 +126,7 @@ export const makeNormalisedFloat32 = (
  * @param seedIndex - 0-based component to set to 1. Default 0.
  * @param dim - Vector dimension. Default {@link EMBEDDING_DIM} (768).
  */
-export const makeNormalisedVectorLiteral = (
-  seedIndex = 0,
-  dim: number = EMBEDDING_DIM,
-): string => {
+export const makeNormalisedVectorLiteral = (seedIndex = 0, dim: number = EMBEDDING_DIM): string => {
   const components = Array<number>(dim).fill(0);
   components[seedIndex % dim] = 1;
   return `[${components.join(',')}]`;

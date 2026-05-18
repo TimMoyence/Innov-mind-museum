@@ -80,7 +80,7 @@ const makeMockEncoder = (): EmbeddingsPort & { calls: number } => {
       vector[idx % EMBEDDING_DIM] = 1;
       return {
         vector,
-        modelVersion: 'siglip-base-patch16-224@v1',
+        modelVersion: 'siglip2-base-patch16-224@v1',
       };
     },
     get calls() {
@@ -159,11 +159,12 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
     // Repository wiring uses the real Phase 4 adapter — same module the
     // CLI itself uses in production.
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT-coupled adapter load
-    const { ArtworkEmbeddingRepositoryPg } = require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
-      ArtworkEmbeddingRepositoryPg: new (
-        ds: import('typeorm').DataSource,
-      ) => ArtworkEmbeddingRepository;
-    };
+    const { ArtworkEmbeddingRepositoryPg } =
+      require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
+        ArtworkEmbeddingRepositoryPg: new (
+          ds: import('typeorm').DataSource,
+        ) => ArtworkEmbeddingRepository;
+      };
     repo = new ArtworkEmbeddingRepositoryPg(harness.dataSource);
   });
 
@@ -236,9 +237,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       ...Array.from({ length: 60 }, (_, i) =>
         makeBinding(`Q${600_000 + i}`, `PD ${i}`, 'public-domain'),
       ),
-      ...Array.from({ length: 30 }, (_, i) =>
-        makeBinding(`Q${700_000 + i}`, `CC-0 ${i}`, 'cc-0'),
-      ),
+      ...Array.from({ length: 30 }, (_, i) => makeBinding(`Q${700_000 + i}`, `CC-0 ${i}`, 'cc-0')),
       ...Array.from({ length: 10 }, (_, i) =>
         makeBinding(`Q${800_000 + i}`, `CC-BY-SA ${i}`, 'cc-by-sa'),
       ),

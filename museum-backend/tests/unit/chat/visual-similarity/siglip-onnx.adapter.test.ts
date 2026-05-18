@@ -3,7 +3,7 @@
  *
  * Locks down the contract from tasks.md T4.2 and design.md §3:
  *   - encodes a Buffer → 768-dim L2-normalised Float32Array,
- *   - tags the output with `modelVersion: 'siglip-base-patch16-224@v1'`,
+ *   - tags the output with `modelVersion: 'siglip2-base-patch16-224@v1'`,
  *   - throws `EncoderUnavailableError` when the ONNX run exceeds the
  *     configured `timeoutMs`,
  *   - lazily initialises the InferenceSession at most once across calls.
@@ -45,14 +45,18 @@ interface SiglipOnnxAdapterCtorArgs {
 
 // SUT — Phase 4 file, must not yet exist.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { SiglipOnnxAdapter } = require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
-  SiglipOnnxAdapter: new (args: SiglipOnnxAdapterCtorArgs) => {
-    encode: (input: { buffer: Buffer; mimeType: 'image/jpeg' | 'image/png' | 'image/webp' }) => Promise<{
-      vector: Float32Array;
-      modelVersion: string;
-    }>;
+const { SiglipOnnxAdapter } =
+  require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
+    SiglipOnnxAdapter: new (args: SiglipOnnxAdapterCtorArgs) => {
+      encode: (input: {
+        buffer: Buffer;
+        mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+      }) => Promise<{
+        vector: Float32Array;
+        modelVersion: string;
+      }>;
+    };
   };
-};
 
 describe('SiglipOnnxAdapter (T4.2)', () => {
   beforeEach(() => {
@@ -66,21 +70,21 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
 
   it('returns a 768-dim Float32Array tagged with the SigLIP v1 modelVersion', async () => {
     const adapter = new SiglipOnnxAdapter({
-      modelPath: './models/siglip-base-patch16-224.onnx',
+      modelPath: './models/siglip2-base-patch16-224.onnx',
       timeoutMs: 3000,
     });
     const buffer = await makeSiglipJpegBuffer();
 
     const result = await adapter.encode({ buffer, mimeType: 'image/jpeg' });
 
-    expect(result.modelVersion).toBe('siglip-base-patch16-224@v1');
+    expect(result.modelVersion).toBe('siglip2-base-patch16-224@v1');
     expect(result.vector).toBeInstanceOf(Float32Array);
     expect(result.vector.length).toBe(768);
   });
 
   it('returns an L2-normalised vector (norm ≈ 1.0 within 1e-3)', async () => {
     const adapter = new SiglipOnnxAdapter({
-      modelPath: './models/siglip-base-patch16-224.onnx',
+      modelPath: './models/siglip2-base-patch16-224.onnx',
       timeoutMs: 3000,
     });
     const buffer = await makeSiglipJpegBuffer();
@@ -96,13 +100,14 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
   it('throws EncoderUnavailableError when the ONNX run exceeds timeoutMs', async () => {
     // Hang the run() forever — short timeoutMs forces EncoderUnavailableError.
     onnxRunMock.mockImplementation(
-      () => new Promise(() => {
-        /* never resolves */
-      }),
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
     );
 
     const adapter = new SiglipOnnxAdapter({
-      modelPath: './models/siglip-base-patch16-224.onnx',
+      modelPath: './models/siglip2-base-patch16-224.onnx',
       timeoutMs: 25,
     });
     const buffer = await makeSiglipJpegBuffer();
@@ -114,7 +119,7 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
 
   it('lazily initialises the InferenceSession at most once across encode() calls', async () => {
     const adapter = new SiglipOnnxAdapter({
-      modelPath: './models/siglip-base-patch16-224.onnx',
+      modelPath: './models/siglip2-base-patch16-224.onnx',
       timeoutMs: 3000,
     });
     const buffer = await makeSiglipJpegBuffer();

@@ -32,11 +32,12 @@ import type {
 
 // SUT — Phase 4 file, must not yet exist.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { ArtworkEmbeddingRepositoryPg } = require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
-  ArtworkEmbeddingRepositoryPg: new (
-    dataSource: import('typeorm').DataSource,
-  ) => ArtworkEmbeddingRepository;
-};
+const { ArtworkEmbeddingRepositoryPg } =
+  require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
+    ArtworkEmbeddingRepositoryPg: new (
+      dataSource: import('typeorm').DataSource,
+    ) => ArtworkEmbeddingRepository;
+  };
 
 const NUM_FIXTURE_ROWS = 100;
 
@@ -60,7 +61,10 @@ describe('ArtworkEmbeddingRepositoryPg (T4.5 — integration)', () => {
    * Each subsequent row uses an orthogonal seed, guaranteeing predictable
    * inner-product ordering when comparing against `seedIndex=0`.
    */
-  const buildFixtureRows = (count: number, museumQid: string | null = 'Q19675'): ArtworkEmbeddingRow[] =>
+  const buildFixtureRows = (
+    count: number,
+    museumQid: string | null = 'Q19675',
+  ): ArtworkEmbeddingRow[] =>
     Array.from({ length: count }, (_, i) => ({
       qid: `Q${100_000 + i}`,
       vector: makeNormalisedFloat32(i, EMBEDDING_DIM),
@@ -71,7 +75,7 @@ describe('ArtworkEmbeddingRepositoryPg (T4.5 — integration)', () => {
       },
       imageSource: 'wikimedia' as const,
       license: 'public-domain' as const,
-      embeddingModelVersion: 'siglip-base-patch16-224@v1',
+      embeddingModelVersion: 'siglip2-base-patch16-224@v1',
     }));
 
   it('upserts a 100-row batch and reports inserted=100, updated=0, skipped=0', async () => {

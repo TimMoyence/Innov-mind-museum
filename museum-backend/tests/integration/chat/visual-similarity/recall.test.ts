@@ -11,7 +11,7 @@
  *
  * The full validation requires:
  *   1. The SigLIP ONNX model file at `SIGLIP_ONNX_MODEL_PATH` (or
- *      `./models/siglip-base-patch16-224.onnx`). Not yet exported / uploaded
+ *      `./models/siglip2-base-patch16-224.onnx`). Not yet exported / uploaded
  *      to GCS — tracked under T1.4 ops.
  *   2. A 50-pair fixture (`tests/fixtures/recall-eval.json` currently ships
  *      with 6 placeholder pairs covering the V1 seed museums).
@@ -31,7 +31,10 @@ import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
-import { EMBEDDING_DIM, makeNormalisedFloat32 } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
+import {
+  EMBEDDING_DIM,
+  makeNormalisedFloat32,
+} from '../../../helpers/chat/visual-similarity/embedding.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
 import type {
@@ -56,7 +59,7 @@ interface RecallFixture {
 }
 
 const ONNX_MODEL_PATH =
-  process.env.SIGLIP_ONNX_MODEL_PATH ?? './models/siglip-base-patch16-224.onnx';
+  process.env.SIGLIP_ONNX_MODEL_PATH ?? './models/siglip2-base-patch16-224.onnx';
 const MODEL_AVAILABLE = existsSync(resolve(ONNX_MODEL_PATH));
 const FIXTURE_PATH = resolve(__dirname, '../../../fixtures/recall-eval.json');
 const FIXTURE_AVAILABLE = existsSync(FIXTURE_PATH);
@@ -81,17 +84,19 @@ describeFn('recall@5 (T7.4 — integration, real ONNX model required)', () => {
     harness.scheduleStop();
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic load so the require resolves only when the gate is open
-    const { ArtworkEmbeddingRepositoryPg } = require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
-      ArtworkEmbeddingRepositoryPg: new (
-        ds: import('typeorm').DataSource,
-      ) => ArtworkEmbeddingRepository;
-    };
+    const { ArtworkEmbeddingRepositoryPg } =
+      require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
+        ArtworkEmbeddingRepositoryPg: new (
+          ds: import('typeorm').DataSource,
+        ) => ArtworkEmbeddingRepository;
+      };
     repo = new ArtworkEmbeddingRepositoryPg(harness.dataSource);
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic load to defer the ONNX runtime cost behind the gate
-    const { SiglipOnnxAdapter } = require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
-      SiglipOnnxAdapter: new (args: { modelPath: string; timeoutMs: number }) => EmbeddingsPort;
-    };
+    const { SiglipOnnxAdapter } =
+      require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
+        SiglipOnnxAdapter: new (args: { modelPath: string; timeoutMs: number }) => EmbeddingsPort;
+      };
     encoder = new SiglipOnnxAdapter({
       modelPath: ONNX_MODEL_PATH,
       timeoutMs: 10_000,
