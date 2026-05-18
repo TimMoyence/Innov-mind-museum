@@ -1,12 +1,25 @@
 # HANDOFF — W3 Géo + Walk intra-musée (pilote Bordeaux)
 
-> **Author:** Claude Opus 4.7 (1M context) · **Date:** 2026-05-18
-> **Run ID:** `2026-05-17-w3-geo-walk-intra`
-> **Commit:** `064c632f` sur branche `feat/audit-360-w3-geo-walk-intra`
+> **Author:** Claude Opus 4.7 (1M context) · **Date:** 2026-05-18 (mis à jour 11:00 CEST)
+> **Run ID:** `2026-05-17-w3-geo-walk-intra` + `2026-05-18-audit-dev-backend-bullmq-noise`
+> **Commits:** `064c632f` (W3 livraison) · `35c43988` (handoff + TD-41/42/43) · `b7f12183` (infra hardening TD-44 + PGDATABASE no-fallback + 2 sentinels) sur `feat/audit-360-w3-geo-walk-intra`
 > **Deadline merge :** mercredi **2026-05-20 EOD**
 > **Pilote :** weekend **2026-05-23 / 2026-05-24** à Bordeaux
 
-Ce document est le point d'entrée unique pour reprendre W3. Il contient tout ce qu'une nouvelle session Claude (ou un humain) doit savoir pour : (a) valider la branche en local, (b) merger W4, (c) re-tester post-merge, (d) livrer le pilote weekend.
+Ce document est le point d'entrée unique pour reprendre W3.
+
+## 🟢 Flow recommandé pour fresh agent (mis à jour 2026-05-18)
+
+> Donne ce flow tel quel au prochain agent (humain ou fresh Claude session) :
+>
+> 1. **Ouvre `docs/HANDOFF_W3_GEO_PILOT.md`** (ce fichier). Lis intégralement (~10 min).
+> 2. **Phase A — Validation locale : ✅ DONE 2026-05-18** (cf. §5 — n'a PAS besoin d'être refaite ; le commit `b7f12183` documente les fixes appliqués au passage).
+> 3. **Phase B — Merge W4 : 🟡 À FAIRE.** Avant : lis le **RECAP W4** que l'utilisateur va te fournir (pas committé dans ce repo). Puis applique §5 Phase B.
+> 4. **Phase C — QR génération : 🟡 À FAIRE.** Bloquant pour le pilote samedi 23.
+> 5. **Phase D — On-device test : 🟡 À FAIRE.** Avant samedi 23.
+> 6. **Phase E — Push + PR : 🟡 À FAIRE** (W3 + W4 mergé dans un seul PR).
+>
+> Si le user dit `/team` sur l'une de ces phases : utilise le pipeline `micro` ou `standard` selon le scope. Ne refais PAS Phase A.
 
 ---
 
@@ -20,8 +33,12 @@ Ce document est le point d'entrée unique pour reprendre W3. Il contient tout ce
 | **Tests BE** | 442/442 suites, 5699/0 fail, coverage 89.27 % statements |
 | **Tests FE** | 271/272 suites (2 fails *pré-existants* onboarding, non W3) |
 | **Lint / typecheck / OpenAPI / contract** | Tous PASS |
-| **Pre-commit gates (6/6)** | Tous PASS (workspace-links réparé en chemin) |
+| **Pre-commit gates (7/7)** | Tous PASS (Gate 7 = compose-parity ajouté 2026-05-18) |
 | **Roadmap** | W1.4 / W1.5 / W1.6 cochés (W1.6 partiel, footnote SigLIP-2 différé) |
+| **Phase A (validation locale)** | ✅ **DONE 2026-05-18** — cf. §5 + bonus infra hardening (TD-44) commit `b7f12183` |
+| **dev-stack** | dev-redis `--requirepass` activé · noise BullMQ/ioredis = 0 · 2 sentinels compose-parity + env-drift wired pre-commit + CI |
+| **PGDATABASE** | `required()` sans fallback (UFR-013 fail-loud, miroir JWT) · setupFile pin pour unit-integration + e2e tests |
+| **verify-postgis-migration.sh** | 4 bugs corrigés · exit 0 end-to-end · ARM64 support via `POSTGIS_VERIFY_PLATFORM=linux/amd64` |
 
 **Rien n'est différé côté code W3.** Les seuls follow-ups sont (a) coordination W4 pour les slugs musées, (b) tests on-device, (c) `pnpm bootstrap` après pull.
 
@@ -119,7 +136,38 @@ Coords sourcées de `museum-backend/scripts/seed-museums.ts`. Polygons à raffin
 
 ## 5. Plan d'action restant
 
-### Phase A — Validation locale **AVANT** merge W4 (~30 min)
+### Phase A — Validation locale ✅ **DONE 2026-05-18**
+
+**Résumé d'exécution (commit `b7f12183`)** :
+
+| Étape | Résultat |
+|---|---|
+| A.1 Bootstrap | Skipped — @musaium/shared symlinks frais (17-18 mai), workspace-links sentinel PASS |
+| A.2 Stack Docker | Déjà up depuis 23h + force-recreate post-fix (dev-postgres :5433, dev-redis :6379 healthy avec `--requirepass`, dev-backend :3000, dev-adminer :8082) |
+| A.3 Migration round-trip | `pnpm migration:run` no-op, `generate Check` montre drift pré-existant (HNSW pgvector / halfvec / partial index / FK auto-naming) **AUCUN W3** |
+| A.4 Revert chain ×4 | 4/4 `down()` fonctionnent. Re-run propre. `la-cite-du-vin` skip = idempotent attendu (W4 seedera ce slug) |
+| A.5 verify-postgis-migration.sh | **Exit 0** end-to-end après 4 fixes script (PLATFORM env, PGDATABASE export, pgvector apt install runtime, IDX_..._gist). Mac ARM64 supporté via `POSTGIS_VERIFY_PLATFORM=linux/amd64` |
+| A.6 BE tests | **442/442 suites · 5699/0 fail · cov 89.27% stmt** · 257s · match exact handoff §1 |
+| A.6 lint + openapi + contract | Tous PASS |
+| A.7 FE tests | 271/272 suites · 2899 pass · 2 fails attendus pré-existants `onboarding.test.tsx` (non-W3) |
+| A.7 FE lint | PASS |
+| A.8 Smoke | `/api/health` → 200 (DB up, 81 ms) · `/api/museums/detect-museum` → 401 sans auth (route mountée + middleware fire) · ordre vérifié source (museum.route.ts:212 avant :233) |
+
+**Bonus infra appliqués au passage (TD-44) :**
+- `museum-backend/docker-compose.dev.yml § redis` aligné sur prod (`--requirepass ${REDIS_PASSWORD:-dev-redis-password}` + healthcheck avec AUTH)
+- `museum-backend/docker-compose.dev.yml § backend` `environment:` block injecte `REDIS_HOST/PORT/PASSWORD/URL` (override env_file stale)
+- Force-recreate validé : 0 erreur `Stream isn't writeable`, 0 warn `password was supplied` sur 60s
+- Sentinels `scripts/sentinels/compose-parity.mjs` + `scripts/sentinels/dev-container-env-drift.sh` wired pre-commit Gate 7 + sentinel-mirror P15 + morning-check.sh
+- TD-44 fermé dans `docs/TECH_DEBT.md` (audit `2026-05-18-audit-dev-backend-bullmq-noise` → diagnostic.md 482 lignes, gitignored)
+- `museum-frontend/RUN_LOCAL.md § Redis auth en local` documente convention dev-redis-password
+
+**PGDATABASE no-fallback (parallèle):**
+- `src/config/env.ts:72` : `required('PGDATABASE', ...)` au lieu de `|| 'museumAI'`
+- `tests/helpers/jest-env-pgdatabase.setup.ts` + jest.config.ts unit-integration setupFile pin
+- e2e/jest-env.setup.ts pin PGDATABASE placeholder
+- env.test.ts helper default + nouveau test no-fallback assertion
+
+#### Si tu veux re-valider Phase A from scratch (utile en cas de doute) :
 
 ```bash
 # A.1 — Re-index GitNexus + workspace sanity
@@ -142,6 +190,9 @@ node scripts/migration-cli.cjs generate --name=Check  # → output toujours vide
 pnpm migration:run                                 # ré-applique pour la suite
 
 # A.5 — PostGIS prod-mode (IMP-2)
+# Sur Mac ARM64, override platform :
+POSTGIS_VERIFY_PLATFORM=linux/amd64 bash scripts/verify-postgis-migration.sh
+# Sur Linux/x86_64 (serveur/CI) :
 bash scripts/verify-postgis-migration.sh
 # → exit 0 attendu, postgis container teardown auto
 
@@ -171,7 +222,9 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/api/health
 
 **Critère GO Phase A :** tous les exit 0, pas de régression dans `pnpm test` BE, FE = 2 fails onboarding identiques au start commit.
 
-### Phase B — Merge W4 (à faire dans CE worktree ou dans W4)
+### Phase B — Merge W4 🟡 **À FAIRE** (lis le RECAP W4 d'abord)
+
+> **Prérequis** : lire le **RECAP W4** que l'utilisateur va te fournir (pas dans ce repo — il va te le coller ou pointer vers la branche W4). Comprends son scope avant de merger pour anticiper les conflits.
 
 ```bash
 # B.1 — Récupérer le merge target
@@ -298,12 +351,31 @@ gh pr create --base main \
 ## 8. Si la nouvelle session reprend ici
 
 Lire dans l'ordre :
-1. Ce fichier — vue d'ensemble
-2. `git log -1 064c632f` — détail du commit
-3. `.claude/skills/team/team-state/2026-05-17-w3-geo-walk-intra/STORY.md` — narratif append-only des 4 spawns d'agents
-4. `.claude/skills/team/team-reports/2026-05-17-w3-geo-walk-intra/code-review.json` — findings détaillés
-5. Lancer Phase A (§5) — si tout vert, passer Phase B (merge W4)
+1. **Ce fichier** — vue d'ensemble + flow recommandé en haut (lis le rectangle 🟢 en intro)
+2. `git log --oneline 064c632f..HEAD -- museum-backend/ docs/ scripts/` — voir tous les commits depuis livraison W3 (livraison W3, handoff, TD-44 hardening)
+3. `.claude/skills/team/team-state/2026-05-17-w3-geo-walk-intra/STORY.md` — narratif append-only des 4 spawns d'agents (livraison W3)
+4. `.claude/skills/team/team-state/2026-05-18-audit-dev-backend-bullmq-noise/diagnostic.md` (gitignored, local) — diagnostic infra qui a produit TD-44 fix
+5. `.claude/skills/team/team-reports/2026-05-17-w3-geo-walk-intra/code-review.json` — findings détaillés
+6. Demande à l'utilisateur le **RECAP W4** (pas committé ici)
+7. **Phase A = DONE** — saute. Va directement Phase B (§5 Phase B).
 
-Ne PAS re-lancer `/team` sur cette feature — c'est complet.
+### État dev-stack attendu après cold-start
+
+Si l'utilisateur lance `bash scripts/dev-stack.sh` (ou `pnpm dev:stack`) :
+- 4 containers up : `dev-postgres :5433`, `dev-redis :6379` (avec `--requirepass`), `dev-backend :3000`, `dev-adminer :8082`
+- `docker logs dev-backend --since 5m | grep -cE "(Stream isn't writeable|password was supplied)"` → **0** (TD-44 fix)
+- `pnpm sentinel:compose-parity` → PASS (WARN sur `--appendonly` acceptable, dev n'a pas besoin de persistence Redis)
+- `pnpm sentinel:dev-container-env-drift` → PASS (.env aligné prod-like, vars `.env`-controlled match container)
+- `/api/health` → 200 avec `{"checks":{"database":"up"}}`
+
+### Si la nouvelle session voit du noise BullMQ revenir
+
+C'est probablement parce que l'utilisateur a édité `.env` après que le container ait démarré. Fix :
+```bash
+docker compose -f museum-backend/docker-compose.dev.yml up -d --force-recreate backend
+```
+Le sentinel `dev-container-env-drift.sh` (intégré dans `scripts/morning-check.sh`) tire à ce moment-là.
+
+Ne PAS re-lancer `/team` sur les features W3 (livraison) ou TD-44 (infra hardening) — c'est complet.
 
 Pour reprendre après merge W4 et test : tu peux soit faire les commandes Phase B/C/D directement, soit demander à Claude de les exécuter (la session aura tout le contexte via ce handoff).

@@ -112,7 +112,11 @@ ENV_MTIME_EPOCH="$(stat -f "%m" "$ENV_FILE" 2>/dev/null || stat -c "%Y" "$ENV_FI
 CONTAINER_START_ISO="$(docker inspect "$CONTAINER" --format '{{.State.StartedAt}}' 2>/dev/null || true)"
 if [ -n "$CONTAINER_START_ISO" ]; then
   # `date -d` is GNU ; macOS uses `date -j -f`. Try both.
-  CONTAINER_START_EPOCH="$(date -d "$CONTAINER_START_ISO" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "${CONTAINER_START_ISO%%.*}" +%s 2>/dev/null || echo 0)"
+  # Docker's `.State.StartedAt` is ISO 8601 UTC (suffix `Z` or fractional sec).
+  # On GNU `date -d` recognizes the timezone. On macOS `date -j -f` doesn't,
+  # so we force UTC via `TZ=UTC` to keep the comparison aligned with stat's
+  # UTC epoch mtime. Bug seen 2026-05-18 (false MTIME-DRIFT after recreate).
+  CONTAINER_START_EPOCH="$(date -d "$CONTAINER_START_ISO" +%s 2>/dev/null || TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%S" "${CONTAINER_START_ISO%%.*}" +%s 2>/dev/null || echo 0)"
 else
   CONTAINER_START_EPOCH=0
 fi
