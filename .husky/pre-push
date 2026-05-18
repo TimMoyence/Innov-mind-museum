@@ -185,6 +185,14 @@ if [ -n "$touched_be" ]; then
   # short-circuit the script BEFORE flake detection runs. We need to capture
   # status, dump output, then decide flake-vs-real ourselves.
   set +e
+  # `--testTimeout=30000` mirrors the historical workaround documented in
+  # museum-backend/jest.config.ts:31 — `pnpm test:coverage` used to pass this
+  # explicitly to absorb supertest+coverage "socket hang up" and bcrypt-heavy
+  # integration tests (password reset, MFA, Docker harness boot). When a
+  # central file (env.ts, chat-module.ts) is touched, --findRelatedTests pulls
+  # the entire integration graph; the default 5s budget then trips structural
+  # slow paths that are not regressions. 30s is generous enough to surface
+  # genuine slowdowns without flaking on first-test cold starts.
   ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --testTimeout=30000 --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
   gate16_status=$?
   set -e
