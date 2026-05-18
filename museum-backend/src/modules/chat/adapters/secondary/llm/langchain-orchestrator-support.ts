@@ -13,7 +13,7 @@ import type {
   SectionRunResult,
   SectionRunnerHooks,
 } from '@modules/chat/useCase/llm/llm-section-runner';
-import type { LlmSectionName } from '@modules/chat/useCase/llm/llm-sections';
+import type { LlmSectionName, MainAssistantOutput } from '@modules/chat/useCase/llm/llm-sections';
 import type { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import type { z } from 'zod';
 
@@ -53,9 +53,12 @@ export interface InvokeSectionInput {
   timeoutMs: number;
   payloadBytes: number;
   /**
-   * When provided AND model exposes `withStructuredOutput`, routes through adapter and
-   * re-serialises as `{ answer, ...metadata }` so legacy-JSON parser branch consumes
-   * transparently. Falls back to plain-text `[META]` path if missing.
+   * Routes the section through `model.withStructuredOutput(schema).invoke()`.
+   * REQUIRED for sections that go through the default orchestrator —
+   * `invokeSection` fails closed when missing (C9.17 R2, the legacy
+   * plain-text + JSON-tail fallback was retired 2026-05-18). Stays optional
+   * in the shared type so the walk-tour-guide path (which builds its own
+   * structured adapter call) can keep using the same `ChatModel` contract.
    */
   outputSchema?: {
     schema: z.ZodType;
@@ -70,7 +73,7 @@ export interface InvokeSectionInput {
 export interface AssembleResponseInput {
   input: OrchestratorInput;
   sectionPlan: ReturnType<typeof buildOrchestratorMessages>['sectionPlan'];
-  bySection: Map<LlmSectionName, SectionRunResult<string>>;
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>;
   recentHistory: ChatMessage[];
   normalizedText: string | undefined;
   startedAt: number;

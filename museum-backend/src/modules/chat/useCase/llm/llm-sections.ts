@@ -81,9 +81,12 @@ export interface LlmSectionDefinition {
   required: boolean;
   prompt: string;
   /**
-   * When set AND model exposes `withStructuredOutput`, orchestrator parses via
-   * that adapter. Falls back to legacy `text + [META] {json}` parser otherwise
-   * (test fakes, older providers). `name` surfaces in OpenAI tool-call traces.
+   * Structured-output schema for this section. Orchestrator routes through
+   * `model.withStructuredOutput(schema).invoke(messages)` and consumes the
+   * parsed object directly. REQUIRED for sections that go through the default
+   * orchestrator — the orchestrator fails closed when missing (C9.17 R2, the
+   * legacy plain-text + JSON-tail fallback was retired 2026-05-18).
+   * `name` surfaces in OpenAI tool-call traces.
    */
   outputSchema?: {
     schema: z.ZodType;
@@ -143,8 +146,6 @@ interface BuildSummaryPromptInput {
   hasImage?: boolean;
   audioDescriptionMode?: boolean;
   contentPreferences?: readonly ContentPreference[];
-  /** When false, emits legacy `text + [META] {json}` markup path. */
-  structuredOutput: boolean;
 }
 
 const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
@@ -156,7 +157,6 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     hasImage,
     audioDescriptionMode,
     contentPreferences,
-    structuredOutput,
   } = input;
   const language = localeToLanguageName(resolveLocale([locale]));
   const modeLine = museumMode
@@ -191,7 +191,7 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     );
   }
 
-  // Behavioural reminders — both structured and legacy paths.
+  // Behavioural reminders — structured-output path (sole path since C9.17).
   parts.push(
     'In deeperContext, add 2-3 sentences of technical, historical, or interpretive context (optional).',
     'In openQuestion, ask a question that encourages the visitor to look more closely at the work (optional).',
@@ -201,31 +201,18 @@ const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
       : 'In recommendations, suggest 1-2 related artworks or topics to explore.',
     'In suggestedImages, if the topic is visual (a painting, sculpture, place, or person), suggest 1-4 short search queries that would find illustrative photos. RULES: single-subject answers (one work, one artist, one monument) → 1-2 entries; comparative or multi-subject answers (e.g. comparing Monet and Manet, "best impressionist works", a list of monuments) → 2-4 entries, one per subject. Each entry MUST include a `rationale` (1 short sentence explaining why this image, e.g. "Shows the brushwork discussed above") AND a `caption` (≤8 word title for the thumb). Example: {"query":"Mona Lisa painting Louvre","description":"The painting in its Louvre gallery","rationale":"The work the visitor asked about.","caption":"Mona Lisa at the Louvre"}. Omit suggestedImages entirely for non-visual topics. Rationale MUST NOT include any visitor PII (name, email, location).',
     'Set expertiseSignal to the visitor expertise level you detect from their question.',
+    'Place your visitor-facing reply in the `text` field. Fill the other fields per their description; omit any optional field you have nothing to add for.',
   );
-
-  if (structuredOutput) {
-    parts.push(
-      'Place your visitor-facing reply in the `text` field. Fill the other fields per their description; omit any optional field you have nothing to add for.',
-    );
-  } else {
-    // Legacy [META] markup for providers/test fakes lacking withStructuredOutput.
-    parts.push(
-      'Write your answer as plain text first.',
-      'After your answer, on a new line output exactly [META] followed by a JSON object with this shape:',
-      '{"deeperContext":"string?","openQuestion":"string?","suggestedFollowUp":"string?","imageDescription":"string?","suggestedImages":[{"query":"string","description":"string","rationale":"string","caption":"string"}],"detectedArtwork":{"artworkId":"string?","title":"string?","artist":"string?","confidence":"number?","source":"string?","museum":"string?","room":"string?"},"recommendations":["string"],"expertiseSignal":"beginner|intermediate|expert","citations":["string"]}',
-      'Do not include the answer text in the JSON — it is already provided above.',
-      'Do not add markdown fences around the JSON.',
-    );
-  }
 
   return parts.join(' ');
 };
 
 /**
  * V1: single required "summary" section with structured-output schema.
- * Orchestrator uses `model.withStructuredOutput` when supported (OpenAI gpt-4o
- * ≥ 2024-08, Gemini), falls back to legacy `[META]` parser otherwise. Prompt
- * is always emitted in structured form — fallback parser tolerates plain text.
+ * Orchestrator routes through `model.withStructuredOutput(schema).invoke()`
+ * (OpenAI gpt-4o ≥ 2024-08, Gemini, Deepseek via the OpenAI-compatible
+ * adapter). Sections without `withStructuredOutput` support fail closed —
+ * there is no plain-text fallback (C9.17 R2, retired 2026-05-18).
  */
 export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefinition[] => {
   const summary: LlmSectionDefinition = {
@@ -240,7 +227,6 @@ export const createLlmSectionPlan = (input: LlmSectionPlanInput): LlmSectionDefi
       hasImage: input.hasImage,
       audioDescriptionMode: input.audioDescriptionMode,
       contentPreferences: input.contentPreferences,
-      structuredOutput: true,
     }),
     outputSchema: {
       schema: mainAssistantOutputSchema,

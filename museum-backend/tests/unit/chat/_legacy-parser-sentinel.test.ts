@@ -3,7 +3,7 @@
  * `parseAssistantResponse` parser and its sibling legacy adapter symbols
  * (`serializeStructuredOutput`, `META_DELIMITER`) have been hard-deleted from
  * production source under `museum-backend/src/`. UFR-016 "il est mort on
- * l'enterre" applied to the `text + [META] {json}` wire format.
+ * l'enterre" applied to the legacy plain-text + JSON-tail wire format.
  *
  * Step A migrated all test fakes off the legacy markup (see
  * `_legacy-meta-sentinel.test.ts`). Step B is the production-side deletion:

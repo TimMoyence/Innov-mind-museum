@@ -206,13 +206,31 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
     expect(result.metadata.suggestedImages).toBeUndefined();
   });
 
-  // Step B (C9.17) — once the legacy plain-text + JSON-tail path is removed
-  // from `invokeSection`, a section that ships an `outputSchema` against a
-  // model lacking `withStructuredOutput` MUST fail closed (typed error or
-  // `system:missing-structured-output` citation marker, mirroring
-  // `generateWalk`). Step A only documents the intent; the assertion lands
-  // with the production deletion in Step B.
-  it.todo(
-    'fails closed when section has outputSchema but model lacks withStructuredOutput (Step B)',
-  );
+  // C9.17 Step B — the legacy plain-text + JSON-tail path has been removed
+  // from `invokeSection`. A section that ships an `outputSchema` against a
+  // model lacking `withStructuredOutput` now throws inside `invokeSection`;
+  // the section runner catches the throw and surfaces a `status:'error'`
+  // result, which `resolveSummary` degrades to the canned
+  // `createSummaryFallback` text (degraded=true, fallbackApplied=true).
+  it('fails closed when section has outputSchema but model lacks withStructuredOutput', async () => {
+    const invokeSpy = jest.fn(async () => {
+      throw new Error('legacy invoke should not be called');
+    });
+    // Model with `invoke` only — no `withStructuredOutput`.
+    const model = {
+      invoke: invokeSpy,
+      stream: jest.fn(),
+    };
+    const orchestrator = new LangChainChatOrchestrator({ model: model as never });
+
+    const result = await orchestrator.generate(makeInput({ text: 'Tell me about the Mona Lisa.' }));
+
+    // Legacy invoke path retired — no plain-text fallback attempted.
+    expect(invokeSpy).not.toHaveBeenCalled();
+    // Section runner caught the throw → resolveSummary surfaced the canned
+    // fallback text. Exact wording comes from `createSummaryFallback`, but it
+    // is guaranteed non-empty.
+    expect(typeof result.text).toBe('string');
+    expect(result.text.length).toBeGreaterThan(0);
+  });
 });

@@ -3,7 +3,6 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
   buildOrchestratorMessages,
   buildSectionMessages,
-  toContentString,
   estimatePayloadBytes,
 } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import {
@@ -43,22 +42,11 @@ import type {
   OrchestratorOutput,
   ChatOrchestrator,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { LlmSectionName, LlmSectionDefinition } from '@modules/chat/useCase/llm/llm-sections';
-
-/**
- * Maps schema `text → answer` for the legacy parseAssistantResponse JSON
- * branch. Non-object input → raw string (provider regression fallback to
- * plain-text path). JSON.stringify skips undefined → omitted optionals stay
- * absent (preserves existing semantics).
- */
-const serializeStructuredOutput = (parsed: unknown): string => {
-  if (typeof parsed !== 'object' || parsed === null) {
-    return typeof parsed === 'string' ? parsed : '';
-  }
-  const { text, ...metadata } = parsed as { text?: unknown } & Record<string, unknown>;
-  const answer = typeof text === 'string' ? text : '';
-  return JSON.stringify({ answer, ...metadata });
-};
+import type {
+  LlmSectionName,
+  LlmSectionDefinition,
+  MainAssistantOutput,
+} from '@modules/chat/useCase/llm/llm-sections';
 
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
@@ -104,7 +92,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     return this.circuitBreaker.getState();
   }
 
-  private async invokeSection(input: InvokeSectionInput): Promise<string> {
+  private async invokeSection(input: InvokeSectionInput): Promise<MainAssistantOutput> {
     return await startSpan(
       {
         name: `llm.section.${input.sectionName}`,
@@ -117,32 +105,29 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         },
       },
       async () => {
-        // Structured-output fast path → OpenAI/Gemini `response_format: json_schema`.
-        // Re-stringified as `{answer,...metadata}` for legacy parser.
-        // Fixes gpt-4o-mini ignoring [META] on first turn (promptfoo 2026-05).
-        if (input.outputSchema && input.model.withStructuredOutput) {
-          const structured = input.model.withStructuredOutput(input.outputSchema.schema, {
-            name: input.outputSchema.name,
-          });
-          const parsed = await this.circuitBreaker.execute(() =>
-            this.semaphore.use(
-              async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
-            ),
+        // C9.17 R2 — fail-closed contract. The legacy plain-text + JSON-tail
+        // fallback path was retired 2026-05-18 (UFR-016); every default-path
+        // section MUST ship an `outputSchema` AND target a model that exposes
+        // `withStructuredOutput`. The section runner catches the throw and
+        // surfaces the canned `createSummaryFallback` text downstream.
+        if (!input.outputSchema || !input.model.withStructuredOutput) {
+          throw new Error(
+            'section missing outputSchema or model.withStructuredOutput — legacy path retired C9.17',
           );
-          // C9.4 — record cost only on success (R2: no charge on error).
-          this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
-          return serializeStructuredOutput(parsed);
         }
 
-        // Legacy text + [META] — test fakes / providers without structured output.
-        const result = await this.circuitBreaker.execute(() =>
+        // Structured-output fast path → OpenAI/Gemini `response_format: json_schema`.
+        const structured = input.model.withStructuredOutput(input.outputSchema.schema, {
+          name: input.outputSchema.name,
+        });
+        const parsed = (await this.circuitBreaker.execute(() =>
           this.semaphore.use(
-            async () => await input.model.invoke(input.sectionMessages, { signal: input.signal }),
+            async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
           ),
-        );
-        // C9.4 — record cost only on success.
+        )) as MainAssistantOutput;
+        // C9.4 — record cost only on success (R2: no charge on error).
         this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
-        return toContentString(result.content);
+        return parsed;
       },
     );
   }
@@ -197,7 +182,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           );
 
           // Section errors degrade via resolveSummary fallback; only breaker fast-fail above surfaces 503.
-          const bySection = new Map<LlmSectionName, SectionRunResult<string>>();
+          const bySection = new Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>();
           for (const result of sectionResults) {
             bySection.set(result.name as LlmSectionName, result);
           }
@@ -219,7 +204,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     model: ChatModel,
     prepared: ReturnType<typeof buildOrchestratorMessages>,
     input: OrchestratorInput,
-  ): SectionTask<string>[] {
+  ): SectionTask<MainAssistantOutput>[] {
     const { sectionPlan, systemPrompt, historyMessages, userMessage } = prepared;
     return sectionPlan.map((section: LlmSectionDefinition) => {
       const sectionMessages = buildSectionMessages(

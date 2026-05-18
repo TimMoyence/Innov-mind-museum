@@ -6,11 +6,6 @@ import {
   type SuggestedImage,
 } from '@modules/chat/domain/chat.types';
 
-interface ParsedAssistantResponse {
-  answer: string;
-  metadata: ChatAssistantMetadata;
-}
-
 const isObject = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
 };
@@ -165,47 +160,4 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   metadata.suggestedImages = toSuggestedImages(parsed.suggestedImages);
 
   return metadata;
-};
-
-const META_DELIMITER = '\n[META]';
-
-/**
- * Supports: (1) text + `\n[META]` + JSON (streaming-era), (2) legacy JSON
- * object with `answer` field. Falls back to raw string when neither matches.
- */
-export const parseAssistantResponse = (raw: string): ParsedAssistantResponse => {
-  const metaIndex = raw.indexOf(META_DELIMITER);
-  if (metaIndex !== -1) {
-    const answer = raw.slice(0, metaIndex).trim();
-    const metaJson = raw.slice(metaIndex + META_DELIMITER.length).trim();
-    try {
-      const parsed = JSON.parse(metaJson) as unknown;
-      if (isObject(parsed)) {
-        return { answer, metadata: extractMetadata(parsed) };
-      }
-    } catch {
-      // Malformed meta JSON — return answer with empty metadata
-    }
-    return { answer, metadata: {} };
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isObject(parsed) || typeof parsed.answer !== 'string') {
-      return {
-        answer: raw,
-        metadata: {},
-      };
-    }
-
-    return {
-      answer: parsed.answer,
-      metadata: extractMetadata(parsed),
-    };
-  } catch {
-    return {
-      answer: raw,
-      metadata: {},
-    };
-  }
 };

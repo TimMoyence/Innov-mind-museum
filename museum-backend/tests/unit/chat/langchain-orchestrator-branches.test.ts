@@ -107,14 +107,23 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
   describe('generate — diagnostics included when enabled', () => {
     it('includes diagnostics metadata when includeDiagnostics is true', async () => {
+      const structuredInvoke = jest.fn().mockResolvedValue({
+        text: 'A masterpiece by Monet.',
+        deeperContext: null,
+        openQuestion: null,
+        suggestedFollowUp: null,
+        imageDescription: null,
+        suggestedImages: null,
+        detectedArtwork: null,
+        recommendations: null,
+        expertiseSignal: null,
+        citations: ['art-catalog'],
+        sources: null,
+      });
       const model = {
-        invoke: jest.fn().mockResolvedValue({
-          content: JSON.stringify({
-            answer: 'A masterpiece by Monet.',
-            citations: ['art-catalog'],
-          }),
-        }),
+        invoke: jest.fn(),
         stream: jest.fn(),
+        withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
       };
       const orchestrator = new LangChainChatOrchestrator({ model });
 
@@ -231,15 +240,23 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
   describe('generate — with conversation history', () => {
     it('processes input with history messages and context', async () => {
+      const structuredInvoke = jest.fn().mockResolvedValue({
+        text: 'This is an Impressionist painting.',
+        deeperContext: 'The light play is characteristic of Monet.',
+        openQuestion: null,
+        suggestedFollowUp: 'What year was it painted?',
+        imageDescription: null,
+        suggestedImages: null,
+        detectedArtwork: null,
+        recommendations: null,
+        expertiseSignal: null,
+        citations: null,
+        sources: null,
+      });
       const model = {
-        invoke: jest.fn().mockResolvedValue({
-          content: JSON.stringify({
-            answer: 'This is an Impressionist painting.',
-            deeperContext: 'The light play is characteristic of Monet.',
-            suggestedFollowUp: 'What year was it painted?',
-          }),
-        }),
+        invoke: jest.fn(),
         stream: jest.fn(),
+        withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
       };
       const orchestrator = new LangChainChatOrchestrator({ model });
 

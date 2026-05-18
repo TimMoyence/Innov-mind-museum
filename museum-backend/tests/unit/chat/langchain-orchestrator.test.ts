@@ -54,17 +54,41 @@ import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
-function makeFakeModel(response: string) {
-  return {
-    invoke: jest.fn().mockResolvedValue({ content: response }),
+/**
+ * C9.17 — orchestrator default path now goes exclusively through
+ * `model.withStructuredOutput(schema).invoke()`. Test fakes that previously
+ * returned a plain `invoke({ content })` payload were migrated to also expose
+ * `withStructuredOutput`, which returns the parsed `MainAssistantOutput`
+ * shape directly.
+ */
+function makeFakeModel(answer: string, extra: Record<string, unknown> = {}) {
+  const structuredInvoke = jest.fn().mockResolvedValue({
+    text: answer,
+    deeperContext: null,
+    openQuestion: null,
+    suggestedFollowUp: null,
+    imageDescription: null,
+    suggestedImages: null,
+    detectedArtwork: null,
+    recommendations: null,
+    expertiseSignal: null,
+    citations: null,
+    sources: null,
+    ...extra,
+  });
+  const model = {
+    invoke: jest.fn().mockResolvedValue({ content: answer }),
     stream: jest.fn().mockResolvedValue(
       (async function* () {
-        for (const word of response.split(' ')) {
+        for (const word of answer.split(' ')) {
           yield { content: word + ' ' };
         }
       })(),
     ),
+    withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
+    structuredInvoke,
   };
+  return model;
 }
 
 function makeInput(overrides: Partial<OrchestratorInput> = {}): OrchestratorInput {
@@ -87,7 +111,7 @@ describe('LangChainChatOrchestrator', () => {
       const result = await orchestrator.generate(makeInput());
 
       expect(result.text).toContain('Mona Lisa');
-      expect(model.invoke).toHaveBeenCalled();
+      expect(model.structuredInvoke).toHaveBeenCalled();
     });
 
     it('returns fallback message when model is null', async () => {
@@ -121,15 +145,13 @@ describe('LangChainChatOrchestrator', () => {
       const result = await orchestrator.generate(makeInput({ history }));
 
       expect(result.text).toBeTruthy();
-      expect(model.invoke).toHaveBeenCalled();
+      expect(model.structuredInvoke).toHaveBeenCalled();
     });
 
-    it('handles JSON-formatted LLM response with metadata', async () => {
-      const jsonResponse = JSON.stringify({
-        answer: 'Painted by Leonardo da Vinci.',
+    it('handles structured-output response with metadata (C9.17)', async () => {
+      const model = makeFakeModel('Painted by Leonardo da Vinci.', {
         citations: ['Wikipedia'],
       });
-      const model = makeFakeModel(jsonResponse);
       const orchestrator = new LangChainChatOrchestrator({ model });
 
       const result = await orchestrator.generate(makeInput());
@@ -141,9 +163,11 @@ describe('LangChainChatOrchestrator', () => {
 
   describe('circuit breaker integration', () => {
     it('records failures and opens circuit breaker', async () => {
+      const structuredInvoke = jest.fn().mockRejectedValue(new Error('LLM unavailable'));
       const failingModel = {
         invoke: jest.fn().mockRejectedValue(new Error('LLM unavailable')),
         stream: jest.fn().mockRejectedValue(new Error('LLM unavailable')),
+        withStructuredOutput: jest.fn(() => ({ invoke: structuredInvoke })),
       };
 
       const circuitBreaker = new LLMCircuitBreaker({
@@ -216,20 +240,34 @@ describe('LangChainChatOrchestrator', () => {
       let concurrent = 0;
       let maxConcurrent = 0;
 
+      const slowStructuredInvoke = jest.fn(async () => {
+        concurrent++;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        concurrent--;
+        return {
+          text: 'response',
+          deeperContext: null,
+          openQuestion: null,
+          suggestedFollowUp: null,
+          imageDescription: null,
+          suggestedImages: null,
+          detectedArtwork: null,
+          recommendations: null,
+          expertiseSignal: null,
+          citations: null,
+          sources: null,
+        };
+      });
       const slowModel = {
-        invoke: jest.fn(async () => {
-          concurrent++;
-          maxConcurrent = Math.max(maxConcurrent, concurrent);
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          concurrent--;
-          return { content: 'response' };
-        }),
+        invoke: jest.fn(),
         stream: jest.fn(),
+        withStructuredOutput: jest.fn(() => ({ invoke: slowStructuredInvoke })),
       };
 
       const semaphore = new Semaphore(1);
       const orchestrator = new LangChainChatOrchestrator({
-        model: slowModel,
+        model: slowModel as never,
         semaphore,
       });
 

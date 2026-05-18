@@ -17,21 +17,52 @@ interface InvokeOptions {
 }
 
 class FakeSectionModel {
-  async invoke(messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
-    const serialized = JSON.stringify(messages);
+  // C9.17 — orchestrator default path now goes exclusively through
+  // `withStructuredOutput(schema).invoke()`. Plain `invoke()` retained as a
+  // no-op since the `ChatModel` contract still types it.
+  async invoke(_messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
+    return { content: '' };
+  }
 
-    if (serialized.includes('[SECTION:summary]')) {
-      return {
-        content: JSON.stringify({
-          answer: 'Summary answer',
-          deeperContext: 'More context here.',
-          suggestedFollowUp: 'What technique was used?',
-          citations: ['catalog-ref'],
-        }),
-      };
-    }
-
-    return { content: 'Unknown section' };
+  withStructuredOutput(
+    _schema: unknown,
+    _opts?: { name?: string },
+  ): {
+    invoke: (messages: unknown, opts?: InvokeOptions) => Promise<Record<string, unknown>>;
+  } {
+    return {
+      invoke: async (messages: unknown, _opts?: InvokeOptions) => {
+        const serialized = JSON.stringify(messages);
+        if (serialized.includes('[SECTION:summary]')) {
+          return {
+            text: 'Summary answer',
+            deeperContext: 'More context here.',
+            openQuestion: null,
+            suggestedFollowUp: 'What technique was used?',
+            imageDescription: null,
+            suggestedImages: null,
+            detectedArtwork: null,
+            recommendations: null,
+            expertiseSignal: null,
+            citations: ['catalog-ref'],
+            sources: null,
+          };
+        }
+        return {
+          text: 'Unknown section',
+          deeperContext: null,
+          openQuestion: null,
+          suggestedFollowUp: null,
+          imageDescription: null,
+          suggestedImages: null,
+          detectedArtwork: null,
+          recommendations: null,
+          expertiseSignal: null,
+          citations: null,
+          sources: null,
+        };
+      },
+    };
   }
 
   async stream(
@@ -46,20 +77,44 @@ class FakeSectionModel {
 }
 
 class SlowFakeModel {
-  async invoke(_messages: unknown, options?: InvokeOptions): Promise<{ content: unknown }> {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, 200);
-      options?.signal?.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-          reject(new Error('TimeoutError: Request timed out.'));
-        },
-        { once: true },
-      );
-    });
+  async invoke(_messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
+    return { content: '' };
+  }
 
-    return { content: JSON.stringify({ answer: 'Too late' }) };
+  withStructuredOutput(
+    _schema: unknown,
+    _opts?: { name?: string },
+  ): {
+    invoke: (messages: unknown, opts?: InvokeOptions) => Promise<Record<string, unknown>>;
+  } {
+    return {
+      invoke: async (_messages: unknown, opts?: InvokeOptions) => {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, 200);
+          opts?.signal?.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timer);
+              reject(new Error('TimeoutError: Request timed out.'));
+            },
+            { once: true },
+          );
+        });
+        return {
+          text: 'Too late',
+          deeperContext: null,
+          openQuestion: null,
+          suggestedFollowUp: null,
+          imageDescription: null,
+          suggestedImages: null,
+          detectedArtwork: null,
+          recommendations: null,
+          expertiseSignal: null,
+          citations: null,
+          sources: null,
+        };
+      },
+    };
   }
 
   async stream(
@@ -90,7 +145,7 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     });
 
     const orchestrator = new LangChainChatOrchestrator({
-      model: new FakeSectionModel(),
+      model: new FakeSectionModel() as never,
     });
 
     const result = await orchestrator.generate({
@@ -127,7 +182,7 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     });
 
     const orchestrator = new LangChainChatOrchestrator({
-      model: new SlowFakeModel(),
+      model: new SlowFakeModel() as never,
     });
 
     const result = await orchestrator.generate({
