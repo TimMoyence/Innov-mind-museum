@@ -58,6 +58,20 @@ export interface OrchestratorInput {
    * short-circuits the envelope even if `facts` is non-empty.
    */
   factsSource?: KnowledgeRouterSource;
+  /**
+   * W3 (T5.4) — Resolved from `chatSession.currentArtworkId` upstream of the
+   * orchestrator (pipeline performs the `artwork_knowledge` lookup). When
+   * present, `buildSystemPrompt` injects a `[CURRENT ARTWORK]` section
+   * BEFORE the `[END OF SYSTEM INSTRUCTIONS]` boundary marker. Title MUST
+   * have passed through `sanitizePromptInput()` before reaching here (R22 +
+   * design.md §7 security review).
+   */
+  currentArtwork?: {
+    /** Pre-sanitised title (≤500 chars after `sanitizePromptInput`). */
+    readonly title: string;
+    /** UUID v4 — pre-validated by the FE parser + BE Zod schema. */
+    readonly roomId: string | null;
+  } | null;
 }
 
 export interface OrchestratorOutput {

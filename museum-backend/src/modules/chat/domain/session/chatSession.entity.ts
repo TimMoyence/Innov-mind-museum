@@ -49,6 +49,21 @@ export class ChatSession {
   @Column({ type: 'jsonb', nullable: true })
   visitContext?: VisitContext | null;
 
+  /**
+   * W3 intra-musée — UUID of the room the visitor is currently in (cf. cartel
+   * deeplink scan, spec R19/R22). Used by the LLM prompt builder to emit a
+   * `[CURRENT ARTWORK]` section before `[END OF SYSTEM INSTRUCTIONS]`.
+   */
+  @Column({ type: 'uuid', nullable: true, name: 'current_room' })
+  currentRoom?: string | null;
+
+  /**
+   * W3 intra-musée — UUID of the artwork the visitor just scanned. Looked up
+   * in `artwork_knowledge` on prompt build to inject the title (sanitised).
+   */
+  @Column({ type: 'uuid', nullable: true, name: 'current_artwork_id' })
+  currentArtworkId?: string | null;
+
   @OneToMany(() => ChatMessage, (message) => message.session, {
     cascade: false,
     eager: false,

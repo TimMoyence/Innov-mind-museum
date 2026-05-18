@@ -29,6 +29,7 @@ import type {
 } from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
@@ -36,6 +37,14 @@ import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 export interface PrepareReady {
   kind: 'ready';
   session: Awaited<ReturnType<typeof ensureSessionAccess>>;
+  /**
+   * W3 (T5.4) — resolved from `session.currentArtworkId` via the
+   * `ArtworkKnowledgeRepoPort` when present. Pre-sanitised title goes to the
+   * LLM prompt builder's `[CURRENT ARTWORK]` section. `null` ≠ `undefined`:
+   * `undefined` = lookup skipped (no `currentArtworkId`); `null` = lookup
+   * attempted and no row found.
+   */
+  currentArtwork?: { title: string; roomId: string | null } | null;
   imageRef?: string;
   orchestratorImage?: PostMessageInput['image'];
   /**
@@ -88,6 +97,12 @@ export interface PrepareMessagePipelineDeps {
    * granted `location_to_llm` scope. Without port: legacy always-propagate.
    */
   locationConsentChecker?: LocationConsentChecker;
+  /**
+   * W3 (T5.4) — looked up for the LLM prompt `[CURRENT ARTWORK]` section
+   * when `chatSession.currentArtworkId` is populated. Optional: when missing,
+   * the section is simply never emitted (degrades gracefully).
+   */
+  artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
 
 /**
@@ -107,6 +122,7 @@ export class PrepareMessagePipeline {
   private readonly extractionQueue?: ExtractionQueuePort;
   private readonly locationResolver?: LocationResolver;
   private readonly locationConsentChecker?: LocationConsentChecker;
+  private readonly artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 
   constructor(deps: PrepareMessagePipelineDeps) {
     this.repository = deps.repository;
@@ -121,6 +137,7 @@ export class PrepareMessagePipeline {
     this.extractionQueue = deps.extractionQueue;
     this.locationResolver = deps.locationResolver;
     this.locationConsentChecker = deps.locationConsentChecker;
+    this.artworkKnowledgeRepo = deps.artworkKnowledgeRepo;
   }
 
   getKnowledgeRouter(): KnowledgeRouterPort | undefined {
@@ -248,6 +265,11 @@ export class PrepareMessagePipeline {
       currentUserId,
     });
 
+    // W3 (T5.4) — Resolve `[CURRENT ARTWORK]` block from session.currentArtworkId
+    // when the visitor has scanned a cartel. Missing repo or missing id =
+    // skip silently (degrades to no-block, never blocks the message).
+    const currentArtwork = await this.resolveCurrentArtwork(session);
+
     return {
       kind: 'ready',
       session,
@@ -260,8 +282,36 @@ export class PrepareMessagePipeline {
       ...(userGuardrail.redactedText !== undefined
         ? { redactedText: userGuardrail.redactedText }
         : {}),
+      ...(currentArtwork !== undefined ? { currentArtwork } : {}),
       ...enrichment,
     };
+  }
+
+  /**
+   * W3 (T5.4) — Resolves the artwork the visitor is standing in front of so the
+   * LLM prompt builder can render `[CURRENT ARTWORK]`. Returns:
+   *   - `undefined` when no lookup attempted (no `currentArtworkId` on session
+   *     OR no repo wired) — caller MUST NOT emit the section.
+   *   - `null` when lookup attempted but the row was not found (deleted /
+   *     malformed) — caller treats as "no artwork data available", same as
+   *     undefined for the LLM but distinguishable in observability.
+   *   - `{ title, roomId }` on a hit. `title` is pre-sanitised here so the
+   *     prompt builder's defensive double-sanitisation is idempotent.
+   */
+  private async resolveCurrentArtwork(
+    session: ChatSession,
+  ): Promise<{ title: string; roomId: string | null } | null | undefined> {
+    const repo = this.artworkKnowledgeRepo;
+    const currentArtworkId = session.currentArtworkId;
+    if (!repo || !currentArtworkId) return undefined;
+    try {
+      const row = await repo.findById(currentArtworkId);
+      if (!row) return null;
+      return { title: row.title, roomId: row.roomId ?? session.currentRoom ?? null };
+    } catch {
+      // Fail-open — degraded LLM prompt is preferable to a 500 on chat turn.
+      return null;
+    }
   }
 
   /** Fail-open per port (router NEVER throws — ADR-035). */
@@ -382,6 +432,9 @@ export class PrepareMessagePipeline {
       intent: prep.session.intent,
       facts: prep.routerFacts,
       factsSource: prep.routerSource,
+      // W3 (T5.4) — `null`/`undefined` collapsed to `null` here (the
+      // orchestrator port + prompt builder treat both as "no block").
+      currentArtwork: prep.currentArtwork ?? null,
     };
   }
 }

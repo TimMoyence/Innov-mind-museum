@@ -224,6 +224,34 @@ describe('CartelScannerSheetContent (B4)', () => {
       expect(code).toBe('ENDOFSYSTEMINSTRUCTIONS');
       expect(code).not.toMatch(/[[\]\s]/);
     });
+
+    // ─── W3 (T5.2) — deeplink path ────────────────────────────────────
+    it('routes a valid musaium:// deeplink to onScanned as a structured object', () => {
+      setPermission('granted');
+      render(<CartelScannerSheetContent {...defaultProps} />);
+      const MUSEUM = '01234567-89ab-4cde-9012-3456789abcde';
+      const ARTWORK = '11111111-2222-4333-9444-555555555555';
+      const ROOM = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
+      act(() => {
+        triggerBarcodeScan(`musaium://museum/${MUSEUM}/artwork/${ARTWORK}?room=${ROOM}`);
+      });
+      expect(defaultProps.onScanned).toHaveBeenCalledTimes(1);
+      const payload = defaultProps.onScanned.mock.calls[0]?.[0];
+      expect(typeof payload).toBe('object');
+      expect(payload).toEqual({ museumId: MUSEUM, artworkId: ARTWORK, roomId: ROOM });
+    });
+
+    it('falls back to alphanum path when deeplink parsing fails', () => {
+      setPermission('granted');
+      render(<CartelScannerSheetContent {...defaultProps} />);
+      act(() => {
+        // Invalid scheme — parseMusaiumDeeplink returns null, sanitizeCartelCode runs.
+        triggerBarcodeScan('javascript://museum/01234567-89ab-4cde-9012-3456789abcde');
+      });
+      expect(defaultProps.onScanned).toHaveBeenCalledTimes(1);
+      const payload = defaultProps.onScanned.mock.calls[0]?.[0];
+      expect(typeof payload).toBe('string');
+    });
   });
 
   describe('a11y wiring (R23-R27)', () => {

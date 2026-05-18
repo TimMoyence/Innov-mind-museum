@@ -12,13 +12,29 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { sanitizeCartelCode } from '@/features/chat/application/sanitizeCartelCode';
+import {
+  parseMusaiumDeeplink,
+  sanitizeCartelCode,
+  type MusaiumDeeplink,
+} from '@/features/chat/application/sanitizeCartelCode';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { fontSize, radius, semantic, space } from '@/shared/ui/tokens';
 
 interface CartelScannerSheetContentProps {
-  /** Invoked exactly once with the sanitised cartel code on the first valid scan. */
-  readonly onScanned: (code: string) => void;
+  /**
+   * Invoked exactly once on the first valid scan.
+   *
+   * W3 (T5.2) — payload shape:
+   *   - `string` (canonical alphanumeric code) when the QR encodes a legacy
+   *     `ABC-123`-style cartel reference. Sanitised via {@link sanitizeCartelCode}.
+   *   - {@link MusaiumDeeplink} when the QR encodes a
+   *     `musaium://museum/<uuid>/artwork/<uuid>?room=<uuid>` deeplink. Parsed
+   *     via {@link parseMusaiumDeeplink} (UUID v4 validation per design.md §7).
+   *
+   * Callers MUST narrow on `typeof payload === 'string'` to route to the
+   * legacy lookup template vs the W3 session-context propagation.
+   */
+  readonly onScanned: (payload: string | MusaiumDeeplink) => void;
   /** Dismiss the bottom-sheet route — supplied by the C4 router. */
   readonly close: () => void;
 }
@@ -70,6 +86,19 @@ export function CartelScannerSheetContent({ onScanned, close }: CartelScannerShe
   const handleBarcode = useCallback(
     ({ data }: { data: string; type: string }) => {
       if (scannedRef.current) return;
+      // W3 (T5.2) — try the deeplink parser first. Order matters: the legacy
+      // `sanitizeCartelCode` whitelist `[A-Za-z0-9._-]` would survive `:` and
+      // `/` stripping but collapse the UUID `-` separators into junk if we let
+      // it run on a deeplink. Deeplink path returns a structured object;
+      // alphanum path returns a string.
+      const deeplink = parseMusaiumDeeplink(data);
+      if (deeplink !== null) {
+        scannedRef.current = true;
+        AccessibilityInfo.announceForAccessibility(t('a11y.cartelScanner.scan_success'));
+        onScanned(deeplink);
+        close();
+        return;
+      }
       const code = sanitizeCartelCode(data);
       if (code === null) return;
       scannedRef.current = true;

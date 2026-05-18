@@ -9,6 +9,7 @@ const makeArtworkRepoStub = (
 ): ArtworkKnowledgeRepoPort => ({
   findByTitleAndLocale: async (title) => (byTitle[title] as ArtworkKnowledge) ?? null,
   searchByTitle: async () => [],
+  findById: async () => null,
   upsertFromClassification: async (data) => data as ArtworkKnowledge,
   findNeedsReview: async () => [],
   approve: async () => null,

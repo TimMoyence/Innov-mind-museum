@@ -12,6 +12,7 @@ import { CreateMuseumUseCase } from '@modules/museum/useCase/crud/createMuseum.u
 import { GetMuseumUseCase } from '@modules/museum/useCase/crud/getMuseum.useCase';
 import { ListMuseumsUseCase } from '@modules/museum/useCase/crud/listMuseums.useCase';
 import { UpdateMuseumUseCase } from '@modules/museum/useCase/crud/updateMuseum.useCase';
+import { DetectMuseumUseCase } from '@modules/museum/useCase/detect/detect-museum.useCase';
 import { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
 import { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
@@ -30,6 +31,7 @@ export const createMuseumUseCase = new CreateMuseumUseCase(museumRepository);
 export const getMuseumUseCase = new GetMuseumUseCase(museumRepository);
 export const listMuseumsUseCase = new ListMuseumsUseCase(museumRepository);
 export const updateMuseumUseCase = new UpdateMuseumUseCase(museumRepository);
+export const detectMuseumUseCase = new DetectMuseumUseCase(museumRepository);
 
 export const buildSearchMuseumsUseCase = (cache?: CacheService): SearchMuseumsUseCase =>
   new SearchMuseumsUseCase(museumRepository, cache);

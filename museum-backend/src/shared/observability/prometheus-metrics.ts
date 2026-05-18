@@ -372,6 +372,34 @@ export const llmGuardChaosInjectionsTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * W3 (geo + walk + intra-musée) metrics. Cardinality:
+ *   - geo_detect_museum_total.outcome ∈ {hit-geofence, hit-haversine, miss} → 3 series
+ *   - nominatim_requests_total.outcome ∈ {hit, miss, error, cached}        → 4 series
+ *   - nominatim_request_duration_seconds                                     → 1 histogram
+ * Total ≤ 8 active series, well under the 200 budget.
+ */
+export const geoDetectMuseumTotal = new Counter({
+  name: 'geo_detect_museum_total',
+  help: 'Total /api/museums/detect-museum invocations, by outcome (hit-geofence, hit-haversine, miss).',
+  labelNames: ['outcome'] as const,
+  registers: [registry],
+});
+
+export const nominatimRequestsTotal = new Counter({
+  name: 'nominatim_requests_total',
+  help: 'Total Nominatim reverse-geocode requests, by outcome (hit, miss, error, cached).',
+  labelNames: ['outcome'] as const,
+  registers: [registry],
+});
+
+export const nominatimRequestDurationSeconds = new Histogram({
+  name: 'nominatim_request_duration_seconds',
+  help: 'Nominatim reverse-geocode latency in seconds (live calls only ; cache hits not observed).',
+  buckets: [0.05, 0.1, 0.3, 0.5, 1, 3, 5],
+  registers: [registry],
+});
+
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
 }

@@ -190,6 +190,10 @@ function RootLayout() {
                           <Stack.Screen name="(stack)/offline-maps" />
                           <Stack.Screen name="(stack)/discover" />
                           <Stack.Screen name="(stack)/museum-detail" />
+                          <Stack.Screen
+                            name="(stack)/museums-picker"
+                            options={{ presentation: 'modal' }}
+                          />
                           <Stack.Screen name="(stack)/support" />
                           <Stack.Screen name="(stack)/tickets" />
                           <Stack.Screen name="(stack)/ticket-detail" />

@@ -68,5 +68,5 @@ export function parseDateOfBirth(raw: string | null | undefined): string | null 
   if (day < 1 || day > 31) return null;
   if (!isRealCalendarDate(year, month, day)) return null;
 
-  return `${year}-${pad(month)}-${pad(day)}`;
+  return `${String(year)}-${pad(month)}-${pad(day)}`;
 }

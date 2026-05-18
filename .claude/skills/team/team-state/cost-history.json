@@ -59,5 +59,66 @@
     },
     "delta": 22.8566,
     "deltaPct": 327.69
+  },
+  {
+    "runId": "2026-05-17-w3-geo-walk-intra",
+    "ts": "2026-05-17T23:13:38Z",
+    "mode": "feature",
+    "pipeline": "enterprise",
+    "estimated": {
+      "pipeline": "enterprise",
+      "complexity": 5,
+      "perAgent": {
+        "architect": {
+          "model": "opus-4.7",
+          "tokensIn": 28000,
+          "tokensOut": 14000,
+          "costUSD": 1.4700
+        },
+        "editor": {
+          "model": "opus-4.6",
+          "tokensIn": 52500,
+          "tokensOut": 28000,
+          "costUSD": 2.8875
+        },
+        "verifier": {
+          "model": "opus-4.6",
+          "tokensIn": 21000,
+          "tokensOut": 7000,
+          "costUSD": 0.8400
+        },
+        "security": {
+          "model": "opus-4.6",
+          "tokensIn": 28000,
+          "tokensOut": 10500,
+          "costUSD": 1.2075
+        },
+        "reviewer": {
+          "model": "opus-4.7",
+          "tokensIn": 35000,
+          "tokensOut": 14000,
+          "costUSD": 1.5750
+        },
+        "documenter": {
+          "model": "opus-4.6",
+          "tokensIn": 17500,
+          "tokensOut": 7000,
+          "costUSD": 0.7875
+        }
+      },
+      "totalTokensIn": 182000,
+      "totalTokensOut": 80500,
+      "totalCostUSD": 8.7675,
+      "methodology": "static-bootstrap-2026-05"
+    },
+    "actual": {
+      "runId": "2026-05-17-w3-geo-walk-intra",
+      "tokensIn": 147561,
+      "tokensOut": 0,
+      "costUSD": 2.2134,
+      "source": "state-json"
+    },
+    "delta": -6.5541,
+    "deltaPct": -74.75
   }
 ]

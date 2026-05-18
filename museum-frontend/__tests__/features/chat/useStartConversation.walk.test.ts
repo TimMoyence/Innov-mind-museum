@@ -39,6 +39,25 @@ jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
 }));
 
+// ── useLocation (W3 — useStartConversation now subscribes for auto-detect) ────
+// The walk-intent flow does NOT use auto-detect; we return an idle GPS state
+// so the auto-detect branch is bypassed entirely.
+jest.mock('@/features/museum/application/useLocation', () => ({
+  useLocation: () => ({
+    latitude: null,
+    longitude: null,
+    status: 'idle',
+    precision: null,
+    error: null,
+  }),
+}));
+
+jest.mock('@/features/museum/infrastructure/museumApi', () => ({
+  museumApi: {
+    detectMuseum: jest.fn(),
+  },
+}));
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const WALK_COMPOSER_ROUTE = '/(stack)/walk-composer';

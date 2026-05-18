@@ -43,6 +43,16 @@ export const getEnrichmentStatusQuerySchema = z.object({
   jobId: z.string().min(1).max(128),
 });
 
+/**
+ * W3 — GET /api/museums/detect-museum query schema. Both lat/lng are
+ * REQUIRED (spec R5). `z.coerce` turns the string query param into a number
+ * up-front so the range refinements (-90..90, -180..180) fire on parse.
+ */
+export const detectMuseumQuerySchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+});
+
 export const searchMuseumsQuerySchema = z
   .object({
     lat: z.coerce.number().min(-90).max(90).optional(),

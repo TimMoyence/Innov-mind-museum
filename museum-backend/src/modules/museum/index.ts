@@ -3,6 +3,7 @@ export {
   getMuseumUseCase,
   listMuseumsUseCase,
   updateMuseumUseCase,
+  detectMuseumUseCase,
   buildSearchMuseumsUseCase,
   buildLowDataPackService,
   buildEnrichMuseumUseCase,

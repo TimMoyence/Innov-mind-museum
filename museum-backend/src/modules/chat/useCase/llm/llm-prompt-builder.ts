@@ -47,6 +47,33 @@ const appendConversationalRules = (parts: string[]): void => {
   );
 };
 
+/**
+ * W3 (T5.4) — renders the `[CURRENT ARTWORK]` section emitted before the
+ * `[END OF SYSTEM INSTRUCTIONS]` marker when the visitor has scanned a cartel.
+ *
+ * Security envelope (design.md §7) :
+ *   - `title` MUST already have been sanitised via `sanitizePromptInput()` by
+ *     the caller (the pipeline). We re-run it defensively here — idempotent,
+ *     cheap, and protects against future call sites that forget the contract.
+ *   - `roomId` is a UUID v4 (validated by both FE parser AND BE Zod) — emit
+ *     verbatim, no escaping needed since the UUID alphabet is `[0-9a-f-]`.
+ *   - Section block ALWAYS terminated by an explicit
+ *     `[END OF CURRENT ARTWORK]` line so the LLM cannot be tricked into
+ *     swallowing later prompt text as artwork data.
+ *
+ * Returns `null` when `currentArtwork` is missing OR title is empty post-
+ * sanitisation — caller MUST treat null as "do not emit section at all".
+ */
+const renderCurrentArtworkSection = (
+  currentArtwork: { title: string; roomId: string | null } | null | undefined,
+): string | null => {
+  if (!currentArtwork) return null;
+  const sanitisedTitle = sanitizePromptInput(currentArtwork.title);
+  if (!sanitisedTitle) return null;
+  const roomLine = currentArtwork.roomId ? `\nroom: ${currentArtwork.roomId}` : '';
+  return `[CURRENT ARTWORK]\ntitle: ${sanitisedTitle}${roomLine}\n[END OF CURRENT ARTWORK]`;
+};
+
 export const buildSystemPrompt = (
   locale: string | undefined,
   museumMode: boolean,
@@ -56,6 +83,11 @@ export const buildSystemPrompt = (
     conversationPhase?: ConversationPhase;
     audioDescriptionMode?: boolean;
     lowDataMode?: boolean;
+    /**
+     * W3 (T5.4) — pre-sanitised current-artwork context. When set, emits
+     * `[CURRENT ARTWORK]` block right before `[END OF SYSTEM INSTRUCTIONS]`.
+     */
+    currentArtwork?: { title: string; roomId: string | null } | null;
   },
 ): string => {
   const {
@@ -63,6 +95,7 @@ export const buildSystemPrompt = (
     conversationPhase = 'active',
     audioDescriptionMode,
     lowDataMode,
+    currentArtwork,
   } = options ?? {};
   const language = localeToLanguageName(resolveLocale([locale]));
   const guidanceStyles: Record<string, string> = {
@@ -122,6 +155,14 @@ export const buildSystemPrompt = (
 
   if (visitContextBlock) {
     parts.push(visitContextBlock);
+  }
+
+  // W3 (T5.4) — emit BEFORE the boundary marker so the LLM treats it as
+  // trusted system context, not user-controlled prompt. `sanitizePromptInput`
+  // already neutralised any embedded marker / control character.
+  const currentArtworkBlock = renderCurrentArtworkSection(currentArtwork);
+  if (currentArtworkBlock) {
+    parts.push(currentArtworkBlock);
   }
 
   parts.push(
@@ -186,6 +227,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     conversationPhase,
     audioDescriptionMode: input.audioDescriptionMode,
     lowDataMode: input.lowDataMode,
+    currentArtwork: input.currentArtwork ?? null,
   });
 
   const historyMessages: ChatModelMessage[] = recentHistory.map((message) => {

@@ -10,6 +10,15 @@ import { openApiRequest, type OpenApiResponseFor } from '@/shared/api/openapiCli
 type DirectoryResponse = OpenApiResponseFor<'/api/museums/directory', 'get'>;
 type GetMuseumResponse = OpenApiResponseFor<'/api/museums/{idOrSlug}', 'get'>;
 type SearchResponse = OpenApiResponseFor<'/api/museums/search', 'get'>;
+type DetectMuseumResponse = OpenApiResponseFor<'/api/museums/detect-museum', 'get'>;
+
+/**
+ * Result of {@link museumApi.detectMuseum} — mirrors the BE
+ * `MuseumDetectionResult` schema (W3 cluster A). When no museum was found
+ * within the 50 km radius, `museumId`, `distance`, and `name` are all `null`
+ * and `confidence` is `0`.
+ */
+export type MuseumDetectionResult = DetectMuseumResponse;
 
 /** Public museum entry returned by the directory endpoint. */
 export type MuseumDirectoryEntry = DirectoryResponse['museums'][number];
@@ -116,6 +125,28 @@ export const museumApi = {
    * When both are provided, the backend uses the bbox.
    * @returns Search results with museum entries and total count.
    */
+  /**
+   * Detects the museum the visitor is in/near for the given coordinates.
+   *
+   * Behaviour mirrors BE `DetectMuseumUseCase` (W3 cluster A):
+   *   - `confidence === 1.0` when inside a museum geofence polygon.
+   *   - `confidence === max(0, 1 - distance / 500)` otherwise (linear decay).
+   *   - `museumId === null` when no museum within 50 km.
+   *
+   * Rate-limited 30/min/userId BE-side. Errors propagate to the caller — the
+   * hook layer (`useDetectMuseum`) is responsible for fail-open semantics.
+   */
+  async detectMuseum(params: { lat: number; lng: number }): Promise<MuseumDetectionResult> {
+    return openApiRequest({
+      path: '/api/museums/detect-museum',
+      method: 'get',
+      query: {
+        lat: params.lat,
+        lng: params.lng,
+      },
+    });
+  },
+
   async searchMuseums(params: {
     lat?: number;
     lng?: number;

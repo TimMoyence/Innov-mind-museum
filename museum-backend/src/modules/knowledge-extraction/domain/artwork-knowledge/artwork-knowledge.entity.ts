@@ -51,6 +51,15 @@ export class ArtworkKnowledge {
   @Column({ type: 'varchar', length: 10 })
   locale!: string;
 
+  /**
+   * W3 intra-musée prep (W1.6b deferred) — UUID of the room this artwork
+   * lives in inside the museum. Populated by the future SigLIP image-position
+   * pipeline (design.md §D5). Nullable since legacy rows + non-pilot museums
+   * won't have room mapping in V1.
+   */
+  @Column({ type: 'uuid', nullable: true, name: 'room_id' })
+  roomId?: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

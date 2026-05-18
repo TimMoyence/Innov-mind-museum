@@ -1,4 +1,10 @@
 import { logger } from '@shared/logger/logger';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import {
+  nominatimRequestDurationSeconds,
+  nominatimRequestsTotal,
+} from '@shared/observability/prometheus-metrics';
+import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
 import type { CacheService } from '@shared/cache/cache.port';
@@ -183,12 +189,21 @@ function mapReverseResponse(data: NominatimReverseResponseItem): NominatimRevers
   };
 }
 
-/** Returns `null` on failure/empty (fail-open). `timeoutMs` default 5000. */
-export async function reverseGeocodeWithNominatim(
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
+interface ReverseFetchResult {
+  outcome: 'hit' | 'miss' | 'error';
+  value: NominatimReverseResult | null;
+}
+
+/** Core live fetch — split from the observability wrapper to keep function lengths bounded. */
+async function fetchReverseLive(
   lat: number,
   lng: number,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS,
-): Promise<NominatimReverseResult | null> {
+  timeoutMs: number,
+): Promise<ReverseFetchResult> {
   try {
     const url = buildReverseUrl(lat, lng);
     const controller = new AbortController();
@@ -213,20 +228,52 @@ export async function reverseGeocodeWithNominatim(
       logger.warn('Nominatim reverse API returned non-OK status', {
         status: response.status,
         statusText: response.statusText,
+        lat_3dec: round3(lat),
+        lng_3dec: round3(lng),
       });
-      return null;
+      return { outcome: 'error', value: null };
     }
 
     const data = (await response.json()) as NominatimReverseResponseItem;
-    return mapReverseResponse(data);
+    const mapped = mapReverseResponse(data);
+    return { outcome: mapped ? 'hit' : 'miss', value: mapped };
   } catch (error) {
     logger.warn('Nominatim reverse geocoding failed', {
       error: error instanceof Error ? error.message : String(error),
-      lat,
-      lng,
+      lat_3dec: round3(lat),
+      lng_3dec: round3(lng),
     });
-    return null;
+    return { outcome: 'error', value: null };
   }
+}
+
+/** Returns `null` on failure/empty (fail-open). `timeoutMs` default 5000. */
+export async function reverseGeocodeWithNominatim(
+  lat: number,
+  lng: number,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<NominatimReverseResult | null> {
+  const startedAtMs = Date.now();
+  const span = safeTrace('geo.nominatim.reverse.start', () =>
+    getLangfuse()?.span({
+      name: 'geo.nominatim.reverse',
+      input: { lat_3dec: round3(lat), lng_3dec: round3(lng), cached: false },
+    }),
+  );
+
+  const { outcome, value } = await fetchReverseLive(lat, lng, timeoutMs);
+  const latencyMs = Date.now() - startedAtMs;
+
+  nominatimRequestsTotal.labels(outcome).inc();
+  nominatimRequestDurationSeconds.observe(latencyMs / 1000);
+  safeTrace('geo.nominatim.reverse.end', () => {
+    span?.update({
+      output: { outcome, cached: false, latency_ms: latencyMs },
+    });
+    span?.end();
+  });
+
+  return value;
 }
 
 /**
@@ -320,6 +367,18 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
     }
 
     if (cached) {
+      // Cache hit — emit a lightweight span + counter so dashboards can show
+      // hit-rate. Live-call counters are emitted inside reverseGeocodeWithNominatim.
+      nominatimRequestsTotal.labels('cached').inc();
+      safeTrace('geo.nominatim.reverse.cached', () => {
+        getLangfuse()
+          ?.span({
+            name: 'geo.nominatim.reverse',
+            input: { lat_3dec: round3(lat), lng_3dec: round3(lng), cached: true },
+          })
+          .update({ output: { outcome: 'cached', cached: true, latency_ms: 0 } })
+          .end();
+      });
       if (shouldEarlyRefresh(cached, Date.now())) {
         fireBackgroundRefresh({
           cache,

@@ -25,5 +25,6 @@ export const makeChatRepo = (
   updateMessageAudio: jest.fn(),
   clearMessageAudio: jest.fn(),
   findLegacyImageRefsByUserId: jest.fn().mockResolvedValue([]),
+  updateSessionContext: jest.fn().mockResolvedValue(undefined),
   ...overrides,
 });

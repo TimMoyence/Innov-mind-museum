@@ -503,7 +503,18 @@
       "permission_body": "Musaium needs camera access to scan artwork cartels. Open Settings to enable it.",
       "permission_open_settings": "Open Settings",
       "cancel": "Cancel",
-      "lookup_template": "Tell me about the artwork with cartel code: {{code}}"
+      "lookup_template": "Tell me about the artwork with cartel code: {{code}}",
+      "detected_artwork": {
+        "title": "Artwork detected"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "You seem to be near {{museumName}}",
+        "body": "Want to start the visit?",
+        "yes": "Yes, let's go",
+        "choose_another": "Choose another museum"
+      }
     },
     "artworkHero": {
       "untitled": "Untitled artwork",
@@ -799,6 +810,14 @@
       "retry": "Retry",
       "close": "Close"
     }
+  },
+  "museumPicker": {
+    "title": "Choose a museum",
+    "search_placeholder": "Search for a museum…",
+    "favorites_section": "Favourites",
+    "nearby_section": "Nearby museums",
+    "empty_state": "No museums found. Try another name or move closer.",
+    "close_a11y": "Close the museum picker"
   },
   "days": {
     "mon": "Mon",

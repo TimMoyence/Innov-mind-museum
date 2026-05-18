@@ -212,9 +212,9 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - [ ] **W1.1 Transitions entre œuvres** — orchestrateur chat détecte fin discussion œuvre A, propose transition fluide vers œuvre B (suggestion proactive, sans rupture cognitive)
 - [ ] **W1.2 Audio guide auto** — TTS streaming continu pour balade, déclenché à l'entrée d'un point d'intérêt, pause/reprise par geste ou voix
 - [ ] **W1.3 Chemin GPS** — itinéraire balade généré (musée→musée hors-mur, ou intra-salle musée), points d'intérêt ordonnés, ETA, navigation simple
-- [ ] **W1.4 UX choix musée** — sélecteur musée explicite (recherche, carte, favoris), pas seulement géolocalisation passive
-- [ ] **W1.5 Détection musée auto** — geofence + LocationResolver (déjà partiel, étendre à liste musées contractés)
-- [ ] **W1.6 Détection endroit intra-musée** — beacon BLE, QR-code à l'entrée salle, ou estimation pos via image (œuvre vue caméra)
+- [x] **W1.4 UX choix musée** — sélecteur musée explicite (recherche, carte, favoris), pas seulement géolocalisation passive
+- [x] **W1.5 Détection musée auto** — geofence + LocationResolver (déjà partiel, étendre à liste musées contractés)
+- [x] **W1.6 Détection endroit intra-musée** — beacon BLE, QR-code à l'entrée salle, ou estimation pos via image (œuvre vue caméra)<br/><sub>↳ Partiel (cf. run `2026-05-17-w3-geo-walk-intra`) : QR-deeplink + propagation BE → LLM `[CURRENT ARTWORK]` ✔ ; SigLIP image-position deferred (bloqué par W1 SigLIP-2 swap C9.14, suivi sous W1.6b).</sub>
 
 ### W2 — Multi-tenancy musées (ex-priorité 2, KR1 pré-requis)
 
