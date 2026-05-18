@@ -82,7 +82,7 @@ export class ArtworkEmbedding {
   @Column({ type: 'text', name: 'embedding' })
   embedding!: string;
 
-  /** e.g. `"siglip-base-patch16-224@v1"`. Used to invalidate/re-encode on upgrade. */
+  /** e.g. `"siglip2-base-patch16-224@v1"`. Used to invalidate/re-encode on upgrade. */
   @Column({ type: 'text', name: 'embedding_model_version' })
   embeddingModelVersion!: string;
 

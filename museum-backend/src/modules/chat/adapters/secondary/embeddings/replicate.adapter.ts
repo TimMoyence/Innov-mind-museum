@@ -228,7 +228,12 @@ function l2Normalise(vec: number[]): Float32Array {
   return out;
 }
 
-/** Output shape: `siglip-base-patch16-224@replicate-v1` (owner+sha stripped). */
+/**
+ * Output shape: `siglip-base-patch16-224@replicate-v1` (owner+sha stripped).
+ * Stays at SigLIP v1: Replicate had no SigLIP-2 model at the C9.14 upgrade
+ * (2026-05-18) so the hosted fallback lags one generation; the distinct
+ * `modelVersion` keeps stale-row detection honest in `artwork_embeddings`.
+ */
 function buildModelVersion(model: string): string {
   const noOwner = model.includes('/') ? (model.split('/')[1] ?? model) : model;
   const noSha = noOwner.includes(':') ? (noOwner.split(':')[0] ?? noOwner) : noOwner;

@@ -22,7 +22,7 @@ export interface EncodeOutput {
    * avoid JSON round-trip on hot path.
    */
   vector: Float32Array;
-  /** e.g. `"siglip-base-patch16-224@v1"`. Detects stale rows on upgrade. */
+  /** e.g. `"siglip2-base-patch16-224@v1"`. Detects stale rows on upgrade. */
   modelVersion: string;
 }
 

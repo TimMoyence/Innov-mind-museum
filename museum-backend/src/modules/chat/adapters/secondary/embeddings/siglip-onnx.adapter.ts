@@ -1,7 +1,8 @@
 /**
  * SigLIP ONNX embeddings adapter — default `EmbeddingsPort` impl (ADR-037).
- * SigLIP-base-patch16-224 via `onnxruntime-node` (CPU, NAPI). Primary path;
- * Replicate adapter is hosted fallback (R8).
+ * SigLIP-2 base patch16-224 via `onnxruntime-node` (CPU, NAPI). Primary path;
+ * Replicate adapter is hosted fallback (R8) — Replicate lags one model
+ * generation (still SigLIP v1), see `embeddings.factory.ts` for the rationale.
  *
  * Preprocessing normalize is `(pixel / 127.5) - 1.0` → range [-1, 1], NOT
  * ImageNet mean/std (different from CLIP/ResNet/DINOv2). Wrong normalize
@@ -26,7 +27,7 @@ import { logger } from '@shared/logger/logger';
 import { preprocessForSiglip } from './image-preprocess';
 
 /** Persisted alongside the embedding so model upgrades can detect stale rows. */
-const SIGLIP_MODEL_VERSION = 'siglip-base-patch16-224@v1';
+const SIGLIP_MODEL_VERSION = 'siglip2-base-patch16-224@v1';
 
 const SIGLIP_INPUT_NAME = 'pixel_values';
 const SIGLIP_OUTPUT_NAME = 'image_embeds';

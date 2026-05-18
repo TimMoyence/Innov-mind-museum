@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # fetch-models.sh — idempotent fetch of large ML model artefacts at Docker build time.
 #
-# Currently pulls the SigLIP base patch16-224 ONNX bundle used by the
+# Currently pulls the SigLIP-2 base patch16-224 ONNX bundle used by the
 # `siglip-onnx` adapter (`EmbeddingsPort` / `/chat/compare`). The model is
 # ~340MB and must NOT live in git; we stream it from a public GCS bucket
 # during the builder stage of `museum-backend/deploy/Dockerfile.prod`.
@@ -35,14 +35,14 @@
 #
 # TODO(ops): provision the `musaium-models-public` GCS bucket and upload the
 # ONNX bundle exported via:
-#   optimum-cli export onnx --model google/siglip-base-patch16-224 ./models/siglip-base-patch16-224
+#   optimum-cli export onnx --model google/siglip2-base-patch16-224 ./models/siglip2-base-patch16-224
 # Then publish the canonical SHA256 and propagate it to CI/CD secrets so this
 # script can refuse drift.
 
 set -euo pipefail
 
-DEFAULT_URL="https://storage.googleapis.com/musaium-models-public/siglip-base-patch16-224.onnx"
-DEFAULT_DEST="./models/siglip-base-patch16-224.onnx"
+DEFAULT_URL="https://storage.googleapis.com/musaium-models-public/siglip2-base-patch16-224.onnx"
+DEFAULT_DEST="./models/siglip2-base-patch16-224.onnx"
 
 URL="${SIGLIP_ONNX_URL:-$DEFAULT_URL}"
 DEST="${SIGLIP_ONNX_DEST:-$DEFAULT_DEST}"
