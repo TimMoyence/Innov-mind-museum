@@ -55,7 +55,7 @@ export class BgeRerankerV2M3Adapter implements RerankerPort {
    *         tokenizer not yet implemented (see file-level docblock).
    *         V2 (C9.13.1) replaces this with the real inference loop.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await -- contract requires Promise return; V1 short-circuits before any async work
+  // eslint-disable-next-line @typescript-eslint/require-await -- Justification: RerankerPort contract mandates Promise<RerankResult[]> return; V1 short-circuits via synchronous throw before any async work — adding await/yield purely to satisfy the rule would be dead code that V2 (C9.13.1) replaces wholesale with the real `session.run()` inference loop. Approved-by: dispatcher 6c2da855 (C9.13 V1 scaffold — throws synchronously; Promise return enforced by port signature)
   public async rerank(_query: string, _docs: string[], _topN: number): Promise<RerankResult[]> {
     // V1 marker — see file docblock + spec §2 "Honest scope statement".
     // V2 (C9.13.1) will replace this throw with:
