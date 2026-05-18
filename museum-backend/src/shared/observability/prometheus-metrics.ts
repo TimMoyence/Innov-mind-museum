@@ -442,6 +442,23 @@ export const rerankFallbackTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * C9.5 (2026-05-18) — prompt-caching telemetry. Cardinality bounded to 9
+ * series (3 `cache_status` ∈ {hit, partial, miss} × 3 `provider` ∈ {openai,
+ * deepseek, google}). Incremented exactly once per successful LLM section
+ * invocation by `recordPromptCacheTelemetry()` (lands in T2.3). `miss` covers
+ * both absent-`usage_metadata` and `cache_read === 0` cases.
+ *
+ * SCAFFOLD STATE (T1.2 red): the Counter is DECLARED but no `.inc()` call
+ * sites exist yet — the green commits (T2.3 + T2.4) wire it in.
+ */
+export const llmPromptCacheHitsTotal = new Counter({
+  name: 'musaium_llm_prompt_cache_hits_total',
+  help: 'Total LLM section invocations classified by prompt-cache outcome (hit | partial | miss), labelled by provider.',
+  labelNames: ['cache_status', 'provider'] as const,
+  registers: [registry],
+});
+
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
 }
