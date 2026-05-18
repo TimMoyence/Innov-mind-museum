@@ -26,7 +26,6 @@ import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcri
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { TextToSpeechService } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import type { OcrService } from '@modules/chat/adapters/secondary/image/ocr-service';
-import type { ArtTopicClassifierPort } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
@@ -409,7 +408,6 @@ interface BuildChatTestServiceOptions {
   tts?: TextToSpeechService;
   cache?: CacheService;
   ocr?: OcrService;
-  artTopicClassifier?: ArtTopicClassifierPort;
   /**
    * C4.1 T6.2 — optional `KnowledgeRouterPort` stub. When set, threads through
    * to `ChatService` so integration tests can exercise the prepare-pipeline →
@@ -446,7 +444,6 @@ export function buildChatTestService(
       tts: opts.tts,
       cache: opts.cache,
       ocr: opts.ocr,
-      artTopicClassifier: opts.artTopicClassifier,
       knowledgeRouter: opts.knowledgeRouter,
     });
   }

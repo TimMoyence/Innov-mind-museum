@@ -47,14 +47,6 @@ const createMockRepository = (overrides: Partial<Parameters<typeof makeChatRepo>
 const createMockAudit = (): jest.Mocked<AuditService> =>
   ({ log: jest.fn(), logBatch: jest.fn() }) as unknown as jest.Mocked<AuditService>;
 
-/**
- * Creates a mock art-topic classifier.
- * @param isArtResult
- */
-const createMockClassifier = (isArtResult: boolean) => ({
-  isArtRelated: jest.fn().mockResolvedValue(isArtResult),
-});
-
 describe('GuardrailEvaluationService', () => {
   describe('evaluateInput', () => {
     it('allows clean art-related text', async () => {
@@ -351,30 +343,12 @@ describe('GuardrailEvaluationService', () => {
       expect(result.metadata.citations).toContain('policy:unsafe_output');
     });
 
-    it('blocks off-topic output when art-topic classifier is provided', async () => {
-      const classifier = createMockClassifier(false);
-      const service = new GuardrailEvaluationService({
-        repository: createMockRepository(),
-        artTopicClassifier: classifier,
-      });
-
-      const result = await service.evaluateOutput({
-        text: 'Here is a recipe for chocolate cake.',
-        metadata: {},
-        requestedLocale: 'en',
-      });
-
-      expect(result.allowed).toBe(false);
-      expect(result.metadata.citations).toContain('policy:off_topic');
-      expect(classifier.isArtRelated).toHaveBeenCalledWith('Here is a recipe for chocolate cake.');
-    });
-
-    it('allows art-related output when classifier confirms', async () => {
-      const classifier = createMockClassifier(true);
-      const service = new GuardrailEvaluationService({
-        repository: createMockRepository(),
-        artTopicClassifier: classifier,
-      });
+    // C9.9 (2026-05-18) — OUTPUT O3 art-topic classifier retired. Off-topic
+    // outputs are no longer blocked by this service; defense surface = section
+    // prompt + L3 LLM judge (C9.7 on uncertain INPUTS) + promptfoo CI corpus
+    // (`llm-security-promptfoo.yml` ≥ 95 %). See ADR-015 amendment 2026-05-18.
+    it('passes a perfectly normal output when both V1 keyword + V2 provider allow', async () => {
+      const service = new GuardrailEvaluationService({ repository: createMockRepository() });
 
       const result = await service.evaluateOutput({
         text: 'This painting by Monet captures the essence of impressionism.',
@@ -386,59 +360,18 @@ describe('GuardrailEvaluationService', () => {
       expect(result.text).toContain('Monet');
     });
 
-    it('fails CLOSED when art-topic classifier throws an error (security hardening)', async () => {
-      const classifier = {
-        isArtRelated: jest.fn().mockRejectedValue(new Error('Classifier unavailable')),
-      };
-      const service = new GuardrailEvaluationService({
-        repository: createMockRepository(),
-        artTopicClassifier: classifier,
-      });
-
-      const result = await service.evaluateOutput({
-        text: 'Some interesting text about gardens.',
-        metadata: {},
-        requestedLocale: 'en',
-      });
-
-      // Fail-closed: classifier error means suppress LLM output and return safe refusal
-      expect(result.allowed).toBe(false);
-      expect(result.text).not.toBe('Some interesting text about gardens.');
-      expect(result.text.length).toBeGreaterThan(0);
-      expect(result.metadata.citations).toContain('policy:unsafe_output');
-    });
-
-    it('fail-closed refusal is localized for fr locale when classifier throws', async () => {
-      const classifier = {
-        isArtRelated: jest.fn().mockRejectedValue(new Error('boom')),
-      };
-      const service = new GuardrailEvaluationService({
-        repository: createMockRepository(),
-        artTopicClassifier: classifier,
-      });
-
-      const result = await service.evaluateOutput({
-        text: 'Some text about gardens.',
-        metadata: {},
-        requestedLocale: 'fr-FR',
-      });
-
-      expect(result.allowed).toBe(false);
-      // French refusal should differ from English and contain localized phrasing
-      expect(result.text).toContain('uniquement');
-      expect(result.metadata.citations).toContain('policy:unsafe_output');
-    });
-
-    it('skips classifier when artTopicClassifier is not provided', async () => {
+    it('no longer blocks off-topic outputs (O3 retired — handled upstream)', async () => {
       const service = new GuardrailEvaluationService({ repository: createMockRepository() });
 
       const result = await service.evaluateOutput({
-        text: 'A perfectly normal response about cooking.',
+        text: 'Here is a recipe for chocolate cake.',
         metadata: {},
         requestedLocale: 'en',
       });
 
-      // Without classifier, only safety keyword checks run
+      // After C9.9 burial, off-topic detection on OUTPUTS is no longer this
+      // service's responsibility. The V1 keyword guardrail allows arbitrary
+      // non-injection / non-PII text; the V2 GuardrailProvider is opt-in.
       expect(result.allowed).toBe(true);
     });
 

@@ -8,7 +8,7 @@ import {
   evaluateUserInputGuardrail,
 } from './art-topic-guardrail';
 import { recordBiasMetrics, resolveLocaleLabel } from './eval/bias-metrics.helper';
-import { aggregateOutputText, runArtTopicClassifier } from './eval/output-classifier.helper';
+import { aggregateOutputText } from './eval/output-aggregator';
 import {
   evaluateGuardrailProvider,
   runLlmJudge,
@@ -22,7 +22,6 @@ import { buildBlockedOutputPayload } from './guardrail-refusal-builder';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { GuardrailAuditContext } from './guardrail-audit-payload';
 import type {
-  ArtTopicClassifierPort,
   GuardrailEvaluationServiceDeps,
   InputGuardrailResult,
   LlmJudgeFn,
@@ -36,12 +35,11 @@ import type {
 import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { AuditService } from '@shared/audit/audit.service';
 
-export type { GuardrailAuditContext, ArtTopicClassifierPort, LlmJudgeFn };
+export type { GuardrailAuditContext, LlmJudgeFn };
 
 export class GuardrailEvaluationService {
   private readonly repository: ChatRepository;
   private readonly audit?: AuditService;
-  private readonly artTopicClassifier?: ArtTopicClassifierPort;
   private readonly guardrailProvider?: GuardrailProvider;
   private readonly guardrailProviderObserveOnly: boolean;
   private readonly llmJudge?: LlmJudgeFn;
@@ -50,7 +48,6 @@ export class GuardrailEvaluationService {
   constructor(deps: GuardrailEvaluationServiceDeps) {
     this.repository = deps.repository;
     this.audit = deps.audit;
-    this.artTopicClassifier = deps.artTopicClassifier;
     this.guardrailProvider = deps.guardrailProvider;
     this.guardrailProviderObserveOnly = deps.guardrailProviderObserveOnly ?? true;
     this.llmJudge = deps.llmJudge;
@@ -226,9 +223,15 @@ export class GuardrailEvaluationService {
   }
 
   /**
-   * SEC FAIL-CLOSED — classifier throw → suppress LLM output + generic safe
-   * refusal (OWASP LLM 2026: never pass unverified output when safety check
-   * fails to execute).
+   * Output guardrail evaluation. Two layers after C9.9 (2026-05-18):
+   *  1. V1 keyword guardrail on aggregated output text (answer + image
+   *     captions + rationales).
+   *  2. V2 `GuardrailProvider` adapter (ADR-048) — defense-in-depth.
+   *
+   * The legacy OUTPUT O3 LLM-based art-topic classifier was retired (C9.9)
+   * — section prompt forces art focus, L3 LLM judge catches off-topic INPUTS
+   * (C9.7), and the promptfoo CI corpus (`llm-security-promptfoo.yml`) gates
+   * regressions. See ADR-015 amendment 2026-05-18.
    */
   async evaluateOutput(params: {
     text: string;
@@ -238,7 +241,6 @@ export class GuardrailEvaluationService {
   }): Promise<{ text: string; metadata: ChatAssistantMetadata; allowed: boolean }> {
     const { text, metadata, requestedLocale, context } = params;
     const providerRan = Boolean(this.guardrailProvider);
-    const classifierRan = Boolean(this.artTopicClassifier);
 
     // C2 v2 — LLM-authored caption + rationale on EnrichedImage are user-visible
     // and may carry leaks; aggregate with answer text so keyword guardrail
@@ -292,24 +294,11 @@ export class GuardrailEvaluationService {
       });
     }
 
-    const classifierBlock = await runArtTopicClassifier(
-      {
-        text,
-        metadata,
-        requestedLocale,
-        providerRan,
-        context,
-      },
-      {
-        classifier: this.artTopicClassifier,
-        logBlock: (logParams) => this.logBlock(logParams),
-      },
-    );
-    if (classifierBlock) return classifierBlock;
-
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, {
       phase: 'output',
-      classifierRan,
+      // C9.9 — O3 classifier retired; flag retained for downstream audit
+      // consumers (always false).
+      classifierRan: false,
       providerRan,
     });
     return { text, metadata, allowed: true };
