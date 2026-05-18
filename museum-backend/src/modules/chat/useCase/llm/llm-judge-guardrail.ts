@@ -18,6 +18,7 @@ import {
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
 export type LlmJudgeDecision = 'allow' | 'block' | 'review';
@@ -105,6 +106,8 @@ const parseJudgeJson = (raw: string): JudgeDecision | null => {
 export interface JudgeWithLlmOptions {
   /** Default: `env.guardrails.judgeTimeoutMs`. */
   timeoutMs?: number;
+  /** C9.7 — detached path. When provided, judge uses `model.withStructuredOutput` directly. */
+  model?: ChatModel;
   orchestrator?: ChatOrchestrator;
 }
 
