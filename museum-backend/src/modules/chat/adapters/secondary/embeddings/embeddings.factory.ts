@@ -14,7 +14,16 @@ import { SiglipOnnxAdapter } from '@modules/chat/adapters/secondary/embeddings/s
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
 import type { AppEnv } from '@src/config/env.types';
 
-/** Pinned to match the local ONNX model (vectors must stay comparable). */
+/**
+ * Replicate hosted fallback slug. NOTE: pinned to SigLIP v1 because Replicate
+ * did not publish a `siglip2-base-patch16-224` model at the time of the C9.14
+ * upgrade (verified 2026-05-18, HTTP 404 on `lucataco/siglip2-base-patch16-224`).
+ * The local SigLIP-2 adapter is the primary path; the Replicate fallback now
+ * lags one model generation and emits a distinct `modelVersion`
+ * (`siglip-base-patch16-224@replicate-v1`) — cross-comparing rows between the
+ * two adapters is unsupported by design (the `modelVersion` column is the
+ * stale-row signal). Bump this slug once Replicate ships SigLIP-2.
+ */
 const REPLICATE_SIGLIP_MODEL = 'lucataco/siglip-base-patch16-224';
 
 /** @throws {Error} on missing REPLICATE_API_TOKEN (when provider='replicate') or unknown provider. */

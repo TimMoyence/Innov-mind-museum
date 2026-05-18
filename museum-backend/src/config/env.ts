@@ -329,7 +329,7 @@ const env: AppEnv = {
     provider: embeddingsProvider,
     siglipOnnxModelPath:
       toOptionalString(process.env.SIGLIP_ONNX_MODEL_PATH) ??
-      './models/siglip-base-patch16-224.onnx',
+      './models/siglip2-base-patch16-224.onnx',
     replicateApiToken: toOptionalString(process.env.REPLICATE_API_TOKEN),
     embeddingsDim: toNumber(process.env.EMBEDDINGS_DIM, 768),
     topN: toNumber(process.env.VISUAL_TOP_N, 20),

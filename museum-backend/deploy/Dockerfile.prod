@@ -79,7 +79,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/openapi ./openapi
 # C3 (2026-05) — visual-similarity ONNX bundle staged in the build stage by
 # scripts/fetch-models.sh. Path mirrors SIGLIP_ONNX_MODEL_PATH default
-# (./models/siglip-base-patch16-224.onnx) so env.ts resolution works at runtime.
+# (./models/siglip2-base-patch16-224.onnx) so env.ts resolution works at runtime.
 COPY --from=build /app/models ./models
 
 # Strip source maps from production image (uploaded to Sentry separately)

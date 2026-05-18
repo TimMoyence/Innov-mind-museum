@@ -373,7 +373,7 @@ export interface AppEnv {
     provider: EmbeddingsProvider;
     /**
      * Path to SigLIP ONNX bundle. Relative paths resolve from `process.cwd()`.
-     * Default `./models/siglip-base-patch16-224.onnx` (downloaded at Docker
+     * Default `./models/siglip2-base-patch16-224.onnx` (downloaded at Docker
      * build by `scripts/fetch-models.sh`). Ignored when `provider === 'replicate'`.
      */
     siglipOnnxModelPath: string;

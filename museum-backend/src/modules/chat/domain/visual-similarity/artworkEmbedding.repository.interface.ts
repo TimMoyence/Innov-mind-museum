@@ -17,7 +17,7 @@ export interface ArtworkEmbeddingRow {
   metadata: ArtworkMetadata;
   imageSource: ArtworkEmbedding['imageSource'];
   license: ArtworkEmbedding['license'];
-  /** e.g. `"siglip-base-patch16-224@v1"`. */
+  /** e.g. `"siglip2-base-patch16-224@v1"`. */
   embeddingModelVersion: string;
   /**
    * Internal Musaium tenant FK (`museums.id`). NULL = global public catalog
