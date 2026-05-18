@@ -1008,6 +1008,21 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-41 — `eslint-disable` sans `Approved-by` dans `similarity-service.rerank-fail-open.test.ts`
+
+- [ ] **Statut** : ouvert (créé 2026-05-18, /team C9.13 reviewer cycle 2 audit)
+- **Référence code** :
+  ```
+  museum-backend/tests/unit/chat/visual-similarity/similarity-service.rerank-fail-open.test.ts:83
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load gives a useful "Cannot find module" RED in Phase 3 before Phase 4 lands the service constructor signature change
+  ```
+- **Symptôme** : le disable a une `Justification:` (≥20 chars) mais manque la ligne `Approved-by: <reviewer/SHA>` que CLAUDE.md `§ ESLint Discipline` exige pour tout nouveau `eslint-disable`. Le pattern correct est déjà appliqué sur les 2 disables des adapters rerank V1 (cf. `bge-reranker-v2-m3.adapter.ts:58`, `null-reranker.adapter.ts:22`) qui portent `Approved-by: dispatcher 6c2da855`. Ce site précède la corrective loop, donc le reviewer cycle 2 l'a flagué hors scope.
+- **Sprint d'origine** : C9.13 GREEN cycle (commit `6c2da855` 2026-05-18) ; flagué par /team reviewer cycle 2 (`code-review-cycle-2.json`) comme "minor non-blocker, residual from GREEN".
+- **Effort estimé** : 1 minute (1-line append).
+- **Comment fermer** : ajouter sous la ligne 83 un commentaire `// Approved-by: dispatcher 6c2da855 (C9.13 RED — dynamic SUT load required to surface "Cannot find module" before Phase 4 lands)` et cocher TD-41 ici.
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
