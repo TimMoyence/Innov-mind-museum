@@ -5,7 +5,7 @@
     "note": "T1.4 ops PENDING — full 50-pair fixture + GCS upload of SigLIP ONNX model required before live recall validation. Test recall.test.ts skips when SIGLIP_ONNX_MODEL_PATH file is absent. Current 6 pairs are placeholders covering the V1 seed museums (Louvre / Orsay / Pompidou / MoMA / Met) so the test STRUCTURE is correct; expand to 50 once T1.4 lands.",
     "expectedSize": 50,
     "currentSize": 6,
-    "modelVersion": "siglip-base-patch16-224@v1"
+    "modelVersion": "siglip2-base-patch16-224@v1"
   },
   "pairs": [
     {
