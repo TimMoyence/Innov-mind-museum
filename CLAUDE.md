@@ -294,7 +294,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (25637 symbols, 41264 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (26085 symbols, 43275 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
