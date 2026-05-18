@@ -38,7 +38,7 @@ const makeRepo = (messageRow: ChatMessageWithSessionOwnership | null = makeMessa
 const makeTts = (): jest.Mocked<TextToSpeechService> => ({
   synthesize: jest.fn().mockResolvedValue({
     audio: Buffer.from('fake-audio'),
-    contentType: 'audio/mpeg',
+    contentType: 'audio/ogg',
   }),
 });
 
@@ -150,7 +150,7 @@ describe('ChatMediaService', () => {
       const result = await svc.synthesizeSpeech(MESSAGE_ID, 42);
 
       expect(result).not.toBeNull();
-      expect(result!.contentType).toBe('audio/mpeg');
+      expect(result!.contentType).toBe('audio/ogg');
       expect(tts.synthesize).toHaveBeenCalledWith({
         text: 'Hello world',
         voice: 'alloy',
@@ -176,15 +176,36 @@ describe('ChatMediaService', () => {
       const cache = makeCache();
       cache.get.mockResolvedValue({
         audio: Buffer.from('cached-audio').toString('base64'),
-        contentType: 'audio/mpeg',
+        contentType: 'audio/ogg',
       });
       const svc = new ChatMediaService({ repository: repo, tts, cache });
 
       const result = await svc.synthesizeSpeech(MESSAGE_ID, 42);
 
       expect(result).not.toBeNull();
-      expect(result!.contentType).toBe('audio/mpeg');
+      expect(result!.contentType).toBe('audio/ogg');
       expect(tts.synthesize).not.toHaveBeenCalled();
+    });
+
+    // C9.12c (2026-05-17) — cache key MUST include voice id, otherwise switching
+    // user.ttsVoice serves stale audio from a previous voice. The cache key
+    // shape is `tts:v2:<messageId>:<voiceId>` — voice change → cache miss.
+    it('cache key is voice-aware (different voice → cache miss)', async () => {
+      const row = makeMessageRow({ role: 'assistant', text: 'Hello' });
+      const repo = makeRepo(row);
+      const tts = makeTts();
+      const cache = makeCache();
+      cache.get.mockResolvedValue(null);
+      const svc = new ChatMediaService({ repository: repo, tts, cache });
+
+      await svc.synthesizeSpeech(MESSAGE_ID, 42);
+
+      expect(cache.get).toHaveBeenCalledWith(`tts:v2:${MESSAGE_ID}:alloy`);
+      expect(cache.set).toHaveBeenCalledWith(
+        `tts:v2:${MESSAGE_ID}:alloy`,
+        expect.objectContaining({ contentType: 'audio/ogg' }),
+        expect.any(Number),
+      );
     });
 
     it('returns null when assistant message has no text', async () => {

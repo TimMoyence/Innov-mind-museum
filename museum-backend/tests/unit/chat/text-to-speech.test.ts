@@ -41,7 +41,7 @@ describe('OpenAiTextToSpeechService', () => {
 
     const result = await service.synthesize({ text: 'Hello world' });
 
-    expect(result.contentType).toBe('audio/mpeg');
+    expect(result.contentType).toBe('audio/ogg');
     expect(Buffer.isBuffer(result.audio)).toBe(true);
     expect(result.audio.length).toBe(3);
 
@@ -51,7 +51,7 @@ describe('OpenAiTextToSpeechService', () => {
     expect(body.input).toBe('Hello world');
     expect(body.model).toBe('gpt-4o-mini-tts');
     expect(body.voice).toBe('alloy');
-    expect(body.response_format).toBe('mp3');
+    expect(body.response_format).toBe('opus');
   });
 
   it('uses voice override when provided', async () => {

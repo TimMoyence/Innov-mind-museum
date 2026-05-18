@@ -23,6 +23,11 @@ interface ParsedContext {
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
+  /**
+   * C9.10 (2026-05-17) — set by the FE STT path. When true, the LLM is
+   * constrained to a 60-80w prose-only answer for TTS playback.
+   */
+  voiceMode?: boolean;
 }
 
 /** Matches ImageProcessingService.assertMimeType (LLM vision pipeline). */
@@ -132,6 +137,10 @@ const parseLocation = (value: unknown): string | undefined => {
 
 /** Accepts boolean or boolean-string ('true'/'false'). */
 const parseMuseumMode = (value: unknown): boolean | undefined => {
+  return parseBoolean(value, 'context.museumMode');
+};
+
+const parseBoolean = (value: unknown, fieldName: string): boolean | undefined => {
   if (value === undefined) return undefined;
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
@@ -139,7 +148,7 @@ const parseMuseumMode = (value: unknown): boolean | undefined => {
     if (lower === 'true') return true;
     if (lower === 'false') return false;
   }
-  throw badRequest('context.museumMode must be a boolean');
+  throw badRequest(`${fieldName} must be a boolean`);
 };
 
 const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefined => {
@@ -183,6 +192,10 @@ export const parseContext = (input: unknown): ParsedContext | undefined => {
 
   const locale = parseLocale(value.locale);
   if (locale !== undefined) context.locale = locale;
+
+  // C9.10 — accept boolean or boolean-string (multipart).
+  const voiceMode = parseBoolean(value.voiceMode, 'context.voiceMode');
+  if (voiceMode !== undefined) context.voiceMode = voiceMode;
 
   return context;
 };

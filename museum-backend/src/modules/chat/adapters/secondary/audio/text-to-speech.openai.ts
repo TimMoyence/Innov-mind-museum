@@ -37,7 +37,9 @@ const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise
         input: text,
         voice,
         speed: env.tts.speed,
-        response_format: 'mp3',
+        // Opus/OGG container: -40% bandwidth + -50-100ms first-byte vs MP3 (C9.12a
+        // 2026-05-17). Universal mobile support (iOS 14+, Android 5+).
+        response_format: 'opus',
       }),
       signal: AbortSignal.timeout(env.llm.timeoutMs),
     });
@@ -95,7 +97,7 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       const apiKey = requireApiKey();
       const response = await fetchSpeech(apiKey, text, voice);
       const audio = await parseSpeechResponse(response);
-      return { audio, contentType: 'audio/mpeg' };
+      return { audio, contentType: 'audio/ogg' };
     } catch (err) {
       outcome = 'error';
       errorType = classifyTtsError(err);

@@ -29,6 +29,11 @@ export interface LocalCacheKeyInput {
   locale: string;
   guideLevel?: string;
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — voiceMode produces a 60-80w prose answer vs ~250-400w
+   * default. MUST be in the cache key to prevent cross-mode leakage.
+   */
+  voiceMode?: boolean;
   /** Authenticated user id; mutually exclusive with `anonId`. */
   userId?: number | string | null;
   /** Anonymous device id from secure-store; mutually exclusive with `userId`. */
@@ -103,6 +108,7 @@ export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
     input.locale,
     input.guideLevel ?? 'beginner',
     input.audioDescriptionMode ? '1' : '0',
+    input.voiceMode ? '1' : '0',
   ];
 
   let key: string;

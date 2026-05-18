@@ -428,6 +428,13 @@ const env: AppEnv = {
     // either until ADR-051 promotion criteria pass (≥7d shadow, decision-match
     // thresholds, p95 latency).
     presidio: {
+      /**
+       * C9.8 (2026-05-17) — when true AND `baseUrl` set, the chat pipeline
+       * uses MicrosoftPresidioAdapter as the V2 guardrail provider. Combine
+       * with `GUARDRAILS_V2_OBSERVE_ONLY=true` for the 4-7d bake before
+       * flipping to enforce. ADR-051.
+       */
+      enabled: toBoolean(process.env.PRESIDIO_ENABLED, false),
       baseUrl: toOptionalString(process.env.PRESIDIO_BASE_URL),
       timeoutMs: toNumber(process.env.PRESIDIO_TIMEOUT_MS, 500),
     },

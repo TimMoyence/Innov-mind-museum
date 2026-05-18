@@ -210,9 +210,10 @@ export class ChatMediaService {
   }
 
   /**
-   * Cache: Redis `tts:<messageId>` (default 1d) → fresh synth + fire-and-forget
-   * S3 persistence (audioUrl + voice + ts) on ChatMessage for offline replay /
-   * walk pre-fetch.
+   * Cache: Redis `tts:v2:<messageId>:<voiceId>` (default 1d) → fresh synth +
+   * fire-and-forget S3 persistence (audioUrl + voice + ts) on ChatMessage for
+   * offline replay / walk pre-fetch. `v2` prefix bumped 2026-05-17 to make the
+   * key voice-aware (correctness fix TD-28).
    *
    * @throws {AppError} 400 not assistant, 501 TTS unavailable, 404 not found/owned.
    */
@@ -240,7 +241,7 @@ export class ChatMediaService {
 
     const targetVoice = row.session.user?.ttsVoice ?? env.tts.voice;
 
-    const cacheKey = `tts:${messageId}`;
+    const cacheKey = `tts:v2:${messageId}:${targetVoice}`;
     if (this.cache) {
       const cached = await this.cache.get<{ audio: string; contentType: string }>(cacheKey);
       if (cached) {
@@ -262,24 +263,32 @@ export class ChatMediaService {
       );
     }
 
+    // Decoupled persistence (C9.12b 2026-05-17) — don't block the TTS response on
+    // S3 save + DB updateMessageAudio. Existing fail-open semantic preserved
+    // inside the detached promise; failures only emit a warn log.
     if (this.audioStorage) {
-      try {
-        const ref = await this.audioStorage.save({
-          buffer: result.audio,
-          contentType: result.contentType,
-        });
-        await this.repository.updateMessageAudio(messageId, {
-          audioUrl: ref,
-          audioGeneratedAt: new Date(),
-          audioVoice: targetVoice,
-        });
-      } catch (error: unknown) {
-        // fail-open: audio persistence best-effort, must not affect TTS response
-        logger.warn('audio_storage_persist_failed', {
-          messageId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+      const audioStorage = this.audioStorage;
+      const repository = this.repository;
+      const audioBuffer = result.audio;
+      const audioContentType = result.contentType;
+      void (async () => {
+        try {
+          const ref = await audioStorage.save({
+            buffer: audioBuffer,
+            contentType: audioContentType,
+          });
+          await repository.updateMessageAudio(messageId, {
+            audioUrl: ref,
+            audioGeneratedAt: new Date(),
+            audioVoice: targetVoice,
+          });
+        } catch (error: unknown) {
+          logger.warn('audio_storage_persist_failed', {
+            messageId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      })();
     }
 
     return result;

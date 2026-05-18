@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -11,6 +11,12 @@ interface ArtworkCardProps {
   museum?: string;
   room?: string;
   confidence?: number;
+  /**
+   * C9.18 (2026-05-17) — when provided alongside `onPress`, makes the card
+   * tappable for B2B deep-link to the artwork detail screen.
+   */
+  artworkId?: string;
+  onPress?: () => void;
 }
 
 const confidenceKey = (value?: number): 'high' | 'medium' | 'low' | null => {
@@ -22,13 +28,22 @@ const confidenceKey = (value?: number): 'high' | 'medium' | 'low' | null => {
 };
 
 /** Displays a card with detected artwork metadata including title, artist, museum location, and recognition confidence level. */
-export const ArtworkCard = ({ title, artist, museum, room, confidence }: ArtworkCardProps) => {
+export const ArtworkCard = ({
+  title,
+  artist,
+  museum,
+  room,
+  confidence,
+  artworkId,
+  onPress,
+}: ArtworkCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const badgeKey = confidenceKey(confidence);
   const badge = badgeKey ? t(`artworkCard.confidence.${badgeKey}`) : null;
+  const isTappable = Boolean(artworkId && onPress);
 
-  return (
+  const content = (
     <GlassCard style={styles.card} intensity={44}>
       <View style={styles.row}>
         <View style={styles.content}>
@@ -53,6 +68,20 @@ export const ArtworkCard = ({ title, artist, museum, room, confidence }: Artwork
         ) : null}
       </View>
     </GlassCard>
+  );
+
+  if (!isTappable) {
+    return content;
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('artworkCard.openDetail', { defaultValue: 'Open artwork detail' })}
+    >
+      {content}
+    </Pressable>
   );
 };
 

@@ -30,6 +30,11 @@ export interface OrchestratorInput {
   /** Pre-verified from extraction DB (highest priority enrichment). */
   localKnowledgeBlock?: string;
   audioDescriptionMode?: boolean;
+  /**
+   * C9.10 (2026-05-17) — Voice-first walk-mode prompt branch. When `true`,
+   * `buildSummaryPrompt` constrains the answer to 60-80 words prose-only.
+   */
+  voiceMode?: boolean;
   lowDataMode?: boolean;
   /** For cache key scoping. */
   museumId?: number | null;

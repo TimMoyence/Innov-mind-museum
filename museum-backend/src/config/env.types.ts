@@ -594,10 +594,12 @@ export interface AppEnv {
     queueMax: number;
     /**
      * ADR-051 (2026-05-13) — Microsoft Presidio analyzer+anonymizer sidecar.
-     * Adapter implemented but NOT wired pre-launch; knobs await Phase 1
-     * shadow promotion.
+     * C9.8 (2026-05-17) — wired via `PRESIDIO_ENABLED` flag, defaults to
+     * observe-only via `GUARDRAILS_V2_OBSERVE_ONLY=true` for 4-7d bake.
      */
     presidio: {
+      /** C9.8 — when true AND `baseUrl` set, used as the V2 guardrail provider. */
+      enabled: boolean;
       baseUrl?: string;
       /** Hard request timeout (ms) for /analyze + /anonymize. Fail-CLOSED on elapsed. */
       timeoutMs: number;

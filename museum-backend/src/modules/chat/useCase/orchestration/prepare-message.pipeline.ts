@@ -423,6 +423,7 @@ export class PrepareMessagePipeline {
       localKnowledgeBlock: prep.localKnowledgeBlock,
       webSearchBlock: prep.webSearchBlock,
       audioDescriptionMode: input.context?.audioDescriptionMode,
+      voiceMode: input.context?.voiceMode,
       lowDataMode: input.context?.lowDataMode ?? false,
       resolvedLocation: prep.resolvedLocation,
       contentPreferences: input.context?.contentPreferences,

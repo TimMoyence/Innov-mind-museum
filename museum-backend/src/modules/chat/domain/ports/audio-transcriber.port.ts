@@ -5,6 +5,13 @@ export interface AudioTranscriberInput {
   mimeType: string;
   locale?: string;
   requestId?: string;
+  /**
+   * W7.4 (2026-05-17) — OpenAI STT `prompt` param (≤224 tokens, ~896 chars).
+   * Biases recognition toward expected vocabulary (artist names, artwork
+   * titles, museum names). MUST be free of visitor PII — callers strip
+   * email/name patterns before passing.
+   */
+  prompt?: string;
 }
 
 export interface AudioTranscriptionResult {

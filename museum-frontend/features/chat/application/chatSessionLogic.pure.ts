@@ -52,6 +52,12 @@ export interface CitationSource {
 /** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
   detectedArtwork?: {
+    /**
+     * C9.18 (2026-05-17) — B2B deep-link target. When present alongside a
+     * known museum id, the FE deep-links the chip tap to
+     * `/museum/[id]/artwork/[artworkId]`.
+     */
+    artworkId?: string;
     title?: string;
     artist?: string;
     museum?: string;

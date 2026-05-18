@@ -271,6 +271,7 @@ export const buildOrchestratorMessages = (input: OrchestratorInput): Orchestrato
     visitContextBlock: visitContextBlock || undefined,
     hasImage,
     audioDescriptionMode: input.audioDescriptionMode,
+    voiceMode: input.voiceMode,
     contentPreferences: input.contentPreferences,
   });
 

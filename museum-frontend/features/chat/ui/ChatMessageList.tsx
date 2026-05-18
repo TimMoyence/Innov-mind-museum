@@ -8,6 +8,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { router } from 'expo-router';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -155,6 +156,25 @@ export const ChatMessageList = ({
     [t],
   );
 
+  // C9.18 (2026-05-17) — B2B deep-link from chat detected-artwork chip.
+  // The full route `/museum/[id]/artwork/[artworkId]` does not exist yet in
+  // V1; we navigate to the existing `museum-detail` screen with `artworkId`
+  // as a passthrough param. The screen will be extended to scroll/highlight
+  // the artwork in a follow-up (TD-NEW). When `museum-detail` cannot resolve
+  // a museum id, the navigation falls back to the museum NAME stored on the
+  // detected artwork — the screen handles that as a best-effort lookup.
+  const handleArtworkPress = useCallback((message: ChatUiMessage) => {
+    const detected = message.metadata?.detectedArtwork;
+    if (!detected?.artworkId) return;
+    router.push({
+      pathname: '/museum-detail',
+      params: {
+        name: detected.museum ?? '',
+        artworkId: detected.artworkId,
+      },
+    });
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: ChatUiMessage }) => {
       const isAssistant = item.role === 'assistant';
@@ -178,6 +198,7 @@ export const ChatMessageList = ({
             onRetry={onRetry}
             feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
             onFeedback={isAssistant ? handleFeedback : undefined}
+            onArtworkPress={isAssistant ? handleArtworkPress : undefined}
           />
 
           {isAssistant && !isItemStreaming && item.text ? (
@@ -219,6 +240,7 @@ export const ChatMessageList = ({
       feedbackMap,
       handleFeedback,
       handleShare,
+      handleArtworkPress,
       t,
       theme.textTertiary,
       ttsIsPlaying,
