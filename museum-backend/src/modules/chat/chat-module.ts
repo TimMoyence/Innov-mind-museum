@@ -24,6 +24,7 @@ import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persiste
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
+import { createRerankerAdapter } from '@modules/chat/adapters/secondary/rerank/reranker.factory';
 import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
 import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
 import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
@@ -160,6 +161,10 @@ function buildWikidataStack(dataSource: DataSource, cache?: CacheService): Wikid
 // V1), NO `*_ENABLED` switch.
 
 // C9.7 — judge takes a raw ChatModel (detached path), not the full orchestrator.
+// C9.13 (2026-05-18) — APPEND-AFTER: KnowledgeRouter now also injects the
+// cross-encoder reranker. V1 production default `env.rerank.provider='null'`
+// selects `NullRerankerAdapter` which always throws → KR's rerank phase
+// fails-open to baseline ordering. Zero behavior change in V1.
 function buildKnowledgeRouter(
   kbProvider: KnowledgeBaseProvider,
   wsProvider: WebSearchProvider,
@@ -169,11 +174,13 @@ function buildKnowledgeRouter(
     kb: kbProvider,
     ws: wsProvider,
     judge: new LlmJudgeGuardrail({ model: judgeModel }),
+    reranker: createRerankerAdapter(env),
     config: {
       threshold: env.knowledgeRouter.threshold,
       kbTimeoutMs: env.knowledgeRouter.kbTimeoutMs,
       judgeTimeoutMs: env.knowledgeRouter.judgeTimeoutMs,
       wsTimeoutMs: env.knowledgeRouter.wsTimeoutMs,
+      rerankTimeoutMs: env.rerank.timeoutMs,
     },
   });
 }
@@ -245,17 +252,25 @@ function buildCompareImageUseCase(
     cache: cacheBackend,
   });
 
+  // C9.13 (2026-05-18) — VisualSimilarityService gains a `reranker` dep. V1
+  // production default `env.rerank.provider='null'` selects the no-op adapter,
+  // so behavior is unchanged. The factory is invoked here (not memoized
+  // outside) because the buildCompareImageUseCase scope is per-boot.
+  const rerankerAdapter = createRerankerAdapter(env);
+
   const visualSimilarityService = new VisualSimilarityService({
     encoder: embeddingsAdapter,
     repo: artworkEmbeddingRepo,
     enricher: wikidataEnricher,
     cache: cacheBackend,
+    reranker: rerankerAdapter,
     weights: {
       wVisual: env.visualSimilarity.wVisual,
       wMeta: env.visualSimilarity.wMeta,
     },
     topN: env.visualSimilarity.topN,
     topK: env.visualSimilarity.topKDefault,
+    rerankTimeoutMs: env.rerank.timeoutMs,
   });
 
   return createCompareImageUseCase({

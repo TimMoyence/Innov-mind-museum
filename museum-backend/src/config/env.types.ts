@@ -11,6 +11,14 @@ export type StorageDriver = 'local' | 's3';
  */
 export type EmbeddingsProvider = 'siglip-onnx' | 'replicate';
 
+/**
+ * C9.13 (2026-05) — cross-encoder reranker providers. `'null'` (default)
+ * selects the no-op adapter (V1 prod default). `'bge-reranker-v2-m3'` selects
+ * the BAAI/bge-reranker-v2-m3 ONNX scaffold (V1 throws → fail-open; V2 lands
+ * real inference in C9.13.1).
+ */
+export type RerankerProvider = 'null' | 'bge-reranker-v2-m3';
+
 // Legacy `GuardrailsV2Candidate` enum retired 2026-05-14 (ADR-015 amendment).
 // Each V2 layer now self-activates from its own config presence
 // (`GUARDRAILS_V2_LLM_GUARD_URL` for sidecar, `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY > 0` for judge).
@@ -410,6 +418,49 @@ export interface AppEnv {
      * fallback. Default 3000ms (covers SigLIP-base CPU p99 with margin).
      */
     encodeTimeoutMs: number;
+  };
+  /**
+   * C9.13 (2026-05) — cross-encoder reranker (BAAI/bge-reranker-v2-m3 ONNX).
+   * Re-orders retrieval candidates in `KnowledgeRouterService.runWebSearchLeg`
+   * and `VisualSimilarityService.compare`. V1 production default
+   * `provider='null'` selects a no-op adapter (zero behavior change); flipping
+   * to `'bge-reranker-v2-m3'` activates the scaffold which currently throws
+   * (fail-open) until V2 (C9.13.1) lands the SentencePiece tokenizer + real
+   * inference.
+   */
+  rerank: {
+    /**
+     * `'null'` (default) → `NullRerankerAdapter` (throws "disabled by
+     * configuration"; callers fall back to baseline order). `'bge-reranker-v2-m3'`
+     * → `BgeRerankerV2M3Adapter` (V1 scaffold; V2 inference deferred to C9.13.1).
+     */
+    provider: RerankerProvider;
+    /**
+     * Path to the bge-reranker-v2-m3 ONNX bundle. Relative paths resolve from
+     * `process.cwd()`. Default `./models/bge-reranker-v2-m3.onnx` (V2: fetched
+     * at Docker build by `scripts/fetch-models.sh`). Ignored when
+     * `provider === 'null'`.
+     */
+    modelPath: string;
+    /**
+     * Hard deadline in ms for a single `rerank()` call. On elapsed, caller
+     * fails-open to baseline ordering and increments
+     * `musaium_rerank_fallback_total{reason='timeout'}`. Default 2000ms (V2
+     * sized for ~50 candidates × 768 tokens on CPU; V1 short-circuits).
+     */
+    timeoutMs: number;
+    /**
+     * Upper bound on candidates fanned into the reranker (V2 tuning knob).
+     * V1 callers don't enforce it — KR slices to `MAX_WEB_FACTS` and VS
+     * passes its `topMatches.length`. Default 50.
+     */
+    topKCandidates: number;
+    /**
+     * Top-N returned by the reranker. Caller-controlled in practice (KR
+     * passes `MAX_WEB_FACTS`, VS passes `topMatches.length`); kept here for
+     * V2 dashboards. Default 5.
+     */
+    topNFinal: number;
   };
   /**
    * Museum enrichment cache retention. Complements refresh scan (which

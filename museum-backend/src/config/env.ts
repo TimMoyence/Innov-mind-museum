@@ -18,6 +18,7 @@ import {
   resolveEmbeddingsProvider,
   resolveLlmProvider,
   resolveNodeEnv,
+  resolveRerankerProvider,
   resolveStorageDriver,
   warnLegacyJwtSecret,
 } from './env-resolvers';
@@ -28,6 +29,7 @@ import type {
   DeploymentMode,
   EmbeddingsProvider,
   LlmProvider,
+  RerankerProvider,
   StorageDriver,
 } from './env.types';
 
@@ -41,6 +43,7 @@ const provider = resolveLlmProvider();
 const storageDriver = resolveStorageDriver();
 const deploymentMode = resolveDeploymentMode();
 const embeddingsProvider: EmbeddingsProvider = resolveEmbeddingsProvider();
+const rerankerProvider: RerankerProvider = resolveRerankerProvider();
 
 const isDev = nodeEnv === 'development' || nodeEnv === 'test';
 const isProduction = nodeEnv === 'production';
@@ -339,6 +342,19 @@ const env: AppEnv = {
     fallbackVisualThreshold: toNumber(process.env.VISUAL_FALLBACK_VISUAL_THRESHOLD, 0.4),
     embeddingsCacheTtlMs: toNumber(process.env.EMBEDDINGS_CACHE_TTL_MS, 3_600_000),
     encodeTimeoutMs: toNumber(process.env.EMBEDDINGS_ENCODE_TIMEOUT_MS, 3000),
+  },
+  // C9.13 (2026-05-18) — cross-encoder reranker. Defaults select the no-op
+  // `NullRerankerAdapter` (V1 prod default, zero behavior change). Flip
+  // `RERANK_PROVIDER=bge-reranker-v2-m3` to activate the scaffold (still
+  // fail-open in V1, real inference lands in C9.13.1). Rollback = `git revert`
+  // or `RERANK_PROVIDER=null`. No `*_ENABLED` flag (UFR-015 / pre-launch V1).
+  rerank: {
+    provider: rerankerProvider,
+    modelPath:
+      toOptionalString(process.env.RERANK_MODEL_PATH) ?? './models/bge-reranker-v2-m3.onnx',
+    timeoutMs: toNumber(process.env.RERANK_TIMEOUT_MS, 2000),
+    topKCandidates: toNumber(process.env.RERANK_TOP_K_CANDIDATES, 50),
+    topNFinal: toNumber(process.env.RERANK_TOP_N_FINAL, 5),
   },
   enrichment: {
     hardDeleteAfterDays: toNumber(process.env.ENRICHMENT_HARD_DELETE_AFTER_DAYS, 180),

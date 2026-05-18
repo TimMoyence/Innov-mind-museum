@@ -7,13 +7,19 @@
 
 import { createHash } from 'node:crypto';
 
+import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { logger } from '@shared/logger/logger';
 import { getLangfuse } from '@shared/observability/langfuse.client';
-import { chatWebsearchFallbackTotal } from '@shared/observability/prometheus-metrics';
+import {
+  chatWebsearchFallbackTotal,
+  rerankFallbackTotal,
+  rerankLatencyMs,
+} from '@shared/observability/prometheus-metrics';
 import { safeTrace } from '@shared/observability/safeTrace';
 
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
-import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
+import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
+import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { LlmJudgePort } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 
 export type KnowledgeRouterSource = 'wikidata' | 'web' | 'none';
@@ -48,16 +54,23 @@ export interface KnowledgeRouterConfig {
   kbTimeoutMs: number;
   judgeTimeoutMs: number;
   wsTimeoutMs: number;
+  /** C9.13 — hard deadline on a single rerank call before fail-open (default 2000). */
+  rerankTimeoutMs: number;
 }
 
 export interface KnowledgeRouterDeps {
   kb: KnowledgeBaseProvider;
   ws: WebSearchProvider;
   judge: LlmJudgePort;
+  /** C9.13 — cross-encoder reranker. Fail-open; baseline preserved on throw/timeout. */
+  reranker: RerankerPort;
   config: KnowledgeRouterConfig;
 }
 
 const MAX_WEB_FACTS = 5;
+
+/** C9.13 — telemetry caller label, kept as a constant so labels stay in sync. */
+const RERANK_CALLER_LABEL = 'knowledge-router';
 
 /**
  * D4 — uses `AbortSignal.any` (NOT `Promise.race`) to avoid the "loser leak"
@@ -73,6 +86,21 @@ function pickWebsearchOutcome(errored: boolean, resultCount: number): 'hit' | 'e
   if (errored) return 'error';
   if (resultCount > 0) return 'hit';
   return 'empty';
+}
+
+/**
+ * C9.13 — maps rerank failure cause to the `reason` label on
+ * `musaium_rerank_fallback_total`. Distinguishes:
+ *  - `'unavailable'` = adapter signalled intentional disabled state
+ *    (e.g. `NullRerankerAdapter`, V1 scaffold throws).
+ *  - `'timeout'` = our caller-side AbortSignal fired (message contains "timed out").
+ *  - `'error'` = any other failure (unexpected throw, native module load failure).
+ */
+function pickRerankFallbackReason(err: unknown): 'unavailable' | 'timeout' | 'error' {
+  if (err instanceof RerankerUnavailableError) {
+    return err.message.includes('timed out') ? 'timeout' : 'unavailable';
+  }
+  return 'error';
 }
 
 /**
@@ -231,6 +259,12 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
 
   /**
    * Fail-open: WS error → `wsErrored=true`, `webResults=[]`, counter outcome='error'.
+   *
+   * C9.13 — when `webResults.length > 1`, results are re-ordered by the
+   * injected `RerankerPort` BEFORE slicing to `MAX_WEB_FACTS`. Any reranker
+   * failure (throw / timeout) is caught and the baseline order is preserved
+   * (counter `musaium_rerank_fallback_total{caller='knowledge-router'}`
+   * incremented).
    */
   private async runWebSearchLeg(
     searchTermNormalised: string,
@@ -254,9 +288,179 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       outcome: pickWebsearchOutcome(wsErrored, webResults.length),
     });
 
-    const webFacts = webResults.slice(0, MAX_WEB_FACTS).map((r) => `${r.title}: ${r.snippet}`);
+    const orderedResults = await this.maybeRerankWebResults(searchTermNormalised, webResults);
+
+    const webFacts = orderedResults.slice(0, MAX_WEB_FACTS).map((r) => `${r.title}: ${r.snippet}`);
 
     return { webFacts, webResultCount: webResults.length, latencyWeb };
+  }
+
+  /**
+   * C9.13 — optional rerank phase. Fail-open: throw / timeout → baseline.
+   *
+   * Telemetry contract (design §10):
+   *  - Langfuse span `chat.rerank` with metadata `{ caller, candidateCount,
+   *    topN, latencyMs, outcome, queryHash }`. `queryHash` = sha256(query)[:16].
+   *  - Prom histogram `musaium_rerank_latency_ms{caller='knowledge-router',
+   *    outcome=...}` per call.
+   *  - Prom counter `musaium_rerank_fallback_total{caller='knowledge-router',
+   *    reason=...}` on fail-open.
+   */
+  private async maybeRerankWebResults(
+    searchTerm: string,
+    webResults: readonly SearchResult[],
+  ): Promise<readonly SearchResult[]> {
+    if (webResults.length <= 1) return webResults;
+
+    const candidateCount = webResults.length;
+    const topN = Math.min(MAX_WEB_FACTS, candidateCount);
+    const docs = webResults.map((r) => `${r.title}: ${r.snippet}`);
+    const rerankStart = performance.now();
+
+    try {
+      const rerankSignal = AbortSignal.timeout(this.deps.config.rerankTimeoutMs);
+      const rerankResults = await this.runRerankWithSignal(searchTerm, docs, topN, rerankSignal);
+      const latencyMs = performance.now() - rerankStart;
+
+      const reordered: SearchResult[] = [];
+      const usedIndices = new Set<number>();
+      for (const { docIndex } of rerankResults) {
+        if (docIndex < 0 || docIndex >= webResults.length) continue;
+        reordered.push(webResults[docIndex]);
+        usedIndices.add(docIndex);
+      }
+      // Append any unranked tail so total count is preserved (defensive —
+      // reranker SHOULD return topN ≤ candidateCount entries, but if it
+      // returns fewer the baseline tail still feeds the slice).
+      if (reordered.length < candidateCount) {
+        for (let i = 0; i < webResults.length; i += 1) {
+          if (!usedIndices.has(i)) {
+            reordered.push(webResults[i]);
+          }
+        }
+      }
+
+      this.emitRerankTelemetry({
+        searchTerm,
+        candidateCount,
+        topN,
+        latencyMs,
+        outcome: 'success',
+      });
+      return reordered;
+    } catch (err) {
+      const latencyMs = performance.now() - rerankStart;
+      const reason = pickRerankFallbackReason(err);
+
+      this.emitRerankTelemetry({
+        searchTerm,
+        candidateCount,
+        topN,
+        latencyMs,
+        outcome: 'fallback',
+        reason,
+        errorClass: err instanceof Error ? err.constructor.name : 'Unknown',
+      });
+      return webResults;
+    }
+  }
+
+  /**
+   * Wraps `reranker.rerank(...)` with an AbortSignal-aware timeout. The
+   * underlying port has no signal arg; abort path rejects with a synthetic
+   * timeout-flavoured `RerankerUnavailableError` so the caller's fallback
+   * counter sees `reason='timeout'`.
+   */
+  private async runRerankWithSignal(
+    query: string,
+    docs: string[],
+    topN: number,
+    signal: AbortSignal,
+  ): Promise<readonly { docIndex: number; score: number }[]> {
+    const budgetMs = String(this.deps.config.rerankTimeoutMs);
+    if (signal.aborted) {
+      throw new RerankerUnavailableError(`rerank aborted before start (${budgetMs}ms budget)`);
+    }
+
+    return await new Promise((resolve, reject) => {
+      let settled = false;
+      const onAbort = (): void => {
+        if (settled) return;
+        settled = true;
+        reject(new RerankerUnavailableError(`rerank timed out after ${budgetMs}ms`));
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+
+      this.deps.reranker.rerank(query, docs, topN).then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          signal.removeEventListener('abort', onAbort);
+          resolve(value);
+        },
+        (err: unknown) => {
+          if (settled) return;
+          settled = true;
+          signal.removeEventListener('abort', onAbort);
+          reject(err instanceof Error ? err : new Error(String(err)));
+        },
+      );
+    });
+  }
+
+  /**
+   * Emits Langfuse span + Prom histogram (+ fallback counter when outcome
+   * `fallback`). Both wrapped in `safeTrace` — telemetry outage cannot
+   * propagate to chat pipeline.
+   */
+  private emitRerankTelemetry(payload: {
+    searchTerm: string;
+    candidateCount: number;
+    topN: number;
+    latencyMs: number;
+    outcome: 'success' | 'fallback';
+    reason?: 'unavailable' | 'timeout' | 'error';
+    errorClass?: string;
+  }): void {
+    safeTrace('chat.rerank.metric', () => {
+      rerankLatencyMs.observe(
+        { caller: RERANK_CALLER_LABEL, outcome: payload.outcome },
+        payload.latencyMs,
+      );
+      if (payload.outcome === 'fallback' && payload.reason !== undefined) {
+        rerankFallbackTotal.inc({
+          caller: RERANK_CALLER_LABEL,
+          reason: payload.reason,
+        });
+      }
+    });
+
+    if (payload.outcome === 'fallback') {
+      logger.warn('reranker_fallback', {
+        caller: RERANK_CALLER_LABEL,
+        reason: payload.reason,
+        errorClass: payload.errorClass,
+        originalCount: payload.candidateCount,
+        queryHash: createHash('sha256').update(payload.searchTerm).digest('hex').slice(0, 16),
+      });
+    }
+
+    safeTrace('chat.rerank.span', () => {
+      const lf = getLangfuse();
+      const queryHash = createHash('sha256').update(payload.searchTerm).digest('hex').slice(0, 16);
+      lf?.trace({
+        name: 'chat.rerank',
+        metadata: {
+          'rerank.caller': RERANK_CALLER_LABEL,
+          'rerank.candidate_count': payload.candidateCount,
+          'rerank.top_n': payload.topN,
+          'rerank.latency_ms': payload.latencyMs,
+          'rerank.outcome': payload.outcome,
+          'rerank.query_hash': queryHash,
+          ...(payload.reason !== undefined ? { 'rerank.reason': payload.reason } : {}),
+        },
+      });
+    });
   }
 
   /**

@@ -38,12 +38,14 @@ const { getLangfuse: mockGetLangfuse } = require('@shared/observability/langfuse
   getLangfuse: jest.Mock;
 };
 
+import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
 } from '@modules/chat/domain/ports/knowledge-base.port';
+import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 
@@ -73,6 +75,8 @@ const defaultConfig = {
   kbTimeoutMs: 200,
   judgeTimeoutMs: 500,
   wsTimeoutMs: 1500,
+  // C9.13 — V1 default reranker is null; rerank phase fails-open to baseline.
+  rerankTimeoutMs: 800,
 };
 
 function makeService(overrides: {
@@ -101,7 +105,15 @@ function makeService(overrides: {
     }),
   } as unknown as WebSearchProvider;
 
-  return new KnowledgeRouterService({ kb, ws, judge, config: defaultConfig });
+  // V1 reranker = always-throw mock. KR exercises its fail-open branch and
+  // preserves baseline ordering. Span emission contract is unchanged.
+  const reranker: jest.Mocked<RerankerPort> = {
+    rerank: jest
+      .fn()
+      .mockRejectedValue(new RerankerUnavailableError('reranker disabled by configuration')),
+  };
+
+  return new KnowledgeRouterService({ kb, ws, judge, reranker, config: defaultConfig });
 }
 
 describe('chat.knowledge.lookup Langfuse span (T7.1)', () => {
