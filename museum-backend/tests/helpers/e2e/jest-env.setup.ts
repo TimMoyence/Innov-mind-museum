@@ -43,3 +43,9 @@ process.env.AUTH_EMAIL_SERVICE_KIND = process.env.AUTH_EMAIL_SERVICE_KIND ?? 'te
 // (`if (this.emailService && this.frontendUrl)`). Pin a placeholder so e2e
 // tests using TestEmailService actually capture a verification email.
 process.env.FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:8081';
+
+// PGDATABASE is required at env.ts module load (no fallback per 2026-05-18).
+// The e2e harness later overwrites with the testcontainer's actual db name —
+// this placeholder just keeps env.ts from throwing during eager top-level
+// imports before the harness runs.
+process.env.PGDATABASE = process.env.PGDATABASE ?? 'museum_e2e_placeholder';

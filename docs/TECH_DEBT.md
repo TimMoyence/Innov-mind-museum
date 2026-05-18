@@ -802,6 +802,38 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-44 — `docker-compose.dev.yml` divergence vs prod sur Redis AUTH (bruit BullMQ/ioredis)
+
+- [x] **Statut** : fermé 2026-05-18 — fix appliqué dans le même run d'audit qui l'a ouvert (`2026-05-18-audit-dev-backend-bullmq-noise`).
+- **Référence code** :
+  ```
+  museum-backend/docker-compose.dev.yml § redis   # avant fix : pas de --requirepass
+  museum-backend/deploy/docker-compose.prod.yml:328-349   # source de vérité (force --requirepass)
+  museum-backend/src/index.ts:65-72   # createRedisConnectionOptions(maxRetriesPerRequest:null, enableOfflineQueue:false)
+  ```
+- **Symptôme observable (avant fix)** : `docker logs dev-backend` produisait 143 erreurs / 24h `Error: Stream isn't writeable and enableOfflineQueue options is false` + 263 warnings `[WARN] This Redis server's 'default' user does not require a password, but a password was supplied`. Container répondait toujours à `/api/health` mais le bruit masquait les vraies erreurs Redis (défaut anti-enterprise-grade).
+- **Root cause** :
+  1. `.env` modifié post-container-start (drift 15h) → container live avait `NODE_ENV=production` + `REDIS_*` set, alors que `.env` actuel ne les contenait plus. Jamais `--force-recreate`.
+  2. Compose dev n'avait pas `--requirepass`, alors que prod le force. ioredis envoyait AUTH → Redis 7+ répondait avec un warn (AUTH-without-requirepass).
+  3. `Stream isn't writeable` = transient ioredis reconnect avec `enableOfflineQueue:false` (BullMQ-recommended Worker setting, donc correct côté code).
+- **Sprint d'origine** : `2026-05-18-audit-dev-backend-bullmq-noise` (audit /team architect-only).
+- **Effort estimé / réel** : 20 min estimé (UFR-019 corrigé) / 25 min réel (incl. compose + TD entry + RUN_LOCAL note).
+- **Comment fix a été appliqué** :
+  1. `museum-backend/docker-compose.dev.yml § redis` : ajout `command: [redis-server, --requirepass, ${REDIS_PASSWORD:-dev-redis-password}]` + healthcheck `redis-cli -a ... PING`.
+  2. `museum-backend/docker-compose.dev.yml § backend` : ajout `environment: { REDIS_HOST: redis, REDIS_PORT: 6379, REDIS_PASSWORD: ${REDIS_PASSWORD:-dev-redis-password}, REDIS_URL: redis://:...@redis:6379 }` + `depends_on: redis: service_healthy`.
+  3. Force-recreate : `docker compose -f museum-backend/docker-compose.dev.yml up -d --force-recreate redis backend`.
+  4. Verify : `docker logs dev-backend --since 5m 2>&1 | grep -cE "(Stream isn't writeable|password was supplied)"` → 0.
+- **Sentinel coverage ajoutée** (closing-the-loop défense en profondeur) :
+  - `scripts/sentinels/compose-parity.mjs` : vérifie que les flags critiques (`--requirepass`, `--appendonly`) présents en prod le sont aussi en dev pour chaque service partagé. Wired pre-commit Gate 7 + CI quality gate.
+  - `scripts/sentinels/dev-container-env-drift.sh` : compare `docker exec dev-backend printenv` vs `.env` actuel. Intégré dans `scripts/morning-check.sh`.
+- **Owner** : Tim (closed within the audit run).
+- **Liens** :
+  - Audit diagnostic : `.claude/skills/team/team-state/2026-05-18-audit-dev-backend-bullmq-noise/diagnostic.md` (482 lignes).
+  - Memory `feedback_zero_bypass` (case study 2026-05-17 S4-P0-02 dev-backend cassé).
+  - Adjacent TDs : TD-41/42/43 (W3 follow-ups commit `35c43988`).
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

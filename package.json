@@ -15,7 +15,9 @@
     "sentinel:idor-smoke": "node scripts/sentinels/idor-smoke.mjs",
     "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs",
     "sentinel:sentry-scrubber-parity": "node scripts/sentinels/sentry-scrubber-parity.mjs",
-    "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs"
+    "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs",
+    "sentinel:compose-parity": "node scripts/sentinels/compose-parity.mjs",
+    "sentinel:dev-container-env-drift": "bash scripts/sentinels/dev-container-env-drift.sh"
   },
   "devDependencies": {
     "husky": "^9.1.7"

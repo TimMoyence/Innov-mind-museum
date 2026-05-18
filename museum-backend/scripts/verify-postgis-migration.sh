@@ -22,6 +22,9 @@ DB_NAME="${POSTGIS_VERIFY_DB:-museum_pg_verify}"
 DB_USER="${POSTGIS_VERIFY_USER:-museum}"
 DB_PASS="${POSTGIS_VERIFY_PASS:-museum}"
 IMAGE="${POSTGIS_VERIFY_IMAGE:-postgis/postgis:16-3.5}"
+# Empty by default = native arch. On Apple Silicon (no upstream ARM64 manifest
+# for postgis/postgis), export POSTGIS_VERIFY_PLATFORM=linux/amd64.
+PLATFORM="${POSTGIS_VERIFY_PLATFORM:-}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -34,9 +37,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "--- starting $IMAGE on host port $HOST_PORT ---"
+echo "--- starting $IMAGE on host port $HOST_PORT ${PLATFORM:+(platform=$PLATFORM)}---"
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER_NAME" \
+  ${PLATFORM:+--platform="$PLATFORM"} \
   -e POSTGRES_DB="$DB_NAME" \
   -e POSTGRES_USER="$DB_USER" \
   -e POSTGRES_PASSWORD="$DB_PASS" \
@@ -52,9 +56,17 @@ for i in $(seq 1 30); do
 done
 docker exec "$CONTAINER_NAME" pg_isready -U "$DB_USER" -d "$DB_NAME"
 
+# Install pgvector — postgis/postgis ships without it, but the migration chain
+# includes AddArtworkEmbeddings (CREATE EXTENSION vector). Without this step the
+# migration:run aborts before reaching AddMuseumGeofence (the target of this
+# verification). postgis/postgis:16-3.5 is Debian bullseye + postgres-apt repo
+# is pre-configured, so the package is available without adding sources.
+echo "--- installing postgresql-16-pgvector ---"
+docker exec "$CONTAINER_NAME" sh -c 'apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector' >/dev/null
+
 export DB_HOST=localhost
 export DB_PORT="$HOST_PORT"
-export DB_NAME="$DB_NAME"
+export PGDATABASE="$DB_NAME"
 export DB_USER="$DB_USER"
 export DB_PASSWORD="$DB_PASS"
 export DB_SYNCHRONIZE=false
@@ -80,12 +92,12 @@ if [[ "$JSONB_PRESENT" != "0" ]]; then
 fi
 
 GIST_PRESENT=$(docker exec "$CONTAINER_NAME" psql -U "$DB_USER" -d "$DB_NAME" -tA -c \
-  "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='museums' AND indexname='IDX_museums_geofence'")
+  "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='museums' AND indexname='IDX_museums_geofence_gist'")
 if [[ "$GIST_PRESENT" != "1" ]]; then
-  echo "FAIL: GIST index IDX_museums_geofence not created"
+  echo "FAIL: GIST index IDX_museums_geofence_gist not created"
   exit 2
 fi
-echo "OK: GIST index IDX_museums_geofence present"
+echo "OK: GIST index IDX_museums_geofence_gist present"
 
 echo "--- pnpm migration:revert (revert the 4 W3 migrations in reverse order) ---"
 for i in 1 2 3 4; do

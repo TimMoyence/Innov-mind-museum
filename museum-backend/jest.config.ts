@@ -150,6 +150,10 @@ const config: Config.InitialOptions = {
         '<rootDir>/tests/e2e/',
         '<rootDir>/scripts/__tests__/',
       ],
+      // Pin PGDATABASE only — env.ts now requires it without fallback. Does not
+      // pin EXTRACTION_WORKER_ENABLED / CACHE_ENABLED (intentionally, see
+      // adjacent comment block).
+      setupFiles: ['<rootDir>/tests/helpers/jest-env-pgdatabase.setup.ts'],
     },
     {
       ...sharedProjectOptions,
