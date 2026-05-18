@@ -68,10 +68,10 @@ describe('llm-sections', () => {
     });
     const prompt = plan[0].prompt;
     // Quantity tune (1-4 range; 1-2 single-subject; 2-4 multi-subject) —
-    // applies to both the structured-output path and the legacy [META]
-    // fallback path. The single-subject cap (≤2) was tightened from the
-    // original "1-4" wording to align with promptfoo c2-enrichment Test 2
-    // (Mona Lisa expects 1..2 entries).
+    // applies to the structured-output path (the legacy fallback was retired
+    // C9.17). The single-subject cap (≤2) was tightened from the original
+    // "1-4" wording to align with promptfoo c2-enrichment Test 2 (Mona Lisa
+    // expects 1..2 entries).
     expect(prompt).toContain('1-4 short search queries');
     expect(prompt).toContain('single-subject answers');
     expect(prompt).toContain('comparative or multi-subject answers');
@@ -99,7 +99,7 @@ describe('llm-sections', () => {
     expect(summary.outputSchema?.schema).toBe(mainAssistantOutputSchema);
   });
 
-  it('drops the legacy [META] markup directive from the structured-output prompt', () => {
+  it('never emits a legacy JSON-tail directive in the summary prompt', () => {
     const plan = createLlmSectionPlan({
       locale: 'en-US',
       museumMode: false,
@@ -107,7 +107,7 @@ describe('llm-sections', () => {
       timeoutSummaryMs: 10000,
     });
     // Structured-output path is the default — schema enforces the shape, so
-    // the prompt MUST NOT instruct the model to emit a `[META]` block.
+    // the prompt MUST NOT instruct the model to emit a legacy JSON-tail block.
     expect(plan[0].prompt).not.toContain('[META]');
     expect(plan[0].prompt).not.toContain('"detectedArtwork":{');
     // But the structured directive that anchors the visitor reply field IS

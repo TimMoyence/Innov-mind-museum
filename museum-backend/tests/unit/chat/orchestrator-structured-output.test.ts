@@ -2,26 +2,28 @@
  * Verifies the structured-output fast path of {@link LangChainChatOrchestrator}
  * for default (non-walk) intent — C2 image-chat fix 2026-05.
  *
- * Bug history: gpt-4o-mini occasionally ignored the `[META] {json}` directive
- * embedded in the summary section prompt on the first turn, returning the
- * answer text without the trailing `[META]` block. The legacy parser then
- * extracted `metadata: {}`, dropping `suggestedImages` — the fan-out fetcher
- * never ran, no images were attached, promptfoo c2-enrichment regressed at
+ * Bug history (historical — legacy path retired C9.17): gpt-4o-mini
+ * occasionally ignored the legacy plain-text directive embedded in the
+ * summary section prompt on the first turn, returning the answer text
+ * without the trailing JSON-tail block. The legacy parser then extracted
+ * `metadata: {}`, dropping `suggestedImages` — the fan-out fetcher never
+ * ran, no images were attached, promptfoo c2-enrichment regressed at
  * 2/4 PASS.
  *
  * Fix: wire `model.withStructuredOutput(mainAssistantOutputSchema)` into the
  * default section invocation. OpenAI / Gemini honour
  * `response_format: json_schema` and return a parsed object; the orchestrator
- * re-stringifies it as `{ answer, ...metadata }` so the existing legacy
- * parser branch consumes it transparently.
+ * re-stringifies it as `{ answer, ...metadata }` so the runtime metadata
+ * extractor consumes it transparently.
  *
  * This file pins:
  *   1. Structured-output adapter is invoked when both the section ships a
  *      schema AND the model exposes `withStructuredOutput`.
  *   2. Fields produced by the schema (`text`, `suggestedImages`,
  *      `detectedArtwork`, etc.) make it to `OrchestratorOutput.metadata`.
- *   3. Models without `withStructuredOutput` fall back gracefully to the
- *      legacy text + [META] path.
+ *   3. Step B (C9.17) will pin the fail-closed behaviour when a section
+ *      ships an `outputSchema` but the model lacks `withStructuredOutput`.
+ *      Until then, the placeholder `it.todo(...)` documents the intent.
  */
 
 jest.mock('@src/config/env', () => ({
@@ -117,7 +119,10 @@ class FakeStructuredModel {
     this.returnValue = returnValue;
   }
 
-  withStructuredOutput(_schema: unknown, options?: { name?: string }): {
+  withStructuredOutput(
+    _schema: unknown,
+    options?: { name?: string },
+  ): {
     invoke: (messages: unknown, opts?: { signal?: AbortSignal }) => Promise<StructuredFakeReturn>;
   } {
     this.capturedSchemaName = options?.name;
@@ -135,38 +140,7 @@ class FakeStructuredModel {
 
   invoke = jest.fn(async () => {
     this.invokedLegacy += 1;
-    return Promise.resolve({
-      content: 'fallback text\n[META]\n{}',
-    });
-  });
-
-  stream = jest.fn();
-}
-
-/**
- * Fake model that exposes only `invoke` (no `withStructuredOutput`). The
- * orchestrator must fall back to the legacy text + [META] path.
- */
-class FakeLegacyModel {
-  invokedStructured = 0;
-  invokedLegacy = 0;
-
-  invoke = jest.fn(async () => {
-    this.invokedLegacy += 1;
-    return Promise.resolve({
-      content:
-        "Plain answer about the comparison.\n[META]\n" +
-        JSON.stringify({
-          suggestedImages: [
-            {
-              query: 'Monet Water Lilies',
-              description: 'Late series',
-              rationale: 'Shows the brushwork.',
-              caption: 'Water Lilies series',
-            },
-          ],
-        }),
-    });
+    throw new Error('legacy invoke path retired — see C9.17');
   });
 
   stream = jest.fn();
@@ -232,16 +206,13 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
     expect(result.metadata.suggestedImages).toBeUndefined();
   });
 
-  it('falls back gracefully to the legacy [META] path when withStructuredOutput is missing', async () => {
-    const model = new FakeLegacyModel();
-    const orchestrator = new LangChainChatOrchestrator({ model: model as never });
-
-    const result = await orchestrator.generate(makeInput());
-
-    expect(model.invokedStructured).toBe(0);
-    expect(model.invokedLegacy).toBe(1);
-    expect(result.text).toBe('Plain answer about the comparison.');
-    expect(result.metadata.suggestedImages).toHaveLength(1);
-    expect(result.metadata.suggestedImages?.[0].caption).toBe('Water Lilies series');
-  });
+  // Step B (C9.17) — once the legacy plain-text + JSON-tail path is removed
+  // from `invokeSection`, a section that ships an `outputSchema` against a
+  // model lacking `withStructuredOutput` MUST fail closed (typed error or
+  // `system:missing-structured-output` citation marker, mirroring
+  // `generateWalk`). Step A only documents the intent; the assertion lands
+  // with the production deletion in Step B.
+  it.todo(
+    'fails closed when section has outputSchema but model lacks withStructuredOutput (Step B)',
+  );
 });
