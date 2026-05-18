@@ -1,0 +1,13 @@
+# UFR-022 lib-docs — local snapshot cache, untracked, regenerated on demand.
+# Only INDEX.json + README.md + .gitignore + */LESSONS.md are tracked
+# (also enforced by the root .gitignore). This file is the second line of
+# defense and the per-folder documentation of intent.
+
+# Per-lib generated artifacts (untracked)
+*/VERSION
+*/snapshot-*.md
+*/sources.json
+*/PATTERNS.md
+
+# Anything else under a lib folder that isn't LESSONS.md
+# (root .gitignore handles the whitelist; this is belt-and-suspenders)

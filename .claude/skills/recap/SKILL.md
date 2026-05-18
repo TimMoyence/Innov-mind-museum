@@ -1,7 +1,7 @@
 ---
 name: recap
-description: "/recap — Daily Recap Musaium"
-last-verified: 2026-05-16
+description: "/recap — Daily Recap Musaium (UFR-022 fresh-context aware)"
+last-verified: 2026-05-18
 ---
 
 # /recap — Daily Recap Musaium
@@ -72,3 +72,7 @@ Files:    [N] fichiers modifies aujourd'hui
 - NE PAS ajouter de "learnings" ou "patterns" — c'est le role de /team
 - NE PAS modifier de fichier — ce skill est 100% lecture seule + formatage
 - Si aucun commit aujourd'hui : le dire clairement ("0 commits aujourd'hui")
+
+## UFR-022 — Fresh-context contract
+
+Skill 100% standalone (jamais invoque par /team comme sub-phase). Fresh-context formellement non requis. Mais si invoque inside un /team run (rare, e.g. recap de fin de cycle), premiere reponse : `BRIEF-ACK: <sha256-of-args>` ; refus + `BLOCK-CONTEXT-LEAK` si message history pollue par une autre phase du meme RUN_ID.

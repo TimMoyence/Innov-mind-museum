@@ -1,7 +1,7 @@
 {
-  "version": "2.0",
+  "version": "2.1",
   "description": "Regles non-negociables issues des retours utilisateur cumules (memory feedback_*). Reference unique pour tous les agents. Violation = FAIL immediat sauf marquage `deprecated: true`.",
-  "lastUpdated": "2026-05-15",
+  "lastUpdated": "2026-05-18",
   "families": {
     "honesty-truth": "Verite, verification prealable, declaration des deviations, anti-fabrication. Socle du systeme — toute autre famille s'effondre sans elle.",
     "quality-doctrine": "Anti-raccourci, anti-duplication, anti-empilement. Solution qualite > solution rapide.",
@@ -190,6 +190,16 @@
       "applyWhen": "Toute operation git commit / git push / equivalent qui touche au hooks system"
     },
     {
+      "id": "UFR-022",
+      "family": "orchestration",
+      "source": "feedback_fresh_context_five_phases_2026_05_18",
+      "proseCanonical": "CLAUDE.md § Fresh-context 5-phase workflow (UFR-022) — twinned canonical prose with full forbidden/required/lib-docs/why breakdown.",
+      "rule": "Toute modif code applicatif + tests DOIT passer par 5 phases en fresh-context : spec (architect) -> plan (architect) -> red (editor, tests qui FAIL) -> green (editor, code rend test vert, FROZEN-TEST byte-for-byte) -> review (reviewer). Chaque phase = un agent spawne fresh via Agent tool, zero message d'une autre phase dans son context. Si un agent voit dans son history des messages d'une autre phase du meme RUN_ID -> BLOCK-CONTEXT-LEAK + refus. Phase Green NE PEUT PAS modifier un seul byte des tests crees en Red ; hook post-edit-green-test-freeze.sh re-hash sha256 chaque test apres edit, mismatch -> exit 1 STOP. Si agent green pense test bugge -> emit BLOCK-TEST-WRONG <file>:<line> <reason> SANS toucher le fichier, dispatcher re-spawn fresh phase 3. Tout agent red/green/reviewer DOIT consulter lib-docs/<lib>/PATTERNS.md + LESSONS.md pour chaque lib importee par le diff ; cache stale (>14j OU version drift package.json) declenche refresh obligatoire via doc-fetcher + doc-curator (double fresh agents) ; WebSearch fail -> WARN + use stale + tag rapport, pas de BLOCK. Reviewer rejection loop ILLIMITE (zero cap, zero warning surface). Cap 2 corrective loops s'applique UNIQUEMENT aux intra-phase hook failures (lint/tsc/test fails dans une meme phase), pas aux reviewer rejections. Mode unique enterprise-grade — plus de selecteur micro/standard/enterprise/mode bypass. Exemption auto si diff = 0 fichier code applicatif (pure-doc edits markdown/docs/config only).",
+      "severity": "BLOCK",
+      "applyWhen": "Toute creation/modification de fichier matchant museum-backend/src/**/*.ts, museum-frontend/{app,features,shared,components}/**/*.{ts,tsx}, museum-web/src/**/*.{ts,tsx} OU tests associes",
+      "exceptions": "Diff = 0 fichier code applicatif (markdown/docs/config only). Rename prive pur avec gitnexus_impact upstream=0 callers. Bump version manifest pur (package.json/lock files sans code touche). Edit .env*, .github/workflows/**, docs/**, lib-docs/<lib>/LESSONS.md (human-edited)."
+    },
+    {
       "id": "UFR-021",
       "family": "test-discipline",
       "source": "feedback_post_feature_test_coverage_2026_05_17",
@@ -206,6 +216,7 @@
     "note": "Memory is local/non-versioned. This JSON encodes the feedback_* memory content as portable rules. Deprecated UFRs are kept for ID stability (no renumbering) but their enforcement has moved elsewhere — see replacedBy."
   },
   "changelog": [
+    { "version": "2.1", "date": "2026-05-18", "changes": "Add UFR-022 (fresh-context 5-phase workflow + frozen-test + lib-docs obligation + mode unique enterprise + reviewer rejection loop illimite). Amends V12 SKILL.md (mode unique, Step 4/5 split, cost gate telemetry-only) and 13 agents/skills files (fresh-context contract clause)." },
     { "version": "2.0", "date": "2026-05-15", "changes": "Add `family` taxonomy (6 families). Add UFR-015 (no feature flags pre-launch), UFR-016 (bury dead code), UFR-017 (check tests before bug classification), UFR-018 (check configs before assuming), UFR-019 (no solo-dev estimates). Deprecate UFR-009 (replaced by env-policy sentinel) and UFR-011 (replaced by CLAUDE.md gotcha + memory). Sharpen UFR-003 (eslint-disable justification format) and UFR-006 (dev methodology distinct from UFR-005)." },
     { "version": "1.0", "date": "2026-05-02", "changes": "Initial 13 UFRs. UFR-014 added 2026-05-15 in v1.x patch (deviation auto-declaration)." }
   ]

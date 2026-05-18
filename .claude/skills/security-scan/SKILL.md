@@ -1,7 +1,7 @@
 ---
 name: security-scan
-description: "/security-scan — Audit securite leger"
-last-verified: 2026-05-16
+description: "/security-scan — Audit securite leger (UFR-022 fresh-context aware)"
+last-verified: 2026-05-18
 ---
 
 # /security-scan — Audit securite leger
@@ -95,9 +95,17 @@ Pour les findings CRITICAL/HIGH, lire le contexte (10 lignes avant/apres) pour e
 
 Phase 3 VERIFIER : `/security-scan changed` execute automatiquement. FAIL si findings CRITICAL ou HIGH.
 
+## UFR-022 — Fresh-context contract
+
+Si invoque dans le cadre d'un run `/team` (RUN_ID set) :
+- Premiere reponse : `BRIEF-ACK: <sha256-of-args>`.
+- Si message history contient des artefacts d'une autre phase du meme RUN_ID → `BLOCK-CONTEXT-LEAK` + refus.
+- Si la diff touche une lib auth/crypto/llm (jsonwebtoken, bcryptjs, jose, langchain, openai, anthropic, etc.), consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour les patterns securite documentes ; citer `PATTERNS.md:<line>` quand un finding match un anti-pattern documente.
+
 ## REGLES
 
 1. Zero faux positif — chaque finding doit etre verifiable avec evidence
 2. PE-006 : les .env locaux gitignores ne sont PAS des vulnerabilites
 3. Context obligatoire — lire le code autour avant de rapporter
 4. CRITICAL/HIGH = bloqueur deploy, MEDIUM/LOW = backlog
+5. UFR-022 : fresh-context si invoque depuis /team, lib-docs consulte pour libs auth/crypto/llm.

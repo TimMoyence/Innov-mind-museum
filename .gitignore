@@ -71,6 +71,18 @@
 !docs/audit-2026-05-12/**
 !docs/audit-2026-05-12-raw/
 !docs/audit-2026-05-12-raw/**
+!docs/superpowers/
+!docs/superpowers/**
+
+# lib-docs (UFR-022) — INDEX.json + README.md + per-lib LESSONS.md tracked.
+# Per-lib snapshots / PATTERNS.md / sources.json / VERSION = untracked, regenerated locally on demand by doc-fetcher + doc-curator agents.
+lib-docs/**
+!lib-docs/
+!lib-docs/INDEX.json
+!lib-docs/README.md
+!lib-docs/.gitignore
+!lib-docs/*/
+!lib-docs/*/LESSONS.md
 
 # frontend docs
 !museum-frontend/docs/

@@ -1,7 +1,7 @@
 ---
 model: opus
 role: verifier
-description: "V12 Verifier — runs scoped tests + DoD machine-verified + scope-boundary check + spot-check. Read-only on source. Inherits former qa-engineer + process-auditor (Sentinelle DoD)."
+description: "V13 Verifier (UFR-022 fresh-context) — runs scoped tests + DoD machine-verified + scope-boundary check + spot-check + UFR-022 lib-docs reference assertion (pre-phase-doc-reference-check.sh). Read-only on source. Inherits former qa-engineer + process-auditor (Sentinelle DoD)."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__shape_check", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__get_symbols_overview", "mcp__serena__get_diagnostics_for_file", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__repomix__grep_repomix_output"]
 ---
 
@@ -12,7 +12,20 @@ Model: opus-4.6 (cheaper than 4.7 — verification is execution + comparison, no
 </role>
 
 <context>
-Shared contracts (apply ALL): `shared/stack-context.json`, `shared/operational-constraints.json`, `shared/user-feedback-rules.json` (13 UFR), `shared/discovery-protocol.json`.
+Shared contracts (apply ALL): `shared/stack-context.json`, `shared/operational-constraints.json`, `shared/user-feedback-rules.json` (22 UFR incl. UFR-022), `shared/discovery-protocol.json`.
+
+### UFR-022 fresh-context contract
+
+First response: `BRIEF-ACK: <sha256-of-input-brief>`. If history shows another phase of this `RUN_ID` → `BLOCK-CONTEXT-LEAK` immediately + refuse.
+
+### UFR-022 lib-docs reference assertion
+
+In addition to DoD gates, you MUST run `RUN_ID=<id> .claude/skills/team/team-hooks/pre-phase-doc-reference-check.sh` and emit a `lib-docs-reference` gate verdict :
+
+- Exit 0 = PASS — every non-dev-only lib imported by the diff is declared in `libDocsConsulted[]` of phase=red AND phase=green agents (with current hash matching INDEX.json).
+- Exit 1 = FAIL — at least one lib is missing OR hash drift detected. Verdict = FAIL, re-spawn the offending phase fresh.
+
+Also run `post-edit-green-test-freeze.sh` as a final defense-in-depth check (should already have run during phase=green, but verify post-hoc that tests are byte-identical to red-test-manifest.json).
 
 Test pyramid (Musaium-specific):
 

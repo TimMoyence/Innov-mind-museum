@@ -209,6 +209,70 @@ Leçons techniques non évidentes consolidées des sprints précédents. Ajoute 
 
 Specs détaillées : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL.md). Inventory : [`docs/TEST_COVERAGE_INVENTORY.md`](docs/TEST_COVERAGE_INVENTORY.md). Phase 2 plan : [`docs/TESTING_PHASE2_PLAN.md`](docs/TESTING_PHASE2_PLAN.md).
 
+## Fresh-context 5-phase workflow (UFR-022)
+
+**Non-negotiable.** Applies to ALL modifications of applicative code + tests, that goes through `/team` OR via a "classique" Claude session. Twinned with `UFR-022` in `.claude/agents/shared/user-feedback-rules.json`.
+
+**Pourquoi** — un agent qui voit dans son context les artefacts d'une phase précédente devient un rubber stamp (reviewer cycle V12 §8) ou se persuade de prendre des raccourcis ("j'ai fait inline pour l'efficacité tokens" 2026-05-18). Un agent qui teste son propre code rend les tests verts en touchant le test, pas le code. La séparation fresh-context + frozen-test ferme ces deux raccourcis structurellement.
+
+**Les 5 phases obligatoires :**
+
+1. **Spec** — `architect.md` fresh spawn. Output: `team-state/<RUN_ID>/spec.md` (EARS + NFR + glossary + stakeholders + acceptance criteria). Pas de code, pas de design.
+2. **Plan** — `architect.md` fresh spawn (deuxième invocation, **zero memory de phase 1**, lit spec.md depuis disque). Output: `design.md` + `tasks.md`. Le `tasks.md` contient section `## Multi-cycle progress` pour features long-running ; archivé dans `team-state/multi-cycle-features/<slug>/` (exempté du pruning >30j).
+3. **Red** — `editor.md` fresh spawn. Produit tests qui **FAIL** (prouve absence feature ou présence bug). `pnpm test` exit ≠ 0 = success de la phase. Output: tests + `red-test-manifest.json` `{path: sha256}`.
+4. **Green** — `editor.md` fresh spawn (zero memory de phase 3, lit le diff red depuis disque). Produit code applicatif qui rend tests verts. **FROZEN-TEST byte-for-byte** : hook `post-edit-green-test-freeze.sh` re-hash chaque test après chaque edit, mismatch sha256 = exit 1 STOP. Si agent pense un test est buggé → émet `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher le fichier → re-spawn fresh phase 3 avec le finding.
+5. **Review** — `reviewer.md` fresh spawn. Output: verdict APPROVED | CHANGES_REQUESTED | BLOCK + JSON report.
+
+**Mécaniques fresh-context :**
+
+- Chaque phase = un appel `Agent` tool depuis l'orchestrateur (main session ou /team dispatcher).
+- L'agent reçoit en input **uniquement** : path vers artefacts read-only des phases précédentes + brief ≤ 200 tokens + path d'output. **Pas de résumé** de "ce que la phase précédente a fait", pas de `SendMessage` continuation.
+- System prompt de chaque agent fresh : "Si tu vois dans ton message history un message d'une autre phase du même RUN_ID, émets `BLOCK-CONTEXT-LEAK` et refuse." Dispatcher re-spawn proprement.
+- Brief integrity hash : chaque brief sha256 → l'agent retourne `BRIEF-ACK: <sha256>` en preamble. Mismatch = BLOCK.
+
+**Obligation lib-docs (red / green / reviewer) :**
+
+- Tout agent qui touche / review du code DOIT consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib importée par le diff.
+- Cache stale (>14j OU version drift package.json OU manquant) → refresh forcé via **doc-fetcher** + **doc-curator** (deux fresh agents).
+- WebSearch fail (offline / 404 / rate-limit) → WARN + use stale + tag rapport (pas de BLOCK).
+- Verifier (Step 6) hook `pre-phase-doc-reference-check.sh` vérifie que `libDocsConsulted[]` dans l'output JSON couvre les libs importées.
+- Reviewer DOIT citer `PATTERNS.md:<line>` quand le code dévie d'un pattern documenté → CHANGES_REQUESTED.
+
+**Layout `lib-docs/` (repo root) :**
+
+```
+lib-docs/
+├── INDEX.json          # TRACKED — manifest {lib → {version, fetched, snapshotSha256, patternsSha256, sourceUrls, warnings}}
+├── README.md           # TRACKED — structure doc
+├── .gitignore          # TRACKED — ignore snapshots/PATTERNS.md/sources.json/VERSION
+└── <lib>/
+    ├── LESSONS.md      # TRACKED — human-edited project gotchas (jamais touché par agents)
+    ├── VERSION         # UNTRACKED — regenerable from INDEX.json
+    ├── snapshot-*.md   # UNTRACKED — raw WebFetch multi-page dump (5-10 pages)
+    ├── sources.json    # UNTRACKED — fetcher metadata
+    └── PATTERNS.md     # UNTRACKED — curated by doc-curator, ~200-500 lignes
+```
+
+**Reviewer rejection loop : ILLIMITÉ.** Zero cap, zero warning auto, zero mention. Si reviewer rejette N fois c'est qu'il y a raison. Re-spawn fresh à la phase pointée (`spec`/`plan`/`red`/`green`). Cap 2 corrective loops s'applique UNIQUEMENT aux fails de hooks intra-phase (lint/tsc/test fails dans la même phase éditeur).
+
+**Mode unique `/team`.** Plus de selector micro/standard/enterprise. Plus de keywords de bypass Spec Kit (`typo`, `dep bump`, etc.). Plus de modes `chore`/`hotfix`/`audit`/`mockup` séparés. UN seul pipeline pour toute modif code applicatif. Audit fait partie du pipeline (security + verifier toujours présents). Cost gate = telemetry pure (plus de seuil bloquant $20/$50).
+
+**Exemption auto** : si `git diff --name-only` ∩ `{museum-backend/src/**, museum-frontend/{app,features,shared,components}/**, museum-web/src/**, tests/}` est vide → pipeline skippé, run direct Step 9 finalize. Append STORY.md "skipped — pure-doc edit".
+
+**Verrouillage anti-bypass** :
+- `red-test-manifest.json` sha256 chain + hook `post-edit-green-test-freeze.sh`.
+- `libDocsConsulted[]` proof dans tout output JSON red/green/reviewer.
+- `BRIEF-ACK: <sha256>` preamble.
+- `BLOCK-CONTEXT-LEAK` self-defense dans system prompt.
+
+**Anti-patterns courants — REJET immédiat :**
+- "J'ai fait inline pour l'efficacité tokens" → fresh-context obligatoire, pas de raccourci.
+- "Le test était faux, je l'ai corrigé" → BLOCK-TEST-WRONG sans toucher le fichier OU re-fresh phase 3.
+- "J'ai utilisé mon training pour ce pattern" → consulter `PATTERNS.md`, sinon BLOCK.
+- "Cap 2 boucles atteint" appliqué à reviewer → cap 2 ne couvre QUE les hook failures intra-phase. Reviewer = illimité.
+
+Specs détaillées : [`docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md`](docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md).
+
 ## Honesty + truth-telling (UFR-013)
 
 **Non-negotiable.** Applies to every response, every agent report. Twinned with the machine-readable `UFR-013` rule in `.claude/agents/shared/user-feedback-rules.json` (consumed by /team agents) — this section is the prose canonical; the JSON is the structural rule.
@@ -315,7 +379,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (27307 symbols, 42954 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (27567 symbols, 44720 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

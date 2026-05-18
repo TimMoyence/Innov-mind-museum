@@ -1,7 +1,7 @@
 ---
 name: test-writer
-description: "/test-writer — Generateur de tests cible"
-last-verified: 2026-05-16
+description: "/test-writer — Generateur de tests cible (UFR-022 fresh-context aware)"
+last-verified: 2026-05-18
 ---
 
 # /test-writer — Generateur de tests cible
@@ -85,7 +85,19 @@ cd museum-web && pnpm test -- <test-file>
 
 ## INTEGRATION /team
 
-Phase 2.5 REGRESSION : si les agents DEV n'ont pas livre de tests pour les fichiers modifies, le Tech Lead invoque `/test-writer changed` comme fallback.
+`/team` (UFR-022) execute la phase=red via editor.md fresh-context, pas via /test-writer. `/test-writer` reste utilisable en standalone (couverture ad-hoc, regression fallback) mais NE remplace PAS la phase=red du pipeline UFR-022.
+
+Si invoque dans le contexte d'un run /team, ce skill DOIT :
+- Emit `BRIEF-ACK: <sha256-of-args>` en preamble.
+- Refuser et emit `BLOCK-CONTEXT-LEAK` si message history contient des artefacts d'une autre phase du meme RUN_ID.
+- Inscrire les tests produits dans `team-state/$RUN_ID/red-test-manifest.json` (sha256 par path) si la variable RUN_ID est definie.
+
+## UFR-022 — Fresh-context contract
+
+Quand ce skill produit des tests dans le cadre d'un pipeline /team phase=red :
+- Les tests doivent FAIL apres generation (test rouge prouve l'absence de feature ou la presence du bug).
+- Inscrire `red-test-manifest.json` `{path: sha256}` pour chaque test cree/modifie.
+- La phase=green qui suit ne pourra PAS modifier ces tests (frozen-test enforce par `post-edit-green-test-freeze.sh`).
 
 ## REGLES
 
@@ -93,3 +105,4 @@ Phase 2.5 REGRESSION : si les agents DEV n'ont pas livre de tests pour les fichi
 2. JAMAIS de `as any` dans les mocks — `jest.Mocked<T>` obligatoire
 3. tsc --noEmit DOIT passer sur les fichiers test crees
 4. Un test qui passe meme si on supprime le code teste = test inutile = FAIL
+5. UFR-022 : si invoke dans un /team run, tests DOIVENT FAIL apres generation (phase=red), et `red-test-manifest.json` ecrit avec leur sha256.

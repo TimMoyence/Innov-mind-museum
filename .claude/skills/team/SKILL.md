@@ -1,36 +1,41 @@
 ---
-description: 'SDLC multi-agents Musaium — orchestrateur enterprise-grade avec Agent Teams natifs, parallelisme reel, quality gates automatises, user feedback rules, etat durable v12'
-argument-hint: '[type?:feature|bug|mockup|refactor|hotfix|chore|audit] [description] | resume:<run-id>'
+description: 'SDLC multi-agents Musaium — orchestrateur enterprise-grade UNIQUE MODE (UFR-022) avec fresh-context 5-phase + frozen-test + lib-docs obligation + reviewer rejection loop illimité. Plus de selecteur de pipeline ; chaque modif code applicatif passe par spec → plan → red → green → verify → security → review → documenter.'
+argument-hint: '[description] | resume:<run-id> | roadmap:rotate | learning:review | compose:<skill1,skill2>'
 ---
 
-# /team v12 — Orchestrateur SDLC Musaium
+# /team v13 — Orchestrateur SDLC Musaium (mode unique UFR-022)
 
-> **Reference unique** : `team-sdlc-index.md` pour la table de verite (pipelines, agents, protocoles, templates, UFR, gates, skills).
-> **Roadmap orchestrateur** : `docs/ROADMAP_TEAM.md` (v13 OKR cost+quality+spec-kit-mandatory).
+> **Reference unique** : `team-sdlc-index.md` pour la table de verite (agents, protocoles, templates, UFR, gates, skills).
+> **Roadmap orchestrateur** : `docs/ROADMAP_TEAM.md` (v13 OKR cost+quality+UFR-022).
 > **Roadmap produit** : `docs/ROADMAP_PRODUCT.md` (features NOW/NEXT/LATER).
+> **UFR-022 design** : `docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md`.
 
-Dispatcher avec etat durable (`team-state/<run-id>/`), Spec Kit (spec → design → tasks), handoffs structures (≤200 tokens), hooks deterministes (lint/tsc), telemetry Langfuse, all-Opus sauf Documenter (Sonnet — cf. ROADMAP_TEAM T1.3).
+Dispatcher avec etat durable (`team-state/<run-id>/`), 5-phase fresh-context obligatoire (spec → plan → red → green → review), handoffs structures (≤200 tokens), hooks deterministes (lint/tsc/freshness/freeze/reference), telemetry Langfuse, all-Opus.
 
-**Roadmap consumption** : à chaque cycle, dispatcher lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md` pour piocher l'item NOW à exécuter (auto-consolidation T1.6 en cours de wire). Au merge feature → coche `[x]` sur item correspondant. Fin de sprint → réécriture complète des 2 ROADMAPs.
+**Mode unique enterprise-grade (UFR-022).** Plus de selecteur micro/standard/enterprise. Plus de keywords de bypass Spec Kit. Plus de modes chore/hotfix/audit/mockup. UN seul pipeline pour toute modif code applicatif. Exemption auto si diff = 0 fichier code (pure-doc edit) detecte par `pre-phase-pure-doc-check.sh`.
+
+**Roadmap consumption** : à chaque cycle, dispatcher lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md` pour piocher l'item NOW à exécuter. Au merge feature → coche `[x]` sur item correspondant. Fin de sprint → réécriture complète des 2 ROADMAPs.
 
 ---
 
 ## REGLES ABSOLUES
 
 1. NE JAMAIS avancer sans gates PASS du pipeline
-2. Tous agents en `model: opus-4.7` (architect, reviewer) ou `opus-4.6` (editor, verifier, security, documenter) — UFR-010 sans exception (T1.3 Sonnet swap reverted 2026-05-14, ADR-029 amende)
+2. Tous agents en `model: opus-4.7` (architect, reviewer) ou `opus-4.6` (editor, verifier, security, documenter, doc-fetcher, doc-curator) — UFR-010 sans exception
 3. Agents ne commitent PAS — seul le Tech Lead git add/commit/push
 4. Agents n'ecrivent PAS dans `team-knowledge/` ni `team-reports/`
-5. Agents respectent les 13 UFR (`shared/user-feedback-rules.json`)
-6. Cap 2 boucles correctives → escalade utilisateur (V12 §8)
+5. Agents respectent les 22 UFR (`shared/user-feedback-rules.json`)
+6. **UFR-022 fresh-context 5-phase obligatoire** : chaque phase (spec / plan / red / green / review) = un Agent spawn fresh, zero message d'une autre phase dans son context. `BRIEF-ACK: <sha256>` premiere reponse ; `BLOCK-CONTEXT-LEAK` si leak detecte. Verifier hook `pre-phase-doc-reference-check.sh` cross-check `libDocsConsulted[]`.
 7. Etat durable obligatoire : tout run cree `team-state/<run-id>/state.json`
 8. Handoffs entre agents = JSON ≤200 tokens (briefs, refs > inline content)
 9. Pas de critic-agent pour lint/tsc/tests : delegue aux hooks `team-hooks/`
-10. Sentinelle = role `verifier` (DoD machine-verified, scope-boundary, spot-check, anti-hallucination) + role `reviewer` (fresh-context semantic review). Process-auditor v4 fusionne dans verifier.
+10. Sentinelle = role `verifier` (DoD machine-verified, scope-boundary, spot-check, anti-hallucination, lib-docs-reference assertion) + role `reviewer` (fresh-context semantic review, lib-docs PATTERNS.md compliance, frozen-test cross-check). Process-auditor v4 fusionne dans verifier.
 11. **Honnetete absolue (UFR-013) :** interdit de mentir, fabriquer, pretendre avoir verifie sans verifier, masquer un echec. En cas de doute → WebSearch / WebFetch / Read le code reel AVANT de repondre. "Je ne sais pas" est une reponse valide. Toute regression / test failure / erreur DOIT etre rapportee verbatim, sans minimisation.
-12. **Parallélisme = READ-ONLY uniquement (V12 §1 #1) :** spawn agents en parallèle UNIQUEMENT pour audit/research/investigation (verifier, security, reviewer, architect mode "explore"). TOUS les writes (editor, documenter) sont sérialisés. Cognition Labs + Anthropic + LangGraph convergent : context collapse + race conditions sur les writes parallèles. Max 5 sub-agents read-only en parallèle (au-delà : synthesis cost > savings).
-13. **Reviewer JAMAIS dans contexte editor (V12 §8) :** le reviewer DOIT être spawné via Agent tool fresh-context, jamais via SendMessage continuation. Si fuite contexte détectée → BLOCK-CONTEXT-LEAK + re-spawn.
-14. **Cap 2 boucles correctives ENFORCED (V12 §8) :** `state.json.telemetry.correctiveLoops >= 2` → dispatcher STOP + escalade user. Pas de bypass. Voir Step 5 CAP MECHANISM.
+12. **Parallélisme = READ-ONLY uniquement :** spawn agents en parallèle UNIQUEMENT pour audit/research/investigation read-only. TOUS les writes serialises. Max 5 sub-agents read-only en parallèle. Doc-fetcher peut paralleliser par lib (read-only sur source) ; doc-curator peut suivre, en parallele aussi (sa write zone est par-lib disjointe).
+13. **Tout agent JAMAIS dans contexte d'une autre phase (UFR-022) :** spawn via Agent tool fresh-context, jamais via SendMessage continuation. Fuite detectee → BLOCK-CONTEXT-LEAK + re-spawn proprement.
+14. **Cap 2 boucles correctives UFR-022-ament : intra-phase uniquement.** `state.json.telemetry.intraPhaseHookLoops >= 2` (lint/tsc/test fails dans la MEME phase editeur) → STOP + escalade user. **Reviewer rejection loop = ILLIMITE** (`state.json.telemetry.reviewerRejectionLoops` purement telemetry, zero cap, zero warning auto). Si reviewer rejette N fois c'est qu'il y a raison ; re-spawn fresh la phase pointee (spec/plan/red/green).
+15. **Lib-docs obligation (UFR-022)** : agent red/green/reviewer DOIT consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib non-dev-only importee par le diff. Cache stale (>14j OU version drift OU manquant) declenche doc-fetcher + doc-curator (double fresh agents). WebSearch fail → WARN + use stale + tag. Verifier hook BLOCK si `libDocsConsulted[]` ne couvre pas les imports.
+16. **Frozen-test (UFR-022)** : phase Red ecrit `red-test-manifest.json` `{path: sha256}` ; phase Green ne peut pas modifier un byte d'un test du manifest. Hook `post-edit-green-test-freeze.sh` enforce. Mismatch = STOP. Si Green pense test bugge → `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher, re-spawn fresh phase Red.
 
 ---
 
@@ -61,46 +66,48 @@ Si INIT :
 2. mkdir team-state/$RUN_ID/ et team-state/$RUN_ID/handoffs/
 3. cp team-templates/STORY.md.tmpl       → team-state/$RUN_ID/STORY.md
 4. Capturer .startCommit = git rev-parse HEAD
-5. Write state.json initial (version: 1, status: "initializing", startCommit)
+5. Write state.json initial (version: 1, status: "initializing", startCommit, mode: "standard", pipeline: "enterprise")
 6. Set RUN_ID env pour tous les hooks/agents downstream
-7. Pruning : supprimer team-state/<run-id>/ dont updatedAt > 30 jours
-8. Roadmap context loader (T1.6) :
+7. Pruning : supprimer team-state/<run-id>/ dont updatedAt > 30 jours (sauf team-state/multi-cycle-features/** qui est exempte du pruning)
+8. **Pure-doc exemption check (UFR-022)** :
+     RUN_ID=$RUN_ID .claude/skills/team/team-hooks/pre-phase-pure-doc-check.sh
+   - Exit 0 + marker `pure-doc-skip.marker` ecrit → mode = "pure-doc-skip", JUMP directement Step 9 finalize (skip all phases 1-8).
+   - Exit 0 sans marker → diff applicatif present, continuer pipeline complet.
+   - Exit 1 → diff vide, BLOCK : "rien a executer, ajoute des changes au working tree".
+9. Roadmap context loader (T1.6) :
      RUN_ID=$RUN_ID .claude/skills/team/team-hooks/pre-cycle-roadmap-load.sh
    - Produit team-state/$RUN_ID/roadmap-context.json (lecture-seule).
    - verdict=PASS attendu ; verdict=WARN tolere (roadmap absente → arrays vides, dispatch continue).
    - Architect peut consulter ce JSON pour cadrer le scope (non-bloquant si absent).
+10. **Multi-cycle features check (UFR-022 §9)** :
+     - Scan `team-state/multi-cycle-features/*/tasks-latest.md` pour un slug matching la description.
+     - Si match → charger le tasks-latest.md, l'inclure dans le brief de phase=plan, et la phase=plan amendera "Cycles completed" + "Acceptance criteria".
 ```
 
-### Step 1 — Parse & Classify
+### Step 1 — Parse description (UFR-022 mode unique)
 
 ```
-1. Extraire mode (explicite ou infere) : feature|bug|mockup|refactor|hotfix|chore|audit
-2. Extraire description
-3. Determiner scope : backend-only | frontend-only | full-stack | infra
-4. Si ambiguite → demander a l'utilisateur (BLOCK le run)
+1. Extraire description (tout l'argv apres le RUN_ID disambiguation)
+2. Determiner scope : backend-only | frontend-only | full-stack | infra (informatif seulement, plus de pipeline branching)
+3. Si description vide ou ambiguite extreme → demander a l'utilisateur (BLOCK le run)
 ```
 
-### Step 2 — Select Pipeline
+Plus de selecteur de mode (`feature|bug|mockup|refactor|hotfix|chore|audit` retires). Plus de selecteur de pipeline (`micro|standard|enterprise` retires). Le pipeline est UNIQUE et fixe : 9 phases obligatoires (spec, plan, doc-freshness, red, green, verify, security, review, documenter). Exemption auto via Step 0 §8 pure-doc-check si diff = 0 code file.
 
-Lire `team-protocols/sdlc-pipelines.md`. Classification automatique :
-```
-micro:      ≤5 fichiers ET ≤200 lignes ET single-scope
-standard:   6-20 fichiers OU multi-scope OU interface publique modifiee
-enterprise: 20+ fichiers OU cross-module OU migration DB OU security-sensitive
-```
+### Step 2 — REMOVED (UFR-022 : mode unique, plus de pipeline selector)
 
-### Step 2.5 — Cost Estimate Gate (T1.1 ROADMAP_TEAM — KR1)
+Step 2 historique (select pipeline micro/standard/enterprise) supprime. Le pipeline est toujours le pipeline complet 9-phase.
 
-Pre-run forecast obligatoire AVANT context loading. Bloque le run si l'estimation échoue.
+### Step 2.5 — Cost Estimate Telemetry (T1.1 KR1 — UFR-022 amende : telemetry only, no block)
+
+Pre-run forecast collecte pour audit hebdo KR1, **sans threshold bloquant**.
 
 ```
-1. Determiner agent list selon pipeline :
-   - micro:      architect,editor (skip verifier — hooks suffisent)
-   - standard:   architect,editor,verifier,reviewer
-   - enterprise: architect,editor,verifier,security,reviewer,documenter
+1. Agent list fixe (mode unique) :
+   architect (×2 — spec + plan), editor (×2 — red + green), verifier, security, reviewer, documenter, doc-fetcher (×N libs stale), doc-curator (×N libs stale)
 2. Determiner complexity 1..5 (heuristique : files touched / 4, clamp 1..5).
 3. Run :
-     EST=$(.claude/skills/team/lib/cost-estimate.sh <pipeline> <agents-csv> <complexity>)
+     EST=$(.claude/skills/team/lib/cost-estimate.sh enterprise <agents-csv> <complexity>)
 4. Parse JSON :
      totalCostUSD = $(echo "$EST" | jq -r '.totalCostUSD')
 5. Update state.json telemetry :
@@ -110,24 +117,22 @@ Pre-run forecast obligatoire AVANT context loading. Bloque le run si l'estimatio
    (CAS lock via mkdir, schéma identique aux hooks).
 6. Persist EST raw output dans `team-state/$RUN_ID/cost-estimate.json` (input pour Step 9 delta).
 7. Gate failure conditions :
-   - Script exit ≠ 0 OU stdout vide OU totalCostUSD null/0 → REFUSE run + escalade user.
-   - Override flag `--no-cost-estimate` (passé en argv) → log audit STORY.md `cost-estimate: SKIPPED (user override)` + continue.
-8. Threshold check :
-   - Si totalCostUSD > $20 : warn user + demander confirmation interactive AVANT continue.
-   - Si totalCostUSD > $50 : refuse implicite, escalade systematique.
+   - Script exit ≠ 0 OU stdout vide OU totalCostUSD null/0 → log WARN, continue (telemetry only, UFR-022 amende).
+   - Override flag `--no-cost-estimate` → log audit STORY.md `cost-estimate: SKIPPED (user override)` + continue.
+8. **THRESHOLD BLOCKS RETIRES (UFR-022)** — aucun seuil $20/$50 ne bloque le run. Cost reste mesure pour audit KR1, jamais frein.
 ```
 
 ### Step 3 — Smart Context Loading + Cache Warm-up
 
 V12 §6 : SINGLE warm call avant fan-out parallele (Anthropic prompt caching, evite 5-10x cost blow-up).
 
-#### Fichiers chargés (cache_control: ephemeral marker à appliquer)
+#### Fichiers chargés (cache_control: ephemeral marker à appliquer) — UFR-022 mode unique
 
-| Pipeline | Fichiers chargés |
+Le mode unique charge TOUS les protocoles et KB JSON (équivalent ancien `enterprise`). Plus de branching par pipeline.
+
+| Mode | Fichiers chargés |
 |---|---|
-| micro | quality-ratchet.json + error-patterns.json + micro.md |
-| standard | + quality-gates.md + agent-mandate.md + import-coherence.md + prompt-enrichments.json + standard.md |
-| enterprise | + tous les protocoles + tous les KB JSON + enterprise.md |
+| standard (mode unique UFR-022) | quality-ratchet.json + error-patterns.json + quality-gates.md + agent-mandate.md + import-coherence.md + prompt-enrichments.json + tous les protocoles + tous les KB JSON + enterprise.md template |
 
 #### Warm-up protocole CONCRET (ENFORCE)
 
@@ -148,144 +153,239 @@ V12 §6 : SINGLE warm call avant fan-out parallele (Anthropic prompt caching, ev
 
 **Anti-pattern (interdit) :** spawn 3+ agents en parallèle SANS warm-up préalable. Chaque agent paie le full prefix individuellement = 3-10× overcost.
 
-### Step 4 — Spec Kit (brainstorm + plan)
+### Step 4a — Spec phase (UFR-022 fresh-context, architect spawn #1)
 
-#### APC — Agentic Plan Caching (V12 §6 + arxiv 2506.14852) — CHECK FIRST
-
-AVANT de spawner architect pour produire un plan from scratch, le dispatcher consulte le plan-cache :
+**Architect fresh spawn dedie a la production de spec.md UNIQUEMENT.** Pas de design.md, pas de tasks.md a cette phase.
 
 ```
-1. Calculer fingerprint :
-     FP=$(.claude/skills/team/lib/plan-cache.sh fingerprint \
-            "<mode>" "<scope>" "<modules-csv>" "<problem-statement>")
-2. Lookup :
-     HIT=$(.claude/skills/team/lib/plan-cache.sh lookup "$FP")
-3a. Si HIT non-vide ET les paths du HIT existent encore :
-      - Reuse FULL : symlink ou cp les 3 fichiers (spec/design/tasks) vers
-        team-state/$RUN_ID/
-      - .claude/skills/team/lib/plan-cache.sh bump "$FP"
-      - Spawn architect en mode "ADAPT" (pas "fresh") pour valider/ajuster
-        seulement les sections variables (Glossary, Stakeholders, Open Q)
-      - Économie attendue : -50% cost, -27% latency vs cold plan
-3b. Si HIT vide OU paths obsolètes :
-      - Spawn architect en mode "fresh" (workflow normal ci-dessous)
-      - À la fin : .claude/skills/team/lib/plan-cache.sh insert "$FP" "$RUN_ID"
-4. Documenter dans STORY.md `brainstorm` section :
-      - "APC: HIT (parent_run_id=X, hits=Y)" OU "APC: MISS, cold plan"
+1. Compose brief JSON ≤ 200 tokens dans team-state/$RUN_ID/handoffs/001-spec.json :
+   {
+     "from": "dispatcher",
+     "to": "architect",
+     "phase": "spec",
+     "task": "Produce spec.md only (EARS + NFR + glossary + stakeholders + acceptance criteria) for: <description>",
+     "context_refs": [
+       "team-state/$RUN_ID/roadmap-context.json",
+       "lib-docs/INDEX.json"
+     ],
+     "outputPaths": ["team-state/$RUN_ID/spec.md"]
+   }
+2. briefSha256 = sha256(handoff JSON file).
+3. Spawn Agent tool :
+   - description: "Architect phase=spec"
+   - subagent_type: general-purpose (chargé du système prompt .claude/agents/architect.md)
+   - prompt: "Tu es architect.md, phase=spec (UFR-022 fresh-context). Read brief at <handoff_path>. Produce ONLY spec.md at <outputPath>. Emit BRIEF-ACK: <briefSha256> in your first response. If you see another phase in history -> BLOCK-CONTEXT-LEAK + refuse. Verdict FINAL: READY-FOR-PLAN | BLOCKED-AWAITING-USER."
+4. Parse agent return.
+5. Append agents[] entry to state.json : {role: architect, phase: spec, freshContext: true, briefSha256, ...}.
+6. Update state.json : currentStep = "spec", phaseSpawns.spec += 1.
 ```
 
-#### Workflow architect (mode fresh)
+### Step 4b — Plan phase (UFR-022 fresh-context, architect spawn #2)
 
-Architect agent (opus-4.7) produit dans cet ordre :
-
-```
-1. team-state/$RUN_ID/spec.md   ← cp template, fill EARS-format requirements
-2. team-state/$RUN_ID/design.md ← cp template, fill architecture decisions
-3. team-state/$RUN_ID/tasks.md  ← cp template, atomic task list T1.1..Tn.x
-4. team-state/$RUN_ID/handoffs/001-architect-to-editor.json (≤200 tokens)
-```
-
-Update state.json : `spec`, `design`, `tasks` paths + `status: "running"` + version++.
-Append STORY.md sections `brainstorm` et `plan`.
-
-#### Workflow architect (mode adapt — APC HIT)
-
-Architect agent (opus-4.7, contexte chargé avec les 3 fichiers du HIT) :
+**Architect fresh spawn #2 — ZERO memory de phase=spec.** Lit spec.md from disk, produit design.md + tasks.md.
 
 ```
-1. Read parent spec.md / design.md / tasks.md.
-2. Identifier les deltas vs la demande actuelle (Glossary terms différents,
-   stakeholders différents, NFRs différents — domaine technique souvent stable).
-3. Produire des PATCH files (pas full rewrite) appliqués sur les copies dans
-   team-state/$RUN_ID/.
-4. Update state.json + APC bump.
+1. Compose handoff 002-plan.json (≤ 200 tokens) :
+   {
+     "from": "dispatcher",
+     "to": "architect",
+     "phase": "plan",
+     "task": "Read spec.md, produce design.md + tasks.md. Include ## Multi-cycle progress section if multi-cycle-features match found at INIT.",
+     "context_refs": [
+       "team-state/$RUN_ID/spec.md",
+       "lib-docs/INDEX.json",
+       "team-state/multi-cycle-features/<slug>/tasks-latest.md (if exists)"
+     ],
+     "outputPaths": ["team-state/$RUN_ID/design.md", "team-state/$RUN_ID/tasks.md"]
+   }
+2. Spawn Agent tool, NEW process, no message-history reference to phase=spec.
+3. Parse output. Verify BRIEF-ACK match.
+4. If `tasks.md` contains non-empty `## Multi-cycle progress` section :
+   - mkdir -p team-state/multi-cycle-features/<feature-slug>/
+   - cp tasks.md → team-state/multi-cycle-features/<slug>/tasks-latest.md (overwrite)
+   - cp tasks.md → team-state/multi-cycle-features/<slug>/tasks-<RUN_ID>.md (snapshot)
+5. Update state.json : currentStep = "plan", phaseSpawns.plan += 1.
 ```
 
-#### Step 4 closing gate — Spec Kit mandatoire (T1.4 ROADMAP_TEAM — KR2)
+### Step 4.5 — Doc Freshness + Refresh (UFR-022, optional double fresh agents)
 
-AVANT de passer au Step 5, le dispatcher invoque le hook qui machine-vérifie la présence + non-vacuité de spec.md / design.md / tasks.md pour les runs non-triviaux. Ferme le loophole "architect a sauté Spec Kit en silence".
+Run AFTER plan, BEFORE red — so tasks.md is the basis for which libs the diff will touch.
 
 ```
-RUN_ID=$RUN_ID \
-MODE=$MODE \
-DESCRIPTION="$DESCRIPTION" \
-OVERRIDE_SPEC_KIT="${OVERRIDE_SPEC_KIT:-}" \
-.claude/skills/team/team-hooks/pre-feature-spec-check.sh
+1. Hook detection :
+     RUN_ID=$RUN_ID .claude/skills/team/team-hooks/pre-phase-doc-freshness.sh
+   - Parses imports in working tree + staged + untracked code files.
+   - For each non-dev-only lib, 3-way check (package.json version vs INDEX vs 14d staleness vs PATTERNS.md presence).
+   - Writes team-state/$RUN_ID/doc-refresh-queue.json {queue:[...], skipped:[...]}.
+
+2. For each lib in queue[] :
+   a. Spawn doc-fetcher.md FRESH (allowedTools: WebSearch+WebFetch+Read+Write lib-docs/**) :
+      - Input brief: {lib, currentVersion, lastFetched, reason}
+      - Workflow: WebSearch + WebFetch 5-10 pages, write snapshot-YYYY-MM-DD.md + sources.json + VERSION (all untracked)
+      - Verdict: OK | WARN (WebSearch fail). NEVER BLOCK.
+   b. Spawn doc-curator.md FRESH (allowedTools: Read lib-docs/**+Write lib-docs/<lib>/PATTERNS.md only) :
+      - Input brief: {lib, snapshotPath, lessonsPath, sourcesPath}
+      - Workflow: Read snapshot raw, extract sections, write PATTERNS.md (~200-500 lines)
+      - Verdict: OK | WARN (sections missing)
+   c. Dispatcher updates lib-docs/INDEX.json (single-source-of-truth, TRACKED) with the new entry :
+      jq '.libs[$lib] = {version, fetched, fetchedBy, curatedAt, curatedBy, snapshotSha256, patternsSha256, sourceUrls, warnings}' INDEX.json
+3. Append state.json.gates[] : {name:"doc-freshness", verdict:"PASS|WARN", details:"<N refreshed, M warnings>"}.
+4. Parallelism : steps 2a + 2b can run in parallel per-lib (read-only on source ; write zones disjoint per-lib).
 ```
 
-Comportement :
+### Step 5a — Red phase (UFR-022 fresh-context, editor spawn #1)
 
-| Cas | Verdict gate | Exit | Suite |
-|---|---|---|---|
-| `mode in {chore, hotfix, audit, mockup}` ET pas de force keyword | PASS (mode bypass) | 0 | Step 5 |
-| Description matche keywords triviaux (`typo`, `dep[s]? bump`, `version bump`, `lockfile`, `whitespace`, `rename file only`) ET mode ∉ {feature, refactor} ET pas de force keyword | PASS (trivial bypass) | 0 | Step 5 |
-| Description matche force keywords (`security`, `auth`, `migration`, `password`, `token`, `permission`, `rbac`, `oauth`, `jwt`, `crypto`, `encrypt`) ET Spec Kit incomplet | FAIL | 1 | STOP run + escalade user |
-| `mode in {feature, refactor}` ET Spec Kit absent / fichier <200B / placeholders non remplis | FAIL | 1 | STOP run + escalade user |
-| Spec Kit complet (3 fichiers, ≥200B chacun, headers `## ` remplis) | PASS | 0 | Step 5 |
-| `OVERRIDE_SPEC_KIT=1` (CLI flag `--no-spec-kit`) | WARN | 0 | Step 5 + audit STORY.md `## override` |
+**Editor fresh spawn dedie a la production de tests qui FAIL.** Pas de code applicatif a cette phase.
 
-**Override flag `--no-spec-kit`** : le dispatcher accepte cet argv au démarrage du run, le propage en env `OVERRIDE_SPEC_KIT=1` au hook. La gate emit verdict=WARN (pas PASS) et le hook append une section `## override — dispatcher — <ts>` à STORY.md avec la description verbatim. Le reviewer (Step 8) DOIT justifier l'override dans son section review.
-
-**Exit 1 = STOP** : le dispatcher ne passe pas à Step 5. Update `state.json.status="blocked"` + escalade user avec le verdict du hook (verbatim, UFR-013).
-
-Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --self-test` → 8/8 scenarios PASS.
-
-### Step 5 — Implement (editor)
-
-Editor agent (opus-4.6) consomme tasks.md top-down :
 ```
-1. Lit handoff brief depuis team-state/$RUN_ID/handoffs/001-architect-to-editor.json
-2. Pour chaque task T1.x..Tn.x :
-   a. Edit/Write les fichiers
+1. Compose handoff 003-red.json (≤ 200 tokens) :
+   {
+     "from": "dispatcher",
+     "to": "editor",
+     "phase": "red",
+     "task": "Write FAILING tests proving absence of feature or presence of bug per spec.md/design.md/tasks.md. pnpm test must exit != 0 = success.",
+     "context_refs": [
+       "team-state/$RUN_ID/spec.md",
+       "team-state/$RUN_ID/design.md",
+       "team-state/$RUN_ID/tasks.md",
+       "lib-docs/INDEX.json"
+     ],
+     "libDocsRequired": [list of libs from doc-refresh-queue.json (non-dev-only)],
+     "outputPaths": ["<test-files>", "team-state/$RUN_ID/red-test-manifest.json"]
+   }
+2. Spawn Agent tool (editor.md, fresh).
+3. Agent verifies pnpm test scoped exit != 0 (red).
+4. Agent writes red-test-manifest.json {<path>: sha256} per test created/modified.
+5. Agent returns JSON with libDocsConsulted[].
+6. Update state.json : phaseSpawns.red += 1, append agents[].
+```
+
+### Step 5b — Green phase (UFR-022 fresh-context, editor spawn #2 — FROZEN-TEST)
+
+**Editor fresh spawn #2 — ZERO memory of phase=red, FROZEN-TEST byte-for-byte.**
+
+```
+1. Compose handoff 004-green.json (≤ 200 tokens) :
+   {
+     "from": "dispatcher",
+     "to": "editor",
+     "phase": "green",
+     "task": "Write applicative code until all tests in red-test-manifest.json pass. FROZEN-TEST: cannot modify any byte of any path in the manifest. If test wrong: BLOCK-TEST-WRONG <path>:<line> <reason> + refuse to touch.",
+     "context_refs": [
+       "team-state/$RUN_ID/spec.md",
+       "team-state/$RUN_ID/design.md",
+       "team-state/$RUN_ID/tasks.md",
+       "team-state/$RUN_ID/red-test-manifest.json",
+       "lib-docs/INDEX.json"
+     ],
+     "redDiffPath": "<git diff $startCommit..HEAD as of end of red phase>",
+     "libDocsRequired": [...same list as red...]
+   }
+2. Spawn Agent tool (editor.md, fresh, zero memory of red).
+3. Per task in tasks.md :
+   a. Edit/Write code (NOT tests).
    b. RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-edit-lint.sh
    c. RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-edit-typecheck.sh
-   d. Si FAIL → boucle corrective (voir CAP MECHANISM ci-dessous)
-3. Append STORY.md section `implement`
-4. Update state.json : agents[editor].status = "completed" + version++
+   d. RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-edit-green-test-freeze.sh  ← FROZEN-TEST gate
+   e. Si fail lint/tsc/test (intra-phase) → CAP MECHANISM intra-phase ci-dessous.
+   f. Si fail freeze → STOP + escalade (cannot retry, cause = green agent touched a frozen test).
+4. Agent runs pnpm test scoped → must exit 0 (green).
+5. Agent returns JSON with libDocsConsulted[].
+6. Update state.json : phaseSpawns.green += 1, append agents[].
 ```
 
-#### CAP MECHANISM — corrective loops (V12 §8 hard limit)
+**BLOCK-TEST-WRONG protocol** : si phase=green agent declare un test bugge :
+```
+1. Parse BLOCK-TEST-WRONG <test-path>:<line> <reason> from agent output.
+2. Update state.json.status = "blocked-test-wrong", record finding in STORY.md.
+3. Re-spawn fresh phase=red with brief :
+   {
+     "task": "Fix red test per editor-green finding: <reason>",
+     "context_refs": [...],
+     "previousRedManifest": "team-state/$RUN_ID/red-test-manifest.json (overwrite with new sha256s after fix)"
+   }
+4. Once new red phase complete, re-spawn fresh phase=green.
+5. reviewerRejectionLoops NOT incremented (this isn't a reviewer rejection). phaseSpawns.red and phaseSpawns.green both increment.
+```
 
-**Compteur** : `state.json.telemetry.correctiveLoops` (integer, schéma déjà déclaré).
+#### CAP MECHANISM — intra-phase hook fails (UFR-022 amended V12 §8)
 
-**Protocole par task qui FAIL un hook** :
+**Compteur** : `state.json.telemetry.intraPhaseHookLoops` (integer, schéma 2.1).
+
+S'applique UNIQUEMENT aux fails de hooks `post-edit-lint.sh` / `post-edit-typecheck.sh` / `pnpm test` à l'intérieur d'une MEME phase éditeur (red OU green). Reset à 0 entre phases.
+
+**Protocole par task qui FAIL un hook intra-phase** :
 ```
 1. Read current value:
-     LOOPS=$(jq -r '.telemetry.correctiveLoops // 0' team-state/$RUN_ID/state.json)
-2. Increment via CAS pattern (mêmes mkdir lock que team-hooks):
-     update_state '.telemetry.correctiveLoops = ($__loops + 1)' --argjson __loops "$LOOPS"
-3. If LOOPS+1 >= 2 → STOP, do NOT retry. Append STORY.md:
-     "## implement — editor — <ts> [LOOP-CAP REACHED]
+     LOOPS=$(jq -r '.telemetry.intraPhaseHookLoops // 0' team-state/$RUN_ID/state.json)
+2. Increment via CAS pattern :
+     update_state '.telemetry.intraPhaseHookLoops = ($__loops + 1)'
+3. If LOOPS+1 >= 2 → STOP, do NOT retry. Append STORY.md :
+     "## <phase> — editor — <ts> [INTRA-PHASE LOOP-CAP REACHED]
        - Task T<id> failed at hook <name>
        - Loops used: 2 (cap)
        - Last error: <verbatim quote>
        - Verdict: ESCALATE-USER"
-   Then update state.json `status: "blocked"` + `currentStep: "blocked-loop-cap"`.
-   The dispatcher returns to the user with the failure quote.
-4. Else (LOOPS+1 < 2) → retry the task once with the corrective fix.
+   Update state.json `status: "blocked"` + `currentStep: "blocked-loop-cap"`.
+   Return to user with failure quote.
+4. Else (LOOPS+1 < 2) → retry the task once with corrective fix.
 ```
 
-Le dispatcher REFUSE de continuer si `correctiveLoops >= 2` détecté à n'importe quel Step. Pas de bypass.
+**Reviewer rejection loop (Step 8) reste ILLIMITE** — c'est un mecanisme distinct, voir Step 8.
 
-### Step 6 — Verify (verifier + hooks deterministes)
+#### Spec Kit closing gate (UFR-022 amend — keywords bypass retires)
 
-Verifier agent (opus-4.6) declenche hooks :
+AVANT de passer au Step 4.5 / 5a, le dispatcher invoque le hook qui machine-vérifie la présence + non-vacuité de spec.md / design.md / tasks.md.
+
 ```
-1. .claude/skills/team/team-hooks/pre-complete-verify.sh (à creer en W3)
-   - pnpm test scoped (BE/FE/WEB selon scope)
-   - gitnexus_detect_changes() pour scope verification
-   - mutation testing si fichier banking-grade touche (Phase 4 Stryker)
-2. Append STORY.md section `verify` avec verdicts
-3. Si FAIL → boucle corrective ou escalade
+RUN_ID=$RUN_ID \
+DESCRIPTION="$DESCRIPTION" \
+.claude/skills/team/team-hooks/pre-feature-spec-check.sh
 ```
 
-### Step 7 — Security (enterprise only)
+Comportement (UFR-022 simplifie — plus de bypass keywords) :
 
-Security agent (opus-4.6, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — pas d'Edit) :
+| Cas | Verdict gate | Exit | Suite |
+|---|---|---|---|
+| Spec Kit complet (3 fichiers, ≥200B chacun, headers `## ` remplis) | PASS | 0 | Step 4.5 |
+| Spec Kit absent / fichier <200B / placeholders non remplis | FAIL | 1 | STOP run + escalade user |
+
+**Plus de mode-bypass** (chore/hotfix/audit/mockup retires). **Plus de keyword-bypass** (typo, dep bump, etc.). Le pure-doc-check au Step 0 §8 gere l'exemption automatique pour diff = 0 code. Tout autre run = Spec Kit obligatoire.
+
+Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --self-test` → 8/8 scenarios PASS.
+
+### Step 6 — Verify (verifier fresh + hooks deterministes)
+
+Verifier agent (opus-4.6, **fresh spawn UFR-022**) declenche hooks :
 ```
-1. promptfoo regression sur chat.service.ts si touche
-2. Output classifier (Presidio NER) — V12 §4 P0
-3. Append STORY.md section `security`
+1. Spawn Agent tool verifier.md FRESH (BRIEF-ACK + BLOCK-CONTEXT-LEAK self-defense).
+2. Agent runs :
+   a. .claude/skills/team/team-hooks/pre-complete-verify.sh
+      - pnpm test scoped (BE/FE/WEB selon scope)
+      - gitnexus_detect_changes() pour scope verification
+      - mutation testing si fichier banking-grade touche (Phase 4 Stryker)
+   b. .claude/skills/team/team-hooks/pre-phase-doc-reference-check.sh  ← UFR-022 lib-docs assertion
+      - Cross-check libDocsConsulted[] from red+green agents vs diff imports.
+      - Exit 1 = FAIL = re-spawn the offending phase fresh.
+   c. .claude/skills/team/team-hooks/post-edit-green-test-freeze.sh (defense-in-depth) ← FROZEN-TEST final assert
+3. Append STORY.md section `verify` avec verdicts.
+4. Si FAIL → boucle corrective intra-phase OU re-spawn fresh la phase pointee.
+5. Update state.json : phaseSpawns.verify += 1.
+```
+
+### Step 7 — Security (TOUJOURS execute en mode unique UFR-022)
+
+Security agent (opus-4.6, **fresh spawn UFR-022**, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — pas d'Edit) :
+```
+1. Spawn Agent tool security.md FRESH.
+2. Agent runs :
+   - pnpm audit (BE+FE+web) — supply chain CVE drift
+   - semgrep --config=p/owasp-top-ten + p/llm-security si scope touche LLM/auth/crypto
+   - promptfoo regression sur chat.service.ts si touche
+   - Cross-ref lib-docs/<lib>/PATTERNS.md pour libs auth/crypto/llm
+3. Append STORY.md section `security`.
+4. Verdict PASS/WARN/FAIL → si FAIL CRITICAL ou HIGH → BLOCK, escalade user.
+5. Update state.json : phaseSpawns.security += 1.
 ```
 
 ### Step 8 — Review (reviewer fresh context)
@@ -342,19 +442,46 @@ Reason: spawn was a continuation, not fresh-context. Re-spawn via Agent tool.
 6. Append section review à STORY.md (l'agent imprime la section ; le dispatcher l'écrit append-only).
 ```
 
-#### Verdict gating (T1.5 — score-thresholded)
+#### Verdict gating (T1.5 — score-thresholded — UFR-022 amend : reviewer loop illimite)
 
 Le verdict prioritaire est le `weightedMean` des 5 axes (T1.5 KR3) — l'agent calcule, le dispatcher applique :
 
 | weightedMean      | Verdict           | Action                                                           |
 |-------------------|-------------------|------------------------------------------------------------------|
-| ≥ 85              | APPROVED          | Step 9 finalize                                                   |
-| 70.0 — 84.9       | CHANGES_REQUESTED | re-spawn editor avec `findings.blocker` + `findings.important` ; incrémente `correctiveLoops` ; cap ≥2 → escalade |
-| < 70              | BLOCK             | STOP + escalade user avec breakdown axe-par-axe                   |
+| ≥ 85              | APPROVED          | Step 8.5 documenter                                              |
+| 70.0 — 84.9       | CHANGES_REQUESTED | re-spawn FRESH la phase pointee par `reSpawnPhase` du JSON reviewer (spec/plan/red/green) ; incremente `reviewerRejectionLoops` (telemetry seule, **PAS de cap, PAS de warning auto**). |
+| < 70              | BLOCK             | STOP + escalade user avec breakdown axe-par-axe                  |
+
+**UFR-022 — reviewer rejection loop ILLIMITE.** Le compteur `state.json.telemetry.reviewerRejectionLoops` incremente a chaque CHANGES_REQUESTED. Aucun seuil n'est applique, aucun warning n'est emis. Si reviewer rejette 20 fois c'est qu'il y a raison.
+
+Re-spawn protocol :
+```
+1. Read reviewer JSON output: reSpawnPhase, reSpawnReason.
+2. Append handoff brief 00X-respawn.json with reSpawnReason as task.
+3. Spawn fresh Agent tool of the role for that phase (architect-spec/architect-plan/editor-red/editor-green).
+4. After phase completes, re-run downstream phases (e.g. green if reSpawnPhase=red, verify+security+review if reSpawnPhase=green).
+5. reviewerRejectionLoops += 1 (telemetry).
+6. NO cap check, NO warning surface to user, NO auto-block.
+```
 
 **Override de cohérence** : si l'agent émet `verdict: BLOCK` (e.g. BLOCK-CONTEXT-LEAK) MAIS le mean ≥ 85, le verdict explicite agent prime (sécurité > metric). À l'inverse si mean < 70 mais verdict agent = APPROVED, le dispatcher REJECT le review et re-spawn (incohérence — UFR-013 honnêteté violation suspectée).
 
+### Step 8.5 — Documenter (UFR-022 fresh spawn, toujours present en mode unique)
+
+Documenter agent (opus-4.6, **fresh spawn UFR-022**) :
+```
+1. Spawn Agent tool documenter.md FRESH.
+2. Append STORY.md final section (post-finalize summary).
+3. ADR(s) si nouveau choix architectural irreversible.
+4. CHANGELOG entry si release-bound.
+5. Update state.json : phaseSpawns.documenter += 1.
+```
+
+Plus de skip "enterprise only" (en mode unique tout run a un documenter pass — meme leger).
+
 ### Step 9 — Finalize (Tech Lead)
+
+**Pure-doc skip fastpath (UFR-022)** : si `team-state/$RUN_ID/pure-doc-skip.marker` existe (Step 0 §8 a detecte une edit pure-doc), JUMP directement au §6 git add (skip §1-§5). Le run est marque `mode: "pure-doc-skip"`, `status: "completed"`, et l'utilisateur peut commit comme d'habitude.
 
 ```
 1. Update KB :
@@ -385,7 +512,7 @@ Le verdict prioritaire est le `weightedMean` des 5 axes (T1.5 KR3) — l'agent c
 5. Roadmap tick proposal (T1.6) :
      RUN_ID=$RUN_ID DESCRIPTION="$DESCRIPTION" MODE=$MODE \
          .claude/skills/team/team-hooks/post-cycle-roadmap-update.sh
-   - Lit `team-state/$RUN_ID/roadmap-context.json` (produit par Step 0 §8).
+   - Lit `team-state/$RUN_ID/roadmap-context.json` (produit par Step 0 §9).
    - Verdict MATCH → display patch (`team-state/$RUN_ID/roadmap-tick.patch`) + ASK user to apply (NEVER auto-commit, NEVER auto git add).
    - Verdict AMBIGUOUS → display top 5 candidates with scores ; ask user to pick one or skip.
    - Verdict NO_MATCH / SKIP / WARN → log only, no prompt.
@@ -444,11 +571,15 @@ Metriques cles : tokens/agent, latence/phase, cost/run, corrective-loops/run, ga
 |---|---|---|
 | `team-hooks/post-edit-lint.sh` | Apres editor task | scoped ESLint + handoff brief size gate (≤200 tokens) |
 | `team-hooks/post-edit-typecheck.sh` | Apres editor task | scoped tsc --noEmit |
-| `team-hooks/pre-feature-spec-check.sh` | Fin Step 4 (Spec Kit closing gate) | T1.4 KR2 — vérifie spec.md/design.md/tasks.md ≥ 200B chacun pour runs non-triviaux |
-| `team-hooks/pre-cycle-roadmap-load.sh` | Step 0 INIT §8 | T1.6 — lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse items NOW non cochés, écrit `team-state/$RUN_ID/roadmap-context.json`. WARN tolerant. |
+| `team-hooks/pre-feature-spec-check.sh` | Fin Step 4b (Spec Kit closing gate) | T1.4 KR2 — vérifie spec.md/design.md/tasks.md ≥ 200B chacun (UFR-022 : plus de bypass keywords/modes) |
+| `team-hooks/pre-cycle-roadmap-load.sh` | Step 0 INIT §9 | T1.6 — lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse items NOW non cochés, écrit `team-state/$RUN_ID/roadmap-context.json`. WARN tolerant. |
 | `team-hooks/pre-complete-verify.sh` | Avant `status: completed` | scoped tests + STORY.md append-only check via sha256 chain |
 | `team-hooks/post-complete-lesson-capture.sh` | Step 9 (Finalize) après cost delta | T2.1 KR4 — extrait 1 lesson markdown depuis STORY.md vers `team-knowledge/lessons/<RUN_ID>.md`. Fail-open. |
 | `team-hooks/post-cycle-roadmap-update.sh` | Step 9 (Finalize) après lesson capture | T1.6 — fuzzy-match DESCRIPTION ↔ items NOW, propose patch `[x]` staged (jamais auto-commit). |
+| `team-hooks/pre-phase-pure-doc-check.sh` | Step 0 INIT §8 (UFR-022) | UFR-022 — diff = 0 code applicatif → skip tout pipeline + ecrit pure-doc-skip.marker. |
+| `team-hooks/pre-phase-doc-freshness.sh` | Step 4.5 (UFR-022) | UFR-022 — detecte libs touchees, 3-way staleness check, ecrit doc-refresh-queue.json. |
+| `team-hooks/post-edit-green-test-freeze.sh` | Apres chaque edit phase Green (UFR-022) | UFR-022 — re-hash sha256 chaque test de red-test-manifest.json ; mismatch = exit 1 STOP. |
+| `team-hooks/pre-phase-doc-reference-check.sh` | Step 6 Verify (UFR-022) | UFR-022 — assert libDocsConsulted[] couvre les imports non-dev-only du diff + hash drift check. |
 | `lib/roadmap-rotate.sh` | `/team roadmap:rotate` (manual) | T1.6 — fin de sprint : archive ROADMAPs courants, promote NEXT → NOW, insère NEXT — TBD vide. Refuse tree dirty (exit 2). |
 
 Tous les hooks mutent `state.json` via le pattern compare-and-swap (`mkdir state.json.lock.d` atomique POSIX, recovery PID stale, timeout 3s). Pas de dependance `flock`.
@@ -540,6 +671,7 @@ V1 = manuel sur demande. T2.2 ROADMAP_TEAM ajoute cron weekly automatique.
 |---|---|---|
 | v3 | 2026-03 | 3 pipelines, import coherence, GitNexus integration, PE scoring, agent ROI |
 | v4 | 2026-04-17 | P02 Hardening : `team-sdlc-index.md` + 12 UFR + stack-context updated |
+| **v13.UFR-022** | **2026-05-18** | **MODE UNIQUE.** Pipeline selector retire (micro/standard/enterprise/modes feature/bug/etc.). UN seul pipeline 9-phase pour tout modif code applicatif. Step 4 split en 4a (architect spec fresh) + 4b (architect plan fresh). Step 5 split en 5a (editor red fresh, tests qui FAIL + red-test-manifest.json sha256) + 5b (editor green fresh, FROZEN-TEST byte-for-byte). Nouveau Step 4.5 doc-freshness (doc-fetcher + doc-curator double fresh agents) avec cache lib-docs/ (INDEX.json + LESSONS.md tracked, snapshots/PATTERNS.md untracked, refresh forcee >14j ou version drift). Step 7 security toujours present (plus enterprise-only). Step 8.5 documenter toujours present. REGLE 14 amendee : cap 2 = intra-phase hook fails seulement ; reviewer rejection loop = ILLIMITE (zero cap, zero warning). REGLE 6 + 15 + 16 ajoutes (fresh-context, lib-docs obligation, frozen-test). 4 nouveaux hooks : pre-phase-pure-doc-check, pre-phase-doc-freshness, post-edit-green-test-freeze, pre-phase-doc-reference-check. 2 nouveaux agents : doc-fetcher.md, doc-curator.md. APC (Agentic Plan Caching) retire (incompatible fresh-context). Cost gate Step 2.5 telemetry only (plus de seuil bloquant). Exemption auto pure-doc edit via pre-phase-pure-doc-check.sh. |
 | **v12** | **2026-05-02** | Etat durable (`team-state/<run-id>/state.json`, optimistic lock CAS via mkdir). |
 |   |   | Spec Kit : spec.md (EARS + NFR + glossary + stakeholders), design.md (+observability §10), tasks.md, STORY.md (append-only, sha256-chained). |
 |   |   | Handoff briefs ≤200 tokens (~800 chars), enforced by `post-edit-lint.sh`. |

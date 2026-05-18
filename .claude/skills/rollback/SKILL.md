@@ -75,9 +75,17 @@ curl -s http://localhost:3000/api/health
 
 Phase 7 VALIDER : si la validation post-deploy echoue, le Tech Lead peut invoquer `/rollback` pour restaurer.
 
+## UFR-022 — Fresh-context contract
+
+Si invoque dans le cadre d'un run `/team` (RUN_ID set, contexte d'incident post-deploy) :
+- Premiere reponse : `BRIEF-ACK: <sha256-of-args>`.
+- Si message history contient des artefacts d'une autre phase → `BLOCK-CONTEXT-LEAK` + refus.
+- Outside `/team` (incident response standalone) : fresh-context non requis (rollback est typiquement un act humain immediat — la priorite est la remediation, pas la discipline orchestration).
+
 ## REGLES
 
 1. TOUJOURS demander confirmation utilisateur avant rollback
 2. Preferer `git revert` (preserve history) a `git reset` (destructif)
 3. Verifier post-rollback (tests + typecheck + build)
 4. Ne JAMAIS force push sur main sans approbation explicite
+5. UFR-022 : fresh-context si invoque depuis /team (sinon, standalone incident response).

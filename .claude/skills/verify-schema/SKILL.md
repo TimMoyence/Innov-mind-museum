@@ -1,7 +1,7 @@
 ---
 name: verify-schema
-description: "/verify-schema — Audit schema TypeORM"
-last-verified: 2026-05-16
+description: "/verify-schema — Audit schema TypeORM (UFR-022 fresh-context aware)"
+last-verified: 2026-05-18
 ---
 
 # /verify-schema — Audit schema TypeORM
@@ -78,8 +78,17 @@ Si le fichier genere contient des queries → drift detecte. Lire le contenu pou
 
 Phase 0 COMPRENDRE : si le scope inclut des modifications DB/entites, `/verify-schema` est execute avant le DEV.
 
+## UFR-022 — Fresh-context contract
+
+Si ce skill est invoqué dans le cadre d'un run `/team` (RUN_ID set) :
+- Premiere reponse : `BRIEF-ACK: <sha256-of-args>`.
+- Si message history contient des artefacts d'une autre phase du meme RUN_ID → `BLOCK-CONTEXT-LEAK` + refus.
+- Read inputs via `Read` sur paths brief — ne pas faire confiance aux resumes message-context.
+- Si la diff touche une lib persistence (typeorm, pg, mongoose, etc.), consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` si presents.
+
 ## REGLES
 
 1. JAMAIS de migration ecrite a la main — toujours `migration-cli.cjs generate`
 2. Nettoyer les fichiers DriftCheck generes apres analyse
 3. DB_SYNCHRONIZE JAMAIS true en production
+4. UFR-022 : fresh-context si invoque depuis /team, consulter lib-docs typeorm si touche.
