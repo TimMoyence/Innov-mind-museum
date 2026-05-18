@@ -109,8 +109,12 @@ ok ".env active — URL=$ACTIVE_URL VARIANT=$ACTIVE_VARIANT CERT_PIN=$ACTIVE_PIN
 # ---- 4.5. Kill orphan Metro on 8081 (left over from previous sessions) ----
 # Without this guard, expo start fallbacks to 8083 silently — the app on the
 # simulator (built against 8081) then can't find Metro. Idempotent.
+#
+# NOTE the `|| true` chain : `lsof` exits 1 when no listener matches, and
+# `set -euo pipefail` combined with `var=$(cmd|head)` would abort the script.
+# We tolerate the non-zero exit explicitly.
 step "4.5/5 Cleaning orphan Metro on :8081 if any"
-ORPHAN_PID=$(lsof -nP -iTCP:8081 -sTCP:LISTEN -t 2>/dev/null | head -1)
+ORPHAN_PID=$( { lsof -nP -iTCP:8081 -sTCP:LISTEN -t 2>/dev/null || true; } | head -1 || true)
 if [ -n "${ORPHAN_PID:-}" ]; then
   warn "Orphan Metro (PID $ORPHAN_PID) holding :8081 — killing"
   kill "$ORPHAN_PID" 2>/dev/null || true
@@ -126,15 +130,19 @@ fi
 # known-good device so `--ios` finds it and skips the fallback path.
 step "4.6/5 Pre-booting iPhone 17 Pro simulator"
 SIM_NAME="iPhone 17 Pro"
-SIM_UDID=$(xcrun simctl list devices available 2>/dev/null | grep "$SIM_NAME (" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\) \(.*$/\1/')
+SIM_UDID=$( { xcrun simctl list devices available 2>/dev/null || true; } | grep "$SIM_NAME (" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\) \(.*$/\1/' || true)
 if [ -z "${SIM_UDID:-}" ]; then
   warn "Simulator '$SIM_NAME' not found — Xcode + Expo will fall back to next available device"
 else
-  CURRENT_STATE=$(xcrun simctl list devices 2>/dev/null | grep "$SIM_UDID" | sed -E 's/.*\((Booted|Shutdown)\).*$/\1/')
+  CURRENT_STATE=$( { xcrun simctl list devices 2>/dev/null || true; } | grep "$SIM_UDID" | sed -E 's/.*\((Booted|Shutdown)\).*$/\1/' || true)
   if [ "$CURRENT_STATE" = "Booted" ]; then
     ok "$SIM_NAME already booted ($SIM_UDID)"
   else
-    xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1 && ok "$SIM_NAME booted ($SIM_UDID)" || warn "Could not boot $SIM_NAME (may already be booted by Simulator.app)"
+    if xcrun simctl boot "$SIM_UDID" >/dev/null 2>&1; then
+      ok "$SIM_NAME booted ($SIM_UDID)"
+    else
+      warn "Could not boot $SIM_NAME (may already be booted by Simulator.app)"
+    fi
   fi
   open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID" >/dev/null 2>&1 || true
 fi
