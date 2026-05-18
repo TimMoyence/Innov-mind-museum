@@ -6,10 +6,6 @@ import type { AuditService } from '@shared/audit/audit.service';
 
 export type { GuardrailAuditContext } from './guardrail-audit-payload';
 
-export interface ArtTopicClassifierPort {
-  isArtRelated(text: string): Promise<boolean>;
-}
-
 export interface InputGuardrailResult {
   allow: boolean;
   reason?: GuardrailBlockReason;
@@ -33,7 +29,6 @@ export type LlmJudgeFn = (message: string) => Promise<JudgeDecision | null>;
 export interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;
   audit?: AuditService;
-  artTopicClassifier?: ArtTopicClassifierPort;
   /**
    * Optional guardrail provider layer (ADR-048). Runs AFTER the deterministic
    * keyword guardrail and uses the hexagonal `GuardrailProvider` port. When

@@ -201,6 +201,52 @@ If user-name detection becomes required: build a denylist of ~500 canonical arti
 
 Reproductibilité du benchmark : `museum-backend/ops/llm-guard-sidecar/README.md` + `scripts/benchmark-guardrails.ts`.
 
+## Amendment 2026-05-18 — OUTPUT O3 art-topic classifier retired (C9.9)
+
+The output-side LLM-based art-topic classifier (`ArtTopicClassifier` +
+`runArtTopicClassifier`) ran as the third layer of `evaluateOutput()` (after
+the V1 keyword guardrail and the V2 `GuardrailProvider` adapter). It made a
+second LLM call (`gpt-4o-mini`, 3 tokens out) on every chat output to confirm
+the answer was art / museum related, and fail-CLOSED on classifier throw with
+a generic `unsafe_output` refusal.
+
+It was retired (UFR-016 "il est mort on l'enterre") because the same protection
+is already provided three times over by independent layers:
+
+1. **Section prompt** (`llm-sections.ts`) — the orchestrator injects an
+   art / museum-focused section prompt before any user content. Off-topic
+   answers virtually never originate from this prompt.
+2. **L3 LLM judge on INPUTS** (`llm-judge-guardrail.ts`, C9.7 detached
+   2026-05-18) — for uncertain inputs ≥ 50 chars, the judge runs a 4-way
+   classification (`allow / block:offtopic / block:injection / block:abuse`)
+   BEFORE the LLM is called. Off-topic inputs never reach the LLM, so the
+   LLM never produces an off-topic output.
+3. **Promptfoo CI gate** (`.github/workflows/llm-security-promptfoo.yml`)
+   — 85 adversarial prompts × 8 locales × 10 attack families, gates merges
+   at ≥ 95 % pass rate. Any regression in output-topic adherence trips this
+   gate.
+
+Files deleted:
+- `museum-backend/src/modules/chat/useCase/guardrail/art-topic-classifier.ts`
+- `museum-backend/src/modules/chat/useCase/guardrail/eval/output-classifier.helper.ts`
+- `museum-backend/tests/unit/chat/art-topic-classifier.test.ts`
+
+Surface retained:
+- `aggregateOutputText` moved to new module
+  `useCase/guardrail/eval/output-aggregator.ts` (still aggregates LLM-authored
+  image captions + rationales into a single string for the V1 keyword
+  guardrail to scan — invariant unchanged).
+- Audit payload field `classifierRan: boolean` retained for downstream audit
+  consumers; value is permanently `false` after this PR.
+
+Expected wins (V1 traffic ≈ 6 k–8 k chats/month):
+- Latency: −50 to −500 ms per output (one `gpt-4o-mini` RTT eliminated).
+- Cost: ≈ −$1–2 / month (one classifier call per chat output).
+
+Defense surface AFTER burial is therefore: V1 input keyword + L3 input judge
++ section prompt + V1 output keyword + V2 output provider + promptfoo CI.
+Six layers, none redundant.
+
 ## References
 
 - banking-grade hardening design (deleted 2026-05-03 — see git commit history) (Phase D F4)

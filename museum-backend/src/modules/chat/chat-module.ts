@@ -42,7 +42,6 @@ import {
   GetMessageExplanationUseCase,
   TypeOrmAuditCorrelator,
 } from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
-import { ArtTopicClassifier } from '@modules/chat/useCase/guardrail/art-topic-classifier';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import { ImageProcessingService as ImageProcessingPipelineService } from '@modules/chat/useCase/image/image-processing.service';
@@ -763,7 +762,7 @@ export class ChatModule {
       knowledgeRouter: deps.knowledgeRouter,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
-      artTopicClassifier: new ArtTopicClassifier(),
+      // C9.9 (2026-05-18) — OUTPUT O3 art-topic classifier retired.
       // Share ONE adapter — local `metrics()` counters + breaker reference
       // would diverge across instances.
       guardrailProvider: this.getOrBuildGuardrailProvider(),

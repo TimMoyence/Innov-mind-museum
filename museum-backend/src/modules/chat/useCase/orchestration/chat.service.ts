@@ -35,10 +35,7 @@ import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type {
-  ArtTopicClassifierPort,
-  LlmJudgeFn,
-} from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
+import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
@@ -83,7 +80,6 @@ export interface ChatServiceDeps {
   knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
-  artTopicClassifier?: ArtTopicClassifierPort;
   guardrailProvider?: GuardrailProvider;
   guardrailProviderObserveOnly?: boolean;
   llmJudge?: LlmJudgeFn;
@@ -146,7 +142,6 @@ export class ChatService {
         artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
       },
       safety: {
-        artTopicClassifier: deps.artTopicClassifier,
         guardrailProvider: deps.guardrailProvider,
         guardrailProviderObserveOnly: deps.guardrailProviderObserveOnly,
         llmJudge: deps.llmJudge,

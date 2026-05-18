@@ -28,10 +28,7 @@ import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type {
-  ArtTopicClassifierPort,
-  LlmJudgeFn,
-} from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
+import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
@@ -101,7 +98,6 @@ export interface ChatEnrichmentDeps {
 }
 
 export interface ChatSafetyDeps {
-  artTopicClassifier?: ArtTopicClassifierPort;
   guardrailProvider?: GuardrailProvider;
   guardrailProviderObserveOnly?: boolean;
   audit?: AuditService;
@@ -162,7 +158,6 @@ export class ChatMessageService {
     this.guardrail = new GuardrailEvaluationService({
       repository: deps.repository,
       audit: safety.audit,
-      artTopicClassifier: safety.artTopicClassifier,
       guardrailProvider: safety.guardrailProvider,
       guardrailProviderObserveOnly: safety.guardrailProviderObserveOnly,
       llmJudge: safety.llmJudge,
