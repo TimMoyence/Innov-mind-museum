@@ -2,6 +2,7 @@
 
 > Status: implemented 2026-05-12. Effective for app version >= 1.2.3.
 > Owner: legal + mobile platform. Reviewed by: editor agent, /team enterprise run `2026-05-12-llm-guard-perennial-implementation`.
+> **Audit companion:** [`AI_DISCLOSURE_AUDIT.md`](./AI_DISCLOSURE_AUDIT.md) — scope-by-scope audit + evidence kit + V1.1 follow-ups (W4 cluster A, 2026-05-17).
 
 ## 1. What we disclose
 

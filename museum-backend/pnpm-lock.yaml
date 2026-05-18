@@ -30,6 +30,9 @@ importers:
       '@musaium/shared':
         specifier: file:../packages/musaium-shared
         version: file:../packages/musaium-shared(zod@4.4.3)
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.1
       '@opentelemetry/auto-instrumentations-node':
         specifier: ^0.75.0
         version: 0.75.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))

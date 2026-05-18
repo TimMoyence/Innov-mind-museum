@@ -1,6 +1,6 @@
 # Musaium — Release Checklist & Remaining Work
 
-> Last updated: 2026-04-04 | Sprint 6 complete | Overall: 111/112 tasks (99%)
+> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-01 | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
 
 ---
 
@@ -591,13 +591,15 @@ eas submit --platform android --profile production --latest
 
 ## 10. Admin Dashboard Deployment
 
-> Admin panel is now `museum-web` (Next.js 15), replacing the former `museum-admin` (Vite+React, deleted 2026-04-04).
+> Admin panel is now `museum-web` (Next.js 15 + React 19 + Tailwind 4, pnpm), replacing the former `museum-admin` (Vite+React, deleted 2026-04-04). Build command: `pnpm build` (NOT `npm run build` — `museum-web` is a pnpm workspace, see CLAUDE.md). CI pipeline = `.github/workflows/ci-cd-web.yml` (quality → Lighthouse → Docker/GHCR → VPS).
 
-- [ ] Choose hosting: Vercel / Netlify / CloudFlare Pages / VPS static
-- [ ] Build: `cd museum-web && npm run build`
-- [ ] Deploy to hosting platform
+- [ ] Choose hosting: Docker/GHCR → VPS (current pipeline) · alternative: Vercel / Netlify / CloudFlare Pages
+- [ ] Build: `cd museum-web && pnpm install && pnpm lint && pnpm build`
+- [ ] Lighthouse CI PR gate ≥ 95 on landing (W4.1 / `docs/operations/LIGHTHOUSE_AUDIT.md`)
+- [ ] Deploy to hosting platform (or push to `main` to trigger `ci-cd-web.yml`)
 - [ ] Set API base URL environment variable to production backend URL
 - [ ] Add admin URL to backend `CORS_ORIGINS`
+- [ ] Verify admin pages render: `/{locale}/admin/login`, `/admin/museums/new` (W2.1), `/admin/museums/[id]/branding` (W2.2), `/admin/analytics` with per-museum filter (W2.3)
 
 ---
 
