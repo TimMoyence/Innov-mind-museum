@@ -24,6 +24,7 @@ import {
 import { safeTrace } from '@shared/observability/safeTrace';
 
 import { templateRationale, type SharedAttribute } from './rationale-templater';
+import { maybeRerankCompareMatches } from './rerank-phase';
 import { computeMetadataScore, fuse } from './similarity-scoring';
 
 import type {
@@ -31,6 +32,7 @@ import type {
   EmbeddingsPort,
 } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
+import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type {
   ArtworkEmbeddingRepository,
   FindNearestOptions,
@@ -63,11 +65,19 @@ export interface VisualSimilarityServiceDeps {
   repo: ArtworkEmbeddingRepository;
   enricher: EnricherLike;
   cache: CacheService;
+  /**
+   * C9.13 — cross-encoder reranker, invoked only when `CompareInput.queryText`
+   * is set (V1 callers don't pass it; V2 chat-pipeline integration will).
+   * Fail-open: any throw / timeout preserves the fused-score ordering.
+   */
+  reranker: RerankerPort;
   /** Typically `{ wVisual: 0.7, wMeta: 0.3 }`. */
   weights: { wVisual: number; wMeta: number };
   /** Override default kNN candidate pool size (`max(20, 4*topK)`). */
   topN?: number;
   topK?: number;
+  /** C9.13 — hard deadline on `reranker.rerank()` before fail-open. Default 2000ms. */
+  rerankTimeoutMs?: number;
 }
 
 export interface CompareInput {
@@ -84,6 +94,13 @@ export interface CompareInput {
    * never returned. V1 single-tenant ships unscoped (repo logs warn).
    */
   museumId?: number | null;
+  /**
+   * C9.13 — optional textual query used to drive the cross-encoder reranker
+   * over `topMatches.facts.title`. V1 callers (current `/chat/compare` route)
+   * do not pass this; V2 chat-pipeline integration will. When undefined, the
+   * reranker is NOT called and the fused-score ordering is preserved exactly.
+   */
+  queryText?: string;
 }
 
 /** Mockable shape decoupled from full Langfuse SDK type. */
@@ -198,18 +215,22 @@ export class VisualSimilarityService {
   private readonly repo: ArtworkEmbeddingRepository;
   private readonly enricher: EnricherLike;
   private readonly cache: CacheService;
+  private readonly reranker: RerankerPort;
   private readonly weights: { wVisual: number; wMeta: number };
   private readonly topNOverride: number | undefined;
   private readonly defaultTopK: number;
+  private readonly rerankTimeoutMs: number;
 
   public constructor(deps: VisualSimilarityServiceDeps) {
     this.encoder = deps.encoder;
     this.repo = deps.repo;
     this.enricher = deps.enricher;
     this.cache = deps.cache;
+    this.reranker = deps.reranker;
     this.weights = deps.weights;
     this.topNOverride = deps.topN;
     this.defaultTopK = deps.topK ?? DEFAULT_TOP_K;
+    this.rerankTimeoutMs = deps.rerankTimeoutMs ?? 2000;
   }
 
   /** See file header for full pipeline contract (spec R1/R3/R4/R5/R10/R11). */
@@ -289,6 +310,8 @@ export class VisualSimilarityService {
       parentSpan,
     });
 
+    result.matches = await this.applyOptionalRerank(input.queryText, result.matches);
+
     updateParentTrace(
       parentSpan,
       {
@@ -303,6 +326,24 @@ export class VisualSimilarityService {
 
     await this.writeCache(cacheKey, result);
     return result;
+  }
+
+  /**
+   * C9.13 — invoke optional rerank phase. Skipped when `queryText` is undefined
+   * (V1 default — current `/chat/compare` callers never pass it) or when
+   * there's nothing to reorder (≤ 1 match). Fail-open: any throw / timeout
+   * inside `maybeRerankCompareMatches` returns the input untouched.
+   */
+  private async applyOptionalRerank(
+    queryText: string | undefined,
+    matches: CompareMatch[],
+  ): Promise<CompareMatch[]> {
+    if (queryText === undefined || matches.length <= 1) return matches;
+    return await maybeRerankCompareMatches(
+      { reranker: this.reranker, rerankTimeoutMs: this.rerankTimeoutMs },
+      queryText,
+      matches,
+    );
   }
 
   private openParentSpan(input: CompareInput, topK: number): VisualCompareTrace | undefined {

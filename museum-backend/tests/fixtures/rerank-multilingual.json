@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "version": "v1",
+    "locales": ["fr", "en", "it", "es", "ar", "ja"],
+    "queriesPerLocale": 3,
+    "notes": "C9.13 V1 multilingual rerank benchmark fixture. 6 locales × 3 queries each = 18 queries. Real Wikidata QIDs sourced from public art-history corpus (Mona Lisa, Sunflowers, The Starry Night, The Great Wave, Las Meninas, La Persistencia de la Memoria, ...). Each query has 5-6 candidates; baseline order is intentionally shuffled vs ground truth so baseline nDCG@5 < 1 and V2 (C9.13.1) can measure uplift. V2 should expand to 10 queries × 6 locales = 60 queries for a more statistically meaningful uplift signal."
+  },
+  "data": {
+    "fr": [
+      {
+        "query": "portrait de Léonard de Vinci",
+        "candidates": [
+          { "qid": "Q45585", "title": "Les Tournesols" },
+          { "qid": "Q12418", "title": "La Joconde" },
+          { "qid": "Q4504", "title": "La Cène" },
+          { "qid": "Q193581", "title": "L'Homme de Vitruve" },
+          { "qid": "Q22822565", "title": "La Vierge aux rochers" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "peinture impressionniste de fleurs",
+        "candidates": [
+          { "qid": "Q12418", "title": "La Joconde" },
+          { "qid": "Q45585", "title": "Les Tournesols" },
+          { "qid": "Q145833", "title": "La Nuit étoilée" },
+          { "qid": "Q1601834", "title": "Iris" },
+          { "qid": "Q26710", "title": "Nymphéas" }
+        ],
+        "expectedRankedQids": ["Q45585", "Q1601834", "Q26710", "Q145833", "Q12418"]
+      },
+      {
+        "query": "estampe japonaise vague océan",
+        "candidates": [
+          { "qid": "Q12418", "title": "La Joconde" },
+          { "qid": "Q45585", "title": "Les Tournesols" },
+          { "qid": "Q643341", "title": "La Grande Vague de Kanagawa" },
+          { "qid": "Q145833", "title": "La Nuit étoilée" },
+          { "qid": "Q210272", "title": "Trente-six vues du mont Fuji" }
+        ],
+        "expectedRankedQids": ["Q643341", "Q210272", "Q145833", "Q12418", "Q45585"]
+      }
+    ],
+    "en": [
+      {
+        "query": "Leonardo da Vinci portrait painting",
+        "candidates": [
+          { "qid": "Q45585", "title": "Sunflowers" },
+          { "qid": "Q12418", "title": "Mona Lisa" },
+          { "qid": "Q4504", "title": "The Last Supper" },
+          { "qid": "Q193581", "title": "Vitruvian Man" },
+          { "qid": "Q22822565", "title": "Virgin of the Rocks" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "Van Gogh starry night landscape",
+        "candidates": [
+          { "qid": "Q12418", "title": "Mona Lisa" },
+          { "qid": "Q45585", "title": "Sunflowers" },
+          { "qid": "Q145833", "title": "The Starry Night" },
+          { "qid": "Q1601834", "title": "Irises" },
+          { "qid": "Q674484", "title": "Wheatfield with Crows" }
+        ],
+        "expectedRankedQids": ["Q145833", "Q674484", "Q45585", "Q1601834", "Q12418"]
+      },
+      {
+        "query": "Spanish royal court painting",
+        "candidates": [
+          { "qid": "Q12418", "title": "Mona Lisa" },
+          { "qid": "Q45585", "title": "Sunflowers" },
+          { "qid": "Q170400", "title": "Las Meninas" },
+          { "qid": "Q160535", "title": "The Surrender of Breda" },
+          { "qid": "Q581254", "title": "Portrait of Pope Innocent X" }
+        ],
+        "expectedRankedQids": ["Q170400", "Q160535", "Q581254", "Q12418", "Q45585"]
+      }
+    ],
+    "it": [
+      {
+        "query": "ritratto di Leonardo da Vinci",
+        "candidates": [
+          { "qid": "Q45585", "title": "I girasoli" },
+          { "qid": "Q12418", "title": "Monna Lisa" },
+          { "qid": "Q4504", "title": "L'Ultima Cena" },
+          { "qid": "Q193581", "title": "Uomo vitruviano" },
+          { "qid": "Q22822565", "title": "Vergine delle Rocce" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "affresco rinascimentale italiano",
+        "candidates": [
+          { "qid": "Q45585", "title": "I girasoli" },
+          { "qid": "Q12418", "title": "Monna Lisa" },
+          { "qid": "Q4504", "title": "L'Ultima Cena" },
+          { "qid": "Q2278175", "title": "Cappella Sistina" },
+          { "qid": "Q165403", "title": "La Scuola di Atene" }
+        ],
+        "expectedRankedQids": ["Q2278175", "Q165403", "Q4504", "Q12418", "Q45585"]
+      },
+      {
+        "query": "scultura michelangelo marmo",
+        "candidates": [
+          { "qid": "Q12418", "title": "Monna Lisa" },
+          { "qid": "Q45585", "title": "I girasoli" },
+          { "qid": "Q179900", "title": "David" },
+          { "qid": "Q193378", "title": "Pietà" },
+          { "qid": "Q4504", "title": "L'Ultima Cena" }
+        ],
+        "expectedRankedQids": ["Q179900", "Q193378", "Q4504", "Q12418", "Q45585"]
+      }
+    ],
+    "es": [
+      {
+        "query": "retrato de Leonardo da Vinci",
+        "candidates": [
+          { "qid": "Q45585", "title": "Los girasoles" },
+          { "qid": "Q12418", "title": "La Gioconda" },
+          { "qid": "Q4504", "title": "La Última Cena" },
+          { "qid": "Q193581", "title": "Hombre de Vitruvio" },
+          { "qid": "Q22822565", "title": "La Virgen de las Rocas" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "pintura surrealista relojes derretidos",
+        "candidates": [
+          { "qid": "Q12418", "title": "La Gioconda" },
+          { "qid": "Q45585", "title": "Los girasoles" },
+          { "qid": "Q160236", "title": "La persistencia de la memoria" },
+          { "qid": "Q170400", "title": "Las Meninas" },
+          { "qid": "Q4504", "title": "La Última Cena" }
+        ],
+        "expectedRankedQids": ["Q160236", "Q170400", "Q4504", "Q12418", "Q45585"]
+      },
+      {
+        "query": "Velázquez corte española",
+        "candidates": [
+          { "qid": "Q45585", "title": "Los girasoles" },
+          { "qid": "Q12418", "title": "La Gioconda" },
+          { "qid": "Q170400", "title": "Las Meninas" },
+          { "qid": "Q160535", "title": "La rendición de Breda" },
+          { "qid": "Q581254", "title": "Retrato del Papa Inocencio X" }
+        ],
+        "expectedRankedQids": ["Q170400", "Q160535", "Q581254", "Q12418", "Q45585"]
+      }
+    ],
+    "ar": [
+      {
+        "query": "لوحة ليوناردو دافنشي",
+        "candidates": [
+          { "qid": "Q45585", "title": "زهرة عباد الشمس" },
+          { "qid": "Q12418", "title": "الموناليزا" },
+          { "qid": "Q4504", "title": "العشاء الأخير" },
+          { "qid": "Q193581", "title": "رجل فيتروفيوس" },
+          { "qid": "Q22822565", "title": "عذراء الصخور" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "ليلة مرصعة بالنجوم فان جوخ",
+        "candidates": [
+          { "qid": "Q12418", "title": "الموناليزا" },
+          { "qid": "Q45585", "title": "زهرة عباد الشمس" },
+          { "qid": "Q145833", "title": "ليلة النجوم" },
+          { "qid": "Q1601834", "title": "زهور السوسن" },
+          { "qid": "Q674484", "title": "حقل القمح مع الغربان" }
+        ],
+        "expectedRankedQids": ["Q145833", "Q674484", "Q45585", "Q1601834", "Q12418"]
+      },
+      {
+        "query": "موجة كاناغاوا اليابانية",
+        "candidates": [
+          { "qid": "Q12418", "title": "الموناليزا" },
+          { "qid": "Q643341", "title": "الموجة العظيمة قبالة كاناغاوا" },
+          { "qid": "Q210272", "title": "ست وثلاثون منظراً لجبل فوجي" },
+          { "qid": "Q45585", "title": "زهرة عباد الشمس" },
+          { "qid": "Q145833", "title": "ليلة النجوم" }
+        ],
+        "expectedRankedQids": ["Q643341", "Q210272", "Q145833", "Q12418", "Q45585"]
+      }
+    ],
+    "ja": [
+      {
+        "query": "レオナルド・ダ・ヴィンチ 肖像画",
+        "candidates": [
+          { "qid": "Q45585", "title": "ひまわり" },
+          { "qid": "Q12418", "title": "モナ・リザ" },
+          { "qid": "Q4504", "title": "最後の晩餐" },
+          { "qid": "Q193581", "title": "ウィトルウィウス的人体図" },
+          { "qid": "Q22822565", "title": "岩窟の聖母" }
+        ],
+        "expectedRankedQids": ["Q12418", "Q4504", "Q193581", "Q22822565", "Q45585"]
+      },
+      {
+        "query": "葛飾北斎 富士山 浮世絵",
+        "candidates": [
+          { "qid": "Q12418", "title": "モナ・リザ" },
+          { "qid": "Q45585", "title": "ひまわり" },
+          { "qid": "Q643341", "title": "神奈川沖浪裏" },
+          { "qid": "Q210272", "title": "富嶽三十六景" },
+          { "qid": "Q145833", "title": "星月夜" }
+        ],
+        "expectedRankedQids": ["Q210272", "Q643341", "Q145833", "Q12418", "Q45585"]
+      },
+      {
+        "query": "ゴッホ 星 夜 風景画",
+        "candidates": [
+          { "qid": "Q12418", "title": "モナ・リザ" },
+          { "qid": "Q45585", "title": "ひまわり" },
+          { "qid": "Q145833", "title": "星月夜" },
+          { "qid": "Q1601834", "title": "アイリス" },
+          { "qid": "Q674484", "title": "カラスのいる麦畑" }
+        ],
+        "expectedRankedQids": ["Q145833", "Q674484", "Q45585", "Q1601834", "Q12418"]
+      }
+    ]
+  }
+}

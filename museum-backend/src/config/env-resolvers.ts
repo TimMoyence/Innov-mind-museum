@@ -13,6 +13,7 @@ import type {
   EmbeddingsProvider,
   LlmProvider,
   NodeEnv,
+  RerankerProvider,
   StorageDriver,
 } from './env.types';
 
@@ -20,6 +21,7 @@ const nodeEnvSchema = z.enum(['development', 'test', 'production']);
 const llmProviderSchema = z.enum(['openai', 'deepseek', 'google']);
 const storageDriverSchema = z.enum(['local', 's3']);
 const embeddingsProviderSchema = z.enum(['siglip-onnx', 'replicate']);
+const rerankerProviderSchema = z.enum(['null', 'bge-reranker-v2-m3']);
 
 /**
  * Resolves Redis config. Priority:
@@ -133,6 +135,16 @@ export function resolveStorageDriver(): StorageDriver {
 export function resolveEmbeddingsProvider(): EmbeddingsProvider {
   const raw = (process.env.EMBEDDINGS_PROVIDER || 'siglip-onnx').toLowerCase();
   return embeddingsProviderSchema.safeParse(raw).data ?? 'siglip-onnx';
+}
+
+/**
+ * C9.13 (2026-05) — `RERANK_PROVIDER`. Default `'null'` (V1 prod default,
+ * no-op adapter, zero behavior change). Unknown values fall back to default
+ * rather than throw — fail-open ethos: misconfigured reranker MUST NOT brick boot.
+ */
+export function resolveRerankerProvider(): RerankerProvider {
+  const raw = (process.env.RERANK_PROVIDER || 'null').toLowerCase();
+  return rerankerProviderSchema.safeParse(raw).data ?? 'null';
 }
 
 /**

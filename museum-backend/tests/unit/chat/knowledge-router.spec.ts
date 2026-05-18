@@ -19,12 +19,14 @@
  * jest.fn() stubs, no I/O. Latency is measured via `performance.now()` inside
  * the service and surfaced through `metadata.latencyMs.{kb,judge,web}`.
  */
+import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 import type {
   ArtworkFacts,
   KnowledgeBaseProvider,
 } from '@modules/chat/domain/ports/knowledge-base.port';
+import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type { LlmJudgePort, LlmJudgeResult } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 
@@ -74,17 +76,29 @@ const defaultConfig = {
   kbTimeoutMs: 200,
   judgeTimeoutMs: 500,
   wsTimeoutMs: 1500,
+  // C9.13 — V1 default reranker is null (`NullRerankerAdapter`), so the
+  // rerank phase always falls back to baseline. Budget here is unused by V1.
+  rerankTimeoutMs: 800,
 };
 
 const makeService = (config: Partial<typeof defaultConfig> = {}): MockedDeps => {
   const kb = { lookup: jest.fn() } as unknown as jest.Mocked<KnowledgeBaseProvider>;
   const ws = { search: jest.fn() } as unknown as jest.Mocked<WebSearchProvider>;
   const judge = { evaluate: jest.fn() } as unknown as jest.Mocked<LlmJudgePort>;
+  // V1 reranker mock: always throws → KR exercises its fail-open branch and
+  // preserves the baseline ordering of `webResults`. Mirrors the production
+  // `NullRerankerAdapter` contract without coupling to its impl.
+  const reranker: jest.Mocked<RerankerPort> = {
+    rerank: jest
+      .fn()
+      .mockRejectedValue(new RerankerUnavailableError('reranker disabled by configuration')),
+  };
 
   const service = new KnowledgeRouterService({
     kb,
     ws,
     judge,
+    reranker,
     config: { ...defaultConfig, ...config },
   });
 

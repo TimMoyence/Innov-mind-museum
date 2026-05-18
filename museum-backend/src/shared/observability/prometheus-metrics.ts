@@ -414,6 +414,34 @@ export const nominatimRequestDurationSeconds = new Histogram({
   registers: [registry],
 });
 
+/**
+ * C9.13 (2026-05-18) — cross-encoder rerank step instrumentation. Two metrics
+ * scoped narrowly to the rerank phase (KR `runWebSearchLeg` + VS `compare`):
+ *  - `musaium_rerank_latency_ms` histogram (per-call wall time, labels
+ *    `caller` ∈ {`knowledge-router`, `visual-similarity`}, `outcome` ∈
+ *    {`success`, `fallback`}).
+ *  - `musaium_rerank_fallback_total` counter (incremented when reranker
+ *    throws / times out and caller falls back to baseline; label `reason`
+ *    ∈ {`unavailable`, `timeout`, `error`}).
+ *
+ * Cardinality cap: 2 callers × 2 outcomes = 4 series (latency) + 2 × 3 = 6
+ * series (fallback). Bucket scale matches existing latency histograms.
+ */
+export const rerankLatencyMs = new Histogram({
+  name: 'musaium_rerank_latency_ms',
+  help: 'Wall-clock latency (ms) of a single reranker invocation, labelled by caller and outcome.',
+  labelNames: ['caller', 'outcome'] as const,
+  buckets: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
+  registers: [registry],
+});
+
+export const rerankFallbackTotal = new Counter({
+  name: 'musaium_rerank_fallback_total',
+  help: 'Total rerank calls that fell back to baseline ordering, labelled by caller and reason.',
+  labelNames: ['caller', 'reason'] as const,
+  registers: [registry],
+});
+
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
 }
