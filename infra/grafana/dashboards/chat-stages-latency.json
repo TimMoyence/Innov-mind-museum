@@ -1,0 +1,295 @@
+{
+  "title": "Chat Stages Latency (per-phase p50/p95/p99)",
+  "uid": "chat-stages-latency",
+  "tags": ["musaium", "chat", "latency", "per-phase", "c1.1", "w4"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "musaium-prometheus"
+        },
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "${datasource}",
+        "enable": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "titleFormat": "Deploy",
+        "target": {
+          "expr": "changes(process_start_time_seconds{service=\"musaium-backend\"}[1m]) > 0",
+          "refId": "Anno"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "STT (Speech-to-Text)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "STT latency — p50 / p95 / p99",
+      "description": "histogram_quantile(q, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le)). Provider-agnostic view. Alert: stt_p99 > 1s for 5m (chat-stages-latency.yml).",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.6 },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le))",
+          "legendFormat": "stt p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le))",
+          "legendFormat": "stt p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le))",
+          "legendFormat": "stt p99"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "row",
+      "title": "LLM (LangChain orchestrator)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "collapsed": false
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "LLM latency — p50 / p95 / p99 (all providers)",
+      "description": "histogram_quantile(q, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le)). For per-provider breakdown see panel below. Alert: llm_p99 > 4s for 5m.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2.5 },
+              { "color": "red", "value": 4 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le))",
+          "legendFormat": "llm p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le))",
+          "legendFormat": "llm p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le))",
+          "legendFormat": "llm p99"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "LLM latency p95 — per provider",
+      "description": "Compare providers (openai / deepseek / google). Use to detect provider-side degradation before chaos game-day or post-launch incident.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le, provider))",
+          "legendFormat": "{{ provider }} p95"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "TTS (Text-to-Speech)",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "collapsed": false
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "TTS latency — p50 / p95 / p99",
+      "description": "histogram_quantile(q, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le)). Alert: tts_p99 > 2s for 5m.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1.2 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le))",
+          "legendFormat": "tts p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le))",
+          "legendFormat": "tts p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le))",
+          "legendFormat": "tts p99"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Aggregate — all phases",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "collapsed": false
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "All phases p99 (overlay)",
+      "description": "Same y-axis as chat-latency dashboard. Eyeball-detect the dominant stage during latency spikes — if all three rise together it's a downstream issue (DB, network); if one rises it's that phase's provider/code.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 28 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 4 },
+              { "color": "red", "value": 6 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"stt\"}[5m])) by (le))",
+          "legendFormat": "stt p99"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"llm\"}[5m])) by (le))",
+          "legendFormat": "llm p99"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase=\"tts\"}[5m])) by (le))",
+          "legendFormat": "tts p99"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Phase error rate (errors / total)",
+      "description": "Error rate per phase from chat_phase_errors_total / total. Helps separate latency spike from outright failure.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 37 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "calcs": ["mean", "max"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(chat_phase_errors_total{phase=\"stt\"}[5m])) / clamp_min(sum(rate(chat_phase_duration_seconds_count{phase=\"stt\"}[5m])), 1e-9)",
+          "legendFormat": "stt error-rate"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(chat_phase_errors_total{phase=\"llm\"}[5m])) / clamp_min(sum(rate(chat_phase_duration_seconds_count{phase=\"llm\"}[5m])), 1e-9)",
+          "legendFormat": "llm error-rate"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(chat_phase_errors_total{phase=\"tts\"}[5m])) / clamp_min(sum(rate(chat_phase_duration_seconds_count{phase=\"tts\"}[5m])), 1e-9)",
+          "legendFormat": "tts error-rate"
+        }
+      ]
+    }
+  ]
+}

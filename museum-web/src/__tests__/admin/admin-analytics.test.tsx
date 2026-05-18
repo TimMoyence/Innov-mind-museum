@@ -397,13 +397,16 @@ describe('AnalyticsPage', () => {
       </Providers>,
     );
 
+    // W4 W2.3 — a 4th call to `/api/museums` was added to load the museum
+    // filter list. The 3 analytics endpoints still fire as before.
     await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledTimes(3);
+      expect(mockApiGet).toHaveBeenCalledTimes(4);
     });
 
     expect(mockApiGet).toHaveBeenCalledWith('/api/admin/analytics/usage?days=30&granularity=daily');
     expect(mockApiGet).toHaveBeenCalledWith('/api/admin/analytics/content?limit=10');
     expect(mockApiGet).toHaveBeenCalledWith('/api/admin/analytics/engagement');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/museums');
   });
 
   it('re-fetches usage when granularity filter changes', async () => {

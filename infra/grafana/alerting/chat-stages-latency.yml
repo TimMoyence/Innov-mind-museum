@@ -1,0 +1,130 @@
+# Prometheus alerting rules — per-phase chat latency.
+# Companion dashboard: infra/grafana/dashboards/chat-stages-latency.json
+# W4 cluster B, TB1 / C1.1 — 2026-05-17.
+#
+# Why per-phase alerts in addition to the end-to-end one (chat-latency.yml):
+# the e2e alert tells us "chat is slow" but not "which stage". When we are on
+# call at 03:00 with a single founder, knowing the offending stage halves the
+# MTTR. The thresholds are derived from spec NFR for each stage:
+#   stt: target p99 ≤ 1.0s   (OpenAI Whisper realistic ceiling on small audio)
+#   llm: target p99 ≤ 4.0s   (LangChain orchestrator including retry budget)
+#   tts: target p99 ≤ 2.0s   (gpt-4o-mini-tts on short replies)
+# Sum + serialization budget = ~6s, matching the e2e alert in chat-latency.yml.
+
+groups:
+  - name: chat-stages-latency
+    interval: 30s
+    rules:
+      - alert: chat_stt_p99_high
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(chat_phase_duration_seconds_bucket{phase="stt"}[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          phase: stt
+          owner: tim
+        annotations:
+          summary: "STT p99 latency above 1s (5m window)"
+          description: |
+            Speech-to-Text p99 latency over the last 5 minutes is
+            {{ $value | printf "%.2f" }}s, above the 1s budget.
+
+            First action: open the Grafana dashboard `chat-stages-latency`
+            and check whether one provider is dominant (panel
+            "LLM latency p95 — per provider" sibling at STT level if added).
+            Most likely cause: OpenAI Whisper service degradation.
+            Fall-back: switch transcription model via env
+            `LLM_AUDIO_TRANSCRIPTION_MODEL` (next deploy) — there is no
+            in-process fallback for STT today.
+          dashboard: "{{ .ExternalURL }}/d/chat-stages-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-latency"
+
+      - alert: chat_llm_p99_high
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(chat_phase_duration_seconds_bucket{phase="llm"}[5m])) by (le)
+          ) > 4
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          phase: llm
+          owner: tim
+        annotations:
+          summary: "LLM phase p99 latency above 4s (5m window)"
+          description: |
+            LLM phase (LangChain orchestrator) p99 latency over the last
+            5 minutes is {{ $value | printf "%.2f" }}s, above the 4s budget.
+
+            First action: check the "LLM latency p95 — per provider" panel
+            on dashboard `chat-stages-latency` to identify the slow
+            provider. If a single provider is at fault, the orchestrator
+            should be falling over to a secondary — verify the Sentry
+            event `llm_provider_fallback` is firing. If the orchestrator
+            is NOT falling over, the chaos runbook §3 needs re-validation.
+          dashboard: "{{ .ExternalURL }}/d/chat-stages-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#3-llm-provider-kill"
+
+      - alert: chat_tts_p99_high
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(chat_phase_duration_seconds_bucket{phase="tts"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          phase: tts
+          owner: tim
+        annotations:
+          summary: "TTS p99 latency above 2s (5m window)"
+          description: |
+            Text-to-Speech p99 latency over the last 5 minutes is
+            {{ $value | printf "%.2f" }}s, above the 2s budget.
+
+            First action: check provider status (OpenAI). TTS has no
+            in-process fallback today; degraded TTS will surface to the
+            user as a missing audio reply (the text reply still ships).
+            Mitigation: if degradation is sustained, set
+            `TTS_MODEL=<smaller-model>` via env (next deploy).
+          dashboard: "{{ .ExternalURL }}/d/chat-stages-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md#chat-latency"
+
+      # Critical compound alert — when all three phases are simultaneously
+      # degraded, it's almost certainly a downstream / network problem (DNS,
+      # ingress, Cloudflare) or a backend host-level issue (CPU saturated by
+      # a runaway job). The single-phase alerts will all fire too, but this
+      # one routes faster as a single page.
+      - alert: chat_all_stages_p99_high
+        expr: |
+          histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase="stt"}[5m])) by (le)) > 1
+          and
+          histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase="llm"}[5m])) by (le)) > 4
+          and
+          histogram_quantile(0.99, sum(rate(chat_phase_duration_seconds_bucket{phase="tts"}[5m])) by (le)) > 2
+        for: 3m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "All chat phases (stt/llm/tts) above p99 budget simultaneously (3m window)"
+          description: |
+            All three chat phases are exceeding their p99 budgets at the
+            same time. This pattern is rare and usually indicates a
+            downstream / host-level problem (network, ingress, backend
+            CPU/memory pressure) rather than a provider-side LLM/STT/TTS
+            issue. The single-phase alerts will fire too — this one is the
+            "drop everything" page.
+          dashboard: "{{ .ExternalURL }}/d/chat-stages-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/CHAOS_RUNBOOKS.md"

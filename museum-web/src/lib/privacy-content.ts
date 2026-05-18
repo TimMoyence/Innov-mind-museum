@@ -14,7 +14,7 @@ export interface PrivacyContent {
 const en: PrivacyContent = {
   title: 'Privacy Policy (GDPR)',
   version: '1.0.0',
-  lastUpdated: '2026-03-18',
+  lastUpdated: '2026-05-17',
   sections: [
     {
       id: 'controller',
@@ -120,8 +120,24 @@ const en: PrivacyContent = {
       ],
     },
     {
+      // ADR-053 — Apple App Store Review Guideline 5.1.2(i) + GDPR Art. 7.
+      // The mobile app captures granular, per-category × per-provider consent
+      // before transmitting personal data to third-party AI providers; this
+      // section is the public-policy mirror so privacy-aware users can audit
+      // what we ask for and what we send where.
+      id: 'granular-ai-consent',
+      title: '13. Granular Third-Party AI Consent',
+      paragraphs: [
+        'In addition to the general AI disclosure above (§12), the Musaium mobile app captures separate, explicit consent for each combination of (data category × third-party AI provider) before transmitting personal data outside Musaium-controlled infrastructure. This is a layer on top of the contract-performance basis (Art. 6(1)(b)) covering account access and core functionality: granular consents under Art. 6(1)(a) are additional evidence that you have actively authorised each data flow, in line with Apple App Store Review Guideline 5.1.2(i) (effective 2025-11-13) and GDPR Article 7 (granularity + revocability).',
+        'Consent scopes recorded today include: text messages to OpenAI (required to use the chat) and to Google; photos / images to OpenAI and Google; audio to OpenAI and Google; profile to OpenAI and Google. DeepSeek scopes are intentionally NOT offered in the EU production build (CI gate `LLM_PROVIDER=deepseek` is blocked in EU).',
+        'All grants and revocations are persisted in our backend (`user_consents` table) and logged in our internal audit trail (`audit_logs`) with timestamp, IP, and request identifier. You may view and revoke any of these grants at any time from Settings → AI Consent in the mobile app.',
+        'Revocation behaviour is two-tier: (a) location-to-LLM revocation is enforced in real time — once revoked, your location is no longer transmitted to any provider; (b) other third-party AI revocations are recorded as user intent but do not retroactively stop in-flight inference: full enforcement is account deletion (cf. §8 Your Rights — right to erasure).',
+        'Lawful-basis layering rationale lives in [ADR-053](https://github.com/InnovMind/musaium/blob/main/docs/adr/ADR-053-apple-5-1-2-i-granular-consent.md). The corresponding DPIA addendum is published as `docs/legal/DPIA_T1.1_addendum.md`.',
+      ],
+    },
+    {
       id: 'changes',
-      title: '13. Policy Changes',
+      title: '14. Policy Changes',
       paragraphs: [
         'We may update this policy to reflect legal, technical, or product changes. Material changes will be communicated in-app or through appropriate channels before or when they take effect.',
       ],
@@ -132,7 +148,7 @@ const en: PrivacyContent = {
 const fr: PrivacyContent = {
   title: 'Politique de confidentialité (RGPD)',
   version: '1.0.0',
-  lastUpdated: '18 mars 2026',
+  lastUpdated: '17 mai 2026',
   sections: [
     {
       id: 'controller',
@@ -238,8 +254,24 @@ const fr: PrivacyContent = {
       ],
     },
     {
+      // ADR-053 — Guideline Apple App Store 5.1.2(i) + RGPD Art. 7.
+      // L'application mobile collecte un consentement séparé, granulaire,
+      // par couple (catégorie de données × prestataire IA tiers) avant
+      // toute transmission de données personnelles hors infrastructure
+      // Musaium ; cette section est le miroir public de cette pratique.
+      id: 'granular-ai-consent',
+      title: '13. Consentement granulaire pour les IA tierces',
+      paragraphs: [
+        "En complément de la divulgation IA générale ci-dessus (§12), l'application mobile Musaium recueille un consentement explicite, séparé, pour chaque couple (catégorie de données × prestataire IA tiers) avant la transmission de données personnelles hors de l'infrastructure que Musaium contrôle. Cette couche s'ajoute à la base d'exécution du contrat (Art. 6(1)(b)) pour l'accès au compte et aux fonctionnalités principales : les consentements granulaires au titre de l'Art. 6(1)(a) constituent une preuve additionnelle d'autorisation active de chaque flux, conformément à la Guideline Apple App Store 5.1.2(i) (effective 2025-11-13) et au RGPD Art. 7 (granularité + révocabilité).",
+        "Les scopes de consentement enregistrés à ce jour incluent : messages texte vers OpenAI (requis pour utiliser le chat) et vers Google ; photos / images vers OpenAI et Google ; audio vers OpenAI et Google ; profil vers OpenAI et Google. Les scopes DeepSeek ne sont volontairement PAS proposés dans le build UE de production (porte CI `LLM_PROVIDER=deepseek` bloquée en UE).",
+        "Toutes les acceptations et révocations sont persistées dans notre back-end (table `user_consents`) et tracées dans notre journal interne d'audit (`audit_logs`) avec horodatage, IP et identifiant de requête. Vous pouvez consulter et révoquer chacune de ces autorisations à tout moment depuis Paramètres → Consentement IA dans l'application mobile.",
+        "La portée d'une révocation est à deux étages : (a) la révocation « localisation vers LLM » est appliquée en temps réel — une fois révoquée, votre position n'est plus transmise à aucun prestataire ; (b) les autres révocations IA tierces sont enregistrées comme intention utilisateur mais n'interrompent pas rétroactivement des inférences en cours : l'application complète passe par la suppression de compte (cf. §8 Vos Droits — droit à l'effacement).",
+        "Le détail de la justification du choix « couche additionnelle 6(1)(a) au-dessus du 6(1)(b) » figure dans [ADR-053](https://github.com/InnovMind/musaium/blob/main/docs/adr/ADR-053-apple-5-1-2-i-granular-consent.md). L'addendum DPIA correspondant est publié sous `docs/legal/DPIA_T1.1_addendum.md`.",
+      ],
+    },
+    {
       id: 'changes',
-      title: '13. Modifications de la politique',
+      title: '14. Modifications de la politique',
       paragraphs: [
         "Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.",
       ],

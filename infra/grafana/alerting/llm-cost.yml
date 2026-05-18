@@ -1,0 +1,194 @@
+# Prometheus alerting rules — LLM cost circuit-breaker + cache health + guard CB.
+# W4 cluster B, TB2 / C9.4-alerts — 2026-05-17.
+#
+# Three alerts:
+#   1. cache_hit_rate_too_low  — cache hit rate < 30 % over 30m (warning) /
+#                                < 10 % over 30m (critical). Cache is the
+#                                primary cost-control lever; if it tanks,
+#                                bill goes up linearly and so does latency.
+#   2. llm_cost_breaker_open   — cost CB tripped (state == 2 = OPEN).
+#                                Means daily cap exceeded or unit-cost spike;
+#                                downstream traffic is being shed. User
+#                                impact: chat replies degraded / blocked
+#                                until the breaker auto-resets.
+#   3. llm_guard_breaker_open  — guard CB tripped. V2 LLM Guard (Presidio /
+#                                ProtectAI) sidecar is unreachable. The
+#                                guardrail pipeline falls open to V1
+#                                keyword guardrail per ADR-047 fail-CLOSED
+#                                contract for the BUDGET path. Defense in
+#                                depth is partially lost while open.
+#
+# All three use the standard `severity: warning|critical` + `service +
+# surface + owner: tim` labels for routing by alertmanager.yml.
+
+groups:
+  - name: llm-cost-and-cache
+    interval: 30s
+    rules:
+      - alert: cache_hit_rate_too_low
+        expr: |
+          (
+            sum(rate(llm_cache_hits_total[30m]))
+            /
+            clamp_min(
+              sum(rate(llm_cache_hits_total[30m])) + sum(rate(llm_cache_misses_total[30m])),
+              1e-9
+            )
+          ) < 0.30
+        for: 30m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "LLM cache hit rate below 30% (30m window)"
+          description: |
+            LLM cache (LlmCacheServiceImpl, ADR-036) hit rate is
+            {{ $value | humanizePercentage }} over the last 30 minutes,
+            below the 30% warning threshold.
+
+            Cache is our primary cost lever — low hit rate means linear
+            cost growth with traffic AND linear latency growth. Look for:
+              - Deploy churn (every deploy invalidates the prompt-cached
+                section if the system prompt changed).
+              - A regression in cache key shape (`llm:v1:{ctx}:{museum}:{user}:{sha}`).
+              - User-base shift (more first-time-questions = legit cache misses).
+
+            Single source of truth for cache config:
+            `museum-backend/src/shared/llm/cache/LlmCacheServiceImpl.ts`.
+            Do NOT add a second cache layer — ADR-036 R11/R13 forbids it.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-036-llm-cache.md"
+
+      - alert: cache_hit_rate_critical
+        expr: |
+          (
+            sum(rate(llm_cache_hits_total[30m]))
+            /
+            clamp_min(
+              sum(rate(llm_cache_hits_total[30m])) + sum(rate(llm_cache_misses_total[30m])),
+              1e-9
+            )
+          ) < 0.10
+        for: 30m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "LLM cache hit rate below 10% (30m window)"
+          description: |
+            LLM cache hit rate is {{ $value | humanizePercentage }} over
+            the last 30 minutes — cache is effectively disabled. Either
+            Redis is unreachable, the key derivation is broken, or a
+            recent deploy invalidated every cached prompt at once.
+
+            Same diagnostics as the warning alert plus:
+              - `redis-cli PING` (should return PONG).
+              - `LLM_CACHE_ENABLED` env not flipped to false in error.
+              - Recent commits touching `LlmCacheServiceImpl` /
+                `prompt-cache-control.ts` / `cache-key.derive.ts`.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-036-llm-cache.md"
+
+      - alert: llm_cost_breaker_open
+        # Gauge values: 0 = CLOSED, 1 = HALF_OPEN, 2 = OPEN.
+        # Any non-zero state held for 1 minute = at-risk; OPEN = paging.
+        expr: |
+          musaium_llm_cost_circuit_breaker_state == 2
+        for: 1m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "LLM cost circuit breaker OPEN — traffic being shed"
+          description: |
+            The LLM cost circuit breaker has been OPEN for ≥ 1 minute.
+            Cause is one of:
+              - Daily cost cap reached (`LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY`
+                exceeded; reset rolls at UTC midnight).
+              - Unit-cost spike detected (per-request cost > rolling
+                p99 × multiplier).
+              - Provider-side billing anomaly (rare; verify).
+
+            User impact: chat requests are returning a degraded path
+            (V1 guardrail only, V2 layers skipped) OR being rejected
+            outright depending on the BUDGET path config.
+
+            First action: open the cost dashboard (when wired) and the
+            provider billing console (OpenAI / DeepSeek / Google). If the
+            cap was reached *legitimately*, raise the cap via env +
+            redeploy. If the spike is anomalous, find the source request
+            in Sentry and roll back the deploy that introduced it.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-036-llm-cache.md"
+
+      - alert: llm_guard_breaker_open
+        expr: |
+          musaium_llm_guard_circuit_breaker_state == 2
+        for: 1m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          owner: tim
+          # NB: warning, not critical — V1 keyword guardrail is still
+          # active; defense in depth is partially preserved.
+        annotations:
+          summary: "LLM Guard sidecar circuit breaker OPEN"
+          description: |
+            The V2 LLM Guard sidecar (Presidio / ProtectAI, ADR-047)
+            circuit breaker is OPEN for ≥ 1 minute. The sidecar is
+            unreachable or returning errors above the breaker threshold.
+
+            Impact: V2 LLM Guard checks are being skipped, falling back
+            to V1 keyword guardrail. Defense in depth is partially lost
+            but the surface is NOT undefended (V1 + structural prompt
+            isolation + input sanitization still apply per CLAUDE.md
+            §AI Safety).
+
+            First action: check the sidecar process / container
+            (`docker compose -f museum-backend/docker-compose.dev.yml ps`
+            locally; `systemctl status` on the prod VPS). Restart if
+            crashed. If chronic, consider scaling sidecar replica.
+
+            Verify with `musaium_llm_guard_circuit_breaker_skips_total`
+            rate — if the skip rate is high, the guardrail is paying
+            the latency price for retrying. Lower the breaker threshold
+            via env if needed.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-047-llm-guard-sidecar.md"
+
+      - alert: guardrail_budget_redis_fail_closed
+        # Fail-CLOSED counter from prometheus-metrics.ts — when the budget
+        # Redis backend is unreachable, the guardrail falls CLOSED (deny)
+        # per ADR-047. Any sustained fall-closed rate means traffic is
+        # being rejected without the user understanding why.
+        expr: |
+          sum(rate(musaium_guardrail_budget_redis_fallback_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "Guardrail budget Redis fail-CLOSED rate > 0.1/s (5m window)"
+          description: |
+            The guardrail-budget Redis backend has been unreachable /
+            corrupted at a sustained rate of
+            {{ $value | printf "%.2f" }} fail-CLOSED events per second
+            over the last 5 minutes. User-facing impact: guardrail is
+            denying requests it cannot account for, behaviour is
+            indistinguishable from "your message was blocked" to the
+            user.
+
+            First action: `redis-cli PING` + `redis-cli INFO clients`.
+            If Redis is healthy, check the budget key shape on the
+            backend logs for a recent migration mismatch.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-047-llm-guard-sidecar.md"

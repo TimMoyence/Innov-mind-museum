@@ -10,4 +10,4 @@ Preferred-Languages: en, fr
 Canonical: https://musaium.com/.well-known/security.txt
 Policy: https://musaium.com/fr/security
 Acknowledgments: https://musaium.com/fr/security#hall-of-fame
-# Encryption: PGP key TBD; email security@musaium.com to request key exchange.
+Encryption: https://musaium.com/.well-known/pgp-key.txt
