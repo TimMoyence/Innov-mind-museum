@@ -13,5 +13,15 @@ const loadOpenApiSpec = (): Record<string, unknown> => {
 };
 
 export const setupSwagger = (app: Express): void => {
-  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(loadOpenApiSpec()));
+  // TD-SW-01 — disable the online validator badge (cross-origin call to
+  // online.swagger.io leaks the spec) + persist Authorize across reloads +
+  // brand the page title (lib-docs/swagger-ui-express/PATTERNS.md).
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(loadOpenApiSpec(), {
+      customSiteTitle: 'Musaium API',
+      swaggerOptions: { validatorUrl: null, persistAuthorization: true },
+    }),
+  );
 };

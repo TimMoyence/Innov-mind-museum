@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
@@ -42,6 +43,10 @@ function AnimatedDot({ delay, color, reduceMotion }: AnimatedDotProps): ReactEle
         -1,
       ),
     );
+    // TD-REA-02 — cancel the infinite withRepeat on unmount.
+    return () => {
+      cancelAnimation(opacity);
+    };
   }, [delay, opacity, reduceMotion]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
@@ -68,6 +73,10 @@ function SkeletonBubble({ color, reduceMotion }: SkeletonBubbleProps): ReactElem
       ),
       -1,
     );
+    // TD-REA-02 — cancel the infinite withRepeat on unmount.
+    return () => {
+      cancelAnimation(opacity);
+    };
   }, [opacity, reduceMotion]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));

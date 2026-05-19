@@ -88,6 +88,11 @@ export const upload = multer({
   limits: {
     fileSize: env.llm.maxImageBytes,
     files: 1,
+    // TD-MUL-01 — bound multipart field/part/header counts (defense-in-depth
+    // DoS guard, lib-docs/multer/PATTERNS.md §4).
+    fields: 10,
+    parts: 20,
+    headerPairs: 50,
   },
   fileFilter: imageFileFilter,
 });
@@ -97,6 +102,10 @@ export const audioUpload = multer({
   limits: {
     fileSize: env.llm.maxAudioBytes,
     files: 1,
+    // TD-MUL-01 — same defense-in-depth bounds as the image upload above.
+    fields: 10,
+    parts: 20,
+    headerPairs: 50,
   },
   fileFilter: audioFileFilter,
 });

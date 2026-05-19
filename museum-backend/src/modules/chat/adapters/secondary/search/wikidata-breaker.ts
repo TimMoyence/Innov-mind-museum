@@ -88,6 +88,9 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
       volumeThreshold: config.volumeThreshold,
       capacity: config.capacity,
       name: 'wikidata-sparql',
+      // TD-OP-03 — groups related breakers in the opossum hystrix-stats stream
+      // for dashboard aggregation (lib-docs/opossum/PATTERNS.md §3).
+      group: 'knowledge-base',
     });
 
     this.breaker.fallback(() => null);

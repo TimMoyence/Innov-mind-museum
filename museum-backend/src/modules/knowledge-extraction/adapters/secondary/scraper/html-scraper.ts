@@ -312,7 +312,13 @@ export class HtmlScraper implements ScraperPort {
 
   private extractContent(url: string, html: string): ScrapedPage | null {
     const { document } = parseHTML(html);
-    const reader = new Readability(document);
+    // TD-LINK-01 — Readability mutates the document during `parse()`. Cloning
+    // once means the fallback branch below can re-parse from the same source
+    // without paying a second `parseHTML(html)` CPU cost
+    // (lib-docs/@mozilla/readability/PATTERNS.md §3). `cloneNode(true)` returns
+    // a typed Node from linkedom — Readability accepts it structurally.
+    const clone = document.cloneNode(true);
+    const reader = new Readability(clone);
     const article = reader.parse();
 
     if (!article?.textContent) {
