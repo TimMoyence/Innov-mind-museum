@@ -21,7 +21,7 @@
  * Spec: docs/chat-ux-refonte/specs/A2.md §1.3 (R16-R22).
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { BackHandler, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -73,16 +73,23 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
   }, [visible, onClose]);
 
   // R20 — pinch-zoom clamped to [1, 5]. Worklet-driven via Reanimated.
-  const pinch = Gesture.Pinch()
-    .onUpdate((e) => {
-      'worklet';
-      const next = savedScale.value * e.scale;
-      scale.value = next < MIN_SCALE ? MIN_SCALE : next > MAX_SCALE ? MAX_SCALE : next;
-    })
-    .onEnd(() => {
-      'worklet';
-      savedScale.value = scale.value;
-    });
+  // TD-RNGH-03 — useMemo so the Gesture instance survives parent re-renders.
+  // Empty deps OK : the gesture only reads shared values via worklet refs
+  // (savedScale / scale), which keep their identity across renders.
+  const pinch = useMemo(
+    () =>
+      Gesture.Pinch()
+        .onUpdate((e) => {
+          'worklet';
+          const next = savedScale.value * e.scale;
+          scale.value = next < MIN_SCALE ? MIN_SCALE : next > MAX_SCALE ? MAX_SCALE : next;
+        })
+        .onEnd(() => {
+          'worklet';
+          savedScale.value = scale.value;
+        }),
+    [savedScale, scale],
+  );
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

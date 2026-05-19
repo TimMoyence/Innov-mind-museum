@@ -114,8 +114,9 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => {
  */
 const getDefaultApiEnvironment = (): ApiEnvironment => {
   const extra = readExtra();
+  // TD-RN-03 — canonical helper (CLAUDE.md gotcha § process.env local-vs-CI).
   const explicit =
-    normalizeApiEnvironment(process.env.EXPO_PUBLIC_API_ENVIRONMENT) ??
+    normalizeApiEnvironment(readEnvString(process.env.EXPO_PUBLIC_API_ENVIRONMENT)) ??
     normalizeApiEnvironment(extra.API_ENVIRONMENT);
 
   if (explicit && explicit !== 'custom') {

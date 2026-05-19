@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import * as Updates from 'expo-updates';
 import i18n from '@/shared/i18n/i18n';
@@ -63,8 +63,8 @@ export class ErrorBoundary extends Component<Props, State> {
             defaultValue: 'The app encountered an unexpected error. Your data is safe.',
           })}
         </Text>
-        <TouchableOpacity
-          style={styles.button}
+        <Pressable
+          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
           onPress={() => void this.handleReload()}
           accessibilityRole="button"
           accessibilityLabel={i18n.t('error.boundaryReload', { defaultValue: 'Reload' })}
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <Text style={styles.buttonText}>
             {i18n.t('error.boundaryReload', { defaultValue: 'Reload' })}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -114,6 +114,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space['8'],
     paddingVertical: semantic.button.paddingYCompact,
     borderRadius: radius.lg,
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
   buttonText: {
     color: darkTheme.primaryContrast,

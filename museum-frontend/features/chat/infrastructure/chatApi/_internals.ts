@@ -1,3 +1,4 @@
+import { readEnvString } from '@/shared/lib/env';
 import { createAppError } from '@/shared/types/AppError';
 
 /** Base path for all chat HTTP endpoints. */
@@ -57,8 +58,8 @@ export const ensureContract = <T>(
  * falls back to a non-streaming POST and shows a typing indicator.
  */
 export const isChatStreamingEnabled = (): boolean => {
-  const envValue: unknown = process.env.EXPO_PUBLIC_CHAT_STREAMING;
-  const raw = typeof envValue === 'string' ? envValue.toLowerCase() : undefined;
+  // TD-RN-03 — canonical helper (CLAUDE.md gotcha § process.env local-vs-CI).
+  const raw = readEnvString(process.env.EXPO_PUBLIC_CHAT_STREAMING)?.toLowerCase();
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 };
 

@@ -170,6 +170,10 @@ const httpClient = axios.create({
     Accept: 'application/json',
   },
   timeout: 15000,
+  // TD-AX-01 — bound request/response body size to 10 MiB (PATTERNS.md axios
+  // §3 DO). Mitigates accidental large payload DoS vs default Infinity.
+  maxContentLength: 10 * 1024 * 1024,
+  maxBodyLength: 10 * 1024 * 1024,
 });
 
 const wait = async (ms: number): Promise<void> => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Map, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -46,6 +47,12 @@ export default function DemoMap() {
       keyboard: false,
       dragPan: true,
       attributionControl: false,
+    });
+
+    // TD-MGL-02 — surface maplibre-gl tile / style / network errors to Sentry
+    // instead of swallowing them silently in the console.
+    map.on('error', (e) => {
+      Sentry.captureException(e.error ?? new Error('maplibre-gl error (no .error payload)'));
     });
 
     map.on('load', () => {
