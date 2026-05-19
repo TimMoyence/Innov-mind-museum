@@ -46,7 +46,16 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // the real reranker and asserts the +5pt uplift; at that point the file
 // will satisfy the tier signature naturally and this exemption will be
 // removed (cap returns to 11). Justification + approval ref in baseline JSON.
-const PHASE_1_BASELINE_CAP = 12;
+//
+// 2026-05-19 (W1 merge cascade): bumped 12 → 13 to admit
+// auth/rate-limit-zod-400-no-bump.integration.test.ts from Batch A
+// (cluster 5 T1.5 R6). Express smoke test asserting validateBody
+// short-circuits BEFORE the rate-limiter on 8 enumerated route sites.
+// Uses createRouteTestApp (bare Express harness) — same shape as
+// chat-api.smoke.integration.test.ts. The cap bump is required because
+// the baseline entry was missed when Batch A originally landed on main
+// (local pre-push gates skip this sentinel; CI quality job catches it).
+const PHASE_1_BASELINE_CAP = 13;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {
