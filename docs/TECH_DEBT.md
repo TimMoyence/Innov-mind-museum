@@ -986,6 +986,28 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-54 — `cachedGeofenceMode` singleton module-level peut fuiter entre tests
+
+- [ ] **Statut** : ouvert (créé 2026-05-19, /review PR #290 finding MEDIUM)
+- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:21` (singleton) + `:_resetGeofenceModeCacheForTests()` (test seam existant).
+- **Symptôme** : `cachedGeofenceMode` est lazy-init au premier query + jamais ré-évalué. Le commentaire dit "immuable at runtime" — vrai en prod, mais en CI/integration tests qui drop/recreate la column geofence (transitions postgis ↔ jsonb via migrations rejouées dans le même worker Jest), le cache survit et le repo query la mauvaise branche. Flaky tests possible.
+- **Sprint d'origine** : W3 (audit-360 geo-walk-intra).
+- **Effort estimé** : 30 min — option A : appeler `_resetGeofenceModeCacheForTests()` en `beforeEach` de tous les tests integration touchant geofence (discipline ; risque de l'oublier) ; option B : ESLint rule `musaium-test-discipline/reset-geofence-cache-in-beforeach` qui force le pattern ; option C : drop le cache (re-detect à chaque query, surcoût 1 SELECT system_columns par appel).
+- **Comment fermer** : décider A/B/C avec le owner W3, implémenter, documenter dans le JSDoc du singleton.
+
+---
+
+### TD-55 — `MuseumRepository.findByCoords` jsonb path = N+1 query
+
+- [ ] **Statut** : ouvert (créé 2026-05-19, /review PR #290 finding LOW)
+- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:163` (jsonb-bbox branch).
+- **Symptôme** : la query full-scan retourne juste les IDs matchés, puis le code boucle pour `findById(id)` chacun → N+1. À <100 museums (V1 prod = 19 museums seedés) c'est imperceptible ; au-delà de 1k museums (B2B scale) la latence explose linéairement (1 + N round-trips PG).
+- **Sprint d'origine** : W3 (fallback jsonb introduit quand pgvector/PostGIS absent).
+- **Effort estimé** : 1 h — inline le `SELECT museum.*` dans la query bbox au lieu de re-fetcher (`SELECT id, name, slug, ..., geofence_bbox FROM museums WHERE bbox_match($1)`). Ajouter test perf bench fixture 1k museums pour catch toute régression future.
+- **Comment fermer** : refacto + bench + documenter dans le JSDoc l'invariant "1 round-trip pour la branche jsonb-bbox".
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

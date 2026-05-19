@@ -117,16 +117,20 @@ export class SeedPilotMuseumGeofences1779051850000 implements MigrationInterface
         continue;
       }
 
+      // Write-once seed: gate on `IS NULL` so a curator override (e.g. admin
+      // panel refining the corners post-pilot) survives a re-run of this
+      // migration (revert + re-up cycle). Without the gate, the ±110m generic
+      // bbox would silently overwrite the curated value.
       if (colSet.has('geofence')) {
         const wkt = buildPolygonWkt(pilot.corners);
         await queryRunner.query(
-          `UPDATE "museums" SET "geofence" = ST_GeomFromText($1, 4326) WHERE "slug" = $2`,
+          `UPDATE "museums" SET "geofence" = ST_GeomFromText($1, 4326) WHERE "slug" = $2 AND "geofence" IS NULL`,
           [wkt, pilot.slug],
         );
       } else {
         const bbox = buildBbox(pilot.corners);
         await queryRunner.query(
-          `UPDATE "museums" SET "geofence_bbox" = $1::jsonb WHERE "slug" = $2`,
+          `UPDATE "museums" SET "geofence_bbox" = $1::jsonb WHERE "slug" = $2 AND "geofence_bbox" IS NULL`,
           [JSON.stringify(bbox), pilot.slug],
         );
       }
