@@ -54,6 +54,11 @@
       "path": "museum-backend/tests/integration/chat/wikidata-resilience.integration.test.ts",
       "reason": "C5 Step 5.2 — drives the real opossum breaker + real WikidataClient (with mocked global.fetch) + cascade { breakerState, dumpRepo } via WikidataBreakerClient and KnowledgeBaseService. Exercises the breaker trip → soak window → local dump fallback path end-to-end. fetch is mocked because the test intent IS the breaker behaviour under controlled upstream failure modes; real Wikidata in CI would be non-deterministic. The dump repository round-trip is covered separately by wikidata-kb-dump-repository.test.ts (real Postgres testcontainer).",
       "approved_by": "C5-spec-Step5.2"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/rerank/multilingual-bench.test.ts",
+      "reason": "C9.13 V1 — multilingual rerank benchmark scaffold. Reads tests/fixtures/rerank-multilingual.json from disk, computes baseline nDCG@5 per locale, asserts scores ∈ [0,1] (sanity) + logs a markdown summary to stdout for human review. No DB, no outbound HTTP, no orchestrator — V1 only exercises the local nDCG@5 helper against the fixture (NullRerankerAdapter always throws → baseline-only path). Lives under tests/integration/ because V2 (C9.13.1) will swap in the real reranker adapter and assert +5pt nDCG@5 uplift on ≥4/6 locales — at that point the file will import the adapter wiring and satisfy the tier signature naturally; this exemption will then be removed.",
+      "approved_by": "C9.13-spec-D4"
     }
   ]
 }
