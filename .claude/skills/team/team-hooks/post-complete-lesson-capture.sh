@@ -166,13 +166,24 @@ except Exception:
 " 2>/dev/null || echo "0")
   fi
 
-  # Resolve absolute story path
+  # Resolve absolute story path.
+  # FIX-G 2026-05-19 — dispatcher does NOT yet always write the `.story` field
+  # in state.json (observed empty in runs `2026-05-19-tanstack-zustand-polish`
+  # and `2026-05-19-cluster-9-cert-pinning-hardening`), which caused all lesson
+  # sections to silently degrade to "_no data captured_". Fall back to the
+  # canonical convention path `team-state/<runId>/STORY.md` when `.story` is
+  # absent — defensive, no spec drift.
   local story_abs=""
   if [ -n "$story" ]; then
     if [ "${story:0:1}" = "/" ]; then
       story_abs="$story"
     else
       story_abs="$REPO_ROOT/$story"
+    fi
+  else
+    local fallback="$REPO_ROOT/.claude/skills/team/team-state/$run_id/STORY.md"
+    if [ -f "$fallback" ]; then
+      story_abs="$fallback"
     fi
   fi
 
