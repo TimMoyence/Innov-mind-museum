@@ -103,4 +103,58 @@ describe('useMe (Spec C T2.10)', () => {
     });
     expect(result.current.error).toBeDefined();
   });
+
+  // ── TD-TQ-01 — AbortSignal plumbing through queryFn ───────────────────────
+  //
+  // Spec R1 + design D1 mandate that `useMe`'s `queryFn` consume the
+  // `QueryFunctionContext.signal` and forward it to `authService.me()` so
+  // cancellation propagates down to the underlying HTTP layer.
+  //
+  // lib-docs cite: lib-docs/@tanstack/react-query/PATTERNS.md:295.
+  //
+  // RED contract: the current source calls `authService.me()` with NO args;
+  // the assertions below fail until the green phase threads `{ signal }`.
+  describe('TD-TQ-01 — signal propagation', () => {
+    it('forwards an AbortSignal to authService.me() via QueryFunctionContext', async () => {
+      mockMe.mockImplementationOnce(
+        () =>
+          new Promise(() => {
+            /* deferred — never resolves so the test can observe the in-flight signal */
+          }),
+      );
+
+      renderHookWithQueryClient(() => useMe());
+
+      await waitFor(() => {
+        expect(mockMe).toHaveBeenCalledTimes(1);
+      });
+
+      const firstArg = mockMe.mock.calls[0]?.[0];
+      expect(firstArg).toBeDefined();
+      expect(firstArg).toHaveProperty('signal');
+      expect((firstArg as { signal: unknown }).signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("flips the captured signal's .aborted flag when queryClient.cancelQueries is called", async () => {
+      mockMe.mockImplementationOnce(
+        () =>
+          new Promise(() => {
+            /* deferred */
+          }),
+      );
+
+      const { client } = renderHookWithQueryClient(() => useMe());
+
+      await waitFor(() => {
+        expect(mockMe).toHaveBeenCalledTimes(1);
+      });
+      const captured = mockMe.mock.calls[0]?.[0] as { signal: AbortSignal } | undefined;
+      expect(captured?.signal).toBeInstanceOf(AbortSignal);
+      expect(captured?.signal.aborted).toBe(false);
+
+      await client.cancelQueries({ queryKey: ['user', 'me'] });
+
+      expect(captured?.signal.aborted).toBe(true);
+    });
+  });
 });

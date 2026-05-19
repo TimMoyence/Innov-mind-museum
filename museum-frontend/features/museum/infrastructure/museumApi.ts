@@ -84,12 +84,17 @@ export type MuseumEnrichmentResponse =
 export const museumApi = {
   /**
    * Lists all active museums in the public directory.
+   *
+   * @param opts.signal - TD-TQ-01 — AbortSignal forwarded from
+   *   `QueryFunctionContext.signal` so the fetch cancels on queryKey flip
+   *   / unmount. PATTERNS.md:295.
    * @returns Array of museum directory entries.
    */
-  async listMuseumDirectory(): Promise<MuseumDirectoryEntry[]> {
+  async listMuseumDirectory(opts?: { signal?: AbortSignal }): Promise<MuseumDirectoryEntry[]> {
     const data = await openApiRequest({
       path: '/api/museums/directory',
       method: 'get',
+      signal: opts?.signal,
     });
     return data.museums;
   },
@@ -114,15 +119,23 @@ export const museumApi = {
    *   - center+radius: pass `lat`, `lng`, and optional `radius` (meters)
    *   - bounding box: pass `bbox` as `[minLng, minLat, maxLng, maxLat]`
    * When both are provided, the backend uses the bbox.
+   *
+   * @param opts.signal - TD-TQ-01 — AbortSignal forwarded from
+   *   `QueryFunctionContext.signal` so in-flight searches cancel on queryKey
+   *   flip (e.g. GPS jitter, debounced text change) / unmount. PATTERNS.md:295.
+   *   Note: `searchInBounds` callers do NOT pass `signal` (design D6).
    * @returns Search results with museum entries and total count.
    */
-  async searchMuseums(params: {
-    lat?: number;
-    lng?: number;
-    radius?: number;
-    q?: string;
-    bbox?: [number, number, number, number];
-  }): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
+  async searchMuseums(
+    params: {
+      lat?: number;
+      lng?: number;
+      radius?: number;
+      q?: string;
+      bbox?: [number, number, number, number];
+    },
+    opts?: { signal?: AbortSignal },
+  ): Promise<{ museums: MuseumSearchEntry[]; count: number }> {
     const data = await openApiRequest({
       path: '/api/museums/search',
       method: 'get',
@@ -133,6 +146,7 @@ export const museumApi = {
         q: params.q,
         bbox: params.bbox ? params.bbox.join(',') : undefined,
       },
+      signal: opts?.signal,
     });
     return { museums: data.museums, count: data.count };
   },

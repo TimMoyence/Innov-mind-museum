@@ -119,24 +119,31 @@ export const useMuseumDirectory = (
 
   const museumsQuery = useAppQuery<MuseumWithDistance[]>({
     queryKey: nearQueryKey,
-    queryFn: async () => {
+    // TD-TQ-01 / spec R2/R3 / design D1+D6 — forward QueryFunctionContext.signal
+    // through both geo paths and the no-coords fallback so cancellation
+    // propagates on queryKey flip (GPS jitter crossing the rounding boundary).
+    // PATTERNS.md:295.
+    queryFn: async ({ signal }) => {
       // Geo path: prefer search endpoint, fall back to directory if search
       // errors (keeps the UX working when the search service is degraded).
       if (userLatitude !== null && userLongitude !== null) {
         try {
-          const { museums } = await museumApi.searchMuseums({
-            lat: userLatitude,
-            lng: userLongitude,
-            radius: DEFAULT_RADIUS_METERS,
-          });
+          const { museums } = await museumApi.searchMuseums(
+            {
+              lat: userLatitude,
+              lng: userLongitude,
+              radius: DEFAULT_RADIUS_METERS,
+            },
+            { signal },
+          );
           return museums.map(mapSearchEntryToMuseumWithDistance);
         } catch {
-          const entries = await museumApi.listMuseumDirectory();
+          const entries = await museumApi.listMuseumDirectory({ signal });
           return entries.map(mapDirectoryEntryToMuseumWithDistance);
         }
       }
 
-      const entries = await museumApi.listMuseumDirectory();
+      const entries = await museumApi.listMuseumDirectory({ signal });
       return entries.map(mapDirectoryEntryToMuseumWithDistance);
     },
     staleTime: STALE_TIME_MS,
@@ -178,13 +185,19 @@ export const useMuseumDirectory = (
 
   const searchQueryResult = useAppQuery<MuseumWithDistance[]>({
     queryKey: ['museums', 'search', effectiveSearchQuery, roundedLat, roundedLng] as const,
-    queryFn: async () => {
-      const { museums } = await museumApi.searchMuseums({
-        q: effectiveSearchQuery,
-        ...(userLatitude !== null && userLongitude !== null
-          ? { lat: userLatitude, lng: userLongitude, radius: DEFAULT_RADIUS_METERS }
-          : {}),
-      });
+    // TD-TQ-01 / spec R4 / design D1 — forward QueryFunctionContext.signal so
+    // the search request cancels on new debounce / queryKey flip / unmount.
+    // PATTERNS.md:295.
+    queryFn: async ({ signal }) => {
+      const { museums } = await museumApi.searchMuseums(
+        {
+          q: effectiveSearchQuery,
+          ...(userLatitude !== null && userLongitude !== null
+            ? { lat: userLatitude, lng: userLongitude, radius: DEFAULT_RADIUS_METERS }
+            : {}),
+        },
+        { signal },
+      );
       return museums.map(mapSearchEntryToMuseumWithDistance);
     },
     enabled: effectiveSearchQuery.length >= MIN_SEARCH_CHARS,

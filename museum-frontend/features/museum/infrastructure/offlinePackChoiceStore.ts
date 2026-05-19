@@ -51,6 +51,10 @@ export const useOfflinePackChoiceStore = create<OfflinePackChoiceState>()(
       name: 'musaium-offline-pack-choice',
       storage: createJSONStorage(() => storage),
       version: 1,
+      // TD-ZUS-02 / spec R10 / design D5 — narrow persisted shape to `{ choices }`
+      // so action functions (acceptOfflinePack / declineOfflinePack / getChoice /
+      // clearChoice) are excluded from disk payload. PATTERNS.md:119,206.
+      partialize: (state) => ({ choices: state.choices }),
     },
   ),
 );

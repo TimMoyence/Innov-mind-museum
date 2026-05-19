@@ -1,12 +1,20 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { authService } from '@/features/auth/infrastructure/authApi';
 import type { useAuth } from '@/features/auth/application/AuthContext';
 import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 import { getErrorMessage } from '@/shared/lib/errors';
+
+/**
+ * TD-TQ-02 / design D2 — discriminator returned by mutationFn to tell the
+ * hook-level `onSuccess` whether a real session was established (i.e.
+ * `loginWithSession()` was called). Only that path warrants invalidating the
+ * `['user']` query cache. PATTERNS.md:109,139.
+ */
+type AuthMutationResult = { sessionEstablished: true } | undefined;
 
 type LoginWithSession = ReturnType<typeof useAuth>['loginWithSession'];
 
@@ -58,8 +66,21 @@ export function useEmailPasswordAuth({
 }: UseEmailPasswordAuthArgs): UseEmailPasswordAuthResult {
   const { t } = useTranslation();
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const loginMutation = useMutation({
+  // TD-TQ-02 / spec R5/R6/R8 / design D2+D3 — invalidate the `['user']` key
+  // prefix (covers `['user','me']` + any future user-scoped query) exactly
+  // once per successful session establishment. The `sessionEstablished`
+  // discriminator gates the invalidation so validation short-circuits and
+  // no-token fall-throughs (which still resolve the mutation) do NOT fire it.
+  // PATTERNS.md:109 (mutation onSuccess), :139 (invalidateQueries prefix).
+  const invalidateUserOnSession = (result: AuthMutationResult): void => {
+    if (result?.sessionEstablished) {
+      void queryClient.invalidateQueries({ queryKey: ['user'] });
+    }
+  };
+
+  const loginMutation = useMutation<AuthMutationResult>({
     mutationFn: async () => {
       const { email, password } = getValues();
       if (!email || !password) {
@@ -69,13 +90,14 @@ export function useEmailPasswordAuth({
       const response = await authService.login(email, password);
       if (response.accessToken && response.refreshToken) {
         await loginWithSession(response);
-      } else {
-        Alert.alert(t('common.error'), t('auth.login_failed'));
+        return { sessionEstablished: true };
       }
+      Alert.alert(t('common.error'), t('auth.login_failed'));
     },
+    onSuccess: invalidateUserOnSession,
   });
 
-  const registerMutation = useMutation({
+  const registerMutation = useMutation<AuthMutationResult>({
     mutationFn: async () => {
       const { email, password, firstname, lastname, dateOfBirth } = getValues();
       if (!email || !password || !firstname || !lastname || !dateOfBirth) {
@@ -100,7 +122,7 @@ export function useEmailPasswordAuth({
         const response = await authService.login(email, password);
         if (response.accessToken && response.refreshToken) {
           await loginWithSession(response);
-          return;
+          return { sessionEstablished: true };
         }
       } catch {
         // Auto-login failed (e.g. email verification required) — fall back to manual login
@@ -109,6 +131,7 @@ export function useEmailPasswordAuth({
       setInfoMessage(t('auth.registration_complete'));
       onRegistrationComplete();
     },
+    onSuccess: invalidateUserOnSession,
   });
 
   const handleLogin = useCallback(async (): Promise<void> => {

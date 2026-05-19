@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
 import {
@@ -8,6 +8,16 @@ import {
   isAppleSignInAvailable,
 } from '@/features/auth/infrastructure/socialAuthProviders';
 import { getErrorMessage } from '@/shared/lib/errors';
+
+/**
+ * TD-TQ-02 / design D2 — discriminator returned by mutationFn so the hook-level
+ * `onSuccess` can conditionally invalidate `['user']`. Only flows that actually
+ * called `loginWithSession()` (i.e. both tokens were present) trigger the
+ * invalidation. PATTERNS.md:109,139.
+ */
+interface SocialMutationResult {
+  sessionEstablished: boolean;
+}
 
 interface UseSocialLoginOptions {
   loginWithSession: (session: LoginResponse) => Promise<void>;
@@ -35,14 +45,30 @@ export const useSocialLogin = ({
   loginWithSession,
 }: UseSocialLoginOptions): UseSocialLoginResult => {
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     void isAppleSignInAvailable().then(setAppleAuthAvailable);
   }, []);
 
-  const handleSocialLoginSuccess = async (response: LoginResponse): Promise<void> => {
+  // TD-TQ-02 / spec R7/R8 / design D2+D3 — returns `{ sessionEstablished }` so
+  // the hook-level `onSuccess` can invalidate `['user']` only when the tokens
+  // were actually present and `loginWithSession()` was awaited. PATTERNS.md:109.
+  const handleSocialLoginSuccess = async (
+    response: LoginResponse,
+  ): Promise<SocialMutationResult> => {
     if (response.accessToken && response.refreshToken) {
       await loginWithSession(response);
+      return { sessionEstablished: true };
+    }
+    return { sessionEstablished: false };
+  };
+
+  // TD-TQ-02 / design D2+D3 — invalidate the `['user']` key prefix exactly once
+  // per real session establishment. PATTERNS.md:139.
+  const invalidateUserOnSession = (result: SocialMutationResult): void => {
+    if (result.sessionEstablished) {
+      void queryClient.invalidateQueries({ queryKey: ['user'] });
     }
   };
 
@@ -62,22 +88,24 @@ export const useSocialLogin = ({
     }
   };
 
-  const appleMutation = useMutation({
+  const appleMutation = useMutation<SocialMutationResult>({
     mutationFn: async () => {
       const requestedNonce = await safeRequestNonce();
       const { provider, idToken, nonce } = await signInWithApple({ nonce: requestedNonce });
       const response = await authService.socialLogin(provider, idToken, nonce);
-      await handleSocialLoginSuccess(response);
+      return handleSocialLoginSuccess(response);
     },
+    onSuccess: invalidateUserOnSession,
   });
 
   // F11-mobile (2026-05) — Google uses the server-mediated /google/initiate redirect flow:
   // in-app browser → deeplink callback → OTC redeem via /api/auth/social-redeem.
-  const googleMutation = useMutation({
+  const googleMutation = useMutation<SocialMutationResult>({
     mutationFn: async () => {
       const session = await signInWithGoogle();
-      await handleSocialLoginSuccess(session);
+      return handleSocialLoginSuccess(session);
     },
+    onSuccess: invalidateUserOnSession,
   });
 
   const handleAppleSignIn = async (): Promise<void> => {

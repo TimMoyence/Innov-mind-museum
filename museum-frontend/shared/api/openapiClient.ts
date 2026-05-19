@@ -128,6 +128,12 @@ export const openApiRequest = async <
   body?: unknown;
   headers?: HeadersRecord;
   requiresAuth?: boolean;
+  /**
+   * TD-TQ-01 / design D1 — forwarded to `httpRequest` → `AxiosRequestConfig.signal`.
+   * Lets TanStack Query's `QueryFunctionContext.signal` propagate end-to-end.
+   * PATTERNS.md:295.
+   */
+  signal?: AbortSignal;
 }): Promise<OpenApiResponseFor<P, M, S>> => {
   const url = appendQuery(formatOpenApiPath(params.path, params.pathParams), params.query);
 
@@ -136,5 +142,6 @@ export const openApiRequest = async <
     body: params.body,
     headers: params.headers,
     requiresAuth: params.requiresAuth,
+    signal: params.signal,
   });
 };

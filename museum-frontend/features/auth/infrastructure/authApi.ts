@@ -78,11 +78,18 @@ export const authService = {
     });
   },
 
-  /** Fetches the currently authenticated user's profile. */
-  async me(): Promise<AuthMeResponse> {
+  /**
+   * Fetches the currently authenticated user's profile.
+   *
+   * @param opts.signal - TD-TQ-01 — AbortSignal forwarded from TanStack Query's
+   *   `QueryFunctionContext.signal` down to the axios layer. Lets `useMe`
+   *   cancel in-flight requests on queryKey flip / unmount. PATTERNS.md:295.
+   */
+  async me(opts?: { signal?: AbortSignal }): Promise<AuthMeResponse> {
     return openApiRequest({
       path: '/api/auth/me',
       method: 'get',
+      signal: opts?.signal,
     });
   },
 

@@ -24,6 +24,8 @@ type AuthMeResponse = paths['/api/auth/me']['get']['responses'][200]['content'][
 export const useMe = () => {
   return useAppQuery<AuthMeResponse, ['user', 'me']>({
     queryKey: ['user', 'me'],
-    queryFn: () => authService.me(),
+    // TD-TQ-01 / spec R1 / design D1 — forward QueryFunctionContext.signal so
+    // cancellation propagates to axios. PATTERNS.md:295.
+    queryFn: ({ signal }) => authService.me({ signal }),
   });
 };

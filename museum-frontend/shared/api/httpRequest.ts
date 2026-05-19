@@ -11,6 +11,14 @@ interface RequestOptions {
   headers?: HeadersRecord;
   body?: unknown;
   responseType?: 'json' | 'arraybuffer' | 'blob' | 'text';
+  /**
+   * TD-TQ-01 / design D1 — AbortSignal forwarded to `AxiosRequestConfig.signal`
+   * (axios ≥ 0.22). Lets TanStack Query's `QueryFunctionContext.signal` reach
+   * the underlying HTTP layer so in-flight requests are cancelled when the
+   * query is cancelled, the queryKey flips, or the consuming component unmounts.
+   * PATTERNS.md:295.
+   */
+  signal?: AbortSignal;
 }
 
 const isFormData = (body: unknown): body is FormData => {
@@ -29,7 +37,7 @@ const isFormData = (body: unknown): body is FormData => {
  */
 export const httpRequest = async <T>(
   url: string,
-  { requiresAuth = true, headers, body, method, responseType }: RequestOptions = {},
+  { requiresAuth = true, headers, body, method, responseType, signal }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
     ...(headers ?? {}),
@@ -47,6 +55,7 @@ export const httpRequest = async <T>(
       headers: finalHeaders,
       requiresAuth,
       ...(responseType ? { responseType } : {}),
+      ...(signal ? { signal } : {}),
     };
 
     const response = await httpClient.request<T>(requestConfig);

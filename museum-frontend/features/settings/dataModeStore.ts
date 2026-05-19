@@ -33,6 +33,13 @@ export const useDataModePreferenceStore = create<DataModePreferenceStore>()(
     {
       name: 'musaium.dataMode.preference',
       storage: createJSONStorage(() => storage),
+      // TD-ZUS-01 / spec R9+R11 / design D4+D5 — first version field; pre-fix
+      // unversioned blobs are accepted by zustand v5 hydrate fall-through (no
+      // `migrate` fn needed). Narrow persisted shape to `{ preference }` so
+      // action references (setPreference / mergeFromServer) stay in-memory only.
+      // PATTERNS.md:119,120,206.
+      version: 1,
+      partialize: (state) => ({ preference: state.preference }),
     },
   ),
 );
