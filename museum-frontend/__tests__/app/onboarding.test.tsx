@@ -6,6 +6,8 @@
  * 2. Next advances through all 4 slides
  * 3. Skip on slide 1 → setHasSeenOnboarding(true) + router.replace home
  * 4. Done on slide 4 → setHasSeenOnboarding(true) + router.replace home
+ * 5. Skip when unauthenticated → markOnboardingComplete NOT called (F3.1)
+ * 6. Done when unauthenticated → markOnboardingComplete NOT called (F3.2)
  */
 
 import '../helpers/test-utils';
@@ -20,6 +22,13 @@ jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
 }));
 
 const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
+// Mutable auth state for per-test override (F3 — T3-GREEN).
+// Default `isAuthenticated:true` preserves existing 4 tests' behavior. The 2
+// new tests flip to `false` via the `setMockAuth` global helper exposed below.
+const mockAuthState = { isAuthenticated: true };
+(globalThis as unknown as { setMockAuth: (v: boolean) => void }).setMockAuth = (v: boolean) => {
+  mockAuthState.isAuthenticated = v;
+};
 jest.mock('@/features/auth/application/AuthContext', () => ({
   // `isAuthenticated: true` is required since 6c39e9365 — the onboarding
   // handleComplete now skips the server-side mark when the user is not yet
@@ -28,7 +37,9 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   // tail, so we always expose `true`.
   useAuth: () => ({
     markOnboardingComplete: mockMarkOnboardingComplete,
-    isAuthenticated: true,
+    get isAuthenticated() {
+      return mockAuthState.isAuthenticated;
+    },
   }),
 }));
 
@@ -105,6 +116,7 @@ import OnboardingScreen from '@/app/(stack)/onboarding';
 describe('OnboardingScreen v2', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.isAuthenticated = true;
     mockMarkOnboardingComplete.mockResolvedValue(undefined);
     mockUseOnboarding.mockReturnValue({
       currentStep: 0,
@@ -166,5 +178,41 @@ describe('OnboardingScreen v2', () => {
       expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
       expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
     });
+  });
+
+  // ── F3 — isAuthenticated:false branch coverage (T3-RED) ────────────────────
+  // Spec F3.1, F3.2. Production guard in app/(stack)/onboarding.tsx:61-67
+  // (commit 6c39e936) skips markOnboardingComplete() when isAuthenticated is
+  // false. These tests assert that skip path. They require per-test override
+  // of the useAuth mock — wired by T3-GREEN. On red HEAD the module-level
+  // mock hardcodes isAuthenticated:true, so the new tests fail at the
+  // setMockAuth() call (ReferenceError) — that IS the RED state.
+
+  it('Skip on slide 1 when not authenticated does NOT call markOnboardingComplete', async () => {
+    (globalThis as unknown as { setMockAuth: (v: boolean) => void }).setMockAuth(false);
+    render(<OnboardingScreen />);
+    fireEvent.press(screen.getByLabelText('a11y.onboarding.skip'));
+    await waitFor(() => {
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
+    expect(mockMarkOnboardingComplete).not.toHaveBeenCalled();
+  });
+
+  it('Done on last slide when not authenticated does NOT call markOnboardingComplete', async () => {
+    (globalThis as unknown as { setMockAuth: (v: boolean) => void }).setMockAuth(false);
+    mockUseOnboarding.mockReturnValue({
+      currentStep: 3,
+      goToStep: mockGoToStep,
+      next: mockNext,
+      isLast: true,
+    });
+    render(<OnboardingScreen />);
+    fireEvent.press(screen.getByLabelText('a11y.onboarding.get_started'));
+    await waitFor(() => {
+      expect(mockSetHasSeenOnboarding).toHaveBeenCalledWith(true);
+      expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
+    expect(mockMarkOnboardingComplete).not.toHaveBeenCalled();
   });
 });
