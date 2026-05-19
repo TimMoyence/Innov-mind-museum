@@ -59,3 +59,17 @@ Pinning is **defense-in-depth**, not a primary control: HTTPS + HSTS already pre
 - [react-native-ssl-public-key-pinning](https://github.com/frw/react-native-ssl-public-key-pinning)
 - [TrustKit (iOS)](https://github.com/datatheorem/TrustKit) — underlying iOS implementation
 - [OkHttp CertificatePinner](https://square.github.io/okhttp/4.x/okhttp/okhttp3/-certificate-pinner/) — underlying Android implementation
+
+## Phase 2.1 hardening — 2026-05-19 (TD-SSL-01..05)
+
+Status update, not a new decision. Cluster 9 (RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`) hardened the Phase 2 scaffolding along 5 axes flagged by the 2026-05-18 enterprise-grade audit:
+
+- **TD-SSL-01** — `ios.networkInspector: false` in `expo-build-properties` (`museum-frontend/app.config.ts:289`) so iOS dev-client builds with the env flag ON exhibit deterministic pinning identical to production. PATTERNS §5.3.
+- **TD-SSL-02** — `PINSET_EXPIRATION_DATE = '2027-03-12'` wired into `PinningOptions` via `buildPinningOptions()` (`museum-frontend/shared/config/cert-pinning.ts:70`). Bounded in `[2027-03-12, 2028-03-12]` — lower = E8 NotAfter, upper = +12mo cap — so an unmaintained client either keeps pinning while the chain is valid or falls back to OS trust-store after the cap. PATTERNS §5.4.
+- **TD-SSL-03** — `addSslPinningErrorListener` returns an `EmitterSubscription`; Cluster 9 captures it in a module-scoped reference, exposes `disposeCertPinning()` for explicit teardown, and guards against HMR re-entry so Fast Refresh cannot leak a duplicate listener. PATTERNS §2.
+- **TD-SSL-04** — `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` gained a `## Coverage scope` section enumerating which network paths the JS-level pinning covers (RN `fetch` / `XMLHttpRequest` on `musaium.com`) and which native SDK paths bypass it (Sentry native transport, MapLibre tile loader, `expo-image-picker` upload pipeline, S3 audio fetches on non-`musaium.com` hostnames). PATTERNS §4.
+- **TD-SSL-05** — new Maestro flow `museum-frontend/.maestro/cert-pinning-smoke.yaml` with `launchApp clearState: true` to purge the iOS TLS session cache between iterations (PATTERNS §5.2). Note (follow-up TD-SSL-06): under the V1 OFF default (ADR-031 doctrine), the flow is operationally a launch-and-login smoke rather than a pinning-applied proof until activation flips ON or until `initOutcome.kind` is surfaced to a debug-only `testID`.
+
+R6 NFR parity preserved — kill-switch ladder, `FAIL_OPEN_STATE`, `parseKillSwitchPayload`, `isCacheFresh`, `resolveKillSwitchState` all byte-identical to HEAD. Two-pin strategy (LE leaf + LE E8 intermediate) retained. No new dependency. Reviewer APPROVED **87.0/100** on the 5 axes (correctness 86 / security 90 / maintainability 88 / testability 84 / documentation 87). The V1 activation decision (`EXPO_PUBLIC_CERT_PINNING_ENABLED`) remains deferred per spec §8 Q1.
+
+Open follow-ups carried out of this run (severity:medium per reviewer): **TD-SSL-06** (Maestro flow needs `initOutcome.kind` debug-only `testID` to fail-loud when init was skipped despite the build expecting it on) and **TD-SSL-07** (theoretical in-flight init/dispose race between the kill-switch await and the listener assignment — cheap mitigation via module-scoped pending-promise or boolean re-entry guard). Both deferred as TD entries, not launch blockers under V1 OFF default.

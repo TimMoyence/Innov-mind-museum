@@ -4,7 +4,10 @@ jest.mock('@sentry/react-native', () => ({
 }));
 
 const mockInitializeSslPinning = jest.fn().mockResolvedValue(undefined);
-const mockAddSslPinningErrorListener = jest.fn();
+// D7 mock-builder: return `{ remove: jest.fn() }` so the green-phase
+// `disposeCertPinning` impl can call `.remove()` on the captured
+// EmitterSubscription (PATTERNS §2 lines 72-84 / §7 lines 200-207).
+const mockAddSslPinningErrorListener = jest.fn().mockReturnValue({ remove: jest.fn() });
 const mockIsSslPinningAvailable = jest.fn().mockReturnValue(true);
 
 jest.mock('react-native-ssl-public-key-pinning', () => ({
@@ -19,7 +22,11 @@ import {
   parseKillSwitchPayload,
   type KillSwitchState,
 } from '@/shared/config/cert-pinning';
-import { initCertPinning, resolveKillSwitchState } from '@/shared/infrastructure/cert-pinning-init';
+import {
+  disposeCertPinning,
+  initCertPinning,
+  resolveKillSwitchState,
+} from '@/shared/infrastructure/cert-pinning-init';
 
 import type { storage } from '@/shared/infrastructure/storage';
 
@@ -211,5 +218,107 @@ describe('initCertPinning', () => {
     });
     expect(result).toEqual({ kind: 'initialized', killSwitchSource: 'fail-open' });
     expect(mockInitializeSslPinning).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * R3 acceptance — listener teardown via `disposeCertPinning`.
+ *
+ * Cited:
+ *   - lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md:72-84
+ *     (§2 — always call `.remove()` on the EmitterSubscription returned by
+ *     `addSslPinningErrorListener`).
+ *
+ * The mock-builder change above (`.mockReturnValue({ remove: jest.fn() })`)
+ * is a setup-line change — it preserves the 8 pre-existing assertions
+ * byte-for-byte while letting the green-phase impl call `.remove()` on
+ * the captured subscription. R6 NFR parity preserved.
+ */
+describe('disposeCertPinning', () => {
+  it('invokes the captured subscription .remove() exactly once after a successful initCertPinning', async () => {
+    process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED = 'true';
+    const removeSpy = jest.fn();
+    mockAddSslPinningErrorListener.mockReturnValueOnce({ remove: removeSpy });
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ pinningEnabled: true }),
+    } as Response);
+
+    const result = await initCertPinning({
+      apiBaseUrl: 'https://api.example.test',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      storageImpl: inMemoryStorage(),
+    });
+    expect(result.kind).toBe('initialized');
+
+    disposeCertPinning();
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('is a no-op when no listener was registered (env-disabled boot path)', async () => {
+    // env flag absent → initCertPinning short-circuits without registering
+    // a listener. disposeCertPinning must NOT throw and MUST NOT touch
+    // any subscription.
+    const result = await initCertPinning({ apiBaseUrl: 'https://api.example.test' });
+    expect(result).toEqual({ kind: 'skipped', reason: 'env-disabled' });
+    expect(() => {
+      disposeCertPinning();
+    }).not.toThrow();
+    // No listener was registered, so the mock factory was never called.
+    expect(mockAddSslPinningErrorListener).not.toHaveBeenCalled();
+  });
+
+  it('clears the captured reference so a second dispose call is also a no-op', async () => {
+    process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED = 'true';
+    const removeSpy = jest.fn();
+    mockAddSslPinningErrorListener.mockReturnValueOnce({ remove: removeSpy });
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ pinningEnabled: true }),
+    } as Response);
+
+    await initCertPinning({
+      apiBaseUrl: 'https://api.example.test',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      storageImpl: inMemoryStorage(),
+    });
+
+    disposeCertPinning();
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    // Second call must NOT invoke .remove() again — the reference is cleared.
+    disposeCertPinning();
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-subscribes when initCertPinning is invoked again after a prior dispose', async () => {
+    process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED = 'true';
+    const firstRemove = jest.fn();
+    const secondRemove = jest.fn();
+    mockAddSslPinningErrorListener
+      .mockReturnValueOnce({ remove: firstRemove })
+      .mockReturnValueOnce({ remove: secondRemove });
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ pinningEnabled: true }),
+    } as Response);
+
+    await initCertPinning({
+      apiBaseUrl: 'https://api.example.test',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      storageImpl: inMemoryStorage(),
+    });
+    disposeCertPinning();
+    expect(firstRemove).toHaveBeenCalledTimes(1);
+
+    await initCertPinning({
+      apiBaseUrl: 'https://api.example.test',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      storageImpl: inMemoryStorage(),
+    });
+    expect(mockAddSslPinningErrorListener).toHaveBeenCalledTimes(2);
+
+    disposeCertPinning();
+    expect(secondRemove).toHaveBeenCalledTimes(1);
+    expect(firstRemove).toHaveBeenCalledTimes(1);
   });
 });

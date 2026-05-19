@@ -19,6 +19,7 @@
  * immediately on subsequent requests, not delay app start).
  */
 import * as Sentry from '@sentry/react-native';
+import type { EmitterSubscription } from 'react-native';
 import {
   addSslPinningErrorListener,
   initializeSslPinning,
@@ -37,6 +38,17 @@ import { readEnvString } from '@/shared/lib/env';
 import { storage } from './storage';
 
 const KILL_SWITCH_CACHE_KEY = 'cert-pinning.kill-switch.v1';
+
+/**
+ * Module-scoped reference to the active `addSslPinningErrorListener`
+ * subscription, so it can be detached on HMR/teardown. Single host
+ * (`musaium.com`) → single listener, no registry needed. Reassigned
+ * by `initCertPinning` (set) and `disposeCertPinning` (clear).
+ *
+ * Cited: `lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md`
+ * §2 lines 72-84 (always call `.remove()` on the returned subscription).
+ */
+let activeListener: EmitterSubscription | null = null;
 
 // Bridges local/CI typing divergence on `process.env.X` reads via the
 // canonical `readEnvString` helper. See museum-frontend/shared/lib/env.ts.
@@ -130,7 +142,17 @@ export const initCertPinning = async (params: {
     return { kind: 'skipped', reason: 'kill-switch-disabled' };
   }
 
-  addSslPinningErrorListener((error) => {
+  // HMR / re-init safety: if a prior listener is still attached
+  // (Fast Refresh re-runs the module), remove it before resubscribing
+  // to avoid duplicate Sentry events on a single mismatch.
+  // Cited PATTERNS.md §2 lines 72-84 (always call `.remove()` on the
+  // returned subscription) + design §9 D2 HMR guard.
+  if (activeListener) {
+    activeListener.remove();
+    activeListener = null;
+  }
+
+  activeListener = addSslPinningErrorListener((error) => {
     Sentry.captureMessage('cert-pinning.mismatch', {
       level: 'error',
       tags: { 'cert-pinning.host': error.serverHostname },
@@ -146,4 +168,28 @@ export const initCertPinning = async (params: {
     data: { source: killSwitch.source },
   });
   return { kind: 'initialized', killSwitchSource: killSwitch.source };
+};
+
+/**
+ * Tears down the `cert-pinning.mismatch` listener registered by
+ * `initCertPinning`. Safe to call when no listener was registered
+ * (env-disabled boot path) — no-op, no throw.
+ *
+ * Intended call sites:
+ *   - HMR teardown in `__DEV__` (Fast Refresh re-runs).
+ *   - Unit tests asserting listener lifecycle (R3 acceptance).
+ *
+ * Cited: `lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md`
+ * §2 lines 72-84 — always call `.remove()` on the returned subscription.
+ */
+export const disposeCertPinning = (): void => {
+  if (activeListener) {
+    activeListener.remove();
+    activeListener = null;
+    Sentry.addBreadcrumb({
+      category: 'cert-pinning',
+      level: 'info',
+      message: 'disposed',
+    });
+  }
 };

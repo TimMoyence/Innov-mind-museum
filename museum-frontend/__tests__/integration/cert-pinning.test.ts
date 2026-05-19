@@ -19,7 +19,11 @@ jest.mock('@sentry/react-native', () => ({
 }));
 
 const mockInitializeSslPinning = jest.fn().mockResolvedValue(undefined);
-const mockAddSslPinningErrorListener = jest.fn();
+// D7 mock-builder: return `{ remove: jest.fn() }` so the green-phase
+// `disposeCertPinning` impl can call `.remove()` on the captured
+// EmitterSubscription. PATTERNS §2 lines 72-84 / §7 lines 200-207.
+// Setup-line change only — the 3 existing assertions stay byte-identical.
+const mockAddSslPinningErrorListener = jest.fn().mockReturnValue({ remove: jest.fn() });
 const mockIsSslPinningAvailable = jest.fn().mockReturnValue(true);
 
 jest.mock('react-native-ssl-public-key-pinning', () => ({

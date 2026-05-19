@@ -89,7 +89,7 @@ lib-docs/**
 
 # frontend docs
 !museum-frontend/docs/
-!museum-frontend/docs/IOS26_CRASH_DIAG.md
+!museum-frontend/docs/**
 
 # backend perf bench artifacts (EXPLAIN ANALYZE outputs + reports)
 !museum-backend/docs/

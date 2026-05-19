@@ -2,7 +2,12 @@
   "shards": [
     {
       "name": "auth",
-      "flows": ["auth-flow.yaml", "auth-persistence.yaml", "onboarding-flow.yaml"]
+      "flows": [
+        "auth-flow.yaml",
+        "auth-persistence.yaml",
+        "onboarding-flow.yaml",
+        "cert-pinning-smoke.yaml"
+      ]
     },
     {
       "name": "chat",

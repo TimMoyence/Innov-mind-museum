@@ -54,6 +54,22 @@ export const PROD_SPKI_HASHES = [
 ] as const;
 
 /**
+ * Failsafe horizon. After this wall-clock date, the lib silently
+ * disables pin validation for the host and falls back to OS trust
+ * store validation. Pinned at the E8 intermediate NotAfter so the
+ * failsafe doesn't outlive the currently-pinned intermediate chain.
+ * Per the spec NFR, this MUST stay ≥ '2027-03-12' (E8 NotAfter)
+ * AND ≤ '2028-03-12' (cap +12 months). See
+ * `lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md` §5.4
+ * lines 154-156 (`expirationDate` is a failsafe, not a rollout knob).
+ *
+ * Reviewer: bump THIS const AND the runbook snapshot table in the
+ * same commit when rotating the intermediate pin (see
+ * `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` §Pre-rotation).
+ */
+export const PINSET_EXPIRATION_DATE = '2027-03-12' as const;
+
+/**
  * Builds the {@link PinningOptions} payload consumed by
  * `initializeSslPinning`. Kept as a function (not a const) so the
  * pinset can be swapped in tests via dependency injection.
@@ -64,6 +80,7 @@ export const buildPinningOptions = (
   [PINNED_HOST]: {
     publicKeyHashes: [...hashes],
     includeSubdomains: false,
+    expirationDate: PINSET_EXPIRATION_DATE,
   },
 });
 

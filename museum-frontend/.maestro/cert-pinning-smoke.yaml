@@ -1,0 +1,64 @@
+appId: com.musaium.mobile.preview
+---
+# Cert pinning smoke — cold-start auth round-trip
+#
+# Why this flow (UFR-021 + PATTERNS §5.2):
+#   iOS caches successful TLS sessions ; "wrong pin" tests need a full
+#   process restart to be reliable. We use `launchApp clearState: true`
+#   to purge the TLS session cache between runs, then exercise an auth
+#   request that flows through the pinned `musaium.com` domain.
+#
+# What this asserts:
+#   - The native module loaded and `initializeSslPinning` resolved
+#     (otherwise no fetch makes it past the kill-switch path).
+#   - The pin set in `shared/config/cert-pinning.ts` matches the
+#     live `musaium.com:443` chain (otherwise the auth fetch TLS-fails).
+#
+# Test account: seeded smoke account (apple.test@apple.com / Apple1234!)
+# — matches helpers/quick-login.yaml + auth-login-happy.yaml conventions.
+#
+# Cited: lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md §5.2
+# lines 127-133 (iOS TLS session cache makes "wrong pin" tests lie).
+# Design §9 D4 (RUN 2026-05-19-cluster-9-cert-pinning-hardening).
+
+- launchApp:
+    clearState: true
+    stopApp: true
+
+- waitForAnimationToEnd
+
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+- tapOn:
+    id: "email-input"
+- inputText: "apple.test@apple.com"
+
+- tapOn:
+    id: "password-input"
+- inputText: "Apple1234!"
+
+- hideKeyboard
+
+- tapOn:
+    id: "auth-submit"
+
+# If pinning is broken, the TLS handshake to musaium.com:443 fails,
+# the auth fetch rejects, and the "Your museum companion" home hero
+# never appears. The timeout below is the pinning-applied assertion.
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Onboarding may appear on first launch — skip if it does
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 15000
+
+- assertNotVisible:
+    text: "Welcome back|Bon retour"

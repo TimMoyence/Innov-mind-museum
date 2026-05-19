@@ -281,6 +281,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             // duplicated). Building RN from source uses one canonical compile
             // path. +8-10 min on clean Xcode build, cached after.
             buildReactNativeFromSource: true,
+            // P3.4 (TD-SSL-01) — Disable Expo dev-client iOS network inspector
+            // because it interferes with `initializeSslPinning` setup on dev-client
+            // builds (lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md §5.3
+            // lines 135-152). Production builds disable the inspector automatically ;
+            // this opt-out only affects dev/preview.
+            networkInspector: false,
           },
         },
       ],

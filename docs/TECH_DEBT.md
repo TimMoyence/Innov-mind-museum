@@ -1268,7 +1268,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-SSL-01 — `networkInspector: false` MISSING dans app.config.ts → Expo dev iOS pinning unpredictable (HIGH, BLOCKER pre-V1 IF cert pinning enabled)
+## ✅ TD-SSL-01 — `networkInspector: false` MISSING dans app.config.ts → Expo dev iOS pinning unpredictable (HIGH, BLOCKER pre-V1 IF cert pinning enabled)
+
+- [x] **Statut** : fermé 2026-05-19 — RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`. `ios.networkInspector: false` ajouté au plugin `expo-build-properties` dans `museum-frontend/app.config.ts:289`.
 
 **Context** : `expo-build-properties` ios block manque `networkInspector: false`. Dev builds avec `EXPO_PUBLIC_CERT_PINNING_ENABLED=true` exhibit unpredictable pinning. Smoke test RUNBOOK relies on preview build = false on iOS dev.
 
@@ -1278,7 +1280,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SSL-02 — `expirationDate` failsafe absent (MEDIUM, post-V1 mais avant 2027)
+## ✅ TD-SSL-02 — `expirationDate` failsafe absent (MEDIUM, post-V1 mais avant 2027)
+
+- [x] **Statut** : fermé 2026-05-19 — RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`. `PINSET_EXPIRATION_DATE = '2027-03-12'` exporté et wiré dans `buildPinningOptions()` (`museum-frontend/shared/config/cert-pinning.ts:70`). Borné `[2027-03-12, 2028-03-12]` via unit tests R2.
 
 **Context** : Si app version stops shipping → tous clients brick at TLS handshake après 2027-03-12 (E8 intermediate exp). Kill-switch ne mitige que si network reachable.
 
@@ -1288,7 +1292,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SSL-03 — `addSslPinningErrorListener` subscription discarded (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-SSL-03 — `addSslPinningErrorListener` subscription discarded (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-19 — RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`. `EmitterSubscription` capturée dans `activeListener` module-scoped + nouveau export `disposeCertPinning()` + guard HMR re-entry. 4 nouveaux tests R3.
 
 **Context** : Discards EmitterSubscription return value. Defeats hot-reload cleanup, prevents tests d'assert teardown.
 
@@ -1298,7 +1304,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SSL-04 — Third-party native SDK pinning bypass surface NON-auditée (LOW, NICE_TO_HAVE)
+## ✅ TD-SSL-04 — Third-party native SDK pinning bypass surface NON-auditée (LOW, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-19 — RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`. Section `## Coverage scope` ajoutée à `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` avec 6-row table (API client, Sentry native, MapLibre, expo-image-picker, S3 audio, kill-switch endpoint) + threat-model implication.
 
 **Context** : Library instrumente seulement RN Networking. Sentry native transport, MapLibre tile loader, expo-image-picker uploads, audioUrl S3 GETs peut bypass pinning silently.
 
@@ -1308,13 +1316,56 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SSL-05 — iOS TLS session cache gotcha non codifié en tests auto (LOW, NICE_TO_HAVE)
+## ✅ TD-SSL-05 — iOS TLS session cache gotcha non codifié en tests auto (LOW, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-19 — RUN_ID `2026-05-19-cluster-9-cert-pinning-hardening`. Maestro flow `museum-frontend/.maestro/cert-pinning-smoke.yaml` créé avec `launchApp clearState: true stopApp: true` + enregistré dans le shard `auth` de `shards.json`. Voir TD-SSL-06 pour la limitation actuelle (proof-applied gap under V1 OFF default).
 
 **Context** : Cache invalidation requires full app process restart. Documented RUNBOOK manual smoke only.
 
 **Remediation** : Add Maestro flow with `launchApp clearState:true` entre config mutations.
 
 **Evidence** : RUNBOOK :168-178.
+
+---
+
+## TD-SSL-06 — Maestro `cert-pinning-smoke.yaml` ne prouve PAS le pinning-applied sous V1 OFF default (MEDIUM, follow-up post-activation)
+
+**Context** : Sous V1 (ADR-031 doctrine, `EXPO_PUBLIC_CERT_PINNING_ENABLED` non set), `initCertPinning` short-circuit `kind:'skipped' reason:'env-disabled'` avant tout call à `initializeSslPinning`. Le flow `cert-pinning-smoke.yaml` exerce un cold-start auth round-trip qui PASSE même quand le pinning est OFF (TLS via OS trust store) — donc le flow est opérationnellement un launch+login smoke, NON un pinning-applied proof. Devient meaningful uniquement après bascule activation ON.
+
+**Remediation** : surface `initOutcome.kind` (literal: `"initialized"` | `"skipped"`) à un debug-only `testID` (e.g. `<View testID="cert-pinning-state" {…}>{initOutcome.kind}</View>` derrière `__DEV__`). Maestro flow assert sur ce `testID` valeur attendue selon build profile (preview iOS ON → `initialized` ; dev local OFF → `skipped`). Fail-loud quand init était attendu ON mais a été skipped silencieusement.
+
+**Evidence** : `museum-frontend/.maestro/cert-pinning-smoke.yaml` ; reviewer code-review.json finding 1 (severity:medium, axis:testability) ; spec.md §8 Q1 (V1 activation déférée).
+
+**Effort estimé** : 1-2 heures (1 small testID + 1 Maestro assertion + 1 conditional wire depuis `_layout.tsx`).
+
+**Comment fermer** :
+1. Surface `initOutcome.kind` côté `cert-pinning-init.ts` (déjà retourné par `initCertPinning`).
+2. Stocker dans state module-scoped + render debug-only View avec `testID="cert-pinning-state"` dans `_layout.tsx`.
+3. Étendre `cert-pinning-smoke.yaml` avec `- assertVisible: id: cert-pinning-state\n    text: "initialized"` (or `"skipped"` selon profile).
+4. Update `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` Smoke test section.
+
+**Sprint d'origine** : 2026-05-19 Cluster 9 cert pinning hardening (run `2026-05-19-cluster-9-cert-pinning-hardening`).
+
+---
+
+## TD-SSL-07 — `initCertPinning` in-flight init/dispose race (MEDIUM, follow-up theoretical)
+
+**Context** : `initCertPinning` est async, await `resolveKillSwitchState` AVANT d'assigner `activeListener` (cert-pinning-init.ts:155 approx). Un appel concurrent à `disposeCertPinning()` entre les deux points de suspension observe `activeListener === null`, no-op, puis init resume et assigne le listener que dispose voulait empêcher. Race symétrique pour deux init concurrents → leak d'une subscription. Pas un launch blocker sous V1 OFF default (single eager call site, `dispose` non encore wiré côté HMR), mais ergonomiquement fragile dès qu'on wirera `dispose` côté Fast Refresh `__DEV__` hook.
+
+**Remediation** : sérialisation via promesse module-scoped pending (e.g. `let pendingInit: Promise<CertPinningInitOutcome> | null = null` + `if (pendingInit) return pendingInit; pendingInit = (async () => {…})(); return pendingInit;`). OU boolean re-entry guard. Réviser le contract `initCertPinning` : doit-il être idempotent ? Pre-empté par un dispose en-vol ?
+
+**Evidence** : `museum-frontend/shared/infrastructure/cert-pinning-init.ts:104-149` ; reviewer code-review.json finding 2 (severity:medium, axis:correctness).
+
+**Effort estimé** : 2-4 heures (1 pending-promise serialiser + 2-3 nouveaux tests R3+ pour init/dispose race + race-test pattern doc dans JSDoc).
+
+**Comment fermer** :
+1. Ajouter `let pendingInit: Promise<CertPinningInitOutcome> | null = null;` module-scoped.
+2. Wrap `initCertPinning` body : si `pendingInit` non-null → return it ; sinon assigner `pendingInit = (async () => {…})()` puis `.finally(() => pendingInit = null)`.
+3. `disposeCertPinning` : si `pendingInit` non-null, await-le AVANT le `activeListener.remove()` (ou cancel — choix de contract à documenter dans JSDoc).
+4. 2-3 nouveaux tests `cert-pinning-init.test.ts` exercisant l'init/dispose race (`Promise.all([initCertPinning(opts), disposeCertPinning()])`).
+5. JSDoc sur `initCertPinning` : "idempotent + dispose-safe".
+
+**Sprint d'origine** : 2026-05-19 Cluster 9 cert pinning hardening (run `2026-05-19-cluster-9-cert-pinning-hardening`).
 
 ---
 
