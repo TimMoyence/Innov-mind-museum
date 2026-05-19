@@ -37,12 +37,21 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // emission / registry surface) with the real infra path covered by sibling
 // tests carrying a real DataSource / testcontainer. Reduce back to a lower
 // cap only by deleting entries, never by adding more.
-const PHASE_1_BASELINE_CAP = 11;
+//
+// 2026-05-19 (C9.13 V1): bumped 11 → 12 to admit
+// chat/rerank/multilingual-bench.test.ts — fixture-only nDCG@5 baseline
+// scaffold (reads tests/fixtures/rerank-multilingual.json, computes
+// scores, asserts ∈ [0,1]). No DB / HTTP / orchestrator in V1. Lives
+// under integration/ because V2 (C9.13.1) swaps NullRerankerAdapter for
+// the real reranker and asserts the +5pt uplift; at that point the file
+// will satisfy the tier signature naturally and this exemption will be
+// removed (cap returns to 11). Justification + approval ref in baseline JSON.
+const PHASE_1_BASELINE_CAP = 12;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {
     const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf-8')) as {
-      exempt: Array<{ path: string }>;
+      exempt: { path: string }[];
     };
     expect(Array.isArray(baseline.exempt)).toBe(true);
     expect(baseline.exempt.length).toBeLessThanOrEqual(PHASE_1_BASELINE_CAP);
