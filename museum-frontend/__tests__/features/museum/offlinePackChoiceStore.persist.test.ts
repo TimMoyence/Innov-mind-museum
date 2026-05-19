@@ -97,7 +97,8 @@ describe('offlinePackChoiceStore — persist config (TD-ZUS-02)', () => {
 
     const raw = mockStorage.get(STORAGE_KEY);
     expect(raw).toBeDefined();
-    const parsed = JSON.parse(raw!) as {
+    if (raw === undefined) throw new Error('Expected persisted state to be defined');
+    const parsed = JSON.parse(raw) as {
       state: { choices: Record<string, { decision: string; recordedAt: string }> };
       version: number;
     };

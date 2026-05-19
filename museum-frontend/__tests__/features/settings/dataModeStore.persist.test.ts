@@ -93,7 +93,8 @@ describe('dataModeStore — persist config (TD-ZUS-01)', () => {
 
     const raw = mockStorage.get(STORAGE_KEY);
     expect(raw).toBeDefined();
-    const parsed = JSON.parse(raw!) as { state: Record<string, unknown>; version: number };
+    if (raw === undefined) throw new Error('Expected persisted state to be defined');
+    const parsed = JSON.parse(raw) as { state: Record<string, unknown>; version: number };
 
     expect(parsed.version).toBe(1);
     expect(parsed.state).toEqual({ preference: 'low' });
