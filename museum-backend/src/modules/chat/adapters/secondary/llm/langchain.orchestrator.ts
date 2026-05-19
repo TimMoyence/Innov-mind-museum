@@ -306,18 +306,15 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * withStructuredOutput → walkAssistantOutputSchema. No section runner / retry —
    * exceptions propagate.
    *
-   * C9.5 asymmetry — the walk path intentionally does NOT switch to
-   * `includeRaw: true` + `recordPromptCacheTelemetry`. The editor scope for
-   * C9.5 limits cache telemetry to the default-path `invokeSection`. The walk
-   * intent is session-pinned and would benefit equally from prompt caching;
-   * adding telemetry there is a follow-up (tracked in design §D5.a). `usageRef`
-   * is accepted here for signature parity with the default path but stays
-   * untouched — Langfuse generation.end() will report no `usage` block for
-   * walk turns until that follow-up lands.
+   * C9.5 D5.a — walk path uses `includeRaw: true` and emits the same
+   * `recordPromptCacheTelemetry` side-effects as the default `invokeSection`
+   * (Prom Counter + log + Langfuse usage block). R10/R12 graceful degradation
+   * applies: fakes / older SDKs returning the parsed-only shape classify as
+   * `'miss'` and telemetry helpers swallow their own failures.
    */
   private async generateWalk(
     input: OrchestratorInput,
-    _usageRef: UsageRef,
+    usageRef: UsageRef,
   ): Promise<OrchestratorOutput> {
     const model = this.model;
     if (!model) {
@@ -370,26 +367,35 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
     messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
 
-    // C9.5 — walk path stays on the legacy parsed-only shape (no
-    // `includeRaw: true`) per the asymmetry comment on `generateWalk`. The
-    // `ChatModel.withStructuredOutput` return type is a union accommodating
-    // both shapes; here we narrow at runtime via `isIncludeRawShape`.
+    // C9.5 D5.a — parity with chat path: `includeRaw: true` surfaces the
+    // raw AIMessage's `usage_metadata.input_token_details.cache_read` so we
+    // can classify hit/partial/miss and feed the same Prom Counter + log +
+    // Langfuse usage block. R10: fakes / providers returning the parsed-only
+    // shape degrade to `'miss'` via the `isIncludeRawShape` narrowing below.
     const structured = model.withStructuredOutput(walkAssistantOutputSchema, {
       name: 'WalkAssistantOutput',
+      includeRaw: true,
     });
 
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     const walkPayloadBytes = estimatePayloadBytes(messages);
-    const rawResult = await structured.invoke(messages, { signal });
-    let result: WalkAssistantOutput;
-    if (isIncludeRawShape<WalkAssistantOutput>(rawResult)) {
-      if (rawResult.parsed === null) {
-        throw new Error('walk structured output parse failure — parsed: null');
-      }
-      result = rawResult.parsed;
-    } else {
-      result = rawResult;
-    }
+    const rawResult = (await structured.invoke(messages, { signal })) as
+      | WalkAssistantOutput
+      | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null };
+    const { result, usage } = this.narrowWalkStructuredResult(rawResult);
+
+    // C9.5 D5.a — R8/R9/R11/R12 emit Prom + log + Langfuse usage block. All
+    // side-effects swallowed internally; this call never throws.
+    recordPromptCacheTelemetry(
+      {
+        requestId: input.requestId,
+        sectionName: 'walk',
+        provider: env.llm.provider,
+        model: env.llm.model,
+        usage,
+      },
+      usageRef,
+    );
 
     // C9.4 — record cost on walk path (bypasses invokeSection). R2: only on success.
     const walkTier = input.userId == null ? 'anonymous' : 'free';
@@ -410,5 +416,26 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       metadata: { citations: [] },
       suggestions,
     };
+  }
+
+  /**
+   * C9.5 D5.a — narrows the walk path's `includeRaw: true` response. R10:
+   * providers/fakes returning the parsed-only shape degrade to no usage.
+   */
+  private narrowWalkStructuredResult(
+    rawResult:
+      | WalkAssistantOutput
+      | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null },
+  ): {
+    result: WalkAssistantOutput;
+    usage: UsageMetadata | undefined;
+  } {
+    if (isIncludeRawShape<WalkAssistantOutput>(rawResult)) {
+      if (rawResult.parsed === null) {
+        throw new Error('walk structured output parse failure — parsed: null');
+      }
+      return { result: rawResult.parsed, usage: rawResult.raw.usage_metadata };
+    }
+    return { result: rawResult, usage: undefined };
   }
 }
