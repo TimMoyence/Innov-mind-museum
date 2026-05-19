@@ -24,7 +24,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { BackHandler, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -103,48 +103,55 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <SafeAreaView style={styles.root} accessibilityViewIsModal>
-        <Pressable
-          style={styles.closeButton}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.artworkHero.modal.close')}
-          hitSlop={12}
-        >
-          <Ionicons name="close-circle" size={32} color={CLOSE_ICON_COLOR} />
-        </Pressable>
-
-        <GestureDetector gesture={pinch}>
-          <Animated.View
-            style={[styles.imageArea, animatedStyle]}
-            accessibilityHint={t('chat.artworkHero.modal.a11y_pinch_hint')}
+      {/* TD-RNGH-02 — RN `<Modal>` opens a separate native window root, so the
+       * tree-level `<GestureHandlerRootView>` in `app/_layout.tsx` does NOT
+       * reach this subtree. Re-wrap here so pinch-zoom (Gesture.Pinch)
+       * actually receives touch events. Without this the pinch detector
+       * silently no-ops — defeats the whole purpose of the modal. */}
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaView style={styles.root} accessibilityViewIsModal>
+          <Pressable
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.artworkHero.modal.close')}
+            hitSlop={12}
           >
-            <Image
-              source={{ uri: model.imageUrl }}
-              style={styles.fullImage}
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-              testID="artwork-hero-modal-image"
-            />
-          </Animated.View>
-        </GestureDetector>
+            <Ionicons name="close-circle" size={32} color={CLOSE_ICON_COLOR} />
+          </Pressable>
 
-        <View style={styles.bottomBar}>
-          <Text style={styles.title} numberOfLines={2}>
-            {title}
-          </Text>
-          {model.artist ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {model.artist}
+          <GestureDetector gesture={pinch}>
+            <Animated.View
+              style={[styles.imageArea, animatedStyle]}
+              accessibilityHint={t('chat.artworkHero.modal.a11y_pinch_hint')}
+            >
+              <Image
+                source={{ uri: model.imageUrl }}
+                style={styles.fullImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+                testID="artwork-hero-modal-image"
+              />
+            </Animated.View>
+          </GestureDetector>
+
+          <View style={styles.bottomBar}>
+            <Text style={styles.title} numberOfLines={2}>
+              {title}
             </Text>
-          ) : null}
-          {location ? (
-            <Text style={styles.location} numberOfLines={1}>
-              {location}
-            </Text>
-          ) : null}
-        </View>
-      </SafeAreaView>
+            {model.artist ? (
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {model.artist}
+              </Text>
+            ) : null}
+            {location ? (
+              <Text style={styles.location} numberOfLines={1}>
+                {location}
+              </Text>
+            ) : null}
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 });

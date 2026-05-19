@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 
@@ -155,67 +156,79 @@ function RootLayout() {
   }
 
   return (
-    <ErrorBoundary>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister: queryPersister,
-          maxAge: persistMaxAge,
-          buster: persistBuster,
-          dehydrateOptions: { shouldDehydrateQuery },
-        }}
-      >
-        <I18nProvider>
-          <PaywallProvider>
-            <ThemeProvider>
-              <AuthProvider>
-                <ConnectivityProvider>
-                  <DataModeProvider>
-                    <BiometricGate>
-                      <AuthenticationGuard>
-                        <Stack screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="auth" />
-                          <Stack.Screen name="(tabs)" />
-                          <Stack.Screen
-                            name="(stack)/chat/[sessionId]"
-                            options={{
-                              headerShown: false,
-                              gestureEnabled: true,
-                            }}
-                          />
-                          <Stack.Screen name="(stack)/settings" />
-                          <Stack.Screen name="(stack)/change-password" />
-                          <Stack.Screen name="(stack)/preferences" />
-                          <Stack.Screen name="(stack)/guided-museum-mode" />
-                          <Stack.Screen name="(stack)/offline-maps" />
-                          <Stack.Screen name="(stack)/discover" />
-                          <Stack.Screen name="(stack)/museum-detail" />
-                          <Stack.Screen
-                            name="(stack)/museums-picker"
-                            options={{ presentation: 'modal' }}
-                          />
-                          <Stack.Screen name="(stack)/support" />
-                          <Stack.Screen name="(stack)/tickets" />
-                          <Stack.Screen name="(stack)/ticket-detail" />
-                          <Stack.Screen name="(stack)/create-ticket" />
-                          <Stack.Screen name="(stack)/privacy" />
-                          <Stack.Screen name="(stack)/terms" />
-                          <Stack.Screen name="(stack)/onboarding" />
-                          <Stack.Screen name="+not-found" />
-                        </Stack>
-                        <ThemedStatusBar />
-                        <PaywallModalHost />
-                      </AuthenticationGuard>
-                    </BiometricGate>
-                  </DataModeProvider>
-                </ConnectivityProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </PaywallProvider>
-        </I18nProvider>
-      </PersistQueryClientProvider>
-    </ErrorBoundary>
+    // TD-RNGH-01 — root <GestureHandlerRootView> wrapper required by
+    // react-native-gesture-handler v2 on Android (mandatory for Fabric / New
+    // Arch). Without it, every Gesture.* / Swipeable / ReanimatedSwipeable
+    // child silently no-ops on Android — pinch-zoom on ArtworkHeroModal +
+    // SwipeableConversationCard swipe both depend on this.
+    // lib-docs/react-native-gesture-handler/PATTERNS.md §1.
+    <GestureHandlerRootView style={layoutStyles.gestureRoot}>
+      <ErrorBoundary>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: queryPersister,
+            maxAge: persistMaxAge,
+            buster: persistBuster,
+            dehydrateOptions: { shouldDehydrateQuery },
+          }}
+        >
+          <I18nProvider>
+            <PaywallProvider>
+              <ThemeProvider>
+                <AuthProvider>
+                  <ConnectivityProvider>
+                    <DataModeProvider>
+                      <BiometricGate>
+                        <AuthenticationGuard>
+                          <Stack screenOptions={{ headerShown: false }}>
+                            <Stack.Screen name="auth" />
+                            <Stack.Screen name="(tabs)" />
+                            <Stack.Screen
+                              name="(stack)/chat/[sessionId]"
+                              options={{
+                                headerShown: false,
+                                gestureEnabled: true,
+                              }}
+                            />
+                            <Stack.Screen name="(stack)/settings" />
+                            <Stack.Screen name="(stack)/change-password" />
+                            <Stack.Screen name="(stack)/preferences" />
+                            <Stack.Screen name="(stack)/guided-museum-mode" />
+                            <Stack.Screen name="(stack)/offline-maps" />
+                            <Stack.Screen name="(stack)/discover" />
+                            <Stack.Screen name="(stack)/museum-detail" />
+                            <Stack.Screen
+                              name="(stack)/museums-picker"
+                              options={{ presentation: 'modal' }}
+                            />
+                            <Stack.Screen name="(stack)/support" />
+                            <Stack.Screen name="(stack)/tickets" />
+                            <Stack.Screen name="(stack)/ticket-detail" />
+                            <Stack.Screen name="(stack)/create-ticket" />
+                            <Stack.Screen name="(stack)/privacy" />
+                            <Stack.Screen name="(stack)/terms" />
+                            <Stack.Screen name="(stack)/onboarding" />
+                            <Stack.Screen name="+not-found" />
+                          </Stack>
+                          <ThemedStatusBar />
+                          <PaywallModalHost />
+                        </AuthenticationGuard>
+                      </BiometricGate>
+                    </DataModeProvider>
+                  </ConnectivityProvider>
+                </AuthProvider>
+              </ThemeProvider>
+            </PaywallProvider>
+          </I18nProvider>
+        </PersistQueryClientProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
+
+const layoutStyles = StyleSheet.create({
+  gestureRoot: { flex: 1 },
+});
 
 export default Sentry.wrap(RootLayout);

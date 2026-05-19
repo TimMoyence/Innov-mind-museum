@@ -1851,21 +1851,36 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-RNGH-01 — GestureHandlerRootView MISSING root → gestures silent fail (HIGH BLOCKER pre-V1)
+## ✅ TD-RNGH-01 — GestureHandlerRootView MISSING root → gestures silent fail (HIGH BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — `<GestureHandlerRootView style={layoutStyles.gestureRoot}>` (`flex: 1`) wraps the entire `<ErrorBoundary>` → providers → `<Stack>` tree at `museum-frontend/app/_layout.tsx`. Inline-style avoided via `StyleSheet.create({ gestureRoot: { flex: 1 } })`.
+
 **Context** : grep 0 hits across museum-frontend. Pinch-zoom + Swipeable silently fail in prod (especially Android New Arch hard-required).
 **Fix** : Wrap Stack subtree dans `<GestureHandlerRootView style={{flex:1}}>` at `app/_layout.tsx` top of return().
 **Evidence** : `museum-frontend/app/_layout.tsx:157-213` (no wrapper).
 
-## 🚨 TD-RNGH-02 — ArtworkHeroModal Modal not re-wrapped GestureHandlerRootView (HIGH BLOCKER pre-V1)
+## ✅ TD-RNGH-02 — ArtworkHeroModal Modal not re-wrapped GestureHandlerRootView (HIGH BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — `<Modal>` body re-wrapped with a fresh `<GestureHandlerRootView style={styles.root}>` inside `museum-frontend/features/chat/ui/ArtworkHeroModal.tsx`. RN Modal opens a separate native window root, so the tree-level GHRView from `_layout.tsx` does NOT reach the modal subtree — pinch-zoom would otherwise no-op silently.
+
 **Context** : Modal is native window — gestures MUST re-wrap. Pinch-zoom = entire purpose of this modal per R20 docstring.
 **Fix** : Wrap `<SafeAreaView>` body inside `<Modal>` with `<GestureHandlerRootView style={{flex:1}}>`.
 **Evidence** : `museum-frontend/features/chat/ui/ArtworkHeroModal.tsx:97-141`.
 
-## TD-RNGH-03 — Gesture instance recreated every render (MEDIUM)
+## ✅ TD-RNGH-03 — Gesture instance recreated every render (MEDIUM)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `da428f56`) — `Gesture.Pinch()` wrapped in `useMemo([savedScale, scale])` in `ArtworkHeroModal.tsx`. Empty-deps OK because the gesture body only reads shared values via worklet refs which keep their identity across renders.
+
 **Fix** : `useMemo(() => Gesture.Pinch()..., [])`.
 **Evidence** : `ArtworkHeroModal.tsx:76-85`.
 
-## TD-RNGH-04 — Legacy Swipeable → migrate to ReanimatedSwipeable (MEDIUM)
+## ✅ TD-RNGH-04 — Legacy Swipeable → migrate to ReanimatedSwipeable (MEDIUM)
+
+- [x] **Statut** : fermé 2026-05-19 — migrated 2 files :
+  - `DailyArtCard.tsx` : import switched to `react-native-gesture-handler/ReanimatedSwipeable` ; `ref` typed `SwipeableMethods` ; `onSwipeableOpen` direction compared via `SwipeDirection.RIGHT` enum (not bare `'right'`) ; `eslint-disable @typescript-eslint/no-deprecated` markers removed (×2).
+  - `SwipeableConversationCard.tsx` : same import path ; `renderRightActions` now uses `SharedValue<number>` translation arg + a dedicated `DeleteAction` sub-component owning `useAnimatedStyle` (ReanimatedSwipeable contract — hooks must live inside the action child, not the render-prop closure) ; switched to `Animated` from `react-native-reanimated` (worklets) ; `Extrapolation`/`interpolate` from reanimated.
+  - Test mocks updated : `jest.mock('react-native-gesture-handler/ReanimatedSwipeable', ...)` added to both `SwipeableConversationCard.test.tsx` + `DailyArtCard.test.tsx`. 18/18 scoped tests pass.
+
 **Fix** : import from `react-native-gesture-handler/ReanimatedSwipeable`.
 **Evidence** : `DailyArtCard.tsx:3,37,178` + `SwipeableConversationCard.tsx:1,4` avec eslint-disable.
 

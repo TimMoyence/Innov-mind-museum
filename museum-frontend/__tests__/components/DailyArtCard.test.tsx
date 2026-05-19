@@ -3,11 +3,25 @@ import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
 // ── react-native-gesture-handler — Swipeable mock that captures callbacks ────
 // Must appear before the component import so Jest hoisting applies correctly.
+// TD-RNGH-04 — DailyArtCard now imports `ReanimatedSwipeable` from the subpath
+// `react-native-gesture-handler/ReanimatedSwipeable`. We mock both the root
+// module (other deps) AND the subpath (the new ctor) so the captured
+// `onSwipeableOpen` hook still fires deterministically in tests.
 let capturedOnSwipeableOpen: ((direction: string) => void) | undefined;
 jest.mock('react-native-gesture-handler', () => {
   const { View } = require('react-native');
   return {
-    Swipeable: ({
+    GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => (
+      <View>{children}</View>
+    ),
+  };
+});
+
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({
       children,
       onSwipeableOpen,
     }: {
@@ -17,9 +31,7 @@ jest.mock('react-native-gesture-handler', () => {
       capturedOnSwipeableOpen = onSwipeableOpen;
       return <View testID="swipeable-wrapper">{children}</View>;
     },
-    GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => (
-      <View>{children}</View>
-    ),
+    SwipeDirection: { LEFT: 'left', RIGHT: 'right' },
   };
 });
 

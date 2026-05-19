@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated as RNAnimated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+// TD-RNGH-04 — migrated from deprecated `Swipeable` (RN Animated v1) to
+// `ReanimatedSwipeable` (Reanimated v3 worklets, Fabric/New Arch safe).
+// lib-docs/react-native-gesture-handler/PATTERNS.md.
+import ReanimatedSwipeable, {
+  SwipeDirection,
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -34,8 +40,7 @@ export const DailyArtCard = ({
   const reduceMotion = useReducedMotion();
   const [funFactExpanded, setFunFactExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Swipeable uses legacy Animated API
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<SwipeableMethods>(null);
 
   const fadeAnim = useMemo(() => new RNAnimated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
 
@@ -175,20 +180,19 @@ export const DailyArtCard = ({
   return (
     <RNAnimated.View style={{ opacity: fadeAnim }}>
       {swipeToSave ? (
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Swipeable uses legacy Animated API
-        <Swipeable
+        <ReanimatedSwipeable
           ref={swipeableRef}
           renderRightActions={renderRightActions}
           friction={2}
           rightThreshold={80}
           onSwipeableOpen={(direction) => {
-            if (direction === 'right') {
+            if (direction === SwipeDirection.RIGHT) {
               void handleSwipeSave();
             }
           }}
         >
           {cardBody}
-        </Swipeable>
+        </ReanimatedSwipeable>
       ) : (
         cardBody
       )}
