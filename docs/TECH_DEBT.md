@@ -1223,7 +1223,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## TD-EXPO-01 — 5 screens utilisent RN `Image` au lieu d'expo-image (consolidation TD-RN-02) — voir TD-RN-02
 
-## TD-REACT-01 — useSessionLoader async fetch SANS cancellation flag (HIGH, BLOCKER pre-V1)
+## ✅ TD-REACT-01 — useSessionLoader async fetch SANS cancellation flag (HIGH, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — pre-fixed in earlier sprint. Verified `museum-frontend/features/chat/application/useSessionLoader.ts:9-87` implements the closure-cell `CancellationTick` pattern: `loadTickRef` captures one tick per invocation, prior invocations flip `tick.cancelled = true`, each `setState` after `await` is guarded by `if (tick.cancelled) return;`. Sentry capture + Zustand cache hydration intentionally run unconditional per R9/R10 doctrine. Memory `feedback_closure_cell_cancellation_react_hooks` honored.
 
 **Context** : `useSessionLoader.ts:25-56` await `chatApi.getSession(sessionId)` puis setMessages/setSessionTitle UNCONDITIONALLY. Pas de cancellation flag. Nav rapide entre chats → stale fetch de session A peut clobber state de session B. Memory `feedback_closure_cell_cancellation_react_hooks` violée. Sibling hooks `useResumableSession` / `useProactiveMuseumSuggestion` implémentent déjà le pattern correct → copier byte-for-byte.
 
@@ -1772,13 +1774,19 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-RHF-01 — auth.tsx formState.errors JAMAIS lu → validation silently swallowed (CRITICAL, BLOCKER pre-V1)
+## ✅ TD-RHF-01 — auth.tsx formState.errors JAMAIS lu → validation silently swallowed (CRITICAL, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — pre-fixed in earlier sprint (ADR-025 RHF + Zod Controller migration). Verified `museum-frontend/app/auth.tsx:56-60` uses `const { control, handleSubmit, getValues, reset } = useForm(...)`. Form delegated to `LoginForm` + `RegisterForm` children where every input is `<Controller name="..." render={({ field, fieldState: { error } }) => <FormInput ... error={error?.message} errorTestID="..." />}>`. `handleSubmit(handleLogin)()` wraps submit at L156. **UFR-021** : Maestro flow `museum-frontend/.maestro/auth-submit-invalid-email.yaml` already exists. TECH_DEBT entry was stale (pre-merge audit snapshot).
+
 **Context** : RHF utilisé comme glorified useState bag. Zod schema runs but errors NEVER displayed. Even worse — `handleSubmit` not used → schema bypassed at submit. C'est exactement le bug DOB-2026-05-17 que UFR-021 doit prévenir.
 **Fix** : Destructure `handleSubmit, control, formState: { errors }`. Surface `<Text role='alert'>{errors.X?.message}</Text>`. Migrate all TextInput to `<Controller>`. Wrap submit `onSubmit={handleSubmit(handleLogin)}`.
 **Evidence** : `museum-frontend/app/auth.tsx:71-82,244-299`.
 **UFR-021** : add Maestro flow "submit auth with invalid email" asserting inline error visible.
 
-## 🚨 TD-RHF-02 — useForm bypassed avec watch+setValue → re-render storm (HIGH, BLOCKER pre-V1)
+## ✅ TD-RHF-02 — useForm bypassed avec watch+setValue → re-render storm (HIGH, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — co-resolved with TD-RHF-01. AuthScreen no longer subscribes via root-level `watch()`. The only `useWatch` site is the `SocialLoginButtonsGate` sub-component (`auth.tsx:321`) which scopes the re-render to itself, preserving parent stability. Verified.
+
 **Context** : 6 watch() at root → full re-render of AuthScreen + ALL children on every keystroke. RHF main perf feature negated.
 **Fix** : covered by TD-RHF-01 Controller migration.
 
