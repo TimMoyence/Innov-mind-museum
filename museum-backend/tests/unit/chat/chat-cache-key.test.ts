@@ -12,40 +12,76 @@ describe('chat-cache-key — R1 hybrid scoping', () => {
   // Global namespace (cross-user safe)
   // -------------------------------------------------------------------------
   describe('global namespace (generic queries)', () => {
-    it('two users in same museum asking the same generic question share the SAME global key', () => {
-      const a = buildCacheKey(makeCacheKeyInput({ userId: 1 }));
-      const b = buildCacheKey(makeCacheKeyInput({ userId: 2 }));
+    // F2 doctrine amendment (2026-05-19): generic queries route to global key
+    // ONLY when no userId/anonId is passed. Passing an explicit identity now
+    // forces the user/anon-scoped namespace (see isGenericQuery JSDoc).
+    it('two anonymous generic queries in same museum share the SAME global key', () => {
+      const a = buildCacheKey(makeCacheKeyInput({ userId: undefined, anonId: undefined }));
+      const b = buildCacheKey(makeCacheKeyInput({ userId: undefined, anonId: undefined }));
       expect(a).toBe(b);
       expect(a).toMatch(/^chat:llm:global:/);
     });
 
-    it('same user, identical generic query → identical global key', () => {
+    it('passing userId on a generic query routes to user-scoped (F2 amendment)', () => {
+      const a = buildCacheKey(makeCacheKeyInput({ userId: 1 }));
+      const b = buildCacheKey(makeCacheKeyInput({ userId: 2 }));
+      expect(a).not.toBe(b);
+      expect(a).toMatch(/^chat:llm:user:1:/);
+      expect(b).toMatch(/^chat:llm:user:2:/);
+    });
+
+    it('same user, identical generic query → identical user-scoped key', () => {
       const a = buildCacheKey(makeCacheKeyInput({ userId: 42 }));
       const b = buildCacheKey(makeCacheKeyInput({ userId: 42 }));
       expect(a).toBe(b);
+      expect(a).toMatch(/^chat:llm:user:42:/);
     });
 
     it('different museums produce different global keys', () => {
-      const a = buildCacheKey(makeCacheKeyInput({ museumId: 'louvre' }));
-      const b = buildCacheKey(makeCacheKeyInput({ museumId: 'orsay' }));
+      const a = buildCacheKey(
+        makeCacheKeyInput({ museumId: 'louvre', userId: undefined, anonId: undefined }),
+      );
+      const b = buildCacheKey(
+        makeCacheKeyInput({ museumId: 'orsay', userId: undefined, anonId: undefined }),
+      );
       expect(a).not.toBe(b);
     });
 
     it('locale change → different global key', () => {
-      const fr = buildCacheKey(makeCacheKeyInput({ locale: 'fr' }));
-      const en = buildCacheKey(makeCacheKeyInput({ locale: 'en' }));
+      const fr = buildCacheKey(
+        makeCacheKeyInput({ locale: 'fr', userId: undefined, anonId: undefined }),
+      );
+      const en = buildCacheKey(
+        makeCacheKeyInput({ locale: 'en', userId: undefined, anonId: undefined }),
+      );
       expect(fr).not.toBe(en);
     });
 
     it('guideLevel change → different global key', () => {
-      const beginner = buildCacheKey(makeCacheKeyInput({ guideLevel: 'beginner' }));
-      const expert = buildCacheKey(makeCacheKeyInput({ guideLevel: 'expert' }));
+      const beginner = buildCacheKey(
+        makeCacheKeyInput({ guideLevel: 'beginner', userId: undefined, anonId: undefined }),
+      );
+      const expert = buildCacheKey(
+        makeCacheKeyInput({ guideLevel: 'expert', userId: undefined, anonId: undefined }),
+      );
       expect(beginner).not.toBe(expert);
     });
 
     it('audioDescriptionMode change → different global key', () => {
-      const off = buildCacheKey(makeCacheKeyInput({ audioDescriptionMode: false }));
-      const on = buildCacheKey(makeCacheKeyInput({ audioDescriptionMode: true }));
+      const off = buildCacheKey(
+        makeCacheKeyInput({
+          audioDescriptionMode: false,
+          userId: undefined,
+          anonId: undefined,
+        }),
+      );
+      const on = buildCacheKey(
+        makeCacheKeyInput({
+          audioDescriptionMode: true,
+          userId: undefined,
+          anonId: undefined,
+        }),
+      );
       expect(off).not.toBe(on);
     });
   });

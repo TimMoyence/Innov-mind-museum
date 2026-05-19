@@ -12,6 +12,7 @@ import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
+import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type {
   FeedbackMessageResult,
   ReportMessageResult,
@@ -155,58 +156,40 @@ export class ChatMediaService {
     return { messageId, status: existing ? 'updated' : 'created' };
   }
 
-  /** Fail-open: invalidates LLM cache for the question preceding this assistant msg. */
+  /**
+   * Fail-open: invalidates LLM cache for the question preceding this assistant msg.
+   *
+   * F2 (2026-05-19) — write-time shape (audioDescriptionMode × voiceMode) is
+   * unknown at feedback time, so we iterate the full 4-shape cartesian
+   * (`{false,true}²`) across both namespaces (global + user-scoped when owner
+   * present) — 4 or 8 `del` calls. Per-key try/catch ensures a single Redis
+   * hiccup does not skip the remaining keys (F2.3 partial-failure resilience).
+   */
   private async invalidateCacheForFeedback(
     messageId: string,
     row: Awaited<ReturnType<typeof ensureMessageAccess>>,
   ): Promise<void> {
     if (!this.cache) return;
+    const cache = this.cache;
     try {
-      const history = await this.repository.listSessionHistory(row.message.sessionId, 50);
-      const assistantIdx = history.findIndex((m) => m.id === messageId);
-      const userMsg = assistantIdx > 0 ? history[assistantIdx - 1] : null;
-
-      if (userMsg?.text && userMsg.role === 'user' && row.session.museumId) {
-        // R1 hybrid scoping — del BOTH global and user-scoped shapes (write-time
-        // shape depends on geo/attachments, unknown at feedback time).
-        const ownerId = row.session.user?.id;
-        const baseInput = {
-          text: userMsg.text,
-          museumId: String(row.session.museumId),
-          locale: row.session.locale ?? 'fr',
-          guideLevel: row.session.visitContext?.detectedExpertise ?? 'beginner',
-          audioDescriptionMode: false,
-        };
-        const keys: string[] = [
-          buildCacheKey({
-            ...baseInput,
-            hasHistory: false,
-            hasAttachment: false,
-            hasGeo: false,
-          }),
-        ];
-        if (ownerId !== undefined) {
-          keys.push(
-            buildCacheKey({
-              ...baseInput,
-              userId: ownerId,
-              hasHistory: false,
-              hasAttachment: false,
-              hasGeo: false,
-            }),
-          );
-        }
-        for (const key of keys) {
-          await this.cache.del(key);
-          logger.info('llm_cache_invalidated_by_feedback', {
-            museumId: row.session.museumId,
-            key,
-          });
-        }
+      const userMsg = await this.findPrecedingUserMessage(row.message.sessionId, messageId);
+      if (!userMsg?.text || userMsg.role !== 'user' || !row.session.museumId) return;
+      const keys = buildFeedbackInvalidationKeys(userMsg.text, row.session);
+      for (const key of keys) {
+        await safeCacheDel(cache, key, row.session.museumId);
       }
     } catch {
       // fail-open: invalidation failure must not affect feedback response
     }
+  }
+
+  private async findPrecedingUserMessage(
+    sessionId: string,
+    assistantMessageId: string,
+  ): Promise<{ role: string; text?: string | null } | null> {
+    const history = await this.repository.listSessionHistory(sessionId, 50);
+    const assistantIdx = history.findIndex((m) => m.id === assistantMessageId);
+    return assistantIdx > 0 ? history[assistantIdx - 1] : null;
   }
 
   /**
@@ -320,5 +303,51 @@ export class ChatMediaService {
       voice: row.message.audioVoice ?? env.tts.voice,
       generatedAt: row.message.audioGeneratedAt?.toISOString() ?? new Date(0).toISOString(),
     };
+  }
+}
+
+/**
+ * F2 cartesian — build 4 shapes × 2 namespaces (global + user-scoped if owner).
+ * Each call to buildCacheKey is pure, no I/O — safe to fan out.
+ */
+function buildFeedbackInvalidationKeys(userText: string, session: ChatSession): string[] {
+  const ownerId = session.user?.id;
+  const baseInput = {
+    text: userText,
+    museumId: String(session.museumId),
+    locale: session.locale ?? 'fr',
+    guideLevel: session.visitContext?.detectedExpertise ?? 'beginner',
+    hasHistory: false,
+    hasAttachment: false,
+    hasGeo: false,
+  } as const;
+  const namespaces: { userId?: number }[] = [{}];
+  if (ownerId !== undefined) namespaces.push({ userId: ownerId });
+  const keys: string[] = [];
+  for (const ns of namespaces) {
+    for (const audioDescriptionMode of [false, true]) {
+      for (const voiceMode of [false, true]) {
+        keys.push(buildCacheKey({ ...baseInput, ...ns, audioDescriptionMode, voiceMode }));
+      }
+    }
+  }
+  return keys;
+}
+
+/**
+ * F2.3 — per-key fail-open. A single Redis hiccup MUST NOT skip remaining
+ * keys in the cartesian. The outer try/catch in invalidateCacheForFeedback
+ * catches non-cache failures (e.g. listSessionHistory rejection).
+ */
+async function safeCacheDel(cache: CacheService, key: string, museumId: number): Promise<void> {
+  try {
+    await cache.del(key);
+    logger.info('llm_cache_invalidated_by_feedback', { museumId, key });
+  } catch (err: unknown) {
+    logger.warn('llm_cache_invalidate_failed', {
+      museumId,
+      key,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
