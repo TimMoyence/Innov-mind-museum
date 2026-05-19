@@ -345,4 +345,154 @@ describe('useSessionLoader', () => {
     expect(result.current.messages).toHaveLength(0);
     expect(result.current.error).toBe('API down');
   });
+
+  // ── TD-REACT-01 cancellation guard (closure-cell + cleanup) ───────────────
+  describe('cancellation', () => {
+    interface Deferred<T> {
+      promise: Promise<T>;
+      resolve: (v: T) => void;
+      reject: (e: unknown) => void;
+    }
+    const createDeferred = <T>(): Deferred<T> => {
+      let resolve!: (v: T) => void;
+      let reject!: (e: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    };
+
+    it('does not call setMessages after unmount when the fetch resolves late', async () => {
+      const setMessagesSpy = jest.fn();
+      const deferred = createDeferred<ReturnType<typeof makeGetSessionResponse>>();
+      mockGetSession.mockImplementationOnce(() => deferred.promise);
+
+      const { unmount } = renderHook(() => useSessionLoader(SESSION_ID, setMessagesSpy));
+
+      // Component unmounts before the request resolves.
+      unmount();
+
+      await act(async () => {
+        deferred.resolve(
+          makeGetSessionResponse({
+            session: {
+              id: SESSION_ID,
+              locale: 'en-US',
+              museumMode: true,
+              title: 'Resolved-after-unmount',
+              museumName: 'Stale',
+              createdAt: '2025-01-01T00:00:00Z',
+              updatedAt: '2025-01-01T00:00:00Z',
+              intent: 'default',
+            },
+          }),
+        );
+        // Flush microtasks so the awaited continuation runs.
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // R7 — no setState on the consumer's messages after unmount.
+      expect(setMessagesSpy).not.toHaveBeenCalled();
+      // R10 — Zustand cache hydration still fires (observability is independent of UI).
+      expect(mockSetSession).toHaveBeenCalledWith(
+        SESSION_ID,
+        expect.any(Array),
+        'Resolved-after-unmount',
+        'Stale',
+      );
+    });
+
+    it('does not overwrite the new session state when sessionId changes mid-fetch', async () => {
+      const setMessagesSpy = jest.fn();
+      const deferA = createDeferred<ReturnType<typeof makeGetSessionResponse>>();
+      const deferB = createDeferred<ReturnType<typeof makeGetSessionResponse>>();
+      mockGetSession.mockImplementationOnce(() => deferA.promise);
+      mockGetSession.mockImplementationOnce(() => deferB.promise);
+
+      const { result, rerender } = renderHook(
+        ({ sessionId }: { sessionId: string }) => useSessionLoader(sessionId, setMessagesSpy),
+        { initialProps: { sessionId: 'session-A' } },
+      );
+
+      // session A is in-flight; user navigates to session B.
+      rerender({ sessionId: 'session-B' });
+
+      // Stale A response arrives AFTER nav — its setMessages / setSessionTitle must be cancelled.
+      await act(async () => {
+        deferA.resolve(
+          makeGetSessionResponse({
+            session: {
+              id: 'session-A',
+              locale: 'en-US',
+              museumMode: true,
+              title: 'A-stale-title',
+              museumName: 'A-museum',
+              createdAt: '2025-01-01T00:00:00Z',
+              updatedAt: '2025-01-01T00:00:00Z',
+              intent: 'default',
+            },
+          }),
+        );
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // Cancellation guard: A's state must NOT have leaked into the live B view.
+      expect(result.current.sessionTitle).not.toBe('A-stale-title');
+      expect(result.current.museumName).not.toBe('A-museum');
+
+      // Now B resolves correctly.
+      await act(async () => {
+        deferB.resolve(
+          makeGetSessionResponse({
+            session: {
+              id: 'session-B',
+              locale: 'en-US',
+              museumMode: true,
+              title: 'B-fresh-title',
+              museumName: 'B-museum',
+              createdAt: '2025-01-01T00:00:00Z',
+              updatedAt: '2025-01-01T00:00:00Z',
+              intent: 'default',
+            },
+          }),
+        );
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.sessionTitle).toBe('B-fresh-title');
+      expect(result.current.museumName).toBe('B-museum');
+    });
+
+    it('still reports Sentry exceptions even when the fetch lands after unmount (R9)', async () => {
+      const setMessagesSpy = jest.fn();
+      const deferred = createDeferred<ReturnType<typeof makeGetSessionResponse>>();
+      mockGetSession.mockImplementationOnce(() => deferred.promise);
+
+      const { unmount } = renderHook(() => useSessionLoader(SESSION_ID, setMessagesSpy));
+      unmount();
+
+      const Sentry = require('@sentry/react-native') as { captureException: jest.Mock };
+
+      const lateError = new Error('Network-after-unmount');
+      await act(async () => {
+        deferred.reject(lateError);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(Sentry.captureException).toHaveBeenCalledWith(lateError, {
+        tags: { flow: 'chat.loadSession' },
+      });
+      // setError on the consumer is gated by cancellation, so no setState on unmounted hook.
+      // Observability via setMessagesSpy: cache-hydration branch is skipped post-cancellation too.
+      expect(setMessagesSpy).not.toHaveBeenCalled();
+    });
+  });
 });

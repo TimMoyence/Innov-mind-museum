@@ -10,13 +10,22 @@ import { getErrorMessage } from '@/shared/lib/errors';
 
 type LoginWithSession = ReturnType<typeof useAuth>['loginWithSession'];
 
-interface UseEmailPasswordAuthArgs {
+export interface EmailPasswordAuthValues {
   email: string;
   password: string;
   firstname: string;
   lastname: string;
-  /** ISO YYYY-MM-DD. Required at submit time (age-gate); empty string forwarded for type stability. */
+  /** Raw user input — accepted in YYYY-MM-DD, DD/MM/YYYY, etc. Normalized via parseDateOfBirth here. */
   dateOfBirth: string;
+}
+
+interface UseEmailPasswordAuthArgs {
+  /**
+   * Read the current form values at submit time. Lets the parent screen use
+   * react-hook-form's `getValues` (or any equivalent) without subscribing the
+   * root component to per-keystroke re-renders (TD-RHF-01).
+   */
+  getValues: () => EmailPasswordAuthValues;
   loginWithSession: LoginWithSession;
   onRegistrationComplete: () => void;
 }
@@ -43,11 +52,7 @@ interface UseEmailPasswordAuthResult {
  * via `onRegistrationComplete`.
  */
 export function useEmailPasswordAuth({
-  email,
-  password,
-  firstname,
-  lastname,
-  dateOfBirth,
+  getValues,
   loginWithSession,
   onRegistrationComplete,
 }: UseEmailPasswordAuthArgs): UseEmailPasswordAuthResult {
@@ -56,6 +61,7 @@ export function useEmailPasswordAuth({
 
   const loginMutation = useMutation({
     mutationFn: async () => {
+      const { email, password } = getValues();
       if (!email || !password) {
         Alert.alert(t('common.error'), t('auth.fill_all_fields'));
         return;
@@ -71,6 +77,7 @@ export function useEmailPasswordAuth({
 
   const registerMutation = useMutation({
     mutationFn: async () => {
+      const { email, password, firstname, lastname, dateOfBirth } = getValues();
       if (!email || !password || !firstname || !lastname || !dateOfBirth) {
         Alert.alert(t('common.error'), t('auth.fill_all_fields'));
         return;

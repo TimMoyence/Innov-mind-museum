@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { KeyboardTypeOptions, TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
@@ -94,6 +94,16 @@ interface FormInputProps {
   testID?: string;
   /** Accessibility label; defaults to placeholder if not provided. */
   accessibilityLabel?: string;
+  /** Called when the input loses focus. Used by react-hook-form Controller for `onBlur` validation mode. */
+  onBlur?: TextInputProps['onBlur'];
+  /**
+   * Field-level validation error to surface inline below the input. When set,
+   * the shell border switches to danger color and a `<Text role="alert">` line
+   * renders so VoiceOver / TalkBack announce it on appearance.
+   */
+  error?: string;
+  /** Test ID for the inline error line. Defaults to `${testID}-error` when omitted. */
+  errorTestID?: string;
 }
 
 /**
@@ -114,37 +124,59 @@ export function FormInput({
   textContentType,
   testID,
   accessibilityLabel,
+  onBlur,
+  error,
+  errorTestID,
 }: FormInputProps) {
   const { theme } = useTheme();
   const defaults = VARIANT_DEFAULTS[variant];
 
+  const shellBorderColor = error ? theme.danger : theme.cardBorder;
+  const resolvedErrorTestID = errorTestID ?? (testID ? `${testID}-error` : undefined);
+
   return (
-    <View
-      style={[
-        styles.inputShell,
-        { borderColor: theme.cardBorder, backgroundColor: theme.inputBackground },
-      ]}
-    >
-      <Ionicons name={icon} size={20} color={theme.textSecondary} />
-      <TextInput
-        style={[styles.input, { color: theme.textPrimary }]}
-        placeholder={placeholder}
-        placeholderTextColor={theme.placeholderText}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry ?? defaults.secureTextEntry}
-        autoCapitalize={autoCapitalize ?? defaults.autoCapitalize}
-        keyboardType={keyboardType ?? defaults.keyboardType}
-        autoComplete={autoComplete ?? defaults.autoComplete}
-        textContentType={textContentType ?? defaults.textContentType}
-        testID={testID}
-        accessibilityLabel={accessibilityLabel ?? placeholder}
-      />
+    <View style={styles.wrapper}>
+      <View
+        style={[
+          styles.inputShell,
+          { borderColor: shellBorderColor, backgroundColor: theme.inputBackground },
+        ]}
+      >
+        <Ionicons name={icon} size={20} color={theme.textSecondary} />
+        <TextInput
+          style={[styles.input, { color: theme.textPrimary }]}
+          placeholder={placeholder}
+          placeholderTextColor={theme.placeholderText}
+          value={value}
+          onChangeText={onChangeText}
+          onBlur={onBlur}
+          secureTextEntry={secureTextEntry ?? defaults.secureTextEntry}
+          autoCapitalize={autoCapitalize ?? defaults.autoCapitalize}
+          keyboardType={keyboardType ?? defaults.keyboardType}
+          autoComplete={autoComplete ?? defaults.autoComplete}
+          textContentType={textContentType ?? defaults.textContentType}
+          testID={testID}
+          accessibilityLabel={accessibilityLabel ?? placeholder}
+        />
+      </View>
+      {error ? (
+        <Text
+          testID={resolvedErrorTestID}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[styles.errorText, { color: theme.danger }]}
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    gap: space['1'],
+  },
   inputShell: {
     borderRadius: semantic.input.radius,
     borderWidth: semantic.input.borderWidth,
@@ -158,5 +190,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: space['2'],
+  },
+  errorText: {
+    fontSize: 13,
+    paddingHorizontal: space['1'],
   },
 });

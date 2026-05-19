@@ -142,13 +142,19 @@ describe('AuthScreen', () => {
     );
   });
 
-  it('login alerts when fields are empty', async () => {
+  it('login submit with empty fields surfaces inline Zod errors (TD-RHF-02)', async () => {
+    // Cluster 7 (TD-RHF-02): submit with empty fields no longer bubbles to the
+    // catch-all `auth.fill_all_fields` Alert — the Zod resolver gates handleSubmit
+    // so the business mutation never runs, and the user sees the inline error
+    // attached to the offending field (testID="auth-email-error" et al.).
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('common.error', 'auth.fill_all_fields');
+      expect(screen.getByTestId('auth-email-error')).toBeTruthy();
     });
+    expect(alertSpy).not.toHaveBeenCalledWith('common.error', 'auth.fill_all_fields');
+    alertSpy.mockRestore();
   });
 
   it('register button is disabled until GDPR checkbox is checked and DOB is filled', async () => {
@@ -222,17 +228,21 @@ describe('AuthScreen', () => {
     });
   });
 
-  it('RHF: empty email + password shows fill_all_fields alert (business-layer guard)', async () => {
+  it('RHF: empty email submit surfaces inline error and skips the business mutation (TD-RHF-02)', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<AuthScreen />);
 
-    // Submit without entering any value — RHF defaults are '' which the hook
-    // treats as empty fields and triggers the Alert guard.
+    // Submit without entering any value — handleSubmit gates on Zod validity,
+    // so the catch-all `auth.fill_all_fields` Alert (legacy behavior) is no
+    // longer reached. The inline `auth-email-error` testID is the new
+    // observable user-facing signal (TD-RHF-02, AC1 — Maestro mirror).
     fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('common.error', 'auth.fill_all_fields');
+      expect(screen.getByTestId('auth-email-error')).toBeTruthy();
     });
+    expect(mockLogin).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalledWith('common.error', 'auth.fill_all_fields');
 
     alertSpy.mockRestore();
   });

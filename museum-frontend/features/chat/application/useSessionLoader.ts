@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -6,9 +6,19 @@ import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
 import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
 
+interface CancellationTick {
+  cancelled: boolean;
+}
+
 /**
  * Loads a chat session from the API, hydrating from the Zustand cache for instant display.
  * Manages session metadata (title, museum name) and loading/error state.
+ *
+ * Cancellation contract (TD-REACT-01): a closure-cell `tick` is captured per invocation
+ * and tracked via `loadTickRef`. On unmount / sessionId change / rapid reload, the
+ * previous tick flips `cancelled = true`, which guards every setState call after `await`.
+ * Sentry capture and Zustand cache hydration intentionally run regardless of cancellation
+ * — observability and cache freshness are independent of the consumer's UI binding.
  */
 export const useSessionLoader = (
   sessionId: string,
@@ -22,7 +32,16 @@ export const useSessionLoader = (
   const [museumName, setMuseumName] = useState<string | null>(null);
   const [sessionMuseumMode, setSessionMuseumMode] = useState<boolean | null>(null);
 
+  const loadTickRef = useRef<CancellationTick | null>(null);
+
   const loadSession = useCallback(async () => {
+    // Cancel any in-flight invocation so a late response can't overwrite the fresh request.
+    if (loadTickRef.current) {
+      loadTickRef.current.cancelled = true;
+    }
+    const tick: CancellationTick = { cancelled: false };
+    loadTickRef.current = tick;
+
     setIsLoading(true);
     setError(null);
 
@@ -30,14 +49,19 @@ export const useSessionLoader = (
       const response = await chatApi.getSession(sessionId);
       const title = response.session.title ?? null;
       const museum = response.session.museumName ?? null;
+      const sorted = sortByTime(response.messages.map(mapApiMessageToUiMessage));
+      // Hydrate the shared cache regardless of cancellation (R10).
+      storeSetSession(sessionId, sorted, title, museum);
+      if (tick.cancelled) return;
       setSessionTitle(title);
       setMuseumName(museum);
       setSessionMuseumMode(response.session.museumMode);
-      const sorted = sortByTime(response.messages.map(mapApiMessageToUiMessage));
       setMessages(sorted);
-      storeSetSession(sessionId, sorted, title, museum);
     } catch (loadError) {
+      // Observability stays unconditional (R9): engineers need every network error,
+      // including ones whose UI consumer has already unmounted.
       Sentry.captureException(loadError, { tags: { flow: 'chat.loadSession' } });
+      if (tick.cancelled) return;
       setError(getErrorMessage(loadError));
       // Hydrate from cache so the user isn't left with an empty screen on a transient error.
       const cached = useChatSessionStore.getState().sessions[sessionId];
@@ -47,12 +71,19 @@ export const useSessionLoader = (
         setMuseumName(cached.museumName);
       }
     } finally {
-      setIsLoading(false);
+      if (!tick.cancelled) {
+        setIsLoading(false);
+      }
     }
   }, [sessionId, storeSetSession, setMessages]);
 
   useEffect(() => {
     void loadSession();
+    return () => {
+      if (loadTickRef.current) {
+        loadTickRef.current.cancelled = true;
+      }
+    };
   }, [loadSession]);
 
   return {

@@ -7,7 +7,12 @@ import { authService } from '@/features/auth/infrastructure/authApi';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 interface UseForgotPasswordArgs {
-  email: string;
+  /**
+   * Read the current email at click time. Lets the parent screen use
+   * react-hook-form's `getValues` (or any equivalent) without subscribing to
+   * per-keystroke re-renders (TD-RHF-01).
+   */
+  getEmail: () => string;
 }
 
 interface UseForgotPasswordResult {
@@ -26,12 +31,13 @@ interface UseForgotPasswordResult {
  * Alert), and on confirm calls the password reset API, surfacing
  * success or error state through the hook's own return value.
  */
-export function useForgotPassword({ email }: UseForgotPasswordArgs): UseForgotPasswordResult {
+export function useForgotPassword({ getEmail }: UseForgotPasswordArgs): UseForgotPasswordResult {
   const { t } = useTranslation();
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const email = getEmail();
       await authService.forgotPassword(email);
       Alert.alert(t('auth.email_sent_title'), t('auth.email_sent_message'));
       setInfoMessage(null);
@@ -39,6 +45,7 @@ export function useForgotPassword({ email }: UseForgotPasswordArgs): UseForgotPa
   });
 
   const handleForgotPassword = useCallback((): void => {
+    const email = getEmail();
     if (!email) {
       Alert.alert(t('common.error'), t('auth.enter_email_for_reset'));
       return;
@@ -54,7 +61,7 @@ export function useForgotPassword({ email }: UseForgotPasswordArgs): UseForgotPa
         },
       },
     ]);
-  }, [email, mutation, t]);
+  }, [getEmail, mutation, t]);
 
   const clearError = useCallback(() => {
     mutation.reset();

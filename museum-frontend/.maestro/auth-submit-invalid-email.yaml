@@ -1,0 +1,48 @@
+appId: com.musaium.mobile.preview
+---
+# Auth — Submit with invalid email (Zod inline error)
+#
+# TD-RHF-02 — surfaces the react-hook-form field-level error from the Zod
+# `email()` validator inline next to the email input. The form must NOT
+# submit (no backend call, no auth-error-state banner) and the error must
+# carry testID="auth-email-error" with accessibilityRole="alert" so VO/TB
+# announce it.
+# screen: AuthScreen
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach auth screen (login mode is default)
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+# ──────────────────────────────────────────────
+# Phase 2: Type a malformed email + a structurally-valid password
+# (avoids the catch-all "fill all fields" Alert from useEmailPasswordAuth)
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "email-input"
+- inputText: "not-an-email"
+
+- tapOn:
+    id: "password-input"
+- inputText: "AnyValidPwd123"
+
+- hideKeyboard
+
+- tapOn:
+    id: "auth-submit"
+
+# ──────────────────────────────────────────────
+# Phase 3: Inline Zod email error must appear
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "auth-email-error"
+    timeout: 5000
+
+# Sanity: form did not submit — no global error banner, still on login screen
+- assertNotVisible:
+    id: "auth-error-state"
+- assertVisible:
+    text: "Welcome back|Bon retour"

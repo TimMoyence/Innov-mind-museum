@@ -4,9 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
+import type { Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
@@ -22,43 +22,29 @@ import { BiometricSetupSheet } from '@/features/auth/ui/BiometricSetupSheet';
 import { LoginForm } from '@/features/auth/ui/LoginForm';
 import { RegisterForm } from '@/features/auth/ui/RegisterForm';
 import { SocialLoginButtons } from '@/features/auth/ui/SocialLoginButtons';
+import {
+  AUTH_FORM_DEFAULTS,
+  authSchema,
+  type AuthFormValues,
+} from '@/features/auth/ui/authFormSchema';
 import { authStyles as styles } from '@/features/auth/ui/authStyles';
-import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-// ── Form schema (ADR-025: react-hook-form + Zod for ≥3 validated fields) ──────
-// Register-only fields (firstname, lastname, gdprAccepted) are optional in the
-// schema; the existing useEmailPasswordAuth handler enforces them at submit time
-// so we don't duplicate that validation here.
-const authSchema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
-  firstname: z.string().optional(),
-  lastname: z.string().optional(),
-  gdprAccepted: z.boolean().optional(),
-  // Raw user input — accepted in YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY,
-  // DD.MM.YYYY. Normalized to ISO via parseDateOfBirth at submit time
-  // (useEmailPasswordAuth) before posting to the backend, which re-validates
-  // and computes age against the French digital majority (15 years — CNIL
-  // Délibération 2021-018).
-  dateOfBirth: z
-    .string()
-    .refine((raw) => parseDateOfBirth(raw) !== null, {
-      message: 'YYYY-MM-DD or DD/MM/YYYY',
-    })
-    .optional(),
-});
-type AuthFormValues = z.infer<typeof authSchema>;
-
 /**
  * Orchestrates the authentication screen: toggles between login and
  * registration modes, owns the form state and business handlers, and
  * delegates rendering to the focused sub-components `LoginForm`,
  * `RegisterForm`, and `SocialLoginButtons`.
+ *
+ * Form binding (ADR-025): react-hook-form + Zod, Controller pattern in the
+ * child forms. The root holds `control` + `handleSubmit` + `getValues`; field
+ * subscriptions live inside each Controller, so keystrokes do not re-render
+ * this orchestrator (TD-RHF-01). Field-level Zod errors surface inline next
+ * to each input via `FormInput.error` (TD-RHF-02).
  */
 export default function AuthScreen() {
   const { t } = useTranslation();
@@ -67,19 +53,12 @@ export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [showBiometricSheet, setShowBiometricSheet] = useState(false);
 
-  // ── Form fields (ADR-025: react-hook-form + Zod) ────────────────────────────
-  const { watch, setValue } = useForm<AuthFormValues>({
+  const { control, handleSubmit, getValues, reset } = useForm<AuthFormValues>({
     resolver: zodResolver(authSchema),
     mode: 'onBlur',
-    defaultValues: { email: '', password: '', firstname: '', lastname: '', gdprAccepted: false },
+    defaultValues: AUTH_FORM_DEFAULTS,
   });
 
-  const email = watch('email');
-  const password = watch('password');
-  const firstname = watch('firstname') ?? '';
-  const lastname = watch('lastname') ?? '';
-  const dateOfBirth = watch('dateOfBirth') ?? '';
-  const gdprAccepted = watch('gdprAccepted') ?? false;
   const { loginWithSession } = useAuth();
   type Session = Parameters<typeof loginWithSession>[0];
   const pendingSessionRef = useRef<Session | null>(null);
@@ -135,21 +114,27 @@ export default function AuthScreen() {
     await faceIdRestore.restore();
   }, [faceIdRestore]);
 
-  const forgot = useForgotPassword({ email });
+  const getEmail = useCallback(() => getValues('email'), [getValues]);
+  const forgot = useForgotPassword({ getEmail });
 
   const onRegistrationComplete = useCallback(() => {
     setIsLogin(true);
-    setValue('firstname', '');
-    setValue('lastname', '');
-    setValue('password', '');
-  }, [setValue]);
+    reset({ ...AUTH_FORM_DEFAULTS, email: getValues('email') });
+  }, [getValues, reset]);
+
+  const formValuesGetter = useCallback(
+    () => ({
+      email: getValues('email'),
+      password: getValues('password'),
+      firstname: getValues('firstname') ?? '',
+      lastname: getValues('lastname') ?? '',
+      dateOfBirth: getValues('dateOfBirth') ?? '',
+    }),
+    [getValues],
+  );
 
   const emailPasswordAuth = useEmailPasswordAuth({
-    email,
-    password,
-    firstname,
-    lastname,
-    dateOfBirth,
+    getValues: formValuesGetter,
     loginWithSession: loginWithSessionWithBiometricPrompt,
     onRegistrationComplete,
   });
@@ -164,6 +149,17 @@ export default function AuthScreen() {
   const { handleForgotPassword } = forgot;
   const { handleLogin, handleRegister } = emailPasswordAuth;
 
+  // `handleSubmit` runs the Zod resolver first; the mutation only fires on a
+  // valid form. Invalid submits leave `formState.errors` populated and the
+  // child Controllers surface them inline via `FormInput.error` (TD-RHF-02).
+  const onLoginSubmit = useCallback(() => {
+    void handleSubmit(() => handleLogin())();
+  }, [handleSubmit, handleLogin]);
+
+  const onRegisterSubmit = useCallback(() => {
+    void handleSubmit(() => handleRegister())();
+  }, [handleSubmit, handleRegister]);
+
   const handleDismissError = useCallback(() => {
     emailPasswordAuth.clearError();
     forgot.clearError();
@@ -175,10 +171,9 @@ export default function AuthScreen() {
       return;
     }
     setIsLogin((value) => !value);
-    setValue('gdprAccepted', false);
+    reset({ ...AUTH_FORM_DEFAULTS, email: getValues('email') });
   };
 
-  const gdprGated = !isLogin && !gdprAccepted;
   const asyncBusy = isLoading || isSocialLoading;
 
   return (
@@ -243,52 +238,18 @@ export default function AuthScreen() {
 
               {isLogin ? (
                 <LoginForm
-                  email={email}
-                  password={password}
+                  control={control}
                   isLoading={isLoading}
                   isSocialLoading={isSocialLoading}
-                  onChangeEmail={(value) => {
-                    setValue('email', value, { shouldValidate: true });
-                  }}
-                  onChangePassword={(value) => {
-                    setValue('password', value, { shouldValidate: true });
-                  }}
                   onForgotPassword={handleForgotPassword}
-                  onSubmit={() => {
-                    void handleLogin();
-                  }}
+                  onSubmit={onLoginSubmit}
                 />
               ) : (
                 <RegisterForm
-                  email={email}
-                  password={password}
-                  firstname={firstname}
-                  lastname={lastname}
-                  dateOfBirth={dateOfBirth}
-                  gdprAccepted={gdprAccepted}
+                  control={control}
                   isLoading={isLoading}
                   isSocialLoading={isSocialLoading}
-                  onChangeEmail={(value) => {
-                    setValue('email', value, { shouldValidate: true });
-                  }}
-                  onChangePassword={(value) => {
-                    setValue('password', value, { shouldValidate: true });
-                  }}
-                  onChangeFirstname={(value) => {
-                    setValue('firstname', value, { shouldValidate: true });
-                  }}
-                  onChangeLastname={(value) => {
-                    setValue('lastname', value, { shouldValidate: true });
-                  }}
-                  onChangeDateOfBirth={(value) => {
-                    setValue('dateOfBirth', value, { shouldValidate: true });
-                  }}
-                  onToggleGdpr={() => {
-                    setValue('gdprAccepted', !gdprAccepted);
-                  }}
-                  onSubmit={() => {
-                    void handleRegister();
-                  }}
+                  onSubmit={onRegisterSubmit}
                   onOpenTerms={() => {
                     router.push('/(stack)/terms');
                   }}
@@ -306,10 +267,11 @@ export default function AuthScreen() {
 
               <AuthSeparator />
 
-              <SocialLoginButtons
+              <SocialLoginButtonsGate
+                control={control}
+                isLogin={isLogin}
                 appleAuthAvailable={appleAuthAvailable}
                 disabled={asyncBusy}
-                gdprGated={gdprGated}
                 onApplePress={() => void handleAppleSignIn()}
                 onGooglePress={() => void handleGoogleSignIn()}
               />
@@ -331,5 +293,40 @@ export default function AuthScreen() {
         onSkip={handleBiometricSkip}
       />
     </LiquidScreen>
+  );
+}
+
+interface SocialLoginButtonsGateProps {
+  control: Control<AuthFormValues>;
+  isLogin: boolean;
+  appleAuthAvailable: boolean;
+  disabled: boolean;
+  onApplePress: () => void;
+  onGooglePress: () => void;
+}
+
+/**
+ * Subscribes locally to `gdprAccepted` so toggling GDPR consent in register
+ * mode re-renders only this small wrapper, not the whole `AuthScreen`
+ * (TD-RHF-01). Social sign-in stays disabled in register mode until consent.
+ */
+function SocialLoginButtonsGate({
+  control,
+  isLogin,
+  appleAuthAvailable,
+  disabled,
+  onApplePress,
+  onGooglePress,
+}: SocialLoginButtonsGateProps) {
+  const gdprAccepted = useWatch({ control, name: 'gdprAccepted' });
+  const gdprGated = !isLogin && !gdprAccepted;
+  return (
+    <SocialLoginButtons
+      appleAuthAvailable={appleAuthAvailable}
+      disabled={disabled}
+      gdprGated={gdprGated}
+      onApplePress={onApplePress}
+      onGooglePress={onGooglePress}
+    />
   );
 }
