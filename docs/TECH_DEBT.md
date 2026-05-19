@@ -960,6 +960,32 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-52 — `scripts/seed-pilot-museums.sh` (W4) cassé : `pnpm exec tsx` + cible Paris
+
+- [ ] **Statut** : ouvert (créé 2026-05-19, découvert en Phase B re-seed Bordeaux)
+- **Référence code** : `museum-backend/scripts/seed-pilot-museums.sh` (livré par W4 audit-360 cluster ops/release).
+- **Symptôme** :
+  1. Le script invoque `pnpm exec tsx <ts-file>` mais `tsx` n'est PAS dans les deps backend — c'est `ts-node`. Le script fail immédiatement (`Cannot find module 'tsx'`).
+  2. Le contenu seedé pointe les 3 musées Paris (Louvre / Orsay / Pompidou), pas la liste pilote attendue (Bordeaux pour le pilote 2026-05-23).
+- **Workaround actuel** : `pnpm seed:museums` (canonical, invoque `scripts/seed-museums.ts` qui contient les 19 musées dont les 3 bordelais + a une commande TypeORM valide).
+- **Sprint d'origine** : W4 (cluster ops/release).
+- **Effort estimé** : 30 min — option A : rebrand le script "Paris pilots" + fix `pnpm exec tsx` → `ts-node` ; option B : supprimer le script (redondant avec `seed-museums.ts` qui est plus complet).
+- **Comment fermer** : choisir A ou B avec le owner W4 ; documenter dans le PR de fix la décision.
+
+---
+
+### TD-53 — Anonymous volume `dev-backend` node_modules drift après modif `package.json` host
+
+- [ ] **Statut** : ouvert (créé 2026-05-19, découvert en Phase B post-merge W3+W4 quand `@opentelemetry/api` a été ajouté en deps)
+- **Référence code** : `museum-backend/docker-compose.dev.yml:42` (anonymous volume `/app/museum-backend/node_modules`).
+- **Symptôme** : quand `package.json` change côté host (ajout d'une dep par un merge / un install), le container `dev-backend` continue d'utiliser le `node_modules` baked dans l'image (préservé via anonymous volume). nodemon crash en boucle sur `Cannot find module 'X'`. Fix manuel actuel : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` (puis restart container).
+- **Workaround actuel** : recipe documentée dans le HANDOFF (`docs/HANDOFF_W3_GEO_PILOT.md` Phase B step 3 + cette session 2026-05-19). Acceptable pour dev, mais friction visible.
+- **Sprint d'origine** : N/A (infra dev compose, existant depuis l'introduction des anonymous volumes).
+- **Effort estimé** : 1 h — option A : script `pnpm bootstrap-dev-container` qui detect drift package.json → run install dans le container automatiquement ; option B : hook nodemon pre-start qui check `package.json mtime > pnpm-lock.yaml mtime container` et run install ; option C : rebuild image à chaque `up -d` (lent mais déterministe).
+- **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans `docs/DEV_SETUP.md` (ou équivalent).
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)

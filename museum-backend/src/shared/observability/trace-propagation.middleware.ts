@@ -46,11 +46,7 @@ function readHeader(req: Request, key: string): string | undefined {
   return undefined;
 }
 
-export function traceePropagationMiddleware(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): void {
+export function tracePropagationMiddleware(req: Request, _res: Response, next: NextFunction): void {
   try {
     const sentryTrace = readHeader(req, HEADER_SENTRY_TRACE);
     const baggage = readHeader(req, HEADER_BAGGAGE);
