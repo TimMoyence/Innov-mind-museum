@@ -154,8 +154,9 @@ mfaRouter.post(
 
 mfaRouter.post(
   '/challenge',
-  challengeLimiter,
   validateBody(challengeSchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  challengeLimiter,
   async (req: Request, res: Response) => {
     const { mfaSessionToken, code } = req.body as { mfaSessionToken: string; code: string };
     try {
@@ -200,8 +201,9 @@ mfaRouter.post(
 
 mfaRouter.post(
   '/recovery',
-  recoveryLimiter,
   validateBody(recoverySchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  recoveryLimiter,
   async (req: Request, res: Response) => {
     const { mfaSessionToken, recoveryCode } = req.body as {
       mfaSessionToken: string;

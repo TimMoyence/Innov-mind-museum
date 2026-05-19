@@ -161,6 +161,13 @@ export const byUserId = (req: Parameters<RequestHandler>[0]): string => {
   return user?.id ? `user:${String(user.id)}` : byIp(req);
 };
 
+// @internal — test-only helper: returns the current count for a bucket key in the in-memory store, or undefined if the bucket has not been created or has expired.
+export const getBucketCountForKey = (key: string): number | undefined => {
+  const bucket = store.get(key);
+  if (!bucket || bucket.resetAt <= Date.now()) return undefined;
+  return bucket.count;
+};
+
 /** @internal */
 export const clearRateLimitBuckets = (): void => {
   store.clear();

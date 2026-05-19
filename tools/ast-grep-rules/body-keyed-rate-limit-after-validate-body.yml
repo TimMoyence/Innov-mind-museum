@@ -1,0 +1,77 @@
+# R8 / TD-EX-01 — Body-keyed rate-limit middleware must appear AFTER
+# validateBody() in every router.post() registration under
+# museum-backend/src/modules/{auth,chat}/.
+#
+# spec.md §3.2 R8:
+#   "If a developer adds a new POST route that uses both validateBody and a
+#   body-keyed express-rate-limit, then the CI guard shall fail the PR if
+#   ordering is reversed."
+#
+# design.md §D5:
+#   Rule matches router.post(path, ...args) where the args list contains BOTH
+#   a validateBody(...) call AND a named body-keyed limiter identifier where
+#   the LIMITER appears BEFORE validateBody in the argument list.
+#
+# Body-keyed limiters (named allowlist per design D4):
+#   - loginByAccountLimiter  (keys on req.body.email)
+#   - refreshLimiter         (keys on req.body.refreshToken → familyId)
+#   - socialLoginLimiter     (keys on req.body.provider)
+#   - challengeLimiter       (keys on req.body.mfaSessionToken → userId)
+#   - recoveryLimiter        (keys on req.body.mfaSessionToken → userId)
+#
+# This rule catches the shape:
+#   router.post(path, ..., <bodyKeyedLimiter>, ..., validateBody(...), ...)
+#
+# After green phase reorders the middleware, this rule produces 0 findings.
+#
+# Severity: error — blocks CI.
+# Scope: museum-backend/src/modules/{auth,chat}/**/*.ts
+
+id: body-keyed-rate-limit-after-validate-body
+language: TypeScript
+severity: error
+message: |
+  Body-keyed rate-limit middleware appears BEFORE validateBody() in router.post()
+  registration (R8, TD-EX-01). This enables account-bucket DoS: an attacker can
+  exhaust a victim's rate-limit bucket by spamming malformed bodies that trigger
+  Zod 400 — the counter is bumped before validation short-circuits.
+  Fix: move validateBody(schema) BEFORE body-keyed limiters in the middleware
+  array. IP-keyed limiters (loginLimiter) may stay BEFORE validateBody (design D4).
+  Affected limiters: loginByAccountLimiter, refreshLimiter, socialLoginLimiter,
+  challengeLimiter, recoveryLimiter.
+
+note: |
+  Correct order per design.md §D4:
+    router.post('/route',
+      ipKeyedLimiter,        // optional, stays BEFORE validateBody
+      validateBody(schema),  // FIRST body-touching middleware
+      bodyKeyedLimiter,      // AFTER validateBody
+      handler,
+    )
+
+rule:
+  any:
+    # Each pattern matches: limiter identifier appears before validateBody(...)
+    # in the same router.post() call argument list.
+    - pattern: >
+        $ROUTER.post($PATH, $$$BEFORE, loginByAccountLimiter, $$$MIDDLE,
+        validateBody($SCHEMA), $$$AFTER)
+    - pattern: >
+        $ROUTER.post($PATH, $$$BEFORE, refreshLimiter, $$$MIDDLE,
+        validateBody($SCHEMA), $$$AFTER)
+    - pattern: >
+        $ROUTER.post($PATH, $$$BEFORE, socialLoginLimiter, $$$MIDDLE,
+        validateBody($SCHEMA), $$$AFTER)
+    - pattern: >
+        $ROUTER.post($PATH, $$$BEFORE, challengeLimiter, $$$MIDDLE,
+        validateBody($SCHEMA), $$$AFTER)
+    - pattern: >
+        $ROUTER.post($PATH, $$$BEFORE, recoveryLimiter, $$$MIDDLE,
+        validateBody($SCHEMA), $$$AFTER)
+
+files:
+  - "museum-backend/src/modules/auth/**/*.ts"
+  - "museum-backend/src/modules/chat/**/*.ts"
+
+ignores:
+  - "museum-backend/tests/**"

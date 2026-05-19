@@ -145,16 +145,37 @@ const invalidToken = (code: string, reason: string): AppError =>
   });
 
 /**
+ * VerifyOptions with `algorithms` made required (non-optional).
+ * Exported so tests can import for shape assertion (design D3, T2.2).
+ * per lib-docs/jsonwebtoken/PATTERNS.md §3 L164-167 (algorithm pinning, CVE-2022-23540)
+ */
+export type SafeJwtVerifyOptions = jwt.VerifyOptions & {
+  algorithms: NonNullable<jwt.VerifyOptions['algorithms']>; // required (not optional)
+};
+
+/**
  * Wraps `jsonwebtoken` verification so library errors (TokenExpiredError,
  * JsonWebTokenError including "jwt audience invalid", signature failures,
  * malformed tokens, etc.) surface as AppError 401 instead of bubbling up as
  * an opaque 500. Any non-jsonwebtoken error is re-thrown unchanged.
+ *
+ * `algorithms` is REQUIRED in options (must be a non-empty array).
+ * per lib-docs/jsonwebtoken/PATTERNS.md §3 L164-167 (algorithm pinning, CVE-2022-23540)
  */
-const safeJwtVerify = (
+// @internal — exported for test contract verification only (R3 wrapper-contract test)
+export const safeJwtVerify = (
   idToken: string,
   publicKey: string,
-  options: jwt.VerifyOptions,
+  options: SafeJwtVerifyOptions,
 ): jwt.JwtPayload => {
+  // Runtime guard: algorithms must be present and non-empty (belt-and-braces, D3).
+  // Cast to unknown first so TS does not optimize away the check on the required field
+  // (third-party callers may bypass the type via `as VerifyOptions` — runtime catches them).
+  // per lib-docs/jsonwebtoken/PATTERNS.md §4 'DON'T: Call verify without algorithms'
+  const algs = (options as unknown as { algorithms?: jwt.Algorithm[] }).algorithms;
+  if (!algs || algs.length === 0) {
+    throw new Error('safeJwtVerify requires options.algorithms (defense-in-depth, TD-JWT-01)');
+  }
   try {
     return jwt.verify(idToken, publicKey, options) as jwt.JwtPayload;
   } catch (err) {

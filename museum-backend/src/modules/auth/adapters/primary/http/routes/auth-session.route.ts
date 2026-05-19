@@ -101,8 +101,9 @@ authSessionRouter.post(
 authSessionRouter.post(
   '/login',
   loginLimiter,
-  loginByAccountLimiter,
   validateBody(loginSchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  loginByAccountLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password } = req.body;
@@ -131,8 +132,9 @@ authSessionRouter.post(
 
 authSessionRouter.post(
   '/refresh',
-  refreshLimiter,
   validateBody(refreshSchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  refreshLimiter,
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
     const session = await authSessionService.refresh(refreshToken);
@@ -162,8 +164,9 @@ authSessionRouter.post(
 
 authSessionRouter.post(
   '/social-login',
-  socialLoginLimiter,
   validateBody(socialLoginSchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  socialLoginLimiter,
   async (req: Request, res: Response) => {
     const { provider, idToken, nonce } = req.body;
     const session = await socialLoginUseCase.execute(provider, idToken, nonce);
@@ -198,9 +201,10 @@ authSessionRouter.post(
 // only needs rate-limit guard against OTC entropy-pool bruteforce.
 authSessionRouter.post(
   '/social-redeem',
-  socialLoginLimiter,
   diagSocialRedeemCode,
   validateBody(socialRedeemSchema),
+  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
+  socialLoginLimiter,
   async (req: Request, res: Response) => {
     const { code } = req.body;
     const session = await redeemSocialOtcUseCase.execute(code);

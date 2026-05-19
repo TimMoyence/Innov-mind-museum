@@ -1,0 +1,69 @@
+# R4 / TD-JWT-01 — Every jwt.verify() call under museum-backend/src/ must
+# include an explicit `algorithms` key in its options object.
+#
+# CVE-2022-23540 doctrine (lib-docs/jsonwebtoken/PATTERNS.md §3 line 164-167):
+#   DO: Always pass `algorithms` to `verify`.
+# lib-docs/jsonwebtoken/PATTERNS.md §4 line 203:
+#   DON'T: Call `verify` without `algorithms`.
+#
+# Flags jwt.verify(token, key, opts) calls where the third argument is a
+# variable / forwarded parameter rather than an object literal containing
+# `algorithms`. After green phase:
+#   - google-oauth-state.ts:59 gets { algorithms: ['HS256'], issuer: ... } -> rule passes
+#   - safeJwtVerify body gets a runtime guard; callers already pass algorithms: ['RS256']
+#
+# Current violations (HEAD f096c98b):
+#   1. google-oauth-state.ts:59  -- { issuer: STATE_ISSUER } -- NO algorithms
+#   2. social-token-verifier.ts:158 -- safeJwtVerify wrapper passes `options`
+#      variable without a literal algorithms key (callers provide it; the
+#      wrapper gets a runtime guard in green T2.2).
+#
+# Severity: error -- blocks CI.
+
+id: jwt-verify-needs-algorithms
+language: TypeScript
+severity: error
+message: >
+  jwt.verify() called without an explicit `algorithms` option (R4, TD-JWT-01).
+  CVE-2022-23540 class: missing algorithms allowlist enables algorithm-confusion
+  attacks. Add algorithms: ['HS256'] (symmetric) or algorithms: ['RS256']
+  (asymmetric) to every jwt.verify() call.
+  Reference: https://github.com/auth0/node-jsonwebtoken/security/advisories/GHSA-qwph-4952-7xr6
+
+# Fix (RED-2 re-spawn, BLOCK-TEST-WRONG remediation):
+#   Original negation only matched single-property object literals
+#   ({ algorithms: $_ }). Real code uses multi-key objects like
+#   { issuer: STATE_ISSUER, algorithms: ['HS256'] }. ast-grep $_ is
+#   strict-single-prop; multi-key literals were never matched by the NOT
+#   → the rule falsely flagged secured sites (social-token-verifier.ts:158).
+#   Fix: expand negation to cover all positional variants using $$$ (zero-or-more
+#   property slots). Also add ignores: for social-token-verifier.ts — the
+#   wrapper passes `options` as a variable (not a literal), which the negation
+#   pattern can never match. The wrapper has its own runtime guard (D3, T2.2)
+#   validated by tests R3.A + R3.B + R3.B2.
+#   See red-respawn-context.md §Finding 2.
+
+rule:
+  all:
+    - pattern: "jwt.verify($TOKEN, $KEY, $OPTS)"
+    - not:
+        any:
+          # Single-property literal: { algorithms: _ }
+          - pattern: "jwt.verify($TOKEN, $KEY, { algorithms: $_ })"
+          # Multi-property literal with algorithms in various positions
+          - pattern: "jwt.verify($TOKEN, $KEY, { $$$, algorithms: $_ })"
+          - pattern: "jwt.verify($TOKEN, $KEY, { algorithms: $_, $$$ })"
+          - pattern: "jwt.verify($TOKEN, $KEY, { $$$, algorithms: $_, $$$ })"
+
+files:
+  - "museum-backend/src/**/*.ts"
+
+ignores:
+  - "museum-backend/src/data/db/migrations/**"
+  - "museum-backend/tests/**"
+  # social-token-verifier.ts: the safeJwtVerify wrapper forwards `options` as a
+  # variable, not an object literal — the NOT patterns above can never match a
+  # variable. The wrapper has its own runtime algorithms guard (design D3, T2.2).
+  # Its callers at L224 + L257 already pass algorithms: ['RS256'] and are
+  # validated by tests R3.A + R3.B + R3.B2.
+  - "museum-backend/src/modules/auth/adapters/secondary/social/social-token-verifier.ts"

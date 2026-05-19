@@ -828,6 +828,14 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## TD-EX-01 — Rate-limiter ordering : reads `req.body` BEFORE Zod validator (MEDIUM, BLOCKER pre-V1)
 
+**Status: RESOLVED — 2026-05-19**
+
+> **Run:** 2026-05-19-cluster5-jwt-ratelimit
+> **Diff scope:** 6 route sites reordered — `/login`, `/refresh`, `/social-login`, `/social-redeem` (`auth-session.route.ts`), `/mfa/challenge`, `/mfa/recovery` (`mfa.route.ts`). `/social-redeem` auto-detected at L199 by ast-grep rule during green phase (not in original 5-site architect plan; scope widened via BLOCK-TEST-WRONG reconciliation). Chat routes (`chat-message`, `chat-media`, `chat-compare`) confirmed already-correct via R10 regression guard — no change needed.
+> **CVE coverage:** Account-bucket DoS vector closed — `validateBody` (Zod 400) now short-circuits before any body-keyed rate-limit counter is mutated.
+> **Regression guard:** `tools/ast-grep-rules/body-keyed-rate-limit-after-validate-body.yml` (severity: error) wired in `sgconfig.yml` + `.husky/pre-push` Gate 14.
+> **Tests:** `middleware-ordering.test.ts` (10 unit assertions), `rate-limit-zod-400-no-bump.integration.test.ts` (8 integration assertions — 60 malformed bodies, bucket count 0), `/metrics` cardinality guard R9.G.
+
 **Context** : 7 call sites (login, refresh, social-login, mfa challenge/recovery, chat-message, chat-media, chat-compare) place rate-limiters that MUTATE counter state BEFORE the Zod validator. Counter inflates on invalid bodies → either (a) funnel corruption (chat-message dailyChatLimit), or (b) account-targeted DoS via spam of malformed login bodies against a victim's email bucket. CLAUDE.md "mutating middleware ordering" pattern fixed only for chat-session, not propagated.
 
 **Remediation** : 2 options per call site :
@@ -1021,7 +1029,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-SN-01 — Sentry+OTel coexistence pattern CLAUDE.md half-implémenté → trace correlation BROKEN (HIGH, BLOCKER pre-V1)
+## TD-SN-01 — Sentry+OTel coexistence pattern CLAUDE.md half-implémenté → trace correlation BROKEN (HIGH, BLOCKER pre-V1)
+
+- [x] **Status** : STALE-BY-DESIGN 2026-05-19 — ADR-045 owner decision : trace correlation is implemented via header-based middleware (`museum-backend/src/shared/observability/trace-propagation.middleware.ts`, shipped W3+W4), NOT via the `@sentry/opentelemetry` SDK bridge. The `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` shape at `sentry.ts:50-51` is the correct end-state. See `docs/HANDOFF-2026-05-19-debt-collision-report.md` §7 decision 1 and the CLAUDE.md "Sentry+OTel Node SDK v2 coexistence" gotcha (amended same day).
 
 **Context** : `sentry.ts:42-53` set `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` per CLAUDE.md prescription. MAIS `opentelemetry.ts:36-51` build le NodeSDK avec ZÉRO Sentry bridge : `@sentry/opentelemetry` package NOT installed, no SentryContextManager / SentrySampler / SentryPropagator / SentrySpanProcessor. Conséquence : `captureException` fire INSIDE un OTel span actif mais Sentry ne peut PAS lire le span → errors perdent trace_id/span_id correlation silencieusement. Distributed-tracing BE↔FE = broken silently.
 
@@ -1037,7 +1047,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-SN-02 — Sentry.init() omits `tracePropagationTargets` → BE↔FE trace tree split (HIGH, BLOCKER pre-V1)
+## TD-SN-02 — Sentry.init() omits `tracePropagationTargets` → BE↔FE trace tree split (HIGH, BLOCKER pre-V1)
+
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` wired at `museum-backend/src/shared/observability/sentry.ts:46`. Verified by `museum-backend/tests/unit/shared/observability/sentry-init.test.ts` assertion (1/5) + security F3.
 
 **Context** : CLAUDE.md gotcha explicite : `tracePropagationTargets doit être explicite sinon trace tree BE↔FE split silencieux`. `sentry.ts:42-53 Sentry.init({...})` omits le param entirely.
 
@@ -1051,6 +1063,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## TD-SN-03 — `initSentry()` runs AFTER imports → auto-instrumentation patching incomplete (MEDIUM, NON_BLOCKER)
 
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `initSentry()` now invoked at `museum-backend/src/instrumentation.ts:10` BEFORE `initOpenTelemetry()` at line 11. The legacy `initSentry()` call site removed from `museum-backend/src/index.ts`. Verified by code-review R2.
+
 **Context** : `index.ts:461 initSentry()` invoqué APRÈS 40+ imports + `createApp()`. Mitigated by `skipOpenTelemetrySetup:true` mais snapshot warning toujours valable.
 
 **Remediation** : Move `initSentry()` dans `instrumentation.ts` AVANT OTel init.
@@ -1062,6 +1076,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ---
 
 ## TD-SN-04 — `profilesSampleRate` deprecated → `profileSessionSampleRate` + `profileLifecycle` (LOW, NON_BLOCKER)
+
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `profileSessionSampleRate` + `profileLifecycle: 'trace'` set at `museum-backend/src/shared/observability/sentry.ts:48-49`. Env var renamed `SENTRY_PROFILES_SAMPLE_RATE` → `SENTRY_PROFILE_SESSION_SAMPLE_RATE` across `env.ts:243`, `.env.example:141`, `.env.production.example:81`, `docs/CI_CD_SECRETS.md:396`, `docs/compliance/SUBPROCESSORS.md:37`. Verified by security F4 + code-review R3.
 
 **Context** : `sentry.ts:47 profilesSampleRate: env.sentry.profilesSampleRate`. PATTERNS.md note deprecated since v10.27.0. Breaks on next major.
 
@@ -1076,6 +1092,15 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## 🚨 TD-JWT-01 — google-oauth-state.ts MISSING `algorithms` in jwt.verify (HIGH BLOCKER pre-V1)
 
+**Status: RESOLVED — 2026-05-19**
+
+> **Run:** 2026-05-19-cluster5-jwt-ratelimit
+> **Diff scope:** 5 source files — `google-oauth-state.ts` (+2L: `algorithms: ['HS256']` added at L59-62 with PATTERNS.md citation), `social-token-verifier.ts` (+25L: `safeJwtVerify` wrapper with `SafeJwtVerifyOptions` TypeScript `NonNullable` type + runtime guard), `auth-session.route.ts`, `mfa.route.ts`, `rate-limit.middleware.ts` (companion TD-EX-01 fixes in same run). Regression guards added for all 3 pre-existing HS256 symmetric sites (`mfaSessionToken.ts:41`, `token-jwt.service.ts:66`, `token-jwt.service.ts:92`).
+> **CVE coverage:** CVE-2022-23540 **MITIGATED** — all 5 `jwt.verify` sites in `museum-backend/src/` now pass explicit `algorithms` allowlist. Defense-in-depth: (1) TypeScript `NonNullable` type at wrapper boundary, (2) runtime guard throws before `jwt.verify` call if `algorithms` absent/empty, (3) ast-grep CI rule blocks future regressions.
+> **Regression guard:** `tools/ast-grep-rules/jwt-verify-needs-algorithms.yml` (severity: error) wired in `sgconfig.yml` + `.husky/pre-push` Gate 14.
+> **Tests:** `none-algorithm-banned.test.ts`, `google-oauth-state.algorithms.test.ts`, `hs256-algorithm-pinning-regression.test.ts`, `social-token-verifier.wrapper-contract.test.ts` — 23 unit assertions, all pass.
+> **Follow-up (non-blocking):** See TD-JWT-02 below — `iss`/`aud` pinning on internal HS256 tokens (pre-existing gap, not introduced by this PR).
+
 **Context** : `museum-backend/src/modules/auth/adapters/secondary/social/google-oauth-state.ts:59` `jwt.verify(token, env.auth.jwtSecret, { issuer: STATE_ISSUER })` omits `algorithms`. CVE-2022-23540 class. Doctrine violation (PATTERNS.md §3+§4+§5).
 
 **Remediation** : Add `algorithms: ['HS256']` to VerifyOptions. 1-line change.
@@ -1083,6 +1108,18 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Evidence** : `museum-backend/src/modules/auth/adapters/secondary/social/google-oauth-state.ts:59`.
 
 **Blast radius** : 1 file, 1 line. Trivial fix, high doctrine weight.
+
+---
+
+## TD-JWT-02 — `iss`/`aud` NOT pinned on internal HS256 tokens (LOW, NON_BLOCKER post-V1)
+
+**Context** : `mfaSessionToken.ts:40`, `token-jwt.service.ts:66` (access), `token-jwt.service.ts:91` (refresh) verify internal HS256-signed tokens without `issuer` or `audience` options. PATTERNS.md §3 L187-190 recommends `iss`+`aud` as defense-in-depth even for internal self-issued tokens. Risk is low because each token type uses a distinct module-scoped secret (3 separate env vars: `mfaSessionTokenSecret`, `accessTokenSecret`, `refreshTokenSecret`) — cross-secret confusion requires key-leak. Current shape-validation (`type`, `sub`, `jti`, `familyId` claims) catches misrouted tokens. Not introduced by Cluster 5; pre-existing gap flagged as INFO by security review (security-report.json:67-76) and NIT by code review (code-review.json finding #4).
+
+**Remediation** : Add `issuer: 'musaium-auth'` + `audience: 'musaium-api'` to `jwt.sign` + `jwt.verify` calls at the 3 internal token sites. Regression-guard by existing `hs256-algorithm-pinning-regression.test.ts` which already covers these sites.
+
+**Evidence** : `museum-backend/src/modules/auth/useCase/totp/mfaSessionToken.ts:40`, `museum-backend/src/modules/auth/useCase/session/token-jwt.service.ts:65,91`.
+
+**Blast radius** : 2 files, ~6 lines. Non-blocking post-V1 hardening.
 
 ---
 
@@ -1291,7 +1328,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-SRN-01 — metro.config.js uses getDefaultConfig au lieu de getSentryExpoConfig → Hermes source-maps risque (MAJOR, BLOCKER pre-V1)
+## TD-SRN-01 — metro.config.js uses getDefaultConfig au lieu de getSentryExpoConfig → Hermes source-maps risque (MAJOR, BLOCKER pre-V1)
+
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `museum-frontend/metro.config.js:2,4` now uses `require('@sentry/react-native/metro').getSentryExpoConfig(__dirname)`. Config composition (watchFolders, resolver.unstable_enableSymlinks, nodeModulesPaths preserving the `@musaium/shared` symlink) preserved byte-for-byte per design D6. Verified by code-review R8.
 
 **Context** : PATTERNS.md §1 prescrit `getSentryExpoConfig` from `@sentry/react-native/metro`. Sans ça, risk Hermes bundle source-maps non-aligned → stack traces minifiées dashboard, debug post-V1 cassé.
 
@@ -1570,18 +1609,26 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-SNXT-01 — sentry.client.config.ts ORPHAN → browser errors NOT captured (HIGH BLOCKER pre-V1)
+## TD-SNXT-01 — sentry.client.config.ts ORPHAN → browser errors NOT captured (HIGH BLOCKER pre-V1)
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `museum-web/sentry.client.config.ts` deleted; `museum-web/instrumentation-client.ts` created (auto-loaded by Next.js 15 + `@sentry/nextjs` v10) with full init shape + tracePropagationTargets + env-split tracesSampleRate. Code-review R4. R9 browser-side smoke deferred to post-merge operator gate (design §6.4).
+
 **Context** : Next.js 15 + @sentry/nextjs v10 auto-load `instrumentation-client.ts` (NOT v8/v9 `sentry.client.config.ts`). Browser-side Sentry.init NEVER runs → landing page + admin SPA = silent observability.
 **Fix** : Rename `museum-web/sentry.client.config.ts` → `museum-web/instrumentation-client.ts`. Verify browser devtools.
 
 ## TD-SNXT-02 — onRequestError wrapper extra latency (MEDIUM)
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `museum-web/src/instrumentation.ts:11` now reads `export { captureRequestError as onRequestError } from '@sentry/nextjs';` — direct named re-export, no wrapper. Semantically equivalent to canonical `const onRequestError = Sentry.captureRequestError`. Code-review R5.
+
 **Fix** : `export const onRequestError = Sentry.captureRequestError;`.
 **Evidence** : `museum-web/src/instrumentation.ts:11-18`.
 
 ## TD-SNXT-03 — tracesSampleRate hardcoded 0.1 all envs (MEDIUM)
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `process.env.NODE_ENV === 'development' ? 1.0 : 0.1` applied at line 13 of all 3 Web init files (`instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`). Code-review R6. Per design D4 the 3× literal is intentional (helper extraction overhead > 1-line × 3).
+
 **Fix** : `NODE_ENV === 'development' ? 1.0 : 0.1` in 3 configs.
 
 ## TD-SNXT-04 — tunnelRoute + tracePropagationTargets MISSING (MEDIUM)
+- [x] **Status** : RESOLVED 2026-05-19 (run `2026-05-19-sentry-otel-cleanup`). `tunnelRoute: '/monitoring'` set in `museum-web/next.config.ts:48` (withSentryConfig opts); `museum-web/src/middleware.ts:163` matcher updated to exclude `monitoring`. Explicit `tracePropagationTargets` allowlist `[/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` wired in the 3 runtime init files (per design D5, since `tracePropagationTargets` ∉ `SentryBuildOptions` per `@sentry/nextjs` types). Code-review R7. Security F2 + F3 confirm matcher + allowlist.
+
 **Fix** : add `tunnelRoute: '/monitoring'` + explicit allow-list to withSentryConfig.
 
 

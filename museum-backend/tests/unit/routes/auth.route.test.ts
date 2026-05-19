@@ -1037,14 +1037,32 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(200);
     });
 
-    it('POST /api/auth/refresh: limiter counts invalid bodies toward IP bucket', async () => {
-      // Limiter runs before validateBody so probing with missing refreshToken still drains bucket.
-      for (let i = 0; i < 30; i += 1) {
+    it('POST /api/auth/refresh: invalid bodies do NOT bump the IP bucket (TD-EX-01)', async () => {
+      // TD-EX-01: validateBody runs BEFORE the body-keyed limiter; malformed bodies
+      // short-circuit to 400 without bumping the counter — bucket never drains via
+      // invalid-body probes.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- runtime require to avoid hoist issues with jest.mock above
+      const { getBucketCountForKey } = require('@shared/middleware/rate-limit.middleware') as {
+        getBucketCountForKey: (key: string) => number | undefined;
+      };
+
+      // 60 consecutive invalid-body requests — comfortably above the 30-req limit.
+      for (let i = 0; i < 60; i += 1) {
         const res = await request(app).post('/api/auth/refresh').send({});
         expect(res.status).toBe(400);
       }
-      const blocked = await request(app).post('/api/auth/refresh').send({});
-      expect(blocked.status).toBe(429);
+
+      // After 60 invalid bodies, the bucket key for this IP must be untouched
+      // (undefined = bucket never created, or 0 = bucket created but never bumped).
+      // The refreshLimiter keyGenerator returns `ip` (or `ip:familyId`) — for empty body
+      // there is no refreshToken so no familyId → key is just the IP.
+      const ipKey = 'auth-refresh:127.0.0.1';
+      const count = getBucketCountForKey(ipKey);
+      expect(count ?? 0).toBe(0);
+
+      // A 61st invalid request still returns 400 (validation) — NEVER 429.
+      const next = await request(app).post('/api/auth/refresh').send({});
+      expect(next.status).toBe(400);
     });
 
     it('POST /api/auth/social-login returns 429 after limit exceeded for same IP+provider', async () => {

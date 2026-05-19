@@ -56,8 +56,10 @@ export function signGoogleOAuthState(payload: SignGoogleOAuthStateInput): string
  * (backward compat with admin redirects already in flight at deploy time).
  */
 export function verifyGoogleOAuthState(token: string): GoogleOAuthStatePayload {
+  // per lib-docs/jsonwebtoken/PATTERNS.md §3 L164-167 (algorithm pinning, CVE-2022-23540)
   const decoded = jwt.verify(token, env.auth.jwtSecret, {
     issuer: STATE_ISSUER,
+    algorithms: ['HS256'],
   });
   if (typeof decoded !== 'object') {
     throw new Error('Invalid state payload shape');
