@@ -5,7 +5,17 @@
       "flows": [
         "auth-flow.yaml",
         "auth-persistence.yaml",
+        "auth-login-happy.yaml",
+        "auth-login-invalid-credentials.yaml",
+        "auth-submit-invalid-email.yaml",
+        "auth-register-happy.yaml",
+        "auth-register-duplicate-email.yaml",
+        "auth-register-minor-dob.yaml",
+        "auth-register-password-breached.yaml",
+        "auth-account-delete.yaml",
         "onboarding-flow.yaml",
+        "onboarding-full-carousel.yaml",
+        "onboarding-skip-anonymous.yaml",
         "cert-pinning-smoke.yaml"
       ]
     },
@@ -22,7 +32,12 @@
     },
     {
       "name": "museum",
-      "flows": ["museum-search-geo.yaml", "navigation-flow.yaml"]
+      "flows": [
+        "museum-search-geo.yaml",
+        "navigation-flow.yaml",
+        "nav-stack-deep-links.yaml",
+        "nav-tabs-roundtrip.yaml"
+      ]
     },
     {
       "name": "settings",
