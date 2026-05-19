@@ -8,6 +8,13 @@ interface LocaleLayoutProps {
   params: Promise<{ locale: string }>;
 }
 
+// TD-NEXT-02 — pre-render FR + EN at build so the [locale] cold path serves
+// from static cache instead of running RSC + dictionary load per request
+// (lib-docs/next/PATTERNS.md §3).
+export function generateStaticParams(): { locale: Locale }[] {
+  return [{ locale: 'fr' }, { locale: 'en' }];
+}
+
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
