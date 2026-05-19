@@ -27,4 +27,12 @@ export const bootstrapMapLibre = (): void => {
   LogManager.start();
 };
 
-bootstrapMapLibre();
+// Skip the top-level invocation under Jest. `LogManager.start()` opens a
+// native subscription (file descriptor + event-loop callback) that is not
+// `.unref()`'d, so when test files transitively import this module via
+// `app/_layout.tsx`, Jest keeps the worker alive after the suite ends
+// ("Jest did not exit one second after the test run has completed").
+// `JEST_WORKER_ID` is set by Jest on every worker; absent in app runtime.
+if (process.env.JEST_WORKER_ID === undefined) {
+  bootstrapMapLibre();
+}
