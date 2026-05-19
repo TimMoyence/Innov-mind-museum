@@ -1,17 +1,22 @@
 /**
- * B6 — Proactive in-museum suggestion banner.
+ * B6 / W3 — Proactive in-museum suggestion banner.
  *
- * Card rendered on the home screen suggesting the visitor start a voice
- * conversation when GPS detects them within 200 m of a known museum
- * ("You're at <museumName> — Ask the assistant?"). Dismissable via a
- * separate Pressable (round X button, own `accessibilityRole="button"` +
- * label) — the dismiss tap MUST NOT trigger the card tap (R21).
+ * Two display modes, picked by `museum.confidence`:
  *
- * Tap card → `onStart(museum)` (parent calls `useStartConversation` with
- *           `intent: 'audio'` + `museumId`/`museumName`/`coordinates`).
- * Tap dismiss → `onDismiss()` (parent persists 4 h flag via the hook).
+ *   - confidence > 0.8 → auto-pickup banner (legacy B6 behaviour).
+ *     Single Pressable card "You're at <museumName> — Ask the assistant?"
+ *     + a separate close (X) Pressable. Tap card → `onStart(museum)`.
  *
- * Spec : `docs/chat-ux-refonte/specs/B6.md` §1.2 R15-R26 ; §4 AC14-AC20.
+ *   - confidence ∈ (0.5, 0.8] → confirm bottom-sheet card.
+ *     "Tu sembles proche du <museumName>, on démarre la balade ?"
+ *     + Yes button (`onStart`) + Choose-another button
+ *     (`onChooseAnother`, falls back to `onDismiss` when absent).
+ *
+ * The hook (`useProactiveMuseumSuggestion`) returns null below 0.5, so the
+ * banner never renders the low-confidence band — the picker is the manual
+ * fallback (R14, wired separately in `useStartConversation`).
+ *
+ * Spec : `team-state/2026-05-17-w3-geo-walk-intra/spec.md` R12-R13.
  */
 
 import React from 'react';
@@ -24,29 +29,28 @@ import { radius, semantic, space } from '@/shared/ui/tokens';
 
 import type { ProactiveMuseum } from '@/features/chat/application/useProactiveMuseumSuggestion';
 
+/** Above this threshold the banner uses the auto-pickup layout (legacy B6). */
+const AUTO_PICKUP_CONFIDENCE_THRESHOLD = 0.8;
+
 interface ProactiveMuseumBannerProps {
   /** Proactive museum payload, or `null` when no in-museum match was found. */
   readonly museum: ProactiveMuseum | null;
-  /** Invoked with the full museum verbatim when the card is tapped. */
+  /** Invoked with the full museum verbatim when the card / Yes button is tapped. */
   readonly onStart?: (museum: ProactiveMuseum) => void;
-  /** Invoked when the dismiss button is tapped. */
+  /** Invoked when the dismiss (X) button is tapped (auto-pickup band only). */
   readonly onDismiss?: () => void;
+  /**
+   * Invoked when the user picks "Choose another" inside the confirm bottom-sheet.
+   * When omitted in the confirm band, the button falls back to `onDismiss`.
+   */
+  readonly onChooseAnother?: () => void;
 }
 
-/**
- * B6 — Proactive in-museum suggestion banner. Renders `null` when `museum`
- * is `null` (R15). When non-null, renders a Pressable card with an
- * Ionicons `location` icon, title interpolated with `{{museumName}}`,
- * subtitle, and a SEPARATE dismiss Pressable (own role/label, hit-slop 12
- * → ≥ 44 dp effective hit target, WCAG 2.5.5).
- *
- * React.memo'd with default ref equality (R26) — the parent hook keeps a
- * stable museum reference unless the underlying match changes.
- */
 export const ProactiveMuseumBanner = React.memo(function ProactiveMuseumBanner({
   museum,
   onStart,
   onDismiss,
+  onChooseAnother,
 }: ProactiveMuseumBannerProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -55,28 +59,97 @@ export const ProactiveMuseumBanner = React.memo(function ProactiveMuseumBanner({
     return null;
   }
 
-  const handleCardPress = (): void => {
+  const isAutoPickup = museum.confidence > AUTO_PICKUP_CONFIDENCE_THRESHOLD;
+
+  const handleStartPress = (): void => {
     onStart?.(museum);
   };
 
   const handleDismissPress = (event?: GestureResponderEvent): void => {
-    // Stop the press event from bubbling to the outer card Pressable so the
-    // dismiss tap never doubles as a start-conversation tap (R21, AC20). RN's
-    // synthetic event from `fireEvent.press` may be `undefined` in tests —
-    // guard so we never crash the dismiss path.
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
     onDismiss?.();
   };
 
+  const handleChooseAnotherPress = (): void => {
+    if (onChooseAnother) {
+      onChooseAnother();
+    } else {
+      onDismiss?.();
+    }
+  };
+
+  // ── confirm bottom-sheet branch (confidence ∈ (0.5, 0.8]) ────────────────
+  if (!isAutoPickup) {
+    return (
+      <View
+        testID="proactive-museum-confirm-sheet"
+        accessibilityRole="alert"
+        accessibilityLabel={t('chat.proactive.confirm_sheet.title', { museumName: museum.name })}
+        style={[
+          styles.confirmRoot,
+          {
+            backgroundColor: theme.cardBackground,
+            borderColor: theme.cardBorder,
+          },
+        ]}
+      >
+        <View style={[styles.icon, { backgroundColor: theme.surface }]}>
+          <Ionicons name="location-outline" size={20} color={theme.primary} />
+        </View>
+        <View style={styles.content}>
+          <Text
+            testID="proactive-museum-confirm-title"
+            numberOfLines={2}
+            style={[styles.title, { color: theme.textPrimary }]}
+          >
+            {t('chat.proactive.confirm_sheet.title', { museumName: museum.name })}
+          </Text>
+          <Text
+            testID="proactive-museum-confirm-body"
+            numberOfLines={2}
+            style={[styles.subtitle, { color: theme.textSecondary }]}
+          >
+            {t('chat.proactive.confirm_sheet.body')}
+          </Text>
+        </View>
+        <View style={styles.confirmActions}>
+          <Pressable
+            testID="proactive-museum-confirm-yes"
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.proactive.confirm_sheet.yes')}
+            onPress={handleStartPress}
+            style={[styles.confirmYes, { backgroundColor: theme.primary }]}
+          >
+            <Text style={[styles.confirmYesText, { color: theme.primaryContrast }]}>
+              {t('chat.proactive.confirm_sheet.yes')}
+            </Text>
+          </Pressable>
+          <Pressable
+            testID="proactive-museum-confirm-choose-another"
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.proactive.confirm_sheet.choose_another')}
+            onPress={handleChooseAnotherPress}
+            style={styles.confirmChooseAnother}
+          >
+            <Text style={[styles.confirmChooseAnotherText, { color: theme.textSecondary }]}>
+              {t('chat.proactive.confirm_sheet.choose_another')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  // ── auto-pickup branch (confidence > 0.8) — legacy B6 layout ─────────────
   return (
     <Pressable
       testID="proactive-museum-banner"
       accessibilityRole="button"
       accessibilityLabel={t('chat.proactive_museum.cta_a11y_label', { museumName: museum.name })}
       accessibilityHint={t('chat.proactive_museum.cta_a11y_hint')}
-      onPress={handleCardPress}
+      onPress={handleStartPress}
       style={[
         styles.root,
         {
@@ -130,6 +203,14 @@ const styles = StyleSheet.create({
     borderRadius: semantic.modal.radius,
     borderWidth: semantic.input.borderWidth,
   },
+  confirmRoot: {
+    flexDirection: 'column',
+    gap: space['3'],
+    paddingVertical: space['4'],
+    paddingHorizontal: space['4'],
+    borderRadius: semantic.modal.radius,
+    borderWidth: semantic.input.borderWidth,
+  },
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
@@ -154,5 +235,34 @@ const styles = StyleSheet.create({
     height: space['8'],
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: space['2'],
+    marginTop: space['1'],
+  },
+  confirmYes: {
+    flex: 1,
+    paddingVertical: space['2'],
+    paddingHorizontal: space['4'],
+    borderRadius: semantic.modal.radius,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmYesText: {
+    fontSize: semantic.button.fontSize,
+    fontWeight: '600',
+  },
+  confirmChooseAnother: {
+    flex: 1,
+    paddingVertical: space['2'],
+    paddingHorizontal: space['4'],
+    borderRadius: semantic.modal.radius,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmChooseAnotherText: {
+    fontSize: semantic.button.fontSize,
+    fontWeight: '500',
   },
 });

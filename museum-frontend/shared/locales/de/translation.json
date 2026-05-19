@@ -70,8 +70,8 @@
     "last_name": "Nachname",
     "email": "E-Mail",
     "password": "Passwort",
-    "date_of_birth_placeholder": "Geburtsdatum (JJJJ-MM-TT)",
-    "date_of_birth_a11y": "Geburtsdatum, Format Jahr-Monat-Tag",
+    "date_of_birth_placeholder": "Geburtsdatum (TT.MM.JJJJ)",
+    "date_of_birth_a11y": "Geburtsdatum, Format Tag.Monat.Jahr",
     "log_in": "Anmelden",
     "sign_up": "Registrieren",
     "no_account": "Kein Konto? Registrieren",
@@ -503,7 +503,18 @@
       "permission_body": "Musaium benötigt Kamerazugriff zum Scannen von Werkschildern. Öffnen Sie die Einstellungen, um ihn zu erlauben.",
       "permission_open_settings": "Einstellungen öffnen",
       "cancel": "Abbrechen",
-      "lookup_template": "Erzähl mir mehr über das Werk mit dem Schild-Code: {{code}}"
+      "lookup_template": "Erzähl mir mehr über das Werk mit dem Schild-Code: {{code}}",
+      "detected_artwork": {
+        "title": "Kunstwerk erkannt"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "Du scheinst in der Nähe von {{museumName}} zu sein",
+        "body": "Möchtest du den Rundgang starten?",
+        "yes": "Ja, los geht’s",
+        "choose_another": "Anderes Museum wählen"
+      }
     },
     "artworkHero": {
       "untitled": "Werk ohne Titel",
@@ -799,6 +810,14 @@
       "retry": "Erneut versuchen",
       "close": "Schließen"
     }
+  },
+  "museumPicker": {
+    "title": "Museum auswählen",
+    "search_placeholder": "Museum suchen…",
+    "favorites_section": "Favoriten",
+    "nearby_section": "Museen in der Nähe",
+    "empty_state": "Keine Museen gefunden. Versuche einen anderen Namen oder komme näher.",
+    "close_a11y": "Museum-Auswahl schließen"
   },
   "days": {
     "mon": "Mo",

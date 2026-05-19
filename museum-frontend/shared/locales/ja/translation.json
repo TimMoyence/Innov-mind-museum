@@ -503,7 +503,18 @@
       "permission_body": "作品解説をスキャンするにはカメラへのアクセスが必要です。設定を開いて許可してください。",
       "permission_open_settings": "設定を開く",
       "cancel": "キャンセル",
-      "lookup_template": "解説コード「{{code}}」の作品について教えてください"
+      "lookup_template": "解説コード「{{code}}」の作品について教えてください",
+      "detected_artwork": {
+        "title": "作品を検出しました"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "{{museumName}}の近くにいるようです",
+        "body": "見学を始めますか？",
+        "yes": "はい、行きましょう",
+        "choose_another": "別の美術館を選ぶ"
+      }
     },
     "artworkHero": {
       "untitled": "無題の作品",
@@ -799,6 +810,14 @@
       "retry": "再試行",
       "close": "閉じる"
     }
+  },
+  "museumPicker": {
+    "title": "美術館を選ぶ",
+    "search_placeholder": "美術館を検索…",
+    "favorites_section": "お気に入り",
+    "nearby_section": "近くの美術館",
+    "empty_state": "美術館が見つかりません。別の名前を試すか、近づいてください。",
+    "close_a11y": "美術館セレクターを閉じる"
   },
   "days": {
     "mon": "月",

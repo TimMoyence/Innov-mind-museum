@@ -8,6 +8,11 @@
   },
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
+    "dev:local": "npm run env:local && npm run dev:check && npm run dev",
+    "dev:check": "node scripts/check-local-backend.mjs",
+    "env:local": "cp .env.local-dev .env && echo '→ .env now = .env.local-dev (localhost:3000, cert pinning OFF, APP_VARIANT=development)'",
+    "env:prod-test": "cp .env.prod-test .env && echo '→ .env now = .env.prod-test (https://musaium.com, cert pinning ON, APP_VARIANT=production)'",
+    "env:current": "node -e \"const m=new Map([['EXPO_PUBLIC_API_BASE_URL',null],['APP_VARIANT',null],['EXPO_PUBLIC_CERT_PINNING_ENABLED',null]]);for(const l of require('fs').readFileSync('.env','utf8').split('\\n')){const k=l.split('=')[0];if(m.has(k))m.set(k,l.split('=')[1])}for(const[k,v]of m)console.log(k+'='+(v??'<unset>'))\"",
     "build:web": "expo export --platform web",
     "generate:openapi-types": "openapi-typescript ../museum-backend/openapi/openapi.json -o shared/api/generated/openapi.ts && prettier --write shared/api/generated/openapi.ts",
     "check:openapi-types": "npm run generate:openapi-types && git diff --exit-code -- shared/api/generated/openapi.ts",

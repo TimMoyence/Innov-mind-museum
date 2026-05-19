@@ -12,11 +12,11 @@
     "git": "https://github.com/facebook/react-native.git",
     "tag": "v0.83.6"
   },
-  "source_files": "**/*.h",
+  "source_files": "*.{cpp,h}",
   "header_dir": "react/timing",
   "pod_target_xcconfig": {
     "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
-    "HEADER_SEARCH_PATHS": "\"${PODS_ROOT}/React-debug\"",
+    "HEADER_SEARCH_PATHS": "\"${PODS_CONFIGURATION_BUILD_DIR}/React-debug/React_debug.framework/Headers\"",
     "DEFINES_MODULE": "YES"
   },
   "dependencies": {

@@ -42,8 +42,14 @@
     "React-jsi": [],
     "React-renderercss": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": []
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": []
   },
   "libraries": "bz2",
   "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1",

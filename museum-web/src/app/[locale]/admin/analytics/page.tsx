@@ -22,6 +22,7 @@ import type {
   ContentAnalytics,
   EngagementAnalytics,
   AnalyticsGranularity,
+  MuseumDTO,
 } from '@/lib/admin-types';
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -92,10 +93,21 @@ export default function AnalyticsPage() {
   // Filter state
   const [days, setDays] = useState(30);
   const [granularity, setGranularity] = useState<AnalyticsGranularity>('daily');
+  // W4 W2.3 — per-museum filter (B2B-pilot). '' = all museums (current behaviour).
+  const [museumId, setMuseumId] = useState<string>('');
+  const [museums, setMuseums] = useState<MuseumDTO[]>([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ── W4 W2.3 — query-string helper that appends museumId when set ───────
+
+  function withMuseumScope(path: string): string {
+    if (!museumId) return path;
+    const sep = path.includes('?') ? '&' : '?';
+    return `${path}${sep}museumId=${encodeURIComponent(museumId)}`;
+  }
 
   // ── Fetch all three in parallel on mount ──────────────────────────────
 
@@ -108,10 +120,12 @@ export default function AnalyticsPage() {
       try {
         const [usageData, contentData, engagementData] = await Promise.all([
           apiGet<UsageAnalytics>(
-            `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
+            withMuseumScope(
+              `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
+            ),
           ),
-          apiGet<ContentAnalytics>('/api/admin/analytics/content?limit=10'),
-          apiGet<EngagementAnalytics>('/api/admin/analytics/engagement'),
+          apiGet<ContentAnalytics>(withMuseumScope('/api/admin/analytics/content?limit=10')),
+          apiGet<EngagementAnalytics>(withMuseumScope('/api/admin/analytics/engagement')),
         ]);
         if (!cancelled) {
           setUsage(usageData);
@@ -133,20 +147,45 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + museumId-driven re-fetch
+  }, [museumId]);
+
+  // ── W4 W2.3 — load museum list once (used by the per-museum filter) ───
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMuseums() {
+      try {
+        const data = await apiGet<{ museums?: MuseumDTO[]; data?: MuseumDTO[] }>(
+          '/api/museums',
+        );
+        if (cancelled) return;
+        setMuseums(data.museums ?? data.data ?? []);
+      } catch {
+        // Per-museum filter is additive; if the list endpoint is unreachable
+        // we degrade gracefully to the all-museums view.
+      }
+    }
+    void loadMuseums();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // ── Re-fetch only usage when filters change ──────────────────────────
+  // ── Re-fetch only usage when granularity / days change ───────────────
 
   const fetchUsage = useCallback(async () => {
     try {
       const data = await apiGet<UsageAnalytics>(
-        `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
+        withMuseumScope(
+          `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
+        ),
       );
       setUsage(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load usage analytics');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- museumId triggers full refetch via top effect
   }, [days, granularity]);
 
   // Skip the initial render (handled by the mount useEffect above)
@@ -174,7 +213,27 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold text-text-primary">{adminDict.analytics}</h1>
           <p className="mt-1 text-text-secondary">{adminDict.analyticsPage.subtitle}</p>
         </div>
-        <ExportCsvButton kind="sessions" />
+        <div className="flex items-center gap-3">
+          {/* W4 W2.3 — per-museum filter; empty value = aggregate across all museums. */}
+          {museums.length > 0 && (
+            <select
+              aria-label="Museum"
+              value={museumId}
+              onChange={(e) => {
+                setMuseumId(e.target.value);
+              }}
+              className="rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+            >
+              <option value="">All museums</option>
+              {museums.map((m) => (
+                <option key={m.id} value={String(m.id)}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <ExportCsvButton kind="sessions" />
+        </div>
       </div>
 
       {/* Loading */}

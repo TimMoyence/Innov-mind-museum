@@ -226,6 +226,9 @@ jest.mock('@modules/chat/chat-module', () => {
     // Phase 1 (perennial design): GDPR Art. 22 explanation use-case accessor.
     // Tests don't exercise the /messages/:id/explanation route so a stub is OK.
     getMessageExplanationUseCase: () => undefined,
+    // W3 (T5.3): chat-session context update use-case accessor. Tests don't
+    // exercise the PATCH /sessions/:id/context route so a stub is OK.
+    getUpdateSessionContextUseCase: () => undefined,
   };
 });
 jest.mock('@modules/daily-art', () => ({

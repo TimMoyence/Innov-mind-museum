@@ -25,6 +25,8 @@ export type ContentAnalytics = Schemas['ContentAnalytics'];
 export type EngagementAnalytics = Schemas['EngagementAnalytics'];
 export type AuthUser = Schemas['AuthUser'];
 export type AuthSessionResponse = Schemas['AuthSessionResponse'];
+export type MuseumDTO = Schemas['MuseumDTO'];
+export type MuseumType = MuseumDTO['museumType'];
 
 // ---------------------------------------------------------------------------
 // Backward-compat aliases — consumers import by old names, keep them working.
@@ -96,6 +98,23 @@ export const MODERATION_STATUSES: Extract<ReviewStatus, 'approved' | 'rejected'>
   'approved',
   'rejected',
 ];
+
+// W4 W2.x — Museum admin shapes (B2B onboarding). MuseumType enum mirrors the
+// BE z.enum(['art','history','science','specialized','general']) — keep in sync.
+export const MUSEUM_TYPES: MuseumType[] = ['art', 'history', 'science', 'specialized', 'general'];
+
+/**
+ * Branding sub-tree persisted under MuseumDTO.config.branding (JSONB). Schema
+ * is hand-rolled here because the BE accepts config as `Record<string, unknown>`
+ * with light shape validation; the FE exposes the typed slice it actually edits.
+ * Color values are HEX (#RRGGBB) — validated client-side, mirrored to BE on save.
+ */
+export interface MuseumBranding {
+  primaryColor?: string;
+  secondaryColor?: string;
+  logoUrl?: string;
+  accentColor?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Path B — intentionally hand-rolled: generic meta-shape or query-param helper

@@ -273,6 +273,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               'android.permission.SYSTEM_ALERT_WINDOW',
             ],
           },
+          ios: {
+            // RN 0.83.6 prebuilt React.framework tarball bakes RCTSwiftUI
+            // symbols in, then the pod system rebuilds RCTSwiftUI locally
+            // and statically links into Musaium.debug.dylib → ObjC runtime
+            // "Class implemented in both" warnings at launch (29 symbols
+            // duplicated). Building RN from source uses one canonical compile
+            // path. +8-10 min on clean Xcode build, cached after.
+            buildReactNativeFromSource: true,
+          },
         },
       ],
       [

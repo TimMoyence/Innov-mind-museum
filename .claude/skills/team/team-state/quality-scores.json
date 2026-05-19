@@ -130,5 +130,23 @@
       "important": 2,
       "nit": 4
     }
+  },
+  {
+    "runId": "2026-05-17-w3-geo-walk-intra",
+    "ts": "2026-05-17T23:13:27Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "weightedMean": 90.2,
+      "specAlignment": 92,
+      "kissDryHexagonal": 85,
+      "security": 92,
+      "testDiscipline": 92,
+      "honestyDiscipline": 90
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 2,
+      "nit": 0
+    }
   }
 ]

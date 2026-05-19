@@ -16,8 +16,22 @@ services:
       - '3000:3000'
     env_file:
       - .env
+    # Inject REDIS_* in `environment:` so the values come from this compose file
+    # (and override anything stale in .env). This mirrors the prod compose
+    # contract (deploy/docker-compose.prod.yml § redis) — TD-44 fix.
+    # If .env later overrides REDIS_PASSWORD, the var substitution below uses
+    # that value; otherwise the dev fallback `dev-redis-password` is used and
+    # matches the `redis` service's `--requirepass` below (single source of
+    # truth for dev/CI smoke).
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev-redis-password}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev-redis-password}@redis:6379
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       # Mount the backend source AT /app/museum-backend so the file: symlink
@@ -54,8 +68,28 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dev-redis
+    # Force `--requirepass` so the dev container matches the prod compose
+    # contract (deploy/docker-compose.prod.yml:331-334). Without it, ioredis
+    # in the backend sends AUTH and Redis 7 emits
+    # `[WARN] This Redis server's default user does not require a password,
+    # but a password was supplied` on every connection — 200+ lines/24h of
+    # log noise that masks real errors. TD-44 fix 2026-05-18.
+    command:
+      - 'redis-server'
+      - '--requirepass'
+      - '${REDIS_PASSWORD:-dev-redis-password}'
     ports:
       - '6379:6379'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'redis-cli -a "${REDIS_PASSWORD:-dev-redis-password}" PING | grep -q PONG',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
 
   adminer:

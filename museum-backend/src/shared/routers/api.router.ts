@@ -19,11 +19,16 @@ import {
   getLlmCircuitBreakerState,
   getLlmGuardCircuitBreakerState,
   getMessageExplanationUseCase,
+  getUpdateSessionContextUseCase,
   getUserMemoryService,
 } from '@modules/chat/chat-module';
 import { createDailyArtRouter } from '@modules/daily-art';
 import leadsRouter from '@modules/leads/adapters/primary/http/routes/leads.route';
-import { buildEnrichMuseumUseCase, buildLowDataPackService } from '@modules/museum';
+import {
+  buildEnrichMuseumUseCase,
+  buildLowDataPackService,
+  detectMuseumUseCase,
+} from '@modules/museum';
 import { createLowDataPackRouter } from '@modules/museum/adapters/primary/http/routes/low-data-pack.route';
 import { createMuseumRouter } from '@modules/museum/adapters/primary/http/routes/museum.route';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
@@ -355,6 +360,7 @@ function mountDomainRouters(
       getCompareImageUseCase(),
       getCompareSessionAccessVerifier(),
       getMessageExplanationUseCase(),
+      getUpdateSessionContextUseCase(),
     ),
   );
   router.use('/auth/consent', consentRouter);
@@ -368,7 +374,11 @@ function mountDomainRouters(
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use(
     '/museums',
-    createMuseumRouter({ cacheService, enrichMuseumUseCase: resolveEnrichMuseumUseCase() }),
+    createMuseumRouter({
+      cacheService,
+      enrichMuseumUseCase: resolveEnrichMuseumUseCase(),
+      detectMuseumUseCase,
+    }),
   );
 
   const resolvedCache = cacheService ?? new NoopCacheService();

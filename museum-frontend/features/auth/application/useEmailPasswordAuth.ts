@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { authService } from '@/features/auth/infrastructure/authApi';
 import type { useAuth } from '@/features/auth/application/AuthContext';
+import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 type LoginWithSession = ReturnType<typeof useAuth>['loginWithSession'];
@@ -74,7 +75,18 @@ export function useEmailPasswordAuth({
         Alert.alert(t('common.error'), t('auth.fill_all_fields'));
         return;
       }
-      await authService.register({ email, password, firstname, lastname, dateOfBirth });
+      const normalizedDob = parseDateOfBirth(dateOfBirth);
+      if (!normalizedDob) {
+        Alert.alert(t('common.error'), t('auth.fill_all_fields'));
+        return;
+      }
+      await authService.register({
+        email,
+        password,
+        firstname,
+        lastname,
+        dateOfBirth: normalizedDob,
+      });
 
       // Auto-login after successful registration
       try {

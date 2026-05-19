@@ -20,7 +20,7 @@ export async function findNearbyMuseums(
     if (museum.latitude == null || museum.longitude == null) continue;
     const distance = haversineDistanceMeters(lat, lng, museum.latitude, museum.longitude);
     if (distance <= MAX_DISTANCE_METERS) {
-      nearby.push({ name: museum.name, distance: Math.round(distance) });
+      nearby.push({ id: museum.id, name: museum.name, distance: Math.round(distance) });
     }
   }
 

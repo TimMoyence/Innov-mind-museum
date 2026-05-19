@@ -55,6 +55,7 @@ import { LocationResolver } from '@modules/chat/useCase/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
+import { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/update-session-context.useCase';
 import { compareImageUseCase as createCompareImageUseCase } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import { VisualSimilarityService } from '@modules/chat/useCase/visual-similarity/similarity.service';
 import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
@@ -117,6 +118,11 @@ export interface BuiltChatModule {
    * `GET /api/chat/messages/:id/explanation`. See `docs/GDPR_ART22_SCOPE.md`.
    */
   getMessageExplanationUseCase: GetMessageExplanationUseCase;
+  /**
+   * W3 (T5.3) — patch `current_artwork_id` / `current_room` on a session.
+   * Consumed by `PATCH /api/chat/sessions/:id/context`.
+   */
+  updateSessionContextUseCase: UpdateSessionContextUseCase;
 }
 
 // Wikidata stack — composition (outer → inner):
@@ -668,6 +674,7 @@ export class ChatModule {
       locationResolver,
       locationConsentChecker,
       knowledgeExtraction,
+      artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
     });
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
@@ -688,6 +695,9 @@ export class ChatModule {
       auditCorrelator: new TypeOrmAuditCorrelator(dataSource),
     });
 
+    // W3 (T5.3) — Composed last so it captures the repo we just constructed.
+    const updateSessionContextUseCase = new UpdateSessionContextUseCase(repository);
+
     const built: BuiltChatModule = {
       chatService,
       describeService,
@@ -701,6 +711,7 @@ export class ChatModule {
       compareSessionAccessVerifier,
       knowledgeRouter,
       getMessageExplanationUseCase,
+      updateSessionContextUseCase,
     };
     this._built = built;
     return built;
@@ -726,6 +737,8 @@ export class ChatModule {
     locationResolver?: LocationResolver;
     locationConsentChecker?: LocationConsentChecker;
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
+    /** W3 (T5.4) — passed-through into the message pipeline for [CURRENT ARTWORK]. */
+    artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
   }): ChatService {
     return new ChatService({
       repository: deps.repository,
@@ -757,6 +770,7 @@ export class ChatModule {
       extractionQueue: deps.knowledgeExtraction.extractionQueue,
       locationResolver: deps.locationResolver,
       locationConsentChecker: deps.locationConsentChecker,
+      artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
     });
   }
 }
@@ -849,4 +863,13 @@ export const getCompareSessionAccessVerifier =
 export const getMessageExplanationUseCase = (): GetMessageExplanationUseCase | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().getMessageExplanationUseCase
+    : undefined;
+
+/**
+ * W3 (T5.3) — `PATCH /api/chat/sessions/:id/context`. Undefined when module
+ * not built — mount the endpoint conditionally.
+ */
+export const getUpdateSessionContextUseCase = (): UpdateSessionContextUseCase | undefined =>
+  getActiveChatModule().isBuilt()
+    ? getActiveChatModule().getBuilt().updateSessionContextUseCase
     : undefined;

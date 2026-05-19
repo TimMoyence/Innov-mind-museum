@@ -38,8 +38,14 @@
     "React-jsi": [],
     "React-renderercss": [],
     "hermes-engine": [],
-    "ReactNativeDependencies": [],
-    "React-Core-prebuilt": [],
+    "glog": [],
+    "boost": [],
+    "DoubleConversion": [],
+    "fast_float": [],
+    "fmt": [],
+    "RCT-Folly": [],
+    "SocketRocket": [],
+    "RCT-Folly/Fabric": [],
     "React-hermes": []
   },
   "pod_target_xcconfig": {

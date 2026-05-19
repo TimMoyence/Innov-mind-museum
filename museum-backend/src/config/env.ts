@@ -69,7 +69,7 @@ const env: AppEnv = {
     port: toNumber(process.env.DB_PORT, 5432),
     user: toOptionalString(process.env.DB_USER),
     password: toOptionalString(process.env.DB_PASSWORD),
-    database: toOptionalString(process.env.PGDATABASE) || 'museumAI',
+    database: required('PGDATABASE', toOptionalString(process.env.PGDATABASE)),
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
     replicaUrl: toOptionalString(process.env.DB_REPLICA_URL) ?? null,
   },

@@ -1522,6 +1522,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/chat/sessions/{id}/context': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Patch the intra-musée context (currentArtworkId / currentRoom)
+     * @description W3 (R19/R20). Used by the FE cartel-deeplink scanner to propagate the scanned `currentArtworkId` and `currentRoom` to the chat session so the LLM prompt builder can emit a `[CURRENT ARTWORK]` section. Both fields are optional + nullable: undefined → leave untouched, null → clear, string → set (must be RFC 4122 v4 UUID, validated server-side as defence in depth per spec R20).
+     */
+    patch: operations['updateSessionContext'];
+    trace?: never;
+  };
   '/api/chat/sessions/{id}/messages': {
     parameters: {
       query?: never;
@@ -2967,6 +2987,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/museums/detect-museum': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Detect the museum the visitor is in/near based on GPS coordinates */
+    get: operations['detectMuseum'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/admin/reviews': {
     parameters: {
       query?: never;
@@ -4089,6 +4126,27 @@ export interface components {
       sessionId: string;
       deleted: boolean;
     };
+    /** @description W3 (R19/R20). Both fields optional + nullable. At least one MUST be present. UUIDs MUST be RFC 4122 v4 (server-side regex validation, defence in depth). */
+    UpdateSessionContextRequest: {
+      /**
+       * Format: uuid
+       * @description UUID v4 of the artwork the visitor scanned. `null` clears the field.
+       */
+      currentArtworkId?: string | null;
+      /**
+       * Format: uuid
+       * @description UUID v4 of the room the artwork lives in. `null` clears the field.
+       */
+      currentRoom?: string | null;
+    };
+    UpdateSessionContextResponse: {
+      /** Format: uuid */
+      sessionId: string;
+      /** Format: uuid */
+      currentArtworkId: string | null;
+      /** Format: uuid */
+      currentRoom: string | null;
+    };
     ReportMessageResponse: {
       /** Format: uuid */
       messageId: string;
@@ -4452,6 +4510,15 @@ export interface components {
        */
       museumType: 'art' | 'history' | 'science' | 'specialized' | 'general';
     };
+    MuseumDetectionResult: {
+      /** @description ID of the detected museum, or null if no match within 50 km. */
+      museumId: number | null;
+      /** @description 1.0 = inside geofence polygon; else linear decay max(0, 1 - distance/500). */
+      confidence: number;
+      /** @description Meters from museum centroid. Null when no museum is found. */
+      distance: number | null;
+      name: string | null;
+    };
     TicketDTO: {
       /** Format: uuid */
       id: string;
@@ -4703,4 +4770,62 @@ export interface components {
   pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+  updateSessionContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateSessionContextRequest'];
+      };
+    };
+    responses: {
+      /** @description Patched session context */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['UpdateSessionContextResponse'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      404: components['responses']['NotFound'];
+    };
+  };
+  detectMuseum: {
+    parameters: {
+      query: {
+        /** @description Latitude in decimal degrees (WGS84). */
+        lat: number;
+        /** @description Longitude in decimal degrees (WGS84). */
+        lng: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Detection result. `museumId=null` when no museum was found within 50 km. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MuseumDetectionResult'];
+        };
+      };
+      400: components['responses']['BadRequest'];
+      401: components['responses']['Unauthorized'];
+      429: components['responses']['TooManyRequests'];
+    };
+  };
+}

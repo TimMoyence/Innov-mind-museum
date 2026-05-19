@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from 'express';
 
 import {
   createMuseumSchema,
+  detectMuseumQuerySchema,
   getEnrichmentQuerySchema,
   getEnrichmentStatusQuerySchema,
   searchMuseumsQuerySchema,
@@ -27,6 +28,7 @@ import type {
   MuseumDirectoryDTO,
   UpdateMuseumInput,
 } from '@modules/museum/domain/museum/museum.types';
+import type { DetectMuseumUseCase } from '@modules/museum/useCase/detect/detect-museum.useCase';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -162,10 +164,20 @@ const handleUpdateMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
+const buildHandleDetectMuseum = (detectMuseumUseCase: DetectMuseumUseCase) => {
+  return async (_req: Request, res: Response) => {
+    const { lat, lng } = res.locals.validatedQuery as { lat: number; lng: number };
+    const result = await detectMuseumUseCase.execute(lat, lng);
+    res.json(result);
+  };
+};
+
 export interface CreateMuseumRouterDeps {
   cacheService?: CacheService;
   /** When undefined, the two `/enrichment` endpoints return 503. */
   enrichMuseumUseCase?: EnrichMuseumUseCase;
+  /** When undefined, `/detect-museum` returns 503. */
+  detectMuseumUseCase?: DetectMuseumUseCase;
 }
 
 export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router => {
@@ -187,6 +199,24 @@ export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router =>
     validateQuery(searchMuseumsQuerySchema),
     buildHandleSearch(searchMuseumsUseCase),
   );
+
+  // W3 — geofence detection. Mounted BEFORE the catch-all `/:idOrSlug` so
+  // Express doesn't treat "detect-museum" as a slug.
+  if (deps.detectMuseumUseCase) {
+    const detectLimiter = createRateLimitMiddleware({
+      limit: 30,
+      windowMs: 60_000,
+      keyGenerator: byUserId,
+    });
+    museumRouter.get(
+      '/detect-museum',
+      isAuthenticated,
+      detectLimiter,
+      validateQuery(detectMuseumQuerySchema),
+      buildHandleDetectMuseum(deps.detectMuseumUseCase),
+    );
+  }
+
   museumRouter.post(
     '/',
     isAuthenticated,

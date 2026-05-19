@@ -43,6 +43,7 @@
     "scripts/seed-knowledge.ts",
     "scripts/seed-smoke-account.ts",
     "scripts/seed-kb-canon.ts",
+    "scripts/seed-pilot-artwork-knowledge.ts",
     "scripts/audit-chain-verify.ts"
   ],
   "exclude": ["node_modules", ".stryker-tmp", ".stryker-run", "dist", "coverage"]

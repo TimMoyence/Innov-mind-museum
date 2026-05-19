@@ -5,6 +5,8 @@
     "prepare": "husky",
     "bootstrap": "cd museum-backend && pnpm install --frozen-lockfile && cd ../museum-frontend && npm install && cd ../museum-web && pnpm install --frozen-lockfile",
     "build:tokens": "cd design-system && npm run build",
+    "dev:stack": "bash scripts/dev-stack.sh",
+    "dev:stack:down": "bash scripts/dev-stack-down.sh",
     "sentinel:as-any": "node scripts/sentinels/as-any-ratchet.mjs",
     "sentinel:env-policy": "node scripts/sentinels/env-policy.mjs",
     "sentinel:openapi-sync": "node scripts/sentinels/openapi-sync.mjs",
@@ -13,7 +15,9 @@
     "sentinel:idor-smoke": "node scripts/sentinels/idor-smoke.mjs",
     "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs",
     "sentinel:sentry-scrubber-parity": "node scripts/sentinels/sentry-scrubber-parity.mjs",
-    "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs"
+    "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs",
+    "sentinel:compose-parity": "node scripts/sentinels/compose-parity.mjs",
+    "sentinel:dev-container-env-drift": "bash scripts/sentinels/dev-container-env-drift.sh"
   },
   "devDependencies": {
     "husky": "^9.1.7"

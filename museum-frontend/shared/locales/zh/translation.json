@@ -503,7 +503,18 @@
       "permission_body": "Musaium 需要相机权限来扫描作品说明牌。请打开设置以授权。",
       "permission_open_settings": "打开设置",
       "cancel": "取消",
-      "lookup_template": "请介绍说明牌编号为「{{code}}」的作品"
+      "lookup_template": "请介绍说明牌编号为「{{code}}」的作品",
+      "detected_artwork": {
+        "title": "已识别作品"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "您似乎在{{museumName}}附近",
+        "body": "想开始参观吗？",
+        "yes": "好的，出发",
+        "choose_another": "选择其他博物馆"
+      }
     },
     "artworkHero": {
       "untitled": "无题作品",
@@ -799,6 +810,14 @@
       "retry": "重试",
       "close": "关闭"
     }
+  },
+  "museumPicker": {
+    "title": "选择博物馆",
+    "search_placeholder": "搜索博物馆…",
+    "favorites_section": "收藏",
+    "nearby_section": "附近的博物馆",
+    "empty_state": "未找到博物馆。请尝试其他名称或靠近一些。",
+    "close_a11y": "关闭博物馆选择器"
   },
   "days": {
     "mon": "周一",

@@ -94,3 +94,43 @@ export const setMessageFeedback = async (
 
   return data as { messageId: string; status: string };
 };
+
+/**
+ * W3 (T5.3) — patches the intra-musée context (`currentArtworkId` /
+ * `currentRoom`) on a chat session after a cartel deeplink scan. Both fields
+ * are optional + nullable: omit = keep, `null` = clear, `string` = set.
+ *
+ * Returns the BE-confirmed post-write state so the caller can update local
+ * UI immediately without an extra round-trip.
+ *
+ * Spec: docs/team-state/2026-05-17-w3-geo-walk-intra/spec.md R19/R20.
+ */
+export interface SetSessionContextResult {
+  readonly sessionId: string;
+  readonly currentArtworkId: string | null;
+  readonly currentRoom: string | null;
+}
+
+export const setSessionContext = async (params: {
+  sessionId: string;
+  /** Omit to leave untouched, `null` to clear, `string` to set. UUID v4 required. */
+  currentArtworkId?: string | null;
+  /** Omit to leave untouched, `null` to clear, `string` to set. UUID v4 required. */
+  currentRoom?: string | null;
+}): Promise<SetSessionContextResult> => {
+  // Build body explicitly so `undefined` ≠ `null` semantics survive JSON.stringify.
+  const body: Record<string, string | null> = {};
+  if (Object.prototype.hasOwnProperty.call(params, 'currentArtworkId')) {
+    body.currentArtworkId = params.currentArtworkId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(params, 'currentRoom')) {
+    body.currentRoom = params.currentRoom ?? null;
+  }
+  const data = await openApiRequest({
+    path: '/api/chat/sessions/{id}/context',
+    method: 'patch',
+    pathParams: { id: params.sessionId },
+    body: JSON.stringify(body),
+  });
+  return data as SetSessionContextResult;
+};

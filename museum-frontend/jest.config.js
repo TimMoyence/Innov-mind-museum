@@ -44,6 +44,11 @@ module.exports = {
     'features/auth/infrastructure/socialAuthProviders\\.ts$',
     'features/chat/application/offlineQueue\\.ts$',
     'features/chat/domain/contracts\\.ts$',
+    // mapLibreBootstrap.ts holds a top-level `LogManager.start()` guarded by
+    // `JEST_WORKER_ID` (see file). The non-jest branch can only be exercised
+    // by spawning a fresh node process without JEST_WORKER_ID then importing
+    // the module — not worth the test machinery for a bootstrap side effect.
+    'features/museum/infrastructure/mapLibreBootstrap\\.ts$',
   ],
   coverageThreshold: {
     global: {

@@ -70,8 +70,8 @@
     "last_name": "Nom",
     "email": "E-mail",
     "password": "Mot de passe",
-    "date_of_birth_placeholder": "Date de naissance (AAAA-MM-JJ)",
-    "date_of_birth_a11y": "Date de naissance, format année-mois-jour",
+    "date_of_birth_placeholder": "Date de naissance (JJ/MM/AAAA)",
+    "date_of_birth_a11y": "Date de naissance, format jour/mois/année",
     "log_in": "Se connecter",
     "sign_up": "S'inscrire",
     "no_account": "Pas de compte ? S'inscrire",
@@ -503,7 +503,18 @@
       "permission_body": "Musaium a besoin d'accéder à la caméra pour scanner les cartels. Ouvrez les Réglages pour autoriser.",
       "permission_open_settings": "Ouvrir les Réglages",
       "cancel": "Annuler",
-      "lookup_template": "Parlez-moi de l'œuvre avec le code cartel : {{code}}"
+      "lookup_template": "Parlez-moi de l'œuvre avec le code cartel : {{code}}",
+      "detected_artwork": {
+        "title": "Œuvre détectée"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "Tu sembles proche du {{museumName}}",
+        "body": "On démarre la balade ?",
+        "yes": "Oui, on y va",
+        "choose_another": "Choisir un autre musée"
+      }
     },
     "artworkHero": {
       "untitled": "Œuvre sans titre",
@@ -799,6 +810,14 @@
       "retry": "Réessayer",
       "close": "Fermer"
     }
+  },
+  "museumPicker": {
+    "title": "Choisir un musée",
+    "search_placeholder": "Rechercher un musée…",
+    "favorites_section": "Favoris",
+    "nearby_section": "Musées à proximité",
+    "empty_state": "Aucun musée trouvé. Essayez un autre nom ou éloignez-vous.",
+    "close_a11y": "Fermer le sélecteur de musée"
   },
   "days": {
     "mon": "Lun",

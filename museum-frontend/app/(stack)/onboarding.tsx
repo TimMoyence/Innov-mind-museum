@@ -37,7 +37,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList<SlideKey>>(null);
   const setHasSeenOnboarding = useUserProfileStore((s) => s.setHasSeenOnboarding);
-  const { markOnboardingComplete } = useAuth();
+  const { markOnboardingComplete, isAuthenticated } = useAuth();
   const { currentStep, goToStep, next, isLast } = useOnboarding(SLIDE_COUNT);
 
   const onViewableItemsChanged = useCallback(
@@ -54,14 +54,20 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const handleComplete = useCallback(async () => {
-    try {
-      await markOnboardingComplete();
-    } catch (err) {
-      console.warn('[onboarding] markOnboardingComplete failed', err);
+    // Skip the server-side mark when unauthenticated — the endpoint requires
+    // a valid session. Local `hasSeenOnboarding` flag is enough until the
+    // user signs up/in; server sync happens on the next authenticated boot
+    // via AuthContext.bootstrapProfile.
+    if (isAuthenticated) {
+      try {
+        await markOnboardingComplete();
+      } catch (err) {
+        console.warn('[onboarding] markOnboardingComplete failed', err);
+      }
     }
     setHasSeenOnboarding(true);
     router.replace('/(tabs)/home');
-  }, [markOnboardingComplete, setHasSeenOnboarding]);
+  }, [isAuthenticated, markOnboardingComplete, setHasSeenOnboarding]);
 
   const handleSkip = useCallback(async () => {
     await handleComplete();

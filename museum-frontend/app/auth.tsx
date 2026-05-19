@@ -23,6 +23,7 @@ import { LoginForm } from '@/features/auth/ui/LoginForm';
 import { RegisterForm } from '@/features/auth/ui/RegisterForm';
 import { SocialLoginButtons } from '@/features/auth/ui/SocialLoginButtons';
 import { authStyles as styles } from '@/features/auth/ui/authStyles';
+import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -39,11 +40,16 @@ const authSchema = z.object({
   firstname: z.string().optional(),
   lastname: z.string().optional(),
   gdprAccepted: z.boolean().optional(),
-  // ISO YYYY-MM-DD. Validated server-side against the French digital
-  // majority (15 years — CNIL Délibération 2021-018).
+  // Raw user input — accepted in YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY,
+  // DD.MM.YYYY. Normalized to ISO via parseDateOfBirth at submit time
+  // (useEmailPasswordAuth) before posting to the backend, which re-validates
+  // and computes age against the French digital majority (15 years — CNIL
+  // Délibération 2021-018).
   dateOfBirth: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD')
+    .refine((raw) => parseDateOfBirth(raw) !== null, {
+      message: 'YYYY-MM-DD or DD/MM/YYYY',
+    })
     .optional(),
 });
 type AuthFormValues = z.infer<typeof authSchema>;

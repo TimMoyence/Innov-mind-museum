@@ -79,6 +79,7 @@ export function makeMockDataSource<T extends ObjectLiteral>(
 ): DataSource {
   return {
     getRepository: jest.fn().mockReturnValue(repo),
+    query: jest.fn(),
   } as unknown as DataSource;
 }
 

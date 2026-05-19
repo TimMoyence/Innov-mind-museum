@@ -26,9 +26,17 @@ Please include:
 - Affected component and version (backend / mobile / web)
 - Your contact info (so we can credit you; anonymous reports are also welcome)
 
-**PGP / encrypted reports:** PGP key fingerprint will be published at `https://musaium.com/.well-known/pgp-key.txt` once V1 ships. If you need encrypted submission before then, email `security@musaium.com` requesting a key exchange.
+**PGP / encrypted reports:** PGP public key — <https://musaium.com/.well-known/pgp-key.txt> (generation + rotation procedure: [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md)). Fingerprint is published in the same file's header comments; verify before encrypting. Algorithm: Ed25519. Expires: 2028-05-17. If your tooling does not support Ed25519, email `security@musaium.com` requesting an RSA fallback key.
 
 **Please do not** open public GitHub issues, post on social media, or contact unrelated team members for vulnerability reports. Use the security email only.
+
+**Regulator escalation paths** (used by us when a report meets thresholds; not a substitute for reporting to us first):
+
+- **CERT-FR** (French national CSIRT) — `certfr-info@ssi.gouv.fr` · `+33 1 71 75 84 50` (verified 2026-05-17, source <https://www.cert.ssi.gouv.fr/contact/>).
+- **ENISA Single Reporting Platform** (EU CRA Art. 14 reporting) — <https://srp.enisa.europa.eu>.
+- **CNIL** (French DPA, GDPR Art. 33) — <https://notifications.cnil.fr>.
+
+Full contact register (with quarterly verification cadence) lives in [`docs/operations/INCIDENT_CONTACTS.md`](docs/operations/INCIDENT_CONTACTS.md).
 
 ## Our commitments
 
