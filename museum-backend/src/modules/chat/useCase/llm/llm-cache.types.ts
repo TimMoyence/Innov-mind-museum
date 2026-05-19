@@ -27,6 +27,10 @@ export interface LlmCacheKeyInput {
    * entries).
    */
   imageContentHash?: string;
+  /** C9.10 — voice mode prompt branch (80w cap). Distinct cache scope (TD-23-extension). */
+  readonly voiceMode?: boolean;
+  /** C9.2 — audio-description mode (WCAG 1.1.1 autoplay). Distinct cache scope. */
+  readonly audioDescriptionMode?: boolean;
 }
 
 export interface LlmCacheLookupResult<T> {

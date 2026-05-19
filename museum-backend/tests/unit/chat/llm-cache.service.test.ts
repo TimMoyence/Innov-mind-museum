@@ -169,4 +169,65 @@ describe('LlmCacheServiceImpl', () => {
       loggerSpy.mockRestore();
     });
   });
+
+  // ── F1 (W2 follow-up) — voiceMode + audioDescriptionMode discrimination ──
+  //
+  // Spec F1.1/F1.2/F1.3 — LLM response cache key MUST discriminate on
+  // `voiceMode` and `audioDescriptionMode` (C9.10 — voice produces ~60-80w
+  // prose, no-voice produces ~250-400w with markdown; audio-description
+  // produces an alt-text-style answer). Today both fields are absent from
+  // `LlmCacheKeyInput` → keys collide → wrong-shape responses get cross-served
+  // across (voice, no-voice) / (audio-desc, no-audio-desc) cohorts. T1-GREEN
+  // adds the fields + bumps KEY_VERSION v1→v2 so legacy entries don't bleed.
+  describe('F1 — voiceMode / audioDescriptionMode key discrimination (KEY_VERSION v2)', () => {
+    it('A — two inputs differing only in voiceMode produce different keys', async () => {
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store(baseInput, { text: 'long-prose' });
+      await service.store({ ...baseInput, voiceMode: true }, { text: 'short-voice' });
+
+      const keyNoVoice = String(cache.set.mock.calls[0][0]);
+      const keyVoice = String(cache.set.mock.calls[1][0]);
+      expect(keyNoVoice).not.toBe(keyVoice);
+    });
+
+    it('B — two inputs differing only in audioDescriptionMode produce different keys', async () => {
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store({ ...baseInput, audioDescriptionMode: false }, { text: 'normal' });
+      await service.store({ ...baseInput, audioDescriptionMode: true }, { text: 'alt-text' });
+
+      const keyNormal = String(cache.set.mock.calls[0][0]);
+      const keyAltText = String(cache.set.mock.calls[1][0]);
+      expect(keyNormal).not.toBe(keyAltText);
+    });
+
+    it('C — golden-hash for canonical input without voiceMode/audioDescriptionMode', async () => {
+      // Both fields absent → canonical hash MUST be byte-identical to today's
+      // shape (mirror imageContentHash R8/AC6 contract). Only the KEY_VERSION
+      // prefix flips from v1 → v2. Pinned key updated as part of T1-GREEN
+      // (architect note: this golden survives unchanged on the hex side; only
+      // the `:v1:` → `:v2:` segment shifts).
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store(baseInput, { text: 'x' });
+
+      const key = String(cache.set.mock.calls[0][0]);
+      expect(key).toBe('llm:v2:generic:none:anon:6c3364ef2dd9937a4a72638ab32b67b8');
+    });
+
+    it('D — buildKey output contains the `:v2:` version segment', async () => {
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store(baseInput, { text: 'x' });
+
+      const key = String(cache.set.mock.calls[0][0]);
+      expect(key).toContain(':v2:');
+      expect(key).not.toContain(':v1:');
+    });
+  });
 });
