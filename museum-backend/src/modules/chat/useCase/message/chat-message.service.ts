@@ -280,7 +280,7 @@ export class ChatMessageService {
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return null;
-    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
+    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return null;
     const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
     if (result.hit && result.value) {
@@ -303,7 +303,7 @@ export class ChatMessageService {
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return;
-    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText);
+    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return;
     await llmCache.store(cacheInput, aiResult);
     logger.info('llm_cache_miss', {
@@ -370,7 +370,11 @@ export class ChatMessageService {
    * Builds the LlmCacheKeyInput from the prepared pipeline state.
    * Returns null when the prompt is empty (image-only, no cacheable text).
    */
-  private buildLlmCacheInput(prep: PrepareReady, sanitizedText: string): LlmCacheKeyInput | null {
+  private buildLlmCacheInput(
+    prep: PrepareReady,
+    sanitizedText: string,
+    input: PostMessageInput,
+  ): LlmCacheKeyInput | null {
     if (!sanitizedText) return null;
     return {
       model: env.llm.model,
@@ -387,6 +391,12 @@ export class ChatMessageService {
       // absent (text-only, url-source), canonical input is byte-identical to
       // the pre-C3 shape (legacy keys preserved — see R8 / AC6).
       imageContentHash: prep.imageContentHash,
+      // F1 (2026-05-19) — propagate voiceMode / audioDescriptionMode so the
+      // cache key discriminates (voice / no-voice) and (audio-desc / no-audio-desc)
+      // cohorts. C9.10 voice prompt branch produces 60-80w prose ; absent here
+      // → keys collide → wrong-shape responses cross-served.
+      voiceMode: input.context?.voiceMode,
+      audioDescriptionMode: input.context?.audioDescriptionMode,
     };
   }
 }

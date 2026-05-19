@@ -11,7 +11,7 @@ import type {
 } from './llm-cache.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-const KEY_VERSION = 'v1';
+const KEY_VERSION = 'v2';
 const KEY_PREFIX = 'llm';
 
 const TTL_GENERIC_S = 7 * 24 * 60 * 60;
@@ -100,9 +100,12 @@ export class LlmCacheServiceImpl implements LlmCacheService {
   }
 
   /**
-   * Key: `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
+   * Key: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
    * museumId BEFORE userId for `delByPrefix` invalidateMuseum pattern (inverts
-   * spec's conceptual order).
+   * spec's conceptual order). F1 (2026-05-19) — canonical input now folds in
+   * `voiceMode` + `audioDescriptionMode` (truthy-only, mirror imageContentHash
+   * R8/AC6 contract) so the (voice / no-voice) and (audio-desc / no-audio-desc)
+   * cohorts get distinct scopes ; legacy entries are isolated by the v1→v2 bump.
    */
   private buildKey(input: LlmCacheKeyInput, contextClass: LlmContextClass): string {
     const userIdSeg = input.userId === 'anon' ? 'anon' : String(input.userId);
@@ -125,6 +128,16 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
   };
   if (input.imageContentHash !== undefined) {
     canonical.imageContentHash = input.imageContentHash;
+  }
+  // F1 (2026-05-19) — truthy-only emit so legacy text-only entries WITHOUT
+  // voiceMode/audioDescriptionMode produce byte-identical canonical JSON
+  // (mirror R8/AC6 imageContentHash contract). v1→v2 KEY_VERSION bump isolates
+  // pre-F1 entries.
+  if (input.audioDescriptionMode) {
+    canonical.audioDescriptionMode = input.audioDescriptionMode;
+  }
+  if (input.voiceMode) {
+    canonical.voiceMode = input.voiceMode;
   }
   // Sort keys for deterministic JSON (localeCompare = stable).
   const sortedJson = JSON.stringify(

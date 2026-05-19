@@ -13,6 +13,7 @@ import type {
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/llm/llm-cache.types';
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
@@ -1140,6 +1141,46 @@ describe('ChatMessageService', () => {
           text: 'Contact test@example.com about art',
         }),
       );
+    });
+  });
+
+  // ── F1 (W2 follow-up) — buildLlmCacheInput propagates voiceMode ────────
+  //
+  // Spec F1.3 — `buildLlmCacheInput(prep, sanitizedText, input)` MUST forward
+  // `input.context.voiceMode` + `input.context.audioDescriptionMode` into the
+  // returned `LlmCacheKeyInput`. Today the helper drops them on the floor, so
+  // (voice, no-voice) cohorts share the same cache key and cross-serve.
+  //
+  // The helper is private — we test it indirectly via the injected `llmCache`
+  // mock: `tryLlmCacheStore` calls `llmCache.store(cacheInput, ...)` after a
+  // miss, and we assert on the captured `cacheInput`.
+  describe('F1 — LLM cache input propagates voiceMode (C9.10)', () => {
+    const makeLlmCacheMock = (): jest.Mocked<LlmCacheService> => ({
+      classify: jest.fn().mockReturnValue('generic'),
+      lookup: jest.fn().mockResolvedValue({ hit: false, value: null, contextClass: 'generic' }),
+      store: jest.fn().mockResolvedValue(undefined),
+      invalidateMuseum: jest.fn().mockResolvedValue(undefined),
+    });
+
+    it('E — buildLlmCacheInput threads input.context.voiceMode=true into LlmCacheKeyInput', async () => {
+      const llmCache = makeLlmCacheMock();
+      const { service } = buildService({ llmCache });
+
+      await service.postMessage(
+        SESSION_ID,
+        {
+          text: 'Tell me about this painting',
+          context: { voiceMode: true },
+        },
+        'req-1',
+        USER_ID,
+      );
+
+      expect(llmCache.store).toHaveBeenCalledTimes(1);
+      const cacheInput = llmCache.store.mock.calls[0][0] as LlmCacheKeyInput & {
+        voiceMode?: boolean;
+      };
+      expect(cacheInput.voiceMode).toBe(true);
     });
   });
 });

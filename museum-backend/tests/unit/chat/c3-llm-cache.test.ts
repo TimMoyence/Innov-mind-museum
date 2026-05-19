@@ -116,9 +116,10 @@ describe('C3 — LlmCacheServiceImpl key derivation extension (R6-R10)', () => {
     const keyWithImage = String(cache.set.mock.calls[1][0]);
 
     expect(keyTextOnly).not.toBe(keyWithImage);
-    // Both keys share the prefix shape `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:`
-    expect(keyTextOnly).toMatch(/^llm:v1:generic:none:anon:[0-9a-f]{32}$/);
-    expect(keyWithImage).toMatch(/^llm:v1:generic:none:anon:[0-9a-f]{32}$/);
+    // Both keys share the prefix shape `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:`
+    // (F1 2026-05-19 — KEY_VERSION bumped v1→v2 to isolate voiceMode + audioDescriptionMode entries)
+    expect(keyTextOnly).toMatch(/^llm:v2:generic:none:anon:[0-9a-f]{32}$/);
+    expect(keyWithImage).toMatch(/^llm:v2:generic:none:anon:[0-9a-f]{32}$/);
   });
 
   it('R7 — two requests with the SAME imageContentHash and otherwise identical fields produce the SAME key', async () => {
@@ -418,7 +419,7 @@ describe('C3 — bypass preservation when no visual signature (R12)', () => {
     expect(result.hit).toBe(false);
     // The derived key MUST embed the imageContentHash (different from a no-image key).
     const key = String(cache.get.mock.calls[0][0]);
-    expect(key).toMatch(/^llm:v1:generic:none:anon:[0-9a-f]{32}$/);
+    expect(key).toMatch(/^llm:v2:generic:none:anon:[0-9a-f]{32}$/);
   });
 
   it('R8 — non-regression on existing fail-open contract (cache.get throws → hit=false, contextClass propagated)', async () => {
