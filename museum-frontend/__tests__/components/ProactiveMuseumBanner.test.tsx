@@ -44,6 +44,7 @@ function makeMuseum(overrides: Partial<ProactiveMuseum> = {}): ProactiveMuseum {
   return {
     id: 7,
     name: 'Louvre',
+    confidence: 0.9,
     latitude: 48.8606,
     longitude: 2.3376,
     distanceMeters: 87,
@@ -219,6 +220,104 @@ describe('<ProactiveMuseumBanner> (B6 — proactive in-museum banner UI)', () =>
         <ProactiveMuseumBanner museum={makeMuseum()} onStart={jest.fn()} onDismiss={jest.fn()} />,
       );
       expect(getByText('close')).toBeTruthy();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // W3 — confirm bottom-sheet (confidence ∈ (0.5, 0.8])
+  // ────────────────────────────────────────────────────────────────────────
+  describe('confirm bottom-sheet variant (W3 R13)', () => {
+    it('renders confirm sheet when confidence === 0.6 (medium band)', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.6 })}
+          onStart={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(getByTestId('proactive-museum-confirm-sheet')).toBeTruthy();
+      expect(getByTestId('proactive-museum-confirm-yes')).toBeTruthy();
+      expect(getByTestId('proactive-museum-confirm-choose-another')).toBeTruthy();
+      // Legacy auto-pickup banner MUST NOT render in the medium band.
+      expect(queryByTestId('proactive-museum-banner')).toBeNull();
+    });
+
+    it('renders auto-pickup banner when confidence === 0.9 (high band)', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.9 })}
+          onStart={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(getByTestId('proactive-museum-banner')).toBeTruthy();
+      expect(queryByTestId('proactive-museum-confirm-sheet')).toBeNull();
+    });
+
+    it('renders confirm sheet at the 0.8 boundary (NOT auto-pickup — strict > 0.8)', () => {
+      const { getByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.8 })}
+          onStart={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(getByTestId('proactive-museum-confirm-sheet')).toBeTruthy();
+    });
+
+    it('invokes onStart(museum) when Yes is tapped in the confirm sheet', () => {
+      const onStart = jest.fn();
+      const museum = makeMuseum({ confidence: 0.6 });
+      const { getByTestId } = render(
+        <ProactiveMuseumBanner museum={museum} onStart={onStart} onDismiss={jest.fn()} />,
+      );
+      fireEvent.press(getByTestId('proactive-museum-confirm-yes'));
+      expect(onStart).toHaveBeenCalledTimes(1);
+      expect(onStart).toHaveBeenCalledWith(museum);
+    });
+
+    it('invokes onChooseAnother when Choose-another is tapped', () => {
+      const onChooseAnother = jest.fn();
+      const { getByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.6 })}
+          onStart={jest.fn()}
+          onDismiss={jest.fn()}
+          onChooseAnother={onChooseAnother}
+        />,
+      );
+      fireEvent.press(getByTestId('proactive-museum-confirm-choose-another'));
+      expect(onChooseAnother).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to onDismiss when Choose-another is tapped and onChooseAnother is absent', () => {
+      const onDismiss = jest.fn();
+      const { getByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.6 })}
+          onStart={jest.fn()}
+          onDismiss={onDismiss}
+        />,
+      );
+      fireEvent.press(getByTestId('proactive-museum-confirm-choose-another'));
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the confirm title key using i18n', () => {
+      const { getByTestId } = render(
+        <ProactiveMuseumBanner
+          museum={makeMuseum({ confidence: 0.6 })}
+          onStart={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      // test-utils mocks t = (key) => key.
+      expect(getByTestId('proactive-museum-confirm-title').props.children).toBe(
+        'chat.proactive.confirm_sheet.title',
+      );
+      expect(getByTestId('proactive-museum-confirm-body').props.children).toBe(
+        'chat.proactive.confirm_sheet.body',
+      );
     });
   });
 });

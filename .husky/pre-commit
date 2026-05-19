@@ -17,6 +17,9 @@
 #   6. workspace-links — only fires when commit touches packages/ or any
 #      <app>/package.json — verifies file: deps still resolve so consumers
 #      can build. Skipped on unrelated commits to keep latency low.
+#   7. compose-parity — only fires when commit touches a museum-backend/
+#      docker-compose*.yml — verifies critical flags (--requirepass, etc.)
+#      present in prod compose are mirrored in dev compose. TD-44 guard.
 # =============================================================================
 set -e
 
@@ -47,7 +50,7 @@ run_gitleaks() {
 }
 
 # ─── Gate 1 — gitleaks staged-diff scan ────────────────────────────────────
-echo "[pre-commit] ► Gate 1/6 gitleaks (staged diff)"
+echo "[pre-commit] ► Gate 1/7 gitleaks (staged diff)"
 if ! run_gitleaks; then
   echo ""
   echo "[pre-commit] ✗ gitleaks found one or more secrets in the staged diff."
@@ -59,12 +62,12 @@ rm -f "${GITLEAKS_REPORT}"
 echo "[pre-commit] ✓ Gate 1"
 
 # ─── Gate 2 — env-policy sentinel ──────────────────────────────────────────
-echo "[pre-commit] ► Gate 2/6 env-policy (forbidden .env + secret regex)"
+echo "[pre-commit] ► Gate 2/7 env-policy (forbidden .env + secret regex)"
 node scripts/sentinels/env-policy.mjs || exit 1
 echo "[pre-commit] ✓ Gate 2"
 
 # ─── Gate 3 — lint-staged per workspace ────────────────────────────────────
-echo "[pre-commit] ► Gate 3/6 lint-staged (tsc + ESLint on staged)"
+echo "[pre-commit] ► Gate 3/7 lint-staged (tsc + ESLint on staged)"
 if git diff --cached --name-only | grep -q '^museum-backend/'; then
   ( cd museum-backend && npx lint-staged ) || exit 1
 fi
@@ -77,12 +80,12 @@ fi
 echo "[pre-commit] ✓ Gate 3"
 
 # ─── Gate 4 — as-any ratchet ───────────────────────────────────────────────
-echo "[pre-commit] ► Gate 4/6 as-any ratchet (count must not exceed baseline)"
+echo "[pre-commit] ► Gate 4/7 as-any ratchet (count must not exceed baseline)"
 node scripts/sentinels/as-any-ratchet.mjs || exit 1
 echo "[pre-commit] ✓ Gate 4"
 
 # ─── Gate 5 — root-hygiene (stray .md / .sql / .log at repo root) ──────────
-echo "[pre-commit] ► Gate 5/6 root-hygiene"
+echo "[pre-commit] ► Gate 5/7 root-hygiene"
 ROOT_NEW=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+$' || true)
 ROOT_MD_ALLOW='^(AGENTS|CLAUDE|README|LICENSE|SECURITY|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT|GOVERNANCE|NOTICE)\.md$'
 for f in $ROOT_NEW; do
@@ -114,11 +117,23 @@ echo "[pre-commit] ✓ Gate 5"
 # commits skip this gate so the < 5s budget is preserved.
 STAGED=$(git diff --cached --name-only)
 if echo "$STAGED" | grep -qE '^(packages/|museum-[a-z]+/(package\.json|pnpm-lock\.yaml|package-lock\.json)$)'; then
-  echo "[pre-commit] ► Gate 6/6 workspace-links (file: protocol symlinks)"
+  echo "[pre-commit] ► Gate 6/7 workspace-links (file: protocol symlinks)"
   node scripts/sentinels/workspace-links.mjs || exit 1
   echo "[pre-commit] ✓ Gate 6"
 else
   echo "[pre-commit] ⤿ Gate 6 skipped (no packages/ or app manifest changes)"
+fi
+
+# ─── Gate 7 — compose-parity (conditional) ─────────────────────────────────
+# Fires only when the staged diff touches a docker-compose file in
+# museum-backend/ (dev or prod). Guards TD-44 contract: critical flags
+# (`--requirepass`, etc.) present in prod compose MUST be in dev compose.
+if echo "$STAGED" | grep -qE '^museum-backend/(docker-compose|deploy/docker-compose).*\.ya?ml$'; then
+  echo "[pre-commit] ► Gate 7/7 compose-parity (dev compose mirrors prod)"
+  node scripts/sentinels/compose-parity.mjs || exit 1
+  echo "[pre-commit] ✓ Gate 7"
+else
+  echo "[pre-commit] ⤿ Gate 7 skipped (no docker-compose changes)"
 fi
 
 echo "[pre-commit] ═══════════════════════════════════════════════════"

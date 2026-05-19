@@ -109,4 +109,52 @@ describe('museumApi', () => {
       expect(result.count).toBe(1);
     });
   });
+
+  describe('detectMuseum', () => {
+    it('calls GET /api/museums/detect-museum with lat + lng query params', async () => {
+      mockHttpRequest.mockResolvedValue({
+        museumId: 7,
+        confidence: 1,
+        distance: 0,
+        name: 'Louvre',
+      });
+
+      await museumApi.detectMuseum({ lat: 48.8606, lng: 2.3376 });
+
+      const calledUrl = mockHttpRequest.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('/api/museums/detect-museum?');
+      expect(calledUrl).toContain('lat=48.8606');
+      expect(calledUrl).toContain('lng=2.3376');
+    });
+
+    it('returns the MuseumDetectionResult body verbatim', async () => {
+      const detection = {
+        museumId: 42,
+        confidence: 0.6,
+        distance: 200,
+        name: "Musée d'Orsay",
+      };
+      mockHttpRequest.mockResolvedValue(detection);
+
+      const result = await museumApi.detectMuseum({ lat: 48.86, lng: 2.326 });
+
+      expect(result).toEqual(detection);
+    });
+
+    it('returns the null-shape when BE reports no museum within range', async () => {
+      mockHttpRequest.mockResolvedValue({
+        museumId: null,
+        confidence: 0,
+        distance: null,
+        name: null,
+      });
+
+      const result = await museumApi.detectMuseum({ lat: 0, lng: 0 });
+
+      expect(result.museumId).toBeNull();
+      expect(result.confidence).toBe(0);
+      expect(result.distance).toBeNull();
+      expect(result.name).toBeNull();
+    });
+  });
 });

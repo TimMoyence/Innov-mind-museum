@@ -48,6 +48,7 @@ import type {
 import type { PrepareReady } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
@@ -95,6 +96,8 @@ export interface ChatEnrichmentDeps {
   locationResolver?: LocationResolver;
   /** GDPR — gates whether location reaches LLM at all. */
   locationConsentChecker?: LocationConsentChecker;
+  /** W3 (T5.4) — looked up by pipeline for the `[CURRENT ARTWORK]` prompt section. */
+  artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
 
 export interface ChatSafetyDeps {
@@ -179,6 +182,7 @@ export class ChatMessageService {
       extractionQueue: enrichment.extractionQueue,
       locationResolver: enrichment.locationResolver,
       locationConsentChecker: enrichment.locationConsentChecker,
+      artworkKnowledgeRepo: enrichment.artworkKnowledgeRepo,
     });
   }
 

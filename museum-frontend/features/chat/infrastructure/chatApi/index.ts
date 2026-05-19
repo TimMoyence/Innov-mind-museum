@@ -21,6 +21,7 @@ import {
   listSessions,
   reportMessage,
   setMessageFeedback,
+  setSessionContext,
 } from './metadata';
 import { createSession, createSessionOrThrow, postMessage, sendMessageSmart } from './send';
 import { postMessageStream } from './stream';
@@ -41,6 +42,7 @@ export const chatApi = {
   listSessions,
   reportMessage,
   setMessageFeedback,
+  setSessionContext,
   sendMessageSmart: sendMessageSmartBound,
 } as const;
 
@@ -54,6 +56,7 @@ export {
   listSessions,
   reportMessage,
   setMessageFeedback,
+  setSessionContext,
   createSession,
   createSessionOrThrow,
   postMessage,
@@ -62,3 +65,4 @@ export {
 export type { PostMessageParams, SendMessageSmartParams } from './send';
 export type { PostMessageStreamParams } from './stream';
 export type { PostAudioMessageParams } from './audio';
+export type { SetSessionContextResult } from './metadata';

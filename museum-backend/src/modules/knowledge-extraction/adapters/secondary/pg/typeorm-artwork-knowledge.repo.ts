@@ -13,6 +13,11 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
       .getOne();
   }
 
+  /** W3 (T5.4) — UUID-keyed lookup; returns null on miss. */
+  async findById(id: string): Promise<ArtworkKnowledge | null> {
+    return await this.repo.findOne({ where: { id } });
+  }
+
   async searchByTitle(searchTerm: string, locale: string, limit = 3): Promise<ArtworkKnowledge[]> {
     return await this.repo
       .createQueryBuilder('ak')

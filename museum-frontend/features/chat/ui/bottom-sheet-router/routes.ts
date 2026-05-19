@@ -3,6 +3,7 @@ import type { ParseKeys } from 'i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
+import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
 import type { ThirdPartyAiScope } from '@/features/chat/application/thirdPartyAiConsent';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
@@ -63,7 +64,13 @@ export interface BottomSheetRouteParams {
     onOpenScanner: () => void;
   };
   'cartel-scanner': {
-    onScanned: (code: string) => void;
+    /**
+     * W3 (T5.2) — invoked with either a sanitised alphanum cartel code
+     * (`string`) OR a parsed Musaium deeplink (`MusaiumDeeplink`). The caller
+     * narrows on `typeof payload === 'string'` to dispatch to the legacy
+     * lookup-template flow vs the W3 session-context propagation.
+     */
+    onScanned: (payload: string | MusaiumDeeplink) => void;
   };
 }
 

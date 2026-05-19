@@ -145,3 +145,44 @@ export const postMessageSchema = z.object(
 );
 
 export type PostMessageBody = z.infer<typeof postMessageSchema>;
+
+/**
+ * W3 (T5.3) — strict RFC 4122 v4 UUID regex. Mirrors the FE `parseMusaiumDeeplink`
+ * validation byte-for-byte (defence in depth — spec R20). Lower / upper hex
+ * tolerated; version nibble MUST be `4`; variant nibble MUST be one of `8|9|a|b`.
+ *
+ * Rejected payloads return HTTP 400 with `error.code = 'INVALID_QR_PAYLOAD'`
+ * (mapped by the route handler).
+ */
+const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const optionalNullableUuidV4 = z
+  .union([z.string(), z.null()])
+  .optional()
+  .refine((value) => value === undefined || value === null || UUID_V4_RE.test(value), {
+    message: 'must be a RFC 4122 v4 UUID or null',
+  });
+
+/**
+ * W3 (T5.3) — `PATCH /api/chat/sessions/:id/context` body schema.
+ *
+ * Both fields are optional + nullable:
+ *   - `undefined` → "do not touch the field" (caller wants to update only the other).
+ *   - `null`      → "clear the field" (visitor scanned a museum-only QR, no room).
+ *   - `string`    → MUST be RFC 4122 v4 (defence in depth vs FE).
+ *
+ * At least ONE field MUST be present (otherwise no-op call → reject 400).
+ */
+export const updateSessionContextSchema = z
+  .object(
+    {
+      currentArtworkId: optionalNullableUuidV4,
+      currentRoom: optionalNullableUuidV4,
+    },
+    { message: 'Payload must be an object' },
+  )
+  .refine((value) => value.currentArtworkId !== undefined || value.currentRoom !== undefined, {
+    message: 'at least one of currentArtworkId or currentRoom must be provided',
+  });
+
+export type UpdateSessionContextBody = z.infer<typeof updateSessionContextSchema>;

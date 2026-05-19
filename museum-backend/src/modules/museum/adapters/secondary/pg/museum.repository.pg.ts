@@ -14,10 +14,19 @@ import type {
 } from '@modules/museum/domain/museum/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
+/**
+ * Cached at module level (set by `MuseumRepositoryPg.detectGeofenceMode()` on
+ * first `findByCoords` call). Avoids `information_schema.columns` lookup on
+ * every detect request. Module-level singleton is safe because the underlying
+ * schema is immutable at runtime (migration-driven).
+ */
+type GeofenceMode = 'postgis' | 'jsonb-bbox' | 'absent';
+let cachedGeofenceMode: GeofenceMode | null = null;
+
 export class MuseumRepositoryPg implements IMuseumRepository {
   private readonly repo: Repository<Museum>;
 
-  constructor(dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     this.repo = dataSource.getRepository(Museum);
   }
 
@@ -115,4 +124,71 @@ export class MuseumRepositoryPg implements IMuseumRepository {
   async delete(id: number): Promise<void> {
     await this.repo.delete(id);
   }
+
+  /**
+   * W3 geofence-containment lookup. Bootstrap-cached mode pick (introspects
+   * `information_schema.columns` once at first call). Returns `null` if no
+   * geofence column is present (e.g. migrations not yet run on this DB).
+   */
+  async findByCoords(lat: number, lng: number): Promise<Museum | null> {
+    const mode = await this.detectGeofenceMode();
+
+    if (mode === 'absent') return null;
+
+    if (mode === 'postgis') {
+      // ST_Contains uses the GIST index — sub-millisecond at V1 scale.
+      const rows: { id: number }[] = await this.dataSource.query(
+        `SELECT id FROM "museums"
+         WHERE "is_active" = true
+           AND "geofence" IS NOT NULL
+           AND ST_Contains("geofence", ST_SetSRID(ST_Point($1, $2), 4326))
+         LIMIT 1`,
+        [lng, lat],
+      );
+      if (rows.length === 0) return null;
+      return await this.findById(rows[0].id);
+    }
+
+    // jsonb-bbox path — load all museums with a bbox and filter in-app.
+    // V1 caps at < 100 museums so the scan is cheap ; no GiST equivalent
+    // for jsonb-stored rectangles without PostGIS.
+    const rows: {
+      id: number;
+      geofence_bbox: { north: number; south: number; east: number; west: number } | null;
+    }[] = await this.dataSource.query(
+      `SELECT "id", "geofence_bbox" FROM "museums" WHERE "is_active" = true AND "geofence_bbox" IS NOT NULL`,
+    );
+
+    for (const row of rows) {
+      const bbox = row.geofence_bbox;
+      if (bbox && lat >= bbox.south && lat <= bbox.north && lng >= bbox.west && lng <= bbox.east) {
+        return await this.findById(row.id);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * One-shot column introspection — cached at module level so subsequent
+   * detect calls don't hit `information_schema`. Returns `'absent'` when
+   * neither column exists (defensive against partially-applied migrations).
+   */
+  private async detectGeofenceMode(): Promise<GeofenceMode> {
+    if (cachedGeofenceMode !== null) return cachedGeofenceMode;
+    const cols: { column_name: string }[] = await this.dataSource.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'museums'
+         AND column_name IN ('geofence', 'geofence_bbox')`,
+    );
+    const colSet = new Set(cols.map((row) => row.column_name));
+    if (colSet.has('geofence')) cachedGeofenceMode = 'postgis';
+    else if (colSet.has('geofence_bbox')) cachedGeofenceMode = 'jsonb-bbox';
+    else cachedGeofenceMode = 'absent';
+    return cachedGeofenceMode;
+  }
+}
+
+/** Test seam — clears the bootstrap-cached geofence mode. Do NOT use in prod. */
+export function _resetGeofenceModeCacheForTests(): void {
+  cachedGeofenceMode = null;
 }

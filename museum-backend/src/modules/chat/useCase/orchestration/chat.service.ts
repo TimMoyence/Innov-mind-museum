@@ -49,6 +49,7 @@ import type {
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
+import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
@@ -92,6 +93,12 @@ export interface ChatServiceDeps {
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
+  /**
+   * W3 (T5.4) — used by the pipeline to look up `artwork_knowledge` rows for
+   * the LLM prompt `[CURRENT ARTWORK]` section when a cartel deeplink was
+   * scanned and `chatSession.currentArtworkId` is populated.
+   */
+  artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
   locationResolver?: LocationResolver;
   /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
@@ -136,6 +143,7 @@ export class ChatService {
         extractionQueue: deps.extractionQueue,
         locationResolver: deps.locationResolver,
         locationConsentChecker: deps.locationConsentChecker,
+        artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
       },
       safety: {
         artTopicClassifier: deps.artTopicClassifier,

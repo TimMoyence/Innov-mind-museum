@@ -164,4 +164,23 @@ export interface ChatRepository {
    * the user row is removed, otherwise CASCADE nukes the rows and refs are lost.
    */
   findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
+
+  /**
+   * W3 (T5.3) — patches `current_artwork_id` and/or `current_room` on the
+   * given session row. `undefined` skips the field (do not touch);
+   * explicit `null` clears it (visitor scanned a museum-only QR). The caller
+   * MUST validate UUID v4 format BEFORE invoking — repo does no validation.
+   *
+   * Concurrency: no row-lock — last writer wins; cartel scans are rare-enough
+   * single-user events that we accept the natural race.
+   *
+   * @throws {Error} bubbles TypeORM driver errors.
+   */
+  updateSessionContext(
+    sessionId: string,
+    patch: {
+      currentArtworkId?: string | null;
+      currentRoom?: string | null;
+    },
+  ): Promise<void>;
 }

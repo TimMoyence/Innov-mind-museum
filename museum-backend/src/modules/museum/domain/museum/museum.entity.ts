@@ -49,6 +49,26 @@ export class Museum {
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive!: boolean;
 
+  /**
+   * W3 geofence-containment storage. The actual DB shape depends on
+   * `AddMuseumGeofence` migration mode :
+   *   - PostGIS path → `geofence geometry(Polygon, 4326)` column.
+   *   - JSONB path   → `geofence_bbox jsonb` column.
+   *
+   * Both columns are mutually exclusive at the DB layer (the migration
+   * creates only one depending on PostGIS availability). The PostGIS
+   * `geofence` column is NOT declared here — TypeORM treats unknown
+   * columns as drift, and the geometry type isn't first-class in
+   * the ORM. `MuseumRepositoryPg.findByCoords` reads `geofence` via
+   * raw `dataSource.query(ST_Contains...)` when that mode is active.
+   *
+   * `geofenceBbox` is declared as a real column (with `select: false`)
+   * so it doesn't load on default `findOne()` paths, but the migration
+   * shape matches when the JSONB-bbox mode is active.
+   */
+  @Column({ type: 'jsonb', nullable: true, name: 'geofence_bbox', select: false })
+  geofenceBbox?: { north: number; south: number; east: number; west: number } | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

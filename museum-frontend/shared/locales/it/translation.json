@@ -503,7 +503,18 @@
       "permission_body": "Musaium ha bisogno della fotocamera per scansionare i cartelli. Apri Impostazioni per autorizzarlo.",
       "permission_open_settings": "Apri Impostazioni",
       "cancel": "Annulla",
-      "lookup_template": "Parlami dell'opera con il codice cartello: {{code}}"
+      "lookup_template": "Parlami dell'opera con il codice cartello: {{code}}",
+      "detected_artwork": {
+        "title": "Opera rilevata"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "Sembri essere vicino al {{museumName}}",
+        "body": "Vuoi iniziare la visita?",
+        "yes": "Sì, andiamo",
+        "choose_another": "Scegli un altro museo"
+      }
     },
     "artworkHero": {
       "untitled": "Opera senza titolo",
@@ -809,6 +820,14 @@
       "retry": "Riprova",
       "close": "Chiudi"
     }
+  },
+  "museumPicker": {
+    "title": "Scegli un museo",
+    "search_placeholder": "Cerca un museo…",
+    "favorites_section": "Preferiti",
+    "nearby_section": "Musei nelle vicinanze",
+    "empty_state": "Nessun museo trovato. Prova un altro nome o avvicinati.",
+    "close_a11y": "Chiudi il selettore di musei"
   },
   "days": {
     "mon": "Lun",

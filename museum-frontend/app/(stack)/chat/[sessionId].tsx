@@ -35,6 +35,8 @@ import { CollapsibleTopBar } from '@/features/chat/ui/CollapsibleTopBar';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
 import { Composer } from '@/features/chat/ui/Composer';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
+import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
+import { setSessionContext } from '@/features/chat/infrastructure/chatApi/metadata';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
@@ -354,11 +356,35 @@ export default function ChatSessionScreen() {
   // chat as a text message via the i18n lookup template. The orchestrator
   // resolves the artwork via the existing `museumName` / `locationString`
   // context — no BE endpoint added in V1 (Q1 V1.1+).
+  //
+  // W3 (T5.2) — also accept a parsed `MusaiumDeeplink` payload (UUID-validated
+  // upstream by `parseMusaiumDeeplink`). The deeplink path propagates the
+  // scanned IDs to the BE via `setSessionContext` so the LLM prompt builder
+  // picks them up on the next message (R22 / `[CURRENT ARTWORK]`). The user-
+  // facing message is the same `chat.cartelScanner.detected_artwork.title`
+  // copy — the orchestrator + DB enrichment fill in the artwork details.
   const handleCartelScanned = useCallback(
-    (code: string) => {
-      void sendMessage({ text: t('chat.cartelScanner.lookup_template', { code }) });
+    (payload: string | MusaiumDeeplink) => {
+      if (typeof payload === 'string') {
+        void sendMessage({
+          text: t('chat.cartelScanner.lookup_template', { code: payload }),
+        });
+        return;
+      }
+      // Deeplink path — fire context patch + a user-facing announcement
+      // message. Both calls are best-effort: a BE patch failure leaves the
+      // chat usable (LLM falls back to museum-level context).
+      void setSessionContext({
+        sessionId,
+        currentArtworkId: payload.artworkId,
+        currentRoom: payload.roomId,
+      }).catch(() => {
+        // Swallow — logged by openApiRequest. The chat continues; the LLM
+        // simply won't see the [CURRENT ARTWORK] section this turn.
+      });
+      void sendMessage({ text: t('chat.cartelScanner.detected_artwork.title') });
     },
-    [sendMessage, t],
+    [sendMessage, t, sessionId],
   );
 
   // B4 — open the 9th C4 route (fullscreen camera scanner). The route is

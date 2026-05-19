@@ -16,7 +16,8 @@
         "chat-history-pagination.yaml",
         "museum-chat-flow.yaml",
         "chat-compare.yaml",
-        "audio-recording-flow.yaml"
+        "audio-recording-flow.yaml",
+        "chat-cartel-deeplink.yaml"
       ]
     },
     {

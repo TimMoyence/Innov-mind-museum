@@ -177,8 +177,9 @@ describe('reverseGeocodeWithNominatim', () => {
       'Nominatim reverse geocoding failed',
       expect.objectContaining({
         error: 'Network error',
-        lat: 48.8606,
-        lng: 2.3376,
+        // W3 spec R7 (GDPR) — coords logged at 3-decimal precision only.
+        lat_3dec: 48.861,
+        lng_3dec: 2.338,
       }),
     );
   });
@@ -193,8 +194,8 @@ describe('reverseGeocodeWithNominatim', () => {
       'Nominatim reverse geocoding failed',
       expect.objectContaining({
         error: 'reverse-boom',
-        lat: 12.34,
-        lng: 56.78,
+        lat_3dec: 12.34,
+        lng_3dec: 56.78,
       }),
     );
   });
@@ -209,8 +210,8 @@ describe('reverseGeocodeWithNominatim', () => {
       'Nominatim reverse geocoding failed',
       expect.objectContaining({
         error: expect.stringContaining('Aborted'),
-        lat: 48.8606,
-        lng: 2.3376,
+        lat_3dec: 48.861,
+        lng_3dec: 2.338,
       }),
     );
   });

@@ -128,6 +128,10 @@ jest.mock('@modules/chat/chat-module', () => ({
   getLlmCircuitBreakerState: () => undefined,
   getLlmGuardCircuitBreakerState: () => undefined,
   getMessageExplanationUseCase: () => undefined,
+  // W3 (T5.3): chat-session context update use-case accessor. This suite only
+  // exercises the EXTRACTION_WORKER_ENABLED=false short-circuit; the PATCH
+  // /sessions/:id/context route is not exercised so undefined is sufficient.
+  getUpdateSessionContextUseCase: () => undefined,
   getUserMemoryService: () => undefined,
 }));
 jest.mock('@modules/daily-art', () => ({

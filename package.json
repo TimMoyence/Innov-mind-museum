@@ -18,7 +18,9 @@
     "sentinel:guardrails-ratchet": "node scripts/sentinels/guardrails-ratchet.mjs",
     "sentinel:sentry-scrubber-parity": "node scripts/sentinels/sentry-scrubber-parity.mjs",
     "sentinel:workspace-links": "node scripts/sentinels/workspace-links.mjs",
-    "sentinel:screen-test-coverage": "node scripts/sentinels/screen-test-coverage.mjs"
+    "sentinel:screen-test-coverage": "node scripts/sentinels/screen-test-coverage.mjs",
+    "sentinel:compose-parity": "node scripts/sentinels/compose-parity.mjs",
+    "sentinel:dev-container-env-drift": "bash scripts/sentinels/dev-container-env-drift.sh"
   },
   "devDependencies": {
     "husky": "^9.1.7"

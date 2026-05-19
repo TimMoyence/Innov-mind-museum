@@ -19,6 +19,7 @@ jest.mock('@modules/museum/useCase', () => ({
   createMuseumUseCase: { execute: (...args: unknown[]) => mockCreateMuseum(...args) },
   getMuseumUseCase: { execute: (...args: unknown[]) => mockGetMuseum(...args) },
   updateMuseumUseCase: { execute: (...args: unknown[]) => mockUpdateMuseum(...args) },
+  detectMuseumUseCase: { execute: jest.fn() },
   buildSearchMuseumsUseCase: () => ({
     execute: (...args: unknown[]) => mockSearchMuseums(...args),
   }),

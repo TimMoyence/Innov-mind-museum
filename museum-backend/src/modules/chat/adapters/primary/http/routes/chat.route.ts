@@ -17,11 +17,12 @@ import type { DescribeService } from '@modules/chat/useCase/describe.service';
 import type { GetMessageExplanationUseCase } from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
+import type { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/update-session-context.useCase';
 
 export type CompareImageUseCase = CompareRouterDeps['compareImageUseCase'];
 export type CompareSessionAccessVerifier = CompareRouterDeps['verifySessionAccess'];
 
-/* eslint-disable max-params -- backward-compat: 7 positional args; options-object
+/* eslint-disable max-params -- backward-compat: 8 positional args; options-object
    refactor tracked in TECH_DEBT (post-merge).
    Justification: ≥20 chars — keeping positional args avoids cross-PR churn.
    Approved-by: tim@2026-05-12 */
@@ -33,13 +34,14 @@ export const createChatRouter = (
   compareImageUseCase?: CompareImageUseCase,
   compareSessionAccessVerifier?: CompareSessionAccessVerifier,
   getMessageExplanationUseCase?: GetMessageExplanationUseCase,
+  updateSessionContextUseCase?: UpdateSessionContextUseCase,
 ): Router => {
   const router = Router();
 
   // Shared instance so concurrency counter is consistent across message/media/compare.
   const uploadAdmission = createUploadAdmissionMiddleware();
 
-  router.use('/', createSessionRouter(chatService));
+  router.use('/', createSessionRouter(chatService, updateSessionContextUseCase));
   router.use('/', createMessageRouter(chatService, artKeywordRepo, uploadAdmission));
   router.use('/', createMediaRouter(chatService, uploadAdmission));
   if (userMemoryService) {

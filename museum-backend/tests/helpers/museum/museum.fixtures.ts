@@ -12,6 +12,7 @@ export const makeMuseumRepo = (
   findBySlug: jest.fn(),
   findAll: jest.fn().mockResolvedValue([]),
   findInBoundingBox: jest.fn().mockResolvedValue([]),
+  findByCoords: jest.fn().mockResolvedValue(null),
   delete: jest.fn(),
   ...overrides,
 });

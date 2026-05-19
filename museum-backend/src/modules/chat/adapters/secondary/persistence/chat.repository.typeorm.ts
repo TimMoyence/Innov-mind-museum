@@ -380,4 +380,28 @@ export class TypeOrmChatRepository implements ChatRepository {
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
     return await findLegacyImageRefsByUserId(this.messageRepo, userId);
   }
+
+  /**
+   * W3 (T5.3) — patches the W3 intra-musée context columns on a session row.
+   *
+   * Implementation note (CLAUDE.md gotcha) — `repo.update(criteria, partial)`
+   * forwards to `UpdateQueryBuilder.set()` which SILENTLY SKIPS `undefined`
+   * fields (correct) but DOES set `null` (we want this to clear). We
+   * construct the patch object explicitly so only the caller-supplied keys
+   * land in the UPDATE statement.
+   */
+  async updateSessionContext(
+    sessionId: string,
+    patch: { currentArtworkId?: string | null; currentRoom?: string | null },
+  ): Promise<void> {
+    const updates: Partial<Pick<ChatSession, 'currentArtworkId' | 'currentRoom'>> = {};
+    if (Object.prototype.hasOwnProperty.call(patch, 'currentArtworkId')) {
+      updates.currentArtworkId = patch.currentArtworkId ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'currentRoom')) {
+      updates.currentRoom = patch.currentRoom ?? null;
+    }
+    if (Object.keys(updates).length === 0) return;
+    await this.sessionRepo.update({ id: sessionId }, updates);
+  }
 }

@@ -3,7 +3,10 @@ import type { Repository } from 'typeorm';
 import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import { AppError } from '@shared/errors/app.error';
 
-import { MuseumRepositoryPg } from '@modules/museum/adapters/secondary/pg/museum.repository.pg';
+import {
+  MuseumRepositoryPg,
+  _resetGeofenceModeCacheForTests,
+} from '@modules/museum/adapters/secondary/pg/museum.repository.pg';
 import { makeMuseum } from 'tests/helpers/museum/museum.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
@@ -244,6 +247,102 @@ describe('MuseumRepositoryPg', () => {
       await sut.delete(1);
 
       expect(repo.delete).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ─── findByCoords (W3 geofence containment) ───
+  describe('findByCoords', () => {
+    beforeEach(() => {
+      _resetGeofenceModeCacheForTests();
+    });
+
+    it('returns null when neither geofence nor geofence_bbox column is present', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock).mockResolvedValueOnce([]); // information_schema lookup
+      sut = new MuseumRepositoryPg(ds);
+
+      const result = await sut.findByCoords(48.86, 2.34);
+
+      expect(result).toBeNull();
+    });
+
+    it('PostGIS path — runs ST_Contains and returns matched museum', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock)
+        .mockResolvedValueOnce([{ column_name: 'geofence' }]) // schema introspect
+        .mockResolvedValueOnce([{ id: 42 }]); // ST_Contains hit
+      const matched = makeMuseum({ id: 42, name: 'Louvre' });
+      repo.findOne.mockResolvedValue(matched);
+      sut = new MuseumRepositoryPg(ds);
+
+      const result = await sut.findByCoords(48.8606, 2.3376);
+
+      expect(result).toBe(matched);
+      const queries = (ds.query as jest.Mock).mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(queries.some((q) => q.includes('ST_Contains'))).toBe(true);
+    });
+
+    it('PostGIS path — returns null when no polygon contains the point', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock)
+        .mockResolvedValueOnce([{ column_name: 'geofence' }])
+        .mockResolvedValueOnce([]); // no row
+      sut = new MuseumRepositoryPg(ds);
+
+      const result = await sut.findByCoords(0, 0);
+
+      expect(result).toBeNull();
+    });
+
+    it('JSONB-bbox path — returns museum whose bbox contains the point', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock)
+        .mockResolvedValueOnce([{ column_name: 'geofence_bbox' }])
+        .mockResolvedValueOnce([
+          {
+            id: 7,
+            geofence_bbox: { north: 48.87, south: 48.85, east: 2.35, west: 2.33 },
+          },
+        ]);
+      const matched = makeMuseum({ id: 7 });
+      repo.findOne.mockResolvedValue(matched);
+      sut = new MuseumRepositoryPg(ds);
+
+      const result = await sut.findByCoords(48.86, 2.34);
+
+      expect(result).toBe(matched);
+    });
+
+    it('JSONB-bbox path — returns null when point falls outside every bbox', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock)
+        .mockResolvedValueOnce([{ column_name: 'geofence_bbox' }])
+        .mockResolvedValueOnce([
+          {
+            id: 7,
+            geofence_bbox: { north: 48.87, south: 48.85, east: 2.35, west: 2.33 },
+          },
+        ]);
+      sut = new MuseumRepositoryPg(ds);
+
+      const result = await sut.findByCoords(45.0, 5.0); // far outside Paris
+
+      expect(result).toBeNull();
+    });
+
+    it('caches the mode pick across subsequent calls (no second information_schema hit)', async () => {
+      const ds = makeMockDataSource(repo);
+      (ds.query as jest.Mock)
+        .mockResolvedValueOnce([{ column_name: 'geofence_bbox' }])
+        .mockResolvedValue([]); // returns empty bbox list
+      sut = new MuseumRepositoryPg(ds);
+
+      await sut.findByCoords(48.86, 2.34);
+      await sut.findByCoords(48.87, 2.35);
+
+      const queries = (ds.query as jest.Mock).mock.calls.map((c: unknown[]) => String(c[0]));
+      const schemaIntrospectionCalls = queries.filter((q) => q.includes('information_schema'));
+      expect(schemaIntrospectionCalls).toHaveLength(1);
     });
   });
 });

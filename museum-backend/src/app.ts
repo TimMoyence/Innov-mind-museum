@@ -25,6 +25,7 @@ import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middl
 import { httpMetricsMiddleware, metricsHandler } from '@shared/observability/metrics-middleware';
 import { enableDefaultMetrics } from '@shared/observability/prometheus-metrics';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
+import { tracePropagationMiddleware } from '@shared/observability/trace-propagation.middleware';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
 
@@ -99,6 +100,7 @@ function applyGlobalMiddleware(app: Express): void {
 
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
+  app.use(tracePropagationMiddleware);
 
   const corsOrigins = resolveCorsOrigin(env.corsOrigins, isProd);
 

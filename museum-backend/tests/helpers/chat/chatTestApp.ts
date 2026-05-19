@@ -295,6 +295,20 @@ class InMemoryChatRepository implements ChatRepository {
     return Array.from(new Set(refs));
   }
 
+  async updateSessionContext(
+    sessionId: string,
+    patch: { currentArtworkId?: string | null; currentRoom?: string | null },
+  ): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    if (Object.prototype.hasOwnProperty.call(patch, 'currentArtworkId')) {
+      session.currentArtworkId = patch.currentArtworkId ?? null;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'currentRoom')) {
+      session.currentRoom = patch.currentRoom ?? null;
+    }
+  }
+
   private findMessage(messageId: string): ChatMessage | undefined {
     for (const list of this.messages.values()) {
       const found = list.find((m) => m.id === messageId);

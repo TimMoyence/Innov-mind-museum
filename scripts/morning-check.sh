@@ -206,6 +206,29 @@ else
   fail "gh CLI not installed — cannot check CI status"
 fi
 
+# ── Dev Stack Drift ──────────────────────────────────────────────────
+header "Dev Stack Drift (TD-44)"
+
+cd "$ROOT"
+
+if bash scripts/sentinels/compose-parity.mjs >/dev/null 2>&1; then
+  pass "compose-parity — dev mirrors prod on critical flags"
+else
+  fail "compose-parity — flag drift between dev and prod compose"
+fi
+
+# Run drift-check ; treat WARN-only (.env mtime newer than container) as a
+# pass but surface the message so the operator sees it. FAIL (per-var drift)
+# counts toward failure count.
+DRIFT_OUTPUT=$(bash scripts/sentinels/dev-container-env-drift.sh 2>&1) || DRIFT_EXIT=$?
+DRIFT_EXIT=${DRIFT_EXIT:-0}
+if [ "$DRIFT_EXIT" -eq 0 ]; then
+  pass "dev-container-env-drift — no drift"
+else
+  fail "dev-container-env-drift — see output below"
+  printf '%s\n' "$DRIFT_OUTPUT" | sed 's/^/    /'
+fi
+
 # ── Summary ──────────────────────────────────────────────────────────
 header "Summary"
 

@@ -76,6 +76,22 @@ export class InMemoryMuseumRepository implements IMuseumRepository {
     );
   }
 
+  /**
+   * In-memory geofence-containment test stub. Mirrors the JSONB-bbox branch
+   * of the PG adapter (rectangle check). PostGIS polygon containment is NOT
+   * simulated — tests that need it must mock the repo directly.
+   */
+  async findByCoords(lat: number, lng: number): Promise<Museum | null> {
+    for (const m of this.museums) {
+      if (!m.isActive) continue;
+      const bbox = m.geofenceBbox;
+      if (bbox && lat >= bbox.south && lat <= bbox.north && lng >= bbox.west && lng <= bbox.east) {
+        return m;
+      }
+    }
+    return null;
+  }
+
   async delete(id: number): Promise<void> {
     this.museums = this.museums.filter((m) => m.id !== id);
   }

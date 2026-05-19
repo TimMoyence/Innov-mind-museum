@@ -107,3 +107,17 @@ Si tu as besoin de tester depuis le browser, ajoute temporairement les origins d
 ```
 CORS_ORIGINS=https://musaium.com,...,http://localhost:8081,http://localhost:8082
 ```
+
+## Redis auth en local (TD-44 fix)
+
+Depuis 2026-05-18, `dev-redis` force `--requirepass` pour matcher le contrat prod (élimine les warnings `[WARN] default user does not require a password` qui polluaient les logs).
+
+- **Password par défaut** : `dev-redis-password` (hardcodé en fallback dans `museum-backend/docker-compose.dev.yml`).
+- **Override** : si tu veux un password différent, ajoute `REDIS_PASSWORD=monMotDePasse` dans `museum-backend/.env` AVANT `docker compose up -d`.
+- **Connexion depuis l'host** (e.g. `redis-cli` pour debug) :
+  ```bash
+  redis-cli -h localhost -p 6379 -a dev-redis-password PING
+  # → PONG
+  ```
+- **Si tu changes le password après que le stack soit up** : `docker compose -f museum-backend/docker-compose.dev.yml up -d --force-recreate redis backend` (les 2 doivent être recreate ensemble pour rester synchros).
+- **Sentinel** : `pnpm sentinel:compose-parity` (root) vérifie que `--requirepass` reste présent dans le compose dev (parité avec prod). Tire en pre-commit Gate 7 + CI.

@@ -33,10 +33,15 @@ describe('env.ts module', () => {
    * @param envOverrides
    */
   function loadEnv(envOverrides: Record<string, string | undefined> = {}) {
-    // Set NODE_ENV to test by default to avoid production validation
+    // Set NODE_ENV to test by default to avoid production validation.
+    // PGDATABASE is required at module load (no fallback) — default it here so
+    // tests that don't care about DB config don't need to set it explicitly.
+    // Tests that DO want to assert missing-PGDATABASE behavior pass it as
+    // undefined in `envOverrides`.
     process.env = {
       ...originalEnv,
       NODE_ENV: 'test',
+      PGDATABASE: 'museum_test',
       ...envOverrides,
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import needed for module-level singleton
@@ -263,16 +268,21 @@ describe('env.ts module', () => {
       }).toThrow(/Missing required environment variable/);
     });
 
-    it('does not throw for missing secrets in test mode', () => {
+    it('does not throw for missing JWT secrets in test mode', () => {
       expect(() => {
         loadEnv({
           NODE_ENV: 'test',
           JWT_ACCESS_SECRET: undefined,
           JWT_SECRET: undefined,
           JWT_REFRESH_SECRET: undefined,
-          PGDATABASE: undefined,
         });
       }).not.toThrow();
+    });
+
+    it('throws when PGDATABASE is missing in any NODE_ENV (no fallback)', () => {
+      expect(() => {
+        loadEnv({ NODE_ENV: 'test', PGDATABASE: undefined });
+      }).toThrow(/Missing required environment variable.*PGDATABASE/);
     });
   });
 

@@ -503,7 +503,18 @@
       "permission_body": "يحتاج Musaium إلى الوصول إلى الكاميرا لمسح لافتات الأعمال. افتح الإعدادات للسماح بذلك.",
       "permission_open_settings": "فتح الإعدادات",
       "cancel": "إلغاء",
-      "lookup_template": "أخبرني عن العمل برمز اللافتة: {{code}}"
+      "lookup_template": "أخبرني عن العمل برمز اللافتة: {{code}}",
+      "detected_artwork": {
+        "title": "تم اكتشاف العمل الفني"
+      }
+    },
+    "proactive": {
+      "confirm_sheet": {
+        "title": "يبدو أنك بالقرب من {{museumName}}",
+        "body": "هل تريد بدء الجولة؟",
+        "yes": "نعم، لنبدأ",
+        "choose_another": "اختيار متحف آخر"
+      }
     },
     "artworkHero": {
       "untitled": "عمل بدون عنوان",
@@ -798,6 +809,14 @@
       "retry": "إعادة المحاولة",
       "close": "إغلاق"
     }
+  },
+  "museumPicker": {
+    "title": "اختر متحفًا",
+    "search_placeholder": "ابحث عن متحف…",
+    "favorites_section": "المفضلة",
+    "nearby_section": "المتاحف القريبة",
+    "empty_state": "لم يتم العثور على متاحف. جرّب اسمًا آخر أو اقترب أكثر.",
+    "close_a11y": "إغلاق منتقي المتاحف"
   },
   "days": {
     "mon": "إثن",

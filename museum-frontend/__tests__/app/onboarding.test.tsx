@@ -21,7 +21,15 @@ jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
 
 const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/auth/application/AuthContext', () => ({
-  useAuth: () => ({ markOnboardingComplete: mockMarkOnboardingComplete }),
+  // `isAuthenticated: true` is required since 6c39e9365 — the onboarding
+  // handleComplete now skips the server-side mark when the user is not yet
+  // signed in (markOnboardingComplete endpoint needs a session). Tests in
+  // this file all simulate an authenticated user reaching the onboarding
+  // tail, so we always expose `true`.
+  useAuth: () => ({
+    markOnboardingComplete: mockMarkOnboardingComplete,
+    isAuthenticated: true,
+  }),
 }));
 
 import { router as expoRouter } from 'expo-router';
