@@ -474,43 +474,365 @@ However, W1 reduces the **scope** of three TDs by deleting `art-topic-classifier
 
 ---
 
-## 7. Open questions (business decisions pending)
+## 7. Open questions — RESOLVED 2026-05-19
 
-These decisions gate specific TDs and **must be resolved before fixing them** :
+User decisions captured 2026-05-19 :
 
-1. **ADR-045 Sentry+OTel coexistence design** — does the W3+W4 `trace-propagation.middleware.ts` (header-based correlation, BE+FE side) replace the need for the `@sentry/opentelemetry` SDK bridge described in TD-SN-01 ?
-   - **If yes** : TD-SN-01 becomes STALE-BY-DESIGN once W3 lands. Update CLAUDE.md gotcha "Sentry+OTel Node SDK v2 coexistence" to note "we use middleware-based correlation, NOT SDK bridge". Document amendment.
-   - **If no** : TD-SN-01 remains BLOCKER. /team Cluster 1 installs `@sentry/opentelemetry` + wires `SentryContextManager` + `SentryPropagator` + `SentrySpanProcessor` post-W3-merge.
-   - **Owner** : ADR-045 author. ⚠ Blocks Batch B (Sentry cleanup) partially.
+1. ✅ **ADR-045 Sentry+OTel coexistence : YES** — `trace-propagation.middleware.ts` (W3+W4 header-based correlation) IS the design choice. The `@sentry/opentelemetry` SDK bridge is NOT needed.
+   - **Consequence** : **TD-SN-01 marked STALE-BY-DESIGN** once W3 lands. Remove from BLOCKER list.
+   - **Action** : Amend CLAUDE.md "Sentry+OTel Node SDK v2 coexistence" gotcha with note "trace correlation via middleware (header-based), NOT SDK bridge. Per ADR-045 decision 2026-05-19. `skipOpenTelemetrySetup: true` remains correct."
+   - **Batch B impact** : Skip TD-SN-01 sub-task. Still execute TD-SN-02/03/04 + TD-SNXT + TD-SRN.
 
-2. **AR launch date** — is Arabic shipping pre-V1 (`2026-06-01`) or post-launch ?
-   - **If pre-V1** : TD-I18N-01/02/03 are CRITICAL/HIGH BLOCKERS. /team Cluster 11 (Batch J) before launch.
-   - **If post-V1** : Downgrade entire i18n AR cluster to NICE_TO_HAVE / V1.1. Move from BLOCKER to backlog.
-   - **Check** : `docs/ROADMAP_PRODUCT.md` for current AR status (W3 inventory shows it's modified — may already have AR-launch decision).
-   - **Affected** : 5 TDs (TD-I18N-01..05). ⚠ Blocks Batch J entirely.
+2. ✅ **AR launch : POST-V1** — Arabic ships V1.1.
+   - **Consequence** : TD-I18N-01..05 all **downgrade BLOCKER → V1.1 NICE_TO_HAVE**.
+   - **Action** : Move TD-I18N-01..05 to V1.1 backlog section in `docs/TECH_DEBT.md` post-merge.
+   - **Batch J : DEFERRED**, not pre-V1.
 
-3. **CSP `report-to` directive** — pre-V1 polish or post-launch ?
-   - **If pre-V1** : Add `report-to` directive + endpoint scaffolding in Batch E.
-   - **If post-launch** : TD-HEL section "polish" stays NICE_TO_HAVE.
+3. ✅ **CSP `report-to` : POST-V1** — defer to V1.1 polish.
+   - **Consequence** : TD-HEL-03 partial scope only (extend `imgSrc` + `connectSrc` now ; skip `report-to` directive).
+   - **Batch E** : reduced scope. No CSP report endpoint needed pre-V1.
 
-4. **Cert pinning rollout** — is `EXPO_PUBLIC_CERT_PINNING_ENABLED=true` the V1 default ?
-   - **If yes** : TD-SSL-01 = BLOCKER. Batch I before launch.
-   - **If no (default off)** : TD-SSL-01..05 downgrade to NICE_TO_HAVE pre-2027 (E8 intermediate expiry).
-   - **Check** : `museum-frontend/app.config.ts:cert pinning plugin` + EAS profile config + `app.config.ts` env defaults.
+4. ✅ **Cert pinning : YES — `EXPO_PUBLIC_CERT_PINNING_ENABLED=true` is V1 default**.
+   - **Consequence** : TD-SSL-01..05 remain pre-V1 BLOCKER. Batch I before launch.
+   - **Action** : prioritize Batch I in next /team queue.
 
-5. **/metrics endpoint auth strategy (TD-PC-02)** — three options :
-   - (a) nginx `allow <prom-ip>; deny all` in prod site.conf — **simplest, infra-level**
-   - (b) Express `requireSuperAdmin` middleware on `app.get('/metrics')` — **app-level, JWT-based**
-   - (c) Separate internal port `:9100` mapped only on tailscale/VPN — **most secure, infra change**
-   - **Decision needed** : DevOps owner choice. Affects Batch C.
+5. ✅ **/metrics auth (TD-PC-02) : Option (b)** — Express `requireSuperAdmin` middleware on `app.get('/metrics')`.
+   - **Consequence** : No nginx work required. App-level JWT-based gate.
+   - **Batch C** : update spec to use existing `requireSuperAdmin` middleware (already used elsewhere in admin routes).
 
-6. **GestureHandlerRootView auto-wrap regression** — confirm via iOS preview New Arch testing that Expo Router 5.x does NOT auto-wrap `Stack` in `<GestureHandlerRootView>`. The audit grep shows 0 hits, but Expo SDK changes routinely. Validate empirically before Batch F implementation to avoid double-wrap warnings.
+6. ✅ **GestureHandlerRootView regression** — empirical check deferred to Batch F implementation. /team will validate via iOS preview build during phase 3 (green) or phase 7 (verifier).
 
-7. **W4 standalone branch deletion** — confirm via `git log W4..W3` that W3's merge commit is **identical** to direct W4 merge. If so, delete `feat/audit-360-w4-compliance-ops-release` immediately after W3 lands to avoid stale branch confusion.
+7. ✅ **W4 standalone deletion** — user confirms intent to delete after W3 lands. Verify `git log feat/audit-360-w4-compliance-ops-release..feat/audit-360-w3-geo-walk-intra` shows W3 ahead, AND `git log W3..W4` empty (W4 fully contained).
 
 ---
 
-## 8. Investigation log (append-only)
+## 8. Decision impact on batch matrix (independence vs merges)
+
+> Q from user 2026-05-19: "Les 12 batchs sont à coller dans de nouvelles sessions et sont indépendants des merges ?"
+> A: **Partial independence**. Each batch lives in its own /team session (fresh-context UFR-022), but they SERIALIZE on shared files (`docs/TECH_DEBT.md`, ESLint plugin baselines, `package.json` lockfile). Real workflow : run each batch in its own session BUT commit serially. Multiple batches running in parallel = guaranteed merge conflicts on TECH_DEBT.md.
+
+### Batches independent of all merges (can launch NOW, before any worktree merges) :
+
+| Batch | Why independent | Notes |
+|---|---|---|
+| **A** — JWT + Auth rate-limit | None of the 7 route files touched by any worktree | 1-line algorithms fix + middleware reorder |
+| **B** — Sentry/OTel cleanup (minus TD-SN-01) | sentry.ts / metro.config.js / Web sentry configs not touched | TD-SN-01 SKIPPED per ADR-045 decision |
+| **D** — React forms (TD-RHF-01/02 + TD-REACT-01) | auth.tsx + useSessionLoader.ts not touched | UFR-021 prevention, highest doctrine weight |
+| **H** — TanStack + Zustand polish | useMe / useMuseumDirectory / mutations / stores not touched | Low risk, fast |
+| **I** — Cert pinning (TD-SSL-01..05) | app.config.ts + cert-pinning files not touched | BLOCKER per user decision |
+| **K** — Web framer-motion + maplibre codemod | 11 web files + DemoMap.tsx not touched | Pure codemod |
+
+### Batches needing a SPECIFIC merge first :
+
+| Batch | Blocked by | Why |
+|---|---|---|
+| **C** part (TD-PC-02) | W3 merge | app.ts touched by W3 |
+| **C** part (TD-PC-03) | W1 + W3 merge | prometheus-metrics.ts touched by both |
+| **E** (Helmet CSP) | W3 merge | app.ts touched by W3 |
+| **F** part (TD-RNGH-01) | W3 merge | _layout.tsx touched by W3 |
+| **G** part (TD-MD-02) | W2 merge | chatSessionLogic.pure.ts touched by W2 |
+| **L** part (TD-LC-*) | W1 merge | langchain-orchestrator-support.ts touched + scope shrinks |
+| **L** part (TD-LF-*) | W1 merge | langchain.orchestrator.ts + tracing.ts touched |
+| **L** part (TD-ONNX-*) | W1 merge | siglip-onnx.adapter.ts touched |
+| **L** part (TD-MUL-01) | W2 merge | chat-route.helpers.ts touched |
+
+### Batches SAFE-NOW that can also be SPLIT to run partially now :
+
+- **C** : TD-PC-01 alone (metrics-middleware.ts) is SAFE-NOW. Split off as **Batch C₀**.
+- **F** : TD-RNGH-02/03/04 are SAFE-NOW (ArtworkHeroModal + DailyArtCard + SwipeableConversationCard). Split off as **Batch F₀**.
+- **G** : TD-MD-01 + TD-MD-03 + TD-MD-04 are SAFE-NOW (useChatSessionActions.ts + Markdown configs). Split off as **Batch G₀**.
+
+### Recommended /team queue (sequential, one session each)
+
+**Phase 1 — Pre-merge independent batches** (can launch immediately, in any order, BUT one at a time to avoid TECH_DEBT.md conflicts) :
+
+1. Batch A (JWT + Auth) — highest doctrine weight, 1-line fixes
+2. Batch D (React forms) — UFR-021 prevention
+3. Batch C₀ (TD-PC-01 only) — 1-line fix
+4. Batch K (Web codemods) — clean isolation
+5. Batch F₀ (TD-RNGH-02/03/04)
+6. Batch G₀ (TD-MD-01 + 03 + 04)
+7. Batch I (Cert pinning) — V1 BLOCKER
+8. Batch B (Sentry/OTel minus TD-SN-01) — multi-file, larger scope
+9. Batch H (TanStack + Zustand polish)
+
+**Phase 2 — Post-W3 merge** :
+
+10. Batch E (Helmet CSP) — needs W3 zone re-audit
+11. Batch C₁ (TD-PC-02 only) — needs W3 zone, uses requireSuperAdmin per decision
+12. Batch F₁ (TD-RNGH-01 only) — needs W3 _layout.tsx
+
+**Phase 3 — Post-W1 merge** :
+
+13. Batch L₁ (TD-LC-01/02/03 with reduced scope + TD-LC-05 + TD-LF-01/02 + TD-ONNX-01/02/03) — re-audit Evidence post-W1
+14. Batch C₂ (TD-PC-03 naming) — needs W1 + W3 metrics
+
+**Phase 4 — Post-W2 merge** :
+
+15. Batch G₁ (TD-MD-02 only) — needs W2 chatSessionLogic.pure.ts
+16. Batch L₂ (TD-MUL-01 + remaining TypeORM/bcrypt hygiene)
+
+**V1.1 backlog (deferred per user decisions)** :
+
+- Batch J (i18n AR) — post-V1
+- TD-HEL "report-to" polish — post-V1
+- TD-SN-01 — STALE-BY-DESIGN, drop from list
+
+---
+
+## 9. Merge execution prompt (paste in fresh session)
+
+> Copy the markdown block below and paste into a NEW Claude Code session at `/Users/Tim/Desktop/all/dev/Pro/InnovMind`. The session needs full filesystem + Bash + `gh` CLI access.
+
+````markdown
+Mission : merge cascade audit-360 worktrees (W3 → W1 → W2) into main, via GitHub PRs with CI green gate.
+
+## Context
+
+Read `docs/HANDOFF-2026-05-19-debt-collision-report.md` IN FULL before starting. Critical sections : §1 (worktrees), §4 (merge order), §6 (TD-LC-* scope shrink), §7 (resolved decisions), §8 (batches blocked by which merge).
+
+Key facts :
+- W4 (feat/audit-360-w4-compliance-ops-release) is contained in W3 (verified : commit `f687b600` = "merge(w3+w4)"). **Don't open a PR for W4. Delete the branch after W3 lands.**
+- Order : W3 → (no W4) → W1 → W2.
+- ADR-045 decision : header-middleware-based trace correlation. TD-SN-01 is STALE-BY-DESIGN. CLAUDE.md amendment needed.
+- AR launch is POST-V1. Downgrade TD-I18N-01..05.
+- Cert pinning IS ON in V1. Keep TD-SSL-01..05 as BLOCKER.
+
+## Constraints (NON-NEGOTIABLE)
+
+- **UFR-020** : ZERO hook bypass. No `--no-verify`, no `SKIP_*=1`, no `core.hookspath=/dev/null`. If a hook fails, fix the root cause.
+- **UFR-013** : honesty. Report failures VERBATIM. "All tests pass" only after running them. Distinguish verified vs assumed.
+- **No /team spawn** : this is a merge orchestration task, not feature work.
+- Each phase needs explicit human confirm before destructive operation (force-push, branch delete).
+
+## Phase 0 — Preflight
+
+1. Confirm worktree state :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind worktree list
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind log --oneline -5
+   ```
+   Expect main at `3439848b` or later, 4 worktrees present.
+
+2. Verify W4 ⊆ W3 :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind log feat/audit-360-w3-geo-walk-intra..feat/audit-360-w4-compliance-ops-release --oneline
+   ```
+   MUST be empty. If non-empty, W4 has commits not in W3 → STOP and report.
+
+3. Verify `gh` CLI auth :
+   ```
+   gh auth status
+   gh repo view --json nameWithOwner
+   ```
+
+4. Verify CI workflow status :
+   ```
+   gh workflow list
+   ```
+   Expect `ci-cd-backend.yml`, `ci-cd-web.yml`, `ci-cd-mobile.yml` etc.
+
+## Phase 1 — Push branches + create PRs
+
+For each of W3, W1, W2 (in this order — push the slowest-CI first so it warms up while others queue) :
+
+1. **W3** :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W3 push -u origin feat/audit-360-w3-geo-walk-intra
+   ```
+   If push rejected (branch already on remote diverged) : `git -C ... push --force-with-lease`.
+   
+   Create PR :
+   ```
+   gh pr create --base main --head feat/audit-360-w3-geo-walk-intra \
+     --title "audit-360 W3 : geo-walk-intra + W4 compliance/ops (merged)" \
+     --body "Includes W4 audit-360 compliance/ops/release via merge commit f687b600. Unblocks TDs : TD-HEL-01/02/03, TD-PC-02, TD-RNGH-01, TD-TO-01. See docs/HANDOFF-2026-05-19-debt-collision-report.md §3-4."
+   ```
+
+2. **W1** :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W1 push -u origin feat/audit-360-w1-chat-hardening
+   gh pr create --base main --head feat/audit-360-w1-chat-hardening \
+     --title "audit-360 W1 : chat hardening (C9.0..C9.17)" \
+     --body "29 commits. LLM cost gauge + Langfuse trace + reranker scaffold + SigLIP-2 + [META] retired + UFR-016 burials (art-topic-classifier, google-cse, searxng, duckduckgo). Shrinks TD-LC-01/02/03 evidence scope. See report §6."
+   ```
+
+3. **W2** :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W2 push -u origin feat/audit-360-w2-ai-safety-voice
+   gh pr create --base main --head feat/audit-360-w2-ai-safety-voice \
+     --title "audit-360 W2 : AI safety + voice + a11y" \
+     --body "STT prompt biasing + voice-aware TTS cache + Presidio + WCAG audio descriptions + Jest timeout 30s. Unblocks TD-MD-02, TD-MUL-01."
+   ```
+
+4. **List the 3 PRs** :
+   ```
+   gh pr list --search "audit-360-w" --state open
+   ```
+
+5. **Do NOT push W4** (per §7 decision 7). Note the W4 PR URL would be redundant.
+
+## Phase 2 — Wait for CI green on all 3 PRs
+
+For each PR :
+```
+gh pr checks <PR_URL>
+```
+
+If any check fails :
+1. Read the failure log : `gh run view <run_id> --log-failed`
+2. Diagnose root cause. Common cases :
+   - W1 might fail openapi sync (museum-frontend `npm run check:openapi-types`) — regenerate locally + push.
+   - W2 might fail Jest timeout — already bumped to 30s in commit `2e9b81bd`, should be OK.
+   - W3 might fail BE migration tests if Postgres pgvector image missing — check `ci-cd-backend.yml` services block uses `pgvector/pgvector:pg16`.
+3. Fix on the source worktree, push, wait for re-run.
+4. NEVER bypass. UFR-020.
+
+Report status to user. **STOP HERE for user confirm before Phase 3.**
+
+## Phase 3 — Merge cascade (only after user confirms all 3 PRs green)
+
+### 3.A — Merge W3 (ships W4 inside)
+
+```
+gh pr merge <W3_PR_NUMBER> --merge --delete-branch
+# --merge (not --squash) preserves the W4 merge commit signature inside main's history.
+# --delete-branch removes feat/audit-360-w3 from remote post-merge.
+```
+
+Local sync :
+```
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind checkout main
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind pull origin main
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind log --oneline -5
+```
+
+Run local verification suite (parallel possible) :
+```
+cd museum-backend && pnpm install && pnpm lint && pnpm test
+cd museum-frontend && npm install && npm run lint && npm test
+cd museum-web && pnpm install && pnpm lint && pnpm test
+cd museum-backend && pnpm openapi:validate
+```
+
+If all green :
+- Delete W4 standalone (per §7.7) :
+  ```
+  git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind branch -D feat/audit-360-w4-compliance-ops-release
+  git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind worktree remove /Users/Tim/Desktop/all/dev/Pro/InnovMind-W4
+  git push origin --delete feat/audit-360-w4-compliance-ops-release 2>/dev/null || echo "W4 not on remote (expected)"
+  ```
+
+If any test fails : STOP, report verbatim, do not proceed to W1.
+
+### 3.B — Merge W1 (chat hardening)
+
+Rebase W1 on post-W3 main :
+```
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W1 fetch origin main
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W1 rebase origin/main
+```
+
+**Expected conflicts** (per report §2) :
+- `museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts`
+- `museum-backend/src/modules/chat/useCase/llm/llm-sections.ts`
+- `museum-backend/src/modules/chat/useCase/message/chat-message.service.ts`
+- `museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts`
+- `museum-backend/src/modules/chat/chat-module.ts`
+- `museum-backend/src/modules/chat/domain/ports/chat-orchestrator.port.ts`
+- `museum-backend/src/shared/observability/prometheus-metrics.ts` (W1 + W3 both add gauges)
+- `museum-frontend/shared/locales/{ar,de,en,es,fr,it,ja,zh}/translation.json` (8 locales)
+
+Resolution discipline : each conflict needs a deliberate decision. Don't blanket `--theirs` or `--ours`. For locale files, MERGE both worktrees' new keys (each adds different strings). For source code, read both sides + understand intent. Read `lib-docs/<lib>/PATTERNS.md` if pattern is unclear.
+
+Push :
+```
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W1 push --force-with-lease origin feat/audit-360-w1-chat-hardening
+```
+
+Wait for CI re-run :
+```
+gh pr checks <W1_PR_NUMBER>
+```
+
+If green, merge :
+```
+gh pr merge <W1_PR_NUMBER> --merge --delete-branch
+```
+
+Local sync + verify (same as 3.A) + delete W1 worktree :
+```
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind worktree remove /Users/Tim/Desktop/all/dev/Pro/InnovMind-W1
+```
+
+### 3.C — Merge W2 (AI safety + voice)
+
+Same flow as 3.B :
+```
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W2 fetch origin main
+git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind-W2 rebase origin/main
+```
+
+Expect locale conflicts (3-way now: 8 locales × W2-vs-post-W1-main) + chat files (W2 vs W1 overlap on llm-prompt-builder, llm-sections, chat-message.service, prepare-message.pipeline).
+
+Push --force-with-lease, wait CI, merge with --delete-branch, sync local, verify, remove worktree.
+
+## Phase 4 — Post-merge cleanup
+
+1. **CLAUDE.md ADR-045 amendment** (per §7.1 decision) :
+   Locate the "Sentry+OTel Node SDK v2 coexistence" gotcha in CLAUDE.md "Pièges connus" section. Append :
+   > **Amendment 2026-05-19 (ADR-045)** : trace correlation BE↔FE is achieved via the `museum-backend/src/shared/observability/trace-propagation.middleware.ts` (reads `sentry-trace`+`baggage` headers, attaches to active OTel span) AND `museum-frontend/shared/observability/sentry-init.ts:tracePropagationTargets`. We do NOT use the `@sentry/opentelemetry` SDK bridge. `skipOpenTelemetrySetup: true` in `sentry.ts` is correct and intentional.
+
+2. **TECH_DEBT.md updates** :
+   - Mark TD-SN-01 as STALE (per ADR-045 decision)
+   - Downgrade TD-I18N-01..05 from BLOCKER → V1.1 NICE_TO_HAVE (move to V1.1 section)
+   - Downgrade TD-HEL "report-to" polish reference to V1.1 (TD-HEL-03 partial)
+   - TD-LC-01/02/03 : remove `art-topic-classifier.ts` references from Evidence (deleted by W1) ; update `langchain-orchestrator-support.ts` line numbers based on post-merge file state. Verify by reading the merged file in main.
+   - Strikethrough or move resolved deviations as relevant.
+
+3. **GitNexus reindex** :
+   ```
+   npx gitnexus analyze
+   ```
+   Expect symbol count change (+detect-museum, +reranker port, +trace-propagation middleware, -art-topic-classifier, -searxng/google-cse/duckduckgo). Report new symbol total.
+
+4. **Final full verification** :
+   ```
+   cd museum-backend && pnpm lint && pnpm test && pnpm test:e2e && pnpm openapi:validate
+   cd museum-frontend && npm run lint && npm test
+   cd museum-web && pnpm lint && pnpm test
+   ```
+   
+   Smoke test if local stack available :
+   ```
+   docker compose -f museum-backend/docker-compose.dev.yml up -d
+   cd museum-backend && pnpm smoke:api
+   ```
+
+5. **Commit cleanup** :
+   ```
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind add docs/TECH_DEBT.md CLAUDE.md
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind commit -m "docs: post audit-360 W1/W2/W3 merge cleanup (TD scope + ADR-045 amendment)"
+   git -C /Users/Tim/Desktop/all/dev/Pro/InnovMind push origin main
+   ```
+
+## Phase 5 — Report back
+
+Send brief status to user :
+- ✅ W3 merged at commit `<SHA>`, ✅ W1 merged at `<SHA>`, ✅ W2 merged at `<SHA>`
+- W4 branch deleted (local + remote)
+- Test suite : `BE: <pass>/<total>` ; `FE: <pass>/<total>` ; `Web: <pass>/<total>` ; e2e: `<pass>/<total>`
+- TECH_DEBT.md tally post-cleanup : SAFE-NOW count = <N> (down from 62 pre-merge)
+- GitNexus index : `<N>` symbols, `<M>` relationships
+- CLAUDE.md ADR-045 amendment applied ✅
+- Any unresolved conflict zones, follow-ups, or yellow flags
+
+Then user can launch /team batches A, D, C₀, K, F₀, G₀, I, B, H sequentially from collision report §5/§8 (in different sessions, one at a time to avoid TECH_DEBT.md conflicts).
+````
+
+---
+
+## 10. Investigation log (append-only)
 
 - **2026-05-19 09:30** — Read handoff doc, listed worktrees, confirmed 88 TDs in `docs/TECH_DEBT.md` lines 761-1660.
 - **2026-05-19 09:35** — Spawned 4 read-only `Explore` agents (W1, W2, W3, W4) for parallel git diff/log/status capture.
@@ -526,10 +848,11 @@ These decisions gate specific TDs and **must be resolved before fixing them** :
   - W4 FE `sentry-init.ts` has `tracePropagationTargets` already (FE side OK ; BE TD-SN-02 SAFE-NOW).
 - **2026-05-19 10:05** — Classification complete. 62 SAFE-NOW / 17 WAIT-FOR-MERGE / 2 COLLISION-RISK / 0 STALE / 4 needs-human-review.
 - **2026-05-19 10:10** — Recommended merge order W3 → W4 (skip) → W1 → W2. 12 /team batches drafted.
+- **2026-05-19 11:30** — User resolved 7 open questions (§7) : ADR-045 = YES middleware, AR = post-V1, CSP report-to = post-V1, cert pinning = ON, /metrics = requireSuperAdmin, W4 = delete after W3. Re-classified batches into independence matrix (§8). Drafted merge execution prompt (§9) for fresh-session orchestration.
 
 ---
 
-## 9. Acceptance check (per HANDOFF mission)
+## 11. Acceptance check (per HANDOFF mission)
 
 ✅ **1. Choose optimal merge order** : §4 — W3 (with W4 inside) → W1 → W2. Skip W4 standalone.
 ✅ **2. Launch /team Cluster runs on TDs SAFE-NOW without waste risk** : §5 — 12 batches A..L, sequenced.
