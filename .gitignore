@@ -214,3 +214,11 @@ museum-backend/.perf-seed-checkpoint.json
 # Docker build time by museum-backend/scripts/fetch-models.sh. Never committed.
 museum-backend/models/
 **/*.onnx
+
+# W3 (T5.5) — printable QR-cartel PDFs. Regenerable from fixtures/*.csv via
+# scripts/generate-qr-cartels.cjs; binaries, not source.
+museum-backend/cartels-*.pdf
+
+# Local pnpm content-addressable store (created by `pnpm install --prefer-offline`
+# in some env setups). Never source-tracked.
+.pnpm-store/
