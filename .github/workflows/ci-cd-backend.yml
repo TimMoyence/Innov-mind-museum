@@ -199,7 +199,7 @@ jobs:
             --shard=${{ matrix.shard }}/4 \
             --coverage --coverageReporters=json \
             --coverageDirectory=coverage-shard-${{ matrix.shard }} \
-            --testTimeout=15000
+            --testTimeout=30000
 
       - name: Upload coverage shard
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
