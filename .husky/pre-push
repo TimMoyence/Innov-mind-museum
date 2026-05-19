@@ -185,7 +185,7 @@ if [ -n "$touched_be" ]; then
   # short-circuit the script BEFORE flake detection runs. We need to capture
   # status, dump output, then decide flake-vs-real ourselves.
   set +e
-  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
+  ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --testTimeout=30000 --selectProjects unit-integration --findRelatedTests $(echo "$touched_be" | sed 's|^museum-backend/||') ) > "$gate16_log" 2>&1
   gate16_status=$?
   set -e
   # NEVER `cat "$gate16_log"` full: ~10MB output causes SIGPIPE when git's
@@ -204,7 +204,7 @@ if [ -n "$touched_be" ]; then
       echo "$failed_suites" | sed 's/^/[pre-push]     - /'
       retry_ok=1
       for suite in $failed_suites; do
-        ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --selectProjects unit-integration --testPathPattern="$suite" ) >/dev/null 2>&1 || { retry_ok=0; echo "[pre-push]     ✗ $suite still fails in isolation"; }
+        ( cd museum-backend && pnpm exec jest --watchman=false --runInBand --passWithNoTests --coverage=false --testTimeout=30000 --selectProjects unit-integration --testPathPattern="$suite" ) >/dev/null 2>&1 || { retry_ok=0; echo "[pre-push]     ✗ $suite still fails in isolation"; }
       done
       if [ "$retry_ok" = "1" ]; then
         echo "[pre-push]   ✓ all retried suites pass in isolation — confirmed flake, accepting gate 16"
@@ -227,8 +227,13 @@ gate_end "Gate 16"
 gate_start "Gate 17/18 affected tests (frontend) — jest --findRelatedTests"
 if [ -n "$touched_fe" ]; then
   echo "[pre-push]   $(echo "$touched_fe" | wc -l | tr -d ' ') FE source file(s) changed — running related tests"
+  # `--forceExit --testTimeout=30000` mirrors Gate 16 (BE). RN tests pass but
+  # the React Scheduler MessageChannel (upstream react #26608, unfixed since
+  # 2023) keeps the event loop alive → jest hangs post-tests → the hook would
+  # otherwise be killed by an external SIGTERM and report a fake failure.
+  # Added 2026-05-19 after audit-360-w3 first-push diagnostic.
   # shellcheck disable=SC2086
-  ( cd museum-frontend && npx jest --watchman=false --runInBand --findRelatedTests --passWithNoTests --coverage=false $(echo "$touched_fe" | sed 's|^museum-frontend/||') ) || {
+  ( cd museum-frontend && npx jest --watchman=false --runInBand --forceExit --testTimeout=30000 --findRelatedTests --passWithNoTests --coverage=false $(echo "$touched_fe" | sed 's|^museum-frontend/||') ) || {
     echo "[pre-push] ✗ affected frontend tests failed"; exit 1;
   }
 else
