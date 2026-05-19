@@ -1136,10 +1136,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Remediation** :
 1. Run doc-fetcher on `ChatGoogle` upstream docs ;
 2. Update `lib-docs/langchain/PATTERNS.md` with `ChatGoogle` patterns ;
-3. Migrate `langchain-orchestrator-support.ts:1,82` + `art-topic-classifier.ts:2,28` ;
+3. Migrate `langchain-orchestrator-support.ts:1,241` ;
 4. Bundle with TD-LC-02 (`openAIApiKey` → `apiKey`) since same files.
 
-**Evidence** : `museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-support.ts:1,82`, `museum-backend/src/modules/chat/useCase/guardrail/art-topic-classifier.ts:2,28`.
+**Evidence (post-W1 merge 2026-05-19)** : `museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-support.ts:1,241`. `art-topic-classifier.ts` reference removed — file deleted by W1 commit `33a9d4d5` (C9.9 UFR-016 burial).
 
 ---
 
@@ -1149,7 +1149,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 **Remediation** : Normalize 4 constructor sites to `apiKey:` + `model:`. Add `maxRetries` + `timeout` per PATTERNS.md DO #6 (currently 3/4 sites missing).
 
-**Evidence** : `langchain-orchestrator-support.ts:90,102`, `art-topic-classifier.ts:19,36`, `content-classifier.service.ts:70`.
+**Evidence (post-W1 merge 2026-05-19)** : `langchain-orchestrator-support.ts:253,262`, `content-classifier.service.ts:70`. `art-topic-classifier.ts` reference removed — file deleted by W1 (C9.9 UFR-016 burial).
 
 ---
 
@@ -1159,7 +1159,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 **Remediation** : Add `streamUsage: false` to 2 Deepseek constructors.
 
-**Evidence** : `langchain-orchestrator-support.ts:90-98`, `art-topic-classifier.ts:36-43`.
+**Evidence (post-W1 merge 2026-05-19)** : `langchain-orchestrator-support.ts:247-257` (Deepseek ChatOpenAI constructor block). `art-topic-classifier.ts` reference removed — file deleted by W1 (C9.9 UFR-016 burial).
 
 ---
 
@@ -1803,24 +1803,26 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-I18N-01 — intl-pluralrules polyfill loaded TOO LATE → AR collapse silencieux (CRITICAL, BLOCKER pre-AR-launch)
+> **Cluster 11 status (handoff 2026-05-19 §7.2 owner decision)** : Arabic launch is POST-V1 (ships V1.1). The 5 TD-I18N items below are downgraded from BLOCKER-pre-AR-launch → V1.1 NICE_TO_HAVE. They are NOT V1 launch gates. Re-audit ar/translation.json (TD-I18N-02 was 4-way COLLISION-RISK) once V1.1 AR-launch work begins.
+
+## TD-I18N-01 — intl-pluralrules polyfill loaded TOO LATE → AR collapse silencieux (V1.1, NICE_TO_HAVE)
 **Context** : Polyfill in `shared/i18n/i18n.ts:1` but `index.js:1` doesn't import it. Loads only when _layout.tsx eval. ANY future module importing i18next first → Hermes missing Intl.PluralRules. AR = CLDR Category 6 silently collapses.
 **Fix** : Move `import 'intl-pluralrules';` to `museum-frontend/index.js:1` BEFORE `import 'expo-router/entry'`.
 **Evidence** : `museum-frontend/shared/i18n/i18n.ts:1`, `museum-frontend/index.js:1`.
 
-## 🚨 TD-I18N-02 — Arabic plural keys MISSING (HIGH, BLOCKER pre-AR-launch)
+## TD-I18N-02 — Arabic plural keys MISSING (V1.1, NICE_TO_HAVE)
 **Context** : `ar/translation.json:1156-1157` only `_zero` for minutesShort, only `_other` for chat.report. AR requires _one/_two/_few/_many/_other.
 **Fix** : Author AR forms before AR launch. Add ESLint sentinel : `*_zero` requires `_one/_other` siblings ; AR requires all 6.
 
-## 🚨 TD-I18N-03 — Hand-rolled `_zero` ternary bypasses i18next (HIGH, BLOCKER pre-AR-launch)
+## TD-I18N-03 — Hand-rolled `_zero` ternary bypasses i18next (V1.1, NICE_TO_HAVE)
 **Context** : `carnet/[sessionId].tsx:160-162` ternary. Bypasses plural resolution for AR.
 **Fix** : `t('carnet.minutesShort', { count: Number(detail.durationLabel) })`. Requires TD-I18N-01 first.
 
-## TD-I18N-04 — Pre-formatted dates interpolated as opaque strings (MEDIUM, NICE_TO_HAVE)
+## TD-I18N-04 — Pre-formatted dates interpolated as opaque strings (V1.1, NICE_TO_HAVE)
 **Context** : RTL/AR can't reorder date vs surrounding text. v26 built-in `datetime` formatter ignored.
 **Fix** : `"Granted on {{date, datetime(dateStyle: medium)}}"` + `t(..., {date: new Date(iso)})`.
 
-## TD-I18N-05 — i18n.init missing supportedLngs (MEDIUM, NICE_TO_HAVE)
+## TD-I18N-05 — i18n.init missing supportedLngs (V1.1, NICE_TO_HAVE)
 **Fix** : add `supportedLngs: SUPPORTED_LOCALES` + `defaultNS: 'translation'` + `ns: ['translation']`.
 
 
