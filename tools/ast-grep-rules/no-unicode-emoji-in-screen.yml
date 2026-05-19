@@ -1,6 +1,13 @@
 # Forbid unicode emojis in mobile screens / web pages.
 # Musaium UX rule (memory: feedback_no_unicode_emoji): PNG (require) + Ionicons only.
 # Catches emojis embedded in JSX text or string literals in app/, features/<>/ui/, components/.
+#
+# 2026-05-19 — ast-grep 0.42.x requires explicit AST `kind:` constraint on rules
+# that combine `regex:`. The legacy form `pattern: $TEXT + regex: ...` errored with
+# "Rule must specify a set of AST kinds to match." The fix: scope the regex to two
+# concrete kinds — `string_fragment` (inner content of '...', "...", and template
+# literals — all three resolve to string_fragment in tree-sitter-tsx) and `jsx_text`
+# (text node between JSX tags). Verified locally against synthetic .tsx fixtures.
 
 id: no-unicode-emoji-in-screen
 language: tsx
@@ -22,16 +29,20 @@ note: |
 # misc symbols, dingbats, enclosed alphanumerics, and the ZWJ/VS-16 combiners.
 rule:
   any:
-    - pattern: $TEXT
+    - kind: string_fragment
+      regex: '[\u{1F300}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{200D}\u{FE0F}]'
+    - kind: jsx_text
       regex: '[\u{1F300}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{200D}\u{FE0F}]'
 
 files:
+  # RN only — the cross-platform render inconsistency rationale (memory
+  # feedback_no_unicode_emoji) is mobile-specific. Modern browsers render
+  # unicode consistently; web components that use `aria-hidden="true"` glyphs
+  # as visual-only status indicators are accessibility-safe and out of scope.
   - 'museum-frontend/app/**/*.tsx'
   - 'museum-frontend/features/**/ui/**/*.tsx'
   - 'museum-frontend/components/**/*.tsx'
   - 'museum-frontend/shared/ui/**/*.tsx'
-  - 'museum-web/src/app/**/*.tsx'
-  - 'museum-web/src/components/**/*.tsx'
 ignores:
   - '**/*.test.tsx'
   - '**/__tests__/**'

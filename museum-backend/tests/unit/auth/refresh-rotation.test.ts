@@ -60,6 +60,8 @@ const signRefresh = (jti: string, familyId: string): string =>
   jwt.sign({ sub: '1', type: 'refresh', jti, familyId }, env.auth.refreshTokenSecret, {
     algorithm: 'HS256',
     expiresIn: '30d',
+    issuer: 'musaium-refresh',
+    audience: 'musaium-refresh',
   });
 
 describe('AuthSessionService — refresh-token sliding idle window', () => {

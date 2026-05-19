@@ -16,7 +16,12 @@ interface MfaSessionClaims extends JwtPayload {
   mfaPending: true;
 }
 
+// lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token
+// to prevent token-confusion across token families (defense-in-depth).
+export const MFA_SESSION_TOKEN_ISSUER = 'musaium-mfa-session';
+
 export function issueMfaSessionToken(userId: number): string {
+  // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
   return jwt.sign(
     {
       sub: String(userId),
@@ -27,6 +32,8 @@ export function issueMfaSessionToken(userId: number): string {
     {
       algorithm: 'HS256',
       expiresIn: env.auth.mfaSessionTokenTtlSeconds,
+      issuer: MFA_SESSION_TOKEN_ISSUER,
+      audience: MFA_SESSION_TOKEN_ISSUER,
     },
   );
 }
@@ -37,8 +44,11 @@ const unauthorized = (message: string, code = 'INVALID_MFA_SESSION'): AppError =
 /** @throws {Error} 401 on any inconsistency. */
 export function verifyMfaSessionToken(token: string): { userId: number } {
   try {
+    // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
     const decoded = jwt.verify(token, env.auth.mfaSessionTokenSecret, {
       algorithms: ['HS256'],
+      issuer: MFA_SESSION_TOKEN_ISSUER,
+      audience: MFA_SESSION_TOKEN_ISSUER,
     }) as MfaSessionClaims;
 
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: jwt payload runtime shape */

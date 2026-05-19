@@ -7,6 +7,11 @@ import { env } from '@src/config/env';
 
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 
+// lib-docs/jsonwebtoken/PATTERNS.md §3: DO pin iss+aud on every internal token
+// to prevent token-confusion across token families (defense-in-depth).
+export const ACCESS_TOKEN_ISSUER = 'musaium-access';
+export const REFRESH_TOKEN_ISSUER = 'musaium-refresh';
+
 interface AccessTokenClaims extends JwtPayload {
   sub: string;
   type: 'access';
@@ -62,8 +67,11 @@ export class TokenJwtService {
   /** @throws {Error} 401 AppError on any failure. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
+      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
       const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
         algorithms: ['HS256'],
+        issuer: ACCESS_TOKEN_ISSUER,
+        audience: ACCESS_TOKEN_ISSUER,
       }) as AccessTokenClaims;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
       if (decoded.type !== 'access' || !decoded.sub) {
@@ -88,8 +96,11 @@ export class TokenJwtService {
   /** @throws {Error} 401 AppError on any failure. */
   verifyRefreshToken(token: string): RefreshTokenClaims {
     try {
+      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
       const decoded = jwt.verify(token, env.auth.refreshTokenSecret, {
         algorithms: ['HS256'],
+        issuer: REFRESH_TOKEN_ISSUER,
+        audience: REFRESH_TOKEN_ISSUER,
       }) as RefreshTokenClaims;
       /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime */
       if (
@@ -117,6 +128,7 @@ export class TokenJwtService {
     museumId?: number | null;
     jti: string;
   }): string {
+    // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
     return jwt.sign(
       {
         sub: String(params.userId),
@@ -126,12 +138,18 @@ export class TokenJwtService {
         ...(params.museumId ? { museumId: params.museumId } : {}),
       },
       env.auth.accessTokenSecret,
-      { algorithm: 'HS256', expiresIn: env.auth.accessTokenTtl as jwt.SignOptions['expiresIn'] },
+      {
+        algorithm: 'HS256',
+        expiresIn: env.auth.accessTokenTtl as jwt.SignOptions['expiresIn'],
+        issuer: ACCESS_TOKEN_ISSUER,
+        audience: ACCESS_TOKEN_ISSUER,
+      },
     );
   }
 
   /** Bound to a token family. */
   signRefreshToken(params: { userId: number; jti: string; familyId: string }): string {
+    // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
     return jwt.sign(
       {
         sub: String(params.userId),
@@ -140,7 +158,12 @@ export class TokenJwtService {
         familyId: params.familyId,
       },
       env.auth.refreshTokenSecret,
-      { algorithm: 'HS256', expiresIn: env.auth.refreshTokenTtl as jwt.SignOptions['expiresIn'] },
+      {
+        algorithm: 'HS256',
+        expiresIn: env.auth.refreshTokenTtl as jwt.SignOptions['expiresIn'],
+        issuer: REFRESH_TOKEN_ISSUER,
+        audience: REFRESH_TOKEN_ISSUER,
+      },
     );
   }
 

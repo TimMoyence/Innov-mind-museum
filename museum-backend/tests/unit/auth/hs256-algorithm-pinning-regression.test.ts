@@ -60,10 +60,16 @@ describe('R2 — Already-secured HS256 sites regression guard', () => {
     // Import after mock and spy setup
     const { verifyMfaSessionToken } = await import('@modules/auth/useCase/totp/mfaSessionToken');
 
+    // TD-JWT-02: include iss+aud so verifyMfaSessionToken doesn't reject before spy fires.
     const validToken = jwt.sign(
       { sub: '42', type: 'mfa_session', mfaPending: true },
       MFA_SESSION_SECRET,
-      { algorithm: 'HS256', expiresIn: 300 },
+      {
+        algorithm: 'HS256',
+        expiresIn: 300,
+        issuer: 'musaium-mfa-session',
+        audience: 'musaium-mfa-session',
+      },
     );
 
     // Call the function — let it run through
@@ -90,10 +96,16 @@ describe('R2 — Already-secured HS256 sites regression guard', () => {
     const { TokenJwtService } = await import('@modules/auth/useCase/session/token-jwt.service');
     const service = new TokenJwtService();
 
+    // TD-JWT-02: include iss+aud so verifyAccessToken doesn't reject before spy fires.
     const validAccessToken = jwt.sign(
       { sub: '1', type: 'access', jti: 'test-jti-access', role: 'visitor' },
       ACCESS_SECRET,
-      { algorithm: 'HS256', expiresIn: '15m' },
+      {
+        algorithm: 'HS256',
+        expiresIn: '15m',
+        issuer: 'musaium-access',
+        audience: 'musaium-access',
+      },
     );
 
     service.verifyAccessToken(validAccessToken);
@@ -112,6 +124,7 @@ describe('R2 — Already-secured HS256 sites regression guard', () => {
     const { TokenJwtService } = await import('@modules/auth/useCase/session/token-jwt.service');
     const service = new TokenJwtService();
 
+    // TD-JWT-02: include iss+aud so verifyRefreshToken doesn't reject before spy fires.
     const validRefreshToken = jwt.sign(
       {
         sub: '1',
@@ -120,7 +133,12 @@ describe('R2 — Already-secured HS256 sites regression guard', () => {
         familyId: 'test-family-id',
       },
       REFRESH_SECRET,
-      { algorithm: 'HS256', expiresIn: '14d' },
+      {
+        algorithm: 'HS256',
+        expiresIn: '14d',
+        issuer: 'musaium-refresh',
+        audience: 'musaium-refresh',
+      },
     );
 
     service.verifyRefreshToken(validRefreshToken);

@@ -57,7 +57,7 @@ describe('S2-22: JWT PII strip', () => {
     const token = jwt.sign(
       { sub: '42', type: 'access', jti: 'test-jti', role: 'visitor' },
       getAccessSecret(),
-      { expiresIn: '15m' },
+      { expiresIn: '15m', issuer: 'musaium-access', audience: 'musaium-access' },
     );
 
     const result = service.verifyAccessToken(token);

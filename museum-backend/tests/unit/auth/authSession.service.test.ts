@@ -358,7 +358,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'missing-jti', familyId: 'fam-1' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
       refreshTokenRepo.findByJti.mockResolvedValue(null);
 
@@ -375,7 +375,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-reuse', familyId: 'fam-reuse' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       refreshTokenRepo.findByJti.mockResolvedValue(
@@ -400,7 +400,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-revoked', familyId: 'fam-revoked' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       refreshTokenRepo.findByJti.mockResolvedValue(
@@ -427,7 +427,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-expired', familyId: 'fam-expired' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       refreshTokenRepo.findByJti.mockResolvedValue(
@@ -455,7 +455,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '999', type: 'refresh', jti: 'jti-nousers', familyId: 'fam-nousers' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       refreshTokenRepo.findByJti.mockResolvedValue(
@@ -480,7 +480,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-rotated', familyId: 'fam-rotated' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       refreshTokenRepo.findByJti.mockResolvedValue(
@@ -511,7 +511,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-logout', familyId: 'fam-logout' },
         env.auth.refreshTokenSecret,
-        { expiresIn: '30d' },
+        { expiresIn: '30d', issuer: 'musaium-refresh', audience: 'musaium-refresh' },
       );
 
       await service.logout(token);
@@ -555,7 +555,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '42', type: 'access', jti: 'at-jti', role: 'admin', museumId: 5 },
         env.auth.accessTokenSecret,
-        { expiresIn: '15m' },
+        { expiresIn: '15m', issuer: 'musaium-access', audience: 'musaium-access' },
       );
 
       const result = service.verifyAccessToken(token);
@@ -569,7 +569,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'access', jti: 'at-jti-2', role: 'visitor' },
         env.auth.accessTokenSecret,
-        { expiresIn: '15m' },
+        { expiresIn: '15m', issuer: 'musaium-access', audience: 'musaium-access' },
       );
 
       const result = service.verifyAccessToken(token);
@@ -583,7 +583,7 @@ describe('AuthSessionService', () => {
       const token = jwt.sign(
         { sub: '1', type: 'access', jti: 'at-jti-3' },
         env.auth.accessTokenSecret,
-        { expiresIn: '15m' },
+        { expiresIn: '15m', issuer: 'musaium-access', audience: 'musaium-access' },
       );
 
       const result = service.verifyAccessToken(token);

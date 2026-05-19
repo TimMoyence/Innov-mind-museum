@@ -20,19 +20,25 @@ note: |
   = stored XSS. V12 §8 OWASP LLM02 indirect injection vector.
 
 rule:
-  any:
-    - pattern: dangerouslySetInnerHTML={{ __html: $X }}
-    - pattern: dangerouslySetInnerHTML={{__html: $X}}
-  not:
-    inside:
-      kind: program
-      has:
-        any:
-          - pattern: import $_ from 'isomorphic-dompurify'
-          - pattern: import $_ from 'dompurify'
-          - pattern: import { $$$ } from 'isomorphic-dompurify'
-          - pattern: import { $$$ } from 'dompurify'
-        stopBy: end
+  all:
+    # Match the dangerouslySetInnerHTML JSX attribute. Patterns quoted as YAML
+    # strings because the inner `__html:` colon would otherwise be parsed as a
+    # YAML mapping ("mapping values are not allowed in this context").
+    - any:
+        - pattern: "dangerouslySetInnerHTML={{ __html: $X }}"
+        - pattern: "dangerouslySetInnerHTML={{__html: $X}}"
+    # AND the surrounding program must NOT import DOMPurify.
+    - not:
+        inside:
+          kind: program
+          stopBy: end
+          has:
+            any:
+              - pattern: "import $_ from 'isomorphic-dompurify'"
+              - pattern: "import $_ from 'dompurify'"
+              - pattern: "import { $$$ } from 'isomorphic-dompurify'"
+              - pattern: "import { $$$ } from 'dompurify'"
+            stopBy: end
 
 files:
   - 'museum-web/src/**/*.tsx'

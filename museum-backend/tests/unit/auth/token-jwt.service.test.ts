@@ -242,11 +242,12 @@ describe('TokenJwtService — verifyAccessToken', () => {
   });
 
   it('falls back role to "visitor" when role claim is empty/undefined', () => {
-    // Sign a token manually without role to simulate a legacy issuance.
+    // Sign a token manually without role to simulate a token missing the role claim.
+    // TD-JWT-02: iss+aud must be present (tokens without iss/aud are rejected post-pinning).
     const token = jwt.sign(
       { sub: '5', type: 'access', jti: 'legacy-jti' },
       env.auth.accessTokenSecret,
-      { algorithm: 'HS256', expiresIn: '5m' },
+      { algorithm: 'HS256', expiresIn: '5m', issuer: 'musaium-access', audience: 'musaium-access' },
     );
     const result = service.verifyAccessToken(token);
     expect(result.role).toBe('visitor');

@@ -1,24 +1,23 @@
 /**
- * T1.7 / R4 + R8 — ast-grep sentinel: verify that the two new rules
- * flag the expected violations in HEAD source (RED state = violations exist).
+ * T1.7 / R4 + R8 — ast-grep sentinel: post-merge regression guard.
+ *
+ * Originally written during the cluster5 RED phase to flag violations on
+ * unfixed source. After GREEN landed (commit 25d3f042) the assertions flipped
+ * to `toHaveLength(0)` — the rules now serve as regression guards: if a
+ * future change reintroduces a missing-algorithms jwt.verify() or reorders
+ * a body-keyed limiter before validateBody, this test fires.
  *
  * design.md §D5:
  *   Two ast-grep rules:
  *   1. jwt-verify-needs-algorithms.yml — flags jwt.verify() without algorithms
  *   2. body-keyed-rate-limit-after-validate-body.yml — flags limiter before validateBody
  *
- * RED state (tasks.md T1.7):
- *   jwt rule: flags google-oauth-state.ts:59 → exactly 1 violation → exit ≠ 0.
- *   ordering rule: flags 5 route sites (auth ×3, mfa ×2) → ≥1 violation → exit ≠ 0.
- *
- * After green phase fixes the source:
+ * Post-cluster5 (GREEN state, expected):
  *   jwt rule: 0 violations → exit 0.
  *   ordering rule: 0 violations → exit 0.
  *
  * Implementation: invoke `ast-grep scan` via execSync; parse JSON output to
- * count violations. This mirrors what CI does in the pre-push hook.
- *
- * Frozen-test invariant: this file is immutable byte-for-byte once committed.
+ * count violations. This mirrors what CI does in the pre-push hook Gate 14.
  */
 
 import { execSync } from 'node:child_process';
@@ -101,36 +100,22 @@ describe('R4 sentinel — jwt-verify-needs-algorithms.yml', () => {
   });
 
   /**
-   * RED signal: exactly 1 violation today — google-oauth-state.ts:59.
-   * FAILS after green phase fixes the source (0 violations).
-   *
-   * After green: this assertion should be changed to expect(findings).toHaveLength(0)
-   * — but since this is the FROZEN RED test, green phase must NOT modify this file.
-   * Instead, green phase fixes the source until the rule produces 0 findings,
-   * which means this assertion will PASS with 0 violations ≠ 1... wait.
-   *
-   * IMPORTANT: The assertion below is the RED assertion that FAILS when green fixes
-   * the source. The green-phase DONE-WHEN is that this assertion transitions from
-   * "0 violations !== 1 expected RED violations" (i.e. all fixed) to
-   * "0 violations === 0" in a separate green-phase test OR the verifier confirms
-   * the rule exits 0.
-   *
-   * Per tasks.md T1.7: "TODAY the rule scan flags google-oauth-state.ts:59 as
-   * an offence → exit ≠ 0 → red."
-   *
-   * We assert exactly 1 violation in RED (the known unfixed site). This test
-   * FAILS after green (0 violations). The frozen-test contract means green
-   * phase cannot change this assertion — green must fix the source.
+   * Post-cluster5 regression guard: jwt.verify() without algorithms must
+   * never reappear in museum-backend/src/. If this test fails, a developer
+   * added a jwt.verify call that omits the `algorithms` option — CVE-2022-23540
+   * algorithm-confusion attack surface.
    */
-  it('R4.1 — exactly 1 violation today: google-oauth-state.ts jwt.verify without algorithms', () => {
-    // RED state: 1 violation expected (google-oauth-state.ts:59)
-    // This assertion FAILS after green phase fixes the source (0 violations found)
-    expect(findings.length).toBeGreaterThanOrEqual(1);
-
-    // Verify the violation is the expected file
-    const violatingFiles = findings.map((f) => f.file);
-    const hasGoogleOAuthState = violatingFiles.some((f) => f.includes('google-oauth-state.ts'));
-    expect(hasGoogleOAuthState).toBe(true);
+  it('R4.1 — zero jwt.verify-without-algorithms violations in museum-backend/src', () => {
+    if (findings.length > 0) {
+      // Surface the offending files in the assertion message for fast triage
+      const offenders = findings.map((f) => `${f.file}:${f.range?.start.line ?? '?'}`).join(', ');
+      throw new Error(
+        `jwt-verify-needs-algorithms regression: ${findings.length} violation(s): ${offenders}. ` +
+          'Add explicit algorithms: [...] to the jwt.verify() options object. ' +
+          'See lib-docs/jsonwebtoken/PATTERNS.md §3.',
+      );
+    }
+    expect(findings).toHaveLength(0);
   });
 
   /**
@@ -167,36 +152,35 @@ describe('R8 sentinel — body-keyed-rate-limit-after-validate-body.yml', () => 
   });
 
   /**
-   * RED signal: ≥1 violation today (5 expected: auth ×3, mfa ×2).
-   * FAILS (becomes 0) after green phase reorders the middleware.
-   *
-   * Per tasks.md T1.7: "the rule scan over auth-session.route.ts / mfa.route.ts
-   * flags the 5 routes as offences → exit ≠ 0."
-   *
-   * The specific count may vary depending on how ast-grep counts multi-argument
-   * patterns, so we assert ≥ 1 not exactly 5.
+   * Post-cluster5 regression guard: body-keyed rate-limit before validateBody
+   * must never reappear. If this fails, a developer added a body-keyed limiter
+   * upstream of validateBody at a router.post site — account-bucket DoS
+   * attack surface (spam malformed bodies against a victim email to drain
+   * their counter without paying the validateBody cost).
    */
-  it('R8.1 — ≥1 violation today: body-keyed limiter appears before validateBody', () => {
-    // RED state: ≥1 violation
-    // This assertion FAILS after green phase reorders middleware (0 violations)
-    expect(findings.length).toBeGreaterThanOrEqual(1);
+  it('R8.1 — zero body-keyed-limiter-before-validateBody violations', () => {
+    if (findings.length > 0) {
+      const offenders = findings.map((f) => `${f.file}:${f.range?.start.line ?? '?'}`).join(', ');
+      throw new Error(
+        `body-keyed-rate-limit-after-validate-body regression: ${findings.length} violation(s): ${offenders}. ` +
+          'Move validateBody(...) BEFORE the body-keyed limiter at every router.post site. ' +
+          'See spec.md R6+R7+R9 for the TD-EX-01 contract.',
+      );
+    }
+    expect(findings).toHaveLength(0);
   });
 
   /**
-   * RED signal: violations come from the expected files.
+   * Post-cluster5 regression guard: the 5 historically-affected route files
+   * (auth-session.route.ts × 4 sites incl. /social-redeem; mfa.route.ts × 2
+   * sites) must remain free of violations. If a reorder regresses, this names
+   * the file in the failure for fast triage.
    */
-  it('R8.2 — violations are in auth-session.route.ts and/or mfa.route.ts', () => {
-    if (findings.length === 0) {
-      // If no findings, this test marks the expectation and fails
-      expect(findings.length).toBeGreaterThan(0);
-      return;
-    }
-
-    const violatingFiles = findings.map((f) => f.file);
-    const inExpectedFiles = violatingFiles.some(
-      (f) => f.includes('auth-session.route.ts') || f.includes('mfa.route.ts'),
+  it('R8.2 — auth-session.route.ts and mfa.route.ts remain free of ordering violations', () => {
+    const regressedTargets = findings.filter(
+      (f) => f.file.includes('auth-session.route.ts') || f.file.includes('mfa.route.ts'),
     );
-    expect(inExpectedFiles).toBe(true);
+    expect(regressedTargets).toHaveLength(0);
   });
 
   /**
