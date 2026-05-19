@@ -79,7 +79,7 @@
       "hasGeo": false
     },
     "normalizedText": "quelle technique ?",
-    "components": "quelle technique ?|fr|beginner|0|0",
+    "components": "quelle technique ?|fr|beginner|0|0|h:1",
     "expectedKeyPrefix": "chat:llm:user:7:met:"
   },
   {
@@ -96,7 +96,7 @@
       "hasGeo": false
     },
     "normalizedText": "tell me about this painting",
-    "components": "tell me about this painting|en|beginner|0|0",
+    "components": "tell me about this painting|en|beginner|0|0|a:1",
     "expectedKeyPrefix": "chat:llm:anon:device-abc123:british-museum:"
   },
   {

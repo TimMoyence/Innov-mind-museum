@@ -64,8 +64,19 @@ export function normalizeQuestion(text: string): string {
  *
  * Default-safe: any undefined flag is treated as TRUE (i.e. as if context
  * were present), so the function falls through to user/anon scoping.
+ *
+ * F2 doctrine amendment (2026-05-19 run) — mirrors backend
+ * `chat-cache-key.util.ts`: when the caller explicitly passes a truthy
+ * `userId` or `anonId`, treat the request as scoped (NOT generic). This
+ * preserves the feedback-driven invalidation path on the user-scoped
+ * variant of generic questions. Generic global keys are reached by NOT
+ * passing userId/anonId at all.
  */
 export function isGenericQuery(input: LocalCacheKeyInput): boolean {
+  const uid = input.userId;
+  if (uid !== undefined && uid !== null && String(uid).length > 0) return false;
+  const aid = input.anonId;
+  if (aid !== undefined && aid !== null && aid.length > 0) return false;
   const hasHistory = input.hasHistory ?? true;
   const hasAttachment = input.hasAttachment ?? true;
   const hasGeo = input.hasGeo ?? true;
@@ -117,6 +128,13 @@ export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
   } else {
     const { namespace, id } = resolveRequester(input);
     const components = [...baseComponents];
+    // F2 (2026-05-19) — when scoped via explicit userId/anonId, hasHistory and
+    // hasAttachment still influence the LLM response, so factor them into the
+    // hash; previously they only flipped the global-vs-scoped branch (which
+    // pre-amendment also produced different keys via prefix change). MUST stay
+    // byte-identical to backend `chat-cache-key.util.ts`.
+    if (input.hasHistory) components.push('h:1');
+    if (input.hasAttachment) components.push('a:1');
     if (input.hasGeo && input.geoBucket && input.geoBucket.length > 0) {
       components.push(`geo:${input.geoBucket}`);
     }
