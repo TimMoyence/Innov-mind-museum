@@ -393,7 +393,7 @@ Setup: `eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value <toke
 
 ### Backend DSN
 
-Set `SENTRY_DSN` in the backend `.env` file on the VPS (not in GitHub secrets — it's a runtime env var).
+Set `SENTRY_DSN` in the backend `.env` file on the VPS (not in GitHub secrets — it's a runtime env var). Tuning knobs `SENTRY_TRACES_SAMPLE_RATE` and `SENTRY_PROFILE_SESSION_SAMPLE_RATE` (per `@sentry/node` v10.27.0 continuous-profiling API, adopted 2026-05-19) live alongside it; see `museum-backend/.env.production.example` for canonical values.
 
 ### Frontend DSN
 

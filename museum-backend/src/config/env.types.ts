@@ -252,7 +252,7 @@ export interface AppEnv {
     environment: string;
     release: string;
     tracesSampleRate: number;
-    profilesSampleRate: number;
+    profileSessionSampleRate: number;
   };
   otel?: {
     enabled: boolean;

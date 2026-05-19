@@ -130,5 +130,97 @@
       "important": 2,
       "nit": 4
     }
+  },
+  {
+    "runId": "2026-05-19-cluster-9-cert-pinning-hardening",
+    "ts": "2026-05-19T11:00:39Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": 86,
+      "security": 90,
+      "maintainability": 88,
+      "testability": 84,
+      "documentation": 87,
+      "weightedMean": 87.0
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 3,
+      "nit": 4
+    }
+  },
+  {
+    "runId": "2026-05-19-sentry-otel-cleanup",
+    "ts": "2026-05-19T12:50:26Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": 93,
+      "doctrine": 86,
+      "security": 92,
+      "maintainability": 88,
+      "scopeDiscipline": 96,
+      "weightedMean": 91.0
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 3
+    }
+  },
+  {
+    "runId": "2026-05-19-sentry-otel-cleanup",
+    "ts": "2026-05-19T12:54:53Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": 93,
+      "doctrine": 86,
+      "security": 92,
+      "maintainability": 88,
+      "scopeDiscipline": 96,
+      "weightedMean": 91.0
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 3
+    }
+  },
+  {
+    "runId": "2026-05-19-sentry-otel-followups",
+    "ts": "2026-05-19T13:04:15Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.30,
+        "reasoning": "7/7 spec REQs (FU-1, FU-1b, FU-2, FU-3, FU-4, FU-5, FU-6a, FU-6b) implemented at the exact files+lines spec called out. verify.json + security.json show all gates PASS. 5/5 BE sentry-init.test.ts assertions green. Single -5 for the JSDoc line-number drift in test header (cosmetic but a correctness-of-documentation slip)."
+      },
+      "doctrine": {
+        "score": 92,
+        "weight": 0.20,
+        "reasoning": "UFR-013 honesty: spec explicit + design D4 empirical (eslint stripping produces 4 errors verified 2026-05-19); UFR-020 zero-bypass: no --no-verify, no hook skip; UFR-022 lib-docs: FU-1b citing canonical Sentry docs URL + PATTERNS.md updated in-run. Reviewer.md schema clarification (FU-6b) closes prior reviewer drift (parent run shipped flat-array). -8 because doctrine axis subsumes maintainability+scope axes per brief's equal-weight remark, not perfect."
+      },
+      "security": {
+        "score": 94,
+        "weight": 0.25,
+        "reasoning": "security.json declared 7/8 PASS + 1 WARN. WARN (F3) is documentary line-number drift in test JSDoc, not a security vector — explicitly tagged 'Non-security; flag to reviewer for cosmetic fix.' R10 anti-regression preserved (skipOpenTelemetrySetup + getDefaultIntegrationsWithoutPerformance + sendDefaultPii:false). FU-5 removes real DSN (org/project ID fingerprint leak). FU-6a brace-isolation is purely defensive (no injection vector); FU-6b jq filter uses --arg/--slurpfile (parameterized, no eval)."
+      },
+      "maintainability": {
+        "score": 90,
+        "weight": 0.20,
+        "reasoning": "Comments accurate post-FU-2 (refers to instrumentation.ts:10-11 with rationale). FU-3 file-header explains WHY the 4 disables exist (jest.isolateModules + CJS re-instantiation). FU-6b adds inline comment block (lines 73-79) documenting the dual-shape contract + severity mapping — future-proof for next reviewer drift. -10 for two nits: (a) test JSDoc line-number drift, (b) tracePropagationTargetsCount magic literal."
+      },
+      "scopeDiscipline": {
+        "score": 96,
+        "weight": 0.05,
+        "reasoning": "Only the 7 FU items + 2 verifier-reported polish (lib-docs PATTERNS.md, reviewer.md schema clarification) touched. Zero refactor of parent run's R1-R10 code. TD-SN-01 (@sentry/opentelemetry bridge) explicitly NOT touched (security scopeCreepGuard PASS, 6 forbidden symbols grepped, 0 hits in application code). verify.json correctly parked 2 out-of-scope discoveries (regex over-eager + version-prefix stripping) as FU-7-candidates without expanding this run."
+      },
+      "weightedMean": 93.4
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 2
+    }
   }
 ]

@@ -34,10 +34,16 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Note: `tracePropagationTargets` is a Sentry.init() option (per-runtime),
+// NOT a withSentryConfig (build) option. The explicit allowlist
+// (api.musaium.com + localhost:3000) is wired in `instrumentation-client.ts`,
+// `sentry.server.config.ts`, and `sentry.edge.config.ts`. See
+// `lib-docs/@sentry/nextjs/PATTERNS.md` §3 lines 159-161 + §4 line 189.
 export default withSentryConfig(nextConfig, {
   // Only upload source maps when SENTRY_AUTH_TOKEN is set (CI / production builds)
   silent: true,
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
+  tunnelRoute: '/monitoring',
 });

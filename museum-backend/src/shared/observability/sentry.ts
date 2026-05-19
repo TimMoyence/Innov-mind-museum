@@ -29,10 +29,12 @@ export const initSentry = (): void => {
     return;
   }
 
-  // ADR-045 Sentry+OTel coexistence: OTel SDK is initialised by `src/instrumentation.ts`
-  // BEFORE this runs and provides all HTTP/Express/Postgres/Redis instrumentation. Two
-  // settings prevent Sentry from duplicating that work (previously stacked ~21 finish
-  // listeners on every ServerResponse → MaxListenersExceededWarning):
+  // ADR-045 Sentry+OTel coexistence — boot ordering (post-R2, 2026-05-19):
+  //   Sentry init runs first (`src/instrumentation.ts:10`), OTel NodeSDK starts after
+  //   (`src/instrumentation.ts:11`). Sentry-first guarantees that errors thrown by OTel
+  //   auto-instrumentation setup are captured. The two settings below prevent Sentry
+  //   from duplicating the work OTel performs (previously stacked ~21 finish listeners
+  //   on every ServerResponse → MaxListenersExceededWarning):
   //   1. `skipOpenTelemetrySetup: true` — Sentry won't create its OWN OTel NodeSDK
   //   2. `getDefaultIntegrationsWithoutPerformance()` — drops ~25 perf integrations
   //      (Express/Postgres/Redis/Kafka) that mirror OTel auto-instrumentations 1:1.
@@ -43,8 +45,10 @@ export const initSentry = (): void => {
     dsn: env.sentry.dsn,
     environment: env.sentry.environment,
     release: env.sentry.release,
+    tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/],
     tracesSampleRate: env.sentry.tracesSampleRate,
-    profilesSampleRate: env.sentry.profilesSampleRate,
+    profileSessionSampleRate: env.sentry.profileSessionSampleRate,
+    profileLifecycle: 'trace',
     skipOpenTelemetrySetup: true,
     integrations: [...Sentry.getDefaultIntegrationsWithoutPerformance()],
     sendDefaultPii: false,
@@ -57,7 +61,8 @@ export const initSentry = (): void => {
     environment: env.sentry.environment,
     release: env.sentry.release,
     tracesSampleRate: env.sentry.tracesSampleRate,
-    profilesSampleRate: env.sentry.profilesSampleRate,
+    profileSessionSampleRate: env.sentry.profileSessionSampleRate,
+    tracePropagationTargetsCount: 2,
   });
 };
 

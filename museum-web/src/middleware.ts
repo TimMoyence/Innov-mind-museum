@@ -160,6 +160,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all paths except static files and API
-    '/((?!_next/static|_next/image|favicon.ico|images|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images|api|monitoring).*)',
   ],
 };

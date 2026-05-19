@@ -193,7 +193,7 @@ while IFS= read -r lib; do
 
   REASONS=""
   if [ "$current_version" != "unknown" ] && [ "$cached_version" != "" ] && [ "$current_version" != "$cached_version" ]; then
-    REASONS+="version-drift($cached_version→$current_version) "
+    REASONS+="version-drift(${cached_version}→${current_version}) "
   fi
   if [ -z "$cached_fetched" ] || [ "$cached_fetched" = "null" ]; then
     REASONS+="never-fetched "

@@ -199,6 +199,10 @@ Forbidden actions:
     { "req": "R1", "ref": "spec.md §3", "implAt": "file:line", "status": "PASS|GAP" }
   ],
   "findings": {
+    // CANONICAL SCHEMA — object-of-arrays form below is required. Flat-array form
+    // (findings: [{ severity, ... }]) is DEPRECATED and only ingested by
+    // quality-scores.sh for backward compatibility (severity → bucket mapping
+    // documented in that script).
     "blocker":   [{ "fileLine": "src/x.ts:42", "problem": "...", "ref": "UFR-007", "fix": "..." }],
     "important": [{ "fileLine": "src/x.ts:88", "problem": "...", "why": "...", "fix": "..." }],
     "nit":       [{ "fileLine": "src/x.ts:120", "suggestion": "..." }]

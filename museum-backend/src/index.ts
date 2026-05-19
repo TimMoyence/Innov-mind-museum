@@ -43,7 +43,6 @@ import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { shutdownLangfuse } from '@shared/observability/langfuse.client';
 import { setMetricsDataSource } from '@shared/observability/metrics-context';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
-import { initSentry } from '@shared/observability/sentry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
 
@@ -458,8 +457,6 @@ function logStartupFailure(error: unknown): void {
 
 /** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
-  initSentry();
-
   // Fail fast on unsafe deployment topology (multi-instance + no shared Redis in prod).
   // Must run BEFORE any external connection so the pod fails its readiness probe.
   assertDeploymentInvariants(env, { logger });

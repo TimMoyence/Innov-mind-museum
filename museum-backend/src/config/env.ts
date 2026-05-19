@@ -240,7 +240,7 @@ const env: AppEnv = {
         environment: nodeEnv,
         release: resolvedAppVersion === 'unknown' ? '1.0.0' : resolvedAppVersion,
         tracesSampleRate: toNumber(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
-        profilesSampleRate: toNumber(process.env.SENTRY_PROFILES_SAMPLE_RATE, 0),
+        profileSessionSampleRate: toNumber(process.env.SENTRY_PROFILE_SESSION_SAMPLE_RATE, 0),
       }
     : undefined,
   // JUSTIFIED: OTel heavy in local dev without collector — explicit opt-in.

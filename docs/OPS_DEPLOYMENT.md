@@ -547,6 +547,20 @@ Push to `main` after staging validation.
 5. Sentry release
 6. Post-deploy smoke test
 
+### Pre-deploy boot-sequence check
+
+Before running step 1 (image build), run `cd museum-backend && pnpm dev` locally and confirm the log line `sentry_initialized` appears BEFORE `opentelemetry_initialized` in the boot output.
+
+Rationale: per parent run R2 (Sentry+OTel coexistence invariant, `museum-backend/src/instrumentation.ts:10-11`) Sentry MUST init before OTel so that any error thrown by OTel auto-instrumentation setup is captured by Sentry. A reversed ordering silently drops boot-time observability errors.
+
+Acceptance one-liner:
+
+```bash
+pnpm dev 2>&1 | grep -nE 'sentry_initialized|opentelemetry_initialized' | head -2
+```
+
+Expected: `sentry_initialized` listed first, then `opentelemetry_initialized`.
+
 ### Production verification
 
 ```bash

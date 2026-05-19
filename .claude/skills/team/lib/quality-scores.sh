@@ -70,6 +70,13 @@ trap release_lock EXIT
 
 ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+# Findings tally supports TWO shapes for backward compatibility:
+#   - canonical (per reviewer.md): { blocker: [...], important: [...], nit: [...] }
+#   - legacy/flat (some early reviewer outputs): [{ severity: "blocker"|"high"|"medium"|"important"|"low"|"info"|"nit", ... }, ...]
+# Severity mapping for the flat-array shape:
+#   blocker → blocker
+#   medium | high | important → important
+#   low | info | nit → nit
 entry=$(jq -nc \
   --arg runId "$RUN_ID" \
   --arg ts "$ts" \
@@ -79,11 +86,19 @@ entry=$(jq -nc \
     ts:       $ts,
     verdict:  $review[0].verdict,
     scores:   $review[0].scoresOnFiveAxes,
-    findingsCount: {
-      blocker:   ($review[0].findings.blocker   // [] | length),
-      important: ($review[0].findings.important // [] | length),
-      nit:       ($review[0].findings.nit       // [] | length)
-    }
+    findingsCount: (
+      # dual-shape: ($review[0].findings | type) == "array" branch vs object-of-arrays canonical branch
+      ($review[0].findings // {}) as $f
+      | if ($f | type) == "array" then
+          { blocker:   [$f[] | select(.severity == "blocker")]                                                | length,
+            important: [$f[] | select(.severity == "medium" or .severity == "high" or .severity == "important")] | length,
+            nit:       [$f[] | select(.severity == "low" or .severity == "info" or .severity == "nit")]       | length }
+        else
+          { blocker:   ($f.blocker   // [] | length),
+            important: ($f.important // [] | length),
+            nit:       ($f.nit       // [] | length) }
+        end
+    )
   }')
 
 new_history=$(jq --argjson e "$entry" '. += [$e] | (if length > 200 then .[-200:] else . end)' "$SCORES_FILE")

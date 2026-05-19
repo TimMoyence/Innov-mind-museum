@@ -9,7 +9,8 @@ import {
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  tracesSampleRate: 0.1,
+  tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/],
+  tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1,
   environment: process.env.NODE_ENV,
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
   sendDefaultPii: false,
@@ -17,3 +18,5 @@ Sentry.init({
   beforeBreadcrumb: (breadcrumb) =>
     shouldDropBreadcrumb(breadcrumb as ScrubbableBreadcrumb) ? null : breadcrumb,
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
