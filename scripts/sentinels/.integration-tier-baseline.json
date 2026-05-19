@@ -59,6 +59,11 @@
       "path": "museum-backend/tests/integration/chat/rerank/multilingual-bench.test.ts",
       "reason": "C9.13 V1 — multilingual rerank benchmark scaffold. Reads tests/fixtures/rerank-multilingual.json from disk, computes baseline nDCG@5 per locale, asserts scores ∈ [0,1] (sanity) + logs a markdown summary to stdout for human review. No DB, no outbound HTTP, no orchestrator — V1 only exercises the local nDCG@5 helper against the fixture (NullRerankerAdapter always throws → baseline-only path). Lives under tests/integration/ because V2 (C9.13.1) will swap in the real reranker adapter and assert +5pt nDCG@5 uplift on ≥4/6 locales — at that point the file will import the adapter wiring and satisfy the tier signature naturally; this exemption will then be removed.",
       "approved_by": "C9.13-spec-D4"
+    },
+    {
+      "path": "museum-backend/tests/integration/auth/rate-limit-zod-400-no-bump.integration.test.ts",
+      "reason": "Batch A / Cluster 5 T1.5 R6 — Express smoke test boots createRouteTestApp() (bare Express harness, no DB/Redis) and sends malformed POSTs to the 8 enumerated auth+chat route sites to assert that validateBody short-circuits BEFORE the rate-limiter mutates its in-memory bucket (asserted via getBucketCountForKey test-only helper). No real infra boundary crossed — same pattern as chat-api.smoke.integration.test.ts and compare.route.test.ts.",
+      "approved_by": "Batch-A-spec-R6"
     }
   ]
 }
