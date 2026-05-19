@@ -168,6 +168,7 @@ describe('langfuse.client — getLangfuse', () => {
     class FakeLangfuseCtor {
       public readonly cfg: Record<string, unknown>;
       public shutdownAsync = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
+      public on = jest.fn<() => void, [string, (...args: unknown[]) => void]>(() => () => {});
       constructor(cfg: Record<string, unknown>) {
         this.cfg = cfg;
         constructorSpy(cfg);
@@ -232,6 +233,7 @@ describe('langfuse.client — shutdownLangfuse', () => {
     const shutdownAsync = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
     class FakeLangfuseCtor {
       public shutdownAsync = shutdownAsync;
+      public on = jest.fn<() => void, [string, (...args: unknown[]) => void]>(() => () => {});
     }
     jest.doMock('langfuse', () => ({ Langfuse: FakeLangfuseCtor }));
 
@@ -264,6 +266,7 @@ describe('langfuse.client — shutdownLangfuse', () => {
     const shutdownAsync = jest.fn<Promise<void>, []>().mockRejectedValue(failure);
     class FakeLangfuseCtor {
       public shutdownAsync = shutdownAsync;
+      public on = jest.fn<() => void, [string, (...args: unknown[]) => void]>(() => () => {});
     }
     jest.doMock('langfuse', () => ({ Langfuse: FakeLangfuseCtor }));
 

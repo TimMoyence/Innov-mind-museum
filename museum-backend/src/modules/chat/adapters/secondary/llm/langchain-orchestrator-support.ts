@@ -82,7 +82,7 @@ export interface ChatModel {
    */
   withStructuredOutput?<T>(
     schema: z.ZodType<T>,
-    opts?: { name?: string; includeRaw?: boolean },
+    opts?: { name?: string; includeRaw?: boolean; strict?: boolean },
   ): {
     invoke(
       messages: unknown,
@@ -250,16 +250,17 @@ export const toModel = (): ChatModel | null => {
       configuration: {
         baseURL: 'https://api.deepseek.com/v1',
       },
-      openAIApiKey: env.llm.deepseekApiKey,
+      apiKey: env.llm.deepseekApiKey,
       model: env.llm.model,
       temperature: env.llm.temperature,
       maxTokens: env.llm.maxOutputTokens,
+      streamUsage: false,
     });
   }
 
   if (env.llm.openAiApiKey) {
     return new ChatOpenAI({
-      openAIApiKey: env.llm.openAiApiKey,
+      apiKey: env.llm.openAiApiKey,
       model: env.llm.model,
       temperature: env.llm.temperature,
       maxTokens: env.llm.maxOutputTokens,

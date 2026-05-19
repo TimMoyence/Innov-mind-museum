@@ -59,6 +59,13 @@ export function getLangfuse(): Langfuse | null {
     flushAt: 10,
     flushInterval: 5_000,
   });
+  // TD-LF-04 — subscribe to SDK 'error' events so silent network/auth drops are
+  // surfaced once (warn-level, fail-open never bubbles to chat path).
+  _client.on('error', (err: unknown) => {
+    logger.warn('langfuse_sdk_error', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
   return _client;
 }
 

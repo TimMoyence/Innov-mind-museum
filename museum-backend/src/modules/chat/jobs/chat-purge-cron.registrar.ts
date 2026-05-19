@@ -105,6 +105,13 @@ function spawnPurgeWorker(dataSource: DataSource, config: ChatPurgeCronConfig): 
       jobId: job?.id,
     });
   });
+  // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md §3 DO).
+  worker.on('error', (err) => {
+    captureExceptionWithContext(err, {
+      queue: CHAT_PURGE_QUEUE_NAME,
+      kind: 'worker_error',
+    });
+  });
 
   return worker;
 }

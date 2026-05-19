@@ -108,7 +108,7 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
       expect(schemaArg).toBeDefined();
       expect(typeof (schemaArg as z.ZodTypeAny).parse).toBe('function');
       expect(typeof (schemaArg as z.ZodTypeAny).safeParse).toBe('function');
-      expect(optsArg).toEqual({ name: 'JudgeDecision' });
+      expect(optsArg).toEqual({ name: 'JudgeDecision', strict: true });
     });
 
     it('passes [SystemMessage(JUDGE_SYSTEM_PROMPT), HumanMessage(user)] to invoke', async () => {

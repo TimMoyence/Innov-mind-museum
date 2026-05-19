@@ -20,7 +20,10 @@ export const httpMetricsMiddleware: RequestHandler = (req, res, next) => {
       typeof routeVal.path === 'string'
         ? (routeVal as { path: string }).path
         : undefined;
-    const route = routePath ?? req.path;
+    // TD-PC-01 — fall back to literal 'unmatched' (NOT req.path) to bound
+    // Prometheus label cardinality. Attacker probing /api/<random> would
+    // otherwise explode storage; PATTERNS.md prom-client §3.
+    const route = routePath ?? 'unmatched';
     httpRequestsTotal.inc({ route, status: String(res.statusCode), method: req.method });
     httpRequestDurationSeconds.observe({ route, method: req.method }, durationS);
   });

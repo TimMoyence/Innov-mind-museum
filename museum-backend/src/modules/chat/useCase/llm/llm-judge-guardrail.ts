@@ -123,7 +123,10 @@ export const judgeWithLlm = async (
 
   const startedAt = Date.now();
   try {
-    const structured = model.withStructuredOutput(JudgeDecisionSchema, { name: 'JudgeDecision' });
+    const structured = model.withStructuredOutput(JudgeDecisionSchema, {
+      name: 'JudgeDecision',
+      strict: true,
+    });
     const signal = AbortSignal.timeout(timeoutMs);
     const messages = [new SystemMessage(JUDGE_SYSTEM_PROMPT), new HumanMessage(message)];
     // C9.5 — `ChatModel.withStructuredOutput` return type is now a union

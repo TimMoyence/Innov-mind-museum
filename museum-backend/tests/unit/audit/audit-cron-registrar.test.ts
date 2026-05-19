@@ -194,14 +194,17 @@ describe('registerAuditCron — happy path', () => {
     expect(capturedWorker?.options).toEqual({ connection: CONNECTION, concurrency: 1 });
   });
 
-  it('wires the worker `failed` event handler (kills L116 StringLiteral)', async () => {
+  it('wires the worker `failed` and `error` event handlers (kills L116 StringLiteral; TD-BMQ-01)', async () => {
     const queue = makeQueueMock();
     await registerAuditCron(asQueue(queue), FAKE_DATA_SOURCE, { connection: CONNECTION });
 
-    expect(capturedWorker?.onSpy).toHaveBeenCalledTimes(1);
-    const [event, handler] = capturedWorker!.onSpy.mock.calls[0] as [string, unknown];
-    expect(event).toBe('failed');
-    expect(handler).toBeInstanceOf(Function);
+    expect(capturedWorker?.onSpy).toHaveBeenCalledTimes(2);
+    const events = capturedWorker!.onSpy.mock.calls.map((c) => c[0] as string);
+    expect(events).toContain('failed');
+    expect(events).toContain('error');
+    capturedWorker!.onSpy.mock.calls.forEach((c) => {
+      expect(c[1]).toBeInstanceOf(Function);
+    });
   });
 });
 

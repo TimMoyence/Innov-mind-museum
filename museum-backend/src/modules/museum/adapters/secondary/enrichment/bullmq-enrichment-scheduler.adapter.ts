@@ -101,6 +101,13 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
         jobId: job?.id,
       });
     });
+    // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md §3 DO).
+    this.worker.on('error', (err) => {
+      captureExceptionWithContext(err, {
+        queue: ENRICHMENT_SCHEDULER_QUEUE_NAME,
+        kind: 'worker_error',
+      });
+    });
   }
 
   /** Best-effort on each step so a failure draining one resource doesn't leak the others. */

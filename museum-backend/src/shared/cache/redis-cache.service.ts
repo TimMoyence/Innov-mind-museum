@@ -18,6 +18,9 @@ export class RedisCacheService implements CacheService {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
       enableReadyCheck: false,
+      // TD-IO-01 / TD-IO-02 — bounded backoff + READONLY recovery (PATTERNS.md ioredis §3).
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+      reconnectOnError: (err) => (err.message.includes('READONLY') ? 2 : false),
       ...(options.password ? { password: options.password } : {}),
     });
     this.defaultTtl = options.defaultTtlSeconds ?? 300;

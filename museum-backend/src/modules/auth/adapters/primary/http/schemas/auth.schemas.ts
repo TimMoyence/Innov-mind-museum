@@ -90,7 +90,7 @@ export const updateContentPreferencesSchema = z.object({
 
 // Spec C T2.4 — `null` resets to env default. Unknown voice / non-string / missing → 400.
 export const updateTtsVoiceSchema = z.object({
-  voice: z.union([z.null(), z.enum(TTS_VOICES)]),
+  voice: z.enum(TTS_VOICES).nullable(),
 });
 
 // TD-2 — All fields optional; `.refine` blocks empty body. `defaultLocale`

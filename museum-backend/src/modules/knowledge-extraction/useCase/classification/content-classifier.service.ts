@@ -68,8 +68,8 @@ export class ContentClassifierService implements ContentClassifierPort {
 
   constructor(openaiApiKey: string, modelName: string) {
     const llm = new ChatOpenAI({
-      openAIApiKey: openaiApiKey,
-      modelName,
+      apiKey: openaiApiKey,
+      model: modelName,
       temperature: 0,
     });
     this.model = llm.withStructuredOutput(classificationSchema);

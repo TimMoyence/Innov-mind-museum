@@ -18,7 +18,7 @@ export const buildAiTestOrchestrator = (): LangChainChatOrchestrator => {
   }
 
   const model = new ChatOpenAI({
-    openAIApiKey: apiKey,
+    apiKey,
     model: AI_MODEL,
     temperature: 0.3,
   });

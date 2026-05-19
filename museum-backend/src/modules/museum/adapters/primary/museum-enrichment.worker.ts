@@ -235,6 +235,13 @@ export class MuseumEnrichmentWorker {
       logger.info('museum_enrichment_job_completed', { jobId: job.id });
     });
     this.worker.on('failed', onMuseumEnrichmentJobFailed);
+    // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md §3 DO).
+    this.worker.on('error', (err) => {
+      captureExceptionWithContext(err, {
+        queue: MUSEUM_ENRICHMENT_QUEUE_NAME,
+        kind: 'worker_error',
+      });
+    });
   }
 
   /** Idempotent graceful shutdown. */

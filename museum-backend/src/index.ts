@@ -68,6 +68,11 @@ const createRedisConnectionOptions = () =>
     password: env.redis.password,
     maxRetriesPerRequest: null,
     enableOfflineQueue: false,
+    // TD-IO-01 — bounded exponential backoff (PATTERNS.md ioredis §3 DO).
+    retryStrategy: (times: number) => Math.min(times * 50, 2000),
+    // TD-IO-02 — ElastiCache failover defense: force reconnect on READONLY
+    // primary→replica role flip and resend the command (return 2).
+    reconnectOnError: (err: Error) => (err.message.includes('READONLY') ? (2 as const) : false),
   }) as const;
 
 /** Initializes cache and rate-limit Redis connections from environment config. */
@@ -91,6 +96,9 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
       lazyConnect: false,
       enableReadyCheck: false,
       connectionName: 'rate-limit',
+      // TD-IO-01 / TD-IO-02 — bounded backoff + READONLY recovery (PATTERNS.md ioredis §3).
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+      reconnectOnError: (err) => (err.message.includes('READONLY') ? 2 : false),
       ...(redisPassword ? { password: redisPassword } : {}),
     });
     redisClient.on('error', (err) => {

@@ -285,7 +285,7 @@ export const EXPLANATION_RECOURSE_TYPES = ['self-retry', 'signal', 'support'] as
 const ExplanationRecourseSchema = z.object({
   type: z.enum(EXPLANATION_RECOURSE_TYPES),
   description: z.string().max(200),
-  supportUrl: z.union([z.url(), z.null()]),
+  supportUrl: z.url().nullable(),
 });
 
 const ExplanationProvidedBySchema = z.object({
@@ -296,11 +296,11 @@ const ExplanationProvidedBySchema = z.object({
 /** Wire schema for `GET /api/chat/messages/:id/explanation`. */
 export const ExplanationResponseSchema = z.object({
   decision: z.enum(['allowed', 'blocked']),
-  category: z.union([z.enum(EXPLANATION_CATEGORIES), z.null()]),
+  category: z.enum(EXPLANATION_CATEGORIES).nullable(),
   reasonSummary: z.string().max(200),
   recourse: ExplanationRecourseSchema,
-  auditRef: z.union([z.uuid(), z.null()]),
-  providedBy: z.union([ExplanationProvidedBySchema, z.null()]),
+  auditRef: z.uuid().nullable(),
+  providedBy: ExplanationProvidedBySchema.nullable(),
   decisionAt: z.iso.datetime({ offset: true }),
   policyVersion: z.string().min(1).max(64),
 });

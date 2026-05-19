@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 
 import { AppDataSource } from '@data/db/data-source';
 import { User } from '@modules/auth/domain/user/user.entity';
+import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 
 /**
  * Idempotent seed for the post-deploy smoke-test account.
@@ -40,7 +41,9 @@ async function main(): Promise<void> {
   await AppDataSource.initialize();
   const repo = AppDataSource.getRepository(User);
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  // TD-BC-03 — central BCRYPT_ROUNDS instead of hardcoded literal to avoid
+  // drift on next cost bump.
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const now = new Date();
 
   const existing = await repo.findOne({ where: { email } });

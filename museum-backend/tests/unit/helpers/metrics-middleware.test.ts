@@ -1,5 +1,5 @@
+import { httpRequestsTotal, registry } from '@shared/observability/prometheus-metrics';
 import { httpMetricsMiddleware, metricsHandler } from '@shared/observability/metrics-middleware';
-import { registry } from '@shared/observability/prometheus-metrics';
 
 import type { Request, Response } from 'express';
 
@@ -23,6 +23,30 @@ describe('metrics-middleware', () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(finishHandlers.length).toBe(1);
+  });
+
+  it('TD-PC-01 — unmatched routes emit `route="unmatched"` (not req.path) to bound cardinality', async () => {
+    const finishHandlers: (() => void)[] = [];
+    const req = {
+      method: 'GET',
+      path: '/api/foo/random-attacker-probe',
+      route: undefined,
+    } as unknown as Request;
+    const res = {
+      statusCode: 404,
+      on: (event: string, cb: () => void) => {
+        if (event === 'finish') finishHandlers.push(cb);
+      },
+    } as unknown as Response;
+    const next = jest.fn();
+
+    httpMetricsMiddleware(req, res, next);
+    finishHandlers.forEach((cb) => cb());
+
+    const labelValue = await httpRequestsTotal.get();
+    const seenRoutes = labelValue.values.map((v) => v.labels.route);
+    expect(seenRoutes).toContain('unmatched');
+    expect(seenRoutes).not.toContain('/api/foo/random-attacker-probe');
   });
 
   it('metricsHandler responds with Prometheus text/plain content type', async () => {

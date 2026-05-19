@@ -99,6 +99,11 @@ function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
   app.use(requestIdMiddleware);
+  // TD-HEL-01 — helmet mounted EARLY so 429 / 500 / preflight responses ship
+  // with CSP / HSTS / X-Content-Type-Options / X-Frame-Options. Previously
+  // mounted after rateLimit → 429 leaked plaintext bodies sans headers
+  // (BLOCKER pre-V1). PATTERNS.md helmet §1.
+  app.use(helmet(buildHelmetOptions(isProd)));
   app.use(requestLoggerMiddleware);
   app.use(tracePropagationMiddleware);
 
@@ -128,8 +133,6 @@ function applyGlobalMiddleware(app: Express): void {
       keyGenerator: byIp,
     }),
   );
-
-  app.use(helmet(buildHelmetOptions(isProd)));
   app.use(
     compression({
       filter: (req, res) => {

@@ -101,6 +101,15 @@ export async function registerAuditCron(
   );
 
   worker.on('failed', onAuditCronJobFailed);
+  // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md
+  // §3 DO): without it an unhandled exception terminates the process.
+  worker.on('error', (err) => {
+    captureExceptionWithContext(err, {
+      queue: queue.name,
+      kind: 'worker_error',
+      schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
+    });
+  });
 
   return {
     stop: async () => {
