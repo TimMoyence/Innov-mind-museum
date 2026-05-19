@@ -1,5 +1,6 @@
 import { LogManager } from '@maplibre/maplibre-react-native';
 
+import { readEnvString } from '@/shared/lib/env';
 import { reportError } from '@/shared/observability/errorReporting';
 
 let bootstrapped = false;
@@ -33,6 +34,6 @@ export const bootstrapMapLibre = (): void => {
 // `app/_layout.tsx`, Jest keeps the worker alive after the suite ends
 // ("Jest did not exit one second after the test run has completed").
 // `JEST_WORKER_ID` is set by Jest on every worker; absent in app runtime.
-if (process.env.JEST_WORKER_ID === undefined) {
+if (readEnvString(process.env.JEST_WORKER_ID) === undefined) {
   bootstrapMapLibre();
 }
