@@ -12,8 +12,8 @@ interface MotionProps {
   [key: string]: unknown;
 }
 
-// Framer Motion relies on IntersectionObserver — stub motion elements with plain HTML
-vi.mock('framer-motion', () => ({
+// Motion (formerly framer-motion) relies on IntersectionObserver — stub motion elements with plain HTML
+vi.mock('motion/react', () => ({
   motion: {
     h2: function MotionH2({
       children,

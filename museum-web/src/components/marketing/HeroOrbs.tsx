@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 
 export default function HeroOrbs() {
   const { scrollYProgress } = useScroll();
@@ -10,8 +10,7 @@ export default function HeroOrbs() {
   const midY = useTransform(scrollYProgress, [0, 0.3], ['0%', '25%']);
   const fastY = useTransform(scrollYProgress, [0, 0.3], ['0%', '40%']);
 
-  const style = (y: typeof slowY) =>
-    shouldReduceMotion ? undefined : { y };
+  const style = (y: typeof slowY) => (shouldReduceMotion ? undefined : { y });
 
   return (
     <>

@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useRef, Children } from 'react';
-import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'motion/react';
 
 type AnimationVariant = 'slide' | 'scale' | 'fade' | 'blur-scale';
 

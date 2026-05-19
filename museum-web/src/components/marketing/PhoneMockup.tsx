@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useRef, useState, useCallback } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'motion/react';
 
 interface PhoneMockupProps {
   children: ReactNode;
@@ -97,7 +97,8 @@ export default function PhoneMockup({
           height: PHONE_HEIGHT * scale,
           maxWidth: '100%',
           borderRadius: OUTER_RADIUS * scale,
-          background: 'linear-gradient(145deg, var(--sem-device-chrome-frame-accent) 0%, var(--sem-device-chrome-frame-dark) 50%, var(--sem-device-chrome-frame) 100%)',
+          background:
+            'linear-gradient(145deg, var(--sem-device-chrome-frame-accent) 0%, var(--sem-device-chrome-frame-dark) 50%, var(--sem-device-chrome-frame) 100%)',
           padding: BEZEL_WIDTH * scale,
           boxShadow:
             floatingShadow ?? '0 20px 50px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.15)',

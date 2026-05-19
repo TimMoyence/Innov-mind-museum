@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import { motion, useMotionValueEvent, useScroll, useTransform } from 'motion/react';
 import type { Dictionary, Locale } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 

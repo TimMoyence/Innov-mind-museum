@@ -27,8 +27,8 @@
   "dependencies": {
     "@musaium/shared": "file:../packages/musaium-shared",
     "@sentry/nextjs": "^10.49.0",
-    "framer-motion": "^12.38.0",
     "maplibre-gl": "^5.23.0",
+    "motion": "^12.39.0",
     "next": "^15.5.18",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",

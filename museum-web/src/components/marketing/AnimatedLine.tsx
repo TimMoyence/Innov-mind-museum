@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 
 export default function AnimatedLine() {
   const ref = useRef<HTMLDivElement>(null);

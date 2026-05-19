@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useReducedMotion } from 'motion/react';
 
 export default function ScrollProgress() {
   const { scrollYProgress } = useScroll();

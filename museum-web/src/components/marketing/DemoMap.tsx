@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import maplibregl from 'maplibre-gl';
+import { Map, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const museums: [number, number][] = [
@@ -33,7 +33,7 @@ export default function DemoMap() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const map = new maplibregl.Map({
+    const map = new Map({
       container: mapRef.current,
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
       center: [2.3376, 48.862],
@@ -59,7 +59,7 @@ export default function DemoMap() {
         el.style.cursor = 'pointer';
         el.style.animation = 'pulse-marker 2s ease-in-out infinite';
 
-        new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+        new Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
       }
     });
 
@@ -131,7 +131,13 @@ export default function DemoMap() {
           style={{ transform: 'translate(-50%, -50%)' }}
           aria-hidden="true"
         >
-          <div style={{ position: 'relative', width: 'var(--spacing-3.5)', height: 'var(--spacing-3.5)' }}>
+          <div
+            style={{
+              position: 'relative',
+              width: 'var(--spacing-3.5)',
+              height: 'var(--spacing-3.5)',
+            }}
+          >
             <div
               style={{
                 position: 'absolute',

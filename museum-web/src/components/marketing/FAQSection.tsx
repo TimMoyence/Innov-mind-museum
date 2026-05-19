@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import AnimatedSection from '@/components/marketing/AnimatedSection';
 
 interface FAQSectionProps {
@@ -25,7 +25,9 @@ export default function FAQSection({ title, items }: FAQSectionProps) {
               <button
                 type="button"
                 className="flex w-full items-center justify-between py-5"
-                onClick={() => { setOpenIndex(openIndex === i ? null : i); }}
+                onClick={() => {
+                  setOpenIndex(openIndex === i ? null : i);
+                }}
                 aria-expanded={openIndex === i}
               >
                 <span className="text-left text-lg font-medium text-text-primary">

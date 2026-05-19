@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'motion/react';
 
 interface Message {
   role: string;
@@ -58,7 +58,10 @@ export default function DemoChat({ messages }: DemoChatProps) {
           >
             Art Session
           </p>
-          <p className="mt-0.5" style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs-)' }}>
+          <p
+            className="mt-0.5"
+            style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs-)' }}
+          >
             a213b2e3-e00...
           </p>
         </div>
