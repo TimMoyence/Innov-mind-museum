@@ -1501,7 +1501,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-HEL-01 — helmet mount AFTER rateLimit → 429 sans security headers (MEDIUM, BLOCKER pre-V1)
+## ✅ TD-HEL-01 — helmet mount AFTER rateLimit → 429 sans security headers (MEDIUM, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — helmet moved to immediately after requestIdMiddleware, before requestLogger + rateLimit. 429/500/preflight responses now ship with CSP/HSTS/X-Content-Type-Options/X-Frame-Options.
 
 **Context** : `museum-backend/src/app.ts:100-130` order = requestId → requestLogger → cors → rateLimit → helmet → compression. 429 responses ship sans CSP/HSTS/X-Content-Type-Options/X-Frame-Options.
 
@@ -1511,7 +1513,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-HEL-02 — CSP `connect-src: ['self']` trop narrow → admin/Sentry browser broken (HIGH, BLOCKER pre-V1)
+## ✅ TD-HEL-02 — CSP `connect-src: ['self']` trop narrow → admin/Sentry browser broken (HIGH, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 — `connectSrc` extended to `['self', 'https://*.sentry.io', 'https://o*.ingest.sentry.io', 'https://api.openai.com', 'https://api.stripe.com']` in `museum-backend/src/app.ts` buildHelmetOptions. Sentry browser SDK + future admin OpenAI test prompt page + Stripe V1.1 billing all whitelisted. CSP Evaluator validation TBD pre-merge (V1.1 polish).
 
 **Context** : Project ships Sentry browser SDK (admin HTML), OTel collector, OpenAI/DeepSeek API. None whitelisted in CSP. Silent runtime breakage of fetch/XHR/WS beyond same-origin.
 
@@ -1521,7 +1525,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-HEL-03 — CSP `img-src` missing CloudFront/museum.com domains (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-HEL-03 — CSP `img-src` missing CloudFront/museum.com domains (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-19 — `imgSrc` extended with `https://*.cloudfront.net`, `https://musaium.com`, `https://*.musaium.com`, `https://upload.wikimedia.org`. Verified against `museum-backend/src/modules/daily-art/artworks.data.ts` Wikimedia thumbnails. S3 + data: kept. CSP `report-to` directive deferred to V1.1 polish per HANDOFF §7.3.
 
 **Context** : Artwork thumbnails via CloudFront ou museum-canonical sont CSP-blocked. Daily-art recall corpus refs potentially load external sources.
 

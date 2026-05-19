@@ -82,8 +82,32 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
         // 'unsafe-inline' kept for style-src as a stop-gap; remove once admin
         // CSS migrates off inline tag styles (Phase 2 follow-up).
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https://*.s3.amazonaws.com', 'https://*.amazonaws.com'],
-        connectSrc: ["'self'"],
+        // TD-HEL-03 — extend imgSrc allowlist : CloudFront (deferred V1.1 CDN),
+        // musaium.com canonical + subdomains, Wikimedia upload (artwork
+        // thumbnails sourced from `museum-backend/src/modules/daily-art/
+        // artworks.data.ts`). S3 entries kept for direct presigned URLs.
+        imgSrc: [
+          "'self'",
+          'data:',
+          'https://*.s3.amazonaws.com',
+          'https://*.amazonaws.com',
+          'https://*.cloudfront.net',
+          'https://musaium.com',
+          'https://*.musaium.com',
+          'https://upload.wikimedia.org',
+        ],
+        // TD-HEL-02 — extend connectSrc so the admin SPA Sentry browser SDK +
+        // OpenAI direct browser calls (future admin "test prompt" page) +
+        // Stripe (V1.1 billing) can reach their origins. Without these the
+        // Sentry replay+error transport gets CSP-blocked silently in prod
+        // (BLOCKER pre-V1 once admin HTML ships).
+        connectSrc: [
+          "'self'",
+          'https://*.sentry.io',
+          'https://o*.ingest.sentry.io',
+          'https://api.openai.com',
+          'https://api.stripe.com',
+        ],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
         objectSrc: ["'none'"],
