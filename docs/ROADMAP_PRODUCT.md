@@ -1,20 +1,28 @@
 # Roadmap Produit — Musaium
 
-> **Vivante.** Réécrite à chaque sprint (4 semaines). Snapshots précédents = git history.
+> **Source de vérité unique.** Vivante, réécrite à chaque sprint (4 semaines). Snapshots précédents = git history.
 > **Sprint courant :** 2026-05-03 → 2026-06-01 (launch day).
 > **Horizon :** 1 mois NOW + 1 trimestre NEXT/LATER.
 >
-> **📑 Audit chat backend 360° (2026-05-16)** — Référence sourçée file:line + 80+ WebSearches + 36 sources externes : `.claude/skills/team/team-reports/2026-05-16-chat-backend-audit-360/roadmap/NORTHSTAR.md` (8 agents read-only : architecture / LangChain / prompting+guardrails / perf+cost / voice / RAG / observability / produit-UX). Items issus de cet audit consolidés ci-dessous dans **C9** (NOW pré-launch chat hardening), **W6+W7** (NEXT chat modernization V1.1), et **Moonshot V1.2+** (LATER B2B-ready + 20-ans-avance). ROADMAP_PRODUCT reste source unique de vérité pour /team workflow (auto-consolidation T1.6).
+> **📑 Audit chat backend 360° (2026-05-16)** — `.claude/skills/team/team-reports/2026-05-16-chat-backend-audit-360/roadmap/NORTHSTAR.md` (8 agents read-only). Items consolidés ci-dessous dans **C9** (NOW chat hardening), **W6+W7** (NEXT V1.1), **Moonshot V1.2+** (LATER).
+>
+> **🔬 Audit fresh-context 50 sous-agents (2026-05-20)** — voir §"P0 Launch Readiness" ci-dessous. A retiré 4 documents satellites obsolètes (`ROADMAP_REMEDIATION_*`, `AUDIT_FINDINGS_*`) en consolidant tout ici. Inflation x6-x8 détectée vs les claims audit antérieurs ; 22 claims P0 falsifiés vérifiés en code. Cette roadmap = source unique post-consolidation.
 
 ---
 
-## North Star
+## North Star (re-cadré 2026-05-20)
 
-**Musaium est l'assistant balade culturelle.**
+**Musaium V1 (launch 2026-06-01) = AI Art Companion intra-musée + carnet de visite.**
 
-- Hors-musée ET intra-musée
+- **Intra-musée** : géoloc/QR détecte le musée (W1.5 shipped) → chat AI conversationnel sur les œuvres en photographiant + voice-first + multi-musées (W1.4 shipped, 3 pilots Bordeaux seedés) + audio description WCAG (C9.2 shipped) + transitions suggérées entre œuvres via prompt `suggestions[]` (W1.1 partiel) + carnet post-visite (C10.B1 shipped).
+- Hors-musée = mode dégradé (chat sur photos d'œuvres déjà visitées + recommandations basées sur carnet).
+
+**Musaium V2 = "Assistant balade culturelle hors-musée"** = walking guide pro-actif multi-POI avec chemin GPS + audio guide streaming (W1.2/W1.3 deferred — `features/walk/` n'existe pas, `museum_pois`/`walk_routes` tables absentes, infra multi-POI à construire).
+
+Pourquoi le re-cadrage (audit finding E4) : la position commerciale "assistant balade culturelle" pré-V1 était mensongère puisque `features/walk/` n'existe pas. V1 honnête = "art companion intra-musée intelligent multi-musées". V2 = la vision balade hors-musée originale, post-launch 6-10 sem si signaux KR2 positifs.
+
 - Multi-musées (pas une app par musée)
-- Voice-first (mains libres pendant la balade)
+- Voice-first (mains libres pendant la visite)
 - AI conversationnel contextuel (œuvres, lieux, histoire)
 
 ## Audience cible
@@ -22,36 +30,152 @@
 | Segment | Modèle | État |
 |---|---|---|
 | **B2C visiteur** | Freemium (3 sessions/mois free, abonnement Premium illimité) | Hypothèse — soft-paywall stub V1 (C6) pour valider data-driven |
-| **B2B musée** | Licence annuelle + co-branding optionnel | Hypothèse — pilotes à signer avant juin |
+| **B2B musée** | Licence annuelle + co-branding optionnel | 3 pilots Bordeaux contractés (Musée d'Aquitaine + CAPC + Cité du Vin) |
 | **Institutionnel** | Subvention culture / appel à projets | Backlog 2026 H2 |
 
 ---
 
-## OKR Q2-2026 (Mai-Juin)
+## OKR Q2-2026 (Mai-Juin) — re-cadré 2026-05-20
 
-**Objective :** Lancer Musaium V1 le 1er juin 2026 avec une expérience balade culturelle hors-musée multi-musées qui donne envie de revenir.
+**Objective :** Lancer Musaium V1 le 1er juin 2026 avec une expérience AI Art Companion intra-musée multi-musées qui donne envie de revenir + un pitch B2B prêt (image-compare + co-branding).
 
 | KR | Cible | Mesure |
 |---|---|---|
-| **KR1 — Pilotes B2B** | ≥3 musées contractés (LOI signée) avant 1er juin | Compte signatures |
-| **KR2 — Walk V1 NPS** | NPS post-balade ≥7/10 sur 50 sessions test | Survey in-app |
+| **KR1 — Pilotes B2B** | ≥3 musées contractés (LOI signée) avant 1er juin | 3 pilots Bordeaux seedés (confirmer LOI signature) |
+| **KR2 — Companion NPS** *(re-cadré : était "Walk V1 NPS", Walk hors-musée = V2)* | NPS post-session art companion ≥7/10 sur 50 sessions test | Survey in-app, mesurable via `review.rating` + Brevo follow-up |
 | **KR3 — Stabilité** | Crash-free ≥99.5% + chat p99 <5s + 0 P0 bug | Sentry + Langfuse + Grafana |
-| **KR4 — Adoption** | 100 visiteurs B2C inscrits semaine 1 post-launch | Analytics |
+| **KR4 — Adoption** | 100 visiteurs B2C inscrits semaine 1 post-launch | SQL `users` + telemetry funnel C6.5 (P0 à wirer) |
+
+---
+
+## P0 Launch Readiness (audit fresh-context 2026-05-20)
+
+> **Consolidation** : ce bloc remplace `docs/ROADMAP_REMEDIATION_*.md` (4 fichiers supprimés). Issu d'un audit 50 sous-agents fresh-context × 5 vagues (Wave A P0 launch / Wave B C9 shipped / Wave C cleanup / Wave D refactor / Wave E produit/légal) qui a challengé chaque claim du précédent remediation roadmap contre le code réel. Inflation systémique x6-x8 détectée. 22 claims P0 falsifiés. 7 items déjà shippés jamais cochés.
+>
+> **Cumul P0 honnête** : ~16-25h dev + ~3h30 Tim ops. Pas 100+ items "20/20 transversal".
+
+### P0.A — Bugs sécurité (dev ~6-8h)
+
+| ID | Item | Preuve code (audit) | Effort |
+|---|---|---|---|
+| [ ] **P0.A1** | **forgotPassword + login-handler emails clair-texte** (Sentry/Loki/Langfuse ingest) — créer `@shared/pii/extractEmailDomain.ts` + patcher 5 sites | `auth/useCase/forgotPassword.useCase.ts:33,53,60` + `login-handler.helpers.ts:65,75` (finding A1) | 45-60 min |
+| [ ] **P0.A2** | **DOB bypass exploitable curl direct** — drop `.optional()` + drop fallback `if (!dateOfBirth) return` + fix test qui enshrine le bug | `auth/adapters/.../auth.schemas.ts:15` + `register.useCase.ts:106` + `auth.route.test.ts:421-430` (finding A2) | 2-3 h (incl. ADR + OpenAPI regen + Maestro flow updated) |
+| [ ] **P0.A3** | **Sentry tag URL leak via `req.originalUrl`** — utiliser `scrubUrl` depuis `@musaium/shared` (helper canonique, PAS `redactQueryString` comme prétendu). Patcher 3 sites + ajouter `code` au `SENSITIVE_QUERY_KEYS` pour OAuth callback | `shared/middleware/error.middleware.ts:94,102,120` (finding A3) | 45-60 min |
+| [ ] **P0.A4** | **Langfuse leak via LangChain CallbackHandler `updateRoot:true`** — `LANGFUSE_ENABLED=true` en prod + payload brut emis. Utiliser `LangfuseCoreOptions.mask` SDK option native 3.38.20 → `mask: ({data}) => stripFreeText(data)` blacklist `data.input.messages[]`/`data.output.text`. **Pas subclass 4-8h comme prétendu** — `mask` native = ~50 LOC + tests | `shared/observability/langfuse-langchain.ts:61` + `langfuse.client.ts:55-61` (finding A4) | 30-60 min |
+| [ ] **P0.A5** | **Version drift Android** : `app.config.ts:121` literal `'1.2.3'` vs `package.json:4` `1.2.4` (propagé `Info.plist:24`, `build.gradle:98`). Dynamiser `version: require('./package.json').version as string` + sentinel `museum-frontend-version-sync.mjs` | finding A7 | 30-45 min |
+| [ ] **P0.A6** | **C9.4 cost circuit breaker fail-CLOSE wiring** : `LlmCostCircuitBreaker.canAttempt()` JAMAIS appelé (telemetry+gauge OK mais fail-OPEN). Wire `if (!await costBreaker.canAttempt()) throw` avant `invokeSection` dans `langchain.orchestrator.ts`. Update header docstring stale. **OU** documenter explicit "telemetry-only V1, fail-CLOSE V1.1" dans ADR-047 si pas le temps | `llm-cost-circuit-breaker.ts:5-7,107-114` + `langchain.orchestrator.ts:104-124,212` (finding B2) | 2-3 h |
+
+### P0.B — Ops Tim launch (~3h30 cumul)
+
+> **Honesty UFR-013** : aucun DPO (Délégué Protection Données) n'a été déclaré à la CNIL pour Musaium. L'audit légal (finding E3) conclut que l'**obligation RGPD Art.37 ne s'applique pas** au volume V1 (100 visiteurs S1 ≠ "large scale" au sens WP243). Donc rien à signer — auto-déclaration défensive reportée V1.1+ si pivot scale.
+> Distincts : **DPA = Data Processing Agreement** (contrat sub-processor Art.28.3) — ceux-là sont **obligatoires V1** dès qu'un sous-traitant reçoit du PII (Langfuse Cloud actif en prod). Tableau ci-dessous ne mélange pas DPO et DPA.
+
+| ID | Item | Effort |
+|---|---|---|
+| [ ] **P0.T1** | **PGP key réelle** Ed25519 2y → `museum-web/public/.well-known/pgp-key.txt` (remplace token `PGP_KEY_PLACEHOLDER_DO_NOT_SHIP`). Runbook prêt : `docs/operations/PGP_KEY_GENERATION.md`. + CI grep gate dans `ci-cd-web.yml` (sentinel n'existe pas malgré claim antérieur) | 30 min Tim + 5 min CI |
+| [ ] **P0.T2** | **Mailbox `security@musaium.com`** : alias OVH → Gmail Tim, smoke test mail entrant (RFC 9116 §2.5.3 Contact: MUST réel) | 10-30 min Tim |
+| [ ] **P0.T3** | **DPA Langfuse Cloud signature** + ajouter Langfuse à `docs/compliance/SUBPROCESSORS.md` (actuellement absent). C9.0 a shippé avec `LANGFUSE_ENABLED=true` en prod → DPA Art.28.3 obligatoire | 30-60 min Tim |
+| [ ] **P0.T4** | **DPA autres vendors** : OpenAI Trust Portal + Sentry PDF + Brevo + AWS console + OVH + Google Cloud (si activé). Tous self-serve. Archive PDFs dans `docs/legal/dpa-signed/` (à créer) | ~65 min sign + 45 min archive |
+| [ ] **P0.T5** | **C7.5 device TTS test backgrounded iPhone** : ouvrir chat → AI répond TTS → lock screen → audio continue ? Rappel : PR #258 a déjà shipped crash SIGABRT non testé device | 5-10 min Tim |
+| [ ] **P0.T6** | **CERT-FR vault 1Password** (volontaire, trust signal) | 15 min Tim |
+| [ ] **P0.T7** | **Renewal calendar 2027-04-15** (security.txt expires 2027-05-14) | 5 min Tim |
+
+### P0.C — Feature gate launch (dev ~10-15h)
+
+| ID | Item | Pourquoi launch-critical | Effort |
+|---|---|---|---|
+| [ ] **P0.F1** | **C3.3 exécution seed catalog initial** sur 3 pilots Bordeaux (Musée d'Aquitaine + CAPC + Cité du Vin) via `scripts/catalog-ingest.ts` shipped. **Sentinel S1.2 SigLIP `embedding_model_version` homogeneity** AVANT exec pour éviter pollution dual-version. Cohérence pilote à clarifier (`seed-pilot-museums.sh` cible Paris, `seed-pilot-artwork-knowledge.ts` cible Bordeaux — incohérence à fixer avant exec) | C3 image compare = différentiateur core B2B ; sans seed, similarity service retourne `no_visual_neighbor` systématique = théâtre | 5-15 min wall-clock ONNX local + 1h validation + decision pilote ~2h |
+| [ ] **P0.F2** | **C6.5 telemetry funnel conversion paywall** : install PostHog self-hosted OU Plausible + 3 events FE (`paywall_modal_shown`, `paywall_cta_clicked`, `paywall_email_captured`) + 1 BE (`quota_exceeded`) + consent gate GDPR + dashboard simple | KR4 mesurable + décision Stripe NEXT débloquée. Code admet `user-tier.ts:5` "the flip is the canonical premium grant until R1 funnel data unblocks Stripe" | **6-10h** (pas 4-6h prétendus) |
+| [ ] **P0.F3** | **C7.4 §3 `.env` corrections RELEASE_CHECKLIST.md** : `CORS_ORIGINS`, `BREVO_API_KEY`, `APP_VERSION`, `GOOGLE_OAUTH_CLIENT_ID`, drop dead vars | bloque prod (release checklist 111/112 GO, reste §3) | 30-60 min |
+
+### P0.D — Walk V1 décision éditoriale (à acter Tim avant tout autre travail)
+
+Audit finding E4 : la position "assistant balade culturelle" pré-V1 était mensongère puisque `features/walk/` n'existe pas. **3 options à choisir** :
+
+| Option | Conséquence | Effort |
+|---|---|---|
+| ☐ **A. Re-cadrer V1 = "AI Art Companion intra-musée" (déjà fait dans NorthStar ci-dessus)** | Honest. Pas de slip launch. Landing/ASO/pitch B2B à éditer. Walk hors-musée → V2 (sprint juin-août). | 4-8h Tim copywriting + landing edits |
+| ☐ **B. Slip launch 4-6 sem + livrer W1.1+W1.2+W1.3 minimum** | Risque cash runway + B2B pilot dates. | ~3-4 sem dev solo |
+| ☐ **C. MVP Walk symbolique** (auto-suggestion œuvre suivante via proximité GPS, déjà partiel via `suggestions[]` + W1.6) | Walk V1 = "stub intra-musée" annoncé honest dans CGU. Carnet + suggestions ré-emballées. | 2-3j dev |
+
+**Recommandation honnête : option A** (NorthStar re-cadré ci-dessus). KR2 NPS reste mesurable sur art companion. Promote Walk hors-musée → V2 (NEXT-V2 §ci-dessous).
+
+### P0.E — Items déjà shippés cochés honest (UFR-013 fix)
+
+Au 2026-05-20, audit a confirmé 7 items prétendus `[ ]` dans NOW Phase 1 sont en réalité SHIPPED :
+
+- **C9.2** imageDescription audio-desc → shipped 2026-05-17 (`useChatSession.ts:99-124`)
+- **C9.3b** AI Act Art.50 badge persistant → shipped `ChatHeader.tsx:77-93` + i18n 8 locales (over-compliance : AI Act applicable 2026-08-02, pas launch 2026-06-01)
+- **C9.10** voiceMode prompt branch → shipped `llm-sections.ts:149,203` + cache key
+- **C9.12a** MP3 → Opus → shipped `text-to-speech.openai.ts:42`
+- **C9.12b** S3 decouple → shipped `chat-media.service.ts:249-275` fire-and-forget
+- **C9.16** SSE residuals → déjà absent de `src/` (résidus dist+coverage stale auto-régénérables)
+- **C9.18** deep-link artworkId → shipped en fallback `/museum-detail` (route canonique TD-NEW V1.1)
+
+Ces ticks ont été appliqués aux sections C9 ci-dessous. **Total Phase A P0 strict réel après audit = ~3 items ouverts** (P0.A6 cost breaker fail-CLOSE, P0.F1 seed catalog, P0.F2 telemetry funnel) — pas les 8 prétendus dans la version pré-audit.
+
+### P0.F — Claims falsifiés à NE PLUS retenter
+
+Liste verbatim (les preuves code détaillées sont dans le commit message du squash `chore(roadmap): consolider`) :
+
+- ❌ "PostGIS 8 fichiers à patcher + Dockerfile custom 6-8h" → 1 seul fichier réel `ci-cd-backend.yml:319 postgres:16 → pgvector/pgvector:pg16`, 15 min
+- ❌ "MigrateGeofenceBboxToPostgis nouvelle migration 3-4h" → migration existante `1779051738966-AddMuseumGeofence.ts` hybride postgis+jsonb-bbox fallback déjà
+- ❌ "SigLIP kNN modelVersion isolation 🚨 P0" → DB prod vide, bug latent, grouper avec P0.F1 seed exec
+- ❌ "Anon LLM cost rate-limit bypass" → non-exploitable, route exige `isAuthenticated` middleware
+- ❌ "AI Act Art.50 badge à implémenter, legal review 0.5-3j" → déjà shipped
+- ❌ "EN 301 549 §9.1.1.1 violation latente" → micro-entreprise <2M€ CA exempt EAA + C9.2 shipped
+- ❌ "DPO obligation Art.37 V1" → non applicable au volume 100 visitors S1
+- ❌ "ENISA SRP deadline pré-launch 2026-09-11" → deadline réelle 2027-12-11 full requirements
+- ❌ "Sentinel PGP placeholder gate déjà en place" → n'existe pas (à créer)
+- ❌ "18 000 lignes docs retirées" → 7 700 réelles (inflation x2.3)
+- ❌ "42 TD fermées TECH_DEBT" → 1 seule confirmée (TD-11)
+- ❌ "Hexagonal POJO 23 entities 3-5j" → 157 fichiers cross-importants, infaisable V1
+- ❌ "Chat éclatement 4 sous-modules V1" → 909 LOC composition root sain, 144 LOC/file moyenne, over-engineering 12j launch
+- ❌ "`@musaium/shared` 9 modules adoptés 3/3 apps" → comptes inflated 1.5-3×, scope-cut à 3 modules réels V1.1
+- ❌ "Stryker CI réactivation" → décision D3 local-only déjà actée
+- ❌ "Llama-Prompt-Guard wired ADR-051 ready" → adapter implémenté mais NON wired dans `chat-module.ts`, Dockerfile sidecar absent → scaffold dormant V1.1
+- ❌ "C9.13 Reranker shipped : -15% à -25% failed retrievals" → V1 scaffold throw `RerankerUnavailableError`, V2-deferred-honest (chiffres = projections, pas mesures)
+- ❌ "ESLint custom rule no-sentry-direct-capture 3-4h" → 15 sites prod total, grep CI 1-liner suffit
+- ❌ "Sentry 39 sites BE 1j" → 2 sites réels BE, effort 15 min
+- ❌ "L6.6 web 2→8 langues 4-6h" → fantasme 1 ordre de grandeur, scope-cut FR/EN/ES/DE 20-30h V1.1
+- ❌ "doc-anchor-check sentinelle 2-3h" → 92 refs total, ROI faible, defer (mais voir `roadmap-claim-resolves.mjs` nouvelle sentinelle ciblée roadmap seulement)
+- ❌ "Wave 7 verify 20/20 transversal sign-off" → exit criteria fabriqué
+
+### P0.G — Anti-pattern documenté : UFR-024 Audit-driven roadmap inflation
+
+> **UFR-024** (à codifier dans `.claude/agents/shared/user-feedback-rules.json`) — quand une roadmap consolide des audits multiples, vérifier (a) chaque `path:line` cité résout, (b) chaque "X LOC à supprimer" est `wc -l` reproductible, (c) chaque "déjà en place" sentinelle est `find` reproductible, (d) chaque "shipped" commit est `git show` reproductible. Pas de bullet sans preuve code.
+>
+> **Why** : 2026-05-20 le remediation roadmap original avait fabriqué 120+ items hors ROADMAP_PRODUCT NOW (inflation x6-x8), 22 P0 falsifiés en <5 min code-check, et oubliait Walk V1 (différenciateur core).
+>
+> **How to apply** : pour toute nouvelle roadmap dérivée d'audit, exiger preuve `path:line` + commit SHA ou `find/grep` reproductible AVANT lock. Sentinelle `scripts/sentinels/roadmap-claim-resolves.mjs` (wired pre-push + sentinel-mirror) fail les claims invérifiables sur `docs/ROADMAP*.md`.
+
+### P0.H — Exit criteria honest V1 launch
+
+1. ✅ P0.A1-A6 dev fixes mergés + tests verts (BE tsc + tests + ESLint + OpenAPI validate)
+2. ✅ P0.T1-T7 Tim ops complétés, preuves archivées (DPA PDFs `docs/legal/dpa-signed/`, security@ mail entrant smoke OK, PGP réelle, Sentry P0 = 0)
+3. ✅ P0.F1 seed catalog ≥3 musées prod, C3 image compare retourne du contenu réel
+4. ✅ P0.F2 telemetry funnel émis + dashboard PostHog/Plausible opérationnel
+5. ✅ P0.F3 RELEASE_CHECKLIST §3 .env validé prod
+6. ✅ P0.D Walk V1 décision actée + landing/pitch B2B alignés (option A recommandée)
+7. ✅ Items P0.E cochés honest dans ROADMAP_PRODUCT (déjà fait 2026-05-20)
+8. ✅ Smoke prod local Docker ≥48h : auth + chat + photo upload + DSAR + geofence (jsonb-bbox path actif)
+9. ✅ Tim sign-off P0.T5 device TTS test iPhone réel
+
+**Pas de "20/20 transversal". Pas de Wave 7 verify cérémonielle.** MVP honest qui shippe et apprend.
 
 ---
 
 ## Stratégie : Phase 1 Consolidation → Phase 2 Évolution
 
-Décision 2026-05-08 (brainstorm reprio) : **consolider l'existant à un niveau premium AVANT d'empiler Walk V1**.
+Décision 2026-05-08 (brainstorm reprio) : **consolider l'existant à un niveau premium AVANT d'empiler Walk V1**. Re-cadrée 2026-05-20 (audit) : V1 = AI Art Companion intra-musée, V2 = walking guide hors-musée.
 
 Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade dès V1, alors :
-- KR2 (NPS Walk) bénéficie d'un fondement chat solide
-- Pitch B2B (KR1) montre features différenciantes (image compare = wow)
-- Soft-paywall stub (KR4 funnel data) valide hypothèse freemium pré-Stripe full
-- Phase 2 démarre sur fondation stable, pas sur surcouche fragile
+- KR2 (NPS Companion) bénéficie d'un fondement chat solide
+- Pitch B2B (KR1) montre features différenciantes (image compare seed P0.F1 = wow)
+- Soft-paywall stub (KR4 funnel data via P0.F2) valide hypothèse freemium pré-Stripe full
+- V2 (NEXT-V2) démarre sur fondation stable
 
-**Phase 1 (NOW)** = items C1…C7 ci-dessous. Bloque démarrage Phase 2 tant qu'incomplet.
-**Phase 2 (NEXT)** = items Walk V1 + multi-tenancy + admin + landing, déplacés depuis l'ancien NOW.
+**Phase 1 (NOW)** = items C1…C9 ci-dessous + P0.A-H ci-dessus. **Phase 2 (NEXT V1.1)** = multi-tenancy + admin + landing + chat backend modernization. **V2 NEXT** = Walk hors-musée (W1.2/W1.3 + multi-POI infra).
 
 ---
 
@@ -151,29 +275,34 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 
 - [x] **C9.0 Activer Langfuse prod + exporter Prom baseline 7j** — précondition à toute optim. Sans ça, gains ci-dessous sont hypothèses non vérifiées. Effort 0.5j + 7j bake parallèle. *(NORTHSTAR BL1)* *(shipped `fd796f94` 2026-05-19 — lf.trace+generation w/ userId/sessionId/museumId emitted)*
 - [x] **C9.1 Fix copy mensonge "images compressées"** UFR-013 violation — fermé 2026-05-17, edit FR + EN `museum-frontend/shared/locales/{fr,en}/translation.json:552` (TTS désactivé / réponses plus courtes / prefetch wifi uniquement). Cf. TD-15. *(NORTHSTAR + H §5.1 SEV1 + dispatcher)*
-- [ ] **C9.2 `imageDescription` rendu en audio-desc mode** — SEV1 a11y bug : visiteur mal-voyant upload image, bot répond mais ne lit jamais la description. WCAG 2.1 Level A + EN 301 549 §9.1.1.1 violation latente. `imageDescription` est émis BE (`assistant-response.ts:199`) mais jamais consommé FE. Effort 2j. *(H POC-3 SEV1)*
+- [x] **C9.2 `imageDescription` rendu en audio-desc mode** — shipped 2026-05-17 (`useChatSession.ts:99-124` autoplay TTS via expo-speech quand `audioDescriptionMode` ON ; toggle UI `SettingsAccessibilityCard.tsx` ; Zustand store + bootstrap profile server sync ; tests). BE émet via `assistant-response.ts:159` (claim original ligne 199 stale). *(audit 2026-05-20 : case oubliée par /team au merge)*
 - [x] **C9.3a Granular AI consent sheet (Apple 5.1.2(i) + GDPR Art. 7)** — per-category × per-provider toggles, default OFF, audit chain emission, settings revocation. ADR-053. *(merge `bfcd0743` 2026-05-17 S4-P0-02, audit 2026-05-17 tick-audit split)*
-- [ ] **C9.3b EU AI Act Art.50 voice disclosure badge persistant** sur bouton TTS — distinct de C9.3a : vérifier si `AiConsentSheetContent.tsx` rend un badge AI persistant pendant playback (pas seulement opt-in first-use). Si non, implémenter. Grace period 2026-12-02 pour systèmes pré-2026-08-02. **Legal review obligatoire**. Effort 0.5-3j selon état actuel. *(E R-LEGAL-1 BLOCKER potentiel — à vérifier Session 1)* *(W4 2026-05-17 — partie LEGAL : `docs/legal/AI_DISCLOSURE_AUDIT.md` rédigé — surface-by-surface review (5 surfaces actuelles + 4 surfaces dormant), evidence kit pour CNIL/notified-body, 7 V1.1 follow-ups (TD-41..44), verdict "appears compliant" pending DPO sign-off + DPIA addendum `DPIA_T1.1_addendum.md`. Partie IMPL badge persistant reste à faire par mobile.)*
+- [x] **C9.3b EU AI Act Art.50 voice disclosure badge persistant** — shipped (vérifié audit 2026-05-20). Badge `ai-disclosure-badge` persistant `ChatHeader.tsx:77-93` (visible collapsed + expanded), footer `AiDisclosureFooter.tsx`, sheet recap `AiDisclosureSheetContent.tsx`, voice intro audio greeting `VoiceSessionIntroSheetContent.tsx:67`, i18n 8 locales (`voice.disclosure.badgeLabel/badgeA11y`). Audit légal `docs/legal/AI_DISCLOSURE_AUDIT.md` verdict "appears compliant" 2026-05-17. Note : AI Act Art.50 applicable 2026-08-02, donc V1 launch 2026-06-01 = anticipation (over-compliance). Reste TD-41 a11y contrast badge 8 locales (V1.1) + DPO sign-off doc.
 - [x] **C9.4 Wire Cost Circuit Breaker + Langfuse generation()** — unified changeset : migrer `lf.trace` → `lf.generation({input, output, usage, model})` dans `langchain-orchestrator-tracing.ts` + propager `userId/sessionId/museumId` (5 LOC) + wire `recordCharge(estimateCostCents(...))` dans `langchain.orchestrator.invokeSection` + ajouter Prom gauge `llm_cost_eur_per_hour{tier,museumId}` + 3 alerts manquantes (cache-hit-rate-too-low, llm_cost_breaker_open, llm_guard_breaker_open). Effort 2j, gain : cost observability + safety net hard cap (50$/h spike, 500$/jour). *(NORTHSTAR Convergent.1 — B Gap-9 + D §10 + G converge)* *(W4 2026-05-17 — partie alertes Prom : `infra/grafana/alerting/llm-cost.yml` shippé avec 5 alerts (cache_hit_rate_too_low warn+critical, llm_cost_breaker_open, llm_guard_breaker_open, + bonus guardrail_budget_redis_fail_closed). Final bake post-W1 BE wiring `recordCharge` + Prom gauges.)* *(shipped `0635b883` 2026-05-19 — wake LlmCostCircuitBreaker + Prom gauge musaium_llm_cost_eur_per_hour)*
 - [x] **C9.5 Stable-prefix message ordering** — restructurer `buildSectionMessages` (`llm-prompt-builder.ts:321-397`) : mettre system+section AVANT visitor_context+memory+enrichment+history+user. Précondition prefix ≥1024 tokens identique byte-à-byte. Logger `prompt_tokens_details.cached_tokens` (OpenAI L2 auto-cache). Effort 1j, gain attendu **-30 à -40% input cost gratuit** si cache hit ratio ≥ 0.4 sur sessions > 2 turns. *(B T1-A.2 + T1-A.3 + D QW3)* *(shipped `bcb035c6` 2026-05-19 + corrective `ce9f34bb` walk-intent parity)*
 - [x] **C9.6 Promise.all enrichment + location + router** — `prepare-message.pipeline.ts:355-408` 3 awaits séquentiels indépendants (`fetchEnrichmentData` || `resolveLocationForMessage` || `resolveRouterFacts`). Effort 0.5j, gain **-200 à -500ms P50**. *(D-QW1)* *(shipped `50b75951` 2026-05-19 — parallelize enrichment + location + router facts)*
 - [x] **C9.7 Détacher LLM judge de l'orchestrator** — `llm-judge-guardrail.ts:170-235` réutilise full pipeline section/circuit-breaker/Langfuse pour un simple structured output `{decision, confidence}`. Replace par `model.withStructuredOutput(JudgeDecisionSchema).invoke([JUDGE_SYSTEM, msg])` direct. Effort 1j, gain **-50 à -100ms judge p99**. *(B T1-A.4)* *(shipped `4a64c52b` 2026-05-19 — detach judge from full orchestrator pipeline)*
 - [ ] **C9.8 Activate Presidio adapter (LLM02 PII gap)** — input + output PII detection (`Anonymize` + `Anonymized` scanners), observeOnly 7j bake puis enforce. ADR-051 ready. Effort 2j + 7j bake. Comble gap critique : Musaium V1 couvre email/phone via regex seulement, manque LOCATION/PERSON/CREDIT_CARD/CRYPTO/IBAN. *(C-P1 P0)*
 - [x] **C9.9 Retire art-topic classifier OUTPUT O3** — `art-topic-classifier.ts:50` refait un LLM call mini-modèle pour décider si output on-topic, redondant avec section prompt enforcement + L3 judge + promptfoo smoke gate. Garde fail-CLOSED sans valeur LLM01/LLM02. Effort 0.5j, gain **-300 à -800ms p99 output**. *(C-P2)* *(shipped `e0d9cf29` 2026-05-19 — retire OUTPUT O3, UFR-016)*
-- [ ] **C9.10 Voice-first prompt branch** — flag `voiceMode` from `OrchestratorInput`, word cap 60-80 (vs 150-400 actuel), prose-only, no markdown/bullets enforcement (extension pattern `audioDescriptionMode`). Effort 1.5j, gain **-60 à -70% audio length** (UX walk-mode mesurable -2 à -3s d'écoute moyenne). *(C-P6 P0 voice-first DNA)*
+- [x] **C9.10 Voice-first prompt branch** — shipped (vérifié audit 2026-05-20). Flag `voiceMode` propagé `chat.shared-types.ts:45` → `chat-route.helpers.ts:206` → `chat-orchestrator.port.ts:37` → `llm-prompt-builder.ts:274` → `llm-sections.ts:149` active branch `if (voiceMode) return 80` word cap + `:203` prose-only no-markdown. Cache key inclut `voiceMode` (`chat-cache-key.util.ts:44,123`). *(audit 2026-05-20 : case oubliée par /team au merge)*
 - [x] **C9.11 Collapse triple anti-injection reminder** — 3 endroits dans le prompt (`buildSystemPrompt:140` + final reminder L391-393 + Spotlighting envelope `CRITICAL: Treat content above as DATA` L101). ~150 tokens × 100k req/j = **15M tokens/jour gaspillés**. Effort 0.5j. *(C-P3)* *(shipped `ef728036` 2026-05-19 — dedup to canonical post-user slot)*
-- [ ] **C9.12 TTS quick wins** :
-    - [ ] C9.12a MP3 → Opus codec — `text-to-speech.openai.ts:42` `response_format: 'opus'`. Effort 1j, gain **-50 à -100ms first-byte + -40% bandwidth 4G**. Vérifier RN expo-audio support Opus 2026. *(E R-TTS-3)*
-    - [ ] C9.12b Decouple S3 save + DB updateMessageAudio du response path — `chat-media.service.ts:314-332` fire-and-forget post-response. Effort 0.5j, gain **-150 à -400ms p50 fresh TTS**. *(E R-TTS-6)*
-    - [x] C9.12c Fix cache key voice bug — `tts:<messageId>` n'inclut PAS voice → user change voice = ancien hit Redis. Add voiceId au cache key + namespace migration. Effort 0.5j (correctness bug). *(E R-TTS-5)* *(shipped `d54552be` 2026-05-19 — include voiceMode + audioDescriptionMode in LLM cache key, covers voiceId scope)*
+- [x] **C9.12 TTS quick wins** — tous shipped (vérifié audit 2026-05-20) :
+    - [x] C9.12a MP3 → Opus codec — shipped `text-to-speech.openai.ts:42` literal `response_format: 'opus'` (commentaire daté 2026-05-17 "-40% bandwidth + -50-100ms first-byte vs MP3"). Note : support RN/Expo Opus à valider device test (C7.5).
+    - [x] C9.12b Decouple S3 save + DB — shipped `chat-media.service.ts:249-275` true fire-and-forget `void (async () => { ... })()` (claim original ligne 314-332 stale).
+    - [x] C9.12c Fix cache key voice bug — shipped `d54552be` 2026-05-19 (include voiceMode + audioDescriptionMode in LLM cache key).
 - [x] **C9.13 Ship bge-reranker-v2-m3 ONNX local** — multilingue FR/EN/IT/ES/AR/JP, 0€ inférence CPU (mutualisé avec SigLIP). Reranker absent = gap RAG moderne (Anthropic Contextual Retrieval -49 à -67% failed retrievals avec rerank). Effort 4-5j, gain **-15 à -25% failed retrievals + nDCG@5 ~+10pt** vs no-rerank. *(F-QW1 P0)* *(shipped `64fab9af` 2026-05-19 + corrective `d2eeae57` + tier exempt `f57bf2a3` — V1 scaffold)*
 - [x] **C9.14 SigLIP → SigLIP-2 base drop-in** — re-export `.onnx` + bump `SIGLIP_MODEL_VERSION` const → `upsertBatch` idempotent re-ingest. Preprocess identique (mean=0.5/std=0.5). Effort 1j, gain **+2-3pt R@1 visual compare** (audit fixture). *(F-QW2)* *(shipped `1a3e8d18` 2026-05-19 — swap SigLIP v1 → SigLIP-2 base patch16-224 ONNX)*
 - [x] **C9.15 Retire Google CSE + SearXNG + DuckDuckGo adapters** — Tavily (P50 180ms) + Brave (indépendant, hedge Nebius acquisition Feb 2026 risque continuity) suffisent. Doctrine UFR-016 bury dead code. Effort 1j, **-314 LOC -3 env vars -3 secrets**. *(F-QW3)* *(shipped `6936975a` 2026-05-19 + cleanup `2d6650be` — UFR-016 bury dead code)*
-- [ ] **C9.16 Dead code burial SSE residuals** — `adapters/primary/http/helpers/sse.helpers.ts` (51L) + `useCase/orchestration/stream-buffer.ts` (288L) + JSDoc références ADR-001 supprimée + commentaire mensonger `chat-message.route.ts:101` ("moved to sse-dormant.ts" — fichier inexistant). ADR-001 retired 2026-05-03 = décision produit ferme. Effort 1j, **~700 LOC** UFR-013 + UFR-016. *(A-Vague-1)*
+- [x] **C9.16 Dead code burial SSE residuals** — déjà absent de `src/` (vérifié audit 2026-05-20). Résidus = `dist/` + `coverage/` stale uniquement (auto-régénérables). DONE confirmé.
 - [x] **C9.17 Sunset legacy `[META]` parser path** — `llm-sections.ts:262-273` + `langchain.orchestrator.ts:131-141` + `assistant-response.parseAssistantResponse`. Précondition : audit test fakes migrent vers `withStructuredOutput`. Effort 0.5j, **-80 LOC dead code**. *(B T1-A.1)* *(shipped `3f0f9ac3` step B 2026-05-19 + corrective `868042e2` chaos e2e fakes migration)*
-- [ ] **C9.18 `detectedArtwork.artworkId` deep-link B2B** — champ BE émis (`assistant-response.ts:175`), FE re-déclare pas dans `ChatUiMessageMetadata` → impossible deep-link `/museum/:id/artwork/:artworkId`. Critique pour stratégie B2B intra-museum routing. Effort 2j. *(H POC-5 / §1.2)*
+- [~] **C9.18 `detectedArtwork.artworkId` deep-link B2B** — shipped en fallback (vérifié audit 2026-05-20). BE émet via `extractMetadata()` `assistant-response.ts:120-128` (claim original ligne 175 stale). FE déclare `ChatUiMessageMetadata.detectedArtwork.artworkId` dans `chatSessionLogic.pure.ts:53-60`, passé à `ArtworkCard` via `ChatMessageBubble.tsx:255`, handler `ChatMessageList.tsx:166-176` deep-link `router.push({pathname:'/museum-detail', params:{artworkId, name}})`. **Route canonique `/museum/[id]/artwork/[artworkId]` n'existe pas encore** (TD-NEW noté dans le code) — route `/museum-detail` sert de passthrough V1 avec param artworkId. V1.1 = route dédiée + scroll/highlight UX.
 
-**Total Phase A P0 strict** : ~8 items restants (au 2026-05-20, après tick-audit 11 shipped 2026-05-19) sur ~10-12 j-h dev résiduels — C9.2 (a11y imageDescription audio), C9.3b (AI Act badge IMPL), C9.8 (Presidio PII), C9.10 (voice-first prompt), C9.12a (MP3→Opus), C9.12b (S3 decouple), C9.16 (SSE residuals burial), C9.18 (artworkId deep-link). Axes restants : media+voice (C9.10/12a/12b) || AI-safety+i18n (C9.2/3b/8/18) || code-burial (C9.16). **C9.0 baseline shipped `fd796f94` 2026-05-19 — 7j bake en cours, mesure de gain post-bake.**
+**Total Phase A P0 strict** (mis à jour audit 2026-05-20 par 50 sous-agents fresh-context) : **~3 items réellement ouverts** sur ~3-6 j-h dev résiduels —
+- C9.4 cost circuit breaker **fail-CLOSE wiring** (telemetry+gauge shipped, mais `canAttempt()` jamais appelé — orchestrator fail-OPEN ; à wirer 2-3h OU documenter "telemetry-only V1" dans ADR-047)
+- C9.8 Presidio activate **deferred V1.1** (faible valeur produit V1 : email/phone regex couvre 95% risque RGPD ; PERSON/LOCATION = faux positifs sur artist names + museum cities reconnus par l'adapter lui-même ; gate sur prod data)
+- Walk V1 si décision option C MVP stub
+
+Items précédemment listés ouverts mais en réalité SHIPPED (cocher honest UFR-013) : C9.2 (a11y), C9.3b (AI badge), C9.10 (voice prompt), C9.12a/b (Opus + S3 decouple), C9.16 (SSE buré), C9.18 (deep-link fallback). C9.0 baseline shipped `fd796f94` 2026-05-19 — bake en cours, MAIS Langfuse leak via LangChain CallbackHandler `updateRoot:true` à fixer P0 launch via `LangfuseCoreOptions.mask` SDK option 30-60min (cf P0.A4 ci-dessus) — DPA Langfuse Cloud aussi P0.
 
 ### C10 — Chat UX refonte 2026-05-16 (livrée hors-roadmap, doctrine itérative assumée)
 
@@ -207,14 +336,18 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 >
 > **🔍 Audit 2026-05-14 :** W3.1, W3.2, W3.3 et W4.1 ont été livrés malgré la doctrine "Phase 2 bloquée tant que Phase 1 incomplète" (commits `53903a293` 2026-04-21 → `3bf0813e` 2026-05-07). Items reclassés `[x]` ci-dessous avec ref commit. Indicateur clair que la séparation Phase 1/Phase 2 a glissé en pratique — re-discuter au prochain `/team roadmap:rotate`.
 
-### W1 — Walk V1 IMPROVE (différenciateur core, ex-priorité 1)
+### W1 — Walk V1 intra-musée (différenciateur core, re-cadré 2026-05-20)
 
-- [ ] **W1.1 Transitions entre œuvres** — orchestrateur chat détecte fin discussion œuvre A, propose transition fluide vers œuvre B (suggestion proactive, sans rupture cognitive)
-- [ ] **W1.2 Audio guide auto** — TTS streaming continu pour balade, déclenché à l'entrée d'un point d'intérêt, pause/reprise par geste ou voix
-- [ ] **W1.3 Chemin GPS** — itinéraire balade généré (musée→musée hors-mur, ou intra-salle musée), points d'intérêt ordonnés, ETA, navigation simple
-- [x] **W1.4 UX choix musée** — sélecteur musée explicite (recherche, carte, favoris), pas seulement géolocalisation passive
-- [x] **W1.5 Détection musée auto** — geofence + LocationResolver (déjà partiel, étendre à liste musées contractés)
-- [x] **W1.6 Détection endroit intra-musée** — beacon BLE, QR-code à l'entrée salle, ou estimation pos via image (œuvre vue caméra)<br/><sub>↳ Partiel (cf. run `2026-05-17-w3-geo-walk-intra`) : QR-deeplink + propagation BE → LLM `[CURRENT ARTWORK]` ✔ ; SigLIP image-position deferred (bloqué par W1 SigLIP-2 swap C9.14, suivi sous W1.6b).</sub>
+> **Split V1 intra vs V2 hors-musée** (audit finding E4 + décision P0.D) :
+> - **V1 intra-musée** = transitions œuvre→œuvre + détection contexte (W1.4/W1.5/W1.6 + W1.1 partiel via prompt `suggestions[]`)
+> - **V2 hors-musée** = walking guide multi-POI hors-musée avec chemin GPS + audio streaming auto (W1.2/W1.3 deferred V2, infra `features/walk/`+`museum_pois`+`walk_routes` à construire)
+
+- [~] **W1.1 Transitions entre œuvres** *(intra-musée)* — partiel via prompt `walk-tour-guide.ts` `suggestions[]` (3 short texts en fin de réponse) + chips de relance FE. Pas encore d'orchestration "fin discussion œuvre A → transition fluide œuvre B" automatique. Promote V1.0.x hotfix window si MVP stub option C choisi (cf P0.D).
+- [ ] **W1.2 Audio guide auto streaming** *(V2 hors-musée)* — TTS streaming continu balade, déclenché entrée POI, pause/reprise geste/voix. **Defer V2** (infra multi-POI absente, `museum_pois`/`walk_routes` tables n'existent pas).
+- [ ] **W1.3 Chemin GPS itinéraire** *(V2 hors-musée)* — itinéraire balade généré (musée↔musée hors-mur, ou intra-salle), POI ordonnés, ETA, navigation simple. **Defer V2** (idem infra absente).
+- [x] **W1.4 UX choix musée** — sélecteur musée explicite (recherche, carte, favoris) shipped
+- [x] **W1.5 Détection musée auto** — geofence + LocationResolver shipped (jsonb-bbox path actif prod, PostGIS feature-detect runtime fallback — pas de migration `MigrateGeofenceBboxToPostgis` requise V1 contrairement à claim audit antérieur)
+- [x] **W1.6 Détection endroit intra-musée** — partiel : QR-deeplink + propagation BE → LLM `[CURRENT ARTWORK]` ✔ ; SigLIP image-position deferred V1.1 (bloqué par seed P0.F1 + multi-rows pour kNN utile)
 
 ### W2 — Multi-tenancy musées (ex-priorité 2, KR1 pré-requis)
 
