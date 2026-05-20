@@ -1982,7 +1982,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-MGL-01 — maplibre-gl default import v4 → use named v5 (HIGH, BLOCKER pre-V1)
+## ✅ TD-MGL-01 — maplibre-gl default import v4 → use named v5 (HIGH, BLOCKER pre-V1)
+- [x] **Status** : RESOLVED 2026-05-19 — commit `0535fa541`. `DemoMap.tsx:5` now `import { Map, Marker } from 'maplibre-gl'` (named, v5-correct) + 2 call sites (`new Map(...)`, `new Marker(...)`). Verified 2026-05-20 : lint exit 0, Vitest 468 passed. Pairs with TD-MGL-02 (`map.on('error', …)` listener) also closed.
+
 **Context** : `DemoMap.tsx:4 import maplibregl from 'maplibre-gl'` — v5 dropped default. Currently masked by interop shim, breaks on next bundler/TS-resolver bump.
 **Fix** : `import * as maplibregl from 'maplibre-gl'` OR named imports.
 **Evidence** : `museum-web/src/components/marketing/DemoMap.tsx:4`.
@@ -1995,7 +1997,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-FM-01 — framer-motion → motion package codemod (MAJOR, BLOCKER pre-V1)
+## ✅ TD-FM-01 — framer-motion → motion package codemod (MAJOR, BLOCKER pre-V1)
+- [x] **Status** : RESOLVED 2026-05-19 — commit `0535fa541`. 11 marketing/shared components codemodded `from 'framer-motion'` → `from 'motion/react'`; `package.json` framer-motion 12.38.0 → `motion ^12.39.0`; `StorySection.test.tsx` mock target follows the import. All `'use client'` directives retained (RSC boundary). Verified 2026-05-20 : `node_modules` has `motion`, not `framer-motion` (the residual `framer-motion@12.39.0` in `pnpm-lock.yaml` is a transitive dep of `motion`, expected); lint exit 0, Vitest 468 passed.
+
 **Context** : 11 files use legacy `from 'framer-motion'`. v12 package renamed to `motion` — `from 'motion/react'` canonical.
 **Fix** : codemod 11 files + `pnpm remove framer-motion && pnpm add motion`. Verify SSR (motion/react-client for RSC). ~30min.
 **Evidence** : 11 files museum-web/src/components/{marketing,shared}/.
