@@ -1760,17 +1760,23 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-ONNX-01 — InferenceSession.create omits SessionOptions (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-ONNX-01 — InferenceSession.create omits SessionOptions (HIGH, NICE_TO_HAVE pre-V1)
+
+- [x] **Statut** : fermé 2026-05-20 — `SIGLIP_SESSION_OPTIONS = { executionProviders: ['cpu'], graphOptimizationLevel: 'all', freeDimensionOverrides: { batch: 1 } }` passed to `InferenceSession.create(modelPath, options)` in `siglip-onnx.adapter.ts`. Pins CPU EP (no silent CUDA/CoreML pick), full graph fusion, fixed batch=1 buffers. Test asserts the exact options shape (8/8 pass).
 
 **Context** : Relies on defaults. Linux x64 prod + future CUDA EP = silent CUDA pick.
 **Fix** : `{ executionProviders: ['cpu'], graphOptimizationLevel: 'all', freeDimensionOverrides: { batch: 1 } }`.
 **Evidence** : `museum-backend/src/modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter.ts:125`.
 
-## ⚠️ TD-ONNX-02 — No session.release() teardown → native memory leak (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-ONNX-02 — No session.release() teardown → native memory leak (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — `public async shutdown()` added : awaits the cached session, calls `session.release()`, drops `sessionPromise` (idempotent + fail-open warn). Tests cover release-then-recreate + no-op-when-never-created. **Follow-up (non-blocking)** : wire `adapter.shutdown()` into the `index.ts` SIGTERM block — currently the embeddings adapter is built deep in the chat composition root and not exposed to the top-level teardown sequence ; the method is ready, only the cross-module plumbing remains. ONNX session is CPU NAPI (no TCP socket) so this is graceful-restart hygiene, not a hard handle leak like ioredis.
 
 **Fix** : add `async shutdown() { await session.release(); this.sessionPromise = null; }`.
 
-## ⚠️ TD-ONNX-03 — No inputNames/outputNames validation post-create (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-ONNX-03 — No inputNames/outputNames validation post-create (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — `acquireSession` validates `session.inputNames.includes('pixel_values')` + `session.outputNames.includes('image_embeds')` immediately after create, throwing `EncoderUnavailableError` with the actual names on drift (fail-fast instead of opaque native error at first run). Test asserts the throw on a mismatched input name.
 
 **Context** : Model drift caught only at first encode.
 **Fix** : assert post-create `session.inputNames.includes('pixel_values')` else throw EncoderUnavailableError.

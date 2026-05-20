@@ -46,10 +46,30 @@ export interface SiglipOnnxAdapterOptions {
   timeoutMs: number;
 }
 
+/**
+ * TD-ONNX-01 — explicit SessionOptions. `executionProviders: ['cpu']` pins the
+ * CPU EP so a future CUDA/CoreML EP install can't silently change numerics ;
+ * `graphOptimizationLevel: 'all'` enables full graph fusion ;
+ * `freeDimensionOverrides: { batch: 1 }` locks the symbolic batch dim (we always
+ * encode one image) so the runtime can allocate fixed buffers.
+ * lib-docs/onnxruntime-node/PATTERNS.md §SessionOptions.
+ */
+interface OnnxSessionOptions {
+  executionProviders?: readonly string[];
+  graphOptimizationLevel?: 'disabled' | 'basic' | 'extended' | 'all';
+  freeDimensionOverrides?: Record<string, number>;
+}
+
+const SIGLIP_SESSION_OPTIONS: OnnxSessionOptions = {
+  executionProviders: ['cpu'],
+  graphOptimizationLevel: 'all',
+  freeDimensionOverrides: { batch: 1 },
+};
+
 /** Local structural shape — runtime loaded via `require()` for jest.mock + lazy native binding. */
 interface OnnxRuntimeModule {
   InferenceSession: {
-    create: (modelPath: string) => Promise<OnnxInferenceSession>;
+    create: (modelPath: string, options?: OnnxSessionOptions) => Promise<OnnxInferenceSession>;
   };
   Tensor: new (type: 'float32', data: Float32Array, dims: readonly number[]) => OnnxTensor;
 }
@@ -62,6 +82,11 @@ interface OnnxTensor {
 
 interface OnnxInferenceSession {
   run(feeds: Record<string, OnnxTensor>): Promise<Record<string, OnnxNamedTensor | undefined>>;
+  /** TD-ONNX-02 — frees the native session (long-lived process teardown). */
+  release(): Promise<void>;
+  /** TD-ONNX-03 — model I/O contract, validated post-create. */
+  readonly inputNames: readonly string[];
+  readonly outputNames: readonly string[];
 }
 
 interface OnnxNamedTensor {
@@ -123,10 +148,27 @@ export class SiglipOnnxAdapter implements EmbeddingsPort {
   }
 
   private async acquireSession(runtime: OnnxRuntimeModule): Promise<OnnxInferenceSession> {
-    this.sessionPromise ??= runtime.InferenceSession.create(this.modelPath).catch(
-      (err: unknown) => {
+    this.sessionPromise ??= runtime.InferenceSession.create(this.modelPath, SIGLIP_SESSION_OPTIONS)
+      .then((session) => {
+        // TD-ONNX-03 — fail-fast if the loaded model's I/O contract drifts from
+        // what `encode()` feeds/reads. Without this, a mismatched model surfaces
+        // only at the first `session.run` with an opaque native error.
+        if (!session.inputNames.includes(SIGLIP_INPUT_NAME)) {
+          throw new EncoderUnavailableError(
+            `SigLIP ONNX model at ${this.modelPath} missing input '${SIGLIP_INPUT_NAME}' (got: ${session.inputNames.join(', ')})`,
+          );
+        }
+        if (!session.outputNames.includes(SIGLIP_OUTPUT_NAME)) {
+          throw new EncoderUnavailableError(
+            `SigLIP ONNX model at ${this.modelPath} missing output '${SIGLIP_OUTPUT_NAME}' (got: ${session.outputNames.join(', ')})`,
+          );
+        }
+        return session;
+      })
+      .catch((err: unknown) => {
         // Drop rejected promise so next call retries (transient FS error).
         this.sessionPromise = null;
+        if (err instanceof EncoderUnavailableError) throw err;
         logger.warn('siglip_onnx_session_create_failed', {
           modelPath: this.modelPath,
           error: err instanceof Error ? err.message : String(err),
@@ -137,9 +179,29 @@ export class SiglipOnnxAdapter implements EmbeddingsPort {
           }`,
           err,
         );
-      },
-    );
+      });
     return await this.sessionPromise;
+  }
+
+  /**
+   * TD-ONNX-02 — release the native session + drop the cached promise so the
+   * next `encode()` re-creates it. Wire into the app SIGTERM teardown so the
+   * NAPI session does not leak across process restarts (also un-blocks Stryker
+   * open-handle detection — see CLAUDE.md gotchas). Idempotent + fail-open.
+   */
+  public async shutdown(): Promise<void> {
+    const pending = this.sessionPromise;
+    this.sessionPromise = null;
+    if (!pending) return;
+    try {
+      const session = await pending;
+      await session.release();
+    } catch (err) {
+      logger.warn('siglip_onnx_session_release_failed', {
+        modelPath: this.modelPath,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
 

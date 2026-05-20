@@ -59,13 +59,84 @@ const { SiglipOnnxAdapter } =
   };
 
 describe('SiglipOnnxAdapter (T4.2)', () => {
+  const onnxReleaseMock = jest.fn<Promise<void>, []>();
+
   beforeEach(() => {
     onnxCreateMock.mockReset();
     onnxRunMock.mockReset();
-    onnxCreateMock.mockResolvedValue({ run: onnxRunMock });
+    onnxReleaseMock.mockReset();
+    onnxReleaseMock.mockResolvedValue(undefined);
+    // TD-ONNX-02/03 — the mock session exposes the full contract the adapter
+    // now relies on : `release()` for teardown + `inputNames`/`outputNames`
+    // for the post-create I/O validation.
+    onnxCreateMock.mockResolvedValue({
+      run: onnxRunMock,
+      release: onnxReleaseMock,
+      inputNames: ['pixel_values'],
+      outputNames: ['image_embeds'],
+    });
     onnxRunMock.mockResolvedValue({
       image_embeds: { data: FAKE_RAW_OUTPUT, dims: [1, 768] },
     });
+  });
+
+  it('TD-ONNX-01 — passes explicit SessionOptions (cpu EP, all-opt, batch override) to create', async () => {
+    const adapter = new SiglipOnnxAdapter({
+      modelPath: './models/siglip2-base-patch16-224.onnx',
+      timeoutMs: 3000,
+    });
+    await adapter.encode({ buffer: await makeSiglipJpegBuffer(), mimeType: 'image/jpeg' });
+
+    expect(onnxCreateMock).toHaveBeenCalledTimes(1);
+    const opts = onnxCreateMock.mock.calls[0]?.[1] as {
+      executionProviders?: string[];
+      graphOptimizationLevel?: string;
+      freeDimensionOverrides?: Record<string, number>;
+    };
+    expect(opts.executionProviders).toEqual(['cpu']);
+    expect(opts.graphOptimizationLevel).toBe('all');
+    expect(opts.freeDimensionOverrides).toEqual({ batch: 1 });
+  });
+
+  it('TD-ONNX-03 — throws EncoderUnavailableError when the model lacks the expected input name', async () => {
+    onnxCreateMock.mockResolvedValue({
+      run: onnxRunMock,
+      release: onnxReleaseMock,
+      inputNames: ['wrong_input'],
+      outputNames: ['image_embeds'],
+    });
+    const adapter = new SiglipOnnxAdapter({
+      modelPath: './models/bad.onnx',
+      timeoutMs: 3000,
+    });
+    await expect(
+      adapter.encode({ buffer: await makeSiglipJpegBuffer(), mimeType: 'image/jpeg' }),
+    ).rejects.toBeInstanceOf(EncoderUnavailableError);
+  });
+
+  it('TD-ONNX-02 — shutdown() releases the native session + drops the cache', async () => {
+    const adapter = new SiglipOnnxAdapter({
+      modelPath: './models/siglip2-base-patch16-224.onnx',
+      timeoutMs: 3000,
+    });
+    const buffer = await makeSiglipJpegBuffer();
+    await adapter.encode({ buffer, mimeType: 'image/jpeg' });
+
+    await adapter.shutdown();
+    expect(onnxReleaseMock).toHaveBeenCalledTimes(1);
+
+    // Next encode re-creates the session (cache was dropped).
+    await adapter.encode({ buffer, mimeType: 'image/jpeg' });
+    expect(onnxCreateMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('TD-ONNX-02 — shutdown() is a no-op when no session was ever created', async () => {
+    const adapter = new SiglipOnnxAdapter({
+      modelPath: './models/siglip2-base-patch16-224.onnx',
+      timeoutMs: 3000,
+    });
+    await expect(adapter.shutdown()).resolves.toBeUndefined();
+    expect(onnxReleaseMock).not.toHaveBeenCalled();
   });
 
   it('returns a 768-dim Float32Array tagged with the SigLIP v1 modelVersion', async () => {
