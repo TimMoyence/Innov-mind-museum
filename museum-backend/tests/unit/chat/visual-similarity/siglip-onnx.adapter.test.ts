@@ -44,7 +44,7 @@ interface SiglipOnnxAdapterCtorArgs {
 }
 
 // SUT — Phase 4 file, must not yet exist.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
+
 const { SiglipOnnxAdapter } =
   require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
     SiglipOnnxAdapter: new (args: SiglipOnnxAdapterCtorArgs) => {
@@ -55,6 +55,7 @@ const { SiglipOnnxAdapter } =
         vector: Float32Array;
         modelVersion: string;
       }>;
+      shutdown: () => Promise<void>;
     };
   };
 
