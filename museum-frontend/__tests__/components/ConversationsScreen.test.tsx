@@ -1,5 +1,5 @@
 import '../helpers/test-utils';
-import React from 'react';
+import type React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
@@ -62,6 +62,19 @@ jest.mock('@/features/conversation/ui/ConversationSearchBar', () => {
   return {
     ConversationSearchBar: (props: { value: string; onChangeText: (t: string) => void }) => (
       <View testID="search-bar" />
+    ),
+  };
+});
+
+// TD-RNGH-04 — SwipeableConversationCard now wraps `ReanimatedSwipeable`
+// (Reanimated worklets), which is not available in this screen test's jsdom
+// context. Mock it to a passthrough wrapper (mirrors the shared
+// conversations-screen.setup.tsx helper) so the screen renders its cards.
+jest.mock('@/features/conversation/ui/SwipeableConversationCard', () => {
+  const { View } = require('react-native');
+  return {
+    SwipeableConversationCard: ({ children }: { children: React.ReactNode }) => (
+      <View>{children}</View>
     ),
   };
 });
