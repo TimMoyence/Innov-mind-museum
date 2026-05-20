@@ -30,3 +30,21 @@ Audit 2026-05-18 : **MOSTLY_COMPLIANT_WITH_2_HIGH_FINDINGS**.
 - 27 metrics declared : 16 counters + 4 gauges + 7 histograms
 - 1 high-cardinality vulnerability (F1)
 - 0 auth on /metrics (F2)
+
+---
+
+## Refresh 2026-05-20 — status check
+
+- **F1 (HIGH)** : FIXED in `metrics-middleware.ts:23-26` — TD-PC-01 applied (`req.path` fallback replaced with literal `'unmatched'`). Confirmed at read time on 2026-05-20.
+- **F2 (HIGH, OPEN)** : `app.ts:222 app.get('/metrics', metricsHandler)` — still no auth middleware on the route. nginx allowlist status in prod site.conf NOT verified in this refresh. **TD-PC-02 remains open, gating action item for V1 launch (2026-06-01)**.
+- **F3 (MEDIUM, OPEN)** : `musaium_` prefix inconsistency persists (15 prefixed, 12 unprefixed in `prometheus-metrics.ts`). No commit landed since 2026-05-18. TD-PC-03 not yet scheduled.
+- **TD-31 (planned post-V1)** : migration to `@opentelemetry/exporter-prometheus`. Concept map + gradual strategy added to `PATTERNS.md` §6a. Risk: cardinality discipline loses construction-time `labelNames` gate — must be re-enforced per call site. NOT on V1 critical path.
+- **TD-43 (`geo_detect_museum_total{outcome="miss"}` ambiguity)** : confirmed at `prometheus-metrics.ts:396-401`. The Counter does not distinguish "no match" (legitimate empty result) from "throw" (Nominatim error → caller chose to record `miss`). Recommended fix: split outcome into `{hit-geofence, hit-haversine, miss-nomatch, miss-error}`. Cardinality impact: 3 → 4 series, well under 200 budget. TD-43 ready for scheduling.
+
+## New finding F4 (LOW, 2026-05-20) — `prom-client@15.1.3` is 23 months old
+
+Latest published release is still v15.1.3 (2024-06-27). The `Unreleased` CHANGELOG section accumulates planned v16 work but nothing has shipped in ~2 years. Not a defect — `prom-client` is a stable, low-surface library — but worth tracking against the TD-31 OTel migration timeline. If v16 ships (drops Node 16/18/21/23 + renames `AggregatorRegistry → ClusterRegistry`), the engines bump is the only blocker since Musaium has 0 `AggregatorRegistry` usages.
+
+## New finding F5 (INFO, 2026-05-20) — no CVE in NVD / GitHub Advisory DB
+
+Searched May 2026. No prom-client CVEs published. Supply-chain remains the only realistic vector (lockfile + Dependabot in place).

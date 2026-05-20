@@ -2,203 +2,352 @@
   "$schema": "https://musaium.app/lib-docs/INDEX.schema.json",
   "version": "1.0",
   "description": "UFR-022 lib-docs manifest. Source of truth for which libraries have a cached PATTERNS.md + LESSONS.md + raw snapshot. Tracked in git. Per-lib snapshots/PATTERNS.md/sources.json/VERSION = untracked, regenerated locally on demand by doc-fetcher + doc-curator agents.",
-  "lastUpdated": "2026-05-18T10:12:57Z",
+  "lastUpdated": "2026-05-21T00:00:00Z",
   "libs": {
     "typeorm": {
       "version": "0.3.28",
-      "fetched": "2026-05-18T08:01:00Z",
+      "fetched": "2026-05-20T19:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:01:00Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "017efd825138716ed723c7adbefdc682f29812c55a91e41d97098965d6f728d5",
-      "patternsSha256": "862266265de596e9f79055c65c296775698b4f1e4b525f76143b99b9ebf393df",
+      "curatedBy": "doc-curator (UFR-022 refresh)",
+      "snapshotSha256": "390ff30129899dbd715608b295fed63e95293b4b26aeebf788aa3e0f48eaec60",
+      "patternsSha256": "d97f9ca9a5b01873b4928865c5319966bc3ffdf4ec3e8f07232b9f99a38de039",
       "sourceUrls": [
-        "https://typeorm.io/",
-        "https://typeorm.io/docs/getting-started"
+        "https://typeorm.io/docs/getting-started",
+        "https://typeorm.io/docs/data-source/data-source",
+        "https://typeorm.io/docs/entity/entities",
+        "https://typeorm.io/docs/relations/relations",
+        "https://typeorm.io/docs/working-with-entity-manager/working-with-entity-manager",
+        "https://typeorm.io/docs/working-with-entity-manager/working-with-repository",
+        "https://typeorm.io/docs/working-with-entity-manager/find-options",
+        "https://typeorm.io/docs/query-builder/select-query-builder",
+        "https://typeorm.io/docs/migrations/why",
+        "https://typeorm.io/docs/advanced-topics/transactions",
+        "https://typeorm.io/docs/query-runner",
+        "https://typeorm.io/docs/guides/active-record-data-mapper",
+        "https://typeorm.io/docs/help/faq",
+        "https://github.com/typeorm/typeorm/releases",
+        "https://github.com/typeorm/typeorm/releases/tag/0.3.29",
+        "https://github.com/typeorm/typeorm/releases/tag/0.3.30",
+        "https://github.com/typeorm/typeorm/security/advisories"
       ],
       "warnings": [
         {
-          "reason": "404",
-          "url": "https://typeorm.io/docs/working-with-repository/repository-api"
+          "url": "https://github.com/typeorm/typeorm/blob/master/CHANGELOG.md",
+          "reason": "degraded",
+          "ts": "2026-05-20T19:25:00Z",
+          "note": "GitHub blob viewer returned chrome content without actual changelog text. Worked around by fetching per-release pages directly."
         },
         {
+          "url": "https://typeorm.io/docs/working-with-repository/repository-api",
           "reason": "404",
-          "url": "https://typeorm.io/docs/working-with-repository/find-options"
+          "ts": "2026-05-18T07:55:30Z",
+          "note": "Stale path from prior refresh — fallback to /docs/working-with-entity-manager/working-with-repository still works."
+        },
+        {
+          "url": "https://typeorm.io/docs/working-with-repository/find-options",
+          "reason": "404",
+          "ts": "2026-05-18T07:55:30Z",
+          "note": "Stale path from prior refresh — fallback to /docs/working-with-entity-manager/find-options still works."
         }
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "express": {
       "version": "5.2.1",
-      "fetched": "2026-05-18T08:11:33Z",
+      "fetched": "2026-05-20T18:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:11:33Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "02f242d008ba9ad8e70a39b0a4d3661ba108d36ed22c5441eba48ff4633d0672",
-      "patternsSha256": "3c57311fd43e61e147c33d9c6632e49a97636a81f2dcdc427c747db7a9ff7b04",
+      "snapshotSha256": "e1904e4eb3fd22ff3b67a61906aac65aad9607bda50e486b1bd51d9c65b2e6f5",
+      "patternsSha256": "16c5078f28e52595ad20fdb7ef8d0e4f235bdec870cd4eafcabf46b2fb71be91",
       "sourceUrls": [
         "https://expressjs.com/en/5x/api.html",
-        "https://expressjs.com/en/guide/migrating-5.html"
+        "https://expressjs.com/en/guide/migrating-5.html",
+        "https://github.com/expressjs/express/releases",
+        "https://github.com/expressjs/express/blob/master/History.md",
+        "https://github.com/expressjs/express/security/advisories",
+        "https://github.com/advisories/GHSA-qw6h-vgh9-j6wx",
+        "https://github.com/advisories/GHSA-rv95-896h-c2vc",
+        "https://expressjs.com/en/advanced/best-practice-security.html"
       ],
-      "warnings": []
+      "warnings": [
+        "https://github.com/expressjs/express/blob/master/Changelog.md returned HTTP 404 — Express uses History.md, not Changelog.md. History.md was fetched successfully, so no data loss."
+      ],
+      "refreshed": "2026-05-20"
     },
     "langchain": {
       "version": "1.x-family",
-      "fetched": "2026-05-18T08:11:33Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:11:33Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "39177912fb523ac5e2badbbe97908c212f9366ba0ad3b9b779e45b66675b1c4e",
-      "patternsSha256": "7e13306a1d67de9b80f33b256346e8afb145b5b6bc6a61b784d7bbcdac2f4b78",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "9292bddb8fdd62423e916ac7d84cb7876ac2ad3629c1209089f7e6e02efe0c0d",
+      "patternsSha256": "0c2c4bfdedc8f23055f2b132620766f151954539f56b10db8bcf7a17328f8b0e",
       "sourceUrls": [
         "https://docs.langchain.com/oss/javascript/releases/langchain-v1",
-        "https://js.langchain.com/docs/"
+        "https://docs.langchain.com/oss/javascript/integrations/chat/openai",
+        "https://docs.langchain.com/oss/javascript/integrations/chat/google_generative_ai",
+        "https://docs.langchain.com/oss/javascript/integrations/chat/google",
+        "https://docs.langchain.com/oss/javascript/langchain/structured-output",
+        "https://github.com/langchain-ai/langchainjs/releases",
+        "https://github.com/langchain-ai/langchainjs/security/advisories",
+        "https://registry.npmjs.org/@langchain/openai",
+        "https://registry.npmjs.org/@langchain/core",
+        "https://registry.npmjs.org/@langchain/google-genai",
+        "https://registry.npmjs.org/@langchain/google"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "https://docs.langchain.com/oss/javascript/quickstart"
-        }
+        "npmjs.com gated by Cloudflare 403 — used registry.npmjs.org directly",
+        "docs.langchain.com/.../chat/google publishes constructor + migration pointer but no side-by-side migration table",
+        "docs.langchain.com/oss/javascript/quickstart still 404 (since 2026-05-18)"
       ],
       "family": [
         "@langchain/core@1.1.45",
         "@langchain/openai@1.4.2",
         "@langchain/google-genai@2.1.26"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "pg": {
       "version": "8.20.0",
-      "fetched": "2026-05-18T08:11:33Z",
+      "fetched": "2026-05-20T17:40:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:11:33Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "6d9ed6a96787b81f3127c0ecbfdf589c601ac9c5f01b67dd15c9e2ce29f82f28",
-      "patternsSha256": "361d485e5750f7b2aa09c6dd1b67eb60bb3d11c1d51958b91e1b2d9a4c5b083e",
+      "curatedBy": "doc-curator (UFR-022 refresh)",
+      "snapshotSha256": "5a3a780f7b6e4a73455227463d3c6a5b87109abcac449362f8dbb01aadd29024",
+      "patternsSha256": "9cacc76e45ba1eb0ae200f8052795f03fda39e10a0e126729e2de0bf49910b16",
       "sourceUrls": [
         "https://node-postgres.com/",
-        "https://node-postgres.com/apis/pool"
+        "https://node-postgres.com/features/connecting",
+        "https://node-postgres.com/features/queries",
+        "https://node-postgres.com/features/pooling",
+        "https://node-postgres.com/features/transactions",
+        "https://node-postgres.com/apis/pool",
+        "https://node-postgres.com/apis/client",
+        "https://node-postgres.com/features/types",
+        "https://node-postgres.com/guides/pool-sizing",
+        "https://node-postgres.com/guides/async-express",
+        "https://node-postgres.com/guides/upgrading",
+        "https://node-postgres.com/apis/cursor",
+        "https://node-postgres.com/announcements",
+        "https://github.com/brianc/node-postgres/security/advisories",
+        "gh:api:repos/brianc/node-postgres/contents/CHANGELOG.md",
+        "gh:api:repos/brianc/node-postgres/commits?since=2026-03-01",
+        "npm:view:pg:versions+time+dist-tags"
       ],
-      "warnings": []
+      "warnings": [
+        "GitHub Releases page returns 'no releases' — maintainer publishes via npm + CHANGELOG.md. Authoritative source = packages/pg/CHANGELOG.md fetched via gh api.",
+        "GitHub Tags API only exposes tags up to v7.14 (pre-monorepo). Use npm dist-tags for modern version discovery.",
+        "No CVE / GHSA registered for the prototype-pollution fix in 8.21.0 (#3656) as of 2026-05-20.",
+        "Locked museum-backend version 8.20.0 lags upstream latest 8.21.0 by 2 days. Recommend bump for SECURITY fix (#3656).",
+        "Snapshot does not include /apis/result, deep /apis/types, /apis/utilities, /features/ssl, /features/native, /features/esm, /features/callbacks, /guides/project-structure."
+      ],
+      "refreshed": "2026-05-20"
     },
     "bcrypt": {
       "version": "6.0.0",
-      "fetched": "2026-05-18T08:11:33Z",
+      "fetched": "2026-05-20T19:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:11:33Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "dcdcde1f07fb54e4383f249541605d31073a0b5ce3654919d4dff08bda33d315",
-      "patternsSha256": "1896b3981b427c7fe9c646ac73ed3c146813ddff56eeb95c650306bd4755d09d",
+      "curatedBy": "doc-curator (UFR-022 refresh wave)",
+      "snapshotSha256": "9ffedd66f324c18facf41cb38d6054642bc2e7181ba837ea7e29ce06f31f7ec9",
+      "patternsSha256": "d06d054a1617677155fb8f18ba9c5668ffb5e15a45665471dc63868a96615f20",
       "sourceUrls": [
+        "https://raw.githubusercontent.com/kelektiv/node.bcrypt.js/master/README.md",
+        "https://raw.githubusercontent.com/kelektiv/node.bcrypt.js/master/SECURITY.md",
+        "https://github.com/kelektiv/node.bcrypt.js/releases",
+        "https://github.com/kelektiv/node.bcrypt.js/security/advisories",
+        "https://github.com/kelektiv/node.bcrypt.js/wiki/Security-Issues-and-Concerns",
+        "https://github.com/kelektiv/node.bcrypt.js/discussions/1196",
         "https://github.com/kelektiv/node.bcrypt.js",
-        "https://raw.githubusercontent.com/kelektiv/node.bcrypt.js/master/SECURITY.md"
+        "https://www.jsdocs.io/package/bcrypt",
+        "https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/master/types/bcrypt/index.d.ts",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+        "gh:api:advisories?ecosystem=npm&affects=bcrypt",
+        "npm:view:bcrypt:versions+time",
+        "https://www.npmjs.com/package/bcrypt"
       ],
       "warnings": [
-        {
-          "reason": "403-anti-bot",
-          "url": "https://www.npmjs.com/package/bcrypt"
-        }
-      ]
+        "npmjs.com returns HTTP 403 (anti-bot). Metadata cross-checked via `npm view bcrypt versions time` and `jsdocs.io`. No content loss.",
+        "Upstream SECURITY.md still lists 5.0.x as the only supported branch — stale relative to v6.0.0 release. Treat v6.x as the current supported branch (npm dist-tag latest = 6.0.0 is authoritative).",
+        "Upstream cadence: 1 release in the last ~12 months. Library in low-maintenance mode. Not a vulnerability, but anchors TD-29 (argon2id migration) rationale.",
+        "OWASP 2026 cheat-sheet repositions bcrypt as 'legacy systems only' behind Argon2id + scrypt; still acceptable at cost >= 10. Musaium pin BCRYPT_ROUNDS = 12 — conforming."
+      ],
+      "refreshed": "2026-05-20"
     },
     "jsonwebtoken": {
       "version": "9.0.3",
-      "fetched": "2026-05-18T08:11:33Z",
+      "fetched": "2026-05-20T19:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:11:33Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "aa8facfdd1e16a8943620371c3f8fe37d0c5fb96e800ac719547fc2cad9a418c",
-      "patternsSha256": "50b45d06a94348f002ed1015ca951523a4fba0886a351841abed2547cc44553e",
+      "snapshotSha256": "cf29e41288cab44fc0004c5e2cf5b0cd31b63564976fa20bec0db824f44825a3",
+      "patternsSha256": "69aa6e86f7b552ef31b8132bd21f9cde5691ee89846f2bb54271073560cbe26d",
       "sourceUrls": [
-        "https://github.com/auth0/node-jsonwebtoken",
-        "https://github.com/auth0/node-jsonwebtoken/wiki/Migration-Notes:-v8-to-v9"
+        "https://raw.githubusercontent.com/auth0/node-jsonwebtoken/master/README.md",
+        "https://raw.githubusercontent.com/auth0/node-jsonwebtoken/master/CHANGELOG.md",
+        "https://github.com/auth0/node-jsonwebtoken/wiki/Migration-Notes:-v8-to-v9",
+        "https://api.github.com/repos/auth0/node-jsonwebtoken/releases",
+        "https://api.github.com/repos/auth0/node-jsonwebtoken/security-advisories",
+        "https://api.github.com/repos/auth0/node-jsonwebtoken/tags",
+        "https://www.jsdocs.io/package/@types/jsonwebtoken",
+        "https://datatracker.ietf.org/doc/html/rfc7519",
+        "https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_rest_api/authenticating_users_with_sign_in_with_apple"
       ],
       "warnings": [
-        {
-          "reason": "403-forbidden",
-          "url": "https://www.npmjs.com/package/jsonwebtoken"
-        }
-      ]
+        "https://www.npmjs.com/package/jsonwebtoken returns 403-forbidden (persistent ; GitHub raw README is source of truth — no data loss).",
+        "snapshot-2026-05-20.md is a DELTA snapshot ; full upstream text held in snapshot-2026-05-18.md (preserved unchanged). Upstream README and CHANGELOG are byte-identical to the 2026-05-18 capture ; this refresh records verification + Musaium in-tree state changes."
+      ],
+      "refreshed": "2026-05-20"
     },
     "bullmq": {
       "version": "5.74.1",
-      "fetched": "2026-05-18T08:24:52Z",
+      "fetched": "2026-05-20T18:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:24:52Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "21a82798affab42f5c3966909b1866121699a812e6796f33facdfdec7924c84c",
-      "patternsSha256": "7400efd2e11a8ff6c4082afbca908af2192096ffc2b259edb47631d387ce5d74",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "772bd52fdf1432387b0739e1014b1a89e1bda0dec73b309651260e8f5598f4d8",
+      "patternsSha256": "8cd748c03c06c41e8aa4728c22daae7338b217f4193c9c0199de16ffd5ff74f9",
       "sourceUrls": [
         "https://docs.bullmq.io/guide/introduction",
-        "https://docs.bullmq.io/guide/connections"
+        "https://docs.bullmq.io/guide/queues",
+        "https://docs.bullmq.io/guide/workers",
+        "https://docs.bullmq.io/guide/connections",
+        "https://docs.bullmq.io/guide/events",
+        "https://docs.bullmq.io/guide/retrying-failing-jobs",
+        "https://docs.bullmq.io/guide/rate-limiting",
+        "https://docs.bullmq.io/guide/workers/concurrency",
+        "https://docs.bullmq.io/guide/flows",
+        "https://docs.bullmq.io/guide/job-schedulers",
+        "https://docs.bullmq.io/guide/jobs",
+        "https://docs.bullmq.io/guide/jobs/job-ids",
+        "https://docs.bullmq.io/guide/jobs/job-data",
+        "https://docs.bullmq.io/guide/jobs/prioritized",
+        "https://docs.bullmq.io/guide/jobs/stalled",
+        "https://docs.bullmq.io/guide/jobs/deduplication",
+        "https://docs.bullmq.io/guide/jobs/repeatable",
+        "https://docs.bullmq.io/changelog",
+        "https://api.docs.bullmq.io/classes/v5.Queue.html",
+        "https://docs.bullmq.io/patterns/manually-fetching-jobs",
+        "https://github.com/taskforcesh/bullmq/security/advisories",
+        "https://registry.npmjs.org/bullmq"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "https://docs.bullmq.io/guide/queueevents"
-        }
-      ]
+        "WebFetch 403 on github.com CHANGELOG.md (anti-bot) — used docs.bullmq.io/changelog as substitute",
+        "WebFetch 403 on npmjs.com — used registry.npmjs.org JSON API",
+        "/guide/queueevents 404 (canonical: /guide/events)",
+        "/guide/jobs/job-options 404 (no aggregator page exists)",
+        "/guide/jobs/removing-jobs 404 (removal patterns in Queue API + Stalled)",
+        "/patterns/dlq 404 (no dedicated page; pattern is removeOnFail + getFailed + Bull-board)",
+        "/guide/jobs/job-data 200 but sparse"
+      ],
+      "refreshed": "2026-05-20"
     },
     "ioredis": {
       "version": "5.10.1",
-      "fetched": "2026-05-18T08:24:52Z",
+      "fetched": "2026-05-20T20:15:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:24:52Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "1002dba0ac51d5376188288c388f7adfea0d94f8136c1d16d78c60cac918cd87",
-      "patternsSha256": "4ce02936fc22bea1e99b8ff44bd9b566c27776857c9d4c0f4a8884b825a62813",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "9e2a6c46707f511e6d3108a6885b9d4a2dfd72601b1d0893bc862f5bbec8c3b1",
+      "patternsSha256": "fa32d75f9308db3dc3fd5fda91cb285576de21ea33ba62f86267a7a5b9332301",
       "sourceUrls": [
         "https://github.com/redis/ioredis",
-        "https://github.com/redis/ioredis/wiki/Upgrading-from-v4-to-v5"
+        "https://github.com/redis/ioredis/wiki/Upgrading-from-v4-to-v5",
+        "https://github.com/redis/ioredis/releases",
+        "https://github.com/redis/ioredis/releases/tag/v5.10.1",
+        "https://github.com/redis/ioredis/security/advisories",
+        "https://github.com/advisories?query=ioredis",
+        "https://redis.github.io/ioredis/classes/Redis.html",
+        "https://redis.github.io/ioredis/classes/Cluster.html",
+        "https://redis.github.io/ioredis/index.html",
+        "https://github.com/redis/ioredis/wiki/Disable-ready-check",
+        "https://raw.githubusercontent.com/redis/ioredis/main/examples/typescript/scripts.ts"
       ],
       "warnings": [
-        {
-          "reason": "404-expected",
-          "url": "redis.github.io typedoc options page"
-        }
-      ]
+        "examples/cluster.{js,ts}, examples/sentinel.ts, examples/pubsub.ts return 404 — no dedicated example files in repo, coverage is README-only",
+        "redis.github.io/ioredis/interfaces/RedisOptions.html returns 404 — RedisOptions is a type alias not exported as a separate typedoc page",
+        "Release notes for v5.0.0 through v5.8.1 not visible on /releases excerpt — historical migration breakpoints below v5.8.2 may be missing"
+      ],
+      "refreshed": "2026-05-20"
     },
     "@sentry/node": {
       "version": "10.49.0",
-      "fetched": "2026-05-18T08:24:52Z",
+      "fetched": "2026-05-20T10:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:24:52Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "9abed1ff0f6a6d233bcd540c324eb13af32967c3e96a6daeaf0eb77132c6d32f",
-      "patternsSha256": "a211e5372cbfc7379905fa50019ac92ddd4633a8afd5013e2124309fd35d52e4",
+      "curatedBy": "doc-curator (UFR-022 refresh)",
+      "snapshotSha256": "dae583d799bef7cc293acdc6a86cd56432a5a1d09bfef5c01d63bb6aaec9802f",
+      "patternsSha256": "02e313767125e369c01b318670f03160387e71e3fe65307ca9470acb4619b835",
       "sourceUrls": [
         "https://docs.sentry.io/platforms/javascript/guides/node/",
-        "https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/"
+        "https://docs.sentry.io/platforms/javascript/guides/node/configuration/options/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/opentelemetry/custom-setup/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/tracing/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/configuration/integrations/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/configuration/integrations/http/",
+        "https://docs.sentry.io/platforms/javascript/guides/express/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/usage/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/migration/v9-to-v10/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/configuration/filtering/",
+        "https://docs.sentry.io/platforms/javascript/guides/node/profiling/",
+        "https://docs.sentry.io/platforms/javascript/data-management/sensitive-data/",
+        "https://github.com/getsentry/sentry-javascript/releases",
+        "https://github.com/getsentry/sentry-javascript/security/advisories"
       ],
       "warnings": [
         {
-          "reason": "404",
-          "url": "/platforms/javascript/guides/node/best-practices/"
+          "url": "https://docs.sentry.io/platforms/javascript/guides/node/best-practices/",
+          "reason": "HTTP 404 (persistent since 2026-05-18)",
+          "ts": "2026-05-20T10:00:00Z"
         },
         {
-          "reason": "api-undocumented",
-          "note": "getDefaultIntegrationsWithoutPerformance used by project but not on canonical v10 page"
+          "url": "https://docs.sentry.io/platforms/javascript/guides/node/usage/",
+          "reason": "partial — only captureException/captureMessage; setUser/setTag/withScope/flush/close missing",
+          "ts": "2026-05-20T10:00:00Z"
         }
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "opentelemetry": {
       "version": "0.217.x-family",
-      "fetched": "2026-05-18T08:24:52Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:24:52Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "e3dfcabb68990778bc819d23773380e76426f463643d1ec6bc3ca8496c14cee7",
-      "patternsSha256": "fc9bf734b486b06b66576220a67d87c21d00214572e45178134806eaa742362a",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "8edf001dfadc728cef3f7c6a5892f5557334c7407f93cf4c512180d1ee9d245d",
+      "patternsSha256": "b3f7b0df59b67d57061cebb6bbac5657859f2bdd87a2fba7854eabc77a019e6f",
       "sourceUrls": [
         "https://opentelemetry.io/docs/languages/js/",
-        "https://opentelemetry.io/docs/languages/js/instrumentation/"
+        "https://opentelemetry.io/docs/languages/js/getting-started/nodejs/",
+        "https://opentelemetry.io/docs/languages/js/instrumentation/",
+        "https://opentelemetry.io/docs/languages/js/resources/",
+        "https://opentelemetry.io/docs/languages/js/sampling/",
+        "https://opentelemetry.io/docs/concepts/sampling/",
+        "https://opentelemetry.io/docs/languages/js/propagation/",
+        "https://opentelemetry.io/docs/specs/semconv/",
+        "https://github.com/open-telemetry/opentelemetry-js/releases",
+        "https://github.com/open-telemetry/opentelemetry-js/security/advisories",
+        "https://github.com/open-telemetry/opentelemetry-js/security/advisories/GHSA-q7rr-3cgh-j5r3",
+        "https://github.com/open-telemetry/opentelemetry-js-contrib/releases",
+        "https://github.com/open-telemetry/opentelemetry-js-contrib/security/advisories",
+        "https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/packages/auto-instrumentations-node/README.md",
+        "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/experimental/CHANGELOG.md",
+        "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/CHANGELOG.md",
+        "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js-contrib/main/packages/auto-instrumentations-node/CHANGELOG.md",
+        "https://registry.npmjs.org/@opentelemetry/api",
+        "https://registry.npmjs.org/@opentelemetry/sdk-node",
+        "https://registry.npmjs.org/@opentelemetry/auto-instrumentations-node",
+        "https://registry.npmjs.org/@opentelemetry/exporter-trace-otlp-http",
+        "https://registry.npmjs.org/@opentelemetry/resources",
+        "https://registry.npmjs.org/@opentelemetry/semantic-conventions"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "https://opentelemetry.io/docs/languages/js/migration/"
-        },
-        {
-          "reason": "discrepancy",
-          "note": "instrumentation-router not in v0.75.0 auto-instrumentations-node bundle README"
-        }
+        "/docs/languages/js/migration/ — 404 (still broken since 2026-05-18); reconstructed from CHANGELOG",
+        "/docs/languages/js/sampling/ — partial coverage (only TraceIdRatioBased documented)",
+        "/docs/specs/semconv/general/trace/ — overview only, verify ATTR_* against package source",
+        "npmjs.com — 403 anti-bot; sourced versions from registry.npmjs.org JSON API"
       ],
       "family": [
         "@opentelemetry/sdk-node@0.217.0",
@@ -206,38 +355,54 @@
         "@opentelemetry/exporter-trace-otlp-http@0.217.0",
         "@opentelemetry/resources@2.7.0",
         "@opentelemetry/semantic-conventions@1.40.0"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-native": {
       "version": "0.83.6",
-      "fetched": "2026-05-18T08:24:52Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:24:52Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "32061a6ce9196227411c4b051ed3134865e9a73c289c32ee22364b9dc3883a0f",
-      "patternsSha256": "0d9d0dbd52fc844f2a43d799675f2e67f38235cc734f45ae61672511d09ca71f",
+      "snapshotSha256": "e3c6c577b0166930884366ad03f3947fa01eadda4c5620eb3d446ae8a5994ebb",
+      "patternsSha256": "20f10902761090d9dc5ebf2f096467404c207f56ee32a412c88db3ab90e3775f",
       "sourceUrls": [
-        "https://reactnative.dev/blog/2025/12/16/react-native-0.83",
-        "https://reactnative.dev/architecture/landing-page"
-      ],
-      "warnings": []
-    },
-    "expo": {
-      "version": "55.0.x-family",
-      "fetched": "2026-05-18T08:39:31Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T08:39:31Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "834198298e94056d6fa7b358404bf75eac626b4c7fe3771b6f5de2fe71ee3217",
-      "patternsSha256": "abcc002ce7ec36839828f71dcbef9b727c45439e4c0d69e7fc57331ba8e25cd6",
-      "sourceUrls": [
-        "https://expo.dev/changelog/sdk-55",
-        "https://docs.expo.dev/router/introduction/"
+        "https://github.com/facebook/react-native/releases",
+        "https://github.com/facebook/react-native/security/advisories",
+        "https://reactnative.dev/blog",
+        "https://reactnative.dev/docs/accessibility",
+        "https://reactnative.dev/docs/performance",
+        "https://reactnative.dev/architecture/landing-page",
+        "https://reactnative.dev/docs/right-to-left",
+        "https://reactnative.dev/docs/getting-started"
       ],
       "warnings": [
-        {
-          "note": "31 packages collapsed; per-module deep dives deferred to upstream"
-        }
+        "https://reactnative.dev/docs/right-to-left returned HTTP 404; RTL doctrine fallback = CLAUDE.md + __tests__/rtl/_rtl-style-audit.ts",
+        "0.84/0.85 blog posts 404 on direct fetch; only blog-index abstracts captured",
+        "Architecture authoring pages (/architecture/fabric-renderer, /threading-model, /bundled-hermes) not refreshed this cycle",
+        "GitHub releases date discrepancy (0.83.x patches surfaced April 2025 vs 0.83 blog Dec 2025) documented at face value"
+      ],
+      "refreshed": "2026-05-20"
+    },
+    "expo": {
+      "version": "55.0.11",
+      "fetched": "2026-05-21T00:00:00Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T08:39:31Z",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "981f155f8573ad6becf812f40d9aed6c711bbf3569e520f4b64eb06e71ecbe1d",
+      "patternsSha256": "e60ee4178327a7a42be861570d7f16af10e6f517da7b08f0fc710e8836902a7d",
+      "sourceUrls": [
+        "https://docs.expo.dev/",
+        "https://docs.expo.dev/versions/v55.0.0/",
+        "https://expo.dev/changelog/sdk-55",
+        "https://docs.expo.dev/versions/v55.0.0/sdk/build-properties/",
+        "https://expo.dev/changelog/mitigating-critical-security-vulnerability-in-react-server-components",
+        "https://security.snyk.io/package/npm/expo-updates"
+      ],
+      "warnings": [
+        "https://docs.expo.dev/workflow/babel/ returned 404",
+        "Per-module SDK pages carried from 2026-05-18 curation"
       ],
       "family": [
         "expo@55.0.11",
@@ -271,180 +436,248 @@
         "expo-font@55.0.6",
         "@expo/vector-icons@15.0.3",
         "babel-preset-expo@~55.0.8"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "react": {
       "version": "19.2.6",
-      "fetched": "2026-05-18T08:39:31Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:39:31Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "72ac998d24f66c3805c21066513d76c0a28fe17772e60ddec01a95f524906eae",
-      "patternsSha256": "ba4c1d4ed5fae9c49aff4971a22247a743c30a756125d5d891506bd073c6c0a0",
+      "snapshotSha256": "9396e3ea866dc0ad1061f7bea4a207107f761fe4c317f5d043065c2c2dce2aaa",
+      "patternsSha256": "a332135315869589b0c1338b64d040eb367678988c44c668d044f58f7023816a",
       "sourceUrls": [
-        "https://react.dev/learn",
-        "https://react.dev/reference/react/hooks"
+        "https://github.com/facebook/react/releases",
+        "https://github.com/facebook/react/security/advisories",
+        "https://react.dev/blog/2025/10/01/react-19-2",
+        "https://react.dev/reference/react-dom",
+        "https://react.dev/reference/rules",
+        "https://react.dev/reference/react/useActionState"
       ],
-      "warnings": [],
+      "warnings": [
+        "Security advisory CVE numbers + exact affected ranges not fetched (per-advisory pages). All advisories RSC-scoped; Musaium ships no RSC. Mitigation = stay >=19.2.6 (satisfied).",
+        "useFormStatus / requestFormReset / useImperativeHandle full signatures only summarised."
+      ],
       "family": [
         "react@19.2.6",
         "react-dom@19.2.6"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "@tanstack/react-query": {
-      "version": "5.100.x-family",
-      "fetched": "2026-05-18T08:39:31Z",
+      "version": "5.100.10",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:39:31Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "7090414173ab472aaf39e09b82fb34711a6ee9c9be8ea85989f9237325d8dd08",
-      "patternsSha256": "b5e8ae267041a0b55f2e3322d396a727a9467a2a056f4858d4bbd0244796872a",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "d476985de8120067a1fa86dd156d4b778f7a46a258054605e03ca76ff4f692ea",
+      "patternsSha256": "a1b8c5bd0269013c5de245e55c41005cdf62787b7437023d0ec072e7a91c3e3b",
       "sourceUrls": [
         "https://tanstack.com/query/latest/docs/framework/react/overview",
-        "https://tanstack.com/query/latest/docs/framework/react/guides/migrating-to-v5"
+        "https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation",
+        "https://tanstack.com/query/latest/docs/framework/react/guides/mutations",
+        "https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation",
+        "https://tanstack.com/query/latest/docs/framework/react/guides/network-mode",
+        "https://tanstack.com/query/latest/docs/framework/react/react-native",
+        "https://tanstack.com/query/latest/docs/framework/react/plugins/persistQueryClient",
+        "https://tanstack.com/query/latest/docs/framework/react/plugins/createAsyncStoragePersister",
+        "https://github.com/TanStack/query/releases",
+        "https://github.com/TanStack/query/security/advisories"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "/docs/framework/react/reference/QueryClient"
-        }
+        "react-native upstream page lacks persister/AsyncStorage guidance; AsyncStorage size/encryption notes in PATTERNS.md are operational, sourced from persister source + RN knowledge",
+        "query-async-storage-persister pinned ^5.99.2 while siblings ^5.100.10 — documented family per upstream"
       ],
       "family": [
         "@tanstack/react-query@5.100.10",
         "@tanstack/react-query-persist-client@5.100.10",
         "@tanstack/query-async-storage-persister@5.99.2"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-hook-form": {
-      "version": "7.74.x-family",
-      "fetched": "2026-05-18T08:39:31Z",
+      "version": "7.74.0",
+      "fetched": "2026-05-21T00:45:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:39:31Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "02955fc6f98d291781e8ac6b5482394462bc90f7a8cc7ab46e932fcf104abff4",
-      "patternsSha256": "398f2669179006dccb96db3819dd9648985b623081ab1bb5bfb3f6d97748cdd6",
+      "snapshotSha256": "f8b7618704798fb5b6bdbf91a0d225e15eef9c1ed440a39aa0a918c1dda75a45",
+      "patternsSha256": "7578c846f8d87960c988ab1d07e10f672377f1a0a0767eaff5df65d69645a9f0",
       "sourceUrls": [
-        "https://raw.githubusercontent.com/react-hook-form/documentation/master/src/content/docs/get-started.mdx",
-        "https://github.com/react-hook-form/resolvers"
+        "https://raw.githubusercontent.com/react-hook-form/documentation/master/src/content/get-started.mdx",
+        "https://raw.githubusercontent.com/react-hook-form/react-hook-form/master/CHANGELOG.md",
+        "https://raw.githubusercontent.com/react-hook-form/resolvers/master/README.md",
+        "https://api.github.com/repos/react-hook-form/resolvers/releases",
+        "https://github.com/react-hook-form/react-hook-form/releases",
+        "https://security.snyk.io/package/npm/react-hook-form"
       ],
       "warnings": [
-        {
-          "reason": "403-cloudflare",
-          "url": "react-hook-form.com (recovered via GitHub raw MDX)"
-        }
+        "react-hook-form.com 403-blocked by Cloudflare bot challenge on every public docs URL (persisting from 2026-05-18). All content sourced from canonical react-hook-form/documentation GitHub MDX + CHANGELOG.md + resolvers README/releases.",
+        "Pinned 7.74.0 is 2 minor behind latest 7.76.0; delta is bug-fix + additive only (setValues, TS6 support, useFieldArray/Controller fixes), no breaking change, no security advisory."
       ],
       "family": [
         "react-hook-form@7.74.0",
         "@hookform/resolvers@5.2.2"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "axios": {
       "version": "1.16.0",
-      "fetched": "2026-05-18T08:39:31Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:39:31Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "ce5212bd780072fad49921a9a3936b116217a77da2940e365ad507bee7de3149",
-      "patternsSha256": "29e6996def5ab612f41d9c51b8cf1b4ca63a37fa94ac5c08955275d7859e1f2e",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "4eadffade0380c71ee5a927fd174260690b19f52cd400b5c33dfe1b921d02ea2",
+      "patternsSha256": "dfc5ec2c4cb71e20b284b098a6d82ca6782051601d22fd11eb3142518a7a6bd2",
       "sourceUrls": [
-        "https://axios.rest/pages/getting-started/first-steps",
-        "https://axios.rest/pages/advanced/interceptors"
+        "https://axios.rest/pages/advanced/interceptors",
+        "https://axios.rest/pages/advanced/cancellation",
+        "https://axios.rest/pages/advanced/error-handling",
+        "https://github.com/axios/axios/releases",
+        "https://github.com/axios/axios/security/advisories"
       ],
       "warnings": [
-        {
-          "reason": "host-migrated",
-          "note": "axios-http.com -> axios.rest as of 2026-05-18"
-        }
-      ]
+        "installed 1.16.0 is one patch behind latest 1.16.1 (2026-05-13); ^1.16.0 range permits bump — recommended for proto-pollution/header-injection hardening",
+        "advisory patched-version fields not exposed per-CVE; 'fixed in 1.16.x line' inferred from publish date 2026-04-24 < 1.16.0 release 2026-05-02",
+        "canonical doc host migrated axios-http.com -> axios.rest (301)"
+      ],
+      "refreshed": "2026-05-20"
     },
     "@sentry/react-native": {
       "version": "8.9.1",
-      "fetched": "2026-05-18T08:55:18Z",
+      "fetched": "2026-05-20T19:55:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:55:18Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "3a7cf464aa0f90ddda7e8ffc4495433499f77032a0fcde5f87b4070eb17aa48d",
-      "patternsSha256": "e9601f5eb04f4c13a23d8858472388f13de429c3ee9479e4c59dca0d407912c0",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "7d33283aa8a5933a9d882c3e4f9d1d64cafff2c847631baacc44e23ede50374d",
+      "patternsSha256": "c3f19a8006be66bd347c5ee48e4a03a87acd4af7d35ce6ab20fae8260ff72f8f",
       "sourceUrls": [
-        "https://docs.sentry.io/platforms/react-native/",
-        "https://docs.sentry.io/platforms/react-native/migration/"
+        "https://github.com/getsentry/sentry-react-native/releases",
+        "https://docs.sentry.io/platforms/react-native/configuration/options/",
+        "https://docs.sentry.io/platforms/react-native/manual-setup/expo/",
+        "https://docs.sentry.io/platforms/react-native/tracing/instrumentation/expo-router/",
+        "https://docs.sentry.io/platforms/react-native/sourcemaps/",
+        "https://docs.sentry.io/platforms/react-native/session-replay/",
+        "https://docs.sentry.io/platforms/react-native/data-management/sensitive-data/",
+        "https://github.com/getsentry/sentry-react-native/security/advisories",
+        "https://docs.sentry.io/platforms/react-native/"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "/platforms/react-native/features/error-boundary/"
-        }
-      ]
+        "404: /enriching-events/source-context/ (recovered via /sourcemaps/)",
+        "partial: GHSA-68c2-4mpx-qh95 affected-range not on public index",
+        "partial: /data-management/sensitive-data/ — auto-scrubbed fields, replay masking, server-side scrubbing not enumerated",
+        "partial: landing page — latest version + RN/Expo SDK ranges absent"
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-native-reanimated": {
-      "version": "4.x-family",
-      "fetched": "2026-05-18T08:55:18Z",
+      "version": "4.2.1",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:55:18Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "65e91aa1a7d6e7b19d2f5cad9c9202b78d0e0cb038bd6de53e6e01271f229f5c",
-      "patternsSha256": "e63b13d31a9fcf26fc8842c78365e870ed111f6f84bc0563dac137094ea06ec3",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "41eeb8ea780e17b985457d8800a1d1681b3c39140302a7d3d709e214a90f68c5",
+      "patternsSha256": "d6e0847364fbe0d94063bf371a181efe53e27c9cce5fb44da880ea0c340bd56a",
       "sourceUrls": [
-        "https://docs.swmansion.com/react-native-reanimated/docs/",
-        "https://docs.swmansion.com/react-native-worklets/docs/"
+        "https://github.com/software-mansion/react-native-reanimated/releases",
+        "https://github.com/software-mansion/react-native-reanimated/security/advisories",
+        "https://docs.swmansion.com/react-native-reanimated/docs/css-animations/animation-name",
+        "https://docs.swmansion.com/react-native-reanimated/docs/layout-animations/entering-exiting-animations",
+        "https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started/",
+        "https://docs.swmansion.com/react-native-reanimated/docs/guides/migration-from-3.x/",
+        "https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/"
       ],
-      "warnings": [],
+      "warnings": [
+        "glossary page lacked CSS-animations content; refetched at /docs/css-animations/animation-name",
+        "release-notes dates reported as 2025 by WebFetch — used for version ordering only, not fetch timeline",
+        "latest upstream 4.3.1 / worklets 0.8.3; Musaium pinned 4.2.1 / 0.7.4 (supported on RN 0.83)"
+      ],
       "family": [
         "react-native-reanimated@4.2.1",
         "react-native-worklets@0.7.4"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "i18next": {
-      "version": "v26+v17-family",
-      "fetched": "2026-05-18T08:55:18Z",
+      "version": "26.0.6",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:55:18Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "09b1cec219da3487f8c436272d9bb00d321ccbb6ba790d09a5590c52163232a0",
-      "patternsSha256": "16aefa46de7d41767c82d692df006947961ee1308c269237fe5ad43313fbad79",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "077b67e8e1535ab2f783516b7914c9c1d0d4649b847c7598ebeb836ee12eb86e",
+      "patternsSha256": "5559b32a47cedb88cdb5779e203914c6413e0b696b05ac84e504ab69834f46cd",
       "sourceUrls": [
-        "https://www.i18next.com/overview/getting-started",
-        "https://react.i18next.com/latest/usetranslation-hook"
+        "https://www.i18next.com/",
+        "https://www.i18next.com/overview/api",
+        "https://www.i18next.com/translation-function/plurals",
+        "https://www.i18next.com/translation-function/formatting",
+        "https://github.com/i18next/i18next/releases",
+        "https://github.com/i18next/i18next/security/advisories"
       ],
-      "warnings": [],
+      "warnings": [
+        "installed 26.0.6 is behind latest 26.2.0; ^26.0.6 permits bump — recommended to satisfy react-i18next 17.0.8 peer (i18next >= 26.2.0)",
+        "F1/F3/F5/F7 from 2026-05-18 audit STILL UNFIXED; F2 partial (AR plurals incomplete for CLDR Cat 6); F4 still uses pre-formatted date interpolation",
+        "CI check:i18n validates key parity only, NOT CLDR plural-suffix completeness — AR _few/_many gaps pass green",
+        "v26 migration: legacy interpolation.format callback removed (project clean)"
+      ],
       "family": [
         "i18next@26.0.6",
         "react-i18next@17.0.4",
         "intl-pluralrules@2.0.1"
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "zod": {
-      "version": "4.4.1",
-      "fetched": "2026-05-18T08:55:18Z",
+      "version": "^4.4.3",
+      "fetched": "2026-05-20T19:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:55:18Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "072f3ecf8f62ad6aa18adab95d1767218f820f51b0a6de11ccc12ef18997d0ed",
-      "patternsSha256": "caf5de5515be56026d8a157f48223ef5664554785c3cc015c4e9c99b4f5a045e",
+      "snapshotSha256": "570877823672e3fa08d8e3ca76272fdbad9e8341d852acb4bc2fb4a9889e1a69",
+      "patternsSha256": "2f9a29f6a9f6777e5f57badd127014a77a8e945bc4d6607b30cb0b31f643ed90",
       "sourceUrls": [
         "https://zod.dev/v4",
-        "https://zod.dev/v4/changelog"
+        "https://zod.dev/v4/changelog",
+        "https://zod.dev/basics",
+        "https://zod.dev/api",
+        "https://zod.dev/error-customization",
+        "https://zod.dev/error-formatting",
+        "https://zod.dev/metadata",
+        "https://zod.dev/json-schema",
+        "https://zod.dev/library-authors",
+        "https://github.com/colinhacks/zod/releases",
+        "https://github.com/colinhacks/zod/releases/tag/v4.4.0",
+        "https://github.com/colinhacks/zod/security/advisories"
       ],
-      "warnings": []
+      "warnings": [
+        "OpenAI structured-output reference page returned HTTP 403 via WebFetch — rules cross-referenced from in-repo JSDoc in main-assistant-output.schema.ts:14-25.",
+        "/v4/error-formatting page still does not enumerate the full $ZodIssue subtype taxonomy in its prose body."
+      ],
+      "refreshed": "2026-05-20"
     },
     "next": {
       "version": "15.5.18",
-      "fetched": "2026-05-18T08:55:18Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T08:55:18Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "e8646665ad4b42ef7005d79b649a5b1b26e852b26e167ae7cce1a4bf2c04e78c",
-      "patternsSha256": "6165f246bf28a1b1fe2d39d52c4795b634030cbbeefb6c1355a1b4f5cf7b887e",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "48b50077c42bbc2fe7ee37379235a0b8cc3262927e48207e7c5d45a811306ca5",
+      "patternsSha256": "054ce149ab4bb45cb29c2e8d03d94f3c13e224173d63e2c791b157ff5a2e7c29",
       "sourceUrls": [
-        "https://nextjs.org/docs/app",
+        "https://github.com/advisories/GHSA-f82v-jwr5-mffw",
+        "https://github.com/vercel/next.js/security/advisories",
+        "https://nextjs.org/docs/app/api-reference/file-conventions/error",
+        "https://nextjs.org/docs/app/getting-started/mutating-data",
         "https://nextjs.org/docs/app/guides/upgrading/version-15"
       ],
       "warnings": [
-        {
-          "reason": "version-drift",
-          "note": "canonical site at v16; project at v15.5.18 — Upgrading-to-v15 page is authoritative"
-        }
-      ]
+        "canonical-doc-site-version-drift: nextjs.org/docs = v16.2.6; target v15.5.18. v16-only APIs flagged in PATTERNS §5.",
+        "15.5.18 verified as latest 15.5.x patch via npm dist-tags (backport channel); latest stable is 16.2.6.",
+        "GitHub releases page surfaced only canary prereleases; stable landscape confirmed via npm.",
+        "advisory index lists titles only; only CVE-2025-29927 fetched in detail."
+      ],
+      "refreshed": "2026-05-20"
     },
     "framer-motion": {
       "version": "12.38.0",
@@ -466,187 +699,299 @@
     },
     "@sentry/nextjs": {
       "version": "10.49.0",
-      "fetched": "2026-05-18T09:06:39Z",
+      "fetched": "2026-05-20T19:55:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:06:39Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "870d52d093034907b536c7ab975074c536339bbff0bb5fe6ca635eabaeececa8",
-      "patternsSha256": "f0dbe30d22f9b1963b6cb04c71e6481ae527cbad1201904afe682c8239918383",
+      "snapshotSha256": "6f1b25250d8c197e389536fcc4e3c18537149c3ad863b58c6c1d0f35368f0b24",
+      "patternsSha256": "702125021836055246b993871e44a0e4ccabcc9e46ab5c9b9d10a549648d2863",
       "sourceUrls": [
         "https://docs.sentry.io/platforms/javascript/guides/nextjs/",
-        "https://docs.sentry.io/platforms/javascript/guides/nextjs/migration/v9-to-v10/"
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/",
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/build/",
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/data-management/sensitive-data/",
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/tracing/",
+        "https://github.com/getsentry/sentry-javascript/releases",
+        "https://github.com/getsentry/sentry-javascript/security/advisories",
+        "https://github.com/getsentry/sentry-javascript/security/advisories/GHSA-2rmr-xw8m-22q9",
+        "https://github.com/getsentry/sentry-javascript/security/advisories/GHSA-6465-jgvq-jhgp"
       ],
       "warnings": [
-        {
-          "reason": "404",
-          "url": "/configuration/edge-runtime/"
-        }
-      ]
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/edge-runtime/ returned HTTP 404 (re-tested 2026-05-20). Edge-runtime guidance captured via manual-setup + troubleshooting pages.",
+        "https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/ is a thin index — full semantics live under /configuration/build/ and /data-management/sensitive-data/, both fetched."
+      ],
+      "refreshed": "2026-05-20"
     },
     "maplibre-gl": {
       "version": "5.23.0",
-      "fetched": "2026-05-18T09:06:39Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:06:39Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "9d5699e7525854d8caf3ba1768cb79800830a692129a881beb0bed0b8808320d",
-      "patternsSha256": "26ecedf802679e3b96f63c3c84fa1d211fb7b76863ae02aa6827bb414d969b33",
+      "snapshotSha256": "0de0d6ff9ccdde4671da054f6c31776eac6a41eed01cde282e3cf79b57ad7c8e",
+      "patternsSha256": "510318e2d4dec809dc5ace9145a2cdee1ceb7ba9b2cccac3c00638deb951460e",
       "sourceUrls": [
         "https://maplibre.org/maplibre-gl-js/docs/",
-        "https://github.com/maplibre/maplibre-gl-js/releases/tag/v5.0.0"
+        "https://github.com/maplibre/maplibre-gl-js/releases",
+        "https://github.com/maplibre/maplibre-gl-js/releases/tag/v5.24.0",
+        "https://github.com/maplibre/maplibre-gl-js/security/advisories",
+        "https://security.snyk.io/package/npm/maplibre-gl",
+        "https://www.npmjs.com/package/maplibre-gl"
       ],
       "warnings": [
         {
-          "reason": "partial",
-          "note": "only NavigationControl detailed; other controls listed by name"
+          "kind": "version-drift",
+          "reason": "Declared ^5.23.0 floats to latest stable 5.24.0. v6.0.0-9 PRERELEASE only — no stable v6, no bump.",
+          "ts": "2026-05-21T00:00:00Z"
+        },
+        {
+          "kind": "security",
+          "reason": "No CVE / Snyk direct vulnerability for maplibre-gl 5.x as of 2026-05.",
+          "ts": "2026-05-21T00:00:00Z"
         }
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "recharts": {
       "version": "3.8.1",
-      "fetched": "2026-05-18T09:06:39Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:06:39Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "1e7b011fb4ad0af34e4d784f4374c3bfa7c441076c6dc7d07d59190c3c0705ea",
-      "patternsSha256": "b307ce2ae62c247b9095a977dccd293909f6d67f7035f910cafee1a7205fd7fd",
+      "snapshotSha256": "2c599dff9ba5e5579e494c4dffcd8a3859afdc28f059e1379d78a4f2b01b6b06",
+      "patternsSha256": "684002f99a1807d31865afa9e0d7a1ac8d7ae4620f820e60e993e810d51b67a7",
       "sourceUrls": [
-        "https://recharts.github.io/en-US/",
+        "https://recharts.github.io/en-US/guide/getting-started",
+        "https://recharts.github.io/en-US/guide/installation",
+        "https://recharts.github.io/en-US/api/LineChart",
+        "https://recharts.github.io/en-US/api/BarChart",
+        "https://recharts.github.io/en-US/api/AreaChart",
+        "https://recharts.github.io/en-US/api/PieChart",
+        "https://recharts.github.io/en-US/api/ResponsiveContainer",
+        "https://recharts.github.io/en-US/guide/animations",
+        "https://recharts.github.io/en-US/guide/typescript",
+        "https://github.com/recharts/recharts/releases",
+        "https://github.com/recharts/recharts/security/advisories",
         "https://github.com/recharts/recharts/wiki/3.0-migration-guide"
       ],
       "warnings": [
-        {
-          "reason": "host-migrated",
-          "note": "recharts.org -> recharts.github.io"
-        }
-      ]
+        "GitHub Releases page rendered 3.x dates as 2025 via WebFetch; corrected against npm registry publish timestamps (3.8.1 = 2026-03-25T12:12:20Z). npm authoritative.",
+        "Docs-site v2->v3 migration slugs (/guide/migrate-from-v2, /guide/migration) 404 — migration facts from GitHub Wiki 3.0-migration-guide.",
+        "In-repo CHANGELOG.md stale at v2.2.0 — 3.x notes only on GitHub Releases.",
+        "Canonical doc root moved recharts.org -> recharts.github.io."
+      ],
+      "refreshed": "2026-05-20"
     },
     "sharp": {
-      "version": "0.34.0",
-      "fetched": "2026-05-18T09:06:39Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:06:39Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "4f686fc3a0b5bb2f20948e3ffcdeb2aacd98181c55064736656b1dd5dcda2e78",
-      "patternsSha256": "226224ce964f7fcb4887ca929f6258415de8575d0dcc750ae001a760aeb08632",
+      "version": "0.34.5",
+      "pinnedRange": "^0.34.0",
+      "fetched": "2026-05-20T18:14:00Z",
+      "fetchedBy": "doc-curator-refresh",
+      "curatedAt": "2026-05-20T18:14:00Z",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "887c02bb354a143696a9252eacf05d57d84e50f8eb837ce3a4ccb85fe8523e01",
+      "patternsSha256": "403a55f2575e854997e69c71100d9289edd200b1c3edd0b7ae3a1adbf5970a0a",
       "sourceUrls": [
         "https://sharp.pixelplumbing.com/",
-        "https://sharp.pixelplumbing.com/api-resize/"
+        "https://sharp.pixelplumbing.com/install/",
+        "https://sharp.pixelplumbing.com/api-constructor/",
+        "https://sharp.pixelplumbing.com/api-resize/",
+        "https://sharp.pixelplumbing.com/api-output/",
+        "https://sharp.pixelplumbing.com/api-composite/",
+        "https://sharp.pixelplumbing.com/api-input/",
+        "https://sharp.pixelplumbing.com/performance/",
+        "https://sharp.pixelplumbing.com/api-channel/",
+        "https://sharp.pixelplumbing.com/changelog/v0.34.5/",
+        "https://github.com/lovell/sharp/releases",
+        "https://github.com/advisories?query=sharp+ecosystem%3Anpm"
       ],
-      "warnings": []
+      "warnings": [],
+      "openTds": [
+        "TD-SHARP-01",
+        "TD-SHARP-02",
+        "TD-SHARP-03"
+      ],
+      "refreshed": "2026-05-20"
     },
     "opossum": {
       "version": "9.0.0",
-      "fetched": "2026-05-18T09:16:07Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:16:07Z",
+      "fetched": "2026-05-20T18:00:00Z",
+      "fetchedBy": "doc-curator",
+      "curatedAt": "2026-05-20T18:00:00Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "68881ad5794e8fa0e89605a27b9384ba2b853252aab604927140d0979ec6ee57",
-      "patternsSha256": "19663bc9a9cecbe5b2a12cec3a20c9b2fc047a30038f7c2016a6b91b7721c1ed",
+      "snapshotSha256": "ace213b7c4e76cf0da454970f1b5ccd426e41c679fbfa0d5e9585b6c1b183598",
+      "patternsSha256": "e6ab888c50e417f16e28b37fe5e773ff77f87bcdb20c52998ee1404910e30f6d",
+      "previousSnapshotSha256": "68881ad5794e8fa0e89605a27b9384ba2b853252aab604927140d0979ec6ee57",
       "sourceUrls": [
         "https://github.com/nodeshift/opossum",
-        "https://github.com/nodeshift/opossum/blob/main/README.md"
+        "https://github.com/nodeshift/opossum/blob/main/README.md",
+        "https://github.com/nodeshift/opossum/releases",
+        "https://github.com/nodeshift/opossum/blob/main/CHANGELOG.md"
       ],
       "warnings": [
         {
           "reason": "404",
-          "note": "JSDoc class pages flattened to index"
+          "note": "JSDoc class pages still 404 (CircuitBreaker.html, Status.html, global.html, classes.list.html)"
+        },
+        {
+          "reason": "403",
+          "note": "npmjs.com forbids WebFetch — release metadata via GitHub releases page only"
         }
-      ]
+      ],
+      "latestUpstream": "9.0.0",
+      "cveCheck": {
+        "performed": "2026-05-20T18:00:00Z",
+        "result": "no-cves",
+        "note": "CVE-2025-68613 unrelated (n8n RCE)"
+      }
     },
     "otpauth": {
       "version": "9.4.1",
-      "fetched": "2026-05-18T09:16:07Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:16:07Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "630e9a69a93032c353af7e2f3f07145f5ea28ef1ddfaf43d7ba6c4fcabafdc4f",
-      "patternsSha256": "e86232677d729a7ccd80578d99598fb2716efb2bad6b1d8e9fa74fb4067c6f07",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "b2168181819fd2474477ddc33400f7c1008eb0b6b1f5603395f1ba5f826a4185",
+      "patternsSha256": "0ecd835db161d66747ace8bbb0d8d1d4985021422ec58b14dd8efce77bffe2a7",
       "sourceUrls": [
-        "https://github.com/hectorm/otpauth",
-        "https://hectorm.github.io/otpauth/"
+        "https://github.com/hectorm/otpauth/blob/master/README.md",
+        "https://github.com/hectorm/otpauth/releases",
+        "https://github.com/hectorm/otpauth/security/advisories",
+        "https://hectorm.github.io/otpauth/classes/TOTP.html",
+        "https://hectorm.github.io/otpauth/classes/HOTP.html",
+        "https://hectorm.github.io/otpauth/classes/Secret.html",
+        "https://hectorm.github.io/otpauth/classes/URI.html",
+        "https://datatracker.ietf.org/doc/html/rfc6238",
+        "https://github.com/google/google-authenticator/wiki/Key-Uri-Format"
       ],
-      "warnings": []
+      "warnings": [
+        "Musaium 1 minor behind latest (9.4.1 → 9.5.1). No breaking change, no advisory. Bump deferred V2 per remediation roadmap D3.",
+        "Replay protection on Musaium relies on rate-limiter (5/15 min), NOT on otpauth itself. validate({window:1}) only checks currentness."
+      ],
+      "refreshed": "2026-05-20"
     },
     "helmet": {
       "version": "8.1.0",
-      "fetched": "2026-05-18T09:16:07Z",
+      "fetched": "2026-05-20T19:30:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:16:07Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "dcc8fa6e6f5de81e0b0f4a154cb5af0eb7346533e0baafa596a246f9ff79eecb",
-      "patternsSha256": "4e5786d774f5a6388177706a4ff78ad4418f95ff2d9ff4140078629fc7186a66",
+      "snapshotSha256": "506175cd55981cc81b8e5a81d2403a59e6f288738f7e58abd6af4bcf76f8282f",
+      "patternsSha256": "6d95b7fc456deefaef3e8b4deff487a1c3967b1547a8fa21542b457628184f07",
       "sourceUrls": [
-        "https://helmetjs.github.io/",
-        "https://github.com/helmetjs/helmet/blob/main/CHANGELOG.md"
+        "https://github.com/helmetjs/helmet",
+        "https://github.com/helmetjs/helmet/blob/main/README.md",
+        "https://github.com/helmetjs/helmet/blob/main/middlewares/content-security-policy/README.md",
+        "https://github.com/helmetjs/helmet/blob/main/middlewares/strict-transport-security/README.md",
+        "https://github.com/helmetjs/helmet/blob/main/CHANGELOG.md",
+        "https://github.com/helmetjs/helmet/security/advisories",
+        "https://helmetjs.github.io/faq/",
+        "https://helmetjs.github.io/faq/non-documents/",
+        "https://owasp.org/www-project-secure-headers/",
+        "https://hstspreload.org/",
+        "https://content-security-policy.com/"
       ],
-      "warnings": []
+      "warnings": [
+        "https://helmetjs.github.io/faq/csp-nonce/ returned HTTP 404 on 2026-05-20 — nonce pattern (PATTERNS.md §3.5) derived from upstream README directive-as-function support, not from the dedicated FAQ sub-page.",
+        "https://www.npmjs.com/package/helmet returned HTTP 403 (bot detection) — version verified via GitHub CHANGELOG.md instead."
+      ],
+      "refreshed": "2026-05-20"
     },
     "multer": {
       "version": "2.1.1",
-      "fetched": "2026-05-18T09:16:07Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:16:07Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "0bc858bebef4881f4c5d981866c6b92e907a7038305f5787ba7fcf47183b8363",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "434eae5eb30106efd1bbe2fbf4c8cd47bf8fb2a9bf507823b441020769edcd8c",
       "patternsSha256": "f0eb0ff71cf4de0a85bb3c2d142d7037235db247af20976b1e668a4ea7ff3417",
       "sourceUrls": [
-        "https://github.com/expressjs/multer",
-        "https://github.com/advisories/GHSA-44fp-w29j-9vj5"
+        "https://raw.githubusercontent.com/expressjs/multer/main/README.md",
+        "https://raw.githubusercontent.com/expressjs/multer/main/CHANGELOG.md",
+        "https://github.com/expressjs/multer/blob/main/StorageEngine.md",
+        "https://github.com/expressjs/multer/releases",
+        "https://github.com/expressjs/multer/security/advisories",
+        "https://security.snyk.io/package/npm/multer",
+        "https://www.nodejs-security.com/learn/secure-file-handling/weak-multer-file-name-manipulation"
       ],
       "warnings": [
-        {
-          "reason": "security-critical",
-          "note": "only 2.1.1 safe; 1.x and 2.0.x have unpatched DoS CVEs"
-        }
-      ]
+        "npmjs.com WebFetch 403; README recovered via raw.githubusercontent.com.",
+        "Per-GHSA pages not individually fetched; index + CHANGELOG + Snyk cross-ref sufficient."
+      ],
+      "refreshed": "2026-05-20"
     },
     "swagger-ui-express": {
       "version": "5.0.1",
-      "fetched": "2026-05-18T09:16:07Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:16:07Z",
-      "curatedBy": "doc-curator",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
       "snapshotSha256": "973c5c6fd0bfd9b0c514197b2349aa79002076f229946af05a2f85b044b1b868",
       "patternsSha256": "5ea62ed9f9c3207487d2ac4dcc27389a8b857d02a6fbee464231dddf1e5cb5b2",
       "sourceUrls": [
         "https://github.com/scottie1984/swagger-ui-express",
         "https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/"
       ],
-      "warnings": []
+      "warnings": [],
+      "refreshed": "2026-05-20"
     },
     "onnxruntime-node": {
       "version": "1.26.0",
-      "fetched": "2026-05-18T09:31:03Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:31:03Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "9459714fd0a4d5cf80b11c8e42fac520a87eb19b897be5eb07343af909ba15bb",
-      "patternsSha256": "3c9ba662ae54a85346b9237556c47d9be7bf3295fc36ea6f0e925a071120e831",
+      "pinnedRange": "^1.26.0",
+      "fetched": "2026-05-20T18:14:00Z",
+      "fetchedBy": "doc-curator-refresh",
+      "curatedAt": "2026-05-20T18:14:00Z",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "e4ccab555b3f4a58d9538bbee8cc150a769ec542a3474288061df5850151cfd0",
+      "patternsSha256": "8441616f3b8d59e8ea30c0bc3a611c3cbb569f3ec74bd1467f7e44969d7af9ed",
       "sourceUrls": [
         "https://onnxruntime.ai/docs/get-started/with-javascript/node.html",
-        "https://onnxruntime.ai/docs/api/js/"
+        "https://onnxruntime.ai/docs/api/js/",
+        "https://onnxruntime.ai/docs/api/js/modules/InferenceSession.html",
+        "https://github.com/microsoft/onnxruntime/blob/main/js/common/lib/inference-session.ts",
+        "https://onnxruntime.ai/docs/api/js/interfaces/Tensor-1.html",
+        "https://onnxruntime.ai/docs/execution-providers/",
+        "https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html",
+        "https://github.com/microsoft/onnxruntime/releases"
       ],
-      "warnings": []
+      "warnings": [
+        "npmjs.com WebFetch 403 (carryover from 2026-05-18); release dates verified via GitHub + search cache."
+      ],
+      "closedTds": [
+        "TD-ONNX-01",
+        "TD-ONNX-02",
+        "TD-ONNX-03"
+      ],
+      "openTds": [
+        "TD-ONNX-04"
+      ],
+      "refreshed": "2026-05-20"
     },
     "langfuse": {
       "version": "3.38.20",
-      "fetched": "2026-05-18T09:31:03Z",
+      "fetched": "2026-05-20T19:55:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:31:03Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "17c3c550bd3cfd3c83a0199cb697c765d29257bf24b8cf5b0a67b116a92bc590",
-      "patternsSha256": "2fd964ee19eee614ecf08055e3c528b81ac76a4845f8078efdc150ea86c7993c",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "ab93370f9ea75e983f19f2f621630f6374ca37b27496e18ed85fd2cfb0885b12",
+      "patternsSha256": "a7c01602638cf0efc181888ace08accb3b479d774458e46d039bbe9892034327",
       "sourceUrls": [
-        "https://github.com/langfuse/langfuse-js/tree/v3.38.20",
-        "https://langfuse.com/docs/sdk/typescript"
+        "https://github.com/langfuse/langfuse-js/blob/v3.38.20/langfuse-langchain/src/callback.ts",
+        "https://raw.githubusercontent.com/langfuse/langfuse-js/v3.38.20/langfuse-langchain/src/callback.ts",
+        "https://github.com/langfuse/langfuse-js/releases",
+        "https://github.com/langfuse/langfuse-js/security/advisories",
+        "https://langfuse.com/docs/integrations/langchain/typescript",
+        "https://langfuse.com/docs/observability/features/sessions",
+        "https://langfuse.com/docs/model-usage-and-cost"
       ],
       "warnings": [
-        {
-          "reason": "deprecated",
-          "note": "v3.x deprecated; project pins v3.38.20; v5 docs differ"
-        }
-      ]
+        "v3 SDK line FROZEN post-deprecation (2025-08 v4 GA, 2026-03 v5 GA) — no patch upgrades available without crossing migration boundary",
+        "langfuse.com/docs/observability/features/scoring 404 on 2026-05-20 — scoring fields rely on 2026-05-18 SDK source extract",
+        "langfuse.com/docs/observability/features/cost redirects to model-usage-and-cost",
+        "GitHub Releases page-1 shows v5-only, v3.38.x no longer indexed",
+        "npmjs.com still 403 for langfuse package (CDN gating)"
+      ],
+      "refreshed": "2026-05-20"
     },
     "express-middleware-thin": {
       "version": "mixed-family",
@@ -675,34 +1020,76 @@
     },
     "prom-client": {
       "version": "15.1.3",
-      "fetched": "2026-05-18T09:31:03Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:31:03Z",
+      "fetched": "2026-05-20T18:00:00Z",
+      "fetchedBy": "doc-curator",
+      "curatedAt": "2026-05-20T18:00:00Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "5912dfbd30310d71181e9af1a5879c9f3b57ad1271f26acab0e3156ec842ffe2",
-      "patternsSha256": "0e92c8ad0cc56782999f853b506023a2b8c7efe2c6ecc68e9880e9c00da1886a",
+      "snapshotSha256": "dd2400e4bd2ff1bd73d57d4fbfab113e9fbe6eea9d2c5c6279cf7472d806e9d2",
+      "patternsSha256": "6220242f78206910d9da9c385462d980dffbdecb6fd16186252afa7ec31a6ac4",
+      "previousSnapshotSha256": "5912dfbd30310d71181e9af1a5879c9f3b57ad1271f26acab0e3156ec842ffe2",
       "sourceUrls": [
-        "https://github.com/siimon/prom-client"
+        "https://github.com/siimon/prom-client",
+        "https://github.com/siimon/prom-client/releases",
+        "https://open-telemetry.github.io/opentelemetry-js/modules/_opentelemetry_exporter-prometheus.html"
       ],
-      "warnings": []
+      "warnings": [
+        {
+          "reason": "403",
+          "note": "npmjs.com forbids WebFetch — release metadata via GitHub releases page only"
+        }
+      ],
+      "latestUpstream": "15.1.3",
+      "cveCheck": {
+        "performed": "2026-05-20T18:00:00Z",
+        "result": "no-cves"
+      },
+      "migrationTarget": {
+        "lib": "@opentelemetry/exporter-prometheus",
+        "tdLineItem": "TD-31",
+        "status": "planned-post-V1"
+      }
     },
     "linkedom": {
-      "version": "0.x+0.6-family",
-      "fetched": "2026-05-18T09:31:03Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:31:03Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "2b4be749da7b80b35d6833c4536cf2a015b10d5f6cd63a7343331169eb5481a1",
-      "patternsSha256": "649a12b5c57fbd3b67bf36f2389a5db2a3553bcb74c53369adf4ade0cea2759a",
+      "version": "0.18.12+0.6.0-family",
+      "pinnedRange": "linkedom@^0.18.12; @mozilla/readability@^0.6.0",
+      "migrationTarget": "defuddle@0.18.1",
+      "fetched": "2026-05-20T18:14:00Z",
+      "fetchedBy": "doc-curator-refresh",
+      "curatedAt": "2026-05-20T18:14:00Z",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "fee7838f7a008484814af9be2ddc344b5ec0ca813062535ec98ab1b70f2ea179",
+      "patternsSha256": "eeb66861feed8a16eb7957fab39211a78351f5e32f4bba32b24a965dcfe7ad2d",
       "sourceUrls": [
+        "https://raw.githubusercontent.com/WebReflection/linkedom/main/README.md",
         "https://github.com/WebReflection/linkedom",
-        "https://github.com/mozilla/readability"
+        "https://github.com/WebReflection/linkedom/releases",
+        "https://raw.githubusercontent.com/WebReflection/linkedom/main/esm/index.js",
+        "https://github.com/WebReflection/linkedom/blob/main/types/index.d.ts",
+        "https://raw.githubusercontent.com/mozilla/readability/main/README.md",
+        "https://github.com/mozilla/readability",
+        "https://github.com/mozilla/readability/releases",
+        "https://deepwiki.com/mozilla/readability",
+        "https://github.com/kepano/defuddle",
+        "https://raw.githubusercontent.com/kepano/defuddle/main/README.md"
       ],
-      "warnings": [],
+      "warnings": [
+        "npmjs.com WebFetch 403 for both linkedom + @mozilla/readability (carryover from 2026-05-18); release dates via search cache.",
+        "GitHub Releases empty for both linkedom + @mozilla/readability (ship via npm only).",
+        "defuddle docs/getting-started.md returned 404; README is authoritative."
+      ],
       "family": [
         "linkedom@0.18.12",
         "@mozilla/readability@0.6.0"
-      ]
+      ],
+      "closedTds": [
+        "TD-LINK-01"
+      ],
+      "openTds": [
+        "TD-LINK-02",
+        "TD-LINK-03",
+        "TD-33"
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-native-gesture-handler": {
       "version": "2.31.0",
@@ -798,480 +1185,953 @@
       "warnings": []
     },
     "react-native-qrcode-svg": {
-      "version": "6.3.15",
-      "fetched": "2026-05-18T09:52:14Z",
+      "version": "6.3.21",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "4c0761c2de0be0bf60af0e5e965fdac078a3cb0cd7f1e41c194a492d3e4d5f57",
-      "patternsSha256": "b8b621ee85c5cfc20c594932a7d9a20f2c687340912787f5ecd05a026c6c3da7",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "79492e51c9933ac4c4394dd36c34e39f28b7bbd5c2fab6a3d922b935ddc73c5d",
+      "patternsSha256": "df8dcdde328ee4e6544fd176c5b0bee57158ee4d66a9a3cf04741c2b8318ca58",
       "sourceUrls": [
-        "https://github.com/Expensify/react-native-qrcode-svg"
+        "https://raw.githubusercontent.com/Expensify/react-native-qrcode-svg/master/README.md",
+        "https://github.com/Expensify/react-native-qrcode-svg",
+        "https://github.com/Expensify/react-native-qrcode-svg/issues/138",
+        "https://github.com/Expensify/react-native-qrcode-svg/releases"
       ],
       "warnings": [
-        {
-          "note": "repo moved awesomejerry/ -> Expensify/; no formal releases for 6.3.x"
-        }
-      ]
+        "Version drift: declared ^6.3.15, installed 6.3.21 (latest 6.3 patch; API stable across 6.3.x, no breaking change).",
+        "Single call site MfaEnrollScreen.tsx:109 displays sensitive TOTP secret with no ecl='H', no onError, no screen-capture protection (FLAG_SECURE), no a11y label. F1/F2 (2026-05-18) still open + new F-SEC-03 (screen-capture) + F-A11Y-04.",
+        "RN 0.83 → textEncodingTransformation Babel block NOT required.",
+        "No formal release notes for 6.3.x line; npm HTML page 403s WebFetch. No CVE found."
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-native-ssl-public-key-pinning": {
       "version": "1.2.6",
-      "fetched": "2026-05-18T09:52:14Z",
+      "fetched": "2026-05-21T00:55:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "6aa46a5ef0effd805066ae95ee3c6a92d803efbfd99392925c93d7902120c8ff",
-      "patternsSha256": "d9f37907f7605e16b7a93830ad5a3dcd15a109e482c0a9d866b36d71407ac9a6",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "bd8bfc3a46649d1f46a6f41a0bccecff4e2014dd204867f88368ee2fe2295510",
+      "patternsSha256": "489b43407d90d1ca90cded2f55783aad13862fbc94fd25b046bf6e3831f14aa7",
       "sourceUrls": [
         "https://github.com/frw/react-native-ssl-public-key-pinning",
-        "https://github.com/datatheorem/TrustKit/blob/master/docs/getting-started.md"
+        "https://github.com/frw/react-native-ssl-public-key-pinning/releases",
+        "https://github.com/frw/react-native-ssl-public-key-pinning/tags",
+        "https://github.com/frw/react-native-ssl-public-key-pinning/blob/main/SECURITY.md",
+        "https://github.com/datatheorem/TrustKit/blob/master/docs/getting-started.md",
+        "https://square.github.io/okhttp/features/https/",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Pinning_Cheat_Sheet.html",
+        "https://letsencrypt.org/certificates/"
       ],
-      "warnings": []
+      "warnings": [
+        "npm registry page 403 Cloudflare (not refetched; gh-api README authoritative)",
+        "upstream SECURITY.md stale: lists only 1.0.x supported but lib maintained, latest 1.2.6"
+      ],
+      "refreshed": "2026-05-20"
     },
     "@ronradtke/react-native-markdown-display": {
       "version": "8.1.0",
-      "fetched": "2026-05-18T09:52:14Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "fb3613e3b28ed198ea376a06b9761803285cd4935839f7ffa21227f8e132f88d",
-      "patternsSha256": "82e2acdbbbbf41f221efc74b20e5cc7aabf1aefbea17c3abe5fe49f4f0205848",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "e9cb502e8e49208b8a57be126dbb5c3e420f75fbc0fa1c24fd56ea49ea4cbc11",
+      "patternsSha256": "787daafdd5b0e36b3a1eedd28193d3d615be9736ff2bd030a6721617ccf22d5b",
       "sourceUrls": [
-        "https://github.com/RonRadtke/react-native-markdown-display"
+        "https://raw.githubusercontent.com/RonRadtke/react-native-markdown-display/master/README.md",
+        "https://raw.githubusercontent.com/RonRadtke/react-native-markdown-display/master/src/lib/renderRules.js",
+        "https://raw.githubusercontent.com/RonRadtke/react-native-markdown-display/master/src/lib/styles.js",
+        "https://registry.npmjs.org/@ronradtke/react-native-markdown-display",
+        "https://api.github.com/repos/RonRadtke/react-native-markdown-display/releases"
       ],
-      "warnings": []
+      "warnings": [
+        "npm latest = 8.1.0; GitHub 8.1.1 tag never published to npm (compare 404). ^8.1.0 already newest installable. Prior 'Latest 8.1.1' corrected.",
+        "Renders LLM-authored prompt-injectable output. TD-MD-01..04 ALL verified REMEDIATED 2026-05-21 (confirm dialog + new URL().protocol scheme allowlist + image rule suppressed).",
+        "Reviewer MUST block any future change that reverts the link gate to startsWith or re-enables the image rule (re-opens SEC-MD-01/02/03)."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@react-native-async-storage/async-storage": {
       "version": "2.2.0",
-      "fetched": "2026-05-18T09:52:14Z",
+      "fetched": "2026-05-20T20:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "8691e895d8a19f3f277ca00c524fec216c29cad8f2c3fcd4967b6e365473b383",
-      "patternsSha256": "bdafae07e0d4a535f65d9169aa6add33938fa740730320d891ad5eb8a787faf2",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "3291aea50a8ca916704f356095b6fd0b64e63deb0b4e2ee1c2b53d3f84c4b720",
+      "patternsSha256": "f215f55aed49142b4b20b7b586c9a06e283c6a8044f2b30085b628fcb86e460c",
       "sourceUrls": [
-        "https://react-native-async-storage.github.io/async-storage/2.0/"
+        "https://react-native-async-storage.github.io/2.0/",
+        "https://github.com/react-native-async-storage/async-storage/releases",
+        "https://docs.expo.dev/versions/latest/sdk/async-storage/",
+        "https://www.npmjs.com/package/@react-native-async-storage/async-storage"
       ],
-      "warnings": []
+      "warnings": [
+        "v3.x latest line NOT compatible with Expo SDK 54+ — 2.2.0 is correct pin for Expo SDK 55. DO NOT bump to v3.",
+        "Unencrypted plaintext storage — secrets/PII must use expo-secure-store. No JS-package CVE/GHSA.",
+        "TD-AS-01/02/03 OPEN (key namespacing, wrapper try/catch, TanStack cache 2MB cap)."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@react-native-community/netinfo": {
       "version": "11.5.2",
-      "fetched": "2026-05-18T10:00:56Z",
+      "fetched": "2026-05-20T20:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:00:56Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "200c9a39b9f2a175bf07bd83563e4da222455e3de5cb252a5ae2fca2c3a51e17",
-      "patternsSha256": "3563fe95e1485ba602e6edee9a2a09598b705c0ab0cf53e6da6bfafe20fac1b0",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "648c46380040044bd4588f282983cafcee108f44494fdbb221dc3587bc1b1d83",
+      "patternsSha256": "9f394995976e9d5d0c3de201e1a3f37dcad281f70b59a182e03357cd211c9eaf",
       "sourceUrls": [
         "https://github.com/react-native-netinfo/react-native-netinfo",
+        "https://github.com/react-native-netinfo/react-native-netinfo/blob/master/CHANGELOG.md",
+        "https://github.com/react-native-netinfo/react-native-netinfo/releases",
         "https://docs.expo.dev/versions/latest/sdk/netinfo/"
       ],
-      "warnings": []
+      "warnings": [
+        "v12.0.0 (2026-02-14) BREAKING: iOS 14+/RN 0.76+ min, Wi-Fi API change requiring Access Wi-Fi Information entitlement. API surface unchanged; bump = deliberate native-config migration.",
+        "No CVE/GHSA as of 2026-05-20.",
+        "TD-14 OPEN: onlineManager NOT wired to NetInfo (offline-first gap). TD-NI-01/02/03 OPEN."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@react-navigation/native": {
       "version": "7.0.14",
-      "fetched": "2026-05-18T10:00:56Z",
+      "fetched": "2026-05-20T20:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:00:56Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "397c4e45ec82f973af4785214ad4e6cd350c5cefb701407cf02451f4119a36f3",
-      "patternsSha256": "8722f5c1549d864960ba9e707db849f642db20d9b043f637a14a8a0326251cb4",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "670f8cb7b284979dbb8f6cb0aae02229197ca2ee5bfe1e765b9c060266b54c05",
+      "patternsSha256": "6bd3693782fdb2afa5f9af36d003791e1339ad1beced4630e19d20802b87dbdc",
       "sourceUrls": [
         "https://reactnavigation.org/docs/getting-started",
-        "https://reactnavigation.org/docs/upgrading-from-6.x"
+        "https://reactnavigation.org/docs/use-focus-effect",
+        "https://reactnavigation.org/docs/upgrading-from-6.x",
+        "https://github.com/react-navigation/react-navigation/releases",
+        "https://www.npmjs.com/package/@react-navigation/native"
       ],
-      "warnings": []
+      "warnings": [
+        "Latest 7.2.4 is same major (v7) — minor/patch drift, no breaking changes. Bump optional.",
+        "No CVE/GHSA for v7.x as of 2026-05-20.",
+        "TD-RNAV-01 OPEN: Universal/App Links not configured (custom musaium:// scheme only)."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@shopify/flash-list": {
       "version": "2.0.2",
-      "fetched": "2026-05-18T10:00:56Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:00:56Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "24625918f5eae615a84f59cfff569b01e8e95bc4692120c55429db5afe1ad5b9",
-      "patternsSha256": "545e099dccb9dd529ade58e9c78477020a8c39d71ad338e25cef8bdbad407539",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "bbe92b699998828b6e00a470ad4213ccee0b4849c93355ef1100e0bf1f9b1f09",
+      "patternsSha256": "c820b5fa3290aba7c2141437d6ce8f652cd492aeddf235f0580e414703cf73cd",
       "sourceUrls": [
-        "https://shopify.github.io/flash-list/docs/",
-        "https://shopify.github.io/flash-list/docs/v2-migration/"
+        "https://shopify.github.io/flash-list/docs/usage/",
+        "https://shopify.github.io/flash-list/docs/v2-changes/",
+        "https://shopify.github.io/flash-list/docs/v2-migration/",
+        "https://shopify.engineering/flashlist-v2",
+        "https://registry.npmjs.org/@shopify/flash-list",
+        "https://api.github.com/repos/Shopify/flash-list/releases"
       ],
       "warnings": [
-        {
-          "note": "v2 removes estimatedItemSize; new-arch only"
-        }
-      ]
+        "Pinned 2.0.2; npm latest 2.3.1. No advisories on any 2.x.",
+        "2.2.1 fixes sticky-header-disappears on RN 0.83 (Musaium's RN version) — strongest bump argument; out of scope for doc refresh, flagged to team.",
+        "TD-FL-01 (inline ListEmptyComponent JSX) + TD-FL-02 (maintainVisibleContentPosition for chat) still OPEN."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@maplibre/maplibre-react-native": {
       "version": "11.0.0",
-      "fetched": "2026-05-18T10:00:56Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:00:56Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "afba5fd5611d220e7e71190e93dd70f704db4c55ec0f6182219e61ebc3926b5d",
-      "patternsSha256": "a544153d93656a960eb785c5c34a5b84c1bce10e66ea859975d3d2cfb3b2ad34",
+      "snapshotSha256": "1047cbd0124fa6eae57a3c9ccc56593e18ab581c63c0ac0ada1a7013df449922",
+      "patternsSha256": "9bea2afcf04b6924caa2d9119f9c652b85263eef11d91a766c7cad66b71d8eb5",
       "sourceUrls": [
+        "https://github.com/maplibre/maplibre-react-native",
         "https://maplibre.org/maplibre-react-native/",
-        "https://github.com/maplibre/maplibre-react-native/releases/tag/v11.0.0"
+        "https://github.com/maplibre/maplibre-react-native/releases",
+        "https://github.com/maplibre/maplibre-react-native/releases/tag/v11.2.1",
+        "https://github.com/maplibre/maplibre-react-native/releases/tag/v11.1.0",
+        "https://github.com/maplibre/maplibre-react-native/releases/tag/v11.0.1"
       ],
       "warnings": [
         {
-          "note": "v11 renames: MapView->Map, ShapeSource->GeoJSONSource, per-type Layer -> unified"
+          "kind": "version-drift",
+          "reason": "Pinned exact 11.0.0; latest stable 11.2.1. No v11.x release is breaking. Recommended bump pulls 11.0.1 Android GeoJSON memory fix + hillshade/color-relief layer types (V2 terrain). Non-blocking.",
+          "ts": "2026-05-21T00:00:00Z"
+        },
+        {
+          "kind": "patch-changelog-partial",
+          "reason": "Patch notes 11.0.2/11.0.3/11.1.1/11.1.2/11.2.1 summarised as Bug Fixes only, not line-audited.",
+          "ts": "2026-05-21T00:00:00Z"
         }
-      ]
+      ],
+      "refreshed": "2026-05-20"
     },
     "js-sha256": {
       "version": "0.11.1",
-      "fetched": "2026-05-18T10:00:56Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:00:56Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "e0eca936c013ec7b9b99ccda12585309fba70905635e0e9c2a13f0e815e10431",
-      "patternsSha256": "f418e6b161f0be8dc0d2f5fddaeb7ba46c238f2ce7e23bfb304d21db28ec64f9",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "4d6826e8c31ecc8e1430e3a699cddbe7aa405c0759f3e44145c533309027eabc",
+      "patternsSha256": "ea401266abc96150022dfaae0971fefe6db9f591f7ea3927c8614ad2d129c356",
       "sourceUrls": [
-        "https://github.com/emn178/js-sha256"
+        "https://github.com/emn178/js-sha256",
+        "https://raw.githubusercontent.com/emn178/js-sha256/master/CHANGELOG.md",
+        "https://api.github.com/repos/emn178/js-sha256/tags"
       ],
-      "warnings": []
+      "warnings": [
+        "0.11.1 is registry latest (terminal); no advisories 2024-2026.",
+        "npm HTML page 403s anonymous fetcher; version metadata via npm view CLI.",
+        "Single FE consumer (computeLocalCacheKey.ts) is sync, load-bearing backend-parity; expo-crypto (async, not installed) is NOT a viable replacement."
+      ],
+      "refreshed": "2026-05-20"
     },
     "zustand": {
-      "version": "5.0.12",
-      "fetched": "2026-05-18T10:11:42Z",
+      "version": "^5.0.12",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:11:42Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "f7316d55620ed49e1cfac10af56f7d79654fd8a9dd67d0b9477039dd9a33f1ed",
-      "patternsSha256": "79d7dfc59e87b987ab827337e920e6b0c44bc207b95bbd15d34515efa307cedb",
+      "snapshotSha256": "f342dd9b9341532564fb5d4213a36d22006bc280bef2ece065db318513bb125d",
+      "patternsSha256": "6cc55bf152db8dfd40c454bcec3e3b6ed4d392919efd214d1992c8223f393239",
       "sourceUrls": [
-        "https://github.com/pmndrs/zustand",
-        "https://github.com/pmndrs/zustand/blob/main/docs/reference/migrations/migrating-to-v5.md"
-      ],
-      "warnings": []
-    },
-    "uuid": {
-      "version": "11.1.0",
-      "fetched": "2026-05-18T10:11:42Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T10:11:42Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "1597ffe3019df150f9611da3b7893f51e12af09cdc8fe6cfeb133aa810a33e22",
-      "patternsSha256": "0adb4cbf1579f80cc76b53c41ac39179c540f7e75d18d3021263b514dabe3207",
-      "sourceUrls": [
-        "https://github.com/uuidjs/uuid"
+        "https://api.github.com/repos/pmndrs/zustand/releases",
+        "https://github.com/pmndrs/zustand/releases/tag/v5.0.13",
+        "https://github.com/pmndrs/zustand/security-advisories",
+        "https://raw.githubusercontent.com/pmndrs/zustand/main/docs/reference/migrations/migrating-to-v5.md",
+        "https://raw.githubusercontent.com/pmndrs/zustand/main/docs/reference/middlewares/persist.md",
+        "https://raw.githubusercontent.com/pmndrs/zustand/main/docs/reference/integrations/persisting-store-data.md",
+        "https://raw.githubusercontent.com/pmndrs/zustand/main/docs/reference/hooks/use-shallow.md",
+        "https://raw.githubusercontent.com/pmndrs/zustand/main/docs/reference/middlewares/subscribe-with-selector.md"
       ],
       "warnings": [
         {
-          "note": "ESM-only since v10; v11.1.1 has GHSA-w5hq-g745-h8pq security fix"
+          "kind": "version-drift",
+          "reason": "Pinned ^5.0.12, installed 5.0.12, latest stable 5.0.13. 5.0.12->5.0.13 is devtools-only (PR #3443 + #3469); Musaium ships no devtools middleware. Bump optional, zero runtime risk.",
+          "ts": "2026-05-21T00:00:00Z"
+        },
+        {
+          "kind": "open-tech-debt",
+          "reason": "TD-14 race still open: dataModeStore.ts lacks _hydrated + onRehydrateStorage (drift vs 3 sibling settings stores). DataModeProvider.tsx:74-82 reads preference before async AsyncStorage hydration -> transient default 'auto' on cold boot, self-corrects. LOW-MEDIUM. Both prior MINORs (TD-ZUS-01/02) now fixed in source + test-covered.",
+          "ts": "2026-05-21T00:00:00Z"
+        },
+        {
+          "kind": "docs-tree-reorg",
+          "reason": "zustand docs reorganized to docs/reference/{apis,hooks,middlewares,integrations,migrations}/* since 2026-05-18; old paths 404. Re-resolved via GitHub tree.",
+          "ts": "2026-05-21T00:00:00Z"
+        },
+        {
+          "kind": "no-advisory",
+          "reason": "security-advisories endpoint returned empty []. No CVE/GHSA for zustand 5.0.x as of 2026-05-21.",
+          "ts": "2026-05-21T00:00:00Z"
         }
-      ]
+      ],
+      "refreshed": "2026-05-20"
+    },
+    "uuid": {
+      "version": "11.1.1",
+      "fetched": "2026-05-21T00:00:00Z",
+      "fetchedBy": "doc-fetcher",
+      "curatedAt": "2026-05-18T10:11:42Z",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "328630f7cc76b85e702ea773be588aaf83c129870d41dff496ac8cd5cfd7696a",
+      "patternsSha256": "640c10be483df2ffefeff4c9146edee0a1e3f27f9ac9bc70ec2979b4a2474683",
+      "sourceUrls": [
+        "https://github.com/uuidjs/uuid/blob/main/README.md",
+        "https://github.com/uuidjs/uuid/blob/main/CHANGELOG.md",
+        "https://api.github.com/repos/uuidjs/uuid/releases",
+        "https://github.com/uuidjs/uuid/security/advisories/GHSA-w5hq-g745-h8pq"
+      ],
+      "warnings": [
+        "Pinned 11.1.1 (intentional V1 hold); latest is 14.0.0. 11.1.1 carries the GHSA-w5hq-g745-h8pq backport so no security pressure to bump.",
+        "DRIFT-1: deps ^11.1.0 vs pnpm.overrides ^11.1.1 dual-source-of-truth (TD-UUID-01, LOW).",
+        "DRIFT-3: @types/uuid@^11.0.0 redundant deprecated stub since uuid ships own types (v11.0.3); droppable (LOW)."
+      ],
+      "refreshed": "2026-05-20"
     },
     "qrcode": {
       "version": "1.5.4",
-      "fetched": "2026-05-18T10:11:42Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T10:11:42Z",
-      "curatedBy": "doc-curator",
-      "snapshotSha256": "7835bf7ad2f00c0e1154ec3863d30e5b103335bf91ce407fab3e751b9dac46d9",
-      "patternsSha256": "e904f09372ffc9f57062e25da8a8010ff1386e1b4c62d7e4e0197cdf9f46166d",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "70aa16220784aa3d39dc63debb56c8eafa282a9b6f4ba86a40151791d88191fb",
+      "patternsSha256": "2e835b0086b0d8917b1f670929250762af498e10a2933eb4ab825ad0c8866ac3",
       "sourceUrls": [
-        "https://github.com/soldair/node-qrcode"
+        "https://raw.githubusercontent.com/soldair/node-qrcode/master/README.md",
+        "https://raw.githubusercontent.com/soldair/node-qrcode/master/CHANGELOG.md",
+        "https://registry.npmjs.org/qrcode",
+        "https://security.snyk.io/package/npm/qrcode"
       ],
       "warnings": [
-        {
-          "note": "no bundled TS types; upstream CHANGELOG stale since 1.3.3"
-        }
-      ]
+        "On latest stable (1.5.4, published 2024-08-05). No upgrade pending; no CVE (Snyk).",
+        "Scope correction: used in BOTH museum-backend (scripts/generate-qr-cartels.cjs toBuffer PNG) and museum-web (admin/mfa toString SVG). 2026-05-18 doc wrongly scoped to web only.",
+        "MFA QR (web admin/mfa/page.tsx:26) and printed cartels (cartel script) both omit/use errorCorrectionLevel:'M'; doctrine = 'H' for sensitive on-screen secret, 'Q'/'H' for printed media.",
+        "Upstream CHANGELOG stale at 1.3.3; no GitHub Releases; npm HTML page 403s WebFetch."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@langchain/core": {
       "coveredBy": "langchain",
       "version": "1.1.45",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "9a76165115cc3d801cac0bbaf4afa9b53a88ac765633e6a34eb8aa024a4b28a2",
+      "patternsSha256": "56885cc5a1e6f39c81e9c2a734c7bc5b54a4cb430622fef7f60ac7496ec885da",
+      "sourceUrls": [
+        "https://docs.langchain.com/oss/javascript/releases/langchain-v1",
+        "https://docs.langchain.com/oss/javascript/langchain/messages",
+        "https://github.com/langchain-ai/langchainjs/releases",
+        "https://registry.npmjs.org/@langchain/core"
+      ],
+      "warnings": [
+        "Family-collapse policy: full PATTERNS lives at lib-docs/langchain/PATTERNS.md §1-7 + §8 delta. Stub here is a pointer."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@langchain/openai": {
       "coveredBy": "langchain",
       "version": "1.4.2",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "154cb3fe7b041e92e0467e5dcec4544d6212d8cb399a2323c235780f0bc08bc2",
+      "patternsSha256": "b42f58c75575ec4494234715a30a2cd091713960f9fe4ca7fc03a2ed3fb655f3",
+      "sourceUrls": [
+        "https://docs.langchain.com/oss/javascript/integrations/chat/openai",
+        "https://github.com/langchain-ai/langchainjs/releases",
+        "https://github.com/langchain-ai/langchainjs/security/advisories",
+        "https://registry.npmjs.org/@langchain/openai"
+      ],
+      "warnings": [
+        "Family-collapse policy: stub PATTERNS.md delegates to lib-docs/langchain/PATTERNS.md (§2.b, §3, §4, §8.c/§8.e are openai-specific).",
+        "5 anti-patterns documented in lib-docs/.refresh-2026-05-20/findings/langchain.md — bump batch recommended."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@langchain/google-genai": {
       "coveredBy": "langchain",
       "version": "2.1.26",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/langchain/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "236f85dd242338c8894a51274dd808a7b5ebe2ade5fc86fafd36eaca4332b7ad",
+      "patternsSha256": "93d97f4b04999b84f3a80b47ff799550e725b0dc0ad091f2cc8722dec8f1e6a4",
+      "sourceUrls": [
+        "https://docs.langchain.com/oss/javascript/integrations/chat/google_generative_ai",
+        "https://docs.langchain.com/oss/javascript/integrations/chat/google",
+        "https://github.com/langchain-ai/langchainjs/releases",
+        "https://registry.npmjs.org/@langchain/google-genai",
+        "https://registry.npmjs.org/@langchain/google"
+      ],
+      "warnings": [
+        "Package is DEPRECATED — do NOT add new consumers. TD-LC-01 migration path documented in PATTERNS.md §8.d.",
+        "Side-by-side migration table absent from upstream docs — recipe reconstructed from constructor options."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@opentelemetry/sdk-node": {
       "coveredBy": "opentelemetry",
       "version": "0.217.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "ad9d913c61865a35a686b35ca180ad3f9ffc6b609ed4765cdd2d7438d95e96d8",
+      "refreshed": "2026-05-20"
     },
     "@opentelemetry/auto-instrumentations-node": {
       "coveredBy": "opentelemetry",
       "version": "0.75.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "8bfe5e2e08503611b9b3c1803cc00d6f8bc7416c7cf7fa1ca46888f105fb8216",
+      "refreshed": "2026-05-20"
     },
     "@opentelemetry/exporter-trace-otlp-http": {
       "coveredBy": "opentelemetry",
       "version": "0.217.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "7bf272a6028c35e43818bf09c71134f345316d048bcbe16ed67f6e8359e86677",
+      "refreshed": "2026-05-20"
     },
     "@opentelemetry/resources": {
       "coveredBy": "opentelemetry",
       "version": "2.7.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "74cceffb8e9cdb9f27396c2d2165804133ee515ee070027bc7f1450039a3c6fb",
+      "refreshed": "2026-05-20"
     },
     "@opentelemetry/semantic-conventions": {
       "coveredBy": "opentelemetry",
       "version": "1.40.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:50:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/opentelemetry/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "a5352dfaca59fdfc7cbd50f47ba75eabbb54d37719521ae2855e8673d3c74f80",
+      "refreshed": "2026-05-20"
     },
     "expo-router": {
       "coveredBy": "expo",
       "version": "55.0.10",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "2527961af2861a73b742f41101cab581ba47f229c3b99c6bdf6ec46272ecc6e7",
+      "patternsSha256": "9ab9335a271f153c1a5a52f89d5bae57cdb0604b4cef97acb7e33a6d641c9527",
+      "sourceUrls": [
+        "https://docs.expo.dev/router/introduction/",
+        "https://docs.expo.dev/router/advanced/router-settings/",
+        "https://expo.dev/changelog/sdk-55",
+        "https://expo.dev/changelog/mitigating-critical-security-vulnerability-in-react-server-components"
+      ],
+      "warnings": [
+        "Full API surface synthesized from changelog + reference summary + codebase grep (advanced page covered only unstable_settings)"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-camera": {
       "coveredBy": "expo",
       "version": "55.0.13",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "9be524f94d23347691b0f00fb3e5313d31ccc2e56fb34d9dcc966e32af9eb9fb",
+      "patternsSha256": "8757c7c8ed245f201fc74895d0bfa780ee46da5f88fc4a513640a6539c85ce35",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/camera/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "Promoted from family stub → dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "No package-specific CVE; SDK-wide RSC CVEs client-only N/A"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-audio": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-image": {
       "coveredBy": "expo",
       "version": "55.0.10",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-image-picker": {
       "coveredBy": "expo",
       "version": "55.0.16",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "b439e2569e67ee063ee78b11698e43999a6b795e752c947ceeeaf9c2c6d99f07",
+      "patternsSha256": "6fbc86efb7a4731e80462b02205b7ab513cc2c237fa46f8832921e54bd357274",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/imagepicker/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "Promoted from family stub → dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "No package-specific CVE"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-image-manipulator": {
       "coveredBy": "expo",
       "version": "55.0.15",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "a0afa253db5cee6c32a3d0668f8f427fa9097c8be147d15c56941a4598708a40",
+      "patternsSha256": "3e4c872d1025130e10221040d0fc385b3dd961eb87305a03931453f11529bcd2",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/imagemanipulator/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "Promoted from family stub → dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "Both consumers still on deprecated manipulateAsync (migration owed before SDK 56)",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "No package-specific CVE"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-location": {
       "coveredBy": "expo",
       "version": "55.1.6",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-secure-store": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-file-system": {
       "coveredBy": "expo",
       "version": "55.0.14",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-blur": {
       "coveredBy": "expo",
       "version": "55.0.12",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-haptics": {
       "coveredBy": "expo",
       "version": "55.0.12",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-linear-gradient": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-linking": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator (UFR-022)",
+      "snapshotSha256": "6fc5bf15f1998b04395ec62818c865068902eaf7530de947b3db579b8f890548",
+      "patternsSha256": "4205810d002ca74e770f1c123f8106224c7ebc42086aa4c3c0c9b4892fdd0292",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/linking/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "github.com/expo/expo/releases has no per-package release notes (single SDK changelog instead)",
+        "No dedicated upstream breaking-changes section for v55; deprecations from per-property docs"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-local-authentication": {
       "coveredBy": "expo",
       "version": "55.0.13",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "27051ec8b907ee149ab0ca970c5a8f99abaa4af495902b1d7e2eaa5b67f410c9",
+      "patternsSha256": "98f67d8170b4813c17fcb06fae6be01a139aa842d316683fba611d894e4660a6",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/local-authentication/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "Promoted from family stub -> dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "No package-specific CVE; biometric result is a local UX gate, not a server auth claim"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-localization": {
       "coveredBy": "expo",
       "version": "55.0.13",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-speech": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-splash-screen": {
       "coveredBy": "expo",
       "version": "55.0.15",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:25:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "1de3931e6fa0f3f3b4fb6ffa3e3a8804c20d37e4c1d74c82150ebcd19405ae04",
+      "patternsSha256": "a2af863a2689765dbcb2042e28f46ff553b03c20135bf60563e95edc150087fd",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/splash-screen/"
+      ],
+      "warnings": [
+        "Split off from expo family stub into dedicated PATTERNS/LESSONS/snapshot (UFR-022 dedicated-doc refresh 2026-05-21)."
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-status-bar": {
       "coveredBy": "expo",
       "version": "55.0.5",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:25:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "a2dbdf95da1f3fc6ff71a45f110e55dbf19197d995f0cd59c636eb1b769d8bf3",
+      "patternsSha256": "0600059ef31a850e10e6a01d9c1ddc815b2850aa026d17e2a3951a8da0bd0305",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/status-bar/"
+      ],
+      "warnings": [
+        "Split off from expo family stub into dedicated PATTERNS/LESSONS/snapshot (UFR-022 dedicated-doc refresh 2026-05-21).",
+        "SDK 55 edge-to-edge: Android backgroundColor + translucent props deprecated."
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-store-review": {
       "coveredBy": "expo",
       "version": "55.0.13",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "7a81af52a87c74ea1f0e65f57a65fecddcd4d19aabf76a0800341076fea4f109",
+      "patternsSha256": "2bafbb0eb57f7829d5dbd5890410e3219d1aad09065893479bed7027668a24e1",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/storereview/",
+        "https://expo.dev/changelog/sdk-55",
+        "https://developer.apple.com/design/human-interface-guidelines/ratings-and-reviews"
+      ],
+      "warnings": [
+        "Promoted from family stub -> dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "OS rate-limit cap is silent/unreadable; app-side bookkeeping is the only lever (3/year)"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-system-ui": {
       "coveredBy": "expo",
       "version": "55.0.15",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:25:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "402ac957d9df52df89c3b0546ab7aa1ded87fe1732b3f68f68145fa9a56e2e6b",
+      "patternsSha256": "d52fff85f2b2105df061a15b2c0a2bcc8762b4db6d3a0b5d5a9235ca6a06362a",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/system-ui/"
+      ],
+      "warnings": [
+        "Split off from expo family stub into dedicated PATTERNS/LESSONS/snapshot (UFR-022 dedicated-doc refresh 2026-05-21).",
+        "No runtime SystemUI.* usage in museum-frontend; config-driven (userInterfaceStyle: 'automatic')."
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-updates": {
       "coveredBy": "expo",
       "version": "55.0.18",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "ce980e0720cb5aed6e738d5148a4b7bf4165996e6fb1dab0fb271103bec2729e",
+      "patternsSha256": "019add011920750e36b1e5fd250fecf9ae0e4fe660fe9c4fc99302cda7214133",
+      "sourceUrls": [
+        "https://docs.expo.dev/eas-update/introduction/",
+        "https://expo.dev/changelog/sdk-55",
+        "https://security.snyk.io/package/npm/expo-updates"
+      ],
+      "warnings": [
+        "useUpdates() field list synthesized from API reference summary; OTA disabled in Musaium (ADR-009)"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-web-browser": {
       "coveredBy": "expo",
       "version": "55.0.15",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "a260dd422d6220d3bf90e97cdb91c83862bf88d4a28c42f648958a11a9f1e211",
+      "patternsSha256": "e8cbd70ca69645a426d53ba3332b5cb55cbc2d968f601af4d5e8f773ea8667c6",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/webbrowser/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "Promoted from family stub -> dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "Native-link sensitivity: static import crashes bundle at startup if Pods out of sync (PR #258 SIGABRT, hotfix f7ec92f7) -> lazy require mandatory"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-apple-authentication": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "e6a78cf699f973cb843c96bf7ae880f4bf38945e6dc51ada999cc2afc4bc86fa",
+      "patternsSha256": "e8942002aeea4c43655a7bbded39997101f7537b33e94d858cb8a7f8d5a33a33",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/apple-authentication/",
+        "https://expo.dev/changelog/sdk-55",
+        "https://developer.apple.com/app-store/review/guidelines/#sign-in-with-apple"
+      ],
+      "warnings": [
+        "Promoted from family stub -> dedicated PATTERNS/LESSONS/snapshot/VERSION/sources",
+        "github.com/expo/expo/releases returned empty (Expo uses changelog not GH Releases)",
+        "No package-specific CVE; trust = backend RS256+JWKS+nonce verification of identityToken"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-asset": {
       "coveredBy": "expo",
       "version": "55.0.12",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator (UFR-022)",
+      "snapshotSha256": "94615ed87ea3d70e65a1efbfba3a3e5e1d85e86ad8e1cf6d385f714efdee2747",
+      "patternsSha256": "7bf4f2c14fa4be2b1fc78e1d0a443bcd12ce7e841544dad47977eab1f55a43f9",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/asset/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "github.com/expo/expo/releases has no per-package release notes (single SDK changelog instead)",
+        "No dedicated upstream breaking-changes section for v55; deprecations from per-property docs"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-build-properties": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "8d673384f98b403c5fc56a9d5b0bc2df2b90e52b7fcda66085376b3d9e97e597",
+      "patternsSha256": "2897de02ecbe804a8680d65edeada43a95d3e46c9f563a6e436b3187fcef2517",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/build-properties/"
+      ],
+      "warnings": [],
+      "refreshed": "2026-05-20"
     },
     "expo-clipboard": {
       "coveredBy": "expo",
       "version": "55.0.11",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
     },
     "expo-constants": {
       "coveredBy": "expo",
       "version": "55.0.14",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator (UFR-022)",
+      "snapshotSha256": "8f2ad2557415837ff722190aa9227acb2f5e08b3aeba004a96a7e3def24d7975",
+      "patternsSha256": "9548c74cad1b5dd767dc47d895d74e6b0d06e6f39f904fb3549306b295597b46",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/constants/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "github.com/expo/expo/releases has no per-package release notes (single SDK changelog instead)",
+        "No dedicated upstream breaking-changes section for v55; deprecations from per-property docs"
+      ],
+      "refreshed": "2026-05-20"
     },
     "expo-font": {
       "coveredBy": "expo",
       "version": "55.0.6",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator (UFR-022)",
+      "snapshotSha256": "b62a375e8f4a38fe3c806b22a9a7d04cb86ed30bc1e9e5b7163bd6af63397cbb",
+      "patternsSha256": "93dee5719c6d29920d367bacba398c9f743b0a8da9ac4e4ffece3cdfbe84b6fe",
+      "sourceUrls": [
+        "https://docs.expo.dev/versions/v55.0.0/sdk/font/",
+        "https://expo.dev/changelog/sdk-55"
+      ],
+      "warnings": [
+        "github.com/expo/expo/releases has no per-package release notes (single SDK changelog instead)",
+        "No dedicated upstream breaking-changes section for v55; deprecations from per-property docs"
+      ],
+      "refreshed": "2026-05-20"
     },
     "@expo/vector-icons": {
       "coveredBy": "expo",
-      "version": "15.0.3",
-      "fetched": "2026-05-18T10:12:57Z",
+      "version": "^15.0.3",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "2564b788dcb7816d54c4ad0156830b2226f1328c126bc46c2d02a687c6f22fe7",
+      "patternsSha256": "024774c7738a30184f04a8fa585fe63a6dbc33dd61c7fc54be069abc7dc05010",
+      "sourceUrls": [
+        "https://docs.expo.dev/guides/icons/",
+        "https://github.com/expo/vector-icons/releases",
+        "https://icons.expo.fyi/"
+      ],
+      "warnings": [
+        "Promoted from family stub to dedicated docs. Dedicated dir is lib-docs/expo-vector-icons/ (no @ in path); the lib-docs/@expo/vector-icons/PATTERNS.md stub remains as a pointer for pre-phase-doc-freshness.sh.",
+        "Minor drift 15.0.3 -> 15.1.1 (IcoMoon JSON + getIconSetForProps fallback). Low-risk, not urgent; 15.0.0 family-break + expo-font peer dep already behind the 15.x line."
+      ],
+      "refreshed": "2026-05-20"
     },
     "babel-preset-expo": {
       "coveredBy": "expo",
       "version": "55.0.8",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "5d64611e92c8f5557c3f14cbcad0efa3c005864fc1e377dff5c10b5540e98941",
+      "patternsSha256": "beced89172259127d74fb8765a86fef312cfd01f0ce743532cb329c0f476683b",
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/expo/expo/main/packages/babel-preset-expo/README.md",
+        "https://docs.expo.dev/versions/latest/config/babel/",
+        "https://github.com/expo/expo/issues/42684",
+        "https://docs.expo.dev/guides/react-compiler/"
+      ],
+      "warnings": [
+        "https://docs.expo.dev/workflow/babel/ returned 404",
+        "README options may be ahead of pinned 55.0.8"
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-dom": {
       "coveredBy": "react",
       "version": "19.2.6",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/react/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/react/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "db5dc9ced8c92705d6becdb52d89f35236dd2651dc78d286ca9ee6735e682c61",
+      "patternsSha256": "2bc62d750d83dc04e3b27f3aae7b0a0ee1b8722c44a6e7effc52cd139ad77581",
+      "sourceUrls": [
+        "https://react.dev/reference/react-dom",
+        "https://react.dev/blog/2025/10/01/react-19-2",
+        "https://github.com/facebook/react/releases",
+        "https://github.com/facebook/react/security/advisories"
+      ],
+      "warnings": [
+        "react-dom collapsed under react family (user decision 2026-05-18); curated patterns in ../react/PATTERNS.md. patternsSha256 is the react-dom stub hash.",
+        "useFormStatus / requestFormReset full signatures only summarised; SSR bundler integration out of scope."
+      ],
+      "refreshed": "2026-05-20"
     },
     "@tanstack/react-query-persist-client": {
       "coveredBy": "@tanstack/react-query",
       "version": "5.100.10",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "9f31fb72bd4cd07e71209b0019a225a71568787813d4a643a2068602ce069a0a",
+      "patternsSha256": "925c6b081d9011df1334343fe6b5f305b039f6dadb1166fe3c86e228391dd1ae",
+      "sourceUrls": [
+        "https://tanstack.com/query/latest/docs/framework/react/plugins/persistQueryClient",
+        "https://github.com/TanStack/query/releases",
+        "https://github.com/TanStack/query/security/advisories"
+      ],
+      "warnings": [],
+      "refreshed": "2026-05-20"
     },
     "@tanstack/query-async-storage-persister": {
       "coveredBy": "@tanstack/react-query",
       "version": "5.99.2",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/@tanstack/react-query/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "217be2c10f36ac2410a21d9d1061e47d3891ec594d6743c4e4064611af78b51b",
+      "patternsSha256": "2df28a366ef4e84f3b4a121d7d4a6c6525ce9651363cbdd5b6d45d15298c7d74",
+      "sourceUrls": [
+        "https://tanstack.com/query/latest/docs/framework/react/plugins/createAsyncStoragePersister",
+        "https://github.com/TanStack/query/blob/main/packages/query-async-storage-persister/src/index.ts",
+        "https://github.com/TanStack/query/releases",
+        "https://github.com/TanStack/query/security/advisories"
+      ],
+      "warnings": [
+        "AsyncStorage size limits + encryption guidance are operational, not in the upstream react-query plugin page",
+        "pinned ^5.99.2 while siblings ^5.100.10 — documented family"
+      ],
+      "refreshed": "2026-05-20"
     },
     "@hookform/resolvers": {
       "coveredBy": "react-hook-form",
       "version": "5.2.2",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:45:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/react-hook-form/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/react-hook-form/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "f8b7618704798fb5b6bdbf91a0d225e15eef9c1ed440a39aa0a918c1dda75a45",
+      "patternsSha256": "0b1a1a14c0af40200179ed11301bd94900221f145e3a09dec1c65b94cf35f2b0",
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/react-hook-form/resolvers/master/README.md",
+        "https://api.github.com/repos/react-hook-form/resolvers/releases",
+        "https://www.npmjs.com/package/@hookform/resolvers",
+        "https://github.com/react-hook-form/resolvers/releases"
+      ],
+      "warnings": [
+        "5.2.2 is the latest upstream release (2025-09-14); no newer version exists.",
+        "v5.0.0 was breaking (requires react-hook-form>=7.55.0, triple-generic useForm<Input,Context,Output>); Musaium on RHF 7.74.0 satisfies this. No security advisory."
+      ],
+      "refreshed": "2026-05-20"
     },
     "react-native-worklets": {
       "coveredBy": "react-native-reanimated",
@@ -1283,58 +2143,245 @@
     "react-i18next": {
       "coveredBy": "i18next",
       "version": "17.0.4",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "84baad9fd02a96a927fe840ba366ccef8e9ef7a0122e510a113cd5366d244dfc",
+      "patternsSha256": "765f107f95b67df64afecb82dd379f37e14054caabe10fecf43a82d07ac06b99",
+      "sourceUrls": [
+        "https://react.i18next.com/",
+        "https://github.com/i18next/react-i18next/releases",
+        "https://raw.githubusercontent.com/i18next/react-i18next/master/CHANGELOG.md",
+        "https://github.com/i18next/react-i18next/security/advisories"
+      ],
+      "warnings": [
+        "PEER-DEP RISK: latest 17.0.8 requires i18next >= 26.2.0; project pins i18next ^26.0.6 (locked 26.0.6) — fresh npm install can produce unmet peer dep. Bump pair or pin exact.",
+        "promoted from stub to full dedicated PATTERNS.md + LESSONS.md (was redirect to i18next family file)",
+        "installed 17.0.4 behind latest 17.0.8 (17.0.5/06 rendering fixes, 17.0.7 scopeNs, 17.0.8 strict selector typecheck)",
+        "GitHub releases page rendered empty; versions/changelog sourced from npm registry + raw CHANGELOG.md"
+      ],
+      "refreshed": "2026-05-20"
     },
     "intl-pluralrules": {
       "coveredBy": "i18next",
-      "version": "2.0.1",
-      "fetched": "2026-05-18T10:12:57Z",
+      "version": "^2.0.1",
+      "fetched": "2026-05-21T00:00:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/i18next/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "8b511bd70e8cf49aa5270be8d410dd005ed31e1c0da84128cfa7b5f1e40f3c39",
+      "patternsSha256": "6c0794b5d11f97c4c2576c54d742515546191e00ec9209fdb681e4411a6969ac",
+      "sourceUrls": [
+        "https://github.com/eemeli/intl-pluralrules",
+        "https://www.npmjs.com/package/intl-pluralrules",
+        "https://github.com/facebook/hermes/blob/main/doc/IntlAPIs.md"
+      ],
+      "warnings": [
+        "Promoted from family stub to dedicated docs in same dir lib-docs/intl-pluralrules/.",
+        "No version drift (2.0.1 == latest). Polyfill NOT removable: Hermes RN 0.83 lacks native Intl.PluralRules (verified). UFR-016 burial does not apply."
+      ],
+      "refreshed": "2026-05-20"
     },
     "cors": {
       "coveredBy": "express-middleware-thin",
       "version": "2.8.6",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T20:10:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "bc431c4ce90d1d91e9654adf60861b4b4fed80e9d880813b239016b5bb78eef1",
+      "patternsSha256": "74a35fbe311c3eedbfebad50706823e3a03faab91cfa00437ab3248b79c37fa1",
+      "sourceUrls": [
+        "https://github.com/expressjs/cors",
+        "https://github.com/expressjs/cors/blob/master/README.md",
+        "https://github.com/expressjs/cors/releases",
+        "https://github.com/expressjs/cors/security/advisories",
+        "https://security.snyk.io/package/npm/cors",
+        "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html"
+      ],
+      "warnings": [
+        {
+          "url": "https://github.com/expressjs/cors/blob/master/CHANGELOG.md",
+          "reason": "no-version-bump-since-2.8.6",
+          "ts": "2026-05-20T20:10:00Z"
+        },
+        {
+          "kind": "split-from-bundle",
+          "ts": "2026-05-20T20:10:00Z",
+          "details": "Previously documented under lib-docs/express-middleware-thin (alongside compression, dotenv, reflect-metadata, p-limit). Split into dedicated lib-doc per user mandate 2026-05-20."
+        }
+      ],
+      "refreshed": "2026-05-20"
     },
     "compression": {
       "coveredBy": "express-middleware-thin",
       "version": "1.8.1",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T20:10:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "54ebb3e14814a6478cd53cc52cfbcada3195930057ec920cb5e4256f08ddda9c",
+      "patternsSha256": "a4c0019b42fe1b2620c7404eef70bff5fc611f7a6df23d3c1f43305158a9211a",
+      "sourceUrls": [
+        "https://github.com/expressjs/compression",
+        "https://github.com/expressjs/compression/blob/master/README.md",
+        "https://github.com/expressjs/compression/releases",
+        "https://github.com/expressjs/compression/security/advisories",
+        "https://www.npmjs.com/package/compression",
+        "https://expressjs.com/en/resources/middleware/compression.html",
+        "https://en.wikipedia.org/wiki/BREACH",
+        "https://security.snyk.io/package/npm/compression"
+      ],
+      "warnings": [
+        {
+          "url": "https://github.com/expressjs/compression/blob/master/HISTORY.md",
+          "reason": "no-public-changelog-diff-1.8.0-to-1.8.1",
+          "ts": "2026-05-20T20:10:00Z"
+        },
+        {
+          "kind": "library-scope-clarification",
+          "ts": "2026-05-20T20:10:00Z",
+          "details": "compression middleware does NOT mitigate BREACH — mitigation lives at the response layer (no-transform header, custom filter, CSRF rotation). README is silent on this; codified in PATTERNS §4.1."
+        },
+        {
+          "kind": "split-from-bundle",
+          "ts": "2026-05-20T20:10:00Z",
+          "details": "Previously documented under lib-docs/express-middleware-thin. Split into dedicated lib-doc 2026-05-20."
+        }
+      ],
+      "refreshed": "2026-05-20"
     },
     "dotenv": {
       "coveredBy": "express-middleware-thin",
       "version": "17.4.1",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T20:10:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "bb0bc9537d3ccbfee7832d4d64f9ac4eed9febbe84bbab32a3b8984715bb6d7b",
+      "patternsSha256": "369e22e39d6384d698502d342bdffa0c789e0e2d51809e5be3e07646c19f1a1b",
+      "sourceUrls": [
+        "https://github.com/motdotla/dotenv",
+        "https://github.com/motdotla/dotenv/blob/master/README.md",
+        "https://github.com/motdotla/dotenv/blob/master/CHANGELOG.md",
+        "https://github.com/motdotla/dotenv/releases",
+        "https://github.com/motdotla/dotenv/security/advisories",
+        "https://www.npmjs.com/package/dotenv",
+        "https://dotenvx.com/",
+        "https://github.com/dotenvx/dotenvx",
+        "https://github.com/dotenvx/dotenvx/blob/main/CHANGELOG.md",
+        "https://github.com/motdotla/dotenv/issues/876",
+        "https://security.snyk.io/package/npm/dotenv"
+      ],
+      "warnings": [
+        {
+          "url": "https://www.npmjs.com/package/dotenv",
+          "reason": "http-403-anti-bot",
+          "ts": "2026-05-20T20:10:00Z",
+          "mitigation": "version cross-verified via GitHub CHANGELOG + jsdocs.io"
+        },
+        {
+          "kind": "upstream-version-drift",
+          "ts": "2026-05-20T20:10:00Z",
+          "details": "package.json pins ^17.4.1; upstream latest is 17.4.2 (2026-04-12, docs-only). Renovate will catch."
+        },
+        {
+          "kind": "split-from-bundle",
+          "ts": "2026-05-20T20:10:00Z",
+          "details": "Previously documented under lib-docs/express-middleware-thin. Split into dedicated lib-doc 2026-05-20."
+        }
+      ],
+      "refreshed": "2026-05-20"
     },
     "reflect-metadata": {
       "coveredBy": "express-middleware-thin",
       "version": "0.2.2",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T19:35:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "snapshotSha256": "87dc6f6f6ab0cdaf4aaea5507d510e4931782614fd2322d2e2cd7439aa564568",
+      "patternsSha256": "76d9d55c9343dac7d3971b5758d92027e9e73adc25f5ac753a9e81b699a55ab6",
+      "sourceUrls": [
+        "https://github.com/microsoft/reflect-metadata",
+        "https://www.npmjs.com/package/reflect-metadata",
+        "https://github.com/tc39/proposal-decorator-metadata",
+        "https://www.typescriptlang.org/docs/handbook/decorators.html",
+        "https://www.typescriptlang.org/tsconfig/emitDecoratorMetadata.html",
+        "https://github.com/typeorm/typeorm/issues/10869",
+        "https://github.com/microsoft/TypeScript/issues/57533"
+      ],
+      "warnings": [
+        "Library minimally maintained: last release 0.2.2 on 2024-03-29 (no successor). Musaium IS on latest.",
+        "TC39 stage-3 decorator metadata does NOT carry design-time types — TypeORM/NestJS/Angular cannot migrate off reflect-metadata yet (TS#57533 open).",
+        "Previous PATTERNS.md was an incorrect stub collapsing into express-middleware-thin — restored to a dedicated curation this cycle."
+      ],
+      "refreshed": "2026-05-20"
     },
     "p-limit": {
-      "coveredBy": "express-middleware-thin",
-      "version": "3",
-      "fetched": "2026-05-18T10:12:57Z",
-      "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/express-middleware-thin/PATTERNS.md (UFR-022 collapse policy)"
+      "version": "3.1.0",
+      "versionPin": "^3",
+      "latestUpstream": "7.3.0",
+      "fetched": "2026-05-20T18:00:00Z",
+      "fetchedBy": "doc-curator",
+      "curatedAt": "2026-05-20T18:00:00Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "eb0cc18d76ed0d93d2a50f5826d0eaa84ca0df9619d9cf4495a80ad44f53cf0e",
+      "patternsSha256": "5fdf3c02deed836df0eef95b5da63a32ba032c119623714b3db4d79601dfbdf5",
+      "sourceUrls": [
+        "https://github.com/sindresorhus/p-limit",
+        "https://github.com/sindresorhus/p-limit/releases"
+      ],
+      "warnings": [
+        {
+          "reason": "403",
+          "note": "npmjs.com forbids WebFetch — release metadata via GitHub releases page only"
+        }
+      ],
+      "cveCheck": {
+        "performed": "2026-05-20T18:00:00Z",
+        "result": "no-cves"
+      },
+      "previousState": "stub-deferred-to-express-middleware-thin",
+      "promotionReason": "ESM-only divergence v3 vs v4+ + dedicated Semaphore consumer warrants own PATTERNS"
     },
     "@mozilla/readability": {
       "coveredBy": "linkedom",
       "version": "0.6.0",
-      "fetched": "2026-05-18T10:12:57Z",
+      "fetched": "2026-05-20T18:14:00Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/linkedom/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/linkedom/PATTERNS.md (UFR-022 collapse policy). Migration target documented in linkedom/PATTERNS.md §6 (defuddle, TD-33).",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "refreshed": "2026-05-20"
+    },
+    "@opentelemetry/api": {
+      "version": "1.9.0",
+      "fetched": "2026-05-20T19:50:00Z",
+      "curatedBy": "doc-curator (refresh 2026-05-20)",
+      "patternsSha256": "7ef3b4a039efad90e58f363e0c01f2e8fe03e7fc3fe8ef9f6b662ba48bf0895b",
+      "refreshed": "2026-05-20"
+    },
+    "motion": {
+      "version": "12.39.0",
+      "fetched": "2026-05-21T00:30:00Z",
+      "curatedBy": "lib-doc-curator",
+      "snapshotSha256": "70b494b4f65b712b215f50b2f7a567dedc8000b7f3e516de0c3648d2f05f3ca0",
+      "patternsSha256": "3b50d1932bd155083da23a0fcda06103046cd177d615ab8216d58a4ad195b28f",
+      "sourceUrls": [
+        "https://motion.dev/docs/react",
+        "https://motion.dev/docs/react-accessibility",
+        "https://motion.dev/docs/react-upgrade-guide",
+        "https://raw.githubusercontent.com/motiondivision/motion/main/CHANGELOG.md",
+        "https://registry.npmjs.org/motion"
+      ],
+      "warnings": [
+        "Package renamed framer-motion -> motion mid-2025; lib-docs dir renamed framer-motion/ -> motion/; framer-motion/ kept as legacy alias stub.",
+        "gh api .../releases returned empty; changelog sourced from raw CHANGELOG.md + npm versions. Latest stable 12.39.0 verified via npm view.",
+        "13.0.0-alpha.0 exists on npm (pre-release) — not adopted; pinned ^12.39.0."
+      ],
+      "refreshed": "2026-05-20"
     }
   },
   "devOnlyLibs": [
@@ -1376,5 +2423,6 @@
     "cross-env",
     "dotenv-cli",
     "openapi-typescript"
-  ]
+  ],
+  "refreshNote": "Full 95-lib re-curation 2026-05-20/21 (UFR-022). All snapshots regenerated, codebase anti-pattern scan + security advisory check per lib."
 }

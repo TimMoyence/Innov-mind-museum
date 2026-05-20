@@ -44,3 +44,19 @@ Audit 2026-05-18 : **🚨 3 AR LAUNCH BLOCKERS** (F1+F2+F3). v26 migration clean
 4. **F5** (supportedLngs + defaultNS) — 5 lines
 5. **F4** (built-in datetime formatter) — generalize before more dates
 6. **F7** (initImmediate: false) — 1 line
+
+## 2026-05-20
+
+Re-verified vs. 2026-05-18 audit (i18next 26.0.6 locked, latest 26.2.0). **F1, F3, F5, F7 STILL UNFIXED; F2 partial.**
+
+- **F1 still open** — `museum-frontend/index.js:1` imports only `expo-router/entry`; `import 'intl-pluralrules'` remains in `shared/i18n/i18n.ts:1` (loads lazily via `app/_layout.tsx`). AR Hermes plural-collapse hazard persists. Move polyfill to `index.js:1`.
+- **F2 evolved (still incomplete)** — `minutesShort` is now base `{{count}} …` + `minutesShort_zero` only, across EN/FR/AR (`ar/translation.json:1178-1179`). AR (CLDR Cat 6) still lacks `_one/_two/_few/_many/_other` → count 2/3/11 return the base form. `report_*` are flat keys, not plurals (no `_*` needed). The CI key-parity check (`scripts/check-i18n-completeness.js`) does NOT validate CLDR plural completeness → AR gaps pass green. Sentinel gap.
+- **F3 still open** — `app/(stack)/carnet/[sessionId].tsx:160-162` still hand-rolls `detail.durationLabel === '0' ? t('carnet.minutesShort_zero') : t('carnet.minutesShort',{count})`. Replace with unconditional `t('carnet.minutesShort',{ count: Number(detail.durationLabel) })` (after F1).
+- **F4 still open** — `features/settings/ui/SettingsAiConsentCard.tsx:79-89` still builds `new Intl.DateTimeFormat(i18n.language,{dateStyle:'medium'})` in a `useMemo` and interpolates the formatted string into `ai_consent_granted_on`. Move to v26 built-in `{{date, datetime(dateStyle: medium)}}`.
+- **F5 still open** — `i18n.ts:16-35` `init` has `fallbackLng:'en'` but NO `supportedLngs`, no explicit `ns`/`defaultNS`. Add `supportedLngs` from the `supportedLocales` config (DRY).
+- **F7 still open** — `init` never `await`-ed and `initImmediate` not set; static resources make the gap microscopic but add `initImmediate:false` for determinism.
+- **NEW: peer-dep drift risk** — react-i18next `latest` (17.0.8) peer-requires `i18next >= 26.2.0`; project pins i18next `^26.0.6` (locked 26.0.6). A fresh `npm install` can pull react-i18next 17.0.8 against i18next 26.0.6 → unmet peer dep. Bump both together (i18next 26.2.0 + react-i18next 17.0.8) or pin exact. See react-i18next LESSONS.
+- **Security note** — i18next 26.0.6 is itself the security release (ReDoS delimiter escaping, log-forging control-char strip, nesting `escapeValue:false` warning). Do NOT downgrade below 26.0.6. v26.2.0 adds no new security fix, but closing the peer-dep gap pulls it in cleanly.
+- **Positives still hold** — zero legacy `interpolation.format` callback (v26-clean), declaration merging present (`types.ts`), single correct `<Trans>` site, RTL reload via `Updates.reloadAsync()`, no `keyPrefix`+`ns:key` anti-pattern.
+
+Fix order unchanged: F1 → F3 → F2 → F5 → F4 → F7, plus pin/bump the i18next↔react-i18next pair.

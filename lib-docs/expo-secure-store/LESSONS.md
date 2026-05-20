@@ -1,0 +1,11 @@
+# Lessons — expo-secure-store
+
+Project-specific gotchas. Human-edited. Consumed by /team red/green/reviewer agents.
+
+## 2026-05-20
+
+- **Tokens lack `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` (SECURITY GAP).** `features/auth/infrastructure/authTokenStore.ts:50` writes the JWT refresh + access tokens with `setItemAsync(key, token)` and **no options object**. expo-secure-store defaults `keychainAccessible` to `WHEN_UNLOCKED`, which is **backup-migratable** — the refresh token is written into the encrypted iCloud/iTunes backup and can be restored onto a different device. For a device-bound refresh token this is wrong; it should be `SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY`. Fix: thread an options arg through `secureTokenStore` and pass `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` on every token write. Re-review before V1 launch (auth surface).
+- **Web silently falls back to plaintext AsyncStorage.** Same file, `loadSecureStore()` returns `null` on `Platform.OS === 'web'` → tokens go to AsyncStorage (unencrypted). Tolerated because Musaium web = admin panel (desktop, short-lived JWT, no device-extraction threat model). If web ever holds long-lived secrets, this becomes a finding — move to `httpOnly` cookies, not AsyncStorage. Do not silently extend this fallback to mobile.
+- **Key sanitization is required when keys derive from runtime data.** iOS keychain keys must match `[A-Za-z0-9._-]+`. `useVoiceDisclosure.ts:33` correctly does `sessionId.replace(/[^A-Za-z0-9._-]/g, '_')`. Any new SecureStore key built from a sessionId / userId / arbitrary string MUST sanitize the same way or `setItemAsync` throws on iOS.
+- **SecureStore used for a plain boolean preference.** `offlineMapsPreferences.ts` stores a non-secret flag in SecureStore "for uniform pattern". Harmless but overkill (encrypted store for a boolean). Not worth churning, but don't cite it as the canonical preference-storage pattern — AsyncStorage is the right home for non-secret prefs.
+- **iOS keychain survives app uninstall.** A "ghost" logged-in state after delete+reinstall on iOS is expected platform behavior (bundle-id-keyed keychain), not a bug. Android wipes on uninstall. Don't chase this as a defect.

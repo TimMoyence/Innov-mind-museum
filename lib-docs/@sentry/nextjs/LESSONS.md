@@ -32,3 +32,28 @@ Audit 2026-05-18 : **🚨 CHANGES_REQUESTED — 1 HIGH BLOCKER pre-V1**.
 ## INFO
 - N/A : museum-web zero route.ts/route.tsx + zero 'use server' actions (API proxied to museum-backend via rewrites). `withServerActionInstrumentation` not needed.
 - `sentry.edge.config.ts` byte-identical to server (no edge-specific tuning) — flags lack of intentional config.
+
+---
+
+## Addendum 2026-05-20 (refresh round, doc-curator)
+
+### Status updates vs 2026-05-18 audit
+- **TD-SNXT-01 (S1 HIGH)** — **FIXED**. `museum-web/instrumentation-client.ts` exists, calls `Sentry.init(...)` and exports `onRouterTransitionStart = Sentry.captureRouterTransitionStart`. No orphan `sentry.client.config.ts` remains. Browser-side observability is live.
+- **TD-SNXT-02 (S2 MEDIUM)** — **FIXED**. `museum-web/src/instrumentation.ts:11` uses the canonical direct re-export: `export { captureRequestError as onRequestError } from '@sentry/nextjs'`. No dynamic-import-per-request wrapper.
+- **TD-SNXT-03 (S3 MEDIUM)** — **FIXED**. All 3 config files (`instrumentation-client.ts:13`, `sentry.server.config.ts:13`, `sentry.edge.config.ts:13`) use `process.env.NODE_ENV === 'development' ? 1.0 : 0.1`.
+- **TD-SNXT-04 (S4 MEDIUM)** — **FIXED**. `next.config.ts:48` sets `tunnelRoute: '/monitoring'`. All 3 config files set explicit `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]`.
+
+### Net delta verdict 2026-05-20
+- All 4 audit BLOCKERs from 2026-05-18 are now resolved in code.
+- Library version (10.49.0) is fresh — latest stable is 10.53.1, no Next.js-relevant breaking changes between the two. Optional bump to 10.53.1 is low-risk but NOT required.
+- No security advisory affects 10.49.0 (GHSA-2rmr-xw8m-22q9 fixed at 7.77.0; GHSA-6465-jgvq-jhgp fixed at 10.27.0). museum-web is patched and additionally sets `sendDefaultPii: false`.
+
+### New TD entry (P2, informational)
+
+- **TD-47 (distributed tracing — partial coverage)** — SDK auto-fetch instrumentation wires `sentry-trace` + `baggage` from browser code (client bundle) and from RSC paths that use the SDK-patched global `fetch`. BUT `museum-web/src/lib/api.ts` is a hand-written `fetch` wrapper used by the admin panel; the SDK's auto-patch covers it in the browser bundle, but **server-side RSC calls during page render do not propagate trace context for happy-path correlation** (only error-path correlation via `onRequestError`-attached scope). Fix when admin-panel observability becomes a P1: explicitly inject `sentry-trace` + `baggage` headers in `api.ts` mutation helpers using `Sentry.getActiveSpan()` + `spanToTraceHeader()` (or `Sentry.getTraceData()` v10 helper). Currently low priority — wait for first observability gap. Cross-ref CLAUDE.md gotcha `apiPut n'existe pas` (same file, ad-hoc PUT wrappers also miss `X-CSRF-Token` consistency).
+
+### Defence-in-depth note (security advisory GHSA-6465-jgvq-jhgp)
+The Authorization/Cookie header leak vulnerability (Moderate, fixed 10.27.0) only triggered when `sendDefaultPii: true`. museum-web sets it to `false` AND runs 10.49.0 → both layers protect.
+
+### `sentry.edge.config.ts` ≡ `sentry.server.config.ts` (still byte-identical)
+Not a defect, but flag: museum-web has no real edge code path today (no middleware-side enrichment, no edge route handlers — just CSP nonce generation in `src/middleware.ts`). When/if edge logic grows (e.g. geo-based routing, edge auth), differentiate the edge config (lower sample rate, no replay, different release tag).

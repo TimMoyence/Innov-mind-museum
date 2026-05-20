@@ -4,6 +4,7 @@
 > Mise à jour à chaque sprint via `/team` skill.
 > Items résolus → cocher `[x]` et garder 1 sprint avant de purger.
 > **Différent des roadmaps** : la roadmap décrit les features à shipper, ce fichier décrit les compromis pris qui devront être nettoyés.
+> **Dernière consolidation : 2026-05-21** — application des 10 verdicts read-only du refresh lib-docs 2026-05-20 (95 libs). Voir `lib-docs/.refresh-2026-05-20/td-verdicts/`.
 
 ---
 
@@ -19,6 +20,45 @@ Chaque ligne décrit une dette avec :
 - **Statut** : `[ ]` ouvert, `[x]` fermé.
 
 Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on retire l'entrée.
+
+---
+
+## Bumps recommandés (refresh 2026-05-20)
+
+> Issu du verdict `deps-versions` (refresh lib-docs 2026-05-20/21). Classés SECURITY (bumper pre-V1) | ROUTINE (Renovate) | LOCKED (ne PAS bumper). `pinned` = valeur `package.json` à l'audit ; `latest` = npm latest.
+
+### 🔒 SECURITY — bumper pre-V1
+
+| lib | app | pinned → latest | raison |
+|---|---|---|---|
+| **pg** | BE | 8.20.0 → **8.21.0** | Fix prototype-pollution (PR #3656) sur les noms de colonnes server-supplied (`__proto__` row-builder) + `scramMaxIterations` DOS defuse + SASLprep. Pas de CVE enregistrée, risque réel via proxy untrusted. Pas d'API change → single-line bump. |
+| **axios** | FE | 1.16.0 → **1.16.1** | Prototype-pollution (CVE-2026-42033/42035/42264) + CRLF/header-injection (CVE-2026-42037) corrigés 1.15.1→1.16.1, classe applicable au path XHR RN. `^1.16.0` permet le patch. (SSRF/proxy CVEs NON applicables — RN n'a pas l'adapter http/proxy Node.) `npm update axios`. |
+
+### ROUTINE — fenêtre Renovate
+
+| lib | app | pinned → latest | note |
+|---|---|---|---|
+| @sentry/react-native | FE | ^8.9.1 → 8.11.1 | iOS AVAsset crash fix (HLS offline, non utilisé). GHSA-68c2-4mpx-qh95 auth-token leak : range 8.9.1 indéterminée, env-only token mitige → **re-classer SECURITY si la range confirme 8.9.1**. |
+| react-native-webview | FE | 13.16.0 → 13.16.1 | iOS SIGABRT fix (= TD-RNWV-03). |
+| maplibre-react-native | FE | 11.0.0 → 11.2.1 | 11.0.1 Android GeoJSONSource memory fix (pertinent : GeoJSON clustered all-museums). Pas de CVE. |
+| @expo/vector-icons | FE | ^15.0.3 → **15.1.1** | **15.1.0 burned upstream → pin 15.1.1** (skip 15.1.0). |
+| typeorm | BE | 0.3.28 → 0.3.30 | 0.3.29 `limit()` validation Update/SoftDelete (expo Musaium LOW) + 0.3.30 `JsonContains` array fix. **Rester 0.3.x jusqu'à V1 ; 1.0.0 (2026-05-19) → Q3 2026.** |
+| i18next | FE | 26.0.6 → 26.2.0 | **Paire** : react-i18next 17.0.8 peer-requires i18next ≥ 26.2.0. NE PAS descendre sous 26.0.6 (release sécu ReDoS/log-forge). |
+| react-i18next | FE | 17.0.4 → 17.0.8 | **Paire** : bumper ENSEMBLE avec i18next ≥ 26.2.0 (hazard fresh-install si bumpé seul). |
+| @shopify/flash-list | FE | 2.0.2 → 2.3.1 | 2.2.1 fixe sticky-header disparaissant sur **RN 0.83** (version exacte Musaium, PR #2069) ; 2.3.1 ajoute MVCP (unblock TD-FL-02). |
+| recharts | WEB | (patch) | patch routine. |
+| uuid | FE/BE | → 11.1.1 | GHSA-w5hq-g745-h8pq backporté à 11.1.1 → déjà patché au pin. v14 inutile. |
+| @opentelemetry/api · resources · semantic-conventions | BE | patches | **semantic-conventions : skip 1.41.0 (YANKED) → 1.41.1.** REJETER toute PR 1.41.0. |
+
+### LOCKED — NE PAS bumper
+
+| lib | raison |
+|---|---|
+| @react-native-async-storage/async-storage | v3.x = scoped-storage breaking + NON compatible Expo SDK 54+ + Android 16 KB page-size failure. 2.2.0 = pin maximal correct Expo SDK 55. |
+| @react-native-community/netinfo | v12.0.0 BREAKING (iOS 14+/RN 0.76+ min + entitlement Access Wi-Fi Information → Apple portal). Defer post-launch. |
+| p-limit | ESM lock — rester v3 (évite le break ESM-only en surface CJS). |
+| motion | `13.0.0-alpha.0` = pre-release, NE PAS adopter. Rester ≥12.37.0 (12.39.0 actuel). |
+| @opentelemetry/sdk-node · exporter-trace-otlp-http · auto-instrumentations-node | track expérimental 0.x ; 0.218.0 = serializer rewrite → smoke-test Tempo requis (DEFERRED). |
 
 ---
 
@@ -77,23 +117,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-11 — `@types/express-serve-static-core` pin à 5.0.6 (param widening 5.1.x) [x]
-
-- **Localisation** :
-  ```
-  museum-backend/package.json:pnpm.overrides.@types/express-serve-static-core = "5.0.6"
-  ```
-- **Symptôme** : la version 5.1.0 / 5.1.1 a élargi `req.params[key]` de `string` à `string | string[]` (pour refléter des cas légitimes de paramètres multi-segments). Cette upcasting déclenche 27+ erreurs `TS2322` / `TS2345` sur l'ensemble des `*.route.ts` BE qui font `useCase.execute({ id: req.params.id })` ou `\`bucket:${req.params.id}\`` template literal.
-- **Pourquoi non résolu en V1** : élargissement TYPE-only (pas de runtime change), pin à 5.0.6 conserve la sémantique observée 2026-05-13. Migration ~30 fichiers route, non-trivial.
-- **Sprint d'origine** : 2026-05-14 (rollback Renovate PR #277 absorbé puis neutralisé via override pin).
-- **Effort estimé** : 0.5 jour si on bumpe l'override + narrowing systématique au callsite (`typeof X === 'string' ? X : undefined`). Mieux : helper `parseStringParam(req, key): string | undefined` réutilisable.
-- **Closure 2026-05-15** :
-  1. Suppression de la clé `pnpm.overrides."@types/express-serve-static-core"` (doctrine bury-dead-code : pas de bump-puis-pin obsolète, override retiré net) + ajout explicite de `@types/express-serve-static-core: ^5.1.1` en `devDependencies` pour forcer le lockfile à re-résoudre (sinon `@types/express@5.0.1` re-pinne la transitive à 5.0.6).
-  2. Helper `parseStringParam(req, key): string | undefined` créé dans `museum-backend/src/shared/middleware/parseStringParam.ts` (16 lignes, rejette `string[]` et `''`).
-  3. Codemod sur 11 fichiers route, 22 call sites narrowed (admin-ke, admin, cache-purge, auth-api-keys, consent, chat-media, chat-message, chat-session, low-data-pack, museum, support) + 1 helper interne (`bySession` dans `rate-limit.middleware.ts` qui consommait `req.params.id` dans un template literal).
-  4. tsc final : 0 erreurs (28 erreurs `TS2322`/`TS2345` réelles mesurées sur HEAD, pas 27+ comme estimé).
-  5. Lint final : 0 warnings (3 warnings sonarjs introduits par les nouveaux strings dupliqués → factorisés via `MESSAGE_ID_REQUIRED` et `INVALID_MUSEUM_ID` constants).
-  6. BE test suite : 5404 passed / 5497 total (93 skipped pré-existants, 0 fail).
+- ~~TD-11 (fermé 2026-05-15, archivé 2026-05-21)~~ → [archive](TECH_DEBT_ARCHIVE.md#td-11--types-express-serve-static-core-pin-à-506-param-widening-51x)
 
 ---
 
@@ -169,7 +193,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   2. Aligner `dataModeStore` sur le pattern `_hydrated` + `onRehydrateStorage` (cf. `userProfileStore` lignes 29/91 + `audioDescriptionStore` lignes 26/57 comme reference).
   3. Ajouter scenario Maestro `flows/offline-pack-airplane.yaml` : (a) telecharger pack pour une ville, (b) toggle airplane mode (Maestro `runFlow` avec adb shell), (c) ouvrir map, assert tiles raster visibles, (d) toggle off airplane. Brancher dans `ci-cd-mobile.yml` quality job.
   4. Créer `docs/OFFLINE_CONTRACT.md` qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
-  5. Cocher TD-14 ici.
+  5. **Wire `onlineManager` à NetInfo (= TD-OM-01, ajouté 2026-05-21, MEDIUM-HIGH pre-V1)** — le sous-gap le plus à fort levier, non couvert par les steps 1-4 : `onlineManager.setEventListener(...)` au bootstrap pour que `refetchOnReconnect`/`networkMode:'online'` self-heal sur device. Évidence consommateur : `DataModeProvider.tsx:80-82` (pas de gate `_hydrated`), `queryClient.ts:54-55`. Voir TD-OM-01 pour le détail.
+  6. Cocher TD-14 + TD-OM-01 ici.
 
 ---
 
@@ -196,7 +221,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-18 — Search adapters sur-provisionnés (5 providers configurés, 2-3 utilisés réel V1)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent F §2 + §9)
+- [x] **Statut** : fermé 2026-05-17 via C9.15 — coché 2026-05-21, vérifié vs code (faux-ouvert, déjà remédié). `museum-backend/src/modules/chat/adapters/secondary/search/` ne contient plus `google-cse.client.ts` / `searxng.client.ts` / `duckduckgo.client.ts` ; `chat-module.ts:547-548` commente "C9.15 (2026-05-17) — Google CSE / SearXNG / DuckDuckGo adapters retired", `buildWebSearchProvider` (`:557-568`) ne push que Tavily + Brave. (résolu 2026-05-21, vérifié vs code — ai verdict)
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/adapters/secondary/search/google-cse.client.ts      # 84 LOC, redondant Tavily+Brave
@@ -214,7 +239,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-19 — Legacy `[META]` JSON parser path mort (`withStructuredOutput` est le path production)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent B Gap-4b)
+- [x] **Statut** : fermé 2026-05-18 via C9.17 — coché 2026-05-21, vérifié vs code (faux-ouvert, dead path déjà retiré). `grep -rn "\[META\]" src/modules/chat/` = 0 hit ; `llm-sections.ts:88` "legacy plain-text + JSON-tail fallback was retired 2026-05-18" ; `langchain.orchestrator.ts` invokeSection fail-closed (throw si `!outputSchema || !model.withStructuredOutput`, plus de legacy invoke fallback) ; `assistant-response.ts` n'a plus de parser `[META]`. (résolu 2026-05-21, vérifié vs code — ai verdict)
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/useCase/llm/llm-sections.ts:262-273           # legacy prompt branch "[META] JSON"
@@ -228,9 +253,11 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-20 — Langfuse wrap manuel `withLangfuseTrace` (0 `lf.generation()`, cost column UI = 0)
+### TD-20 — Langfuse generations résiduelles sur les 4 paths non-LangChain (per-tenant cost attribution)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent G + B T1-B.1)
+> **Re-scopé 2026-05-21 (ai verdict, MEDIUM)** : le symptôme original "0 `lf.generation()`, cost column UI = 0" est désormais **FAUX pour le chat path** — `langchain-orchestrator-tracing.ts:101-122` émet `trace?.generation({...})` + `generation?.end({...usage})` depuis C9.4/TD-LF-02 (2026-05-18). Résiduel réel = 4 paths non-LangChain non instrumentés : (a) judge `llm-judge-guardrail.ts:135` (raw `structured.invoke`, no langfuse import) ; (b) TTS `text-to-speech.openai.ts` (no langfuse import) ; (c) STT `audio-transcriber.openai.ts` (no langfuse import) ; (d) LLM-Guard adapter (pas de corrélation langfuse) ; (e) generations sans metadata `museumId/tier/requestId` (D1 subclass). Reprioritisé scope per-tenant-cost-attribution.
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent G + B T1-B.1 ; re-scopé 2026-05-21)
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-tracing.ts  # 8 sites lf?.trace(...), 0 lf.generation()
@@ -271,40 +298,40 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-23 — `@musaium/shared` sentry-scrubber extraction (ADR-045 deferred)
+### TD-23 — `@musaium/shared` sentry-scrubber : ratifier la divergence hash-algo (ADR-045)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G3)
+> **Re-scopé 2026-05-21 (observability verdict, INFO)** : **l'extraction est largement FAITE.** Le package `packages/musaium-shared/src/observability/sentry-scrubber.ts` (+ `.test.ts`) existe ; les 3 fichiers app sont désormais des **thin re-exports** qui importent la logique de scrub depuis `@musaium/shared/observability` et n'injectent que le `hashEmail` runtime-specific (`museum-backend/src/shared/observability/sentry-scrubber.ts:8-16`, `museum-web/src/lib/sentry-scrubber.ts:13-43`, `museum-frontend/shared/observability/sentry-scrubber.ts`). Le drift "sync manuelle" est résolu, gardé par `scripts/sentinels/sentry-scrubber-parity.mjs`. **Résiduel = la divergence d'algo email-hash est désormais INTENTIONNELLE** (BE = SHA-256-8hex via `node:crypto` ; FE+Web = fold 32-bit runtime-agnostic, pas de polyfill `crypto`), documentée in-file (`museum-web/src/lib/sentry-scrubber.ts:6-9,22-27`). Le close-goal original ("aligner sur sha256-8hex, BE source de vérité") n'a PAS été exécuté ; à la place la divergence a été rendue intentionnelle. Reste à ratifier dans ADR-045. Plus un P0.
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G3 ; re-scopé 2026-05-21 — extraction faite, résiduel = ratifier divergence hash)
 - **Référence code** :
   ```
-  museum-backend/src/.../sentry-scrubber.ts:1-2
-  museum-frontend/src/.../sentry-scrubber.ts:1-2
-  museum-web/src/.../sentry-scrubber.ts:1-2
+  packages/musaium-shared/src/observability/sentry-scrubber.ts        # source partagée
+  museum-backend/src/shared/observability/sentry-scrubber.ts:8-16     # thin re-export + SHA-256 hashEmail
+  museum-web/src/lib/sentry-scrubber.ts:13-43                         # thin re-export + 32-bit fold hashEmail
+  museum-frontend/shared/observability/sentry-scrubber.ts             # même pattern
   ```
-- **Symptôme** : 3 fichiers manuellement synchronisés. Email-hash inconsistency : BE = sha256-8hex, FE+Web = 32-bit fold-8hex. Drift potentiel à chaque update.
+- **Symptôme** : ~~3 fichiers manuellement synchronisés~~ (résolu — package partagé + sentinel parity). Résiduel : email-hash inconsistency BE = sha256-8hex vs FE+Web = 32-bit fold-8hex, désormais by-design.
 - **Sprint d'origine** : audit-2026-05-12-raw F9 G3.
-- **Effort estimé** : 1-2 jours.
-- **Comment fermer** : extraire vers `packages/musaium-shared/sentry-scrubber/` (pattern déjà validé pour `@musaium/shared/observability`). ADR-045 documente la décision de différer — fichier ADR existe, pas un ADR manquant, juste extraction non encore faite. Aligner sur sha256-8hex (BE source de vérité).
+- **Effort estimé** : INFO — amendment ADR-045 (ratifier la divergence comme intentionnelle), pas de code.
+- **Comment fermer** : amender ADR-045 pour documenter que la divergence hash-algo BE↔FE/Web est intentionnelle (runtime-agnostic côté client, pas de polyfill `crypto`), OU fermer comme INFO. L'extraction `packages/musaium-shared/` est faite.
 
 ---
 
 ### TD-24 — Metro4Shell CVE-2025-11953 audit (`@react-native-community/cli-server-api`)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw R11 §1.2)
-- **Référence code** : transitive dep RN. `npm ls @react-native-community/cli-server-api` audit non fait.
+- [x] **Statut** : fermé N/A 2026-05-21 (mobile verdict, vérifié vs code) — **package absent, non applicable.** `@react-native-community/cli-server-api` n'est ni dans `node_modules` ni dans `package-lock.json` (grep = 0). Ce projet Expo SDK 55 / RN 0.83 run le dev server via `@react-native/community-cli-plugin@0.83.6` + `metro@0.83.5` — PAS le `@react-native-community/cli` server standalone que vise CVE-2025-11953 (Metro4Shell, endpoints `/open-url` / `/launch-debugger`). Les projets Expo-managed ne shippent pas `cli-server-api`.
+- **Résiduel (verification, non-bloquant)** : confirmer que `metro@0.83.5` lui-même n'a pas d'advisory SSRF/`open-url` séparé avant close final (WebSearch non run dans le verdict).
+- **Référence code** : `find node_modules -path "*cli-server-api*"` = 0 ; `grep cli-server-api package-lock.json` = 0 ; `node_modules/metro/package.json` = 0.83.5 ; `node_modules/@react-native/community-cli-plugin/package.json` = 0.83.6.
 - **Sprint d'origine** : audit-2026-05-12-raw R11 §1.2.
-- **Effort estimé** : 15 min audit + bump éventuel.
-- **Comment fermer** : CISA KEV depuis 2026-02-05, fix dispo `cli-server-api@20.0.0+`. Vérifier version transitive dans `museum-frontend/`, bump si < 20.0.0.
 
 ---
 
 ### TD-25 — Sentry+OTel trace propagation BE↔FE split
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G2)
-- **Référence code** : F9 G2 — mobile/web injectent `sentry-trace`, BE OTel lit `traceparent`, no `SentryPropagator` registered.
+- [x] **Statut** : fermé 2026-05-21 (observability verdict, vérifié vs code) — **cheap path shippé, full bridge intentionnellement déféré (ADR-045/TD-SN-01).** `museum-backend/src/shared/observability/sentry.ts:48` porte `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` ; le bridge header-based ship via `trace-propagation.middleware.ts` (W3+W4). Le full bridge `@sentry/opentelemetry` `SentryPropagator` est délibérément NON installé (= TD-SN-01 STALE-BY-DESIGN). (résolu 2026-05-21, vérifié vs code)
+- **Référence code** : `museum-backend/src/shared/observability/sentry.ts:48`, `trace-propagation.middleware.ts`.
 - **Symptôme** : trace tree jamais reconvergent entre client (Sentry header) et serveur (OTel W3C header). Debugging cross-stack impossible.
 - **Sprint d'origine** : audit-2026-05-12-raw F9 G2.
-- **Effort estimé** : 1 jour (cheap : `tracePropagationTargets` explicite + doc) OU 1-2 jours (full bridge : Sentry `httpIntegration` w/ `spans:false` + `SentryPropagator` dans OTel SDK).
-- **Comment fermer** : trancher cheap vs full bridge selon le besoin observability post-launch. Cheap path = pragmatic V1.
 
 ---
 
@@ -332,8 +359,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-28 — TTS cache key voice-aware (correctness bug)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F2 + C9.12)
-- **Référence code** : C9.12c ROADMAP_PRODUCT — `tts:<messageId>` clé ne contient pas la voice.
+- [x] **Statut** : fermé 2026-05-17 (v2 prefix), coché 2026-05-21 vérifié vs code (disclosure verdict — doc était stale). `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:227` `const cacheKey = ` + "`tts:v2:${messageId}:${targetVoice}`" + ` ;` avec `targetVoice = row.session.user?.ttsVoice ?? env.tts.voice` (`:225`) ; doc-comment `:196-199` "v2 prefix bumped 2026-05-17 to make the key voice-aware (TD-28)". Legacy keys TTL-expire. (résolu 2026-05-21, vérifié vs code)
+- **Référence code** : `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:225-227`.
 - **Symptôme** : user change voice setting → stale audio Redis retourné (clé invariant sur voice). Bug correctness, pas perf.
 - **Sprint d'origine** : audit-2026-05-12-raw F2 + C9.12.
 - **Effort estimé** : 30 min.
@@ -354,12 +381,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-30 — `framer-motion` → `motion` rename
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit)
-- **Référence code** : `museum-web/` 12 imports + 1 vi.mock.
-- **Symptôme** : package renommé upstream (`framer-motion` → `motion`). Defer post-launch — rename mécanique, zéro valeur produit.
-- **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
-- **Effort estimé** : 5 min mécanique (codemod sed import paths + vi.mock string).
-- **Comment fermer** : `pnpm rm framer-motion && pnpm add motion` + codemod imports. Tests web pass.
+- [x] **Statut** : fermé 2026-05-19 via TD-FM-01 (commit `0535fa541`), coché 2026-05-21 vérifié vs code (deps verdict — TD-30 était un doublon superseded de TD-FM-01, le header restait stale "defer post-launch"). Grep `museum-web/src` (2026-05-21) : **0** `from 'framer-motion'`, **11** `from 'motion/react'` ; `package.json:31 = motion@^12.39.0`. (résolu 2026-05-21, vérifié vs code)
+- **Référence code** : `museum-web/src/components/{marketing,shared}/*` — 11 imports `motion/react`.
+- **Sprint d'origine** : team-report 2026-05-15-renovate-audit. **Codemod canonical = TD-FM-01.**
 
 ---
 
@@ -398,12 +422,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-34 — Maestro path discrepancy
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #1)
-- **Référence code** : `museum-frontend/maestro/` (4 new flows) vs `museum-frontend/.maestro/` (CI shards.json reader).
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #1 ; compte corrigé 4→6 le 2026-05-21, mobile verdict)
+- **Référence code** : `museum-frontend/maestro/` (sans dot) contient **6** flows (`capture-screens.yaml`, `login-and-capture.yaml`, `paywall-quota-exhaustion.yaml`, `rtl-switch-ar.yaml`, `screenshots.yaml`, `voice-record-and-tts.yaml`) — aucun n'apparaît dans `museum-frontend/.maestro/shards.json:1-49` (avec dot), que lit la CI.
 - **Symptôme** : flows ajoutés à `maestro/` (sans dot) ne sont jamais picked up par CI qui lit `.maestro/shards.json`. Silent skip = false sense of coverage.
 - **Sprint d'origine** : audit-360 S3 follow-up #1.
 - **Effort estimé** : 30 min.
-- **Comment fermer** : relocate les 4 flows vers `.maestro/flows/` + ajouter au shard manifest. Vérifier la sentinelle CI `shard-manifest` ne crie pas.
+- **Comment fermer** : relocate les **6** flows vers `.maestro/` + ajouter au shard manifest. Triage : `paywall-quota-exhaustion`/`rtl-switch-ar`/`voice-record-and-tts` = coverage réelle intentionnelle ; `screenshots`/`capture-screens`/`login-and-capture` = potentiellement utilitaires screenshot dev-only (juger avant de promouvoir). Vérifier la sentinelle CI `shard-manifest`.
 
 ---
 
@@ -491,11 +515,13 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 ### TD-42 — `cachedGeofenceMode` jamais invalidé (W3 MIN-1)
 
 - [ ] **Statut** : ouvert (créé 2026-05-18, run `2026-05-17-w3-geo-walk-intra`).
-- **Référence code** :
+- **Référence code** (lignes corrigées 2026-05-21, db verdict) :
   ```
-  museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:23-24,182-194
+  museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:24       # singleton cachedGeofenceMode
+  museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:176-188   # detectGeofenceMode()
+  museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:192       # _resetGeofenceModeCacheForTests (test seam)
   ```
-- **Symptôme** : `cachedGeofenceMode` (`'postgis' | 'jsonb' | 'absent'`) résolu au premier appel `findByCoords` et persiste pour la vie du process. Si l'opérateur applique `AddMuseumGeofence` après boot (rolling deploy avec migration in-flight), le cache reste sur `'absent'` indéfiniment.
+- **Symptôme** : `cachedGeofenceMode` (`'postgis' | 'jsonb-bbox' | 'absent'`) résolu au premier appel `findByCoords` et persiste pour la vie du process. Si l'opérateur applique `AddMuseumGeofence` après boot (rolling deploy avec migration in-flight), le cache reste sur `'absent'` indéfiniment.
 - **Mitigations V1** : déploiement Musaium = migration pre-boot via script (pas de rolling migration in-flight). Restart service après hot-migration au pire des cas.
 - **Sprint d'origine** : run /team `2026-05-17-w3-geo-walk-intra` reviewer MIN-1.
 - **Effort estimé** : 1h.
@@ -512,7 +538,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - [ ] **Statut** : ouvert (créé 2026-05-18, run `2026-05-17-w3-geo-walk-intra`).
 - **Référence code** :
   ```
-  museum-backend/src/modules/museum/useCase/detect/detect-museum.useCase.ts:89-96  # catch path
+  museum-backend/src/modules/museum/useCase/detect/detect-museum.useCase.ts:84-91  # catch path, geoDetectMuseumTotal.labels('miss').inc() au :89 (lignes corrigées 2026-05-21, db verdict)
   ```
 - **Symptôme** : sur exception, le use-case incrémente `geoDetectMuseumTotal.labels('miss').inc()` après avoir mis à jour le span existant avec `{error}`. Le label `miss` reçoit donc 2 sémantiques distinctes : "no museum within 50 km" (légitime) + "use case threw" (alarme opé). Grafana ne peut pas distinguer.
 - **Mitigations V1** : Langfuse span porte le `error` field → debugging possible par trace.
@@ -536,12 +562,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 > **Renuméroté 2026-05-20** (ex-TD-41, collision avec TD-41 W3 `sanitizePromptInput`). Distinct debt — ID dédupliqué.
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §6.2)
-- **Référence code** : `museum-frontend/features/chat/ui/ChatHeader.tsx` (pill "AI / IA / KI / …"), `museum-frontend/shared/ui/tokens.generated.ts` (couleurs de thème).
-- **Symptôme** : aucune mesure WCAG 2.2 4.1 (contraste ≥ 4.5:1) sur le badge AI vs le fond du `ChatHeader` en thèmes clair + sombre. Risque : badge invisible pour un sous-ensemble d'utilisateurs → Art. 50 §1 "clear and distinguishable" partiellement compromis.
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §6.2 ; référence tokens corrigée 2026-05-21, disclosure verdict)
+- **Référence code** : `museum-frontend/features/chat/ui/ChatHeader.tsx:78-92` (badge AI). **Correction 2026-05-21** : le badge utilise les tokens de thème `theme.primaryTint` (background) + `theme.primary` (bordure `:83` + texte `:89`), **PAS** les tokens nommés `chat.badge.aiBg`/`chat.badge.aiFg` (qui n'existent pas). La surface d'ajustement réelle = `primary` / `primaryTint`.
+- **Symptôme** : aucune mesure WCAG 2.2 4.1 (contraste ≥ 4.5:1) sur le badge AI vs le fond du `ChatHeader` en thèmes clair + sombre — confirmé : aucun artefact de mesure axe-contrast localisé. Risque : badge invisible pour un sous-ensemble d'utilisateurs → Art. 50 §1 "clear and distinguishable" partiellement compromis. (a11y labelling OK : `accessibilityRole="button"` + i18n `accessibilityLabel` `:85-86` ; l'item ouvert = uniquement le ratio de contraste couleur.)
 - **Sprint d'origine** : audit-360 W4 (`2026-05-17-w4-compliance-ops-release`).
 - **Effort estimé** : 1-2 h (mesure axe-contrast + ajustement tokens si needed).
-- **Comment fermer** : run axe-contrast sur le screen `Chat` dans les 2 thèmes ; si fail, ajuster `chat.badge.aiBg` / `chat.badge.aiFg` dans `design-system/` puis `pnpm -C design-system build`.
+- **Comment fermer** : run axe-contrast sur le screen `Chat` dans les 2 thèmes ; si fail, ajuster `primary` / `primaryTint` dans `design-system/` puis `pnpm -C design-system build`.
 
 ---
 
@@ -549,12 +575,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 > **Renuméroté 2026-05-20** (ex-TD-42, collision avec TD-42 W3 `cachedGeofenceMode`). Distinct debt — ID dédupliqué.
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §2.4)
-- **Référence code** : `museum-frontend/features/chat/ui/AiDisclosureModal.tsx` (URL "Learn more" pointe `/privacy` in-app).
-- **Symptôme** : tant que le site marketing public n'expose pas `/{locale}/ai-disclosure`, le lien renvoie vers la page Privacy embarquée. Cohérent mais sous-optimal pour l'auditeur tiers (CNIL / notified body) qui voudrait une URL stable hors-application.
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §2.4 ; chemin corrigé 2026-05-21, disclosure verdict)
+- **Référence code** (corrigé 2026-05-21) : `AiDisclosureModal.tsx` **n'existe plus** — refactoré dans le pattern bottom-sheet-router en `museum-frontend/features/chat/ui/AiDisclosureSheetContent.tsx` (route `ai-disclosure`, `bottom-sheet-router/routes.ts:54,150`). "Learn more" = callback `onLearnMore` (`AiDisclosureSheetContent.tsx:11-15,49-56`) wiré dans `app/(stack)/chat/[sessionId].tsx:367-370` → `router.push('/(stack)/privacy')` (donc in-app). Page marketing `museum-web/src/app/[locale]/ai-disclosure/` **absente**.
+- **Symptôme** : tant que le site marketing public n'expose pas `/{locale}/ai-disclosure`, le lien renvoie vers la page Privacy embarquée. Cohérent mais sous-optimal pour l'auditeur tiers (CNIL / notified body) qui voudrait une URL stable hors-application. (Symptôme toujours vrai — seule la référence de fichier était stale.)
 - **Sprint d'origine** : V1 launch (carry-over).
 - **Effort estimé** : 30 min (changer la constante d'URL après que `museum-web/src/app/[locale]/ai-disclosure/page.tsx` soit shippée).
-- **Comment fermer** : créer `museum-web/src/app/[locale]/ai-disclosure/page.tsx` (mirror du AiDisclosureModal copy) + bump la constante dans `AiDisclosureModal.tsx`.
+- **Comment fermer** : créer `museum-web/src/app/[locale]/ai-disclosure/page.tsx` (mirror du copy AiDisclosureSheetContent) + bump le `onLearnMore` dans `app/(stack)/chat/[sessionId].tsx:368-370`.
 
 ---
 
@@ -606,14 +632,16 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-47 — Distributed tracing pas wired sur museum-web (admin)
+### TD-47 — RSC `api.ts` happy-path ne forward pas les trace headers (museum-web)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 / `docs/observability/DISTRIBUTED_TRACING.md` §7)
-- **Référence code** : `museum-web/` ne dispose pas d'init Sentry avec `tracePropagationTargets` (W6.9 a câblé `museum-frontend` mobile uniquement).
-- **Symptôme** : les requêtes admin web vers le backend n'apparaissent pas dans la trace correlée. Investigation cross-system depuis l'admin = grep manuel.
+> **Re-scopé 2026-05-21 (web + observability verdicts, P2 informational)** : le symptôme original "museum-web ne dispose pas d'init Sentry avec tracePropagationTargets" est **FAUX en code** — `museum-web/instrumentation-client.ts:12`, `sentry.server.config.ts:12` et `sentry.edge.config.ts:12` portent tous `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` ; `museum-web/src/instrumentation.ts` existe. Fixé par le run `2026-05-19-sentry-otel-cleanup` (TD-SNXT-01..04 fermés). **Résiduel réel (plus étroit)** : le SDK auto-instrumente les error paths + le `fetch` global patché, MAIS le wrapper `fetch` écrit à la main dans `api.ts` (+ le `apiPut` local, cf. gotcha CLAUDE.md "apiPut n'existe pas") ne forward PAS `sentry-trace`/`baggage` pour la corrélation **happy-path** dans les RSC server-rendered.
+
+- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 ; re-scopé 2026-05-21 — init shippé, résiduel = RSC happy-path)
+- **Référence code** : `museum-web/src/lib/api.ts` (wrapper fetch RSC + `apiPut` local dans `admin/museums/[id]/branding/page.tsx`) — ne forward pas `sentry-trace`/`baggage`. Init Sentry vérifié shippé : `instrumentation-client.ts:12`, `sentry.server.config.ts:12`.
+- **Symptôme** : sur le happy path (pas d'erreur), les requêtes admin web RSC vers le backend via le wrapper `api.ts` n'apparaissent pas dans la trace corrélée. Les error paths + le `fetch` global patché sont déjà couverts.
 - **Sprint d'origine** : audit-360 W4 (cluster B).
-- **Effort estimé** : 2 h (init Sentry web + tracePropagationTargets + smoke).
-- **Comment fermer** : ajouter `museum-web/src/instrumentation.ts` ou équivalent avec `Sentry.init({ tracePropagationTargets: [/^https:\/\/api\.musaium\.com\//] })`, suivant le pattern Next.js 15 + Sentry SDK.
+- **Effort estimé** : P2 — injecter `Sentry.getTraceData()` (helper v10) dans les helpers de mutation de `api.ts` + le `apiPut` local.
+- **Comment fermer** : forward `sentry-trace`/`baggage` (via `Sentry.getTraceData()`) dans le wrapper `api.ts` ; cross-ref nettoyage `apiPut` (gotcha CLAUDE.md).
 
 ---
 
@@ -668,8 +696,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-52 — `scripts/seed-pilot-museums.sh` (W4) cassé : `pnpm exec tsx` + cible Paris
 
-- [ ] **Statut** : ouvert (créé 2026-05-19, découvert en Phase B re-seed Bordeaux)
-- **Référence code** : `museum-backend/scripts/seed-pilot-museums.sh` (livré par W4 audit-360 cluster ops/release).
+- [x] **Statut** : fermé 2026-05-21 (disclosure verdict, option B — script supprimé). Le script cassé `museum-backend/scripts/seed-pilot-museums.sh` **n'existe plus** dans le working tree, et `git log --all -- <path>` est **vide** (jamais committé OU déjà retiré). Le chemin canonical est intact : `museum-backend/scripts/seed-museums.ts` + `package.json:48 "seed:museums": "ts-node -r tsconfig-paths/register scripts/seed-museums.ts"` (commande valide, 19 musées dont les 3 bordelais). **Caveat honnête** : le commit de suppression est introuvable — impossible de prouver quand/comment l'artefact a disparu, seulement qu'il est absent maintenant. (résolu 2026-05-21, vérifié vs code — script gone)
+- **Référence code** : ~~`museum-backend/scripts/seed-pilot-museums.sh`~~ (absent) ; canonical = `museum-backend/scripts/seed-museums.ts` (`pnpm seed:museums`).
 - **Symptôme** :
   1. Le script invoque `pnpm exec tsx <ts-file>` mais `tsx` n'est PAS dans les deps backend — c'est `ts-node`. Le script fail immédiatement (`Cannot find module 'tsx'`).
   2. Le contenu seedé pointe les 3 musées Paris (Louvre / Orsay / Pompidou), pas la liste pilote attendue (Bordeaux pour le pilote 2026-05-23).
@@ -695,7 +723,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 ### TD-54 — `cachedGeofenceMode` singleton module-level peut fuiter entre tests
 
 - [ ] **Statut** : ouvert (créé 2026-05-19, /review PR #290 finding MEDIUM)
-- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:21` (singleton) + `:_resetGeofenceModeCacheForTests()` (test seam existant).
+- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:24` (singleton) + `:192 _resetGeofenceModeCacheForTests()` (test seam existant) — lignes corrigées 2026-05-21 (db verdict).
 - **Symptôme** : `cachedGeofenceMode` est lazy-init au premier query + jamais ré-évalué. Le commentaire dit "immuable at runtime" — vrai en prod, mais en CI/integration tests qui drop/recreate la column geofence (transitions postgis ↔ jsonb via migrations rejouées dans le même worker Jest), le cache survit et le repo query la mauvaise branche. Flaky tests possible.
 - **Sprint d'origine** : W3 (audit-360 geo-walk-intra).
 - **Effort estimé** : 30 min — option A : appeler `_resetGeofenceModeCacheForTests()` en `beforeEach` de tous les tests integration touchant geofence (discipline ; risque de l'oublier) ; option B : ESLint rule `musaium-test-discipline/reset-geofence-cache-in-beforeach` qui force le pattern ; option C : drop le cache (re-detect à chaque query, surcoût 1 SELECT system_columns par appel).
@@ -706,7 +734,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 ### TD-55 — `MuseumRepository.findByCoords` jsonb path = N+1 query
 
 - [ ] **Statut** : ouvert (créé 2026-05-19, /review PR #290 finding LOW)
-- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:163` (jsonb-bbox branch).
+- **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:158-167` (jsonb-bbox branch ; bbox SELECT `:158-160`, boucle `findById(row.id)` au `:165`) — lignes corrigées 2026-05-21 (db verdict).
 - **Symptôme** : la query full-scan retourne juste les IDs matchés, puis le code boucle pour `findById(id)` chacun → N+1. À <100 museums (V1 prod = 19 museums seedés) c'est imperceptible ; au-delà de 1k museums (B2B scale) la latence explose linéairement (1 + N round-trips PG).
 - **Sprint d'origine** : W3 (fallback jsonb introduit quand pgvector/PostGIS absent).
 - **Effort estimé** : 1 h — inline le `SELECT museum.*` dans la query bbox au lieu de re-fetcher (`SELECT id, name, slug, ..., geofence_bbox FROM museums WHERE bbox_match($1)`). Ajouter test perf bench fixture 1k museums pour catch toute régression future.
@@ -815,25 +843,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-EX-01 — Rate-limiter ordering : reads `req.body` BEFORE Zod validator (MEDIUM, BLOCKER pre-V1)
-
-**Status: RESOLVED — 2026-05-19**
-
-> **Run:** 2026-05-19-cluster5-jwt-ratelimit
-> **Diff scope:** 6 route sites reordered — `/login`, `/refresh`, `/social-login`, `/social-redeem` (`auth-session.route.ts`), `/mfa/challenge`, `/mfa/recovery` (`mfa.route.ts`). `/social-redeem` auto-detected at L199 by ast-grep rule during green phase (not in original 5-site architect plan; scope widened via BLOCK-TEST-WRONG reconciliation). Chat routes (`chat-message`, `chat-media`, `chat-compare`) confirmed already-correct via R10 regression guard — no change needed.
-> **CVE coverage:** Account-bucket DoS vector closed — `validateBody` (Zod 400) now short-circuits before any body-keyed rate-limit counter is mutated.
-> **Regression guard:** `tools/ast-grep-rules/body-keyed-rate-limit-after-validate-body.yml` (severity: error) wired in `sgconfig.yml` + `.husky/pre-push` Gate 14.
-> **Tests:** `middleware-ordering.test.ts` (10 unit assertions), `rate-limit-zod-400-no-bump.integration.test.ts` (8 integration assertions — 60 malformed bodies, bucket count 0), `/metrics` cardinality guard R9.G.
-
-**Context** : 7 call sites (login, refresh, social-login, mfa challenge/recovery, chat-message, chat-media, chat-compare) place rate-limiters that MUTATE counter state BEFORE the Zod validator. Counter inflates on invalid bodies → either (a) funnel corruption (chat-message dailyChatLimit), or (b) account-targeted DoS via spam of malformed login bodies against a victim's email bucket. CLAUDE.md "mutating middleware ordering" pattern fixed only for chat-session, not propagated.
-
-**Remediation** : 2 options per call site :
-- **(A)** Move `validateBody` BEFORE limiter (cheap when body-derived key optional)
-- **(B)** Split limiter into reserve+commit phases (heavy refactor, only for /login)
-
-**Evidence** : `auth-session.route.ts:101,132,163`, `mfa.route.ts:155,201`, `chat-message.route.ts:169`, `chat-media.route.ts:230`, `chat-compare.route.ts:215`.
-
-**Blast radius** : 7 route files, ~30 lines changes. Pre-V1 BLOCKER given DoS risk on login bucket.
+- ~~TD-EX-01 (RESOLVED 2026-05-19, archivé 2026-05-21)~~ → [archive](TECH_DEBT_ARCHIVE.md#td-ex-01--rate-limiter-ordering--reads-reqbody-before-zod-validator)
 
 ---
 
@@ -879,9 +889,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ✅ TD-LC-04 — content-classifier `z.record(z.string(), z.unknown())` violates PATTERNS.md DON'T #4 (MEDIUM, NON_BLOCKER)
+## ⚠️ TD-LC-04 — content-classifier `z.record(z.string(), z.unknown())` violates PATTERNS.md DON'T #4 (MEDIUM, NON_BLOCKER)
 
-- [x] **Statut** : fermé 2026-05-20 (decision, no code change) — **explicit non-strict + OpenAI-only decision documented.** The 6 dictionary fields (`openingHours`, `admissionFees`, `collections`, `currentExhibitions`, `accessibility`, …) hold genuinely heterogeneous museum data whose key set is unbounded and source-dependent — enumerating fixed keys would silently drop legitimate extracted data. The classifier (`content-classifier.service.ts`) constructs `ChatOpenAI` directly (NOT the multi-provider orchestrator) and calls `withStructuredOutput(classificationSchema)` **without** `strict` (defaults to non-strict), which OpenAI accepts for `z.record`. PATTERNS.md DON'T #4 only bites on (a) Gemini — never used here — and (b) OpenAI strict-mode — deliberately not enabled here (the TD-LC-05 strict:true rollout was scoped to the judge path only for this exact reason). Decision : keep `z.record` + stay non-strict on this OpenAI-only path. Re-evaluate only if the classifier ever moves to Gemini or strict mode.
+> **Disposition corrigée 2026-05-21 (3 verdicts indépendants : ai, zod, state-sweep)** : **PAS une vraie clôture code.** Statut réel = **ACCEPTED (decision, no code change)**, PAS ✅ done — l'ancien ✅ était trompeur (3 agents l'ont signalé : "marked ✅ but code still violates"). Le `z.record` est TOUJOURS dans `content-classifier.service.ts:26-31` (5 champs `z.record(z.string(), z.unknown()).nullable()` : openingHours, admissionFees, collections, currentExhibitions, accessibility) fed à `withStructuredOutput(classificationSchema)` au `:75` (non-strict). **Opératoire aujourd'hui** (OpenAI non-strict accepte `z.record`) MAIS viole PATTERNS.md DON'T #4 dans le code SANS marqueur `strict:false` explicite ; landmine latente l'instant où le classifier passe à Gemini ou strict mode. L'agent zod note le structured output comme silently-broken-risk HIGH. Une clôture "decision-only" sur un schéma encore-violant n'est PAS une vraie clôture sous le rubric verifier. Si on garde `z.record`, la décision DOIT être encodée en code (marqueur non-strict explicite + JSDoc citant la contrainte OpenAI-only) ET le risque zod HIGH adressé (ex. `z.string().nullable()` raw JSON + `JSON.parse` downstream + validation `z.record`).
+
+- [ ] **Statut** : **REOPENED 2026-05-21 — ACCEPTED (decision, no code change), pas une clôture code.** Le `z.record` reste en code (`content-classifier.service.ts:26-31` → `withStructuredOutput` `:75`). Opératoire today (OpenAI non-strict) mais viole PATTERNS.md DON'T #4 ; landmine latente Gemini/strict. Décision antérieure (fermé 2026-05-20) jugée trompeuse par 3 verdicts indépendants → re-ouvert.
 
 **Context** : 6 fields use unbounded `z.record` shape. Gemini-incompatible. OpenAI strict-mode incompatible. Currently classifier only uses OpenAI non-strict, so silent.
 
@@ -893,7 +905,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-LC-05 — `withStructuredOutput` missing `strict: true` (LOW, NON_BLOCKER)
 
-- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — **scoped to the OpenAI-only judge path.** `strict: true` added to `llm-judge-guardrail.ts` `withStructuredOutput(JudgeDecisionSchema, { name, strict: true })` + the project `ChatModel` typedef widened to expose `strict?: boolean`. **Deliberately NOT applied** to the 2 chat-orchestrator sites (`langchain.orchestrator.ts:129,375`) because those run multi-provider (Gemini / Deepseek / OpenAI) and `strict` is OpenAI-only (PATTERNS.md DO #8) — would break Gemini ; nor to `content-classifier.service.ts:75` whose `z.record` schema is strict-incompatible (see TD-LC-04). Judge test asserts the `{ name, strict: true }` opts shape.
+- [x] **Statut** : judge path fermé 2026-05-19 (commit `cbc92d8d`) — **scoped to the OpenAI-only judge path.** `strict: true` added to `llm-judge-guardrail.ts` `withStructuredOutput(JudgeDecisionSchema, { name, strict: true })` + the project `ChatModel` typedef widened to expose `strict?: boolean`. **Deliberately NOT applied** to the 2 chat-orchestrator sites (`langchain.orchestrator.ts:159` main chat, `:419` walk-tour — lignes corrigées 2026-05-21, étaient `:92,280`) because those run multi-provider (Gemini / Deepseek / OpenAI) and `strict` is OpenAI-only (PATTERNS.md DO #8) — would break Gemini ; nor to `content-classifier.service.ts:75` whose `z.record` schema is strict-incompatible (see TD-LC-04). Judge test asserts the `{ name, strict: true }` opts shape.
+> **Note 2026-05-21 (ai verdict)** : les sites orchestrator (`langchain.orchestrator.ts:159,419`) restent un deferral défendable, mais lib-docs 2026-05-20 recommande un **strict conditionnel par provider** (les schémas `MainAssistantOutput` + `walkAssistantOutputSchema` sont vérifiés strict-compliant) — à revisiter si OpenAI-only OU strict provider-gated est câblé. Item résiduel laissé OUVERT sur ces 2 sites.
 
 **Context** : 3 call sites omit `strict: true`. Without it, schema drift surfaces as Zod parse failure (late) instead of API rejection (early).
 
@@ -904,7 +917,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-RN-01 — `ErrorBoundary` utilise TouchableOpacity deprecated (LOW, NON_BLOCKER)
+## ✅ TD-RN-01 — `ErrorBoundary` utilise TouchableOpacity deprecated (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (fe-rn verdict). `shared/ui/ErrorBoundary.tsx:3` importe `Pressable` (plus de `TouchableOpacity`), utilisé `:66`/`:75` ; zéro `TouchableOpacity` dans le fichier. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : `shared/ui/ErrorBoundary.tsx` est le DERNIER site avec `TouchableOpacity` dans museum-frontend. PATTERNS.md §4 flag deprecated (JS-thread opacity lag).
 
@@ -930,7 +945,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-RN-03 — 2 sites lisent `process.env` sans `readEnvString` helper (LOW, NON_BLOCKER)
+## ✅ TD-RN-03 — 2 sites lisent `process.env` sans `readEnvString` helper (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (fe-rn verdict). Grep `process.env.` (hors `readEnvString`/`env.ts`) sur app/features/shared = 0 read brut ; les 2 sites antérieurs (`_internals.ts:60`, `apiConfig.ts:118`) routent désormais via le helper. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : CLAUDE.md gotcha + `shared/lib/env.ts` mandatent `readEnvString` pour ALL `process.env.X` reads. 2 sites ré-implémentent localement.
 
@@ -981,7 +998,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-TQ-01 — queryFn ignore AbortSignal → data race GPS jitter (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-TQ-01 — queryFn ignore AbortSignal → data race GPS jitter (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (state-sweep verdict ; doc était stale). Les 3 sites forward `{ signal }` : `useMe.ts:29` `queryFn: ({ signal }) => authService.me({ signal })` ; `useMuseumDirectory.ts:126-147` + `:191-199` forward `{ signal }` (cite `TD-TQ-01 / PATTERNS.md:295`). Résiduel non-ticket `useMuseumEnrichment.ts:84` (custom `pollTokenRef`) = LOW documenté, hors TD. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : `useMuseumDirectory` keepPreviousData path : rapid GPS jitter crée overlapping requests → late response du précédent location peut clobber le résultat current. `queryFn: () => api.get(url)` ignore `QueryFunctionContext.signal`.
 
@@ -993,7 +1012,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-TQ-02 — Login mutations NE invalident PAS `['user', 'me']` queryKey (LOW, NON_BLOCKER)
+## ✅ TD-TQ-02 — Login mutations NE invalident PAS `['user', 'me']` queryKey (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (state-sweep verdict ; doc était stale). `useEmailPasswordAuth.ts:71-79` `onSuccess` invalide `queryKey: ['user']` (préfixe, couvre `['user','me']`) gated par `result?.sessionEstablished` ; `useSocialLogin.ts:54-71` même pattern. Observer trap fermé : `useMe.ts` subscribe `['user','me']`. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : Edge case post-login user B : stale cache user A persiste jusqu'à staleTime (5min) ou foreground transition. Mitigé partiellement par logout `clear()` mais PAS sur cold-start login après logout.
 
@@ -1035,9 +1056,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SN-01 — Sentry+OTel coexistence pattern CLAUDE.md half-implémenté → trace correlation BROKEN (HIGH, BLOCKER pre-V1)
+## TD-SN-01 — Sentry+OTel coexistence pattern CLAUDE.md half-implémenté → trace correlation BROKEN (~~HIGH, BLOCKER pre-V1~~ → MEDIUM, NOT a launch blocker)
 
-- [x] **Status** : STALE-BY-DESIGN 2026-05-19 — ADR-045 owner decision : trace correlation is implemented via header-based middleware (`museum-backend/src/shared/observability/trace-propagation.middleware.ts`, shipped W3+W4), NOT via the `@sentry/opentelemetry` SDK bridge. The `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` shape at `sentry.ts:50-51` is the correct end-state. See `docs/HANDOFF-2026-05-19-debt-collision-report.md` §7 decision 1 and the CLAUDE.md "Sentry+OTel Node SDK v2 coexistence" gotcha (amended same day).
+> **Re-confirmé 2026-05-21 (observability verdict)** : **STALE-BY-DESIGN per ADR-045 — corrélation header-based intentionnelle, PAS le bridge SDK `@sentry/opentelemetry`.** Sévérité **downgradée HIGH→MEDIUM** (le header `(HIGH, BLOCKER pre-V1)` original est superseded par le statut `[x]`) — **PAS un launch blocker.** Le résiduel = coût UX (pas de deep-link Sentry→Tempo/Langfuse), tradeoff design documenté. Code re-vérifié : `sentry.ts:42-57` + `opentelemetry.ts:36-51` sans `SentryContextManager`/`SentrySampler`/`SentryPropagator` ; `package.json` sans `@sentry/opentelemetry`. Amendment ADR-045 recommandé (ratifier "Sentry deep-link OTel trace_id n'est PAS un goal V1 ; pivot via requestId").
+
+- [x] **Status** : STALE-BY-DESIGN 2026-05-19 (re-confirmé 2026-05-21) — ADR-045 owner decision : trace correlation is implemented via header-based middleware (`museum-backend/src/shared/observability/trace-propagation.middleware.ts`, shipped W3+W4), NOT via the `@sentry/opentelemetry` SDK bridge. The `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` shape at `sentry.ts:50-51` is the correct end-state. See the CLAUDE.md "Sentry+OTel Node SDK v2 coexistence" gotcha (amended same day). **Severity downgraded HIGH→MEDIUM 2026-05-21 — not a launch blocker.**
 
 **Context** : `sentry.ts:42-53` set `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` per CLAUDE.md prescription. MAIS `opentelemetry.ts:36-51` build le NodeSDK avec ZÉRO Sentry bridge : `@sentry/opentelemetry` package NOT installed, no SentryContextManager / SentrySampler / SentryPropagator / SentrySpanProcessor. Conséquence : `captureException` fire INSIDE un OTel span actif mais Sentry ne peut PAS lire le span → errors perdent trace_id/span_id correlation silencieusement. Distributed-tracing BE↔FE = broken silently.
 
@@ -1117,7 +1140,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-JWT-02 — `iss`/`aud` NOT pinned on internal HS256 tokens (LOW, NON_BLOCKER post-V1)
+## ✅ TD-JWT-02 — `iss`/`aud` NOT pinned on internal HS256 tokens (LOW, NON_BLOCKER post-V1)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (auth verdict ; corps ci-dessous était STALE). Tous les sites sign+verify portent désormais `issuer`+`audience` : `token-jwt.service.ts:71-74` (access verify), `:100-103` (refresh verify), `:144-145` (access sign), `:164-165` (refresh sign) ; `mfaSessionToken.ts:35-36` (sign), `:48-51` (verify). Les numéros de ligne du corps (`mfaSessionToken.ts:40`, `token-jwt.service.ts:65,91`) sont stale. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : `mfaSessionToken.ts:40`, `token-jwt.service.ts:66` (access), `token-jwt.service.ts:91` (refresh) verify internal HS256-signed tokens without `issuer` or `audience` options. PATTERNS.md §3 L187-190 recommends `iss`+`aud` as defense-in-depth even for internal self-issued tokens. Risk is low because each token type uses a distinct module-scoped secret (3 separate env vars: `mfaSessionTokenSecret`, `accessTokenSecret`, `refreshTokenSecret`) — cross-secret confusion requires key-leak. Current shape-validation (`type`, `sub`, `jti`, `familyId` claims) catches misrouted tokens. Not introduced by Cluster 5; pre-existing gap flagged as INFO by security review (security-report.json:67-76) and NIT by code review (code-review.json finding #4).
 
@@ -1153,13 +1178,39 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-BC-03 — seed-smoke-account.ts hardcodes 12 (LOW, trivial fix)
+## ✅ TD-BC-03 — seed-smoke-account.ts hardcodes 12 (LOW, trivial fix)
+
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (auth verdict ; doc montrait encore ouvert). Le littéral `12` a disparu : `scripts/seed-smoke-account.ts:8` `import { BCRYPT_ROUNDS } from '@shared/security/bcrypt'` ; `:44-46` "TD-BC-03 — central BCRYPT_ROUNDS instead of hardcoded literal" + `bcrypt.hash(password, BCRYPT_ROUNDS)`. (résolu 2026-05-21, vérifié vs code)
 
 **Context** : `scripts/seed-smoke-account.ts:43 bcrypt.hash(password, 12)` bypasses central BCRYPT_ROUNDS constant. Drift on next cost bump.
 
 **Remediation** : Replace literal `12` with `BCRYPT_ROUNDS` import. 2-line fix.
 
 **Evidence** : `museum-backend/scripts/seed-smoke-account.ts:43`.
+
+---
+
+## TD-SEC-01 — Auth tokens persistés sans `keychainAccessible` → refresh token migrable via backup iCloud (HIGH, NICE_TO_HAVE pre-V1)
+
+> **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code + index-entry expo-secure-store).**
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : `museum-frontend/features/auth/infrastructure/authTokenStore.ts:50` — `secureStore.setItemAsync(key, token)` appelé SANS 3e arg `options`, pour `REFRESH_TOKEN_KEY` (`:17,:64`) ET `ACCESS_TOKEN_KEY` (`:18,:65`).
+- **Symptôme** : `expo-secure-store` défaut à `WHEN_UNLOCKED` (pas `*_THIS_DEVICE_ONLY`) → l'item keychain est inclus dans l'iCloud Keychain / les backups device chiffrés et migrable vers un nouvel appareil. Un backup restauré sur un appareil contrôlé par un attaquant porte une session live (refresh token long-lived). Exploit nécessite la chaîne device-backup-restore-to-attacker → défendable au launch, fix rapide.
+- **Severity** : HIGH, NICE_TO_HAVE pre-V1.
+- **Comment fermer** : passer `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` aux 2 calls `set` (+ ré-écrire tout item pré-existant une fois au prochain login).
+
+---
+
+## TD-SEC-02 — MFA enroll affiche QR TOTP + secret + recovery codes sans protection screen-capture (HIGH, NICE_TO_HAVE pre-V1)
+
+> **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code ; lib-docs `react-native-qrcode-svg` F-SEC-03). Note : le verdict lib-docs l'appelait "TD-QR-03" mais ce TD n'existe pas — entrée genuinement nouvelle.**
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:108-128` — `<QRCode value={otpauthUrl} size={200} />` (`:108-113`) + le secret TOTP base32 `selectable` (`{manualSecret}`) + les recovery codes (`:117-128`). Vérifié : AUCUN `expo-screen-capture` / `FLAG_SECURE` / `usePreventScreenCapture` / blur iOS resign-active dans le fichier (grep = 0).
+- **Symptôme** : sur Android le secret est screenshot/screen-record/app-switcher-snapshot capturable ; iOS n'a pas de blur on resign-active. Screenshot/recording/snapshot leak le secret TOTP et/ou les recovery codes (2nd-factor exposure). Mitigé par user-presence requirement + faible incidence pré-launch.
+- **Severity** : HIGH, NICE_TO_HAVE pre-V1.
+- **Comment fermer** : gate l'écran avec `expo-screen-capture` (`usePreventScreenCaptureAsync` on focus, release on blur → Android FLAG_SECURE) + overlay iOS sur `resignActive` ; ne jamais logger `otpauthUrl`/`manualSecret`.
 
 ---
 
@@ -1565,10 +1616,14 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-ZUS-01 — dataModeStore.ts missing version+partialize (MINOR, NICE_TO_HAVE)
+## ✅ TD-ZUS-01 — dataModeStore.ts missing version+partialize (MINOR, NICE_TO_HAVE)
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (state-sweep verdict ; doc était stale). `museum-frontend/features/settings/dataModeStore.ts:41-42` porte `version: 1` + `partialize: (state) => ({ preference: state.preference })` (cite `TD-ZUS-01`). (résolu 2026-05-21, vérifié vs code)
+
 **Fix** : add `version: 1, partialize: (s) => ({ preference: s.preference })`.
 
-## TD-ZUS-02 — offlinePackChoiceStore.ts missing partialize (MINOR, NICE_TO_HAVE)
+## ✅ TD-ZUS-02 — offlinePackChoiceStore.ts missing partialize (MINOR, NICE_TO_HAVE)
+- [x] **Statut** : fermé — coché 2026-05-21, vérifié vs code (state-sweep verdict ; doc était stale). `museum-frontend/features/museum/infrastructure/offlinePackChoiceStore.ts:53-57` porte `version: 1` + `partialize: (state) => ({ choices: state.choices })` (cite `TD-ZUS-02`). (résolu 2026-05-21, vérifié vs code)
+
 **Fix** : add `partialize: (state) => ({ choices: state.choices })`.
 
 ---
@@ -1658,6 +1713,15 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ## TD-FL-02 — Chat lists should use maintainVisibleContentPosition v2 (INFO, V1.1)
 **Fix** : replace manual `onContentSizeChange→scrollToEnd` with v2 native prop.
 
+## TD-FLATLIST-01 — ~2 FlatList fixed-height sans getItemLayout (LOW, NICE_TO_HAVE)
+
+> **NOUVEAU 2026-05-21 (fe-rn verdict).** ⚠️ **Ne PAS surévaluer** : le verdict fe-rn a corrigé la claim "11 sites" du finding en **3 FlatList + 8 FlashList** (FlashList calcule le layout automatiquement → pas de `getItemLayout` requis). Gap réel = uniquement les FlatList fixed-height.
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : 3 sites `FlatList` en scope (`app/(stack)/onboarding.tsx`, `features/chat/ui/ImageCompareCarousel.tsx`, `features/museum/ui/MuseumPickerScreen.tsx`). Seul `onboarding.tsx` set déjà `getItemLayout` → **~2 sites résiduels** (dont `MuseumPickerScreen`). Re-vérifier chaque site (composant list réel) avant d'agir.
+- **Symptôme** : perf latente (pas un bug). Listes courtes (museum picker, slides onboarding).
+- **Severity** : LOW.
+- **Comment fermer** : pour les FlatList genuinement fixed-height SEULEMENT, ajouter `getItemLayout` + `React.memo` row + `renderItem` stable. NE PAS blanket-apply aux FlashList.
 
 ---
 
@@ -1684,6 +1748,16 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## TD-RNWV-02 — onRenderProcessGone handler absent (LOW)
 **Fix** : `onRenderProcessGone={() => setLoadError(true)}` per PATTERNS L144.
+
+## TD-RNWV-03 — bump react-native-webview 13.16.0 → 13.16.1 (MEDIUM, pre-V1 stability)
+
+> **NOUVEAU 2026-05-21 (mobile verdict, dérivé du snapshot react-native-webview 2026-05-20 ; pas de findings file dédié).**
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : `museum-frontend/package.json` `"react-native-webview": "13.16.0"` (latest = 13.16.1, 2026-02-27, un patch behind).
+- **Symptôme** : 13.16.1 = fix iOS — conversion nil `NSString`→`std::string` ne trigger plus `SIGABRT` dans le bridge C++ WebView. Même classe de crash que le `SIGABRT` `expo-web-browser` TestFlight (CLAUDE.md § Pièges connus, PR #258, hotfix `f7ec92f7`). Aucun breaking change.
+- **Severity** : MEDIUM (pre-V1 stability), effort LOW.
+- **Comment fermer** : `npx expo install react-native-webview` (→ 13.16.1) + `pod install` + `git add -f ios/Pods/...` (gotcha iOS Xcode-Cloud Pods committés). 1 seul consumer WebView, blast radius bas.
 
 ---
 
@@ -1724,6 +1798,18 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Context** : 11 files use legacy `from 'framer-motion'`. v12 package renamed to `motion` — `from 'motion/react'` canonical.
 **Fix** : codemod 11 files + `pnpm remove framer-motion && pnpm add motion`. Verify SSR (motion/react-client for RSC). ~30min.
 **Evidence** : 11 files museum-web/src/components/{marketing,shared}/.
+
+---
+
+## TD-FM-02 — 4 fichiers landing utilisent useScroll/useTransform/whileInView sans useReducedMotion (MEDIUM, a11y WCAG 2.3.3)
+
+> **NOUVEAU 2026-05-21 (web-next verdict, 4 fichiers vérifiés grep `useReducedMotion` = 0 dans chacun). Follow-up de TD-FM-01 (rename), pas un gap de rename.**
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : `src/components/shared/Header.tsx` (`useScroll`+`useTransform` :7,21,33,38,43), `src/components/marketing/PhoneMockup.tsx` (parallax `useScroll`/`useTransform` :4,41,46), `src/components/marketing/StorySection.tsx` (`whileInView` :108,117,130,142), `src/components/marketing/BentoFeatureGrid.tsx` (`whileInView` :40) — **0** `useReducedMotion` dans chacun.
+- **Symptôme** : la media query CSS `@media (prefers-reduced-motion)` (`globals.css:364`) ne couvre PAS le motion JS-driven (`useTransform`/`whileInView`). Parallax = cas-école motion-sickness. WCAG 2.3.3 (Animation from Interactions). Baseline positive : 6/11 importers motion guardent déjà reduced-motion.
+- **Severity** : MEDIUM a11y, pre-launch nice-to-have.
+- **Comment fermer** : `<MotionConfig reducedMotion="user">` au layout root web (1-file, couvre les 11) OU `useReducedMotion()` short-circuits sur les 4 fichiers non-gardés.
 
 ---
 
@@ -1775,6 +1861,18 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## TD-NI-04 — 5x inline jest.mock netinfo (LOW)
 **Fix** : use bundled `netinfo-mock.js` in jest.setup.ts.
+
+---
+
+## TD-OM-01 — `onlineManager` NON wiré à NetInfo → TanStack Query sans self-heal offline→online sur RN (MEDIUM-HIGH, pre-V1)
+
+> **NOUVEAU 2026-05-21 (mobile + state-sweep verdicts, triple-corroboré : netinfo §1 + tanstack-query §11.1 + grep direct).** Sous-cas explicite de TD-14 (cf. TD-14 step 5 annoté), tracé séparément pour visibilité car c'est l'item offline FE le plus à fort levier pré-launch.
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- **Référence code** : `grep -rn "onlineManager|focusManager|setEventListener"` museum-frontend = **0 hit**. `queryClient.ts:54-55` set `refetchOnReconnect:true` + `networkMode:'online'` mais sur RN la détection reconnect est web-only sans `onlineManager.setEventListener(NetInfo)`. `ConnectivityProvider.tsx:23-26` a un listener NetInfo mais qui ne feed QUE le contexte local, pas react-query.
+- **Symptôme** : `refetchOnReconnect` ne fire JAMAIS sur device, `networkMode:'online'` ne pause/resume jamais → pas de self-heal automatique des queries offline→online, pas de mutation queue/resume offline. Le commentaire `queryClient.ts:54-55` ("mobile uses an explicit AppState listener") est TROMPEUR — `useAuthAppStateSync.ts` est auth-token-refresh only, pas un bridge connectivité query. Offline-first = requirement PRE-V1.
+- **Severity** : MEDIUM-HIGH, pre-V1 (devrait lander avant le launch 2026-06-01). ~1h.
+- **Comment fermer** : wire `onlineManager.setEventListener(setOnline => NetInfo.addEventListener(s => setOnline(!!s.isConnected && s.isInternetReachable !== false)))` au bootstrap app (PATTERNS §8). Cocher aussi TD-14 step 5 quand fait.
 
 ---
 

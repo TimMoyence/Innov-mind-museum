@@ -1,4 +1,18 @@
-# Lessons — react-native-gesture-handler (v2.31.0)
+# Lessons — react-native-gesture-handler (v2.31.x)
+
+## 2026-05-20
+
+Re-audit (installed 2.31.1, latest v2 2.31.2). **All 2026-05-18 BLOCKERS are now FIXED in source.** Verdict: GREEN.
+
+- **F1 (root wrap) — RESOLVED.** `app/_layout.tsx:6` imports `GestureHandlerRootView`; `:165` wraps the Stack subtree (`layoutStyles.gestureRoot`), closed `:226`. TD-RNGH-01 done.
+- **F2 (Modal re-wrap) — RESOLVED.** `features/chat/ui/ArtworkHeroModal.tsx:111` re-wraps the `<Modal>` body in a nested `<GestureHandlerRootView>` (comment cites TD-RNGH-02). Pinch-zoom now reaches the detector.
+- **F3 (gesture recreated each render) — RESOLVED.** `ArtworkHeroModal.tsx:79-92` wraps `Gesture.Pinch()` in `useMemo([savedScale, scale])`. Stable deps (shared-value identity). TD-RNGH-03 done.
+- **F4 (legacy Swipeable) — RESOLVED.** `DailyArtCard.tsx` + `SwipeableConversationCard.tsx` now import `ReanimatedSwipeable` from `react-native-gesture-handler/ReanimatedSwipeable` (Fabric-safe). TD-RNGH-04 done. Note: 2.31.2 changed `SwipeableProps` ref typing `RefObject`→`Ref` — `useRef<SwipeableMethods>(null)` stays compatible.
+- **F5 (Jest setup)** — confirmed N/A; project uses Node test runner per CLAUDE.md, not Jest. Plus 2.31.2 added a worklet-detection guard that quiets the related warning.
+- **New (info, not a finding):** 2.31.0 fixed "GestureDetector unresponsive after `display:none` toggle on New Arch". Musaium full-unmounts gesture trees (`return null`) so it never hit the bug — keep that pattern; avoid `display:none` for gesture subtrees.
+- **Threading note:** worklet→JS hops in gesture callbacks should use `scheduleOnRN` (modern) over `runOnJS` (deprecated). Musaium's pinch callbacks only touch shared values (no hop needed) — fine. Cf. `react-native-worklets/PATTERNS.md`.
+
+## 2026-05-18 (historical — all items above now resolved)
 
 Audit 2026-05-18 : **🚨 2 BLOCKERS** — gestures silently fail in prod sans fix.
 

@@ -344,3 +344,33 @@
   - Adjacent TDs : TD-41/42/43 (W3 follow-ups commit `35c43988`).
 
 ---
+
+### TD-11 — `@types/express-serve-static-core` pin à 5.0.6 (param widening 5.1.x)
+
+- [x] **Statut** : fermé 2026-05-15 — archivé 2026-05-21 (db verdict : RESOLVED, déjà coché, vérifié vs `museum-backend/package.json:91` `@types/express-serve-static-core: ^5.1.1` en devDependency directe, plus de clé dans `pnpm.overrides`).
+- **Localisation** :
+  ```
+  museum-backend/package.json:pnpm.overrides.@types/express-serve-static-core = "5.0.6"  (retiré)
+  ```
+- **Symptôme** : la version 5.1.0 / 5.1.1 a élargi `req.params[key]` de `string` à `string | string[]` → 27+ erreurs `TS2322` / `TS2345` sur les `*.route.ts` BE. Pin à 5.0.6 conservait la sémantique 5.0.x.
+- **Sprint d'origine** : 2026-05-14 (rollback Renovate PR #277 absorbé puis neutralisé via override pin).
+- **Closure 2026-05-15** :
+  1. Suppression de la clé `pnpm.overrides."@types/express-serve-static-core"` (doctrine bury-dead-code) + ajout explicite de `@types/express-serve-static-core: ^5.1.1` en `devDependencies` pour forcer le lockfile à re-résoudre.
+  2. Helper `parseStringParam(req, key): string | undefined` créé dans `museum-backend/src/shared/middleware/parseStringParam.ts` (16 lignes, rejette `string[]` et `''`).
+  3. Codemod sur 11 fichiers route, 22 call sites narrowed + 1 helper interne (`bySession` dans `rate-limit.middleware.ts`).
+  4. tsc final : 0 erreurs (28 erreurs réelles mesurées, pas 27+). Lint : 0 warnings. BE test suite : 5404 passed / 5497 total (93 skipped, 0 fail).
+
+---
+
+### TD-EX-01 — Rate-limiter ordering : reads `req.body` BEFORE Zod validator
+
+- [x] **Statut** : RESOLVED 2026-05-19 — archivé 2026-05-21 (db verdict : déjà marqué RESOLVED, vérifié vs code).
+- **Run** : 2026-05-19-cluster5-jwt-ratelimit.
+- **Diff scope** : 6 route sites réordonnés — `/login`, `/refresh`, `/social-login`, `/social-redeem` (`auth-session.route.ts`), `/mfa/challenge`, `/mfa/recovery` (`mfa.route.ts`). Chat routes (`chat-message`, `chat-media`, `chat-compare`) confirmées already-correct via R10 regression guard. Vérifié 2026-05-21 : `auth-session.route.ts:102-106` chaîne `/login` = `loginLimiter → validateBody(loginSchema) → loginByAccountLimiter` ; `mfa.route.ts:156-159` `/challenge` = `validateBody(challengeSchema) → challengeLimiter`.
+- **CVE coverage** : DoS account-bucket fermé — `validateBody` (Zod 400) short-circuit avant tout counter body-keyed.
+- **Regression guard** : `tools/ast-grep-rules/body-keyed-rate-limit-after-validate-body.yml` (severity: error) wired in `sgconfig.yml:11-12` (`ruleDirs: [tools/ast-grep-rules]`, root) + `.husky/pre-push` Gate 14.
+- **Tests** : `middleware-ordering.test.ts` (10 unit), `rate-limit-zod-400-no-bump.integration.test.ts` (8 integration), `/metrics` cardinality guard R9.G.
+- **Context** : 7 call sites plaçaient des rate-limiters MUTANT le counter AVANT le validator Zod → counter inflation sur invalid bodies (funnel corruption OU account-targeted DoS via spam de bodies login malformés).
+- **Evidence** : `auth-session.route.ts:102-106`, `mfa.route.ts:156-159`.
+
+---

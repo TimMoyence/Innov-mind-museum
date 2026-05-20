@@ -51,3 +51,26 @@ Project-specific gotchas. Audit enterprise-grade 2026-05-18 (sampled 15 files cr
 ## 2026-05-18 — Polish opportunities `<Activity>` (React 19.2)
 - **Site identifié** : `museum-frontend/app/(tabs)/museums.tsx:51-101` — Map↔List view toggle crossfade puis setViewMode UNMOUNT subtree. Candidate pour `<Activity mode={viewMode === 'map' ? 'visible' : 'hidden'}>` qui preserve map camera state across back-toggle.
 - **Status** : deferred polish (V1.1+).
+
+## 2026-05-20 — Refresh: TD-REACT-01 CLOSED (cancellation tick adopté)
+- **Status** : ✅ FERMÉ. `useSessionLoader.ts` utilise désormais un `loadTickRef` (ref-tick variant, `useSessionLoader.ts:35-65`) — l'await→setState est gardé par `if (tick.cancelled) return` (ligne 55). Side-effects R9/R10 (Sentry capture + `storeSetSession` shared-cache hydration) restent UNCONDITIONNELS, placés AVANT le guard (lignes 53-54, 63) — voir commentaires R9/R10. Pattern documenté `PATTERNS.md` §3 (variant b).
+- **Leçon** : la cancellation a 2 formes valides — closure-cell flag dans `useEffect` (variant a) OU ref-tick dans un `useCallback` (variant b). Choisir (b) quand l'async vit dans un callback re-déclenchable manuellement (reload).
+
+## 2026-05-20 — TD-REACT-02 toujours OUVERT : 8 sites `<Context.Provider>` (re-vérifié, count inchangé)
+- **Re-scan 2026-05-21** : `grep -rn "Context.Provider"` confirme exactement 8 sites production (6 FE + 2 web), identiques au baseline -18 :
+  - FE : `features/chat/application/DataModeProvider.tsx:94`, `features/auth/application/AuthContext.tsx:333`, `features/paywall/application/PaywallProvider.tsx:95`, `shared/ui/ThemeContext.tsx:56`, `shared/i18n/I18nContext.tsx:101`, `shared/infrastructure/connectivity/ConnectivityProvider.tsx:34`
+  - web : `src/lib/auth.tsx:189`, `src/lib/admin-dictionary.tsx:36`
+- **Fix** : `<Context value>{children}</Context>` (PATTERNS §2b). One-liner par site, codemod upstream dispo. Aucun bug runtime — deprecation path uniquement.
+
+## 2026-05-20 — TD-REACT-03 OUVERT : admin user page = candidate Actions (confirmé par lecture)
+- **Site** : `museum-web/src/app/[locale]/admin/users/[id]/page.tsx:168-239` — `runMutation` manuel = `setBusy(true)` + try/catch/finally `setBusy(false)`, 4 mutations (role/suspend/unsuspend/delete) toutes via ce wrapper. C'est exactement le boilerplate que React 19 Actions supprime.
+- **Fix** : migrer vers `useActionState((prev, fd) => …)` par mutation OU `startTransition(async …)` + `isPending` ; envelopper `user` dans `useOptimistic` pour toggle suspend/role instantané. Note : museum-web n'a PAS le React Compiler → les `useCallback` ici (lignes 136, 162, 168, 204-239) restent load-bearing tant que la migration Actions n'est pas faite.
+- **Anti-pattern** : `PATTERNS.md:§5` ligne "DON'T ship new mutation pages with manual useState(busy)".
+
+## 2026-05-20 — Sécurité : 7 advisories React = TOUTES RSC-scoped, non-exploitables ici
+- **Constat** : toutes les GHSA React publiées (Dec 2025 → May 2026) ciblent React Server Components (DoS Server Actions + 1 Critical RSC + 1 source-code-exposure Moderate). Musaium n'écrit AUCUN RSC (museum-web App Router mais pages = client components / static ; voir scan : zéro `createRoot`/`hydrateRoot` custom, Next.js gère le bootstrap). Donc surface d'attaque = nulle côté Musaium.
+- **Action** : rester pinné ≥19.2.6 (FE déjà `19.2.6`, web `^19.2.0` résout ≥19.2.6) suffit — tous les fixes inclus. Pas de bump requis.
+
+## 2026-05-20 — React Compiler ON en FE, OFF en web (asymétrie à connaître)
+- **Constat** : `museum-frontend/babel.config.js:5` active `babel-plugin-react-compiler` ; `museum-web/next.config.*` ne l'active PAS.
+- **Implication** : en FE, les nouveaux `useMemo`/`useCallback` sont en général redondants (compiler memoize) — audit compte 208 `useCallback` + 73 `useMemo`, à traiter comme suspects en review. En web, la mémoïsation manuelle reste nécessaire (ex admin page). Ne pas appliquer la même règle aux 2 apps.
