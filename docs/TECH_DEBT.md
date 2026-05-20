@@ -2037,11 +2037,17 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-PC-01 — req.path fallback → unbounded cardinality DoS (HIGH, BLOCKER pre-V1)
+## ✅ TD-PC-01 — req.path fallback → unbounded cardinality DoS (HIGH, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — `routePath ?? req.path` → `routePath ?? 'unmatched'` in `metrics-middleware.ts`. RED-then-GREEN test `metrics-middleware.test.ts` "unmatched routes emit route=unmatched".
+
 **Context** : `metrics-middleware.ts:23 const route = routePath ?? req.path`. Attacker probing /api/foo/<random> → Prometheus storage explosion.
 **Fix** : Replace fallback par literal `'unmatched'`. Only emit metric when routePath defined.
 
-## 🚨 TD-PC-02 — /metrics endpoint PUBLICLY REACHABLE no auth (HIGH, BLOCKER pre-V1)
+## ✅ TD-PC-02 — /metrics endpoint PUBLICLY REACHABLE no auth (HIGH, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-20 — Option (b) per HANDOFF §7.5 : `app.get('/metrics', noStore, isAuthenticated, requireRole(UserRole.SUPER_ADMIN), metricsHandler)` in `museum-backend/src/app.ts`. App-level JWT gate, no nginx work. `Cache-Control: private, no-store` guard added upstream so no CDN ever serves a stale Prom snapshot. Tests `tests/unit/helpers/metrics-auth.test.ts` cover the 3 contract cases : 401 anon / 403 visitor+admin / 200 super_admin (4/4 pass).
+
 **Context** : `app.ts:222` no auth middleware. Leaks internal cardinality + breaker state + tenant_id + error counts + custom labels.
 **Fix** : nginx `location = /metrics { allow <prom-ip>; deny all; }` in prod site.conf OR `requireSuperAdmin` middleware OR separate internal port.
 
