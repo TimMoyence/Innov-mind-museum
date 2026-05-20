@@ -1,6 +1,0 @@
-{
-  "archiveVerdict": "KEEP-AS-IS",
-  "fileCount": 26,
-  "flaggedFiles": [],
-  "summary": "Well-organized archive. README documents purpose/rules/subfolder map. No empties, no content-hash dupes, no mis-filed live docs. SPRINT_RECAP exists only here (no live dupe). CLAUDE.md '22 fichiers' count verified accurate. Two live refs (CLAUDE.md L26+L149) point INTO archive for history by design. It's a frozen historical record - retain."
-}
