@@ -74,7 +74,7 @@ The `migration:run` and `migration:revert` npm scripts in
 
 Without the decorator, TypeORM sees the index as "extra" and the next
 `migration:generate` run produces a migration dropping it. Pattern enforced
-on the A1+A2 critical FK indexes (cf. `museum-backend/src/data/db/migrations/1777568348067-AddCriticalChatIndexesP0.ts` + the sibling `@Index` decorators on `chat_messages.session`, `chat_sessions.user`, `artwork_matches.message`). Idempotence test: `museum-backend/tests/integration/db/critical-indexes-idempotency.test.ts`. Pedagogical explanation: [`docs/explications-sprint-2026-05-05/15-bloc-6-db-indexes-a1-a2.md`](./explications-sprint-2026-05-05/15-bloc-6-db-indexes-a1-a2.md).
+on the A1+A2 critical FK indexes (cf. `museum-backend/src/data/db/migrations/1777568348067-AddCriticalChatIndexesP0.ts` + the sibling `@Index` decorators on `chat_messages.session`, `chat_sessions.user`, `artwork_matches.message`).
 
 ## 6. Always run `migration-cli.cjs generate --name=DriftCheck` after a migration
 

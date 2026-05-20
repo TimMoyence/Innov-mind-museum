@@ -27,7 +27,7 @@ Multi-block sprint covering supply-chain (cosign + SLSA), audit-chain Slack aler
 
 ADRs produced: ADR-014 (MFA all roles), ADR-015 (LLM-judge guardrail v2), ADR-018/019/020 (retention), ADR-021-024 (scaling design), ADR-026 (SLO observability), ADR-030 (LLM-judge budget redis), ADR-036 (LLM cache).
 
-Debrief (training material): `docs/_archive/training-2026-05/explications-sprint-2026-05-05/` (22 fichiers, 6239L).
+Debrief pédagogique 2026-04-30→05-05 (en git history, supprimé du tree 2026-05-20).
 
 ## Phase 12 — Stryker mutation testing — banking-grade hit (2026-05-08 → 2026-05-11, audit-corrected 2026-05-14)
 
@@ -48,3 +48,27 @@ Commits: `daa3ef20` (final 0 survivors on shared/* + module-auth-totp), prior ch
 ADR-049 §Rollout Phase 1.5 closed ahead of schedule. `llm-security-garak.yml` swapped from a `huggingface.Pipeline` (Phi-3-mini-4k-instruct) baseline target to a `rest` generator pointed at the live Musaium chat endpoint (`POST /api/chat/sessions/:id/messages`), booted in-job via pgvector + Redis service containers (same pattern as `llm-security-promptfoo.yml`). Probe set widened 3 → 6 (`promptinject,leakreplay,encoding,dan,tap,xss`) — closes audit gaps G2 (multi-turn via `dan` + `tap`) and G4 (encoding bypass) from `2026-05-14-verification-batch`. Session-per-probe freshness loop prevents history contamination. New `Content check` step defends against silent JSON-shape drift; severity-eval Python widened to multi-report glob. `--parallel_attempts=1`. Known coverage gap deferred to Phase 2: LLM Guard sidecar not deployed in CI (same gap in promptfoo).
 
 Run: `2026-05-14-garak-musaium-rest-swap`. New file: `museum-backend/scripts/llm-security/musaium-garak-rest.json`. ADR-049 changelog footer + STATUS.md row updated at merge.
+
+> **Reverted 2026-05-17** (commit `cc17254db`) — `llm-security-garak.yml` + `musaium-garak-rest.json` **deleted**. Real cost ~$120/mo (256 prompts × 6 probes × ~18s/call full orchestrator → ~8h wall-clock + ~$30 OpenAI tokens × 4 runs) vs $2/mo estimate. Deferred to V2.1 once an LLM Guard sidecar in CI permits a fast-path target without the full orchestrator. Cf. ADR-049 amendment 2026-05-17 + CLAUDE.md § CI. promptfoo (`llm-security-promptfoo.yml`) remains the active OWASP LLM07 gate.
+
+## Phase 15 — Maestro Phase 1 + UFR-021 screen-test coverage (2026-05-17)
+
+Maestro flow inventory expanded (11 flows) + UFR-021 screen-test-coverage sentinel introduced — every new/modified user-facing screen must ship with a Maestro flow exercising its critical happy path; Jest component tests no longer sufficient (DOB-2026-05-17 regex regression). 50 % screen coverage reached at phase close.
+
+- Sentinel: `pnpm sentinel:screen-test-coverage` ; grandfather baseline `museum-frontend/.maestro/coverage-baseline.json` (removals only)
+- Specs: `docs/TESTING_DISCIPLINE_PROPOSAL.md`, `docs/TEST_COVERAGE_INVENTORY.md`, `docs/TESTING_PHASE2_PLAN.md`
+- Commit: `70f5ce2f` (Maestro Phase 1 + UFR-021 sentinel)
+
+## Phase 16 — Distributed tracing W3/W4 + cert-pinning cluster 9 (2026-05-17 → 2026-05-19)
+
+Header-based BE↔FE trace propagation wired (`trace-propagation.middleware.ts`, mounted `app.ts:103`); CORS allowedHeaders extended with `sentry-trace` + `baggage`. Sentry+OTel SDK v2 coexistence settled (`skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()`; no `@sentry/opentelemetry` bridge — TD-SN-01 STALE-BY-DESIGN). Mobile cert-pinning cluster 9 hardening (TD-SSL-01..05). Typo `tracee→tracePropagationMiddleware` fixed.
+
+- `docs/observability/DISTRIBUTED_TRACING.md`, `docs/HANDOFF-2026-05-19-debt-collision-report.md`
+- Commits: `d06bfd54` (Sentry/OTel cleanup), `d041ed83` (rename + TD-52/53), `0c256191` (cert pinning cluster 9)
+
+## Phase 17 — UFR-022 fresh-context 5-phase /team pipeline (2026-05-18)
+
+`/team` orchestrator reworked to a single mandatory 5-phase fresh-context pipeline (spec → plan → red → green → review), each phase a fresh agent spawn reading prior artifacts from disk only. Frozen-test byte-for-byte (`post-edit-green-test-freeze.sh`), mandatory lib-docs consultation, `BRIEF-ACK` + `BLOCK-CONTEXT-LEAK` self-defense, unlimited reviewer rejection loop. Mode selector + bypass keywords removed.
+
+- Spec: `docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md` ; rule `UFR-022`
+- Commit: `5a01f5ca` (UFR-022 fresh-context 5-phase + mode unique + lib-docs cache)

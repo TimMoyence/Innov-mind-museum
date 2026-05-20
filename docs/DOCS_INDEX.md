@@ -1,7 +1,8 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Last cleanup: **2026-05-17** (Deep absorption pass — 4 audit/worktree sources extraites puis supprimées : `docs/audit-2026-05-12/`, `docs/audit-2026-05-12-raw/`, `docs/chat-ux-refonte/`, `docs/roadmap-night/`, `docs/plans/`, `stryker-admin-night.log`, 24 team-reports subdirs absorbés + `working/`. Extractions : 5 ADRs (054-058), 19 TDs (TD-21..39), 5 gotchas CLAUDE.md, 3 doctrines MEMORY.md. `team-reports/2026-05-05-recap-investigation/` promu repo-root archive.).
+> Last cleanup: **2026-05-20** (`docs/_archive/training-2026-05/` + `sprints/` supprimés (pollution : material pédagogique + recaps de sprint ; git history conservé), inbound refs des docs live nettoyées).
+> Previous cleanup: 2026-05-17 (Deep absorption pass — 4 audit/worktree sources extraites puis supprimées : `docs/audit-2026-05-12/`, `docs/audit-2026-05-12-raw/`, `docs/chat-ux-refonte/`, `docs/roadmap-night/`, `docs/plans/`, `stryker-admin-night.log`, 24 team-reports subdirs absorbés + `working/`. Extractions : 5 ADRs (054-058), 19 TDs (TD-21..39), 5 gotchas CLAUDE.md, 3 doctrines MEMORY.md. `team-reports/2026-05-05-recap-investigation/` promu repo-root archive.).
 > Previous cleanup: 2026-05-12 (sprint audit-cleanup-2026-05-12 — archive `docs/_archive/` introduit, `explications-sprint-2026-05-05/` + `SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` déplacés en archive, ADR-033+034 mergés, 5 plans périmés supprimés, 3 docs museum-frontend stales supprimés, 18+ dangling refs corrigés, 6 stubs ADR deferred V1.1 créés).
 > Previous cleanup: 2026-05-07 (purge complète de `docs/archive/`, suppression HORIZONTAL_SCALING, CDN_CLOUDFLARE_SETUP, FEATURE_KNOWLEDGE_BASE_WIKIDATA).
 > Previous cleanup: 2026-05-05 (backend hexagonal cleanup, codemod imports, god-files split).
@@ -114,9 +115,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 ## Archive (historical reference)
 
-- **`docs/_archive/`** — read-only archive in-tree. Contents:
-  - `training-2026-05/explications-sprint-2026-05-05/` (22 files, 6239L, French training material from sprint 2026-04-30 → 2026-05-05)
-  - `sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` (1403L)
+- **`docs/_archive/`** — read-only archive in-tree. `training-2026-05/` (training material) + `sprints/` (sprint recaps) supprimés 2026-05-20 (pollution ; recoverable via `git log --all -- docs/_archive/<path>`). Le dossier ne sert plus qu'à héberger les snapshots `/team roadmap:rotate` (`roadmaps/<sprint-end>/`).
 - **`docs/archive/`** (old name) was deleted 2026-05-07. Recover via `git log --all -- docs/archive/<path>`. Tech debts encore actifs trackés dans `docs/TECH_DEBT.md`. Décisions devenues ADRs dans `docs/adr/`.
 
 ## Référence externe

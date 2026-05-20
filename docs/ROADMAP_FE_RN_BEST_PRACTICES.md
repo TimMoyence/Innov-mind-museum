@@ -1,8 +1,8 @@
 # Roadmap FE / RN Best Practices — Musaium
 
 > **Vivante.** Réécrite à chaque sprint. Snapshots précédents = git history.
-> **Sprint courant :** 2026-05-03 → 2026-06-01 (launch sprint).
-> **Owner principal :** WT2 (`InnovMind-cleanup-fe`, branche `cleanup/fe`). WT3 (web) tient cette doc à jour côté roadmap mais ne touche pas `museum-frontend/**`.
+> **Sprint courant :** 2026-05-03 → 2026-06-01 (launch sprint). MAJ 2026-05-20.
+> **Owner :** travail FE mergé directement sur `main` (le modèle de worktree dédié `cleanup/fe` n'existe plus). Coche `[x]` au merge.
 > **Horizon :** 1 mois NOW + 1 trimestre NEXT/LATER.
 
 ---
@@ -13,13 +13,13 @@
 
 Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patterns FE ; release engineering = `docs/MOBILE_INTERNAL_TESTING_FLOW.md` + `docs/STORE_SUBMISSION_GUIDE.md` ; iOS crash diag = `museum-frontend/docs/IOS26_CRASH_DIAG.md`.
 
-**Produit context (décision 2026-05-08) :** ROADMAP_PRODUCT priorise **Phase 1 Consolidation (chat fast / image / Wikidata / no-halluc / compare / paywall stub) AVANT Phase 2 Walk V1**. Cette roadmap FE = **track parallèle indépendant** (dette Expo / RN). Items F3/F5/F12 ci-dessous restent sur leur cadence WT2, **pas bloqués** par Phase 1 produit, **pas prioritaires** sur elle. Coordination : cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`.
+**Produit context (décision 2026-05-08) :** ROADMAP_PRODUCT priorise **Phase 1 Consolidation (chat fast / image / Wikidata / no-halluc / compare / paywall stub) AVANT Phase 2 Walk V1**. Cette roadmap FE = **track parallèle indépendant** (dette Expo / RN), **pas bloqué** par Phase 1 produit, **pas prioritaire** sur elle.
 
 ---
 
 ## NOW — Sprint launch (2026-05-03 → 2026-06-01)
 
-> Coche `[x]` au merge dans `main`. WT3 met à jour cette doc en fin de cycle ; les items « `[ ] in WT2` » sont la file d'attente WT2 — soft sync, attente du merge avant cocher.
+> Coche `[x]` au merge dans `main`.
 
 ### F1 — Typed routes Expo Router 5
 
@@ -32,7 +32,7 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ### F3 — MuseumSheet bottom-sheet — finalize
 
-- [ ] **in WT2 (cleanup/fe)** — `museum-frontend/features/museum/components/MuseumSheet.tsx` UX validation 3 personae, animation de pull-to-dismiss, a11y screen-reader labels FR + EN. Soft sync : WT3 cochera ici au merge WT2 sur `main`.
+- [ ] `museum-frontend/features/museum/ui/MuseumSheet.tsx` UX validation 3 personae, animation de pull-to-dismiss, a11y screen-reader labels FR + EN. (Fichier présent depuis 2026-05-05 avec a11y + gesture code ; reste ouvert sur la validation UX.)
 
 ### F4 — Hermes V1 (~~NOW~~ → LATER)
 
@@ -41,7 +41,7 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ### F5 — `noUncheckedIndexedAccess` strict flag
 
-- [ ] **in WT2 (cleanup/fe)** — activer `compilerOptions.noUncheckedIndexedAccess: true` dans `museum-frontend/tsconfig.json` + fix sites d'accès indexé non-narrowed. Soft sync attendu WT2 merge.
+- [x] `compilerOptions.noUncheckedIndexedAccess: true` activé dans `museum-frontend/tsconfig.json` (l.5) + sites d'accès indexé non-narrowed corrigés. SHIPPED.
 
 ### F6 — i18n FR + EN parity
 
@@ -70,7 +70,7 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ### F12 — Expo prebuild + Pods committed
 
-- [ ] **in WT2 (cleanup/fe)** — finalize prebuild + `Pods/` committed flow + Podfile `fmt` consteval patch re-applied (cf. `feedback_ios_pods_xcloud` + `reference_podfile_fmt_patch`). Soft sync attendu WT2 merge.
+- [x] Prebuild + `Pods/` committed flow (13318 fichiers trackés) + Podfile `fmt` consteval patch appliqué (cf. CLAUDE.md §iOS Xcode Cloud build chain). SHIPPED.
 
 ---
 
@@ -92,7 +92,7 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ### Cert pinning Phase 2
 
-- [ ] Cf. `docs/adr/ADR-016-mobile-cert-pinning-deferred.md` (status owned by WT1/WT2, à re-évaluer début juillet).
+- [ ] Cf. `docs/adr/ADR-016-mobile-cert-pinning-deferred.md` (à re-évaluer début juillet).
 
 ---
 
@@ -116,6 +116,4 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ## Coordination
 
-WT3 (web) tient ce fichier à jour côté **statut + decision + roadmap** ; WT2 (museum-frontend) **exécute** F3/F5/F12 et merge dans `main`. Soft-sync : un item « `[ ] in WT2` » bascule à `[x]` quand WT2 merge dans `main` sur la même semaine.
-
-Coordination des 3 worktrees : cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`.
+Le modèle multi-worktree dédié (WT2 `cleanup/fe` / WT3 web) est défunt : le travail FE est exécuté et mergé directement sur `main`. Cocher `[x]` au merge. Contexte historique de l'organisation worktree : `git log --all -- docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` (fichier supprimé du tree 2026-05-20, recoverable via git history).

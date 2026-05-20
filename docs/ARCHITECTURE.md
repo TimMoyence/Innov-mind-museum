@@ -29,18 +29,20 @@ src/
 │   │       ├── notifier/, social/, search/, storage/, audio/, image/, pii/, llm/, guardrails/, …
 │   │       └── …                       # category by external concern, NEVER a flat dump
 │   ├── jobs/                           # BullMQ workers / cron registrars (composition layer; relative imports OK)
-│   ├── <module>-module.ts              # composition root (chat, knowledge-extraction): wire DI graph
+│   ├── <module>-module.ts              # composition root (chat only); KE wires its DI graph via index.ts (KnowledgeExtractionModule class)
 │   ├── wiring.ts                       # lazy runtime accessors (request-time getters)
 │   └── index.ts                        # public lifecycle barrel (build + teardown API)
-├── shared/                             # cross-cutting: errors, logger, routers, validation, domain types
-├── helpers/                            # middleware (error handler, rate limit, request ID/logger), swagger setup
+├── shared/
+│   ├── middleware/                     # error.middleware.ts, rate-limit.middleware.ts, request-id.middleware.ts, etc.
+│   ├── http/                           # swagger.ts, cors.config.ts, http clients, requireUser, …
+│   └── …                               # cross-cutting: errors, logger, routers, validation, domain types
 ├── app.ts                              # Express app factory (middleware chain + router mount)
 └── index.ts                            # entrypoint (DB init → app.listen)
 ```
 
 Modules + composition pattern:
-- **admin / auth / museum / review / support** — barrel pattern. `useCase/index.ts` re-exports the public application services.
-- **chat / knowledge-extraction** — composition-root pattern. `<module>-module.ts` builds the DI graph; `useCase/index.ts` is intentionally absent (composition root replaces it).
+- **admin / auth / leads / museum / review / support** — barrel pattern. `useCase/index.ts` re-exports the public application services.
+- **chat / knowledge-extraction** — composition-root pattern; `useCase/index.ts` is intentionally absent (composition root replaces it). Chat wires its DI graph via `chat-module.ts`; knowledge-extraction has no `*-module.ts` — its composition root is `index.ts`, which exports the `KnowledgeExtractionModule` class.
 - **daily-art** — hexagonal scaffold normalized at Phase 0bis. Tiny module (1 use case, 1 catalog), still follows the same skeleton for repo coherence.
 
 Key patterns:
@@ -85,9 +87,12 @@ features/                  # business logic by domain
 ├── chat/                  # chat session hook, contracts, API calls, streaming, TTS
 ├── conversation/          # conversation list/dashboard
 ├── daily-art/             # daily artwork card, saved artworks
+├── diagnostics/           # runtime diagnostics / debug tooling
+├── home/                  # home tab landing
 ├── legal/                 # privacy policy, terms of service content
 ├── museum/                # museum directory, map view, geolocation
 ├── onboarding/            # first-launch carousel
+├── paywall/               # freemium quota upsell, subscription gating
 ├── review/                # public reviews, star rating
 ├── settings/              # runtime settings, theme, security, compliance
 └── support/               # ticket system, contact form

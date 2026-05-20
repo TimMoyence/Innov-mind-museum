@@ -14,6 +14,8 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 ## État actuel (V12 acquis)
 
+> **Note 2026-05-20** — post-T2.1 + UFR-022, le roster agents est passé à 9 : architect, editor, verifier, security, reviewer, documenter, learning-curator (T2.1), doc-fetcher + doc-curator (UFR-022). La table ci-dessous reflète le baseline V12 ; nouveaux agents trackés en V13 acquis (§ ci-dessous).
+
 | Acquis | Statut |
 |---|---|
 | 6 agents (architect, editor, verifier, security, reviewer, documenter) | shipped |
@@ -29,6 +31,19 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 | UFR-013 honesty rule | shipped |
 | Promptfoo CI gate (jailbreak corpus) | shipped |
 | Tous-Opus (UFR-010, exception explicite Documenter→Sonnet 2026-05-03 ADR-029) | shipped |
+
+## État actuel (V13 acquis — UFR-022)
+
+| Acquis | Statut |
+|---|---|
+| Fresh-context 5-phase workflow (spec → plan → red → green → review) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Mode unique `/team` (retrait selector micro/standard/enterprise + bypass keywords) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Frozen-test byte-for-byte (red-test-manifest.json sha256 + post-edit hook) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Reviewer rejection loop illimité (cap 2 réservé aux hook failures intra-phase) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Lib-docs cache obligation (`lib-docs/<lib>/PATTERNS.md` + `LESSONS.md`, refresh >14j) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Doc-fetcher + doc-curator fresh agents (cache refresh sur miss / version drift) | shipped 2026-05-18 (commit `5a01f5ca`) |
+| Lib-docs bootstrap 54 libs + enterprise audit (88 TD, 21 BLOCKERS) | shipped 2026-05-18 (commit `685bc45c`) |
+| BRIEF-ACK + BLOCK-CONTEXT-LEAK + libDocsConsulted[] proof anti-bypass | shipped 2026-05-18 (commit `5a01f5ca`) |
 
 ## Ce qui manque (gap analysis user 2026-05-03)
 
@@ -100,7 +115,7 @@ Self-test : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.sh --sel
 
 > **Provider swap 2026-05-14** : T1.5b root cause unblocked — le cron Mon 2026-05-04 et Mon 2026-05-11 ont firé mais TOUS en failure (`ANTHROPIC_API_KEY secret is not set` — non provisionné sur le repo GitHub). Sur instruction user "pas de clef Anthropic, utiliser GPT à la place", `lib/reviewer-eval-shim.sh` + `.github/workflows/team-quality-regression.yml` + `team-promptfoo/promptfooconfig.yaml` ont été swappés Anthropic `/v1/messages` → OpenAI `/v1/chat/completions` (modèle `gpt-4o` par défaut, override via `REVIEWER_EVAL_MODEL`). Action restante côté toi : `gh secret set OPENAI_API_KEY` (le repo a 0 secret OpenAI actuellement). Une fois le secret poussé, le cron Mon 2026-05-18 produira le premier `output.json` réel.
 
-- [ ] Confirmer `OPENAI_API_KEY` secret repo poussé (action manuelle user — bloque le prochain cron)
+- [x] Confirmer `OPENAI_API_KEY` secret repo poussé — `gh secret list` confirme push 2026-05-14T14:48:58Z
 - [ ] After first Mon-04:00 UTC real OpenAI-API cron run lands, write `lib/quality-baseline-bake.sh` to derive new `baseline-scores.json` from a real-mode `output.json` (axisMeans + perFeature)
 - [ ] Re-commit baseline w/ `calibrationMode: "real-openai-gpt-4o"` and timestamp
 - [ ] Document rebake protocol in `team-promptfoo/README.md` (replace mock-bootstrap section with real-baked steps)
@@ -147,7 +162,7 @@ Run de référence : `team-state/2026-05-03-feedback-loop-interne-t21/`. Décisi
 - [ ] Estimation cumulée par sprint — alerte si budget mensuel projection >X€ avant launch
 - [ ] Cost dashboard Grafana — Langfuse → Prometheus exporter
 
-> **Pickup contingent — sprint 2026-05-05 P1 closure note (2026-05-05) :** start only if bandwidth available after the 2026-05-19 feature freeze ramp closes the P1 stack (cf. `docs/_archive/sprints/SPRINT_RECAP_2026-04-30_TO_2026-05-05.md`). KR3 stability + KR4 acquisition prime over orchestrateur tooling pre-launch. Re-evaluate at the post-launch + 14d retro.
+> **Pickup contingent — sprint 2026-05-05 P1 closure note (2026-05-05) :** start only if bandwidth available after the 2026-05-19 feature freeze ramp closes the P1 stack (recap consolidé en git history). KR3 stability + KR4 acquisition prime over orchestrateur tooling pre-launch. Re-evaluate at the post-launch + 14d retro.
 
 ---
 
