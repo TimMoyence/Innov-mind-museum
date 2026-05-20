@@ -9,6 +9,7 @@ import { SettingsAiConsentCard } from '@/features/settings/ui/SettingsAiConsentC
 const mockListUserConsents = jest.fn<Promise<unknown[]>, []>();
 const mockGrantConsentScope = jest.fn<Promise<void>, [string]>();
 const mockRevokeConsentScope = jest.fn<Promise<void>, [string]>();
+const mockClearConsentAcceptedFlag = jest.fn<Promise<void>, []>();
 
 jest.mock('@/features/chat/application/thirdPartyAiConsent', () => {
   const SCOPES = [
@@ -23,12 +24,17 @@ jest.mock('@/features/chat/application/thirdPartyAiConsent', () => {
   ] as const;
   return {
     THIRD_PARTY_AI_SCOPES: SCOPES,
+    REQUIRED_CONSENT_SCOPE: 'third_party_ai_text_openai',
     CONSENT_POLICY_VERSION: '2026-06-01',
     listUserConsents: () => mockListUserConsents(),
     grantConsentScope: (scope: string) => mockGrantConsentScope(scope),
     revokeConsentScope: (scope: string) => mockRevokeConsentScope(scope),
   };
 });
+
+jest.mock('@/features/chat/application/useAiConsent', () => ({
+  clearConsentAcceptedFlag: () => mockClearConsentAcceptedFlag(),
+}));
 
 // `@sentry/react-native` is mocked globally in `__tests__/helpers/test-utils.tsx`
 // — reuse that mock instead of redeclaring (the global mock wins last-wins).
@@ -114,6 +120,66 @@ describe('SettingsAiConsentCard', () => {
     await waitFor(() => {
       expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_text_openai');
     });
+  });
+
+  it('clears the local accepted-flag when the user revokes the REQUIRED scope', async () => {
+    // BE says the required scope is currently granted ; user is about to revoke it.
+    mockListUserConsents.mockResolvedValue([
+      {
+        id: 1,
+        scope: 'third_party_ai_text_openai',
+        version: '2026-06-01',
+        grantedAt: '2026-05-16T10:00:00.000Z',
+        revokedAt: null,
+        source: 'ui',
+      },
+    ]);
+    mockRevokeConsentScope.mockResolvedValue(undefined);
+    mockClearConsentAcceptedFlag.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      expect(getAllByRole('switch')[0]?.props.value).toBe(true);
+    });
+
+    fireEvent(getAllByRole('switch')[0]!, 'valueChange', false);
+
+    await waitFor(() => {
+      expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_text_openai');
+    });
+    // Without this, the consent sheet would NOT re-prompt on next chat mount
+    // (the stale "we already asked" memo would still be 'true').
+    expect(mockClearConsentAcceptedFlag).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the local accepted-flag when the user revokes an OPTIONAL scope', async () => {
+    // BE says an optional scope (audio_google) is currently granted.
+    mockListUserConsents.mockResolvedValue([
+      {
+        id: 7,
+        scope: 'third_party_ai_audio_google',
+        version: '2026-06-01',
+        grantedAt: '2026-05-16T10:00:00.000Z',
+        revokedAt: null,
+        source: 'ui',
+      },
+    ]);
+    mockRevokeConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      // 7th switch (index 6) = audio_google.
+      expect(getAllByRole('switch')[6]?.props.value).toBe(true);
+    });
+
+    fireEvent(getAllByRole('switch')[6]!, 'valueChange', false);
+
+    await waitFor(() => {
+      expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_audio_google');
+    });
+    // Optional revocation = the user is informed-managing, not withdrawing —
+    // sheet should NOT re-prompt next session.
+    expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
   });
 
   it('reports BE failures to Sentry and rolls back the optimistic UI update', async () => {

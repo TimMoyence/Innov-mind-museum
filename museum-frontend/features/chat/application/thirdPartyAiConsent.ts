@@ -23,6 +23,15 @@ export const THIRD_PARTY_AI_SCOPES = [
 
 export type ThirdPartyAiScope = (typeof THIRD_PARTY_AI_SCOPES)[number];
 
+/**
+ * Mandatory scope without which the chat cannot function. Surfaced as
+ * `(required)` in the consent sheet and gates the Save button there.
+ * When the user revokes this scope from Settings, the AsyncStorage
+ * "already asked" memo MUST be cleared so the consent sheet re-prompts
+ * on the next chat session.
+ */
+export const REQUIRED_CONSENT_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
+
 /** Policy version anchor — keep in sync with `museum-backend/src/shared/legal/policy-version.ts`. */
 export const CONSENT_POLICY_VERSION = '2026-06-01';
 

@@ -7,6 +7,21 @@ import { grantConsentScope, type ThirdPartyAiScope } from './thirdPartyAiConsent
 const CONSENT_KEY = 'consent.ai_accepted';
 
 /**
+ * Clear the local "user has been asked + answered" memo. Called from the
+ * Settings revoke surface when the user withdraws the mandatory text scope
+ * — the BE state then says "not granted", so the next chat mount MUST
+ * re-prompt rather than honour the stale local flag. Failure is non-fatal
+ * (worst case = sheet doesn't re-prompt, user can revoke again).
+ */
+export const clearConsentAcceptedFlag = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(CONSENT_KEY);
+  } catch (err: unknown) {
+    Sentry.captureException(err, { tags: { flow: 'consent.clear' } });
+  }
+};
+
+/**
  * AI consent modal state. Persists a local "accepted" flag in AsyncStorage so
  * the consent sheet does not re-open every cold start, AND — when explicit
  * scopes are supplied — performs the BE round-trip that materialises a row in
