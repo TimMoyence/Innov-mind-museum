@@ -594,12 +594,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-29 — bcrypt → argon2 migration
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, team-report 2026-05-15-renovate-audit §Abandoned)
-- **Référence code** : 7 use sites dans `museum-backend`.
+- [ ] **Statut** : ouvert — **plan rédigé 2026-05-20** : [`docs/PASSWORD_HASH_MIGRATION.md`](PASSWORD_HASH_MIGRATION.md). Execution reste DEFER-POST-LAUNCH (V1 ships bcrypt-12, OWASP-acceptable). bcrypt cost floor désormais gardé par `museum-backend/tests/unit/auth/bcrypt-cost-factor.test.ts` (≥12, ≤15).
+- **Référence code** : 7 use sites dans `museum-backend` (énumérés dans le plan §2).
 - **Symptôme** : bcrypt abandonné upstream. argon2id = OWASP recommended (memory-hard, side-channel resistant). Verdict audit : "DEFER-POST-LAUNCH high".
 - **Sprint d'origine** : team-report 2026-05-15-renovate-audit.
 - **Effort estimé** : 1-2 sprints (design + migration + rehash on next login window).
-- **Comment fermer** : design dual-hash period (verify bcrypt, write argon2id on next login) → migration backfill → drop bcrypt dep. Post-launch V1.
+- **Comment fermer** : suivre `docs/PASSWORD_HASH_MIGRATION.md` — Phase A (dual-hash facade, write argon2id + verify-both + rehash-on-login, ferme aussi TD-BC-02), Phase B (cold-tail), Phase C (drop bcrypt, probablement jamais). Post-launch V1.
 
 ---
 
@@ -1442,6 +1442,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ---
 
 ## TD-BC-02 — No rehash-on-login when BCRYPT_ROUNDS bumped (LOW, post-V1)
+
+> **Design folded into TD-29 2026-05-20** : the rehash-on-login mechanism is now specified in [`docs/PASSWORD_HASH_MIGRATION.md`](PASSWORD_HASH_MIGRATION.md) §3 Phase A step 4 (`needsRehash(stored)` after a successful verify → opportunistic re-hash with no user friction). Implemented together with the argon2id swap. Still post-V1.
 
 **Context** : 0 hits for `getRounds`/`rehash` in src/. PATTERNS.md §3 bullet 5 recommends `getRounds(hash)` post-compare + rehash if cost-drift.
 

@@ -27,6 +27,7 @@
 !docs/AI_SAFETY.md
 !docs/GDPR_ART22_SCOPE.md
 !docs/TECH_DEBT.md
+!docs/PASSWORD_HASH_MIGRATION.md
 !docs/HANDOFF-*.md
 !docs/GITHUB_ACTIONS_SHA_PINS.md
 !docs/PHASE_HISTORY.md
