@@ -91,7 +91,7 @@ Severity drives the entire response. Use the matrix below at `T+0` and revise as
 | **P2** — Medium | Active CVE in a dependency that is exploitable in our stack but not yet exploited; vendor breach affecting Musaium scope but limited data category | Axios SSRF CVE pre-patch with reachable code path; Sentry vendor incident impacting our project but with PII-scrubbing in place | NO unless escalated to P0/P1 | NO |
 | **P3** — Low | Policy violation without data exposure; theoretical weakness; near-miss | Missing security header; debug log accidentally enabled in staging; gitleaks false-positive | NO | NO |
 
-**Multipliers** (reuse the `/security-compliance` skill formula, base × multiplier):
+**Multipliers** — apply `final = base × ∏(multipliers)` where `base` is the severity tier above (P0=4, P1=3, P2=2, P3=1 if you need a numeric score) and multipliers stack:
 - Internet-facing prod: × 2.0
 - Sensitive personal data (audio, geo, biometric): × 1.5
 - Active exploit ITW: × 2.0
