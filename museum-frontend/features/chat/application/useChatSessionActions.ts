@@ -3,9 +3,7 @@ import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import {
-  decideMarkdownLinkAction,
-} from '@/features/chat/application/chatSessionLogic.pure';
+import { decideMarkdownLinkAction } from '@/features/chat/application/chatSessionLogic.pure';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 
 type ReportReason = 'offensive' | 'inaccurate' | 'inappropriate' | 'other';
@@ -50,9 +48,18 @@ export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSes
   const onReportMessage = useCallback(
     (messageId: string) => {
       Alert.alert(t('chat.report_title'), t('chat.report_body'), [
-        { text: t('chat.report_offensive'), onPress: () => void submitReport(messageId, 'offensive') },
-        { text: t('chat.report_inaccurate'), onPress: () => void submitReport(messageId, 'inaccurate') },
-        { text: t('chat.report_inappropriate'), onPress: () => void submitReport(messageId, 'inappropriate') },
+        {
+          text: t('chat.report_offensive'),
+          onPress: () => void submitReport(messageId, 'offensive'),
+        },
+        {
+          text: t('chat.report_inaccurate'),
+          onPress: () => void submitReport(messageId, 'inaccurate'),
+        },
+        {
+          text: t('chat.report_inappropriate'),
+          onPress: () => void submitReport(messageId, 'inappropriate'),
+        },
         { text: t('chat.report_other'), onPress: () => void submitReport(messageId, 'other') },
         { text: t('common.cancel'), style: 'cancel' },
       ]);
@@ -67,25 +74,47 @@ export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSes
    * in the in-app browser without also opening Safari/Chrome, we MUST
    * return `false` after handling. The action mapping lives in
    * `decideMarkdownLinkAction` so it can be unit-tested in isolation.
+   *
+   * TD-MD-01 — links inside assistant bubbles are LLM-authored and therefore
+   * prompt-injectable. Auto-opening them (even in the in-app browser) is a
+   * phishing/malware vector. Before opening an `'in-app'` (https) link we
+   * surface a confirm dialog showing the *destination hostname* so the user
+   * can spot a spoof. `'system'` schemes (mailto/tel/sms) are inherently
+   * low-risk and open directly. Everything else is ignored (TD-MD-02).
    */
   const onMessageLinkPress = useCallback(
     (url: string): boolean => {
       const action = decideMarkdownLinkAction(url);
       if (action === 'in-app') {
-        params.setBrowserUrl(url);
+        let host: string;
+        try {
+          host = new URL(url).hostname;
+        } catch {
+          return false;
+        }
+        Alert.alert(t('chat.link_confirm_title'), t('chat.link_confirm_body', { host }), [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('chat.link_confirm_open'),
+            onPress: () => {
+              params.setBrowserUrl(url);
+            },
+          },
+        ]);
         return false;
       }
-      if (action === 'system') return true; // mailto:, tel:, etc.
-      return false; // ignore empty URLs
+      if (action === 'system') return true; // mailto:, tel:, sms: only (TD-MD-02 allowlist)
+      return false; // ignore empty / http / non-allowlisted schemes
     },
-    [params],
+    [params, t],
   );
 
   const onMessageImageError = useCallback(
     (messageId: string) => {
       if (imageRefreshInFlightRef.current.has(messageId)) return;
       imageRefreshInFlightRef.current.add(messageId);
-      void params.refreshMessageImageUrl(messageId)
+      void params
+        .refreshMessageImageUrl(messageId)
         .catch(() => {
           /* resilient */
         })

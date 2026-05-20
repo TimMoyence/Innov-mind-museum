@@ -1,10 +1,25 @@
 /* eslint-disable react-native/no-unused-styles -- dynamic styles in useMemo, not detectable by lint */
 import { useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import Markdown from '@ronradtke/react-native-markdown-display';
+import Markdown, { type RenderRules } from '@ronradtke/react-native-markdown-display';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
+
+// TD-MD-03 + TD-MD-04 — assistant markdown is LLM-authored + prompt-injectable.
+// Suppress the `image` render rule entirely so an injected
+// `![](https://evil/x.png)` produces NO <Image> element and therefore NO
+// network fetch (a markdown image is otherwise an automatic GET to an
+// attacker-chosen URL = tracking-pixel / SSRF-from-client vector). Enriched
+// artwork images render through the dedicated carousel, never via markdown
+// `![]()`, so nothing legitimate is lost. Rendering `null` is equivalent in
+// outcome to the parser-level `allowedImageHandlers` allowlist but stays
+// fully typed (no untyped `markdown-it` instance). `link` stays enabled —
+// taps route through the confirm dialog + scheme allowlist in
+// `useChatSessionActions` (TD-MD-01 / TD-MD-02).
+const markdownRules: RenderRules = {
+  image: () => null,
+};
 
 interface MarkdownBubbleProps {
   text: string;
@@ -94,7 +109,7 @@ export const MarkdownBubble = ({ text, onLinkPress }: MarkdownBubbleProps) => {
   );
 
   return (
-    <Markdown style={markdownStyles} onLinkPress={onLinkPress}>
+    <Markdown style={markdownStyles} rules={markdownRules} onLinkPress={onLinkPress}>
       {text}
     </Markdown>
   );

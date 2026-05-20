@@ -547,7 +547,8 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
 });
 
 describe('ChatSessionScreen — markdown link tap', () => {
-  it('http URL routes to the in-app browser route and returns false', () => {
+  it('https URL prompts a confirm dialog (TD-MD-01); opens browser only after confirm', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
     render(<ChatSessionScreen />);
     const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
       'ChatMessageList',
@@ -558,9 +559,43 @@ describe('ChatSessionScreen — markdown link tap', () => {
       result = onLinkPress('https://example.org/article');
     });
 
+    // Always returns false (we never let the markdown lib auto-open).
     expect(result).toBe(false);
+    // No immediate navigation — the confirm dialog gates it.
+    expect(openedRoutes()).not.toContain('browser');
+    // A confirm Alert was raised using the link-confirm copy keys. (The test
+    // i18n mock returns the key verbatim and drops interpolation, so we assert
+    // the key here; hostname interpolation is covered at the unit level.)
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy.mock.calls[0]?.[0]).toBe('chat.link_confirm_title');
+    expect(alertSpy.mock.calls[0]?.[1]).toBe('chat.link_confirm_body');
+
+    // Pressing the "Open" button (last button — after Cancel) navigates.
+    const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
+    act(() => {
+      buttons[buttons.length - 1]?.onPress?.();
+    });
     const browserParams = lastRouteParams<{ url: string }>('browser');
     expect(browserParams?.url).toBe('https://example.org/article');
+    alertSpy.mockRestore();
+  });
+
+  it('http URL is ignored entirely (TD-MD-02 downgrade rejection) — no dialog, no nav', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    render(<ChatSessionScreen />);
+    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
+      'ChatMessageList',
+    ).onLinkPress;
+
+    let result: boolean | undefined;
+    act(() => {
+      result = onLinkPress('http://example.org/article');
+    });
+
+    expect(result).toBe(false);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(openedRoutes()).not.toContain('browser');
+    alertSpy.mockRestore();
   });
 
   it('mailto URL returns true (lets the markdown lib open it via Linking)', () => {

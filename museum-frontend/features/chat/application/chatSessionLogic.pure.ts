@@ -346,8 +346,32 @@ export const formatLocation = (
  */
 export type MarkdownLinkAction = 'in-app' | 'system' | 'ignore';
 
+/**
+ * TD-MD-02 — scheme allowlist via `new URL().protocol` (NOT `startsWith`
+ * prefix matching, which let `intent://`, `app-scheme://`, `file://`,
+ * `javascript:`, `data:` through to `Linking.openURL` = deep-link hijack /
+ * RCE-ish vector when the link text is LLM-authored and prompt-injectable).
+ *
+ * Allowlist :
+ *   - `https:`                 → `'in-app'`  (open in the in-app browser)
+ *   - `mailto:` `tel:` `sms:`  → `'system'`  (Linking.openURL — safe intents)
+ *   - everything else          → `'ignore'`
+ *
+ * `http:` is intentionally rejected (→ `'ignore'`) : mixed-content +
+ * downgrade-attack risk on V1 mobile (HANDOFF §5 Batch G). Malformed URLs
+ * that throw in the `URL` constructor also fall through to `'ignore'`.
+ */
+const SYSTEM_SCHEMES = new Set(['mailto:', 'tel:', 'sms:']);
+
 export function decideMarkdownLinkAction(url: string | undefined | null): MarkdownLinkAction {
   if (!url) return 'ignore';
-  if (url.startsWith('http://') || url.startsWith('https://')) return 'in-app';
-  return 'system';
+  let protocol: string;
+  try {
+    protocol = new URL(url).protocol.toLowerCase();
+  } catch {
+    return 'ignore';
+  }
+  if (protocol === 'https:') return 'in-app';
+  if (SYSTEM_SCHEMES.has(protocol)) return 'system';
+  return 'ignore';
 }

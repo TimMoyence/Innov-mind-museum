@@ -163,12 +163,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-7 — ESLint v10 major drift (BE on v10, FE+Web on v9) — blocked by upstream
+### TD-7 — ESLint version skew résolu (all v9) ; v10 upgrade deferred upstream
 
-- [ ] **Statut** : partiellement clos — BE rebaselined v9.39.4 (2026-05-16, T1.4), drift FE/Web/BE → v10 reste deferred upstream `jsx-eslint/eslint-plugin-react#3979`
+- [x] **Statut** : fermé 2026-05-20 — le drift de versions est éliminé : les **3 apps sont alignées sur `eslint@^9.39.4`** (vérifié package.json ×3, 2026-05-20). BE avait été downgradé de v10→v9 par T1.4 (2026-05-16) ; le titre/statut "BE on v10" était stale. La seule partie résiduelle (bump des 3 apps vers v10) reste **deferred** car bloquée upstream `jsx-eslint/eslint-plugin-react#3979` — c'est un upgrade volontairement différé, plus une dette de drift. Re-tracker comme item d'upgrade séparé si V1.x re-priorise v10.
 - **Référence code** :
   ```
-  museum-backend/package.json     "eslint": "^10.2.0"   (also @eslint/js@^10.0.1, eslint-plugin-jsdoc@^62.9.0 — v10-only)
+  museum-backend/package.json     "eslint": "^9.39.4"   (downgradé de ^10.2.0 par T1.4 2026-05-16)
   museum-frontend/package.json    "eslint": "^9.39.4"
   museum-web/package.json         "eslint": "^9.39.4"
   ```
@@ -834,7 +834,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-41 — Contraste AI badge (light + dark, 8 locales)
+### TD-56 — Contraste AI badge (light + dark, 8 locales)
+
+> **Renuméroté 2026-05-20** (ex-TD-41, collision avec TD-41 W3 `sanitizePromptInput`). Distinct debt — ID dédupliqué.
 
 - [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §6.2)
 - **Référence code** : `museum-frontend/features/chat/ui/ChatHeader.tsx` (pill "AI / IA / KI / …"), `museum-frontend/shared/ui/tokens.generated.ts` (couleurs de thème).
@@ -845,7 +847,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-42 — `AiDisclosureModal` "Learn more" link pointe in-app au lieu du marketing
+### TD-57 — `AiDisclosureModal` "Learn more" link pointe in-app au lieu du marketing
+
+> **Renuméroté 2026-05-20** (ex-TD-42, collision avec TD-42 W3 `cachedGeofenceMode`). Distinct debt — ID dédupliqué.
 
 - [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster A TA6 / `docs/legal/AI_DISCLOSURE_AUDIT.md` §2.4)
 - **Référence code** : `museum-frontend/features/chat/ui/AiDisclosureModal.tsx` (URL "Learn more" pointe `/privacy` in-app).
@@ -856,7 +860,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-43 — Disclosure AI sur admin web `museum-web/admin/*` (si surface end-user un jour)
+### TD-58 — Disclosure AI sur admin web `museum-web/admin/*` (si surface end-user un jour)
+
+> **Renuméroté 2026-05-20** (ex-TD-43, collision avec TD-43 W3 `geo_detect_museum_total`). Distinct debt — ID dédupliqué.
 
 - [ ] **Statut** : ouvert dormant (créé 2026-05-17, audit-360 W4 cluster A TA6 §3)
 - **Référence code** : `museum-web/src/app/[locale]/admin/**` (aucune surface AI exposée à un end-user aujourd'hui).
@@ -867,7 +873,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-44 — Disclosure AI sur templates email transactionnels (si email summary V1.1)
+### TD-59 — Disclosure AI sur templates email transactionnels (si email summary V1.1)
+
+> **Renuméroté 2026-05-20** (ex-TD-44, collision avec TD-44 W3 docker-compose redis AUTH). Distinct debt — ID dédupliqué.
 
 - [ ] **Statut** : ouvert dormant (créé 2026-05-17, audit-360 W4 cluster A TA6 §3)
 - **Référence code** : `museum-backend/src/modules/notification/` (Brevo templates aujourd'hui purement transactionnels).
@@ -1008,7 +1016,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-41 — `eslint-disable` sans `Approved-by` dans `similarity-service.rerank-fail-open.test.ts`
+### TD-60 — `eslint-disable` sans `Approved-by` dans `similarity-service.rerank-fail-open.test.ts`
+
+> **Renuméroté 2026-05-20** (ex-TD-41, troisième collision sur l'ID TD-41 avec W3 `sanitizePromptInput` + W4 AI badge). Distinct debt — ID dédupliqué.
 
 - [ ] **Statut** : ouvert (créé 2026-05-18, /team C9.13 reviewer cycle 2 audit)
 - **Référence code** :
@@ -1019,7 +1029,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Symptôme** : le disable a une `Justification:` (≥20 chars) mais manque la ligne `Approved-by: <reviewer/SHA>` que CLAUDE.md `§ ESLint Discipline` exige pour tout nouveau `eslint-disable`. Le pattern correct est déjà appliqué sur les 2 disables des adapters rerank V1 (cf. `bge-reranker-v2-m3.adapter.ts:58`, `null-reranker.adapter.ts:22`) qui portent `Approved-by: dispatcher 6c2da855`. Ce site précède la corrective loop, donc le reviewer cycle 2 l'a flagué hors scope.
 - **Sprint d'origine** : C9.13 GREEN cycle (commit `6c2da855` 2026-05-18) ; flagué par /team reviewer cycle 2 (`code-review-cycle-2.json`) comme "minor non-blocker, residual from GREEN".
 - **Effort estimé** : 1 minute (1-line append).
-- **Comment fermer** : ajouter sous la ligne 83 un commentaire `// Approved-by: dispatcher 6c2da855 (C9.13 RED — dynamic SUT load required to surface "Cannot find module" before Phase 4 lands)` et cocher TD-41 ici.
+- **Comment fermer** : ajouter sous la ligne 83 un commentaire `// Approved-by: dispatcher 6c2da855 (C9.13 RED — dynamic SUT load required to surface "Cannot find module" before Phase 4 lands)` et cocher TD-60 ici.
 
 ---
 
@@ -1206,6 +1216,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 **Blast radius** : 5 files, ~15 lines, possible visual diff si resizeMode→contentFit mapping mismatches.
 
+> **Dédupliqué 2026-05-20** : l'ancien header `TD-EXPO-01` (plus bas) était un pur pointeur "voir TD-RN-02" sans contenu propre — collapsé ici. TD-RN-02 est la seule entrée canonique pour cette dette (RN `Image` → expo-image).
+
 ---
 
 ## TD-RN-03 — 2 sites lisent `process.env` sans `readEnvString` helper (LOW, NON_BLOCKER)
@@ -1220,8 +1232,6 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 
 ---
-
-## TD-EXPO-01 — 5 screens utilisent RN `Image` au lieu d'expo-image (consolidation TD-RN-02) — voir TD-RN-02
 
 ## ✅ TD-REACT-01 — useSessionLoader async fetch SANS cancellation flag (HIGH, BLOCKER pre-V1)
 
@@ -1300,7 +1310,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-NEXT-02 — Missing `generateStaticParams` for `[locale]` (LOW, NON_BLOCKER)
+## ✅ TD-NEXT-02 — Missing `generateStaticParams` for `[locale]` (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `80885c220` (lib-docs alignment wave 3, Next.js generateStaticParams). Vérifié : `export function generateStaticParams(): { locale: Locale }[]` à `museum-web/src/app/[locale]/layout.tsx:14`.
+
 
 **Context** : Locales FR/EN connues à build → prerender possible. Actuellement cold path = RSC + dictionary load on chaque request.
 
@@ -1438,7 +1451,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-BMQ-01 — `worker.on('error')` missing sur 4/6 workers (LOW, NON_BLOCKER)
+## ✅ TD-BMQ-01 — `worker.on('error')` missing sur 4/6 workers (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `cbc92d8d` (lib-docs alignment, bmq). Vérifié exhaustivement : les **6** workers/schedulers portent maintenant `.on('error')` → `scheduled-jobs.ts:115`, `chat-purge-cron.registrar.ts:109`, `audit-cron.registrar.ts:106`, `extraction.worker.ts:105`, `museum-enrichment.worker.ts:239`, `bullmq-enrichment-scheduler.adapter.ts:105`. **Note** : les chemins listés dans la remediation ci-dessous sont stale — `museum-enrichment.worker.ts` + `bullmq-enrichment-scheduler.adapter.ts` ont migré du module `knowledge-extraction` vers `museum`. La dette est néanmoins entièrement couverte.
 
 **Context** : Snapshot exige 'error' listener pour avoid unhandled exceptions. 4 sites manquent.
 
@@ -1460,7 +1475,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-IO-01 — `retryStrategy` non configuré (4 client sites) (MEDIUM, NICE_TO_HAVE pre-V1)
+## ✅ TD-IO-01 — `retryStrategy` non configuré (4 client sites) (MEDIUM, NICE_TO_HAVE pre-V1)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `cbc92d8d` (lib-docs alignment, redis). Vérifié : `retryStrategy: (times) => Math.min(times * 50, 2000)` présent à `museum-backend/src/index.ts:72` + `:100`.
 
 **Context** : Default ioredis retryStrategy reconnects forever. PATTERNS.md §3 DO #3 prescrit explicit strategy.
 
@@ -1537,7 +1554,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-MUL-01 — multer limits.fields/parts/headerPairs Infinity default (LOW, NON_BLOCKER)
+## ✅ TD-MUL-01 — multer limits.fields/parts/headerPairs Infinity default (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2). Vérifié : `fields:10, parts:20, headerPairs:50` à `museum-backend/src/modules/chat/adapters/primary/http/helpers/chat-route.helpers.ts:93-95` (+ second site :106-108).
+
 
 **Context** : Defense-in-depth DoS vector (PATTERNS.md §4).
 
@@ -1711,7 +1731,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Fix** : `{ abortController, autoRenewAbortController: true }` + propagate signal.
 **Evidence** : `wikidata-breaker.ts:84-91`.
 
-## TD-OP-03 — opossum: missing `group` option (MEDIUM, NON_BLOCKER)
+## ✅ TD-OP-03 — opossum: missing `group` option (MEDIUM, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2). Vérifié : `group: 'knowledge-base'` à `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts:93`.
+
 
 **Fix** : add `group: 'knowledge-base'` to CircuitBreaker opts.
 
@@ -1728,7 +1751,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Context** : `langchain.orchestrator.ts:115 withLangfuseTrace` wrap manually. Manque `callbacks:[new CallbackHandler({root:trace, updateRoot:true})]`.
 **Fix** : import `langfuse-langchain` + pass callbacks.
 
-## ⚠️ TD-LF-04 — Langfuse: no `langfuse.on('error', ...)` subscription (LOW, NON_BLOCKER)
+## ✅ TD-LF-04 — Langfuse: no `langfuse.on('error', ...)` subscription (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `cbc92d8d` (lib-docs alignment, langfuse). Vérifié : `_client.on('error', (err: unknown) => { … })` à `museum-backend/src/shared/observability/langfuse.client.ts:64`.
+
 
 **Fix** : `lf.on('error', err => logger.warn(...))` dans `langfuse.client.ts`.
 
@@ -1751,7 +1777,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ⚠️ TD-LINK-01 — Readability mutate document, no cloneNode (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-LINK-01 — Readability mutate document, no cloneNode (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2, Readability clone). Vérifié : `const clone = document.cloneNode(true);` à `museum-backend/src/modules/knowledge-extraction/adapters/secondary/scraper/html-scraper.ts:320` (chemin réel = `knowledge-extraction`, pas `chat`).
+
 
 **Context** : Fallback branch re-parse → 2x CPU on slow path.
 **Fix** : `new Readability(document.cloneNode(true) as Document).parse()`.
@@ -1770,7 +1799,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-AX-01 — axios maxContentLength/maxBodyLength not capped (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-AX-01 — axios maxContentLength/maxBodyLength not capped (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `da428f56` (lib-docs alignment, axios cap). Vérifié : `maxContentLength: 10 * 1024 * 1024` + `maxBodyLength: 10 * 1024 * 1024` à `museum-frontend/shared/infrastructure/httpClient.ts:175-176`.
+
 **Fix** : add `maxContentLength: 10*1024*1024, maxBodyLength: 10*1024*1024` to `axios.create()`.
 **Evidence** : `museum-frontend/shared/infrastructure/httpClient.ts:168-173`.
 
@@ -1798,7 +1830,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-ZOD-01 — z.config(z.locales.fr()) not set → English error messages (LOW, NICE_TO_HAVE)
+## ✅ TD-ZOD-01 — z.config(z.locales.fr()) not set → English error messages (LOW, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `80885c220` (lib-docs alignment wave 3, zod FR locale). Vérifié : `z.config(z.locales.fr());` à `museum-backend/src/instrumentation.ts:17`.
+
 **Fix** : `z.config(z.locales.fr())` at backend boot.
 
 ## TD-ZOD-02 — No .brand<>() for numeric IDs (LOW, V1.1)
@@ -1845,7 +1880,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ## TD-REA-01 — babel.config.js missing explicit react-native-worklets/plugin (LOW)
 **Fix** : add `'react-native-worklets/plugin'` LAST in plugins array.
 
-## TD-REA-02 — Infinite withRepeat(-1) sans cancelAnimation cleanup (LOW)
+## ✅ TD-REA-02 — Infinite withRepeat(-1) sans cancelAnimation cleanup (LOW)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2, reanimated cleanup). Vérifié : `cancelAnimation(opacity)` à `museum-frontend/shared/ui/SkeletonBox.tsx:47` + `museum-frontend/features/chat/ui/TypingPlaceholder.tsx:48,78`.
+
 **Fix** : `return () => cancelAnimation(opacity);` dans useEffect cleanup.
 **Sites** : `SkeletonBox.tsx:38`, `TypingPlaceholder.tsx:36,64`.
 
@@ -1949,7 +1987,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Fix** : `import * as maplibregl from 'maplibre-gl'` OR named imports.
 **Evidence** : `museum-web/src/components/marketing/DemoMap.tsx:4`.
 
-## TD-MGL-02 — No `error` listener on maplibre-gl Map (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-MGL-02 — No `error` listener on maplibre-gl Map (MEDIUM, NICE_TO_HAVE)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `da428f56` (lib-docs alignment, maplibre errors). Vérifié : `map.on('error', (e) => { … })` à `museum-web/src/components/marketing/DemoMap.tsx:54`.
+
 **Fix** : `map.on('error', e => Sentry.captureException(e.error))`.
 
 ---
@@ -2021,18 +2062,30 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-MD-01 — Markdown link auto-open SANS confirm → LLM-injectable phishing (MEDIUM, BLOCKER pre-V1)
+## ✅ TD-MD-01 — Markdown link auto-open SANS confirm → LLM-injectable phishing (MEDIUM, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-20 — `onMessageLinkPress` (`useChatSessionActions.ts`) now raises an `Alert.alert` confirm dialog showing the destination **hostname** (`new URL(url).hostname`) before any `setBrowserUrl`. Cancel = no-op ; Open = navigate. New i18n keys `chat.link_confirm_{title,body,open}` added to all 8 locales. Screen test `chat-session-deep.test.tsx` asserts the dialog is raised + browser opens only on confirm-button press.
+
 **Context** : `useChatSessionActions.ts:71-82` http(s) links from LLM-markdown auto-open `setBrowserUrl` with ZERO confirm. Prompt-injectable phishing/malware vector.
 **Fix** : confirm dialog OR display target hostname (link preview) OR domain allowlist (musée canoniques, wikipedia, wikidata) + confirm for others.
 
-## 🚨 TD-MD-02 — Non-http schemes forwarded sans allowlist → deep link hijack (MEDIUM, BLOCKER pre-V1)
+## ✅ TD-MD-02 — Non-http schemes forwarded sans allowlist → deep link hijack (MEDIUM, BLOCKER pre-V1)
+
+- [x] **Statut** : fermé 2026-05-20 — `decideMarkdownLinkAction` rewritten to parse via `new URL().protocol` (NOT `startsWith`). Allowlist : `https:` → `'in-app'` ; `{mailto:, tel:, sms:}` → `'system'` ; everything else (incl. `http:` downgrade, `intent://`, `app-scheme://`, `file://`, `javascript:`, `data:`, `content://`, `about:`, `ftp:`) → `'ignore'`. Malformed URLs that throw also → `'ignore'`. Unit test parametrizes 8 dangerous schemes + http rejection + malformed URLs (18/18 pass).
+
 **Context** : `chatSessionLogic.pure.ts:343-347` returns 'system' for any non-http(s). Includes `intent://`, `app-scheme://`, `file://`.
 **Fix** : Replace startsWith par explicit allowlist `['mailto:', 'tel:', 'sms:']`. Return 'ignore' pour autres.
 
-## TD-MD-03 — allowedImageHandlers not pinned to https (LOW)
+## ✅ TD-MD-03 — allowedImageHandlers not pinned to https (LOW)
+
+- [x] **Statut** : fermé 2026-05-20 — superseded by TD-MD-04. The `image` render rule is suppressed entirely (`rules={{ image: () => null }}` on `<Markdown>` in `MarkdownBubble.tsx`), so NO image element is produced from LLM markdown → no network fetch at all. Strictly stronger than an `allowedImageHandlers` https allowlist.
+
 **Fix** : `allowedImageHandlers={['https://']}` on `<Markdown>`.
 
-## TD-MD-04 — No parser-level link/image disable for LLM markdown (LOW)
+## ✅ TD-MD-04 — No parser-level link/image disable for LLM markdown (LOW)
+
+- [x] **Statut** : fermé 2026-05-20 — `MarkdownBubble.tsx` passes `rules={{ image: () => null }}` to suppress markdown image rendering (injected `![](https://evil/x.png)` can never render or fetch). Used the typed `RenderRules` render-rule override rather than an untyped `markdown-it` `.disable()` instance (no `@types/markdown-it` installed). `link` kept enabled — taps route through the TD-MD-01 confirm + TD-MD-02 allowlist.
+
 **Fix** : MarkdownIt(...).disable(['link','image']) if not strictly required.
 
 ---
@@ -2056,7 +2109,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-SW-01 — swagger-ui-express customSiteTitle + validatorUrl:null (LOW)
+## ✅ TD-SW-01 — swagger-ui-express customSiteTitle + validatorUrl:null (LOW)
+
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2). Vérifié : `customSiteTitle: 'Musaium API'` + `swaggerOptions: { validatorUrl: null, persistAuthorization: true }` à `museum-backend/src/shared/http/swagger.ts:23-24`.
+
 **Fix** : `setup(doc, { customSiteTitle: 'Musaium API', swaggerOptions: { validatorUrl: null, persistAuthorization: true } })`.
 
 
