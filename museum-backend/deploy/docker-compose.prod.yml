@@ -239,6 +239,11 @@ services:
       - ./obs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./obs/alerting:/etc/prometheus/alerting:ro
       - prom_data:/prometheus
+    # Required on Linux for Prometheus to resolve `host.docker.internal:9100`
+    # → the node-exporter port published by `network_mode: host` below.
+    # Docker Desktop auto-injects this name; Linux Docker engines do not.
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     networks:
       - private
       - obs
@@ -248,6 +253,31 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    restart: unless-stopped
+
+  # ── Host-level metrics (node-exporter) ─────────────────────────────────
+  # Why `network_mode: host`: node-exporter scrapes the host's /proc and
+  # /sys filesystems; on the network side it needs raw access to
+  # /proc/net/* (interface stats, TCP states). Running it bridged loses
+  # those details. The cost is one extra published port on the host
+  # (9100) — bound implicitly by host networking. Prometheus reaches it
+  # via `host.docker.internal:9100` (resolved by the `extra_hosts` entry
+  # above). VPS firewall already drops :9100 from the public NIC.
+  #
+  # Wired 2026-05-20 after two VPS disk-full incidents in one month
+  # (auto-rollback engaged, prod was offline 5+ min each time). Alerts
+  # live in obs/alerting/vps-host.yml; dashboard uid = `musaium-vps-host`.
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: node-exporter
+    pid: 'host'
+    network_mode: 'host'
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|var/lib/docker)($$|/)'
+      - '--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$$'
     restart: unless-stopped
 
   alertmanager:

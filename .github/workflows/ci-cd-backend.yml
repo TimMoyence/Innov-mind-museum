@@ -728,6 +728,16 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
+          # OCI labels — consumed by the post-deploy `docker image prune` step
+          # on the VPS (`Prune stale backend images on VPS`). `image.source`
+          # scopes the prune to images built from THIS repo, so collateral
+          # pruning of other tooling images on the host is impossible.
+          # docker/build-push-action@v7 does NOT auto-inject OCI labels unless
+          # docker/metadata-action is wired; declaring them here keeps the
+          # contract explicit (and avoids a second action dependency).
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -1079,12 +1089,14 @@ jobs:
             # Re-login (idempotent — same token as the backend deploy).
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
 
-            # Pull + restart the 4 obs services. alertmanager-telegram
+            # Pull + restart the 5 obs services. alertmanager-telegram
             # builds locally from /srv/museum/obs/alertmanager-telegram/
-            # — compose handles the build transparently.
-            docker compose pull prometheus grafana alertmanager
+            # — compose handles the build transparently. node-exporter
+            # listed FIRST because prometheus scrapes it on startup; if
+            # the exporter is missing, the VPS* alerts all NoData.
+            docker compose pull node-exporter prometheus grafana alertmanager
             docker compose up -d --remove-orphans --timeout 30 \
-              prometheus grafana alertmanager alertmanager-telegram
+              node-exporter prometheus grafana alertmanager alertmanager-telegram
 
             # Wait for Grafana healthcheck (confirms provisioning loaded
             # the dashboard + datasource cleanly).
@@ -1171,6 +1183,78 @@ jobs:
           npx @sentry/cli releases deploys "${{ github.sha }}" new \
             -e production \
             --name "rollback-${{ github.sha }}" || true
+
+      # ── Post-deploy hygiene — drop stale Docker images on the VPS ─────
+      # 2026-05 incident: VPS hit 100% disk twice in a month — Docker images
+      # accumulated to 53.8 GB (36.6 GB reclaimable) because each deploy
+      # pulls a new tagged image (`:<sha>`) but the previous tagged image
+      # was never reaped on the host. `docker image prune -a` removes only
+      # images with no living container reference, so the currently-running
+      # backend / prom / grafana / alertmanager / alertmanager-telegram
+      # images are safe (their containers are up). The `until=24h` filter
+      # leaves a 24h grace window so operators can pull a recent prior
+      # image off GHCR for emergency manual rollback inside that window
+      # without re-downloading from the registry.
+      #
+      # Placement rationale: this step runs near the end of deploy-prod,
+      # AFTER `Post-deploy smoke test (prod)` (id: smoke), AFTER the
+      # `Auto-rollback on deploy or smoke failure` (id: rollback) branch,
+      # and AFTER `Notify Sentry of rollback`. It sits BEFORE the final
+      # `Fail job after successful rollback` step (which has its own
+      # `if: failure()` guard and merely surfaces the rollback runbook).
+      # With `if: success()` it executes ONLY when every prior step
+      # passed — i.e., deploy AND smoke AND obs deploy AND obs smoke all
+      # succeeded. If anything failed, the rollback path runs instead
+      # (which depends on `<repo>:previous` being present locally — see
+      # rollback.sh §2), and this prune is skipped, preserving the
+      # `:previous` tag for the recovery path.
+      #
+      # `|| true` on each prune command: the deploy itself has already
+      # succeeded, so any transient daemon error while pruning (concurrent
+      # deploy racing the daemon, label filter mismatch, etc.) MUST NOT
+      # fail the workflow. Hygiene, not gating.
+      #
+      # Backend filter uses `label=org.opencontainers.image.source` set
+      # explicitly in the `Push image to GHCR` step (build-push-action@v7
+      # does not auto-inject OCI labels). The obs prune below uses
+      # `until=24h` alone — upstream prom/grafana/AM images are not built
+      # by us and don't carry our label; the unreferenced-only guarantee
+      # of `-a` keeps the running stack safe.
+      - name: Prune stale Docker images on VPS
+        if: success()
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set +e
+
+            echo "[prune] disk usage before:"
+            docker system df 2>/dev/null || true
+
+            # 1. Drop unreferenced museum-backend images >24h old. Label
+            #    filter scopes prune to images we built from THIS repo.
+            docker image prune -af \
+              --filter "label=org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+              --filter "until=24h" || true
+
+            # 2. Drop unreferenced obs / locally-built images >24h old.
+            #    Upstream images (prom/grafana/AM) don't carry our label;
+            #    `-a` still preserves any image with a running container,
+            #    so the live stack is untouched. `alertmanager-telegram`
+            #    is built locally on the VPS by `docker compose up` and
+            #    accumulates an untagged layer set every deploy — this is
+            #    the main target.
+            docker image prune -af --filter "until=24h" || true
+
+            # 3. Drop build-cache leftovers >24h. The CI build runs on
+            #    the GHA runner, not the VPS, but any incidental cache
+            #    from past direct `docker build` on the host is fair game.
+            docker builder prune -af --filter "until=24h" || true
+
+            echo "[prune] disk usage after:"
+            docker system df 2>/dev/null || true
 
       - name: Fail job after successful rollback
         if: failure() && steps.rollback.outcome == 'success'

@@ -1,0 +1,133 @@
+# Prometheus alerting rules — VPS host-level (disk / memory / CPU).
+# Source : node-exporter scrape job (job_name=node-exporter, target
+# host.docker.internal:9100). Loaded via the `rule_files` glob in
+# prometheus.yml. AlertManager routes by `severity` + `team` to the
+# `telegram-ops` receiver (alertmanager.yml).
+#
+# Wired 2026-05-20 after two VPS disk-full incidents in one month —
+# auto-rollback engaged both times, prod was offline 5+ min each. Goal:
+# catch the drift at 80% / 90% so an ops cleanup runs before deploys
+# start failing on disk-full.
+#
+# Thresholds (root partition):
+#   warning  >80% used, sustained 10m  → run `docker system prune -af`
+#   critical >90% used, sustained  5m  → page; deploys about to fail
+#   auto-rollback engages at 100% (out-of-band, see ops/rollback.sh)
+
+groups:
+  - name: vps-host
+    interval: 1m
+    rules:
+      - alert: VPSDiskHigh
+        expr: |
+          100 - (
+            node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+            * 100
+          ) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: ops
+          service: vps-host
+          owner: tim
+        annotations:
+          summary: "VPS / partition >80% used — clean before deploys fail"
+          description: |
+            Root partition usage is {{ $value | printf "%.1f" }}%. The next
+            deploy of backend or museum-web (which pulls a ~600 MB image
+            each) is likely to fail on `docker pull` if growth continues.
+
+            First action on the VPS:
+              docker system prune -af --volumes  # frees old images + dangling
+              journalctl --vacuum-time=3d        # trim logs if /var/log heavy
+              du -sh /srv/museum/* | sort -h     # spot uploads/pgdata bloat
+
+            Critical alert (VPSDiskCritical) fires at >90%. Auto-rollback
+            engages at 100% (ops/rollback.sh) — by then it is already too late.
+          dashboard: "{{ .ExternalURL }}/d/musaium-vps-host"
+
+      - alert: VPSDiskCritical
+        expr: |
+          100 - (
+            node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+            / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}
+            * 100
+          ) > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: ops
+          service: vps-host
+          owner: tim
+        annotations:
+          summary: "VPS / partition >90% used — deploys about to fail"
+          description: |
+            Root partition usage is {{ $value | printf "%.1f" }}%. Auto-rollback
+            engages at 100% and prod has been offline 5+ min during the two
+            previous incidents (2026-04, 2026-05). Page ops NOW.
+
+            Emergency action sequence:
+              ssh ops@vps
+              docker system prune -af --volumes
+              # if still tight:
+              docker compose -f /srv/museum/docker-compose.yml stop museum-web
+              docker image prune -af
+              # then restart museum-web
+          dashboard: "{{ .ExternalURL }}/d/musaium-vps-host"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/museum-backend/deploy/rollback.sh"
+
+      - alert: VPSMemoryHigh
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+          team: ops
+          service: vps-host
+          owner: tim
+        annotations:
+          summary: "VPS memory >90% used (10m window) — container OOM risk"
+          description: |
+            Memory pressure is {{ $value | printf "%.1f" }}%. The llm-guard
+            sidecar has a 2G hard cap; backend and museum-web are uncapped.
+            If pressure stays >95% for >5 min the kernel OOM-killer will
+            pick a victim (most likely backend — biggest RSS).
+
+            Diagnose with:
+              docker stats --no-stream
+              ps auxf --sort=-%mem | head -20
+          dashboard: "{{ .ExternalURL }}/d/musaium-vps-host"
+
+      - alert: VPSCPUHigh
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 15m
+        labels:
+          severity: warning
+          team: ops
+          service: vps-host
+          owner: tim
+        annotations:
+          summary: "VPS CPU >85% sustained 15m"
+          description: |
+            Sustained CPU load at {{ $value | printf "%.1f" }}% over 15 min.
+            Typical causes:
+              - LLM batch workload (knowledge-extraction worker) hot loop.
+              - pg_dump / vacuum window running long on db container.
+              - Unintended infinite loop after a backend deploy.
+
+            Diagnose:
+              docker stats --no-stream
+              top -bn1 | head -20
+          dashboard: "{{ .ExternalURL }}/d/musaium-vps-host"
+
+      - alert: NodeExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: "node-exporter down — VPS host metrics unobservable"
+          description: "Prometheus cannot scrape node-exporter ({{ $labels.instance }}). VPS disk/memory/CPU alerts will NoData until restored. Restart: ssh <vps> 'cd /srv/museum && docker compose up -d node-exporter'"

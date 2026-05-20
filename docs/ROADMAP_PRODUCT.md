@@ -302,6 +302,17 @@ Hypothèse : si chat / image / Wikidata / no-halluc / compare sont premium-grade
 - Multi-langue extended (au-delà FR/EN — IT, ES, DE, JP, AR pour musées internationaux)
 - Realtime social — visiteurs même musée peuvent se voir + chat groupe
 
+### Infra VPS hardening post-launch (incident 2026-05-20)
+
+> Origine : VPS OVH plein à 100% deux fois en un mois (24 GB Docker images + 5.8 GB build cache + journald). Auto-rollback a tenu mais cycle d'incident répétable + non-scalable si charge users. Hygiene quotidienne (D + E + cron docker prune + log rotation + journald cap) appliquée 2026-05-20 — ces items sont les fondations architecturales post-launch.
+
+- [ ] **F1 Disque dédié pour `/var/lib/docker`** — OVH Additional Disk attachable, mount sur `/var/lib/docker` (ou volumes critiques `museum_pgdata`/`museum_uploads`). Root OS isolé du data → un container qui log en boucle n'éclate plus l'OS. Effort 1 j (storage attach + symlink migration + downtime planifiée 30 min).
+- [ ] **F2 Photos visiteurs sur S3 / B2** — `museum_uploads` volume va exploser dès le launch (chaque chat avec image = upload). Offload vers OVH Object Storage ou Backblaze B2 (Glacier-tier ~$0.005/GB/mois). Backend signe URLs temporaires côté client. Permet scale linéaire indépendant du VPS. Effort 3-5 j (adapter S3-compat + signed URL flow + migration backfill).
+- [ ] **F3 DB backups off-VPS** — `deploy_db_backups` actuellement local sur VPS = single point of failure. Push `pg_dump` via `restic` vers B2/S3 (rotation 30j daily + 12 monthly). Effort 2 j (script + cron + secrets + restore drill). RPO/RTO documentés dans runbook.
+- [ ] **F4 Split VPS multi-tenant** — actuellement museum + `portfolio25_*` + `home/telegram` cohabitent sur la même box. Quand museum monte en charge, isoler sur VPS dédié OVH (les autres restent sur la petite box). Coût ~5€/mois supplémentaire vs risque d'interférence. Trigger : quand museum CPU avg > 50% ou disk growth > 5 GB/semaine post-launch.
+- [ ] **F5 Container resource limits explicites** — actuellement chaque service consomme sans cap. Ajouter `deploy.resources.limits` (mémoire + CPU) dans docker-compose.prod.yml pour backend, web, prom, grafana. Empêche un service runaway de killer les autres. Effort 1 j (baseline mesure + cap conservateur + tests load).
+- [ ] **F6 Disk-usage SLO + ratchet** — métrique `vps_disk_used_pct` exposée via node-exporter (item E livré 2026-05-20), SLO target ≤ 60% steady-state. Alerte already configured ≥ 80% (warning) / ≥ 90% (critical). Ratchet trimestriel : si baseline drift > +10% trimestre, ouvrir TD pour root-cause.
+
 ### Moonshot V1.2+ B2B-ready + 20-ans-avance (audit NORTHSTAR Phases C+D)
 
 > Bets stratégiques issus de l'audit /team 360° 2026-05-16. Détail file:line + risk register + sources externes : `team-reports/2026-05-16-chat-backend-audit-360/roadmap/NORTHSTAR.md` §6-7.

@@ -41,3 +41,17 @@ scrape_configs:
           - "backend:3000"
         labels:
           service: musaium-backend
+
+  # node-exporter — VPS host-level metrics (disk, memory, CPU, network, IO).
+  # The exporter runs with `network_mode: host` (see docker-compose.prod.yml)
+  # so its port 9100 is bound on the host, not on a Docker bridge. Prometheus
+  # reaches it through the `host.docker.internal:host-gateway` extra_hosts
+  # entry on the prometheus service (required on Linux Docker; auto on Desktop).
+  # Alerts: obs/alerting/vps-host.yml. Dashboard uid: musaium-vps-host.
+  - job_name: node-exporter
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - "host.docker.internal:9100"
+        labels:
+          service: vps-host
