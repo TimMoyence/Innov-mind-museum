@@ -119,6 +119,10 @@ jobs:
       - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
         run: node scripts/sentinels/sentry-scrubber-parity.mjs
 
+      - name: 'Mirror Gate P19 — Prometheus metric-naming ratchet (BE)'
+        working-directory: museum-backend
+        run: node scripts/sentinels/metric-naming.mjs
+
       - name: 'Mirror Gate P15 — compose-parity (dev vs prod docker-compose)'
         run: node scripts/sentinels/compose-parity.mjs
 

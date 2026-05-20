@@ -231,6 +231,9 @@ xcshareddata/swiftpm/configuration/
 # Quality hooks ephemeral cache (bg-runner output + alerts log)
 .claude/.cache/
 
+# Agent worktrees (ephemeral isolated workspaces from Agent isolation:"worktree")
+.claude/worktrees/
+
 # Perf seed checkpoint (local state, not for VCS)
 museum-backend/.perf-seed-checkpoint.json
 

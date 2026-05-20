@@ -27,6 +27,7 @@
 #  16. Affected unit tests BE                       — jest --findRelatedTests
 #  17. Affected tests FE                            — jest --findRelatedTests
 #  18. Affected tests Web                           — vitest run --changed
+#  19. Prometheus metric-naming ratchet (BE)         — node scripts/sentinels/metric-naming.mjs
 # =============================================================================
 set -e
 
@@ -261,8 +262,18 @@ else
 fi
 gate_end "Gate 18"
 
+# ─── Gate 19 — Prometheus metric-naming ratchet (BE) ───────────────────────
+# Runs UNCONDITIONALLY: the 44-metric inventory freeze + `musaium_` prefix
+# cap=16 apply globally, the sentinel runs in ~1s, and any prom change anywhere
+# in the repo can trip the registry (TD-PC-03 audit closure).
+gate_start "Gate 19/19 Prometheus metric-naming ratchet (backend)"
+( cd museum-backend && node scripts/sentinels/metric-naming.mjs ) || {
+  echo "[pre-push] ✗ metric-naming ratchet failed — see docs/observability/METRIC_NAMING_AUDIT.md"; exit 1;
+}
+gate_end "Gate 19"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 18 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 19 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
