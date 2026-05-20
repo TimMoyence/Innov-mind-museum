@@ -1,7 +1,9 @@
 # Conflict Resolution — Protocole de resolution
 
-Quand 2 agents ou le Tech Lead et un agent ont des conclusions contradictoires.
-Charge en mode **enterprise** uniquement.
+Quand le Tech Lead et un agent (ou l'utilisateur et un agent) ont des conclusions contradictoires.
+Charge **Toujours** (mode unique UFR-022).
+
+> Les collisions d'edition agent-vs-agent sont structurellement impossibles : sous REGLE 12 tous les writes sont serialises (parallelisme read-only uniquement, max 5 agents). Ce protocole ne couvre donc que les disputes humain/Tech-Lead vs agent + les overrules de gate.
 
 ---
 
@@ -16,22 +18,13 @@ Charge en mode **enterprise** uniquement.
 
 ## CAS COURANTS
 
-### Agent A et Agent B modifient le meme fichier
-```
-1. Identifier qui a modifie en premier (timestamps)
-2. Si modifications non-conflictuelles → merge manuel par Tech Lead
-3. Si modifications conflictuelles → choisir la version la plus coherente
-4. L'autre agent est respawne avec les modifications mergees comme contexte
-```
+### Agent (Green) pense qu'un test est faux
+Frozen-test (REGLE 16) : l'agent NE touche PAS le test. Il emet `BLOCK-TEST-WRONG <file>:<line> <reason>` → re-spawn fresh phase Red avec le finding.
 
-### Agent contredit le plan
-```
-1. L'agent a-t-il une raison technique valide ? (Discovery)
-2. Si oui → Tech Lead evalue et ajuste le plan
-3. Si non → l'agent re-execute selon le plan original
-```
+### Agent en desaccord avec le plan / la review
+Pas de plan-tweak ad-hoc ni de re-execution in-context. La review route via la **reviewer rejection loop ILLIMITEE** (REGLE 14) : `CHANGES_REQUESTED` → re-spawn fresh la phase pointee (spec/plan/red/green). Zero cap, zero warning. Si le reviewer rejette N fois c'est qu'il y a raison.
 
-### Sentinelle FAIL conteste par le Tech Lead
+### Gate verifier/reviewer FAIL conteste par le Tech Lead
 ```
 1. Le Tech Lead doit fournir une justification ecrite
 2. La justification est loguee dans le rapport de run

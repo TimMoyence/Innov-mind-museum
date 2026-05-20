@@ -1,140 +1,83 @@
-# SDLC Pipelines — 3 Tiers
+# SDLC Pipeline — Mode Unique (UFR-022)
 
-Definit les 3 pipelines d'execution et la matrice de routing mode → pipeline.
+Thin per-phase reference. **`SKILL.md` is canonical** (EXECUTION Steps 0-9) — this file
+only summarises the fixed 9-phase flow and its fresh-context invariants. Defer to SKILL.md
+for the concrete dispatcher actions, handoff JSON shapes, and state.json mutations.
 
----
-
-## CLASSIFICATION AUTOMATIQUE
-
-```
-micro:      ≤5 fichiers ET ≤200 lignes ET single-scope (backend-only OU frontend-only)
-standard:   6-20 fichiers OU multi-scope OU modification d'interface publique OU mode refactor
-enterprise: 20+ fichiers OU cross-module OU migration DB OU security-sensitive
-```
-
-**Auto-escalade :**
-- Si un agent micro depasse 5 fichiers → escalade automatique en standard
-- Si un standard depasse 20 fichiers → escalade en enterprise
-- L'escalade est loguee dans velocity-metrics.json : `{"escalation": {"from": "micro", "to": "standard", "reason": "files > 5"}}`
-- L'escalade NE PEUT PAS descendre (pas de de-escalade en cours de run)
-
-## MATRICE MODE → PIPELINE
-
-| Mode | Pipeline par defaut | Peut descendre ? | Conditions de descente |
-|------|-------------------|------------------|------------------------|
-| `bug` (evident, ≤3 fichiers) | micro | Non | — |
-| `bug` (complexe, multi-fichiers) | standard | Non | — |
-| `chore` | micro | Non | — |
-| `hotfix` | micro | Non | — |
-| `mockup` | micro | Non | — |
-| `feature` (ciblee, single-scope) | standard | Oui → micro | ≤5 fichiers ET ≤200 lignes |
-| `feature` (fullstack) | enterprise | Oui → standard | ≤20 fichiers ET pas de migration |
-| `refactor` | standard | Oui → micro | ≤5 fichiers |
-| `audit` | enterprise | Non | — |
+> **UFR-022 retired the 3-tier model.** No more `micro` / `standard` / `enterprise`
+> selector, no more mode router (`feature` / `bug` / `chore` / `hotfix` / `mockup` /
+> `refactor` / `audit`), no more classification or auto-escalade. UN seul pipeline pour
+> toute modif de code applicatif. Historique du 3-tier model → `git log -- this file`.
 
 ---
 
-## PIPELINE MICRO
+## INVARIANTS FRESH-CONTEXT (s'appliquent à CHAQUE phase)
 
-**Contexte charge :** SKILL.md + micro.md + quality-ratchet.json + error-patterns.json (unfixed only)
-**Estimation :** ~250 lignes de contexte
+- **Fresh spawn par phase** — chaque phase = un appel `Agent` tool (nouveau process),
+  zéro message d'une autre phase du même RUN_ID dans le context. Jamais de `SendMessage`
+  continuation, jamais de résumé inline de la phase précédente (refs disque seulement).
+- **`BRIEF-ACK: <sha256>`** — l'agent émet le hash du brief reçu en première réponse.
+  Mismatch = BLOCK.
+- **`BLOCK-CONTEXT-LEAK`** — si un agent voit dans son history un message d'une autre
+  phase, il refuse et le dispatcher re-spawn proprement.
+- **Lib-docs obligation** — red / green / reviewer DOIVENT consulter
+  `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib non-dev-only importée par le
+  diff, et reporter `libDocsConsulted[]`. Cache stale (>14j / version drift / manquant) →
+  doc-freshness refresh. Verifier hook BLOCK si la couverture manque.
+- **Frozen-test** — red écrit `red-test-manifest.json` `{path: sha256}` ; green ne peut
+  modifier aucun byte d'un test du manifest (`post-edit-green-test-freeze.sh` enforce).
+  Test jugé buggé → `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher → re-spawn fresh red.
 
-### Phases
-
-| # | Phase | Description | Gate |
-|---|-------|-------------|------|
-| 1 | COMPRENDRE | Lire le code concerne, comprendre le probleme | — |
-| 2 | DEVELOPPER | Coder la solution (1 agent, pas de parallele) | tsc + tests |
-| 3 | LIVRER | Verification finale, commit | Quality Ratchet |
-
-### Regles micro
-- **0 Sentinelle** — le Tech Lead fait les verifications lui-meme
-- **1 seul agent DEV** — pas de parallelisme, pas de coordination
-- **Pas de phase CHALLENGER** — scope trop petit pour justifier une review architecturale
-- **Pas de phase PLAN avec validation utilisateur** — execution directe
-- **Gate = tsc + tests + ratchet** — minimal mais non-negociable
-- **Si auto-escalade → passer en standard** (recharger les protocoles manquants)
-
----
-
-## PIPELINE STANDARD
-
-**Contexte charge :** SKILL.md + standard.md + quality-gates.md + agent-mandate.md + import-coherence.md + quality-ratchet.json + error-patterns.json + prompt-enrichments.json
-**Estimation :** ~600 lignes de contexte
-
-### Phases
-
-| # | Phase | Description | Gate |
-|---|-------|-------------|------|
-| 0 | COMPRENDRE | Analyse du probleme, lecture du code, GitNexus query | — |
-| 1 | PLANIFIER | Plan technique, fichiers a modifier, estimation | — |
-| 1.5 | CHALLENGER | Review architecturale (skill /challenger si disponible) | — |
-| 2 | DEVELOPPER | Agents DEV en parallele si multi-scope | Post-agent scoped tsc |
-| 3 | VERIFIER | tsc global + tests + ratchet + scope check | Sentinelle legere |
-| 4 | TESTER | Tests supplementaires si coverage gap | — |
-| 5 | LIVRER | Commit, rapport | Quality Ratchet |
-
-### Regles standard
-- **Sentinelle legere** — 1 seul checkpoint (Phase 3), pas de portes intermediaires
-- **Agents DEV paralleles** si multi-scope (backend + frontend)
-- **Import coherence active** — pre-edit GitNexus + post-agent scoped tsc
-- **Phase CHALLENGER** — via skill dedie si disponible, sinon inline max 10 fichiers
-- **Phase PLAN** — notification utilisateur (pas approbation bloquante sauf L1)
+**Exemption auto pure-doc** — si `git diff --name-only` ne touche aucun fichier de code
+applicatif, `pre-phase-pure-doc-check.sh` (Step 0) écrit `pure-doc-skip.marker` et le run
+saute directement Step 9 finalize (toutes les phases 1-8 skippées).
 
 ---
 
-## PIPELINE ENTERPRISE
+## LES 9 PHASES
 
-**Contexte charge :** SKILL.md + enterprise.md + tous les protocoles + tous les KB JSON
-**Estimation :** ~1200 lignes de contexte
+| # | Phase | Agent (fresh) | Output | Gate / invariant |
+|---|-------|---------------|--------|------------------|
+| 1 | **spec** | architect #1 | `spec.md` (EARS + NFR + glossary + stakeholders + acceptance) | spec only, pas de design/tasks |
+| 2 | **plan** | architect #2 (zéro mémoire de #1, lit `spec.md` du disque) | `design.md` + `tasks.md` | Spec Kit closing gate (`pre-feature-spec-check.sh`, 3 fichiers ≥200B) |
+| 3 | **doc-freshness** | doc-fetcher + doc-curator (×N libs stale, parallèles, write-zones disjointes) | `snapshot-*.md`, `PATTERNS.md`, `INDEX.json` maj | `pre-phase-doc-freshness.sh` ; WebSearch fail → WARN, jamais BLOCK |
+| 4 | **red** | editor #1 | tests qui **FAIL** + `red-test-manifest.json` | `pnpm test` scoped exit ≠ 0 = succès |
+| 5 | **green** | editor #2 (zéro mémoire de #4, lit le red diff du disque) | code applicatif | FROZEN-TEST byte-for-byte ; `pnpm test` scoped exit 0 |
+| 6 | **verify** | verifier | verdicts dans STORY.md | `pre-complete-verify.sh` + `pre-phase-doc-reference-check.sh` + freeze final assert |
+| 7 | **security** | security (Read/Grep/Bash, pas d'Edit) | section STORY.md `security` | TOUJOURS exécuté ; `pnpm audit` + semgrep + promptfoo ; FAIL HIGH/CRITICAL = BLOCK |
+| 8 | **review** | reviewer | `code-review.json` (5 axes + verdict) | weightedMean ≥85 APPROVED / 70-84.9 CHANGES_REQUESTED / <70 BLOCK |
+| 9 | **documenter** | documenter | STORY.md final + ADR/CHANGELOG si requis | TOUJOURS présent (plus de skip "enterprise-only") |
 
-### Phases
-
-| # | Phase | Description | Gate |
-|---|-------|-------------|------|
-| 0 | COMPRENDRE | Analyse profonde, GitNexus query + context, derniers rapports | — |
-| 1 | CONCEVOIR | Design technique, architecture, interfaces | Sentinelle |
-| 1.5 | CHALLENGER | Review architecturale approfondie | Sentinelle |
-| 2 | PLANIFIER | Plan detaille, task graph, estimations | Validation utilisateur |
-| 3 | DEVELOPPER | Agents DEV en parallele reel (run_in_background) | Post-agent scoped tsc |
-| 3.5 | REGRESSION | Verification des chemins existants non casses | — |
-| 4 | VERIFIER | tsc global + tests + ratchet + scope + eslint-disable scan | Sentinelle |
-| 5 | TESTER | Tests supplementaires, smoke tests API si routes modifiees | Sentinelle |
-| 5.5 | VIABILITE | Checklist produit (donnees persistees, offline, UX coherente) | — |
-| 6 | CLEANUP | Dead code, imports inutiles, console.log | — |
-| 7 | LIVRER | Commit, rapport, sprint tracking update | Sentinelle finale |
-
-### Regles enterprise
-- **Sentinelle complete** — 4 portes (CONCEVOIR, VERIFIER, TESTER, LIVRER)
-- **Validation utilisateur** apres PLANIFIER (bloquant)
-- **Import coherence complete** — 3 niveaux
-- **Boucles correctives** — max 3, puis escalade
-- **KB update** — mandatory at FINALIZE (error-patterns, PE scoring, agent ROI)
-- **Sprint tracking** — update PROGRESS_TRACKER + SPRINT_LOG
+Détail de chaque step (briefs, hooks intra-phase, ordering finalize) → `SKILL.md` EXECUTION.
 
 ---
 
-## SMART CONTEXT LOADING
+## BOUCLES CORRECTIVES — deux mécanismes distincts
 
-Le dispatcher SKILL.md charge les fichiers selon le pipeline :
+- **Intra-phase hook fail (cap 2)** — fails de `post-edit-lint.sh` / `post-edit-typecheck.sh`
+  / `pnpm test` à l'intérieur d'une MÊME phase éditeur (red ou green). Compteur
+  `state.json.telemetry.intraPhaseHookLoops`, reset entre phases. `>= 2` → STOP + escalade user.
+- **Reviewer rejection loop — ILLIMITÉ.** CHANGES_REQUESTED → re-spawn fresh la phase
+  pointée par `reSpawnPhase` (spec/plan/red/green) + re-run des phases downstream.
+  `reviewerRejectionLoops` est telemetry pure : **zéro cap, zéro warning auto**. Si le
+  reviewer rejette N fois, c'est qu'il y a raison.
 
-```
-MICRO:
-  read team-knowledge/quality-ratchet.json
-  read team-knowledge/error-patterns.json (filtre: unfixed only)
-  read team-templates/micro.md
+`BLOCK-TEST-WRONG` (green → red) n'incrémente PAS `reviewerRejectionLoops` (ce n'est pas
+un rejet reviewer) — voir SKILL.md Step 5b.
 
-STANDARD:
-  read team-knowledge/quality-ratchet.json
-  read team-knowledge/error-patterns.json (filtre: unfixed only)
-  read team-knowledge/prompt-enrichments.json (filtre: inject_when match mode)
-  read team-protocols/quality-gates.md
-  read team-protocols/agent-mandate.md
-  read team-protocols/import-coherence.md
-  read team-templates/standard.md
+---
 
-ENTERPRISE:
-  read team-knowledge/*.json (7 fichiers)
-  read team-protocols/*.md (8 fichiers)
-  read team-templates/enterprise.md
-```
+## CONTEXT LOADING (mode unique)
+
+Plus de branching par pipeline. Le dispatcher charge TOUS les protocoles + KB JSON
+(équivalent de l'ancien `enterprise`) via le warm-up cache unique avant fan-out
+(SKILL.md Step 3). Template unique : `team-templates/enterprise.md` (`micro.md`/`standard.md`
+= legacy dead-concept, sélecteur retiré).
+
+---
+
+## CHANGELOG
+
+| Version | Date | Changements |
+|---|---|---|
+| **v13.UFR-022** | **2026-05-18** | Réécrit en mode-unique. Supprimé : classification micro/standard/enterprise, matrice mode→pipeline, pipelines MICRO/STANDARD/ENTERPRISE, SMART CONTEXT LOADING branché. Remplacé par la table 9-phase (spec/plan/doc-freshness/red/green/verify/security/review/documenter) keyée sur SKILL.md Steps 4a-9. |

@@ -1,6 +1,8 @@
 # Quality Gates — Verification Pipeline
 
-Protocole de verification a chaque porte Sentinelle.
+Mecanique des portes de qualite appliquees a la phase **Verify (Step 6)** du pipeline unique UFR-022 (verifier fresh-context + hooks deterministes `team-hooks/`). Voir `SKILL.md` REGLE 10 (role verifier) + Step 6.
+
+> Note UFR-022 : lint / tsc / tests sont desormais delegues aux hooks deterministes (`post-edit-lint.sh`, `post-edit-typecheck.sh`, `pre-complete-verify.sh`) — REGLE 9. Les Steps ci-dessous decrivent la mecanique des checks que le verifier (Step 6) assemble et que les hooks executent ; aucun n'est conditionnel a un mode (les selecteurs micro/standard/enterprise et feature/bug/etc. sont retires).
 
 ---
 
@@ -28,13 +30,13 @@ cd museum-frontend && npm test 2>&1 | tail -5      # Node.js test runner
 }
 ```
 
-Envoyer la baseline a la Sentinelle. Toute regression par rapport a cette baseline = FAIL.
+Persister la baseline dans `team-state/<run-id>/`. Toute regression par rapport a cette baseline = FAIL au Step 6 Verify.
 
 ---
 
 ## VERIFICATION PIPELINE
 
-Execute a **chaque porte Sentinelle** (6 portes dans le cycle complet).
+Execute a la phase **Verify (Step 6)** du pipeline unique (verifier fresh + hooks). Les checks alimentent aussi le reviewer (Step 8).
 
 ### Step 1 — Typecheck (non negociable)
 
@@ -92,14 +94,14 @@ Pour chaque nouveau `eslint-disable` detecte :
 
 ### Step 5 — Scope Check
 
-Verifier que les fichiers modifies correspondent au scope attendu :
-- Mode backend-only → pas de modifs dans `museum-frontend/`
-- Mode frontend-only → pas de modifs dans `museum-backend/`
-- Aucun mode → pas de modifs dans `node_modules/`, `.env`, credentials
+Verifier que les fichiers modifies correspondent au scope attendu (le scope `backend-only | frontend-only | full-stack | infra` est **informatif** seulement, plus de pipeline branching — SKILL.md Step 1) :
+- Scope declare backend-only → modifs dans `museum-frontend/` = Discovery hors-scope a flagger
+- Scope declare frontend-only → modifs dans `museum-backend/` = Discovery hors-scope a flagger
+- Toujours, quel que soit le scope → pas de modifs dans `node_modules/`, `.env`, credentials = VIOLATION (FAIL)
 
-### Step 6 — Self-Verification Agent
+### Step 6 — Self-Verification (phase editeur green)
 
-Chaque agent DEV doit, AVANT de rendre son travail :
+L'agent editor de la phase green doit, AVANT de rendre son travail (lint/tsc/test eux-memes sont enforces par les hooks `post-edit-*.sh` — REGLE 9 ; cette checklist couvre ce que les hooks ne voient pas) :
 
 ```
 1. Relire chaque fichier modifie en entier
@@ -111,15 +113,15 @@ Chaque agent DEV doit, AVANT de rendre son travail :
 7. Produire le GitNexus Calls Log (cf. agent-mandate.md § COHERENCE IMPORTS)
    - Lister CHAQUE appel gitnexus_impact/context/rename avec symbole + resultat
    - Si aucun symbole existant modifie → ecrire "0 appels requis"
-   - Absence de log = FAIL de porte
+   - Absence de log = FAIL de porte (verifie au Step 6b)
 ```
 
-### Step 6b — Verification GitNexus Calls Log (Sentinelle)
+### Step 6b — Verification GitNexus Calls Log (verifier)
 
-La Sentinelle verifie le GitNexus Calls Log de chaque agent :
+Le verifier (Step 6) verifie le GitNexus Calls Log produit par les phases editeur :
 ```
 1. Le log est-il present ? (absent = FAIL immediat)
-2. Pour chaque fichier modifie par l'agent qui existait deja :
+2. Pour chaque fichier modifie qui existait deja :
    - Un appel gitnexus_impact est-il logue pour ce symbole ? (absent = WARN)
 3. Pour chaque fichier supprime :
    - Un appel gitnexus_context est-il logue ? (absent = FAIL)
@@ -128,9 +130,9 @@ La Sentinelle verifie le GitNexus Calls Log de chaque agent :
 5. Les dependants d=1 listes sont-ils traites ou FLAGS comme Discovery ?
 ```
 
-### Step 7 — Inter-Agent Scoped tsc (standard + enterprise)
+### Step 7 — Inter-Agent Scoped tsc
 
-Execute par le Tech Lead apres chaque agent DEV, AVANT la porte Sentinelle.
+Scoped tsc execute sur les fichiers modifies pendant la phase Verify (Step 6).
 Cf. `import-coherence.md` niveau 2 pour le protocole complet.
 
 ```bash
@@ -153,9 +155,9 @@ cd museum-frontend && npx tsc --noEmit 2>&1 | head -20
 
 ---
 
-## RAPPORT DE PORTE (format Sentinelle)
+## RAPPORT DE PORTE (verifier output)
 
-L'output envoye a la Sentinelle via SendMessage :
+Le verifier (Step 6) ecrit ce verdict dans la section `verify` de `STORY.md` :
 
 ```json
 {
@@ -186,13 +188,13 @@ L'output envoye a la Sentinelle via SendMessage :
 |---------|-----------|--------|
 | **PASS** | Tous les checks OK | Continuer le cycle |
 | **WARN** | Checks OK mais metriques stagnantes | Continuer avec note |
-| **FAIL** | Au moins 1 check echoue | Boucle corrective obligatoire |
+| **FAIL** | Au moins 1 check echoue | Boucle corrective (intra-phase cap 2, ou re-spawn fresh la phase pointee — SKILL.md REGLE 14) |
 
 ---
 
 ## ERROR BUDGET GATE
 
-Evaluation au pre-flight pour determiner si le run peut demarrer :
+Evaluation au pre-flight pour enregistrer la sante de la baseline (telemetry — plus de branchement de mode, le pipeline est unique UFR-022) :
 
 ```json
 {
@@ -202,5 +204,5 @@ Evaluation au pre-flight pour determiner si le run peut demarrer :
 }
 ```
 
-- Si `tsc_errors > 0` OU `ratchet_regressions = true` → forcer mode "bug"
-- Message : "Error budget depasse. Le run est force en mode bug pour corriger les regressions."
+- Si `tsc_errors > 0` OU `ratchet_regressions = true` → verdict `EXCEEDED` : la baseline est deja rouge AVANT le run.
+- Action : escalade user (la baseline doit etre verte avant de demarrer un cycle — on ne masque pas une regression pre-existante derriere une nouvelle feature). Le pipeline reste le pipeline unique 9-phase ; aucun "mode bug" force.

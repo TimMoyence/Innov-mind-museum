@@ -1,7 +1,12 @@
 # Error Taxonomy — Classification et reponse
 
 Classification des erreurs rencontrees pendant un run SDLC.
-Charge en mode **enterprise** uniquement.
+Charge **Toujours** (mode unique UFR-022).
+
+> Note: les E-codes ci-dessous sont locaux a ce fichier. Ils ne sont PAS l'enum
+> de `team-knowledge/error-patterns.json` (`import-broken|type-mismatch|...`).
+> Si une reconciliation est souhaitee, mapper E-IMPORT→import-broken,
+> E-TYPE→type-mismatch, etc. — sinon ils restent orphelins.
 
 ---
 
@@ -22,28 +27,37 @@ Charge en mode **enterprise** uniquement.
 
 | Severite | Bloque commit ? | Action immediate ? | Boucle corrective ? | Escalade apres |
 |----------|----------------|-------------------|---------------------|----------------|
-| CRITICAL | Oui | Oui | Oui — prioritaire | 1 tentative |
-| HIGH | Oui | Oui | Oui | 2 tentatives |
-| MEDIUM | Non (WARN) | Recommande | Optionnel | 3 tentatives |
+| CRITICAL | Oui | Oui | Oui — prioritaire | cap intra-phase (2) ; reviewer illimite |
+| HIGH | Oui | Oui | Oui | cap intra-phase (2) ; reviewer illimite |
+| MEDIUM | Non (WARN) | Recommande | Optionnel | cap intra-phase (2) ; reviewer illimite |
 | LOW | Non | Non | Non | Jamais |
+
+> "Escalade apres" suit la doctrine UFR-022 (cf. SKILL.md REGLE 14) : les boucles
+> correctives intra-phase (hook lint/tsc/test fails) cap a 2 → STOP + escalade ;
+> les boucles de rejet reviewer sont ILLIMITEES. La severite n'altere PAS ce cap.
 
 ## BOUCLE CORRECTIVE
 
 ```
 1. Identifier la classe d'erreur (E-IMPORT, E-TYPE, etc.)
-2. Determiner le point de retour:
-   - E-IMPORT, E-TYPE → retour DEVELOPPER (meme agent si c'est son scope)
-   - E-SCOPE → retour PLANIFIER (le scope etait mal defini)
-   - E-TEST → retour DEVELOPPER (agent corrige)
-   - E-ARCH → retour CONCEVOIR (si structural) ou DEVELOPPER (si local)
-   - E-RUNTIME → retour TESTER (agent QA investigue)
-3. Creer TaskCreate("correction-{phase}-{error_code}-{loop_count}")
-4. Spawner agent de correction avec:
-   - Message d'erreur exact
-   - Fichiers concernes
-   - PE pertinents (si EP existe pour ce type d'erreur)
-5. Re-executer depuis le point de correction
-6. Max 3 boucles (2 pour CRITICAL) → escalade utilisateur
+2. Determiner la phase de re-spawn (UFR-022 9-phase: spec, plan, red, green, verify, security, review):
+   - E-IMPORT, E-TYPE → re-spawn fresh phase=green (l'editeur corrige le code applicatif)
+   - E-SCOPE → re-spawn fresh phase=plan (le scope etait mal defini)
+   - E-TEST → re-spawn fresh phase=green (l'editeur corrige le code, PAS le test — frozen-test)
+   - E-ARCH → re-spawn fresh phase=plan (si structural) ou phase=green (si local)
+   - E-RUNTIME → re-spawn fresh phase=verify (le verifier investigue le smoke/E2E)
+3. Le dispatcher (PAS l'agent) compose un nouveau handoff JSON ≤200 tokens pointant
+   vers les artefacts read-only sur disque (spec.md / design.md / diff). Pas de
+   TaskCreate, pas de continuation: chaque correction = un Agent spawn fresh,
+   zero memory de la phase precedente (UFR-022 fresh-context).
+4. Le brief de correction inclut: message d'erreur exact, fichiers concernes,
+   PE pertinents (si EP existe pour ce type d'erreur dans error-patterns.json).
+5. Re-executer la phase pointee depuis le point de correction.
+6. Doctrine de cap (UFR-022, cf. SKILL.md REGLE 14):
+   - Boucles correctives INTRA-PHASE (lint/tsc/test fails dans la MEME phase editeur):
+     cap 2 (`telemetry.intraPhaseHookLoops >= 2`) → STOP + escalade utilisateur.
+   - Boucles de rejet REVIEWER: **ILLIMITEES**, zero cap, zero warning auto. Si le
+     reviewer rejette N fois, c'est qu'il y a raison; re-spawn fresh la phase pointee.
 ```
 
 ## ENREGISTREMENT

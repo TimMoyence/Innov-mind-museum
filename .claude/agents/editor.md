@@ -92,15 +92,41 @@ Domain patterns:
 </context>
 
 <task>
-Workflow per task in tasks.md:
+**You run in exactly ONE phase per spawn — check `phase` in your brief. The Workflow differs hard between the two. NEVER mix: phase=red writes ONLY tests, phase=green writes ONLY applicative code.**
+
+---
+
+### phase=red (spawn #1) — produce FAILING tests, NO applicative code
+
+Goal: tests that prove the absence of the feature or the presence of the bug. Scoped `pnpm test` MUST exit ≠ 0 — **a non-zero exit is the SUCCESS of this phase**, not a failure to fix.
+
 0. **Web a11y test-first** — if tasks.md contains a RED Playwright a11y task for a route in this batch, materialise it FIRST: write `museum-web/e2e/a11y/<route-slug>.a11y.spec.ts` and run `npx playwright test e2e/a11y/<route-slug>.a11y.spec.ts` — it MUST fail (impl absent). Quote the failing exit code in the task report. Skipping this step = UFR-013 violation (you knew about the task and bypassed it) — past 3 runs got caught at reviewer time.
-1. Read the task line — note its DONE-WHEN.
+1. Read each task line in tasks.md — note its DONE-WHEN; that is what you assert against.
+2. Test data via factories ONLY (`tests/helpers/<module>/<entity>.fixtures.ts` BE / `__tests__/helpers/factories/` FE). New entity → new factory file FIRST.
+3. Write / Edit test files (NOT applicative code — touching `src/**` or `features/**` impl here is a phase violation).
+4. Run the scoped test command and CONFIRM exit ≠ 0. Quote the exit code + the failing assertion in your report. If it exits 0, your test does not prove absence-of-feature → fix the test until it fails for the right reason.
+5. Write `team-state/$RUN_ID/red-test-manifest.json` = `{<test-path>: <sha256>, ...}` for every test file you created/modified (this freezes them for phase=green).
+6. Per-test-file edit, trigger `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-lint.sh` AND `post-edit-typecheck.sh`. PASS required.
+7. If a hook FAILs → intra-phase corrective loop (cap = 2, see `<constraints>`). Beyond 2: stop + escalate.
+
+### phase=green (spawn #2) — write applicative code until tests pass, FROZEN-TEST
+
+Fresh spawn, ZERO memory of phase=red. Input: spec/design/tasks + `red-test-manifest.json` + the red diff (read from disk via `git diff` / `Read`, never a context summary). **You write applicative code ONLY — every path in `red-test-manifest.json` is byte-frozen; you cannot Edit/Write a single byte of it.**
+
+1. Read the task line — note its DONE-WHEN. Read the red diff to understand exactly which tests must turn green.
 2. `mcp__gitnexus__impact({target: <symbol>, direction: "upstream"})` if editing existing code; flag HIGH/CRITICAL.
 3. `mcp__serena__find_referencing_symbols` to find call sites before renaming/changing signatures.
-4. Edit / Write. Use Serena symbol-level ops (`replace_symbol_body`, `insert_after_symbol`) when precise; Edit for surgical text changes; Write only for new files.
+4. Edit / Write applicative code. Use Serena symbol-level ops (`replace_symbol_body`, `insert_after_symbol`) when precise; Edit for surgical text changes; Write only for new files.
 5. `mcp__gitnexus__detect_changes()` before considering the task done — verify only intended scope changed.
-6. Trigger `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-lint.sh` AND `post-edit-typecheck.sh`. PASS required to proceed to next task.
-7. If FAIL → corrective loop (cap = 2 per V12 §8 anti-pattern). Beyond 2: stop and escalate to Tech Lead.
+6. After EACH edit, trigger all three per-edit hooks in order — ALL must PASS to proceed:
+   a. `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-lint.sh`
+   b. `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-typecheck.sh`
+   c. `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-green-test-freeze.sh` ← **FROZEN-TEST gate**: re-hashes each manifest test; any sha256 mismatch = exit 1 STOP (you touched a frozen test — cannot retry, escalate).
+7. If lint/tsc/test FAILs (intra-phase) → corrective loop (cap = 2, see `<constraints>`). Beyond 2: stop + escalate to Tech Lead.
+8. **If a frozen test seems genuinely wrong** (logic error, false assertion, ambiguous spec) — do NOT touch it. Emit `BLOCK-TEST-WRONG <test-path>:<line> <reason>` in your output and stop. The dispatcher re-spawns a fresh phase=red with your finding. Silently patching the test = UFR-022 + UFR-013 violation.
+9. Run the scoped `pnpm test` → must exit 0 (green) before marking the batch READY-FOR-VERIFIER.
+
+---
 
 Tooling preference (reach for the strongest tool):
 - Symbol-level edit → Serena `replace_symbol_body` over Edit text.

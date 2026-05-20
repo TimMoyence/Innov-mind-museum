@@ -1,7 +1,7 @@
 # GitNexus Integration — Code Intelligence par phase
 
 Protocole d'utilisation OBLIGATOIRE des outils GitNexus MCP a chaque phase du SDLC.
-Charge en mode **standard** et **enterprise**.
+Charge a chaque run `/team` (mode unique UFR-022).
 
 ---
 
@@ -20,7 +20,7 @@ Charge en mode **standard** et **enterprise**.
 
 ## USAGE PAR PHASE
 
-### COMPRENDRE (toutes pipelines)
+### COMPRENDRE
 ```
 gitnexus_query({query: "<sujet de la tache>"})
 → Trouver les execution flows lies
@@ -28,7 +28,7 @@ gitnexus_query({query: "<sujet de la tache>"})
 → Optionnel: gitnexus_context({name: "<symbole cle>"}) si besoin de la vue 360
 ```
 
-### CONCEVOIR (enterprise uniquement)
+### CONCEVOIR
 ```
 Pour chaque symbole cle qui sera modifie :
 gitnexus_impact({target: "<symbol>", direction: "upstream"})
@@ -40,7 +40,7 @@ gitnexus_impact({target: "<symbol>", direction: "upstream"})
 Si risk = HIGH ou CRITICAL → ALERTER l'utilisateur avant de continuer
 ```
 
-### DEVELOPPER (standard + enterprise)
+### DEVELOPPER
 ```
 AVANT chaque modification de symbole existant:
 gitnexus_impact({target: "<symbol>", direction: "upstream"})
@@ -55,7 +55,7 @@ gitnexus_context({name: "<fichier/symbole>"})
 → cf. import-coherence.md niveau 1 — delete protocol
 ```
 
-### VERIFIER (standard + enterprise)
+### VERIFIER
 ```
 gitnexus_detect_changes({scope: "staged"})
 → Comparer avec le scope attendu
@@ -63,7 +63,7 @@ gitnexus_detect_changes({scope: "staged"})
 → Inclure dans le rapport de porte Sentinelle
 ```
 
-### LIVRER (enterprise uniquement)
+### LIVRER
 ```
 gitnexus_detect_changes({scope: "all"})
 → Verification finale: changements = scope attendu
@@ -82,7 +82,7 @@ qui reference explicitement les outils GitNexus a utiliser.
 
 ### Verification par la Sentinelle
 La Sentinelle verifie a chaque porte :
-1. gitnexus_detect_changes a-t-il ete appele ? (enterprise: obligatoire)
+1. gitnexus_detect_changes a-t-il ete appele ? (obligatoire)
 2. Les fichiers changes correspondent-ils au scope du mandat ?
 3. Les d=1 dependants sont-ils traites ?
 

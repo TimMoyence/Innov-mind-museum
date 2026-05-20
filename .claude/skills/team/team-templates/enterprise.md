@@ -1,172 +1,160 @@
-# Template: Enterprise
+# Template: Pipeline (mode unique UFR-022)
 
-Pipeline complet pour les features fullstack, migrations, refactors majeurs, audits.
+Pipeline unique fresh-context pour TOUTE modification de code applicatif + tests.
 
-**Criteres :** 20+ fichiers, cross-module, migration DB, security-sensitive.
-**Contexte :** ~1200 lignes chargees (tous protocoles + tous KB).
+> **Plus de selecteur micro/standard/enterprise** — un seul pipeline, 9 phases obligatoires.
+> Exemption auto uniquement si `git diff` = 0 fichier code (pure-doc edit, detecte par `pre-phase-pure-doc-check.sh`).
+> Ce template est chargé en warm-up cache prefix (SKILL.md Step 3 §135). Il mirror le pipeline canonique de `team-protocols/sdlc-pipelines.md` + SKILL.md Steps 4a→9.
+
+**Contexte :** tous les protocoles + tous les KB JSON chargés (warm-up unique avant fan-out).
 
 ---
 
-## TASK GRAPH (feature-fullstack)
+## TASK GRAPH (mode unique 9-phase)
 
 ```
-T1: COMPRENDRE       (blockedBy: rien)
-T2: CONCEVOIR         (blockedBy: T1)
-T3: CHALLENGER        (blockedBy: T2)
-T4: PLANIFIER         (blockedBy: T3)      ← validation utilisateur
-T5: DEV-backend       (blockedBy: T4)
-T6: DEV-frontend      (blockedBy: T4)      ← parallele avec T5
-T7: DEV-api           (blockedBy: T4)      ← parallele avec T5, T6
-T8: REGRESSION        (blockedBy: T5, T6, T7)
-T9: VERIFIER          (blockedBy: T8)
-T10: TESTER           (blockedBy: T9)
-T11: VIABILITE        (blockedBy: T10)
-T12: CLEANUP          (blockedBy: T11)
-T13: LIVRER           (blockedBy: T12)
+P1: spec           (blockedBy: rien)              architect fresh #1
+P2: plan           (blockedBy: P1)                architect fresh #2 — zero memory de P1
+P3: doc-freshness   (blockedBy: P2)               doc-fetcher + doc-curator fresh (×N libs stale, optionnel)
+P4: red            (blockedBy: P3)                editor fresh #1 — tests qui FAIL + red-test-manifest.json
+P5: green          (blockedBy: P4)                editor fresh #2 — zero memory de P4, FROZEN-TEST byte-for-byte
+P6: verify         (blockedBy: P5)                verifier fresh
+P7: security       (blockedBy: P6)                security fresh — TOUJOURS present
+P8: review         (blockedBy: P7)                reviewer fresh — rejection loop ILLIMITE
+P9: documenter     (blockedBy: P8)                documenter fresh — TOUJOURS present
 ```
 
 ## PHASES
 
-### Phase 0 — COMPRENDRE
+### P1 — spec (architect fresh spawn #1)
 
 ```
-1. Lire les fichiers concernes
-2. gitnexus_query({query: "<sujet>"}) → execution flows
-3. gitnexus_context({name: "<symboles cles>"}) → 360-degree view
-4. Lire le dernier rapport team-reports/ pour contexte
-5. Lire next-run.json pour recommendations actives
+1. Read brief JSON ≤200 tokens (handoffs/001-spec.json) + roadmap-context.json + lib-docs/INDEX.json
+2. Emit BRIEF-ACK: <sha256> en premiere reponse
+3. Produire UNIQUEMENT spec.md (EARS + NFR + glossary + stakeholders + acceptance criteria)
+4. Pas de code, pas de design.md, pas de tasks.md
+5. Si fuite context d'une autre phase -> BLOCK-CONTEXT-LEAK + refuse
+6. Verdict FINAL : READY-FOR-PLAN | BLOCKED-AWAITING-USER
 ```
 
-### Phase 1 — CONCEVOIR
+### P2 — plan (architect fresh spawn #2, zero memory de P1)
 
 ```
-1. Design technique: architecture, interfaces, data flow
-2. gitnexus_impact sur les symboles cles → blast radius
-3. Si risk HIGH/CRITICAL → WARN utilisateur avant de continuer
-4. Produire: liste des fichiers, interfaces entre agents, schema de donnees si migration
-
-Gate Sentinelle: design coherent, blast radius accepte
+1. Read spec.md depuis disque (handoffs/002-plan.json) — JAMAIS de resume de P1
+2. BRIEF-ACK: <sha256>
+3. Produire design.md (hexagonal mapping, data model, API contract, test plan, observability)
+   + tasks.md (liste de taches atomiques)
+4. Inclure section ## Multi-cycle progress si match multi-cycle-features trouve a INIT
 ```
 
-### Phase 1.5 — CHALLENGER
+### P3 — doc-freshness (doc-fetcher + doc-curator fresh, optionnel)
 
 ```
-1. Review architecturale approfondie (skill /challenger ou inline)
-2. Verifier: pas de regression, coherence avec l'existant, edge cases
-3. GitNexus: impact analysis sur les 3 symboles les plus critiques
-
-Gate Sentinelle: pas de blocage architectural
+1. Hook pre-phase-doc-freshness.sh detecte les libs non-dev-only touchees par tasks.md
+2. Pour chaque lib stale (>14j OU version drift OU PATTERNS.md manquant) :
+   a. doc-fetcher fresh : WebSearch + WebFetch 5-10 pages -> snapshot-YYYY-MM-DD.md (untracked)
+   b. doc-curator fresh : extract -> PATTERNS.md ~200-500 lignes (untracked)
+   c. Dispatcher update lib-docs/INDEX.json (tracked)
+3. WebSearch fail -> WARN + use stale + tag rapport. JAMAIS de BLOCK.
+4. Parallelisme autorise par-lib (read-only sur source, write zones disjointes)
 ```
 
-### Phase 2 — PLANIFIER
+### P4 — red (editor fresh spawn #1)
 
 ```
-1. Plan detaille avec task graph
-2. Estimation par agent (fichiers, lignes, complexite)
-3. Allocation dynamique: consulter agent-performance.json > specializations
-   - avgScore > 9.0 → privilegier
-   - avgScore < 7.0 (3+ runs) → eviter
-4. VALIDATION UTILISATEUR BLOQUANTE (sauf hotfix, autonomie L3+)
+1. Read spec.md + design.md + tasks.md + lib-docs/INDEX.json (handoffs/003-red.json)
+2. BRIEF-ACK: <sha256>
+3. Consulter lib-docs/<lib>/PATTERNS.md + LESSONS.md pour chaque lib importee (obligation UFR-022)
+4. Ecrire des tests qui FAIL (prouvent absence feature ou presence bug)
+5. pnpm test scoped DOIT exit != 0 = success de la phase
+6. Ecrire red-test-manifest.json {<path>: sha256} par test cree/modifie
+7. Retourner JSON avec libDocsConsulted[]
 ```
 
-### Phase 3 — DEVELOPPER (parallele reel)
+### P5 — green (editor fresh spawn #2, zero memory de P4, FROZEN-TEST)
 
 ```
-1. Construire les mandats (cf. agent-mandate.md):
-   - Section COHERENCE IMPORTS obligatoire
-   - PE pertinents injectes (filtre inject_when)
-   - EP unfixed injectes
-   - Track Record agent injecte (weaknessHistory)
-2. Spawner agents DEV en PARALLELE REEL:
-   Agent(subagent_type: "backend-architect", team_name, run_in_background: true)
-   Agent(subagent_type: "frontend-architect", team_name, run_in_background: true)
-3. Quand chaque agent termine:
-   a. Scoped tsc sur fichiers modifies + dependants d=1
-   b. Si FAIL → renvoi au meme agent avec erreur exacte (max 2 retours)
-   c. Si PASS → marquer comme complete
-4. Quand tous les agents PASS → continuer
+1. Read spec.md + design.md + tasks.md + red-test-manifest.json + redDiff (handoffs/004-green.json)
+2. BRIEF-ACK: <sha256>
+3. Consulter lib-docs/<lib>/PATTERNS.md + LESSONS.md
+4. Ecrire le code applicatif (PAS les tests) jusqu'a ce que tous les tests du manifest passent
+5. Apres chaque edit, les hooks tournent :
+   a. post-edit-lint.sh        (scoped ESLint + brief size gate)
+   b. post-edit-typecheck.sh   (scoped tsc --noEmit)
+   c. post-edit-green-test-freeze.sh  ← FROZEN-TEST : mismatch sha256 = exit 1 STOP
+6. FROZEN-TEST : interdiction de modifier un byte d'un test du manifest.
+   Si test bugge -> emettre BLOCK-TEST-WRONG <path>:<line> <reason> SANS toucher, re-spawn fresh P4 red.
+7. pnpm test scoped DOIT exit 0 (green)
+8. Retourner JSON avec libDocsConsulted[]
+
+CAP intra-phase : intraPhaseHookLoops >= 2 (lint/tsc/test fails dans la MEME phase) -> STOP + escalade user.
 ```
 
-### Phase 3.5 — REGRESSION
+### P6 — verify (verifier fresh spawn)
 
 ```
-1. Verifier que les chemins existants non modifies fonctionnent
-2. Tests existants: doivent tous passer (0 regression)
-3. Si regression detectee → identifier la cause, spawner agent de correction
+1. BRIEF-ACK: <sha256> + BLOCK-CONTEXT-LEAK self-defense
+2. pre-complete-verify.sh : pnpm test scoped (BE/FE/WEB) + gitnexus_detect_changes() + mutation si banking-grade
+3. pre-phase-doc-reference-check.sh : cross-check libDocsConsulted[] (red+green) vs imports du diff
+4. post-edit-green-test-freeze.sh (defense-in-depth, FROZEN-TEST final assert)
+5. Verdict PASS/WARN/FAIL. FAIL -> boucle corrective intra-phase OU re-spawn fresh la phase pointee.
 ```
 
-### Phase 4 — VERIFIER (Gate Sentinelle)
+### P7 — security (security fresh spawn, TOUJOURS present)
 
 ```
-1. tsc global (backend + frontend)
-2. Tests complets
-3. Quality Ratchet check
-4. ESLint-disable scan (cf. quality-gates.md)
-5. Scope check
-6. gitnexus_detect_changes({scope: "staged"})
-
-Gate Sentinelle: rapport structure, verdict PASS/WARN/FAIL
+1. allowedTools : Read/Grep/Bash(promptfoo*,semgrep*) — pas d'Edit
+2. pnpm audit (BE+FE+web) — supply chain CVE drift
+3. semgrep --config=p/owasp-top-ten + p/llm-security si scope LLM/auth/crypto
+4. promptfoo regression sur chat.service.ts si touche
+5. Cross-ref lib-docs/<lib>/PATTERNS.md pour libs auth/crypto/llm
+6. Verdict PASS/WARN/FAIL. FAIL CRITICAL/HIGH -> BLOCK, escalade user.
 ```
 
-### Phase 5 — TESTER
+### P8 — review (reviewer fresh spawn, rejection loop ILLIMITE)
 
 ```
-1. Tests supplementaires si coverage gap
-2. Smoke tests API si routes modifiees (1 happy + 1 auth + 1 validation par route)
-3. Tests de non-regression specifiques
-
-Gate Sentinelle: coverage non regresse, smoke tests OK
+1. FRESH CONTEXT obligatoire — AUCUN message de l'editor. Spawn via Agent tool, jamais SendMessage.
+2. Inputs : spec.md + design.md (paths) + RUN_ID + diff base. Pas de resume editor.
+3. Citer PATTERNS.md:<line> quand le code devie d'un pattern documente -> CHANGES_REQUESTED.
+4. Verdict prioritaire = weightedMean des 5 axes :
+     >= 85          -> APPROVED -> P9 documenter
+     70.0 — 84.9    -> CHANGES_REQUESTED -> re-spawn FRESH la phase pointee (spec/plan/red/green)
+     < 70           -> BLOCK -> STOP + escalade user (breakdown axe-par-axe)
+5. Reviewer rejection loop = ILLIMITE (reviewerRejectionLoops telemetry seule, zero cap, zero warning auto).
+   Si reviewer rejette N fois c'est qu'il y a raison.
+6. Fuite context -> VERDICT: BLOCK-CONTEXT-LEAK + re-spawn fresh.
 ```
 
-### Phase 5.5 — VIABILITE
+### P9 — documenter (documenter fresh spawn, TOUJOURS present)
 
 ```
-Checklist produit (chaque agent DEV doit avoir verifie, mais le Tech Lead re-verifie):
-- [ ] Donnees persistees (DB, pas juste state local)
-- [ ] Edge cases (timeout, offline, permission refusee, payload invalide)
-- [ ] UX coherente pour un utilisateur reel
-- [ ] Retrocompatibilite API preservee (pas de breaking change)
-- [ ] Migration reversible si applicable
+1. BRIEF-ACK: <sha256>
+2. Append STORY.md final section (post-finalize summary)
+3. ADR(s) si nouveau choix architectural irreversible
+4. CHANGELOG entry si release-bound
 ```
 
-### Phase 6 — CLEANUP
+### Finalize (Tech Lead — hors phases agents)
 
 ```
-1. Supprimer dead code cree pendant le dev
-2. Supprimer imports inutiles
-3. Supprimer console.log de debug
-4. Verifier nommage coherent
+1. Update KB (velocity-metrics, agent-roi, error-patterns)
+2. Cost delta telemetry (KR1, no block)
+3. state.json status: completed + telemetry summary
+4. Lesson capture (post-complete-lesson-capture.sh, fail-open)
+5. Roadmap tick proposal (post-cycle-roadmap-update.sh, ASK user, jamais auto-commit)
+6. Tech Lead git add + commit (jamais les agents)
 ```
 
-### Phase 7 — LIVRER (Gate Sentinelle finale)
+## DoD (machine-verified)
 
-```
-1. tsc final (dernier filet)
-2. Tests final
-3. Quality Ratchet: write-on-improve
-4. git add + commit
-5. FINALIZE protocol (cf. finalize.md):
-   a. Update error-patterns.json (toute boucle corrective = 1 entry)
-   b. Update prompt-enrichments.json (scoring PE utilises ce run)
-   c. Update agent-performance.json (score par agent, specializations)
-   d. Update velocity-metrics.json (run metrics)
-   e. Update next-run.json (recommendations pour le prochain run)
-   f. Update autonomy-state.json (promotion/demotion si applicable)
-6. Ecrire team-reports/YYYY-MM-DD.md (Executive Summary)
-7. Update docs/V1_Sprint/ (PROGRESS_TRACKER + SPRINT_LOG)
-
-Gate Sentinelle finale: DoD machine-verified (7 checks programmatiques)
-```
-
-## DoD
-
-- [ ] tsc PASS (backend + frontend)
-- [ ] Tests PASS (pas de regression + nouveaux tests)
-- [ ] Quality Ratchet: pas de regression
-- [ ] Import coherence: 0 erreur tsc post-agent
-- [ ] Sentinelle: 4 verdicts PASS (CONCEVOIR, VERIFIER, TESTER, LIVRER)
-- [ ] Viabilite: checklist produit validee
-- [ ] KB: 7 fichiers JSON mis a jour
-- [ ] Rapport: team-reports/ ecrit
-- [ ] Sprint tracking: mis a jour
-- [ ] Code commite
+- [ ] spec.md / design.md / tasks.md presents + non-vides (pre-feature-spec-check.sh PASS)
+- [ ] red-test-manifest.json ecrit, tests FAIL prouves (P4)
+- [ ] FROZEN-TEST respecte byte-for-byte (post-edit-green-test-freeze.sh PASS)
+- [ ] tsc PASS (scope) + tests PASS (green, P6)
+- [ ] libDocsConsulted[] couvre les imports non-dev-only (pre-phase-doc-reference-check.sh PASS)
+- [ ] Security verdict PASS/WARN, pas de CRITICAL/HIGH non-resolu (P7)
+- [ ] Reviewer weightedMean >= 85 (APPROVED) (P8)
+- [ ] documenter pass present (STORY.md final section, P9)
+- [ ] Lesson capture verdict dans state.json gates[]
+- [ ] Code commite par le Tech Lead uniquement

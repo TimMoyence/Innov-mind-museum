@@ -544,21 +544,19 @@ Metriques cles : tokens/agent, latence/phase, cost/run, corrective-loops/run, ga
 | Protocole | Fichier | Charge en |
 |---|---|---|
 | Pipelines & phases | `team-protocols/sdlc-pipelines.md` | Toujours |
-| Quality gates | `team-protocols/quality-gates.md` | Standard + Enterprise |
-| Agent mandates | `team-protocols/agent-mandate.md` | Standard + Enterprise |
-| Import coherence | `team-protocols/import-coherence.md` | Standard + Enterprise |
-| GitNexus integration | `team-protocols/gitnexus-integration.md` | Standard + Enterprise |
-| Finalize & KB | `team-protocols/finalize.md` | Standard (partiel) + Enterprise |
-| Error taxonomy | `team-protocols/error-taxonomy.md` | Enterprise |
-| Conflict resolution | `team-protocols/conflict-resolution.md` | Enterprise |
+| Quality gates | `team-protocols/quality-gates.md` | Toujours |
+| Agent mandates | `team-protocols/agent-mandate.md` | Toujours |
+| Import coherence | `team-protocols/import-coherence.md` | Toujours |
+| GitNexus integration | `team-protocols/gitnexus-integration.md` | Toujours |
+| Finalize & KB | `team-protocols/finalize.md` | Toujours |
+| Error taxonomy | `team-protocols/error-taxonomy.md` | Toujours |
+| Conflict resolution | `team-protocols/conflict-resolution.md` | Toujours |
 
 ## TEMPLATES
 
 | Type | Fichier |
 |---|---|
-| Pipeline micro | `team-templates/micro.md` |
-| Pipeline standard | `team-templates/standard.md` |
-| Pipeline enterprise | `team-templates/enterprise.md` |
+| Pipeline (mode unique UFR-022) | `team-templates/enterprise.md` — seul template chargé (cf. Step 3 §135). `micro.md`/`standard.md` = legacy dead-concept, sélecteur retiré. |
 | Spec (Spec Kit) | `team-templates/spec.md.tmpl` |
 | Design (Spec Kit) | `team-templates/design.md.tmpl` |
 | Tasks (Spec Kit) | `team-templates/tasks.md.tmpl` |
@@ -684,9 +682,4 @@ V1 = manuel sur demande. T2.2 ROADMAP_TEAM ajoute cron weekly automatique.
 
 ## KNOWN GAPS (W4+)
 
-- Agent consolidation 9→6 (W4 — V12 §3 ; W3 hooks shipped 2026-05-02)
-- Architect/Editor split formalise dans agent-mandate.md (W4)
-- Security stack additions : Prompt-Guard-2 + Presidio + promptfoo CI (W5 — V12 §4)
-- Stryker mutation gate ≥70% sur modules critiques (W6 — V12 §6)
-- ast-grep + Spec Kit pilote production (W7)
-- Cosign + audit_log hash-chained + Renovate pin (W8)
+Tous fermés au 2026-05 (vérifié 2026-05-20). Historique W4–W8 : agents formalisés (9 `.claude/agents/*.md` incl. architect/editor split + doc-fetcher/doc-curator/learning-curator), promptfoo CI (`.github/workflows/{ci-cd,llm-security}-promptfoo.yml` + `semgrep.yml`), Stryker gate (`museum-backend/stryker/` 20+ configs), ast-grep rules production (`tools/ast-grep-rules/`), Spec Kit templates canoniques (`team-templates/{spec,design,tasks}.md.tmpl`), Renovate pin (`renovate.json`, cf. PR #267). Détails phase : `docs/PHASE_HISTORY.md`.

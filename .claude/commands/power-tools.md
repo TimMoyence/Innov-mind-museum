@@ -27,7 +27,7 @@ Verifier la coherence routes backend actives ↔ spec OpenAPI.
 set +e
 echo "=== OpenAPI Route Parity ==="
 SPEC="museum-backend/openapi/openapi.json"
-AUTH="museum-backend/src/modules/auth/adapters/primary/http/auth.route.ts"
+AUTH="museum-backend/src/modules/auth/adapters/primary/http/routes/auth.route.ts"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq missing: check skipped"
@@ -104,7 +104,7 @@ else
 fi
 
 echo "--- direct cross-app references from frontend code ---"
-rg --color never -n -e 'museum-backend/' museum-frontend/app museum-frontend/features museum-frontend/shared museum-frontend/services 2>/dev/null || \
+rg --color never -n -e 'museum-backend/' museum-frontend/app museum-frontend/features museum-frontend/shared 2>/dev/null || \
   echo "(aucune reference directe frontend -> museum-backend)"
 
 echo "--- direct cross-app references from backend code ---"
@@ -127,13 +127,13 @@ rg --color never -n \
   -e 'setAuthRefreshHandler\(' \
   -e 'setUnauthorizedHandler\(' \
   -e 'clearAccessToken\(' \
-  museum-frontend/context/AuthContext.tsx \
+  museum-frontend/features/auth/application/AuthContext.tsx \
   museum-frontend/shared/infrastructure/httpClient.ts \
-  museum-frontend/services/authService.ts \
-  museum-frontend/features/auth/infrastructure/authStorage.ts 2>/dev/null || echo "(aucun)"
+  museum-frontend/features/auth/infrastructure/authApi.ts \
+  museum-frontend/features/auth/infrastructure/authTokenStore.ts 2>/dev/null || echo "(aucun)"
 
 echo "--- requiresAuth false on auth endpoints ---"
-rg --color never -n 'requiresAuth:\s*false' museum-frontend/services/authService.ts 2>/dev/null || echo "(aucun requiresAuth:false)"
+rg --color never -n 'requiresAuth:\s*false' museum-frontend/features/auth/infrastructure/authApi.ts 2>/dev/null || echo "(aucun requiresAuth:false)"
 
 echo "=== Auth Refresh DONE ==="
 ```
@@ -180,7 +180,7 @@ rg --color never -n \
   -e 'iaService' \
   -e 'components/' \
   -e 'features/conversation' \
-  museum-frontend/docs/ARCHITECTURE_MAP.md 2>/dev/null || echo "(aucun)"
+  docs/ARCHITECTURE.md 2>/dev/null || echo "(aucun)"
 
 echo "=== Legacy Docs DONE ==="
 ```
@@ -337,9 +337,9 @@ rg --color never -n \
   -e 'authService\.refresh\(' \
   -e 'setAuthRefreshHandler\(' \
   -e 'setUnauthorizedHandler\(' \
-  museum-frontend/context/AuthContext.tsx \
+  museum-frontend/features/auth/application/AuthContext.tsx \
   museum-frontend/shared/infrastructure/httpClient.ts \
-  museum-frontend/services/authService.ts
+  museum-frontend/features/auth/infrastructure/authApi.ts
 ```
 
 #### Signed media flow

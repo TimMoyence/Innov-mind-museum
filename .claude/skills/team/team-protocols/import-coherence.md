@@ -1,7 +1,7 @@
 # Import Coherence — Protocole anti-imports casses
 
 Protocole de coherence des imports entre agents paralleles.
-Charge en mode **standard** et **enterprise** (pas micro — single-scope, risque faible).
+Charge **toujours** (pipeline unique UFR-022).
 
 ---
 

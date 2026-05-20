@@ -1,15 +1,34 @@
-# Team v12 — deterministic hooks
+# Team v13 (UFR-022) — deterministic hooks
 
-LLM-critic agents are wasteful for things compilers can decide. V12 §1.4 + §8: lint / typecheck / tests run as post-edit hooks, not agent calls.
+LLM-critic agents are wasteful for things compilers can decide. Lint / typecheck / tests / frozen-test / lib-docs assertions run as deterministic hooks, not agent calls. Under UFR-022 there is **one** pipeline (no mode selector, no Spec-Kit bypass keywords); these 11 hooks gate its phases.
 
-## Files
+## Files (11 hooks)
+
+### Core gates
 
 | Hook | Trigger | Purpose |
 |---|---|---|
-| `pre-feature-spec-check.sh` | End of Step 4 (post Spec Kit), before Step 5 (editor) | T1.4 ROADMAP_TEAM KR2 — enforce spec.md + design.md + tasks.md presence + non-vacuity for non-trivial feature/refactor runs. Triviality detected via description regex; force keywords (auth/security/migration/...) override triviality. Override env `OVERRIDE_SPEC_KIT=1` (CLI `--no-spec-kit`) → WARN + STORY.md audit. Self-test : `--self-test` runs 7 scenarios. |
 | `post-edit-lint.sh` | After editor agent finishes a task | scoped ESLint on touched files; FAIL → loop back to editor; ALSO enforces handoff-brief ≤200 token cap |
 | `post-edit-typecheck.sh` | After editor agent finishes a task | scoped `tsc --noEmit` on touched modules |
+| `pre-feature-spec-check.sh` | End of Step 4b (Spec Kit closing gate), before editor phase | T1.4 ROADMAP_TEAM KR2 — verify `spec.md` / `design.md` / `tasks.md` each present + ≥ 200 bytes (non-vacuous). UFR-022: no triviality regex, no force keywords, no bypass — every applicative-code run goes through Spec Kit. Self-test : `--self-test` runs 8 scenarios. |
 | `pre-complete-verify.sh` | Before dispatcher marks state `completed` | full scoped tests + STORY.md append-only check via per-phase sha256 chain |
+
+### UFR-022 phase hooks (fresh-context 5-phase)
+
+| Hook | Trigger | Purpose |
+|---|---|---|
+| `pre-phase-pure-doc-check.sh` | Step 0 INIT §8 | Auto-exemption: diff = 0 applicative-code files (pure-doc edit) → skip the whole pipeline + write `pure-doc-skip.marker`. |
+| `pre-phase-doc-freshness.sh` | Step 4.5 | Detect libs imported by the diff, run 3-way staleness check (>14d / version drift / missing), write `doc-refresh-queue.json` for doc-fetcher + doc-curator. |
+| `post-edit-green-test-freeze.sh` | After every edit in phase Green | FROZEN-TEST gate — re-hash sha256 of each test in `red-test-manifest.json`; any mismatch = exit 1 STOP (Green cannot mutate a Red test byte-for-byte). |
+| `pre-phase-doc-reference-check.sh` | Step 6 Verify | Assert `libDocsConsulted[]` covers every non-dev-only import in the diff + hash drift check (lib-docs obligation proof). |
+
+### Lifecycle hooks
+
+| Hook | Trigger | Purpose |
+|---|---|---|
+| `pre-cycle-roadmap-load.sh` | Step 0 INIT §9 | T1.6 — read `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse unchecked NOW items, write `team-state/$RUN_ID/roadmap-context.json`. WARN-tolerant. |
+| `post-complete-lesson-capture.sh` | Step 9 Finalize, after cost delta | T2.1 KR4 — extract 1 lesson markdown from STORY.md into `team-knowledge/lessons/<RUN_ID>.md`. Fail-open. |
+| `post-cycle-roadmap-update.sh` | Step 9 Finalize, after lesson capture | T1.6 — fuzzy-match DESCRIPTION ↔ NOW items, propose staged `[x]` patch (never auto-commits). |
 
 ## Concurrency model
 
@@ -29,14 +48,13 @@ All hooks expect `RUN_ID` env var pointing to a directory under `team-state/`:
 RUN_ID=2026-05-02-auth-rate-limit .claude/skills/team/team-hooks/post-edit-lint.sh
 ```
 
-`pre-feature-spec-check.sh` additionally requires `MODE` and `DESCRIPTION` (and optionally `OVERRIDE_SPEC_KIT=1`):
+`pre-feature-spec-check.sh` reads the Spec Kit artefacts under `team-state/$RUN_ID/` directly — no `MODE`, no `DESCRIPTION`, no override env. UFR-022 retired the mode selector and the Spec-Kit bypass keywords (`OVERRIDE_SPEC_KIT` / `--no-spec-kit` no longer exist); there is one pipeline and every applicative-code run must produce a non-vacuous `spec.md` / `design.md` / `tasks.md`:
 
 ```bash
-RUN_ID=2026-05-03-foo MODE=feature DESCRIPTION="add admin RBAC" \
-  .claude/skills/team/team-hooks/pre-feature-spec-check.sh
+RUN_ID=2026-05-03-foo .claude/skills/team/team-hooks/pre-feature-spec-check.sh
 ```
 
-Returns 0 = PASS, 1 = FAIL. Stdout is concise; details land in `state.json.gates[]`.
+Returns 0 = PASS (all three artefacts present + ≥ 200 bytes), 1 = FAIL. Stdout is concise; details land in `state.json.gates[]`.
 
 ## Anti-patterns to avoid
 
