@@ -223,7 +223,7 @@ Non réalisée au stade DPIA initiale (audience pré-launch). À envisager via :
 - `museum-backend/src/modules/chat/useCase/orchestration/chat.service.ts` — pipeline chat (référence code).
 - `museum-backend/src/shared/observability/sentry-scrubber.ts` — single source of truth scrubbing PII.
 - AI Act EU 2024/1689 Art. 50 — obligations de transparence.
-- CNIL Délibération 2021-018 — majorité numérique 15 ans.
+- Loi n° 2023-566 du 7 juillet 2023 + CNIL Délibération n° 2021-069 du 3 juin 2021 — majorité numérique 15 ans.
 - CNIL Guide PIA Software 2018/2024.
 
 ---

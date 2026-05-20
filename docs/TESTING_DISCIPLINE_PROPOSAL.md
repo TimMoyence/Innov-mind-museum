@@ -1,9 +1,19 @@
 # Testing Discipline Proposal — UFR-021 (post-feature test-coverage gate)
 
-**Status :** PROPOSAL (2026-05-17) — pending review
+**Status :** ACCEPTED-PARTIAL (audited 2026-05-19) — Phase 1 shipped 2026-05-17 (commit `70f5ce2f9`), Phase 2 pending-user wiring.
 **Author :** /team architect agent
 **Scope :** `museum-frontend/` (RN + Expo Router screens) — extensible to web later
 **Trigger incident :** signup DOB regex mismatch silently disabled the submit button. No Maestro / Jest test exercised the `DD/MM/YYYY` typing path. Bug shipped to TestFlight before manual QA caught it.
+
+> **Implementation status (audit 2026-05-19, verified against repo):**
+> - ✅ **§1 prose** — UFR-021 block live in `CLAUDE.md` (§ Post-feature test coverage). DONE.
+> - ✅ **§2 JSON** — UFR-021 entry live in `.claude/agents/shared/user-feedback-rules.json` (line 203). DONE.
+> - ✅ **§3 sentinel** — `museum-frontend/scripts/sentinels/screen-test-coverage.mjs` shipped + wired as `pnpm sentinel:screen-test-coverage` (`museum-frontend/package.json:21`); `museum-frontend/.maestro/coverage-baseline.json` bootstrapped (option B, §8). DONE.
+> - ⏳ **§4 pre-push Gate 19** — NOT wired (`.husky/pre-push` has no screen-test-coverage step). OPEN (Phase 2, pending user validation per CLAUDE.md "Phase 2 (à wirer après validation user)").
+> - ⏳ **§5 PR template checkbox** — OPEN (Phase 2).
+> - ⏳ **§6 ci-cd-mobile.yml step + §6.1 sentinel-mirror.yml mirror** — NOT wired (0 references in either workflow). OPEN (Phase 2).
+>
+> This file is NOT yet superseded: canonical rule lives in CLAUDE.md UFR-021, but the CI/hook enforcement (§4/§5/§6) is still pending. DELETE this file only once those wire. The design sections below remain the spec of record for the Phase 2 wiring.
 
 > **Note gitignore (see CLAUDE.md § Pièges connus) :** `docs/` is whitelisted file-by-file. To track this proposal, add `!docs/TESTING_DISCIPLINE_PROPOSAL.md` to `.gitignore` before staging. Same for `docs/TESTING_DISCIPLINE.md` once the proposal is accepted.
 
@@ -17,7 +27,7 @@ A regression slipped because :
 2. No Maestro flow filled the DOB field with realistic user input.
 3. Pre-push hook ran `--findRelatedTests` on the changed file — but the test was green (it tested the mock, not the regex), so the gate passed.
 
-Defense-in-depth requires **route-level e2e contract** : every screen that ships to a user has at least one Maestro flow exercising its critical happy path. The current 14 Maestro flows cover ~10 of the ~30 routable screens — a coverage hole that grows silently every sprint.
+Defense-in-depth requires **route-level e2e contract** : every screen that ships to a user has at least one Maestro flow exercising its critical happy path. At proposal time (2026-05-17) the Maestro suite covered ~10 of the ~30 in-scope screens — a coverage hole that grows silently every sprint. (As of the 2026-05-19 audit the suite has grown to 27 active `.maestro/*.yaml` flows.)
 
 The fix is not "write more tests" (we're doing that tonight). The fix is a **mechanical sentinel** that prevents the hole from re-opening.
 

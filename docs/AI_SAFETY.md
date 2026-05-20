@@ -2,7 +2,7 @@
 
 > **Status:** Live document — extracted at Phase 0 fold-in of the perennial 10-year design (2026-05-12).
 > **Steward:** founder/tech lead (solo). When the first B2B LOI lands, hiring trigger for a security/SRE FTE per perennial design RP1 is **declined by the user** in favour of solo dev + OSS tooling + WebSearch loop.
-> **Last review:** 2026-05-12.
+> **Last review:** 2026-05-20 (L5 judge row + Presidio wiring corrected against code).
 > **Related ADRs:** ADR-015 (LLM judge V2), ADR-030 (judge budget cap), ADR-038 (anti-hallucination + citations + WebSearch), ADR-047 (LLM-Guard circuit breaker fail-CLOSED), ADR-048 (`GuardrailProvider` strategy interface), ADR-049 (LLM security CI gates).
 > **Related docs:** `docs/AI_VOICE.md`, `docs/GDPR_ART22_SCOPE.md`, `docs/legal/DPIA.md`, `docs/legal/ROPA.md`, `docs/compliance/DATA_FLOW_MAP.md`, `docs/compliance/AI_ACT_CONFORMITY_MATRIX.md`, `docs/compliance/FAIRNESS_METRICS_PLAN.md`, `docs/compliance/art5-audit.md`, `docs/compliance/SUBPROCESSORS.md`, `docs/RUNBOOKS/guardrail-incidents.md`, `docs/RUNBOOKS/audit-chain-forensics.md`, `docs/OPS_INCIDENT_LLM_GUARD.md`, `docs/operations/CAPACITY_PLAN_100K.md`.
 > **Source design:** `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/{spec,design}.md`.
@@ -29,9 +29,9 @@ The guardrail subsystem is **five independent layers**, applied in order, around
 | L2 | **`sanitizePromptInput()`** Unicode normalisation + zero-width strip + length cap (`@shared/validation/input.ts`) | input, on every user-controlled field (locale, location, freetext) | every prompt | deterministic |
 | L3 | **Structural prompt isolation** — system instructions + section prompts BEFORE user content, with `[END OF SYSTEM INSTRUCTIONS]` boundary marker | LangChain message-array assembly (`llm-prompt-builder.ts`) | every LLM call | architecturally enforced |
 | L4 | **LLM-Guard sidecar** (`LLMGuardAdapter` implementing the `GuardrailProvider` port, ADR-048) | input + output of every chat turn | every chat turn | **fail-CLOSED** when timeout / network / breaker OPEN / semaphore overflow (ADR-047) |
-| L5 | **LLM judge** (`llm-judge.adapter.ts`, ADR-015) | output | every assistant response | fail-CLOSED + daily budget cap (ADR-030) |
+| L5 | **LLM judge** (`llm-judge-guardrail.ts`, ADR-015) | input — selectively, only on uncertain V1 allows (`message.length > env.guardrails.judgeMinMessageLength`) | uncertain inputs the keyword pre-filter allowed | **fail-OPEN** to the keyword decision (timeout / schema violation / model throw / budget exhausted → `null` → `{ decision: 'review' }`) + daily budget cap (ADR-030) |
 
-The keyword guardrail (L1) is the **first defence** and remains deterministic. The LLM-Guard sidecar (L4) is enforced **on top**, not as a replacement. **Removing one layer does not equal removing the defence** — but no single layer is sufficient. L1 is fast and deterministic but low-recall on novel attacks; L4 is high-recall on novel attacks but network-dependent; L5 is output-only and judges semantic content. The combination is the doctrine.
+The keyword guardrail (L1) is the **first defence** and remains deterministic. The LLM-Guard sidecar (L4) is enforced **on top**, not as a replacement. **Removing one layer does not equal removing the defence** — but no single layer is sufficient. L1 is fast and deterministic but low-recall on novel attacks; L4 is high-recall on novel attacks but network-dependent; L5 is input-side and judges the semantic content of inputs the keyword filter left uncertain. The combination is the doctrine.
 
 ## 3. Fail-CLOSED contract (non-negotiable)
 
@@ -92,7 +92,7 @@ Coverage per `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-
 | Risk | Status | Notes |
 |---|---|---|
 | LLM01 prompt injection | PARTIAL | L1 + L3 + L4 cover direct; Phase 1.5 Garak/promptfoo CI (ADR-049) extends to paraphrase / translation / role-play |
-| LLM02 PII leakage | PARTIAL | `RegexPiiSanitizer` covers email + phone; Phase 1 adds Microsoft Presidio sidecar for named-entity NER |
+| LLM02 PII leakage | PARTIAL → landed-behind-flag | `RegexPiiSanitizer` covers email + phone; `MicrosoftPresidioAdapter` named-entity NER wired behind `PRESIDIO_ENABLED` (C9.8, 2026-05-17) |
 | LLM03 supply-chain | PARTIAL | image digest pinning + Renovate; Phase 3 chaos drill + DR runbook |
 | LLM04 data + model poisoning | NOT-APPLICABLE | no user-controllable training |
 | LLM05 improper output handling | MITIGATED | React Native `<Text>` zero HTML injection; TypeORM zero SQLi |
@@ -105,15 +105,15 @@ Coverage per `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-
 ## 6. Voice-specific safety (`docs/AI_VOICE.md`)
 
 - STT (`gpt-4o-mini-transcribe`) — transcript flows through L1-L5 identically to text.
-- TTS (`gpt-4o-mini-tts`, voice `alloy`) — output audio is generated from text that has passed L4 + L5. Audio itself is not re-scanned; an audio classifier sits on a Phase 2 re-evaluation if telemetry surfaces a gap.
+- TTS (`gpt-4o-mini-tts`, voice `alloy`) — output audio is generated from text that has passed the output-side guardrail (L4 output scan); the input transcript was already screened by L1-L5 input layers. Audio itself is not re-scanned; an audio classifier sits on a Phase 2 re-evaluation if telemetry surfaces a gap.
 - **Art. 50 audio disclosure** in voice mode — explicit greeting at session start (`features/chat/ui/VoiceSessionIntro.tsx` + 8-locale i18n in `museum-frontend/shared/locales/*/translation.json:voice.disclosure`). Visual badge in `ChatHeader` supplements but does not replace the audio.
 - Realtime WebRTC (ADR-042, currently deferred) MUST go through L1-L5 when (if) it ships. A parallel codepath that bypasses guardrails is the perennial design's identified risk #8 (asymmetry). Phase 3+ work.
 
 ## 7. Provider strategy + supply chain
 
-Per ADR-048, providers implement the `GuardrailProvider` port (`museum-backend/src/modules/chat/domain/ports/guardrail-provider.port.ts`). Current single provider: `LLMGuardAdapter` wrapping `laiyer-ai/llm-guard` Python sidecar.
+Per ADR-048, providers implement the `GuardrailProvider` port (`museum-backend/src/modules/chat/domain/ports/guardrail-provider.port.ts`). Default provider: `LLMGuardAdapter` wrapping `laiyer-ai/llm-guard` Python sidecar (active when `GUARDRAILS_V2_LLM_GUARD_URL` set). `MicrosoftPresidioAdapter` is now wired behind a flag (C9.8, 2026-05-17): when `PRESIDIO_ENABLED=true` + `PRESIDIO_BASE_URL` set, it takes over as the V2 provider for full LLM02 NER coverage (`chat-module.ts:441`). `LlamaPromptGuardAdapter` is scaffolded but not yet wired (ADR-051).
 
-ADR-015 flagged the upstream as "hobbyist-grade". The `compliance-research-guardrail-alternatives.md` benchmark (May 2026) measured 0.22 recall on the adversarial arXiv 2502.15427 corpus for the incumbent prompt-injection scanner, versus 0.733 for Llama Guard 2 and 0.916 for Granite Guardian. **Provider swap is a Phase 1 task** with mandatory shadow mode (≥7 days of parallel run, decisions logged, compared, gated on `version` + `metrics()` snapshots) before promotion. Top candidate: Llama Prompt Guard 2 86M (Meta, MIT, 97.5% recall @ 1% FPR, CPU-viable 150-400 ms, 8 languages incl. FR) paired with Microsoft Presidio for PII.
+ADR-015 flagged the upstream as "hobbyist-grade". The `compliance-research-guardrail-alternatives.md` benchmark (May 2026) measured 0.22 recall on the adversarial arXiv 2502.15427 corpus for the incumbent prompt-injection scanner, versus 0.733 for Llama Guard 2 and 0.916 for Granite Guardian. **Provider swap is partially landed:** the Presidio PII adapter is shipped behind `PRESIDIO_ENABLED` (C9.8) and the Llama Prompt Guard adapter is scaffolded but unwired. Full promotion (ADR-051) carries mandatory shadow mode (≥7 days of parallel run, decisions logged, compared, gated on `version` + `metrics()` snapshots) before promotion. Top candidate: Llama Prompt Guard 2 86M (Meta, MIT, 97.5% recall @ 1% FPR, CPU-viable 150-400 ms, 8 languages incl. FR) paired with Microsoft Presidio for PII.
 
 Supply-chain DR — image digest pinning + quarterly chaos drill (Phase 3, perennial design §11). Until then, fast manual rollback path documented in `docs/RUNBOOKS/V1_FALLBACKS.md`.
 

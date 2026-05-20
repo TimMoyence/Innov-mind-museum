@@ -20,7 +20,7 @@
 
 ```bash
 # 1. Confirm the chat surface is degraded
-curl -fsS https://api.musaium.app/api/health | jq '.llmGuardCircuitBreaker'
+curl -fsS https://api.musaium.com/api/health | jq '.llmGuardCircuitBreaker'
 # Expected healthy: {state: "CLOSED", failureCount: 0, ...}
 # Tripped: {state: "OPEN", failureCount: N, openedAt: "..."}
 
@@ -104,7 +104,7 @@ ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml logs --tail=5
 # Expected: HTTP 201, response body has assistant text, NOT mappedReason="service_unavailable"
 
 # 2. Confirm breaker recovered
-curl -fsS https://api.musaium.app/api/health | jq '.llmGuardCircuitBreaker.state'
+curl -fsS https://api.musaium.com/api/health | jq '.llmGuardCircuitBreaker.state'
 # Expected: "CLOSED"
 
 # 3. Confirm latency dropped back

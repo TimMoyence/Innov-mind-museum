@@ -35,12 +35,17 @@ export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"  # https://appleid.appl
 ## 2. Build
 
 ### iOS Production Build
+
+> **iOS build chain = Xcode Cloud (not EAS).** Per the CLAUDE.md "iOS build chain" gotcha, production iOS archives are built on **Xcode Cloud**, which uses the committed `museum-frontend/ios/Pods/` and the `museum-frontend/ios/ci_scripts/` (`ci_post_clone.sh` installs Node 22, `ci_pre_xcodebuild.sh` writes `.xcode.env.local`). Xcode Cloud does **not** run `pod install` at build time — Pods are checked into git. EAS iOS build profiles (`eas.json` + the `build-production-ios` job in `ci-cd-mobile.yml`) exist as a `workflow_dispatch` fallback/CLI path, but the canonical production iOS chain is Xcode Cloud.
+
+EAS fallback (manual, if Xcode Cloud is unavailable):
 ```bash
 cd museum-frontend
 eas build --platform ios --profile production
 ```
 - EAS auto-creates Distribution Certificate + Provisioning Profile on first build
 - Build takes ~15-30 minutes
+- After any `expo prebuild --clean` or new native dep: re-apply the Podfile `post_install` patches and `git add -f ios/Pods/...` so Xcode Cloud picks up the updated Pods (see CLAUDE.md gotcha).
 
 ### Android Production Build
 ```bash
@@ -171,9 +176,12 @@ Notes for reviewer:
 ```
 
 ### Submit
+
+If the build was produced by **Xcode Cloud**, submit/distribute to TestFlight & App Store Connect directly from Xcode Cloud or via App Store Connect. If you used the EAS fallback build above, you can submit it with:
 ```bash
 eas submit --platform ios --profile production --latest
 ```
+(This is also what the `submit-production-ios` job in `ci-cd-mobile.yml` runs, against the latest EAS build.)
 
 ---
 
@@ -236,7 +244,7 @@ The content mirrors `museum-frontend/features/legal/privacyPolicyContent.ts` (in
 ### First release (recommended order)
 
 1. **Deploy museum-web** to VPS (privacy + landing pages live)
-2. **Build iOS** production via EAS
+2. **Build iOS** production via Xcode Cloud (EAS fallback available)
 3. **Submit to TestFlight** → test all flows on real device
 4. **Upload screenshots** to App Store Connect
 5. **Fill store listing** (description, keywords, What's New)
@@ -248,8 +256,7 @@ The content mirrors `museum-frontend/features/legal/privacyPolicyContent.ts` (in
 11. **Promote to production** (after internal testing validation)
 
 ### CI/CD automation
-The `mobile-release.yml` workflow handles automated EAS builds on push to main.
-Manual submission via `eas submit` is recommended for first release.
+The `.github/workflows/ci-cd-mobile.yml` workflow handles EAS builds/submits. Build & submit jobs are **`workflow_dispatch`-only** (manual, via Actions > mobile > Run workflow with `profile` / `platform` / `submit` inputs) — they are **not** triggered by a push to main (push/PR only run `quality` + `prebuild`). iOS **production builds** are produced on **Xcode Cloud** (committed Pods, `ios/ci_scripts/`); the workflow's `build-production-ios` EAS job is a fallback. Android production builds/submits also have a tag-`v*` trigger gated by the `AUTO_TAG_BUILD_ANDROID` repo variable.
 
 ---
 

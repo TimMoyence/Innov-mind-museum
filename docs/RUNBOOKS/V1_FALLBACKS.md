@@ -79,11 +79,11 @@ gpg --decrypt ~/Backups/musaium/museum-<latest>.sql.gz.gpg \
   | gunzip \
   | psql -h localhost -p 55432 -U postgres -d drill_restore
 
-# Sanity assertions: museum table populated, audit trail rows present
+# Sanity assertions: museums table populated, audit trail rows present
 psql -h localhost -p 55432 -U postgres -d drill_restore -c \
-  "SELECT count(*) FROM museum;"
+  "SELECT count(*) FROM museums;"
 psql -h localhost -p 55432 -U postgres -d drill_restore -c \
-  "SELECT count(*) FROM audit_log WHERE created_at > now() - interval '7 days';"
+  "SELECT count(*) FROM audit_logs WHERE created_at > now() - interval '7 days';"
 
 # Cleanup
 docker stop pg-drill

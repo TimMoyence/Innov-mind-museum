@@ -1,9 +1,18 @@
-# Musaium Mobile — Test Index (Phase 1, 2026-05-17)
+# Musaium Mobile — Test Index (Phase 1, 2026-05-17 · refreshed 2026-05-19)
 
 Single source of truth for what's tested locally vs what's not. Updated at
 the end of every test-discipline cycle. Companion to
 [`TEST_COVERAGE_INVENTORY.md`](TEST_COVERAGE_INVENTORY.md) (the full surface
 map) and [`TESTING_PHASE2_PLAN.md`](TESTING_PHASE2_PLAN.md) (expansion plan).
+
+> **Audit refresh 2026-05-19 — verified actuals:** 27 active `.maestro/*.yaml`
+> flows (excl `config.yaml`) + 6 secondary `maestro/*.yaml`. The flow tables
+> below are rebuilt to the current set (8 auth-* split flows + onboarding/nav
+> additions + `chat-cartel-deeplink`, `cert-pinning-smoke`, `auth-submit-invalid-email`
+> were missing). **Honesty note (UFR-013):** these flows are written and present
+> in-repo, but the suite is NOT yet wired into CI (UFR-021 Phase 2 pending) and
+> has not been recorded as run here — so "Last run" stays blank and status is
+> "🟡 written-in-repo, run-status-unrecorded", NOT a green claim.
 
 ## Local quick run
 
@@ -43,7 +52,11 @@ maestro test .maestro/auth-register-happy.yaml   # Phase 1 — written tonight
 
 ## Maestro flows
 
-> Status legend : ✅ green, 🟡 written-not-run-yet, ❌ red, ⏭️ skipped, ▶️ running
+> Status legend : ✅ green (recorded run), 🟡 written-in-repo / run-status-unrecorded, ❌ red, ⏭️ skipped, ▶️ running
+>
+> All 27 active flows below are 🟡 — present in-repo, not yet CI-wired
+> (UFR-021 Phase 2 pending), no recorded run. Flip to ✅ + fill "Last run"
+> only after an actual recorded run (do NOT mark green on faith — UFR-013).
 
 > **Known runtime issue (2026-05-17, to fix next session) :**
 > Maestro `launchApp: clearState: true` on the Expo Dev Build launches the
@@ -57,50 +70,63 @@ maestro test .maestro/auth-register-happy.yaml   # Phase 1 — written tonight
 > Currently flows omit clearState — they assume the app is at the auth
 > screen pre-run. Manual reset between flows required until next session.
 
-### AUTH (`museum-frontend/.maestro/auth-*.yaml`)
+### AUTH (`museum-frontend/.maestro/auth-*.yaml` — 8 flows)
 
 | Flow | Status | Last run | Notes |
 |---|---|---|---|
-| `auth-flow.yaml` (existing) | ▶️ | — | EN text matchers, needs locale FR-EN flexibility check |
-| `auth-register-happy.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-register-password-breached.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-register-duplicate-email.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-register-minor-dob.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-login-happy.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-login-invalid-credentials.yaml` | 🟡 | — | Phase 1 — to validate in P2 |
-| `auth-account-delete.yaml` | 🟡 | — | Phase 1 — possibly blocked on missing testID |
-| `auth-persistence.yaml` (existing) | 🟡 | — | Should still work — verify in P2 |
+| `auth-flow.yaml` | 🟡 | — | Register → Home → Logout → Login → Home. EN text matchers, needs locale FR-EN flexibility check |
+| `auth-register-happy.yaml` | 🟡 | — | Register happy path |
+| `auth-register-password-breached.yaml` | 🟡 | — | Register → PASSWORD_BREACHED (HIBP) |
+| `auth-register-duplicate-email.yaml` | 🟡 | — | Register → CONFLICT (dup email) |
+| `auth-register-minor-dob.yaml` | 🟡 | — | Register → MINOR_PARENTAL_CONSENT |
+| `auth-login-happy.yaml` | 🟡 | — | Login happy path |
+| `auth-login-invalid-credentials.yaml` | 🟡 | — | Login → INVALID_CREDENTIALS |
+| `auth-submit-invalid-email.yaml` | 🟡 | — | Invalid email format → validation error (DOB-class regression guard) |
+| `auth-account-delete.yaml` | 🟡 | — | Account deletion flow |
+| `auth-persistence.yaml` | 🟡 | — | Login → kill app → relaunch → session restored |
 
-### ONBOARDING + NAV (`museum-frontend/.maestro/{onboarding,nav}-*.yaml`)
+### ONBOARDING + NAV (`museum-frontend/.maestro/{onboarding,nav}*.yaml`)
 
 | Flow | Status | Last run | Notes |
 |---|---|---|---|
+| `onboarding-flow.yaml` | 🟡 | — | 4-slide carousel → complete → home |
 | `onboarding-skip-anonymous.yaml` | 🟡 | — | Regression guard for markOnboardingComplete pre-auth bug fixed in commit 6c39e936 |
 | `onboarding-full-carousel.yaml` | 🟡 | — | Walk 4 slides + complete |
+| `navigation-flow.yaml` | 🟡 | — | Tab navigation + Settings → Preferences |
 | `nav-tabs-roundtrip.yaml` | 🟡 | — | home → discover → carnet → settings → home |
 | `nav-stack-deep-links.yaml` | 🟡 | — | Each (stack) screen reachable + back nav |
 
-### CHAT (`museum-frontend/.maestro/{chat,museum,audio}-*.yaml`)
+### CHAT + MUSEUM (`museum-frontend/.maestro/{chat,museum,audio}*.yaml`)
 
 | Flow | Status | Last run | Notes |
 |---|---|---|---|
-| `chat-flow.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `chat-compare.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `chat-history-pagination.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `museum-chat-flow.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `audio-recording-flow.yaml` (existing) | 🟡 | — | Verify in P2 |
+| `chat-flow.yaml` | 🟡 | — | Core chat: send text → AI response |
+| `chat-compare.yaml` | 🟡 | — | Attach artwork photo → similar artworks → tap match |
+| `chat-history-pagination.yaml` | 🟡 | — | Multi-turn → scroll up → load older |
+| `chat-cartel-deeplink.yaml` | 🟡 | — | Cartel scanner deeplink path |
+| `museum-chat-flow.yaml` | 🟡 | — | Museums tab → detail → start chat from context |
+| `museum-search-geo.yaml` | 🟡 | — | Museums tab + geolocation filtering + detail open/back |
+| `audio-recording-flow.yaml` | 🟡 | — | Mic → record → transcription → AI audio response |
 
-### SETTINGS / OTHER (existing)
+### SETTINGS / SUPPORT / SECURITY (`museum-frontend/.maestro/`)
 
 | Flow | Status | Last run | Notes |
 |---|---|---|---|
-| `settings-flow.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `paywall-quota-exhaustion.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `rtl-switch-ar.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `voice-record-and-tts.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `login-and-capture.yaml` (existing) | 🟡 | — | Verify in P2 |
-| `screenshots.yaml` (existing) | 🟡 | — | Manual screenshot capture, not a regression test |
-| `capture-screens.yaml` (existing) | 🟡 | — | Manual screenshot capture |
+| `settings-flow.yaml` | 🟡 | — | Settings hub → theme/privacy/terms/support → home |
+| `settings-locale-switch.yaml` | 🟡 | — | fr↔en switch → verify re-render |
+| `support-ticket-create.yaml` | 🟡 | — | Settings → Support → fill form → submit → success |
+| `cert-pinning-smoke.yaml` | 🟡 | — | Cert-pinning runtime smoke |
+
+### SECONDARY / DEMO (`museum-frontend/maestro/` — 6 flows, NOT counted by UFR-021 sentinel)
+
+| Flow | Status | Last run | Notes |
+|---|---|---|---|
+| `login-and-capture.yaml` | 🟡 | — | Login → home → capture screenshots |
+| `capture-screens.yaml` | 🟡 | — | Navigate all screens → capture for docs (not a regression test) |
+| `voice-record-and-tts.yaml` | 🟡 | — | Record audio → verify TTS response |
+| `paywall-quota-exhaustion.yaml` | 🟡 | — | Exhaust quota → paywall modal |
+| `rtl-switch-ar.yaml` | 🟡 | — | Locale switch to AR → verify RTL rendering |
+| `screenshots.yaml` | 🟡 | — | Global screenshot capture for release notes (not a regression test) |
 
 ## Known testID gaps (extracted from inventory)
 
@@ -114,13 +140,22 @@ full list. Top 10 critical to add before extending Maestro coverage further :
 5. Modal dismiss / confirm buttons
 6. ... (see inventory)
 
-## How tests get added going forward (UFR-021, proposed)
+## How tests get added going forward (UFR-021 — ACCEPTED-PARTIAL)
 
-Per [`TESTING_DISCIPLINE_PROPOSAL.md`](TESTING_DISCIPLINE_PROPOSAL.md), every
-new screen or major feature MUST ship with associated Maestro coverage OR an
-explicit `// e2e-skip: <reason ≥ 30 chars>` justification in source code.
-Enforced by `scripts/sentinels/screen-test-coverage.mjs` in pre-push +
-sentinel-mirror CI gate.
+Per [`TESTING_DISCIPLINE_PROPOSAL.md`](TESTING_DISCIPLINE_PROPOSAL.md) +
+CLAUDE.md § Post-feature test coverage, every new screen or major feature
+MUST ship with associated Maestro coverage OR an explicit
+`// e2e-skip: <reason ≥ 30 chars>` justification in source code.
+
+Status (2026-05-19):
+- ✅ Sentinel shipped — `museum-frontend/scripts/sentinels/screen-test-coverage.mjs`,
+  run locally via `pnpm sentinel:screen-test-coverage`. Baseline grandfathers
+  pre-UFR-021 screens in `museum-frontend/.maestro/coverage-baseline.json`
+  (removals only, never grow).
+- ⏳ Pre-push gate + `ci-cd-mobile.yml` step + `sentinel-mirror.yml` mirror —
+  NOT wired yet (Phase 2, pending user validation per CLAUDE.md
+  "Phase 2 (à wirer après validation user)"). Until then the sentinel is
+  advisory: run it manually before push.
 
 ## Maintenance
 

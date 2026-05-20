@@ -1,8 +1,13 @@
 # Musaium Mobile — E2E Test Coverage Inventory
 
-**Generated:** 2026-05-17  
+**Generated:** 2026-05-17 · **Counts re-verified:** 2026-05-19  
 **Codebase:** `/museum-frontend` (Expo 55 + Expo Router)  
 **Scope:** Route analysis, interactive elements, testID audit, Maestro coverage map, critical gaps
+
+> **Audit 2026-05-19 — verified actuals (via `find`/`ls`):** 26 in-scope
+> `app/**/*.tsx` route screens (excl `_*.tsx`/`+*.tsx`) + 4 `features/**/*Screen.tsx`;
+> 27 active `.maestro/*.yaml` flows (excl `config.yaml`) + 6 secondary `maestro/*.yaml`.
+> Section counts below refreshed accordingly.
 
 ---
 
@@ -21,6 +26,7 @@
 | `/(stack)/discover` | `app/(stack)/discover.tsx` | Yes | Camera/Audio/Text intents |
 | `/(stack)/onboarding` | `app/(stack)/onboarding.tsx` | Yes | 4-slide carousel: greeting, museum mode, camera, walk |
 | `/(stack)/museum-detail` | `app/(stack)/museum-detail.tsx` | Yes | `id`, `name`, `latitude`, `longitude`, `distanceMeters` |
+| `/(stack)/museums-picker` | `app/(stack)/museums-picker.tsx` | Yes | Museum selection (added since 2026-05-17) |
 | `/(stack)/chat/[sessionId]` | `app/(stack)/chat/[sessionId].tsx` | Yes | `sessionId` param, text/audio/image input |
 | `/(stack)/carnet` | `app/(stack)/carnet.tsx` | Yes | Artwork notebook |
 | `/(stack)/carnet/[sessionId]` | `app/(stack)/carnet/[sessionId].tsx` | Yes | `sessionId` param |
@@ -36,7 +42,7 @@
 | `/(stack)/terms` | `app/(stack)/terms.tsx` | Yes | Terms of Service |
 | `/(stack)/support` | `app/(stack)/support.tsx` | Yes | Support contact form |
 
-**Total routes:** 25 (6 tabs, 19 stack)
+**Total routes (in-scope, excl `_layout`/`+not-found`):** 26 (4 tabs + 22 stack/root, verified 2026-05-19). Plus 4 `features/**/ui/*Screen.tsx` not routed directly: `MfaChallengeScreen`, `MfaEnrollScreen`, `BiometricLockScreen`, `MuseumPickerScreen`.
 
 ---
 
@@ -320,33 +326,56 @@
 
 ## 3. Existing Maestro Coverage
 
-| File | What It Tests | testIDs Used | Status |
-|---|---|---|---|
-| `auth-flow.yaml` | Register → Home → Logout → Login → Home | Text-based (no testID) | Core |
-| `auth-persistence.yaml` | Login → Kill app → Relaunch → Verify session restored | Text-based | Core |
-| `chat-flow.yaml` | Home → Start conversation → Send text → Verify AI response | `send-button` (via label) | Core |
-| `onboarding-flow.yaml` | 4-slide carousel → Complete → Return to home | Text-based | Core |
-| `settings-flow.yaml` | Home → Settings → Theme toggle → Privacy → Terms → Support → Home | Text-based | Core |
-| `navigation-flow.yaml` | Tab navigation (Home → Dashboard → Museums → Home) + Settings → Preferences | Text-based | Core |
-| `museum-chat-flow.yaml` | Museums tab → Detail → Start Chat from context | Text-based | Core |
-| `museum-search-geo.yaml` | Museums tab + geolocation filtering + detail open/back | Text-based | Core |
-| `audio-recording-flow.yaml` | Chat → Mic button → Record audio → Wait for transcription → AI audio response | Audio fixture-based | Advanced |
-| `chat-history-pagination.yaml` | Multi-turn chat → Scroll up → Load older messages | Text-based | Extended |
-| `chat-compare.yaml` | Chat → Attach artwork photo → Wait for "Similar artworks" → Tap match | Photo attachment | Advanced |
-| `settings-locale-switch.yaml` | Settings → Preferences → Switch locale fr↔en → Verify re-render | Text-based | Extended |
-| `support-ticket-create.yaml` | Settings → Support → Fill form → Submit → Success | Text-based | Extended |
-| `rtl-switch-ar.yaml` | Locale switch to AR → Verify RTL rendering | Text-based | Extended |
-| `login-and-capture.yaml` (maestro/) | Login → Verify home → Capture screenshots | Text-based | Extended |
-| `capture-screens.yaml` (maestro/) | Navigate all screens → Capture for documentation | Text-based | Extended |
-| `voice-record-and-tts.yaml` (maestro/) | Record audio → Verify TTS response | Audio fixture-based | Advanced |
-| `paywall-quota-exhaustion.yaml` (maestro/) | Exhaust conversation quota → Verify paywall modal | Text-based | Advanced |
-| `screenshots.yaml` (maestro/) | Global screenshot capture for release notes | Text-based | Release |
+**Primary suite — `.maestro/*.yaml` (27 active flows, excl `config.yaml`; verified 2026-05-19):**
 
-**Maestro Coverage Summary:**
-- **14 flows** in `.maestro/` directory (primary test suite)
-- **5 flows** in `maestro/` directory (secondary / demo)
-- **Core paths covered:** Auth, onboarding, chat, navigation, settings, museums, support
-- **Advanced coverage:** Audio, image compare, quota limiting, RTL
+| File | What It Tests | Status |
+|---|---|---|
+| `auth-flow.yaml` | Register → Home → Logout → Login → Home | Core |
+| `auth-login-happy.yaml` | Login happy path | Core |
+| `auth-login-invalid-credentials.yaml` | Login → INVALID_CREDENTIALS error state | Core |
+| `auth-register-happy.yaml` | Register happy path | Core |
+| `auth-register-duplicate-email.yaml` | Register → CONFLICT (dup email) | Core |
+| `auth-register-minor-dob.yaml` | Register → MINOR_PARENTAL_CONSENT (minor DOB) | Core |
+| `auth-register-password-breached.yaml` | Register → PASSWORD_BREACHED (HIBP) | Core |
+| `auth-submit-invalid-email.yaml` | Submit invalid email format → validation error | Core |
+| `auth-account-delete.yaml` | Account deletion flow | Core |
+| `auth-persistence.yaml` | Login → kill app → relaunch → session restored | Core |
+| `onboarding-flow.yaml` | 4-slide carousel → complete → home | Core |
+| `onboarding-full-carousel.yaml` | Walk all 4 slides + complete | Core |
+| `onboarding-skip-anonymous.yaml` | Skip-anonymous (regression guard, markOnboardingComplete pre-auth) | Core |
+| `navigation-flow.yaml` | Tab navigation + Settings → Preferences | Core |
+| `nav-tabs-roundtrip.yaml` | home → discover → carnet → settings → home | Core |
+| `nav-stack-deep-links.yaml` | Each (stack) screen reachable + back nav | Core |
+| `chat-flow.yaml` | Home → start conversation → send text → AI response | Core |
+| `chat-history-pagination.yaml` | Multi-turn → scroll up → load older | Extended |
+| `chat-compare.yaml` | Attach artwork photo → "Similar artworks" → tap match | Advanced |
+| `chat-cartel-deeplink.yaml` | Cartel scanner deeplink path | Advanced |
+| `museum-chat-flow.yaml` | Museums tab → detail → start chat from context | Core |
+| `museum-search-geo.yaml` | Museums tab + geolocation filtering + detail open/back | Core |
+| `audio-recording-flow.yaml` | Chat → mic → record → transcription → AI audio response | Advanced |
+| `settings-flow.yaml` | Settings hub → theme/privacy/terms/support → home | Core |
+| `settings-locale-switch.yaml` | Settings → Preferences → fr↔en → re-render | Extended |
+| `support-ticket-create.yaml` | Settings → Support → fill form → submit → success | Extended |
+| `cert-pinning-smoke.yaml` | Cert-pinning runtime smoke | Advanced |
+
+Helper subflow (not an entry point): `.maestro/helpers/quick-login.yaml`.
+
+**Secondary / demo suite — `maestro/*.yaml` (6 flows, not counted by the UFR-021 sentinel which only walks `.maestro/`):**
+
+| File | What It Tests | Status |
+|---|---|---|
+| `login-and-capture.yaml` | Login → home → capture screenshots | Extended |
+| `capture-screens.yaml` | Navigate all screens → capture for docs | Extended |
+| `voice-record-and-tts.yaml` | Record audio → verify TTS response | Advanced |
+| `paywall-quota-exhaustion.yaml` | Exhaust quota → paywall modal | Advanced |
+| `rtl-switch-ar.yaml` | Locale switch to AR → verify RTL rendering | Extended |
+| `screenshots.yaml` | Global screenshot capture for release notes | Release |
+
+**Maestro Coverage Summary (2026-05-19):**
+- **27 active flows** in `.maestro/` (primary suite; `config.yaml` excluded, `helpers/` not entry points)
+- **6 flows** in `maestro/` (secondary / demo / screenshot capture)
+- **Core paths covered:** Auth (incl. all error codes + account delete), onboarding, navigation (tabs + deep links), chat, museums, settings, support
+- **Advanced coverage:** Audio STT→TTS, image compare, cartel deeplink, cert-pinning smoke, quota/paywall, RTL
 
 ---
 
@@ -396,16 +425,15 @@
 
 ## 5. Test Coverage Summary
 
-### Metrics
+### Metrics (re-verified 2026-05-19)
 | Metric | Count | Coverage % |
 |---|---|---|
-| **Total Routes** | 25 | 100% identified |
-| **Total Screens** | 15 major | 100% scanned |
-| **Existing Maestro Flows** | 19 flows | — |
-| **Screens with any Maestro coverage** | 12 / 15 | **80%** |
+| **Total in-scope routes** (`app/**/*.tsx`, excl `_*`/`+*`) | 26 | 100% identified |
+| **Feature `*Screen.tsx`** (not directly routed) | 4 | 100% identified |
+| **Active Maestro flows** (`.maestro/`, excl `config.yaml`) | 27 | — |
+| **Secondary Maestro flows** (`maestro/`) | 6 | — |
+| **Screens with any Maestro coverage** | ~14 / 15 major | — |
 | **Screens with testIDs** | 11 / 15 | **73%** |
-| **testIDs across codebase** | 45 total | Partial |
-| **Critical testIDs present** | 28 / 45 | **62%** |
 
 ### Coverage by Feature (Maestro flows)
 
@@ -418,8 +446,8 @@
 | **Settings** | Theme, locale, preferences, compliance | ✓ Good |
 | **Museums** | Map/List view, search, detail, geolocation | ✓ Good |
 | **Onboarding** | 4-slide carousel, skip/complete | ✓ Good |
-| **Support** | Ticket creation form | ⚠️ Partial |
-| **Carnet** | Save/browse artworks | ❌ None |
+| **Support** | Ticket creation form (`support-ticket-create.yaml`) | ✓ Core |
+| **Carnet** | Save/browse artworks | ⚠️ Partial (reachable via `nav-stack-deep-links`, no dedicated flow) |
 | **Biometric** | Setup modal, cold-start restore | ❌ None |
 | **Accessibility** | Voice labels, screen reader | ❌ None |
 | **Offline** | Queue, retry, network transitions | ❌ None |
@@ -461,34 +489,30 @@
 
 ## Appendix: File Locations
 
-**Maestro Tests (Primary):**
+**Maestro Tests (Primary — 27 active flows, see §3 table for the full list):**
 ```
-.maestro/
-  ├── auth-flow.yaml ..................... Auth lifecycle
-  ├── auth-persistence.yaml .............. Token persistence
-  ├── chat-flow.yaml ..................... Core chat
-  ├── chat-history-pagination.yaml ....... Multi-turn chat
-  ├── chat-compare.yaml .................. Image similarity
-  ├── onboarding-flow.yaml ............... Carousel
-  ├── settings-flow.yaml ................. Settings hub
-  ├── settings-locale-switch.yaml ........ i18n
-  ├── navigation-flow.yaml ............... Tab navigation
-  ├── museum-chat-flow.yaml .............. Museum → chat
-  ├── museum-search-geo.yaml ............. Geolocation
+.maestro/                              (27 *.yaml, excl config.yaml)
+  ├── auth-*.yaml ........................ 8 auth flows (lifecycle + all error codes + delete)
+  ├── onboarding-*.yaml .................. flow / full-carousel / skip-anonymous
+  ├── nav-*.yaml + navigation-flow.yaml .. tabs roundtrip + stack deep-links
+  ├── chat-*.yaml + audio-recording ...... chat / pagination / compare / cartel-deeplink / audio
+  ├── museum-*.yaml ...................... museum-chat / museum-search-geo
+  ├── settings-*.yaml .................... settings-flow / settings-locale-switch
   ├── support-ticket-create.yaml ......... Support form
-  ├── audio-recording-flow.yaml .......... Voice STT→TTS
-  ├── rtl-switch-ar.yaml ................. RTL testing
+  ├── cert-pinning-smoke.yaml ............ cert-pinning runtime smoke
+  ├── config.yaml ........................ (excluded from sentinel)
   └── helpers/
-      └── quick-login.yaml ............... Reusable auth
+      └── quick-login.yaml ............... Reusable auth subflow
 ```
 
-**Maestro Tests (Secondary):**
+**Maestro Tests (Secondary — 6 flows, not counted by UFR-021 sentinel):**
 ```
 maestro/
   ├── login-and-capture.yaml
   ├── capture-screens.yaml
   ├── voice-record-and-tts.yaml
   ├── paywall-quota-exhaustion.yaml
+  ├── rtl-switch-ar.yaml
   └── screenshots.yaml
 ```
 
@@ -508,6 +532,7 @@ app/
       ├── discover.tsx ................... Intent launcher
       ├── onboarding.tsx ................. Carousel
       ├── museum-detail.tsx .............. Museum view
+      ├── museums-picker.tsx ............. Museum selection
       ├── chat/[sessionId].tsx ........... Chat session
       ├── carnet.tsx ..................... Artwork notebook
       ├── carnet/[sessionId].tsx ......... Artwork detail

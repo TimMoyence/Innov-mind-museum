@@ -7,8 +7,8 @@ End-to-end runbook for the `/api/chat/compare` pipeline. ADR-037 captures the ar
 `POST /api/chat/compare` (multipart) → `museum-backend/src/modules/chat/useCase/visual-similarity/similarity.service.ts#compare()` runs:
 
 1. **Cache lookup** — Redis, key = `visual-similarity:compare:v1:{locale}:{topK}:{sortedMuseumQids},{sha256(buffer)}`. TTL 1 h.
-2. **Encode** — SigLIP `siglip-base-patch16-224@onnx-fp16`, ONNX Runtime CPU. Output L2-normalised float32(768).
-3. **kNN search** — `artwork_embeddings` table, pgvector `halfvec(768)` cosine, IVFFlat index. `topN = max(20, 4 * topK)`.
+2. **Encode** — SigLIP-2 `siglip2-base-patch16-224@v1` (C9.14 swap, commit `1a3e8d18`), ONNX Runtime CPU. Output L2-normalised float32(768). Note: the Replicate hosted fallback lags one generation (still SigLIP v1, `siglip-base-patch16-224@replicate-v1`) — cross-comparing rows from the two encoders is invalid, see `embeddings.factory.ts`.
+3. **kNN search** — `artwork_embeddings` table, pgvector `halfvec(768)`, HNSW index `IDX_artwork_embeddings_hnsw` (`halfvec_ip_ops`, `m=16` / `ef_construction=64`; vectors are L2-normalised at encode time so inner product == cosine). `topN = max(20, 4 * topK)`.
 4. **Enrich** — Wikidata SPARQL batch (one HTTP per locale, qids deduplicated). Drop candidates without resolved facts (UFR-013).
 5. **Score + fuse** — `finalScore = 0.7 * visualScore + 0.3 * metadataScore`. V1 metadataScore = 0 (no query facts).
 6. **Sort + truncate** to `topK`.
@@ -20,10 +20,11 @@ Frontend glue: `museum-frontend/features/chat/application/useCompareImage.ts` (R
 
 | Name | Default | Purpose |
 |---|---|---|
-| `SIGLIP_ONNX_MODEL_PATH` | `models/siglip-base-patch16-224.onnx` | Path to the ONNX model file (loaded once at process start). |
+| `SIGLIP_ONNX_MODEL_PATH` | `./models/siglip2-base-patch16-224.onnx` | Path to the SigLIP-2 ONNX model file (loaded once at process start). |
 | `SIGLIP_ONNX_PROVIDER` | `cpu` | Execution provider. `cuda` requires GPU + driver — V1 ships CPU-only. |
 | `WIKIDATA_SPARQL_ENDPOINT` | `https://query.wikidata.org/sparql` | Public Wikidata endpoint. Self-hosted mirror configurable. |
 | `VISUAL_COMPARE_CACHE_TTL_SECONDS` | `3600` | Redis result-cache TTL. |
+| `RERANK_PROVIDER` | `null` | Cross-encoder reranker (C9.13). `null` = no-op adapter (V1 prod default). `bge-reranker-v2-m3` selects the BAAI/bge-reranker-v2-m3 ONNX scaffold which currently throws (fail-open → baseline order); full impl lands V2. |
 | `SMOKE_COMPARE_ENABLED` | `"true"` | Whether `pnpm smoke:api` exercises `/api/chat/compare`. Disable only in legitimate degraded-environment runs. |
 
 ## CLI usage
@@ -77,14 +78,14 @@ Validates the visitor-facing flow on a real device. Fixture image: `museum-front
 1. Open the Langfuse `chat.compare.total` traces — sort by latency desc.
 2. Check the per-stage spans (`chat.compare.{encode,search,enrich,fusion}`):
    - **encode** dominant → CPU saturation or model not warm. Restart, then check AVX2 baseline.
-   - **search** dominant → catalog grew past IVFFlat sweet spot. `REINDEX INDEX artwork_embeddings_vector_idx` with a higher `lists` parameter.
+   - **search** dominant → HNSW recall/latency tradeoff drifting as the catalogue grows. First try raising `hnsw.ef_search` at the session level (`SET hnsw.ef_search = 100;`) to trade latency for recall without a rebuild. If the index itself is degraded, `REINDEX INDEX CONCURRENTLY "IDX_artwork_embeddings_hnsw";` to rebuild it; persistent growth may warrant a higher `m` / `ef_construction` (recreate the index — these are build-time params and cannot be `ALTER`ed).
    - **enrich** dominant → Wikidata SPARQL slowdown. Check `query.wikidata.org` status, fall back to a self-hosted mirror.
    - **fusion** dominant → unlikely (pure CPU sort), check for unexpected GC pauses.
 
 ### `recall@5 < 0.85` on fixture set
 
 1. Run the recall regression test locally (T7.4 — currently `skipped`, opt-in via `RECALL_REGRESSION=true pnpm test`).
-2. If the IVFFlat index was rebuilt with too few `lists` for catalogue size, `REINDEX` with `lists = sqrt(rowcount)`.
+2. If the HNSW index is suspected stale/degraded, rebuild it: `REINDEX INDEX CONCURRENTLY "IDX_artwork_embeddings_hnsw";`. For a recall (not latency) shortfall, raise `hnsw.ef_search` first; only bump build-time `m` / `ef_construction` (recreate the index) if higher `ef_search` is insufficient.
 3. If a new model version was deployed, re-encode the catalogue: drop + re-run `scripts/catalog-ingest.ts --reset`.
 
 ### `artwork_embeddings_count < 9000` (Sentry alert — T9.5)
@@ -152,3 +153,4 @@ The `max(...)` aggregator is defensive — multiple BE replicas all report the s
 - **Maestro fixture.** The nightly flow expects `museum-frontend/.maestro/fixtures/test-artwork.jpg`; CI uploads it via `adb push` (Android) or `xcrun simctl addmedia` (iOS) before invoking maestro.
 - **Empty `metadataScore` in V1.** No query-side enrichment yet — `finalScore` collapses to `wVisual * visualScore`. V2 introduces query-facts resolution.
 - **Single encoder.** No Replicate fallback in V1. Encoder downtime → `503` contractual envelope.
+- **No cross-encoder reranking in V1.** The `bge-reranker-v2-m3` integration (C9.13, `RERANK_PROVIDER`) ships only as a scaffold — the default `null` provider is a no-op, and selecting `bge-reranker-v2-m3` currently throws (fail-open → results keep their baseline HNSW order). Final ranking in V1 is purely `finalScore` fusion. Full reranking lands in V2.

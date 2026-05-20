@@ -155,10 +155,10 @@ flowchart LR
 | G3 / V12 | No breach SLA / playbook (Art 33/34) | Tech lead + Legal | All |
 | G4 / V5 | S3 audio + image orphans after DB purge | BE team | F7 |
 | G5 / V4 | LLM cache key omits userId — cross-user leak | BE team | F6, F9-F11 |
-| G6 | No DPIA (Art 35) — geo + AI + voice biometric | DPO (TBD) | F3, F4, F9-F11 |
+| ~~G6~~ RESOLVED | DPIA (Art 35) — geo + AI + voice biometric — shipped `docs/legal/DPIA.md` (2026-05-13) | DPO (TBD) | F3, F4, F9-F11 |
 | G7 | Consent ungranular (only `location_to_llm`) | Product + BE | F2, F3, F9-F11 |
 | G9 / V6 | EXIF not stripped on uploaded images | BE team | F2 |
-| G10 | No ROPA (Art 30) committed | Legal | All |
+| ~~G10~~ RESOLVED | ROPA (Art 30) — committed `docs/legal/ROPA.md` (2026-05-13) | Legal | All |
 | G11 | Privacy policy not audited for sub-processor list completeness | Legal | All — drives publication of `SUBPROCESSORS.md` |
 | G12 | No transfer impact assessment for US-based LLM | Legal | F9, F10, F15, F16 |
 

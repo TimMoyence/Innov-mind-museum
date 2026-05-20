@@ -34,7 +34,7 @@ The pre-existing surgical playbook [`docs/OPS_INCIDENT_LLM_GUARD.md`](../OPS_INC
 
 ### Orient
 ```bash
-curl -fsS https://api.musaium.app/api/health | jq '.llmGuardCircuitBreaker'
+curl -fsS https://api.musaium.com/api/health | jq '.llmGuardCircuitBreaker'
 ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml exec backend curl -fsS http://llm-guard:8081/health"
 ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml logs --tail=200 llm-guard"
 ```
@@ -66,7 +66,7 @@ Fail-CLOSED is doing its job. Chat is degraded (every request returns `service_u
 ```bash
 ssh ops@vps "docker stats --no-stream llm-guard"   # CPU sustained > 90 % → capacity issue
 ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml logs --tail=50 backend | grep llm_guard_semaphore_overflow"
-curl -fsS https://api.musaium.app/api/health | jq '.llmGuardCircuitBreaker.failureCount'
+curl -fsS https://api.musaium.com/api/health | jq '.llmGuardCircuitBreaker.failureCount'
 ```
 
 ### Bend
@@ -95,7 +95,7 @@ ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml logs --tail=5
 
 ### Orient
 ```bash
-curl -fsS https://api.musaium.app/api/health | jq '.llmGuardCircuitBreaker'
+curl -fsS https://api.musaium.com/api/health | jq '.llmGuardCircuitBreaker'
 ssh ops@vps "docker compose -f /srv/museum/docker-compose.prod.yml exec backend curl -fsS http://llm-guard:8081/health"
 psql "$PROD_DB_URL" -c "SELECT created_at, metadata FROM audit_logs WHERE action='SECURITY_LLM_GUARD_BREAKER_OPEN' ORDER BY created_at DESC LIMIT 5;"
 ```

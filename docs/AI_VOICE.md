@@ -54,7 +54,7 @@ Mobile                 Backend                          OpenAI
 | `AudioStorage` (port) | `museum-backend/src/modules/chat/domain/ports/audio-storage.port.ts` | Abstraction stockage audio. |
 | `S3CompatibleAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/storage/audio-storage.s3.ts` | Adapter S3 — préfixe `chat-audios/<year>/<month>/<uuid>.mp3`. |
 | `LocalAudioStorage` | `museum-backend/src/modules/chat/adapters/secondary/storage/audio-storage.stub.ts` | Adapter dev (`tmp/audios/`). |
-| `ChatMediaService.synthesizeSpeech` | `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:188` | Cache Redis (TTL 1d) + persistance S3 + DB (audioUrl). |
+| `ChatMediaService.synthesizeSpeech` | `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts` | Cache Redis (TTL 1d) + persistance S3 + DB (audioUrl). |
 | `ChatMediaService.getMessageAudioUrl` | `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts` | Retourne URL signée S3 pour download direct mobile. |
 | `ChatRepository.updateMessageAudio` | `museum-backend/src/modules/chat/domain/session/chat.repository.interface.ts` | Persiste `audioUrl/audioGeneratedAt/audioVoice` sur `ChatMessage`. |
 
@@ -87,7 +87,7 @@ LLM_AUDIO_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe   # STT (Whisper successor)
 
 # TTS (V1)
 TTS_MODEL=gpt-4o-mini-tts                        # Default V1 (était tts-1 avant)
-TTS_VOICE=alloy                                  # alloy | echo | fable | onyx | nova | shimmer | verse | marin
+TTS_VOICE=alloy                                  # alloy | echo | fable | onyx | nova | shimmer
 TTS_SPEED=1.0
 TTS_MAX_TEXT_LENGTH=4096
 TTS_CACHE_TTL_SECONDS=86400                      # Redis cache hot path (1 jour)

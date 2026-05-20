@@ -37,6 +37,8 @@ Step-by-step setup for Apple Sign-In and Google Sign-In in Musaium.
 
 > Pre-requisite: a Google Cloud project (ideally the same one used for Google Play Console).
 
+> **Architecture note** — Musaium does **not** use the native `@react-native-google-signin` SDK. Google sign-in is a **server-mediated OAuth flow**: the mobile app opens `${apiBaseUrl}/api/auth/google/initiate?platform=mobile` in an in-app browser (`expo-web-browser` `openAuthSessionAsync`), the **backend** drives the entire OAuth dance with Google and redirects back to the `musaium://auth/google/callback` deeplink with a single-use code. The OAuth Client ID + secret live **server-side only**. Consequently there are **no** iOS/Android Client IDs, **no** `iosUrlScheme`, and **no** SHA-1 fingerprint to configure on the client. See `museum-frontend/features/auth/infrastructure/socialAuthProviders.ts`.
+
 ### [x] Step 1 — Create project (if not done)
 
 1. Go to https://console.cloud.google.com
@@ -55,53 +57,27 @@ Step-by-step setup for Apple Sign-In and Google Sign-In in Musaium.
 4. **Save and Continue** on each step (Scopes, Test users) — no specific scopes needed
 5. **Publish App** when ready (otherwise stays in "Testing" mode with max 100 users)
 
-### [x] Step 3 — Create Web Client ID (most important)
+### [x] Step 3 — Create Web Client ID (the only one needed)
+
+The backend performs the OAuth exchange, so a single **Web application** OAuth client is sufficient for all platforms (iOS, Android, web).
 
 1. Menu > **APIs & Services** > **Credentials**
 2. **+ Create Credentials** > **OAuth client ID**
 3. Application type: **Web application**
 4. Name: `Musaium Web Client`
-5. No Authorized redirect URIs needed (no web OAuth flow)
-6. **Create** > **copy the Client ID** (format: `xxxx.apps.googleusercontent.com`)
-7. **This Client ID goes in the backend env**: `GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com`
+5. **Authorized redirect URIs**: add the backend OAuth callback the server registers with Google (the production server's `/api/auth/google/callback` endpoint). The mobile deeplink (`musaium://...`) is **not** registered here — Google only ever redirects to the backend, which then 302s to the deeplink.
+6. **Create** > copy **both** the Client ID (`xxxx.apps.googleusercontent.com`) **and** the Client secret.
+7. These go in the **backend env**:
+   - `GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com` (used to verify the `aud` claim)
+   - the Client secret (consult the backend `.env.example` for the exact var name) — needed for the server-side token exchange.
 
-### [x] Step 4 — Create iOS Client ID
-
-1. **+ Create Credentials** > **OAuth client ID**
-2. Application type: **iOS**
-3. Name: `Musaium iOS`
-4. Bundle ID: `com.musaium.mobile`
-5. **Create** > **copy the iOS Client ID** (format: `yyyy.apps.googleusercontent.com`)
-6. **This Client ID goes in two places**:
-   - `museum-frontend/app.config.ts` — `iosUrlScheme` (reversed format: `com.googleusercontent.apps.yyyy`)
-   - `museum-frontend/services/socialAuthService.ts` — `iosClientId` in `GoogleSignin.configure()`
-
-### [x] Step 5 — Create Android Client ID
-
-1. **+ Create Credentials** > **OAuth client ID**
-2. Application type: **Android**
-3. Name: `Musaium Android`
-4. Package name: `com.musaium.mobile`
-5. SHA-1 certificate fingerprint — get with:
-
-   ```bash
-   # With EAS managed credentials:
-   eas credentials --platform android
-   # Select the keystore > shows SHA-1
-
-   # Or with local keystore:
-   keytool -list -v -keystore ./android/app/release.keystore -alias key0
-   ```
-
-6. **Create**
-
-### [x] Step 6 — Enable API (optional but recommended)
+### [x] Step 4 — Enable API (optional but recommended)
 
 1. Menu > **APIs & Services** > **Library**
-2. Search "Google Identity" or "People API [x]"
+2. Search "Google Identity" or "People API"
 3. Enable if not already done
 
-**Result**: 3 Client IDs created (Web, iOS, Android). The Web Client ID is the main one used for token verification.
+**Result**: 1 Web OAuth Client ID created. No iOS/Android Client IDs, no SHA-1 fingerprint, no `iosUrlScheme` — the backend owns the whole Google OAuth flow.
 
 ---
 
@@ -114,8 +90,9 @@ Add to `museum-backend/.env`:
 APPLE_CLIENT_ID=com.musaium.mobile
 
 # Google Sign-In (Web Client ID — used to verify the "aud" claim in Google JWTs)
-# If you have multiple client IDs (web + iOS), comma-separate them
 GOOGLE_OAUTH_CLIENT_ID=xxxx.apps.googleusercontent.com
+# Plus the Google OAuth Client secret for the server-side token exchange
+# (see museum-backend/.env.example for the exact variable name).
 ```
 
 Add to GitHub Actions secrets (for CI/CD):
@@ -127,32 +104,21 @@ Add to GitHub Actions secrets (for CI/CD):
 
 ## 4. Frontend Configuration
 
-### [x] Update `app.config.ts`
+**No client-side Google Client ID configuration is required.** The mobile app never holds a Google OAuth client — it only opens the backend `/api/auth/google/initiate` URL and listens for the `musaium://auth/google/callback` deeplink. There is **no** `iosUrlScheme` to set in `app.config.ts` and **no** `services/socialAuthService.ts` (the actual implementation lives in `museum-frontend/features/auth/infrastructure/socialAuthProviders.ts`).
 
-Replace the placeholder `iosUrlScheme` with the real iOS Client ID (reversed):
+The only client-side requirements are:
 
-```ts
-['@react-native-google-signin/google-signin', {
-  iosUrlScheme: 'com.googleusercontent.apps.YOUR_REAL_IOS_CLIENT_ID',
-}],
-```
+- The `musaium://` deeplink scheme (set via `scheme: APP_SCHEME` in `app.config.ts`) so the OS routes the OAuth callback back into the app.
+- `expo-web-browser` (registered as an Expo config plugin in `app.config.ts`) for `openAuthSessionAsync`.
+- `expo-apple-authentication` (config plugin) for the native Apple Sign-In button.
 
-### [x] Update `services/socialAuthService.ts`
-
-Replace the placeholder values with real Client IDs:
-
-```ts
-GoogleSignin.configure({
-  webClientId: 'YOUR_REAL_WEB_CLIENT_ID.apps.googleusercontent.com',
-  iosClientId: 'YOUR_REAL_IOS_CLIENT_ID.apps.googleusercontent.com',
-});
-```
+All of these are already wired — no per-environment client config is needed for Google.
 
 ---
 
 ## 5. EAS Rebuild
 
-The two libraries add native modules — OTA updates are insufficient:
+`expo-apple-authentication` and `expo-web-browser` add native modules — OTA updates are insufficient when these are added/changed:
 
 ```bash
 # Rebuild dev client for testing
@@ -161,6 +127,8 @@ eas build --profile development --platform all
 # Or just iOS first (Apple Sign-In only exists on iOS)
 eas build --profile development --platform ios
 ```
+
+> **iOS native deps reminder** — if `expo-web-browser` / `expo-apple-authentication` Pods drift, the iOS build (Xcode Cloud) uses the committed `museum-frontend/ios/Pods/`. After any `expo prebuild` or native dep change, run `cd museum-frontend/ios && pod install` and `git add -f ios/Pods/...` (see CLAUDE.md "iOS build chain" gotcha). A missing native module is degraded gracefully via the lazy `require('expo-web-browser')` in `socialAuthProviders.ts`.
 
 ---
 

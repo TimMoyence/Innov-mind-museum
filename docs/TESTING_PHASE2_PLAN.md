@@ -3,6 +3,18 @@
 Generated 2026-05-17. Companion to `TEST_COVERAGE_INVENTORY.md` (full surface
 map) and `TESTING_DISCIPLINE_PROPOSAL.md` (automation rule UFR-021).
 
+> **Status (audit 2026-05-19) — STILL THE PENDING PLAN.** Phase 1 landed
+> 2026-05-17 (commit `70f5ce2f9`): API smoke runner, migration sync sentinel,
+> auth/onboarding/nav Maestro flows, AND the UFR-021 sentinel
+> (`museum-frontend/scripts/sentinels/screen-test-coverage.mjs` +
+> `coverage-baseline.json` + UFR-021 prose in CLAUDE.md + JSON entry).
+> The UFR-021 **enforcement wiring** is NOT done: pre-push Gate, `ci-cd-mobile.yml`
+> step, and `sentinel-mirror.yml` mirror are still un-wired (verified 0 refs in
+> those workflows + `.husky/pre-push`). CLAUDE.md records this as
+> "Phase 2 (à wirer après validation user)" — i.e. awaiting explicit user
+> go-ahead before the gate becomes blocking. The Tier 1–4 coverage expansion
+> below remains open work.
+
 ## What landed tonight (Phase 1, 2026-05-17 evening session)
 
 - **API smoke runner** — `pnpm smoke:api`, 13 scenarios, all green. Covers
@@ -13,17 +25,21 @@ map) and `TESTING_DISCIPLINE_PROPOSAL.md` (automation rule UFR-021).
   `dev:stack` step 3.5. Prevents schema-drift incidents like the `User.tier`
   500 chain. Interactive "apply now?" prompt on pending.
 - **Maestro AUTH coverage** — see `museum-frontend/.maestro/auth-*.yaml`
-  (extended in commit `<COMMIT_HASH>`). Covers register happy, register
-  PASSWORD_BREACHED, register CONFLICT, register MINOR_PARENTAL_CONSENT,
-  login happy, login INVALID_CREDENTIALS, account deletion.
+  (8 auth flows present as of the 2026-05-19 audit). Covers register happy,
+  register PASSWORD_BREACHED, register CONFLICT (duplicate email), register
+  MINOR_PARENTAL_CONSENT (minor DOB), login happy, login INVALID_CREDENTIALS,
+  account deletion, submit-invalid-email.
 - **Maestro ONBOARDING + NAV coverage** — see
   `museum-frontend/.maestro/{onboarding,nav}-*.yaml`. Skip-anonymous
   (regression guard for the `markOnboardingComplete failed Error:
   Authentication required` we just fixed), full carousel, tab roundtrip,
   stack deep links.
-- **UFR-021 proposal** — `docs/TESTING_DISCIPLINE_PROPOSAL.md`. Ready to
-  implement in Phase 3. Includes sentinel script spec + pre-push hook +
-  PR template + CI gate.
+- **UFR-021 proposal** — `docs/TESTING_DISCIPLINE_PROPOSAL.md`. Sentinel
+  spec + prose. **Update 2026-05-19:** sentinel itself shipped
+  (`museum-frontend/scripts/sentinels/screen-test-coverage.mjs` +
+  `coverage-baseline.json` + CLAUDE.md/JSON UFR-021); only the enforcement
+  wiring (pre-push Gate, CI step, sentinel-mirror) remains — pending user
+  validation. Proposal status flipped to ACCEPTED-PARTIAL.
 
 ## Phase 2 areas (tomorrow morning, 2026-05-18)
 
@@ -97,31 +113,29 @@ Extend `scripts/smoke-api.mjs` with new scenarios:
 freshly-migrated ephemeral test DB. Maestro flows already shard-run on
 Android matrix per `ci-cd-mobile.yml` — add the auth flows there too.
 
-### UFR-021 implementation (~2h)
+### UFR-021 implementation
 
-Per `docs/TESTING_DISCIPLINE_PROPOSAL.md`, implement:
-1. `scripts/sentinels/screen-test-coverage.mjs` (spec ready in proposal §3)
-2. Add to `.husky/pre-push` as Gate 19
-3. Add UFR-021 block to `CLAUDE.md` + JSON entry to
-   `.claude/agents/shared/user-feedback-rules.json`
-4. Add PR template checkbox
-5. CI gate in `ci-cd-mobile.yml`
+Per `docs/TESTING_DISCIPLINE_PROPOSAL.md` (status verified 2026-05-19):
+1. [x] `museum-frontend/scripts/sentinels/screen-test-coverage.mjs` (shipped, wired as `pnpm sentinel:screen-test-coverage`) + `coverage-baseline.json` bootstrapped
+2. [ ] Add to `.husky/pre-push` as Gate 19 — **pending (user validation)**
+3. [x] UFR-021 block in `CLAUDE.md` + JSON entry in `.claude/agents/shared/user-feedback-rules.json`
+4. [ ] Add PR template checkbox — **pending (Phase 2)**
+5. [ ] CI gate in `ci-cd-mobile.yml` + mirror in `sentinel-mirror.yml` — **pending (Phase 2)**
 
-## Total effort estimate
+## Work breakdown (parallelizability)
 
-| Tier | Effort | Parallelizable? |
-|---|---|---|
-| Tier 1 (chat, discover, settings, camera) | 4h | Yes, 4 agents |
-| Tier 2 (paywall, carnet) | 2h | Yes, 2 agents |
-| Tier 3 (support, legal, etc.) | 1h | Yes, 1-2 agents |
-| testID audit + adds | 1-2h | No, single commit |
-| Backend smoke expansion | 1h | Solo |
-| CI wiring | 30 min | Solo |
-| UFR-021 implementation | 2h | Solo |
+> Hour estimates removed per UFR-019 (solo-dev estimates systematically
+> 50–70% inflated). Listed by parallelizability only.
 
-**With 4-5 parallel agents : 6-8h wall-clock for full Phase 2 + UFR-021.**
-
-Realistic for one focused morning if dispatching is tight.
+| Tier | Parallelizable? |
+|---|---|
+| Tier 1 (chat, discover, settings, camera) | Yes, 4 agents |
+| Tier 2 (paywall, carnet) | Yes, 2 agents |
+| Tier 3 (support, legal, etc.) | Yes, 1-2 agents |
+| testID audit + adds | No, single commit |
+| Backend smoke expansion | Solo |
+| CI wiring | Solo |
+| UFR-021 enforcement wiring (pre-push + CI mirror) | Solo — pending user validation |
 
 ## Hard requirements before marking Phase 2 complete
 
@@ -129,11 +143,11 @@ Realistic for one focused morning if dispatching is tight.
 - [ ] `pnpm test:e2e:auth` (Maestro auth suite) green on iOS Simulator
 - [ ] `pnpm test:e2e:nav` (Maestro nav suite) green on iOS Simulator
 - [ ] `pnpm test:e2e:chat` (Maestro chat suite) green on iOS Simulator
-- [ ] `pnpm sentinel:screen-coverage` green (per UFR-021)
-- [ ] `.husky/pre-push` runs sentinel + smoke before push
+- [x] `pnpm sentinel:screen-test-coverage` exists + green on clean main (per UFR-021)
+- [ ] `.husky/pre-push` runs sentinel + smoke before push — **NOT wired (pending user validation)**
 - [ ] PR template updated
-- [ ] `docs/TEST_INDEX.md` lists every flow with status
-- [ ] CLAUDE.md has UFR-021 block
+- [x] `docs/TEST_INDEX.md` lists every flow with status
+- [x] CLAUDE.md has UFR-021 block
 
 ## Anti-goals (do NOT do)
 

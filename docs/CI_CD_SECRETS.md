@@ -73,31 +73,31 @@ Note mobile:
 ### `GHCR_USER`
 - Rôle: username pour push/pull d’images sur GHCR (`ghcr.io`).
 - Utilisé par:
-  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
+  - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: repository (ou organization si mutualisé).
 
 ### `GHCR_TOKEN`
 - Rôle: token GitHub (ou PAT) avec permission `packages:write`/`packages:read` pour GHCR.
 - Utilisé par:
-  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
+  - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: repository / organization.
 
 ### `SERVER_HOST`
 - Rôle: hostname/IP du VPS cible (deploy backend).
 - Utilisé par:
-  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
+  - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: environment (`staging`, `production`) si serveurs différents.
 
 ### `SERVER_USER`
 - Rôle: utilisateur SSH pour le déploiement (ex: `deploy`).
 - Utilisé par:
-  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
+  - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: environment.
 
 ### `SERVER_KEY`
 - Rôle: clé privée SSH du compte de déploiement.
 - Utilisé par:
-  - `_deploy-backend.yml` (reusable deploy workflow, called by `ci-cd-backend.yml`)
+  - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: environment (jamais repository si prod/staging distincts).
 
 ## Secrets Smoke Tests Post-Deploy (Strictement requis)
@@ -128,18 +128,18 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 #### `PROD_SMOKE_API_BASE_URL`
 - Rôle: URL base de l’API prod (ex: `https://api.example.com`).
 - Utilisé par:
-  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
+  - `ci-cd-backend.yml` (production deploy job)
 
 #### `PROD_SMOKE_TEST_EMAIL`
 - Rôle: email du compte de test smoke prod.
 - Utilisé par:
-  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
+  - `ci-cd-backend.yml` (production deploy job)
 - Recommandation: compte dédié, permissions minimales, surveillé.
 
 #### `PROD_SMOKE_TEST_PASSWORD`
 - Rôle: mot de passe du compte de test smoke prod.
 - Utilisé par:
-  - `ci-cd-backend.yml` (production deploy job via `_deploy-backend.yml`)
+  - `ci-cd-backend.yml` (production deploy job)
 
 ## Secrets Mobile (Expo / EAS)
 
@@ -381,7 +381,7 @@ Pour Scaleway / OVH (bucket réutilisé actuellement = non-AWS), seule l'auth pa
 
 | Secret | Role | Used by | Scope |
 |--------|------|---------|-------|
-| `SENTRY_AUTH_TOKEN` | Authentication for Sentry CLI (source map upload, release creation) | `_deploy-backend.yml` (called by `ci-cd-backend.yml`), EAS builds (via `eas secret:create`) | repository |
+| `SENTRY_AUTH_TOKEN` | Authentication for Sentry CLI (source map upload, release creation) | `ci-cd-backend.yml` (deploy job), EAS builds (via `eas secret:create`) | repository |
 | `SENTRY_ORG` | Sentry organization slug | Deploy workflows | repository |
 | `SENTRY_PROJECT_BACKEND` | Sentry project slug for the backend API | Deploy workflows | repository |
 

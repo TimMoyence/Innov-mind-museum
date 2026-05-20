@@ -1,6 +1,6 @@
 # Cert rotation + cert-pinning kill-switch runbook
 
-**Audience**: Ops on call when the production TLS cert for `api.musaium.app` rotates, **or** when a pin-mismatch incident is paging.
+**Audience**: Ops on call when the production TLS cert for `musaium.com` rotates, **or** when a pin-mismatch incident is paging.
 
 **Reference design**: [ADR-031](../adr/ADR-031-mobile-cert-pinning-kill-switch.md). Library: [`react-native-ssl-public-key-pinning`](https://github.com/frw/react-native-ssl-public-key-pinning) selected in [ADR-016](../adr/ADR-016-mobile-cert-pinning-deferred.md).
 
@@ -17,7 +17,7 @@ This runbook covers three operations:
 A pin is the base64-encoded SHA-256 of the certificate's Subject Public Key Info (SPKI). Capture both the leaf cert and a backup CA you trust to issue the next cert:
 
 ```bash
-HOST=api.musaium.app
+HOST=musaium.com
 
 openssl s_client -servername "$HOST" -connect "$HOST":443 -showcerts < /dev/null 2>/dev/null \
   | openssl x509 -pubkey -noout \
@@ -79,5 +79,5 @@ Step-by-step:
 ## Out-of-scope
 
 - Public CA root pinning (we only pin SPKI of leaf + backup CA, not roots).
-- Per-environment pin sets (only `api.musaium.app` is currently configured).
+- Per-environment pin sets (only `musaium.com` is currently configured).
 - Network library variants outside the OS-stock TLS stack (e.g. WebSocket libs that bypass URLSession / OkHttp). Inventory them and add explicit handling if and when they ship.

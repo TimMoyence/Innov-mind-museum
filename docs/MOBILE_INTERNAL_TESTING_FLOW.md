@@ -2,10 +2,12 @@
 
 Ce document décrit le flux mobile Android recommandé pour `Musaium`:
 
-- `push frontend` -> build cloud Android store-grade
+- déclenchement **manuel** (`workflow_dispatch`) -> build cloud Android store-grade sur EAS
 - auto-submit Google Play `Internal testing`
 - validation réelle via Play Console / Google Play
 - production publique séparée et contrôlée
+
+> **Note déclenchement (2026-05)** — le build Android internal **n'est plus déclenché par un `push` sur `main`**. Le trigger on-push drainait le quota EAS Free plan à chaque merge ; les opérateurs lancent désormais le job `build-internal-android` manuellement depuis l'onglet **Actions** (`workflow_dispatch`, profil `internal`). Sur `push`/`pull_request`, le workflow ne lance que `quality` + `prebuild` (+ Maestro en nightly). Voir le bloc `on:` de `.github/workflows/ci-cd-mobile.yml`.
 
 ## Objectif
 
@@ -42,16 +44,15 @@ Cela permet:
 - `package production` + `API staging` pour le track interne
 - `package production` + `API production` pour la vraie release publique
 
-### 3. Push frontend => internal testing
+### 3. Dispatch manuel => internal testing
 
-Sur `push` vers `main` avec changements `museum-frontend/**`:
+Lancement manuel via **Actions > mobile > Run workflow** (`workflow_dispatch`) avec `profile=internal`, `platform=android`:
 
-1. `quality-frontend`
-2. `build-preview-ios`
-3. `build-internal-android`
-4. auto-submit Google Play `internal`
+1. `quality` (lint, tests, OpenAPI sync, i18n, expo-doctor)
+2. `build-internal-android` (EAS build profil `internal` + `--auto-submit-with-profile internal`)
+3. auto-submit Google Play `internal`
 
-La prod publique Android n'est pas déclenchée par un simple push.
+La prod publique Android n'est pas déclenchée par ce flux ; elle utilise `profile=production` (+ `submit=yes` pour `submit-production-android`).
 
 ## Pré-requis
 
@@ -100,33 +101,28 @@ Avant le premier flux automatisé:
 
 Fichier:
 
-- `/Users/Tim/Desktop/all/dev/Pro/InnovMind/.github/workflows/mobile-release.yml`
+- `.github/workflows/ci-cd-mobile.yml`
 
-### Push frontend
+### Triggers réels
 
-Un `push` sur `main` avec changements frontend lance:
+Le bloc `on:` du workflow déclenche:
 
-1. vérification qualité
-2. preview iOS
-3. build Android `internal`
-4. auto-submit Play `Internal testing`
+- `pull_request` / `push` (main, tags `v*`) sur les paths `museum-frontend/**`, `museum-backend/openapi/**`, le workflow lui-même -> jobs `quality` + `prebuild` uniquement (feedback rapide).
+- `schedule` (cron `17 3 * * *`) -> matrice Maestro Android + iOS nightly.
+- `workflow_dispatch` (inputs `profile` / `platform` / `submit`) -> les jobs de build/submit. **C'est le seul déclencheur des builds EAS.**
 
-### Commit message routing
+### Jobs de build / submit (tous `workflow_dispatch`)
 
-- `feature/ios-only` -> skip Android internal testing
-- `feature/android-only` -> skip iOS preview
+- `build-preview-ios` / `build-preview-android` — profil `preview` (installable manuel).
+- `build-internal-android` — profil `internal` + auto-submit Play `internal`.
+- `build-production-ios` / `build-production-android` — profil `production`.
+- `submit-production-ios` / `submit-production-android` — `eas submit` vers les stores (requiert `submit=yes`). `build-production-android` + `submit-production-android` ont aussi un trigger tag `v*` gardé par la var `AUTO_TAG_BUILD_ANDROID`.
 
 ## Commandes utiles
 
-### Commit et push du frontend
+### Lancer le flux internal Android
 
-```bash
-cd /Users/Tim/Desktop/all/dev/Pro/InnovMind
-
-git add .gitignore museum-frontend docs .github/workflows/mobile-release.yml
-git commit -m "feat(mobile): automate android internal testing flow"
-git push origin main
-```
+Via l'UI GitHub: **Actions > mobile > Run workflow** avec `profile=internal`, `platform=android`.
 
 ### Build production Android manuel
 
@@ -145,7 +141,7 @@ eas build --platform android --profile production --non-interactive
 
 ### Internal testing
 
-Après un `push` frontend:
+Après un dispatch manuel `profile=internal`:
 
 1. le workflow GitHub doit être vert
 2. le build EAS Android `internal` doit être créé
@@ -171,11 +167,9 @@ Vérifier:
 3. statut de la soumission Play
 4. existence du track `internal`
 
-### Cas 2: un push ne doit pas lancer Android
+### Cas 2: éviter un build Android non voulu
 
-Utiliser dans le commit:
-
-- `feature/ios-only`
+Les builds ne partent que sur `workflow_dispatch` manuel — un `push`/`pull_request` ne lance jamais `build-internal-android`. Il suffit donc de ne pas dispatcher le job.
 
 ### Cas 3: besoin d'un APK manuel
 

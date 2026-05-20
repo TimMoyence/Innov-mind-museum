@@ -26,7 +26,7 @@ Please include:
 - Affected component and version (backend / mobile / web)
 - Your contact info (so we can credit you; anonymous reports are also welcome)
 
-**PGP / encrypted reports:** PGP public key — <https://musaium.com/.well-known/pgp-key.txt> (generation + rotation procedure: [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md)). Fingerprint is published in the same file's header comments; verify before encrypting. Algorithm: Ed25519. Expires: 2028-05-17. If your tooling does not support Ed25519, email `security@musaium.com` requesting an RSA fallback key.
+**PGP / encrypted reports:** PGP public key publication is pending pre-launch. Until then, contact [security@musaium.com](mailto:security@musaium.com) to coordinate an out-of-band encrypted channel (Signal, age, or vendor portal). The URL <https://musaium.com/.well-known/pgp-key.txt> will host the public key once generated per [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md); algorithm, fingerprint, and expiry will be advertised here at that point.
 
 **Please do not** open public GitHub issues, post on social media, or contact unrelated team members for vulnerability reports. Use the security email only.
 
@@ -111,4 +111,4 @@ The complete Vulnerability Disclosure Policy, including the most recent version 
 
 ---
 
-Last updated: 2026-05-14 — Maintainer: Musaium (security@musaium.com).
+Last updated: 2026-05-19 — Maintainer: Musaium (security@musaium.com).

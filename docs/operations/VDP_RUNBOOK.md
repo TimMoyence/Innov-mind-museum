@@ -88,7 +88,7 @@ For CRITICAL findings: PagerDuty-equivalent escalation = SMS to founder + Telegr
 ```
 T+0  : awareness (report received, alert triggered, support ticket flagged "security")
 T+15m: confirm initial assessment (real / not real, scope, severity)
-T+1h : mitigation in production (feature flag off, route disabled, kill switch, rollback)
+T+1h : mitigation in production (route disabled, rate-limit clamp, edge block, rollback)
 T+4h : confirm mitigation effective via /api/health + Sentry + Grafana request-error dashboards
 T+24h: ENISA SRP early warning (if CRA-qualifying — see §6) AND/OR CNIL notification (if personal-data breach — see §5)
 T+72h: full notification (GDPR + CRA)
@@ -98,8 +98,8 @@ T+14d (CRA) / T+1mo (GDPR severe incident): final report
 
 Mitigation toolbox available without redeploy:
 
-- Feature flag kill switch (`museum-backend/src/shared/config/feature-flags.ts`) — flip + restart pod via OVH CLI.
-- Rate-limit upgrade for the offending route (`museum-backend/src/middlewares/rate-limit.ts`).
+- Disable the offending route at the router (comment out / 503 the route in its module + redeploy) — Musaium ships no feature flags pre-launch (UFR-015), so there is no flag to flip.
+- Rate-limit upgrade for the offending route (`museum-backend/src/shared/middleware/rate-limit.middleware.ts`).
 - WAF / reverse-proxy block at OVH edge (last resort, requires OVH support ticket).
 - Mobile remote config kill switch via app config endpoint.
 
@@ -165,7 +165,7 @@ Filing happens through the [ENISA Single Reporting Platform (SRP)](https://digit
 
 ### CRA pre-flight (before 2026-09-11)
 
-- [ ] Register on ENISA SRP test environment when it goes live.
+- [ ] Register on the ENISA SRP — live since 2025-09-11 (see [`ENISA_SRP_ONBOARDING.md`](ENISA_SRP_ONBOARDING.md)); complete onboarding now rather than waiting.
 - [ ] Save SRP credentials + designated reporter contact in 1Password.
 - [ ] Confirm CERT-FR contact path (`certfr-info@ssi.gouv.fr`, +33 1 71 75 84 50).
 - [ ] Dry run: submit a "test incident" to verify portal workflow + designated reporter assignment.

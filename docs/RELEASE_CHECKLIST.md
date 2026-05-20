@@ -12,163 +12,38 @@
 
 ---
 
-## 2. CRITICAL — Production Infrastructure Gaps
+## 2. Production Infrastructure — État actuel
 
-Les éléments ci-dessous sont des écarts entre l'état du code actuel et la configuration de production sur le VPS (`/srv/museum/`).
+> **Résolu (audit 2026-05-20)** : les "gaps" listés dans les versions Sprint-3/4 de ce
+> document (Redis, volume uploads, llm-guard sidecar, healthcheck DB tous "manquants")
+> sont désormais **tous présents** dans `museum-backend/deploy/docker-compose.prod.yml`.
+> Cette section décrit l'état-cible vérifié, pas un backlog d'écarts.
 
-### 2.1 docker-compose.yml — Services manquants
+### 2.1 docker-compose.prod.yml — Services présents
 
-Le docker-compose prod actuel ne contient que `backend` + `db`. Il manque :
+Le compose prod (`museum-backend/deploy/docker-compose.prod.yml`) contient :
 
-#### A. Redis (BLOQUANT pour cache/locks)
+| Service | Rôle | Notes |
+|---------|------|-------|
+| `backend` | API Express | `depends_on: db (service_healthy)` + monte le volume `uploads:/app/tmp/uploads` |
+| `db` | PostgreSQL 16 (pgvector) | healthcheck `pg_isready` + `depends_on: condition: service_healthy` |
+| `redis` | Cache + locks + rate-limit store | `redis:7-alpine`, `--requirepass`, healthcheck `redis-cli PING`, volume `redis_data:/data` |
+| `llm-guard` | Sidecar AI Guardrails V2 (ADR-047) | `ghcr.io/timmoyence/museum-llm-guard`, hostname `llm-guard:8081`, intentionnellement absent de `depends_on` du backend (évite le deadlock cold-start) |
 
-Le backend utilise `ioredis` pour le cache de sessions, listes et distributed locks.
-Sans Redis, `CACHE_ENABLED` doit rester `false` et le cache est un no-op.
+Volumes déclarés : `pgdata`, `redis_data`, `uploads`. Le volume `uploads` persiste
+les images uploadées (`OBJECT_STORAGE_DRIVER=local` → `/app/tmp/uploads`) à travers les
+restarts/redeploys.
 
-```yaml
-redis:
-  image: redis:7-alpine
-  volumes:
-    - redis_data:/data
-  networks:
-    - private
-  restart: unless-stopped
-```
+> **Sémantique Redis** : Redis est une dépendance d'infrastructure requise une fois
+> `CACHE_ENABLED=true`. Le backend ne déclare pas `redis` dans `depends_on` mais s'y
+> connecte au runtime ; un Redis absent dégrade le cache/rate-limit, pas le boot.
 
-Ajouter aussi dans `volumes:` :
-```yaml
-volumes:
-  pgdata:
-  redis_data:
-  uploads:
-```
+### 2.2 Dockerfile.prod — Permissions uploads
 
-#### B. Volume uploads (BLOQUANT — perte d'images)
-
-`OBJECT_STORAGE_DRIVER=local` écrit dans `/app/tmp/uploads` à l'intérieur du conteneur.
-**Sans volume persistant, toutes les images sont perdues à chaque restart/redeploy.**
-
-```yaml
-backend:
-  volumes:
-    - uploads:/app/tmp/uploads
-```
-
-#### C. Healthcheck DB + depends_on condition
-
-Le backend peut démarrer avant que PostgreSQL soit prêt → crash au boot.
-
-```yaml
-db:
-  image: postgres:16-alpine
-  environment:
-    POSTGRES_USER: ${DB_USER}
-    POSTGRES_PASSWORD: ${DB_PASSWORD}
-    POSTGRES_DB: ${PGDATABASE}
-    POSTGRES_INITDB_ARGS: "--auth=scram-sha-256"
-  volumes:
-    - pgdata:/var/lib/postgresql/data
-  networks:
-    - private
-  healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-  restart: unless-stopped
-
-backend:
-  depends_on:
-    db:
-      condition: service_healthy
-    redis:
-      condition: service_started
-```
-
-> **Changement de sémantique Redis** : dans la config précédente, Redis était
-> complètement optionnel (absent du compose). Avec `depends_on: redis: condition: service_started`,
-> Redis devient **requis au boot** — si le conteneur Redis est absent ou crashé, le backend
-> ne démarrera pas. C'est voulu : une fois `CACHE_ENABLED=true` dans `.env`, Redis est une
-> dépendance d'infrastructure, pas un bonus.
->
-> Si Redis doit redevenir optionnel (fallback graceful), retirer le bloc `redis:` de
-> `depends_on` et garder `CACHE_ENABLED=false` dans `.env`. Le backend utilisera alors
-> `NoopCacheService` (in-memory no-op, aucun cache réel).
-
-#### D. docker-compose.yml complet recommandé
-
-```yaml
-networks:
-  web:
-    external: true
-  private:
-    driver: bridge
-    internal: true
-
-volumes:
-  pgdata:
-  redis_data:
-  uploads:
-
-services:
-  backend:
-    image: ghcr.io/timmoyence/museum-backend:latest
-    hostname: backend
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    volumes:
-      - uploads:/app/tmp/uploads
-    networks:
-      private: {}
-      web:
-        aliases:
-          - museum-backend
-    ports:
-      - "127.0.0.1:3000:3000"
-    restart: unless-stopped
-
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${PGDATABASE}
-      POSTGRES_INITDB_ARGS: "--auth=scram-sha-256"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - private
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    networks:
-      - private
-    restart: unless-stopped
-```
-
-### 2.2 Dockerfile.prod — Bug permissions uploads
-
-Le Dockerfile crée un `nodeuser` (uid 1001) mais ne crée pas `/app/tmp/uploads`.
-Le user non-root n'a pas les permissions d'écrire dans `/app/`.
-
-**Fix requis** dans `museum-backend/deploy/Dockerfile.prod`, avant `USER nodeuser` :
-
-```dockerfile
-RUN mkdir -p /app/tmp/uploads && chown nodeuser:nogroup /app/tmp/uploads
-```
+`museum-backend/deploy/Dockerfile.prod` crée `/app/tmp/uploads` avec les bonnes
+permissions pour `nodeuser` (uid 1001) avant le passage en non-root. Vérifier que ce
+`RUN mkdir -p /app/tmp/uploads && chown ...` reste présent lors de toute refonte du
+Dockerfile.
 
 ---
 
@@ -208,7 +83,6 @@ Tous les feature flags sont à `false` par défaut. Les features sont codées et
 
 | Flag | Default | Recommandation | Impact |
 |------|---------|----------------|--------|
-| `FEATURE_FLAG_STREAMING` | `false` | **`true`** (déjà set) | SSE chat streaming |
 | `FEATURE_FLAG_USER_MEMORY` | `false` | **`true`** si tu veux la personnalisation cross-session | Injecte le profil utilisateur dans le prompt LLM |
 | `FEATURE_FLAG_MULTI_TENANCY` | `false` | `true` si multi-musées activé | Isole les données par musée |
 | `FEATURE_FLAG_VOICE_MODE` | `false` | `true` si TTS activé | Réponses audio via OpenAI TTS |
@@ -306,7 +180,6 @@ SENTRY_DSN=<DSN_SENTRY>
 SENTRY_TRACES_SAMPLE_RATE=0.1
 
 # === Feature Flags ===
-FEATURE_FLAG_STREAMING=true
 FEATURE_FLAG_USER_MEMORY=false
 FEATURE_FLAG_MULTI_TENANCY=false
 FEATURE_FLAG_VOICE_MODE=false
@@ -316,22 +189,16 @@ FEATURE_FLAG_API_KEYS=false
 
 ---
 
-## 4. Database — Migrations pendantes en production
+## 4. Database — Migrations en production
 
-20 migrations TypeORM existent. Si la prod n'a pas été déployée depuis le Sprint 3, les migrations suivantes sont **pendantes** :
+**64 migrations TypeORM** existent (`ls museum-backend/src/data/db/migrations/*.ts | wc -l`,
+vérifié 2026-05-20). Toute migration non encore appliquée sur la prod est **pendante**.
+La liste autoritative des migrations pendantes se lit toujours depuis le serveur via
+`migration:show` (commande ci-dessous), pas depuis ce document — la liste figée Sprint-3/4
+qui se trouvait ici a été retirée car obsolète.
 
-| # | Migration | Description | Sprint |
-|---|-----------|-------------|--------|
-| 14 | `1774100000000-NormalizeEmailCase` | Normalisation emails lowercase | S3 |
-| 15 | `1774200000000-AddUserRoleColumn` | Colonne `role` pour RBAC (user/admin/superadmin/moderator) | S4 |
-| 16 | `1774200100000-CreateAuditLogsTable` | Table `audit_logs` + trigger immutable (17 event types) | S4 |
-| 17 | `1774300000000-CreateMuseumsAndTenantFKs` | Table `museums` + FK `museum_id` sur users/sessions/api_keys | S4 |
-| 18 | `1774300100000-CreateUserMemoriesTable` | Table `user_memories` (profil cross-session) | S4 |
-| 19 | `1774400000000-AddModerationColumnsToMessageReports` | Colonnes modération (status, reviewedBy, etc.) | S4 |
-| 20 | `1774400100000-CreateSupportTables` | Tables `support_tickets` + `ticket_messages` | S4 |
-| 21 | `1774500000000-AddMuseumCoordinates` | Colonnes `latitude`/`longitude` sur `museums` | S4 |
-
-**Ces migrations sont appliquées automatiquement par le CI/CD** (`deploy-backend.yml` ligne 129) :
+**Ces migrations sont appliquées automatiquement par le CI/CD** (job deploy de
+`ci-cd-backend.yml`) :
 ```bash
 docker compose exec -T backend node ./node_modules/typeorm/cli.js migration:run -d dist/src/data/db/data-source.js
 ```
@@ -412,7 +279,7 @@ curl -s http://localhost:3000/api/health | jq .
 
 ### 5.2 Vérifier le CI/CD
 
-Le workflow `deploy-backend.yml` SSH dans le VPS et fait :
+Le job deploy de `ci-cd-backend.yml` SSH dans le VPS et fait :
 ```bash
 docker compose pull backend
 docker compose up -d --remove-orphans backend
@@ -431,7 +298,6 @@ Si CloudFlare est activé en front du VPS :
 - [ ] Migrer les DNS vers CloudFlare (voir `docs/adr/ADR-024-cloudflare-cdn-strategy.md` — l'ancien runbook `CDN_CLOUDFLARE_SETUP.md` a été archivé/supprimé 2026-05-07, decision-only ADR remplace le runbook)
 - [ ] SSL/TLS mode : Full (Strict)
 - [ ] Vérifier le health endpoint à travers CloudFlare : `curl https://musaium.com/api/health`
-- [ ] Tester le SSE streaming à travers CloudFlare (les réponses chat ne doivent pas être bufferisées)
 - [ ] Vérifier que le backend reçoit la vraie IP client (header `CF-Connecting-IP` si nginx configuré)
 
 ---
@@ -446,7 +312,7 @@ Device: iPhone 15 Pro Max (6.7") or 6.5" alternative
 | 1 | **Onboarding** | First slide with app branding | Show the carousel entry point |
 | 2 | **Home** | Home tab with welcome message | Show the main entry screen |
 | 3 | **Chat** | Active conversation with artwork photo | Show image + AI response with metadata |
-| 4 | **Chat (streaming)** | Message being streamed | Show the live typing indicator |
+| 4 | **Chat (voice)** | Voice reply with audio playback control | Show the TTS audio affordance |
 | 5 | **Conversations** | Dashboard with multiple sessions | Show the conversation list with titles |
 | 6 | **Museums** | Museum directory with distance badges | Show the geolocation-sorted list |
 | 7 | **Museum Detail** | Museum info + "Start Chat Here" CTA | Show the museum-to-chat flow |
@@ -639,7 +505,7 @@ eas submit --platform android --profile production --latest
 
 ### CI/CD
 - [ ] Secrets GitHub Actions à jour (`GHCR_*`, `SERVER_*`, `PROD_SMOKE_*`, `SENTRY_*`)
-- [ ] Workflow `deploy-backend.yml` fonctionne (lint → test → build → deploy → migrate → smoke)
+- [ ] Job deploy de `ci-cd-backend.yml` fonctionne (lint → test → build → deploy → migrate → smoke)
 - [ ] Smoke test credentials créées (user de test en prod)
 
 ### Mobile
@@ -652,6 +518,5 @@ eas submit --platform android --profile production --latest
 - [ ] `curl https://musaium.com/api/health` retourne `{ "status": "ok" }`
 - [ ] Login/Register fonctionne
 - [ ] Chat + image upload fonctionne
-- [ ] SSE streaming fonctionne (si flag activé)
 - [ ] Reset password email reçu (si Brevo configuré)
 - [ ] Sentry reçoit les events
