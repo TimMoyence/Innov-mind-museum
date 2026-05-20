@@ -527,8 +527,11 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
     mockAiConsentState.consentResolved = false;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean }>('Composer');
-      expect(props.isSending).toBe(true);
+      const props = lastProps<{ isSending: boolean; disabled: boolean }>('Composer');
+      // Consent gate goes through `disabled`, not `isSending` — surfacing an
+      // inert button (not a spinner) when waiting on the consent flow.
+      expect(props.disabled).toBe(true);
+      expect(props.isSending).toBe(false);
     } finally {
       mockAiConsentState.consentResolved = true;
     }
@@ -538,8 +541,9 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean }>('Composer');
-      expect(props.isSending).toBe(true);
+      const props = lastProps<{ isSending: boolean; disabled: boolean }>('Composer');
+      expect(props.disabled).toBe(true);
+      expect(props.isSending).toBe(false);
     } finally {
       mockAiConsentState.showAiConsent = false;
     }

@@ -34,7 +34,11 @@ export const useAiConsent = () => {
       .then((v) => {
         if (v !== 'true') setShowAiConsent(true);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        // Previously swallowed silently — surface to Sentry so AsyncStorage
+        // read failures (native-module init drift, etc.) stop hiding behind
+        // the re-prompt-on-next-session UX.
+        Sentry.captureException(err, { tags: { flow: 'consent.read' } });
         setShowAiConsent(true);
       })
       .finally(() => {

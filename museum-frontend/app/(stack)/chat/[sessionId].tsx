@@ -67,6 +67,12 @@ export default function ChatSessionScreen() {
   const [pendingVoiceAction, setPendingVoiceAction] = useState(false);
 
   const bottomSheetRouter = useBottomSheetRouter();
+  // Destructure stable refs so consumer effects/callbacks don't re-fire on
+  // every router-state transition. `bottomSheetRouter` itself is memoised on
+  // the state machine and rotates on every dispatch ; the methods inside are
+  // useCallback([]) — referentially stable across the rotation.
+  const openSheet = bottomSheetRouter.open;
+  const closeSheet = bottomSheetRouter.close;
   const { showAiConsent, setShowAiConsent, consentResolved, acceptAiConsent, recheckConsent } =
     useAiConsent();
   const {
@@ -244,29 +250,29 @@ export default function ChatSessionScreen() {
 
   const openContextMenu = useCallback(
     (msg: ChatUiMessage) => {
-      bottomSheetRouter.open('context-menu', {
+      openSheet('context-menu', {
         message: msg,
         onCopy: (m) => void copyText(m),
         onShare: (m) => void shareText(m),
         onReport: (messageId) => reportMessageRef.current?.(messageId),
       });
     },
-    [bottomSheetRouter, copyText, shareText],
+    [openSheet, copyText, shareText],
   );
 
   const openBrowser = useCallback(
     (url: string) => {
-      bottomSheetRouter.open('browser', { url });
+      openSheet('browser', { url });
     },
-    [bottomSheetRouter],
+    [openSheet],
   );
 
   const setBrowserUrlBridge = useCallback(
     (url: string | null) => {
       if (url) openBrowser(url);
-      else bottomSheetRouter.close();
+      else closeSheet();
     },
-    [openBrowser, bottomSheetRouter],
+    [openBrowser, closeSheet],
   );
 
   const sessionActions = useChatSessionActions({
@@ -288,13 +294,13 @@ export default function ChatSessionScreen() {
   // through the hook's own callback chain.
   useEffect(() => {
     if (showAiConsent) {
-      bottomSheetRouter.open('consent', {
+      openSheet('consent', {
         onAccept: (grantedScopes) => {
           void acceptAiConsent(grantedScopes);
         },
         onPrivacy: () => {
           setShowAiConsent(false);
-          bottomSheetRouter.close();
+          closeSheet();
           router.push('/(stack)/privacy');
           const unsub = navigation.addListener('focus', () => {
             unsub();
@@ -312,45 +318,46 @@ export default function ChatSessionScreen() {
     setShowAiConsent,
     recheckConsent,
     navigation,
-    bottomSheetRouter,
+    openSheet,
+    closeSheet,
   ]);
 
   // Mirror `dailyLimitReached` → `daily-limit` sheet. The sheet's CTA calls
   // `onDismiss` which routes to `clearDailyLimit`.
   useEffect(() => {
     if (dailyLimitReached) {
-      bottomSheetRouter.open('daily-limit', {
+      openSheet('daily-limit', {
         onDismiss: () => {
           clearDailyLimit();
         },
       });
     }
-  }, [dailyLimitReached, clearDailyLimit, bottomSheetRouter]);
+  }, [dailyLimitReached, clearDailyLimit, openSheet]);
 
   // Mirror voice-intro pending state → `voice-intro` sheet.
   useEffect(() => {
     if (voiceIntroVisible) {
-      bottomSheetRouter.open('voice-intro', {
+      openSheet('voice-intro', {
         locale,
         onAcknowledge: () => {
           void onAcknowledgeVoiceDisclosure();
         },
       });
     }
-  }, [voiceIntroVisible, locale, onAcknowledgeVoiceDisclosure, bottomSheetRouter]);
+  }, [voiceIntroVisible, locale, onAcknowledgeVoiceDisclosure, openSheet]);
 
   const openSummary = useCallback(() => {
-    bottomSheetRouter.open('summary', { summary: visitSummary });
-  }, [bottomSheetRouter, visitSummary]);
+    openSheet('summary', { summary: visitSummary });
+  }, [openSheet, visitSummary]);
 
   const openAiDisclosure = useCallback(() => {
-    bottomSheetRouter.open('ai-disclosure', {
+    openSheet('ai-disclosure', {
       onLearnMore: () => {
-        bottomSheetRouter.close();
+        closeSheet();
         router.push('/(stack)/privacy');
       },
     });
-  }, [bottomSheetRouter]);
+  }, [openSheet, closeSheet]);
 
   // B4 — when the user scans a cartel QR, push the sanitised code to the
   // chat as a text message via the i18n lookup template. The orchestrator
@@ -391,15 +398,15 @@ export default function ChatSessionScreen() {
   // closed automatically by `<CartelScannerSheetContent>` on a successful
   // scan or via the cancel button.
   const onOpenCartelScanner = useCallback(() => {
-    bottomSheetRouter.open('cartel-scanner', { onScanned: handleCartelScanned });
-  }, [bottomSheetRouter, handleCartelScanned]);
+    openSheet('cartel-scanner', { onScanned: handleCartelScanned });
+  }, [openSheet, handleCartelScanned]);
 
   // A1 — open the attachment-picker bottom sheet. Wires the audio + image
   // hooks through the router params so the sheet content can drive the
   // camera/gallery/record actions and the play/clear preview block.
   // B4 extends the params with `onOpenScanner` (4th picker action).
   const onOpenAttachments = useCallback(() => {
-    bottomSheetRouter.open('attachment-picker', {
+    openSheet('attachment-picker', {
       recordedAudioUri,
       isPlayingAudio,
       isRecording,
@@ -411,7 +418,7 @@ export default function ChatSessionScreen() {
       onOpenScanner: onOpenCartelScanner,
     });
   }, [
-    bottomSheetRouter,
+    openSheet,
     recordedAudioUri,
     isPlayingAudio,
     isRecording,
@@ -511,7 +518,8 @@ export default function ChatSessionScreen() {
             text={inputHandlers.text}
             onChangeText={inputHandlers.setText}
             onSend={() => void inputHandlers.onSend()}
-            isSending={isSending || !consentResolved || showAiConsent}
+            isSending={isSending}
+            disabled={!consentResolved || showAiConsent}
             imageUri={selectedImage}
             onClearImage={clearSelectedImage}
             recordedAudioUri={recordedAudioUri}
