@@ -170,6 +170,51 @@ describe('bottomSheetReducer', () => {
     });
   });
 
+  describe('R14 — CTA_CLOSE bypasses the blocking gate', () => {
+    it('open(consent, blocking) + CTA_CLOSE → closing (the route’s own button always closes)', () => {
+      const state: BottomSheetState = {
+        kind: 'open',
+        route: 'consent',
+        params: {},
+        blocking: true,
+      };
+      const event: BottomSheetEvent = { type: 'CTA_CLOSE' };
+      const next = bottomSheetReducer(state, event);
+      expect(next).toEqual({
+        kind: 'closing',
+        route: 'consent',
+        params: {},
+        blocking: true,
+        nextQueued: null,
+      });
+    });
+
+    it('opening(daily-limit, blocking) + CTA_CLOSE → closing (CTA fires before OPEN_DONE settles)', () => {
+      const state: BottomSheetState = {
+        kind: 'opening',
+        route: 'daily-limit',
+        params: {},
+        blocking: true,
+      };
+      const event: BottomSheetEvent = { type: 'CTA_CLOSE' };
+      const next = bottomSheetReducer(state, event);
+      expect(next).toEqual({
+        kind: 'closing',
+        route: 'daily-limit',
+        params: {},
+        blocking: true,
+        nextQueued: null,
+      });
+    });
+
+    it('idle + CTA_CLOSE → idle (no route to close)', () => {
+      const state: BottomSheetState = { kind: 'idle' };
+      const event: BottomSheetEvent = { type: 'CTA_CLOSE' };
+      const next = bottomSheetReducer(state, event);
+      expect(next).toEqual(state);
+    });
+  });
+
   describe('R7 / R10 — non-blocking route accepts CLOSE', () => {
     it('open(context-menu) + CLOSE → closing(context-menu, nextQueued=null)', () => {
       const state: BottomSheetState = {
