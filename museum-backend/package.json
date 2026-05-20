@@ -19,6 +19,7 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "openapi:validate": "node ./scripts/check-openapi-spec.cjs",
+    "sentinel:metric-naming": "node ./scripts/sentinels/metric-naming.mjs",
     "smoke:api": "node ./scripts/smoke-api.cjs",
     "smoke:emails": "ts-node -r tsconfig-paths/register scripts/smoke-emails.ts",
     "test": "jest --watchman=false --runInBand --selectProjects unit-integration",

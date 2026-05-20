@@ -2128,7 +2128,10 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 **Context** : `app.ts:222` no auth middleware. Leaks internal cardinality + breaker state + tenant_id + error counts + custom labels.
 **Fix** : nginx `location = /metrics { allow <prom-ip>; deny all; }` in prod site.conf OR `requireSuperAdmin` middleware OR separate internal port.
 
-## TD-PC-03 — Naming inconsistency musaium_ prefix (MEDIUM, NICE_TO_HAVE)
+## ✅ TD-PC-03 — Naming inconsistency musaium_ prefix (MEDIUM, NICE_TO_HAVE) — AUDIT DONE, rename DEFERRED
+
+- [x] **Statut** : fermé 2026-05-20 — audit + ratchet sentinel shipped (NO rename, per HANDOFF §5 Batch C : a rename silently breaks every Grafana panel / alert still querying the old name, so it needs a coordinated dashboard PR — not a registry edit). Deliverables : (1) `docs/observability/METRIC_NAMING_AUDIT.md` — 44-metric inventory + findings F1-F5 + dashboard break-map + deferred rename plan §6 ; (2) `museum-backend/scripts/sentinels/metric-naming.mjs` + `pnpm sentinel:metric-naming` — locks the status quo (R1 snake_case, R2 `_total`, R3 `_seconds` w/ the one grandfathered `musaium_rerank_latency_ms`, 44-name inventory freeze, `musaium_` prefix cap=16). PASS against current registry. Headline finding F2 : split prefix discipline (28 bare vs 16 `musaium_`, no ADR) → target = drop `musaium_` (Option A). Renames tracked in audit §6 as a future coordinated PR.
+
 **Fix** : decide drop entirely OR apply consistently + collectDefaultMetrics({prefix:'musaium_'}).
 
 ---
