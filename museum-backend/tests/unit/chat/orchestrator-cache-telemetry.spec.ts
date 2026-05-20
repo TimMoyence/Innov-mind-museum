@@ -10,10 +10,10 @@
  *
  * Expected RED state today (4bf040b7 HEAD, before T2.3 / T2.4 / T2.5 green):
  *   - All 5 cases FAIL because:
- *     * Orchestrator does not call `withStructuredOutput({ includeRaw: true })`.
- *     * `llmPromptCacheHitsTotal` Counter is declared but `.inc()` call sites
+ *     Orchestrator does not call `withStructuredOutput({ includeRaw: true })`.
+ *     `llmPromptCacheHitsTotal` Counter is declared but `.inc()` call sites
  *       are absent (the green commits add the helper + wiring).
- *     * Langfuse generation.end() payload lacks `usage` / `metadata.cacheStatus`.
+ *     Langfuse generation.end() payload lacks `usage` / `metadata.cacheStatus`.
  *
  * Once T2.3 (helper) + T2.4 (orchestrator wiring) + T2.5 (Langfuse usageRef)
  * are green, all 5 cases flip green.
@@ -71,6 +71,22 @@ jest.mock('@shared/observability/langfuse.client', () => ({
   getLangfuse: jest.fn(() => null),
 }));
 
+// `withLangfuseTrace` (called by orchestrator.generate) transitively requires
+// `langfuse-langchain` via `loadCallbackHandler` (TD-LF-02 wiring, commit
+// da1474f31). That package's `langfuse-core` dep performs a top-level
+// `dynamicImport()` at module-init, which throws
+// `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING_FLAG` under Jest's VM without
+// `--experimental-vm-modules`. Hoisted mock here short-circuits the require
+// chain — same pattern as `langfuse-callback-wiring.test.ts:17-29`.
+jest.mock('langfuse-langchain', () => ({
+  __esModule: true,
+  CallbackHandler: jest.fn().mockImplementation((_cfg: { root: unknown; updateRoot: boolean }) => ({
+    name: 'fake-langfuse-handler',
+    handleChainStart: jest.fn(),
+    handleChainEnd: jest.fn(),
+  })),
+}));
+
 /* eslint-disable import/first -- jest.mock must hoist before imports */
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 import { getLangfuse } from '@shared/observability/langfuse.client';
@@ -109,6 +125,7 @@ interface IncludeRawShape {
  * Fake model whose `withStructuredOutput` returns a runnable resolving with
  * `{ raw: { usage_metadata }, parsed }` (R5 includeRaw shape). Pass
  * `rawUsage = undefined` to simulate Deepseek (missing usage_metadata path).
+ * @param rawUsage
  */
 function makeIncludeRawModel(rawUsage: unknown): {
   withStructuredOutput: jest.Mock;
@@ -149,6 +166,8 @@ function makeInput(overrides: Partial<OrchestratorInput> = {}): OrchestratorInpu
  * provider) label-pair and returns the integer count (0 if absent). Uses the
  * `prom-client` `hashMap` accessor pattern (same as other Prom-Counter tests
  * in the repo — e.g. `prometheus-metrics.test.ts`).
+ * @param cacheStatus
+ * @param provider
  */
 function getCacheCounterValue(cacheStatus: string, provider: string): number {
   const hashMap = (
