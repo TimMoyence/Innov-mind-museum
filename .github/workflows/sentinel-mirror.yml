@@ -126,6 +126,9 @@ jobs:
       - name: 'Mirror Gate P15 — compose-parity (dev vs prod docker-compose)'
         run: node scripts/sentinels/compose-parity.mjs
 
+      - name: 'Mirror Gate P20 — roadmap claim resolves (UFR-024)'
+        run: node scripts/sentinels/roadmap-claim-resolves.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli
