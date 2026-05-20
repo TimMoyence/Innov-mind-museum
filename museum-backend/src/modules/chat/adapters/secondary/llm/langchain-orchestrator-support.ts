@@ -7,6 +7,7 @@ import { env } from '@src/config/env';
 
 import type { LLMCircuitBreaker } from './llm-circuit-breaker';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
+import type { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
@@ -59,6 +60,23 @@ export interface UsageRef {
   current?: UsageMetadata;
 }
 
+/**
+ * TD-LF-02 — mutable ref that ferries the `langfuse-langchain`
+ * `CallbackHandler` from `withLangfuseTrace` into every `.invoke()` call
+ * downstream. `withLangfuseTrace` constructs the handler with `root: trace`
+ * so the handler's chain / LLM observations append to the trace it just
+ * opened (rather than starting a parallel one). Typed as
+ * `BaseCallbackHandler[]` (not `unknown[]`) so the `.invoke({ callbacks })`
+ * opt stays structurally compatible with the real LangChain `Callbacks`
+ * type ; `langfuse-langchain`'s `CallbackHandler` extends `BaseCallbackHandler`
+ * so the assignment is sound at runtime (asserted by the loader). The ref
+ * is opt-in : absent / empty array → invoke runs without callbacks,
+ * identical to the pre-LF-02 path.
+ */
+export interface LangfuseCallbacksRef {
+  current?: BaseCallbackHandler[];
+}
+
 /** Minimal contract — satisfied by LangChain BaseChatModel and test fakes. */
 export interface ChatModel {
   invoke(messages: unknown, options?: { signal?: AbortSignal }): Promise<{ content: unknown }>;
@@ -86,7 +104,14 @@ export interface ChatModel {
   ): {
     invoke(
       messages: unknown,
-      opts?: { signal?: AbortSignal },
+      /**
+       * TD-LF-02 — `callbacks` carries a `langfuse-langchain` `CallbackHandler`
+       * (which extends LangChain's `BaseCallbackHandler`). Typed to the same
+       * `BaseCallbackHandler[]` shape LangChain itself accepts so this
+       * interface stays structurally compatible with the real `ChatOpenAI` /
+       * `ChatGoogleGenerativeAI` classes returned by `toModel`.
+       */
+      opts?: { signal?: AbortSignal; callbacks?: BaseCallbackHandler[] },
     ): Promise<T | { raw: { usage_metadata?: UsageMetadata }; parsed: T | null }>;
   };
 }
@@ -213,6 +238,14 @@ export interface InvokeSectionInput {
    * wrapper above this invocation (walk-intent path).
    */
   usageRef?: UsageRef;
+  /**
+   * TD-LF-02 — mutable ref with the `langfuse-langchain` `CallbackHandler`
+   * that `withLangfuseTrace` constructs against the just-opened trace. Threaded
+   * here so each section `.invoke()` writes its LLM-level observations onto
+   * the same trace root (`updateRoot:true`), powering the Langfuse cost UI.
+   * Undefined / empty array = pre-LF-02 path (no callbacks attached).
+   */
+  callbacksRef?: LangfuseCallbacksRef;
 }
 
 export interface AssembleResponseInput {
@@ -236,12 +269,26 @@ export interface LangChainChatOrchestratorDeps {
   costBreaker?: LlmCostCircuitBreaker | null;
 }
 
+/**
+ * TD-LC-02 (PATTERNS.md DO #6) — explicit `maxRetries` + `timeout` on every
+ * LangChain chat-model constructor. LangChain's default `maxRetries=6` can
+ * be too slow / too eager depending on provider — pinning to 2 makes the
+ * retry budget predictable on top of the section-runner's own retry layer
+ * (`isRetryableError`). `timeout` mirrors `env.llm.timeoutMs` so a hung
+ * provider request doesn't outlive the section deadline.
+ */
+const LANGCHAIN_HTTP_RETRIES = 2;
+
 export const toModel = (): ChatModel | null => {
   if (env.llm.provider === 'google' && env.llm.googleApiKey) {
     return new ChatGoogleGenerativeAI({
       apiKey: env.llm.googleApiKey,
       model: env.llm.model,
       maxOutputTokens: env.llm.maxOutputTokens,
+      // PATTERNS.md §2.c documents `maxRetries` on the Gemini class but not
+      // `timeout` — the GoogleGenerativeAIChatInput type rejects it as
+      // unknown, so this branch ships only the retry cap.
+      maxRetries: LANGCHAIN_HTTP_RETRIES,
     });
   }
 
@@ -254,7 +301,11 @@ export const toModel = (): ChatModel | null => {
       model: env.llm.model,
       temperature: env.llm.temperature,
       maxTokens: env.llm.maxOutputTokens,
+      // TD-LC-03 / PATTERNS.md DO #8 — third-party OpenAI-compatible endpoints
+      // (Deepseek) must opt out of streaming usage to avoid token-usage errors.
       streamUsage: false,
+      maxRetries: LANGCHAIN_HTTP_RETRIES,
+      timeout: env.llm.timeoutMs,
     });
   }
 
@@ -264,6 +315,8 @@ export const toModel = (): ChatModel | null => {
       model: env.llm.model,
       temperature: env.llm.temperature,
       maxTokens: env.llm.maxOutputTokens,
+      maxRetries: LANGCHAIN_HTTP_RETRIES,
+      timeout: env.llm.timeoutMs,
     });
   }
 

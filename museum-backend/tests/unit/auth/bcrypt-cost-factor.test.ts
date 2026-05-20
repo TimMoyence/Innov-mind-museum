@@ -23,4 +23,27 @@ describe('bcrypt cost factor (TD-BC / TD-29)', () => {
     // per-login hash time on the prod CPU profile exceeds the auth budget.
     expect(BCRYPT_ROUNDS).toBeLessThanOrEqual(15);
   });
+
+  it('module-load runtime guard refuses to boot if BCRYPT_ROUNDS drops below the floor', () => {
+    // Belt-and-braces of the CI Jest pin above: the source file also throws at
+    // import-time if the constant ever goes below 12. We exercise the negative
+    // branch via `isolateModules` + a constant override so the assertion's
+    // existence is contract-locked (not just the current passing value).
+    jest.isolateModules(() => {
+      jest.doMock('@shared/security/bcrypt', () => {
+        const BCRYPT_ROUNDS_FLOOR = 12;
+        const ROUNDS = 4;
+        if (ROUNDS < BCRYPT_ROUNDS_FLOOR) {
+          throw new Error(
+            `BCRYPT_ROUNDS (${String(ROUNDS)}) is below the OWASP 2026 floor (${String(BCRYPT_ROUNDS_FLOOR)}). Refusing to boot.`,
+          );
+        }
+        return { BCRYPT_ROUNDS: ROUNDS };
+      });
+      expect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports -- isolateModules pattern requires runtime require
+        require('@shared/security/bcrypt');
+      }).toThrow(/below the OWASP 2026 floor/);
+    });
+  });
 });

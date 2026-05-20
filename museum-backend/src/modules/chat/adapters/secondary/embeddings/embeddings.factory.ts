@@ -10,6 +10,7 @@
 
 import { ReplicateEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/replicate.adapter';
 import { SiglipOnnxAdapter } from '@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter';
+import { logger } from '@shared/logger/logger';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
 import type { AppEnv } from '@src/config/env.types';
@@ -26,16 +27,31 @@ import type { AppEnv } from '@src/config/env.types';
  */
 const REPLICATE_SIGLIP_MODEL = 'lucataco/siglip-base-patch16-224';
 
+/**
+ * TD-ONNX-02 — most-recent boot-time adapter, captured so the top-level
+ * SIGTERM teardown (`index.ts:drainAsyncResources`) can call `.shutdown()`
+ * without needing to plumb the adapter through every chat-module getter.
+ * Single-adapter-per-process matches reality (composition root builds once),
+ * but `shutdownEmbeddingsAdapter()` is idempotent so a missed boot is safe.
+ *
+ * Module-level state is fine because the factory is invoked once per process
+ * at boot ; tests that recreate the factory across specs call
+ * `resetEmbeddingsAdapterRegistryForTests()`.
+ */
+let activeAdapter: EmbeddingsPort | null = null;
+
 /** @throws {Error} on missing REPLICATE_API_TOKEN (when provider='replicate') or unknown provider. */
 export function createEmbeddingsAdapter(env: AppEnv): EmbeddingsPort {
   const visual = env.visualSimilarity;
 
+  let adapter: EmbeddingsPort;
   switch (visual.provider) {
     case 'siglip-onnx':
-      return new SiglipOnnxAdapter({
+      adapter = new SiglipOnnxAdapter({
         modelPath: visual.siglipOnnxModelPath,
         timeoutMs: visual.encodeTimeoutMs,
       });
+      break;
 
     case 'replicate': {
       const apiToken = visual.replicateApiToken;
@@ -44,11 +60,12 @@ export function createEmbeddingsAdapter(env: AppEnv): EmbeddingsPort {
           "createEmbeddingsAdapter: provider='replicate' requires REPLICATE_API_TOKEN to be set (env.visualSimilarity.replicateApiToken is missing/empty)",
         );
       }
-      return new ReplicateEmbeddingsAdapter({
+      adapter = new ReplicateEmbeddingsAdapter({
         apiToken,
         model: REPLICATE_SIGLIP_MODEL,
         timeoutMs: visual.encodeTimeoutMs,
       });
+      break;
     }
 
     default: {
@@ -59,4 +76,34 @@ export function createEmbeddingsAdapter(env: AppEnv): EmbeddingsPort {
       );
     }
   }
+
+  activeAdapter = adapter;
+  return adapter;
+}
+
+/**
+ * TD-ONNX-02 — graceful teardown hook called from the top-level SIGTERM
+ * sequence (`index.ts:drainAsyncResources`). Idempotent + fail-open : a
+ * missing adapter is a no-op ; a thrown `.shutdown()` is logged at warn-level
+ * and swallowed so the rest of the teardown sequence finishes.
+ */
+export async function shutdownEmbeddingsAdapter(): Promise<void> {
+  const adapter = activeAdapter;
+  activeAdapter = null;
+  if (!adapter?.shutdown) return;
+  try {
+    await adapter.shutdown();
+  } catch (err) {
+    logger.warn('embeddings_adapter_shutdown_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Test-only helper — clears the module-level adapter reference between specs
+ * that build a fresh factory. Production code never calls this.
+ */
+export function resetEmbeddingsAdapterRegistryForTests(): void {
+  activeAdapter = null;
 }

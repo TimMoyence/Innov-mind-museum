@@ -43,7 +43,7 @@ interface SiglipOnnxAdapterCtorArgs {
   timeoutMs: number;
 }
 
-// SUT — Phase 4 file, must not yet exist.
+// SUT — dynamic require keeps jest.mock('onnxruntime-node') hoisting + native-binding lazy semantics.
 
 const { SiglipOnnxAdapter } =
   require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
@@ -201,5 +201,34 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
 
     expect(onnxCreateMock).toHaveBeenCalledTimes(1);
     expect(onnxRunMock).toHaveBeenCalledTimes(2);
+  });
+
+  // Reviewer NIT (2026-05-20) — locks the retry-after-create-failure contract.
+  // A transient FS / native-load failure must drop `sessionPromise` (the
+  // `.catch()` arm in `acquireSession`) so the next `encode()` call rebuilds
+  // the session instead of permanently breaking the adapter.
+  it('retries InferenceSession.create after a transient create failure', async () => {
+    onnxCreateMock.mockReset();
+    onnxCreateMock.mockRejectedValueOnce(new Error('transient FS error')).mockResolvedValue({
+      run: onnxRunMock,
+      release: onnxReleaseMock,
+      inputNames: ['pixel_values'],
+      outputNames: ['image_embeds'],
+    });
+
+    const adapter = new SiglipOnnxAdapter({
+      modelPath: './models/siglip2-base-patch16-224.onnx',
+      timeoutMs: 3000,
+    });
+    const buffer = await makeSiglipJpegBuffer();
+
+    await expect(adapter.encode({ buffer, mimeType: 'image/jpeg' })).rejects.toBeInstanceOf(
+      EncoderUnavailableError,
+    );
+
+    // Second call must re-attempt `create` (cached promise was dropped) and succeed.
+    const result = await adapter.encode({ buffer, mimeType: 'image/jpeg' });
+    expect(result.vector).toBeInstanceOf(Float32Array);
+    expect(onnxCreateMock).toHaveBeenCalledTimes(2);
   });
 });

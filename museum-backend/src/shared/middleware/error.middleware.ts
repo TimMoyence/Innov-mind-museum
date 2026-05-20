@@ -27,11 +27,35 @@ const isAppErrorLike = (error: unknown): error is AppError => {
   return typeof candidate.statusCode === 'number' && typeof candidate.code === 'string';
 };
 
+/**
+ * Multer DoS bounds (`limits.fields` / `limits.parts` / `limits.fileSize` /
+ * `limits.fieldNameSize` / `limits.fieldSize`) all guard resource exhaustion
+ * — exceeding them is "payload too large" semantics (413), not a malformed
+ * request (400). File-count / unexpected-field overruns stay 400 because
+ * they are semantic request shape errors, not size overruns (cf. TD-MUL-02
+ * which keeps `LIMIT_FILE_COUNT` / `LIMIT_UNEXPECTED_FILE` on 400).
+ */
+const MULTER_PAYLOAD_TOO_LARGE_CODES = new Set<MulterError['code']>([
+  'LIMIT_FILE_SIZE',
+  'LIMIT_PART_COUNT',
+  'LIMIT_FIELD_COUNT',
+  'LIMIT_FIELD_KEY',
+  'LIMIT_FIELD_VALUE',
+]);
+
+const MULTER_413_MESSAGES: Partial<Record<MulterError['code'], string>> = {
+  LIMIT_FILE_SIZE: 'File too large',
+  LIMIT_PART_COUNT: 'Too many parts',
+  LIMIT_FIELD_COUNT: 'Too many fields',
+  LIMIT_FIELD_KEY: 'Field name too long',
+  LIMIT_FIELD_VALUE: 'Field value too long',
+};
+
 const normalizeError = (error: unknown): unknown => {
   if (error instanceof MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
+    if (MULTER_PAYLOAD_TOO_LARGE_CODES.has(error.code)) {
       return new AppError({
-        message: 'File too large',
+        message: MULTER_413_MESSAGES[error.code] ?? 'Payload too large',
         statusCode: 413,
         code: 'PAYLOAD_TOO_LARGE',
       });

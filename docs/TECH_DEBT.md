@@ -1157,6 +1157,8 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-LC-02 — ChatOpenAI constructor options : `openAIApiKey`+`modelName` → `apiKey`+`model` (MEDIUM, NON_BLOCKER)
 
+- [x] **Statut DO #6 follow-up** : fermé 2026-05-20 — `maxRetries: 2` + `timeout: env.llm.timeoutMs` ajoutés aux 3 ctors `toModel()` (PATTERNS.md DO #6). Gemini accepte `maxRetries` mais pas `timeout` (typage `GoogleGenerativeAIChatInput` refuse l'option ; seul le retry cap est passé). Test `tomodel-ctor-config.test.ts` asserte les 3 branches.
+
 - [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — renamed `openAIApiKey:` → `apiKey:` + `modelName:` → `model:` at all 3 live sites (`langchain-orchestrator-support.ts:253,262` Deepseek + OpenAI ctors, `content-classifier.service.ts:70`) + the AI test helper. `maxRetries`/`timeout` per PATTERNS.md DO #6 left as a separate NICE_TO_HAVE (not blocking; defaults are adequate for V1).
 
 **Context** : Legacy v0 aliases. PATTERNS.md §2.b shows v1-canonical = `apiKey` + `model`. Aliases still accepted but deprecation timeline unknown.
@@ -1169,7 +1171,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-LC-03 — Deepseek ChatOpenAI : missing `streamUsage: false` defense-in-depth (LOW, NON_BLOCKER)
 
-- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — `streamUsage: false` added to the single live Deepseek `ChatOpenAI` ctor (`langchain-orchestrator-support.ts`). The "2 Deepseek constructors" in the original evidence was pre-W1 ; `art-topic-classifier.ts` was deleted by W1 (C9.9 UFR-016), leaving one.
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — `streamUsage: false` added to the single live Deepseek `ChatOpenAI` ctor (`langchain-orchestrator-support.ts`). The "2 Deepseek constructors" in the original evidence was pre-W1 ; `art-topic-classifier.ts` was deleted by W1 (C9.9 UFR-016), leaving one. **Acceptance batch1 #3 follow-up 2026-05-20** : the "+ 2 unit tests asserting it" gap flagged by the honesty audit is now closed — `tests/unit/chat/tomodel-ctor-config.test.ts` ships 2 distinct cases (config-shape on the Deepseek branch + provider-isolation on the OpenAI branch) plus 4 LC-02 maxRetries/timeout assertions.
 
 **Context** : PATTERNS.md DO #8 — third-party OpenAI-compatible endpoints (Deepseek) need `streamUsage: false`. Latent today (no streaming) but bug if streaming reintroduced.
 
@@ -1568,7 +1570,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-MUL-01 — multer limits.fields/parts/headerPairs Infinity default (LOW, NON_BLOCKER)
 
-- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2). Vérifié : `fields:10, parts:20, headerPairs:50` à `museum-backend/src/modules/chat/adapters/primary/http/helpers/chat-route.helpers.ts:93-95` (+ second site :106-108).
+- [x] **Statut** : fermé 2026-05-20 — commit `60e95051` (lib-docs alignment wave 2). Vérifié : `fields:10, parts:20, headerPairs:50` à `museum-backend/src/modules/chat/adapters/primary/http/helpers/chat-route.helpers.ts:93-95` (+ second site :106-108). **Acceptance batch L #2 follow-up 2026-05-20** : `error.middleware.ts` mappe désormais `LIMIT_FIELD_COUNT` / `LIMIT_PART_COUNT` / `LIMIT_FIELD_KEY` / `LIMIT_FIELD_VALUE` → **413 PAYLOAD_TOO_LARGE** (DoS-bound semantics) ; `LIMIT_FILE_COUNT` / `LIMIT_UNEXPECTED_FILE` restent en 400 (semantic shape errors — frontière TD-MUL-02). Integration test `tests/unit/middleware/multer-field-limit-413.test.ts` exerce un POST 11-fields → 413 contre un vrai multer middleware + Express ; régression unit aussi locked dans `error-handler.test.ts`.
 
 
 **Context** : Defense-in-depth DoS vector (PATTERNS.md §4).
@@ -1752,17 +1754,16 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ⏸️ TD-LF-01 — Langfuse: no observeOpenAI wrapper → token/cost data missing (MEDIUM, NICE_TO_HAVE) — DEFERRED
+## ⊘ TD-LF-01 — Langfuse: no observeOpenAI wrapper → token/cost data missing (MEDIUM, NICE_TO_HAVE) — MOOT
 
-> **Disposition 2026-05-20** : **DEFERRED.** `observeOpenAI` (exported by the installed `langfuse` pkg) wraps a raw OpenAI SDK client — but Musaium's chat path runs through the LangChain orchestrator, not a direct OpenAI client ; the direct-client call sites (TTS / STT / judge) are spread across modules. Wrapping them touches multiple files + the observability layer that was just stabilized under ADR-045 (2026-05-19). Marginal pre-V1 value (the manual fail-open `withLangfuseTrace` spans already capture latency/outcome). Bundle into a dedicated observability /team run with a Langfuse cost-UI smoke check.
+> **Disposition 2026-05-20 (reworded after honesty audit)** : **MOOT — not applicable.** `observeOpenAI` wraps an `OpenAI` SDK *client instance* ; Musaium has **none** to wrap. Verified : `grep "new OpenAI(\|from 'openai'\|observeOpenAI" museum-backend/src` → 0 hits. The chat / judge paths use LangChain `ChatOpenAI` (covered by TD-LF-02 via `langfuse-langchain`'s `CallbackHandler`). The TTS (`text-to-speech.openai.ts`) and STT (`audio-transcriber.openai.ts`) adapters call `fetch('https://api.openai.com/...')` directly — there is no SDK client object on which `observeOpenAI` can hook. The previous "DEFERRED" disposition described an architecture that doesn't exist (UFR-013 fix). Cost / token telemetry on the LangChain path is covered by TD-LF-02 ; for TTS/STT, instrumentation would have to be manual fetch wrappers (separate scope, not via observeOpenAI).
 
-**Context** : OpenAI calls manuellement traced via fail-open spans. PATTERNS §2 DO : observeOpenAI = recommended.
-**Fix** : wrap OpenAI client via `observeOpenAI(openaiClient)` dans `shared/openai/openai.client.ts`.
-**Evidence** : `langfuse.client.ts` + all OpenAI direct call sites.
+**Original context (kept for archaeology)** : OpenAI calls manuellement traced via fail-open spans. PATTERNS §2 DO : observeOpenAI = recommended.
+**Original fix proposal (obsolete)** : wrap OpenAI client via `observeOpenAI(openaiClient)` dans `shared/openai/openai.client.ts` — that file does not exist; the TD was authored against an assumed architecture.
 
-## ⏸️ TD-LF-02 — Langfuse: no CallbackHandler on LangChain → internal steps invisible (MEDIUM, NICE_TO_HAVE) — DEFERRED
+## ✅ TD-LF-02 — Langfuse: no CallbackHandler on LangChain → internal steps invisible (MEDIUM, NICE_TO_HAVE)
 
-> **Disposition 2026-05-20** : **DEFERRED.** Requires installing a NEW dependency `langfuse-langchain` (not present in `museum-backend/node_modules`) + threading `callbacks: [new CallbackHandler({ root: trace, updateRoot: true })]` through every orchestrator `invoke`. New-dep + hot-chat-path + just-stabilized-observability (ADR-045) = too much for an autonomous pass. Bundle with TD-LF-01 in a dedicated observability /team run.
+- [x] **Statut** : fermé 2026-05-20 — `langfuse-langchain@~3.38.0` ajouté ; `createLangfuseCallbackHandler(trace)` (lazy require, fail-open, mirrors `langfuse.client.ts` loader) construit un `CallbackHandler({ root: trace, updateRoot: true })` dans `withLangfuseTrace` après l'ouverture du trace. Threading via une `LangfuseCallbacksRef` (même pattern que `usageRef`) — `mergeInvokeOpts()` plie la handler sur chaque `.invoke()` (sections + walk). Test `langfuse-callback-wiring.test.ts` (3 cases) asserte : (a) ctor appelé avec `{ root: trace, updateRoot: true }`, ref écrit avec `[handler]` ; (b) ref reste `undefined` quand Langfuse désactivé (pas de trace) ; (c) back-compat callers sans ref. **Non vérifié ici** : acceptance batch1 #4 "Langfuse cost UI shows non-zero token/cost" — exige Langfuse live + un appel d'orchestrator de probe. Le wiring est en place ; la vérification UI est une étape ops séparée. `Callbacks` typé `BaseCallbackHandler[]` (pas `unknown[]`) pour rester structurellement compatible avec le vrai `ChatOpenAI` retourné par `toModel`.
 
 **Context** : `langchain.orchestrator.ts:115 withLangfuseTrace` wrap manually. Manque `callbacks:[new CallbackHandler({root:trace, updateRoot:true})]`.
 **Fix** : import `langfuse-langchain` + pass callbacks.
@@ -1786,7 +1787,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-ONNX-02 — No session.release() teardown → native memory leak (MEDIUM, NICE_TO_HAVE)
 
-- [x] **Statut** : fermé 2026-05-20 — `public async shutdown()` added : awaits the cached session, calls `session.release()`, drops `sessionPromise` (idempotent + fail-open warn). Tests cover release-then-recreate + no-op-when-never-created. **Follow-up (non-blocking)** : wire `adapter.shutdown()` into the `index.ts` SIGTERM block — currently the embeddings adapter is built deep in the chat composition root and not exposed to the top-level teardown sequence ; the method is ready, only the cross-module plumbing remains. ONNX session is CPU NAPI (no TCP socket) so this is graceful-restart hygiene, not a hard handle leak like ioredis.
+- [x] **Statut** : fermé 2026-05-20 — `public async shutdown()` added : awaits the cached session, calls `session.release()`, drops `sessionPromise` (idempotent + fail-open warn). Tests cover release-then-recreate + no-op-when-never-created. **Wiring follow-up closed 2026-05-20** : `shutdown?(): Promise<void>` exposé sur `EmbeddingsPort` ; `embeddings.factory.ts` enregistre l'adapter actif sur création et expose `shutdownEmbeddingsAdapter()` (idempotent + fail-open) ; `index.ts:drainAsyncResources` l'appelle via `safeTeardown('embeddings_adapter_shutdown_failed', …)` AVANT `shutdownOpenTelemetry()`. ONNX session libérée à SIGTERM/SIGINT au lieu de fuir entre restarts. Retry-after-create-failure test ajouté (locks le contrat `.catch()` qui drop `sessionPromise` pour permettre retry).
 
 **Fix** : add `async shutdown() { await session.release(); this.sessionPromise = null; }`.
 

@@ -13,6 +13,7 @@ import {
 } from '@modules/auth/adapters/secondary/social/nonce-store';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
+import { shutdownEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
 import {
   registerChatPurgeCron,
@@ -264,6 +265,11 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   for (const handle of retentionCrons) {
     await safeTeardown('retention_cron_shutdown_error', () => handle.close());
   }
+  // TD-ONNX-02 — release SigLIP NAPI session BEFORE OTel/cache teardown.
+  // ONNX session is CPU-only (no TCP) so leak severity is "graceful-restart
+  // hygiene" rather than "blocks SIGTERM" — `safeTeardown` swallows any
+  // throw so a missing/already-released adapter never blocks the rest.
+  await safeTeardown('embeddings_adapter_shutdown_failed', () => shutdownEmbeddingsAdapter());
   await shutdownOpenTelemetry();
   const ocr = getOcrService();
   if (ocr.destroy) await ocr.destroy();

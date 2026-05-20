@@ -189,4 +189,48 @@ describe('errorHandler middleware', () => {
     expect(captureExceptionWithContext).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
   });
+
+  // TD-MUL-01 — DoS bounds (`fields`, `parts`, field-name/value size) are
+  // payload-too-large, not generic 400. Mirrors the file-size mapping above.
+  it.each([
+    ['LIMIT_FIELD_COUNT', 'Too many fields'],
+    ['LIMIT_PART_COUNT', 'Too many parts'],
+    ['LIMIT_FIELD_KEY', 'Field name too long'],
+    ['LIMIT_FIELD_VALUE', 'Field value too long'],
+  ] as const)('maps multer %s to 413 payload-too-large', (code, expectedMessage) => {
+    const err = new MulterError(code);
+    const req = mockReq({ requestId: `req-${code.toLowerCase()}` });
+    const res = mockRes();
+
+    errorHandler(err, req, res, noop);
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: expectedMessage,
+        requestId: `req-${code.toLowerCase()}`,
+      },
+    });
+    expect(captureExceptionWithContext).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  // TD-MUL-02 boundary — semantic request-shape errors stay 400 (NOT 413).
+  // Locks the contract so a future "everything multer → 413" regression is
+  // caught.
+  it.each(['LIMIT_FILE_COUNT', 'LIMIT_UNEXPECTED_FILE'] as const)(
+    'keeps multer %s on 400 (semantic, not size)',
+    (code) => {
+      const err = new MulterError(code);
+      const req = mockReq();
+      const res = mockRes();
+
+      errorHandler(err, req, res, noop);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.error.code).toBe('BAD_REQUEST');
+    },
+  );
 });

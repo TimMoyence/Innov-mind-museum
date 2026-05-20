@@ -37,6 +37,14 @@ export interface EmbeddingsPort {
    *         to `503 COMPARE_ENCODER_UNAVAILABLE`.
    */
   encode(input: EncodeInput): Promise<EncodeOutput>;
+
+  /**
+   * TD-ONNX-02 — optional graceful teardown. `siglip-onnx` releases the native
+   * NAPI session ; HTTP-only adapters (`replicate`) have nothing to release
+   * and may omit. SIGTERM path calls this via the factory's
+   * `shutdownEmbeddingsAdapter()` hook. MUST be idempotent + fail-open.
+   */
+  shutdown?(): Promise<void>;
 }
 
 /**

@@ -38,10 +38,13 @@ import type {
   ChatModel,
   InvokeSectionInput,
   LangChainChatOrchestratorDeps,
+  LangfuseCallbacksRef,
   UsageMetadata,
   UsageRef,
 } from './langchain-orchestrator-support';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
+import type { BaseCallbackHandler } from '@langchain/core/callbacks/base';
+import type { BaseMessage } from '@langchain/core/messages';
 import type {
   OrchestratorInput,
   OrchestratorOutput,
@@ -52,6 +55,33 @@ import type {
   LlmSectionDefinition,
   MainAssistantOutput,
 } from '@modules/chat/useCase/llm/llm-sections';
+
+/**
+ * TD-LF-02 — folds the Langfuse `CallbackHandler` (when present) onto the
+ * base `.invoke()` opts. Used by both the section path and the walk path so
+ * the wiring is one helper, not two divergent ternaries. Returns the base
+ * opts unchanged when no callbacks are registered (pre-LF-02 shape).
+ */
+function mergeInvokeOpts(
+  baseOpts: { signal: AbortSignal },
+  callbacksRef: LangfuseCallbacksRef | undefined,
+): { signal: AbortSignal } | { signal: AbortSignal; callbacks: BaseCallbackHandler[] } {
+  const callbacks = callbacksRef?.current;
+  if (!callbacks || callbacks.length === 0) return baseOpts;
+  return { ...baseOpts, callbacks };
+}
+
+/**
+ * Insert `WALK_TOUR_GUIDE_SECTION` AFTER the system instructions and BEFORE
+ * the first HumanMessage — `buildSectionMessages` also appends a trailing
+ * reminder SystemMessage, so we can't use `length - 1`. Extracted to keep
+ * `generateWalk` under the `max-lines-per-function` cap.
+ */
+function injectWalkTourGuideSection(messages: BaseMessage[]): void {
+  const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
+  const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
+  messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
+}
 
 export class LangChainChatOrchestrator implements ChatOrchestrator {
   private readonly model: ChatModel | null;
@@ -130,9 +160,18 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           name: input.outputSchema.name,
           includeRaw: true,
         });
+        // TD-LF-02 — when `withLangfuseTrace` opened a trace, `callbacksRef`
+        // carries the `langfuse-langchain` CallbackHandler ; the shared
+        // `mergeInvokeOpts` helper folds it onto the signal opts so this
+        // call writes its LLM observations onto the same trace root. Empty
+        // / absent ref → unchanged invoke shape.
         const result = (await this.circuitBreaker.execute(() =>
           this.semaphore.use(
-            async () => await structured.invoke(input.sectionMessages, { signal: input.signal }),
+            async () =>
+              await structured.invoke(
+                input.sectionMessages,
+                mergeInvokeOpts({ signal: input.signal }, input.callbacksRef),
+              ),
           ),
         )) as
           | MainAssistantOutput
@@ -181,6 +220,11 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     // + input/output tokens) up to the enclosing Langfuse generation.end()
     // call without polluting the public `OrchestratorOutput` port.
     const usageRef: UsageRef = {};
+    // TD-LF-02 — `callbacksRef` is populated by `withLangfuseTrace` after the
+    // trace is open (and only when Langfuse is enabled). Sections + walk path
+    // read `callbacksRef.current` at `.invoke()` time so LangChain's internal
+    // chain / LLM observations append to the same trace.
+    const callbacksRef: LangfuseCallbacksRef = {};
     return await withLangfuseTrace(
       'llm.orchestrate',
       input,
@@ -198,7 +242,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           },
           async () => {
             if (input.intent === 'walk') {
-              return await this.generateWalk(input, usageRef);
+              return await this.generateWalk(input, usageRef, callbacksRef);
             }
 
             // Breaker fast-fail at entry → surface 503; section fallback can't mask a degraded provider.
@@ -219,7 +263,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               };
             }
 
-            const tasks = this.buildSectionTasks(model, prepared, input, usageRef);
+            const tasks = this.buildSectionTasks(model, prepared, input, usageRef, callbacksRef);
 
             const sectionResults = await runSectionTasks(
               tasks,
@@ -249,6 +293,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           },
         ),
       usageRef,
+      callbacksRef,
     );
   }
 
@@ -257,6 +302,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     prepared: ReturnType<typeof buildOrchestratorMessages>,
     input: OrchestratorInput,
     usageRef: UsageRef,
+    callbacksRef: LangfuseCallbacksRef,
   ): SectionTask<MainAssistantOutput>[] {
     const { sectionPlan, systemPrompt, historyMessages, userMessage } = prepared;
     return sectionPlan.map((section: LlmSectionDefinition) => {
@@ -296,6 +342,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             // C9.5 — thread for cache-status telemetry.
             requestId: input.requestId,
             usageRef,
+            // TD-LF-02 — opt-in LangChain CallbackHandler ref (populated by
+            // `withLangfuseTrace` when Langfuse is enabled).
+            callbacksRef,
           }),
       };
     });
@@ -312,32 +361,31 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * applies: fakes / older SDKs returning the parsed-only shape classify as
    * `'miss'` and telemetry helpers swallow their own failures.
    */
+  /** Walk-path canned fallback ; extracted to keep `generateWalk` under the line cap. */
+  private walkFallback(citation: string): OrchestratorOutput {
+    return {
+      text: MISSING_LLM_KEY_FALLBACK,
+      metadata: { citations: [citation] },
+      suggestions: undefined,
+    };
+  }
+
   private async generateWalk(
     input: OrchestratorInput,
     usageRef: UsageRef,
+    callbacksRef: LangfuseCallbacksRef,
   ): Promise<OrchestratorOutput> {
     const model = this.model;
-    if (!model) {
-      return {
-        text: MISSING_LLM_KEY_FALLBACK,
-        metadata: { citations: ['system:missing-llm-api-key'] },
-        suggestions: undefined,
-      };
-    }
+    if (!model) return this.walkFallback('system:missing-llm-api-key');
 
     // ChatModel.withStructuredOutput is optional (test fakes / older providers).
-    // Distinct citation marker keeps this observable in metadata.
     if (!model.withStructuredOutput) {
       logger.warn('llm_walk_no_structured_output', {
         requestId: input.requestId,
         provider: env.llm.provider,
         model: env.llm.model,
       });
-      return {
-        text: MISSING_LLM_KEY_FALLBACK,
-        metadata: { citations: ['system:missing-structured-output'] },
-        suggestions: undefined,
-      };
+      return this.walkFallback('system:missing-structured-output');
     }
 
     const prepared = buildOrchestratorMessages(input);
@@ -361,11 +409,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       },
     );
 
-    // Insert WALK_TOUR_GUIDE_SECTION AFTER system instructions, BEFORE HumanMessage.
-    // buildSectionMessages also appends a trailing reminder SystemMessage → can't use length-1.
-    const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
-    const insertAt = humanIdx >= 0 ? humanIdx : messages.length;
-    messages.splice(insertAt, 0, new SystemMessage(WALK_TOUR_GUIDE_SECTION));
+    injectWalkTourGuideSection(messages);
 
     // C9.5 D5.a — parity with chat path: `includeRaw: true` surfaces the
     // raw AIMessage's `usage_metadata.input_token_details.cache_read` so we
@@ -379,7 +423,11 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     const walkPayloadBytes = estimatePayloadBytes(messages);
-    const rawResult = (await structured.invoke(messages, { signal })) as
+    // TD-LF-02 — `mergeInvokeOpts` folds the Langfuse CallbackHandler onto the signal opts.
+    const rawResult = (await structured.invoke(
+      messages,
+      mergeInvokeOpts({ signal }, callbacksRef),
+    )) as
       | WalkAssistantOutput
       | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null };
     const { result, usage } = this.narrowWalkStructuredResult(rawResult);
