@@ -1074,7 +1074,17 @@
     "data_audio": "Messages vocaux (transcrits uniquement, audio non conservé par l'IA)",
     "data_location": "Votre localisation (si vous choisissez de la partager)",
     "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)",
-    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek"
+    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek",
+    "summary_only_content": "Seuls les textes, images et audio que tu envoies sont partagés — rien de plus.",
+    "summary_no_personal_data": "Aucune donnée personnelle (nom, email, localisation précise) n'est transmise aux fournisseurs IA.",
+    "summary_processing": "Le traitement est limité à la génération de réponses par les fournisseurs déclarés (OpenAI, Google).",
+    "summary_revoke_anytime": "Tu peux gérer ou révoquer ton consentement à tout moment depuis les Paramètres.",
+    "accept_all": "Accepter tout",
+    "manage_choices": "Gérer mes choix",
+    "back_to_summary": "Retour",
+    "manage_title": "Gérer mes choix",
+    "manage_subtitle": "Décoche chaque catégorie librement. Le scope « Textes OpenAI » est requis pour pouvoir discuter avec l'IA.",
+    "save_required_hint": "Active « Textes OpenAI » pour pouvoir enregistrer."
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",

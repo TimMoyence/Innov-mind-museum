@@ -1074,7 +1074,17 @@
     "data_audio": "Voice messages (transcribed only, audio not stored by AI)",
     "data_location": "Your location (if you choose to share it)",
     "data_profile": "Your art preferences and visit history (to personalize responses)",
-    "data_providers": "Processed by third-party AI services: OpenAI, Google, and DeepSeek"
+    "data_providers": "Processed by third-party AI services: OpenAI, Google, and DeepSeek",
+    "summary_only_content": "Only the text, images and audio you send are shared — nothing else.",
+    "summary_no_personal_data": "No personal data (name, email, precise location) is transmitted to AI providers.",
+    "summary_processing": "Processing is limited to response generation by the declared providers (OpenAI, Google).",
+    "summary_revoke_anytime": "You can manage or revoke your consent at any time from Settings.",
+    "accept_all": "Accept all",
+    "manage_choices": "Manage my choices",
+    "back_to_summary": "Back",
+    "manage_title": "Manage my choices",
+    "manage_subtitle": "Uncheck any category freely. The \"OpenAI Text\" scope is required to chat with the AI.",
+    "save_required_hint": "Enable \"OpenAI Text\" to save your choices."
   },
   "dailyArt": {
     "title": "Artwork of the Day",
