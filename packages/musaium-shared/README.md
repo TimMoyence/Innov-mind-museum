@@ -1,51 +1,56 @@
 # @musaium/shared
 
-Cross-app shared utilities for the Musaium monorepo.
+Cross-app sentry-scrubber + observability primitives for the Musaium monorepo.
 
-**Status**: package scaffold ready; **not yet wired** into the three apps.
+**Status**: live (v0.2.0). Wired into all three apps as a `file:` dependency.
 
-## Contents (sprint cleanup-2026-05-12, agent C)
+## Surface
+
+The package exports a single sub-path. (The v0.1.0 scaffold sub-paths
+`./geo`, `./validation`, `./i18n`, `./errors`, `./auth` were phantom — 0 consumers —
+and were culled in v0.2.0 along with their `src/` dirs. See `CHANGELOG.md`.)
 
 | Subpath | Exports | Notes |
 | --- | --- | --- |
-| `./geo` | `haversineDistanceMeters` | Currently duplicated in `museum-backend/src/shared/utils/haversine.ts` + `museum-frontend/features/museum/application/haversine.ts`. |
-| `./validation` | `PASSWORD_MIN`, `PASSWORD_MAX`, `passwordSchema` | Replaces 5 ad-hoc Zod password schemas across BE schemas + Web admin + RN. |
-| `./i18n` | `SUPPORTED_LOCALES`, `Locale`, `DEFAULT_LOCALE`, `isSupportedLocale` | Web `[locale]` route param narrowing currently uses `as Locale`. |
-| `./errors` | `ERROR_CODES`, `ErrorCode` | Single source of truth for error code literals shared between BE envelopes and FE/Web mappers. |
-| `./auth` | `decodeJwtPayloadWith`, `jwtHeaderSchema`, `baseJwtPayloadSchema`, `Base64UrlDecoder` | Isomorphic helper — host provides Node `Buffer`-or-browser `atob` decoder. Replaces the per-app `jwt-decode.ts` files added in C.12. |
+| `.` (root barrel) | re-exports `./observability` | `museum-backend` consumes via this barrel. |
+| `./observability` | sentry-scrubber primitives + types | The only live surface. |
 
-## Why "not yet wired"
+`package.json` `exports` map: `.` + `./observability` only.
 
-Wiring requires touching the root `pnpm-workspace.yaml` and every consumer
-`package.json` — high coordination cost during the parallel-worktree sprint
-cleanup-2026-05-12. The scaffold lets the next sprint integrate one consumer at
-a time without re-discovering the API surface.
+## Live consumers (3)
 
-## Integration plan (next sprint)
+- `museum-backend/src/shared/observability/sentry-scrubber.ts` — via the root barrel (`@musaium/shared`).
+- `museum-frontend/shared/observability/sentry-scrubber.ts` — via the path-style import (`@musaium/shared/observability`).
+- `museum-web/src/lib/sentry-scrubber.ts` — via the path-style import.
 
-1. Add `pnpm-workspace.yaml` at repo root:
-   ```yaml
-   packages:
-     - museum-backend
-     - museum-web
-     - packages/*
-   ```
-   museum-frontend (Expo) cannot join the pnpm workspace; consume via
-   `npm install file:../packages/musaium-shared`.
+## Wiring — `file:` package, not a pnpm workspace
 
-2. Add `"@musaium/shared": "workspace:*"` to museum-backend and museum-web
-   dependencies. Run `pnpm install` at the root.
+There is **no `pnpm-workspace.yaml`** at the repo root. The three apps each declare
+`"@musaium/shared": "file:../packages/musaium-shared"` in their manifest (revert
+of the earlier workspace experiment, commit `641968ea4`).
 
-3. Replace consumers one subpath at a time:
-   - `import { haversineDistanceMeters } from '@musaium/shared/geo'`
-   - delete `museum-backend/src/shared/utils/haversine.ts` + FE counterpart.
-   - Same for password / locales / error codes.
+Consequence: after a `git pull` that touches `packages/musaium-shared/` or an app
+manifest, you MUST re-run `pnpm install` / `npm install` in **each** affected app
+to re-materialize `node_modules/@musaium/shared`, otherwise `pnpm build` fails on
+`Module not found: @musaium/shared/observability`.
 
-4. JWT decode: keep the per-app wrappers (`src/shared/auth/jwt-decode.ts`) but
-   replace their bodies with a call to `decodeJwtPayloadWith(token, schema, base64UrlDecoder)`
-   so the parsing/validation logic lives in one place.
+Guard-rails (2026-05-14):
 
-## Sentry scrubbers — explicitly NOT here
+- `pnpm bootstrap` (root) re-installs the three apps in sequence.
+- `scripts/sentinels/workspace-links.mjs` detects broken symlinks (exit 1 + fix command).
+- Husky `post-merge` hook warns automatically after `git pull`.
+- Pre-commit Gate 6 blocks if a staged diff touches `packages/**` or `museum-*/package.json` with broken symlinks.
 
-Per the audit doctrine, the 3-copy Sentry scrubber pattern stays manual for this
-sprint. Extraction to `@musaium/shared/observability` is deferred to ADR-045.
+See CLAUDE.md § "Pièges connus" → `@musaium/shared` bullet for the full gotcha.
+
+## Build & test
+
+```bash
+pnpm build       # rm -rf dist && tsc
+pnpm test        # node --test on src/observability/*.test.ts
+pnpm typecheck   # tsc --noEmit
+```
+
+## History
+
+See `CHANGELOG.md`. The 3-copy Sentry scrubber extraction tracked under ADR-045.

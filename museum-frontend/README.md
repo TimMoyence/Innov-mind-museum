@@ -18,7 +18,7 @@ Backend must run on `http://localhost:3000` for the default `.env`. Start it fro
 |---|---|
 | `npm run dev` | Expo dev server (`EXPO_NO_TELEMETRY=1 expo start`) |
 | `npm run ios` / `npm run android` | Native run on simulator/device |
-| `npm run lint` | `eslint . --max-warnings=22 && tsc --noEmit` |
+| `npm run lint` | `eslint . --max-warnings=0 && tsc --noEmit` (avec cache) |
 | `npm run typecheck` | `tsc --noEmit` only |
 | `npm test` | Node test runner (compiles to `.test-dist/`) + Jest RN suite |
 | `npm run test:coverage` | Jest with coverage |

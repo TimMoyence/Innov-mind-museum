@@ -23,13 +23,17 @@ ast-grep scan --rule tools/ast-grep-rules/no-raw-throw-error.yml
 ast-grep scan --json > ast-grep-report.json
 ```
 
-## Rules shipped (W7 — 3 starter)
+## Rules shipped (7)
 
 | Rule | Severity | Scope | Catches |
 |---|---|---|---|
 | `no-raw-throw-error` | error | `museum-backend/src/**` | `throw new Error(...)` outside domain entities and migrations — use `AppError` factories |
 | `no-dangerously-set-inner-html-without-purify` | error | `museum-web/src/**/*.tsx` | `dangerouslySetInnerHTML` without DOMPurify import — V12 §8 OWASP LLM02 |
 | `no-unicode-emoji-in-screen` | warning | `museum-frontend/app/**` + `museum-web/src/app/**` | unicode emojis in JSX — use PNG `require` or Ionicons (`feedback_no_unicode_emoji`) |
+| `body-keyed-rate-limit-after-validate-body` | error | `museum-backend/src/modules/{auth,chat}/**/*.ts` | body-keyed rate-limiter (`loginByAccountLimiter`, `refreshLimiter`, `socialLoginLimiter`, `challengeLimiter`, `recoveryLimiter`) placed BEFORE `validateBody()` in a `router.post()` — account-bucket DoS via malformed-body spam (R8 / TD-EX-01) |
+| `jwt-verify-needs-algorithms` | error | `museum-backend/src/**/*.ts` | `jwt.verify()` without an explicit `algorithms` option — CVE-2022-23540 algorithm-confusion class (R4 / TD-JWT-01) |
+| `use-readenv-helper` | warning | `museum-frontend/**/*.ts` | raw `process.env.X` reads — wrap via canonical `readEnvString` from `@/shared/lib/env` to bridge local/CI typing divergence |
+| `use-readenv-helper-tsx` | warning | `museum-frontend/**/*.tsx` | same as `use-readenv-helper`, split out because ast-grep treats `typescript` and `tsx` as distinct grammars |
 
 ## Adding a rule
 

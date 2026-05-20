@@ -27,7 +27,7 @@ Sections marked MANDATORY block merge until checked.
 - [ ] OWASP LLM Top 10 considered — cite affected risks in the description (LLM01 prompt-injection, LLM02 insecure-output, LLM06 SDoS, etc.).
 - [ ] Tests cover the safety contract (regression test for the failure mode being fixed OR for the new path being added).
 - [ ] ADR added or amended if doctrine changes (per [`docs/adr/`](../docs/adr/) — guardrail strategy / policy / audit-chain).
-- [ ] Red-team corpus check : new patterns added to `tests/red-team/guardrail-corpus.json` if the fix is for a false negative.
+- [ ] Red-team corpus check : new attack patterns added to [`museum-backend/security/promptfoo/jailbreaks.yaml`](../museum-backend/security/promptfoo/jailbreaks.yaml) (and/or `halluc-corpus-injection.partial.json`) if the fix is for a false negative — corpus grows, never shrinks.
 - [ ] CODEOWNERS review obtained — the matching path in [`.github/CODEOWNERS`](./CODEOWNERS) must be reviewed before merge.
 
 ## Compliance checklist
@@ -47,6 +47,8 @@ Sections marked MANDATORY block merge until checked.
 - [ ] Manual smoke if applicable — describe steps below.
 - [ ] If migration : `pnpm migration:run` clean + `node scripts/migration-cli.cjs generate --name=Check` returns empty (no schema drift).
 - [ ] If OpenAPI change : `pnpm openapi:validate` (backend) + `npm run check:openapi-types` (mobile).
+- [ ] **No hook bypass (UFR-020)** — pre-commit + pre-push hooks ran un-bypassed (no `--no-verify` / `-n` / `SKIP_PRE_COMMIT` / `SKIP_PRE_PUSH` / `core.hookspath=/dev/null`).
+- [ ] **Maestro coverage (UFR-021)** — any new/modified user-facing screen ships a `museum-frontend/.maestro/*.yaml` flow exercising its critical happy path, OR carries a justified `// e2e-skip: <reason ≥30 chars>`.
 
 Manual smoke steps (paste exact commands and expected output) :
 

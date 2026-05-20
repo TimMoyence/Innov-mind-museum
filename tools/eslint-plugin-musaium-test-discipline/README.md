@@ -18,6 +18,17 @@ Fires when a test file directly constructs a domain entity (`User`, `ChatMessage
 
 Use the factories in `tests/helpers/<module>/<entity>.fixtures.ts` (BE) or `__tests__/helpers/factories/` (FE) instead.
 
+### `musaium-test-discipline/no-typeorm-set-undefined`
+
+Forbids `field: undefined` inside TypeORM update calls, because `UpdateQueryBuilder` silently filters `undefined` values before generating SQL — the column is never cleared, leaving (for example) replayable one-time tokens. Use `field: () => 'NULL'` instead.
+
+Two patterns are flagged:
+
+- **Pattern A** — `<anything>.set({ field: undefined, ... })` (`UpdateQueryBuilder.set`).
+- **Pattern B** — `repo.update(criteria, { field: undefined, ... })` (2-arg `Repository`/`EntityManager.update`, which forwards to `.set()` internally).
+
+Shorthand and computed properties are ignored. By default the rule only runs on files whose path contains `.repository.` or `.repo.` (configurable via the `filePathPatterns` option). See `museum-backend/.../user.repository.pg.ts` `verifyEmail` for the reference fix.
+
 ### `musaium-test-discipline/no-undisabled-test-discipline-disable`
 
 Requires every `eslint-disable` comment targeting a `musaium-test-discipline` rule to include both:

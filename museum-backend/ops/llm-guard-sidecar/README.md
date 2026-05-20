@@ -33,7 +33,7 @@ curl -X POST http://localhost:8081/scan/prompt \
 
 ## Docker (via compose overlay)
 
-Only needed when integrating the backend container with the sidecar. The overlay `docker-compose.guardrails.yml` at the backend root expects this directory to contain a `Dockerfile` (TODO for prod go-decision — not required for local POC benchmark).
+Only needed when integrating the backend container with the sidecar. The overlay `docker-compose.guardrails.yml` at the backend root builds the `Dockerfile` in this directory. The prod image is `python:3.11-slim`-based, preloads the HuggingFace models at build time (~2.5 GB image, ~30s container start, no network during rollout), runs as a non-root `sidecar` user, force-upgrades CVE-flagged transitive deps, and ships a `/health` healthcheck on port 8081.
 
 ## Environment
 

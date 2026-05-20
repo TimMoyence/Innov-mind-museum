@@ -2,6 +2,8 @@
 
 > Date: 2026-05-18
 > Status: draft → user review
+
+**Status: SHIPPED 2026-05-18 (commit 5a01f5ca).** This document is the historical design rationale; SKILL.md is the live operational spec.
 > Replaces: V12 §8 cap policy (partial), Step 4 closing gate keywords, /team pipeline selector (micro/standard/enterprise)
 > Twin rules: UFR-013 (honnêteté), UFR-021 (post-feature test coverage), UFR-020 (zero bypass)
 
@@ -500,10 +502,10 @@ Aucune. Le pipeline `/team` change radicalement. Les runs en cours au moment du 
 
 ## 14. Open questions (à traiter en plan ou en exécution)
 
-- Comment bootstrap initial des ~15 libs sans bloquer le premier `/team` ? Probablement un script `bin/lib-docs-bootstrap.sh` à lancer manuellement avant le premier run.
+- Comment bootstrap initial des ~15 libs sans bloquer le premier `/team` ? Probablement un script `bin/lib-docs-bootstrap.sh` à lancer manuellement avant le premier run. **NOT BUILT as of 2026-05-20** — aucun script bootstrap (ni `bin/`, ni équivalent) n'existe dans le repo ; le bootstrap se fait au fil des runs via doc-fetcher/doc-curator.
 - Format exact des sections PATTERNS.md (template fixe vs free-form curator) — à voir dans le plan.
 - Que faire si un dev clone le repo et lance `/team` sans accès réseau (WebSearch impossible) ? Probablement INDEX.json absent localement → tout est stale → tout WARN. Acceptable per §6.6.
-- Faut-il un mécanisme de "lib alias" (e.g. `@langchain/core` et `@langchain/openai` partagent les mêmes docs LangChain) ? Probablement oui dans INDEX.json via champ `aliases[]`. À spec dans le plan.
+- Faut-il un mécanisme de "lib alias" (e.g. `@langchain/core` et `@langchain/openai` partagent les mêmes docs LangChain) ? Probablement oui dans INDEX.json via champ `aliases[]`. À spec dans le plan. **NOT BUILT (no aliases populated)** as of 2026-05-20 — `lib-docs/INDEX.json` ne contient aucune clé `aliases`.
 
 ---
 
