@@ -1,0 +1,13 @@
+{
+  "path": "./.claude/agents/reviewer.md",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Fully aligned w/ SKILL.md v13 UFR-022: opus-4.7, fresh-context, 5-axis weights+thresholds, unlimited rejection loop, BLOCK-CONTEXT-LEAK, lib-docs+frozen-test mandates all present. No stale IDs or retired modes.",
+  "staleClaims": [
+    {"line": 2, "claim": "model: opus (frontmatter generic, not opus-4.7)", "actual": "Repo-wide convention: all sibling agents (architect/editor/verifier/security) use frontmatter `model: opus`; precise opus-4.7 tier stated in body line 13. Not stale.", "verified": true},
+    {"line": 52, "claim": "T1.2 extensions 2026-05-03 / 'micro pipeline may skip' refs (lines 85,89,156,277)", "actual": "Micro pipeline retired in v13 mode-unique (SKILL.md line 95). Spec is now always mandatory; 'micro may skip' branches are dead but harmless graceful-degradation; not a correctness defect.", "verified": true}
+  ],
+  "updatePlan": "Optional minor polish (non-blocking): drop residual 'micro pipeline may skip' conditionals (lines 85,89,156,277,401) since v13 mode-unique made spec.md/design.md always mandatory (SKILL.md line 95, pre-feature-spec-check FAIL if absent). Pure cleanup; current text degrades gracefully when files exist (always true) so no functional impact. No model-ID, threshold, or rejection-loop changes needed.",
+  "wouldLoseInfo": "Detailed Musaium-specific gates (a11y, string-guard, design-system token, security grep, deviations cross-check), 5-axis JSON schema, frozen-test cross-check protocol, evidence-based review examples."
+}

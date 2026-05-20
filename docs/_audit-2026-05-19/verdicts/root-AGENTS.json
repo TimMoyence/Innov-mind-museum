@@ -1,0 +1,12 @@
+{
+  "path": "./AGENTS.md",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "MEDIUM",
+  "reason": "Thin pointer file (23 lines) serving non-Claude AI agents (Codex, Gemini CLI). Explicitly delegates to CLAUDE.md, no duplication. Manually curated minimal version per CLAUDE.md gotcha.",
+  "staleClaims": [],
+  "consolidateTarget": null,
+  "updatePlan": "No update needed. File correctly implements the manually-curated minimal pointer pattern documented in CLAUDE.md gotcha (GitNexus auto-inject patched out 2026-05-15). The AUDIT P1-16 comment (2026-05-12) accurately describes current state. Could optionally bump audit date to 2026-05-15 to reflect the gitnexus patch-out milestone, but not necessary.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "Standard discoverability for non-Claude AI agents (Codex/Gemini CLI/etc.) that look for AGENTS.md by convention. Removing would leave them without entry point to CLAUDE.md."
+}

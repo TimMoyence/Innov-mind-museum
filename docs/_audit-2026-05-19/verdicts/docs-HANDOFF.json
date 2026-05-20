@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "path": "docs/HANDOFF-2026-05-18-tech-debt-investigation.md",
+      "verdict": "ARCHIVE",
+      "valueLevel": "low",
+      "reason": "Session-transition artifact; its mission (produce 05-19 collision report) is DONE. Worktrees W1-W4 all merged (PR #290). Only cited by collision report as a source.",
+      "workShipped": true,
+      "referencedBy": "HANDOFF-2026-05-19-debt-collision-report.md (as source context); not CLAUDE.md"
+    },
+    {
+      "path": "docs/HANDOFF-2026-05-19-debt-collision-report.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Load-bearing: CLAUDE.md gotcha + TECH_DEBT TD-SN-01 STALE-BY-DESIGN both anchor the Sentry/OTel ADR-045 decision to its §7. Also cited by PHASE_HISTORY + METRIC_NAMING_AUDIT.",
+      "workShipped": true,
+      "referencedBy": "CLAUDE.md:158, docs/TECH_DEBT.md:1330, docs/PHASE_HISTORY.md:66, docs/observability/METRIC_NAMING_AUDIT.md:11"
+    },
+    {
+      "path": "docs/HANDOFF_W3_GEO_PILOT.md",
+      "verdict": "ARCHIVE",
+      "valueLevel": "low",
+      "reason": "W3 code shipped (PR #290 merged, Bordeaux QR fixtures committed aa9abc4e). Phases A/B/C/D obsolete. TECH_DEBT TD-53 cites Phase B recipe, so archive not hard DELETE.",
+      "workShipped": true,
+      "referencedBy": "docs/TECH_DEBT.md:990 (TD-53 cites Phase B step 3 recipe)"
+    }
+  ],
+  "summary": "2 of 3 are spent session artifacts (W1-W4 all merged via PR #290) → ARCHIVE to _archive. The 05-19 collision report is load-bearing (CLAUDE.md + TECH_DEBT TD-SN-01 anchor ADR-045 Sentry/OTel decision to it) → KEEP."
+}

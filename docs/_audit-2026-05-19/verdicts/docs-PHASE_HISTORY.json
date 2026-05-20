@@ -1,0 +1,14 @@
+{
+  "path": "./docs/PHASE_HISTORY.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Historical record, mostly accurate. Phase 14 (garak) now stale: workflow + config deleted 2026-05-17. Missing 3 phases post-2026-05-14 (Maestro Phase1/UFR-021, tracing, UFR-022).",
+  "staleClaims": [
+    {"line": 46, "claim": "Phase 14 — Garak REST swap (2026-05-14): llm-security-garak.yml swapped to rest generator, live + enforced", "actual": "garak workflow DELETED 2026-05-17 (commit cc17254db, $120/mo vs $2 estimate); musaium-garak-rest.json no longer exists; deferred V2.1 per ADR-049 amendment", "verified": true},
+    {"line": 50, "claim": "New file: museum-backend/scripts/llm-security/musaium-garak-rest.json", "actual": "File no longer present (removed with garak workflow drop 2026-05-17)", "verified": true}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Add closing note to Phase 14 marking garak reverted/deleted 2026-05-17 (cc17254db) + link CLAUDE.md amendment. Append new phases post-0514: Maestro Phase 1 + UFR-021 screen-coverage sentinel (70f5ce2f), distributed tracing clusters (d06bfd54/d041ed83), cert-pinning cluster 9 (0c256191), UFR-022 fresh-context 5-phase /team (5a01f5ca). Keep all else.",
+  "wouldLoseInfo": "Chronological cross-cutting phase record (coverage gate, Maestro, a11y, Stryker score history, chaos defer, garak attempt) — only place this timeline is consolidated; git log otherwise."
+}

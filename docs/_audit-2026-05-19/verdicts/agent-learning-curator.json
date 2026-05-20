@@ -1,0 +1,23 @@
+{
+  "path": "./.claude/agents/learning-curator.md",
+  "verdict": "UPDATE",
+  "confidence": 8,
+  "valueLevel": "HIGH",
+  "reason": "Workflow aligned w/ SKILL.md LEARNING SUBCOMMAND (read-only, write-to-pending, D7 batch honesty, risk-sorted). Two defects: malformed closing tag + allowedTools/Bash write-confinement gap.",
+  "staleClaims": [
+    {
+      "line": 163,
+      "claim": "Document closes with </output> tag",
+      "actual": "Section opened at line 135 is <output_format>; closing tag should be </output_format>. Mismatched/orphan tag — cosmetic but malformed.",
+      "verified": true
+    },
+    {
+      "line": 5,
+      "claim": "allowedTools excludes Edit/Write so curator can write ONLY to amendments/pending/ (SKILL.md:665 garde-fou)",
+      "actual": "allowedTools has neither Edit nor Write but DOES include Bash. The agent writes amendment files via Bash (heredoc), which can write to ANY path incl. production rules/code. The 'write only to pending/' constraint is prose-enforced, NOT tool-enforced. SKILL.md:665 implies Edit/Write exclusion is the guardrail; Bash defeats it.",
+      "verified": true
+    }
+  ],
+  "updatePlan": "1) Fix line 163 </output> -> </output_format>. 2) Reconcile allowedTools/Bash gap: since no Write tool is granted, Bash is the only file-writing path and is unconstrained. Either (a) add a sentence in <workflow> Step 8 + frontmatter note that Bash writes MUST target only amendments/pending/ (honor-system, defense via batch summary audit), or (b) add Write tool scoped doc + a pre-write path-guard. Recommend (a) minimal: explicit note that Bash file writes outside amendments/pending/ are a contract violation (UFR-013/D-rule). Dirs all verified present.",
+  "wouldLoseInfo": "Detailed lesson/amendment schema refs, routing table (Step 4), D5 dedup contentHash rule, D7 batch honesty, honesty checklist — all valuable, must preserve on any edit."
+}

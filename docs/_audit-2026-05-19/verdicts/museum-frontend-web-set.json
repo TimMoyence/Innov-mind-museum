@@ -1,0 +1,78 @@
+{
+  "files": [
+    {
+      "path": "museum-frontend/RUN_LOCAL.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "All commands verified: env:local/dev:local/dev:check/dev:stack exist in package.json; 3-file .env pattern accurate; referenced by CLAUDE.md."
+    },
+    {
+      "path": "museum-frontend/README.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Mostly accurate (RN 0.83/Expo 55, .env.local.example, (tabs)/(stack) groups OK) but lint line says --max-warnings=22; actual is --max-warnings=0.",
+      "updatePlan": "Fix lint cell: 'eslint . --max-warnings=22 && tsc --noEmit' -> '--max-warnings=0'. Optionally note test = test:node + test:rn split."
+    },
+    {
+      "path": "museum-web/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Next 15 + React 19 + Tailwind 4 + pnpm accurate; all scripts (dev/build/lint/test) match package.json; env vars + structure correct."
+    },
+    {
+      "path": "museum-frontend/docs/CERT_PINNING_RUNBOOK.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Both SPKI pins + KILL_SWITCH_CACHE_TTL_MS=1h match cert-pinning.ts exactly; capture-spki.sh exists; referenced by memory."
+    },
+    {
+      "path": "museum-frontend/docs/IOS26_CRASH_DIAG.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate diagnostics runbook; extract-crash-context.sh exists; wire-up files valid; companions ADR-004 + crash memory (instrumentation retained to 2026-06-15)."
+    },
+    {
+      "path": "museum-frontend/.maestro/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate Maestro how-to; bundle id, backend port, test-account flow correct. Note 'no testID' line is now partly dated but harmless."
+    },
+    {
+      "path": "museum-frontend/.maestro/AUTH_FLOWS_NOTES.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Dated 2026-05-17 maintainer notes / testID-gap tracker; seed:smoke-account script verified; self-describes as snapshot, accurate to purpose."
+    },
+    {
+      "path": "museum-frontend/.maestro/NAV_FLOWS_NOTES.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Dated 2026-05-17 gap-tracking notes for nav flows; testID/skip rationale accurate to its snapshot purpose; useful maintainer reference."
+    },
+    {
+      "path": "museum-frontend/.maestro/fixtures/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate test-artwork.jpg fixture provenance + license + usage; CI upload reference valid."
+    },
+    {
+      "path": "museum-frontend/.maestro/fixtures/audio.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate audio-fixture contract (PCM 16k mono, gpt-4o-mini-transcribe, MAESTRO_AUDIO_FIXTURE injection); not-committed rationale sound."
+    },
+    {
+      "path": "museum-frontend/features/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Hexagonal-light layout reference; per-feature status table dated 2026-05-12 with explicit verification method; canonical contract for new features."
+    },
+    {
+      "path": "museum-frontend/assets/images/backgrounds/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "low",
+      "reason": "Short asset-replacement workflow; naming convention + mobile/desktop paths accurate; useful for designers."
+    }
+  ],
+  "summary": "12 internal docs audited (ios/Pods/** vendor READMEs excluded as third-party). 11 KEEP, 1 UPDATE (museum-frontend/README.md lint --max-warnings stale: 22 -> 0). RUN_LOCAL + CERT_PINNING spot-checks both verified against package.json + cert-pinning.ts."
+}

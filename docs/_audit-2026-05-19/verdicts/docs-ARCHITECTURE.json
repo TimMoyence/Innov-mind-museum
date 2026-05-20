@@ -1,0 +1,55 @@
+{
+  "path": "./docs/ARCHITECTURE.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Core hexagonal/alias facts accurate, but 4 stale items: undocumented 'leads' BE module, KE composition file misnamed, src/helpers/ moved to src/shared/, FE features list missing 3 dirs.",
+  "staleClaims": [
+    {
+      "line": 42,
+      "claim": "admin / auth / museum / review / support — barrel pattern.",
+      "actual": "'leads' module also exists (src/modules/leads/) and uses barrel pattern (useCase/index.ts present). It is undocumented in the module list.",
+      "verified": true
+    },
+    {
+      "line": 43,
+      "claim": "chat / knowledge-extraction — composition-root pattern. <module>-module.ts builds the DI graph",
+      "actual": "Only chat has chat-module.ts. knowledge-extraction has NO *-module.ts; its composition root is index.ts exporting class KnowledgeExtractionModule. useCase/index.ts correctly absent for both (verified NO).",
+      "verified": true
+    },
+    {
+      "line": 32,
+      "claim": "<module>-module.ts # composition root (chat, knowledge-extraction): wire DI graph",
+      "actual": "Tree diagram implies both chat and KE have <module>-module.ts; KE does not — it wires via index.ts (KnowledgeExtractionModule class).",
+      "verified": true
+    },
+    {
+      "line": 36,
+      "claim": "helpers/ # middleware (error handler, rate limit, request ID/logger), swagger setup",
+      "actual": "src/helpers/ does NOT exist. Middleware lives in src/shared/middleware/ (error.middleware.ts, rate-limit.middleware.ts, request-id.middleware.ts); swagger in src/shared/http/swagger.",
+      "verified": true
+    },
+    {
+      "line": 37,
+      "claim": "app.ts # Express app factory (middleware chain + router mount)",
+      "actual": "app.ts exists & accurate; but the preceding helpers/ line in the tree is wrong (see line 36).",
+      "verified": true
+    },
+    {
+      "line": 82,
+      "claim": "features/ block lists: art-keywords,auth,chat,conversation,daily-art,legal,museum,onboarding,review,settings,support",
+      "actual": "Actual museum-frontend/features/ also contains: diagnostics/, home/, paywall/ (3 undocumented). All 11 listed dirs confirmed present.",
+      "verified": true
+    },
+    {
+      "line": 58,
+      "claim": "Path aliases @modules/@shared/@data + 4-level relative forbidden",
+      "actual": "tsconfig.json paths confirmed: @shared/* @modules/* @data/* @src/* all present and correct.",
+      "verified": true
+    }
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "1) Line 42: add 'leads' to barrel-pattern module list -> 'admin / auth / leads / museum / review / support'. 2) Line 43: clarify 'chat (chat-module.ts) / knowledge-extraction (index.ts -> KnowledgeExtractionModule class)' — KE has no *-module.ts. 3) Line 32 tree comment: change to '<module>-module.ts # composition root (chat); KE wires via index.ts'. 4) Lines 36-37 tree: replace 'helpers/  # middleware ... swagger setup' with reality — middleware under shared/middleware/, swagger under shared/http/swagger; delete the standalone helpers/ entry. 5) Lines 82-93 FE features: add diagnostics/, home/, paywall/ entries.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "Accurate hexagonal layer doctrine, import-discipline codemod rules, minimal-barrel policy, FE/Web layouts — all still valid and well-documented; deletion would lose canonical arch reference."
+}

@@ -1,0 +1,89 @@
+{
+  "files": [
+    {
+      "path": "docs/legal/SUBPROCESSORS.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate discoverability stub pointing to canonical docs/compliance/SUBPROCESSORS.md; correctly explains dual-path filing; cross-refs valid.",
+      "placeholders": [],
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/legal/AI_DISCLOSURE.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate AI Act Art.50 disclosure spec + ADR-053 granular consent layer; code refs + 8 locales + dates consistent; honest about enforcement gap.",
+      "placeholders": [],
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/legal/AI_DISCLOSURE_AUDIT.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate Art.50 audit companion; honest gap log; launch date 2026-06-01 + Art.50 effective 2026-08-02 correct. Legal sign-off pending (expected).",
+      "placeholders": [],
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/legal/DPIA_T1.1_addendum.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate ADR-053 consent addendum; DRAFT awaiting DPO ratification (deadline 2026-05-25). Honest about 4 follow-up gaps. No factual errors.",
+      "placeholders": ["DPO signature pending (deadline 2026-05-25, launch-blocking per doc)"],
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/legal/DPIA.md",
+      "verdict": "UPDATE",
+      "valueLevel": "critical",
+      "reason": "Internal contradiction: §9 annex (L226) still cites wrong 'CNIL Delib 2021-018' though T1.3 (L67) corrected it to 2021-069. Plus unfilled DPO mandate + signature.",
+      "placeholders": [
+        "L8: '<!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 -->' cabinet 'a confirmer'",
+        "L198-203: §7 Avis du DPO empty (checkboxes + Date/Nom/Signature) — launch-blocking, deadline 2026-05-25"
+      ],
+      "updatePlan": "Fix §9 annex L226: replace 'CNIL Deliberation 2021-018' with 'Loi 2023-566 + CNIL Delib n.2021-069' to match corrected T1.3. DPO mandate + sign-off must be filled before 2026-06-01 (launch-blocking, not editorial)."
+    },
+    {
+      "path": "docs/legal/ROPA.md",
+      "verdict": "UPDATE",
+      "valueLevel": "critical",
+      "reason": "Accurate Art.30 register cross-verified vs code; but unfilled DPO mandate + empty signature block are launch-blocking placeholders (deadline 2026-05-25 / sign 2026-05-26).",
+      "placeholders": [
+        "L9: '<!-- DPO MANDATE PENDING ... -->' cabinet 'a confirmer'",
+        "L174-181: §Signature block empty (DPO + responsable) — launch-blocking"
+      ],
+      "updatePlan": "Mandate DPO by 2026-05-25, obtain Art.39 opinion + signatures by target 2026-05-26 (J-6). No text errors found; only the deliberate-empty signature/mandate placeholders block launch."
+    },
+    {
+      "path": "docs/legal/DPIA_ROPA_READINESS.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate consolidated readiness tracker; 13/13 controller decisions logged; honest NON SIGNE status; risk-if-unsigned section sound. Pure tracking doc.",
+      "placeholders": ["Tracks the DPO-mandate + signature placeholders that live in DPIA/ROPA themselves"],
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/legal/accessibility-statement-fr.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Accurate EAA/WCAG partial-conformance statement; honest. Two unfilled placeholders: postal address + signatures. Address is publication/launch-blocking.",
+      "placeholders": [
+        "L30: 'Adresse postale: A renseigner avant publication (siege declare au RCS)'",
+        "L131-132: §8 Signature block empty (responsable + auditeur a11y)"
+      ],
+      "updatePlan": "Fill RCS postal address before publishing the public /accessibility page. Operator signature can follow once WCAG manual+user passes done (status legitimately stays 'partiel'). Address blocks launch publication."
+    },
+    {
+      "path": "docs/legal/accessibility-statement-en.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "EN mirror of FR statement, accurate + honest. Same unfilled postal address + signature placeholders. Address blocks public publication.",
+      "placeholders": [
+        "L30: 'Postal address: To be filled in before publication (registered with the French RCS)'",
+        "L131-132: §8 Signature block empty (operator + external a11y auditor)"
+      ],
+      "updatePlan": "Fill RCS postal address before publishing public page; keep FR/EN parity. Operator signature deferred until WCAG passes documented. Address is launch/publication blocking."
+    }
+  ],
+  "summary": "9 legal docs, all factually accurate vs code/dates (launch 2026-06-01, Art.50 eff. 2026-08-02). 5 KEEP, 4 UPDATE. LAUNCH-BLOCKERS: DPO mandate+signatures unfilled in DPIA+ROPA (deadline 2026-05-25/26); a11y postal address (FR+EN) unfilled before public page. One factual fix: DPIA L226 annex still cites superseded 'CNIL 2021-018' contradicting corrected L67. No defunct subprocessors, no wrong company name."
+}

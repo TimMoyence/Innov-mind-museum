@@ -1,0 +1,7 @@
+{
+  "runtimeVerdict": "KEEP",
+  "archiveVerdict": "KEEP",
+  "fileCount": 28,
+  "pruneCandidates": [],
+  "summary": "Runtime: 6 run dirs (1x 2026-05-16, 5x 2026-05-19), all <30d (threshold 2026-04-20). No working/ (already purged), no empty files. websearch/ is empty scaffold dir, not a stale file. Archive: 1 run dir 2026-05-05, git confirms only README.md versioned per CLAUDE.md. Both READMEs accurate + consistent with lifecycle policy."
+}

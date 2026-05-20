@@ -1,0 +1,16 @@
+{
+  "path": "./.claude/agents/editor.md",
+  "verdict": "UPDATE",
+  "confidence": 7,
+  "valueLevel": "HIGH",
+  "reason": "Role/context blocks fully UFR-022 aligned (red/green split, frozen-test, BLOCK-TEST-WRONG, manifest sha256, BRIEF-ACK, BLOCK-CONTEXT-LEAK, lib-docs, intra-phase cap-2 vs unlimited reviewer). But <task> per-task Workflow omits the post-edit-green-test-freeze.sh hook step and is phase-agnostic.",
+  "staleClaims": [
+    {"line": 16, "claim": "Model: opus-4.6", "actual": "Matches SKILL.md REGLE 2 + CHANGELOG v13 (editor=opus-4.6). Frontmatter line 2 'model: opus' is generic CC convention resolving to latest opus; body pins 4.6. Not stale (same treatment as architect verdict l.8).", "verified": true},
+    {"line": 102, "claim": "Workflow step 6: trigger post-edit-lint.sh AND post-edit-typecheck.sh. PASS required.", "actual": "SKILL.md Step 5b §3d mandates a THIRD hook in the green per-edit loop: post-edit-green-test-freeze.sh (the FROZEN-TEST gate). The <task> Workflow lists only lint+typecheck. The freeze hook is described in the <role>/frozen-test prose (l.14, l.46-53) but absent from the operational step list — a green-phase agent following the numbered Workflow could skip invoking it.", "verified": true},
+    {"line": 94, "claim": "<task> Workflow per task in tasks.md (single phase-agnostic edit loop)", "actual": "UFR-022 splits editor into phase=red (tests only, pnpm test exit!=0, write red-test-manifest.json) and phase=green (code only, frozen-test). The <task> Workflow describes only a green-style edit loop and never states the red-phase deliverable (failing tests + manifest). Red duties live in <role> l.13 but not in the operational <task>. Mirror of architect's residual-monolithic-task gap.", "verified": true},
+    {"line": 103, "claim": "If FAIL -> corrective loop (cap = 2 per V12 §8 anti-pattern)", "actual": "Correct but under-qualified at this line; the UFR-022 clarification (cap 2 = intra-phase hook fails only, reviewer rejection unlimited) appears at l.145. Aligned with SKILL.md REGLE 14 — keep, optionally cross-ref l.145 from l.103.", "verified": true},
+    {"line": 134, "claim": "Per-component string-guard anti-workaround rule (2026-05-15)", "actual": "Detailed, project-specific, current; aligns with CLAUDE.md no-hardcoded-strings doctrine. Not stale — must be preserved.", "verified": true}
+  ],
+  "updatePlan": "Add the missing FROZEN-TEST hook to the <task> Workflow green loop: after step 6 (post-edit-lint + post-edit-typecheck) insert post-edit-green-test-freeze.sh as a mandatory PASS gate per edit (mirror SKILL.md Step 5b §3d). Split or annotate the <task> Workflow to distinguish phase=red (write FAILING tests + red-test-manifest.json {path:sha256}, pnpm test exit!=0 = success, NO app code) from phase=green (code only, frozen-test, BLOCK-TEST-WRONG). The <role>/<context>/frozen-test/lib-docs/<constraints>/<examples> blocks are correct — leave intact. No stale model IDs; no retired micro/standard/enterprise selector refs in this file.",
+  "wouldLoseInfo": "Frozen-test + BLOCK-TEST-WRONG prose, lib-docs obligation, hexagonal/FE/web domain patterns, per-component string-guard anti-workaround rule, factory test discipline, UFR-013 honesty grounding, GitNexus impact-before-edit. All must be preserved."
+}

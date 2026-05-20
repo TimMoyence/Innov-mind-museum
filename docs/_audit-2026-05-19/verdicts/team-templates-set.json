@@ -1,0 +1,77 @@
+{
+  "files": [
+    {
+      "path": ".claude/skills/team/team-templates/micro.md",
+      "verdict": "DELETE",
+      "valueLevel": "dead-concept",
+      "reason": "Describes RETIRED micro pipeline mode. Selector removed by UFR-022. No dispatcher/hook logic loads it; only doc-mentioned as 'legacy dead-concept'.",
+      "deleteRationale": "Safe: zero references in dispatcher logic or team-hooks. Mentioned only in docs: SKILL.md:559 + sdlc-pipelines.md:74-75 (both already flag it 'legacy dead-concept') and team-sdlc-index.md:11/51/130-133 (stale 3-tier model, audited separately). Clean up: remove micro.md from SKILL.md:559 TEMPLATES table, drop the legacy parenthetical in sdlc-pipelines.md:74-75, and delete the stale rows in team-sdlc-index.md. UFR-016 bury-dead-code.",
+      "updatePlan": ""
+    },
+    {
+      "path": ".claude/skills/team/team-templates/standard.md",
+      "verdict": "DELETE",
+      "valueLevel": "dead-concept",
+      "reason": "Describes RETIRED standard pipeline mode. Same status as micro.md. No live dispatcher/hook reference; only legacy doc mentions.",
+      "deleteRationale": "Safe: no dispatcher/hook consumes standard.md. Refs to clean: SKILL.md:559 (flags it legacy), sdlc-pipelines.md:74-75 legacy note, team-sdlc-index.md:12/52/129-132 stale rows. Note SKILL.md:135 'standard (mode unique UFR-022)' is just the table key label, NOT a load of standard.md (it loads enterprise.md). UFR-016.",
+      "updatePlan": ""
+    },
+    {
+      "path": ".claude/skills/team/team-templates/audit.md",
+      "verdict": "DELETE",
+      "valueLevel": "dead-concept",
+      "reason": "Describes RETIRED audit mode (UFR-022 removed audit/chore/hotfix/mockup modes). NOT referenced in SKILL.md at all. Audit now folded into the unique pipeline (security+verifier always present).",
+      "deleteRationale": "Safe: grep finds zero reference outside team-sdlc-index.md:54 (stale 3-tier doc) and stale worktree copies. SKILL.md does not load or mention audit.md. Audit-as-mode replaced by always-on security/verifier phases per SKILL.md:15. Clean up: remove team-sdlc-index.md:54 row. UFR-016.",
+      "updatePlan": ""
+    },
+    {
+      "path": ".claude/skills/team/team-templates/enterprise.md",
+      "verdict": "UPDATE",
+      "valueLevel": "low-but-loaded",
+      "reason": "IS loaded (SKILL.md:135 warm-up). BUT its content is the OLD 13-phase pipeline (CONCEVOIR/CHALLENGER/VIABILITE/CLEANUP) contradicting UFR-022's 9-phase (spec/plan/doc-freshness/red/green/verify/security/review/documenter).",
+      "deleteRationale": "",
+      "updatePlan": "Cannot DELETE: SKILL.md:135 loads it into the warm-up cache prefix. But its 13-phase task graph is stale-by-contradiction with the canonical 9-phase in sdlc-pipelines.md:49 + SKILL.md Steps 4a-9. Rewrite enterprise.md to mirror the 9-phase fresh-context pipeline (or rename to pipeline.md and update SKILL.md:135/559 + sdlc-pipelines.md:74 reference). Drop the 'micro/standard escalation' wording — no tiers remain."
+    },
+    {
+      "path": ".claude/skills/team/team-templates/spec.md.tmpl",
+      "verdict": "UPDATE",
+      "valueLevel": "high-active",
+      "reason": "Actively produced at SKILL.md Step 4a (spec.md, EARS+NFR+glossary+stakeholders). Content matches. Minor drift: header has {{MODE}}/{{PIPELINE}} placeholders, both retired by UFR-022.",
+      "deleteRationale": "",
+      "updatePlan": "KEEP structure (EARS/NFR/glossary/stakeholders all match SKILL.md:166 spec-phase output). Trim the header line 'Mode: {{MODE}} · Pipeline: {{PIPELINE}}' — both fields are dead-concept post mode-unique. Leave Run/Author/Created."
+    },
+    {
+      "path": ".claude/skills/team/team-templates/design.md.tmpl",
+      "verdict": "KEEP",
+      "valueLevel": "high-active",
+      "reason": "Actively produced at SKILL.md Step 4b (design.md). Content (hexagonal mapping, data model, API contract, test plan, observability) matches architect plan-phase output. No mode/pipeline drift.",
+      "deleteRationale": "",
+      "updatePlan": ""
+    },
+    {
+      "path": ".claude/skills/team/team-templates/tasks.md.tmpl",
+      "verdict": "KEEP",
+      "valueLevel": "high-active",
+      "reason": "Actively produced at SKILL.md Step 4b (tasks.md). Atomic task list + verifier gate match. Verification gate references current hooks (post-edit-lint, pre-complete-verify). No drift.",
+      "deleteRationale": "",
+      "updatePlan": ""
+    },
+    {
+      "path": ".claude/skills/team/team-templates/STORY.md.tmpl",
+      "verdict": "UPDATE",
+      "valueLevel": "high-active",
+      "reason": "Actively cp'd at SKILL.md:67 (Step INIT). Append-only sections present. Label drift vs UFR-022 9-phase: 'brainstorm'/'implement'/'finalize' should be 'spec'/'red'+'green'/'documenter'.",
+      "deleteRationale": "",
+      "updatePlan": "KEEP file (load-bearing, copied every run). Rename phase section headers to match UFR-022 canonical phases: 'brainstorm'->'spec', add separate 'red' + 'green' sections (currently one 'implement'), 'finalize'->'documenter'. Aligns the sha256-chained append-only doc with SKILL.md Steps 4a/4c/4d/9."
+    },
+    {
+      "path": ".claude/skills/team/team-templates/handoff-brief.json.tmpl",
+      "verdict": "KEEP",
+      "valueLevel": "high-active",
+      "reason": "Actively referenced SKILL.md:564 + the <200-token handoff constraint is enforced by post-edit-lint.sh and used in every fresh-context phase spawn. Schema (from/to/task/context_refs/decisions/blockers) matches dispatcher usage.",
+      "deleteRationale": "",
+      "updatePlan": ""
+    }
+  ],
+  "summary": "5 .tmpl files KEEP/UPDATE (Spec Kit, actively used; spec+STORY have mode/phase-label drift). micro/standard/audit.md = retired-mode dead-concept, DELETE (refs only in docs, no dispatcher/hook). enterprise.md loaded but its 13-phase content contradicts UFR-022 9-phase: UPDATE."
+}

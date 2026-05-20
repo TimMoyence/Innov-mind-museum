@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "path": "docs/TEST_INDEX.md",
+      "verdict": "UPDATE",
+      "valueLevel": "medium",
+      "reason": "Stale: all flows still marked written-not-run / verify-in-P2; flow list missing 8 flows added since; overlaps inventory coverage map.",
+      "updatePlan": "Refresh Maestro flow table to match current 27 .maestro/*.yaml (config excluded); drop the obsolete .maestro vs maestro/ split; update Status/Last-run columns post-P2 runs; resolve dangling COMMIT_HASH and Phase-2-todo notes or fold this file into TEST_COVERAGE_INVENTORY to kill overlap."
+    },
+    {
+      "path": "docs/TEST_FACTORIES.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate: BE/FE factory paths, ESLint plugin, ADR-012 tier rule, baseline-cannot-grow all verified against repo; canonical per CLAUDE.md.",
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/TEST_COVERAGE_INVENTORY.md",
+      "verdict": "UPDATE",
+      "valueLevel": "medium",
+      "reason": "Inventory drift: claims 25 routes / 14+5 maestro flows; actual 26 routes (new museums-picker.tsx) + 27 active .maestro flows; auth split flows + new screens absent.",
+      "updatePlan": "Re-walk app/ (add museums-picker.tsx + features MfaChallenge/MfaEnroll/BiometricLock/MuseumPicker Screen.tsx); replace §3 flow table with current 27-flow list (auth-* split, chat-cartel-deeplink, cert-pinning-smoke, auth-submit-invalid-email); fix §5 metrics (counts now wrong). Several Phase-1/2 testID gaps now closed — re-audit §4."
+    },
+    {
+      "path": "docs/TESTING_PHASE2_PLAN.md",
+      "verdict": "UPDATE",
+      "valueLevel": "low",
+      "reason": "Partly executed: sentinel+baseline+UFR-021 shipped, but pre-push Gate19 / sentinel-mirror / ci-cd-mobile step NOT wired (CLAUDE.md: Phase 2 pending). Checklist all unchecked.",
+      "updatePlan": "Tick landed items (smoke:api, auth/onboarding/nav flows, sentinel, UFR-021 in CLAUDE.md+JSON). Flag still-open: pre-push hook gate, sentinel-mirror, ci-cd-mobile wiring, PR template, backend smoke expansion. Drop solo-dev hour estimates (UFR-019). Resolve COMMIT_HASH placeholder."
+    },
+    {
+      "path": "docs/TESTING_DISCIPLINE_PROPOSAL.md",
+      "verdict": "UPDATE",
+      "valueLevel": "medium",
+      "reason": "Status PROPOSAL/pending but largely implemented: UFR-021 in CLAUDE.md+JSON, sentinel+baseline shipped. CI/hook wiring (§4/§6) still pending so not fully superseded.",
+      "updatePlan": "Flip header Status to ACCEPTED-PARTIAL; mark §1/§2/§3 (prose+JSON+sentinel) DONE; keep §4 pre-push Gate19, §6 ci-cd-mobile + sentinel-mirror as OPEN Phase-2 items. Once those wire, DELETE this file (canonical lives in CLAUDE.md UFR-021)."
+    },
+    {
+      "path": "docs/LINT_DISCIPLINE.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate decision tree + justified-categories + Phase-0 PR hard rule; matches CLAUDE.md ESLint Discipline pointer and musaium plugin enforcement.",
+      "updatePlan": ""
+    }
+  ],
+  "summary": "2 KEEP (TEST_FACTORIES, LINT_DISCIPLINE accurate). 4 UPDATE: inventory drifted (25->26 routes, 19->27 flows), TEST_INDEX statuses stale, Phase2 partly shipped (sentinel+UFR-021 done, hook/CI wiring pending), PROPOSAL now ACCEPTED-PARTIAL not pending. No DELETE yet — proposal not fully superseded until CI/hook wired."
+}

@@ -1,0 +1,17 @@
+{
+  "path": "./.claude/agents/verifier.md",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Fully aligned with SKILL.md Step 6 + REGLE 10. All 3 hooks exist, lib-docs assertion + BRIEF-ACK + BLOCK-CONTEXT-LEAK + process-auditor fusion + scope/spot-check/anti-hallucination all present.",
+  "staleClaims": [
+    {"line": 2, "claim": "frontmatter model: opus", "actual": "SKILL.md REGLE 2 says verifier=opus-4.6; body line 11 states opus-4.6. Frontmatter 'opus' matches editor/security/reviewer/architect convention (4/6 agents) — not stale, harness resolves alias.", "verified": true},
+    {"line": 11, "claim": "Model: opus-4.6 (cheaper than 4.7)", "actual": "Matches SKILL.md REGLE 2 line 24 (verifier=opus-4.6).", "verified": true},
+    {"line": 9, "claim": "inherit process-auditor's DoD posture (Sentinelle role from v4)", "actual": "Confirmed SKILL.md REGLE 10 line 32: 'Process-auditor v4 fusionne dans verifier.'", "verified": true},
+    {"line": 23, "claim": "runs pre-phase-doc-reference-check.sh for lib-docs assertion", "actual": "Hook exists (ls confirmed, 6214 bytes); SKILL.md Step 6 line 367-368 + REGLE 15 line 37 confirm.", "verified": true},
+    {"line": 79, "claim": "runs pre-complete-verify.sh", "actual": "Hook exists (ls confirmed, 4717 bytes); SKILL.md line 363.", "verified": true},
+    {"line": 28, "claim": "runs post-edit-green-test-freeze.sh as defense-in-depth", "actual": "Hook exists (ls confirmed, 5006 bytes); SKILL.md line 370 confirms defense-in-depth role at Step 6.", "verified": true}
+  ],
+  "updatePlan": "None required. Optional polish (low priority): could pin frontmatter to 'claude-opus-4-6' to match documenter.md for consistency, but 'opus' is the dominant convention (4/6 agents) and body prose already specifies opus-4.6 — no functional drift. No retired modes referenced; no missing UFR-022 mandates; no non-existent hooks.",
+  "wouldLoseInfo": "N/A — KEEP. File is the canonical verifier role spec (DoD gates, scope-boundary, spot-check, mutation gate, lib-docs assertion, anti-hallucination/UFR-013)."
+}

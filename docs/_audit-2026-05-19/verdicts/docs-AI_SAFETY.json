@@ -1,0 +1,48 @@
+{
+  "path": "./docs/AI_SAFETY.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "HIGH-value security doctrine doc, mostly accurate. But L5 LLM-judge row mis-describes it as output/fail-CLOSED when code says input/fail-OPEN, wrong file path, and Presidio provider now wired (was Phase 1).",
+  "staleClaims": [
+    {
+      "line": 32,
+      "claim": "L5 LLM judge runs on 'output' of every assistant response, failure mode 'fail-CLOSED + daily budget cap'",
+      "actual": "llm-judge-guardrail.ts: judge runs on INPUT, selectively invoked only on long inputs where keyword said allow (guardrail-evaluation.service.ts:152-154); it is fail-OPEN (null -> {decision:'review'} 'fail-open', line 163). Only the daily-budget-cap part is correct. CLAUDE.md AI Safety also states judge runs on uncertain V1 allows (input, msg >= 50 chars), fail-OPEN to V1.",
+      "verified": true
+    },
+    {
+      "line": 32,
+      "claim": "file path `llm-judge.adapter.ts`",
+      "actual": "Actual file is src/modules/chat/useCase/llm/llm-judge-guardrail.ts; no llm-judge.adapter.ts exists.",
+      "verified": true
+    },
+    {
+      "line": 108,
+      "claim": "TTS output is generated from text that has passed L4 + L5",
+      "actual": "Inherits the L5=output framing error; the judge (L5) is an input-side layer, so the L4+L5 output-chain phrasing is imprecise.",
+      "verified": true
+    },
+    {
+      "line": 114,
+      "claim": "Current single provider: `LLMGuardAdapter` wrapping laiyer-ai/llm-guard",
+      "actual": "chat-module.ts:442 MicrosoftPresidioAdapter is wired and takes over as the V2 provider when PRESIDIO_ENABLED=true + baseUrl set (C9.8, 2026-05-17). LlamaPromptGuardAdapter also exists (not yet wired). No longer strictly single-provider.",
+      "verified": true
+    },
+    {
+      "line": 95,
+      "claim": "LLM02 PII: Phase 1 adds Microsoft Presidio sidecar for named-entity NER",
+      "actual": "MicrosoftPresidioAdapter already implemented and conditionally wired (chat-module.ts, env.guardrails.presidio.enabled). Now landed-behind-flag, not purely Phase 1 future.",
+      "verified": true
+    },
+    {
+      "line": 116,
+      "claim": "Provider swap is a Phase 1 task (future)",
+      "actual": "Partially landed: Presidio adapter present + wired behind PRESIDIO_ENABLED. Llama Prompt Guard adapter scaffolded but unwired. Update to reflect shipped-behind-flag status.",
+      "verified": true
+    }
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Fix L5 row (line 32): change 'output' -> 'input (uncertain V1 allows, msg >= judgeMinMessageLength)', change 'fail-CLOSED' -> 'fail-OPEN to V1 decision (+ daily budget cap ADR-030)', and correct path llm-judge.adapter.ts -> llm-judge-guardrail.ts. Adjust L4+L5 phrasing (line 108) accordingly. Update Section 7 (line 114-116) + LLM02 row (line 95) to note MicrosoftPresidioAdapter is now wired behind PRESIDIO_ENABLED (C9.8 2026-05-17) and LlamaPromptGuardAdapter is scaffolded. Optionally add note reconciling 5-layer doc model vs 6-layer CLAUDE.md model (output guardrail folded). Bump Last review date. ADR-015 parallel-V2 change is correctly reflected; no GUARDRAILS_V2_CANDIDATE staleness.",
+  "wouldLoseInfo": "Compliance mapping (GDPR/AI Act/OWASP), fail-CLOSED contract rationale, audit posture, capacity plan, provider benchmark numbers, escalation process. All HIGH-value, unique to this doc."
+}

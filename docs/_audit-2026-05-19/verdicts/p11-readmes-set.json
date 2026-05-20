@@ -1,0 +1,54 @@
+{
+  "files": [
+    {
+      "path": "tools/eslint-plugin-musaium-test-discipline/README.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Documents 2 rules but plugin src ships 3; missing no-typeorm-set-undefined (live, cited in CLAUDE.md gotcha).",
+      "updatePlan": "Add a Rules section for musaium-test-discipline/no-typeorm-set-undefined (blocks .set({field:undefined}) + repo.update Pattern A/B, scope *.repository*.ts + *.repo.ts)."
+    },
+    {
+      "path": "tools/ast-grep-rules/README.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Header + table say 'W7 — 3 starter' but 7 .yml rules exist; 4 undocumented.",
+      "updatePlan": "Add 4 rows: body-keyed-rate-limit-after-validate-body, jwt-verify-needs-algorithms, use-readenv-helper, use-readenv-helper-tsx. Retitle '3 starter' to current count (7)."
+    },
+    {
+      "path": "infra/langfuse/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate: ports/secrets/integration plan match; OTel wiring + trace forwarder paths verified.",
+      "updatePlan": ""
+    },
+    {
+      "path": "packages/musaium-shared/README.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Stale: says 'not yet wired', lists 5 subpaths deleted in v0.2.0; only ./observability remains w/ 3 live consumers.",
+      "updatePlan": "Rewrite to v0.2.0 reality: observability-only surface, 3 live consumers, file: package (no pnpm-workspace.yaml per CLAUDE.md gotcha). Drop deleted geo/validation/i18n/errors/auth + workspace integration plan."
+    },
+    {
+      "path": "packages/musaium-shared/CHANGELOG.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Accurate: v0.2.0 Removed/Kept/Changed matches package.json (version 0.2.0, exports . + ./observability).",
+      "updatePlan": ""
+    },
+    {
+      "path": "lib-docs/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Layout matches UFR-022 + actual INDEX.json structure; tracked/untracked split correct.",
+      "updatePlan": ""
+    },
+    {
+      "path": "lib-docs/INDEX.json",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Valid manifest: 105 libs + devOnlyLibs, schema fields (version/fetched/snapshotSha256/patternsSha256/sourceUrls/warnings) present.",
+      "updatePlan": ""
+    }
+  ],
+  "summary": "4 KEEP (langfuse, CHANGELOG, lib-docs README + INDEX.json valid). 3 UPDATE: eslint README missing 3rd rule no-typeorm-set-undefined; ast-grep README says 3 rules but 7 exist; musaium-shared README stale (v0.2.0 culled 5 subpaths, observability-only)."
+}

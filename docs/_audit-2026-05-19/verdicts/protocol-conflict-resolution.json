@@ -1,0 +1,17 @@
+{
+  "path": "./.claude/skills/team/team-protocols/conflict-resolution.md",
+  "verdict": "UPDATE",
+  "confidence": 8,
+  "valueLevel": "LOW",
+  "reason": "Generic dispute-resolution PROCEDURE still useful, but parallel-edit collision scenario is obsolete under serialized writes (REGLE 12) and 'enterprise uniquement' contradicts SKILL.md index (Toujours).",
+  "staleClaims": [
+    {"line": 4, "claim": "Charge en mode enterprise uniquement.", "actual": "SKILL.md PROTOCOLES table line 553 lists conflict-resolution as 'Toujours'; UFR-022 retired the micro/standard/enterprise selector entirely.", "verified": true},
+    {"line": 19, "claim": "Agent A et Agent B modifient le meme fichier (timestamps, merge manuel, modifs conflictuelles, respawn avec merge)", "actual": "REGLE 12 serializes ALL writes (parallelism read-only, max 5); two agents can never edit the same file concurrently, so this entire collision scenario cannot occur.", "verified": true},
+    {"line": 27, "claim": "Agent contredit le plan -> Tech Lead evalue/ajuste OU agent re-execute selon plan original", "actual": "Under UFR-022 disagreement routes via BLOCK-TEST-WRONG (Green) or reviewer re-spawn fresh phase (REGLE 14, illimite); not ad-hoc Tech Lead plan tweak nor in-context re-execute (fresh-context REGLE 13).", "verified": true},
+    {"line": 34, "claim": "Sentinelle FAIL conteste par le Tech Lead", "actual": "Verifier/reviewer gates are now machine-enforced hooks (REGLE 9/10); 'Sentinelle' is retired framing. Overrule-with-WARN concept survives but mechanism is dated.", "verified": true}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Fix line 4 'enterprise uniquement' -> 'Toujours' (matches SKILL.md index). DELETE the parallel-edit collision case (lines 19-25) — impossible under REGLE 12 serialized writes. Rewrite 'Agent contredit le plan' to point at BLOCK-TEST-WRONG + reviewer rejection loop (REGLE 14). Rename 'Sentinelle' -> verifier/reviewer; keep overrule-with-WARN logging. Keep generic PROCEDURE (evidence/cross-validation/synthese/escalade) for human-vs-agent disputes. Net result: a much shorter file scoped to Tech-Lead-vs-agent + gate-overrule, since agent-vs-agent write collisions are now structurally impossible.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "Generic evidence->cross-validation->synthese->escalade dispute procedure and the gate-overrule-with-WARN-logging convention; both still valid for human-Tech-Lead vs agent contradictions."
+}

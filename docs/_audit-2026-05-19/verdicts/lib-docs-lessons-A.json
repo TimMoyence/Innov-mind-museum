@@ -1,0 +1,32 @@
+{
+  "files": [
+    {"path": "lib-docs/@maplibre/maplibre-react-native/LESSONS.md", "verdict": "KEEP", "reason": "v11 vendor-API gotcha: fitBounds padding symmetric→RTL no-op safe, lib does NOT mirror"},
+    {"path": "lib-docs/@react-native-async-storage/async-storage/LESSONS.md", "verdict": "KEEP", "reason": "TD-AS-01..04: key-namespace inconsistency, wrapper no try/catch, 2MB Android cap, inline mocks"},
+    {"path": "lib-docs/@react-native-community/netinfo/LESSONS.md", "verdict": "KEEP", "reason": "TD-NI-01..04: isConnected null→true coerce, prefetch ignores isInternetReachable, AppState bridge"},
+    {"path": "lib-docs/@react-navigation/native/LESSONS.md", "verdict": "KEEP", "reason": "TD-RNAV-01: Universal/App Links NOT configured for musaium.com, blocks magic-links pre-V1"},
+    {"path": "lib-docs/@ronradtke/react-native-markdown-display/LESSONS.md", "verdict": "KEEP", "reason": "SEC-MD-01..04: LLM-markdown auto-opens URLs no confirm, scheme hijack, allowedImageHandlers"},
+    {"path": "lib-docs/@sentry/nextjs/LESSONS.md", "verdict": "KEEP", "reason": "TD-SNXT-01: orphan sentry.client.config.ts→browser errors not captured (v10 needs instrumentation-client.ts)"},
+    {"path": "lib-docs/@sentry/node/LESSONS.md", "verdict": "KEEP", "reason": "TD-SN-01/02: OTel bridge half-implemented, tracePropagationTargets missing (trace correlation lost)"},
+    {"path": "lib-docs/@sentry/react-native/LESSONS.md", "verdict": "KEEP", "reason": "TD-SRN-01: metro.config uses getDefaultConfig not getSentryExpoConfig→Hermes source-maps misaligned"},
+    {"path": "lib-docs/@shopify/flash-list/LESSONS.md", "verdict": "KEEP", "reason": "TD-FL-01: inline List*Component JSX defeats recycling pool; v2 migration audit w/ sites"},
+    {"path": "lib-docs/@tanstack/react-query/LESSONS.md", "verdict": "KEEP", "reason": "TD-TQ-01/02: queryFn ignores AbortSignal (GPS jitter race), login mutation no ['user'] invalidation"},
+    {"path": "lib-docs/axios/LESSONS.md", "verdict": "KEEP", "reason": "TD-AX-01/02: maxContentLength uncapped (decompression bomb), no signal plumbing in httpRequest helper"},
+    {"path": "lib-docs/bcrypt/LESSONS.md", "verdict": "KEEP", "reason": "TD-BC-01: 72-byte cap not enforced, FR accents/emoji silent truncation; BCRYPT_ROUNDS central constant"},
+    {"path": "lib-docs/bullmq/LESSONS.md", "verdict": "KEEP", "reason": "TD-BMQ-01/02: 4/6 workers missing on('error'), SIGTERM may not await worker.close(); upsertJobScheduler pattern"},
+    {"path": "lib-docs/expo/LESSONS.md", "verdict": "KEEP", "reason": "SDK55 /legacy file-system subpath, secure-store lazy require crash-class, OTA disabled ADR-009"},
+    {"path": "lib-docs/express-middleware-thin/LESSONS.md", "verdict": "KEEP", "reason": "TD-MID-02 p-limit '^3' Renovate caveat; cors secure-default + compression SSE-skip site refs"},
+    {"path": "lib-docs/express/LESSONS.md", "verdict": "KEEP", "reason": "TD-EX-01: rate-limiter reading req.body must run AFTER validateBody; 7 specific route:line sites + DoS"},
+    {"path": "lib-docs/framer-motion/LESSONS.md", "verdict": "KEEP", "reason": "TD-FM-01: 11 importers use legacy 'framer-motion' not 'motion/react' (pkg renamed); RSC boundary"},
+    {"path": "lib-docs/helmet/LESSONS.md", "verdict": "KEEP", "reason": "TD-HEL-01..03: helmet mounted AFTER rateLimit (429 no headers), CSP connect-src/img-src too narrow"},
+    {"path": "lib-docs/i18next/LESSONS.md", "verdict": "KEEP", "reason": "3 AR launch blockers: intl-pluralrules loaded too late, AR plural keys missing, hand-rolled _zero ternary"},
+    {"path": "lib-docs/ioredis/LESSONS.md", "verdict": "KEEP", "reason": "TD-IO-01..04: retryStrategy/reconnectOnError unset, enableReadyCheck missing on BullMQ, dead-code factory"},
+    {"path": "lib-docs/js-sha256/LESSONS.md", "verdict": "KEEP", "reason": "BE↔FE cache-key parity contract load-bearing; sync pure-JS chosen vs expo-crypto async; bump→re-run parity"},
+    {"path": "lib-docs/jsonwebtoken/LESSONS.md", "verdict": "KEEP", "reason": "TD-JWT-01: google-oauth-state.ts verify missing algorithms:['HS256'] (CVE-2022-23540 doctrine)"},
+    {"path": "lib-docs/langchain/LESSONS.md", "verdict": "KEEP", "reason": "TD-LC-01: ChatGoogleGenerativeAI deprecated v1, openAIApiKey/modelName v0 aliases, z.record Gemini-incompat"},
+    {"path": "lib-docs/langfuse/LESSONS.md", "verdict": "KEEP", "reason": "TD-LF-01..04: no observeOpenAI/CallbackHandler→token+cost dashboard empty, v3 deprecated migration"},
+    {"path": "lib-docs/linkedom/LESSONS.md", "verdict": "KEEP", "reason": "TD-LINK-01/02: Readability mutates doc 2x parse cost, response.text() unbounded OOM; textContent-only safe"},
+    {"path": "lib-docs/maplibre-gl/LESSONS.md", "verdict": "KEEP", "reason": "TD-MGL-01/02: default import dropped in v5 (masked by shim), no 'error' listener→silent map blank-out"},
+    {"path": "lib-docs/multer/LESSONS.md", "verdict": "KEEP", "reason": "TD-MUL-01/02: limits.fields/parts/headerPairs unset DoS, MulterError code discrimination incomplete"}
+  ],
+  "summary": "27 KEEP / 0 DELETE. All files are substantive audit-2026-05-18 outputs with concrete file:line sites, TD-* entries, and project-specific gotchas. None empty/placeholder/generic."
+}

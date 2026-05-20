@@ -1,0 +1,16 @@
+{
+  "path": "./.claude/quality-ratchet.json",
+  "verdict": "UPDATE",
+  "confidence": 8,
+  "valueLevel": "HIGH",
+  "reason": "Active hook gate (session-init/bg-quality-runner/ratchet-check read it). testCount floor 3805 lags actual 5809 BE; mutation block fresh (2026-05-17). Floor still valid but loose.",
+  "staleClaims": [
+    {"field": "testCount", "jsonSays": "3805", "actual": "BE 5809 passed per SessionStart baseline; ratchet is a FLOOR so non-failing but ~2000 below actual", "verified": true},
+    {"field": "lastUpdated", "jsonSays": "2026-05-02", "actual": "mutation sub-block edited 2026-05-17 commit f9e16fb7; top-level lastUpdated not bumped", "verified": true},
+    {"field": "asAnyCount", "jsonSays": "0", "actual": "0 per baseline — current", "verified": true},
+    {"field": "frontendTestCount", "jsonSays": "1966", "actual": "FE actual not re-measured this session; floor likely also lagging", "verified": false}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Re-measure current passing counts (BE 5809, FE, web) and ratchet testCount/frontendTestCount/webTestCount UP to actuals; bump top-level lastUpdated to 2026-05-19. Optionally tighten coverage floors to current actuals. Do NOT touch mutation block (fresh). team-knowledge/quality-ratchet.json is a DISTINCT /team history log (nested schema, no hook reads it) — not a dup, leave as-is.",
+  "wouldLoseInfo": "None — UPDATE only raises floors and refreshes timestamp; mutation _comment doctrine and existing values preserved."
+}

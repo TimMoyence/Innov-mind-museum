@@ -1,0 +1,105 @@
+path	verdict	confidence	value	mtime	editor_run_id	notes
+./AGENTS.md	KEEP	9	HIGH	2026-05-19	n/a	Deliberate thin pointer to CLAUDE.md for non-Claude AI agents (Codex/Gemini)
+./CLAUDE.md	UPDATE	9	MEDIUM	2026-05-19	applied	Counts drift + line# rot + 5 niche pièges → split to docs/GOTCHAS_ARCHIVE.md
+./README.md	KEEP	9	HIGH	2026-05-19	n/a	Distinct external audience, accurate (Express 5/Node 22/Expo 55/RN 0.83/port 5433 verified)
+./SECURITY.md	UPDATE	9	HIGH	2026-05-19	applied	PGP key advertised but file still PGP_KEY_PLACEHOLDER_DO_NOT_SHIP — soften wording
+docs/GOTCHAS_ARCHIVE.md	CREATED	n/a	n/a	2026-05-19	from CLAUDE.md split	5 niche pièges relocated
+./docs/ROADMAP_TEAM.md	UPDATE	9	HIGH	2026-05-19	applied	Drift: T1.5b checkbox not ticked, agents count 6→9, UFR-022 V13 milestone missing as T-item
+./docs/ROADMAP_PRODUCT.md	UPDATE	9	HIGH	2026-05-19	applied	12 C9 checkboxes ticked (verified commits) + total Phase A recompute
+./docs/ARCHITECTURE.md	UPDATE	8	HIGH	2026-05-19	applied	4 stale: leads module undoc, KE root index.ts, src/helpers gone, FE features missing diagnostics/home/paywall
+./docs/TECH_DEBT.md	UPDATE	9	HIGH	2026-05-19	applied	11 resolved-but-open + 4 dup IDs + TD-7 stale; archive-split deferred to 2nd pass
+./docs/DOCS_INDEX.md	UPDATE	8	HIGH	2026-05-19	deferred-to-end	0 broken, ~32 orphans (GOTCHAS_ARCHIVE, HANDOFFs, legal/, operations/, TEST_*); update LAST after final doc set known
+./docs/PHASE_HISTORY.md	UPDATE	8	MEDIUM	2026-05-19	applied	garak Phase14 stale (deleted 2026-05-17) + 3 missing phases (Maestro/UFR-021, tracing, UFR-022)
+DEFERRED	TECH_DEBT archive split	n/a	n/a	2026-05-20	2nd-pass	Move ~25 closed items to TECH_DEBT_ARCHIVE.md — do near end of audit
+./docs/ROADMAP_FE_RN_BEST_PRACTICES.md	UPDATE	8	MEDIUM	2026-05-19	applied	F5/F12 shipped unchecked, F3 path components/→ui/, WT2 worktree model gone
+./.claude/agents/architect.md	UPDATE	8	HIGH	2026-05-19	applied	Workflow l.87-105 still monolithic spec+design pass, contradicts UFR-022 spec/plan split
+./.claude/agents/reviewer.md	KEEP	9	HIGH	2026-05-19	n/a	Fully aligned UFR-022 (opus-4.7, 5-axis, unlimited loop, BLOCK-CONTEXT-LEAK)
+./.claude/agents/editor.md	UPDATE	8	HIGH	2026-05-19	applied	Workflow phase-agnostic, omits post-edit-green-test-freeze.sh + red/green phase split
+./.claude/agents/verifier.md	KEEP	9	HIGH	2026-05-19	n/a	Aligned SKILL.md Step6+REGLE10, 3 hooks verified exist, opus-4.6
+./.claude/agents/security.md	UPDATE-minor	7	MEDIUM	2026-05-19	deferred-frontmatter-pass	model:opus convention (contested) + allowedTools broad vs SKILL scoped — handle in consolidated agent-frontmatter decision
+./.claude/agents/documenter.md	KEEP	9	HIGH	2026-05-19	n/a	model:opus-4-6 correct, no Sonnet leftover, cosmetic date nit l.11 only
+./.claude/agents/shared/user-feedback-rules.json	KEEP	9	HIGH	2026-05-19	n/a	20 active/22 total, all UFR present+sequential, minor cosmetic v12→v13 + UFR-022/021 ordering
+./.claude/agents/learning-curator.md	KEEP	8	MEDIUM	2026-05-19	n/a	Aligned; auditor HALLUCINATED malformed </output> tag (verified balanced); allowedTools Bash deferred
+./.claude/agents/shared/stack-context.json	UPDATE	8	MEDIUM	2026-05-19	applied	i18n next-intl wrong (custom dict), GitNexus 1.5.3→1.6.3, stale test counts
+./.claude/skills/team/SKILL.md	UPDATE	8	HIGH	2026-05-19	applied	KNOWN GAPS lists 6 shipped items as pending; PROTOCOLES/TEMPLATES tables cite retired micro/standard/enterprise modes
+./.claude/skills/team/team-protocols/sdlc-pipelines.md	UPDATE	8	MEDIUM	2026-05-19	applied	Whole file = retired 3-tier model, 0 UFR-022; rewrite to thin mode-unique 9-phase ref
+./.claude/skills/team/team-protocols/quality-gates.md	UPDATE	8	MEDIUM	2026-05-19	applied	Gate mechanics accurate but multi-mode/6-gate Sentinelle framing retired; strip mode language keep mechanics
+./.claude/agents/doc-fetcher.md	KEEP	9	HIGH	2026-05-19	n/a	Well-aligned UFR-022 (BRIEF-ACK, BLOCK-CONTEXT-LEAK, write lib-docs only, OK|WARN); dispatcher-read by TL not agent (prev agent hung)
+./.claude/agents/doc-curator.md	KEEP	9	HIGH	2026-05-19	n/a	Well-aligned UFR-022 (preserve LESSONS.md, write PATTERNS.md only, 200-500L target); dispatcher-read by TL
+./.claude/skills/team/team-protocols/agent-mandate.md	UPDATE	8	MEDIUM	2026-05-19	applied	Frozen V12: 6→9 agents, retired modes/ALLOCATION, missing UFR-022 splits+frozen-test+lib-docs, cap-2 stale
+./.claude/skills/team/team-protocols/import-coherence.md	UPDATE	9	HIGH	2026-05-19	applied-by-TL	1-line mode fix l.4 (aliases all verified correct); TL direct edit
+./.claude/skills/team/team-protocols/gitnexus-integration.md	UPDATE	8	MEDIUM	2026-05-19	applied	Tool names accurate but retired-mode (standard/enterprise/micro) qualifiers throughout; strip
+./.claude/skills/team/team-protocols/finalize.md	UPDATE	8	MEDIUM	2026-05-19	applied	Pre-v13 (Apr5), retired modes + dead V1_Sprint refs, omits UFR-022 Step9 sequence; rewrite
+./.claude/skills/team/team-protocols/error-taxonomy.md	UPDATE	7	MEDIUM	2026-05-19	applied	Header enterprise-only, retired phase names, TaskCreate (forbidden UFR-022), cap-3 vs unlimited reviewer; tables OK refresh doctrine
+./.claude/skills/team/team-protocols/conflict-resolution.md	UPDATE	8	MEDIUM	2026-05-19	applied	enterprise-only header, parallel-edit collision obsolete (REGLE12 serialized writes), some scenarios superseded; heavy-trim
+FINDING	agent-roi.json absent	n/a	n/a	2026-05-20	noted	SKILL.md L489 references team-knowledge/agent-roi.json but file absent (created on write) — minor
+./.claude/quality-ratchet.json	KEEP	8	HIGH	2026-05-19	deferred-gate-policy	Floor 3805<5809 = normal ratchet headroom (auto-raised by hook on green); manual bump = gate-policy not doc-fix. team-knowledge ver distinct (not dup)
+./.claude/skills/team/team-sdlc-index.md	UPDATE	8	HIGH	2026-05-19	applied	Master index frozen v4/V12: 6→9 agents, 12→22 UFR, retired pipelines/modes, wrong KB path, 8 dead skill refs; rewrite v13
+./.claude/skills/team/team-promptfoo/README.md	KEEP	8	MEDIUM	2026-05-19	n/a	Accurate; 4 files + 2 shims + CI exist; absent quality-baseline-bake.sh is tracked TODO T1.5b not error
+./.claude/skills/team/team-hooks/README.md	UPDATE	8	MEDIUM	2026-05-19	applied	Documents 4/11 hooks (4 UFR-022 phase hooks + 3 lifecycle undocumented), v12 title, retired MODE/OVERRIDE_SPEC_KIT bypass example
+./.claude/skills/team/team-templates/micro.md	DELETE	9	NOISE	2026-05-19	EXECUTED-git-rm (staged, not committed)
+./.claude/skills/team/team-templates/standard.md	DELETE	9	NOISE	2026-05-19	EXECUTED-git-rm (staged, not committed)
+./.claude/skills/team/team-templates/audit.md	DELETE	9	NOISE	2026-05-19	EXECUTED-git-rm (staged, not committed)
+./.claude/skills/team/team-templates/design.md.tmpl	KEEP	8	HIGH	2026-05-19	n/a	Active Spec Kit template (Step 4b)
+./.claude/skills/team/team-templates/tasks.md.tmpl	KEEP	8	HIGH	2026-05-19	n/a	Active Spec Kit template (Step 4b)
+./.claude/skills/team/team-templates/handoff-brief.json.tmpl	KEEP	8	HIGH	2026-05-19	n/a	Active handoff template
+TEMPLATES-3UPD	enterprise.md+spec.md.tmpl+STORY.md.tmpl	8	HIGH	2026-05-19	applied	enterprise.md 13→9phase, spec.md.tmpl dead {{MODE}}/{{PIPELINE}}, STORY.md.tmpl phase-label drift
+./.claude/skills/team/team-knowledge/plan-cache.json	DELETE	9	NOISE	2026-05-19	EXECUTED-git-rm (staged, not committed)
+./.claude/skills/team/lib/plan-cache.sh	DELETE	9	NOISE	2026-05-19	EXECUTED-git-rm (staged, not committed)
+team-knowledge-JSON-8files	KEEP	8	HIGH	2026-05-19	n/a	8 live telemetry/state/doctrine (agent-perf/autonomy/error-patterns/estimation/next-run/prompt-enrich/quality-ratchet/velocity) actively wired
+./docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md	UPDATE-light	8	HIGH	2026-05-19	applied	KEEP as design record; fix stale 'awaiting review' header + flag 2 §14 unbuilt (lib-docs-bootstrap.sh absent, INDEX aliases empty)
+team-lessons-set (22 files)	MIXED	8	MEDIUM	2026-05-19	in-progress	2 KEEP / 10 CONSOLIDATE / 10 DELETE; 10 empty-placeholder noise + 4 absorbed in CLAUDE.md; promote 2 unique gotchas
+./docs/AI_VOICE.md	UPDATE	9	HIGH	2026-05-19	applied	2 minor: l.90 lists 8 voices (catalog has 6, no verse/marin), l.57 synthesizeSpeech line# stale
+./docs/AI_SAFETY.md	UPDATE	8	HIGH	2026-05-19	applied	L5 LLM-judge wrong (output/fail-CLOSED → input/fail-OPEN), wrong path, Presidio C9.8 wired so single-provider stale
+CLAUDE.md-gotchas-add	UPDATE	9	HIGH	2026-05-19	applied	+2 verified gotchas (SAVEPOINT-migration, @types pin) promoted from lessons; +520 tokens
+./docs/MIGRATION_GOVERNANCE.md	UPDATE	8	HIGH	2026-05-19	applied	Core rules accurate; 2 stale refs l.77 (archived pedagogical doc path, non-existent idempotency test)
+./docs/AI_VISUAL_SIMILARITY.md	UPDATE	8	HIGH	2026-05-19	applied	SigLIP v1→v2 (C9.14), IVFFlat→HNSW halfvec_ip_ops, bge-reranker C9.13 missing, REINDEX lists advice wrong
+./docs/HANDOFF-2026-05-19-debt-collision-report.md	KEEP	9	HIGH	2026-05-19	n/a	Load-bearing: CLAUDE.md:158 + TECH_DEBT TD-SN-01 + PHASE_HISTORY anchor ADR-045 Sentry/OTel decision §7
+./docs/HANDOFF-2026-05-18-tech-debt-investigation.md	DELETE	8	NOISE	2026-05-20	EXECUTED-git-rm (staged, not committed)
+./docs/HANDOFF_W3_GEO_PILOT.md	DELETE	8	NOISE	2026-05-20	EXECUTED-git-rm (staged, not committed)
+docs/operations/ (12 files)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	11 KEEP + 1 UPDATE (VDP_RUNBOOK); SECURITY.md pointer trio all exist+coherent
+./docs/operations/VDP_RUNBOOK.md	UPDATE	8	MEDIUM	2026-05-19	applied	§4 dead paths (feature-flags.ts gone, rate-limit path wrong), §6 ENISA stale (SRP live since 2025-09-11)
+./docs/TEST_FACTORIES.md	KEEP	8	HIGH	2026-05-19	n/a	Verified accurate
+./docs/LINT_DISCIPLINE.md	KEEP	8	HIGH	2026-05-19	n/a	Verified accurate
+TEST-4docs-UPDATE	TEST_INDEX+COVERAGE_INVENTORY+PHASE2_PLAN+DISCIPLINE_PROPOSAL	8	MEDIUM	2026-05-19	applied	Phase2=accepted-partial(not pending), drift 25→26 routes/27 flows, stale 🟡 statuses
+docs/legal/ (9 files)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	5 KEEP + 4 UPDATE; controller/launch/Art.50 dates accurate
+docs/legal/DPIA.md+ROPA.md+accessibility-fr/en	FLAG-HUMAN	8	HIGH	2026-05-19	USER-ACTION	Launch-blocker placeholders: DPO mandate+signatures (deadline 2026-05-25), postal address — require human/legal input, NOT auto-fillable
+./docs/legal/DPIA.md	UPDATE	8	HIGH	2026-05-19	applied	§9 annex L226 cites superseded CNIL Délib 2021-018, contradicts own L67 (Loi 2023-566+Délib 2021-069) — align
+docs/RUNBOOKS/ (9 files)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	6 KEEP + 3 UPDATE; rollback/secrets/audit-chain verified accurate
+RUNBOOKS-3UPD	CERT_ROTATION+guardrail-incidents+V1_FALLBACKS	8	HIGH	2026-05-19	applied	CERT/guardrail host .app→.com (PINNED_HOST=musaium.com), V1_FALLBACKS table museum→museums/audit_log→audit_logs
+docs/compliance+incidents (10 files)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	9 KEEP + 1 UPDATE (DATA_FLOW_MAP); AI Act matrix/Art5/Art10/Art28 accurate; tabletops valid
+./docs/compliance/DATA_FLOW_MAP.md	UPDATE	8	MEDIUM	2026-05-19	applied	§4 lists DPIA(G6)/ROPA(G10) as 'not committed' but both shipped docs/legal/ 2026-05-13
+SUBPROCESSORS-dup-check	KEEP-both	9	n/a	2026-05-19	n/a	legal(33L public summary) vs compliance(93L Art28 detail) DISTINCT not dup
+./docs/GOOGLE_PLAY_DATA_SAFETY.md	KEEP	8	HIGH	2026-05-19	n/a	Verified accurate (data sharing Sentry/OpenAI/Brevo)
+./docs/CONTRIBUTING.md	KEEP	8	HIGH	2026-05-19	n/a	Verified (hook policy, audit-chain, commands match CLAUDE.md)
+./docs/GDPR_ART22_SCOPE.md	KEEP	8	HIGH	2026-05-19	n/a	Verified accurate
+MOBILE-3UPD	MOBILE_INTERNAL_TESTING+SOCIAL_AUTH_SETUP+STORE_SUBMISSION	8	MEDIUM	2026-05-19	applied	mobile-release.yml→ci-cd-mobile.yml, SOCIAL_AUTH stale (expo-web-browser not RNGoogleSignin), EAS-iOS vs Xcode Cloud reconcile
+gitnexus-* skills (6)	KEEP	9	MEDIUM	2026-05-19	n/a	All 6 KEEP, tool names match canonical, binary-managed (edits overwritten on re-analyze)
+./.claude/skills/rollback/SKILL.md	KEEP	8	HIGH	2026-05-19	n/a	Verified accurate vs repo (pnpm test/lint/build, /api/health mount)
+./.claude/skills/backend-patterns/SKILL.md	KEEP	6	LOW	2026-05-19	n/a	Self-contained generic reference, low value but harmless
+./.claude/skills/security-compliance/SKILL.md	KEEP	6	LOW	2026-05-19	n/a	Self-contained generic reference
+5 skills: codeql/semgrep/skill-creator/supply-chain-auditor/variant-analysis	BROKEN-DECIDE	8	MEDIUM	2026-05-19	USER-DECISION	SKILL.md references bundled dirs (workflows/references/scripts/resources) deleted in 2026-05-16 cull — reinstall full skill OR remove. supply-chain-auditor also has dir/frontmatter name mismatch
+5 user-slash skills (recap/test-routes/test-writer/verify-schema/security-scan)	KEEP	9	HIGH	2026-05-19	n/a	All have valid last-verified frontmatter (2026-05-16/18), UFR-022 contracts + commands check out
+./.claude/commands/power-tools.md	UPDATE	7	MEDIUM	2026-05-19	pending	5/9 checks dead paths (services/context/authService gone, auth.route moved, ARCHITECTURE_MAP.md deleted) → false-clean signals
+museum-backend docs (9 tracked)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	8 KEEP + 1 UPDATE (llm-guard README); clients/harness/corpus/CI verified
+./museum-backend/ops/llm-guard-sidecar/README.md	UPDATE	8	MEDIUM	2026-05-19	applied	Says Dockerfile 'TODO for prod' but ops/llm-guard-sidecar/Dockerfile now exists
+museum-frontend/web docs (12)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	11 KEEP + 1 UPDATE; RUN_LOCAL cmds + CERT_PINNING verified
+./museum-frontend/README.md	UPDATE	8	MEDIUM	2026-05-19	applied-by-TL-confirmed	lint cell --max-warnings=22→0 (actual script =0); TL 1-line fix
+tools/ast-grep-rules/*.yml (7) + sentinel baselines (4 json)	KEEP	8	HIGH	2026-05-19	n/a	Active enforcement code (ast-grep rules + ratchet baselines), not doc-staleness material
+P11 READMEs (langfuse/musaium-CHANGELOG/lib-docs README+INDEX)	KEEP	8	HIGH	2026-05-19	n/a	4 KEEP; INDEX.json 105 libs valid schema
+P11-3UPD	eslint-plugin+ast-grep+musaium-shared READMEs	8	MEDIUM	2026-05-19	pending	eslint-plugin 2→3 rules, ast-grep 3→7 rules, musaium-shared lists deleted subpaths (only ./observability ships)
+docs/_archive/ (25 of 26)	DELETE	9	NOISE	2026-05-20	EXECUTED-git-rm (staged, not committed)
+docs ops/infra (10 files)	MOSTLY-KEEP	8	HIGH	2026-05-19	n/a	7 KEEP + 3 UPDATE; deploy-staging job confirmed live
+OPS-3UPD	OPS_INCIDENT_LLM_GUARD+CI_CD_SECRETS+RELEASE_CHECKLIST	8	HIGH	2026-05-19	applied	LLM_GUARD .app→.com, CI_CD_SECRETS+RELEASE cite deleted _deploy-backend.yml, RELEASE stale (20→64 migr, false gaps, SSE)
+team-reports (runtime+archive 19)	KEEP	8	MEDIUM	2026-05-19	n/a	All runtime <30d, no working scratch, archive only README versioned per policy
+docs/adr/ (54)	KEEP+ADD-INDEX	8	HIGH	2026-05-19	n/a	All cited ADRs present, superseded marked, gaps intentional; ONLY gap = no index/README (discoverability)
+P11-3UPD	eslint-plugin+ast-grep+musaium-shared READMEs	8	MEDIUM	2026-05-19	applied	eslint 3 rules, ast-grep 7 rules, musaium-shared rewritten to v0.2.0 reality
+lib-docs LESSONS group A (27)	KEEP	9	HIGH	2026-05-20	n/a	All 27 substantive 2026-05-18 audit gotchas (file:line + TD-IDs), not pollution; aggressive posture applied, earned keep
+lib-docs LESSONS group B (26)	KEEP	9	HIGH	2026-05-20	n/a	All 26 substantive audit gotchas (file:line + TD), not pollution
+./.github/PULL_REQUEST_TEMPLATE.md	UPDATE	8	MEDIUM	2026-05-20	applied	L30 refs nonexistent guardrail-corpus.json; add UFR-020 no-bypass + UFR-021 Maestro affirmations
+5 broken skills (codeql/semgrep/skill-creator/supply-chain-auditor/variant-analysis)	DELETE	8	NOISE	2026-05-20	EXECUTED-git-rm	Orphaned SKILL.md shells (bundled dirs culled 2026-05-16); user approved removal
+13 lessons (10 empty/absorbed + 2 absorbed-CONSOLIDATE)	DELETE	8	NOISE	2026-05-20	EXECUTED-git-rm	Empty stubs/placeholders + content absorbed in CLAUDE.md
+8 mergeable lessons → LESSONS_DIGEST.md	CONSOLIDATE	8	MEDIUM	2026-05-20	EXECUTED	5 nuggets digested to LESSONS_DIGEST.md (35L), 3 dups dropped, 8 sources git rm
+.claude/skills/team/team-knowledge/lessons/LESSONS_DIGEST.md	CREATED	n/a	n/a	2026-05-20	consolidation-target	5 unique nuggets from 8 thin lessons
+./.claude/skills/team/team-sdlc-index.md	UPDATE-followup	9	HIGH	2026-05-20	applied-by-TL	Removed dangling plan-cache.json ref (deleted) + added LESSONS_DIGEST.md; post-deletion coherence fix
+./CLAUDE.md DEEP-PASS	UPDATE	9	HIGH	2026-05-20	applied	Line-level efficiency: 414→372L (-10%) / 47KB→35KB (-26%); all rules+gotchas preserved

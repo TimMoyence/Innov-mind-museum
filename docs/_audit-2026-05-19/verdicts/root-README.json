@@ -1,0 +1,12 @@
+{
+  "path": "./README.md",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Accurate external-facing README. Versions (Express 5, TypeORM, Node 22, Expo 55, RN 0.83), ports (3000/5433), env paths, ADR-044 ref all verified. Different audience from CLAUDE.md (GitHub viewers vs AI).",
+  "staleClaims": [],
+  "consolidateTarget": null,
+  "updatePlan": "Optional minor polish: line 73 placeholder '<your_repo>/musaium.git' could be replaced with real GitHub URL if repo is public. Line 152 ADR-044 link verified. No blocking staleness — keep as-is unless cosmetic update desired.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "External-facing project pitch, simplified architecture diagram, tech stack table, getting-started flow, team credits, RNCP36581 license context — none duplicated in CLAUDE.md."
+}

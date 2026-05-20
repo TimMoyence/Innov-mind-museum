@@ -1,0 +1,19 @@
+{
+  "path": "./.claude/skills/team/team-protocols/quality-gates.md",
+  "verdict": "UPDATE",
+  "confidence": 8,
+  "valueLevel": "MEDIUM",
+  "reason": "Core gate mechanics (tsc, tests, ratchet, eslint-disable allowlist, scope) still valid, but framed in retired multi-mode/6-gate Sentinelle model contradicting UFR-022 mode-unique 5-phase pipeline.",
+  "staleClaims": [
+    {"line": 37, "claim": "Execute a chaque porte Sentinelle (6 portes dans le cycle complet)", "actual": "UFR-022 pipeline = 9 phases (spec/plan/doc-freshness/red/green/verify/security/review/documenter); no fixed '6 portes Sentinelle'. SKILL.md:95.", "verified": true},
+    {"line": 96, "claim": "Mode backend-only -> pas de modifs dans museum-frontend/", "actual": "Mode selector (backend-only/frontend-only) retired; scope is informatif only, no pipeline branching. SKILL.md:91,95.", "verified": true},
+    {"line": 131, "claim": "Step 7 — Inter-Agent Scoped tsc (standard + enterprise)", "actual": "micro/standard/enterprise pipeline selector retired UFR-022; pipeline is unique. SKILL.md:99.", "verified": true},
+    {"line": 205, "claim": "Si tsc_errors>0 OU ratchet_regressions -> forcer mode 'bug'", "actual": "mode 'bug' (and chore/hotfix/audit/mockup) retired UFR-022; no force-bug branching exists. SKILL.md:95.", "verified": true},
+    {"line": 102, "claim": "Chaque agent DEV doit, AVANT de rendre son travail (self-verification)", "actual": "Partially stale: agents are now fresh-context spec/plan/red/green/review spawns; lint/tsc/test delegated to team-hooks/, not manual self-verification. SKILL.md:31.", "verified": true},
+    {"line": 134, "claim": "Cf. import-coherence.md niveau 2", "actual": "Verified: import-coherence.md exists in team-protocols/. Reference valid.", "verified": true},
+    {"line": 62, "claim": "Comparer avec team-knowledge/quality-ratchet.json", "actual": "Verified: quality-ratchet.json exists. Reference valid.", "verified": true}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Strip retired-mode language: (1) line 37 '6 portes Sentinelle' -> 'verify gate (Step 6) + reviewer (Step 8)' per UFR-022 9-phase; (2) line 96-98 scope-check note as informatif-only, not branching; (3) line 131 drop '(standard + enterprise)'; (4) lines 193-206 Error Budget Gate: remove 'force mode bug' (no modes); keep pre-flight tsc/ratchet baseline as telemetry. Keep Steps 1-4 (tsc/tests/ratchet/eslint-disable allowlist) + Step 6 self-verify GitNexus log — still accurate and machine-relevant. Add note: lint/tsc/test now run via team-hooks/ (post-edit-lint.sh, post-edit-typecheck.sh).",
+  "wouldLoseInfo": "eslint-disable allowlist (9 rules), quality-ratchet check, GitNexus Calls Log gate, scope-check rules, gate report JSON shape — none duplicated in SKILL.md."
+}

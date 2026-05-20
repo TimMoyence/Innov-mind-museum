@@ -1,0 +1,17 @@
+{
+  "path": "./.claude/agents/documenter.md",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Frontmatter model=claude-opus-4-6 (no Sonnet leftover), always-present (no enterprise-only skip), STORY.md/ADR/CHANGELOG duties + BRIEF-ACK + BLOCK-CONTEXT-LEAK all match SKILL.md Step 8.5.",
+  "staleClaims": [
+    {
+      "line": 11,
+      "claim": "T1.3 reverted 2026-05-14, ADR-029 amended",
+      "actual": "Brief/commit 7d135e78f cites the Sonnet-experiment revert at 2026-05-03; line 11 says 2026-05-14. Date is cosmetic prose only; the model ID itself is correct.",
+      "verified": false
+    }
+  ],
+  "updatePlan": "No functional change required. Optional cosmetic: reconcile line 11 revert date (2026-05-14 vs commit 7d135e78f 2026-05-03) for accuracy. Not blocking — model frontmatter is correct.",
+  "wouldLoseInfo": "ADR template, STORY finalize section format, CHANGELOG conventions, GOOD/BAD examples, UFR-013 honesty constraints, forbidden write-scope rules."
+}

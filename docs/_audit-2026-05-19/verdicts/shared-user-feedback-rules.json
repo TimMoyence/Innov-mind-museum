@@ -1,0 +1,16 @@
+{
+  "path": "./.claude/agents/shared/user-feedback-rules.json",
+  "verdict": "KEEP",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "All UFR-001..022 present, no gaps/dups. UFR-013/020/021/022 match CLAUDE.md prose canonicals. 20 active (17 from 2026-05-15 + 020/021/022). Complete + consistent.",
+  "ufrCount": "20 active / 22 total",
+  "staleClaims": [
+    {"ufr": "UFR-009", "issue": "Marked deprecated:true 2026-05-15 (env-policy sentinel) — correctly retained for ID stability, not stale", "verified": true},
+    {"ufr": "UFR-011", "issue": "Marked deprecated:true 2026-05-15 (CLAUDE.md gotcha + memory) — correctly retained for ID stability, not stale", "verified": true},
+    {"ufr": "UFR-010", "issue": "family taxonomy says 'orchestration: /team v12'; CLAUDE.md/SKILL now v13 — cosmetic version drift in families desc, rule itself valid", "verified": true}
+  ],
+  "missingRules": [],
+  "updatePlan": "No required update. Optional polish: (1) UFR-022 entry placed before UFR-021 in rules[] array — reorder for sequential readability (IDs are complete, purely cosmetic). (2) families.orchestration description says '/team v12' — bump to v13 to match current SKILL.md/CLAUDE.md. Neither affects enforcement; defer unless touching file for other reasons.",
+  "wouldLoseInfo": "N/A — KEEP verdict, no deletion. File is the structural twin of CLAUDE.md UFR prose; load-bearing for all /team agents."
+}

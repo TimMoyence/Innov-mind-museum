@@ -1,0 +1,30 @@
+{
+  "path": "./docs/ROADMAP_PRODUCT.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Strategic source-of-truth, fresh sprint 2026-05-03→06-01, accurate top sections; but massive C9 checkbox drift — 11 items shipped (green commits) since 2026-05-17 tick-audit not reflected.",
+  "staleClaims": [
+    {"line": 176, "claim": "Total Phase A P0 strict ~22 j-h dev sur 15 j calendaires (au 2026-05-17)", "actual": "Date au 2026-05-17 obsolète (now 2026-05-19/20); 11/19 C9 items shipped between 2026-05-17 and 2026-05-20"},
+    {"line": 7, "claim": "Items issus de cet audit consolidés ci-dessous dans C9 ... reste source unique de vérité pour /team workflow (auto-consolidation T1.6)", "actual": "Auto-consolidation a échoué pour C9.0/4/5/6/7/9/11/13/14/15/17 — commits TDD shippés mais cases pas flippées"},
+    {"line": 38, "claim": "KR3 — Stabilité ≥99.5% + chat p99 <5s + 0 P0 bug (Sentry + Langfuse + Grafana)", "actual": "C9.0 note LANGFUSE_ENABLED=false par défaut — KR3 mesure 'Langfuse' non observable sans C9.0 prod activate ; pourtant C9.0 maintenant shipped (commit fd796f94)"}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "1) Flip [x] sur C9.0 (fd796f94), C9.4 (0635b883), C9.5 (bcb035c6), C9.6 (50b75951), C9.7 (4a64c52b), C9.9 (e0d9cf29), C9.11 (ef728036), C9.13 (64fab9af), C9.14 (1a3e8d18), C9.15 (6936975a), C9.17 (3f0f9ac3) avec ref commit. 2) Recalculer 'Total Phase A P0' restant (8 items au lieu de 19) et bumper la dateline 2026-05-19. 3) Vérifier C9.3b legal audit shipped via W4 audit-360 (ligne 156 dit 'partie LEGAL shipped, IMPL badge reste') — tagger [PARTIAL]. 4) Sprint end 2026-06-01 imminent : préparer la prochaine rotation /team roadmap:rotate.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "Roadmap stratégique unique — North Star, OKR Q2-2026, KR1-4, Phase 1/2 doctrine, KILLED log, M1/M2/M3 moonshot bets avec sources NORTHSTAR. Aucune duplication ailleurs.",
+  "checkboxDrift": [
+    {"line": 152, "claim": "[ ] C9.0 Activer Langfuse prod + exporter Prom baseline 7j", "actualState": "shipped: feat(C9.0) green fd796f94 — lf.trace+generation w/ userId/sessionId/museumId emitted"},
+    {"line": 157, "claim": "[ ] C9.4 Wire Cost Circuit Breaker + Langfuse generation()", "actualState": "shipped: feat(C9.4) green 0635b883 — wake LlmCostCircuitBreaker + Prom gauge musaium_llm_cost_eur_per_hour"},
+    {"line": 158, "claim": "[ ] C9.5 Stable-prefix message ordering", "actualState": "shipped: feat(C9.5) green bcb035c6 + corrective ce9f34bb walk-intent parity"},
+    {"line": 159, "claim": "[ ] C9.6 Promise.all enrichment + location + router", "actualState": "shipped: perf(C9.6) green 50b75951 — parallelize enrichment + location + router facts"},
+    {"line": 160, "claim": "[ ] C9.7 Détacher LLM judge de l'orchestrator", "actualState": "shipped: refactor(C9.7) green 4a64c52b — detach judge from full orchestrator pipeline"},
+    {"line": 162, "claim": "[ ] C9.9 Retire art-topic classifier OUTPUT O3", "actualState": "shipped: chore(C9.9) green e0d9cf29 — retire OUTPUT O3 (UFR-016)"},
+    {"line": 164, "claim": "[ ] C9.11 Collapse triple anti-injection reminder", "actualState": "shipped: refactor(C9.11) green ef728036 — dedup to canonical post-user slot"},
+    {"line": 169, "claim": "[ ] C9.13 Ship bge-reranker-v2-m3 ONNX local", "actualState": "shipped: feat(C9.13) green 64fab9af + corrective d2eeae57 + tier exempt f57bf2a3 (V1 scaffold)"},
+    {"line": 170, "claim": "[ ] C9.14 SigLIP → SigLIP-2 base drop-in", "actualState": "shipped: feat(C9.14) green 1a3e8d18 — swap SigLIP v1 → SigLIP-2 base patch16-224 ONNX"},
+    {"line": 171, "claim": "[ ] C9.15 Retire Google CSE + SearXNG + DuckDuckGo adapters", "actualState": "shipped: chore(C9.15) green 6936975a + cleanup 2d6650be — UFR-016 bury dead code"},
+    {"line": 173, "claim": "[ ] C9.17 Sunset legacy [META] parser path", "actualState": "shipped: refactor(C9.17) green 3f0f9ac3 step B + corrective 868042e2 chaos e2e fakes migration"},
+    {"line": 168, "claim": "[ ] C9.12c Fix cache key voice bug", "actualState": "shipped: fix(chat) d54552be — include voiceMode + audioDescriptionMode in LLM cache key (covers C9.12c voiceId scope)"}
+  ]
+}

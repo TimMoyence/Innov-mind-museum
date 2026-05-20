@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "path": "docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Canonical design record for UFR-022, SHIPPED 2026-05-18 (commit 5a01f5cae). CLAUDE.md references it directly. Historical ADR-like value.",
+      "staleClaims": [
+        "Header 'Status: draft -> user review' — feature shipped, no longer draft",
+        "Footer 'Awaiting user review before transition to writing-plans' — plan executed + merged",
+        "§14 open question 'bin/lib-docs-bootstrap.sh probablement a lancer' — script does NOT exist in repo (bin/ + scripts/ both empty); bootstrap path unresolved",
+        "§14 open question 'lib alias mechanism probablement oui dans INDEX.json via aliases[]' — INDEX.json has zero 'aliases' keys; not implemented",
+        "§5/§13 future-tense framing ('sera detaille dans le plan', 'TBD') reads as unbuilt but is now built (SKILL.md 43KB refactor, both hooks, doc-fetcher.md, doc-curator.md, INDEX.json all present)"
+      ],
+      "updatePlan": "Add a top banner 'SHIPPED 2026-05-18 (commit 5a01f5cae) — historical design record, no longer awaiting review'. Change Status line to 'shipped'. In §14, mark resolved questions and flag the 2 NOT-implemented items (bootstrap script absent, INDEX.json aliases[] absent) so they aren't mistaken for done. No content deletion — keep as ADR-style history."
+    }
+  ],
+  "summary": "Single file: UFR-022 5-phase design spec. KEEP as historical design record (feature shipped 2026-05-18, all artifacts present). UPDATE-light: header/footer still read draft/awaiting-review; 2 §14 open questions (bootstrap script, INDEX aliases[]) never built — flag as unresolved. Not redundant w/ SKILL.md (design rationale vs operational instructions)."
+}

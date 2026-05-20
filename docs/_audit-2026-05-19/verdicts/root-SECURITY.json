@@ -1,0 +1,18 @@
+{
+  "path": "./SECURITY.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "GitHub-convention security policy, accurate overall and referenced docs exist, but PGP key advertisement is misaligned: live file is still the PGP_KEY_PLACEHOLDER_DO_NOT_SHIP stub.",
+  "staleClaims": [
+    {
+      "line": 29,
+      "claim": "PGP public key — https://musaium.com/.well-known/pgp-key.txt ... Fingerprint is published in the same file's header comments; verify before encrypting. Algorithm: Ed25519. Expires: 2028-05-17.",
+      "actual": "museum-web/public/.well-known/pgp-key.txt contains only the literal token PGP_KEY_PLACEHOLDER_DO_NOT_SHIP — no fingerprint, no Ed25519 material, no 2028-05-17 expiry. Production deploy pipeline is expected to gate on this token (per CLAUDE.md Pièges 2026-05-17). The SECURITY.md advertising of fingerprint/algo/expiry is therefore aspirational, not verified."
+    }
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Either (a) generate the real PGP keypair per docs/operations/PGP_KEY_GENERATION.md and replace the placeholder before the next prod deploy, OR (b) soften line 29 to 'PGP key publication pending — until then, email security@musaium.com to coordinate an out-of-band channel' and remove the Ed25519/2028-05-17/fingerprint specifics. Option (a) preferred pre-launch. Also bump 'Last updated' line 114 from 2026-05-14 to the edit date.",
+  "deleteRationale": null,
+  "wouldLoseInfo": "SECURITY.md is a load-bearing GitHub-convention file (security contact, VDP, safe harbour, CRA timelines) — deletion would break disclosure pathway. Must be kept and corrected."
+}

@@ -1,0 +1,18 @@
+{
+  "path": "./.claude/skills/team/team-protocols/error-taxonomy.md",
+  "verdict": "UPDATE",
+  "confidence": 8,
+  "valueLevel": "MEDIUM",
+  "reason": "Stale-but-used: still loaded 'Toujours' (SKILL.md:552) + referenced by learning-curator/sdlc-index/finalize, but header says enterprise-only, uses retired phase names + TaskCreate + cap-3 loop contradicting UFR-022 illimited reviewer loop.",
+  "staleClaims": [
+    {"line": 4, "claim": "Charge en mode enterprise uniquement", "actual": "SKILL.md:552 marks it 'Toujours' under mode-unique UFR-022", "verified": true},
+    {"line": 35, "claim": "retour DEVELOPPER/PLANIFIER/CONCEVOIR/TESTER (lines 35-39)", "actual": "UFR-022 renamed phases to Spec/Plan/Red/Green/Review; old names dead", "verified": true},
+    {"line": 40, "claim": "Creer TaskCreate('correction-...')", "actual": "UFR-022 fresh-context forbids TaskCreate continuation; phases are fresh Agent spawns reading artefacts from disk", "verified": true},
+    {"line": 46, "claim": "Max 3 boucles (2 pour CRITICAL) -> escalade", "actual": "UFR-022: reviewer rejection loop is ILLIMITE; cap-2 applies only to intra-phase hook failures (lint/tsc/test)", "verified": true},
+    {"line": 12, "claim": "E-IMPORT/E-TYPE/E-SCOPE class codes", "actual": "E-codes appear ONLY in this file; error-patterns.json uses its own enum (import-broken|type-mismatch|...) not E-codes", "verified": true}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "1) Line 4: 'enterprise uniquement' -> 'Toujours (mode-unique UFR-022)'. 2) Lines 35-39: rename phase return points to Spec/Plan/Red/Green/Review. 3) Line 40: replace TaskCreate with fresh Agent re-spawn reading disk artefacts. 4) Line 46: replace cap-3/cap-2 with UFR-022 doctrine: reviewer loop illimite, cap-2 only for intra-phase hook fails. 5) Optional: align E-codes with error-patterns.json type enum or note mapping. Keep CLASSES + RESPONSE MATRIX tables (still useful).",
+  "deleteRationale": null,
+  "wouldLoseInfo": "Error classification taxonomy + severity->action response matrix; the only structured error-severity mapping for /team agents. Not duplicated elsewhere."
+}

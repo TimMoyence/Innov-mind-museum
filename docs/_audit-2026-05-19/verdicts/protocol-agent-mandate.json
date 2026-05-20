@@ -1,0 +1,19 @@
+{
+  "path": "./.claude/skills/team/team-protocols/agent-mandate.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "MEDIUM",
+  "reason": "Mandate template + write-scope table are valuable but frozen at V12: 6-role roster (vs 9 agents), retired mode/pipeline selectors, no UFR-022 spec/plan + red/green split, no frozen-test/lib-docs.",
+  "staleClaims": [
+    {"line": 3, "claim": "les 6 roles V12 (architect/editor/verifier/security/reviewer/documenter)", "actual": "9 agents exist: +doc-fetcher, doc-curator, learning-curator (added 2026-05-18 UFR-022). SKILL.md line 685 says 9 .claude/agents/*.md", "verified": true},
+    {"line": 16, "claim": "Mode: {feature|bug|mockup|refactor|hotfix|chore|audit}", "actual": "Mode selector retired; SKILL.md line 95 'Plus de selecteur de mode ... retires'. Mode unique UFR-022", "verified": true},
+    {"line": 17, "claim": "Pipeline: {micro|standard|enterprise}", "actual": "Pipeline selector retired; SKILL.md line 95 'Plus de selecteur de pipeline ... retires'. Pipeline unique 9-phase", "verified": true},
+    {"line": 108, "claim": "ARCHITECT/EDITOR SPLIT (V12) ... architect plan-only single phase, editor single impl phase", "actual": "UFR-022 splits architect into spec(#1)/plan(#2) fresh spawns + editor into red(#1)/green(#2) fresh spawns w/ frozen-test. architect.md/editor.md descriptions confirm", "verified": true},
+    {"line": 155, "claim": "ALLOCATION table mapping modes->pipelines->roles (feature/bug/mockup/hotfix/chore/audit)", "actual": "Entire table obsolete; single fixed 9-phase pipeline (spec,plan,doc-freshness,red,green,verify,security,review,documenter)", "verified": true},
+    {"line": 181, "claim": "Cap 2 boucles correctives par phase -> escalade utilisateur (V12 §8)", "actual": "REGLE 14 amended: cap 2 = intra-phase hook fails only; reviewer rejection loop ILLIMITE (SKILL.md line 36)", "verified": true},
+    {"line": 24, "claim": "Model: opus-4.7 (architect, reviewer) | opus-4.6 (editor, verifier, security, documenter)", "actual": "Assignment correct conceptually but omits doc-fetcher/doc-curator/learning-curator. Agent frontmatter uses model: opus (alias); IDs not literally stale", "verified": true}
+  ],
+  "consolidateTarget": null,
+  "updatePlan": "Retitle V12->V13 UFR-022. Roster: add doc-fetcher/doc-curator/learning-curator to write-scope table + REGLE 1 model line. Replace CONTEXTE Mode/Pipeline fields with single-mode + phase field. Rewrite ARCHITECT/EDITOR SPLIT into architect spec(#1)/plan(#2) + editor red(#1)/green(#2) frozen-test fresh-context spawns. Delete ALLOCATION mode/pipeline table -> reference 9-phase fixed pipeline. Add lib-docs obligation, BRIEF-ACK, BLOCK-CONTEXT-LEAK, frozen-test, reviewer-unlimited-loop to REGLES. Fix REGLE 10 cap-2 to intra-phase-only. Keep template structure + write-scope columns + GitNexus import-coherence + REGLES TECHNIQUES (still valid).",
+  "wouldLoseInfo": "Mandate template skeleton, per-role write-scope/forbidden table, GitNexus pre-edit import-coherence protocol, REGLES TECHNIQUES (ESLint/DRY/honesty/no-emoji) — all still useful, must survive update."
+}

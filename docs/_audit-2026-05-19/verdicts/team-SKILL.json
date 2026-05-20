@@ -1,0 +1,19 @@
+{
+  "path": "./.claude/skills/team/SKILL.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Active /team v13 dispatcher. All hook/lib/agent/protocol/template refs exist (verified). But KNOWN GAPS (W4+) all shipped, and PROTOCOLES/TEMPLATES tables reference retired micro/standard/enterprise modes contradicting UFR-022 mode-unique.",
+  "missingRefs": [],
+  "staleClaims": [
+    {"line": 687, "claim": "KNOWN GAP: Agent consolidation 9->6 (W4)", "actual": "9 agent .md files exist incl. doc-fetcher/doc-curator/learning-curator added by UFR-022; the 6-role model is already canonical in agent-mandate.md line 3", "verified": true},
+    {"line": 688, "claim": "KNOWN GAP: Architect/Editor split formalise dans agent-mandate.md (W4)", "actual": "agent-mandate.md line 108 'ARCHITECT/EDITOR SPLIT' section exists; split is implemented as Step 4a/4b + 5a/5b per v13.UFR-022 changelog", "verified": true},
+    {"line": 689, "claim": "KNOWN GAP: Security stack: Prompt-Guard-2 + Presidio + promptfoo CI (W5)", "actual": "ci-cd-promptfoo.yml, llm-security-promptfoo.yml, semgrep.yml all present in .github/workflows; promptfoo CI shipped per ADR-049", "verified": true},
+    {"line": 690, "claim": "KNOWN GAP: Stryker mutation gate >=70% sur modules critiques (W6)", "actual": "museum-backend/stryker/ has 10+ configs (audit/auth/c9-batch*/module-*); Stryker heavily operational per CLAUDE.md gotchas", "verified": true},
+    {"line": 692, "claim": "KNOWN GAP: Cosign + audit_log hash-chained + Renovate pin (W8)", "actual": "./renovate.json present; Renovate config:best-practices lessons documented in CLAUDE.md (PR #267)", "verified": true},
+    {"line": 547, "claim": "PROTOCOLES 'Charge en' column: Standard + Enterprise / Enterprise", "actual": "UFR-022 retired micro/standard/enterprise selector (line 15, 95-99); Step 3 table line 135 confirms mode unique loads ALL protocoles — these column values are dead concepts", "verified": true},
+    {"line": 559, "claim": "TEMPLATES table lists Pipeline micro/standard/enterprise as live templates", "actual": "Files exist but pipeline-selector retired under mode unique; only enterprise.md is loaded (line 135). micro.md/standard.md are dead-concept templates", "verified": true}
+  ],
+  "updatePlan": "Rewrite or delete KNOWN GAPS section (lines 685-692) — all 6 W4+ items are shipped (verified via ls of agents/, workflows/, stryker/, renovate.json). Fix PROTOCOLES 'Charge en' column (lines 546-553): replace 'Standard + Enterprise'/'Enterprise' with 'Toujours' (mode unique loads all per line 135). Update TEMPLATES table (lines 559-561): clarify micro.md/standard.md are legacy/unused, only enterprise.md loaded under UFR-022, or drop the dead rows. No file refs are missing — purely stale-content fixes consistent with the v13.UFR-022 mode-unique thesis.",
+  "wouldLoseInfo": "Nothing load-bearing. KNOWN GAPS is historical W-tracking now obsolete; PROTOCOLES/TEMPLATES file paths stay valid, only the stale mode-column annotations change."
+}

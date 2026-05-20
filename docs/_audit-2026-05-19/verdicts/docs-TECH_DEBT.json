@@ -1,0 +1,37 @@
+{
+  "path": "./docs/TECH_DEBT.md",
+  "verdict": "UPDATE",
+  "confidence": 9,
+  "valueLevel": "HIGH",
+  "reason": "Debt tracker is accurate for explicitly-closed items, but a whole 'lib-docs alignment wave 1-3' batch (commits da428f56/cbc92d8d/60e95051/80885c220) fixed ~12 TD items left un-checkboxed. Also 4 duplicate TD-IDs.",
+  "resolvedButOpen": [
+    {"id": "TD-IO-01", "line": 1463, "evidence": "retryStrategy present at index.ts:72 + redis-client.ts:100 (commit cbc92d8d 'redis')", "verified": true},
+    {"id": "TD-MUL-01", "line": 1540, "evidence": "limits {fields:10,parts:20,headerPairs:50} at chat-route.helpers.ts:88-108 (commit 60e95051)", "verified": true},
+    {"id": "TD-SW-01", "line": 2059, "evidence": "customSiteTitle + validatorUrl:null + persistAuthorization at swagger.ts:23-24 (commit 60e95051)", "verified": true},
+    {"id": "TD-OP-03", "line": 1714, "evidence": "group:'knowledge-base' at wikidata-breaker.ts:93 (commit 60e95051)", "verified": true},
+    {"id": "TD-ZOD-01", "line": 1801, "evidence": "z.config(z.locales.fr()) at instrumentation.ts:17 (commit 80885c220 'zod FR locale')", "verified": true},
+    {"id": "TD-LF-04", "line": 1731, "evidence": "_client.on('error') at langfuse.client.ts:64 (commit cbc92d8d 'langfuse')", "verified": true},
+    {"id": "TD-LINK-01", "line": 1754, "evidence": "document.cloneNode(true) at html-scraper.ts:320 (commit 60e95051 'Readability clone')", "verified": true},
+    {"id": "TD-REA-02", "line": 1848, "evidence": "cancelAnimation cleanup at SkeletonBox.tsx:47 + TypingPlaceholder.tsx:48,78 (commit 60e95051 'reanimated cleanup')", "verified": true},
+    {"id": "TD-AX-01", "line": 1773, "evidence": "maxContentLength + maxBodyLength 10MB at httpClient.ts:175-176 (commit da428f56 'axios cap')", "verified": true},
+    {"id": "TD-NEXT-02", "line": 1303, "evidence": "generateStaticParams() at museum-web layout.tsx:14 (commit 80885c220)", "verified": true},
+    {"id": "TD-MGL-02", "line": 1952, "evidence": "map.on('error') at DemoMap.tsx:54 (commit da428f56 'maplibre errors')", "verified": true},
+    {"id": "TD-BMQ-01", "line": 1441, "evidence": "PARTIAL — worker.on('error') at scheduled-jobs.ts:115; verify remaining workers (museum-enrichment, audit-cron) before closing", "verified": false}
+  ],
+  "duplicates": [
+    {"ids": ["TD-41", "TD-41", "TD-41"], "note": "THREE distinct items share ID TD-41: L743 sanitizePromptInput brackets (open), L837 AI badge contrast (open), L1011 eslint-disable Approved-by (open). All three must be renumbered to unique IDs."},
+    {"ids": ["TD-42", "TD-42"], "note": "L765 cachedGeofenceMode invalidation (open) vs L848 AiDisclosureModal Learn-more link (open). Renumber the W4-cluster one."},
+    {"ids": ["TD-43", "TD-43"], "note": "L784 geo_detect miss/throw metric (open) vs L859 AI disclosure admin web dormant (open). Renumber."},
+    {"ids": ["TD-44", "TD-44"], "note": "L805 docker-compose redis AUTH (CLOSED 2026-05-18) vs L870 AI disclosure email templates dormant (open). Renumber."},
+    {"ids": ["TD-EXPO-01", "TD-RN-02"], "note": "TD-EXPO-01 (L1224) is explicitly a pure pointer to TD-RN-02 (RN Image -> expo-image). Collapse into TD-RN-02; TD-EXPO-01 adds nothing."},
+    {"ids": ["TD-3", "TD-LC-01..04 family"], "note": "Not a dup; noted only that LC family already self-flags art-topic-classifier deletion inline (accurate)."}
+  ],
+  "staleClaims": [
+    {"line": 168, "claim": "TD-7 status 'BE on v10, FE+Web on v9' drift", "actual": "All 3 apps now on eslint ^9.39.4 (verified package.json x3). BE was downgraded by T1.4 (2026-05-16). The version-skew framing is stale; only the deferred v10-upgrade-blocked-upstream remains valid. Update title/status to 'all v9, v10 upgrade deferred upstream'.", "verified": true},
+    {"line": 1142, "claim": "TD-LC-01 references art-topic-classifier.ts (already self-flagged removed)", "actual": "Confirmed art-topic-classifier* deleted from src/ (W1 C9.9). Note is accurate, no action.", "verified": true},
+    {"line": 1028, "claim": "'Tech debts fermes' section says '(Aucun pour le moment)'", "actual": "FALSE — ~25 closed [x] items now exist inline (TD-1..6,8,9,11,16,21,37,38,44, all TD-SN/SSL/RNGH/HEL/PC/RHF/REACT/SRN/SNXT resolved). The closed-items section is unmaintained; closed items should be archived there or to TECH_DEBT_ARCHIVE.md.", "verified": true}
+  ],
+  "splitRecommendation": "YES. File is 2076 lines / ~150KB. ~25+ items are CLOSED [x]/RESOLVED. Move all closed items to docs/TECH_DEBT_ARCHIVE.md (keep ID + 1-line closure note + commit SHA). Keeps active tracker ~800-900 lines. The lib-docs audit batch (L1042+, TD-TO/EX/LC/RN/etc, ~85 entries) is the bulk — once the resolved ones are checkboxed and archived, the open remainder shrinks sharply.",
+  "updatePlan": "1) Checkbox [x] + add closure note w/ commit SHA for the 11 verified resolved-but-open: TD-IO-01(cbc92d8d), TD-MUL-01/SW-01/OP-03/LINK-01/REA-02(60e95051), TD-ZOD-01/NEXT-02(80885c220), TD-LF-04(cbc92d8d), TD-AX-01/MGL-02(da428f56). Verify TD-BMQ-01 remaining workers before closing. 2) Renumber duplicate IDs: the THREE TD-41 (L743->TD-56, L837->TD-57, L1011->TD-58), TD-42@L765->TD-59, TD-43@L784->TD-60, TD-44@L805->keep(closed)/L870->TD-61 (pick a consistent scheme; W4-cluster batch L837-877 collides with W3 batch). 3) Update TD-7 (L168): retitle to reflect all-apps-on-v9, v10 upgrade still deferred upstream #3979. 4) Collapse TD-EXPO-01 into TD-RN-02. 5) Fix L1028 'Aucun pour le moment' — create/move-to docs/TECH_DEBT_ARCHIVE.md and relocate all [x] items there.",
+  "wouldLoseInfo": "Closure notes carry valuable forensic detail (commit SHAs, why-not-fixed-earlier, decision briefs e.g. TD-10 option-c). Archive rather than delete — losing these would erase audit-trail rationale."
+}

@@ -1,0 +1,10 @@
+{
+  "adrSetVerdict": "FLAG-ISSUES",
+  "fileCount": 54,
+  "citedAdrsPresent": true,
+  "flaggedFiles": [
+    {"path": "docs/adr/", "issue": "missing", "reason": "No index/README listing the 54 ADRs; numbering gaps (001/005/008/034) undiscoverable without git archaeology"}
+  ],
+  "indexStatus": "missing",
+  "summary": "54 ADRs, all immutable history. All CLAUDE.md-cited ADRs (015,021,036,037,045,047,049,050/051/052,054) present + correctly numbered. ADR-033 & ADR-046 properly marked SUPERSEDED w/ status+'Superseded by' headers. No empty/placeholder/duplicate files. Gaps 001/005/008/034 are intentional deletions (SSE deprecated, ADR-008->027, ADR-034 consolidated into 033) per documented prune commits. Sole issue: no index/README in docs/adr/."
+}

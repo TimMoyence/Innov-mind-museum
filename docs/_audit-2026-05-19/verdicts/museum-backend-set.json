@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "museum-backend/docs/perf/2026-04-30-A1-A2-explain-analyze.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Dated EXPLAIN ANALYZE bench artifact (A1/A2 FK indexes). Historical record, accurate, immutable by nature."
+    },
+    {
+      "path": "museum-backend/ops/llm-guard-sidecar/README.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Accurate adapter/endpoint/env contract, but says Dockerfile is 'TODO' while ops/llm-guard-sidecar/Dockerfile now exists.",
+      "updatePlan": "Update Docker section: Dockerfile now present (not TODO). Note docker-compose.guardrails.yml overlay can build it. Verify GUARDRAILS_V2_LLM_GUARD_URL wiring still matches CLAUDE.md."
+    },
+    {
+      "path": "museum-backend/scripts/llm-security/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Verified: 85-entry corpus matches, promptfoo/smoke workflows exist, Garak deferral matches ADR-049 amendment + CLAUDE.md."
+    },
+    {
+      "path": "museum-backend/security/promptfoo/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Accurate: jailbreaks.yaml + promptfooconfig.yaml + ci-cd-promptfoo.yml all exist. Local-run + adding-attacks steps valid."
+    },
+    {
+      "path": "museum-backend/src/modules/chat/adapters/secondary/search/SEARCH_PROVIDERS.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Verified scope: chat-module.ts wires only Tavily+Brave as WebSearchProvider (L557-568). Google/SearXNG/DDG retired per C9.15. Accurate."
+    },
+    {
+      "path": "museum-backend/tests/helpers/chaos/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Verified: broken-redis-cache.ts + stub-llm-orchestrator.ts exist. Usage snippets match harness override pattern."
+    },
+    {
+      "path": "museum-backend/tests/helpers/integration/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Verified: integration-harness.ts exists, test:integration script matches (RUN_INTEGRATION, runInBand). scheduleStop pattern matches MEMORY."
+    },
+    {
+      "path": "museum-backend/tests/mutation-killers/README.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Dir intentionally empty (forward-compat slot, 0 files moved in D.1 audit). README documents the convention; accurate."
+    },
+    {
+      "path": "museum-backend/tests/perf/k6/helpers/100k-runbook.md",
+      "verdict": "KEEP",
+      "valueLevel": "medium",
+      "reason": "Verified stress-100k-rps.k6.js exists. Runbook for unprovisioned subsystem F infra; aspirational but accurate + correctly gated."
+    }
+  ],
+  "summary": "9 tracked backend .md docs (not ~11). 8 KEEP, 1 UPDATE. All paths/commands/module names spot-checked against src/ & workflows. Only stale item: llm-guard sidecar README claims Dockerfile is TODO but it now exists."
+}

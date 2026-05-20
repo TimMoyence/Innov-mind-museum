@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "path": "docs/MOBILE_INTERNAL_TESTING_FLOW.md",
+      "verdict": "UPDATE",
+      "valueLevel": "medium",
+      "reason": "Workflow file mobile-release.yml does not exist; actual is ci-cd-mobile.yml. iOS prod build is EAS here but CLAUDE.md says iOS=Xcode Cloud.",
+      "updatePlan": "Replace all mobile-release.yml refs with ci-cd-mobile.yml + real job names (build-internal-android, build-preview-ios). Reconcile iOS chain: CLAUDE.md states iOS=Xcode Cloud (Pods committed), not EAS; clarify EAS-iOS vs Xcode Cloud reality. Verify push trigger jobs match actual workflow on:push block."
+    },
+    {
+      "path": "docs/SOCIAL_AUTH_SETUP.md",
+      "verdict": "UPDATE",
+      "valueLevel": "medium",
+      "reason": "References @react-native-google-signin (absent from package.json), services/socialAuthService.ts (does not exist), iosUrlScheme in app.config.ts (absent). Real impl uses expo-web-browser OAuth.",
+      "updatePlan": "Rewrite Google sections: actual impl is features/auth/infrastructure/socialAuthProviders.ts via expo-web-browser web OAuth (no native google-signin SDK, no iOS/Android Client IDs, no iosUrlScheme). Apple section + backend env (APPLE_CLIENT_ID, GOOGLE_OAUTH_CLIENT_ID) verified accurate. Drop SHA-1/Client ID steps that no longer apply."
+    },
+    {
+      "path": "docs/GOOGLE_PLAY_DATA_SAFETY.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Spot-check OK: Sentry/OpenAI/Brevo sharing, expo-location Accuracy.Balanced, NSPrivacyTracking false, DELETE /api/auth/account all match code/doctrine. Compliance reference doc.",
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/STORE_SUBMISSION_GUIDE.md",
+      "verdict": "UPDATE",
+      "valueLevel": "high",
+      "reason": "Refs nonexistent mobile-release.yml; store-listing JSONs + feature-graphic + privacy route verified present. App Store URL/CTA section accurate. Minor workflow drift only.",
+      "updatePlan": "Fix CI/CD section: mobile-release.yml -> ci-cd-mobile.yml. Note iOS production build chain may be Xcode Cloud per CLAUDE.md (Pods committed) rather than pure EAS submit; verify eas submit ios path still valid. Keep screenshots/metadata/listing sections (all referenced files exist)."
+    },
+    {
+      "path": "docs/CONTRIBUTING.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Stack table matches CLAUDE.md (Node22/Express5/RN0.83/Expo55/Next15). Commands + no-bypass hook policy align with UFR-020. CI job names plausible. SOC2/branch-protection authoritative.",
+      "updatePlan": ""
+    },
+    {
+      "path": "docs/GDPR_ART22_SCOPE.md",
+      "verdict": "KEEP",
+      "valueLevel": "high",
+      "reason": "Live legal scope doc; explanation endpoint + use-case + controller paths plausible, audit-chain ref matches CLAUDE.md doctrine. SCHUFA analysis sound, sign-off dated 2026-05-12.",
+      "updatePlan": ""
+    }
+  ],
+  "summary": "3 KEEP (DataSafety, GDPR-Art22, Contributing) + 3 UPDATE. Stale workflow ref mobile-release.yml->ci-cd-mobile.yml in MOBILE+STORE; SOCIAL_AUTH worst (wrong google-signin SDK + nonexistent socialAuthService.ts/iosUrlScheme paths). iOS=Xcode Cloud vs EAS mismatch flagged per CLAUDE.md."
+}

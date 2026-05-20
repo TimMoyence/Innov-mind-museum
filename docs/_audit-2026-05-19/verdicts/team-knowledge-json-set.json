@@ -1,0 +1,69 @@
+{
+  "files": [
+    {
+      "path": ".claude/skills/team/team-knowledge/agent-performance.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-telemetry",
+      "readBy": "team-protocols/finalize.md (Step 9 write), team-templates/audit.md+enterprise.md (load)",
+      "reason": "Live agent quality telemetry written by finalize Step 9. Empty seed but actively wired."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/autonomy-state.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-state",
+      "readBy": "team-protocols/finalize.md, team-templates/enterprise.md",
+      "reason": "Autonomy level (L1) + promotion/demotion history. Active state machine read at run start."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/error-patterns.json",
+      "verdict": "KEEP",
+      "valueLevel": "doctrine+telemetry",
+      "readBy": "SKILL.md Step3 (loaded), finalize.md (write), error-taxonomy.md, agents read unfixed at spawn",
+      "reason": "Agents read patterns at spawn to avoid repeats; finalize records new ones. Core KB."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/estimation-accuracy.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-telemetry",
+      "readBy": "team-protocols/finalize.md",
+      "reason": "Estimate-vs-actual calibration KB written by finalize. Empty seed, wired (UFR-019 calibration)."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/next-run.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-state",
+      "readBy": "team-protocols/finalize.md, team-templates/enterprise.md",
+      "reason": "Pending recommendations/blockers carried across runs w/ auto-apply. Active state."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/plan-cache.json",
+      "verdict": "DELETE",
+      "valueLevel": "orphaned",
+      "readBy": "NONE (only lib/plan-cache.sh which itself has zero callers)",
+      "reason": "APC retired by UFR-022 (incompatible w/ fresh-context). entries:[] empty, no live caller.",
+      "deleteRationale": "SKILL.md CHANGELOG v13.UFR-022 line 672 explicitly: 'APC (Agentic Plan Caching) retire (incompatible fresh-context)'. New Step 4b Plan phase produces fresh plan from spec.md with NO cache lookup. lib/plan-cache.sh has zero callers repo-wide (only stale worktree snapshots + historical ROADMAP 'shipped' entry reference it). entries array is empty. Both plan-cache.json and lib/plan-cache.sh are orphaned dead state. Recommend deleting both together."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/prompt-enrichments.json",
+      "verdict": "KEEP",
+      "valueLevel": "doctrine+telemetry",
+      "readBy": "SKILL.md Step3 (loaded), finalize.md (score), agent-mandate.md, enterprise.md",
+      "reason": "5 active PE rules injected into architect agents; finalize scores them. Live doctrine KB."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/quality-ratchet.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-telemetry",
+      "readBy": "SKILL.md Step3 (loaded), quality-gates.md, micro.md",
+      "reason": "Test-count/asAny/eslint/tsc ratchet baseline + history. Core quality gate state."
+    },
+    {
+      "path": ".claude/skills/team/team-knowledge/velocity-metrics.json",
+      "verdict": "KEEP",
+      "valueLevel": "runtime-telemetry",
+      "readBy": "SKILL.md (loaded), finalize.md (write), team-sdlc-index.md, gitnexus-integration.md",
+      "reason": "Per-run velocity log written by finalize Step 9. Live telemetry, not docs."
+    }
+  ],
+  "summary": "8/9 KEEP (live runtime telemetry/state+doctrine, all wired via finalize.md Step9 / SKILL.md Step3 load). 1 DELETE: plan-cache.json orphaned by UFR-022 APC retirement (CHANGELOG line 672), zero live caller; delete with lib/plan-cache.sh."
+}
