@@ -33,6 +33,13 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: jest.fn(() => jest.fn()),
   }),
+  // Screen-focus re-runs the consent re-check (`recheckConsent`) so the sheet
+  // re-prompts after a Settings revoke. The mock executes the effect once on
+  // mount (same lifecycle as real focus-on-mount) and returns a noop cleanup.
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react') as typeof import('react');
+    React.useEffect(() => effect(), [effect]);
+  },
 }));
 
 export const mockUseChatSession = jest.fn();

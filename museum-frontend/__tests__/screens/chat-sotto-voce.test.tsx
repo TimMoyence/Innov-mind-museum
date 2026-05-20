@@ -108,6 +108,10 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: (_event: string, _cb: () => void) => jest.fn(),
   }),
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react') as typeof import('react');
+    React.useEffect(() => effect(), [effect]);
+  },
 }));
 
 // ── chatApi (avoid network) ─────────────────────────────────────────────────

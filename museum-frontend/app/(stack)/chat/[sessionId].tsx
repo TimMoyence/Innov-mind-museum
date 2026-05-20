@@ -9,7 +9,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -287,6 +287,19 @@ export default function ChatSessionScreen() {
   useEffect(() => {
     reportMessageRef.current = sessionActions.onReportMessage;
   }, [sessionActions.onReportMessage]);
+
+  // Re-read the consent flag on every screen focus. `useAiConsent` reads
+  // AsyncStorage once on mount — without this, a user who pushes Settings,
+  // revokes the required scope (which clears the local "accepted" memo via
+  // `clearConsentAcceptedFlag()`) and pops back finds the chat screen still
+  // mounted, `showAiConsent` still false, and the consent sheet dormant
+  // despite the BE having no granted required scope. Reported 2026-05-20 :
+  // "j'ai tout remis à zéro mais l'écran ne se réaffiche pas."
+  useFocusEffect(
+    useCallback(() => {
+      recheckConsent();
+    }, [recheckConsent]),
+  );
 
   // Open the AI consent sheet when `useAiConsent` flips it on. The hook owns
   // the boolean; the screen reacts to it via the router. The sheet content

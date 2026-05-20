@@ -30,6 +30,10 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: jest.fn(() => jest.fn()),
   }),
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const React = require('react') as typeof import('react');
+    React.useEffect(() => effect(), [effect]);
+  },
 }));
 
 // ── useChatSession ──────────────────────────────────────────────────────────
