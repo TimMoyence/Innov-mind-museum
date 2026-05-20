@@ -1139,7 +1139,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-LC-01 — Migration `ChatGoogleGenerativeAI` → `ChatGoogle` (HIGH, NICE_TO_HAVE pre-V1)
+## ⏸️ TD-LC-01 — Migration `ChatGoogleGenerativeAI` → `ChatGoogle` (HIGH, NICE_TO_HAVE pre-V1) — DEFERRED
+
+> **Disposition 2026-05-20** : **DEFERRED, not done this pass.** The migration target `ChatGoogle` lives in `@langchain/google-gauth` / `@langchain/google-common` — **neither is installed** (only the deprecated `@langchain/google-genai` is present). `lib-docs/langchain/PATTERNS.md` §5.c + Coverage warnings explicitly state the **`ChatGoogle` migration recipe is absent** (constructor parity / env var / package origin not yet fetched). Swapping the primary Gemini LLM constructor blind — without a verified migration recipe, and adding a new package — is too risky for an autonomous pass. `ChatGoogleGenerativeAI` is **deprecated, not removed** — it still works. **To close** : (1) doc-fetcher on `ChatGoogle` upstream, (2) `pnpm add @langchain/google-gauth`, (3) migrate `langchain-orchestrator-support.ts:1,241` with a dedicated /team run + Gemini smoke test.
 
 **Context** : `@langchain/google-genai` v2.1.26 is DEPRECATED in v1. Migration target `ChatGoogle` not yet documented in snapshot. Current usage works but on deprecation track.
 
@@ -1153,7 +1155,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-LC-02 — ChatOpenAI constructor options : `openAIApiKey`+`modelName` → `apiKey`+`model` (MEDIUM, NON_BLOCKER)
+## ✅ TD-LC-02 — ChatOpenAI constructor options : `openAIApiKey`+`modelName` → `apiKey`+`model` (MEDIUM, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — renamed `openAIApiKey:` → `apiKey:` + `modelName:` → `model:` at all 3 live sites (`langchain-orchestrator-support.ts:253,262` Deepseek + OpenAI ctors, `content-classifier.service.ts:70`) + the AI test helper. `maxRetries`/`timeout` per PATTERNS.md DO #6 left as a separate NICE_TO_HAVE (not blocking; defaults are adequate for V1).
 
 **Context** : Legacy v0 aliases. PATTERNS.md §2.b shows v1-canonical = `apiKey` + `model`. Aliases still accepted but deprecation timeline unknown.
 
@@ -1163,7 +1167,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-LC-03 — Deepseek ChatOpenAI : missing `streamUsage: false` defense-in-depth (LOW, NON_BLOCKER)
+## ✅ TD-LC-03 — Deepseek ChatOpenAI : missing `streamUsage: false` defense-in-depth (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — `streamUsage: false` added to the single live Deepseek `ChatOpenAI` ctor (`langchain-orchestrator-support.ts`). The "2 Deepseek constructors" in the original evidence was pre-W1 ; `art-topic-classifier.ts` was deleted by W1 (C9.9 UFR-016), leaving one.
 
 **Context** : PATTERNS.md DO #8 — third-party OpenAI-compatible endpoints (Deepseek) need `streamUsage: false`. Latent today (no streaming) but bug if streaming reintroduced.
 
@@ -1173,7 +1179,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-LC-04 — content-classifier `z.record(z.string(), z.unknown())` violates PATTERNS.md DON'T #4 (MEDIUM, NON_BLOCKER)
+## ✅ TD-LC-04 — content-classifier `z.record(z.string(), z.unknown())` violates PATTERNS.md DON'T #4 (MEDIUM, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-20 (decision, no code change) — **explicit non-strict + OpenAI-only decision documented.** The 6 dictionary fields (`openingHours`, `admissionFees`, `collections`, `currentExhibitions`, `accessibility`, …) hold genuinely heterogeneous museum data whose key set is unbounded and source-dependent — enumerating fixed keys would silently drop legitimate extracted data. The classifier (`content-classifier.service.ts`) constructs `ChatOpenAI` directly (NOT the multi-provider orchestrator) and calls `withStructuredOutput(classificationSchema)` **without** `strict` (defaults to non-strict), which OpenAI accepts for `z.record`. PATTERNS.md DON'T #4 only bites on (a) Gemini — never used here — and (b) OpenAI strict-mode — deliberately not enabled here (the TD-LC-05 strict:true rollout was scoped to the judge path only for this exact reason). Decision : keep `z.record` + stay non-strict on this OpenAI-only path. Re-evaluate only if the classifier ever moves to Gemini or strict mode.
 
 **Context** : 6 fields use unbounded `z.record` shape. Gemini-incompatible. OpenAI strict-mode incompatible. Currently classifier only uses OpenAI non-strict, so silent.
 
@@ -1183,7 +1191,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-LC-05 — `withStructuredOutput` missing `strict: true` (LOW, NON_BLOCKER)
+## ✅ TD-LC-05 — `withStructuredOutput` missing `strict: true` (LOW, NON_BLOCKER)
+
+- [x] **Statut** : fermé 2026-05-19 (commit `cbc92d8d`) — **scoped to the OpenAI-only judge path.** `strict: true` added to `llm-judge-guardrail.ts` `withStructuredOutput(JudgeDecisionSchema, { name, strict: true })` + the project `ChatModel` typedef widened to expose `strict?: boolean`. **Deliberately NOT applied** to the 2 chat-orchestrator sites (`langchain.orchestrator.ts:129,375`) because those run multi-provider (Gemini / Deepseek / OpenAI) and `strict` is OpenAI-only (PATTERNS.md DO #8) — would break Gemini ; nor to `content-classifier.service.ts:75` whose `z.record` schema is strict-incompatible (see TD-LC-04). Judge test asserts the `{ name, strict: true }` opts shape.
 
 **Context** : 3 call sites omit `strict: true`. Without it, schema drift surfaces as Zod parse failure (late) instead of API rejection (early).
 
@@ -1740,13 +1750,17 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ⚠️ TD-LF-01 — Langfuse: no observeOpenAI wrapper → token/cost data missing (MEDIUM, NICE_TO_HAVE)
+## ⏸️ TD-LF-01 — Langfuse: no observeOpenAI wrapper → token/cost data missing (MEDIUM, NICE_TO_HAVE) — DEFERRED
+
+> **Disposition 2026-05-20** : **DEFERRED.** `observeOpenAI` (exported by the installed `langfuse` pkg) wraps a raw OpenAI SDK client — but Musaium's chat path runs through the LangChain orchestrator, not a direct OpenAI client ; the direct-client call sites (TTS / STT / judge) are spread across modules. Wrapping them touches multiple files + the observability layer that was just stabilized under ADR-045 (2026-05-19). Marginal pre-V1 value (the manual fail-open `withLangfuseTrace` spans already capture latency/outcome). Bundle into a dedicated observability /team run with a Langfuse cost-UI smoke check.
 
 **Context** : OpenAI calls manuellement traced via fail-open spans. PATTERNS §2 DO : observeOpenAI = recommended.
 **Fix** : wrap OpenAI client via `observeOpenAI(openaiClient)` dans `shared/openai/openai.client.ts`.
 **Evidence** : `langfuse.client.ts` + all OpenAI direct call sites.
 
-## ⚠️ TD-LF-02 — Langfuse: no CallbackHandler on LangChain → internal steps invisible (MEDIUM, NICE_TO_HAVE)
+## ⏸️ TD-LF-02 — Langfuse: no CallbackHandler on LangChain → internal steps invisible (MEDIUM, NICE_TO_HAVE) — DEFERRED
+
+> **Disposition 2026-05-20** : **DEFERRED.** Requires installing a NEW dependency `langfuse-langchain` (not present in `museum-backend/node_modules`) + threading `callbacks: [new CallbackHandler({ root: trace, updateRoot: true })]` through every orchestrator `invoke`. New-dep + hot-chat-path + just-stabilized-observability (ADR-045) = too much for an autonomous pass. Bundle with TD-LF-01 in a dedicated observability /team run.
 
 **Context** : `langchain.orchestrator.ts:115 withLangfuseTrace` wrap manually. Manque `callbacks:[new CallbackHandler({root:trace, updateRoot:true})]`.
 **Fix** : import `langfuse-langchain` + pass callbacks.
