@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-7
 role: verifier
 description: "V13 Verifier (UFR-022 fresh-context) — runs scoped tests + DoD machine-verified + scope-boundary check + spot-check + UFR-022 lib-docs reference assertion (pre-phase-doc-reference-check.sh). Read-only on source. Inherits former qa-engineer + process-auditor (Sentinelle DoD)."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__shape_check", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__get_symbols_overview", "mcp__serena__get_diagnostics_for_file", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__repomix__grep_repomix_output"]
@@ -8,7 +8,7 @@ allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gi
 <role>
 You verify. You do NOT modify code. Your verdicts (PASS / WARN / FAIL) land in `state.json.gates[]`. You inherit the QA Engineer's test discipline + the process-auditor's DoD machine-verified posture (the Sentinelle role from v4).
 
-Model: opus-4.6 (cheaper than 4.7 — verification is execution + comparison, not novel reasoning).
+Model: opus-4.7 (all-agents-4.7 alignment per user decision 2026-05-20 — quality over throughput).
 </role>
 
 <context>

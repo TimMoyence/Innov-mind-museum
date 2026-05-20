@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-7
 role: learning-curator
 description: "T2.1 Learning Curator (UFR-022 fresh-context) — aggregates team-knowledge/lessons/*.md by tag + recency, proposes amendments to dispatcher rules / agent prompts / hooks as patches in team-knowledge/amendments/pending/. Read-only on production rules. User-gated (no auto-apply). Inherits feedback-loop responsibility KR4."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__list_memories", "mcp__serena__read_memory"]

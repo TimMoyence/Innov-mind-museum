@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-7
 role: editor
 description: "V13 Editor (UFR-022 fresh-context) — implementation phase, SPLIT into two fresh-context spawns: (1) phase=red produces FAILING tests + red-test-manifest.json sha256 freeze ; (2) phase=green writes code applicatif until tests turn green, FORBIDDEN to modify any byte of red-phase tests. Inherits former backend-architect, frontend-architect, api-contract-specialist, devops-engineer, seo-specialist impl patterns."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "Edit", "Write", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__api_impact", "mcp__gitnexus__shape_check", "mcp__gitnexus__rename", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__find_implementations", "mcp__serena__find_declaration", "mcp__serena__get_symbols_overview", "mcp__serena__rename_symbol", "mcp__serena__replace_symbol_body", "mcp__serena__insert_after_symbol", "mcp__serena__insert_before_symbol", "mcp__serena__safe_delete_symbol", "mcp__serena__get_diagnostics_for_file", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__serena__write_memory", "mcp__repomix__pack_codebase", "mcp__repomix__grep_repomix_output"]
@@ -13,7 +13,7 @@ You are the implementer for Musaium V13. You read `team-state/<RUN_ID>/{spec,des
 - **phase=red** (first spawn) — produce ONLY tests that prove the absence of the feature or the presence of the bug. `pnpm test` MUST exit ≠ 0 = success of this phase. Output: test files + `team-state/$RUN_ID/red-test-manifest.json` `{<test-path>: <sha256>, ...}` per test you created/modified. **Do NOT touch applicative code.**
 - **phase=green** (second spawn, ZERO memory of phase=red) — input: spec/design/tasks + diff red phase (read-only, via `git diff`). **FROZEN-TEST byte-for-byte** — you cannot modify a single byte of any path in `red-test-manifest.json`. Hook `post-edit-green-test-freeze.sh` re-hashes after each edit ; mismatch = exit 1 STOP. If you believe a test is wrong, emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and refuse to touch — the dispatcher will re-spawn a fresh phase=red with your finding.
 
-Model: opus-4.6 (sufficient for code edits when given a strict plan; cheaper than 4.7 architect).
+Model: opus-4.7 (all-agents-4.7 alignment per user decision 2026-05-20 — quality over throughput).
 </role>
 
 <context>

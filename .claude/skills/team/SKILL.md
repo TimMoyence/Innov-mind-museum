@@ -21,7 +21,7 @@ Dispatcher avec etat durable (`team-state/<run-id>/`), 5-phase fresh-context obl
 ## REGLES ABSOLUES
 
 1. NE JAMAIS avancer sans gates PASS du pipeline
-2. Tous agents en `model: opus-4.7` (architect, reviewer) ou `opus-4.6` (editor, verifier, security, documenter, doc-fetcher, doc-curator) — UFR-010 sans exception
+2. Tous agents en `model: claude-opus-4-7` SAUF documenter en `claude-opus-4-6` — UFR-010 sans exception (decision user 2026-05-20)
 3. Agents ne commitent PAS — seul le Tech Lead git add/commit/push
 4. Agents n'ecrivent PAS dans `team-knowledge/` ni `team-reports/`
 5. Agents respectent les 22 UFR (`shared/user-feedback-rules.json`)
@@ -356,7 +356,7 @@ Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.
 
 ### Step 6 — Verify (verifier fresh + hooks deterministes)
 
-Verifier agent (opus-4.6, **fresh spawn UFR-022**) declenche hooks :
+Verifier agent (opus-4.7, **fresh spawn UFR-022**) declenche hooks :
 ```
 1. Spawn Agent tool verifier.md FRESH (BRIEF-ACK + BLOCK-CONTEXT-LEAK self-defense).
 2. Agent runs :
@@ -375,7 +375,7 @@ Verifier agent (opus-4.6, **fresh spawn UFR-022**) declenche hooks :
 
 ### Step 7 — Security (TOUJOURS execute en mode unique UFR-022)
 
-Security agent (opus-4.6, **fresh spawn UFR-022**, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — pas d'Edit) :
+Security agent (opus-4.7, **fresh spawn UFR-022**, allowedTools: Read/Grep/Bash(promptfoo*,semgrep*) — pas d'Edit) :
 ```
 1. Spawn Agent tool security.md FRESH.
 2. Agent runs :
@@ -468,7 +468,7 @@ Re-spawn protocol :
 
 ### Step 8.5 — Documenter (UFR-022 fresh spawn, toujours present en mode unique)
 
-Documenter agent (opus-4.6, **fresh spawn UFR-022**) :
+Documenter agent (opus-4.6 — only exception, all other agents 4.7 per user 2026-05-20, **fresh spawn UFR-022**) :
 ```
 1. Spawn Agent tool documenter.md FRESH.
 2. Append STORY.md final section (post-finalize summary).
@@ -674,7 +674,7 @@ V1 = manuel sur demande. T2.2 ROADMAP_TEAM ajoute cron weekly automatique.
 |   |   | Spec Kit : spec.md (EARS + NFR + glossary + stakeholders), design.md (+observability §10), tasks.md, STORY.md (append-only, sha256-chained). |
 |   |   | Handoff briefs ≤200 tokens (~800 chars), enforced by `post-edit-lint.sh`. |
 |   |   | Deterministic hooks : `post-edit-lint.sh`, `post-edit-typecheck.sh`, `pre-complete-verify.sh`. |
-|   |   | All-Opus : architect/reviewer = 4.7, editor/verifier/security/documenter = 4.6 (UFR-010). |
+|   |   | All-Opus : architect/reviewer = 4.7, editor/verifier/security/documenter = 4.6 (UFR-010). (Aligné all-4.7 sauf documenter 2026-05-20 — voir REGLE 2.) |
 |   |   | Langfuse infra (`infra/langfuse/`) + BE OTel wiring shipped (commit `be7258432`). |
 |   |   | Cache warm-up sequencing avant fan-out. Resume protocol via `/team resume:<run-id>`. |
 | **v13** | **2026-05-03** | T1.6 ROADMAP × /team auto-consolidation : pre-cycle hook (Step 0 §8 charge `roadmap-context.json`), post-cycle hook (Step 9 propose tick `[x]` via patch staged), `/team roadmap:rotate` (rotation fin sprint). 3 nouveaux composants bash, 3 emplacements wirés dans SKILL.md. Cohérent UFR + règle "Tech Lead seul commite". |

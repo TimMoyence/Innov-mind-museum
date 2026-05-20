@@ -1,7 +1,7 @@
 # Docs Index — Musaium
 
 > Table de vérité : toutes les docs importantes en un seul point.
-> Last cleanup: **2026-05-20** (`docs/_archive/training-2026-05/` + `sprints/` supprimés (pollution : material pédagogique + recaps de sprint ; git history conservé), inbound refs des docs live nettoyées).
+> Last cleanup: **2026-05-20** (`docs/_archive/training-2026-05/` + `sprints/` supprimés (pollution : material pédagogique + recaps de sprint ; git history conservé), inbound refs des docs live nettoyées, **catch-all orphans pass** : ~32 docs orphelines indexées — `docs/legal/*`, `docs/operations/*`, ADRs 047-058, testing discipline, `GOTCHAS_ARCHIVE.md`, `AI_SAFETY.md`, `observability/DISTRIBUTED_TRACING.md`, `LESSONS_DIGEST.md`, handoff debt collision).
 > Previous cleanup: 2026-05-17 (Deep absorption pass — 4 audit/worktree sources extraites puis supprimées : `docs/audit-2026-05-12/`, `docs/audit-2026-05-12-raw/`, `docs/chat-ux-refonte/`, `docs/roadmap-night/`, `docs/plans/`, `stryker-admin-night.log`, 24 team-reports subdirs absorbés + `working/`. Extractions : 5 ADRs (054-058), 19 TDs (TD-21..39), 5 gotchas CLAUDE.md, 3 doctrines MEMORY.md. `team-reports/2026-05-05-recap-investigation/` promu repo-root archive.).
 > Previous cleanup: 2026-05-12 (sprint audit-cleanup-2026-05-12 — archive `docs/_archive/` introduit, `explications-sprint-2026-05-05/` + `SPRINT_RECAP_2026-04-30_TO_2026-05-05.md` déplacés en archive, ADR-033+034 mergés, 5 plans périmés supprimés, 3 docs museum-frontend stales supprimés, 18+ dangling refs corrigés, 6 stubs ADR deferred V1.1 créés).
 > Previous cleanup: 2026-05-07 (purge complète de `docs/archive/`, suppression HORIZONTAL_SCALING, CDN_CLOUDFLARE_SETUP, FEATURE_KNOWLEDGE_BASE_WIKIDATA).
@@ -24,10 +24,17 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | ADRs (002-058) | [`docs/adr/`](adr/) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
+| Gotchas archive (less-frequent pitfalls, split from CLAUDE.md 2026-05-20) | [`docs/GOTCHAS_ARCHIVE.md`](GOTCHAS_ARCHIVE.md) |
 | Test discipline — DRY factories | [`docs/TEST_FACTORIES.md`](TEST_FACTORIES.md) + `CLAUDE.md` § Test Discipline (quick ref) + `tests/helpers/**/*.fixtures.ts` |
+| Test index (full repo test inventory) | [`docs/TEST_INDEX.md`](TEST_INDEX.md) |
+| Test coverage inventory (UFR-021 baseline) | [`docs/TEST_COVERAGE_INVENTORY.md`](TEST_COVERAGE_INVENTORY.md) |
+| Testing discipline proposal (UFR-021 spec) | [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](TESTING_DISCIPLINE_PROPOSAL.md) |
+| Testing Phase 2 plan (UFR-021 pre-push gate + CI mirror) | [`docs/TESTING_PHASE2_PLAN.md`](TESTING_PHASE2_PLAN.md) |
 | ESLint discipline | [`docs/LINT_DISCIPLINE.md`](LINT_DISCIPLINE.md) + `CLAUDE.md` § ESLint Discipline (quick ref) |
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
+| Tech debt collision handoff (2026-05-19, load-bearing per `CLAUDE.md:158`) | [`docs/HANDOFF-2026-05-19-debt-collision-report.md`](HANDOFF-2026-05-19-debt-collision-report.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
+| AI Safety (chat guardrails defense-in-depth, full spec) | [`docs/AI_SAFETY.md`](AI_SAFETY.md) + `CLAUDE.md` § AI Safety (quick ref) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
 | LLM cache strategy (single-source) | [`docs/adr/ADR-036-llm-cache-strategy.md`](adr/ADR-036-llm-cache-strategy.md) |
 | Visual similarity (C3, SigLIP + pgvector) | [`docs/adr/ADR-037-visual-similarity-siglip-pgvector.md`](adr/ADR-037-visual-similarity-siglip-pgvector.md), runbook [`docs/AI_VISUAL_SIMILARITY.md`](AI_VISUAL_SIMILARITY.md) |
@@ -50,6 +57,23 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-045`](adr/ADR-045-shared-observability-package-extraction.md) | `@musaium/shared/observability` extraction deferred |
 | [`ADR-046`](adr/ADR-046-zod-4-be-migration-deferred.md) | Zod 4 BE migration deferred per ADR-033 |
 
+### ADRs 047-058 (audit-360 W1/W2/W3 + ultrareview + 2026-05-17/19 sprints)
+
+| ADR | Subject |
+|---|---|
+| [`ADR-047`](adr/ADR-047-llm-guard-circuit-breaker-fail-closed.md) | LLM Guard sidecar circuit-breaker fail-closed |
+| [`ADR-048`](adr/ADR-048-guardrail-strategy-interface.md) | Guardrail strategy interface (V1/V2 polymorphism) |
+| [`ADR-049`](adr/ADR-049-llm-security-ci-gates.md) | LLM security CI gates (promptfoo OWASP LLM07 ; garak deferred) |
+| [`ADR-050`](adr/ADR-050-accept-langfuse-v3-eol.md) | Accept Langfuse v3 EOL risk |
+| [`ADR-051`](adr/ADR-051-oss-guardrail-providers-ready.md) | OSS guardrail providers (Mistral/Llama Guard) ready, gated by ADR-048 |
+| [`ADR-052`](adr/ADR-052-user-suspend-softdelete.md) | User suspend/soft-delete semantics |
+| [`ADR-053`](adr/ADR-053-apple-5-1-2-i-granular-consent.md) | Apple §5.1.2(i) granular consent |
+| [`ADR-054`](adr/ADR-054-audit-chain-merkle-batch-redesign.md) | Audit chain Merkle batch redesign (100k MAU scale) |
+| [`ADR-055`](adr/ADR-055-bottomsheet-router-state-machine.md) | BottomSheet router state machine |
+| [`ADR-056`](adr/ADR-056-a5-phase-client-side-simulated.md) | A5 phase client-side simulated |
+| [`ADR-057`](adr/ADR-057-webauthn-rp-id-decision-deferred.md) | WebAuthn RP-ID decision deferred |
+| [`ADR-058`](adr/ADR-058-selective-hexagonal-ports-policy.md) | Selective hexagonal ports policy |
+
 ## Operations
 
 | Doc | Path |
@@ -68,6 +92,18 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | VDP triage & incident response (GDPR 72h + CRA 24h/72h/14d) | [`docs/operations/VDP_RUNBOOK.md`](operations/VDP_RUNBOOK.md) |
 | Vulnerability Disclosure Policy (root) | [`SECURITY.md`](../SECURITY.md) — published at `musaium.com/{fr,en}/security` + RFC 9116 at `/.well-known/security.txt` |
 | Grafana dashboard JSON | [`docs/observability/musaium-backend-dashboard.json`](observability/musaium-backend-dashboard.json) |
+| Distributed tracing (Sentry+OTel, header bridge BE↔FE) | [`docs/observability/DISTRIBUTED_TRACING.md`](observability/DISTRIBUTED_TRACING.md) |
+| Capacity plan 100k MAU | [`docs/operations/CAPACITY_PLAN_100K.md`](operations/CAPACITY_PLAN_100K.md) |
+| Chaos gameday 2026-05 | [`docs/operations/CHAOS_GAMEDAY_2026-05.md`](operations/CHAOS_GAMEDAY_2026-05.md) |
+| CNIL breach notification dry-run | [`docs/operations/CNIL_BREACH_NOTIFICATION_DRYRUN.md`](operations/CNIL_BREACH_NOTIFICATION_DRYRUN.md) |
+| ENISA SRP onboarding | [`docs/operations/ENISA_SRP_ONBOARDING.md`](operations/ENISA_SRP_ONBOARDING.md) |
+| Incident contacts | [`docs/operations/INCIDENT_CONTACTS.md`](operations/INCIDENT_CONTACTS.md) |
+| Lighthouse audit | [`docs/operations/LIGHTHOUSE_AUDIT.md`](operations/LIGHTHOUSE_AUDIT.md) |
+| Pentest scope | [`docs/operations/PENTEST_SCOPE.md`](operations/PENTEST_SCOPE.md) |
+| PGP key generation runbook | [`docs/operations/PGP_KEY_GENERATION.md`](operations/PGP_KEY_GENERATION.md) |
+| Postmortem template | [`docs/operations/POSTMORTEM_TEMPLATE.md`](operations/POSTMORTEM_TEMPLATE.md) |
+| Security mailbox setup | [`docs/operations/SECURITY_MAILBOX_SETUP.md`](operations/SECURITY_MAILBOX_SETUP.md) |
+| Sentry P0 triage 2026-05-20 | [`docs/operations/SENTRY_P0_TRIAGE_2026-05-20.md`](operations/SENTRY_P0_TRIAGE_2026-05-20.md) |
 
 ## Incidents & Compliance
 
@@ -95,6 +131,15 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Social auth setup | [`docs/SOCIAL_AUTH_SETUP.md`](SOCIAL_AUTH_SETUP.md) |
 | Privacy policy (HTML, deployed) | [`docs/privacy-policy.html`](privacy-policy.html) |
 | Contributing | [`docs/CONTRIBUTING.md`](CONTRIBUTING.md) |
+| AI disclosure (user-facing) | [`docs/legal/AI_DISCLOSURE.md`](legal/AI_DISCLOSURE.md) |
+| AI disclosure — audit trail | [`docs/legal/AI_DISCLOSURE_AUDIT.md`](legal/AI_DISCLOSURE_AUDIT.md) |
+| DPIA (Data Protection Impact Assessment) | [`docs/legal/DPIA.md`](legal/DPIA.md) |
+| DPIA T1.1 addendum | [`docs/legal/DPIA_T1.1_addendum.md`](legal/DPIA_T1.1_addendum.md) |
+| DPIA + ROPA readiness | [`docs/legal/DPIA_ROPA_READINESS.md`](legal/DPIA_ROPA_READINESS.md) |
+| ROPA (Record of Processing Activities) | [`docs/legal/ROPA.md`](legal/ROPA.md) |
+| Subprocessors pointer (canonical = `docs/compliance/SUBPROCESSORS.md`) | [`docs/legal/SUBPROCESSORS.md`](legal/SUBPROCESSORS.md) |
+| Accessibility statement (FR) | [`docs/legal/accessibility-statement-fr.md`](legal/accessibility-statement-fr.md) |
+| Accessibility statement (EN) | [`docs/legal/accessibility-statement-en.md`](legal/accessibility-statement-en.md) |
 
 ## Skills & Agents (`.claude/`)
 
@@ -108,6 +153,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | /team templates (Spec Kit) | `.claude/skills/team/team-templates/` |
 | /team hooks | `.claude/skills/team/team-hooks/` |
 | /team durable state | `.claude/skills/team/team-state/` |
+| /team knowledge — lessons (digest + per-incident) | [`.claude/skills/team/team-knowledge/lessons/LESSONS_DIGEST.md`](../.claude/skills/team/team-knowledge/lessons/LESSONS_DIGEST.md) + sibling `*-<incident>.md` |
 
 ## GitNexus
 
@@ -115,7 +161,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 ## Archive (historical reference)
 
-- **`docs/_archive/`** — read-only archive in-tree. `training-2026-05/` (training material) + `sprints/` (sprint recaps) supprimés 2026-05-20 (pollution ; recoverable via `git log --all -- docs/_archive/<path>`). Le dossier ne sert plus qu'à héberger les snapshots `/team roadmap:rotate` (`roadmaps/<sprint-end>/`).
+- **`docs/_archive/`** — read-only archive in-tree. **État au 2026-05-20** : ne contient plus que `README.md` (pointeur). `training-2026-05/` (training material) + `sprints/` (sprint recaps `2026-04-30_TO_2026-05-05`) supprimés 2026-05-20 (pollution ; recoverable via `git log --all -- docs/_archive/<path>`). Future use : snapshots `/team roadmap:rotate` (`roadmaps/<sprint-end>/`) — non créés à ce jour.
 - **`docs/archive/`** (old name) was deleted 2026-05-07. Recover via `git log --all -- docs/archive/<path>`. Tech debts encore actifs trackés dans `docs/TECH_DEBT.md`. Décisions devenues ADRs dans `docs/adr/`.
 
 ## Référence externe

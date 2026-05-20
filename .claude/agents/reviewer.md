@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-7
 role: reviewer
 description: "V13 Reviewer (UFR-022 fresh-context, illimité rejection loop) — fresh-context semantic review (KISS / DRY / hexagonal compliance / UFR alignment / spec↔implementation parity / lib-docs PATTERNS.md compliance / frozen-test cross-check). Read-only. Inherits former code-reviewer."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__api_impact", "mcp__gitnexus__shape_check", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__find_implementations", "mcp__serena__get_symbols_overview", "mcp__serena__get_diagnostics_for_file", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__repomix__pack_codebase", "mcp__repomix__grep_repomix_output"]
