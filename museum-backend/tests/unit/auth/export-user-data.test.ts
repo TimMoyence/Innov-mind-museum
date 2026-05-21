@@ -32,6 +32,16 @@ const makeConsentRepo = (rows: UserConsent[]): IUserConsentRepository => ({
   listForUser: jest.fn().mockResolvedValue(rows),
 });
 
+/** B3 — the new DSAR export ports, defaulted to empty so the legacy assertions hold. */
+const emptyExtraExportPorts = () => ({
+  userMemoryExport: { getForUser: async () => null },
+  auditLogExport: { listForUser: async () => [] },
+  messageFeedbackExport: { listForUser: async () => [] },
+  messageReportExport: { listForUser: async () => [] },
+  socialAccountExport: { listForUser: async () => [] },
+  apiKeyExport: { listForUser: async () => [] },
+});
+
 describe('ExportUserDataUseCase', () => {
   it('assembles full payload with consent + chat + reviews + tickets', async () => {
     const chatData: UserChatExportData = {
@@ -113,6 +123,7 @@ describe('ExportUserDataUseCase', () => {
       reviewDataExport: makeReviewPort(reviews),
       supportDataExport: makeSupportPort(tickets),
       userConsentRepository: makeConsentRepo(consentRows),
+      ...emptyExtraExportPorts(),
     });
 
     const user = makeUser({
@@ -129,7 +140,7 @@ describe('ExportUserDataUseCase', () => {
 
     const result = await useCase.execute(user);
 
-    expect(result.schemaVersion).toBe('1');
+    expect(result.schemaVersion).toBe('2');
     expect(new Date(result.exportedAt).getTime()).not.toBeNaN();
     expect(result.user.id).toBe(1);
     expect(result.user.email).toBe('ada@example.com');
@@ -153,6 +164,7 @@ describe('ExportUserDataUseCase', () => {
       reviewDataExport: makeReviewPort([]),
       supportDataExport: makeSupportPort([]),
       userConsentRepository: makeConsentRepo([]),
+      ...emptyExtraExportPorts(),
     });
 
     const user = makeUser({ id: 7, email: 'empty@example.com' });
@@ -173,6 +185,7 @@ describe('ExportUserDataUseCase', () => {
       reviewDataExport: makeReviewPort([]),
       supportDataExport: makeSupportPort([]),
       userConsentRepository: makeConsentRepo([]),
+      ...emptyExtraExportPorts(),
     });
 
     const user = makeUser({ firstname: undefined, lastname: undefined });
@@ -181,7 +194,9 @@ describe('ExportUserDataUseCase', () => {
 
     expect(result.user.firstname).toBeNull();
     expect(result.user.lastname).toBeNull();
-    expect(result.user.locale).toBeNull();
+    // B3 — `locale` placeholder replaced by `defaultLocale` (schemaVersion '2').
+    expect(result.user).not.toHaveProperty('locale');
+    expect(typeof result.user.defaultLocale).toBe('string');
   });
 
   it('preserves revokedAt timestamp for revoked consents', async () => {
@@ -204,6 +219,7 @@ describe('ExportUserDataUseCase', () => {
       reviewDataExport: makeReviewPort([]),
       supportDataExport: makeSupportPort([]),
       userConsentRepository: makeConsentRepo(consentRows),
+      ...emptyExtraExportPorts(),
     });
 
     const result = await useCase.execute(makeUser());

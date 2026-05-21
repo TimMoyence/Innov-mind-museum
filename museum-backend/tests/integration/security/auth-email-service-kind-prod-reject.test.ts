@@ -100,6 +100,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     overpassCacheTtlSeconds: 86400,
     overpass: { cacheTtlSeconds: 86400, negativeCacheTtlSeconds: 3600 },
     chatPurgeRetentionDays: 180,
+    s3OrphanPurgeRetentionDays: 180,
     knowledgeBase: {
       timeoutMs: 500,
       cacheTtlSeconds: 3600,

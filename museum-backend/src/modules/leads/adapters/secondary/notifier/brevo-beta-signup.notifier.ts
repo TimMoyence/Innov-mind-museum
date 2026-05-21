@@ -69,6 +69,44 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
       `Brevo contacts add failed (${String(response.status)}): ${bodyText.slice(0, 800)}`,
     );
   }
+
+  /**
+   * GDPR Art.17 erasure (B2, R4–R6) — `DELETE /v3/contacts/{email}?identifierType=email_id`.
+   *
+   * Outcomes:
+   *  - 2xx / 204 → `deleted`
+   *  - 404 (contact never existed) → `not_found` (idempotent success, no throw, no error log)
+   *  - other non-2xx → throws with status + body slice; api-key NEVER appended.
+   */
+  async removeContact(email: string): Promise<{ outcome: BetaSignupOutcome }> {
+    const url = `${BREVO_CONTACTS_ENDPOINT}/${encodeURIComponent(email)}?identifierType=email_id`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'api-key': this.apiKey,
+        Accept: 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return { outcome: 'deleted' };
+    }
+
+    // R5 — Brevo returns 404 when the contact does not exist. Erasure is
+    // idempotent: nothing to remove is success, not an error.
+    if (response.status === 404) {
+      logger.info('beta_signup_remove_contact_not_found', {
+        emailDomain: email.split('@')[1] ?? 'unknown',
+      });
+      return { outcome: 'not_found' };
+    }
+
+    const bodyText = await response.text().catch(() => '');
+    // R6 / security — slice body; api-key NEVER appended to the error message.
+    throw new Error(
+      `Brevo contact remove failed (${String(response.status)}): ${bodyText.slice(0, 800)}`,
+    );
+  }
 }
 
 /**
@@ -80,6 +118,14 @@ export class NoopBetaSignupNotifier implements BetaSignupNotifier {
     logger.warn('beta_signup_notifier_noop', {
       requestId: payload.requestId,
       emailDomain: payload.email.split('@')[1] ?? 'unknown',
+    });
+    return Promise.resolve({ outcome: 'noop' });
+  }
+
+  /** GDPR erasure (B2, R6) — no Brevo creds, so nothing to remove; resolves noop. */
+  removeContact(email: string): Promise<{ outcome: BetaSignupOutcome }> {
+    logger.warn('beta_signup_remove_contact_noop', {
+      emailDomain: email.split('@')[1] ?? 'unknown',
     });
     return Promise.resolve({ outcome: 'noop' });
   }

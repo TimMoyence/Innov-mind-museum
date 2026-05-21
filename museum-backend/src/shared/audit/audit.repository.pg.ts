@@ -51,6 +51,19 @@ export class AuditRepositoryPg implements IAuditLogRepository {
     });
   }
 
+  /**
+   * DSAR (Art.15, B3, spec Q6) — returns the data subject's own audit rows
+   * (`actor_id = actorId`), newest first. Read-only; the INSERT-only hash chain
+   * is untouched. The full-row entity is returned; the export use case maps it
+   * to a DTO that excludes `prevHash` / `rowHash` (R14).
+   */
+  async listForActor(actorId: number): Promise<AuditLog[]> {
+    return await this.dataSource.getRepository(AuditLog).find({
+      where: { actorId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   private async acquireChainLock(manager: EntityManager): Promise<void> {
     await manager.query('SELECT pg_advisory_xact_lock($1)', [AUDIT_CHAIN_LOCK_KEY.toString()]);
   }

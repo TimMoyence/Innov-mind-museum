@@ -5,7 +5,7 @@
  * (R16 anti-enumeration). Route maps every outcome to 202.
  */
 
-export type BetaSignupOutcome = 'subscribed' | 'duplicate' | 'noop';
+export type BetaSignupOutcome = 'subscribed' | 'duplicate' | 'noop' | 'deleted' | 'not_found';
 
 /**
  * Forwarded to Brevo as `OPT_IN_SOURCE` for cohort segmentation.
@@ -37,4 +37,17 @@ export interface BetaSignupPayload {
  */
 export interface BetaSignupNotifier {
   subscribe(payload: BetaSignupPayload): Promise<{ outcome: BetaSignupOutcome } | void>;
+
+  /**
+   * GDPR Art.17 erasure (B2) — removes the user's marketing contact so they
+   * stop receiving marketing. Idempotent: a 404 (contact never existed) resolves
+   * as success (`not_found`). Other non-2xx throws WITHOUT leaking the api-key.
+   * The Noop notifier resolves `{ outcome: 'noop' }` with no network call.
+   *
+   * Optional on the port so signup-only test doubles need not implement it; the
+   * concrete adapters (`BrevoBetaSignupNotifier` / `NoopBetaSignupNotifier`)
+   * always provide it, and the auth deletion proxy depends on a narrow
+   * `{ removeContact(email) }` shape rather than the full notifier.
+   */
+  removeContact?(email: string): Promise<{ outcome: BetaSignupOutcome } | void>;
 }

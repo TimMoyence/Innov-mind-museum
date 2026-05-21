@@ -6,5 +6,6 @@ export const makeAuditRepo = (
 ): IAuditLogRepository => ({
   insert: jest.fn().mockResolvedValue(undefined),
   insertBatch: jest.fn().mockResolvedValue(undefined),
+  listForActor: jest.fn().mockResolvedValue([]),
   ...overrides,
 });

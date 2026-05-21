@@ -240,5 +240,43 @@
       "important": 0,
       "nit": 2
     }
+  },
+  {
+    "runId": "2026-05-21-gdpr-erasure-chain",
+    "ts": "2026-05-21T09:57:53Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.30,
+        "reasoning": "All 17 EARS requirements implemented and traced to file:line; 47/47 targeted tests pass; full BE suite verified green by dispatcher (481 suites/5870 tests). Ordering (R16), best-effort (R3/R6/R17), boundary-safe /user-<id>/ match (R7), legacyFetcher forwarding (R8/R9), secret exclusion (R14) all correct. Entity fields verified to exist (no fabricated columns). -5 only for the orphan-worker-on-misconfig edge (logs warn then attempts a doomed list rather than clean skip) — sound and forced by frozen test, but slightly less elegant than a guarded skip."
+      },
+      "security": {
+        "score": 95,
+        "weight": 0.25,
+        "reasoning": "OWASP API3: DSAR export excludes all secrets by explicit per-field allow-listing (no password/_token/hash/salt/prevHash/rowHash) — verified in 6 mapper functions + asserted by frozen completeness test. OWASP API1: listForActor keyed to authenticated user.id only. Brevo api-key never logged (emailDomain only) and never appended to thrown errors; email URL-encoded (path-injection safe). Audit hash-chain integrity preserved (read-only, chain internals excluded). No raw SQL. -5 for residual notableArtworks unknown[] passthrough (NIT, no current secret)."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.20,
+        "reasoning": "Clean hexagonal layering, lazy proxies match the established pattern, DRY consolidation of cron boot, thorough requirement-referencing docstrings (R-tags), shared audioStorage instance. -7 for the growing composition root (index.ts now needs max-lines:'off') and the slightly indirect orphan misconfig flow that needs the deviation note to read correctly."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "8 new frozen RED test suites + 10 helper factories/accessors; per-category export assertions; ordering + best-effort failure-path tests; boundary-safety decoy (user-420) test; fail-open registration test; secret-absence assertion. All via shared factories (verified makeApiKey/makeMessageFeedback factory pattern), no inline entities, no as-Entity in prod. -10: audio cleanup + listForActor exercised via unit/in-memory rather than testcontainers integration (design.md §6 marked integration OPTIONAL); acceptable but a real-PG QueryBuilder pass for findAudioRefsByUserId would harden it."
+      },
+      "docQuality": {
+        "score": 92,
+        "weight": 0.10,
+        "reasoning": "Every new symbol carries a docstring citing its R-requirement + design decision (D5/D6/D7); deleteAccount docstring is honest per R15/UFR-013 (explicitly states audit_logs retained, not 'full deletion'); deviation rationales embedded in code (eslint comment, port docstring, misconfig comment). -8: STORY.md green-section deviations were relayed via the dispatcher brief rather than written into STORY.md (template still has {{ISO_TS}} placeholders); the documenter phase should backfill."
+      },
+      "weightedMean": 93.55
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 2
+    }
   }
 ]

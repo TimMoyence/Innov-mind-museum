@@ -346,8 +346,9 @@ describe('image-storage.s3', () => {
       // Native scan (GET) + native delete (POST) + legacy delete (POST) = 3 requests
       expect(requests.length).toBe(3);
       expect(requests[0].method).toBe('GET');
-      // Native list must scope to chat-images/user-42/
-      expect(requests[0].path).toContain('prefix=chat-images%2Fuser-42%2F');
+      // B4: native list scopes to the whole chat-images/ prefix (the user segment
+      // is mid-key in the production layout); keys are then filtered by /user-42/.
+      expect(requests[0].path).toContain('prefix=chat-images%2F');
 
       expect(requests[1].method).toBe('POST');
       expect(requests[1].path).toContain('?delete=');
@@ -401,7 +402,7 @@ describe('image-storage.s3', () => {
       // Only the GET list is issued — nothing to delete, no legacy fetcher.
       expect(requests.length).toBe(1);
       expect(requests[0].method).toBe('GET');
-      expect(requests[0].path).toContain('prefix=chat-images%2Fuser-42%2F');
+      expect(requests[0].path).toContain('prefix=chat-images%2F');
     });
   });
 });

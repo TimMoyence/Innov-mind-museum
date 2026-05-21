@@ -294,6 +294,28 @@ class InMemoryChatRepository implements ChatRepository {
     return Array.from(new Set(refs));
   }
 
+  async findAudioRefsByUserId(userId: number): Promise<string[]> {
+    const refs: string[] = [];
+    for (const session of this.sessions.values()) {
+      if (session.user?.id !== userId) continue;
+      const messageList = this.messages.get(session.id) ?? [];
+      for (const message of messageList) {
+        if (typeof message.audioUrl === 'string' && message.audioUrl.length > 0) {
+          refs.push(message.audioUrl);
+        }
+      }
+    }
+    return Array.from(new Set(refs));
+  }
+
+  async listMessageFeedbackForUser(): Promise<[]> {
+    return [];
+  }
+
+  async listMessageReportsForUser(): Promise<[]> {
+    return [];
+  }
+
   async updateSessionContext(
     sessionId: string,
     patch: { currentArtworkId?: string | null; currentRoom?: string | null },

@@ -1,6 +1,11 @@
 import { MessageFeedback } from '@modules/chat/domain/message/messageFeedback.entity';
 
 import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback.entity';
+import type { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
+import type {
+  MessageFeedbackExportRow,
+  MessageReportExportRow,
+} from '@modules/chat/domain/session/chat.repository.interface';
 import type { Repository } from 'typeorm';
 
 export async function upsertMessageFeedback(
@@ -48,4 +53,40 @@ export async function getMessageFeedback(
 
   if (!row) return null;
   return { value: row.value };
+}
+
+/**
+ * DSAR (Art.15/20, B3 / T1.10) — the user's message feedback projected to the
+ * subject-facing export DTO `{ messageId, value, createdAt }`.
+ */
+export async function listMessageFeedbackForUser(
+  feedbackRepo: Repository<MessageFeedback>,
+  userId: number,
+): Promise<MessageFeedbackExportRow[]> {
+  const rows = await feedbackRepo.find({ where: { userId } });
+  return rows.map((row) => ({
+    messageId: row.messageId,
+    value: row.value,
+    createdAt: row.createdAt,
+  }));
+}
+
+/**
+ * DSAR (Art.15/20, B3 / T1.10, design D7) — the user's message reports projected
+ * to `{ messageId, reason, comment, status, createdAt }`. Third-party moderator
+ * fields (`reviewedBy` / `reviewerNotes` / `reviewedAt`) are intentionally
+ * excluded — they are staff data about the report, not the subject's own data.
+ */
+export async function listMessageReportsForUser(
+  reportRepo: Repository<MessageReport>,
+  userId: number,
+): Promise<MessageReportExportRow[]> {
+  const rows = await reportRepo.find({ where: { userId } });
+  return rows.map((row) => ({
+    messageId: row.messageId,
+    reason: row.reason,
+    comment: row.comment ?? null,
+    status: row.status,
+    createdAt: row.createdAt,
+  }));
 }

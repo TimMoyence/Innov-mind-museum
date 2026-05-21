@@ -89,6 +89,13 @@ export interface UserChatExportData {
     id: string;
     locale?: string | null;
     museumMode: boolean;
+    // B3 (DSAR) — previously-omitted ChatSession columns (R13).
+    intent?: string | null;
+    museumId?: number | null;
+    coordinates?: { lat: number; lng: number } | null;
+    visitContext?: VisitContext | null;
+    currentRoom?: string | null;
+    currentArtworkId?: string | null;
     title?: string | null;
     museumName?: string | null;
     createdAt: string;
@@ -103,6 +110,26 @@ export interface UserChatExportData {
       metadata?: Record<string, unknown> | null;
     }[];
   }[];
+}
+
+/** DSAR (Art.15/20) — subject-facing message-feedback export row (B3 / T1.10). */
+export interface MessageFeedbackExportRow {
+  messageId: string;
+  value: string;
+  createdAt: Date | string;
+}
+
+/**
+ * DSAR (Art.15/20) — subject-facing message-report export row (B3 / T1.10, D7).
+ * `reviewedBy` / `reviewerNotes` / `reviewedAt` are third-party moderator data
+ * and are intentionally NOT part of this shape.
+ */
+export interface MessageReportExportRow {
+  messageId: string;
+  reason: string;
+  comment: string | null;
+  status: string;
+  createdAt: Date | string;
 }
 
 /** Implemented by {@link TypeOrmChatRepository}. */
@@ -164,6 +191,21 @@ export interface ChatRepository {
    * the user row is removed, otherwise CASCADE nukes the rows and refs are lost.
    */
   findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
+
+  /**
+   * GDPR right-to-erasure (B1) — resolves the user's stored TTS audio refs from
+   * the DB so the deletion flow can delete each S3 object via
+   * `AudioStorage.deleteByRef`. MUST run BEFORE the user row is removed (CASCADE
+   * wipes the rows that carry `audioUrl`). Audio keys have no user segment, so a
+   * prefix scan is impossible — the DB ref set is the only reliable source.
+   */
+  findAudioRefsByUserId(userId: number): Promise<string[]>;
+
+  /** DSAR (Art.15/20) — the user's message feedback projected to the export DTO. */
+  listMessageFeedbackForUser(userId: number): Promise<MessageFeedbackExportRow[]>;
+
+  /** DSAR (Art.15/20) — the user's message reports projected to the export DTO (excludes moderator fields, D7). */
+  listMessageReportsForUser(userId: number): Promise<MessageReportExportRow[]>;
 
   /**
    * W3 (T5.3) — patches `current_artwork_id` and/or `current_room` on the
