@@ -125,7 +125,7 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
             value={otpauthUrl}
             size={200}
             ecl="H"
-            onError={(err) => {
+            onError={(err: unknown) => {
               reportError(err, { op: 'mfa.qr.generation' });
             }}
           />
