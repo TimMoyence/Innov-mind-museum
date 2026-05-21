@@ -302,6 +302,8 @@ export interface AppEnv {
    * data-minimization.
    */
   chatPurgeRetentionDays: number;
+  /** B5 (D5) — S3 orphan-purge retention window in days. Diverges from chatPurgeRetentionDays. */
+  s3OrphanPurgeRetentionDays: number;
   /** Knowledge base (Wikidata) configuration. */
   knowledgeBase: {
     timeoutMs: number;

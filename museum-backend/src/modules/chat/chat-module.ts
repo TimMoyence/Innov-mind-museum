@@ -102,6 +102,12 @@ export interface BuiltChatModule {
   chatService: ChatService;
   describeService: DescribeService;
   imageStorage: ImageStorage;
+  /**
+   * GDPR erasure (B1) — the active audio storage, exposed so the auth deletion
+   * proxy can `deleteByRef` the user's TTS audio. `undefined` when no S3 backend
+   * is configured (local dev / tests with the local stub still resolves one).
+   */
+  audioStorage: AudioStorage | undefined;
   repository: TypeOrmChatRepository;
   ocrService: OcrService;
   userMemoryService: UserMemoryService | undefined;
@@ -619,6 +625,7 @@ export class ChatModule {
     museumRepository?: IMuseumRepository,
   ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
+    const audioStorage = this.buildAudioStorage();
     const repository = new TypeOrmChatRepository(dataSource);
     const tts = env.llm.openAiApiKey
       ? new OpenAiTextToSpeechService()
@@ -694,6 +701,7 @@ export class ChatModule {
       effectiveOrchestrator,
       judgeModel: llmModel,
       imageStorage,
+      audioStorage,
       tts,
       cache,
       ocr,
@@ -734,6 +742,7 @@ export class ChatModule {
       chatService,
       describeService,
       imageStorage,
+      audioStorage,
       repository,
       ocrService: ocr,
       userMemoryService: userMemory,
@@ -759,6 +768,8 @@ export class ChatModule {
     /** C9.7 — raw ChatModel used by the detached LLM-judge path. */
     judgeModel: ChatModel | null;
     imageStorage: LocalImageStorage | S3CompatibleImageStorage;
+    /** Built once in {@link build} and shared so the GDPR proxy + chat pipeline use one instance. */
+    audioStorage: AudioStorage | undefined;
     tts: OpenAiTextToSpeechService | DisabledTextToSpeechService;
     cache?: CacheService;
     ocr: TesseractOcrService | DisabledOcrService;
@@ -780,7 +791,7 @@ export class ChatModule {
       imageStorage: deps.imageStorage,
       imageProcessor: new SharpImageProcessor(),
       audioTranscriber: new OpenAiAudioTranscriber(),
-      audioStorage: this.buildAudioStorage(),
+      audioStorage: deps.audioStorage,
       tts: deps.tts,
       cache: deps.cache,
       ocr: deps.ocr,
@@ -844,6 +855,10 @@ export const resetActiveChatModule = (): void => {
 // callbacks). For lifecycle management use the main barrel (`@modules/chat`).
 
 export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;
+
+/** GDPR erasure (B1) — active audio storage for the auth deletion proxy. */
+export const getAudioStorage = (): AudioStorage | undefined =>
+  getActiveChatModule().getBuilt().audioStorage;
 
 export const getChatRepository = (): TypeOrmChatRepository =>
   getActiveChatModule().getBuilt().repository;

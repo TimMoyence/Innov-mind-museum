@@ -20,6 +20,10 @@ import {
   type ChatPurgeCronHandle,
 } from '@modules/chat/jobs/chat-purge-cron.registrar';
 import {
+  registerS3OrphanPurgeCron,
+  type S3OrphanPurgeCronHandle,
+} from '@modules/chat/jobs/s3-orphan-purge-cron.registrar';
+import {
   buildPurgeDeadEnrichmentsUseCase,
   buildRefreshStaleEnrichmentsUseCase,
   createBullmqEnrichmentScheduler,
@@ -210,6 +214,7 @@ interface ShutdownResources {
   auditCron: AuditCronHandle | undefined;
   auditCronQueue: Queue | undefined;
   chatPurgeCron: ChatPurgeCronHandle | undefined;
+  s3OrphanPurgeCron: S3OrphanPurgeCronHandle | undefined;
   retentionCrons: ScheduledJobHandle[];
 }
 
@@ -245,6 +250,7 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
     auditCron,
     auditCronQueue,
     chatPurgeCron,
+    s3OrphanPurgeCron,
     retentionCrons,
     cacheService,
   } = resources;
@@ -261,6 +267,9 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   }
   if (chatPurgeCron) {
     await safeTeardown('chat_purge_cron_shutdown_error', () => chatPurgeCron.stop());
+  }
+  if (s3OrphanPurgeCron) {
+    await safeTeardown('s3_orphan_purge_cron_shutdown_error', () => s3OrphanPurgeCron.stop());
   }
   for (const handle of retentionCrons) {
     await safeTeardown('retention_cron_shutdown_error', () => handle.close());
@@ -343,18 +352,29 @@ function registerShutdownHandlers(resources: ShutdownResources): void {
   }
 }
 
-/** Boots the chat-purge cron (Redis-enabled only). Fail-open on any registrar error. */
-async function startChatPurgeCron(): Promise<ChatPurgeCronHandle | undefined> {
+type CronRegister<H> = (
+  ds: typeof AppDataSource,
+  cfg: { connection: ReturnType<typeof createRedisConnectionOptions>; retentionDays: number },
+) => Promise<H>;
+
+/**
+ * Boots a Redis-backed BullMQ retention cron (chat-purge, S3 orphan-purge).
+ * Guarded by `env.cache?.enabled` (BullMQ requires Redis); fail-open so a
+ * registrar error logs `<skipLog>` and never blocks boot.
+ */
+async function startRedisCron<H>(
+  register: CronRegister<H>,
+  retentionDays: number,
+  skipLog: string,
+): Promise<H | undefined> {
   if (!env.cache?.enabled) return undefined;
   try {
-    return await registerChatPurgeCron(AppDataSource, {
+    return await register(AppDataSource, {
       connection: createRedisConnectionOptions(),
-      retentionDays: env.chatPurgeRetentionDays,
+      retentionDays,
     });
   } catch (err) {
-    logger.warn('chat_purge_cron_boot_skipped', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    logger.warn(skipLog, { error: err instanceof Error ? err.message : String(err) });
     return undefined;
   }
 }
@@ -438,7 +458,16 @@ async function bootBackgroundJobs(
   const { handle: auditCron, queue: auditCronQueue } = env.cache?.enabled
     ? await startAuditCron()
     : { handle: undefined, queue: undefined };
-  const chatPurgeCron = await startChatPurgeCron();
+  const chatPurgeCron = await startRedisCron(
+    registerChatPurgeCron,
+    env.chatPurgeRetentionDays,
+    'chat_purge_cron_boot_skipped',
+  );
+  const s3OrphanPurgeCron = await startRedisCron(
+    registerS3OrphanPurgeCron,
+    env.s3OrphanPurgeRetentionDays,
+    's3_orphan_purge_cron_boot_skipped',
+  );
   const retentionCrons = await startRetentionCrons();
 
   return {
@@ -448,6 +477,7 @@ async function bootBackgroundJobs(
     auditCron,
     auditCronQueue,
     chatPurgeCron,
+    s3OrphanPurgeCron,
     retentionCrons,
   };
 }

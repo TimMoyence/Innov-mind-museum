@@ -110,6 +110,13 @@ export async function exportUserChatData(
           id: session.id,
           locale: session.locale,
           museumMode: session.museumMode,
+          // B3 (DSAR) — previously-omitted ChatSession columns (R13).
+          intent: session.intent,
+          museumId: session.museumId ?? null,
+          coordinates: session.coordinates ?? null,
+          visitContext: session.visitContext ?? null,
+          currentRoom: session.currentRoom ?? null,
+          currentArtworkId: session.currentArtworkId ?? null,
           title: session.title ?? null,
           museumName: session.museumName ?? null,
           createdAt: session.createdAt.toISOString(),

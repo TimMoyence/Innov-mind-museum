@@ -103,9 +103,15 @@ export class S3CompatibleImageStorage implements ImageStorage {
   }
 
   /**
-   * GDPR right-to-erasure, SEC-23. (1) Native S3 prefix scan on
-   * `chat-images/user-<userId>/`. (2) `legacyFetcher` keys (DB-sourced) cover records
-   * predating the user-scoped path. Batches DeleteObjects at 1000 keys (S3 API limit).
+   * GDPR right-to-erasure, SEC-23 (B4). The PRODUCTION image key layout is
+   * `chat-images/YYYY/MM/user-<id>/session-<sid>/<uuid>.<ext>` (built by
+   * `buildChatImageObjectKey`, always passed as `objectKey`), so the user
+   * segment is NOT at the head of the key — a `chat-images/user-<id>/` prefix
+   * scan would match ZERO production objects. We therefore (1) list the whole
+   * `chat-images/` prefix and delete only the keys whose path contains the
+   * boundary-safe segment `/user-<id>/` (leading + trailing slash so `user-42`
+   * never matches `user-420`); (2) delete `legacyFetcher` keys (DB-sourced) that
+   * cover any remaining records. Batches DeleteObjects at 1000 keys (S3 limit).
    */
   async deleteByPrefix(
     userId: number | string,
@@ -113,23 +119,28 @@ export class S3CompatibleImageStorage implements ImageStorage {
   ): Promise<void> {
     const normalizedUserId = typeof userId === 'number' ? userId : Number(userId);
     const userSegment = `user-${String(userId)}`;
+    // SEC: boundary-safe match — leading + trailing slash so `user-42` does not
+    // match `user-420/...`. Production keys embed the segment mid-path.
+    const userPathSegment = `/${userSegment}/`;
 
-    // SEC: trailing slash required so `user-42` does not match `user-420/*` etc.
-    // normalizeObjectKey strips trailing slashes; re-append after.
-    const userPrefix =
+    // Scan the whole `chat-images/` prefix (objectKeyPrefix-aware) — the user
+    // segment is mid-key in the production layout, so a user-scoped prefix would
+    // miss every object. Filter to this user's keys before deleting.
+    const scanPrefix =
       normalizeObjectKey({
-        key: `chat-images/${userSegment}`,
+        key: 'chat-images',
         objectKeyPrefix: this.config.objectKeyPrefix,
       }) + '/';
     let continuationToken: string | undefined;
     do {
       const { keys, nextToken } = await listObjectsByPrefix(
         this.config,
-        userPrefix,
+        scanPrefix,
         continuationToken,
       );
-      if (keys.length > 0) {
-        await deleteObjectsBatch(this.config, keys);
+      const userKeys = keys.filter((key) => key.includes(userPathSegment));
+      if (userKeys.length > 0) {
+        await deleteObjectsBatch(this.config, userKeys);
       }
       continuationToken = nextToken;
     } while (continuationToken);

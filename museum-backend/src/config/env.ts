@@ -283,6 +283,9 @@ const env: AppEnv = {
     negativeCacheTtlSeconds: toNumber(process.env.OVERPASS_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
   },
   chatPurgeRetentionDays: toNumber(process.env.CHAT_PURGE_RETENTION_DAYS, 180),
+  // B5 (D5) — orphan-purge retention window. Separate from chatPurgeRetentionDays
+  // so the two windows can diverge. Config value, not a feature flag (UFR-015).
+  s3OrphanPurgeRetentionDays: toNumber(process.env.S3_ORPHAN_PURGE_RETENTION_DAYS, 180),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),

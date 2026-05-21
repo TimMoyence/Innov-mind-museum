@@ -6,7 +6,7 @@
     "scores": {
       "correctness": {
         "score": 92,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "All 10 spec EARS requirements verified PASS end-to-end. Step 9 ordering fixed (BLOCKER cycle 1 resolved): §3 status flip precedes §4 lesson hook, with explicit CRITICAL ORDERING marker referencing the corrective loop. Hook self-test 6/6 PASS. R1 (file ≥200B) verified — lesson file 959B. R3/R4/R10 covered by self-test scenarios 2/3/4/6. Schema enums extended consistently (learning-curator role + lesson-capture gate). Edge cases (corrupt state.json, missing STORY.md, RUN_ID collision) handled gracefully."
       },
       "security": {
@@ -16,7 +16,7 @@
       },
       "maintainability": {
         "score": 90,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "KISS: hook = pure shell + jq, no LLM call (D1). Curator = single-purpose agent. DRY: SKILL.md / SCHEMA.md / learning-curator.md cross-reference rather than duplicate. Hexagonal N/A (infra). Naming consistent (RUN_ID, contentHash, sourceLessons match across schema + agent + dispatcher). State mutation uses existing mkdir-CAS pattern from pre-feature-spec-check.sh — no new lock primitive invented. Three eslint/shellcheck disables in the hook all carry `Justification:` comments per CLAUDE.md ESLint discipline."
       },
       "testCoverage": {
@@ -26,7 +26,7 @@
       },
       "docQuality": {
         "score": 92,
-        "weight": 0.10,
+        "weight": 0.1,
         "reasoning": "SKILL.md CHANGELOG v13 row now has explicit T2.1 sub-row enumerating all components AND acknowledging the cycle 1 corrective loop (cycle 2 IMPORTANT 2 fix). spec.md R5 reworded to match implementation precisely (cycle 2 IMPORTANT 1 fix). Step 9 §3 has inline CRITICAL ORDERING note documenting the BLOCKER fix rationale. Two SCHEMA.md files (lessons + amendments) precise + cross-referenced. ROADMAP_TEAM.md T2.1 section ticked with implementation notes per item. Architect's spec/design preserved verbatim, no drift between intent + outcome."
       },
       "weightedMean": 90.05
@@ -44,7 +44,7 @@
     "scores": {
       "correctness": {
         "score": 95,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "All 12 R1-R12 PASS with cited evidence. Hook body mirrors pre-refactor MuseumSheet.tsx:62-105 verbatim (cross-checked via git show 186631b8). Existing 16/16 test suite passes without any test-file edit. New 11-case hook test exceeds spec'd 7. Consumer (app/(tabs)/museums.tsx) untouched. `wc -l` 104 ≤ 300. useEffect count 1 actual call ≤ 2."
       },
       "security": {
@@ -54,7 +54,7 @@
       },
       "maintainability": {
         "score": 94,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "532 LOC monolith → 104 LOC shell + 5 single-concern modules (49/95/187/171/66). Each sub-component is single-screenful and named after its concern. Hook signature (museum, lang, t)→{enrichment, enriched, hoursDisplay, hasRichContent, showEnrichmentLoader, hoursToneColor} is honest about its inputs/outputs. Editor's swap from design.md's TFunction to local I18nTranslator is an improvement (no i18next surface leak). Explicit useMemo preserved on hoursDisplay per spec §4 React Compiler caveat. -1 for the two NITs (dead `?? ''` defaults + raw shadow scalars; both pre-existing patterns)."
       },
       "testCoverage": {
@@ -64,7 +64,7 @@
       },
       "docQuality": {
         "score": 88,
-        "weight": 0.10,
+        "weight": 0.1,
         "reasoning": "Hook has a JSDoc paragraph naming the synthetic-OSM guard intent (useMuseumSheetEnrichmentData.ts:22-27). Shell has a comment describing the eager-fetch contract (MuseumSheet.tsx:35-37). State.json STORY ledger updated with all 4 gate verdicts. -2 for the NIT delta (TFunction→I18nTranslator swap not noted in STORY) — minor."
       },
       "weightedMean": 93.65
@@ -100,7 +100,7 @@
     "scores": {
       "correctness": {
         "score": 92,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "All 15 EARS R requirements have a corresponding implementation citation + at least one test. 157/157 BE C2 unit tests + 2039/2039 FE tests pass on this worktree. R6/R7 edge cases (empty rationale, null rationale, v1 legacy) covered. R3 tie-break + R13 museum pin verified by tests. R5 fail-open paths verified. Minor edge gap: bump cap behaviour (R15 from spec) defended-in-depth at both `assistant-response.ts:84` AND `enrichment-fetcher.ts:64` — robust."
       },
       "security": {
@@ -110,7 +110,7 @@
       },
       "maintainability": {
         "score": 88,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "KISS: aggregator overload preserves the public surface (no port mutation). DRY: `pickNonUnsplashCaption`, `buildAttribution`, `buildAnnotationLookup` extracted; OpenAPI shapes added once and consumed via regen. Hexagonal: no adapter imports in domain; composition root gated. Naming consistent (`SuggestedImageAnnotation`, `EnrichedImageSource`, `RATIONALE_FALLBACK_MARKER`). Comments cite spec EARS IDs directly (R1, R3, R7, R9, R11, R13, R15) — excellent traceability. Two new eslint-disables in adapters carry full Justification + Approved-by paragraph; one inherited skeleton-file disable lacks Approved-by (IMPORTANT finding above). The 357-LOC image-enrichment.service.ts is at the edge of comfort but well-segmented (helpers below class)."
       },
       "testCoverage": {
@@ -120,10 +120,10 @@
       },
       "docQuality": {
         "score": 88,
-        "weight": 0.10,
+        "weight": 0.1,
         "reasoning": "STORY.md is exhaustive (12 phases logged with file-level deltas + corrective-loop counts). spec.md + design.md complete with EARS + 7 design decisions D1-D7 + open-questions-resolved amendment for transparency (UFR-013). OpenAPI delta documented inline (description fields cite C2 v2). docs/ROADMAP_PRODUCT.md ticked + docs/TECH_DEBT.md TD-5 added with operator runbook (bake plan). Inline comments cite EARS IDs in code (R1/R3/R7/R9/R11/R13/R15). Memory project_c2_ai_side_only respected: 'Multi-image upload by visitor' explicitly out of scope (spec §2). Minor: no explicit ADR for the kill-switch (CHAT_ENRICHMENT_V2_ENABLED) but the env.ts comment + bake plan in TECH_DEBT.md cover the operational story."
       },
-      "weightedMean": 90.0
+      "weightedMean": 90
     },
     "findingsCount": {
       "blocker": 0,
@@ -159,7 +159,7 @@
       "maintainability": 88,
       "testability": 84,
       "documentation": 87,
-      "weightedMean": 87.0
+      "weightedMean": 87
     },
     "findingsCount": {
       "blocker": 0,
@@ -177,7 +177,7 @@
       "security": 92,
       "maintainability": 88,
       "scopeDiscipline": 96,
-      "weightedMean": 91.0
+      "weightedMean": 91
     },
     "findingsCount": {
       "blocker": 0,
@@ -195,7 +195,7 @@
       "security": 92,
       "maintainability": 88,
       "scopeDiscipline": 96,
-      "weightedMean": 91.0
+      "weightedMean": 91
     },
     "findingsCount": {
       "blocker": 0,
@@ -210,12 +210,12 @@
     "scores": {
       "correctness": {
         "score": 95,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "7/7 spec REQs (FU-1, FU-1b, FU-2, FU-3, FU-4, FU-5, FU-6a, FU-6b) implemented at the exact files+lines spec called out. verify.json + security.json show all gates PASS. 5/5 BE sentry-init.test.ts assertions green. Single -5 for the JSDoc line-number drift in test header (cosmetic but a correctness-of-documentation slip)."
       },
       "doctrine": {
         "score": 92,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "UFR-013 honesty: spec explicit + design D4 empirical (eslint stripping produces 4 errors verified 2026-05-19); UFR-020 zero-bypass: no --no-verify, no hook skip; UFR-022 lib-docs: FU-1b citing canonical Sentry docs URL + PATTERNS.md updated in-run. Reviewer.md schema clarification (FU-6b) closes prior reviewer drift (parent run shipped flat-array). -8 because doctrine axis subsumes maintainability+scope axes per brief's equal-weight remark, not perfect."
       },
       "security": {
@@ -225,7 +225,7 @@
       },
       "maintainability": {
         "score": 90,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "Comments accurate post-FU-2 (refers to instrumentation.ts:10-11 with rationale). FU-3 file-header explains WHY the 4 disables exist (jest.isolateModules + CJS re-instantiation). FU-6b adds inline comment block (lines 73-79) documenting the dual-shape contract + severity mapping — future-proof for next reviewer drift. -10 for two nits: (a) test JSDoc line-number drift, (b) tracePropagationTargetsCount magic literal."
       },
       "scopeDiscipline": {
@@ -248,7 +248,7 @@
     "scores": {
       "correctness": {
         "score": 95,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "All 10 EARS reqs map to verified impl; both suites GREEN at HEAD (FE 9/9, web 10/10). 6 magic-link routes confirmed to exist; locales ['fr','en'] confirmed; middleware /.well-known passthrough confirmed. #1 risk (extensionless AASA Content-Type) resolved via headers() with no redirect. R4 custom scheme not regressed. Real-device gate left as documented operator gate (UFR-013), not claimed automated."
       },
       "security": {
@@ -258,7 +258,7 @@
       },
       "maintainability": {
         "score": 93,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "KISS/DRY/hexagonal PASS. Reuses existing variant guard idiom and headers() array; no new abstraction. Inline comments justify WHY per UFR-013. Follows lib-docs PATTERNS."
       },
       "testCoverage": {
@@ -268,7 +268,7 @@
       },
       "docQuality": {
         "score": 88,
-        "weight": 0.10,
+        "weight": 0.1,
         "reasoning": "Code comments cite spec R-IDs + design D-IDs and explain rationale. Minor: editor green-phase output JSON not persisted to run-report dir (NIT); no code impact."
       },
       "weightedMean": 92.95
@@ -277,6 +277,44 @@
       "blocker": 0,
       "important": 0,
       "nit": 1
+    }
+  },
+  {
+    "runId": "2026-05-21-gdpr-erasure-chain",
+    "ts": "2026-05-21T09:57:53Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.3,
+        "reasoning": "All 17 EARS requirements implemented and traced to file:line; 47/47 targeted tests pass; full BE suite verified green by dispatcher (481 suites/5870 tests). Ordering (R16), best-effort (R3/R6/R17), boundary-safe /user-<id>/ match (R7), legacyFetcher forwarding (R8/R9), secret exclusion (R14) all correct. Entity fields verified to exist (no fabricated columns). -5 only for the orphan-worker-on-misconfig edge (logs warn then attempts a doomed list rather than clean skip) — sound and forced by frozen test, but slightly less elegant than a guarded skip."
+      },
+      "security": {
+        "score": 95,
+        "weight": 0.25,
+        "reasoning": "OWASP API3: DSAR export excludes all secrets by explicit per-field allow-listing (no password/_token/hash/salt/prevHash/rowHash) — verified in 6 mapper functions + asserted by frozen completeness test. OWASP API1: listForActor keyed to authenticated user.id only. Brevo api-key never logged (emailDomain only) and never appended to thrown errors; email URL-encoded (path-injection safe). Audit hash-chain integrity preserved (read-only, chain internals excluded). No raw SQL. -5 for residual notableArtworks unknown[] passthrough (NIT, no current secret)."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.2,
+        "reasoning": "Clean hexagonal layering, lazy proxies match the established pattern, DRY consolidation of cron boot, thorough requirement-referencing docstrings (R-tags), shared audioStorage instance. -7 for the growing composition root (index.ts now needs max-lines:'off') and the slightly indirect orphan misconfig flow that needs the deviation note to read correctly."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "8 new frozen RED test suites + 10 helper factories/accessors; per-category export assertions; ordering + best-effort failure-path tests; boundary-safety decoy (user-420) test; fail-open registration test; secret-absence assertion. All via shared factories (verified makeApiKey/makeMessageFeedback factory pattern), no inline entities, no as-Entity in prod. -10: audio cleanup + listForActor exercised via unit/in-memory rather than testcontainers integration (design.md §6 marked integration OPTIONAL); acceptable but a real-PG QueryBuilder pass for findAudioRefsByUserId would harden it."
+      },
+      "docQuality": {
+        "score": 92,
+        "weight": 0.1,
+        "reasoning": "Every new symbol carries a docstring citing its R-requirement + design decision (D5/D6/D7); deleteAccount docstring is honest per R15/UFR-013 (explicitly states audit_logs retained, not 'full deletion'); deviation rationales embedded in code (eslint comment, port docstring, misconfig comment). -8: STORY.md green-section deviations were relayed via the dispatcher brief rather than written into STORY.md (template still has {{ISO_TS}} placeholders); the documenter phase should backfill."
+      },
+      "weightedMean": 93.55
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 2
     }
   }
 ]

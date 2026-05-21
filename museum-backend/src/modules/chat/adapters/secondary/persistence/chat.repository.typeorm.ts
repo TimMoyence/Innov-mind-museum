@@ -9,12 +9,15 @@ import { CursorCodec } from '@shared/pagination/cursor-codec';
 
 import {
   clearMessageAudio,
+  findAudioRefsByUserId,
   findLegacyImageRefsByUserId,
   updateMessageAudio,
 } from './chat-repository-audio';
 import {
   deleteMessageFeedback,
   getMessageFeedback,
+  listMessageFeedbackForUser,
+  listMessageReportsForUser,
   upsertMessageFeedback,
 } from './chat-repository-feedback';
 import {
@@ -379,6 +382,24 @@ export class TypeOrmChatRepository implements ChatRepository {
    */
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
     return await findLegacyImageRefsByUserId(this.messageRepo, userId);
+  }
+
+  /**
+   * GDPR right-to-erasure (B1) — returns the user's stored TTS audio refs. MUST
+   * be called BEFORE user delete (CASCADE wipes messages/sessions).
+   */
+  async findAudioRefsByUserId(userId: number): Promise<string[]> {
+    return await findAudioRefsByUserId(this.messageRepo, userId);
+  }
+
+  /** DSAR (Art.15/20, B3) — the user's message feedback for the export payload. */
+  async listMessageFeedbackForUser(userId: number) {
+    return await listMessageFeedbackForUser(this.feedbackRepo, userId);
+  }
+
+  /** DSAR (Art.15/20, B3, D7) — the user's message reports for the export payload. */
+  async listMessageReportsForUser(userId: number) {
+    return await listMessageReportsForUser(this.reportRepo, userId);
   }
 
   /**

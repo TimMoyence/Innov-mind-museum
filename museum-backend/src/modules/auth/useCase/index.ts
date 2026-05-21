@@ -12,6 +12,7 @@ import { SocialTokenVerifierAdapter } from '@modules/auth/adapters/secondary/soc
 import {
   DeleteAccountUseCase,
   type ImageCleanupPort,
+  type LegacyImageRefLookup,
 } from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
 import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
@@ -42,18 +43,35 @@ import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { auditService } from '@shared/audit';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
+import { logger } from '@shared/logger/logger';
 import { setApiKeyRepository, setUserRoleResolver } from '@shared/middleware/apiKey.middleware';
 import { env } from '@src/config/env';
 
 import type {
+  ApiKeyExportPort,
+  ApiKeySource,
+  AuditLogExportPort,
+  AuditLogSource,
   ChatDataExportPort,
+  MessageFeedbackExportPort,
+  MessageFeedbackSource,
+  MessageReportExportPort,
+  MessageReportSource,
   ReviewDataExportPort,
+  SocialAccountExportPort,
+  SocialAccountSource,
   SupportDataExportPort,
+  UserMemoryExportPort,
+  UserMemorySource,
   UserReviewExportEntry,
   UserSupportTicketExportEntry,
 } from '@modules/auth/domain/exportUserData.types';
 import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
 import type { EmailService } from '@shared/email/email.port';
+import type {
+  AudioCleanupPort,
+  MarketingContactRemovalPort,
+} from '@shared/ports/audio-cleanup.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);
 const socialAccountRepository = new SocialAccountRepositoryPg(AppDataSource);
@@ -120,12 +138,73 @@ const socialLoginUseCase = new SocialLoginUseCase(
 const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
 /** Lazy image cleanup via chat module — late-bind to avoid circular init. */
 const imageCleanupProxy: ImageCleanupPort = {
-  async deleteByPrefix(prefix: string): Promise<void> {
+  async deleteByPrefix(userId, legacyFetcher): Promise<void> {
     const { getImageStorage } = await import('@modules/chat/chat-module');
-    await getImageStorage().deleteByPrefix(prefix);
+    // B4/R8 — forward BOTH args; dropping `legacyFetcher` silently disabled the
+    // DB-sourced cleanup that reaches production-layout keys.
+    await getImageStorage().deleteByPrefix(userId, legacyFetcher);
   },
 };
-const deleteAccountUseCase = new DeleteAccountUseCase(userRepository, imageCleanupProxy);
+
+/**
+ * R9 — DB-sourced legacy/full image-ref fetcher. Lazy-bound to the chat repo so
+ * `DeleteAccountUseCase` can reach production-layout image keys regardless of
+ * the native scan prefix.
+ */
+const legacyImageRefLookupProxy: LegacyImageRefLookup = {
+  async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
+    const { getChatRepository } = await import('@modules/chat/chat-module');
+    return await getChatRepository().findLegacyImageRefsByUserId(userId);
+  },
+};
+
+/**
+ * B1/R1-R3 — resolves the user's TTS audio refs from the chat repo and deletes
+ * each S3 object via `AudioStorage.deleteByRef`. Per-ref try/catch so one bad
+ * ref doesn't strand the rest. Lazy-bound to avoid a static auth→chat dep.
+ */
+const audioCleanupProxy: AudioCleanupPort = {
+  async deleteUserAudio(userId: number): Promise<void> {
+    const { getChatRepository, getAudioStorage } = await import('@modules/chat/chat-module');
+    const audioStorage = getAudioStorage();
+    if (!audioStorage) return;
+    const refs = await getChatRepository().findAudioRefsByUserId(userId);
+    for (const ref of refs) {
+      try {
+        await audioStorage.deleteByRef(ref);
+      } catch (error) {
+        logger.warn('delete_account_audio_ref_delete_failed', {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  },
+};
+
+/**
+ * B2/R4-R6 — removes the user's Brevo marketing contact. Built from env creds;
+ * when absent, the Noop notifier no-ops. Lazy-bound to avoid a static auth→leads
+ * dep. The use case calls `removeContact(email)` best-effort.
+ */
+const brevoRemovalProxy: MarketingContactRemovalPort = {
+  async removeContact(email: string): Promise<unknown> {
+    const { BrevoBetaSignupNotifier, NoopBetaSignupNotifier } =
+      await import('@modules/leads/adapters/secondary/notifier/brevo-beta-signup.notifier');
+    const notifier = env.brevoApiKey
+      ? new BrevoBetaSignupNotifier(env.brevoApiKey, env.brevoBetaListId ?? 0)
+      : new NoopBetaSignupNotifier();
+    return await notifier.removeContact(email);
+  },
+};
+
+const deleteAccountUseCase = new DeleteAccountUseCase(
+  userRepository,
+  imageCleanupProxy,
+  legacyImageRefLookupProxy,
+  audioCleanupProxy,
+  brevoRemovalProxy,
+);
 
 /** Lazy-bound — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
@@ -179,6 +258,72 @@ const supportDataExportProxy: SupportDataExportPort = {
   },
 };
 
+// ─── B3 DSAR export proxies (lazy-bound, read-only) ─────────────────────────
+
+/** UserMemory (chat module). Resolves the active memory service at call time. */
+const userMemoryExportProxy: UserMemoryExportPort = {
+  async getForUser(userId: number): Promise<UserMemorySource | null> {
+    const { getUserMemoryService } = await import('@modules/chat/chat-module');
+    const service = getUserMemoryService();
+    if (!service) return null;
+    return await service.getUserMemory(userId);
+  },
+};
+
+/** The subject's own audit rows (`actor_id = userId`). */
+const auditLogExportProxy: AuditLogExportPort = {
+  async listForUser(userId: number): Promise<AuditLogSource[]> {
+    const { auditRepository } = await import('@shared/audit');
+    return await auditRepository.listForActor(userId);
+  },
+};
+
+/** message_feedback rows owned by the user. */
+const messageFeedbackExportProxy: MessageFeedbackExportPort = {
+  async listForUser(userId: number): Promise<MessageFeedbackSource[]> {
+    const { getChatRepository } = await import('@modules/chat/chat-module');
+    return await getChatRepository().listMessageFeedbackForUser(userId);
+  },
+};
+
+/** message_reports rows owned by the user (moderator fields excluded, D7). */
+const messageReportExportProxy: MessageReportExportPort = {
+  async listForUser(userId: number): Promise<MessageReportSource[]> {
+    const { getChatRepository } = await import('@modules/chat/chat-module');
+    return await getChatRepository().listMessageReportsForUser(userId);
+  },
+};
+
+/** social_accounts owned by the user (no secrets on the entity). */
+const socialAccountExportProxy: SocialAccountExportPort = {
+  async listForUser(userId: number): Promise<SocialAccountSource[]> {
+    const rows = await socialAccountRepository.findByUserId(userId);
+    return rows.map((r) => ({
+      provider: r.provider,
+      providerUserId: r.providerUserId,
+      email: r.email,
+      createdAt: r.createdAt,
+    }));
+  },
+};
+
+/** api_keys owned by the user. `hash`/`salt` are stripped downstream by the use case. */
+const apiKeyExportProxy: ApiKeyExportPort = {
+  async listForUser(userId: number): Promise<ApiKeySource[]> {
+    const rows = await apiKeyRepository.findByUserId(userId);
+    return rows.map((k) => ({
+      id: k.id,
+      prefix: k.prefix,
+      name: k.name,
+      museumId: k.museumId ?? null,
+      expiresAt: k.expiresAt,
+      lastUsedAt: k.lastUsedAt,
+      isActive: k.isActive,
+      createdAt: k.createdAt,
+    }));
+  },
+};
+
 const userConsentRepository = new UserConsentRepositoryPg(AppDataSource);
 
 const exportUserDataUseCase = new ExportUserDataUseCase({
@@ -186,6 +331,12 @@ const exportUserDataUseCase = new ExportUserDataUseCase({
   reviewDataExport: reviewDataExportProxy,
   supportDataExport: supportDataExportProxy,
   userConsentRepository,
+  userMemoryExport: userMemoryExportProxy,
+  auditLogExport: auditLogExportProxy,
+  messageFeedbackExport: messageFeedbackExportProxy,
+  messageReportExport: messageReportExportProxy,
+  socialAccountExport: socialAccountExportProxy,
+  apiKeyExport: apiKeyExportProxy,
 });
 const getProfileUseCase = new GetProfileUseCase(userRepository);
 const changePasswordUseCase = new ChangePasswordUseCase(userRepository, refreshTokenRepository);
