@@ -250,6 +250,34 @@
     "error_mismatch": "パスワードが一致しません",
     "error_short": "パスワードは8文字以上にしてください"
   },
+  "verify_email": {
+    "title": "Verify your email",
+    "loading": "Verifying your email…",
+    "success": "Your email address has been verified.",
+    "invalidToken": "This verification link is invalid or has expired.",
+    "error": "We could not verify your email. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "confirm_email_change": {
+    "title": "Confirm your new email",
+    "loading": "Confirming your new email…",
+    "success": "Your new email address has been confirmed.",
+    "invalidToken": "This confirmation link is invalid or has expired.",
+    "error": "We could not confirm your email change. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "reset_password": {
+    "title": "Reset your password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Reset password",
+    "success": "Your password has been reset.",
+    "invalidToken": "This reset link is invalid or has expired.",
+    "error": "We could not reset your password. Please try again.",
+    "error_short": "Password must be at least 8 characters",
+    "error_mismatch": "Passwords do not match",
+    "cta_login": "Continue to sign in"
+  },
   "change_email": {
     "title": "メールアドレスを変更",
     "new_email": "新しいメールアドレス",

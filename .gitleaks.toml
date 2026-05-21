@@ -121,4 +121,9 @@ regexes = [
   '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\..{0,}example.{0,}''',
   # PG advisory-lock constants — integer lock keys, not API keys.
   '''AUDIT_CHAIN_LOCK_KEY''',
+  # TD-RNAV-01 magic-link screen tests: synthetic deep-link tokens
+  # (tok_verify_*/tok_reset_*/tok_confirm_*) used to drive
+  # __tests__/screens/{verify-email,reset-password,confirm-email-change}.test.tsx.
+  # Fake fixtures, never real credentials.
+  '''tok_(verify|reset|confirm)_[A-Za-z0-9]+''',
 ]

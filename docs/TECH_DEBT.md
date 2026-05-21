@@ -1703,7 +1703,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ## ✅ TD-RNAV-01 — Universal Links / App Links pour musaium.com (RÉSOLU 2026-05-21)
 **Context** : Marketing email magic-links + Apple Smart App Banners + Android Chrome intent fallback ALL BREAK without `associatedDomains` (iOS) + `intentFilters with autoVerify` (Android).
-**Résolution** (run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED weightedMean 92.95) — **plumbing d'association de domaine uniquement** (le routage deep-link IN-APP lien→écran reste un follow-up séparé, cf. ci-dessous).
+**Résolution end-to-end en 2 cycles** : (1) plumbing d'association de domaine, (2) routage deep-link IN-APP lien→écran. La feature est désormais **complète côté code** ; seul reste le gate opérateur post-deploy (non automatisable en CI).
+
+### Cycle 1 — plumbing d'association de domaine (run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED weightedMean 92.95)
 
 Fichiers livrés (6) :
 - `museum-frontend/app.config.ts` — `ios.associatedDomains = ['applinks:musaium.com']` + `android.intentFilters` (`autoVerify` `https`/`musaium.com`), **prod-only** (`variant === 'production'` guard).
@@ -1713,12 +1715,28 @@ Fichiers livrés (6) :
 - `museum-web/next.config.ts` — règle `headers()` forçant `Content-Type: application/json` sur le path AASA (NFR-1 / risque #1 : Next sert un fichier `public/` extensionless en `application/octet-stream`, qu'Apple invalide silencieusement).
 - `museum-web/src/lib/well-known-association.test.ts` — Vitest, 10 tests.
 
+### Cycle 2 — routage deep-link IN-APP (run `/team` `2026-05-21-universal-links-inapp-routing`, APPROVED weightedMean 90.9)
+
+Ferme le gap explicitement laissé par le cycle 1 (cycle-1 spec §8 Q1) : une fois l'association OS↔app établie, l'OS remettait `https://musaium.com/fr/verify-email?token=…` à l'app, mais sans `+native-intent.tsx` Expo Router résolvait sur `+not-found` → le token one-time n'était jamais POSTé → verify-email / reset-password / confirm-email-change échouaient silencieusement pour les users app. Frontend-only, aucun changement backend / OpenAPI / migration.
+
+Fichiers livrés (9) :
+- `museum-frontend/app/+native-intent.tsx` (NOUVEAU) — `redirectSystemPath` : strip préfixe `/fr|/en`, mappe vers `/(stack)/{verify-email,reset-password,confirm-email-change}`, **préserve `?token` byte-for-byte** (string-slice, pas de round-trip `URLSearchParams`), passthrough `musaium://` et tout autre path inchangé, try/catch (retourne `event.path` sur erreur).
+- `museum-frontend/features/auth/lib/magicLinkPath.ts` (NOUVEAU) — mapper pur (testable hors device, React/expo-free).
+- `museum-frontend/features/auth/infrastructure/authApi.ts` (M) — ajout `verifyEmail(token)` → `POST /api/auth/verify-email` (méthode manquante ; `confirmEmailChange`/`resetPassword` existaient déjà).
+- `museum-frontend/features/auth/ui/TokenExchangeFlow.tsx` (NOUVEAU) — composant 4-états auto-submit partagé (`loading|success|invalidToken|error`) pour verify-email + confirm-email-change.
+- `museum-frontend/app/(stack)/{verify-email,confirm-email-change,reset-password}.tsx` (3 NOUVEAUX) + `app/_layout.tsx` (M, 3 routes enregistrées).
+- `museum-frontend/shared/locales/{en,fr,es,de,it,ja,zh,ar}/translation.json` (M) — clés `verify_email.*` / `confirm_email_change.*` / `reset_password.*` (FR/EN traduites, autres EN-fallback).
+- `museum-frontend/.maestro/magic-link-{verify-email,confirm-email-change,reset-password}.yaml` (3 NOUVEAUX) + `.maestro/shards.json` (M) — couverture happy-path UFR-021 / R12 (Maestro ne tourne PAS en CI cloud ici ; ces flows existent pour `sentinel:screen-test-coverage` + run on-device).
+
+Tests : 5 suites Jest / 29 tests verts (`magicLinkPath`, `verifyEmail.api`, 3 écrans). Token jamais loggé (R13, testé + grep clean). Décisions D1-D8 dans le design du run (pas de nouvel ADR). Un cycle BLOCK-TEST-WRONG (bug de mock `expo-router` dans les tests d'écran) résolu par un red frais, sans toucher aux tests gelés (UFR-022).
+
 **Reste à faire = gate opérateur post-deploy (NON automatisable en CI ; ne PAS prétendre vérifié — UFR-013)** :
 - Pré-deploy iOS : confirmer que le profil de provisioning EAS **production** porte la capability **Associated Domains** (l'édition `app.config.ts` est inerte sans elle).
 - Deploy gate : les 2 `.well-known` DOIVENT shipper en prod ET être placeholder-free (miroir du gate PGP-key, CLAUDE.md).
 - Post-deploy iOS/Android : checks device réels (`curl` AASA/assetlinks + Apple CDN + `adb pm verify-app-links`/`get-app-links`).
+- Post-deploy in-app (cycle 2) : avec l'app installée, taper un magic-link réel (verify-email / reset-password / confirm-email-change) DOIT ouvrir l'écran correspondant et consommer le token (PAS `+not-found`). Cf. runbook §3.1.
 
-Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md). Décisions D1-D5 dans le design du run (pas de nouvel ADR).
+Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md). Décisions cycle 1 (D1-D5) + cycle 2 (D1-D8) dans le design de chaque run (pas de nouvel ADR).
 
 ---
 

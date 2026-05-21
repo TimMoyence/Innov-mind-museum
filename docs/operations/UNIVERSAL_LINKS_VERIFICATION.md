@@ -1,20 +1,24 @@
 # Universal Links / App Links — Verification Runbook (musaium.com)
 
-> **Scope:** TD-RNAV-01 — post-deploy verification of the iOS Universal Links + Android App Links domain association for `musaium.com`.
-> **Created:** 2026-05-21 (run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED).
+> **Scope:** TD-RNAV-01 — post-deploy verification of the iOS Universal Links + Android App Links domain association for `musaium.com`, plus the in-app routing that consumes the magic-link tokens.
+> **Created:** 2026-05-21 (cycle 1 run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED). **Updated:** 2026-05-21 (cycle 2 run `/team` `2026-05-21-universal-links-inapp-routing`, APPROVED — in-app routing added, §0 + §3.1).
 > **Honesty (UFR-013):** Every check below is a **real-device / live-network** verification executed by the operator **after** a prod deploy. Results are reported verbatim. None of these are run in CI — the codebase delivers only the association declarations + static files; "the link opens the app on a real device" is NOT automatable and MUST NOT be claimed as CI-verified.
 
 ---
 
-## 0. What this run shipped (and what it did NOT)
+## 0. What was shipped (the two cycles)
 
-**Shipped — OS-level domain-association plumbing only:**
+**Cycle 1 — OS-level domain-association plumbing:**
 - `museum-frontend/app.config.ts` — iOS `associatedDomains: ['applinks:musaium.com']` + Android `autoVerify` `https`/`musaium.com` intent filter, **production variant only**.
 - `museum-web/public/.well-known/apple-app-site-association` (AASA, extensionless) — appID `RB3F9L6GUD.com.musaium.mobile`, 6 magic-link components (FR/EN × verify-email / reset-password / confirm-email-change), `?token` matcher, no blind `*`.
 - `museum-web/public/.well-known/assetlinks.json` — package `com.musaium.mobile`, Google Play App Signing SHA256 fingerprint.
 - `museum-web/next.config.ts` — `headers()` rule forcing `Content-Type: application/json` on the AASA path.
 
-**NOT shipped (separate follow-up):** in-app deep-link routing. Once association succeeds the OS hands `https://musaium.com/...` to the app, but Expo Router has no `Linking.prefixes` / `getStateFromPath` mapping yet, so the app will not resolve those URLs to a screen. Establishing association is necessary but not sufficient for the end-to-end magic-link-opens-app experience.
+**Cycle 2 — in-app deep-link routing (now shipped, run `2026-05-21-universal-links-inapp-routing`):** the gap cycle 1 explicitly deferred is closed. Once association succeeds the OS hands `https://musaium.com/...` to the app; the app now resolves those URLs to the right screen and consumes the token:
+- `museum-frontend/app/+native-intent.tsx` — `redirectSystemPath` strips the optional `/fr|/en` prefix, maps to `/(stack)/{verify-email,reset-password,confirm-email-change}`, preserves `?token` byte-for-byte, and passes every other path (incl. `musaium://`) through unchanged (try/catch returns the input path on error).
+- `museum-frontend/app/(stack)/{verify-email,confirm-email-change,reset-password}.tsx` + the shared `features/auth/ui/TokenExchangeFlow.tsx` — consume the token (`authApi.verifyEmail` / `confirmEmailChange` / `resetPassword`) and render `loading → success | invalidToken | error`.
+
+> Establishing association (cycle 1) was necessary but not sufficient; the in-app routing (cycle 2) makes the end-to-end magic-link-opens-app experience work. See §3.1 for the post-deploy in-app check.
 
 ---
 
@@ -55,9 +59,27 @@ Then confirm Apple's CDN has fetched and cached the file (Apple crawls the domai
 curl -s https://app-site-association.cdn-apple.com/a/v1/musaium.com
 ```
 
-On-device sanity check: with a prod build installed (the build whose provisioning profile carries the Associated Domains capability, §1), tapping a real magic-link `https://musaium.com/fr/verify-email?token=...` should be handed to the app by iOS. (If in-app routing is not yet wired — see §0 — the app receives the URL but may not navigate; that is the expected follow-up gap, not an association failure.)
+On-device sanity check: with a prod build installed (the build whose provisioning profile carries the Associated Domains capability, §1), tapping a real magic-link `https://musaium.com/fr/verify-email?token=...` should be handed to the app by iOS, which then routes in-app (cycle 2 — see §3.1).
 
 **Report:** paste the verbatim `curl` headers + the Apple CDN response. Do not summarise as "works" without the raw output.
+
+---
+
+## 3.1 Post-deploy — in-app routing (cycle 2)
+
+With association working (§3/§4) **and** a prod build that includes the cycle-2 in-app routing installed, tapping a real transactional-email magic-link must open the matching screen and consume the one-time token — **not** land on `+not-found`.
+
+For each of the three flows, request a fresh real email and tap its link on a device with the app installed:
+
+- **verify-email** — `https://musaium.com/{fr|en}/verify-email?token=...` → opens the verify-email screen → shows the success state (email verified). A bad/expired token → `invalidToken` state (not a crash, not `+not-found`).
+- **reset-password** — `https://musaium.com/{fr|en}/reset-password?token=...` → opens the reset-password screen → enter a new password (≥8 chars, matching confirm) → submit → success → CTA to login.
+- **confirm-email-change** — `https://musaium.com/{fr|en}/confirm-email-change?token=...` → opens the confirm screen → shows success.
+
+**Failure signatures:** the link lands on `+not-found` (in-app routing not in this build, or `+native-intent` not mapping the route); or the screen opens but the token is rejected when it should be valid (token dropped/re-encoded across the rewrite — the byte-for-byte `?token` preservation, NFR-1).
+
+**CI-local coverage (not CI cloud):** three Maestro happy-path flows ship with cycle 2 — `museum-frontend/.maestro/magic-link-{verify-email,confirm-email-change,reset-password}.yaml`. They satisfy `pnpm sentinel:screen-test-coverage` (UFR-021) and are runnable on-device (they reach the screens via the `musaium://` scheme, which `+native-intent` passes through unchanged). **Maestro does NOT run in the CI cloud here** — these flows do not substitute for the real-device HTTPS hand-off check above; they only exercise the in-app screen behaviour. A live Maestro run needs a seeded backend test account/token (same caveat as `mfa-enroll-flow.yaml`).
+
+**Report:** for each flow, state the link tapped, the screen reached, and the final state. Do not assert "works" without naming the screen + outcome state per flow.
 
 ---
 
@@ -88,7 +110,7 @@ adb shell pm get-app-links com.musaium.mobile
 - [ ] `curl` assetlinks.json output pasted verbatim.
 - [ ] `adb shell pm get-app-links` output pasted verbatim showing the actual verification state.
 - [ ] iOS provisioning-profile Associated Domains capability confirmed present (§1) — or flagged as missing/blocking.
-- [ ] In-app routing gap (§0) acknowledged as a known, separate follow-up — NOT silently treated as "association broken".
+- [ ] In-app routing (§3.1) verified for all three flows (verify-email / reset-password / confirm-email-change): screen opened + token consumed, NOT `+not-found`. Per-flow screen + outcome stated verbatim.
 
 If any check fails, report the exact failing output and stop — do not paper over it.
 
@@ -97,7 +119,8 @@ If any check fails, report the exact failing output and stop — do not paper ov
 ## References
 
 - TD-RNAV-01 entry: [`docs/TECH_DEBT.md`](../TECH_DEBT.md).
-- Run artefacts (spec / design / decisions D1-D5): `.claude/skills/team/team-state/2026-05-21-universal-links-td-rnav-01/`.
+- Cycle 1 run artefacts (spec / design / decisions D1-D5): `.claude/skills/team/team-state/2026-05-21-universal-links-td-rnav-01/`.
+- Cycle 2 run artefacts (spec / design / decisions D1-D8, in-app routing): `.claude/skills/team/team-state/2026-05-21-universal-links-inapp-routing/`.
 - PGP-key deploy-gate analogue: [`docs/operations/PGP_KEY_GENERATION.md`](PGP_KEY_GENERATION.md) + CLAUDE.md § Pièges connus.
 - Apple AASA spec: https://developer.apple.com/documentation/xcode/supporting-associated-domains
 - Android App Links / Digital Asset Links: https://developer.android.com/training/app-links/verify-android-applinks

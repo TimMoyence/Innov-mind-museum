@@ -250,6 +250,34 @@
     "error_mismatch": "Les mots de passe ne correspondent pas",
     "error_short": "Le mot de passe doit contenir au moins 8 caractères"
   },
+  "verify_email": {
+    "title": "Vérifiez votre e-mail",
+    "loading": "Vérification de votre e-mail…",
+    "success": "Votre adresse e-mail a été vérifiée.",
+    "invalidToken": "Ce lien de vérification est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu vérifier votre e-mail. Veuillez réessayer.",
+    "cta_login": "Continuer vers la connexion"
+  },
+  "confirm_email_change": {
+    "title": "Confirmez votre nouvel e-mail",
+    "loading": "Confirmation de votre nouvel e-mail…",
+    "success": "Votre nouvelle adresse e-mail a été confirmée.",
+    "invalidToken": "Ce lien de confirmation est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu confirmer le changement d'e-mail. Veuillez réessayer.",
+    "cta_login": "Continuer vers la connexion"
+  },
+  "reset_password": {
+    "title": "Réinitialisez votre mot de passe",
+    "new": "Nouveau mot de passe",
+    "confirm": "Confirmer le nouveau mot de passe",
+    "submit": "Réinitialiser le mot de passe",
+    "success": "Votre mot de passe a été réinitialisé.",
+    "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu réinitialiser votre mot de passe. Veuillez réessayer.",
+    "error_short": "Le mot de passe doit contenir au moins 8 caractères",
+    "error_mismatch": "Les mots de passe ne correspondent pas",
+    "cta_login": "Continuer vers la connexion"
+  },
   "change_email": {
     "title": "Changer d'email",
     "new_email": "Nouvelle adresse email",
