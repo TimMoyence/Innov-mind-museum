@@ -278,7 +278,7 @@ describe('login-rate-limiter — distributed Redis path', () => {
     expect(Number.parseInt(ttl, 10)).toBeGreaterThan(0);
   });
 
-  it('calls redisStore.increment with prefixed key and window on recordFailedLogin', async () => {
+  it('calls redisStore.increment with hashed prefixed key and window on recordFailedLogin', async () => {
     const mock = makeMockRedisStore();
     setLoginRateLimitStore(mock);
 
@@ -287,7 +287,10 @@ describe('login-rate-limiter — distributed Redis path', () => {
 
     expect(mock.increment).toHaveBeenCalledTimes(1);
     const [key, windowMs] = mock.increment.mock.calls[0];
-    expect(key).toBe('login-attempts:distrib@test.com');
+    // I-SEC6: sliding-window key must be hashed (no raw email in Redis keyspace),
+    // mirroring the lockout key. Was `login-attempts:distrib@test.com` (raw PII).
+    expect(key).toBe(`login-attempts:${hashEmail('distrib@test.com')}`);
+    expect(key).not.toContain('@');
     expect(windowMs).toBe(10 * 60 * 1000);
   });
 
@@ -334,7 +337,7 @@ describe('login-rate-limiter — distributed Redis path', () => {
     await flushMicrotasks();
 
     expect(mock.reset).toHaveBeenCalledTimes(1);
-    expect(mock.reset.mock.calls[0][0]).toBe('login-attempts:reset@test.com');
+    expect(mock.reset.mock.calls[0][0]).toBe(`login-attempts:${hashEmail('reset@test.com')}`);
     expect(mock.lockoutDel).toHaveBeenCalledTimes(1);
     expect(mock.lockoutDel.mock.calls[0][0]).toBe(`auth:lockout:${hashEmail('reset@test.com')}`);
   });

@@ -29,6 +29,9 @@ describe('P0-5 — auth locale enums coherence', () => {
       const result = registerSchema.safeParse({
         email: 'test@example.com',
         password: 'password123',
+        // A2: dateOfBirth is now required (CNIL age gate). This test's intent is
+        // locale coherence, so we supply a valid adult DOB to reach a clean parse.
+        dateOfBirth: '1990-06-13',
         locale,
       });
       expect(result.success).toBe(true);

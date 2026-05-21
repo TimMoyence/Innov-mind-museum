@@ -267,17 +267,18 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
 
     expect(auditLogMock).toHaveBeenCalledTimes(1);
     // Strict shape — kills L70 ObjectLiteral, L72 'AUTH_LOGIN_FAILED', L73 metadata.
+    // A1 / GDPR Art. 5(1)(c): only the email DOMAIN is retained, never the raw address.
     expect(auditLogMock).toHaveBeenCalledWith({
       action: AUDIT_AUTH_LOGIN_FAILED,
       actorType: 'anonymous',
-      metadata: { email: 'alice@example.com' },
+      metadata: { emailDomain: 'example.com' },
       ip: '192.0.2.1',
       requestId: 'req-fail-1',
     });
     expect(AUDIT_AUTH_LOGIN_FAILED).toBe('AUTH_LOGIN_FAILED');
   });
 
-  it('emits AUDIT_AUTH_LOGIN_FAILED with metadata.email === undefined when req.body.email is a number (kills L68 typeof + L68 string literal flip)', async () => {
+  it('emits AUDIT_AUTH_LOGIN_FAILED with metadata.emailDomain === undefined when req.body.email is a number (kills L68 typeof + L68 string literal flip)', async () => {
     // If L68 EqualityOperator `===` flips to `!==`, a non-string would be kept
     // and we'd see `email: 12345` in metadata. If L68 StringLiteral '' replaces
     // 'string', the check becomes `typeof email === ''` which is never true → all
@@ -295,7 +296,7 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
     expect(auditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_AUTH_LOGIN_FAILED,
-        metadata: { email: undefined },
+        metadata: { emailDomain: undefined },
       }),
     );
   });
@@ -316,7 +317,7 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
     expect(auditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_AUTH_LOGIN_FAILED,
-        metadata: { email: undefined },
+        metadata: { emailDomain: undefined },
       }),
     );
   });
@@ -338,7 +339,7 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
 });
 
 describe('auditLoginError — TOO_MANY_REQUESTS', () => {
-  it('emits AUDIT_SECURITY_RATE_LIMIT with endpoint "/login" and the email string (kills L80/L82/L83 + L83:47 "/login" literal)', async () => {
+  it('emits AUDIT_SECURITY_RATE_LIMIT with endpoint "/login" and the email domain (kills L80/L82/L83 + L83:47 "/login" literal)', async () => {
     const req = makeReq({
       ip: '198.51.100.42',
       requestId: 'req-rate-1',
@@ -353,17 +354,18 @@ describe('auditLoginError — TOO_MANY_REQUESTS', () => {
     await auditLoginError(req, err);
 
     expect(auditLogMock).toHaveBeenCalledTimes(1);
+    // A1 / GDPR Art. 5(1)(c): only the email DOMAIN is retained, never the raw address.
     expect(auditLogMock).toHaveBeenCalledWith({
       action: AUDIT_SECURITY_RATE_LIMIT,
       actorType: 'anonymous',
-      metadata: { email: 'bob@example.com', endpoint: '/login' },
+      metadata: { emailDomain: 'example.com', endpoint: '/login' },
       ip: '198.51.100.42',
       requestId: 'req-rate-1',
     });
     expect(AUDIT_SECURITY_RATE_LIMIT).toBe('SECURITY_RATE_LIMIT');
   });
 
-  it('emits AUDIT_SECURITY_RATE_LIMIT with undefined email when req.body has no email field', async () => {
+  it('emits AUDIT_SECURITY_RATE_LIMIT with undefined emailDomain when req.body has no email field', async () => {
     const req = makeReq({ body: {} });
     const err = new AppError({
       message: 'rate limited',
@@ -377,7 +379,7 @@ describe('auditLoginError — TOO_MANY_REQUESTS', () => {
     expect(auditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_SECURITY_RATE_LIMIT,
-        metadata: { email: undefined, endpoint: '/login' },
+        metadata: { emailDomain: undefined, endpoint: '/login' },
       }),
     );
   });

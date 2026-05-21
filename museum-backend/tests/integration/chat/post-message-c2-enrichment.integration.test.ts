@@ -55,7 +55,10 @@ function makeQueryAwareImageSourceClient(
 ): jest.Mocked<ImageSourceClient> {
   return {
     searchPhotos: jest.fn().mockImplementation(async (query: string) => {
-      const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32);
+      const slug = query
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .slice(0, 32);
       return Promise.resolve([
         {
           ...basePhoto,
@@ -69,7 +72,9 @@ function makeQueryAwareImageSourceClient(
 }
 
 /** Builds a minimal {@link KnowledgeBaseProvider} jest mock. */
-function makeKnowledgeBaseProviderMock(facts: ArtworkFacts | null): jest.Mocked<KnowledgeBaseProvider> {
+function makeKnowledgeBaseProviderMock(
+  facts: ArtworkFacts | null,
+): jest.Mocked<KnowledgeBaseProvider> {
   return {
     lookup: jest.fn().mockResolvedValue(facts),
   };
@@ -112,13 +117,13 @@ class V2SuggestingOrchestrator implements ChatOrchestrator {
         },
         suggestedImages: [
           {
-            query: "Monet Water Lilies painting",
+            query: 'Monet Water Lilies painting',
             description: 'The Water Lilies series by Monet.',
             rationale: 'Shows the impressionist brushwork central to the answer.',
-            caption: "Water Lilies by Monet",
+            caption: 'Water Lilies by Monet',
           },
           {
-            query: "Manet Olympia painting",
+            query: 'Manet Olympia painting',
             description: 'The Olympia portrait by Manet.',
             rationale: 'Provides the contrasting realist composition cited above.',
             caption: 'Olympia by Manet',
@@ -192,39 +197,24 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   process.env.GOOGLE_OAUTH_CLIENT_ID = 'phase5-test-audience.apps.googleusercontent.com';
 
   // Now perform the dynamic imports — env.ts will capture the values above.
-  const { ImageEnrichmentService } = await import(
-    '@modules/chat/useCase/image/image-enrichment.service'
-  );
-  const { KnowledgeBaseService } = await import(
-    '@modules/chat/useCase/knowledge/knowledge-base.service'
-  );
+  const { ImageEnrichmentService } =
+    await import('@modules/chat/useCase/image/image-enrichment.service');
+  const { KnowledgeBaseService } =
+    await import('@modules/chat/useCase/knowledge/knowledge-base.service');
   const { ChatService } = await import('@modules/chat/useCase/orchestration/chat.service');
-  const { TypeOrmChatRepository } = await import(
-    '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm'
-  );
-  const { LocalImageStorage } = await import(
-    '@modules/chat/adapters/secondary/storage/image-storage.stub'
-  );
+  const { TypeOrmChatRepository } =
+    await import('@modules/chat/adapters/secondary/persistence/chat.repository.typeorm');
+  const { LocalImageStorage } =
+    await import('@modules/chat/adapters/secondary/storage/image-storage.stub');
   const { createApp } = await import('@src/app');
   const { AppDataSource } = await import('@src/data/db/data-source');
-  const { clearRateLimitBuckets } = await import(
-    '@shared/middleware/rate-limit.middleware'
-  );
+  const { clearRateLimitBuckets } = await import('@shared/middleware/rate-limit.middleware');
 
   // Discover migrations the same way e2e-app-harness does — read from disk
   // so a brand-new schema migration is auto-picked-up by this test.
   const { readdirSync } = await import('node:fs');
   const { join } = await import('node:path');
-  const migrationsDir = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'src',
-    'data',
-    'db',
-    'migrations',
-  );
+  const migrationsDir = join(__dirname, '..', '..', '..', 'src', 'data', 'db', 'migrations');
   const migrationFiles = readdirSync(migrationsDir)
     .filter((name) => name.endsWith('.ts') && !name.endsWith('.d.ts'))
     .sort((a, b) => a.localeCompare(b));
@@ -258,9 +248,10 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   await AppDataSource.initialize();
 
   // Suppress stale-connection errors from the underlying pg driver.
-  (
-    AppDataSource.driver as { master?: { on?: (e: string, fn: () => void) => void } }
-  ).master?.on?.('error', () => undefined);
+  (AppDataSource.driver as { master?: { on?: (e: string, fn: () => void) => void } }).master?.on?.(
+    'error',
+    () => undefined,
+  );
 
   await AppDataSource.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   await AppDataSource.runMigrations({ transaction: 'each' });
@@ -285,10 +276,11 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   );
 
   const knowledgeBase = args.knowledgeBaseProvider
-    ? new KnowledgeBaseService(
-        args.knowledgeBaseProvider,
-        { timeoutMs: 5_000, cacheTtlSeconds: 0, cacheMaxEntries: 50 },
-      )
+    ? new KnowledgeBaseService(args.knowledgeBaseProvider, {
+        timeoutMs: 5_000,
+        cacheTtlSeconds: 0,
+        cacheMaxEntries: 50,
+      })
     : undefined;
 
   const chatService = new ChatService({
@@ -375,7 +367,13 @@ async function registerAndLoginVisitor(harness: BootedHarness): Promise<Register
 
   const reg = await harness.request('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password, firstname: 'Int', lastname: 'Tester' }),
+    body: JSON.stringify({
+      email,
+      password,
+      firstname: 'Int',
+      lastname: 'Tester',
+      dateOfBirth: '1990-06-13',
+    }),
   });
   if (reg.status !== 201) {
     throw new Error(`register failed: status=${reg.status} body=${JSON.stringify(reg.body)}`);
@@ -502,67 +500,64 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
       await booted?.stop();
     });
 
-    it(
-      'returns ≥2 images from ≥2 distinct sources with non-empty caption + rationale on the second turn',
-      async () => {
-        const visitor = await registerAndLoginVisitor(booted);
-        const sessionId = await createSession(booted, visitor.token);
+    it('returns ≥2 images from ≥2 distinct sources with non-empty caption + rationale on the second turn', async () => {
+      const visitor = await registerAndLoginVisitor(booted);
+      const sessionId = await createSession(booted, visitor.token);
 
-        // Turn 1 — primes the session: orchestrator answers with
-        // `suggestedImages` in metadata, persisted to the assistant message.
-        const t1 = await postUserMessage(
-          booted,
-          sessionId,
-          visitor.token,
-          "Compare Monet's Water Lilies to Manet's Olympia",
-        );
-        expect(t1.status).toBe(201);
-        expect(t1.body.metadata.suggestedImages).toBeDefined();
-        expect(t1.body.metadata.suggestedImages?.length).toBeGreaterThanOrEqual(2);
+      // Turn 1 — primes the session: orchestrator answers with
+      // `suggestedImages` in metadata, persisted to the assistant message.
+      const t1 = await postUserMessage(
+        booted,
+        sessionId,
+        visitor.token,
+        "Compare Monet's Water Lilies to Manet's Olympia",
+      );
+      expect(t1.status).toBe(201);
+      expect(t1.body.metadata.suggestedImages).toBeDefined();
+      expect(t1.body.metadata.suggestedImages?.length).toBeGreaterThanOrEqual(2);
 
-        // Turn 2 — history now contains turn-1's `suggestedImages`, which the
-        // enrichment-fetcher reads to fan out to all wired source clients.
-        const t2 = await postUserMessage(
-          booted,
-          sessionId,
-          visitor.token,
-          'Tell me more about the brushwork.',
-        );
+      // Turn 2 — history now contains turn-1's `suggestedImages`, which the
+      // enrichment-fetcher reads to fan out to all wired source clients.
+      const t2 = await postUserMessage(
+        booted,
+        sessionId,
+        visitor.token,
+        'Tell me more about the brushwork.',
+      );
 
-        expect(t2.status).toBe(201);
-        const images = t2.body.metadata.images;
-        expect(Array.isArray(images)).toBe(true);
-        expect(images!.length).toBeGreaterThanOrEqual(2);
+      expect(t2.status).toBe(201);
+      const images = t2.body.metadata.images;
+      expect(Array.isArray(images)).toBe(true);
+      expect(images!.length).toBeGreaterThanOrEqual(2);
 
-        const allowed: ReadonlySet<EnrichedImage['source']> = new Set([
-          'wikidata',
-          'unsplash',
-          'commons',
-          'musaium',
-        ]);
-        for (const img of images!) {
-          expect(allowed.has(img.source)).toBe(true);
-          expect(typeof img.caption).toBe('string');
-          expect(img.caption.length).toBeGreaterThan(0);
-          expect(typeof img.rationale).toBe('string');
-        }
+      const allowed: ReadonlySet<EnrichedImage['source']> = new Set([
+        'wikidata',
+        'unsplash',
+        'commons',
+        'musaium',
+      ]);
+      for (const img of images!) {
+        expect(allowed.has(img.source)).toBe(true);
+        expect(typeof img.caption).toBe('string');
+        expect(img.caption.length).toBeGreaterThan(0);
+        expect(typeof img.rationale).toBe('string');
+      }
 
-        // R5 — the v2 fan-out path propagates the LLM-authored caption +
-        // rationale from `suggestedImages[]` annotations to every image fetched
-        // through `ImageSourceClient` (commons / unsplash / musaium). The
-        // wikidata image is added via `mergeWikidataImage` AFTER the fan-out,
-        // which does not currently propagate annotations — so a non-empty
-        // rationale on that source is not asserted here. The fan-out sources
-        // MUST carry rationale, otherwise v2 metadata enrichment is broken.
-        const fanOutImages = images!.filter((img) => img.source !== 'wikidata');
-        expect(fanOutImages.length).toBeGreaterThanOrEqual(1);
-        for (const img of fanOutImages) {
-          expect(img.rationale.length).toBeGreaterThan(0);
-        }
+      // R5 — the v2 fan-out path propagates the LLM-authored caption +
+      // rationale from `suggestedImages[]` annotations to every image fetched
+      // through `ImageSourceClient` (commons / unsplash / musaium). The
+      // wikidata image is added via `mergeWikidataImage` AFTER the fan-out,
+      // which does not currently propagate annotations — so a non-empty
+      // rationale on that source is not asserted here. The fan-out sources
+      // MUST carry rationale, otherwise v2 metadata enrichment is broken.
+      const fanOutImages = images!.filter((img) => img.source !== 'wikidata');
+      expect(fanOutImages.length).toBeGreaterThanOrEqual(1);
+      for (const img of fanOutImages) {
+        expect(img.rationale.length).toBeGreaterThan(0);
+      }
 
-        const sourcesPresent = new Set(images!.map((img) => img.source));
-        expect(sourcesPresent.size).toBeGreaterThanOrEqual(2);
-      },
-    );
+      const sourcesPresent = new Set(images!.map((img) => img.source));
+      expect(sourcesPresent.size).toBeGreaterThanOrEqual(2);
+    });
   });
 });

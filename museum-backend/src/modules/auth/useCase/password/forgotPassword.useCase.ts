@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildResetPasswordEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
+import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 import { env } from '@src/config/env';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -30,7 +31,9 @@ export class ForgotPasswordUseCase {
     // SEC-HARDENING (M16): require verified email before issuing reset token.
     // Silently skip to avoid enumerating verified vs. unverified accounts.
     if (!user.email_verified) {
-      logger.warn('forgot_password_unverified_skipped', { email: normalizedEmail });
+      logger.warn('forgot_password_unverified_skipped', {
+        emailDomain: extractEmailDomain(normalizedEmail),
+      });
       return;
     }
 
@@ -50,14 +53,14 @@ export class ForgotPasswordUseCase {
         );
       } catch (error) {
         logger.warn('forgot_password_email_failed', {
-          email: normalizedEmail,
+          emailDomain: extractEmailDomain(normalizedEmail),
           error: (error as Error).message,
         });
       }
     } else {
       const level = env.nodeEnv === 'production' ? 'error' : 'warn';
       logger[level]('forgot_password_email_skipped_no_service', {
-        email: normalizedEmail,
+        emailDomain: extractEmailDomain(normalizedEmail),
         hint: 'Configure BREVO_API_KEY + FRONTEND_URL or a dev mail catcher (MailHog/Mailpit)',
       });
     }

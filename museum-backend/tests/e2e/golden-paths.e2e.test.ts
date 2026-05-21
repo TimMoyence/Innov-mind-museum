@@ -53,6 +53,7 @@ describeE2E('golden path e2e flows', () => {
           password,
           firstname: 'Golden',
           lastname: 'PathOne',
+          dateOfBirth: '1990-06-13',
         }),
       });
 
