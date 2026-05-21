@@ -32,6 +32,7 @@
  */
 
 import '../helpers/test-utils';
+import type * as ReactModule from 'react';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
@@ -68,8 +69,8 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => mockNavCanGoBack(),
     addListener: (event: string, callback: () => void) => mockNavAddListener(event, callback),
   }),
-  useFocusEffect: (effect: () => void | (() => void)) => {
-    const React = require('react') as typeof import('react');
+  useFocusEffect: (effect: ReactModule.EffectCallback) => {
+    const React = require('react') as typeof ReactModule;
     React.useEffect(() => effect(), [effect]);
   },
 }));

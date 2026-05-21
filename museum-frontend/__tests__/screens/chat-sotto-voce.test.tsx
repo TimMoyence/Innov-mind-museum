@@ -25,6 +25,7 @@
  */
 
 import React from 'react';
+import type * as ReactModule from 'react';
 import { render } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
@@ -108,8 +109,8 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: (_event: string, _cb: () => void) => jest.fn(),
   }),
-  useFocusEffect: (effect: () => void | (() => void)) => {
-    const React = require('react') as typeof import('react');
+  useFocusEffect: (effect: ReactModule.EffectCallback) => {
+    const React = require('react') as typeof ReactModule;
     React.useEffect(() => effect(), [effect]);
   },
 }));
