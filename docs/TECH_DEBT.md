@@ -1701,9 +1701,24 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ⚠️ TD-RNAV-01 — Universal Links / App Links NOT configured pour musaium.com (MEDIUM BLOCKER pre-V1)
+## ✅ TD-RNAV-01 — Universal Links / App Links pour musaium.com (RÉSOLU 2026-05-21)
 **Context** : Marketing email magic-links + Apple Smart App Banners + Android Chrome intent fallback ALL BREAK without `associatedDomains` (iOS) + `intentFilters with autoVerify` (Android).
-**Fix** : Add to `app.config.ts` — `ios.associatedDomains: ['applinks:musaium.com']` + `android.intentFilters: [{ action: 'VIEW', autoVerify: true, data: [{scheme:'https', host:'musaium.com'}], category: ['BROWSABLE', 'DEFAULT'] }]`.
+**Résolution** (run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED weightedMean 92.95) — **plumbing d'association de domaine uniquement** (le routage deep-link IN-APP lien→écran reste un follow-up séparé, cf. ci-dessous).
+
+Fichiers livrés (6) :
+- `museum-frontend/app.config.ts` — `ios.associatedDomains = ['applinks:musaium.com']` + `android.intentFilters` (`autoVerify` `https`/`musaium.com`), **prod-only** (`variant === 'production'` guard).
+- `museum-frontend/__tests__/app-config-universal-links.test.ts` — Jest, 9 tests (R1-R4 × variants).
+- `museum-web/public/.well-known/apple-app-site-association` (NOUVEAU, extensionless) — appID `RB3F9L6GUD.com.musaium.mobile`, 6 `components` scopés aux magic-links FR/EN (verify-email / reset-password / confirm-email-change) avec matcher `?token`, pas de `*` aveugle.
+- `museum-web/public/.well-known/assetlinks.json` (NOUVEAU) — package `com.musaium.mobile`, SHA256 App Signing `38:97:AA:FF:…:34`.
+- `museum-web/next.config.ts` — règle `headers()` forçant `Content-Type: application/json` sur le path AASA (NFR-1 / risque #1 : Next sert un fichier `public/` extensionless en `application/octet-stream`, qu'Apple invalide silencieusement).
+- `museum-web/src/lib/well-known-association.test.ts` — Vitest, 10 tests.
+
+**Reste à faire = gate opérateur post-deploy (NON automatisable en CI ; ne PAS prétendre vérifié — UFR-013)** :
+- Pré-deploy iOS : confirmer que le profil de provisioning EAS **production** porte la capability **Associated Domains** (l'édition `app.config.ts` est inerte sans elle).
+- Deploy gate : les 2 `.well-known` DOIVENT shipper en prod ET être placeholder-free (miroir du gate PGP-key, CLAUDE.md).
+- Post-deploy iOS/Android : checks device réels (`curl` AASA/assetlinks + Apple CDN + `adb pm verify-app-links`/`get-app-links`).
+
+Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md). Décisions D1-D5 dans le design du run (pas de nouvel ADR).
 
 ---
 

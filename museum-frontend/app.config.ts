@@ -133,6 +133,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       icon: BRAND_ICON,
       bundleIdentifier: variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
+      // TD-RNAV-01 — Universal Links. Production-only (spec R3 / design D3):
+      // the entitlement is asserted per-bundle-id, and the preview bundle
+      // (`com.musaium.mobile.preview`) is absent from the published AASA, so a
+      // non-prod build claiming `applinks:musaium.com` would fail verification.
+      associatedDomains: variant === 'production' ? ['applinks:musaium.com'] : undefined,
       buildNumber: '90',
       usesAppleSignIn: true,
       infoPlist: {
@@ -238,6 +243,21 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: variant === 'production' ? APP_ANDROID_PACKAGE : APP_ANDROID_PACKAGE_PREVIEW,
+      // TD-RNAV-01 — App Links. Production-only (spec R3 / design D3): the
+      // `autoVerify` VIEW filter delegates https://musaium.com to this package,
+      // which is matched server-side by `public/.well-known/assetlinks.json`.
+      // The preview package is not in assetlinks, so non-prod stays browser-open.
+      intentFilters:
+        variant === 'production'
+          ? [
+              {
+                action: 'VIEW',
+                autoVerify: true,
+                data: [{ scheme: 'https', host: 'musaium.com' }],
+                category: ['BROWSABLE', 'DEFAULT'],
+              },
+            ]
+          : undefined,
       versionCode: 90,
       permissions: [
         'android.permission.RECORD_AUDIO',

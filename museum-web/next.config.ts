@@ -20,7 +20,18 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      // TD-RNAV-01 — Force `application/json` on the extensionless AASA file.
+      // Next serves a `public/` file with no extension as
+      // `application/octet-stream`, which Apple silently rejects (spec R5/R10,
+      // design D1). No redirect, no route handler — `/.well-known/*` already
+      // bypasses the i18n middleware (design D2, `middleware.test.ts:58-63`).
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+      { source: '/:path*', headers: securityHeaders },
+    ];
   },
 
   // Proxy /api calls to the backend in development

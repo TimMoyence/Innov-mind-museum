@@ -240,5 +240,43 @@
       "important": 0,
       "nit": 2
     }
+  },
+  {
+    "runId": "2026-05-21-universal-links-td-rnav-01",
+    "ts": "2026-05-21T10:23:34Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.30,
+        "reasoning": "All 10 EARS reqs map to verified impl; both suites GREEN at HEAD (FE 9/9, web 10/10). 6 magic-link routes confirmed to exist; locales ['fr','en'] confirmed; middleware /.well-known passthrough confirmed. #1 risk (extensionless AASA Content-Type) resolved via headers() with no redirect. R4 custom scheme not regressed. Real-device gate left as documented operator gate (UFR-013), not claimed automated."
+      },
+      "security": {
+        "score": 94,
+        "weight": 0.25,
+        "reasoning": "0-secret invariant holds; appID/package/SHA256 verbatim from prereqs-verified.json. No wildcard appIDs, no blind '*' — link-hijacking surface minimized; AASA scoped to ?token magic links. Placeholder gate (R9) tested+clean. No eval/dangerouslySetInnerHTML/raw-SQL/env-leak."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.20,
+        "reasoning": "KISS/DRY/hexagonal PASS. Reuses existing variant guard idiom and headers() array; no new abstraction. Inline comments justify WHY per UFR-013. Follows lib-docs PATTERNS."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "RED-first proven (red-diff.patch = test files only); frozen-test PASS. Assertions cover R1-R10 incl. negative prod-only cases + placeholder gate. Verified literals as fixed strings (allowed per spec §4). Real-device E2E intentionally an operator gate, not a coverage gap."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.10,
+        "reasoning": "Code comments cite spec R-IDs + design D-IDs and explain rationale. Minor: editor green-phase output JSON not persisted to run-report dir (NIT); no code impact."
+      },
+      "weightedMean": 92.95
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
+    }
   }
 ]
