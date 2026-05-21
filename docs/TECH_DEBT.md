@@ -269,11 +269,11 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
-### TD-23 — `@musaium/shared` sentry-scrubber : ratifier la divergence hash-algo (ADR-045)
+### ✅ TD-23 — `@musaium/shared` sentry-scrubber : ratifier la divergence hash-algo (ADR-045) (RÉSOLU INFO 2026-05-21)
 
 > **Re-scopé 2026-05-21 (observability verdict, INFO)** : **l'extraction est largement FAITE.** Le package `packages/musaium-shared/src/observability/sentry-scrubber.ts` (+ `.test.ts`) existe ; les 3 fichiers app sont désormais des **thin re-exports** qui importent la logique de scrub depuis `@musaium/shared/observability` et n'injectent que le `hashEmail` runtime-specific (`museum-backend/src/shared/observability/sentry-scrubber.ts:8-16`, `museum-web/src/lib/sentry-scrubber.ts:13-43`, `museum-frontend/shared/observability/sentry-scrubber.ts`). Le drift "sync manuelle" est résolu, gardé par `scripts/sentinels/sentry-scrubber-parity.mjs`. **Résiduel = la divergence d'algo email-hash est désormais INTENTIONNELLE** (BE = SHA-256-8hex via `node:crypto` ; FE+Web = fold 32-bit runtime-agnostic, pas de polyfill `crypto`), documentée in-file (`museum-web/src/lib/sentry-scrubber.ts:6-9,22-27`). Le close-goal original ("aligner sur sha256-8hex, BE source de vérité") n'a PAS été exécuté ; à la place la divergence a été rendue intentionnelle. Reste à ratifier dans ADR-045. Plus un P0.
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw F9 G3 ; re-scopé 2026-05-21 — extraction faite, résiduel = ratifier divergence hash)
+- [x] **Statut** : résolu INFO 2026-05-21 (créé 2026-05-17, audit-2026-05-12-raw F9 G3 ; re-scopé 2026-05-21 — extraction faite ; fermé via amendement ADR-045 « Amendment 2026-05-21 » qui ratifie la divergence hash-algo comme intentionnelle, pas de code)
 - **Référence code** :
   ```
   packages/musaium-shared/src/observability/sentry-scrubber.ts        # source partagée
