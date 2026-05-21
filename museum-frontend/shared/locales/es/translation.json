@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — mensajes de texto",
       "third_party_ai_image_google": "Google AI — fotos",
       "third_party_ai_audio_google": "Google AI — transcripciones de voz",
-      "third_party_ai_profile_google": "Google AI — preferencias e historial"
+      "third_party_ai_profile_google": "Google AI — preferencias e historial",
+      "location_to_llm": "Ubicación — lugares cercanos"
     },
     "accessibility": "Accesibilidad",
     "audio_description": "Audiodescripción",
@@ -1074,7 +1075,9 @@
     "data_audio": "Mensajes de voz (solo transcritos, el audio no es almacenado por la IA)",
     "data_location": "Tu ubicación (si decides compartirla)",
     "data_profile": "Tus preferencias artísticas e historial de visitas (para personalizar las respuestas)",
-    "data_providers": "Procesadas por servicios de IA de terceros: OpenAI, Google y DeepSeek"
+    "data_providers": "Procesadas por servicios de IA de terceros: OpenAI, Google y DeepSeek",
+    "scope_location": "Ubicación",
+    "scope_location_hint": "Tu zona aproximada (ciudad) se comparte con la IA para reconocer museos y monumentos cercanos. Tu ubicación precisa nunca se comparte."
   },
   "dailyArt": {
     "title": "Obra del Día",

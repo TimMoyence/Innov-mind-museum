@@ -21,6 +21,8 @@ jest.mock('@/features/chat/application/thirdPartyAiConsent', () => {
     'third_party_ai_image_google',
     'third_party_ai_audio_google',
     'third_party_ai_profile_google',
+    // B9 — coarse-location data-sharing scope, mirrors the real source array.
+    'location_to_llm',
   ] as const;
   return {
     THIRD_PARTY_AI_SCOPES: SCOPES,
@@ -58,7 +60,8 @@ describe('SettingsAiConsentCard', () => {
 
     expect(getByText('settings.ai_consent_title')).toBeTruthy();
     const switches = getAllByRole('switch');
-    expect(switches).toHaveLength(8);
+    // 8 provider scopes + 1 location-data scope (B9).
+    expect(switches).toHaveLength(9);
     for (const sw of switches) {
       expect(sw.props.value).toBe(false);
     }
@@ -142,7 +145,9 @@ describe('SettingsAiConsentCard', () => {
       expect(getAllByRole('switch')[0]?.props.value).toBe(true);
     });
 
-    fireEvent(getAllByRole('switch')[0]!, 'valueChange', false);
+    const requiredSwitch = getAllByRole('switch')[0];
+    if (!requiredSwitch) throw new Error('expected required switch at index 0');
+    fireEvent(requiredSwitch, 'valueChange', false);
 
     await waitFor(() => {
       expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_text_openai');
@@ -172,13 +177,66 @@ describe('SettingsAiConsentCard', () => {
       expect(getAllByRole('switch')[6]?.props.value).toBe(true);
     });
 
-    fireEvent(getAllByRole('switch')[6]!, 'valueChange', false);
+    const audioSwitch = getAllByRole('switch')[6];
+    if (!audioSwitch) throw new Error('expected audio_google switch at index 6');
+    fireEvent(audioSwitch, 'valueChange', false);
 
     await waitFor(() => {
       expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_audio_google');
     });
     // Optional revocation = the user is informed-managing, not withdrawing —
     // sheet should NOT re-prompt next session.
+    expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
+  });
+
+  // B9 (spec R5 / AC-B9-2) — the location_to_llm row (index 8, after the 8
+  // provider scopes) grants/revokes via the same /api/auth/consent round-trip.
+  it('grants location_to_llm when its Switch is toggled on', async () => {
+    mockListUserConsents.mockResolvedValue([]);
+    mockGrantConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      expect(mockListUserConsents).toHaveBeenCalled();
+    });
+
+    const switches = getAllByRole('switch');
+    const locationSwitch = switches[8];
+    if (!locationSwitch) throw new Error('expected location switch at index 8');
+    fireEvent(locationSwitch, 'valueChange', true);
+
+    await waitFor(() => {
+      expect(mockGrantConsentScope).toHaveBeenCalledWith('location_to_llm');
+    });
+  });
+
+  it('revokes location_to_llm when its Switch is toggled off (optional scope — flag not cleared)', async () => {
+    mockListUserConsents.mockResolvedValue([
+      {
+        id: 9,
+        scope: 'location_to_llm',
+        version: '2026-06-01',
+        grantedAt: '2026-05-16T10:00:00.000Z',
+        revokedAt: null,
+        source: 'ui',
+      },
+    ]);
+    mockRevokeConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      expect(getAllByRole('switch')[8]?.props.value).toBe(true);
+    });
+
+    const locationSwitch = getAllByRole('switch')[8];
+    if (!locationSwitch) throw new Error('expected location_to_llm switch at index 8');
+    fireEvent(locationSwitch, 'valueChange', false);
+
+    await waitFor(() => {
+      expect(mockRevokeConsentScope).toHaveBeenCalledWith('location_to_llm');
+    });
+    // location_to_llm is OPTIONAL — revoking it must NOT clear the "already
+    // asked" memo (only the REQUIRED scope does — do not regress).
     expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
   });
 

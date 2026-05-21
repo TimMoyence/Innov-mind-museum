@@ -2,20 +2,50 @@ import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
 
+import { extractUserIdFromToken } from '@/features/auth/domain/authLogic.pure';
+import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
+
 import { grantConsentScope, type ThirdPartyAiScope } from './thirdPartyAiConsent';
 
-const CONSENT_KEY = 'consent.ai_accepted';
+/**
+ * Per-userId namespaced "user has been asked + answered" memo key (B8, design
+ * §9 D2). TD-AS-01 convention (`musaium.<feature>.<key>`, lib-docs
+ * `@react-native-async-storage/async-storage/LESSONS.md:F1`). The userId is
+ * derived from the access token (`extractUserIdFromToken(getAccessToken())`).
+ *
+ * Namespacing closes the GDPR Art. 7 cross-user inheritance defect: on a shared
+ * device, user A's acceptance lives under A's key and CANNOT suppress user B's
+ * prompt (B reads B's namespace, which is absent → re-prompt). No token →
+ * `__anon` namespace (treated as not-asked → safe re-prompt). The legacy global
+ * `consent.ai_accepted` key is intentionally NEVER consulted — a device
+ * carrying only the legacy key re-prompts under the fresh namespace (R10
+ * migration tolerance), and no value is inherited across users.
+ */
+const ANON_NAMESPACE = '__anon';
+
+const consentMemoKey = (): string => {
+  let userId: string | null = null;
+  try {
+    const token = getAccessToken();
+    userId = token ? extractUserIdFromToken(token) : null;
+  } catch {
+    userId = null;
+  }
+  return `musaium.consent.aiAccepted.${userId ?? ANON_NAMESPACE}`;
+};
 
 /**
- * Clear the local "user has been asked + answered" memo. Called from the
- * Settings revoke surface when the user withdraws the mandatory text scope
- * — the BE state then says "not granted", so the next chat mount MUST
- * re-prompt rather than honour the stale local flag. Failure is non-fatal
- * (worst case = sheet doesn't re-prompt, user can revoke again).
+ * Clear the local "user has been asked + answered" memo for the CURRENT user's
+ * namespace. Called from the Settings revoke surface when the user withdraws
+ * the mandatory text scope, AND from the auth logout / forced-logout cascade
+ * (`AuthContext.clearPerUserFeatureStorage`) so the next user on a shared device
+ * is re-prompted (B8/R6). The BE state then says "not granted", so the next
+ * chat mount MUST re-prompt rather than honour the stale local flag. Failure is
+ * non-fatal (worst case = sheet doesn't re-prompt, user can revoke again).
  */
 export const clearConsentAcceptedFlag = async (): Promise<void> => {
   try {
-    await AsyncStorage.removeItem(CONSENT_KEY);
+    await AsyncStorage.removeItem(consentMemoKey());
   } catch (err: unknown) {
     Sentry.captureException(err, { tags: { flow: 'consent.clear' } });
   }
@@ -45,7 +75,7 @@ export const useAiConsent = () => {
   const [consentResolved, setConsentResolved] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(CONSENT_KEY)
+    AsyncStorage.getItem(consentMemoKey())
       .then((v) => {
         if (v !== 'true') setShowAiConsent(true);
       })
@@ -79,7 +109,7 @@ export const useAiConsent = () => {
       }
     }
     try {
-      await AsyncStorage.setItem(CONSENT_KEY, 'true');
+      await AsyncStorage.setItem(consentMemoKey(), 'true');
     } catch {
       // Persist failure is non-blocking — modal will re-appear next session
     }
@@ -87,7 +117,7 @@ export const useAiConsent = () => {
   }, []);
 
   const recheckConsent = useCallback(() => {
-    AsyncStorage.getItem(CONSENT_KEY)
+    AsyncStorage.getItem(consentMemoKey())
       .then((v) => {
         if (v !== 'true') setShowAiConsent(true);
       })

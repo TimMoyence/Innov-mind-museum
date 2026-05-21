@@ -125,6 +125,22 @@ const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 
 const REQUIRED_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
 
+/**
+ * `location_to_llm` is a coarse-location data-sharing scope (city/country only),
+ * NOT a per-LLM-vendor grant — so it renders in its own single-row "Location"
+ * group BELOW the provider grid (design §9 D1), never under OpenAI/Google.
+ * Default OFF (GDPR Art. 4(11) unambiguous affirmative action). The BE consent
+ * gate (`location-resolver.ts`) is what actually propagates the coarse location
+ * once this is granted.
+ */
+const LOCATION_ROW: RowSpec = {
+  scope: 'location_to_llm',
+  icon: 'location-outline',
+  labelKey: 'consent.scope_location',
+  hintKey: 'consent.scope_location_hint',
+  required: false,
+};
+
 const initialState = (): Record<ThirdPartyAiScope, boolean> =>
   Object.fromEntries(THIRD_PARTY_AI_SCOPES.map((s) => [s, false])) as Record<
     ThirdPartyAiScope,
@@ -305,6 +321,7 @@ export const AiConsentSheetContent = ({
                   </Text>
                 </View>
                 <Switch
+                  testID={`consent-switch-${row.scope}`}
                   value={grants[row.scope]}
                   onValueChange={() => {
                     toggle(row.scope);
@@ -317,6 +334,40 @@ export const AiConsentSheetContent = ({
             ))}
           </View>
         ))}
+
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: theme.surface, borderColor: theme.cardBorder },
+          ]}
+        >
+          <View style={styles.switchRow}>
+            <Ionicons
+              name={LOCATION_ROW.icon}
+              size={20}
+              color={theme.primary}
+              style={styles.switchIcon}
+            />
+            <View style={styles.switchInfo}>
+              <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>
+                {t(LOCATION_ROW.labelKey)}
+              </Text>
+              <Text style={[styles.switchHint, { color: theme.textSecondary }]}>
+                {t(LOCATION_ROW.hintKey)}
+              </Text>
+            </View>
+            <Switch
+              testID={`consent-switch-${LOCATION_ROW.scope}`}
+              value={grants[LOCATION_ROW.scope]}
+              onValueChange={() => {
+                toggle(LOCATION_ROW.scope);
+              }}
+              trackColor={{ false: theme.cardBorder, true: theme.primary }}
+              accessibilityRole="switch"
+              accessibilityLabel={t(LOCATION_ROW.labelKey)}
+            />
+          </View>
+        </View>
 
         <Pressable
           onPress={onPrivacy}

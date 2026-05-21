@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — 文本消息",
       "third_party_ai_image_google": "Google AI — 照片",
       "third_party_ai_audio_google": "Google AI — 语音转录",
-      "third_party_ai_profile_google": "Google AI — 偏好与历史"
+      "third_party_ai_profile_google": "Google AI — 偏好与历史",
+      "location_to_llm": "位置 — 附近的地点"
     },
     "accessibility": "无障碍",
     "audio_description": "音频描述",
@@ -1074,7 +1075,9 @@
     "data_audio": "语音消息（仅转录，音频不被AI存储）",
     "data_location": "您的位置（如果您选择分享）",
     "data_profile": "您的艺术偏好和参观历史（用于个性化回复）",
-    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek"
+    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek",
+    "scope_location": "位置",
+    "scope_location_hint": "您的大致区域（城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的精确位置绝不会被共享。"
   },
   "dailyArt": {
     "title": "每日艺术",

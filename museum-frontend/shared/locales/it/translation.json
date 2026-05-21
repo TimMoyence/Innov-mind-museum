@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — messaggi di testo",
       "third_party_ai_image_google": "Google AI — foto",
       "third_party_ai_audio_google": "Google AI — trascrizioni vocali",
-      "third_party_ai_profile_google": "Google AI — preferenze e cronologia"
+      "third_party_ai_profile_google": "Google AI — preferenze e cronologia",
+      "location_to_llm": "Posizione — luoghi nelle vicinanze"
     },
     "accessibility": "Accessibilità",
     "audio_description": "Audiodescrizione",
@@ -1074,7 +1075,9 @@
     "data_audio": "Messaggi vocali (solo trascritti, l'audio non viene memorizzato dall'IA)",
     "data_location": "La tua posizione (se scegli di condividerla)",
     "data_profile": "Le tue preferenze artistiche e la cronologia delle visite (per personalizzare le risposte)",
-    "data_providers": "Trattati da servizi di IA di terze parti: OpenAI, Google e DeepSeek"
+    "data_providers": "Trattati da servizi di IA di terze parti: OpenAI, Google e DeepSeek",
+    "scope_location": "Posizione",
+    "scope_location_hint": "La tua zona approssimativa (città) è condivisa con l'IA per riconoscere musei e monumenti nelle vicinanze. La tua posizione precisa non è mai condivisa."
   },
   "dailyArt": {
     "title": "Opera del Giorno",

@@ -53,7 +53,9 @@ describe('AiConsentSheetContent — summary view (default)', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
     });
-    // 4 categories × 2 providers = 8 scopes — every one granted in one click.
+    // 4 categories × 2 providers = 8 provider scopes + 1 location-data scope
+    // (B9 — `location_to_llm` is a coarse-location data-sharing grant, not a
+    // per-vendor AI grant) — every one granted in one click.
     const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
     expect(grantedScopes).toEqual(
       expect.arrayContaining([
@@ -65,9 +67,10 @@ describe('AiConsentSheetContent — summary view (default)', () => {
         'third_party_ai_image_google',
         'third_party_ai_audio_google',
         'third_party_ai_profile_google',
+        'location_to_llm',
       ]),
     );
-    expect(grantedScopes.length).toBe(8);
+    expect(grantedScopes.length).toBe(9);
     expect(defaultProps.close).toHaveBeenCalledTimes(1);
   });
 
@@ -110,10 +113,12 @@ describe('AiConsentSheetContent — manage view', () => {
     return api;
   };
 
-  it('Manage CTA reveals 8 switches all defaulting OFF (no pre-check — GDPR Art. 4(11))', async () => {
+  it('Manage CTA reveals 9 switches all defaulting OFF (8 provider + 1 location — GDPR Art. 4(11))', async () => {
     const { getAllByRole } = await renderManage();
     const switches = getAllByRole('switch');
-    expect(switches.length).toBe(8);
+    // 8 provider switches (4 categories × 2 providers) + 1 location-data switch
+    // (B9 — rendered as its own group below the provider grid, design §9 D1).
+    expect(switches.length).toBe(9);
     for (const sw of switches) {
       expect(sw.props.value).toBe(false);
     }
@@ -204,5 +209,95 @@ describe('AiConsentSheetContent — manage view', () => {
     // After round-tripping, the required scope choice survives.
     const switchesAfter = api.getAllByRole('switch');
     expect(switchesAfter[0]?.props.value).toBe(true);
+  });
+});
+
+/**
+ * B9 (spec R5 / AC-B9-2, design §9 D1) — the manage view exposes a dedicated
+ * "Location" group (NOT under the OpenAI/Google provider grid) for the
+ * `location_to_llm` coarse-location data-sharing scope. It defaults OFF, and
+ * enabling it (without the required text scope) does NOT satisfy Save — but
+ * enabling BOTH the required text scope AND the Location toggle forwards
+ * `location_to_llm` in the granted set on Save.
+ */
+describe('AiConsentSheetContent — Location group (location_to_llm, B9)', () => {
+  let defaultProps: {
+    close: jest.Mock;
+    onAccept: jest.Mock;
+    onPrivacy: jest.Mock;
+  };
+
+  beforeEach(() => {
+    defaultProps = {
+      close: jest.fn(),
+      onAccept: jest.fn(),
+      onPrivacy: jest.fn(),
+    };
+  });
+
+  const renderManage = async () => {
+    const api = render(<AiConsentSheetContent {...defaultProps} />);
+    fireEvent.press(api.getByText('consent.manage_choices'));
+    await waitFor(() => {
+      expect(api.getByText('consent.manage_title')).toBeTruthy();
+    });
+    return api;
+  };
+
+  /** The Location switch is identified by its `consent.scope_location` a11y label. */
+  const findLocationSwitch = <T extends { props: { accessibilityLabel?: string } }>(
+    switches: readonly T[],
+  ): T | undefined =>
+    switches.find((sw) => sw.props.accessibilityLabel === 'consent.scope_location');
+
+  it('renders the Location label + hint copy in manage view', async () => {
+    const { getByText } = await renderManage();
+    expect(getByText('consent.scope_location')).toBeTruthy();
+    expect(getByText('consent.scope_location_hint')).toBeTruthy();
+  });
+
+  it('renders a Location switch defaulting OFF with switch a11y role', async () => {
+    const { getAllByRole } = await renderManage();
+    const switches = getAllByRole('switch');
+    const locationSwitch = findLocationSwitch(switches);
+    expect(locationSwitch).toBeDefined();
+    expect(locationSwitch?.props.value).toBe(false);
+    expect(locationSwitch?.props.accessibilityRole).toBe('switch');
+  });
+
+  it('forwards location_to_llm in the granted set when both the required scope and Location are ON', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    const locationSwitch = findLocationSwitch(switches);
+    if (!requiredSwitch || !locationSwitch)
+      throw new Error('expected required + location switches');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+    fireEvent(locationSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).toContain('location_to_llm');
+    expect(grantedScopes).toContain('third_party_ai_text_openai');
+  });
+
+  it('does NOT forward location_to_llm when the Location toggle stays OFF', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    if (!requiredSwitch) throw new Error('expected required switch');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).not.toContain('location_to_llm');
   });
 });
