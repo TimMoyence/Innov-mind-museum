@@ -4,7 +4,7 @@ Guidance for Claude Code (claude.ai/code) in this repo.
 
 ## Project Overview
 
-Musaium — AI Art Companion intra-musée multi-musées, voice-first (V1 launch 2026-06-01). Visiteurs photographient les œuvres, parlent à l'AI, carnet post-visite. AI conversationnel via LangChain + LLM (OpenAI/Deepseek/Google). Audience : B2C freemium + B2B musée (3 pilots Bordeaux : Aquitaine + CAPC + Cité du Vin) + institutionnel. **V2 (post-launch sprint juin-août)** = walking guide hors-musée multi-POI (chemin GPS + audio streaming auto). Re-cadrage NorthStar 2026-05-20 (cf `docs/ROADMAP_PRODUCT.md` NorthStar) après audit fresh-context qui a révélé que `features/walk/` n'existe pas — la position "assistant balade culturelle" pré-V1 était mensongère.
+Musaium — Compagnon culturel IA voice-first, **dedans ET dehors** : tu photographies une œuvre (en musée) ou un monument/lieu (en ville, ex Pont de Pierre à Bordeaux), tu en discutes avec l'AI, carnet post-visite. V1 inclut aussi des **suggestions de proximité** (« un monument à côté », « un musée pas loin ») sans navigation. AI conversationnel via LangChain + LLM (OpenAI/Deepseek/Google). V1 launch 2026-06-07 (minimum, à reconfirmer). Audience : B2C freemium (cible V1) ; **B2B musée = hypothèse future, aucun musée démarché à ce jour** (les 3 musées Bordeaux dans `seed-museums.ts` sont des données de démo, pas des pilots contractés) ; institutionnel = backlog. **V2 (post-launch sprint juin-août)** = parcours guidé navigué multi-POI (itinéraire GPS + suivi trajet + audio streaming auto entre points) — distinct du monument-photo V1. Re-cadrage NorthStar 2026-05-21 (cf `docs/ROADMAP_PRODUCT.md` NorthStar) après que l'audit a révélé que `features/walk/` n'existe pas et que les claims « 3 pilots contractés / LOI signées » étaient mensongers.
 
 Monorepo, 3 apps indépendantes :
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
@@ -331,7 +331,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (29329 symbols, 47179 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (29363 symbols, 47244 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
