@@ -173,7 +173,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
 
-- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)
+- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (`docs/OFFLINE_CONTRACT.md`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
+- [ ] ~~ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)~~
 - **Référence code** :
   ```
   museum-frontend/features/chat/ui/OfflineBanner.tsx                # chat-only, importé seulement dans app/(stack)/chat/[sessionId].tsx
@@ -1850,10 +1851,12 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ---
 
 ## TD-NI-01 — netinfo isConnected null coerced to true (MEDIUM, NICE_TO_HAVE)
+- [x] **Status** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). `?? true` coercion dropped; `ConnectivityProvider` is now tri-state (`isConnected: boolean|null`) deriving `isOnline` via the pure `isOnline()` predicate.
 **Fix** : propagate boolean|null (context type + default).
 **Evidence** : `ConnectivityProvider.tsx:25`.
 
 ## TD-NI-02 — Prefetch ignore isInternetReachable (MEDIUM, NICE_TO_HAVE)
+- [x] **Status** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). `useMuseumPrefetch` now gates on canonical `isOnline` (honours `isInternetReachable === false`), not `type !== 'wifi'` alone.
 **Fix** : gate on isInternetReachable in `useMuseumPrefetch.ts:39-41`.
 
 ## TD-NI-03 — Missing iOS AppState refresh (LOW)
@@ -1868,7 +1871,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (mobile + state-sweep verdicts, triple-corroboré : netinfo §1 + tanstack-query §11.1 + grep direct).** Sous-cas explicite de TD-14 (cf. TD-14 step 5 annoté), tracé séparément pour visibilité car c'est l'item offline FE le plus à fort levier pré-launch.
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- [x] **Statut** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). NetInfo→`onlineManager` bridge installed once at bootstrap via `installOnlineManagerBridge()` (module side-effect in `shared/data/queryClient.ts:16`) → `refetchOnReconnect`/`networkMode:'online'` now self-heal on device. Couvre aussi TD-14 step 5.
 - **Référence code** : `grep -rn "onlineManager|focusManager|setEventListener"` museum-frontend = **0 hit**. `queryClient.ts:54-55` set `refetchOnReconnect:true` + `networkMode:'online'` mais sur RN la détection reconnect est web-only sans `onlineManager.setEventListener(NetInfo)`. `ConnectivityProvider.tsx:23-26` a un listener NetInfo mais qui ne feed QUE le contexte local, pas react-query.
 - **Symptôme** : `refetchOnReconnect` ne fire JAMAIS sur device, `networkMode:'online'` ne pause/resume jamais → pas de self-heal automatique des queries offline→online, pas de mutation queue/resume offline. Le commentaire `queryClient.ts:54-55` ("mobile uses an explicit AppState listener") est TROMPEUR — `useAuthAppStateSync.ts` est auth-token-refresh only, pas un bridge connectivité query. Offline-first = requirement PRE-V1.
 - **Severity** : MEDIUM-HIGH, pre-V1 (devrait lander avant le launch 2026-06-01). ~1h.

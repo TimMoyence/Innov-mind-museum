@@ -37,7 +37,6 @@ import { Composer } from '@/features/chat/ui/Composer';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
 import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
 import { setSessionContext } from '@/features/chat/infrastructure/chatApi/metadata';
-import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { WalkSuggestionChips } from '@/features/chat/ui/WalkSuggestionChips';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -87,8 +86,6 @@ export default function ChatSessionScreen() {
     isLoading,
     isSending,
     isStreaming,
-    isOffline,
-    pendingCount,
     error,
     clearError,
     dailyLimitReached,
@@ -490,7 +487,6 @@ export default function ChatSessionScreen() {
             </Text>
           ) : null}
 
-          <OfflineBanner pendingCount={pendingCount} isOffline={isOffline} />
           {error ? (
             <ErrorState
               variant="inline"

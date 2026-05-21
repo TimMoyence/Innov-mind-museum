@@ -1,0 +1,82 @@
+appId: com.musaium.mobile.preview
+---
+# screen: GlobalOfflineBannerHost
+#
+# Connectivity Offline Banner Flow (UFR-021, run 2026-05-21-connectivity-offline-first).
+# Proves the GLOBAL offline banner (mounted once in app/_layout.tsx) surfaces the
+# offline state on a NON-chat screen and persists across a non-chat navigation —
+# i.e. it is no longer chat-screen-only. Covers spec R8/R10 + TD-14 step 3.
+#
+# Platform caveat (lib-docs/@react-native-community/netinfo PATTERNS.md:171,238):
+# the iOS Simulator does NOT reflect host WiFi / airplane toggles, and Maestro's
+# snapshot is silent on iOS connectivity drivers. `setAirplaneMode` is reliable on
+# the Android matrix — this flow targets Android; iOS nightly is best-effort.
+#
+# Prerequisites:
+#   - User is already logged in (helpers/quick-login.yaml) or app is authenticated.
+
+# ──────────────────────────────────────────────
+# Phase 1: Land on the home (non-chat) screen, online
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+# If we land on auth, log in first.
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if it appears.
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# Banner must NOT be visible while online.
+- assertNotVisible:
+    id: "offline-banner"
+
+# ──────────────────────────────────────────────
+# Phase 2: Go offline (airplane mode) — global banner must appear on home
+# ──────────────────────────────────────────────
+- setAirplaneMode: enabled
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "offline-banner"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 3: Tap-through — navigate to another NON-chat surface and prove the
+# banner persists (global mount, not a per-screen instance)
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Settings"
+    optional: true
+- waitForAnimationToEnd
+
+- assertVisible:
+    id: "offline-banner"
+
+# Navigate back to home — banner still present while offline.
+- back
+- waitForAnimationToEnd
+
+- assertVisible:
+    id: "offline-banner"
+
+# ──────────────────────────────────────────────
+# Phase 4: Restore connectivity — banner disappears
+# ──────────────────────────────────────────────
+- setAirplaneMode: disabled
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    notVisible:
+      id: "offline-banner"
+    timeout: 15000

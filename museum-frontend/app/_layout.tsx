@@ -37,6 +37,7 @@ setErrorTranslate((key, opts) => i18n.t(key as 'error.network', opts));
 import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
+import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
 import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
@@ -213,6 +214,7 @@ function RootLayout() {
                             <Stack.Screen name="+not-found" />
                           </Stack>
                           <ThemedStatusBar />
+                          <GlobalOfflineBannerHost />
                           <PaywallModalHost />
                         </AuthenticationGuard>
                       </BiometricGate>
