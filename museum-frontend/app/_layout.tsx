@@ -193,6 +193,7 @@ function RootLayout() {
                             />
                             <Stack.Screen name="(stack)/settings" />
                             <Stack.Screen name="(stack)/change-password" />
+                            <Stack.Screen name="(stack)/mfa-enroll" />
                             <Stack.Screen name="(stack)/preferences" />
                             <Stack.Screen name="(stack)/guided-museum-mode" />
                             <Stack.Screen name="(stack)/offline-maps" />

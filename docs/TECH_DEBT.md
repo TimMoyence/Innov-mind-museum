@@ -1194,11 +1194,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code + index-entry expo-secure-store).**
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
-- **Référence code** : `museum-frontend/features/auth/infrastructure/authTokenStore.ts:50` — `secureStore.setItemAsync(key, token)` appelé SANS 3e arg `options`, pour `REFRESH_TOKEN_KEY` (`:17,:64`) ET `ACCESS_TOKEN_KEY` (`:18,:65`).
+- [x] **Statut** : fermé 2026-05-21 via run `2026-05-21-td-sec-01-02-mobile-secrets` (commit pending) — APPROVED reviewer. `secureTokenStore` factory passe désormais `{ keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` pour les 2 tokens (access + refresh) → device-bound, non-backup-migratable. Fallback web AsyncStorage inchangé.
+- **Référence code** : `museum-frontend/features/auth/infrastructure/authTokenStore.ts` — `secureStore.setItemAsync(key, token, { keychainAccessible: ... })` pour `REFRESH_TOKEN_KEY` ET `ACCESS_TOKEN_KEY`.
 - **Symptôme** : `expo-secure-store` défaut à `WHEN_UNLOCKED` (pas `*_THIS_DEVICE_ONLY`) → l'item keychain est inclus dans l'iCloud Keychain / les backups device chiffrés et migrable vers un nouvel appareil. Un backup restauré sur un appareil contrôlé par un attaquant porte une session live (refresh token long-lived). Exploit nécessite la chaîne device-backup-restore-to-attacker → défendable au launch, fix rapide.
 - **Severity** : HIGH, NICE_TO_HAVE pre-V1.
-- **Comment fermer** : passer `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` aux 2 calls `set` (+ ré-écrire tout item pré-existant une fois au prochain login).
+- **Comment fermer** : ~~passer `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` aux 2 calls `set`~~ FAIT (les items pré-existants sont ré-écrits au prochain login).
 
 ---
 
@@ -1206,11 +1206,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code ; lib-docs `react-native-qrcode-svg` F-SEC-03). Note : le verdict lib-docs l'appelait "TD-QR-03" mais ce TD n'existe pas — entrée genuinement nouvelle.**
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
-- **Référence code** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:108-128` — `<QRCode value={otpauthUrl} size={200} />` (`:108-113`) + le secret TOTP base32 `selectable` (`{manualSecret}`) + les recovery codes (`:117-128`). Vérifié : AUCUN `expo-screen-capture` / `FLAG_SECURE` / `usePreventScreenCapture` / blur iOS resign-active dans le fichier (grep = 0).
+- [x] **Statut** : fermé 2026-05-21 via run `2026-05-21-td-sec-01-02-mobile-secrets` (commit pending) — APPROVED reviewer. Nouveau hook `museum-frontend/features/auth/hooks/usePreventScreenCapture.ts` (require lazy/web-safe gardé de `expo-screen-capture`) : `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount — PAS le hook lib unmount-only), key `'mfa-secret'`, erreurs via `reportError` sans payload secret. Wiré dans `MfaEnrollScreen.tsx`. Native dep `expo-screen-capture ~55.0.14` (pod install fait, Pods + Podfile.lock + ExpoModulesProvider.swift committés). Route Expo `app/(stack)/mfa-enroll.tsx` ajoutée (écran était orphelin) + flow Maestro `.maestro/mfa-enroll-flow.yaml` (UFR-021).
+- **Référence code** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx` (wire `usePreventScreenCapture`), `museum-frontend/features/auth/hooks/usePreventScreenCapture.ts`.
 - **Symptôme** : sur Android le secret est screenshot/screen-record/app-switcher-snapshot capturable ; iOS n'a pas de blur on resign-active. Screenshot/recording/snapshot leak le secret TOTP et/ou les recovery codes (2nd-factor exposure). Mitigé par user-presence requirement + faible incidence pré-launch.
 - **Severity** : HIGH, NICE_TO_HAVE pre-V1.
-- **Comment fermer** : gate l'écran avec `expo-screen-capture` (`usePreventScreenCaptureAsync` on focus, release on blur → Android FLAG_SECURE) + overlay iOS sur `resignActive` ; ne jamais logger `otpauthUrl`/`manualSecret`.
+- **Comment fermer** : ~~gate l'écran avec `expo-screen-capture` (on focus, release on blur → Android FLAG_SECURE)~~ FAIT via `usePreventScreenCapture` (impératif + `useFocusEffect`, pas le hook lib unmount-only). `otpauthUrl`/`manualSecret` jamais loggés.
 
 ---
 

@@ -154,6 +154,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **`apiPut` n'existe pas dans `museum-web/src/lib/api.ts`** — la stack expose `apiGet/Post/Patch/Delete`. Les pages admin qui PUT (ex branding) utilisent un wrapper `fetch` local + CSRF cookie (`csrf_token`→`X-CSRF-Token`) + `credentials:'include'`. >2 sites ré-implémentant ce wrapper → ajouter `apiPut` proprement. Réf `admin/museums/[id]/branding/page.tsx`.
 - **`SAVEPOINT` dans une migration crash sous `runMigrations({transaction:'none'})`** — l'integration harness (`tests/helpers/integration/integration-harness.ts`) run les migrations HORS transaction → `SAVEPOINT can only be used in transaction blocks` → **kill TOUTES les suites integration**. Fix : guarder par `if (queryRunner.isTransactionActive)`. Réf migration `AddMuseumGeofence.ts`.
 - **Retirer un pin `@types/*` d'un `pnpm.overrides` ne suffit PAS à le bumper** — si le `@types` parent déclare une range qui matche déjà la version pinnée, pnpm garde le lockfile. Forcer : déclarer le sous-paquet en `devDependencies` directe avec la range cible (ex `@types/express-serve-static-core: ^5.1.1`), puis re-résoudre. Réf `museum-backend/package.json`. TD-11.
+- **Écran affichant un secret (TOTP/recovery codes) → screen-capture impératif, PAS le hook lib (museum-frontend)** — `usePreventScreenCapture()` de `expo-screen-capture` ne release que sur unmount, or un `<Stack.Screen>` reste monté quand on navigue dessus (host persistant, même classe que RN Modal). Utiliser `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount), key dédiée. `require()` lazy/web-safe gardé (le module est natif → absent sur web/Jest), erreurs via `reportError` sans payload secret, jamais logger le secret. `expo-screen-capture` = native dep → `pod install` + `git add -f ios/Pods/...` + Podfile.lock + ExpoModulesProvider.swift committés (Xcode Cloud ne run pas `pod install`). Tokens : `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` (device-bound, non-backup-migratable). Réf `features/auth/hooks/usePreventScreenCapture.ts`, TD-SEC-01/02, `lib-docs/expo-screen-capture/PATTERNS.md`.
 
 ## Environment Setup
 
@@ -330,7 +331,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (28848 symbols, 46692 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (29329 symbols, 47179 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

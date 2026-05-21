@@ -13,6 +13,7 @@
         "auth-register-minor-dob.yaml",
         "auth-register-password-breached.yaml",
         "auth-account-delete.yaml",
+        "mfa-enroll-flow.yaml",
         "onboarding-flow.yaml",
         "onboarding-full-carousel.yaml",
         "onboarding-skip-anonymous.yaml",

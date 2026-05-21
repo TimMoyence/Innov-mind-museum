@@ -12,6 +12,7 @@ export {
   makePostMessageResponse,
 } from './session.factories';
 export { makeAuthUser, makeAuthTokens } from './auth.factories';
+export { makeMfaEnrollResult } from './mfa.factories';
 export { makeMuseumListItem, makeGeoLocation } from './museum.factories';
 export type { GeoLocation } from './museum.factories';
 export { makeReview } from './review.factories';
