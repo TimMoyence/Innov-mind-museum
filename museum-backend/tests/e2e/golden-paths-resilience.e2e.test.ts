@@ -208,6 +208,7 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
           password,
           firstname: 'Fresh',
           lastname: 'User',
+          dateOfBirth: '1990-06-13',
         }),
       });
       // E2E env has no SMTP — bypass verification email so login succeeds.

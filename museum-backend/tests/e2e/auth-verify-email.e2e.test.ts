@@ -29,6 +29,7 @@ describeE2E('auth verify-email e2e', () => {
         password: 'Password123!',
         firstname: 'Verify',
         lastname: 'Test',
+        dateOfBirth: '1990-06-13',
         gdprConsent: true,
       }),
     });

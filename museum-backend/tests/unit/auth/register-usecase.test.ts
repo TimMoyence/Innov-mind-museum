@@ -28,6 +28,10 @@ const makeMockEmailService = (): jest.Mocked<EmailService> => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
 });
 
+// A2 (T2.5G): dateOfBirth is now required by RegisterUseCase (hard-throw on a
+// falsy DOB). Adult DOB so these non-age-gate cases exercise their real intent.
+const ADULT_DOB = '1990-06-13';
+
 describe('RegisterUseCase', () => {
   it('registers a user with valid email and password', async () => {
     const registeredUser = makeUser({ id: 10, email: 'newuser@test.com' });
@@ -36,7 +40,11 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute({ email: 'newuser@test.com', password: 'StrongP@ss1!' });
+    const result = await useCase.execute({
+      email: 'newuser@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     expect(result.id).toBe(10);
     expect(result.email).toBe('newuser@test.com');
@@ -46,7 +54,7 @@ describe('RegisterUseCase', () => {
       'StrongP@ss1!',
       undefined,
       undefined,
-      undefined,
+      ADULT_DOB,
     );
   });
 
@@ -57,14 +65,18 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    await useCase.execute({ email: '  User@Test.COM  ', password: 'StrongP@ss1!' });
+    await useCase.execute({
+      email: '  User@Test.COM  ',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     expect(userRepo.registerUser).toHaveBeenCalledWith(
       'user@test.com',
       expect.anything(),
       undefined,
       undefined,
-      undefined,
+      ADULT_DOB,
     );
   });
 
@@ -81,7 +93,9 @@ describe('RegisterUseCase', () => {
     const userRepo = makeUserRepo();
     const useCase = new RegisterUseCase(userRepo);
 
-    await expect(useCase.execute({ email: 'user@test.com', password: '123' })).rejects.toThrow();
+    await expect(
+      useCase.execute({ email: 'user@test.com', password: '123', dateOfBirth: ADULT_DOB }),
+    ).rejects.toThrow();
   });
 
   it('passes sanitized name fields to the repository', async () => {
@@ -96,6 +110,7 @@ describe('RegisterUseCase', () => {
       password: 'StrongP@ss1!',
       firstname: 'Jane',
       lastname: 'Doe',
+      dateOfBirth: ADULT_DOB,
     });
 
     expect(userRepo.registerUser).toHaveBeenCalledWith(
@@ -103,7 +118,7 @@ describe('RegisterUseCase', () => {
       'StrongP@ss1!',
       'Jane',
       'Doe',
-      undefined,
+      ADULT_DOB,
     );
   });
 
@@ -115,7 +130,11 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
+    await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     expect(userRepo.setVerificationToken).toHaveBeenCalledTimes(1);
     const [userId, storedToken, expires] = userRepo.setVerificationToken.mock.calls[0];
@@ -141,7 +160,11 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
+    await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     expect(emailService.sendEmail).toHaveBeenCalledTimes(1);
     expect(emailService.sendEmail).toHaveBeenCalledWith(
@@ -162,7 +185,12 @@ describe('RegisterUseCase', () => {
     const emailService = makeMockEmailService();
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!', locale: 'en' });
+    await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      locale: 'en',
+      dateOfBirth: ADULT_DOB,
+    });
 
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
     expect(htmlArg).toContain('https://app.example.com/en/verify-email?token=');
@@ -178,7 +206,11 @@ describe('RegisterUseCase', () => {
     emailService.sendEmail.mockRejectedValue(new Error('SMTP connection refused'));
 
     const useCase = new RegisterUseCase(userRepo, emailService, 'https://app.example.com');
-    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
+    const result = await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     // Registration should still succeed
     expect(result.id).toBe(7);
@@ -193,7 +225,11 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
+    const result = await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     // Registration still succeeds
     expect(result.id).toBe(8);
@@ -206,7 +242,11 @@ describe('RegisterUseCase', () => {
     });
 
     const useCase = new RegisterUseCase(userRepo);
-    const result = await useCase.execute({ email: 'user@test.com', password: 'StrongP@ss1!' });
+    const result = await useCase.execute({
+      email: 'user@test.com',
+      password: 'StrongP@ss1!',
+      dateOfBirth: ADULT_DOB,
+    });
 
     expect(result.id).toBe(9);
     // setVerificationToken is still called

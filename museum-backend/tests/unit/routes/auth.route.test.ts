@@ -411,6 +411,8 @@ describe('Auth Routes — HTTP Layer', () => {
         password: 'ValidPass1',
         firstname: 'Jane',
         lastname: 'Doe',
+        // A2 (R3): dateOfBirth is now required by the register schema.
+        dateOfBirth: '1990-06-13',
       });
 
       expect(res.status).toBe(201);
@@ -424,7 +426,7 @@ describe('Auth Routes — HTTP Layer', () => {
         firstname: 'Jane',
         lastname: 'Doe',
         locale: 'fr',
-        dateOfBirth: undefined,
+        dateOfBirth: '1990-06-13',
         ip: expect.any(String),
         requestId: expect.any(String),
       });

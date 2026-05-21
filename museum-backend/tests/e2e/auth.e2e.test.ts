@@ -26,6 +26,7 @@ describeE2E('auth e2e (full lifecycle)', () => {
         password: 'Password123!',
         firstname: 'Auth',
         lastname: 'Test',
+        dateOfBirth: '1990-06-13',
       }),
     });
 

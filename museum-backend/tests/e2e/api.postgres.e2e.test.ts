@@ -62,6 +62,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Tester',
         lastname: 'User',
+        dateOfBirth: '1990-06-13',
       }),
     });
 
@@ -188,6 +189,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Audio',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     expect(register.status).toBe(201);
@@ -261,6 +263,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Image',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     await markEmailVerified(harness, email);
@@ -376,6 +379,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Recency',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     await markEmailVerified(harness, email);
@@ -443,6 +447,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Delete',
         lastname: 'Case',
+        dateOfBirth: '1990-06-13',
       }),
     });
     expect(register.status).toBe(201);
