@@ -142,7 +142,9 @@ describe('SettingsAiConsentCard', () => {
       expect(getAllByRole('switch')[0]?.props.value).toBe(true);
     });
 
-    fireEvent(getAllByRole('switch')[0]!, 'valueChange', false);
+    const firstSwitch = getAllByRole('switch')[0];
+    if (!firstSwitch) throw new Error('expected consent switches to be rendered');
+    fireEvent(firstSwitch, 'valueChange', false);
 
     await waitFor(() => {
       expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_text_openai');
@@ -172,7 +174,10 @@ describe('SettingsAiConsentCard', () => {
       expect(getAllByRole('switch')[6]?.props.value).toBe(true);
     });
 
-    fireEvent(getAllByRole('switch')[6]!, 'valueChange', false);
+    const audioGoogleSwitch = getAllByRole('switch')[6];
+    if (!audioGoogleSwitch)
+      throw new Error('expected the audio_google consent switch to be rendered');
+    fireEvent(audioGoogleSwitch, 'valueChange', false);
 
     await waitFor(() => {
       expect(mockRevokeConsentScope).toHaveBeenCalledWith('third_party_ai_audio_google');

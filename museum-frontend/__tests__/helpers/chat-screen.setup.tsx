@@ -3,6 +3,8 @@
  * Import AFTER test-utils (which provides global mocks for theme, router, etc.).
  */
 
+import type * as ReactTypes from 'react';
+
 // Locally declared so babel-jest allows them in the jest.mock factory below.
 const mockChatApiCreate = jest.fn();
 const mockChatApiDeleteSessionIfEmpty = jest.fn();
@@ -36,9 +38,9 @@ jest.mock('@react-navigation/native', () => ({
   // Screen-focus re-runs the consent re-check (`recheckConsent`) so the sheet
   // re-prompts after a Settings revoke. The mock executes the effect once on
   // mount (same lifecycle as real focus-on-mount) and returns a noop cleanup.
-  useFocusEffect: (effect: () => void | (() => void)) => {
-    const React = require('react') as typeof import('react');
-    React.useEffect(() => effect(), [effect]);
+  useFocusEffect: (effect: ReactTypes.EffectCallback) => {
+    const ReactRuntime = require('react') as typeof ReactTypes;
+    ReactRuntime.useEffect(() => effect(), [effect]);
   },
 }));
 

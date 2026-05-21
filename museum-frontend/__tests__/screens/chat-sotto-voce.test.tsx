@@ -24,6 +24,7 @@
  *   - Minimum surface mocked here ; screen-local gate is the contract.
  */
 
+import type * as ReactTypes from 'react';
 import React from 'react';
 import { render } from '@testing-library/react-native';
 
@@ -108,9 +109,9 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: (_event: string, _cb: () => void) => jest.fn(),
   }),
-  useFocusEffect: (effect: () => void | (() => void)) => {
-    const React = require('react') as typeof import('react');
-    React.useEffect(() => effect(), [effect]);
+  useFocusEffect: (effect: ReactTypes.EffectCallback) => {
+    const ReactRuntime = require('react') as typeof ReactTypes;
+    ReactRuntime.useEffect(() => effect(), [effect]);
   },
 }));
 

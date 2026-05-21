@@ -35,6 +35,7 @@
       "name": "museum",
       "flows": [
         "museum-search-geo.yaml",
+        "museum-picker-flow.yaml",
         "navigation-flow.yaml",
         "nav-stack-deep-links.yaml",
         "nav-tabs-roundtrip.yaml"
