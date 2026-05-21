@@ -46,6 +46,7 @@ import type {
 } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { PrepareReady } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
@@ -95,6 +96,12 @@ export interface ChatEnrichmentDeps {
   locationResolver?: LocationResolver;
   /** GDPR — gates whether location reaches LLM at all. */
   locationConsentChecker?: LocationConsentChecker;
+  /**
+   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
+   * `third_party_ai_<text|image>_<provider>` scopes (R2/R3). Without checker
+   * the legacy always-allow path is preserved (pre-launch migration window).
+   */
+  thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
   /** W3 (T5.4) — looked up by pipeline for the `[CURRENT ARTWORK]` prompt section. */
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
@@ -179,6 +186,7 @@ export class ChatMessageService {
       extractionQueue: enrichment.extractionQueue,
       locationResolver: enrichment.locationResolver,
       locationConsentChecker: enrichment.locationConsentChecker,
+      thirdPartyAiConsentChecker: enrichment.thirdPartyAiConsentChecker,
       artworkKnowledgeRepo: enrichment.artworkKnowledgeRepo,
     });
   }

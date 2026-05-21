@@ -60,9 +60,12 @@ export class ExtractionWorker implements ExtractionQueuePort {
     this.worker = new Worker<ExtractionJobPayload>(
       QUEUE_NAME,
       async (job) => {
-        const { url, searchTerm, locale } = job.data;
+        // R10 — destructure tolerantly. In-flight legacy jobs may still carry
+        // a leftover `searchTerm` field; JS object-destructure ignores extras
+        // by default, so the deploy-window backward-compat is automatic.
+        const { url, locale } = job.data;
         logger.info('extraction_job_start', { url, jobId: job.id });
-        await this.jobService.processUrl(url, searchTerm, locale);
+        await this.jobService.processUrl(url, locale);
       },
       {
         connection: this.config.connection,

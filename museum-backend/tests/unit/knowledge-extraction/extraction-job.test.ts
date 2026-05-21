@@ -28,7 +28,6 @@ import {
 // ---------------------------------------------------------------------------
 
 const TEST_URL = 'https://example.com/mona-lisa';
-const TEST_SEARCH_TERM = 'Mona Lisa';
 const TEST_LOCALE = 'en';
 
 const SCRAPED_PAGE: ScrapedPage = {
@@ -131,7 +130,7 @@ describe('ExtractionJobService', () => {
   it('full success flow: scrapes, classifies artwork, stores in artworkRepo', async () => {
     const { service, scraper, classifier, contentRepo, artworkRepo, museumRepo } = makeService();
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(scraper.scrape).toHaveBeenCalledWith(TEST_URL);
     expect(classifier.classify).toHaveBeenCalledWith(SCRAPED_PAGE.textContent, TEST_LOCALE);
@@ -160,7 +159,7 @@ describe('ExtractionJobService', () => {
     const contentRepo = makeContentRepo({ scrapedAt: recentDate });
     const { service, scraper, classifier } = makeService({ contentRepo });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(scraper.scrape).not.toHaveBeenCalled();
     expect(classifier.classify).not.toHaveBeenCalled();
@@ -172,7 +171,7 @@ describe('ExtractionJobService', () => {
     const contentRepo = makeContentRepo({ scrapedAt: staleDate });
     const { service, scraper } = makeService({ contentRepo });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(scraper.scrape).toHaveBeenCalledWith(TEST_URL);
     expect(contentRepo.upsert).toHaveBeenCalled();
@@ -182,7 +181,7 @@ describe('ExtractionJobService', () => {
     const scraper = makeScraper(null);
     const { service, classifier, contentRepo } = makeService({ scraper });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(scraper.scrape).toHaveBeenCalledWith(TEST_URL);
     expect(classifier.classify).not.toHaveBeenCalled();
@@ -194,7 +193,7 @@ describe('ExtractionJobService', () => {
     const classifier = makeClassifier(null);
     const { service, contentRepo, artworkRepo } = makeService({ classifier });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(contentRepo.upsert).toHaveBeenCalled();
     expect(contentRepo.updateStatus).toHaveBeenCalledWith(TEST_URL, ExtractedContentStatus.FAILED);
@@ -210,7 +209,7 @@ describe('ExtractionJobService', () => {
     const classifier = makeClassifier(lowConfidenceClassification);
     const { service, contentRepo, artworkRepo, museumRepo } = makeService({ classifier });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(contentRepo.updateStatus).toHaveBeenCalledWith(
       TEST_URL,
@@ -229,7 +228,7 @@ describe('ExtractionJobService', () => {
     const classifier = makeClassifier(midConfidenceClassification);
     const { service, artworkRepo, contentRepo } = makeService({ classifier });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(artworkRepo.upsertFromClassification).toHaveBeenCalledWith(
       expect.objectContaining({ needsReview: true, confidence: 0.55 }),
@@ -245,7 +244,7 @@ describe('ExtractionJobService', () => {
     const classifier = makeClassifier(MUSEUM_CLASSIFICATION);
     const { service, artworkRepo, museumRepo, contentRepo } = makeService({ classifier });
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(museumRepo.upsertFromClassification).toHaveBeenCalledWith(
       expect.objectContaining({

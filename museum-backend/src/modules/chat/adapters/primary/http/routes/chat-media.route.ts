@@ -18,6 +18,8 @@ import {
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
+import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
+import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
@@ -31,11 +33,12 @@ import {
 import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 
 const MESSAGE_ID_REQUIRED = 'messageId param is required';
 
-function createAudioHandler(chatService: ChatService) {
+function createAudioHandler(chatService: ChatService, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
     const parsedAudioContext = parseContext(req.body?.context);
@@ -52,6 +55,18 @@ function createAudioHandler(chatService: ChatService) {
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
       throw badRequest('session id param is required');
+    }
+
+    // B7 (R4/R5/R6) — gate STT on `third_party_ai_audio_<provider>` BEFORE
+    // any external (OpenAI Whisper) call. Runs AFTER isAuthenticated +
+    // rate-limit + costGuard + multer (middleware order preserved); the
+    // check is read-only so the "mutating middleware ordering" gotcha
+    // (CLAUDE.md) does not regress.
+    const { scope: audioScope } = resolveActiveProviderForScope('audio');
+    const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
+    if (!granted) {
+      res.status(403).json({ error: 'consent_required', scope: audioScope });
+      return;
     }
 
     const result = await chatService.postAudioMessage(
@@ -211,6 +226,7 @@ function createTtsHandler(chatService: ChatService) {
 export const createMediaRouter = (
   chatService: ChatService,
   uploadAdmission?: RequestHandler,
+  consentChecker: ThirdPartyAiConsentChecker = buildThirdPartyAiConsentChecker(),
 ): Router => {
   const router = Router();
 
@@ -237,7 +253,7 @@ export const createMediaRouter = (
     llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
-    createAudioHandler(chatService),
+    createAudioHandler(chatService, consentChecker),
   );
   router.post(
     '/messages/:messageId/report',

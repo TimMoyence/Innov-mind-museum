@@ -70,6 +70,24 @@ export default function Footer({ dict, locale }: FooterProps) {
             >
               {dict.footer.links.b2b}
             </Link>
+            <Link
+              href={`/${locale}/terms`}
+              className="text-sm text-text-secondary transition-colors hover:text-primary-600"
+            >
+              {dict.footer.links.terms}
+            </Link>
+            <Link
+              href={`/${locale}/subprocessors`}
+              className="text-sm text-text-secondary transition-colors hover:text-primary-600"
+            >
+              {dict.footer.links.subprocessors}
+            </Link>
+            <Link
+              href={`/${locale}/cookies`}
+              className="text-sm text-text-secondary transition-colors hover:text-primary-600"
+            >
+              {dict.footer.links.cookies}
+            </Link>
           </nav>
         </div>
       </div>

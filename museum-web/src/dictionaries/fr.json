@@ -195,7 +195,10 @@
       "support": "Aide",
       "accessibility": "Accessibilité",
       "security": "Sécurité",
-      "b2b": "Pour les musées"
+      "b2b": "Pour les musées",
+      "terms": "Conditions d'utilisation",
+      "subprocessors": "Sous-traitants",
+      "cookies": "Cookies"
     }
   },
   "resetPassword": {

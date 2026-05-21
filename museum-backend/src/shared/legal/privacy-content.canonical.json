@@ -1,0 +1,580 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-05-21",
+  "locales": {
+    "en": {
+      "sections": [
+        {
+          "id": "controller",
+          "title": "1. Data Controller",
+          "paragraphs": [
+            "Musaium is operated by InnovMind (Tim Moyence, Entrepreneur Individuel), acting as data controller for personal data processed through the mobile application and related support channels.",
+            "Registered address: France.",
+            "Contact: tim.moyence@gmail.com.",
+            "Pursuant to Article 37 GDPR, the designation of a Data Protection Officer (DPO) is not required for our organisation."
+          ]
+        },
+        {
+          "id": "data-collected",
+          "title": "2. Data We Collect",
+          "paragraphs": [
+            "Account data: email address, hashed and salted password, account creation date, user preferences (language, theme).",
+            "Conversation data: text messages exchanged during chat sessions, AI-generated responses, session metadata (timestamps, session identifiers, museum context where applicable).",
+            "Visual and audio data: photographs of artworks taken or imported by the user; audio recordings of voice questions. These are transmitted to AI services for analysis and kept only for the time required for processing.",
+            "Technical data: device type and version, operating system, app version, anonymised technical identifiers, error and performance logs.",
+            "Support data: messages sent through support channels (Instagram/Telegram) may be processed by those platforms under their own privacy policies."
+          ]
+        },
+        {
+          "id": "purposes",
+          "title": "3. Purposes & Legal Bases (GDPR Art. 6)",
+          "paragraphs": [
+            "Provide museum-focused AI assistance about artworks, monuments, museums, architecture, and cultural heritage — Contract performance (Art. 6(1)(b)).",
+            "Operate authentication, secure sessions, error handling, and support workflows — Contract performance (Art. 6(1)(b)).",
+            "Security monitoring, fraud prevention, service reliability and product diagnostics — Legitimate interests (Art. 6(1)(f)).",
+            "Device permissions (camera, microphone, photo library) — Consent (Art. 6(1)(a)), only when the user explicitly triggers the feature.",
+            "Granular third-party AI consent (text/image/audio/profile × OpenAI/Google) — Consent (Art. 6(1)(a)) layered on top of contract performance."
+          ]
+        },
+        {
+          "id": "device-permissions",
+          "title": "4. Device Permissions",
+          "paragraphs": [
+            "Camera — used to photograph artworks for AI-driven contextual information. No background capture.",
+            "Microphone — used for voice questions. Audio is transmitted for transcription, then deleted after processing.",
+            "Photo Library — used to import an existing image from the gallery. Only the selected image is accessible to the application.",
+            "No passive collection: permissions are only used when the user actively triggers the matching feature."
+          ]
+        },
+        {
+          "id": "recipients",
+          "title": "5. Recipients & Sub-processors",
+          "paragraphs": [
+            "Authorised internal personnel, on a need-to-know basis.",
+            "Sub-processors are listed in §5.1 below. Each transfer outside the European Economic Area (EEA) is governed by appropriate safeguards (Standard Contractual Clauses, adequacy decision, or equivalent mechanism).",
+            "OpenAI (United States) — LLM provider for text and vision; transfer mechanism: SCC.",
+            "Google Cloud / Vertex AI (United States / EU) — alternative LLM provider; transfer mechanism: SCC.",
+            "DeepSeek (China) — alternative LLM provider, NOT enabled in EU production builds; transfer mechanism: none (not used in EU).",
+            "OVH SAS (France) — server and database hosting; data stays in the EU; transfer mechanism: internal (EU).",
+            "Amazon Web Services (EU) — object storage (S3) in EU regions; transfer mechanism: internal (EU).",
+            "Expo / EAS (United States) — mobile app distribution and over-the-air updates; transfer mechanism: SCC.",
+            "Brevo (France) — transactional email delivery (verification, password reset); transfer mechanism: internal (EU).",
+            "Sentry (United States) — error monitoring and performance telemetry; sendDefaultPii is disabled and a custom scrubber strips PII; transfer mechanism: SCC.",
+            "Apple (Sign in with Apple, United States) — federated authentication; transfer mechanism: SCC.",
+            "Tavily (United States) — web search backend for retrieval-augmented generation; transfer mechanism: SCC.",
+            "Brave (United States) — alternative web search backend; transfer mechanism: SCC.",
+            "Unsplash (United States) — public image library for cultural references; transfer mechanism: SCC.",
+            "Langfuse (Germany) — LLM observability and prompt telemetry; transfer mechanism: internal (EU).",
+            "CARTO (CartoDB tiles, United States) — map tiles for the museum map view; transfer mechanism: SCC.",
+            "Wikidata (Germany) — structured knowledge base for cultural references; transfer mechanism: internal (EU).",
+            "Wikimedia (Wikipedia REST, United States) — encyclopedic content for cultural references; transfer mechanism: SCC.",
+            "Nominatim (Germany) — reverse geocoding for museum/monument detection; transfer mechanism: internal (EU).",
+            "OpenStreetMap Foundation (United Kingdom, Overpass API) — spatial queries for monuments; transfer mechanism: adequacy.",
+            "Better-Stack (Germany) — uptime monitoring and incident alerting; transfer mechanism: internal (EU)."
+          ]
+        },
+        {
+          "id": "transfers",
+          "title": "6. International Transfers",
+          "paragraphs": [
+            "Where personal data is transferred outside the EEA / UK / Switzerland, transfers are governed by Standard Contractual Clauses (SCC), an adequacy decision, or an equivalent safeguard.",
+            "Data hosted on OVH and AWS stays within the European Union."
+          ]
+        },
+        {
+          "id": "retention",
+          "title": "7. Retention Periods",
+          "paragraphs": [
+            "Account data, chat history, and uploaded images: kept for the duration of service use and deleted on request.",
+            "Audio recordings (voice questions): not stored — transmitted for transcription then immediately deleted.",
+            "Authentication tokens: access tokens valid for 15 minutes; refresh tokens valid for 30 days."
+          ]
+        },
+        {
+          "id": "security",
+          "title": "8. Security Measures",
+          "paragraphs": [
+            "Musaium uses technical and organisational safeguards including access controls, transport encryption (TLS), environment isolation, password hashing (bcrypt), and operational monitoring.",
+            "No system is risk-free. Users should avoid sharing unnecessary sensitive personal data in chat conversations."
+          ]
+        },
+        {
+          "id": "rights",
+          "title": "9. Your GDPR Rights",
+          "paragraphs": [
+            "You may request access, rectification, erasure, restriction, portability, and objection to processing where applicable.",
+            "Where processing is based on consent, you may withdraw consent at any time without affecting the lawfulness of processing before withdrawal.",
+            "To exercise your rights, contact: tim.moyence@gmail.com. Include enough information to verify your request. Response within one month (Art. 12(3) GDPR), extendable by two months if necessary."
+          ]
+        },
+        {
+          "id": "minors",
+          "title": "10. Children & Minors",
+          "paragraphs": [
+            "Musaium is not intended for users under 15 years old. Pursuant to Article 8 GDPR and Article 45 of the French Data Protection Act (Loi Informatique et Libertés), and consistent with CNIL Délibération 2021-018 setting the French digital majority at 15 years, users under 15 require parental authorisation to create an account.",
+            "If you believe a minor under 15 years old provided personal data without parental authorisation, contact us at tim.moyence@gmail.com so we can promptly delete the relevant data.",
+            "Reference: CNIL Délibération 2021-018 (French digital majority — 15 years)."
+          ]
+        },
+        {
+          "id": "cookies",
+          "title": "11. Cookies & Trackers",
+          "paragraphs": [
+            "Musaium is a native mobile app. It does not use cookies within the meaning of the ePrivacy Directive.",
+            "The web landing site uses strictly-necessary cookies only (e.g. admin authentication redirect hint, CSRF token). No advertising trackers, no behavioural analytics SDKs (no Vercel Analytics, no Session Replay, no PostHog, no Google Analytics, no Hotjar, no Matomo, no Plausible, no Umami, no Fathom, no Segment, no Mixpanel).",
+            "The only technical identifiers used are authentication tokens (JWT), required for service operation and stored securely on your device."
+          ]
+        },
+        {
+          "id": "ai-disclosure",
+          "title": "12. AI Generative Content (EU AI Act Art. 50)",
+          "paragraphs": [
+            "When you interact with Musaium, you are interacting with a generative AI assistant powered by third-party large language models (OpenAI, Google, DeepSeek). Replies are produced automatically and may contain errors, omissions, or factual inaccuracies — please verify critical information with primary sources.",
+            "Voice messages are transcribed by a speech-to-text model; spoken replies are synthesised by a text-to-speech model. Audio buffers are not stored beyond the request lifecycle.",
+            "This disclosure is provided pursuant to Article 50 of the EU AI Act (Regulation (EU) 2024/1689)."
+          ]
+        },
+        {
+          "id": "granular-ai-consent",
+          "title": "13. Granular Third-Party AI Consent",
+          "paragraphs": [
+            "In addition to the general AI disclosure above (§12), the Musaium mobile app captures separate, explicit consent for each combination of (data category × third-party AI provider) before transmitting personal data outside Musaium-controlled infrastructure.",
+            "Consent scopes recorded today include: text messages to OpenAI (required to use the chat) and to Google; photos / images to OpenAI and Google; audio to OpenAI and Google; profile to OpenAI and Google. DeepSeek scopes are intentionally NOT offered in the EU production build.",
+            "All grants and revocations are persisted in our backend (user_consents table) and logged in our internal audit trail (audit_logs) with timestamp, IP, and request identifier. You may view and revoke any of these grants at any time from Settings → AI Consent in the mobile app.",
+            "Revocation of location-to-LLM is enforced in real time. Other third-party AI revocations are recorded as user intent; full enforcement is account deletion."
+          ]
+        },
+        {
+          "id": "changes",
+          "title": "14. Policy Changes",
+          "paragraphs": [
+            "We may update this policy to reflect legal, technical, or product changes. Material changes will be communicated in-app or through appropriate channels before, or when, they take effect.",
+            "The last-updated date and version number appear at the top of this document."
+          ]
+        }
+      ],
+      "recipients": [
+        {
+          "name": "OpenAI",
+          "role": "LLM provider — text and vision",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "LLM"
+        },
+        {
+          "name": "Google Cloud",
+          "role": "Alternative LLM provider — Vertex AI",
+          "jurisdiction": "United States / EU",
+          "transferMechanism": "SCC",
+          "category": "LLM"
+        },
+        {
+          "name": "DeepSeek",
+          "role": "Alternative LLM provider (NOT enabled in EU production)",
+          "jurisdiction": "China",
+          "transferMechanism": "none",
+          "category": "LLM"
+        },
+        {
+          "name": "OVH SAS",
+          "role": "Server and database hosting",
+          "jurisdiction": "France",
+          "transferMechanism": "internal",
+          "category": "infra"
+        },
+        {
+          "name": "Amazon Web Services",
+          "role": "Object storage (S3) in EU regions",
+          "jurisdiction": "EU",
+          "transferMechanism": "internal",
+          "category": "infra"
+        },
+        {
+          "name": "Expo",
+          "role": "Mobile app distribution and over-the-air updates (EAS)",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "infra"
+        },
+        {
+          "name": "Brevo",
+          "role": "Transactional email delivery",
+          "jurisdiction": "France",
+          "transferMechanism": "internal",
+          "category": "email"
+        },
+        {
+          "name": "Sentry",
+          "role": "Error monitoring and performance telemetry",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "monitoring"
+        },
+        {
+          "name": "Apple",
+          "role": "Federated authentication (Sign in with Apple)",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "auth"
+        },
+        {
+          "name": "Tavily",
+          "role": "Web search backend (RAG)",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Brave",
+          "role": "Alternative web search backend",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Unsplash",
+          "role": "Public image library for cultural references",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Langfuse",
+          "role": "LLM observability and prompt telemetry",
+          "jurisdiction": "Germany",
+          "transferMechanism": "internal",
+          "category": "telemetry"
+        },
+        {
+          "name": "CARTO",
+          "role": "Map tiles for the museum map view (CartoDB)",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "mapping"
+        },
+        {
+          "name": "Wikidata",
+          "role": "Structured knowledge base for cultural references",
+          "jurisdiction": "Germany",
+          "transferMechanism": "internal",
+          "category": "search"
+        },
+        {
+          "name": "Wikimedia",
+          "role": "Wikipedia REST — encyclopedic content for cultural references",
+          "jurisdiction": "United States",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Nominatim",
+          "role": "Reverse geocoding for museum/monument detection",
+          "jurisdiction": "Germany",
+          "transferMechanism": "internal",
+          "category": "mapping"
+        },
+        {
+          "name": "OpenStreetMap Foundation",
+          "role": "Spatial queries for monuments (Overpass API)",
+          "jurisdiction": "United Kingdom",
+          "transferMechanism": "adequacy",
+          "category": "mapping"
+        },
+        {
+          "name": "Better-Stack",
+          "role": "Uptime monitoring and incident alerting",
+          "jurisdiction": "Germany",
+          "transferMechanism": "internal",
+          "category": "uptime"
+        }
+      ]
+    },
+    "fr": {
+      "sections": [
+        {
+          "id": "controller",
+          "title": "1. Responsable du traitement",
+          "paragraphs": [
+            "Musaium est opéré par InnovMind (Tim Moyence, Entrepreneur Individuel), agissant en qualité de responsable du traitement des données personnelles traitées via l'application mobile et les canaux de support associés.",
+            "Adresse : France.",
+            "Contact : tim.moyence@gmail.com.",
+            "Conformément à l'article 37 du RGPD, la désignation d'un Délégué à la Protection des Données (DPO) n'est pas requise pour notre organisation."
+          ]
+        },
+        {
+          "id": "data-collected",
+          "title": "2. Données collectées",
+          "paragraphs": [
+            "Données de compte : adresse e-mail, mot de passe (haché et salé), date de création du compte, préférences utilisateur (langue, thème).",
+            "Données de conversation : messages textuels échangés lors des sessions de chat, réponses générées par l'IA, métadonnées de session (horodatages, identifiants de session, contexte muséal le cas échéant).",
+            "Données visuelles et audio : photographies d'œuvres prises ou importées par l'utilisateur, enregistrements audio des questions vocales. Elles sont transmises aux services d'IA pour analyse et conservées uniquement le temps nécessaire au traitement.",
+            "Données techniques : type et version de l'appareil, système d'exploitation, version de l'application, identifiants techniques anonymisés, journaux d'erreurs et de performance.",
+            "Données de support : les messages envoyés via les canaux de support (Instagram/Telegram) peuvent être traités par ces plateformes selon leurs propres politiques de confidentialité."
+          ]
+        },
+        {
+          "id": "purposes",
+          "title": "3. Finalités et bases légales (Art. 6 RGPD)",
+          "paragraphs": [
+            "Fournir l'assistance muséale par IA (œuvres, monuments, musées, architecture, patrimoine culturel) — Exécution du contrat (Art. 6(1)(b)).",
+            "Opérer l'authentification, les sessions sécurisées, la gestion des erreurs et les flux de support — Exécution du contrat (Art. 6(1)(b)).",
+            "Surveillance de sécurité, prévention de la fraude, fiabilité du service et diagnostics produit — Intérêts légitimes (Art. 6(1)(f)).",
+            "Permissions d'appareil (caméra, microphone, photothèque) — Consentement (Art. 6(1)(a)), uniquement sur action explicite de l'utilisateur.",
+            "Consentement granulaire pour les IA tierces (texte/image/audio/profil × OpenAI/Google) — Consentement (Art. 6(1)(a)), couche additionnelle au-dessus de l'exécution du contrat."
+          ]
+        },
+        {
+          "id": "device-permissions",
+          "title": "4. Permissions de l'appareil",
+          "paragraphs": [
+            "Caméra — utilisée pour photographier des œuvres et obtenir des informations contextuelles via l'IA. Aucune capture en arrière-plan.",
+            "Microphone — utilisé pour la saisie vocale. L'enregistrement audio est transmis pour transcription puis supprimé après traitement.",
+            "Photothèque — utilisée pour importer une image existante depuis la galerie. Seule l'image sélectionnée est accessible à l'application.",
+            "Aucune collecte passive : les permissions ne sont utilisées que lorsque vous déclenchez activement la fonctionnalité correspondante."
+          ]
+        },
+        {
+          "id": "recipients",
+          "title": "5. Destinataires et sous-traitants",
+          "paragraphs": [
+            "Personnel interne autorisé, sur la base du besoin d'en connaître.",
+            "Les sous-traitants sont listés ci-dessous. Chaque transfert hors Espace Économique Européen (EEE) est encadré par des garanties appropriées (clauses contractuelles types, décision d'adéquation ou mécanisme équivalent).",
+            "OpenAI (États-Unis) — prestataire LLM texte et vision ; mécanisme de transfert : clauses contractuelles types (CCT).",
+            "Google Cloud / Vertex AI (États-Unis / UE) — prestataire LLM alternatif ; mécanisme : CCT.",
+            "DeepSeek (Chine) — prestataire LLM alternatif, NON activé dans les builds UE de production ; mécanisme : aucun (non utilisé en UE).",
+            "OVH SAS (France) — hébergement serveur et base de données ; données dans l'UE ; mécanisme : interne (UE).",
+            "Amazon Web Services (UE) — stockage objet (S3) en régions UE ; mécanisme : interne (UE).",
+            "Expo / EAS (États-Unis) — distribution de l'application mobile et mises à jour over-the-air ; mécanisme : CCT.",
+            "Brevo (France) — envoi d'e-mails transactionnels (vérification, réinitialisation) ; mécanisme : interne (UE).",
+            "Sentry (États-Unis) — supervision d'erreurs et télémétrie de performance ; sendDefaultPii désactivé + scrubber custom ; mécanisme : CCT.",
+            "Apple (Sign in with Apple, États-Unis) — authentification fédérée ; mécanisme : CCT.",
+            "Tavily (États-Unis) — moteur de recherche web pour génération augmentée ; mécanisme : CCT.",
+            "Brave (États-Unis) — moteur de recherche web alternatif ; mécanisme : CCT.",
+            "Unsplash (États-Unis) — bibliothèque publique d'images pour références culturelles ; mécanisme : CCT.",
+            "Langfuse (Allemagne) — observabilité LLM et télémétrie de prompts ; mécanisme : interne (UE).",
+            "CARTO (tuiles CartoDB, États-Unis) — fonds de carte pour la vue musées ; mécanisme : CCT.",
+            "Wikidata (Allemagne) — base de connaissances structurée pour références culturelles ; mécanisme : interne (UE).",
+            "Wikimedia (Wikipedia REST, États-Unis) — contenu encyclopédique pour références culturelles ; mécanisme : CCT.",
+            "Nominatim (Allemagne) — géocodage inverse pour détection musée/monument ; mécanisme : interne (UE).",
+            "OpenStreetMap Foundation (Royaume-Uni, Overpass API) — requêtes spatiales pour monuments ; mécanisme : adéquation.",
+            "Better-Stack (Allemagne) — supervision d'uptime et alertes d'incident ; mécanisme : interne (UE)."
+          ]
+        },
+        {
+          "id": "transfers",
+          "title": "6. Transferts internationaux",
+          "paragraphs": [
+            "Lorsque des données personnelles sont transférées hors EEE / Royaume-Uni / Suisse, les transferts sont encadrés par des clauses contractuelles types (CCT), une décision d'adéquation ou un mécanisme équivalent.",
+            "Les données hébergées chez OVH et AWS restent dans l'Union européenne."
+          ]
+        },
+        {
+          "id": "retention",
+          "title": "7. Durées de conservation",
+          "paragraphs": [
+            "Données de compte, historique de conversations et images : conservées pendant la durée d'utilisation du service, supprimées sur demande.",
+            "Fichiers audio (questions vocales) : non stockés — transmis pour transcription puis immédiatement supprimés.",
+            "Jetons d'authentification : accès 15 minutes, renouvellement 30 jours."
+          ]
+        },
+        {
+          "id": "security",
+          "title": "8. Mesures de sécurité",
+          "paragraphs": [
+            "Musaium utilise des mesures techniques et organisationnelles : contrôle d'accès, chiffrement des transports (TLS), isolation des environnements, hachage des mots de passe (bcrypt) et supervision opérationnelle.",
+            "Aucun système n'est sans risque. Évitez de partager des données personnelles sensibles inutiles dans les conversations de chat."
+          ]
+        },
+        {
+          "id": "rights",
+          "title": "9. Vos droits RGPD",
+          "paragraphs": [
+            "Vous pouvez demander l'accès, la rectification, l'effacement, la limitation, la portabilité et l'opposition au traitement, dans les conditions prévues par la loi.",
+            "Lorsque le traitement est fondé sur le consentement, vous pouvez le retirer à tout moment sans affecter la licéité du traitement antérieur.",
+            "Pour exercer vos droits : tim.moyence@gmail.com. Incluez suffisamment d'informations pour vérifier votre demande. Réponse sous un mois (Art. 12(3) RGPD), prolongeable de deux mois si nécessaire."
+          ]
+        },
+        {
+          "id": "minors",
+          "title": "10. Protection des mineurs",
+          "paragraphs": [
+            "Musaium n'est pas destinée aux mineurs de moins de 15 ans. Conformément à l'article 8 du RGPD, à l'article 45 de la loi Informatique et Libertés, et à la CNIL Délibération 2021-018 fixant la majorité numérique française à 15 ans, l'inscription d'un mineur de moins de 15 ans n'est possible qu'avec l'autorisation du titulaire de l'autorité parentale.",
+            "Si vous pensez qu'un mineur de moins de 15 ans nous a fourni des données personnelles sans autorisation parentale, contactez tim.moyence@gmail.com afin que nous procédions à leur suppression.",
+            "Référence : CNIL Délibération 2021-018 (majorité numérique française fixée à 15 ans)."
+          ]
+        },
+        {
+          "id": "cookies",
+          "title": "11. Cookies et traceurs",
+          "paragraphs": [
+            "Musaium est une application mobile native. Elle n'utilise pas de cookies au sens de la directive ePrivacy.",
+            "Le site web utilise uniquement des cookies strictement nécessaires (par ex. indicateur d'authentification admin, jeton CSRF). Aucun traceur publicitaire, aucune analytique comportementale tierce (pas de Vercel Analytics, pas de Session Replay, pas de PostHog, pas de Google Analytics, pas de Hotjar, pas de Matomo, pas de Plausible, pas d'Umami, pas de Fathom, pas de Segment, pas de Mixpanel).",
+            "Les seuls identifiants techniques utilisés sont les jetons d'authentification (JWT), nécessaires au fonctionnement du service et stockés de manière sécurisée sur votre appareil."
+          ]
+        },
+        {
+          "id": "ai-disclosure",
+          "title": "12. Contenu généré par IA (Art. 50 AI Act UE)",
+          "paragraphs": [
+            "Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, DeepSeek). Les réponses sont produites automatiquement et peuvent contenir des erreurs ou des inexactitudes — vérifiez les informations critiques auprès de sources primaires.",
+            "Les messages vocaux sont transcrits par un modèle de reconnaissance vocale ; les réponses orales sont synthétisées par un modèle text-to-speech. Les tampons audio ne sont pas conservés au-delà du cycle de la requête.",
+            "Cette information est fournie conformément à l'article 50 du règlement UE sur l'intelligence artificielle (Règlement (UE) 2024/1689)."
+          ]
+        },
+        {
+          "id": "granular-ai-consent",
+          "title": "13. Consentement granulaire pour les IA tierces",
+          "paragraphs": [
+            "En complément de la divulgation IA générale ci-dessus (§12), l'application mobile Musaium recueille un consentement explicite séparé pour chaque couple (catégorie de données × prestataire IA tiers) avant toute transmission de données personnelles hors infrastructure que Musaium contrôle.",
+            "Les scopes de consentement enregistrés incluent : messages texte vers OpenAI (requis pour utiliser le chat) et vers Google ; photos / images vers OpenAI et Google ; audio vers OpenAI et Google ; profil vers OpenAI et Google. Les scopes DeepSeek ne sont volontairement PAS proposés dans le build UE de production.",
+            "Toutes les acceptations et révocations sont persistées dans le back-end (table user_consents) et tracées dans le journal d'audit interne (audit_logs) avec horodatage, IP et identifiant de requête. Vous pouvez consulter et révoquer chacune de ces autorisations depuis Paramètres → Consentement IA dans l'application.",
+            "La révocation localisation-vers-LLM est appliquée en temps réel. Les autres révocations IA tierces sont enregistrées comme intention utilisateur ; l'application complète passe par la suppression de compte."
+          ]
+        },
+        {
+          "id": "changes",
+          "title": "14. Modifications de la politique",
+          "paragraphs": [
+            "Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.",
+            "La date de mise à jour et le numéro de version figurent en haut de ce document."
+          ]
+        }
+      ],
+      "recipients": [
+        {
+          "name": "OpenAI",
+          "role": "Prestataire LLM — texte et vision",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "LLM"
+        },
+        {
+          "name": "Google Cloud",
+          "role": "Prestataire LLM alternatif — Vertex AI",
+          "jurisdiction": "États-Unis / UE",
+          "transferMechanism": "SCC",
+          "category": "LLM"
+        },
+        {
+          "name": "DeepSeek",
+          "role": "Prestataire LLM alternatif (NON activé en production UE)",
+          "jurisdiction": "Chine",
+          "transferMechanism": "none",
+          "category": "LLM"
+        },
+        {
+          "name": "OVH SAS",
+          "role": "Hébergement serveur et base de données",
+          "jurisdiction": "France",
+          "transferMechanism": "internal",
+          "category": "infra"
+        },
+        {
+          "name": "Amazon Web Services",
+          "role": "Stockage objet (S3) en régions UE",
+          "jurisdiction": "UE",
+          "transferMechanism": "internal",
+          "category": "infra"
+        },
+        {
+          "name": "Expo",
+          "role": "Distribution mobile et mises à jour OTA (EAS)",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "infra"
+        },
+        {
+          "name": "Brevo",
+          "role": "Envoi d'e-mails transactionnels",
+          "jurisdiction": "France",
+          "transferMechanism": "internal",
+          "category": "email"
+        },
+        {
+          "name": "Sentry",
+          "role": "Supervision d'erreurs et télémétrie de performance",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "monitoring"
+        },
+        {
+          "name": "Apple",
+          "role": "Authentification fédérée (Sign in with Apple)",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "auth"
+        },
+        {
+          "name": "Tavily",
+          "role": "Moteur de recherche web (RAG)",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Brave",
+          "role": "Moteur de recherche web alternatif",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Unsplash",
+          "role": "Bibliothèque publique d'images pour références culturelles",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Langfuse",
+          "role": "Observabilité LLM et télémétrie de prompts",
+          "jurisdiction": "Allemagne",
+          "transferMechanism": "internal",
+          "category": "telemetry"
+        },
+        {
+          "name": "CARTO",
+          "role": "Fonds de carte pour la vue musées (CartoDB)",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "mapping"
+        },
+        {
+          "name": "Wikidata",
+          "role": "Base de connaissances structurée pour références culturelles",
+          "jurisdiction": "Allemagne",
+          "transferMechanism": "internal",
+          "category": "search"
+        },
+        {
+          "name": "Wikimedia",
+          "role": "Wikipedia REST — contenu encyclopédique pour références culturelles",
+          "jurisdiction": "États-Unis",
+          "transferMechanism": "SCC",
+          "category": "search"
+        },
+        {
+          "name": "Nominatim",
+          "role": "Géocodage inverse pour détection musée/monument",
+          "jurisdiction": "Allemagne",
+          "transferMechanism": "internal",
+          "category": "mapping"
+        },
+        {
+          "name": "OpenStreetMap Foundation",
+          "role": "Requêtes spatiales pour monuments (Overpass API)",
+          "jurisdiction": "Royaume-Uni",
+          "transferMechanism": "adequacy",
+          "category": "mapping"
+        },
+        {
+          "name": "Better-Stack",
+          "role": "Supervision d'uptime et alertes d'incident",
+          "jurisdiction": "Allemagne",
+          "transferMechanism": "internal",
+          "category": "uptime"
+        }
+      ]
+    }
+  }
+}

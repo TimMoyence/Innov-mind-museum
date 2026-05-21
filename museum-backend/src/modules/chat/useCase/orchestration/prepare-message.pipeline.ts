@@ -1,6 +1,7 @@
 import { fetchEnrichmentData } from '@modules/chat/useCase/enrichment/enrichment-fetcher';
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolver';
+import { checkThirdPartyAiConsent } from '@modules/chat/useCase/orchestration/consent-gate';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
@@ -29,6 +30,7 @@ import type {
   ResolvedLocation,
 } from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
@@ -100,6 +102,16 @@ export interface PrepareMessagePipelineDeps {
    */
   locationConsentChecker?: LocationConsentChecker;
   /**
+   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
+   * `third_party_ai_<text|image>_<provider>` scopes (R2/R3 of cluster A).
+   * D3 fail-CLOSED: anonymous user (`currentUserId` nullish) refused without
+   * touching the repo. Without port: legacy always-allow (kept for tests that
+   * exercise other branches and for migration windows). Mirrors
+   * `locationConsentChecker` wiring (`location-resolver.ts:196-200` +
+   * `chat-module.ts:834-841`).
+   */
+  thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
+  /**
    * W3 (T5.4) — looked up for the LLM prompt `[CURRENT ARTWORK]` section
    * when `chatSession.currentArtworkId` is populated. Optional: when missing,
    * the section is simply never emitted (degrades gracefully).
@@ -124,6 +136,7 @@ export class PrepareMessagePipeline {
   private readonly extractionQueue?: ExtractionQueuePort;
   private readonly locationResolver?: LocationResolver;
   private readonly locationConsentChecker?: LocationConsentChecker;
+  private readonly thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
   private readonly artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 
   constructor(deps: PrepareMessagePipelineDeps) {
@@ -139,6 +152,7 @@ export class PrepareMessagePipeline {
     this.extractionQueue = deps.extractionQueue;
     this.locationResolver = deps.locationResolver;
     this.locationConsentChecker = deps.locationConsentChecker;
+    this.thirdPartyAiConsentChecker = deps.thirdPartyAiConsentChecker;
     this.artworkKnowledgeRepo = deps.artworkKnowledgeRepo;
   }
 
@@ -155,19 +169,17 @@ export class PrepareMessagePipeline {
     }
   }
 
-  private enqueueForExtraction(
-    results: SearchResult[],
-    text: string | undefined,
-    locale: string | undefined,
-  ): void {
+  private enqueueForExtraction(results: SearchResult[], locale: string | undefined): void {
     if (!this.extractionQueue || results.length === 0 || !locale) return;
     const queue = this.extractionQueue;
-    const searchTerm = text ?? '';
+    // I-SEC9 (R9 / GDPR Art. 5(1)(c)) — the legacy `searchTerm` (raw user chat
+    // text) was removed from the BullMQ payload: it sat unused in Redis and
+    // had no functional consumer downstream (`extraction-job.service.ts`).
     // Promise.resolve().then converts sync throw (queue closed w/ enableOfflineQueue:false
     // when Redis down) into rejection so fireAndForget logs it instead of bubbling.
     fireAndForget(
       Promise.resolve().then(() =>
-        queue.enqueueUrls(results.slice(0, 5).map((r) => ({ url: r.url, searchTerm, locale }))),
+        queue.enqueueUrls(results.slice(0, 5).map((r) => ({ url: r.url, locale }))),
       ),
       'extraction_enqueue_web_results',
     );
@@ -212,6 +224,37 @@ export class PrepareMessagePipeline {
     };
   }
 
+  /**
+   * R2 / R3 / R5 / D3 — `third_party_ai_<text|image>_<provider>` gate
+   * (cluster A, RUN_ID=2026-05-21-p0-gdpr). Runs BEFORE `ensureSessionAccess`
+   * so D3 anon (`currentUserId` nullish) fail-CLOSES before any session
+   * lookup, and so an authenticated turn with a denied scope never persists
+   * the user message, fans out enrichment, or hits Redis/BullMQ (R9 parity +
+   * GDPR Art. 5(1)(c)). The gate is intentionally session-independent —
+   * refusal locale derives from `input.context.locale` only (reading
+   * `session.locale` would leak session-existence to anon probers; the
+   * default `en` fallback inside `consent-gate.ts` matches existing
+   * `buildGuardrailRefusal` semantics).
+   */
+  private async runConsentGate(
+    sessionId: string,
+    input: PostMessageInput,
+    text: string | undefined,
+    currentUserId: number | undefined,
+  ): Promise<PrepareRefused | null> {
+    return await checkThirdPartyAiConsent({
+      checker: this.thirdPartyAiConsentChecker,
+      input: {
+        sessionId,
+        text,
+        image: input.image,
+        imageRef: undefined,
+        currentUserId,
+        requestedLocale: input.context?.locale?.trim() ?? undefined,
+      },
+    });
+  }
+
   async prepare(
     sessionId: string,
     input: PostMessageInput,
@@ -219,11 +262,14 @@ export class PrepareMessagePipeline {
     currentUserId?: number,
     ip?: string,
   ): Promise<PrepareResult> {
-    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
-    const ownerId = session.user?.id;
-
     const text = input.text?.trim();
     this.validateMessageInput(text, input.image);
+
+    const consentRefusal = await this.runConsentGate(sessionId, input, text, currentUserId);
+    if (consentRefusal) return consentRefusal;
+
+    const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
+    const ownerId = session.user?.id;
 
     const { imageRef, orchestratorImage, imageContentHash } = await this.processInputImage(
       input.image,
@@ -406,7 +452,7 @@ export class PrepareMessagePipeline {
       hasMuseumMode: input.context?.museumMode ?? session.museumMode,
     });
 
-    this.enqueueForExtraction(webSearchResults, input.text?.trim(), requestedLocale);
+    this.enqueueForExtraction(webSearchResults, requestedLocale);
 
     return {
       userMemoryBlock,

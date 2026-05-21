@@ -17,7 +17,7 @@ interface TermsOfServiceContent {
 export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
   title: 'Terms of Service',
   version: '1.0.0',
-  lastUpdated: '2026-03-18',
+  lastUpdated: '2026-05-21',
   sections: [
     {
       id: 'acceptance',

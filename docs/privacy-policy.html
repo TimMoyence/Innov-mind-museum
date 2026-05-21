@@ -471,8 +471,8 @@
         <p class="subtitle">Comment Musaium prot&egrave;ge vos donn&eacute;es personnelles</p>
         <div class="meta-bar">
           <div><strong>Version&nbsp;:</strong> 1.0.0</div>
-          <div><strong>Derni&egrave;re mise &agrave; jour&nbsp;:</strong> 18 mars 2026</div>
-          <div><strong>Date d'effet&nbsp;:</strong> 18 mars 2026</div>
+          <div><strong>Derni&egrave;re mise &agrave; jour&nbsp;:</strong> 2026-05-21</div>
+          <div><strong>Date d'effet&nbsp;:</strong> 2026-05-21</div>
         </div>
       </div>
     </div>
@@ -923,9 +923,10 @@
           <span class="section-number">Article 10</span>
           <h2 class="section-title">Protection des mineurs</h2>
           <p>
-            Musaium n'est pas destin&eacute;e aux mineurs de moins de 16&nbsp;ans. Conform&eacute;ment &agrave;
-            l'article 8 du RGPD et &agrave; l'article 45 de la loi Informatique et Libert&eacute;s,
-            l'inscription d'un mineur de moins de 16&nbsp;ans n'est possible qu'avec
+            Musaium n'est pas destin&eacute;e aux mineurs de moins de 15&nbsp;ans. Conform&eacute;ment &agrave;
+            l'article 8 du RGPD, &agrave; l'article 45 de la loi Informatique et Libert&eacute;s
+            et &agrave; la <strong>CNIL D&eacute;lib&eacute;ration 2021-018</strong> fixant la majorit&eacute; num&eacute;rique fran&ccedil;aise &agrave; 15&nbsp;ans,
+            l'inscription d'un mineur de moins de 15&nbsp;ans n'est possible qu'avec
             l'autorisation du titulaire de l'autorit&eacute; parentale.
           </p>
           <p>
@@ -975,6 +976,73 @@
           </ul>
         </section>
 
+        <!-- Appendix: Complete sub-processor disclosure (R11 — 19 vendors) -->
+        <section class="section" id="s-subprocessors-full" aria-labelledby="appendix-title">
+          <span class="section-number">Annexe</span>
+          <h2 class="section-title" id="appendix-title">Liste compl&egrave;te des sous-traitants</h2>
+          <p>
+            Liste exhaustive des sous-traitants Musaium (RGPD Art. 28) &mdash; mirror de la source canonique
+            (<code>museum-backend/src/shared/legal/privacy-content.canonical.json</code>).
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sous-traitant</th>
+                  <th>R&ocirc;le</th>
+                  <th>Juridiction</th>
+                  <th>M&eacute;canisme de transfert</th>
+                  <th>Cat&eacute;gorie</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>OpenAI</td><td>Fournisseur LLM (texte/vision)</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>LLM</td></tr>
+                <tr><td>Google Cloud (Vertex AI)</td><td>Fournisseur LLM alternatif</td><td>&Eacute;tats-Unis / UE</td><td>SCC</td><td>LLM</td></tr>
+                <tr><td>DeepSeek</td><td>Fournisseur LLM alternatif (PAS activ&eacute; en UE)</td><td>Chine</td><td>none</td><td>LLM</td></tr>
+                <tr><td>OVH SAS</td><td>H&eacute;bergement serveur et base de donn&eacute;es</td><td>France (UE)</td><td>internal</td><td>infra</td></tr>
+                <tr><td>Amazon Web Services</td><td>Stockage objet (S3) en UE</td><td>UE</td><td>internal</td><td>infra</td></tr>
+                <tr><td>Expo (EAS)</td><td>Distribution app mobile + OTA</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>infra</td></tr>
+                <tr><td>Brevo</td><td>Envoi des e-mails transactionnels</td><td>France (UE)</td><td>internal</td><td>email</td></tr>
+                <tr><td>Sentry</td><td>Monitoring erreurs et performance</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>monitoring</td></tr>
+                <tr><td>Apple (Sign in with Apple)</td><td>Authentification d&eacute;l&eacute;gu&eacute;e</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>auth</td></tr>
+                <tr><td>Tavily</td><td>Recherche web pour l'enrichissement IA</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>search</td></tr>
+                <tr><td>Brave</td><td>Recherche web alternative</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>search</td></tr>
+                <tr><td>Unsplash</td><td>Banque d'images de r&eacute;f&eacute;rence</td><td>&Eacute;tats-Unis</td><td>SCC</td><td>search</td></tr>
+                <tr><td>Langfuse</td><td>T&eacute;l&eacute;m&eacute;trie LLM (traces / spans)</td><td>UE (auto-h&eacute;berg&eacute;)</td><td>internal</td><td>telemetry</td></tr>
+                <tr><td>CARTO (CartoDB tiles)</td><td>Tuiles cartographiques</td><td>Espagne (UE)</td><td>internal</td><td>mapping</td></tr>
+                <tr><td>Wikidata</td><td>Base de connaissances pour l'identification d'&oelig;uvres</td><td>UE (Wikimedia DE)</td><td>internal</td><td>search</td></tr>
+                <tr><td>Wikimedia (Wikipedia REST)</td><td>Articles encyclop&eacute;diques pour l'enrichissement</td><td>UE (Wikimedia DE)</td><td>internal</td><td>search</td></tr>
+                <tr><td>Nominatim</td><td>G&eacute;ocodage inverse (toponymes)</td><td>UE (OSMF)</td><td>internal</td><td>mapping</td></tr>
+                <tr><td>OpenStreetMap Foundation (OSMF / Overpass)</td><td>API spatiale (monuments &agrave; proximit&eacute;)</td><td>Royaume-Uni</td><td>adequacy</td><td>mapping</td></tr>
+                <tr><td>Better-Stack (Better Stack)</td><td>Surveillance uptime et alerting</td><td>R&eacute;publique tch&egrave;que (UE)</td><td>internal</td><td>uptime</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!--
+          CANONICAL-SOURCE-METADATA — synced with museum-backend/src/shared/legal/privacy-content.canonical.json
+          Drift sentinel: museum-backend/scripts/sentinels/privacy-content-drift.mjs
+
+          legal-citation: CNIL Délibération 2021-018 (majorité numérique française — 15 ans)
+
+          version: 1.0.0
+          lastUpdated: 2026-05-21
+          section-id: controller
+          section-id: data-collected
+          section-id: purposes
+          section-id: device-permissions
+          section-id: recipients
+          section-id: transfers
+          section-id: retention
+          section-id: security
+          section-id: rights
+          section-id: minors
+          section-id: cookies
+          section-id: ai-disclosure
+          section-id: granular-ai-consent
+          section-id: changes
+        -->
       </div>
     </main>
 

@@ -55,6 +55,7 @@ import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.serv
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/update-session-context.useCase';
+import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import { compareImageUseCase as createCompareImageUseCase } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import { VisualSimilarityService } from '@modules/chat/useCase/visual-similarity/similarity.service';
 import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
@@ -86,6 +87,7 @@ import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.po
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location-resolver';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type {
   ChatPersistencePort,
   CompareMimeType,
@@ -686,6 +688,11 @@ export class ChatModule {
       ? new LocationResolver(museumRepository, cache)
       : undefined;
     const locationConsentChecker = buildLocationConsentChecker();
+    // GDPR Art. 7 — gates text + image LLM dispatch on the granular
+    // `third_party_ai_<text|image>_<provider>` scopes (cluster A R2/R3).
+    // Same lazy-import pattern as `buildLocationConsentChecker` (avoids the
+    // chat ↔ auth init cycle at boot — see `third-party-ai-consent-checker.ts:48-51`).
+    const thirdPartyAiConsentChecker = buildThirdPartyAiConsentChecker();
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
@@ -713,6 +720,7 @@ export class ChatModule {
       museumRepository,
       locationResolver,
       locationConsentChecker,
+      thirdPartyAiConsentChecker,
       knowledgeExtraction,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
     });
@@ -781,6 +789,7 @@ export class ChatModule {
     museumRepository?: IMuseumRepository;
     locationResolver?: LocationResolver;
     locationConsentChecker?: LocationConsentChecker;
+    thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
     /** W3 (T5.4) — passed-through into the message pipeline for [CURRENT ARTWORK]. */
     artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
@@ -822,6 +831,7 @@ export class ChatModule {
       extractionQueue: deps.knowledgeExtraction.extractionQueue,
       locationResolver: deps.locationResolver,
       locationConsentChecker: deps.locationConsentChecker,
+      thirdPartyAiConsentChecker: deps.thirdPartyAiConsentChecker,
       artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
     });
   }
