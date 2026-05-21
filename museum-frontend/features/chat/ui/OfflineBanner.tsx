@@ -21,6 +21,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount, isOf
   if (isOffline) {
     return (
       <View
+        testID="offline-banner"
         style={[styles.container, { backgroundColor: theme.errorBackground }]}
         accessibilityRole="alert"
         accessibilityLabel={t('offline.title')}

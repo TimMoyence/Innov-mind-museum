@@ -23,8 +23,8 @@
  * Spec: `docs/chat-ux-refonte/specs/A2.md` §1.2 R8-R12 ; §2.5 wire ; §4 AC16.
  */
 
+import type * as ReactTypes from 'react';
 import React from 'react';
-import type * as ReactModule from 'react';
 import { render } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
@@ -121,9 +121,9 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: (_event: string, _cb: () => void) => jest.fn(),
   }),
-  useFocusEffect: (effect: ReactModule.EffectCallback) => {
-    const React = require('react') as typeof ReactModule;
-    React.useEffect(() => effect(), [effect]);
+  useFocusEffect: (effect: ReactTypes.EffectCallback) => {
+    const ReactRuntime = require('react') as typeof ReactTypes;
+    ReactRuntime.useEffect(() => effect(), [effect]);
   },
 }));
 

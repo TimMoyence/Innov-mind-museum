@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["RB3F9L6GUD.com.musaium.mobile"],
+        "components": [
+          { "/": "/fr/verify-email", "?": { "token": "?*" }, "comment": "FR email verification magic link" },
+          { "/": "/en/verify-email", "?": { "token": "?*" }, "comment": "EN email verification magic link" },
+          { "/": "/fr/reset-password", "?": { "token": "?*" }, "comment": "FR password reset magic link" },
+          { "/": "/en/reset-password", "?": { "token": "?*" }, "comment": "EN password reset magic link" },
+          { "/": "/fr/confirm-email-change", "?": { "token": "?*" }, "comment": "FR email-change confirmation magic link" },
+          { "/": "/en/confirm-email-change", "?": { "token": "?*" }, "comment": "EN email-change confirmation magic link" }
+        ]
+      }
+    ]
+  }
+}

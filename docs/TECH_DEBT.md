@@ -173,7 +173,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
 
-- [ ] **Statut** : ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)
+- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (`docs/OFFLINE_CONTRACT.md`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
+- [ ] ~~ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)~~
 - **Référence code** :
   ```
   museum-frontend/features/chat/ui/OfflineBanner.tsx                # chat-only, importé seulement dans app/(stack)/chat/[sessionId].tsx
@@ -1194,11 +1195,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code + index-entry expo-secure-store).**
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
-- **Référence code** : `museum-frontend/features/auth/infrastructure/authTokenStore.ts:50` — `secureStore.setItemAsync(key, token)` appelé SANS 3e arg `options`, pour `REFRESH_TOKEN_KEY` (`:17,:64`) ET `ACCESS_TOKEN_KEY` (`:18,:65`).
+- [x] **Statut** : fermé 2026-05-21 via run `2026-05-21-td-sec-01-02-mobile-secrets` (commit pending) — APPROVED reviewer. `secureTokenStore` factory passe désormais `{ keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` pour les 2 tokens (access + refresh) → device-bound, non-backup-migratable. Fallback web AsyncStorage inchangé.
+- **Référence code** : `museum-frontend/features/auth/infrastructure/authTokenStore.ts` — `secureStore.setItemAsync(key, token, { keychainAccessible: ... })` pour `REFRESH_TOKEN_KEY` ET `ACCESS_TOKEN_KEY`.
 - **Symptôme** : `expo-secure-store` défaut à `WHEN_UNLOCKED` (pas `*_THIS_DEVICE_ONLY`) → l'item keychain est inclus dans l'iCloud Keychain / les backups device chiffrés et migrable vers un nouvel appareil. Un backup restauré sur un appareil contrôlé par un attaquant porte une session live (refresh token long-lived). Exploit nécessite la chaîne device-backup-restore-to-attacker → défendable au launch, fix rapide.
 - **Severity** : HIGH, NICE_TO_HAVE pre-V1.
-- **Comment fermer** : passer `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` aux 2 calls `set` (+ ré-écrire tout item pré-existant une fois au prochain login).
+- **Comment fermer** : ~~passer `{ keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }` aux 2 calls `set`~~ FAIT (les items pré-existants sont ré-écrits au prochain login).
 
 ---
 
@@ -1206,11 +1207,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (auth-security verdict, vérifié vs code ; lib-docs `react-native-qrcode-svg` F-SEC-03). Note : le verdict lib-docs l'appelait "TD-QR-03" mais ce TD n'existe pas — entrée genuinement nouvelle.**
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
-- **Référence code** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:108-128` — `<QRCode value={otpauthUrl} size={200} />` (`:108-113`) + le secret TOTP base32 `selectable` (`{manualSecret}`) + les recovery codes (`:117-128`). Vérifié : AUCUN `expo-screen-capture` / `FLAG_SECURE` / `usePreventScreenCapture` / blur iOS resign-active dans le fichier (grep = 0).
+- [x] **Statut** : fermé 2026-05-21 via run `2026-05-21-td-sec-01-02-mobile-secrets` (commit pending) — APPROVED reviewer. Nouveau hook `museum-frontend/features/auth/hooks/usePreventScreenCapture.ts` (require lazy/web-safe gardé de `expo-screen-capture`) : `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount — PAS le hook lib unmount-only), key `'mfa-secret'`, erreurs via `reportError` sans payload secret. Wiré dans `MfaEnrollScreen.tsx`. Native dep `expo-screen-capture ~55.0.14` (pod install fait, Pods + Podfile.lock + ExpoModulesProvider.swift committés). Route Expo `app/(stack)/mfa-enroll.tsx` ajoutée (écran était orphelin) + flow Maestro `.maestro/mfa-enroll-flow.yaml` (UFR-021).
+- **Référence code** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx` (wire `usePreventScreenCapture`), `museum-frontend/features/auth/hooks/usePreventScreenCapture.ts`.
 - **Symptôme** : sur Android le secret est screenshot/screen-record/app-switcher-snapshot capturable ; iOS n'a pas de blur on resign-active. Screenshot/recording/snapshot leak le secret TOTP et/ou les recovery codes (2nd-factor exposure). Mitigé par user-presence requirement + faible incidence pré-launch.
 - **Severity** : HIGH, NICE_TO_HAVE pre-V1.
-- **Comment fermer** : gate l'écran avec `expo-screen-capture` (`usePreventScreenCaptureAsync` on focus, release on blur → Android FLAG_SECURE) + overlay iOS sur `resignActive` ; ne jamais logger `otpauthUrl`/`manualSecret`.
+- **Comment fermer** : ~~gate l'écran avec `expo-screen-capture` (on focus, release on blur → Android FLAG_SECURE)~~ FAIT via `usePreventScreenCapture` (impératif + `useFocusEffect`, pas le hook lib unmount-only). `otpauthUrl`/`manualSecret` jamais loggés.
 
 ---
 
@@ -1700,9 +1701,24 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## ⚠️ TD-RNAV-01 — Universal Links / App Links NOT configured pour musaium.com (MEDIUM BLOCKER pre-V1)
+## ✅ TD-RNAV-01 — Universal Links / App Links pour musaium.com (RÉSOLU 2026-05-21)
 **Context** : Marketing email magic-links + Apple Smart App Banners + Android Chrome intent fallback ALL BREAK without `associatedDomains` (iOS) + `intentFilters with autoVerify` (Android).
-**Fix** : Add to `app.config.ts` — `ios.associatedDomains: ['applinks:musaium.com']` + `android.intentFilters: [{ action: 'VIEW', autoVerify: true, data: [{scheme:'https', host:'musaium.com'}], category: ['BROWSABLE', 'DEFAULT'] }]`.
+**Résolution** (run `/team` `2026-05-21-universal-links-td-rnav-01`, APPROVED weightedMean 92.95) — **plumbing d'association de domaine uniquement** (le routage deep-link IN-APP lien→écran reste un follow-up séparé, cf. ci-dessous).
+
+Fichiers livrés (6) :
+- `museum-frontend/app.config.ts` — `ios.associatedDomains = ['applinks:musaium.com']` + `android.intentFilters` (`autoVerify` `https`/`musaium.com`), **prod-only** (`variant === 'production'` guard).
+- `museum-frontend/__tests__/app-config-universal-links.test.ts` — Jest, 9 tests (R1-R4 × variants).
+- `museum-web/public/.well-known/apple-app-site-association` (NOUVEAU, extensionless) — appID `RB3F9L6GUD.com.musaium.mobile`, 6 `components` scopés aux magic-links FR/EN (verify-email / reset-password / confirm-email-change) avec matcher `?token`, pas de `*` aveugle.
+- `museum-web/public/.well-known/assetlinks.json` (NOUVEAU) — package `com.musaium.mobile`, SHA256 App Signing `38:97:AA:FF:…:34`.
+- `museum-web/next.config.ts` — règle `headers()` forçant `Content-Type: application/json` sur le path AASA (NFR-1 / risque #1 : Next sert un fichier `public/` extensionless en `application/octet-stream`, qu'Apple invalide silencieusement).
+- `museum-web/src/lib/well-known-association.test.ts` — Vitest, 10 tests.
+
+**Reste à faire = gate opérateur post-deploy (NON automatisable en CI ; ne PAS prétendre vérifié — UFR-013)** :
+- Pré-deploy iOS : confirmer que le profil de provisioning EAS **production** porte la capability **Associated Domains** (l'édition `app.config.ts` est inerte sans elle).
+- Deploy gate : les 2 `.well-known` DOIVENT shipper en prod ET être placeholder-free (miroir du gate PGP-key, CLAUDE.md).
+- Post-deploy iOS/Android : checks device réels (`curl` AASA/assetlinks + Apple CDN + `adb pm verify-app-links`/`get-app-links`).
+
+Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md). Décisions D1-D5 dans le design du run (pas de nouvel ADR).
 
 ---
 
@@ -1850,10 +1866,12 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 ---
 
 ## TD-NI-01 — netinfo isConnected null coerced to true (MEDIUM, NICE_TO_HAVE)
+- [x] **Status** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). `?? true` coercion dropped; `ConnectivityProvider` is now tri-state (`isConnected: boolean|null`) deriving `isOnline` via the pure `isOnline()` predicate.
 **Fix** : propagate boolean|null (context type + default).
 **Evidence** : `ConnectivityProvider.tsx:25`.
 
 ## TD-NI-02 — Prefetch ignore isInternetReachable (MEDIUM, NICE_TO_HAVE)
+- [x] **Status** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). `useMuseumPrefetch` now gates on canonical `isOnline` (honours `isInternetReachable === false`), not `type !== 'wifi'` alone.
 **Fix** : gate on isInternetReachable in `useMuseumPrefetch.ts:39-41`.
 
 ## TD-NI-03 — Missing iOS AppState refresh (LOW)
@@ -1868,7 +1886,7 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 > **NOUVEAU 2026-05-21 (mobile + state-sweep verdicts, triple-corroboré : netinfo §1 + tanstack-query §11.1 + grep direct).** Sous-cas explicite de TD-14 (cf. TD-14 step 5 annoté), tracé séparément pour visibilité car c'est l'item offline FE le plus à fort levier pré-launch.
 
-- [ ] **Statut** : ouvert (créé 2026-05-21, refresh lib-docs 2026-05-20)
+- [x] **Statut** : RESOLVED 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059). NetInfo→`onlineManager` bridge installed once at bootstrap via `installOnlineManagerBridge()` (module side-effect in `shared/data/queryClient.ts:16`) → `refetchOnReconnect`/`networkMode:'online'` now self-heal on device. Couvre aussi TD-14 step 5.
 - **Référence code** : `grep -rn "onlineManager|focusManager|setEventListener"` museum-frontend = **0 hit**. `queryClient.ts:54-55` set `refetchOnReconnect:true` + `networkMode:'online'` mais sur RN la détection reconnect est web-only sans `onlineManager.setEventListener(NetInfo)`. `ConnectivityProvider.tsx:23-26` a un listener NetInfo mais qui ne feed QUE le contexte local, pas react-query.
 - **Symptôme** : `refetchOnReconnect` ne fire JAMAIS sur device, `networkMode:'online'` ne pause/resume jamais → pas de self-heal automatique des queries offline→online, pas de mutation queue/resume offline. Le commentaire `queryClient.ts:54-55` ("mobile uses an explicit AppState listener") est TROMPEUR — `useAuthAppStateSync.ts` est auth-token-refresh only, pas un bridge connectivité query. Offline-first = requirement PRE-V1.
 - **Severity** : MEDIUM-HIGH, pre-V1 (devrait lander avant le launch 2026-06-01). ~1h.
@@ -1876,12 +1894,14 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-QR-01 — 2FA QR uses ecl='M' (15%) instead of 'H' (30%) (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-QR-01 — 2FA QR uses ecl='M' (15%) instead of 'H' (30%) (HIGH, NICE_TO_HAVE pre-V1)
+- [x] **Statut** : fermé 2026-05-21 — `<QRCode value={otpauthUrl} size={200} ecl="H" onError={...} />` dans `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx`. Test `MfaEnrollScreen.test.tsx` "TOTP QR hardening" capture les props du mock et asserte `ecl==='H'`. lib-docs/react-native-qrcode-svg/PATTERNS.md:75.
 **Context** : Sensitive 2FA secret scanned once in suboptimal conditions. Failed decode = user retypes 32-char base32.
-**Fix** : Add `ecl="H"` to `<QRCode>` in `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:109`.
+**Fix** : ~~Add `ecl="H"` to `<QRCode>`~~ FAIT.
 
-## TD-QR-02 — onError prop missing → uncaught crash (MEDIUM, NICE_TO_HAVE)
-**Fix** : `onError={(err) => logger.warn('mfa.qr.generation.failed', { err })}`.
+## ✅ TD-QR-02 — onError prop missing → uncaught crash (MEDIUM, NICE_TO_HAVE)
+- [x] **Statut** : fermé 2026-05-21 — `onError={(err) => reportError(err, { op: 'mfa.qr.generation' })}` sur le `<QRCode>` (pas de `logger` util en FE → `reportError`, pattern du hook voisin). Même test asserte `typeof onError === 'function'`. lib-docs/react-native-qrcode-svg/PATTERNS.md:76.
+**Fix** : ~~`onError={(err) => logger.warn(...)}`~~ FAIT (via `reportError`).
 
 ---
 
@@ -1944,8 +1964,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-QRW-01 — qrcode admin 2FA missing errorCorrectionLevel='H' (MEDIUM)
-**Fix** : add `errorCorrectionLevel: 'H'` to QRCode.toString call in `museum-web/src/app/[locale]/admin/mfa/page.tsx:26`.
+## ✅ TD-QRW-01 — qrcode admin 2FA missing errorCorrectionLevel='H' (MEDIUM)
+- [x] **Statut** : fermé 2026-05-21 — `errorCorrectionLevel: 'H'` ajouté au `QRCode.toString` dans `museum-web/src/app/[locale]/admin/mfa/page.tsx`. Test vitest `page.test.tsx` (red→green vérifié) asserte l'option. lib-docs/qrcode/PATTERNS.md:76,87.
+**Fix** : ~~add `errorCorrectionLevel: 'H'` to QRCode.toString call~~ FAIT.
 
 ## TD-UUID-01 — uuid deps vs pnpm.overrides version inconsistency (LOW)
 **Fix** : align `museum-backend/package.json:160 ^11.1.1` OR drop override.

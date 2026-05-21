@@ -4,6 +4,16 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import Constants from 'expo-constants';
 
 import type { AppError } from '@/shared/types/AppError';
+import { installOnlineManagerBridge } from '@/shared/infrastructure/connectivity/onlineManagerBridge';
+
+// Wire NetInfo -> TanStack Query `onlineManager` ONCE at app bootstrap (design
+// §D4). This module is imported by the root layout before any provider renders,
+// so the bridge is installed before any query can run and cannot remount.
+// Without it, `refetchOnReconnect:true` (below) and offline mutation pausing are
+// dead on React Native (react-query's reconnect detection is web-only). The
+// returned unsubscribe is intentionally not retained in prod (process lifetime).
+// lib-docs: @tanstack/react-query PATTERNS.md:174,191.
+installOnlineManagerBridge();
 
 const STALE_TIME_DEFAULT = 5 * 60 * 1000;
 const GC_TIME_DEFAULT = 24 * 60 * 60 * 1000;

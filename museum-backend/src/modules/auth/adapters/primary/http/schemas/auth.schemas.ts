@@ -10,12 +10,11 @@ export const registerSchema = z.object({
   firstname: z.string().max(100).optional(),
   lastname: z.string().max(100).optional(),
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
-  // CNIL Délibération 2021-018 — digital majority 15y. Below → BE returns
-  // MINOR_PARENTAL_CONSENT_REQUIRED. Use case parses + computes age server-side.
-  dateOfBirth: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD')
-    .optional(),
+  // CNIL Délibération 2021-018 — digital majority 15y. REQUIRED (A2): a missing or
+  // malformed DOB is rejected with 400 so the age gate cannot be bypassed. Below 15
+  // → BE returns MINOR_PARENTAL_CONSENT_REQUIRED. Use case parses + computes age
+  // server-side. Zod v4 — no `required_error` (lib-docs/zod/LESSONS.md).
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD'),
 });
 
 export const loginSchema = z.object({

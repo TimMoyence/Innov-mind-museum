@@ -33,7 +33,7 @@ describe('ConnectivityProvider', () => {
     jest.clearAllMocks();
   });
 
-  it('provides default connected state', () => {
+  it('provides tri-state default: undetermined connectivity, online-optimistic', () => {
     const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       <ConnectivityProvider>{children}</ConnectivityProvider>
     );
@@ -43,7 +43,11 @@ describe('ConnectivityProvider', () => {
     });
 
     expect(result.current).not.toBeNull();
-    expect(result.current.isConnected).toBe(true);
+    // TD-NI-01: the cold-start window reads as null (no fabricated `true`),
+    // while the derived `isOnline` stays online-optimistic for display.
+    expect(result.current.isConnected).toBeNull();
+    expect(result.current.isInternetReachable).toBeNull();
+    expect(result.current.isOnline).toBe(true);
   });
 
   it('updates state when NetInfo fires a disconnected event', () => {
@@ -55,7 +59,7 @@ describe('ConnectivityProvider', () => {
       wrapper,
     });
 
-    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isConnected).toBeNull();
 
     act(() => {
       netInfoCallback?.({ isConnected: false, isInternetReachable: false });
@@ -63,9 +67,10 @@ describe('ConnectivityProvider', () => {
 
     expect(result.current.isConnected).toBe(false);
     expect(result.current.isInternetReachable).toBe(false);
+    expect(result.current.isOnline).toBe(false);
   });
 
-  it('defaults isConnected to true when NetInfo reports null', () => {
+  it('propagates null from NetInfo raw (no coercion) and stays online-optimistic', () => {
     const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       <ConnectivityProvider>{children}</ConnectivityProvider>
     );
@@ -78,7 +83,11 @@ describe('ConnectivityProvider', () => {
       netInfoCallback?.({ isConnected: null as unknown as boolean, isInternetReachable: null });
     });
 
-    expect(result.current.isConnected).toBe(true);
+    // TD-NI-01: no `?? true` coercion — the raw null is propagated, but the
+    // derived predicate is online-optimistic on an undetermined interface.
+    expect(result.current.isConnected).toBeNull();
+    expect(result.current.isInternetReachable).toBeNull();
+    expect(result.current.isOnline).toBe(true);
   });
 
   it('unsubscribes from NetInfo on unmount', () => {
@@ -102,7 +111,8 @@ describe('useConnectivity', () => {
 
     const { result } = renderHook(() => useConnectivity(), { wrapper });
 
-    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isConnected).toBeNull();
     expect(result.current.isInternetReachable).toBeNull();
+    expect(result.current.isOnline).toBe(true);
   });
 });

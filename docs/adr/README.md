@@ -72,6 +72,7 @@ Numbering gaps : **ADR-001, ADR-005, ADR-008, ADR-034** were deleted from `docs/
 | [ADR-056](ADR-056-a5-phase-client-side-simulated.md) | Chat pipeline phase: client-side simulated, not BE-streamed | ACCEPTED | Implemented |
 | [ADR-057](ADR-057-webauthn-rp-id-decision-deferred.md) | WebAuthn admin RP ID decision | DEFERRED | V1.1 |
 | [ADR-058](ADR-058-selective-hexagonal-ports-policy.md) | Selective hexagonal ports: keep multi-impl ports, inline single-impl ports | PROPOSED | |
+| [ADR-059](ADR-059-connectivity-single-source-online-manager-bridge.md) | Connectivity single source of truth + `onlineManager` bridge as `queryClient.ts` module side-effect | ACCEPTED | Implemented |
 
 ## Cross-reference sanity check vs CLAUDE.md
 

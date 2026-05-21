@@ -20,7 +20,11 @@ function handleEvictedMessages(messages: QueuedMessage[]): void {
 
 export const useOfflineQueue = () => {
   const queueRef = useRef(new OfflineQueue({ storage, onEvict: handleEvictedMessages }));
-  const { isConnected } = useConnectivity();
+  // Source "offline" from the canonical predicate (design §D7) so a captive
+  // portal ({isConnected:true, isInternetReachable:false}) reads as offline,
+  // not the old `!isConnected` off a coerced value. lib-docs:
+  // @react-native-community/netinfo PATTERNS.md:173 (reachable != connected).
+  const { isOnline } = useConnectivity();
 
   // eslint-disable-next-line react-hooks/refs -- stable singleton ref
   const queue = queueRef.current;
@@ -62,7 +66,7 @@ export const useOfflineQueue = () => {
   return {
     pendingMessages: snapshot,
     pendingCount: snapshot.length,
-    isOffline: !isConnected,
+    isOffline: !isOnline,
     enqueue,
     dequeue,
     peek: useCallback(() => queue.peek(), [queue]),

@@ -32,7 +32,7 @@
  */
 
 import '../helpers/test-utils';
-import type * as ReactModule from 'react';
+import type * as ReactTypes from 'react';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
@@ -69,8 +69,8 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => mockNavCanGoBack(),
     addListener: (event: string, callback: () => void) => mockNavAddListener(event, callback),
   }),
-  useFocusEffect: (effect: ReactModule.EffectCallback) => {
-    const React = require('react') as typeof ReactModule;
+  useFocusEffect: (effect: ReactTypes.EffectCallback) => {
+    const React = require('react') as typeof ReactTypes;
     React.useEffect(() => effect(), [effect]);
   },
 }));
@@ -1140,13 +1140,9 @@ describe('ChatSessionScreen — Composer value change', () => {
   });
 });
 
-describe('ChatSessionScreen — OfflineBanner + isOffline mapping', () => {
-  it('forwards pendingCount and isOffline to OfflineBanner', () => {
-    mockUseChatSession.mockReturnValue(defaultSession({ isOffline: true, pendingCount: 3 }));
-    render(<ChatSessionScreen />);
-
-    const props = lastProps<{ pendingCount: number; isOffline: boolean }>('OfflineBanner');
-    expect(props.pendingCount).toBe(3);
-    expect(props.isOffline).toBe(true);
-  });
-});
+// NOTE: the chat-local <OfflineBanner> mount was removed in this cycle
+// (connectivity single-source-of-truth, design §D5). The banner is now mounted
+// globally in app/_layout.tsx via <GlobalOfflineBannerHost />, so the chat
+// screen no longer forwards pendingCount/isOffline to a local OfflineBanner.
+// The global mount is covered by __tests__/components/GlobalOfflineBanner.test.tsx
+// and the .maestro/connectivity-offline-banner.yaml flow (UFR-021).

@@ -62,10 +62,17 @@ jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   }),
 }));
 
-// Connectivity
+// Connectivity — tri-state shape (post-2026-05-21 connectivity-offline-first
+// run). useChatSession now consumes the canonical `isOnline` (design §D7), so
+// the mock mirrors the wider context: `mockIsConnected` drives both the raw
+// interface flag and the derived `isOnline`.
 let mockIsConnected = true;
 jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
-  useConnectivity: () => ({ isConnected: mockIsConnected }),
+  useConnectivity: () => ({
+    isConnected: mockIsConnected,
+    isInternetReachable: mockIsConnected,
+    isOnline: mockIsConnected,
+  }),
 }));
 
 // Offline queue

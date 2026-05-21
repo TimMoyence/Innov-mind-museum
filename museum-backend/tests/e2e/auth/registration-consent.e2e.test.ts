@@ -36,6 +36,7 @@ describeE2E('registration consent (GDPR)', () => {
         password: 'Password123!',
         firstname: 'Consent',
         lastname: 'Test',
+        dateOfBirth: '1990-06-13',
       }),
     });
 

@@ -1,0 +1,63 @@
+appId: com.musaium.mobile.preview
+---
+# screen: MuseumPickerScreen
+# screen: MuseumPickerRoute
+#
+# W3 museum picker — happy path (UFR-021 coverage for /(stack)/museums-picker
+# + features/museum/ui/MuseumPickerScreen.tsx).
+#
+# Normally reached as the auto-detect-fail fallback from useStartConversation;
+# here we deep-link straight to the route (the screen has no standalone in-app
+# affordance that is reliably reachable without forcing a geo failure). Tap the
+# first nearby-museum row (BE pre-sorts by distance) and assert we navigate away
+# — handleSelect() does router.back() + startConversation(), landing in chat.
+#
+# Test account + the 3 seeded Bordeaux pilot museums must exist in the backend.
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Open the museum picker route (deep-link)
+# ──────────────────────────────────────────────
+- openLink:
+    link: "musaium:///(stack)/museums-picker"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- extendedWaitUntil:
+    visible:
+      id: "museum-picker-screen"
+    timeout: 10000
+
+- assertVisible:
+    id: "museum-picker-list"
+
+# ──────────────────────────────────────────────
+# Phase 2: Tap the first nearby-museum row → select + navigate
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "museum-picker-row-.*"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# handleSelect dismisses the picker (router.back) and starts a conversation,
+# so the picker root must no longer be visible.
+- assertNotVisible:
+    id: "museum-picker-screen"

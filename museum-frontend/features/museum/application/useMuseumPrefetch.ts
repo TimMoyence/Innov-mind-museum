@@ -3,6 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 
 import { useChatLocalCacheStore } from '@/features/chat/application/chatLocalCache';
 import { useDataMode } from '@/features/chat/application/DataModeProvider';
+import { isOnline } from '@/shared/infrastructure/connectivity/isOnline';
 import { fetchLowDataPack } from '../infrastructure/lowDataPackApi';
 
 const PREFETCH_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -37,6 +38,17 @@ export function useMuseumPrefetch(museumId: string | null, locale: string): void
     if (lastPrefetch && Date.now() - lastPrefetch < PREFETCH_COOLDOWN_MS) return;
 
     void NetInfo.fetch().then((info) => {
+      // Skip prefetch unless the canonical predicate says we are online — i.e.
+      // an active interface AND the internet not explicitly unreachable
+      // (TD-NI-02: a captive portal on wifi has `isInternetReachable:false` and
+      // must NOT trigger a fetch over dead connectivity). lib-docs:
+      // @react-native-community/netinfo PATTERNS.md:173,266.
+      if (
+        !isOnline({ isConnected: info.isConnected, isInternetReachable: info.isInternetReachable })
+      ) {
+        return;
+      }
+
       // Skip prefetch on non-wifi when in low-data mode (avoid burning expensive data)
       if ((info.type as string) !== 'wifi' && isLowData) return;
 

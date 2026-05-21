@@ -23,7 +23,14 @@ export default function AdminMfaPage(): ReactElement {
 
   useEffect(() => {
     if (!enroll) return;
-    void QRCode.toString(enroll.otpauthUrl, { type: 'svg', margin: 1, width: 220 }).then(setQrSvg);
+    // TD-QRW-01: errorCorrectionLevel 'H' (30%) for the one-shot TOTP secret QR
+    // — silent default is 'M' (15%). lib-docs/qrcode/PATTERNS.md:76,87.
+    void QRCode.toString(enroll.otpauthUrl, {
+      type: 'svg',
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: 220,
+    }).then(setQrSvg);
   }, [enroll]);
 
   const handleGenerate = async () => {

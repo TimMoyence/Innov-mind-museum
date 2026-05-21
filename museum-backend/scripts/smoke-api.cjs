@@ -291,6 +291,7 @@ async function ensureLogin(baseUrl, email, password, timeoutMs) {
       password,
       firstname: getEnv('SMOKE_TEST_FIRSTNAME', 'Smoke'),
       lastname: getEnv('SMOKE_TEST_LASTNAME', 'Runner'),
+      dateOfBirth: getEnv('SMOKE_TEST_DOB', '1990-06-13'),
     },
     timeoutMs,
     expected: [201, 409],
