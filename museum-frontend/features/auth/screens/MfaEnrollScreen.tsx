@@ -14,6 +14,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { usePreventScreenCapture } from '@/features/auth/hooks/usePreventScreenCapture';
 import { mfaService } from '@/features/auth/infrastructure/mfaApi';
+import { reportError } from '@/shared/observability/errorReporting';
 import {
   fontSize,
   goldScale,
@@ -116,7 +117,18 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
         </Pressable>
       ) : (
         <View style={styles.qrWrap}>
-          <QRCode value={otpauthUrl} size={200} />
+          {/* TD-QR-01: ecl="H" (30% recovery) maximises first-scan success for
+              the one-shot TOTP secret. TD-QR-02: onError degrades a generation
+              failure to the manual key below instead of an uncaught render crash.
+              lib-docs/react-native-qrcode-svg/PATTERNS.md:75-76. */}
+          <QRCode
+            value={otpauthUrl}
+            size={200}
+            ecl="H"
+            onError={(err) => {
+              reportError(err, { op: 'mfa.qr.generation' });
+            }}
+          />
           <Text style={styles.manualHint}>Or enter this key manually:</Text>
           <Text selectable style={styles.manualKey}>
             {manualSecret}

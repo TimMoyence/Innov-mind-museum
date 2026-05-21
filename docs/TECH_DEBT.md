@@ -1879,12 +1879,14 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-QR-01 — 2FA QR uses ecl='M' (15%) instead of 'H' (30%) (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-QR-01 — 2FA QR uses ecl='M' (15%) instead of 'H' (30%) (HIGH, NICE_TO_HAVE pre-V1)
+- [x] **Statut** : fermé 2026-05-21 — `<QRCode value={otpauthUrl} size={200} ecl="H" onError={...} />` dans `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx`. Test `MfaEnrollScreen.test.tsx` "TOTP QR hardening" capture les props du mock et asserte `ecl==='H'`. lib-docs/react-native-qrcode-svg/PATTERNS.md:75.
 **Context** : Sensitive 2FA secret scanned once in suboptimal conditions. Failed decode = user retypes 32-char base32.
-**Fix** : Add `ecl="H"` to `<QRCode>` in `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:109`.
+**Fix** : ~~Add `ecl="H"` to `<QRCode>`~~ FAIT.
 
-## TD-QR-02 — onError prop missing → uncaught crash (MEDIUM, NICE_TO_HAVE)
-**Fix** : `onError={(err) => logger.warn('mfa.qr.generation.failed', { err })}`.
+## ✅ TD-QR-02 — onError prop missing → uncaught crash (MEDIUM, NICE_TO_HAVE)
+- [x] **Statut** : fermé 2026-05-21 — `onError={(err) => reportError(err, { op: 'mfa.qr.generation' })}` sur le `<QRCode>` (pas de `logger` util en FE → `reportError`, pattern du hook voisin). Même test asserte `typeof onError === 'function'`. lib-docs/react-native-qrcode-svg/PATTERNS.md:76.
+**Fix** : ~~`onError={(err) => logger.warn(...)}`~~ FAIT (via `reportError`).
 
 ---
 
@@ -1947,8 +1949,9 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## TD-QRW-01 — qrcode admin 2FA missing errorCorrectionLevel='H' (MEDIUM)
-**Fix** : add `errorCorrectionLevel: 'H'` to QRCode.toString call in `museum-web/src/app/[locale]/admin/mfa/page.tsx:26`.
+## ✅ TD-QRW-01 — qrcode admin 2FA missing errorCorrectionLevel='H' (MEDIUM)
+- [x] **Statut** : fermé 2026-05-21 — `errorCorrectionLevel: 'H'` ajouté au `QRCode.toString` dans `museum-web/src/app/[locale]/admin/mfa/page.tsx`. Test vitest `page.test.tsx` (red→green vérifié) asserte l'option. lib-docs/qrcode/PATTERNS.md:76,87.
+**Fix** : ~~add `errorCorrectionLevel: 'H'` to QRCode.toString call~~ FAIT.
 
 ## TD-UUID-01 — uuid deps vs pnpm.overrides version inconsistency (LOW)
 **Fix** : align `museum-backend/package.json:160 ^11.1.1` OR drop override.

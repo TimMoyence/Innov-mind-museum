@@ -17,12 +17,17 @@ import type { EffectCallback } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-// ── react-native-qrcode-svg — render value as text so we can assert on it ────
+// ── react-native-qrcode-svg — render value as text so we can assert on it, and
+// capture the props passed to <QRCode> so we can assert ecl/onError (TD-QR-01/02).
+const mockQrProps: Record<string, unknown>[] = [];
 jest.mock('react-native-qrcode-svg', () => {
   const { Text } = require('react-native');
   return {
     __esModule: true,
-    default: ({ value }: { value: string }) => <Text testID="qr-code">{value}</Text>,
+    default: (props: { value: string }) => {
+      mockQrProps.push(props as unknown as Record<string, unknown>);
+      return <Text testID="qr-code">{props.value}</Text>;
+    },
   };
 });
 
@@ -151,6 +156,33 @@ describe('MfaEnrollScreen — graceful degradation (R5, R6)', () => {
       expect(callArgs).not.toContain(result.otpauthUrl);
       expect(callArgs).not.toContain(result.manualSecret);
     }
+  });
+});
+
+describe('MfaEnrollScreen — TOTP QR hardening (TD-QR-01 / TD-QR-02)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQrProps.length = 0;
+  });
+
+  it('renders the QR with ecl="H" (30% recovery) and an onError handler', async () => {
+    // lib-docs/react-native-qrcode-svg/PATTERNS.md:75-76 — the one-shot TOTP
+    // secret QR must use ecl='H' (maximises first-scan success) and provide
+    // onError so a generation failure degrades to the manual key instead of an
+    // uncaught render crash.
+    const result = makeMfaEnrollResult();
+    mockEnroll.mockResolvedValue(result);
+
+    render(<MfaEnrollScreen />);
+    fireEvent.press(screen.getByText('Generate'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('qr-code')).toBeTruthy();
+    });
+
+    const props = mockQrProps.at(-1);
+    expect(props?.ecl).toBe('H');
+    expect(typeof props?.onError).toBe('function');
   });
 });
 
