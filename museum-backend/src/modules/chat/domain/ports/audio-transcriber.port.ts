@@ -1,5 +1,7 @@
 import { AppError } from '@shared/errors/app.error';
 
+import type { LlmPathTier } from '@shared/observability/derive-tier';
+
 export interface AudioTranscriberInput {
   base64: string;
   mimeType: string;
@@ -12,6 +14,13 @@ export interface AudioTranscriberInput {
    * email/name patterns before passing.
    */
   prompt?: string;
+  /**
+   * TD-20 (R11b) — OPTIONAL per-tenant scope threaded from the tenant-scoped
+   * call site (`chat-message.service` STT) so the Langfuse STT `generation`
+   * carries real attribution. Omitted (never fabricated) when absent.
+   */
+  museumId?: number;
+  tier?: LlmPathTier;
 }
 
 export interface AudioTranscriptionResult {

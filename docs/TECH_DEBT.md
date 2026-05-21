@@ -207,21 +207,35 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - ~~TD-17 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-18 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-19 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
-### TD-20 — Langfuse generations résiduelles sur les 4 paths non-LangChain (per-tenant cost attribution)
+### ~~TD-20 — Langfuse generations résiduelles sur les 4 paths non-LangChain (per-tenant cost attribution)~~ — RÉSOLU 2026-05-21
 
-> **Re-scopé 2026-05-21 (ai verdict, MEDIUM)** : le symptôme original "0 `lf.generation()`, cost column UI = 0" est désormais **FAUX pour le chat path** — `langchain-orchestrator-tracing.ts:101-122` émet `trace?.generation({...})` + `generation?.end({...usage})` depuis C9.4/TD-LF-02 (2026-05-18). Résiduel réel = 4 paths non-LangChain non instrumentés : (a) judge `llm-judge-guardrail.ts:135` (raw `structured.invoke`, no langfuse import) ; (b) TTS `text-to-speech.openai.ts` (no langfuse import) ; (c) STT `audio-transcriber.openai.ts` (no langfuse import) ; (d) LLM-Guard adapter (pas de corrélation langfuse) ; (e) generations sans metadata `museumId/tier/requestId` (D1 subclass). Reprioritisé scope per-tenant-cost-attribution.
+> **Résolu 2026-05-21** (`/team` run `2026-05-21-td20-langfuse-llm-paths`, review APPROVED 9.4/10, security PASS, verify PASS — 2146 tests, tsc clean). Les 4 paths LLM non-LangChain émettent désormais `generation()`/`event()` Langfuse via `safeTrace` + `getLangfuse()` fail-open : judge `llm-judge-guardrail.ts` (`generation` model + `metadata.inputLength/estimatedCostCents`, PAS de token usage fabriqué — UFR-013), TTS `text-to-speech.openai.ts` (`generation` `usageDetails:{input:text.length}` + `unit:'CHARACTERS'`), STT `audio-transcriber.openai.ts` (`generation` `usage:{input:byteLength}` + interim `unit:'BYTES'` en metadata, cf TD-20a ci-dessous), LLM-Guard `llm-guard.adapter.ts` (`event` `guardrail.llm-guard.scan` émis APRÈS le verdict — ADR-047 fail-CLOSED structurellement préservé). Helper DRY `src/shared/observability/derive-tier.ts` (parité verbatim avec `langchain.orchestrator.ts`). Plumbing per-tenant `{museumId,tier,requestId}` optionnel ajouté sur 4 ports (spread-omit idiom → backward-compat, aucune fixture cassée). Chat path déjà couvert depuis C9.4/TD-LF-02 (2026-05-18), hors scope ici (UFR-016, non re-touché).
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit NORTHSTAR Agent G + B T1-B.1 ; re-scopé 2026-05-21)
-- **Référence code** :
+- [x] **Statut** : résolu 2026-05-21 (créé 2026-05-17, audit NORTHSTAR Agent G + B T1-B.1 ; re-scopé 2026-05-21 ; clos par run TD-20)
+- **Référence code (post-résolution)** :
   ```
-  museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-tracing.ts  # 8 sites lf?.trace(...), 0 lf.generation()
-  museum-backend/src/shared/observability/langfuse.client.ts                                # SDK v3.38.20 wrap manuel
-  museum-backend/src/shared/observability/safeTrace.ts                                       # fail-open helper
+  museum-backend/src/shared/observability/derive-tier.ts                                          # helper tier DRY (nouveau)
+  museum-backend/src/modules/chat/useCase/llm/llm-judge-guardrail.ts                              # generation judge
+  museum-backend/src/modules/chat/adapters/secondary/audio/text-to-speech.openai.ts              # generation TTS (CHARACTERS)
+  museum-backend/src/modules/chat/adapters/secondary/audio/audio-transcriber.openai.ts           # generation STT (BYTES interim)
+  museum-backend/src/modules/chat/adapters/secondary/guardrails/llm-guard.adapter.ts             # event guardrail.scan
+  museum-backend/src/shared/observability/safeTrace.ts                                            # fail-open helper (réutilisé)
   ```
-- **Symptôme** : Langfuse SDK v3 expose `lf.generation({input, output, usage, model})` qui auto-track token usage + cost. Wrap manuel `withLangfuseTrace` n'utilise que `lf.trace({metadata: {provider, latencyMs}})` → Langfuse UI cost column = 0 (pas de signal usage). Aucun `userId/sessionId/museumId` propagé Langfuse-level (champs existent `OrchestratorInput.userId` cf. port:44 mais pas inclus dans tracing). Aucun `lf.score()` → online evals Feb 2026 (observation-level) inutilisées.
 - **Sprint d'origine** : audit /team 360° 2026-05-16 (G + B Gap-9).
-- **Effort estimé** : **1 jour** standalone, mais wired dans C9.4 unified changeset (avec cost CB + Prom gauge €/h + 3 alerts) = 2j total. Précondition pour cost CB enforcement + per-tenant cost attribution B2B.
-- **Comment fermer** : exécuter C9.4 — migration ciblée puis `langfuse-langchain` callback handler officiel V1.1 (W6.8).
+- **Effort réel** : 1 run `/team` (spec→plan→red→green→verify→security→review→documenter), inclus une boucle `BLOCK-TEST-WRONG` (red re-spawn). Estimé 1-2j, réalisé en un run.
+- **Suivi** : 2 follow-up honnêtes découverts pendant le run → **TD-20a** + **TD-20b** ci-dessous.
+
+#### TD-20a — `museumId` absent sur les paths guardrail (suivi TD-20)
+
+- [ ] **Statut** : ouvert (découvert 2026-05-21, run TD-20)
+- **Symptôme** : la propagation per-tenant `{museumId,tier,requestId}` est complète sur judge/TTS/STT mais **partielle côté guardrail** : `GuardrailAuditContext` ne porte pas `museumId`, donc l'`event()` LLM-Guard ne peut pas l'attacher. L'ajouter = changement de contrat **route-level** (threading `museumId` depuis la route chat jusqu'au contexte guardrail), hors scope d'un run telemetry-only.
+- **Comment fermer** : étendre `GuardrailAuditContext` avec `museumId?` + propager depuis la route chat (point d'entrée où le museum est résolu) jusqu'à `llm-guard.adapter.ts`. Vérifier qu'aucun autre consommateur du contexte ne régresse.
+
+#### TD-20b — STT unit interim `BYTES` (suivi TD-20, D-Q1 deferred)
+
+- [ ] **Statut** : ouvert (découvert 2026-05-21, run TD-20 ; décision D-Q1 deferred)
+- **Symptôme** : la `generation()` STT émet `usage:{input:byteLength}` avec `unit:'BYTES'` rangé en **metadata** (free-form) — `BYTES` n'est PAS un membre valide de `ModelUsageUnit` (`CHARACTERS|TOKENS|MILLISECONDS|SECONDS|IMAGES|REQUESTS`, cf. LESSONS.md LF-V3-14). Sans durée audio, on ne peut pas émettre la vraie unité de pricing Whisper (`SECONDS`, `$0.0001/sec`). L'octet-count est un proxy interim ; aucun catalog `gpt-4o-mini-transcribe` n'existe encore donc pas de coût inféré trompeur.
+- **Comment fermer** : calculer la durée audio (`getAudioDurationSeconds`) côté adapter STT → émettre `usageDetails:{input:durationSeconds}` + `unit:'SECONDS'` + ajouter `gpt-4o-mini-transcribe` au catalog Langfuse (`inputPrice: 0.0001`, `unit: 'SECONDS'`).
 
 ---
 

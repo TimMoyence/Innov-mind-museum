@@ -85,6 +85,23 @@ STT (Whisper / `gpt-4o-mini-transcribe`) is priced per audio SECOND : `$0.006/mi
 
 From `langfuse.com/docs/model-usage-and-cost` (2026-05-20 fetch) : **"Ingested usage and cost are prioritised over inferred usage and cost."**. Implication for Anthropic / providers where Musaium would have the actual bill : pass `costDetails: { input: <USD>, output: <USD> }` directly on the generation to override Langfuse's inference. Not relevant today (Musaium = OpenAI + Deepseek + Google), but worth documenting for future provider additions.
 
+---
+
+## 2026-05-21 — TD-20 impl : 2 inexactitudes dans le cache curé (PATTERNS.md)
+
+Pendant le run `/team` `2026-05-21-td20-langfuse-llm-paths` (instrumentation des 4 paths LLM non-LangChain), vérification du cache curé contre les types installés `langfuse-core@3.38.20` (`museum-backend/node_modules/.pnpm/langfuse-core@3.38.20/node_modules/langfuse-core/lib/index.d.ts`) a révélé 2 erreurs :
+
+### ⚠️ LF-V3-14 MEDIUM — `CreateEventBody` n'a PAS de champ `tags` ; PATTERNS.md:416 est faux
+- `CreateEventBody` (`.d.ts:1620-1623`) = `{ id?: string|null } & OptionalObservationBody`. `OptionalObservationBody` (`.d.ts:1605-1619`) expose `traceId/name/startTime/metadata/input/output/level/statusMessage/parentObservationId/version/environment` — **pas de `tags`**.
+- `tags?: string[] | null` n'existe que sur le **TraceBody** (`.d.ts:1709`, bloc trace :1700-1713). Donc le pattern recommandé PATTERNS.md:416 `lf.event({ name:'guardrail.llm-guard.scan', metadata:{...}, tags:['guardrail'] })` est **incorrect** : `tags` y est silencieusement ignoré (ou tsc rejette selon strictness). Les tags doivent aller sur le **trace** parent (`lf.trace({ tags:[...] })`), pas sur l'event.
+- **Impl TD-20** : l'`event()` LLM-Guard a donc été émis sans `tags` (les tags catégoriels vivent sur le trace). À corriger dans PATTERNS.md:416 au prochain refresh curator.
+
+### ⚠️ LF-V3-15 MEDIUM — `BYTES` n'est PAS un membre de `ModelUsageUnit`
+- `ModelUsageUnit` (`.d.ts:1459`) = `"CHARACTERS" | "TOKENS" | "MILLISECONDS" | "SECONDS" | "IMAGES" | "REQUESTS"`. **`BYTES` absent.** Ne jamais le mettre dans `usage.unit` / `usageDetails` `unit` (`Usage.unit` à `.d.ts:1141`, observation usage à :1423/:1922 référencent tous `ModelUsageUnit`).
+- Confirme et précise LF-V3-12 (qui suggérait `unit:'BYTES'`) : le `BYTES` interim STT DOIT vivre en **metadata free-form** (`metadata:{ unit:'BYTES', durationKnown:false }`), jamais dans le champ `unit` typé. Suivi `docs/TECH_DEBT.md` TD-20b (upgrade `SECONDS` quand audio-duration dispo, D-Q1 deferred).
+
+---
+
 ### ✅ Positives reaffirmed 2026-05-20
 
 - `langchain-orchestrator-tracing.ts` is a clean reference impl of the "outer manual trace + inner CallbackHandler" pattern (PATTERNS.md §8.1).

@@ -807,8 +807,15 @@ export class ChatModule {
       guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
-      llmJudge: async (message: string) =>
-        await judgeWithLlm(message, { model: deps.judgeModel ?? undefined }),
+      // TD-20 (R13c) — forward the optional `{tier, requestId}` scope (museumId
+      // honestly absent on this path, D5) into the judge generation.
+      llmJudge: async (message: string, scope?) =>
+        await judgeWithLlm(message, {
+          model: deps.judgeModel ?? undefined,
+          ...(scope?.museumId !== undefined ? { museumId: scope.museumId } : {}),
+          ...(scope?.tier !== undefined ? { tier: scope.tier } : {}),
+          ...(scope?.requestId !== undefined ? { requestId: scope.requestId } : {}),
+        }),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository: deps.museumRepository,
       dbLookup: deps.knowledgeExtraction.dbLookup,

@@ -4,11 +4,13 @@ import {
   ScanSemaphoreOverflowError,
 } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { logger } from '@shared/logger/logger';
+import { getLangfuse } from '@shared/observability/langfuse.client';
 import {
   llmGuardChaosInjectionsTotal,
   llmGuardCircuitBreakerSkipsTotal,
   llmGuardScanDurationSeconds,
 } from '@shared/observability/prometheus-metrics';
+import { safeTrace } from '@shared/observability/safeTrace';
 
 import type { GuardrailCircuitBreakerSnapshot } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
 import type {
@@ -99,6 +101,23 @@ const mapReason = (raw: string | undefined): GuardrailBlockReason => {
 type ScanOutcome = 'success' | 'fail_closed' | 'timeout' | 'breaker_skip' | 'overflow';
 
 /**
+ * TD-20 (R4/R13e/D5) — per-tenant scope for the LLM-Guard correlation `event`.
+ * `museumId` is honestly ABSENT on this path (`GuardrailAuditContext` carries no
+ * museumId — spec §5/D5); only `tier` + `requestId` are reachable. Spread-omit
+ * (absent => key omitted, never fabricated — UFR-013).
+ */
+interface ScanScope {
+  tier?: GuardrailInput['tier'];
+  requestId?: string;
+}
+
+/** Spread-omit ScanScope builder — absent fields produce absent keys (UFR-013). */
+const buildScanScope = (tier: GuardrailInput['tier'], requestId?: string): ScanScope => ({
+  ...(tier !== undefined ? { tier } : {}),
+  ...(requestId !== undefined ? { requestId } : {}),
+});
+
+/**
  * GuardrailProvider port over the LLM Guard Python sidecar (ADR-048).
  * Fail-CLOSED on every error path (network, HTTP ≥ 400, malformed JSON,
  * breaker open, queue overflow) per ADR-047 — no-fail-OPEN contract.
@@ -150,16 +169,24 @@ export class LLMGuardAdapter implements GuardrailProvider {
 
   /** Fail-CLOSED on error. */
   async checkInput(input: GuardrailInput): Promise<GuardrailVerdict> {
-    return await this.scan('/scan/prompt', { prompt: input.text, locale: input.locale });
+    return await this.scan(
+      '/scan/prompt',
+      { prompt: input.text, locale: input.locale },
+      buildScanScope(input.tier, input.requestId),
+    );
   }
 
   /** Fail-CLOSED on error. */
   async checkOutput(output: GuardrailOutput): Promise<GuardrailVerdict> {
-    return await this.scan('/scan/output', {
-      prompt: output.userInput ?? '',
-      output: output.text,
-      locale: output.locale,
-    });
+    return await this.scan(
+      '/scan/output',
+      {
+        prompt: output.userInput ?? '',
+        output: output.text,
+        locale: output.locale,
+      },
+      buildScanScope(output.tier, output.requestId),
+    );
   }
 
   /**
@@ -184,7 +211,7 @@ export class LLMGuardAdapter implements GuardrailProvider {
     let probeOk: boolean;
     let probeDetail: string | undefined;
     try {
-      const verdict = await this.scan('/scan/prompt', { prompt: 'health-probe' });
+      const verdict = await this.scan('/scan/prompt', { prompt: 'health-probe' }, {});
       // `service_unavailable` = scan-path failure (timeout/overflow/breaker race).
       probeOk = verdict.allow || verdict.reason !== 'service_unavailable';
       if (!probeOk) probeDetail = `probe_returned_${verdict.reason ?? 'unknown'}`;
@@ -219,7 +246,11 @@ export class LLMGuardAdapter implements GuardrailProvider {
     };
   }
 
-  private async scan(path: string, body: Record<string, unknown>): Promise<GuardrailVerdict> {
+  private async scan(
+    path: string,
+    body: Record<string, unknown>,
+    scope: ScanScope = {},
+  ): Promise<GuardrailVerdict> {
     this._metricsRequests += 1;
 
     // ADR-047 fail-CLOSED during breaker OPEN window.
@@ -232,7 +263,9 @@ export class LLMGuardAdapter implements GuardrailProvider {
       llmGuardScanDurationSeconds.observe({ path, outcome: 'breaker_skip' }, 0);
       this._metricsSkipsBreaker += 1;
       this._metricsBlocks += 1;
-      return this.failClosed('service_unavailable');
+      const verdict = this.failClosed('service_unavailable');
+      this.emitScanEvent(path, 'breaker_skip', verdict, scope);
+      return verdict;
     }
 
     // ADR-047 — overflow → fail-CLOSED, no fan-out to saturated sidecar.
@@ -248,16 +281,20 @@ export class LLMGuardAdapter implements GuardrailProvider {
         llmGuardScanDurationSeconds.observe({ path, outcome: 'overflow' }, 0);
         this._metricsSkipsOverflow += 1;
         this._metricsBlocks += 1;
-        return this.failClosed('service_unavailable');
+        const verdict = this.failClosed('service_unavailable');
+        this.emitScanEvent(path, 'overflow', verdict, scope);
+        return verdict;
       }
       throw e;
     }
 
     const start = process.hrtime.bigint();
     let outcome: ScanOutcome = 'fail_closed';
+    let verdict: GuardrailVerdict = this.failClosed('error');
     try {
       const result = await this.scanOverHttp(path, body);
       outcome = result.outcome;
+      verdict = result.verdict;
       if (!result.verdict.allow) this._metricsBlocks += 1;
       if (result.outcome === 'fail_closed' || result.outcome === 'timeout') {
         this._metricsErrors += 1;
@@ -267,7 +304,44 @@ export class LLMGuardAdapter implements GuardrailProvider {
       const elapsedSeconds = Number(process.hrtime.bigint() - start) / 1e9;
       llmGuardScanDurationSeconds.observe({ path, outcome }, elapsedSeconds);
       this.semaphore.release();
+      // TD-20 (R4/R8) — correlation event for EVERY outcome. Fail-OPEN
+      // telemetry: emitted OUTSIDE the verdict computation so a Langfuse throw
+      // can never flip the fail-CLOSED security verdict (ADR-047, security §7).
+      this.emitScanEvent(path, outcome, verdict, scope);
     }
+  }
+
+  /**
+   * TD-20 (R4) — Langfuse correlation `event` (NOT a `generation` — the sidecar
+   * is a fixed monthly cost, no per-token billing). Carries decision/outcome
+   * metadata + scope only; NEVER the scanned text (PII discipline, NFR Privacy).
+   * `museumId` honestly absent on this path (D5). Fail-open via `safeTrace`.
+   */
+  private emitScanEvent(
+    path: string,
+    outcome: ScanOutcome,
+    verdict: GuardrailVerdict,
+    scope: ScanScope,
+  ): void {
+    safeTrace('langfuse.llm-guard.event', () => {
+      const lf = getLangfuse();
+      // v3.38.20 — `tags` live on the TRACE body (PATTERNS.md §2.2), NOT on the
+      // event observation body. Tag the trace; the event carries the metadata.
+      lf?.trace({
+        name: 'guardrail.llm-guard',
+        tags: ['guardrail'],
+        metadata: { ...scope },
+      }).event({
+        name: 'guardrail.llm-guard.scan',
+        metadata: {
+          path,
+          outcome,
+          allow: verdict.allow,
+          ...(verdict.reason !== undefined ? { reason: verdict.reason } : {}),
+          ...scope,
+        },
+      });
+    });
   }
 
   /** Hot path short-circuits RNG when chaosRate=0. */

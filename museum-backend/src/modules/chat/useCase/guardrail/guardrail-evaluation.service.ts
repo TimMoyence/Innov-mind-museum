@@ -1,6 +1,7 @@
 import { withPolicyCitation } from '@modules/chat/useCase/image/chat-image.helpers';
 import { AUDIT_SECURITY_GUARDRAIL_PASS } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
+import { deriveTier } from '@shared/observability/derive-tier';
 
 import {
   buildGuardrailRefusal,
@@ -34,6 +35,7 @@ import type {
 } from '@modules/chat/domain/session/chat.repository.interface';
 import type { PostMessageResult } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { AuditService } from '@shared/audit/audit.service';
+import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 export type { GuardrailAuditContext, LlmJudgeFn };
 
@@ -86,6 +88,33 @@ export class GuardrailEvaluationService {
   }
 
   /**
+   * TD-20 (R13c/R13e/R12) — per-tenant scope for the judge + LLM-Guard
+   * observations, derived from the audit context. `museumId` honestly ABSENT
+   * (not in `GuardrailAuditContext` — spec §5/D5). Spread-omit `requestId`.
+   */
+  private scopeFromContext(context?: GuardrailAuditContext): LlmJudgeScope {
+    return {
+      tier: deriveTier(context?.userId),
+      ...(context?.requestId !== undefined ? { requestId: context.requestId } : {}),
+    };
+  }
+
+  /**
+   * ADR-048 input-leg provider call. Extracted so `evaluateInput` stays under
+   * the line cap. TD-20 (R13e/R12) — forwards `{tier, requestId}` scope.
+   */
+  private async runProviderCheckInput(
+    text: string | undefined,
+    context?: GuardrailAuditContext,
+  ): Promise<{ allow: boolean; reason?: string; redactedText?: string }> {
+    if (!this.guardrailProvider) return { allow: true };
+    return await this.guardrailProvider.checkInput({
+      text: text ?? '',
+      ...this.scopeFromContext(context),
+    });
+  }
+
+  /**
    * `preClassified='art'` skips soft off-topic check ONLY; hard blocks
    * (insults, prompt injection) always run. Every block goes through audit
    * chain (V13 / STRIDE R3).
@@ -117,10 +146,7 @@ export class GuardrailEvaluationService {
     // layer, never replacing it.
     const providerVerdict = await evaluateGuardrailProvider(
       'input',
-      async () => {
-        if (!this.guardrailProvider) return { allow: true };
-        return await this.guardrailProvider.checkInput({ text: text ?? '' });
-      },
+      () => this.runProviderCheckInput(text, context),
       this.providerDeps(),
     );
     if (!providerVerdict.allow) {
@@ -150,8 +176,10 @@ export class GuardrailEvaluationService {
     }
 
     // F4 — judge selectively invoked on long inputs where keyword said allow.
-    // Cannot upgrade keyword blocks (those returned earlier).
-    const judgeDecision = await runLlmJudge(text ?? '', this.judgeDeps());
+    // Cannot upgrade keyword blocks (those returned earlier). TD-20 (R13c/R12) —
+    // forwards `{tier, requestId}` from the audit context (museumId absent, D5).
+    const scope = this.scopeFromContext(context);
+    const judgeDecision = await runLlmJudge(text ?? '', this.judgeDeps(), scope);
     if (!judgeDecision.allow) {
       recordBiasMetrics({ locale, layer: 'judge', decision: judgeDecision });
       await this.logBlock({
@@ -274,6 +302,8 @@ export class GuardrailEvaluationService {
           text,
           metadata: { ...metadata },
           locale: requestedLocale,
+          // TD-20 (R13e/R12) — symmetric scope on the output leg (D5).
+          ...this.scopeFromContext(context),
         });
       },
       this.providerDeps(),

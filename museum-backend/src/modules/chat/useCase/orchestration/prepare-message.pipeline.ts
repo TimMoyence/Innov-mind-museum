@@ -4,6 +4,7 @@ import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolv
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
+import { deriveTier } from '@shared/observability/derive-tier';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -33,6 +34,7 @@ import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/dom
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
+import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 export interface PrepareReady {
   kind: 'ready';
@@ -263,6 +265,7 @@ export class PrepareMessagePipeline {
       history,
       ownerId,
       currentUserId,
+      requestId,
     });
 
     // W3 (T5.4) — Resolve `[CURRENT ARTWORK]` block from session.currentArtworkId
@@ -314,16 +317,23 @@ export class PrepareMessagePipeline {
     }
   }
 
-  /** Fail-open per port (router NEVER throws — ADR-035). */
+  /**
+   * Fail-open per port (router NEVER throws — ADR-035).
+   *
+   * TD-20 (R13d/R12) — threads per-tenant scope to the judge leg's Langfuse
+   * `generation` via the optional `KnowledgeRouterPort.resolve` 3rd arg. The
+   * scope is built spread-omit (absent => key omitted, never fabricated).
+   */
   private async resolveRouterFacts(
     inputText: string | undefined,
+    scope?: LlmJudgeScope,
   ): Promise<{ routerFacts: readonly string[]; routerSource: KnowledgeRouterSource }> {
     const router = this.knowledgeRouter;
     const searchTerm = inputText?.trim();
     if (!router || !searchTerm) {
       return { routerFacts: [], routerSource: 'none' };
     }
-    const result = await router.resolve(searchTerm);
+    const result = await router.resolve(searchTerm, undefined, scope);
     return { routerFacts: result.facts, routerSource: result.source };
   }
 
@@ -334,6 +344,7 @@ export class PrepareMessagePipeline {
     history: ChatMessage[];
     ownerId: number | undefined;
     currentUserId: number | undefined;
+    requestId: string | undefined;
   }): Promise<{
     userMemoryBlock: string | undefined;
     knowledgeBaseBlock: string | undefined;
@@ -344,7 +355,16 @@ export class PrepareMessagePipeline {
     routerFacts: readonly string[];
     routerSource: KnowledgeRouterSource;
   }> {
-    const { input, session, requestedLocale, history, ownerId, currentUserId } = args;
+    const { input, session, requestedLocale, history, ownerId, currentUserId, requestId } = args;
+    // TD-20 (R13d/R12) — per-tenant scope for the judge-via-knowledge-router
+    // path. `tier` derived from the session owner (or the requesting user) via
+    // the shared `deriveTier` (verbatim parity with the chat orchestrator).
+    // Spread-omit: a missing field is absent on the observation, never `null`.
+    const routerScope: LlmJudgeScope = {
+      ...(session.museumId != null ? { museumId: session.museumId } : {}),
+      tier: deriveTier(ownerId ?? currentUserId),
+      ...(requestId !== undefined ? { requestId } : {}),
+    };
     // A5 R6 — searching-collection span wraps the (parallelized) enrichment
     // fan-out (C9.6). The three calls are independent — `Promise.all` makes
     // wall-clock ≈ max(t) instead of sum(t), saving ~200-500ms P50.
@@ -379,7 +399,7 @@ export class PrepareMessagePipeline {
         userId: ownerId ?? currentUserId,
         consentChecker: this.locationConsentChecker,
       }),
-      this.resolveRouterFacts(input.text?.trim()),
+      this.resolveRouterFacts(input.text?.trim(), routerScope),
     ]);
     emitChatPhaseSpan('searching-collection', enrichmentStartedAtMs, {
       sessionId: session.id,

@@ -5,9 +5,13 @@ import {
   type ChatPhaseErrorType,
   type ChatPhaseOutcome,
 } from '@shared/observability/chat-phase-timer';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
 import type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
+import type { LlmPathTier } from '@shared/observability/derive-tier';
+import type { LangfuseGenerationClient } from 'langfuse';
 
 export type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 
@@ -72,6 +76,40 @@ const parseSpeechResponse = async (response: Response): Promise<Buffer> => {
   return Buffer.from(arrayBuffer);
 };
 
+/**
+ * TD-20 (R2/R5/R8/D2) — opens the TTS Langfuse `generation` (cost path, billed
+ * per CHARACTERS). PATTERNS.md §2.3 `trace().generation()` chain + §9.3 P3;
+ * fail-open via `safeTrace` + `getLangfuse()` (PATTERNS.md:310,313 DO#12,#15).
+ * PII discipline (NFR Privacy / PATTERNS.md §8.1): only the text LENGTH +
+ * `voice` enum, never the input text. Scope spread-omit so an absent
+ * `museumId`/`tier` (contextless `describe` path) produces an ABSENT key, never
+ * `null` (UFR-013). Returns `undefined` when Langfuse is disabled.
+ */
+const openTtsGeneration = (
+  text: string,
+  voice: string,
+  requestId: string,
+  scope: { museumId?: number; tier?: LlmPathTier },
+): LangfuseGenerationClient | undefined =>
+  safeTrace('langfuse.tts.generation.create', () => {
+    const lf = getLangfuse();
+    return lf
+      ?.trace({
+        name: 'tts.synthesize',
+        metadata: { requestId, ...scope },
+      })
+      .generation({
+        name: 'tts.synthesize.generation',
+        model: env.tts.model,
+        // v3.38.20 — `unit` lives INSIDE `usage` (PATTERNS.md §2.5 + SDK
+        // `Usage.unit`), NOT at the generation body top level. `usageDetails`
+        // also emitted so the cost server reads the per-metric record.
+        usage: { input: text.length, unit: 'CHARACTERS' },
+        usageDetails: { input: text.length },
+        metadata: { textLength: text.length, voice, ...scope },
+      });
+  });
+
 /** POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {
   /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
@@ -79,6 +117,8 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
     text: string;
     voice?: string;
     requestId?: string;
+    museumId?: number;
+    tier?: LlmPathTier;
   }): Promise<TtsResult> {
     const text = input.text.slice(0, env.tts.maxTextLength);
     const voice = input.voice ?? env.tts.voice;
@@ -91,16 +131,30 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
     // A5 R5 — Langfuse span `chat.phase.synthesizing-voice` (sibling of Prom dim, distinct concerns).
     const synthesisStartedAtMs = Date.now();
 
+    // TD-20 — cost-attribution generation (spread-omit scope, never fabricated).
+    const scope = {
+      ...(input.museumId !== undefined ? { museumId: input.museumId } : {}),
+      ...(input.tier !== undefined ? { tier: input.tier } : {}),
+    };
+    const generation = openTtsGeneration(text, voice, requestId, scope);
+
     let outcome: ChatPhaseOutcome = 'success';
     let errorType: ChatPhaseErrorType = 'unknown';
     try {
       const apiKey = requireApiKey();
       const response = await fetchSpeech(apiKey, text, voice);
       const audio = await parseSpeechResponse(response);
+      safeTrace('langfuse.tts.generation.end', () => generation?.end({}));
       return { audio, contentType: 'audio/ogg' };
     } catch (err) {
       outcome = 'error';
       errorType = classifyTtsError(err);
+      safeTrace('langfuse.tts.generation.end.error', () =>
+        generation?.end({
+          level: 'ERROR',
+          statusMessage: err instanceof Error ? err.message : String(err),
+        }),
+      );
       throw err;
     } finally {
       timer.end(outcome, errorType);

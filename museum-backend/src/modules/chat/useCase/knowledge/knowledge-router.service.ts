@@ -21,6 +21,7 @@ import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge
 import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { LlmJudgePort } from '@modules/chat/useCase/llm/llm-judge-guardrail';
+import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 export type KnowledgeRouterSource = 'wikidata' | 'web' | 'none';
 
@@ -44,7 +45,17 @@ export interface KnowledgeRouterResult {
 
 /** Implementations must never throw (fail-open R9/R10) and honor `signal`. */
 export interface KnowledgeRouterPort {
-  resolve(searchTerm: string, signal?: AbortSignal): Promise<KnowledgeRouterResult>;
+  /**
+   * TD-20 (R13d) — optional `scope` 3rd arg forwards per-tenant attribution
+   * (`museumId`/`tier`/`requestId`) to the judge leg's `generation`. Optional
+   * data on an existing port method (not a new port). Optional => existing
+   * callers compile unchanged.
+   */
+  resolve(
+    searchTerm: string,
+    signal?: AbortSignal,
+    scope?: LlmJudgeScope,
+  ): Promise<KnowledgeRouterResult>;
 }
 
 /** Tuning only — no field can disable the feature (D11). */
@@ -169,8 +180,12 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
    * Never throws (D8). PII safety (NFR7): raw `searchTerm` never leaves this
    * method — telemetry carries sha256[:16] hash only.
    */
-  async resolve(searchTerm: string, parentSignal?: AbortSignal): Promise<KnowledgeRouterResult> {
-    const result = await this.resolveCore(searchTerm, parentSignal);
+  async resolve(
+    searchTerm: string,
+    parentSignal?: AbortSignal,
+    scope?: LlmJudgeScope,
+  ): Promise<KnowledgeRouterResult> {
+    const result = await this.resolveCore(searchTerm, parentSignal, scope);
     this.emitTelemetry(searchTerm, result);
     return result;
   }
@@ -178,6 +193,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
   private async resolveCore(
     searchTerm: string,
     parentSignal?: AbortSignal,
+    scope?: LlmJudgeScope,
   ): Promise<KnowledgeRouterResult> {
     const latencyMs: { kb?: number; judge?: number; web?: number } = {};
     const searchTermNormalised = searchTerm;
@@ -222,7 +238,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     const judgeStart = performance.now();
     const judgeSignal = buildLegSignal(this.deps.config.judgeTimeoutMs, parentSignal);
     const judge = await this.deps.judge
-      .evaluate(searchTermNormalised, judgeSignal)
+      .evaluate(searchTermNormalised, judgeSignal, scope)
       .catch((err: unknown) => {
         logger.warn('knowledge_router_judge_error', {
           error: err instanceof Error ? err.message : String(err),

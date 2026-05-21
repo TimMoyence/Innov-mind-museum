@@ -12,6 +12,7 @@ import { ensureSessionAccess } from '@modules/chat/useCase/session/session-acces
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
+import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
 
 import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
@@ -340,6 +341,11 @@ export class ChatMessageService {
         locale: input.context?.locale || session.locale || undefined,
         requestId,
         prompt: sttPromptBias,
+        // TD-20 (R13b/R12) — per-tenant scope for the STT cost path. `museumId`
+        // spread-omit (absent => key omitted, never `null`); `tier` derived from
+        // the requesting user via the shared `deriveTier`.
+        ...(session.museumId != null ? { museumId: session.museumId } : {}),
+        tier: deriveTier(currentUserId),
       });
     } catch (err) {
       if (err instanceof AppError) throw err;
