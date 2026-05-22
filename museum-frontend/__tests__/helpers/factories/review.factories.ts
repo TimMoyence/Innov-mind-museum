@@ -8,6 +8,7 @@ export function makeReview(overrides: Partial<ReviewDTO> = {}): ReviewDTO {
     id: '1',
     userId: 1,
     userName: 'Alice',
+    museumId: 42,
     rating: 5,
     comment: 'Great!',
     status: 'approved',

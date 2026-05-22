@@ -32,6 +32,26 @@ deliberate policy decision that must be reviewed.
   release. Legitimate compliance/safety adds will pass with a WARN visible in
   CI ; reviewer is the gatekeeper.
 
+### `response-property-max-increased` → warn
+
+### `response-property-min-decreased` → warn
+
+- **Cycle** : Wave B rating widening (PR #295 `p0/feature-gates` squash)
+- **Introduced** : the P0 feature-gates lot widens the `review/rating` (and
+  `reviews/items/rating` in the DSAR export) range from `[1, 5]` to `[0, 10]`
+  on `POST /api/reviews` (201) and `GET /api/users/me/export` (200).
+- **Reason** : Wave B requires finer-grained rating granularity (half-stars +
+  the option of a `0` "no-rating" sentinel). Range superset is mathematically
+  a strict supererset of the previous one — every old value (1-5) remains
+  valid both client- and server-side, but oasdiff flags it as a breaking
+  schema change because the response envelope is wider than before.
+- **Mitigation** : FE clients (museum-frontend + museum-web review surfaces)
+  ship in the same release with the new clamp `[0, 10]`. Existing API
+  consumers that hard-coded the old upper bound `5` will need to widen, but
+  no value they have ever seen will become invalid.
+- **Future** : new rating-shape changes SHOULD bump the OpenAPI route version
+  (e.g. `/api/v2/reviews`) rather than re-widening in place.
+
 ## Adding a new downgrade
 
 1. Run the failing push locally ; capture the exact check-id from oasdiff

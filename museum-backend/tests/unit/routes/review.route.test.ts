@@ -65,19 +65,22 @@ describe('Review Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
 
-    it('returns 400 for rating out of range (0)', async () => {
+    // Wave B C7 / R-C7b — rating range widened 1-5 → 0-10 (NPS). Out-of-range
+    // guard now fires at -1 (below floor) and 11 (above ceiling). Inside the
+    // 0-10 inclusive band is valid.
+    it('returns 400 for rating out of range (-1, below NPS floor)', async () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 0, comment: 'Some comment here.' });
+        .send({ rating: -1, comment: 'Some comment here.' });
       expect(res.status).toBe(400);
     });
 
-    it('returns 400 for rating out of range (6)', async () => {
+    it('returns 400 for rating out of range (11, above NPS ceiling)', async () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ rating: 6, comment: 'Some comment here.' });
+        .send({ rating: 11, comment: 'Some comment here.' });
       expect(res.status).toBe(400);
     });
 

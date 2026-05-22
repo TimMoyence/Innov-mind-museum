@@ -100,6 +100,12 @@ lib-docs/**
 !museum-backend/docs/
 !museum-backend/docs/perf/
 !museum-backend/docs/perf/**
+# backend operations runbooks (provisioning, deploy, incident)
+!museum-backend/docs/operations/
+!museum-backend/docs/operations/**
+# backend observability runbooks (dashboards, funnel goals, alerts)
+!museum-backend/docs/observability/
+!museum-backend/docs/observability/**
 
 # OS X
 **/.DS_Store*

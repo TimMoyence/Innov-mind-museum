@@ -34,6 +34,7 @@ import { createMuseumRouter } from '@modules/museum/adapters/primary/http/routes
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';
 import reviewRouter from '@modules/review/adapters/primary/http/routes/review.route';
 import supportRouter from '@modules/support/adapters/primary/http/routes/support.route';
+import telemetryRouter from '@modules/telemetry/adapters/primary/http/routes/funnel.route';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
@@ -400,4 +401,6 @@ function mountDomainRouters(
   router.use('/reviews', reviewRouter);
   // R4 W4.3 — B2B leads endpoint (POST /api/leads/b2b).
   router.use('/leads', leadsRouter);
+  // Wave C5 / T-C55 — Plausible funnel proxy (POST /api/telemetry/funnel).
+  router.use('/telemetry', telemetryRouter);
 }

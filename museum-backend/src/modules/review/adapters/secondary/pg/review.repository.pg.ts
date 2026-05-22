@@ -6,6 +6,7 @@ import type {
   ReviewDTO,
   ListReviewsFilters,
   ModerateReviewInput,
+  NpsAggregate,
 } from '@modules/review/domain/review/review.types';
 import type { PaginatedResult } from '@shared/types/pagination';
 import type { DataSource, Repository } from 'typeorm';
@@ -18,6 +19,7 @@ function toDTO(entity: Review): ReviewDTO {
     rating: entity.rating,
     comment: entity.comment,
     status: entity.status,
+    museumId: entity.museumId ?? null,
     createdAt: entity.createdAt.toISOString(),
   };
 }
@@ -35,6 +37,7 @@ export class ReviewRepositoryPg implements IReviewRepository {
       userName: input.userName,
       rating: input.rating,
       comment: input.comment,
+      museumId: input.museumId ?? null,
     });
     const saved = await this.repo.save(entity);
     return toDTO(saved);
@@ -46,8 +49,15 @@ export class ReviewRepositoryPg implements IReviewRepository {
 
     const qb = this.repo.createQueryBuilder('r');
 
+    // `andWhere` first-call behaves as `where` in TypeORM 0.3.x, so we can
+    // accumulate predicates uniformly without tracking the initial state.
     if (filters.status) {
-      qb.where('r.status = :status', { status: filters.status });
+      qb.andWhere('r.status = :status', { status: filters.status });
+    }
+    // Wave B C7 / R-C7c — tenant scope. Skip when undefined/null (super_admin
+    // cross-tenant view).
+    if (filters.museumId !== undefined && filters.museumId !== null) {
+      qb.andWhere('r.museumId = :museumId', { museumId: filters.museumId });
     }
 
     const total = await qb.getCount();
@@ -61,6 +71,49 @@ export class ReviewRepositoryPg implements IReviewRepository {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  /**
+   * Wave B C7 / R-C7c — `listReviews` with tenant scope pre-bound + `approved`
+   * default. Convenience for the per-tenant public view (museum operator
+   * dashboard or per-museum public reviews page).
+   */
+  async findByMuseum(
+    museumId: number,
+    filters: ListReviewsFilters,
+  ): Promise<PaginatedResult<ReviewDTO>> {
+    return await this.listReviews({
+      status: filters.status ?? 'approved',
+      museumId,
+      pagination: filters.pagination,
+    });
+  }
+
+  /**
+   * Wave B C7 / R-C7b — NPS aggregate over `approved` reviews scoped to a
+   * single tenant museum. NPS = %promoters - %detractors, computed in SQL via
+   * conditional COUNT so a single round-trip + indexed scan suffices.
+   * `count = 0` → all buckets 0 + nps 0 (no signal).
+   */
+  async aggregateNps(museumId: number): Promise<NpsAggregate> {
+    const row = await this.repo
+      .createQueryBuilder('r')
+      .select('COUNT(*) FILTER (WHERE r.rating >= 9 AND r.rating <= 10)', 'promoters')
+      .addSelect('COUNT(*) FILTER (WHERE r.rating >= 7 AND r.rating <= 8)', 'passives')
+      .addSelect('COUNT(*) FILTER (WHERE r.rating >= 0 AND r.rating <= 6)', 'detractors')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.museumId = :museumId', { museumId })
+      .andWhere('r.status = :status', { status: 'approved' })
+      .getRawOne<{ promoters: string; passives: string; detractors: string; count: string }>();
+
+    const promoters = Number.parseInt(row?.promoters ?? '0', 10);
+    const passives = Number.parseInt(row?.passives ?? '0', 10);
+    const detractors = Number.parseInt(row?.detractors ?? '0', 10);
+    const count = Number.parseInt(row?.count ?? '0', 10);
+
+    const nps = count === 0 ? 0 : Math.round(((promoters - detractors) / count) * 100);
+
+    return { nps, promoters, passives, detractors, count };
   }
 
   async getReviewById(reviewId: string): Promise<ReviewDTO | null> {

@@ -1237,6 +1237,12 @@
     "error": "Une erreur est survenue. Réessaye plus tard.",
     "dismiss": "Fermer",
     "consent": "J'accepte de recevoir un email à l'ouverture du premium.",
-    "resetsOn": "Réinitialisation le"
+    "resetsOn": "Réinitialisation le",
+    "analyticsConsent": {
+      "title": "Aide-nous à améliorer Musaium",
+      "description": "Avec ton accord, nous mesurons de manière anonyme l'usage de l'application (pages vues, fonctionnalités utilisées). Aucune donnée personnelle, aucun traceur publicitaire — uniquement des compteurs agrégés pour comprendre ce qui fonctionne.",
+      "optIn": "J'accepte",
+      "optOut": "Refuser"
+    }
   }
 }

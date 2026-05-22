@@ -37,13 +37,7 @@ const NAV_PATHS: Record<NavKey, string> = {
 
 // ── Authenticated admin layout with sidebar ────────────────────────────
 
-function AuthenticatedLayout({
-  children,
-  locale,
-}: {
-  children: ReactNode;
-  locale: string;
-}) {
+function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale: string }) {
   const adminDict = useAdminDict();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,7 +57,9 @@ function AuthenticatedLayout({
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/30 md:hidden"
-          onClick={() => { setSidebarOpen(false); }}
+          onClick={() => {
+            setSidebarOpen(false);
+          }}
           aria-hidden="true"
         />
       )}
@@ -76,10 +72,7 @@ function AuthenticatedLayout({
       >
         {/* Logo */}
         <div className="flex h-16 items-center border-b border-primary-100 px-6">
-          <Link
-            href={basePath}
-            className="text-lg font-bold tracking-tight text-primary-700"
-          >
+          <Link href={basePath} className="text-lg font-bold tracking-tight text-primary-700">
             Musaium Admin
           </Link>
         </div>
@@ -94,7 +87,9 @@ function AuthenticatedLayout({
                 <li key={key}>
                   <Link
                     href={href}
-                    onClick={() => { setSidebarOpen(false); }}
+                    onClick={() => {
+                      setSidebarOpen(false);
+                    }}
                     className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-primary-50 text-primary-700'
@@ -115,7 +110,9 @@ function AuthenticatedLayout({
               <li key="ops-grafana">
                 <Link
                   href={`${basePath}/ops/grafana`}
-                  onClick={() => { setSidebarOpen(false); }}
+                  onClick={() => {
+                    setSidebarOpen(false);
+                  }}
                   className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive(`${basePath}/ops/grafana`)
                       ? 'bg-primary-50 text-primary-700'
@@ -138,7 +135,9 @@ function AuthenticatedLayout({
             type="button"
             className="rounded-md p-2 text-text-secondary hover:bg-surface-muted"
             aria-label="Open sidebar"
-            onClick={() => { setSidebarOpen(true); }}
+            onClick={() => {
+              setSidebarOpen(true);
+            }}
           >
             <svg
               className="h-6 w-6"
@@ -154,9 +153,7 @@ function AuthenticatedLayout({
               />
             </svg>
           </button>
-          <span className="ml-3 text-lg font-bold text-primary-700">
-            Musaium Admin
-          </span>
+          <span className="ml-3 text-lg font-bold text-primary-700">Musaium Admin</span>
         </header>
 
         {/* Page content */}
@@ -174,11 +171,7 @@ interface AdminShellProps {
   adminDict: Dictionary['admin'];
 }
 
-export default function AdminShell({
-  children,
-  locale,
-  adminDict,
-}: AdminShellProps) {
+export default function AdminShell({ children, locale, adminDict }: AdminShellProps) {
   const pathname = usePathname();
   const isLoginPage = pathname.endsWith('/admin/login');
 
@@ -193,10 +186,14 @@ export default function AdminShell({
   return (
     <AdminDictProvider dict={adminDict} locale={locale as 'fr' | 'en'}>
       <AuthProvider>
-        <RoleGuard allowedRoles={['admin', 'moderator', 'super_admin']}>
-          <AuthenticatedLayout locale={locale}>
-            {children}
-          </AuthenticatedLayout>
+        {/* Wave B C9 / R-C9 — `museum_manager` added to admin allow-list.
+            The role was previously blocked at the entry by RoleGuard despite being
+            valid everywhere else (ExportCsvButton, support/page, OpenAPI). FE
+            sub-pages still rely on per-page scoping to confine the operator to
+            their own tenant; the BE enforces the actual tenant scope (Wave B C8
+            admin route RBAC scope museumId forcing). */}
+        <RoleGuard allowedRoles={['admin', 'moderator', 'super_admin', 'museum_manager']}>
+          <AuthenticatedLayout locale={locale}>{children}</AuthenticatedLayout>
         </RoleGuard>
       </AuthProvider>
     </AdminDictProvider>

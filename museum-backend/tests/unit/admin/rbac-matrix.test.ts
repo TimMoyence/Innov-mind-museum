@@ -287,7 +287,7 @@ const MATRIX: RouteCase[] = [
   {
     label: 'POST /museums/:id/cache/purge',
     method: 'post',
-    path: '/api/admin/museums/m1/cache/purge',
+    path: '/api/admin/museums/42/cache/purge',
     admin: 200,
     moderator: 403,
     visitor: 403,

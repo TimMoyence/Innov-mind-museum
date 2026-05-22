@@ -24,6 +24,7 @@ const persistedReview: ReviewDTO = {
   rating: 5,
   comment: 'Great museum assistant app!',
   status: 'pending',
+  museumId: null,
   createdAt: '2026-03-26T12:00:00.000Z',
 };
 
@@ -37,6 +38,12 @@ function makeRepo(): jest.Mocked<IReviewRepository> {
     moderateReview: jest.fn().mockResolvedValue(null),
     getAverageRating: jest.fn().mockResolvedValue({ average: 0, count: 0 }),
     listForUser: jest.fn().mockResolvedValue([]),
+    findByMuseum: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
+    aggregateNps: jest
+      .fn()
+      .mockResolvedValue({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 }),
   };
 }
 

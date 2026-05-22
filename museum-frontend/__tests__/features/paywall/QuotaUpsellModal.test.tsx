@@ -164,8 +164,12 @@ describe('QuotaUpsellModal (R1 §1 R26-R29 + N6 + Q7)', () => {
     // this sentinel test rather than its own file (≤19-file constraint).
     // `require()` is intentional — keeps the test self-contained and avoids
     // tsconfig.test JSON include surgery just to bring the locale modules in.
-    const en = require('@/shared/locales/en/paywall.json') as Record<string, string>;
-    const fr = require('@/shared/locales/fr/paywall.json') as Record<string, string>;
+    const en = (
+      require('@/shared/locales/en/translation.json') as { paywall: Record<string, string> }
+    ).paywall;
+    const fr = (
+      require('@/shared/locales/fr/translation.json') as { paywall: Record<string, string> }
+    ).paywall;
     const required = [
       'modalTitle',
       'modalBody',

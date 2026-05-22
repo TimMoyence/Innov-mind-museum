@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
+import { trackFunnelEvent } from '@/shared/analytics/plausible';
 import { httpClient } from '@/shared/infrastructure/httpClient';
 
 /**
@@ -137,6 +138,11 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
       type: 'user',
       message: 'paywall_cta_clicked',
     });
+    // Wave C5 / T-C54 — Plausible funnel emit (tier only ; NO email — PII strip
+    // is defense-in-depth in both FE and BE adapters per PATTERNS.md §5 anti-1).
+    void trackFunnelEvent('paywall_cta_clicked', {
+      tier: reason?.tier ?? 'unknown',
+    });
     try {
       await httpClient.post('/api/leads/paywall-interest', {
         email,
@@ -148,6 +154,12 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
         category: 'paywall',
         type: 'info',
         message: 'paywall_email_captured',
+      });
+      // Wave C5 / T-C54 — second funnel event after successful capture.
+      // Caller MUST NOT pass `email` ; the adapter would strip it anyway,
+      // but we keep the call site clean as a code-review signal.
+      void trackFunnelEvent('paywall_email_captured', {
+        tier: reason?.tier ?? 'unknown',
       });
     } catch {
       setState('error');

@@ -22,16 +22,41 @@ const buildApp = (cache: CacheService) => {
   return app;
 };
 
-const makeCacheMock = (overrides: Partial<CacheService> = {}): CacheService => ({
-  get: jest.fn(),
-  set: jest.fn(),
-  del: jest.fn(),
-  delByPrefix: jest.fn().mockResolvedValue(undefined),
-  ...overrides,
-}) as unknown as CacheService;
+const makeCacheMock = (overrides: Partial<CacheService> = {}): CacheService =>
+  ({
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    delByPrefix: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  }) as unknown as CacheService;
 
 describe('POST /api/admin/museums/:id/cache/purge', () => {
-  it('purges LLM cache by prefix and returns timing (admin token)', async () => {
+  // I-FIX1 (2026-05-21) — the route now delegates to
+  // `LlmCacheServiceImpl.invalidateMuseum`, which iterates `museum-mode` +
+  // `personalized` contextClasses with the real v2 namespace
+  // `llm:v2:{contextClass}:{museumId}:`. Integer ids are required (rejects
+  // non-numeric like the previous "abc-123" string ids). Full namespace +
+  // boundary behaviour is covered by
+  // `tests/integration/admin/cache-purge.namespace.test.ts`.
+  it('purges LLM cache via invalidateMuseum and returns timing (admin token)', async () => {
+    const cache = makeCacheMock();
+    const app = buildApp(cache);
+
+    const res = await request(app)
+      .post('/api/admin/museums/42/cache/purge')
+      .set('Authorization', `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.museumId).toBe(42);
+    expect(typeof res.body.durationMs).toBe('number');
+    // invalidateMuseum issues TWO delByPrefix calls — museum-mode + personalized.
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:museum-mode:42:');
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:personalized:42:');
+    expect(cache.delByPrefix).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects non-integer museum id with 400', async () => {
     const cache = makeCacheMock();
     const app = buildApp(cache);
 
@@ -39,10 +64,20 @@ describe('POST /api/admin/museums/:id/cache/purge', () => {
       .post('/api/admin/museums/abc-123/cache/purge')
       .set('Authorization', `Bearer ${adminToken()}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.museumId).toBe('abc-123');
-    expect(typeof res.body.durationMs).toBe('number');
-    expect(cache.delByPrefix).toHaveBeenCalledWith('chat:llm:abc-123:');
+    expect(res.status).toBe(400);
+    expect(cache.delByPrefix).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-positive museum id with 400', async () => {
+    const cache = makeCacheMock();
+    const app = buildApp(cache);
+
+    const res = await request(app)
+      .post('/api/admin/museums/0/cache/purge')
+      .set('Authorization', `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(400);
+    expect(cache.delByPrefix).not.toHaveBeenCalled();
   });
 
   it('rejects non-admin role with 403', async () => {
@@ -50,7 +85,7 @@ describe('POST /api/admin/museums/:id/cache/purge', () => {
     const app = buildApp(cache);
 
     const res = await request(app)
-      .post('/api/admin/museums/abc-123/cache/purge')
+      .post('/api/admin/museums/42/cache/purge')
       .set('Authorization', `Bearer ${visitorToken()}`);
 
     expect(res.status).toBe(403);
@@ -61,7 +96,7 @@ describe('POST /api/admin/museums/:id/cache/purge', () => {
     const cache = makeCacheMock();
     const app = buildApp(cache);
 
-    const res = await request(app).post('/api/admin/museums/abc-123/cache/purge');
+    const res = await request(app).post('/api/admin/museums/42/cache/purge');
 
     expect(res.status).toBe(401);
     expect(cache.delByPrefix).not.toHaveBeenCalled();

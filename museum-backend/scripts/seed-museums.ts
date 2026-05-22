@@ -11,6 +11,13 @@ interface MuseumSeed {
   description: string;
   latitude: number;
   longitude: number;
+  /**
+   * T-A9 — Wikidata Q-identifier (e.g. `Q3329534`). Optional during the
+   * backfill window — only the Bordeaux trio + Pont de Pierre monument need
+   * Q-codes for V1 SPARQL ingest / DoD validation (cf. D-SCOPE-WAVEA).
+   * Other rows can land it later via admin UI or a follow-up seed pass.
+   */
+  wikidataQid?: string;
 }
 
 const MUSEUMS: MuseumSeed[] = [
@@ -89,6 +96,11 @@ const MUSEUMS: MuseumSeed[] = [
     longitude: 4.818,
   },
   // ── Bordeaux ──
+  // Q-codes verified 2026-05-21 via SPARQL — cf. c4b-sparql-counts.md +
+  // memory `reference_bordeaux_museum_qcodes.md`. Only Musée d'Aquitaine
+  // has Wikidata-ingest-viable artwork data (133 rows P195+P18). CAPC +
+  // Cité du Vin keep their Q-code for cards/maps/geoloc but no auto-ingest
+  // (D-SCOPE-WAVEA decision).
   {
     name: "Musée d'Aquitaine",
     slug: 'musee-d-aquitaine',
@@ -97,6 +109,7 @@ const MUSEUMS: MuseumSeed[] = [
       "Retrace l'histoire de Bordeaux et de l'Aquitaine de la Préhistoire à nos jours à travers des collections archéologiques et ethnographiques.",
     latitude: 44.8346,
     longitude: -0.5745,
+    wikidataQid: 'Q3329534',
   },
   {
     name: "CAPC Musée d'art contemporain",
@@ -106,6 +119,7 @@ const MUSEUMS: MuseumSeed[] = [
       "Installé dans un ancien entrepôt de denrées coloniales, il est l'un des premiers centres d'art contemporain créés en France.",
     latitude: 44.8497,
     longitude: -0.5714,
+    wikidataQid: 'Q2945071',
   },
   {
     name: 'La Cité du Vin',
@@ -115,6 +129,24 @@ const MUSEUMS: MuseumSeed[] = [
       'Centre culturel dédié au vin comme patrimoine universel, dans un édifice emblématique aux formes évoquant le vin dans un verre.',
     latitude: 44.8625,
     longitude: -0.5502,
+    wikidataQid: 'Q16964634',
+  },
+  // Monument hors-musée — first-class V1 "dehors" (D-SCOPE-WAVEA). Q-code
+  // verified 2026-05-21 via SPARQL (Q1773424 = `pont routier` + `pont
+  // tramway` at Bordeaux Q1479). Beware of training-data artist Q-codes
+  // (cf. c4b-sparql-counts.md trap list). Re-uses the same `museums` table — a future
+  // schema split (`monuments` table) is post-V1 backlog. The address /
+  // coords / type are best-effort metadata so the row surfaces on FE cards
+  // and the geoloc map alongside the museum trio.
+  {
+    name: 'Pont de Pierre',
+    slug: 'pont-de-pierre',
+    address: 'Pont de Pierre, 33000 Bordeaux',
+    description:
+      'Pont routier et tramway emblématique enjambant la Garonne, premier pont permanent de Bordeaux (1822), classé monument historique.',
+    latitude: 44.8378,
+    longitude: -0.5641,
+    wikidataQid: 'Q1773424',
   },
   // ── Marseille ──
   {
@@ -214,9 +246,17 @@ async function main(): Promise<void> {
         longitude: m.longitude,
         config: {},
         isActive: true,
+        wikidataQid: m.wikidataQid ?? null,
       })),
     )
-    .orIgnore() // ON CONFLICT DO NOTHING — safe to re-run
+    // T-A9 — `.orUpdate(['wikidata_qid'], 'slug')` so that re-running the
+    // seed on a DB where the rows already exist (prod first-deploy after
+    // seeding had run once without Q-codes) BACKFILLS the wikidata_qid
+    // column instead of being a no-op like `.orIgnore()` was. Conflict
+    // target = `slug` (the existing UNIQUE constraint). Only `wikidata_qid`
+    // is in the overwrite list — we deliberately do NOT clobber operator
+    // edits to name/description/coords/config from the admin UI.
+    .orUpdate(['wikidata_qid'], 'slug')
     .execute();
 
   // With orIgnore(), rows already present produce undefined entries in identifiers.

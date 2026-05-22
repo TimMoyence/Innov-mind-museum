@@ -25,6 +25,7 @@ const sampleReview: ReviewDTO = {
   rating: 4,
   comment: 'Sample comment here.',
   status: 'pending',
+  museumId: null,
   createdAt: '2026-03-26T12:00:00.000Z',
 };
 
@@ -43,6 +44,10 @@ function makeRepo(): jest.Mocked<IReviewRepository> {
     moderateReview: jest.fn().mockResolvedValue(null),
     getAverageRating: jest.fn().mockResolvedValue({ average: 0, count: 0 }),
     listForUser: jest.fn().mockResolvedValue([]),
+    findByMuseum: jest.fn().mockResolvedValue(page),
+    aggregateNps: jest
+      .fn()
+      .mockResolvedValue({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 }),
   };
 }
 

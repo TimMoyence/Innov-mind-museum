@@ -29,6 +29,7 @@ const fakeReview: ReviewDTO = {
   rating: 5,
   comment: 'Great museum assistant app!',
   status: 'pending',
+  museumId: null,
   createdAt: '2026-03-26T12:00:00.000Z',
 };
 
@@ -44,6 +45,12 @@ const makeRepo = (
     moderateReview: jest.fn().mockResolvedValue({ ...fakeReview, status: 'approved' }),
     getAverageRating: jest.fn().mockResolvedValue({ average: 4.5, count: 10 }),
     listForUser: jest.fn().mockResolvedValue([fakeReview]),
+    findByMuseum: jest
+      .fn()
+      .mockResolvedValue({ data: [fakeReview], total: 1, page: 1, limit: 20, totalPages: 1 }),
+    aggregateNps: jest
+      .fn()
+      .mockResolvedValue({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 }),
     ...overrides,
   }) as jest.Mocked<IReviewRepository>;
 

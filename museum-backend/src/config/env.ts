@@ -528,6 +528,14 @@ const env: AppEnv = {
       objectKeyPrefix: toOptionalString(process.env.S3_OBJECT_KEY_PREFIX),
     },
   },
+  // Wave C5 (D-C5) — Plausible funnel analytics. Both vars OPTIONAL : if
+  // either is unset, the PlausibleAdapter no-ops (silent fallback) so dev /
+  // test envs don't accidentally emit. Production validation is delegated to
+  // `validateProductionEnv` (warn only — analytics outage MUST NOT block boot).
+  plausible: {
+    domain: toOptionalString(process.env.PLAUSIBLE_DOMAIN),
+    endpointUrl: toOptionalString(process.env.PLAUSIBLE_ENDPOINT_URL),
+  },
 };
 
 if (env.nodeEnv === 'production') {

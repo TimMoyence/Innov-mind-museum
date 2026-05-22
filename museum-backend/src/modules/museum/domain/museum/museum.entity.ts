@@ -24,6 +24,22 @@ export class Museum {
   @Column({ type: 'varchar', length: 128, unique: true })
   slug!: string;
 
+  /**
+   * Wikidata Q-identifier (e.g. `Q3329534` for Musée d'Aquitaine). Pins the
+   * museum to its canonical Wikidata entity, which acts as the lookup key for
+   * the SPARQL ingest pipeline (`catalog-ingest.ts --museum=<Qid>` resolves
+   * the tenant `museum_id` via this column) and surfaces public metadata
+   * (linked-data references, multilingual labels) to FE callers.
+   *
+   * Nullable so existing rows do not require a hand-curated Q-code at the
+   * migration window — operators set it via the seed (T-A9) or admin UI.
+   * UNIQUE so a single Wikidata entity maps to at most one tenant row.
+   *
+   * Spec: design.md §4 M1, T-A7 (Wave A C3).
+   */
+  @Column({ type: 'varchar', length: 16, nullable: true, unique: true, name: 'wikidata_qid' })
+  wikidataQid?: string | null;
+
   @Column({ type: 'varchar', length: 512, nullable: true })
   address?: string | null;
 

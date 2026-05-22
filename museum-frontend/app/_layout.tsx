@@ -29,6 +29,7 @@ import i18n from '@/shared/i18n/i18n';
 import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
 import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
 import { QuotaUpsellModal } from '@/features/paywall/ui/QuotaUpsellModal';
+import { ConsentBanner } from '@/shared/analytics/ConsentBanner';
 import { setErrorTranslate } from '@/shared/lib/errors';
 
 // Wire i18n into error message formatting so getErrorMessage() returns localised strings.
@@ -219,6 +220,15 @@ function RootLayout() {
                           <ThemedStatusBar />
                           <GlobalOfflineBannerHost />
                           <PaywallModalHost />
+                          {/*
+                           * TD-C5-MOBILE-CONSENT-01 — Analytics consent banner
+                           * mounted at the root so it floats above every screen
+                           * while `useAnalyticsConsent().status === 'unset'`.
+                           * Returns null once the user accepts or declines —
+                           * the decision persists in AsyncStorage so the banner
+                           * does not re-appear on subsequent launches.
+                           */}
+                          <ConsentBanner />
                         </AuthenticationGuard>
                       </BiometricGate>
                     </DataModeProvider>

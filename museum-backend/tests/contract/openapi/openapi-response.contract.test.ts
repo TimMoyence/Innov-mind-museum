@@ -331,6 +331,7 @@ describe('openapi response contracts (active API)', () => {
       id: '550e8400-e29b-41d4-a716-446655440000',
       userId: 42,
       userName: 'Ada',
+      museumId: 42,
       rating: 5,
       comment: 'Excellent museum companion app with rich context and smooth UX.',
       status: 'approved',

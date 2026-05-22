@@ -13,11 +13,13 @@ import {
   engagementAnalyticsQuerySchema,
   listTicketsQuerySchema,
   listReviewsQuerySchema,
+  statsQuerySchema,
   type UsageAnalyticsQuery,
   type ContentAnalyticsQuery,
   type EngagementAnalyticsQuery,
   type ListTicketsQuery,
   type ListReviewsQuery,
+  type StatsQuery,
 } from '@modules/admin/adapters/primary/http/schemas/admin.schemas';
 import {
   listUsersUseCase,
@@ -226,12 +228,39 @@ adminRouter.get(
   },
 );
 
+/**
+ * Wave B C8/C9 — admin stats with optional museumId scope (R-C8).
+ *
+ * RBAC (D6, OWASP API3 / BOLA) :
+ *   - `super_admin`     → museumId free (cross-tenant view legitimate).
+ *   - `admin/moderator` → museumId free (platform staff).
+ *   - `museum_manager`  → museumId FORCED to JWT claim. Any other value is
+ *                         rewritten silently to the caller's tenant so a
+ *                         crafted `?museumId=99` cannot smuggle another
+ *                         tenant's aggregate (BOLA negative guard).
+ *
+ * `museum_manager` is added to the requireRole allow-list so the gate stops
+ * blocking the role at the entry (was admin/moderator only — paired with
+ * the FE AdminShell allow-list update in C9).
+ */
 adminRouter.get(
   '/stats',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
-  async (_req: Request, res: Response) => {
-    const stats = await getStatsUseCase.execute();
+  requireRole('admin', 'moderator', 'museum_manager'),
+  validateQuery(statsQuerySchema),
+  async (req: Request, res: Response) => {
+    const { museumId: queryMuseumId } = res.locals.validatedQuery as StatsQuery;
+
+    // Forced scope for museum_manager — JWT museumId claim wins over any
+    // user-supplied query param. Other roles see the queryMuseumId as-is.
+    let scopedMuseumId: number | undefined = queryMuseumId;
+    if (req.user?.role === 'museum_manager') {
+      scopedMuseumId = req.user.museumId ?? undefined;
+    }
+
+    const stats = await getStatsUseCase.execute(
+      scopedMuseumId !== undefined ? { museumId: scopedMuseumId } : {},
+    );
     res.json(stats);
   },
 );

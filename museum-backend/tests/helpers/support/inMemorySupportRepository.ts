@@ -20,6 +20,8 @@ interface StoredTicket {
   priority: string;
   category: string | null;
   assignedTo: number | null;
+  /** Wave B C7 — multi-tenant scope. Null for unscoped tickets. */
+  museumId: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +50,7 @@ export class InMemorySupportRepository implements ISupportRepository {
       priority: input.priority ?? 'medium',
       category: input.category ?? null,
       assignedTo: null,
+      museumId: input.museumId ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -66,6 +69,10 @@ export class InMemorySupportRepository implements ISupportRepository {
     }
     if (filters.priority) {
       filtered = filtered.filter((t) => t.priority === filters.priority);
+    }
+    // Wave B C7 — multi-tenant scope mirror of pg repo.
+    if (filters.museumId !== undefined && filters.museumId !== null) {
+      filtered = filtered.filter((t) => t.museumId === filters.museumId);
     }
 
     const total = filtered.length;
@@ -174,6 +181,7 @@ export class InMemorySupportRepository implements ISupportRepository {
       priority: 'medium',
       category: null,
       assignedTo: null,
+      museumId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       ...ticket,
@@ -193,6 +201,7 @@ export class InMemorySupportRepository implements ISupportRepository {
       priority: t.priority,
       category: t.category,
       assignedTo: t.assignedTo,
+      museumId: t.museumId,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
       messageCount,

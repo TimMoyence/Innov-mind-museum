@@ -31,6 +31,18 @@ export interface LlmCacheKeyInput {
   readonly voiceMode?: boolean;
   /** C9.2 — audio-description mode (WCAG 1.1.1 autoplay). Distinct cache scope. */
   readonly audioDescriptionMode?: boolean;
+  /**
+   * I-FIX2 (2026-05-21) — stable identity of the artwork currently in focus
+   * (`session.currentArtworkId` UUID, fallback `currentArtwork.title` sanitised).
+   * `[CURRENT ARTWORK]` is rendered in the system prompt (`llm-prompt-builder.ts:74`)
+   * but was historically absent from the cache key — two visitors in the same
+   * museum asking the same prompt about two different artworks would share a
+   * cache line (cross-talk). Folded truthy-only (mirror `imageContentHash`
+   * R8/AC6 + `voiceMode`/`audioDescriptionMode` F1 contracts) so legacy
+   * text-only entries (no current artwork) produce a byte-identical canonical
+   * JSON to pre-I-FIX2 entries — no KEY_VERSION bump required.
+   */
+  readonly currentArtworkKey?: string;
 }
 
 export interface LlmCacheLookupResult<T> {

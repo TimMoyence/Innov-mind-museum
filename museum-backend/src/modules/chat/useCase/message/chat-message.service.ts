@@ -411,6 +411,17 @@ export class ChatMessageService {
       // → keys collide → wrong-shape responses cross-served.
       voiceMode: input.context?.voiceMode,
       audioDescriptionMode: input.context?.audioDescriptionMode,
+      // I-FIX2 (2026-05-21) — `[CURRENT ARTWORK]` is rendered in the system
+      // prompt (`llm-prompt-builder.ts:74`) but was historically NOT folded
+      // into the cache key — two visitors in the same museum asking the same
+      // prompt about different artworks would share the cache line. Prefer
+      // the stable UUID `session.currentArtworkId` (set when the visitor
+      // scans an artwork) ; fallback to the already-sanitised title from the
+      // resolved `currentArtwork` block (lookup may return a row even when
+      // session.currentArtworkId is not echoed back through prep). Truthy-only
+      // contract enforced downstream in `sha256OfCanonicalInput` — undefined
+      // / empty produces a byte-identical legacy hash.
+      currentArtworkKey: prep.session.currentArtworkId ?? prep.currentArtwork?.title ?? undefined,
     };
   }
 }

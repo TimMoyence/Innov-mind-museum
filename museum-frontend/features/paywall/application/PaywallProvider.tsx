@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import * as Sentry from '@sentry/react-native';
 
+import { trackFunnelEvent } from '@/shared/analytics/plausible';
 import { setPaywallHandler } from '@/shared/infrastructure/httpClient';
 
 /**
@@ -71,6 +72,15 @@ export function PaywallProvider({ children }: { children: ReactNode }) {
       type: 'info',
       message: 'paywall_modal_shown',
       data: info,
+    });
+    // Wave C5 / T-C54 — Plausible funnel emit alongside the Sentry breadcrumb.
+    // Two channels, two purposes : breadcrumb = crash-report context (R25),
+    // funnel event = KR4 dashboard signal. Fire-and-forget : `trackFunnelEvent`
+    // contractually never throws + consent gate fail-closed before fetch
+    // (PATTERNS.md §3.4). No PII in props (tier only — `info` carries
+    // currentCount/limit/resetAt but no user identifier, so the cast is safe).
+    void trackFunnelEvent('paywall_modal_shown', {
+      tier: info.tier,
     });
   }, []);
 

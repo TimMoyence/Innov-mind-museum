@@ -57,10 +57,14 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
         throw unauthorized('User authentication required');
       }
 
+      // Wave B C7 / R-C7c — thread tenant scope from JWT claim. Undefined
+      // for visitors without a museum claim → review persists with NULL
+      // museum_id (catalog-level / global review, pre-B2B behaviour).
       const review = await createReviewUseCase.execute({
         user: author,
         rating,
         comment,
+        museumId: authedUser.museumId ?? null,
       });
 
       res.status(201).json({ review });

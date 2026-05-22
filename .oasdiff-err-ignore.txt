@@ -1,0 +1,18 @@
+# INTENTIONAL OpenAPI ignored-breaking-changes — referenced by .oasdiff.yaml
+# (auto-detected by .husky/pre-push Gate 15 oasdiff invocation).
+#
+# Each non-comment line must match an oasdiff breaking-change text (substring).
+# Add a pre-comment block per lot/PR with rationale so future ratchet sweeps
+# can prune obsolete entries.
+#
+# ── Lot P0 / Wave B (commit d128df275, 2026-05-22) — NPS rating widening ──
+# Rating range 1-5 → 0-10 is a back-compat SUPERSET (all old values still
+# valid). FE consumers reading existing reviews are unaffected. New 0-10
+# values are guarded by the same Zod schema BE-side. Documented in
+# CHANGELOG.md ## [Unreleased] § Changed.
+the `data/items/rating` response property's max was increased from `5.00` to `10.00`
+the `data/items/rating` response property's min was decreased from `1.00` to `0.00`
+the `review/rating` response property's max was increased from `5.00` to `10.00`
+the `review/rating` response property's min was decreased from `1.00` to `0.00`
+the `reviews/items/rating` response property's max was increased from `5.00` to `10.00`
+the `reviews/items/rating` response property's min was decreased from `1.00` to `0.00`

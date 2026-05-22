@@ -1,3 +1,4 @@
+import { getTelemetryPort } from '@modules/telemetry/composition/telemetry.module';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -63,6 +64,72 @@ const utcMonthKey = (d: Date): string => {
   return `${String(d.getUTCFullYear())}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
+const resolveLimit = (): number => {
+  // R13 fallback if env unset/non-numeric/≤0.
+  const configured = env.freeTierMonthlySessionLimit;
+  return Number.isFinite(configured) && configured > 0 ? configured : 3;
+};
+
+/**
+ * R12 dedup — log `quota_check_hit_limit` ONCE per (userId, month).
+ * Subsequent 402s in the same window are silent.
+ */
+const logHitOnce = (
+  userId: number,
+  monthStart: Date,
+  currentCount: number,
+  limit: number,
+): void => {
+  const dedupKey = `${String(userId)}:${utcMonthKey(monthStart)}`;
+  if (loggedHits.has(dedupKey)) return;
+  loggedHits.add(dedupKey);
+  logger.info('quota_check_hit_limit', {
+    userId,
+    monthStart: monthStart.toISOString(),
+    currentCount,
+    limit,
+  });
+};
+
+/**
+ * Wave C5 / T-C55 — emit `quota_exceeded` funnel event. Adapter is contractually
+ * non-throwing (PATTERNS.md §5 anti-pattern #10 — analytics MUST NOT block user
+ * requests). The try/catch is defense-in-depth against a stub port (tests).
+ */
+const emitQuotaExceeded = async (req: Request, limit: number): Promise<void> => {
+  try {
+    await getTelemetryPort().emit({
+      name: 'quota_exceeded',
+      // Synthetic URL — Plausible requires a `url` field ; `app://` scheme
+      // segments BE-emitted events from web pageviews in the dashboard.
+      url: 'app://musaium/api/chat/sessions',
+      domain: env.plausible?.domain ?? 'musaium',
+      props: {
+        tier: 'free',
+        limit,
+      },
+      userAgent: req.get('user-agent') ?? undefined,
+      clientIp: req.ip ?? undefined,
+    });
+  } catch (err) {
+    logger.warn('telemetry_emit_failed_in_quota_gate', {
+      error: err instanceof Error ? err.message : 'unknown',
+    });
+  }
+};
+
+/** N15: status MUST be 402 (NOT 429). Body shape pinned D4 / mobile interceptor R24. */
+const respondQuotaExceeded = (res: Response, currentCount: number, limit: number): void => {
+  res.status(402).json({
+    code: 'QUOTA_EXCEEDED',
+    tier: 'free',
+    currentCount,
+    limit,
+    resetAt: firstOfNextUtcMonthIso(),
+    message: 'Monthly free-tier session limit reached',
+  });
+};
+
 export const monthlySessionQuota = async (
   req: Request,
   res: Response,
@@ -82,21 +149,13 @@ export const monthlySessionQuota = async (
   }
 
   const row = await repo.loadUser(user.id);
-  if (!row) {
-    // Fail-OPEN — auth layer is source of truth; branch should be unreachable.
+  if (!row || row.tier === 'premium') {
+    // Fail-OPEN for absent row (auth layer is source of truth) + premium bypass.
     next();
     return;
   }
 
-  if (row.tier === 'premium') {
-    next();
-    return;
-  }
-
-  // R13 fallback if env unset/non-numeric/≤0.
-  const configured = env.freeTierMonthlySessionLimit;
-  const limit = Number.isFinite(configured) && configured > 0 ? configured : 3;
-
+  const limit = resolveLimit();
   const monthStart = firstOfCurrentUtcMonth();
   const consumed = await repo.tryConsume(user.id, monthStart, limit);
 
@@ -105,24 +164,7 @@ export const monthlySessionQuota = async (
     return;
   }
 
-  const dedupKey = `${String(user.id)}:${utcMonthKey(monthStart)}`;
-  if (!loggedHits.has(dedupKey)) {
-    loggedHits.add(dedupKey);
-    logger.info('quota_check_hit_limit', {
-      userId: user.id,
-      monthStart: monthStart.toISOString(),
-      currentCount: row.sessionsMonthCount,
-      limit,
-    });
-  }
-
-  // N15: status MUST be 402 (NOT 429). Body shape pinned D4/mobile interceptor R24.
-  res.status(402).json({
-    code: 'QUOTA_EXCEEDED',
-    tier: 'free',
-    currentCount: row.sessionsMonthCount,
-    limit,
-    resetAt: firstOfNextUtcMonthIso(),
-    message: 'Monthly free-tier session limit reached',
-  });
+  logHitOnce(user.id, monthStart, row.sessionsMonthCount, limit);
+  await emitQuotaExceeded(req, limit);
+  respondQuotaExceeded(res, row.sessionsMonthCount, limit);
 };

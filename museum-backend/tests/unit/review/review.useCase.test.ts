@@ -13,6 +13,7 @@ const fakeReview: ReviewDTO = {
   rating: 5,
   comment: 'Great museum assistant app!',
   status: 'pending',
+  museumId: null,
   createdAt: '2026-03-26T12:00:00.000Z',
 };
 
@@ -26,6 +27,12 @@ function makeFakeRepo(): jest.Mocked<IReviewRepository> {
     moderateReview: jest.fn().mockResolvedValue({ ...fakeReview, status: 'approved' }),
     getAverageRating: jest.fn().mockResolvedValue({ average: 4.5, count: 10 }),
     listForUser: jest.fn().mockResolvedValue([fakeReview]),
+    findByMuseum: jest
+      .fn()
+      .mockResolvedValue({ data: [fakeReview], total: 1, page: 1, limit: 20, totalPages: 1 }),
+    aggregateNps: jest
+      .fn()
+      .mockResolvedValue({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 }),
   };
 }
 
@@ -85,19 +92,20 @@ describe('CreateReviewUseCase', () => {
     ).rejects.toThrow('authentication');
   });
 
-  it('rejects rating < 1', async () => {
+  // Wave B C7 / R-C7b — NPS range widened to 0-10. Rejects only -1 and 11+.
+  it('rejects rating < 0 (NPS detractor floor)', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
     await expect(
-      uc.execute({ user: fakeUser, rating: 0, comment: 'A valid comment here.' }),
+      uc.execute({ user: fakeUser, rating: -1, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
   });
 
-  it('rejects rating > 5', async () => {
+  it('rejects rating > 10 (NPS promoter ceiling)', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo);
     await expect(
-      uc.execute({ user: fakeUser, rating: 6, comment: 'A valid comment here.' }),
+      uc.execute({ user: fakeUser, rating: 11, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
   });
 
