@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 
+import type { DataSource } from 'typeorm';
+
 import { AppDataSource } from '@data/db/data-source';
 import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
@@ -227,11 +229,20 @@ const MUSEUMS: MuseumSeed[] = [
   },
 ];
 
-async function main(): Promise<void> {
-  await AppDataSource.initialize();
-  console.log('Database connected.');
-
-  const repo = AppDataSource.getRepository(Museum);
+/**
+ * Idempotent upsert of the museum seed list against the given DataSource.
+ *
+ * Exported so integration tests can drive it against a testcontainer
+ * (`tests/integration/scripts/seed-museums.idempotent.spec.ts`). The CLI
+ * `main()` below stays as the prod/dev entrypoint.
+ *
+ * @returns counts useful to the caller : `inserted` = newly-created rows,
+ * `totalInDb` = total `museums` rows after the upsert.
+ */
+export async function seedMuseums(
+  dataSource: DataSource,
+): Promise<{ inserted: number; totalInDb: number }> {
+  const repo = dataSource.getRepository(Museum);
   const result = await repo
     .createQueryBuilder()
     .insert()
@@ -249,20 +260,32 @@ async function main(): Promise<void> {
         wikidataQid: m.wikidataQid ?? null,
       })),
     )
-    // T-A9 — `.orUpdate(['wikidata_qid'], 'slug')` so that re-running the
-    // seed on a DB where the rows already exist (prod first-deploy after
-    // seeding had run once without Q-codes) BACKFILLS the wikidata_qid
-    // column instead of being a no-op like `.orIgnore()` was. Conflict
-    // target = `slug` (the existing UNIQUE constraint). Only `wikidata_qid`
-    // is in the overwrite list — we deliberately do NOT clobber operator
-    // edits to name/description/coords/config from the admin UI.
-    .orUpdate(['wikidata_qid'], 'slug')
+    // T-A9 — re-running the seed on a DB where the rows already exist
+    // (prod first-deploy after seeding had run once without Q-codes)
+    // BACKFILLS the wikidata_qid column instead of being a no-op like
+    // `.orIgnore()` was. Conflict target = `slug` column (the existing
+    // UNIQUE constraint is named `UQ_museums_slug` — passing `['slug']`
+    // as an ARRAY emits `ON CONFLICT ("slug")`, letting Postgres resolve
+    // the constraint via its unique index on the column. A bare string
+    // `'slug'` would be misread as a constraint NAME → SQL
+    // `ON CONFLICT ON CONSTRAINT "slug"` → PG error 42704. Only
+    // `wikidata_qid` is in the overwrite list — admin UI edits to
+    // name/description/coords/config are preserved.
+    .orUpdate(['wikidata_qid'], ['slug'])
     .execute();
 
-  // With orIgnore(), rows already present produce undefined entries in identifiers.
-  // Count only entries where id.id is a valid number.
+  // `.orUpdate(...)` returns `undefined` identifiers for conflict rows.
+  // Count only entries where id.id is a valid number = newly-inserted rows.
   const inserted = result.identifiers.filter((id) => id?.id != null).length;
   const totalInDb = await repo.count();
+  return { inserted, totalInDb };
+}
+
+async function main(): Promise<void> {
+  await AppDataSource.initialize();
+  console.log('Database connected.');
+
+  const { inserted, totalInDb } = await seedMuseums(AppDataSource);
   console.log(
     `Seeded ${inserted} new museum(s) (${MUSEUMS.length} in seed list, ${totalInDb} total in DB).`,
   );
@@ -271,7 +294,12 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
-});
+// Guard the CLI entrypoint so `require('./seed-museums')` from a test does
+// NOT auto-execute main() (which would touch AppDataSource + side-effect
+// process.exit). Only fire when invoked directly via `ts-node scripts/seed-museums.ts`.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('Seed failed:', err);
+    process.exit(1);
+  });
+}
