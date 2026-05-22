@@ -1237,6 +1237,12 @@
     "error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "dismiss": "Schließen",
     "consent": "Ich stimme zu, eine E-Mail beim Premium-Start zu erhalten.",
-    "resetsOn": "Setzt zurück am"
+    "resetsOn": "Setzt zurück am",
+    "analyticsConsent": {
+      "title": "Hilf uns, Musaium zu verbessern",
+      "description": "Mit deiner Zustimmung messen wir anonym, wie die App genutzt wird (aufgerufene Seiten, verwendete Funktionen). Keine personenbezogenen Daten, keine Werbetracker — nur aggregierte Zähler, die uns helfen zu verstehen, was funktioniert.",
+      "optIn": "Ich stimme zu",
+      "optOut": "Ablehnen"
+    }
   }
 }

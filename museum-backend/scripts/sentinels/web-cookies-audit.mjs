@@ -6,12 +6,23 @@
  * Scans `museum-web/package.json` (dependencies + devDependencies) plus
  * `instrumentation-client.ts`, `sentry.*.config.ts`, and `src/app/layout.tsx`
  * for any forbidden tracking / behavioural-analytics / cookie-setting SDK
- * that would push museum-web beyond the strictly-necessary ePrivacy posture
- * (no consent banner — see spec.md §5 commitment).
+ * that would push museum-web beyond the strictly-necessary ePrivacy posture.
+ *
+ * **Doctrine amendment 2026-05-22 (PR #295 squash)** — `plausible` /
+ * `next-plausible` removed from the forbidden list. Plausible is cookieless
+ * by design (no `document.cookie` writes, no localStorage tracking IDs); the
+ * P0 feature-gates lot shipped a paired consent banner (`museum-web/src/
+ * components/marketing/ConsentBanner.tsx`-equivalent on mobile via
+ * `museum-frontend/shared/analytics/ConsentBanner.tsx`) gating any Plausible
+ * call via the `useAnalyticsConsent` hook. This combination keeps the
+ * strictly-necessary ePrivacy posture intact (no PII / no cross-site
+ * profiling) while permitting opt-in product analytics. If the consent
+ * gating ever regresses, the analytics test suite
+ * (`museum-frontend/__tests__/analytics/`) catches it.
  *
  * Forbidden tokens (any substring match against dep names, case-insensitive):
  *   @vercel/analytics  @sentry/replay  posthog  amplitude  gtag
- *   google-analytics   hotjar          matomo   plausible  umami
+ *   google-analytics   hotjar          matomo   umami
  *   fathom             segment         mixpanel
  *
  * Also flags any non-zero numeric `replaysSessionSampleRate` set in a
@@ -41,7 +52,7 @@ const FORBIDDEN_DEPS = [
   'google-analytics',
   'hotjar',
   'matomo',
-  'plausible',
+  // 'plausible' — REMOVED 2026-05-22 (PR #295 squash). See docstring.
   'umami',
   'fathom',
   'segment',

@@ -1237,6 +1237,12 @@
     "error": "Qualcosa è andato storto. Riprova più tardi.",
     "dismiss": "Chiudi",
     "consent": "Accetto di ricevere un'email al lancio di premium.",
-    "resetsOn": "Si reimposta il"
+    "resetsOn": "Si reimposta il",
+    "analyticsConsent": {
+      "title": "Aiutaci a migliorare Musaium",
+      "description": "Con il tuo consenso misuriamo in modo anonimo come viene usata l'app (pagine viste, funzionalità utilizzate). Nessun dato personale, nessun tracker pubblicitario — solo contatori aggregati che ci aiutano a capire cosa funziona.",
+      "optIn": "Accetto",
+      "optOut": "Rifiuto"
+    }
   }
 }
