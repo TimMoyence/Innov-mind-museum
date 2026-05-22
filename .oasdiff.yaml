@@ -1,0 +1,4 @@
+# Auto-detected oasdiff config — referenced by .husky/pre-push Gate 15 (auto-lookup
+# `.oasdiff.*`). Ignore-list documents INTENTIONAL OpenAPI changes per lot P0 that
+# are back-compat supersets (range widening). See CHANGELOG.md p0-wave-b for context.
+err-ignore: .oasdiff-err-ignore.txt

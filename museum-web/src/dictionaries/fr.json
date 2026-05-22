@@ -583,5 +583,11 @@
         "error": "Échec du téléchargement"
       }
     }
+  },
+  "analytics_consent": {
+    "title": "Cookies et mesure d'audience",
+    "description": "Musaium utilise Plausible Analytics, un outil de mesure d'audience anonyme et sans cookies. Aucune donnée personnelle n'est collectée, aucun traceur publicitaire n'est posé sur ton appareil. Tu peux refuser cette mesure si tu le souhaites.",
+    "opt_in": "J'accepte",
+    "opt_out": "Refuser"
   }
 }

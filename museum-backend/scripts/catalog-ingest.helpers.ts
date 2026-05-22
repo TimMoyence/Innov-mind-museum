@@ -34,6 +34,88 @@ import type { ArtworkMetadata } from '@modules/chat/domain/visual-similarity/com
 const WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
 const WIKIDATA_USER_AGENT = 'Musaium/1.0 (https://musaium.fr; contact@musaium.fr)';
 
+/**
+ * T-A6 (Wave A C2) — Wikidata P275 (license) returns ENTITY URIs, not slugs.
+ * The downstream `classifyLicense` (catalog-ingest.ts:175) compares raw
+ * values against a slug allow-list (`['public-domain','cc-0','cc-by-sa']`),
+ * so every URI was silently rejected before this mapping landed (100 %
+ * `licenseRejected` in prod for any Wikidata-sourced museum).
+ *
+ * Table verified 2026-05-21 against query.wikidata.org/sparql (cf.
+ * `.claude/skills/team/team-reports/working/2026-05-21-p0-feature-gates/`
+ * `c2-license-uris.md`). Pattern strict :
+ * `http://www.wikidata.org/entity/Qxxx`.
+ *
+ * Free / open mappings only (the V1 allow-list is `['public-domain','cc-0']`
+ * — CC-BY-* / GFDL entries are mapped for forward-compatibility but currently
+ * still get rejected by `classifyLicense`).
+ */
+const WIKIDATA_LICENSE_URI_TO_SLUG: Readonly<Record<string, string>> = Object.freeze({
+  'http://www.wikidata.org/entity/Q19652': 'public-domain',
+  'http://www.wikidata.org/entity/Q6938433': 'cc-0',
+  'http://www.wikidata.org/entity/Q20007257': 'cc-by-4.0',
+  'http://www.wikidata.org/entity/Q6905323': 'cc-by',
+  'http://www.wikidata.org/entity/Q18199165': 'cc-by-sa-4.0',
+  'http://www.wikidata.org/entity/Q26921686': 'gfdl-1.2',
+});
+
+const WIKIDATA_ENTITY_URI_PREFIX = 'http://www.wikidata.org/entity/Q';
+
+/**
+ * Canonical Wikidata Q-identifier regex.
+ *
+ * Shape: leading `Q`, first digit ∈ `[1-9]` (rejects `Q0` and `Q01…`), then
+ * 0..18 more digits. Total bound = 1 + 19 = 20 chars, comfortably above the
+ * current Wikidata Qid space (largest known ≈ 9 digits, ~Q132M as of 2026-05).
+ *
+ * Anchored on both sides so any padding (whitespace, newline) or trailing
+ * payload (SPARQL injection escape) is rejected.
+ *
+ * TD-SEC-WAVEA-01 / WAVE-A-SEC-M1 — defense-in-depth against SPARQL
+ * injection in `buildArtworksOfMuseumSparql` (lines 137 + 143 interpolate
+ * `museumQid` twice into the query template). Mirror of the strict
+ * `--museum-id=<int>` validation in `catalog-ingest.ts:400-410`.
+ */
+const WIKIDATA_QID_REGEX = /^Q[1-9][0-9]{0,18}$/;
+
+/**
+ * Returns `true` iff `s` matches the canonical Wikidata Q-identifier
+ * pattern `^Q[1-9][0-9]{0,18}$`. Empty string, leading-zero, lowercase `q`,
+ * embedded whitespace/newline, SPARQL injection payloads, and lengths
+ * exceeding 19 digits all return `false`.
+ *
+ * Exported so any caller about to interpolate a Qid into a SPARQL template
+ * (or into an upstream CLI flag) can apply the same guard. Cheap O(n)
+ * regex test — safe to call on hot paths.
+ *
+ * @see WAVE-A-SEC-M1 in `security-report.json`
+ */
+export function validateWikidataQid(s: string): boolean {
+  return WIKIDATA_QID_REGEX.test(s);
+}
+
+/**
+ * Resolves a SPARQL `?license` cell value to the slug used by the downstream
+ * license allow-list. Three behaviours :
+ *
+ *   - Empty / nullish string → `null` (defensive — no slug fabrication).
+ *   - Wikidata entity URI in the mapping table → mapped slug.
+ *   - Wikidata entity URI NOT in the mapping table → `null` (rejected
+ *     fail-safe — `classifyLicense` MUST keep dropping unknown licenses).
+ *   - Anything else (e.g. legacy slug `'public-domain'` from older fixtures
+ *     or non-Wikidata sources) → pass-through, so `classifyLicense` decides.
+ *
+ * T-A6 / R-C2 — see `c2-license-uris.md`.
+ */
+export function mapLicenseUriToSlug(uriOrSlug: string): string | null {
+  if (uriOrSlug.length === 0) return null;
+  if (!uriOrSlug.startsWith(WIKIDATA_ENTITY_URI_PREFIX)) {
+    // Legacy slug or non-Wikidata source — defer judgment to classifyLicense.
+    return uriOrSlug;
+  }
+  return WIKIDATA_LICENSE_URI_TO_SLUG[uriOrSlug] ?? null;
+}
+
 /** Minimum delay between two requests targeting the same hostname (ms). */
 const RATE_LIMIT_DELAY_MS = 1_000;
 
@@ -82,6 +164,16 @@ interface SparqlResponse {
  * @param lang - Wikidata language code for `wikibase:label` resolution.
  */
 function buildArtworksOfMuseumSparql(museumQid: string, lang: string): string {
+  // TD-SEC-WAVEA-01 / WAVE-A-SEC-M1 — defense-in-depth. The CLI now also
+  // validates `--museum=<Qid>` at parse time, but this guard protects every
+  // future non-CLI caller (admin UI, cron, orchestrator hook) that might
+  // forward less-trusted input into the SPARQL template below (`museumQid`
+  // is interpolated TWICE — into the `wdt:P195 wd:${...}` triple pattern
+  // and the `BIND(wd:${...} AS ?museum)` clause).
+  if (!validateWikidataQid(museumQid)) {
+    const truncated = museumQid.slice(0, 30);
+    throw new Error(`catalog_ingest_invalid_qid: ${truncated}`);
+  }
   return `
     SELECT ?item ?itemLabel ?creatorLabel ?inception ?image ?license ?museum
     WHERE {
@@ -188,11 +280,16 @@ export async function* fetchArtworksOfMuseum(
       continue;
     }
 
+    // T-A6 — Wikidata P275 yields entity URIs; map them to slugs so the
+    // downstream license allow-list (`classifyLicense`) keeps working.
+    // Unknown URIs → null → fallback to the raw URI value → `classifyLicense`
+    // rejects (fail-safe). Legacy slug values pass through untouched.
+    const mappedLicense = mapLicenseUriToSlug(licenseValue) ?? licenseValue;
     const seed: ArtworkSeed = {
       qid: seedQid,
       title,
       imageUrl,
-      license: licenseValue,
+      license: mappedLicense,
       museumQid,
     };
     const artist = cell(binding, 'creatorLabel');
@@ -270,9 +367,7 @@ export async function downloadThumbnail(url: string, maxBytes: number): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(
-      `catalog_ingest_thumbnail_non_ok: ${String(response.status)} for ${url}`,
-    );
+    throw new Error(`catalog_ingest_thumbnail_non_ok: ${String(response.status)} for ${url}`);
   }
 
   const contentLengthHeader = response.headers.get('content-length');

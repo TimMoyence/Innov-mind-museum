@@ -70,6 +70,10 @@ supportRouter.post(
       description,
       priority,
       category,
+      // Wave B C7 / R-C7c — TD-COR-WAVEB-02. Thread tenant scope from the JWT
+      // claim (mirrors review.route.ts:67). Undefined claim → null
+      // (catalog-level / unscoped ticket, pre-multi-tenant behaviour).
+      museumId: req.user?.museumId ?? null,
       ip: req.ip,
       requestId: req.requestId,
     });

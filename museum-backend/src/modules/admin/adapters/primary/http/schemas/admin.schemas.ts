@@ -92,8 +92,21 @@ export const listReviewsQuerySchema = z.strictObject({
   status: z.enum(REVIEW_STATUSES as [string, ...string[]]).optional(),
 });
 
+/**
+ * Wave B C8 / R-C8 — admin /stats query schema. `museumId` is the optional
+ * B2B tenant scope. `z.strictObject` rejects any other query param (defence-
+ * in-depth — a stray `?foo=bar` cannot smuggle an unscanned filter into the
+ * upstream repo). The RBAC enforcement (museum_manager → forced to JWT
+ * `museumId` claim; super_admin → any value or absent) happens in the route
+ * handler AFTER this schema parses the raw query.
+ */
+export const statsQuerySchema = z.strictObject({
+  museumId: z.coerce.number().int().positive().optional(),
+});
+
 export type UsageAnalyticsQuery = z.infer<typeof usageAnalyticsQuerySchema>;
 export type ContentAnalyticsQuery = z.infer<typeof contentAnalyticsQuerySchema>;
 export type EngagementAnalyticsQuery = z.infer<typeof engagementAnalyticsQuerySchema>;
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
 export type ListReviewsQuery = z.infer<typeof listReviewsQuerySchema>;
+export type StatsQuery = z.infer<typeof statsQuerySchema>;

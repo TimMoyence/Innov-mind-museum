@@ -139,6 +139,15 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
   if (input.voiceMode) {
     canonical.voiceMode = input.voiceMode;
   }
+  // I-FIX2 (2026-05-21) — truthy-only emit (mirror imageContentHash R8/AC6 +
+  // voiceMode F1). Identity of the current artwork already rendered in the
+  // system prompt MUST partition the cache so 2 visitors in the same museum
+  // looking at different artworks don't share a cache line. Absent / empty →
+  // field excluded from canonical JSON → byte-identical to pre-I-FIX2 entries
+  // (no KEY_VERSION bump needed).
+  if (input.currentArtworkKey) {
+    canonical.currentArtworkKey = input.currentArtworkKey;
+  }
   // Sort keys for deterministic JSON (localeCompare = stable).
   const sortedJson = JSON.stringify(
     canonical,

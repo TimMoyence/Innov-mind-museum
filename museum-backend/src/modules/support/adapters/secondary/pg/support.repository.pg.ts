@@ -24,6 +24,7 @@ function toTicketDTO(entity: SupportTicket, messageCount?: number): TicketDTO {
     priority: entity.priority,
     category: entity.category ?? null,
     assignedTo: entity.assignedTo ?? null,
+    museumId: entity.museumId ?? null,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
     messageCount,
@@ -59,6 +60,8 @@ export class SupportRepositoryPg implements ISupportRepository {
       description: input.description,
       priority: input.priority ?? 'medium',
       category: input.category ?? null,
+      // Wave B C7 / R-C7a — tenant scope. Undefined → null (unscoped).
+      museumId: input.museumId ?? null,
     });
     const saved = await this.ticketRepo.save(entity);
     return toTicketDTO(saved);
@@ -78,6 +81,12 @@ export class SupportRepositoryPg implements ISupportRepository {
     }
     if (filters.priority) {
       qb.andWhere('t.priority = :priority', { priority: filters.priority });
+    }
+    // Wave B C7 / R-C7c — BOLA guard. When set, only tickets of the given
+    // tenant are returned. null/undefined → no scope filter (super_admin
+    // cross-tenant view).
+    if (filters.museumId !== undefined && filters.museumId !== null) {
+      qb.andWhere('t.museumId = :museumId', { museumId: filters.museumId });
     }
 
     const total = await qb.getCount();

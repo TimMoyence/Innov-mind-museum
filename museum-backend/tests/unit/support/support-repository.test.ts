@@ -78,6 +78,8 @@ describe('SupportRepositoryPg', () => {
         description: 'I have a problem',
         priority: 'medium',
         category: null,
+        // Wave B C7 — tenant scope; null when not supplied (no JWT museumId claim).
+        museumId: null,
       });
       expect(result).toEqual(
         expect.objectContaining({

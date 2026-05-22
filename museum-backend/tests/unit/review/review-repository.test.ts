@@ -46,6 +46,8 @@ describe('ReviewRepositoryPg', () => {
         userName: 'Test User',
         rating: 4,
         comment: 'Great app!',
+        // Wave B C7 — repo always normalises museumId to null when caller omits.
+        museumId: null,
       });
       expect(result).toEqual({
         id: 'review-001',
@@ -54,6 +56,8 @@ describe('ReviewRepositoryPg', () => {
         rating: 4,
         comment: 'Great app!',
         status: 'pending',
+        // Wave B C7 — DTO surfaces tenant scope (null = unscoped public review).
+        museumId: null,
         createdAt: '2025-06-01T00:00:00.000Z',
       });
     });
@@ -90,7 +94,9 @@ describe('ReviewRepositoryPg', () => {
         pagination: { page: 1, limit: 5 },
       });
 
-      expect(qb.where).toHaveBeenCalledWith('r.status = :status', { status: 'approved' });
+      // Wave B C7 — listReviews now accumulates predicates via andWhere
+      // uniformly (first-call andWhere behaves as where in TypeORM 0.3.x).
+      expect(qb.andWhere).toHaveBeenCalledWith('r.status = :status', { status: 'approved' });
     });
 
     it('computes correct offset for page 2', async () => {

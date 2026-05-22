@@ -583,5 +583,11 @@
         "error": "Could not retrieve file"
       }
     }
+  },
+  "analytics_consent": {
+    "title": "Analytics and cookies",
+    "description": "Musaium uses Plausible Analytics, a cookieless and privacy-friendly audience measurement tool. No personal data is collected and no advertising tracker is set on your device. You can decline this measurement if you prefer.",
+    "opt_in": "I accept",
+    "opt_out": "Decline"
   }
 }

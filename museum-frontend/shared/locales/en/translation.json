@@ -1237,6 +1237,12 @@
     "error": "Something went wrong. Please try again.",
     "dismiss": "Close",
     "consent": "I agree to receive an email when premium launches.",
-    "resetsOn": "Resets on"
+    "resetsOn": "Resets on",
+    "analyticsConsent": {
+      "title": "Help us improve Musaium",
+      "description": "With your consent we anonymously measure how the app is used (pages viewed, features used). No personal data, no advertising tracker — just aggregated counters that help us understand what works.",
+      "optIn": "I accept",
+      "optOut": "Decline"
+    }
   }
 }

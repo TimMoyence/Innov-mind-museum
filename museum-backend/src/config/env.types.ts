@@ -651,4 +651,11 @@ export interface AppEnv {
       refillPerSecond: number;
     };
   };
+  /** Wave C5 (D-C5) — Plausible funnel analytics. Both keys optional in dev/test. */
+  plausible?: {
+    /** Registered Plausible site domain (e.g. `musaium.com`). */
+    domain?: string;
+    /** Self-hosted or `https://plausible.io/api/event` Events API endpoint. */
+    endpointUrl?: string;
+  };
 }

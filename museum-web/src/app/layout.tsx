@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
+import PlausibleProvider from 'next-plausible';
 import './globals.css';
 
 const inter = Inter({
@@ -24,6 +25,13 @@ export const metadata: Metadata = {
   },
 };
 
+// Wave C5 / T-C56 — Plausible site domain. Read from build-time env so the
+// component tree never carries a hardcoded value (PATTERNS.md §5 anti-pattern
+// #2). `enabled` gates script injection : prod + non-empty domain ⇒ inject ;
+// any other case ⇒ no-op (fail-closed for staging / preview / local dev).
+const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+const PLAUSIBLE_ENABLED = process.env.NODE_ENV === 'production' && Boolean(PLAUSIBLE_DOMAIN);
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
   const locale = headersList.get('x-locale') ?? 'fr';
@@ -35,7 +43,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>{nonce ? <meta property="csp-nonce" content={nonce} /> : null}</head>
-      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        {/* Wave C5 / T-C56 — Plausible funnel script. `domain` MUST be non-empty
+            when the provider renders ; the `enabled` gate above prevents the
+            script from being injected in dev / when env is unset. Cookieless +
+            same-origin via `withPlausibleProxy` in `next.config.ts`. */}
+        <PlausibleProvider
+          domain={PLAUSIBLE_DOMAIN ?? 'musaium.local'}
+          enabled={PLAUSIBLE_ENABLED}
+          trackOutboundLinks
+        >
+          {children}
+        </PlausibleProvider>
+      </body>
     </html>
   );
 }

@@ -12,6 +12,12 @@ export interface CreateTicketInput {
   description: string;
   priority?: TicketPriority;
   category?: string;
+  /**
+   * B2B multi-tenant scope (Wave B C7 / R-C7a / R-C7c). Threaded from the
+   * authenticated user's JWT `museumId` claim. `null`/undefined for tickets
+   * not attached to a specific tenant museum.
+   */
+  museumId?: number | null;
 }
 
 export interface AddTicketMessageInput {
@@ -32,6 +38,11 @@ export interface ListTicketsFilters {
   userId?: number;
   status?: TicketStatus;
   priority?: TicketPriority;
+  /**
+   * B2B multi-tenant scope (Wave B C7 / R-C7c). When set, only tickets
+   * belonging to this museum are returned (OWASP API3 / BOLA guard).
+   */
+  museumId?: number | null;
   pagination: PaginationParams;
 }
 
@@ -44,6 +55,8 @@ export interface TicketDTO {
   priority: string;
   category: string | null;
   assignedTo: number | null;
+  /** B2B multi-tenant scope (Wave B C7). Null for tickets unscoped to a tenant. */
+  museumId: number | null;
   createdAt: string;
   updatedAt: string;
   messageCount?: number;

@@ -1122,7 +1122,7 @@
               "required": ["id", "rating", "comment", "status", "userName", "createdAt"],
               "properties": {
                 "id": { "type": "string", "format": "uuid" },
-                "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "rating": { "type": "integer", "minimum": 0, "maximum": 10 },
                 "comment": { "type": "string" },
                 "status": { "type": "string" },
                 "userName": { "type": "string" },
@@ -1221,7 +1221,16 @@
       },
       "ReviewDTO": {
         "type": "object",
-        "required": ["id", "userId", "userName", "rating", "comment", "status", "createdAt"],
+        "required": [
+          "id",
+          "userId",
+          "userName",
+          "rating",
+          "comment",
+          "status",
+          "museumId",
+          "createdAt"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1235,8 +1244,14 @@
           },
           "rating": {
             "type": "integer",
-            "minimum": 1,
-            "maximum": 5
+            "minimum": 0,
+            "maximum": 10,
+            "description": "NPS scale (0 = strongest detractor, 9-10 = promoter). Wave B C7 — widened from 1-5 to 0-10."
+          },
+          "museumId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "B2B multi-tenant scope. Null for unscoped public reviews. Wave B C7."
           },
           "comment": {
             "type": "string"
@@ -4443,8 +4458,8 @@
                 "properties": {
                   "rating": {
                     "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5
+                    "minimum": 0,
+                    "maximum": 10
                   },
                   "comment": {
                     "type": "string",

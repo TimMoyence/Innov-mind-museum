@@ -76,6 +76,21 @@ const buildHarness = async (
       .map((m) => `"${m.tableName}"`);
     if (tables.length === 0) return;
     await AppDataSource.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
+    // Wave B C7 — minimal museum baseline so any test that wires a
+    // multi-tenant FK (reviews.museum_id, support_tickets.museum_id,
+    // artwork_embeddings.museum_id) does not trip a FK violation when it
+    // exercises the museum-scope path without explicitly seeding museums.
+    // Two stable IDs are seeded (42 = primary tenant, 99 = cross-tenant
+    // BOLA target). Tests that seed their own museums still work — the
+    // unique slug means inserts at id ≠ 42/99 do not collide. RESTART
+    // IDENTITY above resets the museums.id sequence to 1; we coerce 42/99
+    // via explicit INSERT so the sequence advance is irrelevant.
+    await AppDataSource.query(
+      `INSERT INTO "museums" (id, name, slug, "museumType", is_active, version)
+         VALUES (42, 'Test Tenant 42', 'test-tenant-42', 'general', true, 1),
+                (99, 'Test Tenant 99', 'test-tenant-99', 'general', true, 1)
+         ON CONFLICT (id) DO NOTHING`,
+    );
   };
 
   let stopped = false;

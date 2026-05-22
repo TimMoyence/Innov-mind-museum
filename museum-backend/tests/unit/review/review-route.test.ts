@@ -79,10 +79,14 @@ describe('Review Routes — Unit', () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ review: mockReview });
+      // Wave B C7 / R-C7c — route threads `museumId` from JWT claim into
+      // the use case. The visitor token used in this test has no museumId
+      // claim → null is passed (catalog-level review, pre-B2B behaviour).
       expect(mockCreateReview).toHaveBeenCalledWith({
         user: expect.objectContaining({ id: 1, firstname: 'Ada', lastname: 'Lovelace' }),
         rating: 5,
         comment: 'An absolutely wonderful museum experience!',
+        museumId: null,
       });
     });
 
@@ -157,11 +161,13 @@ describe('Review Routes — Unit', () => {
       expect(res.status).toBe(400);
     });
 
-    it('returns 400 for rating out of range', async () => {
+    // Wave B C7 / R-C7b — rating range widened to 0-10 (NPS). Use 11 (now
+    // above ceiling) instead of 6 (now valid as NPS passive).
+    it('returns 400 for rating out of range (11, above NPS ceiling)', async () => {
       const res = await request(app)
         .post('/api/reviews')
         .set('Authorization', `Bearer ${userToken()}`)
-        .send({ ...validBody, rating: 6 });
+        .send({ ...validBody, rating: 11 });
 
       expect(res.status).toBe(400);
     });

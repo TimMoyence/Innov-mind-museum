@@ -38,6 +38,7 @@ import {
   downloadThumbnail as politeDownloadThumbnail,
   fetchArtworksOfMuseum as defaultFetchArtworksOfMuseum,
   normalizeMetadata,
+  validateWikidataQid,
   type ArtworkSeed,
 } from './catalog-ingest.helpers';
 
@@ -104,6 +105,18 @@ export interface RunIngestOptions {
   download?: DownloadThumbnailFn;
   /** SPARQL fetcher. Defaults to {@link defaultFetchArtworksOfMuseum}. */
   fetchArtworks?: FetchArtworksOfMuseumFn;
+  /**
+   * T-A8 — Internal Musaium tenant FK (`museums.id`) propagated onto every
+   * persisted {@link ArtworkEmbeddingRow.museumId}. `null` / omitted means
+   * "global public catalog" (visible to every tenant). Non-null pins the
+   * batch to that single tenant — OWASP LLM08 cross-tenant scope (cf.
+   * `ArtworkEmbeddingRepository.findNearest`).
+   *
+   * Resolved at the CLI layer either from the explicit `--museum-id=<int>`
+   * flag, or by looking up `museums.wikidata_qid` for the (single) `--museum=`
+   * Q-code provided. See `main()` for the resolution branch.
+   */
+  museumId?: number | null;
 }
 
 /** Aggregate result of one CLI run. */
@@ -137,9 +150,7 @@ const rawDownloadThumbnail: DownloadThumbnailFn = async (
     },
   });
   if (!response.ok) {
-    throw new Error(
-      `catalog_ingest_thumbnail_non_ok: ${String(response.status)} for ${url}`,
-    );
+    throw new Error(`catalog_ingest_thumbnail_non_ok: ${String(response.status)} for ${url}`);
   }
   const declared = response.headers.get('content-length');
   if (declared !== null) {
@@ -172,10 +183,7 @@ const WIKIMEDIA_SOURCE: ArtworkImageSource = 'wikimedia';
  * into the catalog. The narrowed result is the {@link ArtworkImageLicense}
  * value persisted on the row.
  */
-function classifyLicense(
-  raw: string,
-  allowed: AllowedLicense[],
-): ArtworkImageLicense | null {
+function classifyLicense(raw: string, allowed: AllowedLicense[]): ArtworkImageLicense | null {
   if ((allowed as string[]).includes(raw)) {
     return raw as ArtworkImageLicense;
   }
@@ -314,6 +322,10 @@ export async function runIngest(opts: RunIngestOptions): Promise<RunIngestResult
           imageSource: WIKIMEDIA_SOURCE,
           license,
           embeddingModelVersion: encoded.modelVersion,
+          // T-A8 — propagate the tenant FK end-to-end. `undefined` collapses to
+          // the column default (NULL) at the repository layer; non-null pins
+          // the row to the tenant `museums.id` (OWASP LLM08 scope).
+          museumId: opts.museumId ?? null,
         };
         return row;
       },
@@ -338,6 +350,9 @@ export async function runIngest(opts: RunIngestOptions): Promise<RunIngestResult
     dryRun,
     batchSize,
     concurrency,
+    // T-A8 — surface the tenant scope in the structured log so operators can
+    // audit which museum_id was used for the run (or `null` = global catalog).
+    museumId: opts.museumId ?? null,
   });
 
   return { inserted, updated, skipped, licenseRejected, totalSeen };
@@ -359,6 +374,8 @@ function parseCliArgs(argv: string[]): {
   dryRun: boolean;
   batchSize: number;
   concurrency: number;
+  /** T-A8 — explicit tenant override; if absent and a single `--museum=` Qid is provided, `main()` resolves it from `museums.wikidata_qid`. */
+  museumId?: number;
 } {
   const out: {
     museumQids: string[];
@@ -367,6 +384,7 @@ function parseCliArgs(argv: string[]): {
     dryRun: boolean;
     batchSize: number;
     concurrency: number;
+    museumId?: number;
   } = {
     museumQids: [],
     licenseFilter: ['public-domain', 'cc-0'],
@@ -377,7 +395,30 @@ function parseCliArgs(argv: string[]): {
 
   for (const arg of argv) {
     if (arg.startsWith('--museum=')) {
-      out.museumQids.push(arg.slice('--museum='.length));
+      // TD-SEC-WAVEA-01 / WAVE-A-SEC-M1 — defense-in-depth. The value flows
+      // into `buildArtworksOfMuseumSparql` where it is interpolated TWICE
+      // into the SPARQL template. Mirror the strict `--museum-id=<int>`
+      // pattern below: reject loudly (warn + skip) so a typo or injection
+      // payload never reaches the Wikidata endpoint.
+      const raw = arg.slice('--museum='.length);
+      if (validateWikidataQid(raw)) {
+        out.museumQids.push(raw);
+      } else {
+        logger.warn('catalog_ingest_bad_museum_qid', { raw: raw.slice(0, 64) });
+      }
+      continue;
+    }
+    if (arg.startsWith('--museum-id=')) {
+      // T-A8 — explicit `--museum-id=<positive int>`. Reject NaN, negatives,
+      // zero, and non-integers loudly so a typo never lands as `null` and
+      // leaks rows into the global catalog by accident.
+      const raw = arg.slice('--museum-id='.length);
+      const parsed = Number.parseInt(raw, 10);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        out.museumId = parsed;
+      } else {
+        logger.warn('catalog_ingest_bad_museum_id', { raw });
+      }
       continue;
     }
     if (arg.startsWith('--from-csv=')) {
@@ -389,8 +430,9 @@ function parseCliArgs(argv: string[]): {
       out.licenseFilter = value
         .split(',')
         .map((s) => s.trim())
-        .filter((s): s is AllowedLicense =>
-          s === 'public-domain' || s === 'pd' || s === 'cc-0' || s === 'cc-by-sa',
+        .filter(
+          (s): s is AllowedLicense =>
+            s === 'public-domain' || s === 'pd' || s === 'cc-0' || s === 'cc-by-sa',
         )
         .map((s) => (s === 'pd' ? 'public-domain' : s));
       continue;
@@ -439,19 +481,53 @@ async function main(): Promise<void> {
     await AppDataSource.initialize();
   }
 
-  const { ArtworkEmbeddingRepositoryPg } = (await import(
-    '@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg'
-  )) as {
-    ArtworkEmbeddingRepositoryPg: new (
-      ds: import('typeorm').DataSource,
-    ) => ArtworkEmbeddingRepository;
-  };
+  const { ArtworkEmbeddingRepositoryPg } =
+    (await import('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg')) as {
+      ArtworkEmbeddingRepositoryPg: new (
+        ds: import('typeorm').DataSource,
+      ) => ArtworkEmbeddingRepository;
+    };
   const repository = new ArtworkEmbeddingRepositoryPg(AppDataSource);
 
-  const { createEmbeddingsAdapter } = (await import(
-    '@modules/chat/adapters/secondary/embeddings/embeddings.factory'
-  )) as { createEmbeddingsAdapter: () => EmbeddingsPort };
+  const { createEmbeddingsAdapter } =
+    (await import('@modules/chat/adapters/secondary/embeddings/embeddings.factory')) as {
+      createEmbeddingsAdapter: () => EmbeddingsPort;
+    };
   const encoder = createEmbeddingsAdapter();
+
+  // T-A8 — resolve the tenant scope for the run :
+  //   1. `--museum-id=<int>` explicit → use as-is (validated in parseCliArgs).
+  //   2. else single `--museum=<Qid>` → lookup `museums.wikidata_qid`.
+  //   3. else (multiple Qids or no match) → `null` = global public catalog
+  //      branch. Warn-logged so operators notice if a single-Qid run lands
+  //      in the global namespace because the Q-code wasn't in the seed yet.
+  let resolvedMuseumId: number | null = cli.museumId ?? null;
+  if (resolvedMuseumId === null && cli.museumQids.length === 1) {
+    const targetQid = cli.museumQids[0];
+    const { Museum } = (await import('@modules/museum/domain/museum/museum.entity')) as {
+      Museum: new () => { id: number; wikidataQid?: string | null };
+    };
+    const museumRepo = AppDataSource.getRepository(Museum);
+    const found = await museumRepo
+      .createQueryBuilder('m')
+      .select(['m.id'])
+      .where('m.wikidataQid = :qid', { qid: targetQid })
+      .getOne();
+    if (found && typeof found.id === 'number') {
+      resolvedMuseumId = found.id;
+      logger.info('catalog_ingest_resolved_museum_id', { qid: targetQid, museumId: found.id });
+    } else {
+      logger.warn('catalog_ingest_museum_qid_unresolved', {
+        qid: targetQid,
+        hint: 'no museums row with wikidata_qid matches; ingesting into global catalog (museum_id=NULL)',
+      });
+    }
+  } else if (resolvedMuseumId === null && cli.museumQids.length > 1) {
+    logger.warn('catalog_ingest_multi_qid_global_branch', {
+      count: cli.museumQids.length,
+      hint: 'pass --museum-id=<int> to pin batch to one tenant',
+    });
+  }
 
   const result = await runIngest({
     museumQids: cli.museumQids,
@@ -461,6 +537,7 @@ async function main(): Promise<void> {
     concurrency: cli.concurrency,
     encoder,
     repository,
+    museumId: resolvedMuseumId,
     // Production opts in to the polite 1 req/s/hostname helper.
     download: politeDownloadThumbnail,
   });
