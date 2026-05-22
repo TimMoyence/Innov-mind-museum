@@ -7,6 +7,7 @@ import { AdminExportRepositoryPg } from '@modules/admin/adapters/secondary/pg/ad
 import { ExportChatSessionsUseCase } from '@modules/admin/useCase/export/exportChatSessions.useCase';
 import { ExportReviewsUseCase } from '@modules/admin/useCase/export/exportReviews.useCase';
 import { ExportSupportTicketsUseCase } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
+import { env } from '@src/config/env';
 
 import type { AuditService } from '@shared/audit';
 import type { DataSource } from 'typeorm';
@@ -35,10 +36,30 @@ function getAdminExportRepository(): AdminExportRepositoryPg {
   return cachedRepository;
 }
 
+/**
+ * I-SEC5 (2026-05-21) — resolve salt at factory time (not module-load) so tests
+ * stubbing `env` before calling the getter keep working. Prod boot fail-fast at
+ * `env.production-validation.ts::validateExportPseudonymSalt` guarantees this
+ * is set before any request lands ; dev throws explicitly to force operator to
+ * set EXPORT_PSEUDONYM_SALT in their `.env`. Throw bubbles into the route
+ * handler which already returns 500 via global error middleware.
+ */
+function resolveExportPseudonymSalt(): string {
+  if (!env.exportPseudonymSalt) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT (env.exportPseudonymSalt) is unset — ' +
+        'set it (>= 32 chars) before resolving the admin-export use cases. ' +
+        'See docs/SECURITY.md#export-salt-rotation.',
+    );
+  }
+  return env.exportPseudonymSalt;
+}
+
 export function getExportChatSessionsUseCase(): ExportChatSessionsUseCase {
   cachedSessionsUseCase ??= new ExportChatSessionsUseCase(
     getAdminExportRepository(),
     loadAuditService(),
+    resolveExportPseudonymSalt(),
   );
   return cachedSessionsUseCase;
 }

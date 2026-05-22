@@ -35,6 +35,9 @@ const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
   });
 };
 
+const INVALID_ACCESS_TOKEN_MSG = 'Invalid access token';
+const INVALID_ACCESS_TOKEN_CODE = 'INVALID_ACCESS_TOKEN';
+
 const ttlToSeconds = (value: string): number => {
   const raw = value.trim();
   if (!raw) return 0;
@@ -64,6 +67,49 @@ export class TokenJwtService {
   readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
 
+  /**
+   * Variant of {@link verifyAccessToken} exposing the JWT `jti` + `exp` claims
+   * (RFC 7519 §4.1.4/4.1.7). Used by the denylist middleware (R8) and the
+   * logout handler (R7) which both need the `jti` to consult / write the
+   * `IAccessTokenDenylist`. Existing `verifyAccessToken` shape unchanged so
+   * the 5 other call sites stay frozen (design §3.1 D3 — additive, no
+   * blast radius on the wider auth surface).
+   *
+   * @throws {AppError} 401 INVALID_ACCESS_TOKEN on any failure.
+   */
+  verifyAccessTokenWithClaims(token: string): {
+    id: number;
+    role: UserRole;
+    museumId?: number | null;
+    jti: string;
+    expSec: number;
+  } {
+    try {
+      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
+      const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
+        algorithms: ['HS256'],
+        issuer: ACCESS_TOKEN_ISSUER,
+        audience: ACCESS_TOKEN_ISSUER,
+      }) as AccessTokenClaims;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
+      if (decoded.type !== 'access' || !decoded.sub || typeof decoded.jti !== 'string') {
+        throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
+      }
+      const expSec = typeof decoded.exp === 'number' ? decoded.exp : 0;
+      return {
+        id: Number(decoded.sub),
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
+        role: decoded.role || 'visitor',
+        museumId: decoded.museumId ?? null,
+        jti: decoded.jti,
+        expSec,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
+    }
+  }
+
   /** @throws {Error} 401 AppError on any failure. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
@@ -75,7 +121,7 @@ export class TokenJwtService {
       }) as AccessTokenClaims;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
       if (decoded.type !== 'access' || !decoded.sub) {
-        throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
+        throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
       }
 
       return {
@@ -89,7 +135,7 @@ export class TokenJwtService {
         throw error;
       }
 
-      throw unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
+      throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
     }
   }
 

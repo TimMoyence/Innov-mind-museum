@@ -52,7 +52,8 @@ export class ChallengeMfaUseCase {
     }
 
     const secret = decryptTotpSecret(row.secretEncrypted);
-    if (!verifyTotpCode(secret, trimmedCode)) {
+    const result = verifyTotpCode(secret, trimmedCode);
+    if (!result) {
       throw new AppError({
         message: 'Invalid MFA code.',
         statusCode: 401,
@@ -60,7 +61,20 @@ export class ChallengeMfaUseCase {
       });
     }
 
-    await this.totpRepository.markUsed(userId, new Date());
+    // RFC 6238 §5.2 replay-protection — reject codes whose accepted step is
+    // ≤ the user's last-accepted step. Same `code: 'INVALID_MFA_CODE'` returned
+    // so an attacker cannot distinguish "wrong code" from "replay detected"
+    // (defense-in-depth, lib-docs/otpauth/LESSONS.md L52-54).
+    const lastStep = row.lastUsedStep === null ? null : Number(row.lastUsedStep);
+    if (lastStep !== null && result.step <= lastStep) {
+      throw new AppError({
+        message: 'Invalid MFA code.',
+        statusCode: 401,
+        code: 'INVALID_MFA_CODE',
+      });
+    }
+
+    await this.totpRepository.markUsed(userId, new Date(), result.step);
 
     const session = await this.authSessionService.issueSessionForUser(user);
     return { session, userId };

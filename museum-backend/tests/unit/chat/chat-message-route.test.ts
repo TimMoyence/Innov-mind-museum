@@ -238,9 +238,12 @@ describe('chat-message.route — uncovered paths', () => {
 
   describe('POST /api/chat/art-keywords — no artKeywordRepo', () => {
     it('returns 404 when artKeywordRepo is not provided', async () => {
+      // C3 (I-SEC3 R10): POST /art-keywords now requires ADMIN/MODERATOR role
+      // (requireRole gate before handler). Use admin token to reach the 404
+      // handler — visitor token would short-circuit at 403.
       const res = await request(app)
         .post('/api/chat/art-keywords')
-        .set('Authorization', `Bearer ${userToken()}`)
+        .set('Authorization', `Bearer ${makeToken({ role: 'admin' })}`)
         .send({ keywords: ['monet'] });
 
       expect(res.status).toBe(404);

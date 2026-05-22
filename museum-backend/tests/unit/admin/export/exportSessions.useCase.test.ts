@@ -58,6 +58,12 @@ function makeAsyncIter(rows: ExportRowSessions[]): AsyncIterable<ExportRowSessio
   };
 }
 
+// I-SEC5 (2026-05-21) — corrective loop : ctor now takes `salt: string` as 3rd
+// arg (mirror AdminExportRepositoryPg). Fixed 48-char test salt — deterministic
+// digest for the /^[0-9a-f]{16}$/ assertion below ; identity of the salt itself
+// is irrelevant to the RBAC / streaming / audit invariants this file pins.
+const TEST_PSEUDONYM_SALT = 't'.repeat(48);
+
 describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
   let repo: ExportRepoSpy;
   let audit: AuditSpy;
@@ -71,7 +77,8 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
     useCase = new (ExportChatSessionsUseCase as new (
       r: ExportRepoSpy,
       a: AuditSpy,
-    ) => ExportUseCase)(repo, audit);
+      salt: string,
+    ) => ExportUseCase)(repo, audit, TEST_PSEUDONYM_SALT);
   });
 
   // ── RBAC scope (R6 / R7 / R8 / D4) ──────────────────────────────────────

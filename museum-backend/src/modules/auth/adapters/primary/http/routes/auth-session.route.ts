@@ -151,7 +151,23 @@ authSessionRouter.post(
   validateBody(logoutSchema),
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
-    await authSessionService.logout(refreshToken);
+    // R7 — extract the access token bearer (best-effort) so the access-token
+    // denylist gets the `jti` even though it lives outside the refresh path.
+    // Invalid / expired / absent bearer → undefined ctx → logout still
+    // idempotent (refresh side handled separately). Never throw on bearer
+    // verification : a misformed Bearer must not block logout (cf. spec §R7
+    // "idempotent ... no leak of token validation details").
+    const bearer = req.headers.authorization?.split(' ')[1];
+    let ctx: { accessJti: string; accessExpSec: number } | undefined;
+    if (bearer && !bearer.startsWith('msk_')) {
+      try {
+        const claims = authSessionService.verifyAccessTokenWithClaims(bearer);
+        ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };
+      } catch {
+        // Bearer invalid/expired — silent, no leak.
+      }
+    }
+    await authSessionService.logout(refreshToken, ctx);
     await auditService.log({
       action: AUDIT_AUTH_LOGOUT,
       actorType: 'anonymous',

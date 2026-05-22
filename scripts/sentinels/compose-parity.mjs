@@ -45,8 +45,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 
-const DEV_PATH = path.join(repoRoot, 'museum-backend', 'docker-compose.dev.yml');
-const PROD_PATH = path.join(repoRoot, 'museum-backend', 'deploy', 'docker-compose.prod.yml');
+// C4 I-SEC1 (design D2) — env overrides let the maxmemory-policy unit test
+// inject a temp fixture pair without racing the real repo files. Falls back
+// to the canonical layout when overrides are absent (production behaviour).
+const DEV_PATH =
+  process.env.COMPOSE_PARITY_DEV_PATH ??
+  path.join(repoRoot, 'museum-backend', 'docker-compose.dev.yml');
+const PROD_PATH =
+  process.env.COMPOSE_PARITY_PROD_PATH ??
+  path.join(repoRoot, 'museum-backend', 'deploy', 'docker-compose.prod.yml');
 
 // Each entry: { flag, severity, services? }
 // - severity 'critical' => exit 1 if drift detected
@@ -55,6 +62,13 @@ const PROD_PATH = path.join(repoRoot, 'museum-backend', 'deploy', 'docker-compos
 const CRITICAL_FLAGS = [
   { flag: '--requirepass', severity: 'critical', services: ['redis'] },
   { flag: '--appendonly', severity: 'warn', services: ['redis'] },
+  // C4 I-SEC1 (spec R6, 2026-05-21) — eviction policy parity dev↔prod is
+  // CRITICAL: dev must reproduce prod's `volatile-ttl` behaviour or the
+  // financial-DoS guarantee (cache evicted before counters) is unprovable
+  // locally. The memory cap (`--maxmemory`) itself MAY diverge (dev can
+  // run uncapped) → WARN-only.
+  { flag: '--maxmemory-policy', severity: 'critical', services: ['redis'] },
+  { flag: '--maxmemory', severity: 'warn', services: ['redis'] },
 ];
 
 function readFile(p) {

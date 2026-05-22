@@ -16,9 +16,13 @@ import type { ExportReviewsRepository } from '@modules/admin/useCase/export/expo
 import type { ExportTicketsRepository } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
 import type { DataSource, Repository } from 'typeorm';
 
-// R2 corrective loop 1 (2026-05-15) — env-sourced w/ historical literal fallback
-// so unit tests stubbing env without the field keep working.
-const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
+// I-SEC5 (2026-05-21) — historical literal fallback REMOVED. The committed
+// constant was a trivial dictionary-attack surface against the pseudonymised
+// export (spec §1.1). The salt now MUST come from `env.exportPseudonymSalt`.
+// Prod boot fail-fast lives in `env.production-validation.ts::validateExportPseudonymSalt`.
+// Rotation doctrine : `docs/SECURITY.md#export-salt-rotation` — rotation = privacy
+// incident only ; post-rotation pseudonyms intentionally non-correlatable with
+// pre-rotation outputs (that IS the property we want).
 const CHUNK_SIZE = 500;
 
 /**
@@ -36,8 +40,24 @@ export class AdminExportRepositoryPg
   private readonly reviewRepo: Repository<Review>;
   private readonly ticketRepo: Repository<SupportTicket>;
   private readonly userRepo: Repository<User>;
+  /**
+   * I-SEC5 — resolved at construction (not at module-import) so tests that stub
+   * env BEFORE constructing the repo keep working. Prod boot fail-fast at
+   * `env.production-validation.ts` guarantees this is set before the first
+   * request reaches the adapter ; dev defaults to an explicit throw to force
+   * the operator to set EXPORT_PSEUDONYM_SALT in their `.env` template.
+   */
+  private readonly salt: string;
 
   constructor(dataSource: DataSource) {
+    if (!env.exportPseudonymSalt) {
+      throw new Error(
+        'EXPORT_PSEUDONYM_SALT (env.exportPseudonymSalt) is unset — ' +
+          'set it (>= 32 chars) before instantiating AdminExportRepositoryPg. ' +
+          'See docs/SECURITY.md#export-salt-rotation.',
+      );
+    }
+    this.salt = env.exportPseudonymSalt;
     this.sessionRepo = dataSource.getRepository(ChatSession);
     this.reviewRepo = dataSource.getRepository(Review);
     this.ticketRepo = dataSource.getRepository(SupportTicket);
@@ -109,7 +129,7 @@ export class AdminExportRepositoryPg
       for (const row of rows) {
         yield {
           id: row.id,
-          user_id_pseudonym: pseudonymise(row.userId, PSEUDONYM_SALT),
+          user_id_pseudonym: pseudonymise(row.userId, this.salt),
           user_name: row.userName,
           rating: row.rating,
           comment: row.comment,
@@ -155,7 +175,7 @@ export class AdminExportRepositoryPg
         const email = emailByUser.get(row.userId) ?? String(row.userId);
         yield {
           id: row.id,
-          user_email_pseudonym: pseudonymise(email, PSEUDONYM_SALT),
+          user_email_pseudonym: pseudonymise(email, this.salt),
           category: row.category ?? null,
           status: row.status,
           priority: row.priority,

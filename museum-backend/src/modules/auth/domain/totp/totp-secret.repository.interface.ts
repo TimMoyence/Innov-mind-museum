@@ -22,7 +22,12 @@ export interface ITotpSecretRepository {
    */
   markEnrolled(userId: number, at: Date): Promise<void>;
 
-  markUsed(userId: number, at: Date): Promise<void>;
+  /**
+   * Stamp `last_used_at` AND `last_used_step` (RFC 6238 §5.2 replay-protection).
+   * `step` is REQUIRED — passing `undefined` would silent-skip the column write under
+   * TypeORM 0.3.x (lib-docs/typeorm/LESSONS.md verifyEmail replay 2026-05).
+   */
+  markUsed(userId: number, at: Date, step: number): Promise<void>;
 
   /** Atomic replace. Callers MUST read-modify-write — adapter does NOT diff entries. */
   updateRecoveryCodes(userId: number, codes: TotpRecoveryCode[]): Promise<void>;

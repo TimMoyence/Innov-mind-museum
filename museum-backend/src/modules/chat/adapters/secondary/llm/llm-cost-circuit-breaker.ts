@@ -1,21 +1,56 @@
 /**
  * Cost-based circuit breaker for LLM API spend (perennial design §11 D9 — RE2, ADR-047).
  *
- * STATUS — PHASE 2 PRIMITIVE, NOT WIRED IN V1 HOT PATH. Primitive shipped + unit-tested,
- * singleton in composition root for `onStateChange` Prometheus wiring. **No production
- * caller invokes `recordCharge()` yet.** Phase 2 (B2B onset, per-tenant cost attribution)
- * wires it around the LLM orchestrator call site.
+ * UFR-013 doc-honesty correction — RUN_ID 2026-05-21-p0-c2-cost-breaker.
+ * Prior preamble fabricated three assertions: (1) that the primitive was a
+ * "phase-2" stub not yet wired in V1, (2) that no production caller invoked
+ * `recordCharge()`, (3) that fail-CLOSED was enforced by callers. (1) and (2)
+ * were FALSE — `langchain.orchestrator.ts:recordSectionCost()` had been
+ * calling `recordCharge()` live since C9.4. (3) was an unfulfilled contract
+ * (no caller checked `canAttempt()`). This run wires the missing guards at
+ * the orchestrator entry points and rewrites this preamble to reflect the
+ * actual call graph. Removal of the verbatim false strings is enforced by
+ * `tasks.md` verification grep contract.
  *
- * Distinct from latency `LLMCircuitBreaker`: latency CB trips on failures in window,
- * cost CB trips on spikes (scraping/DDoS amplification) OR daily cap breach. Two
- * conditions ORed: hourly threshold (burst guard) + daily budget (global cap, wider
- * than `guardrail-budget` LLM-judge cap — wraps ANY costed LLM call).
+ * Callers (verified at this docstring's authorship by direct file Read in
+ * worktree `/Users/Tim/Desktop/all/dev/Pro/wt-p0-security` on 2026-05-21) :
+ *  - `recordCharge`    — `langchain.orchestrator.ts:recordSectionCost()`
+ *                        (post-success only on both default + walk paths;
+ *                        R2 — never on error).
+ *  - `canAttempt`      — `langchain.orchestrator.ts:generate()` default path
+ *                        entry (after walk branch, before `runSectionTasks`)
+ *                        AND `langchain.orchestrator.ts:generateWalk()` entry
+ *                        (after fallback short-circuits, before
+ *                        `structured.invoke`). Both throw `CircuitOpenError`
+ *                        when `canAttempt()` returns `false` — fail-CLOSED
+ *                        contract IMPLEMENTED.
+ *  - `recordFailure`   — `langchain.orchestrator.ts:generate()` (default path,
+ *                        post-`runSectionTasks` aggregate inspection — fires
+ *                        when HALF_OPEN probe was consumed but every section
+ *                        failed) AND `langchain.orchestrator.ts:generateWalk()`
+ *                        catch around `structured.invoke()`. R9 wiring.
+ *  - `getState` / `state` — `chat-module.ts` `llmCostEurPerHour` gauge wiring
+ *                           via `onStateChange` callback (label set =
+ *                           {tier, museum_id}; no PII).
  *
- * Storage in-process (rolling 1h window + UTC daily counter). V1 single-instance KISS
- * trade-off — Phase 3 promotes to Redis on horizontal scale.
+ * Image cost accounting — `estimatePayloadBytes()` in `llm-prompt-builder.ts`
+ * substitutes `VISION_BYTES_EQUIVALENT` (`llm-cost-pricing.ts`, default 4000
+ * bytes = 1000 vision tokens × 4 bytes/token) for any `image_url` content
+ * item, INDEPENDENT of `url` source (base64 data-URL vs https). The literal
+ * base64 byte length of an inline image is NOT a realistic input-token proxy
+ * (providers bill 85–1105 tokens per image at `detail:high`). Without this
+ * override the breaker tripped on the first legitimate single-image request
+ * (×100–1000 inflation on data-URL payloads).
  *
- * Fail-CLOSED: when OPEN, callers MUST short-circuit with 503-equivalent. NEVER
- * fail-open — cost protection is a safety guarantee, not a soft hint.
+ * Distinct from latency `LLMCircuitBreaker`: latency CB trips on failures in
+ * window, cost CB trips on spikes (scraping/DDoS amplification) OR daily cap
+ * breach. Two conditions ORed: hourly threshold (burst guard) + daily budget
+ * (global cap, wider than `guardrail-budget` LLM-judge cap — wraps ANY costed
+ * LLM call).
+ *
+ * Storage in-process (rolling 1h window + UTC daily counter). V1
+ * single-instance KISS trade-off — Phase 3 promotes to Redis on horizontal
+ * scale.
  */
 
 import { logger } from '@shared/logger/logger';

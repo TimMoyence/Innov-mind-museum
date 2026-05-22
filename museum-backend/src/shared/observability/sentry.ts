@@ -3,7 +3,13 @@ import * as Sentry from '@sentry/node';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import { scrubEvent, shouldDropBreadcrumb, type ScrubbableEvent } from './sentry-scrubber';
+import {
+  isUrlLikeValue,
+  scrubEvent,
+  scrubUrl,
+  shouldDropBreadcrumb,
+  type ScrubbableEvent,
+} from './sentry-scrubber';
 
 import type { Span } from '@sentry/node';
 import type { Express } from 'express';
@@ -89,9 +95,19 @@ export const captureExceptionWithContext = (
   Sentry.withScope((scope) => {
     if (context) {
       for (const [key, value] of Object.entries(context)) {
-        if (value !== undefined) {
-          scope.setTag(key, value);
-        }
+        if (value === undefined) continue;
+        // R3 (2026-05-21) — defense-in-depth source scrub :
+        // strip sensitive query-string params (`code`, `state`, `email`,
+        // `phone`, `token`, ...) BEFORE Sentry indexes the tag value.
+        // `error.middleware.ts:97` passes `path: req.originalUrl` which often
+        // carries magic-link / OAuth / signup PII in the query-string.
+        // Non-URL-like values (`method: 'GET'`, `requestId: '…'`) flow through
+        // unchanged (no false positives — see `isUrlLikeValue` heuristic).
+        // The downstream `scrubEvent` tag traversal (`beforeSend`) is the
+        // second layer that catches `Sentry.setTag` calls made outside this
+        // wrapper. See `lib-docs/@sentry/node/PATTERNS.md` §6 + §9.1.
+        const scrubbed = isUrlLikeValue(value) ? scrubUrl(value) : value;
+        scope.setTag(key, scrubbed);
       }
     }
     Sentry.captureException(error);

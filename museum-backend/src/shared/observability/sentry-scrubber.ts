@@ -12,7 +12,7 @@ import {
 
 import type { ScrubbableBreadcrumb, ScrubbableEvent } from '@musaium/shared';
 
-export { REDACTED, SENSITIVE_QUERY_KEYS } from '@musaium/shared';
+export { REDACTED, SENSITIVE_QUERY_KEYS, isUrlLikeValue, scrubUrl } from '@musaium/shared';
 export type { ScrubbableBreadcrumb, ScrubbableEvent } from '@musaium/shared';
 
 /** 8-char SHA-256 hex fingerprint. Backend-only — node:crypto, stronger than FE's 32-bit fold. */

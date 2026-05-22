@@ -55,7 +55,19 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // chat-api.smoke.integration.test.ts. The cap bump is required because
 // the baseline entry was missed when Batch A originally landed on main
 // (local pre-push gates skip this sentinel; CI quality job catches it).
-const PHASE_1_BASELINE_CAP = 13;
+//
+// 2026-05-21 (p0/security hotfix cascade): bumped 13 → 15 to admit the
+// two C1 PII-egress baseline entries that landed in 04f1a9c92 without
+// the matching cap bump (cap-discipline doctrine violated by C1):
+//   - observability/error-middleware-sentry.test.ts (C1-R4, supertest IS
+//     the network boundary; pure middleware integration, no DB/Redis).
+//   - observability/langfuse-pii-seed.test.ts (C1-R8, Langfuse SDK mask
+//     invariant; mask function IS the network boundary, same pattern as
+//     ssrf-matrix exemption — test intent IS the boundary).
+// Both entries already justified + approved in the baseline JSON. Reduce
+// back only by deleting entries, never by adding more.
+// Bumped 15→16 for C2 chat-cost-breaker-503 integration test (2026-05-22, hotfix p0/security CI tier-signature fix). feedback_tier_baseline_cap_discipline.md — bump cap concomitant à l'ajout baseline.
+const PHASE_1_BASELINE_CAP = 16;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

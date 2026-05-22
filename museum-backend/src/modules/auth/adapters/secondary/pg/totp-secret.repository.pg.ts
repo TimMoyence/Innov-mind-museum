@@ -50,8 +50,15 @@ export class TotpSecretRepositoryPg implements ITotpSecretRepository {
       .execute();
   }
 
-  async markUsed(userId: number, at: Date): Promise<void> {
-    await this.repo.update({ userId }, { lastUsedAt: at });
+  /**
+   * RFC 6238 §5.2 replay-protection — persist `last_used_step` atomically with
+   * `last_used_at`. PG `bigint` → JS string per lib-docs/typeorm/PATTERNS.md §6
+   * (the column accepts a numeric string ; we serialise via `String(step)` so the
+   * call site is free to pass a plain JS number). Never pass `undefined` — TypeORM
+   * 0.3.x silent-skips it (lib-docs/typeorm/LESSONS.md verifyEmail replay 2026-05).
+   */
+  async markUsed(userId: number, at: Date, step: number): Promise<void> {
+    await this.repo.update({ userId }, { lastUsedAt: at, lastUsedStep: String(step) });
   }
 
   /** Atomic full-array replace. */

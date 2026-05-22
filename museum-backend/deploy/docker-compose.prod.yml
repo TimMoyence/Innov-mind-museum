@@ -364,6 +364,15 @@ services:
       - '${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env for production}'
       - '--appendonly'
       - 'yes'
+      # C4 I-SEC1 (2026-05-21) — hard memory cap + deterministic eviction
+      # policy. `volatile-ttl` evicts shortest-TTL keys first so cache
+      # (1h TTL) is evicted before llm_cost counters (25h TTL), preserving
+      # the financial-DoS quota guarantee under memory pressure. See
+      # `museum-backend/.env.example` (REDIS_MAXMEMORY*) and design D5.
+      - '--maxmemory'
+      - '${REDIS_MAXMEMORY:-512mb}'
+      - '--maxmemory-policy'
+      - '${REDIS_MAXMEMORY_POLICY:-volatile-ttl}'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:

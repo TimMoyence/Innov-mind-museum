@@ -166,6 +166,83 @@ type RedirectOutcome =
   | { blocked: false; response: Response; finalUrl: string };
 
 /**
+ * C4 I-SEC10 (spec R8/R9) — bounded body reader.
+ *
+ * Two-layer cap so RAM consumption stays O(maxContentBytes), not O(payload):
+ *  1. Pre-fetch Content-Length check: reject before consuming the body.
+ *  2. Streamed cumulative-bytes cap: abort `reader.cancel()` past the cap.
+ *
+ * Defense-in-depth (design D8): a malicious server can lie about
+ * Content-Length, but cannot bypass both layers. Returns `null` on either
+ * rejection (logging the appropriate event), or the decoded UTF-8 body on
+ * success. Caller checks for null before passing to extractContent().
+ */
+type StreamedBodyResult = { ok: true; html: string } | { ok: false };
+
+async function readBodyWithCap(
+  response: Response,
+  url: string,
+  maxContentBytes: number,
+): Promise<StreamedBodyResult> {
+  // Layer 1 — Content-Length pre-guard.
+  const contentLengthHeader = response.headers.get('content-length');
+  if (contentLengthHeader !== null) {
+    const declared = Number.parseInt(contentLengthHeader, 10);
+    if (Number.isFinite(declared) && declared > maxContentBytes) {
+      logger.warn('scraper_payload_too_large', {
+        url,
+        contentLength: declared,
+        maxContentBytes,
+      });
+      return { ok: false };
+    }
+  }
+
+  // Layer 2 — streamed cap with early abort. `response.body` is a Web
+  // ReadableStream in Node 22 fetch. TextDecoder fatal:false so a
+  // mid-codepoint truncation never throws (partial result is abandoned).
+  const body = response.body;
+  if (!body) {
+    logger.warn('scraper_no_body', { url });
+    return { ok: false };
+  }
+  // Cast: in some TS lib configs (mix of @types/node + dom), `body.getReader()`
+  // returns ReadableStreamDefaultReader<any> instead of <Uint8Array>. Narrowing
+  // here keeps the rest of the function strictly typed without an
+  // eslint-disable.
+  const reader = body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  let bytesRead = 0;
+  let html = '';
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      const value = chunk.value;
+      bytesRead += value.byteLength;
+      if (bytesRead > maxContentBytes) {
+        logger.warn('scraper_payload_streamed_overflow', {
+          url,
+          bytesReadBeforeAbort: bytesRead,
+          maxContentBytes,
+        });
+        await reader.cancel();
+        return { ok: false };
+      }
+      html += decoder.decode(value, { stream: true });
+    }
+    html += decoder.decode();
+  } catch (streamErr) {
+    logger.warn('scraper_stream_error', {
+      url,
+      error: streamErr instanceof Error ? streamErr.message : String(streamErr),
+    });
+    return { ok: false };
+  }
+  return { ok: true, html };
+}
+
+/**
  * SEC: manual redirect loop so every `Location` is re-validated. Closes DNS
  * rebinding + cloud metadata + scheme-downgrade bypasses missed by a single
  * pre-fetch check.
@@ -296,8 +373,12 @@ export class HtmlScraper implements ScraperPort {
           return null;
         }
 
-        const html = await response.text();
-        return this.extractContent(finalUrl, html);
+        // C4 I-SEC10 (spec R8 + R9) — bounded body read. Defense-in-depth
+        // Content-Length pre-guard + streamed cumulative-bytes cap; see
+        // readBodyWithCap() above for the rationale.
+        const bodyResult = await readBodyWithCap(response, url, this.config.maxContentBytes);
+        if (!bodyResult.ok) return null;
+        return this.extractContent(finalUrl, bodyResult.html);
       } finally {
         clearTimeout(timeout);
       }

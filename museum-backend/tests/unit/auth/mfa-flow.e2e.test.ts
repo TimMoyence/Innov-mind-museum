@@ -329,7 +329,10 @@ describe('MFA flow — R16', () => {
       expect(out.session.accessToken).toBeTruthy();
       expect(out.session.refreshToken).toBeTruthy();
       expect(out.userId).toBe(user.id);
-      expect(verifyTotpCode(secret, code)).toBe(true);
+      // I-SEC7a (2026-05-21) — verifyTotpCode now returns `{ step } | null` (RFC 6238 §5.2 ledger).
+      expect(verifyTotpCode(secret, code)).toEqual(
+        expect.objectContaining({ step: expect.any(Number) }),
+      );
     });
 
     it('challenge with a wrong code throws INVALID_MFA_CODE', async () => {

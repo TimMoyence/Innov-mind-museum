@@ -97,11 +97,45 @@ export function makeFetchSpy(): jest.MockedFunction<typeof fetch> {
   return jest.fn() as jest.MockedFunction<typeof fetch>;
 }
 
-/** Builds an HTML page response — used in scraper tests. */
+/**
+ * Builds a Web ReadableStream that yields the supplied bytes as a single
+ * chunk then closes. Mirrors the Node 22 `fetch()` `response.body` shape so
+ * adapters reading via `body.getReader()` (C4 I-SEC10 streamed scraper)
+ * work in tests without a real network. Tracks `read`/`cancel` invocations
+ * so tests can assert streaming behaviour when needed.
+ */
+function makeWebReadableStream(bytes: Uint8Array): {
+  body: { getReader: () => { read: jest.Mock; cancel: jest.Mock; releaseLock: () => void } };
+} {
+  let consumed = false;
+  const readSpy = jest.fn(async () => {
+    if (consumed) return { done: true as const, value: undefined };
+    consumed = true;
+    return { done: false as const, value: bytes };
+  });
+  const cancelSpy = jest.fn(async () => undefined);
+  return {
+    body: {
+      getReader: () => ({
+        read: readSpy,
+        cancel: cancelSpy,
+        releaseLock: () => undefined,
+      }),
+    },
+  };
+}
+
+/**
+ * Builds an HTML page response — used in scraper tests. Exposes both
+ * `text()` (legacy callers) and `body.getReader()` (C4 I-SEC10 streamed
+ * scraper path) so it survives the migration without per-call branching.
+ */
 export function makeHtmlFetchResponse(
   html: string,
   contentType = 'text/html; charset=utf-8',
 ): Response {
+  const bytes = new TextEncoder().encode(html);
+  const { body } = makeWebReadableStream(bytes);
   return {
     ok: true,
     status: 200,
@@ -109,13 +143,15 @@ export function makeHtmlFetchResponse(
       get: (key: string) => (key.toLowerCase() === 'content-type' ? contentType : null),
       has: (key: string) => key.toLowerCase() === 'content-type',
     },
+    body,
     text: () => Promise.resolve(html),
-    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    arrayBuffer: () => Promise.resolve(bytes.buffer.slice(0) as ArrayBuffer),
   } as unknown as Response;
 }
 
 /** Builds a 3xx redirect response carrying a Location header. */
 export function makeRedirectFetchResponse(location: string, status = 302): Response {
+  const { body } = makeWebReadableStream(new Uint8Array(0));
   return {
     ok: false,
     status,
@@ -123,6 +159,7 @@ export function makeRedirectFetchResponse(location: string, status = 302): Respo
       get: (key: string) => (key.toLowerCase() === 'location' ? location : null),
       has: (key: string) => key.toLowerCase() === 'location',
     },
+    body,
     text: () => Promise.resolve(''),
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
   } as unknown as Response;

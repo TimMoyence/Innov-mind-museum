@@ -11,6 +11,7 @@
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import {
   VALID_CSRF_SECRET,
+  VALID_EXPORT_PSEUDONYM_SALT,
   VALID_JWT_ACCESS_SECRET,
   VALID_JWT_REFRESH_SECRET,
   VALID_MEDIA_SIGNING_SECRET,
@@ -28,6 +29,8 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
     llm: { provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     cache: undefined,
+    // I-SEC5 — drift detection requires AppEnv stub to mirror process.env value.
+    exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     auth: {
       accessTokenSecret: VALID_JWT_ACCESS_SECRET,
       refreshTokenSecret: VALID_JWT_REFRESH_SECRET,

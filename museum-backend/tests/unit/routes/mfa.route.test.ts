@@ -44,6 +44,9 @@ jest.mock('@modules/auth/useCase', () => {
     disableMfaUseCase: { execute: (...args: unknown[]) => mockDisable(...args) },
     getMfaStatusUseCase: { execute: (...args: unknown[]) => mockGetStatus(...args) },
     authSessionService: {
+      // Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
+      // verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
+      // for denylist consultation per R8.
       verifyAccessToken: (token: string) => {
         const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
           sub: string;
@@ -58,6 +61,26 @@ jest.mock('@modules/auth/useCase', () => {
           id: Number(decoded.sub),
           role: decoded.role ?? 'visitor',
           museumId: decoded.museumId ?? null,
+        };
+      },
+      verifyAccessTokenWithClaims: (token: string) => {
+        const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
+          sub: string;
+          role?: string;
+          museumId?: number;
+          type: string;
+          jti?: string;
+          exp?: number;
+        };
+        if (decoded.type !== 'access' || !decoded.sub) {
+          throw new Error('Invalid access token');
+        }
+        return {
+          id: Number(decoded.sub),
+          role: decoded.role ?? 'visitor',
+          museumId: decoded.museumId ?? null,
+          jti: decoded.jti ?? 'test-jti',
+          expSec: decoded.exp ?? 9999999999,
         };
       },
       login: jest.fn(),

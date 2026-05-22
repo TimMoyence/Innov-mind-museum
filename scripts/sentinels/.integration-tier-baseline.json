@@ -64,6 +64,22 @@
       "path": "museum-backend/tests/integration/auth/rate-limit-zod-400-no-bump.integration.test.ts",
       "reason": "Batch A / Cluster 5 T1.5 R6 — Express smoke test boots createRouteTestApp() (bare Express harness, no DB/Redis) and sends malformed POSTs to the 8 enumerated auth+chat route sites to assert that validateBody short-circuits BEFORE the rate-limiter mutates its in-memory bucket (asserted via getBucketCountForKey test-only helper). No real infra boundary crossed — same pattern as chat-api.smoke.integration.test.ts and compare.route.test.ts.",
       "approved_by": "Batch-A-spec-R6"
+    },
+    {
+      "path": "museum-backend/tests/integration/observability/error-middleware-sentry.test.ts",
+      "reason": "C1 PII-egress R4 (run /team 2026-05-21-p0-c1-pii-egress) — HTTP-only path; supertest IS the network boundary; no DB writes. Boots a bare Express app with a synthetic /api/test-error-500 throw route + errorHandler middleware, mocks @sentry/node withScope/setTag to capture tag invocations, asserts scope.tags.path query-string is scrubbed end-to-end (errorHandler → logServerError → captureExceptionWithContext → scrubUrl). Pure middleware integration — no Postgres / Redis / outbound fetch.",
+      "approved_by": "C1-spec-R4 (team-state/2026-05-21-p0-c1-pii-egress/spec.md)"
+    },
+    {
+      "path": "museum-backend/tests/integration/observability/langfuse-pii-seed.test.ts",
+      "reason": "C1 PII-egress R8 (run /team 2026-05-21-p0-c1-pii-egress) — Langfuse SDK mask invariant test; the mask function IS the network boundary (the body it returns is what would otherwise leave for cloud.langfuse.com). Imports stripFreeText directly, applies it to a representative LangChain CallbackHandler body shape seeded with email+phone PII, asserts post-mask serialised payload contains no PII strings and ≥2 '[STRIPPED]' markers. No DB / Redis / outbound HTTP — same pattern as the ssrf-matrix exemption (test intent IS the boundary).",
+      "approved_by": "C1-spec-R8 (team-state/2026-05-21-p0-c1-pii-egress/spec.md)"
+    },
+    {
+      "path": "museum-backend/tests/integration/chat/chat-cost-breaker-503.integration.test.ts",
+      "reason": "C2 cost-breaker 503 contract test ; uses chatTestApp + service-level instantiation (not full Express harness) per CLAUDE.md Stryker gotcha (full createApp() flakes in worktree). Exercises chat-message.service.mapOrchestratorError AppError→503 chain — the documented preservation point for CIRCUIT_BREAKER_OPEN per chat-message.service.ts:62. C2 review docstring §D4. Same precedent: ssrf-matrix.integration.test.ts.",
+      "approved_by": "2026-05-22 C2 review APPROVED 88.5 (hotfix follow-up)",
+      "date": "2026-05-22"
     }
   ]
 }

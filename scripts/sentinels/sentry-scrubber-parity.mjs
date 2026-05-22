@@ -62,7 +62,12 @@ const WRAPPERS = [
  * `packages/musaium-shared/src/observability/sentry-scrubber.test.ts` —
  * the golden-input/golden-output fixture is the second half of this gate.
  */
-const CANONICAL_HASH = 'bacd2ff629f835d29e2034e4fadb5b9b73e0a42a77f965770bbe1585c289542c';
+// 2026-05-21 — bumped in lockstep with run /team `2026-05-21-p0-c1-pii-egress` :
+//   - SENSITIVE_QUERY_KEYS extended 7→11 (R1, +code/email/phone/state)
+//   - scrubEvent now traverses event.tags (R2, scrubRecord + SENSITIVE_HEADER_REGEX + scrubUrl)
+//   - new exported helper isUrlLikeValue (BE captureExceptionWithContext source scrub)
+// Golden fixture asserting the new behaviour : packages/musaium-shared/src/observability/sentry-scrubber.test.ts
+const CANONICAL_HASH = '02ac8c6f32dfec04e1ee3cca7b1eef13266baf90af588561a6c96ec9ad0fb44c';
 
 const REQUIRED_CANONICAL_EXPORTS = [
   'SENSITIVE_HEADER_REGEX',
@@ -73,6 +78,11 @@ const REQUIRED_CANONICAL_EXPORTS = [
   'scrubHeaders',
   'scrubRecord',
   'scrubUrl',
+  // 2026-05-21 — added in run /team `2026-05-21-p0-c1-pii-egress` (R3) :
+  // re-used by the BE wrapper `captureExceptionWithContext` to scrub URL-like
+  // tag values upstream of `scope.setTag`. Defense-in-depth with scrubEvent's
+  // event.tags traversal (R2).
+  'isUrlLikeValue',
   'scrubEvent',
   'shouldDropBreadcrumb',
 ];

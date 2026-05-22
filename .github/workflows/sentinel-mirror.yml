@@ -119,6 +119,9 @@ jobs:
       - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
         run: node scripts/sentinels/sentry-scrubber-parity.mjs
 
+      - name: 'Mirror Gate P21 — fe-version-sync (museum-frontend package.json ↔ app.config.ts)'
+        run: node scripts/sentinels/fe-version-sync.mjs
+
       - name: 'Mirror Gate P19 — Prometheus metric-naming ratchet (BE)'
         working-directory: museum-backend
         run: node scripts/sentinels/metric-naming.mjs

@@ -1,5 +1,6 @@
 import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
+import { VISION_BYTES_EQUIVALENT } from '@modules/chat/adapters/secondary/llm/llm-cost-pricing';
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import { applyHistoryWindow } from '@modules/chat/useCase/orchestration/history-window';
 import { buildVisitContextPromptBlock } from '@modules/chat/useCase/session/visit-context';
@@ -455,13 +456,42 @@ export const toContentString = (content: unknown): string => {
   return '';
 };
 
-export const estimatePayloadBytes = (messages: ChatModelMessage[]): number => {
-  const serialized = messages
-    .map((message) => {
-      const content = (message as { content?: unknown }).content;
-      return toContentString(content);
-    })
-    .join('\n');
+/**
+ * RUN_ID 2026-05-21-p0-c2-cost-breaker / spec §3 R4 — per-item byte counter
+ * with the image override. Counts `{type:'image_url', ...}` items as a fixed
+ * `VISION_BYTES_EQUIVALENT` forfait regardless of `image_url.url` source
+ * (base64 data-URL vs https URL — D2 source-agnostic). All other items use
+ * the existing `toContentString` serialization. Text-only string content
+ * stays at raw UTF-8 byte length (baseline parity, no over-correction).
+ */
+const isImageUrlItem = (item: unknown): boolean =>
+  typeof item === 'object' && item !== null && (item as { type?: unknown }).type === 'image_url';
 
-  return Buffer.byteLength(serialized, 'utf8');
+const payloadBytesForContent = (content: unknown): number => {
+  if (typeof content === 'string') {
+    return Buffer.byteLength(content, 'utf8');
+  }
+  if (Array.isArray(content)) {
+    let total = 0;
+    for (const item of content) {
+      if (isImageUrlItem(item)) {
+        // R4 / D2 — image_url item costs a fixed forfait, never the literal
+        // base64-byte length. Independent of source (URL vs inline data-URL).
+        total += VISION_BYTES_EQUIVALENT;
+        continue;
+      }
+      total += Buffer.byteLength(toContentString(item), 'utf8');
+    }
+    return total;
+  }
+  return Buffer.byteLength(toContentString(content), 'utf8');
+};
+
+export const estimatePayloadBytes = (messages: ChatModelMessage[]): number => {
+  let total = 0;
+  for (const message of messages) {
+    const content = (message as { content?: unknown }).content;
+    total += payloadBytesForContent(content);
+  }
+  return total;
 };

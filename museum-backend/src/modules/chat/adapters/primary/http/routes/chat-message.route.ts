@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { UserRole } from '@modules/auth/domain/user/user-role';
 import { parsePostMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
 import {
   upload,
@@ -18,6 +19,7 @@ import {
   byUserId,
   createRateLimitMiddleware,
 } from '@shared/middleware/rate-limit.middleware';
+import { requireRole } from '@shared/middleware/require-role.middleware';
 import { env } from '@src/config/env';
 
 import type { PostMessageRequest } from '@modules/chat/adapters/primary/http/chat.contracts';
@@ -166,6 +168,18 @@ export const createMessageRouter = (
     keyGenerator: byUserId,
   });
 
+  // I-SEC3 / R11 — per-user 10/min limiter on POST /art-keywords. Mount AFTER
+  // `requireRole` (CLAUDE.md "Mutating middleware ordering") so a 403 visitor
+  // does not consume the admin's bucket. Tight numerical bound chosen to absorb
+  // a legitimate batch sync (≤ 100 keywords × few requests/min) while blocking
+  // scripted pollution. Bucket-name pinned for stable Redis key across deploys.
+  const taxonomyWriteLimiter = createRateLimitMiddleware({
+    limit: 10,
+    windowMs: 60_000,
+    keyGenerator: byUserId,
+    bucketName: 'taxonomy-write',
+  });
+
   router.post(
     '/sessions/:id/messages',
     isAuthenticated,
@@ -181,7 +195,18 @@ export const createMessageRouter = (
   );
 
   router.get('/art-keywords', isAuthenticated, createListArtKeywordsHandler(artKeywordRepo));
-  router.post('/art-keywords', isAuthenticated, createBulkUpsertArtKeywordsHandler(artKeywordRepo));
+  // I-SEC3 / R10 — POST writes the GLOBAL taxonomy. Visitor JWT must NOT reach
+  // the handler (OWASP API1+API5). `requireRole` accepts super_admin implicitly
+  // via require-role.middleware.ts:22, so only ADMIN / MODERATOR / SUPER_ADMIN
+  // proceed. Ordering : isAuthenticated → requireRole → taxonomyWriteLimiter
+  // (limiter AFTER role gate per CLAUDE.md "Mutating middleware ordering").
+  router.post(
+    '/art-keywords',
+    isAuthenticated,
+    requireRole(UserRole.ADMIN, UserRole.MODERATOR),
+    taxonomyWriteLimiter,
+    createBulkUpsertArtKeywordsHandler(artKeywordRepo),
+  );
 
   return router;
 };

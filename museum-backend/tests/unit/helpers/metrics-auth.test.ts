@@ -20,9 +20,13 @@ import { requireRole } from '@shared/middleware/require-role.middleware';
 import { UserRole } from '@modules/auth/domain/user/user-role';
 import { errorHandler } from '@shared/middleware/error.middleware';
 
+// Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
+// verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
+// for denylist consultation per R8.
 jest.mock('@modules/auth/useCase', () => ({
   authSessionService: {
     verifyAccessToken: jest.fn(),
+    verifyAccessTokenWithClaims: jest.fn(),
   },
 }));
 
@@ -32,9 +36,11 @@ interface VerifiedUser {
   id: number;
   role: UserRole;
   museumId: number | null;
+  jti: string;
+  expSec: number;
 }
 
-const verify = authSessionService.verifyAccessToken as jest.MockedFunction<
+const verify = authSessionService.verifyAccessTokenWithClaims as jest.MockedFunction<
   (token: string) => VerifiedUser
 >;
 
@@ -68,7 +74,13 @@ describe('/metrics — TD-PC-02 auth gate', () => {
   });
 
   it('returns 403 when a valid JWT belongs to a non-super-admin role (visitor)', async () => {
-    verify.mockReturnValue({ id: 7, role: UserRole.VISITOR, museumId: null });
+    verify.mockReturnValue({
+      id: 7,
+      role: UserRole.VISITOR,
+      museumId: null,
+      jti: 'jti-test',
+      expSec: 9999999999,
+    });
     const app = buildApp();
     const res = await request(app)
       .get('/metrics')
@@ -78,14 +90,26 @@ describe('/metrics — TD-PC-02 auth gate', () => {
   });
 
   it('returns 403 when a valid JWT belongs to admin (not super_admin)', async () => {
-    verify.mockReturnValue({ id: 8, role: UserRole.ADMIN, museumId: null });
+    verify.mockReturnValue({
+      id: 8,
+      role: UserRole.ADMIN,
+      museumId: null,
+      jti: 'jti-test',
+      expSec: 9999999999,
+    });
     const app = buildApp();
     const res = await request(app).get('/metrics').set('Authorization', 'Bearer fake-admin-token');
     expect(res.status).toBe(403);
   });
 
   it('returns 200 + Prom text body when JWT belongs to super_admin', async () => {
-    verify.mockReturnValue({ id: 1, role: UserRole.SUPER_ADMIN, museumId: null });
+    verify.mockReturnValue({
+      id: 1,
+      role: UserRole.SUPER_ADMIN,
+      museumId: null,
+      jti: 'jti-test',
+      expSec: 9999999999,
+    });
     const app = buildApp();
     const res = await request(app).get('/metrics').set('Authorization', 'Bearer fake-super-token');
     expect(res.status).toBe(200);

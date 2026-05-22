@@ -34,25 +34,39 @@ jest.mock('@modules/auth/useCase', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const { env: envConfig } = require('@src/config/env');
 
+  // Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
+  // verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
+  // for denylist consultation per R8. Both methods provided to keep
+  // backward-compat with any non-middleware caller.
+  const verifyClaims = (token: string) => {
+    const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
+      sub: string;
+      role?: string;
+      museumId?: number;
+      type: string;
+      jti?: string;
+      exp?: number;
+    };
+    if (decoded.type !== 'access' || !decoded.sub) {
+      throw new Error('Invalid access token');
+    }
+    return {
+      id: Number(decoded.sub),
+      role: decoded.role ?? 'visitor',
+      museumId: decoded.museumId ?? null,
+      jti: decoded.jti ?? 'test-jti',
+      expSec: decoded.exp ?? 9999999999,
+    };
+  };
+
   return {
     registerUseCase: { execute: (...args: unknown[]) => mockRegister(...args) },
     authSessionService: {
       verifyAccessToken: (token: string) => {
-        const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
-          sub: string;
-          role?: string;
-          museumId?: number;
-          type: string;
-        };
-        if (decoded.type !== 'access' || !decoded.sub) {
-          throw new Error('Invalid access token');
-        }
-        return {
-          id: Number(decoded.sub),
-          role: decoded.role ?? 'visitor',
-          museumId: decoded.museumId ?? null,
-        };
+        const claims = verifyClaims(token);
+        return { id: claims.id, role: claims.role, museumId: claims.museumId };
       },
+      verifyAccessTokenWithClaims: verifyClaims,
       login: (...args: unknown[]) => mockLogin(...args),
       refresh: (...args: unknown[]) => mockRefresh(...args),
       logout: (...args: unknown[]) => mockLogout(...args),

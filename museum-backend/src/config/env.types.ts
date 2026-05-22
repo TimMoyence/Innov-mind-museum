@@ -219,7 +219,9 @@ export interface AppEnv {
    * R2 W3.4 — Salt for `admin/export` pseudonymization of emails/user-IDs in
    * CSV downloads. Rotate manually after breach (rotation invalidates link
    * between pseudonym and identity in already-exported CSVs). Config value,
-   * NOT a feature flag. Fallback `'musaium-admin-export-v1'` for dev.
+   * NOT a feature flag. REQUIRED in production: `validateProductionEnv` throws
+   * if unset or < 32 chars (I-SEC5, 2026-05-21). Historical fallback literal
+   * removed — see `docs/SECURITY.md#export-salt-rotation`.
    */
   exportPseudonymSalt?: string;
   storage: {

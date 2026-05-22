@@ -6,6 +6,8 @@
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
+import { stripFreeText } from './strip-free-text';
+
 import type { Langfuse } from 'langfuse';
 
 let _client: Langfuse | null = null;
@@ -58,6 +60,12 @@ export function getLangfuse(): Langfuse | null {
     baseUrl: env.langfuse.host,
     flushAt: 10,
     flushInterval: 5_000,
+    // R5 (2026-05-21) — central PII mask. Applied by the SDK on every event /
+    // observation body in `maskEventBodyInPlace` BEFORE network transport.
+    // Closes Vecteur 2 (Langfuse free-text via LangChain CallbackHandler auto-
+    // capture). Fail-safe : `stripFreeText` never throws. Cf. LF-V3-05 reclass
+    // 2026-05-21 + `lib-docs/langfuse/PATTERNS.md` §3 DO #13.
+    mask: stripFreeText,
   });
   // TD-LF-04 — subscribe to SDK 'error' events so silent network/auth drops are
   // surfaced once (warn-level, fail-open never bubbles to chat path).

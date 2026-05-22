@@ -61,10 +61,24 @@ describe('constants are frozen / well-formed', () => {
     assert.equal(SENSITIVE_FIELD_REGEX.test('name'), false);
   });
 
-  it('SENSITIVE_QUERY_KEYS contents are exactly the audited set', () => {
+  it('SENSITIVE_QUERY_KEYS contains exactly the 11 expected entries (R1)', () => {
+    // R1 — 7 original keys + 4 new (code, email, phone, state) for
+    // magic-link / OAuth / signup query-string scrubbing.
     assert.deepEqual(
       [...SENSITIVE_QUERY_KEYS].sort(),
-      ['access_token', 'api_key', 'apikey', 'password', 'refresh_token', 'secret', 'token'],
+      [
+        'access_token',
+        'api_key',
+        'apikey',
+        'code',
+        'email',
+        'password',
+        'phone',
+        'refresh_token',
+        'secret',
+        'state',
+        'token',
+      ],
     );
   });
 
@@ -142,6 +156,81 @@ describe('scrubUrl', () => {
 
   it('returns the URL unchanged when no sensitive keys', () => {
     assert.equal(scrubUrl('https://api.example.com/?page=2'), 'https://api.example.com/?page=2');
+  });
+
+  // R1 — new keys (code, state, email, phone) added 2026-05-21 to close the
+  // magic-link / OAuth / signup query-string leak. These FAIL on the 7-key
+  // canonical and PASS after `SENSITIVE_QUERY_KEYS` extension.
+  it('scrubUrl redacts code/state/email/phone query-params (R1)', () => {
+    assert.equal(
+      scrubUrl(
+        '/api/auth/magic-link?code=ABC&state=XYZ&email=u@x.tld&phone=%2B33612345678&keep=ok',
+      ),
+      `/api/auth/magic-link?code=${REDACTED}&state=${REDACTED}&email=${REDACTED}&phone=${REDACTED}&keep=ok`,
+    );
+  });
+
+  it('scrubUrl is case-insensitive on the new keys (R1)', () => {
+    assert.equal(
+      scrubUrl('/x?CODE=A&Email=b&PHONE=c&State=d'),
+      `/x?CODE=${REDACTED}&Email=${REDACTED}&PHONE=${REDACTED}&State=${REDACTED}`,
+    );
+  });
+});
+
+describe('scrubEvent — tags traversal (R2)', () => {
+  // R2 — scrubEvent today only walks request/user/extra. Sentry tags carry
+  // path / authorization / method etc and are indexed; they MUST be scrubbed.
+  // These tests FAIL on the 2026-05-21 canonical (tags untouched) and PASS
+  // once `scrubEvent` traverses event.tags.
+
+  it('scrubEvent traverses event.tags via scrubRecord (sensitive keys → REDACTED)', () => {
+    const event = {
+      tags: {
+        authorization: 'Bearer foo',
+        path: '/x',
+        requestId: 'rq-1',
+      },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal((out.tags as Record<string, unknown>).authorization, REDACTED);
+    assert.equal((out.tags as Record<string, unknown>).path, '/x');
+    assert.equal((out.tags as Record<string, unknown>).requestId, 'rq-1');
+  });
+
+  it('scrubEvent applies scrubUrl on URL-like tag values', () => {
+    const event = {
+      tags: {
+        path: '/api/auth/magic-link?code=ABC&keep=ok',
+      },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.tags as Record<string, unknown>).path,
+      `/api/auth/magic-link?code=${REDACTED}&keep=ok`,
+    );
+  });
+
+  it('scrubEvent handles missing/undefined tags gracefully', () => {
+    // No tags key at all.
+    assert.doesNotThrow(() => scrubEvent({}, stubDeps));
+    // tags: undefined.
+    assert.doesNotThrow(() => scrubEvent({ tags: undefined } as ScrubbableEvent, stubDeps));
+    // Empty tags object.
+    const emptyTagsOut = scrubEvent({ tags: {} } as ScrubbableEvent, stubDeps);
+    assert.deepEqual((emptyTagsOut as ScrubbableEvent).tags, {});
+  });
+
+  it('scrubEvent preserves non-URL string tag values verbatim', () => {
+    const event = {
+      tags: {
+        method: 'GET',
+        statusCode: '500',
+      },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal((out.tags as Record<string, unknown>).method, 'GET');
+    assert.equal((out.tags as Record<string, unknown>).statusCode, '500');
   });
 });
 
