@@ -4335,7 +4335,10 @@ export interface components {
       id: string;
       userId: number;
       userName: string;
+      /** @description NPS scale (0 = strongest detractor, 9-10 = promoter). Wave B C7 — widened from 1-5 to 0-10. */
       rating: number;
+      /** @description B2B multi-tenant scope. Null for unscoped public reviews. Wave B C7. */
+      museumId: number | null;
       comment: string;
       /** @enum {string} */
       status: 'pending' | 'approved' | 'rejected';
