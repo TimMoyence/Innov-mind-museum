@@ -1,14 +1,13 @@
 /**
  * GENERATED-FROM-CANONICAL — DO NOT EDIT MANUALLY.
  *
- * Reads `museum-backend/src/shared/legal/privacy-content.canonical.json`
- * (single source of truth — see ADR for canonical-content-source) and
- * surfaces a `PrivacyContent` object via `getPrivacyContent(locale)`.
- *
- * The drift sentinel `museum-backend/scripts/sentinels/privacy-content-drift.mjs`
- * verifies this file stays byte-aligned with the canonical by grepping for the
- * canonical `version`, `lastUpdated`, every section `id`, and every recipient
- * `name`. Those tokens are emitted verbatim by the helpers below.
+ * Source of truth = `museum-backend/src/shared/legal/privacy-content.canonical.json`
+ * (ADR-062). A byte-equivalent copy lives at `museum-web/src/lib/legal/`
+ * so the museum-web Docker build (which has no access to museum-backend/)
+ * stays standalone. The drift sentinel
+ * `museum-backend/scripts/sentinels/privacy-content-drift.mjs` enforces
+ * the copy stays identical to the BE canonical (byte-equivalence check)
+ * AND that this file emits every canonical token verbatim (grep check).
  *
  * Canonical metadata mirror (kept verbatim for drift sentinel grep) ----------
  *   version: 1.0.0
@@ -37,7 +36,7 @@
  *     - OpenStreetMap Foundation
  *     - Better-Stack
  */
-import canonical from '../../../museum-backend/src/shared/legal/privacy-content.canonical.json';
+import canonical from './legal/privacy-content.canonical.json';
 
 export interface PrivacySection {
   id: string;

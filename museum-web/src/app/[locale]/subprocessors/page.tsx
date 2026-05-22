@@ -1,7 +1,7 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { getAlternates, getOpenGraph } from '@/lib/seo';
 import { getSubprocessors } from '@/lib/privacy-content';
-import privacyCanonical from '../../../../../museum-backend/src/shared/legal/privacy-content.canonical.json';
+import privacyCanonical from '@/lib/legal/privacy-content.canonical.json';
 import type { Metadata } from 'next';
 
 interface SubprocessorsPageProps {

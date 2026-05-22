@@ -16,6 +16,14 @@
  * Additionally, the HTML age string in the minors section MUST read
  * "15 ans" (regression guard for R13 — CNIL Délibération 2021-018).
  *
+ * 4th surface (added 2026-05-22 — V1 prep): museum-web keeps byte-equivalent
+ * copies of the canonical JSONs under `museum-web/src/lib/legal/` so the
+ * Next.js Docker build is standalone (build context excludes museum-backend/).
+ * These copies MUST stay JSON-equivalent to the BE canonical — checked here
+ * by parsing both sides and comparing serialised payloads (whitespace-tolerant
+ * to avoid spurious failures on Prettier reflow, but structural drift is
+ * caught).
+ *
  * Usage: `node privacy-content-drift.mjs [--root <repoRoot>]`
  * Exit codes:
  *   0 → all surfaces aligned
@@ -23,7 +31,7 @@
  *
  * CI output: `## Sentinel report` GitHub Actions block on failure.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -56,6 +64,71 @@ function surfacePaths(root) {
     'museum-web': join(root, 'museum-web/src/lib/privacy-content.ts'),
     'museum-frontend': join(root, 'museum-frontend/features/legal/privacyPolicyContent.ts'),
   };
+}
+
+/**
+ * JSON-copy pairs (added 2026-05-22). Both sides MUST be JSON-equivalent —
+ * not just byte-equivalent — so Prettier reformat on one side doesn't
+ * trigger a false alarm. Structural drift (added/removed/changed keys) is
+ * still caught because `JSON.stringify` (no spaces) produces identical
+ * strings only when the parsed payloads agree key-for-key, value-for-value.
+ */
+function jsonCopyPairs(root) {
+  return [
+    {
+      label: 'museum-web privacy copy',
+      canonical: join(root, 'museum-backend/src/shared/legal/privacy-content.canonical.json'),
+      copy: join(root, 'museum-web/src/lib/legal/privacy-content.canonical.json'),
+    },
+    {
+      label: 'museum-web terms copy',
+      canonical: join(root, 'museum-backend/src/shared/legal/terms-content.canonical.json'),
+      copy: join(root, 'museum-web/src/lib/legal/terms-content.canonical.json'),
+    },
+  ];
+}
+
+/**
+ * Compare two JSON payloads (raw text) for structural equivalence.
+ * Returns an empty array if equivalent; otherwise a one-item array describing
+ * the first divergence (single message keeps the report compact — once we
+ * know two payloads diverged, byte-by-byte diffing belongs in `git diff`).
+ *
+ * Exported (named) for unit tests so a negative-path fixture can exercise the
+ * comparator without spawning a subprocess.
+ *
+ * @param {string} label    Human-readable copy label.
+ * @param {string} leftRaw  Canonical JSON text.
+ * @param {string} rightRaw Copy JSON text.
+ */
+export function compareJsonCopy(label, leftRaw, rightRaw) {
+  /** @type {unknown} */ let left;
+  /** @type {unknown} */ let right;
+  try {
+    left = JSON.parse(leftRaw);
+  } catch (err) {
+    return [
+      `${label}: canonical JSON parse error — ${err instanceof Error ? err.message : String(err)}`,
+    ];
+  }
+  try {
+    right = JSON.parse(rightRaw);
+  } catch (err) {
+    return [
+      `${label}: copy JSON parse error — ${err instanceof Error ? err.message : String(err)}`,
+    ];
+  }
+  // Canonicalise via JSON.stringify (no spaces). Object key ordering is
+  // preserved from the parser, which uses insertion order — both sides were
+  // produced from the same canonical file, so ordering stays aligned.
+  // A reordered copy is still flagged: it signals manual edit, which is the
+  // exact failure mode we want to catch.
+  const a = JSON.stringify(left);
+  const b = JSON.stringify(right);
+  if (a !== b) {
+    return [`${label}: copy diverged from canonical (use \`diff\` or \`git diff\` to inspect)`];
+  }
+  return [];
 }
 
 /**
@@ -207,6 +280,31 @@ function main() {
     allIssues.push(...checkSurface(surface, text, expected));
   }
 
+  // 4th surface: museum-web JSON copies must stay structurally identical to
+  // the BE canonical. Read-fail = report and continue (don't short-circuit
+  // the other pairs — V1 needs both privacy + terms gates green).
+  for (const pair of jsonCopyPairs(root)) {
+    let canonicalRaw;
+    let copyRaw;
+    try {
+      canonicalRaw = readFileSync(pair.canonical, 'utf8');
+    } catch (err) {
+      allIssues.push(
+        `${pair.label}: failed to read canonical ${pair.canonical} — ${err instanceof Error ? err.message : String(err)}`,
+      );
+      continue;
+    }
+    try {
+      copyRaw = readFileSync(pair.copy, 'utf8');
+    } catch (err) {
+      allIssues.push(
+        `${pair.label}: failed to read copy ${pair.copy} — ${err instanceof Error ? err.message : String(err)}`,
+      );
+      continue;
+    }
+    allIssues.push(...compareJsonCopy(pair.label, canonicalRaw, copyRaw));
+  }
+
   if (allIssues.length > 0) {
     emitReport(allIssues);
     process.exit(1);
@@ -216,4 +314,21 @@ function main() {
   process.exit(0);
 }
 
-main();
+// ESM "is this module the entry point?" guard — without it, importing the
+// module from a Jest test (to reach `compareJsonCopy`) would trigger
+// `main() → process.exit()` and crash the test runner. `realpathSync`
+// resolves symlinks (pnpm / nvm shims).
+function isDirectInvocation() {
+  try {
+    const here = realpathSync(fileURLToPath(import.meta.url));
+    const argv1 = process.argv[1];
+    if (!argv1) return false;
+    return realpathSync(argv1) === here;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectInvocation()) {
+  main();
+}
