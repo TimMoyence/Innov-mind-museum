@@ -4,6 +4,7 @@ export {
   SENSITIVE_FIELD_REGEX,
   SENSITIVE_HEADER_REGEX,
   SENSITIVE_QUERY_KEYS,
+  isUrlLikeValue,
   scrubEvent,
   scrubHeaders,
   scrubRecord,

@@ -63,7 +63,15 @@ export class RecoveryMfaUseCase {
 
     const updated = markCodeConsumed(row.recoveryCodes, matchedIndex, new Date());
     await this.totpRepository.updateRecoveryCodes(userId, updated);
-    await this.totpRepository.markUsed(userId, new Date());
+    // I-SEC7a — recovery codes are NOT TOTP codes (no RFC 6238 step), but the
+    // `markUsed` ledger is the single timestamp source for "MFA last used".
+    // We stamp the CURRENT step so a future TOTP code (necessarily a higher
+    // step) is always accepted (recovery doesn't tighten the replay window).
+    // Recovery one-use enforcement remains the `consumedAt` flag, NOT the step
+    // ledger — spec §2 keeps RecoveryMfa out of the replay-protection scope.
+    const now = new Date();
+    const currentStep = Math.floor(now.getTime() / 1000 / 30);
+    await this.totpRepository.markUsed(userId, now, currentStep);
 
     const session = await this.authSessionService.issueSessionForUser(user);
     const remainingCodes = updated.filter((c) => c.consumedAt === null).length;

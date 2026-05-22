@@ -19,14 +19,24 @@ export const SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-t
 /** Body / extra field names whose values must be redacted before leaving the app. */
 export const SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
 
-/** Query-string keys whose values must be stripped from captured URLs. */
+/** Query-string keys whose values must be stripped from captured URLs.
+ *
+ * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
+ * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
+ * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
+ * lockstep ; golden test `sentry-scrubber.test.ts` asserts the 11-entry set.
+ */
 export const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set([
   'access_token',
   'api_key',
   'apikey',
+  'code',
+  'email',
   'password',
+  'phone',
   'refresh_token',
   'secret',
+  'state',
   'token',
 ]);
 
@@ -57,6 +67,8 @@ export interface ScrubbableEvent {
   };
   extra?: Record<string, unknown>;
   contexts?: Record<string, unknown>;
+  /** R2 (2026-05-21) — Sentry tags are indexed + persistent ; scrubbed by scrubEvent. */
+  tags?: Record<string, unknown>;
 }
 
 /** Minimal shape of a Sentry breadcrumb we read. */
@@ -108,6 +120,23 @@ export const scrubRecord = (input: unknown): unknown => {
   }
   return input;
 };
+
+/**
+ * Heuristic for detecting URL-like string values in dynamic tag/context maps.
+ *
+ * R2/R3 (2026-05-21) — used by both `scrubEvent` (when walking `event.tags`)
+ * and `captureExceptionWithContext` (BE wrapper at sentry.ts) to decide
+ * whether to run `scrubUrl` on a given tag value. Conservative on purpose:
+ * matches strings carrying `?` (query-string), absolute paths (`/…`), or
+ * `http://` / `https://` schemes. Non-URL string values (e.g. `'GET'`,
+ * `'500'`) flow through untouched.
+ */
+export const isUrlLikeValue = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  (value.includes('?') ||
+    value.startsWith('/') ||
+    value.startsWith('http://') ||
+    value.startsWith('https://'));
 
 /** Strips sensitive query-string values from a URL while preserving the rest. */
 export const scrubUrl = (url: string): string => {
@@ -178,6 +207,28 @@ export const scrubEvent = <T extends ScrubbableEvent>(event: T, deps: ScrubberDe
 
   if (next.extra && typeof next.extra === 'object') {
     next.extra = scrubRecord(next.extra) as Record<string, unknown>;
+  }
+
+  // R2 (2026-05-21) — Sentry `tags` are indexed + persistent for 30 days.
+  // Tags carry both body-shaped keys (password/token/...) and header-shaped keys
+  // (authorization/cookie/...). Walk both regexes :
+  //   - `SENSITIVE_FIELD_REGEX` (body fields — handled by scrubRecord)
+  //   - `SENSITIVE_HEADER_REGEX` (header names like `authorization`)
+  // Then `scrubUrl` strips sensitive query-string params from URL-like VALUES
+  // (e.g. `tags.path = '/api/auth/x?code=…'`). Defense-in-depth with the
+  // upstream `captureExceptionWithContext` scrub at the BE wrapper site.
+  if (next.tags && typeof next.tags === 'object') {
+    const scrubbedTags = scrubRecord(next.tags) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(scrubbedTags)) {
+      if (SENSITIVE_HEADER_REGEX.test(key)) {
+        scrubbedTags[key] = REDACTED;
+        continue;
+      }
+      if (isUrlLikeValue(value)) {
+        scrubbedTags[key] = scrubUrl(value);
+      }
+    }
+    next.tags = scrubbedTags;
   }
 
   return next;

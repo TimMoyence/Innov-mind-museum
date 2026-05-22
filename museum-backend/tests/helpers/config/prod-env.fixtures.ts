@@ -29,6 +29,14 @@ export const VALID_MFA_SESSION_TOKEN_SECRET = 'e'.repeat(48);
 export const VALID_CSRF_SECRET = 'f'.repeat(48);
 
 /**
+ * Distinct 48-char salt for admin CSV export pseudonymisation (I-SEC5 2026-05-21).
+ * Must satisfy `validateExportPseudonymSalt` (>= 32 chars). Does NOT need to
+ * differ from other secrets — salt is hashed alongside identifier, never used to
+ * sign / authenticate.
+ */
+export const VALID_EXPORT_PSEUDONYM_SALT = 'g'.repeat(48);
+
+/**
  * Minimal set of env vars that satisfy every required production check
  * in `validateProductionEnv`. Tests can override any subset to isolate a
  * specific failure scenario.
@@ -45,6 +53,7 @@ export function validProductionEnv(
     MFA_ENCRYPTION_KEY: VALID_MFA_ENCRYPTION_KEY,
     MFA_SESSION_TOKEN_SECRET: VALID_MFA_SESSION_TOKEN_SECRET,
     CSRF_SECRET: VALID_CSRF_SECRET,
+    EXPORT_PSEUDONYM_SALT: VALID_EXPORT_PSEUDONYM_SALT,
     PGDATABASE: 'museum_prod',
     CORS_ORIGINS: 'https://app.musaium.com',
     OPENAI_API_KEY: 'sk-test',

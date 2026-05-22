@@ -13,7 +13,7 @@ import type { Cluster } from 'ioredis';
  */
 
 /** 25h = 1h slack over UTC day boundary so late writes survive into next day's audit window. */
-const DAILY_KEY_TTL_SECONDS = 25 * 60 * 60;
+export const DAILY_KEY_TTL_SECONDS = 25 * 60 * 60;
 const KEY_PREFIX = 'llm_cost:user:';
 
 /**

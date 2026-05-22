@@ -185,13 +185,21 @@ describe('langfuse.client — getLangfuse', () => {
     expect(first).not.toBeNull();
     expect(first).toBe(second);
     expect(constructorSpy).toHaveBeenCalledTimes(1);
-    expect(constructorSpy).toHaveBeenCalledWith({
-      publicKey: 'pk_xx',
-      secretKey: 'sk_xx',
-      baseUrl: 'http://langfuse.local',
-      flushAt: 10,
-      flushInterval: 5_000,
-    });
+    // 2026-05-21 (run /team `2026-05-21-p0-c1-pii-egress` R5) — ctor now also
+    // wires `mask: stripFreeText` to redact free-text PII before SDK transport.
+    // Asserted shape uses objectContaining so the dedicated wiring test at
+    // langfuse-mask-ctor-wiring.test.ts owns the `mask` contract (R5) while
+    // this file remains scoped to the singleton / keys / host wiring.
+    expect(constructorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        publicKey: 'pk_xx',
+        secretKey: 'sk_xx',
+        baseUrl: 'http://langfuse.local',
+        flushAt: 10,
+        flushInterval: 5_000,
+        mask: expect.any(Function),
+      }),
+    );
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 });

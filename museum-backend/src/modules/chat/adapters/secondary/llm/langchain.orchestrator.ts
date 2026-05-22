@@ -127,6 +127,78 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     return this.circuitBreaker.getState();
   }
 
+  /**
+   * RUN_ID 2026-05-21-p0-c2-cost-breaker — A7 / spec §3 R3. Latency
+   * circuit-breaker guard for the walk path (default path already gates at
+   * `generate()` entry). Throws `CircuitOpenError` when state is OPEN — the
+   * walk path was previously early-returned BEFORE the default-path guard,
+   * bypassing both breakers.
+   */
+  private checkLatencyBreakerOrThrow(
+    site: 'invokeSection' | 'generateWalk',
+    requestId: string | undefined,
+  ): void {
+    if (this.circuitBreaker.state !== 'OPEN') return;
+    logger.warn('llm_cost_circuit_breaker_reject', {
+      site,
+      requestId,
+      reason: 'latency',
+    });
+    throw new CircuitOpenError();
+  }
+
+  /**
+   * RUN_ID 2026-05-21-p0-c2-cost-breaker — spec §3 R1 + R3. Cost-breaker
+   * fail-CLOSED guard shared by `generate()` default path and
+   * `generateWalk()`. Returns `{ wasHalfOpen }` so the caller can later wire
+   * R9 `recordFailure()` when the probe attempt is consumed AND the LLM
+   * call fails. Throws `CircuitOpenError` when `canAttempt()` returns false
+   * (state OPEN, or HALF_OPEN with the probe already in flight).
+   *
+   * `wasHalfOpen` MUST be captured BEFORE the `canAttempt()` call because
+   * the call mutates `probeInFlight` (single-probe semantics, see
+   * `llm-cost-circuit-breaker.ts:107-114`).
+   */
+  private checkCostBreakerOrThrow(
+    site: 'invokeSection' | 'generateWalk',
+    requestId: string | undefined,
+  ): { wasHalfOpen: boolean } {
+    if (!this.costBreaker) return { wasHalfOpen: false };
+    const wasHalfOpen = this.costBreaker.getState().state === 'HALF_OPEN';
+    if (!this.costBreaker.canAttempt()) {
+      logger.warn('llm_cost_circuit_breaker_reject', {
+        site,
+        requestId,
+        reason: 'cost',
+      });
+      throw new CircuitOpenError();
+    }
+    return { wasHalfOpen };
+  }
+
+  /**
+   * RUN_ID 2026-05-21-p0-c2-cost-breaker — spec §3 R9. When the HALF_OPEN
+   * probe was consumed by `canAttempt()` and every section returned a
+   * non-`success` status (no `recordCharge()` ever fired → no CLOSED
+   * transition), the probe counts as failed evidence → call `recordFailure()`
+   * to re-trip OPEN. Default path inspects the aggregate; walk path uses
+   * its own try/catch around `structured.invoke`.
+   */
+  private maybeRecordHalfOpenProbeFailure(
+    wasHalfOpen: boolean,
+    sectionResults: SectionRunResult<MainAssistantOutput>[],
+    requestId: string | undefined,
+  ): void {
+    if (!wasHalfOpen || !this.costBreaker) return;
+    if (sectionResults.length === 0) return;
+    if (sectionResults.some((result) => result.status === 'success')) return;
+    logger.info('llm_cost_circuit_breaker_probe_failure', {
+      site: 'invokeSection',
+      requestId,
+    });
+    this.costBreaker.recordFailure();
+  }
+
   private async invokeSection(input: InvokeSectionInput): Promise<MainAssistantOutput> {
     return await startSpan(
       {
@@ -250,6 +322,19 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               throw new CircuitOpenError();
             }
 
+            // RUN_ID 2026-05-21-p0-c2-cost-breaker — A6 / spec §3 R1.
+            // Cost-breaker fail-CLOSED guard. Throw bubbles through
+            // `withLangfuseTrace` + `startSpan` (both rethrow on catch) up to
+            // `chat-message.service.ts:259` → `mapOrchestratorError` preserves
+            // the `AppError` → 503 `CIRCUIT_BREAKER_OPEN` to the client.
+            // Placed BEFORE `runSectionTasks` because the section runner
+            // swallows per-task errors into `SectionRunFailure` (degrade via
+            // fallback) — the breaker rejection must bypass that path.
+            const { wasHalfOpen: wasHalfOpenAtAttempt } = this.checkCostBreakerOrThrow(
+              'invokeSection',
+              input.requestId,
+            );
+
             const startedAt = Date.now();
 
             const prepared = buildOrchestratorMessages(input);
@@ -274,6 +359,14 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
                   return isRetryableError(error);
                 },
               }),
+            );
+
+            // RUN_ID 2026-05-21-p0-c2-cost-breaker — R9. See
+            // `maybeRecordHalfOpenProbeFailure` for the rationale + algorithm.
+            this.maybeRecordHalfOpenProbeFailure(
+              wasHalfOpenAtAttempt,
+              sectionResults,
+              input.requestId,
             );
 
             // Section errors degrade via resolveSummary fallback; only breaker fast-fail above surfaces 503.
@@ -370,6 +463,50 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     };
   }
 
+  /**
+   * RUN_ID 2026-05-21-p0-c2-cost-breaker — spec §3 R9 (walk path).
+   * Wraps `structured.invoke()` so a probe failure under HALF_OPEN signals
+   * `recordFailure()` to the cost breaker. Re-throws the original error so
+   * the caller observes the same exception shape — bubbles through
+   * `withLangfuseTrace` to `mapOrchestratorError`. Extracted to keep
+   * `generateWalk` under the `max-lines-per-function` cap.
+   */
+  private async invokeWalkStructured(
+    withStructuredOutput: NonNullable<NonNullable<ChatModel>['withStructuredOutput']>,
+    messages: BaseMessage[],
+    callbacksRef: LangfuseCallbacksRef,
+    walkWasHalfOpen: boolean,
+    requestId: string | undefined,
+  ): Promise<
+    | WalkAssistantOutput
+    | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null }
+  > {
+    // C9.5 D5.a — parity with chat path: `includeRaw: true` surfaces the
+    // raw AIMessage's `usage_metadata.input_token_details.cache_read` so we
+    // can classify hit/partial/miss and feed the same Prom Counter + log +
+    // Langfuse usage block. R10: fakes / providers returning the parsed-only
+    // shape degrade to `'miss'` via the `isIncludeRawShape` narrowing.
+    const structured = withStructuredOutput(walkAssistantOutputSchema, {
+      name: 'WalkAssistantOutput',
+      includeRaw: true,
+    });
+    const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
+    try {
+      return (await structured.invoke(messages, mergeInvokeOpts({ signal }, callbacksRef))) as
+        | WalkAssistantOutput
+        | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null };
+    } catch (err) {
+      if (walkWasHalfOpen && this.costBreaker) {
+        logger.info('llm_cost_circuit_breaker_probe_failure', {
+          site: 'generateWalk',
+          requestId,
+        });
+        this.costBreaker.recordFailure();
+      }
+      throw err;
+    }
+  }
+
   private async generateWalk(
     input: OrchestratorInput,
     usageRef: UsageRef,
@@ -411,26 +548,27 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
     injectWalkTourGuideSection(messages);
 
-    // C9.5 D5.a — parity with chat path: `includeRaw: true` surfaces the
-    // raw AIMessage's `usage_metadata.input_token_details.cache_read` so we
-    // can classify hit/partial/miss and feed the same Prom Counter + log +
-    // Langfuse usage block. R10: fakes / providers returning the parsed-only
-    // shape degrade to `'miss'` via the `isIncludeRawShape` narrowing below.
-    const structured = model.withStructuredOutput(walkAssistantOutputSchema, {
-      name: 'WalkAssistantOutput',
-      includeRaw: true,
-    });
+    // RUN_ID 2026-05-21-p0-c2-cost-breaker — A7 / spec §3 R3. Walk path was
+    // early-returned at `generate()` BEFORE the default-path latency guard
+    // AND BEFORE the cost guard. Mirror both here so the walk path honours
+    // the same fail-CLOSED contract — `CircuitOpenError` bubbles through
+    // `withLangfuseTrace` + `startSpan` to the chat service.
+    this.checkLatencyBreakerOrThrow('generateWalk', input.requestId);
+    const { wasHalfOpen: walkWasHalfOpen } = this.checkCostBreakerOrThrow(
+      'generateWalk',
+      input.requestId,
+    );
 
-    const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
-    const walkPayloadBytes = estimatePayloadBytes(messages);
-    // TD-LF-02 — `mergeInvokeOpts` folds the Langfuse CallbackHandler onto the signal opts.
-    const rawResult = (await structured.invoke(
+    const withStructuredOutput = model.withStructuredOutput.bind(model);
+    const rawResult = await this.invokeWalkStructured(
+      withStructuredOutput,
       messages,
-      mergeInvokeOpts({ signal }, callbacksRef),
-    )) as
-      | WalkAssistantOutput
-      | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null };
+      callbacksRef,
+      walkWasHalfOpen,
+      input.requestId,
+    );
     const { result, usage } = this.narrowWalkStructuredResult(rawResult);
+    const walkPayloadBytes = estimatePayloadBytes(messages);
 
     // C9.5 D5.a — R8/R9/R11/R12 emit Prom + log + Langfuse usage block. All
     // side-effects swallowed internally; this call never throws.

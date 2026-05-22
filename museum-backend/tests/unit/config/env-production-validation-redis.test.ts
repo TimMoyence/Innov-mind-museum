@@ -14,6 +14,7 @@ import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import {
   VALID_CSRF_SECRET,
+  VALID_EXPORT_PSEUDONYM_SALT,
   VALID_JWT_ACCESS_SECRET,
   VALID_JWT_REFRESH_SECRET,
   VALID_MEDIA_SIGNING_SECRET,
@@ -29,6 +30,7 @@ const makeEnvWithCache = (cacheOverrides: Partial<NonNullable<AppEnv['cache']>> 
     brevoApiKey: 'brevo',
     llm: { provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
+    exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     cache: {
       enabled: true,
       url: 'redis://redis:6379',
@@ -59,6 +61,7 @@ describe('validateProductionEnv — Redis password hardening (P3.1)', () => {
       MFA_ENCRYPTION_KEY: VALID_MFA_ENCRYPTION_KEY,
       MFA_SESSION_TOKEN_SECRET: VALID_MFA_SESSION_TOKEN_SECRET,
       CSRF_SECRET: VALID_CSRF_SECRET,
+      EXPORT_PSEUDONYM_SALT: VALID_EXPORT_PSEUDONYM_SALT,
       OPENAI_API_KEY: 'sk-test',
       REDIS_URL: 'redis://redis:6379',
       REDIS_PASSWORD: STRONG_REDIS_PASSWORD,

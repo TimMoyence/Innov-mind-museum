@@ -684,6 +684,33 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ---
 
+### TD-OBS-DENYLIST — Wire 3 Prometheus counters auth + alert `access_token_denylist_unavailable[5m]` (post-V1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, /team run `2026-05-21-p0-c3-auth-crypto` reviewer F6 + run `2026-05-21-p0-c4-infra` documenter sweep)
+- **Référence code** :
+  - `museum-backend/src/shared/observability/prometheus-metrics.ts` (cible — fichier registry existant, ajouter 3 counters)
+  - **Counters spécifiés C3 design §10** (`team-state/2026-05-21-p0-c3-auth-crypto/design.md:354-365`) :
+    1. `totp_replay_blocked_total{user_role}` — incrémenté dans `challengeMfa` + `verifyMfa` à chaque rejet pour `step <= lastUsedStep` (I-SEC7a, ferme RFC 6238 §5.2 replay window).
+    2. `access_token_revoked_total{source="logout"|"admin"}` — incrémenté à chaque `denylist.add` réussi (I-SEC7b, ADR-064 denylist fail-OPEN).
+    3. `art_keywords_rate_limited_total{role}` — incrémenté quand `taxonomyWriteLimiter` rejette (via custom keyGenerator wrapping ou hook `onLimitReached`, I-SEC3).
+  - **Sites d'incrément** :
+    - `museum-backend/src/modules/auth/useCase/totp/challengeMfa.useCase.ts:55-63` + `verifyMfa.useCase.ts:41-50`
+    - `museum-backend/src/modules/auth/useCase/session/authSession.service.ts:201-213` (logout) + admin denylist path TBD
+    - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-message.route.ts:184` (art-keywords route)
+- **Symptôme** : C3 design §10 spécifiait explicitement les 3 counters (avec `art_keywords_rate_limited` aussi listé "via hook `onLimitReached`") mais l'editor green a deferred post-V1 (reviewer F6 INFO non-bloquant + verifier WARN scope minor). Conséquence : (a) pas de visibilité Prometheus/Grafana sur le taux de TOTP replay (signal d'attaque), (b) pas de visibilité sur le taux de access-token revocation (signal d'incident response), (c) pas de visibilité sur taxonomy abuse art-keywords. Les events sont **émis en logs Sentry breadcrumbs** (cf. C3 design §10 ligne "Logs (b)(c)") donc l'incident response a un fallback, mais aucune métrique time-series ne permet d'alerter sur des spikes ou de dashboarder le baseline. **Pas de régression security V1** : les rejets sont effectifs (401/403/429), seule l'observabilité agrégée manque.
+- **Alert manquante (C3 design §10 ligne "Alerts")** : `rate(access_token_denylist_unavailable[5m]) > 0` → page on-call. Aujourd'hui le warn log `access_token_denylist_unavailable` (rate-limité 1/min adapter-side, cf. ADR-064 `Consequences/Positive`) part dans Sentry mais sans alert Prometheus → si Redis se dégrade silencieusement, l'opérateur ne le voit pas avant un audit log Sentry.
+- **Dashboards manquants** : 3 panels Grafana auth-security (totp_replay_blocked rate, access_token_revoked rate, art_keywords_rate_limited rate) — C3 design §10 ligne "Dashboards" planifiait "post-merge via doc handoff", jamais exécuté.
+- **Sprint d'origine** : team-report `2026-05-21-p0-c3-auth-crypto` (reviewer F6 INFO + verifier scope WARN). Re-validé dans `2026-05-21-p0-c4-infra` documenter sweep (le TD était promis dans la STORY C3 ligne 137 "Open follow-ups (créés) : TD-OBS-DENYLIST" mais jamais écrit dans `TECH_DEBT.md` jusqu'ici — réparation honesty UFR-013).
+- **Effort estimé** : 2-4 heures.
+  - 1h — 3 counters dans `prometheus-metrics.ts` + 3 sites d'incrément (1 ligne `metric.inc({...labels})` chacun, post-validation Zod / post-rate-limit hook).
+  - 1h — alert PromQL dans `infra/prometheus/alerts/auth.yml` (créer si absent) + lien on-call.
+  - 1h — 3 panels Grafana via `infra/grafana/dashboards/auth-security.json` (créer si absent — vérifier UID stable cf. CLAUDE.md "UID immutable").
+  - 30 min — tests unit per metric increment (`tests/unit/shared/observability/prometheus-counters-auth.test.ts`).
+- **Comment fermer** : (a) ajouter les 3 counters au registry Prometheus existant, (b) wiring 3 sites d'incrément, (c) tests unit qui assert `metric.inc` appelé une fois par rejet, (d) alert PromQL + dashboard JSON, (e) re-tester smoke `/api/metrics` rend les 3 nouveaux counters, (f) cocher TD-OBS-DENYLIST ici + cross-ref dans ADR-064 §Consequences/Positive note observability.
+- **Priorité** : LOW pre-V1 (security correct, observability seulement). MEDIUM post-V1 (avant 1er pilote B2B où compliance audit demandera des métriques auth).
+
+---
+
 ## Tech debts fermés (gardés 1 sprint avant purge)
 
 (Aucun pour le moment — premier sprint avec ce tracker.)
@@ -1041,6 +1068,51 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 **Fix** : add pre-parse gate, skip ~30-40% non-article pages.
 
+## TD-OBS-PII-METADATA-ALLOWLIST — Langfuse `metadata` non couverte par le mask central (LOW, NON_BLOCKER)
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, security phase /team `2026-05-21-p0-c1-pii-egress` — LOW out-of-scope C1)
+- **Référence code** :
+  ```
+  museum-backend/src/shared/observability/strip-free-text.ts:83-147   # mask scrub des champs free-text (input.messages, output.text, …) — NE touche PAS data.metadata
+  museum-backend/src/shared/observability/langfuse.client.ts:68       # mask: stripFreeText câblé au ctor
+  museum-backend/src/shared/observability/withLangfuseTrace.ts        # principal caller émettant `metadata` (museumId, intent, locale, tier, requestId — déjà PII-safe à la source)
+  museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-tracing.ts
+  museum-backend/src/modules/chat/useCase/llm/llm-judge-guardrail.ts
+  museum-backend/src/modules/chat/adapters/secondary/audio/text-to-speech.openai.ts
+  museum-backend/src/modules/chat/adapters/secondary/audio/audio-transcriber.openai.ts
+  museum-backend/src/modules/chat/adapters/secondary/guardrails/llm-guard.adapter.ts
+  ```
+- **Symptôme** : `stripFreeText` (R6 du run C1) **préserve volontairement** `data.metadata` byte-pour-byte — l'assumption design (cf. `spec.md` §2 in-scope item A4-5 ; `design.md` D6) étant que les callers Musaium n'écrivent dans `metadata` que des champs déjà PII-safe (`museumId`, `intent`, `locale`, `tier`, `requestId`, `inputLength`, `estimatedCostCents`, etc.). Cette assumption n'est **pas enforced** par sentinel ou type system : un futur caller peut ajouter accidentellement une PII dans `metadata` (ex `metadata.userEmail`, `metadata.rawMessage`), elle traverserait le mask intacte vers `cloud.langfuse.com`.
+- **Pourquoi non résolu en C1** : le triage `team-state/2026-05-21-p0-security/triage.md` cluster C1 ciblait les vecteurs `input.messages[*].content` / `output.text` auto-capturés par `langfuse-langchain.CallbackHandler` (P0). `metadata` est aujourd'hui correctement contraint à la source — pas de PII observée. La fermeture du gap est de la **defense-in-depth**, pas une fermeture de vecteur PII actif.
+- **Sprint d'origine** : security phase /team `2026-05-21-p0-c1-pii-egress`, finding LOW × 1.
+- **Effort estimé** : ~1 heure.
+- **Comment fermer** :
+  1. Définir une `METADATA_ALLOWED_KEYS` allow-list dans `museum-backend/src/shared/observability/` (ex `{museumId, intent, locale, tier, requestId, inputLength, estimatedCostCents, model, usage, usageDetails, ...}`).
+  2. Ajouter une assertion légère côté caller (helper `assertMetadataAllowlist(metadata)`) à appeler depuis `withLangfuseTrace` + chaque `safeTrace` non-LangChain (les 5 callers cités ci-dessus). En dev : `throw` si clé inconnue ; en prod : `logger.warn` + filter out la clé.
+  3. **OU** sentinel `scripts/sentinels/langfuse-metadata-allowlist.mjs` qui scan AST les callers `withLangfuseTrace|generation|event|span|trace.update` et bloque tout `metadata: { … }` literal avec une clé hors allow-list.
+  4. Cocher TD-OBS-PII-METADATA-ALLOWLIST ici.
+
+## TD-OBS-SCRUBRECORD-CYCLE-HARDENING — `scrubRecord` recursion sans cycle/depth cap (LOW, NON_BLOCKER)
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, security phase /team `2026-05-21-p0-c1-pii-egress` — LOW out-of-scope C1)
+- **Référence code** :
+  ```
+  packages/musaium-shared/src/observability/sentry-scrubber.ts        # scrubRecord — recursion sur Record<string, unknown> sans seen-guard ni MAX_DEPTH
+  museum-backend/src/shared/observability/sentry-scrubber.ts:8-16     # BE re-export
+  museum-frontend/shared/observability/sentry-scrubber.ts             # FE wrapper
+  museum-web/src/lib/sentry-scrubber.ts:13-43                         # Web wrapper
+  ```
+- **Symptôme** : `scrubRecord` parcourt récursivement les champs nested d'un Sentry event (`request`, `user`, `extra`, et désormais `tags` après R2 du run C1). La récursion n'a **ni seen-guard `WeakSet`** (cycle detection), **ni cap `MAX_DEPTH`**. Aujourd'hui inoffensif car les Sentry event bodies sont JSON-serializable (`beforeSend` est appelé sur des objets déjà sérialisables, le SDK les `JSON.stringify` avant transport), donc cycles ou nesting infini sont structurellement impossibles. La fermeture du gap est **defense-in-depth**, pas une fermeture d'incident actif.
+- **Pourquoi non résolu en C1** : le triage cluster C1 ciblait des vecteurs PII observables. Cycle/depth est un risque **DoS théorique** (stack overflow → `beforeSend` throw → event drop) non observé en prod et structurellement bloqué par le contrat JSON Sentry.
+- **Sprint d'origine** : security phase /team `2026-05-21-p0-c1-pii-egress`, finding LOW × 1.
+- **Effort estimé** : ~30 minutes.
+- **Comment fermer** :
+  1. Ajouter `WeakSet` seen-guard dans `scrubRecord` (canonical, `packages/musaium-shared/src/observability/sentry-scrubber.ts`) : si l'objet a déjà été visité, retourner `'[circular]'` au lieu de récurser. Idem pour `scrubEvent` traversal sur `tags`.
+  2. Ajouter `MAX_DEPTH=10` constant + tracker `depth` param récursif ; au-delà, retourner `'[too-deep]'`.
+  3. Bumper `CANONICAL_HASH` dans `scripts/sentinels/sentry-scrubber-parity.mjs:65` en lockstep avec le diff canonical + golden test fixture.
+  4. Ajouter golden tests : (a) `{a: obj}` où `obj.self = obj` → no stack overflow + scrub clean ; (b) nesting 12-deep → top 10 levels scrubbés, levels 11+ replaced par `'[too-deep]'`.
+  5. Cocher TD-OBS-SCRUBRECORD-CYCLE-HARDENING ici.
+
 
 ---
 
@@ -1252,4 +1324,44 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ## TD-MID-02 — p-limit ^3 too loose (Renovate cap risk) (LOW)
 **Fix** : tighten `museum-backend/package.json:153` to `^3.1.0`.
+
+---
+
+## TD-CB-PARSE-NULL-WEDGE — Walk path `narrowWalkStructuredResult` throws hors try/catch wedge le breaker HALF_OPEN (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, /team run `2026-05-21-p0-c2-cost-breaker`, reviewer IMPORTANT downgrade LOW backlog).
+- **Référence code** :
+  ```
+  museum-backend/src/modules/chat/adapters/secondary/llm/langchain.orchestrator.ts:570 (narrowWalkStructuredResult call, post try/catch)
+  museum-backend/src/modules/chat/adapters/secondary/llm/langchain.orchestrator.ts:478-498 (invokeWalkStructured try/catch — n'enveloppe QUE structured.invoke)
+  ```
+- **Symptôme** : sur le walk path, `invokeWalkStructured` enveloppe `structured.invoke()` dans un try/catch qui appelle `costBreaker.recordFailure()` sur exception (R9 cost-breaker run C2). MAIS `narrowWalkStructuredResult()` (appelée à `:570`, APRÈS le try/catch) peut throw `Error('walk structured output parse failure — parsed: null')` quand le LLM retourne un parsed:null (strict-schema drift). Dans ce cas le probe HALF_OPEN a consommé son slot (`probeInFlight=true` via `canAttempt()`) MAIS `recordFailure()` n'est PAS appelé → breaker wedged HALF_OPEN → requêtes suivantes passent sans gate jusqu'à expiration `openDurationMs` (default 60s).
+- **Pourquoi non résolu en V1** : (a) out-of-spec-R9 scope (R9 contract = throws de `structured.invoke` seulement, design.md §3 D3 « try/catch around structured.invoke ») ; (b) impact pre-launch LOW (parsed:null = strict-schema edge case, pas adversary-controlled, BE-controlled prompt shape) ; (c) auto-recovery 60s borne le blast radius — pas de wedge permanent ; (d) fail-CLOSED protection conservée tant que le breaker était OPEN avant le probe (le wedge n'élargit pas la surface coût, il retarde simplement la re-trip).
+- **Sprint d'origine** : 2026-05-21.
+- **Effort estimé** : ~30 min — deux options :
+  - (a) **Étendre `invokeWalkStructured`** pour englober `narrowWalkStructuredResult` dans le même try/catch (plus chirurgical, préserve la sémantique « probe failure = recordFailure »).
+  - (b) **`recordFailure()` défensif** au site `narrowWalkStructuredResult` throw — moins propre mais 1 ligne.
+- **Référence run** : `team-state/2026-05-21-p0-c2-cost-breaker/` (review.json `findings.important[0]`, security agent LOW finding `STORY.md:2026-05-21T18:25:22Z`).
+
+---
+
+## TD-MIG-DRIFT-HOUSEKEEPING — Pre-existing TypeORM schema drift détecté en C3, refusé du scope (LOW/MEDIUM, NICE_TO_HAVE pre-V1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-21, `/team` run `2026-05-21-p0-c3-auth-crypto`).
+- **Origine** : le générateur `node scripts/migration-cli.cjs generate --name=AddTotpLastUsedStep` (lancé par l'editor green pour matérialiser `last_used_step bigint NULL` sur `totp_secrets`) a émis un diff entity↔DB beaucoup plus large que la seule colonne ajoutée — la dev DB locale du worktree n'était pas pleinement migrée vs `main`. **Per design §4** la migration body a été restreinte à la colonne `last_used_step` (cf disclosure JSDoc du fichier `1779391176767-AddTotpLastUsedStep.ts:17-22` : *"The raw generator output included unrelated drift (...) Per design §4 the migration body is restricted to the intended scope ; the unrelated drift is tracked separately under TD-MIG-* (out of scope for this run, see docs/TECH_DEBT.md)."*). Cette entrée TD tient le registre des items à traiter dans un cycle housekeeping dédié, pas bundlé avec un fix sécurité scopé.
+- **Items détectés (refusés du scope C3)** :
+  - **FK renames** sur `user_consents` (FK column ou constraint name désynchronisée vs entity metadata) — TypeORM voulait `DROP CONSTRAINT` + `ADD CONSTRAINT` avec un nom canonique différent.
+  - **FK renames** sur `totp_secrets` (idem — uniquement le rename de constraint, pas la colonne ajoutée par C3).
+  - **`museums.wikidata_qid` drop** — la colonne existe en DB mais n'est plus dans l'entity (legacy d'une refonte Wikidata).
+  - **`artwork_embeddings.embedding halfvec → text`** — TypeORM voulait revert le type `halfvec(768)` introduit en C3 vers `text` car aucune `@Column` type custom ne décrit `halfvec` (cf CLAUDE.md gotcha `halfvec(N)` PG extension). À ne PAS appliquer en prod (perdrait l'index IVFFlat).
+  - **`art_keywords` UNIQUE** — contrainte UNIQUE manquante côté DB que TypeORM voulait `ADD`.
+  - **Dropped indexes** — quelques `IDX_*` que TypeORM ne reconnaît plus comme dérivables de l'entity metadata (probablement créés par une ancienne migration que TypeORM ne retrouve pas dans le diff entity).
+  - **`chat_sessions.version` DEFAULT removal** — TypeORM voulait `ALTER COLUMN version DROP DEFAULT` (col `@VersionColumn` qui n'accepte pas de DEFAULT côté entity).
+- **Pourquoi non résolu en V1** : (a) hors-scope du fix sécurité C3 (R1..R12 = I-SEC5/I-SEC7/I-SEC3, aucun n'implique ces items) ; (b) tous ces items requièrent une revue indépendante — certains sont des faux positifs TypeORM (le `halfvec→text` revert est **dangereux** en prod), d'autres sont du nettoyage propre (`museums.wikidata_qid` drop, FK renames) ; (c) bundler ce drift dans la migration C3 violerait migration-governance + scope discipline + cacherait l'origine de chaque item.
+- **Impact runtime V1** : NUL aujourd'hui — la DB prod tourne, `chat`/`auth` ne dépendent pas de ces items. Le risque est principalement :
+  - Une future migration `migration-cli.cjs generate` re-générera ce drift à chaque appel tant qu'il n'est pas résolu (bruit + risque qu'un dev applique par erreur le revert `halfvec→text`).
+  - Le check `migration:run && migration-cli.cjs generate --name=Check` (cité §9 spec, run acceptance criterion) n'est PAS clean tant que le drift existe — donc on perd cette sentinelle.
+- **Sprint d'origine** : 2026-05-21.
+- **Effort estimé** : ~2-4h — pour chaque item, classer (a) faux positif TypeORM (ex `halfvec → text`, à fixer côté entity via `@Column({ type: 'halfvec' as any })` ou type custom) vs (b) nettoyage légitime (FK renames, `wikidata_qid` drop) → générer migration ciblée par groupe + ADR si besoin pour les choix non triviaux.
+- **Référence run** : `team-state/2026-05-21-p0-c3-auth-crypto/` (STORY.md L24 disclosure, migration JSDoc `1779391176767-AddTotpLastUsedStep.ts:17-22`).
 

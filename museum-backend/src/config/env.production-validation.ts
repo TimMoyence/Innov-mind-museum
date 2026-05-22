@@ -156,9 +156,28 @@ export function validateProductionEnv(env: AppEnv): void {
   // can forge the CSRF token.
   validateCsrfSecret(env);
 
+  // I-SEC5 (2026-05-21) — EXPORT_PSEUDONYM_SALT present and >= 32 chars in prod.
+  // Historical fallback literal removed (spec §1.1 dictionary attack). Rotation
+  // doctrine : `docs/SECURITY.md#export-salt-rotation`.
+  validateExportPseudonymSalt(env);
+
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+}
+
+function validateExportPseudonymSalt(env: AppEnv): void {
+  const salt = required('EXPORT_PSEUDONYM_SALT', process.env.EXPORT_PSEUDONYM_SALT);
+  assertSecretLength('EXPORT_PSEUDONYM_SALT', salt);
+
+  // Drift detection (mirror validateCsrfSecret) — parsed env MUST agree with
+  // raw env var. A future refactor dropping the wiring in env.ts would silently
+  // bypass the boot gate ; we fail fast instead.
+  if (env.exportPseudonymSalt !== salt) {
+    throw new Error(
+      'env.exportPseudonymSalt is out of sync with EXPORT_PSEUDONYM_SALT — env.ts wiring drift.',
+    );
+  }
 }
 
 function validateCsrfSecret(env: AppEnv): void {

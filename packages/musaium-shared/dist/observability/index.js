@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shouldDropBreadcrumb = exports.scrubUrl = exports.scrubRecord = exports.scrubHeaders = exports.scrubEvent = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_HEADER_REGEX = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_BREADCRUMB_PATHS = exports.REDACTED = void 0;
+exports.shouldDropBreadcrumb = exports.scrubUrl = exports.scrubRecord = exports.scrubHeaders = exports.scrubEvent = exports.isUrlLikeValue = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_HEADER_REGEX = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_BREADCRUMB_PATHS = exports.REDACTED = void 0;
 var sentry_scrubber_1 = require("./sentry-scrubber");
 Object.defineProperty(exports, "REDACTED", { enumerable: true, get: function () { return sentry_scrubber_1.REDACTED; } });
 Object.defineProperty(exports, "SENSITIVE_BREADCRUMB_PATHS", { enumerable: true, get: function () { return sentry_scrubber_1.SENSITIVE_BREADCRUMB_PATHS; } });
 Object.defineProperty(exports, "SENSITIVE_FIELD_REGEX", { enumerable: true, get: function () { return sentry_scrubber_1.SENSITIVE_FIELD_REGEX; } });
 Object.defineProperty(exports, "SENSITIVE_HEADER_REGEX", { enumerable: true, get: function () { return sentry_scrubber_1.SENSITIVE_HEADER_REGEX; } });
 Object.defineProperty(exports, "SENSITIVE_QUERY_KEYS", { enumerable: true, get: function () { return sentry_scrubber_1.SENSITIVE_QUERY_KEYS; } });
+Object.defineProperty(exports, "isUrlLikeValue", { enumerable: true, get: function () { return sentry_scrubber_1.isUrlLikeValue; } });
 Object.defineProperty(exports, "scrubEvent", { enumerable: true, get: function () { return sentry_scrubber_1.scrubEvent; } });
 Object.defineProperty(exports, "scrubHeaders", { enumerable: true, get: function () { return sentry_scrubber_1.scrubHeaders; } });
 Object.defineProperty(exports, "scrubRecord", { enumerable: true, get: function () { return sentry_scrubber_1.scrubRecord; } });

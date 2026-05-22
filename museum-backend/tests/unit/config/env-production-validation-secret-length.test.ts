@@ -13,6 +13,7 @@ import type { AppEnv } from '@src/config/env.types';
 
 const LONG = 'a'.repeat(64);
 const ALT_LONG = 'b'.repeat(64);
+const EXPORT_SALT = 'g'.repeat(48);
 
 /**
  * Minimal AppEnv stub — only fields validateProductionEnv inspects.
@@ -25,6 +26,9 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
     llm: { provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     cache: undefined,
+    // I-SEC5 (2026-05-21) — required by `validateExportPseudonymSalt`. Drift
+    // detection requires the AppEnv stub to mirror process.env.
+    exportPseudonymSalt: EXPORT_SALT,
     auth: {
       accessTokenSecret: LONG,
       refreshTokenSecret: ALT_LONG,
@@ -55,6 +59,8 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       MFA_SESSION_TOKEN_SECRET: 'n'.repeat(48),
       // F7 — CSRF secret must be present + distinct in prod.
       CSRF_SECRET: 'p'.repeat(48),
+      // I-SEC5 (2026-05-21) — required by `validateExportPseudonymSalt`.
+      EXPORT_PSEUDONYM_SALT: EXPORT_SALT,
     };
     delete process.env.JWT_SECRET;
   });

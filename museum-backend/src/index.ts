@@ -7,10 +7,12 @@ import Redis from 'ioredis';
 
 import { AppDataSource, startPoolMonitor } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
+import { RedisAccessTokenDenylist } from '@modules/auth/adapters/secondary/redis/redis-access-token-denylist';
 import {
   RedisNonceStore,
   setSocialNonceStore,
 } from '@modules/auth/adapters/secondary/social/nonce-store';
+import { authSessionService } from '@modules/auth/useCase';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { shutdownEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
@@ -36,6 +38,7 @@ import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-counter';
 import { logger } from '@shared/logger/logger';
+import { setAccessTokenDenylist } from '@shared/middleware/authenticated.middleware';
 import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
 import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
 import { setMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.middleware';
@@ -124,6 +127,17 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     // (GETDEL primitive race-free across replicas). Single-instance dev/tests
     // skip this branch and keep the InMemoryNonceStore default.
     setSocialNonceStore(new RedisNonceStore(redisClient));
+    // I-SEC7b / R7-R9 — access-token denylist for post-logout revocation.
+    // Fail-OPEN on Redis error (spec §R9, lib-docs/ioredis/LESSONS.md L36
+    // fail-soft cache pattern). Single shared `redisClient` is fine — denylist
+    // is non-blocking GET/SET, no pub/sub (cf F-IO-05 sharing comment). Two
+    // wire points : (a) middleware consults denylist on every request via the
+    // module-level setter, (b) logout/refresh use cases write to it via the
+    // AuthSessionService DI setter (set post-construction since the auth
+    // singletons instantiate before this boot path runs).
+    const accessTokenDenylist = new RedisAccessTokenDenylist(redisClient);
+    setAccessTokenDenylist(accessTokenDenylist);
+    authSessionService.setAccessTokenDenylist(accessTokenDenylist);
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };

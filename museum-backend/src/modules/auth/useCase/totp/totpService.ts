@@ -33,10 +33,24 @@ export function generateTotpSecret(label: string): NewTotpSecret {
   return { base32: secret.base32, otpauthUrl: totp.toString() };
 }
 
-/** Malformed input (non-digit, wrong length, bad base32) returns `false` — no throws. */
-export function verifyTotpCode(secretBase32: string, code: string): boolean {
+/**
+ * Verifies a TOTP code and (on accept) returns the RFC 6238 step that matched.
+ *
+ * Returns `null` on malformed input (non-digit, wrong length, bad base32) OR
+ * when no step within the `WINDOW` matches. Returns `{ step }` where
+ * `step = floor(now/PERIOD_SECONDS) + delta` (delta ∈ {-1,0,+1} with WINDOW=1).
+ *
+ * Callers (`challengeMfa`, `verifyMfa`) compare the returned `step` to the
+ * persisted `last_used_step` to enforce RFC 6238 §5.2 "MUST NOT accept the
+ * second attempt of the OTP" — see lib-docs/otpauth/LESSONS.md 2026-05-20
+ * "Replay-protection (rappel doctrinal)".
+ *
+ * lib-docs/otpauth/PATTERNS.md §4 DON'T #2 — never interpret `validate()` as
+ * boolean ; we expose the `delta` (via `step`) so the caller can ledger it.
+ */
+export function verifyTotpCode(secretBase32: string, code: string): { step: number } | null {
   const sanitized = code.trim();
-  if (!/^\d{6}$/.test(sanitized)) return false;
+  if (!/^\d{6}$/.test(sanitized)) return null;
 
   try {
     const secret = OTPAuth.Secret.fromBase32(secretBase32);
@@ -48,8 +62,12 @@ export function verifyTotpCode(secretBase32: string, code: string): boolean {
       secret,
     });
     const delta = totp.validate({ token: sanitized, window: WINDOW });
-    return delta !== null;
+    // lib-docs/otpauth/LESSONS.md L21 — `validate().delta !== null` discrimination
+    // (never `delta > 0` ; delta=0 = current step IS valid).
+    if (delta === null) return null;
+    const currentStep = Math.floor(Date.now() / 1000 / PERIOD_SECONDS);
+    return { step: currentStep + delta };
   } catch {
-    return false;
+    return null;
   }
 }

@@ -1,7 +1,6 @@
 import { AUDIT_ADMIN_EXPORT_SESSIONS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 import { pseudonymise } from '@shared/security/pseudonym';
-import { env } from '@src/config/env';
 
 import type {
   ExportInput,
@@ -20,11 +19,6 @@ export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;
 }
 
-// R2 corrective loop 1 (2026-05-15) — fallback literal preserved so unit tests
-// stubbing env without the field still compute a deterministic /^[0-9a-f]{16}$/
-// digest. Rotation procedure: spec §3.6 / Q6.
-const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
-
 /**
  * Admin CSV export — chat sessions (R2 R6/R7/R8/R12/R17 + D4/D5/D6).
  *
@@ -38,12 +32,31 @@ const PSEUDONYM_SALT = env.exportPseudonymSalt ?? 'musaium-admin-export-v1';
  *
  * Pseudonymisation (R17/D6): super_admin sees raw user_id ; manager/admin see
  * a 16-hex-char SHA-256 pseudonym.
+ *
+ * I-SEC5 (2026-05-21) — `salt` is injected at construction (mirror
+ * `AdminExportRepositoryPg`). The historical committed-literal fallback was
+ * REMOVED — a checked-in constant is a trivial dictionary-attack surface
+ * against the pseudonymised export (spec §1.1 / R2).
+ * Prod boot fail-fast at `env.production-validation.ts::validateExportPseudonymSalt`
+ * guarantees `env.exportPseudonymSalt` is set ≥ 32 chars before composition root
+ * wires this class. Rotation doctrine : `docs/SECURITY.md#export-salt-rotation`.
  */
 export class ExportChatSessionsUseCase {
+  private readonly salt: string;
+
   constructor(
     private readonly repository: ExportSessionsRepository,
     private readonly audit: ExportAuditService,
-  ) {}
+    salt: string,
+  ) {
+    if (!salt) {
+      throw new Error(
+        'ExportChatSessionsUseCase: salt is unset — pass env.exportPseudonymSalt ' +
+          '(>= 32 chars in prod, validated at boot). See docs/SECURITY.md#export-salt-rotation.',
+      );
+    }
+    this.salt = salt;
+  }
 
   async execute(input: ExportInput): Promise<AsyncIterable<ExportRowSessions>> {
     const scopeMuseumId = computeSessionsScope(input);
@@ -59,7 +72,7 @@ export class ExportChatSessionsUseCase {
     });
 
     const rowStream = this.repository.streamChatSessions({ scopeMuseumId });
-    return mapSessionsRows(rowStream, input.actorRole);
+    return mapSessionsRows(rowStream, input.actorRole, this.salt);
   }
 }
 
@@ -83,6 +96,7 @@ function computeSessionsScope(input: ExportInput): number | null {
 async function* mapSessionsRows(
   source: AsyncIterable<ExportRowSessions>,
   actorRole: ExportInput['actorRole'],
+  salt: string,
 ): AsyncIterable<ExportRowSessions> {
   const shouldPseudonymise = actorRole === 'museum_manager' || actorRole === 'admin';
   for await (const row of source) {
@@ -92,7 +106,7 @@ async function* mapSessionsRows(
     }
     yield {
       ...row,
-      user_id: pseudonymise(row.user_id, PSEUDONYM_SALT),
+      user_id: pseudonymise(row.user_id, salt),
     };
   }
 }

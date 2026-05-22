@@ -25,24 +25,50 @@ jest.mock('@modules/auth/useCase', () => {
   const grantConsentUseCase = new GrantConsentUseCase(sharedRepo);
   const revokeConsentUseCase = new RevokeConsentUseCase(sharedRepo);
 
+  const verifyAccessToken = (token: string) => {
+    const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
+      sub: string;
+      role?: string;
+      museumId?: number;
+      type: string;
+      jti?: string;
+      exp?: number;
+    };
+    if (decoded.type !== 'access' || !decoded.sub) {
+      throw new Error('Invalid access token');
+    }
+    return {
+      id: Number(decoded.sub),
+      role: decoded.role ?? 'visitor',
+      museumId: decoded.museumId ?? null,
+    };
+  };
+
+  const verifyAccessTokenWithClaims = (token: string) => {
+    const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
+      sub: string;
+      role?: string;
+      museumId?: number;
+      type: string;
+      jti?: string;
+      exp?: number;
+    };
+    if (decoded.type !== 'access' || !decoded.sub) {
+      throw new Error('Invalid access token');
+    }
+    return {
+      id: Number(decoded.sub),
+      role: decoded.role ?? 'visitor',
+      museumId: decoded.museumId ?? null,
+      jti: decoded.jti ?? 'test-jti',
+      expSec: decoded.exp ?? Math.floor(Date.now() / 1000) + 600,
+    };
+  };
+
   return {
     authSessionService: {
-      verifyAccessToken: (token: string) => {
-        const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
-          sub: string;
-          role?: string;
-          museumId?: number;
-          type: string;
-        };
-        if (decoded.type !== 'access' || !decoded.sub) {
-          throw new Error('Invalid access token');
-        }
-        return {
-          id: Number(decoded.sub),
-          role: decoded.role ?? 'visitor',
-          museumId: decoded.museumId ?? null,
-        };
-      },
+      verifyAccessToken,
+      verifyAccessTokenWithClaims,
       login: jest.fn(),
       refresh: jest.fn(),
       logout: jest.fn(),

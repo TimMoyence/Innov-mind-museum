@@ -118,7 +118,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: APP_NAME,
     slug: APP_SLUG,
-    version: '1.2.3',
+    // C4 A5 (2026-05-21) — single-source-of-truth: derive the published
+    // Expo binary version from museum-frontend/package.json so a manual
+    // literal bump cannot drift behind the npm manifest. `require()` is
+    // licit here because Expo CLI loads app.config.ts via Node `require`
+    // (cf. lib-docs/expo/LESSONS.md:34); ESM/import is not honoured.
+    // Sentinel `scripts/sentinels/fe-version-sync.mjs` keeps the invariant.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Expo CLI Node require entry; no ESM import resolution available in app.config.ts
+    version: (require('./package.json') as { version: string }).version,
     orientation: 'portrait',
     icon: BRAND_ICON,
     scheme: APP_SCHEME,

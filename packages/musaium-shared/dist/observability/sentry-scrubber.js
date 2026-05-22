@@ -14,19 +14,29 @@
  *   golden-input/golden-output identity test that guards against silent drift.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.scrubRecord = exports.scrubHeaders = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
+exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.isUrlLikeValue = exports.scrubRecord = exports.scrubHeaders = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
 /** Header names (case-insensitive) whose values must be redacted before leaving the app. */
 exports.SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/i;
 /** Body / extra field names whose values must be redacted before leaving the app. */
 exports.SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
-/** Query-string keys whose values must be stripped from captured URLs. */
+/** Query-string keys whose values must be stripped from captured URLs.
+ *
+ * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
+ * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
+ * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
+ * lockstep ; golden test `sentry-scrubber.test.ts` asserts the 11-entry set.
+ */
 exports.SENSITIVE_QUERY_KEYS = new Set([
     'access_token',
     'api_key',
     'apikey',
+    'code',
+    'email',
     'password',
+    'phone',
     'refresh_token',
     'secret',
+    'state',
     'token',
 ]);
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
@@ -65,6 +75,22 @@ const scrubRecord = (input) => {
     return input;
 };
 exports.scrubRecord = scrubRecord;
+/**
+ * Heuristic for detecting URL-like string values in dynamic tag/context maps.
+ *
+ * R2/R3 (2026-05-21) — used by both `scrubEvent` (when walking `event.tags`)
+ * and `captureExceptionWithContext` (BE wrapper at sentry.ts) to decide
+ * whether to run `scrubUrl` on a given tag value. Conservative on purpose:
+ * matches strings carrying `?` (query-string), absolute paths (`/…`), or
+ * `http://` / `https://` schemes. Non-URL string values (e.g. `'GET'`,
+ * `'500'`) flow through untouched.
+ */
+const isUrlLikeValue = (value) => typeof value === 'string' &&
+    (value.includes('?') ||
+        value.startsWith('/') ||
+        value.startsWith('http://') ||
+        value.startsWith('https://'));
+exports.isUrlLikeValue = isUrlLikeValue;
 /** Strips sensitive query-string values from a URL while preserving the rest. */
 const scrubUrl = (url) => {
     const qIndex = url.indexOf('?');
@@ -126,6 +152,27 @@ const scrubEvent = (event, deps) => {
     }
     if (next.extra && typeof next.extra === 'object') {
         next.extra = (0, exports.scrubRecord)(next.extra);
+    }
+    // R2 (2026-05-21) — Sentry `tags` are indexed + persistent for 30 days.
+    // Tags carry both body-shaped keys (password/token/...) and header-shaped keys
+    // (authorization/cookie/...). Walk both regexes :
+    //   - `SENSITIVE_FIELD_REGEX` (body fields — handled by scrubRecord)
+    //   - `SENSITIVE_HEADER_REGEX` (header names like `authorization`)
+    // Then `scrubUrl` strips sensitive query-string params from URL-like VALUES
+    // (e.g. `tags.path = '/api/auth/x?code=…'`). Defense-in-depth with the
+    // upstream `captureExceptionWithContext` scrub at the BE wrapper site.
+    if (next.tags && typeof next.tags === 'object') {
+        const scrubbedTags = (0, exports.scrubRecord)(next.tags);
+        for (const [key, value] of Object.entries(scrubbedTags)) {
+            if (exports.SENSITIVE_HEADER_REGEX.test(key)) {
+                scrubbedTags[key] = exports.REDACTED;
+                continue;
+            }
+            if ((0, exports.isUrlLikeValue)(value)) {
+                scrubbedTags[key] = (0, exports.scrubUrl)(value);
+            }
+        }
+        next.tags = scrubbedTags;
     }
     return next;
 };

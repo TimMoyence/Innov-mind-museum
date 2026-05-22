@@ -78,6 +78,12 @@ services:
       - 'redis-server'
       - '--requirepass'
       - '${REDIS_PASSWORD:-dev-redis-password}'
+      # C4 I-SEC1 (2026-05-21) — mirror prod eviction policy so dev
+      # reproduces the same eviction semantics under pressure. Memory cap
+      # (--maxmemory) is optional in dev (WARN-only in compose-parity
+      # sentinel), but the policy is CRITICAL parity. cf design §6 / R6.
+      - '--maxmemory-policy'
+      - '${REDIS_MAXMEMORY_POLICY:-volatile-ttl}'
     ports:
       - '6379:6379'
     healthcheck:

@@ -57,6 +57,16 @@ export class TotpSecret {
   @Column({ type: 'timestamptz', nullable: true, name: 'last_used_at' })
   lastUsedAt!: Date | null;
 
+  /**
+   * RFC 6238 §5.2 replay-protection ledger. Highest TOTP step (= `floor(unixTime / period)`)
+   * that has been accepted for this user. `verifyMfa` / `challengeMfa` MUST reject codes
+   * whose accepted step is `<= lastUsedStep`. `null` = never used since the column landed
+   * (nullable-then-stamp migration, zero-downtime). PG `bigint` → TypeORM string mapping
+   * (lib-docs/typeorm/PATTERNS.md §6 — `bigint` JS string for safe > 2^53 forward-compat).
+   */
+  @Column({ type: 'bigint', nullable: true, name: 'last_used_step' })
+  lastUsedStep!: string | null;
+
   /** 10 entries on enrollment. `consumedAt=null` = still valid. */
   @Column({
     type: 'jsonb',

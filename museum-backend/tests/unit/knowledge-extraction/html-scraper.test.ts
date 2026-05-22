@@ -39,6 +39,8 @@ import {
   mockFetch,
   mockHtmlFetch,
 } from '../../helpers/fetch/fetch-mock.helpers';
+import { makeMockFetchResponse } from '../../helpers/knowledge-extraction/html-scraper.mock';
+import { logger } from '@shared/logger/logger';
 
 const originalFetch = global.fetch;
 
@@ -142,15 +144,19 @@ describe('HtmlScraper', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('truncates content exceeding maxContentBytes', async () => {
-    const smallScraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 20 });
-    global.fetch = mockHtmlFetch(ARTICLE_HTML);
-
-    const result = await smallScraper.scrape('https://example.com/article');
-
-    expect(result).not.toBeNull();
-    expect(result!.textContent.length).toBeLessThanOrEqual(20);
-  });
+  // C4 I-SEC10 (2026-05-21) — the legacy 'truncates content exceeding
+  // maxContentBytes' test was removed in this run. Its assertion (`result`
+  // non-null + `textContent.length <= maxContentBytes`) modelled the old
+  // post-extract `.slice(0, maxContentBytes)` semantics. Per spec R8 + R9,
+  // `maxContentBytes` is now an INPUT cap: any payload exceeding it is
+  // rejected pre-extraction (`scrape()` returns `null`). The old test would
+  // require the cap to behave as BOTH an output truncation (return non-null)
+  // AND an input rejection (return null) on the same config — mutually
+  // exclusive. The new input-cap contract is covered exhaustively by the
+  // R8a/R8b/R9a/R9b cases in the two describe() blocks below. The internal
+  // `.slice()` on extracted text in `extractContent` is now redundant
+  // (input ≥ extracted text by construction) but kept as belt-and-braces;
+  // it has no observable effect for tests that reach extraction.
 
   it('returns a 16-char hex contentHash derived from textContent', async () => {
     global.fetch = mockHtmlFetch(ARTICLE_HTML);
@@ -390,6 +396,101 @@ describe('HtmlScraper', () => {
 
       expect(result).toBeNull();
       expect(fetchSpy).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  // ------------------------------------------------------------------------
+  // C4 I-SEC10 (2026-05-21) — RED phase, spec R8 + R9.
+  //
+  // Scraper response body MUST be bounded by O(maxContentBytes) RAM.
+  //  R8 — pre-guard on Content-Length header (reject pre-download).
+  //  R9 — streamed cap with reader.cancel() once cumulative bytes > cap.
+  //
+  // Today `html-scraper.ts:299` is `await response.text()` — buffers entire
+  // payload before truncate. These tests prove the new contract and are
+  // expected to FAIL on HEAD (green phase implements the guards).
+  // ------------------------------------------------------------------------
+
+  describe('I-SEC10 Content-Length pre-guard', () => {
+    it('R8a — rejects pre-download when Content-Length > maxContentBytes, logs scraper_payload_too_large, never reads body', async () => {
+      const smallScraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 524_288 });
+      const oversizeResponse = makeMockFetchResponse({
+        contentLength: '1048576',
+        chunks: [new Uint8Array(0)],
+      });
+      const fetchSpy = makeFetchSpy();
+      fetchSpy.mockResolvedValue(oversizeResponse);
+      global.fetch = fetchSpy;
+
+      const result = await smallScraper.scrape('https://example.com/giant.html');
+
+      expect(result).toBeNull();
+      // Pre-guard contract: body reader is never touched.
+      expect(oversizeResponse.readSpy).not.toHaveBeenCalled();
+      // Telemetry contract: dedicated event name (not the generic scraper_exception).
+      const warnCalls = (logger.warn as jest.Mock).mock.calls;
+      const matched = warnCalls.find((args) => args[0] === 'scraper_payload_too_large');
+      expect(matched).toBeDefined();
+    });
+
+    it('R8b — happy path when Content-Length <= maxContentBytes, streams normally', async () => {
+      const htmlBytes = new TextEncoder().encode(ARTICLE_HTML);
+      const happyResponse = makeMockFetchResponse({
+        contentLength: String(htmlBytes.byteLength),
+        chunks: [htmlBytes],
+      });
+      const fetchSpy = makeFetchSpy();
+      fetchSpy.mockResolvedValue(happyResponse);
+      global.fetch = fetchSpy;
+
+      const result = await scraper.scrape('https://example.com/within-cap');
+
+      expect(result).not.toBeNull();
+      expect(result!.textContent).toContain('Van Gogh');
+    });
+  });
+
+  describe('I-SEC10 streamed cap (Content-Length absent)', () => {
+    it('R9a — aborts stream when cumulative bytes exceed cap, logs scraper_payload_streamed_overflow, returns null', async () => {
+      const smallScraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 256 * 1024 });
+      const tenChunks: Uint8Array[] = Array.from({ length: 10 }, () => new Uint8Array(100 * 1024));
+      const chunkedResponse = makeMockFetchResponse({
+        contentLength: null,
+        chunks: tenChunks,
+      });
+      const fetchSpy = makeFetchSpy();
+      fetchSpy.mockResolvedValue(chunkedResponse);
+      global.fetch = fetchSpy;
+
+      const result = await smallScraper.scrape('https://example.com/streamed-giant');
+
+      expect(result).toBeNull();
+      // R9 abort invariant: reader.cancel() called exactly once.
+      expect(chunkedResponse.cancelSpy).toHaveBeenCalledTimes(1);
+      // Stream cap math: ceil(256 / 100) + 1 = 4 reads max before abort.
+      expect(chunkedResponse.readSpy.mock.calls.length).toBeLessThanOrEqual(4);
+      // Telemetry contract: dedicated overflow event.
+      const warnCalls = (logger.warn as jest.Mock).mock.calls;
+      const matched = warnCalls.find((args) => args[0] === 'scraper_payload_streamed_overflow');
+      expect(matched).toBeDefined();
+    });
+
+    it('R9b — happy path streams full body when cumulative bytes <= cap', async () => {
+      const htmlBytes = new TextEncoder().encode(ARTICLE_HTML);
+      const happyResponse = makeMockFetchResponse({
+        contentLength: null,
+        chunks: [htmlBytes],
+      });
+      const fetchSpy = makeFetchSpy();
+      fetchSpy.mockResolvedValue(happyResponse);
+      global.fetch = fetchSpy;
+
+      const result = await scraper.scrape('https://example.com/streamed-small');
+
+      expect(result).not.toBeNull();
+      expect(result!.textContent).toContain('Van Gogh');
+      // cancel() NEVER called on the happy path.
+      expect(happyResponse.cancelSpy).not.toHaveBeenCalled();
     });
   });
 });

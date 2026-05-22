@@ -11,6 +11,7 @@ import { TokenJwtService } from './token-jwt.service';
 import type { MfaEnrollmentRequiredResponse, MfaRequiredResponse } from './mfa-gate.service';
 import type { AuthSessionResponse, SafeUser } from './session-issuer.service';
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
+import type { IAccessTokenDenylist } from '@modules/auth/domain/session/access-token-denylist.port';
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { User } from '@modules/auth/domain/user/user.entity';
@@ -57,11 +58,25 @@ export class AuthSessionService {
   private readonly sessionIssuer: SessionIssuerService;
   private readonly mfaGate: MfaGateService;
 
-  /** `totpRepository` optional for legacy unit tests — absent means MFA not-enrolled. */
+  /**
+   * `totpRepository` optional for legacy unit tests — absent means MFA not-enrolled.
+   * `accessTokenDenylist` optional too — composition root wires the Redis or Noop
+   * adapter (R7 design §3.1). Tests that don't exercise revocation can omit it.
+   */
+  /**
+   * Composition root may wire the denylist post-construction via
+   * {@link setAccessTokenDenylist} (the auth useCase singletons instantiate
+   * BEFORE `index.ts::initCacheAndRateLimit` runs ; rather than ordering the
+   * boot graph, we accept the late wiring). Tests inject directly via the
+   * constructor's 4th arg.
+   */
+  private accessTokenDenylist?: IAccessTokenDenylist;
+
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly refreshTokenRepository: IRefreshTokenRepository,
     totpRepository?: ITotpSecretRepository,
+    accessTokenDenylist?: IAccessTokenDenylist,
   ) {
     this.tokenJwt = new TokenJwtService();
     this.sessionIssuer = new SessionIssuerService(
@@ -70,6 +85,12 @@ export class AuthSessionService {
       env.auth.refreshIdleWindowSeconds,
     );
     this.mfaGate = new MfaGateService(userRepository, totpRepository);
+    if (accessTokenDenylist) this.accessTokenDenylist = accessTokenDenylist;
+  }
+
+  /** Composition-root setter — mirrors `setRedisRateLimitStore` / `setLlmCostCounter`. */
+  setAccessTokenDenylist(denylist: IAccessTokenDenylist): void {
+    this.accessTokenDenylist = denylist;
   }
 
   /** @throws {AppError} 400 missing fields, 401 invalid credentials, 403 email unverified/suspended/deleted. */
@@ -197,18 +218,43 @@ export class AuthSessionService {
     });
   }
 
-  /** Idempotent — silently ignores invalid tokens. */
-  async logout(refreshToken: string | undefined): Promise<void> {
+  /**
+   * Idempotent — silently ignores invalid tokens.
+   *
+   * R7 — accepts an optional `ctx` with the access-token `jti` + `exp` so the
+   * denylist gets the access side too (refresh revocation alone leaves the
+   * access JWT cryptographically valid up to its natural TTL ≤ 15 min). The
+   * route handler is responsible for extracting + verifying the bearer access
+   * token BEFORE passing it here ; this service trusts the ctx fields.
+   *
+   * `ttlSec <= 0` (access token already expired) is a no-op on the denylist
+   * side — the adapter skips the Redis write. Both effects are silent on
+   * invalid input (logout MUST stay idempotent for FE-side reliability).
+   */
+  async logout(
+    refreshToken: string | undefined,
+    ctx?: { accessJti: string; accessExpSec: number },
+  ): Promise<void> {
     const token = refreshToken?.trim();
-    if (!token) {
-      return;
+    if (token) {
+      try {
+        const claims = this.tokenJwt.verifyRefreshToken(token);
+        await this.refreshTokenRepository.revokeByJti(claims.jti);
+      } catch {
+        // Idempotent — must not leak token validation details.
+      }
     }
 
-    try {
-      const claims = this.tokenJwt.verifyRefreshToken(token);
-      await this.refreshTokenRepository.revokeByJti(claims.jti);
-    } catch {
-      // Idempotent — must not leak token validation details.
+    if (ctx && this.accessTokenDenylist) {
+      const ttlSec = ctx.accessExpSec - Math.floor(Date.now() / 1000);
+      if (ttlSec > 0) {
+        try {
+          await this.accessTokenDenylist.add(ctx.accessJti, ttlSec);
+        } catch {
+          // Adapter contract is fail-OPEN (R9) — should never throw here, but
+          // belt-and-braces : an unexpected throw must not break logout.
+        }
+      }
     }
   }
 
@@ -225,5 +271,23 @@ export class AuthSessionService {
   /** @throws {AppError} 401 if token invalid or expired. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     return this.tokenJwt.verifyAccessToken(token);
+  }
+
+  /**
+   * R8 — same as {@link verifyAccessToken} but exposes the `jti` + `exp` claims.
+   * Used by the denylist middleware (consults `denylist.has(jti)`) and the
+   * logout route handler (writes `denylist.add(jti, ttl)` after server-side
+   * verification of the bearer).
+   *
+   * @throws {AppError} 401 INVALID_ACCESS_TOKEN.
+   */
+  verifyAccessTokenWithClaims(token: string): {
+    id: number;
+    role: UserRole;
+    museumId?: number | null;
+    jti: string;
+    expSec: number;
+  } {
+    return this.tokenJwt.verifyAccessTokenWithClaims(token);
   }
 }

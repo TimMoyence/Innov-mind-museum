@@ -57,6 +57,32 @@ jest.mock('@modules/auth/useCase', () => {
           museumId: decoded.museumId ?? null,
         };
       },
+      // I-SEC7b sibling — middleware `isAuthenticated` calls this after the
+      // P0 security sweep (PR #293 squash). Returns the claims object that
+      // includes `jti` + `expSec` so the denylist read path can run; the
+      // module-level denylist defaults to a no-op (returns false) in tests
+      // with no Redis, so the gate stays open and we only assert the
+      // consent-route behaviour this test cares about.
+      verifyAccessTokenWithClaims: (token: string) => {
+        const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
+          sub: string;
+          role?: string;
+          museumId?: number;
+          type: string;
+          jti?: string;
+          exp?: number;
+        };
+        if (decoded.type !== 'access' || !decoded.sub) {
+          throw new Error('Invalid access token');
+        }
+        return {
+          id: Number(decoded.sub),
+          role: decoded.role ?? 'visitor',
+          museumId: decoded.museumId ?? null,
+          jti: decoded.jti ?? 'test-jti',
+          expSec: decoded.exp ?? 0,
+        };
+      },
       login: jest.fn(),
       refresh: jest.fn(),
       logout: jest.fn(),

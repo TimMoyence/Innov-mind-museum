@@ -16,7 +16,13 @@
 export declare const SENSITIVE_HEADER_REGEX: RegExp;
 /** Body / extra field names whose values must be redacted before leaving the app. */
 export declare const SENSITIVE_FIELD_REGEX: RegExp;
-/** Query-string keys whose values must be stripped from captured URLs. */
+/** Query-string keys whose values must be stripped from captured URLs.
+ *
+ * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
+ * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
+ * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
+ * lockstep ; golden test `sentry-scrubber.test.ts` asserts the 11-entry set.
+ */
 export declare const SENSITIVE_QUERY_KEYS: ReadonlySet<string>;
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
 export declare const SENSITIVE_BREADCRUMB_PATHS: readonly string[];
@@ -38,6 +44,8 @@ export interface ScrubbableEvent {
     };
     extra?: Record<string, unknown>;
     contexts?: Record<string, unknown>;
+    /** R2 (2026-05-21) — Sentry tags are indexed + persistent ; scrubbed by scrubEvent. */
+    tags?: Record<string, unknown>;
 }
 /** Minimal shape of a Sentry breadcrumb we read. */
 export interface ScrubbableBreadcrumb {
@@ -64,6 +72,17 @@ export interface ScrubberDeps {
 export declare const scrubHeaders: (headers: Record<string, unknown>) => Record<string, unknown>;
 /** Recursively redacts values under sensitive keys. Arrays and nested objects are walked. */
 export declare const scrubRecord: (input: unknown) => unknown;
+/**
+ * Heuristic for detecting URL-like string values in dynamic tag/context maps.
+ *
+ * R2/R3 (2026-05-21) — used by both `scrubEvent` (when walking `event.tags`)
+ * and `captureExceptionWithContext` (BE wrapper at sentry.ts) to decide
+ * whether to run `scrubUrl` on a given tag value. Conservative on purpose:
+ * matches strings carrying `?` (query-string), absolute paths (`/…`), or
+ * `http://` / `https://` schemes. Non-URL string values (e.g. `'GET'`,
+ * `'500'`) flow through untouched.
+ */
+export declare const isUrlLikeValue: (value: unknown) => value is string;
 /** Strips sensitive query-string values from a URL while preserving the rest. */
 export declare const scrubUrl: (url: string) => string;
 /**
