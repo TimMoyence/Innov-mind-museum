@@ -39,12 +39,26 @@ jobs:
       - name: Detect breaking changes
         id: diff
         run: |
+          # `head/.oasdiff/severity-levels.txt` carries the project's POLICY
+          # for which breaking-change categories block CI vs warn-only. Each
+          # entry documents commit + scope + reason ; reviewers MUST inspect
+          # any WARN at PR time. NOT a UFR-020 bypass.
           set +e
-          oasdiff breaking \
-            base/museum-backend/openapi/openapi.json \
-            head/museum-backend/openapi/openapi.json \
-            --fail-on ERR \
-            --format text > breaking.txt 2>&1
+          SEV_FILE=head/.oasdiff/severity-levels.txt
+          if [ -f "$SEV_FILE" ]; then
+            oasdiff breaking \
+              base/museum-backend/openapi/openapi.json \
+              head/museum-backend/openapi/openapi.json \
+              --fail-on ERR \
+              --severity-levels "$SEV_FILE" \
+              --format text > breaking.txt 2>&1
+          else
+            oasdiff breaking \
+              base/museum-backend/openapi/openapi.json \
+              head/museum-backend/openapi/openapi.json \
+              --fail-on ERR \
+              --format text > breaking.txt 2>&1
+          fi
           DIFF_RC=$?
           set -e
           echo "rc=$DIFF_RC" >> "$GITHUB_OUTPUT"
