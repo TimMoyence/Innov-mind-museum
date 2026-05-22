@@ -31,12 +31,24 @@
 
 import bcrypt from 'bcrypt';
 
-import { encryptTotpSecret } from '@modules/auth/useCase/totp/totpEncryption';
-
 import {
   createIntegrationHarness,
   type IntegrationHarness,
 } from 'tests/helpers/integration/integration-harness';
+
+// `@modules/auth/useCase/totp/totpEncryption` transitively imports
+// `@src/config/env`, which reads PGDATABASE eagerly at module load. If we
+// import it at the top of this file (before the harness runs and pins
+// PGDATABASE to the testcontainer DB name), the env module caches the
+// default 'museum_test' value and every subsequent `await import('@src/
+// data/db/data-source')` inside `createIntegrationHarness` returns a
+// DataSource bound to 'museum_test' → "database museum_test does not
+// exist" on the very first query. The other integration tests don't
+// reproduce this because their top-level imports stay clear of any
+// `@src/config/env` transitive path. Lazy-require inside the tests
+// is the smallest possible fix.
+type EncryptTotp = (secret: string) => string;
+let encryptTotpSecret: EncryptTotp;
 
 interface ColumnRow {
   column_name: string;
@@ -60,6 +72,14 @@ describeIntegration('AddTotpLastUsedStep migration — zero-downtime (R6)', () =
   beforeAll(async () => {
     harness = await createIntegrationHarness();
     harness.scheduleStop();
+    // Lazy-require AFTER harness has pinned PGDATABASE to the testcontainer
+    // DB name — see file-top docblock for the env-cache bug this dodges.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- intentional lazy require, justified above
+    encryptTotpSecret = (
+      require('@modules/auth/useCase/totp/totpEncryption') as {
+        encryptTotpSecret: EncryptTotp;
+      }
+    ).encryptTotpSecret;
   });
 
   describe('schema shape', () => {
