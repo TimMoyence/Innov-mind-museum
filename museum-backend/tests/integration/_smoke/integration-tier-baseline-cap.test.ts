@@ -67,7 +67,20 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // Both entries already justified + approved in the baseline JSON. Reduce
 // back only by deleting entries, never by adding more.
 // Bumped 15→16 for C2 chat-cost-breaker-503 integration test (2026-05-22, hotfix p0/security CI tier-signature fix). feedback_tier_baseline_cap_discipline.md — bump cap concomitant à l'ajout baseline.
-const PHASE_1_BASELINE_CAP = 16;
+//
+// 2026-05-22 (PR #295 p0/feature-gates squash): bumped 16 → 23 to admit
+// 7 new V1-lock integration tests that exercise spy-injected /
+// bare-Express boundaries (no real infra crossed). Each entry carries
+// its own justification + date in the baseline JSON:
+//   - admin/analytics-scope.test.ts (spy-injected use-case; HTTP wire only)
+//   - admin/cache-purge.namespace.test.ts (mocked CacheService; precedent: admin-museum-cache-invalidation)
+//   - catalog-ingest/catalog-ingest.museum-id.test.ts (mocked QID fetch + repo, Wave B scoping rule)
+//   - scripts/fetch-models.sh.test.ts (shell subprocess IS the boundary; same as ssrf-matrix precedent)
+//   - telemetry/funnel-consent-header.test.ts (spy-injected telemetry sink)
+//   - telemetry/funnel-quota-exceeded.test.ts (spy-injected telemetry sink)
+//   - telemetry/funnel-route-integration.test.ts (spy-injected sink, multi-event ordering)
+// Reduce back only by deleting baseline entries, never by adding more.
+const PHASE_1_BASELINE_CAP = 23;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {
