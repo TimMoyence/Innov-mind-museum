@@ -163,9 +163,19 @@ if command -v oasdiff >/dev/null 2>&1; then
     if [ -n "$upstream_sha" ]; then
       git show "$upstream_sha:museum-backend/openapi/openapi.json" > /tmp/openapi-base.json 2>/dev/null || true
       if [ -s /tmp/openapi-base.json ]; then
-        oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR || {
-          echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
-        }
+        # `.oasdiff/severity-levels.txt` carries the project's POLICY for which
+        # breaking-change categories block CI vs warn-only. Each entry documents
+        # commit + scope + reason. Downgrades surface as WARN in CI logs ; the
+        # reviewer MUST inspect each WARN at PR time. NOT a UFR-020 bypass.
+        if [ -f .oasdiff/severity-levels.txt ]; then
+          oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR --severity-levels .oasdiff/severity-levels.txt || {
+            echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
+          }
+        else
+          oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR || {
+            echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
+          }
+        fi
       fi
     fi
   else
