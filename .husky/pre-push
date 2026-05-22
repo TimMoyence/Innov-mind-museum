@@ -289,15 +289,29 @@ gate_end "Gate 19"
 # tracked docs/ROADMAP*.md and fails if any path:line / commit SHA / cross-doc
 # / workflow ref does not resolve on disk + in git. Roadmaps are the team
 # contract — every claim must be verifiable.
-gate_start "Gate 20/20 roadmap claim resolves (UFR-024)"
+gate_start "Gate 20/21 roadmap claim resolves (UFR-024)"
 node scripts/sentinels/roadmap-claim-resolves.mjs || {
   echo "[pre-push] ✗ a roadmap cites an item that does not resolve — fix the ref or remove the claim";
   exit 1;
 }
 gate_end "Gate 20"
 
+# ─── Gate 21 — ai-tests count ratchet (BE) ─────────────────────────────────
+# Locks the floor on `museum-backend/tests/ai/**` it() blocks. The ai-tests
+# CI job runs `tests/ai/` in isolation (gated on workflow_dispatch / cron
+# because real OpenAI calls cost tokens) — Jest's global coverage threshold
+# is unreachable from a 19-test subset by construction, so this count ratchet
+# takes over the "lock what these tests do" role for the integration-LLM
+# contract (vision, guardrail, conversation context, text generation).
+gate_start "Gate 21/21 ai-tests count ratchet (backend)"
+( cd museum-backend && node scripts/sentinels/ai-tests-count.mjs ) || {
+  echo "[pre-push] ✗ ai-tests count regressed — bump MIN_TOTAL_AI_TESTS deliberately or restore the dropped test(s)";
+  exit 1;
+}
+gate_end "Gate 21"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 20 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 21 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
