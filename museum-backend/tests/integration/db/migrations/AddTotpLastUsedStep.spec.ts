@@ -128,15 +128,18 @@ describeIntegration('AddTotpLastUsedStep migration — zero-downtime (R6)', () =
       // them now — the column default is NULL → reads back NULL.
       const passwordHash = await bcrypt.hash('Test1234!', 4);
       for (const userId of [20001, 20002, 20003]) {
+        // `users` timestamps are camelCase-quoted (`"createdAt"`/`"updatedAt"`)
+        // per the initial migration; omitting them lets the column DEFAULT now()
+        // fire and avoids the schema-drift trap.
         await harness.dataSource.query(
-          `INSERT INTO users (id, email, password, email_verified, role, created_at, updated_at)
-           VALUES ($1, $2, $3, true, 'visitor', NOW(), NOW())
+          `INSERT INTO users (id, email, password, email_verified, role)
+           VALUES ($1, $2, $3, true, 'visitor')
            ON CONFLICT DO NOTHING`,
           [userId, `r6-${String(userId)}@test.musaium`, passwordHash],
         );
         await harness.dataSource.query(
-          `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes, created_at, updated_at)
-           VALUES ($1, $2, '[]'::jsonb, NOW(), NOW())`,
+          `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes)
+           VALUES ($1, $2, '[]'::jsonb)`,
           [userId, encryptTotpSecret('JBSWY3DPEHPK3PXP')],
         );
       }
@@ -154,14 +157,14 @@ describeIntegration('AddTotpLastUsedStep migration — zero-downtime (R6)', () =
     it('a row with last_used_step IS NULL accepts a fresh UPDATE that stamps the step (R6 stamp on first use)', async () => {
       const passwordHash = await bcrypt.hash('Test1234!', 4);
       await harness.dataSource.query(
-        `INSERT INTO users (id, email, password, email_verified, role, created_at, updated_at)
-         VALUES (20100, 'r6-first-use@test.musaium', $1, true, 'visitor', NOW(), NOW())
+        `INSERT INTO users (id, email, password, email_verified, role)
+         VALUES (20100, 'r6-first-use@test.musaium', $1, true, 'visitor')
          ON CONFLICT DO NOTHING`,
         [passwordHash],
       );
       await harness.dataSource.query(
-        `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes, created_at, updated_at)
-         VALUES (20100, $1, '[]'::jsonb, NOW(), NOW())`,
+        `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes)
+         VALUES (20100, $1, '[]'::jsonb)`,
         [encryptTotpSecret('JBSWY3DPEHPK3PXP')],
       );
 

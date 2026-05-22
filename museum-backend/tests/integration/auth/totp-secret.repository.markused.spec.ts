@@ -28,9 +28,6 @@
 
 import bcrypt from 'bcrypt';
 
-import { TotpSecretRepositoryPg } from '@modules/auth/adapters/secondary/pg/totp-secret.repository.pg';
-import { encryptTotpSecret } from '@modules/auth/useCase/totp/totpEncryption';
-
 import {
   createIntegrationHarness,
   type IntegrationHarness,
@@ -38,6 +35,22 @@ import {
 
 import type { TotpSecret } from '@modules/auth/domain/totp/totp-secret.entity';
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
+
+// `@modules/auth/...` (both the repo + the encryption helper) transitively
+// import `@src/config/env`, whose module-load reads PGDATABASE eagerly. If
+// they are pulled at the top of this file, env caches the default
+// 'museum_test' BEFORE `createIntegrationHarness()` has had a chance to pin
+// PGDATABASE to the testcontainer DB name. Result on CI:
+// `await import('@src/data/db/data-source')` inside the harness returns a
+// DataSource still bound to 'museum_test' → AggregateError on first query
+// → entire beforeAll fails → every test errors on undefined harness. Type-
+// only imports (`TotpSecret`, `ITotpSecretRepository`) are erased and safe.
+// Concrete bindings get lazy-required inside `beforeAll` after the harness
+// has settled the env.
+type EncryptTotp = (secret: string) => string;
+type RepoCtor = new (dataSource: IntegrationHarness['dataSource']) => ITotpSecretRepository;
+let encryptTotpSecret: EncryptTotp;
+let TotpSecretRepositoryPg: RepoCtor;
 
 /** Type pin — the entity gains `lastUsedStep: string | null` (bigint mapping). */
 type RowWithStep = TotpSecret & { lastUsedStep: string | null };
@@ -60,6 +73,20 @@ describeIntegration('TotpSecretRepositoryPg.markUsed — persists last_used_step
   beforeAll(async () => {
     harness = await createIntegrationHarness();
     harness.scheduleStop();
+    // Lazy-require concrete bindings AFTER the harness has pinned
+    // PGDATABASE — see file-top docblock for the env-cache race this dodges.
+
+    encryptTotpSecret = (
+      require('@modules/auth/useCase/totp/totpEncryption') as {
+        encryptTotpSecret: EncryptTotp;
+      }
+    ).encryptTotpSecret;
+
+    TotpSecretRepositoryPg = (
+      require('@modules/auth/adapters/secondary/pg/totp-secret.repository.pg') as {
+        TotpSecretRepositoryPg: RepoCtor;
+      }
+    ).TotpSecretRepositoryPg;
     repo = new TotpSecretRepositoryPg(harness.dataSource);
   });
 
@@ -67,18 +94,25 @@ describeIntegration('TotpSecretRepositoryPg.markUsed — persists last_used_step
     await harness.reset();
   });
 
-  /** Insert minimal user + totp_secrets row so the UPDATE has a target. */
+  /**
+   * Insert minimal user + totp_secrets row so the UPDATE has a target.
+   * @param userId
+   * @param email
+   */
   const seedUserAndTotp = async (userId: number, email: string): Promise<void> => {
     const passwordHash = await bcrypt.hash('Test1234!', 4);
+    // `users` timestamps are camelCase-quoted (`"createdAt"`/`"updatedAt"`) per
+    // the initial migration; omitting them lets the column DEFAULT now() fire
+    // and avoids the schema-drift trap.
     await harness.dataSource.query(
-      `INSERT INTO users (id, email, password, email_verified, role, created_at, updated_at)
-       VALUES ($1, $2, $3, true, 'visitor', NOW(), NOW())
+      `INSERT INTO users (id, email, password, email_verified, role)
+       VALUES ($1, $2, $3, true, 'visitor')
        ON CONFLICT DO NOTHING`,
       [userId, email, passwordHash],
     );
     await harness.dataSource.query(
-      `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes, created_at, updated_at)
-       VALUES ($1, $2, '[]'::jsonb, NOW(), NOW())`,
+      `INSERT INTO totp_secrets (user_id, secret_encrypted, recovery_codes)
+       VALUES ($1, $2, '[]'::jsonb)`,
       [userId, encryptTotpSecret('JBSWY3DPEHPK3PXP')],
     );
   };
