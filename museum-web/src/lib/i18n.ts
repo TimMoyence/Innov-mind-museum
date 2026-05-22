@@ -99,6 +99,10 @@ export interface Dictionary {
       accessibility: string;
       security: string;
       b2b: string;
+      // P0 GDPR — R12 / R16 / R17
+      terms: string;
+      subprocessors: string;
+      cookies: string;
     };
   };
   resetPassword: {

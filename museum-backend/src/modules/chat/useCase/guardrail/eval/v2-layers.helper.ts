@@ -6,6 +6,7 @@ import { judgeVerdictToReason, mapProviderReason } from '../guardrail-reason-map
 import type { GuardrailBlockReason } from '../art-topic-guardrail';
 import type { LlmJudgeFn } from '../guardrail-evaluation.types';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
+import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 /**
  * ADR-015 dual-V2 doctrine — two V2 layers as stand-alone functions, each with
@@ -32,11 +33,13 @@ export interface EvaluateGuardrailProviderDeps {
 export async function runLlmJudge(
   text: string,
   deps: RunLlmJudgeDeps,
+  scope?: LlmJudgeScope,
 ): Promise<{ allow: true } | { allow: false; reason: GuardrailBlockReason }> {
   if (!deps.llmJudgeEnabled || !deps.llmJudge) return { allow: true };
   if (text.length <= env.guardrails.judgeMinMessageLength) return { allow: true };
 
-  const decision = await deps.llmJudge(text);
+  // TD-20 (R13c) — forward optional per-tenant scope into the judge generation.
+  const decision = await deps.llmJudge(text, scope);
   if (!decision) return { allow: true }; // fail-open
 
   if (decision.decision === 'allow' || decision.confidence < 0.6) {

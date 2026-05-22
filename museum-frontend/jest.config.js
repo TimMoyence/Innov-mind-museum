@@ -4,6 +4,7 @@ process.env.TZ = 'UTC';
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['<rootDir>/__tests__/helpers/setup-axios-streams.ts'],
+  setupFilesAfterEnv: ['<rootDir>/__tests__/helpers/setup-netinfo-mock.ts'],
   testMatch: ['<rootDir>/__tests__/**/*.test.{ts,tsx}'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',

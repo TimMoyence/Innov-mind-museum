@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-05-21",
+  "locales": {
+    "en": {
+      "title": "Terms of Service",
+      "sections": [
+        {
+          "id": "acceptance",
+          "title": "1. Acceptance of Terms",
+          "paragraphs": [
+            "By creating an account or using Musaium, you agree to these Terms of Service. If you do not agree, do not use the app."
+          ]
+        },
+        {
+          "id": "description",
+          "title": "2. Description of Service",
+          "paragraphs": [
+            "Musaium is an AI-powered museum companion that provides contextual information about artworks, monuments, museums, architecture, and cultural heritage. The service is provided \"as is\" without guarantees of accuracy or availability.",
+            "AI-generated responses are for informational and educational purposes only. They may contain inaccuracies and should not be considered authoritative."
+          ]
+        },
+        {
+          "id": "accounts",
+          "title": "3. User Accounts",
+          "paragraphs": [
+            "You must provide accurate information when creating an account. You are responsible for maintaining the security of your credentials.",
+            "You may sign in with email/password, Apple Sign-In, or Google Sign-In. Social sign-in accounts are subject to the respective provider's terms.",
+            "You may delete your account at any time from the Settings screen. Deletion is immediate and permanent."
+          ]
+        },
+        {
+          "id": "acceptable-use",
+          "title": "4. Acceptable Use",
+          "paragraphs": [
+            "You agree not to use Musaium to: submit offensive, abusive, or illegal content; attempt to bypass content filters or safety guardrails; reverse-engineer the service; or access other users' data.",
+            "We reserve the right to suspend or terminate accounts that violate these terms."
+          ]
+        },
+        {
+          "id": "intellectual-property",
+          "title": "5. Intellectual Property",
+          "paragraphs": [
+            "Musaium and its content, features, and functionality are owned by InnovMind. The AI-generated responses do not confer any intellectual property rights to users.",
+            "Images you upload remain your property. By uploading, you grant Musaium a limited license to process them for the purpose of providing the service."
+          ]
+        },
+        {
+          "id": "limitation-liability",
+          "title": "6. Limitation of Liability",
+          "paragraphs": [
+            "To the maximum extent permitted by law, InnovMind shall not be liable for any indirect, incidental, or consequential damages arising from your use of Musaium.",
+            "The service is provided for informational purposes. We do not guarantee the accuracy, completeness, or reliability of AI-generated content."
+          ]
+        },
+        {
+          "id": "privacy",
+          "title": "7. Privacy",
+          "paragraphs": [
+            "Your use of Musaium is also governed by our Privacy Policy, which describes how we collect, use, and protect your data."
+          ]
+        },
+        {
+          "id": "modifications",
+          "title": "8. Modifications",
+          "paragraphs": [
+            "We may update these terms from time to time. Material changes will be communicated in-app. Continued use after changes constitutes acceptance."
+          ]
+        },
+        {
+          "id": "governing-law",
+          "title": "9. Governing Law",
+          "paragraphs": [
+            "These terms are governed by the laws of France. Any disputes shall be resolved in the courts of competent jurisdiction in France."
+          ]
+        },
+        {
+          "id": "contact",
+          "title": "10. Contact",
+          "paragraphs": ["For questions about these terms, contact: tim.moyence@gmail.com."]
+        }
+      ]
+    },
+    "fr": {
+      "title": "Conditions d'utilisation",
+      "sections": [
+        {
+          "id": "acceptance",
+          "title": "1. Acceptation des conditions",
+          "paragraphs": [
+            "En créant un compte ou en utilisant Musaium, vous acceptez ces Conditions d'utilisation. Si vous ne les acceptez pas, n'utilisez pas l'application."
+          ]
+        },
+        {
+          "id": "description",
+          "title": "2. Description du service",
+          "paragraphs": [
+            "Musaium est un compagnon culturel piloté par IA qui fournit des informations contextuelles sur les œuvres, monuments, musées, l'architecture et le patrimoine culturel. Le service est fourni « tel quel », sans garantie d'exactitude ou de disponibilité.",
+            "Les réponses générées par l'IA sont fournies à titre informatif et éducatif uniquement. Elles peuvent contenir des inexactitudes et ne doivent pas être considérées comme faisant autorité."
+          ]
+        },
+        {
+          "id": "accounts",
+          "title": "3. Comptes utilisateurs",
+          "paragraphs": [
+            "Vous devez fournir des informations exactes lors de la création de votre compte. Vous êtes responsable de la sécurité de vos identifiants.",
+            "Vous pouvez vous connecter par e-mail/mot de passe, Sign in with Apple ou Google Sign-In. Les comptes via connexion sociale sont soumis aux conditions du prestataire.",
+            "Vous pouvez supprimer votre compte à tout moment depuis l'écran Paramètres. La suppression est immédiate et définitive."
+          ]
+        },
+        {
+          "id": "acceptable-use",
+          "title": "4. Utilisation acceptable",
+          "paragraphs": [
+            "Vous vous engagez à ne pas utiliser Musaium pour : soumettre du contenu offensant, abusif ou illégal ; tenter de contourner les filtres de contenu ou les garde-fous de sécurité ; rétro-ingénierer le service ; accéder aux données d'autres utilisateurs.",
+            "Nous nous réservons le droit de suspendre ou résilier les comptes qui violent ces conditions."
+          ]
+        },
+        {
+          "id": "intellectual-property",
+          "title": "5. Propriété intellectuelle",
+          "paragraphs": [
+            "Musaium et son contenu, ses fonctionnalités et ses caractéristiques sont la propriété d'InnovMind. Les réponses générées par l'IA ne confèrent aucun droit de propriété intellectuelle aux utilisateurs.",
+            "Les images que vous téléversez restent votre propriété. En les téléversant, vous accordez à Musaium une licence limitée pour les traiter aux fins de la fourniture du service."
+          ]
+        },
+        {
+          "id": "limitation-liability",
+          "title": "6. Limitation de responsabilité",
+          "paragraphs": [
+            "Dans toute la mesure permise par la loi, InnovMind ne peut être tenu responsable des dommages indirects, accidentels ou consécutifs résultant de votre utilisation de Musaium.",
+            "Le service est fourni à titre informatif. Nous ne garantissons pas l'exactitude, l'exhaustivité ou la fiabilité du contenu généré par l'IA."
+          ]
+        },
+        {
+          "id": "privacy",
+          "title": "7. Confidentialité",
+          "paragraphs": [
+            "Votre utilisation de Musaium est également régie par notre Politique de confidentialité, qui décrit comment nous collectons, utilisons et protégeons vos données."
+          ]
+        },
+        {
+          "id": "modifications",
+          "title": "8. Modifications",
+          "paragraphs": [
+            "Nous pouvons mettre à jour ces conditions de temps à autre. Les modifications substantielles seront communiquées dans l'application. La poursuite de l'utilisation après modification vaut acceptation."
+          ]
+        },
+        {
+          "id": "governing-law",
+          "title": "9. Droit applicable",
+          "paragraphs": [
+            "Ces conditions sont régies par le droit français. Tout litige sera résolu devant les juridictions compétentes en France."
+          ]
+        },
+        {
+          "id": "contact",
+          "title": "10. Contact",
+          "paragraphs": [
+            "Pour toute question relative à ces conditions, contactez : tim.moyence@gmail.com."
+          ]
+        }
+      ]
+    }
+  }
+}

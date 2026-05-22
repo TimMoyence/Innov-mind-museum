@@ -48,7 +48,6 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
   });
 
   const TEST_URL = 'https://example.com/mona-lisa';
-  const TEST_SEARCH_TERM = 'Mona Lisa';
   const TEST_LOCALE = 'en';
 
   it('scrapes → classifies → persists artwork_knowledge + extracted_content rows', async () => {
@@ -103,7 +102,7 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
       },
     );
 
-    await service.processUrl(TEST_URL, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(TEST_URL, TEST_LOCALE);
 
     expect(scraperMock.scrape).toHaveBeenCalledTimes(1);
     expect(classifierMock.classify).toHaveBeenCalledTimes(1);
@@ -161,7 +160,7 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
       },
     );
 
-    await service.processUrl(dedupUrl, TEST_SEARCH_TERM, TEST_LOCALE);
+    await service.processUrl(dedupUrl, TEST_LOCALE);
 
     expect(scraperMock.scrape).not.toHaveBeenCalled();
     expect(classifierMock.classify).not.toHaveBeenCalled();

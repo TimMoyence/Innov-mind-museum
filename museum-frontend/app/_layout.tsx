@@ -37,6 +37,7 @@ setErrorTranslate((key, opts) => i18n.t(key as 'error.network', opts));
 import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
+import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
 import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
@@ -193,6 +194,10 @@ function RootLayout() {
                             />
                             <Stack.Screen name="(stack)/settings" />
                             <Stack.Screen name="(stack)/change-password" />
+                            <Stack.Screen name="(stack)/verify-email" />
+                            <Stack.Screen name="(stack)/confirm-email-change" />
+                            <Stack.Screen name="(stack)/reset-password" />
+                            <Stack.Screen name="(stack)/mfa-enroll" />
                             <Stack.Screen name="(stack)/preferences" />
                             <Stack.Screen name="(stack)/guided-museum-mode" />
                             <Stack.Screen name="(stack)/offline-maps" />
@@ -212,6 +217,7 @@ function RootLayout() {
                             <Stack.Screen name="+not-found" />
                           </Stack>
                           <ThemedStatusBar />
+                          <GlobalOfflineBannerHost />
                           <PaywallModalHost />
                         </AuthenticationGuard>
                       </BiometricGate>

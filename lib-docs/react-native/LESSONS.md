@@ -35,3 +35,23 @@ Project-specific gotchas pour RN 0.83.6 + New Architecture dans Musaium. Audit e
 - **`textAlign 'start'/'end'`** : ✅ pas de violation
 - **Pressable** : ✅ 99% propagation (1 résidu, TD-RN-01)
 - **expo-image** : ✅ 6 fichiers déjà migrés, 5 résiduels (TD-RN-02)
+
+## 2026-05-20 — Refresh enterprise (full scan app/features/shared/components, RN 0.83.6 inchangé)
+
+Audit complet (pas un sample) sur `app/`, `features/`, `shared/`, `components/`. Deltas vs 2026-05-18 :
+
+- **TD-RN-01 (Touchable→Pressable) — effectivement clos.** Le résidu `shared/ui/ErrorBoundary.tsx` est migré → `Pressable` (`ErrorBoundary.tsx:66`). Seul `Touchable*` restant = `app/(stack)/chat/[sessionId].tsx:451` `TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}` — c'est l'idiome canonique keyboard-dismiss (Pressable y est inadapté). **Acceptable, ne pas migrer.** DON'T : introduire un nouveau `TouchableOpacity`/`TouchableHighlight`.
+
+- **TD-RN-03 (process.env via readEnvString) — RÉSOLU.** Les 2 sites bypass cités le 2026-05-18 (`chatApi/_internals.ts`, `apiConfig.ts`) passent maintenant par `readEnvString`. `cert-pinning-init.ts` aussi. **0 read `process.env` brut** sous app/features/shared/components. Garder la doctrine pour le code neuf.
+
+- **TD-RN-02 (RN Image → expo-image) — INCHANGÉ, 5 fichiers.** Toujours les mêmes : `carnet/[sessionId].tsx:13`, `VisitSummarySheetContent.tsx:2`, `ArtworkHeroModal.tsx:25`, `ArtworkHeroCard.tsx:26`, `DailyArtCard.tsx:2`. Tous portent déjà `accessibilityLabel`/role — le gap est la LIB image (cache/blurhash/contentFit), pas l'a11y. Seul TD RN ouvert.
+
+- **RTL — 0 violation (scan complet, pas sample).** `marginLeft/Right`, `paddingLeft/Right`, `left:/right:` positionnel, `borderLeft/Right`, `textAlign:'start'/'end'` : tous à 0. Codemod F10 tient. (Correction du 2026-05-18 qui disait "sample".)
+
+- **FlatList — correction de comptage.** Le snapshot -18 affirmait "FlatList utilisé dans 2 sites". FAUX : **11 sites** (`conversations.tsx`, `ticket-detail.tsx`, `onboarding.tsx`, `reviews.tsx`, `ChatSessionSurface`, `ChatMessageList`, `ImageCompareCarousel`, `TicketsListView`, `MuseumDirectoryList`, `MuseumPickerScreen`, `ConversationItem`). **Un seul** (`onboarding.tsx`) utilise `getItemLayout`. Pour les listes à hauteur fixe (rows museum/conversation), ajouter `getItemLayout` + `React.memo` sur la row + `renderItem` stable. Pas un bug, mais dette perf latente — voir PATTERNS.md §5.
+
+- **Modal reset** : 8 Modals dans l'app. Pattern `useEffect(reset,[visible])` requis pour ceux qui portent state form/consent (`QuotaUpsellModal` lignée). Voir PATTERNS.md §9.
+
+- **Versions** : `react-native@0.83.6` (3 patches derrière 0.83.9 — in-minor, safe pré-launch), `react-native-reanimated@4.2.1` (9 sites), `expo-image@~55.0.10`, `expo@^55.0.11`. 0.84 (post-launch) RETIRE l'arch legacy → auditer les deps natives avant ce bump.
+
+- **Sécurité** : 0 GHSA advisory contre `facebook/react-native` au 2026-05-21. CVE-2025-55182 (RSC) ne touche pas RN (pas de dépendance `react-server-dom-*`). Aucune pression d'upgrade sécu.

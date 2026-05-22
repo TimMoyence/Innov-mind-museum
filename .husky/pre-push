@@ -163,9 +163,19 @@ if command -v oasdiff >/dev/null 2>&1; then
     if [ -n "$upstream_sha" ]; then
       git show "$upstream_sha:museum-backend/openapi/openapi.json" > /tmp/openapi-base.json 2>/dev/null || true
       if [ -s /tmp/openapi-base.json ]; then
-        oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR || {
-          echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
-        }
+        # `.oasdiff/severity-levels.txt` carries the project's POLICY for which
+        # breaking-change categories block CI vs warn-only. Each entry documents
+        # commit + scope + reason. Downgrades surface as WARN in CI logs ; the
+        # reviewer MUST inspect each WARN at PR time. NOT a UFR-020 bypass.
+        if [ -f .oasdiff/severity-levels.txt ]; then
+          oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR --severity-levels .oasdiff/severity-levels.txt || {
+            echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
+          }
+        else
+          oasdiff breaking /tmp/openapi-base.json museum-backend/openapi/openapi.json --fail-on ERR || {
+            echo "[pre-push] ✗ oasdiff detected breaking OpenAPI changes vs $push_base"; exit 1
+          }
+        fi
       fi
     fi
   else
@@ -266,14 +276,28 @@ gate_end "Gate 18"
 # Runs UNCONDITIONALLY: the 44-metric inventory freeze + `musaium_` prefix
 # cap=16 apply globally, the sentinel runs in ~1s, and any prom change anywhere
 # in the repo can trip the registry (TD-PC-03 audit closure).
-gate_start "Gate 19/19 Prometheus metric-naming ratchet (backend)"
+gate_start "Gate 19/20 Prometheus metric-naming ratchet (backend)"
 ( cd museum-backend && node scripts/sentinels/metric-naming.mjs ) || {
   echo "[pre-push] ✗ metric-naming ratchet failed — see docs/observability/METRIC_NAMING_AUDIT.md"; exit 1;
 }
 gate_end "Gate 19"
 
+# ─── Gate 20 — Roadmap claim resolves (UFR-024) ────────────────────────────
+# Born of the 2026-05-20 audit which uncovered 22 falsified P0 claims, items
+# never checked at merge, fabricated entries, and 1.5-3x inflation in the
+# (now-obsolete) ROADMAP_REMEDIATION satellites. This sentinel scans every
+# tracked docs/ROADMAP*.md and fails if any path:line / commit SHA / cross-doc
+# / workflow ref does not resolve on disk + in git. Roadmaps are the team
+# contract — every claim must be verifiable.
+gate_start "Gate 20/20 roadmap claim resolves (UFR-024)"
+node scripts/sentinels/roadmap-claim-resolves.mjs || {
+  echo "[pre-push] ✗ a roadmap cites an item that does not resolve — fix the ref or remove the claim";
+  exit 1;
+}
+gate_end "Gate 20"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 19 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 20 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"

@@ -125,6 +125,16 @@ jobs:
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 
+      - name: Privacy content drift sentinel (R15)
+        run: pnpm run sentinel:privacy-drift
+
+      # NOTE: sentinel:web-cookies moved to ci-cd-web.yml (R18 acceptance —
+      # design D9 cross-app sentinel acceptable). Still invoked as
+      # `pnpm --filter museum-backend sentinel:web-cookies` from there
+      # because the script lives in the backend workspace and audits the
+      # web surface — single source of truth, just gated by the web
+      # workflow's quality job per R18.
+
       - name: Guard DB_SYNCHRONIZE
         run: |
           if grep -rq 'DB_SYNCHRONIZE=true' .env* 2>/dev/null; then

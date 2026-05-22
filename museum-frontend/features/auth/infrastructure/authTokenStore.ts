@@ -19,8 +19,15 @@ const ACCESS_TOKEN_KEY = 'auth.accessToken';
 
 interface SecureStoreModule {
   getItemAsync: (key: string) => Promise<string | null>;
-  setItemAsync: (key: string, value: string) => Promise<void>;
+  setItemAsync: (
+    key: string,
+    value: string,
+    options?: { keychainAccessible?: unknown },
+  ) => Promise<void>;
   deleteItemAsync: (key: string) => Promise<void>;
+  // iOS keychain accessibility constant read at the call site so the real enum
+  // value is used at runtime (TD-SEC-01: device-bound, non-backup-migratable).
+  WHEN_UNLOCKED_THIS_DEVICE_ONLY?: unknown;
 }
 
 const loadSecureStore = (): SecureStoreModule | null => {
@@ -47,7 +54,13 @@ const secureTokenStore = (key: string) => ({
   },
   async set(token: string): Promise<void> {
     if (secureStore) {
-      await secureStore.setItemAsync(key, token);
+      // TD-SEC-01 (R1, R2): device-bound, non-backup-migratable accessibility
+      // class so the JWT access/refresh tokens are never written into the
+      // iCloud/iTunes encrypted backup. Reads the constant off the loaded
+      // module so the real iOS enum value is used at runtime.
+      await secureStore.setItemAsync(key, token, {
+        keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
       return;
     }
     await storage.setItem(key, token);

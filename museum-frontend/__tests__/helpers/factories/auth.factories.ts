@@ -1,9 +1,27 @@
 import { faker } from '@faker-js/faker';
 
 import type { components } from '@/shared/api/generated/openapi';
+import { createAppError, type AppError, type AppErrorKind } from '@/shared/types/AppError';
 
 type AuthUser = components['schemas']['AuthUser'];
 type AuthSessionResponse = components['schemas']['AuthSessionResponse'];
+
+/**
+ * Creates an {@link AppError} (also an `Error` instance) with sensible defaults.
+ * Used by the magic-link screen tests to drive the `invalidToken` (400) vs
+ * `error` (other) branch via `isAppError(err) && err.status === 400`.
+ */
+export const makeAppError = (
+  overrides?: Partial<Pick<AppError, 'kind' | 'message' | 'status' | 'code'>>,
+): AppError & Error => {
+  const kind: AppErrorKind = overrides?.kind ?? 'Unknown';
+  return createAppError({
+    kind,
+    message: overrides?.message ?? faker.lorem.sentence(),
+    status: overrides?.status ?? 500,
+    ...(overrides?.code !== undefined ? { code: overrides.code } : {}),
+  });
+};
 
 /** Creates an AuthUser with sensible defaults. */
 export const makeAuthUser = (overrides?: Partial<AuthUser>): AuthUser => ({

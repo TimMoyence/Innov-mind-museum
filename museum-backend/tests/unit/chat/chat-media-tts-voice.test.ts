@@ -73,6 +73,9 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
       text: 'Hello world',
       voice: 'echo',
       requestId: MESSAGE_ID,
+      // TD-20 (R13a/R12) — per-tenant scope propagated; museumId omitted
+      // (makeSession default museumId is null), tier derived from userId 42.
+      tier: 'free',
     });
   });
 
@@ -88,6 +91,7 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
       text: 'Hello world',
       voice: 'alloy', // env.tts.voice default per env.ts
       requestId: MESSAGE_ID,
+      tier: 'free', // TD-20 — propagated per-tenant scope (userId 42)
     });
   });
 
@@ -103,6 +107,7 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
       text: 'Hello world',
       voice: 'alloy',
       requestId: MESSAGE_ID,
+      tier: 'free', // TD-20 — propagated per-tenant scope (userId 42)
     });
   });
 });

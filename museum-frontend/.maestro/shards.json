@@ -13,6 +13,10 @@
         "auth-register-minor-dob.yaml",
         "auth-register-password-breached.yaml",
         "auth-account-delete.yaml",
+        "mfa-enroll-flow.yaml",
+        "magic-link-verify-email.yaml",
+        "magic-link-confirm-email-change.yaml",
+        "magic-link-reset-password.yaml",
         "onboarding-flow.yaml",
         "onboarding-full-carousel.yaml",
         "onboarding-skip-anonymous.yaml",
@@ -27,13 +31,16 @@
         "museum-chat-flow.yaml",
         "chat-compare.yaml",
         "audio-recording-flow.yaml",
-        "chat-cartel-deeplink.yaml"
+        "chat-cartel-deeplink.yaml",
+        "connectivity-offline-banner.yaml",
+        "consent-location-grant.yaml"
       ]
     },
     {
       "name": "museum",
       "flows": [
         "museum-search-geo.yaml",
+        "museum-picker-flow.yaml",
         "navigation-flow.yaml",
         "nav-stack-deep-links.yaml",
         "nav-tabs-roundtrip.yaml"

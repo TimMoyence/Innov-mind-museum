@@ -126,7 +126,11 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
   }, [state]);
 
   const closeFromContent = useCallback(() => {
-    dispatchBottomSheetEvent({ type: 'CLOSE' });
+    // CTA_CLOSE bypasses the `blocking: true` gate — the user is making an
+    // explicit in-sheet choice (e.g. "Accept all" on consent, "Acknowledge"
+    // on voice-intro, "Dismiss" on daily-limit). Backdrop/swipe/back keep
+    // dispatching plain CLOSE so the gate still applies to them.
+    dispatchBottomSheetEvent({ type: 'CTA_CLOSE' });
   }, []);
 
   return useMemo(() => {

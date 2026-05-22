@@ -391,6 +391,9 @@ export ASC_APP_ID="1234567890"
 export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 ```
 
+#### Etape 4bis — Universal Links: Associated Domains capability (TD-RNAV-01, BLOQUANT pour la moitié iOS)
+- [ ] Confirmer que le profil de provisioning **production** EAS porte la capability **Associated Domains** (`applinks:musaium.com`). L'édition `app.config.ts` (`ios.associatedDomains`) est **inerte** sans elle : Apple Developer portal → Identifiers → `com.musaium.mobile` → Associated Domains activé ; régénérer le profil s'il précède l'activation. Sinon les magic-links iOS (verify-email / reset-password / confirm-email-change) n'ouvriront pas l'app. Détail : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md) §1.
+
 #### Etape 5 — Build iOS Production
 ```bash
 cd museum-frontend
@@ -513,6 +516,13 @@ eas submit --platform android --profile production --latest
 - [ ] Store listings complétés (descriptions, privacy policy)
 - [ ] TestFlight / Internal Testing validés
 - [ ] Soumission pour review
+
+### Universal / App Links (TD-RNAV-01)
+> Gates opérateur — NON automatisés en CI. Runbook complet : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md).
+- [ ] **Pré-deploy iOS** : profil de provisioning **production** EAS porte la capability **Associated Domains** (§1 / §8 Etape 4bis ci-dessus).
+- [ ] **Post-deploy iOS** : `curl -I https://musaium.com/.well-known/apple-app-site-association` → `200` + `content-type: application/json`, **sans** redirect (§3).
+- [ ] **Post-deploy Android** : `adb shell pm verify-app-links --re-verify com.musaium.mobile` puis `adb shell pm get-app-links com.musaium.mobile` → `musaium.com: verified` (§4).
+- [ ] **Post-deploy in-app (cycle 2)** : app installée, taper un magic-link réel (verify-email / reset-password / confirm-email-change) ouvre l'écran et consomme le token (PAS `+not-found`) (§3.1).
 
 ### Validation finale
 - [ ] `curl https://musaium.com/api/health` retourne `{ "status": "ok" }`

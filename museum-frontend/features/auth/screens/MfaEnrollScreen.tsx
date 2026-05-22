@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { usePreventScreenCapture } from '@/features/auth/hooks/usePreventScreenCapture';
 import { mfaService } from '@/features/auth/infrastructure/mfaApi';
+import { reportError } from '@/shared/observability/errorReporting';
 import {
   fontSize,
   goldScale,
@@ -43,6 +45,10 @@ export interface MfaEnrollScreenProps {
 }
 
 export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElement {
+  // TD-SEC-02 (R3, R4): block screenshots/recording while the live TOTP secret
+  // + recovery codes are on screen; re-enabled on blur/unmount. Lazy/web-safe.
+  usePreventScreenCapture();
+
   const [otpauthUrl, setOtpauthUrl] = useState<string | null>(null);
   const [manualSecret, setManualSecret] = useState<string | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -85,7 +91,11 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      testID="mfa-enroll-screen"
+      style={styles.root}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.title}>Set up two-factor authentication</Text>
       <Text style={styles.subtitle}>
         Scan the QR with Google Authenticator, 1Password, or any TOTP app.
@@ -93,6 +103,7 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
 
       {!otpauthUrl ? (
         <Pressable
+          testID="mfa-generate-button"
           accessibilityRole="button"
           accessibilityLabel="Generate TOTP enrollment code"
           accessibilityState={{ disabled: pending, busy: pending }}
@@ -106,7 +117,18 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
         </Pressable>
       ) : (
         <View style={styles.qrWrap}>
-          <QRCode value={otpauthUrl} size={200} />
+          {/* TD-QR-01: ecl="H" (30% recovery) maximises first-scan success for
+              the one-shot TOTP secret. TD-QR-02: onError degrades a generation
+              failure to the manual key below instead of an uncaught render crash.
+              lib-docs/react-native-qrcode-svg/PATTERNS.md:75-76. */}
+          <QRCode
+            value={otpauthUrl}
+            size={200}
+            ecl="H"
+            onError={(err: unknown) => {
+              reportError(err, { op: 'mfa.qr.generation' });
+            }}
+          />
           <Text style={styles.manualHint}>Or enter this key manually:</Text>
           <Text selectable style={styles.manualKey}>
             {manualSecret}
@@ -143,6 +165,7 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
         <View style={styles.verifyBlock}>
           <Text style={styles.verifyLabel}>Enter the 6-digit code</Text>
           <TextInput
+            testID="mfa-totp-input"
             style={styles.input}
             keyboardType="number-pad"
             maxLength={6}
@@ -152,6 +175,7 @@ export function MfaEnrollScreen({ onEnrolled }: MfaEnrollScreenProps): ReactElem
             accessibilityLabel="TOTP code"
           />
           <Pressable
+            testID="mfa-verify-button"
             accessibilityRole="button"
             accessibilityLabel="Verify 6-digit TOTP code"
             accessibilityState={{ disabled: verifying || code.length !== 6, busy: verifying }}

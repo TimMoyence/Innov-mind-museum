@@ -22,9 +22,12 @@ import {
   recordJudgeCost,
 } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { logger } from '@shared/logger/logger';
+import { getLangfuse } from '@shared/observability/langfuse.client';
+import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
 import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
+import type { LlmJudgeScope, LlmPathTier } from '@shared/observability/derive-tier';
 
 export type LlmJudgeDecision = 'allow' | 'block' | 'review';
 
@@ -42,7 +45,12 @@ export interface LlmJudgeResult {
  * when `signal` aborted.
  */
 export interface LlmJudgePort {
-  evaluate(prompt: string, signal?: AbortSignal): Promise<LlmJudgeResult>;
+  /**
+   * TD-20 (R11c) — optional `scope` 3rd arg threads per-tenant attribution
+   * (`museumId`/`tier`/`requestId`) into the judge `generation`. Optional so
+   * existing callers compile unchanged.
+   */
+  evaluate(prompt: string, signal?: AbortSignal, scope?: LlmJudgeScope): Promise<LlmJudgeResult>;
 }
 
 export type JudgeVerdict = 'allow' | 'block:offtopic' | 'block:injection' | 'block:abuse';
@@ -84,7 +92,17 @@ export interface JudgeWithLlmOptions {
   timeoutMs?: number;
   /** C9.7 — detached path. Judge uses `model.withStructuredOutput` directly. */
   model?: ChatModel;
+  /**
+   * TD-20 (R11c) — OPTIONAL per-tenant scope. Threaded onto the Langfuse judge
+   * `generation` (spread-omit; absent => key omitted, never fabricated).
+   */
+  museumId?: number;
+  tier?: LlmPathTier;
+  requestId?: string;
 }
+
+/** Model name on the judge generation (cost-catalog match). gpt-4o-mini-class. */
+const JUDGE_GENERATION_NAME = 'guardrail.judge.generation';
 
 const isTimeoutError = (error: unknown): boolean =>
   typeof DOMException !== 'undefined' &&
@@ -121,6 +139,38 @@ export const judgeWithLlm = async (
   // (else attacker could spam the judge).
   await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
 
+  // TD-20 (R1/R8/D-Q3) — one-shot Langfuse `generation` for the detached judge
+  // (PATTERNS.md:329 DON'T#13 — judge-outside-trace gap). Fail-open via
+  // `safeTrace` + `getLangfuse()` (PATTERNS.md:310,313 DO#12,#15); enqueue-only,
+  // never adds synchronous latency (judge detached for latency in C9.7).
+  // D-Q3 / UFR-013: `withStructuredOutput().invoke()` does NOT expose
+  // `usage_metadata`, so we emit `model` (cost-catalog inferred) + a
+  // NON-fabricated `metadata.inputLength`/`estimatedCostCents` — never invented
+  // token counts. PII: only the message LENGTH, never the message text
+  // (NFR Privacy / PATTERNS.md §8.1).
+  const lf = getLangfuse();
+  const scope: LlmJudgeScope = {
+    ...(opts.museumId !== undefined ? { museumId: opts.museumId } : {}),
+    ...(opts.tier !== undefined ? { tier: opts.tier } : {}),
+    ...(opts.requestId !== undefined ? { requestId: opts.requestId } : {}),
+  };
+  const generation = safeTrace('langfuse.judge.generation.create', () =>
+    lf
+      ?.trace({
+        name: 'guardrail.judge',
+        metadata: { ...scope },
+      })
+      .generation({
+        name: JUDGE_GENERATION_NAME,
+        model: env.llm.model,
+        metadata: {
+          inputLength: message.length,
+          estimatedCostCents: ESTIMATED_COST_CENTS_PER_CALL,
+          ...scope,
+        },
+      }),
+  );
+
   const startedAt = Date.now();
   try {
     const structured = model.withStructuredOutput(JudgeDecisionSchema, {
@@ -132,7 +182,13 @@ export const judgeWithLlm = async (
     // C9.5 — `ChatModel.withStructuredOutput` return type is now a union
     // `T | { raw, parsed }` because the orchestrator opts into `includeRaw`.
     // Judge does NOT opt in, so the runtime shape is always `T`; cast here.
-    return (await structured.invoke(messages, { signal })) as JudgeDecision;
+    const decision = (await structured.invoke(messages, { signal })) as JudgeDecision;
+    safeTrace('langfuse.judge.generation.end', () => {
+      // D-Q3 — NO fabricated `usage` token counts; close with the verdict enum
+      // only (non-PII). `.end()` sets `endTime` implicitly.
+      generation?.end({ metadata: { decision: decision.decision } });
+    });
+    return decision;
   } catch (error) {
     if (isTimeoutError(error)) {
       logger.warn('guardrail_judge_timeout', {
@@ -144,6 +200,12 @@ export const judgeWithLlm = async (
         error: error instanceof Error ? error.message : String(error),
       });
     }
+    safeTrace('langfuse.judge.generation.end.error', () => {
+      generation?.end({
+        level: 'ERROR',
+        statusMessage: isTimeoutError(error) ? 'judge_timeout' : 'judge_error',
+      });
+    });
     return null;
   }
 };
@@ -173,7 +235,11 @@ export class LlmJudgeGuardrail implements LlmJudgePort {
     this.timeoutMs = opts.timeoutMs;
   }
 
-  async evaluate(prompt: string, signal?: AbortSignal): Promise<LlmJudgeResult> {
+  async evaluate(
+    prompt: string,
+    signal?: AbortSignal,
+    scope?: LlmJudgeScope,
+  ): Promise<LlmJudgeResult> {
     if (signal?.aborted) {
       return { confidence: 0, decision: 'review', reason: 'aborted' };
     }
@@ -185,6 +251,11 @@ export class LlmJudgeGuardrail implements LlmJudgePort {
     const decision = await judgeWithLlm(prompt, {
       model: this.model,
       timeoutMs: this.timeoutMs,
+      // TD-20 (R13d) — forward the threaded per-tenant scope into the judge
+      // generation. Spread-omit so an absent scope adds no fabricated key.
+      ...(scope?.museumId !== undefined ? { museumId: scope.museumId } : {}),
+      ...(scope?.tier !== undefined ? { tier: scope.tier } : {}),
+      ...(scope?.requestId !== undefined ? { requestId: scope.requestId } : {}),
     });
 
     if (decision === null) {

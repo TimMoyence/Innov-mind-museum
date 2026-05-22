@@ -5,7 +5,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 
 export function registerUser(email, password) {
   const res = http.post(`${BASE_URL}/api/auth/register`, JSON.stringify({
-    email, password, firstname: 'Load', lastname: 'Test',
+    email, password, firstname: 'Load', lastname: 'Test', dateOfBirth: '1990-06-13',
   }), { headers: { 'Content-Type': 'application/json' } });
   return res;
 }

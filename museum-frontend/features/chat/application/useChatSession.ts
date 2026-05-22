@@ -51,7 +51,12 @@ export const useChatSession = (sessionId: string) => {
   const { locale, museumMode: settingsMuseumMode, guideLevel } = useRuntimeSettings();
   const { latitude, longitude } = useLocation();
   const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
-  const { isConnected } = useConnectivity();
+  // Canonical connectivity signal (design §D7): a captive portal
+  // ({isConnected:true, isInternetReachable:false}) reads as offline, so the
+  // chat replay never drains the queue into a dead network. We feed this single
+  // `isOnline` value everywhere the connectivity gate was previously the raw
+  // `isConnected` (offline sync drain gate + send strategy selection).
+  const { isOnline: isConnected } = useConnectivity();
   const { classifyText } = useArtKeywordsClassifier();
   const { enabled: audioDescriptionMode } = useAudioDescriptionMode();
   const contentPreferences = useUserProfileStore((s) => s.contentPreferences);

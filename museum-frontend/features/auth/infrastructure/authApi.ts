@@ -202,6 +202,21 @@ export const authService = {
   },
 
   /**
+   * Verifies the user's email address using a previously issued verification
+   * token (delivered in the transactional email magic link). Mirrors the
+   * {@link confirmEmailChange} shape; runs pre-auth (`requiresAuth: false`).
+   * @param token - The email-verification token from the email link.
+   */
+  async verifyEmail(token: string): Promise<OpenApiResponseFor<'/api/auth/verify-email', 'post'>> {
+    return openApiRequest({
+      path: '/api/auth/verify-email',
+      method: 'post',
+      body: JSON.stringify({ token }),
+      requiresAuth: false,
+    });
+  },
+
+  /**
    * Resets the user's password using a previously issued reset token.
    * @param token - Password reset token from the email link.
    * @param newPassword - The new password to set.

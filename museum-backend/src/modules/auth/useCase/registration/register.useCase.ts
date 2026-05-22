@@ -103,7 +103,12 @@ export class RegisterUseCase {
    * screen instead of showing a generic validation error.
    */
   private assertDigitalMajority(dateOfBirth: string | undefined): void {
-    if (!dateOfBirth) return;
+    // A2 (design D2) — defence in depth: the Zod schema is the primary R3 gate
+    // (returns 400), but a falsy DOB reaching here MUST hard-fail rather than
+    // silently bypass the age check. Never parse `undefined` into `new Date(...)`.
+    if (!dateOfBirth) {
+      throw badRequest('dateOfBirth is required');
+    }
     const parsed = new Date(`${dateOfBirth}T00:00:00Z`);
     if (Number.isNaN(parsed.getTime())) {
       throw badRequest('Invalid dateOfBirth');

@@ -62,6 +62,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Tester',
         lastname: 'User',
+        dateOfBirth: '1990-06-13',
       }),
     });
 
@@ -188,6 +189,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Audio',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     expect(register.status).toBe(201);
@@ -213,6 +215,18 @@ describeE2E('api e2e (express + postgres container)', () => {
     );
     expect(createSession.status).toBe(201);
     const sessionId = (createSession.body as { session: { id: string } }).session.id;
+
+    // Grant third_party_ai_audio_openai (B6/B7) — without this, POST /audio
+    // is gated 403 by the consent checker wired in chat-media.route.ts.
+    const grant = await request(
+      '/api/auth/consent',
+      {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'third_party_ai_audio_openai', version: '1.0.0' }),
+      },
+      token,
+    );
+    expect(grant.status).toBe(201);
 
     const formData = new FormData();
     formData.append(
@@ -261,6 +275,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Image',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     await markEmailVerified(harness, email);
@@ -376,6 +391,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Recency',
         lastname: 'EndToEnd',
+        dateOfBirth: '1990-06-13',
       }),
     });
     await markEmailVerified(harness, email);
@@ -443,6 +459,7 @@ describeE2E('api e2e (express + postgres container)', () => {
         password,
         firstname: 'Delete',
         lastname: 'Case',
+        dateOfBirth: '1990-06-13',
       }),
     });
     expect(register.status).toBe(201);

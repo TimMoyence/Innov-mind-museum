@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.musaium.mobile",
+      "sha256_cert_fingerprints": [
+        "38:97:AA:FF:19:54:2A:72:52:5F:40:71:1D:5A:64:13:44:71:D3:47:61:ED:B8:98:17:4F:7A:85:10:28:CA:34"
+      ]
+    }
+  }
+]

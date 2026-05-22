@@ -12,6 +12,7 @@ import { ensureSessionAccess } from '@modules/chat/useCase/session/session-acces
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
+import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
 
 import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
@@ -45,6 +46,7 @@ import type {
 } from '@modules/chat/useCase/orchestration/chat.service.types';
 import type { PrepareReady } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
@@ -94,6 +96,12 @@ export interface ChatEnrichmentDeps {
   locationResolver?: LocationResolver;
   /** GDPR — gates whether location reaches LLM at all. */
   locationConsentChecker?: LocationConsentChecker;
+  /**
+   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
+   * `third_party_ai_<text|image>_<provider>` scopes (R2/R3). Without checker
+   * the legacy always-allow path is preserved (pre-launch migration window).
+   */
+  thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
   /** W3 (T5.4) — looked up by pipeline for the `[CURRENT ARTWORK]` prompt section. */
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
@@ -178,6 +186,7 @@ export class ChatMessageService {
       extractionQueue: enrichment.extractionQueue,
       locationResolver: enrichment.locationResolver,
       locationConsentChecker: enrichment.locationConsentChecker,
+      thirdPartyAiConsentChecker: enrichment.thirdPartyAiConsentChecker,
       artworkKnowledgeRepo: enrichment.artworkKnowledgeRepo,
     });
   }
@@ -340,6 +349,11 @@ export class ChatMessageService {
         locale: input.context?.locale || session.locale || undefined,
         requestId,
         prompt: sttPromptBias,
+        // TD-20 (R13b/R12) — per-tenant scope for the STT cost path. `museumId`
+        // spread-omit (absent => key omitted, never `null`); `tier` derived from
+        // the requesting user via the shared `deriveTier`.
+        ...(session.museumId != null ? { museumId: session.museumId } : {}),
+        tier: deriveTier(currentUserId),
       });
     } catch (err) {
       if (err instanceof AppError) throw err;

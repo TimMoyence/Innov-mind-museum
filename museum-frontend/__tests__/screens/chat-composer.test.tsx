@@ -15,6 +15,7 @@
  * Spec: docs/chat-ux-refonte/specs/A1.md §1.4, AC22-AC23.
  */
 
+import type * as ReactTypes from 'react';
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 
@@ -30,6 +31,10 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: jest.fn(() => jest.fn()),
   }),
+  useFocusEffect: (effect: ReactTypes.EffectCallback) => {
+    const ReactRuntime = require('react') as typeof ReactTypes;
+    ReactRuntime.useEffect(() => effect(), [effect]);
+  },
 }));
 
 // ── useChatSession ──────────────────────────────────────────────────────────

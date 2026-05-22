@@ -38,7 +38,9 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
     expect(res.status).toBe(200);
 
     const body = res.body as Record<string, unknown>;
-    expect(body.schemaVersion).toBe('1');
+    // schemaVersion bumped 1 → 2 in commit 6e92ff9de (DSAR Art.15 chain B3,
+    // 2026-05-21) — added UserMemory section. See exportUserData.types.ts:6.
+    expect(body.schemaVersion).toBe('2');
     expect(typeof body.exportedAt).toBe('string');
 
     const user = body.user as Record<string, unknown>;

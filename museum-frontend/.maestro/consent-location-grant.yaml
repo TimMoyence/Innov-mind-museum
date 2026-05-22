@@ -1,0 +1,77 @@
+appId: com.musaium.mobile.preview
+---
+# screen: AiConsentSheetContent
+#
+# Consent — Location grant happy path (UFR-021 / spec R11 / AC-X-1, B9).
+#
+# Exercises the changed consent surface end-to-end: open chat -> consent sheet
+# -> Manage my choices -> toggle the required Text scope ON + the Location
+# (location_to_llm) scope ON -> Save and continue -> chat reachable. This is the
+# user-facing path that finally lets the visitor's coarse location reach the LLM
+# (the BE consent gate `isGranted(userId, 'location_to_llm')` was previously
+# starved because no FE surface granted the scope).
+#
+# Prerequisites:
+#   - Backend running on localhost:3000 with a working LLM provider.
+#   - A fresh per-user namespace (no prior consent memo) so the sheet appears.
+
+# ──────────────────────────────────────────────
+# Phase 1: Reach the home / chat entry
+# ──────────────────────────────────────────────
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Open the consent sheet via Start Conversation
+# ──────────────────────────────────────────────
+- tapOn: "Start Conversation"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 3: Manage choices -> reveal the granular switches
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Manage my choices"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Toggle the required Text scope + the Location scope ON
+# ──────────────────────────────────────────────
+# The required text->OpenAI switch (first switch) must be ON to enable Save.
+- tapOn:
+    id: "consent-switch-third_party_ai_text_openai"
+    optional: true
+
+# The Location (location_to_llm) switch — identified by its testID literal on
+# the Location group switch added in the green phase.
+- tapOn:
+    id: "consent-switch-location_to_llm"
+
+# ──────────────────────────────────────────────
+# Phase 5: Save and continue
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Save and continue"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 6: Chat is reachable (grant succeeded, sheet dismissed)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Ask about an artwork.*"
+    timeout: 10000

@@ -24,6 +24,8 @@ describe('openapi request contracts (active API)', () => {
           password: 'Sup3rStr0ngP@ss',
           firstname: 'Ada',
           lastname: 'Lovelace',
+          // A2: dateOfBirth is now a required field on the register schema (CNIL age gate).
+          dateOfBirth: '1990-06-13',
         },
       });
     });

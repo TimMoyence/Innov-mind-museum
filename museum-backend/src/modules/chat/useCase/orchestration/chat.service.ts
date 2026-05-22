@@ -45,6 +45,7 @@ import type {
 } from '@modules/chat/useCase/location-resolver';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
@@ -98,6 +99,12 @@ export interface ChatServiceDeps {
   locationResolver?: LocationResolver;
   /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
+  /**
+   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
+   * `third_party_ai_<text|image>_<provider>` scopes (cluster A R2/R3). When
+   * omitted, the legacy always-allow path is preserved.
+   */
+  thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
   urlHeadProbe?: UrlHeadProbe;
 }
 
@@ -139,6 +146,7 @@ export class ChatService {
         extractionQueue: deps.extractionQueue,
         locationResolver: deps.locationResolver,
         locationConsentChecker: deps.locationConsentChecker,
+        thirdPartyAiConsentChecker: deps.thirdPartyAiConsentChecker,
         artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
       },
       safety: {

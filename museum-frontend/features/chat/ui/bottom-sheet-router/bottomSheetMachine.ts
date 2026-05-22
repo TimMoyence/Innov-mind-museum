@@ -33,6 +33,14 @@ export type BottomSheetEvent =
   | { type: 'OPEN'; route: BottomSheetRouteId; params: unknown; blocking: boolean }
   | { type: 'OPEN_DONE' }
   | { type: 'CLOSE' }
+  /**
+   * Programmatic close fired by the CTA inside the route content (via
+   * `close()` prop). Bypasses the `blocking` gate — `blocking: true` only
+   * locks down OFF-route dismissals (backdrop tap, swipe-down, Android back).
+   * The CTA is by definition an in-route explicit user choice ; without this
+   * dedicated event, blocking sheets could never be dismissed from inside.
+   */
+  | { type: 'CTA_CLOSE' }
   | { type: 'CLOSE_DONE' };
 
 /**
@@ -44,8 +52,13 @@ export type BottomSheetEvent =
  *   Last-write-wins replace even when both are blocking — per integration test.
  * - R6: `open(blocking) + OPEN(non-blocking)` → unchanged. Blocking sheet wins.
  * - R7 / R10: `open(non-blocking) + CLOSE` → `closing(prev, nextQueued=null)`.
- * - R11: `open(blocking) + CLOSE` → unchanged. Only the route's CTA can close.
+ * - R11: `open(blocking) + CLOSE` → unchanged. Backdrop / swipe / Android-back
+ *   dispatch `CLOSE` ; the route's CTA dispatches `CTA_CLOSE` and is therefore
+ *   exempt from this gate (the user IS the affirmative actor inside the sheet).
  * - R12: `closing + CLOSE_DONE` → `opening(queued)` if queued, else `idle`.
+ * - R14: `opening | open + CTA_CLOSE` → `closing` regardless of `blocking`.
+ *   Without this, blocking sheets are visually un-dismissable from inside —
+ *   reported 2026-05-20 ("Accepter tout ne fonctionne pas").
  */
 export function bottomSheetReducer(
   state: BottomSheetState,
@@ -100,6 +113,17 @@ export function bottomSheetReducer(
           nextQueued: null,
         };
       }
+      // R14 — CTA close bypasses the blocking gate (the route's own button
+      // represents the in-sheet affirmative action).
+      if (event.type === 'CTA_CLOSE') {
+        return {
+          kind: 'closing',
+          route: state.route,
+          params: state.params,
+          blocking: state.blocking,
+          nextQueued: null,
+        };
+      }
       return state;
     }
 
@@ -122,6 +146,16 @@ export function bottomSheetReducer(
       if (event.type === 'CLOSE') {
         // R11: blocking sheet ignores CLOSE event (CTA path is separate).
         if (state.blocking) return state;
+        return {
+          kind: 'closing',
+          route: state.route,
+          params: state.params,
+          blocking: state.blocking,
+          nextQueued: null,
+        };
+      }
+      // R14 — CTA close bypasses the blocking gate.
+      if (event.type === 'CTA_CLOSE') {
         return {
           kind: 'closing',
           route: state.route,

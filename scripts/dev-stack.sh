@@ -45,6 +45,75 @@ if ! docker info >/dev/null 2>&1; then
 fi
 ok "Docker daemon UP"
 
+# ---- 1.5. Mount-source sentinel ----
+# Detect a dev-backend container whose `/app/museum-backend` bind points at a
+# host path that is NOT this repo's museum-backend (typically a worktree that
+# has since been deleted, or a different InnovMind clone). Symptom : /api/health
+# answers OK because handlers were warmed in memory, but the first lazy require
+# (body-parser → iconv-lite/encodings, BullMQ worker, Sentry instrumentation…)
+# fails with `Cannot find module …` → opaque 400s and zombie workers. The
+# RUNNING_COUNT=EXPECTED_COUNT branch below would otherwise hand control to the
+# stale container instead of recreating it. First seen 2026-05-20 against a
+# stale InnovMind-W3 worktree mount.
+step "1.5/5 Checking dev-backend bind-mount matches this repo"
+EXPECTED_BIND="$BACKEND"
+CURRENT_BIND=$(docker inspect dev-backend \
+  --format '{{range .Mounts}}{{if eq .Destination "/app/museum-backend"}}{{.Source}}{{end}}{{end}}' \
+  2>/dev/null || true)
+if [ -z "${CURRENT_BIND:-}" ]; then
+  ok "dev-backend not present yet — Step 2 will create it with bind=$EXPECTED_BIND"
+elif [ "$CURRENT_BIND" = "$EXPECTED_BIND" ]; then
+  ok "dev-backend bind matches repo ($EXPECTED_BIND)"
+else
+  warn "dev-backend bind-source mismatch detected :"
+  warn "  expected (this repo) : $EXPECTED_BIND"
+  warn "  current  (container) : $CURRENT_BIND"
+  warn "Forcing '$DOCKER_COMPOSE down' to recreate the stack with the correct mount."
+  $DOCKER_COMPOSE down
+  ok "Stale stack torn down — Step 2 will recreate it fresh"
+fi
+
+# ---- 1.6. Lockfile freshness sentinel ----
+# Detect when museum-backend/pnpm-lock.yaml has been modified more recently
+# than dev-backend was last started. The anonymous volume backing
+# /app/museum-backend/node_modules is populated ONCE during image build by
+# `pnpm install --frozen-lockfile` (Dockerfile.dev) and is reused as-is on
+# subsequent `docker compose up`. Any dep added to the lockfile after the
+# image was built has no top-level symlink in the volume, even though the
+# `.pnpm/` content-addressable store may contain it — imports then fail with
+# TS2307 / MODULE_NOT_FOUND at runtime. WARN-only : the rebuild
+# (`down && up --build --renew-anon-volumes`) drops the volume and is
+# destructive enough to keep behind manual confirmation. First seen 2026-05-20
+# against a missing `@opentelemetry/api` symlink after a W4 deps bump.
+step "1.6/5 Checking pnpm-lock.yaml freshness vs dev-backend last start"
+LOCK_MTIME=$(stat -f %m "$BACKEND/pnpm-lock.yaml" 2>/dev/null \
+          || stat -c %Y "$BACKEND/pnpm-lock.yaml" 2>/dev/null \
+          || echo 0)
+CONTAINER_STARTED_AT=$(docker inspect dev-backend --format '{{.State.StartedAt}}' 2>/dev/null || true)
+if [ -z "${CONTAINER_STARTED_AT:-}" ] || [ "$LOCK_MTIME" -eq 0 ]; then
+  ok "No prior dev-backend (or lockfile unreadable) — skipping freshness check"
+else
+  # Strip subseconds + trailing Z, parse as UTC (macOS BSD date + GNU date portable).
+  CONTAINER_TS_TRIMMED=$(echo "$CONTAINER_STARTED_AT" | cut -c1-19)
+  CONTAINER_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "$CONTAINER_TS_TRIMMED" +%s 2>/dev/null \
+                 || date -u -d "$CONTAINER_STARTED_AT" +%s 2>/dev/null \
+                 || echo 0)
+  if [ "$CONTAINER_EPOCH" -eq 0 ]; then
+    warn "Could not parse container StartedAt ($CONTAINER_STARTED_AT) — skipping freshness check"
+  elif [ "$LOCK_MTIME" -gt "$CONTAINER_EPOCH" ]; then
+    warn "pnpm-lock.yaml is newer than dev-backend's last start :"
+    warn "  lockfile mtime  : $(date -r "$LOCK_MTIME" '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date -d "@$LOCK_MTIME" '+%Y-%m-%dT%H:%M:%S%z')"
+    warn "  container start : $CONTAINER_STARTED_AT"
+    warn ""
+    warn "Anon volume /app/museum-backend/node_modules may be missing newly-added"
+    warn "top-level deps. If the backend crashes with TS2307 / MODULE_NOT_FOUND, run :"
+    warn "  $DOCKER_COMPOSE down \\"
+    warn "    && $DOCKER_COMPOSE up -d --build --force-recreate --renew-anon-volumes"
+  else
+    ok "Lockfile mtime <= container start — anon node_modules volume should be fresh"
+  fi
+fi
+
 # ---- 2. Docker stack ----
 step "2/5 Checking Docker stack (dev-backend, dev-postgres, dev-redis, dev-adminer)"
 RUNNING_COUNT=$($DOCKER_COMPOSE ps --status running --services 2>/dev/null | wc -l | tr -d ' ')

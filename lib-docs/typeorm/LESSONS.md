@@ -43,3 +43,17 @@ Projet-specific gotchas pour TypeORM 0.3.x dans Musaium. Édité manuellement (h
 - **Fix** : créer helper `withTxRollback` dans `tests/helpers/db.ts`.
 - **Anti-pattern à éviter** : truncate/delete cascade manuel entre tests, lent et fragile.
 - **Ref** : `PATTERNS.md:253`.
+
+## 2026-05-20 — Refresh
+- Re-fetched upstream sources (release notes 0.3.29 + 0.3.30 + 1.0.0, GitHub Security Advisories) against pinned 0.3.28.
+- **No new gotchas discovered in the Musaium codebase.** Audit covered all `museum-backend/src/**/*.repository*.ts`, `src/**/*.repo.ts`, `src/data/db/migrations/*.ts`:
+  - `.set({field: undefined})` — 0 violations (existing fixes hold; ESLint rule `musaium-test-discipline/no-typeorm-set-undefined` enforces).
+  - `repo.update(_, { field: undefined })` — 0 violations.
+  - Raw template interpolation with user input into QueryBuilder `where()` — 0 violations.
+  - `eager: true` / `cascade: true` — 0 occurrences.
+  - Empty `{}` criteria in `.delete()` / `.update()` — 0 occurrences.
+- **PATTERNS.md regenerated** (sha256 `d97f9ca9a5b01873b4928865c5319966bc3ffdf4ec3e8f07232b9f99a38de039`) — expanded to cover §3.3 update flows (3 shapes), §4.10–§4.13 new anti-patterns (DELETE RETURNING tuple, Relation<T>, raw interpolation, empty criteria post-0.3.23), §7.2 SAVEPOINT integration-harness guard, §7.3 pgvector halfvec migrations.
+- **Security context (0.3.28 vs latest)** : 0.3.29 ships `fix(security): validate limit() in Update/SoftDelete query builders` (no CVE assigned). Musaium exposure: LOW — grep confirms zero call site forwards user input into `.limit()` on update/soft-delete builders. Patch upgrade to 0.3.30 still recommended pre-launch (small surface, no breaking change).
+- **Major 1.0.0 (2026-05-19)** : drops Node 16/18 — Musaium runs Node 22, compatible. Defer upgrade to Q3 2026 post-launch (frozen window).
+- **JsonContains array values** : fixed in 0.3.30 (broken in 0.3.28). No current call site uses `JsonContains` with arrays — but documented in PATTERNS §3.10 as the canonical workaround on 0.3.28 (`Raw(alias => \`${alias} @> :j::jsonb\`, …)`).
+- PATTERNS.md verified against snapshots `snapshot-2026-05-18.md` + `snapshot-2026-05-20.md` (both retained, both referenced in header).

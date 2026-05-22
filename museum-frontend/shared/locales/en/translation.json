@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — text messages",
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — voice transcripts",
-      "third_party_ai_profile_google": "Google AI — preferences & history"
+      "third_party_ai_profile_google": "Google AI — preferences & history",
+      "location_to_llm": "Location — nearby places"
     },
     "accessibility": "Accessibility",
     "audio_description": "Audio Description",
@@ -248,6 +249,34 @@
     "success": "Password updated successfully",
     "error_mismatch": "Passwords do not match",
     "error_short": "Password must be at least 8 characters"
+  },
+  "verify_email": {
+    "title": "Verify your email",
+    "loading": "Verifying your email…",
+    "success": "Your email address has been verified.",
+    "invalidToken": "This verification link is invalid or has expired.",
+    "error": "We could not verify your email. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "confirm_email_change": {
+    "title": "Confirm your new email",
+    "loading": "Confirming your new email…",
+    "success": "Your new email address has been confirmed.",
+    "invalidToken": "This confirmation link is invalid or has expired.",
+    "error": "We could not confirm your email change. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "reset_password": {
+    "title": "Reset your password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Reset password",
+    "success": "Your password has been reset.",
+    "invalidToken": "This reset link is invalid or has expired.",
+    "error": "We could not reset your password. Please try again.",
+    "error_short": "Password must be at least 8 characters",
+    "error_mismatch": "Passwords do not match",
+    "cta_login": "Continue to sign in"
   },
   "change_email": {
     "title": "Change Email",
@@ -1074,7 +1103,19 @@
     "data_audio": "Voice messages (transcribed only, audio not stored by AI)",
     "data_location": "Your location (if you choose to share it)",
     "data_profile": "Your art preferences and visit history (to personalize responses)",
-    "data_providers": "Processed by third-party AI services: OpenAI, Google, and DeepSeek"
+    "data_providers": "Processed by third-party AI services: OpenAI, Google, and DeepSeek",
+    "summary_only_content": "Only the text, images and audio you send are shared — nothing else.",
+    "summary_no_personal_data": "No personal data (name, email, precise location) is transmitted to AI providers.",
+    "summary_processing": "Processing is limited to response generation by the declared providers (OpenAI, Google).",
+    "summary_revoke_anytime": "You can manage or revoke your consent at any time from Settings.",
+    "accept_all": "Accept all",
+    "manage_choices": "Manage my choices",
+    "back_to_summary": "Back",
+    "manage_title": "Manage my choices",
+    "manage_subtitle": "Uncheck any category freely. The \"OpenAI Text\" scope is required to chat with the AI.",
+    "save_required_hint": "Enable \"OpenAI Text\" to save your choices.",
+    "scope_location": "Location",
+    "scope_location_hint": "Your approximate area (city) is shared with the AI to recognize nearby museums and monuments. Your precise location is never shared."
   },
   "dailyArt": {
     "title": "Artwork of the Day",

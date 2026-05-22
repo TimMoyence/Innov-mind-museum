@@ -14,6 +14,8 @@
  * incident; was 300ms — higher ceiling reflects CPU-only inference on V1 VPS).
  */
 
+import type { LlmPathTier } from '@shared/observability/derive-tier';
+
 export type GuardrailBlockReason =
   | 'prompt_injection'
   | 'pii'
@@ -52,6 +54,16 @@ export interface GuardrailInput {
   locale?: string;
   /** For telemetry correlation — never passed to the remote model. */
   sessionId?: string;
+  /**
+   * TD-20 (R11d) — OPTIONAL per-tenant scope from `GuardrailAuditContext` so the
+   * LLM-Guard correlation `event` is attributable. `museumId` is honestly
+   * ABSENT (not in `GuardrailAuditContext` — see spec §5/D5); only `tier` +
+   * `requestId` are reachable on this path. Omitted (never fabricated) when
+   * absent.
+   */
+  museumId?: number;
+  tier?: LlmPathTier;
+  requestId?: string;
 }
 
 export interface GuardrailOutput {
@@ -62,6 +74,10 @@ export interface GuardrailOutput {
   /** Context for relevance checks, no PII stored beyond this call. */
   userInput?: string;
   locale?: string;
+  /** TD-20 (R11d) — symmetric per-tenant scope (see `GuardrailInput`). */
+  museumId?: number;
+  tier?: LlmPathTier;
+  requestId?: string;
 }
 
 /**

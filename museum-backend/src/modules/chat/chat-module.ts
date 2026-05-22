@@ -55,6 +55,7 @@ import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.serv
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/update-session-context.useCase';
+import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import { compareImageUseCase as createCompareImageUseCase } from '@modules/chat/useCase/visual-similarity/compare.use-case';
 import { VisualSimilarityService } from '@modules/chat/useCase/visual-similarity/similarity.service';
 import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
@@ -86,6 +87,7 @@ import type { WebSearchProvider } from '@modules/chat/domain/ports/web-search.po
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { LocationConsentChecker } from '@modules/chat/useCase/location-resolver';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type {
   ChatPersistencePort,
   CompareMimeType,
@@ -102,6 +104,12 @@ export interface BuiltChatModule {
   chatService: ChatService;
   describeService: DescribeService;
   imageStorage: ImageStorage;
+  /**
+   * GDPR erasure (B1) — the active audio storage, exposed so the auth deletion
+   * proxy can `deleteByRef` the user's TTS audio. `undefined` when no S3 backend
+   * is configured (local dev / tests with the local stub still resolves one).
+   */
+  audioStorage: AudioStorage | undefined;
   repository: TypeOrmChatRepository;
   ocrService: OcrService;
   userMemoryService: UserMemoryService | undefined;
@@ -619,6 +627,7 @@ export class ChatModule {
     museumRepository?: IMuseumRepository,
   ): BuiltChatModule {
     const imageStorage = this.buildImageStorage();
+    const audioStorage = this.buildAudioStorage();
     const repository = new TypeOrmChatRepository(dataSource);
     const tts = env.llm.openAiApiKey
       ? new OpenAiTextToSpeechService()
@@ -679,6 +688,11 @@ export class ChatModule {
       ? new LocationResolver(museumRepository, cache)
       : undefined;
     const locationConsentChecker = buildLocationConsentChecker();
+    // GDPR Art. 7 — gates text + image LLM dispatch on the granular
+    // `third_party_ai_<text|image>_<provider>` scopes (cluster A R2/R3).
+    // Same lazy-import pattern as `buildLocationConsentChecker` (avoids the
+    // chat ↔ auth init cycle at boot — see `third-party-ai-consent-checker.ts:48-51`).
+    const thirdPartyAiConsentChecker = buildThirdPartyAiConsentChecker();
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
     this._knowledgeExtractionClose = knowledgeExtraction.close;
@@ -694,6 +708,7 @@ export class ChatModule {
       effectiveOrchestrator,
       judgeModel: llmModel,
       imageStorage,
+      audioStorage,
       tts,
       cache,
       ocr,
@@ -705,6 +720,7 @@ export class ChatModule {
       museumRepository,
       locationResolver,
       locationConsentChecker,
+      thirdPartyAiConsentChecker,
       knowledgeExtraction,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
     });
@@ -734,6 +750,7 @@ export class ChatModule {
       chatService,
       describeService,
       imageStorage,
+      audioStorage,
       repository,
       ocrService: ocr,
       userMemoryService: userMemory,
@@ -759,6 +776,8 @@ export class ChatModule {
     /** C9.7 — raw ChatModel used by the detached LLM-judge path. */
     judgeModel: ChatModel | null;
     imageStorage: LocalImageStorage | S3CompatibleImageStorage;
+    /** Built once in {@link build} and shared so the GDPR proxy + chat pipeline use one instance. */
+    audioStorage: AudioStorage | undefined;
     tts: OpenAiTextToSpeechService | DisabledTextToSpeechService;
     cache?: CacheService;
     ocr: TesseractOcrService | DisabledOcrService;
@@ -770,6 +789,7 @@ export class ChatModule {
     museumRepository?: IMuseumRepository;
     locationResolver?: LocationResolver;
     locationConsentChecker?: LocationConsentChecker;
+    thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
     /** W3 (T5.4) — passed-through into the message pipeline for [CURRENT ARTWORK]. */
     artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
@@ -780,7 +800,7 @@ export class ChatModule {
       imageStorage: deps.imageStorage,
       imageProcessor: new SharpImageProcessor(),
       audioTranscriber: new OpenAiAudioTranscriber(),
-      audioStorage: this.buildAudioStorage(),
+      audioStorage: deps.audioStorage,
       tts: deps.tts,
       cache: deps.cache,
       ocr: deps.ocr,
@@ -796,14 +816,22 @@ export class ChatModule {
       guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
-      llmJudge: async (message: string) =>
-        await judgeWithLlm(message, { model: deps.judgeModel ?? undefined }),
+      // TD-20 (R13c) — forward the optional `{tier, requestId}` scope (museumId
+      // honestly absent on this path, D5) into the judge generation.
+      llmJudge: async (message: string, scope?) =>
+        await judgeWithLlm(message, {
+          model: deps.judgeModel ?? undefined,
+          ...(scope?.museumId !== undefined ? { museumId: scope.museumId } : {}),
+          ...(scope?.tier !== undefined ? { tier: scope.tier } : {}),
+          ...(scope?.requestId !== undefined ? { requestId: scope.requestId } : {}),
+        }),
       piiSanitizer: new RegexPiiSanitizer(),
       museumRepository: deps.museumRepository,
       dbLookup: deps.knowledgeExtraction.dbLookup,
       extractionQueue: deps.knowledgeExtraction.extractionQueue,
       locationResolver: deps.locationResolver,
       locationConsentChecker: deps.locationConsentChecker,
+      thirdPartyAiConsentChecker: deps.thirdPartyAiConsentChecker,
       artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
     });
   }
@@ -844,6 +872,10 @@ export const resetActiveChatModule = (): void => {
 // callbacks). For lifecycle management use the main barrel (`@modules/chat`).
 
 export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;
+
+/** GDPR erasure (B1) — active audio storage for the auth deletion proxy. */
+export const getAudioStorage = (): AudioStorage | undefined =>
+  getActiveChatModule().getBuilt().audioStorage;
 
 export const getChatRepository = (): TypeOrmChatRepository =>
   getActiveChatModule().getBuilt().repository;

@@ -4,7 +4,7 @@ Guidance for Claude Code (claude.ai/code) in this repo.
 
 ## Project Overview
 
-Musaium — assistant balade culturelle hors/intra-musée, multi-musées, voice-first. Visiteurs photographient les œuvres, parlent à l'AI, suivent des balades guidées multi-POI. AI conversationnel via LangChain + LLM (OpenAI/Deepseek/Google). Audience : B2C freemium + B2B musée + institutionnel. Launch V1 : 2026-06-01.
+Musaium — Compagnon culturel IA voice-first, **dedans ET dehors** : tu photographies une œuvre (en musée) ou un monument/lieu (en ville, ex Pont de Pierre à Bordeaux), tu en discutes avec l'AI, carnet post-visite. V1 inclut aussi des **suggestions de proximité** (« un monument à côté », « un musée pas loin ») sans navigation. AI conversationnel via LangChain + LLM (OpenAI/Deepseek/Google). V1 launch 2026-06-07 (minimum, à reconfirmer). Audience : B2C freemium (cible V1) ; **B2B musée = hypothèse future, aucun musée démarché à ce jour** (les 3 musées Bordeaux dans `seed-museums.ts` sont des données de démo, pas des pilots contractés) ; institutionnel = backlog. **V2 (post-launch sprint juin-août)** = parcours guidé navigué multi-POI (itinéraire GPS + suivi trajet + audio streaming auto entre points) — distinct du monument-photo V1. Re-cadrage NorthStar 2026-05-21 (cf `docs/ROADMAP_PRODUCT.md` NorthStar) après que l'audit a révélé que `features/walk/` n'existe pas et que les claims « 3 pilots contractés / LOI signées » étaient mensongers.
 
 Monorepo, 3 apps indépendantes :
 - **`museum-backend/`** — Node.js 22 + Express 5 + TypeORM + PostgreSQL 16 (pnpm)
@@ -154,6 +154,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **`apiPut` n'existe pas dans `museum-web/src/lib/api.ts`** — la stack expose `apiGet/Post/Patch/Delete`. Les pages admin qui PUT (ex branding) utilisent un wrapper `fetch` local + CSRF cookie (`csrf_token`→`X-CSRF-Token`) + `credentials:'include'`. >2 sites ré-implémentant ce wrapper → ajouter `apiPut` proprement. Réf `admin/museums/[id]/branding/page.tsx`.
 - **`SAVEPOINT` dans une migration crash sous `runMigrations({transaction:'none'})`** — l'integration harness (`tests/helpers/integration/integration-harness.ts`) run les migrations HORS transaction → `SAVEPOINT can only be used in transaction blocks` → **kill TOUTES les suites integration**. Fix : guarder par `if (queryRunner.isTransactionActive)`. Réf migration `AddMuseumGeofence.ts`.
 - **Retirer un pin `@types/*` d'un `pnpm.overrides` ne suffit PAS à le bumper** — si le `@types` parent déclare une range qui matche déjà la version pinnée, pnpm garde le lockfile. Forcer : déclarer le sous-paquet en `devDependencies` directe avec la range cible (ex `@types/express-serve-static-core: ^5.1.1`), puis re-résoudre. Réf `museum-backend/package.json`. TD-11.
+- **Écran affichant un secret (TOTP/recovery codes) → screen-capture impératif, PAS le hook lib (museum-frontend)** — `usePreventScreenCapture()` de `expo-screen-capture` ne release que sur unmount, or un `<Stack.Screen>` reste monté quand on navigue dessus (host persistant, même classe que RN Modal). Utiliser `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount), key dédiée. `require()` lazy/web-safe gardé (le module est natif → absent sur web/Jest), erreurs via `reportError` sans payload secret, jamais logger le secret. `expo-screen-capture` = native dep → `pod install` + `git add -f ios/Pods/...` + Podfile.lock + ExpoModulesProvider.swift committés (Xcode Cloud ne run pas `pod install`). Tokens : `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` (device-bound, non-backup-migratable). Réf `features/auth/hooks/usePreventScreenCapture.ts`, TD-SEC-01/02, `lib-docs/expo-screen-capture/PATTERNS.md`.
 
 ## Environment Setup
 
@@ -330,7 +331,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (28932 symbols, 46771 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (29429 symbols, 47353 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

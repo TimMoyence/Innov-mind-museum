@@ -46,7 +46,7 @@ export class ExtractionJobService {
     this.museumRepo = deps.museumRepo;
   }
 
-  async processUrl(url: string, _searchTerm: string, locale: string): Promise<void> {
+  async processUrl(url: string, locale: string): Promise<void> {
     try {
       // Dedup: skip if recently scraped
       const existing = await this.contentRepo.findByUrl(url);

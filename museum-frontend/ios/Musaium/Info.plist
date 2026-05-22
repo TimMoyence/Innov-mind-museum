@@ -65,10 +65,6 @@
 	<string>Allow $(PRODUCT_NAME) to use Face ID to unlock the app.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your location</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Allow $(PRODUCT_NAME) to access your location</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Musaium uses your location to find museums and cultural sites near you, show them on the map, and recommend nearby visits — your location is never tracked or shared with third parties.</string>
 	<key>NSMicrophoneUsageDescription</key>

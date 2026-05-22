@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import {
   dispatchBottomSheetEvent,
@@ -43,32 +43,42 @@ export interface BottomSheetRouter {
 export function useBottomSheetRouter(): BottomSheetRouter {
   const state = useBottomSheetState();
 
+  // `open` and `close` MUST be referentially stable across renders — they are
+  // pure module-dispatch wrappers that do not close over any React state.
+  // Consumer screens routinely list the router (or a destructured method) as
+  // a useEffect dep; if those methods rotated on each state transition the
+  // effect re-fires after every dispatch, re-calling open() and wedging the
+  // state machine in an `opening ↔ closing` oscillation (consent sheet shipped
+  // 2026-05-20 never settled on `open`).
+  const open = useCallback(
+    <K extends BottomSheetRouteId>(
+      route: K,
+      params: BottomSheetRouteParams[K],
+      options?: BottomSheetOpenOptions,
+    ): void => {
+      const definition = ROUTES[route];
+      const blocking = definition?.blocking ?? false;
+      // Publish the trigger handle BEFORE the OPEN event so the router can
+      // store it synchronously (spec R15-R16). `null` is published when the
+      // call-site does not opt in, which clears any stale handle from a
+      // previous open.
+      publishBottomSheetTriggerCapture(options?.triggerNodeHandle ?? null);
+      dispatchBottomSheetEvent({
+        type: 'OPEN',
+        route,
+        params: params as unknown,
+        blocking,
+      });
+    },
+    [],
+  );
+
+  const close = useCallback((): void => {
+    dispatchBottomSheetEvent({ type: 'CLOSE' });
+  }, []);
+
   return useMemo<BottomSheetRouter>(() => {
     const activeRoute: BottomSheetRouteId | null = state.kind === 'idle' ? null : state.route;
-    return {
-      activeRoute,
-      open<K extends BottomSheetRouteId>(
-        route: K,
-        params: BottomSheetRouteParams[K],
-        options?: BottomSheetOpenOptions,
-      ): void {
-        const definition = ROUTES[route];
-        const blocking = definition?.blocking ?? false;
-        // Publish the trigger handle BEFORE the OPEN event so the router can
-        // store it synchronously (spec R15-R16). `null` is published when the
-        // call-site does not opt in, which clears any stale handle from a
-        // previous open.
-        publishBottomSheetTriggerCapture(options?.triggerNodeHandle ?? null);
-        dispatchBottomSheetEvent({
-          type: 'OPEN',
-          route,
-          params: params as unknown,
-          blocking,
-        });
-      },
-      close(): void {
-        dispatchBottomSheetEvent({ type: 'CLOSE' });
-      },
-    };
-  }, [state]);
+    return { activeRoute, open, close };
+  }, [state, open, close]);
 }

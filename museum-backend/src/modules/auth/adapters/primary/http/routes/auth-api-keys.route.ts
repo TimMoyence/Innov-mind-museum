@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from 'express';
 
 import { apiKeyLimiter } from '@modules/auth/adapters/primary/http/helpers/auth-rate-limiters';
 import { createApiKeySchema } from '@modules/auth/adapters/primary/http/schemas/auth.schemas';
+import { UserRole } from '@modules/auth/domain/user/user-role';
 import {
   generateApiKeyUseCase,
   listApiKeysUseCase,
@@ -13,6 +14,7 @@ import { badRequest } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticatedJwtOnly } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
+import { requireRole } from '@shared/middleware/require-role.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 const authApiKeysRouter: Router = Router();
@@ -20,6 +22,11 @@ const authApiKeysRouter: Router = Router();
 authApiKeysRouter.post(
   '/api-keys',
   isAuthenticatedJwtOnly,
+  // I-SEC4 (design D3) — `msk_` B2B keys are a privileged operator capability.
+  // Gate runs BEFORE the rate limiter so unauthorized requests 403 without
+  // burning the bucket (express mutating-middleware-order, lib-docs/express/LESSONS.md).
+  // `super_admin` implicit (centralized in requireRole).
+  requireRole(UserRole.MUSEUM_MANAGER, UserRole.ADMIN),
   apiKeyLimiter,
   validateBody(createApiKeySchema),
   async (req: Request, res: Response) => {

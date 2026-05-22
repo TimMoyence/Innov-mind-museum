@@ -5,6 +5,7 @@ import { buildCacheKey } from '@modules/chat/useCase/message/chat-cache-key.util
 import { ensureMessageAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
 
 import type { ReportReason } from '@modules/chat/domain/chat.types';
@@ -232,10 +233,15 @@ export class ChatMediaService {
       }
     }
 
+    // TD-20 (R13a/R12) — per-tenant scope for the TTS-via-chat-media cost path.
+    // `museumId` spread-omit (absent => key omitted, never `null`); `tier`
+    // derived from the session owner via the shared `deriveTier`.
     const result = await this.tts.synthesize({
       text: row.message.text,
       voice: targetVoice,
       requestId: messageId,
+      ...(row.session.museumId != null ? { museumId: row.session.museumId } : {}),
+      tier: deriveTier(row.session.user?.id),
     });
 
     if (this.cache) {

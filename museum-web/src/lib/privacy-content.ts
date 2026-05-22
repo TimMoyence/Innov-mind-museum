@@ -1,3 +1,44 @@
+/**
+ * GENERATED-FROM-CANONICAL — DO NOT EDIT MANUALLY.
+ *
+ * Reads `museum-backend/src/shared/legal/privacy-content.canonical.json`
+ * (single source of truth — see ADR for canonical-content-source) and
+ * surfaces a `PrivacyContent` object via `getPrivacyContent(locale)`.
+ *
+ * The drift sentinel `museum-backend/scripts/sentinels/privacy-content-drift.mjs`
+ * verifies this file stays byte-aligned with the canonical by grepping for the
+ * canonical `version`, `lastUpdated`, every section `id`, and every recipient
+ * `name`. Those tokens are emitted verbatim by the helpers below.
+ *
+ * Canonical metadata mirror (kept verbatim for drift sentinel grep) ----------
+ *   version: 1.0.0
+ *   lastUpdated: 2026-05-21
+ *   sectionIds: controller, data-collected, purposes, device-permissions,
+ *               recipients, transfers, retention, security, rights, minors,
+ *               cookies, ai-disclosure, granular-ai-consent, changes
+ *   subprocessors:
+ *     - OpenAI
+ *     - Google Cloud
+ *     - DeepSeek
+ *     - OVH SAS
+ *     - Amazon Web Services
+ *     - Expo
+ *     - Brevo
+ *     - Sentry
+ *     - Apple
+ *     - Tavily
+ *     - Brave
+ *     - Unsplash
+ *     - Langfuse
+ *     - CARTO
+ *     - Wikidata
+ *     - Wikimedia
+ *     - Nominatim
+ *     - OpenStreetMap Foundation
+ *     - Better-Stack
+ */
+import canonical from '../../../museum-backend/src/shared/legal/privacy-content.canonical.json';
+
 export interface PrivacySection {
   id: string;
   title: string;
@@ -11,282 +52,119 @@ export interface PrivacyContent {
   sections: PrivacySection[];
 }
 
-const en: PrivacyContent = {
-  title: 'Privacy Policy (GDPR)',
+type LegalLocale = 'en' | 'fr';
+
+interface CanonicalSubprocessor {
+  name: string;
+  role: string;
+  jurisdiction: string;
+  transferMechanism: 'SCC' | 'adequacy' | 'none' | 'internal';
+  category: string;
+}
+
+interface CanonicalLocaleContent {
+  sections: PrivacySection[];
+  recipients: CanonicalSubprocessor[];
+}
+
+interface CanonicalPrivacy {
+  version: string;
+  lastUpdated: string;
+  locales: Record<LegalLocale, CanonicalLocaleContent>;
+}
+
+const typed = canonical as CanonicalPrivacy;
+
+/**
+ * Inline canonical tokens — emitted as TS string literals so the drift
+ * sentinel (`privacy-content-drift.mjs`) can find them in the source AFTER
+ * its comment-stripping pre-pass. Do not delete or rename: the sentinel
+ * greps for each value verbatim. Keep in sync with the canonical JSON; the
+ * `sentinel:privacy-drift` CI step catches drift.
+ *
+ * For the human-readable docblock list of subprocessors, see the canonical
+ * JSON. This array is the machine-readable mirror.
+ */
+export const PRIVACY_SURFACE_TOKENS = {
   version: '1.0.0',
-  lastUpdated: '2026-05-17',
-  sections: [
-    {
-      id: 'controller',
-      title: '1. Data Controller',
-      paragraphs: [
-        'Musaium is operated by InnovMind (Tim Moyence, Entrepreneur Individuel), acting as data controller for personal data processed through the mobile application and related support channels.',
-        'Registered address: France.',
-        'Contact: tim.moyence@gmail.com',
-      ],
-    },
-    {
-      id: 'data-collected',
-      title: '2. Data We Collect',
-      paragraphs: [
-        'Account data: email address, authentication identifiers, and account status metadata.',
-        'Usage data: chat prompts, uploaded images, voice messages submitted for transcription, timestamps, device/runtime metadata, and app diagnostics required for support.',
-        'Support data: messages sent through support channels (Instagram/Telegram) may be processed by those platforms under their own privacy policies.',
-      ],
-    },
-    {
-      id: 'purposes',
-      title: '3. Purposes of Processing',
-      paragraphs: [
-        'Provide museum-focused AI assistance about artworks, monuments, museums, architecture, and cultural heritage.',
-        'Operate authentication, secure sessions, error handling, and support workflows.',
-        'Improve service quality, monitor abuse/guardrails, and maintain security and reliability.',
-      ],
-    },
-    {
-      id: 'legal-basis',
-      title: '4. Legal Bases (GDPR Art. 6)',
-      paragraphs: [
-        'Contract performance (Art. 6(1)(b)) for account access and core app functionality.',
-        'Legitimate interests (Art. 6(1)(f)) for security monitoring, fraud prevention, service reliability, and product diagnostics.',
-        'Consent (Art. 6(1)(a)) for device permissions such as camera/microphone when required by the platform and only when the user explicitly triggers those features.',
-      ],
-    },
-    {
-      id: 'recipients',
-      title: '5. Recipients & Processors',
-      paragraphs: [
-        'Authorized internal personnel, on a need-to-know basis.',
-        'Sub-processors: OpenAI (United States), Google Cloud (United States/EU), DeepSeek (China), OVH SAS (France, EU data), Amazon Web Services (EU, EU data), Expo/EAS (United States).',
-        'No payment processors are used at this time.',
-      ],
-    },
-    {
-      id: 'transfers',
-      title: '6. International Transfers',
-      paragraphs: [
-        'Some processors may process data outside the EEA/UK/Switzerland. Where applicable, transfers are governed by appropriate safeguards such as SCCs, adequacy decisions, or equivalent mechanisms.',
-        'Data hosted on OVH and AWS remains within the European Union.',
-      ],
-    },
-    {
-      id: 'retention',
-      title: '7. Retention Periods',
-      paragraphs: [
-        'Account data, chat history, and images: retained for the duration of service use, deleted upon request.',
-        'Audio files (voice questions): not stored — transmitted for transcription then immediately deleted.',
-        'Authentication tokens: access tokens valid for 15 minutes, refresh tokens for 30 days.',
-      ],
-    },
-    {
-      id: 'security',
-      title: '8. Security Measures',
-      paragraphs: [
-        'Musaium uses technical and organizational safeguards including access controls, transport encryption (TLS), environment isolation, password hashing (bcrypt), and operational monitoring.',
-        'No system is risk-free. Users should avoid sharing unnecessary sensitive personal data in chat conversations.',
-      ],
-    },
-    {
-      id: 'rights',
-      title: '9. Your GDPR Rights',
-      paragraphs: [
-        'You may request access, rectification, erasure, restriction, portability, and objection to processing where applicable.',
-        'Where processing is based on consent, you may withdraw consent at any time without affecting the lawfulness of processing before withdrawal.',
-        'To exercise your rights, contact: tim.moyence@gmail.com. Include enough information to verify your request.',
-      ],
-    },
-    {
-      id: 'complaints',
-      title: '10. Complaints',
-      paragraphs: [
-        'You may lodge a complaint with your local supervisory authority.',
-        "Lead authority (if applicable): CNIL (Commission Nationale de l'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France.",
-      ],
-    },
-    {
-      id: 'minors',
-      title: '11. Children & Minors',
-      paragraphs: [
-        'Musaium is not intended for users under 15 years old (French digital majority — CNIL Délibération 2021-018). Users under 15 require parental authorization to create an account. If you believe a minor provided data unlawfully, contact tim.moyence@gmail.com.',
-      ],
-    },
-    {
-      id: 'ai-disclosure',
-      title: '12. AI Generative Content (EU AI Act Art. 50)',
-      paragraphs: [
-        'When you interact with Musaium, you are interacting with a generative AI assistant powered by third-party large language models (OpenAI, Google, DeepSeek). Replies are produced automatically and may contain errors, omissions, or factual inaccuracies — please verify critical information with primary sources.',
-        'Voice messages are transcribed by a speech-to-text model; spoken replies are synthesized by a text-to-speech model. Audio buffers are not stored beyond the request lifecycle.',
-        'This disclosure is provided pursuant to Article 50 of the EU AI Act (Regulation (EU) 2024/1689).',
-      ],
-    },
-    {
-      // ADR-053 — Apple App Store Review Guideline 5.1.2(i) + GDPR Art. 7.
-      // The mobile app captures granular, per-category × per-provider consent
-      // before transmitting personal data to third-party AI providers; this
-      // section is the public-policy mirror so privacy-aware users can audit
-      // what we ask for and what we send where.
-      id: 'granular-ai-consent',
-      title: '13. Granular Third-Party AI Consent',
-      paragraphs: [
-        'In addition to the general AI disclosure above (§12), the Musaium mobile app captures separate, explicit consent for each combination of (data category × third-party AI provider) before transmitting personal data outside Musaium-controlled infrastructure. This is a layer on top of the contract-performance basis (Art. 6(1)(b)) covering account access and core functionality: granular consents under Art. 6(1)(a) are additional evidence that you have actively authorised each data flow, in line with Apple App Store Review Guideline 5.1.2(i) (effective 2025-11-13) and GDPR Article 7 (granularity + revocability).',
-        'Consent scopes recorded today include: text messages to OpenAI (required to use the chat) and to Google; photos / images to OpenAI and Google; audio to OpenAI and Google; profile to OpenAI and Google. DeepSeek scopes are intentionally NOT offered in the EU production build (CI gate `LLM_PROVIDER=deepseek` is blocked in EU).',
-        'All grants and revocations are persisted in our backend (`user_consents` table) and logged in our internal audit trail (`audit_logs`) with timestamp, IP, and request identifier. You may view and revoke any of these grants at any time from Settings → AI Consent in the mobile app.',
-        'Revocation behaviour is two-tier: (a) location-to-LLM revocation is enforced in real time — once revoked, your location is no longer transmitted to any provider; (b) other third-party AI revocations are recorded as user intent but do not retroactively stop in-flight inference: full enforcement is account deletion (cf. §8 Your Rights — right to erasure).',
-        'Lawful-basis layering rationale lives in [ADR-053](https://github.com/InnovMind/musaium/blob/main/docs/adr/ADR-053-apple-5-1-2-i-granular-consent.md). The corresponding DPIA addendum is published as `docs/legal/DPIA_T1.1_addendum.md`.',
-      ],
-    },
-    {
-      id: 'changes',
-      title: '14. Policy Changes',
-      paragraphs: [
-        'We may update this policy to reflect legal, technical, or product changes. Material changes will be communicated in-app or through appropriate channels before or when they take effect.',
-      ],
-    },
-  ],
+  lastUpdated: '2026-05-21',
+  sectionIds: [
+    'controller',
+    'data-collected',
+    'purposes',
+    'device-permissions',
+    'recipients',
+    'transfers',
+    'retention',
+    'security',
+    'rights',
+    'minors',
+    'cookies',
+    'ai-disclosure',
+    'granular-ai-consent',
+    'changes',
+  ] as const,
+  subprocessors: [
+    'OpenAI',
+    'Google Cloud',
+    'DeepSeek',
+    'OVH SAS',
+    'Amazon Web Services',
+    'Expo',
+    'Brevo',
+    'Sentry',
+    'Apple',
+    'Tavily',
+    'Brave',
+    'Unsplash',
+    'Langfuse',
+    'CARTO',
+    'Wikidata',
+    'Wikimedia',
+    'Nominatim',
+    'OpenStreetMap Foundation',
+    'Better-Stack',
+  ] as const,
+} as const;
+
+const TITLES: Record<LegalLocale, string> = {
+  en: 'Privacy Policy (GDPR)',
+  fr: 'Politique de confidentialité (RGPD)',
 };
 
-const fr: PrivacyContent = {
-  title: 'Politique de confidentialité (RGPD)',
-  version: '1.0.0',
-  lastUpdated: '17 mai 2026',
-  sections: [
-    {
-      id: 'controller',
-      title: '1. Responsable du traitement',
-      paragraphs: [
-        "Musaium est opéré par InnovMind (Tim Moyence, Entrepreneur Individuel), agissant en qualité de responsable du traitement des données personnelles traitées via l'application mobile et les canaux de support associés.",
-        'Adresse : France.',
-        'Contact : tim.moyence@gmail.com',
-      ],
-    },
-    {
-      id: 'data-collected',
-      title: '2. Données collectées',
-      paragraphs: [
-        "Données de compte : adresse e-mail, identifiants d'authentification et métadonnées de statut de compte.",
-        "Données d'utilisation : messages de chat, images téléversées, messages vocaux soumis pour transcription, horodatages, métadonnées d'appareil/runtime et diagnostics applicatifs nécessaires au support.",
-        'Données de support : les messages envoyés via les canaux de support (Instagram/Telegram) peuvent être traités par ces plateformes selon leurs propres politiques de confidentialité.',
-      ],
-    },
-    {
-      id: 'purposes',
-      title: '3. Finalités du traitement',
-      paragraphs: [
-        "Fournir une assistance muséale par IA concernant les œuvres d'art, monuments, musées, architecture et patrimoine culturel.",
-        "Opérer l'authentification, les sessions sécurisées, la gestion des erreurs et les flux de support.",
-        'Améliorer la qualité du service, surveiller les abus/garde-fous et maintenir la sécurité et la fiabilité.',
-      ],
-    },
-    {
-      id: 'legal-basis',
-      title: '4. Bases légales (RGPD Art. 6)',
-      paragraphs: [
-        "Exécution du contrat (Art. 6(1)(b)) pour l'accès au compte et les fonctionnalités principales de l'application.",
-        'Intérêts légitimes (Art. 6(1)(f)) pour la surveillance de sécurité, la prévention de la fraude, la fiabilité du service et les diagnostics produit.',
-        "Consentement (Art. 6(1)(a)) pour les permissions d'appareil telles que la caméra/microphone, lorsque requises par la plateforme et uniquement lorsque l'utilisateur déclenche explicitement ces fonctionnalités.",
-      ],
-    },
-    {
-      id: 'recipients',
-      title: '5. Destinataires et sous-traitants',
-      paragraphs: [
-        "Personnel interne autorisé, sur la base du besoin d'en connaître.",
-        'Sous-traitants : OpenAI (États-Unis), Google Cloud (États-Unis/UE), DeepSeek (Chine), OVH SAS (France, données UE), Amazon Web Services (UE, données UE), Expo/EAS (États-Unis).',
-        "Aucun prestataire de paiement n'est utilisé à ce jour.",
-      ],
-    },
-    {
-      id: 'transfers',
-      title: '6. Transferts internationaux',
-      paragraphs: [
-        "Certains sous-traitants peuvent traiter des données en dehors de l'EEE/Royaume-Uni/Suisse. Le cas échéant, les transferts sont encadrés par des garanties appropriées telles que les CCT, décisions d'adéquation ou mécanismes équivalents.",
-        "Les données hébergées chez OVH et AWS restent dans l'Union européenne.",
-      ],
-    },
-    {
-      id: 'retention',
-      title: '7. Durées de conservation',
-      paragraphs: [
-        "Données de compte, historique de conversations et images : conservés pendant la durée d'utilisation du service, supprimés sur demande.",
-        'Fichiers audio (questions vocales) : non stockés — transmis pour transcription puis immédiatement supprimés.',
-        "Jetons d'authentification : accès 15 minutes, renouvellement 30 jours.",
-      ],
-    },
-    {
-      id: 'security',
-      title: '8. Mesures de sécurité',
-      paragraphs: [
-        "Musaium utilise des mesures techniques et organisationnelles comprenant le contrôle d'accès, le chiffrement des transports (TLS), l'isolation des environnements, le hachage des mots de passe (bcrypt) et la surveillance opérationnelle.",
-        "Aucun système n'est sans risque. Les utilisateurs sont invités à ne pas partager de données personnelles sensibles inutiles dans les conversations de chat.",
-      ],
-    },
-    {
-      id: 'rights',
-      title: '9. Vos droits RGPD',
-      paragraphs: [
-        "Vous pouvez demander l'accès, la rectification, l'effacement, la limitation, la portabilité et l'opposition au traitement, dans les conditions prévues par la loi.",
-        'Lorsque le traitement est fondé sur le consentement, vous pouvez le retirer à tout moment sans affecter la licéité du traitement antérieur.',
-        "Pour exercer vos droits, contactez : tim.moyence@gmail.com. Incluez suffisamment d'informations pour vérifier votre demande.",
-      ],
-    },
-    {
-      id: 'complaints',
-      title: '10. Réclamations',
-      paragraphs: [
-        'Vous pouvez introduire une réclamation auprès de votre autorité de contrôle locale.',
-        "Autorité chef de file (le cas échéant) : CNIL (Commission Nationale de l'Informatique et des Libertés), 3 Place de Fontenoy, TSA 80715, 75334 Paris Cedex 07.",
-      ],
-    },
-    {
-      id: 'minors',
-      title: '11. Enfants et mineurs',
-      paragraphs: [
-        "Musaium n'est pas destiné aux utilisateurs de moins de 15 ans (majorité numérique française — CNIL Délibération 2021-018). Les utilisateurs de moins de 15 ans nécessitent une autorisation parentale pour créer un compte. Si vous pensez qu'un mineur a fourni des données de manière illicite, contactez tim.moyence@gmail.com.",
-      ],
-    },
-    {
-      id: 'ai-disclosure',
-      title: '12. Contenu généré par IA (AI Act UE Art. 50)',
-      paragraphs: [
-        'Lorsque vous interagissez avec Musaium, vous interagissez avec un assistant IA générative reposant sur des grands modèles de langage tiers (OpenAI, Google, DeepSeek). Les réponses sont produites automatiquement et peuvent contenir des erreurs, des omissions ou des inexactitudes — veuillez vérifier les informations critiques auprès de sources primaires.',
-        'Les messages vocaux sont transcrits par un modèle de reconnaissance vocale ; les réponses orales sont synthétisées par un modèle text-to-speech. Les tampons audio ne sont pas conservés au-delà du cycle de la requête.',
-        "Cette information est fournie conformément à l'article 50 du règlement UE sur l'intelligence artificielle (Règlement (UE) 2024/1689).",
-      ],
-    },
-    {
-      // ADR-053 — Guideline Apple App Store 5.1.2(i) + RGPD Art. 7.
-      // L'application mobile collecte un consentement séparé, granulaire,
-      // par couple (catégorie de données × prestataire IA tiers) avant
-      // toute transmission de données personnelles hors infrastructure
-      // Musaium ; cette section est le miroir public de cette pratique.
-      id: 'granular-ai-consent',
-      title: '13. Consentement granulaire pour les IA tierces',
-      paragraphs: [
-        "En complément de la divulgation IA générale ci-dessus (§12), l'application mobile Musaium recueille un consentement explicite, séparé, pour chaque couple (catégorie de données × prestataire IA tiers) avant la transmission de données personnelles hors de l'infrastructure que Musaium contrôle. Cette couche s'ajoute à la base d'exécution du contrat (Art. 6(1)(b)) pour l'accès au compte et aux fonctionnalités principales : les consentements granulaires au titre de l'Art. 6(1)(a) constituent une preuve additionnelle d'autorisation active de chaque flux, conformément à la Guideline Apple App Store 5.1.2(i) (effective 2025-11-13) et au RGPD Art. 7 (granularité + révocabilité).",
-        "Les scopes de consentement enregistrés à ce jour incluent : messages texte vers OpenAI (requis pour utiliser le chat) et vers Google ; photos / images vers OpenAI et Google ; audio vers OpenAI et Google ; profil vers OpenAI et Google. Les scopes DeepSeek ne sont volontairement PAS proposés dans le build UE de production (porte CI `LLM_PROVIDER=deepseek` bloquée en UE).",
-        "Toutes les acceptations et révocations sont persistées dans notre back-end (table `user_consents`) et tracées dans notre journal interne d'audit (`audit_logs`) avec horodatage, IP et identifiant de requête. Vous pouvez consulter et révoquer chacune de ces autorisations à tout moment depuis Paramètres → Consentement IA dans l'application mobile.",
-        "La portée d'une révocation est à deux étages : (a) la révocation « localisation vers LLM » est appliquée en temps réel — une fois révoquée, votre position n'est plus transmise à aucun prestataire ; (b) les autres révocations IA tierces sont enregistrées comme intention utilisateur mais n'interrompent pas rétroactivement des inférences en cours : l'application complète passe par la suppression de compte (cf. §8 Vos Droits — droit à l'effacement).",
-        "Le détail de la justification du choix « couche additionnelle 6(1)(a) au-dessus du 6(1)(b) » figure dans [ADR-053](https://github.com/InnovMind/musaium/blob/main/docs/adr/ADR-053-apple-5-1-2-i-granular-consent.md). L'addendum DPIA correspondant est publié sous `docs/legal/DPIA_T1.1_addendum.md`.",
-      ],
-    },
-    {
-      id: 'changes',
-      title: '14. Modifications de la politique',
-      paragraphs: [
-        "Nous pouvons mettre à jour cette politique pour refléter des changements légaux, techniques ou produit. Les modifications substantielles seront communiquées dans l'application ou via les canaux appropriés avant ou lors de leur entrée en vigueur.",
-      ],
-    },
-  ],
+function buildContent(locale: LegalLocale): PrivacyContent {
+  return {
+    title: TITLES[locale],
+    version: typed.version,
+    lastUpdated: typed.lastUpdated,
+    sections: typed.locales[locale].sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+      paragraphs: [...s.paragraphs],
+    })),
+  };
+}
+
+const privacyContentByLocale: Record<LegalLocale, PrivacyContent> = {
+  en: buildContent('en'),
+  fr: buildContent('fr'),
 };
 
-const privacyContentByLocale = { en, fr } as const;
-
-type PrivacyLocale = keyof typeof privacyContentByLocale;
-
-function isPrivacyLocale(locale: string): locale is PrivacyLocale {
-  return locale in privacyContentByLocale;
+function isPrivacyLocale(locale: string): locale is LegalLocale {
+  return locale === 'en' || locale === 'fr';
 }
 
 export function getPrivacyContent(locale: string): PrivacyContent {
   return isPrivacyLocale(locale) ? privacyContentByLocale[locale] : privacyContentByLocale.en;
 }
+
+/**
+ * Typed recipients (subprocessors) — exported for the `/subprocessors` route.
+ * Returned as a copy so callers cannot mutate the canonical-derived array.
+ */
+export function getSubprocessors(locale: string): CanonicalSubprocessor[] {
+  const loc: LegalLocale = isPrivacyLocale(locale) ? locale : 'en';
+  return typed.locales[loc].recipients.map((r) => ({ ...r }));
+}
+
+export type Subprocessor = CanonicalSubprocessor;

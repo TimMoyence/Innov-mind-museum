@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — 文本消息",
       "third_party_ai_image_google": "Google AI — 照片",
       "third_party_ai_audio_google": "Google AI — 语音转录",
-      "third_party_ai_profile_google": "Google AI — 偏好与历史"
+      "third_party_ai_profile_google": "Google AI — 偏好与历史",
+      "location_to_llm": "位置 — 附近的地点"
     },
     "accessibility": "无障碍",
     "audio_description": "音频描述",
@@ -248,6 +249,34 @@
     "success": "密码更新成功",
     "error_mismatch": "两次输入的密码不一致",
     "error_short": "密码长度至少为8个字符"
+  },
+  "verify_email": {
+    "title": "Verify your email",
+    "loading": "Verifying your email…",
+    "success": "Your email address has been verified.",
+    "invalidToken": "This verification link is invalid or has expired.",
+    "error": "We could not verify your email. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "confirm_email_change": {
+    "title": "Confirm your new email",
+    "loading": "Confirming your new email…",
+    "success": "Your new email address has been confirmed.",
+    "invalidToken": "This confirmation link is invalid or has expired.",
+    "error": "We could not confirm your email change. Please try again.",
+    "cta_login": "Continue to sign in"
+  },
+  "reset_password": {
+    "title": "Reset your password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Reset password",
+    "success": "Your password has been reset.",
+    "invalidToken": "This reset link is invalid or has expired.",
+    "error": "We could not reset your password. Please try again.",
+    "error_short": "Password must be at least 8 characters",
+    "error_mismatch": "Passwords do not match",
+    "cta_login": "Continue to sign in"
   },
   "change_email": {
     "title": "更改邮箱",
@@ -1074,7 +1103,19 @@
     "data_audio": "语音消息（仅转录，音频不被AI存储）",
     "data_location": "您的位置（如果您选择分享）",
     "data_profile": "您的艺术偏好和参观历史（用于个性化回复）",
-    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek"
+    "data_providers": "由第三方 AI 服务处理：OpenAI、Google 和 DeepSeek",
+    "summary_only_content": "仅共享您发送的文本、图像和音频 — 不会共享其他任何内容。",
+    "summary_no_personal_data": "不会向 AI 提供商传输任何个人数据（姓名、电子邮件、精确位置）。",
+    "summary_processing": "处理仅限于由所声明的提供商（OpenAI、Google）生成回复。",
+    "summary_revoke_anytime": "您可以随时在“设置”中管理或撤回您的同意。",
+    "accept_all": "全部接受",
+    "manage_choices": "管理我的选择",
+    "back_to_summary": "返回",
+    "manage_title": "管理我的选择",
+    "manage_subtitle": "您可以自由取消勾选任何类别。“OpenAI 文本”范围是与 AI 聊天的必需项。",
+    "save_required_hint": "启用“OpenAI 文本”以保存您的选择。",
+    "scope_location": "位置",
+    "scope_location_hint": "您的大致区域（城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的精确位置绝不会被共享。"
   },
   "dailyArt": {
     "title": "每日艺术",

@@ -21,6 +21,7 @@ import {
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
+import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 import { env } from '@src/config/env';
 
 const authPasswordRouter: Router = Router();
@@ -57,7 +58,8 @@ authPasswordRouter.post(
     await auditService.log({
       action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
       actorType: 'anonymous',
-      metadata: { email },
+      // A1 / GDPR Art. 5(1)(c): domain only, never the raw email.
+      metadata: { emailDomain: extractEmailDomain(email) },
       ip: req.ip,
       requestId: req.requestId,
     });

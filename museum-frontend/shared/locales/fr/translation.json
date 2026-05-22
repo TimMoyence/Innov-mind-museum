@@ -203,7 +203,8 @@
       "third_party_ai_text_google": "Google AI — messages texte",
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — transcriptions vocales",
-      "third_party_ai_profile_google": "Google AI — préférences & historique"
+      "third_party_ai_profile_google": "Google AI — préférences & historique",
+      "location_to_llm": "Localisation — lieux à proximité"
     },
     "accessibility": "Accessibilité",
     "audio_description": "Audiodescription",
@@ -248,6 +249,34 @@
     "success": "Mot de passe mis à jour avec succès",
     "error_mismatch": "Les mots de passe ne correspondent pas",
     "error_short": "Le mot de passe doit contenir au moins 8 caractères"
+  },
+  "verify_email": {
+    "title": "Vérifiez votre e-mail",
+    "loading": "Vérification de votre e-mail…",
+    "success": "Votre adresse e-mail a été vérifiée.",
+    "invalidToken": "Ce lien de vérification est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu vérifier votre e-mail. Veuillez réessayer.",
+    "cta_login": "Continuer vers la connexion"
+  },
+  "confirm_email_change": {
+    "title": "Confirmez votre nouvel e-mail",
+    "loading": "Confirmation de votre nouvel e-mail…",
+    "success": "Votre nouvelle adresse e-mail a été confirmée.",
+    "invalidToken": "Ce lien de confirmation est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu confirmer le changement d'e-mail. Veuillez réessayer.",
+    "cta_login": "Continuer vers la connexion"
+  },
+  "reset_password": {
+    "title": "Réinitialisez votre mot de passe",
+    "new": "Nouveau mot de passe",
+    "confirm": "Confirmer le nouveau mot de passe",
+    "submit": "Réinitialiser le mot de passe",
+    "success": "Votre mot de passe a été réinitialisé.",
+    "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré.",
+    "error": "Nous n'avons pas pu réinitialiser votre mot de passe. Veuillez réessayer.",
+    "error_short": "Le mot de passe doit contenir au moins 8 caractères",
+    "error_mismatch": "Les mots de passe ne correspondent pas",
+    "cta_login": "Continuer vers la connexion"
   },
   "change_email": {
     "title": "Changer d'email",
@@ -1074,7 +1103,19 @@
     "data_audio": "Messages vocaux (transcrits uniquement, audio non conservé par l'IA)",
     "data_location": "Votre localisation (si vous choisissez de la partager)",
     "data_profile": "Vos préférences artistiques et historique de visites (pour personnaliser les réponses)",
-    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek"
+    "data_providers": "Traitées par des services d'IA tiers : OpenAI, Google et DeepSeek",
+    "summary_only_content": "Seuls les textes, images et audio que tu envoies sont partagés — rien de plus.",
+    "summary_no_personal_data": "Aucune donnée personnelle (nom, email, localisation précise) n'est transmise aux fournisseurs IA.",
+    "summary_processing": "Le traitement est limité à la génération de réponses par les fournisseurs déclarés (OpenAI, Google).",
+    "summary_revoke_anytime": "Tu peux gérer ou révoquer ton consentement à tout moment depuis les Paramètres.",
+    "accept_all": "Accepter tout",
+    "manage_choices": "Gérer mes choix",
+    "back_to_summary": "Retour",
+    "manage_title": "Gérer mes choix",
+    "manage_subtitle": "Décoche chaque catégorie librement. Le scope « Textes OpenAI » est requis pour pouvoir discuter avec l'IA.",
+    "save_required_hint": "Active « Textes OpenAI » pour pouvoir enregistrer.",
+    "scope_location": "Localisation",
+    "scope_location_hint": "Ta zone approximative (ville) est partagée avec l'IA pour reconnaître les musées et monuments à proximité. Ta localisation précise n'est jamais partagée."
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",

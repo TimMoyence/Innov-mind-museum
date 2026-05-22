@@ -78,7 +78,16 @@ const mockDict: Dictionary = {
   footer: {
     copyright: '',
     madeBy: '',
-    links: { privacy: '', support: '', accessibility: '', security: '', b2b: '' },
+    links: {
+      privacy: '',
+      support: '',
+      accessibility: '',
+      security: '',
+      b2b: '',
+      terms: '',
+      subprocessors: '',
+      cookies: '',
+    },
   },
   resetPassword: {} as Dictionary['resetPassword'],
   verifyEmail: {} as Dictionary['verifyEmail'],

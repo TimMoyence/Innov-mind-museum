@@ -442,6 +442,15 @@ export default tseslint.config(
     },
   },
 
+  // ── Boot composition root: single-source-of-truth wiring that grows with
+  //    each new background job / shutdown resource. Splitting it would scatter
+  //    boot ordering invariants (DB → cache → crons → server). Same rationale
+  //    as src/config above. max-lines-per-function still applies per function.
+  {
+    files: ['src/index.ts'],
+    rules: { 'max-lines': 'off' },
+  },
+
   // ── OpenTelemetry: CJS requires needed, dynamic instrumentation ──
   {
     files: ['src/shared/observability/**/*.ts'],

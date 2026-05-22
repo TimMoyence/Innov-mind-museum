@@ -7,7 +7,16 @@ interface RegisterOverrides {
   password?: string;
   firstname?: string;
   lastname?: string;
+  /** ISO `YYYY-MM-DD`. Defaults to an adult DOB so the digital-majority age-gate passes. */
+  dateOfBirth?: string;
 }
+
+/**
+ * Default adult date of birth (well above MINIMUM_AGE_FOR_REGISTRATION) used by
+ * helper register payloads so the digital-majority age-gate passes. Callers
+ * exercising the minor-rejection path must override this explicitly.
+ */
+const DEFAULT_ADULT_DOB = '1990-06-13';
 
 interface RegisterResult {
   userId: number;
@@ -63,10 +72,11 @@ export async function registerUser(
   const password = overrides.password ?? 'Password123!';
   const firstname = overrides.firstname ?? 'Tester';
   const lastname = overrides.lastname ?? 'User';
+  const dateOfBirth = overrides.dateOfBirth ?? DEFAULT_ADULT_DOB;
 
   const res = await harness.request('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password, firstname, lastname }),
+    body: JSON.stringify({ email, password, firstname, lastname, dateOfBirth }),
   });
 
   if (res.status !== 201) {

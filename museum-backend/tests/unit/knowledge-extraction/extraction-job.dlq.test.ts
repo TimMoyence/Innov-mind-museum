@@ -141,9 +141,7 @@ describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
   it('uses extract:<canonicalUrl> as jobId — same URL produces same jobId', async () => {
     const worker = new ExtractionWorker({} as ExtractionJobService, WORKER_CONFIG);
 
-    await worker.enqueueUrls([
-      { url: 'https://example.com/mona-lisa/', searchTerm: 'Mona Lisa', locale: 'en' },
-    ]);
+    await worker.enqueueUrls([{ url: 'https://example.com/mona-lisa/', locale: 'en' }]);
 
     expect(queueInstance.addBulk).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -156,8 +154,8 @@ describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
     const worker = new ExtractionWorker({} as ExtractionJobService, WORKER_CONFIG);
 
     await worker.enqueueUrls([
-      { url: 'https://example.com/artwork/', searchTerm: 'art', locale: 'en' },
-      { url: 'https://example.com/artwork', searchTerm: 'art', locale: 'en' },
+      { url: 'https://example.com/artwork/', locale: 'en' },
+      { url: 'https://example.com/artwork', locale: 'en' },
     ]);
 
     const bulkJobs = (queueInstance.addBulk as jest.Mock).mock.calls[0][0] as Array<{
@@ -172,8 +170,8 @@ describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
     const worker = new ExtractionWorker({} as ExtractionJobService, WORKER_CONFIG);
 
     await worker.enqueueUrls([
-      { url: 'https://example.com/art?b=2&a=1', searchTerm: 'art', locale: 'en' },
-      { url: 'https://example.com/art?a=1&b=2', searchTerm: 'art', locale: 'en' },
+      { url: 'https://example.com/art?b=2&a=1', locale: 'en' },
+      { url: 'https://example.com/art?a=1&b=2', locale: 'en' },
     ]);
 
     const bulkJobs = (queueInstance.addBulk as jest.Mock).mock.calls[0][0] as Array<{
@@ -189,7 +187,7 @@ describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
     const worker = new ExtractionWorker({} as ExtractionJobService, WORKER_CONFIG);
 
     await expect(
-      worker.enqueueUrls([{ url: 'https://example.com/art', searchTerm: 'art', locale: 'en' }]),
+      worker.enqueueUrls([{ url: 'https://example.com/art', locale: 'en' }]),
     ).resolves.toBeUndefined();
   });
 });

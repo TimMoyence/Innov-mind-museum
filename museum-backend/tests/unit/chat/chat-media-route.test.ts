@@ -1,3 +1,17 @@
+// Cluster A R4 — `createMediaRouter` (under test via `createApp`) now wires a
+// `third_party_ai_audio_<provider>` consent gate (`chat-media.route.ts:54-66`).
+// The production `buildThirdPartyAiConsentChecker()` lazy-imports
+// `@modules/auth/useCase` and hits Postgres on `isGranted`, which fails 500 in
+// unit tests with no DB. We swap in a permissive checker so the audio happy
+// path + AppError forwarding assertions exercise the route handler instead of
+// crashing on consent lookup. Audio CONSENT semantics are exercised by
+// `tests/unit/chat/chat-media-audio-consent.test.ts` (frozen, RED-phase).
+jest.mock('@modules/chat/useCase/third-party-ai-consent-checker', () => ({
+  buildThirdPartyAiConsentChecker: () => ({
+    isGranted: async () => await Promise.resolve(true),
+  }),
+}));
+
 import request from 'supertest';
 
 import { AppError } from '@shared/errors/app.error';

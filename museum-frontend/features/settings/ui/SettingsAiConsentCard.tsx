@@ -3,10 +3,12 @@ import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native'
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
+import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
 import {
   grantConsentScope,
   listUserConsents,
   revokeConsentScope,
+  REQUIRED_CONSENT_SCOPE,
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
 } from '@/features/chat/application/thirdPartyAiConsent';
@@ -107,6 +109,17 @@ export const SettingsAiConsentCard = () => {
           await grantConsentScope(scope);
         } else {
           await revokeConsentScope(scope);
+          // When the user withdraws the mandatory scope, the local "we
+          // already asked you" memo MUST be cleared so the chat surface
+          // re-prompts the consent sheet on next mount — otherwise the
+          // BE says "not granted" but the FE silently honours the stale
+          // accept-flag and the user sees an inert chat (reported
+          // 2026-05-20 : "j'ai tout remis à zéro mais l'écran ne se
+          // réaffiche pas"). Optional-scope revocations keep the flag
+          // intact — the user is informed-managing, not withdrawing.
+          if (scope === REQUIRED_CONSENT_SCOPE) {
+            await clearConsentAcceptedFlag();
+          }
         }
         await refresh();
       } catch (toggleError) {

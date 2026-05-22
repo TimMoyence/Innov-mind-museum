@@ -18,6 +18,7 @@ import {
 } from '@/features/auth/infrastructure/biometricStore';
 import { AUTH_ROUTE } from '@/features/auth/routes';
 import { useChatLocalCacheStore } from '@/features/chat/application/chatLocalCache';
+import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
 import { clearDailyArtStorage } from '@/features/daily-art/application/logoutCleanup';
 import { reportError } from '@/shared/observability/errorReporting';
 import {
@@ -111,6 +112,12 @@ const clearPerUserFeatureStorage = async (): Promise<void> => {
     useChatLocalCacheStore.getState().clearAll(),
     clearDailyArtStorage(),
     clearBiometricPreference(),
+    // B8 (spec R6) — clear the per-userId "already asked" consent memo so the
+    // next user on a shared device is re-prompted (GDPR Art. 7 — no consent
+    // inheritance across users). MUST run before `clearPersistedTokens()` so the
+    // access token is still readable when the namespaced key is derived
+    // (`useAiConsent.consentMemoKey`) — call-site ordering enforced below.
+    clearConsentAcceptedFlag(),
   ]);
   for (const outcome of results) {
     if (outcome.status === 'rejected') {
@@ -258,9 +265,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     setUnauthorizedHandler(() => {
+      // B8 — clear per-user feature storage (incl. the namespaced consent memo)
+      // BEFORE clearing tokens, so the access token is still readable when the
+      // consent memo key is derived from it.
+      void clearPerUserFeatureStorage();
       void clearPersistedTokens();
       void resetPersistedCache();
-      void clearPerUserFeatureStorage();
       setIsAuthenticated(false);
       setIsFirstLaunch(null);
       // TD-2 (2026-05-15) — server-forced logout (401 with no recoverable
@@ -284,6 +294,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     let refreshToken: string | null = null;
+    // B8 — clear per-user feature storage (incl. the namespaced consent memo)
+    // BEFORE clearing tokens, so the access token is still readable when the
+    // consent memo key is derived from it.
+    await clearPerUserFeatureStorage();
     try {
       refreshToken = await authStorage.getRefreshToken();
       await clearPersistedTokens();
@@ -292,7 +306,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     await resetPersistedCache();
-    await clearPerUserFeatureStorage();
     setIsAuthenticated(false);
     setIsFirstLaunch(null);
     // TD-2 (2026-05-15) — reset the session-scoped bootstrap guard so the

@@ -21,3 +21,45 @@ Audit 2026-05-18 : **🚨 CHANGES_REQUESTED — security/UX**.
 ```tsx
 <QRCode value={otpauthUrl} size={200} ecl="H" onError={(err) => logger.warn('mfa.qr.generation.failed', { err: err.message })} />
 ```
+
+## 2026-05-20 — re-audit (still CHANGES_REQUESTED, + screen-capture finding)
+
+Single call site unchanged: `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:13` import, `:109` `<QRCode value={otpauthUrl} size={200} />`. Both F1 + F2 from 2026-05-18 remain OPEN. New finding F-SEC-03.
+
+### Version drift
+- Declared `^6.3.15`, **installed `6.3.21`** (latest 6.3 patch — no action needed, but note the drift; API stable across 6.3.x).
+- Peer `react-native-svg`: declared `^15.13.0`, installed `15.15.4` (latest `15.15.5`). Clean.
+
+### 🚨 F1 HIGH (security/UX) — still open : MFA otpauth QR uses default `ecl='M'` (15%) instead of `'H'` (30%)
+- `MfaEnrollScreen.tsx:109` has no `ecl`. Sensitive one-shot TOTP secret; failed decode = user retypes 32-char base32 (manualHint fallback `:110` mitigates UX cost). otpauth ~80-150 chars fits `H` (Byte cap 1273).
+- **Fix TD-QR-01** : add `ecl="H"`.
+
+### ⚠️ F2 MEDIUM — still open : `onError` prop missing → uncaught render exception on capacity failure
+- **Fix TD-QR-02** : `onError={(err) => logger.warn('mfa.qr.generation.failed', { err: err.message })}`, render manualSecret-only fallback.
+
+### 🚨 F-SEC-03 HIGH (NEW, screen-capture) : MFA secret QR + manualSecret displayed with no screen-capture protection
+- `MfaEnrollScreen.tsx` renders the live TOTP shared secret (QR `:109` + `manualSecret` `:111`) with no `FLAG_SECURE` / capture detection. A screenshot, screen-recording, or app-switcher snapshot of this screen leaks the second factor. The library provides NO protection (upstream documents none).
+- **Fix TD-QR-03** :
+  - Android — set `FLAG_SECURE` on screen focus, clear on blur (blocks screenshot + recording + recents thumbnail).
+  - iOS — blur the secret on `resignActive` (app-switcher) + optionally detect screenshot notification and warn.
+  - Hygiene — never log `otpauthUrl`/`manualSecret`, never to Sentry breadcrumbs/analytics; keep ephemeral in `useState` (current — good); clear on navigate-away.
+- Scope: enrollment screen only.
+
+### ⚠️ F-A11Y-04 LOW (NEW) : QR has no accessibility label
+- `<QRCode>` renders a bare `<Svg>` with no a11y semantics. Wrap in `<View accessible accessibilityRole="image" accessibilityLabel="...">` (FE a11y doctrine).
+
+### ✅ Positives
+- Canonical default import ✅; RN 0.83 → no textEncodingTransformation needed ✅; no `logo` → Android `logoBorderRadius` gotcha N/A ✅; default black/white = max camera-decode contrast ✅; manualSecret fallback present ✅; no CVE for the package (2026-05-21) ✅.
+
+### Recommended diff (2026-05-20)
+```tsx
+// + Android FLAG_SECURE on focus / clear on blur (TD-QR-03), e.g. via expo-screen-capture or a native module
+<View accessible accessibilityRole="image" accessibilityLabel="TOTP enrollment QR code">
+  <QRCode
+    value={otpauthUrl}
+    size={200}
+    ecl="H"
+    onError={(err) => logger.warn('mfa.qr.generation.failed', { err: err.message })}
+  />
+</View>
+```

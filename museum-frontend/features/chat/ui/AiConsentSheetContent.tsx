@@ -19,6 +19,11 @@ interface AiConsentSheetContentProps {
   onPrivacy?: () => void;
 }
 
+interface ReassuranceBullet {
+  icon: keyof typeof Ionicons.glyphMap;
+  copyKey: ParseKeys;
+}
+
 interface RowSpec {
   scope: ThirdPartyAiScope;
   icon: keyof typeof Ionicons.glyphMap;
@@ -32,6 +37,20 @@ interface ProviderGroup {
   labelKey: ParseKeys;
   rows: RowSpec[];
 }
+
+/**
+ * Four reassurance bullets shown in the default `summary` view. The copy
+ * lives in `consent.summary_*` keys (FR + EN translations) and is the
+ * single source of truth for the "no personal data + no leak" message the
+ * user explicitly asked for (2026-05-20). Icons are Ionicons — no emoji
+ * unicode (CLAUDE.md gotcha + ast-grep `no-unicode-emoji-in-screen`).
+ */
+const SUMMARY_BULLETS: readonly ReassuranceBullet[] = [
+  { icon: 'checkmark-circle-outline', copyKey: 'consent.summary_only_content' },
+  { icon: 'shield-checkmark-outline', copyKey: 'consent.summary_no_personal_data' },
+  { icon: 'lock-closed-outline', copyKey: 'consent.summary_processing' },
+  { icon: 'settings-outline', copyKey: 'consent.summary_revoke_anytime' },
+] as const;
 
 const PROVIDER_GROUPS: readonly ProviderGroup[] = [
   {
@@ -106,6 +125,22 @@ const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 
 const REQUIRED_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
 
+/**
+ * `location_to_llm` is a coarse-location data-sharing scope (city/country only),
+ * NOT a per-LLM-vendor grant — so it renders in its own single-row "Location"
+ * group BELOW the provider grid (design §9 D1), never under OpenAI/Google.
+ * Default OFF (GDPR Art. 4(11) unambiguous affirmative action). The BE consent
+ * gate (`location-resolver.ts`) is what actually propagates the coarse location
+ * once this is granted.
+ */
+const LOCATION_ROW: RowSpec = {
+  scope: 'location_to_llm',
+  icon: 'location-outline',
+  labelKey: 'consent.scope_location',
+  hintKey: 'consent.scope_location_hint',
+  required: false,
+};
+
 const initialState = (): Record<ThirdPartyAiScope, boolean> =>
   Object.fromEntries(THIRD_PARTY_AI_SCOPES.map((s) => [s, false])) as Record<
     ThirdPartyAiScope,
@@ -114,13 +149,23 @@ const initialState = (): Record<ThirdPartyAiScope, boolean> =>
 
 /**
  * Bottom-sheet content (full-screen presentation) for the granular third-party
- * AI consent gate. S4-P0-02 — Apple Guideline 5.1.2(i) requires explicit,
- * separate, non-bundled consent per (data category × AI provider). Each row
- * is an independent Switch defaulting OFF (no pre-checked boxes — GDPR Art.
- * 4(11) + Art. 7(1) "unambiguous indication by a statement or clear
- * affirmative action"). Save stays disabled until the user actively toggles
- * the mandatory `third_party_ai_text_openai` scope ON ; the required-row
- * label carries a `(required)` badge so the gate is discoverable.
+ * AI consent gate. S4-P0-02 amendment 2026-05-20 — cookie-banner UX :
+ *
+ * - Default `summary` view : reassurance copy (no personal data, no leak,
+ *   limited processing, revocation) + one-click "Accept all" CTA + secondary
+ *   "Manage" CTA. The default path requires zero scope-by-scope decision —
+ *   GDPR Art. 7(1) compliant because (a) "Accept all" is an explicit
+ *   affirmative act, (b) the four reassurance bullets give specific informed
+ *   consent, (c) revocation is documented and reachable from Settings.
+ *
+ * - `manage` view (after pressing Manage) : 4 categories × 2 providers = 8
+ *   independent Switches defaulting OFF (no pre-checked boxes — GDPR Art.
+ *   4(11) + Apple 5.1.2(i) "unambiguous indication by a statement or clear
+ *   affirmative action"). Save stays disabled with an EXPLICIT hint
+ *   ("Enable 'OpenAI Text' to save your choices.") until the user actively
+ *   toggles the mandatory `third_party_ai_text_openai` scope ON. Before
+ *   2026-05-20 the disabled-state was opaque (button looked tappable but did
+ *   nothing) which produced confused-user reports.
  */
 export const AiConsentSheetContent = ({
   close,
@@ -130,11 +175,15 @@ export const AiConsentSheetContent = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
 
-  // Local switch state ; the BottomSheetRouter remounts this Content via
-  // `key={state.route}` on every open, so `useState(initialState)` is already
-  // the source of truth for "fresh open = fresh switches" (no useEffect reset
-  // pattern needed here, even though the CLAUDE.md `RN Modal` gotcha warns
-  // about persistent hosts — the router is not such a host).
+  // View state — `summary` is the default cookie-banner-style landing.
+  // `manage` exposes the granular switches once the user opts in to detail.
+  // BottomSheetRouter remounts this content via `key={state.route}` on every
+  // fresh open, so initialising to 'summary' here doubles as "fresh open =
+  // fresh view" without an additional reset effect.
+  const [view, setView] = useState<'summary' | 'manage'>('summary');
+
+  // Granular switch state. Survives back-and-forth between summary↔manage
+  // (intentional — a user who toggled then went Back keeps their choices).
   const [grants, setGrants] = useState<Record<ThirdPartyAiScope, boolean>>(initialState);
 
   const grantedScopes = useMemo(
@@ -144,7 +193,12 @@ export const AiConsentSheetContent = ({
 
   const canSave = grants[REQUIRED_SCOPE];
 
-  const handleAccept = (): void => {
+  const handleAcceptAll = (): void => {
+    onAccept?.(THIRD_PARTY_AI_SCOPES);
+    close();
+  };
+
+  const handleSaveManaged = (): void => {
     onAccept?.(grantedScopes);
     close();
   };
@@ -153,42 +207,90 @@ export const AiConsentSheetContent = ({
     setGrants((prev) => ({ ...prev, [scope]: !prev[scope] }));
   };
 
+  if (view === 'summary') {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.cardBackground }]}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={[styles.iconCircle, { backgroundColor: theme.primaryTint }]}>
+            <Ionicons name="sparkles" size={36} color={theme.primary} />
+          </View>
+
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{t('consent.title')}</Text>
+
+          <Text style={[styles.body, { color: theme.textSecondary }]}>{t('consent.body')}</Text>
+
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: theme.surface, borderColor: theme.cardBorder },
+            ]}
+          >
+            {SUMMARY_BULLETS.map((bullet) => (
+              <View key={bullet.icon} style={styles.infoRow}>
+                <Ionicons name={bullet.icon} size={20} color={theme.primary} />
+                <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                  {t(bullet.copyKey)}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <Pressable
+            onPress={onPrivacy}
+            accessibilityRole="link"
+            accessibilityLabel={t('consent.read_privacy')}
+          >
+            <Text style={[styles.link, { color: theme.primary }]}>{t('consent.read_privacy')}</Text>
+          </Pressable>
+        </ScrollView>
+
+        <View style={[styles.footer, { borderTopColor: theme.separator }]}>
+          <LiquidButton
+            label={t('consent.accept_all')}
+            onPress={handleAcceptAll}
+            variant="primary"
+            size="lg"
+            accessibilityLabel={t('consent.accept_all')}
+          />
+          <View style={styles.footerSpacer} />
+          <LiquidButton
+            label={t('consent.manage_choices')}
+            onPress={() => {
+              setView('manage');
+            }}
+            variant="secondary"
+            size="lg"
+            accessibilityLabel={t('consent.manage_choices')}
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.cardBackground }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={[styles.iconCircle, { backgroundColor: theme.primaryTint }]}>
-          <Ionicons name="sparkles" size={36} color={theme.primary} />
-        </View>
-
-        <Text style={[styles.title, { color: theme.textPrimary }]}>{t('consent.title')}</Text>
-
-        <Text style={[styles.body, { color: theme.textSecondary }]}>{t('consent.body')}</Text>
-
-        <View
-          style={[
-            styles.infoCard,
-            { backgroundColor: theme.surface, borderColor: theme.cardBorder },
-          ]}
+        <Pressable
+          onPress={() => {
+            setView('summary');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('consent.back_to_summary')}
+          style={styles.backRow}
         >
-          <View style={styles.infoRow}>
-            <Ionicons name="information-circle-outline" size={20} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-              {t('consent.info_accuracy')}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-              {t('consent.info_granular')}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="settings-outline" size={20} color={theme.primary} />
-            <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-              {t('consent.info_revoke')}
-            </Text>
-          </View>
-        </View>
+          <Ionicons name="chevron-back" size={20} color={theme.primary} />
+          <Text style={[styles.backLabel, { color: theme.primary }]}>
+            {t('consent.back_to_summary')}
+          </Text>
+        </Pressable>
+
+        <Text style={[styles.title, { color: theme.textPrimary }]}>
+          {t('consent.manage_title')}
+        </Text>
+
+        <Text style={[styles.body, { color: theme.textSecondary }]}>
+          {t('consent.manage_subtitle')}
+        </Text>
 
         {PROVIDER_GROUPS.map((group) => (
           <View
@@ -219,6 +321,7 @@ export const AiConsentSheetContent = ({
                   </Text>
                 </View>
                 <Switch
+                  testID={`consent-switch-${row.scope}`}
                   value={grants[row.scope]}
                   onValueChange={() => {
                     toggle(row.scope);
@@ -232,6 +335,40 @@ export const AiConsentSheetContent = ({
           </View>
         ))}
 
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: theme.surface, borderColor: theme.cardBorder },
+          ]}
+        >
+          <View style={styles.switchRow}>
+            <Ionicons
+              name={LOCATION_ROW.icon}
+              size={20}
+              color={theme.primary}
+              style={styles.switchIcon}
+            />
+            <View style={styles.switchInfo}>
+              <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>
+                {t(LOCATION_ROW.labelKey)}
+              </Text>
+              <Text style={[styles.switchHint, { color: theme.textSecondary }]}>
+                {t(LOCATION_ROW.hintKey)}
+              </Text>
+            </View>
+            <Switch
+              testID={`consent-switch-${LOCATION_ROW.scope}`}
+              value={grants[LOCATION_ROW.scope]}
+              onValueChange={() => {
+                toggle(LOCATION_ROW.scope);
+              }}
+              trackColor={{ false: theme.cardBorder, true: theme.primary }}
+              accessibilityRole="switch"
+              accessibilityLabel={t(LOCATION_ROW.labelKey)}
+            />
+          </View>
+        </View>
+
         <Pressable
           onPress={onPrivacy}
           accessibilityRole="link"
@@ -242,9 +379,17 @@ export const AiConsentSheetContent = ({
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: theme.separator }]}>
+        {!canSave ? (
+          <View style={styles.saveHintRow}>
+            <Ionicons name="alert-circle-outline" size={16} color={theme.textSecondary} />
+            <Text style={[styles.saveHint, { color: theme.textSecondary }]}>
+              {t('consent.save_required_hint')}
+            </Text>
+          </View>
+        ) : null}
         <LiquidButton
           label={t('consent.save_and_continue')}
-          onPress={handleAccept}
+          onPress={handleSaveManaged}
           variant="primary"
           size="lg"
           disabled={!canSave}
@@ -336,5 +481,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: semantic.screen.paddingXL,
     paddingVertical: semantic.modal.padding,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  footerSpacer: {
+    height: semantic.card.gapSmall,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: space['1'],
+    marginBottom: semantic.card.gapTiny,
+  },
+  backLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  saveHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space['1.5'],
+    marginBottom: semantic.card.gapSmall,
+  },
+  saveHint: {
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
 });

@@ -59,6 +59,8 @@ describe('RegisterUseCase — verification email', () => {
       password: 'ValidPass1',
       firstname: 'Test',
       lastname: 'User',
+      // A2: dateOfBirth is now required (CNIL age gate); supply a valid adult DOB.
+      dateOfBirth: '1990-06-13',
     });
 
     expect(repo.setVerificationToken).toHaveBeenCalledWith(
@@ -87,6 +89,8 @@ describe('RegisterUseCase — verification email', () => {
       password: 'ValidPass1',
       firstname: 'Test',
       lastname: 'User',
+      // A2: dateOfBirth is now required (CNIL age gate); supply a valid adult DOB.
+      dateOfBirth: '1990-06-13',
     });
 
     expect(result).toEqual(user);

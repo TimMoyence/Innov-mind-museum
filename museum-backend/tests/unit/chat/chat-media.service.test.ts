@@ -163,6 +163,9 @@ describe('ChatMediaService', () => {
         text: 'Hello world',
         voice: 'alloy',
         requestId: MESSAGE_ID,
+        // TD-20 (R13a/R12) — per-tenant scope propagated (museumId omitted when
+        // the fixture session has null museumId; tier derived from the owner).
+        tier: 'free',
       });
     });
 

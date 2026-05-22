@@ -98,14 +98,14 @@ describe('ExtractionJobService — idempotence', () => {
     );
 
     // First call — no existing record → full pipeline
-    await service.processUrl(URL_A, 'Mona Lisa', 'en');
+    await service.processUrl(URL_A, 'en');
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
     expect(contentRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ url: URL_A, status: ExtractedContentStatus.SCRAPED }),
     );
 
     // Second call — record exists and is fresh → skipped
-    await service.processUrl(URL_A, 'Mona Lisa', 'en');
+    await service.processUrl(URL_A, 'en');
 
     // upsert total must still be 1 — second call was a no-op
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
@@ -130,7 +130,7 @@ describe('ExtractionJobService — idempotence', () => {
       CONFIG,
     );
 
-    await service.processUrl(URL_A, 'Mona Lisa', 'en');
+    await service.processUrl(URL_A, 'en');
 
     // Stale → re-scraped → upsert called once
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
@@ -153,10 +153,7 @@ describe('ExtractionJobService — idempotence', () => {
       CONFIG,
     );
 
-    await Promise.all([
-      service.processUrl(URL_A, 'Mona Lisa', 'en'),
-      service.processUrl(URL_A, 'Mona Lisa', 'en'),
-    ]);
+    await Promise.all([service.processUrl(URL_A, 'en'), service.processUrl(URL_A, 'en')]);
 
     // Both calls proceed (no in-process lock), but the DB upsert is idempotent
     // (TypeORM upsert by url = ON CONFLICT DO UPDATE).

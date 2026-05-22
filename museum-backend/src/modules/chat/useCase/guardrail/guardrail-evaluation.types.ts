@@ -3,6 +3,7 @@ import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-pro
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { AuditService } from '@shared/audit/audit.service';
+import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 export type { GuardrailAuditContext } from './guardrail-audit-payload';
 
@@ -23,8 +24,13 @@ export interface InputGuardrailResult {
  *
  * Wired in production by `chat-module.ts` to bind the orchestrator. Tests pass
  * a `jest.fn()` with the same signature.
+ *
+ * TD-20 (R13c) — widened with an OPTIONAL `scope` 2nd arg so the
+ * guardrail-closure judge path forwards `{tier, requestId}` from
+ * `GuardrailAuditContext` (museumId honestly ABSENT — see spec §5/D5). Optional
+ * => existing test `jest.fn()`s compile unchanged.
  */
-export type LlmJudgeFn = (message: string) => Promise<JudgeDecision | null>;
+export type LlmJudgeFn = (message: string, scope?: LlmJudgeScope) => Promise<JudgeDecision | null>;
 
 export interface GuardrailEvaluationServiceDeps {
   repository: ChatRepository;

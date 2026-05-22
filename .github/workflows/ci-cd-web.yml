@@ -70,6 +70,16 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      # R18 — Web cookies audit sentinel. Moved here from ci-cd-backend.yml
+      # (reviewer feedback IMPORTANT 3 — R18 acceptance explicitly scopes the
+      # gate to the web quality job). The audit script itself still lives in
+      # the backend workspace (single source of truth — design D9 cross-app
+      # sentinel acceptable) and is pure Node (no pnpm install needed). The
+      # working-directory job default points at museum-web, so reach into
+      # the sibling backend tree via a relative path.
+      - name: Web cookies audit sentinel (R18)
+        run: node ../museum-backend/scripts/sentinels/web-cookies-audit.mjs
       # Coverage gate (vitest.config.ts thresholds) activates after Bloc C5 lands
       # 10 admin panel tests bringing museum-web above the 70 % floor — see ADR-007.
 

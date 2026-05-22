@@ -22,3 +22,13 @@ Audit 2026-05-18 : **MOSTLY_COMPLIANT**.
 - addEventListener cleanup correct (return unsubscribe)
 - Pure `resolveDataMode()` separation
 - No `state.details.ssid` access (Platform.OS guard would be needed if added)
+
+## 2026-05-20
+
+Refresh re-verify (lib-doc-curator, UFR-022). Pinned `11.5.2`. Registry latest **12.0.1**; **v12.0.0 is a BREAKING major** (iOS 14+ / RN 0.76+ min; Wi-Fi API `CNCopyCurrentNetworkInfo`→`NEHotspotNetwork` requiring the Access Wi-Fi Information entitlement). API surface for `fetch`/`addEventListener`/`useNetInfo` unchanged — migration is mostly native config. No advisory forces it; defer the bump to a post-launch native-config window. Pin ≥11.5.2 anyway (monorepo node-resolver fix).
+
+- **🚨 TD-14 STILL OPEN (headline gap)** — `grep onlineManager` across museum-frontend = **0 hits**. TanStack Query's `onlineManager` is NOT wired to NetInfo → no refetch-on-reconnect, mutations not queued offline. Offline-first is PRE-V1. Highest-leverage fix: `onlineManager.setEventListener((setOnline) => NetInfo.addEventListener((s) => setOnline(s.isConnected === true && s.isInternetReachable !== false)))` once at startup. See PATTERNS §8.
+- **TD-NI-01 STILL OPEN** — `ConnectivityProvider.tsx:25` `isConnected: netState.isConnected ?? true` coerces null→true; context type `isConnected: boolean` (line 7) not nullable → reports online during undetermined initial probe → premature API calls. Propagate `boolean | null`, default null (line 12).
+- **TD-NI-02 STILL OPEN** — `useMuseumPrefetch.ts:41` gates only on `info.type !== 'wifi'`; ignores `isInternetReachable`. Captive-portal interface still prefetches. Add `isInternetReachable === true`.
+- **TD-NI-03 (LOW) STILL OPEN** — no AppState `'active'` → `NetInfo.refresh()` bridge; stale state after background iOS WiFi switch.
+- ✅ `DataModeProvider.tsx` correct: `useNetInfo`, checks `isConnected === false`, cellular gen + `isConnectionExpensive`. `addEventListener` cleanup correct in ConnectivityProvider (returns unsubscribe). No `state.details.ssid` access (avoids the v12 entitlement requirement). No CVE/GHSA.

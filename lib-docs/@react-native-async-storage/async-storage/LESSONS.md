@@ -29,3 +29,13 @@ Audit 2026-05-18 : **1 HIGH + 1 MEDIUM + 5 INFO**.
 - queryPersister `shouldDehydrateQuery` PII-allowlist (queryClient.ts:75-92) — blocks auth/user/admin/messages from AsyncStorage plaintext
 - chatSessionStore.ts explicitly DOC plaintext rejection (V1 PII security decision)
 - Node test runner / Jest split correct (zero AsyncStorage tests in `.test-dist/`)
+
+## 2026-05-20
+
+Refresh re-verify (lib-doc-curator, UFR-022). Pinned `2.2.0` (exact). **v3.x (3.0.3) is the registry latest line but is NOT Expo SDK 54+ compatible** — 2.2.0 is the correct/maximal version for Musaium's Expo SDK 55. DO NOT bump to v3 (scoped-storage breaking API + Android 16 KB page-size `libsqlitejni.so` issue in 3.0.x). v2.2.0 still maintained (RN 0.80 support).
+
+- **🚨 SECURITY INVARIANT reaffirmed** — async-storage is UNENCRYPTED PLAINTEXT. Verified `authTokenStore.ts` uses expo-secure-store on native (web localStorage fallback = documented tech debt). Keys `auth.accessToken`/`auth.refreshToken` exist in authTokenStore but route to SecureStore on native, NOT async-storage. NEVER store tokens/PII in async-storage.
+- **TD-AS-01 STILL OPEN** — key namespacing inconsistent: verified `musaium.query.cache`, `runtime.*`, `museum.lastKnownPosition.v1`, `auth.*`, etc. across 10 prefix families. New keys MUST be `musaium.<feature>.<key>`.
+- **TD-AS-02 STILL OPEN** — `shared/infrastructure/storage.ts` lines 8/11/23: `setItem`/`removeItem`/`setJSON` have NO try/catch (only `getJSON` at line 14 catches). Quota-exceeded rejects propagate unhandled. Add wrapper try/catch.
+- **TD-AS-03 STILL OPEN** — `musaium.query.cache` (TanStack persister, 24h gcTime) has no size monitoring vs the Android ~2 MB per-entry cap → silent `setItem` reject → cold-start hydration break on long sessions.
+- ZERO `clear()` calls in production (PATTERNS §4 respected). No CVE/GHSA against the JS package; standing risk is intrinsic plaintext storage.

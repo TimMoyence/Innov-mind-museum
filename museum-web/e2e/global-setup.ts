@@ -22,6 +22,10 @@ async function seedAdminUser(email: string, password: string): Promise<void> {
         firstname: 'PlaywrightTest',
         lastname: 'Admin',
         gdprConsent: true,
+        // `dateOfBirth` became required in commit 77c5e81b2 (P0.A2 DOB age-gate,
+        // CNIL Délibération 2021-018 ≥15y minor consent). Seed an adult DOB
+        // for the e2e admin so the gate passes deterministically.
+        dateOfBirth: '1990-01-01',
       },
     });
     if (!reg.ok()) {

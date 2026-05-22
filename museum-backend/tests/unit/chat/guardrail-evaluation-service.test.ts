@@ -453,7 +453,13 @@ describe('GuardrailEvaluationService', () => {
       const result = await service.evaluateInput('Tell me about the Mona Lisa');
 
       expect(result.allow).toBe(true);
-      expect(adv.checkInput).toHaveBeenCalledWith({ text: 'Tell me about the Mona Lisa' });
+      // TD-20 (R13e/R12) — provider call now carries the derived per-tenant
+      // scope. No context here → tier='anonymous', requestId omitted (museumId
+      // never on this path — D5).
+      expect(adv.checkInput).toHaveBeenCalledWith({
+        text: 'Tell me about the Mona Lisa',
+        tier: 'anonymous',
+      });
     });
 
     it('blocks text when advanced guardrail returns allow=false (enforce mode)', async () => {

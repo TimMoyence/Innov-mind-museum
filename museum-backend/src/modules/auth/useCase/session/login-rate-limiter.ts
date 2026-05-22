@@ -93,14 +93,17 @@ const resolveStore = (): RedisRateLimitStore | null => {
 
 const normalize = (email: string): string => email.toLowerCase().trim();
 
-const slidingRedisKey = (email: string): string => `${KEY_PREFIX}${email}`;
-
-/** Hash to avoid leaking raw identifiers into Redis/log dumps. */
-const lockoutRedisKey = (email: string): string => {
+/**
+ * Hash to avoid leaking raw identifiers (email PII) into Redis keyspace / log
+ * dumps. Single source for both keys (DRY) so the justified disable lives once.
+ */
+const hashEmailForKey = (email: string): string =>
   // eslint-disable-next-line sonarjs/hashing -- SHA-1 used only as a non-cryptographic key identifier, never for password storage or signing
-  const hash = createHash('sha1').update(email).digest('hex');
-  return `${LOCKOUT_KEY_PREFIX}${hash}`;
-};
+  createHash('sha1').update(email).digest('hex');
+
+const slidingRedisKey = (email: string): string => `${KEY_PREFIX}${hashEmailForKey(email)}`;
+
+const lockoutRedisKey = (email: string): string => `${LOCKOUT_KEY_PREFIX}${hashEmailForKey(email)}`;
 
 /** Returns 0 if threshold not met yet. */
 const computeLockoutMs = (failures: number): number => {
