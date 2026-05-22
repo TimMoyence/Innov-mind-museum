@@ -74,6 +74,26 @@ export default tseslint.config(
   {
     files: ['src/**/*.{ts,tsx}'],
     rules: {
+      // Cross-workspace import guard (added 2026-05-22 after the Docker
+      // build broke when 3 files reached into museum-backend/ via `../../`).
+      // The Next.js build context only includes museum-web/, so any import
+      // resolving outside this workspace either fails at build time or
+      // smuggles a dependency that won't be in the production image.
+      // For legal copies see museum-web/src/lib/legal/ + the drift sentinel
+      // (museum-backend/scripts/sentinels/privacy-content-drift.mjs).
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/museum-backend/**', '**/museum-frontend/**'],
+              message:
+                'Cross-workspace imports forbidden — museum-web must not reach into museum-backend/ or museum-frontend/. For legal content use the JSON copies under @/lib/legal/. For API access use the generated OpenAPI client at @/lib/api/generated/.',
+            },
+          ],
+        },
+      ],
+
       // TypeScript strict — errors
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-unused-vars': [

@@ -40,12 +40,38 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
 
   let container: StartedRedisTestContainer;
 
+  // CI race guard (added 2026-05-22): swallow ioredis "Connection is closed"
+  // events that surface AFTER BullMQ workers/queues have already returned
+  // from .close(). Locally the TCP RST race never reproduces (macOS Docker
+  // Desktop keeps the loopback socket alive long enough). On ubuntu-latest
+  // GH runners the docker shutdown is abrupt enough that the residual
+  // ioredis client emits an unhandled rejection → Jest escalates to suite
+  // failure. We restore the original listeners in afterAll so other suites
+  // (e.g. anything that ran before this one in --runInBand mode) keep their
+  // own escalation behaviour intact.
+  const originalUnhandled = process.listeners('unhandledRejection').slice();
+
   beforeAll(async () => {
+    process.removeAllListeners('unhandledRejection');
+    process.on('unhandledRejection', (reason) => {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      if (/Connection is closed/i.test(message)) return;
+      for (const listener of originalUnhandled) {
+        listener.call(process, reason, Promise.reject(reason));
+      }
+    });
     container = await startRedisTestContainer();
   });
 
   afterAll(async () => {
+    // Same race — let ioredis sockets fully RST before docker rm kills Redis.
+    // .close() promises already resolved by here; this is just TCP cleanup.
+    await new Promise((resolve) => setTimeout(resolve, 500));
     await container.stop();
+    process.removeAllListeners('unhandledRejection');
+    for (const listener of originalUnhandled) {
+      process.on('unhandledRejection', listener);
+    }
   });
 
   // ── Stub use cases ─────────────────────────────────────────────────────────

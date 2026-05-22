@@ -280,6 +280,23 @@ jobs:
     needs: [quality, coverage-merge]
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Redis is required because BullMQ queue adapters (museum-enrichment,
+    # chat-purge-cron, audit-cron) connect at composition-root load time;
+    # without it, `tests/integration/museum/bullmq-enrichment-scheduler.integration.test.ts`
+    # fails with `ECONNREFUSED ::1:6379` and trips the whole job. Mirror of
+    # the `quality` job services block — kept identical on purpose so any
+    # future quality-level service tweak applies to integration too.
+    # CLAUDE.md § Pièges connus documents this dependency.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: museum-backend

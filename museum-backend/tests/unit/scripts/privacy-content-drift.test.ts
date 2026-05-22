@@ -28,12 +28,12 @@ interface CanonicalFixture {
   lastUpdated: string;
   locales: {
     en: {
-      sections: Array<{ id: string; title: string; paragraphs: string[] }>;
-      recipients: Array<{ name: string }>;
+      sections: { id: string; title: string; paragraphs: string[] }[];
+      recipients: { name: string }[];
     };
     fr: {
-      sections: Array<{ id: string; title: string; paragraphs: string[] }>;
-      recipients: Array<{ name: string }>;
+      sections: { id: string; title: string; paragraphs: string[] }[];
+      recipients: { name: string }[];
     };
   };
 }
@@ -45,6 +45,7 @@ interface CanonicalFixture {
  * The fixture layout intentionally mirrors the production paths so the
  * sentinel can resolve them via a `--root <fixturesDir>` flag (see GREEN
  * implementation contract in design.md §6 + tasks.md T2.6).
+ * @param root
  */
 function buildSyncedFixtures(root: string): void {
   // Canonical
@@ -120,6 +121,38 @@ function buildSyncedFixtures(root: string): void {
   writeFileSync(
     path.join(root, 'museum-frontend/features/legal/privacyPolicyContent.ts'),
     feTs,
+    'utf8',
+  );
+
+  // 4th surface (added 2026-05-22): museum-web JSON copies of BE canonicals.
+  // The sentinel asserts these are JSON-equivalent to the BE source so the
+  // museum-web Docker build can resolve them without crossing workspaces.
+  // We must also write a terms canonical on the BE side because the sentinel
+  // pairs each copy with its canonical.
+  const termsCanonical = {
+    version: '1.0.0',
+    lastUpdated: '2026-05-21',
+    locales: {
+      en: { title: 'Terms', sections: [] as unknown[] },
+      fr: { title: 'Conditions', sections: [] as unknown[] },
+    },
+  };
+  writeFileSync(
+    path.join(root, 'museum-backend/src/shared/legal/terms-content.canonical.json'),
+    JSON.stringify(termsCanonical, null, 2),
+    'utf8',
+  );
+  mkdirSync(path.join(root, 'museum-web/src/lib/legal'), { recursive: true });
+  // Copies start byte-equivalent — re-serialise from the parsed canonicals so
+  // a `JSON.stringify(JSON.parse(x))` round-trip on either side stays stable.
+  writeFileSync(
+    path.join(root, 'museum-web/src/lib/legal/privacy-content.canonical.json'),
+    JSON.stringify(canonical, null, 2),
+    'utf8',
+  );
+  writeFileSync(
+    path.join(root, 'museum-web/src/lib/legal/terms-content.canonical.json'),
+    JSON.stringify(termsCanonical, null, 2),
     'utf8',
   );
 }
@@ -254,6 +287,66 @@ describe('T2.2 / R15 — privacy-content-drift sentinel', () => {
       const output = `${result.stdout}\n${result.stderr}`;
       expect(output).toMatch(/museum-frontend/i);
       expect(output).toMatch(/deepseek/i);
+    });
+  });
+
+  describe('negative-6 — museum-web privacy JSON copy diverged from BE canonical', () => {
+    it('exits ≠ 0 and names "museum-web privacy copy" when the copy mutates a value', () => {
+      const copyPath = path.join(
+        fixturesDir,
+        'museum-web/src/lib/legal/privacy-content.canonical.json',
+      );
+      const before = require('node:fs').readFileSync(copyPath, 'utf8') as string;
+      // Drop a section from the copy — a manual edit that would silently
+      // ship if not caught. Whitespace-tolerant comparison won't save this:
+      // the parsed shape itself diverges.
+      const parsed = JSON.parse(before) as CanonicalFixture;
+      parsed.locales.fr.sections = parsed.locales.fr.sections.slice(0, 1);
+      writeFileSync(copyPath, JSON.stringify(parsed, null, 2), 'utf8');
+
+      const result = runSentinel(fixturesDir);
+      expect(result.exitCode).not.toBe(0);
+      const output = `${result.stdout}\n${result.stderr}`;
+      expect(output).toMatch(/museum-web privacy copy/i);
+      expect(output).toMatch(/diverged/i);
+    });
+
+    it('passes (exit 0) when canonical and copy are byte-identical and remains tolerant to Prettier-style whitespace reflow', () => {
+      // Re-serialise the canonical with a different indent → structural
+      // equivalence preserved → sentinel must still pass.
+      const canonicalPath = path.join(
+        fixturesDir,
+        'museum-backend/src/shared/legal/privacy-content.canonical.json',
+      );
+      const canonicalRaw = require('node:fs').readFileSync(canonicalPath, 'utf8') as string;
+      const reflowed = JSON.stringify(JSON.parse(canonicalRaw), null, 4); // 4-space indent
+      const copyPath = path.join(
+        fixturesDir,
+        'museum-web/src/lib/legal/privacy-content.canonical.json',
+      );
+      writeFileSync(copyPath, reflowed, 'utf8');
+
+      const result = runSentinel(fixturesDir);
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe('negative-7 — museum-web terms JSON copy diverged from BE canonical', () => {
+    it('exits ≠ 0 and names "museum-web terms copy" when the copy mutates a value', () => {
+      const copyPath = path.join(
+        fixturesDir,
+        'museum-web/src/lib/legal/terms-content.canonical.json',
+      );
+      const before = require('node:fs').readFileSync(copyPath, 'utf8') as string;
+      const parsed = JSON.parse(before) as { version: string };
+      parsed.version = '99.0.0'; // version tampering
+      writeFileSync(copyPath, JSON.stringify(parsed, null, 2), 'utf8');
+
+      const result = runSentinel(fixturesDir);
+      expect(result.exitCode).not.toBe(0);
+      const output = `${result.stdout}\n${result.stderr}`;
+      expect(output).toMatch(/museum-web terms copy/i);
+      expect(output).toMatch(/diverged/i);
     });
   });
 

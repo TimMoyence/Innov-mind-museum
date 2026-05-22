@@ -1,6 +1,6 @@
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { getAlternates, getOpenGraph } from '@/lib/seo';
-import termsCanonical from '../../../../../museum-backend/src/shared/legal/terms-content.canonical.json';
+import termsCanonical from '@/lib/legal/terms-content.canonical.json';
 import type { Metadata } from 'next';
 
 interface TermsPageProps {
