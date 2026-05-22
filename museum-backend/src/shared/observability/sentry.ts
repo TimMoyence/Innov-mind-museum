@@ -45,7 +45,15 @@ export const initSentry = (): void => {
     dsn: env.sentry.dsn,
     environment: env.sentry.environment,
     release: env.sentry.release,
-    tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/],
+    // Anchored on both ends so neither
+    // `https://api.musaium.com.attacker.com` nor
+    // `http://localhost:30001234` slip past the allowlist and trigger
+    // outbound `sentry-trace` / `baggage` header injection to a hostile
+    // origin. Allows the bare hostname or hostname + path (`$|/`).
+    tracePropagationTargets: [
+      /^https:\/\/api\.musaium\.com($|\/)/,
+      /^http:\/\/localhost:3000($|\/)/,
+    ],
     tracesSampleRate: env.sentry.tracesSampleRate,
     profileSessionSampleRate: env.sentry.profileSessionSampleRate,
     profileLifecycle: 'trace',

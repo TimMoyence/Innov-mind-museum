@@ -58,6 +58,19 @@ export const refreshLimiter: RequestHandler = createRateLimitMiddleware({
   bucketName: 'auth-refresh',
 });
 
+/**
+ * /logout — IP-keyed bucket. An attacker who scrapes refresh tokens could
+ * mass-invalidate sessions without this guard; the limit also bounds the
+ * audit row write rate. 30 req / min is well above legitimate user logout
+ * cadence (one-shot per device).
+ */
+export const logoutLimiter: RequestHandler = createRateLimitMiddleware({
+  limit: toPositiveInt(process.env.AUTH_LOGOUT_RATE_LIMIT, 30),
+  windowMs: toPositiveInt(process.env.AUTH_LOGOUT_RATE_WINDOW_MS, 60_000),
+  keyGenerator: byIp,
+  bucketName: 'auth-logout',
+});
+
 /** /social-login + /social-nonce — IP+provider bucket. */
 export const socialLoginLimiter: RequestHandler = createRateLimitMiddleware({
   limit: toPositiveInt(process.env.AUTH_SOCIAL_LOGIN_RATE_LIMIT, 10),

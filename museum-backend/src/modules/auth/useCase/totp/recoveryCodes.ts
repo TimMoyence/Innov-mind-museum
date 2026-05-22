@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 
 import bcrypt from 'bcrypt';
 
@@ -15,13 +15,21 @@ export const RECOVERY_CODE_LENGTH = 10;
 /** Crockford-base32 (no I/L/O/U) — readable, no ambiguous chars, 5 bits/char. */
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
-/** Format: `XXXXX-XXXXX`. */
+/**
+ * Format: `XXXXX-XXXXX`.
+ *
+ * Uses `crypto.randomInt(0, N)` (rejection sampling) rather than
+ * `randomBytes() % N` so the distribution is provably uniform even if the
+ * alphabet is later resized to a non-power-of-2 length. (Today
+ * ALPHABET.length = 32, a power of 2 → `byte % 32` is already uniform,
+ * but CodeQL `js/biased-cryptographic-random` flags the pattern
+ * unconditionally; `randomInt` keeps the call site self-documenting.)
+ */
 export function generateRecoveryCodePlain(): string {
   const half = RECOVERY_CODE_LENGTH / 2;
-  const bytes = randomBytes(RECOVERY_CODE_LENGTH);
   let out = '';
   for (let i = 0; i < RECOVERY_CODE_LENGTH; i += 1) {
-    out += ALPHABET[bytes[i] % ALPHABET.length];
+    out += ALPHABET[randomInt(0, ALPHABET.length)];
     if (i === half - 1) out += '-';
   }
   return out;
