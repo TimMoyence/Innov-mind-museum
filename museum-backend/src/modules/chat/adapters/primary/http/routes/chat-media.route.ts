@@ -282,7 +282,9 @@ export const createMediaRouter = (
     llmCostGuard,
     createTtsHandler(chatService),
   );
-  router.get('/messages/:messageId/image', createImageServeHandler(chatService));
+  // P0-CodeQL — image serve was unrate-limited; an attacker could hammer
+  // signed-URL guessing or cause backend egress amplification.
+  router.get('/messages/:messageId/image', userLimiter, createImageServeHandler(chatService));
 
   return router;
 };

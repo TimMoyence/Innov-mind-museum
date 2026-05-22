@@ -65,7 +65,11 @@ export class AuditRepositoryPg implements IAuditLogRepository {
   }
 
   private async acquireChainLock(manager: EntityManager): Promise<void> {
-    await manager.query('SELECT pg_advisory_xact_lock($1)', [AUDIT_CHAIN_LOCK_KEY.toString()]);
+    // String(bigint) is preferred over `.toString()` here because CodeQL's
+    // `js/property-access-on-non-object` mis-models BigInt literals as
+    // potentially `undefined` (see PR triage 2026-05-22) — String(x)
+    // sidesteps the property-access check entirely.
+    await manager.query('SELECT pg_advisory_xact_lock($1)', [String(AUDIT_CHAIN_LOCK_KEY)]);
   }
 
   private async appendOne(manager: EntityManager, entry: AuditLogEntry): Promise<void> {

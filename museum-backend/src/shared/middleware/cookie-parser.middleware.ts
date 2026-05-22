@@ -23,7 +23,11 @@ function safeDecode(value: string): string {
 
 /** Public for unit tests. */
 export function parseCookieHeader(header: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
+  // Prototype-less store: an attacker who sends `Cookie: __proto__=foo` cannot
+  // pollute Object.prototype (no inherited slots), and `name in out` always
+  // reflects only what we have written ourselves. CodeQL
+  // `js/remote-property-injection` flagged the previous `{}` literal.
+  const out: Record<string, string> = Object.create(null) as Record<string, string>;
   if (!header) return out;
 
   for (const pair of header.split(';')) {

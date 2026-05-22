@@ -7,6 +7,7 @@ import {
 import {
   loginByAccountLimiter,
   loginLimiter,
+  logoutLimiter,
   refreshLimiter,
   registerLimiter,
   socialLoginLimiter,
@@ -146,6 +147,7 @@ authSessionRouter.post(
 
 authSessionRouter.post(
   '/logout',
+  logoutLimiter,
   validateBody(logoutSchema),
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
