@@ -316,5 +316,43 @@
       "important": 0,
       "nit": 2
     }
+  },
+  {
+    "runId": "2026-05-21-universal-links-inapp-routing",
+    "ts": "2026-05-21T11:54:16Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 94,
+        "weight": 0.30,
+        "reasoning": "All 13 EARS reqs PASS with implAt traceability; 5/5 frozen suites green (29 tests). Token byte-preservation pinned by xyz%20z test; pass-through verified for musaium:///(stack)/mfa-enroll (length!==1 guard). Auto-submit closure-cell cancellation guard present (TokenExchangeFlow.tsx:69-84)."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "R13 grep PASS: token never reaches console/logger/reportError(err only)/breadcrumb/a11y/visible Text. requiresAuth:false correct for pre-auth flows. Mapper returns only the original input or one of 3 hard-coded route literals — no open-redirect / no attacker-influenced route name. No eval/dangerouslySetInnerHTML/raw-SQL/env-leak/hardcoded-secret hits."
+      },
+      "maintainability": {
+        "score": 92,
+        "weight": 0.20,
+        "reasoning": "KISS/DRY/hexagonal all PASS. Shared TokenExchangeFlow avoids triplication; DS tokens used (no raw hex/px/rgb); RTL logical props only (textAlign:'auto', no Left/Right). Naming matches project conventions; reused AUTH_ROUTE/HOME_ROUTE constants and isAppError guard rather than re-implementing."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "29 tests across 5 suites cover R1-R10/R13; shared makeAppError factory added (no inline entities, test-discipline compliant). 3 Maestro flows tap THROUGH happy paths with real testIDs; sentinel:screen-test-coverage green with no new coverage-baseline entry (R12)."
+      },
+      "docQuality": {
+        "score": 78,
+        "weight": 0.10,
+        "reasoning": "Source JSDoc is thorough and ties each decision to spec/design refs (D1-D8) and R-ids. Deduction: STORY.md left as unfilled template — red/green libDocsConsulted are 'placeholders', so the run narrative + lib-docs proof are not captured in STORY (caught at review, not a code defect)."
+      },
+      "weightedMean": 90.9
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 2
+    }
   }
 ]
