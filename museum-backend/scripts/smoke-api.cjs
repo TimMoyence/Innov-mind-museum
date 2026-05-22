@@ -369,6 +369,35 @@ async function main() {
   console.log('[smoke:api] auth OK');
 
   const accessToken = session.accessToken;
+
+  // GDPR consent grants — REQUIRED before chat POST in V1.
+  //
+  // `consent-gate.ts:73` enforces `third_party_ai_text_openai` (text channel
+  // via provider-resolver.ts) on every text message. Without it, the chat
+  // service early-returns at `chat-message.service.ts:223` with a synthetic
+  // refusal carrying a `consent_refusal::<scope>` id (consent-gate.ts:108).
+  // That id is deliberately NOT a UUID — it must not collide with real
+  // `chat_message.id` rows — so the downstream TTS validator
+  // (`chat-media.service.ts:72` `isUuid()`) rejects with 400
+  // "Invalid message id format", auto-rollback fires on the smoke step,
+  // and the deploy reverts. Real users grant via the ConsentBanner before
+  // ever reaching the chat screen ; the smoke must mirror that flow.
+  //
+  // Audio scope also pre-granted in case TTS adds its own gate in V1.x —
+  // cheap belt-and-suspenders, no downside if unused.
+  for (const scope of ['third_party_ai_text_openai', 'third_party_ai_audio_openai']) {
+    await fetchJson({
+      baseUrl,
+      path: '/api/auth/consent',
+      method: 'POST',
+      token: accessToken,
+      body: { scope, version: '1.0' },
+      timeoutMs,
+      expected: 201,
+    });
+  }
+  console.log('[smoke:api] consent grants OK (text + audio)');
+
   const created = await fetchJson({
     baseUrl,
     path: '/api/chat/sessions',
