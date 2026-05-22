@@ -275,6 +275,18 @@ describeE2E('golden path e2e flows', () => {
       expect(createRes.status).toBe(201);
       const sessionId = (createRes.body as { session: { id: string } }).session.id;
 
+      // Grant third_party_ai_audio_openai (B6/B7) — without this, POST /audio
+      // is gated 403 by the consent checker wired in chat-media.route.ts.
+      const grantRes = await harness.request(
+        '/api/auth/consent',
+        {
+          method: 'POST',
+          body: JSON.stringify({ scope: 'third_party_ai_audio_openai', version: '1.0.0' }),
+        },
+        token,
+      );
+      expect(grantRes.status).toBe(201);
+
       // Build a minimal audio payload (the harness fake transcriber accepts anything)
       const formData = new FormData();
       formData.append(
