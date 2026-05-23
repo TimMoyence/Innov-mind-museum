@@ -4,6 +4,38 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-4 `validate-query.middleware.ts` aligns on `formatZodIssues`
+
+Run `2026-05-23-pr-4-formatZodIssues` — fourth KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B2.md` D1 (HIGH). Pipeline : UFR-022 fresh-context 5-phase / standard / reviewer APPROVED weightedMean **4.8/5**. Pure TypeScript refacto interne, wire-format 400 `error.message` aligné sur la canonique single-source-of-truth déjà utilisée par `validateBody` + chat contract wrappers. Public OpenAPI 400 contract préservé (`error.message: string` générique, non-contractually-fixed). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`.
+
+### Changed
+
+- **PR-4** — `validate-query.middleware.ts` utilise désormais le formatteur canonique `formatZodIssues` (`museum-backend/src/shared/validation/zod-issue.formatter.ts:13-26`, signature `(issues: readonly z.core.$ZodIssue[]) => string`) au lieu de réinventer le pattern inline `issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')`. Single call-site : `museum-backend/src/shared/middleware/validate-query.middleware.ts:17` — `throw badRequest(formatZodIssues(result.error.issues));`. Import canonique ajouté L2 : `import { formatZodIssues } from '@shared/validation/zod-issue.formatter';`. JSDoc aligné sur `validate-body.middleware.ts:10` (`@throws AppError 400 BAD_REQUEST on validation failure.`). Pragma `eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters` L12 préservé verbatim (NFR-5).
+
+  **Wire-format 400 `error.message` change documenté NFR-3** — observable mais non-breaking sur OpenAPI contract (`error.message: string` reste un free-form string). Différences canonique (post-PR-4) vs legacy inline (pre-PR-4) :
+
+  - **Séparateur path/message** : `<path> <message>` (espace) au lieu de `<path>: <message>` (colon-space).
+  - **Dedup double-prefix** : message dont le texte commence déjà par `<path> ` ou `<path>.` n'est plus double-préfixé (ex `'q must be set'` reste `'q must be set'`, plus `'q: q must be set'`).
+  - **Empty issues défensif** : fallback `'Invalid payload'` au lieu de string vide `''`.
+  - **Root error (empty path)** : `<message>` brut au lieu de `: <message>` (préfixe colon vide).
+
+  Source-of-truth réaffirmée : `zod-issue.formatter.ts` JSDoc L6 ("Single source of truth for Zod issue → flat error string. Wire-format change MUST happen here") matche désormais le code. Validate-body + validate-query sont byte-identiques sur leur branche d'erreur post-PR-4 ; seuls leur source (`req.body` vs `req.query`) et leur sink (`req.body = result.data` vs `res.locals.validatedQuery = result.data`) diffèrent (Express 5 `req.query` read-only).
+
+  Consumer impact NFR-2 empiriquement vérifié : `rg -n "split\(': '\)" museum-frontend museum-web` → **empty** (0 call-site FE/web ne parse `error.message` via `split(': ')` sur routes query-validated). Tests pré-existants asserting le legacy colon-form : `rg -n "expect.*toContain.*': '" museum-backend/tests/` + `rg -n "toContain\(': " museum-backend/tests/contract museum-backend/tests/e2e` → **empty** (aucun snapshot legacy à updater). Logs Sentry / observability breadcrumbs basculent `field: msg` → `field msg` post-merge — non-breaking (payload reste string). `validate-body.middleware.ts` byte-identical pré/post (R4 strict, `git diff` empty). `zod-issue.formatter.ts` byte-identical (canonique inchangée).
+
+### Added
+
+- 5 nouveaux cas de test (`C1`-`C5`) appendés à `museum-backend/tests/unit/middleware/validate-query.test.ts` dans un nouveau `describe('validateQuery — wire-format parity with validateBody', …)` (+109 lignes, append-only) — sentinel codemod permanent empêchant la régression du colon-form `<field>: <message>` à l'avenir :
+  - **C1** (R2/R3) : single-field, `z.object({ q: z.string().min(1) })` rejette `{ q: '' }` via `validateQuery` ET `validateBody` → `expect(queryMessage).toBe(bodyMessage)` + `not.toContain(': ')` + `toMatch(/^q /)`.
+  - **C2** (AC2.3) : root error empty path, `z.object({ q: z.string() })` reçoit `'not-an-object'` → branche `formatZodIssue` empty-path → `'Invalid input: expected object, received string'` (PAS `': Invalid input: …'`).
+  - **C3** (AC2.4) : dedup, `.refine((v) => v.length > 0, { message: 'q must be set' })` → canonique dedup branch → `'q must be set'` (PAS `'q: q must be set'` double-prefix).
+  - **C4** (AC2 défensif) : empty issues — `fakeSchema` mock retourne `{success:false, error:{issues:[]}}` → branche défensive `formatZodIssues` → `'Invalid payload'` (PAS `''`).
+  - **C5** (R3 negative sentinel) : `expect(msg).not.toMatch(/^\w+: /)` — regex `/^\w+: /` (préfixe colon-form en début de string seulement). Deviation honnêtement disclosée red-report.json notes[0] : architect proposait `/.*:.*$/` over-matchant (messages zod légitimes contiennent `:`, ex `'Too small: expected string to have >=1 characters'`), editor a appliqué la version stricte qui catche le legacy colon-form en début sans faux positif. Intent architect anti-colon-form préservé.
+
+  Tests RED verbatim (5/5 FAIL pre-fix) : evidence Jest output dans `red-report.json` cases[].evidence (ex C1 : `Expected: "q Too small: …" Received: "q: Too small: …"`). Tests GREEN (5/5 PASS post-fix) : `pnpm jest --testPathPattern=validate-query.test.ts` → 14/14 PASS (9 legacy + 5 nouveaux). Scope élargi `tests/unit/(middleware|shared)` : 77 suites / 1155 tests all PASS, 0 régression. `pnpm lint` exit 0.
+
+  Frozen-test contract : `red-test-manifest.json` sha256 (`aef671177a3e39fea690fdf3a87b05e6500e37a28064327a3535b4a293f60838`) **UNCHANGED** entre phases red et green — éditeur green n'a pas self-modifié le test manifesté (vérifié `shasum -a 256` ≡ manifest). Anti-bypass UFR-022 honoré.
+
 ## [Unreleased] — 2026-05-23 — PR-3 codemod `notFound()` sur 4 sites auth/useCase
 
 Run `2026-05-23-pr-3-notFound-codemod` — third KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet `notFound`). Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED weightedMean **4.5/5**. Pure TypeScript refacto, wire-format 404 **byte-for-byte identique** (statusCode + `code:'NOT_FOUND'` + `message:'User not found'` + `details:undefined` + instance class `AppError` tous préservés). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump.

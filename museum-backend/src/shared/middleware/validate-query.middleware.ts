@@ -1,4 +1,5 @@
 import { badRequest } from '@shared/errors/app.error';
+import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import type { Request, Response, NextFunction } from 'express';
 import type { z } from 'zod';
@@ -13,10 +14,7 @@ export function validateQuery<T extends z.ZodType>(schema: T) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      const message = result.error.issues
-        .map((i) => `${i.path.join('.')}: ${i.message}`)
-        .join(', ');
-      throw badRequest(message);
+      throw badRequest(formatZodIssues(result.error.issues));
     }
     res.locals.validatedQuery = result.data;
     next();
