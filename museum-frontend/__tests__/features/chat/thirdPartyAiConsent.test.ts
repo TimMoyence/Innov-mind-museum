@@ -3,7 +3,7 @@ import '@/__tests__/helpers/test-utils';
 import {
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
-} from '@/features/chat/application/thirdPartyAiConsent';
+} from '@/features/chat/domain/consentScopes';
 
 /**
  * B9 (spec R1 / AC-B9-1) — the FE consent scope source MUST include

@@ -20,12 +20,15 @@ import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithQueryClient } from '../../../helpers/data/renderWithQueryClient';
 import { makeCompareResult } from '../../../helpers/factories';
 
-// ── Mock the http client used by the hook ─────────────────────────────────
-const mockHttpPost = jest.fn();
+// ── Mock the infra service used by the hook (C1 hexagonal 2026-05-23) ────
+// Previously mocked `httpClient.post` directly ; now mocks
+// `imageComparisonApi.compare`. The service unwraps `response.data` for the
+// hook, so mock resolutions are raw `CompareResult` payloads (no `.data` wrap).
+const mockCompare = jest.fn();
 
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  httpClient: {
-    post: (...args: unknown[]) => mockHttpPost(...args),
+jest.mock('@/features/chat/infrastructure/imageComparisonApi', () => ({
+  imageComparisonApi: {
+    compare: (...args: unknown[]) => mockCompare(...args),
   },
 }));
 
@@ -85,7 +88,8 @@ describe('useCompareImage (T8.1)', () => {
 
   it('returns the backend CompareResult on a successful POST /chat/compare', async () => {
     const compareResult = makeCompareResult();
-    mockHttpPost.mockResolvedValue({ data: compareResult, status: 200 });
+    // Service unwraps response.data for the hook — mock returns the payload.
+    mockCompare.mockResolvedValue(compareResult);
 
     const useCompareImage = loadHook();
     const { result } = renderHookWithQueryClient(() => useCompareImage());
@@ -94,9 +98,10 @@ describe('useCompareImage (T8.1)', () => {
       await result.current.mutateAsync(sampleInput);
     });
 
-    expect(mockHttpPost).toHaveBeenCalledTimes(1);
-    const [url] = mockHttpPost.mock.calls[0] as [string, unknown, unknown];
-    expect(url).toContain('/chat/compare');
+    expect(mockCompare).toHaveBeenCalledTimes(1);
+    const [calledInput] = mockCompare.mock.calls[0] as [unknown];
+    // Hook now passes the input shape directly to the service.
+    expect(calledInput).toEqual(sampleInput);
     // React Query's notifyManager flushes state via setTimeout(0); without a
     // waitFor the assertion would race the post-mutationFn setState even though
     // mutateAsync's promise has already resolved.
@@ -108,7 +113,7 @@ describe('useCompareImage (T8.1)', () => {
   });
 
   it('exposes an error and leaves data undefined when the request fails (network)', async () => {
-    mockHttpPost.mockRejectedValue(new Error('Network Error'));
+    mockCompare.mockRejectedValue(new Error('Network Error'));
 
     const useCompareImage = loadHook();
     const { result } = renderHookWithQueryClient(() => useCompareImage());
@@ -131,7 +136,7 @@ describe('useCompareImage (T8.1)', () => {
         data: { error: { code: 'COMPARE_ENCODER_UNAVAILABLE', message: 'Encoder offline' } },
       },
     });
-    mockHttpPost.mockRejectedValue(err);
+    mockCompare.mockRejectedValue(err);
 
     const useCompareImage = loadHook();
     const { result } = renderHookWithQueryClient(() => useCompareImage());
@@ -163,7 +168,7 @@ describe('useCompareImage (T8.1)', () => {
         data: { error: { code: 'COMPARE_INVALID_IMAGE', message: 'Unsupported MIME type' } },
       },
     });
-    mockHttpPost.mockRejectedValue(err);
+    mockCompare.mockRejectedValue(err);
 
     const useCompareImage = loadHook();
     const { result } = renderHookWithQueryClient(() => useCompareImage());
@@ -175,7 +180,7 @@ describe('useCompareImage (T8.1)', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    // Mutation policy: 4xx is terminal — exactly one POST attempt.
-    expect(mockHttpPost).toHaveBeenCalledTimes(1);
+    // Mutation policy: 4xx is terminal — exactly one service attempt.
+    expect(mockCompare).toHaveBeenCalledTimes(1);
   });
 });

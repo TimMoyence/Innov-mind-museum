@@ -1,62 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
 
-import { extractUserIdFromToken } from '@/features/auth/domain/authLogic.pure';
-import { getAccessToken } from '@/features/auth/infrastructure/authTokenStore';
-
-import { grantConsentScope, type ThirdPartyAiScope } from './thirdPartyAiConsent';
+import { consentApi } from '@/features/chat/infrastructure/consentApi';
+import { consentStorageService } from '@/features/chat/infrastructure/consentStorageService';
+import type { ThirdPartyAiScope } from '@/features/chat/domain/consentScopes';
 
 /**
- * Per-userId namespaced "user has been asked + answered" memo key (B8, design
- * §9 D2). TD-AS-01 convention (`musaium.<feature>.<key>`, lib-docs
- * `@react-native-async-storage/async-storage/LESSONS.md:F1`). The userId is
- * derived from the access token (`extractUserIdFromToken(getAccessToken())`).
- *
- * Namespacing closes the GDPR Art. 7 cross-user inheritance defect: on a shared
- * device, user A's acceptance lives under A's key and CANNOT suppress user B's
- * prompt (B reads B's namespace, which is absent → re-prompt). No token →
- * `__anon` namespace (treated as not-asked → safe re-prompt). The legacy global
- * `consent.ai_accepted` key is intentionally NEVER consulted — a device
- * carrying only the legacy key re-prompts under the fresh namespace (R10
- * migration tolerance), and no value is inherited across users.
+ * Back-compat re-export — `AuthContext.clearPerUserFeatureStorage` and
+ * `SettingsAiConsentCard.onToggle(REQUIRED_CONSENT_SCOPE → off)` continue to
+ * import `clearConsentAcceptedFlag` from this module. The canonical
+ * implementation lives in
+ * `@/features/chat/infrastructure/consentStorageService` ; this re-export
+ * keeps the import path stable so unrelated consumers/tests don't change.
  */
-const ANON_NAMESPACE = '__anon';
-
-const consentMemoKey = (): string => {
-  let userId: string | null = null;
-  try {
-    const token = getAccessToken();
-    userId = token ? extractUserIdFromToken(token) : null;
-  } catch {
-    userId = null;
-  }
-  return `musaium.consent.aiAccepted.${userId ?? ANON_NAMESPACE}`;
-};
+export { clearConsentAcceptedFlag } from '@/features/chat/infrastructure/consentStorageService';
 
 /**
- * Clear the local "user has been asked + answered" memo for the CURRENT user's
- * namespace. Called from the Settings revoke surface when the user withdraws
- * the mandatory text scope, AND from the auth logout / forced-logout cascade
- * (`AuthContext.clearPerUserFeatureStorage`) so the next user on a shared device
- * is re-prompted (B8/R6). The BE state then says "not granted", so the next
- * chat mount MUST re-prompt rather than honour the stale local flag. Failure is
- * non-fatal (worst case = sheet doesn't re-prompt, user can revoke again).
- */
-export const clearConsentAcceptedFlag = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(consentMemoKey());
-  } catch (err: unknown) {
-    Sentry.captureException(err, { tags: { flow: 'consent.clear' } });
-  }
-};
-
-/**
- * AI consent modal state. Persists a local "accepted" flag in AsyncStorage so
- * the consent sheet does not re-open every cold start, AND — when explicit
- * scopes are supplied — performs the BE round-trip that materialises a row in
- * `user_consents` + a hash-chained `CONSENT_GRANTED_THIRD_PARTY_AI` audit row
- * per scope.
+ * AI consent modal state. Persists a local "accepted" flag via
+ * `consentStorageService` (per-userId namespaced) so the consent sheet does
+ * not re-open every cold start, AND — when explicit scopes are supplied —
+ * performs the BE round-trip that materialises a row in `user_consents` + a
+ * hash-chained `CONSENT_GRANTED_THIRD_PARTY_AI` audit row per scope.
  *
  * S4-P0-02 (Apple Guideline 5.1.2(i)) — the legacy single-button accept
  * (no scopes) is preserved for back-compat with existing test mocks, but the
@@ -66,24 +30,27 @@ export const clearConsentAcceptedFlag = async (): Promise<void> => {
  *
  * Failure handling : per-scope BE failures are caught and reported to Sentry
  * (tags : flow=consent.grant, scope) WITHOUT aborting the remaining grants.
- * AsyncStorage still flips so the user is not re-prompted on every cold
+ * The storage flag still flips so the user is not re-prompted on every cold
  * start — the canonical record lives server-side in `user_consents`, the
  * AsyncStorage flag is a UX-only "we already asked you" memo.
+ *
+ * C1 hexagonal (2026-05-23) — application-layer hook ; storage goes through
+ * `consentStorageService`, network goes through `consentApi`. No direct
+ * `AsyncStorage` / `httpRequest` imports.
  */
 export const useAiConsent = () => {
   const [showAiConsent, setShowAiConsent] = useState(false);
   const [consentResolved, setConsentResolved] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(consentMemoKey())
+    consentStorageService
+      .readAccepted()
       .then((v) => {
         if (v !== 'true') setShowAiConsent(true);
       })
-      .catch((err: unknown) => {
-        // Previously swallowed silently — surface to Sentry so AsyncStorage
-        // read failures (native-module init drift, etc.) stop hiding behind
-        // the re-prompt-on-next-session UX.
-        Sentry.captureException(err, { tags: { flow: 'consent.read' } });
+      .catch(() => {
+        // consentStorageService already captured the exception to Sentry
+        // (tag flow=consent.read) ; we just need to flip the prompt on.
         setShowAiConsent(true);
       })
       .finally(() => {
@@ -100,7 +67,7 @@ export const useAiConsent = () => {
       // but does not abort the remaining grants.
       for (const scope of grantedScopes) {
         try {
-          await grantConsentScope(scope);
+          await consentApi.grant(scope);
         } catch (grantError) {
           Sentry.captureException(grantError, {
             tags: { flow: 'consent.grant', scope },
@@ -108,16 +75,13 @@ export const useAiConsent = () => {
         }
       }
     }
-    try {
-      await AsyncStorage.setItem(consentMemoKey(), 'true');
-    } catch {
-      // Persist failure is non-blocking — modal will re-appear next session
-    }
+    await consentStorageService.setAccepted();
     setShowAiConsent(false);
   }, []);
 
   const recheckConsent = useCallback(() => {
-    AsyncStorage.getItem(consentMemoKey())
+    consentStorageService
+      .readAccepted()
       .then((v) => {
         if (v !== 'true') setShowAiConsent(true);
       })

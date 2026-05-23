@@ -11,28 +11,17 @@ const mockGrantConsentScope = jest.fn<Promise<void>, [string]>();
 const mockRevokeConsentScope = jest.fn<Promise<void>, [string]>();
 const mockClearConsentAcceptedFlag = jest.fn<Promise<void>, []>();
 
-jest.mock('@/features/chat/application/thirdPartyAiConsent', () => {
-  const SCOPES = [
-    'third_party_ai_text_openai',
-    'third_party_ai_image_openai',
-    'third_party_ai_audio_openai',
-    'third_party_ai_profile_openai',
-    'third_party_ai_text_google',
-    'third_party_ai_image_google',
-    'third_party_ai_audio_google',
-    'third_party_ai_profile_google',
-    // B9 — coarse-location data-sharing scope, mirrors the real source array.
-    'location_to_llm',
-  ] as const;
-  return {
-    THIRD_PARTY_AI_SCOPES: SCOPES,
-    REQUIRED_CONSENT_SCOPE: 'third_party_ai_text_openai',
-    CONSENT_POLICY_VERSION: '2026-06-01',
-    listUserConsents: () => mockListUserConsents(),
-    grantConsentScope: (scope: string) => mockGrantConsentScope(scope),
-    revokeConsentScope: (scope: string) => mockRevokeConsentScope(scope),
-  };
-});
+// C1 hexagonal (2026-05-23) — `thirdPartyAiConsent.ts` was split into a
+// pure-data `domain/consentScopes` module + a `infrastructure/consentApi`
+// service. The component imports constants from the former and HTTP fns
+// from the latter ; we mock the service and let the real domain module load.
+jest.mock('@/features/chat/infrastructure/consentApi', () => ({
+  consentApi: {
+    list: () => mockListUserConsents(),
+    grant: (scope: string) => mockGrantConsentScope(scope),
+    revoke: (scope: string) => mockRevokeConsentScope(scope),
+  },
+}));
 
 jest.mock('@/features/chat/application/useAiConsent', () => ({
   clearConsentAcceptedFlag: () => mockClearConsentAcceptedFlag(),

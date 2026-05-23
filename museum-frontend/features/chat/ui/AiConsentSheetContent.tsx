@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
-} from '@/features/chat/application/thirdPartyAiConsent';
+} from '@/features/chat/domain/consentScopes';
 import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';

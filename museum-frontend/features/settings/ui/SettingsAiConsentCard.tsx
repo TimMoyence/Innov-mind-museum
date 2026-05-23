@@ -4,14 +4,12 @@ import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
 import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
+import { consentApi } from '@/features/chat/infrastructure/consentApi';
 import {
-  grantConsentScope,
-  listUserConsents,
-  revokeConsentScope,
   REQUIRED_CONSENT_SCOPE,
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
-} from '@/features/chat/application/thirdPartyAiConsent';
+} from '@/features/chat/domain/consentScopes';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -46,7 +44,7 @@ export const SettingsAiConsentCard = () => {
 
   const refresh = useCallback(async () => {
     try {
-      const remote = await listUserConsents();
+      const remote = await consentApi.list();
       const byScope = new Map<ThirdPartyAiScope, { granted: boolean; grantedAt: string | null }>();
       for (const row of remote) {
         if (!isThirdPartyAiScope(row.scope)) continue;
@@ -106,9 +104,9 @@ export const SettingsAiConsentCard = () => {
       );
       try {
         if (next) {
-          await grantConsentScope(scope);
+          await consentApi.grant(scope);
         } else {
-          await revokeConsentScope(scope);
+          await consentApi.revoke(scope);
           // When the user withdraws the mandatory scope, the local "we
           // already asked you" memo MUST be cleared so the chat surface
           // re-prompts the consent sheet on next mount — otherwise the

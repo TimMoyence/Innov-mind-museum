@@ -25,8 +25,12 @@ jest.mock('@/features/auth/infrastructure/biometricStore', () => ({
   getBiometricEnabled: () => mockGetBiometricEnabled(),
 }));
 
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  runAuthRefresh: () => mockRunAuthRefresh(),
+// C1 hexagonal (2026-05-23) — hook now goes through `authSessionService.refresh()`
+// instead of importing `runAuthRefresh` from `@/shared/infrastructure/httpClient`.
+jest.mock('@/features/auth/infrastructure/authSessionService', () => ({
+  authSessionService: {
+    refresh: () => mockRunAuthRefresh(),
+  },
 }));
 
 jest.mock('@/features/auth/application/useBiometricAuth', () => ({

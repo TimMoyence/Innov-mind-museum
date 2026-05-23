@@ -1,5 +1,5 @@
 import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
-import { setApiBaseUrl } from '@/shared/infrastructure/httpClient';
+import { setApiBaseUrl } from '@/features/settings/infrastructure/apiBaseUrlRegistry';
 import { storage } from '@/shared/infrastructure/storage';
 
 export {

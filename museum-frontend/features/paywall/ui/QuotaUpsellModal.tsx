@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
 import { trackFunnelEvent } from '@/shared/analytics/plausible';
-import { httpClient } from '@/shared/infrastructure/httpClient';
+import { leadsApi } from '@/features/paywall/infrastructure/leadsApi';
 
 /**
  * Safe breadcrumb shim — handles the case where the test-utils Sentry mock
@@ -144,7 +144,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
       tier: reason?.tier ?? 'unknown',
     });
     try {
-      await httpClient.post('/api/leads/paywall-interest', {
+      await leadsApi.submitPaywallInterest({
         email,
         consent: true,
         website,

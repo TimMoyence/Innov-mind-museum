@@ -4,7 +4,7 @@ import type { ParseKeys } from 'i18next';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
-import type { ThirdPartyAiScope } from '@/features/chat/application/thirdPartyAiConsent';
+import type { ThirdPartyAiScope } from '@/features/chat/domain/consentScopes';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';

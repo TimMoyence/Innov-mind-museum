@@ -1,5 +1,3 @@
-import { httpRequest } from '@/shared/api/httpRequest';
-
 /**
  * Consent scopes round-tripped to `/api/auth/consent` — must match
  * `museum-backend/src/modules/auth/domain/consent/userConsent.entity.ts
@@ -21,6 +19,12 @@ import { httpRequest } from '@/shared/api/httpRequest';
  * the `ThirdPartyAiScope` union) is reused unchanged (matches the BE
  * free-form-VARCHAR `CONSENT_SCOPES`), but the consent sheet renders it in its
  * own "Location" group, not under the OpenAI/Google provider grid.
+ *
+ * C1 hexagonal (2026-05-23) — extracted from
+ * `features/chat/application/thirdPartyAiConsent.ts` into a pure-data domain
+ * module. The 3 HTTP functions migrated to
+ * `features/chat/infrastructure/consentApi.ts` ; the original application-layer
+ * file was deleted (UFR-016 dead-code burial).
  */
 export const THIRD_PARTY_AI_SCOPES = [
   'third_party_ai_text_openai',
@@ -47,60 +51,3 @@ export const REQUIRED_CONSENT_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_op
 
 /** Policy version anchor — keep in sync with `museum-backend/src/shared/legal/policy-version.ts`. */
 export const CONSENT_POLICY_VERSION = '2026-06-01';
-
-interface ConsentRow {
-  id: number;
-  scope: string;
-  version: string;
-  grantedAt: string;
-  revokedAt: string | null;
-  source: string;
-}
-
-interface ListConsentResponse {
-  consents: ConsentRow[];
-}
-
-interface GrantConsentResponse {
-  consent: {
-    id: number;
-    scope: string;
-    version: string;
-    grantedAt: string;
-    source: string;
-  };
-}
-
-interface RevokeConsentResponse {
-  revoked: true;
-  scope: string;
-}
-
-/** GET /api/auth/consent — returns all rows (active + revoked) for the user. */
-export const listUserConsents = async (): Promise<ConsentRow[]> => {
-  const res = await httpRequest<ListConsentResponse>('/api/auth/consent', {
-    method: 'GET',
-    requiresAuth: true,
-  });
-  return res.consents;
-};
-
-/** POST /api/auth/consent — records a new active grant + audit row. */
-export const grantConsentScope = async (
-  scope: ThirdPartyAiScope,
-  version: string = CONSENT_POLICY_VERSION,
-): Promise<void> => {
-  await httpRequest<GrantConsentResponse>('/api/auth/consent', {
-    method: 'POST',
-    requiresAuth: true,
-    body: { scope, version },
-  });
-};
-
-/** DELETE /api/auth/consent/:scope — stamps `revokedAt` + audit row when active. */
-export const revokeConsentScope = async (scope: ThirdPartyAiScope): Promise<void> => {
-  await httpRequest<RevokeConsentResponse>(`/api/auth/consent/${scope}`, {
-    method: 'DELETE',
-    requiresAuth: true,
-  });
-};

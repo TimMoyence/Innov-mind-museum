@@ -21,11 +21,12 @@ import '../../../helpers/test-utils';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  httpClient: {
-    post: jest.fn(),
+// C1 hexagonal (2026-05-23) — modal posts via `leadsApi` ; we just need a
+// no-op mock so the import resolves under Jest.
+jest.mock('@/features/paywall/infrastructure/leadsApi', () => ({
+  leadsApi: {
+    submitPaywallInterest: jest.fn(),
   },
-  setPaywallHandler: jest.fn(),
 }));
 
 jest.mock('@/shared/analytics/plausible', () => ({

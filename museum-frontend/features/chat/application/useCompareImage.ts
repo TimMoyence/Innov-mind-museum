@@ -2,9 +2,12 @@
  * `useCompareImage` — React Query mutation for the visual-similarity compare
  * pipeline (T8.1, Phase 8 / C3 Image Comparative).
  *
- * Posts a multipart `image + sessionId + topK + locale` payload to
- * `POST /api/chat/compare` and exposes the standard React Query mutation
- * surface (`mutate`, `mutateAsync`, `data`, `error`, `isPending`, …).
+ * Delegates the wire call to `features/chat/infrastructure/imageComparisonApi`
+ * (C1 hexagonal 2026-05-23). This hook keeps the responsibilities the service
+ * intentionally does NOT own:
+ *   - i18n mapping (`chat.compare.error.unavailable`) for 503 /
+ *     `COMPARE_ENCODER_UNAVAILABLE`.
+ *   - React Query retry policy (5xx → up to 2 attempts, 4xx terminal).
  *
  * Behaviours under test (`__tests__/features/chat/application/useCompareImage.test.ts`):
  *  - Idle initial state.
@@ -13,38 +16,26 @@
  *  - 503 + `COMPARE_ENCODER_UNAVAILABLE` → mapped to a stable user-friendly
  *    message (i18n key `chat.compare.error.unavailable`); the raw axios
  *    detail (`encoder down`) is never leaked to the consumer.
- *  - 4xx is terminal — no retry. 5xx is retried up to 2 attempts (the inner
- *    `httpClient` axios interceptor already retries 5xx/429 transparently;
- *    this mutation-level retry is the safety net when those interceptors
- *    are bypassed, e.g. in tests with a mocked client).
+ *  - 4xx is terminal — no retry. 5xx is retried up to 2 attempts.
  */
 import { useTranslation } from 'react-i18next';
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 
-import { httpClient } from '@/shared/infrastructure/httpClient';
-import { appendRnFile } from '@/features/chat/infrastructure/chatApi/_internals';
-import type { components } from '@/shared/api/generated/openapi';
-
-type CompareResult = components['schemas']['CompareResult'];
+import {
+  imageComparisonApi,
+  type CompareInput,
+  type CompareResult,
+} from '@/features/chat/infrastructure/imageComparisonApi';
 
 /**
  * Input for the compare mutation. The image is provided in React Native's
  * `{ uri, name, type }` shape (i.e. straight from `expo-image-picker`); the
  * rest of the fields drive backend parameters.
+ *
+ * Re-exported as the historical `UseCompareImageInput` name for back-compat
+ * with components that imported it from this module.
  */
-export interface UseCompareImageInput {
-  /** RN-shaped image file as returned by the image picker. */
-  image: { uri: string; name: string; type: string };
-  /** Chat session this compare call is associated with. */
-  sessionId: string;
-  /** Number of matches requested, default 5 (server clamps to [1, 10]). */
-  topK?: number;
-  /** Locale for templated rationales / artwork facts. */
-  locale?: 'fr' | 'en';
-}
-
-/** Path of the compare endpoint, mounted under the `/api` prefix server-side. */
-const COMPARE_ENDPOINT = '/api/chat/compare';
+export type UseCompareImageInput = CompareInput;
 
 /** Internal narrow shape we read off thrown errors (axios-like). */
 interface AxiosLikeError {
@@ -70,22 +61,8 @@ const getStatus = (error: unknown): number | undefined =>
 const getErrorCode = (error: unknown): string | undefined =>
   isAxiosLikeError(error) ? error.response?.data?.error?.code : undefined;
 
-/** Builds the multipart body for the compare endpoint. */
-const buildFormData = (input: UseCompareImageInput): FormData => {
-  const formData = new FormData();
-  appendRnFile(formData, 'image', input.image);
-  formData.append('sessionId', input.sessionId);
-  if (input.topK !== undefined) {
-    formData.append('topK', String(input.topK));
-  }
-  if (input.locale) {
-    formData.append('locale', input.locale);
-  }
-  return formData;
-};
-
 /**
- * React Query mutation wrapper around `POST /api/chat/compare`.
+ * React Query mutation wrapper around `imageComparisonApi.compare`.
  *
  * Returns the standard `useMutation()` result shape; consumers should read
  * `data` (the `CompareResult`) and `error` (a normalised `Error`).
@@ -99,12 +76,8 @@ export const useCompareImage = (): UseMutationResult<
 
   return useMutation<CompareResult, Error, UseCompareImageInput>({
     mutationFn: async (input) => {
-      const formData = buildFormData(input);
       try {
-        const response = await httpClient.post<CompareResult>(COMPARE_ENDPOINT, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
+        return await imageComparisonApi.compare(input);
       } catch (error) {
         // 503 + encoder-unavailable → stable user-facing message keyed off i18n.
         // We never let the raw axios "encoder down" detail bubble up to UI.
@@ -113,8 +86,6 @@ export const useCompareImage = (): UseMutationResult<
         if (status === 503 || code === 'COMPARE_ENCODER_UNAVAILABLE') {
           throw new Error(t('chat.compare.error.unavailable'));
         }
-        // Other errors propagate as-is; `getErrorMessage()` (consumer-side)
-        // already knows how to translate AppErrors.
         throw error instanceof Error ? error : new Error(String(error));
       }
     },
