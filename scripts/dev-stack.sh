@@ -73,45 +73,54 @@ else
   ok "Stale stack torn down — Step 2 will recreate it fresh"
 fi
 
-# ---- 1.6. Lockfile freshness sentinel ----
-# Detect when museum-backend/pnpm-lock.yaml has been modified more recently
-# than dev-backend was last started. The anonymous volume backing
-# /app/museum-backend/node_modules is populated ONCE during image build by
-# `pnpm install --frozen-lockfile` (Dockerfile.dev) and is reused as-is on
-# subsequent `docker compose up`. Any dep added to the lockfile after the
-# image was built has no top-level symlink in the volume, even though the
-# `.pnpm/` content-addressable store may contain it — imports then fail with
-# TS2307 / MODULE_NOT_FOUND at runtime. WARN-only : the rebuild
-# (`down && up --build --renew-anon-volumes`) drops the volume and is
-# destructive enough to keep behind manual confirmation. First seen 2026-05-20
-# against a missing `@opentelemetry/api` symlink after a W4 deps bump.
-step "1.6/5 Checking pnpm-lock.yaml freshness vs dev-backend last start"
-LOCK_MTIME=$(stat -f %m "$BACKEND/pnpm-lock.yaml" 2>/dev/null \
-          || stat -c %Y "$BACKEND/pnpm-lock.yaml" 2>/dev/null \
-          || echo 0)
-CONTAINER_STARTED_AT=$(docker inspect dev-backend --format '{{.State.StartedAt}}' 2>/dev/null || true)
-if [ -z "${CONTAINER_STARTED_AT:-}" ] || [ "$LOCK_MTIME" -eq 0 ]; then
-  ok "No prior dev-backend (or lockfile unreadable) — skipping freshness check"
+# ---- 1.6. Image bake-key freshness check ----
+# Detect when any input COPY'd into the dev-backend image at build time has
+# changed since the last `docker compose build` — and rebuild automatically.
+# Replaces the lockfile-only WARN-sentinel (which missed packages/musaium-shared
+# dist drift, Dockerfile edits, eslint-plugin-musaium-test-discipline changes).
+#
+# Mechanism : Dockerfile.dev carries a LABEL musaium.dev-bake-key=<sha256> set
+# from an --build-arg at build time. The wrapper hashes the same input set via
+# `git hash-object` (stable across mtime/permissions/branches/worktrees) and
+# compares. Mismatch → rebuild + recreate backend (anon volumes renewed to
+# guarantee /app/museum-backend/node_modules matches the new lockfile). Match
+# → no-op (idempotent).
+#
+# INPUT_PATHS must mirror the COPY directives in museum-backend/Dockerfile.dev.
+# Tracked files only (untracked excluded by `git ls-files`) — matches what
+# Docker sees once .dockerignore filters apply.
+step "1.6/5 Checking dev-backend image bake-key freshness"
+INPUT_PATHS=(
+  museum-backend/Dockerfile.dev
+  museum-backend/package.json
+  museum-backend/pnpm-lock.yaml
+  packages/musaium-shared
+  tools/eslint-plugin-musaium-test-discipline
+)
+CURRENT_KEY=$(cd "$ROOT" && git ls-files -z "${INPUT_PATHS[@]}" 2>/dev/null \
+  | xargs -0 git hash-object 2>/dev/null \
+  | sha256sum 2>/dev/null \
+  | cut -c1-16)
+
+# docker compose project name = directory of the compose file = "museum-backend"
+# → image tag for the `backend` service is "museum-backend-backend".
+IMAGE_TAG="museum-backend-backend"
+BAKED_KEY=$(docker image inspect "$IMAGE_TAG" \
+  --format '{{ index .Config.Labels "musaium.dev-bake-key" }}' 2>/dev/null || echo "")
+
+if [ -z "${CURRENT_KEY:-}" ]; then
+  warn "Could not compute current bake-key (git missing or repo issue) — skipping freshness check"
+elif [ "$CURRENT_KEY" = "$BAKED_KEY" ]; then
+  ok "Image bake-key match ($CURRENT_KEY) — no rebuild needed"
 else
-  # Strip subseconds + trailing Z, parse as UTC (macOS BSD date + GNU date portable).
-  CONTAINER_TS_TRIMMED=$(echo "$CONTAINER_STARTED_AT" | cut -c1-19)
-  CONTAINER_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "$CONTAINER_TS_TRIMMED" +%s 2>/dev/null \
-                 || date -u -d "$CONTAINER_STARTED_AT" +%s 2>/dev/null \
-                 || echo 0)
-  if [ "$CONTAINER_EPOCH" -eq 0 ]; then
-    warn "Could not parse container StartedAt ($CONTAINER_STARTED_AT) — skipping freshness check"
-  elif [ "$LOCK_MTIME" -gt "$CONTAINER_EPOCH" ]; then
-    warn "pnpm-lock.yaml is newer than dev-backend's last start :"
-    warn "  lockfile mtime  : $(date -r "$LOCK_MTIME" '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date -d "@$LOCK_MTIME" '+%Y-%m-%dT%H:%M:%S%z')"
-    warn "  container start : $CONTAINER_STARTED_AT"
-    warn ""
-    warn "Anon volume /app/museum-backend/node_modules may be missing newly-added"
-    warn "top-level deps. If the backend crashes with TS2307 / MODULE_NOT_FOUND, run :"
-    warn "  $DOCKER_COMPOSE down \\"
-    warn "    && $DOCKER_COMPOSE up -d --build --force-recreate --renew-anon-volumes"
+  if [ -z "$BAKED_KEY" ]; then
+    warn "No bake-key on image (first build, pruned, or pre-bake-key image) → building"
   else
-    ok "Lockfile mtime <= container start — anon node_modules volume should be fresh"
+    warn "Bake-key mismatch (image=$BAKED_KEY current=$CURRENT_KEY) → rebuilding"
   fi
+  $DOCKER_COMPOSE build --build-arg "BAKE_KEY=$CURRENT_KEY" backend
+  $DOCKER_COMPOSE up -d --force-recreate --renew-anon-volumes backend
+  ok "Image rebuilt + backend recreated with fresh anon volumes"
 fi
 
 # ---- 2. Docker stack ----

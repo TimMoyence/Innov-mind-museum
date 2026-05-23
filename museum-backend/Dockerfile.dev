@@ -4,6 +4,15 @@ WORKDIR /app
 # pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
+# Bake-key carried by the image so `scripts/dev-stack.sh` can decide whether a
+# rebuild is needed without inspecting host files (worktree-safe, branch-safe).
+# Computed by the wrapper as sha256 of the set of files COPY'd below (Dockerfile
+# + manifests + file:-dep packages). `unknown` default = forces rebuild when the
+# image was built without the arg (legacy / hand-built). DEV-ONLY label — the
+# prod image (museum-backend/deploy/Dockerfile.prod) doesn't carry this.
+ARG BAKE_KEY=unknown
+LABEL musaium.dev-bake-key="$BAKE_KEY"
+
 # museum-backend's package.json declares TWO `file:` deps that point outside
 # the museum-backend dir (see CLAUDE.md "Pièges connus" — workspace was
 # reverted to file: in commit 641968ea4) :
