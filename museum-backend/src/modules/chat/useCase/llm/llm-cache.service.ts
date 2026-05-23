@@ -32,6 +32,22 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return 'generic';
   }
 
+  /**
+   * PR-P0-1 (2026-05-23) — Public alias of the internal key derivation. Lets
+   * callers (notably `ChatMessageService.tryLlmCacheStore`) stamp the exact
+   * byte-string key on the assistant `ChatMessage` row at write time, so
+   * `ChatMediaService.invalidateCacheForFeedback` can later purge the EXACT
+   * entry on negative feedback — no reconstruction, no cartesian, no
+   * over-purge. Pure (no I/O), deterministic per input.
+   *
+   * Intended for persistence stamping ONLY — do NOT use to drive lookup/store
+   * (call those directly so TTL classification + metrics + fail-open stay on
+   * a single code path).
+   */
+  computeKey(input: LlmCacheKeyInput): string {
+    return this.buildKey(input, this.classify(input));
+  }
+
   /** Fail-open (ADR-036/R8): cache-layer exception → hit=false. */
   async lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>> {
     const contextClass = this.classify(input);

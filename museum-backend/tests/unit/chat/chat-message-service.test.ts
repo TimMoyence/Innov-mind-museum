@@ -1157,6 +1157,12 @@ describe('ChatMessageService', () => {
   describe('F1 — LLM cache input propagates voiceMode (C9.10)', () => {
     const makeLlmCacheMock = (): jest.Mocked<LlmCacheService> => ({
       classify: jest.fn().mockReturnValue('generic'),
+      // PR-P0-1 (2026-05-23) — `computeKey` is invoked by tryLlmCacheStore /
+      // tryLlmCacheLookup to stash the byte-string key on the LlmCacheCtx
+      // (later stamped on the assistant ChatMessage row for targeted
+      // feedback-driven invalidation). Default to a deterministic
+      // `llm:v2:*`-shaped stub.
+      computeKey: jest.fn().mockReturnValue('llm:v2:generic:none:anon:deadbeef'),
       lookup: jest.fn().mockResolvedValue({ hit: false, value: null, contextClass: 'generic' }),
       store: jest.fn().mockResolvedValue(undefined),
       invalidateMuseum: jest.fn().mockResolvedValue(undefined),

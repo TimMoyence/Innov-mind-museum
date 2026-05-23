@@ -83,6 +83,18 @@ interface LlmCacheCtx {
   orchestratorInput: { image?: unknown };
   sessionId: string;
   requestId: string | undefined;
+  /**
+   * PR-P0-1 (2026-05-23) — exact `llm:v2:*` Redis key emitted by
+   * `LlmCacheServiceImpl.computeKey()` on the lookup OR store path.
+   * Threaded into `commitAssistantResponse` so the assistant `ChatMessage`
+   * row is stamped with the key for later feedback-driven invalidation.
+   * Populated on both cache-MISS-then-store and cache-HIT branches (a hit
+   * still writes a NEW assistant row — that row gets the SAME key as the
+   * cached entry, so feedback on either copy invalidates the shared entry).
+   * Undefined when the cache is bypassed (image w/o visual signature, no
+   * llmCache configured, image-only path with empty sanitizedText).
+   */
+  cacheKey?: string;
 }
 
 export interface ChatEnrichmentDeps {
@@ -195,7 +207,7 @@ export class ChatMessageService {
     sessionId: string,
     prep: PrepareReady,
     aiResult: OrchestratorOutput,
-    auditCtx?: { requestId?: string; ip?: string },
+    auditCtx?: { requestId?: string; ip?: string; cacheKey?: string | null },
   ): Promise<PostMessageResult> {
     return await commitAssistantResponse(
       {
@@ -215,6 +227,9 @@ export class ChatMessageService {
         requestId: auditCtx?.requestId,
         ip: auditCtx?.ip,
         routerFacts: prep.routerFacts,
+        // PR-P0-1 (2026-05-23) — stamp the LLM-cache-invalidation cookie
+        // on the assistant row so feedback can purge the exact entry.
+        cacheKey: auditCtx?.cacheKey ?? null,
       },
     );
   }
@@ -250,7 +265,15 @@ export class ChatMessageService {
     };
     const cached = await this.tryLlmCacheLookup(cacheCtx);
     if (cached) {
-      return await this.commitResponse(sessionId, prep, cached, { requestId, ip });
+      // PR-P0-1 (2026-05-23) — cache-HIT path still writes a NEW assistant
+      // row ; stamp the SAME `cacheKey` as the cached entry so feedback on
+      // either copy invalidates the shared cache line. `cacheCtx.cacheKey`
+      // is populated by `tryLlmCacheLookup` (mirror of `tryLlmCacheStore`).
+      return await this.commitResponse(sessionId, prep, cached, {
+        requestId,
+        ip,
+        cacheKey: cacheCtx.cacheKey ?? null,
+      });
     }
 
     // A5 R4 — composing span. merged_bug_004 — try/finally emits on success
@@ -275,7 +298,14 @@ export class ChatMessageService {
     }
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
-    return await this.commitResponse(sessionId, prep, aiResult, { requestId, ip });
+    // PR-P0-1 (2026-05-23) — stamp the cookie on the persisted assistant row
+    // so feedback can purge the exact entry. `cacheCtx.cacheKey` is null when
+    // the cache was bypassed (image w/o signature, no llmCache, empty text).
+    return await this.commitResponse(sessionId, prep, aiResult, {
+      requestId,
+      ip,
+      cacheKey: cacheCtx.cacheKey ?? null,
+    });
   }
 
   /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
@@ -291,6 +321,11 @@ export class ChatMessageService {
     if (hasImage && !hasVisualSignature) return null;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return null;
+    // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
+    // lookup so the cache-HIT branch can stamp the persisted assistant row
+    // with the same cookie used by `LlmCacheServiceImpl.lookup`. Pure (no
+    // I/O) — identical derivation to `lookup`/`store` internals.
+    ctx.cacheKey = llmCache.computeKey(cacheInput);
     const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
     if (result.hit && result.value) {
       logger.info('llm_cache_hit', {
@@ -314,6 +349,11 @@ export class ChatMessageService {
     if (hasImage && !hasVisualSignature) return;
     const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return;
+    // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
+    // store so the assistant row gets stamped with the SAME cookie that
+    // hits Redis. Idempotent if `tryLlmCacheLookup` already populated it
+    // (same `cacheInput` → same key — derivation is pure).
+    ctx.cacheKey = llmCache.computeKey(cacheInput);
     await llmCache.store(cacheInput, aiResult);
     logger.info('llm_cache_miss', {
       contextClass: llmCache.classify(cacheInput),

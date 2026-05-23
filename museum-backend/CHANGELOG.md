@@ -4,6 +4,22 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-P0-1 fix feedback LLM cache invalidation
+
+Run `2026-05-23-pr-p0-1-fix-llm-cache-feedback` — single P0 launch-blocker closed (V1 2026-06-07, J-15). Pipeline : UFR-022 fresh-context 5-phase / enterprise / reviewer APPROVED weightedMean **92.4**.
+
+### Fixed
+
+- **PR-P0-1** — Negative feedback on a chat answer now actually purges the cached LLM response. Previously `buildFeedbackInvalidationKeys` (in `museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts`) produced a cartesian product of keys in an orphan namespace `chat:llm:*` while the real cache writer `LlmCacheServiceImpl` stores under `llm:v2:*` (ADR-036). Result : `cache.del(...)` purged non-existent keys, 0 entries invalidated, stale answer served back for the remainder of the TTL window (24 h museum-mode / 7 d generic). Fix : the exact cache key produced by `LlmCacheServiceImpl.store()` is now captured at WRITE time and persisted on the `ChatMessage` row as `cache_key` (additive nullable migration `1779536483274-AddCacheKeyToChatMessages`). Feedback path reads the row by `messageId`, retrieves `cacheKey`, and purges the exact key. Closes the I-FIX1 sweep (admin "purge museum" path fixed 2026-05-21 ; feedback path was missed in the same sweep). Fail-open semantics preserved (Redis down → HTTP 200 + WARN log). New dedicated suite `tests/unit/chat/feedback-cache-invalidation.test.ts` (8 cases, non-tautological — assertions on the actual key written, not via the function under test). Executes ADR-036 ; no new ADR.
+
+### Removed (UFR-016 burial — ~589 LOC)
+
+- `museum-backend/src/modules/chat/useCase/message/chat-cache-key.util.ts` (148 LOC) — produced the orphan `chat:llm:*` namespace, no writers in prod (exhaustive grep), parity contract FE↔BE was stale (FE `computeLocalCacheKey` is device-local AsyncStorage, never imported the BE helper).
+- `museum-backend/tests/contract/cache-key-parity.test.ts` (66 LOC) — defended the stale parity contract.
+- `museum-backend/tests/fixtures/cache-key-vectors.json` (119 LOC) — fixture for the removed parity test.
+- `museum-backend/tests/helpers/chat/cache-fixtures.ts` (23 LOC) — helper for the removed parity test.
+- `museum-backend/tests/unit/chat/chat-cache-key.test.ts` (233 LOC) — tested the orphan helper.
+
 ## [Unreleased] — 2026-05-21 — P0 GDPR closure lot
 
 Run `2026-05-21-p0-gdpr` — eight P0 items shipped to verrouiller V1 launch (2026-06-01) against pre-launch GDPR + App Store + ePrivacy audit findings. Pipeline : UFR-022 fresh-context 5-phase / standard-enterprise / reviewer APPROVED weightedMean 89.45.

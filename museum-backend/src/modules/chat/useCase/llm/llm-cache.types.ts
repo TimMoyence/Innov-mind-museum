@@ -59,6 +59,17 @@ export interface LlmCacheLookupResult<T> {
  */
 export interface LlmCacheService {
   classify(input: LlmCacheKeyInput): LlmContextClass;
+  /**
+   * PR-P0-1 (2026-05-23) — Returns the exact byte-string this service would
+   * use as Redis key when `lookup()` / `store()` are invoked with the same
+   * `input`. Pure (no I/O) and deterministic per input.
+   *
+   * Intended use: persistence stamping at write time so feedback-driven
+   * invalidation can purge the EXACT cached entry without reconstruction.
+   * Do NOT use for lookup/store paths — call those methods directly so
+   * TTL classification / observability stay on a single code path.
+   */
+  computeKey(input: LlmCacheKeyInput): string;
   lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>>;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains the stored value shape (matches CacheService.set pattern)
   store<T>(input: LlmCacheKeyInput, value: T): Promise<void>;

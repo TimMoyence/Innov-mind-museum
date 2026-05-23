@@ -135,6 +135,8 @@ async function persistAssistantMessage(
     assistantMetadata: ReturnType<typeof buildCommitPayload>['assistantMetadata'];
     sessionUpdates: ReturnType<typeof buildCommitPayload>['sessionUpdates'];
     artworkMatch: ReturnType<typeof buildCommitPayload>['artworkMatch'];
+    /** PR-P0-1 (2026-05-23) — LLM-cache-invalidation cookie. Null when not cached. */
+    cacheKey?: string | null;
   },
 ): Promise<Awaited<ReturnType<ChatRepository['persistMessage']>>> {
   try {
@@ -145,6 +147,7 @@ async function persistAssistantMessage(
       metadata: payload.assistantMetadata as Record<string, unknown>,
       sessionUpdates: payload.sessionUpdates,
       artworkMatch: payload.artworkMatch,
+      cacheKey: payload.cacheKey ?? null,
     });
   } catch (error) {
     if ((error as Error).name === 'OptimisticLockVersionMismatchError') {
@@ -168,9 +171,18 @@ export async function commitAssistantResponse(
     ip?: string;
     /** Absent → grounding gate skipped (NFR8 backward-compat). */
     routerFacts?: readonly string[];
+    /**
+     * PR-P0-1 (2026-05-23) — exact `llm:v2:*` Redis key emitted by
+     * `LlmCacheServiceImpl.computeKey` when the assistant response was
+     * cached. Null/absent for non-cached paths (image-only, no llmCache,
+     * image present but no visual signature, etc.). Stamped on the
+     * persisted message row for targeted feedback-driven invalidation.
+     */
+    cacheKey?: string | null;
   },
 ): Promise<PostMessageResult> {
-  const { requestedLocale, ownerId, enrichedImages, requestId, ip, routerFacts } = options;
+  const { requestedLocale, ownerId, enrichedImages, requestId, ip, routerFacts, cacheKey } =
+    options;
   const outputCheck = await deps.guardrail.evaluateOutput({
     text: aiResult.text,
     metadata: aiResult.metadata,
@@ -201,6 +213,7 @@ export async function commitAssistantResponse(
     assistantMetadata,
     sessionUpdates,
     artworkMatch,
+    cacheKey: cacheKey ?? null,
   });
 
   if (outputCheck.allowed && sessionUpdates?.visitContext) {

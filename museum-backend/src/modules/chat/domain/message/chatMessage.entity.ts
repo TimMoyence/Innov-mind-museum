@@ -57,6 +57,26 @@ export class ChatMessage {
   @Column({ type: 'varchar', length: 32, nullable: true })
   audioVoice?: string | null;
 
+  /**
+   * PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie.
+   *
+   * The exact Redis key (`llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`)
+   * used by `LlmCacheServiceImpl` when this assistant response was cached.
+   * Read at feedback time by `ChatMediaService.invalidateCacheForFeedback`
+   * to purge the exact entry (replaces the broken `chat:llm:*` cartesian
+   * that targeted 0 real keys — closes the I-FIX1 sweep from 2026-05-21).
+   *
+   * Null when:
+   *   - the response was not cached (image-only path, no llmCache configured,
+   *     image present but no visual signature, etc.)
+   *   - the row was written BEFORE this column existed (legacy rows — TTL
+   *     out within ≤ 7 days, R4 skip-when-null contract handles them)
+   *
+   * Internal-only (NFR-2) — never exposed via API response shapes.
+   */
+  @Column({ type: 'text', nullable: true, name: 'cache_key' })
+  cacheKey?: string | null;
+
   @OneToMany(() => ArtworkMatch, (match) => match.message, {
     cascade: false,
     eager: false,

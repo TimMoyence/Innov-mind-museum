@@ -1,7 +1,6 @@
 import { validate as isUuid } from 'uuid';
 
 import { resolveLocalImageMeta } from '@modules/chat/useCase/image/chat-image.helpers';
-import { buildCacheKey } from '@modules/chat/useCase/message/chat-cache-key.util';
 import { ensureMessageAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
@@ -13,7 +12,6 @@ import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
-import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type {
   FeedbackMessageResult,
   ReportMessageResult,
@@ -158,13 +156,26 @@ export class ChatMediaService {
   }
 
   /**
-   * Fail-open: invalidates LLM cache for the question preceding this assistant msg.
+   * PR-P0-1 (2026-05-23) — targeted LLM cache invalidation.
    *
-   * F2 (2026-05-19) — write-time shape (audioDescriptionMode × voiceMode) is
-   * unknown at feedback time, so we iterate the full 4-shape cartesian
-   * (`{false,true}²`) across both namespaces (global + user-scoped when owner
-   * present) — 4 or 8 `del` calls. Per-key try/catch ensures a single Redis
-   * hiccup does not skip the remaining keys (F2.3 partial-failure resilience).
+   * Reads `row.message.cacheKey` (stamped at write time by
+   * `ChatMessageService.tryLlmCacheStore` / `tryLlmCacheLookup` via
+   * `LlmCacheServiceImpl.computeKey`) and purges the exact `llm:v2:*` entry
+   * that produced this assistant message — 1 del, exact match, no cartesian.
+   *
+   * Fail-open: a `cache.del` throw produces a WARN log and the HTTP 200
+   * feedback response still succeeds (the underlying `upsertMessageFeedback`
+   * already committed before this method is called).
+   *
+   * Skip-when-null (R4): legacy rows written before the `cache_key` column
+   * existed have `cacheKey === null`, as do non-cached paths (image-only
+   * without visual signature, no `llmCache` configured, etc.). Those skip
+   * the `del` and emit an INFO `llm_cache_invalidate_skipped` log — they
+   * TTL out within ≤ 7 d.
+   *
+   * Closes the sweep started by I-FIX1 (2026-05-21 admin purge fix in
+   * `cache-purge.route.ts:14-31`) — the feedback path was missed there.
+   * See `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.
    */
   private async invalidateCacheForFeedback(
     messageId: string,
@@ -172,25 +183,28 @@ export class ChatMediaService {
   ): Promise<void> {
     if (!this.cache) return;
     const cache = this.cache;
-    try {
-      const userMsg = await this.findPrecedingUserMessage(row.message.sessionId, messageId);
-      if (!userMsg?.text || userMsg.role !== 'user' || !row.session.museumId) return;
-      const keys = buildFeedbackInvalidationKeys(userMsg.text, row.session);
-      for (const key of keys) {
-        await safeCacheDel(cache, key, row.session.museumId);
-      }
-    } catch {
-      // fail-open: invalidation failure must not affect feedback response
+    const cacheKey = row.message.cacheKey ?? null;
+    const museumId = row.session.museumId ?? null;
+    if (!cacheKey) {
+      logger.info('llm_cache_invalidate_skipped', {
+        messageId,
+        museumId,
+        reason: 'no_cache_key',
+      });
+      return;
     }
-  }
-
-  private async findPrecedingUserMessage(
-    sessionId: string,
-    assistantMessageId: string,
-  ): Promise<{ role: string; text?: string | null } | null> {
-    const history = await this.repository.listSessionHistory(sessionId, 50);
-    const assistantIdx = history.findIndex((m) => m.id === assistantMessageId);
-    return assistantIdx > 0 ? history[assistantIdx - 1] : null;
+    try {
+      await cache.del(cacheKey);
+      logger.info('llm_cache_invalidated_by_feedback', { messageId, museumId, key: cacheKey });
+    } catch (err: unknown) {
+      logger.warn('llm_cache_invalidate_failed', {
+        messageId,
+        museumId,
+        key: cacheKey,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // fail-open — feedback HTTP 200 still returned
+    }
   }
 
   /**
@@ -312,48 +326,9 @@ export class ChatMediaService {
   }
 }
 
-/**
- * F2 cartesian — build 4 shapes × 2 namespaces (global + user-scoped if owner).
- * Each call to buildCacheKey is pure, no I/O — safe to fan out.
- */
-function buildFeedbackInvalidationKeys(userText: string, session: ChatSession): string[] {
-  const ownerId = session.user?.id;
-  const baseInput = {
-    text: userText,
-    museumId: String(session.museumId),
-    locale: session.locale ?? 'fr',
-    guideLevel: session.visitContext?.detectedExpertise ?? 'beginner',
-    hasHistory: false,
-    hasAttachment: false,
-    hasGeo: false,
-  } as const;
-  const namespaces: { userId?: number }[] = [{}];
-  if (ownerId !== undefined) namespaces.push({ userId: ownerId });
-  const keys: string[] = [];
-  for (const ns of namespaces) {
-    for (const audioDescriptionMode of [false, true]) {
-      for (const voiceMode of [false, true]) {
-        keys.push(buildCacheKey({ ...baseInput, ...ns, audioDescriptionMode, voiceMode }));
-      }
-    }
-  }
-  return keys;
-}
-
-/**
- * F2.3 — per-key fail-open. A single Redis hiccup MUST NOT skip remaining
- * keys in the cartesian. The outer try/catch in invalidateCacheForFeedback
- * catches non-cache failures (e.g. listSessionHistory rejection).
- */
-async function safeCacheDel(cache: CacheService, key: string, museumId: number): Promise<void> {
-  try {
-    await cache.del(key);
-    logger.info('llm_cache_invalidated_by_feedback', { museumId, key });
-  } catch (err: unknown) {
-    logger.warn('llm_cache_invalidate_failed', {
-      museumId,
-      key,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-}
+// PR-P0-1 (2026-05-23) — removed `buildFeedbackInvalidationKeys` (broken
+// cartesian over `chat:llm:*` namespace targeting 0 real prod keys) and
+// `safeCacheDel` (only caller was the cartesian). Targeted invalidation is
+// now driven by the `cache_key` cookie persisted on the assistant message
+// row at write time. See `invalidateCacheForFeedback` above + spec/design
+// in `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.

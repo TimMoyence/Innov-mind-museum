@@ -30,6 +30,14 @@ export interface PersistMessageInput {
   sessionUpdates?: PersistMessageSessionUpdates;
   /** Persisted in the same transaction as the message. */
   artworkMatch?: Omit<PersistArtworkMatchInput, 'messageId'>;
+  /**
+   * PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie persisted on
+   * the `chat_messages.cache_key` column. Set ONLY for assistant messages
+   * whose response was cached (so `ChatMediaService.invalidateCacheForFeedback`
+   * can purge the exact entry on negative feedback). Null otherwise.
+   * Internal-only (NFR-2) — never exposed via API responses.
+   */
+  cacheKey?: string | null;
 }
 
 export interface PersistArtworkMatchInput {

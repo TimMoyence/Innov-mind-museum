@@ -157,6 +157,11 @@ export class TypeOrmChatRepository implements ChatRepository {
       text: input.text ?? null,
       imageRef: input.imageRef ?? null,
       metadata: input.metadata ?? null,
+      // PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie. Goes
+      // through `repository.create()` + `repository.save()` (NOT `.update().set({})`)
+      // so the CLAUDE.md TypeORM `.set({ field: undefined })` silent-skip
+      // gotcha is avoided.
+      cacheKey: input.cacheKey ?? null,
       session: { id: input.sessionId } as ChatSession,
     });
 
