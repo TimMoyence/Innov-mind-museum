@@ -354,6 +354,10 @@ export class LLMGuardAdapter implements GuardrailProvider {
     path: string,
     body: Record<string, unknown>,
   ): Promise<{ verdict: GuardrailVerdict; outcome: ScanOutcome }> {
+    // PR-14: does NOT use `fetchWithTimeout` — chaos injection aborts the
+    // caller-held `controller` BEFORE fetch is invoked. The helper owns its
+    // internal controller and exposes no pre-fetch abort handle, so chaos
+    // drills must keep the inline pattern to mirror real outage timing.
     const controller = new AbortController();
     const timer = setTimeout(() => {
       controller.abort();

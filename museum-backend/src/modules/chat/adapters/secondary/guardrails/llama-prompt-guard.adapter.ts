@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '@shared/http/fetch-with-timeout';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -141,28 +142,24 @@ export class LlamaPromptGuardAdapter implements GuardrailProvider {
 
   /** @throws {Error} on non-OK / network / abort / malformed. */
   private async callClassify(text: string): Promise<PromptGuardResponse> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-    }, this.timeoutMs);
-    try {
-      const response = await this.fetchFn(`${this.baseUrl}/classify`, {
+    const response = await fetchWithTimeout(
+      `${this.baseUrl}/classify`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`non_ok_${response.status}`);
-      }
-      const raw = (await response.json()) as Partial<PromptGuardResponse>;
-      if ((raw.label !== 'BENIGN' && raw.label !== 'MALICIOUS') || typeof raw.score !== 'number') {
-        throw new Error('malformed_classify_response');
-      }
-      return raw as PromptGuardResponse;
-    } finally {
-      clearTimeout(timer);
+      },
+      this.timeoutMs,
+      this.fetchFn,
+    );
+    if (!response.ok) {
+      throw new Error(`non_ok_${response.status}`);
     }
+    const raw = (await response.json()) as Partial<PromptGuardResponse>;
+    if ((raw.label !== 'BENIGN' && raw.label !== 'MALICIOUS') || typeof raw.score !== 'number') {
+      throw new Error('malformed_classify_response');
+    }
+    return raw as PromptGuardResponse;
   }
 
   private classifyError(error: unknown): 'timeout' | 'network' | 'malformed' {

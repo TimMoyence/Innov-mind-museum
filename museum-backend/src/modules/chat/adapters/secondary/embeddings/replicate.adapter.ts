@@ -51,6 +51,9 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
 
   /** @throws {EncoderUnavailableError} 4xx/5xx/terminal/timeout */
   public async encode(input: EncodeInput): Promise<EncodeOutput> {
+    // PR-14: does NOT use `fetchWithTimeout` — single budget shared across
+    // multi-fetch flow (createPrediction + awaitTerminal polling). The helper
+    // arms a per-call timer; here the same `controller` must span N fetches.
     const controller = new AbortController();
     const timeoutHandle = setTimeout(() => {
       controller.abort();
