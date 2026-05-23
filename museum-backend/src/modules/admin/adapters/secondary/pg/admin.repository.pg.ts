@@ -3,6 +3,7 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
+import { paginate } from '@shared/pagination/offset-paginate';
 
 import {
   queryUsageAnalytics,
@@ -112,22 +113,9 @@ export class AdminRepositoryPg implements IAdminRepository {
     // Soft-deleted reachable via getUserById for forensics.
     qb.andWhere('u.deleted_at IS NULL');
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('u.createdAt', 'DESC');
 
-    const [users, total] = await qb
-      .orderBy('u.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: users.map(mapUser),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, mapUser);
   }
 
   /** Includes soft-deleted rows. */
@@ -217,22 +205,9 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('log.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('log.createdAt', 'DESC');
 
-    const [logs, total] = await qb
-      .orderBy('log.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: logs.map(mapAuditLog),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, mapAuditLog);
   }
 
   async getStats(): Promise<AdminStats> {
@@ -303,22 +278,9 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('report.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('report.createdAt', 'DESC');
 
-    const [reports, total] = await qb
-      .orderBy('report.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: reports.map((r) => mapReport(r, r.message)),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, (r) => mapReport(r, r.message));
   }
 
   async resolveReport(input: ResolveReportInput): Promise<AdminReportDTO | null> {

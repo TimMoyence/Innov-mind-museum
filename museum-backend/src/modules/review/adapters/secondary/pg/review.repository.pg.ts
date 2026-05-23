@@ -1,4 +1,5 @@
 import { Review } from '@modules/review/domain/review/review.entity';
+import { paginate } from '@shared/pagination/offset-paginate';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type {
@@ -44,9 +45,6 @@ export class ReviewRepositoryPg implements IReviewRepository {
   }
 
   async listReviews(filters: ListReviewsFilters): Promise<PaginatedResult<ReviewDTO>> {
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
-
     const qb = this.repo.createQueryBuilder('r');
 
     // `andWhere` first-call behaves as `where` in TypeORM 0.3.x, so we can
@@ -60,17 +58,9 @@ export class ReviewRepositoryPg implements IReviewRepository {
       qb.andWhere('r.museumId = :museumId', { museumId: filters.museumId });
     }
 
-    const total = await qb.getCount();
+    qb.orderBy('r.createdAt', 'DESC');
 
-    const data = await qb.orderBy('r.createdAt', 'DESC').skip(offset).take(limit).getMany();
-
-    return {
-      data: data.map(toDTO),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, toDTO);
   }
 
   /**

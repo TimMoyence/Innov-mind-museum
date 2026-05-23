@@ -68,6 +68,20 @@ export class SupportRepositoryPg implements ISupportRepository {
   }
 
   async listTickets(filters: ListTicketsFilters): Promise<PaginatedResult<TicketDTO>> {
+    // paginate-skip: subquery-required (COUNT(m.id) + getRawAndEntities)
+    //
+    // This site is intentionally OUT OF SCOPE of the shared
+    // `@shared/pagination/offset-paginate` helper (design.md DL-1/DL-2,
+    // pr8-paginate-sentinel.test.ts SWEPT_FILES excludes this path).
+    //
+    // The shared helper relies on `getManyAndCount()`, which cannot project
+    // a correlated `COUNT(m.id)` subquery for the per-ticket `messageCount`.
+    // Here we need `getRawAndEntities()` to read both the entity columns AND
+    // the raw `messageCount` alias per row in a single round-trip.
+    //
+    // Migrating away from the inline form would require a separate count
+    // query (extra round-trip) OR extending the helper with a raw-projection
+    // overload — both rejected for PR-8 scope.
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 

@@ -67,8 +67,9 @@ describe('ReviewRepositoryPg', () => {
   describe('listReviews', () => {
     it('returns paginated reviews without status filter', async () => {
       const reviews = [makeReview({ id: 'r1' }), makeReview({ id: 'r2' })];
-      qb.getCount.mockResolvedValue(2);
-      qb.getMany.mockResolvedValue(reviews);
+      // PR-8: listReviews migrated from getCount+getMany 2-call to the
+      // `paginate(qb, pagination, toDTO)` helper which uses getManyAndCount.
+      qb.getManyAndCount.mockResolvedValue([reviews, 2]);
 
       const result = await sut.listReviews({
         pagination: { page: 1, limit: 10 },
@@ -86,8 +87,7 @@ describe('ReviewRepositoryPg', () => {
     });
 
     it('applies status filter', async () => {
-      qb.getCount.mockResolvedValue(0);
-      qb.getMany.mockResolvedValue([]);
+      qb.getManyAndCount.mockResolvedValue([[], 0]);
 
       await sut.listReviews({
         status: 'approved',
@@ -100,8 +100,7 @@ describe('ReviewRepositoryPg', () => {
     });
 
     it('computes correct offset for page 2', async () => {
-      qb.getCount.mockResolvedValue(15);
-      qb.getMany.mockResolvedValue([]);
+      qb.getManyAndCount.mockResolvedValue([[], 15]);
 
       const result = await sut.listReviews({
         pagination: { page: 2, limit: 10 },
