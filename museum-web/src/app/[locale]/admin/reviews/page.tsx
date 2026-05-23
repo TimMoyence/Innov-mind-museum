@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
+import type { ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
 // -- Badge colors ────────────────────────────────────────────────────────
@@ -26,55 +27,51 @@ export default function AdminReviewsPage() {
   const adminDict = useAdminDict();
   const dateLocale = useDateLocale();
 
-  const [reviews, setReviews] = useState<ReviewDTO[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | ''>('pending');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Moderation modal state
   const [moderating, setModerating] = useState<ReviewDTO | null>(null);
   const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
   const [saving, setSaving] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
 
-  const fetchReviews = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
+  const reviewsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    return `/api/admin/reviews?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<ReviewDTO>>(
-        `/api/admin/reviews?${params.toString()}`,
-      );
-      setReviews(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reviews');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
+  const {
+    data: reviewsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchReviews,
+  } = useFetchData<ReviewDTO[]>(reviewsUrl, {
+    deps: [page, statusFilter],
+    errorFallback: 'Failed to load reviews',
+  });
 
-  useEffect(() => {
-    void fetchReviews();
-  }, [fetchReviews]);
+  const reviews = reviewsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Moderation handler ─────────────────────────────────────────────
 
   async function handleModerate() {
     if (!moderating || !decision) return;
     setSaving(true);
+    setMutationError(null);
     try {
       await apiPatch<{ review: ReviewDTO }>(`/api/admin/reviews/${moderating.id}`, {
         status: decision,
@@ -83,7 +80,7 @@ export default function AdminReviewsPage() {
       setDecision(null);
       void fetchReviews();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to moderate review');
+      setMutationError(err instanceof Error ? err.message : 'Failed to moderate review');
     } finally {
       setSaving(false);
     }
@@ -122,7 +119,7 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Error */}
-      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (

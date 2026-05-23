@@ -128,11 +128,31 @@ async function refreshAccessToken(): Promise<string> {
 
 // ── Core request function ──────────────────────────────────────────────
 
+/**
+ * Options accepted by public API request helpers.
+ *
+ * Phase 3 (web refactor 2026-05-23) scope: `signal` is currently honoured by
+ * `apiGet` only — `useFetchData` needs it to cancel in-flight reads when
+ * dependencies change or the component unmounts. Mutation helpers
+ * (`apiPost`/`apiPatch`/`apiPut`/`apiDelete`) keep their current signatures
+ * to limit blast-radius; the same option can be added trivially later if a
+ * `useMutation` hook surfaces.
+ */
+export interface ApiRequestOptions {
+  /** Optional AbortSignal forwarded to the underlying fetch() call. */
+  signal?: AbortSignal;
+}
+
+interface InternalRequestOptions extends ApiRequestOptions {
+  /** Set on the recursive call after a refresh — prevents an infinite loop. */
+  isRetry?: boolean;
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  isRetry = false,
+  options?: InternalRequestOptions,
 ): Promise<T> {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}${path}`;
@@ -156,13 +176,14 @@ async function request<T>(
     headers,
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal: options?.signal,
   });
 
   // Handle 401 — attempt refresh (once). F7: cookie-based, no token check needed
   // upfront; the backend rejects with 401 if the refresh cookie is also missing/expired.
   // refreshAccessToken itself fires onLogout on definitive failure (it owns the queue);
   // we just translate the throw into an ApiError for the caller.
-  if (res.status === 401 && !isRetry) {
+  if (res.status === 401 && !options?.isRetry) {
     try {
       await refreshAccessToken();
     } catch {
@@ -170,7 +191,8 @@ async function request<T>(
     }
 
     // Retry the original request — new cookies are now in the jar.
-    return request<T>(method, path, body, true);
+    // Propagate the abort signal so a caller-driven cancel still takes effect on retry.
+    return request<T>(method, path, body, { isRetry: true, signal: options?.signal });
   }
 
   if (!res.ok) {
@@ -196,8 +218,8 @@ async function request<T>(
 
 // ── Public API ─────────────────────────────────────────────────────────
 
-export function apiGet<T>(path: string): Promise<T> {
-  return request<T>('GET', path);
+export function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return request<T>('GET', path, undefined, options);
 }
 
 export function apiPost<T>(path: string, body?: unknown): Promise<T> {

@@ -1,56 +1,47 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet } from '@/lib/api';
+import { useEffect, useState } from 'react';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
-import type { AdminAuditLogDTO, PaginatedResponse } from '@/lib/admin-types';
+import type { AdminAuditLogDTO } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
   const adminDict = useAdminDict();
   const dateLocale = useDateLocale();
 
-  const [logs, setLogs] = useState<AdminAuditLogDTO[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [actionFilter]);
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (actionFilter) params.set('action', actionFilter);
+  const logsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (actionFilter) params.set('action', actionFilter);
+    return `/api/admin/audit-logs?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<AdminAuditLogDTO>>(
-        `/api/admin/audit-logs?${params.toString()}`,
-      );
-      setLogs(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audit logs');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, actionFilter]);
+  const {
+    data: logsPayload,
+    loading,
+    error,
+    pagination,
+  } = useFetchData<AdminAuditLogDTO[]>(logsUrl, {
+    deps: [page, actionFilter],
+    errorFallback: 'Failed to load audit logs',
+  });
 
-  useEffect(() => {
-    void fetchLogs();
-  }, [fetchLogs]);
+  const logs = logsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
 
   return (
     <div>

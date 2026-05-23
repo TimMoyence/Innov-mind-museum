@@ -1,16 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
+import type { Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
 // -- Badge colors ────────────────────────────────────────────────────────
@@ -35,58 +36,55 @@ export default function TicketsPage() {
   const locale = useAdminLocale();
   const dateLocale = useDateLocale();
 
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Update modal state
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [newStatus, setNewStatus] = useState<TicketStatus>('open');
   const [newPriority, setNewPriority] = useState<TicketPriority>('low');
   const [saving, setSaving] = useState(false);
+  // Mutation-specific error (separate from the read-only `error` returned by
+  // the hook — they have the same UX role but distinct sources).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [statusFilter, priorityFilter]);
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
-      if (priorityFilter) params.set('priority', priorityFilter);
+  const ticketsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    if (priorityFilter) params.set('priority', priorityFilter);
+    return `/api/admin/tickets?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<Ticket>>(
-        `/api/admin/tickets?${params.toString()}`,
-      );
-      setTickets(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tickets');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, priorityFilter]);
+  const {
+    data: ticketsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchTickets,
+  } = useFetchData<Ticket[]>(ticketsUrl, {
+    deps: [page, statusFilter, priorityFilter],
+    errorFallback: 'Failed to load tickets',
+  });
 
-  useEffect(() => {
-    void fetchTickets();
-  }, [fetchTickets]);
+  const tickets = ticketsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Update handler ──────────────────────────────────────────────────
 
   async function handleUpdate() {
     if (!editingTicket) return;
     setSaving(true);
+    setMutationError(null);
     try {
       await apiPatch<Ticket>(`/api/admin/tickets/${editingTicket.id}`, {
         status: newStatus,
@@ -95,7 +93,7 @@ export default function TicketsPage() {
       setEditingTicket(null);
       void fetchTickets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update ticket');
+      setMutationError(err instanceof Error ? err.message : 'Failed to update ticket');
     } finally {
       setSaving(false);
     }
@@ -147,7 +145,7 @@ export default function TicketsPage() {
       </div>
 
       {/* Error */}
-      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (

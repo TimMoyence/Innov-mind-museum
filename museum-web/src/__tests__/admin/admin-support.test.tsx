@@ -359,7 +359,9 @@ describe('AdminSupportPage', () => {
       );
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/api/support/tickets/ticket-1');
+        // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
+        expect(mockApiGet).toHaveBeenCalled();
+        expect(mockApiGet.mock.calls[0]?.[0]).toBe('/api/support/tickets/ticket-1');
       });
     });
   });

@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { apiGet, apiPut } from '@/lib/api';
+import { apiPut } from '@/lib/api';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
 import { HEX_RE, HTTPS_RE } from '@/lib/validation';
 import { AlertBanner } from '@/components/ui/AlertBanner';
@@ -58,32 +59,37 @@ export default function MuseumBrandingPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
-  const [museum, setMuseum] = useState<MuseumDTO | null>(null);
   const [branding, setBranding] = useState<MuseumBranding>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof MuseumBranding, string>>>({});
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<GetMuseumResponse>(`/api/museums/${id}`);
-      setMuseum(data.museum);
-      setBranding(asBranding(data.museum.config));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const {
+    data: museumResponse,
+    loading,
+    error,
+    refetch: load,
+  } = useFetchData<GetMuseumResponse>(id ? `/api/museums/${id}` : null, {
+    deps: [id],
+    errorFallback: STRINGS.errorLoad,
+  });
+  const museum = museumResponse?.museum ?? null;
+  const combinedError = error ?? mutationError;
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // `branding` is locally-edited form state, but it must (re)sync from the
+  // server-loaded museum the FIRST render the museum becomes available AND
+  // every time the museum reference changes (e.g. after a refetch following
+  // a successful PUT). We use the React "adjusting state in render" pattern
+  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+  // so the freshly-synced branding is visible in the SAME render that first
+  // renders the form — avoiding a one-frame empty-input flash.
+  const [syncedMuseum, setSyncedMuseum] = useState<MuseumDTO | null>(null);
+  if (museum && museum !== syncedMuseum) {
+    setSyncedMuseum(museum);
+    setBranding(asBranding(museum.config));
+  }
 
   function update<K extends keyof MuseumBranding>(key: K, value: MuseumBranding[K]) {
     setBranding((prev) => ({ ...prev, [key]: value }));
@@ -110,7 +116,7 @@ export default function MuseumBrandingPage() {
     if (Object.keys(v).length > 0) return;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
     setSuccess(null);
     try {
       // Merge — preserve any other config keys (e.g. kbLocale) the BE has.
@@ -118,14 +124,16 @@ export default function MuseumBrandingPage() {
         ...museum.config,
         branding: pruneEmpty(branding),
       };
-      const data = await apiPut<GetMuseumResponse>(`/api/museums/${museum.id}`, {
+      await apiPut<GetMuseumResponse>(`/api/museums/${museum.id}`, {
         config: nextConfig,
       });
-      setMuseum(data.museum);
-      setBranding(asBranding(data.museum.config));
+      // Refetch the museum so the hook becomes the single source of truth
+      // for server state — the in-render sync above re-derives `branding`
+      // from the freshly-loaded `museum.config` (new reference → re-sync).
+      void load();
       setSuccess(STRINGS.saved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.errorSave);
+      setMutationError(err instanceof Error ? err.message : STRINGS.errorSave);
     } finally {
       setSaving(false);
     }
@@ -134,8 +142,8 @@ export default function MuseumBrandingPage() {
   if (loading) {
     return <p className="text-sm text-gray-600">{STRINGS.loading}</p>;
   }
-  if (error && !museum) {
-    return <AlertBanner variant="error" message={error} />;
+  if (combinedError && !museum) {
+    return <AlertBanner variant="error" message={combinedError} />;
   }
   if (!museum) {
     return <p className="text-sm text-gray-600">{STRINGS.notFound}</p>;
@@ -153,7 +161,7 @@ export default function MuseumBrandingPage() {
         <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
       </header>
 
-      {error && <AlertBanner variant="error" message={error} />}
+      {combinedError && <AlertBanner variant="error" message={combinedError} />}
       {success && <AlertBanner variant="success" message={success} />}
 
       <form

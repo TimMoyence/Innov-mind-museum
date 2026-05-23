@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet } from '@/lib/api';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO } from '@/lib/admin-types';
 
@@ -35,29 +34,20 @@ interface ListResponse {
 }
 
 export default function MuseumsListPage() {
-  const [museums, setMuseums] = useState<MuseumDTO[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchMuseums = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<ListResponse>('/api/museums');
-      // The BE returns { museums: [...] } for /directory and may return
-      // either shape for the admin list. Tolerate both.
-      const rows = data.museums ?? data.data ?? [];
-      setMuseums(rows);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchMuseums();
-  }, [fetchMuseums]);
+  // The BE returns { museums: [...] } for /directory and may return either
+  // shape for the admin list. parseData tolerates both and yields MuseumDTO[].
+  const {
+    data: museumsPayload,
+    loading,
+    error,
+  } = useFetchData<MuseumDTO[]>('/api/museums', {
+    parseData: (raw) => {
+      const r = raw as ListResponse;
+      return r.museums ?? r.data ?? [];
+    },
+    errorFallback: STRINGS.error,
+  });
+  const museums = museumsPayload ?? [];
 
   return (
     <section className="space-y-6">

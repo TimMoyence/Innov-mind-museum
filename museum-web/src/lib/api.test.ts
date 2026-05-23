@@ -247,3 +247,95 @@ describe('api.ts — apiPut', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p3
+// Tests fail until apiGet accepts an optional `{signal}` 2nd argument and
+// forwards it to the underlying fetch() call (design §2, OQ-9).
+//
+// Spec backing :
+//   - design.md §2.2 : apiGet<T>(path, options?: ApiRequestOptions)
+//   - design.md §2.3 : `signal: options?.signal` propagated into fetch()
+//   - design.md §9 R-2 : backward-compat — apiGet<T>(path) without options
+//     must keep working (covered by existing tests in this file above)
+// ---------------------------------------------------------------------------
+
+describe('api.ts — apiGet with abort signal', () => {
+  beforeEach(() => {
+    clearCsrfCookie();
+    vi.restoreAllMocks();
+  });
+
+  it('apiGet forwards options.signal to the underlying fetch() call', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({ ok: true }) });
+    const controller = new AbortController();
+
+    // 2-arg signature (path, {signal}) — this fails today because apiGet only
+    // accepts (path). TypeScript should error AND runtime fetch will receive
+    // no signal in init.
+    await apiGet<{ ok: boolean }>('/api/with-signal', { signal: controller.signal });
+
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
+    expect((init as RequestInit).signal).toBe(controller.signal);
+  });
+
+  it('apiGet without options still works (backward-compat — no signal in init)', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({ ok: true }) });
+
+    // Existing single-arg call must remain valid.
+    const data = await apiGet<{ ok: boolean }>('/api/no-options');
+
+    expect(data).toEqual({ ok: true });
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
+    expect((init as RequestInit).signal).toBeUndefined();
+  });
+
+  it('apiGet rejects with AbortError when signal aborts mid-flight', async () => {
+    // Mock fetch that observes the signal and rejects on abort.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const sig = init?.signal;
+          if (sig?.aborted) {
+            reject(new DOMException('aborted', 'AbortError'));
+            return;
+          }
+          sig?.addEventListener(
+            'abort',
+            () => {
+              reject(new DOMException('aborted', 'AbortError'));
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    const controller = new AbortController();
+    const pending = apiGet<unknown>('/api/abortable', { signal: controller.signal });
+
+    // Abort in the next microtask so the listener is registered.
+    queueMicrotask(() => { controller.abort(); });
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('apiGet with already-aborted signal rejects immediately with AbortError', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          if (init?.signal?.aborted) {
+            reject(new DOMException('aborted', 'AbortError'));
+            return;
+          }
+          // never resolves otherwise — test should not reach this branch
+        }),
+    );
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      apiGet<unknown>('/api/pre-aborted', { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});

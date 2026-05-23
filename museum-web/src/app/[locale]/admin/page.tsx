@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { Spinner } from '@/components/ui/Spinner';
 import type { Dictionary } from '@/lib/i18n';
 import type { AdminStats } from '@/lib/admin-types';
@@ -44,35 +43,13 @@ const STAT_CARDS: StatCardDef[] = [
 
 export default function AdminDashboardPage() {
   const adminDict = useAdminDict();
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchStats() {
-      try {
-        const data = await apiGet<AdminStats>('/api/admin/stats');
-        if (!cancelled) {
-          setStats(data);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load stats');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void fetchStats();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const {
+    data: stats,
+    loading,
+    error,
+  } = useFetchData<AdminStats>('/api/admin/stats', {
+    errorFallback: 'Failed to load stats',
+  });
 
   return (
     <div>

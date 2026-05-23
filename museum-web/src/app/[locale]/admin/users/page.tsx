@@ -2,17 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PaginatedResponse, AdminUserDTO, UserRole } from '@/lib/admin-types';
+import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
 
 /** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
 function displayName(u: AdminUserDTO): string {
@@ -63,19 +64,16 @@ export default function UsersPage() {
   const pathname = usePathname();
   const locale = pathname.split('/')[1] ?? 'fr';
 
-  const [users, setUsers] = useState<AdminUserDTO[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Change role modal state
   const [editingUser, setEditingUser] = useState<AdminUserDTO | null>(null);
   const [newRole, setNewRole] = useState<UserRole>('visitor');
   const [changingRole, setChangingRole] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -86,38 +84,37 @@ export default function UsersPage() {
     setPage(1);
   }, [debouncedSearch, roleFilter]);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '10');
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (roleFilter) params.set('role', roleFilter);
+  const usersUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '10');
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (roleFilter) params.set('role', roleFilter);
+    return `/api/admin/users?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<AdminUserDTO>>(
-        `/api/admin/users?${params.toString()}`,
-      );
-      setUsers(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch, roleFilter]);
+  const {
+    data: usersPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchUsers,
+  } = useFetchData<AdminUserDTO[]>(usersUrl, {
+    deps: [page, debouncedSearch, roleFilter],
+    errorFallback: 'Failed to load users',
+  });
 
-  useEffect(() => {
-    void fetchUsers();
-  }, [fetchUsers]);
+  const users = usersPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // ── Change role handler ──────────────────────────────────────────────
 
   async function handleChangeRole() {
     if (!editingUser) return;
     setChangingRole(true);
+    setMutationError(null);
     try {
       await apiPatch<AdminUserDTO>(`/api/admin/users/${editingUser.id}/role`, {
         role: newRole,
@@ -125,7 +122,7 @@ export default function UsersPage() {
       setEditingUser(null);
       void fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change role');
+      setMutationError(err instanceof Error ? err.message : 'Failed to change role');
     } finally {
       setChangingRole(false);
     }
@@ -165,7 +162,7 @@ export default function UsersPage() {
       </div>
 
       {/* Error */}
-      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (

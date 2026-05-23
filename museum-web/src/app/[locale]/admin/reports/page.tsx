@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types';
+import type { Report, ReportStatus } from '@/lib/admin-types';
 
 // -- Status badge colors ----------------------------------------------------------
 
@@ -26,19 +27,16 @@ const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
 export default function ReportsPage() {
   const adminDict = useAdminDict();
 
-  const [reports, setReports] = useState<Report[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Review modal state
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [newStatus, setNewStatus] = useState<ReportStatus>('reviewed');
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const dateLocale = useDateLocale();
 
@@ -47,37 +45,36 @@ export default function ReportsPage() {
     setPage(1);
   }, [statusFilter]);
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
+  const reportsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    return `/api/admin/reports?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<Report>>(
-        `/api/admin/reports?${params.toString()}`,
-      );
-      setReports(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
+  const {
+    data: reportsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchReports,
+  } = useFetchData<Report[]>(reportsUrl, {
+    deps: [page, statusFilter],
+    errorFallback: 'Failed to load reports',
+  });
 
-  useEffect(() => {
-    void fetchReports();
-  }, [fetchReports]);
+  const reports = reportsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Review handler -------------------------------------------------------------
 
   async function handleReview() {
     if (!editingReport) return;
     setSubmitting(true);
+    setMutationError(null);
     try {
       await apiPatch<Report>(`/api/admin/reports/${editingReport.id}`, {
         status: newStatus,
@@ -86,7 +83,7 @@ export default function ReportsPage() {
       setEditingReport(null);
       void fetchReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update report');
+      setMutationError(err instanceof Error ? err.message : 'Failed to update report');
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +114,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Error */}
-      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (

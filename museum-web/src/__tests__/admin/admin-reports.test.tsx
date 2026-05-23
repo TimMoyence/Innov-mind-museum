@@ -392,7 +392,9 @@ describe('ReportsPage', () => {
     );
 
     await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('/api/admin/reports'));
+      // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
+      expect(mockApiGet).toHaveBeenCalled();
+      expect(mockApiGet.mock.calls[0]?.[0]).toEqual(expect.stringContaining('/api/admin/reports'));
     });
   });
 
