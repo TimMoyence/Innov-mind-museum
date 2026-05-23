@@ -4,6 +4,98 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-11 `dailyChatLimit` → atomic `createRateLimitMiddleware` (multi-device burst race ELIMINATED)
+
+Run `2026-05-23-pr-11-dailyChatLimit` — onzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B2.md` (finding D2 : race-prone read-then-write GET/SET sur freemium daily cap). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **9.05/10** (loop-1 terminal, zero CHANGES_REQUESTED). Migration de `dailyChatLimit` (169 LOC hand-rolled `CacheService` get→compare→set non-atomic) vers une instance unique de `createRateLimitMiddleware` (66 LOC, **−61 %**) qui délègue à `RedisRateLimitStore.increment` via le script atomique Lua `INCR_EXPIRE_LUA`. Extension du factory `createRateLimitMiddleware` avec 5 nouveaux knobs optionnels (`errorCode` / `errorMessage` / `statusCode` / nullable `keyGenerator` / function-form `windowMs` / empty-string `bucketName` opt-out) — extensions purement additives, zéro changement aux 6+ call sites existants. **Bonus TOCTOU fix** sur `BucketContext.failClosed` (snapshot synchrone à l'entrée du handler) défense-en-profondeur héritée par tous les futurs consommateurs du factory. Zéro migration DB applicative, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. `pnpm jest --no-coverage --testPathPattern='(middleware/rate-limit\.test|middleware/daily-chat-limit\.test|architecture/pr11-dailyChatLimit-sentinel)'` → **3 suites pass, 50/50 tests pass, 0.779s**. Reversibility : `git revert <sha>` restaure le module legacy + le boot wiring + les 3 test files frozen.
+
+### Added
+
+- **`RateLimitOptions` extensions** (`museum-backend/src/shared/middleware/rate-limit.middleware.ts:31-61`). 5 knobs optionnels, tous documentés TSDoc, tous orthogonaux, tous purement additifs :
+  - `windowMs: number | ((req: Request) => number)` — widened (was `number`). Function form re-évaluée per request → tracks calendar-day rollover ms-jusqu'au-midnight UTC. PR-11 R7.2. Numeric form unchanged for the 6+ existing call sites.
+  - `keyGenerator: (req: Request) => string | null` — widened (was `(req) => string`). Returning `null` → middleware appelle `next()` **sans argument** (skip propre — pas de counter read/write, pas d'erreur émise). PR-11 R2.1. `byIp`/`bySession`/`byUserId` continuent à retourner `string` par covariance (R2.3, zéro call-site change).
+  - `bucketName?: string` (shape inchangée mais semantics étendue) — empty string `''` opts OUT du namespace prefix entirely (`usePrefix = namespace !== ''` à `rate-limit.middleware.ts:176`). La sortie brute du `keyGenerator` devient la clé Redis. PR-11 R8.1. Préserve les keys shape legacy lors d'une migration. `undefined` → anon prefix (legacy behaviour).
+  - `errorCode?: string` — quand fourni, remplace le code AppError par défaut `TOO_MANY_REQUESTS`. PR-11 R1.1.
+  - `errorMessage?: string` — quand fourni, remplace le message par défaut `'Too many requests. Please retry later.'`. PR-11 R1.2.
+  - `statusCode?: 429 | 402` — quand fourni, fixe le HTTP status code sur cap (default 429). Union littérale enforced à compile time. `402` réservé pour une future migration `monthlySessionQuota` (non incluse PR-11). PR-11 R1.3.
+- **Helper `buildCapError(limit, capError): AppError`** (`rate-limit.middleware.ts:96-107`) extrait pour unifier la construction du `AppError` à travers (a) le in-memory cap path, (b) le Redis cap path. Default branch (`capError.code === null`) appelle `tooManyRequests(...)` byte-for-byte → zéro régression pour les 6+ call sites pré-existants qui ne set pas les nouveaux knobs. Custom branch retourne `new AppError({ statusCode: capError.statusCode ?? 429, code: capError.code, message: capError.message ?? '…', details: { limit } })`.
+- **`BucketContext.failClosed: boolean`** (`rate-limit.middleware.ts:79-94`) — snapshot synchrone de `env.rateLimit.failClosed` capturé à l'entrée du handler (line 199). Le deferred `.catch(...)` microtask lit `ctx.failClosed`, pas `env.rateLimit.failClosed`. Closes un TOCTOU latent où un test/operator togglant l'env entre l'entrée du handler et la résolution du catch observerait la valeur post-toggle. `handleRedisFailure` lit `ctx.failClosed` exclusivement (line 137-138). Sentry alerting path intact.
+- **Unit test `museum-backend/tests/unit/middleware/rate-limit.test.ts`** (826 LOC total, étendu à 34 cases, sha256 `c0131e8af7da4d7f6c2055b601e27b9e2e54329d5bbc9ea2dab1668decdd4808`, FROZEN). Couvre les 5 surfaces d'extension R1+R2+R7+R8 :
+  - **R1** : `tooManyRequests(...)` default path byte-for-byte quand les 3 knobs omis ; emission custom `AppError({ statusCode, code, message, details: { limit } })` quand n'importe lequel set ; status union enforced.
+  - **R2** : `keyGenerator → null` → `next()` zéro argument, Redis `.increment` NOT called (spy call count assertion), in-memory store NOT touched (`getBucketCountForKey === undefined`).
+  - **R7** : `windowMs: () => 5000` → `redisStore.increment(key, 5000)` (mock spy on increment args), function called fresh each request.
+  - **R8** : `bucketName: ''` → raw `keyGenerator(req)` output as final key (pas de leading `:`) ; `bucketName: undefined` → anon prefix (legacy) ; `bucketName: 'foo'` → `'foo:rawKey'` (legacy).
+  - **TOCTOU snapshot** : env toggled mid-flight → handler observes snapshot, not live value.
+- **Unit test `museum-backend/tests/unit/middleware/daily-chat-limit.test.ts`** (415 LOC, 12 cases, sha256 `68fdf554e975bd847a983ca33fad6ac9ed05ee0d43f02dd65d2d2a0087be06c4`, FROZEN). Rewrite complet exerçant le nouveau module via la shared API :
+  - In-memory cap path : 1st→200, Nth=limit→200, (N+1)th→429 + `code: 'DAILY_LIMIT_REACHED'` + `message: 'Daily chat limit reached'` + `details: { limit }` + `Retry-After` header.
+  - Redis distributed path (`setRedisRateLimitStore(mockedStore)`) : atomic increment via mock call args, key shape `daily-chat:<userId>:<UTC-date>` bit-identical, wire format identical.
+  - Day-boundary rollover (`jest.useFakeTimers()` + `jest.setSystemTime('2026-05-23T23:59:59Z')` → next call at `'2026-05-24T00:00:00Z'` reset counter to 1).
+  - Anonymous skip (`req.user` undefined → `next()` clean, zéro Redis call) + empty-id skip (`req.user = { id: '' }` → null path).
+  - Concurrent burst sous cap (`Promise.all` 10 requests, `limit: 3`, atomic mock) → exactement 3 allowed + 7 blocked (validates R4.3).
+- **Architecture sentinel `museum-backend/tests/unit/architecture/pr11-dailyChatLimit-sentinel.test.ts`** (118 LOC, sha256 `bd4fd6c340c94ec6cbefa0d1d0c6e2e456d18f42f4f6c09fbeb28ffe8676770f`, FROZEN) — garde régression permanent. Tourne dans le `pnpm test` gate existant. Assertions filesystem-based :
+  - **Block 1** (3 forbidden patterns sur `daily-chat-limit.middleware.ts`) : MUST NOT contain `cache.get(` (race-prone read), MUST NOT contain `cache.set(` (race-prone write), MUST NOT contain `setDailyChatLimitCacheService` (résidu boot wiring). Chaque assertion surface `file:line` remediation hint sur failure.
+  - **Block 2** (1 required import) : MUST import `createRateLimitMiddleware` depuis `@shared/middleware/rate-limit.middleware`. Catches future drift où quelqu'un ré-implémenterait daily-chat à la main.
+
+### Changed
+
+**Migration `dailyChatLimit` (`museum-backend/src/shared/middleware/daily-chat-limit.middleware.ts`)** :
+
+| Aspect | Pre-PR-11 (169 LOC) | Post-PR-11 (66 LOC, **−61 %**) |
+|---|---|---|
+| Surface | `InMemoryBucketStore` instance + `setDailyChatLimitCacheService` + `_resetDailyChatLimitCacheService` + `clearDailyChatLimitBuckets` + `checkInMemory` + `dailyChatLimit` `RequestHandler` hand-rolled (lines 91-113) | 2 helpers (`utcDateString`, `msUntilMidnightUtc`) + 1 const (`DAILY_CHAT_LIMIT = Math.max(1, env.freeTierDailyChatLimit)`) + 1 single `createRateLimitMiddleware({ … })` call exporté comme `dailyChatLimit` |
+| Counter shape | `cache.get<number>(key)` → comparison → `cache.set(key, count+1, ttl)` (**2 round-trips, race-prone**) | `RedisRateLimitStore.increment(key, windowMs)` → single `EVAL` `INCR_EXPIRE_LUA` (**1 round-trip, atomic**) |
+| Failure mode | Fail-OPEN (in-memory fallback toujours) | `env.rateLimit.failClosed` policy — prod 503 + Sentry, dev memory fallback (R6 + spec §8 D2) |
+| Wire format | 429 + `AppError { code: 'DAILY_LIMIT_REACHED', message: 'Daily chat limit reached', details: { limit } }` ; **PAS de Retry-After** | 429 + `AppError { code: 'DAILY_LIMIT_REACHED', message: 'Daily chat limit reached', details: { limit } }` **byte-for-byte** + **`Retry-After: <seconds>` ajouté** (additive, non-breaking — FE interceptor key sur `error.code`) |
+| Anonymous skip | `if (!req.user?.id) return next()` ligne 75-78 | `keyGenerator` retourne `null` → factory call `next()` clean (R2.1). Defense-en-profondeur sur `isAuthenticated` upstream |
+| Test surface | `setDailyChatLimitCacheService(cache)` + `clearDailyChatLimitBuckets()` + `_resetDailyChatLimitCacheService()` | `setRedisRateLimitStore(mockedStore)` + `clearRateLimitBuckets()` partagés depuis `rate-limit.middleware.ts` |
+
+**Boot wiring (`museum-backend/src/index.ts`, −5 LOC)** :
+- Retiré : `import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware'` (line 42, old).
+- Retiré : appel `setDailyChatLimitCacheService(redisCacheService)` (line 120, old).
+- `setRedisRateLimitStore(redisRateLimitStore)` wiring (line 119) suffit — le `dailyChatLimit` migré hérite du store partagé.
+
+**Sites callers (`grep -rn dailyChatLimit src/`) — 3 fichiers, INCHANGÉS** :
+- `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-message.route.ts:14, 186`
+- `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-media.route.ts:26, 244`
+- `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-compare.route.ts:25, 218`
+- Honnêteté : le brief mentionnait "7 sites callers" — verified count = 3 source files (le test file est rewritten, pas unchanged). Cf. spec AC6.
+
+Net source LOC delta : `rate-limit.middleware.ts +100` + `daily-chat-limit.middleware.ts −103` + `index.ts −5` = **−8 LOC net**. La duplication race-prone (`cache.get → compare → cache.set` triplet) existe maintenant dans zéro site.
+
+### Security
+
+- **Race condition burst multi-device ELIMINATED — majeur freemium V1 security win.** Le pattern legacy non-atomique 2-round-trip permettait, sous burst load d'un user authentifié sur plusieurs devices, à deux requêtes interleavées de lire `N`, calculer `N+1`, et écrire `N+1` toutes les deux — over-grant du quota free-tier jusqu'à `N` requêtes concurrentes. Le pattern migré exécute un seul `EVAL` Lua `INCR + PEXPIRE` côté Redis server (`redis-rate-limit-store.ts:16-24`) : zéro fenêtre pour des increments interleavés. **Sentinel test prevent regression** (`tests/unit/architecture/pr11-dailyChatLimit-sentinel.test.ts` lock `cache.get` / `cache.set` / `setDailyChatLimitCacheService` ABSENT going forward).
+- **Bonus TOCTOU fix sur `failClosed` snapshot** — `env.rateLimit.failClosed` capturé synchroniquement à l'entrée du handler dans `ctx.failClosed`. Le deferred `.catch(...)` microtask (après le Redis round-trip) lit `ctx.failClosed`, jamais `env.rateLimit.failClosed`. Closes un TOCTOU latent où un test ou operator togglant l'env entre l'entrée handler et la résolution du catch observerait la valeur post-toggle au lieu de la valeur à l'entrée. Tests qui pin l'env via `withFailClosed(...)` voient maintenant la valeur pinnée déterministiquement. Sentry alerting path préservé (line 143-146). Pas strictement requis par la migration, mais hérité par tous les consommateurs futurs du factory.
+- **Wire format byte-for-byte préservé** — clients FE qui branch sur `error.code === 'DAILY_LIMIT_REACHED'` continuent à fonctionner. `Retry-After` ajouté est strictement additive (FE interceptor ne dépend pas de son absence). Aucun OpenAPI delta. Aucune migration FE/web requise.
+- **Anonymous skip semantics préservé** — counter UNTOUCHED pour `req.user` undefined ou empty-id. Pas de pollution counter anonyme. Pas de DoS sur `daily-chat:undefined:*`. Defense-en-profondeur sur `isAuthenticated` upstream (chat-message.route.ts:185-186).
+- **Zéro nouvelle dépendance** — `museum-backend/package.json` diff vide. `pnpm audit --prod` drift = 0 (1 moderate `qs` DoS pré-existant, non introduit par PR-11).
+
+### Migration notes
+
+- **Redis keyspace rename (one-time at-deploy quota reset)** : `RedisRateLimitStore` (`redis-rate-limit-store.ts:34`) préfixe ses propres clés avec `ratelimit:`. La key shape Redis pour daily-chat passe donc de `daily-chat:<userId>:<UTC-date>` (legacy `CacheService` no-prefix) à `ratelimit:daily-chat:<userId>:<UTC-date>` (new `RedisRateLimitStore`). Effet at-deploy = chaque utilisateur authentifié reçoit un quota fresh free-tier la seconde après deploy. **Pré-launch (zero live users, zero contracted B2B per `project_roadmap_b2b_claims_false`), c'est un non-événement.** Documenté ici explicitement pour qu'un futur lecteur ne prenne pas le rename pour un bug.
+- **Failure mode behavioural change** : daily-chat fail-OPEN (legacy) → fail-CLOSED en prod / memory fallback en dev (aligne sur la policy partagée `env.rateLimit.failClosed`, R6.3). Décision spec §8 D2 — single policy, no special case. Si une panne Redis en prod blank le daily cap, le coût d'abuse > le coût de 503.
+- **Reversibility** : `git revert <sha>` restaure `daily-chat-limit.middleware.ts` legacy + le boot wiring `setDailyChatLimitCacheService` dans `index.ts` + les 3 test files frozen. Pas de DB migration ni de schema delta à revert.
+
+### Verification
+
+```bash
+cd museum-backend && pnpm jest --no-coverage --testPathPattern='(middleware/rate-limit\.test|middleware/daily-chat-limit\.test|architecture/pr11-dailyChatLimit-sentinel)'
+# → 3 suites passed, 50/50 tests passed, 0.779s
+
+cd museum-backend && pnpm lint
+# → exit 0 (eslint src/ + lint:test-discipline + tsc --noEmit)
+
+shasum -a 256 \
+  museum-backend/tests/unit/middleware/rate-limit.test.ts \
+  museum-backend/tests/unit/middleware/daily-chat-limit.test.ts \
+  museum-backend/tests/unit/architecture/pr11-dailyChatLimit-sentinel.test.ts
+# → c0131e8af7da4d7f6c2055b601e27b9e2e54329d5bbc9ea2dab1668decdd4808  …/rate-limit.test.ts
+#   68fdf554e975bd847a983ca33fad6ac9ed05ee0d43f02dd65d2d2a0087be06c4  …/daily-chat-limit.test.ts
+#   bd4fd6c340c94ec6cbefa0d1d0c6e2e456d18f42f4f6c09fbeb28ffe8676770f  …/pr11-dailyChatLimit-sentinel.test.ts
+# (byte-identical avec red-test-manifest.json — frozen-test contract honoré)
+```
+
+---
+
 ## [Unreleased] — 2026-05-23 — PR-10 `shared/cache/probabilistic-refresh.ts` helper + sweep Overpass/Nominatim
 
 Run `2026-05-23-pr-10-probabilistic-refresh` — dixième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B5.md` HIGH #1 (refresh-helper duplication Overpass ↔ Nominatim). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **8.85/10** (loop-1 terminal, zero CHANGES_REQUESTED). Extraction du primitive probabiliste sous `museum-backend/src/shared/cache/` + sweep mécanique des 2 sites HTTP-cached qui dupliquaient le triplet (`Math.random()` jitter formula, `function shouldEarlyRefresh`, `function fireBackgroundRefresh`). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. `pnpm jest --testPathPattern='(probabilistic-refresh|pr10-probabilistic-refresh-sentinel|overpass-cache|nominatim)' --no-coverage` → **8 suites pass, 105/105 tests pass**. Reversibility : `git revert <sha>` restaure helper + 2 sweep sites + 2 red files.

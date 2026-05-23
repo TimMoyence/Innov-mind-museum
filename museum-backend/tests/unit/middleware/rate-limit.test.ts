@@ -27,8 +27,12 @@ const makeMockReq = (overrides: Record<string, unknown> = {}): Request =>
 const makeMockRes = makePartialResponse;
 
 describe('rate-limit middleware — branch coverage', () => {
-  beforeEach(() => clearRateLimitBuckets());
-  afterEach(() => clearRateLimitBuckets());
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+  afterEach(() => {
+    clearRateLimitBuckets();
+  });
 
   it('allows requests up to the limit then rejects with 429', () => {
     const mw = createRateLimitMiddleware({ limit: 2, windowMs: 60_000, keyGenerator: byIp });
@@ -254,8 +258,12 @@ describe('byUserId key generator', () => {
 // new chat sessions in parallel — each session would get its own bucket under
 // `bySession`, but the byUserId limiter shares one bucket per user.
 describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
-  beforeEach(() => clearRateLimitBuckets());
-  afterEach(() => clearRateLimitBuckets());
+  beforeEach(() => {
+    clearRateLimitBuckets();
+  });
+  afterEach(() => {
+    clearRateLimitBuckets();
+  });
 
   it('caps a single user at the limit even across many session ids', () => {
     const mw = createRateLimitMiddleware({ limit: 3, windowMs: 60_000, keyGenerator: byUserId });
@@ -497,5 +505,330 @@ describe('rate-limit middleware — Redis path boundary (count > limit)', () => 
 
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR-11 extensions — `RateLimitOptions` surface widening (R1/R2/R7/R8)
+//
+// UFR-022 red phase — RUN_ID 2026-05-23-pr-11-dailyChatLimit.
+//
+// These tests assert the EXTENDED RateLimitOptions contract spec'd for the
+// dailyChatLimit migration. Pre-green: every block below FAILS — the current
+// factory hard-codes `tooManyRequests('Too many requests. …')`, keyGenerator
+// is typed `(req) => string` (no null skip), windowMs is `number` only, and
+// `bucketName: ''` still prepends a stray `:` in the final key.
+//
+// Spec sources of truth:
+//   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/spec.md §4
+//   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/design.md §2
+//
+// Frozen-test discipline (UFR-022): this file is sha256-hashed in
+// red-test-manifest.json. Green phase MUST NOT modify these tests. Suspected
+// bug → emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
+// ---------------------------------------------------------------------------
+
+describe('PR-11 extensions — custom errorCode / errorMessage / statusCode (R1)', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+    _resetRedisStore();
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    _resetRedisStore();
+    clearRateLimitBuckets();
+  });
+
+  it('emits AppError with custom errorCode/errorMessage/statusCode + details:{limit} on cap (in-memory path)', () => {
+    const mw = createRateLimitMiddleware({
+      limit: 1,
+      windowMs: 60_000,
+      keyGenerator: byIp,
+      bucketName: 'pr11-custom-emit',
+      errorCode: 'DAILY_LIMIT_REACHED',
+      errorMessage: 'Daily chat limit reached',
+      statusCode: 429,
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+
+    // First request fills the bucket.
+    mw(req, res, jest.fn());
+
+    // Second request — should be rejected with the CUSTOM AppError shape.
+    const next = jest.fn();
+    mw(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 429,
+        code: 'DAILY_LIMIT_REACHED',
+        message: 'Daily chat limit reached',
+        details: { limit: 1 },
+      }),
+    );
+  });
+
+  it('emits custom AppError on cap via the Redis path (count > limit)', async () => {
+    const limit = 2;
+    setRedisRateLimitStore({
+      increment: jest.fn().mockResolvedValue({ count: limit + 1, resetAt: Date.now() + 60_000 }),
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const mw = createRateLimitMiddleware({
+      limit,
+      windowMs: 60_000,
+      keyGenerator: byIp,
+      bucketName: 'pr11-redis-custom-emit',
+      errorCode: 'DAILY_LIMIT_REACHED',
+      errorMessage: 'Daily chat limit reached',
+      statusCode: 429,
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 429,
+        code: 'DAILY_LIMIT_REACHED',
+        message: 'Daily chat limit reached',
+        details: { limit },
+      }),
+    );
+  });
+
+  it('keeps default tooManyRequests(...) wire format when ALL THREE options omitted (regression guard for R1.5)', () => {
+    const mw = createRateLimitMiddleware({
+      limit: 1,
+      windowMs: 60_000,
+      keyGenerator: byIp,
+      bucketName: 'pr11-default-emit',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+
+    mw(req, res, jest.fn());
+
+    const next = jest.fn();
+    mw(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 429,
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Too many requests. Please retry later.',
+      }),
+    );
+  });
+});
+
+describe('PR-11 extensions — keyGenerator returning null skips the middleware (R2.1)', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+    _resetRedisStore();
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    _resetRedisStore();
+    clearRateLimitBuckets();
+  });
+
+  it('calls next() with no args and does NOT touch the Redis store when keyGenerator returns null', async () => {
+    const incrementSpy = jest.fn().mockResolvedValue({ count: 1, resetAt: Date.now() + 60_000 });
+    setRedisRateLimitStore({
+      increment: incrementSpy,
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const mw = createRateLimitMiddleware({
+      limit: 5,
+      windowMs: 60_000,
+      // Null return — spec R2.1 contract: skip, no counter read/write.
+      keyGenerator: () => null,
+      bucketName: 'pr11-null-skip',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    // next() called with zero arguments — no error, no skip flag.
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledWith();
+    // Redis untouched — proves no counter side-effect on null skip.
+    expect(incrementSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT touch the in-memory bucket store when keyGenerator returns null (no Redis configured)', () => {
+    const mw = createRateLimitMiddleware({
+      limit: 1,
+      windowMs: 60_000,
+      keyGenerator: () => null,
+      bucketName: 'pr11-null-skip-memory',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+
+    // Call many times — with `limit: 1`, if the skip path were not honoured
+    // the second call would be rejected with 429. Every call must pass.
+    for (let i = 0; i < 5; i++) {
+      const next = jest.fn();
+      mw(req, res, next);
+      expect(next).toHaveBeenCalledWith();
+      expect(next).not.toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
+    }
+  });
+});
+
+describe('PR-11 extensions — windowMs as function resolved per-request (R7)', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+    _resetRedisStore();
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    _resetRedisStore();
+    clearRateLimitBuckets();
+  });
+
+  it('passes the function-resolved windowMs to RedisRateLimitStore.increment', async () => {
+    const incrementSpy = jest.fn().mockResolvedValue({ count: 1, resetAt: Date.now() + 60_000 });
+    setRedisRateLimitStore({
+      increment: incrementSpy,
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const mw = createRateLimitMiddleware({
+      limit: 5,
+      // Function form — design §2.3 step 5.
+      windowMs: () => 5000,
+      keyGenerator: byIp,
+      bucketName: 'pr11-windowms-fn',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    // increment(key, windowMs) — the 2nd argument is the resolved value.
+    expect(incrementSpy).toHaveBeenCalledWith(expect.any(String), 5000);
+  });
+
+  it('re-evaluates windowMs per request (different return values across calls)', async () => {
+    const incrementSpy = jest.fn().mockResolvedValue({ count: 1, resetAt: Date.now() + 60_000 });
+    setRedisRateLimitStore({
+      increment: incrementSpy,
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const windowSequence = [1000, 2000, 3000];
+    let callIdx = 0;
+    const windowMsFn = jest.fn().mockImplementation(() => {
+      const v = windowSequence[callIdx];
+      callIdx += 1;
+      return v;
+    });
+
+    const mw = createRateLimitMiddleware({
+      limit: 999, // never trip — only checking windowMs propagation
+      windowMs: windowMsFn,
+      keyGenerator: byIp,
+      bucketName: 'pr11-windowms-perreq',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+
+    for (let i = 0; i < 3; i++) {
+      mw(req, res, jest.fn());
+      await new Promise(process.nextTick);
+    }
+
+    // Three calls — each saw a different windowMs.
+    expect(windowMsFn).toHaveBeenCalledTimes(3);
+    expect(incrementSpy).toHaveBeenNthCalledWith(1, expect.any(String), 1000);
+    expect(incrementSpy).toHaveBeenNthCalledWith(2, expect.any(String), 2000);
+    expect(incrementSpy).toHaveBeenNthCalledWith(3, expect.any(String), 3000);
+  });
+});
+
+describe('PR-11 extensions — bucketName empty string opts out of namespace prefix (R8)', () => {
+  beforeEach(() => {
+    clearRateLimitBuckets();
+    _resetRedisStore();
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    _resetRedisStore();
+    clearRateLimitBuckets();
+  });
+
+  it("forwards the raw keyGenerator output as the Redis key when bucketName === ''", async () => {
+    const incrementSpy = jest.fn().mockResolvedValue({ count: 1, resetAt: Date.now() + 60_000 });
+    setRedisRateLimitStore({
+      increment: incrementSpy,
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const mw = createRateLimitMiddleware({
+      limit: 5,
+      windowMs: 60_000,
+      keyGenerator: () => 'daily-chat:42:2026-05-23',
+      bucketName: '',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    // No leading ':', no namespace prefix — exactly the keyGenerator output.
+    expect(incrementSpy).toHaveBeenCalledWith('daily-chat:42:2026-05-23', expect.any(Number));
+    // Defensive: no stray ':<key>' form sneaking in.
+    expect(incrementSpy).not.toHaveBeenCalledWith(':daily-chat:42:2026-05-23', expect.any(Number));
+  });
+
+  it('still prepends the namespace prefix when bucketName is a non-empty string (regression guard for R8.2)', async () => {
+    const incrementSpy = jest.fn().mockResolvedValue({ count: 1, resetAt: Date.now() + 60_000 });
+    setRedisRateLimitStore({
+      increment: incrementSpy,
+      reset: jest.fn(),
+      clear: jest.fn(),
+      stopSweep: jest.fn(),
+    } as unknown as RedisRateLimitStore);
+
+    const mw = createRateLimitMiddleware({
+      limit: 5,
+      windowMs: 60_000,
+      keyGenerator: () => 'x:y',
+      bucketName: 'ns',
+    });
+    const req = makeMockReq();
+    const res = makeMockRes();
+    const next = jest.fn();
+
+    mw(req, res, next);
+    await new Promise(process.nextTick);
+
+    expect(incrementSpy).toHaveBeenCalledWith('ns:x:y', expect.any(Number));
   });
 });

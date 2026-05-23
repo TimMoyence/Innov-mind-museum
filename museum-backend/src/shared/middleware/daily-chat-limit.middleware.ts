@@ -1,129 +1,66 @@
-import { AppError } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
-import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
+/**
+ * Daily chat limit — PR-11 (2026-05-23). Thin wrapper around the shared
+ * `createRateLimitMiddleware` factory. The legacy `CacheService` plumbing
+ * (its boot wiring and non-atomic `get`+`set` read-modify-write pair) is
+ * burned; all distributed counting now flows through `RedisRateLimitStore`,
+ * which uses an atomic INCR+PEXPIRE Lua script.
+ *
+ * Spec / design refs:
+ *   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/spec.md §4
+ *   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/design.md §3.1
+ */
+import { createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 import { env } from '@src/config/env';
 
-import type { CacheService } from '@shared/cache/cache.port';
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, RequestHandler } from 'express';
 
-interface DailyBucket {
-  count: number;
-  /** ISO YYYY-MM-DD (UTC). */
-  dateStr: string;
-}
+/** ISO YYYY-MM-DD (UTC) — day key for the per-user bucket. */
+const utcDateString = (): string => new Date().toISOString().slice(0, 10);
 
-const store = new InMemoryBucketStore<DailyBucket>({
-  isExpired: (entry) => entry.dateStr !== todayStr(),
-});
-
-const todayStr = (): string => new Date().toISOString().slice(0, 10);
-
-let cacheService: CacheService | null = null;
-
-/** When set, distributed Redis counting with in-memory fallback. */
-export const setDailyChatLimitCacheService = (cs: CacheService): void => {
-  cacheService = cs;
-};
-
-/** @internal */
-export const _resetDailyChatLimitCacheService = (): void => {
-  cacheService = null;
-};
-
-const secondsUntilMidnightUtc = (): number => {
+/** Milliseconds until the next UTC midnight — used as the rolling window TTL. */
+const msUntilMidnightUtc = (): number => {
   const now = new Date();
   const midnight = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
   );
-  return Math.max(1, Math.ceil((midnight.getTime() - now.getTime()) / 1000));
-};
-
-/** Primary path when no CacheService; fallback when Redis fails. */
-const checkInMemory = (key: string, limit: number, dateStr: string, next: NextFunction): void => {
-  const current = store.get(key);
-
-  if (current?.dateStr === dateStr) {
-    if (current.count >= limit) {
-      next(
-        new AppError({
-          message: 'Daily chat limit reached',
-          statusCode: 429,
-          code: 'DAILY_LIMIT_REACHED',
-          details: { limit },
-        }),
-      );
-      return;
-    }
-
-    current.count += 1;
-    store.set(key, current);
-    next();
-    return;
-  }
-
-  store.set(key, { count: 1, dateStr });
-  next();
+  return Math.max(1_000, midnight.getTime() - now.getTime());
 };
 
 /**
- * Ordering: AFTER `isAuthenticated` (`req.user` required).
- * 429 `{ code: 'DAILY_LIMIT_REACHED', limit, message }` on cap.
+ * Cap: at least 1, default 100 (FREE_TIER_DAILY_CHAT_LIMIT). Resolved at
+ * factory build so the value is stable across requests inside a single boot.
  */
-export const dailyChatLimit = (req: Request, _res: Response, next: NextFunction): void => {
-  const user = req.user;
+const DAILY_CHAT_LIMIT = Math.max(1, env.freeTierDailyChatLimit);
 
-  if (!user?.id) {
-    next();
-    return;
-  }
-
-  const limit = Math.max(1, env.freeTierDailyChatLimit);
-  const dateStr = todayStr();
-  const key = `daily-chat:${String(user.id)}:${dateStr}`;
-
-  if (!cacheService) {
-    checkInMemory(key, limit, dateStr, next);
-    return;
-  }
-
-  // Capture local const so TS narrows non-null inside async chain.
-  const cache = cacheService;
-  void cache
-    .get<number>(key)
-    .then((cachedCount) => {
-      const count = cachedCount ?? 0;
-
-      if (count >= limit) {
-        next(
-          new AppError({
-            message: 'Daily chat limit reached',
-            statusCode: 429,
-            code: 'DAILY_LIMIT_REACHED',
-            details: { limit },
-          }),
-        );
-        return;
-      }
-
-      const ttl = secondsUntilMidnightUtc();
-      return cache.set(key, count + 1, ttl).then(() => {
-        // Keep in-memory store in sync for fallback.
-        store.set(key, { count: count + 1, dateStr });
-        next();
-      });
-    })
-    .catch(() => {
-      // Redis failed → in-memory fallback. Wrap to prevent sync throw becoming unhandled rejection.
-      logger.warn('daily_chat_limit_redis_fallback', { userId: user.id });
-      try {
-        checkInMemory(key, limit, dateStr, next);
-      } catch (err) {
-        next(err instanceof Error ? err : new Error(String(err)));
-      }
-    });
-};
-
-/** @internal */
-export const clearDailyChatLimitBuckets = (): void => {
-  store.clear();
-};
+/**
+ * Ordering: MUST run AFTER `isAuthenticated` (consumes `req.user.id`).
+ * Anonymous requests skip the limiter (keyGenerator returns null).
+ * On cap → `AppError { statusCode: 429, code: 'DAILY_LIMIT_REACHED', details: { limit } }`
+ * + `Retry-After` header (additive over the legacy impl, free via the shared factory).
+ */
+export const dailyChatLimit: RequestHandler = createRateLimitMiddleware({
+  // PR-11 R8 — empty bucketName opts out of namespace prefixing. The Redis
+  // key emitted to `RedisRateLimitStore.increment` is exactly
+  // `daily-chat:<userId>:<UTC-date>` (matches spec §8 D1 and the legacy key
+  // shape, so bake-prod buckets survive the cutover).
+  bucketName: '',
+  limit: DAILY_CHAT_LIMIT,
+  // PR-11 R7 — function form, re-evaluated per request so the TTL tracks the
+  // calendar-day rollover (ms-until-midnight).
+  windowMs: () => msUntilMidnightUtc(),
+  errorCode: 'DAILY_LIMIT_REACHED',
+  errorMessage: 'Daily chat limit reached',
+  statusCode: 429,
+  keyGenerator: (req: Request) => {
+    // PR-11 R2.1 — anonymous requests bypass the limiter entirely (no counter
+    // touched). The route still enforces auth via `isAuthenticated` upstream;
+    // this guard exists for tests/health probes that hit the middleware
+    // without an authenticated session. We coerce to `unknown` because tests
+    // exercise the empty-id branch with `user: {}` (no `id`) and with
+    // `user: { id: '' }` — neither of which TS allows under `UserJwtPayload`.
+    const userId = (req.user as { id?: unknown } | undefined)?.id;
+    if (typeof userId !== 'number' && typeof userId !== 'string') return null;
+    if (userId === '') return null;
+    return `daily-chat:${String(userId)}:${utcDateString()}`;
+  },
+});

@@ -39,7 +39,6 @@ import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-counter';
 import { logger } from '@shared/logger/logger';
 import { setAccessTokenDenylist } from '@shared/middleware/authenticated.middleware';
-import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
 import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
 import { setMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.middleware';
 import { PgMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.repo.pg';
@@ -117,7 +116,9 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     });
     const redisRateLimitStore = new RedisRateLimitStore(redisClient);
     setRedisRateLimitStore(redisRateLimitStore);
-    setDailyChatLimitCacheService(redisCacheService);
+    // PR-11 (2026-05-23) — `setDailyChatLimitCacheService` removed; the
+    // `dailyChatLimit` middleware now counts atomically via `RedisRateLimitStore`
+    // wired one line above.
     // P0-4 (audit 2026-05-12 §P0-U-2) — wire the per-user daily USD counter on
     // the same ioredis client. The middleware fails OPEN if no counter is
     // registered (dev/test), so this single setter is the only boot wiring.
