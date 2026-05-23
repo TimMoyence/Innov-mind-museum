@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO } from '@/lib/admin-types';
 
 // W4 W2.1/2.2 — Admin museum list. Parent route for /admin/museums/new
@@ -73,11 +74,7 @@ export default function MuseumsListPage() {
         </Link>
       </header>
 
-      {error && (
-        <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <AlertBanner variant="error" message={error} />}
 
       {loading && <p className="text-sm text-gray-600">{STRINGS.loading}</p>}
 

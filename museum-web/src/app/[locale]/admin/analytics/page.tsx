@@ -17,6 +17,8 @@ import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { EmptyChartPlaceholder } from '@/components/admin/EmptyChartPlaceholder';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
+import { Spinner } from '@/components/ui/Spinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import type {
   UsageAnalytics,
   ContentAnalytics,
@@ -120,9 +122,7 @@ export default function AnalyticsPage() {
       try {
         const [usageData, contentData, engagementData] = await Promise.all([
           apiGet<UsageAnalytics>(
-            withMuseumScope(
-              `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
-            ),
+            withMuseumScope(`/api/admin/analytics/usage?days=${days}&granularity=${granularity}`),
           ),
           apiGet<ContentAnalytics>(withMuseumScope('/api/admin/analytics/content?limit=10')),
           apiGet<EngagementAnalytics>(withMuseumScope('/api/admin/analytics/engagement')),
@@ -156,9 +156,7 @@ export default function AnalyticsPage() {
     let cancelled = false;
     async function loadMuseums() {
       try {
-        const data = await apiGet<{ museums?: MuseumDTO[]; data?: MuseumDTO[] }>(
-          '/api/museums',
-        );
+        const data = await apiGet<{ museums?: MuseumDTO[]; data?: MuseumDTO[] }>('/api/museums');
         if (cancelled) return;
         setMuseums(data.museums ?? data.data ?? []);
       } catch {
@@ -177,9 +175,7 @@ export default function AnalyticsPage() {
   const fetchUsage = useCallback(async () => {
     try {
       const data = await apiGet<UsageAnalytics>(
-        withMuseumScope(
-          `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
-        ),
+        withMuseumScope(`/api/admin/analytics/usage?days=${days}&granularity=${granularity}`),
       );
       setUsage(data);
     } catch (err) {
@@ -239,14 +235,12 @@ export default function AnalyticsPage() {
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
       {/* ── KPI Cards ────────────────────────────────────────────────────── */}
       {engagement && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiGet } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
+import { Spinner } from '@/components/ui/Spinner';
 import type { Dictionary } from '@/lib/i18n';
 import type { AdminStats } from '@/lib/admin-types';
 
@@ -80,7 +81,7 @@ export default function AdminDashboardPage() {
 
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 

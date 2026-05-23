@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { TierToggleButton } from '@/components/admin/TierToggleButton';
+import { Spinner } from '@/components/ui/Spinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -248,13 +250,8 @@ export default function UserDetailPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div
-          role="status"
-          aria-live="polite"
-          className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
-          aria-label={dict.loading}
-        />
+      <div className="flex items-center justify-center py-24" aria-live="polite">
+        <Spinner label={dict.loading} />
       </div>
     );
   }
@@ -288,16 +285,8 @@ export default function UserDetailPage({ params }: PageProps) {
       <h1 className="mt-3 text-2xl font-bold text-text-primary">{displayName}</h1>
       <p className="mt-1 text-text-secondary">{dict.subtitle}</p>
 
-      {flash && (
-        <div role="status" className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          {flash}
-        </div>
-      )}
-      {error && (
-        <div role="alert" className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {flash && <AlertBanner variant="success" message={flash} className="mt-4" />}
+      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {/* Identity */}

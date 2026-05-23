@@ -3,6 +3,9 @@
 import { useState } from 'react';
 
 import Button from '@/components/ui/Button';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
+import { EMAIL_RE } from '@/lib/validation';
 import type { Locale } from '@/lib/i18n';
 
 /**
@@ -30,7 +33,6 @@ interface BetaSignupSectionProps {
 
 type ValidationKey = 'email' | 'consent';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ENDPOINT = '/api/leads/beta';
 
 /**
@@ -159,11 +161,7 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
               }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
-            {errors.email ? (
-              <p id="beta-email-error" role="alert" className="mt-1 text-sm text-red-700">
-                {errors.email}
-              </p>
-            ) : null}
+            <FormFieldError id="beta-email-error" error={errors.email} />
           </div>
 
           {/* Consent */}
@@ -193,11 +191,7 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
               </a>
             </label>
           </div>
-          {errors.consent ? (
-            <p role="alert" className="mt-1 text-sm text-red-700">
-              {errors.consent}
-            </p>
-          ) : null}
+          <FormFieldError error={errors.consent} />
 
           {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
           <div
@@ -227,11 +221,7 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
 
           {/* Polite live region for the error message (success has its own block above) */}
           <div aria-live="polite" className="min-h-[1.5rem]">
-            {errorMessage ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {errorMessage}
-              </div>
-            ) : null}
+            {errorMessage ? <AlertBanner variant="error" message={errorMessage} /> : null}
           </div>
 
           <Button type="submit" className="w-full" disabled={submitting}>

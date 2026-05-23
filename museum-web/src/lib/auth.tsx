@@ -13,6 +13,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
+import { Spinner } from '@/components/ui/Spinner';
 import type { AuthSessionResponse, UserRole } from '@/lib/admin-types';
 
 // Re-export the canonical UserRole so existing `import { UserRole } from '@/lib/auth'`
@@ -222,7 +223,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   if (blocking) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+        <Spinner />
       </div>
     );
   }
@@ -260,7 +261,7 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   if (blocking) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+        <Spinner />
       </div>
     );
   }

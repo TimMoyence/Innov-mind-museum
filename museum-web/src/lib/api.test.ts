@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ApiError, registerLogoutHandler, apiGet, apiPost, apiPatch } from './api';
+import { ApiError, registerLogoutHandler, apiGet, apiPost, apiPatch, apiPut } from './api';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 
 // ---------------------------------------------------------------------------
@@ -181,5 +181,69 @@ describe('api.ts — request functions', () => {
 
     await expect(apiGet('/api/protected')).rejects.toThrow(ApiError);
     expect(logoutSpy).toHaveBeenCalledOnce();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p1
+// Tests fail until apiPut is exported from ./api (spec U-R4.1..U-R4.3 / AC-16).
+// Mirror the apiPost / apiPatch convention: PUT verb + credentials:include +
+// X-CSRF-Token on state-changing requests + ApiError on !ok.
+// ---------------------------------------------------------------------------
+
+describe('api.ts — apiPut', () => {
+  beforeEach(() => {
+    clearCsrfCookie();
+    vi.restoreAllMocks();
+  });
+
+  it('sends a PUT request with the JSON body and resolves to the parsed JSON', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({ updated: true }) });
+
+    const data = await apiPut<{ updated: boolean }>('/api/museums/1', {
+      name: 'Updated',
+    });
+
+    expect(spy).toHaveBeenCalledOnce();
+    const [url, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
+    expect(url).toBe('/api/museums/1');
+    expect((init as RequestInit).method).toBe('PUT');
+    expect((init as RequestInit).body).toBe(JSON.stringify({ name: 'Updated' }));
+    expect(data).toEqual({ updated: true });
+  });
+
+  it('uses credentials: include so HttpOnly auth cookies flow on PUT (F7)', async () => {
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiPut('/api/museums/1', {});
+
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
+    expect((init as RequestInit).credentials).toBe('include');
+  });
+
+  it('attaches X-CSRF-Token header on PUT when csrf_token cookie is present (AC-16)', async () => {
+    setCsrfCookie('csrf-put-token');
+    const spy = mockFetch({ json: () => Promise.resolve({}) });
+
+    await apiPut('/api/museums/1', { x: 1 });
+
+    const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers['X-CSRF-Token']).toBe('csrf-put-token');
+  });
+
+  it('throws ApiError on a non-ok response (U-R4.3)', async () => {
+    mockFetch({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: () => Promise.resolve({ message: 'invalid payload' }),
+    });
+
+    await expect(apiPut('/api/museums/1', { x: 1 })).rejects.toThrow(ApiError);
+    await expect(apiPut('/api/museums/1', { x: 1 })).rejects.toMatchObject({
+      status: 400,
+      message: 'invalid payload',
+    });
   });
 });

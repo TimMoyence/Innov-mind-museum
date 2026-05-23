@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { apiGet, apiPost } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
+import { Spinner } from '@/components/ui/Spinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import type { TicketDetail, TicketMessage, TicketStatus, TicketPriority } from '@/lib/admin-types';
 
@@ -114,7 +116,7 @@ export default function AdminSupportPage() {
       <div>
         <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       </div>
     );
@@ -126,7 +128,7 @@ export default function AdminSupportPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <AlertBanner variant="error" message={error} className="mt-4" />
         <Link
           href={`/${locale}/admin/tickets`}
           className="mt-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -154,9 +156,7 @@ export default function AdminSupportPage() {
       <h1 className="mt-2 text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
 
       {/* Error banner */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
       {/* Metadata card */}
       <div className="mt-6 rounded-xl border border-primary-100 bg-white p-6">

@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { apiPost } from '@/lib/api';
 import type { MuseumDTO, MuseumType } from '@/lib/admin-types';
 import { MUSEUM_TYPES } from '@/lib/admin-types';
+import { SLUG_RE, KB_LOCALE_RE } from '@/lib/validation';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
 
 // W4 W2.1 — Admin museum onboarding form. Posts to POST /api/museums
 // (BE route: museum-backend/src/modules/museum/adapters/primary/http/routes/museum.route.ts).
@@ -47,9 +50,6 @@ const STRINGS = {
     serverGeneric: 'Could not create museum.',
   },
 } as const;
-
-const SLUG_RE = /^[a-z0-9-]+$/;
-const KB_LOCALE_RE = /^[a-z]{2}(-[A-Z]{2})?$/;
 
 interface FormState {
   name: string;
@@ -96,7 +96,8 @@ export default function NewMuseumPage() {
     }
     if (form.longitude !== '') {
       const lng = Number(form.longitude);
-      if (!Number.isFinite(lng) || lng < -180 || lng > 180) next.longitude = STRINGS.errors.lngRange;
+      if (!Number.isFinite(lng) || lng < -180 || lng > 180)
+        next.longitude = STRINGS.errors.lngRange;
     }
     return next;
   }
@@ -149,11 +150,7 @@ export default function NewMuseumPage() {
         <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
       </header>
 
-      {serverError && (
-        <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {serverError}
-        </div>
-      )}
+      {serverError && <AlertBanner variant="error" message={serverError} />}
 
       <form
         onSubmit={(e) => {
@@ -170,12 +167,14 @@ export default function NewMuseumPage() {
             id="m-name"
             type="text"
             value={form.name}
-            onChange={(e) => { update('name', e.target.value); }}
+            onChange={(e) => {
+              update('name', e.target.value);
+            }}
             maxLength={200}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.nameHelp}</p>
-          {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
+          <FormFieldError error={errors.name} />
         </div>
 
         <div>
@@ -186,13 +185,15 @@ export default function NewMuseumPage() {
             id="m-slug"
             type="text"
             value={form.slug}
-            onChange={(e) => { update('slug', e.target.value); }}
+            onChange={(e) => {
+              update('slug', e.target.value);
+            }}
             maxLength={200}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="louvre"
           />
           <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.slugHelp}</p>
-          {errors.slug && <p className="mt-1 text-xs text-red-600">{errors.slug}</p>}
+          <FormFieldError error={errors.slug} />
         </div>
 
         <div>
@@ -202,7 +203,9 @@ export default function NewMuseumPage() {
           <select
             id="m-type"
             value={form.museumType}
-            onChange={(e) => { update('museumType', e.target.value as MuseumType); }}
+            onChange={(e) => {
+              update('museumType', e.target.value as MuseumType);
+            }}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             {MUSEUM_TYPES.map((t) => (
@@ -221,7 +224,9 @@ export default function NewMuseumPage() {
             id="m-address"
             type="text"
             value={form.address}
-            onChange={(e) => { update('address', e.target.value); }}
+            onChange={(e) => {
+              update('address', e.target.value);
+            }}
             maxLength={500}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -234,7 +239,9 @@ export default function NewMuseumPage() {
           <textarea
             id="m-description"
             value={form.description}
-            onChange={(e) => { update('description', e.target.value); }}
+            onChange={(e) => {
+              update('description', e.target.value);
+            }}
             maxLength={2000}
             rows={4}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -252,10 +259,12 @@ export default function NewMuseumPage() {
               type="number"
               step="0.000001"
               value={form.latitude}
-              onChange={(e) => { update('latitude', e.target.value); }}
+              onChange={(e) => {
+                update('latitude', e.target.value);
+              }}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            {errors.latitude && <p className="mt-1 text-xs text-red-600">{errors.latitude}</p>}
+            <FormFieldError error={errors.latitude} />
           </div>
           <div>
             <label htmlFor="m-lng" className="block text-sm font-medium text-gray-700">
@@ -266,10 +275,12 @@ export default function NewMuseumPage() {
               type="number"
               step="0.000001"
               value={form.longitude}
-              onChange={(e) => { update('longitude', e.target.value); }}
+              onChange={(e) => {
+                update('longitude', e.target.value);
+              }}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            {errors.longitude && <p className="mt-1 text-xs text-red-600">{errors.longitude}</p>}
+            <FormFieldError error={errors.longitude} />
           </div>
         </div>
         <p className="text-xs text-gray-500">{STRINGS.fields.geoHint}</p>
@@ -282,7 +293,9 @@ export default function NewMuseumPage() {
             id="m-kb-locale"
             type="text"
             value={form.kbLocale}
-            onChange={(e) => { update('kbLocale', e.target.value); }}
+            onChange={(e) => {
+              update('kbLocale', e.target.value);
+            }}
             maxLength={10}
             placeholder="fr"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

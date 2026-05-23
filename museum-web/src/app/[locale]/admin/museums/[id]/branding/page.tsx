@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPut } from '@/lib/api';
 import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
+import { HEX_RE, HTTPS_RE } from '@/lib/validation';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
 
 // W4 W2.2 — Per-museum branding editor. Reads/writes museum.config.branding
 // via PUT /api/museums/:id (BE allows arbitrary config record; FE exposes the
@@ -12,13 +15,6 @@ import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
 // a true upload endpoint is a V1.1 follow-up (TD-50). Color picker uses the
 // native HTML <input type="color"> for KISS until brand-aware design tokens
 // are wired in V1.1.
-//
-// Why apiPost('/api/museums/:id') with method override: the existing api.ts
-// helper set doesn't expose apiPut; the BE route is PUT, so we use apiPost
-// with the X-HTTP-Method-Override header pattern only if needed — in this
-// codebase the api helpers route through Next rewrites to the backend; PUT
-// is supported because the BE explicitly handles it. We use the native fetch
-// inside apiPatch shape via a small local wrapper.
 
 const STRINGS = {
   title: 'Branding',
@@ -45,9 +41,6 @@ const STRINGS = {
   saved: 'Branding saved.',
 } as const;
 
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
-const HTTPS_RE = /^https:\/\/[^\s]+$/i;
-
 function asBranding(config: Record<string, unknown> | undefined): MuseumBranding {
   if (!config) return {};
   const raw = config.branding;
@@ -55,38 +48,6 @@ function asBranding(config: Record<string, unknown> | undefined): MuseumBranding
     return raw as MuseumBranding;
   }
   return {};
-}
-
-// Local wrapper to PUT since api.ts only exposes GET/POST/PATCH/DELETE.
-async function apiPut<T>(path: string, body: unknown): Promise<T> {
-  // Reuse apiPost shape; if the BE expects PUT strictly, prefer this minimal
-  // fetch over importing & extending api.ts (defer that to a follow-up).
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  // Read CSRF token from the cookie (double-submit), mirroring api.ts.
-  if (typeof document !== 'undefined') {
-    const m = /(?:^|;\s*)csrf_token=([^;]+)/.exec(document.cookie);
-    const token = m?.[1];
-    if (token) headers['X-CSRF-Token'] = decodeURIComponent(token);
-  }
-  const res = await fetch(path, {
-    method: 'PUT',
-    credentials: 'include',
-    headers,
-    body: JSON.stringify(body ?? {}),
-  });
-  if (!res.ok) {
-    let msg = `${res.status} ${res.statusText}`;
-    try {
-      const j = (await res.json()) as { message?: string };
-      if (j.message) msg = j.message;
-    } catch {
-      /* ignore body parse error */
-    }
-    throw new Error(msg);
-  }
-  return (await res.json()) as T;
 }
 
 interface GetMuseumResponse {
@@ -174,11 +135,7 @@ export default function MuseumBrandingPage() {
     return <p className="text-sm text-gray-600">{STRINGS.loading}</p>;
   }
   if (error && !museum) {
-    return (
-      <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-        {error}
-      </div>
-    );
+    return <AlertBanner variant="error" message={error} />;
   }
   if (!museum) {
     return <p className="text-sm text-gray-600">{STRINGS.notFound}</p>;
@@ -196,16 +153,8 @@ export default function MuseumBrandingPage() {
         <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
       </header>
 
-      {error && (
-        <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div role="status" className="rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
-          {success}
-        </div>
-      )}
+      {error && <AlertBanner variant="error" message={error} />}
+      {success && <AlertBanner variant="success" message={success} />}
 
       <form
         onSubmit={(e) => {
@@ -229,19 +178,23 @@ export default function MuseumBrandingPage() {
                   id={`b-${k}`}
                   type="color"
                   value={branding[k] ?? '#000000'}
-                  onChange={(e) => { update(k, e.target.value); }}
+                  onChange={(e) => {
+                    update(k, e.target.value);
+                  }}
                   className="h-9 w-12 cursor-pointer rounded border border-gray-300"
                 />
                 <input
                   type="text"
                   value={branding[k] ?? ''}
-                  onChange={(e) => { update(k, e.target.value); }}
+                  onChange={(e) => {
+                    update(k, e.target.value);
+                  }}
                   placeholder="#000000"
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   aria-label={`${k} hex value`}
                 />
               </div>
-              {fieldErrors[k] && <p className="mt-1 text-xs text-red-600">{fieldErrors[k]}</p>}
+              <FormFieldError error={fieldErrors[k]} />
             </div>
           ))}
         </div>
@@ -254,14 +207,14 @@ export default function MuseumBrandingPage() {
             id="b-logo"
             type="url"
             value={branding.logoUrl ?? ''}
-            onChange={(e) => { update('logoUrl', e.target.value); }}
+            onChange={(e) => {
+              update('logoUrl', e.target.value);
+            }}
             placeholder="https://cdn.musaium.com/museums/louvre/logo.svg"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.logoHint}</p>
-          {fieldErrors.logoUrl && (
-            <p className="mt-1 text-xs text-red-600">{fieldErrors.logoUrl}</p>
-          )}
+          <FormFieldError error={fieldErrors.logoUrl} />
         </div>
 
         {(branding.primaryColor ?? branding.logoUrl) && (
@@ -341,4 +294,3 @@ function contrast(hex: string | undefined): string {
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 128 ? '#111111' : '#ffffff';
 }
-

@@ -6,6 +6,8 @@ import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
+import { Spinner } from '@/components/ui/Spinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
@@ -140,14 +142,12 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 

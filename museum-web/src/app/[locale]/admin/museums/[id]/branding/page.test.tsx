@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MuseumBrandingPage from './page';
+import type * as ApiModule from '@/lib/api';
 
 // ── Next.js mocks ─────────────────────────────────────────────────────────
 
@@ -34,13 +35,20 @@ vi.mock('next/link', () => ({
 // ── API mocks ─────────────────────────────────────────────────────────────
 
 const mockApiGet = vi.fn();
-vi.mock('@/lib/api', () => ({
-  apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
-  apiPost: vi.fn(),
-  registerLogoutHandler: vi.fn(),
-}));
+// `apiPut` is now imported from '@/lib/api' (was: a local wrapper). It still
+// uses the global `fetch` under the hood, so the existing fetchSpy assertions
+// remain valid. We need a partial mock that overrides `apiGet` only and keeps
+// the real `apiPut` (which talks to fetch + throws ApiError on !ok).
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof ApiModule>();
+  return {
+    ...actual,
+    apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
+    apiPost: vi.fn(),
+    registerLogoutHandler: vi.fn(),
+  };
+});
 
-// `apiPut` is a local wrapper that uses global fetch — mock fetch directly.
 const fetchSpy = vi.fn();
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchSpy);

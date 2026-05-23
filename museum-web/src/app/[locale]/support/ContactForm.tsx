@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { Dictionary } from '@/lib/i18n';
 
 interface ContactFormProps {
@@ -56,9 +57,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
   if (submitted) {
     return (
       <div className="rounded-xl border border-green-200 bg-green-50 p-8 text-center">
-        <p className="text-lg font-medium text-green-800">
-          {dict.success}
-        </p>
+        <p className="text-lg font-medium text-green-800">{dict.success}</p>
       </div>
     );
   }
@@ -75,7 +74,9 @@ export default function ContactForm({ dict }: ContactFormProps) {
           required
           placeholder={dict.namePlaceholder}
           value={name}
-          onChange={(e) => { setName(e.target.value); }}
+          onChange={(e) => {
+            setName(e.target.value);
+          }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>
@@ -89,7 +90,9 @@ export default function ContactForm({ dict }: ContactFormProps) {
           required
           placeholder={dict.emailPlaceholder}
           value={email}
-          onChange={(e) => { setEmail(e.target.value); }}
+          onChange={(e) => {
+            setEmail(e.target.value);
+          }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>
@@ -103,15 +106,13 @@ export default function ContactForm({ dict }: ContactFormProps) {
           rows={5}
           placeholder={dict.messagePlaceholder}
           value={message}
-          onChange={(e) => { setMessage(e.target.value); }}
+          onChange={(e) => {
+            setMessage(e.target.value);
+          }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
       </div>
-      {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
+      {error ? <AlertBanner variant="error" message={error} /> : null}
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting ? dict.sending : dict.submit}
       </Button>
