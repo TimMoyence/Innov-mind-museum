@@ -1,3 +1,8 @@
+import {
+  createBackgroundRefresh,
+  shouldEarlyRefresh,
+  type RefreshableEntry,
+} from '@shared/cache/probabilistic-refresh';
 import { logger } from '@shared/logger/logger';
 import { getLangfuse } from '@shared/observability/langfuse.client';
 import {
@@ -64,7 +69,6 @@ const NOMINATIM_API_URL = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
 const DEFAULT_TIMEOUT_MS = 5_000;
 const CACHE_KEY_COORD_PRECISION = 3;
-const EARLY_REFRESH_THRESHOLD = 0.9;
 
 /**
  * Promise-chained global rate limiter — OSMF Usage Policy caps clients at 1 req/s
@@ -280,12 +284,12 @@ export async function reverseGeocodeWithNominatim(
  * `value: null` is a SENTINEL (distinct from cache miss) — caches the empty live
  * response short-term to shield Nominatim from repeat misses. `storedAtMs` enables
  * probabilistic early expiration on the TTL-unaware cache port.
+ *
+ * Local alias of the shared `RefreshableEntry` helper so call-sites keep the
+ * Nominatim-domain name while the algorithmic fingerprint lives in
+ * `@shared/cache/probabilistic-refresh`.
  */
-interface ReverseGeocodeCacheEntry {
-  value: NominatimReverseResult | null;
-  storedAtMs: number;
-  ttlSeconds: number;
-}
+type ReverseGeocodeCacheEntry = RefreshableEntry<NominatimReverseResult | null>;
 
 /** Rounded to ~111m precision so GPS jitter doesn't produce new keys per chat message. */
 function buildCacheKey(lat: number, lng: number): string {
@@ -294,49 +298,20 @@ function buildCacheKey(lat: number, lng: number): string {
   )}`;
 }
 
-interface BackgroundRefreshArgs {
-  cache: CacheService;
-  lat: number;
-  lng: number;
-  cacheKey: string;
-  positiveTtlSeconds: number;
-  negativeTtlSeconds: number;
-}
-
-/** Fire-and-forget. Never throws — failure logged as warning. */
-function fireBackgroundRefresh(args: BackgroundRefreshArgs): void {
-  const { cache, lat, lng, cacheKey, positiveTtlSeconds, negativeTtlSeconds } = args;
-  void (async () => {
-    try {
-      const fresh = await reverseGeocodeWithNominatim(lat, lng);
-      const entry: ReverseGeocodeCacheEntry = {
-        value: fresh,
-        storedAtMs: Date.now(),
-        ttlSeconds: fresh ? positiveTtlSeconds : negativeTtlSeconds,
-      };
-      await cache.set(cacheKey, entry, entry.ttlSeconds);
-    } catch (error) {
-      logger.warn('Nominatim background refresh failed', {
-        error: error instanceof Error ? error.message : String(error),
-        cacheKey,
-      });
-    }
-  })();
-}
-
 /**
- * Smooths thundering-herd at TTL expiry — late-window callers serve cached value
- * AND opportunistically refresh in background, so next cold miss is rare.
+ * Builds the Nominatim-bound background-refresh trigger ONCE per cached client.
+ * Extracted from `createCachedNominatimClient` so the returned closure stays
+ * under the `max-lines-per-function` cap. `opName` / `failureMessage` are baked
+ * in; per-call args (cacheKey / refresh / TTLs) supplied by the caller.
  */
-function shouldEarlyRefresh(entry: ReverseGeocodeCacheEntry, nowMs: number): boolean {
-  const elapsedMs = nowMs - entry.storedAtMs;
-  const ttlMs = entry.ttlSeconds * 1_000;
-  if (ttlMs <= 0) return false;
-  const elapsedRatio = elapsedMs / ttlMs;
-  // Stryker disable next-line ConditionalExpression,EqualityOperator,BooleanLiteral: removing the early-return or flipping < to <= is observationally equivalent — both paths yield false when the adjustment denominator is ≤ 0 (Math.random < non-positive always false). Same pattern as shared/http/overpass-cache.ts:113.
-  if (elapsedRatio < EARLY_REFRESH_THRESHOLD) return false;
-  // eslint-disable-next-line sonarjs/pseudo-random -- non-security: TTL jitter
-  return Math.random() < (elapsedRatio - EARLY_REFRESH_THRESHOLD) / (1 - EARLY_REFRESH_THRESHOLD);
+function buildNominatimBackgroundRefresh(cache: CacheService) {
+  return createBackgroundRefresh<NominatimReverseResult | null>({
+    cache,
+    logger,
+    opName: 'nominatim.background-refresh',
+    failureMessage: 'Nominatim background refresh failed',
+    isEmpty: (value) => value == null,
+  });
 }
 
 /**
@@ -349,6 +324,7 @@ function shouldEarlyRefresh(entry: ReverseGeocodeCacheEntry, nowMs: number): boo
 export function createCachedNominatimClient(cache: CacheService): CachedReverseGeocodeFn {
   const positiveTtlSeconds = env.nominatim.cacheTtlSeconds;
   const negativeTtlSeconds = env.nominatim.negativeCacheTtlSeconds;
+  const triggerBackgroundRefresh = buildNominatimBackgroundRefresh(cache);
 
   return async function cachedReverseGeocode(
     lat: number,
@@ -380,11 +356,9 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
           .end();
       });
       if (shouldEarlyRefresh(cached, Date.now())) {
-        fireBackgroundRefresh({
-          cache,
-          lat,
-          lng,
+        triggerBackgroundRefresh({
           cacheKey,
+          refresh: () => reverseGeocodeWithNominatim(lat, lng),
           positiveTtlSeconds,
           negativeTtlSeconds,
         });

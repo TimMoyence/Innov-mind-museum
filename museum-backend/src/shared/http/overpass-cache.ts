@@ -1,3 +1,8 @@
+import {
+  createBackgroundRefresh,
+  shouldEarlyRefresh,
+  type RefreshableEntry,
+} from '@shared/cache/probabilistic-refresh';
 import { logger } from '@shared/logger/logger';
 
 import type { OverpassMuseumResult, OverpassSearchParams } from './overpass-types';
@@ -8,17 +13,16 @@ import type { CacheService } from '@shared/cache/cache.port';
  * negative TTL to shield Overpass from quiet-region / transient-outage hammering.
  * Distinct from cache miss (entry exists in store). `storedAtMs` enables probabilistic
  * refresh on TTL-unaware cache port.
+ *
+ * Compat alias — kept so the rest of the codebase (and the existing tests in
+ * `tests/unit/shared/overpass-cache.test.ts`) can keep importing
+ * `OverpassCacheEntry` without coupling to the shared helper's generic.
  */
-export interface OverpassCacheEntry {
-  value: OverpassMuseumResult[];
-  storedAtMs: number;
-  ttlSeconds: number;
-}
+export type OverpassCacheEntry = RefreshableEntry<OverpassMuseumResult[]>;
 
 const CACHE_KEY_COORD_PRECISION = 3;
 const CACHE_KEY_BBOX_PRECISION = 2;
 const CACHE_KEY_RADIUS_KM_PRECISION = 1;
-const EARLY_REFRESH_THRESHOLD = 0.9;
 
 /**
  * Radius-mode: lat/lng to 3dp (~111m) + radius to 0.1km — absorbs GPS jitter.
@@ -59,35 +63,32 @@ export interface OverpassBackgroundRefreshArgs {
   refresh: (params: OverpassSearchParams) => Promise<OverpassMuseumResult[]>;
 }
 
-/** Fire-and-forget. Never throws. */
+/**
+ * Fire-and-forget. Never throws. Delegates the actual orchestration (refresh
+ * → empty-bucket TTL selection → cache.set → fail-soft logging) to the shared
+ * `createBackgroundRefresh` factory — local code only carries the
+ * Overpass-shaped `params` capture.
+ */
 export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArgs): void {
   const { cache, params, cacheKey, positiveTtlSeconds, negativeTtlSeconds, refresh } = args;
-  void (async () => {
-    try {
-      const fresh = await refresh(params);
-      const entry: OverpassCacheEntry = {
-        value: fresh,
-        storedAtMs: Date.now(),
-        ttlSeconds: fresh.length > 0 ? positiveTtlSeconds : negativeTtlSeconds,
-      };
-      await cache.set(cacheKey, entry, entry.ttlSeconds);
-    } catch (error) {
-      logger.warn('Overpass background refresh failed', {
-        error: error instanceof Error ? error.message : String(error),
-        cacheKey,
-      });
-    }
-  })();
+  const trigger = createBackgroundRefresh<OverpassMuseumResult[]>({
+    cache,
+    logger,
+    opName: 'overpass.background-refresh',
+    failureMessage: 'Overpass background refresh failed',
+    isEmpty: (value) => value.length === 0,
+  });
+  trigger({
+    cacheKey,
+    refresh: () => refresh(params),
+    positiveTtlSeconds,
+    negativeTtlSeconds,
+  });
 }
 
-/** Smooths thundering-herd at TTL expiry. Probabilistic refresh in last 10% TTL. */
-export function shouldOverpassEarlyRefresh(entry: OverpassCacheEntry, nowMs: number): boolean {
-  const elapsedMs = nowMs - entry.storedAtMs;
-  const ttlMs = entry.ttlSeconds * 1_000;
-  if (ttlMs <= 0) return false;
-  const elapsedRatio = elapsedMs / ttlMs;
-  // Stryker disable next-line ConditionalExpression,EqualityOperator: removing the early-return or flipping < to <= is observationally equivalent — both paths yield false when adjustment is ≤ 0 (Math.random < non-positive always false).
-  if (elapsedRatio < EARLY_REFRESH_THRESHOLD) return false;
-  // eslint-disable-next-line sonarjs/pseudo-random -- non-security: TTL jitter
-  return Math.random() < (elapsedRatio - EARLY_REFRESH_THRESHOLD) / (1 - EARLY_REFRESH_THRESHOLD);
-}
+/**
+ * Smooths thundering-herd at TTL expiry. Probabilistic refresh in last 10% TTL.
+ * Const-alias of the shared helper so callers can keep the Overpass-domain name
+ * at the call site.
+ */
+export const shouldOverpassEarlyRefresh = shouldEarlyRefresh<OverpassMuseumResult[]>;

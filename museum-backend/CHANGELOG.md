@@ -4,6 +4,100 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-10 `shared/cache/probabilistic-refresh.ts` helper + sweep Overpass/Nominatim
+
+Run `2026-05-23-pr-10-probabilistic-refresh` — dixième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B5.md` HIGH #1 (refresh-helper duplication Overpass ↔ Nominatim). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **8.85/10** (loop-1 terminal, zero CHANGES_REQUESTED). Extraction du primitive probabiliste sous `museum-backend/src/shared/cache/` + sweep mécanique des 2 sites HTTP-cached qui dupliquaient le triplet (`Math.random()` jitter formula, `function shouldEarlyRefresh`, `function fireBackgroundRefresh`). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. `pnpm jest --testPathPattern='(probabilistic-refresh|pr10-probabilistic-refresh-sentinel|overpass-cache|nominatim)' --no-coverage` → **8 suites pass, 105/105 tests pass**. Reversibility : `git revert <sha>` restaure helper + 2 sweep sites + 2 red files.
+
+### Added
+
+- **Helper module `museum-backend/src/shared/cache/probabilistic-refresh.ts`** (143 LOC). 3 named exports + 1 const + 1 narrow interface :
+  - `export const EARLY_REFRESH_THRESHOLD_DEFAULT = 0.9` — single source of truth for the late-window jitter threshold. Exposed so callers can reason about the window without reaching into internals.
+  - `export interface RefreshableEntry<T> { value: T; storedAtMs: number; ttlSeconds: number }` — minimal cache-entry shape. Generic over `T` so callers can union with `null` (e.g. `T = NominatimReverseResult | null`) without a runtime guard.
+  - `export function shouldEarlyRefresh<T>(entry, nowMs, threshold?): boolean` — pure predicate. Short-circuits `false` (NO `Math.random` call) when `ttlSeconds <= 0` (incl. negative for clock skew) OR `elapsedRatio < threshold`. Otherwise returns `Math.random() < (elapsedRatio - threshold) / (1 - threshold)`. Strict-`<` boundary preserved (mutation killer R5(c') in red tests). Single `// eslint-disable-next-line sonarjs/pseudo-random -- non-security: TTL jitter` lives here — single source of truth for the lint exception.
+  - `export interface RefreshLogger { warn(message, context?): void }` — structural-typing narrow interface so the factory accepts `@shared/logger/logger` without dragging the full module's typing.
+  - `export function createBackgroundRefresh<T>(deps): (args) => void` — factory. `deps = { cache, logger, opName, failureMessage, isEmpty }` baked at client construction. Returned trigger takes `{ cacheKey, refresh, positiveTtlSeconds, negativeTtlSeconds }` per call. Synchronous `void` return (callers MUST NOT await). Internal `void (async IIFE)()` wraps `refresh() → isEmpty?neg:pos TTL bucket → cache.set(key, entry, ttl)`. On throw: `logger.warn(failureMessage, { op, cacheKey, error })` with `error: error instanceof Error ? error.message : String(error)` (homogeneous log shape — downstream dashboards rely on `error: string`).
+
+- **Unit test `museum-backend/tests/unit/shared/cache/probabilistic-refresh.test.ts`** (380 LOC, sha256 `5dd9df3709e9dfe26a2a92d164ae7d1a1c174be96d845f2a63a0ad34d359bc05`, FROZEN). Covers R5 cases (a)–(h) directly on the shared module via `jest.spyOn(Math, 'random')` + `afterEach(() => jest.restoreAllMocks())` :
+  1. `elapsedRatio < threshold` → `false`, `Math.random` call count == 0 (short-circuit asserted via mock).
+  2. `ttlSeconds <= 0` → `false`, `Math.random` call count == 0.
+  3. `ttlSeconds < 0` (clock-skew negative) → `false`, `Math.random` call count == 0.
+  4. `ttlSeconds > 0 && elapsedRatio >= threshold && Math.random < adjustedRatio` → `true`.
+  5. **Strict-`<` boundary** (`Math.random === adjustedRatio` → `false`) — mutation killer for `<` → `<=` flip.
+  6. Factory trigger calls `cache.set` with positive TTL when `isEmpty(value) === false`.
+  7. Factory trigger calls `cache.set` with negative TTL when `isEmpty(value) === true`.
+  8. Factory trigger handles `T = X | null` union (Nominatim shape) without runtime guard.
+  9. Factory trigger calls `logger.warn(failureMessage, { op, cacheKey, error })` on caught `refresh()` error, **never throws** (`expect(() => trigger(args)).not.toThrow()` + microtask flush).
+  10. Factory trigger calls `logger.warn` when `cache.set` itself throws.
+  11. Non-Error rejection values stringified via `String(error)` (homogeneous log shape).
+
+- **Architecture sentinel `museum-backend/tests/unit/architecture/pr10-probabilistic-refresh-sentinel.test.ts`** (135 LOC, sha256 `999083115f60411f4c4098bf89e3547620f2e7de5b0f8e15f1e2a9293c12ec86`, FROZEN) — permanent regression guard. Tourne dans le `pnpm test` gate existant. Assertions filesystem-based (regex scan, aucun import runtime des sites swept) :
+  - **Block 1** (3 forbidden-pattern × 2 sweep targets = 6 assertions) : `museum-backend/src/shared/http/overpass-cache.ts` + `museum-backend/src/shared/http/nominatim.client.ts` MUST NOT contain inline `Math.random\(\)\s*<\s*\(.*EARLY_REFRESH_THRESHOLD.*\)\s*\/\s*\(1\s*-\s*EARLY_REFRESH_THRESHOLD\)` formula, MUST NOT redeclare a local `function shouldEarlyRefresh` body, MUST NOT redeclare a local `function fireBackgroundRefresh` body.
+  - **Block 2** (2 import-check assertions) : both sweep targets MUST import `createBackgroundRefresh` + `shouldEarlyRefresh` + `type RefreshableEntry` from `@shared/cache/probabilistic-refresh`.
+  - **Frozen-test contract** : `red-test-manifest.json` FLAT `{path: sha256}` shape (per `feedback_team_frozen_manifest_flat.md`).
+
+### Changed
+
+**Sweep 2 HTTP-cached client sites — inline `(Math.random < adjustedRatio)` formula + private `shouldEarlyRefresh` + private `fireBackgroundRefresh` → delegate to `@shared/cache/probabilistic-refresh`** :
+
+| # | Site | Pre-PR-10 local symbols | Post-PR-10 surface | LOC delta |
+|---|------|-------------------------|--------------------|-----------|
+| 1 | `museum-backend/src/shared/http/overpass-cache.ts` | `interface OverpassCacheEntry` (5 LOC) + `const EARLY_REFRESH_THRESHOLD` (1 LOC) + `interface OverpassBackgroundRefreshArgs` (8 LOC) + `function fireOverpassBackgroundRefresh` body (20 LOC) + `function shouldOverpassEarlyRefresh` body (11 LOC) + Stryker disable + eslint-disable | `type OverpassCacheEntry = RefreshableEntry<OverpassMuseumResult[]>` alias (1 LOC) + `fireOverpassBackgroundRefresh(args)` thin shim delegating to `createBackgroundRefresh<OverpassMuseumResult[]>({ cache, logger, opName: 'overpass.background-refresh', failureMessage: 'Overpass background refresh failed', isEmpty: (v) => v.length === 0 })` (16 LOC incl. JSDoc) + `shouldOverpassEarlyRefresh = shouldEarlyRefresh<OverpassMuseumResult[]>` const-alias (1 LOC). `buildOverpassCacheKey` body unchanged. **Compat shims retained** so the frozen `tests/unit/shared/overpass-cache.test.ts` (4 cases on `shouldOverpassEarlyRefresh` + 4 on `fireOverpassBackgroundRefresh`) passes byte-identical | `−9` |
+| 2 | `museum-backend/src/shared/http/nominatim.client.ts` | `const EARLY_REFRESH_THRESHOLD = 0.9` (1 LOC) + `interface ReverseGeocodeCacheEntry` (5 LOC) + `interface BackgroundRefreshArgs` (8 LOC) + `function fireBackgroundRefresh` body (19 LOC) + `function shouldEarlyRefresh` body (10 LOC) + Stryker textual-confession comment `'Same pattern as shared/http/overpass-cache.ts:113'` + eslint-disable | `import { createBackgroundRefresh, shouldEarlyRefresh, type RefreshableEntry } from '@shared/cache/probabilistic-refresh'` + `type ReverseGeocodeCacheEntry = RefreshableEntry<NominatimReverseResult \| null>` local alias (1 LOC) + `function buildNominatimBackgroundRefresh(cache)` extracted helper (8 LOC, keeps `createCachedNominatimClient` under `max-lines-per-function`). `createCachedNominatimClient` now calls `const triggerBackgroundRefresh = buildNominatimBackgroundRefresh(cache)` once at construction, then `triggerBackgroundRefresh({ cacheKey, refresh: () => reverseGeocodeWithNominatim(lat, lng), positiveTtlSeconds, negativeTtlSeconds })` per cache-hit early-refresh decision. **Frozen `tests/unit/shared/nominatim-cached-client.test.ts`** (474 LOC) passes byte-identical — public surface `createCachedNominatimClient(cache)` unchanged, internal sweep invisible to test surface | `−30` |
+
+Net source LOC `+143 (new helper) − 9 (overpass-cache.ts) − 30 (nominatim.client.ts) = +104 cumulative`. Outside the spec A7 band `−50` to `−90` (reviewer non-blocking ⚠️) because of (a) Option A compat wrappers in `overpass-cache.ts` retained to honour UFR-022 frozen-test contract on `overpass-cache.test.ts`, (b) generous JSDoc on the shared helper (single source of truth doc), (c) `RefreshLogger` + `BackgroundRefreshDeps<T>` + `BackgroundRefreshTriggerArgs<T>` type-interface surface. Reviewer accepted the trade-off — the algorithm fingerprint duplication is gone, single `eslint-disable sonarjs/pseudo-random` site, single Stryker-relevant `Math.random` line.
+
+**Stryker textual-confession comment dropped at `nominatim.client.ts:336`** — per spec A8. The legacy comment `'Same pattern as shared/http/overpass-cache.ts:113'` is REMOVED because the duplication it confessed no longer exists. The functional Stryker disable rationale (`ConditionalExpression,EqualityOperator` — `'observationally equivalent — both paths yield false when the probabilistic adjustment is ≤ 0 (Math.random < non-positive always false)'`) is preserved at the single shared site, with R5(c') strict-`<` boundary test as the active mutation killer.
+
+**Additive `op` field in `logger.warn` context** — `{ op: 'overpass.background-refresh' | 'nominatim.background-refresh', cacheKey, error }`. Replaces the implicit-by-message-string discrimination (pre-PR-10 the 2 sites emitted 2 distinct message strings — `'Overpass background refresh failed'` / `'Nominatim background refresh failed'` — which remain unchanged via the `failureMessage` factory dep). **Non-breaking** : frozen tests use `expect.objectContaining({ cacheKey, error })` so the additional field passes through. Dashboards/Loki queries that filter by `op:` gain a structured discriminator without parsing the message string.
+
+### Observable behavior preserved (byte-equivalent)
+
+| Behavior | Pre-PR-10 | Post-PR-10 |
+|---|---|---|
+| `Math.random()` calls per `should*Refresh()` invocation | exactly 1 | exactly 1 |
+| `Math.random` short-circuited when `elapsedRatio < threshold` | yes | yes (R5(a) asserted via spy call count) |
+| `Math.random` short-circuited when `ttlSeconds <= 0` (incl. negative) | yes | yes (R5(b)(b') asserted) |
+| Strict-`<` boundary on the random roll | yes | yes (R5(c') asserted — mutation killer) |
+| `cache.set` w/ positive TTL when payload non-empty | yes | yes |
+| `cache.set` w/ negative TTL when payload empty/null | yes | yes |
+| `logger.warn` message string Overpass | `'Overpass background refresh failed'` | unchanged (via `failureMessage` factory dep) |
+| `logger.warn` message string Nominatim | `'Nominatim background refresh failed'` | unchanged (via `failureMessage` factory dep) |
+| `logger.warn` context fields | `{ error, cacheKey }` | `{ op, cacheKey, error }` — additive `op` |
+| `OverpassCacheEntry` type identity | nominal interface | structural type alias to `RefreshableEntry<OverpassMuseumResult[]>` — TS shape identical |
+| Synchronous `void` trigger return | yes | yes (IIFE wrapper preserves fire-and-forget) |
+| Fail-soft on refresh + cache.set throw | yes | yes (try/catch wraps both) |
+
+### Verification
+
+```bash
+cd museum-backend && pnpm jest --testPathPattern='(probabilistic-refresh|pr10-probabilistic-refresh-sentinel|overpass-cache|nominatim)' --no-coverage
+# → 8 suites passed, 105/105 tests passed, 16.7s
+
+cd museum-backend && pnpm lint
+# → exit 0 (eslint src/ + lint:test-discipline + tsc --noEmit)
+
+shasum -a 256 \
+  museum-backend/tests/unit/shared/cache/probabilistic-refresh.test.ts \
+  museum-backend/tests/unit/architecture/pr10-probabilistic-refresh-sentinel.test.ts
+# → 5dd9df3709e9dfe26a2a92d164ae7d1a1c174be96d845f2a63a0ad34d359bc05  …/probabilistic-refresh.test.ts
+# → 999083115f60411f4c4098bf89e3547620f2e7de5b0f8e15f1e2a9293c12ec86  …/pr10-probabilistic-refresh-sentinel.test.ts
+# matches red-test-manifest.json — FROZEN-TEST contract honored
+```
+
+### Cross-app impact
+
+None. Pure internal backend refactor :
+- No API surface change → no OpenAPI delta, no FE follow-up.
+- No DB migration, no env var, no env.example delta.
+- No new runtime dependency (`museum-backend/package.json` diff empty — only root `package.json` gained an unrelated `packageManager: pnpm@11.2.2` pin, **out of PR-10 scope** per reviewer).
+- Dashboards/Loki gain optional structured discriminator via additive `op` field (no existing query breaks).
+
+### Process — single reviewer loop
+
+Loop-1 terminal **APPROVED 8.85/10**. Zero `CHANGES_REQUESTED`. Reviewer non-blocking notes: (a) source LOC delta overshoots spec A7 band `−50` to `−90` by ~+170 LOC due to Option A compat wrappers + generous JSDoc + type-interface surface — accepted ; (b) 4 eslint-test-file warnings inside frozen red files (`@typescript-eslint/no-confusing-void-expression`) — non-blocking because `pnpm lint` exits 0 (project `lint:test-discipline` config doesn't flag them), tightening tracked as tooling debt out of PR-10 scope ; (c) `CLAUDE.md` gitnexus stats line + root `package.json` `packageManager` pin in working tree are auto-injected drift, **out of PR-10 scope** — commit boundary should include only the 5 PR-10 files.
+
+---
+
 ## [Unreleased] — 2026-05-23 — PR-9 `assertPasswordReauth()` helper + sweep 3 useCases
 
 Run `2026-05-23-pr-9-assertPasswordReauth` — neuvième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet auth re-authentication). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **8.6/5** (loop-2 terminal, trajectory loop-1 7.5 CHANGES_REQUESTED → loop-2 8.6 APPROVED). Helper extraction sous `useCase/shared/` + sweep mécanique des 3 sites qui dupliquaient le triplet `getUserById → password-less guard → bcrypt.compare(currentPassword, …)`. **Security win** : statusCode wrong-password normalisé uniforme `401 INVALID_CREDENTIALS` sur les 3 sites (pré-PR-9 : `changePassword` + `changeEmail` retournaient `400 badRequest('Current password is incorrect')`, `disableMfa` retournait déjà `401 INVALID_CREDENTIALS`). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Helper coverage 100% (statements/branches/functions/lines). `pnpm jest --testPathPattern='tests/unit/auth/(pr3-notFound|assertPasswordReauth|change-password|changeEmail.useCase|mfa-flow)|tests/unit/architecture/pr9-'` → **49/49 PASS**. Reversibility : `git revert <sha>` restaure les 3 sites + helper + 4 red files + PR-3 sentinel TARGETS.
