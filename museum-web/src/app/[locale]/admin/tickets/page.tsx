@@ -11,6 +11,8 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
@@ -161,27 +163,13 @@ export default function TicketsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.subject}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.user}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.priority}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.messages}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.subject}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.user}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.priority}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.messages}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -194,37 +182,33 @@ export default function TicketsPage() {
                 ) : (
                   tickets.map((t) => (
                     <tr key={t.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(t.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="max-w-[200px] truncate px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell className="max-w-[200px] truncate font-medium text-text-primary">
                         {t.subject}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {t.userId}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{t.userId}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[t.status]}`}
                         >
                           {t.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[t.priority]}`}
                         >
                           {t.priority}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {t.messageCount ?? 0}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{t.messageCount ?? 0}</TableDataCell>
+                      <TableDataCell nowrap>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -244,7 +228,7 @@ export default function TicketsPage() {
                             {adminDict.ticketsPage.view}
                           </a>
                         </div>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}

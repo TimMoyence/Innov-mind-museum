@@ -14,7 +14,7 @@
 
 type SpinnerSize = 'sm' | 'md' | 'lg';
 
-interface SpinnerProps {
+export interface SpinnerProps {
   size?: SpinnerSize;
   className?: string;
   label?: string;

@@ -9,6 +9,7 @@ import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
 import { HEX_RE, HTTPS_RE } from '@/lib/validation';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
+import Button from '@/components/ui/Button';
 
 // W4 W2.2 — Per-museum branding editor. Reads/writes museum.config.branding
 // via PUT /api/museums/:id (BE allows arbitrary config record; FE exposes the
@@ -271,13 +272,9 @@ export default function MuseumBrandingPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-          >
+          <Button type="submit" variant="primary" size="sm" disabled={saving}>
             {saving ? STRINGS.save.pending : STRINGS.save.idle}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

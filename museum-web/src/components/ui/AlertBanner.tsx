@@ -15,7 +15,7 @@
 
 type AlertVariant = 'error' | 'success' | 'info';
 
-interface AlertBannerProps {
+export interface AlertBannerProps {
   variant: AlertVariant;
   message: string;
   className?: string;

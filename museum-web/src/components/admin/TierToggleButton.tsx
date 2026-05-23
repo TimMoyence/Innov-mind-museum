@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { useAdminDict } from '@/lib/admin-dictionary';
@@ -117,9 +118,7 @@ export function TierToggleButton({ user, viewerRole, onUpdated }: TierToggleButt
         <p className="mt-2 text-sm text-text-secondary">{tierDict.confirmBody}</p>
 
         {errorMessage !== null && (
-          <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {errorMessage}
-          </p>
+          <AlertBanner variant="error" message={errorMessage} className="mt-3" />
         )}
       </BaseModal>
     </>

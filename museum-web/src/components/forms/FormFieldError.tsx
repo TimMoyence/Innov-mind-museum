@@ -14,7 +14,7 @@
  *   override is supplied the default is NOT merged (design §1.5 default-OR-override).
  */
 
-interface FormFieldErrorProps {
+export interface FormFieldErrorProps {
   id?: string;
   error?: string;
   className?: string;

@@ -9,6 +9,7 @@ import { MUSEUM_TYPES } from '@/lib/admin-types';
 import { SLUG_RE, KB_LOCALE_RE } from '@/lib/validation';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
+import Button from '@/components/ui/Button';
 
 // W4 W2.1 — Admin museum onboarding form. Posts to POST /api/museums
 // (BE route: museum-backend/src/modules/museum/adapters/primary/http/routes/museum.route.ts).
@@ -310,13 +311,9 @@ export default function NewMuseumPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-          >
+          <Button type="submit" variant="primary" size="sm" disabled={submitting}>
             {submitting ? STRINGS.submit.pending : STRINGS.submit.idle}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

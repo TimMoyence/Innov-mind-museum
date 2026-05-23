@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
+import { HoneypotField } from '@/components/forms/HoneypotField';
 import { EMAIL_RE } from '@/lib/validation';
 import type { Dictionary, Locale } from '@/lib/i18n';
 
@@ -253,24 +254,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
       <FormFieldError error={errors.consent} />
 
       {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
-      <div
-        aria-hidden="true"
-        style={{ position: 'absolute', left: '-10000px', height: 0, width: 0, overflow: 'hidden' }}
-      >
-        <label htmlFor="b2b-website">Website</label>
-        <input
-          id="b2b-website"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden="true"
-          value={website}
-          onChange={(e) => {
-            setWebsite(e.target.value);
-          }}
-        />
-      </div>
+      <HoneypotField value={website} onChange={setWebsite} />
 
       {/* Live region for error message (success has its own block above) */}
       <div aria-live="polite" className="min-h-[1.5rem]">

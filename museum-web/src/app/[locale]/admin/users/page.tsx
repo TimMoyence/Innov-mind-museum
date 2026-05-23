@@ -13,6 +13,8 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
 
 /** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
@@ -178,22 +180,12 @@ export default function UsersPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnName}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Email</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnRole}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnStatus}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.usersPage.columnName}</TableHeaderCell>
+                  <TableHeaderCell>Email</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.usersPage.columnRole}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.usersPage.columnStatus}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -206,18 +198,18 @@ export default function UsersPage() {
                 ) : (
                   users.map((u) => (
                     <tr key={u.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {displayName(u)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">{u.email}</td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{u.email}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role as UserRole]}`}
                         >
                           {u.role}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             u.emailVerified
@@ -227,15 +219,15 @@ export default function UsersPage() {
                         >
                           {u.emailVerified ? adminDict.common.active : adminDict.common.inactive}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {formatDate(u.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/${locale}/admin/users/${String(u.id)}`}
@@ -257,7 +249,7 @@ export default function UsersPage() {
                             </button>
                           )}
                         </div>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}

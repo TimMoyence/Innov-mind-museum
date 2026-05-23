@@ -7,6 +7,8 @@ import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { AdminAuditLogDTO } from '@/lib/admin-types';
 
 export default function AuditLogsPage() {
@@ -90,22 +92,12 @@ export default function AuditLogsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.auditLogsPage.columnUser}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.auditLogsPage.columnAction}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.auditLogsPage.columnResource}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.auditLogsPage.columnDetails}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">IP</th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.auditLogsPage.columnUser}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.auditLogsPage.columnAction}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.auditLogsPage.columnResource}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.auditLogsPage.columnDetails}</TableHeaderCell>
+                  <TableHeaderCell>IP</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -118,7 +110,7 @@ export default function AuditLogsPage() {
                 ) : (
                   logs.map((log) => (
                     <tr key={log.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(log.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
@@ -126,25 +118,25 @@ export default function AuditLogsPage() {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {log.actorId != null ? `#${String(log.actorId)}` : '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span className="inline-block rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
                           {log.action}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {log.targetType ?? '—'}
                         {log.targetId ? ` #${log.targetId.slice(0, 8)}` : ''}
-                      </td>
-                      <td className="max-w-xs truncate px-6 py-3 text-text-muted">
+                      </TableDataCell>
+                      <TableDataCell className="max-w-xs truncate text-text-muted">
                         {log.metadata ? JSON.stringify(log.metadata) : '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-muted">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="text-text-muted">
                         {log.ip ?? '—'}
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}

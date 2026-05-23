@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
+import { HoneypotField } from '@/components/forms/HoneypotField';
 import { EMAIL_RE } from '@/lib/validation';
 import type { Locale } from '@/lib/i18n';
 
@@ -194,30 +195,7 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
           <FormFieldError error={errors.consent} />
 
           {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              left: '-10000px',
-              height: 0,
-              width: 0,
-              overflow: 'hidden',
-            }}
-          >
-            <label htmlFor="beta-website">Website</label>
-            <input
-              id="beta-website"
-              name="website"
-              type="text"
-              tabIndex={-1}
-              autoComplete="off"
-              aria-hidden="true"
-              value={website}
-              onChange={(e) => {
-                setWebsite(e.target.value);
-              }}
-            />
-          </div>
+          <HoneypotField value={website} onChange={setWebsite} />
 
           {/* Polite live region for the error message (success has its own block above) */}
           <div aria-live="polite" className="min-h-[1.5rem]">

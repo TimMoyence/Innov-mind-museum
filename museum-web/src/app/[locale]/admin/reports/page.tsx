@@ -10,6 +10,8 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { Report, ReportStatus } from '@/lib/admin-types';
 
 // -- Status badge colors ----------------------------------------------------------
@@ -130,24 +132,12 @@ export default function ReportsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.user}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reportsPage.reason}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reportsPage.message}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.user}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reportsPage.reason}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reportsPage.message}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -160,37 +150,34 @@ export default function ReportsPage() {
                 ) : (
                   reports.map((r) => (
                     <tr key={r.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(r.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {r.userId}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {r.reason}
-                      </td>
-                      <td
-                        className="max-w-xs truncate px-6 py-3 text-text-secondary"
-                        title={r.messageText ?? ''}
-                      >
-                        {r.messageText
-                          ? r.messageText.length > 100
-                            ? `${r.messageText.slice(0, 100)}...`
-                            : r.messageText
-                          : '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{r.reason}</TableDataCell>
+                      <TableDataCell className="max-w-xs truncate">
+                        <span title={r.messageText ?? ''}>
+                          {r.messageText
+                            ? r.messageText.length > 100
+                              ? `${r.messageText.slice(0, 100)}...`
+                              : r.messageText
+                            : '—'}
+                        </span>
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status]}`}
                         >
                           {r.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <button
                           type="button"
                           onClick={() => {
@@ -202,7 +189,7 @@ export default function ReportsPage() {
                         >
                           {adminDict.reportsPage.review}
                         </button>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}

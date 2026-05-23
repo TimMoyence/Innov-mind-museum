@@ -10,6 +10,8 @@ import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
@@ -135,24 +137,12 @@ export default function AdminReviewsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.author}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.rating}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.comment}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.author}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.rating}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.comment}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -165,30 +155,28 @@ export default function AdminReviewsPage() {
                 ) : (
                   reviews.map((r) => (
                     <tr key={r.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(r.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {r.userName}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="text-text-primary">
                         {r.rating}/5
-                      </td>
-                      <td className="max-w-md truncate px-6 py-3 text-text-secondary">
-                        {r.comment}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell className="max-w-md truncate">{r.comment}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status]}`}
                         >
                           {adminDict.reviewsPage[r.status]}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {r.status === 'pending' ? (
                           <div className="flex items-center gap-2">
                             {MODERATION_STATUSES.map((s) => (
@@ -214,7 +202,7 @@ export default function AdminReviewsPage() {
                             {adminDict.reviewsPage.moderated}
                           </span>
                         )}
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}
