@@ -120,7 +120,11 @@ async function fetchBinary({ baseUrl, path, method = 'POST', token, body, timeou
     const headers = {
       // Accept both binary (happy path) and JSON (error envelope) — the server
       // chooses based on outcome, so we list both rather than forcing one.
-      Accept: 'audio/mpeg, application/json',
+      // `audio/ogg` covers the OpenAI Opus/Ogg container the TTS service has
+      // emitted since C9.12a (2026-05-17, text-to-speech.openai.ts:46 —
+      // -40% bandwidth + -50-100ms first-byte vs MP3). `audio/mpeg` kept for
+      // legacy MP3 path in case the response_format is ever rolled back.
+      Accept: 'audio/ogg, audio/mpeg, application/json',
     };
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';
@@ -564,19 +568,28 @@ async function main() {
     }
 
     // 4. Magic-byte validation per R4 / D2.
-    //    Accept either ID3v2 header ("ID3" = 0x49 0x44 0x33) or MPEG frame-sync
-    //    (0xFF followed by 0xF*, i.e. (b1 & 0xE0) === 0xE0). No ffprobe.
+    //    Accept any of the audio container formats the backend has shipped :
+    //      - "OggS" header (0x4f 0x67 0x67 0x53) — Ogg container (current
+    //        path : OpenAI Opus, response_format='opus' since C9.12a)
+    //      - "ID3" header (0x49 0x44 0x33) — MP3 with ID3v2 tag
+    //      - MPEG frame-sync (0xFF followed by 0xF*, (b1 & 0xE0) === 0xE0)
+    //        — bare MP3 frame
+    //    No ffprobe — pure byte check.
     const buf = ttsResult.buffer;
-    if (buf.length < 3) {
+    if (buf.length < 4) {
       throw new Error(`TTS audio too short for magic-byte check (length=${buf.length})`);
     }
+    const isOggS =
+      buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53;
     const isId3 = buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33;
     const isMpegFrameSync = buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0;
-    if (!isId3 && !isMpegFrameSync) {
+    if (!isOggS && !isId3 && !isMpegFrameSync) {
       const head = Array.from(buf.subarray(0, 4))
         .map((b) => `0x${b.toString(16).padStart(2, '0')}`)
         .join(' ');
-      throw new Error(`TTS audio magic bytes invalid (head=${head}, expected ID3 or 0xFF 0xE?)`);
+      throw new Error(
+        `TTS audio magic bytes invalid (head=${head}, expected OggS / ID3 / 0xFF 0xE?)`,
+      );
     }
 
     // 5. Length floor per R5 — sub-1KB body almost always = error envelope
