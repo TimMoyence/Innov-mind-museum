@@ -4,6 +4,65 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-6 dead code burial (UFR-016)
+
+Run `2026-05-23-pr-6-dead-code-burial` — sixth incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (volet burial). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **4.65/5**. Pure deletion PR (UFR-016 "il est mort on l'enterre" — pas de `@deprecated`, pas de comment-out). Net diff `-276 LOC` (4 fichiers supprimés) + `+130 LOC` sentinel architecture test = `-146 LOC net`. Zéro changement de comportement runtime observable, zéro modification du canonique préservé, zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Reversibility : `git revert <sha>` restaure les 4 fichiers exactement.
+
+### Removed
+
+- **`museum-backend/src/shared/http/http-cache-headers.ts`** (31 LOC) — middleware `httpCacheHeaders(asset: AssetCacheClass): RequestHandler` jamais wired sur le router prod (audit finding B5, confirmed orphan via `grep -rn 'httpCacheHeaders|http-cache-headers'` zero hits hors du fichier + son test). Le middleware setait `Cache-Control` selon 4 asset classes (`static-immutable` / `index-html` / `openapi-json` / `landing`) — design prématuré pré-Cloudflare. **ADR-024 (HTTP cache headers via Cloudflare) reste ACCEPTED decision-only** ; statut inchangé. Si Cloudflare provisionné post-V1, ré-implémenter `httpCacheHeaders` selon setup réel — la décision architecturale tient toujours, seule l'impl prématurée est enterrée.
+
+- **`museum-backend/tests/unit/helpers/http-cache-headers.test.ts`** (61 LOC) — n'était importateur que du middleware supprimé ci-dessus, plus de raison d'exister.
+
+- **`museum-backend/src/shared/audit/audit-chain-verifier.ts`** (88 LOC) — **shadow duplicate** du canonique `museum-backend/src/shared/audit/audit-chain.ts:75` `verifyAuditChain` (audit finding B8). Le shadow exposait `verifyAuditChain` + `AuditChainVerificationResult` (shape distincte du canonique `AuditChainVerifyResult`) — name-collision risk sur une surface security-critical (audit tamper-evidence). Barrel `museum-backend/src/shared/audit/index.ts:24` re-exporte **uniquement** le canonique (`export { AUDIT_CHAIN_GENESIS_HASH, computeRowHash, verifyAuditChain } from './audit-chain';`) — le shadow n'a jamais été consommé en prod. Tous les 8 consommateurs canoniques (`audit-chain-cli-core.ts:1,22` + barrel + 4 fichiers de test canoniques) sont préservés byte-for-byte. Si besoin futur d'une break-shape enrichie, étendre `AuditChainVerifyResult` proprement, **JAMAIS via fichier shadow**.
+
+- **`museum-backend/tests/unit/shared/audit/audit-chain-verifier.test.ts`** (96 LOC) — n'était importateur que du shadow supprimé ci-dessus.
+
+### Added
+
+- **Architecture sentinel `museum-backend/tests/unit/architecture/pr6-dead-code-burial.test.ts`** (130 LOC, 6 it cases via `describe.each` × 4 `DEAD_FILES` + 2 `FORBIDDEN_IMPORT_SLUGS`) — **permanent regression guard**. Pivot délibéré du bash sentinel proposé au design phase 2 (`tools/sentinels/pr6-dead-code-burial.sh`) vers un Jest architecture test : tourne dans le `pnpm test` gate existant (pas d'invocation séparée), devient guard permanent pour toute future re-introduction des 2 slugs sous `src/`, pas d'étape cleanup post-green. Assertions (toutes grep-based / fs-based, **aucun import runtime des modules morts** — un import recréerait un consommateur) :
+  1. `src/shared/http/http-cache-headers.ts` absent (`existsSync` false).
+  2. `src/shared/audit/audit-chain-verifier.ts` absent.
+  3. `tests/unit/helpers/http-cache-headers.test.ts` absent.
+  4. `tests/unit/shared/audit/audit-chain-verifier.test.ts` absent.
+  5. `grep -rn` sous `src/` retourne 0 match pour les 2 slugs `http-cache-headers` ET `audit-chain-verifier`.
+
+  **Frozen-test contract** : `red-test-manifest.json` FLAT `{path: sha256}` shape (per `feedback_team_frozen_manifest_flat.md`). sha256 verified byte-identical pre/post-green via `shasum -a 256` :
+  - `museum-backend/tests/unit/architecture/pr6-dead-code-burial.test.ts` → `588f3341aff1ae4e7d0d21fc332624dfe7548fd355d2e72540d888ce83974960`
+
+### Scope-out — `isSentryEnabled` (audit finding B7 grep-incomplete)
+
+**Note d'honnêteté UFR-013 pour les futurs cycles d'audit** : l'audit B7 originel listait `isSentryEnabled` (`museum-backend/src/shared/observability/sentry.ts:30`) comme dead code "0 consommateur dans `src/`". L'affirmation est **factuellement correcte pour `src/`** mais **grep-incomplète** — re-grep `tests/**` révèle 6+ consommateurs test légitimes :
+
+- `museum-backend/tests/unit/shared/sentry.test.ts:28,38,54,66,81` — import + assert direct (`expect(isSentryEnabled()).toBe(false)`).
+- `museum-backend/tests/unit/shared/sentry-wrapper.test.ts:107,114` — assert post-`initSentry()` (`expect(isSentryEnabled()).toBe(true)`).
+- `museum-backend/tests/unit/observability/sentry-capture-exception-with-context.test.ts:63,77` — assert état initialisé.
+- `museum-backend/tests/unit/middleware/rate-limit-fail-closed.test.ts:20` — mock du module (`jest.mock('@shared/observability/sentry', () => ({ ..., isSentryEnabled: () => true }))`).
+- `museum-backend/tests/unit/auth/password-breach-check.test.ts:29` — idem mock.
+
+`isSentryEnabled()` est un **test-only public observable** légitime : permet d'asserter l'état d'initialisation Sentry post-`initSentry()` sans tester `initialized` (private du module). Pattern bien établi ; supprimer l'export régresserait les 6+ tests sans bénéfice. Le SUT lui-même utilise `initialized` directement (lignes 73, 85, 93, 122, 127) — il N'appelle PAS `isSentryEnabled()`, donc l'export EST purement un accessor externe pour observabilité de tests.
+
+**T1 scope-out** documenté `spec.md §4.1 + §5 + §6 R1` + sentinel header (lignes 26-27) + ce CHANGELOG. **Règle pour les prochains audits** : avant de classer un export "dead", grep `tests/**` ET `src/**` (et idéalement `scripts/**`/`tools/**`). Cas d'école UFR-013 verify-before-claim — toute future re-listing de B7 doit re-grep d'abord et lire ce scope-out.
+
+### Doctrine adherence
+
+- **UFR-016** (burial net, "il est mort on l'enterre") ✅ — 4 deletions clean, pas de `@deprecated` wrapper, pas de commented-out code.
+- **UFR-013** (honesty, verify-before-claim) ✅ — T1 scope-out documenté end-to-end après honest re-grep, pas de silent skip. L'audit B7 a été reclassé "grep-incomplete" publiquement plutôt que d'enterrer un export consommé par 6+ tests.
+- **UFR-022** (fresh-context 5-phase + frozen-test) ✅ — sha256 sentinel `588f3341…` match manifest byte-for-byte, fresh-context end-to-end, lib-docs consultés (express + node:crypto stdlib).
+
+### Canonical preservation (verified post-burial)
+
+`grep -rn 'verifyAuditChain' museum-backend/src/` post-green :
+
+- `museum-backend/src/shared/audit/audit-chain.ts:75` — canonical `verifyAuditChain` returning `AuditChainVerifyResult` — **untouched**.
+- `museum-backend/src/shared/audit/index.ts:24` — barrel re-export du canonique uniquement — **untouched**.
+- `museum-backend/src/shared/audit/audit-chain-cli-core.ts:1,22` — consumer via barrel — **untouched**.
+- `museum-backend/src/data/db/migrations/1777100000000-AddAuditLogHashChain.ts:33` — doc-comment référençant le canonique — **untouched**.
+
+Tests canoniques (83/83 PASS post-burial) : `tests/unit/audit/audit-chain.test.ts` (~57 specs) + `tests/unit/audit/audit-chain-migration-parity.test.ts` + `tests/unit/shared/audit/audit-chain-cli-core.test.ts` + `tests/unit/admin/audit-breach.test.ts:23,232,288,308`. Sentry regression (T1 scope-out validation runtime) : PASS sur `sentry.test.ts` + `sentry-wrapper.test.ts` + `sentry-capture-exception-with-context.test.ts` — `isSentryEnabled` toujours exporté et fonctionnel.
+
+
+
 ## [Unreleased] — 2026-05-23 — PR-5 `assertPagination` helper + sweep 7 useCases
 
 Run `2026-05-23-pr-5-assertPagination` — fifth KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet pagination guard inline). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **5.00/5**. Pure TypeScript refacto interne, wire-format 400 `error.message` **byte-for-byte identique** (`'page must be a positive integer'` + `'limit must be between 1 and 100'` préservés string-pour-string vs legacy inline). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`. Net diff `+59 / -56` sur 8 fichiers source + 2 nouveaux tests red.
