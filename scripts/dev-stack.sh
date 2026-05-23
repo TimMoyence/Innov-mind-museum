@@ -118,9 +118,37 @@ else
   else
     warn "Bake-key mismatch (image=$BAKED_KEY current=$CURRENT_KEY) → rebuilding"
   fi
+
+  # Capture the backend's current anonymous volumes BEFORE recreate. Docker
+  # anon volumes are SHA-derived (64 hex) ; named volumes always start with the
+  # project prefix like "museum-backend_". `--renew-anon-volumes` detaches but
+  # does NOT remove the old ones → they accumulate as danglings (~800 MB each
+  # for node_modules ; observed 3.4 GB after 5 rebuilds on a single dev host).
+  # E2E teardown already solves this via `docker rm -f -v` (atomic) ; we port
+  # the same discipline to dev. cf feedback_zero_bypass.md corollary 2026-05-17.
+  OLD_BACKEND_ANON_VOLUMES=$(docker inspect dev-backend \
+    --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name}}{{end}}{{end}}' \
+    2>/dev/null | grep -E '^[a-f0-9]{64}$' || true)
+
   $DOCKER_COMPOSE build --build-arg "BAKE_KEY=$CURRENT_KEY" backend
   $DOCKER_COMPOSE up -d --force-recreate --renew-anon-volumes backend
-  ok "Image rebuilt + backend recreated with fresh anon volumes"
+
+  if [ -n "${OLD_BACKEND_ANON_VOLUMES:-}" ]; then
+    # xargs -n 1 : one `docker volume rm` per ID. More tolerant than a single
+    # call (a single in-use volume would otherwise abort the whole batch) and
+    # immune to bash word-splitting quirks across shells.
+    REMOVED=$(printf '%s\n' "$OLD_BACKEND_ANON_VOLUMES" \
+      | xargs -n 1 docker volume rm 2>/dev/null | wc -l | tr -d ' ')
+    TOTAL=$(printf '%s\n' "$OLD_BACKEND_ANON_VOLUMES" | wc -l | tr -d ' ')
+    if [ "$REMOVED" -eq "$TOTAL" ]; then
+      ok "Image rebuilt + backend recreated + $REMOVED stale anon volume(s) reclaimed"
+    else
+      ok "Image rebuilt + backend recreated + $REMOVED/$TOTAL stale anon volume(s) reclaimed"
+      warn "$((TOTAL - REMOVED)) old anon volume(s) still in use elsewhere — left in place"
+    fi
+  else
+    ok "Image rebuilt + backend recreated with fresh anon volumes"
+  fi
 fi
 
 # ---- 2. Docker stack ----
