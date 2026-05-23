@@ -1,6 +1,5 @@
-import crypto from 'node:crypto';
-
 import { badRequest } from '@shared/errors/app.error';
+import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
@@ -14,7 +13,7 @@ export class VerifyEmailUseCase {
     }
 
     // SEC (H2): hash the raw token before lookup — DB only stores the SHA-256 digest.
-    const hashedToken = crypto.createHash('sha256').update(trimmed).digest('hex');
+    const hashedToken = hashEmailTokenForLookup(trimmed);
 
     const user = await this.userRepository.verifyEmail(hashedToken);
     if (!user) {

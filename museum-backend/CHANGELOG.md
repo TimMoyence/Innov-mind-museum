@@ -4,6 +4,93 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-15 `issueEmailToken()` + `hashEmailTokenForLookup()` shared helper + sweep 6 single-use-email-token useCases (DRY-refactor, byte-identical crypto + C2 no-trim préservé)
+
+Run `2026-05-23-pr-15-singleUseEmailToken` — quinzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (finding B3-#1 : crypto single-use email-token copié-collé 6 fois — 3 génération `randomBytes(32).toString('hex')` → `createHash('sha256').update(raw).digest('hex')` + 3 consume `createHash('sha256').update(trim?(raw)).digest('hex')` — chacun ré-important `node:crypto`). Pipeline : UFR-022 fresh-context 5-phase / reviewer (combined verify+security+review) **APPROVED** loop-1 terminal, zero CHANGES_REQUESTED, zero blocking finding. Surface SÉCURITÉ CRITIQUE (token auth single-use) → comportement préservé **byte-identical** : nouveau helper pur/sync `@shared/security/single-use-email-token` (2 fonctions, zéro I/O, `node:crypto` builtin only) remplace les 6 copies inline. Crypto byte-for-byte (entropie 32 bytes = 256 bits, SHA-256, encoding hex préservés sur raw ET digest). Sémantique trim préservée per-site : verify-email (C1) + confirm-email-change (C3) trimment (default), reset-password (C2) **NO trim** explicitement préservé via `{ trim: false }` au call-site (divergence load-bearing per spec R2.3/§6.2 — vs l'ancienne divergence muette). Raw token jamais loggé. La forme d'export ship en 2 fonctions libres `issueEmailToken()`/`hashEmailTokenForLookup()` (cohérent avec les siblings `bcrypt.ts`/`pseudonym.ts`, R1.3) plutôt que la classe `SingleUseEmailTokenService` esquissée au brief — R1.4 laissait le Plan trancher, comportement R1.1/R1.2/R1.5/R3 strictement respecté. Net : +1 helper (13 LOC), 6 useCases allégés (2 lignes crypto → 1 destructuring côté génération, `createHash(...)` → `hashEmailTokenForLookup(...)` côté consume) + 6 imports `crypto` orphelins retirés, +2 fichiers de test gelés. Storage (`set*Token` / 3 consume repo / pattern `() => 'NULL'` dans `user.repository.pg.ts`) inchangé. Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass, zéro OpenAPI delta, zéro FE follow-up, zéro env-var. `npx jest --testPathPattern='(shared/security/single-use-email-token|architecture/pr15-singleUseEmailToken-sentinel)'` → **2 suites, 34 tests pass** (behavioural + sentinel structural) ; coverage helper 100% statements/functions/lines, 85.71% branches. Reversibility : `git revert <sha>` retire le helper + ré-inline les 2 lignes crypto dans les 3 sites génération + restaure `createHash(...)` dans les 3 sites consume + retire les 2 fichiers de test ; pas de DB migration ni de schema delta à revert.
+
+### Added
+
+- **`museum-backend/src/shared/security/single-use-email-token.ts`** (NEW, 13 LOC, pur/sync, `node:crypto` builtin only, colocalisé avec `bcrypt.ts`/`pseudonym.ts`) — deux fonctions exportées :
+  - `export function issueEmailToken(): { raw: string; hashed: string }` — `raw = crypto.randomBytes(32).toString('hex')` (64 chars hex), `hashed = crypto.createHash('sha256').update(raw).digest('hex')` (64 chars hex). Byte-for-byte identique au pattern inline legacy des 3 sites génération. Aucun paramètre d'entropie tweakable (R1.5 — `randomBytes(32)` figé).
+  - `export function hashEmailTokenForLookup(rawToken: string, opts: { trim?: boolean } = {}): string` — `input = opts.trim === false ? rawToken : rawToken.trim()` puis `sha256(input).hex`. Default path (trim) == legacy `sha256(token.trim())` ; `{ trim: false }` path == legacy `sha256(token)` no-trim. Le `trim` conditionnel est la SEULE variation entre les 3 sites consume, modélisée en paramètre explicite pour rendre la divergence C2 lisible et auditée. Zéro import logger/console (helper ne log RIEN, NFR-SEC-1).
+- **`museum-backend/tests/unit/shared/security/single-use-email-token.test.ts`** (NEW, sha256 `c1bfa41f38315244a4855091dd7fc78292c3ea853ecc43710b2c7da9ad361962`, FROZEN au RED) — behaviour : `raw` matche `/^[a-f0-9]{64}$/`, `hashed === sha256(raw)`, 2 `issueEmailToken()` consécutifs → `raw` différents (entropie réelle), `hashEmailTokenForLookup(' abc ')` === `sha256('abc')` (trim default), `hashEmailTokenForLookup(' abc ', { trim: false })` === `sha256(' abc ')` (no-trim ≠ trimmé), parité legacy `hashEmailTokenForLookup(raw, {trim:false})` === `sha256(raw)` === `issueEmailToken().hashed`. Recompute `sha256` **indépendamment via `node:crypto`** (anti-tautologie — pas via le helper) → une dérive entropie/algo/encoding surfacerait en mismatch.
+- **`museum-backend/tests/unit/architecture/pr15-singleUseEmailToken-sentinel.test.ts`** (NEW, sha256 `71599b3166387d757b2d9462de4e4607ebe0db99ebfadbcec801365cfa4db255`, FROZEN au RED) — sentinel fs-based (`readFileSync`, non mockable) sur les 6 fichiers : AUCUN ne contient `crypto.createHash('sha256')` ni `import crypto from 'node:crypto'` ; les 3 sites génération sont free de `randomBytes(32)` et importent + utilisent `issueEmailToken` ; les 3 sites consume importent + utilisent `hashEmailTokenForLookup`. Surface un hint `file:line` au reviewer sur failure ; tourne dans le `pnpm test` gate existant (zéro nouveau `package.json` `scripts:` entry, zéro CI workflow change). Verrouille la non-réintroduction du crypto inline (UFR-016).
+
+### Changed
+
+**Sweep — 3 sites génération adoptent `issueEmailToken()`** (`import crypto from 'node:crypto'` retiré, `import { issueEmailToken } from '@shared/security/single-use-email-token'` ajouté, les 2 lignes crypto → `const { raw: token, hashed: hashedToken } = issueEmailToken();`) :
+
+| Site | Fichier | Persist call | TTL | Var names préservés |
+|---|---|---|---|---|
+| G1 | `museum-backend/src/modules/auth/useCase/registration/register.useCase.ts` | `setVerificationToken(userId, hashed, expires)` | 24h | `token` (lien email), `hashedToken` (persist) |
+| G2 | `museum-backend/src/modules/auth/useCase/password/forgotPassword.useCase.ts` | `setResetToken(email, hashed, expires)` | 1h | idem |
+| G3 | `museum-backend/src/modules/auth/useCase/email/changeEmail.useCase.ts` | `setEmailChangeToken(userId, hashed, newEmail, expires)` | 1h | idem ; commentaire WHY `// 32-byte raw → hex; SHA-256 hash persisted (raw sent in email).` conservé |
+
+**Sweep — 3 sites consume adoptent `hashEmailTokenForLookup()`** (`import crypto` retiré, helper importé) :
+
+| Site | Fichier | Trim | Forme post-sweep | Consume call |
+|---|---|---|---|---|
+| C1 | `museum-backend/src/modules/auth/useCase/registration/verifyEmail.useCase.ts` | trim (default) | `hashEmailTokenForLookup(trimmed)` — pré-trim `const trimmed = token.trim()` + guard non-vide inchangés ; trim:true idempotent sur `trimmed` → byte-identical | `verifyEmail(hashed)` |
+| C2 | `museum-backend/src/modules/auth/useCase/password/resetPassword.useCase.ts` | **NO trim** | `hashEmailTokenForLookup(token, { trim: false })` ← **no-trim préservé byte-identical (spec §6.2 / D2)** ; `assertPasswordNotBreached` + `bcrypt.hash` path inchangés | `consumeResetTokenAndUpdatePassword(hashed, hashedPw)` |
+| C3 | `museum-backend/src/modules/auth/useCase/email/confirmEmailChange.useCase.ts` | trim (default) | `hashEmailTokenForLookup(token)` → `sha256(token.trim())` byte-identical ; guard `if (!token.trim())` inchangé | `consumeEmailChangeToken(hashed)` |
+
+- **Behaviour-preservation byte-identical** — valeur de retour, exceptions levées (`badRequest('… token is required')` / `('Invalid or expired …')`), TTL (24h/1h/1h), liens email, locales, logs, branches `emailService && frontendUrl` préservés sur les 6 sites. Les 6 imports `crypto` orphelins retirés (no-unused vert per R4.3 — aucun usage crypto orthogonal subsistant dans ces fichiers).
+- **Inchangé (R2.5/R2.6)** — `setVerificationToken`/`setResetToken`/`setEmailChangeToken` + les 3 consume repo + le pattern `() => 'NULL'` dans `user.repository.pg.ts` (storage side, hors scope B3-#1 — confirme spec §6.1 contre le brief original « centralise le filet »).
+
+### Security
+
+- **Préservation crypto byte-identical** — entropie inchangée (`randomBytes(32)` = 256 bits, pas de paramètre tweakable, R1.5/NFR-SEC-2) ; algo `sha256` inchangé ; encoding `hex` inchangé (raw token ET digest). DB persiste le digest SHA-256 seul, raw envoyé par email inchangé. Les tests auth existants qui recomputent `sha256(rawToken)` depuis le lien email restent verts sans modification (R3.5).
+- **C2 resetPassword no-trim préservé via `{ trim: false }` — décision sécurité conservatrice** (spec §6.2 option (a)). Un token reset avec whitespace bordure continue d'être rejeté (lookup miss) exactement comme avant → aucun élargissement silencieux de la surface de tokens acceptés. La divergence est désormais **explicite et auditée** au call-site (vs l'ancienne divergence muette `sha256(token)` direct). Harmonisation C2 (adopter le trim) = REJETÉE dans ce PR (changement comportemental → décision humaine séparée, hors B3-#1).
+- **Raw token JAMAIS loggé** — helper zéro import logger/console (pur) ; grep sur les 6 useCases → aucune ligne de log de raw token (tous les log sites référencent hashed/domain/email).
+- **Single source of truth crypto** — élimine le risque de divergence silencieuse 6-way (taille d'entropie, encoding, omission du trim) qui n'était détectable que par lecture croisée. Helper pur/sync sans état → aucun side-channel timing/state introduit au-delà du pattern pré-existant (comparaison faite côté DB `WHERE token = :hashed`, inchangée, NFR-SEC-3).
+- **Zéro nouvelle dépendance** — `museum-backend/package.json` + `pnpm-lock.yaml` inchangés → `pnpm audit` surface identique au start commit. `node:crypto` = builtin Node, aucune lib tierce importée → obligation lib-docs UFR-022 ne se déclenche pas (`libDocsConsulted: []` justifié).
+- **Sentinel frozen sha256 lock** — `71599b3166387d757b2d9462de4e4607ebe0db99ebfadbcec801365cfa4db255` byte-identical verified post-RED + post-GREEN + post-VERIFY (UFR-022 frozen-test contract honoured, zéro editor self-modification). Toute future réintroduction de `crypto.createHash('sha256')` / `randomBytes(32)` / `import crypto from 'node:crypto'` dans les 6 fichiers → fail CI avec hint `file:line`.
+
+### Migration notes
+
+- **No migration required.** Wire format / comportement HTTP des 6 flows email (verify-email, forgot/reset-password, change/confirm-email-change) préservé byte-identical. Aucune migration DB applicative, aucun rename Redis keyspace, aucun delta OpenAPI, aucun delta schema, aucun FE follow-up (liens email consommés inchangés). Les TTL (24h/1h/1h) et les colonnes DB (`verification_token` / `reset_token` / `email_change_token`) sont intouchés.
+- **Reversibility** : `git revert <sha>` retire le helper + ré-inline les 2 lignes crypto dans les 3 sites génération + restaure `createHash(...)` dans les 3 sites consume + re-ajoute les 6 imports `node:crypto` + retire les 2 fichiers de test. Pas de DB migration ni de schema delta à revert. Les 2 sentinel sha256s frozen disparaissent proprement avec le revert.
+
+### Verification
+
+```bash
+cd museum-backend
+
+# 1. Lint + typecheck (6 imports crypto orphelins retirés → no-unused vert)
+pnpm lint
+# → eslint src/ --max-warnings=0 + lint:test-discipline + tsc --noEmit, exit 0
+
+# 2. Helper + sentinel
+npx jest --testPathPattern='(shared/security/single-use-email-token|architecture/pr15-singleUseEmailToken-sentinel)'
+# → 2 suites, 34 tests pass
+
+# 3. Aucun crypto inline résiduel dans les 6 useCases
+grep -rnE "crypto\.(randomBytes|createHash)|from 'node:crypto'" \
+  src/modules/auth/useCase/registration/register.useCase.ts \
+  src/modules/auth/useCase/password/forgotPassword.useCase.ts \
+  src/modules/auth/useCase/email/changeEmail.useCase.ts \
+  src/modules/auth/useCase/registration/verifyEmail.useCase.ts \
+  src/modules/auth/useCase/password/resetPassword.useCase.ts \
+  src/modules/auth/useCase/email/confirmEmailChange.useCase.ts
+# → 0 hits
+
+# 4. Tests auth existants frozen (recomputent sha256 depuis le raw email)
+pnpm test -- --testPathPattern=tests/unit/auth
+# → vert sans modification d'assertion
+
+# 5. Sentinel sha256 frozen
+shasum -a 256 tests/unit/shared/security/single-use-email-token.test.ts \
+              tests/unit/architecture/pr15-singleUseEmailToken-sentinel.test.ts
+# → c1bfa41f… + 71599b31… (match red-test-manifest.json)
+```
+
+### Honesty
+
+- **Forme d'export divergente du spec, flaggée comme PASS_WITH_NOTE non-bloquant.** Spec R1.1/R1.2 proposait `class SingleUseEmailTokenService` avec `issue()`/`hashForLookup()` ; l'implémentation ship 2 fonctions libres `issueEmailToken()`/`hashEmailTokenForLookup()`. R1.4 autorisait explicitement le Plan à trancher le nom ; la forme fonction libre est PLUS cohérente avec les siblings `bcrypt.ts`/`pseudonym.ts` que R1.3 nomme comme cible. Comportement R1.1/R1.2/R1.5/R3 strictement respecté ; sentinel + unit tests verrouillent les noms end-to-end. Pas un défaut.
+- **Chemins de test landés différents du design.** design.md §4 esquissait `tests/unit/auth/single-use-email-token.test.ts` + `…/pr15-single-use-email-token-adoption.test.ts` ; le RED les a landés sous `tests/unit/shared/security/single-use-email-token.test.ts` (colocalisé au helper) + `tests/unit/architecture/pr15-singleUseEmailToken-sentinel.test.ts` (colocalisé aux sentinels PR-11..PR-14). Emplacement final cohérent avec la convention sentinel du batch — documenté ici pour traçabilité.
+- **Coverage helper 85.71% branches honnêtement reporté** (vs 100% stmt/fn/line). Le résiduel = la branche toggle `trim:true` default vs `{trim:false}` est pleinement exercée par les tests ; le 1 résiduel est acceptable pour un helper pur de 13 statements. Pas masqué sous un « 100% coverage ».
+- **CHANGELOG entry ajoutée en phase documenter** — le reviewer a flaggé l'absence de l'entrée CHANGELOG comme seul `openItem` non-bloquant de scope déclaré. Cette entrée la produit (pas de fabrication rétroactive d'un autre artefact).
+
 ## [Unreleased] — 2026-05-23 — PR-14 `fetchWithTimeout()` shared helper + sweep 2 guardrail adapters (DRY-refactor, behaviour-preserving + 3 documented divergences)
 
 Run `2026-05-23-pr-14-fetchWithTimeout` — quatorzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (finding B6 #2 : pattern `AbortController + setTimeout + clearTimeout(finally)` autour de `fetch()` dupliqué dans 5 adapters HTTP de `museum-backend/src/modules/chat/adapters/secondary/`). Pipeline : UFR-022 fresh-context 5-phase / reviewer (combined verify+security+review) **APPROVED** loop-1 terminal, zero CHANGES_REQUESTED, zero blocking finding. Le sweep s'arrête HONNÊTEMENT à **2 des 5 sites** — les 3 autres divergent pour des raisons load-bearing et portent chacun un commentaire `// PR-14: does NOT use \`fetchWithTimeout\` — …` (verrouillé par sentinel) : **replicate** (un seul `AbortController` couvre `createPrediction` + le polling `awaitTerminal` = un budget pour tout l'encode, le helper arme un timer per-call), **siglip-onnx** (le signal alimente `runWithTimeout(session.run)` de `onnxruntime-node`, PAS un `fetch` — le helper est fetch-specific, retourne une `Response`), **llm-guard** (`scanOverHttp` fait `controller.abort(new DOMException('Simulated chaos abort','AbortError'))` AVANT le fetch quand `shouldChaosInject()` → l'appelant DOIT tenir le controller, le helper le possède en interne sans handle pré-fetch). La migration `AbortSignal.timeout()` proposée au brief est REJETÉE (signal read-only → pas d'injection chaos, pas de budget multi-fetch partagé, pas de composition de signal appelant, casse l'injection `fetchFn` en test). Net : +1 helper (48 LOC), 2 adapters allégés (−14 LOC combinés), 3 commentaires de divergence, +12 cas de test gelés. Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass, zéro OpenAPI delta, zéro FE follow-up, zéro env-var. `npx jest --testPathPattern='(fetch-with-timeout|pr14-fetchWithTimeout-sentinel)'` → **2 suites, 12/12 tests pass** (5 helper T5.1–T5.5 + 7 sentinel) ; `npx jest --testPathPattern='(presidio|llama-prompt-guard|llm-guard-adapter|replicate|siglip-onnx).adapter'` → **6 suites, 95/95 tests pass** (zéro régression behaviour) ; **107/107 total**. Reversibility : `git revert <sha>` retire le helper + restaure le pattern inline dans les 2 adapters swept + retire les 3 commentaires + retire les 2 fichiers de test ; pas de DB migration ni de schema delta à revert.

@@ -1,9 +1,8 @@
-import crypto from 'node:crypto';
-
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildResetPasswordEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
+import { issueEmailToken } from '@shared/security/single-use-email-token';
 import { env } from '@src/config/env';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -37,8 +36,7 @@ export class ForgotPasswordUseCase {
       return;
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const { raw: token, hashed: hashedToken } = issueEmailToken();
     const expires = new Date(Date.now() + 3600000); // 1 hour expiration
     await this.userRepository.setResetToken(normalizedEmail, hashedToken, expires);
 

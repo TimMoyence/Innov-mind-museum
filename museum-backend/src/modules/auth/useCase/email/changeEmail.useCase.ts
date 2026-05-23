@@ -1,10 +1,9 @@
-import crypto from 'node:crypto';
-
 import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildChangeEmailEmail } from '@shared/email/templates';
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { issueEmailToken } from '@shared/security/single-use-email-token';
 import { validateEmail } from '@shared/validation/email';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -42,8 +41,7 @@ export class ChangeEmailUseCase {
     }
 
     // 32-byte raw → hex; SHA-256 hash persisted (raw sent in email).
-    const token = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const { raw: token, hashed: hashedToken } = issueEmailToken();
     const expires = new Date(Date.now() + 3600000); // 1 hour
 
     await this.userRepository.setEmailChangeToken(userId, hashedToken, normalizedEmail, expires);

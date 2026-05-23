@@ -1,10 +1,9 @@
-import crypto from 'node:crypto';
-
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildVerifyEmail } from '@shared/email/templates';
 import { AppError, badRequest } from '@shared/errors/app.error';
 import { POLICY_VERSION } from '@shared/legal/policy-version';
 import { logger } from '@shared/logger/logger';
+import { issueEmailToken } from '@shared/security/single-use-email-token';
 import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
@@ -158,8 +157,7 @@ export class RegisterUseCase {
     locale: EmailLocale,
   ): Promise<void> {
     try {
-      const token = crypto.randomBytes(32).toString('hex');
-      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      const { raw: token, hashed: hashedToken } = issueEmailToken();
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await this.userRepository.setVerificationToken(userId, hashedToken, expires);
 
