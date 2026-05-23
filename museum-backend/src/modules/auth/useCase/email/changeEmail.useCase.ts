@@ -1,10 +1,9 @@
 import crypto from 'node:crypto';
 
-import bcrypt from 'bcrypt';
-
+import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildChangeEmailEmail } from '@shared/email/templates';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 
@@ -25,19 +24,7 @@ export class ChangeEmailUseCase {
     currentPassword: string,
     locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
   ): Promise<string> {
-    const user = await this.userRepository.getUserById(userId);
-    if (!user) {
-      throw notFound('User not found');
-    }
-
-    if (!user.password) {
-      throw badRequest('Cannot change email for social-only accounts');
-    }
-
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) {
-      throw badRequest('Current password is incorrect');
-    }
+    const user = await assertPasswordReauth(this.userRepository, userId, currentPassword);
 
     const normalizedEmail = newEmail.trim().toLowerCase();
 

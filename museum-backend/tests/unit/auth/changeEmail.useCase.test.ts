@@ -78,8 +78,9 @@ describe('ChangeEmailUseCase', () => {
     const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'wrongPass')).rejects.toMatchObject({
-      message: 'Current password is incorrect',
-      statusCode: 400,
+      message: 'Invalid credentials',
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
     });
   });
 
@@ -88,8 +89,9 @@ describe('ChangeEmailUseCase', () => {
     const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'anything')).rejects.toMatchObject({
-      message: 'Cannot change email for social-only accounts',
+      message: 'Cannot perform this action on a social-only account',
       statusCode: 400,
+      code: 'SOCIAL_ONLY_ACCOUNT',
     });
   });
 

@@ -1,10 +1,10 @@
 /**
  * PR-3 sentinel — structural anti-regression test.
  *
- * Asserts that the 4 auth use case files have adopted the `notFound()` helper
- * from `@shared/errors/app.error` instead of inline-instantiating an `AppError`
- * with `code: 'NOT_FOUND'`. The substitution is performed in the green phase of
- * RUN_ID 2026-05-23-pr-3-notFound-codemod.
+ * Asserts that the remaining PR-3 auth use case file has adopted the `notFound()`
+ * helper from `@shared/errors/app.error` instead of inline-instantiating an
+ * `AppError` with `code: 'NOT_FOUND'`. The substitution is performed in the
+ * green phase of RUN_ID 2026-05-23-pr-3-notFound-codemod.
  *
  * - Pre-codemod (red phase): FAILS — pattern present, import absent.
  * - Post-codemod (green phase): PASSES — pattern removed, import added.
@@ -16,6 +16,17 @@
  * The test reads the source files via `fs.readFileSync` (no runtime imports of
  * the use cases) so it cannot be neutralised by mocking. It is a pure
  * structural pattern check, not a behavioural test.
+ *
+ * Scope reduction 2026-05-23 (RUN_ID 2026-05-23-pr-9-assertPasswordReauth) —
+ * Originally targeted 4 files (changePassword, changeEmail, disableMfa,
+ * enrollMfa). PR-9 hoisted the password-reauth + user-lookup + 404 throw out
+ * of changePassword/changeEmail/disableMfa into a shared
+ * `assertPasswordReauth()` helper, so those three files no longer import
+ * `notFound` directly (the helper does). enrollMfa is the only remaining
+ * site that still issues a direct `notFound()` call after a user lookup
+ * (its flow has no password-reauth precondition, so PR-9 did not sweep it).
+ * TARGETS is therefore narrowed to `enrollMfa.useCase.ts` to keep the
+ * sentinel scoped to the actual post-PR-9 surface.
  */
 
 import * as fs from 'fs';
@@ -25,13 +36,14 @@ import * as path from 'path';
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 /**
- * The 4 PR-3 target files (paths relative to repo root). Hardcoded to keep the
- * sentinel narrowly scoped — explicit out-of-scope per spec §7.
+ * Remaining PR-3 target file (path relative to repo root). Hardcoded to keep
+ * the sentinel narrowly scoped — explicit out-of-scope per spec §7.
+ *
+ * Post-PR-9: changePassword/changeEmail/disableMfa now route their 404 throw
+ * through `assertPasswordReauth()`; enrollMfa is the only direct-import site
+ * left (no password-reauth precondition, helper not applicable).
  */
 const TARGETS: readonly string[] = [
-  'museum-backend/src/modules/auth/useCase/password/changePassword.useCase.ts',
-  'museum-backend/src/modules/auth/useCase/email/changeEmail.useCase.ts',
-  'museum-backend/src/modules/auth/useCase/totp/disableMfa.useCase.ts',
   'museum-backend/src/modules/auth/useCase/totp/enrollMfa.useCase.ts',
 ];
 

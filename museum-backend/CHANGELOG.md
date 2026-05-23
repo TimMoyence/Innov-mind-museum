@@ -4,6 +4,102 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-9 `assertPasswordReauth()` helper + sweep 3 useCases
+
+Run `2026-05-23-pr-9-assertPasswordReauth` — neuvième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet auth re-authentication). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **8.6/5** (loop-2 terminal, trajectory loop-1 7.5 CHANGES_REQUESTED → loop-2 8.6 APPROVED). Helper extraction sous `useCase/shared/` + sweep mécanique des 3 sites qui dupliquaient le triplet `getUserById → password-less guard → bcrypt.compare(currentPassword, …)`. **Security win** : statusCode wrong-password normalisé uniforme `401 INVALID_CREDENTIALS` sur les 3 sites (pré-PR-9 : `changePassword` + `changeEmail` retournaient `400 badRequest('Current password is incorrect')`, `disableMfa` retournait déjà `401 INVALID_CREDENTIALS`). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Helper coverage 100% (statements/branches/functions/lines). `pnpm jest --testPathPattern='tests/unit/auth/(pr3-notFound|assertPasswordReauth|change-password|changeEmail.useCase|mfa-flow)|tests/unit/architecture/pr9-'` → **49/49 PASS**. Reversibility : `git revert <sha>` restaure les 3 sites + helper + 4 red files + PR-3 sentinel TARGETS.
+
+### Added
+
+- **Helper `assertPasswordReauth(userRepository, userId, currentPassword): Promise<ReauthenticatedUser>`** — `museum-backend/src/modules/auth/useCase/shared/assertPasswordReauth.ts:30-55` (25 LOC body + 15 LOC JSDoc, 56 LOC total). Signature :
+  - Strict ordering invariant (FR-6, sentinel-tested) : `getUserById → null-guard → password-null-guard → bcrypt.compare`. Each guard `throw`-terminates avant la next step (no fallthrough, no log).
+  - **Fast-fail before `bcrypt.compare`** (FR-2 / NFR-2) : social-only accounts (user.password=null) trigger `400 SOCIAL_ONLY_ACCOUNT` AVANT toute crypto computation. Économise ~50ms CPU wasted + uniform timing post-load. Sentinel-tested via mock-call-count (T-U2 asserts `bcrypt.compare` was NOT invoked).
+  - Error matrix locked spec §6.2 + JSDoc :
+    - `user not found` → `404 NOT_FOUND ('User not found')` via `notFound()` factory.
+    - `user.password is null` → `400 SOCIAL_ONLY_ACCOUNT ('Cannot perform this action on a social-only account')` via direct `AppError` instantiation (single-site, no factory per design D-PLAN-2).
+    - `bcrypt.compare → false` → `401 INVALID_CREDENTIALS ('Invalid credentials')` via `unauthorized(message, code?)` (extended in PR-1).
+    - `bcrypt.compare throws` → propagated verbatim (no wrap, no message mutation, no leak — FR-5).
+  - No `logger` import in helper (NFR-3 verified). No `userId` in `error.details` (PII leak avoidance, NFR-3 verified).
+  - Single named export, no overloads, no options bag, no barrel (`useCase/shared/index.ts` does not exist — NFR-4 minimal-barrel honored).
+
+- **`ReauthenticatedUser` branded-type alias** — `museum-backend/src/modules/auth/useCase/shared/assertPasswordReauth.ts:13` (`User & { password: string }`). Narrowing-rationale documented JSDoc lines 9-12 : "After the password-less branch, `password` is provably non-null. Consumers that need the hash (e.g. `changePassword`'s `isSame` check) can skip the `!` non-null assertion thanks to this return type." Quiet KISS win not contemplated in spec §6.1 (which declared `Promise<User>`) — reviewer OBS-2 informational note, accepted. `changePassword:35` now reads `bcrypt.compare(newPassword, user.password)` with no `!` non-null assertion (TS-correct without the lie).
+
+- **New `SOCIAL_ONLY_ACCOUNT` error code** — unified phrasing `'Cannot perform this action on a social-only account'` ; statusCode `400` (input invariant violation, not auth failure). Replaces 3 divergent pre-PR-9 phrasings (`'Cannot change password for social-only accounts'`, `'Cannot change email for social-only accounts'`, `'Cannot disable MFA on a social-only account.'`). Discoverability + i18n future via single code (FE follow-up TD-FE-SOCIAL-ONLY-CODE opened post-merge).
+
+- **Unit test `museum-backend/tests/unit/auth/assertPasswordReauth.test.ts`** (5 cases T-U1..T-U5, sha256 `e8ba4a73a3b462e2…0afd480`, FROZEN) — exercises helper contract end-to-end :
+  1. **T-U1** `getUserById` returns null → 404 NOT_FOUND ; `bcrypt.compare` MUST NOT be called (FR-2 fast-fail asserted via mock-call-count).
+  2. **T-U2** user.password is null → 400 SOCIAL_ONLY_ACCOUNT ; `bcrypt.compare` MUST NOT be called.
+  3. **T-U3** `bcrypt.compare` resolves false → 401 INVALID_CREDENTIALS (asserts the 401 not legacy 400 — D1 normalization security win).
+  4. **T-U4** `bcrypt.compare` throws → propagated verbatim (helper does NOT wrap, MUST NOT mutate message).
+  5. **T-U5** happy path → returns `user` typed `ReauthenticatedUser` (compile-time narrowing assertion).
+  + helper coverage 100% (statements/branches/functions/lines).
+
+- **Architecture sentinel `museum-backend/tests/unit/architecture/pr9-assertPasswordReauth-helper-adoption.test.ts`** (9 assertions ×3 sites, sha256 `4f648302f2f08328…2352e9b85`, FROZEN) — **permanent regression guard**. Tourne dans le `pnpm test` gate existant. Assertions filesystem-based (regex scan, aucun import runtime des sites swept) :
+  - **Block 1** (3 assertions) : no `bcrypt.compare(currentPassword, …)` regex match in any of 3 swept files. `isSame` check in changePassword (`bcrypt.compare(newPassword, user.password)`) intentionally NOT matched (regex word-boundary anchored on `currentPassword`).
+  - **Block 2** (3 assertions) : literal `social-only` (case-insensitive) absent in any of 3 swept files — helper is single source of truth for that message.
+  - **Block 3** (3 assertions) : `import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth'` present in each swept file.
+  - **Frozen-test contract** : `red-test-manifest.json` FLAT `{path: sha256}` shape (per `feedback_team_frozen_manifest_flat.md`). Reviewer OBS-1 noted sentinel placed under `tests/unit/architecture/` instead of design §4.3 `tests/unit/auth/` — pragmatic alignment with PR-6/7/8 convention, accepted.
+
+### Changed
+
+**Sweep 3 useCase sites — inline `getUserById → password-null-guard → bcrypt.compare(currentPassword, …) → 4xx` triplet (3 throw branches inline) → `await assertPasswordReauth(this.userRepository, userId, currentPassword)`** :
+
+| # | Site                                                                                              | Pre-PR-9 inline triplet (LOC) | Post-PR-9 (LOC) | Imports dropped                                       |
+|---|---------------------------------------------------------------------------------------------------|-------------------------------|-----------------|--------------------------------------------------------|
+| 1 | `museum-backend/src/modules/auth/useCase/password/changePassword.useCase.ts:22-40`                | 15                            | 1               | `notFound` (kept `bcrypt` for `isSame` newPassword check) |
+| 2 | `museum-backend/src/modules/auth/useCase/email/changeEmail.useCase.ts:28-43`                      | 15                            | 1               | `bcrypt`, `notFound`                                  |
+| 3 | `museum-backend/src/modules/auth/useCase/totp/disableMfa.useCase.ts:18-38`                        | 20                            | 1               | `bcrypt`, `AppError`, `badRequest`, `notFound`        |
+
+Net source LOC ~−6 across the helper (+35) + the 3 swept sites (−41).
+
+**PR-3 sentinel TARGETS shrunk** (cross-PR sentinel collision fix loop-2 CR-1) :
+- `museum-backend/tests/unit/auth/pr3-notFound-helper-adoption.test.ts` — TARGETS array shrunk from 4 entries to 1 (`enrollMfa.useCase.ts` only). 9-line scope-reduction docblock prepended documenting : (a) PR-9 hoisted the password-reauth + user-lookup + 404 throw into shared helper, so 3 sites no longer directly import `notFound` (the helper does), (b) `enrollMfa` is the only remaining site with a direct `notFound()` call after user lookup (no password-reauth precondition, so PR-9 did not sweep it), (c) TARGETS narrowed to keep the sentinel scoped to the actual post-PR-9 surface. UFR-016 anti-magic doctrine honored — future readers find the WHY inline. **This edit is allowed because the PR-3 sentinel is NOT in PR-9 `red-test-manifest.json`** — frozen-test discipline does not gate the file.
+
+**2 existing-test updates** (sha256-locked in red-test-manifest, byte-identical pre/post-green) :
+- `museum-backend/tests/unit/auth/change-password.test.ts` L16-26 + L54-63 — wrong-password assertion bascule `statusCode:400, message:'Current password is incorrect'` → `statusCode:401, code:'INVALID_CREDENTIALS', message:'Invalid credentials'` ; social-only assertion bascule `message:'Cannot change password for social-only accounts'` → `message:'Cannot perform this action on a social-only account', code:'SOCIAL_ONLY_ACCOUNT'`.
+- `museum-backend/tests/unit/auth/changeEmail.useCase.test.ts` L75-85 + L87-96 — même bascule (wrong-password 400→401 + social-only unified phrasing).
+
+### Security note — statusCode 400 → 401 normalization
+
+**Wrong-password response code normalisé uniforme `401 INVALID_CREDENTIALS` sur les 3 sites swept.** État pré-PR-9 : matrix divergente.
+
+| Site                  | Pre-PR-9 wrong-password response                                       | Post-PR-9 wrong-password response                  |
+|-----------------------|-----------------------------------------------------------------------|----------------------------------------------------|
+| `changePassword`      | `400 badRequest('Current password is incorrect')` (NO code)           | `401 INVALID_CREDENTIALS ('Invalid credentials')`  |
+| `changeEmail`         | `400 badRequest('Current password is incorrect')` (NO code)           | `401 INVALID_CREDENTIALS ('Invalid credentials')`  |
+| `disableMfa`          | `401 INVALID_CREDENTIALS ('Invalid credentials')` (already correct)   | `401 INVALID_CREDENTIALS ('Invalid credentials')` (unchanged) |
+
+**Pourquoi 401 et pas 400 sur wrong-creds** : OWASP semantics — `400 Bad Request` = invariant violation on the request payload (e.g. malformed JSON, missing field), `401 Unauthorized` = identity proof failed. Wrong password IS identity-proof failure, not payload malformation. Aligns with `museum-backend/src/modules/auth/service/authSession.service.ts:100,105` (login unauthenticated paths already return 401) — the JWT-authenticated re-auth paths now match the unauthenticated-login path. Consistent across the entire auth surface.
+
+**API consumer impact** :
+- `museum-frontend/shared/lib/errors.ts` `authCodeMessage` switch DOIT handler `INVALID_CREDENTIALS` (déjà géré côté login) sur les endpoints `PATCH /auth/me/password` + `PATCH /auth/me/email` + `POST /auth/mfa/disable`. Pré-PR-9 le FE traitait probablement le 400 generic-message en fallback (cf. `feedback_check_configs_before_assuming.md` — verify, don't assume). FE follow-up `TD-FE-SOCIAL-ONLY-CODE` ouvert post-merge couvre aussi cette adoption.
+- `museum-frontend/shared/lib/errors.ts` `authCodeMessage` switch DOIT ajouter une arm `SOCIAL_ONLY_ACCOUNT` (i18n key + 7 locales) pour les social-only branches. Pré-PR-9 le FE recevait 3 phrasings divergents en `message` ; post-PR-9 le `code` discriminator est stable, i18n possible.
+- Smoke tests + e2e qui asserte `expect(status).toBe(400)` sur wrong-password sur ces 3 endpoints DOIVENT bumper à `401`. `pnpm smoke:api` à vérifier post-deploy.
+- OpenAPI spec `docs/openapi/auth.yaml` (responses table) — TD ouverte pour bumper la `4xx` table de ces 3 endpoints en cohérence avec le nouveau matrix. Cf. § Tech debt opened.
+
+### Process — 2 reviewer loops (CR-1 cross-PR sentinel collision)
+
+**Reviewer rejection loop UFR-022 = ILLIMITÉ**, cap-free, fresh re-spawn à la phase pointée.
+
+**Trajectory 2 loops** :
+- **Loop-1 (CHANGES_REQUESTED, weightedMean 7.5/5)** — 1 BLOCKER CR-1 (cross-PR sentinel collision : PR-3 sentinel pins `notFound` import on 3 sites PR-9 sweeps, 3/8 assertions FAIL). 3 informational observations (OBS-1 sentinel placement, OBS-2 `ReauthenticatedUser` not in spec, OBS-3 FE follow-up tracking). AC-19 violated.
+- **Loop-2 (APPROVED terminal, weightedMean 8.6/5)** — CR-1 RESOLVED via TARGETS shrink + scope-reduction docblock on `pr3-notFound-helper-adoption.test.ts`. Zero CR remaining. Honesty penalty -0.2 self-applied by reviewer for loop-1 architect oversight (cross-PR sentinel collision not enumerated in spec §8 risks).
+
+**Cross-PR sentinel collision (lesson learned)** :
+- Architect spec.md §8 risks did NOT enumerate the possibility that a swept site is pinned by a pre-existing sentinel from a sibling PR in the same series. PR-3 had already shipped (commit `5e93b82c5` upstream) and its sentinel was running in the global `pnpm test` gate. PR-9 spec enumerated `R4 (test files MUST-NOT-modify)` but listed only the PR-9-specific frozen tests, not the cross-PR ones.
+- Editor green-loop-1 ran `pnpm jest --testPathPattern='assertPasswordReauth|change-password|changeEmail|mfa-flow|pr9-'` — scoped pattern excluded `pr3-*`, so the regression was not caught.
+- Loop-2 fix : TARGETS shrink + 9-line scope-reduction docblock referencing PR-9 RUN_ID inline. Editor authorized because `pr3-notFound-helper-adoption.test.ts` is NOT in PR-9 `red-test-manifest.json` (FLAT 4 entries verified) — frozen-test discipline does not gate the edit.
+- **Lesson UFR-017** : when a sweep mechanically removes a primitive that was pinned by a sibling sentinel, the editor should grep `tests/unit/architecture/pr*-sentinel*.test.ts` + `tests/unit/auth/pr*-helper-adoption*.test.ts` for any sentinel TARGETING the swept files BEFORE declaring green. Add to spec checklist for PR-10..PR-16.
+- **Lesson UFR-022** : the `pnpm test` scope at green-phase MUST be unscoped (`pnpm test` full suite OR `pnpm jest --testPathPattern='auth/'` for an entire module) — narrow `--testPathPattern` patterns hide cross-PR regressions. AC-19 (`pnpm test` sans régression) is a project-wide assertion, not a scoped one.
+
+### Tech debt opened
+
+- **TD-FE-SOCIAL-ONLY-CODE** (V1, museum-frontend) — `museum-frontend/shared/lib/errors.ts` `authCodeMessage` switch ajouter arm `SOCIAL_ONLY_ACCOUNT` (i18n key `auth.errors.socialOnlyAccount` + 7 locales : FR/EN minimum, ar/de/es/it/ja/zh via translator-of-record post-launch). 1-line PR. Cf. design.md D-PLAN-3.
+- **TD-FE-INVALID-CREDENTIALS-CODE** (V1, museum-frontend) — `authCodeMessage` switch DOIT vérifier que `INVALID_CREDENTIALS` est handlé sur les 3 endpoints re-auth (probablement déjà via login fallback, mais à verify cf. `feedback_check_configs_before_assuming.md`). Grep `museum-frontend/features/auth` + `museum-frontend/features/settings` pour les call sites de ces 3 endpoints, assert chacun map `INVALID_CREDENTIALS` → user-friendly i18n message.
+- **TD-OPENAPI-AUTH-4XX-MATRIX** (V1, museum-backend) — `docs/openapi/auth.yaml` (ou équivalent) responses table pour `PATCH /auth/me/password`, `PATCH /auth/me/email`, `POST /auth/mfa/disable` — bumper `400 (Current password is incorrect)` → `401 INVALID_CREDENTIALS` + ajouter `400 SOCIAL_ONLY_ACCOUNT` arm. Run `pnpm openapi:validate` + `pnpm test:contract:openapi` après.
+- **TD-CROSS-PR-SENTINEL-CHECKLIST** (post-launch, doctrine) — extend `/team` editor green-phase checklist : "grep `tests/unit/architecture/pr*-sentinel*.test.ts` + `tests/unit/auth/pr*-helper-adoption*.test.ts` for any TARGETING the swept files. If found, either shrink TARGETS or re-scope describe block in same commit." Add to `.claude/agents/editor.md` system prompt.
+
+---
+
 ## [Unreleased] — 2026-05-23 — PR-8 `paginate(qb, params, mapper?)` helper + sweep 4 repos
 
 Run `2026-05-23-pr-8-paginate` — huitième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet offset-pagination). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **7.8/5** (loop-3 terminal, trajectory 6.5 → 7.4 → 7.8). Pure TypeScript helper extraction + sweep mécanique, `PaginatedResult<T>` field order `{data, total, page, limit, totalPages}` **byte-for-byte préservé**. Zéro changement de comportement runtime observable côté consommateurs (OpenAPI 200 contract identique, FE/web typed shape inchangée), zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Helper coverage 100% (statements/branches/functions/lines). `pnpm jest tests/unit/shared/pagination + tests/unit/architecture/pr8-paginate-sentinel.test.ts + tests/unit/review/review-repository.test.ts` → **38/38 PASS**. Reversibility : `git revert <sha>` restaure les 4 sweep sites + helper + marker support + mock fixtures.
