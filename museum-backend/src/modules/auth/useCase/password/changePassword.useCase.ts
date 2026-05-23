@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest, notFound } from '@shared/errors/app.error';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
@@ -21,7 +21,7 @@ export class ChangePasswordUseCase {
   async execute(userId: number, currentPassword: string, newPassword: string): Promise<void> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
+      throw notFound('User not found');
     }
 
     if (!user.password) {

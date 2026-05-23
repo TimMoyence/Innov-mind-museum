@@ -4,6 +4,26 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-3 codemod `notFound()` sur 4 sites auth/useCase
+
+Run `2026-05-23-pr-3-notFound-codemod` — third KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet `notFound`). Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED weightedMean **4.5/5**. Pure TypeScript refacto, wire-format 404 **byte-for-byte identique** (statusCode + `code:'NOT_FOUND'` + `message:'User not found'` + `details:undefined` + instance class `AppError` tous préservés). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump.
+
+### Changed
+
+- **PR-3** — 4 use cases du module `auth/` utilisent désormais le helper canonique `notFound(message, details?)` (`museum-backend/src/shared/errors/app.error.ts:45-52`, signature `(message: string, details?: unknown) => AppError`, force `statusCode=404` + `code='NOT_FOUND'`) au lieu de réinventer le pattern inline `throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });`. Sites codemodés :
+  - `museum-backend/src/modules/auth/useCase/email/changeEmail.useCase.ts:30` — `ChangeEmailUseCase.execute` (user-not-found pré-bcrypt reauth).
+  - `museum-backend/src/modules/auth/useCase/password/changePassword.useCase.ts:24` — `ChangePasswordUseCase.execute` (idem).
+  - `museum-backend/src/modules/auth/useCase/totp/disableMfa.useCase.ts:22` — `DisableMfaUseCase.execute` (idem, pré-vérif `INVALID_CREDENTIALS`).
+  - `museum-backend/src/modules/auth/useCase/totp/enrollMfa.useCase.ts:34` — `EnrollMfaUseCase.execute` (idem, pré-vérif `MFA_ALREADY_ENROLLED`).
+
+  Imports `AppError` retirés de 2 fichiers (`changeEmail.useCase.ts`, `changePassword.useCase.ts` — plus aucun usage résiduel), conservés sur 2 fichiers (`disableMfa.useCase.ts` L32 `INVALID_CREDENTIALS` 401 ; `enrollMfa.useCase.ts` L39 `MFA_ALREADY_ENROLLED` 409). Helpers nommés `badRequest`/`notFound` ajoutés en ordre alphabétique dans la named-import body. Diff `+8 / -8` lignes sur 4 fichiers source, exactement au budget NFR-5 annoncé.
+
+  Wire-format 404 mathématiquement et empiriquement préservé : helper single-arg `notFound('User not found')` construit `new AppError({ message:'User not found', details:undefined, statusCode:404, code:'NOT_FOUND' })` — byte-for-byte équivalent à l'inline (où `details` était également `undefined`). Tests existants `change-password.test.ts`, `changeEmail.useCase.test.ts`, `mfa-flow.e2e.test.ts` PASS unmodifiés (NFR-1 vérifié empiriquement). Auth unit suite `tests/unit/auth` : **72 suites, 735 tests, all PASS** post-codemod. `pnpm lint` exit 0.
+
+### Added
+
+- Nouveau test sentinel `museum-backend/tests/unit/auth/pr3-notFound-helper-adoption.test.ts` (86 lignes, 8 assertions structurelles) — empêche la régression du pattern inline 404 "User not found" à l'avenir. Couvre par fichier : (a) absence du pattern `new AppError({ ..., code:'NOT_FOUND', ... })` inline (regex `INLINE_NOT_FOUND_PATTERN`, tolère single/double quotes + clés réordonnées), (b) présence de l'import `notFound` from `@shared/errors/app.error` (parsing named-import body pour éviter faux-positifs commentaires). Test FAIL au HEAD pre-codemod (pattern présent), PASS post-codemod (0 inline restant). Frozen-test contract : `red-test-manifest.json` sha256 (`546c7fe6923f0d21df39c10ea38b8f3d9b5bb8ed71a1fe5f526709ebf0791caf`) UNCHANGED entre phases red et green — éditeur n'a pas self-modifié le test manifesté. Sanity-check repo-wide : `rg "new AppError\(\s*\{[^}]*code:\s*['\"]NOT_FOUND['\"]" museum-backend/src` → **0 hits** post-codemod (clean repo-wide, aucun site `NOT_FOUND` inline résiduel hors scope).
+
 ## [Unreleased] — 2026-05-23 — PR-2 codemod `requireUser(req)` sur 7 sites chat/
 
 Run `2026-05-23-pr-2-requireUser-codemod` — second KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH #3. Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED. Pure TypeScript refacto, wire-format 401 strict equivalent (statusCode + `code:'UNAUTHORIZED'` inchangés, seul le `message` text passe `'Token required'` → `'Authentication required'` — discrimination FE/web se fait sur `code` machine-lisible). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump.

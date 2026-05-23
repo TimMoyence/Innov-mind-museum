@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildChangeEmailEmail } from '@shared/email/templates';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
 
@@ -27,7 +27,7 @@ export class ChangeEmailUseCase {
   ): Promise<string> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
+      throw notFound('User not found');
     }
 
     if (!user.password) {

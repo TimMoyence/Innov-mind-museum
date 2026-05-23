@@ -1,4 +1,4 @@
-import { AppError } from '@shared/errors/app.error';
+import { AppError, notFound } from '@shared/errors/app.error';
 
 import { generateRecoveryCodes } from './recoveryCodes';
 import { encryptTotpSecret } from './totpEncryption';
@@ -31,7 +31,7 @@ export class EnrollMfaUseCase {
   async execute(userId: number): Promise<EnrollMfaResult> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
+      throw notFound('User not found');
     }
 
     const existing = await this.totpRepository.findByUserId(userId);

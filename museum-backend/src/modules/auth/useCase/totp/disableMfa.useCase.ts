@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest, notFound } from '@shared/errors/app.error';
 
 import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -19,7 +19,7 @@ export class DisableMfaUseCase {
   async execute(userId: number, currentPassword: string): Promise<void> {
     const user = await this.userRepository.getUserById(userId);
     if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
+      throw notFound('User not found');
     }
     if (!user.password) {
       // Social-only accounts can't reauth via password — intentional dead-end
