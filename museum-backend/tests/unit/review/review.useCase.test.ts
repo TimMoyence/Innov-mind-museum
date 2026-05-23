@@ -185,7 +185,7 @@ describe('ListAllReviewsUseCase', () => {
 // ─── ModerateReviewUseCase ──────────────────────────────────────────
 
 describe('ModerateReviewUseCase', () => {
-  const makeAuditSpy = () => ({ log: jest.fn() });
+  const makeAuditSpy = () => ({ log: jest.fn(), logActorAction: jest.fn() });
 
   it('approves a review', async () => {
     const repo = makeFakeRepo();
@@ -206,7 +206,7 @@ describe('ModerateReviewUseCase', () => {
     await expect(
       uc.execute({ reviewId: fakeReview.id, status: 'invalid', actorId: 7 }),
     ).rejects.toThrow('status');
-    expect(audit.log).not.toHaveBeenCalled();
+    expect(audit.logActorAction).not.toHaveBeenCalled();
   });
 
   it('throws not found when review does not exist (pre-check)', async () => {
@@ -218,7 +218,7 @@ describe('ModerateReviewUseCase', () => {
       uc.execute({ reviewId: 'missing-id', status: 'approved', actorId: 7 }),
     ).rejects.toThrow('not found');
     expect(repo.moderateReview).not.toHaveBeenCalled();
-    expect(audit.log).not.toHaveBeenCalled();
+    expect(audit.logActorAction).not.toHaveBeenCalled();
   });
 
   it('throws not found when update affects zero rows', async () => {
@@ -229,7 +229,7 @@ describe('ModerateReviewUseCase', () => {
     await expect(
       uc.execute({ reviewId: fakeReview.id, status: 'approved', actorId: 7 }),
     ).rejects.toThrow('not found');
-    expect(audit.log).not.toHaveBeenCalled();
+    expect(audit.logActorAction).not.toHaveBeenCalled();
   });
 
   it('emits an ADMIN_REVIEW_MODERATED audit log with before/after state', async () => {
@@ -245,10 +245,9 @@ describe('ModerateReviewUseCase', () => {
       requestId: '11111111-2222-3333-4444-555555555555',
     });
 
-    expect(audit.log).toHaveBeenCalledTimes(1);
-    expect(audit.log).toHaveBeenCalledWith({
+    expect(audit.logActorAction).toHaveBeenCalledTimes(1);
+    expect(audit.logActorAction).toHaveBeenCalledWith({
       action: 'ADMIN_REVIEW_MODERATED',
-      actorType: 'user',
       actorId: 42,
       targetType: 'review',
       targetId: fakeReview.id,
@@ -346,7 +345,7 @@ describe('ModerateReviewUseCase', () => {
       await flushPromises();
 
       expect(result.status).toBe('approved');
-      expect(audit.log).toHaveBeenCalledTimes(1);
+      expect(audit.logActorAction).toHaveBeenCalledTimes(1);
     });
 
     it('does not notify when the update resolves to a non-terminal status', async () => {

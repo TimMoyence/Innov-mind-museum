@@ -54,7 +54,10 @@ const makeRepo = (
     ...overrides,
   }) as jest.Mocked<IReviewRepository>;
 
-const makeAudit = (): { log: jest.Mock } => ({ log: jest.fn() });
+const makeAudit = (): { log: jest.Mock; logActorAction: jest.Mock } => ({
+  log: jest.fn(),
+  logActorAction: jest.fn(),
+});
 
 const flushPromises = async (): Promise<void> => {
   // Two ticks: one for fireAndForget's promise.catch, one for the inner async lookup
@@ -261,7 +264,7 @@ describe('ModerateReviewUseCase — mutation kills', () => {
     await flushPromises();
 
     expect(result.status).toBe('approved');
-    expect(audit.log).toHaveBeenCalledTimes(1);
+    expect(audit.logActorAction).toHaveBeenCalledTimes(1);
     // Mutant `if (false)` would skip the warn+return → execution continues
     // and `author.notifyOnReviewModeration` throws → fireAndForget logs
     // 'fire_and_forget_failed'. The original must NOT trip that path.

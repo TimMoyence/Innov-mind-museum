@@ -54,15 +54,14 @@ export class DeleteUserUseCase {
 
     await this.refreshTokenRepository.revokeAllForUser(input.userId);
 
-    await auditService.log({
+    await auditService.logActorAction({
       action: AUDIT_ADMIN_USER_DELETED,
-      actorType: 'user',
       actorId: input.actorId,
       targetType: 'user',
       targetId: String(input.userId),
       metadata: { targetEmail: deleted.email, targetRole: deleted.role },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     return deleted;

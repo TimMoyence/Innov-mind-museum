@@ -35,6 +35,7 @@ interface TicketsRepoSpy {
 
 interface AuditSpy {
   log: jest.Mock;
+  logActorAction: jest.Mock;
 }
 
 /** Spec-shaped contract pin — green-code-agent ships the production type. */
@@ -75,7 +76,10 @@ describe('ExportReviewsUseCase (R2 R2 / R4 / R18 / Q1 BLOCKER)', () => {
 
   beforeEach(() => {
     repo = { streamReviews: jest.fn(() => makeIter([makeExportReviewRow()])) };
-    audit = { log: jest.fn().mockResolvedValue(undefined) };
+    audit = {
+      log: jest.fn().mockResolvedValue(undefined),
+      logActorAction: jest.fn().mockResolvedValue(undefined),
+    };
     useCase = new (ExportReviewsUseCase as new (r: ReviewsRepoSpy, a: AuditSpy) => ReviewsUC)(
       repo,
       audit,
@@ -90,7 +94,7 @@ describe('ExportReviewsUseCase (R2 R2 / R4 / R18 / Q1 BLOCKER)', () => {
     });
     const rows = await collect(iter);
     expect(rows.length).toBeGreaterThanOrEqual(1);
-    expect(audit.log).toHaveBeenCalledWith(
+    expect(audit.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_ADMIN_EXPORT_REVIEWS,
         metadata: expect.objectContaining({ kind: 'reviews' }),
@@ -153,7 +157,10 @@ describe('ExportSupportTicketsUseCase (R2 R3 / R4 / R19 / Q1 BLOCKER)', () => {
 
   beforeEach(() => {
     repo = { streamSupportTickets: jest.fn(() => makeIter([makeExportTicketRow()])) };
-    audit = { log: jest.fn().mockResolvedValue(undefined) };
+    audit = {
+      log: jest.fn().mockResolvedValue(undefined),
+      logActorAction: jest.fn().mockResolvedValue(undefined),
+    };
     useCase = new (ExportSupportTicketsUseCase as new (
       r: TicketsRepoSpy,
       a: AuditSpy,
@@ -168,7 +175,7 @@ describe('ExportSupportTicketsUseCase (R2 R3 / R4 / R19 / Q1 BLOCKER)', () => {
     });
     const rows = await collect(iter);
     expect(rows.length).toBeGreaterThanOrEqual(1);
-    expect(audit.log).toHaveBeenCalledWith(
+    expect(audit.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_ADMIN_EXPORT_TICKETS,
         metadata: expect.objectContaining({ kind: 'tickets' }),
@@ -227,7 +234,7 @@ describe('ExportSupportTicketsUseCase (R2 R3 / R4 / R19 / Q1 BLOCKER)', () => {
       museumScope: null,
     });
     await collect(iter);
-    const firstCall = audit.log.mock.calls[0] as unknown[];
+    const firstCall = audit.logActorAction.mock.calls[0] as unknown[];
     const entry = firstCall[0] as { metadata?: Record<string, unknown> };
     expect(JSON.stringify(entry.metadata ?? {})).not.toContain('My-Secret-Subject');
   });

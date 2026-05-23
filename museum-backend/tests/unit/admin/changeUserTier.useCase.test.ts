@@ -28,7 +28,7 @@ import { makeAdminRepo } from '../../helpers/admin/repo.fixtures';
 // The mock keeps both observable for assertion. The constant value
 // 'ADMIN_USER_TIER_CHANGED' is pinned by Appendix A of R1.md.
 jest.mock('@shared/audit', () => ({
-  auditService: { log: jest.fn() },
+  auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_USER_TIER_CHANGED: 'ADMIN_USER_TIER_CHANGED',
 }));
 
@@ -97,10 +97,9 @@ describe('ChangeUserTierUseCase (R1 §1 R14/R16/R17 + N3)', () => {
 
     // R1 §3.5 D5 + N3 — audit row with `{ from, to }` metadata, after the
     // mutation resolves, before the use case returns.
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_ADMIN_USER_TIER_CHANGED,
-        actorType: 'user',
         actorId: 99,
         targetType: 'user',
         targetId: '5',
@@ -126,7 +125,7 @@ describe('ChangeUserTierUseCase (R1 §1 R14/R16/R17 + N3)', () => {
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
 
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
     const repoSpy = (repo as unknown as { changeUserTier: jest.Mock }).changeUserTier;
     expect(repoSpy).not.toHaveBeenCalled();
   });
@@ -143,7 +142,7 @@ describe('ChangeUserTierUseCase (R1 §1 R14/R16/R17 + N3)', () => {
 
     const result = await uc.execute({ userId: 7, newTier: 'premium', actorId: 99 });
     expect(result).toBe(previous);
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
     const repoSpy = (repo as unknown as { changeUserTier: jest.Mock }).changeUserTier;
     expect(repoSpy).not.toHaveBeenCalled();
   });
@@ -160,7 +159,7 @@ describe('ChangeUserTierUseCase (R1 §1 R14/R16/R17 + N3)', () => {
     await expect(
       uc.execute({ userId: 999, newTier: 'premium', actorId: 99 }),
     ).rejects.toMatchObject({ statusCode: 404 });
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
   });
 
   // ── N3 — audit ordering ──────────────────────────────────────────────
@@ -169,7 +168,7 @@ describe('ChangeUserTierUseCase (R1 §1 R14/R16/R17 + N3)', () => {
     const previous = makeUser({ id: 11, tier: 'free' });
     const updated = makeUser({ id: 11, tier: 'premium' });
     const order: string[] = [];
-    (auditService.log as jest.Mock).mockImplementation(async () => {
+    (auditService.logActorAction as jest.Mock).mockImplementation(async () => {
       order.push('audit');
     });
     const repo = makeAdminRepo({

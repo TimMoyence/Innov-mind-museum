@@ -32,6 +32,7 @@ interface ExportRepoSpy {
 
 interface AuditSpy {
   log: jest.Mock;
+  logActorAction: jest.Mock;
 }
 
 /** Spec-shaped contract pin — green-code-agent ships the production type. */
@@ -73,7 +74,10 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
     repo = {
       streamChatSessions: jest.fn(() => makeAsyncIter([makeExportSessionRow()])),
     };
-    audit = { log: jest.fn().mockResolvedValue(undefined) };
+    audit = {
+      log: jest.fn().mockResolvedValue(undefined),
+      logActorAction: jest.fn().mockResolvedValue(undefined),
+    };
     useCase = new (ExportChatSessionsUseCase as new (
       r: ExportRepoSpy,
       a: AuditSpy,
@@ -151,11 +155,10 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
       museumScope: null,
     });
     await collect(iter);
-    expect(audit.log).toHaveBeenCalledTimes(1);
-    expect(audit.log).toHaveBeenCalledWith(
+    expect(audit.logActorAction).toHaveBeenCalledTimes(1);
+    expect(audit.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: AUDIT_ADMIN_EXPORT_SESSIONS,
-        actorType: 'user',
         actorId: 1,
         metadata: expect.objectContaining({
           kind: 'sessions',
@@ -167,7 +170,7 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
 
   it('audit.log is awaited BEFORE the first row is yielded (N6 / AC10)', async () => {
     const order: string[] = [];
-    audit.log.mockImplementation(async () => {
+    audit.logActorAction.mockImplementation(async () => {
       order.push('audit');
     });
     repo.streamChatSessions.mockImplementation(() => ({
@@ -192,7 +195,7 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
       museumScope: null,
     });
     await collect(iter);
-    const firstCall = audit.log.mock.calls[0] as unknown[];
+    const firstCall = audit.logActorAction.mock.calls[0] as unknown[];
     const entry = firstCall[0] as { metadata?: Record<string, unknown> };
     const serialised = JSON.stringify(entry.metadata ?? {});
     expect(serialised).not.toContain('Loved the visit');

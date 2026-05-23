@@ -2,6 +2,7 @@ import { AUDIT_ADMIN_EXPORT_TICKETS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 
 import type { ExportInput, ExportRowTicket } from '@modules/admin/domain/export/csv-export.types';
+import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
 /** Tickets are unscoped (Q1 BLOCKER: no `museum_id` column). */
@@ -11,6 +12,7 @@ export interface ExportTicketsRepository {
 
 export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;
+  logActorAction(input: LogActorActionInput): Promise<void>;
 }
 
 /**
@@ -34,9 +36,8 @@ export class ExportSupportTicketsUseCase {
       throw forbidden('Tickets export is restricted to super_admin');
     }
 
-    await this.audit.log({
+    await this.audit.logActorAction({
       action: AUDIT_ADMIN_EXPORT_TICKETS,
-      actorType: 'user',
       actorId: input.actorId,
       metadata: {
         kind: 'tickets',

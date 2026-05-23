@@ -6,7 +6,7 @@ import { makeAdminRepo } from '../../../helpers/admin/repo.fixtures';
 
 // Mock the audit service module
 jest.mock('@shared/audit', () => ({
-  auditService: { log: jest.fn() },
+  auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_ROLE_CHANGE: 'ADMIN_ROLE_CHANGE',
 }));
 
@@ -130,10 +130,9 @@ describe('ChangeUserRoleUseCase', () => {
       requestId: 'req-abc',
     });
 
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'ADMIN_ROLE_CHANGE',
-        actorType: 'user',
         actorId: 99,
         targetType: 'user',
         targetId: '1',
@@ -154,7 +153,7 @@ describe('ChangeUserRoleUseCase', () => {
       statusCode: 404,
     });
 
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
   });
 
   it('throws 404 when user does not exist', async () => {

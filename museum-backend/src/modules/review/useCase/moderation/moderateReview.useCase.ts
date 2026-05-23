@@ -29,7 +29,7 @@ export interface ModerateReviewUseCaseInput {
 const MODERATION_STATUSES: ReviewStatus[] = ['approved', 'rejected'];
 
 export interface ModerateReviewUseCaseDeps {
-  audit?: Pick<AuditService, 'log'>;
+  audit?: Pick<AuditService, 'log' | 'logActorAction'>;
   notifier?: ReviewModerationNotifier;
   authorLookup?: ReviewAuthorLookup;
 }
@@ -40,13 +40,13 @@ export interface ModerateReviewUseCaseDeps {
  * best-effort: a failed email must NOT fail the moderation (ADR-notifications-best-effort).
  */
 export class ModerateReviewUseCase {
-  private readonly audit: Pick<AuditService, 'log'>;
+  private readonly audit: Pick<AuditService, 'log' | 'logActorAction'>;
   private readonly notifier?: ReviewModerationNotifier;
   private readonly authorLookup?: ReviewAuthorLookup;
 
   constructor(
     private readonly repository: IReviewRepository,
-    depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log'> = {},
+    depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log' | 'logActorAction'> = {},
   ) {
     // Back-compat: accept either a full deps object OR a bare audit stub (existing tests).
     const deps: ModerateReviewUseCaseDeps =
@@ -75,9 +75,8 @@ export class ModerateReviewUseCase {
       throw notFound('Review not found');
     }
 
-    await this.audit.log({
+    await this.audit.logActorAction({
       action: AUDIT_ADMIN_REVIEW_MODERATED,
-      actorType: 'user',
       actorId: input.actorId,
       targetType: 'review',
       targetId: input.reviewId,
@@ -85,8 +84,8 @@ export class ModerateReviewUseCase {
         beforeStatus: before.status,
         afterStatus: updated.status,
       },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     this.scheduleAuthorNotification(updated);

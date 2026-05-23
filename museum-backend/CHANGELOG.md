@@ -4,6 +4,134 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-7 `logActorAction` helper + sweep 12 useCases
+
+Run `2026-05-23-pr-7-logActorAction` — seventh incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B9.md` HIGH #2 (12 sites dupliquant inline `actorType:'user'` + `ip ?? null` + `requestId ?? null` autour de `auditService.log(...)`). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **4.71/5** (raw 4.78, -0.07 process haircut pour mechanical first-pass lapse F-1). Pure TypeScript helper extraction + sweep mécanique, wire-format **byte-for-byte identique** (R3 proven structurally par `computeRowHash` payload exclusion). Zéro changement de comportement runtime observable, zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Net diff `+152 / -103` (helper +45 LOC + 8 unit + 60 sentinel + 11 test refresh − 12 sweep targets en net negative). Reversibility : `git revert <sha>` restaure les 12 sites + helper (pure code refacto, no migration, no consumer-visible API surface change).
+
+### Added
+
+- **Helper `AuditService.logActorAction(input: LogActorActionInput): Promise<void>`** — `museum-backend/src/shared/audit/audit.service.ts:157-168` (18 LOC code, cap NFR-2 respected). Signature : `LogActorActionInput` (lignes 31-39) **omits `actorType`** au TYPE level → compile-time TS2353 si caller tente `{actorType:'system'}` (AC4 locked par `@ts-expect-error` dans `logActorAction.test.ts:209`). Comportement :
+  - Force `actorType` au littéral `'user'` (jamais dérivé de l'input — value proposition du helper).
+  - Null-coerce `ip` (`input.ip ?? null`) et `requestId` (`input.requestId ?? null`) au boundary du helper.
+  - Pass-through verbatim `action`, `actorId` (required, jamais optionnel — actor-action par définition), `targetType?`, `targetId?`, `metadata?`.
+  - Délègue à `this.log(...)` — donc hérite du `BREACH_EVENT_SET` guard (`audit.service.ts:81-88` : si `action.startsWith('breach_')`, redirige vers `auditCriticalSecurityEvent`, ne `repository.insert` PAS).
+  - Hérite du repo-error swallow pattern (`logger.error('audit_log_failed', …)` — ne throw jamais).
+  - JSDoc concise + référence `{@link AuditService.log}`.
+
+- **Type-only barrel export `LogActorActionInput`** — `museum-backend/src/shared/audit/index.ts:21`. Aucun runtime export nouveau (NFR-7 minimal-barrel respected) — `AuditService` classe déjà exportée, méthode dispo via instance.
+
+- **Unit test `museum-backend/tests/unit/shared/audit/logActorAction.test.ts`** (8 cases, sha256 `0a70685011a6ea3244d3c0be44b0e9566ad87fd9303aeaeb1637142667024cf9`, FROZEN) — exercise helper contract end-to-end :
+  1. Forces `actorType:'user'` regardless of caller hint.
+  2. Null-coerce `ip` si `undefined`.
+  3. Null-coerce `requestId` si `undefined`.
+  4. Pass-through `ip` string verbatim.
+  5. Pass-through `requestId` string verbatim.
+  6. Pass-through `targetType`/`targetId`/`metadata` verbatim.
+  7. BREACH guard inherited (`action:'breach_unauthorized_access'` → `repository.insert` NOT called, logger warn fires).
+  8. Repo error swallowed (`logActorAction` resolves, ne reject pas).
+  + ligne 209 : `@ts-expect-error` + `audit.logActorAction({ ...base, actorType: 'system' } as never)` — locked compile-time exclusion (AC4).
+
+- **Architecture sentinel `museum-backend/tests/unit/architecture/pr7-logActorAction-sentinel.test.ts`** (60 cases via `it.each` × 5 invariants × 12 sites, sha256 `d3f38c6129d63bc845e616adfcd8385cd11b7f22630741ef41e51a5b6c296d89`, FROZEN) — **permanent regression guard**. Tourne dans le `pnpm test` gate existant. Assertions filesystem-based (grep + regex, aucun import runtime des sites swept) :
+  1. Absence `actorType:\s*'user'` inline sur chacun des 12 sites.
+  2. Absence `ip:\s*input\.ip\s*\?\?\s*null` inline sur chacun des 12 sites.
+  3. Absence `requestId:\s*input\.requestId\s*\?\?\s*null` inline sur chacun des 12 sites.
+  4. Absence `\b(auditService|this\.audit)\.log\(` audit-call literal sur chacun des 12 sites (regex écarte délibérément les interface declarations).
+  5. Présence `.logActorAction(` appel sur chacun des 12 sites.
+
+  **Frozen-test contract** : `red-test-manifest.json` FLAT `{path: sha256}` shape (per `feedback_team_frozen_manifest_flat.md`). sha256 des 2 red files byte-identical pre/post-green via `shasum -a 256`.
+
+### Changed
+
+**Sweep 12 useCases — `auditService.log({actorType:'user', ..., ip: input.ip ?? null, requestId: input.requestId ?? null})` → `auditService.logActorAction({...})`** :
+
+| # | Site                                                                                                  | Variant                                                       |
+|---|-------------------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+| 1 | `museum-backend/src/modules/admin/useCase/users/suspendUser.useCase.ts`                               | direct `auditService.log`                                     |
+| 2 | `museum-backend/src/modules/admin/useCase/users/unsuspendUser.useCase.ts`                             | direct `auditService.log`                                     |
+| 3 | `museum-backend/src/modules/admin/useCase/users/changeUserRole.useCase.ts`                            | direct `auditService.log`                                     |
+| 4 | `museum-backend/src/modules/admin/useCase/users/changeUserTier.useCase.ts`                            | direct `auditService.log`                                     |
+| 5 | `museum-backend/src/modules/admin/useCase/users/deleteUser.useCase.ts`                                | direct `auditService.log`                                     |
+| 6 | `museum-backend/src/modules/admin/useCase/reports/resolveReport.useCase.ts`                           | direct `auditService.log`                                     |
+| 7 | `museum-backend/src/modules/admin/useCase/export/exportReviews.useCase.ts`                            | DI `ExportAuditService` (widening `logActorAction`)            |
+| 8 | `museum-backend/src/modules/admin/useCase/export/exportSupportTickets.useCase.ts`                     | DI `ExportAuditService` (widening `logActorAction`)            |
+| 9 | `museum-backend/src/modules/admin/useCase/export/exportChatSessions.useCase.ts`                       | DI `ExportAuditService` (widening `logActorAction`)            |
+| 10| `museum-backend/src/modules/support/useCase/ticket-user/createTicket.useCase.ts`                      | direct `auditService.log`                                     |
+| 11| `museum-backend/src/modules/support/useCase/ticket-admin/updateTicketStatus.useCase.ts`               | direct `auditService.log`                                     |
+| 12| `museum-backend/src/modules/review/useCase/moderation/moderateReview.useCase.ts`                      | DI `Pick<AuditService,'log'>` → `Pick<AuditService,'log'\|'logActorAction'>` widening |
+
+**DI narrowed interfaces widened en lockstep** :
+- `ExportAuditService` interface (3 export use cases) : kept `log()` AND added `logActorAction(input: LogActorActionInput): Promise<void>` (design §2.6.1).
+- `moderateReview.useCase.ts:32` : `Pick<AuditService, 'log'>` → `Pick<AuditService, 'log' | 'logActorAction'>` (design §2.6.2).
+
+**11 fichiers test refresh** — DI fakes `{ log: jest.fn() }` → `{ log: jest.fn(), logActorAction: jest.fn() }` + assertions retargetées `audit.log` → `audit.logActorAction` (sites swept) :
+- `museum-backend/tests/unit/admin/changeUserRole.useCase.test.ts`
+- `museum-backend/tests/unit/admin/changeUserTier.useCase.test.ts`
+- `museum-backend/tests/unit/admin/user-lifecycle.useCase.test.ts` (suspend/unsuspend/delete)
+- `museum-backend/tests/unit/admin/resolveReport.useCase.test.ts`
+- `museum-backend/tests/unit/admin/export/exportReviewsTickets.useCase.test.ts`
+- `museum-backend/tests/unit/admin/export/exportSessions.useCase.test.ts`
+- `museum-backend/tests/unit/support/createTicket.useCase.test.ts`
+- `museum-backend/tests/unit/support/updateTicketStatus.useCase.test.ts`
+- `museum-backend/tests/unit/support/updateTicketStatus.useCase.mutation.test.ts`
+- `museum-backend/tests/unit/review/review.useCase.test.ts` (6/6 sites retargeted including le F-1 patch ligne 348)
+- `museum-backend/tests/unit/review/moderateReview.mutants.test.ts`
+
+### Process — BLOCK-TEST-WRONG re-spawn + reviewer rejection loop (UFR-022 textbook)
+
+Le **first green pass** a missed l'assertion `review.useCase.test.ts:348` (`expect(audit.log).toHaveBeenCalledTimes(1)` non-retargeted — 5/6 sites du fichier corrects, ligne 348 oubliée). Mécanique lapse, pas structural defect.
+
+Le **reviewer first-pass** a flaggé **F-1 BLOCKING** (verdict CHANGES_REQUESTED) — l'assertion compile et passe (`audit.log` est toujours `jest.fn()` dans le fake), mais elle teste un appel-fantôme inexistant (la prod call est devenue `auditService.logActorAction(...)`).
+
+**Nuance UFR-022 BLOCK-TEST-WRONG** : le test n'était PAS buggé par construction, il était devenu **stale** après le sweep. Le reviewer a correctement classé F-1 comme BLOCKING et déclenché **fresh green re-spawn** (pas red — car `review.useCase.test.ts` n'est PAS dans `red-test-manifest.json`, c'est un existing test refresh hors scope frozen).
+
+Le **fresh green re-spawn** a appliqué un **patch byte-minimal d'1 ligne** :
+- ligne 348 avant : `expect(audit.log).toHaveBeenCalledTimes(1);`
+- ligne 348 après : `expect(audit.logActorAction).toHaveBeenCalledTimes(1);`
+
+Net diff F-1 patch : -1 ligne / +1 ligne. Aucun scope drift, aucun collateral edit. Frozen-test contract intact (les 2 red files sha256 byte-identical au manifest).
+
+**Reviewer second pass : APPROVED weightedMean 4.71/5** (raw 4.78, -0.07 process haircut pour le first-pass F-1 lapse).
+
+**Reviewer rejection loop UFR-022 = ILLIMITÉ**, cap-free, fresh re-spawn à la phase pointée — fonctionnement-as-designed. Cap 2 corrective loops applicable UNIQUEMENT aux fails de hooks intra-phase (lint/tsc/test dans la même phase éditeur), JAMAIS aux verdicts reviewer.
+
+### Wire-format proof (SOC2/GDPR audit trail)
+
+R3 (chain hash identity) trivially holds par **inspection structurelle** :
+- `museum-backend/src/shared/audit/audit-chain.ts:48-57` `computeRowHash()` payload tuple = `[id, actorId, action, targetType, targetId, metadataJson, createdAt, prevHash]`.
+- **NE contient PAS** `actorType`, `ip`, ni `requestId`.
+- Forcing `actorType:'user'` literal + null-coercing `undefined → null` sur `ip`/`requestId` au boundary helper sont **provably hash-invariant by construction**.
+- `museum-backend/src/data/db/postgres/audit.repository.pg.ts:99,104-105` null-normalise déjà au DB-row boundary (defense-in-depth confirmed — helper-level coercion est redondant mais self-documenting).
+
+`tests/unit/audit/audit-chain.test.ts` green post-sweep → zéro régression chain integrity. Pas de migration DB. Pas d'altération du wire format. Tous les `audit_logs` post-PR-7 ont byte-identical `actorType='user'`/`ip`/`request_id` columns vs pré-PR-7.
+
+### Doctrine adherence
+
+- **UFR-013** (honesty, verify-before-claim) ✅ — wire-format proof structurel cité ligne par ligne (`computeRowHash` payload tuple inspection), AC11 sentinel exhaustif sur 12 sites × 5 invariants = 60 cases, F-1 first-pass lapse documenté ouvertement (pas silent skip), 27 autres `actorType:'user'` literals scope-out documentés en `design.md §3` au lieu d'être enterrés silencieusement.
+- **UFR-016** (helper extraction propre, pas `@deprecated` wrapper) ✅ — le helper REPLACE `log()` au site swept, ne wrappe pas. `log()` reste seul point d'entrée pour `system`/`anonymous` actors (R6).
+- **UFR-022** (fresh-context 5-phase + frozen-test) ✅ — sha256 des 2 red files match manifest byte-for-byte (`0a706850…` + `d3f38c61…`), fresh-context end-to-end (each phase = new Agent invocation, zero memory leak), libDocsConsulted vide explicitement justifié design §4 (pas de nouvelle dep, pas de surface lib étrangère consultée), reviewer rejection loop cap-free déclenché F-1 → green re-spawn → APPROVED 4.71/5.
+
+### Canonical preservation (verified post-sweep)
+
+`grep` `auditService.log\|this.audit.log` post-green sur `museum-backend/src/modules/{admin,support,review}/useCase/` :
+- 0 hits sur les 12 swept sites (AC2 verified).
+- Tous les autres callers de `log()` (`audit-ip-anonymizer.job.ts`, breach-event callers, `system`/`anonymous` paths R6) untouched.
+
+`grep` `verifyAuditChain` post-green :
+- `museum-backend/src/shared/audit/audit-chain.ts:75` (canonical `verifyAuditChain` returning `AuditChainVerifyResult`) — **untouched**.
+- `museum-backend/src/shared/audit/index.ts:24` (barrel re-export canonique) — **untouched**.
+
+API publique `AuditService` post-PR-7 : `log()` (untouched, R6), `logBatch()` (untouched), `auditCriticalSecurityEvent()` (untouched, R6), `+logActorAction()` (new).
+
+### Out-of-scope (deferred follow-ups)
+
+- **27 autres `actorType:'user'` literals repo-wide** (`auth/**`, `museum/**`, `admin-routes/**`) hors des 12 swept sites. Design §3 explicitly defers. Reco reviewer O-3 : filer TECH_DEBT entry ou PR-7b ticket avant closing du run. Sentinel actuel ne couvre QUE les 12 sites enumerated — extension future requise pour catch repo-wide.
+- **No `logActorActionBatch` helper** (spec §9). Audit-batch flows restent sur `logBatch()` — pas d'overlap avec les 12 actor-action sites.
+- **No `auditCriticalSecurityEvent` refactor** (spec §11 Q3). Breach events ont leur own dual-path Sentry tagging, scope séparé.
+- **No `ExportAuditService` dedup across 3 export files** (spec §11 Q4). 3 sites need only one new method on the narrowed interface — dedup est un refactor distinct, deferred.
+- **Integration smoke e2e `pnpm test:e2e -- admin/suspendUser`** (spec §8.3) pas exécuté. Wire-format identity structurellement prouvée (R3 via `computeRowHash` payload exclusion) + `audit-chain.test.ts` green → low risk. Reviewer O-2 : reco optionnelle pour belt-and-braces pré-merge.
+
+
+
 ## [Unreleased] — 2026-05-23 — PR-6 dead code burial (UFR-016)
 
 Run `2026-05-23-pr-6-dead-code-burial` — sixth incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (volet burial). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **4.65/5**. Pure deletion PR (UFR-016 "il est mort on l'enterre" — pas de `@deprecated`, pas de comment-out). Net diff `-276 LOC` (4 fichiers supprimés) + `+130 LOC` sentinel architecture test = `-146 LOC net`. Zéro changement de comportement runtime observable, zéro modification du canonique préservé, zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. Reversibility : `git revert <sha>` restaure les 4 fichiers exactement.

@@ -45,9 +45,8 @@ export class UpdateTicketStatusUseCase {
       throw notFound('Ticket not found');
     }
 
-    await auditService.log({
+    await auditService.logActorAction({
       action: AUDIT_ADMIN_TICKET_UPDATED,
-      actorType: 'user',
       actorId: input.actorId,
       targetType: 'support_ticket',
       targetId: input.ticketId,
@@ -56,8 +55,8 @@ export class UpdateTicketStatusUseCase {
         ...(input.priority && { priority: input.priority }),
         ...(input.assignedTo !== undefined && { assignedTo: input.assignedTo }),
       },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     return updated;

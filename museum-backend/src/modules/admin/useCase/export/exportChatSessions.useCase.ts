@@ -7,6 +7,7 @@ import type {
   ExportRowSessions,
   ExportSessionsFilter,
 } from '@modules/admin/domain/export/csv-export.types';
+import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
 /** Async stream so route pipes to HTTP response without buffering (R13). */
@@ -17,6 +18,7 @@ export interface ExportSessionsRepository {
 /** Narrowed surface so unit tests can pass a `jest.fn()` spy. */
 export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;
+  logActorAction(input: LogActorActionInput): Promise<void>;
 }
 
 /**
@@ -61,9 +63,8 @@ export class ExportChatSessionsUseCase {
   async execute(input: ExportInput): Promise<AsyncIterable<ExportRowSessions>> {
     const scopeMuseumId = computeSessionsScope(input);
 
-    await this.audit.log({
+    await this.audit.logActorAction({
       action: AUDIT_ADMIN_EXPORT_SESSIONS,
-      actorType: 'user',
       actorId: input.actorId,
       metadata: {
         kind: 'sessions',
