@@ -73,6 +73,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-056`](adr/ADR-056-a5-phase-client-side-simulated.md) | A5 phase client-side simulated |
 | [`ADR-057`](adr/ADR-057-webauthn-rp-id-decision-deferred.md) | WebAuthn RP-ID decision deferred |
 | [`ADR-058`](adr/ADR-058-selective-hexagonal-ports-policy.md) | Selective hexagonal ports policy |
+| [`ADR-066`](adr/ADR-066-rn-modal-pointer-events-routing.md) | RN overlay `pointerEvents="box-none"` routing convention (backdrop dismiss + slab interactive) |
 
 ## Operations
 

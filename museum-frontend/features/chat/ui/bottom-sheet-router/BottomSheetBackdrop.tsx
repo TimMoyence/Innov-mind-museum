@@ -7,8 +7,18 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 interface BottomSheetBackdropProps {
   /** Called when the user taps the overlay. The router decides whether to close. */
   onPress: () => void;
-  /** Accessibility hint announced for the backdrop tappable region. */
+  /**
+   * Sheet-level announce label kept on the outer testID View so tree-walk
+   * tests + the modal scope continue to discover it. The inner dismiss
+   * Pressable does NOT inherit this label — see `dismissLabel`.
+   */
   accessibilityLabel?: string;
+  /**
+   * Distinct "Dismiss sheet" semantic applied to the inner tappable Pressable
+   * (spec R12). Falls back to `accessibilityLabel` if omitted so existing
+   * call sites stay back-compatible.
+   */
+  dismissLabel?: string;
 }
 
 /**
@@ -24,7 +34,11 @@ interface BottomSheetBackdropProps {
  *   - Inner `<Pressable>` is the actual touchable region in production
  *     (native press feedback, accessibility role).
  */
-export const BottomSheetBackdrop = ({ onPress, accessibilityLabel }: BottomSheetBackdropProps) => {
+export const BottomSheetBackdrop = ({
+  onPress,
+  accessibilityLabel,
+  dismissLabel,
+}: BottomSheetBackdropProps) => {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const opacity = useMemo(() => new Animated.Value(0), []);
@@ -58,7 +72,7 @@ export const BottomSheetBackdrop = ({ onPress, accessibilityLabel }: BottomSheet
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel={accessibilityLabel}
+          accessibilityLabel={dismissLabel ?? accessibilityLabel}
           style={styles.fill}
         />
       </View>

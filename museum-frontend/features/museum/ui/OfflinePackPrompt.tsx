@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactElement } from 'react';
+import { useCallback, type ReactElement } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -38,6 +38,15 @@ export function OfflinePackPrompt({
 }: OfflinePackPromptProps): ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+
+  // Gate backdrop dismiss while a download is in flight — an accidental tap
+  // outside the sheet must NOT silently abort the active download (audit #13).
+  // Hardware back (`onRequestClose`) intentionally remains functional per the
+  // Android convention "back = always exits the modal".
+  const handleBackdropPress = useCallback(() => {
+    if (packState.status === 'active') return;
+    onDismiss();
+  }, [packState.status, onDismiss]);
 
   const renderActions = (): ReactElement => {
     if (errorVisible) {
@@ -139,7 +148,11 @@ export function OfflinePackPrompt({
       onRequestClose={onDismiss}
       testID={testID}
     >
-      <Pressable style={styles.backdrop} onPress={onDismiss} accessibilityElementsHidden />
+      <Pressable
+        style={styles.backdrop}
+        onPress={handleBackdropPress}
+        accessibilityElementsHidden
+      />
       <View
         style={[styles.sheet, { backgroundColor: theme.surface, borderColor: theme.cardBorder }]}
       >

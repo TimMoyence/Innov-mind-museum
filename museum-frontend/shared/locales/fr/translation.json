@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "Options de pièces jointes ouvertes"
     },
+    "bottomSheet": {
+      "dismiss": "Fermer la feuille"
+    },
     "cartelScanner": {
       "opened": "Scanner de cartel ouvert",
       "scan_success": "Code cartel capturé",

@@ -1365,3 +1365,56 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Effort estimé** : ~2-4h — pour chaque item, classer (a) faux positif TypeORM (ex `halfvec → text`, à fixer côté entity via `@Column({ type: 'halfvec' as any })` ou type custom) vs (b) nettoyage légitime (FK renames, `wikidata_qid` drop) → générer migration ciblée par groupe + ADR si besoin pour les choix non triviaux.
 - **Référence run** : `team-state/2026-05-21-p0-c3-auth-crypto/` (STORY.md L24 disclosure, migration JSDoc `1779391176767-AddTotpLastUsedStep.ts:17-22`).
 
+---
+
+## TD-A11Y-COMPOSER-CREATEELEMENT — Composer.tsx layout containers utilisent `React.createElement('View')` au lieu de JSX (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, reviewer loop 2 INFO + tech-debt D-Composer-01).
+- **Référence code** :
+  ```
+  museum-frontend/features/chat/ui/Composer.tsx:49-76 (block-comment empirical rationale)
+  museum-frontend/features/chat/ui/Composer.tsx:94-137 (row, leadingColumn, testIDNode containers en createElement)
+  museum-frontend/features/chat/ui/Composer.tsx:194-197 (iconButtonInner 0×0 testID-anchor style)
+  ```
+- **Symptôme** : les conteneurs layout (`row`, `leadingColumn`) + l'inner host primitive pour testID sont rendus via `React.createElement('View', {...}, children)` au lieu de JSX `<View>...`. RN-runtime-équivalent (la JSX `<View>` finit par `createElement` la même `ViewNativeComponent`), pas de différence runtime, mais code non maximally idiomatic.
+- **Cause** : frozen-test contract (UFR-022) + `react-test-renderer` composite-layer behaviour. Le red test (`Composer.layout.test.tsx:107-113`) walk `getByTestId('composer-mic-button').parent` et assert `lca.parent.props.style.flexDirection === 'row'`. Avec JSX `<View>`, react-test-renderer insère une composite layer au-dessus du host primitive avec le MEME `style` prop → casse l'assertion strict `lca.parent.style`. Idem `collectTestIDsInOrder` (lines 65-81) qui propage testID à travers 3 layers composites → casse l'order-equality. Le `createElement` direct produit un seul host primitive → assertions vertes. Editor a respecté frozen-test (BLOCK-TEST-WRONG aurait re-spawn une fresh red phase ; pas justifié pour ce niveau de friction).
+- **Pourquoi non résolu en V1** : (a) runtime semantics identiques (layout/a11y/RTL/animation) ; (b) PATTERNS.md §7 canonical icon-button shape RESPECTÉ (a11y props sur Pressable, inner View décoratif) ; (c) frozen-test contract non-négociable per UFR-022 ; (d) block-comment 18 lignes documente l'empirical rationale pour les futurs mainteneurs (pas une "fix-me-back-to-JSX" trap).
+- **Effort estimé** : ~1h — investiguer un helper test-utility (ex `__tests__/helpers/flatten-host-primitive.ts`) qui aplatit la composite layer de `react-test-renderer` pour les assertions structurelles. Si feasible, refactor `Composer.tsx` vers JSX `<View>` idiomatique + drop block-comment + drop `iconButtonInner 0×0` style anchor.
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[1]`, `carryForwardToDocumenter.techDebt[0]`).
+
+---
+
+## TD-BACKDROP-DISMISS-R6 — backdrop-dismiss.test.tsx parametrize sur 4/6 routes non-bloquantes (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, reviewer loop 2 INFO + tech-debt D-R6-01).
+- **Référence code** :
+  ```
+  museum-frontend/__tests__/features/chat/bottom-sheet-router/backdrop-dismiss.test.tsx:163-211 (cases array)
+  team-state/2026-05-23-chat-composer-buttons-modal-dismiss/spec.md:48 (R6 wording "every non-blocking route" → 6 routes)
+  ```
+- **Symptôme** : la spec R6 demande la parameterisation sur 6 routes non-bloquantes (`attachment-picker`, `browser`, `context-menu`, `summary`, `ai-disclosure`, `cartel-scanner`). Le test couvre 4/6 (`attachment-picker`, `browser`, `context-menu`, `summary`) ; manque `ai-disclosure` + `cartel-scanner`.
+- **Pourquoi non résolu en V1** : (a) test frozen per UFR-022 red-test-manifest ; (b) le fix container-level (`pointerEvents="box-none"` sur `<BottomSheetContainer>`) est *uniforme* sur toutes les routes C4 — un seul `BottomSheetContainer` les héberge → la couverture 4/6 est *fonctionnellement complète proof* que les 6 routes fonctionnent ; (c) re-spawn red phase juste pour étendre l'array `cases` (2-line change) = disproportionné vs le bénéfice ; (d) reviewer loop 2 a explicitement accepté comme INFO non-blocking.
+- **Effort estimé** : ~30 min — extend `cases` array dans une fresh red phase :
+  ```ts
+  { id: 'ai-disclosure', params: {} },
+  { id: 'cartel-scanner', params: {} },
+  ```
+  Mock content + routes déjà installés par `installAllMockRoutes()`.
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[0]`, `carryForwardToDocumenter.techDebt[1]`, ADR-066 §Risques).
+
+---
+
+## TD-LINT-FROZEN-COMPOSER — 2 warnings `@typescript-eslint/require-await` dans backdrop-dismiss.test.tsx frozen (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, verifier finding F1).
+- **Référence code** :
+  ```
+  museum-frontend/__tests__/features/chat/bottom-sheet-router/backdrop-dismiss.test.tsx:46-47
+  ```
+- **Symptôme** : 2 warnings `@typescript-eslint/require-await` sur les stubs async `toggleRecording`/`playRecordedAudio` (déclarés `async` sans `await` dans le corps). Test frozen → editor green ne peut pas modifier le body. Verifier `npm run lint` exit 1 (warnings, pas errors) — dispatcher brief accepte explicitement.
+- **Pourquoi non résolu en V1** : (a) frozen-test contract per UFR-022 ; (b) warnings (pas errors), gate-passing ; (c) BLOCK-TEST-WRONG aurait re-spawn red phase pour 2 lint warnings = disproportionné.
+- **Effort estimé** : ~10 min — au prochain touch du fichier (post-frozen), choix entre :
+  - (a) refactor stubs vers non-async (drop `async`, return `undefined` direct) — préférable per LINT_DISCIPLINE.md "fix code first" ;
+  - (b) inline `eslint-disable-next-line @typescript-eslint/require-await` avec `Justification:` + `Approved-by:`.
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/STORY.md` (verifier section F1 "WARN, not FAIL").
+

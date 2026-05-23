@@ -12,6 +12,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Chat composer + modal dismiss audit (2026-05-23, V1 close-out)
+
+Run `/team` UFR-022 9-phase fresh-context (`2026-05-23-chat-composer-buttons-modal-dismiss`). Reviewer
+loop 1 CHANGES_REQUESTED (79.3) → loop 2 APPROVED (89.9). Trois défauts UX-mobile chat + audit complet
+des 16 surfaces modal/sheet de `museum-frontend/features/**/ui/*.tsx`.
+
+#### Fixed
+
+- **Mobile chat — `attachment-picker` ferme désormais au tap extérieur.** Bug pointer-events sur
+  `<BottomSheetContainer>` (`Animated.View` wrap + outer `absoluteFill` absorbaient les taps avant
+  le sibling backdrop). Fix : `pointerEvents="box-none"` sur les containers layout/animation +
+  `pointerEvents="auto"` (défaut) sur le slab visible interactif. Les 5 autres routes C4
+  non-bloquantes héritent du fix : `browser`, `context-menu`, `summary`, `ai-disclosure`,
+  `cartel-scanner`. Routes blocking (`consent`, `voice-intro`, `daily-limit`) préservées
+  (gate reducer côté machine, indépendant des hit-tests).
+- **Mobile — VoiceOver/TalkBack double-announce du titre sur backdrop scrub.** Backdrop héritait
+  du `accessibilityLabel` du sheet hôte. Désormais : prop `dismissLabel` distincte sur
+  `<BottomSheetBackdrop>` ; le wrap garde l'announce label du dialog.
+- **Mobile — `<OfflinePackPrompt>` n'abort plus un téléchargement actif au tap backdrop.**
+  `handleBackdropPress` gated sur `packState.status === 'active'` → tap = no-op pendant le
+  download, `onDismiss` ré-autorisé dès `idle` / `complete` / `error`.
+
+#### Changed
+
+- **Mobile chat — Composer layout.** Les boutons mic + `+` migrent en **colonne verticale leading**
+  (mic au-dessus du `+`, les deux à gauche de `<ChatInput>` en LTR, à droite en RTL). Affordance
+  voice + attachment regroupées sur la même main, plus de hand-shift en usage une-main. Audio-pill
+  reste sibling de l'input (D2). RTL-safe (`start/end` logical-side props).
+- **Mobile — `<BottomSheetBackdrop>` a11y label.** Le backdrop accepte maintenant une prop
+  `dismissLabel` distincte ; fallback `accessibilityLabel` pour back-compat.
+
+#### Added
+
+- **Mobile — clé i18n `a11y.bottomSheet.dismiss`** (FR `"Fermer la feuille"` / EN `"Dismiss sheet"`).
+  6 autres locales (ar, de, es, it, ja, zh) suivent via translator-of-record post-launch.
+- **Audit modal/sheet — 7 regression-guard tests** (`MuseumSheet`, `BiometricSetupSheet`,
+  `SourceCitation`, `OfflinePackPrompt`, `QuotaUpsellModal`, `ArtworkHeroModal`,
+  `ImageFullscreenModal`) garantissant qu'un futur refactor ne réintroduit pas l'absorber-overlay
+  bug ni ne casse les surfaces `intentionally-no-backdrop-dismiss`.
+- **[ADR-066](docs/adr/ADR-066-rn-modal-pointer-events-routing.md)** — convention
+  `pointerEvents="box-none"` sur containers `absoluteFill` avec backdrop dismissable + slab
+  interactif sibling. Documente when-to-apply, when-NOT-to-apply (centered cards, pinch-zoom
+  viewers).
+
+#### Tech debt opened
+
+- **TD-A11Y-COMPOSER-CREATEELEMENT** (V1.1) — `Composer.tsx` utilise `React.createElement('View')`
+  pour les layout containers (frozen-test contract `react-test-renderer` composite-layer gotcha,
+  documenté inline ligne 49-76). Investiguer host-primitive flatten helper côté `__tests__/helpers/`.
+- **TD-BACKDROP-DISMISS-R6** (V1.1) — `backdrop-dismiss.test.tsx` parametrize sur 4/6 routes
+  non-bloquantes (manque `ai-disclosure` + `cartel-scanner`). Extension 2-line dans fresh red phase.
+- **TD-LINT-FROZEN-COMPOSER** (V1.1) — 2 warnings `@typescript-eslint/require-await` frozen dans
+  `backdrop-dismiss.test.tsx:46-47`.
+
+---
+
 ### Lot P0 — feature-gates & data-integrity (2026-05-21 → 2026-05-22, V1 close-out)
 
 Lot multi-vagues verrouillant les pré-requis V1 (launch 2026-06-07). 6 commits sur `p0/feature-gates`
