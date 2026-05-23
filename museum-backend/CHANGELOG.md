@@ -4,7 +4,54 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
-## [Unreleased] — 2026-05-23 — PR-4 `validate-query.middleware.ts` aligns on `formatZodIssues`
+## [Unreleased] — 2026-05-23 — PR-5 `assertPagination` helper + sweep 7 useCases
+
+Run `2026-05-23-pr-5-assertPagination` — fifth KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH (volet pagination guard inline). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **5.00/5**. Pure TypeScript refacto interne, wire-format 400 `error.message` **byte-for-byte identique** (`'page must be a positive integer'` + `'limit must be between 1 and 100'` préservés string-pour-string vs legacy inline). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`. Net diff `+59 / -56` sur 8 fichiers source + 2 nouveaux tests red.
+
+### Added
+
+- **Helper `assertPagination(params, opts?)`** — `museum-backend/src/shared/types/pagination.ts:38-53` (+41 LOC append-only au fichier canonique des types pagination déjà colocalisé avec `PaginationParams` + `PaginatedResult<T>` — NFR-3 single-source-of-truth, no new file proliferation). Signature `(params: PaginationParams, opts?: { maxLimit?: number }) => PaginationParams`. Comportement :
+  - Throw `badRequest('page must be a positive integer')` si `!Number.isInteger(page) || page < 1` (page-first check ordering — R5).
+  - Throw `badRequest(`limit must be between 1 and ${maxLimit}`)` si `!Number.isInteger(limit) || limit < 1 || limit > maxLimit` (default `maxLimit = 100`, template-collapse byte-identique au legacy `'limit must be between 1 and 100'`).
+  - Returns fresh literal `{ page, limit }` (pas la ref d'entrée — purity R7, locked par test `'returns a new object'`).
+  - Opts-object signature `{ maxLimit?: number }` choisie pour extensibilité future (`minLimit`/`minPage` non-breaking ; R6).
+  - Pure function : no I/O, no mutation, no logging. Safe en hot path.
+  - JSDoc concise + 3 exemples couvrant les 3 caller flavors (destructure `filters.pagination`, expression-statement, opts override).
+  - Defensive `${String(maxLimit)}` (L49) contre `@typescript-eslint/restrict-template-expressions` (NFR-5).
+  - Imports `badRequest` from `@shared/errors/app.error` — `app.error.ts` n'importe PAS depuis `@shared/types/*` (cycle risk vérifié zero).
+
+- **Test sentinel `museum-backend/tests/unit/shared/types/assertPagination-sentinel.test.ts`** (121 lignes, 4 it.each cases × 7 site rows = 32 case-rows + 2 global greps) — empêche la régression du pattern inline pagination guard à l'avenir. Couvre par site (7 useCases) : (a) `assertPagination` est référencé dans le fichier, (b) import depuis le module canonique `@shared/types/pagination` (alias ou relatif), (c) absence du pattern inline regex `Number.isInteger(...) || ... < 1`, (d) absence des strings wire-format `'page must be a positive integer'` / `'limit must be between 1 and 100'`. Sentinel global : grep récursif `readdirSync` depuis `src/` racine (exclut `node_modules/dist` par construction, wall ~200ms) → **les 2 wire-format strings DOIVENT apparaître exactement 1 fois, dans le fichier helper UNIQUEMENT** (`.toEqual([HELPER_FILE])` — pas juste `length === 1`, pin la file location exacte). Tout nouveau useCase qui copy-paste l'inline pattern avec wire-format strings → fail CI immédiat sur PR.
+
+- **Test unitaire `museum-backend/tests/unit/shared/types/assertPagination.test.ts`** (195 lignes, 20 it cases groupés en describe) — valide le helper : page invalide x5 (zero, negative, fractional, NaN, Infinity, undefined), limit invalide x6 (zero, negative, fractional, overflow default 100, NaN, undefined), happy path x3 ({1,1}, {1,100}, {999,50} → unchanged), ordering R5 x2 (page-first throw locked), opts.maxLimit override x4 ({1,200,{200}} happy, {1,201,{200}} throws with overridden bound, undefined opts → default 100, opts.maxLimit undefined → default 100 via nullish coalescing), purity x2 ('returns a new object' — fresh literal, pas la ref d'entrée).
+
+  **Frozen-test contract** : `red-test-manifest.json` FLAT `{path: sha256}` shape (per `feedback_team_frozen_manifest_flat.md`). sha256 verified byte-identical pre/post-green via `shasum -a 256` :
+  - `museum-backend/tests/unit/shared/types/assertPagination.test.ts` → `4adeddd059b73e5b30803ff45318ee66eddd74a187582ac0a346c31df4589fe7`
+  - `museum-backend/tests/unit/shared/types/assertPagination-sentinel.test.ts` → `f6a66aa94fe96f402d23fafe5ffd19f9c095fe5ee586229fc0314015d0862eff`
+
+  Anti-bypass UFR-022 honoré : éditeur green n'a pas self-modifié les tests manifestés (hook `post-edit-green-test-freeze.sh` exit 0). Total tests : 38 (20 helper + 18 sentinel — comptage inclut le `describe` group multiplication). Tests RED (helper absent au HEAD pre-codemod) → 38/38 FAIL ; Tests GREEN (post-codemod) → 38/38 PASS.
+
+### Changed
+
+- **7 useCases migrés sur `assertPagination`** — pattern inline `if (!Number.isInteger(page) || page < 1) { throw badRequest('page must be a positive integer'); } if (!Number.isInteger(limit) || limit < 1 || limit > 100) { throw badRequest('limit must be between 1 and 100'); }` (7 lignes par site) remplacé par 1 ligne d'appel au helper canonique. Deux flavors documentés (cf. `design.md` §2) :
+
+  **Flavor-A — `filters.pagination` whole passed to repo (3 sites admin)** :
+  - `museum-backend/src/modules/admin/useCase/users/listUsers.useCase.ts:11` — `ListUsersUseCase.execute` : `const { page, limit } = assertPagination(filters.pagination);` (destructure pour bypass d'un downstream qui n'a pas besoin de réécrire `filters.pagination`).
+  - `museum-backend/src/modules/admin/useCase/reports/listReports.useCase.ts:11` — `ListReportsUseCase.execute` : `assertPagination(filters.pagination);` (expression-statement, pas de re-destructure car `filters` passé whole au repo).
+  - `museum-backend/src/modules/admin/useCase/audit/listAuditLogs.useCase.ts:14` — `ListAuditLogsUseCase.execute` : `assertPagination(filters.pagination);` (idem).
+
+  **Flavor-B — fresh `filters` object built from `input.page`/`input.limit` (4 sites support+review)** :
+  - `museum-backend/src/modules/review/useCase/admin/listAllReviews.useCase.ts:24` — `ListAllReviewsUseCase.execute` : `const { page, limit } = assertPagination({ page: input.page, limit: input.limit });`, puis `pagination: { page, limit }` réutilisé dans `filters`.
+  - `museum-backend/src/modules/review/useCase/public/listApprovedReviews.useCase.ts:17` — `ListApprovedReviewsUseCase.execute` : idem.
+  - `museum-backend/src/modules/support/useCase/ticket-admin/listAllTickets.useCase.ts:26` — `ListAllTicketsUseCase.execute` : idem.
+  - `museum-backend/src/modules/support/useCase/ticket-user/listUserTickets.useCase.ts:26` — `ListUserTicketsUseCase.execute` : idem.
+
+  **Imports `badRequest` audit** : retirés des 4 sites où aucun autre usage résiduel (`listUsers`, `listReports`, `listAuditLogs`, `listApprovedReviews`) ; conservés sur 3 sites où encore utilisés pour des validations non-pagination (`listAllReviews` L24 → `status` enum check via `REVIEW_STATUSES.includes(...)` ; `listAllTickets` L28-32 → `status`+`priority` enum checks via `TICKET_STATUSES`/`TICKET_PRIORITIES.includes(...)` ; `listUserTickets` L28-32 → idem). Imports `assertPagination` ajoutés en tête de chaque fichier en ordre alphabétique (alias `@shared/types/pagination`). Verifier diff par site → useCase signatures unchanged (R12), non-pagination validations préservées byte-for-byte (R13).
+
+  **Wire-format 400 `error.message` byte-for-byte preserved** : helper émet exactement les mêmes 2 strings que le legacy inline (`'page must be a positive integer'` + `'limit must be between 1 and 100'` pour `maxLimit=100` default). Tests existants régression : `pnpm test --testPathPattern='admin/useCase/users/listUsers|admin/useCase/reports/listReports|admin/useCase/audit/listAuditLogs|support/listUserTickets|support/listAllTickets|review/useCase/listAllReviews|review/useCase/listApprovedReviews'` → **50/50 PASS** (5 suites incluant mutation-testing variants) ; `pnpm test --testPathPattern='modules/admin/listUsers|modules/admin/listReports|modules/admin/listAuditLogs'` → **20/20 PASS** (3 suites). Wire-format consumer impact : zéro test snapshot à updater (les tests existants asserting le wire-format passaient déjà ; le helper produit le même string). FE/web consumers : non-breaking (OpenAPI 400 `error.message: string` reste free-form, contract inchangé). Sentry/observability breadcrumbs : aucun changement de payload.
+
+  Net diff par fichier source (post-codemod) : `+8 / -10` (flavor-A destructure), `+5 / -10` (flavor-A expression-statement, 2x), `+3 / -6` (flavor-B destructure, 4x — keep `badRequest` import pour enum checks). Helper file `pagination.ts` : `+41 / 0` (append-only). Total source net `+18 / -56` ; tests +316 lignes (2 nouveaux fichiers).
+
+
 
 Run `2026-05-23-pr-4-formatZodIssues` — fourth KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B2.md` D1 (HIGH). Pipeline : UFR-022 fresh-context 5-phase / standard / reviewer APPROVED weightedMean **4.8/5**. Pure TypeScript refacto interne, wire-format 400 `error.message` aligné sur la canonique single-source-of-truth déjà utilisée par `validateBody` + chat contract wrappers. Public OpenAPI 400 contract préservé (`error.message: string` générique, non-contractually-fixed). Zéro migration DB, zéro lib bump, zéro nouveau `eslint-disable`.
 

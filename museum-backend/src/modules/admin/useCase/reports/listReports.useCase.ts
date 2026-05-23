@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { assertPagination } from '@shared/types/pagination';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminReportDTO, ListReportsFilters } from '@modules/admin/domain/admin/admin.types';
@@ -8,14 +8,7 @@ export class ListReportsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
   async execute(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
-    const { page, limit } = filters.pagination;
-
-    if (!Number.isInteger(page) || page < 1) {
-      throw badRequest('page must be a positive integer');
-    }
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-      throw badRequest('limit must be between 1 and 100');
-    }
+    assertPagination(filters.pagination);
 
     return await this.repository.listReports(filters);
   }

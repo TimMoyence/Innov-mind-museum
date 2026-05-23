@@ -1,5 +1,6 @@
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { badRequest } from '@shared/errors/app.error';
+import { assertPagination } from '@shared/types/pagination';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
@@ -22,12 +23,7 @@ export class ListUserTicketsUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
   async execute(input: ListUserTicketsInput): Promise<PaginatedResult<TicketDTO>> {
-    if (!Number.isInteger(input.page) || input.page < 1) {
-      throw badRequest('page must be a positive integer');
-    }
-    if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) {
-      throw badRequest('limit must be between 1 and 100');
-    }
+    const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
     if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
       throw badRequest(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
@@ -40,7 +36,7 @@ export class ListUserTicketsUseCase {
       userId: input.userId,
       status: input.status as TicketStatus | undefined,
       priority: input.priority as TicketPriority | undefined,
-      pagination: { page: input.page, limit: input.limit },
+      pagination: { page, limit },
     };
 
     return await this.repository.listTickets(filters);
