@@ -4,6 +4,91 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-12 `extractEmailDomain` codemod sur 5 leads sites (multi-`@` adversarial `a@b@c.com` corner case fixed)
+
+Run `2026-05-23-pr-12-extractEmailDomain` — douzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (finding B8 MED #2 : `extractEmailDomain` canonical helper bypassed in 5 leads sites). Pipeline : UFR-022 fresh-context 5-phase / reviewer (combined verify+security+review) **APPROVED** loop-1 terminal, zero CHANGES_REQUESTED, zero blocking finding. Codemod mécanique : 5 ad-hoc occurrences de `<expr>.split('@')[1] ?? 'unknown'` (4 dans `brevo-beta-signup.notifier.ts` lignes 62/99/120/128, 1 dans `submitPaywallInterest.useCase.ts` ligne 65) remplacées par un appel au helper canonique `extractEmailDomain(<expr>)` documenté GDPR Art. 5(1)(c) (A1 doctrine). Sentinel Jest frozen ajouté (`tests/unit/shared/pii/pr12-no-raw-email-domain-split.sentinel.test.ts`, sha256 `6ec4e58687aae08c0cf59d9d26dcf758efa56ca03329c217f8f7f8bf9d0ae833`) — bloque toute future réintroduction de `email.split('@')[1]` ou variant chaîné `.trim().split('@')[1]` dans les 2 fichiers leads, surface un hint `file:line` au reviewer sur failure. Net source LOC : `brevo-beta-signup.notifier.ts +1` + `submitPaywallInterest.useCase.ts +1` = **+2 LOC**. Wire format / HTTP behaviour : préservés byte-identical au niveau log (3 intended deltas seuls — last-`@`, trim, lower-case, tous des log-aggregation quality wins). Zéro migration DB applicative, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass, zéro OpenAPI delta, zéro FE follow-up. `pnpm --filter museum-backend test -- --testPathPattern='tests/unit/(leads|shared/pii|auth/a1-email-pii-sinks)'` → **9 suites pass, 62/62 tests pass, 0.760s**. Coverage helper `extractEmailDomain` = **100% all 4 metrics** (13/13 stmts, 4/4 branches, 2/2 fns, 11/11 lines). Reversibility : `git revert <sha>` restaure les 5 sites legacy + retire les 2 imports + retire le sentinel ; pas de DB migration ni de schema delta à revert.
+
+### Changed
+
+**Codemod 5 sites — `<expr>.split('@')[1] ?? 'unknown'` → `extractEmailDomain(<expr>)`** :
+
+| Site | Fichier | Ligne (post-codemod) | Event log | Path |
+|---|---|---|---|---|
+| S1 | `museum-backend/src/modules/leads/adapters/secondary/notifier/brevo-beta-signup.notifier.ts` | 63 | `beta_signup_already_subscribed` | R16 idempotent duplicate |
+| S2 | same file | 100 | `beta_signup_remove_contact_not_found` | R5 idempotent 404 erasure |
+| S3 | same file | 121 | `beta_signup_notifier_noop` | R14 no-creds subscribe |
+| S4 | same file | 129 | `beta_signup_remove_contact_noop` | B2 no-creds erasure |
+| S5 | `museum-backend/src/modules/leads/useCase/submitPaywallInterest.useCase.ts` | 66 | `paywall_email_captured` | R21 paywall capture |
+
+- **`museum-backend/src/modules/leads/adapters/secondary/notifier/brevo-beta-signup.notifier.ts`** (+5 / −4 LOC) — ajouté `import { extractEmailDomain } from '@shared/pii/extractEmailDomain';` (ligne 2, alphabetical relative to existing `@shared/logger/logger` import). 4 sites S1–S4 substitués byte-identique au champ `emailDomain:` (R1.3 préservé). Le `encodeURIComponent(email)` ligne 83 (Brevo `DELETE /v3/contacts/{email}` GDPR erasure API call, R4–R6) est un legitimate non-log sink — laissé untouched, sentinel ne match pas ce pattern.
+- **`museum-backend/src/modules/leads/useCase/submitPaywallInterest.useCase.ts`** (+2 / −1 LOC) — ajouté `import { extractEmailDomain } from '@shared/pii/extractEmailDomain';` (ligne 3, alphabetical entre `@shared/logger/logger` et `@shared/validation/email`). Site S5 substitué, intermediate `const emailDomain = ...` form préservée (R1.5).
+- **`museum-backend/tests/unit/shared/pii/extractEmailDomain.test.ts`** étendu (5 → 16 cases, FROZEN at green). Nouvelles assertions :
+  - **Multi-`@` adversarial** (ligne 29) — `extractEmailDomain('a@b@c.com')` → `'c.com'`. Documented intended-bug-fix (vs old `.split('@')[1]` qui retourne `'b'`).
+  - **Local-part isolation** (lignes 53-58) — `'secret.local-part@example.com'` → `'example.com'` ; output asserted NOT to contain `'secret'` nor `'@'`. Sentinel-level proof helper cannot leak the local part.
+  - **Trim + lower-case** — `'  Alice@Example.COM  '` → `'example.com'`.
+  - **Fallback `'unknown'`** (lignes 32-51) — `''` / `'   '` / `'no-at-sign'` / `'x@'` → `'unknown'`.
+  - **Helper purity** (lignes 64-74) — reads helper source via `readFileSync`, asserts no `@shared/logger`, no `node:fs`, no `console.` smuggling.
+
+### Added
+
+- **Architecture sentinel `museum-backend/tests/unit/shared/pii/pr12-no-raw-email-domain-split.sentinel.test.ts`** (NEW, sha256 `6ec4e58687aae08c0cf59d9d26dcf758efa56ca03329c217f8f7f8bf9d0ae833`, FROZEN) — garde régression permanente. Tourne dans le `pnpm test` gate existant (zéro nouveau `package.json` `scripts:` entry, zéro CI workflow change). Assertions filesystem-based (`readFileSync` + `expect(content).not.toContain(...)`) :
+  - **Block A** (3 forbidden patterns × 2 files = 6 assertions) — `brevo-beta-signup.notifier.ts` et `submitPaywallInterest.useCase.ts` MUST NOT contain `email.split('@')[1]`, MUST NOT contain `.split('@')[1]` (catches chained `.trim().split('@')[1]` variant), MUST import `extractEmailDomain` depuis `@shared/pii/extractEmailDomain`. Chaque assertion surface un hint `file:line` au reviewer sur failure.
+
+### Security
+
+- **GDPR Art. 5(1)(c) data minimisation reinforced** (A1 doctrine). Tous les 5 log sinks émettent maintenant un `emailDomain` dérivé via le helper canonique — pas de `email`, pas de `payload.email`, jamais le local-part ne touche le log sink. Aligned avec la discipline auth A1 déjà en place (`tests/unit/auth/a1-email-pii-sinks.test.ts`).
+- **Multi-`@` adversarial `a@b@c.com` corner case FIXED — defense-in-depth security win.** L'ancien pattern `<expr>.split('@')[1] ?? 'unknown'` retournait `'b'` (substring entre le PREMIER et le DEUXIÈME `@`) — i.e. un fragment du LOCAL-PART, pas le domaine. Le helper `extractEmailDomain` utilise `String.prototype.lastIndexOf('@')` puis `.slice(lastAt + 1)` → retourne `'c.com'` (substring après le DERNIER `@`). `validateEmail` rejette multi-`@` upstream dans S5 (`submitPaywallInterest`), MAIS S2/S4 (`removeContact`) reçoivent un `email` arg raw sans `validateEmail` upstream — le fix au niveau helper est **load-bearing pour ces 2 paths**. Asserted explicitement à `extractEmailDomain.test.ts:29`. Sentinel test prevent regression going forward.
+- **Local-part leak elimination.** Pour multi-`@` input (`'a@b@c.com'`), l'ancien `.split('@')[1]` exposait `'b'` (fragment du local-part) dans le log sink. Le nouveau helper guarantee le substring après le DERNIER `@` — jamais le local-part, même pour des inputs adversariaux. `extractEmailDomain.test.ts:53-58` asserte que `'secret.local-part@example.com'` → `'example.com'` et que l'output ne contient ni `'secret'` ni `'@'`.
+- **Helper purity proven** — `extractEmailDomain.test.ts:64-74` lit le helper source via `readFileSync` et asserte zéro import `@shared/logger`, zéro import `node:fs`, zéro `console.` statement. Le helper ne peut PAS smuggler un side-channel (logger, IO, framework). Pure synchronous string ops uniquement (`trim`, `lastIndexOf`, `slice`, `toLowerCase`).
+- **Fallback `'unknown'` byte-identique au legacy** — empty / whitespace-only / no-`@` / `'x@'` inputs retournent le literal `'unknown'`, identique au précédent `?? 'unknown'`. No PII leak even on malformed input. Wire format byte-identique pour ces inputs.
+- **3 intended deltas seuls** (log-aggregation quality wins, non breaking) — (a) lower-casing (`'Alice@Example.COM'` → `'example.com'` ; S5 lower-case déjà upstream, no observable delta pour paywall capture), (b) trim (`'bob@x.com  '` → `'x.com'`), (c) last-`@` semantic (`'a@b@c.com'` → `'c.com'` not `'b'`). Verified §2.3 spec : aucune Grafana / log alert rule key sur la case du champ `emailDomain` — fix-on-bake acceptable si découverte.
+- **Sentinel frozen sha256 lock** — `6ec4e58687aae08c0cf59d9d26dcf758efa56ca03329c217f8f7f8bf9d0ae833` byte-identical verified pre-RED + post-RED + post-GREEN + post-VERIFY (UFR-022 frozen-test contract honoured, zéro editor self-modification across the cycle).
+- **DELETE URL on `brevo-beta-signup.notifier.ts:83` untouched** — `encodeURIComponent(email)` est le legitimate Brevo `DELETE /v3/contacts/{email}` GDPR erasure API call (R4–R6), pas un log sink. Correctement left untouched. Sentinel pattern `email.split('@')[1]` ne match pas `encodeURIComponent(email)` → pas de false positive.
+- **Zéro nouvelle dépendance** — `museum-backend/package.json` diff vide. Helper utilise stdlib uniquement. `pnpm audit --prod` drift = 0.
+
+### Migration notes
+
+- **No migration required.** Wire format / HTTP behaviour de tous les 5 sites est préservé byte-identical au niveau des consumers (le champ `emailDomain` reste un string, le `'unknown'` fallback est byte-identique, le surrounding event name et autres log payload keys préservés byte-identical per R1.4). Les 3 intended deltas (lower-case, trim, last-`@`) sont des log-aggregation quality wins observables uniquement sur du traffic adversarial ou mixed-case — pas de break de dashboard prod (verified §2.3).
+- **No FE follow-up.** Pas d'OpenAPI delta. Pas de FE/web touched (codemod scoped à `museum-backend/src/modules/leads/` uniquement par R6.3). Wire/HTTP behaviour des routes leads inchangé (logs only changes per R6.4).
+- **Reversibility** : `git revert <sha>` restaure les 5 sites legacy + retire les 2 `import { extractEmailDomain }` + retire le sentinel test + revert l'extension du helper test (5 → 16 cases). Pas de DB migration ni de schema delta à revert. Le sentinel sha256 frozen disparaît proprement avec le revert.
+
+### Verification
+
+```bash
+cd museum-backend
+
+# Codemod scope verified — zero residual ad-hoc split pattern
+grep -rnE "split\(['\"]@['\"]\)\[1\]" src/
+# → 0 hits across the whole src tree
+
+# Helper imported at the 2 touched files
+grep -rn "extractEmailDomain" src/modules/leads
+# → 6 hits (2 imports + 4 calls in notifier, 1 import + 1 call in useCase)
+
+# Scoped test gate
+pnpm jest --no-coverage --testPathPattern='tests/unit/(leads|shared/pii|auth/a1-email-pii-sinks)'
+# → 9 suites pass, 62/62 tests pass, 0.760s
+
+# Helper coverage 100%
+pnpm jest --testPathPattern='tests/unit/shared/pii/extractEmailDomain.test' --coverage
+# → 13/13 stmts, 4/4 branches, 2/2 fns, 11/11 lines
+
+# Lint + typecheck clean
+pnpm lint
+# → eslint src/ --max-warnings=0 + lint:test-discipline + tsc --noEmit, exit 0
+
+# Sentinel sha256 frozen
+shasum -a 256 tests/unit/shared/pii/pr12-no-raw-email-domain-split.sentinel.test.ts
+# → 6ec4e58687aae08c0cf59d9d26dcf758efa56ca03329c217f8f7f8bf9d0ae833 (matches red-test-manifest.json)
+```
+
+### Honesty
+
+- **Brief mentionned `findings/findings-B8.md`** : ce fichier N'EXISTE PAS dans le working tree au moment du spec (`ls findings/` → no such directory). Le bug claim a été re-vérifié indépendamment contre le contrat documenté du helper canonique (`extractEmailDomain.ts:17-26`) ; le spec a explicitement noté l'absence du finding doc plutôt que de fabriquer une citation.
+- **Brief mentionned a B8 #2 row in `docs/TECH_DEBT.md`** : verified the file does not list a B8-#2 row by that anchor → R7.2 (doc closure) shrunk au PR description anchor only ; TECH_DEBT update skipped honestly rather than fabricated.
+- **Spec R5.1 wanted a call-site test asserting `emailDomain: 'c.com'` sur `payload.email = 'a@b@c.com'` pour les 5 leads sites.** `validateEmail` upstream rejette multi-`@` pour le validated entry point (S5), donc le call-site test gap sur les leads suites RESTE — only assertion = helper-level proof à `extractEmailDomain.test.ts:29`. Acknowledged dans spec §2.5 comme acceptable. Flagged pour future hardening si un non-validated entry point est ajouté.
+- **A1 PII-sinks audit (`tests/unit/auth/a1-email-pii-sinks.test.ts`) does not yet enumerate leads sinks.** Out of scope pour cette PR ; future doctrine proposal pour rendre l'audit A1 module-agnostic. La sentinel test `pr12-no-raw-email-domain-split.sentinel.test.ts` étend implicitement la discipline A1 aux leads sites via filesystem assertions, en attendant l'extension formelle.
+
 ## [Unreleased] — 2026-05-23 — PR-11 `dailyChatLimit` → atomic `createRateLimitMiddleware` (multi-device burst race ELIMINATED)
 
 Run `2026-05-23-pr-11-dailyChatLimit` — onzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B2.md` (finding D2 : race-prone read-then-write GET/SET sur freemium daily cap). Pipeline : UFR-022 fresh-context 5-phase / reviewer **APPROVED** weightedMean **9.05/10** (loop-1 terminal, zero CHANGES_REQUESTED). Migration de `dailyChatLimit` (169 LOC hand-rolled `CacheService` get→compare→set non-atomic) vers une instance unique de `createRateLimitMiddleware` (66 LOC, **−61 %**) qui délègue à `RedisRateLimitStore.increment` via le script atomique Lua `INCR_EXPIRE_LUA`. Extension du factory `createRateLimitMiddleware` avec 5 nouveaux knobs optionnels (`errorCode` / `errorMessage` / `statusCode` / nullable `keyGenerator` / function-form `windowMs` / empty-string `bucketName` opt-out) — extensions purement additives, zéro changement aux 6+ call sites existants. **Bonus TOCTOU fix** sur `BucketContext.failClosed` (snapshot synchrone à l'entrée du handler) défense-en-profondeur héritée par tous les futurs consommateurs du factory. Zéro migration DB applicative, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass. `pnpm jest --no-coverage --testPathPattern='(middleware/rate-limit\.test|middleware/daily-chat-limit\.test|architecture/pr11-dailyChatLimit-sentinel)'` → **3 suites pass, 50/50 tests pass, 0.779s**. Reversibility : `git revert <sha>` restaure le module legacy + le boot wiring + les 3 test files frozen.

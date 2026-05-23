@@ -1,4 +1,5 @@
 import { logger } from '@shared/logger/logger';
+import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 
 import type {
   BetaSignupNotifier,
@@ -59,7 +60,7 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
     if (response.status === 400 && bodyText.includes('duplicate_parameter')) {
       logger.info('beta_signup_already_subscribed', {
         requestId: payload.requestId,
-        emailDomain: payload.email.split('@')[1] ?? 'unknown',
+        emailDomain: extractEmailDomain(payload.email),
       });
       return { outcome: 'duplicate' };
     }
@@ -96,7 +97,7 @@ export class BrevoBetaSignupNotifier implements BetaSignupNotifier {
     // idempotent: nothing to remove is success, not an error.
     if (response.status === 404) {
       logger.info('beta_signup_remove_contact_not_found', {
-        emailDomain: email.split('@')[1] ?? 'unknown',
+        emailDomain: extractEmailDomain(email),
       });
       return { outcome: 'not_found' };
     }
@@ -117,7 +118,7 @@ export class NoopBetaSignupNotifier implements BetaSignupNotifier {
   subscribe(payload: BetaSignupPayload): Promise<{ outcome: BetaSignupOutcome }> {
     logger.warn('beta_signup_notifier_noop', {
       requestId: payload.requestId,
-      emailDomain: payload.email.split('@')[1] ?? 'unknown',
+      emailDomain: extractEmailDomain(payload.email),
     });
     return Promise.resolve({ outcome: 'noop' });
   }
@@ -125,7 +126,7 @@ export class NoopBetaSignupNotifier implements BetaSignupNotifier {
   /** GDPR erasure (B2, R6) — no Brevo creds, so nothing to remove; resolves noop. */
   removeContact(email: string): Promise<{ outcome: BetaSignupOutcome }> {
     logger.warn('beta_signup_remove_contact_noop', {
-      emailDomain: email.split('@')[1] ?? 'unknown',
+      emailDomain: extractEmailDomain(email),
     });
     return Promise.resolve({ outcome: 'noop' });
   }

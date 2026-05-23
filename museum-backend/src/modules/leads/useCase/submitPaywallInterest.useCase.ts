@@ -1,5 +1,6 @@
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 import { validateEmail } from '@shared/validation/email';
 
 import type {
@@ -62,7 +63,7 @@ export class SubmitPaywallInterestUseCase {
       outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
 
     // R21 — log requestId + emailDomain + brevoOutcome. Full email forbidden (R17 PII).
-    const emailDomain = email.split('@')[1] ?? 'unknown';
+    const emailDomain = extractEmailDomain(email);
     logger.info('paywall_email_captured', {
       requestId: input.requestId,
       emailDomain,
