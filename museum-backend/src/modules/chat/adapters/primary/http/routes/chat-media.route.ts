@@ -20,7 +20,8 @@ import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-sto
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
@@ -149,10 +150,7 @@ function createImageServeHandler(chatService: ChatService) {
 
 function createReportHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
@@ -161,7 +159,7 @@ function createReportHandler(chatService: ChatService) {
     const result = await chatService.reportMessage(
       messageId,
       payload.reason,
-      currentUser.id,
+      user.id,
       payload.comment,
     );
     res.status(201).json(result);
@@ -170,16 +168,13 @@ function createReportHandler(chatService: ChatService) {
 
 function createFeedbackHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
     }
     const payload = parseFeedbackMessageRequest(req.body ?? {});
-    const result = await chatService.setMessageFeedback(messageId, currentUser.id, payload.value);
+    const result = await chatService.setMessageFeedback(messageId, user.id, payload.value);
     res.status(200).json(result);
   };
 }

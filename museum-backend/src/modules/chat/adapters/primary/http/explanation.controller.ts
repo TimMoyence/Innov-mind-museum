@@ -1,10 +1,10 @@
 import { parseExplanationParams } from '@modules/chat/adapters/primary/http/chat.contracts';
-import { getRequestUser } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import {
   type GetMessageExplanationUseCase,
   MessageNotFoundForExplanationError,
 } from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
-import { AppError, notFound } from '@shared/errors/app.error';
+import { notFound } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 
 import type { Request, RequestHandler, Response } from 'express';
 
@@ -16,10 +16,7 @@ import type { Request, RequestHandler, Response } from 'express';
  */
 export function createExplanationHandler(useCase: GetMessageExplanationUseCase): RequestHandler {
   return async (req: Request, res: Response) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
 
     const { messageId } = parseExplanationParams(req.params);
 
@@ -32,7 +29,7 @@ export function createExplanationHandler(useCase: GetMessageExplanationUseCase):
     try {
       const explanation = await useCase.execute({
         messageId,
-        userId: currentUser.id,
+        userId: user.id,
         ...(effectiveLocale !== undefined ? { locale: effectiveLocale } : {}),
       });
       res.status(200).json(explanation);

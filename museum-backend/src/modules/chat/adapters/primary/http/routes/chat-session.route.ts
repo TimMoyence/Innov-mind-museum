@@ -12,7 +12,8 @@ import {
   type CreateSessionBody,
   type UpdateSessionContextBody,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { monthlySessionQuota } from '@shared/middleware/monthly-session-quota.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
@@ -67,14 +68,7 @@ const buildUpdateSessionContextHandler =
     updateSessionContextUseCase: UpdateSessionContextUseCase,
   ): ((req: Request, res: Response) => Promise<void>) =>
   async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({
-        message: 'Token required',
-        statusCode: 401,
-        code: 'UNAUTHORIZED',
-      });
-    }
+    const user = requireUser(req);
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
       throw badRequest('session id param is required');
@@ -85,7 +79,7 @@ const buildUpdateSessionContextHandler =
     // `undefined`-vs-`null` distinction down to the repo SET clause.
     const result = await updateSessionContextUseCase.execute({
       sessionId,
-      currentUserId: currentUser.id,
+      currentUserId: user.id,
       ...(Object.prototype.hasOwnProperty.call(payload, 'currentArtworkId')
         ? { currentArtworkId: payload.currentArtworkId ?? null }
         : {}),
@@ -126,13 +120,10 @@ export const createSessionRouter = (
   );
 
   router.get('/sessions', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
 
     const query = parseListSessionsQuery(req.query);
-    const result = await chatService.listSessions(query, currentUser.id);
+    const result = await chatService.listSessions(query, user.id);
     res.status(200).json(result);
   });
 

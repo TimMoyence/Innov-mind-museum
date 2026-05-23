@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { getRequestUser } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
-import { AppError } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
@@ -16,12 +15,9 @@ export const createMemoryRouter = (userMemoryService: UserMemoryService): Router
   const router = Router();
 
   router.get('/memory/preference', isAuthenticated, async (req, res) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
 
-    const disabled = await userMemoryService.isDisabledByUser(currentUser.id);
+    const disabled = await userMemoryService.isDisabledByUser(user.id);
     res.status(200).json({ enabled: !disabled });
   });
 
@@ -30,13 +26,10 @@ export const createMemoryRouter = (userMemoryService: UserMemoryService): Router
     isAuthenticated,
     validateBody(memoryPreferenceSchema),
     async (req, res) => {
-      const currentUser = getRequestUser(req);
-      if (!currentUser?.id) {
-        throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-      }
+      const user = requireUser(req);
 
       const { enabled } = req.body as z.infer<typeof memoryPreferenceSchema>;
-      await userMemoryService.setDisabledByUser(currentUser.id, !enabled);
+      await userMemoryService.setDisabledByUser(user.id, !enabled);
       res.status(200).json({ enabled });
     },
   );

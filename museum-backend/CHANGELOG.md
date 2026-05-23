@@ -4,6 +4,27 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-2 codemod `requireUser(req)` sur 7 sites chat/
+
+Run `2026-05-23-pr-2-requireUser-codemod` — second KISS/DRY refactor de l'audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH #3. Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED. Pure TypeScript refacto, wire-format 401 strict equivalent (statusCode + `code:'UNAUTHORIZED'` inchangés, seul le `message` text passe `'Token required'` → `'Authentication required'` — discrimination FE/web se fait sur `code` machine-lisible). Zéro changement de comportement runtime observable côté consommateurs, zéro migration DB, zéro lib bump.
+
+### Changed
+
+- **PR-2** — 7 sites du module `chat/` HTTP layer utilisent désormais le helper canonique `requireUser(req)` (`museum-backend/src/shared/http/requireUser.ts:11`, signature `(req: Request) => UserJwtPayload`, throw `unauthorized('Authentication required')` si `req.user?.id` falsy) au lieu de réinventer le pattern inline `const currentUser = getRequestUser(req); if (!currentUser?.id) { throw new AppError({message:'Token required', statusCode:401, code:'UNAUTHORIZED'}) }`. Sites codemodés :
+  - `museum-backend/src/modules/chat/adapters/primary/http/explanation.controller.ts:19-22` — `createExplanationHandler` (GET `/api/chat/messages/:id/explanation`).
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-session.route.ts:70-77` — `buildUpdateSessionContextHandler` (PATCH `/sessions/:id/context`).
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-session.route.ts:129-132` — inline GET `/sessions` list handler.
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-media.route.ts:152-155` — `createReportHandler` (POST `/messages/:messageId/report`).
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-media.route.ts:173-176` — `createFeedbackHandler` (POST `/messages/:messageId/feedback`).
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-memory.route.ts:19-22` — GET `/memory/preference`.
+  - `museum-backend/src/modules/chat/adapters/primary/http/routes/chat-memory.route.ts:33-36` — PATCH `/memory/preference`.
+
+  Imports `AppError` retirés des 4 fichiers (helpers nommés `badRequest`/`notFound` conservés là où encore utilisés). Imports `getRequestUser` conservés sur `chat-session.route.ts` (sites no-throw L34 GET single, L115 POST create, L142 DELETE — useCase tolère `userId=undefined`) et `chat-media.route.ts` (sites no-throw L43 audio, L189 imageUrl, L209 tts) ; retirés sur `explanation.controller.ts` et `chat-memory.route.ts` (plus aucun usage résiduel). Diff `+18 / -47` lignes sur 4 fichiers source + 1 test sentinel.
+
+### Added
+
+- Nouveau test sentinel `museum-backend/tests/unit/chat/route-discipline-requireUser-codemod.test.ts` (156 lignes, 13 assertions) — empêche la régression du pattern inline à l'avenir. Couvre par fichier : (a) absence du pattern `if (!\w+\?\.id) { throw new AppError({...UNAUTHORIZED...}) }`, (b) absence du literal `throw new AppError({ ... code:'UNAUTHORIZED' ... })` inline (helper-wrapped `unauthorized(...)` reste autorisé), (c) présence de l'import `requireUser` from `@shared/http/requireUser`. Sanity-check global : total inline-pattern ≤ 7 (au HEAD pre-codemod = 7, post-codemod = 0).
+
 ## [Unreleased] — 2026-05-23 — PR-1 unauthorized factory extension + 6-locale sweep
 
 Run `2026-05-23-pr-1-unauthorized-extend` — first KISS/DRY refactor of the audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH #1. Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED. Pure TypeScript refacto, zéro changement de comportement runtime observable, zéro migration DB, zéro lib bump.
