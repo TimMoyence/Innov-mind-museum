@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
@@ -26,14 +26,6 @@ export type LoginResponse =
   | AuthSessionResponse
   | MfaRequiredResponse
   | MfaEnrollmentRequiredResponse;
-
-const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
-  return new AppError({
-    message,
-    statusCode: 401,
-    code,
-  });
-};
 
 const sanitizeUser = (user: User): SafeUser => {
   return {

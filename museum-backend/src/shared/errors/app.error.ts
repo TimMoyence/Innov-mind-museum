@@ -106,11 +106,11 @@ export const serviceUnavailable = (
   });
 };
 
-export const unauthorized = (message: string): AppError => {
+export const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
   return new AppError({
     message,
     statusCode: 401,
-    code: 'UNAUTHORIZED',
+    code,
   });
 };
 

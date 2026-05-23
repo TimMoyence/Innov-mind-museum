@@ -1,6 +1,6 @@
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
-import { AppError } from '@shared/errors/app.error';
+import { AppError, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 /**
@@ -38,9 +38,6 @@ export function issueMfaSessionToken(userId: number): string {
   );
 }
 
-const unauthorized = (message: string, code = 'INVALID_MFA_SESSION'): AppError =>
-  new AppError({ message, statusCode: 401, code });
-
 /** @throws {Error} 401 on any inconsistency. */
 export function verifyMfaSessionToken(token: string): { userId: number } {
   try {
@@ -53,17 +50,17 @@ export function verifyMfaSessionToken(token: string): { userId: number } {
 
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: jwt payload runtime shape */
     if (decoded.type !== 'mfa_session' || !decoded.mfaPending || typeof decoded.sub !== 'string') {
-      throw unauthorized('Invalid MFA session token');
+      throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
     const userId = Number(decoded.sub);
     if (!Number.isFinite(userId) || userId <= 0) {
-      throw unauthorized('Invalid MFA session token');
+      throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
     }
     return { userId };
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw unauthorized('Invalid MFA session token');
+    throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
   }
 }

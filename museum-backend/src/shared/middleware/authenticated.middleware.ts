@@ -1,14 +1,11 @@
 import { authSessionService } from '@modules/auth/useCase';
-import { AppError } from '@shared/errors/app.error';
+import { AppError, unauthorized } from '@shared/errors/app.error';
 import { setUser } from '@shared/observability/sentry';
 
 import { validateApiKey } from './apiKey.middleware';
 
 import type { IAccessTokenDenylist } from '@modules/auth/domain/session/access-token-denylist.port';
 import type { Request, Response, NextFunction } from 'express';
-
-const unauthorized = (message: string): AppError =>
-  new AppError({ message, statusCode: 401, code: 'UNAUTHORIZED' });
 
 const tokenRevoked = (): AppError =>
   new AppError({ message: 'Token revoked', statusCode: 401, code: 'TOKEN_REVOKED' });

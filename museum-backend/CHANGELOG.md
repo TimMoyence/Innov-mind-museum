@@ -4,6 +4,25 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-1 unauthorized factory extension + 6-locale sweep
+
+Run `2026-05-23-pr-1-unauthorized-extend` — first KISS/DRY refactor of the audit `2026-05-23-audit-kiss-dry-backend/findings/findings-B4.md` § Duplications HIGH #1. Pipeline : UFR-022 fresh-context 5-phase / reviewer APPROVED. Pure TypeScript refacto, zéro changement de comportement runtime observable, zéro migration DB, zéro lib bump.
+
+### Changed
+
+- **PR-1** — `unauthorized` factory canonique étendue à signature `(message: string, code?: string): AppError` (default-arg positional, `code = 'UNAUTHORIZED'`). Surface additive : les ~14 call-sites externes mono-arg continuent de compiler sans annotation. Pattern aligné avec les ex-locales L4/L5/L6 (`token-jwt.service`, `authSession.service`, `session-issuer.service`). Source : `museum-backend/src/shared/errors/app.error.ts:109-115`. Symétrie volontairement gardée mono-arg-compatible (vs options-object) pour préserver les 16 call-sites 2-arg littéraux existants et la cohérence avec `forbidden(message)` / `conflict(message)`. AC1+AC2 couverts par nouveau test unit `tests/unit/shared/app-error.test.ts` (assertion `'unauthorized accepts an optional code override'`). AC4+AC8 couverts par nouveau test `tests/unit/auth/unauthorized-codemod.test.ts` (3 paths d'erreur `verifyMfaSessionToken` + sentinel codes machine-lisibles préservés bit-à-bit).
+
+### Removed (UFR-016 burial — 6 factories locales)
+
+- `museum-backend/src/shared/middleware/authenticated.middleware.ts:10-11` — `const unauthorized = (message: string)` (mono-arg, default `'UNAUTHORIZED'`). 5 call-sites mono-arg conservés inchangés (default canonique ≡ default locale).
+- `museum-backend/src/shared/middleware/apiKey.middleware.ts:28-29` — `const unauthorized = (message: string)` (mono-arg, default `'UNAUTHORIZED'`). 6 call-sites mono-arg conservés inchangés.
+- `museum-backend/src/modules/auth/useCase/totp/mfaSessionToken.ts:41-42` — `const unauthorized = (message: string, code = 'INVALID_MFA_SESSION')` (default divergent). **3 call-sites mono-arg promus en 2-arg explicit** `(msg, 'INVALID_MFA_SESSION')` aux lignes 53, 60, 65 post-refactor pour préserver le code machine-lisible (sans cette promotion, FE MFA challenge UX cassée car code dégradait silencieusement à `'UNAUTHORIZED'`).
+- `museum-backend/src/modules/auth/useCase/session/token-jwt.service.ts:30-36` — `const unauthorized = (message: string, code = 'UNAUTHORIZED')`. 6 call-sites 2-arg littéraux (`'INVALID_ACCESS_TOKEN'`, `'INVALID_REFRESH_TOKEN'`) conservés inchangés.
+- `museum-backend/src/modules/auth/useCase/session/authSession.service.ts:30-36` — `const unauthorized = (message: string, code = 'UNAUTHORIZED')`. 7 call-sites 2-arg littéraux (`'INVALID_CREDENTIALS'`, `'INVALID_REFRESH_TOKEN'`, `'ACCOUNT_DELETED'`, `'ACCOUNT_SUSPENDED'`) conservés inchangés.
+- `museum-backend/src/modules/auth/useCase/session/session-issuer.service.ts:39-45` — `const unauthorized = (message: string, code = 'UNAUTHORIZED')`. 4 call-sites 2-arg littéraux (`'REFRESH_TOKEN_REUSE_DETECTED'`, `'REFRESH_TOKEN_EXPIRED'`, `'SESSION_IDLE_TIMEOUT'`) conservés inchangés.
+
+Total diff : `+46 / -44` lignes sur 8 fichiers (6 source + 2 tests). Aucune ADR (refacto réversible). Aucune entrée TECH_DEBT (zéro dette ajoutée).
+
 ## [Unreleased] — 2026-05-23 — PR-P0-1 fix feedback LLM cache invalidation
 
 Run `2026-05-23-pr-p0-1-fix-llm-cache-feedback` — single P0 launch-blocker closed (V1 2026-06-07, J-15). Pipeline : UFR-022 fresh-context 5-phase / enterprise / reviewer APPROVED weightedMean **92.4**.
