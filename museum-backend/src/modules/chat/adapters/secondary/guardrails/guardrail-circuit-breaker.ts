@@ -1,13 +1,19 @@
-import { logger } from '@shared/logger/logger';
-
 /**
  * 3-state circuit breaker for LLM Guard sidecar HTTP (CLOSED → OPEN → HALF_OPEN).
  * Always-on (no enable flag); LLM_GUARD_CB_* env vars are tunables, not kill-switch.
- * Adds `halfOpenMaxProbes` accountant vs llm-circuit-breaker to avoid concurrent
- * probe hammering. Kept separate (KISS — only 2 consumers).
+ * Adds `halfOpenMaxProbes` accountant to avoid concurrent probe hammering.
+ *
+ * PR-13 (RUN_ID 2026-05-23-pr-13-threeStateCircuit) refactor — FSM extracted
+ * to `@shared/circuit-breaker/three-state-circuit`; sliding-window failure
+ * trip predicate lives in `SlidingWindowFailureStrategy`. Public API and log
+ * payloads preserved byte-identical (operators rely on Loki queries).
  */
 
-export type GuardrailCircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+import { SlidingWindowFailureStrategy } from '@shared/circuit-breaker/strategies/sliding-window-failure-strategy';
+import { ThreeStateCircuit, type CircuitState } from '@shared/circuit-breaker/three-state-circuit';
+import { logger } from '@shared/logger/logger';
+
+export type GuardrailCircuitState = CircuitState;
 
 export interface GuardrailCircuitBreakerSnapshot {
   state: GuardrailCircuitState;
@@ -23,6 +29,8 @@ export interface GuardrailCircuitBreakerOptions {
   halfOpenMaxProbes?: number;
   /** Wired by composition root for metrics. */
   onStateChange?: (next: GuardrailCircuitState, prev: GuardrailCircuitState) => void;
+  /** Test seam — defaults to `Date.now`. */
+  now?: () => number;
 }
 
 const DEFAULT_FAILURE_THRESHOLD = 5;
@@ -39,144 +47,98 @@ function parsePositiveNumber(raw: string | undefined, fallback: number): number 
 }
 
 export class GuardrailCircuitBreaker {
-  private readonly failureThreshold: number;
   private readonly windowMs: number;
-  private readonly openDurationMs: number;
-  private readonly halfOpenMaxProbes: number;
-  private readonly onStateChange?: (
-    next: GuardrailCircuitState,
-    prev: GuardrailCircuitState,
-  ) => void;
-
-  private currentState: GuardrailCircuitState = 'CLOSED';
-  private failures: number[] = [];
-  private openedAt: number | null = null;
-  /** OPEN→HALF_OPEN timestamp; feeds probeDurationMs on CLOSE (design.md §10). */
-  private halfOpenedAt: number | null = null;
-  private availableProbes: number;
+  private readonly nowFn: () => number;
+  private readonly strategy: SlidingWindowFailureStrategy;
+  private readonly circuit: ThreeStateCircuit<SlidingWindowFailureStrategy>;
 
   constructor(options: GuardrailCircuitBreakerOptions = {}) {
-    this.failureThreshold =
+    const failureThreshold =
       options.failureThreshold ??
       parsePositiveNumber(process.env.LLM_GUARD_CB_FAILURE_THRESHOLD, DEFAULT_FAILURE_THRESHOLD);
     this.windowMs =
       options.windowMs ??
       parsePositiveNumber(process.env.LLM_GUARD_CB_WINDOW_MS, DEFAULT_WINDOW_MS);
-    this.openDurationMs =
+    const openDurationMs =
       options.openDurationMs ??
       parsePositiveNumber(process.env.LLM_GUARD_CB_OPEN_DURATION_MS, DEFAULT_OPEN_DURATION_MS);
-    this.halfOpenMaxProbes =
+    const halfOpenMaxProbes =
       options.halfOpenMaxProbes ??
       parsePositiveNumber(
         process.env.LLM_GUARD_CB_HALF_OPEN_MAX_PROBES,
         DEFAULT_HALF_OPEN_MAX_PROBES,
       );
-    this.onStateChange = options.onStateChange;
-    this.availableProbes = this.halfOpenMaxProbes;
+    this.nowFn = options.now ?? Date.now;
+    const userOnStateChange = options.onStateChange;
+
+    this.strategy = new SlidingWindowFailureStrategy({
+      threshold: failureThreshold,
+      windowMs: this.windowMs,
+      now: this.nowFn,
+    });
+    this.circuit = new ThreeStateCircuit({
+      strategy: this.strategy,
+      openDurationMs,
+      halfOpenMaxProbes,
+      now: this.nowFn,
+      onStateChange: (next, prev) => {
+        if (next === 'HALF_OPEN') {
+          const openedAtIso =
+            this.circuit.openedAt !== null ? new Date(this.circuit.openedAt).toISOString() : null;
+          logger.info('llm_guard_circuit_breaker_half_open', {
+            openedAt: openedAtIso,
+            windowMs: this.windowMs,
+          });
+        } else if (next === 'CLOSED' && prev === 'HALF_OPEN') {
+          const probeDurationMs =
+            this.circuit.halfOpenedAt !== null ? this.nowFn() - this.circuit.halfOpenedAt : 0;
+          logger.info('llm_guard_circuit_breaker_close', { probeDurationMs });
+        } else if (next === 'OPEN') {
+          logger.warn('llm_guard_circuit_breaker_open', {
+            failureCount: this.strategy.getFailureCount(),
+            windowMs: this.windowMs,
+            from: prev === 'HALF_OPEN' ? 'half_open' : 'closed',
+          });
+        }
+        userOnStateChange?.(next, prev);
+      },
+    });
   }
 
   /** Cheap getter — called per scan. Lazy OPEN→HALF_OPEN on cooldown elapse. */
   get state(): GuardrailCircuitState {
-    if (this.currentState === 'OPEN' && this.openedAt !== null) {
-      const elapsed = Date.now() - this.openedAt;
-      if (elapsed >= this.openDurationMs) {
-        const openedAtIso = new Date(this.openedAt).toISOString();
-        this.transitionTo('HALF_OPEN');
-        this.openedAt = null;
-        this.halfOpenedAt = Date.now();
-        this.availableProbes = this.halfOpenMaxProbes;
-        logger.info('llm_guard_circuit_breaker_half_open', {
-          openedAt: openedAtIso,
-          windowMs: this.windowMs,
-        });
-      }
-    }
-    return this.currentState;
+    return this.circuit.state;
   }
 
   /** HALF_OPEN slot decremented synchronously so concurrent callers can't all sneak through. */
   canAttempt(): boolean {
-    const state = this.state;
-    if (state === 'CLOSED') return true;
-    if (state === 'OPEN') return false;
-    if (this.availableProbes <= 0) return false;
-    this.availableProbes -= 1;
-    return true;
+    return this.circuit.canAttempt();
   }
 
   /** HALF_OPEN → CLOSED; idempotent when already CLOSED. */
   recordSuccess(): void {
-    if (this.currentState === 'HALF_OPEN') {
-      const probeDurationMs = this.halfOpenedAt !== null ? Date.now() - this.halfOpenedAt : 0;
-      this.transitionTo('CLOSED');
-      this.failures = [];
-      this.halfOpenedAt = null;
-      this.availableProbes = this.halfOpenMaxProbes;
-      logger.info('llm_guard_circuit_breaker_close', { probeDurationMs });
-    }
+    this.circuit.recordOutcome('success');
   }
 
   /** Trips OPEN if sliding window exceeds threshold OR call was HALF_OPEN probe. */
   recordFailure(): void {
-    const now = Date.now();
-    this.failures.push(now);
-    this.pruneExpiredFailures(now);
-
-    if (this.currentState === 'HALF_OPEN') {
-      this.trip(now, 'HALF_OPEN');
-      return;
-    }
-
-    if (this.failures.length >= this.failureThreshold) {
-      this.trip(now, 'CLOSED');
-    }
+    this.strategy.recordFailure();
+    this.circuit.recordOutcome('failure');
   }
 
   getState(): GuardrailCircuitBreakerSnapshot {
+    const state = this.circuit.state; // lazy OPEN→HALF_OPEN on expired cooldown
+    const last = this.strategy.getLastFailureAt();
     return {
-      state: this.state, // lazy OPEN→HALF_OPEN on expired cooldown
-      failureCount: this.failures.length,
-      lastFailureAt:
-        this.failures.length > 0 ? new Date(this.failures[this.failures.length - 1]) : null,
-      openedAt: this.openedAt !== null ? new Date(this.openedAt) : null,
+      state,
+      failureCount: this.strategy.getFailureCount(),
+      lastFailureAt: last !== null ? new Date(last) : null,
+      openedAt: this.circuit.openedAt !== null ? new Date(this.circuit.openedAt) : null,
     };
   }
 
   /** Test-only. */
   reset(): void {
-    const prev = this.currentState;
-    this.currentState = 'CLOSED';
-    this.failures = [];
-    this.openedAt = null;
-    this.halfOpenedAt = null;
-    this.availableProbes = this.halfOpenMaxProbes;
-    if (prev !== 'CLOSED') {
-      this.onStateChange?.('CLOSED', prev);
-    }
-  }
-
-  private trip(now: number, from: GuardrailCircuitState): void {
-    this.transitionTo('OPEN');
-    this.openedAt = now;
-    // Probe window ended; clear so next HALF_OPEN sets fresh baseline.
-    this.halfOpenedAt = null;
-    this.availableProbes = this.halfOpenMaxProbes;
-    logger.warn('llm_guard_circuit_breaker_open', {
-      failureCount: this.failures.length,
-      windowMs: this.windowMs,
-      from: from === 'HALF_OPEN' ? 'half_open' : 'closed',
-    });
-  }
-
-  private transitionTo(next: GuardrailCircuitState): void {
-    const prev = this.currentState;
-    if (prev === next) return;
-    this.currentState = next;
-    this.onStateChange?.(next, prev);
-  }
-
-  private pruneExpiredFailures(now: number): void {
-    const cutoff = now - this.windowMs;
-    this.failures = this.failures.filter((ts) => ts > cutoff);
+    this.circuit.reset();
   }
 }

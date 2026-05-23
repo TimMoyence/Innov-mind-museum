@@ -1,52 +1,76 @@
 import { CircuitOpenError } from '@modules/chat/domain/errors/circuit-open.error';
+import { SlidingWindowFailureStrategy } from '@shared/circuit-breaker/strategies/sliding-window-failure-strategy';
+import { ThreeStateCircuit, type CircuitState } from '@shared/circuit-breaker/three-state-circuit';
 import { logger } from '@shared/logger/logger';
 
 export { CircuitOpenError };
-
-type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 interface CircuitBreakerOptions {
   failureThreshold?: number;
   windowMs?: number;
   openDurationMs?: number;
+  /** Additive (PR-13) — composition root can wire metrics gauges. */
+  onStateChange?: (next: CircuitState, prev: CircuitState) => void;
+  /** Test seam — defaults to `Date.now`. */
+  now?: () => number;
 }
 
-export class LLMCircuitBreaker {
-  private readonly failureThreshold: number;
-  private readonly windowMs: number;
-  private readonly openDurationMs: number;
+const DEFAULT_FAILURE_THRESHOLD = 5;
+const DEFAULT_WINDOW_MS = 60_000;
+const DEFAULT_OPEN_DURATION_MS = 30_000;
 
-  private currentState: CircuitState = 'CLOSED';
-  private failures: number[] = [];
-  private openedAt: number | null = null;
+export class LLMCircuitBreaker {
+  private readonly windowMs: number;
+  private readonly strategy: SlidingWindowFailureStrategy;
+  private readonly circuit: ThreeStateCircuit<SlidingWindowFailureStrategy>;
 
   constructor(options?: CircuitBreakerOptions) {
     // Env-var overrides let chaos e2e tune short windows (LLM_CB_FAILURE_THRESHOLD=3,
     // LLM_CB_WINDOW_MS=1000, LLM_CB_OPEN_DURATION_MS=500). Prod leaves unset → defaults
     // 5 / 60000 / 30000.
-    this.failureThreshold =
-      options?.failureThreshold ?? Number(process.env.LLM_CB_FAILURE_THRESHOLD ?? 5);
-    this.windowMs = options?.windowMs ?? Number(process.env.LLM_CB_WINDOW_MS ?? 60_000);
-    this.openDurationMs =
-      options?.openDurationMs ?? Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 30_000);
+    const failureThreshold =
+      options?.failureThreshold ??
+      Number(process.env.LLM_CB_FAILURE_THRESHOLD ?? DEFAULT_FAILURE_THRESHOLD);
+    this.windowMs = options?.windowMs ?? Number(process.env.LLM_CB_WINDOW_MS ?? DEFAULT_WINDOW_MS);
+    const openDurationMs =
+      options?.openDurationMs ??
+      Number(process.env.LLM_CB_OPEN_DURATION_MS ?? DEFAULT_OPEN_DURATION_MS);
+    const now = options?.now ?? Date.now;
+    const userOnStateChange = options?.onStateChange;
+
+    this.strategy = new SlidingWindowFailureStrategy({
+      threshold: failureThreshold,
+      windowMs: this.windowMs,
+      now,
+    });
+    this.circuit = new ThreeStateCircuit({
+      strategy: this.strategy,
+      openDurationMs,
+      now,
+      onStateChange: (next, prev) => {
+        if (next === 'HALF_OPEN') {
+          logger.info('llm_circuit_breaker_half_open');
+        } else if (next === 'CLOSED' && prev === 'HALF_OPEN') {
+          logger.info('llm_circuit_breaker_closed');
+        } else if (next === 'OPEN') {
+          logger.warn('llm_circuit_breaker_open', {
+            failureCount: this.strategy.getFailureCount(),
+            windowMs: this.windowMs,
+          });
+        }
+        userOnStateChange?.(next, prev);
+      },
+    });
   }
 
   /** Transitions OPEN → HALF_OPEN when cooldown expires (side-effecting getter). */
   get state(): CircuitState {
-    if (this.currentState === 'OPEN' && this.openedAt !== null) {
-      const elapsed = Date.now() - this.openedAt;
-      if (elapsed >= this.openDurationMs) {
-        this.currentState = 'HALF_OPEN';
-        this.openedAt = null;
-        logger.info('llm_circuit_breaker_half_open');
-      }
-    }
-    return this.currentState;
+    return this.circuit.state;
   }
 
   /** Throws CircuitOpenError if OPEN; records success/failure otherwise. */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.state === 'OPEN') {
+    if (this.circuit.state === 'OPEN') {
       throw new CircuitOpenError();
     }
 
@@ -62,55 +86,25 @@ export class LLMCircuitBreaker {
 
   /** HALF_OPEN → CLOSED on success. */
   recordSuccess(): void {
-    if (this.currentState === 'HALF_OPEN') {
-      this.currentState = 'CLOSED';
-      this.failures = [];
-      logger.info('llm_circuit_breaker_closed');
-    }
+    this.circuit.recordOutcome('success');
   }
 
   /** Trips to OPEN if threshold exceeded in the sliding window. */
   recordFailure(): void {
-    const now = Date.now();
-    this.failures.push(now);
-    this.pruneExpiredFailures(now);
-
-    if (this.currentState === 'HALF_OPEN') {
-      this.trip(now);
-      return;
-    }
-
-    if (this.failures.length >= this.failureThreshold) {
-      this.trip(now);
-    }
+    this.strategy.recordFailure();
+    this.circuit.recordOutcome('failure');
   }
 
   getState(): { state: CircuitState; failureCount: number; lastFailureAt: Date | null } {
+    const last = this.strategy.getLastFailureAt();
     return {
-      state: this.state, // triggers OPEN → HALF_OPEN transition if cooldown expired
-      failureCount: this.failures.length,
-      lastFailureAt:
-        this.failures.length > 0 ? new Date(this.failures[this.failures.length - 1]) : null,
+      state: this.circuit.state, // triggers OPEN → HALF_OPEN transition if cooldown expired
+      failureCount: this.strategy.getFailureCount(),
+      lastFailureAt: last !== null ? new Date(last) : null,
     };
   }
 
   reset(): void {
-    this.currentState = 'CLOSED';
-    this.failures = [];
-    this.openedAt = null;
-  }
-
-  private trip(now: number): void {
-    this.currentState = 'OPEN';
-    this.openedAt = now;
-    logger.warn('llm_circuit_breaker_open', {
-      failureCount: this.failures.length,
-      windowMs: this.windowMs,
-    });
-  }
-
-  private pruneExpiredFailures(now: number): void {
-    const cutoff = now - this.windowMs;
-    this.failures = this.failures.filter((ts) => ts > cutoff);
+    this.circuit.reset();
   }
 }

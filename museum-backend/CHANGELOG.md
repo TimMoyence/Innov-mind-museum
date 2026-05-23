@@ -4,6 +4,127 @@ All notable changes to the Musaium backend (+ cross-app legal/mobile changes shi
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The Musaium repo is a monorepo (`museum-backend/` + `museum-frontend/` + `museum-web/`) ; this changelog captures cross-app GDPR / compliance / launch-blocking changes when they are coordinated by a single run.
 
+## [Unreleased] — 2026-05-23 — PR-13 `ThreeStateCircuit<TTripStrategy>` primitive + 3 CircuitBreaker wrappers (DRY-refactor, byte-identical surface + onStateChange parity)
+
+Run `2026-05-23-pr-13-threeStateCircuit` — treizième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (finding B6 #1 : 3-state CB duplication across 3 in-house wrappers — `LLMCircuitBreaker` 116 LOC, `LlmCostCircuitBreaker` 260 LOC, `GuardrailCircuitBreaker` 182 LOC, common-ground 7-element FSM shape dupliqué 100%). Pipeline : UFR-022 fresh-context 5-phase / reviewer (combined verify+security+review) **APPROVED** loop-1 terminal, zero CHANGES_REQUESTED, zero blocking finding, 3 nonBlockingObservations documentés (LOC STRETCH-MISS amortization, `onStateChange` opt-in coverage, `parsePositiveNumber` deferred extraction). Refactor structurel : nouveau cluster `museum-backend/src/shared/circuit-breaker/` (3 fichiers, 342 LOC d'infrastructure partagée) absorbe le FSM 3-state dupliqué. Les 3 wrappers passent de 116+260+182 = **558 LOC** à 110+175+144 = **429 LOC** (**−129 LOC, −23%** côté wrapper-only) et deviennent de thin delegates qui composent `ThreeStateCircuit<TStrategy>` + une stratégie de trip pluggable (`SlidingWindowFailureStrategy` partagée par LLM + Guardrail, `CostTripStrategy` cost-only). Public API des 3 wrappers préservée byte-identical au niveau des 5 consumers (`langchain.orchestrator.ts` + `llm-guard.adapter.ts` + `chat-module.ts` composition root + `/api/health` route + tests) ; seul delta ADDITIF = `LLMCircuitBreaker.onStateChange` option (parity avec les 2 autres wrappers — was logger-only outlier pre-refactor). **9 log event names préservés byte-identical** (Loki queries / runbooks / on-call dashboards scrape these — NFR-3 observability invariance). Zéro migration DB applicative, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass, zéro OpenAPI delta, zéro FE follow-up, zéro env-var rename. `pnpm jest --testPathPattern='(unit/chat/(llm|llm-cost|guardrail)-circuit-breaker|unit/shared/circuit-breaker|unit/architecture/pr13-circuit-breaker-purity-sentinel)'` → **7 suites pass, 54/54 tests pass** (33 existing + 20 new primitive/strategies + 1 sentinel). Chaos e2e (`tests/e2e/chaos-circuit-breaker.e2e.test.ts`) untouched, still green per R3 call-graph invariants. Reversibility : `git revert <sha>` restaure les 3 wrappers legacy + retire le shared cluster + retire les 4 new test files ; pas de DB migration ni de schema delta à revert.
+
+### Added
+
+- **Nouveau cluster `museum-backend/src/shared/circuit-breaker/`** (3 fichiers, 342 LOC, domain-agnostic) :
+  - **`three-state-circuit.ts`** (189 LOC) — Primitive FSM générique `class ThreeStateCircuit<TStrategy extends CircuitTripStrategy>`. Exports : `type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN'`, `interface CircuitTripStrategy { shouldTrip(now); pruneExpired(now); reset(); }`, `interface ThreeStateCircuitOptions<TStrategy>` (`strategy`, `openDurationMs`, `halfOpenMaxProbes?`, `onStateChange?`, `now?`), `interface ThreeStateCircuitCommonSnapshot` (`state`, `openedAt: Date | null`, `lastTripAt: Date | null`). Surface mutator concentrée sur 3 méthodes : `recordOutcome('success' | 'failure')`, `trip(from)`, `reset()`. Lazy `OPEN → HALF_OPEN` cooldown transition dans le `state` getter (O(1), no I/O). `canAttempt()` decrement probe slot synchronously (race-safe). `onStateChange` fires EXACTLY ONCE per real transition (invariant). NO logging, NO I/O — wrappers own observability via callback. `now()` injection threaded everywhere (NFR-2 determinism).
+  - **`strategies/sliding-window-failure-strategy.ts`** (60 LOC) — `class SlidingWindowFailureStrategy implements CircuitTripStrategy`. `failures: number[]` pruned lazily by `windowMs`. `recordFailure()` appends `now()`. `shouldTrip(now)` returns `failures.length >= threshold`. `reset()` clears array. Accessors `getFailureCount()` + `getLastFailureAt()` pour les wrapper snapshots. Partagée par `LLMCircuitBreaker` + `GuardrailCircuitBreaker`.
+  - **`strategies/cost-trip-strategy.ts`** (93 LOC) — `class CostTripStrategy implements CircuitTripStrategy`. Dual condition : sliding 1h `hourlyWindow: CostEntry[]` ORed avec UTC day counter `dailySpend = { day: string, cents: number }`. `recordCharge(cents)` rejects non-finite / ≤0 cents at strategy level (defense-in-depth). `shouldTrip(now)` returns `hourly > threshold OR daily > budget`. UTC day rollover via `.toISOString().slice(0,10)`. `reset()` clears hourly window AND daily counter. Accessors `getHourlySpendCents(now)` + `getDailySpendCents(now)` pour le wrapper snapshot. Utilisée uniquement par `LlmCostCircuitBreaker`.
+- **Test sentinel architecture `museum-backend/tests/unit/architecture/pr13-circuit-breaker-purity-sentinel.test.ts`** (NEW, sha256 `0537a195b2c4df69c5cf64ddae97415f2fe98a26ee57f5411dc397516237ddcd`, FROZEN) — UFR-016 dead-code-burial guard. Filesystem-based assertions (`readFileSync` line-by-line scan) ; pour chaque wrapper file :
+  - **Block A — forbidden patterns** (4 patterns × 3 files = 12 assertions, ligne-par-ligne) : `this.currentState = '...'` (FSM mutation belongs to primitive), `private currentState: ...CircuitState = 'CLOSED'` (field declaration belongs to primitive), `private trip(...)` / `private transitionTo(...)` (helpers moved to primitive), `private failures: number[]` / `private hourlyCharges: ` / `private dailySpend = ` (state moved to strategies).
+  - **Block B — required imports** (3 assertions) : each wrapper file MUST import `ThreeStateCircuit` from `@shared/circuit-breaker/three-state-circuit`.
+  - Chaque assertion surface un hint `file:line` au reviewer sur failure. Frozen sha256 lock contre éditor self-modification.
+- **20 nouveaux test cases unit (3 fichiers, FROZEN au RED phase)** :
+  - `museum-backend/tests/unit/shared/circuit-breaker/three-state-circuit.test.ts` (sha256 `462f613c3ce86d6de2d6fc955db7df4a788703bd6b1404178c0d53c4649f357f`) — **9 cases** : CLOSED→OPEN via strategy.shouldTrip, OPEN→HALF_OPEN lazy cooldown, HALF_OPEN+success→CLOSED (strategy.reset called once, onStateChange fired), HALF_OPEN+failure→OPEN re-trip (`from: 'HALF_OPEN'`), `canAttempt()` HALF_OPEN avec `halfOpenMaxProbes=2`, deterministic `now()` injection, `reset()` from OPEN fires onStateChange→CLOSED, public `trip(from)` drives OPEN from CLOSED, `getCommonSnapshot()` accuracy. Local mock strategy avec `tripFlag`/`resetCount`/`pruneCount` (zero external imports).
+  - `museum-backend/tests/unit/shared/circuit-breaker/strategies/sliding-window-failure-strategy.test.ts` (sha256 `449aeb1fc3e5cf95f1103589a3bb905c3043027d32664caff93911d58c137268`) — **5 cases** : `recordFailure()` appends, `shouldTrip()` false<threshold / true=threshold, `pruneExpired()` drops old, `reset()` clears, `getLastFailureAt()` returns most recent.
+  - `museum-backend/tests/unit/shared/circuit-breaker/strategies/cost-trip-strategy.test.ts` (sha256 `9525f237cebf237bc49f92cf7f9e7e27a1bfe1114843eba5f57f781075be73df`) — **6 cases** : `recordCharge(≤0|NaN|Infinity)` no-op, hourly threshold breach trips, daily budget breach trips even when hourly<threshold, hourly window prunes after 1h, UTC day rollover resets daily counter, accessors reflect mutation.
+
+### Changed
+
+**Wrapper refactor — 3 fichiers passent de FSM inline à thin delegate sur `ThreeStateCircuit<TStrategy>`** :
+
+| Wrapper | Fichier | LOC (avant → après) | Strategy | Note |
+|---|---|---|---|---|
+| LLM latency CB | `museum-backend/src/modules/chat/adapters/secondary/llm/llm-circuit-breaker.ts` | 116 → 110 (**−6**) | `SlidingWindowFailureStrategy` | **+ `onStateChange` callback uniformisé** (was logger-only outlier) |
+| LLM cost CB | `museum-backend/src/modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker.ts` | 260 → 175 (**−85**) | `CostTripStrategy` | R3.2 path preserved (stateBefore capture → strategy.recordCharge → shouldTrip → trip-or-recover) |
+| Guardrail CB | `museum-backend/src/modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker.ts` | 182 → 144 (**−38**) | `SlidingWindowFailureStrategy` | `parsePositiveNumber` helper retained inline (deferred extraction) |
+
+- **`LLMCircuitBreaker` — `onStateChange` callback uniformisé** (was logger-only direct outlier pre-refactor). Avant PR-13 : seul wrapper sans `onStateChange` option ; logger calls (`llm_circuit_breaker_half_open` / `_closed` / `_open`) wired inline via direct FSM mutation. Après PR-13 : `CircuitBreakerOptions` accepte un `onStateChange?: (next: CircuitState, prev: CircuitState) => void` (additif, non-breaking — call sites existants continuent sans le supplier). Le constructeur compose `ThreeStateCircuit<SlidingWindowFailureStrategy>` ; le handler `onStateChange` interne au wrapper fait les 3 logger calls (event names byte-identical `llm_circuit_breaker_half_open` / `llm_circuit_breaker_closed` / `llm_circuit_breaker_open` avec payload `{failureCount, windowMs}`) PUIS invoque le user-supplied callback. Parity now achieved avec `LlmCostCircuitBreaker.onStateChange` + `GuardrailCircuitBreaker.onStateChange`. Composition root `chat-module.ts` peut désormais wirer un 3e Prometheus gauge `llm_circuit_breaker_state` dans un follow-up PR sans toucher au wrapper. `CircuitOpenError` re-exportée depuis `llm-circuit-breaker.ts:6` (backward-compat consumer import path).
+- **`LlmCostCircuitBreaker` — délégation byte-identical sur `CostTripStrategy`**. `recordCharge(cents)` preserve la R3.2 path : (1) guard non-positive/non-finite, (2) capture `stateBefore = circuit.state` (triggers lazy OPEN→HALF_OPEN), (3) `strategy.recordCharge(cents)`, (4) si `strategy.shouldTrip(now())` → `circuit.trip(stateBefore)` (HALF_OPEN→OPEN ou CLOSED→OPEN — cap breach honoured on probe call), (5) sinon si `stateBefore === 'HALF_OPEN'` → `circuit.recordOutcome('success')` (probe success path). `recordFailure()` only HALF_OPEN re-OPEN. `getState()` shape `{state, hourlySpendCents, dailySpendCents, lastTripAt: Date|null, openedAt: Date|null}` byte-identical. Re-exported type alias `LlmCostCircuitState = CircuitState` (consumer imports preserved).
+- **`GuardrailCircuitBreaker` — délégation sur `SlidingWindowFailureStrategy`**, primitive composée avec `halfOpenMaxProbes` config (was the only wrapper exposing this knob ; env var `LLM_GUARD_CB_HALF_OPEN_MAX_PROBES` honoured byte-identical). Local `parsePositiveNumber(raw, fallback)` helper retained inline (NaN / ≤0 / non-finite → fallback, défense contre operator typo) — extraction to `@shared/env/parse-positive-number.ts` DEFERRED pour limiter le PR blast radius (recommended follow-up). `getState()` shape `{state, failureCount, lastFailureAt: Date|null, openedAt: Date|null}` byte-identical.
+- **9 log event names préservés byte-identical** (NFR-3 observability invariance) :
+
+| Event | Wrapper | Payload keys |
+|---|---|---|
+| `llm_circuit_breaker_half_open` | LLM latency | (none) |
+| `llm_circuit_breaker_closed` | LLM latency | (none) |
+| `llm_circuit_breaker_open` | LLM latency | `{failureCount, windowMs}` |
+| `llm_cost_circuit_breaker_half_open` | LLM cost | `{hourlySpendCents, dailySpendCents}` |
+| `llm_cost_circuit_breaker_close` | LLM cost | `{hourlySpendCents, dailySpendCents}` |
+| `llm_cost_circuit_breaker_open` | LLM cost | `{hourlySpendCents, dailySpendCents, hourlyThresholdCents, dailyBudgetCents, from: 'half_open'\|'closed'}` |
+| `llm_guard_circuit_breaker_half_open` | Guardrail | `{openedAt: ISO\|null, windowMs}` |
+| `llm_guard_circuit_breaker_close` | Guardrail | `{probeDurationMs}` |
+| `llm_guard_circuit_breaker_open` | Guardrail | `{failureCount, windowMs, from: 'half_open'\|'closed'}` |
+
+  `from` payload casing **lowercase** (`'half_open'` / `'closed'`) byte-identical pre/post-refactor — verified at T0 inventory phase before any write. Loki queries / runbooks / on-call dashboards continue à scraper byte-identical.
+- **`museum-backend/tests/unit/chat/llm-circuit-breaker.test.ts` étendu (10 → 11 cases, FROZEN at green, sha256 `d0e6f0a1964617ee626dd2e1eaba3b5852c0ba7a40e18ffe08ac668eb9717634`)** — 1 nouvelle case ADDITIVE appendée (lignes 130+, purement additif, +34 / −0 LOC) : `it('fires onStateChange callback on every real FSM transition when supplied', ...)` vérifie CLOSED→OPEN, OPEN→HALF_OPEN (lazy via `jest.advanceTimersByTime`), HALF_OPEN→CLOSED — toutes fire le callback avec `(next, prev)` payload. Les 10 cases existantes UNTOUCHED byte-identical (spec §6.2 surgical update only).
+
+### Security
+
+- **Fail-CLOSED path préservé byte-identical** — `llm-circuit-breaker.ts:73-75` continue à `throw new CircuitOpenError()` quand `circuit.state === 'OPEN'`. Upstream `langchain.orchestrator.ts` catches via global error middleware → 503 au client. ADR-047 fail-CLOSED policy pour V2 LLM Guard preserved at wrapper level. `CircuitOpenError` re-exportée depuis le wrapper file (consumer import path byte-identical).
+- **Sliding-window strategy fail-CLOSED sur threshold overflow** — `SlidingWindowFailureStrategy.shouldTrip(now)` prunes puis évalue `failures.length >= threshold` (≥, pas `>`). No off-by-one allowing one extra failure through. Vérifié par `sliding-window-failure-strategy.test.ts` case 2.
+- **Cost-trip strategy day rollover atomique** — `CostTripStrategy.accumulateDaily(now, cents)` checks `dayKey !== current` et reset `{day, cents: 0}` AVANT increment. UTC `.toISOString().slice(0,10)` canonical day key (matches pre-refactor behaviour à `llm-cost-circuit-breaker.ts:189-195` byte-identical). Defense-in-depth : pas de double-counting on day boundary crossings.
+- **Probe-slot accountant race-safe** — `ThreeStateCircuit.canAttempt()` decrement `availableProbes` SYNCHRONOUSLY dans le même getter call avant return true — concurrent probes ne peuvent pas tous passer (matches pre-refactor `GuardrailCircuitBreaker` invariant). Validé par `three-state-circuit.test.ts` case 5 avec `halfOpenMaxProbes=2` (admits 2 then returns false on 3rd call).
+- **Cost predicate ORed conditions preserved** — `CostTripStrategy.shouldTrip(now)` returns `hourly > threshold OR daily > budget`. Defense-in-depth dual : hourly burst (DDoS amplification, scraping) AND daily cap (budget breach, wider than guardrail-budget LLM-judge cap per `llm-cost-circuit-breaker.ts:32-34` doc). Validé par `cost-trip-strategy.test.ts` cases 2-3.
+- **No PII / no secret dans aucun new log payload** — `llm_circuit_breaker_open` payload `{failureCount, windowMs}` = counters seulement, no user data. `llm_cost_circuit_breaker_open` payload `{hourlySpendCents, dailySpendCents, hourlyThresholdCents, dailyBudgetCents, from}` = cents counters + thresholds seulement, no userId, no prompt content. `llm_guard_circuit_breaker_open` payload `{failureCount, windowMs, from}` = counters seulement. GDPR Art. 5(1)(c) data minimisation maintenue.
+- **Primitive layer NO I/O, NO logging** — `three-state-circuit.ts` est domain-agnostic, ne logge JAMAIS, ne fait JAMAIS d'I/O. Wrappers possèdent toute l'observability via `onStateChange` callback. Encapsulation NFR-4 verified. Tested via 9 primitive cases (mock strategy with `resetCount`/`pruneCount` to prove no hidden side-channel).
+- **Sentinel architecture frozen sha256 lock** — `0537a195b2c4df69c5cf64ddae97415f2fe98a26ee57f5411dc397516237ddcd` byte-identical verified pre-RED + post-RED + post-GREEN + post-VERIFY (UFR-022 frozen-test contract honoured, zéro editor self-modification across the cycle). Toute future réintroduction de `this.currentState = ...` mutation, private `trip(...)`/`transitionTo(...)` helpers, ou inline `failures: number[]` / `hourlyCharges` / `dailySpend` fields dans les 3 wrapper files, OU toute future suppression de l'import `ThreeStateCircuit` → fail CI sur PR avec hint `file:line`.
+- **Zéro nouvelle dépendance** — `museum-backend/package.json` diff vide. Primitive + strategies utilisent stdlib uniquement (`Array.prototype.filter/push/reduce`, `Date.now`, `new Date().toISOString()`). `pnpm audit --prod` drift = 0.
+
+### Migration notes
+
+- **No migration required.** Wire format / HTTP behaviour des 5 consumers (`langchain.orchestrator.ts` + `llm-guard.adapter.ts` + `chat-module.ts` composition root + `/api/health` route + tests) est préservé byte-identical. Public API des 3 wrappers byte-identical au niveau call-graph (7 invariants vérifiés AC6 — `.execute(...)`, `.state`, `.recordSuccess()`, `.recordFailure()`, `.recordCharge(...)`, `.canAttempt()`, `.getState()`). Le seul delta ADDITIF est `LLMCircuitBreaker.onStateChange` option (non-breaking).
+- **No FE follow-up.** Pas d'OpenAPI delta. Pas de FE/web touched. `/api/health` snapshot shapes byte-identical (`getLlmCircuitBreakerState()`, `getLlmGuardCircuitBreakerState()`, `getLlmCostCircuitBreaker().getState()`).
+- **No env-var rename.** Tous les env vars `LLM_CB_*` / `LLM_GUARD_CB_*` continuent à fonctionner byte-identical (failureThreshold / windowMs / openDurationMs / halfOpenMaxProbes overrides).
+- **No DB / Redis change.** Storage primitive in-process (rolling 1h window + UTC daily counter pour cost CB ; sliding-window failure count pour LLM + guard). V1 single-instance KISS — phase 3 horizontal scale promotes to Redis (out of scope per `llm-cost-circuit-breaker.ts:38-39` ADR comment).
+- **Reversibility** : `git revert <sha>` restaure les 3 wrappers legacy à leur LOC pre-refactor (116 + 260 + 182 = 558 LOC) + retire le shared cluster `museum-backend/src/shared/circuit-breaker/` (3 files, 342 LOC) + retire les 3 nouveaux test files unit + retire le sentinel test architecture + revert l'extension du `llm-circuit-breaker.test.ts` (11 → 10 cases). Pas de DB migration ni de schema delta à revert. Le 5 sentinel sha256s frozen disparaissent proprement avec le revert.
+- **Follow-up PRs recommended** (non-blocking, hors-scope) :
+  - Wire `LLMCircuitBreaker.onStateChange` à un Prometheus gauge `llm_circuit_breaker_state` dans `chat-module.ts` composition root + `prometheus-metrics.ts` (parity avec `llm_cost_circuit_breaker_state` + `llm_guard_circuit_breaker_state`). ADR-047 amendment.
+  - Extract `parsePositiveNumber` from `guardrail-circuit-breaker.ts` vers `@shared/env/parse-positive-number.ts` + reuse cross-modules (auth/chat/cache parseInt-with-fallback call sites).
+  - Future 4th breaker (HTTP retry budget, token-bucket rate limit, etc.) ne pays que le delegate cost (~110 LOC) — l'amortization rationale validée par cette PR.
+
+### Verification
+
+```bash
+cd museum-backend
+
+# 1. Lint + typecheck
+pnpm lint
+# → eslint src/ --max-warnings=0 + lint:test-discipline + tsc --noEmit, exit 0
+
+# 2. Unit tests — primitive + strategies + 3 wrappers + sentinel
+pnpm test --testPathPattern="(unit/chat/(llm|llm-cost|guardrail)-circuit-breaker|unit/shared/circuit-breaker|unit/architecture/pr13-circuit-breaker-purity-sentinel)"
+# → 7 suites pass, 54/54 tests pass (33 existing + 20 new primitive/strategies + 1 sentinel)
+
+# 3. Chaos e2e (untouched, validates R3 call-graph invariants end-to-end)
+pnpm test:e2e --testPathPattern="chaos-circuit-breaker"
+# → green
+
+# 4. LOC budget
+wc -l src/modules/chat/adapters/secondary/llm/llm-circuit-breaker.ts \
+      src/modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker.ts \
+      src/modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker.ts \
+      src/shared/circuit-breaker/three-state-circuit.ts \
+      src/shared/circuit-breaker/strategies/sliding-window-failure-strategy.ts \
+      src/shared/circuit-breaker/strategies/cost-trip-strategy.ts
+# → 110 / 175 / 144 / 189 / 60 / 93 = 771 LOC total (wrapper-only = 429, −129 vs pre-refactor)
+
+# 5. Log event-name preservation
+grep -nE "llm_(cost_)?(guard_)?circuit_breaker_(open|close|closed|half_open)" \
+  src/modules/chat/adapters/secondary
+# → 9 distinct event names preserved byte-identical (3 LLM latency + 3 cost + 3 guardrail)
+
+# 6. Sentinel sha256 frozen
+shasum -a 256 tests/unit/architecture/pr13-circuit-breaker-purity-sentinel.test.ts \
+              tests/unit/shared/circuit-breaker/three-state-circuit.test.ts \
+              tests/unit/shared/circuit-breaker/strategies/sliding-window-failure-strategy.test.ts \
+              tests/unit/shared/circuit-breaker/strategies/cost-trip-strategy.test.ts \
+              tests/unit/chat/llm-circuit-breaker.test.ts
+# → all 5 sha256s match .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/red-test-manifest.json
+```
+
+### Honesty
+
+- **LOC budget STRETCH-MISS flagged honestly** (AC2 + AC11). Primitive 189 LOC vs ≤160 target (+29 LOC), combined 771 LOC vs ≤474 target (+297 LOC). Justifications documentées en spec §6.6 + design.md §2 + STORY.md green-phase notes : doc-comment blocks §3.5 invariants + `getCommonSnapshot` accessor + env-var override blocks + UFR-013 preamble doc on cost CB. Reviewer accepts STRETCH-MISS avec amortization rationale : duplication ratio drops from 100% (3 FSM copies) to 1 primitive + 3 thin delegates ; future 4th breaker ne pays que ~110 LOC. Pas de buried sous "minor overshoot" — flagged au niveau acceptance criteria binary check.
+- **`LLMCircuitBreaker.onStateChange` opt-in seulement** (non-blocking observation reviewer §1). Composition root `chat-module.ts` ne wire pas encore le 3e Prometheus gauge `llm_circuit_breaker_state` (out of scope per spec §3.1 line 21). Parity callback contract achieved at the wrapper level ; metrics gauge wiring laissé pour follow-up PR (ADR-047 amendment).
+- **`parsePositiveNumber` helper inline dans `guardrail-circuit-breaker.ts`** (lignes 42-47, non-blocking observation reviewer §3). Design.md §9 defers extraction to `@shared/env/parse-positive-number.ts` ; inline retention limite le PR blast radius. Recommended follow-up PR pour reuse cross-modules (auth/chat/cache).
+- **Spec §6.2 byte-identity claim relaxed** during spec authoring : "33 unit cases byte-for-byte identical" was NOT achievable for `LLMCircuitBreaker.test.ts` because the additive `onStateChange` test case is mandated by R2.1. Spec explicitly relaxed to "surgical updates ONLY for the new `onStateChange` signal on `LLMCircuitBreaker` (additive)" — les 10 cases existantes stay byte-identical, la 11e est appendée. Honesty correction au spec phase, pas retrofit post-hoc.
+- **Frozen-test contract honoured** — 5 sentinel sha256s byte-identical verified twice (post-green + post-verify). Aucun `BLOCK-TEST-WRONG` émis pendant le green phase — tous les RED tests genuine, aucune réécriture nécessaire.
+
 ## [Unreleased] — 2026-05-23 — PR-12 `extractEmailDomain` codemod sur 5 leads sites (multi-`@` adversarial `a@b@c.com` corner case fixed)
 
 Run `2026-05-23-pr-12-extractEmailDomain` — douzième incremental refactor de l'audit `2026-05-23-audit-kiss-dry-backend` (finding B8 MED #2 : `extractEmailDomain` canonical helper bypassed in 5 leads sites). Pipeline : UFR-022 fresh-context 5-phase / reviewer (combined verify+security+review) **APPROVED** loop-1 terminal, zero CHANGES_REQUESTED, zero blocking finding. Codemod mécanique : 5 ad-hoc occurrences de `<expr>.split('@')[1] ?? 'unknown'` (4 dans `brevo-beta-signup.notifier.ts` lignes 62/99/120/128, 1 dans `submitPaywallInterest.useCase.ts` ligne 65) remplacées par un appel au helper canonique `extractEmailDomain(<expr>)` documenté GDPR Art. 5(1)(c) (A1 doctrine). Sentinel Jest frozen ajouté (`tests/unit/shared/pii/pr12-no-raw-email-domain-split.sentinel.test.ts`, sha256 `6ec4e58687aae08c0cf59d9d26dcf758efa56ca03329c217f8f7f8bf9d0ae833`) — bloque toute future réintroduction de `email.split('@')[1]` ou variant chaîné `.trim().split('@')[1]` dans les 2 fichiers leads, surface un hint `file:line` au reviewer sur failure. Net source LOC : `brevo-beta-signup.notifier.ts +1` + `submitPaywallInterest.useCase.ts +1` = **+2 LOC**. Wire format / HTTP behaviour : préservés byte-identical au niveau log (3 intended deltas seuls — last-`@`, trim, lower-case, tous des log-aggregation quality wins). Zéro migration DB applicative, zéro lib bump, zéro nouveau `eslint-disable`, zéro hook bypass, zéro OpenAPI delta, zéro FE follow-up. `pnpm --filter museum-backend test -- --testPathPattern='tests/unit/(leads|shared/pii|auth/a1-email-pii-sinks)'` → **9 suites pass, 62/62 tests pass, 0.760s**. Coverage helper `extractEmailDomain` = **100% all 4 metrics** (13/13 stmts, 4/4 branches, 2/2 fns, 11/11 lines). Reversibility : `git revert <sha>` restaure les 5 sites legacy + retire les 2 imports + retire le sentinel ; pas de DB migration ni de schema delta à revert.
