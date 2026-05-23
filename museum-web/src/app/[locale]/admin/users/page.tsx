@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
 import type { PaginatedResponse, AdminUserDTO, UserRole } from '@/lib/admin-types';
 
 /** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
@@ -128,23 +130,6 @@ export default function UsersPage() {
       setChangingRole(false);
     }
   }
-
-  // ── Ref for modal backdrop ───────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingUser) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !changingRole) setEditingUser(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingUser, changingRole]);
 
   return (
     <div>
@@ -295,60 +280,46 @@ export default function UsersPage() {
 
       {/* Change Role Modal */}
       {editingUser && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingUser(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingUser(null);
           }}
-        >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.usersPage.changeRole}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {displayName(editingUser)} ({editingUser.email})
-            </p>
-
-            <select
-              aria-label={adminDict.usersPage.changeRole}
-              value={newRole}
-              onChange={(e) => {
-                setNewRole(e.target.value as UserRole);
+          title={adminDict.usersPage.changeRole}
+          size="sm"
+          dismissable={!changingRole}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingUser(null);
               }}
-              className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+              onConfirm={() => void handleChangeRole()}
+              confirmDisabled={newRole === editingUser.role}
+              confirmBusy={changingRole}
+            />
+          }
+        >
+          <p className="mt-1 text-sm text-text-secondary">
+            {displayName(editingUser)} ({editingUser.email})
+          </p>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingUser(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={changingRole || newRole === editingUser.role}
-                onClick={() => void handleChangeRole()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {changingRole ? '...' : adminDict.common.confirm}
-              </button>
-            </div>
-          </div>
-        </div>
+          <select
+            aria-label={adminDict.usersPage.changeRole}
+            value={newRole}
+            onChange={(e) => {
+              setNewRole(e.target.value as UserRole);
+            }}
+            className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {ALL_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </BaseModal>
       )}
     </div>
   );

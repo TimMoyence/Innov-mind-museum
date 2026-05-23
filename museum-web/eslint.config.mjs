@@ -134,4 +134,24 @@ export default tseslint.config(
       '@next/next/no-img-element': 'error',
     },
   },
+
+  // ── Test files: relax rules that conflict with vitest harness patterns ───
+  // (a) `afterEach`/`beforeEach` imported as a stylistic pair even when only
+  //     one is used; (b) defensive `if (document.body)` guards in jsdom where
+  //     the type narrows to always-truthy. These are test-hygiene patterns,
+  //     never reach production. UFR-022 frozen-test manifests rely on this.
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^(_|beforeEach|afterEach|beforeAll|afterAll)$',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+    },
+  },
 );

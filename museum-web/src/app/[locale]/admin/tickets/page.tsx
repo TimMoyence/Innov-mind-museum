@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
-import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
 import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
@@ -98,23 +100,6 @@ export default function TicketsPage() {
       setSaving(false);
     }
   }
-
-  // -- Modal backdrop ref ─────────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingTicket) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) setEditingTicket(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingTicket, saving]);
 
   return (
     <div>
@@ -281,82 +266,67 @@ export default function TicketsPage() {
 
       {/* Update Ticket Modal */}
       {editingTicket && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingTicket(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingTicket(null);
           }}
+          title={adminDict.ticketsPage.updateTicket}
+          size="sm"
+          dismissable={!saving}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingTicket(null);
+              }}
+              onConfirm={() => void handleUpdate()}
+              confirmDisabled={
+                newStatus === editingTicket.status && newPriority === editingTicket.priority
+              }
+              confirmBusy={saving}
+            />
+          }
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.ticketsPage.updateTicket}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">{editingTicket.subject}</p>
+          <p className="mt-1 text-sm text-text-secondary">{editingTicket.subject}</p>
 
-            <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {adminDict.common.status}
-            </label>
-            <select
-              aria-label={adminDict.common.status}
-              value={newStatus}
-              onChange={(e) => {
-                setNewStatus(e.target.value as TicketStatus);
-              }}
-              className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {TICKET_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+          <label className="mt-4 block text-sm font-medium text-text-secondary">
+            {adminDict.common.status}
+          </label>
+          <select
+            aria-label={adminDict.common.status}
+            value={newStatus}
+            onChange={(e) => {
+              setNewStatus(e.target.value as TicketStatus);
+            }}
+            className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {TICKET_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
 
-            <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {adminDict.common.priority}
-            </label>
-            <select
-              aria-label={adminDict.common.priority}
-              value={newPriority}
-              onChange={(e) => {
-                setNewPriority(e.target.value as TicketPriority);
-              }}
-              className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {TICKET_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingTicket(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={
-                  saving ||
-                  (newStatus === editingTicket.status && newPriority === editingTicket.priority)
-                }
-                onClick={() => void handleUpdate()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? '...' : adminDict.common.confirm}
-              </button>
-            </div>
-          </div>
-        </div>
+          <label className="mt-4 block text-sm font-medium text-text-secondary">
+            {adminDict.common.priority}
+          </label>
+          <select
+            aria-label={adminDict.common.priority}
+            value={newPriority}
+            onChange={(e) => {
+              setNewPriority(e.target.value as TicketPriority);
+            }}
+            className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {TICKET_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </BaseModal>
       )}
     </div>
   );

@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { TierToggleButton } from '@/components/admin/TierToggleButton';
-import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -58,56 +60,26 @@ function SimpleConfirmModal({
   onCancel,
   onConfirm,
 }: SimpleConfirmModalProps) {
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    confirmRef.current?.focus();
-  }, []);
-
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- backdrop click + Escape handled
-    <div
-      ref={backdropRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-modal-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        if (e.target === backdropRef.current && !busy) onCancel();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && !busy) onCancel();
-      }}
+    <BaseModal
+      open
+      onClose={onCancel}
+      title={title}
+      size="md"
+      dismissable={!busy}
+      footer={
+        <ModalActions
+          cancelLabel={cancelLabel}
+          confirmLabel={confirmLabel}
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+          confirmBusy={busy}
+          destructive={destructive}
+        />
+      }
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 id="confirm-modal-title" className="text-lg font-bold text-text-primary">
-          {title}
-        </h2>
-        {body !== '' && <p className="mt-2 text-sm text-text-secondary">{body}</p>}
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            disabled={busy}
-            onClick={onConfirm}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 ${
-              destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-600 hover:bg-primary-700'
-            }`}
-          >
-            {busy ? '…' : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+      {body !== '' && <p className="mt-2 text-sm text-text-secondary">{body}</p>}
+    </BaseModal>
   );
 }
 
@@ -591,74 +563,44 @@ function RoleChangeModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const backdropRef = useRef<HTMLDivElement>(null);
-  // Window-level Escape: the dialog div is not focusable, so a div-scoped
-  // onKeyDown never fires when focus stays on the action button that opened
-  // the modal. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [busy, onCancel]);
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-    <div
-      ref={backdropRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="role-modal-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        if (e.target === backdropRef.current && !busy) onCancel();
-      }}
+    <BaseModal
+      open
+      onClose={onCancel}
+      title={adminDict.usersPage.changeRole}
+      size="sm"
+      dismissable={!busy}
+      footer={
+        <ModalActions
+          cancelLabel={adminDict.common.cancel}
+          confirmLabel={adminDict.common.confirm}
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+          confirmDisabled={unchanged}
+          confirmBusy={busy}
+        />
+      }
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <h2 id="role-modal-title" className="text-lg font-bold text-text-primary">
-          {adminDict.usersPage.changeRole}
-        </h2>
-        <p className="mt-1 text-sm text-text-secondary">{targetEmail}</p>
-        <label htmlFor="new-role-select" className="mt-4 block text-sm text-text-secondary">
-          {dict.newRoleLabel}
-        </label>
-        <select
-          id="new-role-select"
-          value={newRole}
-          onChange={(e) => {
-            onNewRoleChange(e.target.value as UserRole);
-          }}
-          className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-        >
-          {currentRole === 'super_admin' && <option value="super_admin">super_admin</option>}
-          {ASSIGNABLE_ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:opacity-50"
-          >
-            {adminDict.common.cancel}
-          </button>
-          <button
-            type="button"
-            disabled={busy || unchanged}
-            onClick={onConfirm}
-            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? '…' : adminDict.common.confirm}
-          </button>
-        </div>
-      </div>
-    </div>
+      <p className="mt-1 text-sm text-text-secondary">{targetEmail}</p>
+      <label htmlFor="new-role-select" className="mt-4 block text-sm text-text-secondary">
+        {dict.newRoleLabel}
+      </label>
+      <select
+        id="new-role-select"
+        value={newRole}
+        onChange={(e) => {
+          onNewRoleChange(e.target.value as UserRole);
+        }}
+        className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+      >
+        {currentRole === 'super_admin' && <option value="super_admin">super_admin</option>}
+        {ASSIGNABLE_ROLES.map((r) => (
+          <option key={r} value={r}>
+            {r}
+          </option>
+        ))}
+      </select>
+    </BaseModal>
   );
 }
 
@@ -683,74 +625,48 @@ function DeleteConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const backdropRef = useRef<HTMLDivElement>(null);
-  // Window-level Escape: the dialog div is not focusable, so a div-scoped
-  // onKeyDown never fires when focus stays on the action button that opened
-  // the modal. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [busy, onCancel]);
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-    <div
-      ref={backdropRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-modal-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        if (e.target === backdropRef.current && !busy) onCancel();
-      }}
-    >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 id="delete-modal-title" className="text-lg font-bold text-red-700">
-          {dict.confirmDeleteTitle}
-        </h2>
-        <p className="mt-2 text-sm text-text-secondary">{dict.confirmDeleteBody}</p>
-        <p className="mt-3 text-sm">
-          <span className="text-text-secondary">{dict.fieldEmail}: </span>
-          <code className="rounded bg-surface-muted px-1.5 py-0.5 text-text-primary">
-            {targetEmail}
-          </code>
-        </p>
-        <label htmlFor="confirm-delete-email" className="mt-4 block text-sm text-text-secondary">
-          {dict.confirmDeleteTypeEmailLabel}
-        </label>
-        <input
-          id="confirm-delete-email"
-          type="email"
-          autoComplete="off"
-          value={typed}
-          onChange={(e) => {
-            onTypedChange(e.target.value);
-          }}
-          className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+    <BaseModal
+      open
+      onClose={onCancel}
+      titleId="delete-modal-title"
+      size="md"
+      dismissable={!busy}
+      footer={
+        <ModalActions
+          cancelLabel={cancelLabel}
+          confirmLabel={dict.confirmDeleteButton}
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+          confirmDisabled={!canConfirm}
+          confirmBusy={busy}
+          destructive
         />
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            disabled={busy || !canConfirm}
-            onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? '…' : dict.confirmDeleteButton}
-          </button>
-        </div>
-      </div>
-    </div>
+      }
+    >
+      <h2 id="delete-modal-title" className="text-lg font-bold text-red-700">
+        {dict.confirmDeleteTitle}
+      </h2>
+      <p className="mt-2 text-sm text-text-secondary">{dict.confirmDeleteBody}</p>
+      <p className="mt-3 text-sm">
+        <span className="text-text-secondary">{dict.fieldEmail}: </span>
+        <code className="rounded bg-surface-muted px-1.5 py-0.5 text-text-primary">
+          {targetEmail}
+        </code>
+      </p>
+      <label htmlFor="confirm-delete-email" className="mt-4 block text-sm text-text-secondary">
+        {dict.confirmDeleteTypeEmailLabel}
+      </label>
+      <input
+        id="confirm-delete-email"
+        type="email"
+        autoComplete="off"
+        value={typed}
+        onChange={(e) => {
+          onTypedChange(e.target.value);
+        }}
+        className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
+      />
+    </BaseModal>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
 import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types';
 
 // -- Status badge colors ----------------------------------------------------------
@@ -89,23 +91,6 @@ export default function ReportsPage() {
       setSubmitting(false);
     }
   }
-
-  // -- Ref for modal backdrop -----------------------------------------------------
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingReport) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) setEditingReport(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingReport, submitting]);
 
   return (
     <div>
@@ -240,80 +225,65 @@ export default function ReportsPage() {
 
       {/* Review Modal */}
       {editingReport && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingReport(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingReport(null);
           }}
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.reportsPage.reviewReport}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {adminDict.reportsPage.reason} : {editingReport.reason}
-            </p>
-
-            {editingReport.messageText && (
-              <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">
-                <p className="mb-1 text-xs font-medium text-text-muted">
-                  {adminDict.reportsPage.reportedMessage}
-                </p>
-                {editingReport.messageText}
-              </div>
-            )}
-
-            <select
-              aria-label={adminDict.reportsPage.review}
-              value={newStatus}
-              onChange={(e) => {
-                setNewStatus(e.target.value as ReportStatus);
+          title={adminDict.reportsPage.reviewReport}
+          size="md"
+          dismissable={!submitting}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingReport(null);
               }}
-              className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <textarea
-              value={reviewerNotes}
-              onChange={(e) => {
-                setReviewerNotes(e.target.value);
-              }}
-              maxLength={2000}
-              rows={3}
-              placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
-              className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              onConfirm={() => void handleReview()}
+              confirmBusy={submitting}
             />
+          }
+        >
+          <p className="mt-1 text-sm text-text-secondary">
+            {adminDict.reportsPage.reason} : {editingReport.reason}
+          </p>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingReport(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => void handleReview()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? '...' : adminDict.common.confirm}
-              </button>
+          {editingReport.messageText && (
+            <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">
+              <p className="mb-1 text-xs font-medium text-text-muted">
+                {adminDict.reportsPage.reportedMessage}
+              </p>
+              {editingReport.messageText}
             </div>
-          </div>
-        </div>
+          )}
+
+          <select
+            aria-label={adminDict.reportsPage.review}
+            value={newStatus}
+            onChange={(e) => {
+              setNewStatus(e.target.value as ReportStatus);
+            }}
+            className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          <textarea
+            value={reviewerNotes}
+            onChange={(e) => {
+              setReviewerNotes(e.target.value);
+            }}
+            maxLength={2000}
+            rows={3}
+            placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
+            className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          />
+        </BaseModal>
       )}
     </div>
   );

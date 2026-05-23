@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
-import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { Spinner } from '@/components/ui/Spinner';
 import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
@@ -87,27 +88,6 @@ export default function AdminReviewsPage() {
       setSaving(false);
     }
   }
-
-  // -- Modal backdrop ref ─────────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  const modalOpen = moderating !== null && decision !== null;
-  useEffect(() => {
-    if (!modalOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) {
-        setModerating(null);
-        setDecision(null);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [modalOpen, saving]);
 
   return (
     <div>
@@ -255,33 +235,23 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* Moderation confirm modal */}
+      {/* Moderation confirm modal (outlier OQ-6: inline footer with green/red
+          dynamic button — keeps BaseModal scaffold but not ModalActions). */}
       {moderating && decision && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) {
-              setModerating(null);
-              setDecision(null);
-            }
+        <BaseModal
+          open
+          onClose={() => {
+            setModerating(null);
+            setDecision(null);
           }}
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {decision === 'approved'
-                ? adminDict.reviewsPage.confirmApprove
-                : adminDict.reviewsPage.confirmReject}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">{moderating.userName}</p>
-            <p className="mt-1 text-sm text-text-primary">{moderating.rating}/5</p>
-            <blockquote className="mt-3 border-l-4 border-primary-200 pl-4 text-sm italic text-text-secondary">
-              {moderating.comment}
-            </blockquote>
-
+          title={
+            decision === 'approved'
+              ? adminDict.reviewsPage.confirmApprove
+              : adminDict.reviewsPage.confirmReject
+          }
+          size="md"
+          dismissable={!saving}
+          footer={
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -304,14 +274,20 @@ export default function AdminReviewsPage() {
                 }`}
               >
                 {saving
-                  ? '...'
+                  ? '…'
                   : decision === 'approved'
                     ? adminDict.reviewsPage.approve
                     : adminDict.reviewsPage.reject}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p className="mt-2 text-sm text-text-secondary">{moderating.userName}</p>
+          <p className="mt-1 text-sm text-text-primary">{moderating.rating}/5</p>
+          <blockquote className="mt-3 border-l-4 border-primary-200 pl-4 text-sm italic text-text-secondary">
+            {moderating.comment}
+          </blockquote>
+        </BaseModal>
       )}
     </div>
   );
