@@ -1367,20 +1367,32 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ---
 
-## TD-A11Y-COMPOSER-CREATEELEMENT — Composer.tsx layout containers utilisent `React.createElement('View')` au lieu de JSX (LOW, V1.1)
+## TD-A11Y-COMPOSER-CREATEELEMENT — Composer.tsx `React.createElement('View')` string crashait au runtime (RÉSOLU 2026-05-24)
 
-- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, reviewer loop 2 INFO + tech-debt D-Composer-01).
-- **Référence code** :
-  ```
-  museum-frontend/features/chat/ui/Composer.tsx:49-76 (block-comment empirical rationale)
-  museum-frontend/features/chat/ui/Composer.tsx:94-137 (row, leadingColumn, testIDNode containers en createElement)
-  museum-frontend/features/chat/ui/Composer.tsx:194-197 (iconButtonInner 0×0 testID-anchor style)
-  ```
-- **Symptôme** : les conteneurs layout (`row`, `leadingColumn`) + l'inner host primitive pour testID sont rendus via `React.createElement('View', {...}, children)` au lieu de JSX `<View>...`. RN-runtime-équivalent (la JSX `<View>` finit par `createElement` la même `ViewNativeComponent`), pas de différence runtime, mais code non maximally idiomatic.
-- **Cause** : frozen-test contract (UFR-022) + `react-test-renderer` composite-layer behaviour. Le red test (`Composer.layout.test.tsx:107-113`) walk `getByTestId('composer-mic-button').parent` et assert `lca.parent.props.style.flexDirection === 'row'`. Avec JSX `<View>`, react-test-renderer insère une composite layer au-dessus du host primitive avec le MEME `style` prop → casse l'assertion strict `lca.parent.style`. Idem `collectTestIDsInOrder` (lines 65-81) qui propage testID à travers 3 layers composites → casse l'order-equality. Le `createElement` direct produit un seul host primitive → assertions vertes. Editor a respecté frozen-test (BLOCK-TEST-WRONG aurait re-spawn une fresh red phase ; pas justifié pour ce niveau de friction).
-- **Pourquoi non résolu en V1** : (a) runtime semantics identiques (layout/a11y/RTL/animation) ; (b) PATTERNS.md §7 canonical icon-button shape RESPECTÉ (a11y props sur Pressable, inner View décoratif) ; (c) frozen-test contract non-négociable per UFR-022 ; (d) block-comment 18 lignes documente l'empirical rationale pour les futurs mainteneurs (pas une "fix-me-back-to-JSX" trap).
-- **Effort estimé** : ~1h — investiguer un helper test-utility (ex `__tests__/helpers/flatten-host-primitive.ts`) qui aplatit la composite layer de `react-test-renderer` pour les assertions structurelles. Si feasible, refactor `Composer.tsx` vers JSX `<View>` idiomatique + drop block-comment + drop `iconButtonInner 0×0` style anchor.
-- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[1]`, `carryForwardToDocumenter.techDebt[0]`).
+- [x] **Statut** : RÉSOLU (hotfix `c6bf75e8e` 2026-05-24). Corrige aussi une affirmation FAUSSE de la version initiale de cette TD (voir ci-dessous, UFR-013).
+- **CORRECTION FACTUELLE (UFR-013)** : la version initiale de cette TD (créée 2026-05-23 par le documenter du run `2026-05-23-chat-composer-buttons-modal-dismiss`) affirmait *« RN-runtime-équivalent (...), pas de différence runtime »*. **C'était faux.** `React.createElement('View', ...)` avec la string `'View'` lève au runtime `Invariant Violation: View config getter callback for component 'View' must be a function (received undefined)` — la string n'a pas de `viewConfigGetter` enregistré ; seul le composite `View` importé de `react-native` résout vers `ViewNativeComponent`. Le mock Jest de RN enregistre `'View'` comme host string → tests verts → crash masqué. Signalé par l'utilisateur au premier `npm run dev:local` après commit `68e620648`.
+- **Fix appliqué** : `Composer.tsx` réécrit en JSX standard `<View><Pressable testID=...>…</Pressable></View>`. `createElement` supprimé entièrement, `iconButtonInner 0×0` style supprimé, block-comment supprimé. `Composer.layout.test.tsx` : assertions assouplies (`findAncestor` column puis row au lieu de `lca.parent` strict ; dedupe testID hits). Sémantique vérifiée inchangée : mic AVANT attach DANS column DANS row. 3282/3282 tests FE pass + typecheck pass.
+- **Leçon** : voir `TD-PIPELINE-RT-SMOKE-GAP` (ci-dessous) — le gap systémique qui a permis le crash de passer 3 garde-fous (Jest, reviewer, documenter).
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[1]`). Hotfix : commit `c6bf75e8e`.
+
+---
+
+## TD-PIPELINE-RT-SMOKE-GAP — /team Verify n'a aucun boot runtime RN → Jest mock masque les crashes host-primitive (MEDIUM, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-24, post-mortem du crash `TD-A11Y-COMPOSER-CREATEELEMENT`).
+- **Symptôme** : un crash runtime RN (`Invariant Violation` sur `createElement('View')` string) a traversé TROIS garde-fous sans être détecté :
+  1. **Jest** (`npm test`, 3282/3282 vert) — le mock RN enregistre `'View'` comme host string valide, donc `createElement('View')` passe. Le runtime réel ne l'enregistre pas.
+  2. **Reviewer fresh-context loop 2** — APPROVED (89.9/100) sur typecheck + lint + jest, sans booter l'app.
+  3. **Documenter** — a classé la dette « pas de différence runtime » (faux).
+  L'utilisateur l'a vu au premier `npm run dev:local`.
+- **Cause racine** : le pipeline `/team` (Spec→Plan→Red→Green→Verify→Security→Review→Documenter) n'a **aucune phase qui exécute le runtime RN réel**. La phase Verify = `jest` + `tsc` + `lint`, tous aveugles à la résolution `ViewNativeComponent`. Le seul gate runtime du repo est Maestro (`ci-cd-mobile.yml`) qui tourne **après** push, pas pendant `/team` ni en local pre-commit.
+- **Pourquoi UFR-021 ne l'a pas couvert** : la sentinel `scripts/sentinels/screen-test-coverage.mjs:87` scope `app/**/*.tsx` + `features/**/ui/*Screen.tsx`. `Composer.tsx` est un sous-composant (pas `*Screen.tsx`) → explicitement hors scope (CLAUDE.md UFR-021 « Out of scope : sub-composants présentationnels »). Le crash se manifeste pourtant sur l'écran hôte `app/(stack)/chat/[sessionId].tsx` qui, lui, EST dans le scope Maestro — mais Maestro ne tourne qu'en CI.
+- **Pistes de remédiation (à arbitrer)** :
+  - (a) Ajouter une lint rule ast-grep `tools/ast-grep-rules/no-createelement-host-string.yml` qui bannit `React.createElement('<lowercase-or-View/Text/...>', …)` — cheap, déterministe, attrape ce pattern précis. **Recommandé en premier** (effort ~30 min).
+  - (b) Phase Verify `/team` : pour tout diff touchant `museum-frontend/{app,features}/**/*.tsx`, exiger un smoke runtime — soit un test `react-test-renderer` SANS le mock host-string (env dédié), soit un Maestro flow local headless. Effort ~1 jour, friction non-triviale.
+  - (c) Étendre UFR-021 aux sous-composants `features/**/ui/*.tsx` (pas seulement `*Screen.tsx`) quand ils sont importés par un écran in-scope. Risque : explosion du nombre de flows Maestro requis.
+- **Priorité MEDIUM** : un crash mount-time sur l'écran chat (écran principal) = P0 si shippé en prod. La piste (a) ferme le pattern exact à coût quasi-nul ; (b)/(c) sont des durcissements pipeline plus lourds à arbitrer post-launch.
+- **Référence** : crash `TD-A11Y-COMPOSER-CREATEELEMENT`, hotfix `c6bf75e8e`, run `2026-05-23-chat-composer-buttons-modal-dismiss`.
 
 ---
 
