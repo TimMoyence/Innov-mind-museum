@@ -1,3 +1,5 @@
+import { confidenceUpsert } from '@shared/db/confidence-upsert';
+
 import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { Repository } from 'typeorm';
@@ -37,42 +39,20 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
   ): Promise<ArtworkKnowledge> {
     const existing = await this.findByTitleAndLocale(data.title, data.locale);
     if (existing) {
-      if (!existing.sourceUrls.includes(sourceUrl)) {
-        existing.sourceUrls = [...existing.sourceUrls, sourceUrl];
-      }
-      if (data.confidence > existing.confidence) {
-        Object.assign(existing, data, {
-          id: existing.id,
-          sourceUrls: existing.sourceUrls,
-          createdAt: existing.createdAt,
-        });
-      } else {
-        type NullableField =
-          | 'artist'
-          | 'period'
-          | 'technique'
-          | 'historicalContext'
-          | 'dimensions'
-          | 'currentLocation';
-        const nullableFields: NullableField[] = [
-          'artist',
-          'period',
-          'technique',
-          'historicalContext',
-          'dimensions',
-          'currentLocation',
-        ];
-        const patch: Partial<Pick<ArtworkKnowledge, NullableField>> = {};
-        for (const key of nullableFields) {
-          const incoming = data[key];
-          if (existing[key] === null && incoming !== null) {
-            patch[key] = incoming;
-          }
-        }
-        Object.assign(existing, patch);
-      }
-      existing.needsReview = data.needsReview;
-      return await this.repo.save(existing);
+      return await this.repo.save(
+        confidenceUpsert(existing, data, {
+          sourceUrl,
+          nullableFields: [
+            'artist',
+            'period',
+            'technique',
+            'historicalContext',
+            'dimensions',
+            'currentLocation',
+          ],
+          preserveFields: ['id', 'sourceUrls', 'createdAt'],
+        }),
+      );
     }
     return await this.repo.save(this.repo.create({ ...data, sourceUrls: [sourceUrl] }));
   }

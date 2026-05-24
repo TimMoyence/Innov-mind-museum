@@ -1,3 +1,5 @@
+import { confidenceUpsert } from '@shared/db/confidence-upsert';
+
 import type { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
 import type { MuseumEnrichmentRepoPort } from '@modules/knowledge-extraction/domain/ports/museum-enrichment-repo.port';
 import type { Repository } from 'typeorm';
@@ -32,39 +34,20 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
   ): Promise<MuseumEnrichment> {
     const existing = await this.findByNameAndLocale(data.name, data.locale);
     if (existing) {
-      if (!existing.sourceUrls.includes(sourceUrl)) {
-        existing.sourceUrls = [...existing.sourceUrls, sourceUrl];
-      }
-      if (data.confidence > existing.confidence) {
-        Object.assign(existing, data, {
-          id: existing.id,
-          museumId: existing.museumId,
-          sourceUrls: existing.sourceUrls,
-          createdAt: existing.createdAt,
-        });
-      } else {
-        // Backfill nullable fields when the new payload provides a value but
-        // the stored row didn't. The per-key generic preserves the variance
-        // proof that `data[K]` is assignable to `existing[K]` for each K.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- Justification: K constrains input to bind data[K] and existing[K] together for the assignment at L64; without it TypeScript widens to a union value type that's not assignable. Approved-by: tim@2026-05-05
-        const fillIfNull = <K extends keyof typeof data & keyof MuseumEnrichment>(key: K): void => {
-          if (existing[key] === null && data[key] !== null) {
-            existing[key] = data[key];
-          }
-        };
-        for (const key of [
-          'openingHours',
-          'admissionFees',
-          'website',
-          'collections',
-          'currentExhibitions',
-          'accessibility',
-        ] as const) {
-          fillIfNull(key);
-        }
-      }
-      existing.needsReview = data.needsReview;
-      return await this.repo.save(existing);
+      return await this.repo.save(
+        confidenceUpsert(existing, data, {
+          sourceUrl,
+          nullableFields: [
+            'openingHours',
+            'admissionFees',
+            'website',
+            'collections',
+            'currentExhibitions',
+            'accessibility',
+          ],
+          preserveFields: ['id', 'museumId', 'sourceUrls', 'createdAt'],
+        }),
+      );
     }
     return await this.repo.save(this.repo.create({ ...data, sourceUrls: [sourceUrl] }));
   }
