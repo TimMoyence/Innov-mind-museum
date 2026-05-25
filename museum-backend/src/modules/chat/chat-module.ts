@@ -144,6 +144,12 @@ export interface BuiltChatModule {
 interface WikidataStack {
   readonly kbProvider: KnowledgeBaseProvider;
   readonly knowledgeBase: KnowledgeBaseService;
+  /**
+   * TD-OP-01 — the concrete breaker, lifted out of the local scope so the
+   * composition root can dispose its opossum rolling-stats timer at graceful
+   * shutdown (`stopWikidataBreaker()`).
+   */
+  readonly wikidataBreaker: WikidataBreakerClient;
 }
 
 function buildWikidataStack(dataSource: DataSource, cache?: CacheService): WikidataStack {
@@ -162,7 +168,7 @@ function buildWikidataStack(dataSource: DataSource, cache?: CacheService): Wikid
       dumpRepo: wikidataDumpRepo,
     },
   );
-  return { kbProvider, knowledgeBase };
+  return { kbProvider, knowledgeBase, wikidataBreaker };
 }
 
 // C4.1 KnowledgeRouterService cascade: KB → LLM judge → WebSearch. Per-leg
@@ -323,6 +329,11 @@ export class ChatModule {
   private _guardrailProvider: GuardrailProvider | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
+  /**
+   * TD-OP-01 — concrete Wikidata breaker reference retained so the opossum
+   * rolling-stats timer is released at graceful shutdown (open-handle hygiene).
+   */
+  private _wikidataBreaker: WikidataBreakerClient | undefined;
 
   isBuilt(): boolean {
     return this._built !== undefined;
@@ -390,6 +401,16 @@ export class ChatModule {
 
   async stopKnowledgeExtraction(): Promise<void> {
     await this._knowledgeExtractionClose?.();
+  }
+
+  /**
+   * TD-OP-01 — disposes the Wikidata circuit breaker (releases the opossum
+   * rolling-stats `setInterval`). Idempotent at the breaker level; a no-op when
+   * the module was never built. Called from the `index.ts` graceful-shutdown
+   * drain via `safeTeardown`.
+   */
+  stopWikidataBreaker(): void {
+    this._wikidataBreaker?.dispose();
   }
 
   private buildImageStorage(): LocalImageStorage | S3CompatibleImageStorage {
@@ -633,7 +654,9 @@ export class ChatModule {
       ? new OpenAiTextToSpeechService()
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
-    const { kbProvider, knowledgeBase } = buildWikidataStack(dataSource, cache);
+    const { kbProvider, knowledgeBase, wikidataBreaker } = buildWikidataStack(dataSource, cache);
+    // TD-OP-01 — retain for graceful-shutdown disposal of the opossum timer.
+    this._wikidataBreaker = wikidataBreaker;
     const imageEnrichment = this.buildImageEnrichment();
     const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
 
