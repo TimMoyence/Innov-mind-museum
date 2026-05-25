@@ -92,6 +92,10 @@ async function seedMuseumManager(): Promise<SeededUser> {
         firstname: 'MuseumManagerE2e',
         lastname: 'PlaywrightTest',
         gdprConsent: true,
+        // `dateOfBirth` became required (P0.A2 DOB age-gate, commit 77c5e81b2);
+        // mirror `e2e/global-setup.ts:28` seedAdminUser. Was missing here →
+        // register 400 "dateOfBirth … chaîne attendu, indéfini reçu".
+        dateOfBirth: '1990-01-01',
       },
     });
     if (!reg.ok()) {
