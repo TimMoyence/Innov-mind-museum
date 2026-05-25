@@ -33,6 +33,9 @@ export const SettingsAccessibilityCard = () => {
             value={enabled}
             onValueChange={() => void toggle()}
             trackColor={{ false: theme.cardBorder, true: theme.primary }}
+            accessibilityRole="switch"
+            accessibilityLabel={t('settings.audio_description')}
+            accessibilityState={{ checked: enabled }}
           />
         )}
       </View>

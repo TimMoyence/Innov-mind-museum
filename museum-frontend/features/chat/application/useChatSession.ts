@@ -29,6 +29,11 @@ import { useStreamingState } from './useStreamingState';
 import { useOfflineSync } from './useOfflineSync';
 import { useSessionLoader } from './useSessionLoader';
 
+// Type-only import: erased at compile, so it never pulls the native expo-speech
+// module into the bundle. The runtime module is still lazy-`require()`d inside
+// the autoplay effect (test/web bundles lack the native module).
+import type * as ExpoSpeech from 'expo-speech';
+
 export type { ChatUiMessage, ChatUiMessageMetadata };
 
 /**
@@ -115,17 +120,39 @@ export const useChatSession = (sessionId: string) => {
     if (last?.role !== 'assistant') return;
     const desc = last.metadata?.imageDescription;
     if (!desc || autoPlayedImageDescIdsRef.current.has(last.id)) return;
+    // R5 / design §D1 — content-type partition (no double-playback): the
+    // server-TTS path (`useAutoTts`) owns every assistant message that HAS body
+    // text. expo-speech here only auto-reads `imageDescription` for bodyless
+    // messages, so exactly one engine ever auto-plays a given message.
+    // (lib-docs/expo-speech/PATTERNS.md §4 — do NOT route primary replies
+    // through expo-speech.)
+    if (last.text.trim()) return;
     autoPlayedImageDescIdsRef.current.add(last.id);
+    let Speech: typeof ExpoSpeech | null = null;
     try {
       // Lazy-require — mirrors the existing pattern in
       // `VoiceSessionIntroSheetContent.tsx` so absence of expo-speech in
       // test/web bundles does not crash the chat screen.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
-      const Speech = require('expo-speech') as typeof import('expo-speech');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      Speech = require('expo-speech') as typeof ExpoSpeech;
       Speech.speak(desc, { language: locale });
     } catch {
       // best-effort autoplay; failure must not break the chat UX.
     }
+    // R3 + R4 — stop in-flight speech in the effect cleanup. expo-speech is
+    // fire-and-forget and `speak()` QUEUES (lib-docs/expo-speech/PATTERNS.md
+    // §1-2 / LESSONS.md:5); `stop()` interrupts + flushes the queue. React runs
+    // this cleanup BEFORE the next effect run, so a new image-description
+    // message stops the previous utterance before the next `speak()` (R4 — no
+    // stacking) AND unmount/blur halts off-screen playback (R3). `stop()`
+    // returns a Promise — fire-and-forget (`void`).
+    return () => {
+      try {
+        void Speech?.stop();
+      } catch {
+        // best-effort cleanup.
+      }
+    };
   }, [messages, audioDescriptionMode, locale]);
 
   const runWithSending = useCallback(async (fn: () => Promise<boolean>): Promise<boolean> => {

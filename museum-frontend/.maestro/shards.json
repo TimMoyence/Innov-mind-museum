@@ -55,7 +55,12 @@
     },
     {
       "name": "settings",
-      "flows": ["settings-flow.yaml", "settings-locale-switch.yaml", "support-ticket-create.yaml"]
+      "flows": [
+        "settings-flow.yaml",
+        "settings-locale-switch.yaml",
+        "settings-audio-description.yaml",
+        "support-ticket-create.yaml"
+      ]
     }
   ],
   "iosNightly": "all",

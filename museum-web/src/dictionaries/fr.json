@@ -1,4 +1,7 @@
 {
+  "a11y": {
+    "skipToContent": "Aller au contenu principal"
+  },
   "ai_disclosure": {
     "banner": "Musaium est un assistant IA. Les réponses sont générées automatiquement et peuvent contenir des erreurs."
   },

@@ -354,5 +354,43 @@
       "important": 0,
       "nit": 2
     }
+  },
+  {
+    "runId": "2026-05-25-p0-a11y-compliance",
+    "ts": "2026-05-25T09:22:41Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 93,
+        "weight": 0.30,
+        "reasoning": "R1-R11 all genuinely fix the violation (not cosmetic). R5 partition is type-safe (ChatUiMessage.text:string) and non-overlapping vs useAutoTts.ts:55 bodyless-skip. Cleanup ordering (R3/R4) verified by invocationCallOrder test. Upstream: FE jest 110/110, web vitest 622 pass/1 skip."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "continue-on-error scoped ONLY to NEW advisory SBOM/attest steps; existing cosign sign/SLSA attest-build-provenance/cosign verify/gh attestation verify remain blocking + byte-unchanged (sentinel enforces). No secret/injection/env-leak; cosign uses secrets.GHCR_USER. Security phase 0 findings. No LLM/guardrail/auth path touched."
+      },
+      "maintainability": {
+        "score": 90,
+        "weight": 0.20,
+        "reasoning": "Partition-by-content (no shared mutable state) chosen over cross-hook signal per KISS/§D1. Reuses documented in-repo patterns. Comments cite spec/design/lib-docs § precisely. Type-only import keeps native module out of bundle."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "7 non-vacuous RED tests (R1,R3,R4,R5,R6,R7,R8) + 2 strengthened pre-existing + Maestro flow (UFR-021, registered shards.json settings shard) + dual-locale Playwright RED-first + YAML sentinel for R11. Factories used (makeAssistantMessage). No .skip. getByA11yHint confirmed valid in RNTL 13.3.3 (hint-text.d.ts:13)."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.10,
+        "reasoning": "TECH_DEBT TD-CMP6-SBOM-ATTEST records the Q3 decision + mobile residual gap + CRA Art.13/2027 target + close-out steps. R2 contrast honestly qualified as solid-on-solid floor (NOT pixel-exact composited) per UFR-013. Code comments justify the why with refs."
+      },
+      "weightedMean": 91.2
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
+    }
   }
 ]

@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/refs -- Animated.Value ref is a stable object read once at creation; safe RN pattern */
 import { memo, useEffect, useRef } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
 import { MarkdownBubble } from '@/features/chat/ui/MarkdownBubble';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
@@ -43,7 +43,17 @@ export const StreamingBody = memo(function StreamingBody({
 
   return (
     <>
-      <MarkdownBubble text={text} onLinkPress={onLinkPress} />
+      {/*
+        R7 (design §R7) — expose the response body as a polite a11y live region
+        so VoiceOver/TalkBack announce incremental streamed content without
+        focus (lib-docs/react-native/PATTERNS.md §7 — dynamic announcements;
+        precedent StatusIndicator.tsx:46). Wrap ONLY the markdown body — the
+        blinking cursor "▍" stays OUTSIDE so the screen reader does not announce
+        the blink on every frame.
+      */}
+      <View accessibilityLiveRegion="polite">
+        <MarkdownBubble text={text} onLinkPress={onLinkPress} />
+      </View>
       {isStreaming ? (
         <Animated.Text style={[styles.cursor, { color: theme.primary, opacity: cursorOpacity }]}>
           {'▍'}

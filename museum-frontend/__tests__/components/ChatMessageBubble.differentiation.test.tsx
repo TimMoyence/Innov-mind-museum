@@ -190,11 +190,15 @@ describe('ChatMessageBubble — A3 texture differentiation', () => {
     expect(isOpaqueColor(flat.backgroundColor as string | undefined)).toBe(true);
   });
 
-  it('when reduceTransparency=true, assistant bubble still has accessibility role + label', () => {
+  it('when reduceTransparency=true, assistant body stays SR-reachable + keeps the long-press hint', () => {
     mockUseReducedTransparency.mockReturnValue(true);
     const message = makeAssistantMessage({ text: 'Accessible response' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
-    // Long-press wrapper preserves the a11y contract (R22).
-    expect(screen.getByLabelText('a11y.chat.assistant_message')).toBeTruthy();
+    // R8 / design §D8 — under reduceTransparency the assistant <Pressable> still
+    // does NOT mask the body behind a static a11y label; the real response text
+    // stays reachable and the long-press affordance keeps its hint.
+    expect(screen.getByText('Accessible response')).toBeTruthy();
+    expect(screen.queryByLabelText('a11y.chat.assistant_message')).toBeNull();
+    expect(screen.getByA11yHint('a11y.chat.long_press_hint')).toBeTruthy();
   });
 });

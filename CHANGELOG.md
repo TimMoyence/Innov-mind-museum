@@ -12,6 +12,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lot P0 — a11y AA & supply-chain SBOM attestation (2026-05-25, V1 close-out)
+
+Run `/team` UFR-022 9-phase fresh-context (`2026-05-25-p0-a11y-compliance`, branch `p0/a11y`).
+Closes 4 audit findings (I-CMP1/3/5/6) from `audit-state/2026-05-25-roadmap-reconstruction`.
+Reviewer APPROVED 1st pass (weightedMean 91.2). No backend application code; LOT 6 boundary
+(`sseParser.ts` / `chatApi/stream.ts`) untouched.
+
+#### Fixed
+
+- **Mobile — chat a11y AA corrections (I-CMP1, I-CMP3 5/5 sub-violations).** Disclosure-footer
+  contrast/opacity raised to AA; audio-description (expo-speech) double-playback race resolved by
+  partitioning by content type (expo-speech owns image-description messages, server-TTS owns body
+  text); streaming body exposed as a live region with the cursor excluded; chat-bubble masking label
+  removed so body text reaches the accessibility tree; `Settings` audio-description control given
+  Switch role + label + state.
+- **Web — skip-link (WCAG 2.4.1 "Bypass Blocks") (I-CMP5).** Keyboard-reachable "skip to content"
+  anchor added as the first focusable element of `museum-web/src/app/[locale]/layout.tsx`, jumping
+  focus to the `<main id="main">` landmark (Tailwind `sr-only focus:not-sr-only`, copy from
+  `dict.a11y.skipToContent`). Playwright a11y spec `public-skip-link.a11y.spec.ts` added.
+- **Docs — accessibility statement domain + skip-link self-admission (I-CMP5).** `musaium.app` →
+  `musaium.com` corrected in `docs/legal/accessibility-statement-{en,fr}.md`; the now-stale
+  "No skip-link is implemented" assertion (§3.1) updated to reflect the shipped WCAG 2.4.1 skip-link.
+
+#### Added
+
+- **CI — SBOM CycloneDX attestation across the 3 apps (I-CMP6, user decision Q3 "Tout faire").**
+  Backend + web ship signed, digest-bound CycloneDX attestations via `cosign attest --type cyclonedx`
+  (additive, `continue-on-error`, existing `cosign sign` / SLSA-attest / verify left byte-unchanged
+  and still blocking). Mobile ships a CycloneDX SBOM as a CI artifact (`sbom-mobile`); no sigstore
+  attestation because EAS exposes no local OCI digest. Contract guard:
+  `scripts/sentinels/sbom-attest-check.mjs`.
+- **[ADR-068](docs/adr/ADR-068-sbom-attestation-strategy-mobile-gap.md)** — SBOM attestation strategy:
+  digest-bound where possible, mobile-binary attestation gap deferred to **EU CRA Art. 13 (11 Dec
+  2027)**, tracked in TECH_DEBT.
+
+#### Tech debt opened
+
+- **TD-CMP6-SBOM-ATTEST** (CRA 2027) — mobile store binary has no signed SBOM attestation bound to
+  its digest (EAS exposes no local OCI digest). SBOM ships as CI artifact only; signed-attestation
+  delta to close before CRA Art. 13 enforcement. Tracked in `docs/TECH_DEBT.md`.
+
 ### Chat composer + modal dismiss audit (2026-05-23, V1 close-out)
 
 Run `/team` UFR-022 9-phase fresh-context (`2026-05-23-chat-composer-buttons-modal-dismiss`). Reviewer
