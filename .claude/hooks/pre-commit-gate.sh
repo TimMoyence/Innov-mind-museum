@@ -40,8 +40,12 @@ if [ -n "$STAGED_TS" ]; then
   npx eslint $STAGED_TS --max-warnings=0 2>/dev/null || { echo "ESLint errors on staged files"; ERRORS="${ERRORS}ESLint staged files FAIL. "; }
 fi
 
-# 4. Tests backend (bail on first failure for speed, only changed files)
-if ! (cd "$REPO_ROOT/museum-backend" && pnpm test -- --bail --changedSince=HEAD --coverage=false &>/dev/null); then
+# 4. Tests backend (bail on first failure for speed, only changed files).
+# NOTE: invoke jest directly via `pnpm exec` — `pnpm test -- <flags>` inserts a
+# `--` separator so jest parses --changedSince/--bail/--coverage as positional
+# test-name patterns ("No tests found", exit 1) and the gate blocks EVERY commit.
+# --passWithNoTests makes doc/frontend-only commits (zero changed backend tests) pass.
+if ! (cd "$REPO_ROOT/museum-backend" && pnpm exec jest --watchman=false --runInBand --selectProjects unit-integration --changedSince=HEAD --coverage=false --passWithNoTests --bail &>/dev/null); then
   ERRORS="${ERRORS}Backend tests FAIL. "
 fi
 
