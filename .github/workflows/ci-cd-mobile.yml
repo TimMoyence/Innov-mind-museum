@@ -84,8 +84,29 @@ jobs:
 
       - name: Expo Doctor
         # I-OPS8 (R10): was `continue-on-error: true` (gate theatre — a failing
-        # expo-doctor was ignored). Now a non-zero expo-doctor exit fails the job.
-        run: npx expo-doctor
+        # expo-doctor was ignored). Now a REAL blocking gate: it fails on any failed
+        # check EXCEPT the one irreducible, intentional failure — the Metro config
+        # check flags `resolver.unstable_enableSymlinks: true`, which is REQUIRED to
+        # resolve the `@musaium/shared` file: dependency (see metro.config.js +
+        # CLAUDE.md) and has NO expo-doctor disable toggle. App-config-sync (Prebuild,
+        # committed native folders) + SDK version drift are silenced via
+        # expo.doctor / expo.install in package.json, so any NEW failure surfaces.
+        run: |
+          set +e
+          OUTPUT=$(npx expo-doctor 2>&1)
+          STATUS=$?
+          set -e
+          printf '%s\n' "$OUTPUT"
+          if [ "$STATUS" -eq 0 ]; then
+            exit 0
+          fi
+          NON_METRO=$(printf '%s\n' "$OUTPUT" | grep '✖' | grep -v 'Check for issues with Metro config' || true)
+          if [ -n "$NON_METRO" ]; then
+            echo "::error::expo-doctor reported a failed check other than the tolerated Metro-symlinks one:"
+            printf '%s\n' "$NON_METRO"
+            exit 1
+          fi
+          echo "expo-doctor: only the known intentional Metro-symlinks check failed — tolerated."
 
       - name: Check OpenAPI Typegen Sync
         run: npm run check:openapi-types
