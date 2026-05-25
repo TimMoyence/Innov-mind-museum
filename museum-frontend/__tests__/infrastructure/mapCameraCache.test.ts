@@ -9,7 +9,7 @@ import { mapCameraCache } from '@/features/museum/infrastructure/mapCameraCache'
 import { storage } from '@/shared/infrastructure/storage';
 import { nonNull } from '@/__tests__/helpers/nonNull';
 
-const STORAGE_KEY = 'museum.lastCameraView.v1';
+const STORAGE_KEY = 'musaium.museum.lastCameraView.v1';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const SAVE_DEBOUNCE_MS = 1000;
 

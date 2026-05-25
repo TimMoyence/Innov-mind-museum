@@ -1073,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, abrir visita",
       "continue_hint": "Abre esta visita pasada para leer"
+    },
+    "bottomSheet": {
+      "dismiss": "Cerrar hoja"
     }
   },
   "consent": {

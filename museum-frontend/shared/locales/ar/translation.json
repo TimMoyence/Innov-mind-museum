@@ -1073,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}، {{museum}}، {{date}}، فتح الزيارة",
       "continue_hint": "يفتح هذه الزيارة السابقة للقراءة"
+    },
+    "bottomSheet": {
+      "dismiss": "إغلاق الورقة"
     }
   },
   "consent": {

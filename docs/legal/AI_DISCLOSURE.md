@@ -10,7 +10,7 @@ Three concurrent, layered surfaces inform the user that Musaium is an AI assista
 
 1. **Visual blocking modal** — `VoiceSessionIntro` renders before the microphone activates on every voice session. Title, AI-notice subtitle, audio-status indicator, "Start" CTA. Full-screen, cannot be bypassed.
 2. **Audio greeting** — on modal mount, the OS-native TTS (`expo-speech`) speaks the localised disclosure copy (`voice.disclosure.audioGreeting`) in the active locale. Per the EC draft guidelines for Article 50, a naturalistic synthetic voice (Musaium uses `gpt-4o-mini-tts`, voice `alloy`) must carry an *audible* disclosure — a visual badge alone is insufficient.
-3. **Persistent visual badge** — `ChatHeader` shows a tappable "AI / IA / KI / …" pill next to the session title. Tapping it opens `AiDisclosureModal` with the recap copy and a "Learn more" link to this document's public URL.
+3. **Persistent visual badge** — `ChatHeader` shows a tappable "AI / IA / KI / …" pill next to the session title. Tapping it opens `AiDisclosureSheetContent` with the recap copy and a "Learn more" link to this document's public URL.
 
 A passive footer (`AiDisclosureFooter`) is also rendered below the chat thread for the *text*-only disclosure baseline that already pre-dated this change.
 
@@ -21,7 +21,7 @@ A passive footer (`AiDisclosureFooter`) is also rendered below the chat thread f
 | `VoiceSessionIntro` | First tap on the microphone of a voice session | Every new session (`sessionId` change) |
 | Audio greeting | Modal mount | Once per modal mount |
 | AI badge | Mounted alongside the session title | Persistent for the duration of the chat |
-| `AiDisclosureModal` recap | User taps the AI badge | On demand |
+| `AiDisclosureSheetContent` recap | User taps the AI badge | On demand |
 | `AiDisclosureFooter` | Mounted below the message list | Persistent |
 
 The session-scoped acknowledgement is intentional: Article 50 requires disclosure "at the latest at the time of the first interaction", and "first interaction" is interpreted per-session, not per-install. A user returning a week later to a fresh session sees the disclosure again. The flag is stored under `musaium.voice.disclosure_acknowledged.<sessionId>` in `expo-secure-store` (or in memory on web).
@@ -39,7 +39,7 @@ The session-scoped acknowledgement is intentional: Article 50 requires disclosur
 |---|---|
 | `museum-frontend/features/chat/ui/VoiceSessionIntro.tsx` | Pre-mic disclosure modal + audio greeting playback |
 | `museum-frontend/features/chat/hooks/useVoiceDisclosure.ts` | Session-scoped acknowledgement state + SecureStore persistence |
-| `museum-frontend/features/chat/ui/AiDisclosureModal.tsx` | On-demand recap modal opened from the AI badge |
+| `museum-frontend/features/chat/ui/AiDisclosureSheetContent.tsx` | On-demand recap modal opened from the AI badge |
 | `museum-frontend/features/chat/ui/ChatHeader.tsx` | Hosts the persistent AI badge button |
 | `museum-frontend/app/(stack)/chat/[sessionId].tsx` | Wires the disclosure gate to the microphone trigger |
 | `museum-frontend/features/chat/ui/AiDisclosureFooter.tsx` | Persistent text footer (pre-existing, kept) |

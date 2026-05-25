@@ -609,18 +609,6 @@ export interface AppEnv {
       timeoutMs: number;
     };
     /**
-     * ADR-051 (2026-05-13) — Llama Prompt Guard 2 86M (Meta) sidecar.
-     * Same not-wired-yet status as Presidio. Score threshold is MALICIOUS
-     * probability above which adapter returns block verdict.
-     */
-    llamaPromptGuard: {
-      baseUrl?: string;
-      /** Hard request timeout (ms) for /classify. Fail-CLOSED on elapsed. */
-      timeoutMs: number;
-      /** MALICIOUS score threshold above which block verdict emitted. Default 0.8. */
-      scoreThreshold: number;
-    };
-    /**
      * Chaos drill probability in [0, 1] consumed by `LLMGuardAdapter`. Each
      * scan samples uniform random; if < `chaosRate`, call aborted BEFORE fetch
      * (exercise of fail-CLOSED path). Production MUST be 0.

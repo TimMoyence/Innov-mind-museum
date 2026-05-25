@@ -77,7 +77,7 @@ describe('ThemeContext', () => {
       expect(screen.getByTestId('mode').props.children).toBe('dark');
     });
     expect(screen.getByTestId('isDark').props.children).toBe('true');
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('app.themeMode', 'dark');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('musaium.theme.mode', 'dark');
   });
 
   it('persists and restores mode from AsyncStorage', async () => {

@@ -1,5 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { useDailyArt } from '@/features/daily-art/application/useDailyArt';
+import {
+  useDailyArt,
+  SAVED_ARTWORKS_KEY,
+  DISMISSED_KEY,
+} from '@/features/daily-art/application/useDailyArt';
 import type { DailyArtwork } from '@/features/daily-art/infrastructure/dailyArtApi';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -100,13 +104,13 @@ describe('useDailyArt', () => {
     });
 
     expect(result.current.dismissed).toBe(true);
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@musaium/daily_art_dismissed', todayKey());
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(DISMISSED_KEY, todayKey());
   });
 
   it('returns dismissed=true on mount if already dismissed today', async () => {
     // Simulate today's date already stored as dismissed
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-      if (key === '@musaium/daily_art_dismissed') return Promise.resolve(todayKey());
+      if (key === DISMISSED_KEY) return Promise.resolve(todayKey());
       return Promise.resolve(null);
     });
 
@@ -119,6 +123,36 @@ describe('useDailyArt', () => {
     expect(result.current.dismissed).toBe(true);
     // Should not fetch artwork when already dismissed
     expect(mockFetchDailyArt).not.toHaveBeenCalled();
+  });
+
+  it('carries a legacy-keyed dismiss value forward to the new key on first read (TD-AS-01 migrate)', async () => {
+    // Only the PRE-namespacing key holds today's dismiss flag. The
+    // migrateStorageKey wiring in the load effect must copy it forward to the
+    // new key before the read, so the hook still resolves dismissed=true.
+    const legacyStore = new Map<string, string>([['@musaium/daily_art_dismissed', todayKey()]]);
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(legacyStore.get(key) ?? null),
+    );
+    (AsyncStorage.setItem as jest.Mock).mockImplementation((key: string, value: string) => {
+      legacyStore.set(key, value);
+      return Promise.resolve();
+    });
+    (AsyncStorage.removeItem as jest.Mock).mockImplementation((key: string) => {
+      legacyStore.delete(key);
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() => useDailyArt());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.dismissed).toBe(true);
+    expect(mockFetchDailyArt).not.toHaveBeenCalled();
+    // Migrated forward to the namespaced key, legacy key dropped.
+    expect(legacyStore.get(DISMISSED_KEY)).toBe(todayKey());
+    expect(legacyStore.has('@musaium/daily_art_dismissed')).toBe(false);
   });
 
   it('save() persists artwork to storage and sets isSaved=true', async () => {
@@ -136,7 +170,7 @@ describe('useDailyArt', () => {
 
     expect(result.current.isSaved).toBe(true);
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-      '@musaium/saved_artworks',
+      SAVED_ARTWORKS_KEY,
       JSON.stringify([sampleArtwork]),
     );
   });
@@ -144,7 +178,7 @@ describe('useDailyArt', () => {
   it('save() does not duplicate if artwork already saved', async () => {
     // Pre-populate storage with the same artwork
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
-      if (key === '@musaium/saved_artworks') {
+      if (key === SAVED_ARTWORKS_KEY) {
         return Promise.resolve(JSON.stringify([sampleArtwork]));
       }
       return Promise.resolve(null);
@@ -166,7 +200,7 @@ describe('useDailyArt', () => {
 
     // setItem should have been called once (not with a duplicated array)
     const setItemCalls = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
-      ([key]: [string]) => key === '@musaium/saved_artworks',
+      ([key]: [string]) => key === SAVED_ARTWORKS_KEY,
     );
     // If called, the array should still have length 1
     if (setItemCalls.length > 0) {
@@ -193,10 +227,7 @@ describe('useDailyArt', () => {
     });
 
     // Should not attempt to write to storage
-    expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
-      '@musaium/saved_artworks',
-      expect.anything(),
-    );
+    expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SAVED_ARTWORKS_KEY, expect.anything());
   });
 
   it('cleanup sets cancelled flag — late API resolve does not update state', async () => {
