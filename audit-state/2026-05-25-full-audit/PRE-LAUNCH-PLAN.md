@@ -5,6 +5,8 @@
 
 ---
 
+> **✅ DÉCISIONS TRANCHÉES (2026-05-25)** : ① NPS = **FULL SCOPE** (0-10 + global + per-museum, B2B-ready) — PAS de descope. ② museum_manager = **FULL SCOPE Aligner FE/BE** (scoper getStats + routes + branding consumer mobile). ③ MFA = **post-V1** (V1 = neutraliser l'entrée enroll). **Groupage révisé : par FEATURE verticale (1 worktree = 1 slice BE+FE+web cohérente), pas par environnement.** Prompts prêts : [`WORKTREE-PROMPTS.md`](WORKTREE-PROMPTS.md).
+
 ## 1. DEUX DÉCISIONS À TRANCHER D'ABORD (elles descopent du travail)
 
 > Pourquoi d'abord ? Parce que selon ton choix, on **écrit du code OU on n'en écrit pas**. Trancher = potentiellement supprimer un item entier de la Wave 1.
