@@ -141,8 +141,11 @@ jobs:
         # The `mutation` job is intentionally disabled via `if: false` (Stryker
         # prioritised cache-first, out of this run's scope); ignore that ONE
         # documented if-cond pattern so the gate passes on the intentional disable.
+        # Mount $GITHUB_WORKSPACE (repo root) not $PWD: this job runs with
+        # working-directory=museum-backend, so $PWD would be the sub-package and
+        # the .github/workflows/* paths (repo-root-relative) would not resolve.
         run: |
-          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 \
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo rhysd/actionlint:1.7.12 \
             -ignore 'constant expression "false" in condition' \
             .github/workflows/ci-cd-backend.yml .github/workflows/ci-cd-mobile.yml
 
