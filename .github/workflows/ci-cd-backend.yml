@@ -511,7 +511,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # I-OPS8 (R9): ai-tests now RUN on PR (paths-filtered above) instead of being
+      # workflow_dispatch-only — they were invisible before. They are ADVISORY
+      # (continue-on-error), NOT a hard merge gate, because they hit the live OpenAI
+      # provider and assert exact facts in free-form output (e.g. /leonardo|da vinci/
+      # for "who painted the Mona Lisa"). Musaium is a proactive companion: the model
+      # legitimately answers some turns by offering reading angles instead of a bare
+      # fact, so these assertions are non-deterministic by design. Like the promptfoo
+      # gate (95 % pass-rate tolerance), live-LLM checks must absorb variance; a
+      # blocking gate needs the assertions de-flaked / a pass-rate threshold first
+      # (tracked follow-up). The step result stays visible in the PR checks.
       - name: AI Integration Tests
+        continue-on-error: true
         run: pnpm run test:ai
 
   # ─── 5.4. Migration schema-drift gate (I-OPS8 R11) ────────────────────
