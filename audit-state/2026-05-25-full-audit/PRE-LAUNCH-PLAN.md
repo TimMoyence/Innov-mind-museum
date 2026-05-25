@@ -1,108 +1,121 @@
-# 🚀 Plan pré-lancement Musaium V1 — J-13 (launch 2026-06-07)
+# 🚀 Plan pré-lancement Musaium V1 — J-13 (launch 2026-06-07) — v2 (produit-first)
 
-> Source : consolidation full-audit 2026-05-25 (pass-1 + pass-2, 82 agents). Objectif user : **roadmap pré-lancement finalisée + debt à zéro**.
-> **Pas d'estimations en jours** (mes estimations solo tournent 50-70 % trop haut — ta vélocité gouverne). Sizing relatif S/M/L seulement.
-> **Parallélisme** = tracks touchant des zones de code DISJOINTES → exécutables en parallèle (sessions/`/team` cycles distincts sans conflit de merge). Conflits internes notés.
-
----
-
-## 0. Verdict launch-readiness
-
-**Peut-on lancer ?** Pas encore. Le launch est gaté sur **Wave 1 (P0 code) + Wave OPS (compliance humaine) + smoke prod**. Tout le reste est éligible à la fenêtre hotfix V1.0.x (2026-06-07 → 06-21).
-
-- ✅ **Déjà fait** : P0-FA1 (bulle vide, `246db09e9`), LOT 1/2/3 sécu/GDPR/feature-gates (#293/294/295), LOT 5 a11y partiel (#298), LOT 6 burial (PR#299).
-- 🔴 **Bloquant launch** : 5 items code (Wave 1) + 5 actions Tim (Wave OPS).
-- 🟠 **Debt-à-zéro réaliste** : Wave 2 + 3.
-- 🟡 **Defer honnête V1.0.x** (zéro risque launch) : Wave 4.
+> Source : full-audit 2026-05-25 (82 agents). Décisions intégrées : **MFA → post-V1**. Focus **produit, pas optimisation** (l'optim part en Wave 4 différée). Pas d'estimations en jours (mes estimations solo sont 50-70 % trop hautes — ta vélocité gouverne).
+> **Principe de groupage** : on ne groupe PAS par "type de bug" mais par **zone de code disjointe** (backend / frontend / web / infra-CI / ops-humain). Deux tracks dans des zones disjointes ne se marchent pas dessus → vrai parallèle. Le seul point chaud intra-backend est le **chat-pipeline** (plusieurs items s'y croisent) → à faire en série entre eux.
 
 ---
 
-## WAVE 1 — Bloquants launch (parallèle, zones disjointes) 🔴
+## 1. DEUX DÉCISIONS À TRANCHER D'ABORD (elles descopent du travail)
 
-| Track | Item | Zone | Dépend |
+> Pourquoi d'abord ? Parce que selon ton choix, on **écrit du code OU on n'en écrit pas**. Trancher = potentiellement supprimer un item entier de la Wave 1.
+
+### Décision ① — KR2 NPS (objectif OKR « NPS post-session ≥ 7/10 »)
+**État réel** : impossible à mesurer aujourd'hui. `aggregateNps()` est du dead-code (0 appelant), `StarRating.tsx:31` plafonne à **5 étoiles** (donc aucune note 0-10 possible), et `users.museum_id` n'est jamais assigné (l'axe per-museum est inerte).
+
+| Option | Ce qu'on fait | Ce que ça coûte | Ce que ça descope |
 |---|---|---|---|
-| **1A FE** | **P0-FA2 MFA mobile verrou** — router `MfaChallengeScreen` OU masquer l'enroll V1 (`app/(stack)/mfa-enroll.tsx`) | museum-frontend/auth | — |
-| **1B BE** | **P0-FA3 consent location bypass** (GDPR) — couper le fallback raw-coords `prepare-message.pipeline.ts:482` + `llm-prompt-builder.ts:196-200` | museum-backend/chat | — |
-| **1C BE/infra** | **I-OPS2 alertes** backend-down/5xx/DB/Redis + severity routing (`infra/grafana/alerting`) **+ merger #300** (I-FIX3 cap anon/judge/metering, `34bf280fc`) | infra + cost-guard | merge #300 |
-| **1D BE/data** | **P0-FA5 daily-art** — re-sourcer 14/30 URLs (Wikimedia stable) + sentinel CI liveness (`artworks.data.ts`) | museum-backend/daily-art | — |
-| **1E décision** | **P0-FA4 NPS** (câbler 0-10 + per-museum OU descoper KR2) **+ P0-FA6 museum_manager** (aligner FE/BE OU retirer le rôle V1) | admin BE+web | décision produit |
-| **1-ops** | **C1 SigLIP** provisioning (provision GCS + injecter `SIGLIP_ONNX_SHA256` en CI, sinon 503 /chat/compare) | CI + ops | — |
+| **A — NPS global minimal (RECOMMANDÉ)** | Ajouter une question 0-10 post-session (ou élargir StarRating à 0-10) + 1 endpoint qui agrège un NPS **global** (promoters/passives/detractors) | Petit (S) — 1 input FE + 1 lecture BE qui existe déjà (`aggregateNps` à câbler) | Le NPS **par musée** (inutile en V1 : 0 musée contracté) → V1.1 B2B |
+| **B — Descoper KR2** | Mesurer la satisfaction hors-app (Typeform post-session OU signal rétention Plausible KR4). Marquer KR2 « non instrumenté in-app V1 » | Zéro code | Tout le NPS in-app |
 
-→ 1A/1B/1C/1D parallélisables (apps/modules disjoints). 1E = trancher AVANT de coder (les décisions descopent du travail).
+**Reco prof** : Option **A-global**. KR2 est *la* question produit (« est-ce que l'expérience donne envie de revenir ? ») — tu veux la réponse. Le per-museum n'a aucun sens sans client B2B, donc on le jette. C'est un petit ajout produit, pas de l'over-engineering.
 
-## WAVE OPS — Tim, humain (100 % parallèle au code) 🧑‍🔧
+### Décision ② — rôle `museum_manager` (admin multi-tenant B2B)
+**État réel** : le rôle est à moitié construit et **cassé**. Il est dans l'allow-list `AdminShell.tsx:195` (la porte FE s'ouvre), mais le backend n'autorise que `/stats` → **7 des 8 liens de nav renvoient 403**, et le seul qui marche (`/stats`) **fuit l'agrégat global cross-tenant** (`getStats` ignore le museumId). Le branding admin écrit dans le vide (zéro consumer). Or **0 musée n'est contracté** en V1 (B2C-first).
 
-- **B17 révoquer la clé Anthropic** `.env:108` (re-exposée par l'audit) — **à faire maintenant**.
-- **B12** générer PGP réelle + remplacer placeholder · **B13** provisionner mailbox `security@musaium.com` + smoke RFC 9116.
-- **B14** signer DPA Langfuse · **B19** S3 PAB (console OU IaC) · **C7.5** device TTS smoke iPhone réel.
-- **Exec seed prod** (C4 Aquitaine) + **vérifier migration no-drift** (`migration:run` puis `generate Check` vide) avant bake.
+| Option | Ce qu'on fait | Ce que ça coûte | Ce que ça descope |
+|---|---|---|---|
+| **A — Retirer le rôle de la V1 (RECOMMANDÉ)** | Retirer `museum_manager` de l'allow-list FE + masquer la nav. Le rôle reste en base pour plus tard | Très petit (S) — 1-2 lignes | Tout l'admin multi-tenant → V1.1/V1.2 (M1.2) quand un musée signe |
+| **B — Aligner FE/BE** | Câbler les 7 routes + scoper `getStats` par museumId + brancher le branding consumer | Gros (L) | Rien, mais c'est du travail B2B prématuré |
 
----
-
-## WAVE 2 — Compliance gates + honnêteté (parallèle) 🟠
-
-| Track | Item | Zone |
-|---|---|---|
-| **2-CI** | **B12 PGP CI-gate** (bloque deploy si placeholder) + **B19 S3 PAB sentinel** boot-check `GetPublicAccessBlock` | scripts/sentinels, .github |
-| **2-legal** | **B14 ledger dev** — ajouter Langfuse/CARTO/Expo à `SUBPROCESSORS.md` + `ROPA.md` + créer `docs/legal/dpa-signed/` | docs |
-| **2-KR4** | **`EXPO_PUBLIC_PLAUSIBLE_DOMAIN`** dans `.env*.example` FE (sinon funnel KR4 muet en prod) | museum-frontend env |
-| **2-honesty** | Retirer/merger `LOT-P0-STABILITY-CLOSURE.md` (claim creux) · réécrire prose I-SEC4/I-SEC6 (faux "live") · réconcilier I-SEC8 (CRITIQUE→LOW) · ADR-036... corrigé, reste **ADR-038:76 + ADR-065:20** `llm:v1`→`v2` · doc-anchors `c4b/c2` (committer ou retirer) · créer `doc-anchor-check.mjs` (cité CLAUDE.md, inexistant) | docs + scripts |
-
-→ Les 4 tracks Wave 2 sont disjoints, full-parallèle.
+**Reco prof** : Option **A-retirer**. Une feature B2B *cassée* fait plus de mal que pas de feature (elle expose la fuite stats + 7 liens morts). Tu n'as pas de client B2B à servir en V1. La retirer est honnête, minuscule, et **fait disparaître le risque de fuite C8 du même coup**. Le vrai admin multi-tenant se construira quand un musée sera contracté (pitch B2B = démo image-compare + co-branding, pas un dashboard cassé).
 
 ---
 
-## WAVE 3 — Debt-à-zéro réaliste (P1, parallèle par app) 🟠
+## 2. TODO PRÉ-LANCEMENT — OPS (Tim, humain, hors-code — démarre en parallèle MAINTENANT)
 
-**Backend** (chat-pipeline hotspot → sérialiser 3A en interne) :
-- 3A-1 **logger sans scrub** PII query-string (`error.middleware.ts:99,117`)
-- 3A-2 **Langfuse vision PII array** (`strip-free-text.ts` — couvrir `content[]`)
-- 3A-3 **B7 TTS non consent-gated** (`chat-media.route.ts:271`)
-- 3A-4 **DSAR `artwork_matches`** dans l'export Art.15
-- 3B **cost-breaker dailySpend wipe** (`three-state-circuit.ts:128` / `cost-trip-strategy.ts:63`)
-- 3C **leads durabilité** (table locale + OpenAPI `/leads/*`) · **smoke account teardown** + `verification_token` no-op (`seed-smoke-account.ts:155`)
-- 3D **TOTP TOCTOU** (compare-and-set `markUsed`)
+> Ces tâches ne sont pas du code : elles débloquent la conformité légale et la prod. Aucune ne dépend des autres → toutes parallèles.
 
-**Frontend** (features disjointes → sub-parallèle) :
-- 3E-1 **settings sync** — câbler `PATCH /me/preferences` + `audioDescriptionMode` write (5 réglages local-only)
-- 3E-2 **TD-FE-CHAT-BURY-SSE** (callbacks morts) + **TTS cache `.mp3`→`.opus`**
-- 3E-3 **Accept-Language `fr-FR`** (extractLangCode, `chat-compare.route.ts:77`)
-- 3E-4 **a11y I-CMP3** (USER bubble masking `ChatMessageBubble.tsx:237` + live region conditionnelle `StreamingBody.tsx:54`)
-- 3E-5 **2 Maestro stale sur shards CI** (`audio-recording-flow.yaml`, `onboarding-flow.yaml`) — `git mv` remplaçants + swap shard
-- 3E-6 **C3.5 useCompareImage** — câbler dans l'UI OU enterrer (décision)
-
-**Web** :
-- 3F **I-CMP4** badge contrast 2.15:1 (`tokens.semantic.ts`) + **I-CMP5** 4 refs `.app` (`accessibility-content.ts:32,58,90,116`)
-
-→ Backend (3A-D) ∥ Frontend (3E) ∥ Web (3F) = 3 apps disjointes, full-parallèle.
+- [ ] **B17 — Révoquer la clé Anthropic** exposée (`.env:108`, `sk-ant-…`). Dead côté code, mais re-exposée par l'audit → révoquer sur le dashboard Anthropic. *(5 min)*
+- [ ] **B12 — Générer la clé PGP réelle** (Ed25519, 2 ans) et remplacer le placeholder `PGP_KEY_PLACEHOLDER_DO_NOT_SHIP` dans `museum-web/public/.well-known/pgp-key.txt`. Procédure : `docs/operations/PGP_KEY_GENERATION.md`.
+- [ ] **B13 — Provisionner la mailbox `security@musaium.com`** (alias OVH → Gmail) + smoke test RFC 9116 (sinon `SECURITY.md` ment).
+- [ ] **B14 — Signer le DPA Langfuse** + archiver dans `docs/legal/dpa-signed/` (Langfuse Cloud est actif en prod, traite de la donnée).
+- [ ] **B19 — S3 bucket Public-Access-Block** : activer le PAB sur le bucket prod (console OVH/AWS) — il stocke voix biométrique + images EXIF. *(le sentinel CI de garde = côté code, Wave 2)*
+- [ ] **C7.5 — Smoke device TTS sur iPhone réel** avant submit TestFlight (le STT/TTS Opus ne se teste qu'en device).
+- [ ] **Seed prod + no-drift** : exécuter le seed démo (Aquitaine, cf C4) sur la prod, PUIS vérifier `migration:run` → `generate Check` **vide** (zéro drift de schéma) avant le bake.
 
 ---
 
-## WAVE 4 — Defer honnête V1.0.x (zéro risque launch) 🟡
+## 3. `.env` À AJOUTER / VÉRIFIER (vérifié dans le code, UFR-013)
 
-> Forcer ces items à zéro AVANT launch n'est PAS le meilleur call produit (UFR-001) — fenêtre hotfix suffisante.
-- **CC-BY-SA** inatteignable (inerte en V1 : allow-list = pd/cc-0 ; dead forward-compat) — ou trancher pd/cc-0 strict.
-- **seed-pilot-museums.sh** Q-codes Paris (dead-code post-rescope) — burial.
-- **RTL borders** `SwipeableConversationCard` + étendre `_rtl-style-audit` aux radius.
-- **WelcomeCard dead UI** burial · **reviews.userName ghost** + dead 409 burial.
-- **C3.7 score-floor** (`fallbackVisualThreshold` dead) · **C4.3 promptfoo** assertions dead-on-arrival.
-- **I-OPS3** migration single-path · **I-OPS6** guard pgvector ≥0.7.0 · **I-OPS7** indices (P1/scale) · **I-OPS8** CI gates théâtre · **I-OPS5** media backup (IaC).
-- **W2.2 branding** consumer mobile (M1.3 Q3) — OU retirer la claim.
+> Le `.env` prod réel est hors-repo (gitignored) — voici la checklist canonique à confronter à ton `.env` prod.
+
+### 3.1 À AJOUTER (confirmés manquants par l'audit)
+| Var | Où | Pourquoi | Sans ça |
+|---|---|---|---|
+| **`EXPO_PUBLIC_PLAUSIBLE_DOMAIN`** | FE (`.env.production` / EAS) | Funnel analytics KR4 | `resolveDomain()` no-op silencieux → **dashboard KR4 vide en prod** |
+| **`EXPO_PUBLIC_SENTRY_DSN_ANDROID` + `_IOS`** | FE prod / EAS | Crash reporting mobile | Présents dans `.env.prod-test` mais PAS dans `.env.production.example` → **KR3 crash-free non mesuré** si absents du build EAS prod |
+| **`SIGLIP_ONNX_SHA256`** | CI build-arg (`Dockerfile.prod`) | Pin du modèle SigLIP (C1) | `fetch-models.sh` avale le 404 → cold start `/chat/compare` = **503** |
+
+### 3.2 À VÉRIFIER présents dans le `.env` prod BE (sinon boot fail-fast)
+Le code `env.production-validation.ts` **refuse de démarrer** si l'un manque :
+`CORS_ORIGINS` · `CSRF_SECRET` · `EXPORT_PSEUDONYM_SALT` (≥32 chars) · `JWT_ACCESS_SECRET` · `JWT_REFRESH_SECRET` · `MEDIA_SIGNING_SECRET` · `MFA_ENCRYPTION_KEY` · `MFA_SESSION_TOKEN_SECRET` · `OPENAI_API_KEY` · `DEEPSEEK_API_KEY` · `GOOGLE_API_KEY` · `PGDATABASE` · `REDIS_PASSWORD`.
+**+ corrections C6 (utilisées mais non-required)** à confirmer : `APP_VERSION`, `GOOGLE_OAUTH_CLIENT_ID`, `BREVO_API_KEY`, `REDIS_MAXMEMORY`/`REDIS_MAXMEMORY_POLICY`.
+
+### 3.3 À RETIRER du `.env` prod
+- **`ANTHROPIC_API_KEY`** — dead config (zéro usage code), à supprimer **après** révocation (cf. TODO ops).
 
 ---
 
-## Synthèse parallélisme (vue d'ensemble)
+## 4. LES WAVES (groupées par zone disjointe = parallélisables)
+
+### 🔴 WAVE 1 — Bloquants launch (produit + légal)
+**Objectif** : rien qui rende le produit *cassé*, *illégal* ou *aveugle* ne doit shipper. C'est le minimum non-négociable pour ouvrir aux 100 premiers visiteurs.
+**Ce qu'on fait** (4 tracks parallèles, apps disjointes) :
+- **1A · FE** — **Neutraliser l'entrée MFA enroll** : `app/(stack)/mfa-enroll.tsx` doit être inatteignable en V1 (cacher le lien/route) pour qu'aucun user ne s'auto-verrouille (le challenge n'est pas câblé). Le **flow MFA complet → post-V1** (backlog). *Petit.*
+- **1B · BE** — **Consent location bypass** (P0-FA3) : couper le fallback raw-coords (`prepare-message.pipeline.ts:482` + `llm-prompt-builder.ts:196-200`) → ne ship AUCUNE location si consent refusé. *Légal RGPD Art.7.*
+- **1C · infra+BE** — **Alertes prod** (I-OPS2 : backend-down / 5xx / DB / Redis + severity) **+ merger #300** (cap coût anon + judge fail-OPEN, `34bf280fc`). Sans ça : un crash ne page personne et la facture LLM peut déraper.
+- **1D · BE** — **Daily-art images** (P0-FA5) : re-sourcer les 14/30 URLs cassées (Wikimedia stable) + sentinel CI de liveness. C'est la **première impression** (47 % des jours = icône fallback, dont Mona Lisa).
+- **1E · CI/ops** — **SigLIP provisioning** (C1) : provision GCS + injecter `SIGLIP_ONNX_SHA256` en CI, sinon `/chat/compare` = 503 (l'image-compare, argument B2B, est morte).
+**Pourquoi groupé ainsi** : ce sont les 5 défaillances qui cassent l'expérience cœur ou violent la loi. Zones disjointes (auth FE / chat BE / infra / data BE / CI) → tout en parallèle.
+**Ce que ça défère explicitement** : le **flow MFA complet** (post-V1), le **NPS per-museum** et le **multi-tenant admin** (selon décisions §1, probablement retirés/minimisés), toute optimisation.
+
+### 🟠 WAVE 2 — Conformité & honnêteté (le "dossier légal" du launch)
+**Objectif** : que toute promesse publique légale soit **vraie**, et que la doc ne mente pas (un launch B2C EU = obligations RGPD Art.13/28/30 + EAA). Un placeholder PGP ou une privacy policy fausse = signal "vendor négligent" + risque conformité.
+**Ce qu'on fait** (4 tracks parallèles) :
+- **CI** : PGP CI-gate (bloque le deploy si placeholder) + S3 PAB sentinel (boot-check `GetPublicAccessBlock`).
+- **Legal/docs** : ajouter Langfuse/CARTO/Expo à `SUBPROCESSORS.md` (Art.28) + `ROPA.md` (Art.30) + créer `docs/legal/dpa-signed/`.
+- **KR4** : ajouter `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` (cf §3) — sinon le funnel d'adoption est muet.
+- **Honnêteté** (UFR-013/024) : retirer/merger `LOT-P0-STABILITY-CLOSURE.md` (claim creux) · réécrire prose I-SEC4/I-SEC6 (bugs "live" fixés) · réconcilier I-SEC8 (CRITIQUE→LOW) · `ADR-038:76`+`ADR-065:20` `llm:v1`→`v2` · doc-anchors `c4b/c2` + créer `doc-anchor-check.mjs` (cité, inexistant).
+**Pourquoi groupé** : c'est l'hygiène **légale et de vérité**, indépendante du produit, donc parallèle à tout le reste.
+**Ce que ça défère** : rien de produit. (Si tu manques de temps, B12/B13/B14/B19 côté Tim sont le vrai gate ; le code Wave 2 peut suivre dans la fenêtre hotfix.)
+
+### 🟠 WAVE 3 — Debt PRODUIT à zéro (ce que l'utilisateur voit/vit)
+**Objectif** : les bugs qui **dégradent l'expérience** sans la bloquer. C'est le sens utile de "debt à zéro" pour un launch produit.
+**Ce qu'on fait** (Backend ∥ Frontend ∥ Web = 3 apps en parallèle) :
+- **Backend** (point chaud chat-pipeline → série entre eux) : logger sans scrub (PII en stdout) · Langfuse vision PII array · TTS non consent-gated (B7) · DSAR `artwork_matches` (export Art.15 incomplet) · leads durabilité (lead perdu si Brevo down) · smoke account teardown + `verification_token` no-op · TOTP atomic.
+- **Frontend** (features disjointes → sub-parallèle) : **settings sync** (5 réglages ne persistent pas — `PATCH /me/preferences` + `audioDescriptionMode` jamais appelés) · TTS cache `.mp3`→`.opus` · Accept-Language `fr-FR` (users FR ont l'anglais) · a11y bulle USER masquée (I-CMP3) · 2 Maestro stale sur shards CI · C3.5 useCompareImage (câbler ou enterrer).
+- **Web** : I-CMP4 contraste badge 2.15:1 · I-CMP5 refs `.app` (contact a11y injoignable).
+**Pourquoi groupé** : tout est *visible par l'utilisateur* ou *conformité a11y*. Réparti par app = 3 fronts parallèles.
+**Ce que ça défère** : toute la perf/scale → Wave 4.
+
+### 🟡 WAVE 4 — Optimisation & dette technique pure (DIFFÉRÉE V1.0.x — décision assumée)
+**Objectif** : ce qui n'a **aucun impact** sur l'utilisateur à 100 visiteurs/semaine. Tu as dit « produit, pas optimisation » → **on défère explicitement**.
+**Ce qu'on défère** : indices DB manquants (I-OPS7) · migration single-path (I-OPS3) · guard pgvector ≥0.7.0 (I-OPS6) · cost-breaker dailySpend (I-OPS/A6, single-instance) · CI gates théâtre (I-OPS8) · media backup IaC (I-OPS5) · CC-BY-SA (inerte) · burials dead-code (seed-pilot Paris, WelcomeCard, reviews.userName, SSE callbacks) · C3.7 score-floor · C4.3 promptfoo · W2.2 branding consumer.
+**Pourquoi défer est le bon call (UFR-001)** : à faible volume, zéro effet ; la fenêtre hotfix V1.0.x (06-07 → 06-21) existe exactement pour ça. Forcer ces items à zéro pré-launch coûte du temps qui devrait aller au produit.
+
+---
+
+## 5. Vue d'ensemble parallélisme + gate final
 
 ```
-J-13 ───────────────────────────────────────────────► launch
-  Wave 1 (5 tracks code ∥) ──┐
-  Wave OPS (Tim ∥, dès maintenant) ──┤── gate launch
-  Wave 2 (4 tracks ∥) ───────┘
-  Wave 3 (BE ∥ FE ∥ Web) ──── debt-à-zéro
-  Wave 4 ──── defer V1.0.x honnête (ou si temps)
-  + smoke prod local Docker ≥48h (auth+chat+photo+DSAR+geofence) AVANT bake
+J-13 ──────────────────────────────────────────────────────► launch 06-07
+  Décisions §1 (NPS, museum_manager) ← trancher en premier (descope)
+  Wave OPS (Tim) ─────────────────────────────────┐  (parallèle dès maintenant)
+  Wave 1 : 1A∥1B∥1C∥1D∥1E (apps disjointes) ───────┤── GATE LAUNCH
+  Wave 2 : CI ∥ legal ∥ KR4 ∥ honnêteté ───────────┘
+  Wave 3 : Backend ∥ Frontend ∥ Web ──── debt PRODUIT à zéro
+  Wave 4 : ──── DIFFÉRÉE V1.0.x (optimisation, assumé)
+  ▶ GATE FINAL : smoke prod local Docker ≥48h (auth+chat+photo+DSAR+geofence) AVANT bake
 ```
 
-**Décisions à trancher en premier (descopent du travail)** : (1) NPS — câbler ou descoper KR2 ? (2) museum_manager — aligner ou retirer le rôle V1 ? (3) useCompareImage — câbler ou enterrer ? (4) CC-BY-SA — pd/cc-0 strict ?
-
-**Définition de "debt à zéro" honnête** : Wave 1+2 = obligatoire launch ; Wave 3 = debt P1 à zéro (réaliste) ; Wave 4 = defer assumé V1.0.x (le forcer pré-launch coûte plus que ça ne rapporte).
+**"Debt à zéro" honnête** = Wave 1 + 2 (obligatoire) + Wave 3 (debt produit) à zéro ; Wave 4 (optimisation) **différée assumée** — c'est cohérent avec « focus produit ».
