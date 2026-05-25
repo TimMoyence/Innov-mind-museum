@@ -64,6 +64,7 @@ export const MuseumSheet = ({
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel={t('museumDirectory.close_sheet_a11y')}
+          testID="museum-sheet-backdrop"
         />
         <View
           style={[

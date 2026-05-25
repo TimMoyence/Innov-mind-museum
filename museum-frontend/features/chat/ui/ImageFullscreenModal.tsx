@@ -149,6 +149,7 @@ export const ImageFullscreenModal = React.memo(
             accessibilityRole="button"
             accessibilityLabel={t('a11y.chat.fullscreen_close')}
             hitSlop={12}
+            testID="image-fullscreen-modal-close"
           >
             <Ionicons name="close-circle" size={32} color={CAPTION_COLOR} />
           </Pressable>
@@ -171,6 +172,7 @@ export const ImageFullscreenModal = React.memo(
                   if (currentIndex > 0) goTo(currentIndex - 1);
                 }}
                 accessibilityLabel={t('a11y.chat.previous_image')}
+                testID="image-fullscreen-modal-prev"
               />
               <Pressable
                 style={styles.tapZoneRight}
@@ -178,6 +180,7 @@ export const ImageFullscreenModal = React.memo(
                   if (currentIndex < images.length - 1) goTo(currentIndex + 1);
                 }}
                 accessibilityLabel={t('a11y.chat.next_image')}
+                testID="image-fullscreen-modal-next"
               />
             </View>
 

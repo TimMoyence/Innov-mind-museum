@@ -1,0 +1,64 @@
+appId: com.musaium.mobile.preview
+---
+# screen: OfflinePackPrompt
+#
+# C2 — OfflinePackPrompt happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): MuseumMapView mounts the prompt when geo resolves a
+# `nearestCity` AND the pack is absent (`useOfflinePackPromptTrigger`) — not
+# deterministic in CI. We deeplink to a dev-only route that mounts the prompt
+# directly in its accept/decline state with the SAME testID as the prod
+# call-site (app/(dev)/offline-prompt-preview.tsx), so the runtime-derived
+# `${testID}-accept` / `${testID}-decline` anchors resolve identically.
+#
+# The dev route is gated on `__DEV__` (app/(dev)/_layout.tsx redirects in
+# release) — zero prod risk.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   museum-map-offline-prompt-accept    (assert open)
+#   museum-map-offline-prompt-decline   (dismiss)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml).
+#   - Dev/preview bundle (musaium:// scheme + (dev) routes present).
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Deeplink to the dev-only offline-prompt preview route
+# ──────────────────────────────────────────────
+- openLink:
+    link: "musaium:///(dev)/offline-prompt-preview"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2: Assert the prompt is open, then decline (dismiss)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "museum-map-offline-prompt-accept"
+    timeout: 10000
+- assertVisible:
+    id: "museum-map-offline-prompt-accept"
+- tapOn:
+    id: "museum-map-offline-prompt-decline"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "museum-map-offline-prompt-accept"

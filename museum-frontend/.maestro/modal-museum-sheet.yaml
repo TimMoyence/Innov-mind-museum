@@ -1,0 +1,71 @@
+appId: com.musaium.mobile.preview
+---
+# screen: MuseumSheet
+#
+# C2 — MuseumSheet happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap a <MuseumCard> in the Museums tab directory, which sets
+# `selectedMuseum` and opens the sheet (app/(tabs)/museums.tsx).
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   museum-card               (open trigger — first card)
+#   museum-sheet-start-chat   (assert sheet open)
+#   museum-sheet-close        (dismiss — header close button, a11y-reachable)
+#   museum-sheet-backdrop     (touch-dismiss affordance; a11y-hidden, not a Maestro target)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml).
+#   - At least one museum in the backend directory (`pnpm seed:museums`).
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Go to the Museums tab, wait for the directory list
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Museums|Musées"
+- waitForAnimationToEnd:
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 2: Open the first museum card → sheet
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "museum-card"
+    index: 0
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Assert the sheet is open, then dismiss via the header close button.
+# NB: the backdrop (testID museum-sheet-backdrop) is touch-dismissable in the
+# app but is a11y-hidden behind the sheet's accessibilityViewIsModal, so Maestro
+# cannot target it — verified on a live iOS 26.4 simulator run (2026-05-25).
+# Dismiss therefore uses the header close button (museum-sheet-close).
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "museum-sheet-start-chat"
+- tapOn:
+    id: "museum-sheet-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "museum-sheet-start-chat"

@@ -116,6 +116,7 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
             accessibilityRole="button"
             accessibilityLabel={t('chat.artworkHero.modal.close')}
             hitSlop={12}
+            testID="artwork-hero-modal-close"
           >
             <Ionicons name="close-circle" size={32} color={CLOSE_ICON_COLOR} />
           </Pressable>

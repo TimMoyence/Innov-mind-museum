@@ -7,23 +7,34 @@ appId: com.musaium.mobile.preview
 # in the backend database.
 #
 # Test account: e2e-test-login@test.musaium.dev / TestPassword123!
-# This account must be seeded in the backend before running E2E tests.
+# This account must be seeded in the backend before running E2E tests
+# (`SMOKE_TEST_EMAIL=… SMOKE_TEST_PASSWORD=… pnpm seed:smoke-account`).
+#
+# Selectors use the form's stable testIDs (LoginForm.tsx: email-input /
+# password-input / auth-submit). The previous text selectors ("Email" /
+# "Password" / "Log in") did NOT match the live UI — the fields render the
+# i18n PLACEHOLDER t('auth.email') ("E-mail"), not the literal "Email", so
+# `tapOn: { text: "Email" }` resolved to nothing. Verified failing on a live
+# iOS 26.4 simulator run (2026-05-25); switched to testIDs (locale-independent).
 
 - tapOn:
-    text: "Email"
+    id: "email-input"
 - inputText: "e2e-test-login@test.musaium.dev"
 
 - tapOn:
-    text: "Password"
+    id: "password-input"
 - inputText: "TestPassword123!"
 
-- tapOn: "Log in"
+- hideKeyboard
+
+- tapOn:
+    id: "auth-submit"
 
 - waitForAnimationToEnd:
     timeout: 10000
 
 # Handle onboarding if it appears after login
 - tapOn:
-    text: "Skip"
+    text: "Skip|Passer"
     optional: true
 - waitForAnimationToEnd

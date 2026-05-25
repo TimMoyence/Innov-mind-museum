@@ -1,0 +1,94 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ImageFullscreenModal
+#
+# C2 — ImageFullscreenModal happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap an image thumbnail inside an assistant bubble that carries
+# `metadata.images`, which sets `fullscreenIndex` (ChatMessageBubble.tsx). The
+# enriched-image response comes from a live backend, so this flow is NIGHTLY
+# (backend-dependent), NOT PR-blocking — same class as chat-compare.yaml.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   image-fullscreen-modal-close   (assert open + dismiss)
+#   image-fullscreen-modal-next    (next image, optional — needs >=2 images)
+#   image-fullscreen-modal-prev    (prev image)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml).
+#   - Fixture .maestro/fixtures/test-artwork.jpg on device + backend that
+#     returns an assistant message with >=1 enriched image.
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Open chat + send the compare fixture (yields enriched images)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Start Conversation|Démarrer"
+    timeout: 10000
+- tapOn: "Start Conversation|Démarrer"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    text: "I understand, continue|J'ai compris"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    label: "Attach image|Joindre une image"
+- tapOn:
+    text: "Allow|Autoriser"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Wait for the enriched-image carousel, tap a thumbnail
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Similar artworks|Œuvres similaires"
+    timeout: 60000
+# Tap the first image in the bubble — the carousel cell opens the fullscreen
+# modal via onImagePress.
+- tapOn:
+    label: "Similar artwork:|Œuvre similaire :"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Assert the fullscreen modal opened, page once, dismiss
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "image-fullscreen-modal-close"
+- tapOn:
+    id: "image-fullscreen-modal-next"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "image-fullscreen-modal-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "image-fullscreen-modal-close"

@@ -1,0 +1,82 @@
+appId: com.musaium.mobile.preview
+---
+# screen: SourceCitation
+#
+# C2 — SourceCitation happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap an inline citation marker `[n]` in an assistant message
+# that carries sources (ChatMessageBubble.tsx). The sourced LLM response comes
+# from a live backend, so this flow is NIGHTLY (backend-dependent), NOT
+# PR-blocking — same class as chat-flow.yaml.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   source-citation-marker     (open trigger)
+#   source-citation-open-url   (assert sheet open)
+#   source-citation-close      (dismiss)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml).
+#   - Backend returns an assistant message with >=1 citation source.
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Open chat + send a factual question (yields sourced answer)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Start Conversation|Démarrer"
+    timeout: 10000
+- tapOn: "Start Conversation|Démarrer"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    text: "I understand, continue|J'ai compris"
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    label: "Message|Message input|Saisir un message"
+- inputText: "Who painted the Mona Lisa and where is it kept?"
+- tapOn:
+    label: "Send|Envoyer"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Wait for a citation marker, open the source sheet
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "source-citation-marker"
+    timeout: 60000
+- tapOn:
+    id: "source-citation-marker"
+    index: 0
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Assert the sheet is open, then dismiss it
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "source-citation-open-url"
+- tapOn:
+    id: "source-citation-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "source-citation-open-url"

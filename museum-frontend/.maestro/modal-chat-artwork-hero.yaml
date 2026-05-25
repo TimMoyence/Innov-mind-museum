@@ -1,0 +1,93 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ArtworkHeroModal
+#
+# C2 — ArtworkHeroModal happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap <ArtworkHeroCard> in a chat session whose assistant
+# message carries a `detectedArtwork`, which flips `heroModalVisible`
+# (app/(stack)/chat/[sessionId].tsx). Requires a live backend (localhost:3000)
+# that detects the artwork in the uploaded fixture, so this flow is NIGHTLY
+# (backend-dependent), NOT PR-blocking — same class as chat-compare.yaml.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   artwork-hero-card           (ArtworkHeroCard, open trigger)
+#   artwork-hero-modal-image    (assert modal open)
+#   artwork-hero-modal-close    (dismiss)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml).
+#   - Fixture image .maestro/fixtures/test-artwork.jpg pushed to the device
+#     (CI uploads it before the run; see chat-compare.yaml Phase 3).
+
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Welcome back|Bon retour|Log in"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 1: Open a new chat session
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Start Conversation|Démarrer"
+    timeout: 10000
+- tapOn: "Start Conversation|Démarrer"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    text: "I understand, continue|J'ai compris"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Attach the artwork fixture so the assistant detects an artwork
+# ──────────────────────────────────────────────
+- tapOn:
+    label: "Attach image|Joindre une image"
+- tapOn:
+    text: "Allow|Autoriser"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Wait for the detected-artwork card, then open the hero modal
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "artwork-hero-card"
+    timeout: 60000
+- tapOn:
+    id: "artwork-hero-card"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Assert the modal is open, then dismiss it
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "artwork-hero-modal-image"
+- tapOn:
+    id: "artwork-hero-modal-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "artwork-hero-modal-image"

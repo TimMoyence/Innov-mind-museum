@@ -20,7 +20,8 @@
         "onboarding-flow.yaml",
         "onboarding-full-carousel.yaml",
         "onboarding-skip-anonymous.yaml",
-        "cert-pinning-smoke.yaml"
+        "cert-pinning-smoke.yaml",
+        "modal-auth-biometric-setup.yaml"
       ]
     },
     {
@@ -33,7 +34,10 @@
         "audio-recording-flow.yaml",
         "chat-cartel-deeplink.yaml",
         "connectivity-offline-banner.yaml",
-        "consent-location-grant.yaml"
+        "consent-location-grant.yaml",
+        "modal-chat-artwork-hero.yaml",
+        "modal-chat-image-fullscreen.yaml",
+        "modal-chat-source-citation.yaml"
       ]
     },
     {
@@ -43,7 +47,10 @@
         "museum-picker-flow.yaml",
         "navigation-flow.yaml",
         "nav-stack-deep-links.yaml",
-        "nav-tabs-roundtrip.yaml"
+        "nav-tabs-roundtrip.yaml",
+        "modal-museum-sheet.yaml",
+        "modal-museum-offline-pack.yaml",
+        "modal-paywall-quota-upsell.yaml"
       ]
     },
     {

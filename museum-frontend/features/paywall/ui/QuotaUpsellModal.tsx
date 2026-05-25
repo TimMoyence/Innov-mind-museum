@@ -169,7 +169,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.card} accessibilityRole="alert">
+        <View style={styles.card} accessibilityRole="alert" testID="quota-upsell-modal">
           <View style={styles.headerRow}>
             <Text style={styles.title}>{t('paywall.modalTitle')}</Text>
             <Pressable
@@ -177,6 +177,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
               accessibilityLabel={t('paywall.dismiss')}
               accessibilityRole="button"
               style={styles.closeButton}
+              testID="quota-upsell-dismiss"
             >
               <Text style={styles.closeIcon}>×</Text>
             </Pressable>
@@ -198,6 +199,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
             autoCorrect={false}
             autoCapitalize="none"
             style={styles.input}
+            testID="quota-upsell-email"
           />
 
           {/* Honeypot — `display:'none'` per StyleSheet ; never rendered to a11y. */}
@@ -217,6 +219,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
             accessibilityRole="checkbox"
             accessibilityState={{ checked: consent }}
             style={styles.consentRow}
+            testID="quota-upsell-consent"
           >
             <View style={[styles.checkbox, consent && styles.checkboxChecked]} />
             <Text style={styles.consentText}>{t('paywall.consent')}</Text>
@@ -228,6 +231,7 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
             }}
             accessibilityRole="button"
             style={styles.submitButton}
+            testID="quota-upsell-submit"
           >
             <Text style={styles.submitText}>
               {state === 'sending' ? t('paywall.sending') : t('paywall.submit')}

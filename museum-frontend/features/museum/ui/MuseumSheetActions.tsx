@@ -41,6 +41,7 @@ export const MuseumSheetActions = ({
         disabled={isStartingChat}
         accessibilityRole="button"
         accessibilityLabel={t('museumDirectory.start_chat')}
+        testID="museum-sheet-start-chat"
       >
         {isStartingChat ? (
           <ActivityIndicator color={theme.primaryContrast} />
@@ -66,6 +67,7 @@ export const MuseumSheetActions = ({
             }}
             accessibilityRole="button"
             accessibilityLabel={t('museumDirectory.open_in_maps')}
+            testID="museum-sheet-open-maps"
           >
             <Ionicons name="navigate-outline" size={16} color={theme.primary} />
             <Text style={[styles.secondaryButtonText, { color: theme.primary }]}>
@@ -83,6 +85,7 @@ export const MuseumSheetActions = ({
           }}
           accessibilityRole="button"
           accessibilityLabel={t('museumDirectory.view_details')}
+          testID="museum-sheet-view-details"
         >
           <Ionicons name="information-circle-outline" size={16} color={theme.primary} />
           <Text style={[styles.secondaryButtonText, { color: theme.primary }]}>
