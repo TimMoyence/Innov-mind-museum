@@ -1,4 +1,7 @@
 {
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "ai_disclosure": {
     "banner": "Musaium is an AI assistant. Replies are generated automatically and may contain errors."
   },

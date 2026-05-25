@@ -184,8 +184,11 @@ export const ChatMessageBubble = React.memo(
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onReport(message.id);
             }}
-            accessibilityRole="text"
-            accessibilityLabel={t('a11y.chat.assistant_message')}
+            // R8 / design §D8 — do NOT set accessibilityRole="text" + a static
+            // accessibilityLabel here: that collapses the subtree and masks the
+            // real response text from screen readers (the audio-description
+            // audience). The inner <StreamingBody>/<MarkdownBubble> text is now
+            // exposed naturally. Keep the long-press affordance hint.
             accessibilityHint={t('a11y.chat.long_press_hint')}
           >
             {reduceTransparency ? (

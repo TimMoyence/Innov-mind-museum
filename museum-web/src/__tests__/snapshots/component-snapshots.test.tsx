@@ -43,6 +43,7 @@ vi.mock('next/image', () => ({
 }));
 
 const mockDict: Dictionary = {
+  a11y: { skipToContent: 'Skip to main content' },
   metadata: { title: 'Musaium', description: 'Museum assistant' },
   nav: {
     home: 'Home',

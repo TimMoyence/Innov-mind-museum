@@ -1437,3 +1437,26 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
   - (b) inline `eslint-disable-next-line @typescript-eslint/require-await` avec `Justification:` + `Approved-by:`.
 - **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/STORY.md` (verifier section F1 "WARN, not FAIL").
 
+---
+
+## TD-CMP6-SBOM-ATTEST — Décision I-CMP6 ("Tout faire") + gap résiduel attestation binaire mobile (EU CRA Art. 13 / 2027)
+
+- [ ] **Statut** : ouvert (créé 2026-05-25, `/team` run `2026-05-25-p0-a11y-compliance`, R11 / I-CMP6 ; partiellement adressé ce run, gap mobile résiduel).
+- **Décision Q3 = "Tout faire"** (validée user, design §D5-D7 du run) :
+  - **Backend** — `cosign attest --type cyclonedx --predicate museum-backend/sbom.json` ajouté dans `ci-cd-backend.yml` deploy-prod, sur `steps.push.outputs.digest`, APRÈS la SLSA `attest-build-provenance@v2`. ADDITIF + `continue-on-error: true` (advisory, ne gate jamais le deploy déjà vérifié). Steps `cosign sign`/`attest-build-provenance`/`cosign verify`/`gh attestation verify` existants inchangés.
+  - **Web** — `ci-cd-web.yml` deploy : `id-token: write` + `attestations: write` ajoutés ; setup pnpm/Node + install + SBOM CycloneDX + `cosign attest --type cyclonedx` sur le digest du push (`id: push`). ADDITIF + `continue-on-error: true`.
+  - **Mobile** — `ci-cd-mobile.yml` quality : SBOM CycloneDX du graphe de deps JS généré + uploadé en artefact CI (`sbom-mobile`). PAS d'attestation sigstore.
+- **Gap résiduel (mobile)** : le binaire store (App Store / Google Play) n'a **pas** d'attestation SBOM signée liée à son digest. Cause : EAS `eas build --no-wait` (`ci-cd-mobile.yml`) construit l'app à distance et n'expose **aucun digest OCI local** atteignable depuis la CI — il n'y a donc rien à quoi lier un prédicat signé. Le SBOM est shippé en artefact CI, mais pas signé/lié au binaire.
+- **Référence code** :
+  ```
+  .github/workflows/ci-cd-backend.yml   (step "Cosign attest SBOM (CycloneDX)")
+  .github/workflows/ci-cd-web.yml        (step "Cosign attest SBOM (CycloneDX)")
+  .github/workflows/ci-cd-mobile.yml     (step "Generate mobile SBOM (CycloneDX)" + "Upload mobile SBOM artifact")
+  scripts/sentinels/sbom-attest-check.mjs (contrat des 3 workflows)
+  ```
+- **Échéance contraignante** : **EU CRA Art. 13 (2027)** — pas un blocker V1 (2026-06-07). Le SBOM mobile en artefact suffit à l'audit ; l'attestation signée du binaire store est le delta à fermer avant 2027.
+- **Effort estimé** : 4-8 h — investiguer le tooling EAS-side (export SBOM/attestation depuis le pipeline EAS, ou `eas build --json` + récupération du digest de l'artefact store) ; lier un prédicat CycloneDX au binaire via l'API attestation Expo si disponible.
+- **Comment fermer** : EAS expose un digest/identifiant stable du binaire → générer + signer l'attestation côté EAS hook ; sinon attendre le support natif Expo/EAS de l'attestation SBOM.
+- **Décision formalisée** : [`docs/adr/ADR-068-sbom-attestation-strategy-mobile-gap.md`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) (digest-bound where possible ; gap mobile = ce TD).
+- **Référence run** : `team-state/2026-05-25-p0-a11y-compliance/` (spec.md §2 I-CMP6, design.md §D5-D7).
+

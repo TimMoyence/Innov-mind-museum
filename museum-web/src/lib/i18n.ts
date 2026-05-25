@@ -14,6 +14,11 @@ export async function getDictionary(locale: Locale): Promise<Dictionary> {
 
 /** Shape of a dictionary file — extend as pages are built out. */
 export interface Dictionary {
+  // I-CMP5(a) / R9 — accessibility-only copy. Grouped under its own namespace
+  // so a11y strings (skip-link, etc.) stay distinct from the marketing nav.
+  a11y: {
+    skipToContent: string;
+  };
   metadata: {
     title: string;
     description: string;

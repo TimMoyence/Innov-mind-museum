@@ -28,8 +28,8 @@ Closing run `2026-05-14-i18n-a11y-eaa-batch` shipped the following remediations:
 | Service name | Musaium — cultural companion for in-museum and outside-museum visits, mobile app + web site |
 | Operator | Tim Moyence — Sole Proprietor, operating InnovMind / Musaium |
 | Postal address | To be filled in before publication (registered with the French RCS) |
-| Accessibility contact email | `support@musaium.app` |
-| Surfaces in scope | Mobile app iOS + Android (`com.musaium.mobile`); web site `https://musaium.app` (landing + admin panel `/admin`); static privacy policy `https://musaium.app/privacy` |
+| Accessibility contact email | `support@musaium.com` |
+| Surfaces in scope | Mobile app iOS + Android (`com.musaium.mobile`); web site `https://musaium.com` (landing + admin panel `/admin`); static privacy policy `https://musaium.com/privacy` |
 
 ---
 
@@ -58,7 +58,7 @@ No claim of total or substantial conformance is made at this stage.
 - **Mobile tap targets**: chat-interface buttons aim for ≥ 44 × 44 pt (Apple HIG) but have not been audited on iPad or with VoiceOver enabled (WCAG 2.5.5). To be audited.
 - **Generative-AI disclosure**: the `ai_disclosure` banner is rendered on all 3 surfaces (mobile, web, privacy policy) — to be verified that screen readers correctly announce the generative nature of responses (WCAG 4.1.2 + AI Act Art. 50).
 - **User photos and galleries**: visitor-uploaded artwork photos lack auto-generated `alt` text; the AI enrichment pipeline could produce a descriptive alt-text but is not wired for this purpose (WCAG 1.1.1). To be audited.
-- **Keyboard navigation (web)**: the Next.js landing page and the admin panel have not been tested under keyboard-only operation (Tab/Shift-Tab + Enter). No skip-link is implemented (WCAG 2.4.1). To be audited.
+- **Keyboard navigation (web)**: a keyboard-reachable "skip to content" link is now implemented as the first focusable element of the web layout, jumping focus to the `<main id="main">` landmark (WCAG 2.4.1 — Bypass Blocks — satisfied; `museum-web/src/app/[locale]/layout.tsx`). End-to-end keyboard-only operation (Tab/Shift-Tab + Enter) of the Next.js landing page and the admin panel has not yet been fully audited beyond this. To be audited.
 - **Video captions**: demonstration videos on the landing page have no captions nor transcript (WCAG 1.2.2, 1.2.3). To be audited / captioned before launch or removed.
 
 ### 3.2 Disproportionate-burden claims
@@ -101,7 +101,7 @@ A WCAG 2.1 AA audit is planned in three passes:
 
 Users encountering an accessibility defect can contact:
 
-- **Musaium support service**: `support@musaium.app` — target response within 7 business days.
+- **Musaium support service**: `support@musaium.com` — target response within 7 business days.
 - **Défenseur des droits** (France): https://www.defenseurdesdroits.fr — gracious or contentious appeal in case of no response from the operator.
 - **DGCCRF** (France): supervisory authority competent under Décret 2019-768 and the French EAA transposition — https://www.economie.gouv.fr/dgccrf.
 - **ARCOM**: subsidiary competence over online public communication services.

@@ -98,6 +98,26 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
+      # ── I-CMP6 / R11 (decision Q3 "Tout faire", design §D7) — CycloneDX SBOM
+      # of the JS bundle dependency graph, uploaded as a CI artifact. There is
+      # deliberately NO sigstore image attestation here: EAS `eas build
+      # --no-wait` produces no local OCI image digest reachable from CI, so
+      # there is nothing to bind a signed predicate to. The residual gap
+      # (store-binary lacks a signed SBOM attestation) is tracked in
+      # docs/TECH_DEBT.md against EU CRA Art.13/2027.
+      # continue-on-error: the SBOM artifact must never block the quality gate.
+      - name: Generate mobile SBOM (CycloneDX)
+        continue-on-error: true
+        run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom-mobile.json --spec-version 1.5 --output-reproducible
+
+      - name: Upload mobile SBOM artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: sbom-mobile
+          path: museum-frontend/sbom-mobile.json
+          retention-days: 90
+
       - name: Check i18n completeness
         run: npm run check:i18n
 

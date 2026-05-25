@@ -71,10 +71,16 @@ describe('ChatMessageBubble', () => {
     expect(screen.getByText('This is the **Mona Lisa**.')).toBeTruthy();
   });
 
-  it('renders assistant message with correct a11y label', () => {
+  it('exposes the real assistant response text to the a11y tree (R8 / I-CMP3(5))', () => {
+    // R8 / design §D8 — the assistant <Pressable> no longer carries a static
+    // accessibilityLabel={t('a11y.chat.assistant_message')} that would collapse
+    // the subtree and mask the response from screen readers. The real body text
+    // is exposed naturally; the long-press affordance keeps its hint.
     const message = makeAssistantMessage({ text: 'Hello visitor' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
-    expect(screen.getByLabelText('a11y.chat.assistant_message')).toBeTruthy();
+    expect(screen.getByText('Hello visitor')).toBeTruthy();
+    expect(screen.queryByLabelText('a11y.chat.assistant_message')).toBeNull();
+    expect(screen.getByA11yHint('a11y.chat.long_press_hint')).toBeTruthy();
   });
 
   // ── Timestamp ───────────────────────────────────────────────────────────────

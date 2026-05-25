@@ -28,8 +28,8 @@ La clôture du run `2026-05-14-i18n-a11y-eaa-batch` a livré les remédiations s
 | Nom du service | Musaium — assistant culturel intra-musée et hors-musée, application mobile + site web |
 | Responsable / opérateur | Tim Moyence — Entrepreneur Individuel, opérant InnovMind / Musaium |
 | Adresse postale | À renseigner avant publication (siège déclaré au RCS) |
-| Email de contact a11y | `support@musaium.app` |
-| Surfaces couvertes | Application mobile iOS + Android (`com.musaium.mobile`) ; site web `https://musaium.app` (landing + admin panel `/admin`) ; politique de confidentialité statique `https://musaium.app/privacy` |
+| Email de contact a11y | `support@musaium.com` |
+| Surfaces couvertes | Application mobile iOS + Android (`com.musaium.mobile`) ; site web `https://musaium.com` (landing + admin panel `/admin`) ; politique de confidentialité statique `https://musaium.com/privacy` |
 
 ---
 
@@ -58,7 +58,7 @@ Aucune affirmation de conformité totale ou substantielle n'est faite à ce stad
 - **Cibles tactiles mobile** : les boutons de l'interface chat sont conçus pour des cibles ≥ 44 × 44 pt (HIG Apple) mais n'ont pas été audités sur écran iPad ni avec accessibilité VoiceOver activée (WCAG 2.5.5). À auditer.
 - **Disclosure IA générative** : la bannière `ai_disclosure` est rendue sur les 3 surfaces (mobile, web, privacy policy) — vérifier que les lecteurs d'écran annoncent correctement le caractère génératif des réponses (WCAG 4.1.2 + AI Act Art. 50).
 - **Captures + galeries** : les photos d'œuvres prises par l'utilisateur n'ont pas d'attribut `alt` auto-généré ; le pipeline d'enrichissement IA pourrait produire un alt-text descriptif mais ce n'est pas wiré (WCAG 1.1.1). À auditer.
-- **Navigation clavier (web)** : la landing Next.js et le panneau admin n'ont pas été testés avec navigation au clavier seul (Tab/Shift-Tab + Enter). Aucun skip-link n'est implémenté (WCAG 2.4.1). À auditer.
+- **Navigation clavier (web)** : un lien d'évitement « aller au contenu » accessible au clavier est désormais implémenté comme premier élément focusable du layout web et déplace le focus vers le repère `<main id="main">` (WCAG 2.4.1 — Contournement de blocs — satisfait ; `museum-web/src/app/[locale]/layout.tsx`). La navigation au clavier seul (Tab/Shift-Tab + Enter) de bout en bout sur la landing Next.js et le panneau admin n'a pas encore été pleinement auditée au-delà de ce point. À auditer.
 - **Sous-titres vidéo** : la landing présente des vidéos de démonstration sans sous-titres ni transcription (WCAG 1.2.2, 1.2.3). À auditer / sous-titrer avant launch ou retirer.
 
 ### 3.2 Charges disproportionnées invoquées
@@ -101,7 +101,7 @@ Audit WCAG 2.1 AA prévu en trois passes :
 
 Les utilisateurs constatant un défaut d'accessibilité peuvent saisir :
 
-- **Service support Musaium** : `support@musaium.app` — réponse cible sous 7 jours ouvrés.
+- **Service support Musaium** : `support@musaium.com` — réponse cible sous 7 jours ouvrés.
 - **Défenseur des droits** (France) : https://www.defenseurdesdroits.fr — recours gracieux ou contentieux en cas d'absence de réponse de l'opérateur.
 - **DGCCRF** (France) : autorité de surveillance compétente au titre du Décret 2019-768 et de la transposition EAA — https://www.economie.gouv.fr/dgccrf.
 - **ARCOM** : compétence subsidiaire sur les services de communication au public en ligne.
