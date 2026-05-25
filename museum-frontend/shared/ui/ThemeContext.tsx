@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 import { lightTheme, darkTheme, type ThemePalette } from './themes';
 
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -13,7 +14,9 @@ interface ThemeContextValue {
   setMode: (mode: ThemeMode) => void;
 }
 
-const THEME_KEY = 'app.themeMode';
+const THEME_KEY = 'musaium.theme.mode';
+/** Pre-namespacing key migrated forward once on mount (TD-AS-01). */
+const LEGACY_THEME_KEY = 'app.themeMode';
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: lightTheme,
@@ -31,7 +34,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<ThemeMode>('system');
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY)
+    migrateStorageKey(THEME_KEY, LEGACY_THEME_KEY)
+      .then(() => AsyncStorage.getItem(THEME_KEY))
       .then((stored) => {
         if (stored === 'light' || stored === 'dark' || stored === 'system') {
           setModeState(stored);

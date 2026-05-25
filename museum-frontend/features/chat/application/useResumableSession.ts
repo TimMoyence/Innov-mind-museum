@@ -13,9 +13,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { storage } from '@/shared/infrastructure/storage';
+import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 
 /** Storage key holding the ISO timestamp until which the banner stays hidden. */
-export const RESUMPTION_BANNER_DISMISS_STORAGE_KEY = 'settings.resumption_banner_dismissed_until';
+export const RESUMPTION_BANNER_DISMISS_STORAGE_KEY =
+  'musaium.settings.resumptionBannerDismissedUntil';
+
+/** Pre-namespacing key migrated forward once before the read (TD-AS-01). */
+const LEGACY_RESUMPTION_KEY = 'settings.resumption_banner_dismissed_until';
 
 /** 24 hours in milliseconds — duration of the dismiss-until window. */
 export const RESUMPTION_BANNER_DISMISS_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -102,6 +107,8 @@ export function useResumableSession(): {
     void (async () => {
       try {
         // 1. Dismiss-until storage gate — read tolerant of failure.
+        // Migrate the legacy key forward once before reading (TD-AS-01).
+        await migrateStorageKey(RESUMPTION_BANNER_DISMISS_STORAGE_KEY, LEGACY_RESUMPTION_KEY);
         let dismissedUntilRaw: string | null = null;
         try {
           dismissedUntilRaw = await storage.getItem(RESUMPTION_BANNER_DISMISS_STORAGE_KEY);

@@ -12,7 +12,7 @@
  *
  * Key invariants :
  *   - Exposed constants :
- *       RESUMPTION_BANNER_DISMISS_STORAGE_KEY === 'settings.resumption_banner_dismissed_until'
+ *       RESUMPTION_BANNER_DISMISS_STORAGE_KEY === 'musaium.settings.resumptionBannerDismissedUntil'
  *       RESUMPTION_BANNER_DISMISS_DURATION_MS === 86_400_000
  *       RESUMPTION_BANNER_WINDOW_MS === 604_800_000
  *   - Hook returns `{ session: ResumableSession | null; isLoading: boolean; dismiss: () => Promise<void> }`.
@@ -127,9 +127,9 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
   // §1.1 R12 / §4 AC1 — exported constants contract
   // ────────────────────────────────────────────────────────────────────────
   describe('exported constants (R12, AC1)', () => {
-    it('exposes RESUMPTION_BANNER_DISMISS_STORAGE_KEY === "settings.resumption_banner_dismissed_until"', () => {
+    it('exposes RESUMPTION_BANNER_DISMISS_STORAGE_KEY === "musaium.settings.resumptionBannerDismissedUntil"', () => {
       expect(RESUMPTION_BANNER_DISMISS_STORAGE_KEY).toBe(
-        'settings.resumption_banner_dismissed_until',
+        'musaium.settings.resumptionBannerDismissedUntil',
       );
     });
 
