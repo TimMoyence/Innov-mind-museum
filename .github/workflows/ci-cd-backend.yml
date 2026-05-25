@@ -132,14 +132,19 @@ jobs:
       # the deploy migration legs fails the quality gate locally (2 min) instead
       # of surfacing as a broken CI run.
       - name: Actionlint workflows
-        uses: raven-actions/actionlint@3a24062651993d40fed1019b58ac6fbdfbf276cc  # v2.0.1
-        with:
-          files: '.github/workflows/ci-cd-backend.yml .github/workflows/ci-cd-mobile.yml'
-          # The `mutation` job is intentionally disabled via `if: false` (Stryker
-          # prioritised cache-first, out of this run's scope). actionlint's
-          # if-cond rule flags the constant — ignore that ONE documented pattern
-          # so the gate passes on the intentional disable, not on real errors.
-          flags: '-ignore "constant expression \"false\" in condition"'
+        # Run actionlint via its pinned Docker image rather than the
+        # raven-actions/actionlint action: that action shells through
+        # actions/github-script + @actions/tool-cache, which fails in this repo
+        # with ERR_PACKAGE_PATH_NOT_EXPORTED (the runner resolves the repo's own
+        # node_modules/@actions/tool-cache, which has no "exports" main). The image
+        # is version-pinned and needs no Node resolution.
+        # The `mutation` job is intentionally disabled via `if: false` (Stryker
+        # prioritised cache-first, out of this run's scope); ignore that ONE
+        # documented if-cond pattern so the gate passes on the intentional disable.
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 \
+            -ignore 'constant expression "false" in condition' \
+            .github/workflows/ci-cd-backend.yml .github/workflows/ci-cd-mobile.yml
 
       - name: Migrations are reversible (down() present)
         run: node scripts/check-migration-down.cjs
