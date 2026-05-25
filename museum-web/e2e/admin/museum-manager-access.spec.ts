@@ -87,9 +87,10 @@ async function seedMuseumManager(): Promise<SeededUser> {
       data: {
         email,
         password,
-        // Letters-only — backend validator rejects digits in given/family
-        // names (cf. `e2e/global-setup.ts:21-23`).
-        firstname: 'MuseumManagerE2e',
+        // Letters-only — the backend name validator rejects digits (cf.
+        // `e2e/global-setup.ts:21-23`). The previous 'MuseumManagerE2e' (digit
+        // "2") triggered "firstname contains invalid characters" (400).
+        firstname: 'MuseumManagerTest',
         lastname: 'PlaywrightTest',
         gdprConsent: true,
         // `dateOfBirth` became required (P0.A2 DOB age-gate, commit 77c5e81b2);
