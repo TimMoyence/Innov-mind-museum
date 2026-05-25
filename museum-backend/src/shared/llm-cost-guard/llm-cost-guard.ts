@@ -1,5 +1,5 @@
 import { logger as defaultLogger } from '@shared/logger/logger';
-import { musaiumLlmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
+import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
 
 import type { LlmCostCounter } from '@shared/llm-cost-guard/llm-cost-counter.port';
 
@@ -114,7 +114,7 @@ export class LlmCostGuard {
       // this should be flat 0 in prod.
       this.logger.warn('llm_cost_anon_bypass', { capUsd: this.dailyCapUsd });
       try {
-        musaiumLlmCostAnonBypassTotal.inc();
+        llmCostAnonBypassTotal.inc();
       } catch (err) {
         // Observability must never break the guard (prom-client throws on
         // registry-cleared / duplicate-name). Swallow + log, never deny on a

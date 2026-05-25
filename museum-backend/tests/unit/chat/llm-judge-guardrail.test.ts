@@ -22,7 +22,7 @@ import { judgeWithLlm } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 // RED HEAD → import resolves to `undefined`, so the `.get()` reads below throw
 // (feature-absent proof). The VERDICT stays `null` (decision (d) = degrade-to-
 // backstop, telemetry-only — NO hard block).
-import { musaiumGuardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
+import { guardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
 
 import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 
@@ -203,7 +203,7 @@ describe('judgeWithLlm', () => {
  * verdict is INTENTIONAL per CLAUDE.md §AI Safety — converting it to a hard block
  * would turn ~500-call/day budget exhaustion into a mass-false-positive
  * availability incident, spec §8 Q1) AND (2) increment
- * `musaiumGuardrailJudgeDegradedTotal{reason}` with the matching reason so ops
+ * `guardrailJudgeDegradedTotal{reason}` with the matching reason so ops
  * can alert that the semantic layer is degraded.
  *
  * reason ∈ { budget_exhausted, timeout, error, misconfigured } (design §D5,
@@ -212,7 +212,7 @@ describe('judgeWithLlm', () => {
  * Failure mode at RED HEAD (`llm-judge-guardrail.ts:117-211`): each null-return
  * path emits its existing `logger.warn` (`guardrail_judge_budget_exceeded` /
  * `_timeout` / `_error` / `_misconfigured`) but NO metric is incremented and
- * `musaiumGuardrailJudgeDegradedTotal` does not exist → `.get()` throws.
+ * `guardrailJudgeDegradedTotal` does not exist → `.get()` throws.
  *
  * lib-docs consulted: prom-client/PATTERNS.md §7 (Counter `.get()` series read),
  * prom-client/LESSONS.md F1 (no user-derived label, bounded reason set).
@@ -226,7 +226,7 @@ interface CounterSeries {
 describe('judgeWithLlm — degrade telemetry (I-FIX3 T1.3 RED)', () => {
   /** Reads the labelless-or-labelled series value for a given `reason`. */
   async function degradeCount(reason: string): Promise<number> {
-    const metric = await musaiumGuardrailJudgeDegradedTotal.get();
+    const metric = await guardrailJudgeDegradedTotal.get();
     const values = metric.values as CounterSeries[];
     const series = values.find((v: CounterSeries) => v.labels.reason === reason);
     return series?.value ?? 0;
@@ -236,7 +236,7 @@ describe('judgeWithLlm — degrade telemetry (I-FIX3 T1.3 RED)', () => {
     await resetBudget();
     // Module-level Counter on the shared registry — reset between tests so the
     // delta assertions are independent (prom-client PATTERNS §7).
-    musaiumGuardrailJudgeDegradedTotal.reset();
+    guardrailJudgeDegradedTotal.reset();
   });
 
   it('budget exhausted → returns null AND increments reason="budget_exhausted"', async () => {
@@ -309,7 +309,7 @@ describe('judgeWithLlm — degrade telemetry (I-FIX3 T1.3 RED)', () => {
   it('does NOT increment the degrade counter on a successful verdict', async () => {
     const model = buildModel({ text: '{"decision":"allow","confidence":0.9}' });
 
-    const beforeAll = await musaiumGuardrailJudgeDegradedTotal.get();
+    const beforeAll = await guardrailJudgeDegradedTotal.get();
     const totalBefore = (beforeAll.values as CounterSeries[]).reduce(
       (s: number, v: CounterSeries) => s + v.value,
       0,
@@ -317,7 +317,7 @@ describe('judgeWithLlm — degrade telemetry (I-FIX3 T1.3 RED)', () => {
 
     const decision = await judgeWithLlm(SAFE_USER_TEXT, { model });
 
-    const afterAll = await musaiumGuardrailJudgeDegradedTotal.get();
+    const afterAll = await guardrailJudgeDegradedTotal.get();
     const totalAfter = (afterAll.values as CounterSeries[]).reduce(
       (s: number, v: CounterSeries) => s + v.value,
       0,

@@ -469,11 +469,12 @@ export const llmPromptCacheHitsTotal = new Counter({
  * `reason` ∈ {budget_exhausted, timeout, error, misconfigured} → 4 series.
  * `as const` narrows the label type (prom-client/LESSONS.md F1) and there is NO
  * user-derived label (no userId, no message text) — bounded, well under the 200
- * cardinality budget. Sits in the `musaium_guardrail_*` family (matches
- * `guardrailDecisionsTotal` / `guardrailBudgetRedisFallbackTotal`, design §D5).
+ * cardinality budget. Uses a BARE `guardrail_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
  */
-export const musaiumGuardrailJudgeDegradedTotal = new Counter({
-  name: 'musaium_guardrail_judge_degraded_total',
+export const guardrailJudgeDegradedTotal = new Counter({
+  name: 'guardrail_judge_degraded_total',
   help: 'Total LLM-judge degrade events (verdict left to V1/sidecar fallback), by reason (budget_exhausted | timeout | error | misconfigured).',
   labelNames: ['reason'] as const,
   registers: [registry],
@@ -486,11 +487,12 @@ export const musaiumGuardrailJudgeDegradedTotal = new Counter({
  * routes require `isAuthenticated`, so this should be FLAT 0 in prod; a non-zero
  * value means a paid route became reachable anonymously and is silently skipping
  * the per-user cap. Labelless → 1 series (prom-client/LESSONS.md F1 — no
- * user-derived label). Sits in the `musaium_llm_cost_*` family (matches
- * `llmCostCircuitBreakerState` / `llmCostCircuitBreakerTripsTotal`, design §D5).
+ * user-derived label). Uses a BARE `llm_cost_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
  */
-export const musaiumLlmCostAnonBypassTotal = new Counter({
-  name: 'musaium_llm_cost_anon_bypass_total',
+export const llmCostAnonBypassTotal = new Counter({
+  name: 'llm_cost_anon_bypass_total',
   help: 'Total anonymous (userId=null) calls that reached the LLM cost guard and bypassed the per-user cap. Should be flat 0 in prod (all paid routes require auth).',
   registers: [registry],
 });

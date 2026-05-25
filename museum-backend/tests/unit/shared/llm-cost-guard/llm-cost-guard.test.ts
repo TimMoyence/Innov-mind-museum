@@ -4,7 +4,7 @@ import { logger } from '@shared/logger/logger';
 // increment when `userId === null` reaches the guard (design §D3/D5). Does NOT
 // exist at RED HEAD → import resolves to `undefined`, so the metric-counter
 // test below fails when it calls `.get()` on it (feature-absent proof).
-import { musaiumLlmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
+import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
 
 import {
   FailingLlmCostCounter,
@@ -265,13 +265,13 @@ describe('LlmCostGuard (P0-4 red phase)', () => {
 
       // Snapshot the labelless counter value before, exercise the anon path,
       // then assert the counter went up by exactly 1. At RED HEAD
-      // `musaiumLlmCostAnonBypassTotal` does not exist (import === undefined) →
+      // `llmCostAnonBypassTotal` does not exist (import === undefined) →
       // `.get()` throws → feature-absent red.
-      const before = (await musaiumLlmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
+      const before = (await llmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
 
       await expect(guard.assertAllowed(null, 0.1)).resolves.toBeUndefined();
 
-      const after = (await musaiumLlmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
+      const after = (await llmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
       expect(after - before).toBe(1);
     });
 

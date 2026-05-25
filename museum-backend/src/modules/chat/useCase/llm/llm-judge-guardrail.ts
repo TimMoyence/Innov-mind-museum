@@ -23,7 +23,7 @@ import {
 } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { logger } from '@shared/logger/logger';
 import { getLangfuse } from '@shared/observability/langfuse.client';
-import { musaiumGuardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
+import { guardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
 import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
@@ -126,7 +126,7 @@ type JudgeDegradeReason = 'budget_exhausted' | 'timeout' | 'error' | 'misconfigu
  */
 const recordJudgeDegrade = (reason: JudgeDegradeReason): void => {
   try {
-    musaiumGuardrailJudgeDegradedTotal.inc({ reason });
+    guardrailJudgeDegradedTotal.inc({ reason });
   } catch (err) {
     logger.warn('guardrail_judge_degrade_metric_failed', {
       reason,
