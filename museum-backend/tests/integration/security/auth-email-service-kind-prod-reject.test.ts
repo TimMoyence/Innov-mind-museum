@@ -188,7 +188,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       queueMax: 32,
       chaosRate: 0,
       presidio: { enabled: false, timeoutMs: 500 },
-      llamaPromptGuard: { timeoutMs: 500, scoreThreshold: 0.8 },
       costCircuitBreaker: {
         hourlyThresholdCents: 5_000,
         dailyBudgetCents: 50_000,

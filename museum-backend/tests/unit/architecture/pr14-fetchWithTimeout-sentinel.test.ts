@@ -7,7 +7,6 @@
  *
  *   Swept (helper-adopted) — MUST NOT contain inline `setTimeout(…controller.abort…)`
  *   AND MUST import `fetchWithTimeout` from `@shared/http/fetch-with-timeout`:
- *     - src/modules/chat/adapters/secondary/guardrails/llama-prompt-guard.adapter.ts
  *     - src/modules/chat/adapters/secondary/guardrails/presidio.adapter.ts
  *
  *   Divergent (intentionally NOT swept) — MUST carry the literal divergence
@@ -43,10 +42,7 @@ import { resolve } from 'node:path';
 // ../../..  = museum-backend
 const BACKEND_ROOT = resolve(__dirname, '../../..');
 
-const SWEPT_FILES = [
-  'src/modules/chat/adapters/secondary/guardrails/llama-prompt-guard.adapter.ts',
-  'src/modules/chat/adapters/secondary/guardrails/presidio.adapter.ts',
-] as const;
+const SWEPT_FILES = ['src/modules/chat/adapters/secondary/guardrails/presidio.adapter.ts'] as const;
 
 const DIVERGENT_FILES = [
   'src/modules/chat/adapters/secondary/embeddings/replicate.adapter.ts',
