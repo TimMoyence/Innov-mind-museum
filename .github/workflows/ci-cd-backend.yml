@@ -575,17 +575,18 @@ jobs:
       - name: Apply all migrations to a clean pgvector DB
         run: pnpm run migration:run
 
-      # NOTE — a "migration:generate Check must be empty" drift gate is NOT used:
-      # it is structurally infeasible on this schema. On a pristine DB the TypeORM
-      # generator still emits ~40 lines of irreducible diff it cannot round-trip —
-      # halfvec(768) columns (read back as `text`), jsonb `'[]'::jsonb` defaults,
-      # partial/expression indexes (e.g. `WHERE deleted_at IS NOT NULL`), CHECK
-      # constraints, and the deliberate relation-less `museum_id` FKs (flat-int
-      # columns with SQL FKs, no @ManyToOne — see artwork_embeddings/.._knowledge).
-      # None are real drift; the generator just can't model them. A generate-empty
-      # gate would never pass (verified 2026-05-25). The MIGRATION_GOVERNANCE
-      # "generate Check → empty" rule is aspirational for this codebase and is
-      # tracked as doc tech-debt; the clean-apply gate above is the enforceable part.
+      # NOTE — a "generate-a-drift-migration must be empty" gate is deliberately
+      # NOT used: it is structurally infeasible on this schema. On a pristine DB
+      # the TypeORM schema-diff generator still emits ~40 lines of irreducible diff
+      # it cannot round-trip — halfvec(768) columns (read back as `text`), jsonb
+      # `'[]'::jsonb` defaults, partial/expression indexes (e.g. `WHERE deleted_at
+      # IS NOT NULL`), CHECK constraints, and the deliberate relation-less
+      # `museum_id` FKs (flat-int columns with SQL FKs, no @ManyToOne — see
+      # artwork_embeddings/.._knowledge). None are real drift; the generator just
+      # can't model them, so that gate would never pass (verified 2026-05-25). The
+      # MIGRATION_GOVERNANCE "regenerate → empty" rule is aspirational for this
+      # codebase (tracked as doc tech-debt); the clean-apply gate above is the
+      # enforceable part.
 
   # ─── 5.5. Halluc regression (C4.3 / T4.4) ─────────────────────────────
   # PR + nightly mock mode: corpus syntax + assertion harness validated against

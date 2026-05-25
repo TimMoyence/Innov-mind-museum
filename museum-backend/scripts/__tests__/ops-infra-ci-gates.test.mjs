@@ -220,11 +220,12 @@ describe('I-OPS8 :: migration-schema-drift gate (R11)', () => {
     // The enforceable gate: every migration applies cleanly, in order, on a pristine
     // pgvector DB (catches the I-OPS3/I-OPS6 broken-migration / missing-halfvec classes).
     expect(block).toMatch(/migration:run/);
-    // A `migration:generate Check must be empty` drift gate is intentionally NOT
-    // asserted here: it is structurally infeasible on this schema (the TypeORM
-    // generator emits ~40 lines of irreducible non-drift it cannot round-trip —
-    // halfvec, jsonb defaults, partial/expression indexes, relation-less museum_id
-    // FKs). Verified 2026-05-25; documented inline in the workflow + LOT closure report.
-    expect(block).not.toMatch(/migration:generate/);
+    // The generate-a-drift-migration gate is intentionally NOT used: it is
+    // structurally infeasible on this schema (the TypeORM schema-diff generator
+    // emits ~40 lines of irreducible non-drift it cannot round-trip — halfvec,
+    // jsonb defaults, partial/expression indexes, relation-less museum_id FKs).
+    // Verified 2026-05-25; documented inline in the workflow + LOT closure report.
+    // Assert the COMMAND is absent (prose mentions in comments are fine).
+    expect(block).not.toMatch(/run\s+migration:generate/);
   });
 });
