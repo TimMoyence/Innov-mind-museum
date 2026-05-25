@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "Anhangsoptionen geöffnet"
     },
+    "bottomSheet": {
+      "dismiss": "Blatt schließen"
+    },
     "cartelScanner": {
       "opened": "Schild-Scanner geöffnet",
       "scan_success": "Schild-Code erfasst",

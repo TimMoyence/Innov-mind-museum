@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "Opciones de adjuntos abiertas"
     },
+    "bottomSheet": {
+      "dismiss": "Cerrar hoja"
+    },
     "cartelScanner": {
       "opened": "Escáner de cartelas abierto",
       "scan_success": "Código de cartela capturado",

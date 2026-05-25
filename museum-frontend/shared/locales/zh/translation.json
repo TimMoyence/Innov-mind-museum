@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "已打开附件选项"
     },
+    "bottomSheet": {
+      "dismiss": "关闭面板"
+    },
     "cartelScanner": {
       "opened": "已打开说明牌扫描器",
       "scan_success": "已获取说明牌编号",

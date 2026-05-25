@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "添付オプションを開きました"
     },
+    "bottomSheet": {
+      "dismiss": "シートを閉じる"
+    },
     "cartelScanner": {
       "opened": "解説スキャナーを開きました",
       "scan_success": "解説コードを取得しました",

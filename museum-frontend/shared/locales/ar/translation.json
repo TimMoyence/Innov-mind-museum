@@ -1064,6 +1064,9 @@
     "attachmentPicker": {
       "opened": "تم فتح خيارات المرفقات"
     },
+    "bottomSheet": {
+      "dismiss": "إغلاق الورقة"
+    },
     "cartelScanner": {
       "opened": "تم فتح ماسح اللافتات",
       "scan_success": "تم التقاط رمز اللافتة",
