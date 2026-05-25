@@ -1064,9 +1064,6 @@
     "attachmentPicker": {
       "opened": "Opciones de adjuntos abiertas"
     },
-    "bottomSheet": {
-      "dismiss": "Cerrar hoja"
-    },
     "cartelScanner": {
       "opened": "Escáner de cartelas abierto",
       "scan_success": "Código de cartela capturado",
@@ -1076,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, abrir visita",
       "continue_hint": "Abre esta visita pasada para leer"
+    },
+    "bottomSheet": {
+      "dismiss": "Cerrar hoja"
     }
   },
   "consent": {

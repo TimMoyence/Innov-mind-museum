@@ -51,9 +51,9 @@ describe('loadRuntimeSettings', () => {
   });
 
   it('loads saved values from storage', async () => {
-    mockStore.set('runtime.defaultLocale', 'fr-FR');
-    mockStore.set('runtime.defaultMuseumMode', 'false');
-    mockStore.set('runtime.guideLevel', 'expert');
+    mockStore.set('musaium.runtime.defaultLocale', 'fr-FR');
+    mockStore.set('musaium.runtime.defaultMuseumMode', 'false');
+    mockStore.set('musaium.runtime.guideLevel', 'expert');
 
     const settings = await loadRuntimeSettings();
 
@@ -63,8 +63,10 @@ describe('loadRuntimeSettings', () => {
   });
 
   it('cleans up legacy API override keys when present', async () => {
-    mockStore.set('runtime.apiBaseUrl', 'https://old.api.com');
-    mockStore.set('runtime.apiEnvironment', 'staging');
+    // Seed under the namespaced keys (what the loader reads) so the cleanup
+    // gate fires; the cleanup then purges BOTH the legacy and new literals.
+    mockStore.set('musaium.runtime.apiBaseUrl', 'https://old.api.com');
+    mockStore.set('musaium.runtime.apiEnvironment', 'staging');
 
     await loadRuntimeSettings();
 
@@ -101,21 +103,21 @@ describe('save functions', () => {
 
   it('saveDefaultLocale persists locale', async () => {
     await saveDefaultLocale('fr-FR');
-    expect(storage.setItem).toHaveBeenCalledWith('runtime.defaultLocale', 'fr-FR');
+    expect(storage.setItem).toHaveBeenCalledWith('musaium.runtime.defaultLocale', 'fr-FR');
   });
 
   it('saveDefaultLocale falls back to default for empty string', async () => {
     await saveDefaultLocale('  ');
-    expect(storage.setItem).toHaveBeenCalledWith('runtime.defaultLocale', 'en-US');
+    expect(storage.setItem).toHaveBeenCalledWith('musaium.runtime.defaultLocale', 'en-US');
   });
 
   it('saveDefaultMuseumMode persists boolean as string', async () => {
     await saveDefaultMuseumMode(false);
-    expect(storage.setItem).toHaveBeenCalledWith('runtime.defaultMuseumMode', 'false');
+    expect(storage.setItem).toHaveBeenCalledWith('musaium.runtime.defaultMuseumMode', 'false');
   });
 
   it('saveGuideLevel persists level', async () => {
     await saveGuideLevel('expert');
-    expect(storage.setItem).toHaveBeenCalledWith('runtime.guideLevel', 'expert');
+    expect(storage.setItem).toHaveBeenCalledWith('musaium.runtime.guideLevel', 'expert');
   });
 });

@@ -1064,9 +1064,6 @@
     "attachmentPicker": {
       "opened": "تم فتح خيارات المرفقات"
     },
-    "bottomSheet": {
-      "dismiss": "إغلاق الورقة"
-    },
     "cartelScanner": {
       "opened": "تم فتح ماسح اللافتات",
       "scan_success": "تم التقاط رمز اللافتة",
@@ -1076,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}، {{museum}}، {{date}}، فتح الزيارة",
       "continue_hint": "يفتح هذه الزيارة السابقة للقراءة"
+    },
+    "bottomSheet": {
+      "dismiss": "إغلاق الورقة"
     }
   },
   "consent": {

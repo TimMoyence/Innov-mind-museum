@@ -1064,9 +1064,6 @@
     "attachmentPicker": {
       "opened": "已打开附件选项"
     },
-    "bottomSheet": {
-      "dismiss": "关闭面板"
-    },
     "cartelScanner": {
       "opened": "已打开说明牌扫描器",
       "scan_success": "已获取说明牌编号",
@@ -1076,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}，{{museum}}，{{date}}，打开参观",
       "continue_hint": "以只读方式打开此过往参观"
+    },
+    "bottomSheet": {
+      "dismiss": "关闭面板"
     }
   },
   "consent": {

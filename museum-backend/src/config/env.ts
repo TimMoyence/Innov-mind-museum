@@ -441,11 +441,6 @@ const env: AppEnv = {
       baseUrl: toOptionalString(process.env.PRESIDIO_BASE_URL),
       timeoutMs: toNumber(process.env.PRESIDIO_TIMEOUT_MS, 500),
     },
-    llamaPromptGuard: {
-      baseUrl: toOptionalString(process.env.LLAMA_PROMPT_GUARD_BASE_URL),
-      timeoutMs: toNumber(process.env.LLAMA_PROMPT_GUARD_TIMEOUT_MS, 500),
-      scoreThreshold: toNumber(process.env.LLAMA_PROMPT_GUARD_SCORE_THRESHOLD, 0.8),
-    },
     // Chaos drill rate (0..1). Non-zero values intentionally abort /scan
     // calls to exercise fail-CLOSED path. Prod MUST be 0 — `resolveChaosRate`
     // refuses non-zero in prod unless `MUSAIUM_ALLOW_PROD_CHAOS` set verbatim.

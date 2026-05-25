@@ -1254,12 +1254,12 @@
     },
     "@react-native-async-storage/async-storage": {
       "version": "2.2.0",
-      "fetched": "2026-05-20T20:00:00Z",
+      "fetched": "2026-05-25T08:25:00Z",
       "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "lib-doc-curator",
-      "snapshotSha256": "3291aea50a8ca916704f356095b6fd0b64e63deb0b4e2ee1c2b53d3f84c4b720",
-      "patternsSha256": "f215f55aed49142b4b20b7b586c9a06e283c6a8044f2b30085b628fcb86e460c",
+      "curatedAt": "2026-05-25T08:30:00Z",
+      "curatedBy": "doc-curator",
+      "snapshotSha256": "79e9e17b3ea951e044e77f02a45f3901834a1fda8390c32dd853b4c4b3f67543",
+      "patternsSha256": "150df35283ff25d592ef6fe08673cfb1f8775b9f56335c28a6783eccf4348b3b",
       "sourceUrls": [
         "https://react-native-async-storage.github.io/2.0/",
         "https://github.com/react-native-async-storage/async-storage/releases",

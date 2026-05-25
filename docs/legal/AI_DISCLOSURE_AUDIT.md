@@ -48,7 +48,7 @@ Out of scope of this audit (explicitly):
 | Criterion | Status | Evidence |
 |---|---|---|
 | Visible at all times during the chat session | ✅ | Mounted in header alongside session title. |
-| Tappable, opens `AiDisclosureModal` recap | ✅ | `AiDisclosureModal.tsx` referenced from `ChatHeader.tsx`. |
+| Tappable, opens `AiDisclosureSheetContent` recap | ✅ | `AiDisclosureSheetContent.tsx` referenced from `ChatHeader.tsx`. |
 | Distinguishable (visually salient) | ⚠️ | "AI / IA / KI" pill, theme-coloured. **Recommend** an a11y review for color contrast against the chat background in both light + dark themes. **Not blocking V1.** Captured as TD-41. |
 | Survives keyboard / dark-mode / RTL layouts | ✅ | Implemented with `marginStart/marginEnd` per CLAUDE.md RTL rule. |
 
@@ -60,7 +60,7 @@ Out of scope of this audit (explicitly):
 | Survives keyboard, scrolling | ✅ | Standard `View` with KAV-aware positioning. |
 | Carries the same canonical copy | ✅ | Pulls from `i18n` namespace, same source as modal. |
 
-### 2.4 `AiDisclosureModal` recap (on-demand)
+### 2.4 `AiDisclosureSheetContent` recap (on-demand)
 
 | Criterion | Status | Evidence |
 |---|---|---|
@@ -88,7 +88,7 @@ If the CNIL or a notified body asks us to demonstrate compliance with Art. 50, w
 4. Screenshots (FR + EN) of each surface, captured for the V1 build:
    - `VoiceSessionIntro` modal first display.
    - `ChatHeader` with AI badge visible.
-   - `AiDisclosureModal` recap when badge tapped.
+   - `AiDisclosureSheetContent` recap when badge tapped.
    - `AiDisclosureFooter` at the bottom of a long chat.
 5. Translation source files (`museum-frontend/shared/locales/<locale>/translation.json` `voice.disclosure.*` namespace) — proves 8-locale parity.
 6. `__tests__/features/chat/useVoiceDisclosure.test.ts` (proves the gate is enforced under unit test).

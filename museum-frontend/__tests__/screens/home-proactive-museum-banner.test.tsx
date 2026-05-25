@@ -108,7 +108,7 @@ jest.mock('@/features/chat/application/useResumableSession', () => ({
     isLoading: false,
     dismiss: jest.fn().mockResolvedValue(undefined),
   }),
-  RESUMPTION_BANNER_DISMISS_STORAGE_KEY: 'settings.resumption_banner_dismissed_until',
+  RESUMPTION_BANNER_DISMISS_STORAGE_KEY: 'musaium.settings.resumptionBannerDismissedUntil',
   RESUMPTION_BANNER_DISMISS_DURATION_MS: 86_400_000,
   RESUMPTION_BANNER_WINDOW_MS: 604_800_000,
 }));

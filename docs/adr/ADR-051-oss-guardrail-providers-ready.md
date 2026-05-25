@@ -1,6 +1,6 @@
 # ADR-051: OSS GuardrailProvider adapters ready (Presidio + Llama Prompt Guard 2) — not activated
 
-> **Status:** Accepted
+> **Status:** Accepted · **Amended 2026-05-25** (Llama Prompt Guard adapter DELETED — see "Amendment" below; Presidio stays infra-ready)
 > **Date:** 2026-05-12
 > **Decider:** Tim (founder/tech lead)
 > **Builds on:** ADR-015 (LLM-Judge Guardrail V2), ADR-047 (LLM-Guard circuit breaker + fail-CLOSED), ADR-048 (`GuardrailProvider` strategy port)
@@ -74,3 +74,19 @@ Failure of any criterion blocks promotion; the adapter stays infra-ready, the ch
 - **CI impact:** new test suites run as part of `pnpm test`. No new external dependencies (the adapters use the built-in `fetch`).
 - **`.env` template impact:** none — the new knobs are optional and have safe numeric defaults.
 - **Mobile impact:** none — the chat HTTP contract is unchanged.
+
+## Amendment — Llama Prompt Guard adapter DELETED (executed 2026-05-25)
+
+The `LlamaPromptGuardAdapter` half of this ADR was **executed as a deletion**, not a Phase 1 promotion. Re-cadrage NorthStar + V1-lockdown doctrine retired the "ship-now, wire-later" bet for this specific adapter: a never-wired sidecar adapter sitting dormant in the tree until a post-launch Phase 1 contradicted UFR-016 (bury dead code) more than it served ADR-048 optionality. Decision locked by Tim 2026-05-21 (roadmap item **W6.1 / P0.D3**, `docs/V1_LOCKDOWN_LOTS.md §D3`); **DELETE for V1, wire deferred to V2/V1.1** conditioned on a drop in promptfoo LLM07 pass-rate. Prompt-injection coverage at V1 stays on the active LLM-Guard incumbent (`llm-guard.adapter.ts:85`) + the promptfoo LLM07 adversarial corpus (≥ 95 % gate) + the V1 keyword guardrail.
+
+Removed this run (P0 cleanup lot `2026-05-25-p0-cleanup`, commit D3 `refactor(chat): bury never-wired llama-prompt-guard adapter`):
+- `museum-backend/src/modules/chat/adapters/secondary/guardrails/llama-prompt-guard.adapter.ts` (180 LOC)
+- `museum-backend/tests/unit/chat/llama-prompt-guard.adapter.test.ts` (338 LOC)
+- `museum-backend/docker-compose.llama-prompt-guard.yml` (53 LOC)
+- the `guardrails.llamaPromptGuard` config branch in `museum-backend/src/config/env.ts` (`LLAMA_PROMPT_GUARD_BASE_URL` / `_TIMEOUT_MS` / `_SCORE_THRESHOLD`) and its type + JSDoc in `museum-backend/src/config/env.types.ts`. The JSDoc example in `guardrail-provider.port.ts` was reconciled in the same commit.
+
+**Unchanged — the other two providers stay active/ready as decided above:**
+- **LLM-Guard** (`llm-guard.adapter.ts`) — the wired V2 incumbent (ADR-047), untouched.
+- **`MicrosoftPresidioAdapter`** (`presidio.adapter.ts` + `presidio.adapter.test.ts` + `docker-compose.presidio.yml` + the `guardrails.presidio` env branch) — remains infra-ready-but-not-wired exactly as this ADR's Decision specifies; the Phase 1 promotion criteria above still govern its activation.
+
+This amendment narrows the ADR to a single shipped-but-unwired adapter (Presidio); it does **not** rewrite the original 2026-05-12 decision record above.

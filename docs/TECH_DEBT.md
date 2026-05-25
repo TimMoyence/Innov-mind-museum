@@ -1250,9 +1250,14 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ---
 
-## 🚨 TD-AS-01 — async-storage key namespacing inconsistent 11 prefixes (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-AS-01 — async-storage key namespacing inconsistent 11 prefixes (HIGH, NICE_TO_HAVE pre-V1) — RESOLVED 2026-05-25
 **Context** : 24 keys across 11 prefix families (compte corrigé de 16/10, sweep 2026-05-21). getAllKeys cannot be cleanly filtered. Cross-app collision risk.
 **Fix** : codemod to `musaium.<feature>.<key>` convention avec migration reader.
+**RESOLVED 2026-05-25** (/team run `2026-05-25-p0-cleanup`, commit `feat(storage): namespace 10 AsyncStorage keys + one-shot legacy migration reader (TD-AS-01)`) :
+- **10 clés non-conformes** re-préfixées `musaium.<feature>.<key>` à travers 6 fichiers : `app.themeMode`→`musaium.theme.mode` (`ThemeContext.tsx`) ; `runtime.{defaultLocale,defaultMuseumMode,guideLevel,apiBaseUrl,apiEnvironment}`→`musaium.runtime.*` (`runtimeSettings.ts`, `defaultLocale` aussi consommé par `I18nContext.tsx`) ; `settings.resumption_banner_dismissed_until`→`musaium.settings.resumptionBannerDismissedUntil` (`useResumableSession.ts`) ; `museum.lastCameraView.v1`→`musaium.museum.lastCameraView.v1` (`mapCameraCache.ts`) ; `@musaium/saved_artworks`→`musaium.dailyArt.savedArtworks` + `@musaium/daily_art_dismissed`→`musaium.dailyArt.dismissed` (`useDailyArt.ts`).
+- **Reader one-shot legacy→new** : `museum-frontend/shared/infrastructure/migrateStorageKey.ts` — idempotent, no-overwrite (short-circuit si la nouvelle clé porte déjà des données), no-op si legacy absente, copie la valeur en opaque-string (pas de re-parse), best-effort (toute erreur AsyncStorage avalée). Câblé sur les 6 read call-sites. Test : `__tests__/infrastructure/migrateStorageKey.test.ts`.
+- **Clés déjà conformes `musaium.*` NON touchées** (`shared/state`, `features/dataMode`, `queryClient.ts` — diff vide). Le compte "24 keys" du Context d'origine incluait ces conformes + les redéfinitions de mock test (cf. TD-AS-04) ; seules les **10 non-conformes** côté runtime étaient à corriger.
+- Reste ouvert : **TD-AS-02** (wrapper `storage.ts` sans try/catch — compensé localement par le try/catch interne de `migrateStorageKey`), **TD-AS-03**, **TD-AS-04**.
 
 ## TD-AS-02 — storage.ts wrapper missing try/catch setItem/removeItem (MEDIUM, NICE_TO_HAVE)
 **Fix** : try/catch in wrapper OR enforce at call sites avec ESLint rule.

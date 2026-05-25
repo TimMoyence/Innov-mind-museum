@@ -1064,9 +1064,6 @@
     "attachmentPicker": {
       "opened": "Opzioni di allegato aperte"
     },
-    "bottomSheet": {
-      "dismiss": "Chiudi foglio"
-    },
     "cartelScanner": {
       "opened": "Scanner cartelli aperto",
       "scan_success": "Codice cartello acquisito",
@@ -1076,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, apri visita",
       "continue_hint": "Apre questa visita passata in sola lettura"
+    },
+    "bottomSheet": {
+      "dismiss": "Chiudi foglio"
     }
   },
   "consent": {
