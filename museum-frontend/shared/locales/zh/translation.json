@@ -1073,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}，{{museum}}，{{date}}，打开参观",
       "continue_hint": "以只读方式打开此过往参观"
+    },
+    "bottomSheet": {
+      "dismiss": "关闭面板"
     }
   },
   "consent": {

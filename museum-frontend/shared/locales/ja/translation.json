@@ -1073,6 +1073,9 @@
     "carnet": {
       "session_card": "{{title}}、{{museum}}、{{date}}、訪問を開く",
       "continue_hint": "この過去の訪問を読み取り専用で開きます"
+    },
+    "bottomSheet": {
+      "dismiss": "シートを閉じる"
     }
   },
   "consent": {
