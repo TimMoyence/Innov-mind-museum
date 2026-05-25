@@ -354,5 +354,43 @@
       "important": 0,
       "nit": 2
     }
+  },
+  {
+    "runId": "2026-05-25-p0-cleanup",
+    "ts": "2026-05-25T09:56:20Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 94,
+        "weight": 0.30,
+        "reasoning": "All 13 EARS PASS (R1/R13 finalize-deferred per brief). migrateStorageKey matches design §4 contract exactly (idempotent short-circuit existing.length>0, no-overwrite, no-op-on-absent-legacy, opaque-string copy). RED genuineness verified at start commit (send.ts:178 streaming branch). 6 call-sites wired migrate-before-read; I18nContext 6th-consumer caught in GREEN. FE 3370 tests pass, BE tsc+sentinel green. Edge: useDailyArt adds a real end-to-end migrate test through the hook (strengthens coverage)."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "Plaintext invariant preserved (LESSONS SECURITY INVARIANT): only UI prefs migrated, no token/PII, no auth.* key, queryClient PII-allowlist untouched. D3 removes a never-wired guardrail candidate — defense-in-depth (ADR-015 layers 1-6, V2 llm-guard+judge) intact, 0 runtime instantiation verified. migrateStorageKey full try/catch satisfies PATTERNS.md:111/LESSONS-F3 (storage.ts wrapper does NOT catch setItem/removeItem). No env-leak/eval/raw-SQL added. -8 only because TD-AS-02 (wrapper try/catch) remains open project-wide (out of scope, correctly deferred)."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.20,
+        "reasoning": "Net -~1243 LOC dead/dormant. KISS/DRY/hexagonal all PASS. Single shared reader (D-Q3) reused at 6 sites. Atomic config removal (value+type). Honest cleanup-only handling of keys #5/#6 (D-Q4, verified in source not assumed — UFR-018). Clear JSDoc on the new helper citing design §4 + PATTERNS.md. 1 NIT (cosmetic migrate-all consolidation option, out of scope)."
+      },
+      "testCoverage": {
+        "score": 92,
+        "weight": 0.15,
+        "reasoning": "New migrateStorageKey.test.ts covers all 4 behaviours via Map-backed module mock (allowed, not inline entity). Frozen RED tests byte-identical (freeze PASS). Companion sweep updates literals without weakening assertions + ADDS an end-to-end migrate test in useDailyArt.test.ts. No suite lost beyond intentional D3/D4/SSE deletions. -8: auth-email integration (DB harness) not run locally here, but tsc-green + the removed line is an auth-unrelated config field."
+      },
+      "docQuality": {
+        "score": 90,
+        "weight": 0.10,
+        "reasoning": "D5 pure-doc corrections accurate: ADR-036 v1->v2 (cites d54552beb + llm-cache.service.ts:119), AiDisclosureModal->AiDisclosureSheetContent x6. Intentional preservations CORRECT and verified: ADR-055:21 (historical before-list), TECH_DEBT.md:514/519 (TD-57 rename doc), ROADMAP_PRODUCT.md:135 (D5 tracker). Helper + call-sites well-commented. -10: STORY.md append + TECH_DEBT.md:1259 tick are documenter-phase follow-ups (not yet in diff, expected)."
+      },
+      "weightedMean": 92.6
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
+    }
   }
 ]
