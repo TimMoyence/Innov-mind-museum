@@ -23,6 +23,7 @@ import {
 } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { logger } from '@shared/logger/logger';
 import { getLangfuse } from '@shared/observability/langfuse.client';
+import { musaiumGuardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
 import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
@@ -109,52 +110,50 @@ const isTimeoutError = (error: unknown): boolean =>
   error instanceof DOMException &&
   error.name === 'TimeoutError';
 
-/** Fail-open: returns `null` on any failure (caller uses keyword decision). */
-export const judgeWithLlm = async (
-  message: string,
-  opts: JudgeWithLlmOptions = {},
-): Promise<JudgeDecision | null> => {
-  if (await getBudgetExhausted()) {
-    logger.warn('guardrail_judge_budget_exceeded', {
-      cap_cents: env.guardrails.budgetCentsPerDay,
+/**
+ * I-FIX3 (d) — judge-degrade reasons (design §D4/D5). Bounded enum → 4 series,
+ * no user-derived label (prom-client/LESSONS.md F1). Emitted on every fail-mode
+ * `null`-return so ops can alert that the semantic V2 layer is degraded. The
+ * VERDICT is UNCHANGED (null → V1/sidecar fallback — decision (d) = degrade-to-
+ * backstop, NOT hard block; CLAUDE.md §AI Safety, spec §8 Q1).
+ */
+type JudgeDegradeReason = 'budget_exhausted' | 'timeout' | 'error' | 'misconfigured';
+
+/**
+ * Increments the degrade counter. Observability MUST never break the guardrail
+ * path (prom-client throws on registry-cleared / duplicate-name), so a metric
+ * failure is swallowed + logged — the judge still returns its (unchanged) verdict.
+ */
+const recordJudgeDegrade = (reason: JudgeDegradeReason): void => {
+  try {
+    musaiumGuardrailJudgeDegradedTotal.inc({ reason });
+  } catch (err) {
+    logger.warn('guardrail_judge_degrade_metric_failed', {
+      reason,
+      error: err instanceof Error ? err.message : String(err),
     });
-    return null;
   }
+};
 
-  const model = opts.model;
-  if (!model?.withStructuredOutput) {
-    logger.warn('guardrail_judge_misconfigured', {
-      detail: model
-        ? 'no structured-output support — judge requires withStructuredOutput-capable model'
-        : 'no model injected — judge requires ChatModel',
-    });
-    return null;
-  }
-
-  const timeoutMs = opts.timeoutMs ?? env.guardrails.judgeTimeoutMs;
-
-  logger.info('guardrail_judge_invoked', { messageLength: message.length, timeoutMs });
-
-  // SEC — charge budget BEFORE invocation so timed-out calls still count
-  // (else attacker could spam the judge).
-  await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
-
-  // TD-20 (R1/R8/D-Q3) — one-shot Langfuse `generation` for the detached judge
-  // (PATTERNS.md:329 DON'T#13 — judge-outside-trace gap). Fail-open via
-  // `safeTrace` + `getLangfuse()` (PATTERNS.md:310,313 DO#12,#15); enqueue-only,
-  // never adds synchronous latency (judge detached for latency in C9.7).
-  // D-Q3 / UFR-013: `withStructuredOutput().invoke()` does NOT expose
-  // `usage_metadata`, so we emit `model` (cost-catalog inferred) + a
-  // NON-fabricated `metadata.inputLength`/`estimatedCostCents` — never invented
-  // token counts. PII: only the message LENGTH, never the message text
-  // (NFR Privacy / PATTERNS.md §8.1).
+/**
+ * Builds the per-tenant scope + opens the one-shot Langfuse `generation` for the
+ * detached judge (TD-20 R1/R8/D-Q3; PATTERNS.md:329 DON'T#13 judge-outside-trace
+ * gap). Fail-open via `safeTrace` + `getLangfuse()` (PATTERNS.md:310,313 DO#12,#15);
+ * enqueue-only, never adds synchronous latency (judge detached for latency in C9.7).
+ * D-Q3 / UFR-013: `withStructuredOutput().invoke()` does NOT expose `usage_metadata`,
+ * so we emit `model` (cost-catalog inferred) + a NON-fabricated
+ * `inputLength`/`estimatedCostCents` — never invented token counts. PII: only the
+ * message LENGTH, never the text (NFR Privacy / PATTERNS.md §8.1). Returns
+ * `undefined` when Langfuse is unwired/down (decision path unaffected — R8).
+ */
+const openJudgeGeneration = (message: string, opts: JudgeWithLlmOptions) => {
   const lf = getLangfuse();
   const scope: LlmJudgeScope = {
     ...(opts.museumId !== undefined ? { museumId: opts.museumId } : {}),
     ...(opts.tier !== undefined ? { tier: opts.tier } : {}),
     ...(opts.requestId !== undefined ? { requestId: opts.requestId } : {}),
   };
-  const generation = safeTrace('langfuse.judge.generation.create', () =>
+  return safeTrace('langfuse.judge.generation.create', () =>
     lf
       ?.trace({
         name: 'guardrail.judge',
@@ -170,6 +169,41 @@ export const judgeWithLlm = async (
         },
       }),
   );
+};
+
+/** Fail-open: returns `null` on any failure (caller uses keyword decision). */
+export const judgeWithLlm = async (
+  message: string,
+  opts: JudgeWithLlmOptions = {},
+): Promise<JudgeDecision | null> => {
+  if (await getBudgetExhausted()) {
+    logger.warn('guardrail_judge_budget_exceeded', {
+      cap_cents: env.guardrails.budgetCentsPerDay,
+    });
+    recordJudgeDegrade('budget_exhausted');
+    return null;
+  }
+
+  const model = opts.model;
+  if (!model?.withStructuredOutput) {
+    logger.warn('guardrail_judge_misconfigured', {
+      detail: model
+        ? 'no structured-output support — judge requires withStructuredOutput-capable model'
+        : 'no model injected — judge requires ChatModel',
+    });
+    recordJudgeDegrade('misconfigured');
+    return null;
+  }
+
+  const timeoutMs = opts.timeoutMs ?? env.guardrails.judgeTimeoutMs;
+
+  logger.info('guardrail_judge_invoked', { messageLength: message.length, timeoutMs });
+
+  // SEC — charge budget BEFORE invocation so timed-out calls still count
+  // (else attacker could spam the judge).
+  await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
+
+  const generation = openJudgeGeneration(message, opts);
 
   const startedAt = Date.now();
   try {
@@ -195,10 +229,14 @@ export const judgeWithLlm = async (
         timeoutMs,
         elapsedMs: Date.now() - startedAt,
       });
+      recordJudgeDegrade('timeout');
     } else {
+      // Covers model throw AND schema violations (the provider surfaces a schema
+      // mismatch as a thrown validation error) → `error` reason (T1.3 contract).
       logger.warn('guardrail_judge_error', {
         error: error instanceof Error ? error.message : String(error),
       });
+      recordJudgeDegrade('error');
     }
     safeTrace('langfuse.judge.generation.end.error', () => {
       generation?.end({
