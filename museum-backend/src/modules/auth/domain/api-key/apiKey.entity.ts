@@ -2,6 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  Index,
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
@@ -35,6 +36,9 @@ export class ApiKey {
   @JoinColumn({ name: 'user_id' })
   user!: Relation<User>;
 
+  // I-OPS7 — index the FK column so the ON DELETE CASCADE from `users` uses an
+  // index scan instead of a sequential scan when a user row is deleted (R5).
+  @Index('IDX_api_keys_user_id')
   @Column({ name: 'user_id' })
   userId!: number;
 

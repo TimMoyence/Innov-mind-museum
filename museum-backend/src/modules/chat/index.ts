@@ -35,3 +35,11 @@ export const stopArtKeywordsRefresh = (): void => {
 export const stopKnowledgeExtraction = async (): Promise<void> => {
   await getActiveChatModule().stopKnowledgeExtraction();
 };
+
+/**
+ * TD-OP-01 — disposes the Wikidata circuit breaker (releases the opossum
+ * rolling-stats timer). Call during graceful shutdown.
+ */
+export const stopWikidataBreaker = (): void => {
+  getActiveChatModule().stopWikidataBreaker();
+};

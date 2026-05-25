@@ -1,3 +1,5 @@
+import CircuitBreaker from 'opossum';
+
 import {
   WikidataBreakerClient,
   type WikidataBreakerConfig,
@@ -123,9 +125,7 @@ describe('WikidataBreakerClient', () => {
     expect(client.getState().name).toBe('HALF_OPEN');
 
     inner.lookupOrThrow.mockReset();
-    inner.lookupOrThrow.mockRejectedValue(
-      new WikidataTransientError(new Error('5xx'), 'search'),
-    );
+    inner.lookupOrThrow.mockRejectedValue(new WikidataTransientError(new Error('5xx'), 'search'));
 
     await client.lookup(QUERY);
 
@@ -162,24 +162,16 @@ describe('WikidataBreakerClient — Prometheus instrumentation', () => {
   // Helper that pulls the current Counter value for a given label set out of
   // the registry. prom-client's Counter does not expose a synchronous getter
   // tied to label combos ; we have to read the registry snapshot.
-  async function counterValue(
-    metricName: string,
-    labels: Record<string, string>,
-  ): Promise<number> {
+  async function counterValue(metricName: string, labels: Record<string, string>): Promise<number> {
     const metric = registry.getSingleMetric(metricName);
     if (!metric) return 0;
     const data = await metric.get();
     const labelKeys = Object.keys(labels);
-    const found = data.values.find((v) =>
-      labelKeys.every((k) => v.labels[k] === labels[k]),
-    );
+    const found = data.values.find((v) => labelKeys.every((k) => v.labels[k] === labels[k]));
     return found?.value ?? 0;
   }
 
-  async function gaugeValue(
-    metricName: string,
-    labels: Record<string, string>,
-  ): Promise<number> {
+  async function gaugeValue(metricName: string, labels: Record<string, string>): Promise<number> {
     return counterValue(metricName, labels);
   }
 
@@ -202,9 +194,7 @@ describe('WikidataBreakerClient — Prometheus instrumentation', () => {
 
     await client.lookup(QUERY);
 
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'success' }),
-    ).toBe(1);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'success' })).toBe(1);
     expect(await histogramSampleCount('wikidata_sparql_request_duration_seconds')).toBe(1);
   });
 
@@ -212,17 +202,11 @@ describe('WikidataBreakerClient — Prometheus instrumentation', () => {
     const inner = makeInner();
     const client = new WikidataBreakerClient(inner as never, baseConfig);
 
-    inner.lookupOrThrow.mockRejectedValue(
-      new WikidataTransientError({ status: 503 }, 'sparql'),
-    );
+    inner.lookupOrThrow.mockRejectedValue(new WikidataTransientError({ status: 503 }, 'sparql'));
     await client.lookup(QUERY);
 
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'error' }),
-    ).toBe(1);
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'rate_limit' }),
-    ).toBe(0);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'error' })).toBe(1);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'rate_limit' })).toBe(0);
     // Failure still observes duration — the action ran end-to-end before throwing.
     expect(await histogramSampleCount('wikidata_sparql_request_duration_seconds')).toBe(1);
   });
@@ -231,38 +215,32 @@ describe('WikidataBreakerClient — Prometheus instrumentation', () => {
     const inner = makeInner();
     const client = new WikidataBreakerClient(inner as never, baseConfig);
 
-    inner.lookupOrThrow.mockRejectedValue(
-      new WikidataTransientError({ status: 429 }, 'sparql'),
-    );
+    inner.lookupOrThrow.mockRejectedValue(new WikidataTransientError({ status: 429 }, 'sparql'));
     await client.lookup(QUERY);
 
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'rate_limit' }),
-    ).toBe(1);
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'error' }),
-    ).toBe(0);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'rate_limit' })).toBe(1);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'error' })).toBe(0);
   });
 
   it('classifies opossum timeouts as outcome=timeout (deduped against failure)', async () => {
     const inner = makeInner();
     // 20ms per-call cutoff ; inner resolves after 200ms → opossum times out.
     const tightConfig: WikidataBreakerConfig = { ...baseConfig, timeoutMs: 20 };
-    inner.lookupOrThrow.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(MONA), 200)),
-    );
+    inner.lookupOrThrow.mockImplementation(() => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(MONA);
+        }, 200);
+      });
+    });
     const client = new WikidataBreakerClient(inner as never, tightConfig);
 
     await client.lookup(QUERY);
 
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'timeout' }),
-    ).toBe(1);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'timeout' })).toBe(1);
     // Critical : the same call must NOT also be counted as a generic error,
     // otherwise opossum's `failure` follow-up event would double-count.
-    expect(
-      await counterValue('wikidata_sparql_requests_total', { outcome: 'error' }),
-    ).toBe(0);
+    expect(await counterValue('wikidata_sparql_requests_total', { outcome: 'error' })).toBe(0);
   });
 
   it('emits outcome=circuit_open when the breaker fallback returns null', async () => {
@@ -299,34 +277,95 @@ describe('WikidataBreakerClient — Prometheus instrumentation', () => {
     await client.lookup(QUERY);
 
     await driveFailures(client, inner, 5);
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'open' }),
-    ).toBe(1);
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'closed' }),
-    ).toBe(0);
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' }),
-    ).toBe(0);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'open' })).toBe(1);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'closed' })).toBe(0);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' })).toBe(0);
 
     await wait(baseConfig.resetTimeoutMs + 30);
     expect(client.getState().name).toBe('HALF_OPEN');
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' }),
-    ).toBe(1);
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'open' }),
-    ).toBe(0);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' })).toBe(1);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'open' })).toBe(0);
 
     inner.lookupOrThrow.mockReset();
     inner.lookupOrThrow.mockResolvedValue(MONA);
     await client.lookup(QUERY);
     expect(client.getState().name).toBe('CLOSED');
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'closed' }),
-    ).toBe(1);
-    expect(
-      await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' }),
-    ).toBe(0);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'closed' })).toBe(1);
+    expect(await gaugeValue('wikidata_sparql_circuit_state', { state: 'half_open' })).toBe(0);
+  });
+});
+
+/**
+ * TD-OP-01 — `WikidataBreakerClient.dispose()` lifecycle.
+ *
+ * opossum's `new CircuitBreaker` starts an internal rolling-stats `setInterval`
+ * that is never released unless `breaker.shutdown()` is called. Without a
+ * `dispose()` method, every constructed client leaks that timer — the concrete
+ * Stryker/Jest open-handle gotcha (CLAUDE.md § Stryker; lib-docs/opossum
+ * LESSONS.md F1, PATTERNS.md §3 "DO call breaker.shutdown() ... on process
+ * termination").
+ *
+ * Contract:
+ *   - `dispose()` calls the underlying opossum `breaker.shutdown()` exactly once.
+ *   - `dispose()` is idempotent — a second call does not throw and does not
+ *     call `shutdown()` again.
+ */
+describe('WikidataBreakerClient — dispose() (TD-OP-01)', () => {
+  let shutdownSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    // Spy on the opossum prototype so we observe the breaker the client owns
+    // internally without reaching into its private field.
+    shutdownSpy = jest.spyOn(CircuitBreaker.prototype, 'shutdown');
+  });
+
+  afterEach(() => {
+    shutdownSpy.mockRestore();
+  });
+
+  it('exposes a dispose() method', () => {
+    const inner = makeInner();
+    const client = new WikidataBreakerClient(inner as never, baseConfig);
+
+    expect(typeof (client as unknown as { dispose?: unknown }).dispose).toBe('function');
+
+    client.dispose();
+  });
+
+  it('dispose() calls the underlying opossum breaker.shutdown() exactly once', () => {
+    const inner = makeInner();
+    const client = new WikidataBreakerClient(inner as never, baseConfig);
+    // The constructor itself must not have triggered a shutdown.
+    shutdownSpy.mockClear();
+
+    client.dispose();
+
+    expect(shutdownSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('dispose() is idempotent — a second call does not throw and does not re-shutdown', () => {
+    const inner = makeInner();
+    const client = new WikidataBreakerClient(inner as never, baseConfig);
+    shutdownSpy.mockClear();
+
+    client.dispose();
+    expect(() => client.dispose()).not.toThrow();
+
+    expect(shutdownSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves no open opossum timer after dispose() (still CLOSED, no throw on use-after-construct)', async () => {
+    const inner = makeInner();
+    inner.lookupOrThrow.mockResolvedValue(MONA);
+    const client = new WikidataBreakerClient(inner as never, baseConfig);
+
+    await client.lookup(QUERY);
+    expect(client.getState().name).toBe('CLOSED');
+
+    // dispose() must release the rolling-stats interval (asserted indirectly:
+    // shutdown is invoked, and --detectOpenHandles must stay clean in the
+    // green-phase verifier run per tasks.md DONE-WHEN).
+    expect(() => client.dispose()).not.toThrow();
+    expect(shutdownSpy).toHaveBeenCalled();
   });
 });

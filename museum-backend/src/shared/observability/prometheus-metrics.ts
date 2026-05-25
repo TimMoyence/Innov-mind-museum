@@ -459,6 +459,44 @@ export const llmPromptCacheHitsTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * I-FIX3 (2026-05-25) — guardrail-judge degrade observability (design §D4/D5).
+ * Incremented on every fail-mode `null`-return of `judgeWithLlm`
+ * (`llm-judge-guardrail.ts`) so ops can alert that the semantic V2 layer is
+ * degraded. The judge VERDICT is unchanged (null → V1/sidecar fallback,
+ * decision (d) = degrade-to-backstop, NOT hard block — see CLAUDE.md §AI Safety).
+ *
+ * `reason` ∈ {budget_exhausted, timeout, error, misconfigured} → 4 series.
+ * `as const` narrows the label type (prom-client/LESSONS.md F1) and there is NO
+ * user-derived label (no userId, no message text) — bounded, well under the 200
+ * cardinality budget. Uses a BARE `guardrail_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
+ */
+export const guardrailJudgeDegradedTotal = new Counter({
+  name: 'guardrail_judge_degraded_total',
+  help: 'Total LLM-judge degrade events (verdict left to V1/sidecar fallback), by reason (budget_exhausted | timeout | error | misconfigured).',
+  labelNames: ['reason'] as const,
+  registers: [registry],
+});
+
+/**
+ * I-FIX3 (2026-05-25) — anonymous cost-guard bypass observability (design §D3/D5).
+ * Incremented in `LlmCostGuard.assertAllowed` on the `userId === null` branch
+ * (after the kill-switch check, before the early-return). All live paid-LLM
+ * routes require `isAuthenticated`, so this should be FLAT 0 in prod; a non-zero
+ * value means a paid route became reachable anonymously and is silently skipping
+ * the per-user cap. Labelless → 1 series (prom-client/LESSONS.md F1 — no
+ * user-derived label). Uses a BARE `llm_cost_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
+ */
+export const llmCostAnonBypassTotal = new Counter({
+  name: 'llm_cost_anon_bypass_total',
+  help: 'Total anonymous (userId=null) calls that reached the LLM cost guard and bypassed the per-user cap. Should be flat 0 in prod (all paid routes require auth).',
+  registers: [registry],
+});
+
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
 }

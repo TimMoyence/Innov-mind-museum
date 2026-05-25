@@ -16,6 +16,17 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { ChatSessionIntent, VisitContext } from '@modules/chat/domain/chat.types';
 import type { Relation } from 'typeorm';
 
+// I-OPS7 — keyset-pagination composite for `listSessions`
+// (`WHERE userId = :userId ORDER BY updatedAt DESC, id DESC`). Leftmost member
+// is the `user` relation property; TypeORM maps it to the same `"userId"` FK
+// column the existing mono `IDX_chat_sessions_userId` decorates (R7). The mono
+// index is kept (additive, lowest blast — design D7 / spec Q2).
+@Index('IDX_chat_sessions_userId_updatedAt_id', ['user', 'updatedAt', 'id'])
+// I-OPS7 — partial index supporting the GDPR retention purge cron, which scans
+// the un-purged working set: `WHERE purgedAt IS NULL AND updatedAt < NOW() -
+// INTERVAL 'N days'` (chat-purge.job.ts:176-177). The partial `WHERE purged_at
+// IS NULL` keeps the index small as the table ages and rows get purged (R6).
+@Index('IDX_chat_sessions_purged_at_active', ['updatedAt'], { where: '"purged_at" IS NULL' })
 @Entity({ name: 'chat_sessions' })
 export class ChatSession {
   @PrimaryGeneratedColumn('uuid')
