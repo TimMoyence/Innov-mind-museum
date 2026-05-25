@@ -1460,3 +1460,36 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Décision formalisée** : [`docs/adr/ADR-068-sbom-attestation-strategy-mobile-gap.md`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) (digest-bound where possible ; gap mobile = ce TD).
 - **Référence run** : `team-state/2026-05-25-p0-a11y-compliance/` (spec.md §2 I-CMP6, design.md §D5-D7).
 
+---
+
+## TD-FE-CHAT-BURY-SSE — Enterrer le code mort onToken/onDone/onGuardrail + streamText plumbing dans la stratégie chat + réaligner 3 tests fake-world (MEDIUM, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-25, `/team` run `2026-05-25-p0-fa1-empty-bubble-text-only`, décision plan D2 / review NIT ; burial différé hors du scope P0).
+- **Référence code** :
+  ```
+  # Code mort — callbacks jamais appelés (sendMessageSmart sync-only)
+  museum-frontend/features/chat/infrastructure/chatApi/send.ts:169-172              # sendMessageSmart = async (params) => deps.postMessage(params) — ignore onToken/onDone/onGuardrail/signal
+  museum-frontend/features/chat/application/sendStrategies/sendMessageStreaming.ts:77-114  # bloc onToken/onDone/onGuardrail passé à sendMessageSmart, jamais invoqué
+  museum-frontend/features/chat/application/useStreamingState.ts:18,22,29,42,54,57,58  # streamTextRef / flushStreamText / scheduleFlush — seuls consommateurs = onToken/onGuardrail morts
+  museum-frontend/features/chat/application/sendStrategies/sendStrategy.types.ts:83-86     # champs streamTextRef/scheduleFlush/flushStreamText du context-bag SendMessageContext
+  # Commentaire stale (review NIT)
+  museum-frontend/features/chat/application/sendStrategies/sendMessageStreaming.ts:116     # « Non-streaming fallback (image messages or streaming not available) » — le bloc sert désormais texte + image
+  # Tests fake-world à réaligner (pilotent un monde que le transport live ne produit jamais)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:774   # "invokes onToken and onDone to build assistant message" (fire onToken+onDone, return null)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:817   # "invokes onGuardrail to set guardrail text" (fire onGuardrail+onDone, return null)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:935   # "onDone with empty final text still replaces streaming placeholder" (fire onDone, return null)
+  ```
+- **Symptôme** : la voie SSE a été enterrée (D1, ADR-001 SSE deprecated) mais ses callbacks survivent en code mort. `sendMessageSmart` est **toujours synchrone** (`send.ts:169-172` = `=> deps.postMessage(params)`) et **ignore** `onToken`/`onDone`/`onGuardrail`/`signal` ; `sendMessageStreaming.ts:77-114` les passe pourtant encore, et `streamTextRef`/`scheduleFlush`/`flushStreamText` (`useStreamingState.ts`) n'ont plus que ces callbacks morts comme consommateurs. Ce code mort a **directement causé le bug P0-FA1** (bulle assistant vide en texte-seul) : la garde `sendMessageStreaming.ts:117` dépendait de `onDone` pour resetter `streamingIdRef.current`, ce qui ne se produit jamais en live → le bloc finalize était sauté hors path image. **Le fix P0 (1 ligne, garde élargie) a été shippé sans enterrer le code mort** (scope discipline hotfix). En outre, 3 tests `useChatSession.test.ts:774/817/935` mockent `onToken`/`onDone`/`onGuardrail` — exactement les callbacks que le transport live n'appelle jamais → ils passaient au vert tout en couvrant un monde fictif (anti-pattern CLAUDE.md UFR-021 « Jest mocks the very interaction that breaks »), ce qui explique que le bug a shippé vert.
+- **Pourquoi non résolu en V1 (P0-FA1)** : burial = refacto à blast radius large (touche `useStreamingState.ts`, le type `SendMessageContext` dans `sendStrategy.types.ts`, l'index des stratégies qui câble le context-bag, et l'affordance streaming de `ChatMessageBubble`), et force la réécriture/suppression des 3 tests fake-world. Hors scope d'un hotfix P0 launch-blocker : la priorité était la regression-safety du fix 1-ligne, pas un refacto. Déclaré comme **déviation UFR-016** (le code mort viole l'esprit « il est mort on l'enterre » ; trade-off = sécurité de non-régression sur un blocker, assumé honnêtement). Caveat : le fix P0 ne dépend PAS de ce code mort et ne le ravive pas.
+- **Sprint d'origine** : run `/team` `2026-05-25-p0-fa1-empty-bubble-text-only` (plan D2/D5, review NIT commentaire `:116`).
+- **Effort estimé** : ~2-4 h.
+- **Comment fermer** :
+  1. Supprimer le bloc `onToken`/`onDone`/`onGuardrail` (`sendMessageStreaming.ts:77-114`) et la garde télémétrie morte associée — confirmer via grep qu'aucun autre consommateur live ne reste (`onToken`/`onDone`/`onGuardrail` n'apparaissent que dans `send.ts` (type + impl qui ignore) et `sendMessageStreaming.ts` au moment de la création de ce TD).
+  2. Enlever `streamTextRef`/`flushStreamText`/`scheduleFlush` de `useStreamingState.ts` + des champs du context-bag `SendMessageContext` (`sendStrategy.types.ts:83-86`) + de l'index des stratégies qui les câble. Vérifier l'affordance streaming de `ChatMessageBubble` (retirer si plus alimentée).
+  3. Simplifier la signature `SendMessageSmartParams` (`send.ts`) en retirant les callbacks ignorés (ou documenter qu'on les garde si une voie streaming V1.1+ est planifiée — sinon enterrer).
+  4. **Réaligner les 3 tests fake-world** `useChatSession.test.ts:774/817/935` : les supprimer (le monde onDone/onGuardrail n'existe plus) OU les réécrire pour piloter le vrai path sync (mock `mockResolvedValue(PostMessageResponseDTO)` sans firer de callback, comme les tests P0-FA1 TR.1-TR.6 du describe `text-only sync finalize`). Ne pas laisser de test qui couvre un monde mort.
+  5. Toiletter le commentaire stale `sendMessageStreaming.ts:116` « Non-streaming fallback (image messages or streaming not available) » → le bloc sert désormais texte + image en path sync unique (review NIT).
+  6. `npm run lint` + `npx jest __tests__/hooks/useChatSession.test.ts` + `gitnexus_detect_changes` ; cocher TD-FE-CHAT-BURY-SSE ici.
+- **Références** : ADR-001 (SSE deprecated, burial D1) ; `team-state/2026-05-25-p0-fa1-empty-bubble-text-only/{spec.md,design.md (§D2/D5),STORY.md}` ; CLAUDE.md § UFR-016 (« il est mort on l'enterre ») + UFR-021 (anti-pattern fake-world tests).
+- **Note de citation (UFR-013)** : le brief documenter pointait `useChatSession.test.ts:773/816/934` ; vérification `grep` (cf. STORY.md documenter) → les `it(` réels sont à `:774`/`:817`/`:935` (off-by-one — ligne `describe`/commentaire juste au-dessus). Lignes ci-dessus = vérifiées par lecture, source de vérité.
+

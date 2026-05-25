@@ -114,7 +114,7 @@ export const sendMessageStreaming = async (
     });
 
     // Non-streaming fallback (image messages or streaming not available)
-    if (response && (!context.streamingIdRef.current || attempt.imageUri)) {
+    if (response && context.streamingIdRef.current) {
       context.resetStreaming();
       // A5 (R22) — same telemetry hook as the SSE `onDone` branch above. The
       // BE today returns sync (SSE deprecated), so this is the live path.
