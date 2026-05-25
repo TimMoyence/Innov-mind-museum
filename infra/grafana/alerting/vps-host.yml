@@ -1,8 +1,11 @@
 # Prometheus alerting rules — VPS host-level (disk / memory / CPU).
 # Source : node-exporter scrape job (job_name=node-exporter, target
 # host.docker.internal:9100). Loaded via the `rule_files` glob in
-# prometheus.yml. AlertManager routes by `severity` + `team` to the
-# `telegram-ops` receiver (alertmanager.yml).
+# prometheus.yml. AlertManager splits these by their `severity` label:
+# `critical` alerts (e.g. VPSDiskCritical, NodeExporterDown) go to the
+# `telegram-ops-critical` receiver (fast group_wait, 1h repeat_interval);
+# `warning` alerts go to `telegram-ops-warning` (4h repeat_interval). Both
+# receivers hit the same Telegram bridge (alertmanager.yml).
 #
 # Wired 2026-05-20 after two VPS disk-full incidents in one month —
 # auto-rollback engaged both times, prod was offline 5+ min each. Goal:

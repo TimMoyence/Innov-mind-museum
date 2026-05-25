@@ -1,0 +1,151 @@
+# Prometheus alerting rules — primary "is prod alive" API signals.
+# Loaded by Prometheus via the `rule_files` glob in prometheus.yml
+# (/etc/prometheus/alerting/*.yml). AlertManager routes these by `severity`:
+# `critical` → the `telegram-ops-critical` receiver (fast group_wait, tight
+# repeat_interval), `warning` → `telegram-ops-warning` (alertmanager.yml).
+#
+# Added 2026-05-25 (I-OPS2) — the stack had 18 host/chat/cost alerts but NONE
+# for the four signals an oncall actually needs: API 5xx rate, backend process
+# down, Redis down, Postgres down.
+#
+# HONESTY NOTE — every `expr` below targets a metric that is ACTUALLY scraped
+# (verified against prometheus.yml scrape_configs + prometheus-metrics.ts):
+#   - http_requests_total{route,status,method}  (prometheus-metrics.ts:23-28)
+#   - up{job="musaium-backend"}                  (Prometheus-synthesised, prometheus.yml:25)
+#   - musaium_guardrail_budget_redis_fallback_total (prometheus-metrics.ts:296-300)
+# We deliberately emit NO alert on a non-scraped metric (an alert that can never
+# fire is worse than none — false coverage).
+#
+# POSTGRES-DOWN COVERAGE (transitive, documented design decision — spec R4 /
+# design D1): there is NO Postgres exporter and no Postgres up-series in the
+# scrape pipeline, and the embeddings-count gauge is fail-OPEN (keeps its
+# previous value on a DB error) so it MUST NOT be used as a DB-down probe.
+# Instead, Postgres-down is covered TRANSITIVELY by `backend_target_down` below:
+# the backend /api/health depends on the DB, so if Postgres is unreachable the
+# container healthcheck fails → the scrape fails → up==0 → backend_target_down
+# fires. A direct Postgres up-probe would require deploying a dedicated Postgres
+# metrics exporter container (parked, spec Q2 default (a)).
+
+groups:
+  - name: api-health
+    interval: 30s
+    rules:
+      # R1 — API 5xx error-rate (warning tier). Ratio of 5xx responses over all
+      # requests, 5m window. clamp_min on the denominator avoids 0/0 NaN at cold
+      # start / quiet periods (repo pattern, chat-latency.yml:50).
+      - alert: api_5xx_rate_high
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total[5m])), 1e-9)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: api
+          owner: tim
+        annotations:
+          summary: "API 5xx error rate above 5% (5m window)"
+          description: |
+            {{ $value | humanizePercentage }} of API requests returned HTTP 5xx
+            over the last 5 minutes (warning threshold 5%). A sustained
+            server-error fraction this high is well above any healthy baseline.
+
+            First action: open the Grafana dashboard and inspect 5xx by route to
+            find the failing endpoint, then check backend logs / Sentry for the
+            stack trace. Critical alert (api_5xx_rate_critical) fires at 20%.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+
+      # R1 — API 5xx error-rate (critical tier). A fifth of all requests erroring
+      # = a user-visible outage. Same 5m window / clamp_min denominator.
+      - alert: api_5xx_rate_critical
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total[5m])), 1e-9)
+          > 0.20
+        for: 5m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: api
+          owner: tim
+        annotations:
+          summary: "API 5xx error rate above 20% (5m window) — user-visible outage"
+          description: |
+            {{ $value | humanizePercentage }} of API requests returned HTTP 5xx
+            over the last 5 minutes (critical threshold 20%). A fifth of traffic
+            erroring is a user-visible outage — page now.
+
+            Check backend logs / Sentry, the LLM provider status, and the
+            backend_target_down alert (the backend may be flapping). Mitigation
+            pré-launch V1: `git revert <merge-sha>` of the offending deploy.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+
+      # R2 — backend target down (critical). `up` is the Prometheus-synthesised
+      # per-target series (1 = last scrape ok, 0 = failed). Job name verified
+      # `musaium-backend` (prometheus.yml:25). for: 2m rides out a normal rolling
+      # restart (deploy does `up -d --timeout 30 backend` + a healthcheck loop)
+      # while still paging fast on a real outage. Cf. NodeExporterDown for: 3m.
+      #
+      # This alert also TRANSITIVELY covers Postgres-down: /api/health depends on
+      # the DB, so a Postgres outage fails the container healthcheck → scrape
+      # fails → up==0 → this fires (see file header).
+      - alert: backend_target_down
+        expr: up{job="musaium-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: musaium-backend
+          owner: tim
+        annotations:
+          summary: "Backend target down — Prometheus cannot scrape musaium-backend"
+          description: |
+            Prometheus has not scraped the musaium-backend target ({{ $labels.instance }})
+            for over 2 minutes. The backend process is down, unhealthy, or
+            unreachable. This ALSO covers Postgres-down transitively: /api/health
+            depends on the database, so a Postgres outage fails the healthcheck →
+            the container goes unhealthy → this alert fires.
+
+            First action: ssh the VPS and `docker compose ps backend` +
+            `docker compose logs --tail=100 backend`. If the DB is the cause,
+            check the postgres container and connectivity.
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/museum-backend/deploy/rollback.sh"
+
+      # R3 — Redis-down proxy (warning, INDIRECT). There is NO redis_exporter
+      # deployed (the redis:7-alpine container has a Docker healthcheck that
+      # Prometheus does NOT scrape). This alert uses the scraped app-level
+      # fail-closed counter `musaium_guardrail_budget_redis_fallback_total`
+      # (prometheus-metrics.ts:296-300), which increments when the guardrail
+      # budget path reads Redis and finds it unreachable/corrupted.
+      #
+      # HONESTY: this is an INDIRECT PROXY, not a `redis_up == 0` probe. It only
+      # increments when a guardrail-budget read is attempted, so it can LAG a
+      # Redis outage that happens during a quiet chat period. severity=warning
+      # (not critical) because the app fails-closed when Redis is down — degraded
+      # guardrail budgeting, not a full outage. A direct redis_up probe would
+      # need a redis_exporter container (parked, spec Q2 default (a)).
+      - alert: redis_backend_fallback_active
+        expr: |
+          sum(rate(musaium_guardrail_budget_redis_fallback_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          subsystem: redis
+          owner: tim
+        annotations:
+          summary: "Guardrail-budget Redis fallback active (indirect Redis-down proxy)"
+          description: |
+            The backend has been falling back from Redis on the guardrail-budget
+            path for over 5 minutes (rate {{ $value | printf "%.3f" }}/s). This is
+            an INDIRECT PROXY for "Redis unavailable", NOT a direct redis_up probe
+            — it only increments when the guardrail-budget code reads Redis and
+            finds it unreachable or corrupted, so it can lag a real outage during
+            quiet periods. The app fails-closed, so guardrail budgeting is
+            degraded but the service stays up.
+
+            First action: ssh the VPS and `docker compose ps redis` +
+            `docker compose logs --tail=100 redis`; check memory/eviction.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
