@@ -1,5 +1,7 @@
 # Sentry P0 triage — pre-V1 zero-P0 gate
 
+> **Statut au 2026-05-26 : triage NON exécutée.** Deadline 2026-05-19 manquée. `docs/SENTRY_KNOWN_NOISE.md` absent. Action toujours en attente.
+
 **Audience:** Musaium founder (sole Sentry org owner + acting on-call).
 **Goal:** Drive open P0 (highest-severity) Sentry issues to **zero** before feature freeze at 2026-05-19 EOD, so V1 launch (2026-06-01) ships with no known critical regression.
 **Source of truth for severity classification:** internal Sentry triage rubric (below §3) — aligned with [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §3 step "Classify".
