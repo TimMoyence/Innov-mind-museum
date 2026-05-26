@@ -104,7 +104,7 @@ Tu photographies une œuvre (en musée) ou un monument/bâtiment (en ville) → 
 >
 > **À COCHER [x] / recadrer (pass-2)** : C6.5 (503 wording fail-closed déjà correct) · "Sentry `event.tags` walked by scrubEvent" (NEXT — déjà fait, claim "bypassed" faux) · C9.8 Presidio (overlay `docker-compose.presidio.yml` EXISTE → recadrer "activation env-only différée", pas "manque docker-compose").
 >
-> **Anchors/sentinels cassés (UFR-024)** : `c4b-sparql-counts.md`/`c2-license-uris.md` (8 réfs code mortes) · `doc-anchor-check.mjs` cité dans CLAUDE.md **n'existe pas** · LOT 4 stability = commits orphelins non-ancêtres, jamais mergé sur dev (note `LOT-P0-STABILITY-CLOSURE.md` retirée 2026-05-26 ; actions ops → `OPS_DEPLOYMENT.md` §28) · `_rtl-style-audit.ts` ne couvre pas les border-radius (RTL bug `SwipeableConversationCard` non-flaggé) · 2 Maestro stale actifs sur shards CI (`audio-recording-flow.yaml`, `onboarding-flow.yaml`).
+> **Anchors/sentinels cassés (UFR-024)** : `c4b-sparql-counts.md`/`c2-license-uris.md` (8 réfs code mortes) · `doc-anchor-check.mjs` — sentinel non implémenté (backlog) ; la citation dans CLAUDE.md a été retirée (plus de claim faux) · LOT 4 stability = commits orphelins non-ancêtres, jamais mergé sur dev (note `LOT-P0-STABILITY-CLOSURE.md` retirée 2026-05-26 ; actions ops → `OPS_DEPLOYMENT.md` §28) · `_rtl-style-audit.ts` ne couvre pas les border-radius (RTL bug `SwipeableConversationCard` non-flaggé) · 2 Maestro stale actifs sur shards CI (`audio-recording-flow.yaml`, `onboarding-flow.yaml`).
 
 ### P0.A — Security & PII (dev ~20-25h)
 

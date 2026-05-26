@@ -175,7 +175,7 @@ T+25m   Pull + decrypt + restore:
           pg_restore --no-owner --no-acl --jobs=4 \
             --dbname=postgres://recover@new-host:5432/musaium recovery.pgdump
 T+45m   Re-apply pending migrations newer than the backup:
-          docker compose run --rm backend node dist/scripts/run-migrations.js
+          docker compose run --rm backend node dist/src/data/db/run-migrations.js
 T+50m   Repoint backend env (DB_HOST / DATABASE_URL) at recovery DB
 T+55m   Smoke test: curl /api/health; login flow; one chat message
 T+60m   Resume traffic — RTO 1h target met.

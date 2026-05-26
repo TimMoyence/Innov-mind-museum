@@ -124,7 +124,7 @@ Breaker is a **detective** layer, not a safety layer — every individual call s
 - Alert `GuardrailBlockRateSpike` (block_rate > 5 % / 5 min) — warning.
 - Support inbox spike of "Musaium censored me" tickets.
 - Spike in `category=off_topic` or `category=religious` blocks in audit log.
-- Bias alert `BiasLocalBlockRateDrift` for a specific locale (see [`alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml)).
+- Bias alert `BiasLocalBlockRateDrift` for a specific locale (see [`llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml)).
 
 ### Orient
 ```bash
@@ -285,7 +285,7 @@ Per [design.md § 11.4](../../.claude/skills/team/team-state/2026-05-12-llm-guar
 ## See also
 
 - [`docs/OPS_INCIDENT_LLM_GUARD.md`](../OPS_INCIDENT_LLM_GUARD.md) — long-form S1 surgical playbook.
-- [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml) — Prometheus alert rules referenced above.
+- [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml) — Prometheus alert rules referenced above.
 - [`docs/operations/POSTMORTEM_TEMPLATE.md`](../operations/POSTMORTEM_TEMPLATE.md) — when and how to write a postmortem.
 - [`docs/operations/CAPACITY_PLAN_100K.md`](../operations/CAPACITY_PLAN_100K.md) — capacity headroom assumptions.
 - [`docs/operations/PENTEST_SCOPE.md`](../operations/PENTEST_SCOPE.md) — annual pentest scope template.

@@ -197,13 +197,13 @@ appends `_bucket` / `_count` / `_sum` suffixes for histograms).
 |---|---|
 | `musaium_rerank_latency_ms` | *(none — safe to rename now)* |
 | `artwork_embeddings_count` | `infra/grafana/dashboards/visual-compare.json` |
-| `musaium_guardrail_decisions_total` | `guardrail-fairness.json`, `alerting/llm-cost.yml`*, `docs/observability/alerts-llm-guard.yml` |
+| `musaium_guardrail_decisions_total` | `guardrail-fairness.json`, `alerting/llm-cost.yml`*, `infra/grafana/alerting/llm-guard-bias.yml` |
 | `musaium_guardrail_category_blocks_total` | `guardrail-fairness.json` |
 | `musaium_guardrail_budget_redis_fallback_total` | `alerting/llm-cost.yml` |
 | `musaium_llm_cost_circuit_breaker_state` | `alerting/llm-cost.yml` |
-| `musaium_llm_guard_circuit_breaker_state` | `alerting/llm-cost.yml`, `docs/observability/alerts-llm-guard.yml` |
-| `musaium_llm_guard_circuit_breaker_skips_total` | `alerting/llm-cost.yml`, `docs/observability/alerts-llm-guard.yml` |
-| `musaium_llm_guard_scan_duration_seconds` | `docs/observability/alerts-llm-guard.yml` |
+| `musaium_llm_guard_circuit_breaker_state` | `alerting/llm-cost.yml`, `infra/grafana/alerting/llm-guard-bias.yml` |
+| `musaium_llm_guard_circuit_breaker_skips_total` | `alerting/llm-cost.yml`, `infra/grafana/alerting/llm-guard-bias.yml` |
+| `musaium_llm_guard_scan_duration_seconds` | `infra/grafana/alerting/llm-guard-bias.yml` |
 | `musaium_llm_cost_eur_per_hour` | *(not renamed — F4)* |
 | `musaium_tenant_rate_limit_rejects_total` | *(none found)* |
 | `musaium_llm_guard_circuit_breaker_trips_total` | *(none found)* |
@@ -256,7 +256,7 @@ risk (lowest first):
 |---|---|---|---|
 | 1 | `musaium_rerank_latency_ms` → `rerank_duration_seconds` (+ second buckets) | none | **low** |
 | 2 | `artwork_embeddings_count` → `artwork_embeddings` | `visual-compare.json` | low |
-| 3 | Drop `musaium_` from the 12 remaining prefixed metrics (F2 Option A) | `guardrail-fairness.json`, `alerting/llm-cost.yml`, `alerts-llm-guard.yml` | **medium** |
+| 3 | Drop `musaium_` from the 12 remaining prefixed metrics (F2 Option A) | `guardrail-fairness.json`, `alerting/llm-cost.yml`, `llm-guard-bias.yml` | **medium** |
 
 Each step: rename the `name:` in `prometheus-metrics.ts` **and** every PromQL
 reference in the same commit, bump the dashboard `schemaVersion`/keep the `uid`

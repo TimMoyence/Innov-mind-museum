@@ -173,7 +173,7 @@ Drill cadence : quarterly post-launch ; before each B2B GA milestone.
 ## See also
 
 - [`docs/CAPACITY_PLAN.md`](../CAPACITY_PLAN.md) — backend / PG / Redis / CDN tier table (request-per-second axis).
-- [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml) — alerts that fire when capacity is breached.
+- [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml) — alerts that fire when capacity is breached.
 - [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md) — what to do when those alerts fire.
 - [`docs/compliance/FAIRNESS_METRICS_PLAN.md`](../compliance/FAIRNESS_METRICS_PLAN.md) — bias monitoring throughput considerations.
 - [design.md §9.4](../../.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/design.md) — per-provider capacity table (source of throughput numbers).
