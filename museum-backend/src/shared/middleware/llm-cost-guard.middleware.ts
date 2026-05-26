@@ -106,8 +106,14 @@ const toHttpAppError = (err: LlmCostGuardError): AppError =>
 /**
  * Asserts per-user daily $/cap + global kill-switch BEFORE paid LLM calls (P0-4, audit 2026-05-12).
  * Mounted on chat routes triggering paid OpenAI/DeepSeek/Google. Anonymous calls bypass per-user
- * cap but kill-switch still applies. Fails OPEN when counter unwired (dev/test); prod boot
- * sentinel requires Redis so this branch never runs in prod.
+ * cap but kill-switch still applies.
+ *
+ * Unwired-counter behaviour (W1-C2, run 2026-05-26-kr-domains) splits on `NODE_ENV`:
+ *   - production → fail-CLOSED: `next(AppError 503 COST_GUARD_UNAVAILABLE)` +
+ *     `logger.error('llm_cost_guard_not_wired_in_production')`. Defense-in-depth — the
+ *     boot guard `validateCostGuardRedis` normally prevents booting prod without the
+ *     Redis counter, so this branch only fires on a future wiring drift (belt + braces).
+ *   - dev/test → fail-OPEN `next()` (unchanged): local dev runs without Redis.
  *
  * I-FIX3 (a)/(b): charges a route-keyed worst-case fan-out estimate
  * ({@link FANOUT_COST_USD} via {@link classifyFanout}) instead of one flat
@@ -122,6 +128,20 @@ export const llmCostGuard: RequestHandler = (
   next: NextFunction,
 ): void => {
   if (!llmCostCounter) {
+    // W1-C2: in production an unwired counter means paid LLM calls would run with
+    // NO per-user cap — fail-CLOSED rather than degrade silently. dev/test keep the
+    // historical fail-OPEN so local dev needs no Redis.
+    if (env.nodeEnv === 'production') {
+      logger.error('llm_cost_guard_not_wired_in_production');
+      next(
+        new AppError({
+          message: 'LLM cost guard unavailable',
+          statusCode: 503,
+          code: 'COST_GUARD_UNAVAILABLE',
+        }),
+      );
+      return;
+    }
     next();
     return;
   }

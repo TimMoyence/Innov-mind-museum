@@ -164,6 +164,37 @@ export function validateProductionEnv(env: AppEnv): void {
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+
+  // W1-C2 (run 2026-05-26-kr-domains): fail-CLOSED at boot when the per-user LLM
+  // cost guard is configured but its Redis counter cannot exist. Placed AFTER
+  // validateRedis so a misconfigured-but-present Redis throws its specific error
+  // first (no masking).
+  validateCostGuardRedis(env);
+}
+
+/**
+ * W1-C2 — fail-CLOSED at boot if the per-user daily LLM cost cap is configured
+ * (`OPENAI_USER_DAILY_USD_CAP > 0`, the env.ts default is 0.5) but the Redis cache
+ * is disabled (`REDIS_URL` unset → `env.cache` undefined). The cap is enforced via
+ * the Redis-backed `llmCostCounter`, wired only inside `if (env.cache?.enabled)`;
+ * without Redis the counter stays null and `llmCostGuard` fails OPEN, silently
+ * serving paid LLM calls with NO per-user cap. Serving uncapped paid calls in prod
+ * is unacceptable (mission "the bill stops running away"), so we block the boot.
+ *
+ * `userDailyCapUsd === 0` is an explicit operator opt-out and is tolerated. Only
+ * invoked from `validateProductionEnv` (production-only).
+ *
+ * @param env
+ */
+function validateCostGuardRedis(env: AppEnv): void {
+  if (env.llm.costGuard.userDailyCapUsd > 0 && !env.cache?.enabled) {
+    throw new Error(
+      'LLM cost guard is configured (OPENAI_USER_DAILY_USD_CAP > 0) but Redis cache ' +
+        'is disabled (REDIS_URL unset) in production. The per-user daily USD cap cannot ' +
+        'be enforced without the Redis counter — set REDIS_URL or set ' +
+        'OPENAI_USER_DAILY_USD_CAP=0 to explicitly disable the cap.',
+    );
+  }
 }
 
 function validateExportPseudonymSalt(env: AppEnv): void {

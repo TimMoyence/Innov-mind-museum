@@ -65,6 +65,18 @@ export class CostTripStrategy implements CircuitTripStrategy {
     this.dailySpend = { day: '', cents: 0 };
   }
 
+  /**
+   * W1-C1 transient reset — clears ONLY the hourly spike window, PRESERVING the
+   * durable daily UTC accumulator. Called by `ThreeStateCircuit` on probe-success
+   * recovery (HALF_OPEN → CLOSED): the recovered breaker must not be pre-tripped by
+   * a stale hourly spike, but money already spent today must keep counting against
+   * the daily cap (else recovery would refund the full daily headroom each cooldown
+   * cycle). Full {@link reset} (kill-switch / manual) still wipes both.
+   */
+  resetTransient(): void {
+    this.hourlyWindow = [];
+  }
+
   getHourlySpendCents(now: number): number {
     this.pruneExpired(now);
     return this.computeHourlySpend();
