@@ -40,6 +40,9 @@ const userText = (result: ReturnType<typeof buildOrchestratorMessages>): string 
 describe('no-museum geolocated chat path (museumId === null)', () => {
   it('emits a coarse <visitor_context> for an outdoor monument when location is resolved (R8/AC-NM-1)', () => {
     const resolvedLocation = makeResolvedLocation({
+      // Coarse consent → city only ships; the quartier MUST NOT escalate (REQ-5).
+      consentGranularity: 'coarse',
+      reverseGeocodeNeighbourhood: null,
       reverseGeocodeCoarse: 'Bordeaux, France',
       reverseGeocode: '12 Place des Quinconces, 33000 Bordeaux, France',
       nearbyMuseums: [makeNearbyMuseum({ id: 7, name: 'CAPC', distance: 800 })],
@@ -86,7 +89,12 @@ describe('no-museum geolocated chat path (museumId === null)', () => {
     const withLocation = buildOrchestratorMessages(
       makeNullMuseumInput({
         text: 'Hello',
-        resolvedLocation: makeResolvedLocation({ reverseGeocodeCoarse: 'Lyon, France' }),
+        resolvedLocation: makeResolvedLocation({
+          // Coarse consent → city only (no quartier escalation, REQ-5).
+          consentGranularity: 'coarse',
+          reverseGeocodeNeighbourhood: null,
+          reverseGeocodeCoarse: 'Lyon, France',
+        }),
       }),
     );
     expect(userText(withLocation)).toContain('Lyon, France');
@@ -167,6 +175,9 @@ describe('no-museum geolocated chat path — A-01 raw GPS never reaches the LLM 
       makeNullMuseumInput({
         text: 'What is this monument?',
         resolvedLocation: makeResolvedLocation({
+          // Coarse consent → city only ships; quartier MUST NOT escalate (REQ-5).
+          consentGranularity: 'coarse',
+          reverseGeocodeNeighbourhood: null,
           reverseGeocodeCoarse: 'Bordeaux, France',
           reverseGeocode: '12 Place des Quinconces, 33000 Bordeaux, France',
         }),

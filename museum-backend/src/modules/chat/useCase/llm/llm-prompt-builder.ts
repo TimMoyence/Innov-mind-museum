@@ -211,12 +211,18 @@ const buildVisitorContextLine = (input: OrchestratorInput): string => {
   if (rl.isInsideMuseum && rl.nearbyMuseums.length > 0) {
     return `<visitor_context>The visitor is currently inside or very near: ${rl.nearbyMuseums[0].name}. Any artwork photo is most likely from this museum's collection.</visitor_context>`;
   }
-  if (rl.reverseGeocodeCoarse) {
-    // GDPR — only coarse (city+country) ever ships to LLM. Full street-level
-    // stays backend-only for analytics/audit (see location-resolver.ts).
+  // GDPR 3-level granularity (cycle 1.5) — `full` ships the neighbourhood (city +
+  // quartier, degrading to city when no quartier, REQ-4a/REQ-6); `coarse` ships
+  // the city only (REQ-5), never escalating to the quartier. Both are coarse
+  // labels — street-level / coordinates stay backend-only (see location-resolver.ts).
+  const placeLabel =
+    rl.consentGranularity === 'full'
+      ? (rl.reverseGeocodeNeighbourhood ?? rl.reverseGeocodeCoarse)
+      : rl.reverseGeocodeCoarse;
+  if (placeLabel) {
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
     const nearbySuffix = nearbyList ? ` Nearby museums: ${nearbyList}.` : '';
-    return `<visitor_context>The visitor is outdoors in: ${rl.reverseGeocodeCoarse}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
+    return `<visitor_context>The visitor is outdoors in: ${placeLabel}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
   }
   if (rl.nearbyMuseums.length > 0) {
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);

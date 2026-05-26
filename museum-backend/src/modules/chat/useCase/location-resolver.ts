@@ -27,8 +27,11 @@ export interface LocationResolverDeps {
   reverseGeocode?: CachedReverseGeocodeFn;
 }
 
+/** Geo-consent scopes the resolver evaluates: full precision and coarse-only. */
+export type LocationConsentScope = 'location_to_llm' | 'location_coarse_to_llm';
+
 export interface LocationConsentChecker {
-  isGranted(userId: number, scope: 'location_to_llm'): Promise<boolean>;
+  isGranted(userId: number, scope: LocationConsentScope): Promise<boolean>;
 }
 
 /**
@@ -90,6 +93,8 @@ export class LocationResolver {
         nearestMuseumDistance,
         reverseGeocode: null,
         reverseGeocodeCoarse: null,
+        reverseGeocodeNeighbourhood: null,
+        consentGranularity: 'full',
         isInsideMuseum,
       };
       // Cache for 20min (user won't move much inside a museum)
@@ -103,10 +108,12 @@ export class LocationResolver {
     // wiring, so Nominatim is hit at most once per ~111m tile per TTL window).
     let reverseGeocode: string | null = null;
     let reverseGeocodeCoarse: string | null = null;
+    let reverseGeocodeNeighbourhood: string | null = null;
     const reverseResult = await this.reverseGeocode(lat, lng);
     if (reverseResult) {
       reverseGeocode = buildFineReverseGeocode(reverseResult);
       reverseGeocodeCoarse = buildCoarseReverseGeocode(reverseResult);
+      reverseGeocodeNeighbourhood = buildNeighbourhoodReverseGeocode(reverseResult);
     }
 
     return {
@@ -114,6 +121,8 @@ export class LocationResolver {
       nearestMuseumDistance,
       reverseGeocode,
       reverseGeocodeCoarse,
+      reverseGeocodeNeighbourhood,
+      consentGranularity: 'full',
       isInsideMuseum,
     };
   }
@@ -160,6 +169,29 @@ function buildCoarseReverseGeocode(result: {
 }
 
 /**
+ * Builds the GDPR-safe neighbourhood label emitted under full `location_to_llm`
+ * consent: `<neighbourhood ?? suburb>, <city>` (D-FIELD). Finer than coarse but
+ * strictly above street level — NEVER `road` / house number / postcode /
+ * coordinate (REQ-10). When no quartier field is present it degrades to the
+ * coarse city composition (REQ-4a/4b), so a full-consent user never gets less
+ * than coarse and there is never a dangling separator.
+ */
+function buildNeighbourhoodReverseGeocode(result: {
+  name?: string;
+  address: { neighbourhood?: string; suburb?: string; city?: string; country?: string };
+}): string | null {
+  const hood = result.address.neighbourhood ?? result.address.suburb ?? null;
+  // REQ-4a/4b: no quartier → mirror the coarse city composition (city + country,
+  // may be null). A full-consent user thus never gets LESS than coarse.
+  if (!hood) return buildCoarseReverseGeocode(result);
+  const city = result.address.city ?? null;
+  // Quartier present → `<quartier>, <city>` (no country, finer than coarse). City
+  // absent is unusual at this granularity; fall back to the quartier alone (no
+  // dangling separator).
+  return city ? `${hood}, ${city}` : hood;
+}
+
+/**
  * Plain CacheService objects expose functions like `get`, never `cache` /
  * `reverseGeocode`, so presence of either sentinel key means it's a deps bag.
  */
@@ -171,8 +203,8 @@ function isDeps(arg: CacheService | LocationResolverDeps | undefined): arg is Lo
 export interface ResolveLocationOptions {
   /**
    * Authenticated user id. If omitted (anonymous chat) or if the consent
-   * checker denies the `location_to_llm` scope, the function returns
-   * `undefined` and NO location is propagated into the LLM prompt.
+   * checker denies BOTH geo scopes, the function returns `undefined` and NO
+   * location is propagated into the LLM prompt.
    */
   userId?: number;
   /** GDPR consent port. If omitted, consent gating is skipped (legacy paths). */
@@ -180,10 +212,17 @@ export interface ResolveLocationOptions {
 }
 
 /**
- * GDPR gate: when a `consentChecker` is supplied, the resolver is only invoked
- * when the user has actively granted the `location_to_llm` scope. Without
- * consent this function returns `undefined` (equivalent to the user not
- * sharing a location at all), so the LLM prompt carries no geolocation signal.
+ * GDPR gate (3-level consent). When a `consentChecker` is supplied, the two geo
+ * scopes are evaluated into an effective level:
+ *   - `location_to_llm` granted        → `full`  (neighbourhood + city)
+ *   - else `location_coarse_to_llm`     → `coarse` (city + country)
+ *   - neither (or anonymous, or checker error) → `none` → `undefined`
+ * `full` dominates, so the coarse scope is never queried when the full scope is
+ * granted (single round-trip, NFR-5). On `none` the function returns `undefined`
+ * BEFORE any reverse-geocode, so the LLM prompt carries no geolocation signal —
+ * not even the museum name (amendment M2: a "none" user never leaks "their"
+ * museum). A checker error is treated as `none` (fail-closed, NFR-6/D-FAILMODE).
+ * Without a checker (legacy paths) the level defaults to `full` (D-LEGACY).
  */
 export async function resolveLocationForMessage(
   resolver: LocationResolver | undefined,
@@ -193,15 +232,28 @@ export async function resolveLocationForMessage(
 ): Promise<ResolvedLocation | undefined> {
   if (!resolver || !rawLocation) return undefined;
 
+  let granularity: 'coarse' | 'full' = 'full';
   if (options.consentChecker) {
-    if (!options.userId) return undefined;
-    const allowed = await options.consentChecker.isGranted(options.userId, 'location_to_llm');
-    if (!allowed) return undefined;
+    if (!options.userId) return undefined; // REQ-2 anonymous → none
+    try {
+      const full = await options.consentChecker.isGranted(options.userId, 'location_to_llm');
+      // full dominates → short-circuit the coarse query (REQ-1, NFR-5).
+      const coarse = full
+        ? true
+        : await options.consentChecker.isGranted(options.userId, 'location_coarse_to_llm');
+      if (!full && !coarse) return undefined; // REQ-1 none → no Nominatim call
+      granularity = full ? 'full' : 'coarse';
+    } catch {
+      // D-FAILMODE / NFR-6: an error in the consent store must NOT leak a
+      // location. Treat as `none` (fail-closed) and emit nothing.
+      return undefined;
+    }
   }
 
   const coords = parseLocationString(rawLocation);
   if (!coords) return undefined;
   const resolved = await resolver.resolve(coords.lat, coords.lng);
+  resolved.consentGranularity = granularity;
   if (resolved.nearbyMuseums.length > 0 && session.visitContext) {
     session.visitContext.nearbyMuseums = resolved.nearbyMuseums;
   }
