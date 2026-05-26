@@ -1,6 +1,6 @@
 # ADR-048: Guardrail strategy interface — `GuardrailProvider` as the perennial port
 
-> **Status:** Proposed (will become Accepted on Phase 0 commit fire)
+> **Status:** Accepted — implemented (`guardrail-provider.port.ts`)
 > **Date:** 2026-05-12
 > **Decider:** Tim (founder/tech lead)
 > **Supersedes (partial):** ADR-015 (LLM-Judge Guardrail V2) — narrows its `AdvancedGuardrail` port to a single-provider abstraction; ADR-048 generalises to a strategy pattern
@@ -174,9 +174,9 @@ See `team-state/2026-05-12-llm-guard-perennial-10y-design/phase-0-draft/RENAME-P
 
 ## Sign-off criteria for "Accepted"
 
-- [ ] `pnpm tsc --noEmit` passes (BE)
-- [ ] `pnpm test` scoped to `tests/unit/chat/llm-guard-adapter.test.ts` + `tests/unit/chat/guardrail-evaluation.service.test.ts` passes
-- [ ] `cd museum-frontend && npm run check:openapi-types` clean (no FE diff expected, port stays internal)
-- [ ] `docs/AI_SAFETY.md` ships in the same commit (anchor doctrine)
-- [ ] User explicit "go" on the diff
-- [ ] User explicit "go" on push (separate gate per `feedback_auto_commit_end_feature`)
+- [x] `pnpm tsc --noEmit` passes (BE)
+- [x] `pnpm test` scoped to `tests/unit/chat/llm-guard-adapter.test.ts` + `tests/unit/chat/guardrail-evaluation.service.test.ts` passes
+- [x] `cd museum-frontend && npm run check:openapi-types` clean (no FE diff expected, port stays internal)
+- [x] `docs/AI_SAFETY.md` ships in the same commit (anchor doctrine)
+- [x] User explicit "go" on the diff
+- [x] User explicit "go" on push (separate gate per `feedback_auto_commit_end_feature`)

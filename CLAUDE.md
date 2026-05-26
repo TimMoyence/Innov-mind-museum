@@ -25,7 +25,7 @@ Réécrites chaque sprint (4 sem). Snapshots = `git log -- docs/ROADMAP_*.md`. C
 ```bash
 pnpm install                     # install deps
 pnpm dev                         # dev server with nodemon (port 3000)
-pnpm lint                        # typecheck (tsc --noEmit)
+pnpm lint                        # ESLint + lint:test-discipline + tsc --noEmit
 pnpm test                        # all Jest tests
 pnpm test -- --testPathPattern=tests/unit/   # run specific test folder
 pnpm test -- -t "test name"      # run single test by name
@@ -51,7 +51,7 @@ docker compose -f docker-compose.dev.yml up -d   # DB on localhost:5433, Adminer
 ```bash
 npm install                      # install deps
 npm run dev                      # Expo dev server
-npm run lint                     # typecheck (tsc --noEmit)
+npm run lint                     # ESLint + tsc --noEmit
 npm test                         # Node.js test runner (compiles to .test-dist/ then runs)
 npm run generate:openapi-types   # regenerate API types from backend OpenAPI spec
 npm run check:openapi-types      # verify generated types are up to date
@@ -115,7 +115,7 @@ Auto-generated/massive/pure-data. Reading full wastes tokens.
 | `museum-frontend/shared/api/generated/openapi.ts` | ~115 KB / ~4 800 lines | Auto-generated from backend OpenAPI spec | `Grep` for specific type/operation name, or read ±50 lines with `offset`/`limit` |
 | `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
 | `museum-backend/src/data/db/migrations/*.ts` (~64 files) | ~5 KB each | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
-| `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
+| `museum-backend/src/modules/daily-art/adapters/secondary/catalog/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.
@@ -331,7 +331,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (32097 symbols, 51503 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (32242 symbols, 51687 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

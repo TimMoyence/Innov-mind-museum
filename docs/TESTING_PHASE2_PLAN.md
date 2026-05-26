@@ -6,7 +6,7 @@ map) and `TESTING_DISCIPLINE_PROPOSAL.md` (automation rule UFR-021).
 > **Status (audit 2026-05-19) — STILL THE PENDING PLAN.** Phase 1 landed
 > 2026-05-17 (commit `70f5ce2f9`): API smoke runner, migration sync sentinel,
 > auth/onboarding/nav Maestro flows, AND the UFR-021 sentinel
-> (`museum-frontend/scripts/sentinels/screen-test-coverage.mjs` +
+> (`scripts/sentinels/screen-test-coverage.mjs (repo root)` +
 > `coverage-baseline.json` + UFR-021 prose in CLAUDE.md + JSON entry).
 > The UFR-021 **enforcement wiring** is NOT done: pre-push Gate, `ci-cd-mobile.yml`
 > step, and `sentinel-mirror.yml` mirror are still un-wired (verified 0 refs in
@@ -36,7 +36,7 @@ map) and `TESTING_DISCIPLINE_PROPOSAL.md` (automation rule UFR-021).
   stack deep links.
 - **UFR-021 proposal** — `docs/TESTING_DISCIPLINE_PROPOSAL.md`. Sentinel
   spec + prose. **Update 2026-05-19:** sentinel itself shipped
-  (`museum-frontend/scripts/sentinels/screen-test-coverage.mjs` +
+  (`scripts/sentinels/screen-test-coverage.mjs (repo root)` +
   `coverage-baseline.json` + CLAUDE.md/JSON UFR-021); only the enforcement
   wiring (pre-push Gate, CI step, sentinel-mirror) remains — pending user
   validation. Proposal status flipped to ACCEPTED-PARTIAL.
@@ -116,7 +116,7 @@ Android matrix per `ci-cd-mobile.yml` — add the auth flows there too.
 ### UFR-021 implementation
 
 Per `docs/TESTING_DISCIPLINE_PROPOSAL.md` (status verified 2026-05-19):
-1. [x] `museum-frontend/scripts/sentinels/screen-test-coverage.mjs` (shipped, wired as `pnpm sentinel:screen-test-coverage`) + `coverage-baseline.json` bootstrapped
+1. [x] `scripts/sentinels/screen-test-coverage.mjs (repo root)` (shipped, wired as `pnpm sentinel:screen-test-coverage`) + `coverage-baseline.json` bootstrapped
 2. [ ] Add to `.husky/pre-push` as Gate 19 — **pending (user validation)**
 3. [x] UFR-021 block in `CLAUDE.md` + JSON entry in `.claude/agents/shared/user-feedback-rules.json`
 4. [ ] Add PR template checkbox — **pending (Phase 2)**

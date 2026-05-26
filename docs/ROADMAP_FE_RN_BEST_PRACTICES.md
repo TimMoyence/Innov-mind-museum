@@ -66,7 +66,7 @@ Référence transverse : `CLAUDE.md` § Architecture (mobile section) pour patte
 
 ### F11 — Coverage uplift Phase 9 thresholds
 
-- [x] Thresholds 91 / 78 / 80 / 91 enforced (cf. CLAUDE.md §Coverage uplift gates).
+- [x] Thresholds 91 / 78 / 80 / 91 enforced (`museum-frontend/jest.config.js:61-64`).
 
 ### F12 — Expo prebuild + Pods committed
 

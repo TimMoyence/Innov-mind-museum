@@ -7,7 +7,7 @@
 
 ## Context
 
-The rate-limit middleware (`museum-backend/src/helpers/middleware/rate-limit.middleware.ts`) used a Redis-backed store in production for distributed limits. When the Redis call rejected (timeout, connection refused, eviction), the middleware silently fell back to a per-instance in-memory bucket and let the request through.
+The rate-limit middleware (`museum-backend/src/shared/middleware/rate-limit.middleware.ts`) used a Redis-backed store in production for distributed limits. When the Redis call rejected (timeout, connection refused, eviction), the middleware silently fell back to a per-instance in-memory bucket and let the request through.
 
 In a single-instance deployment that is acceptable. In a multi-instance load-balanced deployment (current prod), every replica gets its own counter — distributed limits are effectively disabled during the Redis incident, while the misleading log line `rate_limit_redis_fail_closed_fallback` claimed otherwise. Audit 2026-04-30 finding **F2 (HIGH)**: this is a fail-open control mislabelled as fail-closed.
 

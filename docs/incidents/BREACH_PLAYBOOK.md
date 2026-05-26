@@ -325,7 +325,7 @@ Submit via https://www.cnil.fr/fr/notifier-une-violation-de-donnees-personnelles
 
 > **Notification de violation de données personnelles**
 >
-> **Identité du responsable de traitement**: Musaium SAS (TBD — confirm legal entity name + SIREN + RCS)
+> **Identité du responsable de traitement**: Tim Moyence — Entrepreneur Individuel (InnovMind / Musaium), France
 >
 > **DPO / point de contact**: [Nom, fonction, email, téléphone — TBD]
 >

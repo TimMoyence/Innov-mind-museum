@@ -486,7 +486,7 @@ Plus de skip "enterprise only" (en mode unique tout run a un documenter pass —
 ```
 1. Update KB :
    - velocity-metrics.json
-   - agent-roi.json
+   - agent-performance.json
    - error-patterns.json (si nouveau pattern)
 
 2. Cost delta (T1.1 ROADMAP_TEAM — KR1) :

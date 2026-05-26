@@ -11,6 +11,8 @@ The 2026-04-30 audit flagged the React Native MFA screens as built but unwired:
 - `museum-frontend/features/auth/screens/MfaChallengeScreen.tsx` (TOTP / recovery code challenge)
 - `museum-frontend/features/auth/screens/MfaWarningBanner.tsx` (admin warning-window banner)
 
+> **Amendment 2026-05-26** — Phase 1 (route wire) partially delivered: `app/(stack)/mfa-enroll.tsx` exists. `app/(stack)/mfa-challenge.tsx` is still absent. Phases 2-6 (login flow, settings, banner, i18n, tests) remain deferred per the post-launch+30d decision below.
+
 Backend MFA shipped (R16 + the 2026-04-30 OIDC nonce work in commit `76e860d4`). The screens already consume `mfaService` from `infrastructure/mfaApi.ts`. What's missing is the wiring: route files in `app/(stack)/`, login flow detection of `mfaRequired`, settings entry, and i18n keys.
 
 ## User-confirmed product decisions (this session)

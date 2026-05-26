@@ -37,7 +37,7 @@ Tu photographies une œuvre (en musée) ou un monument/bâtiment (en ville) → 
 
 | Segment | Modèle | État |
 |---|---|---|
-| **B2C visiteur** | Freemium (3 sessions/mois free, abonnement Premium illimité) | Hypothèse — soft-paywall stub V1 (C6 shipped) pour valider data-driven via PostHog (P0.F2) |
+| **B2C visiteur** | Freemium (3 sessions/mois free, abonnement Premium illimité) | Hypothèse — soft-paywall stub V1 (C6 shipped) pour valider data-driven via Plausible (P0.F2) |
 | **B2B musée** | Licence annuelle + co-branding optionnel | **0 musée démarché à ce jour.** Capacité B2B (image-compare + multi-tenant + co-branding + analytics) en préparation pour pitch — hypothèse future, aucun contrat |
 | **Institutionnel** | Subvention culture / appel à projets | Backlog 2026 H2 |
 
@@ -50,7 +50,7 @@ Tu photographies une œuvre (en musée) ou un monument/bâtiment (en ville) → 
 | KR | Cible | Mesure |
 |---|---|---|
 | **KR1 — Pitch B2B prêt** | Capacité B2B démontrable (démo image-compare + co-branding + analytics par musée) — **aucun musée démarché, aucune cible contrat V1** (démarchage = après que l'app soit utilisable) | Démo fonctionnelle prête |
-| **KR2 — Companion NPS** *(re-cadré : était "Walk V1 NPS")* | NPS post-session ≥7/10 sur 50 sessions test ; benchmark B2B SaaS 2026 = +45 médian | Survey in-app — **BLOCKER : `reviews` table sans `museumId`, NPS true 0-10 non implémenté.** Voir P0.B7. |
+| **KR2 — Companion NPS** *(re-cadré : était "Walk V1 NPS")* | NPS post-session ≥7/10 sur 50 sessions test ; benchmark B2B SaaS 2026 = +45 médian | Survey in-app — **BLOCKER : `aggregateNps()` dead-code (0 caller), `StarRating.tsx` plafonné à 5 → NPS 0-10 non implémenté.** Voir P0.C7 + P0-FA4. |
 | **KR3 — Stabilité** | Crash-free ≥99.5% + chat p99 <5s + 0 P0 bug | Sentry + Langfuse + Grafana |
 | **KR4 — Adoption** | 100 visiteurs B2C inscrits semaine 1 post-launch | Funnel PostHog/Plausible (P0.F2 P0 bloquant) |
 

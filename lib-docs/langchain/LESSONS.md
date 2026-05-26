@@ -5,21 +5,21 @@ Project-specific gotchas. Audit enterprise-grade 2026-05-18 (6 consumers audité
 ## 2026-05-18 — `ChatGoogleGenerativeAI` est DÉPRÉCIÉ en v1 (PATTERNS.md §5.c)
 - **Symptôme** : usage actuel fonctionne mais sur deprecation track v1.
 - **Cause** : LangChain v1 retire `@langchain/google-genai` au profit de `ChatGoogle` (paquet différent, recette de migration ABSENTE du snapshot lib-docs).
-- **Sites** : `museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-support.ts:1,82`, `museum-backend/src/modules/chat/useCase/guardrail/art-topic-classifier.ts:2,28`.
+- **Sites** : `museum-backend/src/modules/chat/adapters/secondary/llm/langchain-orchestrator-support.ts:1,82`, `museum-backend/src/modules/chat/useCase/guardrail/art-topic-guardrail.ts:2,28`.
 - **Fix** : voir TD-LC-01 dans `docs/TECH_DEBT.md`. Avant migration : doc-fetcher pass sur `ChatGoogle` upstream + update PATTERNS.md.
 - **Anti-pattern à éviter** : ajouter de nouvelles dépendances sur `ChatGoogleGenerativeAI` — toute nouvelle intégration Gemini doit attendre la migration.
 
 ## 2026-05-18 — `openAIApiKey` / `modelName` sont des alias v0 — utiliser `apiKey` / `model` (v1 canonical)
 - **Symptôme** : pas de bug runtime (aliases backward-compat acceptés par v1.x), mais doc-drift.
 - **Cause** : v1 canonical option names = `apiKey` + `model`. Aliases v0 (`openAIApiKey`, `modelName`) toujours acceptés mais sur deprecation timeline non documentée.
-- **Sites** : 4 constructors ChatOpenAI dans `langchain-orchestrator-support.ts:90-98,102-107`, `art-topic-classifier.ts:19-25,36-43`, `content-classifier.service.ts:70-74`.
+- **Sites** : 4 constructors ChatOpenAI dans `langchain-orchestrator-support.ts:90-98,102-107`, `art-topic-guardrail.ts:19-25,36-43`, `content-classifier.service.ts:70-74`.
 - **Fix** : normaliser à `apiKey:` + `model:` everywhere lors du même refactor que TD-LC-01.
 - **Anti-pattern à éviter** : copier-coller un constructor existant qui utilise les anciens noms.
 
 ## 2026-05-18 — Deepseek ChatOpenAI client doit setter `streamUsage: false` (PATTERNS.md DO #8)
 - **Symptôme** : actuellement latent (orchestrator utilise `.invoke()` seul, pas `.stream()`). Deviendrait live si streaming réintroduit.
 - **Cause** : endpoints OpenAI-compatible third-party (e.g. Deepseek `https://api.deepseek.com/v1`) ne supportent pas le format d'usage tokens du SSE OpenAI v1 → erreur `streamUsage` si activé.
-- **Sites** : `langchain-orchestrator-support.ts:90-98`, `art-topic-classifier.ts:36-43` — constructors Deepseek SANS `streamUsage: false`.
+- **Sites** : `langchain-orchestrator-support.ts:90-98`, `art-topic-guardrail.ts:36-43` — constructors Deepseek SANS `streamUsage: false`.
 - **Fix** : add `streamUsage: false` aux 2 constructors Deepseek (defense-in-depth avant future feature streaming).
 - **Anti-pattern à éviter** : assumer que le client OpenAI v1 marche tel quel sur un endpoint third-party — toujours vérifier la doc du provider.
 

@@ -1,6 +1,6 @@
 # ADR-004 — iOS 26 / A18 Pro production crash watch
 
-- **Status**: Active monitoring (2026-04-20)
+- **Status**: Resolved (2026-05-14) — watching
 - **Owner**: Mobile
 
 ## Context
@@ -39,8 +39,12 @@ Until Expo publishes a fix:
 ### Reversibility
 - Fully reversible — drop the gate when upstream fix lands.
 
+## Amendment — 2026-05-14 RESOLVED
+
+Dual crash resolved via Expo SDK downgrade (see memory `project_ios26_crash_investigation.md` — resolved 2026-05-14). Instrumentation retained until 2026-06-15 bake confirms. No longer a P0 launch blocker.
+
 ## Related
-- Memory: `project_ios26_crash_investigation.md` — dual crash investigation ongoing.
+- Memory: `project_ios26_crash_investigation.md` — dual crash RESOLVED 2026-05-14.
 - ADR-001 (SSE deprecated) — tangentially related (chat-message.route.ts surface).
 
 ## Links
