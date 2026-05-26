@@ -101,7 +101,7 @@ docs/adr/ADR-047*.md                                                    @TimKrak
 docs/adr/ADR-048*.md                                                    @TimKraken
 docs/OPS_INCIDENT_LLM_GUARD.md                                          @TimKraken
 docs/RUNBOOKS/guardrail-incidents.md                                    @TimKraken
-docs/observability/alerts-llm-guard.yml                                 @TimKraken
+infra/grafana/alerting/llm-guard-bias.yml                               @TimKraken
 docs/operations/**                                                      @TimKraken
 
 # ─── Compliance + legal + incident response ───────────────────────────

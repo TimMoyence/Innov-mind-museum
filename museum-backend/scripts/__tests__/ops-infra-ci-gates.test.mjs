@@ -515,3 +515,136 @@ describe('W3-O8 :: deploy_obs guards Telegram secrets before docker compose up',
     expect(guardIdx).toBeLessThan(upIdx);
   });
 });
+
+// =============================================================================
+// WAVE 4 — bias / LLM-Guard alerts loaded & metric-honest (M4 / AI Act Art.10)
+//
+// RED contract (UFR-022): B1–B8 FAIL on the current baseline. The dead bias /
+// LLM-Guard alert file lives under docs/observability/ (NOT mounted/globbed by
+// Prometheus — wave4-design.md §1) and references three metrics that are never
+// emitted by prometheus-metrics.ts, plus the label-value `decision="block"`
+// which the only call-site (bias-metrics.helper.ts:48 → `blocked`) never emits.
+//
+// Audit-where-it-is (wave4-design.md §6 Option A): the content checks read the
+// file from infra/ if the move happened, ELSE from docs/. Today the file is in
+// docs/ and still contains scan_errors_total / scan_attempts_total (B3),
+// decision="block" (B4), cost_usd_total (B5), and a header naming no receivers
+// (B7) → those content checks FAIL on the REAL stale content (not vacuously on
+// an absent file). B1 (file moved into infra/) and B2 (docs source removed) FAIL
+// on physical-move grounds. B6 (breaker stays {state="open"} == 1, never == 2)
+// and B8 (every alert has a severity label) are GREEN-time guards: the docs/
+// content already satisfies them, so they are gated on existsSync(LLM_GUARD_BIAS)
+// to FAIL today (the move hasn't happened) and become load-bearing once GREEN
+// places the corrected file in infra/. Same `readOrEmpty` + regex contract as
+// WAVE 2/3 (no yaml import). This file is byte-frozen (wave4-red-test-manifest).
+// =============================================================================
+
+const LLM_GUARD_BIAS = repoPath(`${ALERT_DIR}/llm-guard-bias.yml`);
+const DOCS_LLM_GUARD = repoPath('docs/observability/alerts-llm-guard.yml');
+
+// Audit the bias/LLM-Guard alert content WHERE IT LIVES (Option A): prefer the
+// moved infra/ file once it exists, else fall back to the stale docs/ source.
+// This makes the "no dead metric / no decision=block" content checks FAIL on the
+// real stale text today, instead of passing vacuously over an absent file.
+function biasAlertContent() {
+  if (existsSync(LLM_GUARD_BIAS)) return readFileSync(LLM_GUARD_BIAS, 'utf8');
+  if (existsSync(DOCS_LLM_GUARD)) return readFileSync(DOCS_LLM_GUARD, 'utf8');
+  return '';
+}
+
+describe('W4 :: bias/LLM-Guard alert file is loaded by Prometheus', () => {
+  it('B1 — infra/grafana/alerting/llm-guard-bias.yml exists (the config is in the globbed/mounted dir)', () => {
+    // SUBSTANTIVE RED: the alert file is still under docs/observability/ today,
+    // which Prometheus never globs (rule_files: /etc/prometheus/alerting/*.yml).
+    // It must be MOVED into infra/grafana/alerting/ to actually load — wave4 §1.
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+  });
+
+  it('B2 — docs/observability/alerts-llm-guard.yml no longer exists (moved, not copied — single source)', () => {
+    // SUBSTANTIVE RED: the docs/ source still exists today. A copy would create a
+    // second source of truth that drifts (UFR-016 / no-duplicate). It must be a
+    // git mv — the docs/ source disappears.
+    expect(existsSync(DOCS_LLM_GUARD)).toBe(false);
+  });
+});
+
+describe('W4 :: no alert references a non-existent metric', () => {
+  const bias = biasAlertContent();
+
+  it('B3 — no rule references the never-emitted scan_errors_total / scan_attempts_total metrics', () => {
+    // SUBSTANTIVE RED (Finding A): grep musaium_llm_guard_scan_{errors,attempts}_total
+    // src/ → 0 match. The only scan metric is musaium_llm_guard_scan_duration_seconds.
+    // LLMGuardScanErrorsHigh must be removed (error coverage = LLMGuard{Latency,
+    // BreakerOpen}). Audited on the live (docs/ today) content → FAILS now.
+    expect(bias).not.toMatch(/musaium_llm_guard_scan_errors_total/);
+    expect(bias).not.toMatch(/musaium_llm_guard_scan_attempts_total/);
+  });
+
+  it('B5 — no rule references the never-shipped musaium_guardrail_cost_usd_total metric (cost group removed)', () => {
+    // SUBSTANTIVE RED (Finding C): grep musaium_guardrail_cost_usd_total src/ → 0
+    // match (the Phase 1B counter was never shipped). The whole guardrail-cost
+    // group must be removed — a loaded file holds only LIVE rules. FAILS now.
+    expect(bias).not.toMatch(/musaium_guardrail_cost_usd_total/);
+  });
+});
+
+describe('W4 :: guardrail decisions use the real label-value decision="blocked"', () => {
+  const bias = biasAlertContent();
+
+  it('B4 — no selector uses decision="block" (the emitted value is "blocked"), and at least one uses decision="blocked"', () => {
+    // SUBSTANTIVE RED (Finding B — the gravest regression of the wave): the only
+    // call-site bias-metrics.helper.ts:48 emits `blocked`/`allowed`, never `block`.
+    // docs/ filters decision="block" in 5 places (GuardrailBlockRateSpike, the R1
+    // recording rule, BiasLocaleDominance ×2) → those rules are silently inert even
+    // once loaded (false AI Act Art.10 conformity). Forbid `decision="block"` that
+    // is NOT immediately followed by `ed` (so decision="blocked" is allowed).
+    expect(bias).not.toMatch(/decision="block"(?!ed)/);
+    // And the corrected value must be present (proves the fix landed, not a wipe).
+    expect(bias).toMatch(/decision="blocked"/);
+  });
+});
+
+describe('W4 :: LLM-Guard breaker alert stays correct + routing-ready', () => {
+  const bias = biasAlertContent();
+
+  it('B6 — breaker rule selects {state="open"} == 1 and never the impossible == 2 (consistent with W2-O1) [GREEN-time guard]', () => {
+    // GREEN-time guard gated on the MOVE: the docs/ content already selects
+    // {state="open"} == 1 correctly, so this is gated on existsSync(LLM_GUARD_BIAS)
+    // to FAIL today (file not yet in infra/). Once moved it forbids a GREEN from
+    // regressing the breaker selector while editing the file (W2-O1 consistency).
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+    expect(bias).toMatch(/musaium_llm_guard_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+    expect(bias).not.toMatch(/circuit_breaker_state\s*==\s*2/);
+  });
+
+  it('B7 — header comment block names the per-severity receivers (telegram-ops-critical / -warning)', () => {
+    // SUBSTANTIVE RED (wave4 §4): the docs/ header only says "Loaded by the
+    // Prometheus instance…" and names NO receiver. After the move the header must
+    // name the two routing receivers (modelled on llm-cost-security.yml). Scope to
+    // the leading comment block so rule-level labels can't false-pass it.
+    const headerLines = [];
+    for (const line of bias.split('\n')) {
+      if (line.startsWith('#') || line.trim() === '') headerLines.push(line);
+      else break;
+    }
+    const header = headerLines.join('\n');
+    expect(header).toMatch(/telegram-ops-critical|telegram-ops-warning/);
+  });
+
+  it('B8 — every retained alert carries a severity label (routing guarantee) [GREEN-time guard]', () => {
+    // GREEN-time guard gated on the MOVE: the docs/ content already labels every
+    // alert with a severity, so this is gated on existsSync(LLM_GUARD_BIAS) to FAIL
+    // today. Once moved it guarantees AlertManager can route every kept rule
+    // (severity=critical → telegram-ops-critical; else → -warning). wave4 §3/AC6.
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+    const alertNames = [...bias.matchAll(/^\s*- alert:\s*(\S+)/gm)].map((m) => m[1]);
+    expect(alertNames.length).toBeGreaterThan(0);
+    // For each alert block, the slice up to the next alert/record/group must hold a
+    // `severity:` label line.
+    const blocks = bias.split(/(?=^\s*- (?:alert|record):)/m);
+    const alertBlocks = blocks.filter((b) => /^\s*- alert:/m.test(b));
+    for (const block of alertBlocks) {
+      expect(block).toMatch(/severity:\s*(?:warning|critical)/);
+    }
+  });
+});
