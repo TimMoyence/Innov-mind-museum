@@ -112,12 +112,14 @@ export const semantic = {
     textValue: '#f6ebe4',
   },
   expertiseLevels: {
+    // WCAG 1.4.3 (A11Y-03): light values darkened so the level-colored text on
+    // its own 8% tint reaches ≥ 4.5:1. Dark values already passed (8+).
     beginner: {
-      light: '#059669',
+      light: '#047857',
       dark: '#34D399',
     },
     intermediate: {
-      light: '#D97706',
+      light: '#92400E',
       dark: '#FBBF24',
     },
     expert: {
@@ -126,14 +128,17 @@ export const semantic = {
     },
   },
   statusBadge: {
+    // WCAG 1.4.3 (A11Y-01): white text needs ≥ 4.5:1 — colors lifted to the
+    // -700 ramp (was -500/-600 at 2.15–3.76:1). closed/priorityLow gray already
+    // passed (4.83). StarRating reuses inProgress (A11Y-04, 1.4.11 ≥ 3:1).
     textColor: '#FFFFFF',
-    open: '#3B82F6',
-    inProgress: '#F59E0B',
-    resolved: '#22C55E',
+    open: '#1D4ED8',
+    inProgress: '#B45309',
+    resolved: '#15803D',
     closed: '#6B7280',
     priorityLow: '#6B7280',
-    priorityMedium: '#F59E0B',
-    priorityHigh: '#EF4444',
+    priorityMedium: '#B45309',
+    priorityHigh: '#B91C1C',
   },
   deviceChrome: {
     bezel: '#000000',
