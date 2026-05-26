@@ -1493,3 +1493,12 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Références** : ADR-001 (SSE deprecated, burial D1) ; `team-state/2026-05-25-p0-fa1-empty-bubble-text-only/{spec.md,design.md (§D2/D5),STORY.md}` ; CLAUDE.md § UFR-016 (« il est mort on l'enterre ») + UFR-021 (anti-pattern fake-world tests).
 - **Note de citation (UFR-013)** : le brief documenter pointait `useChatSession.test.ts:773/816/934` ; vérification `grep` (cf. STORY.md documenter) → les `it(` réels sont à `:774`/`:817`/`:935` (off-by-one — ligne `describe`/commentaire juste au-dessus). Lignes ci-dessus = vérifiées par lecture, source de vérité.
 
+## TD-OPAQUE-ANIMATED-VALUE-SKELETON — test introspecte `Animated.Value._value` (API privée RN) dans un test RED gelé (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-26, audit doc-cleanup §5 V1 ; tracé ici avant burial du triage).
+- **Référence code** : `museum-frontend/__tests__/features/chat/ui/ImageCompareCardSkeleton.test.tsx:63,67` — commentaire « Allow Animated objects too (they expose `_value` in tests) » + accès `(flat.opacity as { _value?: number } | undefined)?._value`.
+- **Symptôme** : viole la doctrine `feedback_opaque_animated_value_test_contract` (« Tests MUST NOT introspect `Animated.Value._value` — use observable reducer state »). Le test pilote l'animation via un champ privé RN au lieu de l'état observable. Violation **dormante** : c'est un test RED pour `ImageCompareCardSkeleton` (feature ImageCompare C3.5, SUT non construit / différé) — inerte tant que le composant n'existe pas, active à la phase Green.
+- **Pourquoi non résolu** : (a) frozen-test contract UFR-022 — modifier le test hors re-spawn red phase est interdit ; (b) feature ImageCompare non priorisée V1 ; (c) corriger maintenant = `BLOCK-TEST-WRONG` + re-spawn red disproportionné pour un test dormant. Même classe que [[TD-LINT-FROZEN-COMPOSER]].
+- **Comment fermer** : lors du build réel d'ImageCompare (phase red/green `/team`), réécrire l'assertion pour lire l'état observable (reducer/prop) au lieu de `_value`. Cf. doctrine `feedback_opaque_animated_value_test_contract`.
+- **Références** : audit doc-cleanup 2026-05-26 (triage §5 V1, conservé en historique git commit `ea389d13e`) ; CLAUDE.md (frozen-test UFR-022) ; mémoire `feedback_opaque_animated_value_test_contract`.
+
