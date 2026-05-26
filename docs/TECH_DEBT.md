@@ -616,7 +616,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 - [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster D / `museum-web/src/app/[locale]/admin/museums/[id]/branding/page.tsx`)
 - **Référence code** : `museum-web/src/app/[locale]/admin/museums/[id]/branding/page.tsx` (logo via `<input type="url">` HTTPS).
-- **Symptôme** : pas d'upload S3 réel — l'opérateur doit héberger le logo ailleurs (CDN, Imgur, etc.) puis coller l'URL. Pas idéal pour l'expérience B2B-pilot ; OK pour les 3 musées pilotes (assets fournis pré-existants).
+- **Symptôme** : pas d'upload S3 réel — l'opérateur doit héberger le logo ailleurs (CDN, Imgur, etc.) puis coller l'URL. Pas idéal pour une future expérience B2B ; sans impact V1 (3 musées de démo, assets de démo pré-existants — aucun pilote B2B contracté).
 - **Sprint d'origine** : audit-360 W4 (cluster D, décision MVP V1).
 - **Effort estimé** : 6-10 h (endpoint BE `POST /api/admin/museums/:id/logo` multipart → S3 ou OVH Object Storage ; FE drop-zone ; quota + virus scan).
 - **Comment fermer** : implémenter le pipeline; le `<input type="url">` reste en fallback si l'upload échoue.
