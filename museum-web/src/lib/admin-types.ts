@@ -78,6 +78,26 @@ export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 // Intentionally hand-rolled — AnalyticsGranularity is embedded in UsageAnalytics.granularity, not a named schema component
 export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * NPS aggregate returned by `GET /api/admin/nps` (C2 / R24, R27). Hand-rolled
+ * until the backend OpenAPI spec ships the `NpsResponse` schema and the
+ * generated `openapi.ts` is regenerated; the field-set mirrors the backend
+ * aggregate one-to-one so the dashboard never re-aggregates client-side (R27).
+ *
+ * - `nps`        — Net Promoter Score in `[-100, 100]` (promoters% − detractors%).
+ * - `promoters`  — count of 9-10 ratings.
+ * - `passives`   — count of 7-8 ratings.
+ * - `detractors` — count of 0-6 ratings.
+ * - `count`      — total approved responses in scope (`0` → empty placeholder).
+ */
+export interface NpsResponse {
+  nps: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  count: number;
+}
 /**
  * Canonical UserRole — single source of truth (re-exported by `auth.tsx`).
  * Hand-rolled because `super_admin` is a Musaium platform-owner tier stored

@@ -19,6 +19,7 @@ const NAV_KEYS = [
   'tickets',
   'supportAdmin',
   'reviewsAdmin',
+  'nps',
 ] as const;
 
 type NavKey = (typeof NAV_KEYS)[number];
@@ -33,6 +34,7 @@ const NAV_PATHS: Record<NavKey, string> = {
   tickets: '/tickets',
   supportAdmin: '/support',
   reviewsAdmin: '/reviews',
+  nps: '/nps',
 };
 
 // ── Authenticated admin layout with sidebar ────────────────────────────

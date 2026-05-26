@@ -355,6 +355,7 @@
     "tickets": "Tickets",
     "supportAdmin": "Support",
     "reviewsAdmin": "Avis",
+    "nps": "NPS",
     "accessDenied": "Accès refusé",
     "goToHomepage": "Retour à l'accueil",
     "login": {
@@ -568,6 +569,17 @@
       "topMuseums": "Musées les plus actifs",
       "museum": "Musée",
       "guardrailBlockRate": "Taux de blocage (guardrail)"
+    },
+    "npsPage": {
+      "subtitle": "Sentiment de recommandation des visiteurs, sur l'échelle 0-10.",
+      "score": "Score NPS",
+      "promoters": "Promoteurs",
+      "passives": "Passifs",
+      "detractors": "Détracteurs",
+      "responses": "Réponses",
+      "distribution": "Répartition des réponses",
+      "chartAriaLabel": "Diagramme en barres des promoteurs, passifs et détracteurs",
+      "allMuseums": "Tous les musées"
     },
     "export": {
       "sessions": {

@@ -166,7 +166,7 @@ export default function AdminReviewsPage() {
                         {r.userName}
                       </TableDataCell>
                       <TableDataCell nowrap className="text-text-primary">
-                        {r.rating}/5
+                        {r.rating}/10
                       </TableDataCell>
                       <TableDataCell className="max-w-md truncate">{r.comment}</TableDataCell>
                       <TableDataCell nowrap>
@@ -268,7 +268,7 @@ export default function AdminReviewsPage() {
           }
         >
           <p className="mt-2 text-sm text-text-secondary">{moderating.userName}</p>
-          <p className="mt-1 text-sm text-text-primary">{moderating.rating}/5</p>
+          <p className="mt-1 text-sm text-text-primary">{moderating.rating}/10</p>
           <blockquote className="mt-3 border-l-4 border-primary-200 pl-4 text-sm italic text-text-secondary">
             {moderating.comment}
           </blockquote>
