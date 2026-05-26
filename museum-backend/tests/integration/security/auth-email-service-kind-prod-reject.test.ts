@@ -170,7 +170,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     },
     extractionWorkerEnabled: true,
     museumEnrichmentSchedulerEnabled: false,
-    redis: { host: 'localhost', port: 6379, clusterNodes: null },
+    redis: { host: 'localhost', port: 6379 },
     guardrails: {
       timeoutMs: 300,
       observeOnly: false,

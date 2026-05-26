@@ -390,7 +390,6 @@ const env: AppEnv = {
   ),
   redis: {
     ...parseRedisUrlFallback(),
-    clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
   },
   guardrails: {
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),

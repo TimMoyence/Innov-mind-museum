@@ -27,6 +27,13 @@ Backend ioredis client gains a cluster toggle: `REDIS_CLUSTER_NODES` env
 var (comma-separated `host:port` pairs). When set, `new Redis.Cluster(...)`.
 When unset, falls back to single-instance `new Redis(url)`.
 
+> **Amendment 2026-05-26 (UFR-016)** — the speculative `createRedisClusterClient`
+> helper + the `REDIS_CLUSTER_NODES` env knob were never wired into the live
+> Redis client (zero callers) and were buried as dead code. This ADR's decision
+> (Cluster over Sentinel) stands; re-implement the toggle as part of the actual
+> cluster migration (see `docs/CAPACITY_PLAN.md`). git history retains the
+> reference implementation.
+
 BullMQ supports cluster mode out of the box (uses `{}` curly-brace key
 prefixes for hash-slot affinity — its native pattern).
 
