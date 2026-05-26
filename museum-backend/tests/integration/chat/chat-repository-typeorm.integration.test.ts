@@ -16,6 +16,7 @@ import {
   type IntegrationHarness,
 } from 'tests/helpers/integration/integration-harness';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
+import { makeArtworkMatch } from 'tests/helpers/chat/artworkMatch.fixtures';
 
 import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
@@ -95,6 +96,33 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       .set({ updatedAt })
       .where('id = :id', { id: sessionId })
       .execute();
+  }
+
+  /**
+   * Cycle 4 (DSAR Art.15/20) — attach one `ArtworkMatch` row to a message via
+   * the shared factory. `persistMessage` only seeds a single match per call,
+   * so this helper inserts directly to cover the N-matches-per-message case.
+   * Returns the persisted ArtworkMatch.
+   * @param messageId - id of the parent ChatMessage.
+   * @param overrides - factory overrides (e.g. title/artist).
+   */
+  async function seedArtworkMatch(
+    messageId: string,
+    overrides: Parameters<typeof makeArtworkMatch>[0] = {},
+  ): Promise<ArtworkMatch> {
+    const matchRepo = harness.dataSource.getRepository(ArtworkMatch);
+    const fixture = makeArtworkMatch(overrides);
+    return await matchRepo.save(
+      matchRepo.create({
+        message: { id: messageId } as ChatMessage,
+        artworkId: fixture.artworkId,
+        title: fixture.title,
+        artist: fixture.artist,
+        confidence: fixture.confidence,
+        source: fixture.source,
+        room: fixture.room,
+      }),
+    );
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -937,6 +965,115 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
 
       expect(dataA.sessions).toHaveLength(1);
       expect(dataA.sessions[0].locale).toBe('en');
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Cycle 4 (DSAR Art.15/20 — B-03) : recognised artworks (ArtworkMatch)
+    // MUST appear in the export. These assertions FAIL at the red baseline —
+    // `exportUserChatData` loads `relations: ['session']` only and never maps
+    // `artworkMatches` (chat-repository-queries.ts:93-132).
+    // ──────────────────────────────────────────────────────────────────────
+
+    it('includes the recognised artworks (artworkMatches) of each message [T1/T7]', async () => {
+      const userId = await seedUser({ email: 'export-artwork@test.dev' });
+      const session = await repo.createSession({ userId, locale: 'fr' });
+      const message = await repo.persistMessage({
+        sessionId: session.id,
+        role: 'assistant',
+        text: 'detected',
+      });
+      await seedArtworkMatch(message.id, {
+        artworkId: 'A1',
+        title: 'Mona Lisa',
+        artist: 'Leonardo da Vinci',
+        confidence: 0.92,
+        source: 'siglip',
+        room: 'Salle des États',
+      });
+
+      const data = await repo.exportUserData(userId);
+
+      const messages = data.sessions[0].messages;
+      expect(messages).toHaveLength(1);
+      const exportedMatches = messages[0].artworkMatches;
+      expect(exportedMatches).toHaveLength(1);
+      const m = exportedMatches[0];
+      expect(m.artworkId).toBe('A1');
+      expect(m.title).toBe('Mona Lisa');
+      expect(m.artist).toBe('Leonardo da Vinci');
+      expect(m.confidence).toBeCloseTo(0.92, 5);
+      expect(m.source).toBe('siglip');
+      expect(m.room).toBe('Salle des États');
+      // createdAt exported as ISO-8601 string (NFR-4).
+      expect(typeof m.createdAt).toBe('string');
+      expect(() => new Date(m.createdAt).toISOString()).not.toThrow();
+      // Allow-list per field (D-2 / EARS-6) — NO internal uuid PK, NO FK.
+      expect(m).not.toHaveProperty('id');
+      expect(m).not.toHaveProperty('message');
+      expect(m).not.toHaveProperty('messageId');
+    });
+
+    it('exports an empty array for a message with no recognised artwork [T2]', async () => {
+      const userId = await seedUser({ email: 'export-no-artwork@test.dev' });
+      const session = await repo.createSession({ userId });
+      await repo.persistMessage({ sessionId: session.id, role: 'user', text: 'plain text' });
+
+      const data = await repo.exportUserData(userId);
+
+      // Key present, value is [] — never undefined / null (EARS-3).
+      expect(data.sessions[0].messages[0]).toHaveProperty('artworkMatches');
+      expect(data.sessions[0].messages[0].artworkMatches).toEqual([]);
+    });
+
+    it('exports ALL recognised artworks across messages and sessions, not just the latest [T3]', async () => {
+      const userId = await seedUser({ email: 'export-all-artwork@test.dev' });
+      const s1 = await repo.createSession({ userId, locale: 'en' });
+      const s2 = await repo.createSession({ userId, locale: 'fr' });
+
+      const m1 = await repo.persistMessage({ sessionId: s1.id, role: 'assistant', text: 's1' });
+      const m2 = await repo.persistMessage({ sessionId: s2.id, role: 'assistant', text: 's2' });
+
+      // 2 matches on m1, 1 match on m2 → 3 total across 2 sessions.
+      await seedArtworkMatch(m1.id, { artworkId: 'A1', title: 'Work One' });
+      await seedArtworkMatch(m1.id, { artworkId: 'A2', title: 'Work Two' });
+      await seedArtworkMatch(m2.id, { artworkId: 'A3', title: 'Work Three' });
+
+      const data = await repo.exportUserData(userId);
+
+      const allTitles = data.sessions
+        .flatMap((s) => s.messages)
+        .flatMap((msg) => msg.artworkMatches)
+        .map((match) => match.title)
+        .sort();
+      expect(allTitles).toEqual(['Work One', 'Work Three', 'Work Two']);
+    });
+
+    it('does NOT leak recognised artworks from another user [T4]', async () => {
+      const userA = await seedUser({ email: 'export-artwork-A@test.dev' });
+      const userB = await seedUser({ email: 'export-artwork-B@test.dev' });
+      const sessionA = await repo.createSession({ userId: userA, locale: 'en' });
+      const sessionB = await repo.createSession({ userId: userB, locale: 'fr' });
+      const msgA = await repo.persistMessage({
+        sessionId: sessionA.id,
+        role: 'assistant',
+        text: 'A',
+      });
+      const msgB = await repo.persistMessage({
+        sessionId: sessionB.id,
+        role: 'assistant',
+        text: 'B',
+      });
+      await seedArtworkMatch(msgA.id, { artworkId: 'A-only', title: 'Owned by A' });
+      await seedArtworkMatch(msgB.id, { artworkId: 'B-only', title: 'Owned by B' });
+
+      const dataA = await repo.exportUserData(userA);
+
+      const titlesA = dataA.sessions
+        .flatMap((s) => s.messages)
+        .flatMap((msg) => msg.artworkMatches)
+        .map((match) => match.title);
+      expect(titlesA).toEqual(['Owned by A']);
+      expect(titlesA).not.toContain('Owned by B');
     });
   });
 });

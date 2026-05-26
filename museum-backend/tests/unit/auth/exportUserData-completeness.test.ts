@@ -62,7 +62,31 @@ function buildWiring(userId: number): ExportWiring {
     museumName: 'CAPC',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
-    messages: [],
+    // Cycle 4 (DSAR Art.15/20 — B-03) : recognised artworks are exported
+    // nested in each message (design D-1). Allow-listed fields only (D-2) —
+    // never the internal uuid PK nor the FK.
+    messages: [
+      {
+        id: 'msg-1',
+        role: 'assistant',
+        text: 'detected',
+        imageRef: null,
+        audioUrl: null,
+        createdAt: '2026-01-01T00:01:00.000Z',
+        metadata: null,
+        artworkMatches: [
+          {
+            artworkId: 'A1',
+            title: 'Mona Lisa',
+            artist: 'Leonardo da Vinci',
+            confidence: 0.92,
+            source: 'siglip',
+            room: 'Salle des États',
+            createdAt: '2026-01-01T00:01:00.000Z',
+          },
+        ],
+      },
+    ],
   };
 
   return {
@@ -107,10 +131,28 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     museumId: 5,
   });
 
-  it('bumps schemaVersion to "2"', async () => {
+  it('bumps schemaVersion to "3"', async () => {
     const useCase = makeExportUserDataUseCase(buildWiring(42));
     const payload = await runExport(useCase, user);
-    expect(payload.schemaVersion).toBe('2');
+    expect(payload.schemaVersion).toBe('3');
+  });
+
+  it('includes recognised artworks (artworkMatches) nested in each message (Cycle 4 / B-03)', async () => {
+    const useCase = makeExportUserDataUseCase(buildWiring(42));
+    const payload = await runExport(useCase, user);
+
+    const sessions = payload.chatSessions as Record<string, unknown>[];
+    const messages = sessions[0].messages as Record<string, unknown>[];
+    const matches = messages[0].artworkMatches as Record<string, unknown>[];
+    expect(Array.isArray(matches)).toBe(true);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].title).toBe('Mona Lisa');
+    expect(matches[0].artworkId).toBe('A1');
+    expect(matches[0].confidence).toBe(0.92);
+    // Allow-list per field (D-2) — no internal uuid PK / FK leaks through.
+    expect(matches[0]).not.toHaveProperty('id');
+    expect(matches[0]).not.toHaveProperty('message');
+    expect(matches[0]).not.toHaveProperty('messageId');
   });
 
   it('includes every new personal-data category (R12)', async () => {
