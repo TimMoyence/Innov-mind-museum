@@ -54,8 +54,6 @@ export interface AppEnv {
     password?: string;
     database: string;
     poolMax: number;
-    /** Optional read-replica URL. When set, dataSourceRouter.read uses it. */
-    replicaUrl: string | null;
   };
   auth: {
     jwtSecret: string;

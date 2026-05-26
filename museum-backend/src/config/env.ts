@@ -74,7 +74,6 @@ const env: AppEnv = {
     password: toOptionalString(process.env.DB_PASSWORD),
     database: required('PGDATABASE', toOptionalString(process.env.PGDATABASE)),
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
-    replicaUrl: toOptionalString(process.env.DB_REPLICA_URL) ?? null,
   },
   auth: {
     // SEC-HARDENING (H12): prod BANS legacy JWT_SECRET fallback; explicit

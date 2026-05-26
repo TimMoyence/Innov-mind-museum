@@ -53,7 +53,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     dbSynchronize: false,
     dbSsl: true,
     dbSslRejectUnauthorized: true,
-    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50, replicaUrl: null },
+    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50 },
     auth,
     llm: {
       provider: 'openai',
