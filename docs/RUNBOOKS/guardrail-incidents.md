@@ -248,7 +248,7 @@ Per-tenant rollback is the path. The schema is designed for it ([design.md § D1
 ```bash
 # Verify the running digest vs the pinned one
 ssh ops@vps "docker inspect llm-guard --format '{{.Image}}'"
-grep "image:.*llm-guard" /Users/Tim/Desktop/all/dev/Pro/InnovMind/infra/docker-compose.prod.yml
+grep "image:.*llm-guard" museum-backend/deploy/docker-compose.prod.yml
 
 # Check egress traffic from the sidecar (should be NONE — sidecar is local-only)
 ssh ops@vps "docker exec llm-guard ss -tn"

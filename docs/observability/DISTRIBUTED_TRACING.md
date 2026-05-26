@@ -77,15 +77,7 @@ A full W3C propagator (read `traceparent`, set OTel context) is already provided
 
 ## 5. Wiring the middleware
 
-The middleware is exported but not yet mounted in [`museum-backend/src/app.ts`](../../museum-backend/src/app.ts). To activate, add after `requestIdMiddleware`:
-
-```ts
-import { traceePropagationMiddleware } from '@shared/observability/trace-propagation.middleware';
-// ...
-app.use(requestIdMiddleware);
-app.use(requestLoggerMiddleware);
-app.use(traceePropagationMiddleware);  // ← W4 W6.9
-```
+Wired at `museum-backend/src/app.ts:135` (`app.use(tracePropagationMiddleware)`).
 
 Ordering matters: the middleware needs the OTel span to already exist (created by `instrumentation-http` automatically). Mounting after `cors` is fine; mounting before `helmet` is fine.
 

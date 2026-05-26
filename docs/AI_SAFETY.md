@@ -145,7 +145,7 @@ Bottlenecks: sidecar CPU on single-VPS; Postgres write amplification on audit lo
 - **Owner:** founder/tech lead (current, solo). Hiring trigger at first B2B LOI **declined** by user (2026-05-12); replaced by solo dev + OSS tooling + WebSearch loop. Continue monitoring this decision at every B2B contract milestone.
 - **Review gates** — CODEOWNERS rule (`.github/CODEOWNERS`) on `guardrail-reason-mapping.ts`, `art-topic-guardrail.ts`, `env.guardrails.*` thresholds, `docs/AI_SAFETY.md`, `docs/GDPR_ART22_SCOPE.md`, `docs/legal/`, `docs/compliance/`. Self-review enforced today; future FTE addition is one-line update.
 - **Pull-request checklist** — `.github/PULL_REQUEST_TEMPLATE.md` includes the mandatory AI-safety checklist; PRs touching guardrails MUST tick every box.
-- **CI gates** — `.github/workflows/llm-security-garak.yml` (nightly + on guardrail-touching PR) + `.github/workflows/llm-security-promptfoo.yml` (system-prompt-leakage regression). ADR-049 codifies.
+- **CI gates** — ~~`llm-security-garak.yml` — supprimé 2026-05-17 (ADR-049 amendment, coût ~$120/mois, déféré V2.1)~~ + `.github/workflows/llm-security-promptfoo.yml` (system-prompt-leakage regression) + `.github/workflows/llm-promptfoo-smoke.yml` (daily art recall smoke). ADR-049 codifies.
 - **Postmortem** — every user-visible false positive AND every detected false negative triggers a postmortem. Template: `docs/operations/POSTMORTEM_TEMPLATE.md`. Cadence + linkage to audit log per `docs/RUNBOOKS/guardrail-incidents.md`.
 - **Pentest** — annual cadence from first B2B GA. Scope template: `docs/operations/PENTEST_SCOPE.md`.
 
