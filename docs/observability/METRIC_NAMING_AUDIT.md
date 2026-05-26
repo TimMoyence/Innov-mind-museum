@@ -34,11 +34,11 @@ Per the official Prometheus naming guidelines:
 
 ---
 
-## 2. Full registry inventory (44 metrics)
+## 2. Full registry inventory (46 metrics)
 
 Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · ❌ hard violation.
 
-### 2.1 Bare-prefix metrics (28) — subsystem prefix, no `musaium_`
+### 2.1 Bare-prefix metrics (30) — subsystem prefix, no `musaium_`
 
 | Metric name | Type | R1 snake | R2/R3 suffix | Verdict |
 |---|---|---|---|---|
@@ -70,6 +70,8 @@ Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · �
 | `geo_detect_museum_total` *(W3)* | Counter | ✅ | ✅ `_total` | ✅ (see R4 §3) |
 | `nominatim_requests_total` *(W3)* | Counter | ✅ | ✅ `_total` | ✅ (see R4 §3) |
 | `nominatim_request_duration_seconds` *(W3)* | Histogram | ✅ | ✅ `_seconds` | ✅ (see R4 §3) |
+| `guardrail_judge_degraded_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
+| `llm_cost_anon_bypass_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
 
 ### 2.2 `musaium_`-prefixed metrics (16)
 

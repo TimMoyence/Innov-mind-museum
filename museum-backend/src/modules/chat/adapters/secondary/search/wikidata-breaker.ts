@@ -74,6 +74,8 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
    * listener consults this flag and exits early to avoid double-count.
    */
   private timeoutDedupe = false;
+  /** TD-OP-01 — guards `dispose()` idempotency (second call no-ops). */
+  private disposed = false;
 
   constructor(
     private readonly inner: WikidataClient,
@@ -164,6 +166,21 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
     if (this.breaker.opened) return { name: 'OPEN', openSince: this.openSince };
     if (this.breaker.halfOpen) return { name: 'HALF_OPEN', openSince: this.openSince };
     return { name: 'CLOSED' };
+  }
+
+  /**
+   * TD-OP-01 — releases the opossum rolling-stats `setInterval` by calling
+   * `breaker.shutdown()` (PATTERNS.md §2 "terminate breaker, remove listeners";
+   * LESSONS.md F1). Without this every constructed client leaks that timer —
+   * the Stryker/Jest open-handle gotcha (CLAUDE.md § Stryker). Wired into the
+   * graceful-shutdown drain via `stopWikidataBreaker()` and exercised by the
+   * test suite's `afterEach`. Idempotent: a second call is a no-op (the breaker
+   * is already shut down).
+   */
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.breaker.shutdown();
   }
 
   private isRateLimit(err: unknown): boolean {

@@ -1,5 +1,10 @@
 import { LlmCostGuard, LlmCostGuardError } from '@shared/llm-cost-guard/llm-cost-guard';
 import { logger } from '@shared/logger/logger';
+// I-FIX3 · T1.2 RED — the anon-bypass observability counter the guard must
+// increment when `userId === null` reaches the guard (design §D3/D5). Does NOT
+// exist at RED HEAD → import resolves to `undefined`, so the metric-counter
+// test below fails when it calls `.get()` on it (feature-absent proof).
+import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
 
 import {
   FailingLlmCostCounter,
@@ -215,8 +220,16 @@ describe('LlmCostGuard (P0-4 red phase)', () => {
      * to that layer for anon traffic, and only enforces the global kill-switch
      * here. If the implementer wants to extend with a global anon bucket
      * later, that is a separate gate; this test pins the V1 behaviour.
+     *
+     * I-FIX3 · T1.2 RED (CONTRACT CHANGE / SWEEP — spec §R3, design §D3):
+     * the early-return is KEPT (no hard block, no per-user key possible) BUT it
+     * is no longer SILENT. Before returning, the guard MUST emit a
+     * `logger.warn('llm_cost_anon_bypass', { capUsd })` so a future un-authed
+     * paid route surfaces loudly instead of bypassing the cap with zero signal.
+     * This assertion is ADDED here in the red phase deliberately — the
+     * frozen-test contract forbids a green-phase self-edit of this file.
      */
-    it('allows anonymous calls when kill-switch is OFF (no per-user cap applies)', async () => {
+    it('allows anonymous calls when kill-switch is OFF (no per-user cap applies) AND warns loudly', async () => {
       const counter = new InMemoryLlmCostCounter();
       const getSpy = jest.spyOn(counter, 'get');
       const incrSpy = jest.spyOn(counter, 'increment');
@@ -233,9 +246,36 @@ describe('LlmCostGuard (P0-4 red phase)', () => {
       // key. Volume control is delegated to IP rate-limit middleware.
       expect(getSpy).not.toHaveBeenCalled();
       expect(incrSpy).not.toHaveBeenCalled();
+
+      // NEW (T1.2) — the bypass is now observable. FAILS at RED HEAD where the
+      // `userId === null` branch returns silently (llm-cost-guard.ts:103-105).
+      expect(warnSpy).toHaveBeenCalledWith(
+        'llm_cost_anon_bypass',
+        expect.objectContaining({ capUsd: 0.5 }),
+      );
     });
 
-    it('denies anonymous calls when kill-switch is ON', async () => {
+    it('increments the anon-bypass observability counter on the anon path', async () => {
+      const counter = new InMemoryLlmCostCounter();
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: false,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      // Snapshot the labelless counter value before, exercise the anon path,
+      // then assert the counter went up by exactly 1. At RED HEAD
+      // `llmCostAnonBypassTotal` does not exist (import === undefined) →
+      // `.get()` throws → feature-absent red.
+      const before = (await llmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
+
+      await expect(guard.assertAllowed(null, 0.1)).resolves.toBeUndefined();
+
+      const after = (await llmCostAnonBypassTotal.get()).values[0]?.value ?? 0;
+      expect(after - before).toBe(1);
+    });
+
+    it('denies anonymous calls when kill-switch is ON (kill-switch precedence preserved)', async () => {
       const counter = new InMemoryLlmCostCounter();
       const guard = new LlmCostGuard({
         killSwitchEnabled: true,
@@ -246,6 +286,15 @@ describe('LlmCostGuard (P0-4 red phase)', () => {
       await expect(guard.assertAllowed(null, 0.1)).rejects.toMatchObject({
         code: 'LLM_KILL_SWITCH_ACTIVE',
       });
+
+      // R4 — the kill-switch short-circuits BEFORE the anon branch, so the anon
+      // bypass warn MUST NOT fire when the kill-switch denies. The only warn is
+      // the kill-switch block.
+      expect(warnSpy).not.toHaveBeenCalledWith('llm_cost_anon_bypass', expect.anything());
+      expect(warnSpy).toHaveBeenCalledWith(
+        'llm_cost_cap_block',
+        expect.objectContaining({ code: 'LLM_KILL_SWITCH_ACTIVE' }),
+      );
     });
   });
 

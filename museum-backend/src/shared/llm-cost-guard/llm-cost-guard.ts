@@ -1,4 +1,5 @@
 import { logger as defaultLogger } from '@shared/logger/logger';
+import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
 
 import type { LlmCostCounter } from '@shared/llm-cost-guard/llm-cost-counter.port';
 
@@ -60,7 +61,10 @@ const dayKey = (now: Date): string => now.toISOString().slice(0, 10);
  *
  * Decision flow (canonical):
  *   1. kill-switch → throw LLM_KILL_SWITCH_ACTIVE BEFORE counter read (auth+anon)
- *   2. userId null → anonymous bypass per-user cap; HTTP rate-limit enforces volume
+ *   2. userId null → warn('llm_cost_anon_bypass') + metric, then bypass per-user
+ *      cap (no stable key); HTTP rate-limit enforces volume. I-FIX3: the bypass is
+ *      LOUD + observable so a future un-authed paid route surfaces immediately
+ *      instead of silently skipping the cap (all live routes require auth today).
  *   3. counter.get() throws (Redis) → fail-CLOSED LLM_COST_GUARD_REDIS_UNAVAILABLE
  *      (contract restored at commit e45490c1)
  *   4. current + estimated > cap → throw LLM_USER_DAILY_CAP_EXCEEDED
@@ -101,6 +105,24 @@ export class LlmCostGuard {
     }
 
     if (userId === null) {
+      // I-FIX3 (c) — anon reaches the guard ONLY after the kill-switch check
+      // above (R4 precedence preserved): a kill-switched anon caller never gets
+      // here. No stable per-user key exists for anon, so we keep the early-return
+      // (no hard block — KISS, no IP-budget store) BUT make it LOUD: a future
+      // un-authed paid route now surfaces immediately instead of bypassing the
+      // cap with zero signal. All live paid routes require `isAuthenticated`, so
+      // this should be flat 0 in prod.
+      this.logger.warn('llm_cost_anon_bypass', { capUsd: this.dailyCapUsd });
+      try {
+        llmCostAnonBypassTotal.inc();
+      } catch (err) {
+        // Observability must never break the guard (prom-client throws on
+        // registry-cleared / duplicate-name). Swallow + log, never deny on a
+        // metric failure (the decision is "allow anon" regardless).
+        this.logger.warn('llm_cost_anon_bypass_metric_failed', {
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
       return;
     }
 
