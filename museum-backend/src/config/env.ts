@@ -304,7 +304,7 @@ const env: AppEnv = {
   wikidata: {
     userAgent:
       toOptionalString(process.env.WIKIDATA_USER_AGENT) ||
-      'Musaium/1.0 (https://musaium.app; contact@musaium.app)',
+      'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
   },
   // C4.1 (2026-05-11) — KnowledgeRouter. TUNING-ONLY: no `*_ENABLED` flag may
   // be added (D11 / pre-launch V1 doctrine). Rollback = `git revert`.
@@ -317,7 +317,7 @@ const env: AppEnv = {
     wsTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_WS_TIMEOUT_MS, 1500),
   },
   nominatim: {
-    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.app',
+    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.com',
     cacheTtlSeconds: toNumber(process.env.NOMINATIM_CACHE_TTL_SECONDS, 86_400),
     negativeCacheTtlSeconds: toNumber(process.env.NOMINATIM_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
     minRequestIntervalMs: toNumber(process.env.NOMINATIM_MIN_REQUEST_INTERVAL_MS, 1_000),
@@ -474,7 +474,7 @@ const env: AppEnv = {
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
-  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.com',
   // R4 W4.3 — B2B leads inbox. Config value, not a feature flag. Falls back
   // to supportInboxEmail in dev so no env churn for solo contributors.
   b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),

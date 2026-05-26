@@ -16,11 +16,14 @@
  * guards the whole user-facing surface so a NEW file can't reintroduce the
  * non-owned domain.
  *
- * Scans museum-web/src + museum-web/public for the literal `musaium.app`.
+ * Scans application source across ALL three apps (not just web) for the literal
+ * `musaium.app` — backend outbound User-Agents / contact emails, frontend i18n
+ * share footers (user-facing!), and web surfaces. The C11 sweep (2026-05-26)
+ * found musaium.app pervasive beyond the web accessibility page.
  *
  * Usage: `node web-domain-canonical.mjs [--root <repoRoot>]`
  * Exit codes:
- *   0 → no non-owned domain in museum-web user-facing surfaces
+ *   0 → no non-owned domain in scanned application source
  *   1 → ≥1 occurrence of musaium.app detected
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -115,7 +118,7 @@ function scanFile(path, root) {
 function emitReport(issues) {
   const lines = ['## Sentinel report — web-domain-canonical', ''];
   if (issues.length === 0) {
-    lines.push('PASS — museum-web user-facing surfaces use the owned domain only.');
+    lines.push('PASS — scanned application source uses the owned domain only.');
   } else {
     lines.push(`FAIL — ${issues.length} occurrence(s) of the non-owned domain musaium.app:`);
     for (const issue of issues) lines.push(`- ${issue}`);
@@ -127,7 +130,15 @@ function emitReport(issues) {
 
 function main() {
   const { root } = parseArgs(process.argv);
-  const targets = [join(root, 'museum-web', 'src'), join(root, 'museum-web', 'public')];
+  const targets = [
+    join(root, 'museum-backend', 'src'),
+    join(root, 'museum-frontend', 'features'),
+    join(root, 'museum-frontend', 'shared'),
+    join(root, 'museum-frontend', 'app'),
+    join(root, 'museum-frontend', 'components'),
+    join(root, 'museum-web', 'src'),
+    join(root, 'museum-web', 'public'),
+  ];
   const files = [];
   for (const t of targets) {
     if (existsSync(t)) walk(t, files);

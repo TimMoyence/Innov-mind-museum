@@ -43,7 +43,7 @@ fresh laptop checkout (they had skipped the `pre-commit install` step).
 
 GitHub's secret-scanning service flagged the push two minutes ago and emailed the
 repo admin with a redacted match for `JWT_ACCESS_SECRET=`. Six minutes ago, an
-external researcher (`research@redacted.example`) emailed `security@musaium.app`
+external researcher (`research@redacted.example`) emailed `security@musaium.com`
 with a screenshot of the same secret value, the commit SHA, and the line "you have
 about 30 minutes before someone else finds this — please rotate". Their email
 mentions they have **not** demonstrated token forgery, only located the secret.
@@ -64,7 +64,7 @@ the runbook step; if they are racing ahead, accelerate to keep pressure.
 
 | T+ | Inject | Facilitator reveal |
 |----|--------|--------------------|
-| T+0 | Researcher email landed in `security@musaium.app`. Acknowledge to participants. | Confirm: detection source = third-party disclosure (BREACH_PLAYBOOK § 2 row 5). Researcher is credible (real PGP-signed email). The push is 32 minutes old. |
+| T+0 | Researcher email landed in `security@musaium.com`. Acknowledge to participants. | Confirm: detection source = third-party disclosure (BREACH_PLAYBOOK § 2 row 5). Researcher is credible (real PGP-signed email). The push is 32 minutes old. |
 | T+5m | Participants receive a second email: GitHub secret-scanning alert (Dependabot-style notification). Same SHA, same secret pattern. | Reveal: the leaked secrets are `JWT_ACCESS_SECRET` AND `JWT_REFRESH_SECRET` — the engineer pasted the entire env block. (Test whether participants caught both — § 5.a step 1 says "treat both as compromised".) |
 | T+15m | Decision forced: do you rotate now, or do you snapshot/audit first? | If team rotates first WITHOUT logging the breach via `auditCriticalSecurityEvent`: mark the gap. § 5 generic preamble step 3 requires the audit row before rotation. If team snapshots `audit_log` first (correct): reveal the audit log shows two `auth.login.success` rows from an unfamiliar IP `185.220.101.x` (TOR exit node) at T-12m and T-3m for two different real visitor accounts. |
 | T+30m | Regulatory clock visible. Participants must answer aloud whether the Art 33 timer started, and at what timestamp. | Force-rotate clock to T+0 of detection (NOT push time). Confirm: severity P0 (token forgery → impersonation of any user). Per § 1.2, awareness threshold met → 72h timer started at T+0 of THIS scenario. CNIL deadline = T+72h from T+0 of this drill. |
@@ -115,7 +115,7 @@ incident would exercise. Fill these together as a group, in this order:
 
 ## Reflection questions (5 min at T+60m)
 
-1. What detection source surfaced the incident first? Was it the one we expected? (Hypothesis: GitHub secret-scanning. Reality in this drill: third-party researcher beat secret-scanning by minutes — what does that say about our monitoring of `security@musaium.app`?)
+1. What detection source surfaced the incident first? Was it the one we expected? (Hypothesis: GitHub secret-scanning. Reality in this drill: third-party researcher beat secret-scanning by minutes — what does that say about our monitoring of `security@musaium.com`?)
 2. Was [`BREACH_PLAYBOOK.md`](../BREACH_PLAYBOOK.md) § 5.a usable as-is, or did we improvise? Specifically: did `auth_session` exist as named in step 4, or did we have to verify the schema first? (TBD — operator: confirm column names in the printed playbook before next drill.)
 3. Where did we stall? Tooling, knowledge, or decision authority? (Common answer: only one person had VPS SSH access. → action item: documented secondary key holder.)
 4. What gap should we close BEFORE the next quarterly drill? Candidates: (a) enforce `pre-commit install` in monorepo `postinstall`; (b) make Gitleaks pre-receive hook server-side, not just client-side; (c) document the on-call backup phone number in § 6; (d) automate CNIL deadline tracking via `.github/workflows/breach-72h-timer.yml` — verify the workflow already exists per BREACH_PLAYBOOK § 9.1.
@@ -145,7 +145,7 @@ This drill is **verbal-only against production**. Forbidden actions during the
 60-minute window:
 - Running any rotation script against `*.musaium.com` or any prod-tagged compose file.
 - Force-pushing to `main` or any branch on the public repo.
-- Sending any email from `security@musaium.app` (the researcher email is staged).
+- Sending any email from `security@musaium.com` (the researcher email is staged).
 - Making any API call to `https://api.musaium.com` other than `GET /api/health` from a clean network.
 
 Permitted: dry-runs against staging, local schema inspection (`\d auth_session`), reading the BREACH_PLAYBOOK and CI_CD_SECRETS files in the repo, drafting (not sending) CNIL notification text into the drill folder.

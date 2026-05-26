@@ -19,7 +19,7 @@ export interface HtmlScraperConfig {
 
 const ALLOWED_CONTENT_TYPES = ['text/html', 'application/xhtml+xml'];
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
-const USER_AGENT = 'MusaiumBot/1.0 (+https://musaium.app; museum-knowledge-enrichment)';
+const USER_AGENT = 'MusaiumBot/1.0 (+https://musaium.com; museum-knowledge-enrichment)';
 const MAX_REDIRECTS = 5;
 
 /**
