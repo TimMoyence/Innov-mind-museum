@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} 闭馆"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}标志"
+  },
   "museum": {
     "about": "关于",
     "opening_hours": "开放时间",

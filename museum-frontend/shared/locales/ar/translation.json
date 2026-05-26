@@ -822,6 +822,9 @@
       "weekly_closed": "{{day}} مغلق"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "شعار {{name}}"
+  },
   "museum": {
     "about": "حول",
     "opening_hours": "ساعات العمل",

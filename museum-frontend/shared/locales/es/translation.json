@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} Cerrado"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logotipo de {{name}}"
+  },
   "museum": {
     "about": "Acerca de",
     "opening_hours": "Horario",

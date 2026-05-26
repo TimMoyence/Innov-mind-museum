@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} 休館"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}のロゴ"
+  },
   "museum": {
     "about": "概要",
     "opening_hours": "開館時間",

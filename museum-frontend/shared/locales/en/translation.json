@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} Closed"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}} logo"
+  },
   "museum": {
     "about": "About",
     "opening_hours": "Opening hours",
