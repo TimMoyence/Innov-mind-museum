@@ -289,6 +289,57 @@ describe('createSummaryFallback — edge cases', () => {
     expect(fallback).not.toContain('You are currently near');
   });
 
+  // -------------------------------------------------------------------------
+  // Cycle 1 (RUN_ID 2026-05-26-chat-pipeline-hardening) — A-04 GPS-leak guard
+  // on the SUMMARY FALLBACK path (text DISPLAYED to the user).
+  //
+  // Bug A-04 (MEDIUM): when the LLM summary section fails/times out,
+  // `createSummaryFallback` interpolates `input.location` verbatim into the
+  // `locationPrefix` ("You are currently near <loc>. "). If `location` is the
+  // raw client GPS string (`"lat:X,lng:Y"`), the user sees their own exact
+  // coordinates. `sanitizePromptInput` does NOT strip them.
+  //
+  // Spec/Design: spec-cycle1.md (REQ-6/7/8, AC-6/7, T7/T8/T10),
+  // design-cycle1.md (chemin fallback résumé F). The non-GPS label case
+  // ("Room 12", T8) above MUST stay green (non-regression, NFR-3).
+  //
+  // Expected status on CURRENT (pre-fix) code:
+  //   - T7  (location = 'lat:48.86,lng:2.33') → FAILS (leaks coords + prefix). Proof of A-04.
+  //   - T10 (location = 'lat:0,lng:0' bounds) → FAILS (parseable coords still leak).
+  // -------------------------------------------------------------------------
+
+  it('T7: omits location prefix and never leaks coords when location is a raw GPS string (AC-6, FAILS pre-fix)', () => {
+    const fallback = createSummaryFallback({
+      history: [makeMessage({ role: 'assistant', text: 'Art details.' })],
+      question: 'Tell me more',
+      location: 'lat:48.86,lng:2.33',
+      locale: 'en-US',
+      museumMode: false,
+    });
+
+    // No location prefix at all (the coords are not a place label).
+    expect(fallback).not.toContain('You are currently near');
+    // And the raw coordinate tokens must never appear in the displayed text.
+    expect(fallback).not.toContain('lat:');
+    expect(fallback).not.toContain('lng:');
+    expect(fallback).not.toContain('48.86');
+    expect(fallback).not.toContain('2.33');
+  });
+
+  it('T10: omits prefix and never leaks zero-bounds coords (lat:0,lng:0) (FAILS pre-fix)', () => {
+    const fallback = createSummaryFallback({
+      history: [makeMessage({ role: 'assistant', text: 'Art details.' })],
+      question: 'Tell me more',
+      location: 'lat:0,lng:0',
+      locale: 'en-US',
+      museumMode: false,
+    });
+
+    expect(fallback).not.toContain('You are currently near');
+    expect(fallback).not.toContain('lat:0');
+    expect(fallback).not.toContain('lng:0');
+  });
+
   // C9.10 (2026-05-17) — voiceMode prompt branch.
   describe('voiceMode (C9.10)', () => {
     it('includes [VOICE_MODE] instruction and 80-word cap when voiceMode=true', () => {

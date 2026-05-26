@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { buildLocalizedFallback, FALLBACK_TEMPLATES } from '@shared/i18n/fallback-messages';
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
+import { isCoordinateString } from '@shared/utils/location';
 import { sanitizePromptInput } from '@shared/validation/input';
 
 import { mainAssistantOutputSchema } from './llm-sections/main-assistant-output.schema';
@@ -281,7 +282,13 @@ const lastNonEmptyTexts = (history: ChatMessage[], limit = 3): string[] => {
 export const createSummaryFallback = (input: SummaryFallbackInput): string => {
   const locale = resolveLocale([input.locale]);
   const snippets = lastNonEmptyTexts(input.history, 3);
-  const sanitizedLocation = input.location ? sanitizePromptInput(input.location) : undefined;
+  // A-04 (REQ-6/7) — never display raw GPS coordinates to the user. When the
+  // location is parseable as `"lat:X,lng:Y"` it is not a place label: omit the
+  // location prefix entirely. Non-GPS labels (e.g. "Room 12") are kept (NFR-3).
+  const sanitizedLocation =
+    input.location && !isCoordinateString(input.location)
+      ? sanitizePromptInput(input.location)
+      : undefined;
   const recap = snippets.length
     ? snippets.join(' ')
     : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback

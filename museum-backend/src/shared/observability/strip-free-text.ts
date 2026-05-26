@@ -20,6 +20,18 @@
  * the Langfuse cost UI keeps populating token counts (the mask scrubs the
  * free-text, NOT the usage).
  *
+ * Cycle 2 (spec-cycle2.md 2026-05-26, REQ-1..10) — multimodal `content`. The
+ * core product shape ("photograph an artwork then chat") builds a
+ * `HumanMessage` whose `content` is an ARRAY of parts
+ * `[{type:'text', text}, {type:'image_url', image_url:{url:'data:...base64'}}]`
+ * (producer `llm-prompt-builder.ts`). Each `type:'text'` part has its `text`
+ * stripped (A-03) and each `type:'image_url'` part has its data-URL / signed
+ * URL stripped (A-05), for both the `{url}` object form and the bare-string
+ * form. Unknown part types are left untouched (REQ-7, accepted residue). The
+ * single array-aware helper `stripContentValue` is reused across input
+ * messages, top-level messages, and `output.content` (PATTERNS.md §3 DO #13 —
+ * one central hook).
+ *
  * Fail-safe (R7) : wraps the entire body in try/catch. If anything throws
  * (corrupted shape, hostile Proxy, future Langfuse body shape we don't
  * recognise) the input is returned unchanged and `logger.warn('langfuse_
@@ -47,18 +59,114 @@ const stripStringIfPresent = (obj: Record<string, unknown>, key: string): void =
   }
 };
 
-/** Mutates a messages array, replacing each `.content` string with `STRIPPED`. */
-const stripMessagesArray = (messages: unknown): void => {
-  if (!Array.isArray(messages)) return;
-  for (const msg of messages) {
-    if (
-      msg &&
-      typeof msg === 'object' &&
-      typeof (msg as Record<string, unknown>).content === 'string'
-    ) {
-      (msg as Record<string, unknown>).content = STRIPPED;
+/**
+ * Strip the free-text PII of a single multimodal `content` PART, returning a
+ * NEW part (immutable — never mutates the caller's object). Recognised shapes :
+ *  - `type:'text'`  → `text` replaced with `STRIPPED` when it is a NON-EMPTY
+ *    string (A-03). Empty string left as-is (nothing to leak, REQ-6/T-09) ;
+ *    a missing `text` field left untouched (REQ-6/T-08).
+ *  - `type:'image_url'` → the URL / data-URL replaced with `STRIPPED` (A-05),
+ *    structure preserved. Both the object form `{ image_url: { url } }` and
+ *    the bare-string form `{ image_url: 'data:...' }` are handled (REQ-2 / R-3).
+ *  - any other `type` (or no `type`) → returned unchanged (REQ-7, accepted
+ *    residue ; Musaium only emits `text` + `image_url`).
+ */
+const stripContentPart = (part: unknown): unknown => {
+  if (!part || typeof part !== 'object') return part;
+  const partObj = part as Record<string, unknown>;
+
+  if (partObj.type === 'text') {
+    // Non-empty string → strip ; empty string / absent / non-string → leave.
+    if (typeof partObj.text === 'string' && partObj.text !== '') {
+      return { ...partObj, text: STRIPPED };
     }
+    return part;
   }
+
+  if (partObj.type === 'image_url') {
+    const imageUrl = partObj.image_url;
+    if (typeof imageUrl === 'string') {
+      // Bare-string variant: { type:'image_url', image_url:'data:...' }.
+      return { ...partObj, image_url: STRIPPED };
+    }
+    if (imageUrl && typeof imageUrl === 'object') {
+      // Object variant: { type:'image_url', image_url:{ url:'data:...' } }.
+      return {
+        ...partObj,
+        image_url: { ...(imageUrl as Record<string, unknown>), url: STRIPPED },
+      };
+    }
+    return part;
+  }
+
+  return part;
+};
+
+/**
+ * Strip the free-text PII of a `content` VALUE, whatever its form. Returns a
+ * NEW value (immutable → idempotent + side-effect-free) :
+ *  - `string`           → `STRIPPED` (legacy text-only behaviour, REQ-3).
+ *  - `Array` (multimodal) → each part mapped through `stripContentPart` (REQ-1/2).
+ *  - anything else (`null`/`undefined`/number/object) → returned unchanged (REQ-5).
+ *
+ * A hostile array (Proxy whose `map`/`length`/index getters throw, T-18) makes
+ * `.map` throw here ; the exception propagates to the global try/catch in
+ * `stripFreeText` (REQ-10 fail-safe) — no per-part catch (that would mask a
+ * partial leak).
+ */
+const stripContentValue = (value: unknown): unknown => {
+  if (typeof value === 'string') return STRIPPED;
+  if (Array.isArray(value)) return value.map(stripContentPart);
+  return value;
+};
+
+/**
+ * Returns a NEW messages array with each `.content` masked via
+ * `stripContentValue` (string → `STRIPPED`, multimodal array → parts stripped).
+ * Each message is shallow-cloned before mutation so the caller's objects stay
+ * untouched (side-effect-free). Non-object entries / messages without a
+ * `content` key are passed through unchanged (REQ-5/T-14).
+ */
+const stripMessagesArray = (messages: unknown): unknown => {
+  if (!Array.isArray(messages)) return messages;
+  return (messages as unknown[]).map((msg): unknown => {
+    if (!msg || typeof msg !== 'object') return msg;
+    const msgObj = msg as Record<string, unknown>;
+    if (!('content' in msgObj)) return { ...msgObj };
+    return { ...msgObj, content: stripContentValue(msgObj.content) };
+  });
+};
+
+/**
+ * Mask the free-text branches of a body's `input` object (clone-then-mutate,
+ * side-effect-free). `prompt` / `text` are always strings ; `messages` is an
+ * array of (possibly multimodal) messages. Returns a NEW input clone.
+ */
+const stripInputObject = (rawInput: Record<string, unknown>): Record<string, unknown> => {
+  const inputClone: Record<string, unknown> = { ...rawInput };
+  stripStringIfPresent(inputClone, 'prompt');
+  stripStringIfPresent(inputClone, 'text');
+  if (Array.isArray(inputClone.messages)) {
+    inputClone.messages = stripMessagesArray(inputClone.messages);
+  }
+  return inputClone;
+};
+
+/**
+ * Mask the free-text branches of a body's `output` object (clone-then-mutate).
+ * `text` / `completion` are always strings ; `content` may be a string OR a
+ * multimodal array (REQ-4 symmetry). Returns a NEW output clone.
+ */
+const stripOutputObject = (rawOutput: Record<string, unknown>): Record<string, unknown> => {
+  const outputClone: Record<string, unknown> = { ...rawOutput };
+  stripStringIfPresent(outputClone, 'text');
+  stripStringIfPresent(outputClone, 'completion');
+  // Only reassign when the key exists so we never introduce a spurious
+  // `content: undefined`.
+  if ('content' in outputClone) {
+    outputClone.content = stripContentValue(outputClone.content);
+  }
+  return outputClone;
 };
 
 /**
@@ -105,33 +213,19 @@ export function stripFreeText(params: MaskInput): MaskInput {
     const cloned: Record<string, unknown> = { ...dataObj };
 
     if (rawInput && typeof rawInput === 'object') {
-      const inputClone: Record<string, unknown> = {
-        ...(rawInput as Record<string, unknown>),
-      };
-      stripStringIfPresent(inputClone, 'prompt');
-      stripStringIfPresent(inputClone, 'text');
-      stripMessagesArray(inputClone.messages);
-      cloned.input = inputClone;
+      cloned.input = stripInputObject(rawInput as Record<string, unknown>);
     }
 
     if (rawOutput && typeof rawOutput === 'object') {
-      const outputClone: Record<string, unknown> = {
-        ...(rawOutput as Record<string, unknown>),
-      };
-      stripStringIfPresent(outputClone, 'text');
-      stripStringIfPresent(outputClone, 'completion');
-      stripStringIfPresent(outputClone, 'content');
-      cloned.output = outputClone;
+      cloned.output = stripOutputObject(rawOutput as Record<string, unknown>);
     }
 
     // Defensive top-level `messages` (some LangChain shapes put the array at
-    // the root of `data` instead of under `input`).
+    // the root of `data` instead of under `input`). `stripMessagesArray`
+    // returns a NEW array with each message shallow-cloned and its `content`
+    // masked (string OR multimodal array, REQ-1/2 T-19).
     if (Array.isArray(rawMessages)) {
-      const messagesClone = (rawMessages as unknown[]).map((m) =>
-        m && typeof m === 'object' ? { ...(m as Record<string, unknown>) } : m,
-      );
-      stripMessagesArray(messagesClone);
-      cloned.messages = messagesClone;
+      cloned.messages = stripMessagesArray(rawMessages);
     }
 
     return { ...params, data: cloned };

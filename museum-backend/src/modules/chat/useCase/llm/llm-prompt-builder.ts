@@ -5,6 +5,7 @@ import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-
 import { applyHistoryWindow } from '@modules/chat/useCase/orchestration/history-window';
 import { buildVisitContextPromptBlock } from '@modules/chat/useCase/session/visit-context';
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
+import { isCoordinateString } from '@shared/utils/location';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { env } from '@src/config/env';
 
@@ -194,6 +195,14 @@ const formatNearbyMuseumsList = (nearbyMuseums: ResolvedLocation['nearbyMuseums'
 const buildVisitorContextLine = (input: OrchestratorInput): string => {
   const rl = input.resolvedLocation;
   if (!rl) {
+    // A-01 (Narrow contract / amendment) — when consent is refused/anonymous
+    // (`resolvedLocation` undefined) the client still ships raw GPS in
+    // `context.location` (`lat:X,lng:Y`). `sanitizePromptInput` does NOT strip
+    // coords, so drop the whole block to avoid leaking exact GPS to the LLM
+    // (GDPR Art. 7 inversion). Non-GPS free-text labels keep M4 behaviour below.
+    if (isCoordinateString(input.context?.location)) {
+      return '';
+    }
     const safeLocation = safeContextValue(input.context?.location);
     return safeLocation
       ? `<visitor_context>Visitor location: ${safeLocation}.</visitor_context>`
