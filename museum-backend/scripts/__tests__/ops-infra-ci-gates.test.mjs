@@ -35,6 +35,12 @@ const DOCKERFILE_PROD = repoPath('museum-backend/deploy/Dockerfile.prod');
 const WF_BACKEND = repoPath('.github/workflows/ci-cd-backend.yml');
 const WF_MOBILE = repoPath('.github/workflows/ci-cd-mobile.yml');
 
+// --- WAVE 2 — observability alert files (M4 KR3 / O1·O5·O6·O7) ---------------
+const LLM_COST = repoPath(`${ALERT_DIR}/llm-cost.yml`);
+const LLM_COST_SECURITY = repoPath(`${ALERT_DIR}/llm-cost-security.yml`);
+const CHAT_LATENCY = repoPath(`${ALERT_DIR}/chat-latency.yml`);
+const WIKIDATA_RESILIENCE = repoPath(`${ALERT_DIR}/wikidata-resilience.yml`);
+
 // Read a file or return '' if absent — lets each `it` make its own assertion
 // (an absent api-health.yml then fails the content checks, which is the point in
 // red). We do NOT throw at module load, so the whole suite reports per-requirement.
@@ -227,5 +233,123 @@ describe('I-OPS8 :: migration-schema-drift gate (R11)', () => {
     // Verified 2026-05-25; documented inline in the workflow + LOT closure report.
     // Assert the COMMAND is absent (prose mentions in comments are fine).
     expect(block).not.toMatch(/run\s+migration:generate/);
+  });
+});
+
+// =============================================================================
+// WAVE 2 — observability alerting (M4 KR3 / O1·O5·O6·O7)
+//
+// RED contract (UFR-022): A1a, A1b, A1c, A2a, A2b, A2c, A3a, A3b, A5a, A5b
+// (10 assertions) FAIL on the current baseline:
+//   - llm-cost.yml still selects `circuit_breaker_state == 2` (impossible) on
+//     both breaker alerts → A1a/A1b/A1c fail.
+//   - infra/grafana/alerting/llm-cost-security.yml does NOT exist → readOrEmpty
+//     returns '' and existsSync is false → A2a/A2b/A2c/A3a/A3b fail.
+//   - chat-latency.yml / wikidata-resilience.yml headers name only the stale
+//     single `telegram-ops` receiver → A5a/A5b fail.
+// A1d and A4 are GREEN-time anti-regression guards (may pass today — see notes).
+// The GREEN phase fixes the exprs/comment, creates llm-cost-security.yml, and
+// reconciles the two stale headers. This file is byte-frozen (red-test-manifest).
+// =============================================================================
+
+// --- A1 — O1: breaker alerts select {state="open"} == 1, not the impossible == 2
+describe('W2-O1 :: breaker alerts fire on {state="open"} == 1', () => {
+  const cost = readOrEmpty(LLM_COST);
+
+  it('A1a — llm_cost breaker selects {state="open"} == 1', () => {
+    expect(cost).toMatch(/musaium_llm_cost_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+  });
+
+  it('A1b — llm_guard breaker selects {state="open"} == 1', () => {
+    expect(cost).toMatch(/musaium_llm_guard_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+  });
+
+  it('A1c — no breaker expr still uses the impossible "== 2" selector', () => {
+    expect(cost).not.toMatch(/circuit_breaker_state\s*==\s*2/);
+  });
+
+  // GREEN-time guard (passes today — severity is NOT the bug): prevents a GREEN
+  // from changing routing while fixing the selector. cost=critical, guard=warning.
+  it('A1d — cost breaker stays critical, guard breaker stays warning (routing unchanged) [GREEN-time guard]', () => {
+    const costBlock = cost.match(/alert:\s*llm_cost_breaker_open[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    const guardBlock = cost.match(/alert:\s*llm_guard_breaker_open[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(costBlock).toMatch(/severity:\s*critical/);
+    expect(guardBlock).toMatch(/severity:\s*warning/);
+  });
+});
+
+// --- A2 — O5: anon-bypass security alert (critical) -------------------------
+describe('W2-O5 :: anon-bypass security alert', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A2a — llm-cost-security.yml exists', () => {
+    expect(existsSync(LLM_COST_SECURITY)).toBe(true);
+  });
+
+  it('A2b — has llm_cost_anon_bypass alert on rate(llm_cost_anon_bypass_total) > 0', () => {
+    expect(sec).toMatch(/alert:\s*llm_cost_anon_bypass/);
+    expect(sec).toMatch(/rate\(llm_cost_anon_bypass_total\[5m\]\)/);
+    expect(sec).toMatch(/>\s*0/);
+  });
+
+  it('A2c — anon-bypass is severity critical (security drift pages), for: 2m', () => {
+    const block = sec.match(/alert:\s*llm_cost_anon_bypass[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(block).toMatch(/severity:\s*critical/);
+    expect(block).toMatch(/for:\s*2m/);
+  });
+});
+
+// --- A3 — O6: judge-degraded compliance alert (warning) ---------------------
+describe('W2-O6 :: judge-degraded compliance alert', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A3a — has guardrail_judge_degraded alert on rate(guardrail_judge_degraded_total) > 0', () => {
+    expect(sec).toMatch(/alert:\s*guardrail_judge_degraded/);
+    expect(sec).toMatch(/rate\(guardrail_judge_degraded_total\[5m\]\)/);
+  });
+
+  it('A3b — judge-degraded is severity warning, for: 5m (persistent degradation only)', () => {
+    const block = sec.match(/alert:\s*guardrail_judge_degraded[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(block).toMatch(/severity:\s*warning/);
+    expect(block).toMatch(/for:\s*5m/);
+  });
+});
+
+// --- A4 — O5/O6: alerts reference REAL bare-prefixed metric names -----------
+// GREEN-time guard (vacuously TRUE today — file absent → sec === ''): prevents a
+// GREEN from typo-prefixing musaium_ on the I-FIX3 bare metrics (dead-alert class,
+// the very O1 bug). The exact-name RED is carried by A2b/A3a; A4 is a guard only.
+describe('W2-O5/O6 :: alerts reference REAL metric names (no musaium_ prefix typo)', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A4 — security alerts use BARE-prefixed metrics, not musaium_* [GREEN-time guard]', () => {
+    // I-FIX3 metrics are llm_cost_anon_bypass_total / guardrail_judge_degraded_total
+    // (BARE prefix, prometheus-metrics.ts:476-498). A musaium_ prefix would be a dead alert.
+    expect(sec).not.toMatch(/musaium_llm_cost_anon_bypass_total/);
+    expect(sec).not.toMatch(/musaium_guardrail_judge_degraded_total/);
+  });
+});
+
+// --- A5 — O7: stale telegram-ops headers reconciled to the split receivers --
+describe('W2-O7 :: stale telegram-ops headers reconciled', () => {
+  // Scope to the leading comment header block only (same pattern as R5b), so
+  // rule-level `telegram-ops` references (if any) can't false-pass it.
+  function headerBlock(text) {
+    const lines = [];
+    for (const line of text.split('\n')) {
+      if (line.startsWith('#') || line.trim() === '') lines.push(line);
+      else break;
+    }
+    return lines.join('\n');
+  }
+
+  it('A5a — chat-latency.yml header names the split receivers (not stale telegram-ops)', () => {
+    const h = headerBlock(readOrEmpty(CHAT_LATENCY));
+    expect(h).toMatch(/telegram-ops-critical|telegram-ops-warning/);
+  });
+
+  it('A5b — wikidata-resilience.yml header names the split receivers (not stale telegram-ops)', () => {
+    const h = headerBlock(readOrEmpty(WIKIDATA_RESILIENCE));
+    expect(h).toMatch(/telegram-ops-critical|telegram-ops-warning/);
   });
 });
