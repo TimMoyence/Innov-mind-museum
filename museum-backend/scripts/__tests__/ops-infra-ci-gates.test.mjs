@@ -353,3 +353,165 @@ describe('W2-O7 :: stale telegram-ops headers reconciled', () => {
     expect(h).toMatch(/telegram-ops-critical|telegram-ops-warning/);
   });
 });
+
+// =============================================================================
+// WAVE 3 — CI gates wired & validated (M4 KR3 / W3-O2·O4·D3·O8)
+//
+// RED contract (UFR-022): the 4 SUBSTANTIVE assertions FAIL on the current
+// baseline (verified by grep on ci-cd-backend.yml — none of the steps exist):
+//   - W1a: no `test:scripts` / `--selectProjects scripts-esm` invocation in the
+//     quality job (the scripts-esm harness is never run in CI today).
+//   - W2a: no `promtool check rules` step over infra/grafana/alerting.
+//   - W3a: no `DB_SSL_REJECT_UNAUTHORIZED=false` guard in the workflow.
+//   - W4a: the deploy_obs SSH script never references the Telegram bridge
+//     secrets before `docker compose up`.
+// W1b / W2b / W3b are GREEN-time anti-regression guards — they pass VACUOUSLY
+// today (the steps they constrain are absent → isolated block is '' → the
+// forbidden patterns are not present). They become load-bearing once GREEN adds
+// the steps (same pattern as A1d / A4 in WAVE 2). Documented inline per guard.
+//
+// All assertions are pure regex over the workflow text (no yaml import) —
+// consistent with the constrained line/regex parser contract (header §11-14).
+// The GREEN phase wires the four steps; this file is byte-frozen
+// (wave3-red-test-manifest.json).
+// =============================================================================
+
+// Isolate a single workflow STEP block: from its `- name: <Step>` line up to the
+// next `- name:` (or the next job key / EOF). Mirrors the step-isolation note in
+// wave3-design.md §4. Returns '' if the named step is absent (→ guards pass
+// vacuously, substantive name-presence checks fail — the RED intent).
+function stepBlock(text, namePattern) {
+  const startRe = new RegExp(`- name: [^\\n]*${namePattern}[^\\n]*\\n`);
+  const startMatch = text.match(startRe);
+  if (!startMatch) return '';
+  const startIdx = startMatch.index + startMatch[0].length;
+  const rest = text.slice(startIdx);
+  // Stop at the next step (`- name:`) or the next top-level job key.
+  const endMatch = rest.match(/\n\s*- name:|\n {2}[A-Za-z0-9_-]+:\n/);
+  return rest.slice(0, endMatch ? endMatch.index : rest.length);
+}
+
+// --- W1 — O2: scripts-esm harness wired into the quality job -----------------
+describe('W3-O2 :: test:scripts (scripts-esm) wired in CI quality job', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W1a — quality job invokes `pnpm run test:scripts` (or --selectProjects scripts-esm)', () => {
+    // SUBSTANTIVE RED: grep confirms zero occurrence of test:scripts/scripts-esm
+    // in ci-cd-backend.yml today → this FAILS until GREEN adds the step.
+    expect(wf).toMatch(/run:\s*pnpm run test:scripts|--selectProjects scripts-esm/);
+  });
+
+  it('W1b — the test:scripts step is NOT continue-on-error [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Becomes
+    // load-bearing once the step exists: forbids a GREEN from shipping the gate
+    // as advisory (continue-on-error: true would silence a real failure).
+    const block = stepBlock(wf, 'test:scripts');
+    expect(block).not.toMatch(/continue-on-error:\s*true/);
+  });
+});
+
+// --- W2 — O4: promtool validates the deployed alert rules --------------------
+describe('W3-O4 :: promtool check rules over infra/grafana/alerting', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W2a — quality job runs `promtool check rules` against infra/grafana/alerting', () => {
+    // SUBSTANTIVE RED: no `promtool` token anywhere in the workflow today.
+    // The {0,160} tolerates the multi-line `docker run ... check rules` form.
+    expect(wf).toMatch(/promtool[\s\S]{0,160}check rules/);
+    expect(wf).toMatch(/infra\/grafana\/alerting/);
+  });
+
+  it('W2b — promtool step scopes alerting/*.yml and does NOT include docs/observability [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Once the
+    // step exists, this forbids widening the glob to docs/observability (NOT
+    // mounted by Prometheus — wave3-design.md §1.2). Keeps the scope honest.
+    const block = stepBlock(wf, 'promtool');
+    expect(block).not.toMatch(/docs\/observability/);
+  });
+
+  it('W2c — promtool `*.yml` glob is SHELL-expanded (sh -c …), not a literal promtool argv', () => {
+    // SUBSTANTIVE RED: the current step is
+    //     --entrypoint promtool \
+    //     prom/prometheus:v2.55.1 \
+    //     check rules /alerting/*.yml
+    // `docker run --entrypoint promtool … check rules /alerting/*.yml` has NO shell
+    // in the container's argv chain, so `/alerting/*.yml` is passed to promtool
+    // LITERALLY (one argv token containing a `*`). promtool does no globbing of its
+    // own → `path /alerting/*.yml does not exist` → exit 1 on every CI run. The fix
+    // is to run the glob through a shell: `--entrypoint sh … -c '… promtool check
+    // rules /alerting/*.yml'` (the shell expands the glob into real filenames).
+    //
+    // W2a only proves the tokens `promtool` + `check rules` are PRESENT — it passes
+    // on the broken literal-argv form too. W2c is the form check that distinguishes
+    // a shell-expanded glob from a literal one.
+    const block = stepBlock(wf, 'promtool');
+
+    // A `*.yml` glob is being used (the thing that needs expansion).
+    const usesGlob = /check rules[\s\S]*?\*\.yml/.test(block);
+    expect(usesGlob).toBe(true);
+
+    // The glob must be inside a shell `-c '…'` invocation. Require an explicit
+    // shell entrypoint (sh/bash) AND a `-c` flag carrying `promtool check rules …*.yml`.
+    // FAILS on `--entrypoint promtool` (no sh/bash, no `-c`); PASSES on
+    // `--entrypoint sh … -c '… promtool check rules /alerting/*.yml'`.
+    expect(block).toMatch(/--entrypoint\s+(?:sh|bash|\/bin\/sh|\/bin\/bash)\b/);
+    expect(block).toMatch(/-c\s+['"][\s\S]*promtool\s+check rules[\s\S]*\*\.yml/);
+
+    // Belt-and-braces: the broken `--entrypoint promtool` form (which hands the
+    // unexpanded glob straight to promtool's argv) must be gone.
+    expect(block).not.toMatch(/--entrypoint\s+promtool\b/);
+  });
+});
+
+// --- W3 — D3: DB_SSL_REJECT_UNAUTHORIZED=false warning guard -----------------
+describe('W3-D3 :: guard warns on DB_SSL_REJECT_UNAUTHORIZED=false in env files', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W3a — workflow greps .env* for DB_SSL_REJECT_UNAUTHORIZED=false and emits ::warning::', () => {
+    // SUBSTANTIVE RED: no DB_SSL guard in the workflow today (grep .github/).
+    expect(wf).toMatch(/DB_SSL_REJECT_UNAUTHORIZED=false/);
+    // The guard must be a WARNING (legitimate for local PgBouncer self-signed),
+    // co-located with the grep — assert ::warning:: appears in the same step.
+    const block = stepBlock(wf, 'DB_SSL_REJECT_UNAUTHORIZED');
+    expect(block).toMatch(/::warning::/);
+  });
+
+  it('W3b — DB_SSL guard is a WARNING, never blocking (no exit 1 / ::error::) [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Forbids a
+    // GREEN from making the guard blocking — DB_SSL_REJECT_UNAUTHORIZED=false is
+    // legitimate for local PgBouncer with self-signed certs (wave3-design.md §2 D3).
+    const block = stepBlock(wf, 'DB_SSL_REJECT_UNAUTHORIZED');
+    expect(block).not.toMatch(/::error::/);
+    expect(block).not.toMatch(/exit 1/);
+  });
+});
+
+// --- W4 — O8: Telegram bridge secrets checked before obs `docker compose up` -
+describe('W3-O8 :: deploy_obs guards Telegram secrets before docker compose up', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  // Isolate the deploy_obs step's SSH script: from `id: deploy_obs` up to the
+  // next `- name:` step. The Telegram secret check must live inside this block,
+  // BEFORE the `docker compose up` of the alertmanager-telegram bridge.
+  function deployObsScript() {
+    const m = wf.match(/id: deploy_obs\n([\s\S]*?)(?=\n\s*- name:|\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    return m ? m[0] : '';
+  }
+
+  it('W4a — deploy_obs checks TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID and aborts (::error:: / exit 1) before `docker compose up`', () => {
+    // SUBSTANTIVE RED: the deploy_obs SSH script (ci-cd-backend.yml ~:1261-1298)
+    // never references the Telegram secrets today → this FAILS until GREEN adds
+    // the explicit fail-loud guard. The harness can only assert STRUCTURALLY (it
+    // cannot read /srv/museum/.env on the VPS) — wave3-design.md §2 O8.
+    const script = deployObsScript();
+    expect(script).toMatch(/TELEGRAM_BOT_TOKEN/);
+    expect(script).toMatch(/TELEGRAM_CHAT_ID/);
+    expect(script).toMatch(/::error::|exit 1/);
+    // The abort must precede the `docker compose up` of the bridge.
+    const upIdx = script.search(/docker compose up/);
+    const guardIdx = script.search(/TELEGRAM_BOT_TOKEN/);
+    expect(guardIdx).toBeGreaterThanOrEqual(0);
+    expect(upIdx).toBeGreaterThanOrEqual(0);
+    expect(guardIdx).toBeLessThan(upIdx);
+  });
+});
