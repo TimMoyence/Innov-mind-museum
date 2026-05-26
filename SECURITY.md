@@ -6,7 +6,7 @@ We take the security of Musaium and the data of our visitors, museum partners, a
 
 ## Supported versions
 
-Musaium is in pre-launch V1 (target 2026-06-01). Until V1 General Availability, the only supported version is `main` (backend, web, mobile). After GA, the two most recent minor releases of each app receive security updates.
+Musaium is in pre-launch V1 (target 2026-06-07, minimum — à reconfirmer). Until V1 General Availability, the only supported version is `main` (backend, web, mobile). After GA, the two most recent minor releases of each app receive security updates.
 
 | Component | Branch / Version | Status |
 |---|---|---|

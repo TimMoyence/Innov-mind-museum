@@ -640,7 +640,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - [ ] **Statut** : ouvert (créé 2026-05-19, découvert en Phase B post-merge W3+W4 quand `@opentelemetry/api` a été ajouté en deps)
 - **Référence code** : `museum-backend/docker-compose.dev.yml:42` (anonymous volume `/app/museum-backend/node_modules`).
 - **Symptôme** : quand `package.json` change côté host (ajout d'une dep par un merge / un install), le container `dev-backend` continue d'utiliser le `node_modules` baked dans l'image (préservé via anonymous volume). nodemon crash en boucle sur `Cannot find module 'X'`. Fix manuel actuel : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` (puis restart container).
-- **Workaround actuel** : recipe documentée dans le HANDOFF (`docs/HANDOFF_W3_GEO_PILOT.md` Phase B step 3 + cette session 2026-05-19). Acceptable pour dev, mais friction visible.
+- **Workaround actuel** : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` puis restart container (documenté cette session 2026-05-19). Acceptable pour dev, mais friction visible.
 - **Sprint d'origine** : N/A (infra dev compose, existant depuis l'introduction des anonymous volumes).
 - **Effort estimé** : 1 h — option A : script `pnpm bootstrap-dev-container` qui detect drift package.json → run install dans le container automatiquement ; option B : hook nodemon pre-start qui check `package.json mtime > pnpm-lock.yaml mtime container` et run install ; option C : rebuild image à chaque `up -d` (lent mais déterministe).
 - **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans `docs/DEV_SETUP.md` (ou équivalent).

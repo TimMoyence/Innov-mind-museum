@@ -4,7 +4,7 @@
 **Date:** 2026-05-23
 **Deciders:** /team run `2026-05-23-web-refactor-p2` (architect + editor + reviewer fresh-context UFR-022)
 **Scope:** `museum-web/` only (museum-frontend uses RN `<Modal>` natively, museum-backend has no UI)
-**Implemented in:** `museum-web/src/components/ui/BaseModal.tsx`, `ModalActions.tsx` (PR pending — branch `dev` post-commit `40e0671e9`)
+**Implemented in:** `museum-web/src/components/ui/BaseModal.tsx`, `ModalActions.tsx` (commit `40e0671e9` — merged on `dev`)
 **Related design:** [`team-state/2026-05-23-web-refactor-p2/design.md`](../../.claude/skills/team/team-state/2026-05-23-web-refactor-p2/design.md) §1, §4
 **Lib-docs:** [`lib-docs/react/PATTERNS.md`](../../lib-docs/react/PATTERNS.md) (React 19 `useId`, ref-as-prop)
 **Audit context:** [`team-reports/2026-05-23-web-dry-audit/audit-log.md`](../../team-reports/2026-05-23-web-dry-audit/audit-log.md) (Batch 2C, lignes 233-256)

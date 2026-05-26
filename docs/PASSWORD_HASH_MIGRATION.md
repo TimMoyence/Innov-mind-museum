@@ -31,9 +31,9 @@ Hash (write) sites — all use `BCRYPT_ROUNDS`:
 |---|---|
 | `modules/auth/adapters/secondary/pg/user.repository.pg.ts:44` | signup password |
 | `modules/auth/adapters/secondary/pg/user.repository.pg.ts:72` | admin-set / change password |
-| `modules/auth/useCase/password/resetPassword.useCase.ts:31` | password reset |
-| `modules/auth/useCase/totp/recoveryCodes.ts:42` | MFA recovery code hashing |
-| `scripts/seed-smoke-account.ts:46` | post-deploy smoke account seed |
+| `modules/auth/useCase/password/resetPassword.useCase.ts:30` | password reset |
+| `modules/auth/useCase/totp/recoveryCodes.ts:50` | MFA recovery code hashing |
+| `scripts/seed-smoke-account.ts:141` | post-deploy smoke account seed |
 
 Compare (verify) sites:
 

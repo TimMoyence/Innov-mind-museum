@@ -15,7 +15,7 @@ Genere un recapitulatif quotidien base UNIQUEMENT sur des sources verifiables.
 3. `pnpm test 2>&1 | tail -5` dans museum-backend — etat des tests backend
 4. `npm test 2>&1 | tail -5` dans museum-frontend — etat des tests frontend
 5. `npm run lint` dans museum-web — etat du typecheck web
-6. `wc -l .claude/team-knowledge/*.json` — taille KB actuelle
+6. `wc -l .claude/skills/team/team-knowledge/*.json` — taille KB actuelle
 
 ## SOURCES INTERDITES
 

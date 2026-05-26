@@ -28,13 +28,14 @@ Verification method: `ls museum-frontend/features/<f>/` + spot-read of folder co
 | `settings/` | 26 | ui · application · infrastructure (+4 top-level files) | Exception — accepted | `runtimeSettings.ts`, `runtimeSettings.pure.ts`, `dataModeStore.ts`, `voice-catalog.ts` are imported widely (≥10 callers across `app/` and other features). They predate the layering. Moving them is a large blast radius for zero behaviour gain — leave in place. New code MUST land under the correct `application/` or `infrastructure/` subfolder. |
 | `onboarding/` | 7 | ui · application | Exception — accepted | Pure first-launch UX. No persistence of its own (it writes to `settings/infrastructure/userProfileStore`). `infrastructure/` would be empty. |
 | `art-keywords/` | 5 | application · infrastructure · domain | Exception — accepted | Headless feature: runs as a background sync hook (`useArtKeywordsSync` mounted in `_layout.tsx`) and a classifier consumed by `chat/`. No screen of its own → no `ui/`. |
+| `paywall/` | — | ui | Verified present | Soft-paywall stub V1 (C6). |
 | `support/` | 2 | ui · infrastructure | Exception — accepted | One helper file + one API client. Adding `application/`/`domain/` to host two files would be ceremony, not architecture. |
 | `home/` | 2 | ui | Exception — accepted | Two presentational components consumed by `app/(stack)/index.tsx`. UI-only by design. |
 | `legal/` | 3 | ui (+2 top-level content files) | Exception — accepted | `privacyPolicyContent.ts` and `termsOfServiceContent.ts` are static text bundles excluded from coverage. Top-level placement matches their dumb-data nature. |
 | `diagnostics/` | 3 | (flat) | Exception — accepted | `PerfOverlay.tsx`, `perfStore.ts`, `useFpsMeter.ts`. Debug-only surface, never shipped to production paths. Three files is below the threshold for layering. |
 
 **Conforming (canonical or canonical-minus-domain)**: 6 — `auth`, `chat`, `museum`, `conversation`, `daily-art`, `review`.
-**Accepted exceptions**: 7 — `settings` (size/imports), `onboarding` / `art-keywords` / `support` / `home` / `legal` / `diagnostics` (justified by domain or smallness).
+**Accepted exceptions**: 8 — `settings` (size/imports), `onboarding` / `art-keywords` / `support` / `home` / `legal` / `diagnostics` / `paywall` (justified by domain or smallness).
 
 ## Rules for new features
 

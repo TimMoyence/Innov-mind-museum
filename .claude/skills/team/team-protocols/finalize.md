@@ -20,7 +20,7 @@ JUMP directement au §6 (git add), skip §1-§5. Le run est marque `mode: "pure-
 ```
 1. Update KB
    - team-knowledge/velocity-metrics.json
-   - team-knowledge/agent-roi.json
+   - team-knowledge/agent-performance.json
    - team-knowledge/error-patterns.json (si nouveau pattern)
 
 2. Cost delta (T1.1 ROADMAP_TEAM — KR1)

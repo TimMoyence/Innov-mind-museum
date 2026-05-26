@@ -8,7 +8,7 @@
 > **Implementation status (audit 2026-05-19, verified against repo):**
 > - ✅ **§1 prose** — UFR-021 block live in `CLAUDE.md` (§ Post-feature test coverage). DONE.
 > - ✅ **§2 JSON** — UFR-021 entry live in `.claude/agents/shared/user-feedback-rules.json` (line 203). DONE.
-> - ✅ **§3 sentinel** — `museum-frontend/scripts/sentinels/screen-test-coverage.mjs` shipped + wired as `pnpm sentinel:screen-test-coverage` (`museum-frontend/package.json:21`); `museum-frontend/.maestro/coverage-baseline.json` bootstrapped (option B, §8). DONE.
+> - ✅ **§3 sentinel** — `scripts/sentinels/screen-test-coverage.mjs` (repo root) shipped + wired as `pnpm sentinel:screen-test-coverage` (root `package.json:22`); `museum-frontend/.maestro/coverage-baseline.json` bootstrapped (option B, §8). DONE.
 > - ⏳ **§4 pre-push Gate 19** — NOT wired (`.husky/pre-push` has no screen-test-coverage step). OPEN (Phase 2, pending user validation per CLAUDE.md "Phase 2 (à wirer après validation user)").
 > - ⏳ **§5 PR template checkbox** — OPEN (Phase 2).
 > - ⏳ **§6 ci-cd-mobile.yml step + §6.1 sentinel-mirror.yml mirror** — NOT wired (0 references in either workflow). OPEN (Phase 2).

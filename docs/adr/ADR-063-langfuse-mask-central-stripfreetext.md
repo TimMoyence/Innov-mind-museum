@@ -132,7 +132,7 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
   - `lib-docs/langfuse/LESSONS.md:49` — LF-V3-05 RECLASSED P0 → CLOSED 2026-05-21.
   - `lib-docs/langfuse/PATTERNS.md` §2.1 (mask ctor option) + §3 DO #13 (central mask) + §8.1 (trace tree shape unaffected).
 - **Cross-ADR** :
-  - ADR-045 — shared observability package extraction (sentry-scrubber lives in `@musaium/shared` ; ce ADR-061 NE migre PAS `strip-free-text` cross-app — voir D5).
+  - ADR-045 — shared observability package extraction (sentry-scrubber lives in `@musaium/shared` ; ce ADR-063 NE migre PAS `strip-free-text` cross-app — voir D5).
   - ADR-050 — accept Langfuse v3 EOL (pin `langfuse@3.38.20` justifié H1 2026).
   - ADR-058 — selective hexagonal ports policy (observability est cross-cutting, pas domain port — `stripFreeText` vit shared/observability/, pas dans un `*.port.ts`).
 - **Tech debt suivi** :

@@ -66,4 +66,4 @@ For admins specifically, the three-shape oracle remains because the warning-wind
 - ASVS 6.3.x — Authentication / Authenticator Lifecycle
 - SOC2 CC6.1 — Logical access controls
 - Commit `f334bf05` — `feat(auth): F6+F9 — MFA enforced for all enrolled users (ADR-013)` *(commit message references ADR-013; ADR file moved to ADR-014 due to numbering collision — see Numbering note above)*
-- Test contract: `museum-backend/tests/integration/auth/mfa-flow.e2e.test.ts` (`F6 — MFA enforced for all enrolled users` describe block)
+- Test contract: `museum-backend/tests/unit/auth/mfa-flow.e2e.test.ts` (`F6 — MFA enforced for all enrolled users` describe block)

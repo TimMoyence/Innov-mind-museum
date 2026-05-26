@@ -12,7 +12,7 @@ The deploy workflow (`.github/workflows/ci-cd-backend.yml`) calls
 `rollback.sh` after **either**:
 - `appleboy/ssh-action` deploy step exits non-zero (image pull, migration
   apply, healthcheck loop), or
-- `node ./scripts/smoke-api.cjs` exits non-zero (login + API call against the
+- `node ./museum-backend/scripts/smoke-api.cjs` exits non-zero (login + API call against the
   freshly-deployed container).
 
 The workflow runs the rollback on the same VPS as the deploy, with the same

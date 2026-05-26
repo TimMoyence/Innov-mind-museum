@@ -10,9 +10,9 @@ The 2026-04-20 audit flagged "coverage non-measured" across the three apps. Cros
 
 | App | `coverage` config | CI behaviour |
 |---|---|---|
-| museum-backend | `jest.config.ts` declares `coverageThreshold` = 88 / 77 / 85 / 88 (stmt/br/fn/ln) — **enforced** | `pnpm test -- --coverage` runs; non-zero exit on miss, but **no CI step calls it with `--coverage`** |
-| museum-frontend | `jest.config.js` declares `coverageThreshold` = 86 / 74 / 72 / 87 — **enforced** | `npm test` does NOT pass `--coverage`, gates are dormant |
-| museum-web | `vitest.config.ts` — **no `test.coverage.thresholds` block** | `pnpm test` runs Vitest; coverage is off entirely |
+| museum-backend | `jest.config.ts` declares `coverageThreshold` = 88 / 74 / 86 / 89 (stmt/br/fn/ln) — **enforced** | `pnpm test -- --coverage` runs; CI gate hard-fails on miss |
+| museum-frontend | `jest.config.js` declares `coverageThreshold` = 91 / 78 / 80 / 91 — **enforced** | `npm run test:coverage` — CI gate hard-fails on miss |
+| museum-web | `vitest.config.ts` — `coverage.thresholds` = lines: 70 / branches: 54 / functions: 64 / statements: 68 | CI gate wired |
 
 Net result today: thresholds exist but no merge is blocked on coverage. The audit's "coverage is marketing" critique holds at the CI gate level even though per-app configs are mostly sane.
 
