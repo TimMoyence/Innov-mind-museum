@@ -944,6 +944,8 @@
       "send_hint": "将您的消息发送给博物馆助手",
       "message_input": "输入您的消息",
       "assistant_message": "助手消息",
+      "attached_image": "附加到消息的图片",
+      "loading": "正在加载回复",
       "user_message": "您的消息",
       "long_press_hint": "长按以查看更多选项",
       "recommendation_hint": "用此建议填充输入框",

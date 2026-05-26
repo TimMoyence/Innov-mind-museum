@@ -944,6 +944,8 @@
       "send_hint": "Envoie votre message à l'assistant du musée",
       "message_input": "Saisissez votre message",
       "assistant_message": "Message de l'assistant",
+      "attached_image": "Image jointe au message",
+      "loading": "Chargement de la réponse",
       "user_message": "Votre message",
       "long_press_hint": "Appui long pour plus d'options",
       "recommendation_hint": "Remplit le champ avec cette suggestion",

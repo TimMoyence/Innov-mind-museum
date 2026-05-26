@@ -944,6 +944,8 @@
       "send_hint": "يرسل رسالتك إلى مساعد المتحف",
       "message_input": "اكتب رسالتك",
       "assistant_message": "رسالة المساعد",
+      "attached_image": "صورة مرفقة بالرسالة",
+      "loading": "جارٍ تحميل الرد",
       "user_message": "رسالتك",
       "long_press_hint": "اضغط مطوّلًا لمزيد من الخيارات",
       "recommendation_hint": "يملأ حقل الإدخال بهذا الاقتراح",

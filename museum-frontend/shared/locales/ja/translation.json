@@ -944,6 +944,8 @@
       "send_hint": "ミュージアムアシスタントにメッセージを送信します",
       "message_input": "メッセージを入力",
       "assistant_message": "アシスタントのメッセージ",
+      "attached_image": "メッセージに添付された画像",
+      "loading": "応答を読み込んでいます",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
       "recommendation_hint": "この提案で入力欄を埋めます",

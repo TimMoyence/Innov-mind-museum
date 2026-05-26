@@ -944,6 +944,8 @@
       "send_hint": "Sendet Ihre Nachricht an den Museumsassistenten",
       "message_input": "Nachricht eingeben",
       "assistant_message": "Nachricht des Assistenten",
+      "attached_image": "An die Nachricht angehängtes Bild",
+      "loading": "Antwort wird geladen",
       "user_message": "Ihre Nachricht",
       "long_press_hint": "Lange drücken für weitere Optionen",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
