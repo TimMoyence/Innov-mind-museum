@@ -646,18 +646,6 @@
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
     "send": "Invia"
   },
-  "welcome": {
-    "title": "Benvenuto su Musaium",
-    "subtitle": "Il tuo compagno di museo personale",
-    "suggestions": {
-      "museum_camera": "Che opera ho davanti?",
-      "museum_history": "Raccontami la storia di questo museo",
-      "museum_next": "Cosa dovrei vedere dopo?",
-      "standard_camera": "Fotografa un'opera per conoscerla meglio",
-      "standard_style": "Parlami dell'Impressionismo",
-      "standard_question": "Chi ha dipinto la Gioconda?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Principiante",
     "intermediate": "Intermedio",

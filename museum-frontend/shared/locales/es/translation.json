@@ -646,18 +646,6 @@
     "placeholder": "Pregunta sobre una obra de arte, monumento, o envía voz/foto...",
     "send": "Enviar"
   },
-  "welcome": {
-    "title": "Bienvenido a Musaium",
-    "subtitle": "Tu compañero personal de museo",
-    "suggestions": {
-      "museum_camera": "¿Qué obra de arte tengo delante?",
-      "museum_history": "Cuéntame sobre la historia de este museo",
-      "museum_next": "¿Qué debería ver a continuación?",
-      "standard_camera": "Fotografía una obra de arte para conocerla",
-      "standard_style": "Háblame del Impresionismo",
-      "standard_question": "¿Quién pintó la Mona Lisa?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Principiante",
     "intermediate": "Intermedio",

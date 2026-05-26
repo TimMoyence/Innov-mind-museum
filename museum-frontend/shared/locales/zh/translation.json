@@ -646,18 +646,6 @@
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
     "send": "发送"
   },
-  "welcome": {
-    "title": "欢迎使用 Musaium",
-    "subtitle": "您的私人博物馆伴侣",
-    "suggestions": {
-      "museum_camera": "我面前的是什么艺术品？",
-      "museum_history": "给我讲讲这座博物馆的历史",
-      "museum_next": "我接下来应该看什么？",
-      "standard_camera": "拍摄一件艺术品来了解它",
-      "standard_style": "给我讲讲印象派",
-      "standard_question": "蒙娜丽莎是谁画的？"
-    }
-  },
   "expertiseBadge": {
     "beginner": "初学者",
     "intermediate": "中级",

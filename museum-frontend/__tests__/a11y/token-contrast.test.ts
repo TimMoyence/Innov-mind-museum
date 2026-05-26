@@ -42,8 +42,9 @@ function contrastRatio(fg: string, bg: string): number {
 function blendOver(fg: string, alpha: number, bg: string): string {
   const f = hexToRgb(fg);
   const b = hexToRgb(bg);
-  const mix = (i: number) => Math.round(f[i] * alpha + b[i] * (1 - alpha));
-  return `#${[0, 1, 2].map((i) => mix(i).toString(16).padStart(2, '0')).join('')}`;
+  const mix = (fc: number, bc: number) => Math.round(fc * alpha + bc * (1 - alpha));
+  const channels = [mix(f[0], b[0]), mix(f[1], b[1]), mix(f[2], b[2])];
+  return `#${channels.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
 // ExpertiseBadge background = `${color}14` (alpha 0x14 = 20/255) over the surface.

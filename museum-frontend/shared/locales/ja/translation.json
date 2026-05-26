@@ -646,18 +646,6 @@
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
     "send": "送信"
   },
-  "welcome": {
-    "title": "Musaiumへようこそ",
-    "subtitle": "あなた専用の美術館コンパニオン",
-    "suggestions": {
-      "museum_camera": "目の前の美術品は何ですか？",
-      "museum_history": "この美術館の歴史を教えてください",
-      "museum_next": "次に何を見るべきですか？",
-      "standard_camera": "美術品を撮影して詳しく知る",
-      "standard_style": "印象派について教えてください",
-      "standard_question": "モナ・リザを描いたのは誰ですか？"
-    }
-  },
   "expertiseBadge": {
     "beginner": "初級",
     "intermediate": "中級",

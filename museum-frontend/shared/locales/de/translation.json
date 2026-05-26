@@ -646,18 +646,6 @@
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
     "send": "Senden"
   },
-  "welcome": {
-    "title": "Willkommen bei Musaium",
-    "subtitle": "Ihr persönlicher Museumsbegleiter",
-    "suggestions": {
-      "museum_camera": "Welches Kunstwerk steht vor mir?",
-      "museum_history": "Erzählen Sie mir etwas über die Geschichte dieses Museums",
-      "museum_next": "Was sollte ich als Nächstes sehen?",
-      "standard_camera": "Fotografieren Sie ein Kunstwerk, um mehr darüber zu erfahren",
-      "standard_style": "Erzählen Sie mir etwas über den Impressionismus",
-      "standard_question": "Wer hat die Mona Lisa gemalt?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Einsteiger",
     "intermediate": "Fortgeschritten",
