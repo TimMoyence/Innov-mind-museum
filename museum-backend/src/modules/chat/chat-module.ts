@@ -286,6 +286,7 @@ function buildCompareImageUseCase(
     topN: env.visualSimilarity.topN,
     topK: env.visualSimilarity.topKDefault,
     rerankTimeoutMs: env.rerank.timeoutMs,
+    fallbackVisualThreshold: env.visualSimilarity.fallbackVisualThreshold,
   });
 
   return createCompareImageUseCase({
