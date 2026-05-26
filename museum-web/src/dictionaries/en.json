@@ -365,7 +365,22 @@
       "error": "Invalid credentials",
       "googleButton": "Continue with Google",
       "divider": "or",
-      "oauthError": "Google sign-in failed. Try again or use your password."
+      "oauthError": "Google sign-in failed. Try again or use your password.",
+      "mfaTitle": "Two-factor authentication",
+      "mfaInstructions": "Enter the 6-digit code from your authenticator app.",
+      "mfaCodeLabel": "Authentication code",
+      "mfaCodePlaceholder": "123456",
+      "mfaSubmit": "Verify and sign in",
+      "mfaUseRecovery": "Use a recovery code instead",
+      "mfaRecoveryLabel": "Recovery code",
+      "mfaRecoveryPlaceholder": "Recovery code",
+      "mfaRecoverySubmit": "Sign in with recovery code",
+      "mfaRecoveryContinue": "Continue to admin",
+      "mfaBackToCode": "Back to authenticator code",
+      "mfaErrorInvalid": "That code is incorrect. Please try again.",
+      "mfaErrorRateLimited": "Too many attempts. Please wait a moment before trying again.",
+      "mfaErrorExpired": "Your session expired. Please sign in again.",
+      "mfaRecoveryRemaining": "{count} recovery codes remaining."
     },
     "common": {
       "date": "Date",

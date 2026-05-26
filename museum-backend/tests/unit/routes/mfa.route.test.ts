@@ -350,6 +350,36 @@ describe('MFA Routes — HTTP layer', () => {
           targetId: '11',
         }),
       );
+
+      // R4 (BE) — the web client authenticates exclusively via HttpOnly cookies
+      // (api.ts cannot read body tokens). A successful challenge MUST mirror the
+      // session to the same auth cookies /login sets via setAuthCookies, otherwise
+      // the browser receives JSON tokens it cannot use → no session on web.
+      const setCookie = res.headers['set-cookie'] as unknown as string[] | undefined;
+      expect(setCookie).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('access_token='),
+          expect.stringContaining('refresh_token='),
+          expect.stringContaining('csrf_token='),
+        ]),
+      );
+    });
+
+    it('does NOT set an access_token cookie when the challenge fails with 401 INVALID_MFA_CODE', async () => {
+      // Negative guard: cookies must only be issued on the success path. A failed
+      // challenge throws before reaching setAuthCookies, so no auth cookie leaks.
+      mockChallenge.mockRejectedValueOnce(
+        new AppError({ message: 'bad', statusCode: 401, code: 'INVALID_MFA_CODE' }),
+      );
+      const sessionToken = issueMfaSessionToken(11);
+
+      const res = await request(app)
+        .post(`${MFA_BASE}/challenge`)
+        .send({ mfaSessionToken: sessionToken, code: '000000' });
+
+      expect(res.status).toBe(401);
+      const setCookie = (res.headers['set-cookie'] as unknown as string[] | undefined) ?? [];
+      expect(setCookie.some((c) => c.startsWith('access_token='))).toBe(false);
     });
 
     it('logs CHALLENGE_FAILED (decoded user) when use case throws INVALID_MFA_CODE with a valid session token', async () => {
@@ -507,6 +537,17 @@ describe('MFA Routes — HTTP layer', () => {
           targetId: '11',
           metadata: { remainingCodes: 4 },
         }),
+      );
+
+      // R6 (BE) — same dual-mode contract as /challenge: a successful recovery
+      // redemption must set the HttpOnly auth cookies so the web client logs in.
+      const setCookie = res.headers['set-cookie'] as unknown as string[] | undefined;
+      expect(setCookie).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('access_token='),
+          expect.stringContaining('refresh_token='),
+          expect.stringContaining('csrf_token='),
+        ]),
       );
     });
 

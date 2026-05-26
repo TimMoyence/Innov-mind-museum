@@ -29,6 +29,29 @@ export type MuseumDTO = Schemas['MuseumDTO'];
 export type MuseumType = MuseumDTO['museumType'];
 
 // ---------------------------------------------------------------------------
+// MFA login envelopes — aliases to the generated OpenAPI schemas (M1).
+// The admin /login response is a discriminated union of these three shapes;
+// LoginForm + auth.tsx discriminate on `mfaRequired` / `mfaEnrollmentRequired`.
+// ---------------------------------------------------------------------------
+
+/** `/login` 200 envelope when a second factor is required. */
+export type MfaRequiredResponse = Schemas['MfaRequiredResponse'];
+/** `/login` 403 envelope when the admin must enroll MFA before logging in. */
+export type MfaEnrollmentRequiredResponse = Schemas['MfaEnrollmentRequiredResponse'];
+/** `/mfa/recovery` 200 envelope — a session plus the remaining recovery-code count. */
+export type MfaRecoverySessionResponse = Schemas['MfaRecoverySessionResponse'];
+
+/**
+ * Discriminated result of `auth.tsx login()` (M1, design §4). `login()` resolves
+ * one of these; it THROWS only on a genuine credential/other error (bad password,
+ * non-MFA 401/403, network). The caller (LoginForm) routes on `kind`.
+ */
+export type LoginOutcome =
+  | { kind: 'success' }
+  | { kind: 'mfa-required'; mfaSessionToken: string; mfaSessionExpiresIn: number }
+  | { kind: 'enrollment-required' };
+
+// ---------------------------------------------------------------------------
 // Backward-compat aliases — consumers import by old names, keep them working.
 // These names are stable; no migration of call sites needed.
 // ---------------------------------------------------------------------------

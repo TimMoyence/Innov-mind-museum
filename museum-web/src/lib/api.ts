@@ -17,13 +17,23 @@
 // ── Error class ────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
+  /**
+   * The parsed JSON response body, when the failing response carried one.
+   * Callers (e.g. the admin login flow) discriminate on it — `mfaRequired`,
+   * `mfaEnrollmentRequired`, or `{ error: { code } }` — without re-parsing.
+   * `undefined` when the body was absent or not valid JSON.
+   */
+  public body?: unknown;
+
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     message: string,
+    body?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
+    this.body = body;
   }
 }
 
@@ -141,6 +151,15 @@ async function refreshAccessToken(): Promise<string> {
 export interface ApiRequestOptions {
   /** Optional AbortSignal forwarded to the underlying fetch() call. */
   signal?: AbortSignal;
+  /**
+   * Opt out of the 401 → auto-refresh → retry → onLogout path. A 401 then
+   * falls straight through to the error block and throws an `ApiError`. Used by
+   * the MFA challenge/recovery calls (and the credentials login): a 401 there is
+   * a DOMAIN error (wrong/expired code, no session yet), not session expiry, so
+   * firing the session-refresh/logout would bounce the admin off the step.
+   * Does NOT affect CSRF or `credentials: 'include'`.
+   */
+  skipAuthRefresh?: boolean;
 }
 
 interface InternalRequestOptions extends ApiRequestOptions {
@@ -183,7 +202,7 @@ async function request<T>(
   // upfront; the backend rejects with 401 if the refresh cookie is also missing/expired.
   // refreshAccessToken itself fires onLogout on definitive failure (it owns the queue);
   // we just translate the throw into an ApiError for the caller.
-  if (res.status === 401 && !options?.isRetry) {
+  if (res.status === 401 && !options?.isRetry && !options?.skipAuthRefresh) {
     try {
       await refreshAccessToken();
     } catch {
@@ -192,20 +211,26 @@ async function request<T>(
 
     // Retry the original request — new cookies are now in the jar.
     // Propagate the abort signal so a caller-driven cancel still takes effect on retry.
-    return request<T>(method, path, body, { isRetry: true, signal: options?.signal });
+    return request<T>(method, path, body, {
+      isRetry: true,
+      signal: options?.signal,
+      skipAuthRefresh: options?.skipAuthRefresh,
+    });
   }
 
   if (!res.ok) {
     let message = res.statusText;
+    let parsedBody: unknown;
     try {
-      const errorBody = (await res.json()) as { message?: string };
+      parsedBody = await res.json();
+      const errorBody = parsedBody as { message?: string };
       if (errorBody.message) {
         message = errorBody.message;
       }
     } catch {
-      // ignore parse errors — keep statusText
+      // ignore parse errors — keep statusText, leave body undefined
     }
-    throw new ApiError(res.status, res.statusText, message);
+    throw new ApiError(res.status, res.statusText, message, parsedBody);
   }
 
   // Handle 204 No Content
@@ -222,8 +247,8 @@ export function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T>
   return request<T>('GET', path, undefined, options);
 }
 
-export function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('POST', path, body);
+export function apiPost<T>(path: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
+  return request<T>('POST', path, body, options);
 }
 
 export function apiPatch<T>(path: string, body?: unknown): Promise<T> {

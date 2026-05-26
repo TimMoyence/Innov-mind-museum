@@ -216,6 +216,21 @@ export interface Dictionary {
       googleButton: string;
       divider: string;
       oauthError: string;
+      mfaTitle: string;
+      mfaInstructions: string;
+      mfaCodeLabel: string;
+      mfaCodePlaceholder: string;
+      mfaSubmit: string;
+      mfaUseRecovery: string;
+      mfaRecoveryLabel: string;
+      mfaRecoveryPlaceholder: string;
+      mfaRecoverySubmit: string;
+      mfaRecoveryContinue: string;
+      mfaBackToCode: string;
+      mfaErrorInvalid: string;
+      mfaErrorRateLimited: string;
+      mfaErrorExpired: string;
+      mfaRecoveryRemaining: string;
     };
     common: {
       date: string;

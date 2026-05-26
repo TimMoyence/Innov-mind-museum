@@ -1,6 +1,7 @@
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 
+import { setAuthCookies } from '@modules/auth/adapters/primary/http/helpers/auth-cookies';
 import {
   challengeMfaUseCase,
   disableMfaUseCase,
@@ -170,6 +171,10 @@ mfaRouter.post(
         ip: req.ip,
         requestId: req.requestId,
       });
+      // F7 dual-mode: mirror the session to HttpOnly auth cookies so the web
+      // admin client (which authenticates exclusively via cookies) is logged in
+      // after a successful challenge. Mobile still reads the body tokens.
+      setAuthCookies(res, session);
       res.status(200).json(session);
     } catch (error) {
       if (error instanceof AppError && error.code === 'INVALID_MFA_CODE') {
@@ -223,6 +228,9 @@ mfaRouter.post(
       ip: req.ip,
       requestId: req.requestId,
     });
+    // F7 dual-mode: same as /challenge — mirror the session to HttpOnly auth
+    // cookies for the web client; mobile keeps the body tokens.
+    setAuthCookies(res, session);
     res.status(200).json({ ...session, remainingRecoveryCodes: remainingCodes });
   },
 );
