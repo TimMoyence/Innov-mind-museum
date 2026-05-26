@@ -24,6 +24,14 @@ const NAV_KEYS = [
 
 type NavKey = (typeof NAV_KEYS)[number];
 
+// C1B / R8 — nav keys a `museum_manager` can actually use, tenant-scoped to
+// their own museum. Mirrors the backend `requireRole` allow-list that admits
+// museum_manager (stats→dashboard, nps, reviews, tickets). Every other role
+// sees the full NAV_KEYS set. The 5 hidden keys (users, auditLogs, reports,
+// analytics, supportAdmin) stay admin/moderator-only — leaving them visible
+// gave the manager dead 403 links.
+const MUSEUM_MANAGER_NAV_KEYS: readonly NavKey[] = ['dashboard', 'reviewsAdmin', 'tickets', 'nps'];
+
 /** Map each nav key to its URL suffix. */
 const NAV_PATHS: Record<NavKey, string> = {
   dashboard: '',
@@ -45,6 +53,11 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
+
+  // C1B / R8 — a museum_manager only sees the links it can use (tenant-scoped);
+  // every other allow-listed role sees the full nav set.
+  const visibleNavKeys: readonly NavKey[] =
+    user?.role === 'museum_manager' ? MUSEUM_MANAGER_NAV_KEYS : NAV_KEYS;
 
   const basePath = `/${locale}/admin`;
 
@@ -82,7 +95,7 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Admin">
           <ul className="space-y-1">
-            {NAV_KEYS.map((key) => {
+            {visibleNavKeys.map((key) => {
               const href = `${basePath}${NAV_PATHS[key]}`;
               const active = isActive(href);
               return (

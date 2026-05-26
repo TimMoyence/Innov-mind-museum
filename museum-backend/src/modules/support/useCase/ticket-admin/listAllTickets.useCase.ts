@@ -16,6 +16,12 @@ export interface ListAllTicketsInput {
   priority?: string;
   page: number;
   limit: number;
+  /**
+   * C1B — tenant scope (BOLA). `undefined`/`null` = global cross-tenant view
+   * (super_admin/admin). For a `museum_manager` the route forces this to their
+   * JWT claim so the repo filters to their own museum's tickets only.
+   */
+  museumId?: number | null;
 }
 
 /** Admin/moderator use only. */
@@ -35,6 +41,7 @@ export class ListAllTicketsUseCase {
     const filters: ListTicketsFilters = {
       status: input.status as TicketStatus | undefined,
       priority: input.priority as TicketPriority | undefined,
+      museumId: input.museumId,
       pagination: { page, limit },
     };
 

@@ -240,7 +240,10 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/tickets',
     admin: 200,
     moderator: 200,
-    museum_manager: 403,
+    // C1B R10 — manager (scoped via JWT museumId claim) can list their own
+    // tenant's tickets. Flipped 403→200; the value-level scope + the 404
+    // ownership guard are proven by tickets-tenant-isolation.test.ts.
+    museum_manager: 200,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -252,7 +255,10 @@ const MATRIX: RouteCase[] = [
     body: ticketBody,
     admin: 200,
     moderator: 200,
-    museum_manager: 403,
+    // C1B R10 — manager passes the RBAC gate; the per-tenant 404 ownership
+    // guard lives below the (mocked) facade → proven by the real-DB
+    // tickets-tenant-isolation.test.ts, not here. Flipped 403→200.
+    museum_manager: 200,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -263,7 +269,10 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/reviews',
     admin: 200,
     moderator: 200,
-    museum_manager: 403,
+    // C1B R10 — manager (scoped via JWT museumId claim) lists their own
+    // tenant's reviews. Flipped 403→200; value-level scope proven by
+    // reviews-tenant-isolation.test.ts.
+    museum_manager: 200,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -275,7 +284,10 @@ const MATRIX: RouteCase[] = [
     body: reviewBody,
     admin: 200,
     moderator: 200,
-    museum_manager: 403,
+    // C1B R10 — manager passes the RBAC gate; the per-tenant 404 ownership
+    // guard lives below the (mocked) facade → proven by the real-DB
+    // reviews-tenant-isolation.test.ts, not here. Flipped 403→200.
+    museum_manager: 200,
     visitor: 403,
     anonymous: 401,
     kind: 'main',

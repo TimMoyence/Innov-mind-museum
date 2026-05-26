@@ -1,4 +1,4 @@
-import { forbidden } from '@shared/errors/app.error';
+import { computeTenantScope } from '@shared/authz/tenant-scope';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminStats } from '@modules/admin/domain/admin/admin.types';
@@ -29,16 +29,15 @@ export class GetStatsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
   async execute({ role, museumId }: GetStatsInput = {}): Promise<AdminStats> {
-    if (role === 'museum_manager') {
-      // Tenant-scoped — the manager MUST have an assigned museum (same
-      // factory/message as the export precedent, design D3).
-      if (museumId == null) {
-        throw forbidden('No museum assigned');
-      }
-      return await this.repository.getStats(museumId);
+    // C1B D1 — single source of truth for the scope decision (extracted helper).
+    // museum_manager → forced museumId (403 if unassigned); super_admin / admin
+    // / unknown → null (global cross-tenant snapshot). Behaviour identical to
+    // the prior inline branch (R4 regression-preserved).
+    const scopeMuseumId = computeTenantScope(role, museumId);
+    if (scopeMuseumId != null) {
+      return await this.repository.getStats(scopeMuseumId);
     }
 
-    // super_admin / admin / unknown → global cross-tenant snapshot.
     return await this.repository.getStats();
   }
 }
