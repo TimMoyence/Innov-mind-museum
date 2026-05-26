@@ -586,7 +586,9 @@ jobs:
         working-directory: museum-backend
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        # Pinned by the multi-arch INDEX digest (must match deploy/docker-compose.prod.yml
+        # so the clean-DB drift check tests the exact image prod runs). :pg16 tag kept for readability.
+        image: pgvector/pgvector:pg16@sha256:00ba258a66dac104fd5171074a0084462a64a1369d8513f3d0a634e2f24d15bc
         env:
           POSTGRES_USER: museum_dev
           POSTGRES_PASSWORD: museum_dev_password

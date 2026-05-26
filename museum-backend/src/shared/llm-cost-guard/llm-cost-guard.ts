@@ -1,5 +1,8 @@
 import { logger as defaultLogger } from '@shared/logger/logger';
-import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
+import {
+  llmCostAnonBypassTotal,
+  llmCostUserDailyUsd,
+} from '@shared/observability/prometheus-metrics';
 
 import type { LlmCostCounter } from '@shared/llm-cost-guard/llm-cost-counter.port';
 
@@ -113,16 +116,7 @@ export class LlmCostGuard {
       // cap with zero signal. All live paid routes require `isAuthenticated`, so
       // this should be flat 0 in prod.
       this.logger.warn('llm_cost_anon_bypass', { capUsd: this.dailyCapUsd });
-      try {
-        llmCostAnonBypassTotal.inc();
-      } catch (err) {
-        // Observability must never break the guard (prom-client throws on
-        // registry-cleared / duplicate-name). Swallow + log, never deny on a
-        // metric failure (the decision is "allow anon" regardless).
-        this.logger.warn('llm_cost_anon_bypass_metric_failed', {
-          reason: err instanceof Error ? err.message : String(err),
-        });
-      }
+      this.recordAnonBypass();
       return;
     }
 
@@ -154,8 +148,9 @@ export class LlmCostGuard {
       });
     }
 
+    let newDailyTotalUsd: number;
     try {
-      await this.counter.increment(userId, day, estimatedCostUsd);
+      newDailyTotalUsd = await this.counter.increment(userId, day, estimatedCostUsd);
     } catch (err) {
       this.logBlock(userId, 'LLM_COST_GUARD_REDIS_UNAVAILABLE', {
         reason: err instanceof Error ? err.message : String(err),
@@ -165,6 +160,46 @@ export class LlmCostGuard {
         code: 'LLM_COST_GUARD_REDIS_UNAVAILABLE',
         message: 'LLM cost counter increment failed — failing CLOSED.',
         capUsd: this.dailyCapUsd,
+      });
+    }
+
+    // WAVE 6 · C4 — observe the NEW daily total exactly once on this allowed path.
+    this.observeDailySpend(newDailyTotalUsd);
+  }
+
+  /**
+   * I-FIX3 — increment the anon-bypass observability counter. Observability must
+   * never break the guard (prom-client throws on registry-cleared / duplicate
+   * name) — swallow + log, never deny on a metric failure (the decision is
+   * "allow anon" regardless).
+   */
+  private recordAnonBypass(): void {
+    try {
+      llmCostAnonBypassTotal.inc();
+    } catch (err) {
+      this.logger.warn('llm_cost_anon_bypass_metric_failed', {
+        reason: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  /**
+   * WAVE 6 · C4 — record the per-user daily spend distribution.
+   *
+   * Called ONLY from the allowed path of `assertAllowed`, AFTER a successful
+   * `increment()`, with the authoritative Redis post-increment total it returns
+   * (NOT just the delta). Refused paths (kill-switch / cap / Redis-unavailable)
+   * and the anon bypass return/throw before reaching the call site, so they never
+   * observe (no per-user spend trackable). Wrapped like the anon-bypass counter:
+   * observability must NEVER break the allow decision (prom-client throws on a
+   * cleared/duplicate registry) — swallow + log, never deny on a metric failure.
+   */
+  private observeDailySpend(newDailyTotalUsd: number): void {
+    try {
+      llmCostUserDailyUsd.observe(newDailyTotalUsd);
+    } catch (err) {
+      this.logger.warn('llm_cost_user_daily_metric_failed', {
+        reason: err instanceof Error ? err.message : String(err),
       });
     }
   }

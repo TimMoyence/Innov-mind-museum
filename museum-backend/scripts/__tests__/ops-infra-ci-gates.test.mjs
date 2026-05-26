@@ -35,6 +35,9 @@ const DOCKERFILE_PROD = repoPath('museum-backend/deploy/Dockerfile.prod');
 const WF_BACKEND = repoPath('.github/workflows/ci-cd-backend.yml');
 const WF_MOBILE = repoPath('.github/workflows/ci-cd-mobile.yml');
 
+// --- WAVE 6 — D5: pgvector image digest pin (deploy + CI) --------------------
+const DOCKER_COMPOSE_PROD = repoPath('museum-backend/deploy/docker-compose.prod.yml');
+
 // --- WAVE 2 — observability alert files (M4 KR3 / O1·O5·O6·O7) ---------------
 const LLM_COST = repoPath(`${ALERT_DIR}/llm-cost.yml`);
 const LLM_COST_SECURITY = repoPath(`${ALERT_DIR}/llm-cost-security.yml`);
@@ -646,5 +649,84 @@ describe('W4 :: LLM-Guard breaker alert stays correct + routing-ready', () => {
     for (const block of alertBlocks) {
       expect(block).toMatch(/severity:\s*(?:warning|critical)/);
     }
+  });
+});
+
+// =============================================================================
+// WAVE 6 — D5: pgvector image pinned by digest (deploy + CI)
+//
+// discovery/deploy-db.md Défaut 5 (LOW): `docker-compose.prod.yml:203` and the
+// `migration-drift` job service in `ci-cd-backend.yml:589` reference
+// `pgvector/pgvector:pg16` by MUTABLE tag — a `docker compose pull` can swap the
+// image with no sha256 validation. The design (wave6-design.md §1 D5) pins the
+// multi-arch INDEX digest `sha256:00ba258...` on BOTH files.
+//
+// RED contract (UFR-022): D5-W6a..c FAIL on the current baseline because both
+// files carry the bare `:pg16` tag with NO `@sha256:` digest (verified: compose
+// :203 and CI :589). D5-W6d is a GREEN-time guard (vacuous at RED — no digests
+// to compare). The GREEN phase appends `@sha256:00ba258...` to both directives.
+// This file is byte-frozen (wave6-red-test-manifest.json).
+//
+// NOTE: existing R11 assertions (`migration-drift` block, lines ~218-236) are
+// LEFT UNTOUCHED — this section only ADDS new `it`s. Likewise the W2/W3/W4
+// sections above are unchanged.
+// =============================================================================
+
+const PGVECTOR_PIN_RE = /image:\s*pgvector\/pgvector:pg16@sha256:[0-9a-f]{64}/;
+// Negative lookahead: a `image:` directive pointing at `:pg16` WITHOUT an
+// `@sha256:` digest immediately after. Scoped to `image:` so the explanatory
+// comment on compose:195 (`# pgvector/pgvector:pg16 — Postgres 16 …`) is NOT a
+// false-fail (it's free text, not a directive).
+const PGVECTOR_BARE_TAG_RE = /image:\s*pgvector\/pgvector:pg16(?!@sha256:)/;
+const PGVECTOR_DIGEST_CAPTURE = /image:\s*pgvector\/pgvector:pg16@sha256:([0-9a-f]{64})/;
+
+describe('WAVE 6 :: D5 — pgvector pinned by digest (deploy prod compose)', () => {
+  const compose = readOrEmpty(DOCKER_COMPOSE_PROD);
+
+  it('the prod compose file exists on disk (harness precondition)', () => {
+    expect(existsSync(DOCKER_COMPOSE_PROD)).toBe(true);
+  });
+
+  it('D5-W6a — the db service pins pgvector by @sha256: digest (64 hex)', () => {
+    // FAILS at RED: compose:203 is `image: pgvector/pgvector:pg16` (bare tag).
+    expect(compose).toMatch(PGVECTOR_PIN_RE);
+  });
+
+  it('D5-W6b — no `image:` directive references pgvector:pg16 without an @sha256 digest', () => {
+    // FAILS at RED: the bare-tag directive `image: pgvector/pgvector:pg16` matches.
+    expect(compose).not.toMatch(PGVECTOR_BARE_TAG_RE);
+  });
+});
+
+describe('WAVE 6 :: D5 — pgvector pinned by digest (CI migration-drift)', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('D5-W6c — the migration-drift job pins pgvector by @sha256: digest (64 hex)', () => {
+    // Isolate the migration-drift job block (same pattern as R11 above) so the
+    // assertion targets the CI service image, not an unrelated occurrence.
+    const jobMatch = wf.match(/\n {2}migration-drift:\n([\s\S]*?)(?=\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    expect(jobMatch).not.toBeNull();
+    const block = jobMatch[0];
+    // FAILS at RED: CI:589 is `image: pgvector/pgvector:pg16` (bare tag).
+    expect(block).toMatch(PGVECTOR_PIN_RE);
+    expect(block).not.toMatch(PGVECTOR_BARE_TAG_RE);
+  });
+});
+
+describe('WAVE 6 :: D5 — prod and CI pin the SAME digest (GREEN-time guard)', () => {
+  const compose = readOrEmpty(DOCKER_COMPOSE_PROD);
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('D5-W6d — the digest in the prod compose equals the digest in the migration-drift CI job', () => {
+    // Vacuous at RED (no digest present → both captures null → both skipped by
+    // the guards below). Load-bearing at GREEN: prevents pinning two divergent
+    // digests (the CI clean DB must test the SAME image that prod runs).
+    const composeDigest = compose.match(PGVECTOR_DIGEST_CAPTURE)?.[1];
+    const jobMatch = wf.match(/\n {2}migration-drift:\n([\s\S]*?)(?=\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    const ciDigest = jobMatch?.[0].match(PGVECTOR_DIGEST_CAPTURE)?.[1];
+
+    expect(composeDigest).toBeDefined();
+    expect(ciDigest).toBeDefined();
+    expect(composeDigest).toBe(ciDigest);
   });
 });
