@@ -53,6 +53,14 @@ interface ChatMessageBubbleProps {
    * accessible via `message.metadata`.
    */
   onArtworkPress?: (message: ChatUiMessage) => void;
+  /**
+   * D-06 (cycle D, 2026-05-26) — fired when the user taps a C3 compare match
+   * card. Parent owns the navigation target (Wikidata sheet/browser for the
+   * `qid`). Mirrors the `onArtworkPress` plumbing: the bubble only forwards a
+   * real handler to `<ImageCompareCarousel>`. When omitted, a graceful no-op is
+   * forwarded so the carousel stays callable and the tap never throws.
+   */
+  onMatchPress?: (qid: string) => void;
 }
 
 /**
@@ -84,6 +92,7 @@ export const ChatMessageBubble = React.memo(
     feedbackValue,
     onFeedback,
     onArtworkPress,
+    onMatchPress,
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
@@ -277,7 +286,9 @@ export const ChatMessageBubble = React.memo(
           <ImageCompareCarousel
             matches={message.metadata.compareResults.matches}
             locale={locale.toLowerCase().startsWith('fr') ? 'fr' : 'en'}
-            onMatchPress={() => undefined}
+            onMatchPress={(qid) => {
+              onMatchPress?.(qid);
+            }}
           />
         ) : null}
 
