@@ -171,6 +171,9 @@ describe('validateProductionEnv — provider key branches', () => {
   });
 
   it('storage.driver=s3 without S3 credentials → throws missing required', () => {
+    // COMP-02: the Public Access Block gate now runs before the credential
+    // checks, so attest it to reach (and assert) the missing-credential branch.
+    process.env.S3_PUBLIC_ACCESS_BLOCK_VERIFIED = 'true';
     const env = {
       ...makeEnv(),
       storage: { driver: 's3', s3: {} },
