@@ -369,6 +369,13 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
+      # COMP-01 — PGP/.well-known placeholder deploy gate. Blocks shipping a
+      # placeholder pgp-key.txt (the RFC 9116 Encryption channel would publish
+      # empty). Runs on prod deploy only; the placeholder is legitimate in
+      # dev/PR until the real key is generated (docs/operations/PGP_KEY_GENERATION.md).
+      - name: PGP placeholder deploy gate
+        run: node scripts/sentinels/wellknown-placeholder-free.mjs
+
       - name: Build image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
