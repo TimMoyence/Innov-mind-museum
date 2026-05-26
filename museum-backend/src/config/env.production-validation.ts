@@ -49,12 +49,32 @@ function validateJwtSecrets(env: AppEnv): void {
   assertSecretLength('JWT_REFRESH_SECRET', env.auth.refreshTokenSecret);
 }
 
+/** Truthy values accepted for the conscious DeepSeek EU-transfer opt-in. */
+function isTransferApproved(raw: string | undefined): boolean {
+  return /^(1|true|yes)$/i.test((raw ?? '').trim());
+}
+
 function validateLlmProviderKey(env: AppEnv): void {
   switch (env.llm.provider) {
     case 'openai':
       required('OPENAI_API_KEY', env.llm.openAiApiKey);
       return;
     case 'deepseek':
+      // COMP-04 — RGPD Art.44-49 / Schrems II. DeepSeek (api.deepseek.com, China)
+      // has no EU adequacy decision; sending chat text / images / coarse geo there
+      // is an unguarded cross-border transfer. Block in production unless the
+      // controller has consciously accepted the risk via a documented flag. The
+      // default provider (openai) and google are unaffected — this guard never
+      // throws for them, so it cannot break the normal boot path.
+      if (!isTransferApproved(process.env.DEEPSEEK_EU_TRANSFER_APPROVED)) {
+        throw new Error(
+          'LLM_PROVIDER=deepseek is blocked in production (Schrems II): DeepSeek ' +
+            '(api.deepseek.com, China) has no EU adequacy decision, so chat/image/geo ' +
+            'data would be transferred cross-border without a safeguard. Set ' +
+            'DEEPSEEK_EU_TRANSFER_APPROVED=true to consciously accept the transfer risk ' +
+            '(document the decision in the ROPA), or use LLM_PROVIDER=openai/google.',
+        );
+      }
       required('DEEPSEEK_API_KEY', env.llm.deepseekApiKey);
       return;
     case 'google':

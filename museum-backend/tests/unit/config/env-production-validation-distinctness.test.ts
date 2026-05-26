@@ -150,6 +150,9 @@ describe('validateProductionEnv — provider key branches', () => {
   });
 
   it('llm.provider=deepseek without DEEPSEEK_API_KEY → throws missing required', () => {
+    // COMP-04: the Schrems II residency guard now runs before the key check, so
+    // approve the EU transfer to reach (and assert) the missing-key branch.
+    process.env.DEEPSEEK_EU_TRANSFER_APPROVED = 'true';
     const env = {
       ...makeEnv(),
       llm: { provider: 'deepseek', deepseekApiKey: '' },
