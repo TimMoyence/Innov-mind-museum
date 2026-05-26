@@ -132,6 +132,9 @@ jobs:
       - name: 'Mirror Gate P20 — roadmap claim resolves (UFR-024)'
         run: node scripts/sentinels/roadmap-claim-resolves.mjs
 
+      - name: 'Mirror Gate P23 — subprocessor ledger completeness (GDPR Art 28, COMP-03/08)'
+        run: node scripts/sentinels/subprocessor-ledger-completeness.mjs
+
       - name: 'Mirror Gate P22 — ai-tests count ratchet (BE)'
         working-directory: museum-backend
         run: node scripts/sentinels/ai-tests-count.mjs
