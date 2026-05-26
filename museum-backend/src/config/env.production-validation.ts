@@ -187,7 +187,8 @@ export function validateProductionEnv(env: AppEnv): void {
  * @param env
  */
 function validateCostGuardRedis(env: AppEnv): void {
-  if (env.llm.costGuard.userDailyCapUsd > 0 && !env.cache?.enabled) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Justification: env trust boundary. AppEnv types `llm.costGuard.userDailyCapUsd` as always-present, but this boot validator is also fed partial env mocks (undefined `llm`/`costGuard`) → bare access threw TypeError (WAVE1-C2 regression). `?? 0` keeps prod fail-CLOSED (default cap 0.5 still throws) while treating absent cap as opt-out. Approved-by: M4-corrective@2026-05-26
+  if ((env.llm?.costGuard?.userDailyCapUsd ?? 0) > 0 && !env.cache?.enabled) {
     throw new Error(
       'LLM cost guard is configured (OPENAI_USER_DAILY_USD_CAP > 0) but Redis cache ' +
         'is disabled (REDIS_URL unset) in production. The per-user daily USD cap cannot ' +
