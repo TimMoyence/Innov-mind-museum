@@ -1,6 +1,6 @@
 # Musaium — Release Checklist & Remaining Work
 
-> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-01 | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
+> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-07 (date canonique, cf. `docs/ROADMAP_PRODUCT.md`) | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
 
 ---
 

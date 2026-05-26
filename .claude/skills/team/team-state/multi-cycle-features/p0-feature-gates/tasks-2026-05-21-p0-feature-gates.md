@@ -35,14 +35,14 @@ Chaque cycle démarre par re-fresh spec/decisions/design lecture et red/green/re
 **Requête** : `SELECT (COUNT(?item) AS ?count) WHERE { ?item wdt:P195 wd:<Qid> ; wdt:P18 ?image }` sur `query.wikidata.org/sparql`.
 **Cibles** : Q3329534 (Aquitaine), Q2945071 (CAPC), Q16964634 (Cité du Vin), monument Pont de Pierre (Q-code TBD).
 **Critère décision (D-SEQ)** : ≥10 œuvres avec image → seed auto OK ; <10 → seed manuel curaté ou descope (documenté dans le rapport).
-**DONE-WHEN** : `team-reports/working/2026-05-21-p0-feature-gates/c4b-sparql-counts.md` créé avec un count par musée + décision per-musée.
+**DONE-WHEN** : count SPARQL par musée + décision per-musée actés (working-dir éphémère purgé) — décision finale dans `docs/ROADMAP_PRODUCT.md` P0.C4b (Aquitaine seul ingest-viable).
 **Dépend de** : rien.
 
 ### [T-A-INV2] [INV] C2 : vérifier Q-codes URI license Wikidata
 
 **But** : confirmer URI exactes à mapper avant d'écrire le test red.
 **Action** : WebFetch `https://www.wikidata.org/wiki/Q19652` (public domain), `Q6938433` (CC0), `Q6905323` (CC BY-SA 3.0), `Q18199165` (CC BY-SA 4.0). Confirmer le pattern URI `http://www.wikidata.org/entity/Qxxx`.
-**DONE-WHEN** : table URI→slug confirmée dans `team-reports/working/2026-05-21-p0-feature-gates/c2-license-uris.md`.
+**DONE-WHEN** : table URI→slug confirmée (working-dir éphémère purgé) — réf `docs/ROADMAP_PRODUCT.md` P0.C4b.
 **Dépend de** : rien (parallélisable avec T-A-INV1).
 
 ### [T-A1] [RED] C2 : fixture URI réelle + test mapping absent → 0 row accepté
