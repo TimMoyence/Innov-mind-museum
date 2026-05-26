@@ -40,13 +40,6 @@ jest.mock('@/features/review/ui/NpsScale', () => {
   };
 });
 
-jest.mock('@/features/review/ui/StarRating', () => {
-  const { View } = require('react-native');
-  return {
-    StarRating: (props: Record<string, unknown>) => <View testID="star-rating" {...props} />,
-  };
-});
-
 import ReviewsScreen from '@/app/(stack)/reviews';
 
 const defaultHookReturn = {
