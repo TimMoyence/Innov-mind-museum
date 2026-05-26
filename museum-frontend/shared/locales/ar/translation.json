@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "اسم العرض الخاص بك",
       "comment_input": "تعليق تقييمك",
-      "star_button": "تعيين تقييم {{count}} نجوم"
+      "star_button": "تعيين تقييم {{count}} نجوم",
+      "nps_value": "درجة التوصية {{value}} من 10"
     },
     "preferences": {
       "language_button": "اختيار لغة {{language}}",
@@ -1175,6 +1176,9 @@
     "writeReview": "كتابة تقييم",
     "averageRating": "متوسط التقييم",
     "ratingLabel": "تقييمك",
+    "npsLabel": "ما مدى احتمال أن توصي بـ Musaium؟",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "اسمك",
     "commentPlaceholder": "شارك تجربتك...",
     "submit": "إرسال التقييم",

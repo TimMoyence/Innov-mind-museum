@@ -18,8 +18,9 @@ import { useReviews } from '@/features/review/application/useReviews';
 import { Confetti } from '@/shared/ui/Confetti';
 import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
-import { StarRating } from '@/features/review/ui/StarRating';
+import { NpsScale } from '@/features/review/ui/NpsScale';
 import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';
+import { useChatSessionStore } from '@/features/chat/infrastructure/chatSessionStore';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -48,7 +49,6 @@ export default function ReviewsScreen() {
   const [showForm, setShowForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [userName, setUserName] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   const [showConfetti, setShowConfetti] = useState(false);
@@ -65,14 +65,20 @@ export default function ReviewsScreen() {
   }, []);
 
   const onSubmit = useCallback(async () => {
-    if (rating === 0 || comment.trim().length === 0 || userName.trim().length === 0) return;
-    const ok = await submitReview(rating, comment.trim(), userName.trim());
+    if (rating === 0 || comment.trim().length === 0) return;
+    // Best-effort attribution (design D-C2-5): the most-recently-visited chat
+    // session's id, read at submit time from the in-memory store. Empty store
+    // → undefined → BE attributes the review to global (Q1, honest fallback).
+    const { sessions } = useChatSessionStore.getState();
+    const sessionId = Object.entries(sessions).sort(
+      (a, b) => b[1].updatedAt - a[1].updatedAt,
+    )[0]?.[0];
+    const ok = await submitReview(rating, comment.trim(), sessionId);
     if (ok) {
       setSubmitted(true);
       setShowForm(false);
       setRating(0);
       setComment('');
-      setUserName('');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!reduceMotionRef.current) {
         setShowConfetti(true);
@@ -81,7 +87,7 @@ export default function ReviewsScreen() {
         }, 1500);
       }
     }
-  }, [rating, comment, userName, submitReview]);
+  }, [rating, comment, submitReview]);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
@@ -93,7 +99,15 @@ export default function ReviewsScreen() {
               <Text style={[styles.avgNumber, { color: theme.textPrimary }]}>
                 {stats.average.toFixed(1)}
               </Text>
-              <StarRating rating={stats.average} size={18} />
+              {/* 0-10 NPS scale, un-capped (no 5-star clamp). R22.
+                  The average number and the "/ 10" suffix are two adjacent Text
+                  nodes; the suffix dict value is a bare "/ 10" (no {{avg}}
+                  interpolation) so the average renders exactly ONCE → "8.4 / 10"
+                  (C2FE-F2: the prior duplicated "{{avg}} / 10" produced
+                  "8.4 8.4 / 10"). */}
+              <Text style={[styles.avgScale, { color: theme.textSecondary }]}>
+                {t('reviews.averageOutOf10')}
+              </Text>
             </View>
             <Text style={[styles.reviewCount, { color: theme.textSecondary }]}>
               {t('reviews.reviewCount', { count: stats.count })}
@@ -122,26 +136,9 @@ export default function ReviewsScreen() {
           </Text>
 
           <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
-            {t('reviews.ratingLabel')}
+            {t('reviews.npsLabel')}
           </Text>
-          <StarRating rating={rating} size={32} interactive onRatingChange={setRating} />
-
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: theme.textPrimary,
-                borderColor: theme.inputBorder,
-                backgroundColor: theme.inputBackground,
-              },
-            ]}
-            placeholder={t('reviews.namePlaceholder')}
-            placeholderTextColor={theme.placeholderText}
-            value={userName}
-            onChangeText={setUserName}
-            maxLength={50}
-            accessibilityLabel={t('a11y.reviews.name_input')}
-          />
+          <NpsScale value={rating === 0 ? null : rating} onChange={setRating} />
 
           <TextInput
             style={[
@@ -175,12 +172,11 @@ export default function ReviewsScreen() {
             style={[
               styles.submitButton,
               {
-                backgroundColor:
-                  rating > 0 && comment.trim() && userName.trim() ? theme.primary : theme.separator,
+                backgroundColor: rating > 0 && comment.trim() ? theme.primary : theme.separator,
               },
             ]}
             onPress={() => void onSubmit()}
-            disabled={submitLoading || rating === 0 || !comment.trim() || !userName.trim()}
+            disabled={submitLoading || rating === 0 || !comment.trim()}
             accessibilityRole="button"
             accessibilityLabel={t('reviews.submit')}
           >
@@ -308,6 +304,10 @@ const styles = StyleSheet.create({
   avgNumber: {
     fontSize: space['8'],
     fontWeight: '700',
+  },
+  avgScale: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   reviewCount: {
     fontSize: fontSize.sm,

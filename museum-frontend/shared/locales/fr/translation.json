@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "Votre nom d'affichage",
       "comment_input": "Votre commentaire d'avis",
-      "star_button": "Donner {{count}} étoiles"
+      "star_button": "Donner {{count}} étoiles",
+      "nps_value": "Score de recommandation {{value}} sur 10"
     },
     "preferences": {
       "language_button": "Sélectionner la langue {{language}}",
@@ -1175,6 +1176,9 @@
     "writeReview": "Écrire un avis",
     "averageRating": "Note moyenne",
     "ratingLabel": "Votre note",
+    "npsLabel": "Quelle est la probabilité que vous recommandiez Musaium ?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Votre nom",
     "commentPlaceholder": "Partagez votre expérience...",
     "submit": "Envoyer l'avis",
