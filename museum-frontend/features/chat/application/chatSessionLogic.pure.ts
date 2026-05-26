@@ -308,6 +308,31 @@ export const buildOptimisticMessage = (params: BuildOptimisticMessageParams): Ch
 };
 
 /**
+ * True when an assistant response has renderable content, i.e. it should
+ * produce a chat bubble.
+ *
+ * Cycle 5 (UFR-022) — single source of truth shared by the four strategies
+ * that create an assistant bubble (streaming, audio, cache, history-load).
+ * The criterion MIRRORS the render condition in `ChatMessageBubble.tsx`
+ * (`hasImages = (metadata?.images?.length ?? 0) > 0` at :97 and
+ * `metadata?.compareResults` at :276) so the logic and the pixel never
+ * diverge (Décision D7): a `text:''` bubble is legitimate when it carries
+ * enriched images or visual-compare results (image-only content), but a
+ * blank/whitespace/null response with no media must never render a bubble.
+ *
+ * Pure — no side effect, no `Date.now`, no i18n (NFR-4).
+ */
+export const isRenderableAssistantContent = (
+  text: string | null | undefined,
+  metadata?: ChatUiMessageMetadata | null,
+): boolean => {
+  if ((text ?? '').trim() !== '') return true;
+  if ((metadata?.images?.length ?? 0) > 0) return true;
+  if (metadata?.compareResults) return true;
+  return false;
+};
+
+/**
  * Tracks successful sends and signals when the in-app review threshold is reached.
  * Mutates the ref atomically. Returns true exactly once on the threshold crossing.
  */
