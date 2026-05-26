@@ -4416,13 +4416,13 @@ export interface components {
       createdAt: string;
     };
     AdminStats: {
-      totalUsers: number;
-      usersByRole: {
+      totalUsers?: number;
+      usersByRole?: {
         [key: string]: number;
       };
       totalSessions: number;
       totalMessages: number;
-      recentSignups: number;
+      recentSignups?: number;
       recentSessions: number;
     };
     AdminReportDTO: {

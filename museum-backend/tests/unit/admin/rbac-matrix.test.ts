@@ -76,6 +76,9 @@ jest.mock('@modules/review/useCase', () => ({
 
 const { app } = createRouteTestApp();
 const moderatorToken = () => makeToken({ role: 'moderator' });
+// C1A R6 — manager token carries a museumId claim so /stats reaches the
+// (mocked) use-case → 200; every other endpoint is gated out → 403.
+const museumManagerToken = () => makeToken({ role: 'museum_manager', museumId: 42 });
 
 // Standalone app for admin-ke routes (not auto-mounted in test app — chat module
 // not built so artworkKnowledgeRepo is undefined in api.router wiring).
@@ -115,6 +118,7 @@ interface RouteCase {
   body?: Record<string, unknown>;
   admin: number; // expected status for admin role
   moderator: number; // expected status for moderator role
+  museum_manager: number; // C1A R6 — expected status for museum_manager role
   visitor: number; // expected status for visitor role
   anonymous: number; // expected status without auth header
   kind: RouteKind;
@@ -135,6 +139,7 @@ const MATRIX: RouteCase[] = [
     body: roleBody,
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -145,6 +150,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/audit-logs',
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -155,6 +161,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/analytics/usage',
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -165,6 +172,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/analytics/content',
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -175,6 +183,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/analytics/engagement',
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -186,6 +195,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/users',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -196,6 +206,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/stats',
     admin: 200,
     moderator: 200,
+    museum_manager: 200,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -206,6 +217,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/reports',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -217,6 +229,7 @@ const MATRIX: RouteCase[] = [
     body: reportBody,
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -227,6 +240,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/tickets',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -238,6 +252,7 @@ const MATRIX: RouteCase[] = [
     body: ticketBody,
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -248,6 +263,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/reviews',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -259,6 +275,7 @@ const MATRIX: RouteCase[] = [
     body: reviewBody,
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -269,6 +286,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/ke/pending',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'ke',
@@ -279,6 +297,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/ke/ak1/approve',
     admin: 200,
     moderator: 200,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'ke',
@@ -290,6 +309,7 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/museums/42/cache/purge',
     admin: 200,
     moderator: 403,
+    museum_manager: 403,
     visitor: 403,
     anonymous: 401,
     kind: 'main',
@@ -351,6 +371,17 @@ describe('Admin RBAC matrix (Finding H3)', () => {
     it(`moderator → ${route.moderator}`, async () => {
       const res = await send(route.kind, route.method, route.path, route.body, moderatorToken());
       expect(res.status).toBe(route.moderator);
+    });
+
+    it(`museum_manager → ${route.museum_manager}`, async () => {
+      const res = await send(
+        route.kind,
+        route.method,
+        route.path,
+        route.body,
+        museumManagerToken(),
+      );
+      expect(res.status).toBe(route.museum_manager);
     });
 
     it(`visitor → ${route.visitor}`, async () => {

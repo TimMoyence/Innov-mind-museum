@@ -1,33 +1,44 @@
+import { forbidden } from '@shared/errors/app.error';
+
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminStats } from '@modules/admin/domain/admin/admin.types';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 
 /**
- * Wave B C8 / R-C8 — optional B2B tenant scope.
+ * C1A — `/api/admin/stats` tenant scoping (BOLA / OWASP API3:2023 fix).
  *
- * When `museumId` is provided, stats are restricted to that tenant (museum-
- * scoped users / sessions / messages). When omitted (super_admin global
- * view), the aggregate is cross-tenant. The route layer enforces RBAC
- * scoping (museum_manager → forced to their JWT claim; super_admin → any
- * museumId or undefined). Repository-level scoping is best-effort here:
- * `museum_id` only exists on a subset of entities (reviews/support_tickets
- * are scoped per Wave B M2/M3; users/chat sessions are NOT museum-scoped
- * in V1). The flag is therefore plumbed but the repository implementation
- * may treat it as a no-op until the rest of the schema lands tenant scope.
+ * The use-case is the single place the scope decision lives (design D3,
+ * mirroring `exportChatSessions.useCase.ts::computeSessionsScope`), so the
+ * route stays a thin pass-through:
+ *   - `super_admin` / `admin` (or unknown/no role) → global cross-tenant
+ *     aggregate (full `AdminStats`, R4 regression-preserved).
+ *   - `museum_manager` → tenant-scoped aggregate restricted to their assigned
+ *     museum; `403` if they carry no `museumId` claim (R5). The reduced shape
+ *     (no platform census) is produced by the repository (D1/D2).
+ *
+ * The `museumId` the route forwards for a manager is ALWAYS the JWT claim
+ * (route force-rewrite, `admin.route.ts`), so a caller-supplied `?museumId=`
+ * query param can never widen scope.
  */
 export interface GetStatsInput {
+  role?: UserRole;
   museumId?: number;
 }
 
 export class GetStatsUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
-  async execute(_input: GetStatsInput = {}): Promise<AdminStats> {
-    // V1 — the underlying repository does not yet scope stats by museumId.
-    // The signature accepts the scope so the route can thread it (and the
-    // BOLA contract pins on the use-case call shape), but the aggregate
-    // returned is the global cross-tenant snapshot until users / sessions
-    // / messages gain museum_id columns (out-of-scope this lot). This is
-    // documented as a known limitation — see spec.md C8 acceptance criteria.
+  async execute({ role, museumId }: GetStatsInput = {}): Promise<AdminStats> {
+    if (role === 'museum_manager') {
+      // Tenant-scoped — the manager MUST have an assigned museum (same
+      // factory/message as the export precedent, design D3).
+      if (museumId == null) {
+        throw forbidden('No museum assigned');
+      }
+      return await this.repository.getStats(museumId);
+    }
+
+    // super_admin / admin / unknown → global cross-tenant snapshot.
     return await this.repository.getStats();
   }
 }

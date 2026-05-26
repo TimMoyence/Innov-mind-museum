@@ -1461,14 +1461,7 @@
       },
       "AdminStats": {
         "type": "object",
-        "required": [
-          "totalUsers",
-          "usersByRole",
-          "totalSessions",
-          "totalMessages",
-          "recentSignups",
-          "recentSessions"
-        ],
+        "required": ["totalSessions", "totalMessages", "recentSessions"],
         "properties": {
           "totalUsers": {
             "type": "integer"

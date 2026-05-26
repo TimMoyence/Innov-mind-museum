@@ -258,9 +258,14 @@ adminRouter.get(
       scopedMuseumId = req.user.museumId ?? undefined;
     }
 
-    const stats = await getStatsUseCase.execute(
-      scopedMuseumId !== undefined ? { museumId: scopedMuseumId } : {},
-    );
+    // Thread the role so the use-case owns the scope decision (super_admin/
+    // admin → global; museum_manager → forced museumId or 403 if unassigned).
+    // The route never decides the shape or the 403 (design D3 — single
+    // hexagonal source of truth).
+    const stats = await getStatsUseCase.execute({
+      role: req.user?.role,
+      museumId: scopedMuseumId,
+    });
     res.json(stats);
   },
 );
