@@ -650,24 +650,13 @@ export class ChatModule {
     const imageStorage = this.buildImageStorage();
     const audioStorage = this.buildAudioStorage();
     const repository = new TypeOrmChatRepository(dataSource);
-    const tts = env.llm.openAiApiKey
-      ? new OpenAiTextToSpeechService()
-      : new DisabledTextToSpeechService();
-    const ocr = new TesseractOcrService();
-    const { kbProvider, knowledgeBase, wikidataBreaker } = buildWikidataStack(dataSource, cache);
-    // TD-OP-01 — retain for graceful-shutdown disposal of the opossum timer.
-    this._wikidataBreaker = wikidataBreaker;
-    const imageEnrichment = this.buildImageEnrichment();
-    const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
-
-    const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
-    this.buildArtKeywordRefresh(artKeywordRepo);
 
     // Scalability primitives (perennial design §11, 100k clients prep).
     // Cost breaker = singleton because its rolling window MUST be shared by
     // every LLM call site (per-callsite breaker would miss system-wide spikes).
     // Tenant rate limiter singleton for the same fairness reason.
-    // Built BEFORE the orchestrator so it can be injected as a dep (C9.4).
+    // Built BEFORE the orchestrator AND the audio adapters so it can be
+    // injected as a dep (C9.4 text path + M1 W5-C3 voice path).
     this._llmCostCircuitBreaker = new LlmCostCircuitBreaker({
       hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
       dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
@@ -686,6 +675,21 @@ export class ChatModule {
     llmCostCircuitBreakerState.set({ state: 'closed' }, 1);
     llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
     llmCostCircuitBreakerState.set({ state: 'open' }, 0);
+
+    // M1 W5-C3 — feed the SAME singleton into the TTS adapter so voice spend is
+    // observed by the global spike/daily breaker (AC8).
+    const tts = env.llm.openAiApiKey
+      ? new OpenAiTextToSpeechService(this._llmCostCircuitBreaker)
+      : new DisabledTextToSpeechService();
+    const ocr = new TesseractOcrService();
+    const { kbProvider, knowledgeBase, wikidataBreaker } = buildWikidataStack(dataSource, cache);
+    // TD-OP-01 — retain for graceful-shutdown disposal of the opossum timer.
+    this._wikidataBreaker = wikidataBreaker;
+    const imageEnrichment = this.buildImageEnrichment();
+    const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
+
+    const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
+    this.buildArtKeywordRefresh(artKeywordRepo);
 
     // C9.7 — share a single ChatModel handle: orchestrator uses it for sections,
     // judge uses it directly via withStructuredOutput (detached path).
@@ -822,7 +826,8 @@ export class ChatModule {
       orchestrator: deps.effectiveOrchestrator,
       imageStorage: deps.imageStorage,
       imageProcessor: new SharpImageProcessor(),
-      audioTranscriber: new OpenAiAudioTranscriber(),
+      // M1 W5-C3 — same singleton breaker as the TTS adapter + orchestrator (AC8).
+      audioTranscriber: new OpenAiAudioTranscriber(this._llmCostCircuitBreaker),
       audioStorage: deps.audioStorage,
       tts: deps.tts,
       cache: deps.cache,
