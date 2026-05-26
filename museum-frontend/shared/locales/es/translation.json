@@ -526,7 +526,8 @@
       "gallery": "Elegir de la galería",
       "record_audio": "Grabar mensaje de voz",
       "stop_audio": "Detener grabación",
-      "scan_cartel": "Escanear cartela"
+      "scan_cartel": "Escanear cartela",
+      "compare": "Comparar esta obra"
     },
     "cartelScanner": {
       "title": "Escanear el QR de la cartela",

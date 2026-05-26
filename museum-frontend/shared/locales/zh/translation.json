@@ -526,7 +526,8 @@
       "gallery": "从相册选择",
       "record_audio": "录制语音消息",
       "stop_audio": "停止录制",
-      "scan_cartel": "扫描说明牌"
+      "scan_cartel": "扫描说明牌",
+      "compare": "比较这件作品"
     },
     "cartelScanner": {
       "title": "扫描说明牌二维码",

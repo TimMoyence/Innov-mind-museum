@@ -526,7 +526,8 @@
       "gallery": "Pick from gallery",
       "record_audio": "Record voice message",
       "stop_audio": "Stop recording",
-      "scan_cartel": "Scan cartel"
+      "scan_cartel": "Scan cartel",
+      "compare": "Compare this artwork"
     },
     "cartelScanner": {
       "title": "Scan the cartel QR",

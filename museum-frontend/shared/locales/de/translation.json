@@ -526,7 +526,8 @@
       "gallery": "Aus Galerie wählen",
       "record_audio": "Sprachnachricht aufnehmen",
       "stop_audio": "Aufnahme stoppen",
-      "scan_cartel": "Schild scannen"
+      "scan_cartel": "Schild scannen",
+      "compare": "Dieses Werk vergleichen"
     },
     "cartelScanner": {
       "title": "QR-Code des Schilds scannen",

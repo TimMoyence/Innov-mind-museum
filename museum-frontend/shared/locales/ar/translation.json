@@ -526,7 +526,8 @@
       "gallery": "اختيار من المعرض",
       "record_audio": "تسجيل رسالة صوتية",
       "stop_audio": "إيقاف التسجيل",
-      "scan_cartel": "مسح اللافتة"
+      "scan_cartel": "مسح اللافتة",
+      "compare": "قارن هذا العمل"
     },
     "cartelScanner": {
       "title": "مسح رمز QR للافتة",

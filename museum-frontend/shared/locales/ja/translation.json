@@ -526,7 +526,8 @@
       "gallery": "ギャラリーから選択",
       "record_audio": "音声メッセージを録音",
       "stop_audio": "録音を停止",
-      "scan_cartel": "解説をスキャン"
+      "scan_cartel": "解説をスキャン",
+      "compare": "この作品を比較"
     },
     "cartelScanner": {
       "title": "作品解説のQRをスキャン",
