@@ -33,13 +33,20 @@ export class ReviewRepositoryPg implements IReviewRepository {
   }
 
   async createReview(input: CreateReviewInput): Promise<ReviewDTO> {
-    const entity = this.repo.create({
+    const draft: Partial<Review> = {
       userId: input.userId,
       userName: input.userName,
       rating: input.rating,
       comment: input.comment,
       museumId: input.museumId ?? null,
-    });
+    };
+    // NPS attribution link (C2 / R5). Only set when the caller threads a
+    // sessionId — keeps the persisted shape byte-identical for create paths
+    // that never carry a session (e.g. legacy / direct repo callers).
+    if (input.sessionId !== undefined) {
+      draft.sessionId = input.sessionId;
+    }
+    const entity = this.repo.create(draft);
     const saved = await this.repo.save(entity);
     return toDTO(saved);
   }
@@ -80,21 +87,40 @@ export class ReviewRepositoryPg implements IReviewRepository {
   }
 
   /**
-   * Wave B C7 / R-C7b — NPS aggregate over `approved` reviews scoped to a
-   * single tenant museum. NPS = %promoters - %detractors, computed in SQL via
-   * conditional COUNT so a single round-trip + indexed scan suffices.
-   * `count = 0` → all buckets 0 + nps 0 (no signal).
+   * NPS aggregate over `approved` reviews. NPS = %promoters - %detractors,
+   * computed in SQL via conditional COUNT so a single round-trip + indexed scan
+   * suffices. `count = 0` → all buckets 0 + nps 0 (no signal).
+   *
+   * Scope (C2 / R6-R7) :
+   *   - `museumId` null/undefined → global; the museum predicate is OMITTED so
+   *     `museum_id IS NULL` rows are INCLUDED (the dominant B2C V1 case). We do
+   *     NOT add `museum_id IS NULL` — simply skip the predicate.
+   *   - `museumId` provided → `AND r.museumId = :museumId` (NULL rows excluded).
+   *
+   * `status = 'approved'` is always present (pending / rejected excluded so
+   * moderation controls the public score).
    */
-  async aggregateNps(museumId: number): Promise<NpsAggregate> {
-    const row = await this.repo
+  async aggregateNps(museumId?: number | null): Promise<NpsAggregate> {
+    const qb = this.repo
       .createQueryBuilder('r')
       .select('COUNT(*) FILTER (WHERE r.rating >= 9 AND r.rating <= 10)', 'promoters')
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 7 AND r.rating <= 8)', 'passives')
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 0 AND r.rating <= 6)', 'detractors')
       .addSelect('COUNT(*)', 'count')
-      .where('r.museumId = :museumId', { museumId })
-      .andWhere('r.status = :status', { status: 'approved' })
-      .getRawOne<{ promoters: string; passives: string; detractors: string; count: string }>();
+      .where('r.status = :status', { status: 'approved' });
+
+    // Per-museum scope ONLY when a concrete museumId is supplied. Omitting the
+    // predicate (not adding `IS NULL`) is the key global-incl-NULL fix (R7).
+    if (museumId !== undefined && museumId !== null) {
+      qb.andWhere('r.museumId = :museumId', { museumId });
+    }
+
+    const row = await qb.getRawOne<{
+      promoters: string;
+      passives: string;
+      detractors: string;
+      count: string;
+    }>();
 
     const promoters = Number.parseInt(row?.promoters ?? '0', 10);
     const passives = Number.parseInt(row?.passives ?? '0', 10);

@@ -40,7 +40,8 @@ import {
   adminSupportFacade,
 } from '@modules/admin/useCase';
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
-import { badRequest } from '@shared/errors/app.error';
+import { getNpsUseCase } from '@modules/review/useCase';
+import { badRequest, forbidden } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
@@ -267,6 +268,42 @@ adminRouter.get(
       museumId: scopedMuseumId,
     });
     res.json(stats);
+  },
+);
+
+/**
+ * C2 / R13-R17 — NPS aggregate (global or per-museum) over approved reviews.
+ *
+ * RBAC (OWASP API1 / BOLA) — mirrors `/stats` allow-list + forced-scope but
+ * DIVERGES on the manager-NULL case (design D-C2-4 / Q2) :
+ *   - super_admin / admin / moderator → museumId free (undefined → global).
+ *   - museum_manager → museumId FORCED to JWT claim. A NULL claim is a HARD
+ *     403 (NEVER degrades to global — that would be a cross-tenant leak, R16).
+ *     This is the intentional difference from `/stats`, which silently
+ *     degrades a NULL-claim manager to global (a known no-op limitation there).
+ *
+ * Query schema reused from `/stats` (`statsQuerySchema` — optional positive
+ * int `museumId`, strictObject).
+ */
+adminRouter.get(
+  '/nps',
+  isAuthenticated,
+  requireRole('admin', 'moderator', 'museum_manager'),
+  validateQuery(statsQuerySchema),
+  async (req: Request, res: Response) => {
+    const { museumId: queryMuseumId } = res.locals.validatedQuery as StatsQuery;
+
+    let scopedMuseumId: number | undefined = queryMuseumId;
+    if (req.user?.role === 'museum_manager') {
+      if (req.user.museumId == null) {
+        // Q2 / R16 — never run the aggregate for a NULL-claim manager.
+        throw forbidden('Museum scope required');
+      }
+      scopedMuseumId = req.user.museumId;
+    }
+
+    const nps = await getNpsUseCase.execute({ museumId: scopedMuseumId });
+    res.json(nps);
   },
 );
 

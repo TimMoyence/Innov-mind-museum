@@ -2114,7 +2114,11 @@ export interface paths {
           'application/json': {
             rating: number;
             comment: string;
-            userName: string;
+            /**
+             * Format: uuid
+             * @description NPS attribution: the chat session the review was authored from. Server derives museum scope; absent/foreign sessions yield a global review.
+             */
+            sessionId?: string;
           };
         };
       };
@@ -2532,6 +2536,47 @@ export interface paths {
           };
           content: {
             'application/json': components['schemas']['AdminStats'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/nps': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Net Promoter Score aggregate (global or per-museum) over approved reviews */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Per-museum scope. Omitted = global (incl. unscoped reviews). museum_manager callers are forced to their own tenant. */
+          museumId?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description NPS aggregate */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['NpsResponse'];
           };
         };
         401: components['responses']['Unauthorized'];
@@ -4424,6 +4469,14 @@ export interface components {
       totalMessages: number;
       recentSignups?: number;
       recentSessions: number;
+    };
+    /** @description Net Promoter Score aggregate over approved reviews. nps = %promoters (rating 9-10) - %detractors (rating 0-6), range -100..100. count=0 yields nps 0. */
+    NpsResponse: {
+      nps: number;
+      promoters: number;
+      passives: number;
+      detractors: number;
+      count: number;
     };
     AdminReportDTO: {
       id: string;

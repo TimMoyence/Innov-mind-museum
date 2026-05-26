@@ -79,15 +79,19 @@ describe('Review Routes — Unit', () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ review: mockReview });
-      // Wave B C7 / R-C7c — route threads `museumId` from JWT claim into
-      // the use case. The visitor token used in this test has no museumId
-      // claim → null is passed (catalog-level review, pre-B2B behaviour).
+      // C2 / R1-R4 — route threads the VISITED `sessionId` (NPS attribution),
+      // NOT the author's tenant claim. This body sends no sessionId →
+      // `sessionId: undefined`; the use-case derives museum scope (NULL here =
+      // global). `authedUser.museumId` is deliberately never read (R4).
       expect(mockCreateReview).toHaveBeenCalledWith({
         user: expect.objectContaining({ id: 1, firstname: 'Ada', lastname: 'Lovelace' }),
         rating: 5,
         comment: 'An absolutely wonderful museum experience!',
-        museumId: null,
+        sessionId: undefined,
       });
+      // R4 — the tenant claim must never be threaded as museumId.
+      const createArg = mockCreateReview.mock.calls[0][0] as Record<string, unknown>;
+      expect(createArg).not.toHaveProperty('museumId');
     });
 
     it('ignores client-supplied userName (schema strips it)', async () => {

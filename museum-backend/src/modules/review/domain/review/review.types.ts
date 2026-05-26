@@ -11,6 +11,12 @@ export interface CreateReviewInput {
   comment: string;
   /** B2B multi-tenant scope (Wave B C7). Null = unscoped/public review. */
   museumId?: number | null;
+  /**
+   * NPS attribution link (C2 / R5). UUID of the chat session the review was
+   * authored from. Nullable — absent / foreign / not-owned sessions persist
+   * `null` (silent, no leak). FK → `chat_sessions(id)` ON DELETE SET NULL.
+   */
+  sessionId?: string | null;
 }
 
 export interface ModerateReviewInput {

@@ -1486,6 +1486,34 @@
           }
         }
       },
+      "NpsResponse": {
+        "type": "object",
+        "description": "Net Promoter Score aggregate over approved reviews. nps = %promoters (rating 9-10) - %detractors (rating 0-6), range -100..100. count=0 yields nps 0.",
+        "required": ["nps", "promoters", "passives", "detractors", "count"],
+        "properties": {
+          "nps": {
+            "type": "integer",
+            "minimum": -100,
+            "maximum": 100
+          },
+          "promoters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "passives": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "detractors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "AdminReportDTO": {
         "type": "object",
         "required": [
@@ -4447,7 +4475,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["rating", "comment", "userName"],
+                "required": ["rating", "comment"],
                 "properties": {
                   "rating": {
                     "type": "integer",
@@ -4459,10 +4487,10 @@
                     "minLength": 10,
                     "maxLength": 2000
                   },
-                  "userName": {
+                  "sessionId": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128
+                    "format": "uuid",
+                    "description": "NPS attribution: the chat session the review was authored from. Server derives museum scope; absent/foreign sessions yield a global review."
                   }
                 }
               }
@@ -4993,6 +5021,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/nps": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Net Promoter Score aggregate (global or per-museum) over approved reviews",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "museumId",
+            "required": false,
+            "description": "Per-museum scope. Omitted = global (incl. unscoped reviews). museum_manager callers are forced to their own tenant.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NPS aggregate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsResponse"
                 }
               }
             }
