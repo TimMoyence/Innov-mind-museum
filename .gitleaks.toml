@@ -126,4 +126,10 @@ regexes = [
   # __tests__/screens/{verify-email,reset-password,confirm-email-change}.test.tsx.
   # Fake fixtures, never real credentials.
   '''tok_(verify|reset|confirm)_[A-Za-z0-9]+''',
+  # Leads security tests (museum-backend/tests/unit/leads/*): a Brevo-style FAKE
+  # api-key canary deliberately embedded to prove the lead-notifier error
+  # sanitiser defangs upstream secrets before they reach the client/persisted
+  # lastError. Matches ONLY the "-leak-canary" sentinel suffix, so a real Brevo
+  # key (xkeysib-<hex>-<rand>, no canary suffix) is still detected. Never real.
+  '''xkeysib-[A-Za-z0-9_-]*-leak-canary''',
 ]
