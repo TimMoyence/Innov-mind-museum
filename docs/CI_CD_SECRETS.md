@@ -45,7 +45,7 @@ Installation locale (obligatoire pour committer) :
 - Linux : binaire depuis https://github.com/gitleaks/gitleaks/releases
 - Fallback : le hook utilise l’image Docker `ghcr.io/gitleaks/gitleaks:latest` si Docker tourne.
 
-Le hook fait échouer le commit dès qu’un secret est détecté, rédige le rapport dans `.gitleaks-report.json`, et le supprime en cas de succès. `--no-verify` est toléré en dernier recours mais à documenter.
+Le hook fait échouer le commit dès qu’un secret est détecté, rédige le rapport dans `.gitleaks-report.json`, et le supprime en cas de succès. `--no-verify` / `-n` / `SKIP_PRE_*` sont **interdits sans exception** (UFR-020). Voir `CLAUDE.md § Hook bypass interdit`. Un hook qui bloque légitimement = fix le hook, jamais de bypass.
 
 ## Épinglage SHA des GitHub Actions
 

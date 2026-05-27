@@ -14,8 +14,8 @@ Visitors photograph an artwork and ask Musaium "what else looks like this?". The
 The `/api/chat/compare` endpoint runs a five-stage pipeline, captured by `VisualSimilarityService.compare()` in `museum-backend/src/modules/chat/useCase/visual-similarity/similarity.service.ts`:
 
 1. **Cache lookup** — `sha256(buffer) + locale + topK + sorted(museumQids)` keys a 1-hour Redis cache (D9). Identical re-submissions short-circuit the whole pipeline.
-2. **Encode** — SigLIP `siglip-base-patch16-224` ONNX FP16 model, served via `onnxruntime-node` (CPU AVX2). L2-normalised 768-dim float32 vector. EncoderUnavailable → 503 + `fallbackReason: 'encoder_unavailable'` (R11).
-3. **kNN search** — pgvector `halfvec(768)` cosine, IVFFlat index, `topN = max(20, 4 * topK)` (R3). Optional `museumQids` filter (R4).
+2. **Encode** — SigLIP `siglip2-base-patch16-224` ONNX FP16 model, served via `onnxruntime-node` (CPU AVX2). L2-normalised 768-dim float32 vector. EncoderUnavailable → 503 + `fallbackReason: 'encoder_unavailable'` (R11).
+3. **kNN search** — pgvector `halfvec(768)` cosine, HNSW index (`m = 16, ef_construction = 64`), `topN = max(20, 4 * topK)` (R3). Optional `museumQids` filter (R4).
 4. **Enrich** — Wikidata SPARQL batch lookup of titles / artists / dates (locale FR/EN). Candidates that don't resolve are dropped — UFR-013: never fabricate facts.
 5. **Score + fuse** — weighted linear `finalScore = 0.7 * visualScore + 0.3 * metadataScore`. V1 has no query-side facts so `metadataScore` collapses to 0 (wired anyway so V2 query-enrichment plugs in without changing the call site).
 
@@ -25,12 +25,12 @@ The `/api/chat/compare` endpoint runs a five-stage pipeline, captured by `Visual
 
 - **CLIP** (OpenAI ViT-B/32): widely deployed, but text-image alignment optimisation isn't ideal for image-image search.
 - **DINOv2**: strong on general object similarity but slower (no FP16 ONNX), no out-of-the-box artwork fine-tuning.
-- **SigLIP base patch16-224 (chosen)**: 768-dim, FP16 ONNX runs at ~80 ms / image on AVX2 CPU, public weights, sigmoid loss → better for retrieval than CLIP's softmax. Pareto-best for our latency budget.
+- **SigLIP2 base patch16-224 (chosen)**: 768-dim, FP16 ONNX runs at ~80 ms / image on AVX2 CPU, public weights, sigmoid loss → better for retrieval than CLIP's softmax. Pareto-best for our latency budget.
 
 ### D2 — Vector store (pgvector vs. Qdrant vs. Pinecone)
 
 - **Qdrant** / **Pinecone**: managed services, additional infra to operate.
-- **pgvector with `halfvec(768)` (chosen)**: in-Postgres, no new datastore, joins with relational tables (license metadata, museum ownership). FP16 storage halves disk vs. `vector(768)`. IVFFlat is good enough for ~50 k catalogue rows V1; HNSW upgrade trivial later.
+- **pgvector with `halfvec(768)` (chosen)**: in-Postgres, no new datastore, joins with relational tables (license metadata, museum ownership). FP16 storage halves disk vs. `vector(768)`. HNSW (`m = 16, ef_construction = 64`) used from day-1 (migration `1778406339944-AddArtworkEmbeddings.ts:78`).
 - **gotcha** captured in CLAUDE.md: pgvector `halfvec` requires the extension installed AND created in prod — verify with `\dx vector` before applying the migration, else revert.
 
 ### D3 — Result-cache scope (none / adapter / use-case)
@@ -57,7 +57,7 @@ The `/api/chat/compare` endpoint runs a five-stage pipeline, captured by `Visual
 
 ### Negative / risks
 
-- IVFFlat recall drops at index-build-time clustering; need to monitor `recall@5 ≥ 0.85` on the fixture set (NFR). Re-tune `lists` parameter as the catalogue grows past 50 k rows.
+- HNSW index (`m = 16, ef_construction = 64`): no `lists` parameter. Monitor `recall@5 ≥ 0.85` on the fixture set (NFR). Tune `ef_construction` / `m` if recall drops as the catalogue grows.
 - `halfvec` precision loss vs. fp32 vector — measured impact on recall is < 1 percentage point on our fixture. If a future encoder is more sensitive (e.g. learned embeddings with tighter cosine clusters), revisit.
 - CPU AVX2 requirement on the VPS — verified Q3 (tasks.md) before T1.4 build.
 - No per-stage Prom histograms yet — Grafana dashboard `infra/grafana/dashboards/visual-compare.json` only has end-to-end latency. Per-stage observability lives in Langfuse only. Adding `compare_stage_duration_seconds_bucket{stage="..."}` is a follow-up.
@@ -86,7 +86,7 @@ Test coverage: `compare.route.test.ts` adds two new SEC cases asserting (a) the 
 ### Alternatives backlog
 
 - **V2 query-side enrichment** — reverse-resolve the user's photo to a candidate QID (e.g. via OCR of museum labels + classifier). Then `metadataScore` becomes meaningful and `sharedAttributes` populates the rationale templater with non-empty terms.
-- **HNSW index** when catalogue > 100 k rows.
+- **HNSW `ef_search` tuning** when catalogue > 100 k rows (HNSW already in use; tune `ef_search` at query time if recall degrades).
 - **Replicate hosted-SigLIP fallback** if local encoder downtime exceeds SLO.
 - **GPU encoder** if p95 encode time becomes the bottleneck (measure first).
 

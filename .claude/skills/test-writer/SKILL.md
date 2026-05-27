@@ -6,7 +6,7 @@ last-verified: 2026-05-18
 
 # /test-writer — Generateur de tests cible
 
-Genere des tests pour les fichiers modifies. Standalone ou integre dans /team Phase 2.5.
+Genere des tests pour les fichiers modifies. Standalone (pas integre dans /team v13).
 
 ## ARGUMENTS
 

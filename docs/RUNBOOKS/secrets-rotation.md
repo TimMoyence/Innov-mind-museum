@@ -10,7 +10,7 @@
 |---|---|---|
 | `JWT_ACCESS_SECRET` | every 90 days | OWASP / SOC2 CC6.1 — bound key for access tokens; access tokens have 15min TTL so a 90d rotation gives ample dual-key window |
 | `JWT_REFRESH_SECRET` | every 90 days | refresh family revocation can purge in-flight tokens; absolute TTL is 14d (post-F8) so rotation soak is cheap |
-| `JWT_MFA_SECRET` (`MFA_SESSION_TOKEN_SECRET`) | every 90 days | bound to the 5min MFA session window |
+| `MFA_SESSION_TOKEN_SECRET` | every 90 days | bound to the 5min MFA session window (`env.production-validation.ts:214`) |
 | `MFA_ENCRYPTION_KEY` | every 180 days | TOTP secrets at rest; rotation requires re-encrypt of `totp_secrets.secret_encrypted` (see "Re-encryption" below) |
 | `MEDIA_SIGNING_SECRET` | every 180 days | signed S3 URLs — cap is 24h so leak window after rotation is bounded |
 | `CSRF_SECRET` (post-F7) | every 90 days | HMAC binding for csrf_token cookie; rotation invalidates outstanding double-submit tokens (web users see one /refresh after rotation) |

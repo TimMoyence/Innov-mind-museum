@@ -156,7 +156,7 @@ pnpm install              # at repo root — installs Husky + lint-staged
 
 The `prepare` script wires `.husky/` into `.git/hooks/`. If hooks are missing after install, run `npx husky` manually.
 
-### Pre-commit gates (budget: < 5s)
+### Pre-commit gates (8 gates, budget < 5s ; gates 6–8 ne tournent que sur changements correspondants)
 
 | # | Gate | What it checks | Fix on failure |
 |---|------|----------------|----------------|
@@ -165,8 +165,11 @@ The `prepare` script wires `.husky/` into `.git/hooks/`. If hooks are missing af
 | 3 | lint-staged | tsc + ESLint on staged TS/TSX in BE / FE / Web | Fix the lint/type error |
 | 4 | as-any ratchet | `as any` count ≤ baseline (`scripts/sentinels/as-any-baseline.json`) | Remove the new `as any` or narrow with a type guard |
 | 5 | root-hygiene | No stray `.md` / `.sql` / `.log` at repo root outside the whitelist | Move under `docs/` or `scripts/ops/sql/` |
+| 6 | workspace-links (conditionnel) | `file:` protocol symlinks intacts (touche `packages/**` ou un manifest d'app) | `pnpm install` dans l'app concernée |
+| 7 | compose-parity (conditionnel) | Dev compose miroite la prod (touche `docker-compose*`) | Réconcilier `docker-compose.dev.yml` ↔ prod |
+| 8 | fe-version-sync (conditionnel) | `package.json` ↔ `app.config.ts` version parity (touche version mobile) | Aligner les deux versions |
 
-### Pre-push gates (budget: < 30s)
+### Pre-push gates (21 gates, budget ~30s–2min)
 
 | # | Gate | What it checks |
 |---|------|----------------|
@@ -179,7 +182,18 @@ The `prepare` script wires `.husky/` into `.git/hooks/`. If hooks are missing af
 | 7 | IDOR matrix smoke | `tests/integration/security/idor-matrix.test.ts` (auto-skips if absent) |
 | 8 | Guardrails ratchet | Keyword count ≥ baseline (`scripts/sentinels/guardrails-baseline.json`) |
 | 9 | as-any ratchet (full) | Catches drift in unstaged files |
-| 10 | Gitleaks (push range) | `gitleaks detect --log-opts=upstream..HEAD` |
+| 10 | Sentry-scrubber parity | FE/BE Sentry scrubber parity sentinel |
+| 11 | Gitleaks (push range) | `gitleaks detect --log-opts=upstream..HEAD` |
+| 12 | Contract OpenAPI test (BE) | Backend OpenAPI contract test |
+| 13 | Migration `down()` non-trivial (BE) | `down()` body is not empty/trivial |
+| 14 | ast-grep rules | `tools/ast-grep-rules/` custom lint rules |
+| 15 | OpenAPI breaking changes | Diff vs upstream — no breaking API changes |
+| 16 | Affected unit tests (BE) | `jest --findRelatedTests` |
+| 17 | Affected tests (FE) | `jest --findRelatedTests` |
+| 18 | Affected tests (Web) | `vitest run --changed` |
+| 19 | Prometheus metric-naming ratchet (BE) | Metric naming convention sentinel |
+| 20 | Roadmap claim resolves (UFR-024) | `scripts/sentinels/roadmap-claim-resolves.mjs` — roadmap path:line claims must resolve |
+| 21 | ai-tests count ratchet (BE) | AI test count ≥ baseline |
 
 ### Updating a baseline
 

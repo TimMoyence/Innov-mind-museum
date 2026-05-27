@@ -2,7 +2,7 @@
 
 Audit 2026-05-18 : **🚨 CHANGES_REQUESTED — security/UX**.
 
-## 🚨 F1 HIGH : 2FA otpauth QR uses default `ecl='M'` (15%) instead of `'H'` (30%)
+## ~~🚨 F1 HIGH~~: 2FA otpauth QR default ecl — CLOSED TD-QR-01 2026-05-21 (`ecl="H"` confirmed at MfaEnrollScreen.tsx:127)
 - **Cause** : `museum-frontend/features/auth/screens/MfaEnrollScreen.tsx:109` `<QRCode value={otpauthUrl} size={200} />` no `ecl` prop.
 - **Impact** : sensitive 2FA secret scanned ONCE in suboptimal light/angles. Failed decode = user retypes 32-char base32 manualSecret (manualHint fallback line 110 mitigates but UX cost).
 - **Fix TD-QR-01** : Add `ecl="H"` per PATTERNS §3 DO doctrine 'Q/H when reliability > size'. otpauth URLs (80-150 chars) well within 'H' capacity (~1273 alphanumeric).
@@ -30,9 +30,8 @@ Single call site unchanged: `museum-frontend/features/auth/screens/MfaEnrollScre
 - Declared `^6.3.15`, **installed `6.3.21`** (latest 6.3 patch — no action needed, but note the drift; API stable across 6.3.x).
 - Peer `react-native-svg`: declared `^15.13.0`, installed `15.15.4` (latest `15.15.5`). Clean.
 
-### 🚨 F1 HIGH (security/UX) — still open : MFA otpauth QR uses default `ecl='M'` (15%) instead of `'H'` (30%)
-- `MfaEnrollScreen.tsx:109` has no `ecl`. Sensitive one-shot TOTP secret; failed decode = user retypes 32-char base32 (manualHint fallback `:110` mitigates UX cost). otpauth ~80-150 chars fits `H` (Byte cap 1273).
-- **Fix TD-QR-01** : add `ecl="H"`.
+### ~~🚨 F1 HIGH~~ — CLOSED (TD-QR-01 archivé 2026-05-21) : MFA otpauth QR ecl fix
+- **RESOLVED** : `MfaEnrollScreen.tsx:127` now has `ecl="H"` (confirmed 2026-05-26). TD-QR-01 closed.
 
 ### ⚠️ F2 MEDIUM — still open : `onError` prop missing → uncaught render exception on capacity failure
 - **Fix TD-QR-02** : `onError={(err) => logger.warn('mfa.qr.generation.failed', { err: err.message })}`, render manualSecret-only fallback.

@@ -1,5 +1,7 @@
 # DPIA + ROPA — Readiness Tracking
 
+> **Statut au 2026-05-26 : DPO non mandaté.** La deadline 2026-05-25 est dépassée. `dpo@musaium.app` reste un alias, pas un DPO mandaté. DPIA/ROPA non signés. Décision go/no-go launch à formaliser par le responsable.
+
 **Owner** : Tech lead (Tim Moyence) + DPO externe (à mandater — deadline ferme 2026-05-25).
 **Date d'ouverture du tracking** : 2026-05-13 (audit P0-1).
 **Date cible de signature complète** : 2026-05-26 (J-6 avant launch V1 du 2026-06-01).

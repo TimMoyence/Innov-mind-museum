@@ -73,7 +73,7 @@ The seven decisions below form an indivisible package. Partial adoption (e.g. ci
 
 **Neutral:**
 
-- **LLM cache key shape unchanged.** ADR-036 v1 key `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` continues to apply; the citations schema v2 addition lives on the *output* side and does not alter `contextClass` derivation. Existing cached entries remain valid post-deploy — no cache-buster needed.
+- **LLM cache key shape unchanged by this ADR.** ~~ADR-036 v1 key `llm:v1:...`~~ → note: the key was bumped to `v2` by commit `d54552beb` (2026-05-19, unrelated to this ADR) to fold `voiceMode` + `audioDescriptionMode` into the hash. The citations schema v2 addition of this ADR lives on the *output* side and does not alter `contextClass` derivation. Current key shape: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` — source of truth `llm-cache.service.ts:119`.
 
 ---
 

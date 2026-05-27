@@ -148,8 +148,8 @@ MUST ship with associated Maestro coverage OR an explicit
 `// e2e-skip: <reason ≥ 30 chars>` justification in source code.
 
 Status (2026-05-19):
-- ✅ Sentinel shipped — `museum-frontend/scripts/sentinels/screen-test-coverage.mjs`,
-  run locally via `pnpm sentinel:screen-test-coverage`. Baseline grandfathers
+- ✅ Sentinel shipped — `scripts/sentinels/screen-test-coverage.mjs` (repo root),
+  run locally via `pnpm sentinel:screen-test-coverage` (root `package.json:22`). Baseline grandfathers
   pre-UFR-021 screens in `museum-frontend/.maestro/coverage-baseline.json`
   (removals only, never grow).
 - ⏳ Pre-push gate + `ci-cd-mobile.yml` step + `sentinel-mirror.yml` mirror —
