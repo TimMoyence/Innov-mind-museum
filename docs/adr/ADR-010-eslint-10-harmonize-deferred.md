@@ -9,7 +9,7 @@
 
 The 2026-04-24 enterprise audit flagged an ESLint version split:
 
-- `museum-backend/` — `eslint ^10.2.0`
+- `museum-backend/` — `eslint ^9.39.4` (aligned down via commit `42d81090a` 2026-05-17 — see § Amendment below)
 - `museum-frontend/` — `eslint ^9.39.4`
 - `museum-web/` — `eslint ^9.39.4`
 
@@ -45,6 +45,10 @@ The web app has the same `eslint-plugin-react` dependency.
 **Keep `eslint ^9.39.4` on mobile + web; keep `eslint ^10.2.0` on backend.** Revert the mobile bump attempted in S16.
 
 The backend is pure TypeScript and uses `typescript-eslint` + backend-specific plugins (`eslint-plugin-boundaries`, `eslint-plugin-import-x`, `eslint-plugin-sonarjs`) that all declare ESLint 10 peer support. Backend stays on v10.
+
+## Amendment — 2026-05-17 (commit `42d81090a`)
+
+Backend ESLint aligned **down** to `^9.39.4` (path B — alignment-down). Monorepo is now uniform at v9 across all three apps. The original decision to keep BE on v10 is superseded. The upgrade-to-v10 path remains documented above for future reference. ADR-032 table updated separately.
 
 Mobile + web stay on v9 until `eslint-plugin-react` (and downstream `eslint-plugin-react-native`) ship a release that adopts the v10 rule-context API. Attempting to pin `contextOrFilename.getFilename` ourselves via a local patch would add maintenance burden for a P3 consistency benefit.
 

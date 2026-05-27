@@ -61,9 +61,11 @@ describe('constants are frozen / well-formed', () => {
     assert.equal(SENSITIVE_FIELD_REGEX.test('name'), false);
   });
 
-  it('SENSITIVE_QUERY_KEYS contains exactly the 11 expected entries (R1)', () => {
-    // R1 — 7 original keys + 4 new (code, email, phone, state) for
-    // magic-link / OAuth / signup query-string scrubbing.
+  it('SENSITIVE_QUERY_KEYS contains exactly the 16 expected entries (R1 + cycle-10 S3/signature)', () => {
+    // R1 — 7 original keys + 4 (code, email, phone, state) for magic-link / OAuth / signup.
+    // Cycle 10 (A-02, 2026-05-26) — +5 (x-amz-signature, x-amz-credential,
+    // x-amz-security-token, sig, signature) to close the presigned-S3 / signed-URL
+    // signature leak. FAILS on the 11-key canonical, PASSES after extension.
     assert.deepEqual(
       [...SENSITIVE_QUERY_KEYS].sort(),
       [
@@ -76,8 +78,13 @@ describe('constants are frozen / well-formed', () => {
         'phone',
         'refresh_token',
         'secret',
+        'sig',
+        'signature',
         'state',
         'token',
+        'x-amz-credential',
+        'x-amz-security-token',
+        'x-amz-signature',
       ],
     );
   });
@@ -174,6 +181,42 @@ describe('scrubUrl', () => {
     assert.equal(
       scrubUrl('/x?CODE=A&Email=b&PHONE=c&State=d'),
       `/x?CODE=${REDACTED}&Email=${REDACTED}&PHONE=${REDACTED}&State=${REDACTED}`,
+    );
+  });
+
+  // Cycle 10 (A-02, 2026-05-26) — presigned-S3 / signed-URL signature params.
+  // These FAIL on the 11-key canonical (params survive verbatim) and PASS once
+  // x-amz-signature/credential/security-token + sig/signature join the set.
+  it('scrubUrl redacts presigned-S3 X-Amz-Signature, keeps X-Amz-Expires (cycle 10)', () => {
+    assert.equal(
+      scrubUrl(
+        'https://bucket.s3.amazonaws.com/key.jpg?X-Amz-Signature=ABC123&X-Amz-Expires=900',
+      ),
+      `https://bucket.s3.amazonaws.com/key.jpg?X-Amz-Signature=${REDACTED}&X-Amz-Expires=900`,
+    );
+  });
+
+  it('scrubUrl redacts X-Amz-Credential and X-Amz-Security-Token (cycle 10)', () => {
+    assert.equal(
+      scrubUrl(
+        'https://b.s3.amazonaws.com/o?X-Amz-Credential=AKIA&X-Amz-Security-Token=tok&X-Amz-Date=d',
+      ),
+      `https://b.s3.amazonaws.com/o?X-Amz-Credential=${REDACTED}&X-Amz-Security-Token=${REDACTED}&X-Amz-Date=d`,
+    );
+  });
+
+  it('scrubUrl redacts sig / signature query-params (cycle 10)', () => {
+    assert.equal(
+      scrubUrl('https://cdn.musaium.com/a?sig=DEADBEEF&signature=CAFE&v=1'),
+      `https://cdn.musaium.com/a?sig=${REDACTED}&signature=${REDACTED}&v=1`,
+    );
+  });
+
+  // D4 — `key` / `author` must NOT be redacted (too generic → false positives).
+  it('scrubUrl leaves generic ?key= / ?author= untouched (D4 — no over-masking)', () => {
+    assert.equal(
+      scrubUrl('https://x.tld/art?key=joconde&author=davinci'),
+      'https://x.tld/art?key=joconde&author=davinci',
     );
   });
 });

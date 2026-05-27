@@ -25,7 +25,7 @@ Réécrites chaque sprint (4 sem). Snapshots = `git log -- docs/ROADMAP_*.md`. C
 ```bash
 pnpm install                     # install deps
 pnpm dev                         # dev server with nodemon (port 3000)
-pnpm lint                        # typecheck (tsc --noEmit)
+pnpm lint                        # ESLint + lint:test-discipline + tsc --noEmit
 pnpm test                        # all Jest tests
 pnpm test -- --testPathPattern=tests/unit/   # run specific test folder
 pnpm test -- -t "test name"      # run single test by name
@@ -51,7 +51,7 @@ docker compose -f docker-compose.dev.yml up -d   # DB on localhost:5433, Adminer
 ```bash
 npm install                      # install deps
 npm run dev                      # Expo dev server
-npm run lint                     # typecheck (tsc --noEmit)
+npm run lint                     # ESLint + tsc --noEmit
 npm test                         # Node.js test runner (compiles to .test-dist/ then runs)
 npm run generate:openapi-types   # regenerate API types from backend OpenAPI spec
 npm run check:openapi-types      # verify generated types are up to date
@@ -79,7 +79,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy + Sentry + smoke
 - `ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS
 - `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix (4 shards) + iOS nightly cron → EAS build + store submit
-- `_deploy-backend.yml` — reusable deploy workflow
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
 - `codeql.yml` — CodeQL security analysis
 - `semgrep.yml` — SAST static analysis
@@ -115,7 +114,7 @@ Auto-generated/massive/pure-data. Reading full wastes tokens.
 | `museum-frontend/shared/api/generated/openapi.ts` | ~115 KB / ~4 800 lines | Auto-generated from backend OpenAPI spec | `Grep` for specific type/operation name, or read ±50 lines with `offset`/`limit` |
 | `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
 | `museum-backend/src/data/db/migrations/*.ts` (~64 files) | ~5 KB each | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
-| `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
+| `museum-backend/src/modules/daily-art/adapters/secondary/catalog/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.
@@ -151,7 +150,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **CORS allowedHeaders contient déjà `sentry-trace` + `baggage` (`museum-backend/src/app.ts`)** — distributed tracing. Ne PAS les retirer (sinon `sentry-trace` stripped au preflight, bridge FE↔BE cassé silencieusement). Middleware `trace-propagation.middleware.ts` (`tracePropagationMiddleware`) monté `app.ts` (commit `f687b600`). Réf `docs/observability/DISTRIBUTED_TRACING.md` §5.
 - **`infra/grafana/dashboards/*.json` UID immutable** — renommer le fichier mais GARDER l'`uid:` historique (sinon liens permanents + annotations/alerts `/d/<uid>` → 404). Pareil pour panels `id:` numérotés (deep-link `&viewPanel=<id>`). Ex `chat-stages-latency.json`.
 - **PGP key `museum-web/public/.well-known/pgp-key.txt` = placeholder** — token `PGP_KEY_PLACEHOLDER_DO_NOT_SHIP`. Deploy pipeline DOIT gate sur l'absence de ce token avant prod (sinon PGP publiée vide → signal "vendor négligent"). Génération : `docs/operations/PGP_KEY_GENERATION.md`.
-- **`apiPut` n'existe pas dans `museum-web/src/lib/api.ts`** — la stack expose `apiGet/Post/Patch/Delete`. Les pages admin qui PUT (ex branding) utilisent un wrapper `fetch` local + CSRF cookie (`csrf_token`→`X-CSRF-Token`) + `credentials:'include'`. >2 sites ré-implémentant ce wrapper → ajouter `apiPut` proprement. Réf `admin/museums/[id]/branding/page.tsx`.
+- **`museum-web/src/lib/api.ts` expose `apiGet/Post/Patch/Put/Delete`** — CSRF géré centralement : lit le cookie `csrf_token` (non-HttpOnly) → header `X-CSRF-Token` sur les méthodes state-changing + `credentials:'include'` (auth via cookie HttpOnly `access_token`). NE PAS ré-implémenter un wrapper `fetch` local par page : utiliser ces helpers. `apiPut` ajouté (`api.ts:233`) — l'ancienne note « apiPut n'existe pas » était stale (corrigée 2026-05-27). Réf `admin/museums/[id]/branding/page.tsx`.
 - **`SAVEPOINT` dans une migration crash sous `runMigrations({transaction:'none'})`** — l'integration harness (`tests/helpers/integration/integration-harness.ts`) run les migrations HORS transaction → `SAVEPOINT can only be used in transaction blocks` → **kill TOUTES les suites integration**. Fix : guarder par `if (queryRunner.isTransactionActive)`. Réf migration `AddMuseumGeofence.ts`.
 - **Retirer un pin `@types/*` d'un `pnpm.overrides` ne suffit PAS à le bumper** — si le `@types` parent déclare une range qui matche déjà la version pinnée, pnpm garde le lockfile. Forcer : déclarer le sous-paquet en `devDependencies` directe avec la range cible (ex `@types/express-serve-static-core: ^5.1.1`), puis re-résoudre. Réf `museum-backend/package.json`. TD-11.
 - **Écran affichant un secret (TOTP/recovery codes) → screen-capture impératif, PAS le hook lib (museum-frontend)** — `usePreventScreenCapture()` de `expo-screen-capture` ne release que sur unmount, or un `<Stack.Screen>` reste monté quand on navigue dessus (host persistant, même classe que RN Modal). Utiliser `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount), key dédiée. `require()` lazy/web-safe gardé (le module est natif → absent sur web/Jest), erreurs via `reportError` sans payload secret, jamais logger le secret. `expo-screen-capture` = native dep → `pod install` + `git add -f ios/Pods/...` + Podfile.lock + ExpoModulesProvider.swift committés (Xcode Cloud ne run pas `pod install`). Tokens : `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` (device-bound, non-backup-migratable). Réf `features/auth/hooks/usePreventScreenCapture.ts`, TD-SEC-01/02, `lib-docs/expo-screen-capture/PATTERNS.md`.
@@ -331,7 +330,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (32097 symbols, 51503 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (32242 symbols, 51687 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

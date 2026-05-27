@@ -131,5 +131,17 @@ regexes = [
   # to prove the sanitiser/persisted-record never surfaces a credential. The
   # mandatory `-leak-canary` suffix guarantees this can never match a real
   # Brevo key (xkeysib-…). Synthetic fixtures, never real credentials.
+  # Fake Brevo-shaped API keys in leads tests (leads-security.test.ts +
+  # leads.route.persist-then-notify.test.ts). Synthetic fixtures — the bodies
+  # are sequential / explicitly labelled ("0123456789abcdef", "secret-0000-leak"),
+  # never a real xkeysib- credential. Caught by gitleaks full-history detect
+  # (not by `protect --staged` on unrelated diffs).
+  '''xkeysib-0123456789abcdef[A-Za-z0-9-]*''',
+  '''xkeysib-secret-0000-leak[A-Za-z0-9-]*''',
+  # Leads security tests (museum-backend/tests/unit/leads/*): a Brevo-style FAKE
+  # api-key canary deliberately embedded to prove the lead-notifier error
+  # sanitiser defangs upstream secrets before they reach the client/persisted
+  # lastError. Matches ONLY the "-leak-canary" sentinel suffix, so a real Brevo
+  # key (xkeysib-<hex>-<rand>, no canary suffix) is still detected. Never real.
   '''xkeysib-[A-Za-z0-9_-]*-leak-canary''',
 ]

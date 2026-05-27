@@ -50,13 +50,29 @@ export interface ListAuditLogsFilters {
   pagination: PaginationParams;
 }
 
+/**
+ * Admin dashboard aggregate.
+ *
+ * Two shapes share this single type (C1A / design D1 — documented-optional
+ * superset):
+ *   - `admin` / `super_admin` (global view) → ALL fields present.
+ *   - `museum_manager` (tenant-scoped view) → the three platform-census
+ *     fields (`totalUsers`/`usersByRole`/`recentSignups`) are OMITTED, since
+ *     they are a cross-tenant role census, not a meaningful per-tenant figure,
+ *     and `usersByRole` would expose the operator (`super_admin`) headcount
+ *     (D2 / NFR-privacy). The tenant-scopable session/message aggregates are
+ *     always present.
+ */
 export interface AdminStats {
-  totalUsers: number;
-  usersByRole: Record<string, number>;
   totalSessions: number;
   totalMessages: number;
-  recentSignups: number;
   recentSessions: number;
+  /** Platform census — present for admin/super_admin, omitted for museum_manager. */
+  totalUsers?: number;
+  /** Platform census — present for admin/super_admin, omitted for museum_manager. */
+  usersByRole?: Record<string, number>;
+  /** Platform census — present for admin/super_admin, omitted for museum_manager. */
+  recentSignups?: number;
 }
 
 // S4-03 Content Moderation

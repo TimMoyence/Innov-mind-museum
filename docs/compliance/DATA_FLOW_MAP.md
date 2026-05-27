@@ -151,13 +151,13 @@ flowchart LR
 | Audit ID | Title | Owner | Linked flow(s) |
 |----------|-------|-------|----------------|
 | G1 / V7 | No DPA / SCC documented for OpenAI / Google / DeepSeek / Brevo / Sentry / Unsplash | Legal + Tech lead | F9, F10, F11, F14, F15, F16 |
-| G2 | No DSAR endpoint (Art 15, 20) | BE team | F1, F2, F3, F4, F5, F7 |
+| ~~G2~~ RESOLVED | ~~No DSAR endpoint (Art 15, 20)~~ → résolu : `GET /api/users/me/export` (`me.route.ts:42`) | BE team | F1, F2, F3, F4, F5, F7 |
 | G3 / V12 | No breach SLA / playbook (Art 33/34) | Tech lead + Legal | All |
 | G4 / V5 | S3 audio + image orphans after DB purge | BE team | F7 |
-| G5 / V4 | LLM cache key omits userId — cross-user leak | BE team | F6, F9-F11 |
+| ~~G5 / V4~~ RESOLVED | ~~LLM cache key omits userId — cross-user leak~~ → résolu : key inclut `{userId|anon}` (`llm-cache.service.ts:119`) | BE team | F6, F9-F11 |
 | ~~G6~~ RESOLVED | DPIA (Art 35) — geo + AI + voice biometric — shipped `docs/legal/DPIA.md` (2026-05-13) | DPO (TBD) | F3, F4, F9-F11 |
 | G7 | Consent ungranular (only `location_to_llm`) | Product + BE | F2, F3, F9-F11 |
-| G9 / V6 | EXIF not stripped on uploaded images | BE team | F2 |
+| ~~G9 / V6~~ RESOLVED | ~~EXIF not stripped on uploaded images~~ → résolu : `image-processing.service.ts` (`modules/chat/adapters/secondary/image/`) | BE team | F2 |
 | ~~G10~~ RESOLVED | ROPA (Art 30) — committed `docs/legal/ROPA.md` (2026-05-13) | Legal | All |
 | G11 | Privacy policy not audited for sub-processor list completeness | Legal | All — drives publication of `SUBPROCESSORS.md` |
 | G12 | No transfer impact assessment for US-based LLM | Legal | F9, F10, F15, F16 |

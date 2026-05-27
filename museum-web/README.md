@@ -58,4 +58,4 @@ Built as a Docker image, pushed to GHCR, deployed to OVH VPS via `.github/workfl
 
 - Ops & deploy — `../docs/OPS_DEPLOYMENT.md`
 - CI/CD secrets — `../docs/CI_CD_SECRETS.md`
-- CDN / Cloudflare — `../docs/CDN_CLOUDFLARE_SETUP.md`
+- CDN / Cloudflare — `../docs/adr/ADR-024-cloudflare-cdn-strategy.md`

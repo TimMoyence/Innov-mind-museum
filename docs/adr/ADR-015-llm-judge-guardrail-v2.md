@@ -155,7 +155,7 @@ Promotion criteria (must all hold over 30 consecutive days):
 - Sidecar P95 under load ≤ 500 ms.
 - Zero over-blocking incidents reported by support.
 
-To promote: set `GUARDRAILS_V2_OBSERVE_ONLY=false` + tighten judge confidence floor in `guardrail-evaluation.service.ts:118` from 0.6 → 0.95.
+To promote: set `GUARDRAILS_V2_OBSERVE_ONLY=false` + tighten judge confidence floor in `eval/v2-layers.helper.ts:45` from 0.6 → 0.95.
 
 ### Phase C — Block full (production-grade)
 
@@ -164,7 +164,7 @@ Promotion criteria (must all hold over 30 consecutive days in Phase B):
 - False positive rate observed ≤ 1%.
 - Zero documented bypass (injection détectée mais pas bloquée).
 
-To promote: lower confidence floor to 0.6 in `guardrail-evaluation.service.ts:118` (default) and keep observe-only false.
+To promote: lower confidence floor to 0.6 in `eval/v2-layers.helper.ts:45` (default) and keep observe-only false.
 
 ## Sidecar `ANONYMIZE_ENTITIES` rationale
 

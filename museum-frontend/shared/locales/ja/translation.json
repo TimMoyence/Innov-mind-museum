@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — 写真",
       "third_party_ai_audio_google": "Google AI — 音声文字起こし",
       "third_party_ai_profile_google": "Google AI — 好みと履歴",
-      "location_to_llm": "位置情報 — 近くの場所"
+      "location_to_llm": "位置情報 — 近くの場所",
+      "location_coarse_to_llm": "位置情報 — 都市のみ"
     },
     "accessibility": "アクセシビリティ",
     "audio_description": "音声ガイド",
@@ -472,7 +473,7 @@
     "audio": "オーディオ",
     "image_sent": "[画像送信]",
     "voice_message": "[音声メッセージ]",
-    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app",
+    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.com",
     "replace_image": "置き換え",
     "remove_image": "削除",
     "share_response": "共有",
@@ -526,7 +527,8 @@
       "gallery": "ギャラリーから選択",
       "record_audio": "音声メッセージを録音",
       "stop_audio": "録音を停止",
-      "scan_cartel": "解説をスキャン"
+      "scan_cartel": "解説をスキャン",
+      "compare": "この作品を比較"
     },
     "cartelScanner": {
       "title": "作品解説のQRをスキャン",
@@ -645,18 +647,6 @@
   "chatInput": {
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
     "send": "送信"
-  },
-  "welcome": {
-    "title": "Musaiumへようこそ",
-    "subtitle": "あなた専用の美術館コンパニオン",
-    "suggestions": {
-      "museum_camera": "目の前の美術品は何ですか？",
-      "museum_history": "この美術館の歴史を教えてください",
-      "museum_next": "次に何を見るべきですか？",
-      "standard_camera": "美術品を撮影して詳しく知る",
-      "standard_style": "印象派について教えてください",
-      "standard_question": "モナ・リザを描いたのは誰ですか？"
-    }
   },
   "expertiseBadge": {
     "beginner": "初級",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} 休館"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}のロゴ"
+  },
   "museum": {
     "about": "概要",
     "opening_hours": "開館時間",
@@ -941,6 +934,8 @@
       "send_hint": "ミュージアムアシスタントにメッセージを送信します",
       "message_input": "メッセージを入力",
       "assistant_message": "アシスタントのメッセージ",
+      "attached_image": "メッセージに添付された画像",
+      "loading": "応答を読み込んでいます",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
       "recommendation_hint": "この提案で入力欄を埋めます",
@@ -979,7 +974,8 @@
     "reviews": {
       "name_input": "表示名",
       "comment_input": "レビューコメント",
-      "star_button": "{{count}}つ星を設定"
+      "star_button": "{{count}}つ星を設定",
+      "nps_value": "おすすめ度スコア 10点中{{value}}点"
     },
     "preferences": {
       "language_button": "{{language}}言語を選択",
@@ -1118,7 +1114,9 @@
     "manage_subtitle": "任意のカテゴリーのチェックを自由に外せます。AIとチャットするには「OpenAI テキスト」のスコープが必須です。",
     "save_required_hint": "選択を保存するには「OpenAI テキスト」を有効にしてください。",
     "scope_location": "位置情報",
-    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地域（都市）がAIと共有されます。正確な位置情報が共有されることはありません。"
+    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地区（地区＋都市）がAIと共有されます。番地・住所・正確な位置情報が共有されることはありません。",
+    "scope_location_coarse": "都市のみ",
+    "scope_location_coarse_hint": "都市と国のみがAIと共有されます（地区レベルより精度が低い選択肢です）。番地や正確な位置情報が共有されることはありません。"
   },
   "dailyArt": {
     "title": "今日のアートワーク",
@@ -1175,6 +1173,9 @@
     "writeReview": "レビューを書く",
     "averageRating": "平均評価",
     "ratingLabel": "あなたの評価",
+    "npsLabel": "Musaiumを友人や同僚にすすめる可能性はどのくらいですか？",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "あなたの名前",
     "commentPlaceholder": "体験を共有してください...",
     "submit": "レビューを送信",

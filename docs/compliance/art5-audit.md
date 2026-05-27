@@ -30,7 +30,7 @@ This audit is the evidence Musaium produces in case of regulatory inquiry. It is
 **Audit verdict :** COMPLIANT — no exploitation mechanism, but voice-first to minors requires named vigilance.
 
 **Surface walked :**
-- Age handling : Musaium accepts users 13+ per ToS. No age-targeted dark patterns (no "buy now or your friends laugh at you" type prompts). Tone is neutral-warm.
+- Age handling : Musaium accepts users 15+ per ToS (MINIMUM_AGE_FOR_REGISTRATION = 15, Loi 2023-566 RGPD France). No age-targeted dark patterns (no "buy now or your friends laugh at you" type prompts). Tone is neutral-warm.
 - Voice TTS naturalism : the `alloy` voice is naturalistic enough that the AI Act draft guidelines for Art. 50 explicitly call out voice as needing disclosure. Musaium ships an audio disclosure at session start ("Vous interagissez avec un assistant IA Musaium") — covered in [`AI_ACT_CONFORMITY_MATRIX.md`](./AI_ACT_CONFORMITY_MATRIX.md) Art. 50 row. The disclosure mitigates the risk that a minor mistakes the voice for a human.
 - Vulnerable users (disability) : Musaium accessibility (VoiceOver / TalkBack support) is product polish, not exploitation surface.
 - Social-economic targeting : Musaium is freemium without paywall-pressure UX patterns. No "limited-time offer" dark patterns.

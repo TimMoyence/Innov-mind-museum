@@ -3,7 +3,7 @@
 **Status:** Accepted — implemented
 **Date:** 2026-05-23
 **Deciders:** /team run `2026-05-23-chat-composer-buttons-modal-dismiss` (architect + editor + reviewer fresh-context UFR-022)
-**Implemented in:** commit `<placeholder>` (PR pending — `museum-frontend/features/chat/ui/bottom-sheet-router/BottomSheetContainer.tsx`, `BottomSheetBackdrop.tsx`)
+**Implemented in:** commit `68e620648` (`museum-frontend/features/chat/ui/bottom-sheet-router/BottomSheetContainer.tsx`, `BottomSheetBackdrop.tsx`)
 **Related design:** [`team-state/2026-05-23-chat-composer-buttons-modal-dismiss/design.md`](../../.claude/skills/team/team-state/2026-05-23-chat-composer-buttons-modal-dismiss/design.md) §3 D1, §9 D1
 **Lib-docs:** [`lib-docs/react-native/PATTERNS.md`](../../lib-docs/react-native/PATTERNS.md) §0 (Pressable canonical shape), §3 (Pressable vs Touchable)
 **Audit context:** [`docs/chat-ux-refonte/specs/C4.md`](#) — superseded by [`ADR-055`](ADR-055-bottomsheet-router-state-machine.md)

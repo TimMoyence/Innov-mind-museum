@@ -8,6 +8,13 @@
  * api_keys (non-secret), plus previously-omitted User + ChatSession columns.
  * Secrets/credentials are excluded by EXPLICIT per-field allow-listing (never
  * entity spread) so a future column cannot leak by accident (R14, design D4).
+ *
+ * Cycle 4 / B-03 (2026-05-26) — `schemaVersion` bumped `'2'` → `'3'`: each
+ * exported message now nests its recognised artworks (`artworkMatches[]`,
+ * ArtworkMatch), closing the Art.15/17/20 asymmetry (erasure already cascades
+ * them). Same allow-list discipline — only the business columns
+ * `{ artworkId, title, artist, confidence, source, room, createdAt }`, never
+ * the internal uuid PK nor the FK.
  */
 
 /** Lazy-bound to avoid circular init. */
@@ -243,6 +250,18 @@ export interface UserChatExportData {
       audioUrl?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
+      // Cycle 4 (DSAR Art.15/20 — B-03) — recognised artworks (ArtworkMatch)
+      // nested in each message (design D-1). Allow-listed business fields only
+      // (D-2): never the internal uuid PK nor the FK. `[]` when none (EARS-3).
+      artworkMatches: {
+        artworkId: string | null;
+        title: string | null;
+        artist: string | null;
+        confidence: number;
+        source: string | null;
+        room: string | null;
+        createdAt: string;
+      }[];
     }[];
   }[];
 }
@@ -259,7 +278,7 @@ export interface UserConsentExportEntry {
 /** GDPR Art. 15 / Art. 20 export payload. */
 export interface UserExportPayload {
   exportedAt: string;
-  schemaVersion: '2';
+  schemaVersion: '3';
   user: {
     id: number;
     email: string;

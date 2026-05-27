@@ -80,6 +80,12 @@ jobs:
       # the sibling backend tree via a relative path.
       - name: Web cookies audit sentinel (R18)
         run: node ../museum-backend/scripts/sentinels/web-cookies-audit.mjs
+      # web-domain-canonical — blocks the non-owned domain musaium.app from
+      # leaking into user-facing web surfaces (notably the EAA accessibility
+      # contact email). Same cross-app sentinel convention as R18: pure Node,
+      # lives in the backend tree, invoked via relative path from museum-web.
+      - name: Web canonical-domain sentinel (no musaium.app)
+        run: node ../museum-backend/scripts/sentinels/web-domain-canonical.mjs
       # Coverage gate (vitest.config.ts thresholds) activates after Bloc C5 lands
       # 10 admin panel tests bringing museum-web above the 70 % floor — see ADR-007.
 
@@ -362,6 +368,13 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
+
+      # COMP-01 — PGP/.well-known placeholder deploy gate. Blocks shipping a
+      # placeholder pgp-key.txt (the RFC 9116 Encryption channel would publish
+      # empty). Runs on prod deploy only; the placeholder is legitimate in
+      # dev/PR until the real key is generated (docs/operations/PGP_KEY_GENERATION.md).
+      - name: PGP placeholder deploy gate
+        run: node scripts/sentinels/wellknown-placeholder-free.mjs
 
       - name: Build image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7

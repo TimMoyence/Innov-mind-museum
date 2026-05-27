@@ -45,7 +45,7 @@ Installation locale (obligatoire pour committer) :
 - Linux : binaire depuis https://github.com/gitleaks/gitleaks/releases
 - Fallback : le hook utilise l’image Docker `ghcr.io/gitleaks/gitleaks:latest` si Docker tourne.
 
-Le hook fait échouer le commit dès qu’un secret est détecté, rédige le rapport dans `.gitleaks-report.json`, et le supprime en cas de succès. `--no-verify` est toléré en dernier recours mais à documenter.
+Le hook fait échouer le commit dès qu’un secret est détecté, rédige le rapport dans `.gitleaks-report.json`, et le supprime en cas de succès. `--no-verify` / `-n` / `SKIP_PRE_*` sont **interdits sans exception** (UFR-020). Voir `CLAUDE.md § Hook bypass interdit`. Un hook qui bloque légitimement = fix le hook, jamais de bypass.
 
 ## Épinglage SHA des GitHub Actions
 
@@ -99,6 +99,18 @@ Note mobile:
 - Utilisé par:
   - `ci-cd-backend.yml` (deploy job)
 - Portée recommandée: environment (jamais repository si prod/staging distincts).
+
+### `PLAUSIBLE_DOMAIN`
+- Rôle: domaine Plausible enregistré (ex: `musaium.com`) pour le funnel analytics KR4.
+- Utilisé par: l'adapter télémétrie backend (`PlausibleAdapter`). No-op si absent (le funnel reste muet) ; `validateProductionEnv` émet un `console.warn` non-bloquant au boot prod si absent.
+- Portée recommandée: environment (`production`).
+
+### `PLAUSIBLE_ENDPOINT_URL`
+- Rôle: URL de l'Events API Plausible (self-hosted ou `https://plausible.io/api/event`) vers laquelle le backend POST les events funnel KR4.
+- Utilisé par: l'adapter télémétrie backend (`PlausibleAdapter`). No-op si absent ; warn boot via `validateProductionEnv` en prod.
+- Portée recommandée: environment (`production`).
+
+> **Note ops (PLAUSIBLE_* backend)** — l'injection effective de `PLAUSIBLE_DOMAIN` / `PLAUSIBLE_ENDPOINT_URL` dans les workflows de déploiement (`ci-cd-backend.yml`) + le `.env` du VPS reste **à faire — HORS-SCOPE de ce cycle (boundary MISSION 4)**. Sans elle, le funnel KR4 reste muet en prod malgré le template `.env*.example` et le warn de boot.
 
 ## Secrets Smoke Tests Post-Deploy (Strictement requis)
 
@@ -163,6 +175,18 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 - Utilisé par:
   - `ci-cd-mobile.yml`
 - Vérifié explicitement avant build preview/prod/submit.
+
+### `EXPO_PUBLIC_PLAUSIBLE_DOMAIN`
+- Rôle: domaine Plausible (ex: `musaium.com`) injecté au build EAS mobile pour le funnel analytics KR4.
+- Utilisé par: le client analytics mobile (`shared/analytics/plausible.ts`). No-op si vide.
+- Portée recommandée: environment (`production`) / EAS build profile.
+
+### `EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL`
+- Rôle: URL de l'Events API Plausible injectée au build EAS mobile. Fallback sur `<API_BASE_URL>/api/telemetry/funnel` si absent.
+- Utilisé par: le client analytics mobile (`shared/analytics/plausible.ts`).
+- Portée recommandée: environment (`production`) / EAS build profile.
+
+> **Note ops (EXPO_PUBLIC_PLAUSIBLE_*)** — l'injection effective de `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` / `EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL` dans `ci-cd-mobile.yml` + la config EAS (build profiles) reste **à faire — HORS-SCOPE de ce cycle (boundary MISSION 4)**. Sans elle, le funnel KR4 mobile reste muet en prod malgré les templates `.env*.example`.
 
 ### `EXPO_PUBLIC_EAS_PROJECT_ID`
 - Statut: plus requis par le workflow mobile actuel.

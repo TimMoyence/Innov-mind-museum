@@ -54,8 +54,6 @@ export interface AppEnv {
     password?: string;
     database: string;
     poolMax: number;
-    /** Optional read-replica URL. When set, dataSourceRouter.read uses it. */
-    replicaUrl: string | null;
   };
   auth: {
     jwtSecret: string;
@@ -515,8 +513,6 @@ export interface AppEnv {
     host: string;
     port: number;
     password?: string;
-    /** Comma-separated host:port pairs for Redis Cluster mode (ioredis Cluster client). */
-    clusterNodes: string | null;
   };
   /**
    * Data-retention prune (ADR-018/019/020). Controls three daily housekeeping
@@ -537,6 +533,17 @@ export interface AppEnv {
     artKeywordsDays: number;
     /** hitCount <= this is candidate. Default 1. */
     artKeywordsHitThreshold: number;
+  };
+  /** Review / NPS configuration. */
+  review: {
+    /**
+     * NPS scale-epoch (F3). ISO-8601 UTC timestamp marking the 1-5 → 0-10 scale
+     * switch. `aggregateNps` counts ONLY reviews with `createdAt >=` this value,
+     * so legacy 1-5 ratings (a former "5" would now read as a detractor) never
+     * poison the NPS. Overridable via `NPS_SCALE_EPOCH`. Always a valid ISO
+     * string (invalid env input degrades to the default).
+     */
+    npsScaleEpoch: string;
   };
   /**
    * Advanced guardrail V2. Each layer below self-activates from its own

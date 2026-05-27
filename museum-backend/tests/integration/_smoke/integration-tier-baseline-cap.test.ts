@@ -79,8 +79,10 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 //   - telemetry/funnel-consent-header.test.ts (spy-injected telemetry sink)
 //   - telemetry/funnel-quota-exceeded.test.ts (spy-injected telemetry sink)
 //   - telemetry/funnel-route-integration.test.ts (spy-injected sink, multi-event ordering)
+//   - telemetry/quota-exceeded-anonymized.test.ts (2026-05-27, PR #301 C3 RGPD —
+//     spy-injected telemetry sink; same Express-smoke pattern as funnel-* above)
 // Reduce back only by deleting baseline entries, never by adding more.
-const PHASE_1_BASELINE_CAP = 23;
+const PHASE_1_BASELINE_CAP = 24;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

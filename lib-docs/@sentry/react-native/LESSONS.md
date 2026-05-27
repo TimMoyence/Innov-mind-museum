@@ -2,7 +2,7 @@
 
 Project-specific gotchas. Audit enterprise-grade 2026-05-18.
 
-## 🚨 2026-05-18 — F1 MAJOR : `metro.config.js` uses `getDefaultConfig` au lieu de `getSentryExpoConfig`
+## ~~🚨 2026-05-18 — F1 MAJOR~~: `metro.config.js` uses `getDefaultConfig` — RESOLVED 2026-05-20 (commit `d06bfd54c` — see refresh section below)
 - **Symptôme** : risque Hermes bundle source-maps non-aligned avec Sentry upload → stack traces minifiées dashboard, debug impossible.
 - **Cause** : `museum-frontend/metro.config.js:2` utilise `const { getDefaultConfig } = require('expo/metro-config')`. PATTERNS.md §1 prescrit explicitement `getSentryExpoConfig` from `@sentry/react-native/metro` comme canonical Expo Metro setup.
 - **Fix** : voir TD-SRN-01. Replace par `const { getSentryExpoConfig } = require('@sentry/react-native/metro')` + call `getSentryExpoConfig(__dirname)`. Verify EAS build still uploads source maps via `@sentry/expo-upload-sourcemaps`.

@@ -20,6 +20,8 @@ import { deriveTopBarCollapsed } from '@/features/chat/application/useCollapsibl
 import { buildVisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
+import { useCompareImagePicker } from '@/features/chat/application/useCompareImagePicker';
+import { useCompareTrigger } from '@/features/chat/application/useCompareTrigger';
 import { useAiConsent } from '@/features/chat/application/useAiConsent';
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
 import { useSottoVoce } from '@/features/chat/application/useSottoVoce';
@@ -97,6 +99,7 @@ export default function ChatSessionScreen() {
     sessionTitle,
     museumName,
     lastAssistantPending,
+    reload,
   } = useChatSession(sessionId);
 
   useMuseumPrefetch(museumName ?? null, locale);
@@ -163,6 +166,28 @@ export default function ChatSessionScreen() {
   }, [acknowledgeVoiceDisclosure, pendingVoiceAction, rawToggleRecording]);
 
   const { selectedImage, onPickImage, onTakePicture, clearSelectedImage } = useImagePicker();
+
+  // D-wiring (Option C) — visual compare. The picker yields the RN file shape;
+  // `useCompareTrigger` runs the compare then `reload()`s the session so the
+  // assistant message the backend already persisted (with
+  // `metadata.compareResults`) surfaces and the existing carousel renders it.
+  // Anti-stale + i18n error mapping live in the hook.
+  const { pickForCompare } = useCompareImagePicker();
+  // The compare pipeline only templates rationales/facts in fr/en (CompareInput);
+  // any other UI locale falls back to English copy.
+  const compareLocale = locale === 'fr' ? 'fr' : 'en';
+  const {
+    trigger: triggerCompare,
+    isPending: isComparing,
+    error: compareError,
+  } = useCompareTrigger({ sessionId, locale: compareLocale, reload });
+
+  const onCompareImage = useCallback(() => {
+    void (async () => {
+      const image = await pickForCompare();
+      if (image) triggerCompare(image);
+    })();
+  }, [pickForCompare, triggerCompare]);
 
   const { enabled: audioDescEnabled } = useAudioDescriptionMode();
   const { enabled: sottoVoce, toggle: toggleSottoVoce } = useSottoVoce();
@@ -426,6 +451,7 @@ export default function ChatSessionScreen() {
       playRecordedAudio: () => void playRecordedAudio(),
       clearMedia: inputHandlers.clearMedia,
       onOpenScanner: onOpenCartelScanner,
+      onCompareImage,
     });
   }, [
     openSheet,
@@ -438,6 +464,7 @@ export default function ChatSessionScreen() {
     playRecordedAudio,
     inputHandlers.clearMedia,
     onOpenCartelScanner,
+    onCompareImage,
   ]);
 
   return (
@@ -487,6 +514,17 @@ export default function ChatSessionScreen() {
             </Text>
           ) : null}
 
+          {isComparing ? (
+            <Text
+              testID="compare-status"
+              style={[styles.recordingStatus, { color: theme.primary }]}
+              accessibilityRole="text"
+              accessibilityLiveRegion="polite"
+            >
+              {t('chat.compare.title')}
+            </Text>
+          ) : null}
+
           {error ? (
             <ErrorState
               variant="inline"
@@ -494,6 +532,10 @@ export default function ChatSessionScreen() {
               onDismiss={clearError}
               testID="error-notice"
             />
+          ) : null}
+
+          {compareError ? (
+            <ErrorState variant="inline" title={compareError} testID="compare-error-notice" />
           ) : null}
 
           <ArtworkHeroCard model={heroModel} collapsed={heroCollapsed} onExpand={onHeroExpand} />

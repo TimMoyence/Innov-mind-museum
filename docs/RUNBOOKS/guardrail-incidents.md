@@ -177,7 +177,7 @@ Two failure modes look identical aggregate-side : (a) **legitimate concentration
 psql "$PROD_DB_URL" -c "SELECT created_at, action, metadata FROM audit_logs WHERE metadata->>'messageId' = '<message-uuid>';"
 
 # Pull the full pipeline trace from Langfuse (Phase 1+)
-# https://langfuse.musaium.app/traces?messageId=<uuid>
+# https://langfuse.musaium.com/traces?messageId=<uuid>
 
 # Confirm which provider returned allow (keyword? llm-guard? llm-judge?)
 # Look for `layer=keyword,decision=allow` AND `layer=llm_guard,decision=allow`
@@ -248,7 +248,7 @@ Per-tenant rollback is the path. The schema is designed for it ([design.md § D1
 ```bash
 # Verify the running digest vs the pinned one
 ssh ops@vps "docker inspect llm-guard --format '{{.Image}}'"
-grep "image:.*llm-guard" /Users/Tim/Desktop/all/dev/Pro/InnovMind/infra/docker-compose.prod.yml
+grep "image:.*llm-guard" museum-backend/deploy/docker-compose.prod.yml
 
 # Check egress traffic from the sidecar (should be NONE — sidecar is local-only)
 ssh ops@vps "docker exec llm-guard ss -tn"

@@ -6,6 +6,7 @@ import {
   required,
   resolveChaosRate,
   toBoolean,
+  toIsoTimestamp,
   toList,
   toNumber,
   toOptionalString,
@@ -74,7 +75,6 @@ const env: AppEnv = {
     password: toOptionalString(process.env.DB_PASSWORD),
     database: required('PGDATABASE', toOptionalString(process.env.PGDATABASE)),
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
-    replicaUrl: toOptionalString(process.env.DB_REPLICA_URL) ?? null,
   },
   auth: {
     // SEC-HARDENING (H12): prod BANS legacy JWT_SECRET fallback; explicit
@@ -304,7 +304,7 @@ const env: AppEnv = {
   wikidata: {
     userAgent:
       toOptionalString(process.env.WIKIDATA_USER_AGENT) ||
-      'Musaium/1.0 (https://musaium.app; contact@musaium.app)',
+      'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
   },
   // C4.1 (2026-05-11) — KnowledgeRouter. TUNING-ONLY: no `*_ENABLED` flag may
   // be added (D11 / pre-launch V1 doctrine). Rollback = `git revert`.
@@ -317,7 +317,7 @@ const env: AppEnv = {
     wsTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_WS_TIMEOUT_MS, 1500),
   },
   nominatim: {
-    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.app',
+    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.com',
     cacheTtlSeconds: toNumber(process.env.NOMINATIM_CACHE_TTL_SECONDS, 86_400),
     negativeCacheTtlSeconds: toNumber(process.env.NOMINATIM_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
     minRequestIntervalMs: toNumber(process.env.NOMINATIM_MIN_REQUEST_INTERVAL_MS, 1_000),
@@ -391,7 +391,6 @@ const env: AppEnv = {
   ),
   redis: {
     ...parseRedisUrlFallback(),
-    clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
   },
   guardrails: {
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
@@ -473,8 +472,23 @@ const env: AppEnv = {
     artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
   },
+  review: {
+    // NPS scale-epoch (F3). The review rating scale switched 1-5 (legacy stars)
+    // → 0-10 (NPS) in this release. A legacy "5" is indistinguishable by value
+    // from an NPS "5" yet would now be miscounted as a detractor (≤6), poisoning
+    // the score on historical data. `aggregateNps` therefore counts ONLY reviews
+    // created AT/AFTER this epoch. Default = the 0-10 deploy date; overridable
+    // via NPS_SCALE_EPOCH (ISO-8601) for staging back-tests / future re-baselines.
+    // Invalid values degrade to the default (toIsoTimestamp warns, never throws).
+    // Mirrors the repository resolver (`nps-scale-epoch.ts`) — same default
+    // literal + parser. The repository reads its own lightweight resolver (to
+    // avoid pulling the DB-coupled env singleton into its static import graph);
+    // this field exposes the value for the AppEnv contract / prod validation.
+    // Keep the default literal in sync with `NPS_SCALE_EPOCH_DEFAULT`.
+    npsScaleEpoch: toIsoTimestamp(process.env.NPS_SCALE_EPOCH, '2026-05-27T00:00:00.000Z'),
+  },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
-  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.com',
   // R4 W4.3 — B2B leads inbox. Config value, not a feature flag. Falls back
   // to supportInboxEmail in dev so no env churn for solo contributors.
   b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),

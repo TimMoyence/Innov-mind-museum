@@ -5,6 +5,7 @@ import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-
 import { applyHistoryWindow } from '@modules/chat/useCase/orchestration/history-window';
 import { buildVisitContextPromptBlock } from '@modules/chat/useCase/session/visit-context';
 import { resolveLocale, localeToLanguageName } from '@shared/i18n/locale';
+import { isCoordinateString } from '@shared/utils/location';
 import { sanitizePromptInput } from '@shared/validation/input';
 import { env } from '@src/config/env';
 
@@ -194,6 +195,14 @@ const formatNearbyMuseumsList = (nearbyMuseums: ResolvedLocation['nearbyMuseums'
 const buildVisitorContextLine = (input: OrchestratorInput): string => {
   const rl = input.resolvedLocation;
   if (!rl) {
+    // A-01 (Narrow contract / amendment) — when consent is refused/anonymous
+    // (`resolvedLocation` undefined) the client still ships raw GPS in
+    // `context.location` (`lat:X,lng:Y`). `sanitizePromptInput` does NOT strip
+    // coords, so drop the whole block to avoid leaking exact GPS to the LLM
+    // (GDPR Art. 7 inversion). Non-GPS free-text labels keep M4 behaviour below.
+    if (isCoordinateString(input.context?.location)) {
+      return '';
+    }
     const safeLocation = safeContextValue(input.context?.location);
     return safeLocation
       ? `<visitor_context>Visitor location: ${safeLocation}.</visitor_context>`
@@ -202,12 +211,18 @@ const buildVisitorContextLine = (input: OrchestratorInput): string => {
   if (rl.isInsideMuseum && rl.nearbyMuseums.length > 0) {
     return `<visitor_context>The visitor is currently inside or very near: ${rl.nearbyMuseums[0].name}. Any artwork photo is most likely from this museum's collection.</visitor_context>`;
   }
-  if (rl.reverseGeocodeCoarse) {
-    // GDPR — only coarse (city+country) ever ships to LLM. Full street-level
-    // stays backend-only for analytics/audit (see location-resolver.ts).
+  // GDPR 3-level granularity (cycle 1.5) — `full` ships the neighbourhood (city +
+  // quartier, degrading to city when no quartier, REQ-4a/REQ-6); `coarse` ships
+  // the city only (REQ-5), never escalating to the quartier. Both are coarse
+  // labels — street-level / coordinates stay backend-only (see location-resolver.ts).
+  const placeLabel =
+    rl.consentGranularity === 'full'
+      ? (rl.reverseGeocodeNeighbourhood ?? rl.reverseGeocodeCoarse)
+      : rl.reverseGeocodeCoarse;
+  if (placeLabel) {
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);
     const nearbySuffix = nearbyList ? ` Nearby museums: ${nearbyList}.` : '';
-    return `<visitor_context>The visitor is outdoors in: ${rl.reverseGeocodeCoarse}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
+    return `<visitor_context>The visitor is outdoors in: ${placeLabel}. They may be photographing a monument, statue, fountain, building facade, or public art in this area.${nearbySuffix}</visitor_context>`;
   }
   if (rl.nearbyMuseums.length > 0) {
     const nearbyList = formatNearbyMuseumsList(rl.nearbyMuseums);

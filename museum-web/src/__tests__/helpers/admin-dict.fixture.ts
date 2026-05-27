@@ -10,6 +10,7 @@ export const mockAdminDict: Dictionary['admin'] = {
   tickets: 'Tickets',
   supportAdmin: 'Support',
   reviewsAdmin: 'Reviews',
+  nps: 'NPS',
   accessDenied: 'Access Denied',
   goToHomepage: 'Go to Homepage',
   login: {
@@ -223,6 +224,18 @@ export const mockAdminDict: Dictionary['admin'] = {
     topMuseums: 'Top Museums',
     museum: 'Museum',
     guardrailBlockRate: 'Block Rate',
+  },
+  npsPage: {
+    subtitle: 'Track visitor recommendation sentiment.',
+    score: 'NPS score',
+    promoters: 'Promoters',
+    passives: 'Passives',
+    detractors: 'Detractors',
+    responses: 'Responses',
+    distribution: 'Response distribution',
+    chartAriaLabel: 'Bar chart of promoter, passive and detractor counts',
+    allMuseums: 'All museums',
+    noMuseumAssigned: 'No museum is assigned to your account. Please contact an administrator.',
   },
   export: {
     sessions: { label: 'CSV sessions', downloading: 'Preparing', error: 'Failed' },

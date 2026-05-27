@@ -1,5 +1,7 @@
 # DPIA + ROPA — Readiness Tracking
 
+> **Statut au 2026-05-26 : DPO non mandaté.** La deadline 2026-05-25 est dépassée. `dpo@musaium.com` reste un alias, pas un DPO mandaté. DPIA/ROPA non signés. Décision go/no-go launch à formaliser par le responsable.
+
 **Owner** : Tech lead (Tim Moyence) + DPO externe (à mandater — deadline ferme 2026-05-25).
 **Date d'ouverture du tracking** : 2026-05-13 (audit P0-1).
 **Date cible de signature complète** : 2026-05-26 (J-6 avant launch V1 du 2026-06-01).
@@ -11,13 +13,13 @@ Le contrôleur (Tim Moyence) a tenu une session « DPO walkthrough » et a posé
 
 | Question | Décision controller (2026-05-13) |
 |---|---|
-| DPO mandate (DPIA:8 + ROPA:9) | **Deadline ferme 2026-05-25** ; cabinet en cours de shortlist ; mailbox `dpo@musaium.app` reliée par alias à `tim.moyence@gmail.com` |
+| DPO mandate (DPIA:8 + ROPA:9) | **Deadline ferme 2026-05-25** ; cabinet en cours de shortlist ; mailbox `dpo@musaium.com` reliée par alias à `tim.moyence@gmail.com` |
 | Base légale Auth (ROPA TR-01) | **6(1)(b) uniquement** (exécution du contrat) — alignée EDPB 03/2022 |
 | Base légale Chat / T1 (DPIA T1.1 + ROPA TR-02) | **Cumul 6(1)(b) + 6(1)(a)** — service = contrat ; consentement uniquement sur toggle `location_to_llm` |
 | Rétention audit logs 13 mois (ROPA TR-01) | **Défendue** : CNIL anti-fraude + Art. 22 + cycle annuel d'audit |
 | Rétention tickets 365j (ROPA TR-05) | **Défendue** : fenêtre saisonnière < prescription civile FR 5 ans |
 | Rétention reviews rejetées 30j (ROPA TR-07) | **Défendue** : preuve via `audit_log` 13 mois |
-| Logs hébergeur (DPIA §4.15 + ROPA TR-06) | **Documenter le défaut OVH actuel d'ici 2026-05-20** ; cible 90j/13mo = P1 post-launch (non claimée pré-enforcement) |
+| Logs hébergeur (DPIA §4.15 + ROPA TR-06) | **Résolu — rétention logs configurée côté OVH le 2026-05-27** (operator-confirmed) ; durée exacte à enregistrer dans `docs/OPS_DEPLOYMENT.md` (operator à confirmer). Aucune claim de conformité au-delà de la valeur réellement enforced. |
 | OpenAI EU data zone (ROPA TR-02) | **Non activée pour V1** ; SCC + DPF maintenus ; ré-évaluation post-revenue B2B |
 | S3 cleanup (ROPA TR-03) | **Vérifié** : cascade orchestrée (`chat-purge.job.ts:23-28` + `chat-media-purger.ts` + `s3-orphan-purge.job.ts`) |
 | Adéquation UK (ROPA TR-04) | **Vérifié 2026-05-13** : Décision (UE) 2025/2531 du 17 décembre 2025 renouvelle jusqu'au 27 décembre 2031 |

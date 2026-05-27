@@ -41,7 +41,7 @@ Pinning is **defense-in-depth**, not a primary control: HTTPS + HSTS already pre
 |---|---|
 | **"Just pin now — defense-in-depth is always good."** | Pinning without a kill-switch is more dangerous than no pinning: a mass-mispin (e.g. unexpected cert rotation) bricks the entire user base until they manually update the app. The kill-switch is the bare minimum prerequisite, and that's a real Expo + remote-config integration, not a one-line change. |
 | **"The threat model is low — skip it entirely."** | We document the gap and ship the runbook so the TODO is visible to future audits. The library is selected so the next dev who picks this up has zero discovery cost. |
-| **"What about Sentry RN? It already proxies HTTPS."** | Sentry events go to a different host (`sentry.io`) and are not on the `api.musaium.app` data path. Pinning the API host does not affect Sentry traffic. |
+| **"What about Sentry RN? It already proxies HTTPS."** | Sentry events go to a different host (`sentry.io`) and are not on the `api.musaium.com` data path. Pinning the API host does not affect Sentry traffic. |
 
 ## Consequences
 

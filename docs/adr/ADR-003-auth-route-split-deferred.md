@@ -1,6 +1,6 @@
 # ADR-003 — Auth route split (deferred)
 
-- **Status**: Deferred (2026-04-20)
+- **Status**: Implemented (2026-05-05, commit b36c67b96)
 - **Owner**: Backend
 
 ## Context

@@ -80,3 +80,15 @@ appId: com.musaium.mobile.preview
 
 # Verify the user message is visible in the chat
 - assertVisible: "What artworks can I see here?"
+
+# C-08 — Assert the ASSISTANT bubble rendered (not just the optimistic user
+# echo). `chat-bubble-assistant` (ChatMessageBubble.tsx:205,219) is only present
+# once a real assistant message lands in the store; the pending phase uses the
+# distinct `chat-assistant-pending` placeholder. Wait for LLM latency.
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 30000
+
+- assertVisible:
+    id: "chat-bubble-assistant"

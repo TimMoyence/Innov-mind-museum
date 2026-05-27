@@ -101,7 +101,7 @@ export class ExportUserDataUseCase {
 
     return {
       exportedAt: new Date().toISOString(),
-      schemaVersion: '2',
+      schemaVersion: '3',
       user: {
         id: user.id,
         email: user.email,

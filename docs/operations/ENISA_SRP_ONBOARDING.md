@@ -44,7 +44,7 @@ In "My products" → "Add product":
 |---|---|
 | Product name | `Musaium` |
 | Product type | `Mobile application` (iOS) + `Web application` |
-| Component identifiers | `com.musaium.app` (iOS bundle), `musaium-frontend@<version>`, `musaium-backend@<version>`, `musaium-web@<version>` |
+| Component identifiers | `com.musaium.mobile` (iOS bundle), `musaium-frontend@<version>`, `musaium-backend@<version>`, `musaium-web@<version>` |
 | Distribution channels | App Store, Google Play, web (`musaium.com`) |
 | In-scope EU member states | All 27 (no exclusion) |
 | First commercial release | 2026-06-01 (V1) |

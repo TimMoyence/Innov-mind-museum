@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — 照片",
       "third_party_ai_audio_google": "Google AI — 语音转录",
       "third_party_ai_profile_google": "Google AI — 偏好与历史",
-      "location_to_llm": "位置 — 附近的地点"
+      "location_to_llm": "位置 — 附近的地点",
+      "location_coarse_to_llm": "位置 — 仅城市"
     },
     "accessibility": "无障碍",
     "audio_description": "音频描述",
@@ -472,7 +473,7 @@
     "audio": "语音",
     "image_sent": "[已发送图片]",
     "voice_message": "[语音消息]",
-    "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.app",
+    "share_footer": "通过Musaium分享 — 您的博物馆伴侣\nhttps://musaium.com",
     "replace_image": "替换",
     "remove_image": "删除",
     "share_response": "分享",
@@ -526,7 +527,8 @@
       "gallery": "从相册选择",
       "record_audio": "录制语音消息",
       "stop_audio": "停止录制",
-      "scan_cartel": "扫描说明牌"
+      "scan_cartel": "扫描说明牌",
+      "compare": "比较这件作品"
     },
     "cartelScanner": {
       "title": "扫描说明牌二维码",
@@ -645,18 +647,6 @@
   "chatInput": {
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
     "send": "发送"
-  },
-  "welcome": {
-    "title": "欢迎使用 Musaium",
-    "subtitle": "您的私人博物馆伴侣",
-    "suggestions": {
-      "museum_camera": "我面前的是什么艺术品？",
-      "museum_history": "给我讲讲这座博物馆的历史",
-      "museum_next": "我接下来应该看什么？",
-      "standard_camera": "拍摄一件艺术品来了解它",
-      "standard_style": "给我讲讲印象派",
-      "standard_question": "蒙娜丽莎是谁画的？"
-    }
   },
   "expertiseBadge": {
     "beginner": "初学者",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} 闭馆"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}标志"
+  },
   "museum": {
     "about": "关于",
     "opening_hours": "开放时间",
@@ -941,6 +934,8 @@
       "send_hint": "将您的消息发送给博物馆助手",
       "message_input": "输入您的消息",
       "assistant_message": "助手消息",
+      "attached_image": "附加到消息的图片",
+      "loading": "正在加载回复",
       "user_message": "您的消息",
       "long_press_hint": "长按以查看更多选项",
       "recommendation_hint": "用此建议填充输入框",
@@ -979,7 +974,8 @@
     "reviews": {
       "name_input": "你的显示名称",
       "comment_input": "你的评价内容",
-      "star_button": "设置{{count}}星评分"
+      "star_button": "设置{{count}}星评分",
+      "nps_value": "推荐评分 {{value}}（满分10）"
     },
     "preferences": {
       "language_button": "选择{{language}}语言",
@@ -1118,7 +1114,9 @@
     "manage_subtitle": "您可以自由取消勾选任何类别。“OpenAI 文本”范围是与 AI 聊天的必需项。",
     "save_required_hint": "启用“OpenAI 文本”以保存您的选择。",
     "scope_location": "位置",
-    "scope_location_hint": "您的大致区域（城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的精确位置绝不会被共享。"
+    "scope_location_hint": "您的大致街区（街区＋城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的街道、地址和精确位置绝不会被共享。",
+    "scope_location_coarse": "仅城市",
+    "scope_location_coarse_hint": "仅与 AI 共享您的城市和国家／地区，精度低于街区级别。您的街道和精确位置绝不会被共享。"
   },
   "dailyArt": {
     "title": "每日艺术",
@@ -1175,6 +1173,9 @@
     "writeReview": "写评价",
     "averageRating": "平均评分",
     "ratingLabel": "你的评分",
+    "npsLabel": "你向他人推荐 Musaium 的可能性有多大？",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "你的名字",
     "commentPlaceholder": "分享你的体验...",
     "submit": "提交评价",

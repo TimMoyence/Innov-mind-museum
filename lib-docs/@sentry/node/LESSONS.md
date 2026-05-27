@@ -2,7 +2,7 @@
 
 Project-specific gotchas. Audit enterprise-grade 2026-05-18.
 
-## 🚨 2026-05-18 — F1 HIGH : OTel coexistence pattern CLAUDE.md HALF-IMPLÉMENTÉ
+## ~~🚨 2026-05-18 — F1 HIGH~~: OTel coexistence pattern — downgraded MEDIUM (2026-05-20, STALE-BY-DESIGN per ADR-045 — see refresh section below)
 - **Symptôme** : Sentry errors PERDENT silencieusement la corrélation OTel trace_id/span_id. Distributed-tracing BE↔FE rotue tree split silencieux.
 - **Cause** : `sentry.ts:42-53` set correctement `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` (per CLAUDE.md prescription). MAIS `opentelemetry.ts:36-51` build le NodeSDK avec ZÉRO Sentry bridge components :
   - ❌ No `SentryContextManager`
@@ -17,7 +17,7 @@ Project-specific gotchas. Audit enterprise-grade 2026-05-18.
   - **(b)** Document explicitement dans CLAUDE.md que coexistence comment est aspirational et trace correlation est intentionally NOT implemented (clarifier ADR-045)
 - **Anti-pattern à éviter** : changer la config Sentry/OTel sans avant clarifier ADR-045 (high-blast observability).
 
-## 🚨 2026-05-18 — F2 HIGH : `tracePropagationTargets` MISSING
+## ~~🚨 2026-05-18 — F2 HIGH~~: `tracePropagationTargets` MISSING — RESOLVED 2026-05-20 (see refresh section below)
 - **Symptôme** : trace tree BE↔FE silently split (CLAUDE.md gotcha explicite).
 - **Cause** : `sentry.ts:42-53 Sentry.init({...})` omits `tracePropagationTargets` entirely. No regex/string array passed. CLAUDE.md mentionne explicitement : `tracePropagationTargets doit être explicite (['^https://api.musaium\\.com/']) sinon trace tree BE↔FE split silencieux`.
 - **Conséquence** : outgoing HTTP requests from backend reçoivent éventuellement PAS les correct sentry-trace/baggage headers. Default propagation behavior of @sentry/node avec `skipOpenTelemetrySetup:true` + no `@sentry/opentelemetry` installed = no propagation.

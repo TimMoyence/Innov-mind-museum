@@ -7,7 +7,7 @@
 
 ## Context
 
-`museum-frontend/app.config.ts:318-323` sets:
+`museum-frontend/app.config.ts:376-380` sets:
 
 ```ts
 updates: {
@@ -50,6 +50,6 @@ Re-evaluate this decision when any of the following is true:
 
 ## Related
 
-- `museum-frontend/app.config.ts:318-323` — runtime flag.
+- `museum-frontend/app.config.ts:376-380` — runtime flag.
 - `museum-frontend/eas.json` — channel declarations (kept for EAS metadata).
 - `docs/MOBILE_INTERNAL_TESTING_FLOW.md` — current release path.

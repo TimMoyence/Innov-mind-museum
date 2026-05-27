@@ -45,7 +45,12 @@ export interface IAdminRepository {
 
   listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>>;
 
-  getStats(): Promise<AdminStats>;
+  /**
+   * Global aggregate when `museumId` is omitted (full `AdminStats`).
+   * When `museumId` is provided, sessions/messages are filtered to that tenant
+   * and the platform-census fields are omitted (reduced manager shape, C1A D1/D2).
+   */
+  getStats(museumId?: number): Promise<AdminStats>;
 
   // S4-03 Content Moderation
   listReports(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>>;

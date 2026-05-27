@@ -14,7 +14,7 @@ interface UseReviewsReturn {
   submitLoading: boolean;
   submitError: string | null;
   loadMore: () => void;
-  submitReview: (rating: number, comment: string, userName: string) => Promise<boolean>;
+  submitReview: (rating: number, comment: string, sessionId?: string) => Promise<boolean>;
   clearSubmitError: () => void;
 }
 
@@ -91,11 +91,11 @@ export const useReviews = (): UseReviewsReturn => {
   }, [hasMore, loading, page]);
 
   const submitReview = useCallback(
-    async (rating: number, comment: string, userName: string): Promise<boolean> => {
+    async (rating: number, comment: string, sessionId?: string): Promise<boolean> => {
       setSubmitLoading(true);
       setSubmitError(null);
       try {
-        const { review } = await reviewApi.submitReview(rating, comment, userName);
+        const { review } = await reviewApi.submitReview(rating, comment, sessionId);
         // Optimistic: add the review locally so submitter sees it immediately (pending state).
         // Stats are NOT mutated here — backend filters stats to approved reviews only,
         // so we wait for the next refetch to keep client/server in sync.

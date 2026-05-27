@@ -1,6 +1,6 @@
 # ADR Index — Musaium
 
-52 architecture decision records present in `docs/adr/`. Click an entry to open the full ADR.
+64 architecture decision records present in `docs/adr/`. Click an entry to open the full ADR.
 
 **Status legend** : `ACCEPTED` (implemented or design-locked) · `PROPOSED` (not yet ratified) · `DEFERRED` (post-launch / V1.1) · `SUPERSEDED` (replaced — see pointer) · `ACTIVE-MONITORING` (operational watch, no code change) · `REVERTED` (rolled back, kept for record).
 
@@ -8,7 +8,7 @@ Numbering gaps : **ADR-001, ADR-005, ADR-008, ADR-034** were deleted from `docs/
 
 ## By status (quick count)
 
-- ACCEPTED (incl. Accepted-Implemented / Amended) : **36**
+- ACCEPTED (incl. Accepted-Implemented / Amended) : **45**
 - DEFERRED : **9**
 - PROPOSED : **4**
 - SUPERSEDED : **2**
@@ -74,10 +74,18 @@ Numbering gaps : **ADR-001, ADR-005, ADR-008, ADR-034** were deleted from `docs/
 | [ADR-058](ADR-058-selective-hexagonal-ports-policy.md) | Selective hexagonal ports: keep multi-impl ports, inline single-impl ports | PROPOSED | |
 | [ADR-059](ADR-059-connectivity-single-source-online-manager-bridge.md) | Connectivity single source of truth + `onlineManager` bridge as `queryClient.ts` module side-effect | ACCEPTED | Implemented |
 | [ADR-060](ADR-060-gdpr-erasure-dsar-compliance-chain.md) | GDPR Art.17 erasure chain (audio/image/Brevo) + S3 orphan-purge cron + Art.15 DSAR export schemaVersion 2 | ACCEPTED | Implemented |
+| [ADR-061](ADR-061-i-sec8-artwork-knowledge-not-multi-tenant.md) | I-SEC8 reclassification: `artwork_knowledge` is a global catalogue, not a multi-tenant store | ACCEPTED | |
+| [ADR-062](ADR-062-canonical-legal-content-source.md) | Single canonical source for legal content (privacy + terms + subprocessors) with CI drift sentinel | ACCEPTED | |
+| [ADR-063](ADR-063-langfuse-mask-central-stripfreetext.md) | Langfuse central `mask` au ctor (`stripFreeText`) comme standard observabilité cross-app | ACCEPTED | Renumbered from ADR-061 → ADR-063 2026-05-22 |
+| [ADR-064](ADR-064-access-token-denylist-fail-open.md) | Access-token denylist Redis adapter is fail-OPEN | ACCEPTED | Renumbered from ADR-062 → ADR-064 2026-05-22 |
+| [ADR-065](ADR-065-redis-volatile-ttl-with-bullmq-caveat.md) | Redis prod eviction policy = `volatile-ttl` (with BullMQ no-TTL caveat accepted V1) | ACCEPTED | Renumbered from ADR-063 → ADR-065 2026-05-22 |
+| [ADR-066](ADR-066-rn-modal-pointer-events-routing.md) | Pointer-events routing convention for RN overlay containers with backdrop dismiss | ACCEPTED | Implemented |
+| [ADR-067](ADR-067-base-modal-custom-vs-radix.md) | BaseModal custom (museum-web) — defer Radix UI Dialog post-launch V1 | ACCEPTED | Implemented Phase 2 |
+| [ADR-068](ADR-068-sbom-attestation-strategy-mobile-gap.md) | SBOM attestation strategy across the 3 apps (digest-bound where possible; mobile gap deferred to CRA 2027) | ACCEPTED | Implemented (advisory, non-blocking) |
 
 ## Cross-reference sanity check vs CLAUDE.md
 
-ADRs cited in `CLAUDE.md` are present in this index: ADR-015, ADR-021, ADR-036, ADR-037, ADR-045, ADR-047, ADR-049, ADR-050, ADR-051, ADR-052, ADR-054.
+ADRs cited in `CLAUDE.md` are present in this index: ADR-015, ADR-021, ADR-036, ADR-037, ADR-045, ADR-047, ADR-049, ADR-050, ADR-051, ADR-052, ADR-054. ADRs 061-068 added 2026-05-26.
 
 ## Maintenance
 

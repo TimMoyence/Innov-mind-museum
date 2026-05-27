@@ -27,16 +27,16 @@
 | Agent | Rôle | Mandat | Model (doctrine) | Write scope |
 |---|---|---|---|---|
 | [architect](../../agents/architect.md) | architect | spec.md (#1) puis design.md + tasks.md (#2). Hexagonal + feature-driven + OpenAPI contract-first | opus-4.7 | `team-state/<RUN_ID>/*.md` |
-| [editor](../../agents/editor.md) | editor | red (tests FAIL, #1) puis green (code, FROZEN-TEST, #2). BE/FE/Web/CI/migrations | opus-4.6 | source code (no deploy/git push) |
-| [verifier](../../agents/verifier.md) | verifier | DoD machine-verified + scope boundary + spot-check + anti-hallucination + lib-docs reference assert | opus-4.6 | read-only ; `state.json.gates[]` via hooks |
-| [security](../../agents/security.md) | security | OWASP LLM Top-10 + API Top-10 + SAST (semgrep/codeql/supply-chain) + promptfoo | opus-4.6 | read-only |
-| [reviewer](../../agents/reviewer.md) | reviewer | Fresh-context semantic review (KISS/DRY/hexagonal/spec↔impl parity/UFR/PATTERNS.md compliance) | opus-4.7 | read-only |
-| [documenter](../../agents/documenter.md) | documenter | ADR drafts, STORY.md finalize, CHANGELOG, doc updates | opus-4.6 | `docs/`, `README*.md`, `CHANGELOG.md`, `STORY.md` |
-| [doc-fetcher](../../agents/doc-fetcher.md) | doc-fetcher | WebSearch + WebFetch 5-10 pages → snapshot brut (UFR-022 lib-docs) | opus-4.6 | `lib-docs/<lib>/` (snapshot/sources/VERSION untracked) |
-| [doc-curator](../../agents/doc-curator.md) | doc-curator | Snapshot brut → `PATTERNS.md` curé (~200-500 lignes) | opus-4.6 | `lib-docs/<lib>/PATTERNS.md` only |
+| [editor](../../agents/editor.md) | editor | red (tests FAIL, #1) puis green (code, FROZEN-TEST, #2). BE/FE/Web/CI/migrations | claude-opus-4-7 | source code (no deploy/git push) |
+| [verifier](../../agents/verifier.md) | verifier | DoD machine-verified + scope boundary + spot-check + anti-hallucination + lib-docs reference assert | claude-opus-4-7 | read-only ; `state.json.gates[]` via hooks |
+| [security](../../agents/security.md) | security | OWASP LLM Top-10 + API Top-10 + SAST (semgrep/codeql/supply-chain) + promptfoo | claude-opus-4-7 | read-only |
+| [reviewer](../../agents/reviewer.md) | reviewer | Fresh-context semantic review (KISS/DRY/hexagonal/spec↔impl parity/UFR/PATTERNS.md compliance) | claude-opus-4-7 | read-only |
+| [documenter](../../agents/documenter.md) | documenter | ADR drafts, STORY.md finalize, CHANGELOG, doc updates | claude-opus-4-6 | `docs/`, `README*.md`, `CHANGELOG.md`, `STORY.md` |
+| [doc-fetcher](../../agents/doc-fetcher.md) | doc-fetcher | WebSearch + WebFetch 5-10 pages → snapshot brut (UFR-022 lib-docs) | claude-opus-4-7 | `lib-docs/<lib>/` (snapshot/sources/VERSION untracked) |
+| [doc-curator](../../agents/doc-curator.md) | doc-curator | Snapshot brut → `PATTERNS.md` curé (~200-500 lignes) | claude-opus-4-7 | `lib-docs/<lib>/PATTERNS.md` only |
 | [learning-curator](../../agents/learning-curator.md) | learning-curator | Agrège lessons → amendments (read-only sur prod) ; `/team learning:review` | opus-4.7 | `team-knowledge/amendments/pending/` only |
 
-**Frontmatter** : tous déclarent `model: opus` (alias), sauf documenter pin `claude-opus-4-6`. La doctrine d'assignation 4.7/4.6 ci-dessus est portée par SKILL.md REGLE 2 (UFR-010 — aucun Sonnet).
+**Frontmatter** : tous déclarent `model: claude-opus-4-7`, sauf documenter pin `claude-opus-4-6`. La doctrine d'assignation 4.7/4.6 ci-dessus est portée par SKILL.md REGLE 2 (UFR-010 — aucun Sonnet).
 
 **Process-auditor v4 (retiré)** : fusionné dans `verifier` (DoD/scope/spot-check/anti-hallucination) + `reviewer` (semantic review). Les hooks `team-hooks/` couvrent les portes déterministes.
 

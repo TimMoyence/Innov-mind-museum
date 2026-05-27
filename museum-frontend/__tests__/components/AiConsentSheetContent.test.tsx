@@ -113,12 +113,14 @@ describe('AiConsentSheetContent — manage view', () => {
     return api;
   };
 
-  it('Manage CTA reveals 9 switches all defaulting OFF (8 provider + 1 location — GDPR Art. 4(11))', async () => {
+  it('Manage CTA reveals 10 switches all defaulting OFF (8 provider + 2 geo — GDPR Art. 4(11))', async () => {
     const { getAllByRole } = await renderManage();
     const switches = getAllByRole('switch');
-    // 8 provider switches (4 categories × 2 providers) + 1 location-data switch
-    // (B9 — rendered as its own group below the provider grid, design §9 D1).
-    expect(switches.length).toBe(9);
+    // 8 provider switches (4 categories × 2 providers) + 2 geo switches:
+    // location_to_llm (full / neighbourhood) + location_coarse_to_llm (coarse /
+    // city) — Cycle 1.5-FE REQ-FE-1, rendered as their own group below the
+    // provider grid (design §2.2).
+    expect(switches.length).toBe(10);
     for (const sw of switches) {
       expect(sw.props.value).toBe(false);
     }
@@ -299,5 +301,191 @@ describe('AiConsentSheetContent — Location group (location_to_llm, B9)', () =>
     });
     const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
     expect(grantedScopes).not.toContain('location_to_llm');
+  });
+});
+
+/**
+ * Cycle 1.5-FE (REQ-FE-1/5, T-SHEET-3/4/5) — the manage view exposes a SECOND
+ * geo row for `location_coarse_to_llm` (coarse / city-only), distinct from the
+ * full neighbourhood `location_to_llm` row. Default OFF. Toggling it ON (plus
+ * the required scope) forwards `location_coarse_to_llm` on Save; leaving it OFF
+ * does not. Switches are identified by their a11y label = the i18n key (the
+ * mock returns the raw key).
+ */
+describe('AiConsentSheetContent — Location coarse group (location_coarse_to_llm, Cycle 1.5-FE)', () => {
+  let defaultProps: {
+    close: jest.Mock;
+    onAccept: jest.Mock;
+    onPrivacy: jest.Mock;
+  };
+
+  beforeEach(() => {
+    defaultProps = {
+      close: jest.fn(),
+      onAccept: jest.fn(),
+      onPrivacy: jest.fn(),
+    };
+  });
+
+  const renderManage = async () => {
+    const api = render(<AiConsentSheetContent {...defaultProps} />);
+    fireEvent.press(api.getByText('consent.manage_choices'));
+    await waitFor(() => {
+      expect(api.getByText('consent.manage_title')).toBeTruthy();
+    });
+    return api;
+  };
+
+  const findSwitchByLabel = <T extends { props: { accessibilityLabel?: string } }>(
+    switches: readonly T[],
+    label: string,
+  ): T | undefined => switches.find((sw) => sw.props.accessibilityLabel === label);
+
+  it('renders the coarse label + hint copy in manage view', async () => {
+    const { getByText } = await renderManage();
+    expect(getByText('consent.scope_location_coarse')).toBeTruthy();
+    expect(getByText('consent.scope_location_coarse_hint')).toBeTruthy();
+  });
+
+  it('renders a coarse Location switch defaulting OFF with switch a11y role', async () => {
+    const { getAllByRole } = await renderManage();
+    const coarseSwitch = findSwitchByLabel(getAllByRole('switch'), 'consent.scope_location_coarse');
+    expect(coarseSwitch).toBeDefined();
+    expect(coarseSwitch?.props.value).toBe(false);
+    expect(coarseSwitch?.props.accessibilityRole).toBe('switch');
+  });
+
+  it('forwards location_coarse_to_llm in the granted set when required + coarse are ON', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    const coarseSwitch = findSwitchByLabel(switches, 'consent.scope_location_coarse');
+    if (!requiredSwitch || !coarseSwitch) throw new Error('expected required + coarse switches');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+    fireEvent(coarseSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).toContain('location_coarse_to_llm');
+    expect(grantedScopes).toContain('third_party_ai_text_openai');
+  });
+
+  it('does NOT forward location_coarse_to_llm when the coarse toggle stays OFF', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    if (!requiredSwitch) throw new Error('expected required switch');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).not.toContain('location_coarse_to_llm');
+  });
+});
+
+/**
+ * Cycle 1.5-FE (D1 = Option C, REQ-FE-8, T-SHEET-6) — the two geo levels are
+ * mutually exclusive in the sheet's local state: enabling full
+ * (`location_to_llm`) when coarse is ON turns coarse OFF, and vice-versa. This
+ * prevents the misleading "both ON" state (where the BE silently lets full
+ * dominate). Asserted via the forwarded granted set on Save (observable state,
+ * per lib-docs/react/PATTERNS.md — assert observable state, not internals).
+ */
+describe('AiConsentSheetContent — geo exclusivity (D1 Option C, Cycle 1.5-FE)', () => {
+  let defaultProps: {
+    close: jest.Mock;
+    onAccept: jest.Mock;
+    onPrivacy: jest.Mock;
+  };
+
+  beforeEach(() => {
+    defaultProps = {
+      close: jest.fn(),
+      onAccept: jest.fn(),
+      onPrivacy: jest.fn(),
+    };
+  });
+
+  const renderManage = async () => {
+    const api = render(<AiConsentSheetContent {...defaultProps} />);
+    fireEvent.press(api.getByText('consent.manage_choices'));
+    await waitFor(() => {
+      expect(api.getByText('consent.manage_title')).toBeTruthy();
+    });
+    return api;
+  };
+
+  const findSwitchByLabel = <T extends { props: { accessibilityLabel?: string } }>(
+    switches: readonly T[],
+    label: string,
+  ): T | undefined => switches.find((sw) => sw.props.accessibilityLabel === label);
+
+  it('enabling full geo after coarse turns coarse OFF (only full forwarded)', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    const fullSwitch = findSwitchByLabel(switches, 'consent.scope_location');
+    const coarseSwitch = findSwitchByLabel(switches, 'consent.scope_location_coarse');
+    if (!requiredSwitch || !fullSwitch || !coarseSwitch)
+      throw new Error('expected required + full + coarse switches');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+    fireEvent(coarseSwitch, 'valueChange', true);
+    fireEvent(fullSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).toContain('location_to_llm');
+    expect(grantedScopes).not.toContain('location_coarse_to_llm');
+  });
+
+  it('enabling coarse geo after full turns full OFF (only coarse forwarded)', async () => {
+    const { getAllByRole, getByText } = await renderManage();
+    const switches = getAllByRole('switch');
+    const requiredSwitch = switches[0];
+    const fullSwitch = findSwitchByLabel(switches, 'consent.scope_location');
+    const coarseSwitch = findSwitchByLabel(switches, 'consent.scope_location_coarse');
+    if (!requiredSwitch || !fullSwitch || !coarseSwitch)
+      throw new Error('expected required + full + coarse switches');
+
+    fireEvent(requiredSwitch, 'valueChange', true);
+    fireEvent(fullSwitch, 'valueChange', true);
+    fireEvent(coarseSwitch, 'valueChange', true);
+
+    fireEvent.press(getByText('consent.save_and_continue'));
+    await waitFor(() => {
+      expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
+    });
+    const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
+    expect(grantedScopes).toContain('location_coarse_to_llm');
+    expect(grantedScopes).not.toContain('location_to_llm');
+  });
+
+  it('reflects exclusivity in the switch values: enabling full flips coarse switch OFF', async () => {
+    const { getAllByRole } = await renderManage();
+    const switches = getAllByRole('switch');
+    const fullSwitch = findSwitchByLabel(switches, 'consent.scope_location');
+    const coarseSwitch = findSwitchByLabel(switches, 'consent.scope_location_coarse');
+    if (!fullSwitch || !coarseSwitch) throw new Error('expected full + coarse switches');
+
+    fireEvent(coarseSwitch, 'valueChange', true);
+    fireEvent(fullSwitch, 'valueChange', true);
+
+    const after = getAllByRole('switch');
+    const coarseAfter = findSwitchByLabel(after, 'consent.scope_location_coarse');
+    const fullAfter = findSwitchByLabel(after, 'consent.scope_location');
+    expect(fullAfter?.props.value).toBe(true);
+    expect(coarseAfter?.props.value).toBe(false);
   });
 });

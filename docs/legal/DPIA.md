@@ -5,7 +5,7 @@
 **Date de rédaction technique** : 2026-05-13 (audit P0-1).
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel, opérant Musaium / InnovMind, France.
 **Contact responsable** : `tim.moyence@gmail.com`.
-**Contact DPO** : `dpo@musaium.app` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
+**Contact DPO** : `dpo@musaium.com` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
 **Cycle de revue** : annuel, ou à chaque changement matériel du traitement.
 
 > **Note d'audit (2026-05-13)** : ce document a fait l'objet d'un audit technique (P0-1) destiné à aligner le contenu factuel sur le code de production réel (durées de conservation, mesures TOM effectivement déployées, statut DeepSeek post-réconciliation P0-3). Toutes les sections marquées `<!-- DPO ACTION REQUIRED: ... -->` requièrent une décision juridique d'un DPO mandaté avant signature. Les sections techniques (T1/T2/T3 — colonnes Durée, Mesures, Destinataires) ont été cross-vérifiées contre `museum-backend/src/config/env.ts`, `museum-backend/src/shared/audit/`, `docs/compliance/SUBPROCESSORS.md`.
@@ -142,7 +142,7 @@ Pour les 3 traitements (toutes vérifiées en code 2026-05-13, voir `museum-back
 3. **Cookies + CSRF (F7)** : access token et refresh token en cookies HttpOnly + Secure + SameSite ; CSRF double-submit token (`CSRF_SECRET` obligatoire en prod, distinct des autres secrets — `env.production-validation.ts:184-201`).
 4. **Audit-chain** : hash-link sur les actions admin et flux GDPR (export, deletion, consent grant/revoke). **IP anonymisée après 13 mois** par cron quotidien (`audit-ip-anonymizer.job.ts:62`, intervalle PG `13 months`).
 5. **PII scrubbing** : Sentry events filtrés par `sentry-scrubber.ts` (BE + FE + Web — à dédupliquer post-launch via `packages/musaium-shared`, voir P1-1). Email → SHA-256 fingerprint, query keys + body fields password/token/secret/refresh/authorization/cookie/email redactés.
-6. **DSAR ready** : export (Art. 15) via `/api/auth/me/export` (`exportUserData.useCase.ts`) + suppression (Art. 17) via `/api/auth/account/delete` (`deleteAccount.useCase.ts`), SLA cible 7j.
+6. **DSAR ready** : export (Art. 15) via `/api/users/me/export` (`exportUserData.useCase.ts`) + suppression (Art. 17) via `/api/auth/account/delete` (`deleteAccount.useCase.ts`), SLA cible 7j.
 7. **Sanitization image** : EXIF strip systématique via `sharp().rotate()` re-encodage avant toute transmission au LLM tiers (`image-processing.service.ts:47`).
 8. **Sanitization texte** : Unicode NFC + suppression zero-width + truncation sur les champs user-controlled injectés en prompt système (`sanitizePromptInput()`), boundary marker `[END OF SYSTEM INSTRUCTIONS]` séparant system + user.
 9. **Backup & DR** : snapshots PG quotidiens chiffrés (rétention provider), hébergement OVH (FR/EU) — voir `docs/OPS_DEPLOYMENT.md`. **Cible DR (controller decision 2026-05-13)** : RTO 24h / RPO 24h, aligné sur la cadence des snapshots OVH. Premier test de restore programmé avant le launch V1 (2026-06-01) — résultat à archiver dans `docs/OPS_DEPLOYMENT.md` § restore-drill.
