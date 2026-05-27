@@ -184,7 +184,9 @@ describe('image-storage.s3', () => {
   });
 
   describe('listObjectsByPrefix', () => {
-    it('parses ListObjectsV2 XML response and extracts keys', async () => {
+    it('parses ListObjectsV2 XML response and extracts objects (key + lastModifiedMs)', async () => {
+      // No <LastModified> in these blocks → parser falls back to lastModifiedMs:0
+      // (treated as "old enough"; the DB-reference net stays authoritative).
       const listXml = `<?xml version="1.0" encoding="UTF-8"?>
         <ListBucketResult>
           <IsTruncated>false</IsTruncated>
@@ -200,10 +202,10 @@ describe('image-storage.s3', () => {
         );
       });
 
-      expect(result.keys).toEqual([
-        'chat-images/2026/03/user-42/session-1/a.png',
-        'chat-images/2026/03/user-42/session-2/b.jpg',
-        'chat-images/2026/03/user-99/session-3/c.png',
+      expect(result.objects).toEqual([
+        { key: 'chat-images/2026/03/user-42/session-1/a.png', lastModifiedMs: 0 },
+        { key: 'chat-images/2026/03/user-42/session-2/b.jpg', lastModifiedMs: 0 },
+        { key: 'chat-images/2026/03/user-99/session-3/c.png', lastModifiedMs: 0 },
       ]);
       expect(result.nextToken).toBeUndefined();
     });
@@ -223,7 +225,9 @@ describe('image-storage.s3', () => {
         );
       });
 
-      expect(result.keys).toEqual(['chat-images/2026/03/user-1/s/a.png']);
+      expect(result.objects).toEqual([
+        { key: 'chat-images/2026/03/user-1/s/a.png', lastModifiedMs: 0 },
+      ]);
       expect(result.nextToken).toBe('token-abc-123');
     });
   });

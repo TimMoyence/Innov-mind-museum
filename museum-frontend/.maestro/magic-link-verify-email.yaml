@@ -11,7 +11,7 @@ appId: com.musaium.mobile.preview
 # token on mount, reaches the success state, and we tap the post-success CTA.
 #
 # A backend test account + a valid one-time verify-email token must be seeded
-# before a live run (same caveat as mfa-enroll-flow.yaml).
+# before a live run.
 
 - launchApp:
     clearState: false

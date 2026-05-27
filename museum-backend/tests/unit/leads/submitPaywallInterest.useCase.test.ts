@@ -21,11 +21,33 @@ import { SubmitPaywallInterestUseCase } from '@modules/leads/useCase/submitPaywa
 import { logger } from '@shared/logger/logger';
 
 import { makePaywallInterestPayload } from '../../helpers/leads/paywallInterest.fixtures';
+import { makeStubLeadRepository } from '../../helpers/leads/stubLeadRepository';
 
+import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 import type {
   BetaSignupNotifier,
   BetaSignupOutcome,
 } from '@modules/leads/domain/ports/beta-signup-notifier.port';
+
+/**
+ * Cycle B (« Aucun lead perdu ») — persist-then-notify: the use-case depends on
+ * `ILeadRepository` (2-arg ctor). The `source` discriminator is persisted in the
+ * jsonb payload and still forwarded to the notifier (R19). Real persistence
+ * ordering is pinned by `submitBetaPaywall.persist-then-notify.test.ts`.
+ */
+type PaywallUseCaseCtor = new (
+  notifier: BetaSignupNotifier,
+  repository: ILeadRepository,
+) => {
+  execute(input: {
+    email: string;
+    consent: boolean;
+    website?: string;
+    ip?: string;
+    requestId?: string;
+    userAgent?: string;
+  }): Promise<void>;
+};
 
 describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
   const subscribe = jest.fn<
@@ -33,18 +55,9 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
     [Parameters<BetaSignupNotifier['subscribe']>[0]]
   >();
   const notifier: BetaSignupNotifier = { subscribe };
-  // Cast through the public contract — keeps `as any` out of the ratchet
-  // while leaving TypeScript honest about the missing module at HEAD.
-  const useCase = new (SubmitPaywallInterestUseCase as new (n: BetaSignupNotifier) => {
-    execute(input: {
-      email: string;
-      consent: boolean;
-      website?: string;
-      ip?: string;
-      requestId?: string;
-      userAgent?: string;
-    }): Promise<void>;
-  })(notifier);
+  // Cast through the public contract — keeps `as any` out of the ratchet.
+  const Ctor = SubmitPaywallInterestUseCase as unknown as PaywallUseCaseCtor;
+  const useCase = new Ctor(notifier, makeStubLeadRepository());
 
   beforeEach(() => {
     subscribe.mockReset();

@@ -4,7 +4,9 @@ import { logger } from '@shared/logger/logger';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type {
   AudioCleanupPort,
+  LeadErasurePort,
   MarketingContactRemovalPort,
+  MarketingErasureFallbackPort,
 } from '@shared/ports/audio-cleanup.port';
 import type {
   ImageCleanupPort as SharedImageCleanupPort,
@@ -34,7 +36,13 @@ export type ImageCleanupPort = SharedImageCleanupPort;
  *  2. S3 TTS AUDIO — refs resolved from the DB (`findAudioRefsByUserId`) and
  *     deleted one-by-one via `AudioStorage.deleteByRef` (audio keys have no
  *     user segment, so no prefix delete is possible).
- *  3. The Brevo MARKETING contact (removed by email; 404 = already gone).
+ *  3. The Brevo MARKETING contact (removed by email; 404 = already gone). On a
+ *     failure (5xx / 429 / timeout) the intent is NOT dropped — it is persisted
+ *     as a durable `brevo_erasure` lead (R5) the redelivery cron retries until
+ *     the contact is gone, so residual third-party PII cannot survive silently.
+ *  3.b The persisted `leads` rows carrying this email (R6) — purged via
+ *     `LeadErasurePort.deleteByEmail` BEFORE the cascade, while the email is
+ *     still resolvable.
  *  4. The DB rows: `chat_sessions` (CASCADE → messages / artwork_matches /
  *     reports / feedback) and `users` (CASCADE → refresh_tokens / social_accounts
  *     / api_keys / consents).
@@ -48,14 +56,42 @@ export type ImageCleanupPort = SharedImageCleanupPort;
  * This is NOT a "full deletion via DB cascade" — object storage and the
  * marketing contact live outside the DB and are cleaned up explicitly here.
  */
+/**
+ * Named options for {@link DeleteAccountUseCase}. Replaces the prior 7-param
+ * positional ctor — every best-effort erasure port is optional + independently
+ * swappable for hexagonal testability, so a named-options object reads clearer
+ * than positional order and removes the `max-params` friction.
+ */
+export interface DeleteAccountUseCaseOptions {
+  userRepository: IUserRepository;
+  imageStorage?: ImageCleanupPort;
+  legacyImageRefLookup?: LegacyImageRefLookup;
+  audioCleanup?: AudioCleanupPort;
+  brevoRemoval?: MarketingContactRemovalPort;
+  /** R5 — durable fallback when the inline Brevo `removeContact` fails. */
+  marketingErasureFallback?: MarketingErasureFallbackPort;
+  /** R6 — purges persisted `leads` rows carrying the account email. */
+  leadErasure?: LeadErasurePort;
+}
+
 export class DeleteAccountUseCase {
-  constructor(
-    private readonly userRepository: IUserRepository,
-    private readonly imageStorage?: ImageCleanupPort,
-    private readonly legacyImageRefLookup?: LegacyImageRefLookup,
-    private readonly audioCleanup?: AudioCleanupPort,
-    private readonly brevoRemoval?: MarketingContactRemovalPort,
-  ) {}
+  private readonly userRepository: IUserRepository;
+  private readonly imageStorage?: ImageCleanupPort;
+  private readonly legacyImageRefLookup?: LegacyImageRefLookup;
+  private readonly audioCleanup?: AudioCleanupPort;
+  private readonly brevoRemoval?: MarketingContactRemovalPort;
+  private readonly marketingErasureFallback?: MarketingErasureFallbackPort;
+  private readonly leadErasure?: LeadErasurePort;
+
+  constructor(options: DeleteAccountUseCaseOptions) {
+    this.userRepository = options.userRepository;
+    this.imageStorage = options.imageStorage;
+    this.legacyImageRefLookup = options.legacyImageRefLookup;
+    this.audioCleanup = options.audioCleanup;
+    this.brevoRemoval = options.brevoRemoval;
+    this.marketingErasureFallback = options.marketingErasureFallback;
+    this.leadErasure = options.leadErasure;
+  }
 
   /**
    * Ordering is load-bearing — object-storage + marketing cleanup MUST run
@@ -104,12 +140,42 @@ export class DeleteAccountUseCase {
     }
 
     // 3. Remove the Brevo MARKETING contact (B2, R4-R6). BEFORE DB cascade so
-    //    the user email is still available as the contact identifier.
+    //    the user email is still available as the contact identifier. On a
+    //    failure, enqueue a DURABLE erasure intent (R5) so the contact is still
+    //    removed by the redelivery cron — never warn-and-drop (residual PII).
     if (this.brevoRemoval) {
       try {
         await this.brevoRemoval.removeContact(user.email);
       } catch (error) {
         logger.warn('delete_account_brevo_cleanup_failed', {
+          userId,
+          error: (error as Error).message,
+        });
+        if (this.marketingErasureFallback) {
+          try {
+            await this.marketingErasureFallback.enqueueBrevoErasure(user.email);
+            logger.info('delete_account_brevo_erasure_enqueued', { userId });
+          } catch (enqueueError) {
+            // Best-effort: a failed enqueue must NOT abort the DB erasure (R10).
+            logger.warn('delete_account_brevo_erasure_enqueue_failed', {
+              userId,
+              error: (enqueueError as Error).message,
+            });
+          }
+        }
+      }
+    }
+
+    // 3.b Purge persisted `leads` rows carrying this email (R6). BEFORE the DB
+    //     cascade — the email is still resolvable. Best-effort: a leads-store
+    //     hiccup must not abort the DB erasure (R10). Logs only `userId` +
+    //     `deletedCount` (no email — R12).
+    if (this.leadErasure) {
+      try {
+        const deletedCount = await this.leadErasure.deleteByEmail(user.email.trim().toLowerCase());
+        logger.info('delete_account_leads_erasure', { userId, deletedCount });
+      } catch (error) {
+        logger.warn('delete_account_leads_erasure_failed', {
           userId,
           error: (error as Error).message,
         });

@@ -3365,6 +3365,179 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/leads/b2b': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a public B2B lead
+     * @description Persist-then-notify (Cycle B): the lead is persisted before the Brevo notifier is invoked, so a Brevo failure never loses it. Returns 202 as soon as it is durable, regardless of the delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            name: string;
+            museum: string;
+            /** @enum {string} */
+            role: 'director' | 'curator' | 'digital' | 'other';
+            message: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/leads/beta': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a public beta-signup lead
+     * @description Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe, durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/leads/paywall-interest': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a paywall premium-interest lead
+     * @description Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe (tagged `paywall_premium_interest`), durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/support/contact': {
     parameters: {
       query?: never;

@@ -1,7 +1,24 @@
 # ADR-017 — MFA RN wire (E2) deferred to post-launch + 30 days
 
-Status: Accepted — 2026-04-30 · re-confirmed 2026-05-05 (defer post-launch+30d)
-Context: Audit 2026-04-30 finding E2 · sprint 2026-05-05 P1 closure decision
+Status: **Withdrawn for V1** — 2026-05-26 (mobile MFA surface removed, not deferred) · was Accepted 2026-04-30 · re-confirmed 2026-05-05 (defer post-launch+30d)
+Context: Audit 2026-04-30 finding E2 · sprint 2026-05-05 P1 closure decision · product decision 2026-05-26 (web-admin-only MFA)
+
+## Amendment 2026-05-26 — Withdrawn for V1 (mobile MFA removed, not deferred)
+
+Product decision 2026-05-26: **MFA stays web-admin-only in V1.** The mobile user-facing MFA surface is **removed** (UFR-016 « il est mort on l'enterre »), not merely deferred. The "post-launch + 30 days" trigger checklist below is therefore **cancelled** — there is no longer a sequenced re-wire; the deferred work is withdrawn.
+
+Removed in cycle M2 (run 2026-05-26-auth-mfa-rgpd-zerodefect):
+
+- `features/auth/screens/MfaEnrollScreen.tsx`, `MfaChallengeScreen.tsx`, `MfaWarningBanner.tsx`
+- `features/auth/infrastructure/mfaApi.ts` (client + `isMfaRequired`/`isMfaEnrollmentRequired` predicates)
+- `features/auth/hooks/usePreventScreenCapture.ts` (its only consumer was `MfaEnrollScreen`)
+- route `app/(stack)/mfa-enroll.tsx` + its `<Stack.Screen>` registration
+- Maestro flow `.maestro/mfa-enroll-flow.yaml` + its `shards.json` entry
+- the screen test + `mfa.factories.ts`
+
+`authService.login()` no longer `throw new Error('MFA_REQUIRED')` (a raw token that would have leaked to the visitor). It now rejects gracefully with a structured `AppError` (`kind: 'Forbidden'`, `code: 'MFA_WEB_ONLY'`) → translated i18n hint `error.auth.mfa_web_only` (8 locales). No navigation, no crash, no orphaned secret screen.
+
+The backend MFA enforcement (**ADR-014**) is **unchanged**: the web admin still enforces MFA for enrolled admin/museum-admin accounts. The native dep `expo-screen-capture` (`~55.0.14`) is kept in `package.json` as light debt (removing a native dep = separate pod-install/Pods cycle, out of M2 scope); its `lib-docs` entry was withdrawn from the active perimeter. If MFA mobile is ever wanted again, it is a fresh design cycle, not a revival of this deferred plan.
 
 ## Question
 

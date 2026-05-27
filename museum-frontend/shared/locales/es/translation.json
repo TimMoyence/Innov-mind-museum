@@ -712,7 +712,8 @@
       "account_suspended": "Tu cuenta ha sido suspendida. Contacta con soporte.",
       "account_deleted": "Esta cuenta ha sido eliminada.",
       "locked_out": "Demasiados intentos fallidos. Vuelve a intentarlo en unos minutos.",
-      "minor_parental_consent_required": "El registro está reservado a usuarios de 15 años o más (mayoría digital francesa)."
+      "minor_parental_consent_required": "El registro está reservado a usuarios de 15 años o más (mayoría digital francesa).",
+      "mfa_web_only": "La autenticación de dos factores se gestiona en el panel de administración web. Inicia sesión allí."
     },
     "chat": {
       "contract_invalid": "Respuesta del servidor inesperada. Inténtalo de nuevo.",

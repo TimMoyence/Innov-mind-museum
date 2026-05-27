@@ -19,7 +19,7 @@ describe('DeleteAccountUseCase', () => {
   it('deletes user and cleans up images when imageStorage is provided', async () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
-    const useCase = new DeleteAccountUseCase(repo, imageStorage);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
 
     await useCase.execute(1);
 
@@ -30,7 +30,7 @@ describe('DeleteAccountUseCase', () => {
 
   it('deletes user without image cleanup when imageStorage is not provided', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new DeleteAccountUseCase(repo);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo });
 
     await useCase.execute(1);
 
@@ -42,7 +42,7 @@ describe('DeleteAccountUseCase', () => {
 
   it('throws 404 when user does not exist', async () => {
     const repo = makeUserRepo(null);
-    const useCase = new DeleteAccountUseCase(repo);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo });
 
     await expect(useCase.execute(999)).rejects.toMatchObject({
       message: 'User not found',
@@ -58,7 +58,7 @@ describe('DeleteAccountUseCase', () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     imageStorage.deleteByPrefix.mockRejectedValue(new Error('S3 connection timeout'));
-    const useCase = new DeleteAccountUseCase(repo, imageStorage);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
 
     // Should NOT throw
     await useCase.execute(1);
@@ -80,7 +80,7 @@ describe('DeleteAccountUseCase', () => {
       callOrder.push('deleteUser');
     });
 
-    const useCase = new DeleteAccountUseCase(repo, imageStorage);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
 
     await useCase.execute(1);
 
@@ -90,7 +90,7 @@ describe('DeleteAccountUseCase', () => {
   it('passes the numeric userId through to deleteByPrefix', async () => {
     const repo = makeUserRepo(makeUser({ id: 42 }));
     const imageStorage = makeImageStorage();
-    const useCase = new DeleteAccountUseCase(repo, imageStorage);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
 
     await useCase.execute(42);
 
@@ -100,7 +100,7 @@ describe('DeleteAccountUseCase', () => {
   it('does not call deleteUser when getUserById throws', async () => {
     const repo = makeUserRepo(makeUser());
     repo.getUserById.mockRejectedValue(new Error('DB connection lost'));
-    const useCase = new DeleteAccountUseCase(repo);
+    const useCase = new DeleteAccountUseCase({ userRepository: repo });
 
     await expect(useCase.execute(1)).rejects.toThrow('DB connection lost');
     expect(repo.deleteUser).not.toHaveBeenCalled();

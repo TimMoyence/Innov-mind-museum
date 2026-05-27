@@ -712,7 +712,8 @@
       "account_suspended": "アカウントは停止されました。サポートにご連絡ください。",
       "account_deleted": "このアカウントは削除されました。",
       "locked_out": "失敗回数が多すぎます。数分後に再度お試しください。",
-      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。"
+      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。",
+      "mfa_web_only": "二要素認証はWeb管理画面で管理されます。そちらからサインインしてください。"
     },
     "chat": {
       "contract_invalid": "サーバーの応答が無効です。もう一度お試しください。",

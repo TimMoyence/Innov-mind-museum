@@ -712,7 +712,8 @@
       "account_suspended": "Your account has been suspended. Contact support.",
       "account_deleted": "This account has been deleted.",
       "locked_out": "Too many failed attempts. Try again in a few minutes.",
-      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority)."
+      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority).",
+      "mfa_web_only": "Two-factor authentication is managed in the web admin. Sign in there."
     },
     "chat": {
       "contract_invalid": "Unexpected server response. Please try again.",

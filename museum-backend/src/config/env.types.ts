@@ -546,6 +546,25 @@ export interface AppEnv {
     npsScaleEpoch: string;
   };
   /**
+   * Cycle B (« Aucun lead perdu ») — async redelivery + retention for the
+   * persisted `leads` table. Always-on pre-launch (structurally skipped without
+   * Redis, mirror `retention`). Config values, NOT feature flags (UFR-015).
+   */
+  leads: {
+    /** BullMQ cron pattern for the redelivery + retention job. Default '*\/5 * * * *'. */
+    redeliveryCronPattern: string;
+    /** Terminal attempts cap before a failed lead is left for an operator. Default 5. */
+    maxAttempts: number;
+    /** Max leads re-attempted (and max delivered purged) per tick. Default 100. */
+    redeliveryBatchLimit: number;
+    /** Days a delivered lead is retained before hard-delete. Default 90. */
+    retentionDays: number;
+    /** Exponential backoff base (ms) between re-delivery attempts. Default 60000. */
+    backoffBaseMs: number;
+    /** Exponential backoff ceiling (ms). Default 3600000. */
+    backoffCapMs: number;
+  };
+  /**
    * Advanced guardrail V2. Each layer below self-activates from its own
    * config presence (URL for sidecar, budget>0 for judge) — no master
    * "candidate" flag (ADR-015 amendment 2026-05-14, T1.7#2).

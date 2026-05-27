@@ -13,7 +13,7 @@
  *    `?` of the *original* input — NEVER round-trip through `URLSearchParams`
  *    (that would re-encode `%20`↔`+` and reorder params; the #1 risk, D3),
  *  - return EVERY other path UNCHANGED (pass-through, NOT `null`) so unrelated
- *    `musaium://` deep links (mfa-enroll, museums-picker) are not regressed.
+ *    `musaium://` deep links (museums-picker) are not regressed.
  *
  * The token is opaque here: it travels inside the preserved query slice and is
  * never parsed, logged, or otherwise inspected (R13).

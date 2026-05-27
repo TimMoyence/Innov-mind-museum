@@ -65,6 +65,12 @@ gate_start "Gate 4/10 OpenAPI sync (BE validate + FE types check)"
 node scripts/sentinels/openapi-sync.mjs || exit 1
 gate_end "Gate 4"
 
+# ─── Gate 4b — Router↔spec drift (R14) ─────────────────────────────────────
+# Cycle B: every mounted Express route MUST be documented in openapi.json.
+gate_start "Gate 4b router-spec drift sentinel (BE)"
+( cd museum-backend && pnpm run sentinel:router-spec-drift ) || exit 1
+gate_end "Gate 4b"
+
 # ─── Gate 5 — Migration revertibility ──────────────────────────────────────
 gate_start "Gate 5/10 migration revertibility sentinel"
 node scripts/sentinels/migration-revertibility.mjs || exit 1

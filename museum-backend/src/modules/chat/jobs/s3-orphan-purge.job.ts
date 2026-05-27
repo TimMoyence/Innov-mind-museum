@@ -47,31 +47,20 @@ export interface RunS3OrphanPurgeOptions {
 }
 
 /**
- * Default page lister — adapts the existing `listObjectsByPrefix` (which
- * returns key-only) into a `{key, lastModifiedMs}` shape by re-issuing a
- * lightweight HEAD-equivalent. To keep the implementation simple in this
- * iteration we treat ALL listed objects as "old enough" when LastModified
- * is unavailable; the `tooFresh` filter is then driven by the override
- * passed in tests. This trade-off keeps the production adapter free of an
- * extra round-trip while still giving tests deterministic age control.
- *
- * Production deployments wishing for native age filtering can pass a custom
- * `pageLister` that parses LastModified out of ListObjectsV2 XML.
+ * Default (production) page lister — passes through the real per-object
+ * `lastModifiedMs` that `listObjectsByPrefix` now parses out of each
+ * ListObjectsV2 `<Contents>` block. This makes the `retentionDays` grace-period
+ * authoritative in prod: a freshly-uploaded object whose `chat_messages` row has
+ * not committed yet is protected by its `LastModified` until it ages past the
+ * cutoff. The DB-reference check remains the second line of defence.
  */
 const defaultPageLister: NonNullable<RunS3OrphanPurgeOptions['pageLister']> = async (
   config,
   prefix,
   continuationToken,
 ) => {
-  const { keys, nextToken } = await listObjectsByPrefix(config, prefix, continuationToken);
-  return {
-    // No LastModified → use 0 (epoch) so the conservative age filter ALWAYS
-    // considers them old enough. Operators can override with a stricter
-    // pageLister; the safer default is "let the DB-reference check be the
-    // last line of defense", which it is.
-    objects: keys.map((key) => ({ key, lastModifiedMs: 0 })),
-    nextToken,
-  };
+  const { objects, nextToken } = await listObjectsByPrefix(config, prefix, continuationToken);
+  return { objects, nextToken };
 };
 
 /** S3 DeleteObjects max batch size — hard-coded by the S3 spec. */
@@ -166,9 +155,11 @@ interface ProcessPageContext {
 async function processOrphanPage(ctx: ProcessPageContext, page: OrphanPage): Promise<void> {
   ctx.result.scanned += page.objects.length;
 
-  const ageEligible = page.objects.filter(
-    (o) => o.lastModifiedMs === 0 || o.lastModifiedMs <= ctx.cutoffMs,
-  );
+  // The age filter is authoritative: only objects whose real LastModified is at
+  // or before the retention cutoff are eligible. Objects with an unparseable
+  // timestamp surface as `lastModifiedMs: 0` (epoch) — older than any cutoff, so
+  // they remain eligible and the DB-reference net still protects referenced keys.
+  const ageEligible = page.objects.filter((o) => o.lastModifiedMs <= ctx.cutoffMs);
   ctx.result.tooFresh += page.objects.length - ageEligible.length;
   if (ageEligible.length === 0) return;
 

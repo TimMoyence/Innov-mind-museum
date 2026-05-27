@@ -154,6 +154,14 @@ jest.mock('@modules/support/adapters/primary/http/routes/support.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
+// Same `env.db.host` trap as me.route / mfa.route: since the leads
+// persist-then-notify work, `leads.route` pulls `leads/useCase` → a PG
+// `LeadRepositoryPg(AppDataSource)` at module load, so it crashes on the
+// db-less env mock unless stubbed.
+jest.mock('@modules/leads/adapters/primary/http/routes/leads.route', () => {
+  const { Router } = jest.requireActual<typeof import('express')>('express');
+  return { __esModule: true, default: Router() };
+});
 
 import { createApiRouter } from '@shared/routers/api.router';
 import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter';

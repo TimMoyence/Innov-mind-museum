@@ -16,6 +16,13 @@ export class DisableMfaUseCase {
 
   async execute(userId: number, currentPassword: string): Promise<void> {
     await assertPasswordReauth(this.userRepository, userId, currentPassword);
+    // R8 — the row DELETION is the in-flight-token invalidation (design §9 D4b).
+    // A `mfaSessionToken` minted before disable, presented after, hits the
+    // `!row?.enrolledAt` guard in `ChallengeMfaUseCase` / `RecoveryMfaUseCase`
+    // (findByUserId now returns null) → 401 `MFA_NOT_ENROLLED`, no session. No
+    // separate jti-revocation store is needed: the disable request carries
+    // `currentPassword`, not the mfaSessionToken, so its jti is not visible here —
+    // deletion-as-invalidation is the KISS invariant that covers BOTH paths.
     await this.totpRepository.deleteByUserId(userId);
   }
 }

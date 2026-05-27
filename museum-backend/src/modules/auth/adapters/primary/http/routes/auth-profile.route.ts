@@ -16,6 +16,7 @@ import {
 import { auditService } from '@shared/audit';
 import {
   AUDIT_ACCOUNT_DELETED,
+  AUDIT_ACCOUNT_DELETION_REQUESTED,
   AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
   AUDIT_AUTH_ONBOARDING_COMPLETED,
   AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED,
@@ -148,6 +149,24 @@ authProfileRouter.patch(
 
 authProfileRouter.delete('/account', isAuthenticated, async (req: Request, res: Response) => {
   const user = requireUser(req);
+  // R1 (Cycle D) — durable "deletion requested" trace BEFORE any erasure runs,
+  // so a failed `execute()` still leaves proof the request was received.
+  await auditService.log({
+    action: AUDIT_ACCOUNT_DELETION_REQUESTED,
+    actorType: 'user',
+    actorId: user.id,
+    targetType: 'user',
+    targetId: String(user.id),
+    ip: req.ip,
+    requestId: req.requestId,
+  });
+
+  // If `execute()` throws (DB down, rollback), the rejection propagates to the
+  // global errorHandler (Express 5 async forwarding) → 5xx, and ACCOUNT_DELETED
+  // is NEVER emitted (R3). The journal never claims a deletion that did not run.
+  await deleteAccountUseCase.execute(user.id);
+
+  // R2 — ACCOUNT_DELETED only AFTER a successful erasure.
   await auditService.log({
     action: AUDIT_ACCOUNT_DELETED,
     actorType: 'user',
@@ -157,7 +176,6 @@ authProfileRouter.delete('/account', isAuthenticated, async (req: Request, res: 
     ip: req.ip,
     requestId: req.requestId,
   });
-  await deleteAccountUseCase.execute(user.id);
   res.status(200).json({ deleted: true });
 });
 

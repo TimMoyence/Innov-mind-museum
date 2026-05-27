@@ -155,6 +155,9 @@ jobs:
       - name: OpenAPI Spec Validate
         run: pnpm run openapi:validate
 
+      - name: Router-spec drift sentinel (R14 - leads routes documented)
+        run: pnpm run sentinel:router-spec-drift
+
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 
@@ -1087,13 +1090,11 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GHCR_USER: ${{ secrets.GHCR_USER }}
           IMAGE_TAG: ${{ github.sha }}
-          SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
-          SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG,SMOKE_TEST_EMAIL,SMOKE_TEST_PASSWORD
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG
           script: |
             set -e
             cd /srv/museum
@@ -1184,14 +1185,12 @@ jobs:
             # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
             docker compose exec -T backend node dist/scripts/seed-knowledge.js
 
-            # 7. Seed smoke-test account (idempotent).
-            #    Ensures post-deploy smoke login succeeds on every deploy without
-            #    manual DB fixups, even after security changes that gate login on
-            #    email_verified / password policy / role RBAC.
-            docker compose exec -T \
-              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
-              -e SMOKE_TEST_PASSWORD="$SMOKE_TEST_PASSWORD" \
-              backend node dist/scripts/seed-smoke-account.js
+            # 7. (smoke account) — NO permanent seed here anymore. The smoke
+            #    account is now EPHEMERAL: a dedicated `create` step (below)
+            #    inserts a fresh account with a per-run random password right
+            #    before the smoke test, and a `cleanup` step (if: always())
+            #    hard-deletes it right after, so no connectable account survives
+            #    a deploy. Cycle C, run 2026-05-26-auth-mfa-rgpd-zerodefect.
 
       # ── Observability stack (C1.1, ADR-036) ────────────────────────────
       # Deploys Grafana / Prometheus / AlertManager / Telegram-bridge
@@ -1373,11 +1372,50 @@ jobs:
         env:
           PROD_SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
           PROD_SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
-          PROD_SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
         run: |
+          # The smoke PASSWORD is no longer a secret: it is generated per-run by
+          # the ephemeral `create` step below. Only EMAIL + base URL stay secrets.
           test -n "$PROD_SMOKE_API_BASE_URL"
           test -n "$PROD_SMOKE_TEST_EMAIL"
-          test -n "$PROD_SMOKE_TEST_PASSWORD"
+
+      # Ephemeral smoke account — STEP 1/3 (create). Inserts a fresh account with
+      # a per-run RANDOM password on the VPS (inside the live backend container),
+      # right before the smoke test. The script prints the password on a single
+      # `SMOKE_TEST_PASSWORD=<value>` stdout line (ops logs go to stderr), which
+      # `capture_stdout` hands back as `steps.smoke_create_prod.outputs.stdout`.
+      - name: Create ephemeral smoke account (prod)
+        id: smoke_create_prod
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: SMOKE_TEST_EMAIL
+          capture_stdout: true
+          script: |
+            set -e
+            cd /srv/museum
+            docker compose exec -T \
+              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
+              backend node dist/scripts/seed-smoke-account.js create
+
+      # STEP 2/3 — mask + expose the generated password as a step output. The
+      # value is `::add-mask::`ed BEFORE anything else uses it, so it never
+      # appears in clear in the logs; it is then consumed only by the smoke step.
+      - name: Extract + mask smoke password (prod)
+        id: smoke_pwd_prod
+        env:
+          CREATE_STDOUT: ${{ steps.smoke_create_prod.outputs.stdout }}
+        run: |
+          PWD_VALUE="$(printf '%s\n' "$CREATE_STDOUT" | sed -n 's/^SMOKE_TEST_PASSWORD=//p' | tail -n1)"
+          if [ -z "$PWD_VALUE" ]; then
+            echo "create step did not emit a SMOKE_TEST_PASSWORD line" >&2
+            exit 1
+          fi
+          echo "::add-mask::$PWD_VALUE"
+          echo "password=$PWD_VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Post-deploy smoke test (prod)
         id: smoke
@@ -1385,11 +1423,33 @@ jobs:
         env:
           SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
           SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
-          SMOKE_TEST_PASSWORD: ${{ secrets.PROD_SMOKE_TEST_PASSWORD }}
+          SMOKE_TEST_PASSWORD: ${{ steps.smoke_pwd_prod.outputs.password }}
+          # A failed `create` MUST fail the smoke loudly (login 401 → rollback),
+          # NOT let smoke-api.cjs auto-register a resident account (D5).
+          SMOKE_ALLOW_REGISTER: 'false'
           SMOKE_TIMEOUT_MS: '20000'
           SMOKE_HEALTH_RETRIES: '24'
           SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
+
+      # STEP 3/3 — cleanup runs UNCONDITIONALLY (if: always()) so NO smoke
+      # account survives, even when create / smoke fails midway.
+      - name: Cleanup ephemeral smoke account (prod)
+        if: ${{ always() }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: SMOKE_TEST_EMAIL
+          script: |
+            set -e
+            cd /srv/museum
+            docker compose exec -T \
+              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
+              backend node dist/scripts/seed-smoke-account.js cleanup
 
       - name: Auto-rollback on deploy or smoke failure (prod)
         id: rollback
@@ -1697,13 +1757,11 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GHCR_USER: ${{ secrets.GHCR_USER }}
           IMAGE_TAG: ${{ github.sha }}
-          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-          SMOKE_TEST_PASSWORD: ${{ secrets.STAGING_SMOKE_TEST_PASSWORD }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG,SMOKE_TEST_EMAIL,SMOKE_TEST_PASSWORD
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG
           script: |
             set -e
             cd /srv/museum
@@ -1777,21 +1835,53 @@ jobs:
             # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
             docker compose exec -T backend-staging node dist/scripts/seed-knowledge.js
 
-            # 7. Seed smoke-test account (idempotent) — same rationale as prod.
-            docker compose exec -T \
-              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
-              -e SMOKE_TEST_PASSWORD="$SMOKE_TEST_PASSWORD" \
-              backend-staging node dist/scripts/seed-smoke-account.js
+            # 7. (smoke account) — NO permanent seed here anymore. The smoke
+            #    account is EPHEMERAL: dedicated `create`/`cleanup` steps (below)
+            #    bracket the smoke test, same as prod. Cycle C, run
+            #    2026-05-26-auth-mfa-rgpd-zerodefect.
 
       - name: Validate staging smoke secrets
         env:
           STAGING_SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
           STAGING_SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-          STAGING_SMOKE_TEST_PASSWORD: ${{ secrets.STAGING_SMOKE_TEST_PASSWORD }}
         run: |
+          # The smoke PASSWORD is generated per-run by the ephemeral `create`
+          # step below — no longer a secret. Only EMAIL + base URL stay secrets.
           test -n "$STAGING_SMOKE_API_BASE_URL"
           test -n "$STAGING_SMOKE_TEST_EMAIL"
-          test -n "$STAGING_SMOKE_TEST_PASSWORD"
+
+      # Ephemeral smoke account — STEP 1/3 (create), same pattern as prod.
+      - name: Create ephemeral smoke account (staging)
+        id: smoke_create_staging
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: SMOKE_TEST_EMAIL
+          capture_stdout: true
+          script: |
+            set -e
+            cd /srv/museum
+            docker compose exec -T \
+              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
+              backend-staging node dist/scripts/seed-smoke-account.js create
+
+      # STEP 2/3 — mask + expose the generated password as a step output.
+      - name: Extract + mask smoke password (staging)
+        id: smoke_pwd_staging
+        env:
+          CREATE_STDOUT: ${{ steps.smoke_create_staging.outputs.stdout }}
+        run: |
+          PWD_VALUE="$(printf '%s\n' "$CREATE_STDOUT" | sed -n 's/^SMOKE_TEST_PASSWORD=//p' | tail -n1)"
+          if [ -z "$PWD_VALUE" ]; then
+            echo "create step did not emit a SMOKE_TEST_PASSWORD line" >&2
+            exit 1
+          fi
+          echo "::add-mask::$PWD_VALUE"
+          echo "password=$PWD_VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Post-deploy smoke test (staging)
         id: smoke_staging
@@ -1799,11 +1889,33 @@ jobs:
         env:
           SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
           SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-          SMOKE_TEST_PASSWORD: ${{ secrets.STAGING_SMOKE_TEST_PASSWORD }}
+          SMOKE_TEST_PASSWORD: ${{ steps.smoke_pwd_staging.outputs.password }}
+          # A failed `create` MUST fail the smoke loudly, NOT self-register a
+          # resident account (D5).
+          SMOKE_ALLOW_REGISTER: 'false'
           SMOKE_TIMEOUT_MS: '20000'
           SMOKE_HEALTH_RETRIES: '24'
           SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
+
+      # STEP 3/3 — cleanup runs UNCONDITIONALLY (if: always()) so NO smoke
+      # account survives, even when create / smoke fails midway.
+      - name: Cleanup ephemeral smoke account (staging)
+        if: ${{ always() }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        env:
+          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: SMOKE_TEST_EMAIL
+          script: |
+            set -e
+            cd /srv/museum
+            docker compose exec -T \
+              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
+              backend-staging node dist/scripts/seed-smoke-account.js cleanup
 
       - name: Auto-rollback on deploy or smoke failure (staging)
         id: rollback_staging

@@ -17,25 +17,32 @@ import type { B2bLeadRole } from '@modules/leads/domain/ports/b2b-lead-notifier.
 
 const leadsRouter: Router = Router();
 
-// R12 — mirror `supportContactLimiter` (5 req / 600s / IP) per R4 §3.4.
+// R12 R17 — mirror `supportContactLimiter` (5 req / 600s / IP) per R4 §3.4.
+// Distributed multi-instance via the global `RedisRateLimitStore` when set at
+// boot; per-instance fallback only without Redis (see /beta comment below).
 const b2bLeadLimiter = createRateLimitMiddleware({
   limit: 5,
   windowMs: 600_000,
   keyGenerator: byIp,
 });
 
-// R3 R12 — dedicated limiter with the same envelope (5 req / 600s / IP) but
+// R3 R12 R17 — dedicated limiter with the same envelope (5 req / 600s / IP) but
 // isolated counters so a spike on /beta does not starve /b2b. Same byIp
-// keyGenerator (counters are per-instance regardless).
+// keyGenerator. Counters are DISTRIBUTED across replicas when the global
+// `RedisRateLimitStore` is set at boot (`setRedisRateLimitStore`, src/index.ts;
+// `createRateLimitMiddleware` reads the module-level `redisStore`,
+// rate-limit.middleware.ts) — they fall back to per-instance only when Redis is
+// absent (local dev / cache disabled). No per-limiter wiring needed.
 const betaSignupLimiter = createRateLimitMiddleware({
   limit: 5,
   windowMs: 600_000,
   keyGenerator: byIp,
 });
 
-// R1 (C6) — dedicated limiter for the paywall-interest endpoint. Same
+// R1 (C6) R17 — dedicated limiter for the paywall-interest endpoint. Same
 // envelope (5 req / 600s / IP) as `/beta` ; isolated counters so a spike on
-// the paywall modal can't starve the landing form (or vice versa).
+// the paywall modal can't starve the landing form (or vice versa). Distributed
+// via the global Redis store when set; per-instance fallback only without Redis.
 const paywallInterestLimiter = createRateLimitMiddleware({
   limit: 5,
   windowMs: 600_000,

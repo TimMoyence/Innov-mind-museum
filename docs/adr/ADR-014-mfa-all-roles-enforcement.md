@@ -5,6 +5,8 @@
 **Deciders**: Tech Lead (sec-hardening-2026-04-30 team), user gate
 **Numbering note**: This decision was originally tracked as ADR-013 in the design spec. ADR-013 was concurrently taken by `ADR-013-admin-facade-kept.md` from a parallel workstream that landed mid-Phase A. Renumbered to ADR-014; commit messages from that window (e.g. `f334bf05`) still reference ADR-013 — this file is the authoritative record.
 
+> **Note 2026-05-26** — the **mobile** MFA wire was withdrawn for V1 (`ADR-017` amendment 2026-05-26, UFR-016): no enrolment/challenge screens, route, or flow ship in `museum-frontend`. The backend gate described here is **unchanged** and stays active for the **web admin** (enrolled admin/museum-admin accounts). Mobile `login()` handles a `mfaRequired` response gracefully (`AppError` `Forbidden`/`MFA_WEB_ONLY` → i18n hint), never routing to a removed screen.
+
 ## Context
 
 Pre-2026-04-30 the MFA gate in `museum-backend/src/modules/auth/useCase/authSession.service.ts:228-238` evaluated only admin accounts:

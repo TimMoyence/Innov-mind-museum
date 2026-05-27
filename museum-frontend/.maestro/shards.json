@@ -13,7 +13,6 @@
         "auth-register-minor-dob.yaml",
         "auth-register-password-breached.yaml",
         "auth-account-delete.yaml",
-        "mfa-enroll-flow.yaml",
         "magic-link-verify-email.yaml",
         "magic-link-confirm-email-change.yaml",
         "magic-link-reset-password.yaml",
