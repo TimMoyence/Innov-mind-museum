@@ -74,6 +74,13 @@ appId: com.musaium.mobile.preview
       label: "Play assistant response"
     timeout: 30000
 
+# C-08 — Explicitly assert the ASSISTANT text bubble rendered, not only the TTS
+# play affordance. `chat-bubble-assistant` (ChatMessageBubble.tsx:205,219) wraps
+# the streamed response body; asserting it guards against a TTS-button-without-
+# text regression (the empty-bubble class of bug, UFR-021).
+- assertVisible:
+    id: "chat-bubble-assistant"
+
 # Sanity check: the visitor message must still be visible (the conversation
 # was preserved through the round-trip).
 - assertVisible: "Who painted the Mona Lisa"
