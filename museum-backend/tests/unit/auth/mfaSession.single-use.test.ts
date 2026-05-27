@@ -31,7 +31,7 @@ import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.use
 import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCase';
 import { issueMfaSessionToken } from '@modules/auth/useCase/totp/mfaSessionToken';
 import { encryptTotpSecret } from '@modules/auth/useCase/totp/totpEncryption';
-import { InMemoryAccessTokenDenylist } from '@modules/auth/adapters/secondary/redis/inmemory-access-token-denylist';
+import { InMemoryAccessTokenDenylist } from '../../helpers/auth/inmemory-access-token-denylist';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
