@@ -126,4 +126,8 @@ regexes = [
   # __tests__/screens/{verify-email,reset-password,confirm-email-change}.test.tsx.
   # Fake fixtures, never real credentials.
   '''tok_(verify|reset|confirm)_[A-Za-z0-9]+''',
+  # WS-B leads-security / leads.route.persist-then-notify tests: synthetic
+  # Brevo api-key fixtures (xkeysib-…-leak-canary) that prove sanitizeLeadError
+  # strips the key from lastError/logs/response. Fake canaries, never real keys.
+  '''xkeysib-[A-Za-z0-9-]*-leak-canary''',
 ]
