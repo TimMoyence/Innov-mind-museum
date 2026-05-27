@@ -21,7 +21,25 @@
  * SUT does not yet exist (Phase 6 wiring). The dynamic require() below
  * yields a "Cannot find module …" RED until the editor lands
  * `chat-compare.route.ts`.
+ *
+ * B-03 consent gate (added cycle "gate consentement /compare"): `createCompareRouter`
+ * now consults a `consentChecker` defaulting to `buildThirdPartyAiConsentChecker()`,
+ * which lazy-imports the auth DB repo. These route-contract cases are golden/error
+ * paths (not consent denial — that lives in `chat-compare-consent.test.ts`), so we
+ * mock that module to GRANT the image scope, mirroring `chat-describe.route.test.ts`
+ * and `chat-compare-consent.test.ts`. Without this the gate hits the prod DB checker
+ * and every authenticated case 500s before reaching the route logic under test.
  */
+
+// ─── Consent-checker mock (hoisted before imports) — grant the image scope ───
+const grantedScopes = new Set<string>(['third_party_ai_image_openai']);
+
+jest.mock('@modules/chat/useCase/third-party-ai-consent-checker', () => ({
+  buildThirdPartyAiConsentChecker: () => ({
+    isGranted: async (userId: number | undefined | null, scope: string) =>
+      await Promise.resolve(userId !== undefined && userId !== null && grantedScopes.has(scope)),
+  }),
+}));
 
 import express from 'express';
 import request from 'supertest';

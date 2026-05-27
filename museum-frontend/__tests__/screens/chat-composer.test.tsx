@@ -17,7 +17,7 @@
 
 import type * as ReactTypes from 'react';
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 
