@@ -126,6 +126,11 @@ regexes = [
   # __tests__/screens/{verify-email,reset-password,confirm-email-change}.test.tsx.
   # Fake fixtures, never real credentials.
   '''tok_(verify|reset|confirm)_[A-Za-z0-9]+''',
+  # Leads no-leak tests (tests/unit/leads/*.test.ts): deliberate Brevo-style
+  # "leak canary" fake api-keys injected into worst-case upstream error messages
+  # to prove the sanitiser/persisted-record never surfaces a credential. The
+  # mandatory `-leak-canary` suffix guarantees this can never match a real
+  # Brevo key (xkeysib-…). Synthetic fixtures, never real credentials.
   # Fake Brevo-shaped API keys in leads tests (leads-security.test.ts +
   # leads.route.persist-then-notify.test.ts). Synthetic fixtures — the bodies
   # are sequential / explicitly labelled ("0123456789abcdef", "secret-0000-leak"),

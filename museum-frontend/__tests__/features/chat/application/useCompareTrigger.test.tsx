@@ -119,7 +119,9 @@ describe('useCompareTrigger — D-01 / D-02 / D-08 (Option C)', () => {
     await waitFor(() => {
       expect(mockCompare).toHaveBeenCalledTimes(1);
     });
-    const [calledInput] = mockCompare.mock.calls[0] as [{ image: RnImage; sessionId: string; locale?: string }];
+    const [calledInput] = mockCompare.mock.calls[0] as [
+      { image: RnImage; sessionId: string; locale?: string },
+    ];
     expect(calledInput.image).toEqual(sampleImage);
     expect(calledInput.sessionId).toBe(SESSION_A);
     expect(calledInput.locale).toBe('fr');

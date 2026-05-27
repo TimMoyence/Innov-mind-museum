@@ -1,4 +1,5 @@
 import { AppError, badRequest } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { extensionByMime } from '@shared/media/mime-extensions';
 import {
   ChatPhaseTimer,
@@ -10,6 +11,9 @@ import { safeTrace } from '@shared/observability/safeTrace';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
+import { estimateSttCostCents } from './voice-cost-pricing';
+
+import type { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import type {
   AudioTranscriberInput,
   AudioTranscriptionResult,
@@ -149,6 +153,36 @@ const parseTranscriptionResponse = async (response: Response): Promise<string> =
  * Reuses shared `OPENAI_API_KEY`.
  */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
+  /**
+   * M1 W5-C3 — optional global cost breaker. Nullable so existing tests / dev
+   * paths constructing the adapter without it stay no-op (same contract as the
+   * orchestrator's `deps.costBreaker ?? null`). Observe-only: voice is NEVER
+   * gated on `canAttempt()` (design §D4); the breaker just accumulates spend so
+   * a voice-driven spike can trip the text path.
+   */
+  private readonly costBreaker: LlmCostCircuitBreaker | null;
+
+  constructor(costBreaker?: LlmCostCircuitBreaker | null) {
+    this.costBreaker = costBreaker ?? null;
+  }
+
+  /**
+   * Fail-open cost charge (mirrors `langchain.orchestrator.ts` `recordSectionCost`).
+   * Charging is sync in-process arithmetic + map write (no I/O); any failure is
+   * logged but NEVER propagates into the transcription hot path (design §D5/AC5).
+   */
+  private recordVoiceCost(cents: number): void {
+    if (!this.costBreaker) return;
+    try {
+      this.costBreaker.recordCharge(cents);
+    } catch (err) {
+      logger.warn('voice_cost_record_failed', {
+        modality: 'stt',
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_AUDIO_TRANSCRIPTION_ERROR */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     const requestId = input.requestId ?? 'unknown';
@@ -181,6 +215,10 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
           const formData = buildTranscriptionFormData(input, audioBuffer);
           const response = await fetchTranscription(formData);
           const text = await parseTranscriptionResponse(response);
+
+          // M1 W5-C3 — feed the global cost breaker only on billable success
+          // (flat STT ceiling — no duration source, design §D1/D3/AC1).
+          this.recordVoiceCost(estimateSttCostCents());
 
           safeTrace('langfuse.stt.generation.end', () => generation?.end({}));
           return {

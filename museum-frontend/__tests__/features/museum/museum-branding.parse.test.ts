@@ -24,9 +24,7 @@ import type { MuseumBranding } from '@/features/museum/domain/museum-branding';
 // the assertions GREEN must satisfy. Mirrors the repo `loadComponent` idiom.
 const loadModule = () =>
   require('@/features/museum/domain/museum-branding') as {
-    parseMuseumBranding: (
-      config: Record<string, unknown> | null | undefined,
-    ) => MuseumBranding;
+    parseMuseumBranding: (config: Record<string, unknown> | null | undefined) => MuseumBranding;
     pickContrastingTextColor: (hex: string) => string;
   };
 
@@ -70,7 +68,9 @@ describe('parseMuseumBranding — defensive jsonb guards (R3, never throws)', ()
   ];
 
   it.each(garbageConfigs)('returns {} and never throws for $label', ({ value }) => {
-    expect(() => parseMuseumBranding(value as Record<string, unknown> | null | undefined)).not.toThrow();
+    expect(() =>
+      parseMuseumBranding(value as Record<string, unknown> | null | undefined),
+    ).not.toThrow();
     expect(parseMuseumBranding(value as Record<string, unknown> | null | undefined)).toEqual({});
   });
 

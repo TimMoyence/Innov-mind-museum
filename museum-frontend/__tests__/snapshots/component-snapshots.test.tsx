@@ -161,8 +161,6 @@ describe('ChatInput — disabled/sending state', () => {
     // button is always rendered (never hidden) — a missing button means a regression
     expect(sendButton).not.toBeNull();
     const button = nonNull(sendButton);
-    expect(
-      button.props.accessibilityState?.disabled ?? button.props.disabled,
-    ).toBeTruthy();
+    expect(button.props.accessibilityState?.disabled ?? button.props.disabled).toBeTruthy();
   });
 });

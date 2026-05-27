@@ -22,8 +22,7 @@
 // against the museum name (the global test-utils mock returns the raw key).
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: { name?: string }) =>
-      opts?.name ? `${opts.name} logo` : key,
+    t: (key: string, opts?: { name?: string }) => (opts?.name ? `${opts.name} logo` : key),
     i18n: { language: 'en' },
   }),
 }));

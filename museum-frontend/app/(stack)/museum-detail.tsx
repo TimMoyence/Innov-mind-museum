@@ -124,11 +124,7 @@ export default function MuseumDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.heroCard} intensity={60}>
-          <MuseumLogo
-            logoUrl={branding.logoUrl}
-            museumName={params.name}
-            style={styles.heroIcon}
-          />
+          <MuseumLogo logoUrl={branding.logoUrl} museumName={params.name} style={styles.heroIcon} />
           <Text style={[styles.title, { color: theme.textPrimary }]}>{params.name}</Text>
 
           {params.address ? (

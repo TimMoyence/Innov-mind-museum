@@ -20,10 +20,7 @@ import { type MuseumBranding, pickContrastingTextColor } from '../domain/museum-
  * light/dark flip or a brand-color change (react/PATTERNS.md:111 — purity +
  * stable identity contract the compiler can't infer from a literal spread).
  */
-export const useBrandedTheme = (
-  appTheme: ThemePalette,
-  branding: MuseumBranding,
-): ThemePalette => {
+export const useBrandedTheme = (appTheme: ThemePalette, branding: MuseumBranding): ThemePalette => {
   const primaryColor = branding.primaryColor;
 
   return useMemo<ThemePalette>(() => {
