@@ -354,7 +354,9 @@ export class PrepareMessagePipeline {
     const currentArtworkId = session.currentArtworkId;
     if (!repo || !currentArtworkId) return undefined;
     try {
-      const row = await repo.findById(currentArtworkId);
+      // I-SEC8 (OWASP LLM08) — scope the cartel lookup to the session's tenant
+      // so a cross-tenant artwork never leaks its title/room into the prompt.
+      const row = await repo.findById(currentArtworkId, session.museumId);
       if (!row) return null;
       return { title: row.title, roomId: row.roomId ?? session.currentRoom ?? null };
     } catch {

@@ -75,6 +75,9 @@ const FROZEN = [
   ['Histogram', 'musaium_rerank_latency_ms'],
   ['Counter', 'musaium_rerank_fallback_total'],
   ['Counter', 'musaium_llm_prompt_cache_hits_total'],
+  // I-FIX3 (2026-05-25) — bare-prefix per F2 Option A (do NOT add to the musaium_ count).
+  ['Counter', 'guardrail_judge_degraded_total'],
+  ['Counter', 'llm_cost_anon_bypass_total'],
 ];
 const MAX_MUSAIUM_PREFIXED = 16;
 
