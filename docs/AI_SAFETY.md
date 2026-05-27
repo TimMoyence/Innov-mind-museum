@@ -51,7 +51,7 @@ The L1 keyword guardrail does **NOT replace** L4 during a CB-OPEN window. When L
 
 Every guardrail-relevant decision is observable via three channels:
 
-- **Prometheus metrics** — point-in-time gauges + cumulative counters, source of truth: `museum-backend/src/shared/observability/prometheus-metrics.ts` (`musaium_llm_guard_*` series). Alert rules: `docs/observability/alerts-llm-guard.yml`.
+- **Prometheus metrics** — point-in-time gauges + cumulative counters, source of truth: `museum-backend/src/shared/observability/prometheus-metrics.ts` (`musaium_llm_guard_*` series). Alert rules: `infra/grafana/alerting/llm-guard-bias.yml`.
 - **Structured logs** — `logger.info` / `logger.warn` on every decision event (`llm_guard_circuit_breaker_{skip,open,half_open,close}`, `advanced_guardrail_block`, `llm_guard_fail_closed`).
 - **Audit log** — append-only table `audit_log`, hash-chained (`museum-backend/src/shared/audit/audit-chain.ts`), 13-month retention with post-retention IP anonymisation (`audit-ip-anonymizer.job.ts`), authoritative for GDPR Art. 30 and AI Act Art. 12. Forensics CLI: `museum-backend/src/shared/audit/audit-chain-cli-core.ts`. Forensic procedure: `docs/RUNBOOKS/audit-chain-forensics.md`. Breach event types: `museum-backend/src/shared/audit/breach-event-types.ts` (GDPR Art. 33, CNIL 72h).
 
@@ -125,7 +125,7 @@ Currently unmonitored. Phase 1 ships per `docs/compliance/FAIRNESS_METRICS_PLAN.
 - `musaium_guardrail_category_blocks_total{locale, category}` counter
 - `musaium_guardrail_block_rate_per_locale{locale}` gauge (recording rule)
 
-**Critical methodological note:** baseline = `avg(block_rate_all_locales)` (equal-weighted per-locale mean), **NOT** the global `total_blocks / total_requests` (which is contaminated when a single locale dominates blocks). Alert thresholds: 2× warning, 3× critical, 5× page-out. Alert rules in `docs/observability/alerts-llm-guard.yml` (BiasLocalBlockRateDrift).
+**Critical methodological note:** baseline = `avg(block_rate_all_locales)` (equal-weighted per-locale mean), **NOT** the global `total_blocks / total_requests` (which is contaminated when a single locale dominates blocks). Alert thresholds: 2× warning, 3× critical, 5× page-out. Alert rules in `infra/grafana/alerting/llm-guard-bias.yml` (BiasLocalBlockRateDrift).
 
 Rationale: a guardrail layer that systematically blocks more prompts in Arabic than French is either a calibration bug or a content reality. Without monitoring, we cannot distinguish, and a press piece "Musaium censors language X speakers" lands without evidence to refute. Per AI Act Art. 10 (data governance for high-risk), bias monitoring becomes a hard requirement if a B2B contract classifies Musaium as high-risk.
 

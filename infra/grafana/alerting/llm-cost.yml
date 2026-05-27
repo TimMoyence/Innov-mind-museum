@@ -6,7 +6,7 @@
 #                                < 10 % over 30m (critical). Cache is the
 #                                primary cost-control lever; if it tanks,
 #                                bill goes up linearly and so does latency.
-#   2. llm_cost_breaker_open   — cost CB tripped (state == 2 = OPEN).
+#   2. llm_cost_breaker_open   — cost CB tripped ({state="open"} == 1).
 #                                Means daily cap exceeded or unit-cost spike;
 #                                downstream traffic is being shed. User
 #                                impact: chat replies degraded / blocked
@@ -94,10 +94,13 @@ groups:
           runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-036-llm-cache.md"
 
       - alert: llm_cost_breaker_open
-        # Gauge values: 0 = CLOSED, 1 = HALF_OPEN, 2 = OPEN.
-        # Any non-zero state held for 1 minute = at-risk; OPEN = paging.
+        # Gauge is label-encoded: one series per state ∈ {closed, half_open,
+        # open}, value 1 = active state / 0 = inactive (emitted by
+        # chat-module.ts onStateChange — sets 1 for the current state, 0 for
+        # the others). There is NO integer "2 = OPEN" encoding; select the
+        # OPEN series explicitly. Held OPEN for 1 minute = paging.
         expr: |
-          musaium_llm_cost_circuit_breaker_state == 2
+          musaium_llm_cost_circuit_breaker_state{state="open"} == 1
         for: 1m
         labels:
           severity: critical
@@ -128,8 +131,10 @@ groups:
           runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-036-llm-cache.md"
 
       - alert: llm_guard_breaker_open
+        # Same label-encoding as the cost breaker above: select the OPEN
+        # series (value 1), never the impossible integer "== 2".
         expr: |
-          musaium_llm_guard_circuit_breaker_state == 2
+          musaium_llm_guard_circuit_breaker_state{state="open"} == 1
         for: 1m
         labels:
           severity: warning

@@ -28,12 +28,40 @@
  * express/LESSONS.md 2026-05-18 (body-unparsed at this seam).
  *
  * Run scope: pnpm jest tests/unit/shared/llm-cost-guard/llm-cost-guard.middleware.test.ts
+ *
+ * --------------------------------------------------------------------------
+ * W1-C2 RED (run 2026-05-26-kr-domains) — defense-in-depth fail-CLOSED when the
+ * cost counter is unwired in production. The middleware currently fails OPEN
+ * (`next()`) whenever `llmCostCounter === null`. That is correct for dev/test
+ * (no Redis), but in production it silently serves paid LLM calls with NO
+ * per-user cap. The fix splits the branch: production → `next(AppError 503
+ * COST_GUARD_UNAVAILABLE)`; dev/test → fail-OPEN (unchanged). Controlling
+ * `env.nodeEnv` requires mocking `@src/config/env` (the file previously imported
+ * the real env). The mock below preserves the `llm.costGuard` shape the existing
+ * fan-out cases rely on (killSwitch:false, cap 0.5) so they are non-regressed.
+ * --------------------------------------------------------------------------
  */
+
+const mockNodeEnv = { value: 'test' as 'test' | 'development' | 'production' };
+
+jest.mock('@src/config/env', () => ({
+  __esModule: true,
+  get env() {
+    return {
+      nodeEnv: mockNodeEnv.value,
+      llm: {
+        costGuard: { killSwitch: false, userDailyCapUsd: 0.5 },
+      },
+    };
+  },
+}));
+
 import {
   llmCostGuard,
   setLlmCostCounter,
   _resetLlmCostCounter,
 } from '@shared/middleware/llm-cost-guard.middleware';
+import { AppError } from '@shared/errors/app.error';
 
 import {
   makePartialRequest,
@@ -176,5 +204,63 @@ describe('llmCostGuard — route-keyed fan-out metering (I-FIX3 T1.1 RED)', () =
         originalUrl: '/api/chat/sessions/sess-1/audio',
       }),
     ).resolves.toBeGreaterThan(0);
+  });
+});
+
+describe('llmCostGuard — unwired counter fail-CLOSED in production (W1-C2 RED)', () => {
+  afterEach(() => {
+    _resetLlmCostCounter();
+    mockNodeEnv.value = 'test';
+    jest.restoreAllMocks();
+  });
+
+  /** Runs the middleware with the counter UNWIRED (null) under a given NODE_ENV. */
+  function runUnwired(nodeEnv: 'test' | 'development' | 'production'): {
+    next: jest.Mock;
+    res: ReturnType<typeof makePartialResponse>;
+  } {
+    _resetLlmCostCounter(); // ensure llmCostCounter === null
+    mockNodeEnv.value = nodeEnv;
+
+    const req = makePartialRequest({
+      method: 'POST',
+      user: { id: 'user-unwired-1' },
+      baseUrl: '/api/chat/sessions/sess-1',
+      path: '/messages',
+      originalUrl: '/api/chat/sessions/sess-1/messages',
+    });
+    const res = makePartialResponse();
+    const next = makeNext() as jest.Mock;
+
+    llmCostGuard(req, res, next);
+    return { next, res };
+  }
+
+  it('counter unwired + NODE_ENV=production → next(503 COST_GUARD_UNAVAILABLE) (fail-CLOSED)', () => {
+    // RED failure mode at be758ab56: the `if (!llmCostCounter) { next(); return; }`
+    // branch fails OPEN regardless of NODE_ENV → next() is called with NO error →
+    // the `instanceof AppError` / statusCode / code assertions FAIL. Counts as RED.
+    const { next } = runUnwired('production');
+
+    expect(next).toHaveBeenCalledTimes(1);
+    const err: unknown = next.mock.calls[0][0];
+    expect(err).toBeInstanceOf(AppError);
+    expect((err as AppError).statusCode).toBe(503);
+    expect((err as AppError).code).toBe('COST_GUARD_UNAVAILABLE');
+  });
+
+  it('counter unwired + NODE_ENV=test → next() with no error (fail-OPEN preserved)', () => {
+    // Non-regression guard: dev/test without Redis MUST keep failing OPEN.
+    const { next } = runUnwired('test');
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0][0]).toBeUndefined();
+  });
+
+  it('counter unwired + NODE_ENV=development → next() with no error (fail-OPEN preserved)', () => {
+    const { next } = runUnwired('development');
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0][0]).toBeUndefined();
   });
 });

@@ -165,4 +165,75 @@ describe('CostTripStrategy', () => {
     expect(strategy.getHourlySpendCents(clock.now())).toBe(0);
     expect(strategy.shouldTrip(clock.now())).toBe(false);
   });
+
+  // ---------------------------------------------------------------------------
+  // W1-C1 RED — transient vs full reset semantics (run 2026-05-26-kr-domains).
+  // The probe-success path of `ThreeStateCircuit` must reset ONLY the transient
+  // hourly spike window, NOT the durable daily UTC accumulator. These three
+  // cases pin the new `resetTransient()` contract on `CostTripStrategy`.
+  //
+  // RED failure mode at be758ab56: `resetTransient` does not exist on
+  // `CostTripStrategy` → ts-jest compile error ("Property 'resetTransient' does
+  // not exist on type 'CostTripStrategy'"). Counts as RED (design.md §6 / AC-C1).
+  // ---------------------------------------------------------------------------
+
+  it('resetTransient() clears the hourly window but PRESERVES the daily accumulator', () => {
+    const clock = makeClock();
+    const strategy = new CostTripStrategy({
+      hourlyThresholdCents: 100,
+      dailyBudgetCents: 10_000, // ample — daily not breached
+      now: clock.now,
+    });
+
+    strategy.recordCharge(200); // counts toward BOTH hourly and daily
+
+    strategy.resetTransient();
+
+    // Hourly spike window wiped (so a fresh probe is not pre-tripped),
+    // but the daily UTC accumulator is intact (money already spent today).
+    expect(strategy.getHourlySpendCents(clock.now())).toBe(0);
+    expect(strategy.getDailySpendCents(clock.now())).toBe(200);
+  });
+
+  it('resetTransient() leaves a daily-cap breach still tripping', () => {
+    const clock = makeClock();
+    const strategy = new CostTripStrategy({
+      hourlyThresholdCents: 10_000, // very high — hourly can NOT trip
+      dailyBudgetCents: 500,
+      now: clock.now,
+    });
+
+    // Spread 200c × 3 across separate hours so the hourly window holds ≤200
+    // while the daily counter accumulates to 600 > 500.
+    strategy.recordCharge(200);
+    clock.advance(HOUR_MS + 1);
+    strategy.recordCharge(200);
+    clock.advance(HOUR_MS + 1);
+    strategy.recordCharge(200);
+
+    expect(strategy.getDailySpendCents(clock.now())).toBe(600);
+
+    strategy.resetTransient();
+
+    // Hourly window emptied, but the daily breach (600 > 500) still trips.
+    expect(strategy.getHourlySpendCents(clock.now())).toBe(0);
+    expect(strategy.shouldTrip(clock.now())).toBe(true);
+  });
+
+  it('reset() (full) clears BOTH the hourly window and the daily accumulator', () => {
+    const clock = makeClock();
+    const strategy = new CostTripStrategy({
+      hourlyThresholdCents: 10_000,
+      dailyBudgetCents: 500,
+      now: clock.now,
+    });
+
+    strategy.recordCharge(300); // daily = 300
+    expect(strategy.getDailySpendCents(clock.now())).toBe(300);
+
+    strategy.reset(); // manual / kill-switch full reset
+
+    expect(strategy.getHourlySpendCents(clock.now())).toBe(0);
+    expect(strategy.getDailySpendCents(clock.now())).toBe(0);
+  });
 });

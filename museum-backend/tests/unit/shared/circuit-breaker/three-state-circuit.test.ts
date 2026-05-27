@@ -33,6 +33,10 @@ import {
 class MockTripStrategy implements CircuitTripStrategy {
   public tripFlag = false;
   public resetCount = 0;
+  // W1-C1 RED (run 2026-05-26-kr-domains): probe-success must call the new
+  // transient-only reset, NOT the full `reset()`. Counted separately so the
+  // primitive's delegate choice is asserted exactly.
+  public resetTransientCount = 0;
   public pruneCount = 0;
   public lastShouldTripNow: number | null = null;
   public lastPruneNow: number | null = null;
@@ -49,6 +53,10 @@ class MockTripStrategy implements CircuitTripStrategy {
 
   reset(): void {
     this.resetCount += 1;
+  }
+
+  resetTransient(): void {
+    this.resetTransientCount += 1;
   }
 }
 
@@ -112,7 +120,17 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     expect(circuit.halfOpenedAt).toBe(clock.now());
   });
 
-  it('HALF_OPEN + success → CLOSED, strategy.reset called, onStateChange fired', () => {
+  it('HALF_OPEN + success → CLOSED, strategy.resetTransient called (NOT reset), onStateChange fired', () => {
+    // W1-C1 RED (run 2026-05-26-kr-domains): on probe success the primitive must
+    // call `strategy.resetTransient()` — clearing only the transient spike window
+    // — NOT the full `strategy.reset()`, which would wipe durable accumulators
+    // (the daily cost cap in CostTripStrategy). Asserting the delegate choice here
+    // keeps the cost-money invariant (AC-C1.1) at the primitive boundary.
+    //
+    // RED failure mode at be758ab56: `MockTripStrategy.resetTransient` does not
+    // satisfy the (not-yet-extended) interface AND the primitive still calls
+    // `reset()` on success → `resetTransientCount` stays 0 while `resetCount`
+    // increments. The assertions below invert that → FAIL. Counts as RED.
     const strategy = new MockTripStrategy();
     const clock = makeClock();
     const events: [CircuitState, CircuitState][] = [];
@@ -130,10 +148,13 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     expect(circuit.state).toBe('HALF_OPEN');
 
     const resetBefore = strategy.resetCount;
+    const resetTransientBefore = strategy.resetTransientCount;
     circuit.recordOutcome('success');
 
     expect(circuit.state).toBe('CLOSED');
-    expect(strategy.resetCount).toBe(resetBefore + 1);
+    // Probe success → transient-only reset, full reset NOT invoked.
+    expect(strategy.resetTransientCount).toBe(resetTransientBefore + 1);
+    expect(strategy.resetCount).toBe(resetBefore);
     expect(events).toContainEqual(['CLOSED', 'HALF_OPEN']);
   });
 

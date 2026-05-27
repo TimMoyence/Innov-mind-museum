@@ -198,9 +198,12 @@ services:
     # personalisation features. Switching back to vanilla
     # `postgres:16-alpine` would silently break vector inserts on next
     # boot (CREATE EXTENSION vector fails) — DO NOT downgrade.
-    # TODO(infra): pin by digest `pgvector/pgvector@sha256:...` — see
-    # pgbouncer TODO above.
-    image: pgvector/pgvector:pg16
+    # Pinned by the multi-arch INDEX digest (immutable, content-addressed) so a
+    # `docker compose pull` cannot silently swap the image; the `:pg16` tag is
+    # kept purely for human readability (Docker honours the @sha256 over the tag).
+    # The CI migration-drift job (.github/workflows/ci-cd-backend.yml) pins the
+    # SAME digest so the clean-DB drift check tests the exact image prod runs.
+    image: pgvector/pgvector:pg16@sha256:00ba258a66dac104fd5171074a0084462a64a1369d8513f3d0a634e2f24d15bc
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}

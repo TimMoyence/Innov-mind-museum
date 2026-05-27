@@ -104,7 +104,7 @@ SME (Musaium falls here pre-Series A) : the **lower** of the two caps applies (A
 
 - **Doctrine** : this matrix + [`compliance-research-eu-ai-act.md`](../../.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-eu-ai-act.md).
 - **Code paths owned by guardrail** : `museum-backend/src/modules/chat/useCase/guardrail/`, `museum-backend/src/shared/audit/`.
-- **Operational evidence** : [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md), [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml).
+- **Operational evidence** : [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md), [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml).
 - **Compliance docs** : [`docs/legal/DPIA.md`](../legal/DPIA.md), [`docs/legal/ROPA.md`](../legal/ROPA.md), [`docs/compliance/DATA_FLOW_MAP.md`](./DATA_FLOW_MAP.md), [`docs/compliance/SUBPROCESSORS.md`](./SUBPROCESSORS.md), [`docs/compliance/FAIRNESS_METRICS_PLAN.md`](./FAIRNESS_METRICS_PLAN.md), [`docs/compliance/art5-audit.md`](./art5-audit.md).
 - **Pentest preparation** : [`docs/operations/PENTEST_SCOPE.md`](../operations/PENTEST_SCOPE.md).
 

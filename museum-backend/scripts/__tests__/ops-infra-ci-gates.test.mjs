@@ -35,6 +35,15 @@ const DOCKERFILE_PROD = repoPath('museum-backend/deploy/Dockerfile.prod');
 const WF_BACKEND = repoPath('.github/workflows/ci-cd-backend.yml');
 const WF_MOBILE = repoPath('.github/workflows/ci-cd-mobile.yml');
 
+// --- WAVE 6 — D5: pgvector image digest pin (deploy + CI) --------------------
+const DOCKER_COMPOSE_PROD = repoPath('museum-backend/deploy/docker-compose.prod.yml');
+
+// --- WAVE 2 — observability alert files (M4 KR3 / O1·O5·O6·O7) ---------------
+const LLM_COST = repoPath(`${ALERT_DIR}/llm-cost.yml`);
+const LLM_COST_SECURITY = repoPath(`${ALERT_DIR}/llm-cost-security.yml`);
+const CHAT_LATENCY = repoPath(`${ALERT_DIR}/chat-latency.yml`);
+const WIKIDATA_RESILIENCE = repoPath(`${ALERT_DIR}/wikidata-resilience.yml`);
+
 // Read a file or return '' if absent — lets each `it` make its own assertion
 // (an absent api-health.yml then fails the content checks, which is the point in
 // red). We do NOT throw at module load, so the whole suite reports per-requirement.
@@ -227,5 +236,497 @@ describe('I-OPS8 :: migration-schema-drift gate (R11)', () => {
     // Verified 2026-05-25; documented inline in the workflow + LOT closure report.
     // Assert the COMMAND is absent (prose mentions in comments are fine).
     expect(block).not.toMatch(/run\s+migration:generate/);
+  });
+});
+
+// =============================================================================
+// WAVE 2 — observability alerting (M4 KR3 / O1·O5·O6·O7)
+//
+// RED contract (UFR-022): A1a, A1b, A1c, A2a, A2b, A2c, A3a, A3b, A5a, A5b
+// (10 assertions) FAIL on the current baseline:
+//   - llm-cost.yml still selects `circuit_breaker_state == 2` (impossible) on
+//     both breaker alerts → A1a/A1b/A1c fail.
+//   - infra/grafana/alerting/llm-cost-security.yml does NOT exist → readOrEmpty
+//     returns '' and existsSync is false → A2a/A2b/A2c/A3a/A3b fail.
+//   - chat-latency.yml / wikidata-resilience.yml headers name only the stale
+//     single `telegram-ops` receiver → A5a/A5b fail.
+// A1d and A4 are GREEN-time anti-regression guards (may pass today — see notes).
+// The GREEN phase fixes the exprs/comment, creates llm-cost-security.yml, and
+// reconciles the two stale headers. This file is byte-frozen (red-test-manifest).
+// =============================================================================
+
+// --- A1 — O1: breaker alerts select {state="open"} == 1, not the impossible == 2
+describe('W2-O1 :: breaker alerts fire on {state="open"} == 1', () => {
+  const cost = readOrEmpty(LLM_COST);
+
+  it('A1a — llm_cost breaker selects {state="open"} == 1', () => {
+    expect(cost).toMatch(/musaium_llm_cost_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+  });
+
+  it('A1b — llm_guard breaker selects {state="open"} == 1', () => {
+    expect(cost).toMatch(/musaium_llm_guard_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+  });
+
+  it('A1c — no breaker expr still uses the impossible "== 2" selector', () => {
+    expect(cost).not.toMatch(/circuit_breaker_state\s*==\s*2/);
+  });
+
+  // GREEN-time guard (passes today — severity is NOT the bug): prevents a GREEN
+  // from changing routing while fixing the selector. cost=critical, guard=warning.
+  it('A1d — cost breaker stays critical, guard breaker stays warning (routing unchanged) [GREEN-time guard]', () => {
+    const costBlock = cost.match(/alert:\s*llm_cost_breaker_open[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    const guardBlock = cost.match(/alert:\s*llm_guard_breaker_open[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(costBlock).toMatch(/severity:\s*critical/);
+    expect(guardBlock).toMatch(/severity:\s*warning/);
+  });
+});
+
+// --- A2 — O5: anon-bypass security alert (critical) -------------------------
+describe('W2-O5 :: anon-bypass security alert', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A2a — llm-cost-security.yml exists', () => {
+    expect(existsSync(LLM_COST_SECURITY)).toBe(true);
+  });
+
+  it('A2b — has llm_cost_anon_bypass alert on rate(llm_cost_anon_bypass_total) > 0', () => {
+    expect(sec).toMatch(/alert:\s*llm_cost_anon_bypass/);
+    expect(sec).toMatch(/rate\(llm_cost_anon_bypass_total\[5m\]\)/);
+    expect(sec).toMatch(/>\s*0/);
+  });
+
+  it('A2c — anon-bypass is severity critical (security drift pages), for: 2m', () => {
+    const block = sec.match(/alert:\s*llm_cost_anon_bypass[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(block).toMatch(/severity:\s*critical/);
+    expect(block).toMatch(/for:\s*2m/);
+  });
+});
+
+// --- A3 — O6: judge-degraded compliance alert (warning) ---------------------
+describe('W2-O6 :: judge-degraded compliance alert', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A3a — has guardrail_judge_degraded alert on rate(guardrail_judge_degraded_total) > 0', () => {
+    expect(sec).toMatch(/alert:\s*guardrail_judge_degraded/);
+    expect(sec).toMatch(/rate\(guardrail_judge_degraded_total\[5m\]\)/);
+  });
+
+  it('A3b — judge-degraded is severity warning, for: 5m (persistent degradation only)', () => {
+    const block = sec.match(/alert:\s*guardrail_judge_degraded[\s\S]*?(?=alert:|$)/)?.[0] ?? '';
+    expect(block).toMatch(/severity:\s*warning/);
+    expect(block).toMatch(/for:\s*5m/);
+  });
+});
+
+// --- A4 — O5/O6: alerts reference REAL bare-prefixed metric names -----------
+// GREEN-time guard (vacuously TRUE today — file absent → sec === ''): prevents a
+// GREEN from typo-prefixing musaium_ on the I-FIX3 bare metrics (dead-alert class,
+// the very O1 bug). The exact-name RED is carried by A2b/A3a; A4 is a guard only.
+describe('W2-O5/O6 :: alerts reference REAL metric names (no musaium_ prefix typo)', () => {
+  const sec = readOrEmpty(LLM_COST_SECURITY);
+
+  it('A4 — security alerts use BARE-prefixed metrics, not musaium_* [GREEN-time guard]', () => {
+    // I-FIX3 metrics are llm_cost_anon_bypass_total / guardrail_judge_degraded_total
+    // (BARE prefix, prometheus-metrics.ts:476-498). A musaium_ prefix would be a dead alert.
+    expect(sec).not.toMatch(/musaium_llm_cost_anon_bypass_total/);
+    expect(sec).not.toMatch(/musaium_guardrail_judge_degraded_total/);
+  });
+});
+
+// --- A5 — O7: stale telegram-ops headers reconciled to the split receivers --
+describe('W2-O7 :: stale telegram-ops headers reconciled', () => {
+  // Scope to the leading comment header block only (same pattern as R5b), so
+  // rule-level `telegram-ops` references (if any) can't false-pass it.
+  function headerBlock(text) {
+    const lines = [];
+    for (const line of text.split('\n')) {
+      if (line.startsWith('#') || line.trim() === '') lines.push(line);
+      else break;
+    }
+    return lines.join('\n');
+  }
+
+  it('A5a — chat-latency.yml header names the split receivers (not stale telegram-ops)', () => {
+    const h = headerBlock(readOrEmpty(CHAT_LATENCY));
+    expect(h).toMatch(/telegram-ops-critical|telegram-ops-warning/);
+  });
+
+  it('A5b — wikidata-resilience.yml header names the split receivers (not stale telegram-ops)', () => {
+    const h = headerBlock(readOrEmpty(WIKIDATA_RESILIENCE));
+    expect(h).toMatch(/telegram-ops-critical|telegram-ops-warning/);
+  });
+});
+
+// =============================================================================
+// WAVE 3 — CI gates wired & validated (M4 KR3 / W3-O2·O4·D3·O8)
+//
+// RED contract (UFR-022): the 4 SUBSTANTIVE assertions FAIL on the current
+// baseline (verified by grep on ci-cd-backend.yml — none of the steps exist):
+//   - W1a: no `test:scripts` / `--selectProjects scripts-esm` invocation in the
+//     quality job (the scripts-esm harness is never run in CI today).
+//   - W2a: no `promtool check rules` step over infra/grafana/alerting.
+//   - W3a: no `DB_SSL_REJECT_UNAUTHORIZED=false` guard in the workflow.
+//   - W4a: the deploy_obs SSH script never references the Telegram bridge
+//     secrets before `docker compose up`.
+// W1b / W2b / W3b are GREEN-time anti-regression guards — they pass VACUOUSLY
+// today (the steps they constrain are absent → isolated block is '' → the
+// forbidden patterns are not present). They become load-bearing once GREEN adds
+// the steps (same pattern as A1d / A4 in WAVE 2). Documented inline per guard.
+//
+// All assertions are pure regex over the workflow text (no yaml import) —
+// consistent with the constrained line/regex parser contract (header §11-14).
+// The GREEN phase wires the four steps; this file is byte-frozen
+// (wave3-red-test-manifest.json).
+// =============================================================================
+
+// Isolate a single workflow STEP block: from its `- name: <Step>` line up to the
+// next `- name:` (or the next job key / EOF). Mirrors the step-isolation note in
+// wave3-design.md §4. Returns '' if the named step is absent (→ guards pass
+// vacuously, substantive name-presence checks fail — the RED intent).
+function stepBlock(text, namePattern) {
+  const startRe = new RegExp(`- name: [^\\n]*${namePattern}[^\\n]*\\n`);
+  const startMatch = text.match(startRe);
+  if (!startMatch) return '';
+  const startIdx = startMatch.index + startMatch[0].length;
+  const rest = text.slice(startIdx);
+  // Stop at the next step (`- name:`) or the next top-level job key.
+  const endMatch = rest.match(/\n\s*- name:|\n {2}[A-Za-z0-9_-]+:\n/);
+  return rest.slice(0, endMatch ? endMatch.index : rest.length);
+}
+
+// --- W1 — O2: scripts-esm harness wired into the quality job -----------------
+describe('W3-O2 :: test:scripts (scripts-esm) wired in CI quality job', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W1a — quality job invokes `pnpm run test:scripts` (or --selectProjects scripts-esm)', () => {
+    // SUBSTANTIVE RED: grep confirms zero occurrence of test:scripts/scripts-esm
+    // in ci-cd-backend.yml today → this FAILS until GREEN adds the step.
+    expect(wf).toMatch(/run:\s*pnpm run test:scripts|--selectProjects scripts-esm/);
+  });
+
+  it('W1b — the test:scripts step is NOT continue-on-error [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Becomes
+    // load-bearing once the step exists: forbids a GREEN from shipping the gate
+    // as advisory (continue-on-error: true would silence a real failure).
+    const block = stepBlock(wf, 'test:scripts');
+    expect(block).not.toMatch(/continue-on-error:\s*true/);
+  });
+});
+
+// --- W2 — O4: promtool validates the deployed alert rules --------------------
+describe('W3-O4 :: promtool check rules over infra/grafana/alerting', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W2a — quality job runs `promtool check rules` against infra/grafana/alerting', () => {
+    // SUBSTANTIVE RED: no `promtool` token anywhere in the workflow today.
+    // The {0,160} tolerates the multi-line `docker run ... check rules` form.
+    expect(wf).toMatch(/promtool[\s\S]{0,160}check rules/);
+    expect(wf).toMatch(/infra\/grafana\/alerting/);
+  });
+
+  it('W2b — promtool step scopes alerting/*.yml and does NOT include docs/observability [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Once the
+    // step exists, this forbids widening the glob to docs/observability (NOT
+    // mounted by Prometheus — wave3-design.md §1.2). Keeps the scope honest.
+    const block = stepBlock(wf, 'promtool');
+    expect(block).not.toMatch(/docs\/observability/);
+  });
+
+  it('W2c — promtool `*.yml` glob is SHELL-expanded (sh -c …), not a literal promtool argv', () => {
+    // SUBSTANTIVE RED: the current step is
+    //     --entrypoint promtool \
+    //     prom/prometheus:v2.55.1 \
+    //     check rules /alerting/*.yml
+    // `docker run --entrypoint promtool … check rules /alerting/*.yml` has NO shell
+    // in the container's argv chain, so `/alerting/*.yml` is passed to promtool
+    // LITERALLY (one argv token containing a `*`). promtool does no globbing of its
+    // own → `path /alerting/*.yml does not exist` → exit 1 on every CI run. The fix
+    // is to run the glob through a shell: `--entrypoint sh … -c '… promtool check
+    // rules /alerting/*.yml'` (the shell expands the glob into real filenames).
+    //
+    // W2a only proves the tokens `promtool` + `check rules` are PRESENT — it passes
+    // on the broken literal-argv form too. W2c is the form check that distinguishes
+    // a shell-expanded glob from a literal one.
+    const block = stepBlock(wf, 'promtool');
+
+    // A `*.yml` glob is being used (the thing that needs expansion).
+    const usesGlob = /check rules[\s\S]*?\*\.yml/.test(block);
+    expect(usesGlob).toBe(true);
+
+    // The glob must be inside a shell `-c '…'` invocation. Require an explicit
+    // shell entrypoint (sh/bash) AND a `-c` flag carrying `promtool check rules …*.yml`.
+    // FAILS on `--entrypoint promtool` (no sh/bash, no `-c`); PASSES on
+    // `--entrypoint sh … -c '… promtool check rules /alerting/*.yml'`.
+    expect(block).toMatch(/--entrypoint\s+(?:sh|bash|\/bin\/sh|\/bin\/bash)\b/);
+    expect(block).toMatch(/-c\s+['"][\s\S]*promtool\s+check rules[\s\S]*\*\.yml/);
+
+    // Belt-and-braces: the broken `--entrypoint promtool` form (which hands the
+    // unexpanded glob straight to promtool's argv) must be gone.
+    expect(block).not.toMatch(/--entrypoint\s+promtool\b/);
+  });
+});
+
+// --- W3 — D3: DB_SSL_REJECT_UNAUTHORIZED=false warning guard -----------------
+describe('W3-D3 :: guard warns on DB_SSL_REJECT_UNAUTHORIZED=false in env files', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('W3a — workflow greps .env* for DB_SSL_REJECT_UNAUTHORIZED=false and emits ::warning::', () => {
+    // SUBSTANTIVE RED: no DB_SSL guard in the workflow today (grep .github/).
+    expect(wf).toMatch(/DB_SSL_REJECT_UNAUTHORIZED=false/);
+    // The guard must be a WARNING (legitimate for local PgBouncer self-signed),
+    // co-located with the grep — assert ::warning:: appears in the same step.
+    const block = stepBlock(wf, 'DB_SSL_REJECT_UNAUTHORIZED');
+    expect(block).toMatch(/::warning::/);
+  });
+
+  it('W3b — DB_SSL guard is a WARNING, never blocking (no exit 1 / ::error::) [GREEN-time guard]', () => {
+    // GREEN-time guard: vacuously TRUE today (step absent → block ''). Forbids a
+    // GREEN from making the guard blocking — DB_SSL_REJECT_UNAUTHORIZED=false is
+    // legitimate for local PgBouncer with self-signed certs (wave3-design.md §2 D3).
+    const block = stepBlock(wf, 'DB_SSL_REJECT_UNAUTHORIZED');
+    expect(block).not.toMatch(/::error::/);
+    expect(block).not.toMatch(/exit 1/);
+  });
+});
+
+// --- W4 — O8: Telegram bridge secrets checked before obs `docker compose up` -
+describe('W3-O8 :: deploy_obs guards Telegram secrets before docker compose up', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  // Isolate the deploy_obs step's SSH script: from `id: deploy_obs` up to the
+  // next `- name:` step. The Telegram secret check must live inside this block,
+  // BEFORE the `docker compose up` of the alertmanager-telegram bridge.
+  function deployObsScript() {
+    const m = wf.match(/id: deploy_obs\n([\s\S]*?)(?=\n\s*- name:|\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    return m ? m[0] : '';
+  }
+
+  it('W4a — deploy_obs checks TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID and aborts (::error:: / exit 1) before `docker compose up`', () => {
+    // SUBSTANTIVE RED: the deploy_obs SSH script (ci-cd-backend.yml ~:1261-1298)
+    // never references the Telegram secrets today → this FAILS until GREEN adds
+    // the explicit fail-loud guard. The harness can only assert STRUCTURALLY (it
+    // cannot read /srv/museum/.env on the VPS) — wave3-design.md §2 O8.
+    const script = deployObsScript();
+    expect(script).toMatch(/TELEGRAM_BOT_TOKEN/);
+    expect(script).toMatch(/TELEGRAM_CHAT_ID/);
+    expect(script).toMatch(/::error::|exit 1/);
+    // The abort must precede the `docker compose up` of the bridge.
+    const upIdx = script.search(/docker compose up/);
+    const guardIdx = script.search(/TELEGRAM_BOT_TOKEN/);
+    expect(guardIdx).toBeGreaterThanOrEqual(0);
+    expect(upIdx).toBeGreaterThanOrEqual(0);
+    expect(guardIdx).toBeLessThan(upIdx);
+  });
+});
+
+// =============================================================================
+// WAVE 4 — bias / LLM-Guard alerts loaded & metric-honest (M4 / AI Act Art.10)
+//
+// RED contract (UFR-022): B1–B8 FAIL on the current baseline. The dead bias /
+// LLM-Guard alert file lives under docs/observability/ (NOT mounted/globbed by
+// Prometheus — wave4-design.md §1) and references three metrics that are never
+// emitted by prometheus-metrics.ts, plus the label-value `decision="block"`
+// which the only call-site (bias-metrics.helper.ts:48 → `blocked`) never emits.
+//
+// Audit-where-it-is (wave4-design.md §6 Option A): the content checks read the
+// file from infra/ if the move happened, ELSE from docs/. Today the file is in
+// docs/ and still contains scan_errors_total / scan_attempts_total (B3),
+// decision="block" (B4), cost_usd_total (B5), and a header naming no receivers
+// (B7) → those content checks FAIL on the REAL stale content (not vacuously on
+// an absent file). B1 (file moved into infra/) and B2 (docs source removed) FAIL
+// on physical-move grounds. B6 (breaker stays {state="open"} == 1, never == 2)
+// and B8 (every alert has a severity label) are GREEN-time guards: the docs/
+// content already satisfies them, so they are gated on existsSync(LLM_GUARD_BIAS)
+// to FAIL today (the move hasn't happened) and become load-bearing once GREEN
+// places the corrected file in infra/. Same `readOrEmpty` + regex contract as
+// WAVE 2/3 (no yaml import). This file is byte-frozen (wave4-red-test-manifest).
+// =============================================================================
+
+const LLM_GUARD_BIAS = repoPath(`${ALERT_DIR}/llm-guard-bias.yml`);
+const DOCS_LLM_GUARD = repoPath('docs/observability/alerts-llm-guard.yml');
+
+// Audit the bias/LLM-Guard alert content WHERE IT LIVES (Option A): prefer the
+// moved infra/ file once it exists, else fall back to the stale docs/ source.
+// This makes the "no dead metric / no decision=block" content checks FAIL on the
+// real stale text today, instead of passing vacuously over an absent file.
+function biasAlertContent() {
+  if (existsSync(LLM_GUARD_BIAS)) return readFileSync(LLM_GUARD_BIAS, 'utf8');
+  if (existsSync(DOCS_LLM_GUARD)) return readFileSync(DOCS_LLM_GUARD, 'utf8');
+  return '';
+}
+
+describe('W4 :: bias/LLM-Guard alert file is loaded by Prometheus', () => {
+  it('B1 — infra/grafana/alerting/llm-guard-bias.yml exists (the config is in the globbed/mounted dir)', () => {
+    // SUBSTANTIVE RED: the alert file is still under docs/observability/ today,
+    // which Prometheus never globs (rule_files: /etc/prometheus/alerting/*.yml).
+    // It must be MOVED into infra/grafana/alerting/ to actually load — wave4 §1.
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+  });
+
+  it('B2 — docs/observability/alerts-llm-guard.yml no longer exists (moved, not copied — single source)', () => {
+    // SUBSTANTIVE RED: the docs/ source still exists today. A copy would create a
+    // second source of truth that drifts (UFR-016 / no-duplicate). It must be a
+    // git mv — the docs/ source disappears.
+    expect(existsSync(DOCS_LLM_GUARD)).toBe(false);
+  });
+});
+
+describe('W4 :: no alert references a non-existent metric', () => {
+  const bias = biasAlertContent();
+
+  it('B3 — no rule references the never-emitted scan_errors_total / scan_attempts_total metrics', () => {
+    // SUBSTANTIVE RED (Finding A): grep musaium_llm_guard_scan_{errors,attempts}_total
+    // src/ → 0 match. The only scan metric is musaium_llm_guard_scan_duration_seconds.
+    // LLMGuardScanErrorsHigh must be removed (error coverage = LLMGuard{Latency,
+    // BreakerOpen}). Audited on the live (docs/ today) content → FAILS now.
+    expect(bias).not.toMatch(/musaium_llm_guard_scan_errors_total/);
+    expect(bias).not.toMatch(/musaium_llm_guard_scan_attempts_total/);
+  });
+
+  it('B5 — no rule references the never-shipped musaium_guardrail_cost_usd_total metric (cost group removed)', () => {
+    // SUBSTANTIVE RED (Finding C): grep musaium_guardrail_cost_usd_total src/ → 0
+    // match (the Phase 1B counter was never shipped). The whole guardrail-cost
+    // group must be removed — a loaded file holds only LIVE rules. FAILS now.
+    expect(bias).not.toMatch(/musaium_guardrail_cost_usd_total/);
+  });
+});
+
+describe('W4 :: guardrail decisions use the real label-value decision="blocked"', () => {
+  const bias = biasAlertContent();
+
+  it('B4 — no selector uses decision="block" (the emitted value is "blocked"), and at least one uses decision="blocked"', () => {
+    // SUBSTANTIVE RED (Finding B — the gravest regression of the wave): the only
+    // call-site bias-metrics.helper.ts:48 emits `blocked`/`allowed`, never `block`.
+    // docs/ filters decision="block" in 5 places (GuardrailBlockRateSpike, the R1
+    // recording rule, BiasLocaleDominance ×2) → those rules are silently inert even
+    // once loaded (false AI Act Art.10 conformity). Forbid `decision="block"` that
+    // is NOT immediately followed by `ed` (so decision="blocked" is allowed).
+    expect(bias).not.toMatch(/decision="block"(?!ed)/);
+    // And the corrected value must be present (proves the fix landed, not a wipe).
+    expect(bias).toMatch(/decision="blocked"/);
+  });
+});
+
+describe('W4 :: LLM-Guard breaker alert stays correct + routing-ready', () => {
+  const bias = biasAlertContent();
+
+  it('B6 — breaker rule selects {state="open"} == 1 and never the impossible == 2 (consistent with W2-O1) [GREEN-time guard]', () => {
+    // GREEN-time guard gated on the MOVE: the docs/ content already selects
+    // {state="open"} == 1 correctly, so this is gated on existsSync(LLM_GUARD_BIAS)
+    // to FAIL today (file not yet in infra/). Once moved it forbids a GREEN from
+    // regressing the breaker selector while editing the file (W2-O1 consistency).
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+    expect(bias).toMatch(/musaium_llm_guard_circuit_breaker_state\{state="open"\}\s*==\s*1/);
+    expect(bias).not.toMatch(/circuit_breaker_state\s*==\s*2/);
+  });
+
+  it('B7 — header comment block names the per-severity receivers (telegram-ops-critical / -warning)', () => {
+    // SUBSTANTIVE RED (wave4 §4): the docs/ header only says "Loaded by the
+    // Prometheus instance…" and names NO receiver. After the move the header must
+    // name the two routing receivers (modelled on llm-cost-security.yml). Scope to
+    // the leading comment block so rule-level labels can't false-pass it.
+    const headerLines = [];
+    for (const line of bias.split('\n')) {
+      if (line.startsWith('#') || line.trim() === '') headerLines.push(line);
+      else break;
+    }
+    const header = headerLines.join('\n');
+    expect(header).toMatch(/telegram-ops-critical|telegram-ops-warning/);
+  });
+
+  it('B8 — every retained alert carries a severity label (routing guarantee) [GREEN-time guard]', () => {
+    // GREEN-time guard gated on the MOVE: the docs/ content already labels every
+    // alert with a severity, so this is gated on existsSync(LLM_GUARD_BIAS) to FAIL
+    // today. Once moved it guarantees AlertManager can route every kept rule
+    // (severity=critical → telegram-ops-critical; else → -warning). wave4 §3/AC6.
+    expect(existsSync(LLM_GUARD_BIAS)).toBe(true);
+    const alertNames = [...bias.matchAll(/^\s*- alert:\s*(\S+)/gm)].map((m) => m[1]);
+    expect(alertNames.length).toBeGreaterThan(0);
+    // For each alert block, the slice up to the next alert/record/group must hold a
+    // `severity:` label line.
+    const blocks = bias.split(/(?=^\s*- (?:alert|record):)/m);
+    const alertBlocks = blocks.filter((b) => /^\s*- alert:/m.test(b));
+    for (const block of alertBlocks) {
+      expect(block).toMatch(/severity:\s*(?:warning|critical)/);
+    }
+  });
+});
+
+// =============================================================================
+// WAVE 6 — D5: pgvector image pinned by digest (deploy + CI)
+//
+// discovery/deploy-db.md Défaut 5 (LOW): `docker-compose.prod.yml:203` and the
+// `migration-drift` job service in `ci-cd-backend.yml:589` reference
+// `pgvector/pgvector:pg16` by MUTABLE tag — a `docker compose pull` can swap the
+// image with no sha256 validation. The design (wave6-design.md §1 D5) pins the
+// multi-arch INDEX digest `sha256:00ba258...` on BOTH files.
+//
+// RED contract (UFR-022): D5-W6a..c FAIL on the current baseline because both
+// files carry the bare `:pg16` tag with NO `@sha256:` digest (verified: compose
+// :203 and CI :589). D5-W6d is a GREEN-time guard (vacuous at RED — no digests
+// to compare). The GREEN phase appends `@sha256:00ba258...` to both directives.
+// This file is byte-frozen (wave6-red-test-manifest.json).
+//
+// NOTE: existing R11 assertions (`migration-drift` block, lines ~218-236) are
+// LEFT UNTOUCHED — this section only ADDS new `it`s. Likewise the W2/W3/W4
+// sections above are unchanged.
+// =============================================================================
+
+const PGVECTOR_PIN_RE = /image:\s*pgvector\/pgvector:pg16@sha256:[0-9a-f]{64}/;
+// Negative lookahead: a `image:` directive pointing at `:pg16` WITHOUT an
+// `@sha256:` digest immediately after. Scoped to `image:` so the explanatory
+// comment on compose:195 (`# pgvector/pgvector:pg16 — Postgres 16 …`) is NOT a
+// false-fail (it's free text, not a directive).
+const PGVECTOR_BARE_TAG_RE = /image:\s*pgvector\/pgvector:pg16(?!@sha256:)/;
+const PGVECTOR_DIGEST_CAPTURE = /image:\s*pgvector\/pgvector:pg16@sha256:([0-9a-f]{64})/;
+
+describe('WAVE 6 :: D5 — pgvector pinned by digest (deploy prod compose)', () => {
+  const compose = readOrEmpty(DOCKER_COMPOSE_PROD);
+
+  it('the prod compose file exists on disk (harness precondition)', () => {
+    expect(existsSync(DOCKER_COMPOSE_PROD)).toBe(true);
+  });
+
+  it('D5-W6a — the db service pins pgvector by @sha256: digest (64 hex)', () => {
+    // FAILS at RED: compose:203 is `image: pgvector/pgvector:pg16` (bare tag).
+    expect(compose).toMatch(PGVECTOR_PIN_RE);
+  });
+
+  it('D5-W6b — no `image:` directive references pgvector:pg16 without an @sha256 digest', () => {
+    // FAILS at RED: the bare-tag directive `image: pgvector/pgvector:pg16` matches.
+    expect(compose).not.toMatch(PGVECTOR_BARE_TAG_RE);
+  });
+});
+
+describe('WAVE 6 :: D5 — pgvector pinned by digest (CI migration-drift)', () => {
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('D5-W6c — the migration-drift job pins pgvector by @sha256: digest (64 hex)', () => {
+    // Isolate the migration-drift job block (same pattern as R11 above) so the
+    // assertion targets the CI service image, not an unrelated occurrence.
+    const jobMatch = wf.match(/\n {2}migration-drift:\n([\s\S]*?)(?=\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    expect(jobMatch).not.toBeNull();
+    const block = jobMatch[0];
+    // FAILS at RED: CI:589 is `image: pgvector/pgvector:pg16` (bare tag).
+    expect(block).toMatch(PGVECTOR_PIN_RE);
+    expect(block).not.toMatch(PGVECTOR_BARE_TAG_RE);
+  });
+});
+
+describe('WAVE 6 :: D5 — prod and CI pin the SAME digest (GREEN-time guard)', () => {
+  const compose = readOrEmpty(DOCKER_COMPOSE_PROD);
+  const wf = readOrEmpty(WF_BACKEND);
+
+  it('D5-W6d — the digest in the prod compose equals the digest in the migration-drift CI job', () => {
+    // Vacuous at RED (no digest present → both captures null → both skipped by
+    // the guards below). Load-bearing at GREEN: prevents pinning two divergent
+    // digests (the CI clean DB must test the SAME image that prod runs).
+    const composeDigest = compose.match(PGVECTOR_DIGEST_CAPTURE)?.[1];
+    const jobMatch = wf.match(/\n {2}migration-drift:\n([\s\S]*?)(?=\n {2}[A-Za-z0-9_-]+:\n|$)/);
+    const ciDigest = jobMatch?.[0].match(PGVECTOR_DIGEST_CAPTURE)?.[1];
+
+    expect(composeDigest).toBeDefined();
+    expect(ciDigest).toBeDefined();
+    expect(composeDigest).toBe(ciDigest);
   });
 });

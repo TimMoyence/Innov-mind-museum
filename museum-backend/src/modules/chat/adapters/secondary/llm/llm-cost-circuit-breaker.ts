@@ -136,16 +136,44 @@ export class LlmCostCircuitBreaker {
   recordCharge(cents: number): void {
     if (!Number.isFinite(cents) || cents <= 0) return;
     const stateBefore = this.circuit.state; // triggers lazy OPEN → HALF_OPEN
-    this.strategy.recordCharge(cents);
 
-    // Trip BEFORE HALF_OPEN recovery so cap breaches are honoured on the probe call.
-    if (this.strategy.shouldTrip(this.nowFn())) {
-      this.circuit.trip(stateBefore);
+    if (stateBefore === 'HALF_OPEN') {
+      // W1-C1 transition fidelity. Decide whether THIS probe breaches a cap BEFORE
+      // committing to a recovery — a breaching probe never recovered, so it must NOT
+      // flicker HALF_OPEN → CLOSED → OPEN (which would emit a spurious
+      // `llm_cost_circuit_breaker_close` "recovery succeeded" log and mislabel the
+      // re-trip origin as `from:'closed'`). We project the probe onto the current
+      // spend WITHOUT mutating the strategy: `getHourlySpendCents`/`getDailySpendCents`
+      // prune then read, so adding `cents` mirrors exactly what `shouldTrip` would see
+      // after the charge. The daily accumulator is durable, so a breaker tripped on the
+      // daily cap (still over for this UTC day) re-trips here — correct money behaviour.
+      const now = this.nowFn();
+      const wouldBreach =
+        this.strategy.getHourlySpendCents(now) + cents > this.hourlyThresholdCents ||
+        this.strategy.getDailySpendCents(now) + cents > this.dailyBudgetCents;
+
+      if (wouldBreach) {
+        // Single HALF_OPEN → OPEN transition (from:'half_open', no close log). Count the
+        // breaching probe so the durable daily accumulator includes it.
+        this.strategy.recordCharge(cents);
+        this.circuit.trip('HALF_OPEN');
+        return;
+      }
+
+      // Healthy probe → recover. `recordOutcome('success')` transitions HALF_OPEN →
+      // CLOSED and calls `CostTripStrategy.resetTransient()`, clearing any stale hourly
+      // spike window while PRESERVING the durable daily accumulator. THEN record the
+      // probe into the now-fresh window so the recovered breaker's hourly spend reflects
+      // ONLY this probe — counted exactly once against both hourly and daily.
+      this.circuit.recordOutcome('success');
+      this.strategy.recordCharge(cents);
       return;
     }
 
-    if (stateBefore === 'HALF_OPEN') {
-      this.circuit.recordOutcome('success');
+    this.strategy.recordCharge(cents);
+    // Trip on a cap breach (CLOSED, or a re-evaluation that should re-OPEN).
+    if (this.strategy.shouldTrip(this.nowFn())) {
+      this.circuit.trip(stateBefore);
     }
   }
 

@@ -72,7 +72,17 @@ const config: Config.InitialOptions = {
   // after the run. Belt-and-braces — the per-suite afterAll already awaits
   // container.stop(), but a crashed worker or an interrupted run can still
   // leave containers behind. Runs once per Jest process (not per worker).
-  globalTeardown: '<rootDir>/tests/helpers/e2e/jest-global-teardown.ts',
+  //
+  // `.cjs` (NOT `.ts`): `globalTeardown` is a TOP-LEVEL option shared by every
+  // project, including `scripts-esm` (transform: {} under
+  // --experimental-vm-modules). The ESM runner loads the teardown via node's
+  // native-ESM path, which cannot parse TS syntax (`as const`) →
+  // `SyntaxError: Unexpected identifier 'as'`, making `test:scripts` exit
+  // non-zero even when assertions pass. A CommonJS `.cjs` is loaded by node's
+  // CJS loader under all runners (no transform), so the teardown is
+  // runner-agnostic while the Docker-cleanup behaviour is unchanged (W1,
+  // run 2026-05-26-kr-domains).
+  globalTeardown: '<rootDir>/tests/helpers/e2e/jest-global-teardown.cjs',
 
   // Coverage reporters are global; coveragePathIgnorePatterns is project-scoped
   // in Jest 29 with `projects`, so the patterns are wired into

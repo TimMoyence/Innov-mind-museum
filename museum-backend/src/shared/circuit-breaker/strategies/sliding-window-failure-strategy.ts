@@ -49,6 +49,16 @@ export class SlidingWindowFailureStrategy implements CircuitTripStrategy {
     this.failures = [];
   }
 
+  /**
+   * W1-C1 transient reset. This strategy's entire state (the failure-timestamp
+   * window) IS transient, so this is byte-identical to {@link reset} — the
+   * probe-success recovery of LLM/Guardrail breakers behaves exactly as before
+   * (no behavioral regression; AC-C1.6).
+   */
+  resetTransient(): void {
+    this.failures = [];
+  }
+
   getFailureCount(): number {
     return this.failures.length;
   }

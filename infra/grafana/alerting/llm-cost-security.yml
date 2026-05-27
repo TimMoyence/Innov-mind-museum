@@ -1,0 +1,109 @@
+# Prometheus alerting rules — LLM cost-guard security & compliance drift.
+# Loaded via the `rule_files` glob in prometheus.yml (/etc/prometheus/alerting/*.yml,
+# directory bind-mounted ./alerting:/etc/prometheus/alerting:ro). Separate from
+# llm-cost.yml on purpose: that file covers cost circuit-breaker + cache health,
+# this one covers the security/compliance drift family (I-FIX3 counters).
+#
+# AlertManager splits these by their `severity` label (alertmanager.yml):
+#   critical → `telegram-ops-critical` receiver (group_wait 10s, repeat 1h)
+#              — wakes someone up. Used by `llm_cost_anon_bypass` (a paid route
+#              reached anonymously is a real security drift).
+#   warning  → `telegram-ops-warning` receiver (4h repeat_interval)
+#              — used by `guardrail_judge_degraded` (V2 judge degrades to the
+#              V1/sidecar backstop, fail-OPEN per ADR-015; compliance drift,
+#              not a hard block).
+# Both receivers hit the same Telegram bridge.
+#
+# Metric prefixes are BARE (`llm_cost_*`, `guardrail_*`) — NOT `musaium_*`.
+# The musaium_ prefix is frozen at 16 series (METRIC_NAMING_AUDIT F2 Option A);
+# prefixing these counters with musaium_ would create a dead alert on a metric
+# that never exists. Names verified against
+# museum-backend/src/shared/observability/prometheus-metrics.ts:476-498.
+
+groups:
+  - name: llm-cost-security
+    interval: 30s
+    rules:
+      - alert: llm_cost_anon_bypass
+        # llm_cost_anon_bypass_total is a labelless counter incremented in
+        # LlmCostGuard.assertAllowed when userId === null. It should be flat 0
+        # in prod (every paid route requires isAuthenticated). Any non-zero
+        # rate means a paid LLM path was reached anonymously → security drift.
+        expr: |
+          sum(rate(llm_cost_anon_bypass_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "LLM cost guard hit anonymously — paid route reached without auth"
+          description: |
+            The LLM cost guard recorded {{ $value | printf "%.3f" }}
+            anonymous-bypass events per second over the last 5 minutes.
+            This counter should be flat 0 in production: every paid LLM
+            route is supposed to require `isAuthenticated`. A non-zero rate
+            means a request reached `LlmCostGuard.assertAllowed` with
+            userId === null — i.e. a paid path was reached anonymously.
+
+            This is a security drift, not a cost problem: the per-user cost
+            accounting is bypassed and an unauthenticated caller can consume
+            paid LLM capacity.
+
+            First action:
+              - Identify the route in Sentry / access logs (look for chat
+                or knowledge-extraction endpoints returning 200 without an
+                Authorization header / session cookie).
+              - Check the most recent deploy that touched auth middleware
+                or route guards — a missing `isAuthenticated` mount is the
+                usual cause.
+              - Confirm the metric source in
+                `museum-backend/src/.../LlmCostGuard` (assertAllowed,
+                userId === null branch).
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/observability/METRIC_NAMING_AUDIT.md"
+
+      - alert: guardrail_judge_degraded
+        # guardrail_judge_degraded_total carries a `reason` label
+        # {budget_exhausted, timeout, error, misconfigured}. We sum(rate(...))
+        # across all reasons: the alert fires as soon as ANY reason drifts.
+        # The verdict is NOT a hard block — a degraded judge falls back to
+        # the V1 keyword guardrail / sidecar (fail-OPEN, ADR-015) — so this
+        # is a compliance degradation, hence severity warning.
+        expr: |
+          sum(rate(guardrail_judge_degraded_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: musaium-backend
+          surface: chat
+          owner: tim
+        annotations:
+          summary: "V2 LLM judge degraded — falling back to V1 backstop"
+          description: |
+            The V2 LLM judge guardrail returned a fail-mode (null verdict)
+            at a sustained rate of {{ $value | printf "%.3f" }} events per
+            second over the last 5 minutes (all `reason` series aggregated).
+            The judge is degrading to the V1 keyword guardrail / sidecar
+            backstop (fail-OPEN per ADR-015 + CLAUDE.md §AI Safety step 5),
+            so requests are still moderated — but the semantic V2 layer is
+            not contributing, which is a compliance drift (AI Act Art. 10).
+
+            `for: 5m` filters the normal end-of-UTC-day `budget_exhausted`
+            transient (the daily judge budget exhausting at day end is
+            expected and must not page).
+
+            First action:
+              - Break down by `reason` on the dashboard:
+                  * budget_exhausted → expected near UTC midnight; raise
+                    `LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY` only if chronic.
+                  * timeout         → judge provider latency; check the
+                    500ms judge timeout + provider status.
+                  * error           → judge API errors; check Sentry +
+                    provider keys.
+                  * misconfigured   → env/config regression after a deploy.
+              - Source: `llm-judge-guardrail.ts` (judgeWithLlm null paths)
+                and prometheus-metrics.ts:476-481.
+          dashboard: "{{ .ExternalURL }}/d/chat-latency"
+          runbook: "https://github.com/Tim-Kraken/InnovMind/blob/main/docs/adr/ADR-015-llm-judge-guardrail-v2.md"

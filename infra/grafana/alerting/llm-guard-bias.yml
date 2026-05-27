@@ -1,15 +1,39 @@
-# Prometheus Alertmanager rules — LLM Guard resilience + bias monitoring
+# Prometheus Alertmanager rules — LLM Guard resilience + per-locale bias monitoring (AI Act Art.10)
 #
-# Loaded by the Prometheus instance defined in infra/grafana/prometheus.yml.
-# Referenced by docs/RUNBOOKS/guardrail-incidents.md.
+# Loaded by the Prometheus instance defined in infra/grafana/prometheus.yml via the
+#   rule_files: - /etc/prometheus/alerting/*.yml
+# glob. The directory is mounted ./alerting:/etc/prometheus/alerting:ro both locally
+# (infra/grafana/docker-compose.yml) and in prod (museum-backend/deploy/docker-compose.prod.yml),
+# so any *.yml dropped here is loaded automatically — no compose edit required.
 #
-# Last reviewed: 2026-05-12
+# Routing (via infra/grafana/alertmanager.yml, which routes on `severity` only):
+#   - severity: critical  → telegram-ops-critical receiver
+#   - severity: warning   → telegram-ops-warning receiver (default leg)
+#
+# Moved 2026-05-26 (WAVE 4) from docs/observability/alerts-llm-guard.yml — this is
+# Prometheus alert CONFIG, not docs, and while it lived under docs/ it was never
+# globbed/mounted, so every rule below was silently inert (false AI Act Art.10 coverage).
+#
+# Audit corrections applied in the same move (WAVE 4):
+#   - REMOVED LLMGuardScanErrorsHigh: it referenced two scan error/attempt counters
+#     that prometheus-metrics.ts never emits. Error/timeout coverage is already
+#     provided by LLMGuardLatencyHigh/Critical + LLMGuardBreakerOpen below.
+#   - REMOVED the guardrail-cost group (GuardrailCostNear/Breached): its Phase 1B
+#     cost counter was never shipped. LLM cost is alerted elsewhere
+#     (llm_cost_breaker_open in llm-cost.yml). A loaded file holds only LIVE rules.
+#   - FIXED the guardrail-decisions label-value: the only call-site
+#     (bias-metrics.helper.ts:48) emits "blocked"/"allowed", so every selector now
+#     uses decision="blocked" (the prior value matched no series, leaving the AI
+#     Act Art.10 core rules silently dead even once loaded).
+#
+# Last reviewed: 2026-05-26
 # Related ADRs: ADR-015, ADR-047, ADR-048
 #
 # Threshold rationale:
 #   - p95 600 ms warning / 800 ms critical: aligned with design.md §9.5 + Companion OPS_INCIDENT_LLM_GUARD §1.
 #   - Block-rate 2× warning / 3× critical: per compliance-research-bias-monitoring.md §4 (Meta-Arabic precedent).
 #   - Baseline = avg(per-locale), NOT global rate (research methodological trap, §4 same doc).
+#   - decision label value is "blocked" (bias-metrics.helper.ts:48), NOT "block".
 
 groups:
   # ──────────────────────────────────────────────────────────────────────
@@ -73,23 +97,13 @@ groups:
           description: "Either breaker has been OPEN for > 5 min OR oscillating CLOSED↔OPEN (death-spiral pattern S2 §3.5)."
           runbook: "https://github.com/innov-mind/musaium/blob/main/docs/OPS_INCIDENT_LLM_GUARD.md#35-surge--death-spiral-pattern"
 
-      - alert: LLMGuardScanErrorsHigh
-        expr: |
-          rate(musaium_llm_guard_scan_errors_total[5m])
-          / rate(musaium_llm_guard_scan_attempts_total[5m]) > 0.1
-        for: 3m
-        labels:
-          severity: warning
-          team: musaium-backend
-          subsystem: guardrail
-        annotations:
-          summary: "LLM Guard scan error rate > 10 %"
-          description: "Error rate = {{ $value | humanizePercentage }}. Likely sidecar crash loop OR backend → sidecar network issue."
-          runbook: "https://github.com/innov-mind/musaium/blob/main/docs/RUNBOOKS/guardrail-incidents.md#s1--sidecar-down-complete"
+      # Removed 2026-05-26 (WAVE 4): LLMGuardScanErrorsHigh referenced two LLM-Guard
+      # scan error/attempt counters that prometheus-metrics.ts never emits. Error and
+      # timeout coverage is provided by LLMGuardLatencyHigh/Critical + LLMGuardBreakerOpen above.
 
       - alert: GuardrailBlockRateSpike
         expr: |
-          (sum(rate(musaium_guardrail_decisions_total{decision="block"}[5m]))
+          (sum(rate(musaium_guardrail_decisions_total{decision="blocked"}[5m]))
            / sum(rate(musaium_guardrail_decisions_total[5m]))) > 0.05
         for: 5m
         labels:
@@ -115,7 +129,7 @@ groups:
       # Recording rule: per-locale block rate (1h rolling).
       - record: musaium:guardrail_block_rate_per_locale:1h
         expr: |
-          sum by (locale) (rate(musaium_guardrail_decisions_total{decision="block"}[1h]))
+          sum by (locale) (rate(musaium_guardrail_decisions_total{decision="blocked"}[1h]))
           / sum by (locale) (rate(musaium_guardrail_decisions_total[1h]))
 
       # Recording rule: equal-weighted average across locales (the correct baseline).
@@ -163,8 +177,8 @@ groups:
       - alert: BiasLocaleDominance
         expr: |
           (
-            sum by (locale) (rate(musaium_guardrail_decisions_total{decision="block"}[1h]))
-            / on() group_left() sum(rate(musaium_guardrail_decisions_total{decision="block"}[1h]))
+            sum by (locale) (rate(musaium_guardrail_decisions_total{decision="blocked"}[1h]))
+            / on() group_left() sum(rate(musaium_guardrail_decisions_total{decision="blocked"}[1h]))
           ) > 0.5
         for: 1h
         labels:
@@ -176,34 +190,8 @@ groups:
           description: "Locale dominance anomaly — suggests a systematic filter misconfiguration targeting this locale."
           runbook: "https://github.com/innov-mind/musaium/blob/main/docs/RUNBOOKS/guardrail-incidents.md#s4--false-positive-surge"
 
-  # ──────────────────────────────────────────────────────────────────────
-  # 3. Cost circuit breaker (design.md §D9, Phase 1B)
-  # Recording rules below assume Phase 1B counter `musaium_guardrail_cost_usd_total`
-  # is shipped. Until then these alerts are dormant (no data → no fire).
-  # ──────────────────────────────────────────────────────────────────────
-  - name: guardrail-cost
-    interval: 1m
-    rules:
-      - alert: GuardrailCostNear
-        expr: |
-          (sum(increase(musaium_guardrail_cost_usd_total[24h])) / 50) > 0.8
-        for: 10m
-        labels:
-          severity: warning
-          team: musaium-backend
-          subsystem: guardrail
-        annotations:
-          summary: "Guardrail daily spend > 80 % of $50/day cap"
-          description: "Cost CB will trip at 100 %. Review spike origin: traffic wave OR pricing anomaly OR DDoS."
-
-      - alert: GuardrailCostBreached
-        expr: |
-          sum(increase(musaium_guardrail_cost_usd_total[24h])) > 50
-        for: 1m
-        labels:
-          severity: critical
-          team: musaium-backend
-          subsystem: guardrail
-        annotations:
-          summary: "Guardrail daily spend exceeded $50/day cap — cost CB tripped"
-          description: "LLM judge provider is being dropped from the pipeline. Degradation to L1 (keyword + LLM Guard only)."
+  # Removed 2026-05-26 (WAVE 4): the guardrail-cost group (GuardrailCostNear,
+  # GuardrailCostBreached) referenced a Phase 1B guardrail cost counter that was
+  # never shipped (0 matches in museum-backend/src/). LLM cost is already alerted
+  # via llm_cost_breaker_open in llm-cost.yml; this file holds only live rules
+  # (no dormant no-data alerts that simulate non-existent coverage).

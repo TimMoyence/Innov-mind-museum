@@ -58,7 +58,7 @@ The project doctrine `feedback_no_feature_flags_prelaunch` makes any "fail-OPEN 
 
 ## Metrics SLO (amendment 2026-05-12 Phase 0)
 
-Operational thresholds for the alert rules in `docs/observability/alerts-llm-guard.yml`:
+Operational thresholds for the alert rules in `infra/grafana/alerting/llm-guard-bias.yml`:
 
 | Alert | Expression (Prometheus) | Severity | Routing |
 |---|---|---|---|

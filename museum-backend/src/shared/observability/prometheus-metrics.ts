@@ -497,6 +497,45 @@ export const llmCostAnonBypassTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * WAVE 6 · C4 (discovery/cost.md D4) — per-user daily LLM spend distribution.
+ *
+ * LABELLESS Histogram in USD. Observed exactly once per ALLOWED `assertAllowed`
+ * call, from `LlmCostGuard.assertAllowed` AFTER a successful `increment()`, with
+ * the value = the NEW daily total RETURNED by `increment()` (the authoritative
+ * post-increment Redis value, NOT just the delta). The previous gap: nothing
+ * exposed the Redis per-user daily cap usage, so ops could not alert on "what
+ * fraction of users are near their cap" without querying Redis directly.
+ *
+ * Why a HISTOGRAM (not a gauge): the business need is a DISTRIBUTION question
+ * ("X% of users at ≥80% cap"), which a sum/max/avg gauge cannot answer — it
+ * erases the per-user spread. Cumulative `_bucket{le=…}` series give the CDF.
+ * Derivable (non-coded, low-priority — see design §C4-alerte) proxy:
+ *   (rate(llm_cost_user_daily_usd_count[1h])
+ *    - rate(llm_cost_user_daily_usd_bucket{le="0.4"}[1h]))
+ *   / clamp_min(rate(llm_cost_user_daily_usd_count[1h]), 1) > 0.05
+ * Honest limit: this measures the FLUX of increments above $0.40, not a count of
+ * distinct near-cap users (a userId label is rejected — unbounded cardinality).
+ *
+ * Why LABELLESS: a `userId` label would be unbounded user-derived cardinality.
+ * 12 explicit buckets → 13 `_bucket` (incl. +Inf) + `_sum` + `_count` = 15 fixed
+ * series, far under the 200 cardinality budget. The buckets `0.4`/`0.5` straddle
+ * the default $0.50 cap and its 80% threshold so the CDF reads near-cap directly.
+ *
+ * Naming: BARE `llm_cost_` subsystem prefix per METRIC_NAMING_AUDIT F2 Option A
+ * (the `musaium_` prefix is frozen at 16, not grown for new metrics). The `_usd`
+ * suffix is a base-UNIT suffix for a monetary AMOUNT — NOT a `_seconds`-debt
+ * histogram (R3 targets DURATIONS). It is grandfathered in BOTH metric-naming
+ * sentinels as a legitimate non-duration amount, distinct from the genuine
+ * base-unit debt `musaium_rerank_latency_ms` (a mis-united duration).
+ */
+export const llmCostUserDailyUsd = new Histogram({
+  name: 'llm_cost_user_daily_usd',
+  help: 'Per-user daily LLM spend in USD, observed once per allowed call (the new daily total after the cost-guard increment). Labelless (no userId) — distribution of users vs their daily cap. Not for billing.',
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.4, 0.5, 0.75, 1, 2.5, 5],
+  registers: [registry],
+});
+
 export async function renderMetrics(): Promise<string> {
   return await registry.metrics();
 }

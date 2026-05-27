@@ -136,6 +136,68 @@ describe('LlmCostCircuitBreaker — HALF_OPEN transitions', () => {
     expect(breaker.state).toBe('CLOSED');
   });
 
+  it('trip → HALF_OPEN → probe success → CLOSED but PRESERVES dailySpendCents (W1-C1 money regression)', () => {
+    // W1-C1 RED (run 2026-05-26-kr-domains) — the core money bug. When a probe
+    // succeeds and the breaker recovers HALF_OPEN→CLOSED, the *durable daily UTC
+    // accumulator* must survive: zeroing it every cooldown would recover the full
+    // daily $/cap headroom each cycle (×288/day), letting spend run far past the
+    // daily cap. The hourly spike window, by contrast, is transient and SHOULD be
+    // reset (so the recovered breaker is not pre-tripped by stale spike charges).
+    //
+    // Scenario faithful to AC-C1.1 (daily preserved) + AC-C1.2 (hourly reset):
+    // accumulate substantial same-day spend (well UNDER the daily cap), trip on an
+    // hourly SPIKE, let the cooldown + >1h jump prune the spike, then a small
+    // healthy probe recovers to CLOSED. The daily accumulator must still reflect
+    // everything charged today (NOT be wiped to ~0).
+    //
+    // NB (UFR-013 honesty): the design's literal "trip on the daily cap" numbers
+    // for this case (design.md §6 (c)) cannot actually reach CLOSED, because
+    // `LlmCostCircuitBreaker.recordCharge` re-checks `shouldTrip` BEFORE recovery
+    // (llm-cost-circuit-breaker.ts:142, design §3 invariant line 45) — a still-
+    // over-cap daily would re-trip OPEN rather than recover. This case therefore
+    // encodes the SAME invariant (daily preserved on probe-success recovery) via a
+    // scenario that can legitimately recover. AC-C1.3 (re-trip when still over cap)
+    // is the complementary path, already covered by
+    // "HALF_OPEN probe that itself breaches the cap → re-OPEN".
+    //
+    // RED failure mode at be758ab56: probe success calls `strategy.reset()` (full),
+    // zeroing `dailySpend` → `getState().dailySpendCents` collapses to ~50 (just
+    // the probe) → the `toBe(total)` assertion FAILS. Counts as RED.
+    const { breaker, tick } = makeBreaker({
+      hourlyThresholdCents: 1_000, // $10/h spike guard
+      dailyBudgetCents: 1_000_000, // daily cap effectively unreachable here
+      openDurationMs: 60_000,
+    });
+
+    // Same-day spend below the daily cap, spread so the hourly window won't
+    // accumulate it: 300c then >1h, 300c then >1h. Daily = 600 so far.
+    breaker.recordCharge(300);
+    tick(61 * 60_000);
+    breaker.recordCharge(300);
+    tick(61 * 60_000);
+    expect(breaker.getState().dailySpendCents).toBe(600);
+
+    // Hourly spike trips OPEN (1_500 > 1_000 threshold). Daily now 2_100.
+    breaker.recordCharge(1_500);
+    expect(breaker.state).toBe('OPEN');
+    expect(breaker.getState().dailySpendCents).toBe(2_100);
+
+    // Cooldown + >1h so the spike prunes out of the hourly window → HALF_OPEN
+    // with a clean hourly window.
+    tick(61 * 60_000);
+    expect(breaker.state).toBe('HALF_OPEN');
+    expect(breaker.canAttempt()).toBe(true);
+
+    breaker.recordCharge(50); // healthy probe, same UTC day → recovers
+    expect(breaker.state).toBe('CLOSED');
+
+    // The whole point: the daily accumulator survived recovery (2_100 + 50),
+    // it was NOT reset to ~0. The hourly window, by contrast, is fresh (just 50).
+    expect(breaker.getState().dailySpendCents).toBeGreaterThan(0);
+    expect(breaker.getState().dailySpendCents).toBe(2_150);
+    expect(breaker.getState().hourlySpendCents).toBe(50);
+  });
+
   it('HALF_OPEN probe fail (recordFailure) → re-OPEN', () => {
     const { breaker, tick } = makeBreaker();
     breaker.recordCharge(1_500);

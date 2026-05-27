@@ -75,6 +75,11 @@ const EXPECTED = {
     'musaium_guardrail_pii_redacted_total',
     'musaium_rerank_fallback_total',
     'musaium_llm_prompt_cache_hits_total',
+    // I-FIX3 (2026-05-25) — bare-prefix per F2 Option A. Present in the source +
+    // BE sentinel FROZEN + audit §2.1 since I-FIX3, but the root CI-mirror EXPECTED
+    // was missed at the time; added here so this mirror matches the source-of-truth.
+    'guardrail_judge_degraded_total',
+    'llm_cost_anon_bypass_total',
   ],
   Histogram: [
     'http_request_duration_seconds',
@@ -86,6 +91,7 @@ const EXPECTED = {
     'musaium_llm_guard_scan_duration_seconds',
     'nominatim_request_duration_seconds',
     'musaium_rerank_latency_ms', // F1 known debt — grandfathered below
+    'llm_cost_user_daily_usd', // WAVE 6 C4 — monetary amount (not a duration), grandfathered below
   ],
   Gauge: [
     'artwork_embeddings_count',
@@ -96,10 +102,16 @@ const EXPECTED = {
   ],
 };
 
-// Histograms allowed to NOT end in `_seconds` (documented base-unit debt, F1).
-// This set must SHRINK over time, never grow. It exists so the violation is
-// visible as known debt rather than silently passing R3.
-const GRANDFATHERED_HISTOGRAMS = new Set(['musaium_rerank_latency_ms']);
+// Histograms allowed to NOT end in `_seconds`. Two categories:
+//   - `musaium_rerank_latency_ms` — documented base-unit DEBT (F1, a duration in
+//     ms). This debt must SHRINK over time, never grow.
+//   - `llm_cost_user_daily_usd` — WAVE 6 C4: a monetary AMOUNT (USD), not a
+//     duration. `_usd` is its correct base unit; R3 (`_seconds`) targets only
+//     durations. This is NOT base-unit debt and is not expected to be "fixed".
+const GRANDFATHERED_HISTOGRAMS = new Set([
+  'musaium_rerank_latency_ms',
+  'llm_cost_user_daily_usd',
+]);
 
 // F2 prefix ratchet ceiling: number of `musaium_`-prefixed metrics today.
 // The target convention (audit F2 Option A) is bare subsystem prefixes, so this

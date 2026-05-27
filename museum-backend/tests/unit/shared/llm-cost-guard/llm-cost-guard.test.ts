@@ -4,7 +4,15 @@ import { logger } from '@shared/logger/logger';
 // increment when `userId === null` reaches the guard (design §D3/D5). Does NOT
 // exist at RED HEAD → import resolves to `undefined`, so the metric-counter
 // test below fails when it calls `.get()` on it (feature-absent proof).
-import { llmCostAnonBypassTotal } from '@shared/observability/prometheus-metrics';
+//
+// WAVE 6 · C4 RED — `llmCostUserDailyUsd` is the per-user daily spend Histogram
+// the guard must `observe()` after a SUCCESSFUL `increment()` (design §1 §74).
+// Does NOT exist at RED HEAD → import resolves to `undefined`, so the C4-R5/R6
+// suite below fails when it calls `.get()` on it (feature-absent proof).
+import {
+  llmCostAnonBypassTotal,
+  llmCostUserDailyUsd,
+} from '@shared/observability/prometheus-metrics';
 
 import {
   FailingLlmCostCounter,
@@ -330,6 +338,125 @@ describe('LlmCostGuard (P0-4 red phase)', () => {
           capUsd: 0.5,
         }),
       );
+    });
+  });
+
+  /**
+   * WAVE 6 · C4 RED — per-user daily spend Histogram fed FROM assertAllowed.
+   *
+   * Design (wave6-design.md §1 §74-98): after a SUCCESSFUL `increment()`,
+   * `assertAllowed` must `observe()` the NEW daily total RETURNED by `increment`
+   * (the authoritative post-increment value), exactly once per allowed call.
+   * Refused paths (kill-switch / cap / Redis-unavailable) and anon (userId=null)
+   * must NOT observe (no per-user spend trackable).
+   *
+   * RED contract (UFR-022): `llmCostUserDailyUsd` does not exist at RED HEAD →
+   * the import resolves to `undefined`, so every helper below that calls
+   * `.reset()` / `.get()` throws — feature-absent proof. C4-R6's "no-observe"
+   * invariants would pass vacuously if the metric existed but were unfed; they
+   * are structured to (a) fail on the undefined import at RED, and (b) prove the
+   * GREEN-time invariant (count unchanged on refused/anon paths).
+   */
+  describe('WAVE 6 · C4 — feeds llm_cost_user_daily_usd histogram', () => {
+    // Pull the current `_count` of the labelless histogram (0 when unobserved).
+    const histogramCount = async (): Promise<number> => {
+      const series = (await llmCostUserDailyUsd.get()).values;
+      const countEntry = series.find((v) => v.metricName === 'llm_cost_user_daily_usd_count');
+      return countEntry?.value ?? 0;
+    };
+
+    // Pull the current `_sum` of the labelless histogram (0 when unobserved).
+    const histogramSum = async (): Promise<number> => {
+      const series = (await llmCostUserDailyUsd.get()).values;
+      const sumEntry = series.find((v) => v.metricName === 'llm_cost_user_daily_usd_sum');
+      return sumEntry?.value ?? 0;
+    };
+
+    beforeEach(() => {
+      llmCostUserDailyUsd.reset();
+    });
+
+    it('C4-R5 — observes the NEW daily total (seed + delta) returned by increment, once, on an allowed call', async () => {
+      const counter = new InMemoryLlmCostCounter();
+      counter.seed('user-1', FROZEN_DAY, 0.3);
+
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: false,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      const countBefore = await histogramCount();
+      const sumBefore = await histogramSum();
+
+      await expect(guard.assertAllowed('user-1', 0.1)).resolves.toBeUndefined();
+
+      const countAfter = await histogramCount();
+      const sumAfter = await histogramSum();
+
+      // Exactly one observation per allowed call.
+      expect(countAfter - countBefore).toBe(1);
+      // The observed value is the NEW total (0.3 + 0.1 = 0.4), NOT just the delta 0.1.
+      expect(sumAfter - sumBefore).toBeCloseTo(0.4, 10);
+    });
+
+    it('C4-R6a — does NOT observe when the kill-switch denies the call', async () => {
+      const counter = new InMemoryLlmCostCounter();
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: true,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      const countBefore = await histogramCount();
+      await expect(guard.assertAllowed('user-1', 0.01)).rejects.toMatchObject({
+        code: 'LLM_KILL_SWITCH_ACTIVE',
+      });
+      expect(await histogramCount()).toBe(countBefore);
+    });
+
+    it('C4-R6b — does NOT observe when the per-user cap is exceeded (over-cap delta not consumed)', async () => {
+      const counter = new InMemoryLlmCostCounter();
+      counter.seed('user-1', FROZEN_DAY, 0.48);
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: false,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      const countBefore = await histogramCount();
+      await expect(guard.assertAllowed('user-1', 0.05)).rejects.toMatchObject({
+        code: 'LLM_USER_DAILY_CAP_EXCEEDED',
+      });
+      expect(await histogramCount()).toBe(countBefore);
+    });
+
+    it('C4-R6c — does NOT observe when Redis is unavailable (fail-CLOSED)', async () => {
+      const counter = new FailingLlmCostCounter('ECONNREFUSED 127.0.0.1:6379');
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: false,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      const countBefore = await histogramCount();
+      await expect(guard.assertAllowed('user-1', 0.01)).rejects.toMatchObject({
+        code: 'LLM_COST_GUARD_REDIS_UNAVAILABLE',
+      });
+      expect(await histogramCount()).toBe(countBefore);
+    });
+
+    it('C4-R6d — does NOT observe on the anonymous (userId=null) bypass path (no per-user spend trackable)', async () => {
+      const counter = new InMemoryLlmCostCounter();
+      const guard = new LlmCostGuard({
+        killSwitchEnabled: false,
+        dailyCapUsd: 0.5,
+        counter,
+      });
+
+      const countBefore = await histogramCount();
+      await expect(guard.assertAllowed(null, 0.1)).resolves.toBeUndefined();
+      expect(await histogramCount()).toBe(countBefore);
     });
   });
 });

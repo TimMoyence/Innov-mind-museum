@@ -175,6 +175,48 @@ jobs:
             exit 1
           fi
 
+      # W3-D3: WARNING-only guard (NOT blocking). DB_SSL_REJECT_UNAUTHORIZED=false
+      # is legitimate for local PgBouncer with a self-signed cert, so this must
+      # never `exit 1` / `::error::` — it only surfaces an intentional decision.
+      # cwd = museum-backend (job default) → same `.env*` glob as the guard above.
+      - name: Guard DB_SSL_REJECT_UNAUTHORIZED
+        run: |
+          if grep -rq 'DB_SSL_REJECT_UNAUTHORIZED=false' .env* 2>/dev/null; then
+            echo "::warning::DB_SSL_REJECT_UNAUTHORIZED=false found in env files — verify this is intentional (PgBouncer self-signed only). In prod this disables TLS cert verification (MITM-susceptible)."
+          fi
+
+      # W3-O2: run the scripts-esm harness (ops-infra-ci-gates etc.) in CI. The
+      # `test:scripts` script wraps `jest --selectProjects scripts-esm --runInBand`
+      # (package.json). cwd = museum-backend (job default — DO NOT override): the
+      # harness resolves repo-root files via resolve(process.cwd(), '..'), which
+      # requires cwd === <repo>/museum-backend. NO continue-on-error (real gate).
+      - name: Run scripts harness (test:scripts)
+        run: pnpm run test:scripts
+
+      # W3-O4: validate the Prometheus alert rules that are actually deployed.
+      # promtool validates the PromQL SYNTAX + rule STRUCTURE, NOT the semantics:
+      # a syntactically-valid-but-impossible selector (e.g. the `== 2` O1 bug) or a
+      # non-existent metric name still PASSES promtool. Those classes are covered by
+      # the Jest harness (ops-infra-ci-gates A1a/A1b/A1c + the metrics cross-check).
+      # This step catches FUTURE expression typos (unbalanced parens, unknown
+      # functions, malformed YAML). Scope = infra/grafana/alerting/*.yml ONLY (what
+      # Prometheus loads via rule_files); docs/observability/ is NOT mounted and is
+      # intentionally excluded. Image pinned by tag (actionlint pattern :147-150).
+      # --entrypoint sh because the `/alerting/*.yml` glob has NO shell to expand it
+      # in a bare `--entrypoint promtool … check rules /alerting/*.yml` argv chain:
+      # promtool does no globbing itself, so it would receive the literal `*` token
+      # and fail `path /alerting/*.yml does not exist` (exit 1) on every CI run. The
+      # `sh -c '…'` wrapper expands the glob into real filenames before promtool sees
+      # them. (Image default entrypoint is `prometheus`, hence the override.)
+      - name: Validate Prometheus alert rules (promtool check rules)
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/infra/grafana/alerting:/alerting:ro" \
+            --entrypoint sh \
+            prom/prometheus:v2.55.1 \
+            -c 'promtool check rules /alerting/*.yml'
+
       # NOTE: test:coverage moved to dedicated sharded job + coverage-merge
       # below (2026-05-15) — 4-shard matrix divides wall-clock by ~4x while
       # keeping the same threshold gate (88/74/86/89). The merge step
@@ -544,7 +586,9 @@ jobs:
         working-directory: museum-backend
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        # Pinned by the multi-arch INDEX digest (must match deploy/docker-compose.prod.yml
+        # so the clean-DB drift check tests the exact image prod runs). :pg16 tag kept for readability.
+        image: pgvector/pgvector:pg16@sha256:00ba258a66dac104fd5171074a0084462a64a1369d8513f3d0a634e2f24d15bc
         env:
           POSTGRES_USER: museum_dev
           POSTGRES_PASSWORD: museum_dev_password
@@ -1264,6 +1308,18 @@ jobs:
 
             # Re-login (idempotent — same token as the backend deploy).
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
+
+            # W3-O8: fail loud (not the implicit compose `${VAR:?}`) if the Telegram
+            # bridge secrets are missing/empty in /srv/museum/.env — otherwise
+            # alertmanager-telegram exits 1 at runtime and critical alerts are lost
+            # silently. Belt-and-braces with the `docker compose config` :? check in
+            # the prior install step. The secrets live on the VPS (NOT GitHub secrets),
+            # so this MUST run VPS-side, ahead of the bridge start-up below.
+            set -a; . /srv/museum/.env 2>/dev/null || true; set +a
+            if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+              echo "::error::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID missing or empty in /srv/museum/.env — obs alerting bridge would fail silently. Aborting obs deploy."
+              exit 1
+            fi
 
             # Pull + restart the 5 obs services. alertmanager-telegram
             # builds locally from /srv/museum/obs/alertmanager-telegram/

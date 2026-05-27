@@ -239,7 +239,11 @@ describe('env.ts module', () => {
     });
 
     it('accepts "production" (with required vars)', () => {
-      const env = loadEnv(validProductionEnv());
+      // OPENAI_USER_DAILY_USD_CAP=0 = explicit cost-guard opt-out so this
+      // node-env parsing test needs no Redis (post-WAVE1-C2 prod contract:
+      // cap>0 requires REDIS_URL). The cap>0+no-Redis throw is covered by
+      // env-production-validation-cost-guard.test.ts.
+      const env = loadEnv(validProductionEnv({ OPENAI_USER_DAILY_USD_CAP: '0' }));
       expect(env.nodeEnv).toBe('production');
     });
   });
@@ -288,7 +292,12 @@ describe('env.ts module', () => {
 
   describe('LLM diagnostics', () => {
     it('forces includeDiagnostics false in production', () => {
-      const env = loadEnv(validProductionEnv({ LLM_INCLUDE_DIAGNOSTICS: 'true' }));
+      // OPENAI_USER_DAILY_USD_CAP=0 = cost-guard opt-out (no Redis needed) so
+      // this diagnostics test exercises the prod path without the WAVE1-C2
+      // cap>0-requires-REDIS_URL fail-closed throw (covered elsewhere).
+      const env = loadEnv(
+        validProductionEnv({ LLM_INCLUDE_DIAGNOSTICS: 'true', OPENAI_USER_DAILY_USD_CAP: '0' }),
+      );
       expect(env.llm.includeDiagnostics).toBe(false);
     });
 

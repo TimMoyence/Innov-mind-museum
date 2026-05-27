@@ -30,8 +30,26 @@ export interface CircuitTripStrategy {
   shouldTrip(now: number): boolean;
   /** Lazy pruning of internal time-bounded state. Idempotent. */
   pruneExpired(now: number): void;
-  /** Clear all internal counters/history (called on `reset()` and probe success). */
+  /**
+   * FULL reset — clears ALL internal state, including durable accumulators
+   * (e.g. the daily UTC cost cap). Called on the MANUAL `ThreeStateCircuit.reset()`
+   * (kill-switch / operator / test): an operator who resets wants to start from a
+   * clean slate. NOT called on probe-success recovery — use {@link resetTransient}
+   * there. See W1-C1 (run 2026-05-26-kr-domains): wiping durable accumulators on
+   * every probe-success recovery would recover the full daily-cap headroom each
+   * cooldown cycle (×288/day), letting paid spend run far past the daily cap.
+   */
   reset(): void;
+  /**
+   * TRANSIENT-only reset — clears the short-lived spike/window state but PRESERVES
+   * durable rollover-bound accumulators. Called by `ThreeStateCircuit` on a probe
+   * success (HALF_OPEN → CLOSED): the recovered breaker must not be pre-tripped by
+   * a stale spike window, yet money already spent in the current UTC day must still
+   * count against the daily cap. For strategies whose entire state is transient
+   * (e.g. {@link import('./strategies/sliding-window-failure-strategy').SlidingWindowFailureStrategy}),
+   * this is byte-identical to {@link reset} — no behavioral change. See W1-C1.
+   */
+  resetTransient(): void;
 }
 
 export interface ThreeStateCircuitOptions<TStrategy extends CircuitTripStrategy> {
@@ -128,7 +146,10 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
     if (outcome === 'success') {
       if (state === 'HALF_OPEN') {
         this.transitionTo('CLOSED');
-        this.strategy.reset();
+        // W1-C1: transient-only reset on probe success — clears the spike window
+        // but preserves durable accumulators (e.g. CostTripStrategy's daily UTC
+        // cap). Full `reset()` is reserved for the manual kill-switch path below.
+        this.strategy.resetTransient();
         this.halfOpenedAtMs = null;
         this.availableProbes = this.halfOpenMaxProbes;
       }
