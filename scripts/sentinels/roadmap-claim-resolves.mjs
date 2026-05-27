@@ -68,6 +68,13 @@ const DOC_RE = /(?<![A-Za-z0-9_\-/])docs\/[A-Za-z0-9_\-/.]+\.md/g;
 // .github/workflows/*.yml or .yaml
 const WORKFLOW_RE = /\.github\/workflows\/[A-Za-z0-9_\-]+\.ya?ml/g;
 
+// Relative markdown link targets — `](FILE.md)` / `](../x/FILE.md#anchor)` that
+// are NOT http(s), NOT root-absolute, NOT already a `docs/...` token (covered by
+// DOC_RE). HON-04 (2026-05-26): DOC_RE required the `docs/` prefix, so a relative
+// link like `[x](V1_LOCKDOWN_LOTS.md)` slipped through as a false PASS. These
+// resolve relative to the scanned doc's own directory.
+const MD_REL_LINK_RE = /\]\((?!https?:|\/|#|docs\/)([A-Za-z0-9_\-./]+\.md)(?:#[^)]*)?\)/g;
+
 // ── Repo file index (basename → list of relative paths) ─────────────────────
 // Built once; basename lookup is O(1) and skips node_modules / build / .git.
 const SKIP_DIRS = new Set([
@@ -399,6 +406,27 @@ for (const rel of roadmapGlob) {
         kind: 'workflow',
         ref: token,
         why: 'workflow yml not found on disk',
+      });
+    }
+  }
+
+  // 5. relative markdown links — `](FILE.md)` resolved against the doc's dir.
+  const docDir = path.dirname(abs);
+  for (const m of src.matchAll(MD_REL_LINK_RE)) {
+    const offset = m.index ?? 0;
+    if (isInsideFence(fences, offset)) continue;
+    if (isInsideRange(gitHistory, offset)) continue;
+    const token = m[1];
+    const { line, col } = offsetToLine(src, offset);
+    const targetAbs = path.resolve(docDir, token);
+    if (!fs.existsSync(targetAbs) || !fs.statSync(targetAbs).isFile()) {
+      failures.push({
+        file: rel,
+        line,
+        col,
+        kind: 'rel-md-link',
+        ref: token,
+        why: 'relative markdown link target not found on disk',
       });
     }
   }

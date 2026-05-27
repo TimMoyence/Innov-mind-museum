@@ -1,5 +1,5 @@
 /**
- * shared/cache scope — noop-cache, redis-cache, redis-client.
+ * shared/cache scope — noop-cache, redis-cache.
  * memory-cache.service.ts and resilient-cache.wrapper.ts carved out to
  * dedicated scopes (19 + 23 survivors on first run, would have polluted
  * baseline). See stryker/shared-memory-cache.config.mjs and

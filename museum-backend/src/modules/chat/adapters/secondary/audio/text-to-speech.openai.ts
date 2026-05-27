@@ -1,4 +1,5 @@
 import { AppError } from '@shared/errors/app.error';
+import { logger } from '@shared/logger/logger';
 import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import {
   ChatPhaseTimer,
@@ -9,6 +10,9 @@ import { getLangfuse } from '@shared/observability/langfuse.client';
 import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
+import { estimateTtsCostCents } from './voice-cost-pricing';
+
+import type { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { LlmPathTier } from '@shared/observability/derive-tier';
 import type { LangfuseGenerationClient } from 'langfuse';
@@ -112,6 +116,35 @@ const openTtsGeneration = (
 
 /** POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {
+  /**
+   * M1 W5-C3 — optional global cost breaker. Nullable so existing tests / dev
+   * paths constructing the adapter without it stay no-op (same contract as the
+   * orchestrator's `deps.costBreaker ?? null`). Observe-only: voice is NEVER
+   * gated on `canAttempt()` (design §D4).
+   */
+  private readonly costBreaker: LlmCostCircuitBreaker | null;
+
+  constructor(costBreaker?: LlmCostCircuitBreaker | null) {
+    this.costBreaker = costBreaker ?? null;
+  }
+
+  /**
+   * Fail-open cost charge (mirrors `langchain.orchestrator.ts` `recordSectionCost`).
+   * Sync in-process arithmetic + map write (no I/O); any failure is logged but
+   * NEVER propagates into the synthesis hot path (design §D5/AC5).
+   */
+  private recordVoiceCost(cents: number): void {
+    if (!this.costBreaker) return;
+    try {
+      this.costBreaker.recordCharge(cents);
+    } catch (err) {
+      logger.warn('voice_cost_record_failed', {
+        modality: 'tts',
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
   async synthesize(input: {
     text: string;
@@ -144,6 +177,9 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       const apiKey = requireApiKey();
       const response = await fetchSpeech(apiKey, text, voice);
       const audio = await parseSpeechResponse(response);
+      // M1 W5-C3 — feed the global cost breaker only on billable success, derived
+      // from the (truncated) char count actually sent (design §D1/D3/AC2).
+      this.recordVoiceCost(estimateTtsCostCents(text.length));
       safeTrace('langfuse.tts.generation.end', () => generation?.end({}));
       return { audio, contentType: 'audio/ogg' };
     } catch (err) {

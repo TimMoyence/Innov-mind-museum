@@ -256,7 +256,7 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
 
     const init = fetchSpy.mock.calls[0][1]!;
     const headers = init.headers as Record<string, string>;
-    expect(headers['User-Agent']).toBe('Musaium/1.0 (+security@musaium.app)');
+    expect(headers['User-Agent']).toBe('Musaium/1.0 (+security@musaium.com)');
   });
 
   it('uses HTTP GET on the HIBP range endpoint', async () => {

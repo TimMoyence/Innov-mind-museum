@@ -24,6 +24,13 @@ export interface ModerateReviewUseCaseInput {
   actorId: number;
   ip?: string;
   requestId?: string;
+  /**
+   * C1B — tenant ownership guard (BOLA, write side). `undefined`/`null` =
+   * unscoped (super_admin/admin may moderate any review). When set (forced by
+   * the route for a `museum_manager`), a review whose `museumId` differs from
+   * this scope is treated as non-existent → `404` (existence-hiding), no write.
+   */
+  scopeMuseumId?: number | null;
 }
 
 const MODERATION_STATUSES: ReviewStatus[] = ['approved', 'rejected'];
@@ -63,6 +70,14 @@ export class ModerateReviewUseCase {
 
     const before = await this.repository.getReviewById(input.reviewId);
     if (!before) {
+      throw notFound('Review not found');
+    }
+
+    // C1B — tenant ownership guard (BOLA write side). A scoped actor
+    // (museum_manager) may only moderate reviews of their own museum; a
+    // foreign-tenant or NULL-museum review is hidden as non-existent (404)
+    // BEFORE any write, so no audit row is emitted for a rejected attempt.
+    if (input.scopeMuseumId != null && before.museumId !== input.scopeMuseumId) {
       throw notFound('Review not found');
     }
 

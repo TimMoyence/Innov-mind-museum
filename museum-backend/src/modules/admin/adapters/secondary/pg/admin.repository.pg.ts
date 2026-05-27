@@ -210,7 +210,47 @@ export class AdminRepositoryPg implements IAdminRepository {
     return await paginate(qb, filters.pagination, mapAuditLog);
   }
 
-  async getStats(): Promise<AdminStats> {
+  async getStats(museumId?: number): Promise<AdminStats> {
+    // Tenant-scoped session aggregate (C1A D4). `museum_id` lives on
+    // chat_sessions (index IDX_chat_sessions_museum_id); when scoped we filter
+    // on it. Aggregate COUNTs come back as strings from pg (precision-safe) —
+    // parse with Number.parseInt (lib-docs/pg/PATTERNS.md §"NUMERIC as string").
+    const sessionsQb = this.sessionRepo
+      .createQueryBuilder('session')
+      .select('COUNT(*)', 'total')
+      .addSelect(
+        'COUNT(*) FILTER (WHERE session."createdAt" >= NOW() - INTERVAL \'7 days\')',
+        'recent',
+      );
+
+    // chat_messages has NO museum_id — scope via the ChatMessage.session
+    // relation (innerJoin filters without selecting, lib-docs/typeorm/PATTERNS.md
+    // §3.5; parameterised andWhere §4.3/§4.12). Uses IDX_chat_messages_sessionId
+    // + IDX_chat_sessions_museum_id.
+    const messagesQb = this.messageRepo.createQueryBuilder('message').select('COUNT(*)', 'total');
+
+    // Tenant-scoped (manager) view: filter both aggregates on museum_id and
+    // omit the platform user census entirely (C1A D2) — saves a query and
+    // never exposes the operator headcount.
+    if (museumId !== undefined) {
+      sessionsQb.andWhere('session.museum_id = :scope', { scope: museumId });
+      messagesQb
+        .innerJoin('message.session', 'ms')
+        .andWhere('ms.museum_id = :scope', { scope: museumId });
+
+      const [sessionsResult, messagesResult] = await Promise.all([
+        sessionsQb.getRawOne<{ total: string; recent: string }>(),
+        messagesQb.getRawOne<{ total: string }>(),
+      ]);
+
+      return {
+        totalSessions: Number.parseInt(sessionsResult?.total ?? '0', 10),
+        totalMessages: Number.parseInt(messagesResult?.total ?? '0', 10),
+        recentSessions: Number.parseInt(sessionsResult?.recent ?? '0', 10),
+      };
+    }
+
+    // Global (admin / super_admin) view — full platform census, unchanged.
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
       this.userRepo
         // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), raw SQL breaks.
@@ -220,18 +260,8 @@ export class AdminRepositoryPg implements IAdminRepository {
         .addSelect('COUNT(*) FILTER (WHERE u."createdAt" >= NOW() - INTERVAL \'7 days\')', 'recent')
         .groupBy('u.role')
         .getRawMany<{ role: string; total: string; recent: string }>(),
-      this.sessionRepo
-        .createQueryBuilder('session')
-        .select('COUNT(*)', 'total')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE session."createdAt" >= NOW() - INTERVAL \'7 days\')',
-          'recent',
-        )
-        .getRawOne<{ total: string; recent: string }>(),
-      this.messageRepo
-        .createQueryBuilder('message')
-        .select('COUNT(*)', 'total')
-        .getRawOne<{ total: string }>(),
+      sessionsQb.getRawOne<{ total: string; recent: string }>(),
+      messagesQb.getRawOne<{ total: string }>(),
     ]);
 
     let totalUsers = 0;

@@ -57,7 +57,7 @@ export async function checkPasswordBreach(
   try {
     const response = await fetch(`${HIBP_RANGE_URL}/${prefix}`, {
       method: 'GET',
-      headers: { 'Add-Padding': 'true', 'User-Agent': 'Musaium/1.0 (+security@musaium.app)' },
+      headers: { 'Add-Padding': 'true', 'User-Agent': 'Musaium/1.0 (+security@musaium.com)' },
       signal: controller.signal,
     });
     clearTimeout(timer);

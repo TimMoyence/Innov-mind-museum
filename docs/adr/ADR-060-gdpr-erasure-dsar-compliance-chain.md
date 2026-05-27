@@ -9,7 +9,7 @@
 
 ## Context
 
-The V1 launch (2026-06-01) with 3 B2B museum pilots requires demonstrable GDPR Art.17 (right-to-erasure) and Art.15/20 (right-of-access / portability) compliance. A code audit (2026-05-21) found six load-bearing gaps:
+The V1 launch (2026-06-01, B2C freemium with demo museum data — no B2B pilots contracted) requires demonstrable GDPR Art.17 (right-to-erasure) and Art.15/20 (right-of-access / portability) compliance for end-user personal data. A code audit (2026-05-21) found six load-bearing gaps:
 
 1. TTS audio files stored in S3 (`chat-audios/YYYY/MM/<uuid>`) were never deleted on account erasure — `DeleteAccountUseCase` had no audio cleanup path.
 2. Brevo marketing contacts survived account deletion — `BrevoBetaSignupNotifier` only had `subscribe()`, no removal path.

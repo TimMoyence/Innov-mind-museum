@@ -199,13 +199,25 @@ function createImageUrlHandler(chatService: ChatService) {
   };
 }
 
-function createTtsHandler(chatService: ChatService) {
+function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
     }
+
+    // B1 (R1/R2/R3) — gate TTS on `third_party_ai_audio_<provider>` BEFORE the
+    // assistant text is sent to the external OpenAI TTS service. Mirrors the
+    // STT gate (createAudioHandler above): same scope, same 403 refusal shape,
+    // read-only so the "mutating middleware ordering" gotcha does not regress.
+    const { scope: audioScope } = resolveActiveProviderForScope('audio');
+    const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
+    if (!granted) {
+      res.status(403).json({ error: 'consent_required', scope: audioScope });
+      return;
+    }
+
     const result = await chatService.synthesizeSpeech(messageId, currentUser?.id);
     if (!result) {
       res.status(204).end();
@@ -275,7 +287,7 @@ export const createMediaRouter = (
     sessionLimiter,
     // P0-4 — TTS paid call; same chokepoint as audio handler.
     llmCostGuard,
-    createTtsHandler(chatService),
+    createTtsHandler(chatService, consentChecker),
   );
   // P0-CodeQL — image serve was unrate-limited; an attacker could hammer
   // signed-URL guessing or cause backend egress amplification.

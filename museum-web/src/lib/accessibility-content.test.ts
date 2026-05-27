@@ -51,4 +51,25 @@ describe('accessibility-content.ts', () => {
     expect(joined).toContain('1.4.3');
     expect(joined).toContain('4.78:1');
   });
+
+  // EAA 2019/882 §6 — the accessibility feedback mechanism must be reachable on
+  // an owned domain. The canonical site is musaium.com (NEXT_PUBLIC_SITE_URL);
+  // musaium.app is not owned. A prior fix corrected the markdown statements but
+  // missed this rendered TS content (CHANGELOG 2026-05-14). Guard both locales.
+  it.each(['en', 'fr'])(
+    'uses the canonical owned domain musaium.com (never musaium.app) — locale %s',
+    (locale) => {
+      const serialized = JSON.stringify(getAccessibilityContent(locale));
+      expect(serialized).not.toContain('musaium.app');
+    },
+  );
+
+  it.each(['en', 'fr'])(
+    'feedback section exposes a contact email on the owned domain — locale %s',
+    (locale) => {
+      const feedback = getAccessibilityContent(locale).sections.find((s) => s.id === 'feedback');
+      expect(feedback).toBeDefined();
+      expect(feedback?.paragraphs.join(' ')).toContain('support@musaium.com');
+    },
+  );
 });

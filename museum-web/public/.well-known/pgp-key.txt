@@ -1,11 +1,15 @@
 -----BEGIN PGP PUBLIC KEY BLOCK-----
-Comment: Musaium Security <security@musaium.com>
-Comment: Placeholder — replace with the real exported key per
-Comment: docs/operations/PGP_KEY_GENERATION.md once the keypair
-Comment: has been generated on the Tech Lead's trusted machine.
-Comment: This placeholder MUST NOT ship to production. The deploy
-Comment: pipeline rejects this file if the body still contains the
-Comment: literal token PGP_KEY_PLACEHOLDER_DO_NOT_SHIP.
 
-PGP_KEY_PLACEHOLDER_DO_NOT_SHIP
+mDMEahad0RYJKwYBBAHaRw8BAQdAKxywmsz0UgkvYBUOWATIk2mZW3n2OuHEGYnk
+M2UbhKO0J011c2FpdW0gU2VjdXJpdHkgPHNlY3VyaXR5QG11c2FpdW0uY29tPoi1
+BBMWCgBdFiEEHeRFwJI+3DywQL44NDHm06DoHJ8FAmoWndEbFIAAAAAABAAObWFu
+dTIsMi41KzEuMTIsMCwzAhsDBQkDwmcABQsJCAcCAiICBhUKCQgLAgQWAgMBAh4H
+AheAAAoJEDQx5tOg6Byfx80BAMvO4NQ34tA225O9sZ/tv2UMHq3UNij0sYT9B5ke
+/tt6AP9r0VaSnbFMfdtjs90VZYvohL/PfoT97WAS58TP3Y58C7g4BGoWockSCisG
+AQQBl1UBBQEBB0CRxjwN2cMfQNDXJygKBrXKfLD+8fuQwKCkPNRGqufJPAMBCAeI
+mgQYFgoAQhYhBB3kRcCSPtw8sEC+ODQx5tOg6ByfBQJqFqHJGxSAAAAAAAQADm1h
+bnUyLDIuNSsxLjEyLDAsMwIbDAUJA8JnAAAKCRA0MebToOgcn4HOAQD4+B5EJQFz
+40DJUAzDyoKOB7B5scEjaItw9/tqqd1ZWwEA66RtH1QmMdIwskU9AtGE7LFDnTmD
+3lcgMmKljwX/WA8=
+=1Rlb
 -----END PGP PUBLIC KEY BLOCK-----

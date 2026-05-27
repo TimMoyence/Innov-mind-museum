@@ -10,7 +10,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Leonardo da Vinci',
     year: 'c. 1503-1519',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/1280px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
     description:
       'A half-length portrait of a woman by Leonardo da Vinci, widely considered the most famous painting in the world.',
     funFact:
@@ -34,7 +34,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Johannes Vermeer',
     year: 'c. 1665',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/800px-1665_Girl_with_a_Pearl_Earring.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/1280px-1665_Girl_with_a_Pearl_Earring.jpg',
     description:
       'A tronie painting depicting a girl wearing an exotic dress and a large pearl earring.',
     funFact:
@@ -46,7 +46,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Edvard Munch',
     year: '1893',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/800px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg/1280px-Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg',
     description:
       'An iconic expressionist painting showing a figure with an agonized expression against a turbulent orange sky.',
     funFact:
@@ -70,7 +70,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Gustav Klimt',
     year: '1907-1908',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/800px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg/1280px-The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg',
     description: 'A gold-leaf and oil painting depicting a couple embracing on a flowery meadow.',
     funFact:
       'Klimt used real gold leaf in this painting, inspired by Byzantine mosaics he saw in Ravenna, Italy.',
@@ -101,25 +101,28 @@ const artworks: readonly Artwork[] = [
     museum: 'Uffizi Gallery, Florence',
   },
   {
-    title: 'The Persistence of Memory',
-    artist: 'Salvador Dali',
-    year: '1931',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg',
-    description: 'A surrealist painting featuring melting pocket watches in a dreamlike landscape.',
+    title: 'Lady with an Ermine',
+    artist: 'Leonardo da Vinci',
+    year: 'c. 1489-1491',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Lady_with_an_Ermine_-_Leonardo_da_Vinci_%28adjusted_levels%29.jpg/1280px-Lady_with_an_Ermine_-_Leonardo_da_Vinci_%28adjusted_levels%29.jpg',
+    description:
+      'A portrait of Cecilia Gallerani, mistress of the Duke of Milan, holding a white ermine.',
     funFact:
-      'Dali said the melting watches were inspired by the surrealist perception of a Camembert cheese melting in the sun.',
-    museum: 'Museum of Modern Art (MoMA), New York',
+      'The ermine is a symbol of purity and also a pun on Cecilia\'s surname: the Greek word for ermine, "galé," echoes Gallerani.',
+    museum: 'Czartoryski Museum, Krakow',
   },
   {
-    title: 'Guernica',
-    artist: 'Pablo Picasso',
-    year: '1937',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/7/74/Guernica.jpg',
+    title: 'The Hay Wain',
+    artist: 'John Constable',
+    year: '1821',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/John_Constable_The_Hay_Wain.jpg/1280px-John_Constable_The_Hay_Wain.jpg',
     description:
-      'A powerful anti-war painting responding to the bombing of the Basque town of Guernica during the Spanish Civil War.',
+      "A pastoral scene of a hay wagon crossing the River Stour, depicting rural Suffolk near Constable's childhood home.",
     funFact:
-      'When a Nazi officer asked Picasso if he had done this, Picasso reportedly replied: "No, you did."',
-    museum: 'Museo Reina Sofia, Madrid',
+      'Largely ignored in England, the painting won a gold medal at the 1824 Paris Salon and deeply influenced French painters like Delacroix.',
+    museum: 'National Gallery, London',
   },
   {
     title: 'The Great Wave off Kanagawa',
@@ -138,7 +141,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Grant Wood',
     year: '1930',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg/800px-Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg/1280px-Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg',
     description:
       'A painting of a farmer and his daughter standing before a house with a Gothic window.',
     funFact:
@@ -170,22 +173,23 @@ const artworks: readonly Artwork[] = [
     museum: 'Art Institute of Chicago',
   },
   {
-    title: 'The Son of Man',
-    artist: 'Rene Magritte',
-    year: '1964',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/e/e5/Magritte_TheSonOfMan.jpg',
+    title: 'The Fighting Temeraire',
+    artist: 'J. M. W. Turner',
+    year: '1839',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg/1280px-The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg',
     description:
-      'A surrealist self-portrait showing a man in a bowler hat with a green apple obscuring his face.',
+      'A veteran warship of the Battle of Trafalgar being towed by a steam tug to its final berth to be broken up, set against a blazing sunset.',
     funFact:
-      'Magritte said the apple represents "the visible that is hidden and the visible that is present," the conflict between what we see and what is concealed.',
-    museum: 'Private collection',
+      'Turner refused to ever sell the painting, calling it his "darling," and bequeathed it to the British nation in 1851.',
+    museum: 'National Gallery, London',
   },
   {
     title: 'The Thinker',
     artist: 'Auguste Rodin',
     year: '1904',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Mus%C3%A9e_Rodin_1.jpg/800px-Mus%C3%A9e_Rodin_1.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Mus%C3%A9e_Rodin_1.jpg/1280px-Mus%C3%A9e_Rodin_1.jpg',
     description:
       'A bronze sculpture of a nude male figure sitting on a rock, chin resting on his hand in deep thought.',
     funFact:
@@ -197,7 +201,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Alexandros of Antioch (attributed)',
     year: 'c. 130-100 BC',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Front_views_of_the_Venus_de_Milo.jpg/800px-Front_views_of_the_Venus_de_Milo.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Front_views_of_the_Venus_de_Milo.jpg/1280px-Front_views_of_the_Venus_de_Milo.jpg',
     description:
       'An ancient Greek marble sculpture depicting Aphrodite, famous for its missing arms.',
     funFact:
@@ -209,7 +213,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Michelangelo',
     year: '1501-1504',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/%27David%27_by_Michelangelo_Fir_JBU002.jpg/800px-%27David%27_by_Michelangelo_Fir_JBU002.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/%27David%27_by_Michelangelo_Fir_JBU002.jpg/1280px-%27David%27_by_Michelangelo_Fir_JBU002.jpg',
     description:
       'A masterpiece of Renaissance sculpture depicting the Biblical hero David, carved from a single block of marble.',
     funFact:
@@ -253,15 +257,16 @@ const artworks: readonly Artwork[] = [
     museum: 'Rijksmuseum, Amsterdam',
   },
   {
-    title: 'Self-Portrait with Thorn Necklace and Hummingbird',
-    artist: 'Frida Kahlo',
-    year: '1940',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/1/1e/Frida_Kahlo_%28self_portrait%29.jpg',
+    title: 'Ophelia',
+    artist: 'John Everett Millais',
+    year: '1851-1852',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Millais_-_Ophelia.jpg/1280px-Millais_-_Ophelia.jpg',
     description:
-      'A self-portrait showing Kahlo with a thorn necklace, a dead hummingbird, and symbolic animals.',
+      "A Pre-Raphaelite painting of Shakespeare's Ophelia singing as she drowns in a stream, surrounded by meticulously detailed flowers.",
     funFact:
-      'Kahlo painted this shortly after her divorce from Diego Rivera; the thorns symbolize her pain and the hummingbird is a Mexican love charm.',
-    museum: 'Harry Ransom Center, Austin',
+      'The model, Elizabeth Siddal, posed in a bathtub of water for hours; the lamps warming it went out and she caught a severe cold.',
+    museum: 'Tate Britain, London',
   },
   {
     title: 'The Creation of Adam',
@@ -280,7 +285,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Diego Velazquez',
     year: '1656',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg/800px-Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg/1280px-Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg',
     description:
       'A complex scene showing the Infanta Margarita with her entourage, with Velazquez himself painting at a large canvas.',
     funFact:
@@ -303,7 +308,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Hieronymus Bosch',
     year: 'c. 1490-1510',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/The_Garden_of_earthly_Delights_by_Bosch_High_Resolution_2.jpg/1280px-The_Garden_of_earthly_Delights_by_Bosch_High_Resolution_2.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/The_Garden_of_earthly_delights.jpg/1280px-The_Garden_of_earthly_delights.jpg',
     description:
       'A triptych depicting Eden, earthly pleasures, and Hell in fantastical and surreal detail.',
     funFact:
@@ -327,7 +332,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Jan van Eyck',
     year: '1434',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Van_Eyck_-_Arnolfini_Portrait.jpg/800px-Van_Eyck_-_Arnolfini_Portrait.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Van_Eyck_-_Arnolfini_Portrait.jpg/1280px-Van_Eyck_-_Arnolfini_Portrait.jpg',
     description:
       'A double portrait of Giovanni di Nicolao Arnolfini and his wife in their home in Bruges, rich in symbolism.',
     funFact:
@@ -339,7 +344,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Johannes Vermeer',
     year: 'c. 1665-1667',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Vermeer_-_Girl_with_a_Red_Hat.JPG/800px-Vermeer_-_Girl_with_a_Red_Hat.JPG',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Vermeer_-_Girl_with_a_Red_Hat.JPG/1280px-Vermeer_-_Girl_with_a_Red_Hat.JPG',
     description:
       'A small, luminous painting of a young woman turning toward the viewer, wearing a striking red hat.',
     funFact:
@@ -351,7 +356,7 @@ const artworks: readonly Artwork[] = [
     artist: 'Caspar David Friedrich',
     year: 'c. 1818',
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/800px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg/1280px-Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg',
     description:
       'A Romantic painting of a man standing on a rocky precipice overlooking a fog-filled landscape.',
     funFact:

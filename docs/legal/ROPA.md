@@ -6,7 +6,7 @@
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel (InnovMind / Musaium).
 **Coordonnées** : `tim.moyence@gmail.com` — France.
 **Représentant UE** : non applicable (responsable de traitement établi en France).
-**Contact DPO** : `dpo@musaium.app` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
+**Contact DPO** : `dpo@musaium.com` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
 
 Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Règlement (UE) 2016/679) ainsi que les recommandations CNIL sur la tenue du registre des activités de traitement pour les responsables de traitement.
 
@@ -126,7 +126,7 @@ Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Rè
 | **Catégories de données** | Stack traces, request metadata (URL, méthode, status, headers post-scrubbing), user-agent, `userId` hashé (8-char fingerprint, pas l'email en clair), payloads scrubés (tokens/passwords/secrets/emails redactés, emails → SHA-256 fingerprint). |
 | **Destinataires** | Sentry (EU ingestion `*.eu.sentry.io` confirmée 2026-04-26) ; OTLP collector éventuel (si activé, opérateur-contrôlé). |
 | **Transferts hors UE** | Sentry EU region confirmée. Aucun transfert hors UE par défaut. |
-| **Durée de conservation** | Sentry : 30j events / 90j attachments (plan). Logs structurés Pino : **rétention actuelle = valeurs par défaut OVH** (durée exacte à vérifier en console OVH + citer dans `docs/OPS_DEPLOYMENT.md` d'ici 2026-05-20, controller decision 2026-05-13). **Cible documentée mais NON enforced** : 90j hot + 13 mois cold (suivi P1 post-launch). Aucune claim de conformité plus stricte tant que la config OVH ne l'enforce pas. |
+| **Durée de conservation** | Sentry : 30j events / 90j attachments (plan). Logs structurés Pino : **rétention logs configurée côté OVH le 2026-05-27** (operator-confirmed). **Durée exacte à enregistrer dans `docs/OPS_DEPLOYMENT.md`** (operator à confirmer). Aucune claim de conformité plus stricte que la valeur réellement enforced côté OVH. |
 | **Mesures de sécurité** | PII scrubber triplicé `sentry-scrubber.ts` × BE/FE/Web aligné post-2026-05-12 (P1-1 : dédup via `packages/musaium-shared` en post-launch), email→SHA-256 fingerprint, breadcrumb drop sur paths auth-adjacents. |
 | **Sous-traitants associés** | SUBPROCESSORS #6 (Sentry), #7 (OTLP optionnel), #9 (Better Stack uptime). |
 

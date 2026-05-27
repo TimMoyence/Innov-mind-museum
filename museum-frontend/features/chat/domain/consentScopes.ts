@@ -10,15 +10,22 @@
  * omitted ; blocked in EU prod by S4-P0-04 sentinel.
  *
  * NOTE — most scopes are per-vendor third-party-AI grants
- * (`third_party_ai_*_{openai,google}`). `location_to_llm` is the exception:
- * it is a **coarse-location data-sharing** scope (city/country only), not a
- * per-LLM-vendor grant. It gates whether the BE propagates the visitor's
- * resolved coarse location into the LLM prompt (`location-resolver.ts`
- * `isGranted(userId, 'location_to_llm')`). It rides this array so the existing
- * grant/revoke wiring (`grant/revokeConsentScope`, the Settings revoke row map,
- * the `ThirdPartyAiScope` union) is reused unchanged (matches the BE
- * free-form-VARCHAR `CONSENT_SCOPES`), but the consent sheet renders it in its
- * own "Location" group, not under the OpenAI/Google provider grid.
+ * (`third_party_ai_*_{openai,google}`). The two geo scopes are the exceptions:
+ * they gate whether the BE propagates the visitor's resolved location into the
+ * LLM prompt (`location-resolver.ts:214-251`), at two distinct precisions:
+ *   - `location_to_llm` = **full / neighbourhood** : the BE emits
+ *     `<neighbourhood>, <city>` (`buildNeighbourhoodReverseGeocode`) — finer
+ *     than the city, never street/address/coordinates. `full` dominates: if it
+ *     is granted, the coarse scope is never consulted.
+ *   - `location_coarse_to_llm` = **coarse / city + country** : the BE emits
+ *     `<city>, <country>` only (`buildCoarseReverseGeocode`) — a less precise
+ *     option than neighbourhood (Cycle 1.5-FE, REQ-FE-1).
+ * Both ride this array so the existing grant/revoke wiring (`consentApi`, the
+ * Settings revoke row map, the `ThirdPartyAiScope` union) is reused unchanged
+ * (matches the BE free-form-VARCHAR `CONSENT_SCOPES`). The consent sheet renders
+ * them in their own "Location" group below the OpenAI/Google provider grid, and
+ * treats them as mutually exclusive (D1 Option C — enabling one disables the
+ * other) to avoid the misleading "both ON" state.
  *
  * C1 hexagonal (2026-05-23) — extracted from
  * `features/chat/application/thirdPartyAiConsent.ts` into a pure-data domain
@@ -36,6 +43,9 @@ export const THIRD_PARTY_AI_SCOPES = [
   'third_party_ai_audio_google',
   'third_party_ai_profile_google',
   'location_to_llm',
+  // Cycle 1.5-FE (REQ-FE-1, D2) — appended LAST so the existing 0-8 indices
+  // stay stable (`switches[8] === location_to_llm`, NFR-FE-6 audit-chain).
+  'location_coarse_to_llm',
 ] as const;
 
 export type ThirdPartyAiScope = (typeof THIRD_PARTY_AI_SCOPES)[number];

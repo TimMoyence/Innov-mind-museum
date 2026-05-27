@@ -38,9 +38,11 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
     expect(res.status).toBe(200);
 
     const body = res.body as Record<string, unknown>;
-    // schemaVersion bumped 1 → 2 in commit 6e92ff9de (DSAR Art.15 chain B3,
-    // 2026-05-21) — added UserMemory section. See exportUserData.types.ts:6.
-    expect(body.schemaVersion).toBe('2');
+    // schemaVersion bumped 2 → 3 in the photo-recognised-artworks export commit
+    // (Cycle 4 / B-03, 2026-05-26) — each exported message now nests
+    // artworkMatches[]. See exportUserData.types.ts:12. (Earlier 1 → 2 in
+    // 6e92ff9de, DSAR Art.15 chain B3, 2026-05-21, added UserMemory.)
+    expect(body.schemaVersion).toBe('3');
     expect(typeof body.exportedAt).toBe('string');
 
     const user = body.user as Record<string, unknown>;

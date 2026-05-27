@@ -34,30 +34,36 @@ describe('ReviewCard', () => {
     expect(root.props.accessibilityRole).toBe('summary');
   });
 
-  it('renders a 1-5 star adjustable rating widget reflecting the review.rating', () => {
-    const result = render(<ReviewCard review={makeReview({ rating: 4 })} />);
-    // StarRating exposes accessibilityRole="adjustable" + accessibilityValue.
-    // Walk the rendered tree to find that node — testing-library's getByRole
-    // does not always recognise non-standard RN roles.
+  // C2-FE / UFR-022 RED (R26, Q4). A rating is an NPS score on a 0-10 scale.
+  // The previous 1-5 StarRating clamp (ReviewCard.tsx:47) misrepresents a 0-10
+  // rating (e.g. rating 9 rendered as ~5 filled stars). The card must read the
+  // rating textually on /10. `t()` returns the key in tests, so the un-capped
+  // numerator is asserted directly. These FAIL at baseline (StarRating still
+  // rendered, no "/10" text node present).
+
+  it('renders the rating textually on a /10 scale (rating 9 → "9/10"), never a 5-star clamp', () => {
+    render(<ReviewCard review={makeReview({ rating: 9 })} />);
+    // The "9" numerator must be present on screen; "/10" denominator present
+    // either inline ("9/10") or via the ratingOutOf10 dict key.
+    expect(screen.getByText(/9/)).toBeTruthy();
+    const out10 = screen.queryByText(/9\s*\/\s*10/) ?? screen.queryByText('reviews.ratingOutOf10');
+    expect(out10).toBeTruthy();
+  });
+
+  it('does NOT render a fixed accessibilityValue capped at max:5 (StarRating removed)', () => {
+    const result = render(<ReviewCard review={makeReview({ rating: 9 })} />);
     interface Node {
-      props?: { accessibilityRole?: string; accessibilityValue?: unknown };
-      children?: Node[] | string[] | null;
+      props?: { accessibilityValue?: { max?: number } };
+      children?: unknown;
     }
-    const walk = (node: Node | Node[] | null | string): Node | null => {
-      if (!node || typeof node === 'string') return null;
-      if (Array.isArray(node)) {
-        for (const child of node) {
-          const found = walk(child);
-          if (found) return found;
-        }
-        return null;
-      }
-      if (node.props?.accessibilityRole === 'adjustable') return node;
-      if (node.children) return walk(node.children as Node[]);
-      return null;
+    const walk = (node: unknown): boolean => {
+      if (!node || typeof node === 'string') return false;
+      if (Array.isArray(node)) return node.some((c) => walk(c));
+      const n = node as Node;
+      if (n.props?.accessibilityValue?.max === 5) return true;
+      return walk(n.children);
     };
-    const widget = walk(result.toJSON() as Node | Node[] | null);
-    expect(widget?.props?.accessibilityValue).toMatchObject({ now: 4, min: 1, max: 5 });
+    expect(walk(result.toJSON())).toBe(false);
   });
 
   it('formats same-day date as "Today" in EN locale', () => {

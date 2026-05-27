@@ -6,18 +6,24 @@ import {
   localeFromAcceptLanguage,
   resolveEmailLocale,
 } from '@shared/email/email-locale';
+import { extractLangCode } from '@shared/i18n/locale';
 
 import type { Request } from 'express';
 
 /**
  * Priority: body.locale (fr/en only — transactional emails ship in 2 locales,
  * other SupportedLocale values fall through rather than fail) → Accept-Language
- * (fr/en heuristic) → default 'fr'.
+ * (fr/en heuristic) → default 'fr'. Region-tagged body locales (`en-US`) are
+ * matched by their `extractLangCode` subtag so a regionalised English user is
+ * not silently downgraded to the French Accept-Language fallthrough.
  */
 export function pickEmailLocale(req: Request): EmailLocale {
   const bodyLocale = (req.body as { locale?: unknown }).locale;
-  if (bodyLocale === 'fr' || bodyLocale === 'en') {
-    return resolveEmailLocale(bodyLocale);
+  if (typeof bodyLocale === 'string') {
+    const lang = extractLangCode(bodyLocale);
+    if (lang === 'en' || lang === 'fr') {
+      return resolveEmailLocale(bodyLocale);
+    }
   }
   return localeFromAcceptLanguage(req.headers['accept-language']);
 }

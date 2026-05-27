@@ -180,6 +180,26 @@ describe('Consent Routes — HTTP + auth gate', () => {
 
       expect(res.status).toBe(400);
     });
+
+    // Cycle 1.5 (RUN_ID 2026-05-26-chat-pipeline-hardening) — the NEW coarse
+    // geo consent scope must be a valid grant target. FAILS today (Zod enum
+    // does not yet include `location_coarse_to_llm` → 400 invalid scope).
+    it('CR1/CR2: accepts location_coarse_to_llm grant (201) and isGranted becomes true', async () => {
+      const token = makeToken({ sub: '42' });
+
+      const res = await request(app)
+        .post('/api/auth/consent')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ scope: 'location_coarse_to_llm', version: '2026-05-26' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.consent).toMatchObject({
+        scope: 'location_coarse_to_llm',
+        version: '2026-05-26',
+        source: 'api',
+      });
+      expect(await sharedRepo.isGranted(42, 'location_coarse_to_llm')).toBe(true);
+    });
   });
 
   describe('DELETE /api/auth/consent/:scope (revoke)', () => {
@@ -204,6 +224,25 @@ describe('Consent Routes — HTTP + auth gate', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(400);
+    });
+
+    // Cycle 1.5 — revoking the coarse scope MUST NOT touch the full scope
+    // (NFR-3, independent grants). FAILS today (coarse scope not yet valid for
+    // revoke → 400). Asserts isolation once the scope exists.
+    it('CR3: revoking location_coarse_to_llm leaves location_to_llm untouched (NFR-3)', async () => {
+      await sharedRepo.grant(42, 'location_to_llm', '2026-05-26', 'api');
+      await sharedRepo.grant(42, 'location_coarse_to_llm', '2026-05-26', 'api');
+      const token = makeToken({ sub: '42' });
+
+      const res = await request(app)
+        .delete('/api/auth/consent/location_coarse_to_llm')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ revoked: true, scope: 'location_coarse_to_llm' });
+      expect(await sharedRepo.isGranted(42, 'location_coarse_to_llm')).toBe(false);
+      // The full-precision scope is independent and still active.
+      expect(await sharedRepo.isGranted(42, 'location_to_llm')).toBe(true);
     });
   });
 

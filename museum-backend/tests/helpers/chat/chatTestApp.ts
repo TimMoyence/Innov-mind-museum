@@ -235,6 +235,17 @@ class InMemoryChatRepository implements ChatRepository {
             imageRef: msg.imageRef,
             createdAt: msg.createdAt.toISOString(),
             metadata: msg.metadata,
+            // Cycle 4 (DSAR Art.15/20 — B-03) — allow-list per field (D-2);
+            // `[]` when none (EARS-3). Mirrors the real TypeORM mapping.
+            artworkMatches: msg.artworkMatches.map((m) => ({
+              artworkId: m.artworkId ?? null,
+              title: m.title ?? null,
+              artist: m.artist ?? null,
+              confidence: m.confidence,
+              source: m.source ?? null,
+              room: m.room ?? null,
+              createdAt: m.createdAt.toISOString(),
+            })),
           })),
         };
       }),

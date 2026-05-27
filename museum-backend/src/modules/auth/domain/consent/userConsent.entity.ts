@@ -23,6 +23,10 @@ import type { Relation } from 'typeorm';
  */
 export const CONSENT_SCOPES = [
   'location_to_llm',
+  // Coarse geo consent (cycle 1.5): city + country only to the LLM, separate
+  // from the full `location_to_llm` (neighbourhood) grant. Free-form VARCHAR →
+  // no DB migration.
+  'location_coarse_to_llm',
   'analytics',
   'marketing',
   'tos_privacy',

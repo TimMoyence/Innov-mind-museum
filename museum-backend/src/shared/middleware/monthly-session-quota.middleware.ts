@@ -95,8 +95,17 @@ const logHitOnce = (
  * Wave C5 / T-C55 — emit `quota_exceeded` funnel event. Adapter is contractually
  * non-throwing (PATTERNS.md §5 anti-pattern #10 — analytics MUST NOT block user
  * requests). The try/catch is defense-in-depth against a stub port (tests).
+ *
+ * C3.1 (RGPD) — `userAgent`/`clientIp` are deliberately OMITTED. This event is
+ * emitted server-side without any analytics-consent signal (consent state lives
+ * client-side), and the visitor IP / User-Agent are personal data (RGPD Art.
+ * 4(1), CJUE C-582/14 Breyer). The telemetry port declares both fields optional
+ * (`telemetry.port.ts`) and the Plausible adapter only sets the matching headers
+ * under an `if (event.userAgent)` / `if (event.clientIp)` guard, so omitting them
+ * at the source removes the PII transmission entirely (recital 26 — anonymous
+ * data, no legal basis required).
  */
-const emitQuotaExceeded = async (req: Request, limit: number): Promise<void> => {
+const emitQuotaExceeded = async (limit: number): Promise<void> => {
   try {
     await getTelemetryPort().emit({
       name: 'quota_exceeded',
@@ -108,8 +117,6 @@ const emitQuotaExceeded = async (req: Request, limit: number): Promise<void> => 
         tier: 'free',
         limit,
       },
-      userAgent: req.get('user-agent') ?? undefined,
-      clientIp: req.ip ?? undefined,
     });
   } catch (err) {
     logger.warn('telemetry_emit_failed_in_quota_gate', {
@@ -165,6 +172,6 @@ export const monthlySessionQuota = async (
   }
 
   logHitOnce(user.id, monthStart, row.sessionsMonthCount, limit);
-  await emitQuotaExceeded(req, limit);
+  await emitQuotaExceeded(limit);
   respondQuotaExceeded(res, row.sessionsMonthCount, limit);
 };

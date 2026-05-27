@@ -56,7 +56,7 @@ const DEFAULT_TIMEOUT_MS = 800;
 const CACHE_TTL_SECONDS = 3600;
 /** Bump on payload-shape changes. */
 const CACHE_KEY_PREFIX = 'head-probe:v1:';
-const USER_AGENT = 'Musaium-CitationProbe/1.0 (+https://musaium.app)';
+const USER_AGENT = 'Musaium-CitationProbe/1.0 (+https://musaium.com)';
 /** 64-bit prefix — collisions practically irrelevant at this scale. */
 const SHA_PREFIX_LEN = 16;
 

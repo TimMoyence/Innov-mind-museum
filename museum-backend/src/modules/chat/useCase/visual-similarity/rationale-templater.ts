@@ -26,6 +26,8 @@
  * Pure function. No side effects, no I/O, no logger. Safe to call in tight
  * loops over the topK match list.
  */
+import { extractLangCode } from '@shared/i18n/locale';
+
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 
 /**
@@ -122,10 +124,14 @@ function attributeValue(facts: ArtworkFacts, attr: SharedAttribute): string | nu
 
 /**
  * Normalise a possibly-unknown locale to one of the supported {@link FALLBACK}
- * keys. Unknown locales fall through to `'en'` per the defensive contract.
+ * keys. The argument is typed `'fr' | 'en'`, but at runtime a region-qualified
+ * tag (e.g. `'fr-FR'` from the Accept-Language path) can leak through the type
+ * union — so we normalise via `extractLangCode` (shared/i18n/locale.ts, the
+ * same normaliser the LLM pipeline uses) before the FR/EN switch. Unknown
+ * locales fall through to `'en'` per the defensive contract.
  */
 function resolveLocale(locale: 'fr' | 'en'): 'fr' | 'en' {
-  return locale === 'fr' ? 'fr' : 'en';
+  return extractLangCode(locale) === 'fr' ? 'fr' : 'en';
 }
 
 /**

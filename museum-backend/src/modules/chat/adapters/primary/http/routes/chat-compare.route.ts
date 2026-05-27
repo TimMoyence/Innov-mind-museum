@@ -12,8 +12,13 @@
  */
 import { Router } from 'express';
 
-import { upload } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
+import {
+  getRequestUser,
+  upload,
+} from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { compareRequestSchema } from '@modules/chat/adapters/primary/http/schemas/compare.schemas';
+import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
+import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import {
   AppError,
   badRequest,
@@ -21,6 +26,7 @@ import {
   compareInvalidImage,
   compareInvalidTopK,
 } from '@shared/errors/app.error';
+import { extractLangCode } from '@shared/i18n/locale';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import {
@@ -32,6 +38,7 @@ import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 import { env } from '@src/config/env';
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
+import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { Request, Response, RequestHandler } from 'express';
 import type { z } from 'zod';
 
@@ -69,15 +76,31 @@ export interface CompareRouterDeps {
     sessionId: string,
     ownerId: number | undefined,
   ) => Promise<{ museumId: number | null }>;
+  /**
+   * B-03 (GDPR Art. 7) — third-party AI image-share consent gate, parity with
+   * STT (`chat-media.route.ts`) and describe (`chat-describe.route.ts`). Injectable
+   * for tests; defaults to the production `buildThirdPartyAiConsentChecker()`.
+   */
+  consentChecker?: ThirdPartyAiConsentChecker;
 }
 
 const DEFAULT_LOCALE: 'fr' | 'en' = 'en';
 
-/** Resolution order: body field → req.clientLocale → DEFAULT_LOCALE. */
+/**
+ * Resolution order: body field → req.clientLocale → DEFAULT_LOCALE.
+ *
+ * Each candidate is normalised via `extractLangCode` (shared/i18n/locale.ts —
+ * the same normaliser the main LLM pipeline uses) so a raw region-qualified
+ * Accept-Language tag like `fr-FR`/`en-US` resolves to its bare code before the
+ * FR/EN check. Without this, `'fr-FR' === 'fr'` is false and a French client
+ * with no explicit body.locale silently falls through to English copy.
+ */
 function resolveLocale(bodyLocale: 'fr' | 'en' | undefined, req: Request): 'fr' | 'en' {
-  if (bodyLocale) return bodyLocale;
-  const clientLocale = req.clientLocale;
-  if (clientLocale === 'fr' || clientLocale === 'en') return clientLocale;
+  for (const candidate of [bodyLocale, req.clientLocale]) {
+    if (!candidate) continue;
+    const code = extractLangCode(candidate);
+    if (code === 'fr' || code === 'en') return code;
+  }
   return DEFAULT_LOCALE;
 }
 
@@ -129,8 +152,20 @@ function mapUseCaseError(error: unknown): unknown {
   return compareInvalidImage(error.message, error.details);
 }
 
-function createCompareHandler(deps: CompareRouterDeps) {
+function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response): Promise<void> => {
+    // B-03 (GDPR Art. 7) — gate the third-party AI image-share scope FIRST, in
+    // the handler head: short-circuits BEFORE `verifySessionAccess` and the
+    // use-case so a denied photo never reaches the SigLIP encoder. Read-only,
+    // runs after auth (401 for anon) → no mutating-middleware regress. Parity
+    // with STT / describe gates.
+    const { scope } = resolveActiveProviderForScope('image');
+    const granted = await consentChecker.isGranted(getRequestUser(req)?.id, scope);
+    if (!granted) {
+      res.status(403).json({ error: 'consent_required', scope });
+      return;
+    }
+
     if (!req.file) {
       throw compareInvalidImage('image file is required');
     }
@@ -198,6 +233,10 @@ function createCompareHandler(deps: CompareRouterDeps) {
 export const createCompareRouter = (deps: CompareRouterDeps): Router => {
   const router = Router();
 
+  // B-03 — default to the production checker (parity `createMediaRouter` /
+  // `createDescribeRouter`); tests inject an override via `deps.consentChecker`.
+  const consentChecker = deps.consentChecker ?? buildThirdPartyAiConsentChecker();
+
   // SEC BLOCKER 2026-05-10 — without limiters an authenticated attacker can
   // hammer (cache thrashing + encoder saturation). Mirrors chat-message.route
   // windows; compare-specific tightening is a follow-up.
@@ -220,7 +259,7 @@ export const createCompareRouter = (deps: CompareRouterDeps): Router => {
     sessionLimiter,
     ...(deps.uploadAdmission ? [deps.uploadAdmission] : []),
     upload.single('image'),
-    createCompareHandler(deps),
+    createCompareHandler(deps, consentChecker),
   );
 
   return router;

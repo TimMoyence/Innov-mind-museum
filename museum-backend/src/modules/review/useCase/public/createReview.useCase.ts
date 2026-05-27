@@ -1,5 +1,6 @@
 import { badRequest, unauthorized } from '@shared/errors/app.error';
 
+import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type { CreateReviewInput, ReviewDTO } from '@modules/review/domain/review/review.types';
 
@@ -14,12 +15,15 @@ interface CreateReviewUseCaseInput {
   rating: number;
   comment: string;
   /**
-   * B2B multi-tenant scope (Wave B C7 / R-C7c). Threaded from the route layer
-   * via the authenticated user's `museumId` JWT claim. `null`/`undefined`
-   * for public reviews not attached to a tenant museum (pre-B2B / catalog
-   * reviews). Persisted as `museum_id` on the review row.
+   * NPS attribution (C2 / R1-R4 / Q1). UUID of the chat session the review was
+   * authored from. The use-case resolves the session via the session-lookup
+   * port and derives `museum_id` from `session.museumId` (may be NULL). An
+   * absent / foreign / not-owned session persists BOTH `museum_id = NULL` AND
+   * `session_id = NULL` silently (no 400, no FK violation, no existence leak,
+   * no cross-user link). The `session_id` link is kept only when the lookup
+   * succeeds. The author's own tenant claim is NEVER read.
    */
-  museumId?: number | null;
+  sessionId?: string | null;
 }
 
 /**
@@ -36,7 +40,10 @@ export function buildReviewDisplayName(user: ReviewAuthorProfile): string {
 
 /** Creates a new review with status 'pending'. */
 export class CreateReviewUseCase {
-  constructor(private readonly repository: IReviewRepository) {}
+  constructor(
+    private readonly repository: IReviewRepository,
+    private readonly sessionLookup: IReviewSessionLookup,
+  ) {}
 
   async execute(input: CreateReviewUseCaseInput): Promise<ReviewDTO> {
     if (!input.user.id) {
@@ -56,18 +63,36 @@ export class CreateReviewUseCase {
 
     const derivedName = buildReviewDisplayName(input.user).slice(0, 128);
 
+    // NPS attribution (C2 / R1-R4 / Q1). Derive museum scope from the VISITED
+    // session, never from the noter's tenant claim. Absent / foreign /
+    // not-owned session → museumId NULL (silent, no 400, no existence leak).
+    //
+    // The sessionId link is persisted ONLY when the lookup succeeds (session
+    // exists AND is owned by the noter). Persisting the raw client sessionId
+    // unconditionally would (a) trip the reviews.session_id → chat_sessions FK
+    // with a non-existent UUID (500 instead of the silent 201), and (b) link a
+    // review to another user's session (cross-user privacy leak) while the
+    // 201/500 split would become an existence oracle, defeating the
+    // IReviewSessionLookup no-existence-leak guarantee. Keep museumId and
+    // sessionId coherent: both NULL when the lookup misses.
+    let museumId: number | null = null;
+    let resolvedSessionId: string | null = null;
+    if (input.sessionId) {
+      const session = await this.sessionLookup.findSessionMuseum(input.sessionId, input.user.id);
+      if (session) {
+        museumId = session.museumId;
+        resolvedSessionId = input.sessionId;
+      }
+    }
+
     const createInput: CreateReviewInput = {
       userId: input.user.id,
       userName: derivedName,
       rating: input.rating,
       comment,
+      museumId,
+      sessionId: resolvedSessionId,
     };
-    // Only thread museumId when explicitly provided — keeps the persisted
-    // shape byte-identical for unscoped/public reviews and preserves the
-    // pre-existing call-site contracts of upstream tests.
-    if (input.museumId !== undefined && input.museumId !== null) {
-      createInput.museumId = input.museumId;
-    }
 
     return await this.repository.createReview(createInput);
   }
