@@ -8,7 +8,7 @@ import type {
   KnowledgeBaseQuery,
 } from '@modules/chat/domain/ports/knowledge-base.port';
 
-const DEFAULT_USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
+const DEFAULT_USER_AGENT = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 

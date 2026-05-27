@@ -86,7 +86,6 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
 import AuthScreen from '@/app/auth';
 import SettingsScreen from '@/app/(stack)/settings';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
-import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
 
 // ============================================================================
 // AuthScreen accessibility
@@ -243,42 +242,5 @@ describe('ChatInput a11y', () => {
     render(<ChatInput {...defaultProps} />);
     const sendBtn = screen.getByLabelText('a11y.chat.send');
     expect(sendBtn.props.accessibilityHint).toBe('a11y.chat.send_hint');
-  });
-});
-
-// ============================================================================
-// WelcomeCard accessibility
-// ============================================================================
-
-describe('WelcomeCard a11y', () => {
-  const defaultProps = {
-    museumMode: false,
-    onSuggestion: jest.fn(),
-    onCamera: jest.fn(),
-    disabled: false,
-  };
-
-  it('all suggestion buttons have accessibilityRole=button', () => {
-    render(<WelcomeCard {...defaultProps} />);
-
-    const cameraBtn = screen.getByLabelText('welcome.suggestions.standard_camera');
-    const styleBtn = screen.getByLabelText('welcome.suggestions.standard_style');
-    const questionBtn = screen.getByLabelText('welcome.suggestions.standard_question');
-
-    expect(cameraBtn.props.accessibilityRole).toBe('button');
-    expect(styleBtn.props.accessibilityRole).toBe('button');
-    expect(questionBtn.props.accessibilityRole).toBe('button');
-  });
-
-  it('camera suggestion has a camera-specific hint', () => {
-    render(<WelcomeCard {...defaultProps} />);
-    const cameraBtn = screen.getByLabelText('welcome.suggestions.standard_camera');
-    expect(cameraBtn.props.accessibilityHint).toBe('a11y.chat.camera_suggestion_hint');
-  });
-
-  it('text suggestions have a text-specific hint', () => {
-    render(<WelcomeCard {...defaultProps} />);
-    const styleBtn = screen.getByLabelText('welcome.suggestions.standard_style');
-    expect(styleBtn.props.accessibilityHint).toBe('a11y.chat.suggestion_hint');
   });
 });

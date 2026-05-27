@@ -177,7 +177,7 @@ Two failure modes look identical aggregate-side : (a) **legitimate concentration
 psql "$PROD_DB_URL" -c "SELECT created_at, action, metadata FROM audit_logs WHERE metadata->>'messageId' = '<message-uuid>';"
 
 # Pull the full pipeline trace from Langfuse (Phase 1+)
-# https://langfuse.musaium.app/traces?messageId=<uuid>
+# https://langfuse.musaium.com/traces?messageId=<uuid>
 
 # Confirm which provider returned allow (keyword? llm-guard? llm-judge?)
 # Look for `layer=keyword,decision=allow` AND `layer=llm_guard,decision=allow`

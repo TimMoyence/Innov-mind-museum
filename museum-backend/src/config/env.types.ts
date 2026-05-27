@@ -54,8 +54,6 @@ export interface AppEnv {
     password?: string;
     database: string;
     poolMax: number;
-    /** Optional read-replica URL. When set, dataSourceRouter.read uses it. */
-    replicaUrl: string | null;
   };
   auth: {
     jwtSecret: string;
@@ -515,8 +513,6 @@ export interface AppEnv {
     host: string;
     port: number;
     password?: string;
-    /** Comma-separated host:port pairs for Redis Cluster mode (ioredis Cluster client). */
-    clusterNodes: string | null;
   };
   /**
    * Data-retention prune (ADR-018/019/020). Controls three daily housekeeping

@@ -12,7 +12,7 @@ import type {
  */
 export class WikimediaCommonsClient implements ImageSourceClient {
   private readonly searchUrl = 'https://commons.wikimedia.org/w/api.php';
-  private readonly userAgent = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
+  private readonly userAgent = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
   private readonly timeoutMs: number;
 
   constructor(timeoutMs = 3000) {

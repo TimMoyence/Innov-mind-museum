@@ -79,7 +79,6 @@ GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy + Sentry + smoke
 - `ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS
 - `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix (4 shards) + iOS nightly cron → EAS build + store submit
-- `_deploy-backend.yml` — reusable deploy workflow
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
 - `codeql.yml` — CodeQL security analysis
 - `semgrep.yml` — SAST static analysis

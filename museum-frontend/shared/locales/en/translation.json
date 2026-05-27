@@ -472,7 +472,7 @@
     "audio": "Audio",
     "image_sent": "[Image sent]",
     "voice_message": "[Voice message]",
-    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app",
+    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.com",
     "share_response": "Share",
     "replace_image": "Replace",
     "remove_image": "Remove",
@@ -645,18 +645,6 @@
   "chatInput": {
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
     "send": "Send"
-  },
-  "welcome": {
-    "title": "Welcome to Musaium",
-    "subtitle": "Your personal museum companion",
-    "suggestions": {
-      "museum_camera": "What artwork is in front of me?",
-      "museum_history": "Tell me about the history of this museum",
-      "museum_next": "What should I see next?",
-      "standard_camera": "Photograph an artwork to learn about it",
-      "standard_style": "Tell me about Impressionism",
-      "standard_question": "Who painted the Mona Lisa?"
-    }
   },
   "expertiseBadge": {
     "beginner": "Beginner",

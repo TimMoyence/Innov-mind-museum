@@ -49,12 +49,32 @@ function validateJwtSecrets(env: AppEnv): void {
   assertSecretLength('JWT_REFRESH_SECRET', env.auth.refreshTokenSecret);
 }
 
+/** Truthy values accepted for the conscious DeepSeek EU-transfer opt-in. */
+function isTransferApproved(raw: string | undefined): boolean {
+  return /^(1|true|yes)$/i.test((raw ?? '').trim());
+}
+
 function validateLlmProviderKey(env: AppEnv): void {
   switch (env.llm.provider) {
     case 'openai':
       required('OPENAI_API_KEY', env.llm.openAiApiKey);
       return;
     case 'deepseek':
+      // COMP-04 — RGPD Art.44-49 / Schrems II. DeepSeek (api.deepseek.com, China)
+      // has no EU adequacy decision; sending chat text / images / coarse geo there
+      // is an unguarded cross-border transfer. Block in production unless the
+      // controller has consciously accepted the risk via a documented flag. The
+      // default provider (openai) and google are unaffected — this guard never
+      // throws for them, so it cannot break the normal boot path.
+      if (!isTransferApproved(process.env.DEEPSEEK_EU_TRANSFER_APPROVED)) {
+        throw new Error(
+          'LLM_PROVIDER=deepseek is blocked in production (Schrems II): DeepSeek ' +
+            '(api.deepseek.com, China) has no EU adequacy decision, so chat/image/geo ' +
+            'data would be transferred cross-border without a safeguard. Set ' +
+            'DEEPSEEK_EU_TRANSFER_APPROVED=true to consciously accept the transfer risk ' +
+            '(document the decision in the ROPA), or use LLM_PROVIDER=openai/google.',
+        );
+      }
       required('DEEPSEEK_API_KEY', env.llm.deepseekApiKey);
       return;
     case 'google':
@@ -65,6 +85,22 @@ function validateLlmProviderKey(env: AppEnv): void {
 
 function validateS3Storage(env: AppEnv): void {
   if (env.storage.driver !== 's3') return;
+
+  // COMP-02 — RGPD Art.32. Object keys are enumerable (chat-images/YYYY/MM/
+  // user-<id>/...); a world-readable bucket leaks every user's photos + voice
+  // audio. No aws-sdk/Terraform here to assert the bucket Public Access Block
+  // automatically, so require the operator to consciously attest they verified
+  // it is private before any prod deploy (fail-closed, no boot-time network).
+  // Enforcing the block via IaC / GetPublicAccessBlock probe needs cloud creds.
+  if (!isTransferApproved(process.env.S3_PUBLIC_ACCESS_BLOCK_VERIFIED)) {
+    throw new Error(
+      'S3 object storage in production requires S3_PUBLIC_ACCESS_BLOCK_VERIFIED=true ' +
+        '— attest that the bucket Public Access Block is enabled (bucket is PRIVATE; ' +
+        'presigned URLs only). Enumerable user-<id> keys make a public bucket a GDPR ' +
+        'Art.32 breach. Verify with the cloud console / `aws s3api get-public-access-block`.',
+    );
+  }
+
   required('S3_ENDPOINT', env.storage.s3?.endpoint);
   required('S3_REGION', env.storage.s3?.region);
   required('S3_BUCKET', env.storage.s3?.bucket);

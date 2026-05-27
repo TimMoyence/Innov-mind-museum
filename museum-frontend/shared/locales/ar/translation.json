@@ -472,7 +472,7 @@
     "audio": "صوتي",
     "image_sent": "[تم إرسال صورة]",
     "voice_message": "[رسالة صوتية]",
-    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.app",
+    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.com",
     "replace_image": "استبدال",
     "remove_image": "إزالة",
     "share_response": "مشاركة",
@@ -645,18 +645,6 @@
   "chatInput": {
     "placeholder": "اسأل عن عمل فني أو معلم، أو أرسل صوتًا/صورة...",
     "send": "إرسال"
-  },
-  "welcome": {
-    "title": "مرحبًا بك في Musaium",
-    "subtitle": "رفيقك الشخصي في المتحف",
-    "suggestions": {
-      "museum_camera": "ما العمل الفني الذي أمامي؟",
-      "museum_history": "أخبرني عن تاريخ هذا المتحف",
-      "museum_next": "ماذا يجب أن أشاهد بعد ذلك؟",
-      "standard_camera": "صوّر عملًا فنيًا للتعرّف عليه",
-      "standard_style": "أخبرني عن الانطباعية",
-      "standard_question": "من رسم الموناليزا؟"
-    }
   },
   "expertiseBadge": {
     "beginner": "مبتدئ",

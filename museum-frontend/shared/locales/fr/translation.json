@@ -472,7 +472,7 @@
     "audio": "Audio",
     "image_sent": "[Image envoyée]",
     "voice_message": "[Message vocal]",
-    "share_footer": "Partagé via Musaium — Votre compagnon de musée\nhttps://musaium.app",
+    "share_footer": "Partagé via Musaium — Votre compagnon de musée\nhttps://musaium.com",
     "share_response": "Partager",
     "replace_image": "Remplacer",
     "remove_image": "Supprimer",
@@ -645,18 +645,6 @@
   "chatInput": {
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",
     "send": "Envoyer"
-  },
-  "welcome": {
-    "title": "Bienvenue sur Musaium",
-    "subtitle": "Votre compagnon de musée personnel",
-    "suggestions": {
-      "museum_camera": "Quelle œuvre est devant moi ?",
-      "museum_history": "Parlez-moi de l'histoire de ce musée",
-      "museum_next": "Que devrais-je voir ensuite ?",
-      "standard_camera": "Photographiez une œuvre pour en savoir plus",
-      "standard_style": "Parlez-moi de l'Impressionnisme",
-      "standard_question": "Qui a peint la Joconde ?"
-    }
   },
   "expertiseBadge": {
     "beginner": "Débutant",
