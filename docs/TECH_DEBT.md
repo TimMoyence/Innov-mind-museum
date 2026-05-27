@@ -1040,11 +1040,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-OP-01 — opossum: NO breaker.shutdown() → Stryker leak (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-OP-01 — opossum: breaker.shutdown() wired (RÉSOLU 2026-05-25, branch p0/stability)
 
-**Context** : WikidataBreakerClient sans dispose() ; tests sans afterEach. CLAUDE.md Stryker open-handle gotcha déjà documenté pour BullMQ/ioredis ; opossum est une autre source.
-**Fix** : add `async dispose() { this.breaker.shutdown(); }` + afterEach in test + wire to app shutdown.
-**Evidence** : `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` (no dispose), tests file.
+**Résolu** : `WikidataBreakerClient.dispose()` (idempotent, appelle `breaker.shutdown()`) ajouté + lifté dans la composition chat + wiré au graceful-shutdown (`index.ts` `drainAsyncResources` via `safeTeardown`). `--detectOpenHandles` confirme le timer opossum libéré. Voir RUN C lot P0 stabilité (`/team` 2026-05-25).
+**Reliquat (NIT, non-bloquant)** : `afterEach(() => client.dispose())` non ajouté aux suites breaker pré-existantes — vérifié inoffensif (detectOpenHandles clean, opossum v9 `unref()` l'intervalle). Test-tidy follow-up.
+**Evidence** : `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` (dispose), `src/index.ts` (graceful-shutdown wiring).
 
 ## ⚠️ TD-OP-02 — opossum: missing AbortController + autoRenewAbortController (MEDIUM, NON_BLOCKER)
 

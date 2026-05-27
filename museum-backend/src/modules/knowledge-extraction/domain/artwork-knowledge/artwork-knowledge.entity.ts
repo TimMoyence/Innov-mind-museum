@@ -11,6 +11,7 @@ import {
 @Index('IDX_artwork_knowledge_title_artist_locale', ['title', 'artist', 'locale'], {
   unique: true,
 })
+@Index('IDX_artwork_knowledge_museum_id', ['museumId'])
 export class ArtworkKnowledge {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -59,6 +60,18 @@ export class ArtworkKnowledge {
    */
   @Column({ type: 'uuid', nullable: true, name: 'room_id' })
   roomId?: string | null;
+
+  /**
+   * I-SEC8 (OWASP LLM08) — internal tenant axis (`museums.id`), mirror of the
+   * C7 precedent on `artwork_embeddings`. `NULL` = global public catalog row
+   * (visible to every tenant); `= X` = tenant-X-private row (visible only to a
+   * session whose `museumId = X`). 100% of V1 rows are NULL (no B2B tenant
+   * writes yet); the column ships before the first B2B onboarding so the
+   * read-path scope in `findById` does not require an emergency hot-path
+   * refactor the day a tenant goes live. FK `museums(id) ON DELETE SET NULL`.
+   */
+  @Column({ type: 'integer', nullable: true, name: 'museum_id' })
+  museumId?: number | null;
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -187,6 +187,14 @@ jobs:
 
       - name: Run promptfoo eval
         working-directory: museum-backend/scripts/llm-security
+        # promptfoo exits 100 on ANY failed case. The documented gate (header §,
+        # "fails when pass-rate < 95 %") is the dedicated "Enforce ≥95 % pass-rate"
+        # step below — which reads the JSON report. Without continue-on-error, a
+        # single non-deterministic adversarial failure (e.g. 84/85 = 98.8 %) would
+        # fail the job HERE and make the 95 % threshold step unreachable dead code.
+        # continue-on-error lets the report be written and the real gate decide;
+        # crashes (no report / total==0) are still caught by that step.
+        continue-on-error: true
         env:
           MUSAIUM_API_BASE_URL: http://localhost:3000
           MUSAIUM_API_KEY: ${{ steps.bootstrap.outputs.token }}

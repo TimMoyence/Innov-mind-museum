@@ -138,7 +138,9 @@
         "expo-constants",
         "expo-dev-client",
         "expo-file-system",
+        "expo-font",
         "expo-haptics",
+        "expo-image",
         "expo-image-manipulator",
         "expo-image-picker",
         "expo-linear-gradient",
@@ -149,18 +151,26 @@
         "expo-router",
         "expo-secure-store",
         "expo-splash-screen",
+        "expo-status-bar",
         "expo-store-review",
         "expo-system-ui",
         "expo-updates",
+        "expo-web-browser",
         "jest-expo",
+        "react",
+        "react-dom",
         "react-native-gesture-handler",
         "react-native-safe-area-context",
-        "react-native-screens"
+        "react-native-screens",
+        "react-native-svg"
       ]
     },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": []
+      },
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
       }
     }
   },

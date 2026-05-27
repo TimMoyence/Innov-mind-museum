@@ -14,7 +14,12 @@ import {
 } from '@modules/auth/adapters/secondary/social/nonce-store';
 import { authSessionService, challengeMfaUseCase, recoveryMfaUseCase } from '@modules/auth/useCase';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
-import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
+import {
+  getOcrService,
+  stopArtKeywordsRefresh,
+  stopKnowledgeExtraction,
+  stopWikidataBreaker,
+} from '@modules/chat';
 import { shutdownEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
 import {
@@ -280,6 +285,10 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   } = resources;
 
   await safeTeardown('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
+  // TD-OP-01 — release the Wikidata opossum breaker's rolling-stats timer.
+  await safeTeardown('wikidata_breaker_shutdown_error', () => {
+    stopWikidataBreaker();
+  });
   if (enrichmentScheduler) {
     await safeTeardown('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
   }
