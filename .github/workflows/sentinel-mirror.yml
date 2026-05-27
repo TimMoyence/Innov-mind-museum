@@ -138,6 +138,9 @@ jobs:
       - name: 'Mirror Gate P24 — canonical domain (no musaium.app, repo-wide, A11Y-02/C11)'
         run: node museum-backend/scripts/sentinels/web-domain-canonical.mjs
 
+      - name: 'Mirror Gate P25 — doc last-verified freshness (sidecar manifest, ≤ 90d, HON-08)'
+        run: node scripts/sentinels/doc-last-verified.mjs
+
       - name: 'Mirror Gate P22 — ai-tests count ratchet (BE)'
         working-directory: museum-backend
         run: node scripts/sentinels/ai-tests-count.mjs
