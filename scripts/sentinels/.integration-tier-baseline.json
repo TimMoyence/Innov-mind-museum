@@ -21,11 +21,6 @@
       "approved_by": "C1-spec-R9"
     },
     {
-      "path": "museum-backend/tests/integration/chat/visual-similarity/compare.route.test.ts",
-      "reason": "C3 T6.2 — bare Express smoke test asserting the HTTP wire contract of POST /chat/compare. Mocks the use-case via spy and exercises status mapping (200/400/401/503). Real DB + pgvector paths covered by sibling artwork-embedding-repository.test.ts and recall.test.ts.",
-      "approved_by": "C3-spec-T6.2"
-    },
-    {
       "path": "museum-backend/tests/integration/chat/chat-citations.integration.test.ts",
       "reason": "C4 T6.1 — exercises ChatService.postMessage() with in-memory repo from buildChatTestService + a mocked ChatOrchestrator returning synthetic metadata.sources[]. Pins (1) verbatim source propagation, (2) sources-validator rejection of hallucinated quotes (R4), (3) graceful undefined when LLM omits sources, (4) Spotlighting envelope nonce. Real LLM HTTP path would require live OpenAI key — deterministic CI uses orchestrator stub. Persistence covered by chat-repository-typeorm.integration.test.ts.",
       "approved_by": "C4-spec-R1-R4"
