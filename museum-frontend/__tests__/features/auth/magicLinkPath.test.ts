@@ -55,7 +55,6 @@ describe('mapMagicLinkPath', () => {
 
   describe('R3 / R11 — pass-through: any non-magic-link path returned unchanged', () => {
     it.each([
-      ['custom-scheme mfa-enroll deep link', 'musaium:///(stack)/mfa-enroll'],
       ['custom-scheme museums-picker deep link', 'musaium:///(stack)/museums-picker'],
       ['non-magic-link HTTPS route', 'https://musaium.com/museums/42'],
       ['locale root with no magic-link segment', 'https://musaium.com/fr'],

@@ -722,7 +722,8 @@
       "account_suspended": "Votre compte a été suspendu. Contactez le support.",
       "account_deleted": "Ce compte a été supprimé.",
       "locked_out": "Trop de tentatives échouées. Réessayez dans quelques minutes.",
-      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
+      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française).",
+      "mfa_web_only": "La double authentification est gérée dans l'admin web. Connectez-vous là-bas."
     },
     "chat": {
       "contract_invalid": "Réponse du serveur invalide. Veuillez réessayer.",

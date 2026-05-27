@@ -2382,24 +2382,6 @@
         "13.0.0-alpha.0 exists on npm (pre-release) — not adopted; pinned ^12.39.0."
       ],
       "refreshed": "2026-05-20"
-    },
-    "expo-screen-capture": {
-      "version": "55.0.14",
-      "fetched": "2026-05-21T06:33:31Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-21T07:00:00Z",
-      "curatedBy": "doc-curator (UFR-022 run 2026-05-21-td-sec-01-02-mobile-secrets)",
-      "snapshotSha256": "ee0c15875569e5c21162786ff73e0f8147f0f1b2e810d1d6b020312499e8c640",
-      "patternsSha256": "3b9c175b5cb7f8450671a859492167ec0900a45619072ffccfb395f5c60fe712",
-      "sourceUrls": [
-        "https://docs.expo.dev/versions/latest/sdk/screen-capture/",
-        "https://libraries.io/npm/expo-screen-capture"
-      ],
-      "warnings": [
-        "npmjs.com HTTP 403 — version 55.0.14 confirmed via libraries.io + WebSearch, not npm registry.",
-        "usePreventScreenCapture hook releases on UNMOUNT ONLY (not navigation blur) — for secret screens use imperative prevent/allow via useFocusEffect. See PATTERNS critical doctrine."
-      ],
-      "refreshed": "2026-05-21"
     }
   },
   "devOnlyLibs": [

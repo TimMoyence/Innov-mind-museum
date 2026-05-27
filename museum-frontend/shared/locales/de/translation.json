@@ -722,7 +722,8 @@
       "account_suspended": "Dein Konto wurde gesperrt. Wende dich an den Support.",
       "account_deleted": "Dieses Konto wurde gelöscht.",
       "locked_out": "Zu viele fehlgeschlagene Versuche. Bitte in einigen Minuten erneut versuchen.",
-      "minor_parental_consent_required": "Die Registrierung ist für Nutzer ab 15 Jahren vorgesehen (französische digitale Volljährigkeit)."
+      "minor_parental_consent_required": "Die Registrierung ist für Nutzer ab 15 Jahren vorgesehen (französische digitale Volljährigkeit).",
+      "mfa_web_only": "Die Zwei-Faktor-Authentifizierung wird im Web-Admin verwaltet. Melden Sie sich dort an."
     },
     "chat": {
       "contract_invalid": "Unerwartete Serverantwort. Bitte erneut versuchen.",

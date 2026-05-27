@@ -3,6 +3,10 @@
 > Human-edited gotchas learned in production. Agents MUST NOT auto-fill this file.
 > Add dated, verified incidents only (e.g. "2026-MM-DD: <what broke> → <fix>").
 
+## 2026-05-26 — withdrawn from active perimeter (MFA mobile removed)
+
+The `usePreventScreenCapture` hook was buried (UFR-016, cycle M2 — mobile MFA surface removal). Its only consumer was `MfaEnrollScreen`, which displayed the TOTP secret + recovery codes; both are gone. There is **no remaining source consumer** of `expo-screen-capture` in `museum-frontend`. The dep `expo-screen-capture` (`~55.0.14`) is kept in `package.json` as light tech debt — removing a native dep is a separate cycle (`pod install` + committed Pods + ExpoModulesProvider, cf. M2 spec Q1). This lib was removed from `INDEX.json` (active tracking) but this `LESSONS.md` is kept tracked for the historical doctrine below.
+
 ## 2026-05-26 — `usePreventScreenCapture()` releases on unmount ONLY — use imperative API with `useFocusEffect`
 
 `usePreventScreenCapture()` calls `allowScreenCaptureAsync` only on component **unmount**. A `<Stack.Screen>` that stays mounted when you navigate away (host-persistent) never unmounts → protection leaks to screens that should NOT be protected, and is never released on blur.

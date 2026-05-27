@@ -722,7 +722,8 @@
       "account_suspended": "您的账户已被暂停，请联系客服。",
       "account_deleted": "该账户已被删除。",
       "locked_out": "失败次数过多，请几分钟后重试。",
-      "minor_parental_consent_required": "注册仅限15岁及以上用户（法国数字成年年龄）。"
+      "minor_parental_consent_required": "注册仅限15岁及以上用户（法国数字成年年龄）。",
+      "mfa_web_only": "双重身份验证在网页管理后台中管理。请在那里登录。"
     },
     "chat": {
       "contract_invalid": "服务器返回无效响应，请重试。",

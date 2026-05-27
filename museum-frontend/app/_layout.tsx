@@ -198,7 +198,6 @@ function RootLayout() {
                             <Stack.Screen name="(stack)/verify-email" />
                             <Stack.Screen name="(stack)/confirm-email-change" />
                             <Stack.Screen name="(stack)/reset-password" />
-                            <Stack.Screen name="(stack)/mfa-enroll" />
                             <Stack.Screen name="(stack)/preferences" />
                             <Stack.Screen name="(stack)/guided-museum-mode" />
                             <Stack.Screen name="(stack)/offline-maps" />
