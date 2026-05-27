@@ -66,8 +66,12 @@ const WRAPPERS = [
 //   - SENSITIVE_QUERY_KEYS extended 7→11 (R1, +code/email/phone/state)
 //   - scrubEvent now traverses event.tags (R2, scrubRecord + SENSITIVE_HEADER_REGEX + scrubUrl)
 //   - new exported helper isUrlLikeValue (BE captureExceptionWithContext source scrub)
+// 2026-05-26 — bumped in lockstep with run /team `2026-05-26-chat-pipeline-hardening` (A-02) :
+//   - SENSITIVE_QUERY_KEYS extended 11→16 (D3, +x-amz-signature/x-amz-credential/
+//     x-amz-security-token/sig/signature) to close the presigned-S3 / signed-URL leak.
+//     Inherited by the central log redaction in museum-backend/src/shared/logger/logger.ts.
 // Golden fixture asserting the new behaviour : packages/musaium-shared/src/observability/sentry-scrubber.test.ts
-const CANONICAL_HASH = '02ac8c6f32dfec04e1ee3cca7b1eef13266baf90af588561a6c96ec9ad0fb44c';
+const CANONICAL_HASH = 'b1e98f5e569744cebe37dd2d1609531d41f4311fb3df3ea9c48ef70945d83e2b';
 
 const REQUIRED_CANONICAL_EXPORTS = [
   'SENSITIVE_HEADER_REGEX',

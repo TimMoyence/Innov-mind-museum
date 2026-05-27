@@ -48,6 +48,8 @@ const DEFAULT_TOP_K = 5;
 /** R3 — kNN candidate pool floor. */
 const MIN_TOP_N = 20;
 const TOP_N_TOPK_MULTIPLIER = 4;
+/** D-03.4 — score-floor default, aligned with `env.ts:345` (legacy callers). */
+const DEFAULT_FALLBACK_VISUAL_THRESHOLD = 0.4;
 const RESULT_CACHE_TTL_SECONDS = 60 * 60;
 /** Bump version segment on payload-shape changes. */
 const RESULT_CACHE_KEY_PREFIX = 'visual-similarity:compare:v1';
@@ -78,6 +80,12 @@ export interface VisualSimilarityServiceDeps {
   topK?: number;
   /** C9.13 — hard deadline on `reranker.rerank()` before fail-open. Default 2000ms. */
   rerankTimeoutMs?: number;
+  /**
+   * D-03 — score floor on `finalScore` (Décision D1). Candidates below it are
+   * excluded before truncation. OPTIONAL — omitted (legacy callers) defaults to
+   * {@link DEFAULT_FALLBACK_VISUAL_THRESHOLD} (0.4, env.ts:345).
+   */
+  fallbackVisualThreshold?: number;
 }
 
 export interface CompareInput {
@@ -220,6 +228,7 @@ export class VisualSimilarityService {
   private readonly topNOverride: number | undefined;
   private readonly defaultTopK: number;
   private readonly rerankTimeoutMs: number;
+  private readonly fallbackVisualThreshold: number;
 
   public constructor(deps: VisualSimilarityServiceDeps) {
     this.encoder = deps.encoder;
@@ -231,6 +240,8 @@ export class VisualSimilarityService {
     this.topNOverride = deps.topN;
     this.defaultTopK = deps.topK ?? DEFAULT_TOP_K;
     this.rerankTimeoutMs = deps.rerankTimeoutMs ?? 2000;
+    this.fallbackVisualThreshold =
+      deps.fallbackVisualThreshold ?? DEFAULT_FALLBACK_VISUAL_THRESHOLD;
   }
 
   /** See file header for full pipeline contract (spec R1/R3/R4/R5/R10/R11). */
@@ -272,21 +283,13 @@ export class VisualSimilarityService {
     });
 
     if (neighbours.length === 0) {
-      const result: CompareResult = {
-        matches: [],
-        durationMs: Date.now() - startedAt,
+      const result = this.buildNoNeighborResult(
         modelVersion,
-        fallbackReason: 'no_visual_neighbor',
-      };
-      updateParentTrace(
+        startedAt,
         parentSpan,
-        { fallbackReason: 'no_visual_neighbor' },
-        { stage: 'search', durationMs: result.durationMs },
+        'search',
+        true,
       );
-      safeTrace('visualSimilarity.metric.fallback_no_neighbor', () => {
-        compareFallbackTotal.inc({ reason: 'no_visual_neighbor' });
-        compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
-      });
       await this.writeCache(cacheKey, result);
       return result;
     }
@@ -433,6 +436,42 @@ export class VisualSimilarityService {
     }
   }
 
+  /**
+   * R-T4 — shared `no_visual_neighbor` builder for both the empty-kNN and
+   * all-below-floor paths (trace + `compareFallbackTotal` stay in sync). Side
+   * effects fail-open via `safeTrace`.
+   */
+  private buildNoNeighborResult(
+    modelVersion: string,
+    startedAt: number,
+    parentSpan: VisualCompareTrace | undefined,
+    stage: string,
+    // Early-return callers (empty kNN) own the `total` duration observation
+    // because they never reach the shared post-scoring observe; the scoreAndPackage
+    // caller passes `false` since it observes `total` once on the returned result
+    // (avoids a double-count, P3-METRIC).
+    observeTotal: boolean,
+  ): CompareResult {
+    const result: CompareResult = {
+      matches: [],
+      durationMs: Date.now() - startedAt,
+      modelVersion,
+      fallbackReason: 'no_visual_neighbor',
+    };
+    updateParentTrace(
+      parentSpan,
+      { fallbackReason: 'no_visual_neighbor' },
+      { stage, durationMs: result.durationMs },
+    );
+    safeTrace('visualSimilarity.metric.fallback_no_neighbor', () => {
+      compareFallbackTotal.inc({ reason: 'no_visual_neighbor' });
+      if (observeTotal) {
+        compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
+      }
+    });
+    return result;
+  }
+
   private scoreAndPackage(args: {
     neighbours: NearestResult[];
     factsByQid: Map<string, ArtworkFacts>;
@@ -451,7 +490,16 @@ export class VisualSimilarityService {
       matches.push(scoreCandidate(neighbour, facts, this.weights, locale));
     }
     matches.sort((a, b) => b.finalScore - a.finalScore);
-    const topMatches = matches.slice(0, topK);
+    // D-03.1/D-03.5 — drop sub-floor candidates (Décision D1: `finalScore`,
+    // inclusive `>=`) BEFORE truncation; no top-K of low-confidence noise.
+    const aboveFloor = matches.filter((m) => m.finalScore >= this.fallbackVisualThreshold);
+    // D-03.2 — neighbours existed but none clears the floor → shared fallback.
+    if (aboveFloor.length === 0) {
+      // observeTotal:false — the scoreAndPackage caller observes `total` once on
+      // the returned result, so the fallback must not double-count it (P3-METRIC).
+      return this.buildNoNeighborResult(modelVersion, startedAt, parentSpan, 'fusion', false);
+    }
+    const topMatches = aboveFloor.slice(0, topK);
     recordStageSpan(parentSpan, 'fusion', fusionStart, {
       scoredCount: matches.length,
       returnedCount: topMatches.length,

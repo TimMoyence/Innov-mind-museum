@@ -1,12 +1,13 @@
 import {
   buildOptimisticMessage,
   bumpSuccessfulSend,
+  isRenderableAssistantContent,
   sortByTime,
   type ChatUiMessage,
   type ChatUiMessageMetadata,
 } from '../chatSessionLogic.pure';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
-import { handleSendError } from './sendStrategy.shared';
+import { handleSendError, logEmptyAssistantResponse } from './sendStrategy.shared';
 import type { SendMessageContext, SendResult } from './sendStrategy.types';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
@@ -49,13 +50,14 @@ export const sendMessageAudio = async (
           : undefined,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
+    const assistantMetadata = (response.metadata as ChatUiMessageMetadata) ?? null;
     const assistantMessage: ChatUiMessage = {
       id: response.message.id,
       role: response.message.role,
       text: response.message.text,
       createdAt: response.message.createdAt,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-      metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
+      metadata: assistantMetadata,
       suggestions: response.message.suggestions ?? undefined,
       transcription:
         'transcription' in response && response.transcription
@@ -63,6 +65,8 @@ export const sendMessageAudio = async (
           : null,
     };
 
+    // EARS-9 — the optimistic user bubble keeps the transcription unconditionally,
+    // even when the assistant reply is dropped as non-renderable below.
     const transcriptionText = assistantMessage.transcription?.text;
     if (transcriptionText) {
       context.setMessages((prev) =>
@@ -72,7 +76,14 @@ export const sendMessageAudio = async (
       );
     }
 
-    context.setMessages((prev) => sortByTime([...prev, assistantMessage]));
+    // Cycle 5 (D1/D7) — only append the assistant bubble when it has renderable
+    // content (non-blank text OR enriched media). A blank/whitespace/null audio
+    // reply must not add a phantom empty bubble.
+    if (isRenderableAssistantContent(assistantMessage.text, assistantMetadata)) {
+      context.setMessages((prev) => sortByTime([...prev, assistantMessage]));
+    } else {
+      logEmptyAssistantResponse('audio');
+    }
 
     if (bumpSuccessfulSend(context.successfulSendsRef)) {
       void incrementCompletedSessions();

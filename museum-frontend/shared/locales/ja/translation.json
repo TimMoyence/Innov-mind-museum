@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — 写真",
       "third_party_ai_audio_google": "Google AI — 音声文字起こし",
       "third_party_ai_profile_google": "Google AI — 好みと履歴",
-      "location_to_llm": "位置情報 — 近くの場所"
+      "location_to_llm": "位置情報 — 近くの場所",
+      "location_coarse_to_llm": "位置情報 — 都市のみ"
     },
     "accessibility": "アクセシビリティ",
     "audio_description": "音声ガイド",
@@ -526,7 +527,8 @@
       "gallery": "ギャラリーから選択",
       "record_audio": "音声メッセージを録音",
       "stop_audio": "録音を停止",
-      "scan_cartel": "解説をスキャン"
+      "scan_cartel": "解説をスキャン",
+      "compare": "この作品を比較"
     },
     "cartelScanner": {
       "title": "作品解説のQRをスキャン",
@@ -932,6 +934,8 @@
       "send_hint": "ミュージアムアシスタントにメッセージを送信します",
       "message_input": "メッセージを入力",
       "assistant_message": "アシスタントのメッセージ",
+      "attached_image": "メッセージに添付された画像",
+      "loading": "応答を読み込んでいます",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
       "recommendation_hint": "この提案で入力欄を埋めます",
@@ -1110,7 +1114,9 @@
     "manage_subtitle": "任意のカテゴリーのチェックを自由に外せます。AIとチャットするには「OpenAI テキスト」のスコープが必須です。",
     "save_required_hint": "選択を保存するには「OpenAI テキスト」を有効にしてください。",
     "scope_location": "位置情報",
-    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地域（都市）がAIと共有されます。正確な位置情報が共有されることはありません。"
+    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地区（地区＋都市）がAIと共有されます。番地・住所・正確な位置情報が共有されることはありません。",
+    "scope_location_coarse": "都市のみ",
+    "scope_location_coarse_hint": "都市と国のみがAIと共有されます（地区レベルより精度が低い選択肢です）。番地や正確な位置情報が共有されることはありません。"
   },
   "dailyArt": {
     "title": "今日のアートワーク",

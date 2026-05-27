@@ -9,3 +9,13 @@ export function parseLocationString(raw?: string): { lat: number; lng: number } 
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   return { lat, lng };
 }
+
+/**
+ * True when `raw` is parseable as raw GPS coordinates (`"lat:X,lng:Y"`).
+ * Single source of truth derived from `parseLocationString` so any coordinate
+ * format change is covered everywhere at once (no duplicated regex). Used by
+ * the chat prompt-injection points to never interpolate raw coordinates.
+ */
+export function isCoordinateString(raw?: string): boolean {
+  return parseLocationString(raw) !== null;
+}

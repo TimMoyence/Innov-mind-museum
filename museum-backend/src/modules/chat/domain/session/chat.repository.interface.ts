@@ -116,6 +116,18 @@ export interface UserChatExportData {
       audioUrl?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
+      // Cycle 4 (DSAR Art.15/20 — B-03) — recognised artworks (ArtworkMatch)
+      // nested in each message (design D-1). Allow-listed business fields only
+      // (D-2): never the internal uuid PK nor the FK. `[]` when none (EARS-3).
+      artworkMatches: {
+        artworkId: string | null;
+        title: string | null;
+        artist: string | null;
+        confidence: number;
+        source: string | null;
+        room: string | null;
+        createdAt: string;
+      }[];
     }[];
   }[];
 }

@@ -17,7 +17,7 @@ export function isSupportedLocale(s: string): s is SupportedLocale {
 }
 
 /** "fr-FR" → "fr". */
-const extractLangCode = (raw: string): string => {
+export const extractLangCode = (raw: string): string => {
   return raw.toLowerCase().split(/[-_]/)[0];
 };
 

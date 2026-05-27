@@ -50,6 +50,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 // Sentry
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
+  captureMessage: jest.fn(),
 }));
 
 // Runtime settings
@@ -930,26 +931,26 @@ describe('useChatSession', () => {
     expect(streamingMsgs).toHaveLength(0);
   });
 
-  // ── Streaming with empty response.message.text in onDone ────────────────
-
-  it('onDone with empty final text still replaces streaming placeholder', async () => {
-    mockSendMessageSmart.mockImplementation(
-      (params: {
-        onToken?: (text: string) => void;
-        onDone?: (payload: {
-          messageId: string;
-          createdAt: string;
-          metadata: Record<string, unknown>;
-        }) => void;
-      }) => {
-        // No tokens sent, so streamTextRef stays empty
-        params.onDone?.({
-          messageId: 'empty-text-msg',
+  // ── Streaming with empty response.message.text (live sync transport) ────────
+  //
+  // Cycle 5 realignment (UFR-022 D6/D8): this test previously fired `onDone`
+  // directly and asserted the empty bubble SURVIVED (`text:''`). That encoded
+  // the bug on a DEAD path — `sendMessageSmart` ignores `onDone` (send.ts:169-172),
+  // so the live finalize is the sync-fallback block (sendMessageStreaming.ts:117).
+  // It is now driven via `mockResolvedValue` (live transport) and asserts the
+  // real contract: a blank response leaves NO bubble and NO `-streaming` orphan.
+  it('empty final text on the live sync transport leaves no bubble and no -streaming placeholder', async () => {
+    mockSendMessageSmart.mockResolvedValue(
+      makePostMessageResponse({
+        sessionId: SESSION_ID,
+        message: {
+          id: 'empty-text-msg',
+          role: 'assistant',
+          text: '',
           createdAt: new Date().toISOString(),
-          metadata: {},
-        });
-        return Promise.resolve(null);
-      },
+        },
+        metadata: {},
+      }),
     );
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
@@ -962,9 +963,18 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'Hi' });
     });
 
-    const doneMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg');
-    expect(doneMsg).toBeDefined();
-    expect(doneMsg?.text).toBe('');
+    // No phantom bubble for the blank response, and no orphan placeholder.
+    expect(
+      result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg'),
+    ).toBeUndefined();
+    const emptyAssistant = result.current.messages.filter(
+      (m: ChatUiMessage) => m.role === 'assistant' && (m.text ?? '').trim() === '',
+    );
+    expect(emptyAssistant).toHaveLength(0);
+    const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
+      m.id.endsWith('-streaming'),
+    );
+    expect(streamingMsgs).toHaveLength(0);
   });
 
   // ── getErrorMessage with non-Error object ───────────────────────────────

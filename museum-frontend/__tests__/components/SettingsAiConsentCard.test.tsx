@@ -49,8 +49,11 @@ describe('SettingsAiConsentCard', () => {
 
     expect(getByText('settings.ai_consent_title')).toBeTruthy();
     const switches = getAllByRole('switch');
-    // 8 provider scopes + 1 location-data scope (B9).
-    expect(switches).toHaveLength(9);
+    // 8 provider scopes + 2 geo scopes (location_to_llm full + location_coarse_to_llm
+    // coarse — Cycle 1.5-FE REQ-FE-1). The card is data-driven on
+    // THIRD_PARTY_AI_SCOPES so the coarse switch appears automatically once the
+    // scope is appended to the domain list.
+    expect(switches).toHaveLength(10);
     for (const sw of switches) {
       expect(sw.props.value).toBe(false);
     }
@@ -227,6 +230,95 @@ describe('SettingsAiConsentCard', () => {
     });
     // location_to_llm is OPTIONAL — revoking it must NOT clear the "already
     // asked" memo (only the REQUIRED scope does — do not regress).
+    expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
+  });
+
+  // Cycle 1.5-FE (REQ-FE-1/6, T-SET-2) — the coarse scope sits at index 9
+  // (appended after location_to_llm at index 8). Toggling it ON grants exactly
+  // `location_coarse_to_llm` via the same /api/auth/consent round-trip.
+  it('grants location_coarse_to_llm when its Switch (index 9) is toggled on', async () => {
+    mockListUserConsents.mockResolvedValue([]);
+    mockGrantConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      expect(mockListUserConsents).toHaveBeenCalled();
+    });
+
+    const coarseSwitch = getAllByRole('switch')[9];
+    if (!coarseSwitch) throw new Error('expected coarse switch at index 9');
+    fireEvent(coarseSwitch, 'valueChange', true);
+
+    await waitFor(() => {
+      expect(mockGrantConsentScope).toHaveBeenCalledWith('location_coarse_to_llm');
+    });
+  });
+
+  // Cycle 1.5-FE (REQ-FE-7/11, T-SET-3) — revoking the coarse scope calls
+  // revoke with exactly that scope and must NOT clear the "already asked" memo
+  // (it is OPTIONAL, like every non-REQUIRED scope).
+  it('revokes location_coarse_to_llm when toggled off (optional scope — flag not cleared)', async () => {
+    mockListUserConsents.mockResolvedValue([
+      {
+        id: 10,
+        scope: 'location_coarse_to_llm',
+        version: '2026-06-01',
+        grantedAt: '2026-05-16T10:00:00.000Z',
+        revokedAt: null,
+        source: 'ui',
+      },
+    ]);
+    mockRevokeConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      expect(getAllByRole('switch')[9]?.props.value).toBe(true);
+    });
+
+    const coarseSwitch = getAllByRole('switch')[9];
+    if (!coarseSwitch) throw new Error('expected location_coarse_to_llm switch at index 9');
+    fireEvent(coarseSwitch, 'valueChange', false);
+
+    await waitFor(() => {
+      expect(mockRevokeConsentScope).toHaveBeenCalledWith('location_coarse_to_llm');
+    });
+    expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
+  });
+
+  // Cycle 1.5-FE (D1 = Option C, REQ-FE-8) — the two geo scopes are mutually
+  // exclusive: granting coarse while full is already granted must revoke full
+  // (grant-one + revoke-the-other), so the BE never receives both geo grants at
+  // once (which would let full silently dominate — misleading consent).
+  it('granting coarse when full is already granted revokes location_to_llm (exclusivity)', async () => {
+    mockListUserConsents.mockResolvedValue([
+      {
+        id: 8,
+        scope: 'location_to_llm',
+        version: '2026-06-01',
+        grantedAt: '2026-05-16T10:00:00.000Z',
+        revokedAt: null,
+        source: 'ui',
+      },
+    ]);
+    mockGrantConsentScope.mockResolvedValue(undefined);
+    mockRevokeConsentScope.mockResolvedValue(undefined);
+
+    const { getAllByRole } = render(<SettingsAiConsentCard />);
+    await waitFor(() => {
+      // full (index 8) reflects granted from BE.
+      expect(getAllByRole('switch')[8]?.props.value).toBe(true);
+    });
+
+    const coarseSwitch = getAllByRole('switch')[9];
+    if (!coarseSwitch) throw new Error('expected coarse switch at index 9');
+    fireEvent(coarseSwitch, 'valueChange', true);
+
+    await waitFor(() => {
+      expect(mockGrantConsentScope).toHaveBeenCalledWith('location_coarse_to_llm');
+    });
+    // Exclusivity: the previously-granted full geo scope is revoked.
+    expect(mockRevokeConsentScope).toHaveBeenCalledWith('location_to_llm');
+    // Geo revocation is OPTIONAL — must not clear the accepted-flag memo.
     expect(mockClearConsentAcceptedFlag).not.toHaveBeenCalled();
   });
 

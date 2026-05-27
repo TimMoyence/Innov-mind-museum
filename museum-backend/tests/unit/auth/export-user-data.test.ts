@@ -60,6 +60,7 @@ describe('ExportUserDataUseCase', () => {
               role: 'user',
               text: 'Tell me about the Mona Lisa',
               createdAt: '2026-03-01T10:01:00.000Z',
+              artworkMatches: [],
             },
             {
               id: 'msg-2',
@@ -67,6 +68,7 @@ describe('ExportUserDataUseCase', () => {
               text: 'The Mona Lisa is...',
               audioUrl: 's3://audio/msg-2.mp3',
               createdAt: '2026-03-01T10:01:05.000Z',
+              artworkMatches: [],
             },
           ],
         },
@@ -140,7 +142,7 @@ describe('ExportUserDataUseCase', () => {
 
     const result = await useCase.execute(user);
 
-    expect(result.schemaVersion).toBe('2');
+    expect(result.schemaVersion).toBe('3');
     expect(new Date(result.exportedAt).getTime()).not.toBeNaN();
     expect(result.user.id).toBe(1);
     expect(result.user.email).toBe('ada@example.com');

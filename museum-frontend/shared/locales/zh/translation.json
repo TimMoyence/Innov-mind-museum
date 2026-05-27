@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — 照片",
       "third_party_ai_audio_google": "Google AI — 语音转录",
       "third_party_ai_profile_google": "Google AI — 偏好与历史",
-      "location_to_llm": "位置 — 附近的地点"
+      "location_to_llm": "位置 — 附近的地点",
+      "location_coarse_to_llm": "位置 — 仅城市"
     },
     "accessibility": "无障碍",
     "audio_description": "音频描述",
@@ -526,7 +527,8 @@
       "gallery": "从相册选择",
       "record_audio": "录制语音消息",
       "stop_audio": "停止录制",
-      "scan_cartel": "扫描说明牌"
+      "scan_cartel": "扫描说明牌",
+      "compare": "比较这件作品"
     },
     "cartelScanner": {
       "title": "扫描说明牌二维码",
@@ -932,6 +934,8 @@
       "send_hint": "将您的消息发送给博物馆助手",
       "message_input": "输入您的消息",
       "assistant_message": "助手消息",
+      "attached_image": "附加到消息的图片",
+      "loading": "正在加载回复",
       "user_message": "您的消息",
       "long_press_hint": "长按以查看更多选项",
       "recommendation_hint": "用此建议填充输入框",
@@ -1110,7 +1114,9 @@
     "manage_subtitle": "您可以自由取消勾选任何类别。“OpenAI 文本”范围是与 AI 聊天的必需项。",
     "save_required_hint": "启用“OpenAI 文本”以保存您的选择。",
     "scope_location": "位置",
-    "scope_location_hint": "您的大致区域（城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的精确位置绝不会被共享。"
+    "scope_location_hint": "您的大致街区（街区＋城市）会与 AI 共享，以识别附近的博物馆和纪念碑。您的街道、地址和精确位置绝不会被共享。",
+    "scope_location_coarse": "仅城市",
+    "scope_location_coarse_hint": "仅与 AI 共享您的城市和国家／地区，精度低于街区级别。您的街道和精确位置绝不会被共享。"
   },
   "dailyArt": {
     "title": "每日艺术",

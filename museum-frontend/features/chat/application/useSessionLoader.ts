@@ -4,7 +4,12 @@ import * as Sentry from '@sentry/react-native';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { chatApi } from '../infrastructure/chatApi';
 import { useChatSessionStore } from '../infrastructure/chatSessionStore';
-import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
+import {
+  isRenderableAssistantContent,
+  mapApiMessageToUiMessage,
+  sortByTime,
+  type ChatUiMessage,
+} from './chatSessionLogic.pure';
 
 interface CancellationTick {
   cancelled: boolean;
@@ -49,7 +54,18 @@ export const useSessionLoader = (
       const response = await chatApi.getSession(sessionId);
       const title = response.session.title ?? null;
       const museum = response.session.museumName ?? null;
-      const sorted = sortByTime(response.messages.map(mapApiMessageToUiMessage));
+      // Cycle 5 (EARS-6/D7) — a persisted assistant message with no renderable
+      // content (degraded 200 saved blank in DB) must not reload as a phantom
+      // empty bubble. User/system messages always pass; only non-renderable
+      // assistant messages are filtered. `mapApiMessageToUiMessage` stays a pure
+      // 1:1 map; the filter lives at the call-site.
+      const sorted = sortByTime(
+        response.messages
+          .map(mapApiMessageToUiMessage)
+          .filter(
+            (m) => m.role !== 'assistant' || isRenderableAssistantContent(m.text, m.metadata),
+          ),
+      );
       // Hydrate the shared cache regardless of cancellation (R10).
       storeSetSession(sessionId, sorted, title, museum);
       if (tick.cancelled) return;

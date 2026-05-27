@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — Fotos",
       "third_party_ai_audio_google": "Google AI — Sprachtranskriptionen",
       "third_party_ai_profile_google": "Google AI — Präferenzen & Verlauf",
-      "location_to_llm": "Standort — Orte in der Nähe"
+      "location_to_llm": "Standort — Orte in der Nähe",
+      "location_coarse_to_llm": "Standort — nur Stadt"
     },
     "accessibility": "Barrierefreiheit",
     "audio_description": "Audiobeschreibung",
@@ -526,7 +527,8 @@
       "gallery": "Aus Galerie wählen",
       "record_audio": "Sprachnachricht aufnehmen",
       "stop_audio": "Aufnahme stoppen",
-      "scan_cartel": "Schild scannen"
+      "scan_cartel": "Schild scannen",
+      "compare": "Dieses Werk vergleichen"
     },
     "cartelScanner": {
       "title": "QR-Code des Schilds scannen",
@@ -932,6 +934,8 @@
       "send_hint": "Sendet Ihre Nachricht an den Museumsassistenten",
       "message_input": "Nachricht eingeben",
       "assistant_message": "Nachricht des Assistenten",
+      "attached_image": "An die Nachricht angehängtes Bild",
+      "loading": "Antwort wird geladen",
       "user_message": "Ihre Nachricht",
       "long_press_hint": "Lange drücken für weitere Optionen",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
@@ -1110,7 +1114,9 @@
     "manage_subtitle": "Sie können jede Kategorie frei abwählen. Der Bereich \"OpenAI Text\" ist erforderlich, um mit der KI zu chatten.",
     "save_required_hint": "Aktivieren Sie \"OpenAI Text\", um Ihre Auswahl zu speichern.",
     "scope_location": "Standort",
-    "scope_location_hint": "Ihre ungefähre Region (Stadt) wird mit der KI geteilt, um nahegelegene Museen und Denkmäler zu erkennen. Ihr genauer Standort wird niemals geteilt."
+    "scope_location_hint": "Ihr ungefähres Viertel (Stadtteil + Stadt) wird mit der KI geteilt, um nahegelegene Museen und Denkmäler zu erkennen. Ihre Straße, Adresse und Ihr genauer Standort werden niemals geteilt.",
+    "scope_location_coarse": "Nur Stadt",
+    "scope_location_coarse_hint": "Nur Ihre Stadt und Ihr Land werden mit der KI geteilt – weniger genau als die Viertel-Ebene. Ihre Straße und Ihr genauer Standort werden niemals geteilt."
   },
   "dailyArt": {
     "title": "Kunstwerk des Tages",

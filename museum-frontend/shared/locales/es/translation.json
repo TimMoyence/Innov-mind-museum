@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — fotos",
       "third_party_ai_audio_google": "Google AI — transcripciones de voz",
       "third_party_ai_profile_google": "Google AI — preferencias e historial",
-      "location_to_llm": "Ubicación — lugares cercanos"
+      "location_to_llm": "Ubicación — lugares cercanos",
+      "location_coarse_to_llm": "Ubicación — solo ciudad"
     },
     "accessibility": "Accesibilidad",
     "audio_description": "Audiodescripción",
@@ -526,7 +527,8 @@
       "gallery": "Elegir de la galería",
       "record_audio": "Grabar mensaje de voz",
       "stop_audio": "Detener grabación",
-      "scan_cartel": "Escanear cartela"
+      "scan_cartel": "Escanear cartela",
+      "compare": "Comparar esta obra"
     },
     "cartelScanner": {
       "title": "Escanear el QR de la cartela",
@@ -932,6 +934,8 @@
       "send_hint": "Envía tu mensaje al asistente del museo",
       "message_input": "Escribe tu mensaje",
       "assistant_message": "Mensaje del asistente",
+      "attached_image": "Imagen adjunta al mensaje",
+      "loading": "Cargando la respuesta",
       "user_message": "Tu mensaje",
       "long_press_hint": "Mantener pulsado para más opciones",
       "recommendation_hint": "Rellena el campo con esta sugerencia",
@@ -1110,7 +1114,9 @@
     "manage_subtitle": "Puedes desmarcar cualquier categoría libremente. El ámbito \"OpenAI Texto\" es obligatorio para chatear con la IA.",
     "save_required_hint": "Activa \"OpenAI Texto\" para guardar tus opciones.",
     "scope_location": "Ubicación",
-    "scope_location_hint": "Tu zona aproximada (ciudad) se comparte con la IA para reconocer museos y monumentos cercanos. Tu ubicación precisa nunca se comparte."
+    "scope_location_hint": "Tu barrio aproximado (barrio + ciudad) se comparte con la IA para reconocer museos y monumentos cercanos. Tu calle, dirección y ubicación precisa nunca se comparten.",
+    "scope_location_coarse": "Solo ciudad",
+    "scope_location_coarse_hint": "Solo se comparten tu ciudad y país con la IA, una opción menos precisa que el nivel de barrio. Tu calle y ubicación precisa nunca se comparten."
   },
   "dailyArt": {
     "title": "Obra del Día",
