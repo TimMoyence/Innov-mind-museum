@@ -579,7 +579,8 @@
       "responses": "Réponses",
       "distribution": "Répartition des réponses",
       "chartAriaLabel": "Diagramme en barres des promoteurs, passifs et détracteurs",
-      "allMuseums": "Tous les musées"
+      "allMuseums": "Tous les musées",
+      "noMuseumAssigned": "Aucun musée n'est assigné à votre compte. Contactez un administrateur."
     },
     "export": {
       "sessions": {

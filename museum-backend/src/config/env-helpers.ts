@@ -36,6 +36,32 @@ export const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
+/**
+ * Parses an ISO-8601 timestamp env var, returning a normalised UTC ISO string.
+ * Invalid / unparseable values fall back to `fallbackIso` (and emit a structured
+ * stderr warning) so a typo'd `NPS_SCALE_EPOCH` never silently disables the NPS
+ * cutoff — it degrades to the documented default instead of `Invalid Date`.
+ * The output is always a valid ISO string safe to bind as a SQL `timestamptz`
+ * parameter.
+ */
+export const toIsoTimestamp = (value: string | undefined, fallbackIso: string): string => {
+  const raw = value?.trim();
+  if (!raw) return fallbackIso;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    process.stderr.write(
+      JSON.stringify({
+        level: 'warn',
+        event: 'env_iso_timestamp_invalid',
+        raw,
+        fallback: fallbackIso,
+      }) + '\n',
+    );
+    return fallbackIso;
+  }
+  return parsed.toISOString();
+};
+
 /** Clamp to [0, 1]. NaN/non-finite → 0, >1 saturates at 1. */
 export const clampUnitInterval = (value: number): number => {
   if (!Number.isFinite(value)) return 0;

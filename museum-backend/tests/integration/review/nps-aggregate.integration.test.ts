@@ -161,6 +161,73 @@ describe('ReviewRepositoryPg.aggregateNps — real SQL [integration, real PG]', 
     });
   });
 
+  describe('NPS scale-epoch cutoff — legacy pre-epoch reviews excluded (F3)', () => {
+    // The 1-5 → 0-10 scale switch means a legacy "5" is now scored as a
+    // detractor (≤6) although it was a top legacy rating. `aggregateNps` MUST
+    // only count reviews created AT/AFTER `NPS_SCALE_EPOCH` (default
+    // 2026-05-27T00:00:00Z) so the legacy cohort never poisons the score.
+    // Baseline FAILS: current impl has no `createdAt >= :npsEpoch` predicate,
+    // so the legacy rows are counted alongside the post-epoch ones.
+    const BEFORE_EPOCH = '2026-01-01T00:00:00Z';
+    const AFTER_EPOCH = '2026-06-01T00:00:00Z';
+
+    it('global aggregate counts ONLY the post-epoch review, excluding a legacy pre-epoch one', async () => {
+      // Legacy detractor-by-coincidence (a former 1-5 "5") created before epoch.
+      await insertReviewRow(harness.dataSource, {
+        rating: 5,
+        museumId: null,
+        createdAt: BEFORE_EPOCH,
+      });
+      // Genuine post-epoch promoter on the new 0-10 scale.
+      await insertReviewRow(harness.dataSource, {
+        rating: 10,
+        museumId: null,
+        createdAt: AFTER_EPOCH,
+      });
+
+      const result = await repo.aggregateNps();
+
+      // Only the post-epoch 10 is counted: the legacy 5 must NOT appear in any
+      // bucket nor the total.
+      expect(result.count).toBe(1);
+      expect(result.promoters).toBe(1);
+      expect(result.detractors).toBe(0);
+      expect(result.nps).toBe(100);
+    });
+
+    it('per-museum aggregate counts ONLY the post-epoch review, excluding a legacy pre-epoch one', async () => {
+      await insertReviewRow(harness.dataSource, {
+        rating: 5,
+        museumId: 42,
+        createdAt: BEFORE_EPOCH,
+      });
+      await insertReviewRow(harness.dataSource, {
+        rating: 10,
+        museumId: 42,
+        createdAt: AFTER_EPOCH,
+      });
+
+      const result = await repo.aggregateNps(42);
+
+      expect(result.count).toBe(1);
+      expect(result.promoters).toBe(1);
+      expect(result.detractors).toBe(0);
+      expect(result.nps).toBe(100);
+    });
+
+    it('returns a neutral aggregate when the only review is legacy (pre-epoch)', async () => {
+      await insertReviewRow(harness.dataSource, {
+        rating: 5,
+        museumId: null,
+        createdAt: BEFORE_EPOCH,
+      });
+
+      const result = await repo.aggregateNps();
+
+      expect(result).toEqual({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 });
+    });
+  });
+
   describe('global vs per-museum incl. museum_id NULL (R7 / R2 — the key fix)', () => {
     beforeEach(async () => {
       // 5 global (museum_id NULL) + 5 attributed to museum 42, all approved.

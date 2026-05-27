@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { apiGet } from '@/lib/api';
+import { apiGet, ApiError } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useAuth } from '@/lib/auth';
 import { EmptyChartPlaceholder } from '@/components/admin/EmptyChartPlaceholder';
@@ -72,7 +72,15 @@ export default function NpsPage() {
         setNps(data);
       } catch (err) {
         if (tick.cancelled) return;
-        setError(err instanceof Error ? err.message : adminDict.common.noData);
+        // F6 — a museum_manager with a NULL museumId claim still sees this page
+        // (the nav link is shown) but the backend 403s the read with
+        // `forbidden('No museum assigned')` / `'Museum scope required'`. Surface
+        // a clear, actionable message instead of the raw technical 403 text.
+        if (err instanceof ApiError && err.status === 403) {
+          setError(adminDict.npsPage.noMuseumAssigned);
+        } else {
+          setError(err instanceof Error ? err.message : adminDict.common.noData);
+        }
       } finally {
         if (!tick.cancelled) setLoading(false);
       }

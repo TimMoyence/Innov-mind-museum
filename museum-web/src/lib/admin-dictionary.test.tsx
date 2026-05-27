@@ -232,6 +232,7 @@ const mockAdminDict: Dictionary['admin'] = {
     distribution: '',
     chartAriaLabel: '',
     allMuseums: '',
+    noMuseumAssigned: '',
   },
   export: {
     sessions: { label: '', downloading: '', error: '' },

@@ -1,3 +1,4 @@
+import { resolveNpsScaleEpoch } from '@modules/review/domain/review/nps-scale-epoch';
 import { Review } from '@modules/review/domain/review/review.entity';
 import { paginate } from '@shared/pagination/offset-paginate';
 
@@ -99,6 +100,15 @@ export class ReviewRepositoryPg implements IReviewRepository {
    *
    * `status = 'approved'` is always present (pending / rejected excluded so
    * moderation controls the public score).
+   *
+   * NPS scale-epoch (F3) : the rating scale switched 1-5 (legacy stars) → 0-10
+   * (NPS). A legacy "5" is indistinguishable by value from an NPS "5" yet would
+   * now be miscounted as a detractor (≤6). So we count ONLY reviews created
+   * AT/AFTER the configured epoch (`resolveNpsScaleEpoch()` — env
+   * `NPS_SCALE_EPOCH` or the deploy-date default; `createdAt >= :npsEpoch`,
+   * parameterized timestamptz) — the legacy cohort is excluded from BOTH the
+   * global and the per-museum aggregate. Applies before bucketing, so buckets +
+   * total + nps are all over the post-epoch cohort only.
    */
   async aggregateNps(museumId?: number | null): Promise<NpsAggregate> {
     const qb = this.repo
@@ -107,7 +117,12 @@ export class ReviewRepositoryPg implements IReviewRepository {
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 7 AND r.rating <= 8)', 'passives')
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 0 AND r.rating <= 6)', 'detractors')
       .addSelect('COUNT(*)', 'count')
-      .where('r.status = :status', { status: 'approved' });
+      .where('r.status = :status', { status: 'approved' })
+      // F3 — exclude legacy 1-5 reviews predating the 0-10 scale switch. Bound
+      // as a parameter (never concatenated); pg casts the ISO string to the
+      // `createdAt` timestamptz column. Applies to global AND per-museum paths.
+      // Resolved per-call so an env override is honoured without a restart.
+      .andWhere('r.createdAt >= :npsEpoch', { npsEpoch: resolveNpsScaleEpoch() });
 
     // Per-museum scope ONLY when a concrete museumId is supplied. Omitting the
     // predicate (not adding `IS NULL`) is the key global-incl-NULL fix (R7).

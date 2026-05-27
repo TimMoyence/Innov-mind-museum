@@ -235,6 +235,7 @@ export const mockAdminDict: Dictionary['admin'] = {
     distribution: 'Response distribution',
     chartAriaLabel: 'Bar chart of promoter, passive and detractor counts',
     allMuseums: 'All museums',
+    noMuseumAssigned: 'No museum is assigned to your account. Please contact an administrator.',
   },
   export: {
     sessions: { label: 'CSV sessions', downloading: 'Preparing', error: 'Failed' },

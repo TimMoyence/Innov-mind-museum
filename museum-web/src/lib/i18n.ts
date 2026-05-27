@@ -430,6 +430,10 @@ export interface Dictionary {
       distribution: string;
       chartAriaLabel: string;
       allMuseums: string;
+      // F6 — shown when the NPS read 403s because the signed-in manager has no
+      // museum assigned (NULL museumId claim). Actionable copy instead of the
+      // raw backend "No museum assigned" / "Museum scope required" text.
+      noMuseumAssigned: string;
     };
     /**
      * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind

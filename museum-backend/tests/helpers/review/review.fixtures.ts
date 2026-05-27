@@ -37,6 +37,16 @@ export interface InsertReviewRowOptions {
   userId?: number;
   userName?: string;
   comment?: string;
+  /**
+   * Explicit `createdAt` override (NPS scale-epoch tests, S-BE-AGG F3). When
+   * omitted the DB default (`now()`) applies, so the row lands AFTER any
+   * realistic `NPS_SCALE_EPOCH`. Accepts a `Date` or an ISO string; passed as a
+   * bound parameter ($7) so legacy pre-epoch rows (e.g. `2026-01-01`) can be
+   * seeded without string concatenation. Column is `"createdAt"` (camelCase, no
+   * naming-strategy override — cf. `review.entity.ts:64` / CreateReviewsTable
+   * migration).
+   */
+  createdAt?: Date | string;
 }
 
 export async function insertReviewRow(
@@ -50,7 +60,18 @@ export async function insertReviewRow(
     userId = 1,
     userName = 'Test User',
     comment = 'A sufficiently long integration-test review comment.',
+    createdAt,
   } = options;
+
+  if (createdAt !== undefined) {
+    const rows = await dataSource.query<{ id: string }[]>(
+      `INSERT INTO "reviews" ("userId", "userName", "rating", "comment", "status", "museum_id", "createdAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+      [userId, userName, rating, comment, status, museumId, createdAt],
+    );
+    return rows[0].id;
+  }
 
   const rows = await dataSource.query<{ id: string }[]>(
     `INSERT INTO "reviews" ("userId", "userName", "rating", "comment", "status", "museum_id")
