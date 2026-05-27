@@ -32,6 +32,18 @@
  * messages, top-level messages, and `output.content` (PATTERNS.md §3 DO #13 —
  * one central hook).
  *
+ * SEC-001 (2026-05-26) — `langfuse-core@3.38.20 maskEventBodyInPlace`
+ * (`lib/index.cjs.js:1301-1318`) calls `mask({ data: body[key] })` SEPARATELY
+ * per `["input","output"]` key, so the mask hook receives the free-text at the
+ * TOP LEVEL of `data`, NOT wrapped under `{input|output|messages}` :
+ *   (a) `{ data: [ {content, role}, … ] }`  — input raw extracted array.
+ *   (b) `{ data: { content, role } }`        — output AIMessage object.
+ *   (c) `{ data: 'raw completion text' }`    — output string fallback.
+ * `stripTopLevelData` handles these (string → `STRIPPED` ; array →
+ * `stripMessagesArray` ; `{content,…}` without wrapper keys → strip `.content`).
+ * The wrapper branches (`stripWrapperData`) are KEPT as defence-in-depth (the
+ * Cycle 2 golden tests + `langfuse-pii-seed` integration test lock them).
+ *
  * Fail-safe (R7) : wraps the entire body in try/catch. If anything throws
  * (corrupted shape, hostile Proxy, future Langfuse body shape we don't
  * recognise) the input is returned unchanged and `logger.warn('langfuse_
@@ -170,6 +182,61 @@ const stripOutputObject = (rawOutput: Record<string, unknown>): Record<string, u
 };
 
 /**
+ * Defence-in-depth WRAPPER branches. Some LangChain shapes (and the Cycle 2
+ * golden tests + the `langfuse-pii-seed` integration test) put the free-text
+ * under `{ input, output, messages }` keys rather than at the top level. Reads
+ * the three branches first so a hostile Proxy (R7 — getter throws on
+ * `input`/`output`/`messages`) propagates to the caller's try/catch immediately
+ * rather than returning a no-op clone. Returns a NEW `data` clone (immutable).
+ */
+const stripWrapperData = (dataObj: Record<string, unknown>): Record<string, unknown> => {
+  const rawInput = dataObj.input;
+  const rawOutput = dataObj.output;
+  const rawMessages = dataObj.messages;
+
+  const cloned: Record<string, unknown> = { ...dataObj };
+
+  if (rawInput && typeof rawInput === 'object') {
+    cloned.input = stripInputObject(rawInput as Record<string, unknown>);
+  }
+  if (rawOutput && typeof rawOutput === 'object') {
+    cloned.output = stripOutputObject(rawOutput as Record<string, unknown>);
+  }
+  // Defensive top-level `messages` (some LangChain shapes put the array at the
+  // root of `data` instead of under `input`). `stripMessagesArray` returns a
+  // NEW array with each message shallow-cloned and its `content` masked
+  // (string OR multimodal array, REQ-1/2 T-19).
+  if (Array.isArray(rawMessages)) {
+    cloned.messages = stripMessagesArray(rawMessages);
+  }
+  return cloned;
+};
+
+/**
+ * Strip the REAL top-level SDK shapes (`langfuse-core@3.38.20`
+ * `maskEventBodyInPlace` calls `mask({ data: body[key] })` per `["input",
+ * "output"]` key — verified `maskPayloads.ts`). Returns the masked `data`, or
+ * `undefined` when `data` is not one of the recognised top-level shapes (the
+ * caller then falls through to the wrapper branches). Shapes :
+ *   (c) non-empty string → `STRIPPED` ; empty string → unchanged.
+ *   (a) array → `stripMessagesArray`.
+ *   (b) `{ content, role }` WITHOUT `input/output/messages` → strip `.content`.
+ */
+const stripTopLevelData = (data: unknown): unknown => {
+  if (typeof data === 'string') return data === '' ? data : STRIPPED;
+  if (Array.isArray(data)) return stripMessagesArray(data);
+  if (!data || typeof data !== 'object') return undefined;
+
+  const dataObj = data as Record<string, unknown>;
+  const isWrapper =
+    dataObj.input !== undefined || dataObj.output !== undefined || dataObj.messages !== undefined;
+  if (!isWrapper && 'content' in dataObj) {
+    return { ...dataObj, content: stripContentValue(dataObj.content) };
+  }
+  return undefined;
+};
+
+/**
  * Langfuse `MaskFunction` shape — matches `langfuse-core@3.38.20`
  * `lib/index.d.ts:7126-7128` verbatim. The `data` field is intentionally
  * `any` (NOT `unknown`) because the SDK passes arbitrary event/observation
@@ -197,38 +264,16 @@ export function stripFreeText(params: MaskInput): MaskInput {
     const raw = params as unknown;
     if (typeof raw !== 'object' || raw === null) return params;
     const data = (raw as { data: unknown }).data;
+
+    // SEC-001 — handle the REAL top-level SDK shapes first (string fallback (c),
+    // input array (a), output `{content,role}` object (b)). `stripTopLevelData`
+    // returns `undefined` when `data` is not one of these → fall through to the
+    // wrapper (defence-in-depth) branches that own `{input,output,messages}`.
+    const topLevel = stripTopLevelData(data);
+    if (topLevel !== undefined) return { ...params, data: topLevel };
     if (!data || typeof data !== 'object') return params;
-    const dataObj = data as Record<string, unknown>;
 
-    // Read the three free-text-bearing branches BEFORE shallow-cloning. This
-    // lets hostile shapes (R7 Proxy test — getter throws on `input`/`output`/
-    // `messages`) trigger the try/catch immediately, rather than silently
-    // returning a no-op clone built from the proxy's empty `ownKeys`.
-    const rawInput = dataObj.input;
-    const rawOutput = dataObj.output;
-    const rawMessages = dataObj.messages;
-
-    // Top-level shallow clone — keeps the function side-effect-free for the
-    // caller's `params.data` object.
-    const cloned: Record<string, unknown> = { ...dataObj };
-
-    if (rawInput && typeof rawInput === 'object') {
-      cloned.input = stripInputObject(rawInput as Record<string, unknown>);
-    }
-
-    if (rawOutput && typeof rawOutput === 'object') {
-      cloned.output = stripOutputObject(rawOutput as Record<string, unknown>);
-    }
-
-    // Defensive top-level `messages` (some LangChain shapes put the array at
-    // the root of `data` instead of under `input`). `stripMessagesArray`
-    // returns a NEW array with each message shallow-cloned and its `content`
-    // masked (string OR multimodal array, REQ-1/2 T-19).
-    if (Array.isArray(rawMessages)) {
-      cloned.messages = stripMessagesArray(rawMessages);
-    }
-
-    return { ...params, data: cloned };
+    return { ...params, data: stripWrapperData(data as Record<string, unknown>) };
   } catch (error) {
     // R7 fail-safe — NEVER let mask exceptions bubble into the SDK's
     // synchronous `maskEventBodyInPlace` path (would crash flush/enqueue).

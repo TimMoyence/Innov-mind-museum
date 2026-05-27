@@ -144,12 +144,17 @@ describe('stripFreeText — R7 fail-safe (never throws, warns)', () => {
     expect(out).toEqual({});
   });
 
-  it('returns input unchanged when data is a primitive string', () => {
-    let out: unknown;
+  // SEC-001 contract change : a non-empty top-level `data` string is the REAL
+  // `handleLLMEnd` string-fallback shape (langfuse-langchain lib:425 →
+  // langfuse-core lib:1309 `mask({ data: body.output })`). It carries the raw
+  // completion → MUST be stripped, not returned unchanged. (Previously this
+  // case asserted `{ data: 'string' }` passthrough, which encoded the leak.)
+  it('strips a non-empty primitive string data (real handleLLMEnd fallback)', () => {
+    let out: { data: unknown } | undefined;
     expect(() => {
       out = stripFreeText({ data: 'string' as unknown });
     }).not.toThrow();
-    expect(out).toEqual({ data: 'string' });
+    expect(out!.data).toBe('[STRIPPED]');
   });
 
   it('never throws on Symbol data', () => {
