@@ -101,25 +101,28 @@ const artworks: readonly Artwork[] = [
     museum: 'Uffizi Gallery, Florence',
   },
   {
-    title: 'The Persistence of Memory',
-    artist: 'Salvador Dali',
-    year: '1931',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg',
-    description: 'A surrealist painting featuring melting pocket watches in a dreamlike landscape.',
+    title: 'Lady with an Ermine',
+    artist: 'Leonardo da Vinci',
+    year: 'c. 1489-1491',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Lady_with_an_Ermine_-_Leonardo_da_Vinci_%28adjusted_levels%29.jpg/1280px-Lady_with_an_Ermine_-_Leonardo_da_Vinci_%28adjusted_levels%29.jpg',
+    description:
+      'A portrait of Cecilia Gallerani, mistress of the Duke of Milan, holding a white ermine.',
     funFact:
-      'Dali said the melting watches were inspired by the surrealist perception of a Camembert cheese melting in the sun.',
-    museum: 'Museum of Modern Art (MoMA), New York',
+      'The ermine is a symbol of purity and also a pun on Cecilia\'s surname: the Greek word for ermine, "galé," echoes Gallerani.',
+    museum: 'Czartoryski Museum, Krakow',
   },
   {
-    title: 'Guernica',
-    artist: 'Pablo Picasso',
-    year: '1937',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/7/74/PicassoGuernica.jpg',
+    title: 'The Hay Wain',
+    artist: 'John Constable',
+    year: '1821',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/John_Constable_The_Hay_Wain.jpg/1280px-John_Constable_The_Hay_Wain.jpg',
     description:
-      'A powerful anti-war painting responding to the bombing of the Basque town of Guernica during the Spanish Civil War.',
+      "A pastoral scene of a hay wagon crossing the River Stour, depicting rural Suffolk near Constable's childhood home.",
     funFact:
-      'When a Nazi officer asked Picasso if he had done this, Picasso reportedly replied: "No, you did."',
-    museum: 'Museo Reina Sofia, Madrid',
+      'Largely ignored in England, the painting won a gold medal at the 1824 Paris Salon and deeply influenced French painters like Delacroix.',
+    museum: 'National Gallery, London',
   },
   {
     title: 'The Great Wave off Kanagawa',
@@ -170,15 +173,16 @@ const artworks: readonly Artwork[] = [
     museum: 'Art Institute of Chicago',
   },
   {
-    title: 'The Son of Man',
-    artist: 'Rene Magritte',
-    year: '1964',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/e/e5/Magritte_TheSonOfMan.jpg',
+    title: 'The Fighting Temeraire',
+    artist: 'J. M. W. Turner',
+    year: '1839',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg/1280px-The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg',
     description:
-      'A surrealist self-portrait showing a man in a bowler hat with a green apple obscuring his face.',
+      'A veteran warship of the Battle of Trafalgar being towed by a steam tug to its final berth to be broken up, set against a blazing sunset.',
     funFact:
-      'Magritte said the apple represents "the visible that is hidden and the visible that is present," the conflict between what we see and what is concealed.',
-    museum: 'Private collection',
+      'Turner refused to ever sell the painting, calling it his "darling," and bequeathed it to the British nation in 1851.',
+    museum: 'National Gallery, London',
   },
   {
     title: 'The Thinker',
@@ -253,15 +257,16 @@ const artworks: readonly Artwork[] = [
     museum: 'Rijksmuseum, Amsterdam',
   },
   {
-    title: 'Self-Portrait with Thorn Necklace and Hummingbird',
-    artist: 'Frida Kahlo',
-    year: '1940',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/1/1e/Frida_Kahlo_%28self_portrait%29.jpg',
+    title: 'Ophelia',
+    artist: 'John Everett Millais',
+    year: '1851-1852',
+    imageUrl:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Millais_-_Ophelia.jpg/1280px-Millais_-_Ophelia.jpg',
     description:
-      'A self-portrait showing Kahlo with a thorn necklace, a dead hummingbird, and symbolic animals.',
+      "A Pre-Raphaelite painting of Shakespeare's Ophelia singing as she drowns in a stream, surrounded by meticulously detailed flowers.",
     funFact:
-      'Kahlo painted this shortly after her divorce from Diego Rivera; the thorns symbolize her pain and the hummingbird is a Mexican love charm.',
-    museum: 'Harry Ransom Center, Austin',
+      'The model, Elizabeth Siddal, posed in a bathtub of water for hours; the lamps warming it went out and she caught a severe cold.',
+    museum: 'Tate Britain, London',
   },
   {
     title: 'The Creation of Adam',
