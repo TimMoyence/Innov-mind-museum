@@ -163,6 +163,8 @@ export function validateProductionEnv(env: AppEnv): void {
     console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
   }
 
+  warnIfPlausibleNotConfigured(env);
+
   validateJwtSecrets(env);
 
   required('PGDATABASE', process.env.PGDATABASE);
@@ -200,6 +202,31 @@ export function validateProductionEnv(env: AppEnv): void {
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+}
+
+/**
+ * C3.2 (NFR-ROBUST-1) — NON-blocking warn when Plausible analytics is not fully
+ * configured. The KR4 funnel goes silent (the PlausibleAdapter no-ops) when
+ * either var is absent ; without this warn an operator has no boot-time signal.
+ * Never throws — an analytics outage MUST NOT block prod boot (same doctrine as
+ * the BREVO_API_KEY warn). Reads the PARSED env (`env.plausible`), not
+ * `process.env` directly, mirroring the BREVO precedent.
+ */
+function warnIfPlausibleNotConfigured(env: AppEnv): void {
+  const domain = env.plausible?.domain;
+  const endpointUrl = env.plausible?.endpointUrl;
+  if (domain && endpointUrl) return;
+
+  const missing = [
+    domain ? null : 'PLAUSIBLE_DOMAIN',
+    endpointUrl ? null : 'PLAUSIBLE_ENDPOINT_URL',
+  ]
+    .filter(Boolean)
+    .join(', ');
+  console.warn(
+    `Plausible analytics not fully configured (${missing}) — the KR4 funnel ` +
+      'will be silent (PlausibleAdapter no-ops). Set these to enable funnel tracking.',
+  );
 }
 
 function validateExportPseudonymSalt(env: AppEnv): void {

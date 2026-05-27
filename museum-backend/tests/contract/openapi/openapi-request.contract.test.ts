@@ -73,6 +73,47 @@ describe('openapi request contracts (active API)', () => {
     });
   });
 
+  // T-API-5 (RED — S-BE-API drift fix R18 + attribution R23).
+  // Baseline FAILS: OpenAPI POST /api/reviews still lists `userName` in
+  // `required` (openapi.json:4457) — so a body WITHOUT `userName` fails the
+  // contract (assertion-fail), and a body WITH `sessionId` is currently not
+  // declared. After green (T-API-11) drops `userName` from required + adds
+  // optional `sessionId`, both assertions hold.
+  describe('reviews (drift fix)', () => {
+    it('POST /reviews — body {rating, comment} (NO userName) matches the contract (R18)', () => {
+      assertMatchesOpenApiRequest({
+        path: '/api/reviews',
+        method: 'post',
+        body: {
+          rating: 9,
+          comment: 'A sufficiently long review comment for the NPS scale.',
+        },
+      });
+    });
+
+    it('POST /reviews — body with optional sessionId matches the contract (R23)', () => {
+      assertMatchesOpenApiRequest({
+        path: '/api/reviews',
+        method: 'post',
+        body: {
+          rating: 8,
+          comment: 'A sufficiently long review comment for the NPS scale.',
+          sessionId: '11111111-1111-4111-8111-111111111111',
+        },
+      });
+    });
+
+    it('POST /reviews — missing rating still fails validation', () => {
+      expect(() =>
+        assertMatchesOpenApiRequest({
+          path: '/api/reviews',
+          method: 'post',
+          body: { comment: 'A sufficiently long review comment.' } as unknown,
+        }),
+      ).toThrow(/OpenAPI request validation failed/);
+    });
+  });
+
   describe('chat', () => {
     it('POST /chat/sessions — empty body is valid (all fields optional)', () => {
       assertMatchesOpenApiRequest({

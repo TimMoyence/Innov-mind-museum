@@ -47,9 +47,10 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
     async (req: Request, res: Response) => {
       const authedUser = requireUser(req);
 
-      const { rating, comment } = req.body as {
+      const { rating, comment, sessionId } = req.body as {
         rating: number;
         comment: string;
+        sessionId?: string;
       };
 
       const author = await resolveAuthor(authedUser.id);
@@ -57,14 +58,16 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
         throw unauthorized('User authentication required');
       }
 
-      // Wave B C7 / R-C7c — thread tenant scope from JWT claim. Undefined
-      // for visitors without a museum claim → review persists with NULL
-      // museum_id (catalog-level / global review, pre-B2B behaviour).
+      // NPS attribution (C2 / R1-R4 / Q1) — thread the VISITED session, NOT the
+      // author's tenant claim. The use-case resolves the session (ownership-
+      // checked) and derives `museum_id`. Absent / foreign session → NULL
+      // museum (global / public review). `authedUser.museumId` is deliberately
+      // never read here (R4 — it would mis-attribute a manager's reviews).
       const review = await createReviewUseCase.execute({
         user: author,
         rating,
         comment,
-        museumId: authedUser.museumId ?? null,
+        sessionId,
       });
 
       res.status(201).json({ review });

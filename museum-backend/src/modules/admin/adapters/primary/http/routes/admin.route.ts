@@ -40,7 +40,9 @@ import {
   adminSupportFacade,
 } from '@modules/admin/useCase';
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
-import { badRequest } from '@shared/errors/app.error';
+import { getNpsUseCase } from '@modules/review/useCase';
+import { computeTenantScope } from '@shared/authz/tenant-scope';
+import { badRequest, forbidden } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
@@ -237,7 +239,12 @@ adminRouter.get(
  *   - `museum_manager`  → museumId FORCED to JWT claim. Any other value is
  *                         rewritten silently to the caller's tenant so a
  *                         crafted `?museumId=99` cannot smuggle another
- *                         tenant's aggregate (BOLA negative guard).
+ *                         tenant's aggregate (BOLA negative guard). A NULL /
+ *                         absent claim is a HARD 403 (NEVER degrades to the
+ *                         global view) — `getStatsUseCase` calls
+ *                         `computeTenantScope('museum_manager', undefined)`
+ *                         which throws `forbidden('No museum assigned')`
+ *                         (proven by `stats-tenant-isolation.test.ts`).
  *
  * `museum_manager` is added to the requireRole allow-list so the gate stops
  * blocking the role at the entry (was admin/moderator only — paired with
@@ -258,10 +265,56 @@ adminRouter.get(
       scopedMuseumId = req.user.museumId ?? undefined;
     }
 
-    const stats = await getStatsUseCase.execute(
-      scopedMuseumId !== undefined ? { museumId: scopedMuseumId } : {},
-    );
+    // Thread the role so the use-case owns the scope decision (super_admin/
+    // admin → global; museum_manager → forced museumId or 403 if unassigned).
+    // The route never decides the shape or the 403 (design D3 — single
+    // hexagonal source of truth).
+    const stats = await getStatsUseCase.execute({
+      role: req.user?.role,
+      museumId: scopedMuseumId,
+    });
     res.json(stats);
+  },
+);
+
+/**
+ * C2 / R13-R17 — NPS aggregate (global or per-museum) over approved reviews.
+ *
+ * RBAC (OWASP API1 / BOLA) — mirrors `/stats` allow-list AND forced-scope,
+ * including the manager-NULL case (design D-C2-4 / Q2) :
+ *   - super_admin / admin / moderator → museumId free (undefined → global).
+ *   - museum_manager → museumId FORCED to JWT claim. A NULL claim is a HARD
+ *     403 (NEVER degrades to global — that would be a cross-tenant leak, R16).
+ *     `/stats` behaves identically: a NULL-claim manager also gets a hard 403
+ *     there (via `computeTenantScope('museum_manager', undefined)` throwing
+ *     `forbidden('No museum assigned')` — proven by
+ *     `stats-tenant-isolation.test.ts`). The two endpoints raise the 403 in
+ *     different layers (this route raises it inline; `/stats` raises it inside
+ *     `getStats.useCase`), but neither ever degrades a NULL-claim manager to
+ *     the global view.
+ *
+ * Query schema reused from `/stats` (`statsQuerySchema` — optional positive
+ * int `museumId`, strictObject).
+ */
+adminRouter.get(
+  '/nps',
+  isAuthenticated,
+  requireRole('admin', 'moderator', 'museum_manager'),
+  validateQuery(statsQuerySchema),
+  async (req: Request, res: Response) => {
+    const { museumId: queryMuseumId } = res.locals.validatedQuery as StatsQuery;
+
+    let scopedMuseumId: number | undefined = queryMuseumId;
+    if (req.user?.role === 'museum_manager') {
+      if (req.user.museumId == null) {
+        // Q2 / R16 — never run the aggregate for a NULL-claim manager.
+        throw forbidden('Museum scope required');
+      }
+      scopedMuseumId = req.user.museumId;
+    }
+
+    const nps = await getNpsUseCase.execute({ museumId: scopedMuseumId });
+    res.json(nps);
   },
 );
 
@@ -371,16 +424,22 @@ adminRouter.get(
 adminRouter.get(
   '/tickets',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin', 'moderator', 'museum_manager'),
   validateQuery(listTicketsQuerySchema),
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { page, limit, status, priority } = res.locals.validatedQuery as ListTicketsQuery;
+
+    // C1B — forced tenant scope (BOLA). `computeTenantScope` returns the
+    // manager's JWT museumId claim (403 if unassigned), `null` for
+    // admin/super_admin (global cross-tenant view). Claim wins over any query.
+    const scopedMuseumId = computeTenantScope(req.user?.role, req.user?.museumId);
 
     const result = await adminSupportFacade.list({
       status,
       priority,
       page,
       limit,
+      museumId: scopedMuseumId,
     });
 
     res.json(result);
@@ -390,7 +449,7 @@ adminRouter.get(
 adminRouter.patch(
   '/tickets/:id',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin', 'moderator', 'museum_manager'),
   validateBody(updateTicketSchema),
   async (req: Request, res: Response) => {
     const ticketId = parseStringParam(req, 'id');
@@ -401,6 +460,11 @@ adminRouter.patch(
       assignedTo?: number | null;
     };
 
+    // C1B — forced tenant ownership scope (BOLA write side). 403 short-circuits
+    // an unassigned manager BEFORE the facade; the use-case enforces the 404 on
+    // a foreign-tenant ticket.
+    const scopedMuseumId = computeTenantScope(req.user?.role, req.user?.museumId);
+
     const updated = await adminSupportFacade.update({
       ticketId,
       status,
@@ -409,6 +473,7 @@ adminRouter.patch(
       actorId: req.user?.id ?? 0,
       ip: req.ip,
       requestId: req.requestId,
+      scopeMuseumId: scopedMuseumId,
     });
 
     res.json({ ticket: updated });
@@ -419,15 +484,20 @@ adminRouter.patch(
 adminRouter.get(
   '/reviews',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin', 'moderator', 'museum_manager'),
   validateQuery(listReviewsQuerySchema),
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { page, limit, status } = res.locals.validatedQuery as ListReviewsQuery;
+
+    // C1B — forced tenant scope (BOLA). Manager → JWT claim (403 if unassigned);
+    // admin/super_admin → null (global cross-tenant view).
+    const scopedMuseumId = computeTenantScope(req.user?.role, req.user?.museumId);
 
     const result = await adminReviewFacade.list({
       status,
       page,
       limit,
+      museumId: scopedMuseumId,
     });
 
     res.json(result);
@@ -437,7 +507,7 @@ adminRouter.get(
 adminRouter.patch(
   '/reviews/:id',
   isAuthenticated,
-  requireRole('admin', 'moderator'),
+  requireRole('admin', 'moderator', 'museum_manager'),
   validateBody(moderateReviewSchema),
   async (req: Request, res: Response) => {
     const reviewId = parseStringParam(req, 'id');
@@ -449,12 +519,18 @@ adminRouter.patch(
       return;
     }
 
+    // C1B — forced tenant ownership scope (BOLA write side). 403 short-circuits
+    // an unassigned manager BEFORE the facade; the use-case enforces the 404 on
+    // a foreign-tenant review.
+    const scopedMuseumId = computeTenantScope(req.user?.role, req.user?.museumId);
+
     const updated = await adminReviewFacade.moderateReview({
       reviewId,
       status,
       actorId,
       ip: req.ip,
       requestId: (req as { requestId?: string }).requestId,
+      scopeMuseumId: scopedMuseumId,
     });
 
     res.json({ review: updated });

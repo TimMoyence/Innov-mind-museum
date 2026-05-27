@@ -821,6 +821,9 @@
       "weekly_closed": "{{day}} Geschlossen"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logo von {{name}}"
+  },
   "museum": {
     "about": "Über",
     "opening_hours": "Öffnungszeiten",
@@ -967,7 +970,8 @@
     "reviews": {
       "name_input": "Dein Anzeigename",
       "comment_input": "Dein Bewertungskommentar",
-      "star_button": "{{count}} Sterne vergeben"
+      "star_button": "{{count}} Sterne vergeben",
+      "nps_value": "Empfehlungswert {{value}} von 10"
     },
     "preferences": {
       "language_button": "Sprache {{language}} auswählen",
@@ -1163,6 +1167,9 @@
     "writeReview": "Bewertung schreiben",
     "averageRating": "Durchschnittsbewertung",
     "ratingLabel": "Deine Bewertung",
+    "npsLabel": "Wie wahrscheinlich ist es, dass du Musaium weiterempfiehlst?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Dein Name",
     "commentPlaceholder": "Teile deine Erfahrung...",
     "submit": "Bewertung abschicken",

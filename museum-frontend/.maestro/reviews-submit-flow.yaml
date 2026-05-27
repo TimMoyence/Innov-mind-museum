@@ -1,0 +1,75 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ReviewsScreen
+# Reviews submit flow (UFR-021 happy path for app/(stack)/reviews.tsx, route /reviews).
+#
+# Exercises the NPS 0-10 input end-to-end: navigate Settings → reviews,
+# open the write-review form, tap an NPS value (testID nps-value-9), fill the
+# comment, submit, and assert the success message. There is NO name field
+# anymore (userName is derived server-side, design D-C2-6).
+#
+# Prerequisites:
+#   - Backend running on localhost:3000 with the e2e test account seeded.
+#   - testIDs: nps-value-9 (NpsScale), reviews-empty-state (empty list).
+
+- waitForAnimationToEnd
+
+# Quick login if we land on the auth screen.
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+# Skip onboarding if shown.
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Navigate to Settings → reviews (/reviews)
+# ──────────────────────────────────────────────
+- tapOn: "Settings"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Open reviews"
+    direction: DOWN
+
+- tapOn: "Open reviews"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Reviews"
+    timeout: 5000
+
+# ──────────────────────────────────────────────
+# Open the write-review form
+# ──────────────────────────────────────────────
+- tapOn: "Write a Review"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Tap an NPS value (0-10 scale, no stars), fill comment, submit
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "nps-value-9"
+
+- tapOn:
+    text: "Share your experience..."
+- inputText: "An unforgettable visit — highly recommend."
+- hideKeyboard
+
+- tapOn: "Submit Review"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Assert the review was submitted
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Thank you for your review!"
+    timeout: 10000

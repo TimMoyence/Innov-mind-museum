@@ -204,6 +204,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       artKeywordsDays: 90,
       artKeywordsHitThreshold: 1,
     },
+    review: { npsScaleEpoch: '2026-05-27T00:00:00.000Z' },
     supportInboxEmail: 'support@musaium.app',
   };
 }

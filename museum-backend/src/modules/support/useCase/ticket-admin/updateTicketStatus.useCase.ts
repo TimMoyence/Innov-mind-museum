@@ -17,6 +17,13 @@ export interface UpdateTicketStatusInput {
   actorId: number;
   ip?: string;
   requestId?: string;
+  /**
+   * C1B — tenant ownership guard (BOLA, write side). `undefined`/`null` =
+   * unscoped (super_admin/admin may update any ticket). When set (forced by the
+   * route for a `museum_manager`), a ticket whose `museumId` differs from this
+   * scope is treated as non-existent → `404` (existence-hiding), no write.
+   */
+  scopeMuseumId?: number | null;
 }
 
 export class UpdateTicketStatusUseCase {
@@ -32,6 +39,20 @@ export class UpdateTicketStatusUseCase {
 
     if (!input.status && !input.priority && input.assignedTo === undefined) {
       throw badRequest('At least one of status, priority, or assignedTo must be provided');
+    }
+
+    // C1B — read-before-write so the tenant ownership guard (BOLA write side)
+    // runs BEFORE any mutation. A scoped actor (museum_manager) may only update
+    // tickets of their own museum; a missing, foreign-tenant or NULL-museum
+    // ticket is hidden as non-existent (404), so no audit row is emitted for a
+    // rejected attempt. This also tightens a latent bug (the old blind update
+    // 404'd only AFTER attempting the write).
+    const existing = await this.repository.getTicketById(input.ticketId);
+    if (!existing) {
+      throw notFound('Ticket not found');
+    }
+    if (input.scopeMuseumId != null && existing.museumId !== input.scopeMuseumId) {
+      throw notFound('Ticket not found');
     }
 
     const updated = await this.repository.updateTicket({

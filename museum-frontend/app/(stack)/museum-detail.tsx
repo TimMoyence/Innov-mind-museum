@@ -9,8 +9,11 @@ import { useStartConversation } from '@/features/chat/application/useStartConver
 import { formatDistance } from '@/features/museum/application/formatDistance';
 import { formatOpeningHours } from '@/features/museum/application/opening-hours.formatter';
 import { openInNativeMaps } from '@/features/museum/application/openInNativeMaps';
+import { useBrandedTheme } from '@/features/museum/application/useBrandedTheme';
+import { useMuseumBranding } from '@/features/museum/application/useMuseumBranding';
 import { useMuseumEnrichment } from '@/features/museum/application/useMuseumEnrichment';
 import { MuseumDetailEnrichment } from '@/features/museum/ui/MuseumDetailEnrichment';
+import { MuseumLogo } from '@/features/museum/ui/MuseumLogo';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -22,7 +25,7 @@ import { styles } from './_styles/museum-detail';
 export default function MuseumDetailScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme: appTheme } = useTheme();
 
   const params = useLocalSearchParams<{
     id: string;
@@ -49,6 +52,13 @@ export default function MuseumDetailScreen() {
     Number.isFinite(parsedMuseumId) && parsedMuseumId > 0 ? parsedMuseumId : null;
   const enrichment = useMuseumEnrichment(enrichmentMuseumId, i18n.language);
   const enriched = enrichment.data;
+
+  // Per-museum co-branding: fetches `config.branding` for the active DB-backed
+  // museum (idle for synthetic/OSM entries) and derives a screen-scoped theme
+  // with the brand primary color. First paint stays on the app theme until the
+  // branding resolves (no spinner gate) — fail-open to app theme on any error.
+  const { branding } = useMuseumBranding(enrichmentMuseumId);
+  const theme = useBrandedTheme(appTheme, branding);
 
   const hoursDisplay = useMemo(
     () => (enriched ? formatOpeningHours(enriched.openingHours, t) : null),
@@ -114,7 +124,11 @@ export default function MuseumDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.heroCard} intensity={60}>
-          <Ionicons name="business" size={40} color={theme.primary} style={styles.heroIcon} />
+          <MuseumLogo
+            logoUrl={branding.logoUrl}
+            museumName={params.name}
+            style={styles.heroIcon}
+          />
           <Text style={[styles.title, { color: theme.textPrimary }]}>{params.name}</Text>
 
           {params.address ? (

@@ -821,6 +821,9 @@
       "weekly_closed": "{{day}} 闭馆"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}标志"
+  },
   "museum": {
     "about": "关于",
     "opening_hours": "开放时间",
@@ -967,7 +970,8 @@
     "reviews": {
       "name_input": "你的显示名称",
       "comment_input": "你的评价内容",
-      "star_button": "设置{{count}}星评分"
+      "star_button": "设置{{count}}星评分",
+      "nps_value": "推荐评分 {{value}}（满分10）"
     },
     "preferences": {
       "language_button": "选择{{language}}语言",
@@ -1163,6 +1167,9 @@
     "writeReview": "写评价",
     "averageRating": "平均评分",
     "ratingLabel": "你的评分",
+    "npsLabel": "你向他人推荐 Musaium 的可能性有多大？",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "你的名字",
     "commentPlaceholder": "分享你的体验...",
     "submit": "提交评价",
