@@ -421,8 +421,11 @@ export default function LoginForm({ dict }: LoginFormProps) {
             )}
 
             {/* Single live region for both error + remaining-codes announcements
-                (a11y NFR requires exactly one [aria-live] on this step). */}
-            <div role="alert" aria-live="assertive">
+                (a11y NFR requires exactly one [aria-live] for THIS component on
+                this step — scoped by `data-testid` so the a11y test does not
+                count Next.js's framework route-announcer `#__next-route-announcer__`,
+                which also carries `aria-live` on every App Router page). */}
+            <div data-testid="mfa-live-region" role="alert" aria-live="assertive">
               {mfaError && (
                 <p className="rounded-lg bg-red-50 px-4 py-2 text-center text-sm text-red-600">
                   {mfaError}

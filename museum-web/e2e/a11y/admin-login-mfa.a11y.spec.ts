@@ -49,8 +49,13 @@ test('admin login MFA challenge step has no WCAG 2.1 AA violations', async ({ pa
   // R15 — focus is moved to the code input on step entry.
   await expect(codeInput).toBeFocused();
 
-  // An aria-live region must be present for error announcements (NFR a11y).
-  await expect(page.locator('[aria-live]')).toHaveCount(1);
+  // The challenge step must expose exactly one error live region for a11y
+  // announcements (NFR a11y). Scoped by data-testid so we assert THIS component's
+  // region, not Next.js's framework route-announcer (#__next-route-announcer__),
+  // which also carries aria-live on every App Router page.
+  const liveRegion = page.getByTestId('mfa-live-region');
+  await expect(liveRegion).toHaveCount(1);
+  await expect(liveRegion).toHaveAttribute('aria-live', 'assertive');
 
   await expectNoA11yViolations(page, '/en/admin/login#mfa-challenge');
 });
