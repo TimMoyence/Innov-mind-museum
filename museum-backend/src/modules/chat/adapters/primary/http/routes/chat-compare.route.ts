@@ -12,7 +12,10 @@
  */
 import { Router } from 'express';
 
-import { getRequestUser, upload } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
+import {
+  getRequestUser,
+  upload,
+} from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { compareRequestSchema } from '@modules/chat/adapters/primary/http/schemas/compare.schemas';
 import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
@@ -23,6 +26,7 @@ import {
   compareInvalidImage,
   compareInvalidTopK,
 } from '@shared/errors/app.error';
+import { extractLangCode } from '@shared/i18n/locale';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import {
@@ -82,11 +86,21 @@ export interface CompareRouterDeps {
 
 const DEFAULT_LOCALE: 'fr' | 'en' = 'en';
 
-/** Resolution order: body field → req.clientLocale → DEFAULT_LOCALE. */
+/**
+ * Resolution order: body field → req.clientLocale → DEFAULT_LOCALE.
+ *
+ * Each candidate is normalised via `extractLangCode` (shared/i18n/locale.ts —
+ * the same normaliser the main LLM pipeline uses) so a raw region-qualified
+ * Accept-Language tag like `fr-FR`/`en-US` resolves to its bare code before the
+ * FR/EN check. Without this, `'fr-FR' === 'fr'` is false and a French client
+ * with no explicit body.locale silently falls through to English copy.
+ */
 function resolveLocale(bodyLocale: 'fr' | 'en' | undefined, req: Request): 'fr' | 'en' {
-  if (bodyLocale) return bodyLocale;
-  const clientLocale = req.clientLocale;
-  if (clientLocale === 'fr' || clientLocale === 'en') return clientLocale;
+  for (const candidate of [bodyLocale, req.clientLocale]) {
+    if (!candidate) continue;
+    const code = extractLangCode(candidate);
+    if (code === 'fr' || code === 'en') return code;
+  }
   return DEFAULT_LOCALE;
 }
 
@@ -138,10 +152,7 @@ function mapUseCaseError(error: unknown): unknown {
   return compareInvalidImage(error.message, error.details);
 }
 
-function createCompareHandler(
-  deps: CompareRouterDeps,
-  consentChecker: ThirdPartyAiConsentChecker,
-) {
+function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response): Promise<void> => {
     // B-03 (GDPR Art. 7) — gate the third-party AI image-share scope FIRST, in
     // the handler head: short-circuits BEFORE `verifySessionAccess` and the
