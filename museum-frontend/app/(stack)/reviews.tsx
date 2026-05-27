@@ -47,7 +47,7 @@ export default function ReviewsScreen() {
   } = useReviews();
 
   const [showForm, setShowForm] = useState(false);
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -65,7 +65,7 @@ export default function ReviewsScreen() {
   }, []);
 
   const onSubmit = useCallback(async () => {
-    if (rating === 0 || comment.trim().length === 0) return;
+    if (rating === null || comment.trim().length === 0) return;
     // Best-effort attribution (design D-C2-5): the most-recently-visited chat
     // session's id, read at submit time from the in-memory store. Empty store
     // → undefined → BE attributes the review to global (Q1, honest fallback).
@@ -77,7 +77,7 @@ export default function ReviewsScreen() {
     if (ok) {
       setSubmitted(true);
       setShowForm(false);
-      setRating(0);
+      setRating(null);
       setComment('');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (!reduceMotionRef.current) {
@@ -138,7 +138,7 @@ export default function ReviewsScreen() {
           <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
             {t('reviews.npsLabel')}
           </Text>
-          <NpsScale value={rating === 0 ? null : rating} onChange={setRating} />
+          <NpsScale value={rating} onChange={setRating} />
 
           <TextInput
             style={[
@@ -172,11 +172,12 @@ export default function ReviewsScreen() {
             style={[
               styles.submitButton,
               {
-                backgroundColor: rating > 0 && comment.trim() ? theme.primary : theme.separator,
+                backgroundColor:
+                  rating !== null && comment.trim() ? theme.primary : theme.separator,
               },
             ]}
             onPress={() => void onSubmit()}
-            disabled={submitLoading || rating === 0 || !comment.trim()}
+            disabled={submitLoading || rating === null || !comment.trim()}
             accessibilityRole="button"
             accessibilityLabel={t('reviews.submit')}
           >

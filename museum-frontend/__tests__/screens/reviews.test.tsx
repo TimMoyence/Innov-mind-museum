@@ -27,15 +27,28 @@ jest.mock('@/features/review/ui/NpsScale', () => {
   const { Pressable, Text } = require('react-native');
   return {
     NpsScale: ({ onChange }: { onChange: (v: number) => void }) => (
-      <Pressable
-        testID="nps-scale"
-        accessibilityRole="button"
-        onPress={() => {
-          onChange(9);
-        }}
-      >
-        <Text>nps-scale-mock</Text>
-      </Pressable>
+      <>
+        <Pressable
+          testID="nps-scale"
+          accessibilityRole="button"
+          onPress={() => {
+            onChange(9);
+          }}
+        >
+          <Text>nps-scale-mock</Text>
+        </Pressable>
+        {/* A second tappable surface that emits the lowest detractor (0).
+            0 is a valid NPS score, NOT a "nothing selected" sentinel. */}
+        <Pressable
+          testID="nps-scale-zero"
+          accessibilityRole="button"
+          onPress={() => {
+            onChange(0);
+          }}
+        >
+          <Text>nps-scale-mock-zero</Text>
+        </Pressable>
+      </>
     ),
   };
 });
@@ -166,6 +179,27 @@ describe('ReviewsScreen', () => {
     expect(args[2]).toBe(recentId);
     // No legacy userName argument anywhere in the call.
     expect(args).not.toContain('');
+  });
+
+  it('lets the user submit the lowest detractor score (rating 0) — 0 is NOT a "nothing selected" sentinel', () => {
+    const submitReview = jest.fn().mockResolvedValue(true);
+    mockUseReviews.mockReturnValue({ ...defaultHookReturn, submitReview });
+    useChatSessionStore.setState({ sessions: {} });
+
+    render(<ReviewsScreen />);
+    fireEvent.press(screen.getByLabelText('reviews.writeReview'));
+    fireEvent.press(screen.getByTestId('nps-scale-zero')); // emits onChange(0)
+    fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'Worst visit ever');
+
+    // The submit button must be enabled once a score (even 0) + comment are set.
+    expect(screen.getByLabelText('reviews.submit').props.accessibilityState?.disabled).toBeFalsy();
+
+    fireEvent.press(screen.getByLabelText('reviews.submit'));
+
+    expect(submitReview).toHaveBeenCalledTimes(1);
+    const args = submitReview.mock.calls[0] as unknown[];
+    expect(args[0]).toBe(0);
+    expect(args[1]).toBe('Worst visit ever');
   });
 
   it('submits without a sessionId arg when the chat-session store is empty (→ global, Q1)', () => {

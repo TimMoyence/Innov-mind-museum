@@ -120,7 +120,9 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
     });
 
     expect(lookup.findSessionMuseum).toHaveBeenCalledWith(OWNED_SESSION, 1);
-    expect(repo.createReview).toHaveBeenCalledWith(expect.objectContaining({ museumId: 42 }));
+    expect(repo.createReview).toHaveBeenCalledWith(
+      expect.objectContaining({ museumId: 42, sessionId: OWNED_SESSION }),
+    );
   });
 
   it('(b) owned session with museum NULL → persists museumId null/omitted (R2)', async () => {
@@ -172,6 +174,47 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
     expect(result).toBeDefined();
     const arg = repo.createReview.mock.calls[0]?.[0];
     expect(arg?.museumId ?? null).toBeNull();
+  });
+
+  it('(f) foreign/inexistent session → sessionId NULL persisted, NOT the raw client id (F2 — FK + existence-oracle guard)', async () => {
+    const repo = makeRepo();
+    // lookup returns null: session missing OR owned by another user — the use-case
+    // cannot distinguish, and MUST persist sessionId NULL so a non-existent UUID
+    // can't trip the reviews.session_id → chat_sessions FK (500) and a foreign
+    // session can't be linked cross-user (privacy leak / existence oracle).
+    const lookup = makeLookup(null);
+    const uc = makeUseCase(repo, lookup);
+    const FOREIGN_SESSION = '33333333-3333-4333-8333-333333333333';
+
+    await execute(uc, {
+      user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
+      rating: 6,
+      comment: VALID_COMMENT,
+      sessionId: FOREIGN_SESSION,
+    });
+
+    const arg = repo.createReview.mock.calls[0]?.[0];
+    // sessionId MUST be coherent with museumId: both NULL when the lookup misses.
+    expect(arg?.museumId ?? null).toBeNull();
+    expect(arg?.sessionId ?? null).toBeNull();
+    expect(arg?.sessionId).not.toBe(FOREIGN_SESSION);
+  });
+
+  it('(g) owned session → sessionId persisted (link kept only when lookup succeeds)', async () => {
+    const repo = makeRepo();
+    const lookup = makeLookup({ museumId: 5 });
+    const uc = makeUseCase(repo, lookup);
+
+    await execute(uc, {
+      user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
+      rating: 9,
+      comment: VALID_COMMENT,
+      sessionId: OWNED_SESSION,
+    });
+
+    const arg = repo.createReview.mock.calls[0]?.[0];
+    expect(arg?.sessionId).toBe(OWNED_SESSION);
+    expect(arg?.museumId).toBe(5);
   });
 
   it('(e) manager (authedUser.museumId=7) notes session museum 3 → museumId:3, tenant claim ignored (R4)', async () => {

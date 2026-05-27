@@ -239,7 +239,12 @@ adminRouter.get(
  *   - `museum_manager`  → museumId FORCED to JWT claim. Any other value is
  *                         rewritten silently to the caller's tenant so a
  *                         crafted `?museumId=99` cannot smuggle another
- *                         tenant's aggregate (BOLA negative guard).
+ *                         tenant's aggregate (BOLA negative guard). A NULL /
+ *                         absent claim is a HARD 403 (NEVER degrades to the
+ *                         global view) — `getStatsUseCase` calls
+ *                         `computeTenantScope('museum_manager', undefined)`
+ *                         which throws `forbidden('No museum assigned')`
+ *                         (proven by `stats-tenant-isolation.test.ts`).
  *
  * `museum_manager` is added to the requireRole allow-list so the gate stops
  * blocking the role at the entry (was admin/moderator only — paired with
@@ -275,13 +280,18 @@ adminRouter.get(
 /**
  * C2 / R13-R17 — NPS aggregate (global or per-museum) over approved reviews.
  *
- * RBAC (OWASP API1 / BOLA) — mirrors `/stats` allow-list + forced-scope but
- * DIVERGES on the manager-NULL case (design D-C2-4 / Q2) :
+ * RBAC (OWASP API1 / BOLA) — mirrors `/stats` allow-list AND forced-scope,
+ * including the manager-NULL case (design D-C2-4 / Q2) :
  *   - super_admin / admin / moderator → museumId free (undefined → global).
  *   - museum_manager → museumId FORCED to JWT claim. A NULL claim is a HARD
  *     403 (NEVER degrades to global — that would be a cross-tenant leak, R16).
- *     This is the intentional difference from `/stats`, which silently
- *     degrades a NULL-claim manager to global (a known no-op limitation there).
+ *     `/stats` behaves identically: a NULL-claim manager also gets a hard 403
+ *     there (via `computeTenantScope('museum_manager', undefined)` throwing
+ *     `forbidden('No museum assigned')` — proven by
+ *     `stats-tenant-isolation.test.ts`). The two endpoints raise the 403 in
+ *     different layers (this route raises it inline; `/stats` raises it inside
+ *     `getStats.useCase`), but neither ever degrades a NULL-claim manager to
+ *     the global view.
  *
  * Query schema reused from `/stats` (`statsQuerySchema` — optional positive
  * int `museumId`, strictObject).

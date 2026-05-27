@@ -18,8 +18,10 @@ interface CreateReviewUseCaseInput {
    * NPS attribution (C2 / R1-R4 / Q1). UUID of the chat session the review was
    * authored from. The use-case resolves the session via the session-lookup
    * port and derives `museum_id` from `session.museumId` (may be NULL). An
-   * absent / foreign / not-owned session persists `museum_id = NULL` silently
-   * (no 400, no existence leak). The author's own tenant claim is NEVER read.
+   * absent / foreign / not-owned session persists BOTH `museum_id = NULL` AND
+   * `session_id = NULL` silently (no 400, no FK violation, no existence leak,
+   * no cross-user link). The `session_id` link is kept only when the lookup
+   * succeeds. The author's own tenant claim is NEVER read.
    */
   sessionId?: string | null;
 }
@@ -64,11 +66,22 @@ export class CreateReviewUseCase {
     // NPS attribution (C2 / R1-R4 / Q1). Derive museum scope from the VISITED
     // session, never from the noter's tenant claim. Absent / foreign /
     // not-owned session → museumId NULL (silent, no 400, no existence leak).
+    //
+    // The sessionId link is persisted ONLY when the lookup succeeds (session
+    // exists AND is owned by the noter). Persisting the raw client sessionId
+    // unconditionally would (a) trip the reviews.session_id → chat_sessions FK
+    // with a non-existent UUID (500 instead of the silent 201), and (b) link a
+    // review to another user's session (cross-user privacy leak) while the
+    // 201/500 split would become an existence oracle, defeating the
+    // IReviewSessionLookup no-existence-leak guarantee. Keep museumId and
+    // sessionId coherent: both NULL when the lookup misses.
     let museumId: number | null = null;
+    let resolvedSessionId: string | null = null;
     if (input.sessionId) {
       const session = await this.sessionLookup.findSessionMuseum(input.sessionId, input.user.id);
       if (session) {
         museumId = session.museumId;
+        resolvedSessionId = input.sessionId;
       }
     }
 
@@ -78,7 +91,7 @@ export class CreateReviewUseCase {
       rating: input.rating,
       comment,
       museumId,
-      sessionId: input.sessionId ?? null,
+      sessionId: resolvedSessionId,
     };
 
     return await this.repository.createReview(createInput);
