@@ -48,15 +48,32 @@ const leadRepository = new LeadRepositoryPg(AppDataSource);
  * Resolves the notifier `subscribe`/`notify` path for a persisted lead by its
  * `type`. Exported so the async retry job re-delivers a `failed`/`pending` lead
  * through the SAME adapter the capture use-case used.
+ *
+ * Cycle D (R5) — `'brevo_erasure'` resolves to a `subscribe`-shaped adapter
+ * whose call REMOVES the Brevo contact (`removeContact(payload.email)`), the
+ * exact opposite of the beta `subscribe` (which ADDS one). 404 is idempotent
+ * success inside `removeContact`, so a retried erasure converges. The retry
+ * job's `deliver()` invokes `subscribe(lead.payload)`; we read `payload.email`.
  */
 export function leadNotifierByType(
   type: LeadType,
 ):
   | { notify: (payload: never) => Promise<void> }
   | { subscribe: typeof betaSignupNotifier.subscribe } {
-  return type === 'b2b'
-    ? { notify: b2bLeadNotifier.notify.bind(b2bLeadNotifier) as (payload: never) => Promise<void> }
-    : { subscribe: betaSignupNotifier.subscribe.bind(betaSignupNotifier) };
+  if (type === 'b2b') {
+    return {
+      notify: b2bLeadNotifier.notify.bind(b2bLeadNotifier) as (payload: never) => Promise<void>,
+    };
+  }
+  if (type === 'brevo_erasure') {
+    return {
+      subscribe: (async (payload: { email: string }) =>
+        await betaSignupNotifier.removeContact(
+          payload.email,
+        )) as typeof betaSignupNotifier.subscribe,
+    };
+  }
+  return { subscribe: betaSignupNotifier.subscribe.bind(betaSignupNotifier) };
 }
 
 export const submitB2bLeadUseCase = new SubmitB2bLeadUseCase(b2bLeadNotifier, leadRepository);

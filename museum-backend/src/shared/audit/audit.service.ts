@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
+import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import { BREACH_EVENT_SET, type BreachEventName } from './breach-event-types';
 
@@ -113,6 +114,11 @@ export class AuditService {
         action: entry.action,
         error: error instanceof Error ? error.message : String(error),
       });
+      // R4 (Cycle D) — a swallowed insert failure on a real privileged action
+      // (e.g. ACCOUNT_DELETED) would otherwise be a forensic black hole: the
+      // action happened, no trace persisted. Route it to Sentry so a silent
+      // failure is detectable. Context carries only the action (no PII).
+      captureExceptionWithContext(error, { action: entry.action, kind: 'audit_log_failed' });
       // Do NOT rethrow — audit failure must not break the user request.
     }
   }

@@ -40,6 +40,25 @@ export interface ImageCleanupLike {
   deleteByPrefix(userId: number | string, legacyFetcher?: unknown): Promise<void>;
 }
 
+/**
+ * Cycle D (T2.x, R5) — durable Brevo-erasure fallback port. When the inline
+ * `removeContact` step fails, the use case enqueues a durable retry intent
+ * (a `brevo_erasure` lead) instead of warn-and-dropping. Added by the green
+ * phase as a NEW constructor arg on `DeleteAccountUseCase`; absent today.
+ */
+export interface MarketingErasureFallbackLike {
+  enqueueBrevoErasure(email: string): Promise<void>;
+}
+
+/**
+ * Cycle D (T3.x, R6) — leads erasure port (`ILeadRepository.deleteByEmail`
+ * projection). Wired into the deletion flow BEFORE the cascade so the email is
+ * still resolvable. Added by the green phase as a NEW constructor arg.
+ */
+export interface LeadErasureLike {
+  deleteByEmail(emailNormalized: string): Promise<number>;
+}
+
 /** Legacy image-ref lookup shape. */
 export interface LegacyLookupLike {
   findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
@@ -51,11 +70,19 @@ export interface DeleteAccountWiring {
   legacyImageRefLookup?: LegacyLookupLike;
   audioCleanup?: AudioCleanupLike;
   brevoRemoval?: BrevoRemovalLike;
+  /** Cycle D (R5) — durable Brevo-erasure fallback (green-phase ctor arg). */
+  marketingErasureFallback?: MarketingErasureFallbackLike;
+  /** Cycle D (R6) — leads erasure port (green-phase ctor arg). */
+  leadErasure?: LeadErasureLike;
 }
 
 /**
- * Constructs `DeleteAccountUseCase` with the (future) audio + Brevo ports.
- * @param w - wiring with the user repo + optional cleanup ports.
+ * Constructs `DeleteAccountUseCase` with the (future) audio + Brevo ports, plus
+ * the Cycle D durable-erasure-fallback + leads-erasure ports. The current ctor
+ * accepts 5 args; passing a 6th/7th literal would be a TS2554 error, so we go
+ * through a cast (allowed in `tests/helpers/`). Red tests still fail at RUNTIME
+ * because the current `execute` never invokes the new ports.
+ * @param w - wiring with the user repo + optional cleanup/fallback ports.
  */
 export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountUseCase {
   const Ctor = DeleteAccountUseCase as unknown as new (
@@ -64,6 +91,8 @@ export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountU
     legacyImageRefLookup?: LegacyLookupLike,
     audioCleanup?: AudioCleanupLike,
     brevoRemoval?: BrevoRemovalLike,
+    marketingErasureFallback?: MarketingErasureFallbackLike,
+    leadErasure?: LeadErasureLike,
   ) => DeleteAccountUseCase;
   return new Ctor(
     w.userRepository,
@@ -71,6 +100,8 @@ export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountU
     w.legacyImageRefLookup,
     w.audioCleanup,
     w.brevoRemoval,
+    w.marketingErasureFallback,
+    w.leadErasure,
   );
 }
 

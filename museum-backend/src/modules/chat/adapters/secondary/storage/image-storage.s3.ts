@@ -133,12 +133,12 @@ export class S3CompatibleImageStorage implements ImageStorage {
       }) + '/';
     let continuationToken: string | undefined;
     do {
-      const { keys, nextToken } = await listObjectsByPrefix(
+      const { objects, nextToken } = await listObjectsByPrefix(
         this.config,
         scanPrefix,
         continuationToken,
       );
-      const userKeys = keys.filter((key) => key.includes(userPathSegment));
+      const userKeys = objects.map((o) => o.key).filter((key) => key.includes(userPathSegment));
       if (userKeys.length > 0) {
         await deleteObjectsBatch(this.config, userKeys);
       }

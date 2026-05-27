@@ -13,8 +13,16 @@
 import type { B2bLeadPayload } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
 import type { BetaSignupPayload } from '@modules/leads/domain/ports/beta-signup-notifier.port';
 
-/** Which public endpoint captured the lead (spec §6). */
-export type LeadType = 'b2b' | 'beta' | 'paywall';
+/**
+ * Which public endpoint captured the lead (spec §6).
+ *
+ * Cycle D (R5) — `'brevo_erasure'` is NOT a captured lead but a durable GDPR
+ * Art.17 erasure intent: when account deletion's inline Brevo `removeContact`
+ * fails, the use case persists a `brevo_erasure` lead so the WS-B redelivery
+ * cron retries the contact REMOVAL (not a subscribe) until it succeeds/404s.
+ * Reuses the `leads` table verbatim (payload = `{ email }`) — no new store.
+ */
+export type LeadType = 'b2b' | 'beta' | 'paywall' | 'brevo_erasure';
 
 /**
  * Delivery lifecycle (spec §6):
@@ -25,14 +33,25 @@ export type LeadType = 'b2b' | 'beta' | 'paywall';
 export type LeadStatus = 'pending' | 'delivered' | 'failed';
 
 /**
+ * Cycle D (R5) — payload of a `brevo_erasure` lead: a GDPR Art.17 erasure
+ * intent. Carries ONLY the email to remove from Brevo (no consent — erasure is
+ * not a subscription). Persisted verbatim as jsonb; `payload.email` is read
+ * uniformly by `deleteByEmail` (R6) and the erasure notifier (`removeContact`).
+ */
+export interface BrevoErasurePayload {
+  email: string;
+}
+
+/**
  * The validated charge persisted as jsonb and handed to the notifier.
  *
  * B2B leads carry the full `B2bLeadPayload` (email/name/museum/role/message);
  * beta + paywall carry `BetaSignupPayload` (email + optional `source`
- * discriminator). Both share `email` + `consent` so PII/erasure logic (R20)
- * can read `payload.email` uniformly.
+ * discriminator); `brevo_erasure` carries `BrevoErasurePayload` (email only).
+ * All share `email` so PII/erasure logic (R20) can read `payload.email`
+ * uniformly.
  */
-export type LeadPayload = B2bLeadPayload | BetaSignupPayload;
+export type LeadPayload = B2bLeadPayload | BetaSignupPayload | BrevoErasurePayload;
 
 /**
  * Input to `ILeadRepository.insertPending` (R1). `dedupKey` is only set for B2B

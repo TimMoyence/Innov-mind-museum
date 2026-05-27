@@ -29,3 +29,27 @@ export interface AudioCleanupPort {
 export interface MarketingContactRemovalPort {
   removeContact(email: string): Promise<unknown>;
 }
+
+/**
+ * Cycle D (R5) — durable fallback for a FAILED inline Brevo `removeContact`
+ * during account deletion. Rather than warn-and-drop (which leaves residual
+ * third-party PII), the deletion use case enqueues a durable erasure intent
+ * (a `brevo_erasure` lead) the WS-B redelivery cron retries until success/404.
+ * The auth use case depends on this minimal shape; the composition root binds
+ * it lazily to the leads repository (no static auth→leads dependency).
+ */
+export interface MarketingErasureFallbackPort {
+  /** Persist a durable intent to remove the Brevo contact for `email`. */
+  enqueueBrevoErasure(email: string): Promise<void>;
+}
+
+/**
+ * Cycle D (R6) — narrow projection of `ILeadRepository.deleteByEmail` so the
+ * auth deletion use case can purge persisted `leads` rows carrying the account
+ * email (GDPR Art.17) BEFORE the DB cascade, without a static-type dependency
+ * on the leads adapter.
+ */
+export interface LeadErasurePort {
+  /** Hard-delete every `leads` row whose stored email matches. Returns rows deleted. */
+  deleteByEmail(emailNormalized: string): Promise<number>;
+}
