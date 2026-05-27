@@ -70,10 +70,18 @@ const makeRowWithStep = (overrides: Partial<RowWithStep>): RowWithStep =>
  * change the production `ITotpSecretRepository.markUsed` signature to require
  * the step arg ; today's adapter compiles against the 2-arg shape.
  */
-class StepAwareTotpRepo implements ITotpSecretRepository {
+/**
+ * NOT `implements ITotpSecretRepository`: cycle T widens `markUsed` to return
+ * `Promise<{affected}>` (incompatible with the HEAD `Promise<void>` port). The
+ * wrapper is cast to the port at the ctor call — pins the future contract
+ * without a pure tsc error.
+ */
+class StepAwareTotpRepo {
   inner: InMemoryTotpSecretRepository;
   markUsedSpy = jest.fn();
   markEnrolledSpy = jest.fn();
+  /** Cycle T / R4: force the CAS result on the verify path. See challengeMfa.replay. */
+  casOverride: { affected: number } | null = null;
 
   constructor(seed: RowWithStep) {
     this.inner = new InMemoryTotpSecretRepository();
@@ -90,13 +98,18 @@ class StepAwareTotpRepo implements ITotpSecretRepository {
     this.markEnrolledSpy(userId, at);
     return await this.inner.markEnrolled(userId, at);
   }
-  async markUsed(userId: number, at: Date, step?: number): Promise<void> {
+  /** Cycle T / R4: `markUsed` returns the CAS result `{affected}` (cast pins the future port). */
+  async markUsed(userId: number, at: Date, step?: number): Promise<{ affected: number }> {
     this.markUsedSpy(userId, at, step);
+    if (this.casOverride !== null) {
+      return this.casOverride;
+    }
     if (step !== undefined) {
       const row = this.inner.rows.get(userId) as RowWithStep | undefined;
       if (row) row.lastUsedStep = String(step);
     }
     await this.inner.markUsed(userId, at);
+    return { affected: 1 };
   }
   async updateRecoveryCodes(
     userId: number,
@@ -127,7 +140,7 @@ describe('VerifyMfaUseCase — replay protection on enrollment verify (R4)', () 
     const user = makeUser({ id: seedRow.userId, role: 'admin' });
     const userRepo = makeUserRepo(user);
     const totpRepo = new StepAwareTotpRepo(seedRow);
-    const useCase = new VerifyMfaUseCase(userRepo, totpRepo);
+    const useCase = new VerifyMfaUseCase(userRepo, totpRepo as unknown as ITotpSecretRepository);
     return { useCase, totpRepo, user };
   };
 
@@ -202,5 +215,26 @@ describe('VerifyMfaUseCase — replay protection on enrollment verify (R4)', () 
     expect(totpRepo.markUsedSpy).toHaveBeenCalledWith(24, expect.any(Date), currentStep);
     // markEnrolled still fires (existing behaviour preserved).
     expect(totpRepo.markEnrolledSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects INVALID_MFA_CODE when markUsed CAS affects 0 rows — enrollment NOT committed (R4 — lost race)', async () => {
+    // A valid code, lastUsedStep one behind → JS compare PASSES. markUsed forced
+    // to {affected:0} (a concurrent verify already consumed this step). The
+    // use-case MUST gate on the CAS result and NOT treat the enrollment as a
+    // success. Fails today: no `affected` gate on the verify path.
+    const seed = makeRowWithStep({
+      userId: 25,
+      lastUsedStep: String(currentStep - 1),
+    });
+    const { useCase, totpRepo } = buildCtx(seed);
+    totpRepo.casOverride = { affected: 0 };
+
+    const totp = buildTotp(PLAIN_SECRET_B32);
+    const code = codeForStep(totp, currentStep);
+
+    await expect(useCase.execute(25, code)).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_MFA_CODE',
+    });
   });
 });

@@ -17,6 +17,7 @@ export const makeTotpSecret = (overrides: Partial<TotpSecret> = {}): TotpSecret 
     secretEncrypted: encryptTotpSecret('JBSWY3DPEHPK3PXP'),
     enrolledAt: new Date('2026-04-01T00:00:00Z'),
     lastUsedAt: null,
+    lastUsedStep: null,
     recoveryCodes: [],
     createdAt: new Date('2026-04-01T00:00:00Z'),
     updatedAt: new Date('2026-04-01T00:00:00Z'),
@@ -87,16 +88,54 @@ export class InMemoryTotpSecretRepository implements ITotpSecretRepository {
     }
   }
 
-  async markUsed(userId: number, at: Date): Promise<void> {
+  /**
+   * Cycle T — atomic compare-and-set parity with `TotpSecretRepositoryPg`. Stamps
+   * `lastUsedAt` + `lastUsedStep` only if the stored step is null or strictly less
+   * than `step`; returns `{ affected }` so the use-case gate (`affected === 1`)
+   * behaves identically against the in-memory substrate.
+   */
+  async markUsed(userId: number, at: Date, step?: number): Promise<{ affected: number }> {
     const row = this.rows.get(userId);
-    if (!row) return;
+    if (!row) return { affected: 0 };
+    if (step === undefined) {
+      // Step-less stamp (legacy 2-arg callers / test wrappers) — `lastUsedAt` only,
+      // no CAS predicate. Satisfies the frozen wrappers that delegate `markUsed(uid, at)`.
+      row.lastUsedAt = at;
+      return { affected: 1 };
+    }
+    const current = row.lastUsedStep === null ? null : Number(row.lastUsedStep);
+    if (current !== null && step <= current) {
+      return { affected: 0 };
+    }
     row.lastUsedAt = at;
+    row.lastUsedStep = String(step);
+    return { affected: 1 };
   }
 
   async updateRecoveryCodes(userId: number, codes: TotpRecoveryCode[]): Promise<void> {
     const row = this.rows.get(userId);
     if (!row) return;
     row.recoveryCodes = codes;
+  }
+
+  /**
+   * Cycle T — atomic recovery-code consumption parity. Stamps `consumedAt` at
+   * `index` only if that entry is still unconsumed; returns `{ affected }`
+   * (1 = consumed, 0 = already consumed OR out-of-range).
+   */
+  async consumeRecoveryCode(
+    userId: number,
+    index: number,
+    at: Date,
+  ): Promise<{ affected: number }> {
+    const row = this.rows.get(userId);
+    if (!row) return { affected: 0 };
+    const entry = row.recoveryCodes[index];
+    if (!entry || entry.consumedAt !== null) return { affected: 0 };
+    row.recoveryCodes = row.recoveryCodes.map((c, i) =>
+      i === index ? { ...c, consumedAt: at.toISOString() } : c,
+    );
+    return { affected: 1 };
   }
 
   async deleteByUserId(userId: number): Promise<void> {

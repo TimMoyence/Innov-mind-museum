@@ -12,7 +12,7 @@ import {
   RedisNonceStore,
   setSocialNonceStore,
 } from '@modules/auth/adapters/secondary/social/nonce-store';
-import { authSessionService } from '@modules/auth/useCase';
+import { authSessionService, challengeMfaUseCase, recoveryMfaUseCase } from '@modules/auth/useCase';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
 import { shutdownEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
@@ -139,6 +139,13 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     const accessTokenDenylist = new RedisAccessTokenDenylist(redisClient);
     setAccessTokenDenylist(accessTokenDenylist);
     authSessionService.setAccessTokenDenylist(accessTokenDenylist);
+    // R7/R8 — single-use mfaSessionToken: the challenge/recovery use-cases denylist
+    // the token's jti after one successful MFA step (and reject a replayed token).
+    // Same fail-OPEN shared `accessTokenDenylist` (ADR-064); same post-construction
+    // setter pattern as `authSessionService` above (the auth singletons instantiate
+    // before this boot path runs).
+    challengeMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
+    recoveryMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };

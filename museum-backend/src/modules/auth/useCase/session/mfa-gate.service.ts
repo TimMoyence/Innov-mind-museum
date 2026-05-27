@@ -40,7 +40,7 @@ export interface MfaEnrollmentRequiredResponse {
 
 /**
  * MFA gating policy at login:
- *   1. Any user with `enrolledAt` TOTP row gates on 2FA (F6, ADR-013).
+ *   1. Any user with `enrolledAt` TOTP row gates on 2FA (F6, ADR-014).
  *   2. Admins additionally inherit R16 warning-window: first login stamps
  *      `mfaEnrollmentDeadline=now+warningDays`; past deadline soft-blocks
  *      with `MfaEnrollmentRequiredResponse` until enrollment.
