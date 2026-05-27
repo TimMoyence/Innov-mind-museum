@@ -1,20 +1,17 @@
 /**
  * GDPR erasure run — constructors for `DeleteAccountUseCase` /
- * `ExportUserDataUseCase` that pass FUTURE constructor arguments / dependency
- * ports not present in the current signatures (added by the green phase: T2.2
- * audio+Brevo ctor args, T3.3 export ports). The current `DeleteAccountUseCase`
- * ctor accepts 3 args; passing a 4th/5th literal would be a TS2554 compile
- * error, so we go through a cast (allowed in `tests/helpers/`). The red tests
- * still fail at RUNTIME because the current `execute` never invokes the new
- * ports (audio refs not deleted, Brevo not removed, new export categories
- * absent, schemaVersion still '1').
+ * `ExportUserDataUseCase`. These helpers map the local structural wiring shapes
+ * onto the real use-case constructors. The `*Like` interfaces are structural
+ * projections of the real ports, so we go through a cast (allowed in
+ * `tests/helpers/`) to bridge them.
  *
- * GREEN contracts:
- *  - T2.2: `new DeleteAccountUseCase(userRepo, imageStorage?, legacyLookup?,
- *      audioCleanup?, brevoRemoval?)`.
+ * Constructor contracts:
+ *  - `new DeleteAccountUseCase({ userRepository, imageStorage?,
+ *      legacyImageRefLookup?, audioCleanup?, brevoRemoval?,
+ *      marketingErasureFallback?, leadErasure? })` — named-options object.
  *      audioCleanup: { deleteUserAudio(userId): Promise<void> }   (AudioCleanupPort)
  *      brevoRemoval: { removeContact(email): Promise<unknown> }
- *  - T3.3: `new ExportUserDataUseCase(deps)` where `deps` adds
+ *  - `new ExportUserDataUseCase(deps)` where `deps` adds
  *      userMemoryExport / auditLogExport / messageFeedbackExport /
  *      messageReportExport / socialAccountExport / apiKeyExport ports (each
  *      `getForUser`/`listForUser`).
@@ -77,32 +74,31 @@ export interface DeleteAccountWiring {
 }
 
 /**
- * Constructs `DeleteAccountUseCase` with the (future) audio + Brevo ports, plus
- * the Cycle D durable-erasure-fallback + leads-erasure ports. The current ctor
- * accepts 5 args; passing a 6th/7th literal would be a TS2554 error, so we go
- * through a cast (allowed in `tests/helpers/`). Red tests still fail at RUNTIME
- * because the current `execute` never invokes the new ports.
+ * Constructs `DeleteAccountUseCase` from the local structural wiring shapes.
+ * The ctor takes a named-options object; the local `*Like` interfaces are
+ * structural projections of the real ports, so we go through a cast (allowed in
+ * `tests/helpers/`) to map the wiring onto the options object.
  * @param w - wiring with the user repo + optional cleanup/fallback ports.
  */
 export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountUseCase {
-  const Ctor = DeleteAccountUseCase as unknown as new (
-    userRepository: IUserRepository,
-    imageStorage?: ImageCleanupLike,
-    legacyImageRefLookup?: LegacyLookupLike,
-    audioCleanup?: AudioCleanupLike,
-    brevoRemoval?: BrevoRemovalLike,
-    marketingErasureFallback?: MarketingErasureFallbackLike,
-    leadErasure?: LeadErasureLike,
-  ) => DeleteAccountUseCase;
-  return new Ctor(
-    w.userRepository,
-    w.imageStorage,
-    w.legacyImageRefLookup,
-    w.audioCleanup,
-    w.brevoRemoval,
-    w.marketingErasureFallback,
-    w.leadErasure,
-  );
+  const Ctor = DeleteAccountUseCase as unknown as new (options: {
+    userRepository: IUserRepository;
+    imageStorage?: ImageCleanupLike;
+    legacyImageRefLookup?: LegacyLookupLike;
+    audioCleanup?: AudioCleanupLike;
+    brevoRemoval?: BrevoRemovalLike;
+    marketingErasureFallback?: MarketingErasureFallbackLike;
+    leadErasure?: LeadErasureLike;
+  }) => DeleteAccountUseCase;
+  return new Ctor({
+    userRepository: w.userRepository,
+    imageStorage: w.imageStorage,
+    legacyImageRefLookup: w.legacyImageRefLookup,
+    audioCleanup: w.audioCleanup,
+    brevoRemoval: w.brevoRemoval,
+    marketingErasureFallback: w.marketingErasureFallback,
+    leadErasure: w.leadErasure,
+  });
 }
 
 // ─── Export use-case (T3.1) ─────────────────────────────────────────────────

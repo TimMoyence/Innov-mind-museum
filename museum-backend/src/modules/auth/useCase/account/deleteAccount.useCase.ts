@@ -56,25 +56,42 @@ export type ImageCleanupPort = SharedImageCleanupPort;
  * This is NOT a "full deletion via DB cascade" — object storage and the
  * marketing contact live outside the DB and are cleaned up explicitly here.
  */
+/**
+ * Named options for {@link DeleteAccountUseCase}. Replaces the prior 7-param
+ * positional ctor — every best-effort erasure port is optional + independently
+ * swappable for hexagonal testability, so a named-options object reads clearer
+ * than positional order and removes the `max-params` friction.
+ */
+export interface DeleteAccountUseCaseOptions {
+  userRepository: IUserRepository;
+  imageStorage?: ImageCleanupPort;
+  legacyImageRefLookup?: LegacyImageRefLookup;
+  audioCleanup?: AudioCleanupPort;
+  brevoRemoval?: MarketingContactRemovalPort;
+  /** R5 — durable fallback when the inline Brevo `removeContact` fails. */
+  marketingErasureFallback?: MarketingErasureFallbackPort;
+  /** R6 — purges persisted `leads` rows carrying the account email. */
+  leadErasure?: LeadErasurePort;
+}
+
 export class DeleteAccountUseCase {
-  /* eslint-disable-next-line max-params -- 7 best-effort erasure ports, each
-     optional + independently swappable for hexagonal testability; the positional
-     order is contractually pinned by the byte-frozen red-phase test helper
-     `tests/helpers/auth/erasure-chain.accessor.ts` (UFR-022), so an options-object
-     refactor is not available this cycle.
-     Justification: frozen-test contract fixes the positional ctor signature.
-     Approved-by: cycles/D/design.md §2 (DeleteAccountUseCase touch list) + red-manifest.json */
-  constructor(
-    private readonly userRepository: IUserRepository,
-    private readonly imageStorage?: ImageCleanupPort,
-    private readonly legacyImageRefLookup?: LegacyImageRefLookup,
-    private readonly audioCleanup?: AudioCleanupPort,
-    private readonly brevoRemoval?: MarketingContactRemovalPort,
-    /** R5 — durable fallback when the inline Brevo `removeContact` fails. */
-    private readonly marketingErasureFallback?: MarketingErasureFallbackPort,
-    /** R6 — purges persisted `leads` rows carrying the account email. */
-    private readonly leadErasure?: LeadErasurePort,
-  ) {}
+  private readonly userRepository: IUserRepository;
+  private readonly imageStorage?: ImageCleanupPort;
+  private readonly legacyImageRefLookup?: LegacyImageRefLookup;
+  private readonly audioCleanup?: AudioCleanupPort;
+  private readonly brevoRemoval?: MarketingContactRemovalPort;
+  private readonly marketingErasureFallback?: MarketingErasureFallbackPort;
+  private readonly leadErasure?: LeadErasurePort;
+
+  constructor(options: DeleteAccountUseCaseOptions) {
+    this.userRepository = options.userRepository;
+    this.imageStorage = options.imageStorage;
+    this.legacyImageRefLookup = options.legacyImageRefLookup;
+    this.audioCleanup = options.audioCleanup;
+    this.brevoRemoval = options.brevoRemoval;
+    this.marketingErasureFallback = options.marketingErasureFallback;
+    this.leadErasure = options.leadErasure;
+  }
 
   /**
    * Ordering is load-bearing — object-storage + marketing cleanup MUST run

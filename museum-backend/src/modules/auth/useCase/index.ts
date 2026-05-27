@@ -228,15 +228,15 @@ const leadErasureProxy: LeadErasurePort = {
   },
 };
 
-const deleteAccountUseCase = new DeleteAccountUseCase(
+const deleteAccountUseCase = new DeleteAccountUseCase({
   userRepository,
-  imageCleanupProxy,
-  legacyImageRefLookupProxy,
-  audioCleanupProxy,
-  brevoRemovalProxy,
-  marketingErasureFallbackProxy,
-  leadErasureProxy,
-);
+  imageStorage: imageCleanupProxy,
+  legacyImageRefLookup: legacyImageRefLookupProxy,
+  audioCleanup: audioCleanupProxy,
+  brevoRemoval: brevoRemovalProxy,
+  marketingErasureFallback: marketingErasureFallbackProxy,
+  leadErasure: leadErasureProxy,
+});
 
 /** Lazy-bound — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
