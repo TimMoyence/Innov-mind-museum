@@ -11,7 +11,6 @@
     "museum-frontend/app/(stack)/guided-museum-mode.tsx",
     "museum-frontend/app/(stack)/offline-maps.tsx",
     "museum-frontend/app/(stack)/preferences.tsx",
-    "museum-frontend/app/(stack)/reviews.tsx",
     "museum-frontend/app/(tabs)/conversations.tsx",
     "museum-frontend/app/(tabs)/index.tsx",
     "museum-frontend/app/index.tsx",

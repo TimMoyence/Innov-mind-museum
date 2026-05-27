@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} Closed"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}} logo"
+  },
   "museum": {
     "about": "About",
     "opening_hours": "Opening hours",
@@ -979,7 +982,8 @@
     "reviews": {
       "name_input": "Your display name",
       "comment_input": "Your review comment",
-      "star_button": "Set {{count}} star rating"
+      "star_button": "Set {{count}} star rating",
+      "nps_value": "Recommendation score {{value}} out of 10"
     },
     "preferences": {
       "language_button": "Select {{language}} language",
@@ -1175,6 +1179,9 @@
     "writeReview": "Write a Review",
     "averageRating": "Average Rating",
     "ratingLabel": "Your Rating",
+    "npsLabel": "How likely are you to recommend Musaium?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Your name",
     "commentPlaceholder": "Share your experience...",
     "submit": "Submit Review",

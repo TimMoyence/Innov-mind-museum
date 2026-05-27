@@ -6,6 +6,7 @@ import {
   required,
   resolveChaosRate,
   toBoolean,
+  toIsoTimestamp,
   toList,
   toNumber,
   toOptionalString,
@@ -472,6 +473,21 @@ const env: AppEnv = {
     reviewsPendingDays: toNumber(process.env.RETENTION_REVIEWS_PENDING_DAYS, 60),
     artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
+  },
+  review: {
+    // NPS scale-epoch (F3). The review rating scale switched 1-5 (legacy stars)
+    // → 0-10 (NPS) in this release. A legacy "5" is indistinguishable by value
+    // from an NPS "5" yet would now be miscounted as a detractor (≤6), poisoning
+    // the score on historical data. `aggregateNps` therefore counts ONLY reviews
+    // created AT/AFTER this epoch. Default = the 0-10 deploy date; overridable
+    // via NPS_SCALE_EPOCH (ISO-8601) for staging back-tests / future re-baselines.
+    // Invalid values degrade to the default (toIsoTimestamp warns, never throws).
+    // Mirrors the repository resolver (`nps-scale-epoch.ts`) — same default
+    // literal + parser. The repository reads its own lightweight resolver (to
+    // avoid pulling the DB-coupled env singleton into its static import graph);
+    // this field exposes the value for the AppEnv contract / prod validation.
+    // Keep the default literal in sync with `NPS_SCALE_EPOCH_DEFAULT`.
+    npsScaleEpoch: toIsoTimestamp(process.env.NPS_SCALE_EPOCH, '2026-05-27T00:00:00.000Z'),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',

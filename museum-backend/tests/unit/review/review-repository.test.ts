@@ -205,6 +205,103 @@ describe('ReviewRepositoryPg', () => {
     });
   });
 
+  // ─── aggregateNps (S-BE-AGG / T-AGG-1 — RED, UFR-022 fresh-context) ───
+  //
+  // Proves the widened signature `aggregateNps(museumId?: number | null)`:
+  //   (a) called with undefined/null → NO `museumId` predicate (global incl. NULL)
+  //   (b) called with 42            → `andWhere('r.museumId = :museumId', {42})`
+  //   (c) band SELECT FILTER clauses are 9..10 / 7..8 / 0..6
+  // Baseline FAILS: current impl (`review.repository.pg.ts:88-107`) unconditionally
+  // calls `.where('r.museumId = :museumId')` and the interface requires `museumId`
+  // (`review.repository.interface.ts:42`). Global path does not exist yet.
+  // lib-docs/typeorm/PATTERNS.md §3.5 (QueryBuilder andWhere/where composition) +
+  // §8.1 (assert generated SQL via mocked QB).
+  describe('aggregateNps', () => {
+    const rawZero = { promoters: '0', passives: '0', detractors: '0', count: '0' };
+
+    it('omits the museumId predicate when called with NO argument (global, incl. museum_id NULL)', async () => {
+      qb.getRawOne.mockResolvedValue(rawZero);
+
+      await sut.aggregateNps();
+
+      // Global path must NOT scope by museum — otherwise museum_id IS NULL rows
+      // (the dominant B2C V1 case) are silently excluded (R7).
+      const allWhereCalls = [...qb.where.mock.calls, ...qb.andWhere.mock.calls];
+      const scopedByMuseum = allWhereCalls.some(
+        (args) => typeof args[0] === 'string' && /museumId/i.test(args[0]),
+      );
+      expect(scopedByMuseum).toBe(false);
+      // status='approved' predicate is still present.
+      const scopedByStatus = allWhereCalls.some(
+        (args) =>
+          typeof args[0] === 'string' &&
+          /status/i.test(args[0]) &&
+          args[1] !== undefined &&
+          (args[1] as { status?: string }).status === 'approved',
+      );
+      expect(scopedByStatus).toBe(true);
+    });
+
+    it('omits the museumId predicate when called with explicit null (global)', async () => {
+      qb.getRawOne.mockResolvedValue(rawZero);
+
+      await sut.aggregateNps(null);
+
+      const allWhereCalls = [...qb.where.mock.calls, ...qb.andWhere.mock.calls];
+      const scopedByMuseum = allWhereCalls.some(
+        (args) => typeof args[0] === 'string' && /museumId/i.test(args[0]),
+      );
+      expect(scopedByMuseum).toBe(false);
+    });
+
+    it('adds `r.museumId = :museumId` predicate when scoped to a museum (42)', async () => {
+      qb.getRawOne.mockResolvedValue(rawZero);
+
+      await sut.aggregateNps(42);
+
+      const allWhereCalls = [...qb.where.mock.calls, ...qb.andWhere.mock.calls];
+      const scopedByMuseum = allWhereCalls.some(
+        (args) =>
+          typeof args[0] === 'string' &&
+          /r\.museumId = :museumId/.test(args[0]) &&
+          args[1] !== undefined &&
+          (args[1] as { museumId?: number }).museumId === 42,
+      );
+      expect(scopedByMuseum).toBe(true);
+    });
+
+    it('uses band FILTER clauses 9..10 (promoters) / 7..8 (passives) / 0..6 (detractors)', async () => {
+      qb.getRawOne.mockResolvedValue(rawZero);
+
+      await sut.aggregateNps(42);
+
+      const selectFragments = [...qb.select.mock.calls, ...qb.addSelect.mock.calls]
+        .map((args) => (typeof args[0] === 'string' ? args[0] : ''))
+        .join(' | ');
+
+      // promoters 9-10
+      expect(selectFragments).toMatch(
+        /rating\s*>=\s*9[\s\S]*rating\s*<=\s*10|rating BETWEEN 9 AND 10/i,
+      );
+      // passives 7-8
+      expect(selectFragments).toMatch(
+        /rating\s*>=\s*7[\s\S]*rating\s*<=\s*8|rating BETWEEN 7 AND 8/i,
+      );
+      // detractors 0-6
+      expect(selectFragments).toMatch(
+        /rating\s*>=\s*0[\s\S]*rating\s*<=\s*6|rating BETWEEN 0 AND 6/i,
+      );
+    });
+
+    it('returns neutral aggregate {nps:0, all buckets 0} when count = 0', async () => {
+      qb.getRawOne.mockResolvedValue(rawZero);
+
+      const result = await sut.aggregateNps();
+
+      expect(result).toEqual({ nps: 0, promoters: 0, passives: 0, detractors: 0, count: 0 });
+    });
+  });
+
   // ─── getAverageRating ───
   describe('getAverageRating', () => {
     it('returns average and count from approved reviews', async () => {

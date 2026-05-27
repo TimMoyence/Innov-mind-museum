@@ -538,6 +538,17 @@ export interface AppEnv {
     /** hitCount <= this is candidate. Default 1. */
     artKeywordsHitThreshold: number;
   };
+  /** Review / NPS configuration. */
+  review: {
+    /**
+     * NPS scale-epoch (F3). ISO-8601 UTC timestamp marking the 1-5 → 0-10 scale
+     * switch. `aggregateNps` counts ONLY reviews with `createdAt >=` this value,
+     * so legacy 1-5 ratings (a former "5" would now read as a detractor) never
+     * poison the NPS. Overridable via `NPS_SCALE_EPOCH`. Always a valid ISO
+     * string (invalid env input degrades to the default).
+     */
+    npsScaleEpoch: string;
+  };
   /**
    * Advanced guardrail V2. Each layer below self-activates from its own
    * config presence (URL for sidecar, budget>0 for judge) — no master

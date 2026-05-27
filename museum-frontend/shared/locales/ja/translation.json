@@ -833,6 +833,9 @@
       "weekly_closed": "{{day}} 休館"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}のロゴ"
+  },
   "museum": {
     "about": "概要",
     "opening_hours": "開館時間",
@@ -979,7 +982,8 @@
     "reviews": {
       "name_input": "表示名",
       "comment_input": "レビューコメント",
-      "star_button": "{{count}}つ星を設定"
+      "star_button": "{{count}}つ星を設定",
+      "nps_value": "おすすめ度スコア 10点中{{value}}点"
     },
     "preferences": {
       "language_button": "{{language}}言語を選択",
@@ -1175,6 +1179,9 @@
     "writeReview": "レビューを書く",
     "averageRating": "平均評価",
     "ratingLabel": "あなたの評価",
+    "npsLabel": "Musaiumを友人や同僚にすすめる可能性はどのくらいですか？",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "あなたの名前",
     "commentPlaceholder": "体験を共有してください...",
     "submit": "レビューを送信",
