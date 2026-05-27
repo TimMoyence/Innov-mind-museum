@@ -1,8 +1,11 @@
+import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 import { validateEmail } from '@shared/validation/email';
 
+
+import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 import type {
   BetaSignupNotifier,
   BetaSignupOutcome,
@@ -26,7 +29,10 @@ interface SubmitPaywallInterestInput {
 }
 
 export class SubmitPaywallInterestUseCase {
-  constructor(private readonly notifier: BetaSignupNotifier) {}
+  constructor(
+    private readonly notifier: BetaSignupNotifier,
+    private readonly repository: ILeadRepository,
+  ) {}
 
   async execute(input: SubmitPaywallInterestInput): Promise<void> {
     if (!input.consent) {
@@ -38,7 +44,7 @@ export class SubmitPaywallInterestUseCase {
       throw badRequest('email must be valid');
     }
 
-    // R23 — honeypot silent drop (mirror R3 R10). Whitespace-only NOT a hit.
+    // R7/R23 — honeypot silent drop BEFORE any persistence. Whitespace-only NOT a hit.
     if (typeof input.website === 'string' && input.website.trim().length > 0) {
       logger.warn('paywall_interest_honeypot_triggered', {
         requestId: input.requestId,
@@ -58,16 +64,42 @@ export class SubmitPaywallInterestUseCase {
       source: 'paywall_premium_interest',
     };
 
-    const outcome = await this.notifier.subscribe(payload);
-    const brevoOutcome: BetaSignupOutcome | 'unknown' =
-      outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
-
-    // R21 — log requestId + emailDomain + brevoOutcome. Full email forbidden (R17 PII).
-    const emailDomain = extractEmailDomain(email);
-    logger.info('paywall_email_captured', {
+    // R1 — persist `pending` BEFORE the notifier so a Brevo failure cannot lose
+    // it (the `source` discriminator is persisted in the jsonb payload).
+    const lead = await this.repository.insertPending({ type: 'paywall', payload, dedupKey: null });
+    logger.info('lead_persisted', {
       requestId: input.requestId,
-      emailDomain,
-      brevoOutcome,
+      leadId: lead.id,
+      type: 'paywall',
     });
+
+    const emailDomain = extractEmailDomain(email);
+
+    try {
+      const outcome = await this.notifier.subscribe(payload);
+      const brevoOutcome: BetaSignupOutcome | 'unknown' =
+        outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
+
+      // R2 — delivery confirmed → pending → delivered.
+      await this.repository.markDelivered(lead.id);
+      logger.info('lead_delivered', { leadId: lead.id, type: 'paywall' });
+
+      // R21 — log requestId + emailDomain + brevoOutcome. Full email forbidden (R17 PII).
+      logger.info('paywall_email_captured', {
+        requestId: input.requestId,
+        emailDomain,
+        brevoOutcome,
+      });
+    } catch (err) {
+      // R3/R5 — NEVER rethrow: the lead is durable; the retry job re-delivers it.
+      // R16 — sanitise before persisting (no api-key, no full recipient email).
+      await this.repository.markFailed(lead.id, toSanitizedLeadError(err));
+      logger.warn('lead_delivery_failed', {
+        leadId: lead.id,
+        type: 'paywall',
+        emailDomain,
+        errorClass: err instanceof Error ? err.name : 'unknown',
+      });
+    }
   }
 }

@@ -204,6 +204,14 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       artKeywordsDays: 90,
       artKeywordsHitThreshold: 1,
     },
+    leads: {
+      redeliveryCronPattern: '*/5 * * * *',
+      maxAttempts: 5,
+      redeliveryBatchLimit: 100,
+      retentionDays: 90,
+      backoffBaseMs: 60_000,
+      backoffCapMs: 3_600_000,
+    },
     supportInboxEmail: 'support@musaium.app',
   };
 }

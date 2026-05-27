@@ -20,8 +20,11 @@
  *    entry-point both tests and the route consume.
  */
 import { makeB2bLeadPayload, type B2bLeadPayload } from '../../helpers/leads/b2bLead.fixtures';
+import { makeStubLeadRepository } from '../../helpers/leads/stubLeadRepository';
 
 import { SubmitB2bLeadUseCase } from '@modules/leads/useCase/submitB2bLead.useCase';
+
+import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 
 // Outbound notifier port — production shape defined alongside the use case.
 interface B2bLeadNotifier {
@@ -34,16 +37,28 @@ interface B2bLeadNotifier {
   ): Promise<void>;
 }
 
+/**
+ * Cycle B (« Aucun lead perdu ») — the use-case is now persist-then-notify and
+ * depends on `ILeadRepository` (2-arg ctor). These unit cases keep the
+ * validation/honeypot/PII contract; a tiny in-memory stub repo stands in for PG
+ * (the real persistence ordering + transitions are pinned by the integration
+ * suite `submitB2bLead.persist-then-notify.test.ts`).
+ */
+type B2bUseCaseCtor = new (
+  notifier: B2bLeadNotifier,
+  repository: ILeadRepository,
+) => {
+  execute(
+    input: B2bLeadPayload & { ip?: string; requestId?: string; userAgent?: string },
+  ): Promise<void>;
+};
+
 describe('SubmitB2bLeadUseCase (R4 §1 R10/R11/R13/R14)', () => {
   const notify = jest.fn<Promise<void>, [Parameters<B2bLeadNotifier['notify']>[0]]>();
   const notifier: B2bLeadNotifier = { notify };
-  // Using `any` here would breach the BE ratchet — we cast to the public
-  // contract instead so TypeScript stays honest about the missing module.
-  const useCase = new (SubmitB2bLeadUseCase as new (n: B2bLeadNotifier) => {
-    execute(
-      input: B2bLeadPayload & { ip?: string; requestId?: string; userAgent?: string },
-    ): Promise<void>;
-  })(notifier);
+  // Cast to the public contract — keeps `as any` out of the ratchet.
+  const Ctor = SubmitB2bLeadUseCase as unknown as B2bUseCaseCtor;
+  const useCase = new Ctor(notifier, makeStubLeadRepository());
 
   beforeEach(() => {
     notify.mockReset();

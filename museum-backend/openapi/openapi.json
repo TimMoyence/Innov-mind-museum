@@ -6167,6 +6167,148 @@
         }
       }
     },
+    "/api/leads/b2b": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a public B2B lead",
+        "description": "Persist-then-notify (Cycle B): the lead is persisted before the Brevo notifier is invoked, so a Brevo failure never loses it. Returns 202 as soon as it is durable, regardless of the delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "name", "museum", "role", "message", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+                  "museum": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "role": {
+                    "type": "string",
+                    "enum": ["director", "curator", "digital", "other"]
+                  },
+                  "message": { "type": "string", "minLength": 10, "maxLength": 5000 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/leads/beta": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a public beta-signup lead",
+        "description": "Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe, durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/leads/paywall-interest": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a paywall premium-interest lead",
+        "description": "Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe (tagged `paywall_premium_interest`), durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
     "/api/support/contact": {
       "post": {
         "tags": ["Support"],

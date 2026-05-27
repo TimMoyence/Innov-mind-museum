@@ -122,6 +122,9 @@ jobs:
       - name: OpenAPI Spec Validate
         run: pnpm run openapi:validate
 
+      - name: Router-spec drift sentinel (R14 - leads routes documented)
+        run: pnpm run sentinel:router-spec-drift
+
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 

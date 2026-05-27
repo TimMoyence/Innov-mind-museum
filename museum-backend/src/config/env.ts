@@ -473,6 +473,19 @@ const env: AppEnv = {
     artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
   },
+  // Cycle B (« Aucun lead perdu ») — async redelivery + retention for the
+  // persisted `leads` table. Config values, NOT feature flags (UFR-015): the
+  // cron is always-on pre-launch, structurally skipped only when Redis is
+  // absent (mirror `retention`). Default tick every 5 min; backoff
+  // exponential 60s→1h; terminal cap 5 attempts; delivered purge after 90 days.
+  leads: {
+    redeliveryCronPattern: process.env.LEADS_REDELIVERY_CRON_PATTERN || '*/5 * * * *',
+    maxAttempts: toNumber(process.env.LEADS_MAX_ATTEMPTS, 5),
+    redeliveryBatchLimit: toNumber(process.env.LEADS_REDELIVERY_BATCH_LIMIT, 100),
+    retentionDays: toNumber(process.env.LEADS_RETENTION_DAYS, 90),
+    backoffBaseMs: toNumber(process.env.LEADS_BACKOFF_BASE_MS, 60_000),
+    backoffCapMs: toNumber(process.env.LEADS_BACKOFF_CAP_MS, 3_600_000),
+  },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
   // R4 W4.3 — B2B leads inbox. Config value, not a feature flag. Falls back

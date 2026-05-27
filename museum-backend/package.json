@@ -22,6 +22,7 @@
     "sentinel:ai-tests-count": "node ./scripts/sentinels/ai-tests-count.mjs",
     "sentinel:metric-naming": "node ./scripts/sentinels/metric-naming.mjs",
     "sentinel:privacy-drift": "node ./scripts/sentinels/privacy-content-drift.mjs",
+    "sentinel:router-spec-drift": "node ./scripts/sentinels/router-spec-drift.mjs",
     "sentinel:web-cookies": "node ./scripts/sentinels/web-cookies-audit.mjs",
     "smoke:api": "node ./scripts/smoke-api.cjs",
     "smoke:emails": "ts-node -r tsconfig-paths/register scripts/smoke-emails.ts",
