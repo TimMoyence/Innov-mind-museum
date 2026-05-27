@@ -320,6 +320,12 @@ export const buildOptimisticMessage = (params: BuildOptimisticMessageParams): Ch
  * enriched images or visual-compare results (image-only content), but a
  * blank/whitespace/null response with no media must never render a bubble.
  *
+ * An `imageDescription`-only message (empty body) carries audio-description
+ * content read aloud by the autoplay effect in `useChatSession` (WCAG 1.1.1) —
+ * it is meaningful content and MUST be kept in state, so it counts as
+ * renderable here (a bodyless image-description message is NOT a phantom).
+ * Dropping it (over-filtering) would silence the audio-description autoplay.
+ *
  * Pure — no side effect, no `Date.now`, no i18n (NFR-4).
  */
 export const isRenderableAssistantContent = (
@@ -329,6 +335,7 @@ export const isRenderableAssistantContent = (
   if ((text ?? '').trim() !== '') return true;
   if ((metadata?.images?.length ?? 0) > 0) return true;
   if (metadata?.compareResults) return true;
+  if ((metadata?.imageDescription ?? '').trim() !== '') return true;
   return false;
 };
 
