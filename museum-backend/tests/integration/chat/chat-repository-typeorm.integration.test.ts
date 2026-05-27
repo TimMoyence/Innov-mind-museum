@@ -17,6 +17,7 @@ import {
 } from 'tests/helpers/integration/integration-harness';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeArtworkMatch } from 'tests/helpers/chat/artworkMatch.fixtures';
+import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 
 import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
@@ -114,7 +115,7 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     const fixture = makeArtworkMatch(overrides);
     return await matchRepo.save(
       matchRepo.create({
-        message: { id: messageId } as ChatMessage,
+        message: makeMessage({ id: messageId }),
         artworkId: fixture.artworkId,
         title: fixture.title,
         artist: fixture.artist,
