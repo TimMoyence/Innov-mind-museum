@@ -283,7 +283,13 @@ export class VisualSimilarityService {
     });
 
     if (neighbours.length === 0) {
-      const result = this.buildNoNeighborResult(modelVersion, startedAt, parentSpan, 'search');
+      const result = this.buildNoNeighborResult(
+        modelVersion,
+        startedAt,
+        parentSpan,
+        'search',
+        true,
+      );
       await this.writeCache(cacheKey, result);
       return result;
     }
@@ -440,6 +446,11 @@ export class VisualSimilarityService {
     startedAt: number,
     parentSpan: VisualCompareTrace | undefined,
     stage: string,
+    // Early-return callers (empty kNN) own the `total` duration observation
+    // because they never reach the shared post-scoring observe; the scoreAndPackage
+    // caller passes `false` since it observes `total` once on the returned result
+    // (avoids a double-count, P3-METRIC).
+    observeTotal: boolean,
   ): CompareResult {
     const result: CompareResult = {
       matches: [],
@@ -454,7 +465,9 @@ export class VisualSimilarityService {
     );
     safeTrace('visualSimilarity.metric.fallback_no_neighbor', () => {
       compareFallbackTotal.inc({ reason: 'no_visual_neighbor' });
-      compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
+      if (observeTotal) {
+        compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
+      }
     });
     return result;
   }
@@ -482,7 +495,9 @@ export class VisualSimilarityService {
     const aboveFloor = matches.filter((m) => m.finalScore >= this.fallbackVisualThreshold);
     // D-03.2 — neighbours existed but none clears the floor → shared fallback.
     if (aboveFloor.length === 0) {
-      return this.buildNoNeighborResult(modelVersion, startedAt, parentSpan, 'fusion');
+      // observeTotal:false — the scoreAndPackage caller observes `total` once on
+      // the returned result, so the fallback must not double-count it (P3-METRIC).
+      return this.buildNoNeighborResult(modelVersion, startedAt, parentSpan, 'fusion', false);
     }
     const topMatches = aboveFloor.slice(0, topK);
     recordStageSpan(parentSpan, 'fusion', fusionStart, {

@@ -253,9 +253,13 @@ export async function resolveLocationForMessage(
   const coords = parseLocationString(rawLocation);
   if (!coords) return undefined;
   const resolved = await resolver.resolve(coords.lat, coords.lng);
-  resolved.consentGranularity = granularity;
-  if (resolved.nearbyMuseums.length > 0 && session.visitContext) {
-    session.visitContext.nearbyMuseums = resolved.nearbyMuseums;
+  // Spread rather than mutate: `resolver.resolve` may return a cached
+  // ResolvedLocation by reference (MemoryCacheService.get hands back the stored
+  // object), and `consentGranularity` is per-request — mutating it in place
+  // would poison the cache for the next caller.
+  const withGranularity = { ...resolved, consentGranularity: granularity };
+  if (withGranularity.nearbyMuseums.length > 0 && session.visitContext) {
+    session.visitContext.nearbyMuseums = withGranularity.nearbyMuseums;
   }
-  return resolved;
+  return withGranularity;
 }

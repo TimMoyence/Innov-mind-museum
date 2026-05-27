@@ -154,6 +154,11 @@ export const SettingsAiConsentCard = () => {
           },
         });
         setRows(previous);
+        // Re-sync with server truth: on a partial geo-exclusivity failure
+        // (grant succeeded but revoke(other) threw) the optimistic `previous`
+        // is stale — the backend may now hold BOTH geo scopes. refresh() pulls
+        // the real state so the UI never lies about what's granted (P3-CONSENT).
+        await refresh();
       } finally {
         setPendingScope(null);
       }
