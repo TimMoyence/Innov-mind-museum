@@ -13,8 +13,20 @@
 # completing cleanly, which is annoying when the user knows they're
 # about to run `pnpm bootstrap` anyway. We surface the issue + the fix
 # command; the hard gate is in pre-commit (Gate 6).
+#
+# Git LFS: this hook ALSO runs `git lfs post-merge` so LFS objects are smudged
+# after a merge. Chained HERE inside the tracked husky hook (not via
+# `git lfs install`, which would clobber it). The marker line lets the
+# husky-lfs-integrity sentinel tell a real hook apart from a bare git-lfs
+# clobber wrapper. DO NOT remove the marker.
+# husky-lfs-integrity: musaium-gate
 # =============================================================================
 set +e
+
+# ─── Git LFS — smudge after merge (non-fatal if git-lfs absent) ────────────
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs post-merge "$@"
+fi
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
 [ -z "$repo_root" ] && exit 0

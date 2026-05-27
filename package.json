@@ -2,7 +2,7 @@
   "private": true,
   "name": "musaium-monorepo",
   "scripts": {
-    "prepare": "husky",
+    "prepare": "husky && node scripts/install-git-lfs-hooks.mjs",
     "bootstrap": "cd museum-backend && pnpm install --frozen-lockfile && cd ../museum-frontend && npm install && cd ../museum-web && pnpm install --frozen-lockfile",
     "build:tokens": "cd design-system && npm run build",
     "dev:stack": "bash scripts/dev-stack.sh",
@@ -22,7 +22,8 @@
     "sentinel:screen-test-coverage": "node scripts/sentinels/screen-test-coverage.mjs",
     "sentinel:compose-parity": "node scripts/sentinels/compose-parity.mjs",
     "sentinel:dev-container-env-drift": "bash scripts/sentinels/dev-container-env-drift.sh",
-    "sentinel:metric-naming": "node scripts/sentinels/metric-naming.mjs"
+    "sentinel:metric-naming": "node scripts/sentinels/metric-naming.mjs",
+    "sentinel:husky-lfs-integrity": "node scripts/sentinels/husky-lfs-integrity.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7"

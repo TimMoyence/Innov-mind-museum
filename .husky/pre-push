@@ -28,8 +28,21 @@
 #  17. Affected tests FE                            — jest --findRelatedTests
 #  18. Affected tests Web                           — vitest run --changed
 #  19. Prometheus metric-naming ratchet (BE)         — node scripts/sentinels/metric-naming.mjs
+#
+# Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
+# .gitattributes — React.xcframework) upload on push. The LFS step is chained
+# HERE (inside the tracked husky hook) instead of letting `git lfs install`
+# clobber this file — see scripts/install-git-lfs-hooks.mjs + the
+# husky-lfs-integrity sentinel. The marker line below lets that sentinel tell a
+# real gate apart from a bare git-lfs clobber wrapper. DO NOT remove the marker.
+# husky-lfs-integrity: musaium-gate
 # =============================================================================
 set -e
+
+# Buffer the ref list git delivers on stdin BEFORE any gate runs, so we can feed
+# it to `git lfs pre-push` at the end (stdin is single-pass; the gates below do
+# not consume it, but buffering is robust against future gates that might).
+lfs_stdin="$(cat)"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -321,3 +334,14 @@ echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
 echo "[pre-push] ✅ All 21 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
+
+# ─── Git LFS — upload LFS objects for this push ────────────────────────────
+# Runs only AFTER every gate passed (a rejected push must not upload). Feeds the
+# buffered ref list back on stdin. Non-fatal if git-lfs is absent so a
+# contributor without LFS installed is not blocked (committed LFS objects simply
+# won't re-upload — CI mirror still enforces correctness).
+if command -v git-lfs >/dev/null 2>&1; then
+  printf '%s' "$lfs_stdin" | git lfs pre-push "$@"
+else
+  echo "[pre-push] ⚠ git-lfs not on PATH — skipping LFS object upload (install git-lfs: https://git-lfs.com)"
+fi
