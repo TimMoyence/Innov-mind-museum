@@ -19,7 +19,7 @@ Le contrôleur (Tim Moyence) a tenu une session « DPO walkthrough » et a posé
 | Rétention audit logs 13 mois (ROPA TR-01) | **Défendue** : CNIL anti-fraude + Art. 22 + cycle annuel d'audit |
 | Rétention tickets 365j (ROPA TR-05) | **Défendue** : fenêtre saisonnière < prescription civile FR 5 ans |
 | Rétention reviews rejetées 30j (ROPA TR-07) | **Défendue** : preuve via `audit_log` 13 mois |
-| Logs hébergeur (DPIA §4.15 + ROPA TR-06) | **Documenter le défaut OVH actuel d'ici 2026-05-20** ; cible 90j/13mo = P1 post-launch (non claimée pré-enforcement) |
+| Logs hébergeur (DPIA §4.15 + ROPA TR-06) | **Résolu — rétention logs configurée côté OVH le 2026-05-27** (operator-confirmed) ; durée exacte à enregistrer dans `docs/OPS_DEPLOYMENT.md` (operator à confirmer). Aucune claim de conformité au-delà de la valeur réellement enforced. |
 | OpenAI EU data zone (ROPA TR-02) | **Non activée pour V1** ; SCC + DPF maintenus ; ré-évaluation post-revenue B2B |
 | S3 cleanup (ROPA TR-03) | **Vérifié** : cascade orchestrée (`chat-purge.job.ts:23-28` + `chat-media-purger.ts` + `s3-orphan-purge.job.ts`) |
 | Adéquation UK (ROPA TR-04) | **Vérifié 2026-05-13** : Décision (UE) 2025/2531 du 17 décembre 2025 renouvelle jusqu'au 27 décembre 2031 |
