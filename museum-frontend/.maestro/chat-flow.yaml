@@ -66,6 +66,22 @@ appId: com.musaium.mobile.preview
 # Verify the user message is visible
 - assertVisible: "Who painted the Mona Lisa?"
 
+# C-07 — Assert the ASSISTANT bubble actually rendered, not just the optimistic
+# user echo. This is the UFR-021 gap that let the empty-bubble regression ship:
+# the old flow asserted ONLY the user message. `chat-bubble-assistant`
+# (ChatMessageBubble.tsx:205,219) wraps <StreamingBody>, which renders
+# `message.text` — so the bubble is only present in the view tree once a real
+# assistant message exists in the store (the pending phase uses the distinct
+# `chat-assistant-pending` TypingPlaceholder, not an empty assistant bubble).
+# We wait for it because LLM latency may exceed the animation settle above.
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 30000
+
+- assertVisible:
+    id: "chat-bubble-assistant"
+
 # ──────────────────────────────────────────────
 # Phase 6: Send a follow-up message
 # ──────────────────────────────────────────────

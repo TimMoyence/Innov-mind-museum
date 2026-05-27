@@ -29,7 +29,7 @@ const en: AccessibilityContent = {
       id: 'scope',
       title: '2. Scope',
       paragraphs: [
-        'This statement covers the Musaium web surface (musaium.app — landing pages, support, privacy, accessibility, password reset, email verification) and the public-facing admin gate (/{locale}/admin/login).',
+        'This statement covers the Musaium web surface (musaium.com — landing pages, support, privacy, accessibility, password reset, email verification) and the public-facing admin gate (/{locale}/admin/login).',
         'The Musaium mobile application (iOS + Android, com.musaium.mobile) is NOT covered by the current automated audit. A separate mobile a11y audit (VoiceOver, TalkBack, Accessibility Inspector, Accessibility Scanner) is planned.',
       ],
     },
@@ -55,7 +55,7 @@ const en: AccessibilityContent = {
       id: 'feedback',
       title: '5. Feedback and enforcement',
       paragraphs: [
-        'If you encounter an accessibility defect, contact support@musaium.app — target response within 7 business days.',
+        'If you encounter an accessibility defect, contact support@musaium.com — target response within 7 business days.',
         'In France, you may also contact the Défenseur des droits (https://www.defenseurdesdroits.fr), the DGCCRF, or ARCOM. Users in other EU Member States should contact their national supervisory authority under Directive (EU) 2019/882 (European Accessibility Act).',
       ],
     },
@@ -87,7 +87,7 @@ const fr: AccessibilityContent = {
       id: 'scope',
       title: '2. Périmètre',
       paragraphs: [
-        "Cette déclaration couvre la surface web Musaium (musaium.app — landing, support, confidentialité, accessibilité, réinitialisation de mot de passe, vérification d'e-mail) et la porte d'entrée admin publique (/{locale}/admin/login).",
+        "Cette déclaration couvre la surface web Musaium (musaium.com — landing, support, confidentialité, accessibilité, réinitialisation de mot de passe, vérification d'e-mail) et la porte d'entrée admin publique (/{locale}/admin/login).",
         "L'application mobile Musaium (iOS + Android, com.musaium.mobile) n'est PAS couverte par l'audit automatisé actuel. Un audit a11y mobile distinct (VoiceOver, TalkBack, Accessibility Inspector, Accessibility Scanner) est planifié.",
       ],
     },
@@ -95,7 +95,7 @@ const fr: AccessibilityContent = {
       id: 'findings',
       title: '3. Non-conformités identifiées (audit automatisé, 2026-05-13)',
       paragraphs: [
-        "Contraste de couleur — token text-text-muted admin (WCAG 1.4.3, Serious) : le token de texte « muted » a été remonté de #94A3B8 à #5E7184 le 2026-05-14 (run 2026-05-14-i18n-a11y-eaa-batch), portant le contraste sur fond blanc de 2.56:1 à 4.78:1. Quatre badges de statut (gray-500 sur gray-100, 4.39:1) sur les pages admin tickets/support/users/reports ont été relevés à gray-600 (≥7:1). Onze éléments select sur tickets/reports/analytics admin ont reçu un aria-label explicite pour satisfaire WCAG 4.1.2.",
+        'Contraste de couleur — token text-text-muted admin (WCAG 1.4.3, Serious) : le token de texte « muted » a été remonté de #94A3B8 à #5E7184 le 2026-05-14 (run 2026-05-14-i18n-a11y-eaa-batch), portant le contraste sur fond blanc de 2.56:1 à 4.78:1. Quatre badges de statut (gray-500 sur gray-100, 4.39:1) sur les pages admin tickets/support/users/reports ont été relevés à gray-600 (≥7:1). Onze éléments select sur tickets/reports/analytics admin ont reçu un aria-label explicite pour satisfaire WCAG 4.1.2.',
         "Un balayage axe-core en direct sur 18 routes (chromium, jeux de règles WCAG 2.1 A + AA) n'a remonté aucune violation le 2026-05-14 — landing, security, accessibility, privacy, support, login, admin dashboard, admin users, admin mfa, admin audit-logs, admin tickets, admin support, admin analytics, admin reports, admin reviews, verify-email, confirm-email-change, reset-password. Cela n'implique PAS une conformité totale — cf. § 4.",
       ],
     },
@@ -113,7 +113,7 @@ const fr: AccessibilityContent = {
       id: 'feedback',
       title: '5. Voies de recours et feedback',
       paragraphs: [
-        "Si vous constatez un défaut d'accessibilité, contactez support@musaium.app — réponse cible sous 7 jours ouvrés.",
+        "Si vous constatez un défaut d'accessibilité, contactez support@musaium.com — réponse cible sous 7 jours ouvrés.",
         "En France, vous pouvez également saisir le Défenseur des droits (https://www.defenseurdesdroits.fr), la DGCCRF ou l'ARCOM. Les utilisateurs résidant dans un autre État membre de l'UE doivent saisir l'autorité de contrôle nationale au titre de la Directive (UE) 2019/882 (European Accessibility Act).",
       ],
     },

@@ -26,7 +26,7 @@
 
 import type * as ReactTypes from 'react';
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 

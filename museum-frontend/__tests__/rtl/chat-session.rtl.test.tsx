@@ -1,6 +1,6 @@
 import '../helpers/test-utils';
 import { mockUseChatSession, defaultChatSession } from '../helpers/chat-screen.setup';
-import { render } from '@testing-library/react-native';
+import { render } from '../helpers/render-chat-screen';
 import { I18nManager } from 'react-native';
 import { findPhysicalSideLeaks } from './_rtl-style-audit';
 

@@ -1,12 +1,13 @@
 import {
   buildOptimisticMessage,
   bumpSuccessfulSend,
+  isRenderableAssistantContent,
   sortByTime,
   type ChatUiMessage,
   type ChatUiMessageMetadata,
 } from '../chatSessionLogic.pure';
 import { incrementCompletedSessions } from '@/shared/infrastructure/inAppReview';
-import { handleSendError } from './sendStrategy.shared';
+import { handleSendError, logEmptyAssistantResponse } from './sendStrategy.shared';
 import { logPhaseTelemetry } from './phase-telemetry';
 import type { SendMessageContext, SendResult } from './sendStrategy.types';
 import type { ContentPreference } from '@/shared/types/content-preference';
@@ -122,10 +123,14 @@ export const sendMessageStreaming = async (
         sessionId: context.sessionId,
         messageId: response.message.id,
       });
-      // Invariant: when SSE streaming completes via onDone in chatApi.sendMessageSmart,
-      // it returns result.message.text === '' so this fallback block is skipped.
-      // If chatApi ever returns partial streamed text on onDone, this guard breaks.
-      if (response.message.text) {
+      // Cycle 5 (D1/D7) — a response is renderable when its text is non-blank OR
+      // it carries enriched media (images / compareResults). A blank/whitespace/
+      // null response with no media must NOT leave a bubble: we drop the orphan
+      // `-streaming` placeholder (symmetric to `handleSendError`) rather than
+      // finalize it into a phantom empty bubble.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
+      const responseMetadata = (response.metadata as ChatUiMessageMetadata) ?? null;
+      if (isRenderableAssistantContent(response.message.text, responseMetadata)) {
         context.setMessages((prev) => {
           const hasPlaceholder = prev.some((m) => m.id === streamingPlaceholderId);
           if (!hasPlaceholder) return prev;
@@ -137,14 +142,16 @@ export const sendMessageStreaming = async (
                   role: response.message.role as 'assistant',
                   text: response.message.text,
                   createdAt: response.message.createdAt,
-                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-                  metadata: (response.metadata as ChatUiMessageMetadata) ?? null,
+                  metadata: responseMetadata,
                   suggestions: response.message.suggestions ?? undefined,
                   image: null,
                 }
               : m,
           );
         });
+      } else {
+        logEmptyAssistantResponse('streaming');
+        context.setMessages((prev) => prev.filter((m) => m.id !== streamingPlaceholderId));
       }
 
       // Keep the optimistic user message with its local file:// URL — it renders
@@ -154,13 +161,20 @@ export const sendMessageStreaming = async (
 
     context.setIsStreaming(false);
 
-    // Cache successful text-only first-turn museum responses for future low-data hits
+    // Cache successful text-only first-turn museum responses for future low-data hits.
+    // Cycle 5 — never persist a non-renderable answer (empty/whitespace) or it
+    // re-poisons the cache and a future low-data hit renders an empty bubble.
     if (
       response &&
       context.museumName &&
       attempt.text &&
       !attempt.imageUri &&
-      attempt.isFirstTurn
+      attempt.isFirstTurn &&
+      isRenderableAssistantContent(
+        response.message.text,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
+        (response.metadata as ChatUiMessageMetadata) ?? null,
+      )
     ) {
       context.cacheStore({
         question: attempt.text,

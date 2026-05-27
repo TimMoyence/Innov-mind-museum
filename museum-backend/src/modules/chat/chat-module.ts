@@ -286,6 +286,7 @@ function buildCompareImageUseCase(
     topN: env.visualSimilarity.topN,
     topK: env.visualSimilarity.topKDefault,
     rerankTimeoutMs: env.rerank.timeoutMs,
+    fallbackVisualThreshold: env.visualSimilarity.fallbackVisualThreshold,
   });
 
   return createCompareImageUseCase({
@@ -866,7 +867,10 @@ export class ChatModule {
  */
 function buildLocationConsentChecker(): LocationConsentChecker {
   return {
-    async isGranted(userId: number, scope: 'location_to_llm'): Promise<boolean> {
+    async isGranted(
+      userId: number,
+      scope: 'location_to_llm' | 'location_coarse_to_llm',
+    ): Promise<boolean> {
       const { userConsentRepository } = await import('@modules/auth/useCase');
       return await userConsentRepository.isGranted(userId, scope);
     },

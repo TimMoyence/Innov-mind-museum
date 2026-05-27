@@ -62,6 +62,12 @@ export interface BottomSheetRouteParams {
     playRecordedAudio: () => Promise<void> | void;
     clearMedia: () => void;
     onOpenScanner: () => void;
+    /**
+     * Cycle D (Option C) — open the visual-compare flow. The screen wires this
+     * to `useCompareTrigger` (pick image → `POST /chat/compare` → reload the
+     * session so the persisted compare carousel surfaces).
+     */
+    onCompareImage: () => void;
   };
   'cartel-scanner': {
     /**

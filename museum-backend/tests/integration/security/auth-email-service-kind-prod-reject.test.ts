@@ -53,7 +53,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     dbSynchronize: false,
     dbSsl: true,
     dbSslRejectUnauthorized: true,
-    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50, replicaUrl: null },
+    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50 },
     auth,
     llm: {
       provider: 'openai',
@@ -170,7 +170,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     },
     extractionWorkerEnabled: true,
     museumEnrichmentSchedulerEnabled: false,
-    redis: { host: 'localhost', port: 6379, clusterNodes: null },
+    redis: { host: 'localhost', port: 6379 },
     guardrails: {
       timeoutMs: 300,
       observeOnly: false,
@@ -212,6 +212,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       backoffBaseMs: 60_000,
       backoffCapMs: 3_600_000,
     },
+    review: { npsScaleEpoch: '2026-05-27T00:00:00.000Z' },
     supportInboxEmail: 'support@musaium.app',
   };
 }

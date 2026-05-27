@@ -90,9 +90,13 @@ export async function exportUserChatData(
       if (sessionBatch.length === 0) break;
 
       const sessionIds = sessionBatch.map((s) => s.id);
+      // Cycle 4 (DSAR Art.15/20 — B-03) — load `artworkMatches` in the SAME
+      // batch find (no N+1, NFR-2). The relation is `eager: false`
+      // (chatMessage.entity.ts:80-84) so it MUST be requested explicitly
+      // (lib-docs/typeorm/PATTERNS.md §3.2 find options, §3.7 relations).
       const messages = await messageEM.find({
         where: { session: { id: In(sessionIds) } },
-        relations: ['session'],
+        relations: ['session', 'artworkMatches'],
         order: { createdAt: 'ASC' },
       });
 
@@ -129,6 +133,19 @@ export async function exportUserChatData(
             audioUrl: msg.audioUrl ?? null,
             createdAt: msg.createdAt.toISOString(),
             metadata: msg.metadata,
+            // Cycle 4 (DSAR Art.15/20 — B-03) — allow-list per field (D-2):
+            // never the uuid PK `m.id` nor the FK `m.message`. The `@OneToMany`
+            // relation is requested explicitly above, so TypeORM populates it as
+            // `[]` (never undefined) when a message has no match (EARS-3).
+            artworkMatches: msg.artworkMatches.map((m) => ({
+              artworkId: m.artworkId ?? null,
+              title: m.title ?? null,
+              artist: m.artist ?? null,
+              confidence: m.confidence,
+              source: m.source ?? null,
+              room: m.room ?? null,
+              createdAt: m.createdAt.toISOString(),
+            })),
           })),
         });
       }

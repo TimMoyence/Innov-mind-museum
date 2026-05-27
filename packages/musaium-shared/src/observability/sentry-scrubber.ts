@@ -24,7 +24,15 @@ export const SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/
  * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
  * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
  * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
- * lockstep ; golden test `sentry-scrubber.test.ts` asserts the 11-entry set.
+ * lockstep ; golden test `sentry-scrubber.test.ts` asserts the set size.
+ *
+ * Cycle 10 (A-02, 2026-05-26) — extended from 11 to 16 entries to close the
+ * presigned-S3 / signed-URL signature leak (`x-amz-signature`,
+ * `x-amz-credential`, `x-amz-security-token`, `sig`, `signature`). Matching is
+ * case-insensitive (`key.toLowerCase()` in `scrubUrl`) so `X-Amz-Signature`
+ * matches `x-amz-signature`. Generic `key` / `author` are deliberately NOT
+ * added (too prone to false positives — D4). Sentinel `CANONICAL_HASH` bumped
+ * in lockstep ; golden test asserts the 16-entry set.
  */
 export const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set([
   'access_token',
@@ -36,8 +44,13 @@ export const SENSITIVE_QUERY_KEYS: ReadonlySet<string> = new Set([
   'phone',
   'refresh_token',
   'secret',
+  'sig',
+  'signature',
   'state',
   'token',
+  'x-amz-credential',
+  'x-amz-security-token',
+  'x-amz-signature',
 ]);
 
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */

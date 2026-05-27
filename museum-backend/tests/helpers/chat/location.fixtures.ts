@@ -32,6 +32,15 @@ export function makeResolvedLocation(overrides: Partial<ResolvedLocation> = {}):
     nearestMuseumDistance: null,
     reverseGeocode: '12 Place des Quinconces, 33000 Bordeaux, France',
     reverseGeocodeCoarse: 'Bordeaux, France',
+    // Cycle 1.5 — GDPR-safe neighbourhood + city label (finer than coarse, never
+    // road / house number / coordinate). Emitted only under `location_to_llm`
+    // (full granularity). Defaults to a Bordeaux quartier consistent with the
+    // coarse default above so existing call sites stay coherent.
+    reverseGeocodeNeighbourhood: 'Quinconces, Bordeaux',
+    // Cycle 1.5 — effective consent level carried by the resolver; the
+    // prompt-builder picks the field (coarse vs neighbourhood) from this. Default
+    // `'full'` mirrors the legacy/no-checker path (D-LEGACY recommendation).
+    consentGranularity: 'full',
     isInsideMuseum: false,
     ...overrides,
   };

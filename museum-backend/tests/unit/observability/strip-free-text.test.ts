@@ -144,12 +144,17 @@ describe('stripFreeText — R7 fail-safe (never throws, warns)', () => {
     expect(out).toEqual({});
   });
 
-  it('returns input unchanged when data is a primitive string', () => {
-    let out: unknown;
+  // SEC-001 contract change : a non-empty top-level `data` string is the REAL
+  // `handleLLMEnd` string-fallback shape (langfuse-langchain lib:425 →
+  // langfuse-core lib:1309 `mask({ data: body.output })`). It carries the raw
+  // completion → MUST be stripped, not returned unchanged. (Previously this
+  // case asserted `{ data: 'string' }` passthrough, which encoded the leak.)
+  it('strips a non-empty primitive string data (real handleLLMEnd fallback)', () => {
+    let out: { data: unknown } | undefined;
     expect(() => {
       out = stripFreeText({ data: 'string' as unknown });
     }).not.toThrow();
-    expect(out).toEqual({ data: 'string' });
+    expect(out!.data).toBe('[STRIPPED]');
   });
 
   it('never throws on Symbol data', () => {
@@ -204,5 +209,331 @@ describe('stripFreeText — R7 fail-safe (never throws, warns)', () => {
     const [, payload] = (logger.warn as jest.Mock).mock.calls[0] as [string, unknown];
     // Stringify the warn payload — it must not include the secret email.
     expect(JSON.stringify(payload ?? {})).not.toContain(secretEmail);
+  });
+});
+
+/**
+ * Cycle 2 (RUN 2026-05-26-chat-pipeline-hardening) — multimodal content support.
+ *
+ * Defect (A-03 HIGH + A-05 LOW-MED, spec-cycle2.md REQ-1..10) : the mask only
+ * strips `content` when `typeof content === 'string'` (strip-free-text.ts:51-62,
+ * `stripMessagesArray`). For the core product shape — "photograph an artwork
+ * then chat" — the HumanMessage content is an ARRAY
+ * `[{type:'text', text}, {type:'image_url', image_url:{url:'data:...base64'}}]`
+ * (producer verified llm-prompt-builder.ts:266-269). The array branch is never
+ * touched → the user text (content[0].text, A-03) AND the base64 data-URL
+ * (content[1].image_url.url, A-05) leak in clear to Langfuse.
+ *
+ * These cases prove the leak in RED (T-06/T-07/T-10/T-11/T-15/T-16/T-17/T-18/T-19
+ * fail today). String-only cases (T-13/T-14) are non-regression locks.
+ *
+ * Lib-docs consulted (UFR-022) :
+ *   - lib-docs/langfuse/PATTERNS.md §2.1 (mask: ({data}) => …) — the mask is a
+ *     ctor hook of signature (params:{data:any}) => any (NFR-03, conforms to
+ *     langfuse-core@3.38.20 lib/index.d.ts:7126-7128). These fixtures feed the
+ *     real `{ data }` shape the SDK passes.
+ *   - lib-docs/langfuse/PATTERNS.md §2.8 — CallbackHandler auto-captures
+ *     input.messages[*] (content array) + output via handleChatModelStart /
+ *     handleLLMEnd → these are the body shapes asserted below.
+ *   - lib-docs/langfuse/PATTERNS.md §3 DO #13 — one central mask hook (the fix
+ *     belongs in stripFreeText, not at the producer call-site).
+ *   - lib-docs/langfuse/LESSONS.md LF-V3-05 — the mask replaces free-text with
+ *     '[STRIPPED]' while preserving metadata/model/usage/usageDetails (REQ-9).
+ */
+describe('stripFreeText — Cycle 2 multimodal content (A-03 + A-05)', () => {
+  beforeEach(() => {
+    (logger.warn as jest.Mock).mockClear();
+  });
+
+  // T-06 — A-03 + A-05 real product shape: text + image data-URL.
+  it('strips text part AND image_url.url in a multimodal input message (T-06)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: '<user_message>mon mail u@x.tld</user_message>' },
+                { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,QUJD' } },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const out = stripFreeText(input);
+    const parts = out.data.input.messages[0].content;
+
+    // A-03 : user text must be redacted.
+    expect(parts[0].text).toBe(STRIPPED);
+    expect(parts[0].type).toBe('text');
+    // A-05 : image data-URL must be redacted, structure preserved.
+    expect(parts[1].image_url.url).toBe(STRIPPED);
+    expect(parts[1].type).toBe('image_url');
+    // Role preserved (REQ-9).
+    expect(out.data.input.messages[0].role).toBe('user');
+    // No clear-text leak anywhere in the serialised output.
+    const serialised = JSON.stringify(out);
+    expect(serialised).not.toContain('u@x.tld');
+    expect(serialised).not.toContain('base64,QUJD');
+  });
+
+  // T-07 — multiple text parts all stripped.
+  it('strips every text part when content has multiple text parts (T-07)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'first secret a' },
+                { type: 'text', text: 'second secret b' },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const out = stripFreeText(input);
+    const parts = out.data.input.messages[0].content;
+    expect(parts[0].text).toBe(STRIPPED);
+    expect(parts[1].text).toBe(STRIPPED);
+  });
+
+  // T-08 — part of type 'text' WITHOUT a text field: unchanged, no crash (REQ-6).
+  it('leaves a text part without a text field unchanged and does not crash (T-08)', () => {
+    const input = {
+      data: { input: { messages: [{ role: 'user', content: [{ type: 'text' }] }] } },
+    };
+
+    let out: typeof input | undefined;
+    expect(() => {
+      out = stripFreeText(input);
+    }).not.toThrow();
+    const part = out!.data.input.messages[0].content[0] as { type: string; text?: unknown };
+    expect(part.type).toBe('text');
+    expect(part.text).toBeUndefined();
+  });
+
+  // T-09 — empty text string: nothing to leak → frozen contract = leave '' as-is (REQ-6).
+  it('leaves an empty text part as empty string (nothing to leak) (T-09)', () => {
+    const input = {
+      data: { input: { messages: [{ role: 'user', content: [{ type: 'text', text: '' }] }] } },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.input.messages[0].content[0].text).toBe('');
+  });
+
+  // T-10 — image-only part with an http(s) signed URL (REQ-2).
+  it('strips image_url.url for an image-only part with an http URL (T-10)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'image_url', image_url: { url: 'https://s3.example/img.jpg?X-Amz=sig' } },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.input.messages[0].content[0].image_url.url).toBe(STRIPPED);
+    expect(JSON.stringify(out)).not.toContain('X-Amz=sig');
+  });
+
+  // T-11 — image_url as a bare string (LangChain serialisation variant, R-3 robustness).
+  it('strips a bare-string image_url part (T-11)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [{ type: 'image_url', image_url: 'data:image/png;base64,QQ==' }],
+            },
+          ],
+        },
+      },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.input.messages[0].content[0].image_url).toBe(STRIPPED);
+    expect(JSON.stringify(out)).not.toContain('base64,QQ==');
+  });
+
+  // T-12 — unknown part type: left unchanged (REQ-7, accepted residue).
+  it('leaves an unknown part type unchanged (T-12)', () => {
+    const input = {
+      data: { input: { messages: [{ role: 'user', content: [{ type: 'foo', bar: 'x' }] }] } },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.input.messages[0].content[0]).toEqual({ type: 'foo', bar: 'x' });
+  });
+
+  // T-13 — empty content array: left as-is (REQ-5).
+  it('leaves an empty content array unchanged (T-13)', () => {
+    const input = {
+      data: { input: { messages: [{ role: 'user', content: [] }] } },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.input.messages[0].content).toEqual([]);
+  });
+
+  // T-14 — content null / absent: message unchanged, no crash (REQ-5).
+  it('leaves a message with null/absent content unchanged and does not crash (T-14)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [{ role: 'user', content: null }, { role: 'assistant' }],
+        },
+      },
+    };
+
+    let out: typeof input | undefined;
+    expect(() => {
+      out = stripFreeText(input);
+    }).not.toThrow();
+    expect(out!.data.input.messages[0].content).toBeNull();
+    expect(out!.data.input.messages[1]).toEqual({ role: 'assistant' });
+  });
+
+  // T-15 — A-03 + A-05 on the OUTPUT array (symmetry, REQ-4).
+  it('strips text + image_url in a multimodal output.content array (T-15)', () => {
+    const input = {
+      data: {
+        input: {},
+        output: {
+          content: [
+            { type: 'text', text: 'reply secret with mail u@x.tld' },
+            { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,ZZZZ' } },
+          ],
+        },
+      },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.output.content[0].text).toBe(STRIPPED);
+    expect(out.data.output.content[1].image_url.url).toBe(STRIPPED);
+    const serialised = JSON.stringify(out);
+    expect(serialised).not.toContain('u@x.tld');
+    expect(serialised).not.toContain('base64,ZZZZ');
+  });
+
+  // T-16 — idempotence on the multimodal shape (REQ-8).
+  it('is idempotent on a multimodal body (T-16)', () => {
+    const input = {
+      data: {
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'secret' },
+                { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,QUJD' } },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const once = stripFreeText(input);
+    const twice = stripFreeText(once);
+    expect(twice).toEqual(once);
+  });
+
+  // T-17 — preservation of usage/model/metadata across a multimodal mask (REQ-9).
+  it('preserves model/usage/usageDetails/metadata byte-identical on a multimodal body (T-17)', () => {
+    const input = {
+      data: {
+        model: 'gpt-4o-mini',
+        usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
+        usageDetails: { input: 10, output: 20, total: 30 },
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'secret' },
+                { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,QUJD' } },
+              ],
+            },
+          ],
+        },
+        metadata: { museumId: 'm1', intent: 'art', locale: 'fr' },
+      },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.model).toBe('gpt-4o-mini');
+    expect(out.data.usage).toEqual({ promptTokens: 10, completionTokens: 20, totalTokens: 30 });
+    expect(out.data.usageDetails).toEqual({ input: 10, output: 20, total: 30 });
+    expect(out.data.metadata).toEqual({ museumId: 'm1', intent: 'art', locale: 'fr' });
+    // The free-text inside the array is still stripped.
+    expect(out.data.input.messages[0].content[0].text).toBe(STRIPPED);
+  });
+
+  // T-18 — hostile array (Proxy throwing on traversal): input unchanged + 1 warn, no PII (REQ-10).
+  it('fail-safe on a hostile array content: returns input + warns once without PII (T-18)', () => {
+    const secret = 'array-secret@x.tld';
+    const hostileArray = new Proxy([] as unknown[], {
+      get(_t, prop) {
+        if (prop === Symbol.iterator || prop === 'length' || prop === 'map' || prop === '0') {
+          throw new Error('hostile array boom');
+        }
+        return undefined;
+      },
+    });
+    const input = {
+      data: { secret, input: { messages: [{ role: 'user', content: hostileArray }] } },
+    };
+
+    let out: unknown;
+    expect(() => {
+      out = stripFreeText(input);
+    }).not.toThrow();
+    expect(out).toBeDefined();
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    const [event, payload] = (logger.warn as jest.Mock).mock.calls[0] as [string, unknown];
+    expect(event).toMatch(/langfuse_mask_failed/);
+    // No PII echo in the warn payload.
+    expect(JSON.stringify(payload ?? {})).not.toContain(secret);
+  });
+
+  // T-19 — top-level `messages` (not under input) with a multimodal array (REQ-1,2).
+  it('strips a multimodal array in top-level data.messages (T-19)', () => {
+    const input = {
+      data: {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'top-level secret u@x.tld' },
+              { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,TTTT' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const out = stripFreeText(input);
+    expect(out.data.messages[0].content[0].text).toBe(STRIPPED);
+    expect(out.data.messages[0].content[1].image_url.url).toBe(STRIPPED);
+    const serialised = JSON.stringify(out);
+    expect(serialised).not.toContain('u@x.tld');
+    expect(serialised).not.toContain('base64,TTTT');
   });
 });

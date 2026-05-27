@@ -33,6 +33,32 @@ describe('email-locale', () => {
     });
   });
 
+  // i18n region-tag bug (same class as the Cycle 12 i18n compare fix): a regionalised
+  // English user (`en-US`) must receive transactional emails in English, not French.
+  // `resolveEmailLocale` must normalise the raw locale via `extractLangCode` before the
+  // 2-locale (fr/en) decision instead of comparing the raw tag.
+  describe('resolveEmailLocale — region-tag normalisation', () => {
+    it('normalises "en-US" to "en" (regionalised English user)', () => {
+      expect(resolveEmailLocale('en-US')).toBe('en');
+    });
+
+    it('normalises "en-GB" to "en"', () => {
+      expect(resolveEmailLocale('en-GB')).toBe('en');
+    });
+
+    it('normalises "fr-FR" to "fr" (non-regression: still fr)', () => {
+      expect(resolveEmailLocale('fr-FR')).toBe('fr');
+    });
+
+    it.each([
+      ['unsupported language "es"', 'es'],
+      ['unsupported region tag "de-DE"', 'de-DE'],
+      ['undefined', undefined],
+    ])('falls back to the default for %s (email ships in 2 locales only)', (_label, input) => {
+      expect(resolveEmailLocale(input)).toBe(DEFAULT_EMAIL_LOCALE);
+    });
+  });
+
   describe('localeFromAcceptLanguage — header parsing', () => {
     it('returns default when header is undefined', () => {
       expect(localeFromAcceptLanguage(undefined)).toBe(DEFAULT_EMAIL_LOCALE);

@@ -1,0 +1,63 @@
+appId: com.musaium.mobile.preview
+# screen: MuseumDetailScreen
+---
+# Museum Branding (C4) — co-branding happy path over museum-detail.
+#
+# UFR-021: museum-detail.tsx is modified by the C4 slice (branded theme +
+# MuseumLogo in the hero). This flow taps THROUGH the happy path — it does not
+# merely assert the screen renders.
+#
+# Trace: home → Museums tab → tap first museum card → museum-detail hero
+#        (museum name + co-branding surface) → "Start Chat Here" CTA → chat loads.
+#
+# Prerequisites:
+#   - User logged in (quick-login helper handles it if on auth screen).
+#   - Backend on localhost:3000 with seeded museums (the 3 Bordeaux demos carry
+#     config:{} → exercise the unbranded fallback; a branded seed exercises the
+#     color/logo override).
+
+# ── Phase 1: land on home ─────────────────────────────────────────────
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Welcome back"
+    file: helpers/quick-login.yaml
+
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Start Conversation"
+    timeout: 10000
+
+# ── Phase 2: Museums tab ──────────────────────────────────────────────
+- tapOn: "Museums"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: "Search museums..."
+    timeout: 10000
+
+# ── Phase 3: open the first museum's detail ───────────────────────────
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ── Phase 4: assert the museum-detail hero, then tap the CTA THROUGH ───
+# The hero card shows the museum name; the co-branding surface (logo /
+# brand-colored CTA) lives here. "Start Chat Here" = museumDirectory.start_chat.
+- extendedWaitUntil:
+    visible: "Start Chat Here"
+    timeout: 5000
+
+- tapOn: "Start Chat Here"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ── Phase 5: chat loaded with museum context (happy path completed) ────
+- assertVisible:
+    id: "chat-input"

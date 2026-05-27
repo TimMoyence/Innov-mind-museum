@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SkeletonBox } from './SkeletonBox';
 import { useTheme } from './ThemeContext';
 import { semantic, space, radius, fontSize } from './tokens';
@@ -9,6 +10,7 @@ interface SkeletonChatBubbleProps {
 
 export const SkeletonChatBubble = ({ alignSelf = 'flex-start' }: SkeletonChatBubbleProps) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -16,6 +18,9 @@ export const SkeletonChatBubble = ({ alignSelf = 'flex-start' }: SkeletonChatBub
         styles.bubble,
         { alignSelf, borderColor: theme.cardBorder, backgroundColor: theme.cardBackground },
       ]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={t('a11y.chat.loading')}
+      accessible
     >
       <SkeletonBox width="100%" height={fontSize.xs} borderRadius={radius.sm} />
       <SkeletonBox

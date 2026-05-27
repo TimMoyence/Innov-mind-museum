@@ -13,6 +13,7 @@ const mockAdminDict: Dictionary['admin'] = {
   tickets: 'Tickets',
   supportAdmin: 'Support',
   reviewsAdmin: 'Reviews',
+  nps: 'NPS',
   accessDenied: 'Access Denied',
   goToHomepage: 'Go to Homepage',
   login: {
@@ -235,6 +236,18 @@ const mockAdminDict: Dictionary['admin'] = {
     topMuseums: '',
     museum: '',
     guardrailBlockRate: '',
+  },
+  npsPage: {
+    subtitle: '',
+    score: '',
+    promoters: '',
+    passives: '',
+    detractors: '',
+    responses: '',
+    distribution: '',
+    chartAriaLabel: '',
+    allMuseums: '',
+    noMuseumAssigned: '',
   },
   export: {
     sessions: { label: '', downloading: '', error: '' },

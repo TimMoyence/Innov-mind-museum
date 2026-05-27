@@ -3,6 +3,7 @@ import { ListApprovedReviewsUseCase } from '@modules/review/useCase/public/listA
 import { ListAllReviewsUseCase } from '@modules/review/useCase/admin/listAllReviews.useCase';
 import { ModerateReviewUseCase } from '@modules/review/useCase/moderation/moderateReview.useCase';
 import { GetReviewStatsUseCase } from '@modules/review/useCase/public/getReviewStats.useCase';
+import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type { ReviewDTO } from '@modules/review/domain/review/review.types';
 
@@ -36,6 +37,11 @@ function makeFakeRepo(): jest.Mocked<IReviewRepository> {
   };
 }
 
+/** No-op session-lookup stub (these cases never thread a sessionId). */
+function makeFakeLookup(): jest.Mocked<IReviewSessionLookup> {
+  return { findSessionMuseum: jest.fn().mockResolvedValue(null) };
+}
+
 // ─── CreateReviewUseCase ────────────────────────────────────────────
 
 describe('CreateReviewUseCase', () => {
@@ -43,7 +49,7 @@ describe('CreateReviewUseCase', () => {
 
   it('creates a review with valid input and derives userName server-side', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     const result = await uc.execute({
       user: fakeUser,
       rating: 5,
@@ -58,7 +64,7 @@ describe('CreateReviewUseCase', () => {
 
   it('derives just firstname when lastname is absent', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await uc.execute({
       user: { id: 2, firstname: 'Grace' },
       rating: 4,
@@ -69,7 +75,7 @@ describe('CreateReviewUseCase', () => {
 
   it('falls back to "Anonymous" when firstname and lastname are both missing', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await uc.execute({
       user: { id: 3 },
       rating: 4,
@@ -82,7 +88,7 @@ describe('CreateReviewUseCase', () => {
 
   it('rejects unauthenticated user (no id)', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await expect(
       uc.execute({
         user: { id: 0, firstname: 'X' },
@@ -95,7 +101,7 @@ describe('CreateReviewUseCase', () => {
   // Wave B C7 / R-C7b — NPS range widened to 0-10. Rejects only -1 and 11+.
   it('rejects rating < 0 (NPS detractor floor)', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await expect(
       uc.execute({ user: fakeUser, rating: -1, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
@@ -103,7 +109,7 @@ describe('CreateReviewUseCase', () => {
 
   it('rejects rating > 10 (NPS promoter ceiling)', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await expect(
       uc.execute({ user: fakeUser, rating: 11, comment: 'A valid comment here.' }),
     ).rejects.toThrow('rating');
@@ -111,7 +117,7 @@ describe('CreateReviewUseCase', () => {
 
   it('rejects comment shorter than 10 chars', async () => {
     const repo = makeFakeRepo();
-    const uc = new CreateReviewUseCase(repo);
+    const uc = new CreateReviewUseCase(repo, makeFakeLookup());
     await expect(uc.execute({ user: fakeUser, rating: 4, comment: 'Short' })).rejects.toThrow(
       'comment',
     );

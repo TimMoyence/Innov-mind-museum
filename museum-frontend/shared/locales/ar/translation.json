@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — الصور",
       "third_party_ai_audio_google": "Google AI — النسخ الصوتية",
       "third_party_ai_profile_google": "Google AI — التفضيلات والسجل",
-      "location_to_llm": "الموقع — الأماكن القريبة"
+      "location_to_llm": "الموقع — الأماكن القريبة",
+      "location_coarse_to_llm": "الموقع — المدينة فقط"
     },
     "accessibility": "إمكانية الوصول",
     "audio_description": "الوصف الصوتي",
@@ -472,7 +473,7 @@
     "audio": "صوتي",
     "image_sent": "[تم إرسال صورة]",
     "voice_message": "[رسالة صوتية]",
-    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.app",
+    "share_footer": "تمت المشاركة عبر Musaium — رفيقك في المتحف\nhttps://musaium.com",
     "replace_image": "استبدال",
     "remove_image": "إزالة",
     "share_response": "مشاركة",
@@ -526,7 +527,8 @@
       "gallery": "اختيار من المعرض",
       "record_audio": "تسجيل رسالة صوتية",
       "stop_audio": "إيقاف التسجيل",
-      "scan_cartel": "مسح اللافتة"
+      "scan_cartel": "مسح اللافتة",
+      "compare": "قارن هذا العمل"
     },
     "cartelScanner": {
       "title": "مسح رمز QR للافتة",
@@ -645,18 +647,6 @@
   "chatInput": {
     "placeholder": "اسأل عن عمل فني أو معلم، أو أرسل صوتًا/صورة...",
     "send": "إرسال"
-  },
-  "welcome": {
-    "title": "مرحبًا بك في Musaium",
-    "subtitle": "رفيقك الشخصي في المتحف",
-    "suggestions": {
-      "museum_camera": "ما العمل الفني الذي أمامي؟",
-      "museum_history": "أخبرني عن تاريخ هذا المتحف",
-      "museum_next": "ماذا يجب أن أشاهد بعد ذلك؟",
-      "standard_camera": "صوّر عملًا فنيًا للتعرّف عليه",
-      "standard_style": "أخبرني عن الانطباعية",
-      "standard_question": "من رسم الموناليزا؟"
-    }
   },
   "expertiseBadge": {
     "beginner": "مبتدئ",
@@ -823,6 +813,9 @@
       "weekly_closed": "{{day}} مغلق"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "شعار {{name}}"
+  },
   "museum": {
     "about": "حول",
     "opening_hours": "ساعات العمل",
@@ -942,6 +935,8 @@
       "send_hint": "يرسل رسالتك إلى مساعد المتحف",
       "message_input": "اكتب رسالتك",
       "assistant_message": "رسالة المساعد",
+      "attached_image": "صورة مرفقة بالرسالة",
+      "loading": "جارٍ تحميل الرد",
       "user_message": "رسالتك",
       "long_press_hint": "اضغط مطوّلًا لمزيد من الخيارات",
       "recommendation_hint": "يملأ حقل الإدخال بهذا الاقتراح",
@@ -980,7 +975,8 @@
     "reviews": {
       "name_input": "اسم العرض الخاص بك",
       "comment_input": "تعليق تقييمك",
-      "star_button": "تعيين تقييم {{count}} نجوم"
+      "star_button": "تعيين تقييم {{count}} نجوم",
+      "nps_value": "درجة التوصية {{value}} من 10"
     },
     "preferences": {
       "language_button": "اختيار لغة {{language}}",
@@ -1119,7 +1115,9 @@
     "manage_subtitle": "يمكنك إلغاء تحديد أي فئة بحرّية. نطاق \"OpenAI نص\" مطلوب للدردشة مع الذكاء الاصطناعي.",
     "save_required_hint": "فعّل \"OpenAI نص\" لحفظ خياراتك.",
     "scope_location": "الموقع",
-    "scope_location_hint": "تتم مشاركة منطقتك التقريبية (المدينة) مع الذكاء الاصطناعي للتعرّف على المتاحف والمعالم القريبة. لا تتم مشاركة موقعك الدقيق أبدًا."
+    "scope_location_hint": "تتم مشاركة الحي التقريبي (الحي + المدينة) مع الذكاء الاصطناعي للتعرّف على المتاحف والمعالم القريبة. لا تتم مشاركة شارعك أو عنوانك أو موقعك الدقيق أبدًا.",
+    "scope_location_coarse": "المدينة فقط",
+    "scope_location_coarse_hint": "تتم مشاركة مدينتك وبلدك فقط مع الذكاء الاصطناعي — خيار أقل دقة من مستوى الحي. لا تتم مشاركة شارعك أو موقعك الدقيق أبدًا."
   },
   "dailyArt": {
     "title": "عمل فني اليوم",
@@ -1176,6 +1174,9 @@
     "writeReview": "كتابة تقييم",
     "averageRating": "متوسط التقييم",
     "ratingLabel": "تقييمك",
+    "npsLabel": "ما مدى احتمال أن توصي بـ Musaium؟",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "اسمك",
     "commentPlaceholder": "شارك تجربتك...",
     "submit": "إرسال التقييم",

@@ -205,6 +205,7 @@ export interface Dictionary {
     tickets: string;
     supportAdmin: string;
     reviewsAdmin: string;
+    nps: string;
     accessDenied: string;
     goToHomepage: string;
     login: {
@@ -433,6 +434,21 @@ export interface Dictionary {
       topMuseums: string;
       museum: string;
       guardrailBlockRate: string;
+    };
+    npsPage: {
+      subtitle: string;
+      score: string;
+      promoters: string;
+      passives: string;
+      detractors: string;
+      responses: string;
+      distribution: string;
+      chartAriaLabel: string;
+      allMuseums: string;
+      // F6 — shown when the NPS read 403s because the signed-in manager has no
+      // museum assigned (NULL museumId claim). Actionable copy instead of the
+      // raw backend "No museum assigned" / "Museum scope required" text.
+      noMuseumAssigned: string;
     };
     /**
      * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind

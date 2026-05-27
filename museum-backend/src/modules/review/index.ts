@@ -4,6 +4,7 @@ export {
   listAllReviewsUseCase,
   moderateReviewUseCase,
   getReviewStatsUseCase,
+  getNpsUseCase,
 } from './useCase';
 export type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 export type {

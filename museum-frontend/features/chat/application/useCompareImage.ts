@@ -19,7 +19,11 @@
  *  - 4xx is terminal — no retry. 5xx is retried up to 2 attempts.
  */
 import { useTranslation } from 'react-i18next';
-import { useMutation, type UseMutationResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  type UseMutationOptions,
+  type UseMutationResult,
+} from '@tanstack/react-query';
 
 import {
   imageComparisonApi,
@@ -61,17 +65,37 @@ const getStatus = (error: unknown): number | undefined =>
 const getErrorCode = (error: unknown): string | undefined =>
   isAxiosLikeError(error) ? error.response?.data?.error?.code : undefined;
 
+/** Default retry policy: 4xx terminal, 5xx retried up to 2 attempts. */
+const defaultRetry: NonNullable<
+  UseMutationOptions<CompareResult, Error, UseCompareImageInput>['retry']
+> = (failureCount, error) => {
+  const status = getStatus(error);
+  if (status !== undefined && status >= 400 && status < 500) {
+    return false;
+  }
+  return failureCount < 2;
+};
+
+/** Optional overrides for the compare mutation. */
+export interface UseCompareImageOptions {
+  /**
+   * Retry policy override. Consumers that surface errors on a tight UX budget
+   * (e.g. the in-screen compare trigger, which must show the i18n error
+   * promptly) pass `false` to skip the 5xx back-off. Defaults to the
+   * 4xx-terminal / 5xx-retried policy.
+   */
+  readonly retry?: UseMutationOptions<CompareResult, Error, UseCompareImageInput>['retry'];
+}
+
 /**
  * React Query mutation wrapper around `imageComparisonApi.compare`.
  *
  * Returns the standard `useMutation()` result shape; consumers should read
  * `data` (the `CompareResult`) and `error` (a normalised `Error`).
  */
-export const useCompareImage = (): UseMutationResult<
-  CompareResult,
-  Error,
-  UseCompareImageInput
-> => {
+export const useCompareImage = (
+  options?: UseCompareImageOptions,
+): UseMutationResult<CompareResult, Error, UseCompareImageInput> => {
   const { t } = useTranslation();
 
   return useMutation<CompareResult, Error, UseCompareImageInput>({
@@ -93,13 +117,8 @@ export const useCompareImage = (): UseMutationResult<
      * Retry policy: 4xx is terminal (client did something wrong — no point
      * resending the same payload), 5xx is transient and worth a retry. We
      * stop after `failureCount` reaches 2 to bound user-perceived latency.
+     * Overridable so the in-screen trigger can opt out (prompt error UX).
      */
-    retry: (failureCount, error) => {
-      const status = getStatus(error);
-      if (status !== undefined && status >= 400 && status < 500) {
-        return false;
-      }
-      return failureCount < 2;
-    },
+    retry: options?.retry ?? defaultRetry,
   });
 };

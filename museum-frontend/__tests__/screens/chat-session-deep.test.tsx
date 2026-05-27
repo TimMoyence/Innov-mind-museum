@@ -36,7 +36,7 @@ import type * as ReactTypes from 'react';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '../helpers/render-chat-screen';
 
 import { makeAssistantMessage, makeChatUiMessage } from '../helpers/factories';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';

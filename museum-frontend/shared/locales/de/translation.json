@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — Fotos",
       "third_party_ai_audio_google": "Google AI — Sprachtranskriptionen",
       "third_party_ai_profile_google": "Google AI — Präferenzen & Verlauf",
-      "location_to_llm": "Standort — Orte in der Nähe"
+      "location_to_llm": "Standort — Orte in der Nähe",
+      "location_coarse_to_llm": "Standort — nur Stadt"
     },
     "accessibility": "Barrierefreiheit",
     "audio_description": "Audiobeschreibung",
@@ -472,7 +473,7 @@
     "audio": "Audio",
     "image_sent": "[Bild gesendet]",
     "voice_message": "[Sprachnachricht]",
-    "share_footer": "Geteilt über Musaium — Ihr Museumsbegleiter\nhttps://musaium.app",
+    "share_footer": "Geteilt über Musaium — Ihr Museumsbegleiter\nhttps://musaium.com",
     "replace_image": "Ersetzen",
     "remove_image": "Entfernen",
     "share_response": "Teilen",
@@ -526,7 +527,8 @@
       "gallery": "Aus Galerie wählen",
       "record_audio": "Sprachnachricht aufnehmen",
       "stop_audio": "Aufnahme stoppen",
-      "scan_cartel": "Schild scannen"
+      "scan_cartel": "Schild scannen",
+      "compare": "Dieses Werk vergleichen"
     },
     "cartelScanner": {
       "title": "QR-Code des Schilds scannen",
@@ -645,18 +647,6 @@
   "chatInput": {
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
     "send": "Senden"
-  },
-  "welcome": {
-    "title": "Willkommen bei Musaium",
-    "subtitle": "Ihr persönlicher Museumsbegleiter",
-    "suggestions": {
-      "museum_camera": "Welches Kunstwerk steht vor mir?",
-      "museum_history": "Erzählen Sie mir etwas über die Geschichte dieses Museums",
-      "museum_next": "Was sollte ich als Nächstes sehen?",
-      "standard_camera": "Fotografieren Sie ein Kunstwerk, um mehr darüber zu erfahren",
-      "standard_style": "Erzählen Sie mir etwas über den Impressionismus",
-      "standard_question": "Wer hat die Mona Lisa gemalt?"
-    }
   },
   "expertiseBadge": {
     "beginner": "Einsteiger",
@@ -834,6 +824,9 @@
       "weekly_closed": "{{day}} Geschlossen"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logo von {{name}}"
+  },
   "museum": {
     "about": "Über",
     "opening_hours": "Öffnungszeiten",
@@ -942,6 +935,8 @@
       "send_hint": "Sendet Ihre Nachricht an den Museumsassistenten",
       "message_input": "Nachricht eingeben",
       "assistant_message": "Nachricht des Assistenten",
+      "attached_image": "An die Nachricht angehängtes Bild",
+      "loading": "Antwort wird geladen",
       "user_message": "Ihre Nachricht",
       "long_press_hint": "Lange drücken für weitere Optionen",
       "recommendation_hint": "Füllt das Eingabefeld mit diesem Vorschlag",
@@ -980,7 +975,8 @@
     "reviews": {
       "name_input": "Dein Anzeigename",
       "comment_input": "Dein Bewertungskommentar",
-      "star_button": "{{count}} Sterne vergeben"
+      "star_button": "{{count}} Sterne vergeben",
+      "nps_value": "Empfehlungswert {{value}} von 10"
     },
     "preferences": {
       "language_button": "Sprache {{language}} auswählen",
@@ -1119,7 +1115,9 @@
     "manage_subtitle": "Sie können jede Kategorie frei abwählen. Der Bereich \"OpenAI Text\" ist erforderlich, um mit der KI zu chatten.",
     "save_required_hint": "Aktivieren Sie \"OpenAI Text\", um Ihre Auswahl zu speichern.",
     "scope_location": "Standort",
-    "scope_location_hint": "Ihre ungefähre Region (Stadt) wird mit der KI geteilt, um nahegelegene Museen und Denkmäler zu erkennen. Ihr genauer Standort wird niemals geteilt."
+    "scope_location_hint": "Ihr ungefähres Viertel (Stadtteil + Stadt) wird mit der KI geteilt, um nahegelegene Museen und Denkmäler zu erkennen. Ihre Straße, Adresse und Ihr genauer Standort werden niemals geteilt.",
+    "scope_location_coarse": "Nur Stadt",
+    "scope_location_coarse_hint": "Nur Ihre Stadt und Ihr Land werden mit der KI geteilt – weniger genau als die Viertel-Ebene. Ihre Straße und Ihr genauer Standort werden niemals geteilt."
   },
   "dailyArt": {
     "title": "Kunstwerk des Tages",
@@ -1176,6 +1174,9 @@
     "writeReview": "Bewertung schreiben",
     "averageRating": "Durchschnittsbewertung",
     "ratingLabel": "Deine Bewertung",
+    "npsLabel": "Wie wahrscheinlich ist es, dass du Musaium weiterempfiehlst?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Dein Name",
     "commentPlaceholder": "Teile deine Erfahrung...",
     "submit": "Bewertung abschicken",

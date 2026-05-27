@@ -26,7 +26,11 @@ import {
 } from '@/features/chat/domain/consentScopes';
 
 describe('consentScopes domain (C1 split — extracted from thirdPartyAiConsent.ts)', () => {
-  it('exposes the 9 scopes in the canonical order (S4-P0-02 audit-chain stability)', () => {
+  // Cycle 1.5-FE (REQ-FE-1, D2 append-order) — `location_coarse_to_llm` is the
+  // coarse (city+country) geo grant. It is APPENDED last so the existing 0-8
+  // indices stay stable (`switches[8] === location_to_llm`, NFR-FE-6 audit-chain
+  // stability). The list now has 10 scopes.
+  it('exposes the 10 scopes in the canonical order (S4-P0-02 audit-chain stability, coarse appended last)', () => {
     expect(THIRD_PARTY_AI_SCOPES).toEqual([
       'third_party_ai_text_openai',
       'third_party_ai_image_openai',
@@ -37,6 +41,7 @@ describe('consentScopes domain (C1 split — extracted from thirdPartyAiConsent.
       'third_party_ai_audio_google',
       'third_party_ai_profile_google',
       'location_to_llm',
+      'location_coarse_to_llm',
     ]);
   });
 
@@ -56,8 +61,22 @@ describe('consentScopes domain (C1 split — extracted from thirdPartyAiConsent.
     expect(location).toBe('location_to_llm');
   });
 
-  it('includes location_to_llm (coarse-location scope, not a per-vendor grant)', () => {
+  it('includes location_to_llm (full / neighbourhood geo grant, not a per-vendor grant)', () => {
     expect(THIRD_PARTY_AI_SCOPES).toContain('location_to_llm');
+  });
+
+  // REQ-FE-1 (T-DOM-2) — the coarse (city+country) geo level exists on the BE
+  // (`CONSENT_SCOPES` + `z.enum` route) but was a dead scope on the FE: never in
+  // this list → never grantable. Adding it here is what un-deads it.
+  it('includes location_coarse_to_llm (coarse / city+country geo grant — REQ-FE-1)', () => {
+    expect(THIRD_PARTY_AI_SCOPES).toContain('location_coarse_to_llm');
+  });
+
+  // REQ-FE-1 (T-DOM-3) — compile-time guard: the coarse scope must be assignable
+  // to the ThirdPartyAiScope union (so consentApi.grant/revoke accept it).
+  it('infers location_coarse_to_llm into the ThirdPartyAiScope union (compile-time)', () => {
+    const coarse: ThirdPartyAiScope = 'location_coarse_to_llm';
+    expect(coarse).toBe('location_coarse_to_llm');
   });
 
   it('intentionally OMITS deepseek scopes (S4-P0-04 EU sentinel blocks them in prod)', () => {

@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — foto",
       "third_party_ai_audio_google": "Google AI — trascrizioni vocali",
       "third_party_ai_profile_google": "Google AI — preferenze e cronologia",
-      "location_to_llm": "Posizione — luoghi nelle vicinanze"
+      "location_to_llm": "Posizione — luoghi nelle vicinanze",
+      "location_coarse_to_llm": "Posizione — solo città"
     },
     "accessibility": "Accessibilità",
     "audio_description": "Audiodescrizione",
@@ -472,7 +473,7 @@
     "audio": "Audio",
     "image_sent": "[Immagine inviata]",
     "voice_message": "[Messaggio vocale]",
-    "share_footer": "Condiviso tramite Musaium — Il tuo compagno di museo\nhttps://musaium.app",
+    "share_footer": "Condiviso tramite Musaium — Il tuo compagno di museo\nhttps://musaium.com",
     "replace_image": "Sostituisci",
     "remove_image": "Rimuovi",
     "share_response": "Condividi",
@@ -526,7 +527,8 @@
       "gallery": "Scegli dalla galleria",
       "record_audio": "Registra messaggio vocale",
       "stop_audio": "Ferma registrazione",
-      "scan_cartel": "Scansiona cartello"
+      "scan_cartel": "Scansiona cartello",
+      "compare": "Confronta quest'opera"
     },
     "cartelScanner": {
       "title": "Scansiona il QR del cartello",
@@ -645,18 +647,6 @@
   "chatInput": {
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
     "send": "Invia"
-  },
-  "welcome": {
-    "title": "Benvenuto su Musaium",
-    "subtitle": "Il tuo compagno di museo personale",
-    "suggestions": {
-      "museum_camera": "Che opera ho davanti?",
-      "museum_history": "Raccontami la storia di questo museo",
-      "museum_next": "Cosa dovrei vedere dopo?",
-      "standard_camera": "Fotografa un'opera per conoscerla meglio",
-      "standard_style": "Parlami dell'Impressionismo",
-      "standard_question": "Chi ha dipinto la Gioconda?"
-    }
   },
   "expertiseBadge": {
     "beginner": "Principiante",
@@ -834,6 +824,9 @@
       "weekly_closed": "{{day}} Chiuso"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logo di {{name}}"
+  },
   "museum": {
     "about": "Informazioni",
     "opening_hours": "Orari",
@@ -942,6 +935,8 @@
       "send_hint": "Invia il tuo messaggio all'assistente del museo",
       "message_input": "Scrivi il tuo messaggio",
       "assistant_message": "Messaggio dell'assistente",
+      "attached_image": "Immagine allegata al messaggio",
+      "loading": "Caricamento della risposta",
       "user_message": "Il tuo messaggio",
       "long_press_hint": "Premi a lungo per altre opzioni",
       "recommendation_hint": "Compila il campo con questo suggerimento",
@@ -980,7 +975,8 @@
     "reviews": {
       "name_input": "Il tuo nome visualizzato",
       "comment_input": "Il tuo commento di recensione",
-      "star_button": "Assegna {{count}} stelle"
+      "star_button": "Assegna {{count}} stelle",
+      "nps_value": "Punteggio di raccomandazione {{value}} su 10"
     },
     "preferences": {
       "language_button": "Seleziona lingua {{language}}",
@@ -1119,7 +1115,9 @@
     "manage_subtitle": "Puoi deselezionare liberamente qualsiasi categoria. L'ambito \"OpenAI Testo\" è obbligatorio per chattare con l'IA.",
     "save_required_hint": "Attiva \"OpenAI Testo\" per salvare le tue scelte.",
     "scope_location": "Posizione",
-    "scope_location_hint": "La tua zona approssimativa (città) è condivisa con l'IA per riconoscere musei e monumenti nelle vicinanze. La tua posizione precisa non è mai condivisa."
+    "scope_location_hint": "Il tuo quartiere approssimativo (quartiere + città) è condiviso con l'IA per riconoscere musei e monumenti nelle vicinanze. La tua via, il tuo indirizzo e la tua posizione precisa non sono mai condivisi.",
+    "scope_location_coarse": "Solo città",
+    "scope_location_coarse_hint": "Vengono condivisi con l'IA solo la tua città e il tuo paese, un'opzione meno precisa del livello di quartiere. La tua via e la tua posizione precisa non sono mai condivise."
   },
   "dailyArt": {
     "title": "Opera del Giorno",
@@ -1176,6 +1174,9 @@
     "writeReview": "Scrivi una recensione",
     "averageRating": "Valutazione media",
     "ratingLabel": "La tua valutazione",
+    "npsLabel": "Quanto è probabile che consigli Musaium?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Il tuo nome",
     "commentPlaceholder": "Condividi la tua esperienza...",
     "submit": "Invia recensione",

@@ -1,6 +1,6 @@
 import { logger } from '@shared/logger/logger';
 
-const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
+const USER_AGENT = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 export interface WikipediaSummary {

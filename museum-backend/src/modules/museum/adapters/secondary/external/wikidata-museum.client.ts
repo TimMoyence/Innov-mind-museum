@@ -6,7 +6,7 @@ import {
 } from '@shared/http/wikidata-ids';
 import { logger } from '@shared/logger/logger';
 
-const USER_AGENT = 'Musaium/1.0 (https://musaium.app; contact@musaium.app)';
+const USER_AGENT = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 const DEFAULT_TIMEOUT_MS = 5_000;

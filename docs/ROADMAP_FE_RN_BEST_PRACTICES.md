@@ -1,7 +1,7 @@
 # Roadmap FE / RN Best Practices — Musaium
 
 > **Vivante.** Réécrite à chaque sprint. Snapshots précédents = git history.
-> **Sprint courant :** 2026-05-03 → 2026-06-01 (launch sprint). MAJ 2026-05-20.
+> **Sprint courant :** 2026-05-03 → 2026-06-07 (launch sprint, date canonique cf. `docs/ROADMAP_PRODUCT.md`). MAJ 2026-05-20.
 > **Owner :** travail FE mergé directement sur `main` (le modèle de worktree dédié `cleanup/fe` n'existe plus). Coche `[x]` au merge.
 > **Horizon :** 1 mois NOW + 1 trimestre NEXT/LATER.
 

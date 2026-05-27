@@ -5,7 +5,12 @@
  * so we re-implement their logic here and test the contracts they satisfy.
  * This is intentional — the helpers are pure functions whose behaviour
  * must be stable regardless of refactoring.
+ *
+ * `toIsoTimestamp` (F3 — NPS scale-epoch) IS exported, so it is imported and
+ * exercised directly (its stderr warning side-effect is spied/silenced).
  */
+
+import { toIsoTimestamp } from '@src/config/env-helpers';
 
 // ---------------------------------------------------------------------------
 // Extracted pure logic mirrors — kept in sync with src/config/env.ts
@@ -179,6 +184,51 @@ describe('required', () => {
     expect(() => required('MY_VAR', '   ')).toThrow(
       'Missing required environment variable: MY_VAR',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toIsoTimestamp (F3 — NPS scale-epoch)
+// ---------------------------------------------------------------------------
+
+describe('toIsoTimestamp', () => {
+  const FALLBACK = '2026-05-27T00:00:00.000Z';
+  let stderrSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    stderrSpy.mockRestore();
+  });
+
+  it('returns the fallback when value is undefined', () => {
+    expect(toIsoTimestamp(undefined, FALLBACK)).toBe(FALLBACK);
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns the fallback when value is empty / whitespace', () => {
+    expect(toIsoTimestamp('', FALLBACK)).toBe(FALLBACK);
+    expect(toIsoTimestamp('   ', FALLBACK)).toBe(FALLBACK);
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it('normalises a valid ISO string to a UTC ISO string', () => {
+    expect(toIsoTimestamp('2026-01-01T00:00:00Z', FALLBACK)).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('normalises an offset timestamp to UTC', () => {
+    // 2026-06-01 02:00 +02:00 == 2026-06-01 00:00 UTC.
+    expect(toIsoTimestamp('2026-06-01T02:00:00+02:00', FALLBACK)).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  it('degrades to the fallback and warns on an unparseable value', () => {
+    expect(toIsoTimestamp('not-a-date', FALLBACK)).toBe(FALLBACK);
+    expect(stderrSpy).toHaveBeenCalledTimes(1);
+    const written = String(stderrSpy.mock.calls[0][0]);
+    expect(written).toContain('env_iso_timestamp_invalid');
+    expect(written).toContain('not-a-date');
   });
 });
 

@@ -14,6 +14,7 @@
 
 import { CreateReviewUseCase } from '@modules/review/useCase/public/createReview.useCase';
 
+import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type { ReviewDTO } from '@modules/review/domain/review/review.types';
 
@@ -27,6 +28,11 @@ const persistedReview: ReviewDTO = {
   museumId: null,
   createdAt: '2026-03-26T12:00:00.000Z',
 };
+
+/** No-op session-lookup stub (these cases never thread a sessionId). */
+function makeLookup(): jest.Mocked<IReviewSessionLookup> {
+  return { findSessionMuseum: jest.fn().mockResolvedValue(null) };
+}
 
 function makeRepo(): jest.Mocked<IReviewRepository> {
   return {
@@ -51,7 +57,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
   describe('comment trimming (L47 MethodExpression)', () => {
     it('trims surrounding whitespace before persisting and length validation', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
 
       await uc.execute({
         user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
@@ -66,6 +72,9 @@ describe('CreateReviewUseCase — mutation coverage', () => {
         userName: 'Ada L.',
         rating: 5,
         comment: 'A valid comment.',
+        // C2 — attribution: no sessionId threaded → museum scope NULL (global).
+        museumId: null,
+        sessionId: null,
       });
     });
 
@@ -75,7 +84,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
       // catches the trim() removal mutant because the padded version has length 16
       // and would slip past the length check if trim() were absent.
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
 
       const padded = '   short!!   '; // raw length 13, trimmed length 8
       await expect(
@@ -93,7 +102,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
   describe('comment length lower bound (L48 EqualityOperator `< 10`)', () => {
     it('accepts a comment of exactly 10 characters (boundary)', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
       const tenChars = 'abcdefghij'; // length === 10
 
       await uc.execute({
@@ -107,12 +116,14 @@ describe('CreateReviewUseCase — mutation coverage', () => {
         userName: 'Ada L.',
         rating: 4,
         comment: tenChars,
+        museumId: null,
+        sessionId: null,
       });
     });
 
     it('rejects a comment of exactly 9 characters', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
       await expect(
         uc.execute({
           user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
@@ -127,7 +138,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
   describe('comment length upper bound (L48 ConditionalExpression / EqualityOperator `> 2000`)', () => {
     it('accepts a comment of exactly 2000 characters (boundary)', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
       const twoThousand = 'x'.repeat(2000);
 
       await uc.execute({
@@ -142,12 +153,14 @@ describe('CreateReviewUseCase — mutation coverage', () => {
         userName: 'Ada L.',
         rating: 3,
         comment: twoThousand,
+        museumId: null,
+        sessionId: null,
       });
     });
 
     it('rejects a comment of exactly 2001 characters', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
       await expect(
         uc.execute({
           user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
@@ -162,7 +175,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
   describe('display name truncation (L52 MethodExpression `.slice(0, 128)`)', () => {
     it('truncates a long derived display name to 128 characters before persisting', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
 
       // firstname (130 chars) + " " + last-initial "." = 133 chars → trimmed to 128.
       const longFirstname = 'A'.repeat(130);
@@ -183,7 +196,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
 
     it('leaves a short display name untouched', async () => {
       const repo = makeRepo();
-      const uc = new CreateReviewUseCase(repo);
+      const uc = new CreateReviewUseCase(repo, makeLookup());
 
       await uc.execute({
         user: { id: 7, firstname: 'Ada', lastname: 'Lovelace' },
@@ -196,6 +209,8 @@ describe('CreateReviewUseCase — mutation coverage', () => {
         userName: 'Ada L.',
         rating: 5,
         comment: 'A valid comment here.',
+        museumId: null,
+        sessionId: null,
       });
     });
   });

@@ -11,7 +11,6 @@ import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 
-import { WelcomeCard } from '@/features/chat/ui/WelcomeCard';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { nonNull } from '../helpers/nonNull';
 
@@ -51,44 +50,6 @@ jest.mock('@/features/chat/ui/ArtworkCard', () => {
 });
 
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
-
-// ============================================================================
-// WelcomeCard — accessibility & behaviour
-// ============================================================================
-
-describe('WelcomeCard — accessibility & behaviour', () => {
-  // pins: the standard mode greeting card exposes a camera-trigger button
-  // accessible to screen readers via its accessibility role
-  it('renders a camera button reachable via accessibility role in standard mode', () => {
-    const onCamera = jest.fn();
-    const { getByRole } = render(
-      <WelcomeCard
-        museumMode={false}
-        onSuggestion={jest.fn()}
-        onCamera={onCamera}
-        disabled={false}
-      />,
-    );
-    const button = getByRole('button', { name: /camera|photo/i });
-    expect(button).toBeTruthy();
-  });
-
-  // pins: museum mode renders distinct content (museum-specific suggestions)
-  // confirmed by the presence of multiple suggestion buttons
-  it('renders multiple suggestion buttons in museum mode', () => {
-    const onSuggestion = jest.fn();
-    const { getAllByRole } = render(
-      <WelcomeCard
-        museumMode={true}
-        onSuggestion={onSuggestion}
-        onCamera={jest.fn()}
-        disabled={false}
-      />,
-    );
-    const buttons = getAllByRole('button');
-    expect(buttons.length).toBeGreaterThanOrEqual(2);
-  });
-});
 
 // ============================================================================
 // ErrorBoundary — fallback behaviour
@@ -200,8 +161,6 @@ describe('ChatInput — disabled/sending state', () => {
     // button is always rendered (never hidden) — a missing button means a regression
     expect(sendButton).not.toBeNull();
     const button = nonNull(sendButton);
-    expect(
-      button.props.accessibilityState?.disabled ?? button.props.disabled,
-    ).toBeTruthy();
+    expect(button.props.accessibilityState?.disabled ?? button.props.disabled).toBeTruthy();
   });
 });

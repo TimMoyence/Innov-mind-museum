@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 import '../helpers/chat-screen.setup';

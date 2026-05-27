@@ -49,7 +49,8 @@
         "nav-tabs-roundtrip.yaml",
         "modal-museum-sheet.yaml",
         "modal-museum-offline-pack.yaml",
-        "modal-paywall-quota-upsell.yaml"
+        "modal-paywall-quota-upsell.yaml",
+        "museum-branding-detail.yaml"
       ]
     },
     {
@@ -58,7 +59,8 @@
         "settings-flow.yaml",
         "settings-locale-switch.yaml",
         "settings-audio-description.yaml",
-        "support-ticket-create.yaml"
+        "support-ticket-create.yaml",
+        "reviews-submit-flow.yaml"
       ]
     }
   ],

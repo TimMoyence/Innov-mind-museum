@@ -5,7 +5,7 @@
 **Date de rédaction technique** : 2026-05-13 (audit P0-1).
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel, opérant Musaium / InnovMind, France.
 **Contact responsable** : `tim.moyence@gmail.com`.
-**Contact DPO** : `dpo@musaium.app` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
+**Contact DPO** : `dpo@musaium.com` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
 **Cycle de revue** : annuel, ou à chaque changement matériel du traitement.
 
 > **Note d'audit (2026-05-13)** : ce document a fait l'objet d'un audit technique (P0-1) destiné à aligner le contenu factuel sur le code de production réel (durées de conservation, mesures TOM effectivement déployées, statut DeepSeek post-réconciliation P0-3). Toutes les sections marquées `<!-- DPO ACTION REQUIRED: ... -->` requièrent une décision juridique d'un DPO mandaté avant signature. Les sections techniques (T1/T2/T3 — colonnes Durée, Mesures, Destinataires) ont été cross-vérifiées contre `museum-backend/src/config/env.ts`, `museum-backend/src/shared/audit/`, `docs/compliance/SUBPROCESSORS.md`.

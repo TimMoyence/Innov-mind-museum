@@ -12,7 +12,12 @@ export {
   makePostMessageResponse,
 } from './session.factories';
 export { makeAuthUser, makeAuthTokens, makeAppError } from './auth.factories';
-export { makeMuseumListItem, makeGeoLocation } from './museum.factories';
+export {
+  makeMuseumListItem,
+  makeGeoLocation,
+  makeMuseumBranding,
+  makeMuseumDetail,
+} from './museum.factories';
 export type { GeoLocation } from './museum.factories';
 export { makeReview } from './review.factories';
 export { makeSupportTicket, makeSupportTicketDetail, makeTicketMessage } from './support.factories';

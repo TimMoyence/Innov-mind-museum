@@ -131,23 +131,26 @@ export const semantic = {
     textValue: '#f6ebe4',
   },
 
-  /** Expertise badge level colors */
+  /** Expertise badge level colors. Light values darkened for WCAG 1.4.3 (A11Y-03):
+   *  level-colored text on its own 8% tint must reach ≥ 4.5:1. Mirror:
+   *  museum-frontend/shared/ui/tokens.semantic.ts (kept in sync by hand). */
   expertiseLevels: {
-    beginner: { light: '#059669', dark: '#34D399' },
-    intermediate: { light: '#D97706', dark: '#FBBF24' },
+    beginner: { light: '#047857', dark: '#34D399' },
+    intermediate: { light: '#92400E', dark: '#FBBF24' },
     expert: { light: '#7C3AED', dark: '#A78BFA' },
   },
 
-  /** Ticket/priority status badge colors */
+  /** Ticket/priority status badge colors. Lifted to the -700 ramp for WCAG 1.4.3
+   *  (A11Y-01): white text needs ≥ 4.5:1 (was 2.15–3.76:1). gray already passed. */
   statusBadge: {
     textColor: '#FFFFFF',
-    open: '#3B82F6',
-    inProgress: '#F59E0B',
-    resolved: '#22C55E',
+    open: '#1D4ED8',
+    inProgress: '#B45309',
+    resolved: '#15803D',
     closed: '#6B7280',
     priorityLow: '#6B7280',
-    priorityMedium: '#F59E0B',
-    priorityHigh: '#EF4444',
+    priorityMedium: '#B45309',
+    priorityHigh: '#B91C1C',
   },
 
   /** Device chrome colors (hardware simulation for mockup components) */

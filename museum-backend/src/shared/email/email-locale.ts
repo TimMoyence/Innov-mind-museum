@@ -2,14 +2,29 @@
 // `/[locale]/...` — without the prefix, Next.js 301 → 404 (segment required).
 // Single source of locale resolution across all useCases.
 
+import { extractLangCode } from '@shared/i18n/locale';
+
 /** Mirrors museum-web `[locale]` segment. */
 export type EmailLocale = 'fr' | 'en';
 
 export const DEFAULT_EMAIL_LOCALE: EmailLocale = 'fr';
 
-/** Falls back to {@link DEFAULT_EMAIL_LOCALE} unless exact `'fr'` or `'en'`. */
+/**
+ * Maps a locale tag to the 2 email locales (fr/en), else {@link DEFAULT_EMAIL_LOCALE}.
+ * Region tags (`en-US`, `fr-FR`) are normalised via {@link extractLangCode} so a
+ * regionalised English user gets English mail. Bare tags stay strict-lowercase
+ * ('EN'/'FR' → default) since `extractLangCode` lowercases — only the presence of
+ * a `-`/`_` separator authorises normalisation.
+ */
 export function resolveEmailLocale(input: unknown): EmailLocale {
+  if (typeof input !== 'string') return DEFAULT_EMAIL_LOCALE;
   if (input === 'en') return 'en';
+  if (input === 'fr') return 'fr';
+  if (/[-_]/.test(input)) {
+    const lang = extractLangCode(input);
+    if (lang === 'en') return 'en';
+    if (lang === 'fr') return 'fr';
+  }
   return DEFAULT_EMAIL_LOCALE;
 }
 
