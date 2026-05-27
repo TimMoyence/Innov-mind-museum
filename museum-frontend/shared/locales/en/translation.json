@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — voice transcripts",
       "third_party_ai_profile_google": "Google AI — preferences & history",
-      "location_to_llm": "Location — nearby places"
+      "location_to_llm": "Location — nearby places",
+      "location_coarse_to_llm": "Location — city only"
     },
     "accessibility": "Accessibility",
     "audio_description": "Audio Description",
@@ -1125,7 +1126,9 @@
     "manage_subtitle": "Uncheck any category freely. The \"OpenAI Text\" scope is required to chat with the AI.",
     "save_required_hint": "Enable \"OpenAI Text\" to save your choices.",
     "scope_location": "Location",
-    "scope_location_hint": "Your approximate area (city) is shared with the AI to recognize nearby museums and monuments. Your precise location is never shared."
+    "scope_location_hint": "Your approximate neighbourhood (district + city) is shared with the AI to recognize nearby museums and monuments. Your street, address and precise location are never shared.",
+    "scope_location_coarse": "City only",
+    "scope_location_coarse_hint": "Only your city and country are shared with the AI — a less precise option than the neighbourhood level. Your street and precise location are never shared."
   },
   "dailyArt": {
     "title": "Artwork of the Day",

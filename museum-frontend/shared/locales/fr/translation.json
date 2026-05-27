@@ -204,7 +204,8 @@
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — transcriptions vocales",
       "third_party_ai_profile_google": "Google AI — préférences & historique",
-      "location_to_llm": "Localisation — lieux à proximité"
+      "location_to_llm": "Localisation — lieux à proximité",
+      "location_coarse_to_llm": "Localisation — ville uniquement"
     },
     "accessibility": "Accessibilité",
     "audio_description": "Audiodescription",
@@ -1125,7 +1126,9 @@
     "manage_subtitle": "Décoche chaque catégorie librement. Le scope « Textes OpenAI » est requis pour pouvoir discuter avec l'IA.",
     "save_required_hint": "Active « Textes OpenAI » pour pouvoir enregistrer.",
     "scope_location": "Localisation",
-    "scope_location_hint": "Ta zone approximative (ville) est partagée avec l'IA pour reconnaître les musées et monuments à proximité. Ta localisation précise n'est jamais partagée."
+    "scope_location_hint": "Ton quartier approximatif (quartier + ville) est partagé avec l'IA pour reconnaître les musées et monuments à proximité. Ta rue, ton adresse et ta localisation précise ne sont jamais partagés.",
+    "scope_location_coarse": "Ville uniquement",
+    "scope_location_coarse_hint": "Seuls ta ville et ton pays sont partagés avec l'IA — une option moins précise que le niveau quartier. Ta rue et ta localisation précise ne sont jamais partagées."
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",

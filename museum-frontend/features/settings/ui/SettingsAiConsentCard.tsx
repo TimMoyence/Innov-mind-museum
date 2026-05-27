@@ -20,6 +20,14 @@ interface ConsentRow {
   grantedAt: string | null;
 }
 
+/**
+ * Cycle 1.5-FE (D1 Option C, REQ-FE-8) — the two geo scopes are mutually
+ * exclusive: granting one revokes the other so the BE never holds both geo
+ * grants at once (which would let full silently dominate coarse — misleading
+ * consent). Mirrors the sheet's local-state exclusivity (`AiConsentSheetContent`).
+ */
+const GEO_SCOPES: readonly ThirdPartyAiScope[] = ['location_to_llm', 'location_coarse_to_llm'];
+
 const isThirdPartyAiScope = (scope: string): scope is ThirdPartyAiScope =>
   (THIRD_PARTY_AI_SCOPES as readonly string[]).includes(scope);
 
@@ -95,16 +103,34 @@ export const SettingsAiConsentCard = () => {
       setPendingScope(scope);
       // Optimistic update — revert on failure.
       const previous = rows;
+      // D1 Option C — when granting a geo scope, the other geo scope must be
+      // revoked (mutual exclusivity). Capture the conflicting geo scopes that
+      // were granted so the optimistic UI flips them OFF and we round-trip a
+      // revoke for each.
+      const geoToRevoke =
+        next && GEO_SCOPES.includes(scope)
+          ? previous
+              .filter((r) => r.scope !== scope && GEO_SCOPES.includes(r.scope) && r.granted)
+              .map((r) => r.scope)
+          : [];
       setRows((curr) =>
-        curr.map((r) =>
-          r.scope === scope
-            ? { ...r, granted: next, grantedAt: next ? new Date().toISOString() : null }
-            : r,
-        ),
+        curr.map((r) => {
+          if (r.scope === scope) {
+            return { ...r, granted: next, grantedAt: next ? new Date().toISOString() : null };
+          }
+          if (geoToRevoke.includes(r.scope)) {
+            return { ...r, granted: false, grantedAt: null };
+          }
+          return r;
+        }),
       );
       try {
         if (next) {
           await consentApi.grant(scope);
+          // Geo exclusivity: revoke any other geo scope that was active.
+          for (const other of geoToRevoke) {
+            await consentApi.revoke(other);
+          }
         } else {
           await consentApi.revoke(scope);
           // When the user withdraws the mandatory scope, the local "we
