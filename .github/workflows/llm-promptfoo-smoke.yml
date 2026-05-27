@@ -116,23 +116,38 @@ jobs:
           exit 1
 
       - name: Seed pre-verified smoke account
+        id: seed_smoke
         # Use the existing seed-smoke-account.ts script (canonical for prod
-        # post-deploy smoke). Creates a visitor with email_verified=true,
-        # onboarding_completed=true, role=visitor — bypasses the EMAIL_NOT_VERIFIED
-        # 403 gate that blocks fresh register→login flows
-        # (auth-session.service.ts:142). Idempotent : safe across CI runs.
-        # Pérein 10y : one canonical seed pattern for all CI smoke flows.
+        # post-deploy smoke), in its `create` subcommand. Creates a visitor with
+        # email_verified=true, onboarding_completed=true, role=visitor — bypasses
+        # the EMAIL_NOT_VERIFIED 403 gate that blocks fresh register→login flows
+        # (auth-session.service.ts:142). Pérein 10y : one canonical seed pattern
+        # for all CI smoke flows.
+        #
+        # `create` generates a per-run RANDOM password (env SMOKE_TEST_PASSWORD is
+        # ignored) and prints it on a single `SMOKE_TEST_PASSWORD=<value>` stdout
+        # line (ops logs go to stderr). We extract that line, `::add-mask::` it so
+        # it never appears in clear, and expose it as a step output consumed only
+        # by the bootstrap step below. The password is NEVER echoed in clear.
         working-directory: museum-backend
         env:
           SMOKE_TEST_EMAIL: smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
-          SMOKE_TEST_PASSWORD: Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}
-        run: pnpm run seed:smoke-account
+        run: |
+          set -euo pipefail
+          CREATE_STDOUT="$(pnpm --silent run seed:smoke-account create)"
+          PWD_VALUE="$(printf '%s\n' "$CREATE_STDOUT" | sed -n 's/^SMOKE_TEST_PASSWORD=//p' | tail -n1)"
+          if [ -z "$PWD_VALUE" ]; then
+            echo "create step did not emit a SMOKE_TEST_PASSWORD line" >&2
+            exit 1
+          fi
+          echo "::add-mask::$PWD_VALUE"
+          echo "password=$PWD_VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Bootstrap chat session
         id: bootstrap
         env:
           SMOKE_TEST_EMAIL: smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
-          SMOKE_TEST_PASSWORD: Sm0ke!CI-${{ github.run_id }}-${{ github.run_attempt }}
+          SMOKE_TEST_PASSWORD: ${{ steps.seed_smoke.outputs.password }}
         run: |
           set -euo pipefail
           LOGIN_BODY="{\"email\":\"${SMOKE_TEST_EMAIL}\",\"password\":\"${SMOKE_TEST_PASSWORD}\"}"
@@ -192,6 +207,17 @@ jobs:
           name: promptfoo-daily-art-smoke-${{ github.run_id }}
           path: museum-backend/scripts/llm-security/reports
           retention-days: 14
+
+      - name: Cleanup smoke account
+        # Backend CI is throwaway (destroyed with the job), so cleanup is not
+        # strictly required — but running it keeps the create/cleanup contract
+        # symmetric and exercises the `cleanup` verb in CI. Runs unconditionally
+        # so no account survives even when an earlier step failed midway.
+        if: ${{ always() }}
+        working-directory: museum-backend
+        env:
+          SMOKE_TEST_EMAIL: smoke+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+        run: pnpm run seed:smoke-account cleanup || true
 
       - name: Print backend log on failure
         if: failure()

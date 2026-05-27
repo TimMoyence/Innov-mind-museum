@@ -8,10 +8,17 @@
  *     - llm-security-promptfoo cron  — silently broken since GDPR #294
  *     - ci-cd-backend.yml staging+prod smoke — same risk
  *
- * Fix : `scripts/seed-smoke-account.ts` now inserts active `user_consents`
+ * Fix : `scripts/seed-smoke-account.ts` inserts active `user_consents`
  * rows for `third_party_ai_text_openai` and `third_party_ai_audio_openai`
- * at seed time. Centralized so all 4 workflows using `seed:smoke-account`
+ * at create time. Centralized so all 4 workflows using `seed:smoke-account`
  * inherit the fix from one place.
+ *
+ * Cycle C (run 2026-05-26-auth-mfa-rgpd-zerodefect) — the permanent
+ * `seedSmokeAccount` upsert is REPLACED by the ephemeral `createSmokeAccount`
+ * (fresh insert + random password, no update/heal branch). This spec migrates
+ * its R2/R3/R4 consent assertions onto the new surface: R2/R3 idempotence is
+ * now expressed as `create → cleanup → create` (delete-then-insert, no
+ * resident account), and R4 (revoke→re-grant) stays on `ensureSmokeConsents`.
  *
  * Run scope :
  *   RUN_INTEGRATION=true pnpm jest tests/integration/scripts/seed-smoke-account.consents.spec.ts --runInBand
@@ -19,6 +26,7 @@
 
 import { IsNull } from 'typeorm';
 
+import { makeSmokeEmail } from 'tests/helpers/auth/smoke-account.fixtures';
 import {
   createIntegrationHarness,
   type IntegrationHarness,
@@ -26,21 +34,28 @@ import {
 
 import { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 
-type SeedSmokeAccount = (
+type CreateSmokeAccount = (
   dataSource: IntegrationHarness['dataSource'],
-  credentials: { email: string; password: string },
+  args: { email: string },
 ) => Promise<{
   userId: number;
   createdUser: boolean;
+  password: string;
   consents: { created: string[]; alreadyActive: string[] };
 }>;
+
+type CleanupSmokeAccount = (
+  dataSource: IntegrationHarness['dataSource'],
+  args: { email: string },
+) => Promise<{ deleted: boolean; userId?: number }>;
 
 type EnsureSmokeConsents = (
   dataSource: IntegrationHarness['dataSource'],
   userId: number,
 ) => Promise<{ created: string[]; alreadyActive: string[] }>;
 
-let seedSmokeAccount: SeedSmokeAccount;
+let createSmokeAccount: CreateSmokeAccount;
+let cleanupSmokeAccount: CleanupSmokeAccount;
 let ensureSmokeConsents: EnsureSmokeConsents;
 let SMOKE_CONSENT_SCOPES: readonly string[];
 
@@ -62,11 +77,13 @@ describeIntegration(
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- intentional lazy require: must run AFTER harness pins PGDATABASE (env-cache race protection)
       const mod = require('../../../scripts/seed-smoke-account') as {
-        seedSmokeAccount: SeedSmokeAccount;
+        createSmokeAccount: CreateSmokeAccount;
+        cleanupSmokeAccount: CleanupSmokeAccount;
         ensureSmokeConsents: EnsureSmokeConsents;
         SMOKE_CONSENT_SCOPES: readonly string[];
       };
-      seedSmokeAccount = mod.seedSmokeAccount;
+      createSmokeAccount = mod.createSmokeAccount;
+      cleanupSmokeAccount = mod.cleanupSmokeAccount;
       ensureSmokeConsents = mod.ensureSmokeConsents;
       SMOKE_CONSENT_SCOPES = mod.SMOKE_CONSENT_SCOPES;
     });
@@ -82,10 +99,9 @@ describeIntegration(
       expect(SMOKE_CONSENT_SCOPES).toHaveLength(2);
     });
 
-    it('first run on a fresh DB creates user + grants every required consent (R2)', async () => {
-      const result = await seedSmokeAccount(harness.dataSource, {
-        email: 'smoke+r2@test.musaium',
-        password: 'Sm0ke!R2-Test',
+    it('create on a fresh DB inserts user + grants every required consent (R2)', async () => {
+      const result = await createSmokeAccount(harness.dataSource, {
+        email: makeSmokeEmail('consents-r2'),
       });
 
       expect(result.createdUser).toBe(true);
@@ -105,29 +121,30 @@ describeIntegration(
       }
     });
 
-    it('re-running on an already-seeded user is idempotent — no duplicate consent rows (R3)', async () => {
-      const credentials = { email: 'smoke+r3@test.musaium', password: 'Sm0ke!R3-Test' };
+    it('create → cleanup → create yields a fresh account with no duplicate consent rows (R3 — ephemeral, not heal)', async () => {
+      const email = makeSmokeEmail('consents-r3');
 
-      const first = await seedSmokeAccount(harness.dataSource, credentials);
-      const second = await seedSmokeAccount(harness.dataSource, credentials);
+      const first = await createSmokeAccount(harness.dataSource, { email });
+      await cleanupSmokeAccount(harness.dataSource, { email });
+      const second = await createSmokeAccount(harness.dataSource, { email });
 
-      expect(second.userId).toBe(first.userId);
-      expect(second.createdUser).toBe(false);
-      expect(second.consents.created).toEqual([]);
-      expect(second.consents.alreadyActive).toEqual(
-        expect.arrayContaining([...SMOKE_CONSENT_SCOPES]),
-      );
+      // Ephemeral: every create is a fresh insert (no upsert/heal).
+      expect(second.createdUser).toBe(true);
+      expect(second.consents.created).toEqual(expect.arrayContaining([...SMOKE_CONSENT_SCOPES]));
+      expect(second.consents.alreadyActive).toEqual([]);
 
+      // The first account is gone; the second carries exactly the required scopes.
       const repo = harness.dataSource.getRepository(UserConsent);
-      const total = await repo.count({
-        where: { userId: first.userId, revokedAt: IsNull() },
-      });
-      expect(total).toBe(SMOKE_CONSENT_SCOPES.length);
+      expect(await repo.count({ where: { userId: first.userId, revokedAt: IsNull() } })).toBe(0);
+      expect(await repo.count({ where: { userId: second.userId, revokedAt: IsNull() } })).toBe(
+        SMOKE_CONSENT_SCOPES.length,
+      );
     });
 
     it('ensureSmokeConsents re-grants a scope after it has been revoked (R4 — recovery)', async () => {
-      const credentials = { email: 'smoke+r4@test.musaium', password: 'Sm0ke!R4-Test' };
-      const { userId } = await seedSmokeAccount(harness.dataSource, credentials);
+      const { userId } = await createSmokeAccount(harness.dataSource, {
+        email: makeSmokeEmail('consents-r4'),
+      });
 
       // Simulate an admin / GDPR revoke for the text scope.
       const repo = harness.dataSource.getRepository(UserConsent);
@@ -141,7 +158,7 @@ describeIntegration(
       });
       expect(activeAfterRevoke).toBe(0);
 
-      // Re-running the seed step re-grants because the prior row is no longer active.
+      // Re-running the consent step re-grants because the prior row is no longer active.
       const result = await ensureSmokeConsents(harness.dataSource, userId);
       expect(result.created).toContain('third_party_ai_text_openai');
 
