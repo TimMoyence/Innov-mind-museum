@@ -129,6 +129,9 @@ jobs:
       - name: 'Mirror Gate P15 — compose-parity (dev vs prod docker-compose)'
         run: node scripts/sentinels/compose-parity.mjs
 
+      - name: 'Mirror Gate P23 — husky × git-lfs hook integrity (UFR-020)'
+        run: node scripts/sentinels/husky-lfs-integrity.mjs
+
       - name: 'Mirror Gate P20 — roadmap claim resolves (UFR-024)'
         run: node scripts/sentinels/roadmap-claim-resolves.mjs
 
