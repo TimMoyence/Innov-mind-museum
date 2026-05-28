@@ -22,7 +22,10 @@ BACKEND="$ROOT/museum-backend"
 FRONTEND="$ROOT/museum-frontend"
 IOS_WORKSPACE="$FRONTEND/ios/Musaium.xcworkspace"
 HEALTH_URL="http://localhost:3000/api/health"
-HEALTH_TIMEOUT=30
+# 75s, not 30s : after a bake-key rebuild the backend boots via ts-node cold
+# (fresh pnpm install layer + first TS compile + OTel/Sentry init) which can
+# exceed 30s → false "never became healthy". A warm restart is well under 30s.
+HEALTH_TIMEOUT=75
 DOCKER_COMPOSE="docker compose -f $BACKEND/docker-compose.dev.yml"
 
 # Color helpers (only if stdout is a TTY)

@@ -24,6 +24,12 @@ services:
     # matches the `redis` service's `--requirepass` below (single source of
     # truth for dev/CI smoke).
     environment:
+      # DB_* injected here (same pattern as REDIS_* below) so .env can hold the
+      # HOST-side coords (localhost:5433, used by host-shell `pnpm dev` /
+      # `migration:run`) while the container always talks to the `db` service on
+      # the docker network. Compose `environment:` overrides env_file `.env`.
+      DB_HOST: db
+      DB_PORT: '5432'
       REDIS_HOST: redis
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:-dev-redis-password}
