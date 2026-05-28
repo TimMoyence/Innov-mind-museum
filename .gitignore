@@ -245,6 +245,14 @@ museum-backend/.perf-seed-checkpoint.json
 # C3 (2026-05) — visual-similarity ONNX bundles. Binary, ~340MB; fetched at
 # Docker build time by museum-backend/scripts/fetch-models.sh. Never committed.
 museum-backend/models/
+
+# Local PGP key material (security@ contact key generation). The PRIVATE key +
+# revocation cert MUST NEVER be committed. Root-anchored (leading /) so the
+# PUBLIC key that ships — museum-web/public/.well-known/pgp-key.txt — stays
+# tracked. See docs/operations/PGP_KEY_GENERATION.md.
+/pgp-key.txt
+/security-private.asc
+/security-revoke.asc
 **/*.onnx
 
 # W3 (T5.5) — printable QR-cartel PDFs. Regenerable from fixtures/*.csv via
