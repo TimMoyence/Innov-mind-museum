@@ -84,12 +84,14 @@ function makeSessionListItem(
     title: string | null;
     createdAt: string;
     updatedAt: string;
+    lastMessageAt: string | null;
     messageCount: number;
     locale: string;
     intent: 'default' | 'walk';
   }> = {},
 ) {
   const now = Date.now();
+  const defaultTs = new Date(now - 2 * ONE_HOUR_MS).toISOString();
   return {
     id: overrides.id ?? 'sess-default',
     museumMode: overrides.museumMode ?? false,
@@ -97,8 +99,12 @@ function makeSessionListItem(
     museumId: overrides.museumId ?? 7,
     lastArtworkTitle: overrides.lastArtworkTitle ?? 'La Liseuse',
     title: overrides.title ?? null,
-    createdAt: overrides.createdAt ?? new Date(now - 2 * ONE_HOUR_MS).toISOString(),
-    updatedAt: overrides.updatedAt ?? new Date(now - 2 * ONE_HOUR_MS).toISOString(),
+    createdAt: overrides.createdAt ?? defaultTs,
+    updatedAt: overrides.updatedAt ?? defaultTs,
+    // Defaults to `updatedAt` so the 20 pre-QA-09 tests rank identically
+    // (activityMs falls back to updatedAt); override it to exercise the
+    // lastMessageAt-based ranking introduced by QA-09.
+    lastMessageAt: overrides.lastMessageAt ?? overrides.updatedAt ?? defaultTs,
     messageCount: overrides.messageCount ?? 4,
     locale: overrides.locale ?? 'en-US',
     intent: overrides.intent ?? 'default',
@@ -270,6 +276,65 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
         expect(result.current.session).not.toBeNull();
       });
       expect(result.current.session?.id).toBe('sess-newer');
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // QA-09 regression — rank by lastMessageAt, NOT the BE-frozen updatedAt
+  // ────────────────────────────────────────────────────────────────────────
+  describe('selection by max lastMessageAt (QA-09 regression)', () => {
+    it('ranks by lastMessageAt, not the frozen updatedAt — the most recently CHATTED session wins', async () => {
+      const now = Date.now();
+      // The BE freezes `updatedAt` at creation. Build the exact QA-09 trap:
+      //  - `stale` was CREATED last (newer updatedAt) but last chatted 4 days ago.
+      //  - `active` was CREATED first (older updatedAt) but chatted 1 hour ago.
+      // Ranking by updatedAt (the old bug) picks `stale`; ranking by
+      // lastMessageAt (the fix) picks `active`. Order-independent discriminator.
+      const stale = makeSessionListItem({
+        id: 'sess-stale',
+        createdAt: new Date(now - 5 * ONE_DAY_MS + 60_000).toISOString(),
+        updatedAt: new Date(now - 5 * ONE_DAY_MS + 60_000).toISOString(), // NEWER createdAt==updatedAt
+        lastMessageAt: new Date(now - 4 * ONE_DAY_MS).toISOString(), // OLD activity
+        messageCount: 2,
+      });
+      const active = makeSessionListItem({
+        id: 'sess-active',
+        createdAt: new Date(now - 5 * ONE_DAY_MS).toISOString(),
+        updatedAt: new Date(now - 5 * ONE_DAY_MS).toISOString(), // OLDER createdAt==updatedAt
+        lastMessageAt: new Date(now - ONE_HOUR_MS).toISOString(), // RECENT activity
+        messageCount: 2,
+      });
+      // Not pre-sorted by activity — assert the hook does not rely on BE order.
+      mockListSessions.mockResolvedValue(listResponse([stale, active]));
+
+      const { result } = renderHook(() => useResumableSession());
+      await waitFor(() => {
+        expect(result.current.session).not.toBeNull();
+      });
+      expect(result.current.session?.id).toBe('sess-active');
+    });
+
+    it('falls back to updatedAt for ranking when lastMessageAt is null (legacy/no-message rows)', async () => {
+      const now = Date.now();
+      // Neither row carries lastMessageAt → activityMs falls back to updatedAt,
+      // so the more recently updated row wins (graceful degradation).
+      const older = makeSessionListItem({
+        id: 'sess-older-null',
+        updatedAt: new Date(now - 3 * ONE_DAY_MS).toISOString(),
+        lastMessageAt: null,
+      });
+      const newer = makeSessionListItem({
+        id: 'sess-newer-null',
+        updatedAt: new Date(now - ONE_HOUR_MS).toISOString(),
+        lastMessageAt: null,
+      });
+      mockListSessions.mockResolvedValue(listResponse([older, newer]));
+
+      const { result } = renderHook(() => useResumableSession());
+      await waitFor(() => {
+        expect(result.current.session).not.toBeNull();
+      });
+      expect(result.current.session?.id).toBe('sess-newer-null');
     });
   });
 

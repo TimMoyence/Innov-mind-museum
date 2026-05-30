@@ -3,7 +3,8 @@
  *
  * Fetches the user's session list once on mount, filters down to sessions
  * eligible for resumption (`messageCount > 0` AND age < 7 days), picks the
- * most recently updated one, and exposes a `dismiss()` mechanism that hides
+ * most recently active one — ranked by last message time, not the BE-frozen
+ * `updatedAt` (QA-09) — and exposes a `dismiss()` mechanism that hides
  * the banner for 24 hours via AsyncStorage.
  *
  * Spec : `docs/chat-ux-refonte/specs/B2.md` §1.1 R1-R12 ; §4 AC1-AC10.
@@ -96,7 +97,7 @@ function pickResumable(sessions: readonly ListSessionItem[], now: number): ListS
  * Conversation resumption banner data hook.
  *
  * - Fetches the most recent sessions exactly once on mount.
- * - Filters by `messageCount > 0` AND age < 7 days, picks max-by-updatedAt.
+ * - Filters by `messageCount > 0` AND age < 7 days, picks max-by-lastMessageAt.
  * - Respects a dismiss-until storage flag (`settings.resumption_banner_dismissed_until`)
  *   suppressing the banner for 24 h after the user taps the dismiss button.
  * - Tolerates API and storage failures silently — never throws.
