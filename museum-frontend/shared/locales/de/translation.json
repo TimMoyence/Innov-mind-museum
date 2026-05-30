@@ -527,7 +527,7 @@
       "gallery": "Aus Galerie wählen",
       "record_audio": "Sprachnachricht aufnehmen",
       "stop_audio": "Aufnahme stoppen",
-      "scan_cartel": "Schild scannen",
+      "scan_cartel": "QR-Code des Kunstwerks scannen",
       "compare": "Dieses Werk vergleichen"
     },
     "cartelScanner": {

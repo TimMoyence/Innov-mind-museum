@@ -527,7 +527,7 @@
       "gallery": "Pick from gallery",
       "record_audio": "Record voice message",
       "stop_audio": "Stop recording",
-      "scan_cartel": "Scan cartel",
+      "scan_cartel": "Scan the artwork QR code",
       "compare": "Compare this artwork"
     },
     "cartelScanner": {

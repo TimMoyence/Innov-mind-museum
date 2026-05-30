@@ -527,7 +527,7 @@
       "gallery": "اختيار من المعرض",
       "record_audio": "تسجيل رسالة صوتية",
       "stop_audio": "إيقاف التسجيل",
-      "scan_cartel": "مسح اللافتة",
+      "scan_cartel": "مسح رمز QR للعمل الفني",
       "compare": "قارن هذا العمل"
     },
     "cartelScanner": {

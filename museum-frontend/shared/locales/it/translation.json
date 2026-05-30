@@ -527,7 +527,7 @@
       "gallery": "Scegli dalla galleria",
       "record_audio": "Registra messaggio vocale",
       "stop_audio": "Ferma registrazione",
-      "scan_cartel": "Scansiona cartello",
+      "scan_cartel": "Scansiona il QR dell'opera",
       "compare": "Confronta quest'opera"
     },
     "cartelScanner": {
