@@ -51,6 +51,12 @@ interface ListSessionItem {
   readonly museumId?: number | null;
   readonly lastArtworkTitle?: string | null;
   readonly updatedAt: string;
+  /**
+   * Timestamp of the session's most recent message (BE: `MAX(m.createdAt)`).
+   * The real activity signal — `updatedAt` is frozen at creation by the BE and
+   * must NOT be used to rank resumption (QA-09).
+   */
+  readonly lastMessageAt?: string | null;
   readonly messageCount: number;
 }
 
@@ -59,20 +65,30 @@ interface ListSessionsResponseShape {
 }
 
 /**
- * Selects the session most recently updated among those satisfying the
- * resumption filter (`messageCount > 0` AND age < 7 days). Pure helper —
- * does NOT assume BE-side ordering.
+ * Timestamp used to rank resumable sessions: the last message time when known,
+ * falling back to `updatedAt`. The BE freezes `updatedAt` at session creation,
+ * so it never reflects activity — `lastMessageAt` (BE `MAX(m.createdAt)`) is the
+ * real "last conversation" signal (QA-09).
+ */
+function activityMs(s: ListSessionItem): number {
+  return new Date(s.lastMessageAt ?? s.updatedAt).getTime();
+}
+
+/**
+ * Selects the most recently ACTIVE session among those satisfying the
+ * resumption filter (`messageCount > 0` AND last activity < 7 days). Pure
+ * helper — does NOT assume BE-side ordering; ranks by `lastMessageAt` (QA-09).
  */
 function pickResumable(sessions: readonly ListSessionItem[], now: number): ListSessionItem | null {
   const eligible = sessions.filter((s) => {
     if (s.messageCount <= 0) return false;
-    const updatedAtMs = new Date(s.updatedAt).getTime();
-    if (Number.isNaN(updatedAtMs)) return false;
-    return now - updatedAtMs < RESUMPTION_BANNER_WINDOW_MS;
+    const ms = activityMs(s);
+    if (Number.isNaN(ms)) return false;
+    return now - ms < RESUMPTION_BANNER_WINDOW_MS;
   });
   if (eligible.length === 0) return null;
   return eligible.reduce((best, current) =>
-    new Date(current.updatedAt).getTime() > new Date(best.updatedAt).getTime() ? current : best,
+    activityMs(current) > activityMs(best) ? current : best,
   );
 }
 

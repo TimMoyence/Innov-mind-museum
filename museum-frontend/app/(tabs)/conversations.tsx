@@ -267,12 +267,16 @@ export default function ConversationsScreen() {
       />
 
       {editMode && selectedIds.size > 0 ? (
-        <ConversationsBulkBar
-          selectedCount={selectedIds.size}
-          onSelectAll={selectAll}
-          onDeleteSelected={handleConfirmDeleteSelected}
-          isDeleting={isDeleting}
-        />
+        // Lift the bulk-action bar above the floating tab bar (absolute-positioned
+        // at the screen bottom) so it isn't hidden behind it (QA-04).
+        <View style={{ marginBottom: bottomPad }}>
+          <ConversationsBulkBar
+            selectedCount={selectedIds.size}
+            onSelectAll={selectAll}
+            onDeleteSelected={handleConfirmDeleteSelected}
+            isDeleting={isDeleting}
+          />
+        </View>
       ) : null}
     </LiquidScreen>
   );
