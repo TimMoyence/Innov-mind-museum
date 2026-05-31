@@ -63,7 +63,7 @@ Mobile                 Backend                          OpenAI
 | Composant | Localisation | Rôle |
 |---|---|---|
 | `useAudioRecorder` | `museum-frontend/features/chat/application/useAudioRecorder.ts` | Capture micro (expo-audio native + MediaRecorder web). |
-| `useTextToSpeech` | `museum-frontend/features/chat/application/useTextToSpeech.ts` | Fetch + playback TTS. Cache `expo-file-system` implémenté (lignes 4, 40). |
+| `useTextToSpeech` | `museum-frontend/features/chat/application/useTextToSpeech.ts` | Fetch + playback TTS. Cache `expo-file-system` implémenté (import ligne 4, `cacheDirectory` ligne 53). |
 | `useAutoTts` | `museum-frontend/features/chat/application/useAutoTts.ts` | Auto-play TTS sur nouveau message assistant. |
 | `useOfflineAudio` | *(absent — backlog V2 walks offline)* | Pre-fetch audio pour walks offline. Non créé. |
 
