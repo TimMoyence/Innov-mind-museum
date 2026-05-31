@@ -149,13 +149,44 @@ function extractOptOutReason(source) {
 // Coverage matching
 // ────────────────────────────────────────────────────────────────────────
 
+// Strip YAML comments line-by-line so a *commented-out* testID / route never
+// counts as real coverage (e.g. `#  10. /(stack)/ticket-detail — SKIPPED`).
+// YAML rule honored: `#` starts a comment only at line start or when preceded
+// by whitespace, and never inside a single/double-quoted scalar. The `#screen:`
+// magic-comment match (case c) deliberately needs the RAW content, so this is
+// applied ONLY to the substring matches (cases a + b) via `flow.code`.
+function stripYamlComments(content) {
+  return content
+    .split('\n')
+    .map((line) => {
+      let inSingle = false;
+      let inDouble = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === "'" && !inDouble) inSingle = !inSingle;
+        else if (ch === '"' && !inSingle) inDouble = !inDouble;
+        else if (ch === '#' && !inSingle && !inDouble && (i === 0 || /\s/.test(line[i - 1]))) {
+          return line.slice(0, i);
+        }
+      }
+      return line;
+    })
+    .join('\n');
+}
+
 function buildFlowsCorpus(flowPaths) {
-  // Returns Array<{path, name, content}>
-  return flowPaths.map((p) => ({
-    path: p,
-    name: p.split('/').pop(),
-    content: readFileSync(p, 'utf8'),
-  }));
+  // Returns Array<{path, name, content, code}>
+  //   content = raw file (used by the `# screen:` magic-comment match, case c)
+  //   code    = comment-stripped (used by testID + route substring, cases a + b)
+  return flowPaths.map((p) => {
+    const content = readFileSync(p, 'utf8');
+    return {
+      path: p,
+      name: p.split('/').pop(),
+      content,
+      code: stripYamlComments(content),
+    };
+  });
 }
 
 function findCoverage(screen, flows) {
@@ -163,20 +194,20 @@ function findCoverage(screen, flows) {
   const hits = [];
   for (const flow of flows) {
     let matched = false;
-    // (a) testID literal substring match
+    // (a) testID literal substring match (comment-stripped)
     for (const id of screen.testIds) {
       const needle1 = `"${id}"`;
       const needle2 = `'${id}'`;
-      if (flow.content.includes(needle1) || flow.content.includes(needle2)) {
+      if (flow.code.includes(needle1) || flow.code.includes(needle2)) {
         matched = true;
         break;
       }
     }
-    // (b) route path substring (only if not already matched)
+    // (b) route path substring (comment-stripped, only if not already matched)
     if (!matched && screen.routePath && screen.routePath !== '/') {
-      if (flow.content.includes(screen.routePath)) matched = true;
+      if (flow.code.includes(screen.routePath)) matched = true;
     }
-    // (c) screen name magic comment `# screen: <Name>` in header
+    // (c) screen name magic comment `# screen: <Name>` in header (RAW — it IS a comment)
     if (!matched && screen.screenName) {
       const header = flow.content.split('\n').slice(0, 10).join('\n');
       if (new RegExp(`#\\s*screen:\\s*${screen.screenName}\\b`).test(header)) {

@@ -151,6 +151,12 @@ jobs:
       - name: 'Mirror — screen-test-coverage (UFR-021, mobile)'
         run: node scripts/sentinels/screen-test-coverage.mjs
 
+      - name: 'Mirror — factory-coverage ratchet (BE DRY-factories, was orphan)'
+        run: node scripts/sentinels/audit-factory-coverage.mjs
+
+      - name: 'Mirror — SBOM attestation contract (3 deploy workflows, was orphan)'
+        run: node scripts/sentinels/sbom-attest-check.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli

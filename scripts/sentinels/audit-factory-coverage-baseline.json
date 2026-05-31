@@ -1,0 +1,10 @@
+{
+  "comment": "RATCHET baseline for audit-factory-coverage.mjs (DRY-factories doctrine, CLAUDE.md § Test Discipline). Each entry = an entity referenced >=3x across backend tests that still lacks a make<Entity> factory in tests/helpers/. This list may ONLY SHRINK: any NEW missing factory fails pre-push Gate 23 + the CI mirror. Close an entry by writing make<Entity> (+ refactoring the inline construction sites) via /team, then remove it here in the same commit. Do NOT add entries.",
+  "bootstrappedAt": "2026-05-31",
+  "missing": [
+    "ChatMessage",
+    "ChatSession",
+    "SupportTicket",
+    "UserMemory"
+  ]
+}

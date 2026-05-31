@@ -389,7 +389,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           path: shard-logs
-      - name: Post summary as PR comment
+      - name: Summarize shard logs + fail on any FAIL
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
         with:
           script: |
@@ -398,17 +398,38 @@ jobs:
             const root = 'shard-logs';
             const shards = fs.existsSync(root) ? fs.readdirSync(root) : [];
             const lines = ['## Maestro shard results', ''];
+            let totalFails = 0;
             for (const shard of shards) {
               const dir = path.join(root, shard);
               const logs = fs.readdirSync(dir).filter(f => f.endsWith('.log'));
               const fails = logs.filter(f => fs.readFileSync(path.join(dir, f), 'utf-8').includes('FAIL'));
+              totalFails += fails.length;
               lines.push(`- **${shard}**: ${logs.length - fails.length}/${logs.length} flows passed${fails.length ? ` — failed: ${fails.map(f => f.replace('.log','')).join(', ')}` : ''}`);
             }
             const body = lines.join('\n');
+            core.summary.addRaw(body).write();
+            // Post a PR comment only when this run is attached to a PR (cron/dispatch have none).
             const { owner, repo } = context.repo;
             const issueNumber = context.payload.pull_request?.number;
-            if (!issueNumber) return;
-            await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
+            if (issueNumber) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
+            }
+            // Anti-false-green (audit 360 dim.2): a flow that logged FAIL must turn
+            // this job red, even on cron/dispatch where there is no PR to comment on.
+            if (totalFails > 0) {
+              core.setFailed(`${totalFails} Maestro flow(s) failed across ${shards.length} shard(s) — see logs.`);
+            }
+
+      # Belt-and-suspenders: the matrix `needs` result is `success` only when ALL
+      # shards exited 0. If a shard errored before writing parseable logs (emulator
+      # boot crash, backend boot failure) the log-scan above can miss it — this gate
+      # still turns the summary red. `skipped` (upstream prebuild/quality failed) is
+      # also NOT a passed e2e, so anything other than `success` fails here.
+      - name: Fail if any shard did not succeed
+        if: ${{ needs.maestro-shard.result != 'success' }}
+        run: |
+          echo "::error::Maestro e2e did not pass (maestro-shard result: ${{ needs.maestro-shard.result }}). A green maestro-summary now REQUIRES every shard to succeed."
+          exit 1
 
   # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:

@@ -31,6 +31,10 @@
 #  20. Roadmap claim resolves (UFR-024)              — node scripts/sentinels/roadmap-claim-resolves.mjs
 #  21. ai-tests count ratchet (BE)                   — node scripts/sentinels/ai-tests-count.mjs
 #  22. Screen test-coverage sentinel (mobile UFR-021) — node scripts/sentinels/screen-test-coverage.mjs
+#  23. Factory-coverage ratchet (BE DRY-factories)   — node scripts/sentinels/audit-factory-coverage.mjs
+#  24. SBOM attestation contract (3 deploy workflows) — node scripts/sentinels/sbom-attest-check.mjs
+#  25. Doc last-verified freshness (≤90d, was CI-only) — node scripts/sentinels/doc-last-verified.mjs
+#  26. Subprocessor ledger (GDPR Art 28, was CI-only) — node scripts/sentinels/subprocessor-ledger-completeness.mjs
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
 # .gitattributes — React.xcframework) upload on push. The LFS step is chained
@@ -347,10 +351,40 @@ gate_start "Gate 22/22 screen test-coverage sentinel (mobile)"
 node scripts/sentinels/screen-test-coverage.mjs || exit 1
 gate_end "Gate 22"
 
+# ─── Gate 23 — Factory-coverage ratchet (BE, DRY-factories) ────────────────
+# Was an orphan one-shot audit until 2026-05-31 (audit 360 dim.3). Now a real
+# ratchet: any entity referenced >= 3x in tests with no make<Entity> factory and
+# NOT in scripts/sentinels/audit-factory-coverage-baseline.json fails the push.
+gate_start "Gate 23/26 factory-coverage ratchet (backend)"
+node scripts/sentinels/audit-factory-coverage.mjs || exit 1
+gate_end "Gate 23"
+
+# ─── Gate 24 — SBOM attestation contract (3 workflows) ─────────────────────
+# Was an orphan (RED proof of the I-CMP6 lot, never re-run). Now wired so a
+# removed `cosign attest --type cyclonedx` step in any of the 3 deploy workflows
+# is caught locally, not silently in a future supply-chain gap.
+gate_start "Gate 24/26 SBOM attestation contract sentinel"
+node scripts/sentinels/sbom-attest-check.mjs || exit 1
+gate_end "Gate 24"
+
+# ─── Gate 25 — Doc last-verified freshness (canonical docs ≤90d) ───────────
+# Was CI-only (mirror P25) → invalidable locally before push. Now a real local
+# gate: the 6 curated canonical docs MUST carry a last-verified stamp ≤ 90d.
+gate_start "Gate 25/26 doc last-verified freshness"
+node scripts/sentinels/doc-last-verified.mjs || exit 1
+gate_end "Gate 25"
+
+# ─── Gate 26 — Subprocessor ledger completeness (GDPR Art 28) ──────────────
+# Was CI-only (mirror P23) → invalidable locally before push. Now a real local
+# gate: every detected vendor host marker MUST be documented in SUBPROCESSORS.md.
+gate_start "Gate 26/26 subprocessor ledger completeness"
+node scripts/sentinels/subprocessor-ledger-completeness.mjs || exit 1
+gate_end "Gate 26"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 22 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 26 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────

@@ -184,7 +184,7 @@
 | **hashEmail-32bit** | 🔴 OPEN | — | V1.0.x | No shared hash implementation found. Item identified in roadmap as duplication candidate across FE + web consumers. |
 | **Brevo-unsubscribe-UX** | 🔴 OPEN | — | V1.0.x | dictionaries/{en,fr}.json:334 promise pas backed. No UX component found for one-click unsubscribe. |
 | **SwipeableConversationCard-RTL** | 🔴 OPEN | — | V1.0.x | Item identified in roadmap. SwipeableConversationCard.tsx border styling logic likely hardcoded for LTR. |
-| **audit-factory-coverage-orphan** | 🔴 OPEN | — | V1.0.x | scripts/sentinels/audit-factory-coverage.mjs exists. Grep shows no CI reference. Orphan file present. |
+| **audit-factory-coverage-orphan** | ✅ DONE | — | V1 | Closed 2026-05-31 (audit 360 dim.3). Was an orphan one-shot report (no exit code). Now a real ratchet gate: exit 1 on any new entity referenced ≥3× in tests with no make<Entity> factory and not in scripts/sentinels/audit-factory-coverage-baseline.json (4 baselined: ChatMessage/ChatSession/SupportTicket/UserMemory). Wired pre-push Gate 23 + sentinel-mirror.yml. |
 | **metric-naming-duplicate** | 🔴 OPEN | — | V1.0.x | scripts/sentinels/metric-naming.mjs + museum-backend/scripts/sentinels/metric-naming.mjs both exist. Duplicate diverged implementations. |
 | **workspace-links-not-in-CI** | 🔴 OPEN | — | V1.0.x | scripts/sentinels/workspace-links.mjs exists. Item claims it's missing from CI mirror sentinel-mirror.yml. |
 | **reportUnusedDisableDirectives-ESLint** | 🟧 PARTIAL | — | V1.0.x | museum-frontend/eslint.config.mjs:203 sets reportUnusedDisableDirectives: 'off' (disabled). BE config status unclear. Web config not checked. Not consistently enabled. |

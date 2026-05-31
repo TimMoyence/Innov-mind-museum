@@ -400,10 +400,16 @@ jobs:
   # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
   mutation:
     needs: [quality, coverage-merge]
-    # FULLY DISABLED 2026-05-09 — a dedicated local cache-builder agent
-    # is regenerating the Stryker incremental cache offline (long-running
-    # job). Once that cache is committed + pushed, flip `if: false` back
-    # to the conditional from c17c404e:
+    # ⚠️ DISABLED (deferred post-launch) — re-confirmed 2026-05-31, audit 360.
+    # This job has NOT run since 2026-05-09. It is NOT a gate today: Stryker
+    # mutation thresholds (`.stryker-hot-files.json`) are NOT enforced anywhere
+    # in CI — do not cite it as an active guard (see docs/PHASE_HISTORY.md
+    # Phase 12 status note). The original "cache-builder agent regenerating the
+    # incremental cache offline" plan never landed; re-arming remains a
+    # deliberate post-launch task, not an in-flight one.
+    #
+    # To RE-ARM: (1) regenerate `reports/stryker-incremental.json` offline and
+    # commit it, (2) replace `if: false` with the conditional from c17c404e:
     #   github.event_name == 'pull_request'
     #   || github.event_name == 'schedule'
     #   || github.event_name == 'workflow_dispatch'
