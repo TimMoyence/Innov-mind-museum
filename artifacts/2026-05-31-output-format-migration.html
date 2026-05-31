@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doctrine « Output format » — ce que l'on pourrait changer</title>
+<style>
+  :root {
+    --ink: #1f2933;
+    --muted: #5a6672;
+    --faint: #8a94a0;
+    --bg: #ffffff;
+    --panel: #f6f7f9;
+    --border: #e3e6ea;
+    --accent: #3b5b7a;   /* accent 1 — slate blue */
+    --accent2: #b06a3c;  /* accent 2 — terracotta, used sparingly */
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+  }
+
+  header.doc {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 28px;
+    margin-bottom: 44px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    margin: 0 0 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    font-size: 17px;
+    color: var(--muted);
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .meta {
+    margin-top: 22px;
+    font-size: 13px;
+    color: var(--faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+  }
+
+  h2 {
+    font-size: 21px;
+    margin: 56px 0 8px;
+    padding-top: 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  h2 .num {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-right: 10px;
+  }
+
+  h3 {
+    font-size: 16px;
+    margin: 30px 0 6px;
+    font-weight: 650;
+  }
+
+  p { margin: 12px 0; }
+
+  a { color: var(--accent); }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .tldr {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin: 8px 0 0;
+  }
+  .tldr p { margin: 6px 0; }
+  .tldr strong { color: var(--ink); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+  }
+  tbody tr:last-child td { border-bottom: 1px solid var(--border); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .tag.read { background: #e7eef5; color: var(--accent); }
+  .tag.edit { background: #f3ece5; color: var(--accent2); }
+  .tag.keep { background: #eceff1; color: var(--muted); }
+
+  ul, ol { margin: 12px 0; padding-left: 22px; }
+  li { margin: 7px 0; }
+
+  .pill-list { list-style: none; padding-left: 0; }
+  .pill-list li {
+    padding-left: 22px;
+    position: relative;
+  }
+  .pill-list li::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 11px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  figure { margin: 24px 0; }
+  figcaption {
+    font-size: 13px;
+    color: var(--faint);
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .chart { width: 100%; height: auto; }
+  .chart .bar { fill: var(--accent); }
+  .chart .bar.alt { fill: var(--accent2); }
+  .chart text { fill: var(--muted); font-size: 13px; font-family: inherit; }
+  .chart .val { fill: var(--ink); font-weight: 600; }
+
+  .note {
+    font-size: 14px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .caveat {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: #fdfbf9;
+  }
+  .caveat strong { color: var(--accent2); }
+
+  footer.doc {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--faint);
+  }
+
+  @media print {
+    html, body { background: #fff; color: #000; font-size: 11.5pt; }
+    .wrap { max-width: none; padding: 0; }
+    a { color: #000; text-decoration: none; }
+    .tldr, .caveat, code, .tag { background: transparent !important; }
+    .tldr, .caveat { border-color: #999; }
+    .chart .bar { fill: #555; }
+    .chart .bar.alt { fill: #999; }
+    h2 { page-break-after: avoid; break-after: avoid-page; }
+    h2, h3 { page-break-inside: avoid; }
+    section { page-break-inside: avoid; }
+    table, figure { page-break-inside: avoid; }
+    header.doc { page-break-after: avoid; }
+    footer.doc { page-break-before: avoid; }
+    @page { margin: 18mm 16mm; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <p class="eyebrow">Doctrine &amp; migration</p>
+  <h1>« Output format » — ce que l'on pourrait changer</h1>
+  <p class="lede">La nouvelle règle <em>Read = HTML, Edit = markdown</em> ajoutée à <code>CLAUDE.md</code> ne change rien rétroactivement. Ce rapport recense les surfaces qui produisent des artefacts « à lire » et où la doctrine s'appliquera désormais.</p>
+  <div class="meta">
+    <span>InnovMind / Musaium</span>
+    <span>2026-05-31</span>
+    <span>Source : <code>CLAUDE.md § Output format</code></span>
+    <span>Premier artefact conforme à la doctrine</span>
+  </div>
+</header>
+
+<section>
+  <div class="tldr">
+    <p><strong>En une ligne.</strong> La doctrine est <em>forward-looking</em> : elle s'applique aux <strong>nouveaux</strong> artefacts à lire, pas à une migration de masse des ~116 fichiers existants.</p>
+    <p><strong>Action la plus rentable.</strong> Patcher les <strong>5 skills</strong> qui génèrent des rapports (<code>/recap</code>, <code>/security-scan</code>, <code>/test-routes</code>, <code>/test-writer</code>, <code>/team</code>) pour qu'ils émettent du HTML self-contained dans <code>artifacts/</code> — le reste suit naturellement.</p>
+    <p><strong>Ne pas toucher.</strong> Specs, configs, READMEs, <code>spec/design/tasks.md</code>, <code>learning/</code>, <code>docs/</code> — matériel d'édition, reste markdown.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">1</span>La décision : Read vs Edit</h2>
+  <p>La doctrine repose sur une seule question : <strong>« est-ce que quelqu'un va le <em>lire</em>, ou est-ce que quelqu'un va l'<em>éditer</em> ? »</strong> La réponse tranche le format. Voici la classification appliquée au repo.</p>
+
+  <table>
+    <thead>
+      <tr><th>Catégorie</th><th>Exemples dans le repo</th><th>Verdict</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Rapports d'exécution SDLC</td>
+        <td><code>code-review.json</code>, <code>verify.json</code>, <code>security.json</code>, <code>STORY.md</code></td>
+        <td><span class="tag read">→ HTML</span></td>
+      </tr>
+      <tr>
+        <td>Audits ponctuels &amp; QA</td>
+        <td><code>audit-state/**/REPORT.md</code>, <code>QA-NOTES.md</code></td>
+        <td><span class="tag read">→ HTML</span></td>
+      </tr>
+      <tr>
+        <td>Récaps / status / briefings</td>
+        <td>sortie <code>/recap</code>, <code>/test-routes</code>, <code>/test-writer</code></td>
+        <td><span class="tag read">→ HTML</span></td>
+      </tr>
+      <tr>
+        <td>Specs &amp; plans éditoriaux</td>
+        <td><code>spec.md</code>, <code>design.md</code>, <code>tasks.md</code> (Spec Kit)</td>
+        <td><span class="tag edit">markdown</span></td>
+      </tr>
+      <tr>
+        <td>Notes &amp; knowledge base</td>
+        <td><code>learning/**</code>, <code>docs/**</code>, <code>LESSONS.md</code></td>
+        <td><span class="tag edit">markdown</span></td>
+      </tr>
+      <tr>
+        <td>Données brutes / signaux</td>
+        <td><code>state.json</code>, <code>*.patch</code>, <code>red-test-manifest.json</code></td>
+        <td><span class="tag keep">ni l'un ni l'autre</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">Cas limite — <code>team-knowledge/lessons/*.md</code> : auto-capturés et « lus », mais consommés surtout par des agents (machine-read) et adossés à <code>LESSONS.md</code> human-edited. Faible valeur HTML ; je les laisse en markdown sauf demande contraire.</p>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Les surfaces à modifier (les 5 skills)</h2>
+  <p>Le vrai levier n'est pas de convertir des fichiers, c'est de changer ce que les générateurs <strong>émettent désormais</strong>. Chaque skill ci-dessous écrit aujourd'hui du markdown ou du JSON destiné à la lecture.</p>
+
+  <h3><code>/recap</code> — récap quotidien</h3>
+  <ul>
+    <li>Aujourd'hui : markdown libre, affiché en chat, non persisté (<code>.claude/skills/recap/SKILL.md</code>).</li>
+    <li>Changement : optionnellement écrire un <code>artifacts/&lt;date&gt;-recap.html</code> self-contained quand l'utilisateur veut le garder / partager.</li>
+  </ul>
+
+  <h3><code>/security-scan</code> — audit sécurité léger</h3>
+  <ul>
+    <li>Aujourd'hui : rapport JSON structuré (findings + verdict).</li>
+    <li>Changement : <strong>conserver le JSON</strong> (donnée, machine-read) <em>et</em> rendre un <code>artifacts/&lt;date&gt;-security-scan.html</code> lisible pour les humains qui consultent le verdict.</li>
+  </ul>
+
+  <h3><code>/test-routes</code> &amp; <code>/test-writer</code> — rapports de validation</h3>
+  <ul>
+    <li>Aujourd'hui : markdown (table de coverage / synthèse).</li>
+    <li>Changement : émettre la version « à lire » en HTML self-contained ; garder le markdown si l'output sert d'entrée à une autre étape.</li>
+  </ul>
+
+  <h3><code>/team</code> — orchestrateur SDLC (impact principal)</h3>
+  <ul>
+    <li>Aujourd'hui : <code>STORY.md</code> + <code>code-review.json</code> + <code>verify.json</code> + <code>security.json</code> par run, dans <code>.claude/skills/team/team-reports/&lt;RUN_ID&gt;/</code>.</li>
+    <li>Changement : ajouter une étape de <strong>rendu HTML</strong> (Step 9 finalize) qui agrège STORY + les JSON en un seul <code>report.html</code> self-contained — c'est l'artefact « à lire » pour l'humain ; les JSON restent la source machine.</li>
+  </ul>
+
+  <div class="caveat">
+    <strong>Recommandation transverse.</strong> Plutôt qu'un template HTML copié dans 5 skills, créer un helper unique (ex. <code>scripts/render-artifact.mjs</code> : markdown/JSON → HTML self-contained avec le CSS de ce rapport inliné). Une seule source de style → la doctrine « restrained design » reste cohérente partout.
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Inventaire existant (comptes vérifiés)</h2>
+  <p>Comptes obtenus par <code>find</code> au 2026-05-31, pas estimés. Ils donnent l'ampleur du « stock » markdown/JSON déjà à lire — utile pour décider d'une éventuelle migration rétroactive (déconseillée par défaut, cf. §5).</p>
+
+  <figure>
+    <svg class="chart" viewBox="0 0 720 260" role="img" aria-label="Nombre de fichiers à lire par surface">
+      <!-- baseline -->
+      <line x1="220" y1="20" x2="220" y2="232" stroke="#e3e6ea" stroke-width="1"/>
+      <!-- rows: label, bar, value. Max value 39 -> scale 460px -->
+      <!-- team-reports JSON 39 -->
+      <text x="210" y="40" text-anchor="end">team-reports · JSON</text>
+      <rect class="bar" x="220" y="28" width="460" height="18" rx="2"/>
+      <text class="val" x="688" y="42" text-anchor="end">39</text>
+      <!-- team-reports MD 23 -->
+      <text x="210" y="76" text-anchor="end">team-reports · MD</text>
+      <rect class="bar" x="220" y="64" width="271" height="18" rx="2"/>
+      <text class="val" x="499" y="78" text-anchor="start">23</text>
+      <!-- team-reports root 28 -->
+      <text x="210" y="112" text-anchor="end">team-reports/ (root)</text>
+      <rect class="bar" x="220" y="100" width="330" height="18" rx="2"/>
+      <text class="val" x="558" y="114" text-anchor="start">28</text>
+      <!-- audit-state 10 -->
+      <text x="210" y="148" text-anchor="end">audit-state/</text>
+      <rect class="bar" x="220" y="136" width="118" height="18" rx="2"/>
+      <text class="val" x="346" y="150" text-anchor="start">10</text>
+      <!-- lessons 9 -->
+      <text x="210" y="184" text-anchor="end">team-knowledge/lessons</text>
+      <rect class="bar alt" x="220" y="172" width="106" height="18" rx="2"/>
+      <text class="val" x="334" y="186" text-anchor="start">9</text>
+      <!-- learning 7 -->
+      <text x="210" y="220" text-anchor="end">learning/</text>
+      <rect class="bar alt" x="220" y="208" width="83" height="18" rx="2"/>
+      <text class="val" x="311" y="222" text-anchor="start">7</text>
+    </svg>
+    <figcaption>Fichiers existants par surface. Barres terracotta = catégories qui <strong>restent markdown</strong> (knowledge base, machine-read).</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr><th>Surface</th><th class="num">Fichiers</th><th>Verdict</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>.claude/skills/team/team-reports/</code></td><td class="num">39 JSON + 23 MD</td><td><span class="tag read">candidat HTML</span></td></tr>
+      <tr><td><code>team-reports/</code> (root, archive)</td><td class="num">28 MD</td><td><span class="tag read">candidat HTML</span></td></tr>
+      <tr><td><code>audit-state/</code></td><td class="num">10 MD</td><td><span class="tag read">candidat HTML</span></td></tr>
+      <tr><td><code>team-knowledge/lessons/</code></td><td class="num">9 MD</td><td><span class="tag edit">reste markdown</span></td></tr>
+      <tr><td><code>learning/</code></td><td class="num">7 MD</td><td><span class="tag edit">reste markdown</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">4</span>Priorités</h2>
+  <ol>
+    <li><strong>Helper de rendu partagé</strong> (<code>scripts/render-artifact.mjs</code>) — fondation, débloque tout le reste avec un seul style.</li>
+    <li><strong>Patcher <code>/team</code> Step 9</strong> — plus gros volume continu de rapports à lire ; un <code>report.html</code> agrégé par run.</li>
+    <li><strong>Patcher <code>/security-scan</code> + <code>/test-routes</code> + <code>/test-writer</code></strong> — dual output (JSON/MD machine + HTML humain).</li>
+    <li><strong><code>/recap</code> opt-in HTML</strong> — quand l'utilisateur veut archiver/partager le récap.</li>
+    <li><strong>Migration rétroactive</strong> — <em>non</em>. Laisser l'historique tel quel (cf. caveat ci-dessous).</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="num">5</span>Honnêteté &amp; limites</h2>
+  <div class="caveat">
+    <strong>Ce rapport est forward-looking, pas un plan de migration de masse.</strong> Convertir 116 fichiers d'archive en HTML brûlerait des tokens pour des artefacts que personne ne relit. La doctrine s'applique aux <em>nouveaux</em> artefacts ; l'historique reste markdown (git le garde de toute façon).
+  </div>
+  <ul class="pill-list">
+    <li>Les comptes (§3) sont vérifiés par <code>find</code> au 2026-05-31, pas estimés — un inventaire d'agent antérieur donnait des chiffres différents, j'ai pris les vrais.</li>
+    <li>Les classifications Read/Edit du §1 sont mon jugement appliqué à la règle, pas une vérité absolue : <code>lessons/</code> en particulier est un cas limite assumé.</li>
+    <li>Aucun skill n'a encore été modifié — ce rapport décrit ce qu'<em>on pourrait</em> changer. Le seul changement réellement appliqué à ce stade est l'ajout de la section <code>## Output format</code> à <code>CLAUDE.md</code>.</li>
+    <li>Le helper <code>render-artifact.mjs</code> n'existe pas encore ; c'est une proposition, pas un fait.</li>
+  </ul>
+</section>
+
+<footer class="doc">
+  Généré comme premier artefact conforme à <code>CLAUDE.md § Output format</code> — fichier HTML autonome, CSS &amp; SVG inline, deux accents, imprimable. Aucune dépendance externe.
+</footer>
+
+</div>
+</body>
+</html>

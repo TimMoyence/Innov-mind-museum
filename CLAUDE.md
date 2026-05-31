@@ -245,6 +245,27 @@ lib-docs/
 
 Specs : [`docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md`](docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md).
 
+## Output format
+
+Pour tout artefact destiné à la lecture humaine (reports, briefings, summaries, plans, retros, status updates, memos, decks) :
+
+- Default to a single self-contained HTML file with inline CSS.
+- Use semantic HTML (`h1`, `h2`, `section`) and embedded styles.
+- Visual style: clean typography, generous whitespace, restrained color use.
+- Always include a print-friendly stylesheet (`@media print`).
+- Light Mode is the default.
+- File extension `.html`, save in `artifacts/` alongside the markdown source.
+
+Pour le matériel de référence qui ne sera QUE édité (specs, configs, READMEs, project notes) : keep markdown as the primary format.
+
+**When unsure: ask "is this for someone to read or someone to edit?"** Read = HTML. Edit = markdown.
+
+**Pourquoi (les idées derrière ces règles) :**
+
+- **One file, no dependencies.** Single HTML file, all CSS inline in `<style>` tags, all SVG charts inline. No external fonts, no CDN, no JavaScript unless the artifact is genuinely interactive. The reader can save the file, email it, paste it into Slack, drop it into a Notion page, archive it for compliance — all without anything breaking. Self-contained HTML is the new "real" artifact.
+- **Print-friendly, always.** Add a `@media print` block that strips backgrounds, adjusts margins, and forces page breaks at section boundaries. ~30 % des décideurs impriment les rapports générés par l'IA. The print layout matters more than expected.
+- **Restrained design.** Resist the instinct to add a hundred icons and gradient backgrounds. The artifact should look like something a careful human designer made, not like a Tailwind playground. Trois règles : **maximum two accent colors, generous white space, sans-serif body type.**
+
 ## Honesty + truth-telling (UFR-013)
 
 **Non-negotiable.** Every response, every agent report. Twinné avec `UFR-013` dans `.claude/agents/shared/user-feedback-rules.json`.

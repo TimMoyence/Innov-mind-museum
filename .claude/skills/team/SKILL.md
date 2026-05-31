@@ -178,6 +178,12 @@ Le mode unique charge TOUS les protocoles et KB JSON (équivalent ancien `enterp
 4. Parse agent return.
 5. Append agents[] entry to state.json : {role: architect, phase: spec, freshContext: true, briefSha256, ...}.
 6. Update state.json : currentStep = "spec", phaseSpawns.spec += 1.
+7. Render lisible (dispatcher, fail-open — CLAUDE.md § Output format) :
+     node scripts/render-artifact.mjs .claude/skills/team/team-state/$RUN_ID/spec.md \
+         --out artifacts/team/$RUN_ID/spec.html --eyebrow "Spec — $RUN_ID" --quiet
+   - CWD = racine repo (comme les hooks/lib). Chemins COMPLETS `.claude/skills/team/team-state/` (le `team-state/` racine n'est pas le run-state).
+   - Permet à l'utilisateur de LIRE la spec hors terminal pour valider. Le markdown reste la source de vérité ; le HTML est une projection en lecture.
+   - Exit non-0 NEVER blocks (fail-open) : la phase continue, la spec markdown existe déjà.
 ```
 
 ### Step 4b — Plan phase (UFR-022 fresh-context, architect spawn #2)
@@ -205,6 +211,12 @@ Le mode unique charge TOUS les protocoles et KB JSON (équivalent ancien `enterp
    - cp tasks.md → team-state/multi-cycle-features/<slug>/tasks-latest.md (overwrite)
    - cp tasks.md → team-state/multi-cycle-features/<slug>/tasks-<RUN_ID>.md (snapshot)
 5. Update state.json : currentStep = "plan", phaseSpawns.plan += 1.
+6. Render lisible (dispatcher, fail-open — CLAUDE.md § Output format) :
+     TS=.claude/skills/team/team-state/$RUN_ID
+     node scripts/render-artifact.mjs $TS/design.md $TS/tasks.md \
+         --out artifacts/team/$RUN_ID/plan.html --title "Plan — $RUN_ID" --eyebrow "Design + Tasks" --quiet
+   - Bundle design+tasks en un seul HTML avec sommaire → l'utilisateur lit le plan pour valider avant red/green. Markdown = source ; HTML = lecture.
+   - Exit non-0 NEVER blocks (fail-open).
 ```
 
 ### Step 4.5 — Doc Freshness + Refresh (UFR-022, optional double fresh agents)
@@ -505,7 +517,7 @@ Plus de skip "enterprise only" (en mode unique tout run a un documenter pass —
      RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-complete-lesson-capture.sh
    - Fail-open: hook exit non-0 NEVER blocks finalize (R10).
    - Skips silently if state.json `.status != "completed"` (R3) — should always be `completed` because §3 already flipped it.
-   - Output: `team-knowledge/lessons/<RUN_ID>.md` (timestamp-suffixed on collision per R4).
+   - Output: `team-knowledge/lessons/<RUN_ID>.json` (schema `lesson/v2`, timestamp-suffixed on collision per R4). Lis via `node scripts/render-artifact.mjs <file>.json` pour une vue HTML.
    - state.json `gates[]` gains `lesson-capture` verdict (`PASS` or `WARN`).
    - Hook reads STORY.md + state.json (read-only) ; appends `gates[]` entry ; that's its only state mutation.
 
@@ -518,8 +530,16 @@ Plus de skip "enterprise only" (en mode unique tout run a un documenter pass —
    - Verdict NO_MATCH / SKIP / WARN → log only, no prompt.
    - Hook fail-open : non-blocking ; finalize continue même si verdict=NO_MATCH.
 
-6. Tech Lead git add + commit (jamais agents) — includes the lesson file written at §4
-7. Optional : promote run → team-reports/ archive si milestone
+6. Render report.html lisible (dispatcher, fail-open — CLAUDE.md § Output format) :
+     TS=.claude/skills/team/team-state/$RUN_ID; TR=.claude/skills/team/team-reports/$RUN_ID
+     node scripts/render-artifact.mjs \
+         $TS/spec.md $TS/design.md $TS/tasks.md $TS/STORY.md \
+         $TR/code-review.json $TR/security.json $TR/verify.json \
+         --out artifacts/team/$RUN_ID/report.html --title "Run report — $RUN_ID" --eyebrow "/team finalize" --quiet
+   - Un seul HTML self-contained avec sommaire : spec + plan + narration + review + security + verify. C'est l'artefact « à lire » humain ; les JSON/markdown restent la source machine.
+   - Le helper saute lui-même les fichiers absents (un run pure-doc-skip n'a ni spec ni review) → fail-open natif. Exit non-0 NEVER blocks.
+7. Tech Lead git add + commit (jamais agents) — includes the lesson file written at §4
+8. Optional : promote run → team-reports/ archive si milestone
 ```
 
 ---
@@ -572,7 +592,7 @@ Metriques cles : tokens/agent, latence/phase, cost/run, corrective-loops/run, ga
 | `team-hooks/pre-feature-spec-check.sh` | Fin Step 4b (Spec Kit closing gate) | T1.4 KR2 — vérifie spec.md/design.md/tasks.md ≥ 200B chacun (UFR-022 : plus de bypass keywords/modes) |
 | `team-hooks/pre-cycle-roadmap-load.sh` | Step 0 INIT §9 | T1.6 — lit `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse items NOW non cochés, écrit `team-state/$RUN_ID/roadmap-context.json`. WARN tolerant. |
 | `team-hooks/pre-complete-verify.sh` | Avant `status: completed` | scoped tests + STORY.md append-only check via sha256 chain |
-| `team-hooks/post-complete-lesson-capture.sh` | Step 9 (Finalize) après cost delta | T2.1 KR4 — extrait 1 lesson markdown depuis STORY.md vers `team-knowledge/lessons/<RUN_ID>.md`. Fail-open. |
+| `team-hooks/post-complete-lesson-capture.sh` | Step 9 (Finalize) après cost delta | T2.1 KR4 — extrait 1 lesson JSON (schema `lesson/v2`, via `jq`) depuis STORY.md vers `team-knowledge/lessons/<RUN_ID>.json`. Fail-open. |
 | `team-hooks/post-cycle-roadmap-update.sh` | Step 9 (Finalize) après lesson capture | T1.6 — fuzzy-match DESCRIPTION ↔ items NOW, propose patch `[x]` staged (jamais auto-commit). |
 | `team-hooks/pre-phase-pure-doc-check.sh` | Step 0 INIT §8 (UFR-022) | UFR-022 — diff = 0 code applicatif → skip tout pipeline + ecrit pure-doc-skip.marker. |
 | `team-hooks/pre-phase-doc-freshness.sh` | Step 4.5 (UFR-022) | UFR-022 — detecte libs touchees, 3-way staleness check, ecrit doc-refresh-queue.json. |
