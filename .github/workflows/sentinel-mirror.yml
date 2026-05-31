@@ -148,6 +148,9 @@ jobs:
         working-directory: museum-backend
         run: node scripts/sentinels/ai-tests-count.mjs
 
+      - name: 'Mirror — screen-test-coverage (UFR-021, mobile)'
+        run: node scripts/sentinels/screen-test-coverage.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli

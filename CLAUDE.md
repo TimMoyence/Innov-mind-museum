@@ -184,7 +184,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 
 **Opt-out** : `// e2e-skip: <raison ≥30 chars>` en haut de la source. Valide : "dev-only debug route", "covered transitively by parent flow X", "third-party native screen". Invalide : "TODO", "low priority", "P2 backlog".
 
-**Enforcement** : `pnpm sentinel:screen-test-coverage` avant push (fail = ajoute flow OU `// e2e-skip:`). `.maestro/coverage-baseline.json` grandfathers les écrans pré-UFR-021 — **JAMAIS de nouvelle entrée**, removals only (si écran rendu out-of-scope, retire du baseline même commit). Phase 2 (post-validation) : pre-push gate + CI mirror.
+**Enforcement** : `pnpm sentinel:screen-test-coverage` avant push (fail = ajoute flow OU `// e2e-skip:`). `.maestro/coverage-baseline.json` grandfathers les écrans pré-UFR-021 — **JAMAIS de nouvelle entrée**, removals only (si écran rendu out-of-scope, retire du baseline même commit). **Phase 2 câblée (2026-05-31)** : pre-push **Gate 22** (`screen-test-coverage.mjs`, fail-fast `|| exit 1`) + step `ci-cd-mobile.yml` quality job (avant prebuild) + mirror `sentinel-mirror.yml` (anti-bypass UFR-020). Checkbox PR (UFR-021) déjà présente dans `PULL_REQUEST_TEMPLATE.md`.
 
 Specs : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL.md), [`docs/TEST_COVERAGE_INVENTORY.md`](docs/TEST_COVERAGE_INVENTORY.md), [`docs/TESTING_PHASE2_PLAN.md`](docs/TESTING_PHASE2_PLAN.md).
 
@@ -352,7 +352,7 @@ TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (32242 symbols, 51687 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (34165 symbols, 55353 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

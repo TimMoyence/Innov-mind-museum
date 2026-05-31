@@ -28,6 +28,9 @@
 #  17. Affected tests FE                            — jest --findRelatedTests
 #  18. Affected tests Web                           — vitest run --changed
 #  19. Prometheus metric-naming ratchet (BE)         — node scripts/sentinels/metric-naming.mjs
+#  20. Roadmap claim resolves (UFR-024)              — node scripts/sentinels/roadmap-claim-resolves.mjs
+#  21. ai-tests count ratchet (BE)                   — node scripts/sentinels/ai-tests-count.mjs
+#  22. Screen test-coverage sentinel (mobile UFR-021) — node scripts/sentinels/screen-test-coverage.mjs
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
 # .gitattributes — React.xcframework) upload on push. The LFS step is chained
@@ -329,10 +332,25 @@ gate_start "Gate 21/21 ai-tests count ratchet (backend)"
 }
 gate_end "Gate 21"
 
+# ─── Gate 22 — Screen test-coverage (mobile UFR-021) ───────────────────────
+# Every new/changed user-facing screen (museum-frontend/app/**, features/**/ui/
+# *Screen.tsx) MUST ship with a Maestro flow exercising its happy path, OR carry
+# an explicit `// e2e-skip: <reason>` opt-out. The sentinel walks the route/
+# screen inventory against .maestro/*.yaml + the grandfather baseline and fails
+# fast if a screen is uncovered. Catches the DOB-2026-05-17-class regression
+# (component test green, real screen broken) BEFORE it reaches TestFlight.
+gate_start "Gate 22/22 screen test-coverage sentinel (mobile)"
+# Single-line fail-fast form (mirrors Gates 4/5/6 `node … || exit 1`). The
+# UFR-021 remediation hint (add a Maestro flow OR `// e2e-skip:`) is printed by
+# the sentinel itself on failure, so a bare `|| exit 1` keeps the gate honest
+# without swallowing the sentinel's own diagnostics.
+node scripts/sentinels/screen-test-coverage.mjs || exit 1
+gate_end "Gate 22"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 21 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 22 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────

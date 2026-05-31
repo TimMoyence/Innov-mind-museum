@@ -149,6 +149,12 @@ jobs:
         # for legitimate symbols (©, OSM attribution).
         run: node ../scripts/check-no-unicode-emoji.cjs
 
+      - name: Screen test-coverage sentinel (UFR-021)
+        # Every new/changed user-facing screen MUST ship a Maestro flow (or an
+        # explicit `// e2e-skip`). Mirrors pre-push Gate 22; `../` because the
+        # quality job's default working-directory is museum-frontend.
+        run: node ../scripts/sentinels/screen-test-coverage.mjs
+
       - name: Maestro shard-manifest sentinel
         run: node ../scripts/sentinels/maestro-shard-manifest.mjs
 
