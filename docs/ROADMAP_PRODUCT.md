@@ -2,7 +2,7 @@
 kind: roadmap
 asof: 2026-05-31 — J-8 avant launch (2026-06-07)
 gonogo: GO_WITH_RISKS
-blockers: 2 code · 5 ops (Tim)
+blockers: 1 code · 5 ops (Tim)
 stats: done=97 partial=28 open=48 ops=5
 ---
 
@@ -13,7 +13,7 @@ stats: done=97 partial=28 open=48 ops=5
 >
 > **Vérification 2026-05-31** — workflow `roadmap-launch-readiness-audit` : 11 clusters × sous-agents lisant le code réel, puis **re-vérification adversariale** de chaque blocker (un 2ᵉ agent relit le code sans croire le 1er) + veille web (concurrence / compliance UE / NPS). **178 items : ✅ 93 livré-vérifié · 🟧 28 partiel · 🔴 48 ouvert · ♻️ 4 stale-claim · 🧑‍🔧 5 ops.**
 >
-> **Verdict launch : 🟧 GO avec risques.** Les 21 « blockers » nominaux se réduisent, après re-vérification, à **2 vrais blockers code + 5 actions ops** (ci-dessous). Les 14 autres étaient des *stale-claims* — des bugs déjà corrigés que la doc traînait encore (consent gating, museum_id FK, budgets latence, BOLA scope, MFA mobile retirée).
+> **Verdict launch : 🟧 GO avec risques.** Les 21 « blockers » nominaux se réduisent, après re-vérification, à **1 vrai blocker code + 5 actions ops** (ci-dessous ; C10 fermé 2026-05-31, commit `787e2ba9`). Les 14 autres étaient des *stale-claims* — des bugs déjà corrigés que la doc traînait encore (consent gating, museum_id FK, budgets latence, BOLA scope, MFA mobile retirée).
 
 ---
 
@@ -33,9 +33,9 @@ stats: done=97 partial=28 open=48 ops=5
 
 > Tout le reste du P0 historique (sécurité, GDPR, feature-gates, stabilité) est **vérifié livré sur `dev`** — détail § V1 ci-dessous et dans l'audit trail. Voici les **seuls items qui bloquent encore** le launch.
 
-### Code (2)
+### Code (1)
 
-- 🔴 **C10 — bouton « un autre musée à côté » mort** — `home.tsx:96-109` passe `onDismiss` au `ProactiveMuseumBanner` mais **pas** `onChooseAnother` ; la CTA suggestion-de-proximité (feature NorthStar V1) ne route nulle part. **Câbler le handler OU retirer l'affordance** avant launch.
+- ✅ **C10 — « un autre musée à côté » câblé** — `home.tsx` passe désormais `onChooseAnother={() => router.push('/(stack)/museums-picker')}` : la CTA suggestion-de-proximité (NorthStar V1) route vers le picker existant (reuse, UFR-016). Test d'intégration AC1 (nav picker) + AC2 (pas de session chat), red prouvé avant câblage. Commit `787e2ba9` sur `dev`, **fermé 2026-05-31**.
 - 🔴 **CNIL âge-15 — preuve e2e manquante** — le code *enforce* déjà le floor (`auth.schemas.ts` `dateOfBirth` requis + `register.useCase` rejette <15 ans, CNIL Délib. 2021-018). Reste à **prouver par 1 flow Maestro happy-path** (UFR-021) que le path date `DD/MM/YYYY` FR n'a pas régressé (classe de bug DOB-2026-05-17). Jest seul ne suffit pas.
 
 ### Ops — Tim, hors-code (5)
