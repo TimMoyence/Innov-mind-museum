@@ -2038,10 +2038,16 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Return today's curated artwork */
+    /**
+     * Return today's curated artwork
+     * @description Returns a single deterministic artwork for the current date. The funFact field is localized to the requested locale (query locale then Accept-Language, falling back to English).
+     */
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          /** @description Locale for the funFact field. Falls back to Accept-Language, then English. */
+          locale?: 'en' | 'fr' | 'es' | 'de' | 'it' | 'ja' | 'zh' | 'ar';
+        };
         header?: never;
         path?: never;
         cookie?: never;

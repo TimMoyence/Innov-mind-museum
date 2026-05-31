@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { storage } from '@/shared/infrastructure/storage';
 import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
@@ -27,6 +28,8 @@ const todayKey = (): string => new Date().toISOString().slice(0, 10);
 
 /** Hook that fetches the daily artwork, tracks save/skip state, and handles dismissal for the day. */
 export const useDailyArt = () => {
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   const [artwork, setArtwork] = useState<DailyArtwork | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -48,7 +51,7 @@ export const useDailyArt = () => {
       }
 
       try {
-        const data = await fetchDailyArt();
+        const data = await fetchDailyArt(locale);
         if (cancelled) return;
         setArtwork(data);
 
@@ -69,7 +72,7 @@ export const useDailyArt = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const save = useCallback(async () => {
     if (!artwork) return;

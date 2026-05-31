@@ -6,6 +6,7 @@ import {
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
+import { artworks } from '@modules/daily-art';
 
 /**
  * Daily Art route integration tests — auth enforcement + response shape.
@@ -85,6 +86,31 @@ describe('Daily Art Routes — HTTP Layer', () => {
         .set('Authorization', `Bearer ${userToken()}`);
 
       expect(res1.body.artwork.title).toBe(res2.body.artwork.title);
+    });
+  });
+
+  // ── QA-08: locale-aware funFact ────────────────────────────────
+
+  describe('Locale-aware funFact (QA-08)', () => {
+    it('returns a French funFact when ?locale=fr', async () => {
+      const res = await request(app)
+        .get('/api/daily-art?locale=fr')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      expect(typeof res.body.artwork.funFact).toBe('string');
+      const frFunFacts = artworks.map((a) => a.funFact.fr);
+      expect(frFunFacts).toContain(res.body.artwork.funFact);
+    });
+
+    it('falls back to the English funFact for an unsupported locale', async () => {
+      const res = await request(app)
+        .get('/api/daily-art?locale=xx')
+        .set('Authorization', `Bearer ${userToken()}`);
+
+      expect(res.status).toBe(200);
+      const enFunFacts = artworks.map((a) => a.funFact.en);
+      expect(enFunFacts).toContain(res.body.artwork.funFact);
     });
   });
 

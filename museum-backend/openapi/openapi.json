@@ -2262,7 +2262,21 @@
       },
       "MuseumEnrichmentView": {
         "type": "object",
-        "required": ["museumId", "locale", "summary", "wikidataQid", "website", "phone", "imageUrl", "openingHours", "admissionFees", "collections", "currentExhibitions", "accessibility", "fetchedAt"],
+        "required": [
+          "museumId",
+          "locale",
+          "summary",
+          "wikidataQid",
+          "website",
+          "phone",
+          "imageUrl",
+          "openingHours",
+          "admissionFees",
+          "collections",
+          "currentExhibitions",
+          "accessibility",
+          "fetchedAt"
+        ],
         "properties": {
           "museumId": {
             "type": "integer"
@@ -4584,9 +4598,22 @@
       "get": {
         "tags": ["DailyArt"],
         "summary": "Return today's curated artwork",
+        "description": "Returns a single deterministic artwork for the current date. The funFact field is localized to the requested locale (query locale then Accept-Language, falling back to English).",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "description": "Locale for the funFact field. Falls back to Accept-Language, then English.",
+            "schema": {
+              "type": "string",
+              "enum": ["en", "fr", "es", "de", "it", "ja", "zh", "ar"]
+            }
           }
         ],
         "responses": {

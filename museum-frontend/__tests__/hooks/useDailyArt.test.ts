@@ -20,6 +20,11 @@ jest.mock('@/features/daily-art/infrastructure/dailyArtApi', () => ({
   fetchDailyArt: (...args: unknown[]) => mockFetchDailyArt(...(args as [])),
 }));
 
+// QA-08: the hook reads the active i18n locale and forwards it to fetchDailyArt.
+jest.mock('react-i18next', () => ({
+  useTranslation: (): { i18n: { language: string } } => ({ i18n: { language: 'fr' } }),
+}));
+
 // Import AsyncStorage after mock so we can spy on it
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -59,6 +64,17 @@ describe('useDailyArt', () => {
 
     expect(mockFetchDailyArt).toHaveBeenCalledTimes(1);
     expect(result.current.artwork).toEqual(sampleArtwork);
+  });
+
+  it('forwards the active i18n locale to fetchDailyArt (QA-08)', async () => {
+    const { result } = renderHook(() => useDailyArt());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // The mocked useTranslation reports language 'fr'.
+    expect(mockFetchDailyArt).toHaveBeenCalledWith('fr');
   });
 
   it('returns artwork data on success', async () => {
