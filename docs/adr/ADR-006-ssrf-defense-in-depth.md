@@ -4,7 +4,7 @@
 - **Owner**: Backend — knowledge-extraction module
 - **Supersedes**: None (tightens the baseline validated by `2026-04-20_security-full-audit.md`)
 
-> **Implementation note (2026-04-30):** the manual-redirect loop, `BLOCKED_HOSTNAMES` set, and `validateHostname` helper are live in `museum-backend/src/modules/knowledge-extraction/adapters/secondary/scraper/html-scraper.ts` (see `BLOCKED_HOSTNAMES` line 31, `validateHostname` line 146, `fetchWithSafeRedirects` line 189). The 6 targeted unit tests called out in "Follow-ups" landed in `tests/unit/knowledge-extraction/html-scraper.test.ts`.
+> **Implementation note (2026-04-30):** the manual-redirect loop, `BLOCKED_HOSTNAMES` set, and `validateHostname` helper are live in `museum-backend/src/modules/knowledge-extraction/adapters/secondary/scraper/html-scraper.ts` (see `BLOCKED_HOSTNAMES` line 29, `validateHostname` line 130, `fetchWithSafeRedirects` line 250). The 6 targeted unit tests called out in "Follow-ups" landed in `tests/unit/knowledge-extraction/html-scraper.test.ts`.
 
 ## Context
 
@@ -40,7 +40,7 @@ Replace the single-shot validation + `redirect: 'follow'` pattern with a **manua
 - **`redirect: 'error'` only** — rejected: loses all legitimate redirects (trailing-slash canonicalisation, HTTP→HTTPS, `www.` upgrades). Too strict for real-world public web.
 - **Direct IP pinning (bypass DNS on each hop, use first-resolved IP as Host header)** — rejected: breaks TLS SNI; breaks virtual-host Apache/nginx sharing IPs. Significant feature loss for marginal gain over per-hop DNS re-check.
 - **`redirect: 'follow'` + proxy that filters responses** — rejected: introduces a new critical dependency; corporate proxies add latency; proxy itself becomes an attack surface.
-- **Delete the scraper entirely** — rejected: knowledge-extraction dbLookup already consumes the scraped data (`prepare-message.pipeline.ts:172` → `llm-prompt-builder.ts:299-301` injects `localKnowledgeBlock` into the LLM prompt with priority over Wikidata). Module is wired and used.
+- **Delete the scraper entirely** — rejected: knowledge-extraction dbLookup already consumes the scraped data (`prepare-message.pipeline.ts:172` → `llm-prompt-builder.ts:410-411` injects `localKnowledgeBlock` into the LLM prompt with priority over Wikidata). Module is wired and used.
 
 ## Consequences
 

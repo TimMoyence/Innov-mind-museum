@@ -74,7 +74,7 @@ A new ADR amending or superseding this one. Any reintroduction of a master flag 
 - **INSULT_KEYWORDS**: 16 entries, **FR + EN only**.
 - **INJECTION_PATTERNS**: 60+ entries across 8 languages (EN, FR, DE, ES, IT, JA, ZH, AR).
 
-Asymmetric coverage created a false sense of multilingual defence — an attacker using insults in DE, ES, IT, JA, ZH, or AR bypassed the keyword pre-filter. ADR-005 (prompt-injection-v2) acknowledged the keyword approach was a v1 placeholder; the env flag `GUARDRAILS_V2_CANDIDATE` was already wired (`'off' | 'llm-guard' | 'nemo' | 'prompt-armor'`) to track future provider choices.
+Asymmetric coverage created a false sense of multilingual defence — an attacker using insults in DE, ES, IT, JA, ZH, or AR bypassed the keyword pre-filter. ADR-005 (prompt-injection-v2 ; doc prunée 2026-05, cf. `git log -- docs/adr/ADR-005*`) acknowledged the keyword approach was a v1 placeholder; the env flag `GUARDRAILS_V2_CANDIDATE` was already wired (`'off' | 'llm-guard' | 'nemo' | 'prompt-armor'`) to track future provider choices.
 
 Audit decision binary (per design spec §2 ADR-012, now this file):
 - (a) **Finish multilingue with an LLM judge wired through the existing flag** (defense in depth on top of keyword pre-filter).
@@ -84,7 +84,7 @@ Audit decision binary (per design spec §2 ADR-012, now this file):
 
 **Option (a) — LLM judge layer with multilingue insult expansion.** Implementation:
 
-1. **Multilingue insult expansion**: 38 entries across 8 languages, matching the existing INJECTION_PATTERNS coverage. Closes the i18n asymmetry without requiring the second-layer LLM call for the trivial case.
+1. **Multilingue insult expansion**: 44 entries across 8 languages, matching the existing INJECTION_PATTERNS coverage. Closes the i18n asymmetry without requiring the second-layer LLM call for the trivial case.
 
 2. **`'llm-judge'` candidate added to `GUARDRAILS_V2_CANDIDATE`** (kept `'off'` default — opt-in until soaked in staging). Judge runs **only** when:
    - Env flag is `'llm-judge'`, AND
@@ -109,7 +109,7 @@ Audit decision binary (per design spec §2 ADR-012, now this file):
 |---|---|
 | **Cost**: every chat message gets a second LLM call → 2× LLM cost. | Selective invocation: only on long messages (>50 chars) AND only when keyword said allow. Estimated <15% of messages. Hard daily cap via env flag; once exceeded, fallback to keyword-only for the rest of the day. |
 | **Latency**: judge adds p99 latency. | Hard 500ms timeout via Promise.race. On timeout, keyword decision serves the user. Worst-case latency increase = 500ms on the slowest 1% of messages, with no impact on the response itself (the request continues with keyword decision). |
-| **Judge can be jailbroken**: the LLM itself is susceptible to prompt injection. | Structured-output JSON with Zod schema rejects free-text. Judge prompt isolated via `[END OF SYSTEM INSTRUCTIONS]` marker (matches existing pattern in `llm-sections.ts`). Defense-in-depth — judge + keyword combined; even if judge is fooled, keyword still triggers on obvious patterns. |
+| **Judge can be jailbroken**: the LLM itself is susceptible to prompt injection. | Structured-output JSON with Zod schema rejects free-text. Judge prompt isolated via `[END OF SYSTEM INSTRUCTIONS]` marker (matches existing pattern in `llm-prompt-builder.ts`). Defense-in-depth — judge + keyword combined; even if judge is fooled, keyword still triggers on obvious patterns. |
 | **Fail-open on edge cases hides errors.** | Every fail mode logs a distinct event (`guardrail_judge_timeout`, `guardrail_judge_budget_exceeded`, `guardrail_judge_parse_error`, `guardrail_judge_throw`). Sentry alerts on >5% failure rate (alert config follow-up). |
 
 ## Rejected Alternative
@@ -250,7 +250,7 @@ Six layers, none redundant.
 ## References
 
 - banking-grade hardening design (deleted 2026-05-03 — see git commit history) (Phase D F4)
-- ADR-005 — prompt-injection-v2 (predecessor, keyword-only v1)
+- ADR-005 — prompt-injection-v2 (predecessor, keyword-only v1 ; doc prunée 2026-05, cf. `git log -- docs/adr/ADR-005*`)
 - Commit `80e3e1cb` — `feat(chat): F4 LLM-judge guardrail v2 + multilingual insult coverage`
 - Test contracts: `museum-backend/tests/unit/chat/{art-topic-guardrail-multilingue,llm-judge-guardrail,guardrail-budget,chat.service.guardrail-v2}.test.ts`
 - P11 sidecar benchmark report (consolidated above; original deleted 2026-05-07 with archive purge)

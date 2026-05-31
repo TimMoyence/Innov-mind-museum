@@ -11,7 +11,7 @@ The rate-limit middleware (`museum-backend/src/shared/middleware/rate-limit.midd
 
 In a single-instance deployment that is acceptable. In a multi-instance load-balanced deployment (current prod), every replica gets its own counter — distributed limits are effectively disabled during the Redis incident, while the misleading log line `rate_limit_redis_fail_closed_fallback` claimed otherwise. Audit 2026-04-30 finding **F2 (HIGH)**: this is a fail-open control mislabelled as fail-closed.
 
-The middleware protects: `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/auth/social-login`, `/api/auth/mfa/verify`, plus chat session/IP/user limiters. A silent disablement opens a credential-stuffing window for as long as Redis is unreachable.
+The middleware protects: `/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/auth/social-login`, `/api/auth/mfa/enroll/verify`, plus chat session/IP/user limiters. A silent disablement opens a credential-stuffing window for as long as Redis is unreachable.
 
 ## Decision
 

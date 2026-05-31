@@ -19,7 +19,7 @@ Le pipeline observabilité Musaium émet vers Langfuse (`cloud.langfuse.com` par
 1. **Spans hand-codés** via `withLangfuseTrace` + `safeTrace` sur les 4 paths LLM non-LangChain (judge, TTS, STT, LLM-Guard) — `metadata` est contraint à la source à des champs PII-safe (`museumId`, `intent`, `locale`, `tier`, `requestId`, `inputLength`, `estimatedCostCents`).
 2. **Auto-capture LangChain** via `langfuse-langchain.CallbackHandler({root, updateRoot:true})` attaché par `attachLangChainCallback` sur chaque `chat.invoke()`. Ce handler capture **automatiquement** `input.messages[*].content` (prompt user) et `output.text` (LLM completion) à chaque LLM call (`langfuse-langchain` v3.38.0 `handleLLMEnd` convention).
 
-Avant ce run, le ctor `new Langfuse({ publicKey, secretKey, baseUrl, flushAt, flushInterval })` (`museum-backend/src/shared/observability/langfuse.client.ts:55-61`) **n'avait pas** la clé `mask` câblée. Conséquence : tout `LANGFUSE_ENABLED=true` (default `false` `config/env.ts:264`, mais activable ops-side) shippait les prompts utilisateur et complétions LLM **non maskés** vers Langfuse. Vecteur PII direct (OWASP LLM07 — PII via tracing ; GDPR Art. 5 §1.c — data minimisation ; CNIL recommandation 2022-06-23 sur observabilité).
+Avant ce run, le ctor `new Langfuse({ publicKey, secretKey, baseUrl, flushAt, flushInterval })` (`museum-backend/src/shared/observability/langfuse.client.ts:57-69`) **n'avait pas** la clé `mask` câblée. Conséquence : tout `LANGFUSE_ENABLED=true` (default `false` `config/env.ts:264`, mais activable ops-side) shippait les prompts utilisateur et complétions LLM **non maskés** vers Langfuse. Vecteur PII direct (OWASP LLM07 — PII via tracing ; GDPR Art. 5 §1.c — data minimisation ; CNIL recommandation 2022-06-23 sur observabilité).
 
 `lib-docs/langfuse/LESSONS.md` LF-V3-05 (2026-05-18) classait initialement « no `mask` hook » en **LOW deferred**, raisonnant les spans hand-codés (déjà PII-safe à la source). Cette analyse **n'avait pas valorisé** que LF-V3-02 closing (2026-05-18 — CallbackHandler wiring) avait *ré-ouvert* le vecteur PII via les input/output auto-capturés. Le run `/team 2026-05-21-p0-c1-pii-egress` corrige cette mis-évaluation et reclasse LF-V3-05 en P0 CLOSED (`lib-docs/langfuse/LESSONS.md:49`).
 
@@ -45,7 +45,7 @@ Conséquence : **toute future instanciation Langfuse cross-app (FE/Web hypothét
 
 ### D2 — `stripFreeText` est fail-safe par contrat (try/catch + retour `data` inchangé + `logger.warn`)
 
-`museum-backend/src/shared/observability/strip-free-text.ts:138-146` enroule la logique de scrub dans `try { … } catch (err) { logger.warn('langfuse_mask_failed', {error: err.message}); return data; }`. Garanties :
+`museum-backend/src/shared/observability/strip-free-text.ts:258-286` (fonction `stripFreeText`) enroule la logique de scrub dans `try { … } catch (error) { logger.warn('langfuse_mask_failed', { … }); return params; }`. Garanties :
 
 - **Idempotent** : appliquer `stripFreeText` deux fois consécutives ne change pas le résultat (R6).
 - **Pas de PII dans le log** : seul `error.message` est loggé, **jamais** le `data` (qui vient justement de faire fail le mask).
@@ -53,7 +53,7 @@ Conséquence : **toute future instanciation Langfuse cross-app (FE/Web hypothét
 
 ### D3 — Marker `'[STRIPPED]'`, distinct de Sentry `'[redacted]'`
 
-`stripFreeText` remplace les portions free-text par le marker littéral `'[STRIPPED]'`. Choix d'un marker **distinct** de Sentry's `'[redacted]'` (`packages/musaium-shared/src/observability/sentry-scrubber.ts:42`) pour éviter ambiguïté à la lecture des logs Langfuse vs Sentry. `'[STRIPPED]'` est le marker idiomatic Musaium pour PII Langfuse ; pas de collision (vérifié grep codebase). Préserve la lisibilité humaine du payload Langfuse.
+`stripFreeText` remplace les portions free-text par le marker littéral `'[STRIPPED]'`. Choix d'un marker **distinct** de Sentry's `'[redacted]'` (`packages/musaium-shared/src/observability/sentry-scrubber.ts:65`) pour éviter ambiguïté à la lecture des logs Langfuse vs Sentry. `'[STRIPPED]'` est le marker idiomatic Musaium pour PII Langfuse ; pas de collision (vérifié grep codebase). Préserve la lisibilité humaine du payload Langfuse.
 
 ### D4 — `stripFreeText` couvre les shapes LangChain + paths manuels, préserve metadata/usage/model
 
@@ -125,7 +125,7 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
   - `langfuse-langchain@3.38.0` — `CallbackHandler({root, updateRoot:true})` auto-capture wiring (`museum-backend/src/shared/observability/langfuse-langchain.ts:57-68`).
 - **Impl** :
   - `museum-backend/src/shared/observability/langfuse.client.ts:68` (`mask: stripFreeText` ctor wiring).
-  - `museum-backend/src/shared/observability/strip-free-text.ts:83-147` (impl + R7 fail-safe).
+  - `museum-backend/src/shared/observability/strip-free-text.ts:68-286` (helpers + `stripFreeText` impl + R7 fail-safe).
   - `museum-backend/tests/integration/observability/langfuse-pii-seed.test.ts` (R8 invariant lock).
   - `museum-backend/tests/unit/observability/{strip-free-text,langfuse-mask-ctor-wiring}.test.ts` (R5/R6/R7 unit coverage).
 - **Lib-docs** :

@@ -8,6 +8,18 @@
     "docs/compliance/SUBPROCESSORS.md": "2026-05-27",
     "SECURITY.md": "2026-05-27",
     "docs/AI_SAFETY.md": "2026-05-31",
-    "docs/AI_VOICE.md": "2026-05-31"
+    "docs/AI_VOICE.md": "2026-05-31",
+    "docs/adr/ADR-006-ssrf-defense-in-depth.md": "2026-05-31",
+    "docs/adr/ADR-011-rate-limit-fail-closed.md": "2026-05-31",
+    "docs/adr/ADR-014-mfa-all-roles-enforcement.md": "2026-05-31",
+    "docs/adr/ADR-015-llm-judge-guardrail-v2.md": "2026-05-31",
+    "docs/adr/ADR-036-llm-cache-strategy.md": "2026-05-31",
+    "docs/adr/ADR-037-visual-similarity-siglip-pgvector.md": "2026-05-31",
+    "docs/adr/ADR-038-anti-hallucination-citations-websearch.md": "2026-05-31",
+    "docs/adr/ADR-047-llm-guard-circuit-breaker-fail-closed.md": "2026-05-31",
+    "docs/adr/ADR-048-guardrail-strategy-interface.md": "2026-05-31",
+    "docs/adr/ADR-060-gdpr-erasure-dsar-compliance-chain.md": "2026-05-31",
+    "docs/adr/ADR-063-langfuse-mask-central-stripfreetext.md": "2026-05-31",
+    "docs/adr/ADR-064-access-token-denylist-fail-open.md": "2026-05-31"
   }
 }

@@ -63,6 +63,8 @@ This stance is consistent with GDPR Recital 65 (retention permitted for legal cl
 
 ### D6 — DSAR export payload versioned at schemaVersion '2'
 
+> **Amendement 2026-05-26 (Cycle 4 / B-03) :** `schemaVersion` a depuis été bumpé `'2'` → `'3'` (ajout de `artworkMatches` par message). Valeur actuelle = `'3'` (`exportUserData.types.ts:281`, historique en-tête `:6,:12`). La décision D6 ci-dessous documente l'état d'origine `'2'`.
+
 `UserExportPayload.schemaVersion` is bumped from `'1'` to `'2'`. All new fields are additive. The export uses explicit per-field allow-list mappers (not entity spread) so that a future column addition to any entity cannot accidentally leak into the export payload (D4 from the run design). Secrets and security credentials are excluded by the mappers: no `password`, `*_token`, `hash`, `salt`, `prevHash`, `rowHash` fields are present at any level of the payload (verified by frozen test `export-user-data-completeness.test.ts`).
 
 `message_reports` export includes `status` but excludes `reviewedBy` + `reviewerNotes` — those are moderator staff data, not the data subject's personal data (GDPR Art.15 covers the subject's data, not third-party staff notes about the subject).

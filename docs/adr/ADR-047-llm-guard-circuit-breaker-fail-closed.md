@@ -73,7 +73,7 @@ Runbook entry for each alert: `docs/RUNBOOKS/guardrail-incidents.md` (scenarios 
 ## References
 
 - Parent run : `.claude/skills/team/team-state/2026-05-12-llm-guard-resilience-enterprise/`
-- Parent audit (CHANGES_REQUESTED, safety=62/100) : `.claude/skills/team/team-reports/2026-05-12-llm-guard-circuit-breaker-audit/code-review.json`
+- Parent audit (CHANGES_REQUESTED, safety=62/100) : `.claude/skills/team/team-reports/2026-05-12-llm-guard-circuit-breaker-audit/code-review.json` — *run de travail élagué (rétention 30j) ; verdict consigné ici comme provenance.*
 - Layered defense doc : `docs/AI_SAFETY.md`
 - Doctrine memory : `feedback_no_feature_flags_prelaunch`, `feedback_quality_doctrine`, `feedback_honesty_no_pretense`
 - Runbook : `docs/OPS_INCIDENT_LLM_GUARD.md`

@@ -78,7 +78,7 @@ Documented for the security review trail (2026-05-10 audit flagged this as HIGH;
 
 After the run-2026-05-08-c3 security review, two BLOCKERs were fixed before merge:
 
-1. **Session-ownership check** — the compare router now requires a `verifySessionAccess` dep that calls `ensureSessionAccess()` (the same invariant `chat-session.service.ts:170,291` uses on every other write path). Cross-tenant write surface closed.
+1. **Session-ownership check** — the compare router now requires a `verifySessionAccess` dep that calls `ensureSessionAccess()` (the same invariant `chat-session.service.ts:175,282` uses on every other write path). Cross-tenant write surface closed.
 2. **Rate limit** — `/chat/compare` now mounts `dailyChatLimit + userLimiter + sessionLimiter` mirroring `/chat/sessions/:id/messages`. Compare is encoder + DB + Wikidata-bound; without these, an authenticated attacker could thrash cache + saturate the encoder at line speed.
 
 Test coverage: `compare.route.test.ts` adds two new SEC cases asserting (a) the verifier is invoked with `(sessionId, ownerId)` on the happy path, (b) a 404 propagates when the verifier throws and the use-case is NOT called.

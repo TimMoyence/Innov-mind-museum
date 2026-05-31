@@ -175,7 +175,7 @@ See `team-state/2026-05-12-llm-guard-perennial-10y-design/phase-0-draft/RENAME-P
 ## Sign-off criteria for "Accepted"
 
 - [x] `pnpm tsc --noEmit` passes (BE)
-- [x] `pnpm test` scoped to `tests/unit/chat/llm-guard-adapter.test.ts` + `tests/unit/chat/guardrail-evaluation.service.test.ts` passes
+- [x] `pnpm test` scoped to `tests/unit/chat/llm-guard-adapter.test.ts` + `tests/unit/chat/guardrail-evaluation-service.test.ts` passes
 - [x] `cd museum-frontend && npm run check:openapi-types` clean (no FE diff expected, port stays internal)
 - [x] `docs/AI_SAFETY.md` ships in the same commit (anchor doctrine)
 - [x] User explicit "go" on the diff

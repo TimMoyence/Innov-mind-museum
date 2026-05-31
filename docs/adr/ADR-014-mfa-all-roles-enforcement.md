@@ -9,7 +9,7 @@
 
 ## Context
 
-Pre-2026-04-30 the MFA gate in `museum-backend/src/modules/auth/useCase/authSession.service.ts:228-238` evaluated only admin accounts:
+Pre-2026-04-30 the MFA gate (historiquement inline dans `authSession.service.ts`, depuis refactoré dans `museum-backend/src/modules/auth/useCase/session/mfa-gate.service.ts:65` `evaluateMfaGate`, appelé par `session/authSession.service.ts:146`) evaluated only admin accounts:
 
 ```ts
 if (user.role === 'admin') {
@@ -32,7 +32,7 @@ Banking-grade SOC2 CC6.1 + ASVS 6.3 (Authentication) do not distinguish role for
 
 | Counter-argument | Response |
 |---|---|
-| **Visitor friction**: forcing MFA on visitors who voluntarily enrolled hurts UX. | Visitors keep the option to disable TOTP via the existing `DELETE /api/auth/mfa` flow (out of scope for this audit). The gate enforces what the user opted into; not a new requirement. |
+| **Visitor friction**: forcing MFA on visitors who voluntarily enrolled hurts UX. | Visitors keep the option to disable TOTP via the existing `POST /api/auth/mfa/disable` flow (out of scope for this audit). The gate enforces what the user opted into; not a new requirement. |
 | **Admin-only is sufficient**: threat model = admin compromise; visitor MFA = nice-to-have. | ASVS 6.3.x and SOC2 CC6.1 don't gate MFA enforcement on role. Half-state is the F9 enumeration oracle. Banking-grade = no half-states. |
 | **Existing sessions**: what about active sessions of visitors who enrolled but were not gated? | Existing access tokens remain valid until natural expiry (15 min). Refresh-rotation event triggers MFA evaluation on next call. Zero-downtime — users see one extra MFA prompt at next refresh, then carry on normally. |
 | **Cost: visitor recovery flows**: lost TOTP = lost account. | The recovery-codes flow (`/api/auth/mfa/recovery`) is already wired for admins. Visitors get the same flow at enrollment time. No additional cost. |

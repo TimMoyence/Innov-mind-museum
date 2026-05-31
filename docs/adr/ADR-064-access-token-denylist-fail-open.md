@@ -6,8 +6,8 @@
 > "ADR-064" mentions in this file refer to itself.
 
 > **Status:** Accepted · **Date:** 2026-05-21 · **Deciders:** Tech Lead
-> **Run:** `team-state/2026-05-21-p0-c3-auth-crypto/`
-> **Closes:** I-SEC7b (P0 security sweep, `docs/ROADMAP_PRODUCT.md` ligne 206) ; spec R9, design D9.
+> **Run:** `team-state/2026-05-21-p0-c3-auth-crypto/` — *run de travail élagué (rétention 30j) ; toutes les références `team-state/2026-05-21-…` ci-dessous pointent vers ce run archivé.*
+> **Closes:** I-SEC7b (P0 security sweep ; preuve item-par-item désormais dans `docs/ROADMAP_AUDIT_TRAIL.md` — le `ROADMAP_PRODUCT.md` a été restructuré en façade 2026-05-31, l'ancien numéro de ligne ne vaut plus) ; spec R9, design D9.
 
 ---
 
