@@ -296,6 +296,16 @@ jobs:
         # VM entirely and is faster (no boot, ~10s readiness).
         run: |
           brew install --quiet postgresql@16
+          # pgvector >=0.7.0 — AddArtworkEmbeddings runs `CREATE EXTENSION vector`
+          # (halfvec). Homebrew postgresql@16 does NOT bundle pgvector, so the
+          # migration aborts and the backend never boots (all Maestro shards die at
+          # setup). Build pgvector from source against pg16's pg_config so
+          # vector.control lands in pg16's extension dir. (CLAUDE.md gotcha:
+          # "migration:run fait CREATE EXTENSION vector → Postgres MUST have pgvector".)
+          PG16_BIN=/opt/homebrew/opt/postgresql@16/bin
+          git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector
+          make -C /tmp/pgvector PG_CONFIG="$PG16_BIN/pg_config"
+          make -C /tmp/pgvector PG_CONFIG="$PG16_BIN/pg_config" install
           brew services start postgresql@16
           # Wait for pg_isready, then create the role + database the BE expects
           # shellcheck disable=SC2034  # loop counter is intentional; body uses break/sleep, not $i
