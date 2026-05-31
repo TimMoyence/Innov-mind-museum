@@ -823,6 +823,11 @@
     "phone": "الهاتف",
     "loading_details": "جارٍ تحميل المعلومات…",
     "no_extra_info": "لا توجد تفاصيل إضافية متاحة.",
+    "info_coming_soon": "مزيد من المعلومات قريبًا",
+    "admission": "رسوم الدخول",
+    "collections": "المجموعات",
+    "exhibitions": "المعارض الحالية",
+    "accessibility": "إمكانية الوصول",
     "offlinePack": {
       "title": "أنت بالقرب من {{cityName}}",
       "description": "نزّل المحتوى دون اتصال لاستكشاف المتحف بدون شبكة.",

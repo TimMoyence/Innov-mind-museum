@@ -92,6 +92,10 @@ describe('Museum Enrichment Routes — HTTP Layer', () => {
           phone: null,
           imageUrl: null,
           openingHours: null,
+          admissionFees: null,
+          collections: null,
+          currentExhibitions: null,
+          accessibility: null,
           fetchedAt: '2026-04-22T10:00:00.000Z',
         },
       });
@@ -161,6 +165,10 @@ describe('Museum Enrichment Routes — HTTP Layer', () => {
           phone: null,
           imageUrl: null,
           openingHours: null,
+          admissionFees: null,
+          collections: null,
+          currentExhibitions: null,
+          accessibility: null,
           fetchedAt: '2026-04-22T10:00:00.000Z',
         },
       });

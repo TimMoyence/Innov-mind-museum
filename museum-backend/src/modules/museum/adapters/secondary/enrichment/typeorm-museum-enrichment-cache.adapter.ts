@@ -153,6 +153,13 @@ function toView(row: MuseumEnrichment): MuseumEnrichmentView {
     phone: row.phone,
     imageUrl: row.imageUrl,
     openingHours: (row.openingHours ?? null) as ParsedOpeningHours | null,
+    // Rich JSONB columns — surfaced as-is (free-form Record | null). The
+    // entity already stores them as `Record<string, unknown> | null`, which
+    // is structurally identical to the view's alias types, so no cast.
+    admissionFees: row.admissionFees ?? null,
+    collections: row.collections ?? null,
+    currentExhibitions: row.currentExhibitions ?? null,
+    accessibility: row.accessibility ?? null,
     fetchedAt: row.fetchedAt.toISOString(),
   };
 }

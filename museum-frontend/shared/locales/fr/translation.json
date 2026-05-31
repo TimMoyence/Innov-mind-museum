@@ -834,6 +834,11 @@
     "phone": "Téléphone",
     "loading_details": "Chargement des informations…",
     "no_extra_info": "Pas d'infos détaillées disponibles.",
+    "info_coming_soon": "Informations bientôt disponibles",
+    "admission": "Tarifs",
+    "collections": "Collections",
+    "exhibitions": "Expositions en cours",
+    "accessibility": "Accessibilité",
     "offlinePack": {
       "title": "Tu es près de {{cityName}}",
       "description": "Télécharge le contenu hors-ligne pour explorer sans connexion.",

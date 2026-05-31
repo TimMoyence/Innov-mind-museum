@@ -17,6 +17,7 @@ export {
   makeGeoLocation,
   makeMuseumBranding,
   makeMuseumDetail,
+  makeMuseumEnrichmentView,
 } from './museum.factories';
 export type { GeoLocation } from './museum.factories';
 export { makeReview } from './review.factories';

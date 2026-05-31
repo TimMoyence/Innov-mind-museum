@@ -834,6 +834,11 @@
     "phone": "電話",
     "loading_details": "情報を読み込み中…",
     "no_extra_info": "詳細情報はありません。",
+    "info_coming_soon": "詳細情報は近日公開予定です",
+    "admission": "入館料",
+    "collections": "コレクション",
+    "exhibitions": "開催中の展覧会",
+    "accessibility": "バリアフリー情報",
     "offlinePack": {
       "title": "{{cityName}}の近くにいます",
       "description": "オフラインコンテンツをダウンロードして接続なしで探索できます。",

@@ -2207,6 +2207,152 @@
             "description": "Optional list of Wikidata museum QIDs scoping the kNN search to the selected museums (R4)."
           }
         }
+      },
+      "ParsedOpeningDay": {
+        "type": "object",
+        "required": ["day", "opens", "closes"],
+        "properties": {
+          "day": {
+            "type": "string",
+            "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+          },
+          "opens": {
+            "type": "string",
+            "nullable": true,
+            "description": "HH:mm local time, null when closed that day"
+          },
+          "closes": {
+            "type": "string",
+            "nullable": true,
+            "description": "HH:mm local time, null when closed that day"
+          }
+        }
+      },
+      "ParsedOpeningHours": {
+        "type": "object",
+        "required": ["raw", "status", "statusReason", "closesAtLocal", "opensAtLocal", "weekly"],
+        "properties": {
+          "raw": {
+            "type": "string",
+            "description": "Original OSM opening_hours value"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "closed", "unknown"]
+          },
+          "statusReason": {
+            "type": "string",
+            "enum": ["currently_open", "currently_closed", "unparseable", "no_data"]
+          },
+          "closesAtLocal": {
+            "type": "string",
+            "nullable": true
+          },
+          "opensAtLocal": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekly": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParsedOpeningDay"
+            }
+          }
+        }
+      },
+      "MuseumEnrichmentView": {
+        "type": "object",
+        "required": ["museumId", "locale", "summary", "wikidataQid", "website", "phone", "imageUrl", "openingHours", "admissionFees", "collections", "currentExhibitions", "accessibility", "fetchedAt"],
+        "properties": {
+          "museumId": {
+            "type": "integer"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "wikidataQid": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "openingHours": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParsedOpeningHours"
+              }
+            ]
+          },
+          "admissionFees": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "collections": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "currentExhibitions": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "accessibility": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MuseumEnrichmentReady": {
+        "type": "object",
+        "required": ["status", "data"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ready"]
+          },
+          "data": {
+            "$ref": "#/components/schemas/MuseumEnrichmentView"
+          }
+        }
+      },
+      "MuseumEnrichmentPending": {
+        "type": "object",
+        "required": ["status", "jobId"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending"]
+          },
+          "jobId": {
+            "type": "string"
+          }
+        }
       }
     },
     "responses": {
@@ -6980,6 +7126,141 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/museums/{id}/enrichment": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Get cached museum enrichment (Wikidata + OSM + rich JSONB fields)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Museum ID"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "description": "BCP-47 locale, e.g. fr or en"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached enrichment is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentReady"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Enrichment refresh queued — poll /enrichment/status with the returned jobId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentPending"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/museums/{id}/enrichment/status": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Poll the status of a queued museum enrichment refresh",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Museum ID"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "description": "BCP-47 locale, e.g. fr or en"
+          },
+          {
+            "in": "query",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job id returned by a prior 202 enrichment response"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached enrichment is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentReady"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Enrichment refresh still pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentPending"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }

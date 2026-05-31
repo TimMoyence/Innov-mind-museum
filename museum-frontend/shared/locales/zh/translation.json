@@ -834,6 +834,11 @@
     "phone": "电话",
     "loading_details": "正在加载详情…",
     "no_extra_info": "暂无详细信息。",
+    "info_coming_soon": "更多信息即将推出",
+    "admission": "门票",
+    "collections": "馆藏",
+    "exhibitions": "当前展览",
+    "accessibility": "无障碍设施",
     "offlinePack": {
       "title": "您靠近{{cityName}}",
       "description": "下载离线内容以便在无连接时浏览。",

@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker';
 import type { components } from '@/shared/api/generated/openapi';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
 import type { MuseumBranding } from '@/features/museum/domain/museum-branding';
+import type { MuseumEnrichmentView } from '@/features/museum/infrastructure/museumApi';
 
 type MuseumDirectoryDTO = components['schemas']['MuseumDirectoryDTO'];
 type MuseumDTO = components['schemas']['MuseumDTO'];
@@ -56,6 +57,35 @@ export const makeMuseumListItem = (
   latitude: faker.location.latitude(),
   longitude: faker.location.longitude(),
   museumType: 'art',
+  ...overrides,
+});
+
+/**
+ * Creates a {@link MuseumEnrichmentView} (projection from
+ * `GET /api/museums/:id/enrichment`) with everything-empty defaults: base +
+ * the four rich JSONB fields all `null`. Pass overrides to populate specific
+ * sections — e.g. `makeMuseumEnrichmentView({ admissionFees: { adult: '6 €' } })`.
+ *
+ * QA-06: the four rich fields (`admissionFees`, `collections`,
+ * `currentExhibitions`, `accessibility`) are nullable `Record<string, unknown>`
+ * — no field shape is guaranteed by the backend Zod schemas.
+ */
+export const makeMuseumEnrichmentView = (
+  overrides?: Partial<MuseumEnrichmentView>,
+): MuseumEnrichmentView => ({
+  museumId: faker.number.int({ min: 1, max: 1000 }),
+  locale: 'en',
+  summary: null,
+  wikidataQid: null,
+  website: null,
+  phone: null,
+  imageUrl: null,
+  openingHours: null,
+  admissionFees: null,
+  collections: null,
+  currentExhibitions: null,
+  accessibility: null,
+  fetchedAt: '2026-05-30T08:00:00.000Z',
   ...overrides,
 });
 

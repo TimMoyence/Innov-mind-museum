@@ -176,6 +176,10 @@ describe('processMuseumEnrichmentJob', () => {
       phone: null,
       imageUrl: null,
       openingHours: null,
+      admissionFees: null,
+      collections: null,
+      currentExhibitions: null,
+      accessibility: null,
       fetchedAt: fixedNow.toISOString(),
     });
     expect(wikidata.fetchFacts).not.toHaveBeenCalled();
