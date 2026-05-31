@@ -21,6 +21,7 @@ LLM-critic agents are wasteful for things compilers can decide. Lint / typecheck
 | `pre-phase-doc-freshness.sh` | Step 4.5 | Detect libs imported by the diff, run 3-way staleness check (>14d / version drift / missing), write `doc-refresh-queue.json` for doc-cache. |
 | `post-edit-green-test-freeze.sh` | After every edit in phase Green | FROZEN-TEST gate — re-hash sha256 of each test in `red-test-manifest.json`; any mismatch = exit 1 STOP (Green cannot mutate a Red test byte-for-byte). |
 | `pre-phase-doc-reference-check.sh` | Step 6 Verify | Assert `libDocsConsulted[]` covers every non-dev-only import in the diff + hash drift check (lib-docs obligation proof). |
+| `pre-complete-debug-log-check.sh` | Step 6 Verify | systematic-debugging enforcement (absorbed from superpowers): if `intraPhaseHookLoops >= 2`, require a complete `debug-log.md` (4 phases + architecture question). Else FAIL → re-spawn green with the protocol. |
 
 ### Lifecycle hooks
 

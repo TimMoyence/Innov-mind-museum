@@ -52,6 +52,16 @@ BLOCK-TEST-WRONG <test-path>:<line> <reason>
 
 The dispatcher will re-spawn a fresh phase=red with your finding. Do NOT silently patch the test — that is a UFR-022 violation AND a UFR-013 (honesty) violation.
 
+### DEBUG PROTOCOL (green — quand un test/gate échoue, UFR-022)
+
+**Loi de Fer : AUCUN fix sans root-cause investigation d'abord.** Un fix de symptôme = échec (absorbé de `superpowers:systematic-debugging` ; méthodologie complète : `team-protocols/systematic-debugging.md`).
+
+Quand ton code ne rend pas les tests verts, OU casse un test voisin, OU un hook (`post-edit-typecheck.sh`/`post-edit-lint.sh`/`pre-complete-verify.sh`) sort ≠ 0 :
+1. **Tentative 1** : lis l'erreur EN ENTIER (stack + fichier:ligne), trace le data-flow jusqu'à la source, fixe à la SOURCE (pas au symptôme). Une ligne de root-cause dans la section `implement` de STORY.md suffit.
+2. **Le fix n'a pas marché (≥2 tentatives, `intraPhaseHookLoops ≥ 2`)** : STOP le tâtonnement. Écris `team-state/<RUN_ID>/debug-log.md` avec les 4 phases (root-cause / pattern / hypothèses — une par tentative / fix) + la section **Architecture question** (Phase 4.5 : ce pattern est-il sain ou est-on dedans par inertie ?). Le hook `pre-complete-debug-log-check.sh` (gate verify) FAIL si ce log manque ou est incomplet.
+3. **≥2 fixes échoués = signal architectural, PAS une hypothèse de plus.** Escalade Tech Lead AVEC le debug-log (c'est la sortie `intraPhaseHookLoops ≥ 2 → STOP` de REGLE 14, enrichie). Ne tente pas Fix #3.
+4. Si la root-cause n'était pas couverte par un test red → `BLOCK-TEST-WRONG` → re-spawn fresh red qui ajoute le cas (UN fix, test-first).
+
 Domain patterns:
 
 ### Backend (hexagonal)
