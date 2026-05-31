@@ -851,7 +851,12 @@ jobs:
 
   # ─── 6. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
-    needs: [quality, coverage-merge]
+    # integration added 2026-05-31 (audit 360 §dim.8 / §7 P0#3): prod deploy now
+    # gates on the real-PG integration suite, not just coverage-merge. e2e is
+    # intentionally NOT a need here — it is skipped on push-to-main (if: pull_request
+    # || schedule), so needs:[e2e] would skip deploy-prod entirely. integration runs
+    # on push whenever coverage-merge runs, so the gating stays consistent.
+    needs: [quality, coverage-merge, integration]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
