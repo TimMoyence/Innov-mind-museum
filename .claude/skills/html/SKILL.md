@@ -48,6 +48,31 @@ node scripts/render-artifact.mjs <f1> <f2> ... --out artifacts/<basename1>-bundl
 Le helper est **fail-open** (saute les fichiers absents avec un warning) et **zéro-dépendance**
 (CSS+SVG inline, `@media print`, light mode, 2 accents).
 
+### Mode roadmap
+
+Pour un fichier de roadmap (dashboard go/no-go, lanes V1/V2, suivi d'avancement),
+le renderer a un **mode roadmap** : pills de statut colorées, barre de progression
+par lane (H2), dashboard agrégé en tête, et filtres de statut cliquables (JS vanilla
+inline, zéro dépendance).
+
+Activation — l'une des trois :
+- `--mode roadmap` (forcé) ;
+- frontmatter `kind: roadmap` dans le `.md` (déclaré, **préféré** — l'intention vit dans la source) ;
+- nom de fichier contenant `roadmap` (auto-détecté, ex `ROADMAP_PRODUCT.md`).
+
+```bash
+node scripts/render-artifact.mjs docs/ROADMAP_PRODUCT.md --out artifacts/roadmap.html --quiet
+```
+
+**Convention markdown lue par le mode** (le `.md` reste lisible en brut) :
+- Tokens de statut en tête de ligne (item de liste OU 1ʳᵉ cellule de tableau) :
+  `✅`=DONE · `🔴`/`❌`=OPEN · `🟧`/`⚠️`/`🔀`=PARTIAL · `🧑‍🔧`=OPS (humain) · `⬜`=TODO.
+  Les checkboxes GFM `[x]`/`[ ]` comptent comme DONE/TODO.
+- `🧑‍🔧` combiné à un token primaire (ex `✅🧑‍🔧`) garde le statut primaire **plus** une pill OPS
+  (« fait côté code, geste ops restant »). Seul, il vaut OPS.
+- Chaque `## Lane` (H2) reçoit sa barre de progression (ratio DONE / total des items de la section).
+- Frontmatter optionnel : `gonogo: GO|GO_WITH_RISKS|NO_GO` → bandeau verdict ; `asof: <date>` → horodatage.
+
 ### Step 3 — Ouvrir + reporter
 
 - Sauf `--no-open` : `open artifacts/<...>.html` (plateforme darwin).

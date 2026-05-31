@@ -14,12 +14,25 @@
 // Single input, no --out  → writes <input>.html next to the source, prints the path.
 // Multiple inputs         → one bundled HTML with a table of contents (needs --out).
 //
+// Roadmap mode (--mode roadmap | frontmatter `kind: roadmap` | filename *roadmap*):
+//   status pills, per-lane progress bars, a go/no-go dashboard, and clickable
+//   status filters (vanilla inline JS). The generic renderer is untouched when off.
+//
 // Supported sources: markdown (STORY.md, spec.md, design.md, tasks.md, lessons),
 // JSON with a `findings[]` array (code-review / security / verify), lesson JSON
 // (`trigger`/`whatWorked`/…), and any other JSON (pretty tree fallback).
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Roadmap mode — module-level flags
+// When active, status tokens (✅/🔴/🟧/🧑‍🔧/⬜ + GFM checkboxes) become colored
+// pills, H2 lanes get a progress bar, and a go/no-go dashboard is prepended.
+// Stays off by default so the generic doctrine renderer is untouched.
+// ─────────────────────────────────────────────────────────────────────────────
+let RM = false; // roadmap mode active for the current source
+let RM_SECTIONS = {}; // slug(H2 title) → { done, partial, open, ops, todo, total }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HTML escaping
@@ -42,7 +55,7 @@ function inline(text) {
   // protect inline code spans before escaping
   text = text.replace(/`([^`]+)`/g, (_, c) => {
     codes.push(c);
-    return `\uE000C${codes.length - 1}\uE000`;
+    return `C${codes.length - 1}`;
   });
   text = esc(text);
   // links — both halves are already entity-safe post-escape, but esc() does NOT
@@ -57,7 +70,7 @@ function inline(text) {
   text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
   text = text.replace(/(^|[^A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, '$1<em>$2</em>');
   // restore code spans (escaped)
-  text = text.replace(/\uE000C(\d+)\uE000/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
+  text = text.replace(/C(\d+)/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
   return text;
 }
 
@@ -112,7 +125,9 @@ function renderMarkdown(md) {
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
       const lvl = h[1].length;
-      out.push(`<h${lvl}>${inline(h[2].replace(/\s+#+\s*$/, ''))}</h${lvl}>`);
+      const rawH = h[2].replace(/\s+#+\s*$/, '');
+      const bar = RM && lvl === 2 ? rmProgressBar(rawH) : '';
+      out.push(`<h${lvl}>${inline(rawH)}</h${lvl}>${bar}`);
       i++;
       continue;
     }
@@ -135,8 +150,12 @@ function renderMarkdown(md) {
       for (const c of head) t += `<th>${inline(c)}</th>`;
       t += '</tr></thead><tbody>';
       for (const r of rows) {
-        t += '<tr>';
-        for (let j = 0; j < head.length; j++) t += `<td>${inline(r[j] ?? '')}</td>`;
+        const rowStatus = RM ? detectStatus(r.join(' ')) : '';
+        t += rowStatus ? `<tr data-rm-status="${rowStatus}">` : '<tr>';
+        for (let j = 0; j < head.length; j++) {
+          const cell = r[j] ?? '';
+          t += `<td>${RM ? rmText(cell).html : inline(cell)}</td>`;
+        }
         t += '</tr>';
       }
       t += '</tbody></table>';
@@ -165,22 +184,29 @@ function renderMarkdown(md) {
         const content = m[3];
         // checkbox support
         const cb = content.match(/^\[([ xX])\]\s+(.*)$/);
-        const text = cb
-          ? `<span class="cb">${cb[1].trim() ? '☑' : '☐'}</span> ${inline(cb[2])}`
-          : inline(content);
+        let text, liAttr = '';
+        if (RM) {
+          const r = rmText(content);
+          text = r.html;
+          if (r.status) liAttr = ` data-rm-status="${r.status}"`;
+        } else {
+          text = cb
+            ? `<span class="cb">${cb[1].trim() ? '☑' : '☐'}</span> ${inline(cb[2])}`
+            : inline(content);
+        }
         if (indent >= 2) {
           if (!openNested) {
             html = html.replace(/<\/li>$/, '');
             html += `<${tag === 'ol' ? 'ol' : 'ul'}>`;
             openNested = tag;
           }
-          html += `<li>${text}</li>`;
+          html += `<li${liAttr}>${text}</li>`;
         } else {
           if (openNested) {
             html += `</${openNested}></li>`;
             openNested = null;
           }
-          html += `<li>${text}</li>`;
+          html += `<li${liAttr}>${text}</li>`;
         }
         i++;
       }
@@ -304,9 +330,186 @@ function renderJson(obj) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Roadmap status detection + rendering
+// One status per line, picked from the FIRST primary token found. 🧑‍🔧 is an
+// orthogonal "ops" flag: alone it means ops-only, combined (✅🧑‍🔧) it keeps the
+// primary status but is still rendered with an OPS tail pill.
+// ─────────────────────────────────────────────────────────────────────────────
+const RM_STATUS = {
+  done: { label: 'DONE', cls: 'done' },
+  open: { label: 'OPEN', cls: 'open' },
+  partial: { label: 'PARTIAL', cls: 'partial' },
+  ops: { label: 'OPS', cls: 'ops' },
+  todo: { label: 'TODO', cls: 'todo' },
+};
+const RM_OPS = '🧑‍🔧';
+// All status emoji, for stripping from the rendered text (VS16 tolerated).
+const RM_EMOJI_RE = /(?:🧑‍🔧|✅|❌|🔴|🟧|🔀|⬜|⚠️|⚠)/gu;
+
+// Primary status of a free-text fragment (table cell / list item) or null.
+function detectStatus(text) {
+  for (const ch of text) {
+    if (ch === '✅') return 'done';
+    if (ch === '❌' || ch === '🔴') return 'open';
+    if (ch === '🟧' || ch === '🔀' || ch === '⚠') return 'partial';
+    if (ch === '⬜') return 'todo';
+  }
+  // GFM checkbox fallback ([x] done / [ ] todo) at the item head.
+  const cb = text.match(/^\s*\[([ xX])\]/);
+  if (cb) return cb[1].trim() ? 'done' : 'todo';
+  // ops-only line (🧑‍🔧 with no primary token)
+  if (text.includes(RM_OPS)) return 'ops';
+  return null;
+}
+
+const rmPill = (status) => {
+  const s = RM_STATUS[status];
+  return s ? `<span class="rm-pill ${s.cls}">${s.label}</span>` : '';
+};
+
+// Render a roadmap cell/item: strip status emoji, prepend a pill, keep inline fmt.
+// `ops` tail (🧑‍🔧 alongside a primary status) becomes a small OPS pill too.
+function rmText(raw) {
+  const status = detectStatus(raw);
+  const hasOps = raw.includes(RM_OPS) && status !== 'ops';
+  const body = raw.replace(RM_EMOJI_RE, '').replace(/^\s*\[[ xX]\]\s*/, '').trim();
+  const pills =
+    (status ? rmPill(status) : '') + (hasOps ? `<span class="rm-pill ops">OPS</span>` : '');
+  return { status: status || '', html: `${pills}${pills ? ' ' : ''}${inline(body)}` };
+}
+
+const rmSlug = (s) => slug(String(s).replace(RM_EMOJI_RE, '').trim());
+
+// Progress bar HTML for an H2 lane, from precomputed RM_SECTIONS tallies.
+function rmProgressBar(title) {
+  const st = RM_SECTIONS[rmSlug(title)];
+  if (!st || !st.total) return '';
+  const pct = Math.round((st.done / st.total) * 100);
+  const seg = (n, cls) => (n ? `<span class="seg ${cls}" style="flex:${n}"></span>` : '');
+  const legend = [
+    st.done && `${st.done} done`,
+    st.partial && `${st.partial} partial`,
+    st.open && `${st.open} open`,
+    st.ops && `${st.ops} ops`,
+    st.todo && `${st.todo} todo`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    `<div class="rm-prog"><div class="rm-bar">` +
+    seg(st.done, 'done') +
+    seg(st.partial, 'partial') +
+    seg(st.open, 'open') +
+    seg(st.ops, 'ops') +
+    seg(st.todo, 'todo') +
+    `</div><div class="rm-prog-meta"><b>${pct}%</b> · ${legend}</div></div>`
+  );
+}
+
+// Walk the markdown once to tally statuses per H2 section + globally.
+function computeRoadmapStats(md) {
+  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  const sections = {};
+  const global = { done: 0, partial: 0, open: 0, ops: 0, todo: 0, total: 0 };
+  let cur = null;
+  let inCode = false;
+  const bump = (status) => {
+    if (!status) return;
+    global[status] = (global[status] || 0) + 1;
+    global.total++;
+    if (cur) {
+      cur[status] = (cur[status] || 0) + 1;
+      cur.total++;
+    }
+  };
+  for (let k = 0; k < lines.length; k++) {
+    const line = lines[k];
+    if (/^\s*```/.test(line)) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+    const h = line.match(/^(#{2})\s+(.*)$/);
+    if (h) {
+      const key = rmSlug(h[2].replace(/\s+#+\s*$/, ''));
+      cur = sections[key] = { done: 0, partial: 0, open: 0, ops: 0, todo: 0, total: 0 };
+      continue;
+    }
+    // list item
+    if (/^\s*([-*+]|\d+\.)\s+/.test(line)) {
+      bump(detectStatus(line.replace(/^\s*([-*+]|\d+\.)\s+/, '')));
+      continue;
+    }
+    // table data row (skip header/separator): a row whose cells carry a token
+    if (line.includes('|') && !/^\s*\|?\s*:?-{2,}/.test(line)) {
+      bump(detectStatus(line));
+    }
+  }
+  RM_SECTIONS = sections;
+  return global;
+}
+
+// The go/no-go dashboard, prepended above the roadmap body.
+// A curated façade summarises many shipped items per line, so the line-computed
+// `global` undercounts. Frontmatter `stats: done=.. partial=.. open=.. ops=.. todo=..`
+// supplies the authoritative verified tally for the headline bar; `blockers: …`
+// is the real launch signal (shown prominently, not a %).
+function rmDashboard(global, fm) {
+  let g = global;
+  if (fm && fm.stats) {
+    const parsed = { done: 0, partial: 0, open: 0, ops: 0, todo: 0, total: 0 };
+    for (const m of String(fm.stats).matchAll(/(done|partial|open|ops|todo)\s*=\s*(\d+)/gi))
+      parsed[m[1].toLowerCase()] = +m[2];
+    parsed.total = parsed.done + parsed.partial + parsed.open + parsed.ops + parsed.todo;
+    if (parsed.total) g = parsed;
+  }
+  const pct = g.total ? Math.round((g.done / g.total) * 100) : 0;
+  const seg = (n, cls) => (n ? `<span class="seg ${cls}" style="flex:${n}"></span>` : '');
+  const gng = fm && fm.gonogo ? String(fm.gonogo).toUpperCase() : '';
+  const gngCls = /NO.?GO/.test(gng) ? 'bad' : /RISK/.test(gng) ? 'warn' : 'ok';
+  const stat = (n, cls, label) => `<span class="rm-stat ${cls}"><b>${n || 0}</b> ${label}</span>`;
+  const chips = [
+    ['all', 'Tout'],
+    ['done', 'Done'],
+    ['partial', 'Partial'],
+    ['open', 'Open'],
+    ['ops', 'Ops'],
+    ['todo', 'Todo'],
+  ]
+    .map(
+      ([f, l], idx) =>
+        `<button class="rm-chip${idx === 0 ? ' active' : ''}" data-rm-filter="${f}">${l}</button>`,
+    )
+    .join('');
+  return (
+    `<section class="rm-dash">` +
+    (gng ? `<div class="rm-gng ${gngCls}">${esc(gng.replace(/_/g, ' '))}</div>` : '') +
+    (fm && fm.blockers ? `<div class="rm-blockers">🚩 Blockers launch — ${esc(fm.blockers)}</div>` : '') +
+    (fm && fm.asof ? `<div class="rm-asof">État vérifié-code · ${esc(fm.asof)}</div>` : '') +
+    `<div class="rm-bar big">` +
+    seg(g.done, 'done') +
+    seg(g.partial, 'partial') +
+    seg(g.open, 'open') +
+    seg(g.ops, 'ops') +
+    seg(g.todo, 'todo') +
+    `</div>` +
+    `<div class="rm-dash-pct">${pct}% <span>livré · vérifié-code (toutes lanes, ${g.total} items)</span></div>` +
+    `<div class="rm-stats">` +
+    stat(g.done, 'done', 'done') +
+    stat(g.partial, 'partial', 'partial') +
+    stat(g.open, 'open', 'open') +
+    stat(g.ops, 'ops', 'ops') +
+    stat(g.todo, 'todo', 'todo') +
+    `</div>` +
+    `<div class="rm-filters">${chips}</div>` +
+    `</section>`
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Dispatch one source file → { title, html }
 // ─────────────────────────────────────────────────────────────────────────────
-function renderSource(path) {
+function renderSource(path, opts = {}) {
   const raw = readFileSync(path, 'utf8');
   const name = basename(path);
   if (extname(path).toLowerCase() === '.json') {
@@ -319,7 +522,20 @@ function renderSource(path) {
     return { title: obj.runId ? `${name} — ${obj.runId}` : name, html: renderJson(obj) };
   }
   const { fm, body } = splitFrontmatter(raw);
+  // Roadmap mode: forced (--mode roadmap), declared (frontmatter kind: roadmap),
+  // or inferred from the filename. Off → untouched generic doctrine render.
+  RM =
+    opts.mode === 'roadmap' ||
+    (fm && String(fm.kind || '').toLowerCase() === 'roadmap') ||
+    /roadmap/i.test(name);
   let html = '';
+  if (RM) {
+    const global = computeRoadmapStats(body);
+    html += rmDashboard(global, fm || {});
+    html += renderMarkdown(body);
+    RM = false; // reset so a bundle's later (non-roadmap) sources render generically
+    return { title: name, html, roadmap: true };
+  }
   if (fm) {
     const items = Object.entries(fm)
       .map(([k, v]) => `<span><b>${esc(k)}</b> ${esc(Array.isArray(v) ? v.join(', ') : v)}</span>`)
@@ -398,6 +614,44 @@ section.artifact{padding-top:8px}
 section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
 footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
 font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
 @media print{
 html,body{background:#fff;color:#000;font-size:11pt}
 .wrap{max-width:none;padding:0}
@@ -407,10 +661,29 @@ a{color:#000;text-decoration:none}
 h1,h2,h3{page-break-after:avoid}
 h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
 header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
 @page{margin:18mm 16mm}
 }`;
 
-function shell({ title, eyebrow, metaItems, bodyHtml }) {
+// Minimal self-contained filter for roadmap mode (no deps): status chips toggle
+// visibility of [data-rm-status] rows/items. Inert when no such elements exist.
+const FILTER_JS = `<script>
+(function(){
+  var chips=document.querySelectorAll('[data-rm-filter]');
+  if(!chips.length)return;
+  var items=document.querySelectorAll('[data-rm-status]');
+  chips.forEach(function(c){c.addEventListener('click',function(){
+    var f=c.getAttribute('data-rm-filter');
+    chips.forEach(function(x){x.classList.remove('active')});c.classList.add('active');
+    items.forEach(function(it){it.style.display=(f==='all'||it.getAttribute('data-rm-status')===f)?'':'none'});
+  })});
+})();
+</script>`;
+
+function shell({ title, eyebrow, metaItems, bodyHtml, roadmap }) {
   const meta = (metaItems || []).map((m) => `<span>${esc(m)}</span>`).join('');
   return `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
@@ -425,7 +698,7 @@ ${meta ? `<div class="meta">${meta}</div>` : ''}
 </header>
 ${bodyHtml}
 <footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
-</div></body></html>
+</div>${roadmap ? FILTER_JS : ''}</body></html>
 `;
 }
 
@@ -440,6 +713,7 @@ function parseArgs(argv) {
     if (a === '--out') opts.out = argv[++i];
     else if (a === '--title') opts.title = argv[++i];
     else if (a === '--eyebrow') opts.eyebrow = argv[++i];
+    else if (a === '--mode') opts.mode = argv[++i];
     else if (a === '--quiet') opts.quiet = true;
     else if (a.startsWith('--')) throw new Error(`unknown flag: ${a}`);
     else inputs.push(a);
@@ -470,18 +744,19 @@ function main() {
 
   let html, outPath;
   if (inputs.length === 1) {
-    const { title, html: body } = renderSource(inputs[0]);
+    const r = renderSource(inputs[0], { mode: opts.mode });
     html = shell({
-      title: opts.title || title,
-      eyebrow: opts.eyebrow,
+      title: opts.title || r.title,
+      eyebrow: opts.eyebrow || (r.roadmap ? 'Roadmap' : undefined),
       metaItems: [basename(inputs[0])],
-      bodyHtml: body,
+      bodyHtml: r.html,
+      roadmap: r.roadmap,
     });
     outPath = opts.out ? resolve(opts.out) : resolve(inputs[0].replace(/\.(md|json)$/i, '') + '.html');
   } else {
     // bundle with TOC
     const parts = inputs.map((p) => {
-      const r = renderSource(p);
+      const r = renderSource(p, { mode: opts.mode });
       r.id = slug(r.title);
       return r;
     });
@@ -497,6 +772,7 @@ function main() {
       eyebrow: opts.eyebrow || 'Bundle',
       metaItems: [`${parts.length} artefacts`],
       bodyHtml: toc + sections,
+      roadmap: parts.some((p) => p.roadmap),
     });
     outPath = resolve(opts.out || join('artifacts', 'bundle.html'));
   }
