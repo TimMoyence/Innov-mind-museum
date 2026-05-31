@@ -80,6 +80,7 @@
 !docs/superpowers/
 !docs/superpowers/**
 !docs/GOTCHAS_ARCHIVE.md
+!docs/MUTATION_SCOPE_EVALUATION.md
 
 # lib-docs (UFR-022) — INDEX.json + README.md + per-lib LESSONS.md tracked.
 # Per-lib snapshots / PATTERNS.md / sources.json / VERSION = untracked, regenerated locally on demand by doc-fetcher + doc-curator agents.
