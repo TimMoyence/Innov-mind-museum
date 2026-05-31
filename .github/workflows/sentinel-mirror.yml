@@ -157,6 +157,18 @@ jobs:
       - name: 'Mirror — SBOM attestation contract (3 deploy workflows, was orphan)'
         run: node scripts/sentinels/sbom-attest-check.mjs
 
+      - name: 'Mirror — a11y floor ratchet (EN 301 549 / RGAA, mobile)'
+        run: node scripts/sentinels/a11y-ratchet.mjs
+
+      - name: 'Mirror — quota/validator ordering (BE, ultrareview F1)'
+        run: node museum-backend/scripts/sentinels/quota-ordering.mjs
+
+      - name: 'Mirror — prod security-header invariants (BE helmet/CSP/CORS)'
+        run: node museum-backend/scripts/sentinels/security-headers-invariants.mjs
+
+      - name: 'Mirror — secret/cert rotation runbook freshness (≤120d)'
+        run: node scripts/sentinels/secret-rotation-freshness.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli

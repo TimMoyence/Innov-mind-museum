@@ -35,6 +35,10 @@
 #  24. SBOM attestation contract (3 deploy workflows) — node scripts/sentinels/sbom-attest-check.mjs
 #  25. Doc last-verified freshness (≤90d, was CI-only) — node scripts/sentinels/doc-last-verified.mjs
 #  26. Subprocessor ledger (GDPR Art 28, was CI-only) — node scripts/sentinels/subprocessor-ledger-completeness.mjs
+#  27. a11y floor ratchet (EN 301 549 / RGAA)        — node scripts/sentinels/a11y-ratchet.mjs
+#  28. quota/validator ordering (BE, ultrareview F1) — node museum-backend/scripts/sentinels/quota-ordering.mjs
+#  29. prod security-header invariants (BE helmet/CSP) — node museum-backend/scripts/sentinels/security-headers-invariants.mjs
+#  30. secret/cert rotation runbook freshness (≤120d) — node scripts/sentinels/secret-rotation-freshness.mjs
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
 # .gitattributes — React.xcframework) upload on push. The LFS step is chained
@@ -377,14 +381,44 @@ gate_end "Gate 25"
 # ─── Gate 26 — Subprocessor ledger completeness (GDPR Art 28) ──────────────
 # Was CI-only (mirror P23) → invalidable locally before push. Now a real local
 # gate: every detected vendor host marker MUST be documented in SUBPROCESSORS.md.
-gate_start "Gate 26/26 subprocessor ledger completeness"
+gate_start "Gate 26/30 subprocessor ledger completeness"
 node scripts/sentinels/subprocessor-ledger-completeness.mjs || exit 1
 gate_end "Gate 26"
+
+# ─── Gate 27 — a11y floor ratchet (mobile, EN 301 549 / RGAA) ──────────────
+# Floor ratchet on accessibilityLabel/Role/Hint counts + RTL physical-side-leak
+# audit tests. Catches a refactor silently stripping a11y signal. audit 360 dim.3.
+gate_start "Gate 27/30 a11y floor ratchet (museum-frontend)"
+node scripts/sentinels/a11y-ratchet.mjs || exit 1
+gate_end "Gate 27"
+
+# ─── Gate 28 — quota/validator ordering (BE, ultrareview F1) ───────────────
+# A business-quota middleware (monthlySessionQuota/dailyChatLimit/llmCostGuard)
+# that consumes the counter MUST run AFTER validateBody, else a Zod 400 inflates
+# the quota. Guards the "mutating middleware ordering" gotcha. audit 360 dim.3.
+gate_start "Gate 28/30 quota/validator ordering sentinel (backend)"
+node museum-backend/scripts/sentinels/quota-ordering.mjs || exit 1
+gate_end "Gate 28"
+
+# ─── Gate 29 — prod security-header invariants (BE helmet/CSP/CORS) ─────────
+# Asserts the prod branch of buildHelmetOptions + CORS still hold: HSTS 2y+preload,
+# CSP enabled, no unsafe-inline scriptSrc, frame/object 'none', and sentry-trace +
+# baggage in allowedHeaders (dropping them breaks FE↔BE tracing). audit 360 dim.3.
+gate_start "Gate 29/30 prod security-header invariants (backend)"
+node museum-backend/scripts/sentinels/security-headers-invariants.mjs || exit 1
+gate_end "Gate 29"
+
+# ─── Gate 30 — secret/cert rotation runbook freshness (≤120d) ──────────────
+# Rotation runbooks rot silently vs live infra. Each must carry a last-verified
+# stamp re-affirmed within 120d (quarterly cadence + buffer). audit 360 dim.3.
+gate_start "Gate 30/30 secret-rotation runbook freshness"
+node scripts/sentinels/secret-rotation-freshness.mjs || exit 1
+gate_end "Gate 30"
 
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 26 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 30 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────
