@@ -60,6 +60,7 @@ jest.mock(
           distanceMeters: number;
         }) => void;
         onDismiss?: () => void;
+        onChooseAnother?: () => void;
       }) => {
         mockBannerRender(props);
         const m = props.museum;
@@ -73,6 +74,13 @@ jest.mock(
           ReactNS.createElement(RN.Pressable, {
             testID: 'mock-ProactiveMuseumBanner-dismiss',
             onPress: () => props.onDismiss?.(),
+          }),
+          // C10 — choose-another button. Calls ONLY the call-site prop (no
+          // internal onDismiss fallback) so the test fails red until HomeScreen
+          // actually wires `onChooseAnother`.
+          ReactNS.createElement(RN.Pressable, {
+            testID: 'mock-ProactiveMuseumBanner-choose-another',
+            onPress: () => props.onChooseAnother?.(),
           }),
         );
       },
@@ -318,6 +326,57 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
       expect(dismiss).toHaveBeenCalledTimes(1);
       // Banner press path NOT triggered by dismiss tap → no session created.
       expect(mockCreateSession).not.toHaveBeenCalled();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // C10 — onChooseAnother wired to the museum picker (NorthStar proximité).
+  //
+  // The confirm-band "Choisir un autre musée" affordance must route to the
+  // existing picker (`/(stack)/museums-picker`), not silently dismiss.
+  // At baseline HomeScreen does NOT pass `onChooseAnother`, so the mock's
+  // choose-another press is a no-op → router.push never receives the picker
+  // route → these tests fail red until the wiring lands.
+  //
+  // Spec : team-state/2026-05-31-c10-chooseanother/spec.md R1-R3 / AC1-AC2.
+  // ────────────────────────────────────────────────────────────────────────
+  describe('onChooseAnother wiring (C10)', () => {
+    const louvre = {
+      id: 7,
+      name: 'Louvre',
+      latitude: 48.8606,
+      longitude: 2.3376,
+      distanceMeters: 50,
+    };
+
+    it('navigates to the museum picker when choose-another is pressed (AC1)', () => {
+      mockUseProactiveMuseumSuggestion.mockReturnValue({
+        museum: louvre,
+        isLoading: false,
+        dismiss: jest.fn().mockResolvedValue(undefined),
+      });
+
+      const { getByTestId } = render(<HomeScreen />);
+      fireEvent.press(getByTestId('mock-ProactiveMuseumBanner-choose-another'));
+
+      expect(router.push).toHaveBeenCalledWith('/(stack)/museums-picker');
+    });
+
+    it('does not start a chat session nor route to chat on choose-another (AC2)', () => {
+      mockUseProactiveMuseumSuggestion.mockReturnValue({
+        museum: louvre,
+        isLoading: false,
+        dismiss: jest.fn().mockResolvedValue(undefined),
+      });
+
+      const { getByTestId } = render(<HomeScreen />);
+      fireEvent.press(getByTestId('mock-ProactiveMuseumBanner-choose-another'));
+
+      expect(mockCreateSession).not.toHaveBeenCalled();
+      const chatPush = router.push.mock.calls.find((call) =>
+        String(call[0] ?? '').includes('/(stack)/chat/'),
+      );
+      expect(chatPush).toBeUndefined();
     });
   });
 });

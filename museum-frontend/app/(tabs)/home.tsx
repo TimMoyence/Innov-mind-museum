@@ -106,6 +106,12 @@ export default function HomeScreen() {
           onDismiss={() => {
             void dismissProactiveMuseum();
           }}
+          onChooseAnother={() => {
+            // C10 — route the confirm-band "Choisir un autre musée" affordance
+            // to the existing nearby-museums picker (NorthStar proximité V1),
+            // instead of the silent onDismiss fallback.
+            router.push('/(stack)/museums-picker');
+          }}
         />
 
         {artwork && !dismissed && !isDailyArtLoading ? (
