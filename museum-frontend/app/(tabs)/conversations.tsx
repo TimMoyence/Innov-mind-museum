@@ -33,7 +33,7 @@ type ListRow =
   | { kind: 'skeleton'; key: string }
   | { kind: 'empty' };
 
-/** Renders the dashboard screen listing recent chat sessions with sort, save, share, swipe-to-delete, and bulk delete capabilities. */
+/** Renders the dashboard screen listing recent chat sessions with sort, save, swipe-to-delete, and bulk delete capabilities. */
 export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -56,7 +56,6 @@ export default function ConversationsScreen() {
     savedSessionIds,
     toggleSortMode,
     toggleSavedFilter,
-    shareDashboard,
     toggleSavedSession,
     confirmDeleteSingle,
     confirmDeleteSelected,
@@ -215,7 +214,6 @@ export default function ConversationsScreen() {
         onToggleEdit={toggleEditMode}
         onToggleSortMode={toggleSortMode}
         onToggleSavedFilter={toggleSavedFilter}
-        onShareDashboard={shareDashboard}
       />
 
       {menuStatus ? (

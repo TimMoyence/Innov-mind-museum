@@ -10,7 +10,6 @@ interface ConversationsHeaderProps {
   onToggleEdit: () => void;
   onToggleSortMode: () => void;
   onToggleSavedFilter: () => void;
-  onShareDashboard: () => Promise<void>;
 }
 
 /** Top context menu row for the conversations dashboard. */
@@ -21,7 +20,6 @@ export const ConversationsHeader = ({
   onToggleEdit,
   onToggleSortMode,
   onToggleSavedFilter,
-  onShareDashboard,
 }: ConversationsHeaderProps) => {
   const { t } = useTranslation();
 
@@ -45,14 +43,6 @@ export const ConversationsHeader = ({
             onPress: onToggleSavedFilter,
             active: isSavedOnly,
             iconOnly: true,
-          },
-          {
-            id: 'share',
-            icon: 'share-social-outline',
-            label: t('conversations.share'),
-            onPress: () => {
-              void onShareDashboard();
-            },
           },
           {
             id: 'edit',

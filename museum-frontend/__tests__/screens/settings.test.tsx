@@ -1,5 +1,6 @@
 import '../helpers/test-utils';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Share } from 'react-native';
 
 // ── Screen-specific mocks ────────────────────────────────────────────────────
 
@@ -215,5 +216,26 @@ describe('SettingsScreen', () => {
     render(<SettingsScreen />);
     fireEvent.press(screen.getByLabelText('a11y.settings.back_home'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/home');
+  });
+
+  // ── Invite a friend (QA-10) ──────────────────────────────────────────────────
+
+  it('renders the invite-a-friend row', () => {
+    render(<SettingsScreen />);
+    expect(screen.getByTestId('settings-invite-friend')).toBeTruthy();
+    expect(screen.getByText('settings.inviteFriend')).toBeTruthy();
+  });
+
+  it('shares the app link when the invite-a-friend row is pressed', () => {
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    render(<SettingsScreen />);
+    fireEvent.press(screen.getByTestId('settings-invite-friend'));
+    expect(shareSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'settings.inviteMessage',
+        url: 'https://musaium.com',
+      }),
+    );
+    shareSpy.mockRestore();
   });
 });
