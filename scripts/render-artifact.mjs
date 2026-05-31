@@ -45,8 +45,13 @@ function inline(text) {
     return `\uE000C${codes.length - 1}\uE000`;
   });
   text = esc(text);
-  // links — both halves are already entity-safe post-escape
-  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => `<a href="${u}">${t}</a>`);
+  // links — both halves are already entity-safe post-escape, but esc() does NOT
+  // neutralize the URL scheme: a `[x](javascript:…)` / `data:` link would stay
+  // clickable in the shared artifact. Allowlist safe schemes, else neutralize to '#'.
+  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => {
+    const safe = /^(https?:|mailto:|#|\/|\.\/|\.\.\/)/i.test(u) ? u : '#';
+    return `<a href="${safe}">${t}</a>`;
+  });
   // bold then italic
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
