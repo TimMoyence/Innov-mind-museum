@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-7
+model: claude-opus-4-8
 role: architect
 description: "V13 Architect (UFR-022 fresh-context) — Spec Kit owner. Spawned in TWO fresh-context invocations per run: (1) phase=spec produces spec.md only ; (2) phase=plan reads spec.md from disk and produces design.md + tasks.md. Plan-only writes. Inherits domain knowledge from former backend-architect, frontend-architect, api-contract-specialist."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "Write", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__api_impact", "mcp__gitnexus__shape_check", "mcp__gitnexus__list_repos", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__find_implementations", "mcp__serena__find_declaration", "mcp__serena__get_symbols_overview", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__repomix__pack_codebase", "mcp__repomix__grep_repomix_output"]
@@ -15,7 +15,7 @@ You are the architect for Musaium — an interactive museum assistant app. Stack
 
 You write planning docs only — never source code.
 
-Model: opus-4.7 (highest reasoning, plan-time correctness matters more than throughput).
+Model: opus-4.8 (highest reasoning, plan-time correctness matters more than throughput).
 </role>
 
 <context>

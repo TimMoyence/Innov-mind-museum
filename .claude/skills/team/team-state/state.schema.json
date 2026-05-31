@@ -12,7 +12,7 @@
     "updatedAt":  { "type": "string", "format": "date-time" },
     "mode":       { "enum": ["standard", "pure-doc-skip"], "description": "UFR-022: mode collapsed to single value 'standard'. 'pure-doc-skip' = exemption auto when diff = 0 code files." },
     "pipeline":   { "enum": ["enterprise"], "description": "UFR-022: single pipeline value. Pre-UFR-022 values (micro/standard/audit) removed." },
-    "currentStep":{ "type": "string", "description": "Phase name from the pipeline template (spec|plan|doc-freshness|red|green|verify|security|review|documenter|finalize)" },
+    "currentStep":{ "type": "string", "description": "Phase name from the pipeline template (spec|plan|doc-cache|red|green|verify|security|review|documenter|finalize)" },
     "status":     { "enum": ["initializing", "running", "blocked", "completed", "failed", "abandoned"] },
     "startCommit":{ "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "git rev-parse HEAD captured at run init. Used by post-edit hooks to scope the diff." },
     "spec":       { "type": "string", "description": "Path to spec.md (Spec Kit, EARS-format)" },
@@ -33,9 +33,9 @@
         "required": ["name", "role", "model", "status"],
         "properties": {
           "name":   { "type": "string" },
-          "role":   { "enum": ["architect", "editor", "verifier", "security", "reviewer", "documenter", "learning-curator", "doc-fetcher", "doc-curator"] },
-          "phase":  { "enum": ["spec", "plan", "red", "green", "verify", "security", "review", "documenter", "doc-fetch", "doc-curate"], "description": "UFR-022 phase tag — distinguishes architect-spec vs architect-plan, editor-red vs editor-green." },
-          "model":  { "enum": ["opus-4.7", "opus-4.6", "sonnet-4.6"] },
+          "role":   { "enum": ["architect", "editor", "doc-cache", "security", "reviewer", "documenter"], "description": "Élagage 9→6 (2026-05-31): verifier (→ gate hooks + reviewer), learning-curator (retiré), doc-fetcher+doc-curator (→ doc-cache)." },
+          "phase":  { "enum": ["spec", "plan", "doc-cache", "red", "green", "verify", "security", "review", "documenter"], "description": "UFR-022 phase tag — distinguishes architect-spec vs architect-plan, editor-red vs editor-green. 'verify' = gate déterministe (hooks, sans agent — pas d'entrée agents[])." },
+          "model":  { "enum": ["opus-4.8", "opus-4.7", "opus-4.6"], "description": "opus-4.8 = tier unifié 2026-05-31 ; 4.7/4.6 conservés pour compat des runs historiques (77 runs pré-élagage)." },
           "status": { "enum": ["pending", "running", "completed", "failed"] },
           "startedAt":  { "type": "string", "format": "date-time" },
           "endedAt":    { "type": "string", "format": "date-time" },
@@ -45,7 +45,7 @@
           "freshContext": { "type": "boolean", "description": "UFR-022: true if spawned via Agent tool fresh (no continuation). Must be true for spec/plan/red/green/review." },
           "libDocsConsulted": {
             "type": "array",
-            "description": "UFR-022: libs whose PATTERNS.md was read by this agent (red/green/reviewer). Verifier cross-checks vs diff imports.",
+            "description": "UFR-022: libs whose PATTERNS.md was read by this agent (red/green/reviewer). The verify gate (pre-phase-doc-reference-check.sh) + reviewer cross-check vs diff imports.",
             "items": {
               "type": "object",
               "additionalProperties": false,
@@ -85,7 +85,7 @@
         "additionalProperties": false,
         "required": ["name", "verdict", "ts"],
         "properties": {
-          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit", "lesson-capture", "doc-freshness", "doc-fetcher", "doc-curator", "frozen-test", "lib-docs-reference", "pure-doc-skip", "brief-integrity", "context-leak"] },
+          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit", "lesson-capture", "doc-freshness", "doc-cache", "verify", "frozen-test", "lib-docs-reference", "pure-doc-skip", "brief-integrity", "context-leak"] },
           "verdict": { "enum": ["PASS", "WARN", "FAIL"] },
           "ts":      { "type": "string", "format": "date-time" },
           "details": { "type": "string" }

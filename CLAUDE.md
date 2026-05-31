@@ -211,7 +211,7 @@ Specs : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL
 
 **Obligation lib-docs (red/green/reviewer) :**
 - Tout agent touchant/reviewant du code DOIT consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib importée.
-- Cache stale (>14j OU version drift package.json OU manquant) → refresh forcé via **doc-fetcher** + **doc-curator** (fresh agents).
+- Cache stale (>14j OU version drift package.json OU manquant OU PATTERNS.md sha256 drift) → refresh forcé via **doc-cache** (fresh agent, fetch+curate ; fusion doc-fetcher+doc-curator 2026-05-31).
 - WebSearch fail (offline/404/rate-limit) → WARN + use stale + tag rapport (pas de BLOCK).
 - Verifier hook `pre-phase-doc-reference-check.sh` vérifie `libDocsConsulted[]` couvre les libs importées.
 - Reviewer DOIT citer `PATTERNS.md:<line>` quand code dévie → CHANGES_REQUESTED.
@@ -227,12 +227,12 @@ lib-docs/
     ├── VERSION         # UNTRACKED — regenerable from INDEX.json
     ├── snapshot-*.md   # UNTRACKED — raw WebFetch dump (5-10 pages)
     ├── sources.json    # UNTRACKED — fetcher metadata
-    └── PATTERNS.md     # UNTRACKED — curated by doc-curator, ~200-500 lignes
+    └── PATTERNS.md     # UNTRACKED — curated by doc-cache, ~200-500 lignes
 ```
 
 **Reviewer rejection loop = ILLIMITÉ.** Zero cap, zero warning, zero mention. Re-spawn fresh à la phase pointée (`spec`/`plan`/`red`/`green`). Cap 2 corrective loops s'applique UNIQUEMENT aux fails de hooks intra-phase (lint/tsc/test dans la même phase éditeur).
 
-**Mode unique `/team`.** Plus de selector micro/standard/enterprise. Plus de keywords bypass Spec Kit (`typo`, `dep bump`). Plus de modes `chore`/`hotfix`/`audit`/`mockup` séparés. UN pipeline pour toute modif code applicatif. Audit dans le pipeline (security + verifier toujours). Cost gate = telemetry pure (plus de seuil $20/$50).
+**Mode unique `/team`.** Plus de selector micro/standard/enterprise. Plus de keywords bypass Spec Kit (`typo`, `dep bump`). Plus de modes `chore`/`hotfix`/`audit`/`mockup` séparés. UN pipeline pour toute modif code applicatif. Audit dans le pipeline (security agent + gate verify déterministe toujours). Cost gate = telemetry pure (plus de seuil $20/$50).
 
 **Exemption auto** : si `git diff --name-only` ∩ `{museum-backend/src/**, museum-frontend/{app,features,shared,components}/**, museum-web/src/**, tests/}` vide → pipeline skippé, run direct Step 9 finalize. Append STORY.md "skipped — pure-doc edit".
 
@@ -353,7 +353,7 @@ TypeORM **v1.0.0 released 2026-05-19** ; le repo 0.3.x est archivé. Musaium = `
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (34370 symbols, 55550 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (34581 symbols, 55824 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

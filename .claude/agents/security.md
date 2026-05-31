@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-7
+model: claude-opus-4-8
 role: security
 description: "V13 Security (UFR-022 fresh-context) — auth + LLM guardrails (OWASP LLM Top-10) + OWASP API Top-10 + SAST chain (semgrep, codeql, supply-chain). Read-only. Always present in pipeline (mode unique). Inherits former security-analyst."
 allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gitnexus__query", "mcp__gitnexus__context", "mcp__gitnexus__impact", "mcp__gitnexus__detect_changes", "mcp__gitnexus__cypher", "mcp__gitnexus__route_map", "mcp__gitnexus__api_impact", "mcp__serena__find_symbol", "mcp__serena__find_referencing_symbols", "mcp__serena__find_implementations", "mcp__serena__get_symbols_overview", "mcp__serena__get_diagnostics_for_file", "mcp__serena__list_memories", "mcp__serena__read_memory", "mcp__repomix__pack_codebase", "mcp__repomix__grep_repomix_output"]
@@ -8,7 +8,7 @@ allowedTools: ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", "mcp__gi
 <role>
 You audit security. You do NOT modify code. Findings include exact file:line + reproduction + severity + concrete fix proposal. Read-only across the entire codebase.
 
-Model: opus-4.7 (all-agents-4.7 alignment per user decision 2026-05-20 — quality over throughput).
+Model: opus-4.8 (all-agents-4.8 alignment per user decision 2026-05-20 — quality over throughput).
 </role>
 
 <context>

@@ -2,14 +2,16 @@
 # pre-phase-doc-freshness.sh — UFR-022 lib-docs freshness gate.
 #
 # Runs before phase 3 (Red), 4 (Green), and 5 (Review). Parses imports from the
-# current diff, then for each non-dev-only lib does a 3-way staleness check :
+# current diff, then for each non-dev-only lib does a 4-way staleness check :
 #   - INDEX.json.libs[lib].version vs resolved package.json version
 #   - INDEX.json.libs[lib].fetched < (now - 14d)
 #   - lib-docs/<lib>/PATTERNS.md exists locally
+#   - lib-docs/<lib>/PATTERNS.md sha256 == INDEX.json.libs[lib].patternsSha256
+#     (de-honor-system: a hand-edited PATTERNS.md drifts silently otherwise)
 #
 # Writes the refresh queue to team-state/$RUN_ID/doc-refresh-queue.json. The
-# dispatcher then spawns doc-fetcher + doc-curator per queued lib. WebSearch
-# fail → WARN + use stale + tag (per UFR-022 §6.6), never BLOCK.
+# dispatcher then spawns doc-cache (fetch+curate, one agent) per queued lib.
+# WebSearch fail → WARN + use stale + tag (per UFR-022 §6.6), never BLOCK.
 #
 # Usage: RUN_ID=YYYY-MM-DD-slug .claude/skills/team/team-hooks/pre-phase-doc-freshness.sh
 # Exits 0 always (this is informational, not a gate that BLOCKs).
@@ -114,6 +116,29 @@ is_stale() {
   [ "$diff_days" -gt "$STALE_THRESHOLD_DAYS" ]
 }
 
+# Portable sha256 of a file (Linux sha256sum / macOS shasum). Empty if no hasher.
+sha256_of() {
+  local f="$1"
+  if command -v sha256sum &>/dev/null; then sha256sum "$f" | awk '{print $1}';
+  elif command -v shasum &>/dev/null; then shasum -a 256 "$f" | awk '{print $1}';
+  else echo ""; fi
+}
+
+# Returns 0 (match) when INDEX.patternsSha256 equals sha256(PATTERNS.md on disk).
+# This is the de-honor-system check: a PATTERNS.md hand-edited (or re-curated)
+# without updating INDEX.json drifts silently otherwise — nothing else in the
+# pipeline re-hashes the on-disk file. Returns 0 (no false trigger) when INDEX
+# has no recorded hash, or when no sha256 tool is available.
+patterns_hash_matches() {
+  local lib="$1" file="$2"
+  local idxh actual
+  idxh=$(jq -r --arg l "$lib" '.libs[$l].patternsSha256 // ""' "$INDEX_FILE" 2>/dev/null)
+  { [ -z "$idxh" ] || [ "$idxh" = "null" ]; } && return 0
+  actual=$(sha256_of "$file")
+  [ -z "$actual" ] && return 0
+  [ "$idxh" = "$actual" ]
+}
+
 self_test() {
   echo "pre-phase-doc-freshness self-test"
   local PASS=0 FAIL=0
@@ -148,6 +173,40 @@ self_test() {
     echo "  FAIL  is_stale 30d-ago → false (want true)"
     FAIL=$((FAIL + 1))
   fi
+
+  # Test patterns_hash_matches (de-honor-system on-disk re-hash)
+  local THASHDIR realh SAVED_INDEX
+  THASHDIR=$(mktemp -d)
+  printf 'hello patterns\n' > "$THASHDIR/PATTERNS.md"
+  realh=$(sha256_of "$THASHDIR/PATTERNS.md")
+  SAVED_INDEX="$INDEX_FILE"
+  INDEX_FILE="$THASHDIR/INDEX.json"
+  printf '{"libs":{"foo":{"patternsSha256":"%s"}}}\n' "$realh" > "$INDEX_FILE"
+  if patterns_hash_matches "foo" "$THASHDIR/PATTERNS.md"; then
+    echo "  PASS  patterns_hash_matches on-disk match"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  patterns_hash_matches on-disk match (false drift)"
+    FAIL=$((FAIL + 1))
+  fi
+  echo '{"libs":{"foo":{"patternsSha256":"deadbeefdeadbeef"}}}' > "$INDEX_FILE"
+  if patterns_hash_matches "foo" "$THASHDIR/PATTERNS.md"; then
+    echo "  FAIL  patterns_hash_matches drift undetected (honor-system gap)"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  PASS  patterns_hash_matches drift detected"
+    PASS=$((PASS + 1))
+  fi
+  echo '{"libs":{"foo":{}}}' > "$INDEX_FILE"
+  if patterns_hash_matches "foo" "$THASHDIR/PATTERNS.md"; then
+    echo "  PASS  patterns_hash_matches no-recorded-hash → no false trigger"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  patterns_hash_matches no-recorded-hash → false trigger"
+    FAIL=$((FAIL + 1))
+  fi
+  INDEX_FILE="$SAVED_INDEX"
+  rm -rf "$THASHDIR"
 
   # Test resolved_version_for : pick a lib known to exist in our package.json
   local v
@@ -202,6 +261,8 @@ while IFS= read -r lib; do
   fi
   if [ ! -f "$patterns_path" ]; then
     REASONS+="patterns-missing-local "
+  elif ! patterns_hash_matches "$lib" "$patterns_path"; then
+    REASONS+="patterns-hash-drift "
   fi
 
   if [ -n "$REASONS" ]; then

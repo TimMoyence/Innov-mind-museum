@@ -4,7 +4,8 @@
 # Auto-captures a reflective lesson from a completed /team run.
 # Wired into dispatcher Step 9 (Finalize). Fail-open: hook failure NEVER
 # blocks finalize (R10). Lesson dumped to team-knowledge/lessons/<RUN_ID>.json
-# (schema lesson/v2 — machine-navigable for the learning-curator agent;
+# (schema lesson/v2 — machine-navigable; captured for MANUAL review since the
+# learning-curator agent was retired 2026-05-31 (0 amendment in 77 runs);
 # historical <RUN_ID>.md files predate v2 and stay as-is). See SCHEMA.md.
 #
 # Inputs (env vars from dispatcher):

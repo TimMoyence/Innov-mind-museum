@@ -24,7 +24,7 @@ Frozen-test (REGLE 16) : l'agent NE touche PAS le test. Il emet `BLOCK-TEST-WRON
 ### Agent en desaccord avec le plan / la review
 Pas de plan-tweak ad-hoc ni de re-execution in-context. La review route via la **reviewer rejection loop ILLIMITEE** (REGLE 14) : `CHANGES_REQUESTED` → re-spawn fresh la phase pointee (spec/plan/red/green). Zero cap, zero warning. Si le reviewer rejette N fois c'est qu'il y a raison.
 
-### Gate verifier/reviewer FAIL conteste par le Tech Lead
+### Gate verify (hooks) / reviewer FAIL contesté par le Tech Lead
 ```
 1. Le Tech Lead doit fournir une justification ecrite
 2. La justification est loguee dans le rapport de run

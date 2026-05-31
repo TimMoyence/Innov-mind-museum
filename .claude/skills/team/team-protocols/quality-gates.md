@@ -1,8 +1,8 @@
 # Quality Gates — Verification Pipeline
 
-Mecanique des portes de qualite appliquees a la phase **Verify (Step 6)** du pipeline unique UFR-022 (verifier fresh-context + hooks deterministes `team-hooks/`). Voir `SKILL.md` REGLE 10 (role verifier) + Step 6.
+Mecanique des portes de qualite appliquees a la phase **Verify (Step 6)** du pipeline unique UFR-022 = gate deterministe execute par les hooks `team-hooks/` ; la part jugement est absorbee par le reviewer Step 8. Plus d'agent verifier. Voir `SKILL.md` Step 6.
 
-> Note UFR-022 : lint / tsc / tests sont desormais delegues aux hooks deterministes (`post-edit-lint.sh`, `post-edit-typecheck.sh`, `pre-complete-verify.sh`) — REGLE 9. Les Steps ci-dessous decrivent la mecanique des checks que le verifier (Step 6) assemble et que les hooks executent ; aucun n'est conditionnel a un mode (les selecteurs micro/standard/enterprise et feature/bug/etc. sont retires).
+> Note UFR-022 : lint / tsc / tests sont desormais delegues aux hooks deterministes (`post-edit-lint.sh`, `post-edit-typecheck.sh`, `pre-complete-verify.sh`) — REGLE 9. Les Steps ci-dessous decrivent la mecanique des checks que les hooks du gate verify executent ; le reviewer (Step 8) confirme la part jugement. Aucun n'est conditionnel a un mode (les selecteurs micro/standard/enterprise et feature/bug/etc. sont retires).
 
 ---
 
@@ -36,7 +36,7 @@ Persister la baseline dans `team-state/<run-id>/`. Toute regression par rapport 
 
 ## VERIFICATION PIPELINE
 
-Execute a la phase **Verify (Step 6)** du pipeline unique (verifier fresh + hooks). Les checks alimentent aussi le reviewer (Step 8).
+Execute a la phase **Verify (Step 6)** du pipeline unique (gate deterministe via hooks). Les checks alimentent aussi le reviewer (Step 8).
 
 ### Step 1 — Typecheck (non negociable)
 
@@ -116,9 +116,9 @@ L'agent editor de la phase green doit, AVANT de rendre son travail (lint/tsc/tes
    - Absence de log = FAIL de porte (verifie au Step 6b)
 ```
 
-### Step 6b — Verification GitNexus Calls Log (verifier)
+### Step 6b — Verification GitNexus Calls Log (reviewer)
 
-Le verifier (Step 6) verifie le GitNexus Calls Log produit par les phases editeur :
+Le reviewer (Step 8) verifie le GitNexus Calls Log produit par les phases editeur :
 ```
 1. Le log est-il present ? (absent = FAIL immediat)
 2. Pour chaque fichier modifie qui existait deja :
@@ -155,9 +155,9 @@ cd museum-frontend && npx tsc --noEmit 2>&1 | head -20
 
 ---
 
-## RAPPORT DE PORTE (verifier output)
+## RAPPORT DE PORTE (gate verify : verdicts hooks + section reviewer)
 
-Le verifier (Step 6) ecrit ce verdict dans la section `verify` de `STORY.md` :
+Le gate verify (hooks) ecrit ses exit codes dans la section `verify` de `STORY.md` ; le reviewer consigne le scope-boundary + spot-check dans sa section `review` :
 
 ```json
 {

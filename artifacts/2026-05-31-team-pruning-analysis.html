@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Élagage /team — analyse & décision (2026-05-31)</title>
+<style>
+  :root { --ink:#1a1a1a; --muted:#5c5c5c; --line:#e2e2e2; --accent:#1f6f5c; --accent2:#a23b2d; --bg:#fbfbfa; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+         color:var(--ink); background:var(--bg); line-height:1.55; max-width:920px; margin:0 auto; padding:48px 32px; }
+  h1 { font-size:1.9rem; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); font-size:.95rem; margin-bottom:36px; }
+  h2 { font-size:1.25rem; margin:40px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+  h3 { font-size:1.02rem; margin:24px 0 6px; }
+  p { margin:8px 0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.9rem; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; color:var(--muted); font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; }
+  .tag { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:3px; letter-spacing:.02em; }
+  .keep { background:#e4f0ec; color:var(--accent); }
+  .merge { background:#fdeee9; color:var(--accent2); }
+  .del  { background:#f3e3e0; color:var(--accent2); }
+  .ev { font-size:.85rem; color:var(--muted); }
+  .card { border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:6px; padding:14px 18px; margin:14px 0; background:#fff; }
+  .card.warn { border-left-color:var(--accent2); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.85em; background:#f0efed; padding:1px 5px; border-radius:3px; }
+  .num { font-variant-numeric:tabular-nums; font-weight:700; color:var(--accent2); }
+  blockquote { margin:8px 0; padding:6px 14px; border-left:3px solid var(--line); color:var(--muted); font-style:italic; font-size:.88rem; }
+  .foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:.82rem; }
+  @media print {
+    body { background:#fff; max-width:100%; padding:0; font-size:11pt; }
+    h2 { page-break-after:avoid; } .card,table { page-break-inside:avoid; }
+    .sub,.foot { color:#555; }
+  }
+</style>
+</head>
+<body>
+<h1>Élagage des agents /team — analyse pour décision</h1>
+<div class="sub">Musaium · 2026-05-31 · fondé sur l'audit 360 (raw/07, raw/11) + lecture des 6 agents + données d'usage réelles sur 77 runs. Aucune suppression effectuée — décision en attente.</div>
+
+<h2>1. Le constat qui cadre tout</h2>
+<p>Deux lectures coexistent et ne se contredisent pas :</p>
+<ul>
+<li><strong>Les 9 agents sont disjoints entre eux.</strong> Lecture ligne-à-ligne : <code>verifier</code> = gates mécaniques (lint/tsc/test/build/mutation), <code>security</code> = threat-model (OWASP LLM/API, SAST, contrats auth), <code>reviewer</code> = sémantique (spec↔impl, KISS/DRY, a11y, frozen-test cross-check). Pas de doublon mutuel significatif.</li>
+<li><strong>L'appareil global duplique ~80 % du natif.</strong> L'audit (raw/11 §1.5) chiffre : <em>« 5-phase spec→plan→red→green→review ≈ brainstorming + writing-plans + TDD + subagent-driven-dev + requesting-code-review → ~80 % conceptuel »</em>. La valeur nette non-native = <strong>frozen-test + lib-docs/LESSONS</strong>.</li>
+</ul>
+<p>Donc l'élagage ne se justifie <em>pas</em> par « ces agents font la même chose », mais par <strong>« cette couche refait du natif »</strong> et <strong>« cette machinerie n'a jamais servi en 77 runs »</strong>.</p>
+
+<h2>2. Données d'usage (77 runs /team)</h2>
+<table>
+<tr><th>Mécanique</th><th>Exercée</th><th>Lecture</th></tr>
+<tr><td>frozen-test (<code>red-test-manifest.json</code>)</td><td><span class="num">39</span> runs</td><td>Valeur nette, réellement utilisée — <strong>à garder</strong></td></tr>
+<tr><td>lib-docs PATTERNS.md (cache 107 libs, consulté par red/green/reviewer)</td><td>existe + lu</td><td>Cache utile (gotchas pgvector/TypeORM/Expo)</td></tr>
+<tr><td>doc-fetcher + doc-curator (<em>fetch dynamique</em>)</td><td><span class="num">1</span> run (seed 2026-05-19)</td><td>Quasi-dormant : le cache existe, mais les 2 agents qui le régénèrent ne tournent presque jamais</td></tr>
+<tr><td>learning-curator (amendements)</td><td>9 lessons in, <span class="num">0</span> amendement out</td><td><strong>Jamais livré</strong> : pending/applied/rejected = 0 sur 77 runs</td></tr>
+</table>
+
+<h2>3. Recommandation par agent</h2>
+
+<div class="card merge">
+<h3><span class="tag merge">FUSIONNER</span> doc-fetcher + doc-curator → <code>doc-cache</code></h3>
+<p>Le split en <em>deux</em> agents n'a qu'une justification : préserver le context-window des agents <em>aval</em> (ils lisent le PATTERNS.md de ~400 lignes, pas le snapshot de 50 KB). Mais cet argument concerne l'aval, <strong>pas</strong> fetcher/curator eux-mêmes — un seul agent peut fetch <em>puis</em> curer dans son propre contexte et n'émettre que PATTERNS.md. Le split ajoute 1 spawn + 1 handoff sans bénéfice aval.</p>
+<p class="ev"><strong>Gain :</strong> −1 agent, −1 handoff. <strong>Conservé :</strong> la valeur lib-docs que l'audit dit explicitement de garder (P0). Ce n'est pas la suppression de lib-docs — c'est dé-sur-découper sa production.</p>
+</div>
+
+<div class="card del">
+<h3><span class="tag del">SUPPRIMER</span> learning-curator (→ V2 si jamais)</h3>
+<p>0 amendement produit en 77 runs. La boucle d'apprentissage capture 9 lessons mais n'a <strong>jamais</strong> rien proposé. C'est de la machinerie spéculative (T2.1 KR4) non amortie à J-7 du launch. Les 9 lessons restent lisibles et exploitables manuellement ; l'agent dédié qui n'a rien sorti est du pur overhead.</p>
+<p class="ev"><strong>Gain :</strong> −1 agent (162 lignes) + le hook <code>post-complete-lesson-capture.sh</code> devient optionnel. <strong>N'affecte ni frozen-test ni lib-docs.</strong> Audit raw/11 §4 : <em>« questionner … learning-curator face au coût solo »</em>.</p>
+</div>
+
+<div class="card merge">
+<h3><span class="tag merge">FUSIONNER</span> verifier → reviewer + hooks existants</h3>
+<p>Le cœur de <code>verifier</code> = exécuter <code>pnpm lint && tsc && test && build</code> + ratchet + mutation. Ce sont des <strong>commandes déterministes</strong>, déjà couvertes par les hooks <code>post-edit-lint.sh</code>, <code>post-edit-typecheck.sh</code>, <code>pre-complete-verify.sh</code> + la CI. Un <em>agent LLM</em> pour lancer des commandes déterministes est le cas d'école du « ça devrait être un hook, pas un agent ». Sa seule part de jugement (scope-boundary, spot-check archi) recoupe le reviewer.</p>
+<p class="ev"><strong>Gain :</strong> −1 agent (193 lignes). <strong>Conservé :</strong> le gate <code>pre-complete-verify.sh</code> (déterministe) + scope-boundary/spot-check repliés dans reviewer.</p>
+</div>
+
+<div class="card">
+<h3><span class="tag keep">GARDER</span> security <span style="color:var(--muted);font-weight:400">— et pousser-back sur l'audit</span></h3>
+<p>L'audit suggère de <em>« fusionner verifier/security dans le reviewer two-stage natif »</em>. <strong>Je recommande de NE PAS fusionner security.</strong> Il est disjoint et domain-specific : OWASP LLM Top-10 (injection, untrusted_content wrapping, Presidio PII), contrats auth (rotation refresh-token, nonce social ID-token, rate-limit 30/min), SAST (semgrep/CodeQL), supply-chain. Pour une app IA culturelle avec surface d'injection LLM, cette profondeur n'est pas réductible à un reviewer générique sans perte.</p>
+</div>
+
+<div class="card">
+<h3><span class="tag keep">GARDER</span> reviewer, architect, editor, documenter</h3>
+<p>reviewer = valeur sémantique + frozen-test cross-check. architect/editor = le red→green fresh-context (l'audit dit P0-garder). documenter = scope d'écriture disjoint.</p>
+</div>
+
+<h2>4. Bilan chiffré de l'élagage proposé</h2>
+<table>
+<tr><th>Action</th><th>Agents</th><th>Lignes prose agent</th></tr>
+<tr><td>Avant</td><td>9</td><td>~1 741</td></tr>
+<tr><td>Fusion doc-fetcher+curator → doc-cache</td><td>−1</td><td>~−170</td></tr>
+<tr><td>Suppression learning-curator</td><td>−1</td><td>−162</td></tr>
+<tr><td>Fusion verifier → reviewer/hooks</td><td>−1</td><td>−193</td></tr>
+<tr><td><strong>Après</strong></td><td><strong>6</strong> (architect, editor, doc-cache, security, reviewer, documenter)</td><td><strong>~−525 lignes</strong></td></tr>
+</table>
+<p class="ev">+ 1 hook devient optionnel (<code>post-complete-lesson-capture.sh</code>), + simplification de l'orchestration SKILL.md (phases verify/learning).</p>
+
+<h2>5. Objectif 4 — alignement /team ↔ superpowers (proposition, non imposée)</h2>
+<p>Plutôt que maintenir une ré-implémentation maison de l'orchestration, <strong>adopter les skills officiels pour les 80 % redondants</strong> et <strong>garder en custom uniquement la valeur non-native</strong> :</p>
+<table>
+<tr><th>Brique /team actuelle</th><th>Bascule vers</th></tr>
+<tr><td>spec → plan</td><td><code>superpowers:brainstorming</code> + <code>writing-plans</code></td></tr>
+<tr><td>red → green fresh-context</td><td><code>superpowers:test-driven-development</code> + <code>subagent-driven-development</code></td></tr>
+<tr><td>verify (gates)</td><td><code>superpowers:verification-before-completion</code> + hooks déterministes</td></tr>
+<tr><td>review loop</td><td><code>superpowers:requesting-code-review</code> / <code>receiving-code-review</code></td></tr>
+<tr><td><strong>frozen-test (sha256)</strong></td><td><strong>CUSTOM — gap réel, aucun équivalent natif</strong></td></tr>
+<tr><td><strong>lib-docs versionné + LESSONS.md</strong></td><td><strong>CUSTOM — cache offline + gotchas Musaium</strong></td></tr>
+<tr><td><strong>security domain + reviewer a11y/design-tokens/string-guard</strong></td><td><strong>CUSTOM — intégration domaine Musaium</strong></td></tr>
+</table>
+<p class="ev">Gain estimé si poussé au bout : −3 agents (déjà comptés ci-dessus) + une part substantielle des 45 KB de <code>SKILL.md</code> (la narration d'orchestration déléguée aux skills natifs) + réduction des 11 hooks à ceux qui portent la valeur non-native (frozen-test, doc-freshness, pre-complete-verify). <strong>Chiffrage précis = un second passage dédié</strong> — cette proposition fixe la direction, pas l'exécution.</p>
+
+<div class="foot">
+Sources : <code>audit-state/2026-05-31-cartographie-360/raw/07-machinerie-team.md</code>, <code>raw/11-team-vs-anthropic.md</code> · lecture des 6 agents <code>.claude/agents/*.md</code> · données d'usage <code>.claude/skills/team/team-state/</code> (77 runs). UFR-013 — aucune affirmation non vérifiée.
+</div>
+</body>
+</html>

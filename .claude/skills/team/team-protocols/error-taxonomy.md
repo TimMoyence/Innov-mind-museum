@@ -45,7 +45,7 @@ Charge **Toujours** (mode unique UFR-022).
    - E-SCOPE → re-spawn fresh phase=plan (le scope etait mal defini)
    - E-TEST → re-spawn fresh phase=green (l'editeur corrige le code, PAS le test — frozen-test)
    - E-ARCH → re-spawn fresh phase=plan (si structural) ou phase=green (si local)
-   - E-RUNTIME → re-spawn fresh phase=verify (le verifier investigue le smoke/E2E)
+   - E-RUNTIME → re-spawn fresh la phase pointee ; le smoke/E2E est re-execute par le gate verify (hooks) et l'investigation revient au reviewer / a l'editeur green selon la cause
 3. Le dispatcher (PAS l'agent) compose un nouveau handoff JSON ≤200 tokens pointant
    vers les artefacts read-only sur disque (spec.md / design.md / diff). Pas de
    TaskCreate, pas de continuation: chaque correction = un Agent spawn fresh,

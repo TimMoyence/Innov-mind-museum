@@ -29,7 +29,7 @@ ANTHROPIC_API_KEY=sk-ant-... npx promptfoo eval --output output.json
 ## Modes
 
 - **mock** (default offline) — deterministic scores from feature_id hash. Catches harness drift, costs $0. Used in PR CI sanity check.
-- **real** (set `ANTHROPIC_API_KEY` + `REVIEWER_EVAL_MODE=real`) — invokes Claude Opus 4.7 via the Anthropic Messages API with `reviewer.md` as system prompt. Cost ~$2-3 per full corpus run. Used in nightly cron + manual recalibration.
+- **real** (set `ANTHROPIC_API_KEY` + `REVIEWER_EVAL_MODE=real`) — invokes Claude Opus 4.8 via the Anthropic Messages API with `reviewer.md` as system prompt. Cost ~$2-3 per full corpus run. Used in nightly cron + manual recalibration.
 
 ## Re-calibrating the baseline
 
