@@ -1360,7 +1360,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
   - **FK renames** sur `user_consents` (FK column ou constraint name désynchronisée vs entity metadata) — TypeORM voulait `DROP CONSTRAINT` + `ADD CONSTRAINT` avec un nom canonique différent.
   - **FK renames** sur `totp_secrets` (idem — uniquement le rename de constraint, pas la colonne ajoutée par C3).
   - **`museums.wikidata_qid` drop** — la colonne existe en DB mais n'est plus dans l'entity (legacy d'une refonte Wikidata).
-  - **`artwork_embeddings.embedding halfvec → text`** — TypeORM voulait revert le type `halfvec(768)` introduit en C3 vers `text` car aucune `@Column` type custom ne décrit `halfvec` (cf CLAUDE.md gotcha `halfvec(N)` PG extension). À ne PAS appliquer en prod (perdrait l'index IVFFlat).
+  - **`artwork_embeddings.embedding halfvec → text`** — TypeORM voulait revert le type `halfvec(768)` introduit en C3 vers `text` car aucune `@Column` type custom ne décrit `halfvec` (cf CLAUDE.md gotcha `halfvec(N)` PG extension). À ne PAS appliquer en prod (perdrait l'index HNSW `halfvec_ip_ops`).
   - **`art_keywords` UNIQUE** — contrainte UNIQUE manquante côté DB que TypeORM voulait `ADD`.
   - **Dropped indexes** — quelques `IDX_*` que TypeORM ne reconnaît plus comme dérivables de l'entity metadata (probablement créés par une ancienne migration que TypeORM ne retrouve pas dans le diff entity).
   - **`chat_sessions.version` DEFAULT removal** — TypeORM voulait `ALTER COLUMN version DROP DEFAULT` (col `@VersionColumn` qui n'accepte pas de DEFAULT côté entity).
