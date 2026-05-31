@@ -162,4 +162,4 @@ The Phase D work is small (~1 day with /team) and explicitly out-of-scope for th
 
 ---
 
-*Status flip to `Accepted` reserved for Tech Lead at C4 merge SHA (Step 8.1). Until then this ADR documents the architectural intent and the seven design-time decisions; the code wiring lives in the C4 PR series. Verbatim quote from `docs/plans/2026-05-10-c4-launch-prompt.md` §E Step 1.4 informed each decision above; any drift between this ADR and the code is a defect to be reconciled before merge per UFR-013.*
+*Status flip to `Accepted` reserved for Tech Lead at C4 merge SHA (Step 8.1). Until then this ADR documents the architectural intent and the seven design-time decisions; the code wiring lives in the C4 PR series. Verbatim quote from the C4 launch-prompt plan (`2026-05-10-c4-launch-prompt.md`, sous `docs/plans/` — prunée 2026-05-12 `9471649d`, cf `git log`) §E Step 1.4 informed each decision above; any drift between this ADR and the code is a defect to be reconciled before merge per UFR-013.*

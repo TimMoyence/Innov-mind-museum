@@ -25,7 +25,7 @@ Avant ce run, le ctor `new Langfuse({ publicKey, secretKey, baseUrl, flushAt, fl
 
 Les forces en présence :
 
-- **Langfuse SDK contract** — `langfuse-core@3.38.20` expose `mask?: MaskFunction` dans `LangfuseCoreOptions` (`lib/index.d.ts:6966`), avec signature `type MaskFunction = (params: { data: any }) => any` (`:7126-7128`). Le hook est appliqué **centralement** par `maskEventBodyInPlace` (`:7407`) sur chaque event/observation body **avant le transport SDK**. C'est **le seul endroit canonique** pour gater l'egress.
+- **Langfuse SDK contract** — `langfuse-core@3.38.20` expose `mask?: MaskFunction` dans `LangfuseCoreOptions` (`lib/index.d.ts L6966`), avec signature `type MaskFunction = (params: { data: any }) => any` (`:7126-7128`). Le hook est appliqué **centralement** par `maskEventBodyInPlace` (`:7407`) sur chaque event/observation body **avant le transport SDK**. C'est **le seul endroit canonique** pour gater l'egress.
 - **Defense-in-depth requirement** — un decorator adapter-level (style `CachingChatOrchestrator` ADR-036) serait fragile : il faudrait wrapper chaque caller LangChain individuellement, et tout nouveau caller régresserait silencieusement. Le mask central garantit qu'aucun event Langfuse ne peut sortir sans passer par `stripFreeText`.
 - **Fail-safe requirement** — Langfuse SDK applique le mask **synchroniquement** dans `maskEventBodyInPlace`. Si le mask throw, le caller (chain.invoke) peut le voir remonter selon le path SDK. UFR (chat path stability) impose que `mask exception ≠ chat path break`.
 - **Cost UI preservation** — Langfuse calcule `cost_usd_estimate` depuis `usage.*` / `usageDetails.*` + catalog model. Le mask **ne doit PAS** toucher `usage`, `usageDetails`, `model`, `metadata.*` (où vivent `museumId`, `tier`, etc.).
@@ -39,7 +39,7 @@ Les forces en présence :
 
 ### D1 — Mask au ctor, jamais en decorator adapter-level
 
-Le mask est passé au constructeur `new LangfuseCtor({ …, mask: stripFreeText })` (`museum-backend/src/shared/observability/langfuse.client.ts:68`). C'est **le seul point d'enforcement** : `langfuse-core` applique `maskEventBodyInPlace` (`langfuse-core@3.38.20 lib/index.d.ts:7407`) sur chaque event/observation body avant transport SDK. Aucun decorator adapter-level (style ADR-036 `CachingChatOrchestrator` retired) n'est ajouté — la centralité du hook ctor rend tout decorator redondant et fragile.
+Le mask est passé au constructeur `new LangfuseCtor({ …, mask: stripFreeText })` (`museum-backend/src/shared/observability/langfuse.client.ts:68`). C'est **le seul point d'enforcement** : `langfuse-core` applique `maskEventBodyInPlace` (`langfuse-core@3.38.20 lib/index.d.ts L7407`) sur chaque event/observation body avant transport SDK. Aucun decorator adapter-level (style ADR-036 `CachingChatOrchestrator` retired) n'est ajouté — la centralité du hook ctor rend tout decorator redondant et fragile.
 
 Conséquence : **toute future instanciation Langfuse cross-app (FE/Web hypothétique) DOIT passer le même `stripFreeText` (ou équivalent fail-safe respectant la même contract).** Cf. D5 ci-dessous pour le path de mutualisation si un 2e consommateur émerge.
 
@@ -92,7 +92,7 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
 - **`metadata` non couvert par le mask** — assumption design (callers Musaium n'écrivent que des champs PII-safe dans `metadata`) **non enforced**. Risque : un futur caller ajoute `metadata.userEmail` accidentellement et la PII traverse. **Suivi** : `TD-OBS-PII-METADATA-ALLOWLIST` (LOW, NON_BLOCKER) — ajouter sentinel OU assertion runtime côté caller.
 - **`scrubRecord` recursion sans cycle/depth cap** — Sentry-scrubber traversal est aujourd'hui structurellement défendu par le contrat JSON Sentry, mais defense-in-depth manquante. **Suivi** : `TD-OBS-SCRUBRECORD-CYCLE-HARDENING` (LOW, NON_BLOCKER) — ajouter `WeakSet` seen-guard + `MAX_DEPTH=10`.
 - **Coupling `stripFreeText` ↔ `langfuse-core MaskFunction` signature** — si Langfuse v4 change la signature `MaskFunction`, il faudra adapter `stripFreeText`. Risque borné par le pin `langfuse@3.38.20` + `langfuse-langchain@3.38.0` (cf. `lib-docs/INDEX.json`) ; ADR-050 acte le V3-EOL stance jusqu'à H1 2026.
-- **`MaskFunction` parameter type = `any`** — la signature SDK est `(params: { data: any }) => any` (`langfuse-core@3.38.20 lib/index.d.ts:7126-7128`). Notre wrapper accepte donc `any`. Un `eslint-disable @typescript-eslint/no-explicit-any` byte-conform SDK est appliqué dans `strip-free-text.ts` (Justification: + Approved-by: per LINT_DISCIPLINE.md, declared dans phase=green deviation #1).
+- **`MaskFunction` parameter type = `any`** — la signature SDK est `(params: { data: any }) => any` (`langfuse-core@3.38.20 lib/index.d.ts L7126-7128`). Notre wrapper accepte donc `any`. Un `eslint-disable @typescript-eslint/no-explicit-any` byte-conform SDK est appliqué dans `strip-free-text.ts` (Justification: + Approved-by: per LINT_DISCIPLINE.md, declared dans phase=green deviation #1).
 
 ### Neutres
 
@@ -119,9 +119,9 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
 
 - **Run artefacts** : `team-state/2026-05-21-p0-c1-pii-egress/{spec.md,design.md,tasks.md,STORY.md}`, code review `code-review.json` (APPROVED 96.25).
 - **Lib reference** :
-  - `langfuse-core@3.38.20 lib/index.d.ts:6966` — `mask?: MaskFunction` sur `LangfuseCoreOptions`.
-  - `langfuse-core@3.38.20 lib/index.d.ts:7126-7128` — `type MaskFunction = (params: { data: any }) => any`.
-  - `langfuse-core@3.38.20 lib/index.d.ts:7407` — `private maskEventBodyInPlace` central application.
+  - `langfuse-core@3.38.20 lib/index.d.ts L6966` — `mask?: MaskFunction` sur `LangfuseCoreOptions`.
+  - `langfuse-core@3.38.20 lib/index.d.ts L7126-7128` — `type MaskFunction = (params: { data: any }) => any`.
+  - `langfuse-core@3.38.20 lib/index.d.ts L7407` — `private maskEventBodyInPlace` central application.
   - `langfuse-langchain@3.38.0` — `CallbackHandler({root, updateRoot:true})` auto-capture wiring (`museum-backend/src/shared/observability/langfuse-langchain.ts:57-68`).
 - **Impl** :
   - `museum-backend/src/shared/observability/langfuse.client.ts:68` (`mask: stripFreeText` ctor wiring).

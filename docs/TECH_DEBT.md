@@ -173,7 +173,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
 
-- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (`docs/OFFLINE_CONTRACT.md`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
+- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (créer le doc `OFFLINE_CONTRACT.md` sous `docs/`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
 - [ ] ~~ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)~~
 - **Référence code** :
   ```
@@ -193,7 +193,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   1. Extraire `OfflineBanner` du chat-only scope → composant `GlobalOfflineBanner` mounté dans `app/_layout.tsx` (probablement sous `ConnectivityProvider`). Couvre museum/settings/home/chat uniformément. Vérifier que le banner chat-only `pendingCount` reste fonctionnel (queue source distinct).
   2. Aligner `dataModeStore` sur le pattern `_hydrated` + `onRehydrateStorage` (cf. `userProfileStore` lignes 29/91 + `audioDescriptionStore` lignes 26/57 comme reference).
   3. Ajouter scenario Maestro `flows/offline-pack-airplane.yaml` : (a) telecharger pack pour une ville, (b) toggle airplane mode (Maestro `runFlow` avec adb shell), (c) ouvrir map, assert tiles raster visibles, (d) toggle off airplane. Brancher dans `ci-cd-mobile.yml` quality job.
-  4. Créer `docs/OFFLINE_CONTRACT.md` qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
+  4. Créer le doc `OFFLINE_CONTRACT.md` (sous `docs/`) qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
   5. **Wire `onlineManager` à NetInfo (= TD-OM-01, ajouté 2026-05-21, MEDIUM-HIGH pre-V1)** — le sous-gap le plus à fort levier, non couvert par les steps 1-4 : `onlineManager.setEventListener(...)` au bootstrap pour que `refetchOnReconnect`/`networkMode:'online'` self-heal sur device. Évidence consommateur : `DataModeProvider.tsx:80-82` (pas de gate `_hydrated`), `queryClient.ts:54-55`. Voir TD-OM-01 pour le détail.
   6. Cocher TD-14 + TD-OM-01 ici.
 
@@ -643,7 +643,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Workaround actuel** : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` puis restart container (documenté cette session 2026-05-19). Acceptable pour dev, mais friction visible.
 - **Sprint d'origine** : N/A (infra dev compose, existant depuis l'introduction des anonymous volumes).
 - **Effort estimé** : 1 h — option A : script `pnpm bootstrap-dev-container` qui detect drift package.json → run install dans le container automatiquement ; option B : hook nodemon pre-start qui check `package.json mtime > pnpm-lock.yaml mtime container` et run install ; option C : rebuild image à chaque `up -d` (lent mais déterministe).
-- **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans `docs/DEV_SETUP.md` (ou équivalent).
+- **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans un doc `DEV_SETUP.md` (sous `docs/`, ou équivalent).
 
 ---
 
@@ -1348,7 +1348,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Effort estimé** : ~30 min — deux options :
   - (a) **Étendre `invokeWalkStructured`** pour englober `narrowWalkStructuredResult` dans le même try/catch (plus chirurgical, préserve la sémantique « probe failure = recordFailure »).
   - (b) **`recordFailure()` défensif** au site `narrowWalkStructuredResult` throw — moins propre mais 1 ligne.
-- **Référence run** : `team-state/2026-05-21-p0-c2-cost-breaker/` (review.json `findings.important[0]`, security agent LOW finding `STORY.md:2026-05-21T18:25:22Z`).
+- **Référence run** : `team-state/2026-05-21-p0-c2-cost-breaker/` (review.json `findings.important[0]`, security agent LOW finding STORY.md horodaté 2026-05-21T18:25:22Z) — *run de travail élagué (rétention 30j)*.
 
 ---
 
@@ -1496,7 +1496,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 ## TD-OPAQUE-ANIMATED-VALUE-SKELETON — test introspecte `Animated.Value._value` (API privée RN) dans un test RED gelé (LOW, V1.1)
 
 - [ ] **Statut** : ouvert (créé 2026-05-26, audit doc-cleanup §5 V1 ; tracé ici avant burial du triage).
-- **Référence code** : `museum-frontend/__tests__/features/chat/ui/ImageCompareCardSkeleton.test.tsx:63,67` — commentaire « Allow Animated objects too (they expose `_value` in tests) » + accès `(flat.opacity as { _value?: number } | undefined)?._value`.
+- **Référence code** : `museum-frontend/__tests__/features/chat/ui/ImageCompareCardSkeleton.test.tsx` (L63,67 — *fichier supprimé depuis ; réf historique*) — commentaire « Allow Animated objects too (they expose `_value` in tests) » + accès `(flat.opacity as { _value?: number } | undefined)?._value`.
 - **Symptôme** : viole la doctrine `feedback_opaque_animated_value_test_contract` (« Tests MUST NOT introspect `Animated.Value._value` — use observable reducer state »). Le test pilote l'animation via un champ privé RN au lieu de l'état observable. Violation **dormante** : c'est un test RED pour `ImageCompareCardSkeleton` (feature ImageCompare C3.5, SUT non construit / différé) — inerte tant que le composant n'existe pas, active à la phase Green.
 - **Pourquoi non résolu** : (a) frozen-test contract UFR-022 — modifier le test hors re-spawn red phase est interdit ; (b) feature ImageCompare non priorisée V1 ; (c) corriger maintenant = `BLOCK-TEST-WRONG` + re-spawn red disproportionné pour un test dormant. Même classe que [[TD-LINT-FROZEN-COMPOSER]].
 - **Comment fermer** : lors du build réel d'ImageCompare (phase red/green `/team`), réécrire l'assertion pour lire l'état observable (reducer/prop) au lieu de `_value`. Cf. doctrine `feedback_opaque_animated_value_test_contract`.

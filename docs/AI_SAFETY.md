@@ -17,7 +17,7 @@ What this document is NOT:
 
 - An implementation guide. Implementation lives in code + per-feature ADRs.
 - A legal opinion. Legal counsel is engaged at the first B2B LOI signing (perennial design D2).
-- A complete threat model. Future `docs/THREAT_MODEL.md` may extract one when warranted.
+- A complete threat model. A future dedicated threat-model doc (`THREAT_MODEL.md`, not yet created under `docs/`) may extract one when warranted.
 
 ## 2. Layered defence
 

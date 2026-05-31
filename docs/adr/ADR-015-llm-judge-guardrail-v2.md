@@ -131,7 +131,7 @@ Audit decision binary (per design spec §2 ADR-012, now this file):
 
 ## Phase rollout & promotion criteria
 
-> Consolidated 2026-05-07 from `docs/archive/nl-reports-2026-04-17/reports/P11-decision.md` (sidecar benchmark v1→v2→v3 — archive purged 2026-05-07, recoverable via `git log -- docs/archive/nl-reports-2026-04-17/`).
+> Consolidated 2026-05-07 from the archived `P11-decision.md` (sidecar benchmark v1→v2→v3 — under `docs/archive/nl-reports-2026-04-17/reports/`, archive purged 2026-05-07, recoverable via `git log -- docs/archive/nl-reports-2026-04-17/`).
 
 The `llm-guard` Python sidecar (P11) and the LLM judge (this ADR) share the same rollout scheme. Three phases, each with measurable promotion criteria.
 
@@ -254,4 +254,4 @@ Six layers, none redundant.
 - Commit `80e3e1cb` — `feat(chat): F4 LLM-judge guardrail v2 + multilingual insult coverage`
 - Test contracts: `museum-backend/tests/unit/chat/{art-topic-guardrail-multilingue,llm-judge-guardrail,guardrail-budget,chat.service.guardrail-v2}.test.ts`
 - P11 sidecar benchmark report (consolidated above; original deleted 2026-05-07 with archive purge)
-- `docs/explications-sprint-2026-05-05/04-guardrails-juges-promptfoo-latence.md` — operator-facing pedagogical explanation
+- `04-guardrails-juges-promptfoo-latence.md` (sous `docs/explications-sprint-2026-05-05/`, doc pédago prunée — cf `git log`) — operator-facing pedagogical explanation
