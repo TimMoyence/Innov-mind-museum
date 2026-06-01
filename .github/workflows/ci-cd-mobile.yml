@@ -417,26 +417,27 @@ jobs:
           api-level: 33
           # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
           # accelerated (the whole point of the macos→ubuntu migration). The
-          # Release APK from prebuild contains the x86_64 ABI (RN/Hermes builds
-          # all four ABIs by default).
+          # prebuild APK is built x86_64-only (-PreactNativeArchitectures), so
+          # its ABI matches this emulator exactly.
           arch: x86_64
           target: google_apis
           profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
+          # E41 — the runner executes each script LINE in its own shell (a
+          # `cd` does NOT persist to the next line), so use repo-root-relative
+          # paths and self-contained one-liners (no multi-line `if` block, no
+          # reliance on the exec bit → `bash <script>`). The APK was downloaded
+          # to museum-frontend/android/app/build/outputs/apk/release/.
+          # The fixture push is a harmless no-op on the auth shard (|| true);
+          # maestro-run-shard.sh resolves .maestro/ from its own path, so it
+          # works regardless of cwd.
           script: |
-            cd museum-frontend
-            adb install -r android/app/build/outputs/apk/release/app-release.apk
-            # T9.x — Push the chat-compare fixture into /sdcard/Download/ so
-            # the picker surfaces it as the most-recent local asset. Harmless
-            # on the other shards; pushing is cheap (≤25KB) and idempotent.
-            if [ -f .maestro/fixtures/test-artwork.jpg ]; then
-              adb push .maestro/fixtures/test-artwork.jpg /sdcard/Download/test-artwork.jpg
-              # Tell MediaStore the new file exists so it appears in pickers.
-              adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/test-artwork.jpg || true
-            fi
-            ./scripts/maestro-run-shard.sh "$MATRIX_SHARD"
+            adb install -r museum-frontend/android/app/build/outputs/apk/release/app-release.apk
+            adb push museum-frontend/.maestro/fixtures/test-artwork.jpg /sdcard/Download/test-artwork.jpg || true
+            adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/test-artwork.jpg || true
+            bash museum-frontend/scripts/maestro-run-shard.sh "$MATRIX_SHARD"
 
       - name: Upload shard logs
         if: always()
