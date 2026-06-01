@@ -99,7 +99,7 @@ appId: com.musaium.mobile.preview
 # = "Supprimer le compte définitivement" / "Delete account permanently")
 # COLLAPSES the subtree, so match the a11y label.
 - tapOn:
-    text: "Supprimer le compte définitivement|Delete account permanently"
+    id: "settings-delete-account"
 
 # ──────────────────────────────────────────────
 # Phase 4: Confirm native Alert (settings.delete_confirm_title / _body)

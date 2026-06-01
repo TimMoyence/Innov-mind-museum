@@ -70,7 +70,7 @@ appId: com.musaium.mobile.preview
 # Accept GDPR by tapping the checkbox SQUARE (row left edge). Tapping the row
 # center hits the inline Terms/Privacy links (own onPress → navigate away).
 - tapOn:
-    point: "11%,67%"
+    id: "gdpr-consent-checkbox"
 
 # Submit (button already on screen; a hard scrollUntilVisible@100% fails when no
 # scroll is needed). Wait + tap by testID.
