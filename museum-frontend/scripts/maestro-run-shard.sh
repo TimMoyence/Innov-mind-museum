@@ -40,7 +40,11 @@ echo "$FLOWS"
 while IFS= read -r flow; do
   [ -z "$flow" ] && continue
   echo "[shard:$SHARD] running $flow…"
-  if maestro test "$MAESTRO_DIR/$flow" 2>&1 | tee "$LOG_DIR/${SHARD}-${flow%.yaml}.log"; then
+  # `--debug-output` writes the per-flow view hierarchy + screenshots into
+  # logs/debug/<flow>/, captured by the CI "Upload shard logs" artifact. This is
+  # what lets us see the exact screen the app was on when an assertion failed
+  # (e.g. a register flow landing on a verify-email gate vs onboarding).
+  if maestro test --debug-output "$LOG_DIR/debug/${flow%.yaml}" "$MAESTRO_DIR/$flow" 2>&1 | tee "$LOG_DIR/${SHARD}-${flow%.yaml}.log"; then
     echo "[shard:$SHARD] $flow PASS"
   else
     echo "[shard:$SHARD] $flow FAIL"
