@@ -85,7 +85,7 @@ appId: com.musaium.mobile.preview
 # element by label lands on the center → opens Terms. Tap the checkbox SQUARE at
 # the row's left edge instead (the box is the first ~20px of the row).
 - tapOn:
-    point: "11%,67%"
+    id: "gdpr-consent-checkbox"
 
 # Submit. The button is already on screen on iPhone 17; a hard scrollUntilVisible
 # at 100% visibility fails when no scroll is needed, so wait + tap by testID.
