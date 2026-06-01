@@ -53,7 +53,8 @@ A single frozen **Network Profile Registry** is the keystone: every test layer (
 
 | # | Decision | Consequence |
 |---|---|---|
-| **D1 — Image target** | **Adaptive**: ~150 KB WebP @1024px **uploaded** for AI recognition + a ~250–400 KB local-only derivative for the carnet thumbnail (never uploaded). | Compression decision produces **two outputs**; the carnet reads the local copy, never re-downloads the uploaded one. Touches the image pipeline + carnet storage. |
+| **D1 — Image target** | **Adaptive**: ~150 KB WebP @1024px **uploaded** for AI recognition + a ~250–400 KB local enhancement derivative for the carnet thumbnail. | Compression decision produces **two outputs**. The carnet prefers the local derivative; on a miss it **re-downloads the durable server copy** (the ~150 KB recognition image). Touches the image pipeline + carnet storage. |
+| **D4 — Durable re-download** | The user must be able to **re-download their carnet images after clearing app data/cookies**, backed by a **dedicated local-cache cap**. | The ~150 KB recognition upload is **persisted server-side** and exposed via an authenticated re-download path. Local image store becomes a **capped cache** (dedicated quota, separate from other caches) that re-hydrates on demand. The 250–400 KB local enhancement derivative is best-effort and does NOT survive a wipe (post-wipe carnet degrades to the ~150 KB server copy — acceptable: the photo is recovered, not its premium version). |
 | **D2 — Idempotency** | **Backend-enforced** `Idempotency-Key`. | FE forwards `queued.id` as `Idempotency-Key`; new backend dedup store + middleware (prod-safe). Lands in **W1**. Closes the zero-loss gap under flapping. |
 | **D3 — Fault-injection prod posture** | **OFF unconditionally in prod, no escape hatch.** | Boot-throw is unconditional (stricter than `resolveChaosRate`); no `'I-know-what-I-am-doing'` token for this middleware. |
 
@@ -237,10 +238,15 @@ L2 (backend middleware) owns **deterministic, header-driven, fast** shaping for 
 Parameterise `optimizeImageForUpload(uri, profile = IMAGE_PROFILES.normal)` (backwards-compatible default keeps non-edge callers untouched). Driven by resolved DataMode:
 - `normal` = today (1600px, JPEG, 2.7 MB).
 - `low` (edge) = **two outputs (D1):**
-  - **uploaded:** 1024px, WebP ~q60, target ~150 KB (backend accepts `image/webp` end-to-end, `image-processing.service.ts:61`).
-  - **local-only carnet derivative:** ~1280px WebP ~q70, target ~250–400 KB, written to local image storage (`offlineImageStorage.ts`), **never uploaded**. The carnet reads this copy.
+  - **uploaded + server-persisted:** 1024px, WebP ~q60, target ~150 KB (backend accepts `image/webp` end-to-end, `image-processing.service.ts:61`). This is the **durable, re-downloadable** source (D4).
+  - **local enhancement derivative:** ~1280px WebP ~q70, target ~250–400 KB, written to the local capped image cache. Best-effort display quality; lost on data wipe (carnet then falls back to the server copy).
 - **Graceful fallback** preserved: WebP unsupported → JPEG q55 @1024px → raw URI; never block upload.
 - The decision is a pure function `features/chat/application/compressionDecision.pure.ts` (unit-tested as M6); the picker (`useImagePicker.ts`/`useCompareImagePicker.ts`) reads `useDataMode()` and calls it pre-upload.
+
+### (a-bis) Durable carnet image re-download + capped local cache (D4) — NET-NEW
+- **Server:** the recognition upload is persisted and tied to the user's carnet/message; an authenticated `GET` re-download path serves it. (W1 red phase verifies whether persistence already exists in the chat-media pipeline before adding it.)
+- **Client:** the local image store (`offlineImageStorage.ts`) becomes a **cache with a dedicated cap** (separate quota from other caches, LRU/maxAge eviction). Carnet display: prefer local derivative → else re-download the server copy and re-populate the capped cache.
+- **Post-wipe path:** after the user clears app data, the carnet re-downloads server copies on demand; quota-bounded so it can never grow unbounded.
 
 ### (b) Request-body gzip + backend decompression — NET-NEW (prod-safe)
 - **Client:** gzip JSON bodies > ~1 KB via `pako` (RN-safe), ONLY on resolved `low`/edge; set `Content-Type: application/json` + `Content-Encoding: gzip`. NEVER gzip multipart image bodies.
@@ -335,7 +341,7 @@ Fault-injection is a footgun strictly worse than `DB_SYNCHRONIZE`. Three concent
 Each wave = `spec → plan → red → green → verify → security → review` (fresh-context per phase, flat `red-test-manifest.json` `{path:sha256}`, lib-docs obligation, reviewer rejection loop unlimited). Sequenced by **data dependency**, not by layer.
 
 ### Wave 1 — Registry + Layer 1 + Compression feature (adaptive + idempotency) + force-low hook
-**Lands:** `networkProfiles.ts` registry + parity sentinel skeleton; L1 harness (helpers A/B/C); M1–M7 tests; adaptive edge image profile (two outputs) + WebP + client gzip (FE) + backend request-decompression middleware (zip-bomb cap) + `Idempotency-Key` forwarding (FE) & dedup store/middleware (BE); `app/(dev)/force-data-mode.tsx`.
+**Lands:** `networkProfiles.ts` registry + parity sentinel skeleton; L1 harness (helpers A/B/C); M1–M7 tests; adaptive edge image profile (two outputs) + WebP + client gzip (FE) + backend request-decompression middleware (zip-bomb cap) + `Idempotency-Key` forwarding (FE) & dedup store/middleware (BE); **durable carnet image re-download path (BE) + capped local image cache (FE) (D4)**; `app/(dev)/force-data-mode.tsx`.
 **Why first:** registry is consumed by W2/W3. Compression + idempotency are the user-promised feature and their units are pure.
 **Security phase load-bearing on:** decompression zip-bomb cap.
 **Green:** mobile + backend `quality`/`e2e` green; parity sentinel green; coverage held.
@@ -361,7 +367,8 @@ Each wave = `spec → plan → red → green → verify → security → review`
 - **R5 — Loss-modelling fidelity** (Toxiproxy has no native packet loss). Mitigation: loss-driven retry already deterministically covered at L1/L2 so L3 loss is corroborative.
 - **R6 — Persisted `force-data-mode` leaking** across same-sim flows (zustand persist). Mitigation: route resets to `'auto'` on unmount OR flows always `clearState`.
 - **R7 — Coverage regression** from new files. Mitigation: every new file ships its own tests; thresholds held.
-- **R8 — Adaptive image local derivative storage growth** (D1: a second larger copy per photo). Mitigation: carnet derivative obeys the existing `offlineImageStorage` eviction/maxAge; verify quota in W1.
+- **R8 — Adaptive image local derivative storage growth** (D1/D4: a second larger copy per photo + re-download cache). Mitigation: the local image store gets a **dedicated cap** with LRU/maxAge eviction; re-download re-hydrates on demand so eviction is non-destructive (server copy is durable). Verify quota + eviction in W1.
+- **R9 — Server image persistence may not exist yet** (D4 assumes the recognition upload is durably stored + re-downloadable). Mitigation: W1 red phase verifies the chat-media persistence path first; if absent, server-side persistence + auth re-download endpoint is added within W1 (prod-safe scope).
 
 ---
 
