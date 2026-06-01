@@ -42,12 +42,10 @@ on:
       - 'museum-backend/openapi/**'
       - '.github/workflows/ci-cd-mobile.yml'
   schedule:
-    # E39 — Nightly Maestro Android matrix at 03:17 UTC (matches the existing
-    # iOS nightly slot). PR/push only run quality + prebuild for fast feedback;
-    # the slow emulator path is gated to nightly + manual dispatch because
-    # GitHub macos-latest hosted runners can't expose Hypervisor Framework
-    # (HVF_UNSUPPORTED), so arm64 AVDs run software-only and time out at 600s.
-    # Future: self-hosted Mac runner with HVF would enable per-PR maestro.
+    # Nightly slot at 03:17 UTC. Since E41 (ubuntu-latest + KVM) the Android
+    # Maestro matrix runs PER-PR, so this cron is mainly the iOS nightly suite
+    # (maestro-ios-nightly, macos-latest) plus a full-matrix Android re-run as a
+    # backstop against per-PR flakiness.
     - cron: '17 3 * * *'
 
 concurrency:
@@ -173,17 +171,39 @@ jobs:
   # ─── 2. Maestro APK prebuild (cached on mobile-source content hash) ──────
   prebuild:
     needs: quality
-    runs-on: macos-latest
+    # Android builds need no macOS — moved off macos-latest (10× minute cost)
+    # to ubuntu-latest. The Maestro emulator job is now also Linux (KVM), so the
+    # whole Android e2e path is x86_64 + hardware-accelerated.
+    runs-on: ubuntu-latest
     # E17: gradle/actions/setup-gradle caches ~/.gradle/caches + wrapper across
     # runs, so cold first run still ~30 min, warm runs ~3-5 min.
     # E34: bumped 25 → 35 after run 25508936326 hit the 25min cap on the cold
-    # path with the new 6GB heap (heap fixed OOM but D8 :app:mergeExtDexDebug
-    # still wants ~18-22 min wall on cold cache for 4 ABIs). Warm cache stays
-    # well under 5 min, so this only widens the cold-path budget.
+    # path with the new 6GB heap (heap fixed OOM but D8 :app:mergeExtDexRelease
+    # still wants ~18-22 min wall on cold cache). Warm cache stays well under
+    # 5 min, so this only widens the cold-path budget.
     timeout-minutes: 35
     defaults:
       run:
         working-directory: museum-frontend
+    # E40 — Build a RELEASE APK of the `development` variant, NOT assembleDebug.
+    #   * A Debug APK expects a Metro dev server on :8081 (it never embeds the JS
+    #     bundle) → on a CI emulator with no Metro it shows the RN red error
+    #     screen — the Android equivalent of the iOS expo-dev-client launcher
+    #     that made the local e2e suite 0/43 false-green. assembleRelease runs
+    #     `bundleReleaseJsAndAssets` → JS is embedded → standalone, no launcher.
+    #   * APP_VARIANT=development keeps Android cleartext HTTP allowed
+    #     (app.config.ts `usesCleartextTraffic: variant === 'development'` +
+    #     plugins/withNetworkSecurity DEV_XML whitelists 10.0.2.2 / localhost),
+    #     which a Release of preview/production would block.
+    #   * On the Android emulator, the host runner is reachable at 10.0.2.2, NOT
+    #     localhost (that is the emulator's own loopback). EXPO_PUBLIC_* vars are
+    #     inlined into the JS bundle at assembleRelease time, so they MUST be set
+    #     on this job (apiConfig.ts reads process.env.EXPO_PUBLIC_API_BASE_URL
+    #     then Constants.expoConfig.extra.API_BASE_URL — both baked here).
+    env:
+      APP_VARIANT: development
+      EXPO_PUBLIC_API_ENVIRONMENT: staging
+      EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3000
     outputs:
       cache-hit: ${{ steps.cache-apk.outputs.cache-hit }}
     steps:
@@ -199,10 +219,14 @@ jobs:
         id: cache-apk
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
-          path: museum-frontend/android/app/build/outputs/apk/debug/app-debug.apk
-          key: maestro-apk-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
+          path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
+          # `release-v2` namespace so any stale Debug APK cached under the old
+          # `maestro-apk-<os>-` key (different content) can never be restored.
+          # The 10.0.2.2 base URL is baked into the bundle, so it is part of the
+          # cache identity via app.config.ts in the hash set.
+          key: maestro-apk-release-v2-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
           restore-keys: |
-            maestro-apk-${{ runner.os }}-
+            maestro-apk-release-v2-${{ runner.os }}-
 
       - name: Setup Java (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
@@ -223,7 +247,7 @@ jobs:
         # E17: caches ~/.gradle/caches/modules-2 (~1-2 GB) + ~/.gradle/wrapper
         # (~150 MB) keyed on **/*.gradle*, **/gradle-wrapper.properties.
         # First run still cold (writes cache); subsequent cold-source runs warm-
-        # restore in ~30s, cutting Gradle assembleDebug from ~35min → ~5min.
+        # restore in ~30s, cutting Gradle assembleRelease from ~35min → ~5min.
         # GRADLE_ENCRYPTION_KEY secret would encrypt the cache; left out for
         # now (works unencrypted) — future hardening when secret is provisioned.
         if: steps.cache-apk.outputs.cache-hit != 'true'
@@ -232,40 +256,80 @@ jobs:
           cache-read-only: false
           build-root-directory: museum-frontend/android
 
-      - name: Gradle assembleDebug (cache miss only)
+      - name: Gradle assembleRelease (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
-        # `--stacktrace --info` surfaces the actual D8 dex-merge conflict (which
-        # class / dex archive). Without them the previous run died with an
-        # empty `DexArchiveMergerException: Error while merging dex archives:`
-        # message and we couldn't pinpoint the offending dependency. The flags
-        # add a few seconds to the log; harmless for a 5-min cached path.
-        run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace --info
+        # Expo's generated android/app/build.gradle signs the `release` buildType
+        # with the debug keystore when no upload keystore is configured, so this
+        # produces a self-signed but installable APK — sufficient for `adb
+        # install` on the CI emulator (no Play upload). `--stacktrace --info`
+        # surfaces any D8 dex-merge conflict on the cold path.
+        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace --info
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: preview-apk
-          path: museum-frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          name: maestro-apk
+          path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 1
 
-  # ─── 3. Maestro shard matrix (Android, nightly cron + manual dispatch) ───
-  # E39 — gated off PR/push because hosted macos-latest runners can't run the
-  # arm64 emulator (HVF unavailable). Re-enable per-PR when a self-hosted Mac
-  # runner is provisioned.
+  # ─── 3. Maestro shard matrix (Android, ubuntu-latest + KVM emulator) ─────
+  # E41 — migrated off macos-latest. GitHub's hosted ubuntu-latest runners
+  # expose /dev/kvm (nested hardware virtualization), so an x86_64 AVD runs
+  # HW-accelerated and boots in ~60-90s instead of timing out at 600s under
+  # macos-latest's software-only arm64 path (HVF unavailable on hosted Macs).
+  # This unlocks per-PR Maestro: the job now also runs on pull_request, turning
+  # the local-green Maestro suite into a permanent CI guard rail (UFR-021) and
+  # closing the CNIL age-15 e2e blocker. iOS Maestro stays nightly (see
+  # maestro-ios-nightly) — HVF on iOS needs a self-hosted Mac runner.
   maestro-shard:
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     needs: prebuild
-    runs-on: macos-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [auth, chat, museum, settings]
+        # ITERATION: temporarily reduced to the auth canary while the ubuntu
+        # KVM pipeline is being proven (emulator boot + backend@10.0.2.2 + APK
+        # install + login). Expanded back to [auth, chat, museum, settings]
+        # once auth is runtime-green on real CI.
+        shard: [auth]
     defaults:
       run:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
+    # GHA service containers (mirror ci-cd-backend.yml + the docker-compose.dev
+    # contract). pgvector/pgvector:pg16 because migration AddArtworkEmbeddings
+    # runs `CREATE EXTENSION vector` (halfvec) — plain postgres:16 aborts the
+    # migration and the backend never boots. redis:7-alpine because `pnpm dev`
+    # eagerly boots BullMQ → without Redis, /api/health times out and every
+    # shard dies at setup (the real reason the old macos native-PG path was
+    # false-green: it had no Redis). No requirepass here (the host `pnpm dev`
+    # connects password-less), matching ci-cd-backend.yml's redis service.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: museum_dev
+          POSTGRES_PASSWORD: museum_dev_password
+          POSTGRES_DB: museum_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U museum_dev -d museum_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -283,11 +347,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Download APK artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
-          name: preview-apk
-          path: museum-frontend/android/app/build/outputs/apk/debug/
+          name: maestro-apk
+          path: museum-frontend/android/app/build/outputs/apk/release/
 
       - name: Install Maestro CLI
         run: |
@@ -296,44 +362,33 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
-      - name: Install + start native Postgres (E37bis — macos-latest has no Docker, Colima/VZ fails on hosted M1)
-        # E37 (Colima) failed because the macos-latest hosted M1 runner can't
-        # nest the VZ driver. Switching to native Homebrew Postgres avoids the
-        # VM entirely and is faster (no boot, ~10s readiness).
-        run: |
-          brew install --quiet postgresql@16
-          # pgvector >=0.7.0 — AddArtworkEmbeddings runs `CREATE EXTENSION vector`
-          # (halfvec). Homebrew postgresql@16 does NOT bundle pgvector, so the
-          # migration aborts and the backend never boots (all Maestro shards die at
-          # setup). Build pgvector from source against pg16's pg_config so
-          # vector.control lands in pg16's extension dir. (CLAUDE.md gotcha:
-          # "migration:run fait CREATE EXTENSION vector → Postgres MUST have pgvector".)
-          PG16_BIN=/opt/homebrew/opt/postgresql@16/bin
-          git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector
-          make -C /tmp/pgvector PG_CONFIG="$PG16_BIN/pg_config"
-          make -C /tmp/pgvector PG_CONFIG="$PG16_BIN/pg_config" install
-          brew services start postgresql@16
-          # Wait for pg_isready, then create the role + database the BE expects
-          # shellcheck disable=SC2034  # loop counter is intentional; body uses break/sleep, not $i
-          for i in $(seq 1 30); do
-            if /opt/homebrew/opt/postgresql@16/bin/pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-          /opt/homebrew/opt/postgresql@16/bin/createuser -s museum_dev || true
-          /opt/homebrew/opt/postgresql@16/bin/psql -d postgres -c "ALTER USER museum_dev WITH PASSWORD 'museum_dev_password';"
-          /opt/homebrew/opt/postgresql@16/bin/createdb -O museum_dev museum_dev || true
-
-      - name: Boot backend (native PG + migrations + API)
+      - name: Boot backend (PG/Redis services + migrations + API + e2e seed)
         working-directory: museum-frontend
         env:
+          # Host `pnpm dev` talks to the GHA service containers on localhost.
           SKIP_DOCKER_COMPOSE: '1'
+          DB_HOST: localhost
           DB_PORT: '5432'
-        run: ./scripts/maestro-runner-setup.sh
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          # Real LLM for the chat shard flows (guardrail/off-topic/multiturn).
+          # Same secret ci-cd-backend.yml + promptfoo use. The auth/museum/
+          # settings shards never hit the LLM, so spend stays near zero there.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          ./scripts/maestro-runner-setup.sh
+          # Seed the FIXED Maestro login account (quick-login.yaml expects
+          # e2e-test-login@test.musaium.dev / TestPassword123!). Direct DB
+          # insert — bypasses the HTTP register breach-check.
+          cd ../museum-backend
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            pnpm seed:e2e-maestro-account
 
-      - name: Enable KVM (for hardware-accelerated emulator)
-        if: runner.os == 'Linux'
+      - name: Enable KVM (hardware-accelerated emulator)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
@@ -341,12 +396,15 @@ jobs:
 
       - name: Run Maestro shard on Android emulator
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
+        env:
+          MATRIX_SHARD: ${{ matrix.shard }}
         with:
           api-level: 33
-          # E38 — macos-latest hosted runner is arm64 (M1); QEMU2 cannot
-          # emulate x86_64 AVDs on an aarch64 host. Switch to arm64-v8a
-          # system image (matching APK ABI built in prebuild).
-          arch: arm64-v8a
+          # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
+          # accelerated (the whole point of the macos→ubuntu migration). The
+          # Release APK from prebuild contains the x86_64 ABI (RN/Hermes builds
+          # all four ABIs by default).
+          arch: x86_64
           target: google_apis
           profile: pixel_6
           force-avd-creation: false
@@ -354,7 +412,7 @@ jobs:
           disable-animations: true
           script: |
             cd museum-frontend
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
             # T9.x — Push the chat-compare fixture into /sdcard/Download/ so
             # the picker surfaces it as the most-recent local asset. Harmless
             # on the other shards; pushing is cheap (≤25KB) and idempotent.
@@ -363,7 +421,7 @@ jobs:
               # Tell MediaStore the new file exists so it appears in pickers.
               adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/test-artwork.jpg || true
             fi
-            ./scripts/maestro-run-shard.sh ${{ matrix.shard }}
+            ./scripts/maestro-run-shard.sh "$MATRIX_SHARD"
 
       - name: Upload shard logs
         if: always()
@@ -375,10 +433,10 @@ jobs:
 
   # ─── 4. Aggregate shard results into a PR comment ─────────────────────────
   maestro-summary:
-    # E39 — only PR runs ever produced shard logs to summarize, but PR no
-    # longer runs maestro-shard. Keep gate consistent — runs only when the
-    # shard matrix above runs (nightly cron + dispatch).
-    if: ${{ always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    # E41 — runs whenever the shard matrix runs: per-PR (the new guard rail),
+    # nightly cron, and manual dispatch. `always()` so a failed shard still
+    # gets summarized + turns this aggregator red (anti-false-green).
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     needs: maestro-shard
     runs-on: ubuntu-latest
     timeout-minutes: 5

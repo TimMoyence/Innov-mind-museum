@@ -57,6 +57,7 @@
     "seed:kb-canon": "ts-node -r tsconfig-paths/register scripts/seed-kb-canon.ts",
     "seed:kb-canon:host": "bash scripts/with-host-env.sh ts-node -r tsconfig-paths/register scripts/seed-kb-canon.ts",
     "seed:smoke-account": "ts-node -r tsconfig-paths/register scripts/seed-smoke-account.ts",
+    "seed:e2e-maestro-account": "ts-node -r tsconfig-paths/register scripts/seed-e2e-maestro-account.ts",
     "seed:perf": "ts-node -r tsconfig-paths/register scripts/seed-perf-load.ts",
     "prune:retention": "ts-node -r tsconfig-paths/register scripts/prune-retention.ts",
     "audit-chain:verify": "ts-node -r tsconfig-paths/register scripts/audit-chain-verify.ts",
