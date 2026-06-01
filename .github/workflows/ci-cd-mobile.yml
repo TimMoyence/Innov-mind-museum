@@ -457,6 +457,25 @@ jobs:
           path: museum-frontend/.maestro/logs/
           retention-days: 7
 
+      # Diagnostics for failing flows: the backend log carries the exact HTTP
+      # response of each register/login attempt (201 vs 409/422/500), and
+      # Maestro's debug dir (~/.maestro/tests/<ts>/) carries the view hierarchy
+      # + screenshot of the screen the app was actually on when an assertion
+      # failed. Collected into one dir so a single artifact has both.
+      - name: Collect failure diagnostics (backend log + Maestro hierarchy)
+        if: always()
+        run: |
+          mkdir -p /tmp/diag
+          cp /tmp/backend.log /tmp/diag/backend.log 2>/dev/null || true
+          cp -r "$HOME/.maestro/tests" /tmp/diag/maestro-tests 2>/dev/null || true
+      - name: Upload failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: maestro-shard-${{ matrix.shard }}-diag
+          path: /tmp/diag/
+          retention-days: 7
+
   # ─── 4. Aggregate shard results into a PR comment ─────────────────────────
   maestro-summary:
     # E41 — runs whenever the shard matrix runs: per-PR (the new guard rail),
