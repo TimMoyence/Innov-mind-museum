@@ -352,8 +352,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: museum-frontend/package-lock.json
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+      # No `pnpm/action-setup` here: the backend boot script
+      # (maestro-runner-setup.sh) runs `corepack enable`, which resolves pnpm
+      # per-package from each package.json's `packageManager` field (the repo
+      # SSOT — museum-backend = pnpm@10.8.0) — the canonical way the backend is
+      # launched, and it sidesteps the action's "multiple versions" error.
       - name: Setup Java
         uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9  # v4
         with:
