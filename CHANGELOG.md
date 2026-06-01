@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Quota free-tier mensuel — 402 désormais émis à la limite (2026-06-01)
+
+Run `/team` UFR-022 fresh-context (`2026-06-01-quota-tuple-402`). Reviewer APPROVED 1er pass
+(weightedMean 92.0). Security PASS (ferme OWASP API4:2023). Aucun ADR (fix de défaut, contrats
+`MonthlyQuotaRepo` + HTTP 402 inchangés). Aucune migration DB.
+
+#### Fixed
+
+- **Backend — le cap mensuel free-tier n'était jamais appliqué (402 jamais émis).**
+  `POST /api/chat/sessions` renvoyait **201 au lieu de 402 QUOTA_EXCEEDED** à la limite
+  (`FREE_TIER_MONTHLY_SESSION_LIMIT`, défaut 3), et `sessions_month_count` n'était pas incrémenté.
+  Cause racine : `PgMonthlyQuotaRepo.tryConsume` lisait le retour de
+  `dataSource.query("UPDATE…RETURNING")` comme un tableau de rows plat, alors que TypeORM 0.3.28
+  renvoie le **tuple `[rows[], affectedCount]`** — `result.length` valait toujours 2 (garde over-limit
+  jamais déclenchée) et `result[0]` (tableau vide à la limite) était traité comme une row truthy.
+  Fix : garde `Array.isArray(result[0])` (tuple vs forme plate) ⇒ `rows.length === 0` ⇒ `null` ⇒ 402.
+  SQL `UPDATE…WHERE…RETURNING` byte-identique (atomicité préservée). Confirmé live :
+  `count=3 → 402`, cycle `0→3 = 201` puis `402`. Dual RED (unit tuple-replay + intégration real-pg)
+  ferme le faux-vert du test middleware mocké (UFR-017).
+
 ### Museum picker — local `id` exposed + OSM rows selectable (2026-06-01)
 
 Run `/team` UFR-022 fresh-context (`2026-06-01-museum-picker-osm-select`). Reviewer APPROVED 1st pass
