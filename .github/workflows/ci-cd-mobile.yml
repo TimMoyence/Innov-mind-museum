@@ -433,7 +433,15 @@ jobs:
           target: google_apis
           profile: pixel_6
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # E41 — boot reliability: a prior run hit "Timeout waiting for emulator
+          # to boot" (the same config booted in 49s the run before — hosted-runner
+          # flakiness). Raise the boot timeout to 15min and give the AVD more
+          # RAM/cores. `-no-snapshot` forces a clean cold boot every run (no
+          # snapshot load/save), which avoids corrupt-snapshot boot hangs.
+          emulator-boot-timeout: 900
+          ram-size: 4096M
+          cores: 3
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           # E41 — the runner executes each script LINE in its own shell (a
           # `cd` does NOT persist to the next line), so use repo-root-relative
