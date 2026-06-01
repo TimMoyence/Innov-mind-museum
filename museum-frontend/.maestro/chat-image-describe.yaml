@@ -1,0 +1,63 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: IMAGE → AI describes a photographed artwork (vision LLM).
+#
+# This is the C2 image-DESCRIBE path (attach a gallery photo → POST /chat/message
+# with the image → the vision LLM, e.g. gpt-4o, describes the artwork), which is
+# DISTINCT from /chat/compare (SigLIP visual-similarity carousel). Describe needs
+# only the LLM vision provider (OpenAI key, live locally) — no SigLIP model — so
+# it is exercisable on the local sim, unlike chat-compare.
+#
+# Prereqs: the test fixture must be in the sim photo library:
+#   xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg
+# (addmedia works on a settled sim; the picker shows the thumbnail grid.)
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+# ── Open the attachment picker → Gallery (system photo picker) ──
+- tapOn:
+    id: "composer-attach-button"
+- waitForAnimationToEnd
+- tapOn:
+    id: "attachment-picker-gallery"
+- waitForAnimationToEnd
+# expo-image-picker may request media-library permission on first use.
+- tapOn:
+    text: "Allow|Allow Access to All Photos|Autoriser|Tout autoriser|Select Photos|Sélectionner des photos"
+    optional: true
+- waitForAnimationToEnd
+
+# ── Pick the seeded fixture: native PHPicker shows a thumbnail grid (no
+# filenames), so tap the top-left cell (most-recent asset = the fixture). The
+# filename tap is a fallback for documents-style pickers. ──
+- tapOn:
+    text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
+    optional: true
+- waitForAnimationToEnd
+# Some PHPicker variants need an explicit "Add"/"Choose" confirm after selection.
+- tapOn:
+    text: "Add|Choose|Ajouter|Choisir|Done|OK"
+    optional: true
+- waitForAnimationToEnd
+
+# ── Composer now carries the image thumbnail; add a question and send ──
+- tapOn:
+    id: "chat-input"
+- inputText: "What can you tell me about this artwork?"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+
+# ── A real assistant message lands: the vision LLM described the photographed
+# artwork (a genuine image round-trip through the UI). chat-bubble-assistant is
+# only present once a real assistant message exists. ──
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 60000
+- assertVisible:
+    id: "chat-bubble-assistant"

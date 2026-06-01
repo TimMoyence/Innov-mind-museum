@@ -1,0 +1,36 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: VERY LONG input → graceful real round-trip.
+#
+# Neither the composer (ChatInput.tsx has no maxLength) nor the backend send
+# schema (chat-session.schemas.ts:142 `text: optionalNonEmptyString`, no .max())
+# caps the message length, so a long message is a legitimate input. This sends a
+# ~1.5k-char rambling-but-on-topic art question through the UI and asserts a real
+# assistant bubble comes back — proving long input is handled gracefully (not
+# truncated to failure, not crashed, not stuck pending).
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+- tapOn:
+    id: "chat-input"
+- inputText: "I have been thinking a great deal about the development of European painting and I would love a thorough explanation, because I keep getting confused about how the different periods connect to one another. Could you walk me through how the Renaissance emphasis on linear perspective and anatomical precision, as seen in artists like Leonardo da Vinci and Raphael, eventually gave way to the dramatic light and movement of the Baroque period with painters such as Caravaggio and Rubens, and then how that in turn influenced the more restrained Neoclassical style, before the Romantics reacted against all of it with emotion and the sublime, and finally how the Impressionists like Monet and Renoir broke from academic tradition entirely by painting light and fleeting moments outdoors? I am especially curious about which specific technical innovations, materials, and changes in patronage drove each of these transitions, and whether the museums of a city like Bordeaux would typically hold representative works from each of these movements so that a visitor could trace the whole arc in a single afternoon. Please be as detailed as you can about the through-line connecting these eras."
+# NOTE: no hideKeyboard here. With a ~1.5k-char multiline value the composer
+# expands and Maestro's hideKeyboard heuristic tap lands on an interactive area
+# and aborts ("try tapping a non-interactive element"). The send-button lives in
+# the composer row ABOVE the keyboard, so it stays tappable with the keyboard up.
+- tapOn:
+    id: "send-button"
+
+# The long message echoes (use a distinctive substring; Maestro anchors text on
+# the full element, so wrap in .*).
+- assertVisible:
+    text: ".*development of European painting.*"
+
+# A real assistant message lands despite the long prompt.
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 60000
+- assertVisible:
+    id: "chat-bubble-assistant"

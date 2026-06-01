@@ -1,13 +1,27 @@
 appId: com.musaium.mobile.preview
 ---
-# KNOWN-BLOCKED (local sim Release): the visual-compare round-trip needs a photo
-# fixture in the simulator's library (`xcrun simctl addmedia`) that the native
-# PHPicker can select, so `useCompareTrigger` POSTs /chat/compare. Locally
-# `simctl addmedia` hangs and the fixture is NOT selectable — the picker shows no
-# pickable asset, no /chat/compare request reaches the backend (verified via
-# backend logs), and the "Similar artworks" carousel never renders. This is a
-# NIGHTLY/CI-only flow (CI uploads the fixture in its pipeline). The flow still
-# exercises chat entry → attachment picker → "Compare" action wiring.
+# KNOWN-BLOCKED (local sim Release) — RE-DIAGNOSED 2026-06-01. The previously
+# recorded cause ("simctl addmedia hangs, fixture not selectable, no /chat/compare
+# request reaches the backend") was WRONG. Verified on iPhone 17 / iOS 26.5:
+#   - `xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg` returns
+#     exit 0 instantly on a settled sim (the earlier "hang" was transient
+#     post-boot MediaServices/Photos daemon state).
+#   - The fixture IS selectable: the top-left PHPicker cell (point 15%,30%) picks
+#     it, and `useCompareTrigger` DOES fire POST /api/chat/compare (confirmed in
+#     backend logs: compare_request with a queryEmbeddingHash, userId 38).
+# The REAL blocker is backend-side: the SigLIP ONNX encoder model
+# (`./models/siglip2-base-patch16-224.onnx`, ~340MB) is absent in the local
+# Docker backend, so every compare returns HTTP 503 "Visual similarity encoder is
+# temporarily unavailable" (log: siglip_onnx_session_create_failed → fallbackReason
+# encoder_unavailable). The model is NOT in git and its GCS bucket
+# (musaium-models-public) is not yet provisioned (see museum-backend/scripts/
+# fetch-models.sh TODO(ops)); /chat/compare additionally needs seeded
+# artwork_embeddings to return matches. Both are backend-infra prerequisites that
+# CI/nightly provisions, so this stays a NIGHTLY/CI-only flow. The UI wiring (chat
+# entry → attachment picker → Compare → pick → POST /chat/compare) is fully
+# exercised locally and the app degrades gracefully (an "Unexpected server error"
+# banner, no crash). NOTE: the image-DESCRIBE path (chat-image-describe.yaml) uses
+# the vision LLM (no SigLIP) and IS runtime-green locally.
 # Chat Compare Flow (C3 Image Comparative — Cycle D Option C).
 #
 # Validates visual similarity matching via the REAL trigger: the "Compare"

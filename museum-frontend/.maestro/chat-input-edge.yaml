@@ -1,0 +1,40 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: EDGE inputs → empty send is a no-op, garbage is handled.
+#
+# Two edge cases in one session:
+#   (1) EMPTY send — the composer guards empty/whitespace text
+#       (chatSessionLogic.pure.ts:295 trims, send-button onSend no-ops on empty),
+#       so tapping send with no text must NOT create a message. We assert no
+#       assistant bubble appears and the composer stays put.
+#   (2) GARBAGE — random non-language tokens are not a keyword block; they reach
+#       the LLM, which responds gracefully (clarify / redirect). We assert a real
+#       assistant bubble lands (no crash on nonsense input).
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+# ── (1) Empty send → no-op ──
+# Tap send with an empty composer. Nothing should be posted.
+- tapOn:
+    id: "send-button"
+- assertNotVisible:
+    id: "chat-bubble-assistant"
+- assertVisible:
+    id: "chat-input"
+
+# ── (2) Garbage input → graceful LLM response ──
+- tapOn:
+    id: "chat-input"
+- inputText: "qwzx!! 9384 ~~~ zzzplargh ++ %%% kkkrrr"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+- assertVisible:
+    text: ".*zzzplargh.*"
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
+- assertVisible:
+    id: "chat-bubble-assistant"

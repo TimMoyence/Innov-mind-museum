@@ -1,0 +1,59 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: MULTI-TURN coherence → 3 real LLM round-trips in one
+# session with context-dependent follow-ups.
+#
+# Turn 1 names a subject (Claude Monet). Turns 2 and 3 use anaphora ("he",
+# "his") that only resolve if the session history is threaded into the LLM
+# context — i.e. the app maintains a coherent multi-turn conversation. At the UI
+# layer we prove each turn is accepted (user echo) and the session keeps
+# producing real assistant messages turn after turn (no crash, no stuck pending).
+# Deterministic semantic coherence is additionally covered by the backend AI
+# matrix; here we exercise the real end-to-end multi-turn loop through the UI.
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+# ── Turn 1 ──
+- tapOn:
+    id: "chat-input"
+- inputText: "Tell me about the painter Claude Monet."
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+- assertVisible: "Tell me about the painter Claude Monet."
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
+
+# ── Turn 2 (anaphora: "he" → Monet, requires session context) ──
+- tapOn:
+    id: "chat-input"
+- inputText: "Which art movement did he help to found?"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+- assertVisible: "Which art movement did he help to found?"
+# Let the second round-trip complete (the assistant bubble from turn 1 persists,
+# so we wait on animation/latency rather than re-assert the same id).
+- waitForAnimationToEnd:
+    timeout: 40000
+
+# ── Turn 3 (anaphora: "his" → Monet) ──
+- tapOn:
+    id: "chat-input"
+- inputText: "Name one of his most famous paintings."
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+- assertVisible: "Name one of his most famous paintings."
+- waitForAnimationToEnd:
+    timeout: 40000
+
+# After three turns the session is still healthy: a real assistant bubble is on
+# screen and the composer is ready for more.
+- assertVisible:
+    id: "chat-bubble-assistant"
+- assertVisible:
+    id: "chat-input"

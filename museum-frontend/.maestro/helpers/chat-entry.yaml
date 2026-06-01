@@ -1,0 +1,103 @@
+appId: com.musaium.mobile.preview
+---
+# Helper: launch fresh → decline analytics → login → home → open a new
+# conversation → accept the AI-disclosure sheet → land on the chat composer
+# (chat-input visible). Extracted verbatim from the proven chat-flow.yaml
+# Phase 0→3 so the conversation-category flows (insult / injection / off-topic /
+# multi-turn / long-input / garbage) share ONE proven entry path instead of
+# duplicating ~50 lines each.
+#
+# Prerequisites (same as chat-flow):
+#   - Seeded account e2e-test-login@test.musaium.dev / TestPassword123!
+#   - Keychain reset before the run (`xcrun simctl keychain booted reset`) so
+#     the auth screen actually shows (clearState does NOT clear the Keychain).
+#   - Backend on localhost:3000 with a working LLM provider.
+#
+# Postcondition: chat-input is visible; the caller types its message + asserts
+# the category-specific response.
+
+# ── Phase 0: Launch fresh + log in (Maestro 2.5.1 does NOT auto-launch) ──
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+# Systemic interceptor #1 — analytics consent banner mounts a beat AFTER the
+# auth screen (async consent read); wait for it, THEN decline (not optional —
+# an immediate optional tap races and misses it).
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+# Systemic interceptor #2 — iOS native "Save Password?" dialog
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+
+# ── Phase 1: Land on home ──
+# Confirm we reached home via the always-present hero text. We deliberately do
+# NOT assert home-carnet-link here: once the account has a prior conversation,
+# home renders a "Reprendre votre dernière conversation" card that pushes the
+# carnet link below the fold, and assertVisible only checks the viewport. The
+# UFR-021 anchor for home lives in chat-flow.yaml; this helper only needs to
+# reach the chat composer.
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ── Phase 2: Reach the chat composer via the DETERMINISTIC museum path ──
+# We deliberately do NOT use the home default-conversation CTA: it is the last
+# child of the home ScrollView, sits half-under the bottom tab bar, and once the
+# account has a prior conversation the home layout shifts (a "Reprendre" resume
+# card appears) so the CTA tap lands on the tab bar / misses entirely — flaky and
+# state-dependent. The Museums tab → museum-card → "Démarrer un chat ici"
+# (museum-sheet-start-chat) path (mirrors museum-chat-flow.yaml, a green flow) is
+# layout-stable and history-independent. The conversation context (museum vs
+# default) is irrelevant for the guardrail/LLM categories the callers exercise.
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+
+# ── Phase 3: Accept the AI-disclosure consent sheet (covers chat-input) ──
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
