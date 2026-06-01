@@ -58,8 +58,18 @@ const AI_TESTS_DIR = resolve(__dirname, '../../tests/ai');
  * multilingual insult/injection blocks (DE/JA/AR/FR/ZH) verified against the
  * real INSULT_KEYWORDS / INJECTION_PATTERNS lists. Current tree = 79 it()
  * blocks across 8 files.
+ *
+ * 2026-06-01 (c) — bumped 79 → 92 after adding guardrail-v2-live.ai.test.ts:
+ * the first suite to exercise the two V2 layers end-to-end with NO mock —
+ * the real LLM-Guard sidecar (ProtectAI) and the real gpt-4o-mini judge. 13
+ * `it()` blocks proving: sidecar blocks injection/toxicity/PII(+redaction) &
+ * allows benign; sidecar DOWN → fail-CLOSED; enforce vs observe-only; judge
+ * catches a V1-allowed off-topic (policy:off_topic) & does not over-block art;
+ * judge timeout AND budget-exhaustion → fail-OPEN; per-call budget accounting.
+ * Locks the fail-CLOSED (sidecar) / fail-OPEN (judge) security invariants.
+ * Current tree = 92 it() blocks across 9 files.
  */
-const MIN_TOTAL_AI_TESTS = 79;
+const MIN_TOTAL_AI_TESTS = 92;
 
 /**
  * Matches: it(, test(, it.skip(, it.only(, it.each(`...`)(, it.todo(,
