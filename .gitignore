@@ -264,3 +264,7 @@ museum-backend/cartels-*.pdf
 # Local pnpm content-addressable store (created by `pnpm install --prefer-offline`
 # in some env setups). Never source-tracked.
 .pnpm-store/
+
+# Tesseract OCR training data (e.g. museum-backend/eng.traineddata). Multi-MB
+# binary models, downloaded/runtime artifacts — never source-tracked.
+*.traineddata
