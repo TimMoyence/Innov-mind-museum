@@ -42,7 +42,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
           run_install: false
 
       # Monorepo — pnpm-lock.yaml lives in each app dir, not at the repo
