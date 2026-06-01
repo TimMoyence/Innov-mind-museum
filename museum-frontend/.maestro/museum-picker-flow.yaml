@@ -75,6 +75,15 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "museum-picker-row-.*"
     index: 0
+# First chat entry shows a one-time "Réponses générées par IA" disclosure modal
+# that overlays the composer — dismiss it so the chat-input becomes tappable.
+# (Verified at runtime 2026-06-01 on iOS 26 sim: without this the flow stalls on
+# the disclosure sheet, not the chat screen.)
+- tapOn:
+    text: "Accepter tout|Accept all"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 5000
 - extendedWaitUntil:
     visible:
       id: "chat-input"

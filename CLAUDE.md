@@ -156,6 +156,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **Retirer un pin `@types/*` d'un `pnpm.overrides` ne suffit PAS à le bumper** — si le `@types` parent déclare une range qui matche déjà la version pinnée, pnpm garde le lockfile. Forcer : déclarer le sous-paquet en `devDependencies` directe avec la range cible (ex `@types/express-serve-static-core: ^5.1.1`), puis re-résoudre. Réf `museum-backend/package.json`. TD-11.
 - **Auth tokens device-bound (museum-frontend)** — `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` à `expo-secure-store` (device-bound, non-backup-migratable) : un refresh token ne migre pas vers un autre appareil via une sauvegarde iCloud/Google. Ne pas relâcher ce flag sans revue sécurité.
 - **MFA = web-admin-only en V1 (museum-frontend)** — la surface MFA mobile user-facing (écrans enrôlement/challenge/banner, route `mfa-enroll`, client `mfaApi`, hook screen-capture, flow Maestro) a été **retirée** (décision produit 2026-05-26, UFR-016, cf. ADR-017 Withdrawn-for-V1). `authService.login()` gère `mfaRequired` gracieusement (AppError `Forbidden`/`MFA_WEB_ONLY` → message i18n `error.auth.mfa_web_only`, jamais le token brut `MFA_REQUIRED`). L'enforcement backend (ADR-014) + l'admin web restent actifs. Aucun écran mobile n'affiche plus de secret TOTP.
+- **TypeORM `dataSource.query()` : SELECT renvoie `rows[]`, mais INSERT/UPDATE/DELETE…RETURNING renvoie le tuple `[rows[], affectedCount]`** — forme différente selon le type de requête (pg, TypeORM 0.3.28). Tout code qui fait `const r = await dataSource.query('UPDATE … RETURNING …')` puis lit `r[0]` comme une row, ou teste `r.length === 0`, est buggé : `r.length` vaut toujours 2 et `r[0]` est le **tableau** de rows (`[]` si 0 match). Lire via une garde `const rows = Array.isArray(r[0]) ? r[0] : r;` puis `rows.length === 0`. Bug réel : le quota free-tier (`monthly-session-quota.repo.pg.ts` `tryConsume`) ne bloquait jamais (402 jamais émis ; `result[0]=[]` truthy → `next()` → 201, compteur jamais incrémenté) — fix commit `f74ce7de`. Détail + incident antérieur (prune cron) : `lib-docs/typeorm/PATTERNS.md §4.10` + `LESSONS.md` (2026-05-08). Auditer les autres `query('…RETURNING')` raw.
 
 ## Environment Setup
 
@@ -353,7 +354,7 @@ TypeORM **v1.0.0 released 2026-05-19** ; le repo 0.3.x est archivé. Musaium = `
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (34581 symbols, 55824 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (35015 symbols, 56470 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
