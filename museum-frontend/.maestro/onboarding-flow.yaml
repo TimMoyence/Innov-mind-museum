@@ -79,6 +79,17 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Welcome to Musaium|Bienvenue sur Musaium"
     timeout: 10000
+# UFR-021 anchor for app/(stack)/onboarding.tsx — Settings → "Replay onboarding
+# guide" opened the /(stack)/onboarding route (the sentinel matches the
+# "/onboarding" route literal). The "Welcome to Musaium" greeting is the runtime
+# proof we reached the carousel; the deep-link re-resolves the same route (lands
+# back on slide 1).
+- openLink:
+    link: "musaium:///(stack)/onboarding"
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to Musaium|Bienvenue sur Musaium"
+    timeout: 10000
 - assertVisible:
     text: "Skip onboarding|Passer l'introduction"
 - assertVisible:

@@ -77,6 +77,18 @@ appId: com.musaium.mobile.preview
     timeout: 40000
 - assertVisible:
     text: "Démarrer un chat ici|Start Chat Here"
+# UFR-021 anchor for app/(stack)/museum-detail.tsx — the Museums tab → card →
+# sheet → "View details" tap above opened the /(stack)/museum-detail route (the
+# sentinel matches the "/museum-detail" route literal). The branded "Démarrer un
+# chat ici|Start Chat Here" CTA above is the runtime proof we reached the branded
+# detail; this deep-link re-resolves the same route (the screen renders the
+# start-chat CTA regardless of params).
+- openLink:
+    link: "musaium:///(stack)/museum-detail"
+- extendedWaitUntil:
+    visible:
+      text: "Démarrer un chat ici|Start Chat Here"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 3: Tap "Start Chat Here" → museum-context chat composer.

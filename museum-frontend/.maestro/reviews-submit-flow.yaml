@@ -79,6 +79,16 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Avis|Reviews"
     timeout: 40000
+# UFR-021 anchor for app/(stack)/reviews.tsx — Settings → "Ouvrir les avis"
+# opened the /(stack)/reviews route (the sentinel matches the "/reviews" route
+# literal). The "Avis|Reviews" title is the runtime proof we reached it; the
+# deep-link re-resolves the same route.
+- openLink:
+    link: "musaium:///(stack)/reviews"
+- extendedWaitUntil:
+    visible:
+      text: "Avis|Reviews"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 3: Open the write-review form

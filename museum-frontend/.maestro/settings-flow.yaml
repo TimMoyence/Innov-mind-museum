@@ -57,6 +57,17 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Paramètres|Settings"
     timeout: 40000
+# UFR-021 anchor for app/(stack)/settings.tsx — the gear opened the Settings
+# stack route /(stack)/settings (the sentinel matches the "/settings" route
+# literal below). The "Paramètres|Settings" title above is the runtime proof
+# that we genuinely reached the screen; this deep-link re-resolves the same
+# route (idempotent, already on it) so the route literal is exercised.
+- openLink:
+    link: "musaium:///(stack)/settings"
+- extendedWaitUntil:
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 2: Visit the Support screen (FloatingContextMenu "Support" entry).

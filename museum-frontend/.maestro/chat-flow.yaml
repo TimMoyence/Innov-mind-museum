@@ -53,18 +53,28 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Votre compagnon de musée|Your museum companion"
     timeout: 40000
+# UFR-021 anchor for app/(tabs)/home.tsx — the visit-notebook link
+# (testID home-carnet-link) is ALWAYS rendered on home (decision §0.5 + Q7),
+# so it is the stable per-screen marker for the home route.
+- assertVisible:
+    id: "home-carnet-link"
 
 # ──────────────────────────────────────────────
 # Phase 2: Start a new conversation -> reach the chat composer.
 #
 # The home default-conversation CTA ("Commencer une nouvelle conversation",
-# the LAST element in the home ScrollView) sits half-under the bottom tab bar
-# on this binary — the content does not scroll it clear of the tab bar, so a
-# tap on it lands on the "Musées" tab instead and routes to the nearby-museums
-# directory (the hybrid companion model hands off to a context picker before
-# chatting). We exercise that real home affordance (best-effort tap), then make
-# the directory deterministic by tapping the "Musées" tab explicitly. From the
-# directory: tap a museum card -> sheet -> "Démarrer un chat ici" -> chat.
+# the LAST element in the home ScrollView) starts a new conversation directly
+# on this binary: the tap creates the session and routes straight into chat,
+# where the AI-disclosure consent sheet ("Accepter tout") mounts over the
+# composer. We exercise that real home affordance, then converge on the
+# AI-disclosure handling below.
+#
+# Defensive fallback: on some layouts the CTA can sit half-under the bottom tab
+# bar and the tap lands on the "Musées" tab instead, routing to the nearby
+# museums directory (the hybrid companion model hands off to a context picker).
+# If we end up in the directory (a `museum-card` is visible and no AI-disclosure
+# sheet appeared), pick the first museum and "Démarrer un chat ici" to reach the
+# same chat composer. Both branches converge on Phase 3.
 # ──────────────────────────────────────────────
 - scrollUntilVisible:
     element:
@@ -74,31 +84,27 @@ appId: com.musaium.mobile.preview
     visibilityPercentage: 30
 - tapOn:
     text: "Commencer une nouvelle conversation|Start a new conversation"
-    optional: true
 - waitForAnimationToEnd
 
-# Deterministic: ensure we are in the nearby-museums directory. The "Musées"
-# tab is always present in the bottom tab bar; tapping it is idempotent (a
-# no-op if already there).
-- tapOn:
-    text: ".*(Musées|Museums).*"
-- extendedWaitUntil:
-    visible:
-      id: "museum-card"
-    timeout: 40000
-
-# Pick the first museum as the chat context. Tapping a card opens the museum
-# sheet; "Démarrer un chat ici" (museum-sheet-start-chat) creates the session
-# and routes into chat.
-- tapOn:
-    id: "museum-card"
-    index: 0
-- extendedWaitUntil:
-    visible:
-      id: "museum-sheet-start-chat"
-    timeout: 40000
-- tapOn:
-    id: "museum-sheet-start-chat"
+# Fallback branch — only runs if the CTA landed us on the museums directory
+# instead of opening chat directly. Picking a card opens the museum sheet;
+# "Démarrer un chat ici" (museum-sheet-start-chat) creates the session and
+# routes into chat. If the CTA opened chat directly, `museum-card` is not
+# visible and this whole block is skipped.
+- runFlow:
+    when:
+      visible:
+        id: "museum-card"
+    commands:
+      - tapOn:
+          id: "museum-card"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "museum-sheet-start-chat"
+          timeout: 40000
+      - tapOn:
+          id: "museum-sheet-start-chat"
 
 # ──────────────────────────────────────────────
 # Phase 3: Handle the AI-disclosure consent sheet (first time only). It mounts

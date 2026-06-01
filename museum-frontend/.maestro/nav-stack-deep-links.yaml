@@ -156,6 +156,17 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Changer le mot de passe|Change Password"
     timeout: 15000
+# UFR-021 anchor for app/(stack)/change-password.tsx — the Settings security-row
+# tap above opened the /(stack)/change-password route (the sentinel matches the
+# "/change-password" route literal). The "Changer le mot de passe|Change
+# Password" title is the runtime proof we reached it; the deep-link re-resolves
+# the same route so the literal is genuinely exercised.
+- openLink:
+    link: "musaium:///(stack)/change-password"
+- extendedWaitUntil:
+    visible:
+      text: "Changer le mot de passe|Change Password"
+    timeout: 15000
 # The change-password screen has its own "Retour" button (common.back); the
 # hardware `back` does not pop it. Tap the button.
 - tapOn:
@@ -175,6 +186,16 @@ appId: com.musaium.mobile.preview
     visibilityPercentage: 1
 - tapOn:
     text: "Changer l'adresse email du compte|Change your account email"
+- extendedWaitUntil:
+    visible:
+      text: "Changer d'email|Change Email"
+    timeout: 15000
+# UFR-021 anchor for app/(stack)/change-email.tsx — the Settings security-row tap
+# above opened the /(stack)/change-email route (the sentinel matches the
+# "/change-email" route literal). The "Changer d'email|Change Email" title is the
+# runtime proof; the deep-link re-resolves the same route.
+- openLink:
+    link: "musaium:///(stack)/change-email"
 - extendedWaitUntil:
     visible:
       text: "Changer d'email|Change Email"
@@ -199,6 +220,16 @@ appId: com.musaium.mobile.preview
     text: "RGPD|Privacy"
     index: 0
 # privacy unique marker: the "Faits essentiels / Quick Facts" heading.
+- extendedWaitUntil:
+    visible:
+      text: "Faits essentiels|Quick Facts"
+    timeout: 15000
+# UFR-021 anchor for app/(stack)/privacy.tsx — the "RGPD|Privacy" menu tap above
+# opened the /(stack)/privacy route (the sentinel matches the "/privacy" route
+# literal). The "Faits essentiels|Quick Facts" heading is the runtime proof; the
+# deep-link re-resolves the same route.
+- openLink:
+    link: "musaium:///(stack)/privacy"
 - extendedWaitUntil:
     visible:
       text: "Faits essentiels|Quick Facts"
@@ -230,6 +261,16 @@ appId: com.musaium.mobile.preview
 # "Version X — Dernière mise à jour …" / "Version X — Last updated …"). The
 # "Politique de confidentialité" link is below the fold AND collapses its visible
 # text under a11y "Voir la politique de confidentialité", so use the version note.
+- extendedWaitUntil:
+    visible:
+      text: ".*(Version .* Dernière mise à jour|Version .* Last updated).*"
+    timeout: 15000
+# UFR-021 anchor for app/(stack)/terms.tsx — the "Ouvrir les conditions
+# d'utilisation" tap above opened the /(stack)/terms route (the sentinel matches
+# the "/terms" route literal). The version-note above is the runtime proof; the
+# deep-link re-resolves the same route.
+- openLink:
+    link: "musaium:///(stack)/terms"
 - extendedWaitUntil:
     visible:
       text: ".*(Version .* Dernière mise à jour|Version .* Last updated).*"
