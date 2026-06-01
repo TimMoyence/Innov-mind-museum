@@ -305,7 +305,10 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           if [ "$EVENT" = "pull_request" ]; then
-            echo 'shards=["smoke"]' >> "$GITHUB_OUTPUT"
+            # ITERATION (backlog chat/museum/settings Android remediation): run the
+            # three not-yet-validated shards in parallel on PR to collect failures.
+            # Revert to ["smoke"] before merging.
+            echo 'shards=["chat","museum","settings"]' >> "$GITHUB_OUTPUT"
           else
             echo 'shards=["auth","chat","museum","settings"]' >> "$GITHUB_OUTPUT"
           fi
@@ -497,6 +500,10 @@ jobs:
         with:
           name: maestro-shard-${{ matrix.shard }}-logs
           path: museum-frontend/.maestro/logs/
+          # Maestro writes its per-flow hierarchy/screenshots under a hidden
+          # `.maestro/tests/` dir; upload-artifact@v4 skips hidden files by
+          # default, so opt in to capture them.
+          include-hidden-files: true
           retention-days: 7
 
       # Diagnostics for failing flows: the backend log carries the exact HTTP
