@@ -204,6 +204,10 @@ jobs:
       APP_VARIANT: development
       EXPO_PUBLIC_API_ENVIRONMENT: staging
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3000
+      # @sentry/react-native's gradle integration auto-uploads JS sourcemaps on
+      # RELEASE builds and needs SENTRY_AUTH_TOKEN (absent here). Disable it: the
+      # Maestro APK only runs on the CI emulator and is never shipped.
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     outputs:
       cache-hit: ${{ steps.cache-apk.outputs.cache-hit }}
     steps:
@@ -254,16 +258,26 @@ jobs:
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a  # v4.4.3
         with:
           cache-read-only: false
-          build-root-directory: museum-frontend/android
+          # NOTE: `build-root-directory` is NOT a valid input for
+          # gradle/actions/setup-gradle@v4 (it warned + was ignored). The action
+          # caches ~/.gradle regardless of the project root, and the build runs
+          # from museum-frontend/android via `cd android` below.
 
       - name: Gradle assembleRelease (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
         # Expo's generated android/app/build.gradle signs the `release` buildType
         # with the debug keystore when no upload keystore is configured, so this
         # produces a self-signed but installable APK — sufficient for `adb
-        # install` on the CI emulator (no Play upload). `--stacktrace --info`
-        # surfaces any D8 dex-merge conflict on the cold path.
-        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace --info
+        # install` on the CI emulator (no Play upload).
+        #
+        # E41 — `-PreactNativeArchitectures=x86_64`: the CI emulator is x86_64,
+        # so build ONLY that ABI instead of the default 4 (armeabi-v7a, arm64-v8a,
+        # x86, x86_64). Quarters the native build's time/disk/RAM and removes the
+        # most likely cause of the silent process kill on the first run (the
+        # 4-ABI cold build at 25% config exhausted runner resources with no
+        # graceful Gradle error). `--info` dropped — it produced 23k lines that
+        # buried the real failure; `--stacktrace` alone surfaces a clean error.
+        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
