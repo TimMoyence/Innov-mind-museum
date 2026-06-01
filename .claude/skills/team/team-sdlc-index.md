@@ -37,7 +37,7 @@
 
 **Élagage agents 9→6 (2026-05-31)** : `doc-fetcher` + `doc-curator` fusionnés en `doc-cache` (fetch+curate en un spawn). `verifier` retiré comme agent — ses gates déterministes (lint/tsc/test/mutation) restent dans les hooks (`pre-complete-verify.sh`, `post-edit-*`) + CI ; son jugement (scope-boundary vs plan, spot-check du fichier le plus risqué, DoD-confirmation, lib-docs-reference assertion) est absorbé par le `reviewer`. `learning-curator` retiré (0 amendement produit en 77 runs). **Process-auditor v4 (retiré antérieurement)** : DoD/scope/spot-check/anti-hallucination absorbés par le `reviewer` ; semantic review aussi dans `reviewer`. Les hooks `team-hooks/` couvrent les portes déterministes.
 
-## 10 Protocoles (`team-protocols/`) — tous chargés (mode unique)
+## 13 Protocoles (`team-protocols/`) — tous chargés (mode unique)
 
 | Protocole | Fichier |
 |---|---|
@@ -51,6 +51,9 @@
 | Conflict resolution | [`conflict-resolution.md`](team-protocols/conflict-resolution.md) |
 | Systematic debugging | [`systematic-debugging.md`](team-protocols/systematic-debugging.md) — absorbé de superpowers (Q4) |
 | Receiving code review | [`receiving-code-review.md`](team-protocols/receiving-code-review.md) — absorbé de superpowers (Q4) |
+| Verification before completion | [`verification-before-completion.md`](team-protocols/verification-before-completion.md) — absorbé de superpowers (Q4) |
+| Finishing a dev branch | [`finishing-a-development-branch.md`](team-protocols/finishing-a-development-branch.md) — absorbé de superpowers (Q4) |
+| Brainstorming → design | [`brainstorming.md`](team-protocols/brainstorming.md) — absorbé de superpowers (Q4) |
 
 ## Templates (`team-templates/`)
 
@@ -193,3 +196,30 @@ Exemples : `/team compose:recap "ajouter pagination"` · `/team compose:semgrep,
 | **v13.UFR-022** | **2026-05-18** | **MODE UNIQUE.** Sélecteur pipeline + modes retirés. Pipeline 9-phase fixe. Step 4 split spec/plan ; Step 5 split red/green (FROZEN-TEST). Nouveau Step 4.5 doc-freshness (doc-fetcher + doc-curator → cache `lib-docs/`). Security + documenter toujours présents. Reviewer loop illimité ; cap 2 = intra-phase only. 4 nouveaux hooks (pure-doc/freshness/freeze/reference). 9 agents. 22 UFR (20 actifs). APC retiré. Cost gate = telemetry only |
 | **v13 index** | **2026-05-20** | Réécriture index : 6→9 agents, 12→22 UFR, suppression pipelines/modes/flux 7-13-phase, KB path corrigé `→ .claude/skills/team/team-knowledge/`, 11 hooks indexés, 8 skills morts purgés, templates UFR-022 ajoutés |
 | **v13.prune-9→6** | **2026-05-31** | Élagage agents 9→6. `doc-fetcher`+`doc-curator` → `doc-cache` (fetch+curate un spawn). `verifier` retiré : gates déterministes dans hooks+CI, jugement absorbé par `reviewer`. `learning-curator` + `/team learning:review` retirés (0 amendement en 77 runs ; `team-knowledge/lessons/` lecture seule). Phase `verify` devient gate déterministe sans agent. Pipeline 8-phase (spec→plan→doc-cache→red→green→verify[gate]→security→review→documenter). `security` conservé |
+| **v13.absorb-superpowers** | **2026-05-31** | Direction Q4 : /team reste primaire, absorbe le bon de superpowers (pas de bascule native). 5 skills absorbés (vendored, self-contained) : `systematic-debugging` + `receiving-code-review` (avec hooks+artefacts enforce) ; `verification-before-completion` + `finishing-a-development-branch` + `brainstorming` (disciplines sans hook). 13 protocoles, 13 hooks. Ledger ci-dessous |
+
+## Superpowers absorption ledger (Q4, 2026-05-31)
+
+/team reste primaire et **absorbe** le bon de superpowers plutôt que d'être remplacé par le natif (décision user Q4). Vendored = self-contained (aucune dépendance au plugin). Ce ledger empêche de ré-absorber du redondant.
+
+**Absorbés (5)** :
+| Skill | Traitement /team | Teeth |
+|---|---|---|
+| `systematic-debugging` | `team-protocols/systematic-debugging.md` + `editor.md` DEBUG PROTOCOL | hook `pre-complete-debug-log-check.sh` (artefact `debug-log.md` au cap `intraPhaseHookLoops≥2`) |
+| `receiving-code-review` | `team-protocols/receiving-code-review.md` + `editor.md`/`architect.md` | hook `pre-complete-review-response-check.sh` (artefact `review-response.md` + anti-sycophancy si `reviewerRejectionLoops≥1`) |
+| `verification-before-completion` | `team-protocols/verification-before-completion.md` + REGLE 17 + `editor.md` | aucun hook (le gate verify lance déjà les vraies commandes) |
+| `finishing-a-development-branch` | `team-protocols/finishing-a-development-branch.md` + Step 9 | aucun hook (décision user-facing) |
+| `brainstorming` | `team-protocols/brainstorming.md` + `architect.md` spec/plan | aucun hook (HARD-GATE déjà imposé par l'ordre spec→plan→red) |
+
+**Skippés (9, redondants avec l'existant)** :
+| Skill | Couvert par |
+|---|---|
+| `dispatching-parallel-agents` | REGLE 12 (parallélisme read-only, max 5) |
+| `executing-plans` | le pipeline 8-phase lui-même |
+| `requesting-code-review` | reviewer auto-spawné (Step 8) |
+| `subagent-driven-development` | /team EST subagent-driven (chaque phase = un Agent spawn) |
+| `test-driven-development` | red/green + frozen-test (plus fort : byte-frozen) |
+| `using-git-worktrees` | `feedback_team_worktree_orchestration` + gotchas CLAUDE.md (+ repris dans finishing-a-development-branch) |
+| `writing-plans` | architect phase plan (#2) |
+| `writing-skills` | méta — hors run applicatif |
+| `using-superpowers` | méta — chargement de skills |

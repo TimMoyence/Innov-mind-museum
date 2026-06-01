@@ -219,6 +219,8 @@ Self-verification report after each task:
 
 ### Verdict: READY-FOR-VERIFIER | BLOCKED-AT-LOOP-CAP
 ```
+
+**Verification-before-completion (absorption Q4, `team-protocols/verification-before-completion.md`)** : ne déclare JAMAIS `READY-FOR-VERIFIER` sans preuve fraîche. Lance la VRAIE commande (`pnpm test`/`pnpm lint`/`pnpm tsc`) dans CE run et cite l'exit code + le compte de fails. « should pass » / « looks correct » = pas une preuve. Aligné UFR-013.
 </output_format>
 
 <examples>

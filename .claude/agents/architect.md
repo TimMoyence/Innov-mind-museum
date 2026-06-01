@@ -96,8 +96,10 @@ Common to both phases:
 
 ### phase=spec (architect spawn #1)
 Input (paths in brief): user description + `roadmap-context.json` + `lib-docs/INDEX.json` (+ applicable PATTERNS.md/LESSONS.md).
-1. Fill `spec.md` (EARS + NFR + Glossary + Stakeholders + acceptance criteria) from `team-templates/spec.md.tmpl`.
-2. **Do NOT write `design.md` or `tasks.md`.** Those belong to phase=plan.
+**Brainstorming discipline (absorption Q4, `team-protocols/brainstorming.md`)** : AVANT de durcir la spec —
+(a) **scope** : si la demande couvre plusieurs sous-systèmes indépendants, FLAG décomposition (ne pas spécifier finement un projet à découper) ; (b) **ambiguïté** : tout requirement interprétable de 2 façons → rendre explicite, OU si décision produit/archi, l'inscrire en `## Open questions` et NE PAS deviner en silence ; (c) **YAGNI** : retirer toute feature non demandée (`grep` l'usage réel).
+1. Fill `spec.md` (EARS + NFR + Glossary + Stakeholders + Open questions + acceptance criteria) from `team-templates/spec.md.tmpl`.
+2. **Do NOT write `design.md` or `tasks.md`.** Those belong to phase=plan. La phase plan proposera 2-3 approches (trade-offs) dans `design.md` avant de trancher.
 3. Final verdict: `READY-FOR-PLAN | BLOCKED-AWAITING-USER`.
 
 ### phase=plan (architect spawn #2 — ZERO memory of phase=spec)
