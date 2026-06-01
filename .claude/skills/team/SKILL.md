@@ -381,6 +381,10 @@ Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.
    d. .claude/skills/team/team-hooks/pre-complete-debug-log-check.sh  ← SYSTEMATIC-DEBUGGING enforcement
       - Si intraPhaseHookLoops ≥ 2 (≥2 boucles correctives), exige debug-log.md complet (4 phases + Architecture question).
       - Exit 1 = FAIL = re-spawn fresh green AVEC le protocole team-protocols/systematic-debugging.md.
+   e. .claude/skills/team/team-hooks/pre-complete-review-response-check.sh  ← RECEIVING-CODE-REVIEW enforcement
+      - Si reviewerRejectionLoops ≥ 1 (un CHANGES_REQUESTED a eu lieu), exige review-response.md : verdict
+        par finding, Evidence: sur tout DISPUTE, ZÉRO accord performatif (anti-sycophancy UFR-013).
+      - Exit 1 = FAIL = re-spawn fresh AVEC team-protocols/receiving-code-review.md.
 2. Append STORY.md section `verify` avec les exit codes verbatim (UFR-013).
 3. Si un hook exit ≠ 0 → boucle corrective intra-phase OU re-spawn fresh la phase pointée. Pas de gate vert sans exit 0 réel (cf. feedback_verify_real_gate_not_global_exit).
 4. Update state.json.gates[] : {name:"verify", verdict:"PASS|FAIL", details:"<exit codes>"}.
@@ -473,10 +477,18 @@ Re-spawn protocol :
 1. Read reviewer JSON output: reSpawnPhase, reSpawnReason.
 2. Append handoff brief 00X-respawn.json with reSpawnReason as task.
 3. Spawn fresh Agent tool of the role for that phase (architect-spec/architect-plan/editor-red/editor-green).
+   → L'agent re-spawné suit team-protocols/receiving-code-review.md : il évalue chaque finding
+     contre le code réel AVANT d'implémenter (pas d'accord performatif), et écrit review-response.md
+     (verdict ACCEPT|DISPUTE|CLARIFY par finding ; Evidence: sur tout DISPUTE). Enforce par
+     pre-complete-review-response-check.sh au gate verify (Step 6) suivant.
 4. After phase completes, re-run downstream phases (e.g. green if reSpawnPhase=red, verify+security+review if reSpawnPhase=green).
 5. reviewerRejectionLoops += 1 (telemetry).
 6. NO cap check, NO warning surface to user, NO auto-block.
 ```
+> **Asymétrie fermée (2026-05-31, absorption Q4 receiving-code-review)** : la loop reste ILLIMITÉE côté
+> émission, mais le côté réception a désormais une discipline — un finding erroné se DISPUTE avec preuve,
+> il ne se subit pas. Empêche (a) le thrash infini sur mauvais finding, (b) la dégradation du code pour
+> satisfaire une review fausse. Frozen-test : finding "test faux" → BLOCK-TEST-WRONG, pas patch silencieux.
 
 **Override de cohérence** : si l'agent émet `verdict: BLOCK` (e.g. BLOCK-CONTEXT-LEAK) MAIS le mean ≥ 85, le verdict explicite agent prime (sécurité > metric). À l'inverse si mean < 70 mais verdict agent = APPROVED, le dispatcher REJECT le review et re-spawn (incohérence — UFR-013 honnêteté violation suspectée).
 
@@ -619,6 +631,7 @@ Exemples : `/team compose:recap,feature "ajouter pagination"`, `/team compose:se
 
 | Version | Date | Changements |
 |---|---|---|
+| **v13.absorb-recvreview** | **2026-05-31** | **ABSORPTION superpowers:receiving-code-review** (Q4, 2e absorption). Ferme l'asymétrie de la reviewer rejection loop (illimitée côté émission, zéro discipline côté réception → risque thrash infini OU dégradation du code pour satisfaire une mauvaise review). Méthodo vendored `team-protocols/receiving-code-review.md` (évaluer avant d'implémenter, disputer avec preuve, zéro accord performatif). Wirée : `editor.md`/`architect.md` (re-spawn après CHANGES_REQUESTED), `SKILL.md` Step 8 loop + Step 6 hook `pre-complete-review-response-check.sh`. Teeth : artefact `review-response.md` enforce (verdict/finding + Evidence/DISPUTE + interdiction de phrases performatives, anti-sycophancy UFR-013 ; self-test 5/5). Frozen-test : finding "test faux" → BLOCK-TEST-WRONG. |
 | **v13.absorb-sysdebug** | **2026-05-31** | **ABSORPTION superpowers:systematic-debugging** (direction Q4 : /team primaire absorbe le natif). Méthodologie 4-phases vendored dans `team-protocols/systematic-debugging.md` (Loi de Fer : aucun fix sans root-cause). Wirée phase green (`editor.md` DEBUG PROTOCOL), gate verify (Step 6 hook `pre-complete-debug-log-check.sh`), REGLE 14 (le cap `intraPhaseHookLoops ≥ 2` = la Phase 4.5 "questionne l'archi"), `error-taxonomy.md` E-RUNTIME. Teeth /team que le skill prose n'a pas : artefact `debug-log.md` enforce par hook (self-test 4/4) au cap correctif. Self-contained (vendored, pas de dépendance plugin). |
 | **v13.UFR-022-prune** | **2026-05-31** | **ÉLAGAGE 9→6 agents** (décision user, fondée audit 360 §dim.7 + données d'usage 77 runs). (a) `doc-fetcher` + `doc-curator` **fusionnés** en `doc-cache` (fetch+curate en un spawn ; fetch dynamique n'avait tourné qu'1×/77). (b) `learning-curator` **supprimé** + mode `/team learning:review` retiré (0 amendement produit en 77 runs ; lessons restent capturées pour lecture manuelle). (c) `verifier` **supprimé** : gates déterministes (lint/tsc/test/mutation) restent en hooks `pre-complete-verify.sh`/`post-edit-*` ; scope-boundary + spot-check + DoD-confirm absorbés par `reviewer`. `security` **conservé** (domain-specific OWASP LLM/auth/SAST, non réductible). Pipeline : spec→plan→doc-cache→red→green→**verify(gate hooks, sans agent)**→security→review→documenter. Frozen-test + lib-docs/LESSONS inchangés (valeur nette non-native). Direction Q4 : /team reste primaire, absorbe le bon de superpowers (pas de bascule native). |
 | v3 | 2026-03 | 3 pipelines, import coherence, GitNexus integration, PE scoring, agent ROI |

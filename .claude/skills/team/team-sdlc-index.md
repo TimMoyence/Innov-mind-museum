@@ -37,7 +37,7 @@
 
 **Élagage agents 9→6 (2026-05-31)** : `doc-fetcher` + `doc-curator` fusionnés en `doc-cache` (fetch+curate en un spawn). `verifier` retiré comme agent — ses gates déterministes (lint/tsc/test/mutation) restent dans les hooks (`pre-complete-verify.sh`, `post-edit-*`) + CI ; son jugement (scope-boundary vs plan, spot-check du fichier le plus risqué, DoD-confirmation, lib-docs-reference assertion) est absorbé par le `reviewer`. `learning-curator` retiré (0 amendement produit en 77 runs). **Process-auditor v4 (retiré antérieurement)** : DoD/scope/spot-check/anti-hallucination absorbés par le `reviewer` ; semantic review aussi dans `reviewer`. Les hooks `team-hooks/` couvrent les portes déterministes.
 
-## 9 Protocoles (`team-protocols/`) — tous chargés (mode unique)
+## 10 Protocoles (`team-protocols/`) — tous chargés (mode unique)
 
 | Protocole | Fichier |
 |---|---|
@@ -50,6 +50,7 @@
 | Error taxonomy | [`error-taxonomy.md`](team-protocols/error-taxonomy.md) |
 | Conflict resolution | [`conflict-resolution.md`](team-protocols/conflict-resolution.md) |
 | Systematic debugging | [`systematic-debugging.md`](team-protocols/systematic-debugging.md) — absorbé de superpowers (Q4) |
+| Receiving code review | [`receiving-code-review.md`](team-protocols/receiving-code-review.md) — absorbé de superpowers (Q4) |
 
 ## Templates (`team-templates/`)
 
@@ -64,7 +65,7 @@
 
 `micro.md` / `standard.md` / `audit.md` = legacy dead-concept (sélecteur retiré UFR-022) ; conservés non-référencés.
 
-## 12 Hooks déterministes (`team-hooks/`)
+## 13 Hooks déterministes (`team-hooks/`)
 
 | Hook | Trigger | Rôle |
 |---|---|---|
@@ -79,6 +80,7 @@
 | `post-cycle-roadmap-update.sh` | Step 9 finalize | Fuzzy-match description ↔ items NOW, propose patch `[x]` (jamais auto-commit) |
 | `pre-complete-verify.sh` | Avant `status: completed` | scoped tests + STORY.md append-only sha256 chain |
 | `pre-complete-debug-log-check.sh` | Step 6 Verify | systematic-debugging : si `intraPhaseHookLoops ≥ 2`, exige `debug-log.md` complet (absorbé de superpowers) |
+| `pre-complete-review-response-check.sh` | Step 6 Verify | receiving-code-review : si `reviewerRejectionLoops ≥ 1`, exige `review-response.md` (verdict/finding + Evidence/DISPUTE + zéro accord performatif) (absorbé de superpowers) |
 | `post-complete-lesson-capture.sh` | Step 9 finalize | Extrait 1 lesson → `team-knowledge/lessons/<RUN_ID>.md` (fail-open) |
 
 Plus `lib/roadmap-rotate.sh` (`/team roadmap:rotate`, manuel). Tous mutent `state.json` via CAS (`mkdir state.json.lock.d`). Détail : [`team-hooks/README.md`](team-hooks/README.md).

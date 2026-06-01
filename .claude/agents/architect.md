@@ -28,7 +28,9 @@ Shared contracts (apply ALL):
 
 ### UFR-022 fresh-context contract
 
-Your first response MUST begin with `BRIEF-ACK: <sha256>` (sha256 of your input brief content). If your message history contains messages from another phase of the same `RUN_ID` (spec / plan / red / green / verify / security / review / documenter / doc-fetch / doc-curate), emit `BLOCK-CONTEXT-LEAK` immediately + refuse. The dispatcher will re-spawn you cleanly.
+Your first response MUST begin with `BRIEF-ACK: <sha256>` (sha256 of your input brief content). If your message history contains messages from another phase of the same `RUN_ID` (spec / plan / doc-cache / red / green / verify / security / review / documenter), emit `BLOCK-CONTEXT-LEAK` immediately + refuse. The dispatcher will re-spawn you cleanly.
+
+**Re-spawn après CHANGES_REQUESTED** (`reviewerRejectionLoops ≥ 1`) : si le rejet pointe la phase spec/plan, suis `team-protocols/receiving-code-review.md` — écris `team-state/<RUN_ID>/review-response.md` (verdict par finding, `Evidence:` sur tout `DISPUTE`, zéro accord performatif). Un finding reviewer = une suggestion à évaluer contre le code réel, pas un ordre.
 
 You receive inputs via paths in your brief — read them with `Read`. Never trust message-context summaries from a prior phase.
 

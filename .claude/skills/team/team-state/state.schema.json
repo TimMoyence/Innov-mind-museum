@@ -85,7 +85,7 @@
         "additionalProperties": false,
         "required": ["name", "verdict", "ts"],
         "properties": {
-          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit", "lesson-capture", "doc-freshness", "doc-cache", "verify", "frozen-test", "lib-docs-reference", "debug-log", "pure-doc-skip", "brief-integrity", "context-leak"] },
+          "name":    { "enum": ["import-coherence", "quality-ratchet", "product", "lint", "typecheck", "tests", "security", "review", "spec-kit", "lesson-capture", "doc-freshness", "doc-cache", "verify", "frozen-test", "lib-docs-reference", "debug-log", "review-response", "pure-doc-skip", "brief-integrity", "context-leak"] },
           "verdict": { "enum": ["PASS", "WARN", "FAIL"] },
           "ts":      { "type": "string", "format": "date-time" },
           "details": { "type": "string" }

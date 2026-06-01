@@ -62,6 +62,15 @@ Quand ton code ne rend pas les tests verts, OU casse un test voisin, OU un hook 
 3. **≥2 fixes échoués = signal architectural, PAS une hypothèse de plus.** Escalade Tech Lead AVEC le debug-log (c'est la sortie `intraPhaseHookLoops ≥ 2 → STOP` de REGLE 14, enrichie). Ne tente pas Fix #3.
 4. Si la root-cause n'était pas couverte par un test red → `BLOCK-TEST-WRONG` → re-spawn fresh red qui ajoute le cas (UN fix, test-first).
 
+### RECEIVING REVIEW (re-spawn après CHANGES_REQUESTED, UFR-022)
+
+Si tu es re-spawné suite à un rejet reviewer (`reviewerRejectionLoops ≥ 1`), tu suis `team-protocols/receiving-code-review.md` AVANT d'implémenter. **Un finding = une suggestion à évaluer, pas un ordre.** Lis `team-reports/<RUN_ID>/code-review.json` depuis le disque, puis écris `team-state/<RUN_ID>/review-response.md` :
+1. Par finding : `Verdict: ACCEPT | DISPUTE | CLARIFY`. Vérifie le finding contre le code réel (`Read`/`Grep`/`gitnexus`) AVANT d'accepter.
+2. Tout `DISPUTE` exige une ligne `Evidence:` (path:line / résultat de test / lib-docs:line) — pas de désaccord nu.
+3. **Zéro accord performatif** (« tu as raison », « bonne remarque », « merci d'avoir relevé ») — le hook `pre-complete-review-response-check.sh` FAIL sinon. Les actions parlent : énonce le fix.
+4. Finding impliquant qu'un test du manifest est faux → `DISPUTE` + `BLOCK-TEST-WRONG` (frozen-test), JAMAIS patcher le test en silence.
+5. Finding flou OU en conflit avec une décision archi/produit du user → `CLARIFY` / escalade Tech Lead, n'implémente rien d'autre tant que ce n'est pas levé.
+
 Domain patterns:
 
 ### Backend (hexagonal)

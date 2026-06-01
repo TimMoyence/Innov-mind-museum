@@ -22,6 +22,7 @@ LLM-critic agents are wasteful for things compilers can decide. Lint / typecheck
 | `post-edit-green-test-freeze.sh` | After every edit in phase Green | FROZEN-TEST gate — re-hash sha256 of each test in `red-test-manifest.json`; any mismatch = exit 1 STOP (Green cannot mutate a Red test byte-for-byte). |
 | `pre-phase-doc-reference-check.sh` | Step 6 Verify | Assert `libDocsConsulted[]` covers every non-dev-only import in the diff + hash drift check (lib-docs obligation proof). |
 | `pre-complete-debug-log-check.sh` | Step 6 Verify | systematic-debugging enforcement (absorbed from superpowers): if `intraPhaseHookLoops >= 2`, require a complete `debug-log.md` (4 phases + architecture question). Else FAIL → re-spawn green with the protocol. |
+| `pre-complete-review-response-check.sh` | Step 6 Verify | receiving-code-review enforcement (absorbed from superpowers): if `reviewerRejectionLoops >= 1`, require `review-response.md` (verdict per finding + Evidence per DISPUTE + no performative agreement). Else FAIL → re-spawn with the protocol. |
 
 ### Lifecycle hooks
 
