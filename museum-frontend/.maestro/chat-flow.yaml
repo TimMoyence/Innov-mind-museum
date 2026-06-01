@@ -56,8 +56,17 @@ appId: com.musaium.mobile.preview
 # UFR-021 anchor for app/(tabs)/home.tsx — the visit-notebook link
 # (testID home-carnet-link) is ALWAYS rendered on home (decision §0.5 + Q7),
 # so it is the stable per-screen marker for the home route.
-- assertVisible:
-    id: "home-carnet-link"
+# Use scrollUntilVisible (not bare assertVisible): once the account has a prior
+# conversation, home renders a "Reprendre" resume card that pushes the carnet
+# link below the fold, and assertVisible only checks the viewport. Scrolling to
+# it de-flakes the anchor on a dirty account while still asserting it exists
+# (and still references the testID literal for the sentinel).
+- scrollUntilVisible:
+    element:
+      id: "home-carnet-link"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 60
 
 # ──────────────────────────────────────────────
 # Phase 2: Start a new conversation -> reach the chat composer.
@@ -76,12 +85,17 @@ appId: com.musaium.mobile.preview
 # sheet appeared), pick the first museum and "Démarrer un chat ici" to reach the
 # same chat composer. Both branches converge on Phase 3.
 # ──────────────────────────────────────────────
+# centerElement: true scrolls the CTA to the viewport CENTER so it clears the
+# bottom tab bar (it is the LAST ScrollView child and otherwise sits half-under
+# the bar, making the tap land on the "Musées" tab). This — plus the museum-card
+# fallback below — makes the home-CTA entry robust on a dirty account.
 - scrollUntilVisible:
     element:
       text: "Commencer une nouvelle conversation|Start a new conversation"
     direction: DOWN
     timeout: 20000
-    visibilityPercentage: 30
+    visibilityPercentage: 100
+    centerElement: true
 - tapOn:
     text: "Commencer une nouvelle conversation|Start a new conversation"
 - waitForAnimationToEnd
