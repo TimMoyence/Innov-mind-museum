@@ -420,43 +420,52 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run Maestro shard on Android emulator
+      # E41 — emulator-boot retry. The AVD boot is intermittently flaky on hosted
+      # runners ("Timeout waiting for emulator to boot"): the IDENTICAL config
+      # booted in 49s on some runs and timed out on others (pure runner-side
+      # flake, not config). A single retry takes the per-run flake probability
+      # from ~p to ~p². Attempt 1 is `continue-on-error`; attempt 2 only runs if
+      # attempt 1 failed, and IT decides the job outcome. The in-emulator work is
+      # a single committed script (maestro-emulator-script.sh) so the action runs
+      # it as ONE line — normal shell state persists, and the two attempts share
+      # one definition. Per-flow retries live inside maestro-run-shard.sh; this
+      # outer retry exists for the boot itself.
+      - name: Run Maestro shard on Android emulator (attempt 1)
+        id: maestro_attempt1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
         env:
           MATRIX_SHARD: ${{ matrix.shard }}
         with:
           api-level: 33
           # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
-          # accelerated (the whole point of the macos→ubuntu migration). The
-          # prebuild APK is built x86_64-only (-PreactNativeArchitectures), so
-          # its ABI matches this emulator exactly.
+          # accelerated. The prebuild APK is x86_64-only, matching this emulator.
           arch: x86_64
           target: google_apis
           profile: pixel_6
           force-avd-creation: false
-          # E41 — boot reliability: a prior run hit "Timeout waiting for emulator
-          # to boot" (the same config booted in 49s the run before — hosted-runner
-          # flakiness). Raise the boot timeout to 15min and give the AVD more
-          # RAM/cores. `-no-snapshot` forces a clean cold boot every run (no
-          # snapshot load/save), which avoids corrupt-snapshot boot hangs.
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 600
           ram-size: 4096M
-          cores: 3
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          # E41 — the runner executes each script LINE in its own shell (a
-          # `cd` does NOT persist to the next line), so use repo-root-relative
-          # paths and self-contained one-liners (no multi-line `if` block, no
-          # reliance on the exec bit → `bash <script>`). The APK was downloaded
-          # to museum-frontend/android/app/build/outputs/apk/release/.
-          # The fixture push is a harmless no-op on the auth shard (|| true);
-          # maestro-run-shard.sh resolves .maestro/ from its own path, so it
-          # works regardless of cwd.
-          script: |
-            adb install -r museum-frontend/android/app/build/outputs/apk/release/app-release.apk
-            adb push museum-frontend/.maestro/fixtures/test-artwork.jpg /sdcard/Download/test-artwork.jpg || true
-            adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/test-artwork.jpg || true
-            bash museum-frontend/scripts/maestro-run-shard.sh "$MATRIX_SHARD"
+          script: bash museum-frontend/scripts/maestro-emulator-script.sh "$MATRIX_SHARD"
+
+      - name: Run Maestro shard on Android emulator (attempt 2, retry on attempt-1 failure)
+        if: steps.maestro_attempt1.outcome == 'failure'
+        uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
+        env:
+          MATRIX_SHARD: ${{ matrix.shard }}
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-boot-timeout: 600
+          ram-size: 4096M
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash museum-frontend/scripts/maestro-emulator-script.sh "$MATRIX_SHARD"
 
       - name: Upload shard logs
         if: always()
