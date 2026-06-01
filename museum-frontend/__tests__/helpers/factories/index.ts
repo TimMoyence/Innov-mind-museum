@@ -30,3 +30,5 @@ export {
   makeCompareFallbackResult,
 } from './compare.factories';
 export { makeCitationSource } from './citation-source.factories';
+export { makeQueuedMessage, makeNetInfoSnapshot } from './connectivity.factories';
+export type { NetInfoSnapshotOverrides } from './connectivity.factories';

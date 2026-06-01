@@ -132,6 +132,50 @@ export default tseslint.config(
     },
   },
 
+  // ── Shared/testing harness boundary (spec R7) ────────────────────
+  //
+  // `@/shared/testing/*` is a TEST-ONLY network-simulation harness (FakeClock,
+  // mulberry32, withNetworkSim, netInfoFromProfile, paceTokens). It must never
+  // ship in the app bundle, so `app/**` (Expo Router routes) cannot import it.
+  // `__tests__/**` is exempt (the block below does not match it). Mirrors the
+  // scoped-config style of the test-relax + test-discipline blocks.
+  {
+    files: ['app/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/shared/testing/*', '@/shared/testing'],
+              message:
+                'shared/testing/* is a TEST-ONLY harness and must not be imported by app/** (it would ship in the bundle). Use it only from __tests__/**.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ── Out-of-project app fixtures — untyped parse ──────────────────
+  //
+  // The boundary test (`__tests__/lint/sharedTestingBoundary.test.ts`) writes a
+  // throwaway fixture under a dot-prefixed temp dir (`app/.boundary-fixture-*/`).
+  // The typed `projectService` cannot find dot-dir files in the TS project and
+  // fatally errors before any rule runs, which would mask the boundary rule.
+  // These dirs are NOT real source (mkdtemp temp, removed on teardown), so we
+  // disable type-checked linting for them (`disableTypeChecked` also drops the
+  // project service) — the syntactic `no-restricted-imports` rule (from the
+  // block above) still runs. Real `app/**` files keep full typed linting (this
+  // block only matches the fixture path).
+  {
+    ...tseslint.configs.disableTypeChecked,
+    files: [
+      'app/**/.boundary-fixture-*/**/*.{ts,tsx}',
+      '__tests__/**/.boundary-fixture-*/**/*.{ts,tsx}',
+    ],
+  },
+
   // ── Test files — relax strict type rules ────────────────────────
   {
     files: ['__tests__/**', 'tests/**'],
