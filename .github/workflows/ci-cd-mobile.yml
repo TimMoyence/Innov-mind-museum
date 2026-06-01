@@ -286,32 +286,50 @@ jobs:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 1
 
-  # ─── 3. Maestro shard matrix (Android, ubuntu-latest + KVM emulator) ─────
+  # ─── 3a. Maestro matrix selector ─────────────────────────────────────────
+  # Per-PR runs only the fast `smoke` subset (~12min, one emulator boot); the
+  # full per-shard suite runs nightly (cron) + on manual dispatch. Emulator e2e
+  # is ~45min/shard, so running all four shards on every PR (~50-65min) is too
+  # heavy — smoke gives a fast pre-merge guard rail on the critical happy paths
+  # while nightly keeps full coverage.
+  maestro-matrix:
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      shards: ${{ steps.set.outputs.shards }}
+    steps:
+      - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            echo 'shards=["smoke"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'shards=["auth","chat","museum","settings"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─── 3b. Maestro shard matrix (Android, ubuntu-latest + KVM emulator) ─────
   # E41 — migrated off macos-latest. GitHub's hosted ubuntu-latest runners
   # expose /dev/kvm (nested hardware virtualization), so an x86_64 AVD runs
   # HW-accelerated and boots in ~60-90s instead of timing out at 600s under
   # macos-latest's software-only arm64 path (HVF unavailable on hosted Macs).
-  # This unlocks per-PR Maestro: the job now also runs on pull_request, turning
-  # the local-green Maestro suite into a permanent CI guard rail (UFR-021) and
-  # closing the CNIL age-15 e2e blocker. iOS Maestro stays nightly (see
-  # maestro-ios-nightly) — HVF on iOS needs a self-hosted Mac runner.
+  # This unlocks per-PR Maestro (smoke subset), turning the local-green Maestro
+  # suite into a permanent CI guard rail (UFR-021) and closing the CNIL age-15
+  # e2e blocker. iOS Maestro stays nightly — HVF on iOS needs a Mac runner.
   maestro-shard:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-    needs: prebuild
+    needs: [prebuild, maestro-matrix]
     runs-on: ubuntu-latest
-    # E41 — 50min: the first full auth shard (18 flows) was cancelled at the old
-    # 30min cap mid-flow-14. Each flow is ~2-2.5min wall (emulator UI + backend
-    # round-trips). Shards run in parallel, so per-PR wall-clock is one shard,
-    # not the sum.
-    timeout-minutes: 50
+    # 70min cap: a nightly full shard (~45min, 18 flows × ~2.5min) plus a
+    # boot-flake retry (attempt 1 timeout + attempt 2 full) must fit. The per-PR
+    # smoke shard finishes in ~12-25min and never approaches this cap.
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       matrix:
-        # ITERATION: temporarily reduced to the auth canary while the ubuntu
-        # KVM pipeline is being proven (emulator boot + backend@10.0.2.2 + APK
-        # install + login). Expanded back to [auth, chat, museum, settings]
-        # once auth is runtime-green on real CI.
-        shard: [auth]
+        shard: ${{ fromJSON(needs.maestro-matrix.outputs.shards) }}
     defaults:
       run:
         working-directory: museum-frontend

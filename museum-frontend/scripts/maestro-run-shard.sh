@@ -24,6 +24,12 @@ fi
 
 if [ "$SHARD" = "all" ]; then
   FLOWS=$(jq -r '.shards[].flows[]' "$MAESTRO_DIR/shards.json")
+elif [ "$SHARD" = "smoke" ]; then
+  # Per-PR fast subset: a handful of proven-green critical happy paths run on a
+  # single emulator boot (~12min). The full per-shard suite runs nightly. The
+  # `smoke` list lives OUTSIDE `.shards[]` so its flows (which are also in the
+  # `auth` shard) don't trip the shard-manifest dedup sentinel.
+  FLOWS=$(jq -r '.smoke[]' "$MAESTRO_DIR/shards.json")
 else
   FLOWS=$(jq -r --arg s "$SHARD" '.shards[] | select(.name == $s) | .flows[]' "$MAESTRO_DIR/shards.json")
 fi

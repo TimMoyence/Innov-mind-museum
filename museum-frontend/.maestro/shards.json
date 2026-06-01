@@ -72,5 +72,12 @@
     }
   ],
   "iosNightly": "all",
+  "smoke": [
+    "auth-login-happy.yaml",
+    "auth-register-happy.yaml",
+    "auth-persistence.yaml",
+    "onboarding-flow.yaml",
+    "magic-link-verify-email.yaml"
+  ],
   "excluded": ["config.yaml"]
 }
