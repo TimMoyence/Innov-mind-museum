@@ -119,6 +119,9 @@ jobs:
       - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
         run: node scripts/sentinels/sentry-scrubber-parity.mjs
 
+      - name: 'Mirror — net-profiles parity (FE↔BE network profile registry, W1-REG)'
+        run: node scripts/sentinels/net-profiles-parity.mjs
+
       - name: 'Mirror Gate P21 — fe-version-sync (museum-frontend package.json ↔ app.config.ts)'
         run: node scripts/sentinels/fe-version-sync.mjs
 
