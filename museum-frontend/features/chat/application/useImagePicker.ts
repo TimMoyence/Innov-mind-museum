@@ -3,7 +3,9 @@ import { Alert, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as ImagePickerLib from 'expo-image-picker';
 
-import { optimizeImageForUpload } from './imageUploadOptimization';
+import { optimizeImageAdaptive } from './imageUploadOptimization';
+import { decideCompression } from './compressionDecision.pure';
+import { useDataMode } from './DataModeProvider';
 
 /**
  * Hook that manages image selection state and handlers for chat attachments.
@@ -12,17 +14,24 @@ import { optimizeImageForUpload } from './imageUploadOptimization';
  */
 export const useImagePicker = () => {
   const { t } = useTranslation();
+  const { resolved } = useDataMode();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const setOptimizedImage = useCallback(async (uri: string) => {
-    try {
-      const optimizedUri = await optimizeImageForUpload(uri);
-      setSelectedImage(optimizedUri);
-    } catch {
-      // Keep upload flow functional even if local optimization fails.
-      setSelectedImage(uri);
-    }
-  }, []);
+  const setOptimizedImage = useCallback(
+    async (uri: string) => {
+      // WebP is the preferred weak-network codec; the optimizer retries JPEG at
+      // runtime if a platform rejects the encode, so we request it optimistically.
+      const decision = decideCompression(resolved, true);
+      try {
+        const { uploadUri } = await optimizeImageAdaptive(uri, decision);
+        setSelectedImage(uploadUri);
+      } catch {
+        // Keep upload flow functional even if local optimization fails.
+        setSelectedImage(uri);
+      }
+    },
+    [resolved],
+  );
 
   const onPickImage = useCallback(async () => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();

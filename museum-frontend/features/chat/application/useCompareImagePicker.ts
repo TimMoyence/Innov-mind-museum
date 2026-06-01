@@ -17,7 +17,9 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePickerLib from 'expo-image-picker';
 
 import { normalizeImageMimeTypeFromExtension } from '@/features/chat/infrastructure/chatApi/_internals';
-import { optimizeImageForUpload } from './imageUploadOptimization';
+import { optimizeImageAdaptive } from './imageUploadOptimization';
+import { decideCompression } from './compressionDecision.pure';
+import { useDataMode } from './DataModeProvider';
 
 /** RN-shaped image file consumed by the compare pipeline. */
 export interface CompareImageFile {
@@ -37,6 +39,7 @@ const describeImage = (uri: string): { name: string; type: string } => {
 
 export const useCompareImagePicker = () => {
   const { t } = useTranslation();
+  const { resolved } = useDataMode();
 
   const pickForCompare = useCallback(async (): Promise<CompareImageFile | null> => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
@@ -64,17 +67,21 @@ export const useCompareImagePicker = () => {
     const firstAsset = result.assets[0];
     if (!firstAsset) return null;
 
-    // Local optimization keeps the upload small; fall back to the raw URI so a
-    // failed optimization never blocks the compare flow (parity useImagePicker).
+    // Local optimization keeps the upload small; the MIME is derived from the
+    // optimized URI extension (.webp / .jpg) so the multipart header matches the
+    // bytes actually sent. Fall back to the raw URI so a failed optimization
+    // never blocks the compare flow (parity useImagePicker).
+    const decision = decideCompression(resolved, true);
     let uri = firstAsset.uri;
     try {
-      uri = await optimizeImageForUpload(firstAsset.uri);
+      const { uploadUri } = await optimizeImageAdaptive(firstAsset.uri, decision);
+      uri = uploadUri;
     } catch {
       uri = firstAsset.uri;
     }
 
     return { uri, ...describeImage(uri) };
-  }, [t]);
+  }, [resolved, t]);
 
   return { pickForCompare };
 };
