@@ -2,112 +2,152 @@ appId: com.musaium.mobile.preview
 ---
 # Navigation Flow: Verify tab navigation and key screen transitions
 #
-# Prerequisites:
-#   - User is already logged in
-#   - Backend running on localhost:3000
+# This flow validates the bottom tab navigator (Dashboard / Museums / Home)
+# and the Settings -> Preferences stack navigation reached via the Home gear.
 #
-# This flow validates the tab navigator and stack navigation.
+# NOTE: Settings is NOT a tab — it is a (stack) route reached from the Home
+# hero gear (testID hero-settings-button). There is also no "Onboarding"
+# tap-target on Home, so the old Onboarding/Welcome phase was removed (it
+# never had a real in-app affordance). See nav-stack-deep-links.yaml for the
+# full stack-screen surface.
 
-# ──────────────────────────────────────────────
-# Phase 1: Ensure we are on home screen
-# ──────────────────────────────────────────────
-- waitForAnimationToEnd
+- launchApp:
+    clearState: true
 
-# If we land on auth, do a quick login
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
 
-# Skip onboarding if shown
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "Skip"
+    id: "analytics-consent-decline"
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate, land on Home
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+
+# The iOS "Save Password?" system dialog appears a BEAT AFTER submit; an immediate
+# optional tap races and misses it, then it covers every later tap. Let it settle,
+# then dismiss optionally.
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Plus tard|Not Now"
     optional: true
-- waitForAnimationToEnd
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
 
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+# Defensive: dismiss the dialog again if it is still covering Home before tabbing.
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
 
 # ──────────────────────────────────────────────
-# Phase 2: Navigate to Dashboard tab
+# Phase 1: Dashboard tab
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Dashboard"
-- waitForAnimationToEnd
-
-- assertVisible: "Dashboard"
-
-# ──────────────────────────────────────────────
-# Phase 3: Navigate to Museums tab
-# ──────────────────────────────────────────────
-- tapOn:
-    text: "Museums"
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 4: Navigate back to Home tab
-# ──────────────────────────────────────────────
-- tapOn:
-    text: "Home"
-- waitForAnimationToEnd
-
+    text: ".*(Tableau de bord|Dashboard).*"
+# Dashboard signal: the screen heading is exactly "Tableau de bord" (the tab node
+# is "Tableau de bord, tab, 2 of 4", so an exact match hits only the heading). The
+# subtitle "Vos sessions de musée récentes…" is not always rendered.
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 5000
+    visible:
+      text: "Tableau de bord|Dashboard"
+    timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 5: Navigate to Settings (stack screen)
+# Phase 2: Museums tab
 # ──────────────────────────────────────────────
-- tapOn: "Settings"
-- waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      text: "Musées à proximité|Nearby Museums"
+    timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 6: Navigate to Preferences from Settings
+# Phase 3: Home tab (return)
+# ──────────────────────────────────────────────
+- tapOn:
+    text: ".*(Accueil|Home).*"
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 4: Settings (stack) via Home gear icon
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "hero-settings-button"
+- extendedWaitUntil:
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 5: Open Preferences from Settings
 # ──────────────────────────────────────────────
 - scrollUntilVisible:
-    element: "Open Preferences"
+    element:
+      text: "Ouvrir les préférences|Open Preferences"
     direction: DOWN
 
-- tapOn: "Open Preferences"
-- waitForAnimationToEnd
-
-- assertVisible: "Preferences"
-
-# ──────────────────────────────────────────────
-# Phase 7: Go back to Settings
-# ──────────────────────────────────────────────
-- back
-- waitForAnimationToEnd
+- tapOn:
+    text: "Ouvrir les préférences|Open Preferences"
+- extendedWaitUntil:
+    visible:
+      text: "Préférences|Preferences"
+    timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 8: Return to Home from Settings
+# Phase 6: Return to the Settings screen via the top "Paramètres" nav chip.
+# (The Preferences screen is a sub-hub with chips Mode Guidé | Confidentialité |
+# Paramètres; a hardware `back` is swallowed here, so the chip is the reliable
+# way back to the main Settings screen.)
+# ──────────────────────────────────────────────
+- tapOn:
+    text: "Paramètres|Settings"
+- extendedWaitUntil:
+    visible:
+      text: "Ouvrir les préférences|Open Preferences"
+    timeout: 15000
+
+# ──────────────────────────────────────────────
+# Phase 7: Return to Home via the in-screen "Back to Home" CTA. Its Pressable sets
+# accessibilityLabel a11y.settings.back_home (collapses the visible
+# "Retour à l'accueil" Text) — match the label, partial visibility OK.
 # ──────────────────────────────────────────────
 - scrollUntilVisible:
-    element: "Back to Home"
+    element:
+      text: "Return to home screen|Retourner à l'écran d'accueil"
     direction: DOWN
-
-- tapOn: "Back to Home"
-- waitForAnimationToEnd
-
+    timeout: 30000
+    visibilityPercentage: 1
+- tapOn:
+    text: "Return to home screen|Retourner à l'écran d'accueil"
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 5000
-
-# ──────────────────────────────────────────────
-# Phase 9: Navigate to Onboarding from Home
-# ──────────────────────────────────────────────
-- tapOn: "Onboarding"
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Welcome to Musaium"
-    timeout: 5000
-
-# Skip onboarding to return to home
-- tapOn: "Skip"
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 15000

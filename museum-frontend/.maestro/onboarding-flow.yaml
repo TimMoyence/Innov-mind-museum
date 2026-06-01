@@ -1,87 +1,140 @@
 appId: com.musaium.mobile.preview
 ---
-# Onboarding Flow: Navigate through all onboarding slides and complete
+# Onboarding Flow: Walk the v2 carousel end-to-end and complete to home.
 #
-# Prerequisites:
-#   - User has just registered (first launch) or onboarding screen is open
-#   - This can be reached from Home > Onboarding button
-#
-# This flow validates the onboarding carousel experience.
+# The v2 carousel (app/(stack)/onboarding.tsx) has 4 slides:
+#   greeting → museumMode → cameraIntent → walkIntent
+# The legacy 3-slide ("Practical Tips" / "Help & Support") path no longer
+# exists, and Home has no "Onboarding" button — the deterministic entry is
+# Settings → "Onboarding Help" (settings.onboarding_help) for a logged-in user.
+# screen: AuthScreen
 
 # ──────────────────────────────────────────────
-# Phase 1: Ensure we are on a screen that can navigate to onboarding
+# Phase 1: Cold start -> auth -> login
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
-# If we land on auth, do a quick login
 - runFlow:
     when:
-      visible: "Welcome back"
+      visible:
+        text: "Welcome back|Bon retour"
     file: helpers/quick-login.yaml
 
-# Skip onboarding if already shown (to get to home)
+# iOS native "Save Password?" dialog after login submit
 - tapOn:
-    text: "Skip"
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    text: "Skip|Passer"
     optional: true
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 2: Navigate to onboarding from home
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Start Conversation"
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 2: Reach the carousel via Settings → Onboarding Help
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "hero-settings-button"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Settings|Paramètres"
     timeout: 10000
-
-- tapOn: "Onboarding"
+# The settings row sets accessibilityLabel a11y.settings.onboarding_link
+# ("Revoir le guide de démarrage" / "Replay onboarding guide") which COLLAPSES
+# the subtree — the visible "Aide à l'utilisation" Text is NOT separately
+# queryable. Match the accessibility label, partial visibility OK.
+- scrollUntilVisible:
+    element:
+      text: "Replay onboarding guide|Revoir le guide de démarrage"
+    direction: DOWN
+    visibilityPercentage: 40
+- tapOn:
+    text: "Replay onboarding guide|Revoir le guide de démarrage"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 3: Slide 1 — Welcome to Musaium
+# Phase 3: Slide 1 — Greeting
 # ──────────────────────────────────────────────
+# NOTE: the Skip / Next / Get-Started buttons set accessibilityLabel
+# (a11y.onboarding.*) which COLLAPSES the visible label text — match the
+# accessibility labels: skip="Passer l'introduction"/"Skip onboarding",
+# next="Diapositive suivante"/"Next slide", get_started="Commencer"/"Get started".
 - extendedWaitUntil:
-    visible: "Welcome to Musaium"
-    timeout: 5000
-
-# Verify Skip button is available
-- assertVisible: "Skip"
-
-# Verify Next button
-- assertVisible: "Next"
-
-# Navigate to next slide
-- tapOn: "Next"
+    visible:
+      text: "Welcome to Musaium|Bienvenue sur Musaium"
+    timeout: 10000
+- assertVisible:
+    text: "Skip onboarding|Passer l'introduction"
+- assertVisible:
+    text: "Next slide|Diapositive suivante"
+- tapOn:
+    text: "Next slide|Diapositive suivante"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 4: Slide 2 — Practical Tips
+# Phase 4: Slide 2 — Museum mode
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Practical Tips"
+    visible:
+      text: "Museum mode|Mode musée"
     timeout: 5000
-
-# Navigate to next slide
-- tapOn: "Next"
+- tapOn:
+    text: "Next slide|Diapositive suivante"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 5: Slide 3 — Help & Support (last slide)
+# Phase 5: Slide 3 — Camera intent
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Help & Support"
+    visible:
+      text: "Photograph artworks|Photographier des œuvres"
     timeout: 5000
+- tapOn:
+    text: "Next slide|Diapositive suivante"
+- waitForAnimationToEnd
 
-# On the last slide, the button says "Get Started"
-- assertVisible: "Get Started"
-
-# Complete onboarding
-- tapOn: "Get Started"
+# ──────────────────────────────────────────────
+# Phase 6: Slide 4 — Walk intent (last slide, Get Started CTA)
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Guided walks|Visites guidées"
+    timeout: 5000
+- assertVisible:
+    text: "Get started|Commencer"
+- tapOn:
+    text: "Get started|Commencer"
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 8000
 
 # ──────────────────────────────────────────────
-# Phase 6: Verify we land on home screen
+# Phase 7: Verify we land on home screen
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
-- assertVisible: "Start Conversation"
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 40000
+# Confirm the start-conversation CTA exists (its accessibilityLabel — the Pressable
+# collapses the visible "Démarrer une conversation" Text). Scroll into view first.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30

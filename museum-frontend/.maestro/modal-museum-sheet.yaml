@@ -14,38 +14,61 @@ appId: com.musaium.mobile.preview
 #   museum-sheet-backdrop     (touch-dismiss affordance; a11y-hidden, not a Maestro target)
 #
 # Prerequisites:
-#   - Test account seeded (helpers/quick-login.yaml).
+#   - Seeded test account (login below).
 #   - At least one museum in the backend directory (`pnpm seed:museums`).
 
 - launchApp:
-    clearState: false
+    clearState: true
 
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
 # Phase 0: Authenticate
 # ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back|Bon retour|Log in"
-    file: helpers/quick-login.yaml
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
 
 - tapOn:
-    text: "Skip|Passer"
+    text: "Plus tard|Not Now"
     optional: true
-- waitForAnimationToEnd
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 1: Go to the Museums tab, wait for the directory list
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Museums|Musées"
-- waitForAnimationToEnd:
-    timeout: 10000
+    text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
     visible:
       id: "museum-card"
-    timeout: 15000
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 2: Open the first museum card → sheet
@@ -53,7 +76,6 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "museum-card"
     index: 0
-- waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
 # Phase 3: Assert the sheet is open, then dismiss via the header close button.
@@ -62,10 +84,13 @@ appId: com.musaium.mobile.preview
 # cannot target it — verified on a live iOS 26.4 simulator run (2026-05-25).
 # Dismiss therefore uses the header close button (museum-sheet-close).
 # ──────────────────────────────────────────────
-- assertVisible:
-    id: "museum-sheet-start-chat"
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 15000
 - tapOn:
     id: "museum-sheet-close"
-- waitForAnimationToEnd
-- assertNotVisible:
-    id: "museum-sheet-start-chat"
+- extendedWaitUntil:
+    notVisible:
+      id: "museum-sheet-start-chat"
+    timeout: 15000

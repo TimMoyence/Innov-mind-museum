@@ -1,84 +1,107 @@
 appId: com.musaium.mobile.preview
 ---
-# Museum → Chat Flow: Navigate to a museum, open detail, start chat from museum context
+# Museum → Chat Flow: Navigate to a museum, open its sheet, start chat from museum context
 #
 # Prerequisites:
-#   - User is already logged in (or quick-login helper handles it)
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
 #   - Backend running on localhost:3000 with seeded museums
 #   - At least one museum returned by the API
 #
-# Trace: Museums tab → tap first museum card → detail screen → "Start Chat Here" → chat loads
+# Trace: Museums tab → tap first museum-card → MuseumSheet → "Start Chat Here"
+#        (museum-sheet-start-chat) → chat loads with museum context.
 # Validates the S11 fix: museumName resolved, GPS context, nearby museums injection.
 
 # ──────────────────────────────────────────────
-# Phase 1: Ensure we are on home screen
+# Phase 0: Launch fresh + log in
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-
-# If we land on auth screen, log in first
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-# Handle onboarding if it appears
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "Skip"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
     optional: true
-- waitForAnimationToEnd
-
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 2: Navigate to Museums tab
-# ──────────────────────────────────────────────
-- tapOn: "Museums"
-- waitForAnimationToEnd
-
-# Wait for museum list to load (at least one museum card should appear)
-- extendedWaitUntil:
-    visible: "Search museums..."
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 3: Tap first museum card
+# Phase 1: Navigate to Museums tab
 # ──────────────────────────────────────────────
 - tapOn:
-    index: 0
-- waitForAnimationToEnd:
-    timeout: 5000
-
-# ──────────────────────────────────────────────
-# Phase 4: Verify museum detail and start chat
-# ──────────────────────────────────────────────
+    text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
-    visible: "Start Chat Here"
-    timeout: 5000
-
-- tapOn: "Start Chat Here"
-- waitForAnimationToEnd:
-    timeout: 10000
+    visible:
+      id: "museum-card"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 5: Verify chat screen loaded with museum context
+# Phase 2: Tap first museum card → MuseumSheet opens
 # ──────────────────────────────────────────────
-- assertVisible:
-    id: "chat-input"
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
 
-# Send a test message to verify the chat is functional
+# ──────────────────────────────────────────────
+# Phase 3: Start chat from the museum context
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "museum-sheet-start-chat"
+
+# The first-time AI-disclosure consent sheet ("Réponses générées par IA")
+# mounts OVER the chat screen and COVERS chat-input, so it MUST be accepted
+# BEFORE asserting the composer is reachable (mirror chat-flow Phase 3). Wait
+# for it deterministically, then accept.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 4: Send a test message to verify museum-context chat is functional
+# ──────────────────────────────────────────────
 - tapOn:
     id: "chat-input"
 - inputText: "What artworks can I see here?"
-
+- hideKeyboard
 - tapOn:
     id: "send-button"
-
-- waitForAnimationToEnd:
-    timeout: 30000
-
-# Verify the user message is visible in the chat
 - assertVisible: "What artworks can I see here?"
 
 # C-08 — Assert the ASSISTANT bubble rendered (not just the optimistic user
@@ -88,7 +111,6 @@ appId: com.musaium.mobile.preview
 - extendedWaitUntil:
     visible:
       id: "chat-bubble-assistant"
-    timeout: 30000
-
+    timeout: 40000
 - assertVisible:
     id: "chat-bubble-assistant"

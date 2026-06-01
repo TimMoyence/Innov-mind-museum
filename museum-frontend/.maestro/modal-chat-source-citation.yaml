@@ -15,47 +15,103 @@ appId: com.musaium.mobile.preview
 #   source-citation-close      (dismiss)
 #
 # Prerequisites:
-#   - Test account seeded (helpers/quick-login.yaml).
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
 #   - Backend returns an assistant message with >=1 citation source.
 
+# ──────────────────────────────────────────────
+# Phase 0: Launch fresh + log in
+# ──────────────────────────────────────────────
 - launchApp:
-    clearState: false
-
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 0: Authenticate
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back|Bon retour|Log in"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip|Passer"
-    optional: true
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 1: Open chat + send a factual question (yields sourced answer)
-# ──────────────────────────────────────────────
+    clearState: true
 - extendedWaitUntil:
-    visible: "Start Conversation|Démarrer"
-    timeout: 10000
-- tapOn: "Start Conversation|Démarrer"
-- waitForAnimationToEnd:
-    timeout: 10000
-
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "I understand, continue|J'ai compris"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open chat + send a factual question (yields a sourced answer)
+# ──────────────────────────────────────────────
+# Home primary CTA: scroll into view (last element, below the fold) + tap by
+# accessibility label (the Pressable's accessibilityLabel collapses the subtree,
+# so the visible "Démarrer une conversation" Text is NOT separately queryable).
+# The home default-conversation CTA sits half-under the bottom tab bar, so its
+# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
+# best-effort, then deterministically: Musées tab → museum card → sheet →
+# "Démarrer un chat ici" → chat composer.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
     optional: true
 - waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
+# MUST be accepted BEFORE the composer is reachable. First-session-only, so
+# the wait is bounded and the tap is the deterministic dismissal.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
 
 - tapOn:
-    label: "Message|Message input|Saisir un message"
+    id: "chat-input"
 - inputText: "Who painted the Mona Lisa and where is it kept?"
+- hideKeyboard
 - tapOn:
-    label: "Send|Envoyer"
+    id: "send-button"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────

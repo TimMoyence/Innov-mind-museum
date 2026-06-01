@@ -3,82 +3,94 @@ appId: com.musaium.mobile.preview
 # screen: SettingsScreen
 # Audio-description toggle happy path (I-CMP3(3) / R6 — UFR-021 coverage)
 #
-# Exercises the touched Accessibility card on the Settings screen: the
-# audio-description <Switch> gained accessibilityRole/label/state (R6). This
-# flow taps through the happy path (nav → scroll to card → toggle ON) so the
-# screen-coverage sentinel recognises the touched surface. The flow references
-# the `settings.audio_description` i18n literal (resolved English copy) so the
-# sentinel binds it to SettingsAccessibilityCard.
-#
-# Prerequisites:
-#   - User logged in
-#   - Backend running on localhost:3000
+# Exercises the Accessibility card on the Settings screen: the audio-description
+# <Switch> (SettingsAccessibilityCard.tsx) carries accessibilityRole="switch"
+# and accessibilityLabel settings.audio_description ("Audiodescription" FR /
+# "Audio Description" EN). App is FRENCH; selectors use FR|EN alternation.
 
-- waitForAnimationToEnd
-
-# Quick-login if we land on auth.
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-# Skip onboarding if shown.
+# ──────────────────────────────────────────────
+# Phase 0: Fresh launch + login → home
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "Skip"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
     optional: true
-- waitForAnimationToEnd
-
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 1: Navigate to Settings
+# Phase 1: Navigate to Settings (home gear)
 # ──────────────────────────────────────────────
-- tapOn: "Settings"
-- waitForAnimationToEnd
-
+- tapOn:
+    id: "hero-settings-button"
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 2: Scroll to the Accessibility card
-# settings.accessibility = "Accessibility", settings.audio_description = "Audio description"
 # ──────────────────────────────────────────────
 - scrollUntilVisible:
     element:
-      text: "Audio description"
+      text: "Audiodescription|Audio Description"
     direction: DOWN
-
-- assertVisible: "Accessibility"
-- assertVisible: "Audio description"
+    visibilityPercentage: 50
+- assertVisible:
+    text: "Accessibilité|Accessibility"
+- assertVisible:
+    text: "Audiodescription|Audio Description"
 
 # ──────────────────────────────────────────────
-# Phase 3: Toggle the audio-description Switch (a11y role="switch")
+# Phase 3: Toggle the audio-description Switch (accessibilityLabel =
+# settings.audio_description). Tapping the labelled control flips it.
 # ──────────────────────────────────────────────
 - tapOn:
-    id: "Audio description"
-    optional: true
-- tapOn:
-    point: "90%,30%"
-    optional: true
+    text: "Audiodescription|Audio Description"
 - waitForAnimationToEnd
 
-# The toggled state persists on the card (Switch flips); assert the card still
-# renders after the interaction (happy path completed without crash).
-- assertVisible: "Audio description"
+# The toggle persists on the card (Switch flips); assert the card still renders
+# after the interaction (happy path completed without crash).
+- assertVisible:
+    text: "Audiodescription|Audio Description"
 
 # ──────────────────────────────────────────────
-# Phase 4: Return to home
+# Phase 4: Return to home via the "Back to Home" CTA (accessibilityLabel
+# a11y.settings.back_home).
 # ──────────────────────────────────────────────
 - scrollUntilVisible:
-    element: "Back to Home"
+    element:
+      text: "Retourner à l'écran d'accueil|Return to home screen"
     direction: DOWN
-
-- tapOn: "Back to Home"
-- waitForAnimationToEnd
-
+    visibilityPercentage: 40
+- tapOn:
+    text: "Retourner à l'écran d'accueil|Return to home screen"
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000

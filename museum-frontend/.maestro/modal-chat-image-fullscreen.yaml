@@ -5,9 +5,10 @@ appId: com.musaium.mobile.preview
 # C2 — ImageFullscreenModal happy path (UFR-021 modal coverage).
 #
 # Trigger (prod): tap an image thumbnail inside an assistant bubble that carries
-# `metadata.images`, which sets `fullscreenIndex` (ChatMessageBubble.tsx). The
-# enriched-image response comes from a live backend, so this flow is NIGHTLY
-# (backend-dependent), NOT PR-blocking — same class as chat-compare.yaml.
+# `metadata.images` / compare matches, which sets `fullscreenIndex`
+# (ChatMessageBubble.tsx). The enriched-image response comes from a live backend,
+# so this flow is NIGHTLY (backend-dependent), NOT PR-blocking — same class as
+# chat-compare.yaml.
 #
 # Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
 #   image-fullscreen-modal-close   (assert open + dismiss)
@@ -15,47 +16,111 @@ appId: com.musaium.mobile.preview
 #   image-fullscreen-modal-prev    (prev image)
 #
 # Prerequisites:
-#   - Test account seeded (helpers/quick-login.yaml).
-#   - Fixture .maestro/fixtures/test-artwork.jpg on device + backend that
-#     returns an assistant message with >=1 enriched image.
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
+#   - Fixture .maestro/fixtures/test-artwork.jpg in the simulator photo library
+#     + backend that returns an assistant message with >=1 enriched image.
 
+# ──────────────────────────────────────────────
+# Phase 0: Launch fresh + log in
+# ──────────────────────────────────────────────
 - launchApp:
-    clearState: false
-
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 0: Authenticate
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back|Bon retour|Log in"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip|Passer"
-    optional: true
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 1: Open chat + send the compare fixture (yields enriched images)
-# ──────────────────────────────────────────────
+    clearState: true
 - extendedWaitUntil:
-    visible: "Start Conversation|Démarrer"
-    timeout: 10000
-- tapOn: "Start Conversation|Démarrer"
-- waitForAnimationToEnd:
-    timeout: 10000
-
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "I understand, continue|J'ai compris"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open chat
+# ──────────────────────────────────────────────
+# Home primary CTA: scroll into view (last element, below the fold) + tap by
+# accessibility label (the Pressable's accessibilityLabel collapses the subtree,
+# so the visible "Démarrer une conversation" Text is NOT separately queryable).
+# The home default-conversation CTA sits half-under the bottom tab bar, so its
+# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
+# best-effort, then deterministically: Musées tab → museum card → sheet →
+# "Démarrer un chat ici" → chat composer.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
     optional: true
 - waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
+# MUST be accepted BEFORE the composer is reachable. First-session-only, so
+# the wait is bounded and the tap is the deterministic dismissal.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
 
+# ──────────────────────────────────────────────
+# Phase 2: Compare the fixture (yields the enriched-image carousel)
+# ──────────────────────────────────────────────
 - tapOn:
-    label: "Attach image|Joindre une image"
+    id: "composer-attach-button"
+- extendedWaitUntil:
+    visible:
+      id: "attachment-picker-compare"
+    timeout: 40000
 - tapOn:
-    text: "Allow|Autoriser"
+    id: "attachment-picker-compare"
+- tapOn:
+    text: "Allow|Allow Access to All Photos|Autoriser"
     optional: true
 - waitForAnimationToEnd
 - tapOn:
@@ -67,19 +132,19 @@ appId: com.musaium.mobile.preview
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 2: Wait for the enriched-image carousel, tap a thumbnail
+# Phase 3: Wait for the carousel, tap a match thumbnail -> fullscreen modal
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Similar artworks|Œuvres similaires"
+    visible:
+      text: "Œuvres similaires|Similar artworks"
     timeout: 60000
-# Tap the first image in the bubble — the carousel cell opens the fullscreen
-# modal via onImagePress.
 - tapOn:
-    label: "Similar artwork:|Œuvre similaire :"
+    label:
+      text: "Œuvre similaire :|Similar artwork:"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 3: Assert the fullscreen modal opened, page once, dismiss
+# Phase 4: Assert the fullscreen modal opened, page once, dismiss
 # ──────────────────────────────────────────────
 - assertVisible:
     id: "image-fullscreen-modal-close"

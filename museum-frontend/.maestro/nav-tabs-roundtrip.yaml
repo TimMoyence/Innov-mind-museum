@@ -3,94 +3,103 @@ appId: com.musaium.mobile.preview
 # Tab navigation — Roundtrip across all 3 tabs
 #
 # NOTE: The bottom tab bar only exposes 3 tabs (see app/(tabs)/_layout.tsx):
-#   - Dashboard (conversations)
-#   - Museums
-#   - Home
+#   - Dashboard (Tableau de bord)
+#   - Museums   (Musées)
+#   - Home      (Accueil)
 # There are NO "Discover", "Carnet", or "Settings" tabs — those are stack
 # routes reached via Home (settings gear / carnet link / intent chips).
 # This flow only exercises the 3 real tabs to catch tab-bar regressions.
 #
-# Validates:
-#   - Each tab is tappable by its label.
-#   - Each tab renders a unique screen-level marker (title or hero text).
-#   - Round-trip back to Home returns to the hero title.
-#
-# Regression catches:
-#   - Renamed tab labels (i18n key drift on tabs.dashboard/museums/home).
-#   - Missing screen for a tab (broken _layout / route file).
-#   - Tab bar not rendering at all (BlurView / layout crash).
+# Tabs have no testIDs (expo-router Tabs.Screen title from i18n), so we tap by
+# the FR|EN label and assert a screen-unique marker per tab.
 
 - launchApp:
-    clearState: false
-
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 1: Ensure authenticated session, on Home
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip"
-    optional: true
-- waitForAnimationToEnd
+    clearState: true
 
 - extendedWaitUntil:
-    visible: "Your museum companion"
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate, land on Home
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Dashboard tab
+# ──────────────────────────────────────────────
+- tapOn:
+    text: ".*(Tableau de bord|Dashboard).*"
+- extendedWaitUntil:
+    visible:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
     timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 2: Dashboard tab
+# Phase 2: Museums tab
 # ──────────────────────────────────────────────
-- tapOn: "Dashboard"
-- waitForAnimationToEnd
-
-# Dashboard screen title key: conversations.title => "Dashboard".
-# To disambiguate the tab label vs the screen title we wait for the
-# subtitle that is unique to the dashboard screen.
+- tapOn:
+    text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
-    visible: "Your recent museum sessions"
-    timeout: 8000
+    visible:
+      text: "Musées à proximité|Nearby Museums"
+    timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 3: Museums tab
+# Phase 3: Home tab (return)
 # ──────────────────────────────────────────────
-- tapOn: "Museums"
-- waitForAnimationToEnd
-
-# Museum screen header: museumDirectory.title => "Nearby Museums".
+- tapOn:
+    text: ".*(Accueil|Home).*"
 - extendedWaitUntil:
-    visible: "Nearby Museums"
-    timeout: 8000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 15000
 
 # ──────────────────────────────────────────────
-# Phase 4: Home tab (return)
+# Phase 4: Re-confirm round-trip — tap Dashboard then Home again
+# (catches stuck-tab regressions on a second tap)
 # ──────────────────────────────────────────────
-- tapOn: "Home"
-- waitForAnimationToEnd
-
+- tapOn:
+    text: ".*(Tableau de bord|Dashboard).*"
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 8000
+    visible:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 5: Re-confirm round-trip by tapping Dashboard once more
-# (catches stuck-tab regressions where second tap on already-active tab
-# fails to navigate elsewhere)
-# ──────────────────────────────────────────────
-- tapOn: "Dashboard"
-- waitForAnimationToEnd
-
+- tapOn:
+    text: ".*(Accueil|Home).*"
 - extendedWaitUntil:
-    visible: "Your recent museum sessions"
-    timeout: 8000
-
-- tapOn: "Home"
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 8000
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 15000

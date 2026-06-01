@@ -1,296 +1,277 @@
 appId: com.musaium.mobile.preview
 ---
-# Stack navigation — Reach each (stack) screen via real UI taps
-#
-# Validates the stack-route surface that the user can actually navigate
-# to via in-app affordances (no deep-linking via expo-router URL).
+# Stack navigation — reach each (stack) screen via real UI taps.
 #
 # Screens covered:
-#   1. /(stack)/museum-detail        — via Museums tab → museum sheet → "View details"
-#   2. /(stack)/chat/[sessionId]     — via Dashboard tab → "Start New Conversation"
-#   3. /(stack)/settings             — via Home hero-settings-button (gear icon)
-#   4. /(stack)/change-password      — via Settings → Security card
-#   5. /(stack)/change-email         — via Settings → Security card
-#   6. /(stack)/privacy              — via Settings → FloatingContextMenu "Privacy"
-#   7. /(stack)/terms                — via Settings → compliance card "Terms of Service"
-#   8. /(stack)/support              — via Settings → FloatingContextMenu "Support"
-#   9. /(stack)/tickets              — SKIPPED: no UI entry from Settings (only via
-#      support hub deep-link); covered separately in support-ticket-create.yaml
-#  10. /(stack)/ticket-detail        — SKIPPED: requires existing ticket pre-state
+#   1. /(stack)/museum-detail     — Museums tab → museum sheet → "View details"
+#   2. /(stack)/chat/[sessionId]  — Dashboard tab → "Start New Conversation"
+#                                   → nearby-museums directory → museum → chat
+#   3. /(stack)/settings          — Home hero gear (hero-settings-button)
+#   4. /(stack)/change-password   — Settings → Security card
+#   5. /(stack)/change-email      — Settings → Security card
+#   6. /(stack)/privacy           — Settings → FloatingContextMenu "RGPD/Privacy"
+#   7. /(stack)/terms             — Settings → Compliance card "Terms of Service"
+#   8. /(stack)/support           — Settings → FloatingContextMenu "Support"
 #
-# For each screen we assert (a) the screen-unique title is visible and
-# (b) the top-left back button returns us to the previous screen.
-#
-# Regression catches:
-#   - Screen renamed (translation key drift on title).
-#   - Missing _layout for a route group.
-#   - Broken back navigation (router.back stuck / unmounted screen).
-#   - Settings card refactor breaking sub-screen entry points.
+# App is FRENCH; selectors use FR|EN alternation.
 
+# ──────────────────────────────────────────────
+# Phase 0: Fresh launch + login → home
+# ──────────────────────────────────────────────
 - launchApp:
-    clearState: false
-
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 0: Authenticate, land on Home
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip"
-    optional: true
-- waitForAnimationToEnd
-
+    clearState: true
 - extendedWaitUntil:
-    visible: "Your museum companion"
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ══════════════════════════════════════════════
+# 1. museum-detail (Museums tab → sheet → View details)
+# ══════════════════════════════════════════════
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-view-details"
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn:
+    id: "museum-sheet-view-details"
+- waitForAnimationToEnd
+# museum-detail unique marker: the "Start Chat Here" CTA (museumDirectory.start_chat).
+- extendedWaitUntil:
+    visible:
+      text: "Démarrer un chat ici|Start Chat Here"
+    timeout: 40000
+# Back → Museums directory. museum-detail is a full-screen stack route (no tab
+# bar) and its hardware `back` is unreliable; tap the top-left back arrow
+# (accessibilityLabel common.back = "Retour" / "Back").
+- tapOn:
+    text: "Retour|Back"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 15000
+# Return to Home
+- tapOn:
+    text: ".*(Accueil|Home).*"
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
     timeout: 15000
 
 # ══════════════════════════════════════════════
-# 1. museum-detail (via Museums tab → sheet → View details)
+# 2. chat/[sessionId] (Dashboard → Start New Conversation → directory → chat)
 # ══════════════════════════════════════════════
-- tapOn: "Museums"
-- waitForAnimationToEnd
-
+- tapOn:
+    text: ".*(Tableau de bord|Dashboard).*"
 - extendedWaitUntil:
-    visible: "Nearby Museums"
-    timeout: 8000
-
-# Tap the first museum card. The list is dynamic — we open the SHEET
-# first by tapping any visible museum row, then tap "View details".
-# If no museum is in range (CI emulator without geolocation), the assertion
-# below will fail with a clear "no museums" message → degrade gracefully.
-- runFlow:
-    when:
-      notVisible: "No museums found"
-    commands:
-      # The MuseumDirectoryList renders Pressable rows whose primary text
-      # is the museum name. We tap the "View details" button as soon as
-      # the sheet renders.
-      - tapOn:
-          text: "View details"
-          optional: true
-      - waitForAnimationToEnd
-
-      # museum-detail.tsx title = params.name (dynamic), but the section
-      # title "Museum Details" (museumDirectory.detail_title) is rendered
-      # in a sub-card when a description exists. Fall back to "Open in
-      # Maps" or "Start Chat Here" — both are screen-unique.
-      - extendedWaitUntil:
-          visible: "Start Chat Here"
-          timeout: 8000
-
-      # Back navigation
-      - tapOn:
-          id: "common.back"
-          optional: true
-      - back
-      - waitForAnimationToEnd
-
-      - extendedWaitUntil:
-          visible: "Nearby Museums"
-          timeout: 5000
-
-# Return to home
-- tapOn: "Home"
+    visible:
+      text: "Tableau de bord|Dashboard"
+    timeout: 15000
+# The Dashboard "Nouvelle conversation" button's accessibilityLabel
+# (a11y.conversations.start_new = "Commencer une nouvelle conversation" /
+# "Start a new conversation") COLLAPSES the subtree, so match the a11y label.
+# Unlike the Home CTA, the Dashboard CTA creates a session DIRECTLY (no museum
+# picker) → chat screen, where the first-time AI-disclosure consent sheet covers
+# the composer. Accept it, then assert the send button.
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
+- tapOn:
+    text: "Accepter tout|Accept all"
+    optional: true
 - waitForAnimationToEnd
+# Chat session screen — the send button is present on every chat screen.
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 8000
+    visible:
+      id: "send-button"
+    timeout: 40000
+# Return Home: close the chat (back to Dashboard tab), then tap the Home tab.
+- tapOn:
+    text: "Fermer la conversation|Close conversation"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: ".*(Accueil|Home).*"
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 15000
 
 # ══════════════════════════════════════════════
-# 2. chat/[sessionId] (via Dashboard → Start New Conversation)
-# ══════════════════════════════════════════════
-- tapOn: "Dashboard"
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Your recent museum sessions"
-    timeout: 8000
-
-# Dashboard sticky bar exposes "Start New Conversation" (conversations.start_new).
-- tapOn: "Start New Conversation"
-- waitForAnimationToEnd:
-    timeout: 10000
-
-# Chat session screen — we just assert the composer is rendered (the
-# input field has placeholder text from chat.placeholder / chat.compose_*).
-# A reliable screen-unique marker is the send-button testID present
-# on every chat session screen.
-- extendedWaitUntil:
-    id: "send-button"
-    timeout: 10000
-
-# Back navigation — returns to Dashboard
-- back
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Your recent museum sessions"
-    timeout: 8000
-
-# Return to home
-- tapOn: "Home"
-- waitForAnimationToEnd
-- extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 8000
-
-# ══════════════════════════════════════════════
-# 3. settings (via Home gear icon)
+# 3. settings (Home gear)
 # ══════════════════════════════════════════════
 - tapOn:
     id: "hero-settings-button"
-- waitForAnimationToEnd
-
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 8000
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 15000
 
 # ══════════════════════════════════════════════
-# 4. change-password (via Settings → Security card)
+# 4. change-password (Settings → Security card)
 # ══════════════════════════════════════════════
+# Row taps match the collapsed accessibilityLabel (a11y.settings.change_password
+# = "Changer le mot de passe du compte"), not the visible shorter text.
 - scrollUntilVisible:
     element:
-      text: "Change password"
+      text: "Changer le mot de passe du compte|Change your account password"
     direction: DOWN
-
-- tapOn: "Change password"
-- waitForAnimationToEnd
-
-# change_password.title => "Change Password"
-- extendedWaitUntil:
-    visible: "Change Password"
-    timeout: 5000
-
-# Back to settings
-- back
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
-
-# ══════════════════════════════════════════════
-# 5. change-email (via Settings → Security card)
-# ══════════════════════════════════════════════
-- scrollUntilVisible:
-    element:
-      text: "Change email"
-    direction: DOWN
-
-- tapOn: "Change email"
-- waitForAnimationToEnd
-
-# change_email.title => "Change Email"
-- extendedWaitUntil:
-    visible: "Change Email"
-    timeout: 5000
-
-- back
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
-
-# ══════════════════════════════════════════════
-# 6. privacy (via Settings → FloatingContextMenu "Privacy")
-# ══════════════════════════════════════════════
-# The privacy quick-link is in the top FloatingContextMenu (icon row).
-# Label = settings.privacy_short => "Privacy".
-# Scroll back to top to make sure the menu is visible.
-- scrollUntilVisible:
-    element:
-      text: "Settings"
-    direction: UP
-    speed: 80
-
+    visibilityPercentage: 1
 - tapOn:
-    text: "Privacy"
-    index: 0
-- waitForAnimationToEnd
-
-# privacy.tsx has a unique label "Privacy" header + a secondary subtitle
-# section. "Privacy" is generic; assert on a privacy-only label:
-# privacy.quick_facts or privacy.gdpr_rights. Most reliable = the "Contact
-# support" CTA at bottom (privacy.open_support).
+    text: "Changer le mot de passe du compte|Change your account password"
 - extendedWaitUntil:
-    visible: "Contact support"
-    timeout: 5000
-
-- back
-- waitForAnimationToEnd
-
+    visible:
+      text: "Changer le mot de passe|Change Password"
+    timeout: 15000
+# The change-password screen has its own "Retour" button (common.back); the
+# hardware `back` does not pop it. Tap the button.
+- tapOn:
+    text: "Retour|Back"
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 15000
 
 # ══════════════════════════════════════════════
-# 7. terms (via Settings → compliance card "Terms of Service")
+# 5. change-email (Settings → Security card)
 # ══════════════════════════════════════════════
 - scrollUntilVisible:
     element:
-      text: "Terms of Service"
+      text: "Changer l'adresse email du compte|Change your account email"
     direction: DOWN
-
-- tapOn: "Terms of Service"
-- waitForAnimationToEnd
-
-# terms.tsx unique marker: "Privacy Policy" link OR version_note.
-# "Privacy Policy" is screen-unique inside the terms page.
+    visibilityPercentage: 1
+- tapOn:
+    text: "Changer l'adresse email du compte|Change your account email"
 - extendedWaitUntil:
-    visible: "Privacy Policy"
-    timeout: 5000
-
-- back
-- waitForAnimationToEnd
-
+    visible:
+      text: "Changer d'email|Change Email"
+    timeout: 15000
+- tapOn:
+    text: "Retour|Back"
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 15000
 
 # ══════════════════════════════════════════════
-# 8. support (via Settings → FloatingContextMenu "Support")
+# 6. privacy (Settings → FloatingContextMenu "RGPD/Privacy")
 # ══════════════════════════════════════════════
 - scrollUntilVisible:
     element:
-      text: "Settings"
+      text: "Paramètres|Settings"
     direction: UP
     speed: 80
+- waitForAnimationToEnd
+- tapOn:
+    text: "RGPD|Privacy"
+    index: 0
+# privacy unique marker: the "Faits essentiels / Quick Facts" heading.
+- extendedWaitUntil:
+    visible:
+      text: "Faits essentiels|Quick Facts"
+    timeout: 15000
+# The privacy screen has no hardware-back; its FloatingContextMenu "Paramètres"
+# item (privacy.menu.settings) navigates back to Settings. Assert a
+# settings-UNIQUE marker ("Ouvrir les préférences") to confirm we left privacy
+# (the privacy screen ALSO shows a "Paramètres" menu chip, so that text is
+# ambiguous).
+- tapOn:
+    text: "Paramètres|Settings"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "Ouvrir les préférences|Open Preferences"
+    timeout: 15000
 
+# ══════════════════════════════════════════════
+# 7. terms (Settings → Compliance card "Terms of Service")
+# ══════════════════════════════════════════════
+- scrollUntilVisible:
+    element:
+      text: "Ouvrir les conditions d'utilisation|Open Terms of Service"
+    direction: DOWN
+    visibilityPercentage: 1
+- tapOn:
+    text: "Ouvrir les conditions d'utilisation|Open Terms of Service"
+# terms unique marker: the version note near the top (terms.version_note =
+# "Version X — Dernière mise à jour …" / "Version X — Last updated …"). The
+# "Politique de confidentialité" link is below the fold AND collapses its visible
+# text under a11y "Voir la politique de confidentialité", so use the version note.
+- extendedWaitUntil:
+    visible:
+      text: ".*(Version .* Dernière mise à jour|Version .* Last updated).*"
+    timeout: 15000
+# The terms screen also uses a FloatingContextMenu (no hardware back); its
+# "Paramètres" item returns to Settings. Confirm via the settings-unique marker.
+- tapOn:
+    text: "Paramètres|Settings"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "Ouvrir les préférences|Open Preferences"
+    timeout: 15000
+
+# ══════════════════════════════════════════════
+# 8. support (Settings → FloatingContextMenu "Support")
+# ══════════════════════════════════════════════
+- scrollUntilVisible:
+    element:
+      text: "Paramètres|Settings"
+    direction: UP
+    speed: 80
+- waitForAnimationToEnd
 - tapOn:
     text: "Support"
     index: 0
-- waitForAnimationToEnd
-
-# support.tsx renders "Instagram" and "Telegram" buttons (support.instagram /
-# support.telegram). "Instagram" is screen-unique inside support.
+# support unique marker: the "Créer un ticket" CTA (the social channel is
+# Telegram, not Instagram).
 - extendedWaitUntil:
-    visible: "Instagram"
-    timeout: 5000
-
-- back
-- waitForAnimationToEnd
-
+    visible:
+      text: "Créer un ticket|Create Ticket"
+    timeout: 15000
+# The support screen back button's visible label is "Retour aux paramètres" but
+# its accessibilityLabel (a11y.support.back_settings = "Retourner aux paramètres"
+# / "Return to settings") COLLAPSES the subtree — match the a11y label. Swipe up
+# first so the bottom button is on screen.
+- swipe:
+    direction: UP
+    duration: 400
+- tapOn:
+    text: "Retourner aux paramètres|Return to settings"
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
-
-# ══════════════════════════════════════════════
-# Phase 9: Return to Home via Back to Home CTA
-# ══════════════════════════════════════════════
-- scrollUntilVisible:
-    element:
-      text: "Back to Home"
-    direction: DOWN
-
-- tapOn: "Back to Home"
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 15000

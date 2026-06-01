@@ -1,109 +1,90 @@
 appId: com.musaium.mobile.preview
 ---
-# Settings Flow: Explore settings, change theme, visit compliance screens
+# screen: SettingsScreen
+# Settings Flow: log in, open Settings via the home gear, visit the Support
+# screen (FloatingContextMenu entry), return Home.
 #
-# Prerequisites:
-#   - User is already logged in
-#   - Backend running on localhost:3000
-#
-# This flow validates the settings hub and its sub-screens.
+# App runs in FRENCH on the e2e sim; every text selector uses FR|EN alternation.
+# Settings is reached via the home hero gear (testID hero-settings-button), NOT a
+# bottom-nav "Settings" tab (which does not exist). The top FloatingContextMenu
+# exposes Préférences / RGPD / Support (app/(stack)/settings.tsx) — each item is a
+# Pressable whose accessibilityLabel is the visible label, tappable by text.
 
 # ──────────────────────────────────────────────
-# Phase 1: Ensure we are on home screen
+# Phase 0: Fresh launch + login → home
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-
-# If we land on auth, do a quick login
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-# Skip onboarding if shown
-- tapOn:
-    text: "Skip"
-    optional: true
-- waitForAnimationToEnd
-
+- launchApp:
+    clearState: true
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 2: Navigate to Settings
-# ──────────────────────────────────────────────
-- tapOn: "Settings"
-- waitForAnimationToEnd
-
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+# Systemic interceptor #1 — analytics consent banner (mounts a beat after the
+# auth screen; wait for it, then decline deterministically).
 - extendedWaitUntil:
-    visible: "Settings"
-    timeout: 5000
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+# Systemic interceptor #2 — iOS native "Save Password?" dialog.
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 3: Try switching themes
+# Phase 1: Navigate to Settings (home hero gear)
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Dark"
-    optional: true
-- waitForAnimationToEnd
-
-# Switch back to system
-- tapOn:
-    text: "System"
-    optional: true
-- waitForAnimationToEnd
+    id: "hero-settings-button"
+- extendedWaitUntil:
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 4: Visit Privacy screen
+# Phase 2: Visit the Support screen (FloatingContextMenu "Support" entry).
+# The menu pill is at the top of the Settings screen; the "Support" item is a
+# Pressable (accessibilityLabel settings.support = "Support").
 # ──────────────────────────────────────────────
-- scrollUntilVisible:
-    element: "Privacy (RGPD)"
-    direction: DOWN
-
-- tapOn: "Privacy (RGPD)"
-- waitForAnimationToEnd
-
-- back
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 5: Visit Terms of Service screen
-# ──────────────────────────────────────────────
-- scrollUntilVisible:
-    element: "Terms of Service"
-    direction: DOWN
-
-- tapOn: "Terms of Service"
-- waitForAnimationToEnd
-
-- back
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 6: Visit Support screen
-# ──────────────────────────────────────────────
-- scrollUntilVisible:
-    element: "Support"
-    direction: DOWN
-
 - tapOn:
     text: "Support"
     index: 0
 - waitForAnimationToEnd
-
-- back
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 7: Return to home
-# ──────────────────────────────────────────────
-- scrollUntilVisible:
-    element: "Back to Home"
-    direction: DOWN
-
-- tapOn: "Back to Home"
-- waitForAnimationToEnd
-
+# Support screen unique marker — the "Créer un ticket" CTA (tickets.createTicket),
+# always present on the support hub (the social channel is Telegram, not Instagram).
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Créer un ticket|Create Ticket"
+    timeout: 40000
+
+# Back to Settings via the support screen's in-screen back button. Its visible
+# label is "Retour aux paramètres" but its accessibilityLabel
+# (a11y.support.back_settings = "Retourner aux paramètres" / "Return to
+# settings") COLLAPSES the subtree, so the queryable node carries the a11y
+# label — match THAT. Swipe up first so it is on screen.
+- swipe:
+    direction: UP
+    duration: 400
+- tapOn:
+    text: "Retourner aux paramètres|Return to settings"
+- extendedWaitUntil:
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000

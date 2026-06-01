@@ -3,79 +3,72 @@ appId: com.musaium.mobile.preview
 # Onboarding — Skip with no authenticated session (regression guard)
 #
 # Validates:
-#   1. Fresh install (clearState) -> app shows auth OR onboarding entry path.
-#   2. Reach the onboarding carousel WITHOUT signing in
-#      (taps "Skip" / "Passer" if we land on auth first; onboarding is
-#       reachable post-auth via the "Onboarding Help" link in settings
-#       in the authenticated path — but here we explicitly test the
-#       UNAUTHENTICATED Skip behaviour by killing app then relaunching
-#       so the carousel can short-circuit early without ever attempting
-#       to login).
-#   3. Tap "Skip" on the onboarding screen.
-#   4. Assert navigation lands on /home (hero title "Your museum companion"
-#      visible) — NOT a blank screen and NOT the auth screen.
-#   5. Assert NO error toast / banner mentioning "Authentication required"
-#      or any 401 noise. This is the exact regression we just fixed in
-#      app/(stack)/onboarding.tsx: markOnboardingComplete() previously
-#      threw 401 when no session existed; now guarded by `isAuthenticated`.
+#   1. Fresh install (clearState) -> app shows auth (anonymous).
+#   2. Tap "Skip" / "Passer" if an onboarding carousel is showing.
+#   3. Assert NO "Authentication required" / 401 noise appears — the exact
+#      regression fixed in app/(stack)/onboarding.tsx: markOnboardingComplete()
+#      previously threw 401 with no session; now guarded by `isAuthenticated`.
+#   4. Assert routing terminates somewhere safe (home OR auth) — never a crash,
+#      blank screen, or auth-required error.
 #
-# If onboarding does not auto-show, the flow degrades gracefully: it
-# detects the home title within the timeout and assertion still passes.
-# (Some builds may auto-skip onboarding for QA accounts.)
+# App runs in FRENCH — text selectors use FR|EN alternation.
+# screen: AuthScreen
 
 - launchApp:
     clearState: true
     stopApp: true
 
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 1: Land on auth (anonymous). DO NOT log in.
-# ──────────────────────────────────────────────
-# First launch lands on the auth screen ("Welcome back" / "Sign in to continue").
-# We just confirm we are NOT already authenticated (so we won't accidentally
-# trigger the authenticated markOnboardingComplete code path).
 - extendedWaitUntil:
-    visible: "Welcome back"
-    timeout: 10000
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
-# Phase 2: The onboarding carousel may render BEHIND/OVER the auth screen
-# in some configurations. If the "Skip" button is showing, tap it directly.
-# Otherwise, this flow is a no-op for the skip path and we fall through to
-# the assertion that home is reachable.
+# Phase 1: Confirm anonymous (auth screen). DO NOT log in.
+# ──────────────────────────────────────────────
+- assertVisible:
+    text: "Welcome back|Bon retour"
+
+# ──────────────────────────────────────────────
+# Phase 2: If an onboarding "Skip" button is showing, tap it.
+# Otherwise no-op and fall through to the safety assertions.
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Skip"
+    text: "Skip|Passer"
     optional: true
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
 # Phase 3: Verify the regression is fixed — no auth-required error
+# (these strings should NEVER appear after a Skip when unauthenticated)
 # ──────────────────────────────────────────────
-# These strings should NEVER appear after a Skip when unauthenticated.
-# Their absence is the core assertion of this flow.
 - assertNotVisible: "Authentication required"
 - assertNotVisible: "Auth required"
 - assertNotVisible: "Unauthorized"
 - assertNotVisible: "401"
 
 # ──────────────────────────────────────────────
-# Phase 4: Verify routing terminates somewhere safe (home OR auth)
+# Phase 4: Routing terminates somewhere safe (home OR auth)
 # ──────────────────────────────────────────────
-# The skip handler in onboarding.tsx routes to /(tabs)/home. Routing then
-# bounces back to auth via the unauthenticated guard. Either is acceptable
-# — what we MUST NOT see is a crash, a stuck blank screen, or an error
-# toast about authentication being required.
 - runFlow:
     when:
-      visible: "Your museum companion"
+      visible:
+        text: "Your museum companion|Votre compagnon de musée"
     commands:
-      - assertVisible: "Your museum companion"
+      - assertVisible:
+          text: "Your museum companion|Votre compagnon de musée"
 
 - runFlow:
     when:
-      visible: "Welcome back"
+      visible:
+        text: "Welcome back|Bon retour"
     commands:
-      - assertVisible: "Welcome back"
+      - assertVisible:
+          text: "Welcome back|Bon retour"
       - assertNotVisible: "Authentication required"

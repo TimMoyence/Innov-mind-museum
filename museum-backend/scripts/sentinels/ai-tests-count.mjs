@@ -39,8 +39,17 @@ const AI_TESTS_DIR = resolve(__dirname, '../../tests/ai');
 /**
  * Frozen floor — bump deliberately when adding new ai-tests (and never
  * decrement without a PR that documents the capability removal).
+ *
+ * 2026-06-01 — bumped 19 → 49 after adding the comprehensive real-LLM
+ * conversation test matrix (vision-matrix / guardrail-matrix /
+ * conversation-matrix .ai.test.ts), which locks the chat AI behavior
+ * end-to-end through the full pipeline (V1 keyword guardrail → input
+ * sanitize → LLM vision/text → output guardrail). The 3 new files add 25
+ * real `it()` test blocks on top of the original 19 (44 actual tests); the
+ * sentinel's tolerant matcher additionally counts a few `it(`-shaped tokens
+ * in helper code, and reports 49 total for the current tree. Pin to that.
  */
-const MIN_TOTAL_AI_TESTS = 19;
+const MIN_TOTAL_AI_TESTS = 49;
 
 /**
  * Matches: it(, test(, it.skip(, it.only(, it.each(`...`)(, it.todo(,

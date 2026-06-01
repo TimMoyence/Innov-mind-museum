@@ -8,28 +8,40 @@ appId: com.musaium.mobile.preview
 #
 # Prerequisites:
 #   - Backend running (docker-compose, localhost:3000)
-#   - Development build installed (bundle id com.musaium.mobile.preview)
-#   - App freshly launched (not logged in)
-#   - Frontend i18n falls back to EN when device locale is not FR — assertions
-#     therefore accept both EN and FR via regex when text-based.
+#   - Release build of variant `development` installed (com.musaium.mobile.preview)
+#   - App runs in FRENCH — assertions accept both EN and FR via alternation.
 #
 # Identity:
 #   - Email: maestro+register-${MAESTRO_RUN_ID}@local.dev   (unique per run)
-#   - Password: MuseumMaestro!2026X                          (complex, not in breach corpus)
-#   - DOB: 10/08/1994                                        (FR DD/MM/YYYY format, parser accepts it)
+#   - Password: Mx7$kq2Lp9vRt4Wz                            (strong, NOT in HIBP breach corpus)
+#   - DOB: 10/08/1994                                        (FR DD/MM/YYYY format, adult)
+# screen: AuthScreen
 
 # ──────────────────────────────────────────────
-# Phase 1: Reach auth screen (login mode by default)
+# Phase 0: Cold start -> auth screen (login mode by default)
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-- assertVisible:
-    text: "Welcome back|Bon retour"
+# Generate a unique email per run (valid JS — Maestro evaluates ${} as JavaScript,
+# so bash-style ${VAR:-default} is a SyntaxError). Timestamp keeps re-runs from
+# colliding on "duplicate email".
+- evalScript: ${output.email = 'maestro-register-' + Date.now() + '@local.dev'}
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
 # Phase 2: Switch to register mode
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "No account\\? Sign up|Pas de compte \\? S'inscrire"
+    text: "Passer à l'inscription|Switch to registration"  # accessibilityLabel (collapses visible "Pas de compte ? S'inscrire")
 - waitForAnimationToEnd
 - assertVisible:
     text: "Create your account|Créez votre compte"
@@ -37,48 +49,56 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 # Phase 3: Fill registration form
 # ──────────────────────────────────────────────
-
-# First name (no testID — match by placeholder text)
 - tapOn:
-    text: "First name|Prénom"
+    id: "firstname-input"
 - inputText: "Maestro"
 
-# Last name
 - tapOn:
-    text: "Last name|Nom"
+    id: "lastname-input"
 - inputText: "Tester"
 
-# Email — unique per concurrent run via MAESTRO_RUN_ID env, default if unset
+# Email — unique per run (see evalScript above)
 - tapOn:
     id: "email-input"
-- inputText: "maestro+register-${MAESTRO_RUN_ID:-default}@local.dev"
+- inputText: "${output.email}"
 
-# Password (complex, not in breach corpus)
+# Password (strong, NOT in HIBP breach corpus)
 - tapOn:
     id: "password-input"
-- inputText: "MuseumMaestro!2026X"
+- inputText: "Mx7$kq2Lp9vRt4Wz"
 
 # Date of birth (DD/MM/YYYY — accepted by parseDateOfBirth)
 - tapOn:
     id: "date-of-birth-input"
 - inputText: "10/08/1994"
 
-# Hide keyboard before tapping GDPR checkbox / submit
-- hideKeyboard
-
-# Accept GDPR (matches both FR + EN consent label, no dedicated testID)
+# Dismiss the keyboard before tapping GDPR checkbox / submit. `hideKeyboard`
+# hard-FAILS on iOS when the focused field is a custom input (the DOB field uses
+# a non-standard editor) and exposes no standard dismiss — tap the static header
+# instead, which reliably blurs any field and is otherwise a no-op.
 - tapOn:
-    text: "I agree to the.*|J'accepte les.*"
+    text: "Create your account|Créez votre compte"
 
-# Scroll to make submit reachable on small simulators, then submit
-- scrollUntilVisible:
-    element:
+# Accept GDPR. The whole row is one Pressable (onToggle) with accessibilityLabel
+# "Accepter les conditions...", BUT the inline rich-text Terms/Privacy LINKS sit
+# at the row's center and have their OWN onPress (they navigate away). Tapping the
+# element by label lands on the center → opens Terms. Tap the checkbox SQUARE at
+# the row's left edge instead (the box is the first ~20px of the row).
+- tapOn:
+    point: "11%,67%"
+
+# Submit. The button is already on screen on iPhone 17; a hard scrollUntilVisible
+# at 100% visibility fails when no scroll is needed, so wait + tap by testID.
+- extendedWaitUntil:
+    visible:
       id: "auth-submit"
-    direction: DOWN
-    timeout: 5000
-
+    timeout: 10000
 - tapOn:
     id: "auth-submit"
+# iOS native "Save Password?" dialog after a successful registration submit
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
 
 # ──────────────────────────────────────────────
 # Phase 4: Verify post-registration state
@@ -88,14 +108,16 @@ appId: com.musaium.mobile.preview
 #   (b) Email verification required → info banner "Inscription terminée" /
 #       "Registration complete. Please log in." stays on auth screen
 #
-# We accept BOTH outcomes — failure means neither appeared after 15s.
+# We accept BOTH outcomes — failure means neither appeared.
 - waitForAnimationToEnd:
     timeout: 10000
 
+# Maestro `text` is a FULL-STRING regex match — the registration-complete banner
+# renders the whole sentence, so wrap each alternative so a substring still matches.
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée|Skip|Passer|Inscription terminée|Registration complete"
-    timeout: 15000
+      text: ".*(Your museum companion|Votre compagnon de musée|Skip|Passer|Inscription terminée|Registration complete).*"
+    timeout: 40000
 
 # Sanity: the registration form ("Create your account") MUST NOT be visible
 # anymore (either we navigated away, or we flipped back to login mode).
