@@ -48,8 +48,18 @@ const AI_TESTS_DIR = resolve(__dirname, '../../tests/ai');
  * real `it()` test blocks on top of the original 19 (44 actual tests); the
  * sentinel's tolerant matcher additionally counts a few `it(`-shaped tokens
  * in helper code, and reports 49 total for the current tree. Pin to that.
+ *
+ * 2026-06-01 (b) — bumped 49 → 79 after the exhaustive-catalog expansion
+ * (CHAT_BEHAVIOR_CATALOG.md, 180 behaviors). Adds a new geo-matrix.ai.test.ts
+ * (in-museum anchoring / nearby-museum proximity / GDPR consent floor via an
+ * injected deterministic LocationResolver + real LLM) plus more IMAGE cases
+ * (sculpture / person-privacy / image+off-topic), multilingual fidelity
+ * (ES/DE), meta-capability, voice-mode prose, multi-subject, and DET
+ * multilingual insult/injection blocks (DE/JA/AR/FR/ZH) verified against the
+ * real INSULT_KEYWORDS / INJECTION_PATTERNS lists. Current tree = 79 it()
+ * blocks across 8 files.
  */
-const MIN_TOTAL_AI_TESTS = 49;
+const MIN_TOTAL_AI_TESTS = 79;
 
 /**
  * Matches: it(, test(, it.skip(, it.only(, it.each(`...`)(, it.todo(,

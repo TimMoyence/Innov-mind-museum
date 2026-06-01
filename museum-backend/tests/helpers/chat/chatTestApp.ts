@@ -26,6 +26,11 @@ import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcri
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { TextToSpeechService } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import type { OcrService } from '@modules/chat/adapters/secondary/image/ocr-service';
+import type {
+  LocationResolver,
+  LocationConsentChecker,
+} from '@modules/chat/useCase/location-resolver';
+import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
@@ -448,6 +453,20 @@ interface BuildChatTestServiceOptions {
    * `ChatModule.build()` adapter graph (Wikidata / WebSearch / judge clients).
    */
   knowledgeRouter?: KnowledgeRouterPort;
+  /**
+   * Geo wiring (opt-in). When set, the prepare-message pipeline resolves
+   * `context.location` ("lat:X,lng:Y") into a `<visitor_context>` line for the
+   * LLM prompt — in-museum anchoring + outdoor reverse-geocode + nearby-museum
+   * proximity suggestions. Real-LLM geo tests inject a deterministic
+   * `LocationResolver` (in-memory museum repo + stubbed reverse-geocode) so the
+   * model is exercised end-to-end without hitting Nominatim. See
+   * `buildAiTestServiceWithGeo` in tests/ai/setup/ai-test-helpers.ts.
+   */
+  locationResolver?: LocationResolver;
+  /** GDPR consent port — gates whether the LLM prompt receives any location. */
+  locationConsentChecker?: LocationConsentChecker;
+  /** Museum repository — source of truth for nearby-museum proximity lookups. */
+  museumRepository?: IMuseumRepository;
 }
 
 /**
@@ -478,6 +497,9 @@ export function buildChatTestService(
       cache: opts.cache,
       ocr: opts.ocr,
       knowledgeRouter: opts.knowledgeRouter,
+      locationResolver: opts.locationResolver,
+      locationConsentChecker: opts.locationConsentChecker,
+      museumRepository: opts.museumRepository,
     });
   }
 

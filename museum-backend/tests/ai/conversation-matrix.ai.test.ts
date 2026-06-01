@@ -5,6 +5,8 @@ import {
   assertGracefulNonEmpty,
   looksFrench,
   looksEnglish,
+  looksSpanish,
+  looksGerman,
 } from './setup/ai-test-helpers';
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
@@ -143,6 +145,94 @@ describeAi('AI conversation matrix (real LLM)', () => {
     await expect(
       service.postMessage(session.id, { text: '     \n\t  ', context: { locale: 'en-US' } }),
     ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('LANGUAGE FIDELITY: Spanish question → Spanish answer (CAN-LANG-03)', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'es-ES' });
+
+    const result = await service.postMessage(session.id, {
+      text: '¿Puedes hablarme del Guernica de Picasso y su significado?',
+      context: { locale: 'es-ES' },
+    });
+
+    assertSubstantiveAnswer(result);
+    expect(looksSpanish(result.message.text)).toBe(true);
+  });
+
+  it('LANGUAGE FIDELITY: German question → German answer (CAN-LANG-04)', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'de-DE' });
+
+    const result = await service.postMessage(session.id, {
+      text: 'Kannst du mir den Expressionismus und seine wichtigsten Künstler erklären?',
+      context: { locale: 'de-DE' },
+    });
+
+    assertSubstantiveAnswer(result);
+    expect(looksGerman(result.message.text)).toBe(true);
+  });
+
+  it('META-CAPABILITY (CAN-META-01): "Que sais-tu faire ?" → honest art/culture description', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'fr-FR' });
+
+    const result = await service.postMessage(session.id, {
+      text: 'Que sais-tu faire exactement ?',
+      context: { locale: 'fr-FR' },
+    });
+
+    assertSubstantiveAnswer(result);
+    // Should describe its actual mission (art / culture / museum / monuments),
+    // not over-promise unrelated capabilities.
+    expect(result.message.text.toLowerCase()).toMatch(
+      /art|culture|musée|monument|œuvre|patrimoine|tableau|peinture/,
+    );
+  });
+
+  it('VOICE MODE (voiceMode:true) → short prose answer, no markdown bullets/headers', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'en-US' });
+
+    const result = await service.postMessage(session.id, {
+      // Simulates an STT transcript; voiceMode constrains the LLM to a 60-80
+      // word prose-only answer (no markdown) — see ChatRequestContext.voiceMode.
+      text: 'Tell me quickly about the Mona Lisa.',
+      context: { locale: 'en-US', voiceMode: true },
+    });
+
+    assertSubstantiveAnswer(result);
+    const text = result.message.text;
+    // Prose-only contract: no markdown list markers, no headers. Best-effort —
+    // a genuine markdown dump here is a real voice-mode regression.
+    expect(text).not.toMatch(/^\s*[-*]\s+/m);
+    expect(text).not.toMatch(/^#{1,6}\s/m);
+  });
+
+  it('MULTI-SUBJECT (EDGE-MIX-02): three topics in one message → graceful, no crash', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'fr-FR' });
+
+    const result = await service.postMessage(session.id, {
+      text: "Parle-moi de Monet, du Colisée et de la technique du sfumato, tout d'un coup.",
+      context: { locale: 'fr-FR' },
+    });
+
+    // Several valid cultural topics at once: must not crash; should engage
+    // substantively (handle or prioritize) rather than refuse.
+    assertSubstantiveAnswer(result);
+  });
+
+  it('MIXED LANGUAGES (EDGE-MIX-01): code-switched input → graceful non-empty reply', async () => {
+    const service = buildAiTestService();
+    const session = await service.createSession({ locale: 'en-US' });
+
+    const result = await service.postMessage(session.id, {
+      text: 'Tell me about la Joconde y su historia, please.',
+      context: { locale: 'en-US' },
+    });
+
+    assertGracefulNonEmpty(result);
   });
 
   it('EMOJI / GARBAGE input → graceful non-empty reply, no crash', async () => {
