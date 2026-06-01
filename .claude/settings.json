@@ -40,6 +40,19 @@
   "hooks": {
     "PostToolUse": [
       {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/skills/team/team-hooks/post-edit-green-test-freeze.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/lint-on-edit.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "condition": "tool_input.command =~ /^git commit/",
         "hooks": [

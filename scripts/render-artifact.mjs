@@ -555,7 +555,7 @@ const STYLE = `
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-.wrap{max-width:820px;margin:0 auto;padding:56px 32px 96px}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
 header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
 .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
 font-weight:600;margin:0 0 10px}

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run report — 2026-06-01-quota-tuple-402</title>
+<style>
+:root{--ink:#1f2933;--muted:#5a6672;--faint:#8a94a0;--bg:#fff;--panel:#f6f7f9;
+--border:#e3e6ea;--accent:#3b5b7a;--accent2:#b06a3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
+header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
+font-weight:600;margin:0 0 10px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.meta{margin-top:18px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 20px}
+h2{font-size:21px;margin:48px 0 8px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 6px;font-weight:650}
+h4,h5,h6{margin:22px 0 6px}
+p{margin:12px 0}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px 18px;
+overflow:auto;font-size:13.5px;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+border-bottom:2px solid var(--border)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+blockquote{margin:16px 0;padding:2px 18px;border-left:3px solid var(--border);color:var(--muted)}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+.cb{color:var(--accent);font-weight:700}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);
+background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:0 0 8px}
+.kv b{color:var(--ink);font-weight:600;margin-right:4px}
+.chip{display:inline-block;font-size:12px;background:#e7eef5;color:var(--accent);
+border-radius:20px;padding:2px 10px;margin:2px 0}
+.muted{color:var(--muted)}
+.verdict{display:inline-block;font-weight:700;font-size:13px;letter-spacing:.04em;
+padding:4px 12px;border-radius:6px}
+.verdict.ok{background:#e7eef5;color:var(--accent)}
+.verdict.warn{background:#f3ece5;color:var(--accent2)}
+.verdict.bad{background:#f6e7e3;color:#9a3412}
+.finding{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:12px 0}
+.finding-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+.finding-title{font-weight:600;margin:4px 0}
+.suggestion{color:var(--muted)}
+.sev{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:4px}
+.sev.crit{background:#f6e7e3;color:#9a3412}
+.sev.high{background:#f3ece5;color:var(--accent2)}
+.sev.med{background:#eef1f4;color:var(--accent)}
+.sev.low{background:#eceff1;color:var(--muted)}
+.axis{font-size:12px;color:var(--muted)}
+.loc{font-size:12px}
+dl{margin:8px 0;padding-left:14px;border-left:1px solid var(--border)}
+dt{font-weight:600;font-size:13px;color:var(--accent);margin-top:8px}
+dd{margin:2px 0 2px 8px}
+nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 20px;margin:0 0 36px}
+nav.toc strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;padding:2px 0}
+section.artifact{padding-top:8px}
+section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
+footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
+@media print{
+html,body{background:#fff;color:#000;font-size:11pt}
+.wrap{max-width:none;padding:0}
+a{color:#000;text-decoration:none}
+.kv,.chip,code,pre,.verdict,.sev,.finding,nav.toc{background:transparent!important}
+.finding,.kv,nav.toc,pre{border-color:#999}
+h1,h2,h3{page-break-after:avoid}
+h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
+header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
+@page{margin:18mm 16mm}
+}</style></head>
+<body><div class="wrap">
+<header class="doc">
+<p class="eyebrow">/team finalize</p>
+<h1>Run report — 2026-06-01-quota-tuple-402</h1>
+<div class="meta"><span>7 artefacts</span></div>
+</header>
+<nav class="toc"><strong>Sommaire</strong><a href="#spec-md">spec.md</a><a href="#design-md">design.md</a><a href="#tasks-md">tasks.md</a><a href="#discovery-md">discovery.md</a><a href="#story-md">STORY.md</a><a href="#code-review-json-2026-06-01-quota-tuple-402">code-review.json — 2026-06-01-quota-tuple-402</a><a href="#security-json">security.json</a></nav><section class="artifact" id="spec-md"><h2>spec.md</h2><h1>Spec — Fix quota free-tier 402 jamais émis (TypeORM UPDATE…RETURNING tuple mal lu)</h1>
+<blockquote><p><strong>Run:</strong> 2026-06-01-quota-tuple-402 <strong>Author:</strong> architect (opus-4.8) · <strong>Created:</strong> 2026-06-01 <strong>Phase:</strong> spec (UFR-022 fresh-context) — spec.md uniquement, ni design ni code.</p></blockquote>
+<p>EARS-format requirements. Source of truth for this run. Editor + reviewer read this before touching code.</p>
+<hr>
+<h2>1. Problem statement</h2>
+<p>Le cap mensuel de sessions pour les comptes free-tier (<code>FREE_TIER_MONTHLY_SESSION_LIMIT</code>, défaut 3, <code>museum-backend/src/config/env.ts:279</code>) ne bloque jamais. Un utilisateur free au-delà de sa limite peut continuer à créer des sessions de chat : <code>POST /api/chat/sessions</code> renvoie <strong>201 au lieu de 402 QUOTA_EXCEEDED</strong>, et <code>sessions_month_count</code> n'est même pas incrémenté. Reproduit live le 2026-06-01 (user 38, free, count=3/limit=3 → 201, count reste 3, aucun log <code>quota_check_hit_limit</code>).</p>
+<p>Cause racine confirmée code + runtime (<code>discovery.md</code>) : <code>PgMonthlyQuotaRepo.tryConsume</code> (<code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts:33-65</code>) appelle <code>this.dataSource.query(&quot;UPDATE …users… RETURNING …&quot;)</code> (l.40-57) puis traite le résultat comme un <strong>tableau de rows</strong> (<code>result.length === 0</code> l.59 ; <code>result[0]</code> lu comme une row l.60). Or TypeORM 0.3.28 renvoie pour un <code>UPDATE…RETURNING</code> un <strong>tuple <code>[rows, affectedCount]</code></strong>, pas <code>rows[]</code>. Conséquences observées en runtime (logs <code>DBG_TRYCONSUME_RAW</code>) :</p>
+<ul><li>quota épuisé (0 row mise à jour) : <code>result = [[], 0]</code> → <code>result.length === 2</code> (jamais 0) → garde l.59</li></ul>
+<p>  non déclenchée → <code>result[0]</code> = <code>[]</code> (tableau vide) traité comme <code>row</code> → <code>row.sessions_month_count</code>   = <code>undefined</code>, <code>new Date(undefined)</code> = Invalid Date → objet <strong>truthy</strong> renvoyé → middleware   <code>if (consumed) next()</code> (<code>monthly-session-quota.middleware.ts:169-172</code>) → <strong>201</strong>.</p>
+<ul><li>1 row : <code>result = [[{…}], 1]</code> → <code>result[0]</code> = le <strong>tableau</strong> de rows (pas la row) → <code>row.sessions_month_count</code></li></ul>
+<p>  = <code>undefined</code> également.</p>
+<p><code>tryConsume</code> ne renvoie donc <strong>jamais</strong> <code>null</code> (length toujours 2) → le quota n'a jamais bloqué dans cet environnement. Le SQL lui-même est correct (la clause <code>WHERE … sessions_month_count &lt; limit</code> refuse bien 0 rows à count=limit, testé manuel <code>UPDATE 0</code>).</p>
+<h2>2. Scope</h2>
+<p><strong>In scope:</strong></p>
+<ul><li><code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts</code> — corriger <code>tryConsume</code> pour</li></ul>
+<p>  lire le tableau de rows depuis le tuple <code>[rows, affectedCount]</code> retourné par <code>dataSource.query()</code>.</p>
+<ul><li>Tests BE prouvant : (a) la régression au niveau de la <strong>vraie forme de retour TypeORM</strong> (repo/intégration),</li></ul>
+<p>  (b) le comportement middleware bout-en-bout (free over-limit → 402, sous-limite → consume).</p>
+<p><strong>Out of scope:</strong></p>
+<ul><li><code>monthly-session-quota.middleware.ts</code> (logique correcte — <code>discovery.md §Périmètre</code>).</li><li>La route <code>chat-session.route.ts</code>, l'entité <code>User</code>, <code>config/env.ts</code> (tous corrects).</li><li>AUCUNE migration DB (logique applicative pure).</li><li>Audit des autres usages de raw <code>query('…RETURNING')</code> dans le codebase (signalé <code>discovery.md §Gotcha</code>,</li></ul>
+<p>  à traiter dans un run séparé — voir Open question Q2).</p>
+<ul><li>Documentation du gotcha dans <code>CLAUDE.md § Pièges connus</code> (doc, hors pipeline code ; mentionné Q3).</li><li>Pas de feature flag (UFR-015). Pas de bypass de hook (UFR-020).</li></ul>
+<h2>3. Requirements (EARS)</h2>
+<table><thead><tr><th>ID</th><th>Type</th><th>Statement</th><th>Acceptance</th></tr></thead><tbody><tr><td>R1</td><td>unwanted</td><td>If un utilisateur free-tier a atteint <code>FREE_TIER_MONTHLY_SESSION_LIMIT</code> sur le mois UTC courant et tente de créer une session, then the system shall renvoyer <strong>402 QUOTA_EXCEEDED</strong> et <strong>NE PAS</strong> incrémenter <code>sessions_month_count</code>.</td><td>Test repo/intégration : à <code>count = limit</code> (même mois), <code>tryConsume</code> retourne <code>null</code> ET la row DB reste à <code>count = limit</code>. Test middleware : <code>tryConsume</code> → <code>null</code> ⇒ 402 + body pinné.</td></tr><tr><td>R2</td><td>event</td><td>When un utilisateur free-tier sous la limite (même mois) crée une session, the system shall incrémenter <code>sessions_month_count</code> de <strong>+1</strong> atomiquement et laisser la requête aboutir (201).</td><td>Test repo/intégration : à <code>count = 1, limit = 3</code>, <code>tryConsume</code> retourne <code>{ sessionsMonthCount: 2, sessionsMonthStart: &lt;Date valide&gt; }</code> ET la row DB passe à <code>count = 2</code>. <code>sessionsMonthStart</code> est une <code>Date</code> valide (PAS Invalid Date).</td></tr><tr><td>R3</td><td>event</td><td>When <code>sessions_month_start</code> de l'utilisateur free appartient à un mois UTC antérieur (rollover mensuel), the system shall réinitialiser <code>sessions_month_count</code> à <strong>1</strong> et fixer <code>sessions_month_start</code> au 1er du mois courant.</td><td>Test repo/intégration : row avec <code>sessions_month_start</code> = mois précédent ET <code>count</code> = limit → <code>tryConsume(monthStartCourant, limit)</code> retourne <code>{ sessionsMonthCount: 1, sessionsMonthStart: &lt;1er du mois courant&gt; }</code> ET la row DB est reset.</td></tr><tr><td>R4</td><td>state</td><td>While <code>tryConsume</code> lit le résultat de <code>dataSource.query(&quot;UPDATE…RETURNING&quot;)</code>, the system shall extraire le <strong>tableau de rows</strong> depuis l'élément tuple <code>[rows, affectedCount]</code> (et non traiter <code>result</code> ou <code>result[0]</code> comme une row), de sorte que 0 row updatée ⇒ <code>null</code>.</td><td>Test repo prouvant que la forme <code>[[], 0]</code> ⇒ <code>null</code> et <code>[[{…}], 1]</code> ⇒ row consommée. Idéalement contre la vraie DB (intégration) plutôt qu'un mock qui rejoue la forme.</td></tr><tr><td>R5</td><td>unwanted</td><td>If l'utilisateur est premium OU anonyme (pas de <code>req.user.id</code>), then the system shall laisser la session se créer sans appeler <code>tryConsume</code> (comportement inchangé).</td><td>Tests middleware existants R3/R5 restent verts (premium → <code>next()</code> sans <code>tryConsume</code> ; pas d'user → <code>next()</code>).</td></tr><tr><td>R6</td><td>unwanted</td><td>If le repo quota n'est pas câblé (<code>repo === null</code>, glitch d'ordre de déploiement), then the system shall fail-OPEN (<code>next()</code>) — comportement inchangé.</td><td>Test middleware existant fail-open <code>monthly_quota_repo_unwired</code> reste vert.</td></tr></tbody></table>
+<h2>4. Constraints</h2>
+<ul><li>KISS / DRY / hexagonal (CLAUDE.md). Fix minimal-correct dans le seul adapter secondary <code>PgMonthlyQuotaRepo</code> ;</li></ul>
+<p>  ne pas toucher l'interface <code>MonthlyQuotaRepo</code> (contrat de port inchangé : <code>tryConsume</code> retourne toujours   <code>{ sessionsMonthCount, sessionsMonthStart } | null</code>).</p>
+<ul><li>All test data via shared factories (CLAUDE.md test discipline) : utiliser <code>tests/helpers/auth/user.fixtures.ts</code></li></ul>
+<p>  pour seeder les users (free/premium, count, monthStart) ; jamais d'inline <code>{ … } as User</code>.</p>
+<ul><li>No <code>eslint-disable</code> sans <code>Justification:</code> + <code>Approved-by:</code> (LINT_DISCIPLINE).</li><li><code>as Entity</code> casts seulement dans <code>tests/helpers/</code>.</li><li>All <code>/team</code> agents <code>model: opus-4.8</code> (UFR-010).</li><li>Honesty rule (UFR-013) : pas de fabrication, pas de fausse vérification, pas de masquage d'échec ;</li></ul>
+<p>  résultats <code>pnpm test</code>/<code>pnpm lint</code> verbatim (exit code + sortie). « Je ne sais pas » est autorisé.</p>
+<ul><li>Pas de bypass de hook (UFR-020) : ni <code>--no-verify</code>, ni <code>SKIP_*</code>, ni <code>core.hookspath=/dev/null</code>.</li><li>Pas de feature flag (UFR-015).</li><li>AUCUNE migration DB. Si une migration semblait nécessaire → c'est un signal d'erreur (le schéma est correct).</li><li>⚠️ Arbre de travail dev contaminé par un run guardrail concurrent : au commit (Tech Lead), stager</li></ul>
+<p>  UNIQUEMENT les fichiers de ce run — JAMAIS <code>git add -A</code> (<code>discovery.md §Contraintes</code>).</p>
+<h2>5. Non-functional requirements (NFR)</h2>
+<table><thead><tr><th>Category</th><th>Target</th><th>Notes</th></tr></thead><tbody><tr><td>Atomicité / concurrence</td><td>Préserver le single-<code>UPDATE…WHERE…RETURNING</code> atomique</td><td>N13/R11 (commentaire repo l.9-13 + middleware l.13-16) : le row-lock Postgres sérialise les POST multi-device concurrents → pas de read-then-write race. Le fix NE DOIT PAS dégrader cela en read-then-write (pas de <code>findOne</code> + <code>save</code> ; on garde le seul UPDATE atomique, on corrige seulement la lecture du résultat).</td></tr><tr><td>Contrat HTTP 402</td><td>Body pinné inchangé</td><td><code>respondQuotaExceeded</code> (<code>monthly-session-quota.middleware.ts:129-138</code>) émet <code>{ code:'QUOTA_EXCEEDED', tier:'free', currentCount, limit, resetAt, message }</code>, status <strong>402</strong> (pas 429) — consommé par l'interceptor axios mobile (R8/R24, N15). Le fix ne touche PAS le middleware → le body reste pinné, mais un test middleware doit le re-prouver vu que le chemin 402 n'était jamais atteint en runtime.</td></tr><tr><td>Latency</td><td>~inchangé (1 round-trip SQL)</td><td>Le fix est purement une correction de parsing en mémoire ; pas de round-trip DB additionnel.</td></tr><tr><td>Security</td><td>Pas de régression d'enforcement quota (abuse / cost-control)</td><td>Le bug = bypass complet du cap free-tier = sur-consommation LLM non bornée. OWASP API4:2023 (Unrestricted Resource Consumption) ; le fix restaure la limite.</td></tr><tr><td>Privacy / GDPR</td><td>Inchangé</td><td>Pas de nouveau champ PII. <code>quota_exceeded</code> telemetry omet déjà <code>userAgent</code>/<code>clientIp</code> (middleware l.99-107).</td></tr><tr><td>i18n</td><td>N/A</td><td><code>message</code> 402 est une string technique consommée par l'interceptor mobile, pas affichée brute (l'app mobile mappe le <code>code</code>). Aucune nouvelle string user-facing dans ce run.</td></tr><tr><td>Telemetry</td><td>Inchangé, mais désormais réellement atteint</td><td><code>quota_check_hit_limit</code> (log) + <code>quota_exceeded</code> (event Plausible) ne se déclenchaient jamais à cause du bug ; le fix rend ce chemin atteignable. Un test peut asserter que le log/event fire au 402 (optionnel, à trancher en plan).</td></tr><tr><td>Test discipline</td><td>UFR-021 N/A (pas d'écran FE) ; mais UFR-017 critique</td><td>Le test middleware existant <strong>mocke</strong> <code>tryConsume</code> → il ne pouvait PAS attraper ce bug (faux-vert). Ce run DOIT ajouter ≥1 test exerçant la <strong>vraie forme de retour</strong> de <code>dataSource.query()</code> (repo-level contre vraie DB via harness, OU à défaut un test repo qui rejoue fidèlement le tuple <code>[rows, affected]</code>). Voir Acceptance §9 AC4 + Open question Q1.</td></tr></tbody></table>
+<h2>6. Glossary</h2>
+<table><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody><tr><td><code>tryConsume(userId, monthStart, limit)</code></td><td>Méthode de <code>PgMonthlyQuotaRepo</code> : tente d'incrémenter (ou reset au rollover) <code>sessions_month_count</code> via un UPDATE atomique gardé par un WHERE. Retourne <code>{ sessionsMonthCount, sessionsMonthStart }</code> si une row a été updatée, <code>null</code> si le WHERE a refusé (quota épuisé même mois).</td></tr><tr><td>tuple <code>[rows, affectedCount]</code></td><td>Forme de retour de <code>DataSource.query()</code> (TypeORM 0.3.28) pour un statement modifiant (<code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>) avec <code>RETURNING</code> : un tableau à 2 éléments, <code>[0]</code> = tableau des rows retournées, <code>[1]</code> = nombre de rows affectées.</td></tr><tr><td><code>rows[]</code></td><td>Forme de retour de <code>DataSource.query()</code> pour un <code>SELECT</code> : directement le tableau de rows. Le bug confond cette forme avec la forme tuple ci-dessus.</td></tr><tr><td>fail-open</td><td>Stratégie de dégradation : en cas d'erreur/absence d'une dépendance (repo non câblé, row introuvable), on laisse passer la requête plutôt que de la bloquer. Appliqué côté middleware (repo null, premium, row absente). NE concerne PAS le chemin nominal free-over-limit qui, lui, doit fail-CLOSED (402).</td></tr><tr><td>free-tier monthly session cap</td><td>Plafond de sessions de chat créables par mois UTC pour un compte <code>tier='free'</code> (<code>FREE_TIER_MONTHLY_SESSION_LIMIT</code>, défaut 3). Premium = illimité (bypass).</td></tr><tr><td>rollover mensuel</td><td>Passage au mois UTC suivant : <code>sessions_month_start</code> &lt; 1er du mois courant ⇒ le compteur repart à 1 lors de la prochaine consommation.</td></tr></tbody></table>
+<h2>7. Stakeholders + personas</h2>
+<table><thead><tr><th>Stakeholder</th><th>Concern</th></tr></thead><tbody><tr><td>End-user (visitor free)</td><td>Quota appliqué de façon prévisible ; à la limite atteinte reçoit un 402 clair (interceptor mobile → upsell paywall), pas un faux 201.</td></tr><tr><td>End-user (visitor premium)</td><td>Aucune régression : pas de cap, jamais de 402.</td></tr><tr><td>Operator / cost-control</td><td>Le cap free-tier borne la consommation LLM ; le bypass actuel = coût LLM non borné par compte free.</td></tr><tr><td>Mobile FE</td><td>Le contrat 402 (status + body <code>code:QUOTA_EXCEEDED</code>) doit rester strictement identique (interceptor axios déclenche le paywall sur ce code).</td></tr><tr><td>Compliance</td><td>Aucun changement de surface PII ; telemetry quota déjà anonymisée.</td></tr></tbody></table>
+<h2>8. Open questions</h2>
+<ul><li><strong>Q1 (NON-BLOCKING — à trancher en plan, propose ci-dessous) :</strong> Le test prouvant la régression doit-il</li></ul>
+<p>  cibler la <strong>vraie DB</strong> via <code>tests/helpers/integration/integration-harness.ts</code> (intégration, exerce la   vraie forme de retour TypeORM, coût : container Postgres, plus lent), OU un <strong>test repo unitaire</strong> qui   rejoue fidèlement le tuple <code>[rows, affectedCount]</code> via un <code>DataSource</code> stub ? <strong>Recommandation architect :</strong>   un test <strong>intégration</strong> repo-level est le plus fidèle (c'est exactement la forme de retour réelle qui a   échappé au mock existant — UFR-017) ; un test unitaire stub peut le compléter mais NE remplace PAS la   preuve intégration (un stub mal réglé reproduirait le même faux-vert). Si l'environnement intégration   est indisponible/instable dans ce run, fallback documenté = test repo stub fidèle + WARN explicite. Le   plan tranche le niveau et le harness.</p>
+<ul><li><strong>Q2 (NON-BLOCKING — hors scope, signalement) :</strong> <code>discovery.md §Gotcha</code> note que d'autres usages de</li></ul>
+<p>  raw <code>dataSource.query('…RETURNING')</code> dans le codebase peuvent avoir le même bug. Faut-il (a) auditer</p>
+<ul><ul><li>corriger dans CE run, ou (b) un run séparé ? <strong>Recommandation :</strong> (b) — hors touch list de ce run</li></ul></li></ul>
+<p>  (KISS/scope). Le plan peut lister un <code>grep</code> d'inventaire en note, sans l'inclure dans les tâches.</p>
+<ul><li><strong>Q3 (NON-BLOCKING) :</strong> Documenter le gotcha TypeORM (<code>SELECT → rows[]</code> vs `UPDATE…RETURNING →</li></ul>
+<p>  [rows, affected]<code>) dans </code>CLAUDE.md § Pièges connus`. C'est une édition pure-doc — soit incluse en fin de   run (Step finalize), soit déférée. <strong>Recommandation :</strong> l'inclure dans le finalize de ce run (faible coût,   forte valeur préventive), mais ce n'est pas du code applicatif → n'affecte pas le pipeline red/green.</p>
+<ul><li><strong>Q4 (NON-BLOCKING) :</strong> Faut-il une <strong>garde défensive cross-version</strong> (détecter forme tuple</li></ul>
+<p>  <code>[rows, affected]</code> vs forme plate <code>rows[]</code>) pour robustesse aux variations TypeORM (driver, version,   type de statement) ? <strong>Recommandation architect :</strong> PROPOSÉ mais à trancher en plan. Pour : robustesse à   un futur bump TypeORM (0.3.x → v1.0, cf. CLAUDE.md §Dependency Monitoring) où la forme pourrait changer.   Contre (YAGNI) : on connaît la forme exacte ici (<code>[rows, affected]</code>), une garde « intelligente » ajoute   de la complexité et un risque de masquer une vraie régression. <strong>Compromis suggéré au plan :</strong> extraire   les rows de façon claire et défensive-mais-simple (ex. détecter si <code>result[0]</code> est un tableau →   c'est le tuple ; sinon traiter <code>result</code> comme <code>rows[]</code>), AVEC un test couvrant les deux formes, plutôt   qu'une heuristique opaque. Le plan tranche entre « strict à la forme observée » et « tolérant aux deux   formes ».</p>
+<h2>9. Acceptance criteria</h2>
+<blockquote><p>Testables. Toute assertion « ça marche » doit pointer un test exécuté (exit code + sortie verbatim, UFR-013).</p></blockquote>
+<ul><li><strong>AC1 (R1 — fail-CLOSED limite atteinte) :</strong> À <code>tier=free</code>, <code>sessions_month_count = limit</code>,</li></ul>
+<p>  <code>sessions_month_start = 1er du mois courant</code>, un appel <code>tryConsume(userId, monthStartCourant, limit)</code>   retourne <strong><code>null</code></strong> ET la row DB conserve <code>sessions_month_count = limit</code> (non incrémenté). Au niveau   middleware : <code>tryConsume → null</code> ⇒ réponse <strong>402</strong> avec body <code>{ code:'QUOTA_EXCEEDED', tier:'free',   currentCount, limit, resetAt, message }</code>. <strong>Ce critère reproduit la limite → 402 ET la   non-incrémentation</strong> (exigence brief).</p>
+<ul><li><strong>AC2 (R2 — consume sous la limite) :</strong> À <code>count = 1, limit = 3</code>, <code>tryConsume</code> retourne</li></ul>
+<p>  <code>{ sessionsMonthCount: 2, sessionsMonthStart }</code> où <code>sessionsMonthStart</code> est une <strong><code>Date</code> valide</strong> (pas   Invalid Date — <code>Number.isNaN(d.getTime()) === false</code>) ET la row DB passe à <code>count = 2</code>.</p>
+<ul><li><strong>AC3 (R3 — rollover) :</strong> row free avec <code>sessions_month_start</code> = mois précédent et <code>count = limit</code> →</li></ul>
+<p>  <code>tryConsume(monthStartCourant, limit)</code> retourne <code>{ sessionsMonthCount: 1, sessionsMonthStart = 1er du   mois courant }</code> ET la row DB est reset (count=1, start=mois courant).</p>
+<ul><li><strong>AC4 (R4 / UFR-017 — preuve sur la vraie forme de retour) :</strong> Il existe ≥1 test qui échoue sur le code</li></ul>
+<p>  ACTUEL (<code>result[0]</code> mal lu) et passe après le fix, exerçant la <strong>forme <code>[rows, affectedCount]</code></strong> réelle de   <code>dataSource.query('UPDATE…RETURNING')</code> — de préférence en intégration contre une vraie DB (Q1). Concrètement :   sur le code buggé, le scénario AC1 renvoie un objet truthy (donc 201 / pas de <code>null</code>) ; sur le code corrigé,   il renvoie <code>null</code> (donc 402). Le test middleware mocké seul NE suffit PAS (il était vert sur le code buggé).</p>
+<ul><li><strong>AC5 (R5/R6 — non-régression bypass) :</strong> Les tests middleware existants</li></ul>
+<p>  (<code>tests/unit/shared/middleware/monthlySessionQuota.middleware.test.ts</code>) — premium bypass, anon bypass,   repo-unwired fail-open, increment sous-limite — restent <strong>verts</strong> sans modification de leur logique métier.</p>
+<ul><li><strong>AC6 (contrat 402 inchangé) :</strong> Le body et le status 402 émis par <code>respondQuotaExceeded</code> sont identiques</li></ul>
+<p>  byte-pour-byte au contrat actuel (<code>monthly-session-quota.middleware.ts:129-138</code>). Aucune modif de ce fichier.</p>
+<ul><li><strong>AC7 (gates verts) :</strong> <code>pnpm lint</code> (ESLint + lint:test-discipline + <code>tsc --noEmit</code>) et <code>pnpm test</code></li></ul>
+<p>  (suites quota touchées) passent, exit 0, sorties rapportées verbatim. Aucun <code>eslint-disable</code> non justifié.   AUCUNE migration générée (<code>node scripts/migration-cli.cjs generate --name=Check</code> resterait vide).</p></section>
+<section class="artifact" id="design-md"><h2>design.md</h2><h1>Design — Fix quota free-tier 402 jamais émis (TypeORM UPDATE…RETURNING tuple mal lu)</h1>
+<blockquote><p><strong>Run:</strong> 2026-06-01-quota-tuple-402 <strong>Author:</strong> architect (opus-4.8) · <strong>Phase:</strong> plan (UFR-022 fresh-context, zéro mémoire de la phase spec — spec.md/discovery.md lus du disque) <strong>Reads:</strong> <code>spec.md</code> (7 requirements R1-R6, 7 AC), <code>discovery.md</code> (cause racine confirmée code + runtime)</p></blockquote>
+<hr>
+<h2>1. Overview</h2>
+<p>Bug runtime confirmé : <code>PgMonthlyQuotaRepo.tryConsume</code> (<code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts:33-65</code>) lit le résultat de <code>dataSource.query(&quot;UPDATE … RETURNING …&quot;)</code> comme un <strong>tableau de rows</strong> (<code>result.length === 0</code> l.59, <code>result[0]</code> comme row l.60). Or TypeORM 0.3.28 retourne pour un <code>UPDATE…RETURNING</code> un <strong>tuple <code>[rows, affectedCount]</code></strong> (vérifié runtime : <code>[[], 0]</code> quand 0 row, <code>[[{…}], 1]</code> quand 1 row). Conséquence : <code>result.length</code> vaut toujours 2 → la garde <code>=== 0</code> ne tire jamais → <code>tryConsume</code> ne retourne <strong>jamais <code>null</code></strong> → le cap free-tier ne bloque jamais (201 au lieu de 402, compteur non incrémenté).</p>
+<p><strong>Fix = correction de parsing en mémoire dans le SEUL adapter secondary <code>tryConsume</code>.</strong> Le SQL atomique (single <code>UPDATE…WHERE…RETURNING</code>) est correct et NE change PAS (préserve N13/R11, row-lock anti-race). Le middleware, la route, l'entité <code>User</code>, <code>config/env.ts</code> ne changent pas (spec §2 Out of scope, confirmé code).</p>
+<p>Pas de migration (logique applicative pure). Pas de feature flag (UFR-015). Pas de changement du port <code>MonthlyQuotaRepo</code> (<code>monthly-session-quota.middleware.ts:30-37</code>) : signature <code>tryConsume(...) → { sessionsMonthCount, sessionsMonthStart } | null</code> inchangée.</p>
+<h2>2. Module touch list</h2>
+<table><thead><tr><th>Path</th><th>Change</th><th>Layer</th></tr></thead><tbody><tr><td><code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts</code></td><td><strong>GREEN</strong> — corriger <code>tryConsume</code> (lecture du tuple)</td><td>adapter secondary</td></tr><tr><td><code>museum-backend/tests/integration/quota/monthly-session-quota.repo.pg.test.ts</code></td><td><strong>NOUVEAU (RED principal)</strong> — test repo-level real-DB via integration-harness, exerce la vraie forme tuple</td><td>test (integration)</td></tr><tr><td><code>museum-backend/tests/unit/shared/middleware/monthly-session-quota.repo.tuple.test.ts</code></td><td><strong>NOUVEAU (RED complémentaire)</strong> — tuple-replay via fake DataSource, capture le bug sans dépendance DB, fail dans le gate <code>pnpm test</code> par défaut</td><td>test (unit)</td></tr></tbody></table>
+<p><strong>NON touchés</strong> (confirmé Read) : <code>monthly-session-quota.middleware.ts</code>, <code>chat-session.route.ts</code>, <code>user.entity.ts</code>, <code>config/env.ts</code>, le test middleware existant <code>tests/unit/shared/middleware/monthlySessionQuota.middleware.test.ts</code> (reste vert sans modif — AC5).</p>
+<h2>3. Hexagonal mapping</h2>
+<ul><li><strong>Port</strong> : <code>MonthlyQuotaRepo</code> (<code>monthly-session-quota.middleware.ts:30-37</code>) — INCHANGÉ. Le middleware</li></ul>
+<p>  (primary, côté HTTP) dépend de l'interface, jamais de l'impl.</p>
+<ul><li><strong>Adapter secondary</strong> : <code>PgMonthlyQuotaRepo</code> (<code>monthly-session-quota.repo.pg.ts</code>) — c'est ici que vit le</li></ul>
+<p>  bug et le fix. Il consomme <code>DataSource</code> (TypeORM). Aucune fuite domaine → adapter.</p>
+<ul><li>Le fix ne déplace aucune frontière : on corrige l'interprétation du retour driver dans l'adapter qui en a</li></ul>
+<p>  déjà la responsabilité. KISS : pas d'abstraction nouvelle, pas de helper partagé spéculatif.</p>
+<h2>4. Data model</h2>
+<p>Aucun changement. Rappel des colonnes touchées par le SQL existant (vérifié <code>user.entity.ts:152-168</code>) :</p>
+<table><thead><tr><th>Colonne DB</th><th>Entité</th><th>Type</th></tr></thead><tbody><tr><td><code>tier</code> (default <code>'free'</code>)</td><td><code>tier</code></td><td><code>varchar(16)</code> `'free' \</td></tr><tr><td><code>sessions_month_count</code> (default 0)</td><td><code>sessionsMonthCount</code></td><td><code>integer</code></td></tr><tr><td><code>sessions_month_start</code> (nullable)</td><td><code>sessionsMonthStart</code></td><td><code>date</code> (`Date \</td></tr></tbody></table>
+<p><strong>Aucune migration.</strong> <code>node scripts/migration-cli.cjs generate --name=Check</code> doit rester vide (AC7).</p>
+<h2>5. API contract changes</h2>
+<p>Aucune. Le contrat HTTP 402 (<code>respondQuotaExceeded</code>, <code>monthly-session-quota.middleware.ts:129-138</code> : status 402 + body <code>{ code:'QUOTA_EXCEEDED', tier:'free', currentCount, limit, resetAt, message }</code>) est émis par le middleware, intouché. OpenAPI inchangé → pas de <code>pnpm openapi:validate</code> / typegen FE requis. Le fix rend ce chemin 402 <strong>atteignable</strong> (il ne l'était jamais en runtime à cause du bug).</p>
+<h2>6. Décision Q4 — forme du fix (tranchée)</h2>
+<p><strong>Décision : garde défensive tuple-vs-flat, simple et explicite (PAS une heuristique opaque).</strong></p>
+<p>Forme retenue (pseudo-code ; l'éditeur green le concrétise) :</p>
+<pre><code>const result: unknown = await this.dataSource.query(`UPDATE … RETURNING …`, [...]);
+
+// TypeORM 0.3.28 : UPDATE…RETURNING → tuple [rows, affectedCount] ; SELECT → rows[].
+// On détecte le tuple via Array.isArray(result[0]) (le 1er élément est le tableau de rows).
+// Sinon on traite `result` comme rows[] (robustesse future bump TypeORM v1.0, cf. CLAUDE.md §Dependency Monitoring).
+const rows: ReadonlyArray&lt;{ sessions_month_count: number; sessions_month_start: string }&gt; =
+  Array.isArray(result) &amp;&amp; Array.isArray(result[0])
+    ? (result[0] as …[])      // forme tuple observée : [[…rows], affected]
+    : ((result as …[]) ?? []); // forme plate (SELECT-like / futur driver)
+
+if (rows.length === 0) return null;            // 0 row updatée ⇒ quota épuisé ⇒ null ⇒ 402
+const row = rows[0];
+return {
+  sessionsMonthCount: row.sessions_month_count,
+  sessionsMonthStart: new Date(row.sessions_month_start),
+};</code></pre>
+<p><strong>Justification (pesée explicite spec §8 Q4) :</strong></p>
+<ul><li><strong>Pour la garde défensive</strong> : robustesse au bump TypeORM 0.3.28 → v1.0 (repo 0.3.x archivé, cf. CLAUDE.md</li></ul>
+<p>  §Dependency Monitoring) où la forme de retour de <code>query()</code> pour les statements modifiants pourrait   s'aligner sur <code>rows[]</code>. La garde <code>Array.isArray(result[0])</code> distingue sans ambiguïté tuple <code>[[…], n]</code> de   plat <code>[{…}, {…}]</code> : un tuple a son 1er élément = tableau ; une liste de rows a son 1er élément = objet row.</p>
+<ul><li><strong>Contre le risque de masquage de régression (spec §8 Q4 &quot;ne doit pas masquer une vraie régression&quot;)</strong> :</li></ul>
+<p>  la garde NE fabrique JAMAIS de row truthy à partir de rien. Les DEUX branches convergent sur la même   invariante <code>rows.length === 0 ⇒ null</code>. C'est précisément l'invariante que le bug actuel viole (il   retournait truthy sur <code>[[], 0]</code>). Le fix la restaure quelle que soit la forme.</p>
+<ul><li><strong>Contre la complexité (KISS)</strong> : 1 ternaire lisible + 1 commentaire qui cite la forme observée. Pas</li></ul>
+<p>  d'heuristique « intelligente » (pas de sniffing de <code>affectedCount</code>, pas de réflexion sur le type de   statement). Le test (T-RED) couvre les DEUX formes → la garde n'est pas du code mort non-testé.</p>
+<p><strong>Alternative écartée (strict-à-la-forme-observée)</strong> : <code>const [rows] = result; if (rows.length === 0) return null;</code>. Plus court, mais casse silencieusement si un futur bump renvoie <code>rows[]</code> (alors <code>rows</code> = 1ère row, <code>rows.length</code> = nombre de clés → comportement faux). Coût de la garde = 1 <code>Array.isArray</code> ⇒ on prend la robustesse.</p>
+<h2>7. Décision Q1 — niveau du test RED (tranchée)</h2>
+<p><strong>Décision : LES DEUX — (1) unit tuple-replay = RED PRINCIPAL (gate <code>pnpm test</code>), (2) integration real-DB = RED de fidélité (gate <code>pnpm test:integration</code>).</strong></p>
+<p>Faits vérifiés qui imposent ce choix :</p>
+<ol><li><strong>Le gate par défaut <code>pnpm test</code></strong> = <code>jest --selectProjects unit-integration</code> (<code>package.json:32</code>). Le</li></ol>
+<p>   projet <code>unit-integration</code> collecte tout <code>tests/**</code> sauf <code>tests/e2e/</code> et <code>scripts/__tests__/</code>    (<code>jest.config.ts:158-162</code>) — donc il <strong>inclut</strong> <code>tests/integration/**</code>.</p>
+<ol><li><strong>MAIS</strong> les suites integration se gardent elles-mêmes : `const shouldRunIntegration =</li></ol>
+<p>   process.env.RUN_INTEGRATION === 'true'; const describeIntegration = shouldRunIntegration ? describe :    describe.skip;<code> (vérifié </code>tests/integration/leads/lead.repository.pg.test.ts:35-36<code>). Sous </code>pnpm test<code>,    </code>RUN_INTEGRATION<code> n'est PAS défini → la suite est **</code>describe.skip<code> → 0 test exécuté → exit 0**. Une    suite integration seule ne FAIL donc PAS le gate RED par défaut → elle ne satisferait pas la définition    UFR-022 « phase red : </code>pnpm test` exit ≠ 0 ».</p>
+<ol><li><strong>L'integration tourne via <code>pnpm test:integration</code></strong> (<code>RUN_INTEGRATION=true … --testPathPattern=tests/integration/</code>,</li></ol>
+<p>   <code>package.json:38</code>) — c'est là qu'elle FAIL au RED contre une vraie DB et passe au GREEN.</p>
+<p><strong>Donc :</strong></p>
+<ul><li><strong>RED PRINCIPAL (déterministe, sans DB, fail le gate standard)</strong> — `tests/unit/shared/middleware/</li></ul>
+<p>  monthly-session-quota.repo.tuple.test.ts<code>. Instancie </code>PgMonthlyQuotaRepo<code> avec un **fake </code>DataSource<code>**   dont </code>.query()<code> renvoie exactement les formes runtime capturées dans </code>discovery.md<code> :   </code>[[], 0]<code> (quota épuisé) et </code>[[{ sessions_month_count, sessions_month_start }], 1]<code> (consume). Assertions :   forme </code>[[], 0]<code> ⇒ </code>tryConsume<code> retourne </code>null<code> ; forme </code>[[{…}], 1]<code> ⇒ retourne   </code>{ sessionsMonthCount, sessionsMonthStart: &lt;Date valide, Number.isNaN(getTime())===false&gt; }<code>. **Sur le   code buggé** : </code>[[], 0]<code> ⇒ </code>result.length===2<code> ⇒ </code>result[0]=[]<code> traité comme row ⇒ objet truthy avec   </code>sessionsMonthCount: undefined<code> + Invalid Date ⇒ l'assertion </code>toBeNull()` FAIL. C'est la preuve UFR-017   que le mock du test middleware existant a manquée.</p>
+<ul><li><strong>RED FIDÉLITÉ (real-DB, exerce la vraie forme TypeORM)</strong> — `tests/integration/quota/</li></ul>
+<p>  monthly-session-quota.repo.pg.test.ts<code>, gardé </code>RUN_INTEGRATION<code> comme tous les pairs. Seed via   </code>makeUser()<code> (</code>tests/helpers/auth/user.fixtures.ts:3<code>) + </code>dataSource.getRepository(User).save(...)<code>.   Couvre AC1 (count=limit ⇒ </code>null<code> ET row DB non incrémentée), AC2 (count=1,limit=3 ⇒ count=2 + Date   valide), AC3 (rollover : start mois précédent ⇒ reset à 1 + start = 1er du mois courant). Prouve le   comportement end-to-end contre le vrai driver pg — ce qu'un stub ne peut pas garantir (un stub mal réglé   reproduirait le faux-vert). **Faisabilité vérifiée** : harness </code>createIntegrationHarness<code> largement   utilisé (≥20 suites), pattern repo-level identique à </code>lead.repository.pg.test.ts<code>. ⚠️ Gotcha CLAUDE.md   « SAVEPOINT hors transaction » NON applicable ici : on n'écrit AUCUNE migration, on consomme les   migrations déjà appliquées par le harness. Le test ne fait que </code>save<code> + </code>tryConsume` + relecture.</p>
+<p><strong>Pourquoi les deux et pas un seul</strong> (spec §8 Q1 recommandation respectée) : le unit tuple-replay seul risque le même reproche que le mock middleware (un stub ≠ la réalité driver) → l'integration le couvre. L'integration seule ne fail pas le gate standard (skip) → le unit le couvre. Coût raisonnable : le unit est trivial (fake objet <code>{ query: async () =&gt; […] }</code>), l'integration réutilise un harness déjà câblé. Les deux ensemble ferment le trou UFR-017 sans laisser de gate aveugle.</p>
+<h2>8. Test plan</h2>
+<table><thead><tr><th>AC</th><th>Test</th><th>Niveau</th><th>Gate</th></tr></thead><tbody><tr><td>AC1 (limite ⇒ <code>null</code>, row non incrémentée)</td><td>integration <code>monthly-session-quota.repo.pg.test.ts</code></td><td>real-DB</td><td><code>pnpm test:integration</code></td></tr><tr><td>AC1 (forme <code>[[], 0]</code> ⇒ <code>null</code>)</td><td>unit <code>…repo.tuple.test.ts</code></td><td>fake DataSource</td><td><code>pnpm test</code></td></tr><tr><td>AC2 (count 1→2, Date valide)</td><td>integration + unit (forme <code>[[{…}],1]</code>)</td><td>real-DB + fake</td><td>les deux gates</td></tr><tr><td>AC3 (rollover ⇒ reset 1)</td><td>integration</td><td>real-DB</td><td><code>pnpm test:integration</code></td></tr><tr><td>AC4 (preuve vraie forme retour, fail sur code buggé)</td><td>unit tuple-replay (déterministe) + integration</td><td>les deux</td><td><code>pnpm test</code> (unit)</td></tr><tr><td>AC5 (non-régression bypass premium/anon/unwired)</td><td>test middleware EXISTANT, INCHANGÉ</td><td>unit</td><td><code>pnpm test</code></td></tr><tr><td>AC6 (contrat 402 byte-identique)</td><td>middleware existant R8 (<code>_status===402</code>, body shape) — INCHANGÉ</td><td>unit</td><td><code>pnpm test</code></td></tr><tr><td>AC7 (gates verts, 0 migration)</td><td><code>pnpm lint</code> + <code>pnpm test</code> + <code>migration generate --name=Check</code> vide</td><td>—</td><td>—</td></tr></tbody></table>
+<p><strong>Frozen-test (UFR-022)</strong> : les 2 tests RED sont manifestés en <code>red-test-manifest.json</code> (FLAT <code>{path: sha256}</code>, cf. <code>feedback_team_frozen_manifest_flat</code>). Le green NE les modifie pas.</p>
+<p><strong>Test discipline (CLAUDE.md)</strong> : seed integration via <code>makeUser()</code> factory ; jamais d'inline <code>{…} as User</code> hors <code>tests/helpers/</code>. Le fake DataSource du unit est un stub de test local acceptable (pas une entité). Teardown integration : <code>harness.scheduleStop()</code> (PAS <code>.stop()</code>, cf. <code>feedback_integration_test_teardown</code>).</p>
+<h2>9. Security review</h2>
+<ul><li><strong>OWASP API4:2023 (Unrestricted Resource Consumption)</strong> : le bug = bypass complet du cap free-tier ⇒</li></ul>
+<p>  sur-consommation LLM non bornée par compte. Le fix restaure l'enforcement (fail-CLOSED sur le chemin   free-over-limit). Aucun nouveau vecteur introduit (parsing en mémoire d'un résultat SQL déjà émis).</p>
+<ul><li><strong>Pas de nouvelle surface PII</strong> (spec §5). La telemetry <code>quota_exceeded</code> omet déjà <code>userAgent</code>/<code>clientIp</code></li></ul>
+<p>  (<code>monthly-session-quota.middleware.ts:99-107</code>) — intouché.</p>
+<ul><li><strong>Fail-open préservé</strong> où il doit l'être (repo null, premium, row absente — middleware) ; fail-closed</li></ul>
+<p>  restauré où il doit l'être (free over-limit). Aucune confusion des deux.</p>
+<h2>10. Observability</h2>
+<table><thead><tr><th>Signal</th><th>État avant</th><th>État après fix</th></tr></thead><tbody><tr><td>log <code>quota_check_hit_limit</code> (<code>monthly-session-quota.middleware.ts:86</code>)</td><td>jamais émis (chemin 402 inatteignable)</td><td>émis 1×/(user,mois) au 1er 402 (R12)</td></tr><tr><td>event Plausible <code>quota_exceeded</code> (<code>…:108-126</code>)</td><td>jamais émis</td><td>émis au 402</td></tr><tr><td>log <code>monthly_quota_repo_unwired</code></td><td>inchangé (fail-open)</td><td>inchangé</td></tr></tbody></table>
+<p>Le fix ne crée AUCUN nouveau span/log/metric. Il rend <strong>atteignables</strong> des signaux existants qui ne tiraient jamais. Test optionnel d'assertion log/event au 402 = déjà couvert par le test middleware existant R12 (mocké) — pas besoin de le dupliquer (KISS). Pas de nouvelle instrumentation à ajouter.</p>
+<h2>11. Rollback path</h2>
+<p>Revert du seul commit touchant <code>monthly-session-quota.repo.pg.ts</code> (+ 2 fichiers test). Aucun état persistant modifié (pas de migration, pas de schéma, pas de cache key bumpé). Rollback = <code>git revert</code> propre, zéro effet de bord DB. Risque rollback = retour au bug (cap non appliqué) — acceptable et identique à l'état actuel.</p>
+<h2>12. Décisions</h2>
+<table><thead><tr><th>#</th><th>Décision</th><th>Justification</th></tr></thead><tbody><tr><td>D1 (Q1)</td><td>RED double : unit tuple-replay (gate standard) + integration real-DB (gate integration)</td><td>Le gate <code>pnpm test</code> ne fail pas sur une suite integration seule (<code>describe.skip</code> sans <code>RUN_INTEGRATION</code>, vérifié <code>lead.repository.pg.test.ts:35</code> + <code>package.json:32/38</code>). Le unit ferme le gate standard ; l'integration ferme le trou de fidélité UFR-017.</td></tr><tr><td>D2 (Q4)</td><td>Garde défensive tuple-vs-flat via <code>Array.isArray(result[0])</code></td><td>Robuste au bump TypeORM v1.0 (repo 0.3.x archivé) sans masquer de régression (les 2 branches convergent sur <code>rows.length===0 ⇒ null</code>). Coût = 1 ternaire testé sur les 2 formes.</td></tr><tr><td>D3</td><td>Port <code>MonthlyQuotaRepo</code> inchangé, SQL atomique inchangé</td><td>KISS + préserve N13/R11 (row-lock anti-race). Le fix corrige la lecture, pas la stratégie d'écriture.</td></tr><tr><td>D4 (Q2)</td><td>Audit des autres usages raw <code>query('…RETURNING')</code> = <strong>follow-up hors run</strong></td><td>KISS/scope (spec §8 Q2). Note d'inventaire ci-dessous, PAS une tâche de ce run.</td></tr><tr><td>D5 (Q3)</td><td>Doc gotcha CLAUDE.md §Pièges connus = <strong>finalize (pure-doc)</strong></td><td>Édition pure-doc, hors pipeline red/green (spec §8 Q3). À faire au Step finalize ; n'affecte pas les phases code.</td></tr></tbody></table>
+<h2>13. Follow-ups (hors scope de ce run — NE PAS coder ici)</h2>
+<ul><li><strong>Q2 (audit)</strong> : <code>grep -rn &quot;RETURNING&quot; museum-backend/src --include=*.ts | grep -i &quot;\.query(&quot;</code> pour</li></ul>
+<p>  inventorier les autres <code>dataSource.query('…RETURNING')</code> susceptibles du même bug. À traiter en run séparé   (pas dans la touch list de ce run). Inventaire = note, pas tâche.</p>
+<ul><li><strong>Q3 (doc)</strong> : ajouter dans <code>CLAUDE.md § Pièges connus</code> une entrée « TypeORM <code>dataSource.query()</code> :</li></ul>
+<p>  <code>SELECT → rows[]</code> mais <code>INSERT/UPDATE/DELETE…RETURNING → [rows, affectedCount]</code> ; lire <code>result[0]</code> comme   une row = bug ». Édition pure-doc au finalize.</p>
+<h2>14. Open questions</h2>
+<p>Aucune bloquante. Q1/Q2/Q3/Q4 de la spec sont toutes tranchées ci-dessus (D1-D5). Verdict <code>READY-FOR-RED</code>.</p>
+<h2>15. Lib-docs</h2>
+<p><code>lib-docs/INDEX.json</code> consulté. Lib touchée = TypeORM (<code>dataSource.query</code>). La forme de retour <code>[rows, affectedCount]</code> pour <code>UPDATE…RETURNING</code> n'est PAS dérivée du training : elle est <strong>vérifiée runtime</strong> (<code>discovery.md</code> logs <code>DBG_TRYCONSUME_RAW</code> : <code>[[], 0]</code> / <code>[[{…}], 1]</code>) — source de vérité empirique, plus forte qu'une doc. Aucun <code>lib-docs/typeorm/PATTERNS.md</code> requis pour ce fix de parsing. Si un PATTERNS.md TypeORM existe et documente cette forme, le green/reviewer le cite ; sinon, la preuve runtime de discovery.md fait foi (UFR-013 : « code says X » vérifié &gt; « general knowledge »).</p></section>
+<section class="artifact" id="tasks-md"><h2>tasks.md</h2><h1>Tasks — Fix quota free-tier 402 jamais émis (TypeORM tuple)</h1>
+<blockquote><p><strong>Run:</strong> 2026-06-01-quota-tuple-402 · <strong>Phase:</strong> plan (UFR-022) Atomic tasks, DONE-WHEN vérifiable. RED (tests qui FAIL) AVANT GREEN (fix). Aucune migration attendue. Frozen-test : les tests RED sont manifestés FLAT <code>{path: sha256}</code> dans <code>red-test-manifest.json</code> ; le green ne les touche pas (sinon <code>BLOCK-TEST-WRONG</code>).</p></blockquote>
+<hr>
+<h2>Phase RED — tests qui ÉCHOUENT sur le code buggé (editor fresh spawn, phase=red)</h2>
+<h3>T1.1 — RED unit tuple-replay (gate standard <code>pnpm test</code>)</h3>
+<p><strong>Touch:</strong> <code>museum-backend/tests/unit/shared/middleware/monthly-session-quota.repo.tuple.test.ts</code> (NOUVEAU). Instancie le VRAI <code>PgMonthlyQuotaRepo</code> (<code>@shared/middleware/monthly-session-quota.repo.pg</code>) avec un fake <code>DataSource</code> minimal <code>{ query: jest.fn() }</code> qui renvoie les formes runtime de <code>discovery.md</code> :</p>
+<ul><li>cas quota épuisé : <code>.query</code> ⇒ <code>[[], 0]</code> → attendre <code>tryConsume(userId, monthStart, 3)</code> === <code>null</code>.</li><li>cas consume : <code>.query</code> ⇒ <code>[[{ sessions_month_count: 2, sessions_month_start: '2026-06-01' }], 1]</code> →</li></ul>
+<p>  attendre <code>{ sessionsMonthCount: 2, sessionsMonthStart }</code> où <code>Number.isNaN(sessionsMonthStart.getTime()) === false</code>. Header magic comment expliquant le RED (bug <code>result[0]</code> lu comme row). Pas d'inline entity (<code>User</code> non requis ici — le fake DataSource ne touche pas l'entité). Cast <code>as unknown as DataSource</code> autorisé dans un fichier de test. <strong>DONE-WHEN:</strong> sur le code ACTUEL (buggé), <code>pnpm test --testPathPattern=monthly-session-quota.repo.tuple</code> échoue (exit ≠ 0) — précisément : le cas <code>[[], 0]</code> retourne un objet truthy (<code>sessionsMonthCount: undefined</code>, Invalid Date) au lieu de <code>null</code> ⇒ l'assertion <code>.toBeNull()</code> FAIL. Sortie verbatim dans le rapport red.</p>
+<h3>T1.2 — RED integration real-DB (gate <code>pnpm test:integration</code>)</h3>
+<p><strong>Touch:</strong> <code>museum-backend/tests/integration/quota/monthly-session-quota.repo.pg.test.ts</code> (NOUVEAU). Pattern identique à <code>tests/integration/leads/lead.repository.pg.test.ts:35-54</code> : <code>const describeIntegration = process.env.RUN_INTEGRATION === 'true' ? describe : describe.skip;</code> <code>beforeAll</code> → <code>createIntegrationHarness()</code> + <code>harness.scheduleStop()</code> + <code>new PgMonthlyQuotaRepo(harness.dataSource)</code>. <code>beforeEach</code> → <code>harness.reset()</code>. Seed users via <code>makeUser()</code> (<code>tests/helpers/auth/user.fixtures.ts:3</code>) + <code>harness.dataSource.getRepository(User).save(...)</code>. Couvre :</p>
+<ul><li><strong>AC1</strong> : user free <code>sessionsMonthCount = limit</code>, <code>sessionsMonthStart</code> = 1er du mois courant →</li></ul>
+<p>  <code>tryConsume(id, monthStartCourant, limit)</code> === <code>null</code> ; relecture row DB ⇒ <code>sessionsMonthCount</code> toujours = limit.</p>
+<ul><li><strong>AC2</strong> : user free <code>count = 1</code>, start = mois courant, limit 3 → <code>tryConsume</code> ⇒</li></ul>
+<p>  <code>{ sessionsMonthCount: 2, sessionsMonthStart: &lt;Date valide&gt; }</code> ; row DB ⇒ count = 2.</p>
+<ul><li><strong>AC3</strong> : user free <code>count = limit</code>, <code>sessionsMonthStart</code> = 1er du mois PRÉCÉDENT → `tryConsume(id,</li></ul>
+<p>  monthStartCourant, limit)<code> ⇒ </code>{ sessionsMonthCount: 1, sessionsMonthStart = 1er du mois courant }<code> ; row DB reset. Teardown : </code>scheduleStop()<code> only (jamais </code>.stop()<code>). Pas d'inline entity. **DONE-WHEN:** </code>pnpm test:integration --testPathPattern=monthly-session-quota.repo.pg<code> échoue (exit ≠ 0) sur le code ACTUEL — AC1 attend </code>null` mais le code buggé renvoie un objet truthy. Sortie verbatim au rapport.</p>
+<h3>T1.3 — Manifester les tests RED</h3>
+<p><strong>Touch:</strong> <code>red-test-manifest.json</code> (run-state, FLAT <code>{path: sha256}</code>). Inclure T1.1 + T1.2 (chemins absolus ou relatifs cohérents avec le hook <code>post-edit-green-test-freeze.sh</code>). <strong>DONE-WHEN:</strong> manifest FLAT (pas <code>{files:{}}</code>, cf. <code>feedback_team_frozen_manifest_flat</code>), 2 entrées, sha256 valides.</p>
+<hr>
+<h2>Phase GREEN — fix minimal qui rend les tests verts (editor fresh spawn, phase=green, ZÉRO mémoire RED)</h2>
+<h3>T2.1 — Corriger <code>tryConsume</code> (lecture du tuple)</h3>
+<p><strong>Touch:</strong> <code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts</code> (l.59-60 et le typage l.39). Appliquer la garde défensive tuple-vs-flat (design.md §6) : extraire <code>rows</code> via <code>Array.isArray(result) &amp;&amp; Array.isArray(result[0]) ? result[0] : result</code>, puis <code>rows.length === 0 ⇒ null</code>, sinon <code>row = rows[0]</code>. Typer <code>result</code> comme <code>unknown</code> (ou <code>unknown[]</code>) plutôt que <code>…[]</code> mal-formé, et caster proprement après détection de forme. Commentaire citant la forme observée <code>[rows, affectedCount]</code> (discovery.md)</p>
+<ul><li>la justification garde-défensive (bump TypeORM v1.0). NE PAS toucher le SQL <code>UPDATE…RETURNING</code> (atomicité</li></ul>
+<p>N13/R11). NE PAS toucher <code>loadUser</code>. NE PAS toucher l'interface <code>MonthlyQuotaRepo</code>. <strong>Impact analysis (à exécuter par l'editor green AVANT édition, CLAUDE.md GitNexus):</strong> <code>gitnexus_impact({target: &quot;tryConsume&quot;, direction: &quot;upstream&quot;})</code> — caller attendu : <code>monthlySessionQuota</code> middleware uniquement. Rapporter blast radius. <strong>DONE-WHEN:</strong> T1.1 (<code>pnpm test --testPathPattern=monthly-session-quota.repo.tuple</code>) PASSE (exit 0). Les tests RED ne sont PAS modifiés (sha256 manifest inchangé — frozen-test). <code>tryConsume</code> retourne <code>null</code> sur <code>[[], 0]</code>, row consommée sur <code>[[{…}], 1]</code>.</p>
+<h3>T2.2 — Vérifier la non-régression du test middleware existant (AC5/AC6)</h3>
+<p><strong>Touch:</strong> AUCUN (vérification seule). NE PAS modifier <code>tests/unit/shared/middleware/monthlySessionQuota.middleware.test.ts</code>. <strong>DONE-WHEN:</strong> <code>pnpm test --testPathPattern=monthlySessionQuota.middleware</code> PASSE (exit 0) sans modif — premium bypass, anon passthrough, repo-unwired fail-open, increment, 402 body shape restent verts.</p>
+<hr>
+<h2>Phase VERIFY — gates (déterministe, dispatcher)</h2>
+<h3>T3.1 — Lint + typecheck</h3>
+<p><strong>DONE-WHEN:</strong> <code>pnpm lint</code> (ESLint + lint:test-discipline + <code>tsc --noEmit</code>) exit 0. Aucun <code>eslint-disable</code> nouveau non justifié. Sortie verbatim.</p>
+<h3>T3.2 — Suite quota complète (gate standard)</h3>
+<p><strong>DONE-WHEN:</strong> <code>pnpm test --testPathPattern=&quot;monthly-session-quota|monthlySessionQuota&quot;</code> exit 0 (T1.1 + middleware existant verts). Pour la fidélité real-DB : <code>pnpm test:integration --testPathPattern=monthly-session-quota.repo.pg</code> exit 0 (T1.2 vert) — à exécuter si l'environnement integration (Docker/testcontainer) est disponible ; sinon WARN explicite + tag rapport (UFR-013, jamais de faux « ça passe »).</p>
+<h3>T3.3 — Pas de drift migration</h3>
+<p><strong>DONE-WHEN:</strong> <code>node scripts/migration-cli.cjs generate --name=Check</code> produit une migration VIDE (aucun changement de schéma). AC7.</p>
+<h3>T3.4 — Full-suite finale (filet contrat partagé)</h3>
+<p><strong>DONE-WHEN:</strong> <code>pnpm test</code> (projet <code>unit-integration</code>) exit 0 — vérifie qu'aucun test adjacent partageant le port <code>MonthlyQuotaRepo</code> n'est cassé (cf. <code>feedback_scoped_review_misses_contract_breakage</code>). Sortie verbatim.</p>
+<hr>
+<h2>Verification gate checklist (avant review)</h2>
+<ul><li><span class="cb">☐</span> T1.1 RED unit FAIL sur code buggé, PASS après fix (sortie verbatim).</li><li><span class="cb">☐</span> T1.2 RED integration FAIL sur code buggé (sous <code>RUN_INTEGRATION=true</code>), PASS après fix.</li><li><span class="cb">☐</span> T1.3 <code>red-test-manifest.json</code> FLAT, 2 entrées, sha256 cohérents avec le hook freeze.</li><li><span class="cb">☐</span> T2.1 fix <code>tryConsume</code> appliqué (garde tuple-vs-flat) ; SQL/loadUser/port inchangés.</li><li><span class="cb">☐</span> T2.2 test middleware existant inchangé + vert (AC5/AC6).</li><li><span class="cb">☐</span> T3.1 <code>pnpm lint</code> exit 0, 0 <code>eslint-disable</code> non justifié.</li><li><span class="cb">☐</span> T3.2 suite quota verte (+ integration si dispo, sinon WARN tagué).</li><li><span class="cb">☐</span> T3.3 migration <code>--name=Check</code> vide (AC7).</li><li><span class="cb">☐</span> T3.4 <code>pnpm test</code> full exit 0.</li><li><span class="cb">☐</span> Aucun fichier hors touch list §2 du design modifié (no <code>git add -A</code> au commit — arbre dev contaminé, discovery.md §Contraintes).</li></ul>
+<h2>Follow-ups (NE PAS coder dans ce run — design.md §13)</h2>
+<ul><li>Q2 : audit <code>grep -rn &quot;RETURNING&quot; museum-backend/src --include=*.ts</code> des autres raw <code>query()</code> (run séparé).</li><li>Q3 : doc gotcha <code>CLAUDE.md § Pièges connus</code> (pure-doc, au Step finalize).</li></ul></section>
+<section class="artifact" id="discovery-md"><h2>discovery.md</h2><h1>Discovery — BUG quota free-tier (402 jamais émis) — cause racine confirmée CODE + RUNTIME</h1>
+<blockquote><p>Faits VÉRIFIÉS par le dispatcher (Read/Grep + reproduction runtime live le 2026-06-01). Backend dev Docker up: localhost:3000 (NODE_ENV=production, base museumAI, nodemon ts-node sur src/). Compte e2e: e2e-test-login@test.musaium.dev / TestPassword123! (userId 38, free, count=3, start=2026-06-01). Re-vérifie les path:line en spec, mais ils tiennent au 2026-06-01.</p></blockquote>
+<h2>Symptôme</h2>
+<p>Un utilisateur free-tier au-delà de la limite mensuelle (<code>FREE_TIER_MONTHLY_SESSION_LIMIT</code>=3, <code>config/env.ts:279</code>) peut continuer à créer des sessions : <code>POST /api/chat/sessions</code> renvoie <strong>201 au lieu de 402 QUOTA_EXCEEDED</strong>, et le compteur <code>sessions_month_count</code> n'est même pas incrémenté. Reproduit live : user 38 à count=3 → POST → 201, count reste 3, aucun log <code>quota_check_hit_limit</code>.</p>
+<h2>Hypothèses ÉLIMINÉES (ne pas y revenir)</h2>
+<ul><li>« repo non câblé » (handoff initial) : FAUX. <code>setMonthlyQuotaRepo(new PgMonthlyQuotaRepo(AppDataSource))</code></li></ul>
+<p>  est appelé inconditionnellement au boot (<code>museum-backend/src/index.ts:565</code>, après <code>AppDataSource.initialize()</code>).   0 log <code>monthly_quota_repo_unwired</code> dans le conteneur.</p>
+<ul><li><code>!user?.id</code> : FAUX. <code>claims.id = Number(decoded.sub)</code> (token-jwt.service.ts:92) → req.user.id=38 (number, log <code>userId:38</code>).</li><li><code>!row || premium</code> : FAUX (instrumentation runtime : <code>loadUser</code> renvoie <code>{id:38,tier:free,count:3,start:2026-06-01}</code>).</li><li>middleware non monté / stale : FAUX (route chat-session.route.ts:107 + compilé identique ; nodemon sur src vivant).</li><li>limite haute : FAUX (env conteneur FREE_TIER unset → défaut 3 ; count ne s'incrémente jamais).</li></ul>
+<h2>Cause racine (CONFIRMÉE par instrumentation runtime)</h2>
+<p>Fichier : <code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts</code>, méthode <code>tryConsume</code> (l.33-65).</p>
+<p><code>tryConsume</code> fait :</p>
+<pre><code>const result = await this.dataSource.query(`UPDATE &quot;users&quot; SET ... WHERE ... RETURNING ...`, [...]);
+if (result.length === 0) return null;   // &lt;-- BUG
+const row = result[0];                  // &lt;-- BUG
+return { sessionsMonthCount: row.sessions_month_count, sessionsMonthStart: new Date(row.sessions_month_start) };</code></pre>
+<p><code>dataSource.query()</code> (TypeORM 0.3.28) pour un <strong>UPDATE…RETURNING</strong> renvoie un <strong>tuple <code>[rows, affectedCount]</code></strong>, PAS le tableau de rows directement (contrairement à un SELECT). Preuve runtime capturée (logs <code>DBG_TRYCONSUME_RAW</code>) :</p>
+<ul><li>quota épuisé (0 match) : <code>result = [[], 0]</code>  → <code>result.length === 2</code> (jamais 0) → garde NON déclenché →</li></ul>
+<p>  <code>result[0] = []</code> (tableau vide) traité comme <code>row</code> → <code>row.sessions_month_count</code> = undefined,   <code>new Date(undefined)</code> = Invalid Date → renvoie un objet <strong>truthy</strong> → middleware <code>if (consumed) next()</code> → <strong>201</strong>.</p>
+<ul><li>1 match : <code>result = [[{sessions_month_count:1, sessions_month_start:'...'}], 1]</code> → <code>result[0]</code> = le TABLEAU de rows.</li></ul>
+<p>Conséquence : <code>tryConsume</code> ne renvoie JAMAIS <code>null</code> (length toujours 2) → le quota n'a <strong>jamais</strong> bloqué dans cet environnement. Le SQL lui-même est correct (testé manuel : <code>UPDATE 0</code> à count=3/limit=3 — il refuse bien).</p>
+<h2>Fix attendu (minimal, à spécifier/coder en green)</h2>
+<p>Lire le tableau de rows depuis <code>result[0]</code> (pas <code>result</code> directement). Valider contre les DEUX formes observées :</p>
+<ul><li><code>const [rows] = result;  if (!Array.isArray(rows) || rows.length === 0) return null;  const row = rows[0];</code></li></ul>
+<p>  → <code>[[],0]</code>→rows=[]→null→402 ✓ ; <code>[[{…}],1]</code>→rows=[{…}]→consume ✓. Considérer une garde défensive (forme tuple vs forme plate) si on veut être robuste aux variations TypeORM, mais la forme <code>[rows, affected]</code> est celle observée en prod-like ici.</p>
+<h2>Gotcha généralisable (à documenter — CLAUDE.md § Pièges connus)</h2>
+<p>TypeORM <code>dataSource.query()</code> : un SELECT renvoie <code>rows[]</code> ; un INSERT/UPDATE/DELETE…RETURNING renvoie <code>[rows, affectedCount]</code>. Tout code qui fait <code>.query('UPDATE…RETURNING')</code> et lit <code>result[0]</code> comme une row est buggé. Auditer les autres usages de raw <code>query()</code> avec RETURNING (hors scope de ce run, mais à signaler).</p>
+<h2>Périmètre</h2>
+<p>BE uniquement : <code>monthly-session-quota.repo.pg.ts</code> (le fix) + tests. AUCUNE migration DB (logique applicative). Le middleware <code>monthly-session-quota.middleware.ts</code>, la route, l'entité User, env.ts = INCHANGÉS (corrects).</p>
+<h2>Contraintes</h2>
+<p>Aucun bypass de hook (UFR-020). Honnêteté UFR-013 (résultats verbatim). Pas de feature flag (UFR-015). Migrations via <code>node scripts/migration-cli.cjs generate</code> uniquement (aucune attendue ici). ⚠️ Arbre de travail dev contaminé par le travail guardrail concurrent d'un autre agent — au commit, stager UNIQUEMENT les fichiers de ce run (jamais git add -A).</p></section>
+<section class="artifact" id="story-md"><h2>STORY.md</h2><h1>STORY — {{TASK_TITLE}}</h1>
+<blockquote><p><strong>Run:</strong> {{RUN_ID}} · <strong>Started:</strong> {{ISO_TS}} <strong>APPEND-ONLY.</strong> Each agent appends a section when its phase completes. Never edit prior sections.</p></blockquote>
+<hr>
+<h2>spec — architect (opus-4.7, fresh context) — {{ISO_TS}}</h2>
+<ul><li>input: ...</li><li>output: spec.md</li><li>decisions: ...</li><li>open questions handed to user: ...</li></ul>
+<h2>plan — architect (opus-4.7, fresh context) — {{ISO_TS}}</h2>
+<ul><li>input: spec.md</li><li>output: design.md, tasks.md</li><li>module touch list: ...</li><li>risks identified: ...</li></ul>
+<h2>red — editor (opus-4.6, fresh context) — {{ISO_TS}}</h2>
+<ul><li>input: spec.md, design.md, tasks.md</li><li>failing tests written: ...</li><li>output: red-test-manifest.json (sha256 per test)</li><li>pnpm test scoped exit != 0 (proves red): ✅</li><li>libDocsConsulted: ...</li></ul>
+<h2>green — editor (opus-4.6, fresh context, FROZEN-TEST) — {{ISO_TS}}</h2>
+<ul><li>input: tasks.md (T1.1…T3.x), red-test-manifest.json</li><li>changed files (code only — tests frozen): ...</li><li>gates that passed inline (post-edit hooks): lint ✅, tsc ✅, frozen-test ✅</li><li>pnpm test scoped exit 0 (green): ✅</li><li>libDocsConsulted: ...</li><li>notes: ...</li></ul>
+<h2>verify — verifier (opus-4.6) — {{ISO_TS}}</h2>
+<ul><li>gates run: lint, tsc, tests, gitnexus_detect_changes</li><li>verdict: PASS / WARN / FAIL</li><li>failures: ...</li><li>corrective loops used: 0 / 1 / 2 (cap)</li></ul>
+<h2>security — security (opus-4.6) — {{ISO_TS}}</h2>
+<ul><li>scope: ...</li><li>findings: ...</li><li>promptfoo regression: PASS / FAIL</li><li>verdict: PASS / WARN / FAIL</li></ul>
+<h2>review — reviewer (opus-4.7, fresh context) — {{ISO_TS}}</h2>
+<ul><li>spec ↔ implementation alignment: ...</li><li>KISS / DRY / hexagonal compliance: ...</li><li>verdict: PASS / WARN / FAIL</li><li>comments: ...</li></ul>
+<h2>documenter — documenter (opus-4.6, fresh context) — {{ISO_TS}}</h2>
+<ul><li>ADR(s) written: ...</li><li>CHANGELOG entry (if release-bound): ...</li><li>post-finalize summary: ...</li></ul>
+<h2>finalize — dispatcher (Tech Lead) — {{ISO_TS}}</h2>
+<ul><li>commit: ...</li><li>KB updates: velocity-metrics, agent-roi, error-patterns</li><li>lesson capture: PASS / WARN</li><li>telemetry summary (Langfuse): tokens=... cost=$... elapsed=...</li></ul>
+<hr>
+<h2>documenter — documenter (opus-4.8, fresh context) — 2026-06-01</h2>
+<p><strong>Fix summary.</strong> Le cap mensuel free-tier (<code>FREE_TIER_MONTHLY_SESSION_LIMIT</code>, défaut 3) n'était jamais appliqué : <code>POST /api/chat/sessions</code> renvoyait <strong>201 au lieu de 402 QUOTA_EXCEEDED</strong> à la limite. Cause racine = <code>PgMonthlyQuotaRepo.tryConsume</code> lisait le retour de <code>dataSource.query(&quot;UPDATE…RETURNING&quot;)</code> comme un tableau de rows plat, alors que TypeORM 0.3.28 renvoie le <strong>tuple <code>[rows[], affectedCount]</code></strong> : <code>result.length</code> valait toujours 2 (jamais 0 → garde over-limit jamais déclenchée), et <code>result[0]</code> (le tableau de rows, vide à la limite) était traité comme une row truthy → 201. Correctif minimal dans le seul adapter secondary : garde <code>Array.isArray(result[0])</code> (tuple vs forme plate) → <code>rows.length === 0 ⇒ null</code> → 402. SQL <code>UPDATE…WHERE…RETURNING</code> byte-identique (atomicité préservée), port <code>MonthlyQuotaRepo</code> inchangé. Source : <code>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts:68-72</code>.</p>
+<p><strong>Verdicts.</strong></p>
+<ul><li><strong>verify : PASS</strong> — incl. confirmation <strong>live runtime</strong> : <code>count=3 → 402</code> ; cycle <code>0→3 = 201</code> puis <code>402</code></li></ul>
+<p>  à la limite. Dual RED (unit tuple-replay 2/2 + intégration real-pg 3/3) ferme le gap UFR-017 du test   middleware mocké faux-vert. frozen-test PASS (manifest FLAT 2 entrées, sha256 byte-for-byte).</p>
+<ul><li><strong>security : PASS</strong> — 0 finding ; ferme OWASP API4:2023 (Unrestricted Resource Consumption — cap</li></ul>
+<p>  free-tier bypassable = coût LLM non borné). fail-CLOSED restauré sur le bon chemin, fail-OPEN   (premium/anon/repo-unwired) préservé côté middleware (untouched). semgrep <code>p/owasp-top-ten</code> 0 finding.</p>
+<ul><li><strong>review : APPROVED</strong> (1er essai, weightedMean <strong>92.0</strong>). 0 blocker, 0 important, 1 nit cosmétique</li></ul>
+<p>  (belt <code>!Array.isArray(rows)</code> redondant — harmless, no change).</p>
+<p><strong>Docs touched (ce run).</strong></p>
+<ul><li><code>CHANGELOG.md</code> (racine) — entrée <code>## [Unreleased] → ### Fixed</code> (quota free-tier 402).</li><li><code>STORY.md</code> — cette section (append-only).</li><li><strong>ADR : aucun.</strong> Fix de défaut (correction de parsing dans un adapter), pas de décision architecturale</li></ul>
+<p>  irréversible ni de contrat public nouveau. Le port <code>MonthlyQuotaRepo</code> et le contrat HTTP 402 sont   inchangés. Un ADR serait du boilerplate (interdit par le rôle documenter). Justification §ADR ci-dessous.</p>
+<p><strong>Gotcha TypeORM — déjà couvert (PAS de duplication).</strong> Le piège <code>query()</code> SELECT (<code>rows[]</code>) vs <code>UPDATE…RETURNING</code> (<code>[rows, affectedCount]</code>) est DÉJÀ documenté dans <code>lib-docs/typeorm/PATTERNS.md §4.10</code></p>
+<ul><li><code>LESSONS.md</code> (incident prod 2026-05-08, même cause racine), et cité inline dans le code corrigé</li></ul>
+<p>(<code>repo.pg.ts:65</code>). Non re-documenté ici.</p>
+<p><strong>Follow-ups (NON traités dans ce run — pure-doc / hors scope).</strong></p>
+<ul><li>CLAUDE.md <code>§ Pièges connus</code> : un ajout du gotcha TypeORM RETURNING serait utile. <strong>NON écrit</strong> —</li></ul>
+<p>  CLAUDE.md a des modifications concurrentes non liées d'un autre agent (l'éditer ferait commiter le   travail d'autrui). À faire dans un commit pure-doc séparé quand CLAUDE.md sera clean. Note : le gotcha   est déjà capturé dans lib-docs (ci-dessus), donc valeur incrémentale faible.</p>
+<ul><li>Spec Open Q2 (NON-BLOCKING, hors scope) : audit des autres usages raw <code>dataSource.query('…RETURNING')</code></li></ul>
+<p>  susceptibles du même bug → run séparé (cf. spec.md §8 Q2).</p></section>
+<section class="artifact" id="code-review-json-2026-06-01-quota-tuple-402"><h2>code-review.json — 2026-06-01-quota-tuple-402</h2><dl><dt>runId</dt><dd>2026-06-01-quota-tuple-402</dd><dt>ts</dt><dd>2026-06-01T12:30:00Z</dd><dt>verdict</dt><dd>APPROVED</dd><dt>reSpawnPhase</dt><dd><span class="muted">null</span></dd><dt>reSpawnReason</dt><dd><span class="muted">null</span></dd><dt>libDocsConsulted</dt><dd><ul><li><dl><dt>lib</dt><dd>typeorm</dd><dt>patternsPath</dt><dd>lib-docs/typeorm/PATTERNS.md</dd><dt>patternsSha256AtConsult</dt><dd>d97f9ca9a5b01873b4928865c5319966bc3ffdf4ec3e8f07232b9f99a38de039</dd><dt>note</dt><dd>INDEX.json.libs.typeorm.patternsSha256 == live PATTERNS.md sha256 (not stale). §4.10 documents the exact `[rows[], rowCount]` tuple bug for `... RETURNING`; LESSONS.md 2026-05-08 is the same root cause from a prior prod incident (prune cron infinite loop). Code comment at repo.pg.ts:65 cites both, accurately.</dd></dl></li></ul></dd><dt>frozenTestCheck</dt><dd><dl><dt>manifestPath</dt><dd>team-state/2026-06-01-quota-tuple-402/red-test-manifest.json</dd><dt>verdict</dt><dd>PASS</dd><dt>modifiedDuringGreen</dt><dd><span class="muted">[]</span></dd><dt>evidence</dt><dd>manifest is FLAT {path:sha256}, 2 entries. Live sha256 of both test files == manifest values byte-for-byte (unit d6a7aaf2…, integration e5da0757…). No green-phase test mutation.</dd></dl></dd><dt>filesReviewed</dt><dd><ul><li>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts</li><li>museum-backend/tests/unit/shared/middleware/monthly-session-quota.repo.tuple.test.ts</li><li>museum-backend/tests/integration/quota/monthly-session-quota.repo.pg.test.ts</li></ul></dd><dt>specImplParity</dt><dd><ul><li><dl><dt>req</dt><dd>R1</dd><dt>ref</dt><dd>spec.md §3 (fail-CLOSED limit→402, no increment)</dd><dt>implAt</dt><dd>monthly-session-quota.repo.pg.ts:72 (rows.length===0 ⇒ null)</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>unit:69 toBeNull on [[],0]; integration AC1:122-125 null + count unchanged at LIMIT</dd></dl></li><li><dl><dt>req</dt><dd>R2</dd><dt>ref</dt><dd>spec.md §3 (under limit → +1, valid Date, 201)</dd><dt>implAt</dt><dd>repo.pg.ts:73-77 (row=rows[0], new Date(start))</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>unit:82-88 count=2 + valid Date; integration AC2:143-151 count 1→2 in DB</dd></dl></li><li><dl><dt>req</dt><dd>R3</dd><dt>ref</dt><dd>spec.md §3 (rollover → reset to 1, start=1st current month)</dd><dt>implAt</dt><dd>SQL CASE (unchanged) — repo.pg.ts:46-50</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>integration AC3:167-186 count→1, start→1st current month (TZ-robust assertion)</dd></dl></li><li><dl><dt>req</dt><dd>R4</dd><dt>ref</dt><dd>spec.md §3 (read rows[] from tuple [rows,affected], not result/result[0] as row)</dd><dt>implAt</dt><dd>repo.pg.ts:68-72 (Array.isArray(result[0]) guard)</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>unit:63 [[],0]⇒null AND :74 [[{…}],1]⇒consume — proves both shapes</dd></dl></li><li><dl><dt>req</dt><dd>R5</dd><dt>ref</dt><dd>spec.md §3 (premium/anon bypass unchanged)</dd><dt>implAt</dt><dd>monthly-session-quota.middleware.ts (UNCHANGED, out of scope)</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>existing middleware test unchanged + green (verify gate: 22 passed)</dd></dl></li><li><dl><dt>req</dt><dd>R6</dd><dt>ref</dt><dd>spec.md §3 (repo unwired → fail-OPEN unchanged)</dd><dt>implAt</dt><dd>middleware (UNCHANGED)</dd><dt>status</dt><dd>PASS</dd><dt>test</dt><dd>existing middleware fail-open test unchanged + green</dd></dl></li></ul></dd><dt>findings</dt><dd><dl><dt>blocker</dt><dd><span class="muted">[]</span></dd><dt>important</dt><dd><span class="muted">[]</span></dd><dt>nit</dt><dd><ul><li><dl><dt>fileLine</dt><dd>museum-backend/src/shared/middleware/monthly-session-quota.repo.pg.ts:72</dd><dt>suggestion</dt><dd>The `!Array.isArray(rows)` belt in the final guard is redundant: both ternary branches already yield an array (tuple branch = result[0] proven array by the condition; flat branch = `(result as …) ?? []`). Harmless defense-in-depth, no change required.</dd></dl></li></ul></dd></dl></dd><dt>musaiumGates</dt><dd><dl><dt>a11y</dt><dd><dl><dt>status</dt><dd>PASS</dd><dt>violations</dt><dd><span class="muted">[]</span></dd><dt>note</dt><dd>N/A — backend only, no FE/web file touched.</dd></dl></dd><dt>designSystem</dt><dd><dl><dt>status</dt><dd>PASS</dd><dt>violations</dt><dd><span class="muted">[]</span></dd><dt>note</dt><dd>N/A — no style code.</dd></dl></dd><dt>securityGrep</dt><dd><dl><dt>status</dt><dd>PASS</dd><dt>hits</dt><dd><span class="muted">[]</span></dd><dt>note</dt><dd>No dangerouslySetInnerHTML/eval/raw-SQL-interpolation/env-leak/hardcoded-secret. SQL is parameterized ($1,$2,$3) and byte-identical to baseline. Only env hit = `process.env.RUN_INTEGRATION` (standard integration-gate pattern, not a log leak).</dd></dl></dd><dt>stringGuardAudit</dt><dd><dl><dt>status</dt><dd>PASS</dd><dt>findings</dt><dd><span class="muted">[]</span></dd><dt>note</dt><dd>N/A — no *.no-hardcoded-strings.test.ts in diff.</dd></dl></dd><dt>deviationsCrossCheck</dt><dd><dl><dt>status</dt><dd>PASS</dd><dt>declared</dt><dd>0</dd><dt>undeclared</dt><dd><span class="muted">[]</span></dd><dt>note</dt><dd>No eslint-disable, no .skip literal (describe.skip via describeIntegration = canonical gate, not a deviation), no TODO/FIXME/XXX, no hardcoded secret. All 7 ACs implemented + tested. Q4 (defensive guard) and Q1 (dual RED) decisions declared in design.md §6/§7.</dd></dl></dd></dl></dd><dt>kissDryHexagonal</dt><dd><dl><dt>kiss</dt><dd>PASS</dd><dt>dry</dt><dd>PASS</dd><dt>hexagonal</dt><dd>PASS</dd><dt>notes</dt><dd>KISS: fix = 1 type extraction + 1 defensive ternary + guard, 20 ins/7 del in a single adapter method; no new abstraction, no helper, SQL untouched. DRY: no duplication; test files share factory makeUser + local TZ helpers. Hexagonal: bug+fix live entirely in adapter secondary PgMonthlyQuotaRepo; port MonthlyQuotaRepo signature unchanged (tryConsume → {…}|null); domain untouched. Naming matches project convention.</dd></dl></dd><dt>scoresOnFiveAxes</dt><dd><dl><dt>correctness</dt><dd><dl><dt>score</dt><dd>94</dd><dt>weight</dt><dd>0.3</dd><dt>reasoning</dt><dd>Root cause (tuple [rows,affected] read as rows[]) correctly fixed; guard sound on both shapes converging on rows.length===0⇒null. All 6 R / 7 AC traceable to impl+test. SQL byte-identical (atomicity preserved). LIVE runtime confirmed: count=3→402, cycle 0→3=201 then 402 (verify gate verbatim).</dd></dl></dd><dt>security</dt><dd><dl><dt>score</dt><dd>92</dd><dt>weight</dt><dd>0.25</dd><dt>reasoning</dt><dd>Closes OWASP API4:2023 quota-bypass (free-tier cap was never enforced → unbounded LLM cost). semgrep 0 findings. Parameterized SQL, no injection, no PII surface change, fail-CLOSED restored on the right path while fail-OPEN preserved on middleware paths.</dd></dl></dd><dt>maintainability</dt><dd><dl><dt>score</dt><dd>90</dd><dt>weight</dt><dd>0.2</dd><dt>reasoning</dt><dd>KISS/DRY/hexagonal all PASS. Inline comment cites real lib-docs §4.10 + LESSONS 2026-05-08 (verified to exist + match the bug). Minor: one redundant Array.isArray belt (NIT, harmless).</dd></dl></dd><dt>testCoverage</dt><dd><dl><dt>score</dt><dd>92</dd><dt>weight</dt><dd>0.15</dd><dt>reasoning</dt><dd>Dual RED closes the UFR-017 gap the mocked middleware test left open: unit tuple-replay (gate pnpm test, 2/2) + integration real-pg (3/3 under RUN_INTEGRATION) exercising the true driver shape. Factories used (makeUser), no inline entity, scheduleStop() teardown, frozen-test PASS.</dd></dl></dd><dt>docQuality</dt><dd><dl><dt>score</dt><dd>88</dd><dt>weight</dt><dd>0.1</dd><dt>reasoning</dt><dd>Test headers explain RED intent + UFR-017 rationale; source comment justifies the defensive guard with WHY (v1.0 bump) and cites lib-docs. STORY.md sections present though templated. TZ-fragility fix documented in localCalendarDay JSDoc.</dd></dl></dd><dt>weightedMean</dt><dd>92</dd></dl></dd></dl></section>
+<section class="artifact" id="security-json"><h2>security.json</h2><p class="verdict ok">PASS</p><p class="muted">0 findings</p></section>
+<footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
+</div></body></html>

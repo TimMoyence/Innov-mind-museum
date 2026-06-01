@@ -37,6 +37,19 @@ if [ ! -f "$FILE_PATH" ]; then
   exit 0
 fi
 
+# UFR-022 frozen-test: NEVER reformat a test frozen by a /team red phase.
+# A silent prettier/eslint --fix would diverge the file's sha256 and mechanically
+# bypass post-edit-green-test-freeze.sh. Skip the file if it is listed (absolute or
+# repo-relative) in ANY active red-test-manifest.json. RUN_ID-independent on purpose.
+REL_PATH="${FILE_PATH#"$REPO_ROOT"/}"
+for manifest in "$REPO_ROOT"/.claude/skills/team/team-state/*/red-test-manifest.json; do
+  [ -f "$manifest" ] || continue
+  if jq -e --arg p "$FILE_PATH" --arg rp "$REL_PATH" 'has($p) or has($rp)' "$manifest" >/dev/null 2>&1; then
+    echo "lint-on-edit: $REL_PATH is frozen (red-test-manifest) — skipping format (UFR-022)" >&2
+    exit 0
+  fi
+done
+
 # Determine which subproject
 if [[ "$FILE_PATH" == *"museum-backend"* ]]; then
   cd "$REPO_ROOT/museum-backend"
