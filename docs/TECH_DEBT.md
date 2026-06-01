@@ -691,7 +691,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - [ ] **Statut** : ouvert (créé 2026-05-21, /team run `2026-05-21-p0-c3-auth-crypto` reviewer F6 + run `2026-05-21-p0-c4-infra` documenter sweep)
 - **Référence code** :
   - `museum-backend/src/shared/observability/prometheus-metrics.ts` (cible — fichier registry existant, ajouter 3 counters)
-  - **Counters spécifiés C3 design §10** (`team-state/2026-05-21-p0-c3-auth-crypto/design.md:354-365`) :
+  - **Counters spécifiés C3 design §10** (`team-state/2026-05-21-p0-c3-auth-crypto/design.md` §10, lignes 354-365 — spec team-state archivée/élaguée, récupérable via git history) :
     1. `totp_replay_blocked_total{user_role}` — incrémenté dans `challengeMfa` + `verifyMfa` à chaque rejet pour `step <= lastUsedStep` (I-SEC7a, ferme RFC 6238 §5.2 replay window).
     2. `access_token_revoked_total{source="logout"|"admin"}` — incrémenté à chaque `denylist.add` réussi (I-SEC7b, ADR-064 denylist fail-OPEN).
     3. `art_keywords_rate_limited_total{role}` — incrémenté quand `taxonomyWriteLimiter` rejette (via custom keyGenerator wrapping ou hook `onLimitReached`, I-SEC3).
@@ -1409,7 +1409,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Référence code** :
   ```
   museum-frontend/__tests__/features/chat/bottom-sheet-router/backdrop-dismiss.test.tsx:163-211 (cases array)
-  team-state/2026-05-23-chat-composer-buttons-modal-dismiss/spec.md:48 (R6 wording "every non-blocking route" → 6 routes)
+  team-state/2026-05-23-chat-composer-buttons-modal-dismiss/spec.md (R6 §48 wording "every non-blocking route" → 6 routes — spec team-state archivée/élaguée, voir git history)
   ```
 - **Symptôme** : la spec R6 demande la parameterisation sur 6 routes non-bloquantes (`attachment-picker`, `browser`, `context-menu`, `summary`, `ai-disclosure`, `cartel-scanner`). Le test couvre 4/6 (`attachment-picker`, `browser`, `context-menu`, `summary`) ; manque `ai-disclosure` + `cartel-scanner`.
 - **Pourquoi non résolu en V1** : (a) test frozen per UFR-022 red-test-manifest ; (b) le fix container-level (`pointerEvents="box-none"` sur `<BottomSheetContainer>`) est *uniforme* sur toutes les routes C4 — un seul `BottomSheetContainer` les héberge → la couverture 4/6 est *fonctionnellement complète proof* que les 6 routes fonctionnent ; (c) re-spawn red phase juste pour étendre l'array `cases` (2-line change) = disproportionné vs le bénéfice ; (d) reviewer loop 2 a explicitement accepté comme INFO non-blocking.
