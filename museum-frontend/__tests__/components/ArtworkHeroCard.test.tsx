@@ -31,6 +31,7 @@ import type { ArtworkHeroModel } from '@/features/chat/application/useArtworkHer
 
 const fullModel: ArtworkHeroModel = {
   imageUrl: 'https://signed.example.com/mona.jpg',
+  messageId: 'msg-hero-full',
   title: 'Mona Lisa',
   artist: 'Leonardo da Vinci',
   museum: 'Louvre',
@@ -40,6 +41,7 @@ const fullModel: ArtworkHeroModel = {
 
 const untitledModel: ArtworkHeroModel = {
   imageUrl: 'https://signed.example.com/unknown.jpg',
+  messageId: 'msg-hero-untitled',
   title: null,
   artist: null,
   museum: null,

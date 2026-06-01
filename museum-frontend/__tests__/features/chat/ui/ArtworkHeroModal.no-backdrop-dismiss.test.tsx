@@ -40,6 +40,7 @@ import type { ArtworkHeroModel } from '@/features/chat/application/useArtworkHer
 
 const makeArtworkHeroModel = (overrides?: Partial<ArtworkHeroModel>): ArtworkHeroModel => ({
   imageUrl: 'https://example.test/artwork.jpg',
+  messageId: 'msg-hero-modal',
   title: 'La Joconde',
   artist: 'Leonardo da Vinci',
   museum: 'Louvre',

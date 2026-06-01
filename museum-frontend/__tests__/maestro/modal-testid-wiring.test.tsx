@@ -75,6 +75,7 @@ import PaywallPreviewRoute from '@/app/(dev)/paywall-preview';
 
 const artworkModel = {
   imageUrl: 'https://example.test/artwork.jpg',
+  messageId: 'msg-hero-maestro',
   title: 'La Joconde',
   artist: 'Leonardo da Vinci',
   museum: 'Louvre',

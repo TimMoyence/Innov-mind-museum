@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 import { fontSize, space } from '@/shared/ui/tokens';
 
 import type { ArtworkHeroModel } from '@/features/chat/application/useArtworkHero';
+import { useCarnetImageSource } from '@/features/chat/application/useCarnetImageSource';
 
 interface ArtworkHeroModalProps {
   readonly visible: boolean;
@@ -126,13 +127,7 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
               style={[styles.imageArea, animatedStyle]}
               accessibilityHint={t('chat.artworkHero.modal.a11y_pinch_hint')}
             >
-              <Image
-                source={{ uri: model.imageUrl }}
-                style={styles.fullImage}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-                testID="artwork-hero-modal-image"
-              />
+              <FullImage messageId={model.messageId} fallbackUrl={model.imageUrl} />
             </Animated.View>
           </GestureDetector>
 
@@ -156,6 +151,29 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
     </Modal>
   );
 });
+
+interface FullImageProps {
+  readonly messageId: string | null;
+  readonly fallbackUrl: string;
+}
+
+/**
+ * Resolves the fullscreen image through {@link useCarnetImageSource} so a
+ * stale signed URL is re-minted from a fresh signed URL + durable cache (D4)
+ * rather than rendering a broken (expired) image.
+ */
+function FullImage({ messageId, fallbackUrl }: FullImageProps): React.ReactElement {
+  const { uri } = useCarnetImageSource({ messageId: messageId ?? '', fallbackUrl });
+  return (
+    <Image
+      source={{ uri }}
+      style={styles.fullImage}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+      testID="artwork-hero-modal-image"
+    />
+  );
+}
 
 const styles = StyleSheet.create({
   root: {

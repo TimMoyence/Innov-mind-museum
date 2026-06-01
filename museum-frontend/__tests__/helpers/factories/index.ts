@@ -32,3 +32,5 @@ export {
 export { makeCitationSource } from './citation-source.factories';
 export { makeQueuedMessage, makeNetInfoSnapshot } from './connectivity.factories';
 export type { NetInfoSnapshotOverrides } from './connectivity.factories';
+export { makeCacheEntry, makeCacheIndex } from './imageCache.factories';
+export type { CacheEntry } from './imageCache.factories';
