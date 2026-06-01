@@ -12,6 +12,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Museum picker — local `id` exposed + OSM rows selectable (2026-06-01)
+
+Run `/team` UFR-022 fresh-context (`2026-06-01-museum-picker-osm-select`). Reviewer APPROVED 1st pass
+(weightedMean 92.85). Décision produit Option B. Cf. [ADR-069](docs/adr/ADR-069-museum-search-id-osm-generic-conversation.md).
+
+#### Fixed
+
+- **Mobile — museum-picker affichait toujours « Aucun musée trouvé ».** Cause racine : la projection
+  BE `SearchMuseumEntry` ne portait pas l'`id` DB des entrées `source:'local'`, donc le FE `toPickable`
+  filtrait 100 % des lignes ; les entrées `source:'osm'` (POI OpenStreetMap, sans ligne DB) étaient en
+  plus structurellement non-sélectionnables. Le picker rend désormais les lignes locales **et** OSM.
+
+#### Added
+
+- **Mobile — sélection d'une ligne OSM démarre une conversation générique.** Ligne `source:'local'` →
+  conversation contexte-musée (`museumId`, favoritable) ; ligne `source:'osm'` → conversation générique
+  **sans** `museumId` (non favoritable, le nom OSM externe n'atteint pas le prompt LLM). Contrat FE
+  `onSelect` élargi en union discriminée `local | osm` (`switch(kind)` exhaustif, caller compris).
+- **[ADR-069](docs/adr/ADR-069-museum-search-id-osm-generic-conversation.md)** — `GET /api/museums/search`
+  expose `id` (additif) ; modèle de sélection OSM=conversation-générique (alternatives rejetées dont
+  OSM-favoritable, réexaminable V2 parcours guidé).
+
+#### Changed
+
+- **API contract (additive, non-breaking) — `GET /api/museums/search`.** Le schéma d'item de recherche
+  expose désormais `id` (integer) en **optional**, présent uniquement pour les entrées `source:'local'`
+  (= `Museum.id`, déjà public via `/api/museums/directory`), jamais ajouté à `required`. Types FE
+  régénérés (`MuseumSearchEntry.id?: number`). Aucune migration DB (changement de projection).
+
 ### Lot P0 — a11y AA & supply-chain SBOM attestation (2026-05-25, V1 close-out)
 
 Run `/team` UFR-022 9-phase fresh-context (`2026-05-25-p0-a11y-compliance`, branch `p0/a11y`).

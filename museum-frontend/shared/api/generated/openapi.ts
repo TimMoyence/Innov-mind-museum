@@ -2986,6 +2986,8 @@ export interface paths {
           content: {
             'application/json': {
               museums: {
+                /** @description DB primary key — present only when source = 'local' (OSM entries have no DB row). */
+                id?: number;
                 name: string;
                 address?: string | null;
                 latitude: number;

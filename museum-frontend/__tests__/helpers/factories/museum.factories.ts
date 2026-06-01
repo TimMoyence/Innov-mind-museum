@@ -3,10 +3,21 @@ import { faker } from '@faker-js/faker';
 import type { components } from '@/shared/api/generated/openapi';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
 import type { MuseumBranding } from '@/features/museum/domain/museum-branding';
-import type { MuseumEnrichmentView } from '@/features/museum/infrastructure/museumApi';
+import type {
+  MuseumEnrichmentView,
+  MuseumSearchEntry,
+} from '@/features/museum/infrastructure/museumApi';
 
 type MuseumDirectoryDTO = components['schemas']['MuseumDirectoryDTO'];
 type MuseumDTO = components['schemas']['MuseumDTO'];
+
+/**
+ * A `source:'local'` search entry carries its originating DB `Museum.id`.
+ * The generated `MuseumSearchEntry` will surface `id?: number` after the
+ * OpenAPI regen (run 2026-06-01-museum-picker-osm-select); the intersection
+ * keeps this factory typed both before and after that regen.
+ */
+export type LocalSearchEntry = MuseumSearchEntry & { id?: number };
 
 /**
  * Creates a {@link MuseumBranding} (per-museum co-branding slice) with valid
@@ -86,6 +97,39 @@ export const makeMuseumEnrichmentView = (
   currentExhibitions: null,
   accessibility: null,
   fetchedAt: '2026-05-30T08:00:00.000Z',
+  ...overrides,
+});
+
+/**
+ * Creates a `source:'local'` {@link MuseumSearchEntry} (a museum backed by a DB
+ * row, hence carrying an integer `id`). Defaults: id 7, Paris-ish coords. Pass
+ * `{ id }` to control the DB primary key the picker maps to `museumId`.
+ */
+export const makeSearchEntryLocal = (overrides?: Partial<LocalSearchEntry>): LocalSearchEntry => ({
+  id: 7,
+  name: 'Louvre',
+  address: '75001 Paris',
+  latitude: 48.8606,
+  longitude: 2.3376,
+  distance: 50,
+  source: 'local',
+  museumType: 'art',
+  ...overrides,
+});
+
+/**
+ * Creates a `source:'osm'` {@link MuseumSearchEntry} (an OpenStreetMap POI with
+ * NO DB row → no `id`). The picker must keep this selectable (kind 'osm',
+ * identified by name + coordinates). Defaults: a Bordeaux monument-ish POI.
+ */
+export const makeSearchEntryOsm = (overrides?: Partial<MuseumSearchEntry>): MuseumSearchEntry => ({
+  name: 'Pont de Pierre',
+  address: null,
+  latitude: 44.8378,
+  longitude: -0.5639,
+  distance: 320,
+  source: 'osm',
+  museumType: 'general',
   ...overrides,
 });
 

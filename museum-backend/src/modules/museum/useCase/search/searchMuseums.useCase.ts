@@ -28,6 +28,12 @@ export interface SearchMuseumsInput {
 }
 
 export interface SearchMuseumEntry {
+  /**
+   * DB primary key — present ONLY on `source: 'local'` entries (a museum
+   * backed by a `Museum` row). `source: 'osm'` entries have no DB row, hence
+   * no `id`. Invariant: `'id' in entry === (entry.source === 'local')`.
+   */
+  id?: number;
   name: string;
   address: string | null;
   latitude: number;
@@ -60,6 +66,8 @@ const DEDUP_OSM_LOCAL_PURE_METERS = 100;
 const DEDUP_OSM_LOCAL_DISTANCE_METERS = 500;
 
 interface LocalMuseumWithCoords {
+  /** Originating `Museum.id` (DB PK) — always present for a DB row. */
+  id: number;
   name: string;
   address: string | null;
   latitude: number;
@@ -76,6 +84,7 @@ async function fetchLocalMuseumsWithCoords(
     for (const m of dbMuseums) {
       if (m.latitude != null && m.longitude != null) {
         results.push({
+          id: m.id,
           name: m.name,
           address: m.address ?? null,
           latitude: m.latitude,
@@ -291,6 +300,7 @@ export class SearchMuseumsUseCase {
     const osmResults = await this.overpassSearch({ bbox });
 
     const localWithCoords: LocalMuseumWithCoords[] = localRows.map((m) => ({
+      id: m.id,
       name: m.name,
       address: m.address ?? null,
       latitude: m.latitude,
@@ -360,6 +370,7 @@ export class SearchMuseumsUseCase {
   /** Non-fatal on failure. */
   private async fetchLocalInBbox(bbox: BoundingBox): Promise<
     {
+      id: number;
       name: string;
       address: string | null;
       latitude: number;
@@ -375,6 +386,7 @@ export class SearchMuseumsUseCase {
             m.latitude != null && m.longitude != null,
         )
         .map((m) => ({
+          id: m.id,
           name: m.name,
           address: m.address ?? null,
           latitude: m.latitude,

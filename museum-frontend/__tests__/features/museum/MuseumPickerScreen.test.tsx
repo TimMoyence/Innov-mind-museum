@@ -14,6 +14,7 @@ import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
+import { makeSearchEntryLocal, makeSearchEntryOsm } from '../../helpers/factories/museum.factories';
 
 // ── useLocation mock ───────────────────────────────────────────────────────
 const mockUseLocation = jest.fn();
@@ -49,17 +50,14 @@ function grantedLocation() {
 function makeNearbyEntry(
   overrides: Partial<{ id: number; name: string; address: string; distance: number }> = {},
 ) {
-  return {
+  return makeSearchEntryLocal({
     id: overrides.id ?? 7,
     name: overrides.name ?? 'Louvre',
     address: overrides.address ?? '75001 Paris',
     distance: overrides.distance ?? 50,
     latitude: 48.86,
     longitude: 2.33,
-    slug: 'louvre',
-    description: null,
-    source: 'local' as const,
-  };
+  });
 }
 
 function makeDirectoryEntry(id: number, name: string) {
@@ -129,7 +127,65 @@ describe('<MuseumPickerScreen>', () => {
 
     fireEvent.press(getByTestId('museum-picker-row-7'));
     expect(mockAddFavourite).toHaveBeenCalledWith(7);
-    expect(onSelect).toHaveBeenCalledWith({ id: 7, name: 'Louvre' });
+    // New union contract: a LOCAL tap yields kind 'local' carrying museumId (R9).
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'local', museumId: 7, name: 'Louvre' }),
+    );
+  });
+
+  it('renders an OSM row as selectable (mix local+osm → list, not empty-state) (R7/R12/R13)', async () => {
+    mockSearchMuseums.mockResolvedValue({
+      museums: [
+        makeNearbyEntry({ id: 7, name: 'Louvre' }),
+        makeSearchEntryOsm({ name: 'Pont de Pierre', latitude: 44.8378, longitude: -0.5639 }),
+      ],
+      count: 2,
+    });
+
+    const { getByTestId, queryByTestId, queryAllByTestId } = render(
+      <MuseumPickerScreen onSelect={jest.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('museum-picker-row-7')).toBeTruthy();
+    });
+
+    // The OSM row must be rendered (not filtered out) → empty-state absent (R12).
+    expect(queryByTestId('museum-picker-empty')).toBeNull();
+    // OSM testID must be deterministic and distinct — never `*-row-undefined` (R13).
+    expect(queryByTestId('museum-picker-row-undefined')).toBeNull();
+    expect(queryAllByTestId('museum-picker-row-osm-osm:44.83780:-0.56390').length).toBe(1);
+  });
+
+  it('tapping an OSM row calls onSelect kind "osm" WITHOUT museumId and does NOT favourite it (R10/R11)', async () => {
+    mockSearchMuseums.mockResolvedValue({
+      museums: [
+        makeSearchEntryOsm({ name: 'Pont de Pierre', latitude: 44.8378, longitude: -0.5639 }),
+      ],
+      count: 1,
+    });
+    const onSelect = jest.fn();
+
+    const { getByTestId } = render(<MuseumPickerScreen onSelect={onSelect} />);
+    await waitFor(() => {
+      expect(getByTestId('museum-picker-row-osm-osm:44.83780:-0.56390')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('museum-picker-row-osm-osm:44.83780:-0.56390'));
+
+    // OSM entries are NOT favouritable in this run (R11).
+    expect(mockAddFavourite).not.toHaveBeenCalled();
+    // OSM tap yields kind 'osm' with coords, no museumId (R10).
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'osm',
+        name: 'Pont de Pierre',
+        latitude: 44.8378,
+        longitude: -0.5639,
+      }),
+    );
+    const arg = onSelect.mock.calls[0][0] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty('museumId');
   });
 
   it('renders the empty state when no museums + no favourites', async () => {

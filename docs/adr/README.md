@@ -1,6 +1,6 @@
 # ADR Index — Musaium
 
-64 architecture decision records present in `docs/adr/`. Click an entry to open the full ADR.
+65 architecture decision records present in `docs/adr/`. Click an entry to open the full ADR.
 
 **Status legend** : `ACCEPTED` (implemented or design-locked) · `PROPOSED` (not yet ratified) · `DEFERRED` (post-launch / V1.1) · `SUPERSEDED` (replaced — see pointer) · `ACTIVE-MONITORING` (operational watch, no code change) · `REVERTED` (rolled back, kept for record).
 
@@ -8,7 +8,7 @@ Numbering gaps : **ADR-001, ADR-005, ADR-008, ADR-034** were deleted from `docs/
 
 ## By status (quick count)
 
-- ACCEPTED (incl. Accepted-Implemented / Amended) : **45**
+- ACCEPTED (incl. Accepted-Implemented / Amended) : **46**
 - DEFERRED : **9**
 - PROPOSED : **4**
 - SUPERSEDED : **2**
@@ -82,6 +82,7 @@ Numbering gaps : **ADR-001, ADR-005, ADR-008, ADR-034** were deleted from `docs/
 | [ADR-066](ADR-066-rn-modal-pointer-events-routing.md) | Pointer-events routing convention for RN overlay containers with backdrop dismiss | ACCEPTED | Implemented |
 | [ADR-067](ADR-067-base-modal-custom-vs-radix.md) | BaseModal custom (museum-web) — defer Radix UI Dialog post-launch V1 | ACCEPTED | Implemented Phase 2 |
 | [ADR-068](ADR-068-sbom-attestation-strategy-mobile-gap.md) | SBOM attestation strategy across the 3 apps (digest-bound where possible; mobile gap deferred to CRA 2027) | ACCEPTED | Implemented (advisory, non-blocking) |
+| [ADR-069](ADR-069-museum-search-id-osm-generic-conversation.md) | `GET /api/museums/search` exposes local `id` (additive); OSM picker rows start a generic museum-context-free conversation | ACCEPTED | Implemented 2026-06-01 (run `museum-picker-osm-select`) |
 
 ## Cross-reference sanity check vs CLAUDE.md
 

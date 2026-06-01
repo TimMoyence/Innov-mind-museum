@@ -6,9 +6,13 @@
  *   2. Horizontal favourites strip (read from `museum.favourites` storage).
  *   3. Vertical FlatList of nearby museums (BE pre-sorts by distance asc).
  *
- * Tap on any row → persists to favourites + calls `onSelect(museumId)`.
+ * Tap on a row → calls `onSelect` with a discriminated union (Option B):
+ *   - `source:'local'` (has DB `id`) → `{ kind:'local', museumId, name }` + persists
+ *     to favourites → starts a museum-context conversation.
+ *   - `source:'osm'` (no DB `id`) → `{ kind:'osm', name, latitude, longitude }`,
+ *     NOT favourited → starts a generic conversation (no `museumId`).
  *
- * Spec : `team-state/2026-05-17-w3-geo-walk-intra/spec.md` R15-R17.
+ * Spec : `team-state/2026-06-01-museum-picker-osm-select/spec.md`.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,34 +35,113 @@ const SEARCH_DEBOUNCE_MS = 300;
 /** radius (meters) for the nearby / search-by-coords API call. */
 const SEARCH_RADIUS_M = 5_000;
 
+/**
+ * What the caller receives on tap — a discriminated union. A LOCAL pick carries
+ * the DB `museumId` (used to start a museum-context conversation + favourite it);
+ * an OSM pick carries only its coordinates + name (generic conversation, never
+ * favourited, no DB row exists).
+ */
+export type SelectedMuseum =
+  | { readonly kind: 'local'; readonly museumId: number; readonly name: string }
+  | {
+      readonly kind: 'osm';
+      readonly name: string;
+      readonly latitude: number;
+      readonly longitude: number;
+    };
+
 interface MuseumPickerScreenProps {
   /**
-   * Invoked when the user taps a museum row in any section. The picker
-   * persists the chosen ID to favourites *before* calling this callback so
-   * the next mount surfaces the entry in the favourites strip.
+   * Invoked when the user taps a museum row in any section. For a LOCAL row the
+   * picker persists the chosen `museumId` to favourites *before* calling this
+   * callback so the next mount surfaces the entry in the favourites strip; OSM
+   * rows are not favouritable (no DB row).
    */
-  onSelect: (museum: { id: number; name: string }) => void;
+  onSelect: (museum: SelectedMuseum) => void;
   /** Invoked when the user dismisses the picker via the close (X) button. */
   onClose?: () => void;
 }
 
-/** Narrow row shape consumed by the list / strip — null IDs filtered upstream. */
-interface PickableMuseum {
-  readonly id: number;
-  readonly name: string;
-  readonly address: string | null;
-  readonly distance: number | null;
+/**
+ * Narrow row shape consumed by the list / strip — discriminated union local|osm.
+ * LOCAL rows carry the DB `museumId`; OSM rows carry coordinates + a derived
+ * stable `osmKey` (lat/lng to 5 decimals ≈ 1 m) used for testID/keyExtractor.
+ */
+export type PickableMuseum =
+  | {
+      readonly kind: 'local';
+      readonly museumId: number;
+      readonly name: string;
+      readonly address: string | null;
+      readonly distance: number | null;
+    }
+  | {
+      readonly kind: 'osm';
+      readonly name: string;
+      readonly address: string | null;
+      readonly distance: number | null;
+      readonly latitude: number;
+      readonly longitude: number;
+      readonly osmKey: string;
+    };
+
+/** Stable OSM identity: lat/lng rounded to 5 decimals (≈ 1 m), unique per POI. */
+function osmKeyOf(latitude: number, longitude: number): string {
+  return `osm:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
 }
 
-function toPickable(entry: MuseumSearchEntry | MuseumDirectoryEntry): PickableMuseum | null {
-  const id = 'id' in entry ? entry.id : null;
-  if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) return null;
+/**
+ * Stable, collision-free testID/key for a row. LOCAL rows key on the DB
+ * `museumId`; OSM rows key on the derived `osmKey` (never `undefined`).
+ */
+function rowTestId(museum: PickableMuseum): string {
+  return museum.kind === 'local'
+    ? `museum-picker-row-${String(museum.museumId)}`
+    : `museum-picker-row-osm-${museum.osmKey}`;
+}
+
+/** FlatList key — disjoint namespaces so local + osm rows never collide. */
+function rowKey(museum: PickableMuseum): string {
+  return museum.kind === 'local' ? `local-${String(museum.museumId)}` : museum.osmKey;
+}
+
+/**
+ * Maps a search entry (local or OSM) or a directory entry into a
+ * {@link PickableMuseum}, or `null` when the entry cannot be made selectable.
+ *
+ * - `source === 'osm'` → kind `osm` (selectable by name + coordinates, no id);
+ * - otherwise an integer `id > 0` is required → kind `local`;
+ * - else `null` (favourites/directory régression-guard — that path is keyed by
+ *   DB id).
+ */
+export function toPickable(entry: MuseumSearchEntry | MuseumDirectoryEntry): PickableMuseum | null {
   const name = entry.name;
   if (typeof name !== 'string' || name.length === 0) return null;
   const address = 'address' in entry && typeof entry.address === 'string' ? entry.address : null;
   const distance =
     'distance' in entry && typeof entry.distance === 'number' ? entry.distance : null;
-  return { id, name, address, distance };
+
+  const source = 'source' in entry ? entry.source : null;
+  if (source === 'osm') {
+    const latitude =
+      'latitude' in entry && typeof entry.latitude === 'number' ? entry.latitude : null;
+    const longitude =
+      'longitude' in entry && typeof entry.longitude === 'number' ? entry.longitude : null;
+    if (latitude === null || longitude === null) return null;
+    return {
+      kind: 'osm',
+      name,
+      address,
+      distance,
+      latitude,
+      longitude,
+      osmKey: osmKeyOf(latitude, longitude),
+    };
+  }
+
+  const id = 'id' in entry ? entry.id : null;
+  if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) return null;
+  return { kind: 'local', museumId: id, name, address, distance };
 }
 
 export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProps) {
@@ -70,7 +153,9 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
   const [searchResults, setSearchResults] = useState<PickableMuseum[]>([]);
   const [nearby, setNearby] = useState<PickableMuseum[]>([]);
   const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
-  const [favouriteEntries, setFavouriteEntries] = useState<PickableMuseum[]>([]);
+  const [favouriteEntries, setFavouriteEntries] = useState<
+    Extract<PickableMuseum, { kind: 'local' }>[]
+  >([]);
 
   // Load favourites once on mount.
   useEffect(() => {
@@ -104,7 +189,7 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
           .map((id) => byId.get(id))
           .filter((m): m is MuseumDirectoryEntry => m !== undefined)
           .map(toPickable)
-          .filter((m): m is PickableMuseum => m !== null);
+          .filter((m): m is Extract<PickableMuseum, { kind: 'local' }> => m?.kind === 'local');
         setFavouriteEntries(ordered);
       } catch {
         if (isCancelled()) return;
@@ -192,8 +277,22 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
 
   const handlePick = useCallback(
     (museum: PickableMuseum) => {
-      void addFavourite(museum.id);
-      onSelect({ id: museum.id, name: museum.name });
+      switch (museum.kind) {
+        case 'local':
+          void addFavourite(museum.museumId);
+          onSelect({ kind: 'local', museumId: museum.museumId, name: museum.name });
+          break;
+        case 'osm':
+          // OSM POIs are not backed by a DB row → not favouritable; the
+          // conversation that follows is generic (no museum context).
+          onSelect({
+            kind: 'osm',
+            name: museum.name,
+            latitude: museum.latitude,
+            longitude: museum.longitude,
+          });
+          break;
+      }
     },
     [onSelect],
   );
@@ -209,7 +308,7 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
   const renderRow = useCallback(
     ({ item }: { item: PickableMuseum }) => (
       <Pressable
-        testID={`museum-picker-row-${String(item.id)}`}
+        testID={rowTestId(item)}
         accessibilityRole="button"
         accessibilityLabel={item.name}
         onPress={() => {
@@ -240,10 +339,10 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
     [theme, handlePick],
   );
 
-  const renderFavourite = (entry: PickableMuseum) => (
+  const renderFavourite = (entry: Extract<PickableMuseum, { kind: 'local' }>) => (
     <Pressable
-      key={entry.id}
-      testID={`museum-picker-favourite-${String(entry.id)}`}
+      key={`local-${String(entry.museumId)}`}
+      testID={`museum-picker-favourite-${String(entry.museumId)}`}
       accessibilityRole="button"
       accessibilityLabel={entry.name}
       onPress={() => {
@@ -325,7 +424,7 @@ export function MuseumPickerScreen({ onSelect, onClose }: MuseumPickerScreenProp
         <FlatList
           testID="museum-picker-list"
           data={visibleMuseums}
-          keyExtractor={(m) => String(m.id)}
+          keyExtractor={rowKey}
           renderItem={renderRow}
           ItemSeparatorComponent={() => <View style={{ height: space['2'] }} />}
           ListEmptyComponent={

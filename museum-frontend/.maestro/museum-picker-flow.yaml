@@ -1,33 +1,14 @@
 appId: com.musaium.mobile.preview
 ---
-# KNOWN-BLOCKED (re-diagnosed 2026-06-01) — and it is NOT a geo/sim limitation.
-# The blocker is a frontend↔backend CONTRACT BUG, verified end-to-end:
-#
-#   * Geo works: with `simctl privacy grant location` + `simctl location set
-#     44.8378,-0.5792`, the nearby effect fires GET /api/museums/search?lat=..&
-#     lng=..&radius=5000 → 200 with real rows (curl confirms: Musée d'Aquitaine
-#     distance 514m, CAPC, Pont de Pierre — all `source:"local"`).
-#   * BUT the screen renders "Aucun musée trouvé": MuseumPickerScreen.tsx:53-55
-#     `toPickable` returns null unless the entry has a positive-integer `id`, and
-#     the /museums/search response shape (SearchMuseumsResult.museums =
-#     SearchMuseumEntry, searchMuseums.useCase.ts:30-46) has NO `id` field. So
-#     EVERY nearby/search entry is filtered out (line 136 / 176
-#     `.map(toPickable).filter(m !== null)` → []), regardless of location.
-#   * The Museums TAB works because it uses GET /api/museums/directory, whose
-#     entries DO carry `id` (MuseumDirectoryEntry); the picker uses the id-less
-#     /museums/search → cannot render a single selectable row.
-#
-# => The museum picker cannot show a selectable row from its only data paths.
-#    This is a product bug (tracked follow-up), not a test-environment gap, and
-#    fixing it needs a design call (OSM `source:"osm"` entries have no DB id at
-#    all, so the id-based selection model is itself incompatible with OSM hits).
-#    This flow therefore exercises the picker MOUNT + search-box WIRING only; the
-#    row-select + navigate-away are optional until the contract is fixed.
 # screen: MuseumPickerScreen
 # screen: MuseumPickerRoute
 #
 # W3 museum picker — UFR-021 coverage for /(stack)/museums-picker +
-# features/museum/ui/MuseumPickerScreen.tsx. Test account + seeded museums needed.
+# features/museum/ui/MuseumPickerScreen.tsx. Test account + seeded Bordeaux
+# museums needed; geo set to Bordeaux (44.8378,-0.5792) so the nearby effect
+# returns local rows. Tap-through happy path: open picker → tap a local museum
+# row → land in the chat screen (run 2026-06-01-museum-picker-osm-select fixed
+# the `id`-less /museums/search contract that previously dropped every row).
 
 # ──────────────────────────────────────────────
 # Phase 0: Fresh launch + login → home
@@ -77,21 +58,26 @@ appId: com.musaium.mobile.preview
     timeout: 20000
 
 # ──────────────────────────────────────────────
-# Phase 2: Exercise the search-box wiring (museumApi.searchMuseums round-trip).
-# Rows cannot render (toPickable id-bug above), so the row tap + navigation are
-# OPTIONAL. The deterministic outcome is that the picker mounted + the search box
-# is interactive — that is what we assert.
+# Phase 2: Search "Musée" → the nearby/search effect returns the seeded Bordeaux
+# LOCAL rows (now carrying `id` → toPickable maps them to selectable rows). Tap
+# the first row and assert we land in the chat screen (tap-through happy path).
+# Local rows sort first by distance, so index 0 is a `museum-picker-row-<id>`.
 # ──────────────────────────────────────────────
 - tapOn:
     id: "museum-picker-search"
 - inputText: "Musée"
 - hideKeyboard
 - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "museum-picker-row-.*"
+    timeout: 20000
 - tapOn:
     id: "museum-picker-row-.*"
     index: 0
-    optional: true
-- waitForAnimationToEnd:
-    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 30000
 - assertVisible:
-    id: "museum-picker-search"
+    id: "chat-input"

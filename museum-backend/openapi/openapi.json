@@ -5866,6 +5866,10 @@
                           "museumType"
                         ],
                         "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "DB primary key — present only when source = 'local' (OSM entries have no DB row)."
+                          },
                           "name": {
                             "type": "string"
                           },
