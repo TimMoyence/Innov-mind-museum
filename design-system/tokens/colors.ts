@@ -44,8 +44,10 @@ export const colors = {
     primary: '#0F172A',
     secondary: '#334155',
     tertiary: '#475569',
-    // 4.78:1 contrast on white (#FFFFFF), WCAG 1.4.3 AA — was #94A3B8 (2.56:1).
-    muted: '#5E7184',
+    // 5.91:1 on white; 4.54:1 on the bluest page-veil stop (#D8E7FF). WCAG 1.4.3
+    // AA both. Darkened from #5E7184 (which was 4.03:1 on the deepened blue
+    // gradient) so the page background can read bluer without losing muted text.
+    muted: '#556677',
     placeholder: '#64748B',
   },
 

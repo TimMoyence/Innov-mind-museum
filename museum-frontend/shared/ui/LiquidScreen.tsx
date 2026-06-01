@@ -67,7 +67,7 @@ export const LiquidScreen = ({ children, background, contentStyle }: LiquidScree
         style={[styles.backgroundImage, { opacity: backgroundOpacity }]}
       />
       <LinearGradient
-        colors={[theme.overlay, theme.surface, theme.surface]}
+        colors={theme.pageVeil ?? [theme.overlay, theme.surface, theme.surface]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}

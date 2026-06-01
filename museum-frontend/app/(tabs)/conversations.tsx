@@ -119,7 +119,7 @@ export default function ConversationsScreen() {
     ({ item }: { item: ListRow }) => {
       if (item.kind === 'sticky') {
         return (
-          <View style={[styles.stickyBar, { backgroundColor: theme.cardBackground }]}>
+          <View style={styles.stickyBar}>
             <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
             <Pressable
               style={[
@@ -297,10 +297,14 @@ const styles = StyleSheet.create({
     paddingTop: semantic.screen.padding,
   },
   stickyBar: {
+    // Transparent sticky panel — the search bar (own glass bg + border) and the
+    // solid primary button float directly on the page, no surrounding card band.
+    // Spacing via gap (not child margins). Trade-off: as the sticky header is
+    // index 1, list rows scroll under it; the gaps no longer occlude them.
     paddingVertical: semantic.list.itemPaddingYCompact,
+    gap: semantic.form.gapLarge,
   },
   primaryButton: {
-    marginTop: semantic.form.gapLarge,
     borderRadius: semantic.button.radius,
     paddingVertical: semantic.button.paddingY,
     alignItems: 'center',

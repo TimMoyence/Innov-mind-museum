@@ -11,6 +11,12 @@ import {
 
 export interface ThemePalette {
   pageGradient: readonly [string, string, ...string[]];
+  /**
+   * White wash painted over the page gradient by LiquidScreen. Optional: when
+   * absent the screen falls back to [overlay, surface, surface]. Light theme
+   * sets a lighter veil so the blue gradient reads through (see functional.pageVeil).
+   */
+  pageVeil?: readonly [string, string, string];
   primary: string;
   primaryContrast: string;
   textPrimary: string;
@@ -46,7 +52,11 @@ export interface ThemePalette {
 }
 
 export const lightTheme: ThemePalette = {
-  pageGradient: [primaryScale['50'], primaryScale['100'], gradientColors.lightEnd],
+  // Deepened from [50,100] → [100,200] so the blue identity reads through the
+  // lighter pageVeil (0.42). Renders ~#E8F2FF → #E7F6FF. WCAG AA preserved via
+  // the paired text.muted darkening (#556677).
+  pageGradient: [primaryScale['100'], primaryScale['200'], gradientColors.lightEnd],
+  pageVeil: [functional.pageVeil, functional.pageVeil, functional.pageVeil],
   primary: primaryScale['600'],
   primaryContrast: surfaceColors.default,
   textPrimary: textColors.primary,

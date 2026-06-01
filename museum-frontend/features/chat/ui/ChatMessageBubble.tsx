@@ -128,7 +128,7 @@ export const ChatMessageBubble = React.memo(
     const bubbleContent = (
       <>
         {isAssistant ? (
-          <View>
+          <View style={styles.assistantBody}>
             {showSkeleton ? <ImageCarouselSkeleton /> : null}
             {!isStreaming && hasImages && message.metadata?.images ? (
               <ImageCarousel
@@ -334,6 +334,13 @@ const styles = StyleSheet.create({
     padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
     borderWidth: semantic.input.borderWidth,
+    // Inter-section spacing via gap (not child margins, which would reveal this
+    // bubble's backgroundColor as a band — esp. above the surface-coloured image).
+    gap: semantic.chat.gap,
+  },
+  assistantBody: {
+    // Spacing between carousel / streaming text / sources / citation chips.
+    gap: semantic.chat.gapSmall,
   },
   bubbleUser: {
     alignSelf: 'flex-end',
@@ -349,7 +356,6 @@ const styles = StyleSheet.create({
   sourcesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: semantic.chat.gapSmall,
     columnGap: semantic.chat.gapSmall,
   },
 });

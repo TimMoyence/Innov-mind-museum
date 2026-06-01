@@ -51,7 +51,6 @@ const styles = StyleSheet.create({
     borderRadius: semantic.input.radiusSmall,
     borderWidth: semantic.input.borderWidth,
     paddingHorizontal: semantic.input.paddingCompact,
-    marginTop: semantic.section.gap,
   },
   icon: {
     marginEnd: space['2'],

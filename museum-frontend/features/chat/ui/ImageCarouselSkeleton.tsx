@@ -93,9 +93,7 @@ export const ImageCarouselSkeleton = React.memo(() => {
 ImageCarouselSkeleton.displayName = 'ImageCarouselSkeleton';
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: semantic.chat.gap,
-  },
+  container: {},
   content: {
     flexDirection: 'row',
   },
