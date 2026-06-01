@@ -414,10 +414,11 @@ export const GUARDRAIL_V2_SIDECAR_URL = _testSidecarUrl
     : 'http://127.0.0.1:8081';
 
 /**
- * Real gpt-4o-mini judge latency is ~670–1050ms (measured), so the production
- * default of 500ms (`env.guardrails.judgeTimeoutMs`) times out every call and
- * fail-opens. Live "judge blocks" tests need a generous timeout to observe a
- * real verdict; the fail-OPEN test deliberately uses a tiny one.
+ * Real gpt-4o-mini judge latency is ~670–1050ms (measured here). The production
+ * default `env.guardrails.judgeTimeoutMs` was raised 500 → 1500 on 2026-06-01
+ * for exactly this reason (at 500ms every call timed out → fail-OPEN). Live
+ * "judge blocks" tests still use an extra-generous timeout to stay non-flaky
+ * under slow-CI latency spikes; the fail-OPEN test deliberately uses a tiny one.
  */
 export const JUDGE_GENEROUS_TIMEOUT_MS = 8000;
 

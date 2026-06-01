@@ -404,7 +404,14 @@ const env: AppEnv = {
     // activates judge in parallel with sidecar (defense-in-depth, ADR-015
     // amendment 2026-05-14). Set to `0` to disable judge layer.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
-    judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
+    // 2026-06-01 — raised 500 → 1500 after the live V2 suite
+    // (tests/ai/guardrail-v2-live.ai.test.ts) measured real gpt-4o-mini
+    // structured-output judge latency at 670–1050ms. At 500ms EVERY judge call
+    // timed out → null → fail-OPEN → the judge never blocked in prod. 1500ms
+    // gives ~1.4× headroom over the observed max and mirrors the sidecar
+    // timeoutMs. Judge is fail-OPEN, so the cost of a too-tight value is silent
+    // degradation to V1, not a refusal — hence it went unnoticed until measured.
+    judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 1500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
     // ADR-030 (2026-05-05) — judge budget backend.
     // 'memory' = per-process (dev/test/single-instance). 'redis' = shared via

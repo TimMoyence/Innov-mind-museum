@@ -36,8 +36,8 @@ jest.mock('@src/config/env', () => ({
     guardrails: {
       // Mirrors env.ts:402 GUARDRAILS_V2_TIMEOUT_MS default.
       timeoutMs: 1500,
-      // Mirrors env.ts:408 LLM_GUARDRAIL_JUDGE_TIMEOUT_MS default.
-      judgeTimeoutMs: 500,
+      // Mirrors env.ts LLM_GUARDRAIL_JUDGE_TIMEOUT_MS default (1500 since 2026-06-01).
+      judgeTimeoutMs: 1500,
     },
     upload: {
       allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
