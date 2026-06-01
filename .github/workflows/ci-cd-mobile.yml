@@ -299,7 +299,11 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     needs: prebuild
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # E41 — 50min: the first full auth shard (18 flows) was cancelled at the old
+    # 30min cap mid-flow-14. Each flow is ~2-2.5min wall (emulator UI + backend
+    # round-trips). Shards run in parallel, so per-PR wall-clock is one shard,
+    # not the sum.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -395,12 +399,18 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           ./scripts/maestro-runner-setup.sh
-          # Seed the FIXED Maestro login account (quick-login.yaml expects
-          # e2e-test-login@test.musaium.dev / TestPassword123!). Direct DB
-          # insert — bypasses the HTTP register breach-check.
+          # Seed the two FIXED Maestro login accounts (direct DB insert, bypasses
+          # the HTTP register breach-check):
+          #   1. e2e-test-login@test.musaium.dev / TestPassword123! — quick-login.yaml
+          #   2. apple.test@apple.com / Apple1234! — auth-login-happy, auth-account-delete,
+          #      cert-pinning-smoke (the Apple-review fixed account).
           cd ../museum-backend
           E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            pnpm seed:e2e-maestro-account
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
             pnpm seed:e2e-maestro-account
 
       - name: Enable KVM (hardware-accelerated emulator)
