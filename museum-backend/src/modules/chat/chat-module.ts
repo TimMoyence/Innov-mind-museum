@@ -61,6 +61,7 @@ import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledg
 import { judgeWithLlm, LlmJudgeGuardrail } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import { LocationResolver } from '@modules/chat/useCase/location-resolver';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
+import { configureIdempotency } from '@modules/chat/useCase/message/idempotency.store';
 import { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/update-session-context.useCase';
@@ -717,6 +718,10 @@ export class ChatModule {
     // injected `frictionStore` is a thin adapter over the module-level
     // functional API so it shares the very instance configured here.
     configureGuardrailFriction({ cache });
+    // D2 (2026-06-01) — Idempotency-Key dedup on the SAME shared CacheService
+    // as the budget / friction / llm-cache. A CacheService present → Redis
+    // adapter (cross-instance dedup); absent → in-process. FAIL-OPEN.
+    configureIdempotency({ cache });
     const frictionStore: IGuardrailFrictionStore = {
       recordStrike: frictionRecordStrike,
       count: frictionCount,

@@ -34,6 +34,13 @@ export interface PostMessageParams {
   voiceMode?: boolean;
   lowDataMode?: boolean;
   contentPreferences?: ContentPreference[];
+  /**
+   * D2 (2026-06-01) — OPTIONAL backend dedup key. Set by the offline-flush path
+   * to the queued item's stable id so a replayed send (flapping reconnect /
+   * double-flush) collapses to a single message. Sent as the `Idempotency-Key`
+   * header; omitted (no header) on the live send path, which is unchanged.
+   */
+  idempotencyKey?: string;
 }
 
 export interface SendMessageSmartParams extends PostMessageParams {
@@ -92,6 +99,7 @@ export const postMessage = async (params: PostMessageParams): Promise<PostMessag
     voiceMode,
     lowDataMode,
     contentPreferences,
+    idempotencyKey,
   } = params;
 
   let payload: unknown;
@@ -140,12 +148,21 @@ export const postMessage = async (params: PostMessageParams): Promise<PostMessag
     });
   }
 
+  // Merge optional headers: X-Data-Mode (low-data toggle) + Idempotency-Key
+  // (D2 dedup key, set only on the offline-flush path). Both omitted on the
+  // live send path → no header object, request unchanged.
+  const headers: Record<string, string> = {};
+  if (lowDataMode !== undefined) {
+    headers['X-Data-Mode'] = lowDataMode ? 'low' : 'normal';
+  }
+  if (idempotencyKey !== undefined) {
+    headers['Idempotency-Key'] = idempotencyKey;
+  }
+
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
     method: 'POST',
     body: payload,
-    ...(lowDataMode === undefined
-      ? {}
-      : { headers: { 'X-Data-Mode': lowDataMode ? 'low' : 'normal' } }),
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
   });
 
   return ensureContract(data, isPostMessageResponseDTO, 'post-message');

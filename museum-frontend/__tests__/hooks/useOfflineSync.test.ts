@@ -26,6 +26,11 @@ interface QueueItem {
   imageUri?: string;
 }
 
+/** The shape `useOfflineSync.peek()` returns — a queued item carries a stable id. */
+interface PeekedItem extends QueueItem {
+  id: string;
+}
+
 /** Bypasses backoff delays so tests run synchronously. */
 const passthroughRetry = <T>(op: () => Promise<T>): Promise<T> => op();
 
@@ -35,7 +40,10 @@ const makeDefaultParams = (overrides?: {
   setMessages?: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
   isRetryable?: (error: unknown) => boolean;
 }) => {
-  const queue = overrides?.peekQueue ?? [];
+  const queue: PeekedItem[] = (overrides?.peekQueue ?? []).map((item, index) => ({
+    id: `queued-${String(index)}`,
+    ...item,
+  }));
   let queueIndex = 0;
 
   const peek = jest.fn(() => (queueIndex < queue.length ? queue[queueIndex] : undefined));

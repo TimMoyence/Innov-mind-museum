@@ -146,6 +146,9 @@ function applyGlobalMiddleware(app: Express): void {
         'Authorization',
         'X-Request-Id',
         'X-Data-Mode',
+        // D2 — offline-flush / reconnect dedup. The FE attaches the queued
+        // item id as `Idempotency-Key`; preflight must allowlist it.
+        'Idempotency-Key',
         'Accept-Language',
         'sentry-trace',
         'baggage',

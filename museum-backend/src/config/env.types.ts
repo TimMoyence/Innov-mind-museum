@@ -44,6 +44,8 @@ export interface AppEnv {
   corsOrigins: string[];
   jsonBodyLimit: string;
   requestTimeoutMs: number;
+  /** Idempotency-Key dedup replay window in ms (bounded [1s, 1h], default 600000). */
+  idempotencyTtlMs: number;
   dbSynchronize: boolean;
   dbSsl: boolean;
   dbSslRejectUnauthorized: boolean;

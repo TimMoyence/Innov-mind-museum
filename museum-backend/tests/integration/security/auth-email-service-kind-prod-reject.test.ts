@@ -50,6 +50,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     corsOrigins: [],
     jsonBodyLimit: '1mb',
     requestTimeoutMs: 20000,
+    idempotencyTtlMs: 600_000,
     dbSynchronize: false,
     dbSsl: true,
     dbSslRejectUnauthorized: true,

@@ -65,6 +65,14 @@ const env: AppEnv = {
   corsOrigins: toList(process.env.CORS_ORIGINS),
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
+  // Idempotency-Key dedup window (2026-06-01, D2). Short TTL bounds the replay
+  // memory: long enough to absorb an offline-flush double-fire / a flapping
+  // reconnect, short enough that the key is not a long-lived dedup oracle.
+  // Bounded [1s, 1h] so a fat-fingered env can't make it 0 (no dedup) or huge.
+  idempotencyTtlMs: Math.min(
+    3_600_000,
+    Math.max(1_000, toNumber(process.env.IDEMPOTENCY_TTL_MS, 600_000)),
+  ),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   dbSsl: toBoolean(process.env.DB_SSL, true),
   dbSslRejectUnauthorized: toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, isProduction),
