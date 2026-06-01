@@ -299,6 +299,20 @@ export const guardrailBudgetRedisFallbackTotal = new Counter({
   registers: [registry],
 });
 
+/**
+ * Hybrid-gravity guardrail (2026-06-01) — counts every fail-SOFT fallback of the
+ * friction store's Redis backend (a `get`/`incrBy` throw or an unreachable
+ * cache). The friction store is the INVERSE of the budget store: an outage
+ * degrades to `count() === 0` / `isCoolingDown() === false` (never a hard
+ * block), so operators alert on this counter rising rather than on a refusal
+ * spike. No user-derived label (prom-client cardinality discipline).
+ */
+export const guardrailFrictionRedisFallbackTotal = new Counter({
+  name: 'musaium_guardrail_friction_redis_fallback_total',
+  help: 'Total guardrail-friction Redis backend fail-SOFT fallbacks (unreachable / throwing counter)',
+  registers: [registry],
+});
+
 export const llmCostCircuitBreakerState = new Gauge({
   name: 'musaium_llm_cost_circuit_breaker_state',
   help: 'Current state of the LLM cost circuit breaker. 1 = active state, 0 = inactive.',

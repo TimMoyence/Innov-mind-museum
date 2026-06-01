@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
-
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { DisabledPiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import { validateAudioInput } from '@modules/chat/useCase/audio/audio-validation';
 import { buildSttPromptBiasFromVisitContext } from '@modules/chat/useCase/audio/stt-prompt-bias';
+import { FrictionEscalationService } from '@modules/chat/useCase/guardrail/guardrail-escalation';
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
+import { buildLlmCacheInput } from '@modules/chat/useCase/message/llm-cache-input.helper';
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
@@ -30,11 +30,13 @@ import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
+import type { FrictionTurnOutcome } from '@modules/chat/useCase/guardrail/guardrail-escalation';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
+import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
-import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/llm/llm-cache.types';
+import type { LlmCacheService } from '@modules/chat/useCase/llm/llm-cache.types';
 import type {
   LocationConsentChecker,
   LocationResolver,
@@ -44,7 +46,10 @@ import type {
   PostMessageResult,
   PostAudioMessageResult,
 } from '@modules/chat/useCase/orchestration/chat.service.types';
-import type { PrepareReady } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
+import type {
+  PrepareReady,
+  PrepareRefused,
+} from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import type { UrlHeadProbe } from '@modules/chat/useCase/orchestration/url-head-probe';
 import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import type { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
@@ -126,6 +131,18 @@ export interface ChatSafetyDeps {
   llmJudge?: LlmJudgeFn;
   /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — 2-level friction counter. When
+   * `frictionEnabled` (default `env.guardrails.frictionEnabled`), the judge runs
+   * in PARALLEL of generation and an isolated off-topic is soft-redirected,
+   * escalating to a hard-block cool-down only past the thresholds. When the
+   * store is omitted, the friction model degrades to plain soft-redirect (no
+   * escalation) — never a hard block (FAIL-SOFT).
+   */
+  frictionStore?: IGuardrailFrictionStore;
+  frictionEnabled?: boolean;
+  frictionSessionThreshold?: number;
+  frictionUserThreshold?: number;
 }
 
 export interface ChatMessageServiceDeps {
@@ -156,6 +173,8 @@ export class ChatMessageService {
   private readonly piiSanitizer: PiiSanitizer;
   private readonly llmCache?: LlmCacheService;
   private readonly urlHeadProbe?: UrlHeadProbe;
+  /** Hybrid-gravity (2026-06-01) — friction policy collaborator (design §5). */
+  private readonly friction: FrictionEscalationService;
 
   constructor(deps: ChatMessageServiceDeps) {
     const enrichment = deps.enrichment ?? {};
@@ -170,6 +189,8 @@ export class ChatMessageService {
     this.userMemory = enrichment.userMemory;
     this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
 
+    const frictionEnabled = safety.frictionEnabled ?? env.guardrails.frictionEnabled;
+
     const imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
       ocr: deps.ocr,
@@ -183,6 +204,16 @@ export class ChatMessageService {
       guardrailProviderObserveOnly: safety.guardrailProviderObserveOnly,
       llmJudge: safety.llmJudge,
       llmJudgeEnabled: safety.llmJudgeEnabled,
+      frictionEnabled,
+    });
+
+    this.friction = new FrictionEscalationService({
+      guardrail: this.guardrail,
+      frictionStore: safety.frictionStore,
+      frictionEnabled,
+      frictionSessionThreshold:
+        safety.frictionSessionThreshold ?? env.guardrails.frictionSessionThreshold,
+      frictionUserThreshold: safety.frictionUserThreshold ?? env.guardrails.frictionUserThreshold,
     });
 
     this.pipeline = new PrepareMessagePipeline({
@@ -242,7 +273,10 @@ export class ChatMessageService {
     ip?: string,
   ): Promise<PostMessageResult> {
     const prep = await this.pipeline.prepare(sessionId, input, requestId, currentUserId, ip);
-    if (prep.kind === 'refused') return prep.result;
+    if (prep.kind === 'refused') {
+      await this.recordSecurityStrikeOnRefusal(prep, sessionId, requestId, currentUserId, ip);
+      return prep.result;
+    }
 
     // LLM02 — substitute provider-scrubbed PII BEFORE local sanitizer so LLM
     // payload + cache key carry only placeholders, never raw PII.
@@ -276,13 +310,36 @@ export class ChatMessageService {
       });
     }
 
+    // Hybrid-gravity (2026-06-01) — friction scopes for this turn. `session` is
+    // always present; `user` when authenticated, else `ip` (hashed — RGPD).
+    const scopes = this.friction.scopesFor(sessionId, prep.ownerId ?? currentUserId, ip);
+
+    // R11 pre-check — if this user/IP (any session) OR this session is in an
+    // armed cool-down window, short-circuit to the cool-down WITHOUT generating
+    // (no LLM spend). FAIL-SOFT: a store outage reports `false` → never blocks.
+    if (this.friction.isEnabled && (await this.friction.isAnyScopeCoolingDown(scopes))) {
+      return await this.buildCoolDownResult(sessionId, prep);
+    }
+
     // A5 R4 — composing span. merged_bug_004 — try/finally emits on success
     // AND failure (time-to-failure is the window engineers need).
     const composingStartedAtMs = Date.now();
-    let aiResult: OrchestratorOutput;
+    let friction: FrictionTurnOutcome;
     let outcome: ChatPhaseOutcome = 'success';
     try {
-      aiResult = await this.orchestrator.generate(orchestratorInput);
+      // Hybrid-gravity (2026-06-01) — when friction is enabled, run the off-topic
+      // SEMANTIC judge IN PARALLEL of generation (Promise.allSettled), so an
+      // on-topic message adds ~0 latency (NFR-Latence-1) and the judge never
+      // sits in series ahead of the answer. When disabled (kill-switch), the
+      // legacy inline judge already ran in `prepare` → just generate.
+      friction = this.friction.isEnabled
+        ? await this.friction.runParallel(
+            async () => await this.orchestrator.generate(orchestratorInput),
+            sanitizedText,
+            scopes,
+            { sessionId, userId: prep.ownerId ?? currentUserId, requestId, ip },
+          )
+        : { kind: 'answer', aiResult: await this.orchestrator.generate(orchestratorInput) };
     } catch (err) {
       outcome = 'error';
       // 503 SERVICE_UNAVAILABLE not 500 — provider failure is degraded
@@ -296,6 +353,16 @@ export class ChatMessageService {
         outcome,
       });
     }
+
+    // Off-topic crossed a threshold → SUPPRESS the generated answer and return
+    // the cool-down (the generation's tokens are already paid — abort is an
+    // unwired optimisation, see design §0). Skip the LLM cache store: a refusal
+    // must never be cached.
+    if (friction.kind === 'cooldown') {
+      return await this.buildCoolDownResult(sessionId, prep);
+    }
+
+    const aiResult = friction.aiResult;
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
     // PR-P0-1 (2026-05-23) — stamp the cookie on the persisted assistant row
@@ -305,6 +372,45 @@ export class ChatMessageService {
       requestId,
       ip,
       cacheKey: cacheCtx.cacheKey ?? null,
+    });
+  }
+
+  /**
+   * Hybrid-gravity (2026-06-01) — on a SECURITY hard-block (V1 keyword / sidecar
+   * block, non-off_topic reason) records a SECURITY-weight strike (2) on session
+   * + principal so a repeat injection / PII spammer escalates into the global
+   * cool-down (design §5 / spec R2). FAIL-SOFT: NEVER alters the hard-block
+   * already encoded in `prep.result`.
+   */
+  private async recordSecurityStrikeOnRefusal(
+    prep: PrepareRefused,
+    sessionId: string,
+    requestId: string | undefined,
+    currentUserId: number | undefined,
+    ip: string | undefined,
+  ): Promise<void> {
+    if (!prep.securityBlock) return;
+    const scopes = this.friction.scopesFor(sessionId, currentUserId, ip);
+    await this.friction.recordSecurityStrike(scopes, {
+      sessionId,
+      userId: currentUserId,
+      requestId,
+      ip,
+    });
+  }
+
+  /**
+   * Persists the assistant cool-down refusal (warm `refocus` copy,
+   * `policy:off_topic` citation). The user message was ALREADY persisted by
+   * `prepare`, so only the refusal is written here (no double-persist).
+   */
+  private async buildCoolDownResult(
+    sessionId: string,
+    prep: PrepareReady,
+  ): Promise<PostMessageResult> {
+    return await this.guardrail.buildCoolDownRefusal({
+      sessionId,
+      requestedLocale: prep.requestedLocale,
     });
   }
 
@@ -319,7 +425,7 @@ export class ChatMessageService {
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return null;
-    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
+    const cacheInput = buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return null;
     // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
     // lookup so the cache-HIT branch can stamp the persisted assistant row
@@ -347,7 +453,7 @@ export class ChatMessageService {
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return;
-    const cacheInput = this.buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
+    const cacheInput = buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return;
     // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
     // store so the assistant row gets stamped with the SAME cookie that
@@ -419,54 +525,4 @@ export class ChatMessageService {
       transcription,
     };
   }
-
-  /**
-   * Builds the LlmCacheKeyInput from the prepared pipeline state.
-   * Returns null when the prompt is empty (image-only, no cacheable text).
-   */
-  private buildLlmCacheInput(
-    prep: PrepareReady,
-    sanitizedText: string,
-    input: PostMessageInput,
-  ): LlmCacheKeyInput | null {
-    if (!sanitizedText) return null;
-    return {
-      model: env.llm.model,
-      userId: prep.ownerId ?? 'anon',
-      systemSection: 'chat-default',
-      locale: prep.requestedLocale ?? 'en',
-      museumContext: {
-        museumId: prep.session.museumId ?? null,
-        museumName: prep.session.museumName ?? null,
-      },
-      userPreferencesHash: prep.userMemoryBlock ? hashString16(prep.userMemoryBlock) : undefined,
-      prompt: sanitizedText,
-      // C3 (R6/R8) — include the visual signature ONLY when available. When
-      // absent (text-only, url-source), canonical input is byte-identical to
-      // the pre-C3 shape (legacy keys preserved — see R8 / AC6).
-      imageContentHash: prep.imageContentHash,
-      // F1 (2026-05-19) — propagate voiceMode / audioDescriptionMode so the
-      // cache key discriminates (voice / no-voice) and (audio-desc / no-audio-desc)
-      // cohorts. C9.10 voice prompt branch produces 60-80w prose ; absent here
-      // → keys collide → wrong-shape responses cross-served.
-      voiceMode: input.context?.voiceMode,
-      audioDescriptionMode: input.context?.audioDescriptionMode,
-      // I-FIX2 (2026-05-21) — `[CURRENT ARTWORK]` is rendered in the system
-      // prompt (`llm-prompt-builder.ts:74`) but was historically NOT folded
-      // into the cache key — two visitors in the same museum asking the same
-      // prompt about different artworks would share the cache line. Prefer
-      // the stable UUID `session.currentArtworkId` (set when the visitor
-      // scans an artwork) ; fallback to the already-sanitised title from the
-      // resolved `currentArtwork` block (lookup may return a row even when
-      // session.currentArtworkId is not echoed back through prep). Truthy-only
-      // contract enforced downstream in `sha256OfCanonicalInput` — undefined
-      // / empty produces a byte-identical legacy hash.
-      currentArtworkKey: prep.session.currentArtworkId ?? prep.currentArtwork?.title ?? undefined,
-    };
-  }
-}
-
-/** 16-char hex SHA-256 digest of a string — used to derive a stable userPreferencesHash. */
-function hashString16(value: string): string {
-  return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }

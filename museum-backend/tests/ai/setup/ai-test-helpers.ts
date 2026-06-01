@@ -17,6 +17,8 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 import type { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type { CachedReverseGeocodeFn, NominatimReverseResult } from '@shared/http/nominatim.client';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.types';
+import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
+import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
 // The `unit-integration` Jest project only pins PGDATABASE (see jest.config.ts);
 // it does NOT inject the host `.env`. Real-LLM ai-tests need `OPENAI_API_KEY`
@@ -148,6 +150,10 @@ export const hasRefusalCitation = (citations: string[] | undefined): boolean => 
  * NOT empty, NOT the no-LLM-key stub). Use for cases that MUST go through to
  * the model and come back with content.
  * @param result - The postMessage result ({ message.text, metadata.citations }).
+ * @param result.message
+ * @param result.message.text
+ * @param result.metadata
+ * @param result.metadata.citations
  */
 export const assertSubstantiveAnswer = (result: {
   message: { text: string };
@@ -166,6 +172,8 @@ export const assertSubstantiveAnswer = (result: {
  * a polite redirect or a substantive answer is acceptable (off-topic, ambiguous
  * image, monument). The key contract is: pipeline did not throw, text non-empty.
  * @param result - The postMessage result ({ message.text }).
+ * @param result.message
+ * @param result.message.text
  */
 export const assertGracefulNonEmpty = (result: { message: { text: string } }): void => {
   expect(result.message.text).toBeDefined();
@@ -356,6 +364,7 @@ export const DENY_ALL_CONSENT: LocationConsentChecker = {
  * Builds a real-LLM ChatService with geo wired: an in-memory museum repository
  * seeded with `museums`, an injected deterministic `reverseGeocode`, and an
  * optional `consentChecker`. The orchestrator is the live LangChain/gpt-4o-mini.
+ * @param opts
  * @param opts.museums - Seeded museums for nearby/in-museum Haversine math.
  * @param opts.reverseGeocode - Deterministic reverse-geocoder (default: returns null).
  * @param opts.consentChecker - Optional GDPR consent gate (default: none → 'full').
@@ -410,7 +419,7 @@ const _prodSidecarIsLoopback =
 export const GUARDRAIL_V2_SIDECAR_URL = _testSidecarUrl
   ? _testSidecarUrl
   : _prodSidecarIsLoopback
-    ? (_rawProdSidecarUrl as string)
+    ? _rawProdSidecarUrl
     : 'http://127.0.0.1:8081';
 
 /**
@@ -459,6 +468,7 @@ export const buildRealJudgeFn = (timeoutMs = JUDGE_GENEROUS_TIMEOUT_MS): LlmJudg
 /**
  * Builds a ChatService wired with the REAL V2 layers for end-to-end guardrail
  * tests. The main orchestrator is the live LangChain/gpt-4o-mini.
+ * @param opts
  * @param opts.sidecarUrl - Override sidecar URL (e.g. a dead port to assert
  *   fail-CLOSED). Default {@link GUARDRAIL_V2_SIDECAR_URL}.
  * @param opts.guardrailTimeoutMs - Sidecar HTTP timeout (default 5000ms).
@@ -471,6 +481,11 @@ export const buildRealJudgeFn = (timeoutMs = JUDGE_GENEROUS_TIMEOUT_MS): LlmJudg
  *   `true`. Set `false` to ISOLATE the judge layer (the sidecar runs first in
  *   `evaluateInput`, so leaving it wired would let a sidecar verdict pre-empt
  *   the judge and confuse layer attribution).
+ * @param opts.frictionStore
+ * @param opts.frictionEnabled
+ * @param opts.frictionSessionThreshold
+ * @param opts.frictionUserThreshold
+ * @param opts.userId
  */
 export const buildAiTestServiceWithV2 = (opts?: {
   sidecarUrl?: string;
@@ -479,7 +494,25 @@ export const buildAiTestServiceWithV2 = (opts?: {
   judge?: LlmJudgeFn;
   llmJudgeEnabled?: boolean;
   includeProvider?: boolean;
-}) => {
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — friction store seam + config. When
+   * `frictionStore` is provided, the off-topic judge runs in parallel of
+   * generation and an isolated off-topic is soft-redirected, escalating to a
+   * hard-block cool-down at `frictionSessionThreshold` (session) /
+   * `frictionUserThreshold` (user/IP).
+   */
+  frictionStore?: IGuardrailFrictionStore;
+  frictionEnabled?: boolean;
+  frictionSessionThreshold?: number;
+  frictionUserThreshold?: number;
+  /**
+   * When set, the returned service injects this `userId` as the request
+   * identity on `createSession`/`postMessage` so the friction `user` scope is
+   * populated cross-session (the USER FLOOR scenario). Sessions are still owned
+   * by this user, so `ensureSessionAccess` is satisfied without per-call args.
+   */
+  userId?: number;
+}): ChatService => {
   const includeProvider = opts?.includeProvider ?? true;
   const guardrailProvider = includeProvider
     ? new LLMGuardAdapter({
@@ -488,12 +521,38 @@ export const buildAiTestServiceWithV2 = (opts?: {
       })
     : undefined;
 
-  return buildChatTestService({
+  const service = buildChatTestService({
     orchestrator: buildAiTestOrchestrator(),
     guardrailProvider,
     guardrailProviderObserveOnly: opts?.observeOnly ?? false,
     llmJudge: opts?.judge,
     llmJudgeEnabled: opts?.llmJudgeEnabled ?? false,
+    frictionStore: opts?.frictionStore,
+    frictionEnabled: opts?.frictionEnabled,
+    frictionSessionThreshold: opts?.frictionSessionThreshold,
+    frictionUserThreshold: opts?.frictionUserThreshold,
+  });
+
+  const userId = opts?.userId;
+  if (userId === undefined) return service;
+
+  // Bind the request identity so the friction `user` scope is exercised
+  // cross-session without threading `currentUserId` into every test call.
+  return new Proxy(service, {
+    get(target, prop, receiver) {
+      if (prop === 'createSession') {
+        return (input: Parameters<ChatService['createSession']>[0]) =>
+          target.createSession({ ...input, userId: input.userId ?? userId });
+      }
+      if (prop === 'postMessage') {
+        return (
+          sessionId: string,
+          input: Parameters<ChatService['postMessage']>[1],
+          requestId?: string,
+        ) => target.postMessage(sessionId, input, requestId, userId);
+      }
+      return Reflect.get(target, prop, receiver) as unknown;
+    },
   });
 };
 

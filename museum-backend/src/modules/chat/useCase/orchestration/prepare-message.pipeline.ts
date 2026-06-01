@@ -80,6 +80,15 @@ export interface PrepareReady {
 export interface PrepareRefused {
   kind: 'refused';
   result: PostMessageResult;
+  /**
+   * Hybrid-gravity (2026-06-01) — set when the refusal is a SECURITY hard-block
+   * (V1 keyword / sidecar block with a non-`off_topic` reason). The caller
+   * records a SECURITY-weight friction strike (design §5 / spec R2) so a repeat
+   * injection / PII spammer escalates into a cool-down. Absent for GDPR consent
+   * refusals (not a security event) and for `off_topic` blocks (the friction
+   * model already handles off-topic via the parallel-judge path).
+   */
+  securityBlock?: boolean;
 }
 
 export type PrepareResult = PrepareReady | PrepareRefused;
@@ -298,7 +307,13 @@ export class PrepareMessagePipeline {
         userId: ownerId,
         userMessage: { sessionId, role: 'user', text, imageRef },
       });
-      return { kind: 'refused', result };
+      // Hybrid-gravity (2026-06-01) — a security hard-block (any non-off_topic
+      // reason: insult / prompt_injection / unsafe_output / service_unavailable)
+      // feeds a SECURITY-weight friction strike at the call site. `off_topic`
+      // is excluded — the parallel-judge friction path owns off-topic.
+      const securityBlock =
+        userGuardrail.reason !== undefined && userGuardrail.reason !== 'off_topic';
+      return { kind: 'refused', result, securityBlock };
     }
 
     await this.repository.persistMessage({ sessionId, role: 'user', text, imageRef });

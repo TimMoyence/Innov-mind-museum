@@ -242,12 +242,20 @@ export const evaluateAssistantOutputGuardrail = ({ text }: { text: string }): Gu
 export const buildGuardrailRefusal = (
   locale: string | undefined,
   reason?: GuardrailBlockReason,
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — when true, an off-topic block uses
+   * the warmer `refocus` cool-down copy instead of the flat `default`. Set by
+   * the friction escalation path; the legacy inline off-topic block leaves it
+   * false so its wording is unchanged.
+   */
+  useRefocus = false,
 ): string => {
   const resolved = resolveLocale([locale]);
   const messages = GUARDRAIL_REFUSALS[resolved];
 
   if (reason === 'insult') return messages.insult;
   if (reason === 'service_unavailable') return messages.serviceUnavailable;
+  if (useRefocus && reason === 'off_topic') return messages.refocus;
   return messages.default;
 };
 

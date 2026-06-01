@@ -68,8 +68,19 @@ const AI_TESTS_DIR = resolve(__dirname, '../../tests/ai');
  * judge timeout AND budget-exhaustion → fail-OPEN; per-call budget accounting.
  * Locks the fail-CLOSED (sidecar) / fail-OPEN (judge) security invariants.
  * Current tree = 92 it() blocks across 9 files.
+ *
+ * 2026-06-01 (d) — bumped 92 → 98 (+6 real it() blocks, sentinel tolerant
+ * matcher reports 98 total) after the hybrid-by-gravity friction escalation
+ * landed in guardrail-v2-live.ai.test.ts. The new blocks lock the friction
+ * model end-to-end with the REAL gpt-4o-mini judge: soft-redirect under the
+ * session threshold, session escalation to a hard policy:off_topic at the Nth
+ * strike, cross-session USER floor via weighted counters, fail-SOFT store
+ * (throwing store never escalates / never 500s), the GUARDRAIL_FRICTION_ENABLED
+ * kill-switch restoring the legacy inline judge hard-block, and the invariant
+ * that security blocks (prompt-injection) still hard-block immediately under
+ * the friction model. V2 friction layer (Layer 3) is now count-ratcheted too.
  */
-const MIN_TOTAL_AI_TESTS = 92;
+const MIN_TOTAL_AI_TESTS = 98;
 
 /**
  * Matches: it(, test(, it.skip(, it.only(, it.each(`...`)(, it.todo(,

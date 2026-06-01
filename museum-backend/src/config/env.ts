@@ -418,6 +418,18 @@ const env: AppEnv = {
     // SET INCRBY + TTL. Default 'redis' in prod (multi-instance no 2× spend);
     // tests pin 'memory' to avoid coupling to Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
+    // Hybrid-gravity guardrail (2026-06-01) — judge runs parallel + 2-level
+    // friction. Kill-switch GUARDRAIL_FRICTION_ENABLED=false → legacy inline
+    // judge hard-block. Defaults: session escalates at 3 off-topic strikes,
+    // user/IP cool-down at 10 (security blocks weigh 2, off-topic 1).
+    frictionEnabled: toBoolean(process.env.GUARDRAIL_FRICTION_ENABLED, true),
+    frictionSessionThreshold: toNumber(process.env.FRICTION_SESSION_THRESHOLD, 3),
+    frictionUserThreshold: toNumber(process.env.FRICTION_USER_THRESHOLD, 10),
+    frictionSessionTtlMs: toNumber(process.env.FRICTION_SESSION_TTL_MS, 21_600_000), // 6h
+    frictionUserTtlMs: toNumber(process.env.FRICTION_USER_TTL_MS, 86_400_000), // 24h
+    frictionCooldownMs: toNumber(process.env.FRICTION_COOLDOWN_MS, 120_000), // 2min
+    frictionWeightSecurity: toNumber(process.env.FRICTION_WEIGHT_SECURITY, 2),
+    frictionWeightOfftopic: toNumber(process.env.FRICTION_WEIGHT_OFFTOPIC, 1),
     // 2026-05-12 — LLM Guard sidecar circuit breaker. NOT a feature flag —
     // always-on (pre-launch V1). Emergency disable =
     // `LLM_GUARD_CB_FAILURE_THRESHOLD=1000000`. Real rollback = `git revert`.

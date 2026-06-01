@@ -34,6 +34,7 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 import type { CacheService } from '@shared/cache/cache.port';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.types';
+import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 
 /** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
 class InMemoryChatRepository implements ChatRepository {
@@ -495,6 +496,15 @@ interface BuildChatTestServiceOptions {
    * test MUST set `true` here for the judge layer to run. Helper does NOT coerce.
    */
   llmJudgeEnabled?: boolean;
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — friction store seam + config.
+   * Forwarded verbatim to `ChatService`. When `frictionStore` is omitted the
+   * model degrades to plain soft-redirect (no escalation).
+   */
+  frictionStore?: IGuardrailFrictionStore;
+  frictionEnabled?: boolean;
+  frictionSessionThreshold?: number;
+  frictionUserThreshold?: number;
 }
 
 /**
@@ -532,6 +542,10 @@ export function buildChatTestService(
       guardrailProviderObserveOnly: opts.guardrailProviderObserveOnly,
       llmJudge: opts.llmJudge,
       llmJudgeEnabled: opts.llmJudgeEnabled,
+      frictionStore: opts.frictionStore,
+      frictionEnabled: opts.frictionEnabled,
+      frictionSessionThreshold: opts.frictionSessionThreshold,
+      frictionUserThreshold: opts.frictionUserThreshold,
     });
   }
 

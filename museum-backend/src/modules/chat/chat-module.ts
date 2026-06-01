@@ -45,6 +45,15 @@ import {
   TypeOrmAuditCorrelator,
 } from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
 import { configureGuardrailBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
+import {
+  armCoolDown as frictionArmCoolDown,
+  configureGuardrailFriction,
+  frictionCount,
+  isCoolingDown as frictionIsCoolingDown,
+  recordStrike as frictionRecordStrike,
+  resetFriction,
+  type IGuardrailFrictionStore,
+} from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import { ImageProcessingService as ImageProcessingPipelineService } from '@modules/chat/useCase/image/image-processing.service';
 import { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
@@ -702,6 +711,19 @@ export class ChatModule {
     this._orchestrator = orchestrator;
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache });
+    // Hybrid-gravity guardrail (2026-06-01) — wire the friction store on the
+    // SAME shared CacheService as the budget / llm-cache. Backend selection is
+    // read dynamically from `GUARDRAIL_FRICTION_BACKEND` (redis in prod). The
+    // injected `frictionStore` is a thin adapter over the module-level
+    // functional API so it shares the very instance configured here.
+    configureGuardrailFriction({ cache });
+    const frictionStore: IGuardrailFrictionStore = {
+      recordStrike: frictionRecordStrike,
+      count: frictionCount,
+      armCoolDown: frictionArmCoolDown,
+      isCoolingDown: frictionIsCoolingDown,
+      reset: resetFriction,
+    };
 
     this._tenantRateLimiter = new TenantRateLimiter({
       capacity: env.guardrails.tenantRateLimit.capacity,
@@ -751,6 +773,7 @@ export class ChatModule {
       thirdPartyAiConsentChecker,
       knowledgeExtraction,
       artworkKnowledgeRepo: knowledgeExtraction.artworkKnowledgeRepo,
+      frictionStore,
     });
 
     const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
@@ -821,6 +844,8 @@ export class ChatModule {
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
     /** W3 (T5.4) — passed-through into the message pipeline for [CURRENT ARTWORK]. */
     artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
+    /** Hybrid-gravity (2026-06-01) — 2-level friction counter store (design §5). */
+    frictionStore: IGuardrailFrictionStore;
   }): ChatService {
     return new ChatService({
       repository: deps.repository,
@@ -845,6 +870,10 @@ export class ChatModule {
       guardrailProvider: this.getOrBuildGuardrailProvider(),
       guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
+      // Hybrid-gravity (2026-06-01) — inject the friction store + config so the
+      // 2-level escalation / cool-down is ACTIVE in prod (not just via the test
+      // seam). `frictionEnabled` / thresholds default from env inside ChatService.
+      frictionStore: deps.frictionStore,
       // TD-20 (R13c) — forward the optional `{tier, requestId}` scope (museumId
       // honestly absent on this path, D5) into the judge generation.
       llmJudge: async (message: string, scope?) =>

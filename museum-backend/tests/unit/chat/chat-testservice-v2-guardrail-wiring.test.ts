@@ -67,6 +67,10 @@ describe('buildChatTestService — V2-guardrail dependency wiring (RUN_ID 2026-0
     const service = buildChatTestService({
       llmJudge: judge,
       llmJudgeEnabled: true,
+      // Hybrid-gravity (2026-06-01): the judge now runs in PARALLEL of generation
+      // by default (off-topic soft-redirect). This wiring assertion targets the
+      // legacy INLINE hard-block path → pin the kill-switch `frictionEnabled:false`.
+      frictionEnabled: false,
       // guardrailProvider intentionally OMITTED — layer independence
       // (AC-6 / NFR-SEC-4): enabling the judge must work without a provider.
     });

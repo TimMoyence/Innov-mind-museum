@@ -412,6 +412,12 @@ describe('chat-route.helpers — uncovered branches', () => {
  *
  * With the mocked env (totalBudgetMs=30000, guardrail serial = 1500 + 500):
  *   chatRouteSocketCeilingMs >= 30000 + 2000 + margin.
+ *
+ * NOTE (2026-06-01): since hybrid-by-gravity friction landed, the LLM judge runs
+ * in PARALLEL with the sidecar, so the timeoutMs + judgeTimeoutMs sum is now a
+ * safe over-estimation (ceiling), not the literal serial latency. The `>=`
+ * assertions below stay valid by construction — a looser ceiling only ever
+ * protects the graceful timeout path. Do not tighten them to an exact `===`.
  */
 interface ReqStub {
   is: (type: string) => boolean;

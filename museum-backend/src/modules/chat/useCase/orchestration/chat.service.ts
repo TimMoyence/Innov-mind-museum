@@ -36,6 +36,7 @@ import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
+import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 import type { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 import type { KnowledgeBaseService } from '@modules/chat/useCase/knowledge/knowledge-base.service';
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
@@ -86,6 +87,15 @@ export interface ChatServiceDeps {
   llmJudge?: LlmJudgeFn;
   /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — 2-level friction counter store +
+   * config. When omitted, the friction model degrades to plain soft-redirect
+   * (no escalation). See {@link ChatSafetyDeps}.
+   */
+  frictionStore?: IGuardrailFrictionStore;
+  frictionEnabled?: boolean;
+  frictionSessionThreshold?: number;
+  frictionUserThreshold?: number;
   piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
@@ -154,6 +164,10 @@ export class ChatService {
         guardrailProviderObserveOnly: deps.guardrailProviderObserveOnly,
         llmJudge: deps.llmJudge,
         llmJudgeEnabled: deps.llmJudgeEnabled,
+        frictionStore: deps.frictionStore,
+        frictionEnabled: deps.frictionEnabled,
+        frictionSessionThreshold: deps.frictionSessionThreshold,
+        frictionUserThreshold: deps.frictionUserThreshold,
         audit: deps.audit,
         piiSanitizer: deps.piiSanitizer,
       },

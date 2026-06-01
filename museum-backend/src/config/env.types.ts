@@ -600,6 +600,28 @@ export interface AppEnv {
      */
     budgetBackend: 'memory' | 'redis';
     /**
+     * Hybrid-gravity guardrail (2026-06-01) — kill-switch for the friction
+     * model. `true` (default): judge runs in PARALLEL of generation and an
+     * isolated off-topic is soft-redirected, escalating only past the
+     * thresholds below. `false`: legacy inline judge that hard-blocks every
+     * off-topic. Ops kill-switch (no redeploy), NOT a feature flag (cf. UFR-015).
+     */
+    frictionEnabled: boolean;
+    /** Session-scoped off-topic strikes at which a message hard-blocks for the rest of the session. */
+    frictionSessionThreshold: number;
+    /** User/IP-scoped strikes at which a global cool-down is armed. */
+    frictionUserThreshold: number;
+    /** TTL (ms) of the session strike counter (default 6h). */
+    frictionSessionTtlMs: number;
+    /** TTL (ms) of the user/IP strike counter (default 24h sliding). */
+    frictionUserTtlMs: number;
+    /** Duration (ms) of the global user/IP cool-down window (default 2min). */
+    frictionCooldownMs: number;
+    /** Strike weight of a security block (V1/sidecar) — heavier so abusers escalate faster. */
+    frictionWeightSecurity: number;
+    /** Strike weight of an off-topic (judge) block. */
+    frictionWeightOfftopic: number;
+    /**
      * 2026-05-12 — LLM Guard sidecar circuit breaker
      * (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
      * NOT a feature flag — always-on (pre-launch V1 doctrine).
