@@ -293,7 +293,7 @@ jobs:
   # heavy — smoke gives a fast pre-merge guard rail on the critical happy paths
   # while nightly keeps full coverage.
   maestro-matrix:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -319,7 +319,7 @@ jobs:
   # suite into a permanent CI guard rail (UFR-021) and closing the CNIL age-15
   # e2e blocker. iOS Maestro stays nightly — HVF on iOS needs a Mac runner.
   maestro-shard:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     needs: [prebuild, maestro-matrix]
     runs-on: ubuntu-latest
     # 70min cap: a nightly full shard (~45min, 18 flows × ~2.5min) plus a
@@ -412,6 +412,12 @@ jobs:
           PGDATABASE: museum_dev
           REDIS_HOST: localhost
           REDIS_PORT: '6379'
+          # Keep the host backend lightweight so it doesn't contend with the
+          # software-GPU emulator boot for CPU on the 4-core runner (the BullMQ
+          # extraction worker + its redis polling churn was a plausible cause of
+          # intermittent emulator boot timeouts). The e2e flows never exercise
+          # knowledge-extraction. (CLAUDE.md Stryker gotcha — same flags.)
+          EXTRACTION_WORKER_ENABLED: 'false'
           # Real LLM for the chat shard flows (guardrail/off-topic/multiturn).
           # Same secret ci-cd-backend.yml + promptfoo use. The auth/museum/
           # settings shards never hit the LLM, so spend stays near zero there.
@@ -462,7 +468,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           force-avd-creation: false
-          emulator-boot-timeout: 600
+          emulator-boot-timeout: 300
           ram-size: 4096M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
@@ -479,7 +485,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           force-avd-creation: true
-          emulator-boot-timeout: 600
+          emulator-boot-timeout: 300
           ram-size: 4096M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
@@ -517,7 +523,7 @@ jobs:
     # E41 — runs whenever the shard matrix runs: per-PR (the new guard rail),
     # nightly cron, and manual dispatch. `always()` so a failed shard still
     # gets summarized + turns this aggregator red (anti-false-green).
-    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: maestro-shard
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -569,6 +575,47 @@ jobs:
         run: |
           echo "::error::Maestro e2e did not pass (maestro-shard result: ${{ needs.maestro-shard.result }}). A green maestro-summary now REQUIRES every shard to succeed."
           exit 1
+
+  # ─── 4b. Nightly / push-main alert — make a red FULL run impossible to miss ─
+  # A scheduled (or push-to-main) full Maestro run executes unattended; a silent
+  # red is a dead gate. On failure this opens (or re-pings) a tracking issue via
+  # the native GITHUB_TOKEN — the repo owner gets a GitHub notification and the
+  # issue stays visible in the Issues tab until fixed. On a green full run it
+  # auto-closes the issue. No external secret/webhook needed.
+  maestro-full-alert:
+    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    needs: [maestro-shard, maestro-summary]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open/close the full-Maestro tracking issue
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
+        with:
+          script: |
+            const failed = ${{ needs.maestro-shard.result != 'success' || needs.maestro-summary.result != 'success' }};
+            const { owner, repo } = context.repo;
+            const label = 'nightly-maestro-alert';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const trigger = context.eventName === 'schedule' ? 'nightly' : 'push to main';
+            const existing = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: label });
+            if (failed) {
+              const body = `The full Maestro suite failed on a **${trigger}** run.\n\nRun: ${runUrl}\n\nThis issue auto-closes when the next full Maestro run is green.`;
+              if (existing.data.length > 0) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: existing.data[0].number, body: `Still failing (${trigger}) — ${runUrl}` });
+              } else {
+                try { await github.rest.issues.getLabel({ owner, repo, name: label }); }
+                catch { await github.rest.issues.createLabel({ owner, repo, name: label, color: 'b60205', description: 'Auto-filed when a full Maestro run fails' }); }
+                await github.rest.issues.create({ owner, repo, title: `🌙 Full Maestro failing (${trigger})`, body, labels: [label] });
+              }
+            } else {
+              for (const issue of existing.data) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: `✅ Full Maestro green again — ${runUrl}. Closing.` });
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed' });
+              }
+            }
 
   # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:

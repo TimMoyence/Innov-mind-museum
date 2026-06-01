@@ -79,7 +79,7 @@ pnpm build                       # build design tokens → museum-frontend/share
 GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy + Sentry + smoke
 - `ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS
-- `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix (4 shards) + iOS nightly cron → EAS build + store submit
+- `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android e2e on **ubuntu-latest + KVM** (x86_64 emulator, backend via GHA pgvector/redis services, Release APK) → EAS build + store submit. **Per-PR = `smoke` subset (~12min, 1 emulator boot); full 4-shard suite runs nightly cron + on push to `main`.** A red full run auto-files a GitHub issue (`maestro-full-alert` job, label `nightly-maestro-alert`) and `node scripts/nightly-status.mjs` surfaces the last full result — **run it at the start of any frontend-touching session** so an unattended red isn't missed. iOS Maestro stays nightly (HVF needs a Mac runner).
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
 - `codeql.yml` — CodeQL security analysis
 - `semgrep.yml` — SAST static analysis
