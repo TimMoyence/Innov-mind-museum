@@ -34,6 +34,13 @@
         "chat-cartel-deeplink.yaml",
         "connectivity-offline-banner.yaml",
         "consent-location-grant.yaml",
+        "chat-guardrail-insult.yaml",
+        "chat-guardrail-injection.yaml",
+        "chat-offtopic-redirect.yaml",
+        "chat-multiturn-coherence.yaml",
+        "chat-input-very-long.yaml",
+        "chat-input-edge.yaml",
+        "chat-image-describe.yaml",
         "modal-chat-artwork-hero.yaml",
         "modal-chat-image-fullscreen.yaml",
         "modal-chat-source-citation.yaml"
