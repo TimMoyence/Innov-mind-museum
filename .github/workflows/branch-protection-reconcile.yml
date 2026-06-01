@@ -1,0 +1,64 @@
+name: branch-protection-reconcile
+
+# =============================================================================
+# Branch-protection-as-code reconciler.
+#
+# On every push to main (and on manual dispatch) this reconciles main's REQUIRED
+# status checks to the declarative manifest .github/branch-protection/main.json.
+# This is what makes pinning "happen at merge even if nobody remembers to run a
+# gh api command": the desired state is committed and lands the moment the
+# manifest reaches main.
+#
+# CREDENTIAL — the default GITHUB_TOKEN CANNOT edit branch protection (there is
+# no `administration` permission scope for the Actions token). So the reconcile
+# step uses a dedicated secret `BRANCH_PROTECTION_TOKEN` with administration:write
+# on this repo. Put EITHER a fine-grained PAT (repo-scoped, Administration: RW)
+# OR a GitHub App installation token in it — the script is credential-agnostic.
+# See .github/branch-protection/README.md.
+#
+# SAFE until configured: when the secret is absent the job SKIPS with a warning
+# (no red job, nothing frozen). The freeze-guard in the script additionally
+# refuses to pin a promptfoo context unless its workflow is job-level-gated, so a
+# required check can never end up "Expected"-forever.
+# =============================================================================
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-protection-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check credential presence
+        id: cred
+        env:
+          BP_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: |
+          if [ -z "$BP_TOKEN" ]; then
+            echo "::warning::secret BRANCH_PROTECTION_TOKEN not set — reconcile skipped. Configure an admin credential (see .github/branch-protection/README.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout main (protected branch tree for the freeze-guard)
+        if: steps.cred.outputs.ready == 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          ref: main
+
+      - name: Reconcile required status checks from manifest
+        if: steps.cred.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN }}
+        run: bash .github/scripts/reconcile-branch-protection.sh

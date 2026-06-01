@@ -34,12 +34,14 @@ name: llm-security-promptfoo
 on:
   schedule:
     - cron: '0 4 * * 1'
-  pull_request:
-    paths:
-      - 'museum-backend/src/modules/chat/**'
-      - 'museum-backend/src/shared/llm/**'
-      - 'museum-backend/scripts/llm-security/**'
-      - '.github/workflows/llm-security-*.yml'
+  # Path filtering moved from workflow-level `on.pull_request.paths` to a
+  # job-level `if:` (see `changes` job + `promptfoo-leak.if` below) so the
+  # workflow ALWAYS starts on a PR and the required `promptfoo systemprompt-leak
+  # corpus` context is reported (skipped=success) even when chat/guardrail code
+  # is untouched. A workflow-level path filter would leave a REQUIRED check
+  # "Expected" forever on unrelated PRs and freeze merges under enforce_admins.
+  # Real LLM cost stays bounded to PRs that actually touch the gated paths.
+  pull_request: {}
   workflow_dispatch:
 
 permissions:
@@ -50,7 +52,38 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # ─── 0. Change detection — gates the (LLM-cost-incurring) corpus job so a PR
+  #        that doesn't touch chat / guardrail / the leak corpus skips it.
+  #        Skipped = success for branch protection, so the required
+  #        `promptfoo systemprompt-leak corpus` context is satisfied without
+  #        booting the backend or sending the 85-prompt adversarial corpus.
+  changes:
+    name: detect chat/guardrail changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      chat: ${{ steps.filter.outputs.chat }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+        id: filter
+        with:
+          filters: |
+            chat:
+              - 'museum-backend/src/modules/chat/**'
+              - 'museum-backend/src/shared/llm/**'
+              - 'museum-backend/scripts/llm-security/**'
+              - '.github/workflows/llm-security-*.yml'
+
   promptfoo-leak:
+    needs: changes
+    # Run the real adversarial corpus only when chat/guardrail changed, or on the
+    # weekly cron / manual dispatch. Otherwise the job skips → reported `success`
+    # so the required context never blocks an unrelated PR.
+    if: |
+      needs.changes.outputs.chat == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     name: promptfoo systemprompt-leak corpus
     runs-on: ubuntu-latest
     timeout-minutes: 30
