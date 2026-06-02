@@ -19,9 +19,12 @@
  *     sseChunkDelayMs: derived (slower profile → larger), ingressKbps: 40 (= bwUpKbps),
  *   }
  *
- *   toToxics(edge) → ToxiproxyToxic[] whose bandwidth toxic rate = bwUpKbps/8 = 11.25 KB/s
- *     (the SINGLE kbps→KB/s site); the OTHER two mappers emit NO KB/s field.
- *   toToxics(offline) → blocking (bandwidth 0 / timeout) toxic.
+ *   toToxics(edge) → ToxiproxyToxic[] shaping BOTH streams (spec §NFR "both streams
+ *     sole shaper"): an UPSTREAM bandwidth toxic rate = bwUpKbps/8 = 11.25 KB/s AND a
+ *     DOWNSTREAM bandwidth toxic rate = bwDownKbps/8 = 25 KB/s, each carrying its own
+ *     `stream` field. kbps→KB/s lives in EXACTLY ONE place (toToxics) — the OTHER two
+ *     mappers emit NO KB/s field.
+ *   toToxics(offline) → blocking (bandwidth 0 / timeout) toxics on BOTH streams.
  *
  * lib-docs: none (pure mappers). toNetInfoSnapshot reused from W1-REG-04.
  * No inline test entities — profiles sourced from the registry.
@@ -95,28 +98,61 @@ describe('toMiddlewareDescriptor (W1-REG-07b)', () => {
   });
 });
 
-describe('toToxics (W1-REG-07c — the single kbps→KB/s site)', () => {
-  it('converts the edge uplink to 11.25 KB/s (bwUpKbps / 8)', () => {
+/**
+ * The both-streams contract (spec §NFR): green adds a per-toxic
+ * `stream?: 'upstream' | 'downstream'` to `ToxiproxyToxic` so the mapper shapes
+ * both directions. We assert against that future field via a local widening so the
+ * contract is expressed test-first without touching the mapper in red.
+ */
+type StreamedToxic = ToxiproxyToxic & { readonly stream?: 'upstream' | 'downstream' };
+
+const toxicStream = (t: ToxiproxyToxic): 'upstream' | 'downstream' | undefined =>
+  (t as StreamedToxic).stream;
+
+const rateOf = (t: ToxiproxyToxic | undefined): number | undefined =>
+  (t?.attributes as { rate?: number } | undefined)?.rate;
+
+describe('toToxics (W1-REG-07c — the single kbps→KB/s site, both streams)', () => {
+  it('shapes BOTH streams: upstream rate = bwUpKbps/8 (11.25), downstream rate = bwDownKbps/8 (25)', () => {
     const toxics = toToxics(edge);
 
-    const bandwidthToxic = toxics.find((t: ToxiproxyToxic) => t.type === 'bandwidth');
-    expect(bandwidthToxic).toBeDefined();
-    // 90 kbps / 8 = 11.25 KB/s — the ONLY place this conversion is performed.
-    expect((bandwidthToxic?.attributes as { rate?: number }).rate).toBeCloseTo(
-      edge.bwUpKbps / 8,
-      6,
+    const up = toxics.find(
+      (t: ToxiproxyToxic) => t.type === 'bandwidth' && toxicStream(t) === 'upstream',
     );
+    const down = toxics.find(
+      (t: ToxiproxyToxic) => t.type === 'bandwidth' && toxicStream(t) === 'downstream',
+    );
+    expect(up).toBeDefined();
+    expect(down).toBeDefined();
+
+    // kbps → KB/s is performed ONCE per direction, here only.
+    expect(rateOf(up)).toBeCloseTo(edge.bwUpKbps / 8, 6);
+    expect(rateOf(up)).toBeCloseTo(11.25, 6);
+    expect(rateOf(down)).toBeCloseTo(edge.bwDownKbps / 8, 6);
+    expect(rateOf(down)).toBeCloseTo(25, 6);
+
+    // Exactly the two bandwidth streams (no extras, none dropped).
+    const bandwidthStreams = toxics
+      .filter((t: ToxiproxyToxic) => t.type === 'bandwidth')
+      .map((t: ToxiproxyToxic) => toxicStream(t))
+      .sort();
+    expect(bandwidthStreams).toEqual(['downstream', 'upstream']);
   });
 
-  it('emits a blocking/timeout toxic for offline (bandwidth 0)', () => {
+  it('emits blocking/timeout toxics on BOTH streams for offline (bandwidth 0)', () => {
     const toxics = toToxics(offline);
 
     expect(toxics.length).toBeGreaterThan(0);
-    const blocking = toxics.some(
-      (t: ToxiproxyToxic) =>
-        t.type === 'timeout' ||
-        (t.type === 'bandwidth' && (t.attributes as { rate?: number }).rate === 0),
+    const isBlocking = (t: ToxiproxyToxic): boolean =>
+      t.type === 'timeout' || (t.type === 'bandwidth' && rateOf(t) === 0);
+
+    const blockingUp = toxics.some(
+      (t: ToxiproxyToxic) => toxicStream(t) === 'upstream' && isBlocking(t),
     );
-    expect(blocking).toBe(true);
+    const blockingDown = toxics.some(
+      (t: ToxiproxyToxic) => toxicStream(t) === 'downstream' && isBlocking(t),
+    );
+    expect(blockingUp).toBe(true);
+    expect(blockingDown).toBe(true);
   });
 });

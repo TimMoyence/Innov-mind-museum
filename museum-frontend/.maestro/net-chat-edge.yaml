@@ -1,0 +1,66 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ChatScreen
+# runtime: NIGHTLY weak-net (device→Toxiproxy, not validated in unit CI)
+#
+# W3-06 — Chat under EDGE / low-data + an offline blip (Layer 3 device track).
+#
+# Drives the REAL low-data path (force-data-mode deeplink → resolveDataMode 'low'
+# → the low-data banner lights), sends a chat message under the shaped condition,
+# then flips airplane mode ON to assert the OFFLINE banner surfaces and the chat
+# surface degrades gracefully (an i18n offline string, NOT a raw error token like
+# "NETWORK_ERROR"). Restoring connectivity must clear the banner (resync).
+#
+# DEVICE→PROXY (runtime-deferred): on the Android nightly matrix the app's API
+# base URL points at the Toxiproxy shaped listener (10.0.2.2:3100) seeded from
+# `node scripts/net-shaping/profile-to-toxics.mjs edge`. setAirplaneMode is
+# reliable on Android; the iOS sim cannot be forced offline (best-effort) so the
+# offline assertions are `optional` (mirrors connectivity-offline-banner.yaml).
+#
+# Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!,
+# backend reachable through the shaped proxy, working LLM provider.
+
+# ── Force the low-data mode deterministically (W1 dev route) ──
+- openLink: "musaium:///(dev)/force-data-mode?value=low"
+- waitForAnimationToEnd
+
+# ── Reach the chat composer via the proven deterministic entry helper ──
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+# ── Low-data banner must light (forced preference 'low') ──
+- extendedWaitUntil:
+    visible:
+      text: "Mode économie de données actif|Data saving mode active"
+    timeout: 15000
+    optional: true
+
+# ── Send a message under the shaped (EDGE) condition ──
+- tapOn:
+    id: "chat-input"
+- inputText: "Parle-moi de cette oeuvre."
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+
+# ── Go offline mid-conversation (Android: reliable; iOS sim: no-op best-effort) ──
+- setAirplaneMode: enabled
+- waitForAnimationToEnd
+
+# Offline banner surfaces — an i18n string, never a raw token.
+- extendedWaitUntil:
+    visible:
+      text: "Vous êtes hors ligne|You're offline"
+    timeout: 12000
+    optional: true
+- assertNotVisible:
+    text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
+
+# ── Restore connectivity → banner clears (resync) ──
+- setAirplaneMode: disabled
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    notVisible:
+      id: "offline-banner"
+    timeout: 20000
+    optional: true

@@ -69,6 +69,15 @@
         "support-ticket-create.yaml",
         "reviews-submit-flow.yaml"
       ]
+    },
+    {
+      "name": "netshape",
+      "flows": [
+        "net-chat-edge.yaml",
+        "net-image-upload-edge.yaml",
+        "net-offline-queue-resync.yaml",
+        "net-auth-geo-edge.yaml"
+      ]
     }
   ],
   "iosNightly": "all",
@@ -79,5 +88,6 @@
     "onboarding-flow.yaml",
     "magic-link-verify-email.yaml"
   ],
+  "netshapeSmoke": ["net-chat-edge.yaml", "net-offline-queue-resync.yaml"],
   "excluded": ["config.yaml"]
 }

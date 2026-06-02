@@ -30,6 +30,12 @@ elif [ "$SHARD" = "smoke" ]; then
   # `smoke` list lives OUTSIDE `.shards[]` so its flows (which are also in the
   # `auth` shard) don't trip the shard-manifest dedup sentinel.
   FLOWS=$(jq -r '.smoke[]' "$MAESTRO_DIR/shards.json")
+elif [ "$SHARD" = "netshapeSmoke" ]; then
+  # W3 — conditional per-PR weak-net smoke: the 2 fastest netshape flows, run
+  # only when chat/connectivity/net-shaping paths change (paths-filtered in
+  # ci-cd-mobile.yml). Like `smoke`, this subset lives OUTSIDE `.shards[]` (its
+  # flows are also in the `netshape` shard) to avoid the dedup sentinel.
+  FLOWS=$(jq -r '.netshapeSmoke[]' "$MAESTRO_DIR/shards.json")
 else
   FLOWS=$(jq -r --arg s "$SHARD" '.shards[] | select(.name == $s) | .flows[]' "$MAESTRO_DIR/shards.json")
 fi

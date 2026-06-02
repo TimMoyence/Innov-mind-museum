@@ -616,6 +616,324 @@ jobs:
               }
             }
 
+  # ─── 4b. Weak-net APK prebuild (baked at the Toxiproxy shaped listener) ───
+  # The default `prebuild` APK bakes EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000,
+  # i.e. it talks to the UNSHAPED host backend directly. If the netshape job reused
+  # that APK, the device would never traverse Toxiproxy (:3100) and the "weak-net"
+  # run would be a silent no-op (false-green): the toxics seeded on :3100 shape a
+  # link nobody uses. This dedicated APK bakes the base URL at the Toxiproxy SHAPED
+  # listener (http://10.0.2.2:3100), so every request the device makes goes
+  # 10.0.2.2:3100 → toxiproxy → host.docker.internal:3000 and is genuinely shaped.
+  # Its own cache namespace (`maestro-apk-netshape-v1-*`) keeps it distinct from the
+  # unshaped :3000 APK so the two can never be cross-restored (the base URL is baked
+  # into the JS bundle, so it is part of the cache identity).
+  prebuild-netshape:
+    needs: quality
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      APP_VARIANT: development
+      EXPO_PUBLIC_API_ENVIRONMENT: staging
+      # Baked at the Toxiproxy SHAPED listener (NOT the unshaped :3000 backend) so
+      # the device→proxy link is genuinely shaped. This is the load-bearing
+      # difference from the `prebuild` job and the fix for the false-green netshape
+      # run: the emulator reaches 10.0.2.2:3100 (Toxiproxy) → host backend :3000.
+      EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3100
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
+
+      - name: Restore weak-net APK cache
+        id: cache-apk
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
+          # `netshape-v1` namespace: a SEPARATE cache from the :3000 APK so the two
+          # (different baked base URL → different bundle content) never cross-restore.
+          key: maestro-apk-netshape-v1-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
+          restore-keys: |
+            maestro-apk-netshape-v1-${{ runner.os }}-
+
+      - name: Setup Java (cache miss only)
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9  # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install npm deps (cache miss only)
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        run: npm install --no-audit --no-fund
+
+      - name: Expo prebuild Android (cache miss only)
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        run: npx expo prebuild --platform android --clean
+
+      - name: Setup Gradle (cache deps, cache miss only)
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a  # v4.4.3
+        with:
+          cache-read-only: false
+
+      - name: Gradle assembleRelease (cache miss only)
+        if: steps.cache-apk.outputs.cache-hit != 'true'
+        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+
+      - name: Upload weak-net APK artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: maestro-apk-netshape
+          path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 1
+
+  # ─── 4c. Weak-net (Toxiproxy) Maestro selector ───────────────────────────
+  # W3 device track (Layer 3). The full `netshape` shard runs on the nightly cron
+  # + manual dispatch; on a PR it runs only the 2-flow `netshapeSmoke` subset and
+  # ONLY when the chat / connectivity / net-shaping surfaces actually changed
+  # (paths-filtered) — a fast pre-merge guard without paying the full weak-net
+  # cost on every unrelated FE PR.
+  netshape-matrix:
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      run: ${{ steps.set.outputs.run }}
+      shard: ${{ steps.set.outputs.shard }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      # On a PR, only proceed if a weak-net-relevant path changed. On cron /
+      # dispatch the full shard always runs.
+      - id: changed
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3
+        with:
+          filters: |
+            netshape:
+              - 'museum-frontend/features/chat/**'
+              - 'museum-frontend/shared/infrastructure/connectivity/**'
+              - 'museum-frontend/.maestro/net-*.yaml'
+              - 'museum-frontend/.maestro/shards.json'
+              - 'museum-backend/src/shared/net-shaping/**'
+              - 'scripts/net-shaping/**'
+              - '.github/workflows/ci-cd-mobile.yml'
+      - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_HIT: ${{ steps.changed.outputs.netshape }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            if [ "$PR_HIT" = "true" ]; then
+              echo 'run=true'  >> "$GITHUB_OUTPUT"
+              echo 'shard=netshapeSmoke' >> "$GITHUB_OUTPUT"
+            else
+              echo 'run=false' >> "$GITHUB_OUTPUT"
+              echo 'shard=netshapeSmoke' >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo 'shard=netshape' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─── 4d. Weak-net Maestro job (device → Toxiproxy shaped link) ────────────
+  # The device→proxy wiring is now GENUINE (no false-green): the APK consumed here
+  # comes from `prebuild-netshape`, baked at the Toxiproxy shaped listener
+  # (EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3100), so every request the emulator
+  # makes goes 10.0.2.2:3100 → toxiproxy → host backend :3000 and is shaped. The
+  # seed step FAILS HARD if the proxy or its toxics cannot be installed (it no
+  # longer swallows curl errors), and asserts both an upstream + a downstream toxic
+  # are live before the emulator boots. This job boots backend + Toxiproxy, seeds
+  # the toxics from the W3 mapper, runs the netshape flows, and records the upload
+  # wall-clock for the compression metric. The unit gate still proves the mapper /
+  # sentinel / compose contract; this job proves the end-to-end shaped link.
+  maestro-netshape-nightly:
+    needs: [prebuild-netshape, netshape-matrix]
+    if: ${{ needs.netshape-matrix.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: museum-frontend
+    env:
+      MAESTRO_VERSION: '2.5.1'
+      NETSHAPE_SHARD: ${{ needs.netshape-matrix.outputs.shard }}
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: museum_dev
+          POSTGRES_PASSWORD: museum_dev_password
+          POSTGRES_DB: museum_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U museum_dev -d museum_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # Toxiproxy shaped link (Layer 3). 8474 = admin API (seed toxics here),
+      # 3100 = shaped listener forwarding to the host backend on :3000. Mirrors
+      # docker-compose.dev.yml profiles:[weaknet]. NEVER in a prod artifact
+      # (sentinel:toxiproxy-no-prod).
+      toxiproxy:
+        image: ghcr.io/shopify/toxiproxy:2.9.0
+        ports:
+          - 8474:8474
+          - 3100:3100
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: museum-frontend/package-lock.json
+      - name: Setup Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9  # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Download weak-net APK artifact
+        # The weak-net APK (from prebuild-netshape) bakes the API base URL at the
+        # Toxiproxy SHAPED listener (10.0.2.2:3100), NOT the unshaped :3000 backend,
+        # so every request the device makes is genuinely shaped. Reusing the plain
+        # `maestro-apk` (:3000) here would bypass Toxiproxy → silent no-op false-green.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: maestro-apk-netshape
+          path: museum-frontend/android/app/build/outputs/apk/release/
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Verify Maestro version
+        run: maestro --version
+
+      - name: Boot backend (PG/Redis services + migrations + API + e2e seed)
+        working-directory: museum-frontend
+        env:
+          SKIP_DOCKER_COMPOSE: '1'
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          EXTRACTION_WORKER_ENABLED: 'false'
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          ./scripts/maestro-runner-setup.sh
+          cd ../museum-backend
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            pnpm seed:e2e-maestro-account
+
+      # Seed the Toxiproxy proxy + the per-profile toxics from the W1 mapper.
+      # `profile-to-toxics.mjs <profile>` emits the admin-API JSON (NO inline
+      # kbps→KB/s — DRY single site in toToxics) covering BOTH streams (one upstream
+      # bandwidth toxic + one downstream). The shaped listener forwards 3100 → host
+      # backend :3000; the weak-net APK is baked at 10.0.2.2:3100, so the device's
+      # requests traverse this shaped link.
+      #
+      # This step FAILS HARD (no `|| echo ::warning::` swallowing): if the proxy or
+      # any toxic cannot be created, the shaped link is not actually in place and the
+      # netshape run would be a false-green no-op — exactly the bug this fix closes.
+      # We verify the proxy + its toxics are live before booting the emulator.
+      - name: Seed Toxiproxy shaped link (edge profile, both streams)
+        working-directory: museum-frontend
+        run: |
+          set -euo pipefail
+          # On GHA the backend runs on the runner host; from the toxiproxy
+          # service container the host is reachable at host.docker.internal.
+          curl -fsS -X POST http://localhost:8474/proxies \
+            -d '{"name":"backend","listen":"0.0.0.0:3100","upstream":"host.docker.internal:3000","enabled":true}'
+          TOXICS=$(node ../scripts/net-shaping/profile-to-toxics.mjs edge)
+          echo "edge toxics (from toToxics, both streams): $TOXICS"
+          echo "$TOXICS" | jq -c '.[]' | while read -r toxic; do
+            curl -fsS -X POST http://localhost:8474/proxies/backend/toxics \
+              -d "$toxic"
+          done
+          # Assert the proxy exists and at least one upstream + one downstream toxic
+          # were installed — proves the link is genuinely shaped before the device run.
+          SEEDED=$(curl -fsS http://localhost:8474/proxies/backend/toxics)
+          echo "installed toxics: $SEEDED"
+          echo "$SEEDED" | jq -e 'map(.stream) | (index("upstream") != null) and (index("downstream") != null)' \
+            || { echo "::error::Toxiproxy is missing an upstream and/or downstream toxic — shaped link not in place"; exit 1; }
+
+      - name: Enable KVM (hardware-accelerated emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Compression wall-clock metric: time the netshape shard end-to-end so the
+      # summary can report how long the shaped (compressed) run took. A bare
+      # number, not a pass/fail gate.
+      - name: Run weak-net Maestro shard (shaped link, wall-clock timed)
+        id: netshape_run
+        uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
+        env:
+          NETSHAPE_SHARD: ${{ needs.netshape-matrix.outputs.shard }}
+        with:
+          api-level: 33
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-boot-timeout: 300
+          ram-size: 4096M
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            START=$(date +%s)
+            bash museum-frontend/scripts/maestro-emulator-script.sh "$NETSHAPE_SHARD"
+            STATUS=$?
+            END=$(date +%s)
+            echo "netshape_wall_clock_seconds=$((END - START))" >> "$GITHUB_OUTPUT"
+            echo "::notice::weak-net shard '$NETSHAPE_SHARD' wall-clock: $((END - START))s (compression metric)"
+            exit $STATUS
+
+      - name: Upload weak-net shard logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: maestro-netshape-logs
+          path: museum-frontend/.maestro/logs/
+          retention-days: 7
+
+      - name: Weak-net summary (wall-clock compression note)
+        if: always()
+        run: |
+          WC="${{ steps.netshape_run.outputs.netshape_wall_clock_seconds }}"
+          {
+            echo "## Weak-net (Toxiproxy) Maestro — shard \`$NETSHAPE_SHARD\`"
+            echo ""
+            echo "- shaped-link wall-clock: **${WC:-n/a}s** (compression metric, device→Toxiproxy edge profile)"
+            echo "- shaped link: APK baked at 10.0.2.2:3100 → Toxiproxy → backend :3000 (genuine, both streams; seed fails hard)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:
     if: ${{ github.event_name == 'schedule' }}

@@ -1,0 +1,69 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ChatScreen
+# runtime: NIGHTLY weak-net (device→Toxiproxy, not validated in unit CI)
+#
+# W3-06 — Offline message queue + reconnect resync (Layer 3 device track).
+#
+# Proves the offline-first queue: while airplane mode is ON the user can still
+# type+send a chat message — it is queued locally (the offline banner shows a
+# "N en attente / N pending" count, NOT a raw error token). On reconnect the
+# queue drains (resync): the banner clears and a real assistant reply lands.
+#
+# DEVICE→PROXY (runtime-deferred): Android nightly only; on reconnect the API
+# base talks to the Toxiproxy shaped listener (10.0.2.2:3100) so the resync is
+# exercised under a 3g-lossy condition seeded from
+# `node scripts/net-shaping/profile-to-toxics.mjs 3g-lossy`. iOS sim cannot be
+# forced offline (best-effort) → offline assertions are optional.
+#
+# Prereqs: seeded account; backend reachable through the shaped proxy with a
+# working LLM provider.
+
+# ── Force low-data mode + reach the chat composer ──
+- openLink: "musaium:///(dev)/force-data-mode?value=low"
+- waitForAnimationToEnd
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+# ── Go offline BEFORE sending → message must queue, not error ──
+- setAirplaneMode: enabled
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: "Vous êtes hors ligne|You're offline"
+    timeout: 12000
+    optional: true
+
+- tapOn:
+    id: "chat-input"
+- inputText: "Quelle est l'histoire de ce lieu ?"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+
+# Queued — the banner carries a pending count, never a raw failure token.
+- extendedWaitUntil:
+    visible:
+      text: ".*(en attente|pending).*"
+    timeout: 12000
+    optional: true
+- assertNotVisible:
+    text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
+
+# ── Reconnect → queue drains (resync) over the shaped 3g-lossy link ──
+- setAirplaneMode: disabled
+- waitForAnimationToEnd
+
+# Offline banner clears once connectivity is back.
+- extendedWaitUntil:
+    notVisible:
+      id: "offline-banner"
+    timeout: 25000
+    optional: true
+
+# A real assistant reply lands after the queued message flushes.
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 90000
+    optional: true

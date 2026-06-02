@@ -68,6 +68,13 @@ export interface FlapTick {
 /** A Toxiproxy toxic descriptor (L3 layer). */
 export interface ToxiproxyToxic {
   readonly type: 'latency' | 'bandwidth' | 'timeout' | 'slicer';
+  /**
+   * The link direction this toxic shapes. `upstream` = client→server (uploads),
+   * `downstream` = server→client (chat SSE / image bytes). A latency toxic is
+   * applied symmetrically and carries no `stream`; the two bandwidth toxics each
+   * carry their own direction so the uplink and downlink are shaped independently.
+   */
+  readonly stream?: 'upstream' | 'downstream';
   readonly attributes: Readonly<Record<string, number>>;
 }
 
@@ -314,9 +321,13 @@ export function toMiddlewareDescriptor(profile: NetworkProfile): MiddlewareDescr
 }
 
 /**
- * L3 — translate a profile into Toxiproxy toxics. This is the ONLY place the
- * kbps→KB/s conversion is performed (`bwUpKbps / 8`). Offline emits a blocking
- * bandwidth-0 toxic.
+ * L3 — translate a profile into Toxiproxy toxics shaping BOTH directions. This is
+ * the ONLY place the kbps→KB/s conversion is performed (`bwUpKbps / 8`,
+ * `bwDownKbps / 8`). The latency toxic is symmetric; the two bandwidth toxics each
+ * carry their own `stream` so the uplink (upload-compression flow) and downlink
+ * (chat SSE / image bytes) are shaped independently. Offline (bw 0) emits a
+ * zero-rate (blocking) bandwidth toxic on each stream so no traffic passes either
+ * way (EARS R4 single conversion site — only `toToxics` calls `kbpsToKBytesPerSec`).
  */
 export function toToxics(profile: NetworkProfile): ToxiproxyToxic[] {
   const toxics: ToxiproxyToxic[] = [
@@ -326,7 +337,13 @@ export function toToxics(profile: NetworkProfile): ToxiproxyToxic[] {
     },
     {
       type: 'bandwidth',
+      stream: 'upstream',
       attributes: { rate: kbpsToKBytesPerSec(profile.bwUpKbps) },
+    },
+    {
+      type: 'bandwidth',
+      stream: 'downstream',
+      attributes: { rate: kbpsToKBytesPerSec(profile.bwDownKbps) },
     },
   ];
 
