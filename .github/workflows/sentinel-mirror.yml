@@ -168,6 +168,9 @@ jobs:
       - name: 'Mirror — prod security-header invariants (BE helmet/CSP/CORS)'
         run: node museum-backend/scripts/sentinels/security-headers-invariants.mjs
 
+      - name: 'Mirror — request-decompression invariants (BE gzip, W1-GZIP)'
+        run: node museum-backend/scripts/sentinels/request-decompression-invariants.mjs
+
       - name: 'Mirror — secret/cert rotation runbook freshness (≤120d)'
         run: node scripts/sentinels/secret-rotation-freshness.mjs
 

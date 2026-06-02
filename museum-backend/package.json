@@ -25,6 +25,7 @@
     "sentinel:net-profiles-parity": "node ../scripts/sentinels/net-profiles-parity.mjs",
     "sentinel:privacy-drift": "node ./scripts/sentinels/privacy-content-drift.mjs",
     "sentinel:quota-ordering": "node ./scripts/sentinels/quota-ordering.mjs",
+    "sentinel:request-decompression": "node ./scripts/sentinels/request-decompression-invariants.mjs",
     "sentinel:router-spec-drift": "node ./scripts/sentinels/router-spec-drift.mjs",
     "sentinel:security-headers": "node ./scripts/sentinels/security-headers-invariants.mjs",
     "sentinel:web-cookies": "node ./scripts/sentinels/web-cookies-audit.mjs",

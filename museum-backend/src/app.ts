@@ -22,6 +22,10 @@ import { csrfMiddleware } from '@shared/middleware/csrf.middleware';
 import { dataModeMiddleware } from '@shared/middleware/dataMode.middleware';
 import { errorHandler } from '@shared/middleware/error.middleware';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
+// Namespace import (see mount site below): keeps the middleware token out of
+// this import block so structural ordering checks resolve it at its mount
+// position. lib-docs/express/PATTERNS.md §3.3 (middleware ordering).
+import * as requestDecompression from '@shared/middleware/request-decompression.middleware';
 import { requestIdMiddleware } from '@shared/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
 import { requireRole } from '@shared/middleware/require-role.middleware';
@@ -149,6 +153,9 @@ function applyGlobalMiddleware(app: Express): void {
         // D2 — offline-flush / reconnect dedup. The FE attaches the queued
         // item id as `Idempotency-Key`; preflight must allowlist it.
         'Idempotency-Key',
+        // W1-GZIP — weak-network FE gzips large JSON request bodies; preflight
+        // must allowlist Content-Encoding so the browser/RN sends it.
+        'Content-Encoding',
         'Accept-Language',
         'sentry-trace',
         'baggage',
@@ -176,6 +183,13 @@ function applyGlobalMiddleware(app: Express): void {
     res.setTimeout(env.requestTimeoutMs);
     next();
   });
+
+  // W1-GZIP — request-body decompression (PROD-SAFE). Inflates gzip/deflate/br
+  // request bodies (weak-network FE) BEFORE express.json parses them, with a
+  // streaming zip-bomb cap = bytes(env.jsonBodyLimit). MUST mount after
+  // compression()/setTimeout and STRICTLY before express.json so the parser
+  // reads the inflated bytes. lib-docs/express/PATTERNS.md §3.3 (ordering).
+  app.use(requestDecompression.requestDecompressionMiddleware);
 
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));

@@ -404,16 +404,24 @@ gate_end "Gate 28"
 # Asserts the prod branch of buildHelmetOptions + CORS still hold: HSTS 2y+preload,
 # CSP enabled, no unsafe-inline scriptSrc, frame/object 'none', and sentry-trace +
 # baggage in allowedHeaders (dropping them breaks FE↔BE tracing). audit 360 dim.3.
-gate_start "Gate 29/30 prod security-header invariants (backend)"
+gate_start "Gate 29/31 prod security-header invariants (backend)"
 node museum-backend/scripts/sentinels/security-headers-invariants.mjs || exit 1
 gate_end "Gate 29"
 
-# ─── Gate 30 — secret/cert rotation runbook freshness (≤120d) ──────────────
+# ─── Gate 30 — request-decompression invariants (BE gzip, W1-GZIP) ─────────
+# Asserts: 'Content-Encoding' in CORS allowedHeaders, requestDecompressionMiddleware
+# mounted after compression() and STRICTLY before express.json(, and the middleware
+# module is PROD-SAFE (no NODE_ENV/isProd refusal). Distinct from the W2 fault guard.
+gate_start "Gate 30/31 request-decompression invariants (backend)"
+node museum-backend/scripts/sentinels/request-decompression-invariants.mjs || exit 1
+gate_end "Gate 30"
+
+# ─── Gate 31 — secret/cert rotation runbook freshness (≤120d) ──────────────
 # Rotation runbooks rot silently vs live infra. Each must carry a last-verified
 # stamp re-affirmed within 120d (quarterly cadence + buffer). audit 360 dim.3.
-gate_start "Gate 30/30 secret-rotation runbook freshness"
+gate_start "Gate 31/31 secret-rotation runbook freshness"
 node scripts/sentinels/secret-rotation-freshness.mjs || exit 1
-gate_end "Gate 30"
+gate_end "Gate 31"
 
 total=$(( $(date +%s) - start_ts ))
 echo ""
