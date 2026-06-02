@@ -46,6 +46,12 @@ export interface AppEnv {
   requestTimeoutMs: number;
   /** Idempotency-Key dedup replay window in ms (bounded [1s, 1h], default 600000). */
   idempotencyTtlMs: number;
+  /**
+   * L2 network-fault injector toggle (TEST-ONLY, Decision D3). Resolved via
+   * `resolveNetFaultEnabled` — coerced false UNCONDITIONALLY in production with
+   * NO escape hatch. Default OFF.
+   */
+  netFaultInjectionEnabled: boolean;
   dbSynchronize: boolean;
   dbSsl: boolean;
   dbSslRejectUnauthorized: boolean;

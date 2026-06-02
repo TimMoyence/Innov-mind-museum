@@ -1,3 +1,5 @@
+import { toBoolean } from './env-helpers';
+
 import type { AppEnv } from './env.types';
 
 const required = (name: string, value: string | undefined): string => {
@@ -141,6 +143,21 @@ function validateRedis(env: AppEnv): void {
  * `NODE_ENV === 'production'`. Throws to fail fast on startup.
  */
 export function validateProductionEnv(env: AppEnv): void {
+  // D3 (W2-07) — the L2 network-fault injector is a TEST-ONLY middleware that
+  // deliberately delays, fails, and trickles responses. It MUST be OFF in
+  // production UNCONDITIONALLY, with NO escape hatch (stricter than the chaos
+  // rate). `shouldMountNetFault` already coerces false in prod, but a misconfig
+  // (e.g. a stray `NET_FAULT_INJECTION_ENABLED=true` leaking into the prod
+  // environment) is an operator error we fail-fast on at boot rather than
+  // silently swallow — mirroring the AUTH_EMAIL_SERVICE_KIND='test' ban class.
+  if (toBoolean(process.env.NET_FAULT_INJECTION_ENABLED, false)) {
+    throw new Error(
+      'NET_FAULT_INJECTION_ENABLED is forbidden in production. The L2 network-fault ' +
+        'injector is a TEST-ONLY middleware (deliberately delays/fails/trickles responses) ' +
+        'with NO production escape hatch (Decision D3). Remove it from the environment.',
+    );
+  }
+
   // Phase 5 sentinel: 'test' email forbidden in prod — silently swallows
   // outbound emails into in-memory store; misconfig would lose real verification mails.
   if (env.auth.emailServiceKind === 'test') {

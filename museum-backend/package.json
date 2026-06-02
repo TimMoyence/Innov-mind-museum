@@ -22,6 +22,7 @@
     "sentinel:ai-tests-count": "node ./scripts/sentinels/ai-tests-count.mjs",
     "sentinel:llm-cost-guard-auth": "node ./scripts/sentinels/llm-cost-guard-auth.mjs",
     "sentinel:metric-naming": "node ./scripts/sentinels/metric-naming.mjs",
+    "sentinel:net-fault-prod-guard": "node ./scripts/sentinels/net-fault-prod-guard.mjs",
     "sentinel:net-profiles-parity": "node ../scripts/sentinels/net-profiles-parity.mjs",
     "sentinel:privacy-drift": "node ./scripts/sentinels/privacy-content-drift.mjs",
     "sentinel:quota-ordering": "node ./scripts/sentinels/quota-ordering.mjs",

@@ -24,6 +24,7 @@ import {
   warnLegacyJwtSecret,
 } from './env-resolvers';
 import { validateProductionEnv } from './env.production-validation';
+import { resolveNetFaultEnabled } from './net-fault.config';
 
 import type {
   AppEnv,
@@ -72,6 +73,14 @@ const env: AppEnv = {
   idempotencyTtlMs: Math.min(
     3_600_000,
     Math.max(1_000, toNumber(process.env.IDEMPOTENCY_TTL_MS, 600_000)),
+  ),
+  // L2 network-fault injector (TEST-ONLY, D3). `resolveNetFaultEnabled` coerces
+  // false UNCONDITIONALLY in prod with NO escape hatch (stricter than
+  // resolveChaosRate). Default OFF. `validateProductionEnv` additionally
+  // boot-throws if the raw flag is truthy in prod (belt-and-braces).
+  netFaultInjectionEnabled: resolveNetFaultEnabled(
+    process.env.NET_FAULT_INJECTION_ENABLED,
+    process.env.NODE_ENV,
   ),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   dbSsl: toBoolean(process.env.DB_SSL, true),

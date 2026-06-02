@@ -47,6 +47,8 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     port: 3000,
     appVersion: '1.0.0',
     trustProxy: true,
+    // D3 (W2) — fault injector is always OFF in this prod env fixture.
+    netFaultInjectionEnabled: false,
     corsOrigins: [],
     jsonBodyLimit: '1mb',
     requestTimeoutMs: 20000,
