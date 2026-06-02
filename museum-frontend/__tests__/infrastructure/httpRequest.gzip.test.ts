@@ -46,17 +46,15 @@ jest.mock('@/shared/infrastructure/dataMode/currentDataMode', () => ({
   getCurrentDataMode: () => mockGetCurrentDataMode(),
 }));
 
-// `virtual: true` — pako is added as a dependency in the green phase
-// (W1-GZIP-07). The virtual mock lets this red test fail for the RIGHT reason
-// (httpRequest does not yet gzip), not on module resolution of an uninstalled
-// package.
-jest.mock(
-  'pako',
-  () => ({
-    gzip: (...args: unknown[]) => mockGzip(...args),
-  }),
-  { virtual: true },
-);
+// pako is a REAL dependency (added W1-GZIP-07, green phase). Mock it normally —
+// NOT `{ virtual: true }`. A virtual mock on an installed module gets bypassed
+// once any other test in the same jest worker resolves the real `pako` first
+// (the module map caches the real path), so `pako.gzip` would hit the real lib
+// and `mockGzip` would see 0 calls — an order-dependent flake that only surfaces
+// in the full `--findRelatedTests` suite, never when this file runs alone.
+jest.mock('pako', () => ({
+  gzip: (...args: unknown[]) => mockGzip(...args),
+}));
 
 import { httpRequest } from '@/shared/api/httpRequest';
 
