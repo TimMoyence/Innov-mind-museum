@@ -62,7 +62,36 @@ contract intact.
 |---|---|---|
 | `app/(dev)/paywall-preview.tsx` | `usePaywall().open(...)` → QuotaUpsellModal | `__DEV__` + `(dev)/_layout.tsx` `<Redirect href="/">` |
 | `app/(dev)/offline-prompt-preview.tsx` | mounts OfflinePackPrompt directly | `__DEV__` + `(dev)/_layout.tsx` `<Redirect href="/">` |
+| `app/(dev)/force-data-mode.tsx` | sets `useDataModePreferenceStore` preference, then redirects home | `__DEV__` (in-route guard + `(dev)/_layout.tsx` `<Redirect href="/">`) |
 
 These routes are absent from release bundles (the `__DEV__` guard + the group
 layout redirect), so there is no risk of a phantom paywall/offline prompt in
 production.
+
+## W3 low-data deeplink contract (`force-data-mode`)
+
+iOS simulators cannot have their NetInfo connection type forced, so the
+low-data banner (`resolveDataMode(preference === 'low')`) never lights
+deterministically in CI. The W3 netshape flows drive the **real**
+`useDataModePreferenceStore` through the dev route instead:
+
+```yaml
+- openLink:
+    link: "musaium:///(dev)/force-data-mode?value=low"
+# the route sets preference='low' on mount, then auto-redirects to "/" so the
+# next screen renders under low-data mode. Omit ?value or use ?value=normal to
+# force the normal path (default when value != 'normal' is 'low').
+```
+
+Contract:
+- `?value=low` (or absent) → `setPreference('low')`; `?value=normal` → `setPreference('normal')`.
+- The route mutates the store on mount, then **auto-redirects** to `/`
+  (`<Redirect href="/">`) — there is no UI to tap; the flow continues on the
+  home screen.
+- On unmount the route **self-resets** the preference to `'auto'` (R6 no-leak),
+  so a forced mode never bleeds into the next flow sharing the same simulator
+  session.
+- Sentinel note: `force-data-mode.tsx` carries a top-of-file `// e2e-skip:`
+  magic comment, so it satisfies `screen-test-coverage` on its own; any W3 flow
+  whose `openLink` references `/force-data-mode` additionally references the
+  route path and would satisfy the sentinel as a flow ref too.
