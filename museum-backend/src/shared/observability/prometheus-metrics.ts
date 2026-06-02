@@ -308,7 +308,7 @@ export const guardrailBudgetRedisFallbackTotal = new Counter({
  * spike. No user-derived label (prom-client cardinality discipline).
  */
 export const guardrailFrictionRedisFallbackTotal = new Counter({
-  name: 'musaium_guardrail_friction_redis_fallback_total',
+  name: 'guardrail_friction_redis_fallback_total',
   help: 'Total guardrail-friction Redis backend fail-SOFT fallbacks (unreachable / throwing counter)',
   registers: [registry],
 });

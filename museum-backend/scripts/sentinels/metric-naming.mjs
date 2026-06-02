@@ -90,6 +90,11 @@ const FROZEN = [
   // WAVE 6 (2026-05-26) — C4 per-user daily spend histogram. Bare prefix (F2
   // Option A) + `_usd` amount (not a `_seconds` duration → NON_SECONDS_HISTOGRAMS).
   ['Histogram', 'llm_cost_user_daily_usd'],
+  // 2026-06-02 — guardrail-friction Redis fail-SOFT fallback counter (hybrid-gravity
+  // guardrail). Bare prefix per F2 Option A — sibling of the older
+  // musaium_guardrail_budget_redis_fallback_total, but kept bare to hold the
+  // musaium_ cap at 16. See METRIC_NAMING_AUDIT.md §2.
+  ['Counter', 'guardrail_friction_redis_fallback_total'],
 ];
 const MAX_MUSAIUM_PREFIXED = 16;
 

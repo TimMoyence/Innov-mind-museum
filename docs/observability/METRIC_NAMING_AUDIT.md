@@ -38,7 +38,7 @@ Per the official Prometheus naming guidelines:
 
 Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · ❌ hard violation.
 
-### 2.1 Bare-prefix metrics (31) — subsystem prefix, no `musaium_`
+### 2.1 Bare-prefix metrics (32) — subsystem prefix, no `musaium_`
 
 | Metric name | Type | R1 snake | R2/R3 suffix | Verdict |
 |---|---|---|---|---|
@@ -73,6 +73,7 @@ Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · �
 | `guardrail_judge_degraded_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
 | `llm_cost_anon_bypass_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
 | `llm_cost_user_daily_usd` *(W6)* | Histogram | ✅ | ⚠️ `_usd` amount, not `_seconds` (R3 N/A — monetary, not a duration) | ✅ (F2 Option A — bare prefix; see F6) |
+| `guardrail_friction_redis_fallback_total` *(hybrid-gravity, 2026-06-02)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix; sibling of the older `musaium_guardrail_budget_redis_fallback_total`, kept bare to hold the cap at 16) |
 
 ### 2.2 `musaium_`-prefixed metrics (16)
 
@@ -181,8 +182,9 @@ in ms and expected to be renamed). A future audit must NOT "fix" `_usd` to
 > **Count note (pre-existing drift, hand-off):** the §2 header (`46 metrics`) and
 > the line-12 / line-159 counters (`44`) already disagreed before W6 and were not
 > recomputed here to avoid introducing a wrong number (UFR-013). The verified
-> source-of-truth count is the sentinel `FROZEN`/`EXPECTED` inventory, now **45**
-> pairs. Reconciling the prose counters is a separate doc-hygiene item (M5).
+> source-of-truth count is the sentinel `FROZEN`/`EXPECTED` inventory, now **46**
+> pairs (the 2026-06-02 `guardrail_friction_redis_fallback_total` addition, bare
+> prefix). Reconciling the prose counters is a separate doc-hygiene item (M5).
 
 ---
 

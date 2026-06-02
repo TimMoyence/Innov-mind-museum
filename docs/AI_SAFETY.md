@@ -21,7 +21,7 @@ What this document is NOT:
 
 ## 2. Layered defence
 
-The guardrail subsystem is **five independent layers**, applied in order, around the LLM call. A failure in one layer does NOT bypass the others.
+The guardrail subsystem is **six independent layers**, applied in order, around the LLM call. A failure in one layer does NOT bypass the others.
 
 | # | Layer | Location | When | Failure mode |
 |---|---|---|---|---|
@@ -29,9 +29,25 @@ The guardrail subsystem is **five independent layers**, applied in order, around
 | L2 | **`sanitizePromptInput()`** Unicode normalisation + zero-width strip + length cap (`@shared/validation/input.ts`) | input, on every user-controlled field (locale, location, freetext) | every prompt | deterministic |
 | L3 | **Structural prompt isolation** — system instructions + section prompts BEFORE user content, with `[END OF SYSTEM INSTRUCTIONS]` boundary marker | LangChain message-array assembly (`llm-prompt-builder.ts`) | every LLM call | architecturally enforced |
 | L4 | **LLM-Guard sidecar** (`LLMGuardAdapter` implementing the `GuardrailProvider` port, ADR-048) | input + output of every chat turn | every chat turn | **fail-CLOSED** when timeout / network / breaker OPEN / semaphore overflow (ADR-047) |
-| L5 | **LLM judge** (`llm-judge-guardrail.ts`, ADR-015) | input — selectively, only on uncertain V1 allows (`message.length > env.guardrails.judgeMinMessageLength`) | uncertain inputs the keyword pre-filter allowed | **fail-OPEN** to the keyword decision (timeout / schema violation / model throw / budget exhausted → `null` → `{ decision: 'review' }`) + daily budget cap (ADR-030) |
+| L5 | **LLM judge** (`llm-judge-guardrail.ts`, ADR-015) — **default (hybrid-gravity): runs IN PARALLEL of generation** (`guardrail-escalation.ts:131`); legacy inline-before-LLM mode only when `GUARDRAIL_FRICTION_ENABLED=false` | input semantic verdict, selectively on long V1 allows (`message.length > env.guardrails.judgeMinMessageLength`) | uncertain inputs the keyword pre-filter allowed | **fail-OPEN** to allow (timeout / schema violation / model throw / budget exhausted → `null` → `allow`, `guardrail-escalation.ts:147`) + daily budget cap (ADR-030) |
+| L6 | **Friction escalation** (`FrictionEscalationService`, hybrid-gravity 2026-06-01) — 2-tier counter store, off-topic → soft-redirect → cool-down ladder. See §2.1 | input, on the L5 verdict | every chat turn when `frictionEnabled` (default) | **fail-SOFT** — a store outage degrades to plain answer / no escalation, never a 500 nor a spurious block (`guardrail-friction.store.ts:10`) |
 
-The keyword guardrail (L1) is the **first defence** and remains deterministic. The LLM-Guard sidecar (L4) is enforced **on top**, not as a replacement. **Removing one layer does not equal removing the defence** — but no single layer is sufficient. L1 is fast and deterministic but low-recall on novel attacks; L4 is high-recall on novel attacks but network-dependent; L5 is input-side and judges the semantic content of inputs the keyword filter left uncertain. The combination is the doctrine.
+The keyword guardrail (L1) is the **first defence** and remains deterministic. The LLM-Guard sidecar (L4) is enforced **on top**, not as a replacement. **Removing one layer does not equal removing the defence** — but no single layer is sufficient. L1 is fast and deterministic but low-recall on novel attacks; L4 is high-recall on novel attacks but network-dependent; L5 judges the semantic content of inputs the keyword filter left uncertain. The combination is the doctrine.
+
+**L5 placement (hybrid-gravity, default `frictionEnabled=true`, `env.ts:442`).** The semantic judge no longer hard-blocks inline before the LLM call. It runs **in parallel of generation** (`Promise.allSettled([evaluateInputSemantic, generate])`, `guardrail-escalation.ts:131-139`, invoked from `chat-message.service.ts:336`), so an on-topic message adds ~0 latency (voice-first NFR). An isolated off-topic is **soft-redirected** (the generated answer is returned, the section prompt recentres) rather than refused; only repeated off-topic crossing a threshold escalates to a hard-block cool-down (§2.1). The original **inline hard-block-every-off-topic** path is preserved as the legacy kill-switch (`runLegacyInlineJudge`, `guardrail-evaluation.service.ts:127`), reached only when `GUARDRAIL_FRICTION_ENABLED=false`; the two modes are mutually-exclusive single code paths (`guardrail-evaluation.service.ts:219`).
+
+### 2.1 Friction escalation (L6, hybrid-gravity)
+
+A 2-tier strike counter (`GuardrailFrictionStore`, `guardrail-friction.store.ts`) escalates repeat abuse into a shared cool-down without hard-blocking isolated lapses:
+
+- **Scopes** — always `session` (`friction:session:<sessionId>`, 6h TTL) plus, per turn, `user` (`friction:user:<userId>`, 24h) when authenticated **xor** `ip` (`friction:ip:<sha256(ip)>`, 24h) when anonymous (`guardrail-friction.store.ts:14-18`, `guardrail-escalation.ts:89`). The principal scope is global across that user's / IP's sessions.
+- **Off-topic ladder** — each parallel-judge off-topic verdict records a strike of weight `FRICTION_WEIGHT_OFFTOPIC` (default 1) on both scopes. Under both thresholds → **soft-redirect** (answer returned). At `session ≥ FRICTION_SESSION_THRESHOLD` (default 3) **or** `user/IP ≥ FRICTION_USER_THRESHOLD` (default 10) → **hard-block cool-down**: the generated answer is suppressed and a warm `refocus` refusal returned; the user/IP cool-down is armed at the user floor (`guardrail-escalation.ts:151-176`, `chat-message.service.ts:361`).
+- **Security strikes** — a V1-keyword / sidecar BLOCK is always an inline hard-block (decided in `prepare`). On top of it, a strike of weight `FRICTION_WEIGHT_SECURITY` (default 2) is recorded on both scopes so a repeat injection / PII spammer crosses the user floor and arms the same global cool-down (`recordSecurityStrike`, `guardrail-escalation.ts:187`, `chat-message.service.ts:385`). The strike is independent of, and never weakens, the hard-block (fail-SOFT).
+- **Cool-down pre-check** — before generating, an armed cool-down on either scope short-circuits to the cool-down refusal with **no LLM spend** (`guardrail-escalation.ts:101`, `chat-message.service.ts:320`). Cool-down TTL = `FRICTION_COOLDOWN_MS` (default 2 min).
+- **Fail-SOFT (inverse of the budget store, which is fail-CLOSED)** — any store outage reads as 0 strikes / not-cooling-down and swallows writes; it never escalates a message nor 500s the chat (`guardrail-friction.store.ts:10`, `guardrail-escalation.ts:108`). Only an escalation-to-cool-down is audited; a soft-redirect is not a block and stays out of the audit chain (`guardrail-evaluation.service.ts:270`).
+- **Wiring** — the store is configured at the composition root on the shared `CacheService` (`chat-module.ts:720`), backend chosen dynamically from `GUARDRAIL_FRICTION_BACKEND` (redis in prod, else in-process; `guardrail-friction.store.ts:201`), and injected into the chat pipeline so escalation is ACTIVE in prod, not just a test seam (`chat-module.ts:881`).
+- **RGPD (NFR-RGPD-1)** — the `ip` scope carries an opaque sha256 hex digest only; the raw IP is hashed before it ever reaches a cache key or log (`hashIp`, `guardrail-friction.store.ts:67`).
+- **Tuning (TUNING-ONLY; the only feature flag is the kill-switch)** — `GUARDRAIL_FRICTION_ENABLED` (kill-switch → legacy inline judge), `FRICTION_SESSION_THRESHOLD`, `FRICTION_USER_THRESHOLD`, `FRICTION_COOLDOWN_MS`, `FRICTION_WEIGHT_SECURITY`, `FRICTION_WEIGHT_OFFTOPIC`, `GUARDRAIL_FRICTION_BACKEND` (`env.ts:442-449`).
 
 ## 3. Fail-CLOSED contract (non-negotiable)
 
@@ -43,7 +59,7 @@ When any `GuardrailProvider` fails (timeout, network error, malformed response, 
 
 The user sees a localised "service temporarily unavailable" message (FR/EN ship; other locales fall back to EN until a future ADR extends the i18n surface). This is the `service_unavailable` mapped reason added at ADR-047 — distinct from `unsafe_output` so the UI no longer says "your content was flagged" on infrastructure failures.
 
-**Rationale.** In pre-launch V1 and indefinitely thereafter (per `feedback_no_feature_flags_prelaunch`), there is **no `*_FAIL_OPEN`, no `*_BREAKER_ENABLED`, no kill-switch** for the guardrail or the fail-CLOSED policy. Tuning is via thresholds (`LLM_GUARD_CB_FAILURE_THRESHOLD`, `LLM_GUARD_MAX_INFLIGHT`, `LLM_GUARD_QUEUE_MAX`, etc.) — those are operational knobs of an always-on behaviour, not feature flags.
+**Rationale.** In pre-launch V1 and indefinitely thereafter (per `feedback_no_feature_flags_prelaunch`), there is **no `*_FAIL_OPEN`, no `*_BREAKER_ENABLED`, no kill-switch** for the L4 sidecar or its fail-CLOSED policy. Tuning is via thresholds (`LLM_GUARD_CB_FAILURE_THRESHOLD`, `LLM_GUARD_MAX_INFLIGHT`, `LLM_GUARD_QUEUE_MAX`, etc.) — those are operational knobs of an always-on behaviour, not feature flags. (The single guardrail kill-switch is `GUARDRAIL_FRICTION_ENABLED` at L5/L6: it does not weaken the fail-CLOSED L4 contract — it only reverts the judge placement from parallel/soft-redirect back to the legacy inline hard-block, §2.1.)
 
 The L1 keyword guardrail does **NOT replace** L4 during a CB-OPEN window. When L4 is degraded, the user gets a refusal; we do not silently fall back to keyword-only inspection. The graceful-degradation hierarchy proposed in the perennial design (Phase 2.D) introduces explicit levels (L0=normal / L1=keyword-strict-only / etc.), but each level transition is a **conscious policy decision** invoked via thresholds, never a runtime accident.
 
@@ -104,10 +120,10 @@ Coverage per `.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-
 
 ## 6. Voice-specific safety (`docs/AI_VOICE.md`)
 
-- STT (`gpt-4o-mini-transcribe`) — transcript flows through L1-L5 identically to text.
-- TTS (`gpt-4o-mini-tts`, voice `alloy`) — output audio is generated from text that has passed the output-side guardrail (L4 output scan); the input transcript was already screened by L1-L5 input layers. Audio itself is not re-scanned; an audio classifier sits on a Phase 2 re-evaluation if telemetry surfaces a gap.
+- STT (`gpt-4o-mini-transcribe`) — transcript flows through L1-L6 identically to text.
+- TTS (`gpt-4o-mini-tts`, voice `alloy`) — output audio is generated from text that has passed the output-side guardrail (L4 output scan); the input transcript was already screened by the L1-L6 input layers. Audio itself is not re-scanned; an audio classifier sits on a Phase 2 re-evaluation if telemetry surfaces a gap.
 - **Art. 50 audio disclosure** in voice mode — explicit greeting at session start (`features/chat/ui/VoiceSessionIntroSheetContent.tsx` + 8-locale i18n in `museum-frontend/shared/locales/*/translation.json:voice.disclosure`). Visual badge in `ChatHeader` supplements but does not replace the audio.
-- Realtime WebRTC (ADR-042, currently deferred) MUST go through L1-L5 when (if) it ships. A parallel codepath that bypasses guardrails is the perennial design's identified risk #8 (asymmetry). Phase 3+ work.
+- Realtime WebRTC (ADR-042, currently deferred) MUST go through L1-L6 when (if) it ships. A parallel codepath that bypasses guardrails is the perennial design's identified risk #8 (asymmetry). Phase 3+ work.
 
 ## 7. Provider strategy + supply chain
 
@@ -153,7 +169,7 @@ Bottlenecks: sidecar CPU on single-VPS; Postgres write amplification on audit lo
 
 | Action | Required artefact |
 |---|---|
-| Modify any of L1-L5 | ADR + this doc updated |
+| Modify any of L1-L6 | ADR + this doc updated |
 | Change a threshold in `env.guardrails.*` | 1-line PR; this doc updated only if doctrine impact |
 | Add a provider | ADR (e.g. ADR-051 for first new provider) + shadow mode procedure (Phase 1) |
 | Add a new layer (e.g. content classifier between L4 and L5) | ADR + new section in this doc |
