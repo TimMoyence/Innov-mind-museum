@@ -66,13 +66,15 @@ appId: com.musaium.mobile.preview
 # The "Noter Musaium" button's accessibilityLabel (a11y.settings.rate_musaium =
 # "Ouvrir les avis" / "Open reviews") COLLAPSES the subtree, so the visible
 # "Noter Musaium" Text is NOT separately queryable — match the a11y label.
-# Swipe up to bring the lower settings section into view first.
-- swipe:
-    direction: UP
-    duration: 400
-- swipe:
-    direction: UP
-    duration: 400
+# Blind `swipe UP ×2` overshot the row into the Third-party-AI consent section
+# (observed via failure screenshot); scrollUntilVisible stops AS SOON as the row
+# is on screen, so it lands on it deterministically regardless of section order.
+- scrollUntilVisible:
+    element:
+      text: "Ouvrir les avis|Open reviews"
+    direction: DOWN
+    visibilityPercentage: 1
+    timeout: 20000
 - tapOn:
     text: "Ouvrir les avis|Open reviews"
 - extendedWaitUntil:

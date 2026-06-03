@@ -14,11 +14,35 @@ appId: com.musaium.mobile.preview
 
 - tapOn:
     id: "chat-input"
-- inputText: "I have been thinking a great deal about the development of European painting and I would love a thorough explanation, because I keep getting confused about how the different periods connect to one another. Could you walk me through how the Renaissance emphasis on linear perspective and anatomical precision, as seen in artists like Leonardo da Vinci and Raphael, eventually gave way to the dramatic light and movement of the Baroque period with painters such as Caravaggio and Rubens, and then how that in turn influenced the more restrained Neoclassical style, before the Romantics reacted against all of it with emotion and the sublime, and finally how the Impressionists like Monet and Renoir broke from academic tradition entirely by painting light and fleeting moments outdoors? I am especially curious about which specific technical innovations, materials, and changes in patronage drove each of these transitions, and whether the museums of a city like Bordeaux would typically hold representative works from each of these movements so that a visitor could trace the whole arc in a single afternoon. Please be as detailed as you can about the through-line connecting these eras."
-# NOTE: no hideKeyboard here. With a ~1.5k-char multiline value the composer
-# expands and Maestro's hideKeyboard heuristic tap lands on an interactive area
-# and aborts ("try tapping a non-interactive element"). The send-button lives in
-# the composer row ABOVE the keyboard, so it stays tappable with the keyboard up.
+# The full ~1.5k-char message is typed as FOUR sequential inputText calls that
+# the composer concatenates at the cursor (Maestro inputText appends). A single
+# inputText of the whole string overruns the Android driver's 120s gRPC deadline
+# (the on-device test IME types char-by-char, ~8-10/s) → DEADLINE_EXCEEDED. iOS
+# tolerates the single call, but splitting keeps the SAME message verbatim while
+# each chunk (~300 chars) finishes well under the deadline on BOTH platforms —
+# parity-safe with zero loss of the long-input coverage. Do NOT re-join: the
+# split exists solely to stay under the per-call driver deadline.
+- inputText: "I have been thinking a great deal about the development of European painting and I would love a thorough explanation, because I keep getting confused about how the different periods connect to one another. "
+- inputText: "Could you walk me through how the Renaissance emphasis on linear perspective and anatomical precision, as seen in artists like Leonardo da Vinci and Raphael, eventually gave way to the dramatic light and movement of the Baroque period with painters such as Caravaggio and Rubens, "
+- inputText: "and then how that in turn influenced the more restrained Neoclassical style, before the Romantics reacted against all of it with emotion and the sublime, and finally how the Impressionists like Monet and Renoir broke from academic tradition entirely by painting light and fleeting moments outdoors? "
+- inputText: "I am especially curious about which specific technical innovations, materials, and changes in patronage drove each of these transitions, and whether the museums of a city like Bordeaux would typically hold representative works from each of these movements so that a visitor could trace the whole arc in a single afternoon. Please be as detailed as you can about the through-line connecting these eras."
+# With the full ~1.5k-char value entered the composer grows tall; on ANDROID the
+# soft keyboard then covers the composer row so send-button drops out of the
+# rendered/visible hierarchy (verified via the failure hierarchy: chat-input +
+# typed text present, NO send-button node). iOS keeps send-button above the
+# keyboard, so the flow historically had no hideKeyboard — but that left Android
+# unable to reach it. hideKeyboard collapses the Android keyboard and brings
+# send-button back on screen. PARITY: hideKeyboard is gated to Android — on iOS
+# it ABORTS here ("Instead of hideKeyboard, try tapping on a non-interactive
+# element", verified iPhone 17/iOS 26.5) AND iOS keeps send-button above the
+# keyboard so it is not needed. The platform-gated runFlow makes the single flow
+# green on BOTH Android (keyboard dismissed → send-button visible) and iOS (step
+# skipped → send-button already reachable).
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: "send-button"
 

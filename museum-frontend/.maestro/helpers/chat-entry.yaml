@@ -89,13 +89,20 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "museum-sheet-start-chat"
 
-# ── Phase 3: Accept the AI-disclosure consent sheet (covers chat-input) ──
-- extendedWaitUntil:
-    visible:
-      text: "Accepter tout|Accept all"
-    timeout: 20000
+# ── Phase 3: Accept the third-party-AI consent sheet IF it appears ──
+# The REQUIRED_CONSENT_SCOPE (third_party_ai_text_openai) is persisted
+# SERVER-SIDE per account (features/chat/infrastructure/consentApi.ts +
+# application/useAiConsent.ts), NOT client-side — so `clearState: true` does NOT
+# re-arm it. On a shared/seeded account that has already granted the scope, the
+# sheet never mounts; a hard `extendedWaitUntil` would then dead-time-out and
+# fail the flow on every run after the first grant (the exact rerun-flakiness we
+# saw locally + the iOS/Android parity hazard). waitForAnimationToEnd lets the
+# sheet settle on the first-ever grant, then an OPTIONAL tap accepts it — or
+# no-ops harmlessly when consent already exists.
+- waitForAnimationToEnd
 - tapOn:
     text: "Accepter tout|Accept all"
+    optional: true
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
