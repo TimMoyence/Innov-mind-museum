@@ -156,6 +156,9 @@ jobs:
       - name: Router-spec drift sentinel (R14 - leads routes documented)
         run: pnpm run sentinel:router-spec-drift
 
+      - name: Hexagonal domain-purity sentinel (ESLint-independent backstop)
+        run: pnpm run sentinel:hexagonal-domain-purity
+
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 

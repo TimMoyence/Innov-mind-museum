@@ -27,7 +27,7 @@ import { guardrailJudgeDegradedTotal } from '@shared/observability/prometheus-me
 import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
-import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
+import type { ChatModel } from '@modules/chat/domain/llm/chat-model.port';
 import type { LlmJudgeScope, LlmPathTier } from '@shared/observability/derive-tier';
 
 export type LlmJudgeDecision = 'allow' | 'block' | 'review';

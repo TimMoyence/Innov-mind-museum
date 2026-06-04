@@ -8,6 +8,7 @@ import { env } from '@src/config/env';
 import type { LLMCircuitBreaker } from './llm-circuit-breaker';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
 import type { BaseCallbackHandler } from '@langchain/core/callbacks/base';
+import type { ChatModel, UsageMetadata } from '@modules/chat/domain/llm/chat-model.port';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
@@ -25,27 +26,11 @@ export const EMPTY_RESPONSE_FALLBACK =
 export const MISSING_LLM_KEY_FALLBACK =
   'Musaium is running without an LLM key. Configure provider keys to enable live AI responses.';
 
-/**
- * C9.5 — minimal shape we read off LangChain's unified `AIMessage.usage_metadata`.
- * Populated by `@langchain/openai` (`prompt_tokens_details.cached_tokens` →
- * `input_token_details.cache_read`) and `@langchain/google-genai`
- * (`cachedContentTokenCount` → `input_token_details.cache_read`). Deepseek's
- * OpenAI-compatible adapter does NOT surface `cache_read` today — R7 fail-open
- * classifies that as `'miss'` without throwing.
- */
-export interface UsageMetadata {
-  input_tokens?: number;
-  output_tokens?: number;
-  total_tokens?: number;
-  input_token_details?: {
-    cache_read?: number;
-    audio?: number;
-  };
-  output_token_details?: {
-    audio?: number;
-    reasoning?: number;
-  };
-}
+// `ChatModel` + `UsageMetadata` moved to `domain/llm/chat-model.port.ts`
+// (B2 close, run 2026-06-04-hexagonal-boundaries-enforcement). Re-exported here
+// (identity-preserving, spec R5) so the orchestrator + every existing importer
+// of this adapter module compile unchanged.
+export type { ChatModel, UsageMetadata };
 
 /** C9.5 R6 — three-bucket prompt-cache classification. */
 export type CacheStatus = 'hit' | 'partial' | 'miss';
@@ -75,45 +60,6 @@ export interface UsageRef {
  */
 export interface LangfuseCallbacksRef {
   current?: BaseCallbackHandler[];
-}
-
-/** Minimal contract — satisfied by LangChain BaseChatModel and test fakes. */
-export interface ChatModel {
-  invoke(messages: unknown, options?: { signal?: AbortSignal }): Promise<{ content: unknown }>;
-  stream(
-    messages: unknown,
-    options?: { signal?: AbortSignal },
-  ): Promise<AsyncIterable<{ content: unknown }>>;
-  /**
-   * Used by walk-intent for `{ answer, suggestions }` validated by walkAssistantOutputSchema.
-   *
-   * Method-shorthand syntax intentional: TS strictFunctionTypes leaves method params
-   * bivariant, so LangChain's stricter `BaseLanguageModelInput` stays assignable to
-   * our `unknown` parameter here without an explicit cast in `toModel()`.
-   *
-   * C9.5 — when `opts.includeRaw === true`, the runnable resolves with
-   * `{ raw: AIMessage, parsed: T | null }` (LangChain
-   * `assembleStructuredOutputPipeline` with `includeRaw=true`). Otherwise the
-   * legacy parsed-only shape (`T`) is returned. The runtime predicate
-   * `isIncludeRawShape()` decides which branch we are on; R10 falls back to
-   * `'miss'` classification when a fake / older SDK ignores `includeRaw`.
-   */
-  withStructuredOutput?<T>(
-    schema: z.ZodType<T>,
-    opts?: { name?: string; includeRaw?: boolean; strict?: boolean },
-  ): {
-    invoke(
-      messages: unknown,
-      /**
-       * TD-LF-02 — `callbacks` carries a `langfuse-langchain` `CallbackHandler`
-       * (which extends LangChain's `BaseCallbackHandler`). Typed to the same
-       * `BaseCallbackHandler[]` shape LangChain itself accepts so this
-       * interface stays structurally compatible with the real `ChatOpenAI` /
-       * `ChatGoogleGenerativeAI` classes returned by `toModel`.
-       */
-      opts?: { signal?: AbortSignal; callbacks?: BaseCallbackHandler[] },
-    ): Promise<T | { raw: { usage_metadata?: UsageMetadata }; parsed: T | null }>;
-  };
 }
 
 /**

@@ -2,18 +2,15 @@ import { AUDIT_ADMIN_EXPORT_SESSIONS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 import { pseudonymise } from '@shared/security/pseudonym';
 
-import type {
-  ExportInput,
-  ExportRowSessions,
-  ExportSessionsFilter,
-} from '@modules/admin/domain/export/csv-export.types';
+import type { ExportInput, ExportRowSessions } from '@modules/admin/domain/export/csv-export.types';
+import type { ExportSessionsRepository } from '@modules/admin/domain/export/export-repositories.port';
 import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-/** Async stream so route pipes to HTTP response without buffering (R13). */
-export interface ExportSessionsRepository {
-  streamChatSessions(filter: ExportSessionsFilter): AsyncIterable<ExportRowSessions>;
-}
+// Re-exported (identity-preserving, spec R5) — `ExportSessionsRepository`
+// moved to `domain/export/export-repositories.port.ts` (C1 close, run
+// 2026-06-04-hexagonal-boundaries-enforcement).
+export type { ExportSessionsRepository };
 
 /** Narrowed surface so unit tests can pass a `jest.fn()` spy. */
 export interface ExportAuditService {

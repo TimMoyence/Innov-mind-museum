@@ -419,14 +419,24 @@ gate_end "Gate 30"
 # ─── Gate 31 — secret/cert rotation runbook freshness (≤120d) ──────────────
 # Rotation runbooks rot silently vs live infra. Each must carry a last-verified
 # stamp re-affirmed within 120d (quarterly cadence + buffer). audit 360 dim.3.
-gate_start "Gate 31/31 secret-rotation runbook freshness"
+gate_start "Gate 31/32 secret-rotation runbook freshness"
 node scripts/sentinels/secret-rotation-freshness.mjs || exit 1
 gate_end "Gate 31"
+
+# ─── Gate 32 — hexagonal domain-purity (BE, ESLint-independent backstop) ────
+# fs-walk over src/modules/*/domain/** asserting no domain file imports the
+# adapters/useCase/application/infrastructure/data layers. Defense-in-depth for
+# the boundaries/dependencies lint rule (which was a months-long no-op until a
+# missing import/resolver was wired). Loads NO eslint config, so it still fires
+# if the lint rule re-regresses. run 2026-06-04-hexagonal-boundaries-enforcement.
+gate_start "Gate 32/32 hexagonal domain-purity sentinel (backend)"
+node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs || exit 1
+gate_end "Gate 32"
 
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 30 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 32 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────

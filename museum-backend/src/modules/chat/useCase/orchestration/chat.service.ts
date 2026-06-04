@@ -17,7 +17,6 @@ import type {
   ReportMessageResult,
   SessionResult,
 } from './chat.service.types';
-import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import type {
   CreateSessionInput,
   MessagePageQuery,
@@ -30,6 +29,7 @@ import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
+import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';

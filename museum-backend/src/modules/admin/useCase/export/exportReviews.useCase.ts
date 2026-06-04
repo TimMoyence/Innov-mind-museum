@@ -2,13 +2,14 @@ import { AUDIT_ADMIN_EXPORT_REVIEWS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 
 import type { ExportInput, ExportRowReview } from '@modules/admin/domain/export/csv-export.types';
+import type { ExportReviewsRepository } from '@modules/admin/domain/export/export-repositories.port';
 import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-/** Reviews are unscoped (Q1 BLOCKER: no `museum_id` column). */
-export interface ExportReviewsRepository {
-  streamReviews(): AsyncIterable<ExportRowReview>;
-}
+// Re-exported (identity-preserving, spec R5) — `ExportReviewsRepository` moved
+// to `domain/export/export-repositories.port.ts` (C1 close, run
+// 2026-06-04-hexagonal-boundaries-enforcement).
+export type { ExportReviewsRepository };
 
 export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;

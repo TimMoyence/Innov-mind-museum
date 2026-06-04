@@ -1,6 +1,6 @@
 import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
-import { VISION_BYTES_EQUIVALENT } from '@modules/chat/adapters/secondary/llm/llm-cost-pricing';
+import { VISION_BYTES_EQUIVALENT } from '@modules/chat/domain/llm/vision-cost.constants';
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 import { applyHistoryWindow } from '@modules/chat/useCase/orchestration/history-window';
 import { buildVisitContextPromptBlock } from '@modules/chat/useCase/session/visit-context';

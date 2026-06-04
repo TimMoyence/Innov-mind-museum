@@ -110,6 +110,17 @@ export default tseslint.config(
         { type: 'entrypoint', pattern: ['src/app.ts', 'src/index.ts'], mode: 'full' },
       ],
       'boundaries/dependency-nodes': ['import', 'dynamic-import'],
+      // REQUIRED for the boundaries rule to fire. Without an `import/resolver`,
+      // the v6 plugin resolves every `@modules/*`/`@shared/*`/`@data/*` alias as
+      // `external` (path `null`), classifies no file into an element type, and
+      // EVERY `from/to` rule silently no-ops (0 errors — a proven months-long
+      // disarmament; run 2026-06-04-hexagonal-boundaries-enforcement, spec R1).
+      // Mirrors the working `import-x/resolver` block below; uses the installed
+      // `eslint-import-resolver-typescript` so the TS path aliases resolve.
+      'import/resolver': {
+        typescript: { alwaysTryTypes: true },
+        node: true,
+      },
     },
     rules: {
       // v6 syntax — `boundaries/dependencies` replaces deprecated `boundaries/element-types`.
@@ -137,22 +148,30 @@ export default tseslint.config(
                 },
               },
             },
-            // Application CANNOT import infrastructure, primary, data
-            {
-              from: { type: 'application' },
-              disallow: {
-                to: {
-                  type: ['infrastructure', 'primary', 'data', 'module-root', 'entrypoint'],
-                },
-              },
-            },
-            // Infrastructure CANNOT import primary, application (except via domain ports)
-            {
-              from: { type: 'infrastructure' },
-              disallow: {
-                to: { type: ['primary', 'application', 'module-root', 'entrypoint'] },
-              },
-            },
+            // W2 — armed when its code is clean (RUN 2026-06-04-hexagonal-boundaries-enforcement).
+            // Application CANNOT import infrastructure, primary, data. Sequenced per Q1(a):
+            // the 34 B1 composition-root + 2 residual B2 couplings move `useCase/index.ts`
+            // DI → module-root in W2; arming this arm before that lands would make `pnpm lint`
+            // RED (not an allow-rule, not a ratchet — the arm goes live the moment its code
+            // is clean). The domain arm above ships fully strict at launch.
+            // {
+            //   from: { type: 'application' },
+            //   disallow: {
+            //     to: {
+            //       type: ['infrastructure', 'primary', 'data', 'module-root', 'entrypoint'],
+            //     },
+            //   },
+            // },
+            // W3 — armed when its code is clean (RUN 2026-06-04-hexagonal-boundaries-enforcement).
+            // Infrastructure CANNOT import primary, application (except via domain ports).
+            // The ~16 C1/C2 chat-adapter→useCase edges + the orchestrator bidirectional
+            // untangle relocate port-types/pure helpers → domain in W3; armed then.
+            // {
+            //   from: { type: 'infrastructure' },
+            //   disallow: {
+            //     to: { type: ['primary', 'application', 'module-root', 'entrypoint'] },
+            //   },
+            // },
           ],
         },
       ],

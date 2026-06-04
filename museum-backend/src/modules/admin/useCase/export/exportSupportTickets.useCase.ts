@@ -2,13 +2,14 @@ import { AUDIT_ADMIN_EXPORT_TICKETS } from '@shared/audit/audit.types';
 import { forbidden } from '@shared/errors/app.error';
 
 import type { ExportInput, ExportRowTicket } from '@modules/admin/domain/export/csv-export.types';
+import type { ExportTicketsRepository } from '@modules/admin/domain/export/export-repositories.port';
 import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-/** Tickets are unscoped (Q1 BLOCKER: no `museum_id` column). */
-export interface ExportTicketsRepository {
-  streamSupportTickets(): AsyncIterable<ExportRowTicket>;
-}
+// Re-exported (identity-preserving, spec R5) — `ExportTicketsRepository` moved
+// to `domain/export/export-repositories.port.ts` (C1 close, run
+// 2026-06-04-hexagonal-boundaries-enforcement).
+export type { ExportTicketsRepository };
 
 export interface ExportAuditService {
   log(entry: AuditLogEntry): Promise<void>;

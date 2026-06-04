@@ -6,7 +6,19 @@
  * Rounding: `Math.ceil` everywhere — safety bias for the circuit breaker.
  */
 
+import {
+  BYTES_PER_TOKEN,
+  VISION_BYTES_EQUIVALENT,
+  VISION_TOKEN_EQUIVALENT,
+} from '@modules/chat/domain/llm/vision-cost.constants';
 import { logger } from '@shared/logger/logger';
+
+// Re-exported (identity-preserving, spec R5) — these constants moved to
+// `domain/llm/vision-cost.constants.ts` (B2 close, run
+// 2026-06-04-hexagonal-boundaries-enforcement) so the application prompt-builder
+// no longer imports them from this adapter. Existing importers of this module
+// compile unchanged.
+export { BYTES_PER_TOKEN, VISION_BYTES_EQUIVALENT, VISION_TOKEN_EQUIVALENT };
 
 export interface ModelPriceCents {
   /** USD cents per 1000 input tokens. */
@@ -34,32 +46,6 @@ export const FALLBACK_PRICING: ModelPriceCents = {
   inputPer1kCents: 0.5,
   outputPer1kCents: 2,
 };
-
-const BYTES_PER_TOKEN = 4;
-
-/**
- * Image-aware cost override — RUN_ID 2026-05-21-p0-c2-cost-breaker / spec §3 R4 + D1.
- *
- * Per-image forfait substituted by `estimatePayloadBytes()` in
- * `llm-prompt-builder.ts` for any content item of shape
- * `{type:'image_url', image_url:{url:<base64 data-URL | https URL>}}`. The
- * literal base64 byte length of an inline image (often ~1 MB+) is NOT a
- * realistic proxy for the provider's billed input tokens — OpenAI bills
- * 85–1105 tokens per image at `detail:high` (`https://platform.openai.com/
- * docs/guides/vision`, NOT WebFetch-verified at this commit per spec §8 Q3).
- *
- * D1 lock: 1000 tokens is the conservative upper bound. Lower would
- * under-protect; higher would inflate false-positive breaker trips on
- * legitimate single-image requests. No env override — UFR-015 (no pre-launch
- * flags) ; tune via PR if real-world drift > 10 % vs invoice (Q1 V2 deferred
- * to real-tokenizer adoption).
- *
- * `VISION_BYTES_EQUIVALENT = VISION_TOKEN_EQUIVALENT * BYTES_PER_TOKEN = 4000`
- * keeps the conversion symmetrical with the byte-based estimator: 1000 vision
- * tokens × 4 bytes/token = 4000 forfait bytes per image item.
- */
-export const VISION_TOKEN_EQUIVALENT = 1000;
-export const VISION_BYTES_EQUIVALENT = VISION_TOKEN_EQUIVALENT * BYTES_PER_TOKEN;
 
 let _warnedModels = new Set<string>();
 

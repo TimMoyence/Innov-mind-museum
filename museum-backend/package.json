@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "openapi:validate": "node ./scripts/check-openapi-spec.cjs",
     "sentinel:ai-tests-count": "node ./scripts/sentinels/ai-tests-count.mjs",
+    "sentinel:hexagonal-domain-purity": "node ./scripts/sentinels/hexagonal-domain-purity.mjs",
     "sentinel:llm-cost-guard-auth": "node ./scripts/sentinels/llm-cost-guard-auth.mjs",
     "sentinel:metric-naming": "node ./scripts/sentinels/metric-naming.mjs",
     "sentinel:net-fault-prod-guard": "node ./scripts/sentinels/net-fault-prod-guard.mjs",

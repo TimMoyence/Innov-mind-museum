@@ -180,6 +180,9 @@ jobs:
       - name: 'Mirror — secret/cert rotation runbook freshness (≤120d)'
         run: node scripts/sentinels/secret-rotation-freshness.mjs
 
+      - name: 'Mirror — hexagonal domain-purity (BE, ESLint-independent backstop)'
+        run: node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli

@@ -15,7 +15,6 @@ import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
 
-import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
 import type {
   AudioTranscriptionResult,
@@ -26,6 +25,7 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
+import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';

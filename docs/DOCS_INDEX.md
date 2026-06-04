@@ -21,7 +21,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-070) | [`docs/adr/`](adr/) — dernière : [`ADR-070`](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md) (audit chain canonical deep serializer + `hash_version`, 2026-06-04) |
+| ADRs (002-071) | [`docs/adr/`](adr/) — dernière : [`ADR-071`](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md) (re-arm boundaries hexagonal : resolver + arming séquencé par vague + sentinel fs indépendant, 2026-06-04) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Gotchas archive (less-frequent pitfalls, split from CLAUDE.md 2026-05-20) | [`docs/GOTCHAS_ARCHIVE.md`](GOTCHAS_ARCHIVE.md) |
@@ -84,6 +84,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-068`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) | SBOM attestation strategy (mobile gap deferred to CRA 2027) |
 | [`ADR-069`](adr/ADR-069-museum-search-id-osm-generic-conversation.md) | `GET /api/museums/search` exposes local `id` + OSM rows start generic conversation |
 | [`ADR-070`](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md) | Audit chain canonical deep-recursive serializer + out-of-payload `hash_version` (closes TD-61) |
+| [`ADR-071`](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md) | Re-arm hexagonal boundaries : `import/resolver` câblé + arming séquencé par vague (domain W1, application/infra W2/W3) + sentinel fs ESLint-indépendant (partial-close TD-62 W1) |
 
 ## Operations
 

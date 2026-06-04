@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hexagonal boundaries — garde-fou ré-armé (domain) + sentinel indépendant (ARCH-01/ARCH-02 / TD-62 W1) (2026-06-04)
+
+Run `/team` UFR-022 fresh-context (`2026-06-04-hexagonal-boundaries-enforcement`), wave 1. Reviewer APPROVED
+(weightedMean 91.9). Cf. [ADR-071](docs/adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md).
+Aucun changement DB / OpenAPI / runtime (relocations type-only, identity-preserving).
+
+#### Fixed
+
+- **fix(arch): re-arm hexagonal boundaries (domain) + independent purity sentinel, close ARCH-02 (TD-62 W1).**
+  Le bloc `eslint-plugin-boundaries` n'avait pas d'`import/resolver` → les alias `@modules/*` résolvaient en
+  `external` → la règle ne firait jamais (no-op prouvé ; commentaire affirmant le contraire = faux). W1 câble le
+  resolver (`eslint.config.mjs:117-120`), arme l'arm `domain` strict (arms `application`/`infrastructure` commentés
+  avec TODO daté W2/W3 — **arming séquencé par vague, pas un ratchet/allow-rule**), ferme la fuite réelle ARCH-02
+  (`KnowledgeRouterSource` descendu au domain, `chat-orchestrator.port.ts:7`), descend 5 ports/consts au `domain/`
+  (vraie inversion de dépendance), ajoute un **sentinel fs ESLint-indépendant** (`hexagonal-domain-purity.mjs`,
+  défense-en-profondeur qui survit à une re-régression de la config) câblé pre-push Gate 32 + CI + mirror, et une
+  fixture-garde prouvant que la règle mord. `pnpm lint` (BE) vert à J-3. W2 (DI composition roots → module-root) +
+  W3 (untangle chat + arm infrastructure + close complet TD-62) = post-launch.
+
 ### Audit chain — collision sur metadata imbriqué fermée (AUDIT-01 / TD-61) (2026-06-04)
 
 Run `/team` UFR-022 fresh-context (`2026-06-04-audit-chain-nested-hash`). Reviewer APPROVED

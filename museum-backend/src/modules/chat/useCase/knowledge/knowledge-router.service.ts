@@ -17,13 +17,17 @@ import {
 } from '@shared/observability/prometheus-metrics';
 import { safeTrace } from '@shared/observability/safeTrace';
 
+import type { KnowledgeRouterSource } from '@modules/chat/domain/knowledge/knowledge-router.types';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
 import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports/web-search.port';
 import type { LlmJudgePort } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
-export type KnowledgeRouterSource = 'wikidata' | 'web' | 'none';
+// Re-exported (identity-preserving, spec R5) so existing
+// `@modules/chat/useCase/knowledge/knowledge-router.service` importers of this
+// type compile unchanged after the domain relocation (ARCH-02 close).
+export type { KnowledgeRouterSource };
 
 export interface KnowledgeRouterResult {
   facts: string[];

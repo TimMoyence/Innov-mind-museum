@@ -2,23 +2,17 @@ import sharp from 'sharp';
 
 import { AppError } from '@shared/errors/app.error';
 
-export interface StrippedImage {
-  buffer: Buffer;
-  mime: string;
-  width: number;
-  height: number;
-}
+import type {
+  ImageProcessorPort,
+  StrippedImage,
+} from '@modules/chat/domain/ports/image-processor.port';
 
-/**
- * Strips privacy-sensitive metadata (EXIF GPS, device, timestamp, tEXt, ICC except orientation).
- * GDPR Art. 5(1)(c) data minimisation + STRIDE I4. Implementations MUST preserve animation
- * for `image/gif` and `image/webp`.
- *
- * @throws {AppError} 400 / `IMAGE_DECODE_FAILED` when input is corrupt.
- */
-export interface ImageProcessorPort {
-  stripExif(buffer: Buffer, mime: string): Promise<StrippedImage>;
-}
+// Identity-preserving re-export (spec R5) — `ImageProcessorPort` / `StrippedImage`
+// moved to `domain/ports/image-processor.port.ts` (B2 close, run
+// 2026-06-04-hexagonal-boundaries-enforcement). The port is a DOMAIN concept;
+// this adapter `implements` it. Re-exported so existing importers of this module
+// (and the application use-cases that injected the port) compile unchanged.
+export type { ImageProcessorPort, StrippedImage };
 
 /**
  * `limitInputPixels` caps at 24 Mpx — exceeds legitimate mobile upload yet well below

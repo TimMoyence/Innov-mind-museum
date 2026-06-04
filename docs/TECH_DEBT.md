@@ -1530,7 +1530,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ### TD-62 — `eslint-plugin-boundaries` no-op (enforcement hexagonal BE mort) + 1 fuite réelle — ✔ re-lu
 
-- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 ARCH-01/ARCH-02). Sévérité HIGH.
+- [ ] **Statut** : **PARTIAL-CLOSE W1** (créé 2026-06-04, audit 360 ARCH-01/ARCH-02 ; W1 livré 2026-06-04 via run `/team` `2026-06-04-hexagonal-boundaries-enforcement`, reviewer APPROVED 91.9 — cf. [ADR-071](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md)). Sévérité HIGH. **Reste ouvert** jusqu'à W3 (arms application/infrastructure armés + close ARCH-01 sur les 3 couches).
 - **Référence code** :
   ```
   museum-backend/eslint.config.mjs:64-160   # bloc boundaries SANS settings['import/resolver']
@@ -1539,6 +1539,16 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
   ```
 - **Symptôme (vérifié)** : le bloc boundaries n'a aucun `import/resolver` dans son `settings` (seul `import-x/resolver` existe dans un bloc séparé) → `@modules/*` résout en `external` (path:null) → la règle ne classe rien et ne fire jamais. Reproduit par l'agent (import domain→infra = 0 erreur ; ajouter le resolver fait fire), confirmé par lecture. Le commentaire l.115-118 (« migration v6 a restauré l'enforcement ») est faux. Une vraie fuite existe déjà non détectée (ARCH-02).
 - **Comment fermer** : (a) `settings['import/resolver'].typescript` DANS le bloc boundaries ; (b) fixture-garde CI (domain importe un adapter → lint fail attendu) ; (c) corriger ARCH-02 ; (d) **filet indépendant** : sentinel fs-based BE (modèle FE `no-shared-api-import`) qui walk `src/modules/*/domain` et fail si un import résout vers `/adapters/` ou `/useCase/` — survit à une re-régression de la config ESLint.
+- **Stratégie d'armement (séquencée par vague, décision user — PAS un ratchet/allow-rule)** : le close-all complet = 62 violations sur 20 fichiers / 8 modules (mesuré empiriquement), un refacto de 3,5-5 jours dont le plus profond (untangle chat-orchestrator) touche le hot path conversationnel — non-tenable safe à J-3. Chaque arm ESLint (`domain`/`application`/`infrastructure`) est armé strict **uniquement quand le code de sa couche est propre** ; séquencer *quand* chaque arm strict passe live n'est ni un allow-rule (aucune config ne sanctionne un couplage existant) ni un ratchet (aucun jeu de violations grandfathered) — ça garde `pnpm lint` vert sans bypass. Cf. ADR-071 §2.
+- **Livré W1 (2026-06-04, launch-blocking — `pnpm lint` BE vert à J-3)** :
+  - (a) `import/resolver` câblé dans le bloc boundaries (`eslint.config.mjs:117-120`) → la règle fire ; commentaire faux l.115-118 corrigé (`eslint.config.mjs:113-117`, R7 W1).
+  - Arm `domain` armé strict ; arms `application`/`infrastructure` commentés avec TODO daté W2/W3 (`eslint.config.mjs:154-175`).
+  - (c) ARCH-02 fermée : `KnowledgeRouterSource` descendu à `chat/domain/knowledge/knowledge-router.types.ts` ; `chat-orchestrator.port.ts:7` importe du domain (grep useCase = vide). + 5 relocations type-only W1 (ImageProcessorPort, ChatModel+UsageMetadata, VISION_BYTES_EQUIVALENT, admin export-repositories.port, museum enrichment-usecases.port) = vraie inversion de dépendance (use-cases C1 `implements` le port domain).
+  - (b) fixture-garde `tests/unit/architecture/boundaries-rule-bites.test.ts` (prouve que la règle MORD via la vraie config, 158/158 verts).
+  - (d) sentinel indépendant `scripts/sentinels/hexagonal-domain-purity.mjs` (0 ref `eslint`, 0.04 s) câblé : `package.json:23`, pre-push **Gate 32/32** (`.husky/pre-push:432-434`), `ci-cd-backend.yml:160`, `sentinel-mirror.yml:183-184`.
+- **Reste à fermer (W2/W3 post-launch, séquencé, code-only, par vague)** :
+  - **W2** : 34 racines de composition DI B1 (`useCase/index.ts` → `module-root index.ts`, 6 modules, auth 456 LOC + 17 importers) + 2 B2 résiduels (daily-art catalog, admin `composition.ts`) ; armer l'arm `application` une fois propre.
+  - **W3** : ~16 edges C1/C2 chat-adapter→useCase + untangle bidirectionnel `llm-prompt-builder.ts` ; armer l'arm `infrastructure` ; **close TD-62 complet** (les 3 arms armés, ARCH-01 fermée sur les 3 couches). Gaté sur la suite chat complète (447) + matrice e2e guardrail réelle.
 
 ### TD-63 — Garantie fail-CLOSED V2 (ADR-047) non gardée en CI — ○ rapporté-agent
 
