@@ -141,6 +141,23 @@ describe('ChangeEmailUseCase', () => {
     });
   });
 
+  // TD-65: a soft-deleted account must keep its email reserved — changing into
+  // it would let the new owner squat the deleted account's identity.
+  it('rejects when the target email belongs to a soft-deleted account', async () => {
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
+    const repo = makeUserRepo();
+    (repo.getUserByEmail as jest.Mock).mockResolvedValueOnce(
+      makeUser({ id: 2, email: 'taken@test.com', deletedAt: new Date() }),
+    );
+    const useCase = new ChangeEmailUseCase(repo);
+
+    await expect(useCase.execute(1, 'taken@test.com', 'ValidPass1')).rejects.toMatchObject({
+      message: 'This email is already in use',
+      statusCode: 400,
+    });
+    expect(repo.setEmailChangeToken).not.toHaveBeenCalled();
+  });
+
   it('normalizes email to lowercase and trimmed', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();

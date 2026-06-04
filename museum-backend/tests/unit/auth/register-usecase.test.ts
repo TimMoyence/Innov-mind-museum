@@ -19,6 +19,7 @@ jest.mock('@src/config/env', () => ({
 import crypto from 'node:crypto';
 
 import { RegisterUseCase } from '@modules/auth/useCase/registration/register.useCase';
+import { conflict } from '@shared/errors/app.error';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
 
@@ -78,6 +79,31 @@ describe('RegisterUseCase', () => {
       undefined,
       ADULT_DOB,
     );
+  });
+
+  // TD-65: an email held by a soft-deleted account stays reserved — a new
+  // signup must not be able to squat the deleted account's identity. The repo
+  // surfaces this as a CONFLICT (it finds the soft-deleted row by email).
+  it('rejects registration when a soft-deleted account already holds the email', async () => {
+    const userRepo = makeUserRepo(null, {
+      registerUser: jest
+        .fn()
+        .mockRejectedValue(conflict('Un utilisateur avec cet email existe déjà.')),
+    });
+
+    const useCase = new RegisterUseCase(userRepo);
+
+    await expect(
+      useCase.execute({
+        email: 'squatted@test.com',
+        password: 'StrongP@ss1!',
+        dateOfBirth: ADULT_DOB,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'CONFLICT',
+    });
+    expect(userRepo.setVerificationToken).not.toHaveBeenCalled();
   });
 
   it('rejects invalid email format', async () => {

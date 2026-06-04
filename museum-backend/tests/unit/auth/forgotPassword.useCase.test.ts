@@ -97,6 +97,23 @@ describe('ForgotPasswordUseCase', () => {
     expect(emailService.sendEmail).not.toHaveBeenCalled();
   });
 
+  // ── Soft-delete email-squat (TD-65) ──────────────────────────────
+
+  it('silently skips and issues no token when the account is soft-deleted', async () => {
+    // A soft-deleted account is typically already verified — without a
+    // deletedAt guard, the use-case would issue a reset token + email to a
+    // deleted account (TD-65, HIGH severity).
+    const repo = makeUserRepo(makeUser({ email_verified: true, deletedAt: new Date() }));
+    const emailService = makeEmailService();
+    const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
+
+    const result = await useCase.execute('user@test.com');
+
+    expect(result).toBeUndefined();
+    expect(repo.setResetToken).not.toHaveBeenCalled();
+    expect(emailService.sendEmail).not.toHaveBeenCalled();
+  });
+
   // ── Edge cases ───────────────────────────────────────────────────
 
   it('returns undefined for empty email string', async () => {
