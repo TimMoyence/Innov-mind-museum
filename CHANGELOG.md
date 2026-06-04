@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Backlog debt sweep — sécurité prompt + cluster geo (2026-06-04)
+
+Lot de dettes backlog traitées en série (triage actionnable + red→green→review fresh sur le code applicatif).
+
+#### Fixed / Security
+
+- **TD-41** (`c03cc428`) — `sanitizePromptInput` defang désormais TOUS les délimiteurs de section du prompt LLM (system instructions / current artwork / visit context / user memory / image analysis / SECTION:<x> / local knowledge / web search / knowledge base), incl. préfixe `END OF`, suffixes em-dash in-bracket, crochets fullwidth et évasion par espaces — en swappant les crochets pour des parens. Exclus à dessein : `[EMAIL]`/`[PHONE]` (sortie du scrubber PII) et l'envelope nonce-gated `[UNTRUSTED EXTERNAL DATA]`. Matcher linéaire ReDoS-safe + test in-code. 3 passes de review adversariale fraîche (les 2 premières ont trouvé des marqueurs manquants → grep exhaustif → 3e APPROVED).
+- **TD-43** (`98333b0f`) — `geo_detect_museum_total` ne confond plus une exception (catch → `{outcome=error}`) avec un vrai « no museum nearby » (`{outcome=miss}`).
+
+#### Changed / Tests
+
+- **TD-54** (`98333b0f`) — `_resetGeofenceModeCacheForTests()` câblé dans le `beforeEach` top-level (le singleton de cache geofence ne fuit plus entre tests).
+- **TD-42** (`98333b0f`) — documenté que le cache geofence-mode est volontairement boot-permanent (prod migre avant boot ; un TTL coûterait des requêtes `information_schema` sur le hot-path pour un scénario que le modèle de déploiement ne produit pas).
+- **TD-36** — déjà résolu (commit `02a0e920`, testIDs `quota-upsell-*` présents) ; confirmé.
+
 ### Audit 360 — clôture dette HIGH→LOW (TD-63→70) + reprise post-crash (2026-06-04)
 
 Clôture du lot de dette issu du contrôle qualité 360 pré-launch, via `/team` UFR-022 fresh-context (workflow
