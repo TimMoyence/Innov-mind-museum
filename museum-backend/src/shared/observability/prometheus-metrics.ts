@@ -401,7 +401,7 @@ export const llmGuardChaosInjectionsTotal = new Counter({
  */
 export const geoDetectMuseumTotal = new Counter({
   name: 'geo_detect_museum_total',
-  help: 'Total /api/museums/detect-museum invocations, by outcome (hit-geofence, hit-haversine, miss).',
+  help: 'Total /api/museums/detect-museum invocations, by outcome (hit-geofence, hit-haversine, miss, error).',
   labelNames: ['outcome'] as const,
   registers: [registry],
 });

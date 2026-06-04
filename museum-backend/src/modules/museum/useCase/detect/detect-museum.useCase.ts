@@ -86,7 +86,9 @@ export class DetectMuseumUseCase {
         span?.update({ output: { error: err instanceof Error ? err.message : String(err) } });
         span?.end();
       });
-      geoDetectMuseumTotal.labels('miss').inc();
+      // TD-43 — an exception is NOT a "no museum nearby" miss; give it its own
+      // label so the {outcome="miss"} series stays a clean no-match signal.
+      geoDetectMuseumTotal.labels('error').inc();
       throw err;
     }
   }

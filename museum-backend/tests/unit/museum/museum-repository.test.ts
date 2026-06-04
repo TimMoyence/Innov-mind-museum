@@ -26,6 +26,10 @@ describe('MuseumRepositoryPg', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // TD-54 — the geofence-mode cache is a module-level singleton; reset it for
+    // EVERY test (not just the geofence describe) so a value cached by one test
+    // can't leak into another and silently change the SQL path under test.
+    _resetGeofenceModeCacheForTests();
     const mocks = buildMocks();
     repo = mocks.repo;
     sut = new MuseumRepositoryPg(mocks.dataSource);

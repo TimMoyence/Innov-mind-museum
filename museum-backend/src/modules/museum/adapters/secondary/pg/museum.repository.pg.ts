@@ -172,6 +172,14 @@ export class MuseumRepositoryPg implements IMuseumRepository {
    * One-shot column introspection — cached at module level so subsequent
    * detect calls don't hit `information_schema`. Returns `'absent'` when
    * neither column exists (defensive against partially-applied migrations).
+   *
+   * TD-42 — the cache is INTENTIONALLY boot-permanent, not TTL'd. In the prod
+   * deploy model migrations run to completion BEFORE the app boots, so the
+   * `museums` column set is fixed for the process lifetime; a TTL would re-hit
+   * `information_schema` on the hot detect path for a runtime-schema-change
+   * scenario that this deploy model never produces. The one case where the cache
+   * must be cleared is tests that apply the geofence migration mid-suite — use
+   * `_resetGeofenceModeCacheForTests()` (wired into the repo test `beforeEach`).
    */
   private async detectGeofenceMode(): Promise<GeofenceMode> {
     if (cachedGeofenceMode !== null) return cachedGeofenceMode;

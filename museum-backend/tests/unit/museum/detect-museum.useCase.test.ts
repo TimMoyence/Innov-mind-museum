@@ -6,9 +6,11 @@ import { geoDetectMuseumTotal } from '@shared/observability/prometheus-metrics';
 
 import { makeMuseum, makeMuseumRepo } from 'tests/helpers/museum/museum.fixtures';
 
-async function readCounter(outcome: 'hit-geofence' | 'hit-haversine' | 'miss'): Promise<number> {
+async function readCounter(
+  outcome: 'hit-geofence' | 'hit-haversine' | 'miss' | 'error',
+): Promise<number> {
   const counter = geoDetectMuseumTotal as unknown as {
-    get: () => Promise<{ values: Array<{ value: number; labels: Record<string, string> }> }>;
+    get: () => Promise<{ values: { value: number; labels: Record<string, string> }[] }>;
   };
   const data = await counter.get();
   const match = data.values.find((row) => row.labels.outcome === outcome);
@@ -17,7 +19,7 @@ async function readCounter(outcome: 'hit-geofence' | 'hit-haversine' | 'miss'): 
 
 describe('DetectMuseumUseCase', () => {
   describe('computeConfidence (helper)', () => {
-    const cases: Array<[number, number]> = [
+    const cases: [number, number][] = [
       [0, 1.0],
       [100, 0.8],
       [200, 0.6],
@@ -152,6 +154,25 @@ describe('DetectMuseumUseCase', () => {
       const after = await readCounter('miss');
 
       expect(after - before).toBeGreaterThanOrEqual(1);
+    });
+
+    // TD-43 — a thrown error must NOT inflate the {outcome="miss"} series (which
+    // means "no museum nearby"). It gets its own {outcome="error"} label. FAILS
+    // pre-fix (the catch path incremented 'miss').
+    it('increments geo_detect_museum_total{outcome="error"} when detection throws', async () => {
+      const repo = makeMuseumRepo({
+        findByCoords: jest.fn().mockRejectedValue(new Error('db down')),
+      });
+
+      const beforeError = await readCounter('error');
+      const beforeMiss = await readCounter('miss');
+      const sut = new DetectMuseumUseCase(repo);
+      await expect(sut.execute(0, 0)).rejects.toThrow('db down');
+      const afterError = await readCounter('error');
+      const afterMiss = await readCounter('miss');
+
+      expect(afterError - beforeError).toBeGreaterThanOrEqual(1);
+      expect(afterMiss - beforeMiss).toBe(0);
     });
   });
 });
