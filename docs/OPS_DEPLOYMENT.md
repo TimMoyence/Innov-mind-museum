@@ -3,6 +3,8 @@
 > Single source of truth for deploying, operating, and recovering Musaium production.
 > Merges former `DEPLOYMENT_STEP_BY_STEP.md`, `RUNBOOK.md`, `RUNBOOK_AUTO_ROLLBACK.md`.
 
+> **⚠️ V1 = pas de serveur staging (prod = stage).** Jusqu'au revenu B2B, il n'y a qu'un seul environnement : la prod, bakée ≥7j (doctrine « no-staging V1 »). Les sections **14-16 (Backend Staging Deploy / Migrations / Smoke)** et toute mention `preprod`/`staging` décrivent une infra **post-launch** non provisionnée en V1 — ne pas suivre ces runbooks aujourd'hui (l'infra n'existe pas). Smoke V1 = local Docker + smoke éphémère post-deploy prod.
+
 ## Table of Contents
 
 1. [Quick Reference](#1-quick-reference)

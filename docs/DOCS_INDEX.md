@@ -21,7 +21,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-068) | [`docs/adr/`](adr/) |
+| ADRs (002-069) | [`docs/adr/`](adr/) — dernière : [`ADR-069`](adr/ADR-069-museum-search-id-osm-generic-conversation.md) (museum-search id OSM, 2026-06-01) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Gotchas archive (less-frequent pitfalls, split from CLAUDE.md 2026-05-20) | [`docs/GOTCHAS_ARCHIVE.md`](GOTCHAS_ARCHIVE.md) |
@@ -156,7 +156,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 |---|---|
 | /team Skill | `.claude/skills/team/SKILL.md` |
 | /team SDLC Index | `.claude/skills/team/team-sdlc-index.md` |
-| Agents (6 — architect, editor, verifier, security, reviewer, documenter) | `.claude/agents/*.md` |
+| Agents (6 — architect, doc-cache, documenter, editor, reviewer, security) | `.claude/agents/*.md` |
 | /team runtime reports (active) | `.claude/skills/team/team-reports/` |
 | /team protocols | `.claude/skills/team/team-protocols/` |
 | /team templates (Spec Kit) | `.claude/skills/team/team-templates/` |
