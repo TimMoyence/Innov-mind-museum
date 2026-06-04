@@ -77,6 +77,15 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
   private lastTripAtMs: number | null = null;
   private halfOpenedAtMs: number | null = null;
   private availableProbes: number;
+  /**
+   * TD-67: tracks whether a HALF_OPEN probe slot has been admitted by
+   * `canAttempt()` but not yet accounted for by `recordOutcome()`. Lets
+   * `releaseProbe()` return exactly ONE outstanding slot to the pool on a
+   * caller exception (try/finally), without over-releasing on repeated calls.
+   * Set on probe admission, cleared on any slot-restoring transition
+   * (`recordOutcome`, `trip`, `reset`) and by `releaseProbe()` itself.
+   */
+  private hasOutstandingProbe = false;
 
   private readonly strategy: TStrategy;
   private readonly openDurationMs: number;
@@ -132,7 +141,35 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
     if (state === 'OPEN') return false;
     if (this.availableProbes <= 0) return false;
     this.availableProbes -= 1;
+    // TD-67: mark that an unaccounted probe is now in flight so a caller that
+    // throws before `recordOutcome()` can return the slot via `releaseProbe()`.
+    this.hasOutstandingProbe = true;
     return true;
+  }
+
+  /**
+   * TD-67: return an admitted-but-unrecorded HALF_OPEN probe slot to the pool.
+   *
+   * Intended for the caller's `finally` block when an exception is thrown
+   * between `canAttempt()` returning `true` and `recordOutcome()` being
+   * reached: without this, the consumed slot is never restored and a
+   * `halfOpenMaxProbes=1` breaker locks out permanently (the OPEN cooldown no
+   * longer applies once HALF_OPEN). Idempotent and conservative:
+   *   - No-op unless the FSM is HALF_OPEN with an outstanding admitted probe.
+   *   - Restores at most ONE slot per admission (capped at `halfOpenMaxProbes`),
+   *     so repeated calls without an intervening `canAttempt()` never inflate
+   *     the pool past the configured cap.
+   *
+   * Stays NO-I/O / NO-logging to preserve the primitive purity contract
+   * (see header §Discipline + pr13 purity sentinel).
+   */
+  releaseProbe(): void {
+    if (this.state !== 'HALF_OPEN') return;
+    if (!this.hasOutstandingProbe) return;
+    if (this.availableProbes < this.halfOpenMaxProbes) {
+      this.availableProbes += 1;
+    }
+    this.hasOutstandingProbe = false;
   }
 
   /**
@@ -152,6 +189,7 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
         this.strategy.resetTransient();
         this.halfOpenedAtMs = null;
         this.availableProbes = this.halfOpenMaxProbes;
+        this.hasOutstandingProbe = false; // TD-67: probe accounted for.
       }
       return;
     }
@@ -176,6 +214,7 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
     this.lastTripAtMs = now;
     this.halfOpenedAtMs = null;
     this.availableProbes = this.halfOpenMaxProbes;
+    this.hasOutstandingProbe = false; // TD-67: slot pool reset on trip.
     this.transitionTo('OPEN', from);
   }
 
@@ -186,6 +225,7 @@ export class ThreeStateCircuit<TStrategy extends CircuitTripStrategy> {
     this.halfOpenedAtMs = null;
     this.lastTripAtMs = null;
     this.availableProbes = this.halfOpenMaxProbes;
+    this.hasOutstandingProbe = false; // TD-67: slot pool reset on manual reset.
     this.strategy.reset();
     if (prev !== 'CLOSED') {
       this.currentState = 'CLOSED';
