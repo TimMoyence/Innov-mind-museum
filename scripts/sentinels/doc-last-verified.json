@@ -1,9 +1,9 @@
 {
   "_comment": "HON-08 doctrine — last-verified manifest. Sidecar (not in-doc frontmatter) so stamping a doc never shifts its line numbers and breaks path:line cross-references. Re-stamp a doc's date (YYYY-MM-DD) when you re-verify its claims. The doc-last-verified sentinel fails if any listed doc is missing or its date is >90 days old. Add a doc here once its claims are verified; removals only when a doc is retired.",
   "docs": {
-    "docs/ROADMAP_PRODUCT.md": "2026-06-02",
+    "docs/ROADMAP_PRODUCT.md": "2026-06-04",
     "docs/ARCHITECTURE.md": "2026-05-27",
-    "docs/TECH_DEBT.md": "2026-06-02",
+    "docs/TECH_DEBT.md": "2026-06-04",
     "docs/legal/ROPA.md": "2026-05-31",
     "docs/compliance/SUBPROCESSORS.md": "2026-06-02",
     "SECURITY.md": "2026-05-27",
@@ -19,7 +19,7 @@
     "docs/adr/ADR-047-llm-guard-circuit-breaker-fail-closed.md": "2026-06-02",
     "docs/adr/ADR-048-guardrail-strategy-interface.md": "2026-06-02",
     "docs/adr/ADR-060-gdpr-erasure-dsar-compliance-chain.md": "2026-05-31",
-    "docs/adr/ADR-063-langfuse-mask-central-stripfreetext.md": "2026-06-02",
+    "docs/adr/ADR-063-langfuse-mask-central-stripfreetext.md": "2026-06-04",
     "docs/adr/ADR-064-access-token-denylist-fail-open.md": "2026-05-31"
   }
 }
