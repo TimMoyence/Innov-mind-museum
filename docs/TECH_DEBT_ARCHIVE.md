@@ -1428,3 +1428,9 @@
 - [x] **Statut** : **résolu 2026-06-04** (commit `776215ec`, lot de clôture audit 360). Décision tranchée : **acter dans la roadmap** (PAS re-armer — re-arm = décision coût réservée à l'humain).
 - **Résolution livrée** : `ROADMAP_PRODUCT.md` § « Posture de risque qualité — gardes désarmés » documente explicitement que Stryker est DÉSARMÉ (`if:false` depuis 2026-05-09), que le kill-rate réel est INCONNU (seule la couverture de lignes est mesurée), et qu'il ne doit JAMAIS être cité comme garde actif. Le SHA parasite `c17c404e` glissé par erreur dans cette note a été retiré en `9bd785ed`.
 - **Reste ouvert (NON fait dans ce lot — honnêteté)** : `TD-39` (wrapper Stryker module-auth) + `TD-40` (`noUncheckedIndexedAccess` BE absent) restent **ouverts**, re-confirmés par l'audit mais non traités ici. Ne PAS les marquer clos.
+
+### TD-71 — `request.query_string` déclaré mais jamais scrubé par `scrubRequest` — ✔ **RÉSOLU** (commit `fb2d8640`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `fb2d8640`, sur `dev` non poussé). Sévérité MEDIUM (fuite obs). Surfacé par la review adversariale de [[TD-68]] ; review fraîche APPROVED 8/8 (incl. durcissement `?`-initial recommandé).
+- **Résolution livrée** : `scrubRequest` (`packages/musaium-shared/src/observability/sentry-scrubber.ts`) applique `scrubUrl` à `query_string` — strip d'un `?` initial (défensif : sinon `?token=x` keyerait sur `?token`, hors `SENSITIVE_QUERY_KEYS` → fuite), wrap en query nue pour réutiliser la redaction par clé sensible, puis strip du `?` synthétique. No-op sans param sensible. +4 tests shared, dist rebuild, `CANONICAL_HASH` ré-épinglé (`2e024c11…`). Vérifié shared 39/39, BE 35/35, web 5/5, parité exit 0.
+- **Statut (origine)** : ouvert, surfacé par la review de TD-68 — `request.query_string` (champ dédié) échappait au scrub (seuls headers/data/url traités).

@@ -32,6 +32,8 @@ les trous (orphan-sweep TD-69, script seed, TD-68 jamais fait, tests TD-65 orphe
 - **TD-65** (`d529450c` + `59790c79`) — `ForgotPasswordUseCase` n'émet plus de token reset à un compte
   soft-deleted ; +3 garde-régression d'identité (changeEmail/register vérifiés déjà sûrs).
 - **TD-63** (`776215ec`) — job CI bloquant `guardrail-failclosed` (sans sidecar ni clé) qui gate `deploy-prod`.
+- **TD-71** (`fb2d8640`) — `scrubRequest` scrub désormais le champ dédié `request.query_string` (params sensibles),
+  avec strip défensif d'un `?` initial. Surfacé puis durci par la review adversariale de TD-68.
 
 #### Removed
 
@@ -44,7 +46,6 @@ les trous (orphan-sweep TD-69, script seed, TD-68 jamais fait, tests TD-65 orphe
 - **TD-70** (`776215ec`) — `ROADMAP_PRODUCT.md` acte explicitement que Stryker est DÉSARMÉ (kill-rate inconnu).
 - **TD-64** — clos **faux positif** : `INSERT…RETURNING` renvoie les rows seules (le tuple `[rows,count]` est
   réservé à UPDATE/DELETE) ; `artKeyword` + résidu leads/support/review étaient déjà corrects.
-- **TD-71** (ouvert) — résidu surfacé par la review TD-68 : `request.query_string` déclaré mais jamais scrubé.
 
 ### Hexagonal boundaries — garde-fou ré-armé (domain) + sentinel indépendant (ARCH-01/ARCH-02 / TD-62 W1) (2026-06-04)
 
