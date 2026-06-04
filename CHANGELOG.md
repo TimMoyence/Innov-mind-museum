@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Audit chain — collision sur metadata imbriqué fermée (AUDIT-01 / TD-61) (2026-06-04)
+
+Run `/team` UFR-022 fresh-context (`2026-06-04-audit-chain-nested-hash`). Reviewer APPROVED
+(weightedMean 92.3). Cf. [ADR-070](docs/adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md).
+Migration DB : `1780564269011-AddAuditLogHashVersion` (`ADD COLUMN hash_version`, non destructif).
+
+#### Fixed
+
+- **fix(audit): close nested-metadata hash collision in audit chain (AUDIT-01/TD-61) — canonical deep serializer + versioned `hash_version`.**
+  `computeRowHash` sérialisait `metadata` via un replacer-allowlist `JSON.stringify(meta, Object.keys(meta).sort())`
+  appliqué récursivement mais alimenté des seules clés top-level → tout objet imbriqué (`breach.{…}`,
+  `provider.{…}`) sérialisé `{}` → **collision** (deux payloads forensiques différents, même `row_hash`),
+  divergence runtime↔migration, et oracles de test buggés (AUDIT-02). Fix : `canonicalStringify` deep-recursif
+  (clés triées code-unit à tous les niveaux), **source unique** partagée runtime+migration ; dispatch versionné
+  par colonne `hash_version` **hors-payload** (legacy v1 figé → zéro faux BREAK, aucun recompute, valeur
+  forensique préservée) ; oracles de test indépendants. Chemin CNIL Art. 33-34 désormais couvert par sa
+  propre signature d'intégrité. Aucun impact OpenAPI.
+
 ### Quota free-tier mensuel — 402 désormais émis à la limite (2026-06-01)
 
 Run `/team` UFR-022 fresh-context (`2026-06-01-quota-tuple-402`). Reviewer APPROVED 1er pass

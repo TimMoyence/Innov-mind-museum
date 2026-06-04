@@ -14,9 +14,12 @@
  *      row hash.
  */
 
+import { createHash } from 'node:crypto';
+
 import * as Sentry from '@sentry/node';
 
 import {
+  AUDIT_CHAIN_GENESIS_HASH,
   AuditService,
   BREACH_EVENTS,
   computeRowHash,
@@ -29,6 +32,62 @@ import { makeChainRow } from '../../helpers/audit/chain.fixtures';
 
 import type { AuditLogEntry } from '@shared/audit';
 import type { AuditChainRow } from '@shared/audit';
+
+/**
+ * INDEPENDENT oracle (AC5 / AC6) — deep canonical serializer, hand-written, NOT
+ * the production fn and NOT `JSON.stringify(meta, Object.keys(meta).sort())`. Keys
+ * sorted by code unit at every level, arrays order-preserved.
+ * @param v value to serialize
+ * @returns canonical deep-sorted JSON
+ */
+function oracleCanonical(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(oracleCanonical).join(',') + ']';
+  const entries = Object.entries(v as Record<string, unknown>);
+  entries.sort(([a], [b]) => {
+    if (a < b) return -1;
+    if (a > b) return 1;
+    return 0;
+  });
+  return (
+    '{' + entries.map(([k, val]) => JSON.stringify(k) + ':' + oracleCanonical(val)).join(',') + '}'
+  );
+}
+
+/** Fields an oracle needs to reproduce a row hash (mirrors AuditChainInput). */
+interface OracleInput {
+  id: string;
+  actorId: number | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+/**
+ * Independent oracle for a row's rowHash — mirrors the CORRECT (post-fix) hash a
+ * row SHOULD carry: full deep serialization of metadata. Used to forge the breach
+ * row's stored rowHash WITHOUT calling the (buggy) production `computeRowHash`, so
+ * `verifyAuditChain` is the only thing under test (AC6).
+ * @param input the chain input fields
+ * @param prevHash previous row hash
+ * @returns the expected SHA-256 hex digest
+ */
+function oracleRowHash(input: OracleInput, prevHash: string): string {
+  const metadataJson = input.metadata === null ? '' : oracleCanonical(input.metadata);
+  const payload = [
+    input.id,
+    input.actorId ?? '',
+    input.action,
+    input.targetType ?? '',
+    input.targetId ?? '',
+    metadataJson,
+    input.createdAt.toISOString(),
+    prevHash,
+  ].join('|');
+  return createHash('sha256').update(payload).digest('hex');
+}
 
 interface SentryScopeStub {
   setTag: jest.Mock;
@@ -309,5 +368,218 @@ describe('audit hash chain — breach row parity', () => {
 
     // The IP isn't on AuditChainRow at all — proving it can't be in the payload.
     expect(Object.keys(breachRow)).not.toContain('ip');
+  });
+});
+
+/**
+ * Legacy v1 (buggy, FROZEN) metadata serializer — top-level keys only, nested
+ * objects collapse to `{}`. Models exactly what the OLD `computeRowHash` produced
+ * for historical rows. Used ONLY to forge a realistic legacy row hash for AC7.
+ * @param meta metadata object
+ * @returns the legacy (top-level-only) JSON string
+ */
+function legacyV1MetadataJson(meta: Record<string, unknown>): string {
+  return JSON.stringify(
+    meta,
+    Object.keys(meta).sort((a, b) => a.localeCompare(b)),
+  );
+}
+
+/**
+ * Forge a stored rowHash the way a row of the given hashVersion SHOULD carry it:
+ * v1 = legacy top-level-only serializer, v2 = full deep canonical (oracleCanonical).
+ * Independent of the production `computeRowHash` (AC6/AC7 oracle independence).
+ * @param input chain input fields
+ * @param prevHash previous row hash
+ * @param hashVersion 1 (legacy) or 2 (deep canonical)
+ * @returns the expected SHA-256 hex digest for that version
+ */
+function oracleRowHashForVersion(input: OracleInput, prevHash: string, hashVersion: 1 | 2): string {
+  let metadataJson = '';
+  if (input.metadata !== null) {
+    metadataJson =
+      hashVersion === 1 ? legacyV1MetadataJson(input.metadata) : oracleCanonical(input.metadata);
+  }
+  const payload = [
+    input.id,
+    input.actorId ?? '',
+    input.action,
+    input.targetType ?? '',
+    input.targetId ?? '',
+    metadataJson,
+    input.createdAt.toISOString(),
+    prevHash,
+  ].join('|');
+  return createHash('sha256').update(payload).digest('hex');
+}
+
+describe('audit hash chain — nested-metadata tamper-evidence (AUDIT-01 / TD-61)', () => {
+  const breachAuditId = '33333333-3333-3333-3333-333333333333';
+
+  /**
+   * Build a [normal, breach(v2), normal] chain where the breach row's stored
+   * rowHash comes from the INDEPENDENT oracle (full deep serialization), NOT from
+   * the production computeRowHash. `verifyAuditChain` is the only thing under test.
+   * @param breachMetadata the metadata payload for the breach row
+   * @returns the 3-row chain
+   */
+  function buildChainWithBreach(breachMetadata: Record<string, unknown>): AuditChainRow[] {
+    const row1 = makeChainRow({
+      id: '00000000-0000-0000-0000-0000000000c1',
+      action: 'AUTH_LOGIN_SUCCESS',
+      actorId: 1,
+      createdAt: new Date('2026-04-26T07:59:00.000Z'),
+    });
+
+    const breachBase = {
+      id: '00000000-0000-0000-0000-0000000000c2',
+      actorId: null,
+      action: BREACH_EVENTS.JWT_SECRET_LEAKED,
+      targetType: 'breach',
+      targetId: breachAuditId,
+      metadata: breachMetadata,
+      createdAt: new Date('2026-04-26T08:00:00.000Z'),
+      prevHash: row1.rowHash,
+    };
+    const row2: AuditChainRow = {
+      ...breachBase,
+      rowHash: oracleRowHash(breachBase, breachBase.prevHash),
+    };
+
+    const tailBase = {
+      id: '00000000-0000-0000-0000-0000000000c3',
+      actorId: 1,
+      action: 'AUTH_LOGOUT',
+      targetType: null,
+      targetId: null,
+      metadata: null,
+      createdAt: new Date('2026-04-26T08:01:00.000Z'),
+      prevHash: row2.rowHash,
+    };
+    const row3: AuditChainRow = {
+      ...tailBase,
+      rowHash: oracleRowHash(tailBase, tailBase.prevHash),
+    };
+
+    return [row1, row2, row3];
+  }
+
+  const breachMetadata = (): Record<string, unknown> => ({
+    breach: {
+      auditId: breachAuditId,
+      severity: 'P0',
+      detectedAt: detectedAt.toISOString(),
+      detectionSource: 'sentry',
+      affectedDataClasses: ['account'],
+      containmentStatus: 'in_progress',
+      description: 'JWT_ACCESS_SECRET found in public CI log artifact',
+      cnilDeadline: expectedCnilDeadline,
+      schemaVersion: 1,
+    },
+  });
+
+  it('AC6 — mutating breach.severity (nested) breaks the chain at the breach row', () => {
+    const rows = buildChainWithBreach(breachMetadata());
+
+    // Baseline: the oracle-forged chain is intact only if computeRowHash serializes
+    // nested metadata (deep). With the buggy runtime this already fails (the breach
+    // row recompute ignores breach.{...}) → RED.
+    expect(verifyAuditChain(rows).valid).toBe(true);
+
+    // Mutate the nested severity P0 -> P2 WITHOUT recomputing the stored rowHash.
+    const tampered = [...rows];
+    const meta = JSON.parse(JSON.stringify(tampered[1].metadata)) as {
+      breach: { severity: string };
+    };
+    meta.breach.severity = 'P2';
+    tampered[1] = { ...tampered[1], metadata: meta as Record<string, unknown> };
+
+    const result = verifyAuditChain(tampered);
+    expect(result.valid).toBe(false);
+    expect(result.firstBreakAt).toBe(1);
+    expect(result.firstBreakId).toBe(tampered[1].id);
+  });
+
+  it('AC6 — mutating breach.description (nested) breaks the chain at the breach row', () => {
+    const rows = buildChainWithBreach(breachMetadata());
+    const tampered = [...rows];
+    const meta = JSON.parse(JSON.stringify(tampered[1].metadata)) as {
+      breach: { description: string };
+    };
+    meta.breach.description = 'totally different breach narrative';
+    tampered[1] = { ...tampered[1], metadata: meta as Record<string, unknown> };
+
+    const result = verifyAuditChain(tampered);
+    expect(result.valid).toBe(false);
+    expect(result.firstBreakAt).toBe(1);
+  });
+
+  it('AC7 — a mixed legacy(v1)+new(v2) chain verifies with no false BREAK', () => {
+    // Legacy row: hashVersion 1, rowHash forged under the FROZEN v1 serializer
+    // (nested collapses to {}). It carries nested metadata, exactly the historical
+    // breach-row shape that the v1 hash never covered.
+    const v1Base = {
+      id: '00000000-0000-0000-0000-0000000000d1',
+      actorId: null,
+      action: BREACH_EVENTS.JWT_SECRET_LEAKED,
+      targetType: 'breach',
+      targetId: breachAuditId,
+      metadata: breachMetadata(),
+      createdAt: new Date('2026-03-01T08:00:00.000Z'),
+      prevHash: AUDIT_CHAIN_GENESIS_HASH,
+    };
+    const v1Row: AuditChainRow = {
+      ...v1Base,
+      hashVersion: 1,
+      rowHash: oracleRowHashForVersion(v1Base, v1Base.prevHash, 1),
+    };
+
+    // New row: hashVersion 2, rowHash under the deep canonical serializer.
+    const v2Base = {
+      id: '00000000-0000-0000-0000-0000000000d2',
+      actorId: 1,
+      action: 'AUTH_LOGIN_SUCCESS',
+      targetType: 'user',
+      targetId: '1',
+      metadata: { breach: { severity: 'P1', count: 7 } } as Record<string, unknown>,
+      createdAt: new Date('2026-06-04T08:00:00.000Z'),
+      prevHash: v1Row.rowHash,
+    };
+    const v2Row: AuditChainRow = {
+      ...v2Base,
+      hashVersion: 2,
+      rowHash: oracleRowHashForVersion(v2Base, v2Base.prevHash, 2),
+    };
+
+    // Legacy verified under v1 (no false positive), new under v2 → whole chain valid.
+    const result = verifyAuditChain([v1Row, v2Row]);
+    expect(result.valid).toBe(true);
+    expect(result.checked).toBe(2);
+  });
+
+  it('AC7 — tampering a legacy(v1) row is still detected', () => {
+    const v1Base = {
+      id: '00000000-0000-0000-0000-0000000000e1',
+      actorId: 5,
+      action: 'AUTH_LOGIN_SUCCESS',
+      targetType: 'user',
+      targetId: '5',
+      metadata: { reason: 'password' } as Record<string, unknown>,
+      createdAt: new Date('2026-03-02T08:00:00.000Z'),
+      prevHash: AUDIT_CHAIN_GENESIS_HASH,
+    };
+    const v1Row: AuditChainRow = {
+      ...v1Base,
+      hashVersion: 1,
+      rowHash: oracleRowHashForVersion(v1Base, v1Base.prevHash, 1),
+    };
+
+    // Genuine alteration of a legacy row: mutate a top-level field without
+    // recomputing the rowHash. Recompute under v1 must diverge → BREAK.
+    const tampered: AuditChainRow = { ...v1Row, action: 'TAMPERED_ACTION' };
+
+    const result = verifyAuditChain([tampered]);
+    expect(result.valid).toBe(false);
+    expect(result.firstBreakAt).toBe(0);
   });
 });

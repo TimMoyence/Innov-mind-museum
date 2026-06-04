@@ -21,7 +21,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-069) | [`docs/adr/`](adr/) — dernière : [`ADR-069`](adr/ADR-069-museum-search-id-osm-generic-conversation.md) (museum-search id OSM, 2026-06-01) |
+| ADRs (002-070) | [`docs/adr/`](adr/) — dernière : [`ADR-070`](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md) (audit chain canonical deep serializer + `hash_version`, 2026-06-04) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Gotchas archive (less-frequent pitfalls, split from CLAUDE.md 2026-05-20) | [`docs/GOTCHAS_ARCHIVE.md`](GOTCHAS_ARCHIVE.md) |
@@ -82,6 +82,8 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-066`](adr/ADR-066-rn-modal-pointer-events-routing.md) | RN overlay `pointerEvents="box-none"` routing convention (backdrop dismiss + slab interactive) |
 | [`ADR-067`](adr/ADR-067-base-modal-custom-vs-radix.md) | BaseModal custom (museum-web) — defer Radix UI Dialog post-launch |
 | [`ADR-068`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) | SBOM attestation strategy (mobile gap deferred to CRA 2027) |
+| [`ADR-069`](adr/ADR-069-museum-search-id-osm-generic-conversation.md) | `GET /api/museums/search` exposes local `id` + OSM rows start generic conversation |
+| [`ADR-070`](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md) | Audit chain canonical deep-recursive serializer + out-of-payload `hash_version` (closes TD-61) |
 
 ## Operations
 

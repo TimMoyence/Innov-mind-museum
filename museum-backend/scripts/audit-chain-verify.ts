@@ -5,10 +5,7 @@ import * as fs from 'node:fs';
 
 import { AppDataSource } from '@data/db/data-source';
 import { AUDIT_CHAIN_GENESIS_HASH, type AuditChainRow } from '@shared/audit/audit-chain';
-import {
-  verifyChainAndFormat,
-  type AuditChainCliResult,
-} from '@shared/audit/audit-chain-cli-core';
+import { verifyChainAndFormat, type AuditChainCliResult } from '@shared/audit/audit-chain-cli-core';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 
 /**
@@ -131,6 +128,9 @@ async function loadDbRows(): Promise<AuditChainRow[]> {
       // a string with the genesis sentinel for the very first row.
       prevHash: r.prevHash ?? AUDIT_CHAIN_GENESIS_HASH,
       rowHash: r.rowHash,
+      // Legacy rows predate the hash_version column ⇒ default to v1 so they verify
+      // under the frozen legacy serializer (no false BREAK). New rows carry 2.
+      hashVersion: (r.hashVersion ?? 1) as 1 | 2,
     }));
   } finally {
     await AppDataSource.destroy();

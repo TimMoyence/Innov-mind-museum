@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { AUDIT_CHAIN_GENESIS_HASH, computeRowHash } from './audit-chain';
+import { AUDIT_CHAIN_GENESIS_HASH, CURRENT_HASH_VERSION, computeRowHash } from './audit-chain';
 import { AuditLog } from './auditLog.entity';
 
 import type { IAuditLogRepository } from './audit.repository.interface';
@@ -90,6 +90,7 @@ export class AuditRepositoryPg implements IAuditLogRepository {
     const rowHash = computeRowHash(
       { id, actorId, action: entry.action, targetType, targetId, metadata, createdAt },
       prevHash,
+      CURRENT_HASH_VERSION,
     );
 
     const repo = manager.getRepository(AuditLog);
@@ -105,6 +106,7 @@ export class AuditRepositoryPg implements IAuditLogRepository {
       requestId: entry.requestId ?? null,
       prevHash,
       rowHash,
+      hashVersion: CURRENT_HASH_VERSION,
       createdAt,
     });
     await repo.save(entity);

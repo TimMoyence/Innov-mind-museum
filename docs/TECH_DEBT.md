@@ -1510,18 +1510,23 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 > Niveau de vérification noté par dette : **✔ re-lu à la main** (orchestrateur) vs **○ rapporté-agent** (preuve path:line de l'agent, fichier confirmé, non re-lu ligne-à-ligne). Honnêteté UFR-013.
 > **Les dettes code passent par `/team` (UFR-022 fresh-context).** Les dettes gate/CI sont des modifs workflow.
 
-### TD-61 — `audit-chain.computeRowHash` exclut le contenu imbriqué du hash (collision) — ✔ re-lu
+### TD-61 — `audit-chain.computeRowHash` exclut le contenu imbriqué du hash (collision) — ✔ re-lu — **RÉSOLU (pending merge)**
 
-- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 AUDIT-01). **Sévérité : HIGH, candidat CRITICAL** (chemin notification CNIL, légalement opposable).
-- **Référence code** :
+- [x] **Statut** : **résolu (pending merge)** — /team run `2026-06-04-audit-chain-nested-hash` (UFR-022 fresh-context), reviewer APPROVED weightedMean 92.3. Cf. **[ADR-070](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md)**. Commit à venir (working tree non committé à l'écriture de cette entrée). **AUDIT-02 (oracles de test buggés) corrigé dans le même lot.** *(historique d'origine conservé ci-dessous.)*
+- **Sévérité (origine)** : HIGH, candidat CRITICAL (chemin notification CNIL, légalement opposable).
+- **Référence code (origine, créé 2026-06-04 — audit 360 AUDIT-01)** :
   ```
   museum-backend/src/shared/audit/audit-chain.ts:43-46   # JSON.stringify(metadata, Object.keys(metadata).sort())
   museum-backend/src/shared/audit/audit.service.ts:207-219
   # + payload guardrail/breach nested (provider:{}, breach:{})
   ```
-- **Symptôme (vérifié)** : le 2ᵉ argument de `JSON.stringify` est un **replacer-allowlist appliqué récursivement** ; `Object.keys(metadata)` ne liste que le 1ᵉʳ niveau → tout objet imbriqué est sérialisé sans ses sous-clés (`{"breach":{}}`). Deux payloads forensiques nested différents → **même hash**. Collision reproduite par l'agent (`COLLISION=true`) ET confirmée par lecture directe du code. La migration `AddAuditLogHashChain` utilise un vrai sérialiseur récursif → **diverge du runtime**, parité non testée. Les tests hardcodent le sérialiseur buggé comme oracle (AUDIT-02) → bug structurellement invisible.
-- **Comment fermer** : sérialiseur canonique deep-recursif (clés triées à tous les niveaux) partagé runtime+migration ; re-stamp/version des hashes historiques ; tests nested sur l'unit ET la parité migration (ne pas réutiliser le sérialiseur comme oracle).
-- **Effort** : à chiffrer ensemble (rappel UFR-019).
+- **Symptôme (vérifié, origine)** : le 2ᵉ argument de `JSON.stringify` est un **replacer-allowlist appliqué récursivement** ; `Object.keys(metadata)` ne liste que le 1ᵉʳ niveau → tout objet imbriqué est sérialisé sans ses sous-clés (`{"breach":{}}`). Deux payloads forensiques nested différents → **même hash**. Collision reproduite par l'agent (`COLLISION=true`) ET confirmée par lecture directe du code. La migration `AddAuditLogHashChain` utilise un vrai sérialiseur récursif → **diverge du runtime**, parité non testée. Les tests hardcodent le sérialiseur buggé comme oracle (AUDIT-02) → bug structurellement invisible.
+- **Résolution livrée** :
+  - Sérialiseur canonique deep-recursif `canonicalStringify` (clés triées à tous les niveaux, comparateur **code-unit** déterministe, PAS `localeCompare`) — **source unique** partagée runtime (`audit-chain.ts`) + migration `AddAuditLogHashChain` (import partagé, parité verrouillée par snapshot de sortie).
+  - Dispatch versionné par **colonne `hash_version` hors-payload** (option A, migration `1780564269011-AddAuditLogHashVersion`, `DEFAULT 1`) : lignes legacy vérifiées sous v1 figé → **zéro faux BREAK**, **aucun recompute** (valeur forensique préservée, pas de sign-off DPO). Nouvelles écritures = v2.
+  - **AUDIT-02** : oracles de test indépendants (`oracleCanonical`/`oracleRowDigest` écrits à la main, byte-comparés à la sortie prod) + cas nested + tableau d'objets + chaîne mixte v1/v2 + mutation imbriquée qui casse la chaîne. Plus aucun test ne réutilise `computeRowHash` ni le sérialiseur buggé comme oracle.
+  - **Invariant à maintenir** : `AuditMetadataSchema` doit continuer d'imposer des clés **lowercase-first** (cf. ADR-070 INVARIANT — `localeCompare`→code-unit diverge sur clés de casse mixte, no-op sur les clés camelCase actuelles).
+- **Backlog résiduel (LOW)** : `canonicalStringify` émet un token littéral `undefined` pour une valeur d'objet imbriquée `undefined` (non atteignable — breach/guardrail utilisent `?? null`, Zod interdit `undefined`). Durcir ou documenter l'invariant `?? null` (cf. ADR-070 § Backlog).
 
 ### TD-62 — `eslint-plugin-boundaries` no-op (enforcement hexagonal BE mort) + 1 fuite réelle — ✔ re-lu
 

@@ -45,6 +45,14 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 64, name: 'row_hash' })
   rowHash!: string;
 
+  /**
+   * Serializer version used for `row_hash`. 1 = legacy top-level-only (historical
+   * rows, default), 2 = canonical deep. Carried OUT of the hash payload so adding
+   * it invalidates no existing `row_hash` (AUDIT-01 / TD-61, ADR option A).
+   */
+  @Column({ type: 'smallint', name: 'hash_version', default: 1 })
+  hashVersion!: number;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 }
