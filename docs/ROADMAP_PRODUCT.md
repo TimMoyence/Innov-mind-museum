@@ -148,6 +148,20 @@ stats: done=97 partial=28 open=48 ops=5
 
 ---
 
+## 🔬 Qualité & audits (traçabilité)
+
+> Deux audits qualité enchaînés. On croit le code, pas la doc. Les findings code alimentent `TECH_DEBT.md`, pas cette façade.
+
+- **Cartographie 360° (2026-05-31)** — `audit-state/2026-05-31-cartographie-360/CARTOGRAPHIE-360.md`. Maturité **70/100 genuine**, 3 piliers qualité « désarmés » signalés (Stryker `if:false`, e2e Maestro faux-vert, frozen-test honor-system).
+- **Contrôle qualité 360° (2026-06-04)** — `audit-state/2026-06-04-controle-qualite-360/` (ALL-FINDINGS.md = 127 findings path:line ; AUDIT-FINDINGS.md ; findings.json) + rendu lisible `artifacts/2026-06-04-controle-qualite-360.html`. **79/100 (B+)** : code applicatif enterprise-grade vérifié, mais **dette de garde-fous** réelle.
+  - **Re-vérif des 3 piliers de mai** : ✅ e2e Maestro faux-vert **fermé** (double-gate) · ✅ frozen-test = **vrai hook** (limité à `/team`) · ❌ **Stryker toujours `if:false`** (la mémoire le croyait priorisé → faux).
+  - **6 HIGH re-vérifiés (6/6 confirmés)** → tracés `TECH_DEBT.md` : `TD-61` (collision hash audit-chain, candidat CRITICAL, chemin CNIL), `TD-62` (boundaries no-op + fuite domain→useCase), `TD-63` (fail-CLOSED V2 non gardé CI), `TD-70` (Stryker non surfacé), `TD-65` (soft-delete email-squat), `TD-66` (snippet audit PII).
+  - **Dette systémique** (réponse à « une dette trouvée est-elle partout ») : oui pour la classe TypeORM `query('…RETURNING')` lue comme une ligne → `TD-64` (4ᵉ clone : artKeyword) en plus de `TD-12` + bug quota `f74ce7de`. Auditer les `…RETURNING` restants.
+  - **Re-confirmés** (déjà tracés) : `TD-39` (Stryker module-auth), `TD-40` (`noUncheckedIndexedAccess` BE absent — asymétrie BE moins strict que FE/WEB sur la frontière DB/LLM).
+- **Limites** (UFR-013) : seuls 6 HIGH reproduits à la main ; ~120 findings reposent sur preuves path:line agents (échantillonnées). A11y mobile, perf, charge, UX = hors scope. Mutation off → force réelle des tests (kill-rate) inconnue.
+
+---
+
 ## Comment utiliser cette roadmap
 
 1. **Début sprint** — `/team` lit ce fichier + `ROADMAP_TEAM.md`, propose les items P0/V1.0.x à attaquer. NEXT bloquée tant que P0 incomplet (sauf hotfix).

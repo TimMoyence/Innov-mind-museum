@@ -1502,3 +1502,90 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Comment fermer** : lors du build réel d'ImageCompare (phase red/green `/team`), réécrire l'assertion pour lire l'état observable (reducer/prop) au lieu de `_value`. Cf. doctrine `feedback_opaque_animated_value_test_contract`.
 - **Références** : audit doc-cleanup 2026-05-26 (triage §5 V1, conservé en historique git commit `ea389d13e`) ; CLAUDE.md (frozen-test UFR-022) ; mémoire `feedback_opaque_animated_value_test_contract`.
 
+---
+
+## Audit contrôle qualité 360° — 2026-06-04
+
+> Source : workflow multi-agents (22 agents, 127 findings, 6 HIGH re-vérifiés 6/6 confirmés). Artefacts : `audit-state/2026-06-04-controle-qualite-360/` (ALL-FINDINGS.md = 127 findings path:line) + `artifacts/2026-06-04-controle-qualite-360.html`. Verdict global **79/100 (B+)**.
+> Niveau de vérification noté par dette : **✔ re-lu à la main** (orchestrateur) vs **○ rapporté-agent** (preuve path:line de l'agent, fichier confirmé, non re-lu ligne-à-ligne). Honnêteté UFR-013.
+> **Les dettes code passent par `/team` (UFR-022 fresh-context).** Les dettes gate/CI sont des modifs workflow.
+
+### TD-61 — `audit-chain.computeRowHash` exclut le contenu imbriqué du hash (collision) — ✔ re-lu
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 AUDIT-01). **Sévérité : HIGH, candidat CRITICAL** (chemin notification CNIL, légalement opposable).
+- **Référence code** :
+  ```
+  museum-backend/src/shared/audit/audit-chain.ts:43-46   # JSON.stringify(metadata, Object.keys(metadata).sort())
+  museum-backend/src/shared/audit/audit.service.ts:207-219
+  # + payload guardrail/breach nested (provider:{}, breach:{})
+  ```
+- **Symptôme (vérifié)** : le 2ᵉ argument de `JSON.stringify` est un **replacer-allowlist appliqué récursivement** ; `Object.keys(metadata)` ne liste que le 1ᵉʳ niveau → tout objet imbriqué est sérialisé sans ses sous-clés (`{"breach":{}}`). Deux payloads forensiques nested différents → **même hash**. Collision reproduite par l'agent (`COLLISION=true`) ET confirmée par lecture directe du code. La migration `AddAuditLogHashChain` utilise un vrai sérialiseur récursif → **diverge du runtime**, parité non testée. Les tests hardcodent le sérialiseur buggé comme oracle (AUDIT-02) → bug structurellement invisible.
+- **Comment fermer** : sérialiseur canonique deep-recursif (clés triées à tous les niveaux) partagé runtime+migration ; re-stamp/version des hashes historiques ; tests nested sur l'unit ET la parité migration (ne pas réutiliser le sérialiseur comme oracle).
+- **Effort** : à chiffrer ensemble (rappel UFR-019).
+
+### TD-62 — `eslint-plugin-boundaries` no-op (enforcement hexagonal BE mort) + 1 fuite réelle — ✔ re-lu
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 ARCH-01/ARCH-02). Sévérité HIGH.
+- **Référence code** :
+  ```
+  museum-backend/eslint.config.mjs:64-160   # bloc boundaries SANS settings['import/resolver']
+  museum-backend/eslint.config.mjs:115-118  # commentaire affirmant à tort que l'enforcement marche
+  museum-backend/src/modules/chat/domain/ports/chat-orchestrator.port.ts:9  # fuite domain->useCase (ARCH-02)
+  ```
+- **Symptôme (vérifié)** : le bloc boundaries n'a aucun `import/resolver` dans son `settings` (seul `import-x/resolver` existe dans un bloc séparé) → `@modules/*` résout en `external` (path:null) → la règle ne classe rien et ne fire jamais. Reproduit par l'agent (import domain→infra = 0 erreur ; ajouter le resolver fait fire), confirmé par lecture. Le commentaire l.115-118 (« migration v6 a restauré l'enforcement ») est faux. Une vraie fuite existe déjà non détectée (ARCH-02).
+- **Comment fermer** : (a) `settings['import/resolver'].typescript` DANS le bloc boundaries ; (b) fixture-garde CI (domain importe un adapter → lint fail attendu) ; (c) corriger ARCH-02 ; (d) **filet indépendant** : sentinel fs-based BE (modèle FE `no-shared-api-import`) qui walk `src/modules/*/domain` et fail si un import résout vers `/adapters/` ou `/useCase/` — survit à une re-régression de la config ESLint.
+
+### TD-63 — Garantie fail-CLOSED V2 (ADR-047) non gardée en CI — ○ rapporté-agent
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 TQ-01). Sévérité HIGH.
+- **Référence code** : `.github/workflows/ci-cd-backend.yml:524-565` (ai-tests `continue-on-error:true` l.564, aucun `services:`/sidecar) ; `tests/ai/guardrail-v2-live*`.
+- **Symptôme** : sans sidecar, `guardrail-v2-live` throw en `beforeAll` → avalé par `continue-on-error`. Les invariants déterministes (dead-port/dead-URL/budget/fail-soft) sont co-localisés avec des asserts LLM non-déterministes → tombent ensemble. Aucun gate bloquant ne valide fail-CLOSED. `ci-cd-llm-guard.yml` ne fait que build+health-smoke.
+- **Comment fermer** : sortir les tests fail-CLOSED déterministes du `describe` live-sidecar → job bloquant sans sidecar ; laisser les asserts LLM en advisory.
+
+### TD-64 — `artKeyword.upsert` lit le tuple RETURNING comme une ligne (4ᵉ clone du bug RETURNING) — ✔ re-lu
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 SYS-01). Sévérité MEDIUM. **Même classe que [[TD-12]] + bug quota `f74ce7de` + gotcha CLAUDE.md « TypeORM query RETURNING renvoie [rows,count] ».**
+- **Référence code** : `museum-backend/src/modules/chat/adapters/secondary/persistence/artKeyword.repository.typeorm.ts:35-44` (`const rows = await this.repo.query('INSERT … RETURNING *'); return (rows as ArtKeyword[])[0]`).
+- **Symptôme (vérifié)** : `query('…RETURNING')` renvoie `[rows[], count]` ; `rows[0]` est donc le **tableau** de lignes, pas l'entité. Le cast `as ArtKeyword[]` masque le bug au compilateur. Le test associé mocke le mauvais shape (cimente le bug).
+- **Réponse à « une dette est-elle partout »** : OUI. Auditer les autres `query('…RETURNING')` raw (lead.repository.pg, prune-* use-cases) au même titre.
+- **Comment fermer** : garde `const r = Array.isArray(rows[0]) ? rows[0] : rows;` puis `r[0]` ; réécrire le mock test au tuple PG réel `[[row],1]`.
+
+### TD-65 — Soft-delete `deletedAt` non filtré hors login (tokens reset + email-squat) — ○ corroboré (grep)
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 SYS-02). Sévérité HIGH (sécurité).
+- **Référence code** : `museum-backend/src/modules/auth/useCase/session/authSession.service.ts:116,198` (seuls sites filtrant `deletedAt`, vérifié grep) ; chemins `forgotPassword`/`registerUser`/`changeEmail` (auth) non re-lus ligne-à-ligne.
+- **Symptôme (corroboré)** : `grep` confirme que `deletedAt` n'est filtré QUE dans les chemins login. L'agent rapporte que `forgotPassword` émet des tokens de reset à des comptes soft-deleted et que `registerUser`/`changeEmail` laissent un compte supprimé squatter l'email (unicité non exclue des soft-deleted). À re-lire/reproduire avant fix.
+- **Comment fermer** : filtrer `deletedAt` dans `forgotPassword` (pas de token à un compte supprimé) + exclure les soft-deleted des checks d'unicité email (ou migrer vers `@DeleteDateColumn`).
+
+### TD-66 — Snippet d'audit BLOCKED garde 64 chars user bruts avant le sanitizer PII — ○ rapporté-agent
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 AISAN-01). Sévérité MEDIUM (PII/rétention).
+- **Référence code** : `museum-backend/src/.../guardrail-snippet.ts:36-40` (slice(0,64) du texte user AVANT `RegexPiiSanitizer`, rétention 13 mois ; contredit le commentaire LLM02 du fichier).
+- **Comment fermer** : passer `fullText` au sanitizer PII avant `slice(0,64)` (comme l'entrée REDACTED) ; garder un fingerprint sha256 du texte intégral pour le dédup.
+
+### TD-67 — `ThreeStateCircuit` : probe HALF_OPEN sans timeout → lock-out permanent possible — ○ rapporté-agent
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 CIRCUIT-01). Sévérité MEDIUM.
+- **Référence code** : `museum-backend/src/shared/circuit-breaker/three-state-circuit.ts`.
+- **Symptôme** : si une exception survient entre `canAttempt` et `recordOutcome`, la probe HALF_OPEN fuit → le circuit peut rester bloqué indéfiniment.
+- **Comment fermer** : timeout/garde try-finally sur la probe HALF_OPEN pour relâcher le slot.
+
+### TD-68 — `sentry-scrubber` ne scrub pas les URL (token query-string) dans `extra`/`data` — ○ rapporté-agent
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 SCRUB-01). Sévérité MEDIUM (fuite obs).
+- **Référence code** : scrubber Sentry canonical (cf. sentinel `sentry-scrubber-parity`).
+- **Symptôme** : une URL avec token en query-string sous une clé `extra`/`data` non-sensible échappe au scrub.
+- **Comment fermer** : étendre le scrubber aux valeurs URL (strip query-string sensible) ; mettre à jour le hash de parité.
+
+### TD-69 — Dead-code / scaling B2B prématuré à enterrer (UFR-016) — ○ rapporté-agent
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 KISS-01/RMAP-01). Sévérité LOW (mais incohérence narrative B2B).
+- **Référence code** : `TenantRateLimiter` (instancié, `.acquire()` jamais appelé) + getter + bloc env + métrique ; `scripts/seed-pilot-museums.sh` (cible Louvre/Orsay/Pompidou — QID jamais seedés — avec vocabulaire « pilot », contredit North Star « 0 musée démarché »).
+- **Comment fermer** : enterrer le code mort (UFR-016 « il est mort on l'enterre ») ; renommer/supprimer le script seed avec son vocabulaire « pilot ».
+
+### TD-70 — Stryker désarmé absent de la posture de risque produit — process
+
+- [ ] **Statut** : ouvert (créé 2026-06-04, audit 360 PILLAR-01). Le mutation gate est `if:false` (`ci-cd-backend.yml:411`, depuis 2026-05-09) — **honnête dans le code** mais non surfacé dans `ROADMAP_PRODUCT.md` (verdict GO_WITH_RISKS).
+- **Décision à trancher** : re-armer (plan `ci-cd-backend.yml:405-410`, décision D3) OU acter formellement dans la roadmap que la force des tests n'est mesurée que par couverture — et ne jamais citer Stryker comme garde actif.
+- **Note** : `TD-39` (wrapper Stryker module-auth) et `TD-40` (`noUncheckedIndexedAccess` BE absent) sont **re-confirmés** par cet audit (actions #8). Ne pas dupliquer ; les fermer dans le même lot.
+

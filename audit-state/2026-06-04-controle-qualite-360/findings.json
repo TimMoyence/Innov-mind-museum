@@ -1,0 +1,32 @@
+{
+  "auditDate": "2026-06-04",
+  "auditTitle": "Controle qualite 360 — Musaium pre-launch V1",
+  "method": "15 dimensions auditees par agents adversariaux (code>docs, UFR-013), 6 findings high-severite re-verifies par un verificateur independant (reproduction empirique). rg banni (corruption RTK) -> grep/Grep + node repro.",
+  "verificationCap": "6 findings high re-verifies a la main (ARCH-01, PILLAR-01, TQ-01, AUDIT-01, STALE-01, ARCH-04). Les autres findings reposent sur les preuves path:line citees par les agents de dimension, echantillonnees mais non exhaustivement reproduites par le synthetiseur.",
+  "dimensions": [
+    {"key": "TYPE", "score": 84, "grade": "expert (decote)"},
+    {"key": "DRY", "score": 72, "grade": "competent"},
+    {"key": "KISS", "score": 68, "grade": "expert-execution / timing-defaut"},
+    {"key": "ARCH-PATTERNS", "score": 68, "grade": "competent"},
+    {"key": "CODE-GRADE", "score": 88, "grade": "expert / enterprise-coeur"},
+    {"key": "TESTS", "score": 74, "grade": "competent->expert (bride gating)"},
+    {"key": "SECURITY", "score": 88, "grade": "enterprise-grade"},
+    {"key": "AI-SANITIZATION", "score": 88, "grade": "expert"},
+    {"key": "OWN-LIBS", "score": 78, "grade": "expert (decote bug audit)"},
+    {"key": "LESSONS", "score": 88, "grade": "enterprise-grade"},
+    {"key": "ROADMAP", "score": 82, "grade": "expert"},
+    {"key": "DEBT-SPREAD", "score": 74, "grade": "competent"},
+    {"key": "DOCS", "score": 71, "grade": "competent"},
+    {"key": "MEMORY", "score": 62, "grade": "competent (pruning manquant)"},
+    {"key": "ARCH-REG", "score": 84, "grade": "expert"}
+  ],
+  "verificationVerdicts": [
+    {"findingId": "ARCH-01", "verdict": "CONFIRMED", "correctedSeverity": "HIGH", "summary": "eslint-plugin-boundaries no-op prouve par repro: le `to` des imports @modules/* resout en external (path:null, type:null) car le bloc boundaries n'a PAS de import/resolver. Fix prouve: ajouter settings['import/resolver'].typescript DANS le bloc boundaries fait firer la regle. Le commentaire eslint.config.mjs:116-118 ('migration v6 a restaure l'enforcement') est FAUX. Rule dans le gate lint actif (--max-warnings=0) mais ne produit jamais d'erreur. Aucune fuite live aujourd'hui (faux-positif lead.repository.interface = JSDoc) mais fausse assurance future."},
+    {"findingId": "PILLAR-01", "verdict": "CONFIRMED", "correctedSeverity": "HIGH", "summary": "ci-cd-backend.yml:411 if:false confirme. mutation/mutation:ci/mutation:gate tous dans le seul job desactive. Le cron nightly est skippe car if job-level evalue avant trigger. Aucun autre workflow ne gate la mutation. Doctrine 'kill >=80% = load-bearing signal' (jest.config.ts:126) adossee a zero enforcement. Repo HONNETE a ce sujet (commentaire 'do not cite as active guard')."},
+    {"findingId": "TQ-01", "verdict": "CONFIRMED", "correctedSeverity": "HIGH", "summary": "ai-tests continue-on-error:true (l.564), aucun services:/sidecar dans le job. guardrail-v2-live throw en beforeAll si sidecar injoignable -> avale. Invariants fail-CLOSED/fail-OPEN deterministes co-localises avec asserts LLM non-deterministes -> tombent ensemble. ci-cd-llm-guard.yml ne fait que build+health-smoke, pas les tests guardrail, et ne trigger pas sur changements backend chat. Aucun gate bloquant ne valide fail-CLOSED."},
+    {"findingId": "AUDIT-01", "verdict": "CONFIRMED", "correctedSeverity": "HIGH", "summary": "Collision nested-key reproduite empiriquement (COLLISION=true). 2 chemins prod: provider:{name,version} (guardrail PII-redaction) ET breach:{...} (notification CNIL — TOUT le payload forensique nested -> hashe comme breach:{}). La migration utilise un vrai stableStringify recursif -> DIVERGE du runtime, parite non testee (test parite + unit test = flat only, l'unit test hardcode meme le serialiseur buggé comme oracle). Sous-estime, pourrait justifier CRITICAL."},
+    {"findingId": "STALE-01", "verdict": "CONFIRMED", "correctedSeverity": "MEDIUM", "summary": "DOCS_INDEX.md:24 ADRs (002-068), ADR-069 (2026-06-01) existe et non indexe. DOCS_INDEX.md:159 liste agent 'verifier' (n'existe pas) et omet 'doc-cache' (existe). Index auto-decrit 'table de verite' mais stale ~2 semaines. Severite HIGH->MEDIUM: zero impact code/runtime/securite, 2 inexactitudes doc discretes."},
+    {"findingId": "ARCH-04", "verdict": "CONFIRMED", "correctedSeverity": "MEDIUM", "summary": "Doublon de PILLAR-01 (Stryker if:false vu cote ARCH-REG). Severite HIGH->MEDIUM: desactivation INTENTIONNELLE, honnetement documentee (workflow+TECH_DEBT+PHASE_HISTORY+decision D3), chemin de re-arm ecrit, gate couverture compensatoire actif, zero dissimulation."}
+  ],
+  "rawDimensionData": "Les 15 objets dimension complets (findings detailles path:line, claimVsReality, docsVsCodeMismatches) sont la source brute fournie au synthetiseur. Conserves dans AUDIT-FINDINGS.md sous forme lisible. Le present findings.json sert d'index machine: scores + verdicts de verification."
+}

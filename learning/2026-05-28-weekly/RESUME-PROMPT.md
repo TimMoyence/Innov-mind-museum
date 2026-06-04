@@ -59,6 +59,20 @@ veux un autre point d'entrée.
 - [ ] **A · Décortiqué #3** — probabilistic-refresh / XFetch (anti cache-stampede).
 - [ ] **A · Décortiqué #4** — codemods `requireUser` / `notFound` (mécanique du sweep).
 - [ ] **A · Décortiqué #5** — Web `BaseModal` + `useFetchData` (React 19, AbortController).
-- [ ] **Thème C** — Pipeline chat (non commencé).
-- [ ] **Thème B** — RGPD/PII/consent (non commencé).
+- [ ] **Thème C** — Pipeline chat (non commencé en mode décortiqué ; survol fait, cf. cours HTML ch.2).
+- [ ] **Thème B** — RGPD/PII/consent (non commencé en mode décortiqué ; survol fait, cf. cours HTML ch.4).
 - [ ] **Thème D+E** — Coûts & multi-tenant (non commencé).
+
+## Mise à jour 2026-06-04 — cours « mode prof » HTML (carte d'ensemble + tout le reste)
+
+> Produit à la demande « complète avec tout le reste + rends-le mode prof en HTML ». **5 agents frais ont relu le code réel** (path:line vérifiés, rien d'inventé) → un cours HTML qui couvre l'app au global, les flux réels, et la réalité honnête (audit 360 du même jour).
+
+- **Livrable** : [`COURS-MUSAIUM-MODE-PROF.html`](./COURS-MUSAIUM-MODE-PROF.html) (ouvrir dans un navigateur ; self-contained, imprimable). Source des chapitres = agents code-vérifiés ; section « réalité » = audit `artifacts/2026-06-04-controle-qualite-360.html`.
+- **Les 5 nouveaux chapitres (survol vérifié, pas encore en mode décortiqué pas-à-pas)** :
+  - [x] **Ch.1 — La carte de l'app** : cycle de vie d'une requête (mobile → middlewares `app.ts` → route primary → useCase → adapter secondary → PG/LLM). Sait situer n'importe quel fichier.
+  - [x] **Ch.2 — Le pipeline chat** : 6 couches de défense en profondeur câblées au composition root (+ guardrail hybride par gravité récent). Nuance : SSE streaming mort/enterré, transport réel = `postMessage` sync.
+  - [x] **Ch.3 — Géo & voix** : géo per-message (coord brute jamais au LLM, fail-closed), voix STT→LLM→TTS, breaker voix observe-only, clé TTS voice-aware.
+  - [x] **Ch.4 — Auth, consentement & RGPD** : rotation refresh à familles, tokens device-bound, consent gate fail-closed, erasure multi-store, hash-chain. Cas d'école : le bug `computeRowHash` (replacer-array récursif).
+  - [x] **Ch.5 — Tout le reste depuis le 28 mai** : résilience réseau faible (W1-W3, compression ~16×, test-track 3 couches), migration Maestro ubuntu+KVM + remédiation e2e + parité iOS/Android, test e2e réel des couches V2 guardrail.
+- **Réalité honnête tissée dans le cours** : 79/100 (B+). Le code est mûr ; ce sont les **garde-fous** qui faiblissent (Stryker off, boundaries no-op, fail-CLOSED V2 non gardé). Détail : `TECH_DEBT.md` TD-61→70.
+- **Prochain item décortiqué inchangé** : `ThreeStateCircuit` (cf. ci-dessus A·Décortiqué #1).
