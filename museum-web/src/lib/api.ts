@@ -14,6 +14,8 @@
  * double-submit verification by the backend.
  */
 
+import * as Sentry from '@sentry/nextjs';
+
 // ── Error class ────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -187,6 +189,16 @@ async function request<T>(
     const csrfToken = readCsrfToken();
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
+  // TD-47 — forward the active Sentry trace context so server-rendered RSC calls
+  // (which bypass the SDK's auto-fetch instrumentation) appear in the correlated
+  // BE↔FE trace. getTraceData() returns {} or undefined values when no span is
+  // active, so only string-typed entries are copied — never an undefined header.
+  for (const [key, value] of Object.entries(Sentry.getTraceData())) {
+    if (typeof value === 'string') {
+      headers[key] = value;
     }
   }
 
