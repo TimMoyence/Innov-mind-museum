@@ -15,6 +15,13 @@ stats: done=97 partial=28 open=48 ops=5
 >
 > **Verdict launch : 🟧 GO avec risques.** Les 21 « blockers » nominaux se réduisent, après re-vérification, à **1 vrai blocker code + 5 actions ops** (ci-dessous ; C10 fermé 2026-05-31, commit `787e2ba9`). Les 14 autres étaient des *stale-claims* — des bugs déjà corrigés que la doc traînait encore (consent gating, museum_id FK, budgets latence, BOLA scope, MFA mobile retirée).
 
+### Posture de risque qualité — gardes désarmés (honnêteté UFR-013)
+
+> Risques acceptés au launch. À lire avant de citer un « garde » CI comme actif.
+
+- 🔴 **TD-70 — Mutation testing (Stryker) DÉSARMÉ.** Le job `mutation` est `if: false` (`.github/workflows/ci-cd-backend.yml`, condition de garde du job) et **n'a pas tourné depuis 2026-05-09**. Les seuils kill-ratio (`.stryker-hot-files.json`) ne sont **enforced nulle part en CI**. Conséquence : la **force réelle des tests (kill-rate) est INCONNUE** — seule la **couverture de lignes** est mesurée (`pnpm run test:coverage`, seuils ~88 stmt / 74 br / 86 fn / 89 lines), et la couverture ≠ la qualité d'assertion. **NE PAS citer Stryker comme un garde actif** (ni dans la doc, ni dans un audit, ni dans un PR). Re-armement = **décision coût réservée à l'humain** (le plan « cache-builder offline » de mai n'a jamais landé) — **à flagger explicitement, ne pas re-armer en passant**. Procédure de re-arm conservée en commentaire dans le job `mutation` (`if: false` → conditionnel `c17c404e`).
+- ✅ **TD-63 — fail-CLOSED V2 désormais gardé (CORRIGÉ 2026-06-04).** L'invariant de sécurité ADR-047 (sidecar LLM-Guard injoignable → `deny` ; judge budget-exhausted / mal-configuré → `null` fail-OPEN) est validé par un **job CI BLOQUANT** `guardrail-failclosed` (`ci-cd-backend.yml`, sans `continue-on-error`, sans sidecar ni `OPENAI_API_KEY`) qui lance `museum-backend/tests/ai/guardrail-failclosed-deterministic.ai.test.ts` et **gate `deploy-prod`**. Le job `ai-tests` (live OpenAI + sidecar réel, non-déterministe) reste **advisory** (`continue-on-error: true`) — il ne valide PAS l'invariant à lui seul.
+
 ---
 
 ## North Star

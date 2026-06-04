@@ -567,6 +567,50 @@ jobs:
         continue-on-error: true
         run: pnpm run test:ai
 
+  # ─── 5.3. Guardrail fail-CLOSED invariant gate (TD-63 / ADR-047) ──────
+  # The `ai-tests` job above is ADVISORY (continue-on-error) because it hits
+  # the live OpenAI provider + a real ProtectAI sidecar (non-deterministic).
+  # That meant the V2 fail-CLOSED / fail-OPEN security invariants (ADR-047)
+  # had NO blocking gate — a broken invariant would never fail a merge.
+  #
+  # This job runs ONLY the DETERMINISTIC subset
+  # (tests/ai/guardrail-failclosed-deterministic.ai.test.ts): no sidecar, no
+  # OPENAI_API_KEY, no network. It is a HARD gate (no continue-on-error) so an
+  # unreachable sidecar that "allows" (fail-OPEN regression) or a budget gate
+  # that calls the model breaks CI. The file is jest-ignored by default
+  # (jest.config.ts:58 `/tests/ai/`); the `--testPathIgnorePatterns` override
+  # lifts that ignore for this run only — same trick as `test:ai`.
+  guardrail-failclosed:
+    needs: [changes, quality]
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Guardrail fail-CLOSED invariants (deterministic, no sidecar/key)
+        # HARD gate (no continue-on-error). No OPENAI_API_KEY, no sidecar — the
+        # deterministic invariants short-circuit before any model/network call.
+        run: >-
+          pnpm exec jest --watchman=false --runInBand --coverage=false
+          --testPathPattern='tests/ai/guardrail-failclosed-deterministic'
+          --testPathIgnorePatterns '/dist/' '/node_modules/'
+
   # ─── 5.4. Migration schema-drift gate (I-OPS8 R11) ────────────────────
   # Applies ALL migrations to a clean DB, then attempts `migration:generate`.
   # If TypeORM would emit a new migration, an entity changed without a matching
@@ -843,7 +887,9 @@ jobs:
     # intentionally NOT a need here — it is skipped on push-to-main (if: pull_request
     # || schedule), so needs:[e2e] would skip deploy-prod entirely. integration runs
     # on push whenever coverage-merge runs, so the gating stays consistent.
-    needs: [quality, coverage-merge, integration]
+    # guardrail-failclosed added 2026-06-04 (TD-63): the V2 fail-CLOSED invariant
+    # (ADR-047) is a deterministic hard gate; prod must not ship if it regresses.
+    needs: [quality, coverage-merge, integration, guardrail-failclosed]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
