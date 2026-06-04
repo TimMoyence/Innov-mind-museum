@@ -277,6 +277,54 @@ describe('scrubEvent — tags traversal (R2)', () => {
   });
 });
 
+describe('scrubEvent — extra/data URL traversal (TD-68 / SCRUB-01)', () => {
+  // TD-68 — a URL carrying a sensitive token in its query-string, stored under a
+  // NON-sensitive key inside `extra` or `request.data`, used to survive verbatim
+  // into Sentry: scrubRecord only redacted by sensitive KEY name and returned
+  // string values as-is, so scrubUrl never ran on URL-like values nested there
+  // (only `tags` and `request.url` got scrubUrl). These FAIL on the pre-TD-68
+  // canonical and PASS once scrubRecord applies scrubUrl to URL-like values.
+
+  it('scrubs a sensitive query-string in a URL nested under extra (non-sensitive key)', () => {
+    const event: ScrubbableEvent = {
+      extra: { callbackUrl: 'https://app.musaium.com/cb?token=secret&keep=ok' },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.extra as Record<string, unknown>).callbackUrl,
+      `https://app.musaium.com/cb?token=${REDACTED}&keep=ok`,
+    );
+  });
+
+  it('scrubs a URL nested under request.data (non-sensitive key)', () => {
+    const event: ScrubbableEvent = {
+      request: { data: { redirect: '/api/auth/magic-link?code=ABC&keep=ok' } },
+    };
+    const out = scrubEvent(event, stubDeps);
+    const data = (out.request as NonNullable<ScrubbableEvent['request']>).data as Record<
+      string,
+      unknown
+    >;
+    assert.equal(data.redirect, `/api/auth/magic-link?code=${REDACTED}&keep=ok`);
+  });
+
+  it('scrubs URL-like values inside arrays + deeply nested extra objects', () => {
+    const event: ScrubbableEvent = {
+      extra: { trail: [{ href: 'https://x.tld/p?access_token=AT&page=2' }] },
+    };
+    const out = scrubEvent(event, stubDeps);
+    const trail = (out.extra as Record<string, unknown>).trail as Array<Record<string, unknown>>;
+    assert.equal(trail[0].href, `https://x.tld/p?access_token=${REDACTED}&page=2`);
+  });
+
+  it('leaves non-URL extra string values untouched (no over-masking)', () => {
+    const event: ScrubbableEvent = { extra: { note: 'just a message', count: '3' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal((out.extra as Record<string, unknown>).note, 'just a message');
+    assert.equal((out.extra as Record<string, unknown>).count, '3');
+  });
+});
+
 describe('scrubEvent — golden fixture', () => {
   // Single comprehensive fixture exercising every code path. The expected
   // output below is the GOLDEN that any future regression will diff against.

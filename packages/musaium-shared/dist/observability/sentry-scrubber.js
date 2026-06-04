@@ -81,7 +81,20 @@ const scrubRecord = (input) => {
         const src = input;
         const out = {};
         for (const [key, value] of Object.entries(src)) {
-            out[key] = exports.SENSITIVE_FIELD_REGEX.test(key) ? exports.REDACTED : (0, exports.scrubRecord)(value);
+            if (exports.SENSITIVE_FIELD_REGEX.test(key)) {
+                out[key] = exports.REDACTED;
+            }
+            else if ((0, exports.isUrlLikeValue)(value)) {
+                // TD-68 (SCRUB-01) — a URL-like value under a NON-sensitive key still
+                // carries sensitive query-string params (`?token=…`, `?code=…`). Without
+                // this, such a URL nested in `extra` / `request.data` reached Sentry raw
+                // (only `tags` and `request.url` previously ran scrubUrl). scrubUrl is a
+                // no-op on URLs with no sensitive params, so this never over-masks.
+                out[key] = (0, exports.scrubUrl)(value);
+            }
+            else {
+                out[key] = (0, exports.scrubRecord)(value);
+            }
         }
         return out;
     }

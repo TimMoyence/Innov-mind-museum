@@ -70,8 +70,12 @@ const WRAPPERS = [
 //   - SENSITIVE_QUERY_KEYS extended 11→16 (D3, +x-amz-signature/x-amz-credential/
 //     x-amz-security-token/sig/signature) to close the presigned-S3 / signed-URL leak.
 //     Inherited by the central log redaction in museum-backend/src/shared/logger/logger.ts.
+// 2026-06-04 — bumped for TD-68 (SCRUB-01, audit 360) :
+//   - scrubRecord now applies scrubUrl to URL-like values under NON-sensitive keys,
+//     so a `?token=…` URL nested in `extra` / `request.data` is scrubbed (previously
+//     only `tags` + `request.url` ran scrubUrl). No new export; logic-only change.
 // Golden fixture asserting the new behaviour : packages/musaium-shared/src/observability/sentry-scrubber.test.ts
-const CANONICAL_HASH = 'b1e98f5e569744cebe37dd2d1609531d41f4311fb3df3ea9c48ef70945d83e2b';
+const CANONICAL_HASH = 'b162fa86a5bf30df4ea79eba68e7e0531ec9a9d73d90fa69584b3950c3238e42';
 
 const REQUIRED_CANONICAL_EXPORTS = [
   'SENSITIVE_HEADER_REGEX',
