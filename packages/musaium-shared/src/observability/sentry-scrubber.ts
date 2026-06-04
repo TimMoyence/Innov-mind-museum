@@ -194,6 +194,16 @@ const scrubRequest = (
   if (typeof out.url === 'string') {
     out.url = scrubUrl(out.url);
   }
+  if (typeof out.query_string === 'string') {
+    // TD-71 — Sentry's dedicated request.query_string field (raw query) was never
+    // scrubbed, so a token=…/code=… reached Sentry verbatim. Strip any leading '?'
+    // first (defensive — Sentry's convention omits it; without this strip a
+    // '?token=x' input would key on '?token', which isn't sensitive → leak), then
+    // wrap as a bare query to reuse scrubUrl's sensitive-key redaction, and strip
+    // the synthetic '?'. No-op when no sensitive param is present.
+    const rawQuery = out.query_string.replace(/^\?/, '');
+    out.query_string = scrubUrl(`?${rawQuery}`).slice(1);
+  }
   return out;
 };
 

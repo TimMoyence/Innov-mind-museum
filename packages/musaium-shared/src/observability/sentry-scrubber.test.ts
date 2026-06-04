@@ -325,6 +325,50 @@ describe('scrubEvent — extra/data URL traversal (TD-68 / SCRUB-01)', () => {
   });
 });
 
+describe('scrubEvent — request.query_string (TD-71)', () => {
+  // TD-71 — scrubRequest scrubbed headers / data / url but NOT the dedicated
+  // request.query_string field (raw query, no leading '?'), so a query carrying
+  // ?token=… / ?code=… reached Sentry verbatim. The first test FAILS on the
+  // pre-TD-71 canonical (query_string left untouched) and PASSES once scrubRequest
+  // runs scrubUrl on it.
+
+  it('scrubs sensitive params in request.query_string (no leading ?)', () => {
+    const event: ScrubbableEvent = {
+      request: { query_string: 'code=ABC&token=secret&page=2' },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      `code=${REDACTED}&token=${REDACTED}&page=2`,
+    );
+  });
+
+  it('leaves a query_string with no sensitive params untouched (no over-masking)', () => {
+    const event: ScrubbableEvent = { request: { query_string: 'page=2&sort=asc' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      'page=2&sort=asc',
+    );
+  });
+
+  it('ignores a non-string query_string without throwing', () => {
+    const event = { request: { query_string: { code: 'x' } } } as unknown as ScrubbableEvent;
+    assert.doesNotThrow(() => scrubEvent(event, stubDeps));
+  });
+
+  it('strips a leading ? before scrubbing (defensive — non-canonical input)', () => {
+    // Without the leading-? strip, the first key would be '?token' (not in
+    // SENSITIVE_QUERY_KEYS) and the value would leak. FAILS on the un-hardened fix.
+    const event: ScrubbableEvent = { request: { query_string: '?token=secret&page=2' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      `token=${REDACTED}&page=2`,
+    );
+  });
+});
+
 describe('scrubEvent — golden fixture', () => {
   // Single comprehensive fixture exercising every code path. The expected
   // output below is the GOLDEN that any future regression will diff against.

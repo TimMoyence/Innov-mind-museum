@@ -74,8 +74,11 @@ const WRAPPERS = [
 //   - scrubRecord now applies scrubUrl to URL-like values under NON-sensitive keys,
 //     so a `?token=…` URL nested in `extra` / `request.data` is scrubbed (previously
 //     only `tags` + `request.url` ran scrubUrl). No new export; logic-only change.
+// 2026-06-04 — bumped for TD-71 : scrubRequest now scrubs the dedicated
+//   request.query_string field via scrubUrl (strips a leading '?' first, defensive).
+//   logic-only.
 // Golden fixture asserting the new behaviour : packages/musaium-shared/src/observability/sentry-scrubber.test.ts
-const CANONICAL_HASH = 'b162fa86a5bf30df4ea79eba68e7e0531ec9a9d73d90fa69584b3950c3238e42';
+const CANONICAL_HASH = '2e024c11b1662f2898b96f902e1515116b41c2b0c6327b804ce2500135bac9b8';
 
 const REQUIRED_CANONICAL_EXPORTS = [
   'SENSITIVE_HEADER_REGEX',
