@@ -208,6 +208,33 @@ Evaluation order: [YesWeHack VDP](https://yeswehack.com/programs/vdp) (FR, EU da
 
 ---
 
+## 10. Post-launch operational cadence — Sentry P0
+
+> Codifies the recurrence-prevention cadence first sketched in [`SENTRY_P0_TRIAGE_2026-05-20.md`](./SENTRY_P0_TRIAGE_2026-05-20.md) §7. The pre-launch triage drives open P0 to zero; this section keeps it there after launch.
+
+**Owner:** Musaium founder (sole Sentry org owner + acting on-call). No delegation until a second on-call exists.
+
+**Scope query:** the §2 query of the triage doc (`is:unresolved level:fatal level:error environment:[prod,production,store-release,test-flight]`, 90-day window). **Rubric:** §3 of the triage doc (fix-now / close-resolved-by-build / close-wontfix / escalate).
+
+| Cadence | When | Action | Target |
+|---|---|---|---|
+| **Daily** | First 7 days post-launch (J+1 … J+7), 09:00 UTC | Run the scope query, triage every new P0 **same-day** | Open P0 back to 0 by EOD |
+| **Weekly** | Every Monday 09:00 UTC thereafter | Re-run the scope query, ratchet the count back to 0 | 0 unresolved P0 at end of session |
+| **Per release** | Within 24 h of every `museum-backend@*` / `museum-frontend@*` release tag deploy | Re-run the scope query against the new release label | No new P0 introduced by the release |
+
+**Same-day fix SLA:** a `fix-now` P0 (per §3) targets a patch within 48 h of detection, consistent with the triage-doc §3 rubric.
+
+**Audit trail.** Each cadence run leaves a durable record in two places:
+
+1. **Sentry itself** — every issue touched gets a verdict comment (`fix-now` / `resolved-by-build <sha>` / `wontfix`), per triage-doc §4 step 8. Sentry's activity log is the primary, tamper-evident trail.
+2. **Ops journal** — a one-line dated entry per run (date, query count pre → post, verdicts applied), appended to the founder's operational log. For a launch-blocker escalation, file a GitHub issue and cross-link it here.
+
+**Miss policy.** A skipped daily/weekly run is itself logged (date + reason). Two consecutive misses during the J+1 … J+7 window escalate to "re-baseline" — re-run the full pre-launch triage ([`SENTRY_P0_TRIAGE_2026-05-20.md`](./SENTRY_P0_TRIAGE_2026-05-20.md) §1–§5) before resuming the lighter cadence.
+
+**Review.** Fold this cadence into the annual runbook review (§9, April 2027): tune the daily window length and the weekly cap against the real P0 arrival rate observed in the first quarter post-launch.
+
+---
+
 ## Appendix A — `acknowledgement-template.md`
 
 ```

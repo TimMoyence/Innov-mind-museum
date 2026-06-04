@@ -106,4 +106,4 @@ After triage, schedule the post-launch cadence:
 - **Weekly** thereafter: Monday 09:00 UTC, run the §2 query, ratchet count back to 0.
 - **Per release**: every backend/mobile release tag, re-run §2 query within 24 h of deploy.
 
-Document this cadence in [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §"Post-launch operational cadence" (add the section if missing — TD-46 candidate).
+Document this cadence in [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §10 "Post-launch operational cadence" (codified 2026-06-05, TD-46 closed).
