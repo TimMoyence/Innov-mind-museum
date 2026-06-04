@@ -492,10 +492,6 @@ const env: AppEnv = {
       dailyBudgetCents: toNumber(process.env.COST_CB_DAILY_BUDGET_CENTS, 50_000),
       openDurationMs: toNumber(process.env.COST_CB_OPEN_DURATION_MS, 300_000),
     },
-    tenantRateLimit: {
-      capacity: toNumber(process.env.TENANT_RATE_LIMIT_CAPACITY, 60),
-      refillPerSecond: toNumber(process.env.TENANT_RATE_LIMIT_REFILL_PER_SEC, 1),
-    },
   },
   // Pre-launch V1: retention crons always-on; `env.cache?.enabled` upstream
   // gate (Redis required) is the skip path for tests/dev without Redis.

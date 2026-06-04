@@ -683,17 +683,6 @@ export interface AppEnv {
       /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
       openDurationMs: number;
     };
-    /**
-     * 2026-05-13 — per-tenant rate limiter (perennial design §11 D10 RE3).
-     * Primitive only — NOT wired V1 (single B2C tenant). Mounted Phase 2 (B2B
-     * onset). Token-bucket: bursts up to `capacity`, refill at `refillPerSecond`.
-     */
-    tenantRateLimit: {
-      /** Max tokens per bucket (burst capacity). */
-      capacity: number;
-      /** Tokens regenerated per second. 1.0 = one sustained req/s. */
-      refillPerSecond: number;
-    };
   };
   /** Wave C5 (D-C5) — Plausible funnel analytics. Both keys optional in dev/test. */
   plausible?: {

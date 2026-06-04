@@ -204,7 +204,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
         dailyBudgetCents: 50_000,
         openDurationMs: 300_000,
       },
-      tenantRateLimit: { capacity: 60, refillPerSecond: 1.0 },
     },
     retention: {
       cronPattern: '15 3 * * *',

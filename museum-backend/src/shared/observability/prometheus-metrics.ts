@@ -291,7 +291,6 @@ export const chatUrlHeadProbeTotal = new Counter({
  *     ADR-030 §Phase 2 LLM10 hardening + ADR-015 known gap)
  *   - llm_cost_circuit_breaker_state: state ∈ {closed, half_open, open}, Gauge 1/0
  *   - llm_cost_circuit_breaker_trips: tx to OPEN (cost spike or daily cap breach)
- *   - tenant_rate_limit_rejects: bounded by live tenant population (Phase 2 ≤ ~20 + anonymous)
  */
 export const guardrailBudgetRedisFallbackTotal = new Counter({
   name: 'musaium_guardrail_budget_redis_fallback_total',
@@ -337,13 +336,6 @@ export const llmCostEurPerHour = new Gauge({
   name: 'musaium_llm_cost_eur_per_hour',
   help: 'Rolling 1h LLM spend in EUR (V1 uses USD pricing as EUR proxy, ±10%). NOT for billing.',
   labelNames: ['tier', 'museum_id'] as const,
-  registers: [registry],
-});
-
-export const tenantRateLimitRejectsTotal = new Counter({
-  name: 'musaium_tenant_rate_limit_rejects_total',
-  help: 'Total per-tenant rate-limit rejects. Cardinality bounded by live tenant population.',
-  labelNames: ['tenant_id'] as const,
   registers: [registry],
 });
 

@@ -10,7 +10,6 @@ import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardr
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
 import { MicrosoftPresidioAdapter } from '@modules/chat/adapters/secondary/guardrails/presidio.adapter';
 import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
-import { TenantRateLimiter } from '@modules/chat/adapters/secondary/guardrails/tenant-rate-limiter';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
   TesseractOcrService,
@@ -80,7 +79,6 @@ import {
   llmCostCircuitBreakerTripsTotal,
   llmGuardCircuitBreakerState,
   llmGuardCircuitBreakerTripsTotal,
-  tenantRateLimitRejectsTotal,
 } from '@shared/observability/prometheus-metrics';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
@@ -328,11 +326,9 @@ export class ChatModule {
   private _guardrailCircuitBreaker: GuardrailCircuitBreaker | undefined;
   /**
    * Scalability primitives (perennial design §11). Cost breaker is
-   * process-scoped (in-memory rolling window). Tenant rate limiter is built but
-   * NOT wired V1 — Phase 2 (B2B onset) consumes it from the chat use-case.
+   * process-scoped (in-memory rolling window).
    */
   private _llmCostCircuitBreaker: LlmCostCircuitBreaker | undefined;
-  private _tenantRateLimiter: TenantRateLimiter | undefined;
   /**
    * Single-instance reference so health probe + use-case target the SAME
    * adapter — local metrics counters would dilute if we instantiated twice.
@@ -379,11 +375,6 @@ export class ChatModule {
   /** Perennial §11 D9. */
   getLlmCostCircuitBreaker(): LlmCostCircuitBreaker | undefined {
     return this._llmCostCircuitBreaker;
-  }
-
-  /** Perennial §11 D10. NOT wired V1 (single B2C tenant); ready Phase 2. */
-  getTenantRateLimiter(): TenantRateLimiter | undefined {
-    return this._tenantRateLimiter;
   }
 
   /**
@@ -729,14 +720,6 @@ export class ChatModule {
       isCoolingDown: frictionIsCoolingDown,
       reset: resetFriction,
     };
-
-    this._tenantRateLimiter = new TenantRateLimiter({
-      capacity: env.guardrails.tenantRateLimit.capacity,
-      refillPerSecond: env.guardrails.tenantRateLimit.refillPerSecond,
-      onReject: (tenantId) => {
-        tenantRateLimitRejectsTotal.inc({ tenant_id: tenantId });
-      },
-    });
 
     const knowledgeRouter = buildKnowledgeRouter(kbProvider, wsProvider, llmModel);
     const locationResolver = museumRepository
