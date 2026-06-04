@@ -12,6 +12,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Audit 360 — clôture dette HIGH→LOW (TD-63→70) + reprise post-crash (2026-06-04)
+
+Clôture du lot de dette issu du contrôle qualité 360 pré-launch, via `/team` UFR-022 fresh-context (workflow
+`wf_06958ad2-beb`, sérialisé par lot : red → green → review adversariale fraîche → commit). Une panne machine
+a interrompu le workflow à l'étape commit du dernier lot ; la reprise a re-vérifié l'état réel contre le dépôt
+(rien de perdu — la sérialisation par-lot laisse un état révocable), landé le travail déjà reviewé, et complété
+les trous (orphan-sweep TD-69, script seed, TD-68 jamais fait, tests TD-65 orphelins).
+
+#### Fixed
+
+- **TD-66** (`5912b5e`) — le snippet d'audit guardrail scrub la PII (email/phone → `[EMAIL]`/`[PHONE]`) AVANT
+  `slice(0,64)` ; le fingerprint sha256 hashe toujours le texte brut (dédup forensique préservé).
+- **TD-67** (`11981930`) — `ThreeStateCircuit.releaseProbe()` + flag `hasOutstandingProbe` : plus de lock-out
+  permanent si une exception fuit entre `canAttempt` et `recordOutcome`.
+- **TD-68** (`f7c7e801`) — le scrubber Sentry (`@musaium/shared`) scrub les query-strings sensibles des URL
+  imbriquées sous clé non-sensible dans `extra`/`request.data` (plus seulement `tags`/`request.url`). Hash de
+  parité ré-épinglé ; review adversariale fraîche 7/7.
+- **TD-65** (`d529450c` + `59790c79`) — `ForgotPasswordUseCase` n'émet plus de token reset à un compte
+  soft-deleted ; +3 garde-régression d'identité (changeEmail/register vérifiés déjà sûrs).
+- **TD-63** (`776215ec`) — job CI bloquant `guardrail-failclosed` (sans sidecar ni clé) qui gate `deploy-prod`.
+
+#### Removed
+
+- **TD-69** (`16a2932a` + `9bd785ed`) — enterrement du dead-code `TenantRateLimiter` (classe + câblage + bloc
+  env + métrique + fixture) et suppression de `scripts/seed-pilot-museums.sh` (vocabulaire « pilot » Louvre/
+  Orsay/Pompidou contredisant le North Star « 0 musée démarché ») ; P0.C4 du ROADMAP repointé sur le seed réel.
+
+#### Docs / honnêteté
+
+- **TD-70** (`776215ec`) — `ROADMAP_PRODUCT.md` acte explicitement que Stryker est DÉSARMÉ (kill-rate inconnu).
+- **TD-64** — clos **faux positif** : `INSERT…RETURNING` renvoie les rows seules (le tuple `[rows,count]` est
+  réservé à UPDATE/DELETE) ; `artKeyword` + résidu leads/support/review étaient déjà corrects.
+- **TD-71** (ouvert) — résidu surfacé par la review TD-68 : `request.query_string` déclaré mais jamais scrubé.
+
 ### Hexagonal boundaries — garde-fou ré-armé (domain) + sentinel indépendant (ARCH-01/ARCH-02 / TD-62 W1) (2026-06-04)
 
 Run `/team` UFR-022 fresh-context (`2026-06-04-hexagonal-boundaries-enforcement`), wave 1. Reviewer APPROVED
