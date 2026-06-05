@@ -123,6 +123,12 @@
       "reason": "C3 RGPD (PR #301, 2026-05-27) — asserts the quota_exceeded event is emitted WITHOUT clientIp/userAgent (RGPD anonymisation). Same Express-smoke pattern as the 3 sibling funnel-* exemptions: createApp() bare harness + spy-injected telemetry sink (require('@modules/telemetry')), no Postgres/Redis/outbound HTTP. The cost-guard middleware path is the boundary; persistence covered by funnel-event repository tests.",
       "approved_by": "2026-05-27 PR #301 (C3 funnel RGPD)",
       "date": "2026-05-27"
+    },
+    {
+      "path": "museum-backend/tests/integration/middleware/request-decompression-roundtrip.test.ts",
+      "reason": "weak-network W1-GZIP-04 — gzipped-request round-trip through the REAL createApp() middleware pipeline via createRouteTestApp() + supertest; asserts the decompression cap returns 413 over the limit. Bare Express smoke, no Postgres/Redis/outbound fetch — same precedent as rate-limit-zod-400-no-bump.integration.test.ts and chat-api.smoke.integration.test.ts (createRouteTestApp harness, no DB path required).",
+      "approved_by": "2026-06-05 PR #310 (weak-network W1 landing)",
+      "date": "2026-06-05"
     }
   ]
 }
