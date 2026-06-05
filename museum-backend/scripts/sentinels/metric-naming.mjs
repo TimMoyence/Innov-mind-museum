@@ -15,7 +15,7 @@
  *          - `musaium_rerank_latency_ms` (F1 known debt — mis-united duration);
  *          - `llm_cost_user_daily_usd` (WAVE 6 C4 — a monetary AMOUNT, not a
  *            duration; `_usd` is its legitimate base unit, NOT base-unit debt).
- *   Inventory freeze — the exact 45 (type,name) pairs are pinned.
+ *   Inventory freeze — the exact 44 (type,name) pairs are pinned.
  *   Prefix ratchet — `musaium_`-prefixed count must not exceed 16 (F2: nudge
  *        new metrics toward the bare-prefix target convention).
  *
@@ -38,7 +38,7 @@ const SRC = resolve(__dirname, '../../src/shared/observability/prometheus-metric
  */
 const NON_SECONDS_HISTOGRAMS = new Set(['musaium_rerank_latency_ms', 'llm_cost_user_daily_usd']);
 
-/** Audit §2 frozen inventory: 45 (type,name) pairs, post-W1+W3+W6 merge. */
+/** Audit §2 frozen inventory: 44 (type,name) pairs, post-W1+W3+W6 merge; -1 = TD-69 buried TenantRateLimiter (musaium_tenant_rate_limit_rejects_total). */
 const FROZEN = [
   ['Counter', 'http_requests_total'],
   ['Histogram', 'http_request_duration_seconds'],
@@ -73,7 +73,6 @@ const FROZEN = [
   ['Gauge', 'musaium_llm_cost_circuit_breaker_state'],
   ['Counter', 'musaium_llm_cost_circuit_breaker_trips_total'],
   ['Gauge', 'musaium_llm_cost_eur_per_hour'],
-  ['Counter', 'musaium_tenant_rate_limit_rejects_total'],
   ['Counter', 'musaium_guardrail_decisions_total'],
   ['Counter', 'musaium_guardrail_category_blocks_total'],
   ['Counter', 'musaium_guardrail_pii_redacted_total'],
