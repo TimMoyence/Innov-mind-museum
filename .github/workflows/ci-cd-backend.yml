@@ -530,7 +530,15 @@ jobs:
       needs.changes.outputs.ai == 'true' ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 10 tests/ai/*.ai.test.ts suites run serially (--runInBand), each hitting the
+    # live OpenAI provider (~20-90s/suite). The old 5-min ceiling cancelled a
+    # *progressing* run mid-suite (PR #310: geo-matrix + text-generation passed,
+    # then cancelled) — and continue-on-error masks a step *failure*, NOT a timeout
+    # cancellation, so the advisory job went red and blocked merge. Widen to let it
+    # complete; 25min matches the other live-provider backend jobs. (Deeper fix
+    # tracked: ai-tests is advisory-by-design and should not sit in the required
+    # check list — guardrail-failclosed is the real deterministic hard gate.)
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: museum-backend
