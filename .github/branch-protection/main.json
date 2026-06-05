@@ -19,7 +19,7 @@
     "strict": true,
     "always": [
       "quality",
-      "ai-tests",
+      "guardrail-failclosed",
       "CodeQL (javascript-typescript)",
       "semgrep",
       "sentinel-mirror",
