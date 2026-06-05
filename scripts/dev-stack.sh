@@ -22,10 +22,17 @@ BACKEND="$ROOT/museum-backend"
 FRONTEND="$ROOT/museum-frontend"
 IOS_WORKSPACE="$FRONTEND/ios/Musaium.xcworkspace"
 HEALTH_URL="http://localhost:3000/api/health"
-# 75s, not 30s : after a bake-key rebuild the backend boots via ts-node cold
-# (fresh pnpm install layer + first TS compile + OTel/Sentry init) which can
-# exceed 30s → false "never became healthy". A warm restart is well under 30s.
-HEALTH_TIMEOUT=75
+# A warm restart answers /api/health in ~1-2s (node process kept running), so a
+# tight ceiling here makes a genuinely hung warm container fail fast — good DX.
+# A COLD boot is different : right after a bake-key rebuild the backend boots via
+# ts-node WITHOUT a transpile cache and type-checks the whole project on first
+# require (tsconfig "files": true → src+tests+scripts), so dataSource.initialize()
+# alone compiled entities + 64 migrations in ~86s on a dev laptop (total boot
+# ~114s, measured 2026-06-01). 75s under-shot that → false "never became healthy".
+# So : keep the tight warm ceiling, but widen it only on the rebuild path below.
+HEALTH_TIMEOUT_WARM=75
+HEALTH_TIMEOUT_COLD=180
+HEALTH_TIMEOUT=$HEALTH_TIMEOUT_WARM
 DOCKER_COMPOSE="docker compose -f $BACKEND/docker-compose.dev.yml"
 
 # Color helpers (only if stdout is a TTY)
@@ -132,6 +139,10 @@ else
   OLD_BACKEND_ANON_VOLUMES=$(docker inspect dev-backend \
     --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name}}{{end}}{{end}}' \
     2>/dev/null | grep -E '^[a-f0-9]{64}$' || true)
+
+  # Cold boot ahead : the freshly rebuilt image has no ts-node transpile cache,
+  # so widen the health ceiling (see HEALTH_TIMEOUT_COLD note above).
+  HEALTH_TIMEOUT=$HEALTH_TIMEOUT_COLD
 
   $DOCKER_COMPOSE build --build-arg "BAKE_KEY=$CURRENT_KEY" backend
   $DOCKER_COMPOSE up -d --force-recreate --renew-anon-volumes backend
