@@ -247,7 +247,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-22 — 14 chat ports single-impl à inliner (suite TD-8)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12 P1-3)
+- [x] **Statut** : **RÉSOLU verified-moot 2026-06-05** (créé 2026-05-17, audit-2026-05-12 P1-3). Re-vérification de la méthodologie ADR-058 step 1 contre l'arbre vivant : **0 des 14 ports n'est inlinable** sous la règle de l'ADR (single-impl ET no test-swap) — chacun a gagné un 2e impl prod (multi-provider, S3-vs-Local par `env.storage.driver`, Regex-vs-Disabled) ou un test-fake load-bearing (chat-orchestrator: 10) depuis le snapshot 2026-05-17. La prémisse « ~700 LOC d'indirection » est périmée : les abstractions portent leur poids. Détail per-port : [`ADR-058` Addendum 2026-06-05](adr/ADR-058-selective-hexagonal-ports-policy.md#addendum-2026-06-05--re-verification-the-inline-list-is-superseded-td-22). `guardrail-provider` reste gated ADR-048 (suivi là-bas). Faux-positif honnête, pas une esquive — appliquer ADR-058 correctement = inline zéro.
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/domain/ports/audio-storage.port.ts

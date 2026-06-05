@@ -152,3 +152,28 @@ Each port inline is one independent commit; rollback granularity = one port at a
 ---
 
 **Honesty caveat (UFR-013):** The "~2000 LOC of indirection" figure comes from the audit-2026-05-12-raw aggregate count of port interface files + barrel re-exports + composition-root wiring lines. It is an estimate of removable code, not a measured benchmark. The 11 ports listed as candidates were enumerated from the chat module's port directory at audit time; if a second impl has shipped between audit and ADR adoption, the candidate list must be re-verified per the "Inlining methodology" step 1 before any inline commit.
+
+---
+
+## Addendum 2026-06-05 — re-verification: the inline list is superseded (TD-22)
+
+The honesty caveat above mandated re-running "Inlining methodology" step 1 before any inline. Executed 2026-06-05 against the live tree (`grep -rn "implements <PortName>" src/` + `tests/`). **Result: ZERO of the 14 chat ports are inlinable under this ADR's own rule** (justified iff ≥2 prod impls OR concretely-used test-swap). Every candidate gained a second production implementation or a load-bearing test fake between the 2026-05-17 audit snapshot and now:
+
+| Port | Impls / swap (verified 2026-06-05) | Verdict |
+|---|---|---|
+| `web-search` | 7 prod impls | KEEP (rule a) |
+| `knowledge-base` | 4 prod impls | KEEP (rule a) |
+| `image-source` | 3 prod impls (musaium-catalogue / wikimedia / unsplash) | KEEP (rule a) |
+| `embeddings` | 2 prod impls (`siglip-onnx` + `replicate`) | KEEP (rule a) |
+| `reranker` | 2 prod impls (`null-reranker` + `bge-reranker-v2-m3`) + test fake | KEEP (rule a/b) |
+| `wikidata-kb-dump` | 2 impls + test fake | KEEP (rule a/b) |
+| `audio-storage` | 2 prod impls (`S3CompatibleAudioStorage` + `LocalAudioStorage`, env-selected) | KEEP (rule a) |
+| `image-storage` | 2 prod impls (`S3CompatibleImageStorage` + `LocalImageStorage`, `buildImageStorage()` switches on `env.storage.driver`) | KEEP (rule a) |
+| `pii-sanitizer` | 1 prod impl (`RegexPiiSanitizer`, always wired `chat-module.ts:874`) + concretely-used test seam (`makePiiSanitizer` injected, `chat-message-service.test.ts:1110`). NB: the `DisabledPiiSanitizer` fallback at `chat-message.service.ts:190` is a **dead branch** — never reached in the wired graph (corrected after fresh-verify) | KEEP (rule b) |
+| `audio-transcriber` | 2 prod impls (`OpenAiAudioTranscriber` + `DisabledAudioTranscriber` wired `chat-message.service.ts:185`) + test fakes | KEEP (rule a/b) |
+| `tts` | 2 prod impls (`OpenAi` + `Disabled`, env-gated `chat-module.ts:683`) + `FakeTextToSpeechService` | KEEP (rule a/b) |
+| `ocr` | 1 prod impl (`TesseractOcrService`; `DisabledOcrService` is a type-union member, not instantiated in prod) + `FakeOcrService` (used in `chat-service-ocr-guard.test.ts`) | KEEP (rule b) |
+| `chat-orchestrator` | single prod impl (`LangChainChatOrchestrator`) + **~11** test-double sites (`ThrowingOrchestrator`/`FakeOrchestrator` injected) | KEEP (rule b, heavily) |
+| `guardrail-provider` | 2 prod impls (`LLMGuardAdapter` + `MicrosoftPresidioAdapter`, env-gated `buildGuardrailProvider()` `chat-module.ts:472`) — independently justified now; the inline was historically gated on ADR-048 | KEEP (rule a) |
+
+**Conclusion:** the "~2000 LOC of indirection to remove" premise is no longer valid — the abstractions are now load-bearing (multi-provider strategies for search/embeddings/rerank/image-source/guardrail, S3-vs-local storage drivers, env-gated OpenAI-vs-Disabled tts/transcriber, and concretely-used test swaps for pii-sanitizer/ocr/orchestrator/wikidata-kb-dump). Applying this ADR's rule correctly yields **inline nothing**. The chat-ports inline list (lines 52–66) is **superseded**; the port-justification *rule* itself (Decision §) remains valid for evaluating future ports. **TD-22 closes as verified-moot** (no inlinable ports), not as deferred work. The `guardrail-provider` inline remains gated on ADR-048 and is tracked there.
