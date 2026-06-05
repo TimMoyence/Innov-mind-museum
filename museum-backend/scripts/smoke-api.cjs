@@ -389,7 +389,18 @@ async function main() {
   //
   // Audio scope also pre-granted in case TTS adds its own gate in V1.x —
   // cheap belt-and-suspenders, no downside if unused.
-  for (const scope of ['third_party_ai_text_openai', 'third_party_ai_audio_openai']) {
+  //
+  // Image scope (`third_party_ai_image_openai`) is REQUIRED before POST
+  // /api/chat/compare: the visual-similarity endpoint sends the photo to the
+  // third-party image AI (provider-resolver.ts:69), and consent-gate enforcement
+  // returns 403 `consent_required` without it. Added 2026-06-05 after the prod
+  // smoke failed on compare (scope was introduced with the GDPR consent work
+  // 71f103b3/b2a2c53d but the smoke was never updated to mirror the user flow).
+  for (const scope of [
+    'third_party_ai_text_openai',
+    'third_party_ai_audio_openai',
+    'third_party_ai_image_openai',
+  ]) {
     await fetchJson({
       baseUrl,
       path: '/api/auth/consent',
@@ -400,7 +411,7 @@ async function main() {
       expected: 201,
     });
   }
-  console.log('[smoke:api] consent grants OK (text + audio)');
+  console.log('[smoke:api] consent grants OK (text + audio + image)');
 
   const created = await fetchJson({
     baseUrl,
