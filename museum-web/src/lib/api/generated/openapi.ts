@@ -2038,10 +2038,16 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Return today's curated artwork */
+    /**
+     * Return today's curated artwork
+     * @description Returns a single deterministic artwork for the current date. The funFact field is localized to the requested locale (query locale then Accept-Language, falling back to English).
+     */
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          /** @description Locale for the funFact field. Falls back to Accept-Language, then English. */
+          locale?: 'en' | 'fr' | 'es' | 'de' | 'it' | 'ja' | 'zh' | 'ar';
+        };
         header?: never;
         path?: never;
         cookie?: never;
@@ -2980,6 +2986,8 @@ export interface paths {
           content: {
             'application/json': {
               museums: {
+                /** @description DB primary key — present only when source = 'local' (OSM entries have no DB row). */
+                id?: number;
                 name: string;
                 address?: string | null;
                 latitude: number;
@@ -4032,6 +4040,116 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/museums/{id}/enrichment': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get cached museum enrichment (Wikidata + OSM + rich JSONB fields) */
+    get: {
+      parameters: {
+        query: {
+          /** @description BCP-47 locale, e.g. fr or en */
+          locale: string;
+        };
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Cached enrichment is ready. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentReady'];
+          };
+        };
+        /** @description Enrichment refresh queued — poll /enrichment/status with the returned jobId. */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentPending'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/museums/{id}/enrichment/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Poll the status of a queued museum enrichment refresh */
+    get: {
+      parameters: {
+        query: {
+          /** @description BCP-47 locale, e.g. fr or en */
+          locale: string;
+          /** @description Job id returned by a prior 202 enrichment response */
+          jobId: string;
+        };
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Cached enrichment is ready. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentReady'];
+          };
+        };
+        /** @description Enrichment refresh still pending. */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentPending'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4917,6 +5035,63 @@ export interface components {
       locale?: 'fr' | 'en';
       /** @description Optional list of Wikidata museum QIDs scoping the kNN search to the selected museums (R4). */
       museumQids?: string[];
+    };
+    ParsedOpeningDay: {
+      /** @enum {string} */
+      day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+      /** @description HH:mm local time, null when closed that day */
+      opens: string | null;
+      /** @description HH:mm local time, null when closed that day */
+      closes: string | null;
+    };
+    ParsedOpeningHours: {
+      /** @description Original OSM opening_hours value */
+      raw: string;
+      /** @enum {string} */
+      status: 'open' | 'closed' | 'unknown';
+      /** @enum {string} */
+      statusReason: 'currently_open' | 'currently_closed' | 'unparseable' | 'no_data';
+      closesAtLocal: string | null;
+      opensAtLocal: string | null;
+      weekly: components['schemas']['ParsedOpeningDay'][];
+    };
+    MuseumEnrichmentView: {
+      museumId: number;
+      locale: string;
+      summary: string | null;
+      wikidataQid: string | null;
+      website: string | null;
+      phone: string | null;
+      imageUrl: string | null;
+      openingHours: components['schemas']['ParsedOpeningHours'] | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      admissionFees: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      collections: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      currentExhibitions: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      accessibility: {
+        [key: string]: unknown;
+      } | null;
+      /** Format: date-time */
+      fetchedAt: string;
+    };
+    MuseumEnrichmentReady: {
+      /** @enum {string} */
+      status: 'ready';
+      data: components['schemas']['MuseumEnrichmentView'];
+    };
+    MuseumEnrichmentPending: {
+      /** @enum {string} */
+      status: 'pending';
+      jobId: string;
     };
   };
   responses: {
