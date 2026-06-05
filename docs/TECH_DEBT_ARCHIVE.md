@@ -1434,3 +1434,16 @@
 - [x] **Statut** : **résolu 2026-06-04** (commit `fb2d8640`, sur `dev` non poussé). Sévérité MEDIUM (fuite obs). Surfacé par la review adversariale de [[TD-68]] ; review fraîche APPROVED 8/8 (incl. durcissement `?`-initial recommandé).
 - **Résolution livrée** : `scrubRequest` (`packages/musaium-shared/src/observability/sentry-scrubber.ts`) applique `scrubUrl` à `query_string` — strip d'un `?` initial (défensif : sinon `?token=x` keyerait sur `?token`, hors `SENSITIVE_QUERY_KEYS` → fuite), wrap en query nue pour réutiliser la redaction par clé sensible, puis strip du `?` synthétique. No-op sans param sensible. +4 tests shared, dist rebuild, `CANONICAL_HASH` ré-épinglé (`2e024c11…`). Vérifié shared 39/39, BE 35/35, web 5/5, parité exit 0.
 - **Statut (origine)** : ouvert, surfacé par la review de TD-68 — `request.query_string` (champ dédié) échappait au scrub (seuls headers/data/url traités).
+
+---
+
+## Archivé 2026-06-05 (night-run dette — fresh-context red→green→review)
+
+Série autonome de 7 dettes (UFR-008). Chaque dette code = red→green→review adversarial fresh, zéro bypass hook. Détail commits + reviews : `artifacts/2026-06-05-night-run-report.html`. TD-40 reste OUVERT dans `docs/TECH_DEBT.md` (différé, scope corrigé).
+
+- **TD-46** (`440494fd`) — `VDP_RUNBOOK.md` §10 « Post-launch operational cadence Sentry P0 » (daily J+1..J+7 09:00 UTC, weekly Mon, per-release 24 h, owner, audit-trail, miss-policy). Doc-only.
+- **TD-27** (`f4331705`) — restore-drill mensuel vérifie la chaîne de hash `audit_logs` post-restore (SOC2 CC7.3). Câblage du vérificateur canonique `pnpm audit-chain:verify` (ts-node) après `pg_restore`, **PAS** un `.cjs` redondant (dériverait du sérialiseur v1/v2 → faux-INTACT). + test de contenu de workflow. Reviewer fresh APPROVED. Preuve CLI : exit 0 (vide) / exit 1 (rompu).
+- **TD-48** (`f6d96c06`) — validateur W3C Baggage all-or-nothing dans `trace-propagation.middleware.ts` (BE). Rejet silencieux des baggage malformés. Parseur linéaire (scan code-point, pas de regex sonar-flaggée). Review fresh 2-passes (sur-rejet OWS-avant-`;` chopé + corrigé). 9/9 tests.
+- **TD-47** (`75a8db25`) — `museum-web/src/lib/api.ts` forwarde `sentry-trace`/`baggage` (Sentry.getTraceData v10) sur happy-path RSC. Review fresh APPROVED (double-injection client bénigne vérifiée dans le SDK). 25/25 tests.
+- **TD-34** (`79723d0d`) — 3 flows Maestro stale CI-skippés supprimés (UFR-016 ; paywall/voice supersédés, RTL = gap doc), 3 utils screenshot gardés + `maestro/README.md`, inventaires de test corrigés + citation roadmap pendante réparée. Déviation assumée delete-vs-relocate (sharder du non-vérifié casserait Maestro push-main).
+- **TD-22** (`1843ce68`) — verified-moot : 0 des 14 ports chat inlinable sous ADR-058 (tous multi-impl prod ou test-swap depuis 2026-05-17) ; addendum ADR-058 superseder la liste inline. Vérifié par agent adversarial frais (2 justifications corrigées).

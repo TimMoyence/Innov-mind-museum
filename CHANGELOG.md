@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Night-run debt closure — TD-46/27/47/48/34/22 + TD-40 deferred (2026-06-05)
+
+Série autonome (fresh-context red→green→review adversarial par dette, zéro bypass hook).
+
+#### Fixed / Security
+
+- **TD-48** (`f6d96c06`) — validation W3C Baggage dans le middleware de trace-propagation BE : un `baggage` malformé (control chars, smuggling de newline, espaces internes, clé vide, >8 KB, >180 membres) est désormais rejeté silencieusement au lieu d'être attaché verbatim à l'attribut de span `musaium.parent.baggage`. Review fresh 2-passes (a chopé un sur-rejet OWS-avant-`;` corrigé) + parseur linéaire (scan code-point, pas de regex ReDoS-flaggée).
+- **TD-47** (`75a8db25`) — `museum-web/src/lib/api.ts` `request()` forwarde `sentry-trace`/`baggage` via `Sentry.getTraceData()` sur le happy-path RSC server-rendered (corrélation BE↔FE ; double-injection client bénigne, le SDK préserve un header pré-existant).
+- **TD-27** (`f4331705`) — le restore-drill mensuel vérifie l'intégrité de la chaîne de hash `audit_logs` post-restore (SOC2 CC7.3) : vérificateur canonique `pnpm audit-chain:verify` câblé après `pg_restore`, pas un `.cjs` redondant qui dériverait du sérialiseur v1/v2.
+
+#### Changed
+
+- **TD-46** (`440494fd`) — `VDP_RUNBOOK.md` §10 codifie la cadence opérationnelle post-launch Sentry P0 (daily J+1..J+7, weekly Mon, per-release 24 h).
+- **TD-34** (`79723d0d`) — 3 flows Maestro stale silencieusement CI-skippés supprimés (paywall/voice supersédés par `.maestro/`, RTL/Arabe = gap e2e documenté) ; `maestro/` (sans dot) clarifié comme outillage screenshot dev/release (pas de couverture CI) via `maestro/README.md` + correction des inventaires de test.
+- **TD-22** (`1843ce68`) — verified-moot : re-vérification de la méthodologie ADR-058 → **0 des 14 ports chat n'est inlinable** (chacun multi-impl prod ou test-swap concrètement utilisé depuis 2026-05-17) ; liste d'inline de l'ADR-058 superseded (addendum). Vérifié par un agent adversarial frais.
+
+#### Deferred
+
+- **TD-40** (`5a5435f6`) — `noUncheckedIndexedAccess` BE : scope réel **mesuré 921 sites** (146 src + 771 tests + 4 scripts), pas 35-50 (~18×). All-or-nothing (le `tsconfig.json` compile `tests/`) → impossible d'activer « par sous-lots ». Différé en effort dédié multi-session ; reste **OUVERT** avec scope corrigé.
+
 ### Backlog debt sweep — sécurité prompt + cluster geo (2026-06-04)
 
 Lot de dettes backlog traitées en série (triage actionnable + red→green→review fresh sur le code applicatif).

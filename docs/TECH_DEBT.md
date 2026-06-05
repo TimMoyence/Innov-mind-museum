@@ -305,7 +305,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-27 — Audit chain post-restore verification manquante
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw R25 §1)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`f4331705`) — vérificateur de chaîne canonique (`pnpm audit-chain:verify`) câblé dans le restore-drill après pg_restore + test de workflow. (orig créé 2026-05-17, audit-2026-05-12-raw R25 §1)
 - **Référence code** : R25 §1 audit-2026-05-12-raw. Monthly drill workflow only runs `count(audit_logs)` smoke, no `audit-chain verify`.
 - **Symptôme** : RPO bounded at 24h (no WAL archiving). Restore drill ne vérifie pas l'intégrité de la chaîne hash post-restore.
 - **Sprint d'origine** : audit-2026-05-12-raw R25.
@@ -362,7 +362,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-34 — Maestro path discrepancy
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #1 ; compte corrigé 4→6 le 2026-05-21, mobile verdict)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`79723d0d`) — 3 flows stale supprimés (UFR-016 ; paywall/voice supersédés, RTL = gap documenté), 3 utils screenshot gardés + `maestro/README.md`, docs corrigées. Déviation assumée : delete plutôt que relocate+shard (sharder du 17-mai non-vérifié casserait le Maestro push-main). (orig créé 2026-05-17, audit-360 S3 follow-up #1)
 - **Référence code** : `museum-frontend/maestro/` (sans dot) contient **6** flows (`capture-screens.yaml`, `login-and-capture.yaml`, `paywall-quota-exhaustion.yaml`, `rtl-switch-ar.yaml`, `screenshots.yaml`, `voice-record-and-tts.yaml`) — aucun n'apparaît dans `museum-frontend/.maestro/shards.json:1-49` (avec dot), que lit la CI.
 - **Symptôme** : flows ajoutés à `maestro/` (sans dot) ne sont jamais picked up par CI qui lit `.maestro/shards.json`. Silent skip = false sense of coverage.
 - **Sprint d'origine** : audit-360 S3 follow-up #1.
@@ -564,7 +564,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-46 — Post-launch operational cadence Sentry P0 (manque section dans VDP_RUNBOOK)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster C TC2 / `docs/operations/SENTRY_P0_TRIAGE_2026-05-20.md` §7)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`440494fd`) — §10 « Post-launch operational cadence » ajoutée au VDP_RUNBOOK. (orig créé 2026-05-17, audit-360 W4 cluster C TC2)
 - **Référence code** : `docs/operations/VDP_RUNBOOK.md` (aucune section "Post-launch operational cadence" aujourd'hui).
 - **Symptôme** : le triage Sentry P0 pré-launch est documenté (cluster C TC2), mais le **rythme post-launch** (daily 09:00 UTC J+1..J+7, weekly Mon 09:00 UTC ensuite, per-release dans les 24 h) n'est pas codifié dans le runbook canonical.
 - **Sprint d'origine** : audit-360 W4.
@@ -577,7 +577,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 > **Re-scopé 2026-05-21 (web + observability verdicts, P2 informational)** : le symptôme original "museum-web ne dispose pas d'init Sentry avec tracePropagationTargets" est **FAUX en code** — `museum-web/instrumentation-client.ts:12`, `sentry.server.config.ts:12` et `sentry.edge.config.ts:12` portent tous `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` ; `museum-web/src/instrumentation.ts` existe. Fixé par le run `2026-05-19-sentry-otel-cleanup` (TD-SNXT-01..04 fermés). **Résiduel réel (plus étroit)** : le SDK auto-instrumente les error paths + le `fetch` global patché, MAIS le wrapper `fetch` écrit à la main dans `api.ts` (+ le `apiPut` local, cf. gotcha CLAUDE.md "apiPut n'existe pas") ne forward PAS `sentry-trace`/`baggage` pour la corrélation **happy-path** dans les RSC server-rendered.
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 ; re-scopé 2026-05-21 — init shippé, résiduel = RSC happy-path)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`75a8db25`) — `Sentry.getTraceData()` forwardé dans `request()` de `api.ts` (sentry-trace/baggage sur happy-path RSC). (orig créé 2026-05-17, audit-360 W4 cluster B TB3)
 - **Référence code** : `museum-web/src/lib/api.ts` (wrapper fetch RSC + `apiPut` local dans `admin/museums/[id]/branding/page.tsx`) — ne forward pas `sentry-trace`/`baggage`. Init Sentry vérifié shippé : `instrumentation-client.ts:12`, `sentry.server.config.ts:12`.
 - **Symptôme** : sur le happy path (pas d'erreur), les requêtes admin web RSC vers le backend via le wrapper `api.ts` n'apparaissent pas dans la trace corrélée. Les error paths + le `fetch` global patché sont déjà couverts.
 - **Sprint d'origine** : audit-360 W4 (cluster B).
@@ -588,7 +588,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-48 — Baggage header validation (BE trace-propagation middleware accepte raw)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 / `docs/observability/DISTRIBUTED_TRACING.md` §7)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`f6d96c06`) — validateur W3C baggage all-or-nothing (rejet silencieux des malformés). (orig créé 2026-05-17, audit-360 W4 cluster B TB3)
 - **Référence code** : `museum-backend/src/shared/observability/trace-propagation.middleware.ts` (attache `baggage` raw, tronqué 1 KB).
 - **Symptôme** : un FE compromis ou un client malveillant peut injecter un baggage W3C-invalide. Cardinality bornée (1 KB), mais l'attribut span pollué peut tromper un dashboard.
 - **Sprint d'origine** : audit-360 W4 (cluster B).
