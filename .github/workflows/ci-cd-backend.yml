@@ -1118,13 +1118,22 @@ jobs:
             STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
-            # Tag whatever :latest currently is on this host as :previous BEFORE pulling.
-            # If :latest doesn't exist yet (first deploy), skip silently.
-            if docker image inspect "${IMAGE_REF}:latest" >/dev/null 2>&1; then
-              docker tag "${IMAGE_REF}:latest" "${IMAGE_REF}:previous"
-              echo "[pre-deploy] tagged ${IMAGE_REF}:latest → :previous"
+            # Capture the rollback TARGET = the IMAGE_TAG currently deployed.
+            # The prod compose pins `image: ...museum-backend:${IMAGE_TAG}` from
+            # /srv/museum/.env (SHA-pinned, NEVER :latest — see the 2026-05-13
+            # crash-loop note in the deploy step). So the rollback target is the
+            # specific SHA in .env right now, captured BEFORE the deploy step
+            # overwrites it. The old :latest→:previous retag scheme never worked
+            # under SHA-pinning (:latest is never present locally), which is why
+            # auto-rollback FATAL-ed on 2026-06-05 — rollback.sh now restores this
+            # tag into .env instead. Defensive: must not trip `set -e`.
+            PREV_TAG="$(sudo grep -E '^IMAGE_TAG=' /srv/museum/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '[:space:]' || true)"
+            if [ -n "${PREV_TAG}" ]; then
+              echo "${PREV_TAG}" > "${STATE_DIR}/previous-image-tag.txt"
+              echo "[pre-deploy] captured rollback target IMAGE_TAG=${PREV_TAG}"
             else
-              echo "[pre-deploy] no existing :latest on host — first deploy, skipping :previous tag"
+              rm -f "${STATE_DIR}/previous-image-tag.txt"
+              echo "[pre-deploy] WARN — no IMAGE_TAG in /srv/museum/.env; rollback target unavailable (first deploy?)"
             fi
 
             # Capture pre-run migration count for the rollback delta.

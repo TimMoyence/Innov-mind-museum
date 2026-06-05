@@ -6,14 +6,16 @@
 # failing deploy. Called with:
 #   rollback.sh <compose-file> <service-name> <image-ref>
 #
-# State directory /srv/museum/.rollback/<service> holds:
-#   - applied-count.txt      # number of migrations newly applied by this deploy
-#   - previous-image.txt     # fully-qualified image ref tagged :previous before pull
+# State directory ${HOME}/.museum-rollback/<service> holds:
+#   - pre-count.txt              # migration count captured before this deploy
+#   - applied-count.txt          # number of migrations newly applied by this deploy
+#   - previous-image-tag.txt     # IMAGE_TAG (commit SHA) live before this deploy —
+#                                # the SHA-pinned rollback target restored into .env
 #
 # Exit codes:
 #   0  rollback succeeded
 #   42 migration revert failed
-#   43 image retag / restart failed
+#   43 image-tag restore / restart failed
 #   44 post-rollback healthcheck failed
 #
 set -u
@@ -87,16 +89,33 @@ else
   echo "[rollback] no new migrations to revert (code-only rollback)"
 fi
 
-# ─── 2. Retag :previous → :latest and restart the service ──────────────────
-echo "[rollback] retagging ${IMAGE_REF}:previous → ${IMAGE_REF}:latest"
-docker tag "${IMAGE_REF}:previous" "${IMAGE_REF}:latest"
-rc=$?
-if [ "${rc}" -ne 0 ]; then
-  echo "[rollback] FATAL — could not retag :previous (image missing?)"
+# ─── 2. Restore the previous IMAGE_TAG and restart the service ─────────────
+# SHA-pinned scheme: the prod compose references ...museum-backend:${IMAGE_TAG}
+# from /srv/museum/.env (NEVER :latest). The pre-deploy step captured the tag
+# that was live before this deploy into previous-image-tag.txt. Restore it into
+# .env and recreate the container so it boots the previous SHA. (The old
+# :previous→:latest retag never worked under SHA-pinning — it FATAL-ed on
+# 2026-06-05 because :latest is never present locally.)
+ENV_FILE=/srv/museum/.env
+PREV_TAG_FILE="${STATE_DIR}/previous-image-tag.txt"
+PREV_TAG=""
+if [ -f "${PREV_TAG_FILE}" ]; then
+  PREV_TAG="$(cat "${PREV_TAG_FILE}" | tr -d '[:space:]')"
+fi
+if [ -z "${PREV_TAG}" ]; then
+  echo "[rollback] FATAL — no previous IMAGE_TAG captured (previous-image-tag.txt missing/empty); cannot roll code back"
   exit 43
 fi
 
-echo "[rollback] recreating ${SERVICE}"
+echo "[rollback] restoring IMAGE_TAG=${PREV_TAG} in ${ENV_FILE}"
+if sudo grep -qE '^IMAGE_TAG=' "${ENV_FILE}" 2>/dev/null; then
+  sudo sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREV_TAG}/" "${ENV_FILE}"
+else
+  echo "IMAGE_TAG=${PREV_TAG}" | sudo tee -a "${ENV_FILE}" >/dev/null
+fi
+
+echo "[rollback] recreating ${SERVICE} on ${PREV_TAG}"
+export IMAGE_TAG="${PREV_TAG}"
 docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --no-deps --timeout 30 "${SERVICE}"
 rc=$?
 if [ "${rc}" -ne 0 ]; then
