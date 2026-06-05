@@ -117,16 +117,15 @@ maestro test .maestro/auth-register-happy.yaml   # Phase 1 — written tonight
 | `support-ticket-create.yaml` | 🟡 | — | Settings → Support → fill form → submit → success |
 | `cert-pinning-smoke.yaml` | 🟡 | — | Cert-pinning runtime smoke |
 
-### SECONDARY / DEMO (`museum-frontend/maestro/` — 6 flows, NOT counted by UFR-021 sentinel)
+### MANUAL SCREENSHOT TOOLING (`museum-frontend/maestro/` — 3 dev/release utils, NOT CI coverage; see `maestro/README.md`)
 
 | Flow | Status | Last run | Notes |
 |---|---|---|---|
-| `login-and-capture.yaml` | 🟡 | — | Login → home → capture screenshots |
-| `capture-screens.yaml` | 🟡 | — | Navigate all screens → capture for docs (not a regression test) |
-| `voice-record-and-tts.yaml` | 🟡 | — | Record audio → verify TTS response |
-| `paywall-quota-exhaustion.yaml` | 🟡 | — | Exhaust quota → paywall modal |
-| `rtl-switch-ar.yaml` | 🟡 | — | Locale switch to AR → verify RTL rendering |
-| `screenshots.yaml` | 🟡 | — | Global screenshot capture for release notes (not a regression test) |
+| `login-and-capture.yaml` | manual | — | Login → home → capture screenshots (not a regression test) |
+| `capture-screens.yaml` | manual | — | Navigate all screens → capture for docs (not a regression test) |
+| `screenshots.yaml` | manual | — | App Store / release-notes screenshot capture (not a regression test) |
+
+> **TD-34 (2026-06-05):** `voice-record-and-tts` / `paywall-quota-exhaustion` / `rtl-switch-ar` removed — silently CI-skipped; voice + paywall superseded by `.maestro/`; RTL/Arabic e2e is a genuine remaining gap.
 
 ## Known testID gaps (extracted from inventory)
 

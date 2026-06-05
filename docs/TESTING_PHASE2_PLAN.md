@@ -59,7 +59,7 @@ as a fresh agent following the same pattern as tonight's writer agents.
 
 | Area | Existing | Gaps |
 |---|---|---|
-| **Paywall** (`features/paywall/ui/QuotaUpsellModal.tsx`) | `paywall-quota-exhaustion.yaml` | Add: subscribe happy, restore purchases, cancel flow, error states (IAP unavailable) |
+| **Paywall** (`features/paywall/ui/QuotaUpsellModal.tsx`) | `.maestro/modal-paywall-quota-upsell.yaml` (the stale `maestro/paywall-quota-exhaustion.yaml` was removed in TD-34) | Add: subscribe happy, restore purchases, cancel flow, error states (IAP unavailable) |
 | **Carnet** (`app/(tabs)/carnet.tsx`) | None | List loads, swipe-delete, empty state, sync after offline |
 
 ### Tier 3 — Support / legal / secondary (~1h, low-pri)

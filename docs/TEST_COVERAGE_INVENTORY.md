@@ -360,16 +360,15 @@
 
 Helper subflow (not an entry point): `.maestro/helpers/quick-login.yaml`.
 
-**Secondary / demo suite — `maestro/*.yaml` (6 flows, not counted by the UFR-021 sentinel which only walks `.maestro/`):**
+**Manual screenshot tooling — `maestro/*.yaml` (3 dev/release utils, NOT CI coverage — see `museum-frontend/maestro/README.md`):**
 
 | File | What It Tests | Status |
 |---|---|---|
-| `login-and-capture.yaml` | Login → home → capture screenshots | Extended |
-| `capture-screens.yaml` | Navigate all screens → capture for docs | Extended |
-| `voice-record-and-tts.yaml` | Record audio → verify TTS response | Advanced |
-| `paywall-quota-exhaustion.yaml` | Exhaust quota → paywall modal | Advanced |
-| `rtl-switch-ar.yaml` | Locale switch to AR → verify RTL rendering | Extended |
-| `screenshots.yaml` | Global screenshot capture for release notes | Release |
+| `login-and-capture.yaml` | Login → home → capture screenshots | Manual util |
+| `capture-screens.yaml` | Navigate all screens → capture for docs | Manual util |
+| `screenshots.yaml` | App Store / release-notes screenshot capture | Manual util |
+
+> **TD-34 (2026-06-05):** the three regression flows once here (`voice-record-and-tts`, `paywall-quota-exhaustion`, `rtl-switch-ar`, audit-360 S3 T3.5/T3.6/T3.7) were **silently skipped by CI** (which only walks `.maestro/`) and have been removed. Voice + paywall are superseded by `.maestro/audio-recording-flow.yaml` and `.maestro/modal-paywall-quota-upsell.yaml`. **RTL/Arabic e2e has no `.maestro` equivalent — a genuine remaining coverage gap** (recoverable from git history if revived, but must be re-validated runtime-green first).
 
 **Maestro Coverage Summary (2026-05-19):**
 - **27 active flows** in `.maestro/` (primary suite; `config.yaml` excluded, `helpers/` not entry points)
@@ -505,14 +504,12 @@ Helper subflow (not an entry point): `.maestro/helpers/quick-login.yaml`.
       └── quick-login.yaml ............... Reusable auth subflow
 ```
 
-**Maestro Tests (Secondary — 6 flows, not counted by UFR-021 sentinel):**
+**Maestro manual screenshot tooling (3 dev/release utils, not CI coverage — see `maestro/README.md`):**
 ```
 maestro/
+  ├── README.md
   ├── login-and-capture.yaml
   ├── capture-screens.yaml
-  ├── voice-record-and-tts.yaml
-  ├── paywall-quota-exhaustion.yaml
-  ├── rtl-switch-ar.yaml
   └── screenshots.yaml
 ```
 
