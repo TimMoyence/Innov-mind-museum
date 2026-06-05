@@ -291,11 +291,24 @@ export const chatUrlHeadProbeTotal = new Counter({
  *     ADR-030 §Phase 2 LLM10 hardening + ADR-015 known gap)
  *   - llm_cost_circuit_breaker_state: state ∈ {closed, half_open, open}, Gauge 1/0
  *   - llm_cost_circuit_breaker_trips: tx to OPEN (cost spike or daily cap breach)
- *   - tenant_rate_limit_rejects: bounded by live tenant population (Phase 2 ≤ ~20 + anonymous)
  */
 export const guardrailBudgetRedisFallbackTotal = new Counter({
   name: 'musaium_guardrail_budget_redis_fallback_total',
   help: 'Total guardrail-budget Redis backend fail-CLOSED fallbacks (unreachable / corrupted counter)',
+  registers: [registry],
+});
+
+/**
+ * Hybrid-gravity guardrail (2026-06-01) — counts every fail-SOFT fallback of the
+ * friction store's Redis backend (a `get`/`incrBy` throw or an unreachable
+ * cache). The friction store is the INVERSE of the budget store: an outage
+ * degrades to `count() === 0` / `isCoolingDown() === false` (never a hard
+ * block), so operators alert on this counter rising rather than on a refusal
+ * spike. No user-derived label (prom-client cardinality discipline).
+ */
+export const guardrailFrictionRedisFallbackTotal = new Counter({
+  name: 'guardrail_friction_redis_fallback_total',
+  help: 'Total guardrail-friction Redis backend fail-SOFT fallbacks (unreachable / throwing counter)',
   registers: [registry],
 });
 
@@ -323,13 +336,6 @@ export const llmCostEurPerHour = new Gauge({
   name: 'musaium_llm_cost_eur_per_hour',
   help: 'Rolling 1h LLM spend in EUR (V1 uses USD pricing as EUR proxy, ±10%). NOT for billing.',
   labelNames: ['tier', 'museum_id'] as const,
-  registers: [registry],
-});
-
-export const tenantRateLimitRejectsTotal = new Counter({
-  name: 'musaium_tenant_rate_limit_rejects_total',
-  help: 'Total per-tenant rate-limit rejects. Cardinality bounded by live tenant population.',
-  labelNames: ['tenant_id'] as const,
   registers: [registry],
 });
 
@@ -395,7 +401,7 @@ export const llmGuardChaosInjectionsTotal = new Counter({
  */
 export const geoDetectMuseumTotal = new Counter({
   name: 'geo_detect_museum_total',
-  help: 'Total /api/museums/detect-museum invocations, by outcome (hit-geofence, hit-haversine, miss).',
+  help: 'Total /api/museums/detect-museum invocations, by outcome (hit-geofence, hit-haversine, miss, error).',
   labelNames: ['outcome'] as const,
   registers: [registry],
 });
@@ -456,6 +462,83 @@ export const llmPromptCacheHitsTotal = new Counter({
   name: 'musaium_llm_prompt_cache_hits_total',
   help: 'Total LLM section invocations classified by prompt-cache outcome (hit | partial | miss), labelled by provider.',
   labelNames: ['cache_status', 'provider'] as const,
+  registers: [registry],
+});
+
+/**
+ * I-FIX3 (2026-05-25) — guardrail-judge degrade observability (design §D4/D5).
+ * Incremented on every fail-mode `null`-return of `judgeWithLlm`
+ * (`llm-judge-guardrail.ts`) so ops can alert that the semantic V2 layer is
+ * degraded. The judge VERDICT is unchanged (null → V1/sidecar fallback,
+ * decision (d) = degrade-to-backstop, NOT hard block — see CLAUDE.md §AI Safety).
+ *
+ * `reason` ∈ {budget_exhausted, timeout, error, misconfigured} → 4 series.
+ * `as const` narrows the label type (prom-client/LESSONS.md F1) and there is NO
+ * user-derived label (no userId, no message text) — bounded, well under the 200
+ * cardinality budget. Uses a BARE `guardrail_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
+ */
+export const guardrailJudgeDegradedTotal = new Counter({
+  name: 'guardrail_judge_degraded_total',
+  help: 'Total LLM-judge degrade events (verdict left to V1/sidecar fallback), by reason (budget_exhausted | timeout | error | misconfigured).',
+  labelNames: ['reason'] as const,
+  registers: [registry],
+});
+
+/**
+ * I-FIX3 (2026-05-25) — anonymous cost-guard bypass observability (design §D3/D5).
+ * Incremented in `LlmCostGuard.assertAllowed` on the `userId === null` branch
+ * (after the kill-switch check, before the early-return). All live paid-LLM
+ * routes require `isAuthenticated`, so this should be FLAT 0 in prod; a non-zero
+ * value means a paid route became reachable anonymously and is silently skipping
+ * the per-user cap. Labelless → 1 series (prom-client/LESSONS.md F1 — no
+ * user-derived label). Uses a BARE `llm_cost_` subsystem prefix per the
+ * METRIC_NAMING_AUDIT F2 Option A go-forward convention (the `musaium_` prefix is
+ * frozen at 16 and not grown for new metrics).
+ */
+export const llmCostAnonBypassTotal = new Counter({
+  name: 'llm_cost_anon_bypass_total',
+  help: 'Total anonymous (userId=null) calls that reached the LLM cost guard and bypassed the per-user cap. Should be flat 0 in prod (all paid routes require auth).',
+  registers: [registry],
+});
+
+/**
+ * WAVE 6 · C4 (discovery/cost.md D4) — per-user daily LLM spend distribution.
+ *
+ * LABELLESS Histogram in USD. Observed exactly once per ALLOWED `assertAllowed`
+ * call, from `LlmCostGuard.assertAllowed` AFTER a successful `increment()`, with
+ * the value = the NEW daily total RETURNED by `increment()` (the authoritative
+ * post-increment Redis value, NOT just the delta). The previous gap: nothing
+ * exposed the Redis per-user daily cap usage, so ops could not alert on "what
+ * fraction of users are near their cap" without querying Redis directly.
+ *
+ * Why a HISTOGRAM (not a gauge): the business need is a DISTRIBUTION question
+ * ("X% of users at ≥80% cap"), which a sum/max/avg gauge cannot answer — it
+ * erases the per-user spread. Cumulative `_bucket{le=…}` series give the CDF.
+ * Derivable (non-coded, low-priority — see design §C4-alerte) proxy:
+ *   (rate(llm_cost_user_daily_usd_count[1h])
+ *    - rate(llm_cost_user_daily_usd_bucket{le="0.4"}[1h]))
+ *   / clamp_min(rate(llm_cost_user_daily_usd_count[1h]), 1) > 0.05
+ * Honest limit: this measures the FLUX of increments above $0.40, not a count of
+ * distinct near-cap users (a userId label is rejected — unbounded cardinality).
+ *
+ * Why LABELLESS: a `userId` label would be unbounded user-derived cardinality.
+ * 12 explicit buckets → 13 `_bucket` (incl. +Inf) + `_sum` + `_count` = 15 fixed
+ * series, far under the 200 cardinality budget. The buckets `0.4`/`0.5` straddle
+ * the default $0.50 cap and its 80% threshold so the CDF reads near-cap directly.
+ *
+ * Naming: BARE `llm_cost_` subsystem prefix per METRIC_NAMING_AUDIT F2 Option A
+ * (the `musaium_` prefix is frozen at 16, not grown for new metrics). The `_usd`
+ * suffix is a base-UNIT suffix for a monetary AMOUNT — NOT a `_seconds`-debt
+ * histogram (R3 targets DURATIONS). It is grandfathered in BOTH metric-naming
+ * sentinels as a legitimate non-duration amount, distinct from the genuine
+ * base-unit debt `musaium_rerank_latency_ms` (a mis-united duration).
+ */
+export const llmCostUserDailyUsd = new Histogram({
+  name: 'llm_cost_user_daily_usd',
+  help: 'Per-user daily LLM spend in USD, observed once per allowed call (the new daily total after the cost-guard increment). Labelless (no userId) — distribution of users vs their daily cap. Not for billing.',
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.4, 0.5, 0.75, 1, 2.5, 5],
   registers: [registry],
 });
 

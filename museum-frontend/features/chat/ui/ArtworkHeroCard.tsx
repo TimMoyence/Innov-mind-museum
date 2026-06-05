@@ -30,6 +30,7 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { fontSize, semantic, space } from '@/shared/ui/tokens';
 
 import type { ArtworkHeroModel } from '@/features/chat/application/useArtworkHero';
+import { useCarnetImageSource } from '@/features/chat/application/useCarnetImageSource';
 
 interface ArtworkHeroCardProps {
   readonly model: ArtworkHeroModel | null;
@@ -90,14 +91,10 @@ export const ArtworkHeroCard = React.memo(function ArtworkHeroCard({
       ]}
       testID="artwork-hero-card"
     >
-      <Image
-        source={{ uri: model.imageUrl }}
-        style={{
-          width: thumbSize,
-          height: thumbSize,
-          borderRadius: thumbSize / 2,
-        }}
-        accessibilityIgnoresInvertColors
+      <HeroThumb
+        messageId={model.messageId}
+        fallbackUrl={model.imageUrl}
+        size={thumbSize}
         testID="artwork-hero-image"
       />
       <View style={styles.content}>
@@ -118,6 +115,31 @@ export const ArtworkHeroCard = React.memo(function ArtworkHeroCard({
     </Pressable>
   );
 });
+
+interface HeroThumbProps {
+  readonly messageId: string | null;
+  readonly fallbackUrl: string;
+  readonly size: number;
+  readonly testID: string;
+}
+
+/**
+ * Resolves the hero thumbnail through {@link useCarnetImageSource} so the image
+ * survives a signed-URL expiry / app-data wipe (D4): it prefers the durable
+ * cache, re-mints a fresh signed URL on a miss, and only falls back to the
+ * embedded (possibly stale) `fallbackUrl` when re-minting fails.
+ */
+function HeroThumb({ messageId, fallbackUrl, size, testID }: HeroThumbProps): React.ReactElement {
+  const { uri } = useCarnetImageSource({ messageId: messageId ?? '', fallbackUrl });
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: size, height: size, borderRadius: size / 2 }}
+      accessibilityIgnoresInvertColors
+      testID={testID}
+    />
+  );
+}
 
 const styles = StyleSheet.create({
   root: {

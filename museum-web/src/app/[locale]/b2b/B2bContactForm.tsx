@@ -3,6 +3,10 @@
 import { useState } from 'react';
 
 import Button from '@/components/ui/Button';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { EMAIL_RE } from '@/lib/validation';
 import type { Dictionary, Locale } from '@/lib/i18n';
 
 interface B2bContactFormProps {
@@ -11,8 +15,6 @@ interface B2bContactFormProps {
 }
 
 type ValidationKey = 'email' | 'name' | 'museum' | 'role' | 'message' | 'consent';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * B2B contact form (R4 §1 R6-R11). Uses native required + a per-field error
@@ -117,11 +119,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
-        {errors.email ? (
-          <p id="b2b-email-error" role="alert" className="mt-1 text-sm text-red-700">
-            {errors.email}
-          </p>
-        ) : null}
+        <FormFieldError id="b2b-email-error" error={errors.email} />
       </div>
 
       {/* Name */}
@@ -145,11 +143,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
-        {errors.name ? (
-          <p id="b2b-name-error" role="alert" className="mt-1 text-sm text-red-700">
-            {errors.name}
-          </p>
-        ) : null}
+        <FormFieldError id="b2b-name-error" error={errors.name} />
       </div>
 
       {/* Museum */}
@@ -173,11 +167,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
-        {errors.museum ? (
-          <p id="b2b-museum-error" role="alert" className="mt-1 text-sm text-red-700">
-            {errors.museum}
-          </p>
-        ) : null}
+        <FormFieldError id="b2b-museum-error" error={errors.museum} />
       </div>
 
       {/* Role */}
@@ -207,11 +197,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
             </option>
           ))}
         </select>
-        {errors.role ? (
-          <p id="b2b-role-error" role="alert" className="mt-1 text-sm text-red-700">
-            {errors.role}
-          </p>
-        ) : null}
+        <FormFieldError id="b2b-role-error" error={errors.role} />
       </div>
 
       {/* Message */}
@@ -235,11 +221,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
-        {errors.message ? (
-          <p id="b2b-message-error" role="alert" className="mt-1 text-sm text-red-700">
-            {errors.message}
-          </p>
-        ) : null}
+        <FormFieldError id="b2b-message-error" error={errors.message} />
       </div>
 
       {/* Consent */}
@@ -269,39 +251,14 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           </a>
         </label>
       </div>
-      {errors.consent ? (
-        <p role="alert" className="mt-1 text-sm text-red-700">
-          {errors.consent}
-        </p>
-      ) : null}
+      <FormFieldError error={errors.consent} />
 
       {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
-      <div
-        aria-hidden="true"
-        style={{ position: 'absolute', left: '-10000px', height: 0, width: 0, overflow: 'hidden' }}
-      >
-        <label htmlFor="b2b-website">Website</label>
-        <input
-          id="b2b-website"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden="true"
-          value={website}
-          onChange={(e) => {
-            setWebsite(e.target.value);
-          }}
-        />
-      </div>
+      <HoneypotField value={website} onChange={setWebsite} />
 
       {/* Live region for error message (success has its own block above) */}
       <div aria-live="polite" className="min-h-[1.5rem]">
-        {errorMessage ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorMessage}
-          </div>
-        ) : null}
+        {errorMessage ? <AlertBanner variant="error" message={errorMessage} /> : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={submitting}>

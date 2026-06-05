@@ -173,7 +173,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-14 — Offline mode coverage gaps (banner non-global, no airplane e2e, dataModeStore race)
 
-- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (`docs/OFFLINE_CONTRACT.md`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
+- [ ] **Statut** : PARTIELLEMENT FERMÉ 2026-05-21 (run `2026-05-21-connectivity-offline-first`, ADR-059) — steps 1, 2, 3 + 5 (= TD-OM-01) DONE. Step 4 (créer le doc `OFFLINE_CONTRACT.md` sous `docs/`) volontairement NON fait : design.md/STORY.md + ADR-059 suffisent (décision user). Reste ouvert tant que step 4 n'est pas tranché ; sinon contenu livré. Step 1 = `GlobalOfflineBannerHost` mounté `_layout.tsx:217` ; step 2 = `dataModeStore` `_hydrated`+`onRehydrateStorage` ; step 3 = `.maestro/connectivity-offline-banner.yaml`.
 - [ ] ~~ouvert (créé 2026-05-16, audit Pattern 6 post-TD-2/TD-3)~~
 - **Référence code** :
   ```
@@ -193,7 +193,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   1. Extraire `OfflineBanner` du chat-only scope → composant `GlobalOfflineBanner` mounté dans `app/_layout.tsx` (probablement sous `ConnectivityProvider`). Couvre museum/settings/home/chat uniformément. Vérifier que le banner chat-only `pendingCount` reste fonctionnel (queue source distinct).
   2. Aligner `dataModeStore` sur le pattern `_hydrated` + `onRehydrateStorage` (cf. `userProfileStore` lignes 29/91 + `audioDescriptionStore` lignes 26/57 comme reference).
   3. Ajouter scenario Maestro `flows/offline-pack-airplane.yaml` : (a) telecharger pack pour une ville, (b) toggle airplane mode (Maestro `runFlow` avec adb shell), (c) ouvrir map, assert tiles raster visibles, (d) toggle off airplane. Brancher dans `ci-cd-mobile.yml` quality job.
-  4. Créer `docs/OFFLINE_CONTRACT.md` qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
+  4. Créer le doc `OFFLINE_CONTRACT.md` (sous `docs/`) qui list : (a) stores qui hydratent depuis storage local, (b) chat queue + cache TTL, (c) MapLibre offline packs (CartoDB raster style), (d) features qui nécessitent réseau (Voice STT/TTS, chat LLM call, image enrichment, knowledge router). Liens depuis TD-2, TD-3 closure notes.
   5. **Wire `onlineManager` à NetInfo (= TD-OM-01, ajouté 2026-05-21, MEDIUM-HIGH pre-V1)** — le sous-gap le plus à fort levier, non couvert par les steps 1-4 : `onlineManager.setEventListener(...)` au bootstrap pour que `refetchOnReconnect`/`networkMode:'online'` self-heal sur device. Évidence consommateur : `DataModeProvider.tsx:80-82` (pas de gate `_hydrated`), `queryClient.ts:54-55`. Voir TD-OM-01 pour le détail.
   6. Cocher TD-14 + TD-OM-01 ici.
 
@@ -207,7 +207,9 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - ~~TD-17 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-18 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-19 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
-### ~~TD-20 — Langfuse generations résiduelles sur les 4 paths non-LangChain (per-tenant cost attribution)~~ — RÉSOLU 2026-05-21
+### ~~TD-20 — Langfuse generations résiduelles sur les 4 paths non-LangChain (per-tenant cost attribution)~~ — RÉSOLU 2026-05-21 (cluster PARTIEL : TD-20a + TD-20b restent OUVERTS)
+
+> **⚠️ Re-confirmé 2026-05-25 (audit D8)** : le tronc TD-20 est bien résolu, mais le **cluster n'est PAS entièrement fermé** — les 2 follow-up **TD-20a** (`museumId` absent sur les paths guardrail) et **TD-20b** (STT unit interim `BYTES`) ci-dessous **restent ouverts** (`[ ]`). Ne pas archiver le cluster comme totalement clos.
 
 > **Résolu 2026-05-21** (`/team` run `2026-05-21-td20-langfuse-llm-paths`, review APPROVED 9.4/10, security PASS, verify PASS — 2146 tests, tsc clean). Les 4 paths LLM non-LangChain émettent désormais `generation()`/`event()` Langfuse via `safeTrace` + `getLangfuse()` fail-open : judge `llm-judge-guardrail.ts` (`generation` model + `metadata.inputLength/estimatedCostCents`, PAS de token usage fabriqué — UFR-013), TTS `text-to-speech.openai.ts` (`generation` `usageDetails:{input:text.length}` + `unit:'CHARACTERS'`), STT `audio-transcriber.openai.ts` (`generation` `usage:{input:byteLength}` + interim `unit:'BYTES'` en metadata, cf TD-20a ci-dessous), LLM-Guard `llm-guard.adapter.ts` (`event` `guardrail.llm-guard.scan` émis APRÈS le verdict — ADR-047 fail-CLOSED structurellement préservé). Helper DRY `src/shared/observability/derive-tier.ts` (parité verbatim avec `langchain.orchestrator.ts`). Plumbing per-tenant `{museumId,tier,requestId}` optionnel ajouté sur 4 ports (spread-omit idiom → backward-compat, aucune fixture cassée). Chat path déjà couvert depuis C9.4/TD-LF-02 (2026-05-18), hors scope ici (UFR-016, non re-touché).
 
@@ -245,7 +247,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-22 — 14 chat ports single-impl à inliner (suite TD-8)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12 P1-3)
+- [x] **Statut** : **RÉSOLU verified-moot 2026-06-05** (créé 2026-05-17, audit-2026-05-12 P1-3). Re-vérification de la méthodologie ADR-058 step 1 contre l'arbre vivant : **0 des 14 ports n'est inlinable** sous la règle de l'ADR (single-impl ET no test-swap) — chacun a gagné un 2e impl prod (multi-provider, S3-vs-Local par `env.storage.driver`, Regex-vs-Disabled) ou un test-fake load-bearing (chat-orchestrator: 10) depuis le snapshot 2026-05-17. La prémisse « ~700 LOC d'indirection » est périmée : les abstractions portent leur poids. Détail per-port : [`ADR-058` Addendum 2026-06-05](adr/ADR-058-selective-hexagonal-ports-policy.md#addendum-2026-06-05--re-verification-the-inline-list-is-superseded-td-22). `guardrail-provider` reste gated ADR-048 (suivi là-bas). Faux-positif honnête, pas une esquive — appliquer ADR-058 correctement = inline zéro.
 - **Référence code** :
   ```
   museum-backend/src/modules/chat/domain/ports/audio-storage.port.ts
@@ -303,7 +305,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-27 — Audit chain post-restore verification manquante
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-2026-05-12-raw R25 §1)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`f4331705`) — vérificateur de chaîne canonique (`pnpm audit-chain:verify`) câblé dans le restore-drill après pg_restore + test de workflow. (orig créé 2026-05-17, audit-2026-05-12-raw R25 §1)
 - **Référence code** : R25 §1 audit-2026-05-12-raw. Monthly drill workflow only runs `count(audit_logs)` smoke, no `audit-chain verify`.
 - **Symptôme** : RPO bounded at 24h (no WAL archiving). Restore drill ne vérifie pas l'intégrité de la chaîne hash post-restore.
 - **Sprint d'origine** : audit-2026-05-12-raw R25.
@@ -360,7 +362,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-34 — Maestro path discrepancy
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #1 ; compte corrigé 4→6 le 2026-05-21, mobile verdict)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`79723d0d`) — 3 flows stale supprimés (UFR-016 ; paywall/voice supersédés, RTL = gap documenté), 3 utils screenshot gardés + `maestro/README.md`, docs corrigées. Déviation assumée : delete plutôt que relocate+shard (sharder du 17-mai non-vérifié casserait le Maestro push-main). (orig créé 2026-05-17, audit-360 S3 follow-up #1)
 - **Référence code** : `museum-frontend/maestro/` (sans dot) contient **6** flows (`capture-screens.yaml`, `login-and-capture.yaml`, `paywall-quota-exhaustion.yaml`, `rtl-switch-ar.yaml`, `screenshots.yaml`, `voice-record-and-tts.yaml`) — aucun n'apparaît dans `museum-frontend/.maestro/shards.json:1-49` (avec dot), que lit la CI.
 - **Symptôme** : flows ajoutés à `maestro/` (sans dot) ne sont jamais picked up par CI qui lit `.maestro/shards.json`. Silent skip = false sense of coverage.
 - **Sprint d'origine** : audit-360 S3 follow-up #1.
@@ -416,7 +418,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - **Symptôme** : drift tsconfig entre les 3 apps. FE + Web ont `noUncheckedIndexedAccess: true` (cf audit S1 § 4.1), BE non. Conséquence : `array[i]` est typé `T` au lieu de `T | undefined`, masquant potentiellement des `TypeError: Cannot read property of undefined` runtime sur les optional indexes (top-K, pagination, validators arrays).
 - **Pourquoi non résolu pré-launch** : 35-50 sites estimés à patcher (per audit Subagent A — array indexing : `topK[0]`, pagination, validators arrays dans `similarity.service.ts`, `chat-repository-queries.ts`, `chat.repository.typeorm.ts`, `jsonb-validator.ts`, `sources-validator.ts`). Effort 8-12h. Pré-launch J-16, on a P0 langfuse v3 EOL (T1.1) + P0-8 JWKS Zod casts (T1.2) plus prioritaires. ROI MEDIUM — le pattern existant `?.` est suffisamment défensif per audit 05-12.
 - **Sprint d'origine** : audit 2026-05-16 (S1 § 4.2).
-- **Effort estimé** : 8-12h.
+- **Effort estimé** : ~~8-12h~~ → **réel mesuré 2026-06-05 : 921 sites** (146 src + 771 tests + 4 scripts) — effort multi-session, cf. Note « Scope vérifié » ci-dessous.
 - **Trigger** : toute mention `noUncheckedIndexedAccess` en code review, OU lecture audit 2026-05-16 § 4.2, OU détection d'un `TypeError: Cannot read property X of undefined` runtime sur un index array BE.
 - **Deadline** : post-V1 sprint 1 (fenêtre 2026-06-01 → 2026-06-30).
 - **Owner** : Tim (single-dev pre-launch).
@@ -426,7 +428,8 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   3. Pour chaque site : ajouter guard `if (!item) continue;` OU narrowing destructuring `const [first] = arr; if (!first) ...` OU `as const` assertion si literal tuple.
   4. Vérifier `pnpm test` BE pass.
   5. Cocher TD-40 ici.
-- **Note** : les sites cités dans l'audit (similarity.service.ts, chat-repository-queries.ts, chat.repository.typeorm.ts) ont 0 occurrence directe `[0]` au moment de la création du ticket — les patterns d'indexing sont probablement indirects (`.at()`, destructuring, `slice`). Comptage rigoureux à faire au moment de l'activation, l'estimation 35-50 est BE-wide (38 fichiers contiennent `[0]` au total).
+- **Note** : les sites cités dans l'audit (similarity.service.ts, chat-repository-queries.ts, chat.repository.typeorm.ts) ont 0 occurrence directe `[0]` au moment de la création du ticket — patterns d'indexing indirects (`.at()`, destructuring, `slice`).
+- **Scope vérifié 2026-06-05 (run autonome ; reste OUVERT)** : mesure réelle via `tsc --noEmit --noUncheckedIndexedAccess` (flag passé en CLI, **sans** modifier le tsconfig committé) → **921 erreurs**, pas 35-50 (sous-estimation ~18×). Répartition : **146 dans `src/`** (44 fichiers ; top : `opening-hours-parser.ts` 19, `audit-chain.ts` 14, `searchMuseums.useCase.ts` 13, `museum.schemas.ts` 8), **771 dans `tests/`**, 4 dans `scripts/`. Codes dominants : 519 `TS2532` + 299 `TS18048` (object/value possibly undefined). **Activation = all-or-nothing** : le `tsconfig.json` principal `include` `tests/**/*.ts`, donc `tsc --noEmit` (gate `pnpm lint` + CI quality) reste **rouge** tant que les 921 ne sont pas tous corrigés — on NE PEUT PAS « activer par sous-lots compilables », seul le tout-dernier commit peut flipper le flag. **Différé du run 2026-06-05** : 771 corrections de tests (mécaniques, via un helper type `requireIndex` comme côté FE/Web) + 146 gardes src = effort dédié multi-session ; trop risqué en non-supervisé d'un seul tenant (un flag à moitié-flippé rend tout le backend rouge et bloque la CI). Non-bloqueur V1 (post-launch, deadline 2026-06-30). Recommandation : effort planifié séparé (workflow file-par-file + helper `requireIndex` BE).
 
 ### TD-41 — `sanitizePromptInput` ne strip pas `[`/`]` (W3 LOW-1 / NTH-1)
 
@@ -561,7 +564,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-46 — Post-launch operational cadence Sentry P0 (manque section dans VDP_RUNBOOK)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster C TC2 / `docs/operations/SENTRY_P0_TRIAGE_2026-05-20.md` §7)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`440494fd`) — §10 « Post-launch operational cadence » ajoutée au VDP_RUNBOOK. (orig créé 2026-05-17, audit-360 W4 cluster C TC2)
 - **Référence code** : `docs/operations/VDP_RUNBOOK.md` (aucune section "Post-launch operational cadence" aujourd'hui).
 - **Symptôme** : le triage Sentry P0 pré-launch est documenté (cluster C TC2), mais le **rythme post-launch** (daily 09:00 UTC J+1..J+7, weekly Mon 09:00 UTC ensuite, per-release dans les 24 h) n'est pas codifié dans le runbook canonical.
 - **Sprint d'origine** : audit-360 W4.
@@ -574,7 +577,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 > **Re-scopé 2026-05-21 (web + observability verdicts, P2 informational)** : le symptôme original "museum-web ne dispose pas d'init Sentry avec tracePropagationTargets" est **FAUX en code** — `museum-web/instrumentation-client.ts:12`, `sentry.server.config.ts:12` et `sentry.edge.config.ts:12` portent tous `tracePropagationTargets: [/^https:\/\/api\.musaium\.com/, /^http:\/\/localhost:3000/]` ; `museum-web/src/instrumentation.ts` existe. Fixé par le run `2026-05-19-sentry-otel-cleanup` (TD-SNXT-01..04 fermés). **Résiduel réel (plus étroit)** : le SDK auto-instrumente les error paths + le `fetch` global patché, MAIS le wrapper `fetch` écrit à la main dans `api.ts` (+ le `apiPut` local, cf. gotcha CLAUDE.md "apiPut n'existe pas") ne forward PAS `sentry-trace`/`baggage` pour la corrélation **happy-path** dans les RSC server-rendered.
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 ; re-scopé 2026-05-21 — init shippé, résiduel = RSC happy-path)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`75a8db25`) — `Sentry.getTraceData()` forwardé dans `request()` de `api.ts` (sentry-trace/baggage sur happy-path RSC). (orig créé 2026-05-17, audit-360 W4 cluster B TB3)
 - **Référence code** : `museum-web/src/lib/api.ts` (wrapper fetch RSC + `apiPut` local dans `admin/museums/[id]/branding/page.tsx`) — ne forward pas `sentry-trace`/`baggage`. Init Sentry vérifié shippé : `instrumentation-client.ts:12`, `sentry.server.config.ts:12`.
 - **Symptôme** : sur le happy path (pas d'erreur), les requêtes admin web RSC vers le backend via le wrapper `api.ts` n'apparaissent pas dans la trace corrélée. Les error paths + le `fetch` global patché sont déjà couverts.
 - **Sprint d'origine** : audit-360 W4 (cluster B).
@@ -585,7 +588,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-48 — Baggage header validation (BE trace-propagation middleware accepte raw)
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster B TB3 / `docs/observability/DISTRIBUTED_TRACING.md` §7)
+- [x] **Statut** : **RÉSOLU 2026-06-05** (`f6d96c06`) — validateur W3C baggage all-or-nothing (rejet silencieux des malformés). (orig créé 2026-05-17, audit-360 W4 cluster B TB3)
 - **Référence code** : `museum-backend/src/shared/observability/trace-propagation.middleware.ts` (attache `baggage` raw, tronqué 1 KB).
 - **Symptôme** : un FE compromis ou un client malveillant peut injecter un baggage W3C-invalide. Cardinality bornée (1 KB), mais l'attribut span pollué peut tromper un dashboard.
 - **Sprint d'origine** : audit-360 W4 (cluster B).
@@ -614,7 +617,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 - [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 W4 cluster D / `museum-web/src/app/[locale]/admin/museums/[id]/branding/page.tsx`)
 - **Référence code** : `museum-web/src/app/[locale]/admin/museums/[id]/branding/page.tsx` (logo via `<input type="url">` HTTPS).
-- **Symptôme** : pas d'upload S3 réel — l'opérateur doit héberger le logo ailleurs (CDN, Imgur, etc.) puis coller l'URL. Pas idéal pour l'expérience B2B-pilot ; OK pour les 3 musées pilotes (assets fournis pré-existants).
+- **Symptôme** : pas d'upload S3 réel — l'opérateur doit héberger le logo ailleurs (CDN, Imgur, etc.) puis coller l'URL. Pas idéal pour une future expérience B2B ; sans impact V1 (3 musées de démo, assets de démo pré-existants — aucun pilote B2B contracté).
 - **Sprint d'origine** : audit-360 W4 (cluster D, décision MVP V1).
 - **Effort estimé** : 6-10 h (endpoint BE `POST /api/admin/museums/:id/logo` multipart → S3 ou OVH Object Storage ; FE drop-zone ; quota + virus scan).
 - **Comment fermer** : implémenter le pipeline; le `<input type="url">` reste en fallback si l'upload échoue.
@@ -636,12 +639,12 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 ### TD-53 — Anonymous volume `dev-backend` node_modules drift après modif `package.json` host
 
 - [ ] **Statut** : ouvert (créé 2026-05-19, découvert en Phase B post-merge W3+W4 quand `@opentelemetry/api` a été ajouté en deps)
-- **Référence code** : `museum-backend/docker-compose.dev.yml:42` (anonymous volume `/app/museum-backend/node_modules`).
+- **Référence code** : `museum-backend/docker-compose.dev.yml:48` (anonymous volume `/app/museum-backend/node_modules`).
 - **Symptôme** : quand `package.json` change côté host (ajout d'une dep par un merge / un install), le container `dev-backend` continue d'utiliser le `node_modules` baked dans l'image (préservé via anonymous volume). nodemon crash en boucle sur `Cannot find module 'X'`. Fix manuel actuel : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` (puis restart container).
-- **Workaround actuel** : recipe documentée dans le HANDOFF (`docs/HANDOFF_W3_GEO_PILOT.md` Phase B step 3 + cette session 2026-05-19). Acceptable pour dev, mais friction visible.
+- **Workaround actuel** : `docker exec -e CI=true dev-backend sh -c 'cd /app/museum-backend && pnpm install --prefer-offline'` puis restart container (documenté cette session 2026-05-19). Acceptable pour dev, mais friction visible.
 - **Sprint d'origine** : N/A (infra dev compose, existant depuis l'introduction des anonymous volumes).
 - **Effort estimé** : 1 h — option A : script `pnpm bootstrap-dev-container` qui detect drift package.json → run install dans le container automatiquement ; option B : hook nodemon pre-start qui check `package.json mtime > pnpm-lock.yaml mtime container` et run install ; option C : rebuild image à chaque `up -d` (lent mais déterministe).
-- **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans `docs/DEV_SETUP.md` (ou équivalent).
+- **Comment fermer** : choisir l'option (A recommandée — explicite, opt-in), implémenter, documenter dans un doc `DEV_SETUP.md` (sous `docs/`, ou équivalent).
 
 ---
 
@@ -689,7 +692,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 - [ ] **Statut** : ouvert (créé 2026-05-21, /team run `2026-05-21-p0-c3-auth-crypto` reviewer F6 + run `2026-05-21-p0-c4-infra` documenter sweep)
 - **Référence code** :
   - `museum-backend/src/shared/observability/prometheus-metrics.ts` (cible — fichier registry existant, ajouter 3 counters)
-  - **Counters spécifiés C3 design §10** (`team-state/2026-05-21-p0-c3-auth-crypto/design.md:354-365`) :
+  - **Counters spécifiés C3 design §10** (`team-state/2026-05-21-p0-c3-auth-crypto/design.md` §10, lignes 354-365 — spec team-state archivée/élaguée, récupérable via git history) :
     1. `totp_replay_blocked_total{user_role}` — incrémenté dans `challengeMfa` + `verifyMfa` à chaque rejet pour `step <= lastUsedStep` (I-SEC7a, ferme RFC 6238 §5.2 replay window).
     2. `access_token_revoked_total{source="logout"|"admin"}` — incrémenté à chaque `denylist.add` réussi (I-SEC7b, ADR-064 denylist fail-OPEN).
     3. `art_keywords_rate_limited_total{role}` — incrémenté quand `taxonomyWriteLimiter` rejette (via custom keyGenerator wrapping ou hook `onLimitReached`, I-SEC3).
@@ -1038,11 +1041,11 @@ Référence dans `ROADMAP_TEAM.md` § T1.7 et `CLAUDE.md`.
 
 ---
 
-## 🚨 TD-OP-01 — opossum: NO breaker.shutdown() → Stryker leak (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-OP-01 — opossum: breaker.shutdown() wired (RÉSOLU 2026-05-25, branch p0/stability)
 
-**Context** : WikidataBreakerClient sans dispose() ; tests sans afterEach. CLAUDE.md Stryker open-handle gotcha déjà documenté pour BullMQ/ioredis ; opossum est une autre source.
-**Fix** : add `async dispose() { this.breaker.shutdown(); }` + afterEach in test + wire to app shutdown.
-**Evidence** : `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` (no dispose), tests file.
+**Résolu** : `WikidataBreakerClient.dispose()` (idempotent, appelle `breaker.shutdown()`) ajouté + lifté dans la composition chat + wiré au graceful-shutdown (`index.ts` `drainAsyncResources` via `safeTeardown`). `--detectOpenHandles` confirme le timer opossum libéré. Voir RUN C lot P0 stabilité (`/team` 2026-05-25).
+**Reliquat (NIT, non-bloquant)** : `afterEach(() => client.dispose())` non ajouté aux suites breaker pré-existantes — vérifié inoffensif (detectOpenHandles clean, opossum v9 `unref()` l'intervalle). Test-tidy follow-up.
+**Evidence** : `museum-backend/src/modules/chat/adapters/secondary/search/wikidata-breaker.ts` (dispose), `src/index.ts` (graceful-shutdown wiring).
 
 ## ⚠️ TD-OP-02 — opossum: missing AbortController + autoRenewAbortController (MEDIUM, NON_BLOCKER)
 
@@ -1248,9 +1251,14 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ---
 
-## 🚨 TD-AS-01 — async-storage key namespacing inconsistent 11 prefixes (HIGH, NICE_TO_HAVE pre-V1)
+## ✅ TD-AS-01 — async-storage key namespacing inconsistent 11 prefixes (HIGH, NICE_TO_HAVE pre-V1) — RESOLVED 2026-05-25
 **Context** : 24 keys across 11 prefix families (compte corrigé de 16/10, sweep 2026-05-21). getAllKeys cannot be cleanly filtered. Cross-app collision risk.
 **Fix** : codemod to `musaium.<feature>.<key>` convention avec migration reader.
+**RESOLVED 2026-05-25** (/team run `2026-05-25-p0-cleanup`, commit `feat(storage): namespace 10 AsyncStorage keys + one-shot legacy migration reader (TD-AS-01)`) :
+- **10 clés non-conformes** re-préfixées `musaium.<feature>.<key>` à travers 6 fichiers : `app.themeMode`→`musaium.theme.mode` (`ThemeContext.tsx`) ; `runtime.{defaultLocale,defaultMuseumMode,guideLevel,apiBaseUrl,apiEnvironment}`→`musaium.runtime.*` (`runtimeSettings.ts`, `defaultLocale` aussi consommé par `I18nContext.tsx`) ; `settings.resumption_banner_dismissed_until`→`musaium.settings.resumptionBannerDismissedUntil` (`useResumableSession.ts`) ; `museum.lastCameraView.v1`→`musaium.museum.lastCameraView.v1` (`mapCameraCache.ts`) ; `@musaium/saved_artworks`→`musaium.dailyArt.savedArtworks` + `@musaium/daily_art_dismissed`→`musaium.dailyArt.dismissed` (`useDailyArt.ts`).
+- **Reader one-shot legacy→new** : `museum-frontend/shared/infrastructure/migrateStorageKey.ts` — idempotent, no-overwrite (short-circuit si la nouvelle clé porte déjà des données), no-op si legacy absente, copie la valeur en opaque-string (pas de re-parse), best-effort (toute erreur AsyncStorage avalée). Câblé sur les 6 read call-sites. Test : `__tests__/infrastructure/migrateStorageKey.test.ts`.
+- **Clés déjà conformes `musaium.*` NON touchées** (`shared/state`, `features/dataMode`, `queryClient.ts` — diff vide). Le compte "24 keys" du Context d'origine incluait ces conformes + les redéfinitions de mock test (cf. TD-AS-04) ; seules les **10 non-conformes** côté runtime étaient à corriger.
+- Reste ouvert : **TD-AS-02** (wrapper `storage.ts` sans try/catch — compensé localement par le try/catch interne de `migrateStorageKey`), **TD-AS-03**, **TD-AS-04**.
 
 ## TD-AS-02 — storage.ts wrapper missing try/catch setItem/removeItem (MEDIUM, NICE_TO_HAVE)
 **Fix** : try/catch in wrapper OR enforce at call sites avec ESLint rule.
@@ -1317,13 +1325,13 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - ~~TD-SW-01 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-QRW-01 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 ## TD-UUID-01 — uuid deps vs pnpm.overrides version inconsistency (LOW)
-**Fix** : align `museum-backend/package.json:160 ^11.1.1` OR drop override.
+**Fix** : align `museum-backend/package.json:88 ^11.1.1` (pnpm.overrides) OR drop override.
 
 ## TD-MID-01 — reflect-metadata test imports consolidate to setupFiles (LOW)
 **Fix** : single Jest setupFiles entry instead of 4 ad-hoc.
 
 ## TD-MID-02 — p-limit ^3 too loose (Renovate cap risk) (LOW)
-**Fix** : tighten `museum-backend/package.json:153` to `^3.1.0`.
+**Fix** : tighten `museum-backend/package.json:172` to `^3.1.0`.
 
 ---
 
@@ -1341,7 +1349,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Effort estimé** : ~30 min — deux options :
   - (a) **Étendre `invokeWalkStructured`** pour englober `narrowWalkStructuredResult` dans le même try/catch (plus chirurgical, préserve la sémantique « probe failure = recordFailure »).
   - (b) **`recordFailure()` défensif** au site `narrowWalkStructuredResult` throw — moins propre mais 1 ligne.
-- **Référence run** : `team-state/2026-05-21-p0-c2-cost-breaker/` (review.json `findings.important[0]`, security agent LOW finding `STORY.md:2026-05-21T18:25:22Z`).
+- **Référence run** : `team-state/2026-05-21-p0-c2-cost-breaker/` (review.json `findings.important[0]`, security agent LOW finding STORY.md horodaté 2026-05-21T18:25:22Z) — *run de travail élagué (rétention 30j)*.
 
 ---
 
@@ -1353,7 +1361,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
   - **FK renames** sur `user_consents` (FK column ou constraint name désynchronisée vs entity metadata) — TypeORM voulait `DROP CONSTRAINT` + `ADD CONSTRAINT` avec un nom canonique différent.
   - **FK renames** sur `totp_secrets` (idem — uniquement le rename de constraint, pas la colonne ajoutée par C3).
   - **`museums.wikidata_qid` drop** — la colonne existe en DB mais n'est plus dans l'entity (legacy d'une refonte Wikidata).
-  - **`artwork_embeddings.embedding halfvec → text`** — TypeORM voulait revert le type `halfvec(768)` introduit en C3 vers `text` car aucune `@Column` type custom ne décrit `halfvec` (cf CLAUDE.md gotcha `halfvec(N)` PG extension). À ne PAS appliquer en prod (perdrait l'index IVFFlat).
+  - **`artwork_embeddings.embedding halfvec → text`** — TypeORM voulait revert le type `halfvec(768)` introduit en C3 vers `text` car aucune `@Column` type custom ne décrit `halfvec` (cf CLAUDE.md gotcha `halfvec(N)` PG extension). À ne PAS appliquer en prod (perdrait l'index HNSW `halfvec_ip_ops`).
   - **`art_keywords` UNIQUE** — contrainte UNIQUE manquante côté DB que TypeORM voulait `ADD`.
   - **Dropped indexes** — quelques `IDX_*` que TypeORM ne reconnaît plus comme dérivables de l'entity metadata (probablement créés par une ancienne migration que TypeORM ne retrouve pas dans le diff entity).
   - **`chat_sessions.version` DEFAULT removal** — TypeORM voulait `ALTER COLUMN version DROP DEFAULT` (col `@VersionColumn` qui n'accepte pas de DEFAULT côté entity).
@@ -1365,3 +1373,162 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Effort estimé** : ~2-4h — pour chaque item, classer (a) faux positif TypeORM (ex `halfvec → text`, à fixer côté entity via `@Column({ type: 'halfvec' as any })` ou type custom) vs (b) nettoyage légitime (FK renames, `wikidata_qid` drop) → générer migration ciblée par groupe + ADR si besoin pour les choix non triviaux.
 - **Référence run** : `team-state/2026-05-21-p0-c3-auth-crypto/` (STORY.md L24 disclosure, migration JSDoc `1779391176767-AddTotpLastUsedStep.ts:17-22`).
 
+---
+
+## TD-A11Y-COMPOSER-CREATEELEMENT — Composer.tsx `React.createElement('View')` string crashait au runtime (RÉSOLU 2026-05-24)
+
+- [x] **Statut** : RÉSOLU (hotfix `c6bf75e8e` 2026-05-24). Corrige aussi une affirmation FAUSSE de la version initiale de cette TD (voir ci-dessous, UFR-013).
+- **CORRECTION FACTUELLE (UFR-013)** : la version initiale de cette TD (créée 2026-05-23 par le documenter du run `2026-05-23-chat-composer-buttons-modal-dismiss`) affirmait *« RN-runtime-équivalent (...), pas de différence runtime »*. **C'était faux.** `React.createElement('View', ...)` avec la string `'View'` lève au runtime `Invariant Violation: View config getter callback for component 'View' must be a function (received undefined)` — la string n'a pas de `viewConfigGetter` enregistré ; seul le composite `View` importé de `react-native` résout vers `ViewNativeComponent`. Le mock Jest de RN enregistre `'View'` comme host string → tests verts → crash masqué. Signalé par l'utilisateur au premier `npm run dev:local` après commit `68e620648`.
+- **Fix appliqué** : `Composer.tsx` réécrit en JSX standard `<View><Pressable testID=...>…</Pressable></View>`. `createElement` supprimé entièrement, `iconButtonInner 0×0` style supprimé, block-comment supprimé. `Composer.layout.test.tsx` : assertions assouplies (`findAncestor` column puis row au lieu de `lca.parent` strict ; dedupe testID hits). Sémantique vérifiée inchangée : mic AVANT attach DANS column DANS row. 3282/3282 tests FE pass + typecheck pass.
+- **Leçon** : voir `TD-PIPELINE-RT-SMOKE-GAP` (ci-dessous) — le gap systémique qui a permis le crash de passer 3 garde-fous (Jest, reviewer, documenter).
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[1]`). Hotfix : commit `c6bf75e8e`.
+
+---
+
+## TD-PIPELINE-RT-SMOKE-GAP — /team Verify n'a aucun boot runtime RN → Jest mock masque les crashes host-primitive (MEDIUM, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-24, post-mortem du crash `TD-A11Y-COMPOSER-CREATEELEMENT`).
+- **Symptôme** : un crash runtime RN (`Invariant Violation` sur `createElement('View')` string) a traversé TROIS garde-fous sans être détecté :
+  1. **Jest** (`npm test`, 3282/3282 vert) — le mock RN enregistre `'View'` comme host string valide, donc `createElement('View')` passe. Le runtime réel ne l'enregistre pas.
+  2. **Reviewer fresh-context loop 2** — APPROVED (89.9/100) sur typecheck + lint + jest, sans booter l'app.
+  3. **Documenter** — a classé la dette « pas de différence runtime » (faux).
+  L'utilisateur l'a vu au premier `npm run dev:local`.
+- **Cause racine** : le pipeline `/team` (Spec→Plan→Red→Green→Verify→Security→Review→Documenter) n'a **aucune phase qui exécute le runtime RN réel**. La phase Verify = `jest` + `tsc` + `lint`, tous aveugles à la résolution `ViewNativeComponent`. Le seul gate runtime du repo est Maestro (`ci-cd-mobile.yml`) qui tourne **après** push, pas pendant `/team` ni en local pre-commit.
+- **Pourquoi UFR-021 ne l'a pas couvert** : la sentinel `scripts/sentinels/screen-test-coverage.mjs:87` scope `app/**/*.tsx` + `features/**/ui/*Screen.tsx`. `Composer.tsx` est un sous-composant (pas `*Screen.tsx`) → explicitement hors scope (CLAUDE.md UFR-021 « Out of scope : sub-composants présentationnels »). Le crash se manifeste pourtant sur l'écran hôte `app/(stack)/chat/[sessionId].tsx` qui, lui, EST dans le scope Maestro — mais Maestro ne tourne qu'en CI.
+- **Pistes de remédiation (à arbitrer)** :
+  - (a) Ajouter une lint rule ast-grep `tools/ast-grep-rules/no-createelement-host-string.yml` qui bannit `React.createElement('<lowercase-or-View/Text/...>', …)` — cheap, déterministe, attrape ce pattern précis. **Recommandé en premier** (effort ~30 min).
+  - (b) Phase Verify `/team` : pour tout diff touchant `museum-frontend/{app,features}/**/*.tsx`, exiger un smoke runtime — soit un test `react-test-renderer` SANS le mock host-string (env dédié), soit un Maestro flow local headless. Effort ~1 jour, friction non-triviale.
+  - (c) Étendre UFR-021 aux sous-composants `features/**/ui/*.tsx` (pas seulement `*Screen.tsx`) quand ils sont importés par un écran in-scope. Risque : explosion du nombre de flows Maestro requis.
+- **Priorité MEDIUM** : un crash mount-time sur l'écran chat (écran principal) = P0 si shippé en prod. La piste (a) ferme le pattern exact à coût quasi-nul ; (b)/(c) sont des durcissements pipeline plus lourds à arbitrer post-launch.
+- **Référence** : crash `TD-A11Y-COMPOSER-CREATEELEMENT`, hotfix `c6bf75e8e`, run `2026-05-23-chat-composer-buttons-modal-dismiss`.
+
+---
+
+## TD-BACKDROP-DISMISS-R6 — backdrop-dismiss.test.tsx parametrize sur 4/6 routes non-bloquantes (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, reviewer loop 2 INFO + tech-debt D-R6-01).
+- **Référence code** :
+  ```
+  museum-frontend/__tests__/features/chat/bottom-sheet-router/backdrop-dismiss.test.tsx:163-211 (cases array)
+  team-state/2026-05-23-chat-composer-buttons-modal-dismiss/spec.md (R6 §48 wording "every non-blocking route" → 6 routes — spec team-state archivée/élaguée, voir git history)
+  ```
+- **Symptôme** : la spec R6 demande la parameterisation sur 6 routes non-bloquantes (`attachment-picker`, `browser`, `context-menu`, `summary`, `ai-disclosure`, `cartel-scanner`). Le test couvre 4/6 (`attachment-picker`, `browser`, `context-menu`, `summary`) ; manque `ai-disclosure` + `cartel-scanner`.
+- **Pourquoi non résolu en V1** : (a) test frozen per UFR-022 red-test-manifest ; (b) le fix container-level (`pointerEvents="box-none"` sur `<BottomSheetContainer>`) est *uniforme* sur toutes les routes C4 — un seul `BottomSheetContainer` les héberge → la couverture 4/6 est *fonctionnellement complète proof* que les 6 routes fonctionnent ; (c) re-spawn red phase juste pour étendre l'array `cases` (2-line change) = disproportionné vs le bénéfice ; (d) reviewer loop 2 a explicitement accepté comme INFO non-blocking.
+- **Effort estimé** : ~30 min — extend `cases` array dans une fresh red phase :
+  ```ts
+  { id: 'ai-disclosure', params: {} },
+  { id: 'cartel-scanner', params: {} },
+  ```
+  Mock content + routes déjà installés par `installAllMockRoutes()`.
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/` (review loop 2 `findings.info[0]`, `carryForwardToDocumenter.techDebt[1]`, ADR-066 §Risques).
+
+---
+
+## TD-LINT-FROZEN-COMPOSER — 2 warnings `@typescript-eslint/require-await` dans backdrop-dismiss.test.tsx frozen (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-23, `/team` run `2026-05-23-chat-composer-buttons-modal-dismiss`, verifier finding F1).
+- **Référence code** :
+  ```
+  museum-frontend/__tests__/features/chat/bottom-sheet-router/backdrop-dismiss.test.tsx:46-47
+  ```
+- **Symptôme** : 2 warnings `@typescript-eslint/require-await` sur les stubs async `toggleRecording`/`playRecordedAudio` (déclarés `async` sans `await` dans le corps). Test frozen → editor green ne peut pas modifier le body. Verifier `npm run lint` exit 1 (warnings, pas errors) — dispatcher brief accepte explicitement.
+- **Pourquoi non résolu en V1** : (a) frozen-test contract per UFR-022 ; (b) warnings (pas errors), gate-passing ; (c) BLOCK-TEST-WRONG aurait re-spawn red phase pour 2 lint warnings = disproportionné.
+- **Effort estimé** : ~10 min — au prochain touch du fichier (post-frozen), choix entre :
+  - (a) refactor stubs vers non-async (drop `async`, return `undefined` direct) — préférable per LINT_DISCIPLINE.md "fix code first" ;
+  - (b) inline `eslint-disable-next-line @typescript-eslint/require-await` avec `Justification:` + `Approved-by:`.
+- **Référence run** : `team-state/2026-05-23-chat-composer-buttons-modal-dismiss/STORY.md` (verifier section F1 "WARN, not FAIL").
+
+---
+
+## TD-CMP6-SBOM-ATTEST — Décision I-CMP6 ("Tout faire") + gap résiduel attestation binaire mobile (EU CRA Art. 13 / 2027)
+
+- [ ] **Statut** : ouvert (créé 2026-05-25, `/team` run `2026-05-25-p0-a11y-compliance`, R11 / I-CMP6 ; partiellement adressé ce run, gap mobile résiduel).
+- **Décision Q3 = "Tout faire"** (validée user, design §D5-D7 du run) :
+  - **Backend** — `cosign attest --type cyclonedx --predicate museum-backend/sbom.json` ajouté dans `ci-cd-backend.yml` deploy-prod, sur `steps.push.outputs.digest`, APRÈS la SLSA `attest-build-provenance@v2`. ADDITIF + `continue-on-error: true` (advisory, ne gate jamais le deploy déjà vérifié). Steps `cosign sign`/`attest-build-provenance`/`cosign verify`/`gh attestation verify` existants inchangés.
+  - **Web** — `ci-cd-web.yml` deploy : `id-token: write` + `attestations: write` ajoutés ; setup pnpm/Node + install + SBOM CycloneDX + `cosign attest --type cyclonedx` sur le digest du push (`id: push`). ADDITIF + `continue-on-error: true`.
+  - **Mobile** — `ci-cd-mobile.yml` quality : SBOM CycloneDX du graphe de deps JS généré + uploadé en artefact CI (`sbom-mobile`). PAS d'attestation sigstore.
+- **Gap résiduel (mobile)** : le binaire store (App Store / Google Play) n'a **pas** d'attestation SBOM signée liée à son digest. Cause : EAS `eas build --no-wait` (`ci-cd-mobile.yml`) construit l'app à distance et n'expose **aucun digest OCI local** atteignable depuis la CI — il n'y a donc rien à quoi lier un prédicat signé. Le SBOM est shippé en artefact CI, mais pas signé/lié au binaire.
+- **Référence code** :
+  ```
+  .github/workflows/ci-cd-backend.yml   (step "Cosign attest SBOM (CycloneDX)")
+  .github/workflows/ci-cd-web.yml        (step "Cosign attest SBOM (CycloneDX)")
+  .github/workflows/ci-cd-mobile.yml     (step "Generate mobile SBOM (CycloneDX)" + "Upload mobile SBOM artifact")
+  scripts/sentinels/sbom-attest-check.mjs (contrat des 3 workflows)
+  ```
+- **Échéance contraignante** : **EU CRA Art. 13 (2027)** — pas un blocker V1 (2026-06-07). Le SBOM mobile en artefact suffit à l'audit ; l'attestation signée du binaire store est le delta à fermer avant 2027.
+- **Effort estimé** : 4-8 h — investiguer le tooling EAS-side (export SBOM/attestation depuis le pipeline EAS, ou `eas build --json` + récupération du digest de l'artefact store) ; lier un prédicat CycloneDX au binaire via l'API attestation Expo si disponible.
+- **Comment fermer** : EAS expose un digest/identifiant stable du binaire → générer + signer l'attestation côté EAS hook ; sinon attendre le support natif Expo/EAS de l'attestation SBOM.
+- **Décision formalisée** : [`docs/adr/ADR-068-sbom-attestation-strategy-mobile-gap.md`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) (digest-bound where possible ; gap mobile = ce TD).
+- **Référence run** : `team-state/2026-05-25-p0-a11y-compliance/` (spec.md §2 I-CMP6, design.md §D5-D7).
+
+---
+
+## TD-FE-CHAT-BURY-SSE — Enterrer le code mort onToken/onDone/onGuardrail + streamText plumbing dans la stratégie chat + réaligner 3 tests fake-world (MEDIUM, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-25, `/team` run `2026-05-25-p0-fa1-empty-bubble-text-only`, décision plan D2 / review NIT ; burial différé hors du scope P0).
+- **Référence code** :
+  ```
+  # Code mort — callbacks jamais appelés (sendMessageSmart sync-only)
+  museum-frontend/features/chat/infrastructure/chatApi/send.ts:169-172              # sendMessageSmart = async (params) => deps.postMessage(params) — ignore onToken/onDone/onGuardrail/signal
+  museum-frontend/features/chat/application/sendStrategies/sendMessageStreaming.ts:77-114  # bloc onToken/onDone/onGuardrail passé à sendMessageSmart, jamais invoqué
+  museum-frontend/features/chat/application/useStreamingState.ts:18,22,29,42,54,57,58  # streamTextRef / flushStreamText / scheduleFlush — seuls consommateurs = onToken/onGuardrail morts
+  museum-frontend/features/chat/application/sendStrategies/sendStrategy.types.ts:83-86     # champs streamTextRef/scheduleFlush/flushStreamText du context-bag SendMessageContext
+  # Commentaire stale (review NIT)
+  museum-frontend/features/chat/application/sendStrategies/sendMessageStreaming.ts:116     # « Non-streaming fallback (image messages or streaming not available) » — le bloc sert désormais texte + image
+  # Tests fake-world à réaligner (pilotent un monde que le transport live ne produit jamais)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:774   # "invokes onToken and onDone to build assistant message" (fire onToken+onDone, return null)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:817   # "invokes onGuardrail to set guardrail text" (fire onGuardrail+onDone, return null)
+  museum-frontend/__tests__/hooks/useChatSession.test.ts:935   # "onDone with empty final text still replaces streaming placeholder" (fire onDone, return null)
+  ```
+- **Symptôme** : la voie SSE a été enterrée (D1, ADR-001 SSE deprecated) mais ses callbacks survivent en code mort. `sendMessageSmart` est **toujours synchrone** (`send.ts:169-172` = `=> deps.postMessage(params)`) et **ignore** `onToken`/`onDone`/`onGuardrail`/`signal` ; `sendMessageStreaming.ts:77-114` les passe pourtant encore, et `streamTextRef`/`scheduleFlush`/`flushStreamText` (`useStreamingState.ts`) n'ont plus que ces callbacks morts comme consommateurs. Ce code mort a **directement causé le bug P0-FA1** (bulle assistant vide en texte-seul) : la garde `sendMessageStreaming.ts:117` dépendait de `onDone` pour resetter `streamingIdRef.current`, ce qui ne se produit jamais en live → le bloc finalize était sauté hors path image. **Le fix P0 (1 ligne, garde élargie) a été shippé sans enterrer le code mort** (scope discipline hotfix). En outre, 3 tests `useChatSession.test.ts:774/817/935` mockent `onToken`/`onDone`/`onGuardrail` — exactement les callbacks que le transport live n'appelle jamais → ils passaient au vert tout en couvrant un monde fictif (anti-pattern CLAUDE.md UFR-021 « Jest mocks the very interaction that breaks »), ce qui explique que le bug a shippé vert.
+- **Pourquoi non résolu en V1 (P0-FA1)** : burial = refacto à blast radius large (touche `useStreamingState.ts`, le type `SendMessageContext` dans `sendStrategy.types.ts`, l'index des stratégies qui câble le context-bag, et l'affordance streaming de `ChatMessageBubble`), et force la réécriture/suppression des 3 tests fake-world. Hors scope d'un hotfix P0 launch-blocker : la priorité était la regression-safety du fix 1-ligne, pas un refacto. Déclaré comme **déviation UFR-016** (le code mort viole l'esprit « il est mort on l'enterre » ; trade-off = sécurité de non-régression sur un blocker, assumé honnêtement). Caveat : le fix P0 ne dépend PAS de ce code mort et ne le ravive pas.
+- **Sprint d'origine** : run `/team` `2026-05-25-p0-fa1-empty-bubble-text-only` (plan D2/D5, review NIT commentaire `:116`).
+- **Effort estimé** : ~2-4 h.
+- **Comment fermer** :
+  1. Supprimer le bloc `onToken`/`onDone`/`onGuardrail` (`sendMessageStreaming.ts:77-114`) et la garde télémétrie morte associée — confirmer via grep qu'aucun autre consommateur live ne reste (`onToken`/`onDone`/`onGuardrail` n'apparaissent que dans `send.ts` (type + impl qui ignore) et `sendMessageStreaming.ts` au moment de la création de ce TD).
+  2. Enlever `streamTextRef`/`flushStreamText`/`scheduleFlush` de `useStreamingState.ts` + des champs du context-bag `SendMessageContext` (`sendStrategy.types.ts:83-86`) + de l'index des stratégies qui les câble. Vérifier l'affordance streaming de `ChatMessageBubble` (retirer si plus alimentée).
+  3. Simplifier la signature `SendMessageSmartParams` (`send.ts`) en retirant les callbacks ignorés (ou documenter qu'on les garde si une voie streaming V1.1+ est planifiée — sinon enterrer).
+  4. **Réaligner les 3 tests fake-world** `useChatSession.test.ts:774/817/935` : les supprimer (le monde onDone/onGuardrail n'existe plus) OU les réécrire pour piloter le vrai path sync (mock `mockResolvedValue(PostMessageResponseDTO)` sans firer de callback, comme les tests P0-FA1 TR.1-TR.6 du describe `text-only sync finalize`). Ne pas laisser de test qui couvre un monde mort.
+  5. Toiletter le commentaire stale `sendMessageStreaming.ts:116` « Non-streaming fallback (image messages or streaming not available) » → le bloc sert désormais texte + image en path sync unique (review NIT).
+  6. `npm run lint` + `npx jest __tests__/hooks/useChatSession.test.ts` + `gitnexus_detect_changes` ; cocher TD-FE-CHAT-BURY-SSE ici.
+- **Références** : ADR-001 (SSE deprecated, burial D1) ; `team-state/2026-05-25-p0-fa1-empty-bubble-text-only/{spec.md,design.md (§D2/D5),STORY.md}` ; CLAUDE.md § UFR-016 (« il est mort on l'enterre ») + UFR-021 (anti-pattern fake-world tests).
+- **Note de citation (UFR-013)** : le brief documenter pointait `useChatSession.test.ts:773/816/934` ; vérification `grep` (cf. STORY.md documenter) → les `it(` réels sont à `:774`/`:817`/`:935` (off-by-one — ligne `describe`/commentaire juste au-dessus). Lignes ci-dessus = vérifiées par lecture, source de vérité.
+
+## TD-OPAQUE-ANIMATED-VALUE-SKELETON — test introspecte `Animated.Value._value` (API privée RN) dans un test RED gelé (LOW, V1.1)
+
+- [ ] **Statut** : ouvert (créé 2026-05-26, audit doc-cleanup §5 V1 ; tracé ici avant burial du triage).
+- **Référence code** : `museum-frontend/__tests__/features/chat/ui/ImageCompareCardSkeleton.test.tsx` (L63,67 — *fichier supprimé depuis ; réf historique*) — commentaire « Allow Animated objects too (they expose `_value` in tests) » + accès `(flat.opacity as { _value?: number } | undefined)?._value`.
+- **Symptôme** : viole la doctrine `feedback_opaque_animated_value_test_contract` (« Tests MUST NOT introspect `Animated.Value._value` — use observable reducer state »). Le test pilote l'animation via un champ privé RN au lieu de l'état observable. Violation **dormante** : c'est un test RED pour `ImageCompareCardSkeleton` (feature ImageCompare C3.5, SUT non construit / différé) — inerte tant que le composant n'existe pas, active à la phase Green.
+- **Pourquoi non résolu** : (a) frozen-test contract UFR-022 — modifier le test hors re-spawn red phase est interdit ; (b) feature ImageCompare non priorisée V1 ; (c) corriger maintenant = `BLOCK-TEST-WRONG` + re-spawn red disproportionné pour un test dormant. Même classe que [[TD-LINT-FROZEN-COMPOSER]].
+- **Comment fermer** : lors du build réel d'ImageCompare (phase red/green `/team`), réécrire l'assertion pour lire l'état observable (reducer/prop) au lieu de `_value`. Cf. doctrine `feedback_opaque_animated_value_test_contract`.
+- **Références** : audit doc-cleanup 2026-05-26 (triage §5 V1, conservé en historique git commit `ea389d13e`) ; CLAUDE.md (frozen-test UFR-022) ; mémoire `feedback_opaque_animated_value_test_contract`.
+
+---
+
+## Audit contrôle qualité 360° — 2026-06-04
+
+> Source : workflow multi-agents (22 agents, 127 findings, 6 HIGH re-vérifiés 6/6 confirmés). Artefacts : `audit-state/2026-06-04-controle-qualite-360/` (ALL-FINDINGS.md = 127 findings path:line) + `artifacts/2026-06-04-controle-qualite-360.html`. Verdict global **79/100 (B+)**.
+> Niveau de vérification noté par dette : **✔ re-lu à la main** (orchestrateur) vs **○ rapporté-agent** (preuve path:line de l'agent, fichier confirmé, non re-lu ligne-à-ligne). Honnêteté UFR-013.
+> **Les dettes code passent par `/team` (UFR-022 fresh-context).** Les dettes gate/CI sont des modifs workflow.
+
+### TD-62 — `eslint-plugin-boundaries` no-op (enforcement hexagonal BE mort) + 1 fuite réelle — ✔ re-lu
+
+- [ ] **Statut** : **PARTIAL-CLOSE W1** (créé 2026-06-04, audit 360 ARCH-01/ARCH-02 ; W1 livré 2026-06-04 via run `/team` `2026-06-04-hexagonal-boundaries-enforcement`, reviewer APPROVED 91.9 — cf. [ADR-071](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md)). Sévérité HIGH. **Reste ouvert** jusqu'à W3 (arms application/infrastructure armés + close ARCH-01 sur les 3 couches).
+- **Référence code** :
+  ```
+  museum-backend/eslint.config.mjs:64-160   # bloc boundaries SANS settings['import/resolver']
+  museum-backend/eslint.config.mjs:115-118  # commentaire affirmant à tort que l'enforcement marche
+  museum-backend/src/modules/chat/domain/ports/chat-orchestrator.port.ts:9  # fuite domain->useCase (ARCH-02)
+  ```
+- **Symptôme (vérifié)** : le bloc boundaries n'a aucun `import/resolver` dans son `settings` (seul `import-x/resolver` existe dans un bloc séparé) → `@modules/*` résout en `external` (path:null) → la règle ne classe rien et ne fire jamais. Reproduit par l'agent (import domain→infra = 0 erreur ; ajouter le resolver fait fire), confirmé par lecture. Le commentaire l.115-118 (« migration v6 a restauré l'enforcement ») est faux. Une vraie fuite existe déjà non détectée (ARCH-02).
+- **Comment fermer** : (a) `settings['import/resolver'].typescript` DANS le bloc boundaries ; (b) fixture-garde CI (domain importe un adapter → lint fail attendu) ; (c) corriger ARCH-02 ; (d) **filet indépendant** : sentinel fs-based BE (modèle FE `no-shared-api-import`) qui walk `src/modules/*/domain` et fail si un import résout vers `/adapters/` ou `/useCase/` — survit à une re-régression de la config ESLint.
+- **Stratégie d'armement (séquencée par vague, décision user — PAS un ratchet/allow-rule)** : le close-all complet = 62 violations sur 20 fichiers / 8 modules (mesuré empiriquement), un refacto de 3,5-5 jours dont le plus profond (untangle chat-orchestrator) touche le hot path conversationnel — non-tenable safe à J-3. Chaque arm ESLint (`domain`/`application`/`infrastructure`) est armé strict **uniquement quand le code de sa couche est propre** ; séquencer *quand* chaque arm strict passe live n'est ni un allow-rule (aucune config ne sanctionne un couplage existant) ni un ratchet (aucun jeu de violations grandfathered) — ça garde `pnpm lint` vert sans bypass. Cf. ADR-071 §2.
+- **Livré W1 (2026-06-04, launch-blocking — `pnpm lint` BE vert à J-3)** :
+  - (a) `import/resolver` câblé dans le bloc boundaries (`eslint.config.mjs:117-120`) → la règle fire ; commentaire faux l.115-118 corrigé (`eslint.config.mjs:113-117`, R7 W1).
+  - Arm `domain` armé strict ; arms `application`/`infrastructure` commentés avec TODO daté W2/W3 (`eslint.config.mjs:154-175`).
+  - (c) ARCH-02 fermée : `KnowledgeRouterSource` descendu à `chat/domain/knowledge/knowledge-router.types.ts` ; `chat-orchestrator.port.ts:7` importe du domain (grep useCase = vide). + 5 relocations type-only W1 (ImageProcessorPort, ChatModel+UsageMetadata, VISION_BYTES_EQUIVALENT, admin export-repositories.port, museum enrichment-usecases.port) = vraie inversion de dépendance (use-cases C1 `implements` le port domain).
+  - (b) fixture-garde `tests/unit/architecture/boundaries-rule-bites.test.ts` (prouve que la règle MORD via la vraie config, 158/158 verts).
+  - (d) sentinel indépendant `scripts/sentinels/hexagonal-domain-purity.mjs` (0 ref `eslint`, 0.04 s) câblé : `package.json:23`, pre-push **Gate 32/32** (`.husky/pre-push:432-434`), `ci-cd-backend.yml:160`, `sentinel-mirror.yml:183-184`.
+- **Reste à fermer (W2/W3 post-launch, séquencé, code-only, par vague)** :
+  - **W2** : 34 racines de composition DI B1 (`useCase/index.ts` → `module-root index.ts`, 6 modules, auth 456 LOC + 17 importers) + 2 B2 résiduels (daily-art catalog, admin `composition.ts`) ; armer l'arm `application` une fois propre.
+  - **W3** : ~16 edges C1/C2 chat-adapter→useCase + untangle bidirectionnel `llm-prompt-builder.ts` ; armer l'arm `infrastructure` ; **close TD-62 complet** (les 3 arms armés, ARCH-01 fermée sur les 3 couches). Gaté sur la suite chat complète (447) + matrice e2e guardrail réelle.

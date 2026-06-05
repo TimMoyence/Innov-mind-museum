@@ -14,6 +14,11 @@ export async function getDictionary(locale: Locale): Promise<Dictionary> {
 
 /** Shape of a dictionary file — extend as pages are built out. */
 export interface Dictionary {
+  // I-CMP5(a) / R9 — accessibility-only copy. Grouped under its own namespace
+  // so a11y strings (skip-link, etc.) stay distinct from the marketing nav.
+  a11y: {
+    skipToContent: string;
+  };
   metadata: {
     title: string;
     description: string;
@@ -200,6 +205,7 @@ export interface Dictionary {
     tickets: string;
     supportAdmin: string;
     reviewsAdmin: string;
+    nps: string;
     accessDenied: string;
     goToHomepage: string;
     login: {
@@ -211,6 +217,21 @@ export interface Dictionary {
       googleButton: string;
       divider: string;
       oauthError: string;
+      mfaTitle: string;
+      mfaInstructions: string;
+      mfaCodeLabel: string;
+      mfaCodePlaceholder: string;
+      mfaSubmit: string;
+      mfaUseRecovery: string;
+      mfaRecoveryLabel: string;
+      mfaRecoveryPlaceholder: string;
+      mfaRecoverySubmit: string;
+      mfaRecoveryContinue: string;
+      mfaBackToCode: string;
+      mfaErrorInvalid: string;
+      mfaErrorRateLimited: string;
+      mfaErrorExpired: string;
+      mfaRecoveryRemaining: string;
     };
     common: {
       date: string;
@@ -413,6 +434,21 @@ export interface Dictionary {
       topMuseums: string;
       museum: string;
       guardrailBlockRate: string;
+    };
+    npsPage: {
+      subtitle: string;
+      score: string;
+      promoters: string;
+      passives: string;
+      detractors: string;
+      responses: string;
+      distribution: string;
+      chartAriaLabel: string;
+      allMuseums: string;
+      // F6 — shown when the NPS read 403s because the signed-in manager has no
+      // museum assigned (NULL museumId claim). Actionable copy instead of the
+      // raw backend "No museum assigned" / "Museum scope required" text.
+      noMuseumAssigned: string;
     };
     /**
      * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind

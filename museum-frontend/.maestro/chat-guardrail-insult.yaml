@@ -1,0 +1,43 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: INSULT → V1 keyword hard-block refusal.
+#
+# Sends an unambiguous insult through the REAL chat UI. The V1 keyword guardrail
+# (art-topic-guardrail.ts evaluateUserInputGuardrail → reason 'insult') blocks
+# pre-LLM (<1s) and the backend persists an assistant message whose text is the
+# canned insult refusal (guardrail-refusals.ts: GUARDRAIL_REFUSALS[locale].insult).
+# That refusal renders in a NORMAL chat-bubble-assistant (StreamingBody), so we
+# assert the distinctive refusal substring is on screen.
+#   EN: "I cannot process insulting language. …"
+#   FR: "Je ne traite pas les insultes. …"
+#
+# Prereqs: seeded account, keychain reset, backend + LLM live (see chat-entry).
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+- tapOn:
+    id: "chat-input"
+- inputText: "You are a stupid idiot"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+
+# User message echoes optimistically.
+- assertVisible: "You are a stupid idiot"
+
+# The refusal arrives as an assistant bubble (hard-block persists a refusal msg).
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
+- assertVisible:
+    id: "chat-bubble-assistant"
+
+# Category assertion — the CANNED insult refusal text (FR|EN distinctive
+# substring, locale-agnostic). Maestro anchors `text:` against the element's
+# FULL text, so a substring must be wrapped in `.*…*.` (the bubble text is the
+# whole refusal sentence). This proves the bubble is the refusal, not a
+# substantive answer.
+- assertVisible:
+    text: ".*(insulting language|insultes).*"

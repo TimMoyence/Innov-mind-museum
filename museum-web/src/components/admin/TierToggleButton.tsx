@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { apiPatch } from '@/lib/api';
 
@@ -46,11 +49,6 @@ export function TierToggleButton({ user, viewerRole, onUpdated }: TierToggleButt
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (open) confirmRef.current?.focus();
-  }, [open]);
 
   const currentLabel = currentTier === 'free' ? tierDict.currentFree : tierDict.currentPremium;
   const toggleLabel = currentTier === 'free' ? tierDict.toggleToPremium : tierDict.toggleToFree;
@@ -94,52 +92,35 @@ export function TierToggleButton({ user, viewerRole, onUpdated }: TierToggleButt
         {toggleLabel}
       </button>
 
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="tier-modal-title"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 id="tier-modal-title" className="text-lg font-bold text-text-primary">
-              {tierDict.confirmTitle}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">{tierDict.confirmBody}</p>
+      <BaseModal
+        open={open}
+        onClose={() => {
+          /* non-dismissable — Escape/backdrop never fires this */
+        }}
+        title={tierDict.confirmTitle}
+        size="md"
+        dismissable={false}
+        footer={
+          <ModalActions
+            cancelLabel={tierDict.cancel}
+            confirmLabel={tierDict.confirmCta}
+            onCancel={() => {
+              setOpen(false);
+              setErrorMessage(null);
+            }}
+            onConfirm={() => {
+              void handleConfirm();
+            }}
+            confirmBusy={busy}
+          />
+        }
+      >
+        <p className="mt-2 text-sm text-text-secondary">{tierDict.confirmBody}</p>
 
-            {errorMessage !== null && (
-              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMessage}
-              </p>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  setOpen(false);
-                  setErrorMessage(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:opacity-50"
-              >
-                {tierDict.cancel}
-              </button>
-              <button
-                ref={confirmRef}
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  void handleConfirm();
-                }}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? '…' : tierDict.confirmCta}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {errorMessage !== null && (
+          <AlertBanner variant="error" message={errorMessage} className="mt-3" />
+        )}
+      </BaseModal>
     </>
   );
 }

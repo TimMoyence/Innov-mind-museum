@@ -46,6 +46,10 @@ const makeView = (overrides: Partial<MuseumEnrichmentView> = {}): MuseumEnrichme
   phone: null,
   imageUrl: null,
   openingHours: null,
+  admissionFees: null,
+  collections: null,
+  currentExhibitions: null,
+  accessibility: null,
   fetchedAt: new Date('2026-04-22T10:00:00Z').toISOString(),
   ...overrides,
 });

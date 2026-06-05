@@ -47,13 +47,16 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     port: 3000,
     appVersion: '1.0.0',
     trustProxy: true,
+    // D3 (W2) — fault injector is always OFF in this prod env fixture.
+    netFaultInjectionEnabled: false,
     corsOrigins: [],
     jsonBodyLimit: '1mb',
     requestTimeoutMs: 20000,
+    idempotencyTtlMs: 600_000,
     dbSynchronize: false,
     dbSsl: true,
     dbSslRejectUnauthorized: true,
-    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50, replicaUrl: null },
+    db: { host: 'localhost', port: 5432, database: 'museumAI', poolMax: 50 },
     auth,
     llm: {
       provider: 'openai',
@@ -170,7 +173,7 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     },
     extractionWorkerEnabled: true,
     museumEnrichmentSchedulerEnabled: false,
-    redis: { host: 'localhost', port: 6379, clusterNodes: null },
+    redis: { host: 'localhost', port: 6379 },
     guardrails: {
       timeoutMs: 300,
       observeOnly: false,
@@ -178,6 +181,14 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       judgeTimeoutMs: 500,
       judgeMinMessageLength: 50,
       budgetBackend: 'memory',
+      frictionEnabled: true,
+      frictionSessionThreshold: 3,
+      frictionUserThreshold: 10,
+      frictionSessionTtlMs: 21_600_000,
+      frictionUserTtlMs: 86_400_000,
+      frictionCooldownMs: 120_000,
+      frictionWeightSecurity: 2,
+      frictionWeightOfftopic: 1,
       circuitBreaker: {
         failureThreshold: 5,
         windowMs: 60_000,
@@ -188,13 +199,11 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       queueMax: 32,
       chaosRate: 0,
       presidio: { enabled: false, timeoutMs: 500 },
-      llamaPromptGuard: { timeoutMs: 500, scoreThreshold: 0.8 },
       costCircuitBreaker: {
         hourlyThresholdCents: 5_000,
         dailyBudgetCents: 50_000,
         openDurationMs: 300_000,
       },
-      tenantRateLimit: { capacity: 60, refillPerSecond: 1.0 },
     },
     retention: {
       cronPattern: '15 3 * * *',
@@ -205,6 +214,15 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       artKeywordsDays: 90,
       artKeywordsHitThreshold: 1,
     },
+    leads: {
+      redeliveryCronPattern: '*/5 * * * *',
+      maxAttempts: 5,
+      redeliveryBatchLimit: 100,
+      retentionDays: 90,
+      backoffBaseMs: 60_000,
+      backoffCapMs: 3_600_000,
+    },
+    review: { npsScaleEpoch: '2026-05-27T00:00:00.000Z' },
     supportInboxEmail: 'support@musaium.app',
   };
 }

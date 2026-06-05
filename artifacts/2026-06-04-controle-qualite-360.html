@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrôle qualité 360° — Musaium — 2026-06-04</title>
+<style>
+  :root{
+    --ink:#1b1b1a; --muted:#6b7280; --line:#e4e2dc; --bg:#fcfcfb; --card:#ffffff;
+    --accent:#2f5d8a; --accent-soft:#eef3f8;
+    --crit:#8a1414; --high:#b3261e; --med:#946206; --low:#4b5563; --info:#3f6212;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;font-size:16px}
+  .wrap{max-width:900px;margin:0 auto;padding:48px 28px 96px}
+  header.doc{border-bottom:3px solid var(--accent);padding-bottom:22px;margin-bottom:34px}
+  h1{font-size:30px;line-height:1.15;margin:0 0 8px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:14.5px}
+  h2{font-size:21px;margin:46px 0 14px;padding-top:10px;border-top:1px solid var(--line);letter-spacing:-.2px}
+  h3{font-size:16.5px;margin:26px 0 6px}
+  p{margin:.55em 0}
+  a{color:var(--accent)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+    background:#f3f2ee;border:1px solid var(--line);border-radius:4px;padding:.5px 5px}
+  .lede{font-size:17px}
+  .scorecard{display:flex;gap:22px;align-items:center;flex-wrap:wrap;
+    background:var(--accent-soft);border:1px solid #d9e3ee;border-radius:12px;padding:20px 24px;margin:6px 0 8px}
+  .bigscore{font-size:52px;font-weight:700;color:var(--accent);line-height:1}
+  .bigscore small{font-size:20px;color:var(--muted);font-weight:600}
+  .grade{font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--accent);
+    border:1.5px solid var(--accent);border-radius:999px;padding:3px 12px}
+  .verdict{flex:1;min-width:260px;font-size:14.5px}
+  .pillgroup{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+  .pill{font-size:12.5px;border-radius:999px;padding:3px 11px;border:1px solid var(--line);background:#fff}
+  .pill b{font-weight:700}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+  td.s{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700}
+  .bar{height:7px;border-radius:4px;background:#ece9e2;overflow:hidden;min-width:90px;margin-top:5px}
+  .bar > i{display:block;height:100%;background:var(--accent)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;color:#fff;
+    border-radius:4px;padding:1px 7px;vertical-align:middle}
+  .b-crit{background:var(--crit)} .b-high{background:var(--high)} .b-med{background:var(--med)}
+  .b-low{background:var(--low)} .b-info{background:var(--info)}
+  .finding{border:1px solid var(--line);border-left:4px solid var(--high);border-radius:8px;
+    background:var(--card);padding:14px 18px;margin:14px 0}
+  .finding.crit{border-left-color:var(--crit)}
+  .finding .ev{font-size:13.5px;color:#33312e;margin-top:6px}
+  .finding .meta{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .finding h3{margin-top:0}
+  .checkmark{color:var(--info);font-weight:700}
+  ol.actions{padding-left:0;list-style:none;counter-reset:a}
+  ol.actions li{counter-increment:a;position:relative;padding:11px 0 11px 44px;border-bottom:1px solid var(--line)}
+  ol.actions li::before{content:counter(a);position:absolute;left:0;top:11px;width:30px;height:30px;
+    border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center}
+  .note{background:#faf8f3;border:1px solid var(--line);border-radius:8px;padding:16px 20px;font-size:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .box{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:#fff}
+  .box h3{margin-top:0}
+  .ok{color:var(--info)} .ko{color:var(--high)}
+  ul.tight{margin:.4em 0;padding-left:1.2em} ul.tight li{margin:.25em 0}
+  .legend{font-size:12.5px;color:var(--muted);margin-top:6px}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}.bigscore{font-size:42px}}
+  @media print{
+    body{background:#fff;font-size:11.5pt}
+    .wrap{max-width:none;padding:0}
+    .scorecard,.note,.box,.finding{background:#fff!important}
+    h2{page-break-after:avoid} .finding,.box,ol.actions li{page-break-inside:avoid}
+    a{color:var(--ink);text-decoration:none}
+    .bar > i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>Contrôle qualité 360° — Musaium</h1>
+  <div class="sub">Check-up pré-launch V1 · <b>2026-06-04</b> · 15 dimensions, 22 agents frais, vérification adversariale · doctrine <b>« on croit le code, pas la doc »</b> (UFR-013)</div>
+</header>
+
+<div class="scorecard">
+  <div class="bigscore">79<small>/100</small></div>
+  <div class="grade">B+</div>
+  <div class="verdict">Code applicatif nettement au-dessus de la moyenne (sécurité / IA / conformité <b>enterprise-grade vérifiées</b>), mais expédié avec une <b>dette de garde-fous réelle</b> : enforcement de couches backend mort, bug d'intégrité dans la lib d'audit-chain (collision reproduite), et fail-CLOSED V2 non gardé en CI.</div>
+</div>
+<div class="pillgroup">
+  <span class="pill"><b>127</b> findings</span>
+  <span class="pill"><span class="badge b-high">HIGH</span> <b>6</b></span>
+  <span class="pill"><span class="badge b-med">MED</span> <b>35</b></span>
+  <span class="pill"><span class="badge b-low">LOW</span> <b>38</b></span>
+  <span class="pill"><span class="badge b-info">INFO</span> <b>48</b></span>
+  <span class="pill">HIGH re-vérifiés : <b>6/6 confirmés</b>, 0 réfuté</span>
+</div>
+<p class="legend">Source brute : <code>audit-state/2026-06-04-controle-qualite-360/</code> (ALL-FINDINGS.md = 127 findings path:line, AUDIT-FINDINGS.md, findings.json). Les 2 findings les plus lourds (AUDIT-01, ARCH-01) ont été re-lus à la main dans le code par l'orchestrateur.</p>
+
+<h2>Résumé exécutif</h2>
+<p class="lede">Au niveau du <b>code applicatif</b>, Musaium est un repo solo-dev pré-launch <b>genuinement mûr</b>. Le défaut n'est presque jamais l'exécution — ce sont les <b>garde-fous censés garantir la qualité dans le temps</b>, et le <b>timing</b> de l'ingénierie.</p>
+
+<div class="grid2">
+  <div class="box">
+    <h3 class="ok">Ce qui est vraiment solide</h3>
+    <ul class="tight">
+      <li>Sécurité : auth JWT à familles, rotation refresh banking-grade, <b>BOLA fermé</b>, secrets prod fail-fast, CSRF/CSP/SSRF.</li>
+      <li>Assainissement IA réel à 6 couches câblées (egress LLM + double-scrub Sentry/Langfuse, <b>fuite GPS RGPD Art.7 fermée</b>).</li>
+      <li>Conformité 2026 : AI Act Art.50 (1ʳᵉ interaction), RGPD Art.17 erasure multi-store, plancher CNIL 15 ans.</li>
+      <li>Discipline type/lint : <b>zéro <code>as any</code> en prod</b> sur ~150k LOC.</li>
+      <li>Densité rare de leçons réellement <b>enforcées par outillage</b> (lint / ast-grep / sentinels).</li>
+    </ul>
+  </div>
+  <div class="box">
+    <h3 class="ko">Les 4 vérités systémiques re-vérifiées</h3>
+    <ul class="tight">
+      <li><b>Garde-fous désarmés silencieusement</b> : Stryker <code>if:false</code> + boundaries no-op prouvé + fail-CLOSED V2 en <code>continue-on-error</code>.</li>
+      <li><b>Bug d'intégrité</b> dans une lib de sécurité : <code>computeRowHash</code> droppe le nested (collision reproduite) — chemin notification CNIL.</li>
+      <li><b>Couche sécurité IA non gardée</b> en CI : la garantie fail-closed (ADR-047) n'est validée par aucun gate bloquant.</li>
+      <li><b>Sur-ingénierie de timing</b> : primitives 100k MAU posées sur un produit B2C à 0 utilisateur.</li>
+    </ul>
+  </div>
+</div>
+
+<p style="margin-top:16px"><b>Bonne nouvelle re-vérifiée :</b> 2 des 3 piliers que la cartographie-360 (2026-05-31) disait « désarmés » sont <b>réellement remédiés</b> — le faux-vert e2e Maestro est fermé par double-gate, et le frozen-test est un vrai hook (plus pur honor-system, mais limité à <code>/team</code>). La mémoire ne mentait pas là-dessus ; elle se trompe sur le 3ᵉ : <b>Stryker reste off</b>.</p>
+
+<h2>Tableau de bord par dimension</h2>
+<table>
+  <thead><tr><th>Dimension</th><th class="s">Score</th><th>Grade</th><th>Verdict (1 ligne)</th></tr></thead>
+  <tbody>
+    <tr><td>Sécurité &amp; fuites</td><td class="s">88<div class="bar"><i style="width:88%"></i></div></td><td>enterprise</td><td>Posture exceptionnelle ; seuls findings = latents (header CSRF hors CORS, token web XSS-readable sur cible Expo-web).</td></tr>
+    <tr><td>Sanitisation IA / observabilité</td><td class="s">88<div class="bar"><i style="width:88%"></i></div></td><td>expert</td><td>Egress LLM/Sentry/Langfuse solide ; défaut = 64 chars bruts gardés dans l'audit forensique.</td></tr>
+    <tr><td>Niveau du code</td><td class="s">88<div class="bar"><i style="width:88%"></i></div></td><td>expert</td><td>Code mûr ; les ombres sont le gating, pas le code.</td></tr>
+    <tr><td>Leçons respectées</td><td class="s">88<div class="bar"><i style="width:88%"></i></div></td><td>enterprise</td><td>Leçons enforcées par outillage ; 3 écarts (LESSONS pgvector dangereuse, expo-image, strict:true).</td></tr>
+    <tr><td>Sûreté de typage</td><td class="s">84<div class="bar"><i style="width:84%"></i></div></td><td>expert −</td><td>Typage prod propre, mais la frontière DB/LLM du BE est sans filet statique (règles off + pas de <code>noUncheckedIndexedAccess</code>).</td></tr>
+    <tr><td>Archi prévue/réelle/réglementaire</td><td class="s">84<div class="bar"><i style="width:84%"></i></div></td><td>expert</td><td>Conformité 2026 vérifiée ; SSRF probe sans allowlist, Stryker off.</td></tr>
+    <tr><td>Roadmap produit vs code</td><td class="s">82<div class="bar"><i style="width:82%"></i></div></td><td>expert</td><td>Honnête et traçable ; inexactitudes chiffrées (corpus 97≠60, roster 9≠6, script « pilot » Louvre/Orsay).</td></tr>
+    <tr><td>Libs maison</td><td class="s">78<div class="bar"><i style="width:78%"></i></div></td><td>expert −</td><td>Libs soignées mais <b>bug d'intégrité audit-chain (HIGH)</b> + probe-leak FSM + scrub URL-in-extra.</td></tr>
+    <tr><td>Qualité des tests</td><td class="s">74<div class="bar"><i style="width:74%"></i></div></td><td>compétent→expert</td><td>Tests applicatifs sincères ; 2/3 piliers désarmés/advisory, gates haut-niveau non bloquants.</td></tr>
+    <tr><td>Dette systémique</td><td class="s">74<div class="bar"><i style="width:74%"></i></div></td><td>compétent</td><td>Discipline réelle mais 2 classes (TypeORM RETURNING tuple, soft-delete) avec clones non-tracés.</td></tr>
+    <tr><td>Duplication (DRY)</td><td class="s">72<div class="bar"><i style="width:72%"></i></div></td><td>compétent</td><td>Vraie culture DRY mais sentinels figés re-laissent fuiter (fetchWithTimeout ×2, date FE éparpillée).</td></tr>
+    <tr><td>Docs inutiles</td><td class="s">71<div class="bar"><i style="width:71%"></i></div></td><td>compétent</td><td>Corpus vivant et honnête mais DOCS_INDEX stale, scratchpads survivants, refs mortes.</td></tr>
+    <tr><td>Simplicité (KISS)</td><td class="s">68<div class="bar"><i style="width:68%"></i></div></td><td>expert-exec</td><td>Code propre mais empilement scaling/B2B très en avance d'un launch à 0 utilisateur.</td></tr>
+    <tr><td>Patterns &amp; rangement</td><td class="s">68<div class="bar"><i style="width:68%"></i></div></td><td>compétent</td><td>Structure propre mais garde-fou de couches BE désarmé (no-op prouvé) + 1 fuite réelle.</td></tr>
+    <tr><td>Mémoire agent</td><td class="s">62<div class="bar"><i style="width:62%"></i></div></td><td>compétent</td><td>Index sain mais ~7 mémoires superposées stale, 6 wikilinks cassés, refs UFR-023/024/025 inexistantes.</td></tr>
+  </tbody>
+</table>
+
+<h2>Findings HIGH — confirmés, re-vérifiés</h2>
+
+<div class="finding crit">
+  <h3><span class="badge b-crit">CRITICAL?</span> AUDIT-01 — <code>audit-chain.computeRowHash</code> droppe le contenu imbriqué du hash</h3>
+  <p class="ev"><code>audit-chain.ts:43-46</code> appelle <code>JSON.stringify(metadata, Object.keys(metadata).sort())</code>. Le 2ᵉ argument est un <b>replacer-allowlist appliqué récursivement</b> : <code>Object.keys</code> ne liste que le premier niveau, donc tout objet imbriqué (<code>breach:{…}</code>, <code>provider:{…}</code>) est sérialisé sans ses sous-clés → <code>{"breach":{}}</code>. Deux payloads forensiques différents produisent le <b>même hash</b>. Collision reproduite empiriquement (<code>COLLISION=true</code>) + re-lue à la main par l'orchestrateur.</p>
+  <p class="ev"><b>Impact :</b> la chaîne d'audit « inviolable » ne couvre pas le contenu nested. Atteint le chemin de <b>notification de violation CNIL</b> (<code>guardrail-audit-payload.ts:105</code>, <code>audit.service.ts:207-219</code>) où tout le payload est imbriqué → légalement opposable. Invisible aux tests, qui hardcodent le sérialiseur buggé comme oracle (AUDIT-02).</p>
+  <p class="meta">Fix : sérialiseur canonique deep-recursif (clés triées récursivement) + re-stamp/version des hashes historiques + tests nested sur l'unit ET la parité migration. → <b>Action #1, via <code>/team</code>.</b></p>
+</div>
+
+<div class="finding">
+  <h3><span class="badge b-high">HIGH</span> ARCH-01 — l'enforcement hexagonal backend (<code>eslint-plugin-boundaries</code>) est un no-op prouvé</h3>
+  <p class="ev"><code>eslint.config.mjs:64-160</code> : le bloc <code>boundaries</code> n'a <b>aucun <code>import/resolver</code></b> dans son <code>settings</code> (seul un <code>import-x/resolver</code> vit dans un bloc séparé). Sans résolveur, les imports <code>@modules/*</code> résolvent en <code>external</code> (path:null) → la règle ne classe rien → ne fire jamais. Reproduit : un import domain→infrastructure flagrant = 0 erreur ; ajouter <code>import/resolver.typescript</code> au bloc fait fire la règle. Re-lu à la main par l'orchestrateur.</p>
+  <p class="ev"><b>Mensonge de config :</b> le commentaire <code>eslint.config.mjs:115-118</code> affirme que « la migration v6 a restauré l'enforcement » — <span class="ko">faux</span>. Et une vraie fuite existe déjà : <code>chat/domain/ports/chat-orchestrator.port.ts:9</code> importe un type défini en useCase (ARCH-02).</p>
+  <p class="meta">Fix : ajouter le resolver au bloc boundaries + fixture-garde CI + un sentinel fs-based indépendant (modèle FE). → <b>Actions #2 &amp; #6.</b></p>
+</div>
+
+<div class="finding">
+  <h3><span class="badge b-high">HIGH</span> TQ-01 — la garantie fail-CLOSED V2 (ADR-047) n'est gardée par aucun gate</h3>
+  <p class="ev"><code>ci-cd-backend.yml:524-565</code> : le job ai-tests est en <code>continue-on-error:true</code> (l.564) et <b>sans sidecar</b> → <code>guardrail-v2-live</code> throw en <code>beforeAll</code> et l'erreur est avalée. Les invariants déterministes (dead-port/dead-URL/budget/fail-soft) sont co-localisés avec des asserts LLM non-déterministes → ils tombent ensemble. <code>ci-cd-llm-guard.yml</code> ne fait que build+health-smoke.</p>
+  <p class="meta">Fix : sortir les tests fail-CLOSED déterministes du <code>describe</code> live-sidecar → gate bloquant sans sidecar ; garder les asserts LLM en advisory. → <b>Action #3.</b></p>
+</div>
+
+<div class="finding">
+  <h3><span class="badge b-high">HIGH</span> PILLAR-01 / ARCH-04 — le mutation gate Stryker est <code>if: false</code></h3>
+  <p class="ev"><code>ci-cd-backend.yml:411</code> : le job entier est désactivé depuis 2026-05-09 ; <code>mutation</code>/<code>mutation:ci</code>/<code>mutation:gate</code> ne tournent jamais (même le cron nightly est skippé). La doctrine « kill ≥80 % = signal load-bearing » (<code>jest.config.ts:126</code>) est adossée à <b>zéro enforcement</b>. <span class="checkmark">Honnête dans le code</span> (commentaire CI : « ne pas citer comme garde actif »).</p>
+  <p class="meta">Fix : trancher — re-armer (plan <code>ci-cd-backend.yml:405-410</code>) OU acter formellement que la force des tests n'est mesurée que par couverture, jamais citée comme garde. → <b>Action #4.</b> (Le vérificateur ramène ARCH-04 à MEDIUM car désactivation intentionnelle/documentée.)</p>
+</div>
+
+<div class="finding">
+  <h3><span class="badge b-high">HIGH</span> AISAN-01 — 64 chars de texte utilisateur brut écrits dans l'audit, avant le sanitizer PII</h3>
+  <p class="ev"><code>guardrail-snippet.ts:36-40</code> : pour tout input bloqué, le snippet garde 64 caractères de <b>texte utilisateur brut</b> (email/téléphone possibles) dans la chaîne de hash d'audit (rétention 13 mois), <b>avant</b> le passage par <code>RegexPiiSanitizer</code> — alors que l'entrée REDACTED, elle, est bien sanitisée. Contredit le commentaire LLM02 du fichier.</p>
+  <p class="meta">Fix : passer <code>fullText</code> au sanitizer PII avant <code>slice(0,64)</code> ; garder un fingerprint sha256 du texte intégral pour le dédup. → <b>Action #5.</b></p>
+</div>
+
+<div class="finding">
+  <h3><span class="badge b-high">HIGH</span> SYS-02 — soft-delete <code>deletedAt</code> non filtré hors login (email-squat + tokens à comptes supprimés)</h3>
+  <p class="ev">Le filtre <code>deletedAt</code> n'est appliqué qu'au login : <code>forgotPassword</code> émet des tokens de reset à des comptes supprimés, et <code>registerUser</code>/<code>changeEmail</code> laissent un compte soft-deleted <b>squatter l'email</b> (unicité non exclue des soft-deleted). Fuite <b>déjà active</b> sur 3 callsites, pas future.</p>
+  <p class="meta">Fix : filtrer <code>deletedAt</code> dans <code>forgotPassword</code> + exclure les soft-deleted des checks d'unicité email (ou migrer vers <code>@DeleteDateColumn</code>). → <b>Action #7 (avec SYS-01).</b></p>
+</div>
+
+<h2>Dettes systémiques transverses (« une dette trouvée quelque part… est-elle partout ? »)</h2>
+<p>C'est la question que tu as explicitement posée. Réponse : <b>oui pour deux classes</b>, et les sentinels figés en laissent fuiter une troisième.</p>
+<ol class="actions" style="counter-reset:a">
+  <li><b>Garde-fous désarmés silencieusement</b> (ARCH-PATTERNS/TESTS/CODE-GRADE/SECURITY) — un mécanisme existe, est documenté comme actif (parfois faussement, ex commentaire boundaries:116-118), mais ne mord pas. La qualité tient par <b>discipline humaine</b>, pas par enforcement : une régression-en-attente structurelle.</li>
+  <li><b>Asymétrie de protection entre apps</b> (TYPE/DRY) — le backend (DB+LLM, la frontière la plus dangereuse) est le <b>moins</b> protégé statiquement ; FE/WEB ont <code>noUncheckedIndexedAccess</code>, pas le BE. Le filet le plus fort est sur la surface la moins risquée.</li>
+  <li><b>Sur-ingénierie de timing / scaling front-loaded</b> (KISS/OWN-LIBS) — primitives 100k MAU (tenant-rate-limiter mort, triple cost-gate, outbox+backoff B2B) sur un produit à 0 utilisateur, 0 musée contracté.</li>
+  <li><b>Tests/sentinels qui ciment le bug au lieu de le garder</b> (OWN-LIBS/DEBT-SPREAD/DRY) — le test audit-chain hardcode le sérialiseur buggé comme oracle (AUDIT-02), le test artKeyword mocke un shape PG impossible (SYS-01), les sentinels DRY keyés sur des TARGETS figés ne couvrent pas les nouveaux fichiers (DUP-01). Même archétype de fausse-confiance que le bug DOB-2026-05-17 que UFR-021 prétend avoir fermé.</li>
+  <li><b>Staleness doc/mémoire de fin de session</b> (DOCS/MEMORY/ROADMAP/LESSONS) — la vérité existe en prose mais n'est jamais exécutée par suppression : DOCS_INDEX stale, ~7 mémoires superposées, <b>LESSONS pgvector dangereuse</b> (recommande <code>vector_cosine_ops</code>, incompatible <code>halfvec</code> → casserait la migration).</li>
+  <li><b>Dead-code / narratif B2B incohérent</b> (KISS/ROADMAP) — le cleanup honnêteté B2B est réel sur les surfaces publiques, mais des résidus internes (script <code>seed-pilot-museums.sh</code> ciblant Louvre/Orsay/Pompidou avec vocabulaire « pilot », primitive dead) ré-introduisent le vocabulaire que le cleanup devait purger.</li>
+</ol>
+
+<h2>Top 10 des actions (ROI décroissant)</h2>
+<ol class="actions">
+  <li><span class="badge b-crit">CRIT</span> <b>Corriger <code>audit-chain.computeRowHash</code></b> — sérialiseur canonique deep-recursif + re-stamp/version des hashes + tests nested unit ET parité migration. Chemin CNIL = légalement liant.</li>
+  <li><span class="badge b-high">HIGH</span> <b>Réparer <code>eslint-plugin-boundaries</code></b> — <code>import/resolver.typescript</code> dans le bloc boundaries + fixture-garde CI + corriger la fuite ARCH-02.</li>
+  <li><span class="badge b-high">HIGH</span> <b>Splitter les tests fail-CLOSED V2</b> — sortir dead-port/URL/budget/fail-soft du describe live-sidecar → gate bloquant sans sidecar.</li>
+  <li><span class="badge b-high">HIGH</span> <b>Trancher Stryker</b> — re-armer OU acter formellement que la force des tests n'est mesurée que par couverture ; ne jamais le citer comme garde.</li>
+  <li><span class="badge b-high">HIGH</span> <b>Sanitiser le snippet d'audit BLOCKED</b> — passer <code>fullText</code> au sanitizer PII avant <code>slice(0,64)</code>.</li>
+  <li><span class="badge b-high">HIGH</span> <b>Sentinel fs-based BE</b> (modèle FE) — walk <code>src/modules/*/domain</code>, fail si un import résout vers <code>/adapters/</code> ou <code>/useCase/</code>. Indépendant de boundaries.</li>
+  <li><span class="badge b-med">MED</span> <b>Fermer SYS-01 &amp; SYS-02</b> — guard <code>Array.isArray</code> sur le RETURNING + réécrire le mock tuple ; filtrer <code>deletedAt</code> + unicité email hors soft-deleted.</li>
+  <li><span class="badge b-med">MED</span> <b><code>noUncheckedIndexedAccess</code> BE + <code>--max-warnings=0</code> WEB</b> — rendre la discipline existante compiler/lint-checked au lieu d'honor-system.</li>
+  <li><span class="badge b-med">MED</span> <b>Corriger LESSONS pgvector + DOCS_INDEX + purge mémoire</b> — la LESSONS pointe la classe d'op qui casserait la migration ; index de vérité stale ; ~7 mémoires superposées + 6 wikilinks cassés.</li>
+  <li><span class="badge b-low">LOW</span> <b>Enterrer le dead-code B2B/scaling</b> (UFR-016) — TenantRateLimiter, <code>seed-pilot-museums.sh</code> ; + probe-timeout ThreeStateCircuit + scrub URL-in-extra.</li>
+</ol>
+
+<h2>Re-vérification de la cartographie-360 (2026-05-31)</h2>
+<table>
+  <thead><tr><th>Pilier flaggé « désarmé »</th><th>État au 2026-06-04</th></tr></thead>
+  <tbody>
+    <tr><td>e2e Maestro faux-vert (summary <code>success</code> malgré 4/4 fail)</td><td><span class="ok">✓ Remédié</span> — fermé par double-gate.</td></tr>
+    <tr><td>frozen-test team honor-system</td><td><span class="ok">✓ Remédié</span> — vrai hook ; limité au périmètre <code>/team</code> (pas universel).</td></tr>
+    <tr><td>Stryker mutation gate <code>if:false</code></td><td><span class="ko">✗ Toujours off</span> — la mémoire se trompe en le croyant priorisé.</td></tr>
+  </tbody>
+</table>
+
+<h2>Note d'honnêteté &amp; limites de cet audit</h2>
+<div class="note">
+  <ul class="tight">
+    <li><b>Cap de re-vérification</b> : 6 findings HIGH reproduits empiriquement par le synthétiseur (collision audit-chain via node, boundaries no-op, ai-tests <code>continue-on-error</code>, Maestro double-gate, Stryker <code>if:false</code>, roster 6 agents, DOCS_INDEX). Les ~120 autres reposent sur les preuves path:line des agents de dimension — échantillonnées et crédibles (grep/Grep imposé, anti-RTK), mais non intégralement re-lues.</li>
+    <li><b>Dimensions superficielles</b> : a11y mobile auto-marquée <code>likely</code> (pas de gate WCAG mobile vérifié, touch-targets/contraste non audités). Performance runtime, charge, UX visuelle = <b>hors scope</b> de ces 15 dimensions.</li>
+    <li><b>Pas de mesure dynamique</b> : aucune suite de tests exécutée en entier par le synthétiseur. Le mutation testing étant off, la <b>force</b> réelle des tests (kill-rate) est inconnue, pas seulement non-gardée.</li>
+    <li><b>CRITICAL non tranché</b> : AUDIT-01 est noté HIGH mais « pourrait justifier CRITICAL » (chemin CNIL). Classé conservativement action #1.</li>
+    <li><b>Score 79</b> = pondération de jugement (sécurité / tests / dette systémique pesés plus lourd). Pas de formule canonique ; un autre pondérateur honnête le situerait 76-82.</li>
+    <li><b>RTK</b> : <code>rg</code> en bash renvoie des sorties vides (corruption du hook) → tous les agents ont utilisé <code>grep</code>/Grep, sinon l'audit serait faussement propre.</li>
+  </ul>
+</div>
+
+<footer>
+  Généré le 2026-06-04 par un workflow d'audit multi-agents (22 agents, ~2,85 M tokens, 942 appels d'outils, ~53 min). Données brutes : <code>audit-state/2026-06-04-controle-qualite-360/</code>. Verdict global <b>79/100 — B+</b>. Le code est solide ; ce sont les garde-fous qui demandent du travail avant/juste après le launch.
+</footer>
+
+</div>
+</body>
+</html>

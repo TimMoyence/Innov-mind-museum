@@ -1,6 +1,6 @@
 # Testing Discipline Proposal — UFR-021 (post-feature test-coverage gate)
 
-**Status :** ACCEPTED-PARTIAL (audited 2026-05-19) — Phase 1 shipped 2026-05-17 (commit `70f5ce2f9`), Phase 2 pending-user wiring.
+**Status :** ACCEPTED — Phase 1 shipped 2026-05-17 (commit `70f5ce2f9`), **Phase 2 (enforcement wiring) shipped 2026-05-31** (run `2026-05-31-ufr021-phase2-wire`). §§3.4/8/9 (baseline burn-down) remain as living reference.
 **Author :** /team architect agent
 **Scope :** `museum-frontend/` (RN + Expo Router screens) — extensible to web later
 **Trigger incident :** signup DOB regex mismatch silently disabled the submit button. No Maestro / Jest test exercised the `DD/MM/YYYY` typing path. Bug shipped to TestFlight before manual QA caught it.
@@ -8,10 +8,10 @@
 > **Implementation status (audit 2026-05-19, verified against repo):**
 > - ✅ **§1 prose** — UFR-021 block live in `CLAUDE.md` (§ Post-feature test coverage). DONE.
 > - ✅ **§2 JSON** — UFR-021 entry live in `.claude/agents/shared/user-feedback-rules.json` (line 203). DONE.
-> - ✅ **§3 sentinel** — `museum-frontend/scripts/sentinels/screen-test-coverage.mjs` shipped + wired as `pnpm sentinel:screen-test-coverage` (`museum-frontend/package.json:21`); `museum-frontend/.maestro/coverage-baseline.json` bootstrapped (option B, §8). DONE.
-> - ⏳ **§4 pre-push Gate 19** — NOT wired (`.husky/pre-push` has no screen-test-coverage step). OPEN (Phase 2, pending user validation per CLAUDE.md "Phase 2 (à wirer après validation user)").
-> - ⏳ **§5 PR template checkbox** — OPEN (Phase 2).
-> - ⏳ **§6 ci-cd-mobile.yml step + §6.1 sentinel-mirror.yml mirror** — NOT wired (0 references in either workflow). OPEN (Phase 2).
+> - ✅ **§3 sentinel** — `scripts/sentinels/screen-test-coverage.mjs` (repo root) shipped + wired as `pnpm sentinel:screen-test-coverage` (root `package.json:22`); `museum-frontend/.maestro/coverage-baseline.json` bootstrapped (option B, §8). DONE.
+> - ✅ **§4 pre-push gate** — WIRED 2026-05-31 (run `2026-05-31-ufr021-phase2-wire`) as **Gate 22** (NOT 19 — the hook now has 21 pre-existing gates; the proposal number was stale). Fail-fast `node scripts/sentinels/screen-test-coverage.mjs || exit 1`, before summary + Git-LFS chain. DONE.
+> - ✅ **§5 PR template checkbox** — ALREADY PRESENT (`PULL_REQUEST_TEMPLATE.md` line 51, `## Test plan`). No dedicated section added to avoid duplication. DONE.
+> - ✅ **§6 ci-cd-mobile.yml step + §6.1 sentinel-mirror.yml mirror** — WIRED 2026-05-31. `ci-cd-mobile.yml` quality job runs the sentinel (`node ../scripts/...`) before the shard-manifest step; `sentinel-mirror.yml` mirrors it server-side (UFR-020 anti-bypass). DONE. Wiring guarded by regression test `museum-frontend/__tests__/sentinels/screen-coverage-wiring.test.ts`.
 >
 > This file is NOT yet superseded: canonical rule lives in CLAUDE.md UFR-021, but the CI/hook enforcement (§4/§5/§6) is still pending. DELETE this file only once those wire. The design sections below remain the spec of record for the Phase 2 wiring.
 

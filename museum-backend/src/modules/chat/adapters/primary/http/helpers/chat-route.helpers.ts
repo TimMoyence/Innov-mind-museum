@@ -10,11 +10,58 @@ import { env } from '@src/config/env';
 
 import type { Request, RequestHandler } from 'express';
 
-/** MUST mount BEFORE multer; uses finite ceiling (budget + 10s), not 0/unlimited. */
+/**
+ * I-OPS4 — chat-route socket-timeout ceiling reconciliation.
+ *
+ * Coherence margin (ms) added on top of the worst-case server-side work
+ * (`totalBudgetMs + serial guardrail budget`) so the response socket is never
+ * force-closed by the request-timeout middleware *before* the LLM deadline path
+ * has a chance to emit a graceful answer/timeout. Must stay strictly positive.
+ */
+const CHAT_ROUTE_TIMEOUT_MARGIN_MS = 2_000;
+
+/**
+ * Worst-case serial guardrail budget: LLM-Guard sidecar + LLM judge.
+ *
+ * NOTE (2026-06-01, hybrid-by-gravity friction): the LLM judge now runs in
+ * PARALLEL with the sidecar, not in series, so summing the two timeouts is a
+ * deliberate SAFE OVER-ESTIMATION (a ceiling), no longer the literal serial
+ * latency. Keep the sum — do NOT lower `judgeTimeoutMs` here to "tighten" the
+ * ceiling. A looser-than-reality socket ceiling only ever protects the graceful
+ * timeout path; a tighter one risks force-closing the socket mid-answer.
+ */
+const serialGuardrailBudgetMs = (): number =>
+  env.guardrails.timeoutMs + env.guardrails.judgeTimeoutMs;
+
+/**
+ * Single source of truth for the chat-route socket ceiling (R2 invariant):
+ *
+ *   chatRouteSocketCeilingMs = totalBudgetMs + serialGuardrailBudget + margin
+ *
+ * The global request timeout (`env.requestTimeoutMs`, default 20 000) can fire
+ * BEFORE the LLM total budget (`env.llm.totalBudgetMs`, default 25 000) plus the
+ * serial guardrail budget (~2 000) is exhausted. `extendTimeoutForUpload` raises
+ * the socket ceiling to this value on EVERY chat request (text-only included),
+ * never shortening an already-larger ceiling. With defaults: 25 000 + 2 000 +
+ * 2 000 = 29 000 ms.
+ */
+export const chatRouteSocketCeilingMs =
+  env.llm.totalBudgetMs + serialGuardrailBudgetMs() + CHAT_ROUTE_TIMEOUT_MARGIN_MS;
+
+/**
+ * MUST mount BEFORE multer; uses a finite ceiling, not 0/unlimited.
+ *
+ * Raises the response socket timeout for BOTH the multipart upload path AND the
+ * text-only (`application/json`) chat path so neither is cut before the LLM
+ * deadline path completes. The multipart path historically used
+ * `totalBudgetMs + 10 000` (image ingest headroom); it is kept as a floor and
+ * never shortened below `chatRouteSocketCeilingMs` (R1, NFR §Latency).
+ */
 export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
-  if (req.is('multipart/form-data')) {
-    res.setTimeout(env.llm.totalBudgetMs + 10_000);
-  }
+  const ceiling = req.is('multipart/form-data')
+    ? Math.max(env.llm.totalBudgetMs + 10_000, chatRouteSocketCeilingMs)
+    : chatRouteSocketCeilingMs;
+  res.setTimeout(ceiling);
   next();
 };
 

@@ -3,61 +3,90 @@ appId: com.musaium.mobile.preview
 # screen: MuseumPickerScreen
 # screen: MuseumPickerRoute
 #
-# W3 museum picker — happy path (UFR-021 coverage for /(stack)/museums-picker
-# + features/museum/ui/MuseumPickerScreen.tsx).
-#
-# Normally reached as the auto-detect-fail fallback from useStartConversation;
-# here we deep-link straight to the route (the screen has no standalone in-app
-# affordance that is reliably reachable without forcing a geo failure). Tap the
-# first nearby-museum row (BE pre-sorts by distance) and assert we navigate away
-# — handleSelect() does router.back() + startConversation(), landing in chat.
-#
-# Test account + the 3 seeded Bordeaux pilot museums must exist in the backend.
+# W3 museum picker — UFR-021 coverage for /(stack)/museums-picker +
+# features/museum/ui/MuseumPickerScreen.tsx. Test account + seeded Bordeaux
+# museums needed; geo set to Bordeaux (44.8378,-0.5792) so the nearby effect
+# returns local rows. Tap-through happy path: open picker → tap a local museum
+# row → land in the chat screen (run 2026-06-01-museum-picker-osm-select fixed
+# the `id`-less /museums/search contract that previously dropped every row).
 
+# ──────────────────────────────────────────────
+# Phase 0: Fresh launch + login → home
+# ──────────────────────────────────────────────
 - launchApp:
-    clearState: false
-
-- waitForAnimationToEnd
-
-# ──────────────────────────────────────────────
-# Phase 0: Authenticate
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible: "Welcome back|Bon retour|Log in"
-    file: helpers/quick-login.yaml
-
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "Skip|Passer"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
     optional: true
-- waitForAnimationToEnd
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 1: Open the museum picker route (deep-link)
+# Phase 1: Open the museum picker route (deep-link) + assert it mounted.
 # ──────────────────────────────────────────────
 - openLink:
     link: "musaium:///(stack)/museums-picker"
 - waitForAnimationToEnd:
     timeout: 10000
-
 - extendedWaitUntil:
     visible:
       id: "museum-picker-screen"
-    timeout: 10000
-
-- assertVisible:
-    id: "museum-picker-list"
+    timeout: 20000
 
 # ──────────────────────────────────────────────
-# Phase 2: Tap the first nearby-museum row → select + navigate
+# Phase 2: Search "Musée" → the nearby/search effect returns the seeded Bordeaux
+# LOCAL rows (now carrying `id` → toPickable maps them to selectable rows). Tap
+# the first row and assert we land in the chat screen (tap-through happy path).
+# Local rows sort first by distance, so index 0 is a `museum-picker-row-<id>`.
 # ──────────────────────────────────────────────
+- tapOn:
+    id: "museum-picker-search"
+- inputText: "Musée"
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "museum-picker-row-.*"
+    timeout: 20000
 - tapOn:
     id: "museum-picker-row-.*"
     index: 0
+# First chat entry shows a one-time "Réponses générées par IA" disclosure modal
+# that overlays the composer — dismiss it so the chat-input becomes tappable.
+# (Verified at runtime 2026-06-01 on iOS 26 sim: without this the flow stalls on
+# the disclosure sheet, not the chat screen.)
+- tapOn:
+    text: "Accepter tout|Accept all"
+    optional: true
 - waitForAnimationToEnd:
-    timeout: 10000
-
-# handleSelect dismisses the picker (router.back) and starts a conversation,
-# so the picker root must no longer be visible.
-- assertNotVisible:
-    id: "museum-picker-screen"
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 30000
+- assertVisible:
+    id: "chat-input"

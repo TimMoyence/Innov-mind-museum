@@ -35,10 +35,13 @@ export type MuseumCategory = MuseumDirectoryEntry['museumType'];
 /**
  * Enrichment types — mirrored from the backend `enrichment.types.ts` domain.
  *
- * Kept as a local definition because the BE hand-maintained OpenAPI spec at
- * `museum-backend/openapi/openapi.json` does not yet expose the
- * `/api/museums/:id/enrichment[/status]` endpoints. Once the BE spec includes
- * them, regenerate via `npm run generate:openapi-types` and swap these for
+ * Kept as a local definition: the BE OpenAPI spec at
+ * `museum-backend/openapi/openapi.json` now exposes the
+ * `GET /api/museums/:id/enrichment[/status]` endpoints, but the generated
+ * client surfaces them as a `pending | ready` union whose `ready.data` payload
+ * mirrors the shape below. This hand-maintained mirror stays as the source of
+ * truth for the rich JSONB fields until the projection is reused elsewhere; if
+ * it drifts, regenerate via `npm run generate:openapi-types` and swap these for
  * `OpenApiResponseFor<...>` aliases.
  */
 
@@ -80,6 +83,19 @@ export interface MuseumEnrichmentView {
   phone: string | null;
   imageUrl: string | null;
   openingHours: ParsedOpeningHours | null;
+  /**
+   * Rich JSONB fields surfaced to the museum-detail screen. Free-form
+   * `Record<string, unknown> | null` (validated by loose Zod schemas BE-side —
+   * no key is guaranteed). `null` when the column is empty; the async refresh
+   * worker does not populate these. Optional so older fixtures that predate the
+   * rich-field rollout (and a `pending`-then-`ready` poll that only carries the
+   * base projection) keep typechecking — the detail screen treats absent and
+   * `null` identically (section hidden).
+   */
+  admissionFees?: Record<string, unknown> | null;
+  collections?: Record<string, unknown> | null;
+  currentExhibitions?: Record<string, unknown> | null;
+  accessibility?: Record<string, unknown> | null;
   /** ISO-8601 timestamp — when the BE persisted this enrichment row. */
   fetchedAt: string;
 }

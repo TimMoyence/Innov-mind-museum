@@ -2,6 +2,7 @@ import type React from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { AccessibilityRole, LayoutChangeEvent, PanResponderInstance } from 'react-native';
 import { Animated, BackHandler, PanResponder, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -78,6 +79,7 @@ export const BottomSheetContainer = ({
   children,
 }: BottomSheetContainerProps) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const opacity = useMemo(() => new Animated.Value(0), []);
   const translateY = useMemo(() => new Animated.Value(40), []);
@@ -282,6 +284,13 @@ export const BottomSheetContainer = ({
   // not have to flip handler identity between renders.
   const panHandlers = panResponder?.panHandlers ?? {};
 
+  // Distinct dismiss label for the backdrop's tappable affordance (spec R12).
+  // The outer wrapper keeps the sheet's announce label (used for dialog
+  // discovery + tree-walk), while the backdrop's inner Pressable now carries
+  // a discrete "Dismiss sheet" semantic so VoiceOver users do not hear the
+  // dialog title twice when scrubbing to the close affordance.
+  const dismissLabel = t('a11y.bottomSheet.dismiss');
+
   return (
     <View
       accessibilityViewIsModal
@@ -290,7 +299,11 @@ export const BottomSheetContainer = ({
       style={StyleSheet.absoluteFill}
       pointerEvents="box-none"
     >
-      <BottomSheetBackdrop onPress={onBackdropPress} accessibilityLabel={accessibilityLabel} />
+      <BottomSheetBackdrop
+        onPress={onBackdropPress}
+        accessibilityLabel={accessibilityLabel}
+        dismissLabel={dismissLabel}
+      />
       <Animated.View
         style={[
           ...presentationStyle,
@@ -299,14 +312,18 @@ export const BottomSheetContainer = ({
             transform: [{ translateY }],
           },
         ]}
-        // Pointer-events stays "auto" — the backdrop sits underneath; taps to
-        // the sheet body are handled by its own pressables, while the
-        // PanResponder claims the gesture only on a clear downward drag.
-        pointerEvents="auto"
+        // `box-none` on the wrap: the wrap (absoluteFill ancestor for the
+        // `sheet`/`card`/`fullscreen` presentations) does NOT claim taps, so
+        // taps that fall outside the visible slab reach the sibling backdrop
+        // (spec R5/R6). The inner View below uses `auto` so the visible slab
+        // still receives its own pressables + PanResponder gestures.
+        pointerEvents="box-none"
         onLayout={handleSheetLayout}
         {...panHandlers}
       >
-        <View style={innerStyle}>{children}</View>
+        <View style={innerStyle} pointerEvents="auto">
+          {children}
+        </View>
       </Animated.View>
     </View>
   );

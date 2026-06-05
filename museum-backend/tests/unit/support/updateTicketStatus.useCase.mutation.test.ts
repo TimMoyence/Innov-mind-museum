@@ -29,7 +29,7 @@ import { makeTicket } from 'tests/helpers/support/ticket.fixtures';
 
 // Mock the audit module — the use case imports the singleton directly.
 jest.mock('@shared/audit', () => ({
-  auditService: { log: jest.fn() },
+  auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_TICKET_UPDATED: 'ADMIN_TICKET_UPDATED',
 }));
 
@@ -97,8 +97,8 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
 
       await useCase.execute({ ticketId, status: 'closed', actorId: 7 });
 
-      expect(auditService.log).toHaveBeenCalledTimes(1);
-      const logArg = auditService.log.mock.calls[0][0];
+      expect(auditService.logActorAction).toHaveBeenCalledTimes(1);
+      const logArg = auditService.logActorAction.mock.calls[0][0];
       // `toEqual` would treat `{ status: 'closed', assignedTo: undefined }` as
       // equal to `{ status: 'closed' }`; use Object.keys to lock the *presence*
       // of the key, killing the "always-spread" mutants.
@@ -112,7 +112,7 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
 
       await useCase.execute({ ticketId, priority: 'high', actorId: 1 });
 
-      const logArg = auditService.log.mock.calls[0][0];
+      const logArg = auditService.logActorAction.mock.calls[0][0];
       expect(Object.keys(logArg.metadata).sort()).toEqual(['priority']);
       expect(Object.prototype.hasOwnProperty.call(logArg.metadata, 'assignedTo')).toBe(false);
       expect(logArg.metadata).toEqual({ priority: 'high' });
@@ -129,10 +129,9 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
         requestId: 'req-assigned',
       });
 
-      expect(auditService.log).toHaveBeenCalledTimes(1);
-      expect(auditService.log).toHaveBeenCalledWith({
+      expect(auditService.logActorAction).toHaveBeenCalledTimes(1);
+      expect(auditService.logActorAction).toHaveBeenCalledWith({
         action: 'ADMIN_TICKET_UPDATED',
-        actorType: 'user',
         actorId: 3,
         targetType: 'support_ticket',
         targetId: ticketId,
@@ -140,7 +139,7 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
         ip: '10.0.0.2',
         requestId: 'req-assigned',
       });
-      const logArg = auditService.log.mock.calls[0][0];
+      const logArg = auditService.logActorAction.mock.calls[0][0];
       expect(Object.keys(logArg.metadata).sort()).toEqual(['assignedTo']);
     });
 
@@ -157,8 +156,8 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
         actorId: 4,
       });
 
-      expect(auditService.log).toHaveBeenCalledTimes(1);
-      const logArg = auditService.log.mock.calls[0][0];
+      expect(auditService.logActorAction).toHaveBeenCalledTimes(1);
+      const logArg = auditService.logActorAction.mock.calls[0][0];
       expect(logArg.metadata).toEqual({ assignedTo: null });
       expect(Object.keys(logArg.metadata).sort()).toEqual(['assignedTo']);
       expect(logArg.metadata.assignedTo).toBeNull();
@@ -175,7 +174,7 @@ describe('UpdateTicketStatusUseCase — mutation coverage', () => {
         actorId: 1,
       });
 
-      const logArg = auditService.log.mock.calls[0][0];
+      const logArg = auditService.logActorAction.mock.calls[0][0];
       expect(logArg.metadata).toEqual({
         status: 'resolved',
         priority: 'low',

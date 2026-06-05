@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, View } from 'react-native';
 
-import { MuseumPickerScreen } from '@/features/museum/ui/MuseumPickerScreen';
+import { MuseumPickerScreen, type SelectedMuseum } from '@/features/museum/ui/MuseumPickerScreen';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -20,18 +20,28 @@ export default function MuseumPickerRoute() {
   const { theme } = useTheme();
   const { startConversation } = useStartConversation();
 
-  const handleSelect = ({ id, name }: { id: number; name: string }): void => {
+  const handleSelect = (museum: SelectedMuseum): void => {
     // Close the picker first so the chat session pushes on top of (stack)
     // root, not on top of the picker. router.back() is a safer dismiss than
     // router.replace() because the picker may be reached from multiple
     // entry points (auto-detect fallback, header CTA, etc.).
     router.back();
-    void startConversation({
-      skipSettings: true,
-      museumMode: true,
-      museumId: id,
-      museumName: name,
-    });
+    switch (museum.kind) {
+      case 'local':
+        // A known DB museum → museum-context conversation.
+        void startConversation({
+          skipSettings: true,
+          museumMode: true,
+          museumId: museum.museumId,
+          museumName: museum.name,
+        });
+        break;
+      case 'osm':
+        // An OSM POI (no DB row) → generic conversation, no museum context
+        // (no museumId / museumMode / museumName — design D4).
+        void startConversation({ skipSettings: true });
+        break;
+    }
   };
 
   const handleClose = (): void => {

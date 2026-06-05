@@ -99,7 +99,7 @@ End-of-sprint snapshot for the three managed dev-tool versions across `museum-ba
 | Tool | Backend | Frontend | Web | Status | ADR |
 |---|---|---|---|---|---|
 | TypeScript | `^5.9.3` | `~5.9.2` | `~5.9.3` (post-bump) | **Aligned (5.9.x)** ✓ | ADR-032 (this) |
-| ESLint | `^10.2.0` | `^9.39.4` | `^9.39.4` | Deferred — split intentional, awaits upstream `eslint-plugin-react` v10 fix | ADR-010 (re-confirmed 2026-05-05) |
+| ESLint | `^9.39.4` | `^9.39.4` | `^9.39.4` | **Aligned (9.39.4)** — BE aligned down via commit `42d81090a` 2026-05-17 (ADR-010 amendment) | ADR-010 |
 | zod | `^3.25.76` | `^4.4.1` | (none) | Status-quo — re-eval 2026-Q4 post-launch, no shared schema | ADR-033 |
 
 Convergence achieved on TypeScript only. ESLint + zod remain deferred by explicit ADR with concrete trigger checklists. No blocker for the 2026-05-19 feature freeze ramp.

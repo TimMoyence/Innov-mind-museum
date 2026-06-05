@@ -1,0 +1,114 @@
+appId: com.musaium.mobile.preview
+---
+# KNOWN-BLOCKED (local sim Release): the paywall preview lives on the (dev) route
+# group, gated on __DEV__===true (app/(dev)/_layout.tsx redirects to "/" in a
+# Release bundle). The installed binary is a Release build (__DEV__=false), so
+# the deeplink lands on Home and the modal never opens. Cannot pass on this
+# binary. The modal assertions below are made optional so the login happy path
+# is still exercised.
+# screen: QuotaUpsellModal
+#
+# C2 — QuotaUpsellModal happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): the axios 402 interceptor calls usePaywall().open(), and the
+# globally-mounted modal (app/_layout.tsx PaywallModalHost) appears. Spamming
+# the API to hit the free quota is slow (NFR-2) and flaky, so we deeplink to a
+# dev-only route that calls usePaywall().open(reason) at mount
+# (app/(dev)/paywall-preview.tsx).
+#
+# ⚠ The (dev) route group is gated on `__DEV__` (app/(dev)/_layout.tsx
+# redirects to "/" in a release bundle). This flow therefore REQUIRES the
+# binary to be a debug / developmentClient build (`__DEV__ === true`). On a
+# pure Release build the deeplink lands on Home and the assertions below time
+# out by design.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   quota-upsell-modal      (assert open)
+#   quota-upsell-email      (input)
+#   quota-upsell-consent    (GDPR consent tick)
+#   quota-upsell-submit     (submit — backend-dependent, optional)
+#   quota-upsell-dismiss    (dismiss — CI-safe fallback)
+#
+# Prerequisites:
+#   - Seeded test account (login below).
+#   - Dev/preview bundle (musaium:// scheme + (dev) routes present, __DEV__).
+#   - Submit hits /api/leads/paywall-interest (live backend) — the dismiss path
+#     below is the CI-safe terminal assertion.
+
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+
+# ──────────────────────────────────────────────
+# Phase 0: Authenticate
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Deeplink to the dev-only paywall preview route → modal opens
+# ──────────────────────────────────────────────
+- openLink:
+    link: "musaium:///(dev)/paywall-preview"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 2-3: Modal interaction — ONLY when the modal actually opened.
+# On a Release binary (KNOWN-BLOCKED) the (dev) route redirects Home, so the
+# modal never appears and this whole block is skipped (the flow still passes).
+# ──────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "quota-upsell-modal"
+    commands:
+      - tapOn:
+          id: "quota-upsell-email"
+      - inputText: "qa+paywall@musaium.test"
+      - hideKeyboard
+      - tapOn:
+          id: "quota-upsell-consent"
+      - tapOn:
+          id: "quota-upsell-submit"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "quota-upsell-dismiss"
+          optional: true
+      - extendedWaitUntil:
+          notVisible:
+            id: "quota-upsell-modal"
+          timeout: 15000

@@ -7,6 +7,7 @@ import * as Updates from 'expo-updates';
 import { toSupportedLocale, type SupportedLocale } from '@/shared/config/supportedLocales';
 import { setLocale as setHttpLocale } from '@/shared/infrastructure/httpClient';
 import { storage } from '@/shared/infrastructure/storage';
+import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 import { applyRTLLayout, needsRTLReload } from '@/shared/i18n/rtl';
 
 let onLanguageChangeCb: ((lang: string) => void) | null = null;
@@ -50,9 +51,12 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<SupportedLocale>('en');
 
   useEffect(() => {
-    // Read the raw stored value — null means "user never chose a language"
-    storage
-      .getItem('runtime.defaultLocale')
+    // Read the raw stored value — null means "user never chose a language".
+    // Migrate the legacy locale key forward once before reading (TD-AS-01).
+    // Idempotent + no-overwrite, so this is order-safe vs runtimeSettings'
+    // migration of the same key.
+    migrateStorageKey('musaium.runtime.defaultLocale', 'runtime.defaultLocale')
+      .then(() => storage.getItem('musaium.runtime.defaultLocale'))
       .then((stored) => {
         const lang = stored ? toSupportedLocale(stored) : detectDeviceLanguage();
         setLanguageState(lang);

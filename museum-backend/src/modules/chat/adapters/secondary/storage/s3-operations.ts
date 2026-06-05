@@ -229,24 +229,23 @@ export const buildS3SignedHeaders = (params: {
   };
 };
 
+/** One listed S3 object paired with its parsed `LastModified` (epoch ms). */
+export interface ListedObject {
+  key: string;
+  lastModifiedMs: number;
+}
+
 interface ListObjectsResult {
-  keys: string[];
+  /**
+   * Each listed object paired `{ key, lastModifiedMs }`, parsed per `<Contents>`
+   * block so `Key` correlates with its `LastModified` (the orphan-purge age
+   * filter needs the real per-object timestamp, not a flat list of keys).
+   */
+  objects: ListedObject[];
   nextToken?: string;
 }
 
 const escapeXmlTag = (tag: string): string => tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const extractXmlValues = (xml: string, tag: string): string[] => {
-  const results: string[] = [];
-  const escaped = escapeXmlTag(tag);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
-  const regex = new RegExp(`<${escaped}>([^<]*)</${escaped}>`, 'g'); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(xml)) !== null) {
-    results.push(match[1]);
-  }
-  return results;
-};
 
 const extractXmlValue = (xml: string, tag: string): string | undefined => {
   const escaped = escapeXmlTag(tag);
@@ -303,11 +302,34 @@ export const listObjectsByPrefix = async (
     throw new Error(`S3 ListObjectsV2 failed (${statusCode}): ${body.slice(0, 500)}`);
   }
 
-  const keys = extractXmlValues(body, 'Key');
+  const objects = parseContentsObjects(body);
   const isTruncated = extractXmlValue(body, 'IsTruncated') === 'true';
   const nextToken = isTruncated ? extractXmlValue(body, 'NextContinuationToken') : undefined;
 
-  return { keys, nextToken };
+  return { objects, nextToken };
+};
+
+/**
+ * Parses each `<Contents>…</Contents>` block of a ListObjectsV2 response so the
+ * `<Key>` correlates with its own `<LastModified>` (the flat `extractXmlValues`
+ * cannot pair the two). `LastModified` is the S3 ISO-8601 timestamp → epoch ms
+ * via `Date.parse`; an unparseable/absent timestamp falls back to `0` (treated
+ * as "old enough" by the age filter, so the DB-reference net stays authoritative).
+ */
+const parseContentsObjects = (xml: string): ListedObject[] => {
+  const objects: ListedObject[] = [];
+  // `[\s\S]*?` (non-greedy) so each block stops at its own closing tag; the
+  // single literal pattern is linear (no nested alternation / backtracking trap).
+  const blockRegex = /<Contents>([\s\S]*?)<\/Contents>/g;
+  for (const block of xml.matchAll(blockRegex)) {
+    const inner = block[1];
+    const key = extractXmlValue(inner, 'Key');
+    if (key === undefined) continue;
+    const lastModifiedIso = extractXmlValue(inner, 'LastModified');
+    const parsed = lastModifiedIso ? Date.parse(lastModifiedIso) : Number.NaN;
+    objects.push({ key, lastModifiedMs: Number.isNaN(parsed) ? 0 : parsed });
+  }
+  return objects;
 };
 
 export const deleteObjectsBatch = async (

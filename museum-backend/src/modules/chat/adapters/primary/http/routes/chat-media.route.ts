@@ -20,7 +20,8 @@ import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-sto
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest } from '@shared/errors/app.error';
+import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
@@ -149,10 +150,7 @@ function createImageServeHandler(chatService: ChatService) {
 
 function createReportHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
@@ -161,7 +159,7 @@ function createReportHandler(chatService: ChatService) {
     const result = await chatService.reportMessage(
       messageId,
       payload.reason,
-      currentUser.id,
+      user.id,
       payload.comment,
     );
     res.status(201).json(result);
@@ -170,16 +168,13 @@ function createReportHandler(chatService: ChatService) {
 
 function createFeedbackHandler(chatService: ChatService) {
   return async (req: Request, res: Response) => {
-    const currentUser = getRequestUser(req);
-    if (!currentUser?.id) {
-      throw new AppError({ message: 'Token required', statusCode: 401, code: 'UNAUTHORIZED' });
-    }
+    const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
     }
     const payload = parseFeedbackMessageRequest(req.body ?? {});
-    const result = await chatService.setMessageFeedback(messageId, currentUser.id, payload.value);
+    const result = await chatService.setMessageFeedback(messageId, user.id, payload.value);
     res.status(200).json(result);
   };
 }
@@ -204,13 +199,25 @@ function createImageUrlHandler(chatService: ChatService) {
   };
 }
 
-function createTtsHandler(chatService: ChatService) {
+function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response) => {
     const currentUser = getRequestUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
       throw badRequest(MESSAGE_ID_REQUIRED);
     }
+
+    // B1 (R1/R2/R3) — gate TTS on `third_party_ai_audio_<provider>` BEFORE the
+    // assistant text is sent to the external OpenAI TTS service. Mirrors the
+    // STT gate (createAudioHandler above): same scope, same 403 refusal shape,
+    // read-only so the "mutating middleware ordering" gotcha does not regress.
+    const { scope: audioScope } = resolveActiveProviderForScope('audio');
+    const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
+    if (!granted) {
+      res.status(403).json({ error: 'consent_required', scope: audioScope });
+      return;
+    }
+
     const result = await chatService.synthesizeSpeech(messageId, currentUser?.id);
     if (!result) {
       res.status(204).end();
@@ -280,7 +287,7 @@ export const createMediaRouter = (
     sessionLimiter,
     // P0-4 — TTS paid call; same chokepoint as audio handler.
     llmCostGuard,
-    createTtsHandler(chatService),
+    createTtsHandler(chatService, consentChecker),
   );
   // P0-CodeQL — image serve was unrate-limited; an attacker could hammer
   // signed-URL guessing or cause backend egress amplification.

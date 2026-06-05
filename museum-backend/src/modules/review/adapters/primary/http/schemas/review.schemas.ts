@@ -18,6 +18,12 @@ import { z } from 'zod';
 export const createReviewSchema = z.object({
   rating: z.number().int().min(0).max(10),
   comment: z.string().min(10).max(2000),
+  /**
+   * NPS attribution link (C2 / R1 / R23). UUID of the chat session the review
+   * was authored from. Optional — absent / foreign / not-owned sessions are
+   * silently treated as a global (NULL museum) review by the use-case.
+   */
+  sessionId: z.uuid().optional(),
 });
 
 export const moderateReviewSchema = z.object({

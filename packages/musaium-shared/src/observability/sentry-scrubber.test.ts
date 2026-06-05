@@ -61,9 +61,11 @@ describe('constants are frozen / well-formed', () => {
     assert.equal(SENSITIVE_FIELD_REGEX.test('name'), false);
   });
 
-  it('SENSITIVE_QUERY_KEYS contains exactly the 11 expected entries (R1)', () => {
-    // R1 — 7 original keys + 4 new (code, email, phone, state) for
-    // magic-link / OAuth / signup query-string scrubbing.
+  it('SENSITIVE_QUERY_KEYS contains exactly the 16 expected entries (R1 + cycle-10 S3/signature)', () => {
+    // R1 — 7 original keys + 4 (code, email, phone, state) for magic-link / OAuth / signup.
+    // Cycle 10 (A-02, 2026-05-26) — +5 (x-amz-signature, x-amz-credential,
+    // x-amz-security-token, sig, signature) to close the presigned-S3 / signed-URL
+    // signature leak. FAILS on the 11-key canonical, PASSES after extension.
     assert.deepEqual(
       [...SENSITIVE_QUERY_KEYS].sort(),
       [
@@ -76,8 +78,13 @@ describe('constants are frozen / well-formed', () => {
         'phone',
         'refresh_token',
         'secret',
+        'sig',
+        'signature',
         'state',
         'token',
+        'x-amz-credential',
+        'x-amz-security-token',
+        'x-amz-signature',
       ],
     );
   });
@@ -176,6 +183,42 @@ describe('scrubUrl', () => {
       `/x?CODE=${REDACTED}&Email=${REDACTED}&PHONE=${REDACTED}&State=${REDACTED}`,
     );
   });
+
+  // Cycle 10 (A-02, 2026-05-26) — presigned-S3 / signed-URL signature params.
+  // These FAIL on the 11-key canonical (params survive verbatim) and PASS once
+  // x-amz-signature/credential/security-token + sig/signature join the set.
+  it('scrubUrl redacts presigned-S3 X-Amz-Signature, keeps X-Amz-Expires (cycle 10)', () => {
+    assert.equal(
+      scrubUrl(
+        'https://bucket.s3.amazonaws.com/key.jpg?X-Amz-Signature=ABC123&X-Amz-Expires=900',
+      ),
+      `https://bucket.s3.amazonaws.com/key.jpg?X-Amz-Signature=${REDACTED}&X-Amz-Expires=900`,
+    );
+  });
+
+  it('scrubUrl redacts X-Amz-Credential and X-Amz-Security-Token (cycle 10)', () => {
+    assert.equal(
+      scrubUrl(
+        'https://b.s3.amazonaws.com/o?X-Amz-Credential=AKIA&X-Amz-Security-Token=tok&X-Amz-Date=d',
+      ),
+      `https://b.s3.amazonaws.com/o?X-Amz-Credential=${REDACTED}&X-Amz-Security-Token=${REDACTED}&X-Amz-Date=d`,
+    );
+  });
+
+  it('scrubUrl redacts sig / signature query-params (cycle 10)', () => {
+    assert.equal(
+      scrubUrl('https://cdn.musaium.com/a?sig=DEADBEEF&signature=CAFE&v=1'),
+      `https://cdn.musaium.com/a?sig=${REDACTED}&signature=${REDACTED}&v=1`,
+    );
+  });
+
+  // D4 — `key` / `author` must NOT be redacted (too generic → false positives).
+  it('scrubUrl leaves generic ?key= / ?author= untouched (D4 — no over-masking)', () => {
+    assert.equal(
+      scrubUrl('https://x.tld/art?key=joconde&author=davinci'),
+      'https://x.tld/art?key=joconde&author=davinci',
+    );
+  });
 });
 
 describe('scrubEvent — tags traversal (R2)', () => {
@@ -231,6 +274,98 @@ describe('scrubEvent — tags traversal (R2)', () => {
     const out = scrubEvent(event, stubDeps);
     assert.equal((out.tags as Record<string, unknown>).method, 'GET');
     assert.equal((out.tags as Record<string, unknown>).statusCode, '500');
+  });
+});
+
+describe('scrubEvent — extra/data URL traversal (TD-68 / SCRUB-01)', () => {
+  // TD-68 — a URL carrying a sensitive token in its query-string, stored under a
+  // NON-sensitive key inside `extra` or `request.data`, used to survive verbatim
+  // into Sentry: scrubRecord only redacted by sensitive KEY name and returned
+  // string values as-is, so scrubUrl never ran on URL-like values nested there
+  // (only `tags` and `request.url` got scrubUrl). These FAIL on the pre-TD-68
+  // canonical and PASS once scrubRecord applies scrubUrl to URL-like values.
+
+  it('scrubs a sensitive query-string in a URL nested under extra (non-sensitive key)', () => {
+    const event: ScrubbableEvent = {
+      extra: { callbackUrl: 'https://app.musaium.com/cb?token=secret&keep=ok' },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.extra as Record<string, unknown>).callbackUrl,
+      `https://app.musaium.com/cb?token=${REDACTED}&keep=ok`,
+    );
+  });
+
+  it('scrubs a URL nested under request.data (non-sensitive key)', () => {
+    const event: ScrubbableEvent = {
+      request: { data: { redirect: '/api/auth/magic-link?code=ABC&keep=ok' } },
+    };
+    const out = scrubEvent(event, stubDeps);
+    const data = (out.request as NonNullable<ScrubbableEvent['request']>).data as Record<
+      string,
+      unknown
+    >;
+    assert.equal(data.redirect, `/api/auth/magic-link?code=${REDACTED}&keep=ok`);
+  });
+
+  it('scrubs URL-like values inside arrays + deeply nested extra objects', () => {
+    const event: ScrubbableEvent = {
+      extra: { trail: [{ href: 'https://x.tld/p?access_token=AT&page=2' }] },
+    };
+    const out = scrubEvent(event, stubDeps);
+    const trail = (out.extra as Record<string, unknown>).trail as Array<Record<string, unknown>>;
+    assert.equal(trail[0].href, `https://x.tld/p?access_token=${REDACTED}&page=2`);
+  });
+
+  it('leaves non-URL extra string values untouched (no over-masking)', () => {
+    const event: ScrubbableEvent = { extra: { note: 'just a message', count: '3' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal((out.extra as Record<string, unknown>).note, 'just a message');
+    assert.equal((out.extra as Record<string, unknown>).count, '3');
+  });
+});
+
+describe('scrubEvent — request.query_string (TD-71)', () => {
+  // TD-71 — scrubRequest scrubbed headers / data / url but NOT the dedicated
+  // request.query_string field (raw query, no leading '?'), so a query carrying
+  // ?token=… / ?code=… reached Sentry verbatim. The first test FAILS on the
+  // pre-TD-71 canonical (query_string left untouched) and PASSES once scrubRequest
+  // runs scrubUrl on it.
+
+  it('scrubs sensitive params in request.query_string (no leading ?)', () => {
+    const event: ScrubbableEvent = {
+      request: { query_string: 'code=ABC&token=secret&page=2' },
+    };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      `code=${REDACTED}&token=${REDACTED}&page=2`,
+    );
+  });
+
+  it('leaves a query_string with no sensitive params untouched (no over-masking)', () => {
+    const event: ScrubbableEvent = { request: { query_string: 'page=2&sort=asc' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      'page=2&sort=asc',
+    );
+  });
+
+  it('ignores a non-string query_string without throwing', () => {
+    const event = { request: { query_string: { code: 'x' } } } as unknown as ScrubbableEvent;
+    assert.doesNotThrow(() => scrubEvent(event, stubDeps));
+  });
+
+  it('strips a leading ? before scrubbing (defensive — non-canonical input)', () => {
+    // Without the leading-? strip, the first key would be '?token' (not in
+    // SENSITIVE_QUERY_KEYS) and the value would leak. FAILS on the un-hardened fix.
+    const event: ScrubbableEvent = { request: { query_string: '?token=secret&page=2' } };
+    const out = scrubEvent(event, stubDeps);
+    assert.equal(
+      (out.request as NonNullable<ScrubbableEvent['request']>).query_string,
+      `token=${REDACTED}&page=2`,
+    );
   });
 });
 

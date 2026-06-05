@@ -1,26 +1,23 @@
 import { MusaiumCatalogueClient } from '@modules/chat/adapters/secondary/search/musaium-catalogue.client';
 
+import { makeArtwork } from '../../helpers/daily-art/artwork.fixtures';
+
 import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
 const fixtureCatalogue: readonly Artwork[] = [
-  {
+  makeArtwork({
     title: 'Mona Lisa',
-    artist: 'Leonardo da Vinci',
-    year: 'c. 1503-1519',
     imageUrl: 'https://example.com/mona-lisa.jpg',
     description: 'A famous portrait',
-    funFact: 'Has her own mailbox at the Louvre.',
-    museum: 'Louvre, Paris',
-  },
-  {
+  }),
+  makeArtwork({
     title: 'The Starry Night',
     artist: 'Vincent van Gogh',
     year: '1889',
     imageUrl: 'https://example.com/starry-night.jpg',
     description: 'Swirling night sky.',
-    funFact: 'Painted from memory during the day.',
     museum: 'MoMA, New York',
-  },
+  }),
 ];
 
 describe('MusaiumCatalogueClient (C2 v2)', () => {

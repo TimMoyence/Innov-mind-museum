@@ -18,6 +18,7 @@ export type {
   BreachDataClass,
   BreachDetectionSource,
   BreachSeverity,
+  LogActorActionInput,
 } from './audit.service';
 export { BREACH_EVENT_SET, BREACH_EVENTS } from './breach-event-types';
 export type { BreachEventName } from './breach-event-types';

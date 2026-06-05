@@ -239,7 +239,6 @@ const styles = StyleSheet.create({
   confirmActions: {
     flexDirection: 'row',
     gap: space['2'],
-    marginTop: space['1'],
   },
   confirmYes: {
     flex: 1,

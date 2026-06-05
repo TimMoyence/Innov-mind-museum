@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { AppError } from '@shared/errors/app.error';
+import { unauthorized } from '@shared/errors/app.error';
 
 import type { TokenJwtService } from './token-jwt.service';
 import type {
@@ -35,14 +35,6 @@ export interface AuthSessionResponse {
    */
   mfaWarningDaysRemaining?: number;
 }
-
-const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
-  return new AppError({
-    message,
-    statusCode: 401,
-    code,
-  });
-};
 
 /**
  * Refresh-token rotation contract: issue a fresh JWT pair (persist +

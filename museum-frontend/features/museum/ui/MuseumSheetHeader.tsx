@@ -41,6 +41,7 @@ export const MuseumSheetHeader = ({ museum, onClose }: MuseumSheetHeaderProps) =
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={t('museumDirectory.close_sheet_a11y')}
+        testID="museum-sheet-close"
       >
         <Ionicons name="close" size={22} color={theme.textSecondary} />
       </Pressable>

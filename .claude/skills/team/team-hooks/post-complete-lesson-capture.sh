@@ -3,7 +3,10 @@
 #
 # Auto-captures a reflective lesson from a completed /team run.
 # Wired into dispatcher Step 9 (Finalize). Fail-open: hook failure NEVER
-# blocks finalize (R10). Lesson dumped to team-knowledge/lessons/<RUN_ID>.md.
+# blocks finalize (R10). Lesson dumped to team-knowledge/lessons/<RUN_ID>.json
+# (schema lesson/v2 — machine-navigable; captured for MANUAL review since the
+# learning-curator agent was retired 2026-05-31 (0 amendment in 77 runs);
+# historical <RUN_ID>.md files predate v2 and stay as-is). See SCHEMA.md.
 #
 # Inputs (env vars from dispatcher):
 #   RUN_ID      (required) — team-state run id
@@ -130,7 +133,7 @@ auto_tag() {
   fi
 }
 
-# --- Write the lesson markdown file -----------------------------------------
+# --- Write the lesson JSON file (schema lesson/v2) --------------------------
 # Returns: prints written path on stdout; non-zero exit on write failure.
 write_lesson() {
   local state_file="$1"
@@ -170,7 +173,8 @@ except Exception:
   # FIX-G 2026-05-19 — dispatcher does NOT yet always write the `.story` field
   # in state.json (observed empty in runs `2026-05-19-tanstack-zustand-polish`
   # and `2026-05-19-cluster-9-cert-pinning-hardening`), which caused all lesson
-  # sections to silently degrade to "_no data captured_". Fall back to the
+  # sections to silently degrade to null (was "_no data captured_" pre-v2).
+  # Fall back to the
   # canonical convention path `team-state/<runId>/STORY.md` when `.story` is
   # absent — defensive, no spec drift.
   local story_abs=""
@@ -203,42 +207,60 @@ except Exception:
   [ -z "$surprises_body" ] && surprises_body="$empty_sentinel"
   [ -z "$actions_body"   ] && actions_body="$empty_sentinel"
 
-  # Tags
+  # Tags → JSON array (jq -Rn reads each line as a string element; drop empties)
   local tags
   tags=$(auto_tag "$story_abs" "$mode" "$pipeline")
-  local tags_yaml=""
+  local tags_json
   IFS=',' read -ra TAG_ARR <<< "$tags"
-  for t in "${TAG_ARR[@]}"; do
-    [ -n "$t" ] && tags_yaml+="  - $t"$'\n'
-  done
+  tags_json=$(printf '%s\n' "${TAG_ARR[@]}" | jq -Rn '[inputs | select(length>0)]')
 
   mkdir -p "$out_dir"
 
   # Resolve target path; on RUN_ID collision append HHMMSS suffix (R4)
-  local target="$out_dir/$run_id.md"
+  local target="$out_dir/$run_id.json"
   if [ -e "$target" ]; then
-    target="$out_dir/$run_id-$(date +%H%M%S).md"
+    target="$out_dir/$run_id-$(date +%H%M%S).json"
   fi
 
-  # Write lesson (use printf for portability vs heredoc edge cases)
-  {
-    printf -- '---\n'
-    printf -- 'runId: %s\n'           "$run_id"
-    printf -- 'mode: %s\n'            "$mode"
-    printf -- 'pipeline: %s\n'        "$pipeline"
-    printf -- 'completedAt: %s\n'     "$completed_at"
-    printf -- 'durationMs: %s\n'      "$duration_ms"
-    printf -- 'correctiveLoops: %s\n' "$corrective_loops"
-    printf -- 'costUSD: %s\n'         "$cost_usd"
-    printf -- 'tags:\n%s'             "$tags_yaml"
-    printf -- '---\n\n'
-    printf -- '# Lesson — %s\n\n' "$run_id"
-    printf -- '## Trigger\n\n%s\n\n' "$trigger_body"
-    printf -- '## What worked\n\n%s\n\n' "$worked_body"
-    printf -- '## What failed\n\n%s\n\n' "$failed_body"
-    printf -- '## Surprises\n\n%s\n\n' "$surprises_body"
-    printf -- '## Action items\n\n%s\n' "$actions_body"
-  } > "$target"
+  # Build lesson JSON via jq — safe escaping of arbitrary STORY.md text.
+  # Honesty rule (UFR-013): empty section → JSON null, never fabricated.
+  # Numeric fields use `tonumber? // 0` so a non-numeric value can never crash
+  # the whole filter (which would silently drop the lesson to a WARN fail-open).
+  if ! jq -n \
+      --arg runId "$run_id" \
+      --arg mode "$mode" \
+      --arg pipeline "$pipeline" \
+      --arg completedAt "$completed_at" \
+      --arg durationMs "$duration_ms" \
+      --arg correctiveLoops "$corrective_loops" \
+      --arg costUSD "$cost_usd" \
+      --argjson tags "$tags_json" \
+      --arg trigger "$trigger_body" \
+      --arg worked "$worked_body" \
+      --arg failed "$failed_body" \
+      --arg surprises "$surprises_body" \
+      --arg actions "$actions_body" \
+      --arg sentinel "$empty_sentinel" \
+      '{
+        schema: "lesson/v2",
+        runId: $runId,
+        mode: $mode,
+        pipeline: $pipeline,
+        completedAt: $completedAt,
+        durationMs: ($durationMs | tonumber? // 0),
+        correctiveLoops: ($correctiveLoops | tonumber? // 0),
+        costUSD: ($costUSD | tonumber? // 0),
+        tags: $tags,
+        trigger:     (if $trigger   == $sentinel then null else $trigger   end),
+        whatWorked:  (if $worked    == $sentinel then null else $worked    end),
+        whatFailed:  (if $failed    == $sentinel then null else $failed    end),
+        surprises:   (if $surprises == $sentinel then null else $surprises end),
+        actionItems: (if $actions   == $sentinel then null else $actions   end)
+      }' > "$target"; then
+    rm -f "$target"
+    echo "post-complete-lesson-capture: jq lesson build failed" >&2
+    return 1
+  fi
 
   printf '%s\n' "$target"
   return 0
@@ -298,10 +320,10 @@ EOF
   local out_dir1="$_SELFTEST_TMP/lessons1"
   local written1
   written1=$(write_lesson "$d1/state.json" "$out_dir1")
-  if [ -f "$written1" ] && [ "$(wc -c < "$written1")" -ge 200 ]; then
+  if [ -f "$written1" ] && jq -e '.schema == "lesson/v2" and .runId == "selftest-2026-05-03-foo"' "$written1" >/dev/null 2>&1; then
     pass=$((pass + 1))
   else
-    echo "  SCENARIO 1 FAIL: file=$written1" >&2
+    echo "  SCENARIO 1 FAIL: file=$written1 (expected valid lesson/v2 JSON)" >&2
     fail=$((fail + 1))
   fi
 
@@ -312,7 +334,7 @@ EOF
   local out_dir2="$_SELFTEST_TMP/lessons2"
   mkdir -p "$out_dir2"
   RUN_ID="s2" STATE_FILE="$d2/state.json" LESSONS_DIR="$out_dir2" "$0" >/dev/null 2>&1 || true
-  if [ "$(find "$out_dir2" -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
+  if [ "$(find "$out_dir2" -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
     pass=$((pass + 1))
   else
     echo "  SCENARIO 2 FAIL: file written despite status=running" >&2
@@ -325,7 +347,7 @@ EOF
   local out_dir3="$_SELFTEST_TMP/lessons3"
   mkdir -p "$out_dir3"
   RUN_ID="s3" STATE_FILE="$d3/state.json" LESSONS_DIR="$out_dir3" "$0" >/dev/null 2>&1 || true
-  if [ "$(find "$out_dir3" -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
+  if [ "$(find "$out_dir3" -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
     pass=$((pass + 1))
   else
     echo "  SCENARIO 3 FAIL: file written despite status=failed" >&2
@@ -340,7 +362,7 @@ EOF
   sleep 1   # ensure HHMMSS differs
   write_lesson "$d4/state.json" "$out_dir4" >/dev/null
   local count4
-  count4=$(find "$out_dir4" -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  count4=$(find "$out_dir4" -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
   if [ "$count4" = "2" ]; then
     pass=$((pass + 1))
   else
@@ -348,17 +370,17 @@ EOF
     fail=$((fail + 1))
   fi
 
-  # Scenario 5 — STORY.md missing → no fabrication, sections say "_no data captured_"
+  # Scenario 5 — STORY.md missing → no fabrication, sections are JSON null
   local d5="$_SELFTEST_TMP/s5"
   build_run "$d5" "completed"
   rm -f "$d5/STORY.md"
   local out_dir5="$_SELFTEST_TMP/lessons5"
   local written5
   written5=$(write_lesson "$d5/state.json" "$out_dir5")
-  if grep -q "_no data captured_" "$written5"; then
+  if jq -e '.trigger == null and .whatFailed == null and .surprises == null' "$written5" >/dev/null 2>&1; then
     pass=$((pass + 1))
   else
-    echo "  SCENARIO 5 FAIL: missing _no data captured_ marker" >&2
+    echo "  SCENARIO 5 FAIL: empty sections should be JSON null (no fabrication)" >&2
     fail=$((fail + 1))
   fi
 
@@ -370,7 +392,7 @@ EOF
   mkdir -p "$out_dir6"
   RUN_ID="s6" STATE_FILE="$d6/state.json" LESSONS_DIR="$out_dir6" "$0" >/dev/null 2>&1
   local rc6=$?
-  if [ "$rc6" = "0" ] && [ "$(find "$out_dir6" -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
+  if [ "$rc6" = "0" ] && [ "$(find "$out_dir6" -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ')" = "0" ]; then
     pass=$((pass + 1))
   else
     echo "  SCENARIO 6 FAIL: rc=$rc6 or unexpected file written" >&2

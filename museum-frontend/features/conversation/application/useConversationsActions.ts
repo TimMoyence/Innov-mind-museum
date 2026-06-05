@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Share } from 'react-native';
+import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { chatApi } from '@/features/chat';
@@ -9,7 +9,6 @@ import { useConversationsStore } from '@/features/conversation/infrastructure/co
 export function useConversationsActions() {
   const { t } = useTranslation();
 
-  const items = useConversationsStore((s) => s.items);
   const removeItems = useConversationsStore((s) => s.removeItems);
   const savedSessionIds = useConversationsStore((s) => s.savedSessionIds);
   const toggleSaved = useConversationsStore((s) => s.toggleSaved);
@@ -46,16 +45,6 @@ export function useConversationsActions() {
       setMenuStatus(next ? t('conversations.showing_saved_only') : t('conversations.showing_all'));
       return next;
     });
-  };
-
-  const shareDashboard = async () => {
-    const total = items.length;
-    const savedCount = savedSessionIds.length;
-    await Share.share({
-      title: t('conversations.share_title'),
-      message: t('conversations.share_body', { total, savedCount }),
-    });
-    setMenuStatus(t('conversations.shared_success'));
   };
 
   const toggleSavedSession = useCallback(
@@ -138,7 +127,6 @@ export function useConversationsActions() {
     savedSessionIds,
     toggleSortMode,
     toggleSavedFilter,
-    shareDashboard,
     toggleSavedSession,
     confirmDeleteSingle,
     confirmDeleteSelected,

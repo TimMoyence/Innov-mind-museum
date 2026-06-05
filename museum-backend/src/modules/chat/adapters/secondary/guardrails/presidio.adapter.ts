@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '@shared/http/fetch-with-timeout';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -230,24 +231,20 @@ export class MicrosoftPresidioAdapter implements GuardrailProvider {
   }
 
   private async requestWithTimeout(path: string, body: Record<string, unknown>): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-    }, this.timeoutMs);
-    try {
-      const response = await this.fetchFn(`${this.baseUrl}${path}`, {
+    const response = await fetchWithTimeout(
+      `${this.baseUrl}${path}`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`non_ok_${response.status}`);
-      }
-      return response;
-    } finally {
-      clearTimeout(timer);
+      },
+      this.timeoutMs,
+      this.fetchFn,
+    );
+    if (!response.ok) {
+      throw new Error(`non_ok_${response.status}`);
     }
+    return response;
   }
 
   private readonly isAnalyzeEntity = (e: unknown): e is PresidioAnalyzeEntity => {

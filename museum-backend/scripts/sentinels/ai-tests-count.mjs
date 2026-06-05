@@ -39,8 +39,48 @@ const AI_TESTS_DIR = resolve(__dirname, '../../tests/ai');
 /**
  * Frozen floor — bump deliberately when adding new ai-tests (and never
  * decrement without a PR that documents the capability removal).
+ *
+ * 2026-06-01 — bumped 19 → 49 after adding the comprehensive real-LLM
+ * conversation test matrix (vision-matrix / guardrail-matrix /
+ * conversation-matrix .ai.test.ts), which locks the chat AI behavior
+ * end-to-end through the full pipeline (V1 keyword guardrail → input
+ * sanitize → LLM vision/text → output guardrail). The 3 new files add 25
+ * real `it()` test blocks on top of the original 19 (44 actual tests); the
+ * sentinel's tolerant matcher additionally counts a few `it(`-shaped tokens
+ * in helper code, and reports 49 total for the current tree. Pin to that.
+ *
+ * 2026-06-01 (b) — bumped 49 → 79 after the exhaustive-catalog expansion
+ * (CHAT_BEHAVIOR_CATALOG.md, 180 behaviors). Adds a new geo-matrix.ai.test.ts
+ * (in-museum anchoring / nearby-museum proximity / GDPR consent floor via an
+ * injected deterministic LocationResolver + real LLM) plus more IMAGE cases
+ * (sculpture / person-privacy / image+off-topic), multilingual fidelity
+ * (ES/DE), meta-capability, voice-mode prose, multi-subject, and DET
+ * multilingual insult/injection blocks (DE/JA/AR/FR/ZH) verified against the
+ * real INSULT_KEYWORDS / INJECTION_PATTERNS lists. Current tree = 79 it()
+ * blocks across 8 files.
+ *
+ * 2026-06-01 (c) — bumped 79 → 92 after adding guardrail-v2-live.ai.test.ts:
+ * the first suite to exercise the two V2 layers end-to-end with NO mock —
+ * the real LLM-Guard sidecar (ProtectAI) and the real gpt-4o-mini judge. 13
+ * `it()` blocks proving: sidecar blocks injection/toxicity/PII(+redaction) &
+ * allows benign; sidecar DOWN → fail-CLOSED; enforce vs observe-only; judge
+ * catches a V1-allowed off-topic (policy:off_topic) & does not over-block art;
+ * judge timeout AND budget-exhaustion → fail-OPEN; per-call budget accounting.
+ * Locks the fail-CLOSED (sidecar) / fail-OPEN (judge) security invariants.
+ * Current tree = 92 it() blocks across 9 files.
+ *
+ * 2026-06-01 (d) — bumped 92 → 98 (+6 real it() blocks, sentinel tolerant
+ * matcher reports 98 total) after the hybrid-by-gravity friction escalation
+ * landed in guardrail-v2-live.ai.test.ts. The new blocks lock the friction
+ * model end-to-end with the REAL gpt-4o-mini judge: soft-redirect under the
+ * session threshold, session escalation to a hard policy:off_topic at the Nth
+ * strike, cross-session USER floor via weighted counters, fail-SOFT store
+ * (throwing store never escalates / never 500s), the GUARDRAIL_FRICTION_ENABLED
+ * kill-switch restoring the legacy inline judge hard-block, and the invariant
+ * that security blocks (prompt-injection) still hard-block immediately under
+ * the friction model. V2 friction layer (Layer 3) is now count-ratcheted too.
  */
-const MIN_TOTAL_AI_TESTS = 19;
+const MIN_TOTAL_AI_TESTS = 98;
 
 /**
  * Matches: it(, test(, it.skip(, it.only(, it.each(`...`)(, it.todo(,

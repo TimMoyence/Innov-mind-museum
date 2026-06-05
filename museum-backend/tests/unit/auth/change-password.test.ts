@@ -19,8 +19,9 @@ describe('ChangePasswordUseCase', () => {
     const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo());
 
     await expect(useCase.execute(1, 'wrongPass1', 'NewValid1')).rejects.toMatchObject({
-      message: 'Current password is incorrect',
-      statusCode: 400,
+      message: 'Invalid credentials',
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
     });
   });
 
@@ -55,8 +56,9 @@ describe('ChangePasswordUseCase', () => {
     const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo());
 
     await expect(useCase.execute(1, 'anything', 'NewValid1')).rejects.toMatchObject({
-      message: 'Cannot change password for social-only accounts',
+      message: 'Cannot perform this action on a social-only account',
       statusCode: 400,
+      code: 'SOCIAL_ONLY_ACCOUNT',
     });
   });
 

@@ -123,9 +123,6 @@
     "sorted_by_messages": "Ordenado por cantidad de mensajes",
     "showing_saved_only": "Mostrando solo sesiones guardadas",
     "showing_all": "Mostrando todas las sesiones",
-    "share_title": "Panel de Musaium",
-    "share_body": "Panel de Musaium: {{total}} sesiones, {{savedCount}} guardadas.",
-    "shared_success": "Resumen del panel compartido",
     "session_unsaved": "Sesión eliminada de guardadas",
     "session_saved": "Sesión guardada",
     "empty_title": "Aún no hay conversaciones",
@@ -190,6 +187,8 @@
     "export_data_desc": "Descargar todos tus datos personales (RGPD)",
     "export_data_success": "Datos exportados correctamente",
     "rate_musaium": "Valorar Musaium",
+    "inviteFriend": "Invitar a un amigo",
+    "inviteMessage": "Descubre Musaium, tu compañero cultural con IA para museos y monumentos. Únete: https://musaium.com",
     "ai_memory": "Personalización IA",
     "ai_memory_hint": "Utiliza tus preferencias artísticas e historial de visitas para personalizar las respuestas de la IA",
     "ai_consent_title": "Proveedores de IA de terceros",
@@ -204,7 +203,8 @@
       "third_party_ai_image_google": "Google AI — fotos",
       "third_party_ai_audio_google": "Google AI — transcripciones de voz",
       "third_party_ai_profile_google": "Google AI — preferencias e historial",
-      "location_to_llm": "Ubicación — lugares cercanos"
+      "location_to_llm": "Ubicación — lugares cercanos",
+      "location_coarse_to_llm": "Ubicación — solo ciudad"
     },
     "accessibility": "Accesibilidad",
     "audio_description": "Audiodescripción",
@@ -472,7 +472,7 @@
     "audio": "Audio",
     "image_sent": "[Imagen enviada]",
     "voice_message": "[Mensaje de voz]",
-    "share_footer": "Compartido con Musaium — Tu compañero de museo\nhttps://musaium.app",
+    "share_footer": "Compartido con Musaium — Tu compañero de museo\nhttps://musaium.com",
     "replace_image": "Reemplazar",
     "remove_image": "Eliminar",
     "share_response": "Compartir",
@@ -526,7 +526,8 @@
       "gallery": "Elegir de la galería",
       "record_audio": "Grabar mensaje de voz",
       "stop_audio": "Detener grabación",
-      "scan_cartel": "Escanear cartela"
+      "scan_cartel": "Escanear el QR de la obra",
+      "compare": "Comparar esta obra"
     },
     "cartelScanner": {
       "title": "Escanear el QR de la cartela",
@@ -646,18 +647,6 @@
     "placeholder": "Pregunta sobre una obra de arte, monumento, o envía voz/foto...",
     "send": "Enviar"
   },
-  "welcome": {
-    "title": "Bienvenido a Musaium",
-    "subtitle": "Tu compañero personal de museo",
-    "suggestions": {
-      "museum_camera": "¿Qué obra de arte tengo delante?",
-      "museum_history": "Cuéntame sobre la historia de este museo",
-      "museum_next": "¿Qué debería ver a continuación?",
-      "standard_camera": "Fotografía una obra de arte para conocerla",
-      "standard_style": "Háblame del Impresionismo",
-      "standard_question": "¿Quién pintó la Mona Lisa?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Principiante",
     "intermediate": "Intermedio",
@@ -722,7 +711,8 @@
       "account_suspended": "Tu cuenta ha sido suspendida. Contacta con soporte.",
       "account_deleted": "Esta cuenta ha sido eliminada.",
       "locked_out": "Demasiados intentos fallidos. Vuelve a intentarlo en unos minutos.",
-      "minor_parental_consent_required": "El registro está reservado a usuarios de 15 años o más (mayoría digital francesa)."
+      "minor_parental_consent_required": "El registro está reservado a usuarios de 15 años o más (mayoría digital francesa).",
+      "mfa_web_only": "La autenticación de dos factores se gestiona en el panel de administración web. Inicia sesión allí."
     },
     "chat": {
       "contract_invalid": "Respuesta del servidor inesperada. Inténtalo de nuevo.",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} Cerrado"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logotipo de {{name}}"
+  },
   "museum": {
     "about": "Acerca de",
     "opening_hours": "Horario",
@@ -840,6 +833,11 @@
     "phone": "Teléfono",
     "loading_details": "Cargando información…",
     "no_extra_info": "Sin detalles adicionales disponibles.",
+    "info_coming_soon": "Más información próximamente",
+    "admission": "Entradas",
+    "collections": "Colecciones",
+    "exhibitions": "Exposiciones actuales",
+    "accessibility": "Accesibilidad",
     "offlinePack": {
       "title": "Estás cerca de {{cityName}}",
       "description": "Descarga el contenido sin conexión para explorar sin red.",
@@ -941,6 +939,8 @@
       "send_hint": "Envía tu mensaje al asistente del museo",
       "message_input": "Escribe tu mensaje",
       "assistant_message": "Mensaje del asistente",
+      "attached_image": "Imagen adjunta al mensaje",
+      "loading": "Cargando la respuesta",
       "user_message": "Tu mensaje",
       "long_press_hint": "Mantener pulsado para más opciones",
       "recommendation_hint": "Rellena el campo con esta sugerencia",
@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "Tu nombre visible",
       "comment_input": "Tu comentario de reseña",
-      "star_button": "Dar {{count}} estrellas"
+      "star_button": "Dar {{count}} estrellas",
+      "nps_value": "Puntuación de recomendación {{value}} de 10"
     },
     "preferences": {
       "language_button": "Seleccionar idioma {{language}}",
@@ -1073,6 +1074,9 @@
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, abrir visita",
       "continue_hint": "Abre esta visita pasada para leer"
+    },
+    "bottomSheet": {
+      "dismiss": "Cerrar hoja"
     }
   },
   "consent": {
@@ -1115,7 +1119,9 @@
     "manage_subtitle": "Puedes desmarcar cualquier categoría libremente. El ámbito \"OpenAI Texto\" es obligatorio para chatear con la IA.",
     "save_required_hint": "Activa \"OpenAI Texto\" para guardar tus opciones.",
     "scope_location": "Ubicación",
-    "scope_location_hint": "Tu zona aproximada (ciudad) se comparte con la IA para reconocer museos y monumentos cercanos. Tu ubicación precisa nunca se comparte."
+    "scope_location_hint": "Tu barrio aproximado (barrio + ciudad) se comparte con la IA para reconocer museos y monumentos cercanos. Tu calle, dirección y ubicación precisa nunca se comparten.",
+    "scope_location_coarse": "Solo ciudad",
+    "scope_location_coarse_hint": "Solo se comparten tu ciudad y país con la IA, una opción menos precisa que el nivel de barrio. Tu calle y ubicación precisa nunca se comparten."
   },
   "dailyArt": {
     "title": "Obra del Día",
@@ -1172,6 +1178,9 @@
     "writeReview": "Escribir una reseña",
     "averageRating": "Valoración media",
     "ratingLabel": "Tu valoración",
+    "npsLabel": "¿Qué probabilidad hay de que recomiendes Musaium?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Tu nombre",
     "commentPlaceholder": "Comparte tu experiencia...",
     "submit": "Enviar reseña",

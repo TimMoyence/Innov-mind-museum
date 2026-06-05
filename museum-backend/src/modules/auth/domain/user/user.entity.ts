@@ -133,8 +133,13 @@ export class User {
   suspended!: boolean;
 
   /**
-   * Soft-delete. Auth refuses login + refresh; row stays for FK integrity
-   * (chat_messages, audit_log) + forensics. RGPD Art. 17 hard erase deferred V1.1.
+   * Soft-delete login-gate: when set, auth refuses login + refresh (filtered
+   * post-fetch — hand-rolled `@Column`, not `@DeleteDateColumn`, so callers must
+   * filter manually, cf. `authSession.service.ts:103,185` + TD-TO-01). It is NOT
+   * the RGPD Art.17 mechanism: the hard erase IS implemented — `DeleteAccountUseCase`
+   * + `IUserRepository.deleteUser` hard-DELETE the row (FK CASCADE wipes children;
+   * `audit_logs` retained by legal obligation). `deletedAt` is only the
+   * suspension/soft-delete marker, kept distinct from the irreversible erasure.
    */
   @Column({ type: 'timestamp', nullable: true, name: 'deleted_at' })
   deletedAt!: Date | null;

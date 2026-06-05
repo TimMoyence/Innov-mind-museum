@@ -1,7 +1,15 @@
 import type React from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { NetInfoStateType, NetInfoCellularGeneration } from '@react-native-community/netinfo';
+
+/**
+ * NetInfo's `type` value for a cellular interface. Compared as a string literal
+ * (NetInfo emits `'cellular'`) rather than via the `NetInfoStateType` runtime
+ * enum object, which is `undefined` under the official Jest mock and is not
+ * needed at runtime. Same rationale for the `'2g'`/`'3g'` generation literals
+ * below (the `NetInfoCellularGeneration` enum values ARE those strings).
+ */
+const CELLULAR_TYPE = 'cellular';
 
 import {
   useDataModePreferenceStore,
@@ -55,12 +63,9 @@ export function resolveDataMode(
   // Auto mode: evaluate network conditions
   if (netInfo.isConnected === false) return 'low';
 
-  if (netInfo.type === (NetInfoStateType.cellular as string) && netInfo.details) {
+  if (netInfo.type === CELLULAR_TYPE && netInfo.details) {
     const gen = netInfo.details.cellularGeneration;
-    if (
-      gen === (NetInfoCellularGeneration['2g'] as string) ||
-      gen === (NetInfoCellularGeneration['3g'] as string)
-    ) {
+    if (gen === '2g' || gen === '3g') {
       return 'low';
     }
   }

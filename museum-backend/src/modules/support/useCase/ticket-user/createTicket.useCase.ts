@@ -56,15 +56,14 @@ export class CreateTicketUseCase {
 
     const ticket = await this.repository.createTicket(createInput);
 
-    await auditService.log({
+    await auditService.logActorAction({
       action: AUDIT_SUPPORT_TICKET_CREATED,
-      actorType: 'user',
       actorId: input.userId,
       targetType: 'support_ticket',
       targetId: ticket.id,
       metadata: { subject: ticket.subject, priority: ticket.priority },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     return ticket;

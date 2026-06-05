@@ -55,6 +55,10 @@ const makeView = (overrides: Partial<MuseumEnrichmentView> = {}): MuseumEnrichme
   phone: '+33 1 23 45 67 89',
   imageUrl: 'https://example.com/banner.jpg',
   openingHours: makeParsedHours(),
+  admissionFees: null,
+  collections: null,
+  currentExhibitions: null,
+  accessibility: null,
   fetchedAt: new Date('2026-05-16T10:00:00.000Z').toISOString(),
   ...overrides,
 });

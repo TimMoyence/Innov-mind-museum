@@ -3,6 +3,8 @@
 > Single source of truth for deploying, operating, and recovering Musaium production.
 > Merges former `DEPLOYMENT_STEP_BY_STEP.md`, `RUNBOOK.md`, `RUNBOOK_AUTO_ROLLBACK.md`.
 
+> **⚠️ V1 = pas de serveur staging (prod = stage).** Jusqu'au revenu B2B, il n'y a qu'un seul environnement : la prod, bakée ≥7j (doctrine « no-staging V1 »). Les sections **14-16 (Backend Staging Deploy / Migrations / Smoke)** et toute mention `preprod`/`staging` décrivent une infra **post-launch** non provisionnée en V1 — ne pas suivre ces runbooks aujourd'hui (l'infra n'existe pas). Smoke V1 = local Docker + smoke éphémère post-deploy prod.
+
 ## Table of Contents
 
 1. [Quick Reference](#1-quick-reference)
@@ -1175,3 +1177,35 @@ on-call runbook if they outlive a deploy.
    `super_admin` users (UX-level guard, not security — assume hidden links
    are still discoverable).
 5. Grafana not exposed via host port — only reachable through nginx.
+
+## 28. Pending ops hardening actions (P0 stability audit 2026-05-25)
+
+> Action items requiring infra/GitHub/IaC access (not patchable in code). Promoted from the
+> P0-stability audit closure before retiring the working note. **Status = TODO** unless verified
+> done — do not assume shipped.
+
+### 28.1 — Media backup + backup-bucket SPOF (I-OPS5)
+- **Media not backed up**: `db-backup-daily.yml` only runs `pg_dump`. S3 media uploads are **not** backed up.
+  Action: enable cross-region replication on the media bucket (provider-side), or add an S3→backup-bucket sync job.
+- **Single-bucket SPOF**: DB dumps and media share one `S3_BUCKET` (prefix `backups/daily/`) — see
+  [`DB_BACKUP_RESTORE.md`](DB_BACKUP_RESTORE.md) (§ "No second bucket is provisioned"). Losing the bucket loses
+  DB **and** media. Action: provision a dedicated `S3_BACKUP_BUCKET` (new secret), repoint `db-backup-daily.yml`.
+- GPG key rotation/seeding/offline-copy is documented in `DB_BACKUP_RESTORE.md` — just confirm the offline copy exists.
+
+### 28.2 — Direct Postgres/Redis exporters (I-OPS2, optional V1)
+Shipped alerting is **app-level** (5xx, `up{job=musaium-backend}==0`, Redis via fallback metric). Postgres-down is
+covered **transitively** via `backend-up==0` (the `/api/health` probe depends on the DB). For direct `pg_up` / `redis_up`
+probes, deploy `postgres_exporter` + `redis_exporter` and add them to `prometheus.yml` `scrape_configs`. Non-blocking V1.
+
+### 28.3 — DR runbook note: fresh-DB manual migration (I-OPS3)
+Migrations now run in the CI deploy step (single path), no longer at container boot. A **fresh DB rebuilt outside the CI
+pipeline** will therefore **not** auto-migrate. Run `run-migrations.js` manually before the first boot on a fresh DB
+(see commands in [`DB_BACKUP_RESTORE.md`](DB_BACKUP_RESTORE.md) §24).
+
+### 28.4 — sentinel-mirror as a required check (I-OPS8d)
+`sentinel-mirror.yml` runs on every PR but is not enforced as a required status check on `main`. Add it via GitHub
+branch-protection (Settings → Branches → `main`) or `gh api`:
+```bash
+gh api repos/<owner>/<repo>/branches/main/protection/required_status_checks \
+  -X PATCH -F 'contexts[]=sentinel-mirror' -F 'contexts[]=migration-drift'
+```

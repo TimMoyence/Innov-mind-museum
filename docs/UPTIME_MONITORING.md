@@ -7,20 +7,14 @@
 ## Monitors
 
 ### Production API
-- **URL**: `https://<prod-domain>/api/health`
+- **URL**: `https://api.musaium.com/api/health`
 - **Method**: GET
 - **Expected status**: 200
 - **Check interval**: 60 seconds
 - **Timeout**: 10 seconds
 - **Keyword check**: `"status":"ok"` in response body
 
-### Staging API
-- **URL**: `https://<staging-domain>/api/health`
-- **Method**: GET
-- **Expected status**: 200
-- **Check interval**: 300 seconds
-- **Timeout**: 10 seconds
-- **Alerting**: email only (relaxed)
+> **Note:** No staging server for V1 (memory `project_no_staging_v1`). Staging monitor removed.
 
 ## Health Endpoint Response
 

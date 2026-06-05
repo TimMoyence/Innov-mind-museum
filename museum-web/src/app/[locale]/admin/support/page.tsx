@@ -1,11 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiPost } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
+import { Spinner } from '@/components/ui/Spinner';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import type { TicketDetail, TicketMessage, TicketStatus, TicketPriority } from '@/lib/admin-types';
 
@@ -40,38 +43,31 @@ export default function AdminSupportPage() {
   const dateLocale = useDateLocale();
   const ticketId = searchParams.get('ticket');
 
-  const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // -- Fetch ticket detail --------------------------------------------------
 
-  const fetchTicket = useCallback(async () => {
-    if (!ticketId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<{ ticket: TicketDetail }>('/api/support/tickets/' + ticketId);
-      setTicket(data.ticket);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load ticket');
-    } finally {
-      setLoading(false);
-    }
-  }, [ticketId]);
-
-  useEffect(() => {
-    void fetchTicket();
-  }, [fetchTicket]);
+  const {
+    data: ticket,
+    loading,
+    error,
+    refetch: fetchTicket,
+  } = useFetchData<TicketDetail>(ticketId ? '/api/support/tickets/' + ticketId : null, {
+    deps: [ticketId],
+    parseData: (raw) => (raw as { ticket: TicketDetail }).ticket,
+    errorFallback: 'Failed to load ticket',
+  });
+  const combinedError = error ?? mutationError;
 
   // -- Send reply -----------------------------------------------------------
 
   async function handleSendReply() {
     if (!ticketId || !replyText.trim()) return;
     setSending(true);
+    setMutationError(null);
     try {
       await apiPost('/api/support/tickets/' + ticketId + '/messages', {
         text: replyText.trim(),
@@ -79,7 +75,7 @@ export default function AdminSupportPage() {
       setReplyText('');
       void fetchTicket();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message');
+      setMutationError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
     }
@@ -114,7 +110,7 @@ export default function AdminSupportPage() {
       <div>
         <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       </div>
     );
@@ -122,11 +118,11 @@ export default function AdminSupportPage() {
 
   // -- Error (no ticket loaded) ---------------------------------------------
 
-  if (error && !ticket) {
+  if (combinedError && !ticket) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <AlertBanner variant="error" message={combinedError} className="mt-4" />
         <Link
           href={`/${locale}/admin/tickets`}
           className="mt-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -154,9 +150,7 @@ export default function AdminSupportPage() {
       <h1 className="mt-2 text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
 
       {/* Error banner */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Metadata card */}
       <div className="mt-6 rounded-xl border border-primary-100 bg-white p-6">

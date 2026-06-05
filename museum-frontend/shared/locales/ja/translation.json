@@ -123,9 +123,6 @@
     "sorted_by_messages": "メッセージ数順に表示",
     "showing_saved_only": "保存済みのセッションのみ表示中",
     "showing_all": "すべてのセッションを表示中",
-    "share_title": "Musaiumダッシュボード",
-    "share_body": "Musaiumダッシュボード: {{total}}件のセッション、{{savedCount}}件を保存済み。",
-    "shared_success": "ダッシュボードの概要を共有しました",
     "session_unsaved": "セッションの保存を解除しました",
     "session_saved": "セッションを保存しました",
     "empty_title": "まだ会話がありません",
@@ -190,6 +187,8 @@
     "export_data_desc": "すべての個人データをダウンロード（GDPR）",
     "export_data_success": "データのエクスポートに成功しました",
     "rate_musaium": "Musaiumを評価",
+    "inviteFriend": "友達を招待",
+    "inviteMessage": "AI文化コンパニオン「Musaium」で美術館や名所を楽しもう。参加してね: https://musaium.com",
     "ai_memory": "AIパーソナライゼーション",
     "ai_memory_hint": "アートの好みと訪問履歴を使用してAIの回答をパーソナライズします",
     "ai_consent_title": "第三者AIプロバイダー",
@@ -204,7 +203,8 @@
       "third_party_ai_image_google": "Google AI — 写真",
       "third_party_ai_audio_google": "Google AI — 音声文字起こし",
       "third_party_ai_profile_google": "Google AI — 好みと履歴",
-      "location_to_llm": "位置情報 — 近くの場所"
+      "location_to_llm": "位置情報 — 近くの場所",
+      "location_coarse_to_llm": "位置情報 — 都市のみ"
     },
     "accessibility": "アクセシビリティ",
     "audio_description": "音声ガイド",
@@ -472,7 +472,7 @@
     "audio": "オーディオ",
     "image_sent": "[画像送信]",
     "voice_message": "[音声メッセージ]",
-    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.app",
+    "share_footer": "Musaiumでシェア — あなたの美術館コンパニオン\nhttps://musaium.com",
     "replace_image": "置き換え",
     "remove_image": "削除",
     "share_response": "共有",
@@ -526,7 +526,8 @@
       "gallery": "ギャラリーから選択",
       "record_audio": "音声メッセージを録音",
       "stop_audio": "録音を停止",
-      "scan_cartel": "解説をスキャン"
+      "scan_cartel": "作品のQRコードをスキャン",
+      "compare": "この作品を比較"
     },
     "cartelScanner": {
       "title": "作品解説のQRをスキャン",
@@ -646,18 +647,6 @@
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
     "send": "送信"
   },
-  "welcome": {
-    "title": "Musaiumへようこそ",
-    "subtitle": "あなた専用の美術館コンパニオン",
-    "suggestions": {
-      "museum_camera": "目の前の美術品は何ですか？",
-      "museum_history": "この美術館の歴史を教えてください",
-      "museum_next": "次に何を見るべきですか？",
-      "standard_camera": "美術品を撮影して詳しく知る",
-      "standard_style": "印象派について教えてください",
-      "standard_question": "モナ・リザを描いたのは誰ですか？"
-    }
-  },
   "expertiseBadge": {
     "beginner": "初級",
     "intermediate": "中級",
@@ -722,7 +711,8 @@
       "account_suspended": "アカウントは停止されました。サポートにご連絡ください。",
       "account_deleted": "このアカウントは削除されました。",
       "locked_out": "失敗回数が多すぎます。数分後に再度お試しください。",
-      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。"
+      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。",
+      "mfa_web_only": "二要素認証はWeb管理画面で管理されます。そちらからサインインしてください。"
     },
     "chat": {
       "contract_invalid": "サーバーの応答が無効です。もう一度お試しください。",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} 休館"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}}のロゴ"
+  },
   "museum": {
     "about": "概要",
     "opening_hours": "開館時間",
@@ -840,6 +833,11 @@
     "phone": "電話",
     "loading_details": "情報を読み込み中…",
     "no_extra_info": "詳細情報はありません。",
+    "info_coming_soon": "詳細情報は近日公開予定です",
+    "admission": "入館料",
+    "collections": "コレクション",
+    "exhibitions": "開催中の展覧会",
+    "accessibility": "バリアフリー情報",
     "offlinePack": {
       "title": "{{cityName}}の近くにいます",
       "description": "オフラインコンテンツをダウンロードして接続なしで探索できます。",
@@ -941,6 +939,8 @@
       "send_hint": "ミュージアムアシスタントにメッセージを送信します",
       "message_input": "メッセージを入力",
       "assistant_message": "アシスタントのメッセージ",
+      "attached_image": "メッセージに添付された画像",
+      "loading": "応答を読み込んでいます",
       "user_message": "あなたのメッセージ",
       "long_press_hint": "長押しでその他のオプション",
       "recommendation_hint": "この提案で入力欄を埋めます",
@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "表示名",
       "comment_input": "レビューコメント",
-      "star_button": "{{count}}つ星を設定"
+      "star_button": "{{count}}つ星を設定",
+      "nps_value": "おすすめ度スコア 10点中{{value}}点"
     },
     "preferences": {
       "language_button": "{{language}}言語を選択",
@@ -1073,6 +1074,9 @@
     "carnet": {
       "session_card": "{{title}}、{{museum}}、{{date}}、訪問を開く",
       "continue_hint": "この過去の訪問を読み取り専用で開きます"
+    },
+    "bottomSheet": {
+      "dismiss": "シートを閉じる"
     }
   },
   "consent": {
@@ -1115,7 +1119,9 @@
     "manage_subtitle": "任意のカテゴリーのチェックを自由に外せます。AIとチャットするには「OpenAI テキスト」のスコープが必須です。",
     "save_required_hint": "選択を保存するには「OpenAI テキスト」を有効にしてください。",
     "scope_location": "位置情報",
-    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地域（都市）がAIと共有されます。正確な位置情報が共有されることはありません。"
+    "scope_location_hint": "近くの美術館やモニュメントを認識するために、おおよその地区（地区＋都市）がAIと共有されます。番地・住所・正確な位置情報が共有されることはありません。",
+    "scope_location_coarse": "都市のみ",
+    "scope_location_coarse_hint": "都市と国のみがAIと共有されます（地区レベルより精度が低い選択肢です）。番地や正確な位置情報が共有されることはありません。"
   },
   "dailyArt": {
     "title": "今日のアートワーク",
@@ -1172,6 +1178,9 @@
     "writeReview": "レビューを書く",
     "averageRating": "平均評価",
     "ratingLabel": "あなたの評価",
+    "npsLabel": "Musaiumを友人や同僚にすすめる可能性はどのくらいですか？",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "あなたの名前",
     "commentPlaceholder": "体験を共有してください...",
     "submit": "レビューを送信",

@@ -35,9 +35,13 @@ describe('Composer (A1)', () => {
 
   it('renders the attach (+) button with a11y label (R4)', () => {
     render(<Composer {...defaultProps} />);
-    const attach = screen.getByTestId('composer-attach-button');
-    expect(attach).toBeTruthy();
-    expect(attach.props.accessibilityLabel).toBe('chat.composer.a11y.open_attachments');
+    // testID lives on a host-only inner View (R1 structural — see Composer.tsx
+    // implementation note) ; a11y semantics live on the surrounding Pressable
+    // per lib-docs/react-native/PATTERNS.md §7 canonical icon-button shape.
+    // Query the Pressable by its a11y label rather than introspecting the
+    // testID-bearing inner View, so the assertion is implementation-agnostic.
+    expect(screen.getByTestId('composer-attach-button')).toBeTruthy();
+    const attach = screen.getByLabelText('chat.composer.a11y.open_attachments');
     expect(attach.props.accessibilityHint).toBe('chat.composer.a11y.open_attachments_hint');
   });
 
@@ -49,15 +53,14 @@ describe('Composer (A1)', () => {
 
   it('renders the mic button with default a11y label when not recording (AC3)', () => {
     render(<Composer {...defaultProps} />);
-    const mic = screen.getByTestId('composer-mic-button');
-    expect(mic).toBeTruthy();
-    expect(mic.props.accessibilityLabel).toBe('chat.composer.a11y.mic');
+    expect(screen.getByTestId('composer-mic-button')).toBeTruthy();
+    // a11y on the Pressable, testID on inner host View — see attach test above.
+    expect(screen.getByLabelText('chat.composer.a11y.mic')).toBeTruthy();
   });
 
   it('renders the mic button with recording a11y label + busy state when isRecording (AC4, R27)', () => {
     render(<Composer {...defaultProps} isRecording />);
-    const mic = screen.getByTestId('composer-mic-button');
-    expect(mic.props.accessibilityLabel).toBe('chat.composer.a11y.mic_recording');
+    const mic = screen.getByLabelText('chat.composer.a11y.mic_recording');
     expect(mic.props.accessibilityState).toEqual(expect.objectContaining({ busy: true }));
   });
 

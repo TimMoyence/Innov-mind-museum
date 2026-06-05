@@ -27,12 +27,15 @@ import { TextInput } from 'react-native';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
+// C1 hexagonal (2026-05-23) — modal now POSTs via
+// `leadsApi.submitPaywallInterest(payload)`. Mock the service ; `mockPost`
+// is invoked with the payload object as its sole argument (no URL/header args).
 const mockPost = jest.fn();
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  httpClient: {
-    post: (...args: unknown[]) => mockPost(...args) as Promise<unknown>,
+jest.mock('@/features/paywall/infrastructure/leadsApi', () => ({
+  leadsApi: {
+    submitPaywallInterest: (payload: unknown) =>
+      mockPost('/api/leads/paywall-interest', payload) as Promise<unknown>,
   },
-  setPaywallHandler: jest.fn(),
 }));
 
 // R1 corrective (2026-05-15) — Sentry mock comes from the global test-utils.tsx

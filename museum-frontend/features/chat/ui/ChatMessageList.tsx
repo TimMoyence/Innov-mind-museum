@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Linking,
   Pressable,
   Share,
   StyleSheet,
@@ -175,6 +176,17 @@ export const ChatMessageList = ({
     });
   }, []);
 
+  // D-06 (cycle D, 2026-05-26) — tapping a C3 compare match card opens the
+  // artwork's Wikidata entry. Mirrors `handleArtworkPress` (local list-level
+  // handler) and `onProvenancePress` (`Linking.openURL` for an external
+  // reference) — `qid` is a required Wikidata QID on every `CompareMatch`.
+  const handleMatchPress = useCallback((qid: string) => {
+    // Only ever open a well-formed Wikidata QID (`Q` + digits) — guards against
+    // a malformed/hostile id reaching the URL even though `qid` is backend-sourced.
+    if (!/^Q\d+$/.test(qid)) return;
+    void Linking.openURL(`https://www.wikidata.org/wiki/${qid}`);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: ChatUiMessage }) => {
       const isAssistant = item.role === 'assistant';
@@ -199,6 +211,7 @@ export const ChatMessageList = ({
             feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
             onFeedback={isAssistant ? handleFeedback : undefined}
             onArtworkPress={isAssistant ? handleArtworkPress : undefined}
+            onMatchPress={isAssistant ? handleMatchPress : undefined}
           />
 
           {isAssistant && !isItemStreaming && item.text ? (
@@ -241,6 +254,7 @@ export const ChatMessageList = ({
       handleFeedback,
       handleShare,
       handleArtworkPress,
+      handleMatchPress,
       t,
       theme.textTertiary,
       ttsIsPlaying,

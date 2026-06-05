@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useChatSession } from '@/features/chat/application/useChatSession';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
+import { makePostMessageResponse } from '@/__tests__/helpers/factories/session.factories';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 // Sentry
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
+  captureMessage: jest.fn(),
 }));
 
 // Runtime settings
@@ -929,26 +931,26 @@ describe('useChatSession', () => {
     expect(streamingMsgs).toHaveLength(0);
   });
 
-  // ── Streaming with empty response.message.text in onDone ────────────────
-
-  it('onDone with empty final text still replaces streaming placeholder', async () => {
-    mockSendMessageSmart.mockImplementation(
-      (params: {
-        onToken?: (text: string) => void;
-        onDone?: (payload: {
-          messageId: string;
-          createdAt: string;
-          metadata: Record<string, unknown>;
-        }) => void;
-      }) => {
-        // No tokens sent, so streamTextRef stays empty
-        params.onDone?.({
-          messageId: 'empty-text-msg',
+  // ── Streaming with empty response.message.text (live sync transport) ────────
+  //
+  // Cycle 5 realignment (UFR-022 D6/D8): this test previously fired `onDone`
+  // directly and asserted the empty bubble SURVIVED (`text:''`). That encoded
+  // the bug on a DEAD path — `sendMessageSmart` ignores `onDone` (send.ts:169-172),
+  // so the live finalize is the sync-fallback block (sendMessageStreaming.ts:117).
+  // It is now driven via `mockResolvedValue` (live transport) and asserts the
+  // real contract: a blank response leaves NO bubble and NO `-streaming` orphan.
+  it('empty final text on the live sync transport leaves no bubble and no -streaming placeholder', async () => {
+    mockSendMessageSmart.mockResolvedValue(
+      makePostMessageResponse({
+        sessionId: SESSION_ID,
+        message: {
+          id: 'empty-text-msg',
+          role: 'assistant',
+          text: '',
           createdAt: new Date().toISOString(),
-          metadata: {},
-        });
-        return Promise.resolve(null);
-      },
+        },
+        metadata: {},
+      }),
     );
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
@@ -961,9 +963,18 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'Hi' });
     });
 
-    const doneMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg');
-    expect(doneMsg).toBeDefined();
-    expect(doneMsg?.text).toBe('');
+    // No phantom bubble for the blank response, and no orphan placeholder.
+    expect(
+      result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg'),
+    ).toBeUndefined();
+    const emptyAssistant = result.current.messages.filter(
+      (m: ChatUiMessage) => m.role === 'assistant' && (m.text ?? '').trim() === '',
+    );
+    expect(emptyAssistant).toHaveLength(0);
+    const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
+      m.id.endsWith('-streaming'),
+    );
+    expect(streamingMsgs).toHaveLength(0);
   });
 
   // ── getErrorMessage with non-Error object ───────────────────────────────
@@ -1226,6 +1237,225 @@ describe('useChatSession', () => {
           source: 'previous-call',
         }),
       );
+    });
+  });
+
+  // ── P0-FA1: text-only sync-path finalize (empty-bubble bug) ────────────────
+  //
+  // RED phase (UFR-022). These tests drive the LIVE sync transport: the mock
+  // RESOLVES a PostMessageResponseDTO and NEVER fires onToken/onDone/onGuardrail
+  // (sendMessageSmart ignores them — send.ts:169-172). The bug: for a text-only
+  // turn the sync-fallback finalize block (sendMessageStreaming.ts:117) is
+  // guarded out (`attempt.imageUri` falsy + `streamingIdRef.current` still set),
+  // so the assistant placeholder keeps `text: ''` and its `${ts}-streaming` id.
+  // A Red test that fires onDone would reproduce a FAKE world (the very reason
+  // the bug shipped green) — see design §6 Q2.
+  describe('text-only sync finalize (P0-FA1 empty bubble)', () => {
+    it('TR.1 — text-only success replaces the placeholder with the API answer text (R1)', async () => {
+      const answer = 'The Mona Lisa was painted by Leonardo.';
+      mockSendMessageSmart.mockResolvedValue(
+        makePostMessageResponse({
+          sessionId: SESSION_ID,
+          message: {
+            id: 'resp-text-1',
+            role: 'assistant',
+            text: answer,
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'Tell me more' });
+      });
+
+      // The finalized assistant bubble shows the API answer.
+      const answered = result.current.messages.find(
+        (m: ChatUiMessage) => m.role === 'assistant' && m.text === answer,
+      );
+      expect(answered).toBeDefined();
+
+      // No empty assistant bubble survives.
+      const emptyAssistant = result.current.messages.filter(
+        (m: ChatUiMessage) => m.role === 'assistant' && m.text === '',
+      );
+      expect(emptyAssistant).toHaveLength(0);
+
+      // Exactly one assistant bubble for this turn (no double-render). The
+      // session seed has one assistant message ('Welcome!'), so the turn adds
+      // exactly one more → none empty.
+      const assistantBubbles = result.current.messages.filter(
+        (m: ChatUiMessage) => m.role === 'assistant',
+      );
+      expect(assistantBubbles.every((m) => m.text !== '')).toBe(true);
+    });
+
+    it('TR.2 — text-only finalize sets the server id and drops the -streaming id (R2)', async () => {
+      mockSendMessageSmart.mockResolvedValue(
+        makePostMessageResponse({
+          sessionId: SESSION_ID,
+          message: {
+            id: 'resp-text-2',
+            role: 'assistant',
+            text: 'Painted around 1503.',
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'When was it painted?' });
+      });
+
+      // The server message id is applied to the finalized bubble.
+      const byServerId = result.current.messages.find((m: ChatUiMessage) => m.id === 'resp-text-2');
+      expect(byServerId).toBeDefined();
+
+      // The transient placeholder id must not survive.
+      const streamingIds = result.current.messages.filter((m: ChatUiMessage) =>
+        m.id.endsWith('-streaming'),
+      );
+      expect(streamingIds).toHaveLength(0);
+    });
+
+    it('TR.3 — text-only carries metadata and suggestions onto the bubble (R3)', async () => {
+      mockSendMessageSmart.mockResolvedValue(
+        makePostMessageResponse({
+          sessionId: SESSION_ID,
+          message: {
+            id: 'resp-text-3',
+            role: 'assistant',
+            text: 'It is a portrait by Leonardo.',
+            createdAt: new Date().toISOString(),
+            suggestions: ['Who painted it?', 'When?'],
+          },
+          metadata: { detectedArtwork: { title: 'Mona Lisa' } },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'Tell me about it' });
+      });
+
+      const finalized = result.current.messages.find((m: ChatUiMessage) => m.id === 'resp-text-3');
+      expect(finalized).toBeDefined();
+      expect(finalized?.metadata?.detectedArtwork?.title).toBe('Mona Lisa');
+      expect(finalized?.suggestions).toEqual(['Who painted it?', 'When?']);
+    });
+
+    it('TR.4 — text-only guardrail/refusal text renders, never blank (R5)', async () => {
+      // design D4 / OQ1: guardrail arrives via response.message.text on the live
+      // sync transport — NOT via onGuardrail (which sendMessageSmart ignores).
+      const refusal = 'I can only discuss art and the works around you.';
+      mockSendMessageSmart.mockResolvedValue(
+        makePostMessageResponse({
+          sessionId: SESSION_ID,
+          message: {
+            id: 'resp-guardrail-1',
+            role: 'assistant',
+            text: refusal,
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'What is the weather today?' });
+      });
+
+      const refusalBubble = result.current.messages.find(
+        (m: ChatUiMessage) => m.role === 'assistant' && m.text === refusal,
+      );
+      expect(refusalBubble).toBeDefined();
+
+      const emptyAssistant = result.current.messages.filter(
+        (m: ChatUiMessage) => m.role === 'assistant' && m.text === '',
+      );
+      expect(emptyAssistant).toHaveLength(0);
+    });
+
+    it('TR.5 — streaming state cleared after text-only finalize (R7)', async () => {
+      mockSendMessageSmart.mockResolvedValue(
+        makePostMessageResponse({
+          sessionId: SESSION_ID,
+          message: {
+            id: 'resp-text-5',
+            role: 'assistant',
+            text: 'Here is the answer.',
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.sendMessage({ text: 'Anything else?' });
+      });
+
+      // Observable state only (design D6, lib-docs/react/PATTERNS.md:152) — do
+      // NOT introspect streamingIdRef.current.
+      expect(result.current.isStreaming).toBe(false);
+
+      const streamingIds = result.current.messages.filter((m: ChatUiMessage) =>
+        m.id.endsWith('-streaming'),
+      );
+      expect(streamingIds).toHaveLength(0);
+    });
+
+    it('TR.6 — text-only send failure removes placeholder and marks user message failed (R6 pin, expected GREEN on current code)', async () => {
+      mockSendMessageSmart.mockRejectedValue(new Error('Network down'));
+
+      const { result } = renderHook(() => useChatSession(SESSION_ID));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      let sendResult: boolean | undefined;
+      await act(async () => {
+        sendResult = await result.current.sendMessage({ text: 'hi' });
+      });
+
+      expect(sendResult).toBe(false);
+
+      const streamingIds = result.current.messages.filter((m: ChatUiMessage) =>
+        m.id.endsWith('-streaming'),
+      );
+      expect(streamingIds).toHaveLength(0);
+
+      const failedUser = result.current.messages.find(
+        (m: ChatUiMessage) => m.role === 'user' && m.sendFailed === true,
+      );
+      expect(failedUser).toBeDefined();
     });
   });
 });

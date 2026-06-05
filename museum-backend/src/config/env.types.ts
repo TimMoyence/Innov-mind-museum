@@ -44,6 +44,14 @@ export interface AppEnv {
   corsOrigins: string[];
   jsonBodyLimit: string;
   requestTimeoutMs: number;
+  /** Idempotency-Key dedup replay window in ms (bounded [1s, 1h], default 600000). */
+  idempotencyTtlMs: number;
+  /**
+   * L2 network-fault injector toggle (TEST-ONLY, Decision D3). Resolved via
+   * `resolveNetFaultEnabled` — coerced false UNCONDITIONALLY in production with
+   * NO escape hatch. Default OFF.
+   */
+  netFaultInjectionEnabled: boolean;
   dbSynchronize: boolean;
   dbSsl: boolean;
   dbSslRejectUnauthorized: boolean;
@@ -54,8 +62,6 @@ export interface AppEnv {
     password?: string;
     database: string;
     poolMax: number;
-    /** Optional read-replica URL. When set, dataSourceRouter.read uses it. */
-    replicaUrl: string | null;
   };
   auth: {
     jwtSecret: string;
@@ -515,8 +521,6 @@ export interface AppEnv {
     host: string;
     port: number;
     password?: string;
-    /** Comma-separated host:port pairs for Redis Cluster mode (ioredis Cluster client). */
-    clusterNodes: string | null;
   };
   /**
    * Data-retention prune (ADR-018/019/020). Controls three daily housekeeping
@@ -537,6 +541,36 @@ export interface AppEnv {
     artKeywordsDays: number;
     /** hitCount <= this is candidate. Default 1. */
     artKeywordsHitThreshold: number;
+  };
+  /** Review / NPS configuration. */
+  review: {
+    /**
+     * NPS scale-epoch (F3). ISO-8601 UTC timestamp marking the 1-5 → 0-10 scale
+     * switch. `aggregateNps` counts ONLY reviews with `createdAt >=` this value,
+     * so legacy 1-5 ratings (a former "5" would now read as a detractor) never
+     * poison the NPS. Overridable via `NPS_SCALE_EPOCH`. Always a valid ISO
+     * string (invalid env input degrades to the default).
+     */
+    npsScaleEpoch: string;
+  };
+  /**
+   * Cycle B (« Aucun lead perdu ») — async redelivery + retention for the
+   * persisted `leads` table. Always-on pre-launch (structurally skipped without
+   * Redis, mirror `retention`). Config values, NOT feature flags (UFR-015).
+   */
+  leads: {
+    /** BullMQ cron pattern for the redelivery + retention job. Default '*\/5 * * * *'. */
+    redeliveryCronPattern: string;
+    /** Terminal attempts cap before a failed lead is left for an operator. Default 5. */
+    maxAttempts: number;
+    /** Max leads re-attempted (and max delivered purged) per tick. Default 100. */
+    redeliveryBatchLimit: number;
+    /** Days a delivered lead is retained before hard-delete. Default 90. */
+    retentionDays: number;
+    /** Exponential backoff base (ms) between re-delivery attempts. Default 60000. */
+    backoffBaseMs: number;
+    /** Exponential backoff ceiling (ms). Default 3600000. */
+    backoffCapMs: number;
   };
   /**
    * Advanced guardrail V2. Each layer below self-activates from its own
@@ -574,6 +608,28 @@ export interface AppEnv {
      */
     budgetBackend: 'memory' | 'redis';
     /**
+     * Hybrid-gravity guardrail (2026-06-01) — kill-switch for the friction
+     * model. `true` (default): judge runs in PARALLEL of generation and an
+     * isolated off-topic is soft-redirected, escalating only past the
+     * thresholds below. `false`: legacy inline judge that hard-blocks every
+     * off-topic. Ops kill-switch (no redeploy), NOT a feature flag (cf. UFR-015).
+     */
+    frictionEnabled: boolean;
+    /** Session-scoped off-topic strikes at which a message hard-blocks for the rest of the session. */
+    frictionSessionThreshold: number;
+    /** User/IP-scoped strikes at which a global cool-down is armed. */
+    frictionUserThreshold: number;
+    /** TTL (ms) of the session strike counter (default 6h). */
+    frictionSessionTtlMs: number;
+    /** TTL (ms) of the user/IP strike counter (default 24h sliding). */
+    frictionUserTtlMs: number;
+    /** Duration (ms) of the global user/IP cool-down window (default 2min). */
+    frictionCooldownMs: number;
+    /** Strike weight of a security block (V1/sidecar) — heavier so abusers escalate faster. */
+    frictionWeightSecurity: number;
+    /** Strike weight of an off-topic (judge) block. */
+    frictionWeightOfftopic: number;
+    /**
      * 2026-05-12 — LLM Guard sidecar circuit breaker
      * (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
      * NOT a feature flag — always-on (pre-launch V1 doctrine).
@@ -609,18 +665,6 @@ export interface AppEnv {
       timeoutMs: number;
     };
     /**
-     * ADR-051 (2026-05-13) — Llama Prompt Guard 2 86M (Meta) sidecar.
-     * Same not-wired-yet status as Presidio. Score threshold is MALICIOUS
-     * probability above which adapter returns block verdict.
-     */
-    llamaPromptGuard: {
-      baseUrl?: string;
-      /** Hard request timeout (ms) for /classify. Fail-CLOSED on elapsed. */
-      timeoutMs: number;
-      /** MALICIOUS score threshold above which block verdict emitted. Default 0.8. */
-      scoreThreshold: number;
-    };
-    /**
      * Chaos drill probability in [0, 1] consumed by `LLMGuardAdapter`. Each
      * scan samples uniform random; if < `chaosRate`, call aborted BEFORE fetch
      * (exercise of fail-CLOSED path). Production MUST be 0.
@@ -638,17 +682,6 @@ export interface AppEnv {
       dailyBudgetCents: number;
       /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
       openDurationMs: number;
-    };
-    /**
-     * 2026-05-13 — per-tenant rate limiter (perennial design §11 D10 RE3).
-     * Primitive only — NOT wired V1 (single B2C tenant). Mounted Phase 2 (B2B
-     * onset). Token-bucket: bursts up to `capacity`, refill at `refillPerSecond`.
-     */
-    tenantRateLimit: {
-      /** Max tokens per bucket (burst capacity). */
-      capacity: number;
-      /** Tokens regenerated per second. 1.0 = one sustained req/s. */
-      refillPerSecond: number;
     };
   };
   /** Wave C5 (D-C5) — Plausible funnel analytics. Both keys optional in dev/test. */

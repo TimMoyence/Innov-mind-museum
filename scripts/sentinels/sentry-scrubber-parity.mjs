@@ -66,8 +66,19 @@ const WRAPPERS = [
 //   - SENSITIVE_QUERY_KEYS extended 7→11 (R1, +code/email/phone/state)
 //   - scrubEvent now traverses event.tags (R2, scrubRecord + SENSITIVE_HEADER_REGEX + scrubUrl)
 //   - new exported helper isUrlLikeValue (BE captureExceptionWithContext source scrub)
+// 2026-05-26 — bumped in lockstep with run /team `2026-05-26-chat-pipeline-hardening` (A-02) :
+//   - SENSITIVE_QUERY_KEYS extended 11→16 (D3, +x-amz-signature/x-amz-credential/
+//     x-amz-security-token/sig/signature) to close the presigned-S3 / signed-URL leak.
+//     Inherited by the central log redaction in museum-backend/src/shared/logger/logger.ts.
+// 2026-06-04 — bumped for TD-68 (SCRUB-01, audit 360) :
+//   - scrubRecord now applies scrubUrl to URL-like values under NON-sensitive keys,
+//     so a `?token=…` URL nested in `extra` / `request.data` is scrubbed (previously
+//     only `tags` + `request.url` ran scrubUrl). No new export; logic-only change.
+// 2026-06-04 — bumped for TD-71 : scrubRequest now scrubs the dedicated
+//   request.query_string field via scrubUrl (strips a leading '?' first, defensive).
+//   logic-only.
 // Golden fixture asserting the new behaviour : packages/musaium-shared/src/observability/sentry-scrubber.test.ts
-const CANONICAL_HASH = '02ac8c6f32dfec04e1ee3cca7b1eef13266baf90af588561a6c96ec9ad0fb44c';
+const CANONICAL_HASH = '2e024c11b1662f2898b96f902e1515116b41c2b0c6327b804ce2500135bac9b8';
 
 const REQUIRED_CANONICAL_EXPORTS = [
   'SENSITIVE_HEADER_REGEX',

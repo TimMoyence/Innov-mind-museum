@@ -1,6 +1,5 @@
-import crypto from 'node:crypto';
-
 import { badRequest } from '@shared/errors/app.error';
+import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -22,7 +21,7 @@ export class ConfirmEmailChangeUseCase {
       throw badRequest('Email change token is required');
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
+    const hashedToken = hashEmailTokenForLookup(token);
     const user = await this.userRepository.consumeEmailChangeToken(hashedToken);
     if (!user) {
       throw badRequest('Invalid or expired email change token');

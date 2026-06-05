@@ -1,4 +1,7 @@
 {
+  "a11y": {
+    "skipToContent": "Aller au contenu principal"
+  },
   "ai_disclosure": {
     "banner": "Musaium est un assistant IA. Les réponses sont générées automatiquement et peuvent contenir des erreurs."
   },
@@ -352,6 +355,7 @@
     "tickets": "Tickets",
     "supportAdmin": "Support",
     "reviewsAdmin": "Avis",
+    "nps": "NPS",
     "accessDenied": "Accès refusé",
     "goToHomepage": "Retour à l'accueil",
     "login": {
@@ -362,7 +366,22 @@
       "error": "Identifiants invalides",
       "googleButton": "Continuer avec Google",
       "divider": "ou",
-      "oauthError": "La connexion Google a échoué. Réessaie ou utilise ton mot de passe."
+      "oauthError": "La connexion Google a échoué. Réessaie ou utilise ton mot de passe.",
+      "mfaTitle": "Authentification à deux facteurs",
+      "mfaInstructions": "Saisis le code à 6 chiffres de ton application d'authentification.",
+      "mfaCodeLabel": "Code d'authentification",
+      "mfaCodePlaceholder": "123456",
+      "mfaSubmit": "Vérifier et se connecter",
+      "mfaUseRecovery": "Utiliser un code de récupération",
+      "mfaRecoveryLabel": "Code de récupération",
+      "mfaRecoveryPlaceholder": "Code de récupération",
+      "mfaRecoverySubmit": "Se connecter avec un code de récupération",
+      "mfaRecoveryContinue": "Continuer vers l'administration",
+      "mfaBackToCode": "Revenir au code d'authentification",
+      "mfaErrorInvalid": "Ce code est incorrect. Réessaie.",
+      "mfaErrorRateLimited": "Trop de tentatives. Patiente un instant avant de réessayer.",
+      "mfaErrorExpired": "Ta session a expiré. Reconnecte-toi.",
+      "mfaRecoveryRemaining": "{count} codes de récupération restants."
     },
     "common": {
       "date": "Date",
@@ -565,6 +584,18 @@
       "topMuseums": "Musées les plus actifs",
       "museum": "Musée",
       "guardrailBlockRate": "Taux de blocage (guardrail)"
+    },
+    "npsPage": {
+      "subtitle": "Sentiment de recommandation des visiteurs, sur l'échelle 0-10.",
+      "score": "Score NPS",
+      "promoters": "Promoteurs",
+      "passives": "Passifs",
+      "detractors": "Détracteurs",
+      "responses": "Réponses",
+      "distribution": "Répartition des réponses",
+      "chartAriaLabel": "Diagramme en barres des promoteurs, passifs et détracteurs",
+      "allMuseums": "Tous les musées",
+      "noMuseumAssigned": "Aucun musée n'est assigné à votre compte. Contactez un administrateur."
     },
     "export": {
       "sessions": {

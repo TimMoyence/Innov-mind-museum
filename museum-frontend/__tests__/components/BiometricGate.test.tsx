@@ -51,8 +51,12 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   }),
 }));
 
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  runAuthRefresh: () => mockRunAuthRefresh(),
+// C1 hexagonal (2026-05-23) — BiometricGate now calls
+// `authSessionService.refresh()` instead of `runAuthRefresh()` direct.
+jest.mock('@/features/auth/infrastructure/authSessionService', () => ({
+  authSessionService: {
+    refresh: () => mockRunAuthRefresh(),
+  },
 }));
 
 jest.mock('@/shared/ui/ThemeContext', () => ({

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { authStorage } from '@/features/auth/infrastructure/authTokenStore';
 import { getBiometricEnabled } from '@/features/auth/infrastructure/biometricStore';
-import { runAuthRefresh } from '@/shared/infrastructure/httpClient';
+import { authSessionService } from '@/features/auth/infrastructure/authSessionService';
 
 import { useBiometricAuth } from './useBiometricAuth';
 
@@ -39,7 +39,9 @@ interface UseFaceIdSessionRestoreResult {
  *   3. {@link getBiometricEnabled} — user preference flag.
  *
  * `canRestore` is true only when all three line up. The `restore()` action
- * gates a {@link runAuthRefresh} call behind a successful biometric prompt.
+ * gates an `authSessionService.refresh()` call behind a successful biometric
+ * prompt (C1 hexagonal 2026-05-23 — application layer no longer reaches into
+ * the shared transport primitive directly).
  */
 export const useFaceIdSessionRestore = (): UseFaceIdSessionRestoreResult => {
   const biometric = useBiometricAuth();
@@ -70,7 +72,7 @@ export const useFaceIdSessionRestore = (): UseFaceIdSessionRestoreResult => {
   const restore = useCallback(async (): Promise<boolean> => {
     const ok = await biometric.authenticate();
     if (!ok) return false;
-    const result = await runAuthRefresh();
+    const result = await authSessionService.refresh();
     return result.kind === 'success';
   }, [biometric]);
 

@@ -1,0 +1,154 @@
+appId: com.musaium.mobile.preview
+---
+# screen: ArtworkHeroModal
+#
+# C2 — ArtworkHeroModal happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap <ArtworkHeroCard> in a chat session whose assistant
+# message carries a `detectedArtwork`, which flips `heroModalVisible`
+# (app/(stack)/chat/[sessionId].tsx). Requires a live backend (localhost:3000)
+# that detects the artwork in the uploaded fixture, so this flow is NIGHTLY
+# (backend-dependent), NOT PR-blocking — same class as chat-compare.yaml.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   artwork-hero-card           (ArtworkHeroCard, open trigger)
+#   artwork-hero-modal-image    (assert modal open)
+#   artwork-hero-modal-close    (dismiss)
+#
+# Prerequisites:
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
+#   - Fixture image .maestro/fixtures/test-artwork.jpg in the simulator photo
+#     library (CI uploads it via `xcrun simctl addmedia` before the run).
+
+# ──────────────────────────────────────────────
+# Phase 0: Launch fresh + log in
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open a new chat session
+# ──────────────────────────────────────────────
+# Home primary CTA: scroll into view (last element, below the fold) + tap by
+# accessibility label (the Pressable's accessibilityLabel collapses the subtree,
+# so the visible "Démarrer une conversation" Text is NOT separately queryable).
+# The home default-conversation CTA sits half-under the bottom tab bar, so its
+# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
+# best-effort, then deterministically: Musées tab → museum card → sheet →
+# "Démarrer un chat ici" → chat composer.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
+# MUST be accepted BEFORE the composer is reachable. First-session-only, so
+# the wait is bounded and the tap is the deterministic dismissal.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 2: Attach the artwork fixture so the assistant detects an artwork
+# ──────────────────────────────────────────────
+- tapOn:
+    id: "composer-attach-button"
+- extendedWaitUntil:
+    visible:
+      id: "attachment-picker-gallery"
+    timeout: 40000
+- tapOn:
+    id: "attachment-picker-gallery"
+- tapOn:
+    text: "Allow|Allow Access to All Photos|Autoriser"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "test-artwork.jpg"
+    optional: true
+- tapOn:
+    point: "15%,30%"
+    optional: true
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Wait for the detected-artwork card, then open the hero modal
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "artwork-hero-card"
+    timeout: 60000
+- tapOn:
+    id: "artwork-hero-card"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 4: Assert the modal is open, then dismiss it
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "artwork-hero-modal-image"
+- tapOn:
+    id: "artwork-hero-modal-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "artwork-hero-modal-image"

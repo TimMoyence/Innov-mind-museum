@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec — Guardrail hybride par gravité (judge parallèle + friction 2-tier)</title>
+<style>
+:root{--ink:#1f2933;--muted:#5a6672;--faint:#8a94a0;--bg:#fff;--panel:#f6f7f9;
+--border:#e3e6ea;--accent:#3b5b7a;--accent2:#b06a3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
+header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
+font-weight:600;margin:0 0 10px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.meta{margin-top:18px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 20px}
+h2{font-size:21px;margin:48px 0 8px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 6px;font-weight:650}
+h4,h5,h6{margin:22px 0 6px}
+p{margin:12px 0}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px 18px;
+overflow:auto;font-size:13.5px;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+border-bottom:2px solid var(--border)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+blockquote{margin:16px 0;padding:2px 18px;border-left:3px solid var(--border);color:var(--muted)}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+.cb{color:var(--accent);font-weight:700}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);
+background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:0 0 8px}
+.kv b{color:var(--ink);font-weight:600;margin-right:4px}
+.chip{display:inline-block;font-size:12px;background:#e7eef5;color:var(--accent);
+border-radius:20px;padding:2px 10px;margin:2px 0}
+.muted{color:var(--muted)}
+.verdict{display:inline-block;font-weight:700;font-size:13px;letter-spacing:.04em;
+padding:4px 12px;border-radius:6px}
+.verdict.ok{background:#e7eef5;color:var(--accent)}
+.verdict.warn{background:#f3ece5;color:var(--accent2)}
+.verdict.bad{background:#f6e7e3;color:#9a3412}
+.finding{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:12px 0}
+.finding-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+.finding-title{font-weight:600;margin:4px 0}
+.suggestion{color:var(--muted)}
+.sev{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:4px}
+.sev.crit{background:#f6e7e3;color:#9a3412}
+.sev.high{background:#f3ece5;color:var(--accent2)}
+.sev.med{background:#eef1f4;color:var(--accent)}
+.sev.low{background:#eceff1;color:var(--muted)}
+.axis{font-size:12px;color:var(--muted)}
+.loc{font-size:12px}
+dl{margin:8px 0;padding-left:14px;border-left:1px solid var(--border)}
+dt{font-weight:600;font-size:13px;color:var(--accent);margin-top:8px}
+dd{margin:2px 0 2px 8px}
+nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 20px;margin:0 0 36px}
+nav.toc strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;padding:2px 0}
+section.artifact{padding-top:8px}
+section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
+footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
+@media print{
+html,body{background:#fff;color:#000;font-size:11pt}
+.wrap{max-width:none;padding:0}
+a{color:#000;text-decoration:none}
+.kv,.chip,code,pre,.verdict,.sev,.finding,nav.toc{background:transparent!important}
+.finding,.kv,nav.toc,pre{border-color:#999}
+h1,h2,h3{page-break-after:avoid}
+h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
+header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
+@page{margin:18mm 16mm}
+}</style></head>
+<body><div class="wrap">
+<header class="doc">
+<p class="eyebrow">Artifact</p>
+<h1>Spec — Guardrail hybride par gravité (judge parallèle + friction 2-tier)</h1>
+<div class="meta"><span>2026-06-01-hybrid-gravity-guardrail-design.md</span></div>
+</header>
+<h1>Spec — Guardrail hybride par gravité (judge parallèle + compteur de friction 2 niveaux)</h1>
+<blockquote><p>Statut : design validé en brainstorming 2026-06-01 (Tim). À implémenter via <code>/team</code> (UFR-022 fresh-context). Périmètre retenu : <strong>tout maintenant</strong> (session + plancher user/IP).</p></blockquote>
+<h2>1. Contexte &amp; problème</h2>
+<p>Le chat Musaium a une défense-en-profondeur (ADR-015) : V1 keyword guardrail (inline ~5 ms, hard-block insulte/injection), sidecar LLM-Guard ProtectAI (inline ~300 ms, fail-CLOSED, PII/injection-ML/toxicité/BanTopics), <strong>judge LLM</strong> (gpt-4o-mini, fail-OPEN, off-topic sémantique), output guardrail (post-réponse).</p>
+<p>Findings vérifiés (mesure end-to-end 2026-06-01, tests <code>guardrail-v2-live.ai.test.ts</code>) :</p>
+<ol><li><strong>Judge fail-open silencieux corrigé</strong> : timeout défaut 500 ms &lt; latence réelle 0,6–1,2 s → <code>AbortSignal</code> déclenché à chaque appel → <code>judgeWithLlm</code> → <code>null</code> → fail-OPEN → le judge ne bloquait jamais en prod. Corrigé à 1500 ms (commit <code>d769e2df</code>). <strong>Le bug aigu est réglé</strong> ; ce spec est un enrichissement, pas un blocker launch.</li><li><strong>Le judge est inline AVANT la génération</strong> (<code>prepare-message.pipeline.ts:283</code> → <code>evaluateInput</code> → puis génération) et <strong>hard-block tout off-topic</strong> (court-circuite la réponse via <code>handleInputBlock</code>). Problèmes :<ol><li><strong>Taxe latence voice-first</strong> : sur un message on-topic ≥50 chars (le cas courant), le judge ajoute jusqu'à <code>judgeTimeoutMs</code> AVANT la réponse (qui dure déjà 3–9 s). Mauvais endroit pour payer, surtout en vocal.</li><li><strong>Pas de notion de gravité</strong> : un visiteur qui pose UNE question hors-sujet (météo) est hard-bloqué exactement comme un abuseur répétitif. Or le <strong>section prompt redirige déjà</strong> l'off-topic gracieusement (prouvé : matrice off-topic verte).</li><li><strong>Stateless</strong> : aucun signal temporel ; un abuseur n'est jamais escaladé, un curieux occasionnel est traité trop durement.</li></ol></li></ol>
+<h2>2. Objectif</h2>
+<p>Remplacer le « videur inline qui hard-block tout off-topic » par un modèle <strong>hybride par gravité</strong> :</p>
+<ul><li><strong>Sécurité</strong> (injection/toxicité/PII) → hard-block immédiat inline (inchangé).</li><li><strong>Off-topic occasionnel</strong> → soft-redirect (le section prompt répond et recentre), <strong>zéro taxe latence</strong> (judge en parallèle de la génération).</li><li><strong>Répétition / abus</strong> → escalade vers hard-block + cool-down, via un <strong>compteur de friction 2 niveaux</strong> (session + plancher user/IP).</li></ul>
+<h3>Non-objectifs</h3>
+<ul><li>Pas de refonte du sidecar ni du V1 keyword (inchangés).</li><li>Pas de ML maison de classification d'abus (le judge LLM suffit comme classificateur).</li><li>Pas de bannissement permanent ni de modération humaine (hors V1).</li></ul>
+<h2>3. Invariants de sécurité (à préserver, non négociables)</h2>
+<ul><li><strong>Sécurité inline avant génération</strong> : V1 + sidecar restent évalués AVANT tout appel au LLM de réponse. On n'envoie JAMAIS du PII/injection au LLM de réponse. Seul le judge (fail-OPEN, off-topic) passe en parallèle.</li><li><strong>Sidecar fail-CLOSED</strong> : sidecar muet/timeout → <code>policy:service_unavailable</code> (inchangé, ADR-047).</li><li><strong>Judge fail-OPEN</strong> : judge timeout/erreur/budget épuisé → <code>null</code> → on retombe sur le verdict V1 (allow). Un judge lent ne doit jamais bloquer (dispo).</li><li><strong>Le compteur de friction ne doit jamais faire fail-CLOSED le chat</strong> : store Redis indisponible → on dégrade en « pas d'escalade » (le soft-redirect + la sécurité inline restent), jamais un blocage dur dû à une panne d'infra.</li></ul>
+<h2>4. Architecture</h2>
+<h3>4.1 Flux</h3>
+<pre><code>message ≥ JUDGE_MIN_LENGTH (50c), V1+sidecar ALLOW
+  │ (sécurité inline déjà passée : un block ici = hard-block + strike SÉCURITÉ + check plancher user)
+  ▼
+PARALLÈLE { judge(input, scope)  ‖  generateAnswer(input, abortSignal) }
+  │
+  ├─ judge = off-topic (block) :
+  │     • frictionStore.recordStrike(session, w_offtopic)
+  │     • frictionStore.recordStrike(user/ip, w_offtopic)
+  │     • escalate = (session ≥ S_soft) || (user ≥ U_floor)
+  │     • escalate ?
+  │         ── oui ─► abortSignal.abort()  → réponse = cool-down (policy:off_topic) localisé
+  │         ── non ─► réponse = answer généré (déjà soft-redirigé par le section prompt)
+  │
+  └─ judge = allow ─► réponse = answer</code></pre>
+<ul><li><strong>Parallélisme</strong> : <code>Promise.allSettled([judge, generate])</code>. Le judge (~1 s) finit avant la réponse (3–9 s) → latence ajoutée ≈ 0 sur le cas allow.</li><li><strong>Abort</strong> : la génération reçoit un <code>AbortSignal</code>. Si le judge décide une escalade pendant la génération, on <code>abort()</code> → on ne paie qu'une fraction des tokens. <strong>Dégradation gracieuse</strong> : si l'orchestrateur ne propage pas (encore) l'<code>AbortSignal</code>, on laisse finir la génération puis on la <strong>supprime</strong> (correct, juste moins économe). L'abort est une optimisation, pas une condition de correction.</li><li><strong>Sécurité inchangée</strong> : sur block V1/sidecar (avant la branche parallèle), on hard-block, on <code>recordStrike(SÉCURITÉ, w_security)</code> et on vérifie le plancher user (un spammeur d'injections finit en cool-down dur).</li></ul>
+<h3>4.2 Composant <code>GuardrailFrictionStore</code> (nouveau)</h3>
+<p>Calqué sur <code>guardrail-budget.ts</code> (pattern éprouvé : <code>CacheService.incrBy</code> + TTL, backends <code>memory</code> dev / <code>redis</code> prod, fail-soft).</p>
+<p>Interface :</p>
+<pre><code>type FrictionScope = { kind: 'session'; sessionId: string }
+                   | { kind: 'user'; userId: number }
+                   | { kind: 'ip'; ipHash: string };
+
+interface GuardrailFrictionStore {
+  recordStrike(scope: FrictionScope, weight: number): Promise&lt;void&gt;; // incrBy + TTL
+  count(scope: FrictionScope): Promise&lt;number&gt;;                      // 0 si store down (fail-soft)
+  reset(scope: FrictionScope): Promise&lt;void&gt;;                        // tests / cron défensif
+}</code></pre>
+<p>Clés / TTL :</p>
+<table><thead><tr><th>Scope</th><th>Clé</th><th>TTL</th></tr></thead><tbody><tr><td>session</td><td><code>friction:session:&lt;sessionId&gt;</code></td><td><code>FRICTION_SESSION_TTL_MS</code> (déf. 6 h)</td></tr><tr><td>user</td><td><code>friction:user:&lt;userId&gt;</code></td><td><code>FRICTION_USER_TTL_MS</code> (déf. 24 h glissant)</td></tr><tr><td>ip (anon)</td><td><code>friction:ip:&lt;sha256(ip)&gt;</code></td><td>idem user (IP hashée, jamais en clair — RGPD)</td></tr></tbody></table>
+<p>Anon = pas de <code>userId</code> → on utilise le plancher <strong>IP hashée</strong> (cohérent avec <code>RedisRateLimitStore</code> existant). IP jamais loggée/stockée en clair.</p>
+<h3>4.3 Gravité → poids de strike</h3>
+<table><thead><tr><th>Gravité</th><th>Source</th><th>Poids (env)</th><th>Action immédiate</th></tr></thead><tbody><tr><td>Sécurité</td><td>V1 keyword / sidecar (injection, toxicité, PII)</td><td><code>w_security</code> = 2</td><td>hard-block (inchangé)</td></tr><tr><td>Off-topic</td><td>judge <code>block</code> reason off_topic</td><td><code>w_offtopic</code> = 1</td><td>soft-redirect (sauf escalade)</td></tr><tr><td>On-topic</td><td>—</td><td>0</td><td>réponse</td></tr></tbody></table>
+<h3>4.4 Politique d'escalade (seuils env, ordre de grandeur validé)</h3>
+<p>Deux escalades <strong>distinctes</strong> (ne pas confondre) :</p>
+<ul><li><strong>Session ≥ <code>FRICTION_SESSION_THRESHOLD</code> (S_soft = 3)</strong> → escalade <strong>par-message ciblée off-topic</strong> : pour le reste de la session, un message off-topic est <strong>hard-bloqué</strong> (refus de recentrage) au lieu d'être soft-redirigé. <strong>Les questions on-topic (art/culture/monument) continuent de marcher normalement</strong> — on ne verrouille pas la session, on cesse juste de tolérer le détournement. Pas de minuteur.</li><li><strong>User/IP ≥ <code>FRICTION_USER_THRESHOLD</code> (U_floor = 10 / 24 h)</strong> → <strong>cool-down temporisé global</strong> : pendant <code>FRICTION_COOLDOWN_MS</code> (déf. 120 000), <strong>tous</strong> les messages de cet user/IP sont rate-limités (réponse cool-down), même en changeant de session. C'est le frein anti-abuseur persistant. Réutilise le concept <code>RedisRateLimitStore</code> (flag <code>friction:cooldown:&lt;scope&gt;</code> avec TTL).</li><li>Cool-down = message localisé honnête (i18n <code>error.chat.refocus</code>), pas un 500, <strong>pas d'emoji</strong> (règle no-emoji). Ex FR : « Je suis ton compagnon culturel — restons sur l'art et le patrimoine. On reprend quand tu veux. »</li></ul>
+<p>Tous gated par <code>GUARDRAIL_FRICTION_ENABLED</code> (déf. true) : kill-switch sans redeploy.</p>
+<h2>5. Configuration (env)</h2>
+<pre><code>GUARDRAIL_FRICTION_ENABLED=true
+FRICTION_SESSION_THRESHOLD=3
+FRICTION_USER_THRESHOLD=10
+FRICTION_SESSION_TTL_MS=21600000      # 6 h
+FRICTION_USER_TTL_MS=86400000         # 24 h
+FRICTION_COOLDOWN_MS=120000           # 2 min
+FRICTION_WEIGHT_SECURITY=2
+FRICTION_WEIGHT_OFFTOPIC=1</code></pre>
+<p>Backend du store : suit <code>GUARDRAIL_BUDGET_BACKEND</code> (memory/redis) déjà existant, même <code>CacheService</code>.</p>
+<h2>6. Gestion d'erreur</h2>
+<table><thead><tr><th>Panne</th><th>Comportement</th></tr></thead><tbody><tr><td>Judge timeout/erreur/budget</td><td><code>null</code> → fail-OPEN → réponse passe (inchangé)</td></tr><tr><td>Sidecar muet</td><td><code>policy:service_unavailable</code> (inchangé)</td></tr><tr><td>FrictionStore (Redis) down</td><td><code>count()</code> renvoie 0 → pas d'escalade ; soft-redirect + sécurité inline tiennent. <strong>Jamais fail-closed sur panne infra.</strong></td></tr><tr><td>Abort non supporté par l'orchestrateur</td><td>on laisse finir puis on supprime la réponse (correct, moins économe)</td></tr></tbody></table>
+<h2>7. Tests (réels, no mock LLM — prolongent <code>guardrail-v2-live.ai.test.ts</code>)</h2>
+<ol><li><strong>off-topic isolé &lt; seuil</strong> → soft-redirect : réponse présente, <strong>pas</strong> de <code>policy:off_topic</code>, le section prompt recentre.</li><li><strong>off-topic répété ≥ S_soft</strong> (3×) → 3ᵉ message hard-block <code>policy:off_topic</code> + message de cool-down.</li><li><strong>latence parallèle</strong> : message on-topic jugé → latence totale ≈ latence de la réponse seule (assert : pas de somme answer+judge ; marge tolérante).</li><li><strong>plancher user cross-session</strong> : strikes répartis sur 2 sessions du même <code>userId</code> → cool-down à U_floor.</li><li><strong>abort</strong> : judge bloque pendant la génération → génération avortée (pas de réponse complète facturée — assert via spy orchestrateur ou absence de texte d'answer).</li><li><strong>fail-soft store</strong> : FrictionStore qui throw → pas d'escalade, chat répond (pas de 500).</li><li><strong>kill-switch</strong> : <code>GUARDRAIL_FRICTION_ENABLED=false</code> → comportement = legacy (judge inline hard-block).</li><li><strong>sécurité inchangée</strong> : injection/PII toujours hard-block immédiat + strike sécurité poids 2.</li></ol>
+<p>Unitaires : <code>GuardrailFrictionStore</code> (incrBy/TTL/fail-soft) façon <code>guardrail-budget</code> tests.</p>
+<h2>8. Impact code (esquisse, détaillée par /team)</h2>
+<ul><li><strong>Nouveau</strong> : <code>src/modules/chat/useCase/guardrail/guardrail-friction.store.ts</code> (+ types) — calqué <code>guardrail-budget.ts</code>.</li><li><strong><code>guardrail-evaluation.service.ts</code></strong> : extraire le judge de <code>evaluateInput</code> (qui ne garde que V1+sidecar inline) ; exposer <code>evaluateInputSemantic(text, scope)</code> appelable en parallèle ; intégrer les strikes + l'escalade.</li><li><strong><code>prepare-message.pipeline.ts</code></strong> : restructurer le tronçon <code>evaluateInput → generate</code> en <code>securityGate → parallel(judge, generate(abortSignal)) → gate final</code>. Threader un <code>AbortSignal</code> vers l'orchestrateur (best-effort).</li><li><strong><code>chat-orchestrator.port</code> / langchain orchestrator</strong> : accepter un <code>AbortSignal</code> optionnel (dégradation gracieuse si absent).</li><li><strong>env</strong> : <code>src/shared/config</code> ajout des clés <code>FRICTION_*</code> + <code>GUARDRAIL_FRICTION_ENABLED</code>.</li><li><strong>i18n</strong> : <code>error.chat.refocus</code> (8 locales).</li><li><strong><code>chat-route.helpers.ts</code></strong> : le <code>socketCeilingMs</code> n'augmente PAS (le judge ne s'additionne plus en série — il est parallèle ; vérifier l'invariant R2 reste vrai, voire le budget baisse).</li></ul>
+<h2>9. Risques &amp; mitigations</h2>
+<ul><li><strong>Sécurité-sensible</strong> : restructurer le guardrail à J-6. Mitigation : invariants §3 testés explicitement (tests 7,8), kill-switch env, <code>/team</code> fresh-context + reviewer + security agent.</li><li><strong>Coût</strong> : payer answer+judge sur off-topic sous-seuil. Mitigation : abort ; off-topic = minorité ; judge ~0,06¢.</li><li><strong>Abort non câblé</strong> : risque de complexité. Mitigation : abort = optimisation optionnelle, le suppress suffit à la correction.</li><li><strong>Faux positifs judge</strong> (on-topic jugé off-topic) : un visiteur légitime accumulerait des strikes. Mitigation : seuil 3 (pas 1), poids off-topic faible, le judge est déjà testé anti-over-block (matrice).</li></ul>
+<h2>10. Critères d'acceptation</h2>
+<ul><li>Off-topic isolé → soft-redirect, <strong>0 ms de latence judge ajoutée</strong> mesurable sur le cas on-topic.</li><li>Off-topic/abus répété → hard-block + cool-down, vérifié réel.</li><li>Plancher user/IP cross-session fonctionnel.</li><li>Tous les invariants sécurité §3 verts. Kill-switch fonctionnel. Store fail-soft.</li><li><code>tsc</code> 0, <code>pnpm lint</code> 0, <code>lint:test-discipline</code> 0, suite <code>guardrail-v2-live</code> + nouveaux tests verts en réel.</li></ul>
+<footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
+</div></body></html>

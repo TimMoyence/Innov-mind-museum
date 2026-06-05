@@ -7,9 +7,9 @@ const mockSyncKeywords = jest.fn<Promise<ArtKeywordListResponse>, [string, strin
 
 jest.mock('@/features/art-keywords/infrastructure/artKeywordsApi', () => ({
   syncKeywords: (...args: [string, string?]) => mockSyncKeywords(...args),
-}));
-
-jest.mock('@/shared/infrastructure/httpClient', () => ({
+  // C1 hexagonal (2026-05-23) — `getLocale` now re-exported through the
+  // feature-infra façade (was imported from `@/shared/infrastructure/httpClient`
+  // directly before, which is now forbidden in application/ui layers).
   getLocale: () => 'fr',
 }));
 

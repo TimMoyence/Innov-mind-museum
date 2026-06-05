@@ -24,8 +24,7 @@ type: project
 
 ### Deployment pipeline
 - `deploy/Dockerfile.prod` — multi-stage standalone, non-root
-- `.github/workflows/ci-web.yml` — typecheck + build
-- `.github/workflows/deploy-web.yml` — Docker + GHCR + VPS SSH
+- `.github/workflows/ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS (les anciens `ci-web.yml`/`deploy-web.yml` n'existent plus, consolidés ; vérifié 2026-05-26)
 - Nginx: `/api/` -> backend:3000, `/` -> museum-web:3001
 
 ### museum-admin (deleted 2026-04-04)

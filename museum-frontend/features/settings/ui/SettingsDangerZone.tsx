@@ -25,6 +25,7 @@ export const SettingsDangerZone = ({
         {t('settings.danger_zone_desc')}
       </Text>
       <Pressable
+        testID="settings-delete-account"
         style={[styles.deleteButton, { backgroundColor: theme.danger }]}
         onPress={onDeleteAccount}
         disabled={isDeletingAccount}

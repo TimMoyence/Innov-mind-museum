@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { AppError } from '@shared/errors/app.error';
+import { AppError, unauthorized } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { setUser } from '@shared/observability/sentry';
 
@@ -24,9 +24,6 @@ export function setUserRoleResolver(
 ): void {
   userRoleResolver = resolver;
 }
-
-const unauthorized = (message: string): AppError =>
-  new AppError({ message, statusCode: 401, code: 'UNAUTHORIZED' });
 
 function checkApiKeyValidity(apiKey: {
   expiresAt?: Date | string | null;

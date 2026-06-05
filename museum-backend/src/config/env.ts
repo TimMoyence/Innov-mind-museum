@@ -6,6 +6,7 @@ import {
   required,
   resolveChaosRate,
   toBoolean,
+  toIsoTimestamp,
   toList,
   toNumber,
   toOptionalString,
@@ -23,6 +24,7 @@ import {
   warnLegacyJwtSecret,
 } from './env-resolvers';
 import { validateProductionEnv } from './env.production-validation';
+import { resolveNetFaultEnabled } from './net-fault.config';
 
 import type {
   AppEnv,
@@ -64,6 +66,22 @@ const env: AppEnv = {
   corsOrigins: toList(process.env.CORS_ORIGINS),
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
+  // Idempotency-Key dedup window (2026-06-01, D2). Short TTL bounds the replay
+  // memory: long enough to absorb an offline-flush double-fire / a flapping
+  // reconnect, short enough that the key is not a long-lived dedup oracle.
+  // Bounded [1s, 1h] so a fat-fingered env can't make it 0 (no dedup) or huge.
+  idempotencyTtlMs: Math.min(
+    3_600_000,
+    Math.max(1_000, toNumber(process.env.IDEMPOTENCY_TTL_MS, 600_000)),
+  ),
+  // L2 network-fault injector (TEST-ONLY, D3). `resolveNetFaultEnabled` coerces
+  // false UNCONDITIONALLY in prod with NO escape hatch (stricter than
+  // resolveChaosRate). Default OFF. `validateProductionEnv` additionally
+  // boot-throws if the raw flag is truthy in prod (belt-and-braces).
+  netFaultInjectionEnabled: resolveNetFaultEnabled(
+    process.env.NET_FAULT_INJECTION_ENABLED,
+    process.env.NODE_ENV,
+  ),
   dbSynchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
   dbSsl: toBoolean(process.env.DB_SSL, true),
   dbSslRejectUnauthorized: toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, isProduction),
@@ -74,7 +92,6 @@ const env: AppEnv = {
     password: toOptionalString(process.env.DB_PASSWORD),
     database: required('PGDATABASE', toOptionalString(process.env.PGDATABASE)),
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
-    replicaUrl: toOptionalString(process.env.DB_REPLICA_URL) ?? null,
   },
   auth: {
     // SEC-HARDENING (H12): prod BANS legacy JWT_SECRET fallback; explicit
@@ -304,7 +321,7 @@ const env: AppEnv = {
   wikidata: {
     userAgent:
       toOptionalString(process.env.WIKIDATA_USER_AGENT) ||
-      'Musaium/1.0 (https://musaium.app; contact@musaium.app)',
+      'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
   },
   // C4.1 (2026-05-11) — KnowledgeRouter. TUNING-ONLY: no `*_ENABLED` flag may
   // be added (D11 / pre-launch V1 doctrine). Rollback = `git revert`.
@@ -317,7 +334,7 @@ const env: AppEnv = {
     wsTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_WS_TIMEOUT_MS, 1500),
   },
   nominatim: {
-    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.app',
+    contactEmail: toOptionalString(process.env.NOMINATIM_CONTACT_EMAIL) || 'contact@musaium.com',
     cacheTtlSeconds: toNumber(process.env.NOMINATIM_CACHE_TTL_SECONDS, 86_400),
     negativeCacheTtlSeconds: toNumber(process.env.NOMINATIM_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
     minRequestIntervalMs: toNumber(process.env.NOMINATIM_MIN_REQUEST_INTERVAL_MS, 1_000),
@@ -391,7 +408,6 @@ const env: AppEnv = {
   ),
   redis: {
     ...parseRedisUrlFallback(),
-    clusterNodes: toOptionalString(process.env.REDIS_CLUSTER_NODES) ?? null,
   },
   guardrails: {
     llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
@@ -405,13 +421,32 @@ const env: AppEnv = {
     // activates judge in parallel with sidecar (defense-in-depth, ADR-015
     // amendment 2026-05-14). Set to `0` to disable judge layer.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
-    judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 500),
+    // 2026-06-01 — raised 500 → 1500 after the live V2 suite
+    // (tests/ai/guardrail-v2-live.ai.test.ts) measured real gpt-4o-mini
+    // structured-output judge latency at 670–1050ms. At 500ms EVERY judge call
+    // timed out → null → fail-OPEN → the judge never blocked in prod. 1500ms
+    // gives ~1.4× headroom over the observed max and mirrors the sidecar
+    // timeoutMs. Judge is fail-OPEN, so the cost of a too-tight value is silent
+    // degradation to V1, not a refusal — hence it went unnoticed until measured.
+    judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 1500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
     // ADR-030 (2026-05-05) — judge budget backend.
     // 'memory' = per-process (dev/test/single-instance). 'redis' = shared via
     // SET INCRBY + TTL. Default 'redis' in prod (multi-instance no 2× spend);
     // tests pin 'memory' to avoid coupling to Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
+    // Hybrid-gravity guardrail (2026-06-01) — judge runs parallel + 2-level
+    // friction. Kill-switch GUARDRAIL_FRICTION_ENABLED=false → legacy inline
+    // judge hard-block. Defaults: session escalates at 3 off-topic strikes,
+    // user/IP cool-down at 10 (security blocks weigh 2, off-topic 1).
+    frictionEnabled: toBoolean(process.env.GUARDRAIL_FRICTION_ENABLED, true),
+    frictionSessionThreshold: toNumber(process.env.FRICTION_SESSION_THRESHOLD, 3),
+    frictionUserThreshold: toNumber(process.env.FRICTION_USER_THRESHOLD, 10),
+    frictionSessionTtlMs: toNumber(process.env.FRICTION_SESSION_TTL_MS, 21_600_000), // 6h
+    frictionUserTtlMs: toNumber(process.env.FRICTION_USER_TTL_MS, 86_400_000), // 24h
+    frictionCooldownMs: toNumber(process.env.FRICTION_COOLDOWN_MS, 120_000), // 2min
+    frictionWeightSecurity: toNumber(process.env.FRICTION_WEIGHT_SECURITY, 2),
+    frictionWeightOfftopic: toNumber(process.env.FRICTION_WEIGHT_OFFTOPIC, 1),
     // 2026-05-12 — LLM Guard sidecar circuit breaker. NOT a feature flag —
     // always-on (pre-launch V1). Emergency disable =
     // `LLM_GUARD_CB_FAILURE_THRESHOLD=1000000`. Real rollback = `git revert`.
@@ -441,11 +476,6 @@ const env: AppEnv = {
       baseUrl: toOptionalString(process.env.PRESIDIO_BASE_URL),
       timeoutMs: toNumber(process.env.PRESIDIO_TIMEOUT_MS, 500),
     },
-    llamaPromptGuard: {
-      baseUrl: toOptionalString(process.env.LLAMA_PROMPT_GUARD_BASE_URL),
-      timeoutMs: toNumber(process.env.LLAMA_PROMPT_GUARD_TIMEOUT_MS, 500),
-      scoreThreshold: toNumber(process.env.LLAMA_PROMPT_GUARD_SCORE_THRESHOLD, 0.8),
-    },
     // Chaos drill rate (0..1). Non-zero values intentionally abort /scan
     // calls to exercise fail-CLOSED path. Prod MUST be 0 — `resolveChaosRate`
     // refuses non-zero in prod unless `MUSAIUM_ALLOW_PROD_CHAOS` set verbatim.
@@ -462,10 +492,6 @@ const env: AppEnv = {
       dailyBudgetCents: toNumber(process.env.COST_CB_DAILY_BUDGET_CENTS, 50_000),
       openDurationMs: toNumber(process.env.COST_CB_OPEN_DURATION_MS, 300_000),
     },
-    tenantRateLimit: {
-      capacity: toNumber(process.env.TENANT_RATE_LIMIT_CAPACITY, 60),
-      refillPerSecond: toNumber(process.env.TENANT_RATE_LIMIT_REFILL_PER_SEC, 1),
-    },
   },
   // Pre-launch V1: retention crons always-on; `env.cache?.enabled` upstream
   // gate (Redis required) is the skip path for tests/dev without Redis.
@@ -478,8 +504,36 @@ const env: AppEnv = {
     artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
   },
+  // Cycle B (« Aucun lead perdu ») — async redelivery + retention for the
+  // persisted `leads` table. Config values, NOT feature flags (UFR-015): the
+  // cron is always-on pre-launch, structurally skipped only when Redis is
+  // absent (mirror `retention`). Default tick every 5 min; backoff
+  // exponential 60s→1h; terminal cap 5 attempts; delivered purge after 90 days.
+  leads: {
+    redeliveryCronPattern: process.env.LEADS_REDELIVERY_CRON_PATTERN || '*/5 * * * *',
+    maxAttempts: toNumber(process.env.LEADS_MAX_ATTEMPTS, 5),
+    redeliveryBatchLimit: toNumber(process.env.LEADS_REDELIVERY_BATCH_LIMIT, 100),
+    retentionDays: toNumber(process.env.LEADS_RETENTION_DAYS, 90),
+    backoffBaseMs: toNumber(process.env.LEADS_BACKOFF_BASE_MS, 60_000),
+    backoffCapMs: toNumber(process.env.LEADS_BACKOFF_CAP_MS, 3_600_000),
+  },
+  review: {
+    // NPS scale-epoch (F3). The review rating scale switched 1-5 (legacy stars)
+    // → 0-10 (NPS) in this release. A legacy "5" is indistinguishable by value
+    // from an NPS "5" yet would now be miscounted as a detractor (≤6), poisoning
+    // the score on historical data. `aggregateNps` therefore counts ONLY reviews
+    // created AT/AFTER this epoch. Default = the 0-10 deploy date; overridable
+    // via NPS_SCALE_EPOCH (ISO-8601) for staging back-tests / future re-baselines.
+    // Invalid values degrade to the default (toIsoTimestamp warns, never throws).
+    // Mirrors the repository resolver (`nps-scale-epoch.ts`) — same default
+    // literal + parser. The repository reads its own lightweight resolver (to
+    // avoid pulling the DB-coupled env singleton into its static import graph);
+    // this field exposes the value for the AppEnv contract / prod validation.
+    // Keep the default literal in sync with `NPS_SCALE_EPOCH_DEFAULT`.
+    npsScaleEpoch: toIsoTimestamp(process.env.NPS_SCALE_EPOCH, '2026-05-27T00:00:00.000Z'),
+  },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
-  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.app',
+  supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.com',
   // R4 W4.3 — B2B leads inbox. Config value, not a feature flag. Falls back
   // to supportInboxEmail in dev so no env churn for solo contributors.
   b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),

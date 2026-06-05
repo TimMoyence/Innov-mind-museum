@@ -31,7 +31,6 @@ jobs:
       PG_MAJOR: '16'
       DRILL_DB: drill_restore
       DRILL_USER: drill
-      DRILL_PASSWORD: ${{ github.run_id }}-drill  # ephemeral, lives only for the job
     services:
       postgres:
         image: postgres:16-alpine
@@ -39,8 +38,9 @@ jobs:
           - 5432:5432
         env:
           POSTGRES_USER: drill
-          # Service env is evaluated by GHA before job env; we cannot reference DRILL_PASSWORD here.
-          # Use a separate-but-equivalent value derived the same way.
+          # The ephemeral drill DB password. Service env is evaluated before job
+          # env, so it is defined inline here (drill-<run_id>) and reused verbatim
+          # by the pg_restore / audit-chain verify / smoke steps below.
           POSTGRES_PASSWORD: drill-${{ github.run_id }}
           POSTGRES_DB: drill_restore
         options: >-
@@ -146,6 +146,44 @@ jobs:
             --dbname="${PGDATABASE}" \
             ./drill/backup.pgdump
           echo "Restore complete."
+
+      # TD-27 — integrity, not just "rows exist". Recompute the audit_logs
+      # SHA-256 prev/row hash chain against the RESTORED data. A torn or tampered
+      # chain in the backup must fail the drill (SOC2 CC7.3 / NIST RC.RP-1), so
+      # this runs AFTER pg_restore and BEFORE the count smoke. We invoke the
+      # canonical verifier (scripts/audit-chain-verify.ts via ts-node) — NOT a
+      # hand-rolled .cjs that would silently drift from the v1/v2 serializer in
+      # audit-chain.ts and risk a false-INTACT verdict on a real break.
+      - name: Setup pnpm (for audit-chain verifier)
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+
+      - name: Install backend deps (audit-chain verifier)
+        working-directory: museum-backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify restored audit_logs hash chain (TD-27)
+        working-directory: museum-backend
+        env:
+          # development ⇒ env.ts gives JWT/CSRF/MFA dev defaults (no prod-required
+          # throw); only PGDATABASE is unconditionally required (env.ts:93).
+          NODE_ENV: development
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_USER: ${{ env.DRILL_USER }}
+          # Same literal the postgres service / pg_restore / smoke steps connect with.
+          DB_PASSWORD: drill-${{ github.run_id }}
+          PGDATABASE: ${{ env.DRILL_DB }}
+        run: |
+          set -euo pipefail
+          # Exit 0 = chain intact, 1 = BREAK (fails the drill), 2 = unexpected error.
+          pnpm audit-chain:verify
 
       - name: Smoke queries
         env:

@@ -18,7 +18,7 @@ interface UseOfflineSyncParams {
   location?: string;
   guideLevel: GuideLevel;
   locale: string;
-  peek: () => { sessionId: string; text?: string; imageUri?: string } | undefined;
+  peek: () => { id: string; sessionId: string; text?: string; imageUri?: string } | undefined;
   dequeue: () => void;
   setMessages: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
   /** Injected in tests to bypass real backoff delays. Defaults to {@link DEFAULT_RETRY}. */
@@ -65,6 +65,9 @@ export const useOfflineSync = ({
               location,
               guideLevel,
               locale,
+              // D2 — the queued item's stable id is the dedup key so a
+              // double-flush (flapping reconnect) collapses to one message.
+              idempotencyKey: currentItem.id,
             }),
           );
           dequeue();

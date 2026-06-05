@@ -4,7 +4,7 @@ import type { ParseKeys } from 'i18next';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import type { VisitSummary } from '@/features/chat/application/chatSessionLogic.pure';
 import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
-import type { ThirdPartyAiScope } from '@/features/chat/application/thirdPartyAiConsent';
+import type { ThirdPartyAiScope } from '@/features/chat/domain/consentScopes';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 import { AiDisclosureSheetContent } from '@/features/chat/ui/AiDisclosureSheetContent';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
@@ -62,6 +62,12 @@ export interface BottomSheetRouteParams {
     playRecordedAudio: () => Promise<void> | void;
     clearMedia: () => void;
     onOpenScanner: () => void;
+    /**
+     * Cycle D (Option C) — open the visual-compare flow. The screen wires this
+     * to `useCompareTrigger` (pick image → `POST /chat/compare` → reload the
+     * session so the persisted compare carousel surfaces).
+     */
+    onCompareImage: () => void;
   };
   'cartel-scanner': {
     /**

@@ -4,8 +4,10 @@ import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import type { EnrichmentSchedulerPort } from '@modules/museum/domain/ports/enrichment-scheduler.port';
-import type { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
-import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
+import type {
+  PurgeDeadEnrichmentsPort,
+  RefreshStaleEnrichmentsPort,
+} from '@modules/museum/domain/ports/enrichment-usecases.port';
 import type { ConnectionOptions } from 'bullmq';
 
 export const ENRICHMENT_SCHEDULER_QUEUE_NAME = 'museum-enrichment-scheduler';
@@ -33,9 +35,9 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
   private started = false;
 
   constructor(
-    private readonly useCase: RefreshStaleEnrichmentsUseCase,
+    private readonly useCase: RefreshStaleEnrichmentsPort,
     private readonly config: BullmqEnrichmentSchedulerConfig,
-    private readonly purgeUseCase?: PurgeDeadEnrichmentsUseCase,
+    private readonly purgeUseCase?: PurgeDeadEnrichmentsPort,
     private readonly purgeThresholdDays?: number,
   ) {
     this.queue = new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {

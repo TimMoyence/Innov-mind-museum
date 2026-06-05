@@ -1,10 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { apiGet } from '@/lib/api';
+import { apiPut } from '@/lib/api';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
+import { HEX_RE, HTTPS_RE } from '@/lib/validation';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
+import Button from '@/components/ui/Button';
 
 // W4 W2.2 — Per-museum branding editor. Reads/writes museum.config.branding
 // via PUT /api/museums/:id (BE allows arbitrary config record; FE exposes the
@@ -12,13 +17,6 @@ import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
 // a true upload endpoint is a V1.1 follow-up (TD-50). Color picker uses the
 // native HTML <input type="color"> for KISS until brand-aware design tokens
 // are wired in V1.1.
-//
-// Why apiPost('/api/museums/:id') with method override: the existing api.ts
-// helper set doesn't expose apiPut; the BE route is PUT, so we use apiPost
-// with the X-HTTP-Method-Override header pattern only if needed — in this
-// codebase the api helpers route through Next rewrites to the backend; PUT
-// is supported because the BE explicitly handles it. We use the native fetch
-// inside apiPatch shape via a small local wrapper.
 
 const STRINGS = {
   title: 'Branding',
@@ -45,9 +43,6 @@ const STRINGS = {
   saved: 'Branding saved.',
 } as const;
 
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
-const HTTPS_RE = /^https:\/\/[^\s]+$/i;
-
 function asBranding(config: Record<string, unknown> | undefined): MuseumBranding {
   if (!config) return {};
   const raw = config.branding;
@@ -55,38 +50,6 @@ function asBranding(config: Record<string, unknown> | undefined): MuseumBranding
     return raw as MuseumBranding;
   }
   return {};
-}
-
-// Local wrapper to PUT since api.ts only exposes GET/POST/PATCH/DELETE.
-async function apiPut<T>(path: string, body: unknown): Promise<T> {
-  // Reuse apiPost shape; if the BE expects PUT strictly, prefer this minimal
-  // fetch over importing & extending api.ts (defer that to a follow-up).
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  // Read CSRF token from the cookie (double-submit), mirroring api.ts.
-  if (typeof document !== 'undefined') {
-    const m = /(?:^|;\s*)csrf_token=([^;]+)/.exec(document.cookie);
-    const token = m?.[1];
-    if (token) headers['X-CSRF-Token'] = decodeURIComponent(token);
-  }
-  const res = await fetch(path, {
-    method: 'PUT',
-    credentials: 'include',
-    headers,
-    body: JSON.stringify(body ?? {}),
-  });
-  if (!res.ok) {
-    let msg = `${res.status} ${res.statusText}`;
-    try {
-      const j = (await res.json()) as { message?: string };
-      if (j.message) msg = j.message;
-    } catch {
-      /* ignore body parse error */
-    }
-    throw new Error(msg);
-  }
-  return (await res.json()) as T;
 }
 
 interface GetMuseumResponse {
@@ -97,32 +60,37 @@ export default function MuseumBrandingPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
-  const [museum, setMuseum] = useState<MuseumDTO | null>(null);
   const [branding, setBranding] = useState<MuseumBranding>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof MuseumBranding, string>>>({});
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<GetMuseumResponse>(`/api/museums/${id}`);
-      setMuseum(data.museum);
-      setBranding(asBranding(data.museum.config));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.errorLoad);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const {
+    data: museumResponse,
+    loading,
+    error,
+    refetch: load,
+  } = useFetchData<GetMuseumResponse>(id ? `/api/museums/${id}` : null, {
+    deps: [id],
+    errorFallback: STRINGS.errorLoad,
+  });
+  const museum = museumResponse?.museum ?? null;
+  const combinedError = error ?? mutationError;
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // `branding` is locally-edited form state, but it must (re)sync from the
+  // server-loaded museum the FIRST render the museum becomes available AND
+  // every time the museum reference changes (e.g. after a refetch following
+  // a successful PUT). We use the React "adjusting state in render" pattern
+  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+  // so the freshly-synced branding is visible in the SAME render that first
+  // renders the form — avoiding a one-frame empty-input flash.
+  const [syncedMuseum, setSyncedMuseum] = useState<MuseumDTO | null>(null);
+  if (museum && museum !== syncedMuseum) {
+    setSyncedMuseum(museum);
+    setBranding(asBranding(museum.config));
+  }
 
   function update<K extends keyof MuseumBranding>(key: K, value: MuseumBranding[K]) {
     setBranding((prev) => ({ ...prev, [key]: value }));
@@ -149,7 +117,7 @@ export default function MuseumBrandingPage() {
     if (Object.keys(v).length > 0) return;
 
     setSaving(true);
-    setError(null);
+    setMutationError(null);
     setSuccess(null);
     try {
       // Merge — preserve any other config keys (e.g. kbLocale) the BE has.
@@ -157,14 +125,16 @@ export default function MuseumBrandingPage() {
         ...museum.config,
         branding: pruneEmpty(branding),
       };
-      const data = await apiPut<GetMuseumResponse>(`/api/museums/${museum.id}`, {
+      await apiPut<GetMuseumResponse>(`/api/museums/${museum.id}`, {
         config: nextConfig,
       });
-      setMuseum(data.museum);
-      setBranding(asBranding(data.museum.config));
+      // Refetch the museum so the hook becomes the single source of truth
+      // for server state — the in-render sync above re-derives `branding`
+      // from the freshly-loaded `museum.config` (new reference → re-sync).
+      void load();
       setSuccess(STRINGS.saved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.errorSave);
+      setMutationError(err instanceof Error ? err.message : STRINGS.errorSave);
     } finally {
       setSaving(false);
     }
@@ -173,12 +143,8 @@ export default function MuseumBrandingPage() {
   if (loading) {
     return <p className="text-sm text-gray-600">{STRINGS.loading}</p>;
   }
-  if (error && !museum) {
-    return (
-      <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-        {error}
-      </div>
-    );
+  if (combinedError && !museum) {
+    return <AlertBanner variant="error" message={combinedError} />;
   }
   if (!museum) {
     return <p className="text-sm text-gray-600">{STRINGS.notFound}</p>;
@@ -196,16 +162,8 @@ export default function MuseumBrandingPage() {
         <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
       </header>
 
-      {error && (
-        <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div role="status" className="rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
-          {success}
-        </div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} />}
+      {success && <AlertBanner variant="success" message={success} />}
 
       <form
         onSubmit={(e) => {
@@ -229,19 +187,23 @@ export default function MuseumBrandingPage() {
                   id={`b-${k}`}
                   type="color"
                   value={branding[k] ?? '#000000'}
-                  onChange={(e) => { update(k, e.target.value); }}
+                  onChange={(e) => {
+                    update(k, e.target.value);
+                  }}
                   className="h-9 w-12 cursor-pointer rounded border border-gray-300"
                 />
                 <input
                   type="text"
                   value={branding[k] ?? ''}
-                  onChange={(e) => { update(k, e.target.value); }}
+                  onChange={(e) => {
+                    update(k, e.target.value);
+                  }}
                   placeholder="#000000"
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   aria-label={`${k} hex value`}
                 />
               </div>
-              {fieldErrors[k] && <p className="mt-1 text-xs text-red-600">{fieldErrors[k]}</p>}
+              <FormFieldError error={fieldErrors[k]} />
             </div>
           ))}
         </div>
@@ -254,14 +216,14 @@ export default function MuseumBrandingPage() {
             id="b-logo"
             type="url"
             value={branding.logoUrl ?? ''}
-            onChange={(e) => { update('logoUrl', e.target.value); }}
+            onChange={(e) => {
+              update('logoUrl', e.target.value);
+            }}
             placeholder="https://cdn.musaium.com/museums/louvre/logo.svg"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.logoHint}</p>
-          {fieldErrors.logoUrl && (
-            <p className="mt-1 text-xs text-red-600">{fieldErrors.logoUrl}</p>
-          )}
+          <FormFieldError error={fieldErrors.logoUrl} />
         </div>
 
         {(branding.primaryColor ?? branding.logoUrl) && (
@@ -310,13 +272,9 @@ export default function MuseumBrandingPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
-          >
+          <Button type="submit" variant="primary" size="sm" disabled={saving}>
             {saving ? STRINGS.save.pending : STRINGS.save.idle}
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -341,4 +299,3 @@ function contrast(hex: string | undefined): string {
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 128 ? '#111111' : '#ffffff';
 }
-

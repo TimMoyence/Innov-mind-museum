@@ -21,7 +21,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 
 | Doc | Path |
 |---|---|
-| ADRs (002-058) | [`docs/adr/`](adr/) |
+| ADRs (002-071) | [`docs/adr/`](adr/) — dernière : [`ADR-071`](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md) (re-arm boundaries hexagonal : resolver + arming séquencé par vague + sentinel fs indépendant, 2026-06-04) |
 | Architecture (BE hex / FE Expo / Web Next.js) | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) + `CLAUDE.md` § Architecture (summary) |
 | Phase history (test/quality hardening 8-13) | [`docs/PHASE_HISTORY.md`](PHASE_HISTORY.md) |
 | Gotchas archive (less-frequent pitfalls, split from CLAUDE.md 2026-05-20) | [`docs/GOTCHAS_ARCHIVE.md`](GOTCHAS_ARCHIVE.md) |
@@ -32,7 +32,6 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | Testing Phase 2 plan (UFR-021 pre-push gate + CI mirror) | [`docs/TESTING_PHASE2_PLAN.md`](TESTING_PHASE2_PLAN.md) |
 | ESLint discipline | [`docs/LINT_DISCIPLINE.md`](LINT_DISCIPLINE.md) + `CLAUDE.md` § ESLint Discipline (quick ref) |
 | Tech debts trackés | [`docs/TECH_DEBT.md`](TECH_DEBT.md) |
-| Tech debt collision handoff (2026-05-19, load-bearing per `CLAUDE.md:158`) | [`docs/HANDOFF-2026-05-19-debt-collision-report.md`](HANDOFF-2026-05-19-debt-collision-report.md) |
 | AI Voice pipeline V1 | [`docs/AI_VOICE.md`](AI_VOICE.md) |
 | AI Safety (chat guardrails defense-in-depth, full spec) | [`docs/AI_SAFETY.md`](AI_SAFETY.md) + `CLAUDE.md` § AI Safety (quick ref) |
 | Knowledge Base (Wikidata) | [`docs/adr/ADR-035-knowledge-base-wikidata.md`](adr/ADR-035-knowledge-base-wikidata.md) |
@@ -57,7 +56,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-045`](adr/ADR-045-shared-observability-package-extraction.md) | `@musaium/shared/observability` extraction deferred |
 | [`ADR-046`](adr/ADR-046-zod-4-be-migration-deferred.md) | Zod 4 BE migration deferred per ADR-033 |
 
-### ADRs 047-058 (audit-360 W1/W2/W3 + ultrareview + 2026-05-17/19 sprints)
+### ADRs 047-068 (audit-360 W1/W2/W3 + ultrareview + 2026-05-17/19/22/26 sprints)
 
 | ADR | Subject |
 |---|---|
@@ -73,6 +72,19 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 | [`ADR-056`](adr/ADR-056-a5-phase-client-side-simulated.md) | A5 phase client-side simulated |
 | [`ADR-057`](adr/ADR-057-webauthn-rp-id-decision-deferred.md) | WebAuthn RP-ID decision deferred |
 | [`ADR-058`](adr/ADR-058-selective-hexagonal-ports-policy.md) | Selective hexagonal ports policy |
+| [`ADR-059`](adr/ADR-059-connectivity-single-source-online-manager-bridge.md) | Connectivity single source of truth + `onlineManager` bridge |
+| [`ADR-060`](adr/ADR-060-gdpr-erasure-dsar-compliance-chain.md) | GDPR Art.17 erasure chain + Art.15 DSAR export schemaVersion 2 |
+| [`ADR-061`](adr/ADR-061-i-sec8-artwork-knowledge-not-multi-tenant.md) | I-SEC8 reclassification: `artwork_knowledge` global catalogue |
+| [`ADR-062`](adr/ADR-062-canonical-legal-content-source.md) | Single canonical source for legal content with CI drift sentinel |
+| [`ADR-063`](adr/ADR-063-langfuse-mask-central-stripfreetext.md) | Langfuse central `mask` au ctor (`stripFreeText`) |
+| [`ADR-064`](adr/ADR-064-access-token-denylist-fail-open.md) | Access-token denylist Redis adapter fail-OPEN |
+| [`ADR-065`](adr/ADR-065-redis-volatile-ttl-with-bullmq-caveat.md) | Redis prod eviction policy `volatile-ttl` + BullMQ caveat |
+| [`ADR-066`](adr/ADR-066-rn-modal-pointer-events-routing.md) | RN overlay `pointerEvents="box-none"` routing convention (backdrop dismiss + slab interactive) |
+| [`ADR-067`](adr/ADR-067-base-modal-custom-vs-radix.md) | BaseModal custom (museum-web) — defer Radix UI Dialog post-launch |
+| [`ADR-068`](adr/ADR-068-sbom-attestation-strategy-mobile-gap.md) | SBOM attestation strategy (mobile gap deferred to CRA 2027) |
+| [`ADR-069`](adr/ADR-069-museum-search-id-osm-generic-conversation.md) | `GET /api/museums/search` exposes local `id` + OSM rows start generic conversation |
+| [`ADR-070`](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md) | Audit chain canonical deep-recursive serializer + out-of-payload `hash_version` (closes TD-61) |
+| [`ADR-071`](adr/ADR-071-hexagonal-boundaries-resolver-sequenced-arming-independent-sentinel.md) | Re-arm hexagonal boundaries : `import/resolver` câblé + arming séquencé par vague (domain W1, application/infra W2/W3) + sentinel fs ESLint-indépendant (partial-close TD-62 W1) |
 
 ## Operations
 
@@ -147,7 +159,7 @@ Snapshots précédents : `git log -- docs/ROADMAP_*.md`.
 |---|---|
 | /team Skill | `.claude/skills/team/SKILL.md` |
 | /team SDLC Index | `.claude/skills/team/team-sdlc-index.md` |
-| Agents (6 — architect, editor, verifier, security, reviewer, documenter) | `.claude/agents/*.md` |
+| Agents (6 — architect, doc-cache, documenter, editor, reviewer, security) | `.claude/agents/*.md` |
 | /team runtime reports (active) | `.claude/skills/team/team-reports/` |
 | /team protocols | `.claude/skills/team/team-protocols/` |
 | /team templates (Spec Kit) | `.claude/skills/team/team-templates/` |

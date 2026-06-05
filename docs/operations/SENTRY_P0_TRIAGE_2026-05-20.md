@@ -1,5 +1,7 @@
 # Sentry P0 triage — pre-V1 zero-P0 gate
 
+> **Statut au 2026-05-26 : triage NON exécutée.** Deadline 2026-05-19 manquée. `docs/SENTRY_KNOWN_NOISE.md` absent. Action toujours en attente.
+
 **Audience:** Musaium founder (sole Sentry org owner + acting on-call).
 **Goal:** Drive open P0 (highest-severity) Sentry issues to **zero** before feature freeze at 2026-05-19 EOD, so V1 launch (2026-06-01) ships with no known critical regression.
 **Source of truth for severity classification:** internal Sentry triage rubric (below §3) — aligned with [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §3 step "Classify".
@@ -104,4 +106,4 @@ After triage, schedule the post-launch cadence:
 - **Weekly** thereafter: Monday 09:00 UTC, run the §2 query, ratchet count back to 0.
 - **Per release**: every backend/mobile release tag, re-run §2 query within 24 h of deploy.
 
-Document this cadence in [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §"Post-launch operational cadence" (add the section if missing — TD-46 candidate).
+Document this cadence in [`docs/operations/VDP_RUNBOOK.md`](./VDP_RUNBOOK.md) §10 "Post-launch operational cadence" (codified 2026-06-05, TD-46 closed).

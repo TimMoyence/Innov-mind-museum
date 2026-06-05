@@ -21,13 +21,17 @@ test('admin opens a user detail page from the list', async ({ page }) => {
   // Wait for the list to render with the seeded admin's row visible.
   await expect(page.getByText(email)).toBeVisible({ timeout: 10_000 });
 
-  // Each row exposes a "View" link to /admin/users/:id (admin + moderator + super_admin).
-  // Pair the click with waitForURL — Next.js dev compiles the dynamic [id] route
-  // on first hit (cold compile can exceed the default 5s expect timeout in CI).
-  const viewLink = page.getByRole('link', { name: /view user details/i }).first();
+  // Open the ADMIN's OWN row, not `.first()`: the list is ordered
+  // `createdAt DESC` (admin.repository.pg.ts:116), so any user seeded by a
+  // sibling spec (e.g. museum-manager-access) appears first and would send us
+  // to the wrong detail page — the line-40 email assertion below is about the
+  // operator's own account. Scope the View link to the row holding `email`.
+  // Pair the click with waitForURL — Next.js dev compiles the dynamic [id]
+  // route on first hit (cold compile can exceed the default 5s timeout in CI).
+  const adminRow = page.getByRole('row').filter({ hasText: email });
   await Promise.all([
     page.waitForURL(/\/admin\/users\/\d+$/, { timeout: 30_000 }),
-    viewLink.click(),
+    adminRow.getByRole('link', { name: /view user details/i }).click(),
   ]);
 
   // Identity + Status sections rendered.

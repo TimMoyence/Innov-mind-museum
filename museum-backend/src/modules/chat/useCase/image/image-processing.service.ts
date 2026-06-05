@@ -13,8 +13,8 @@ import {
   isSafeImageUrl,
 } from './image-input';
 
-import type { ImageProcessorPort } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import type { PostMessageInput } from '@modules/chat/domain/chat.types';
+import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';

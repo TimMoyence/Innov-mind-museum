@@ -1,4 +1,3 @@
-import { readEnvString } from '@/shared/lib/env';
 import { createAppError } from '@/shared/types/AppError';
 
 /** Base path for all chat HTTP endpoints. */
@@ -49,18 +48,6 @@ export const ensureContract = <T>(
   }
 
   return payload;
-};
-
-/**
- * Whether SSE streaming is enabled for chat messages. Controlled by
- * `EXPO_PUBLIC_CHAT_STREAMING`. Default `false`: the streaming path is
- * deactivated post-V1 (token-fluidity issues, ADR-001), so the client
- * falls back to a non-streaming POST and shows a typing indicator.
- */
-export const isChatStreamingEnabled = (): boolean => {
-  // TD-RN-03 — canonical helper (CLAUDE.md gotcha § process.env local-vs-CI).
-  const raw = readEnvString(process.env.EXPO_PUBLIC_CHAT_STREAMING)?.toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 };
 
 /**

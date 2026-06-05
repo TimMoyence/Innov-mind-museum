@@ -3,6 +3,7 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { AuditLog } from '@shared/audit/auditLog.entity';
+import { paginate } from '@shared/pagination/offset-paginate';
 
 import {
   queryUsageAnalytics,
@@ -112,22 +113,9 @@ export class AdminRepositoryPg implements IAdminRepository {
     // Soft-deleted reachable via getUserById for forensics.
     qb.andWhere('u.deleted_at IS NULL');
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('u.createdAt', 'DESC');
 
-    const [users, total] = await qb
-      .orderBy('u.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: users.map(mapUser),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, mapUser);
   }
 
   /** Includes soft-deleted rows. */
@@ -217,25 +205,52 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('log.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('log.createdAt', 'DESC');
 
-    const [logs, total] = await qb
-      .orderBy('log.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: logs.map(mapAuditLog),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, mapAuditLog);
   }
 
-  async getStats(): Promise<AdminStats> {
+  async getStats(museumId?: number): Promise<AdminStats> {
+    // Tenant-scoped session aggregate (C1A D4). `museum_id` lives on
+    // chat_sessions (index IDX_chat_sessions_museum_id); when scoped we filter
+    // on it. Aggregate COUNTs come back as strings from pg (precision-safe) —
+    // parse with Number.parseInt (lib-docs/pg/PATTERNS.md §"NUMERIC as string").
+    const sessionsQb = this.sessionRepo
+      .createQueryBuilder('session')
+      .select('COUNT(*)', 'total')
+      .addSelect(
+        'COUNT(*) FILTER (WHERE session."createdAt" >= NOW() - INTERVAL \'7 days\')',
+        'recent',
+      );
+
+    // chat_messages has NO museum_id — scope via the ChatMessage.session
+    // relation (innerJoin filters without selecting, lib-docs/typeorm/PATTERNS.md
+    // §3.5; parameterised andWhere §4.3/§4.12). Uses IDX_chat_messages_sessionId
+    // + IDX_chat_sessions_museum_id.
+    const messagesQb = this.messageRepo.createQueryBuilder('message').select('COUNT(*)', 'total');
+
+    // Tenant-scoped (manager) view: filter both aggregates on museum_id and
+    // omit the platform user census entirely (C1A D2) — saves a query and
+    // never exposes the operator headcount.
+    if (museumId !== undefined) {
+      sessionsQb.andWhere('session.museum_id = :scope', { scope: museumId });
+      messagesQb
+        .innerJoin('message.session', 'ms')
+        .andWhere('ms.museum_id = :scope', { scope: museumId });
+
+      const [sessionsResult, messagesResult] = await Promise.all([
+        sessionsQb.getRawOne<{ total: string; recent: string }>(),
+        messagesQb.getRawOne<{ total: string }>(),
+      ]);
+
+      return {
+        totalSessions: Number.parseInt(sessionsResult?.total ?? '0', 10),
+        totalMessages: Number.parseInt(messagesResult?.total ?? '0', 10),
+        recentSessions: Number.parseInt(sessionsResult?.recent ?? '0', 10),
+      };
+    }
+
+    // Global (admin / super_admin) view — full platform census, unchanged.
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
       this.userRepo
         // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), raw SQL breaks.
@@ -245,18 +260,8 @@ export class AdminRepositoryPg implements IAdminRepository {
         .addSelect('COUNT(*) FILTER (WHERE u."createdAt" >= NOW() - INTERVAL \'7 days\')', 'recent')
         .groupBy('u.role')
         .getRawMany<{ role: string; total: string; recent: string }>(),
-      this.sessionRepo
-        .createQueryBuilder('session')
-        .select('COUNT(*)', 'total')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE session."createdAt" >= NOW() - INTERVAL \'7 days\')',
-          'recent',
-        )
-        .getRawOne<{ total: string; recent: string }>(),
-      this.messageRepo
-        .createQueryBuilder('message')
-        .select('COUNT(*)', 'total')
-        .getRawOne<{ total: string }>(),
+      sessionsQb.getRawOne<{ total: string; recent: string }>(),
+      messagesQb.getRawOne<{ total: string }>(),
     ]);
 
     let totalUsers = 0;
@@ -303,22 +308,9 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('report.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
+    qb.orderBy('report.createdAt', 'DESC');
 
-    const [reports, total] = await qb
-      .orderBy('report.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      data: reports.map((r) => mapReport(r, r.message)),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, (r) => mapReport(r, r.message));
   }
 
   async resolveReport(input: ResolveReportInput): Promise<AdminReportDTO | null> {

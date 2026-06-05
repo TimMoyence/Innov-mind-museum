@@ -2,13 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import type { PaginatedResponse, AdminUserDTO, UserRole } from '@/lib/admin-types';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
+import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
 
 /** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
 function displayName(u: AdminUserDTO): string {
@@ -59,19 +66,16 @@ export default function UsersPage() {
   const pathname = usePathname();
   const locale = pathname.split('/')[1] ?? 'fr';
 
-  const [users, setUsers] = useState<AdminUserDTO[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Change role modal state
   const [editingUser, setEditingUser] = useState<AdminUserDTO | null>(null);
   const [newRole, setNewRole] = useState<UserRole>('visitor');
   const [changingRole, setChangingRole] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -82,38 +86,37 @@ export default function UsersPage() {
     setPage(1);
   }, [debouncedSearch, roleFilter]);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '10');
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (roleFilter) params.set('role', roleFilter);
+  const usersUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '10');
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (roleFilter) params.set('role', roleFilter);
+    return `/api/admin/users?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<AdminUserDTO>>(
-        `/api/admin/users?${params.toString()}`,
-      );
-      setUsers(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch, roleFilter]);
+  const {
+    data: usersPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchUsers,
+  } = useFetchData<AdminUserDTO[]>(usersUrl, {
+    deps: [page, debouncedSearch, roleFilter],
+    errorFallback: 'Failed to load users',
+  });
 
-  useEffect(() => {
-    void fetchUsers();
-  }, [fetchUsers]);
+  const users = usersPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // ── Change role handler ──────────────────────────────────────────────
 
   async function handleChangeRole() {
     if (!editingUser) return;
     setChangingRole(true);
+    setMutationError(null);
     try {
       await apiPatch<AdminUserDTO>(`/api/admin/users/${editingUser.id}/role`, {
         role: newRole,
@@ -121,28 +124,11 @@ export default function UsersPage() {
       setEditingUser(null);
       void fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change role');
+      setMutationError(err instanceof Error ? err.message : 'Failed to change role');
     } finally {
       setChangingRole(false);
     }
   }
-
-  // ── Ref for modal backdrop ───────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingUser) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !changingRole) setEditingUser(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingUser, changingRole]);
 
   return (
     <div>
@@ -178,14 +164,12 @@ export default function UsersPage() {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 
@@ -196,22 +180,12 @@ export default function UsersPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnName}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Email</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnRole}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.usersPage.columnStatus}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.usersPage.columnName}</TableHeaderCell>
+                  <TableHeaderCell>Email</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.usersPage.columnRole}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.usersPage.columnStatus}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -224,18 +198,18 @@ export default function UsersPage() {
                 ) : (
                   users.map((u) => (
                     <tr key={u.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {displayName(u)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">{u.email}</td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{u.email}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role as UserRole]}`}
                         >
                           {u.role}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             u.emailVerified
@@ -245,15 +219,15 @@ export default function UsersPage() {
                         >
                           {u.emailVerified ? adminDict.common.active : adminDict.common.inactive}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {formatDate(u.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/${locale}/admin/users/${String(u.id)}`}
@@ -275,7 +249,7 @@ export default function UsersPage() {
                             </button>
                           )}
                         </div>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}
@@ -295,60 +269,46 @@ export default function UsersPage() {
 
       {/* Change Role Modal */}
       {editingUser && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingUser(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingUser(null);
           }}
-        >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.usersPage.changeRole}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {displayName(editingUser)} ({editingUser.email})
-            </p>
-
-            <select
-              aria-label={adminDict.usersPage.changeRole}
-              value={newRole}
-              onChange={(e) => {
-                setNewRole(e.target.value as UserRole);
+          title={adminDict.usersPage.changeRole}
+          size="sm"
+          dismissable={!changingRole}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingUser(null);
               }}
-              className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+              onConfirm={() => void handleChangeRole()}
+              confirmDisabled={newRole === editingUser.role}
+              confirmBusy={changingRole}
+            />
+          }
+        >
+          <p className="mt-1 text-sm text-text-secondary">
+            {displayName(editingUser)} ({editingUser.email})
+          </p>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingUser(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={changingRole || newRole === editingUser.role}
-                onClick={() => void handleChangeRole()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {changingRole ? '...' : adminDict.common.confirm}
-              </button>
-            </div>
-          </div>
-        </div>
+          <select
+            aria-label={adminDict.usersPage.changeRole}
+            value={newRole}
+            onChange={(e) => {
+              setNewRole(e.target.value as UserRole);
+            }}
+            className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {ALL_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </BaseModal>
       )}
     </div>
   );

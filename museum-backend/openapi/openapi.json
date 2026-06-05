@@ -1461,14 +1461,7 @@
       },
       "AdminStats": {
         "type": "object",
-        "required": [
-          "totalUsers",
-          "usersByRole",
-          "totalSessions",
-          "totalMessages",
-          "recentSignups",
-          "recentSessions"
-        ],
+        "required": ["totalSessions", "totalMessages", "recentSessions"],
         "properties": {
           "totalUsers": {
             "type": "integer"
@@ -1490,6 +1483,34 @@
           },
           "recentSessions": {
             "type": "integer"
+          }
+        }
+      },
+      "NpsResponse": {
+        "type": "object",
+        "description": "Net Promoter Score aggregate over approved reviews. nps = %promoters (rating 9-10) - %detractors (rating 0-6), range -100..100. count=0 yields nps 0.",
+        "required": ["nps", "promoters", "passives", "detractors", "count"],
+        "properties": {
+          "nps": {
+            "type": "integer",
+            "minimum": -100,
+            "maximum": 100
+          },
+          "promoters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "passives": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "detractors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       },
@@ -2184,6 +2205,166 @@
               "pattern": "^Q[1-9]\\d*$"
             },
             "description": "Optional list of Wikidata museum QIDs scoping the kNN search to the selected museums (R4)."
+          }
+        }
+      },
+      "ParsedOpeningDay": {
+        "type": "object",
+        "required": ["day", "opens", "closes"],
+        "properties": {
+          "day": {
+            "type": "string",
+            "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+          },
+          "opens": {
+            "type": "string",
+            "nullable": true,
+            "description": "HH:mm local time, null when closed that day"
+          },
+          "closes": {
+            "type": "string",
+            "nullable": true,
+            "description": "HH:mm local time, null when closed that day"
+          }
+        }
+      },
+      "ParsedOpeningHours": {
+        "type": "object",
+        "required": ["raw", "status", "statusReason", "closesAtLocal", "opensAtLocal", "weekly"],
+        "properties": {
+          "raw": {
+            "type": "string",
+            "description": "Original OSM opening_hours value"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "closed", "unknown"]
+          },
+          "statusReason": {
+            "type": "string",
+            "enum": ["currently_open", "currently_closed", "unparseable", "no_data"]
+          },
+          "closesAtLocal": {
+            "type": "string",
+            "nullable": true
+          },
+          "opensAtLocal": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekly": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParsedOpeningDay"
+            }
+          }
+        }
+      },
+      "MuseumEnrichmentView": {
+        "type": "object",
+        "required": [
+          "museumId",
+          "locale",
+          "summary",
+          "wikidataQid",
+          "website",
+          "phone",
+          "imageUrl",
+          "openingHours",
+          "admissionFees",
+          "collections",
+          "currentExhibitions",
+          "accessibility",
+          "fetchedAt"
+        ],
+        "properties": {
+          "museumId": {
+            "type": "integer"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "wikidataQid": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "openingHours": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParsedOpeningHours"
+              }
+            ]
+          },
+          "admissionFees": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "collections": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "currentExhibitions": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "accessibility": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Free-form JSONB record (no key guaranteed). Null when empty."
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MuseumEnrichmentReady": {
+        "type": "object",
+        "required": ["status", "data"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ready"]
+          },
+          "data": {
+            "$ref": "#/components/schemas/MuseumEnrichmentView"
+          }
+        }
+      },
+      "MuseumEnrichmentPending": {
+        "type": "object",
+        "required": ["status", "jobId"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending"]
+          },
+          "jobId": {
+            "type": "string"
           }
         }
       }
@@ -4417,9 +4598,22 @@
       "get": {
         "tags": ["DailyArt"],
         "summary": "Return today's curated artwork",
+        "description": "Returns a single deterministic artwork for the current date. The funFact field is localized to the requested locale (query locale then Accept-Language, falling back to English).",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "description": "Locale for the funFact field. Falls back to Accept-Language, then English.",
+            "schema": {
+              "type": "string",
+              "enum": ["en", "fr", "es", "de", "it", "ja", "zh", "ar"]
+            }
           }
         ],
         "responses": {
@@ -4454,7 +4648,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["rating", "comment", "userName"],
+                "required": ["rating", "comment"],
                 "properties": {
                   "rating": {
                     "type": "integer",
@@ -4466,10 +4660,10 @@
                     "minLength": 10,
                     "maxLength": 2000
                   },
-                  "userName": {
+                  "sessionId": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128
+                    "format": "uuid",
+                    "description": "NPS attribution: the chat session the review was authored from. Server derives museum scope; absent/foreign sessions yield a global review."
                   }
                 }
               }
@@ -5000,6 +5194,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/nps": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Net Promoter Score aggregate (global or per-museum) over approved reviews",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "museumId",
+            "required": false,
+            "description": "Per-museum scope. Omitted = global (incl. unscoped reviews). museum_manager callers are forced to their own tenant.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NPS aggregate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NpsResponse"
                 }
               }
             }
@@ -5631,6 +5866,10 @@
                           "museumType"
                         ],
                         "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "DB primary key — present only when source = 'local' (OSM entries have no DB row)."
+                          },
                           "name": {
                             "type": "string"
                           },
@@ -6164,6 +6403,148 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
+        }
+      }
+    },
+    "/api/leads/b2b": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a public B2B lead",
+        "description": "Persist-then-notify (Cycle B): the lead is persisted before the Brevo notifier is invoked, so a Brevo failure never loses it. Returns 202 as soon as it is durable, regardless of the delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "name", "museum", "role", "message", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+                  "museum": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "role": {
+                    "type": "string",
+                    "enum": ["director", "curator", "digital", "other"]
+                  },
+                  "message": { "type": "string", "minLength": 10, "maxLength": 5000 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/leads/beta": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a public beta-signup lead",
+        "description": "Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe, durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/leads/paywall-interest": {
+      "post": {
+        "tags": ["Leads"],
+        "summary": "Submit a paywall premium-interest lead",
+        "description": "Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe (tagged `paywall_premium_interest`), durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "consent"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "maxLength": 254 },
+                  "consent": { "type": "boolean", "enum": [true] },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lead accepted (persisted; delivery is async-recoverable)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": { "$ref": "#/components/responses/InternalError" }
         }
       }
     },
@@ -6776,6 +7157,141 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/museums/{id}/enrichment": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Get cached museum enrichment (Wikidata + OSM + rich JSONB fields)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Museum ID"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "description": "BCP-47 locale, e.g. fr or en"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached enrichment is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentReady"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Enrichment refresh queued — poll /enrichment/status with the returned jobId.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentPending"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/museums/{id}/enrichment/status": {
+      "get": {
+        "tags": ["Museum"],
+        "summary": "Poll the status of a queued museum enrichment refresh",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Museum ID"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "description": "BCP-47 locale, e.g. fr or en"
+          },
+          {
+            "in": "query",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job id returned by a prior 202 enrichment response"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached enrichment is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentReady"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Enrichment refresh still pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuseumEnrichmentPending"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }

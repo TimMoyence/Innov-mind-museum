@@ -44,15 +44,14 @@ export class ChangeUserTierUseCase {
       throw notFound('User not found');
     }
 
-    await auditService.log({
+    await auditService.logActorAction({
       action: AUDIT_ADMIN_USER_TIER_CHANGED,
-      actorType: 'user',
       actorId: input.actorId,
       targetType: 'user',
       targetId: String(input.userId),
       metadata: { from: previous.tier, to: input.newTier },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     return updated;

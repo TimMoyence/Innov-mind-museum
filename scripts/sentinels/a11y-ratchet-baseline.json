@@ -1,0 +1,10 @@
+{
+  "_comment": "FLOOR RATCHET for a11y-ratchet.mjs (EN 301 549 / RGAA). Each value is a MINIMUM: the live count of that a11y signal in museum-frontend/{features,app,shared/ui} must stay >= this. Raise deliberately as coverage grows; lowering requires --update-baseline with justification (a genuine screen removal). Do NOT lower to paper over a regression.",
+  "bootstrappedAt": "2026-05-31",
+  "floors": {
+    "accessibilityLabel": 259,
+    "accessibilityRole": 254,
+    "accessibilityHint": 38,
+    "rtlAuditTests": 4
+  }
+}

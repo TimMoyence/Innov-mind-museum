@@ -12,26 +12,11 @@
  * actual call graph. Removal of the verbatim false strings is enforced by
  * `tasks.md` verification grep contract.
  *
- * Callers (verified at this docstring's authorship by direct file Read in
- * worktree `/Users/Tim/Desktop/all/dev/Pro/wt-p0-security` on 2026-05-21) :
- *  - `recordCharge`    — `langchain.orchestrator.ts:recordSectionCost()`
- *                        (post-success only on both default + walk paths;
- *                        R2 — never on error).
- *  - `canAttempt`      — `langchain.orchestrator.ts:generate()` default path
- *                        entry (after walk branch, before `runSectionTasks`)
- *                        AND `langchain.orchestrator.ts:generateWalk()` entry
- *                        (after fallback short-circuits, before
- *                        `structured.invoke`). Both throw `CircuitOpenError`
- *                        when `canAttempt()` returns `false` — fail-CLOSED
- *                        contract IMPLEMENTED.
- *  - `recordFailure`   — `langchain.orchestrator.ts:generate()` (default path,
- *                        post-`runSectionTasks` aggregate inspection — fires
- *                        when HALF_OPEN probe was consumed but every section
- *                        failed) AND `langchain.orchestrator.ts:generateWalk()`
- *                        catch around `structured.invoke()`. R9 wiring.
- *  - `getState` / `state` — `chat-module.ts` `llmCostEurPerHour` gauge wiring
- *                           via `onStateChange` callback (label set =
- *                           {tier, museum_id}; no PII).
+ * PR-13 (RUN_ID 2026-05-23-pr-13-threeStateCircuit) refactor — FSM extracted
+ * to `@shared/circuit-breaker/three-state-circuit`; cost-specific trip
+ * predicate (hourly window OR daily UTC cap) lives in `CostTripStrategy`.
+ * Public API (canAttempt, recordCharge, recordFailure, getState, reset,
+ * state getter, onStateChange option) preserved byte-identical.
  *
  * Image cost accounting — `estimatePayloadBytes()` in `llm-prompt-builder.ts`
  * substitutes `VISION_BYTES_EQUIVALENT` (`llm-cost-pricing.ts`, default 4000
@@ -53,10 +38,12 @@
  * scale.
  */
 
+import { CostTripStrategy } from '@shared/circuit-breaker/strategies/cost-trip-strategy';
+import { ThreeStateCircuit, type CircuitState } from '@shared/circuit-breaker/three-state-circuit';
 import { logger } from '@shared/logger/logger';
 
 /** Mirrors `GuardrailCircuitBreaker` taxonomy. */
-export type LlmCostCircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+export type LlmCostCircuitState = CircuitState;
 
 export interface LlmCostCircuitBreakerSnapshot {
   state: LlmCostCircuitState;
@@ -79,15 +66,6 @@ export interface LlmCostCircuitBreakerOptions {
 const DEFAULT_HOURLY_THRESHOLD_CENTS = 5_000; // $50/h spike alarm
 const DEFAULT_DAILY_BUDGET_CENTS = 50_000; // $500/day hard cap
 const DEFAULT_OPEN_DURATION_MS = 300_000; // 5 min cooldown
-const HOUR_MS = 3_600_000;
-
-interface CostEntry {
-  at: number;
-  /** Cents — guaranteed positive (negatives rejected by `record`). */
-  cents: number;
-}
-
-const utcDayKey = (epochMs: number): string => new Date(epochMs).toISOString().slice(0, 10);
 
 /**
  * CLOSED → OPEN on cost anomaly or daily cap breach. OPEN → HALF_OPEN after cooldown.
@@ -96,43 +74,54 @@ const utcDayKey = (epochMs: number): string => new Date(epochMs).toISOString().s
 export class LlmCostCircuitBreaker {
   private readonly hourlyThresholdCents: number;
   private readonly dailyBudgetCents: number;
-  private readonly openDurationMs: number;
-  private readonly onStateChange?: (next: LlmCostCircuitState, prev: LlmCostCircuitState) => void;
-  private readonly now: () => number;
-
-  private currentState: LlmCostCircuitState = 'CLOSED';
-  private openedAt: number | null = null;
-  private lastTripAt: number | null = null;
-  /** Pruned lazily on each access. */
-  private hourlyCharges: CostEntry[] = [];
-  /** Resets when UTC day changes. */
-  private dailySpend = { day: '', cents: 0 };
-  /** Ensures only ONE probe at a time when HALF_OPEN. */
-  private probeInFlight = false;
+  private readonly nowFn: () => number;
+  private readonly strategy: CostTripStrategy;
+  private readonly circuit: ThreeStateCircuit<CostTripStrategy>;
 
   constructor(options: LlmCostCircuitBreakerOptions = {}) {
     this.hourlyThresholdCents = options.hourlyThresholdCents ?? DEFAULT_HOURLY_THRESHOLD_CENTS;
     this.dailyBudgetCents = options.dailyBudgetCents ?? DEFAULT_DAILY_BUDGET_CENTS;
-    this.openDurationMs = options.openDurationMs ?? DEFAULT_OPEN_DURATION_MS;
-    this.onStateChange = options.onStateChange;
-    this.now = options.now ?? Date.now;
+    const openDurationMs = options.openDurationMs ?? DEFAULT_OPEN_DURATION_MS;
+    this.nowFn = options.now ?? Date.now;
+    const userOnStateChange = options.onStateChange;
+
+    this.strategy = new CostTripStrategy({
+      hourlyThresholdCents: this.hourlyThresholdCents,
+      dailyBudgetCents: this.dailyBudgetCents,
+      now: this.nowFn,
+    });
+    this.circuit = new ThreeStateCircuit({
+      strategy: this.strategy,
+      openDurationMs,
+      now: this.nowFn,
+      onStateChange: (next, prev) => {
+        if (next === 'HALF_OPEN') {
+          logger.info('llm_cost_circuit_breaker_half_open', {
+            hourlySpendCents: this.strategy.getHourlySpendCents(this.nowFn()),
+            dailySpendCents: this.strategy.getDailySpendCents(this.nowFn()),
+          });
+        } else if (next === 'CLOSED' && prev === 'HALF_OPEN') {
+          logger.info('llm_cost_circuit_breaker_close', {
+            hourlySpendCents: this.strategy.getHourlySpendCents(this.nowFn()),
+            dailySpendCents: this.strategy.getDailySpendCents(this.nowFn()),
+          });
+        } else if (next === 'OPEN') {
+          logger.warn('llm_cost_circuit_breaker_open', {
+            hourlySpendCents: this.strategy.getHourlySpendCents(this.nowFn()),
+            dailySpendCents: this.strategy.getDailySpendCents(this.nowFn()),
+            hourlyThresholdCents: this.hourlyThresholdCents,
+            dailyBudgetCents: this.dailyBudgetCents,
+            from: prev === 'HALF_OPEN' ? 'half_open' : 'closed',
+          });
+        }
+        userOnStateChange?.(next, prev);
+      },
+    });
   }
 
   /** Transitions OPEN → HALF_OPEN lazily once cooldown elapses. Cheap, no I/O. */
   get state(): LlmCostCircuitState {
-    if (this.currentState === 'OPEN' && this.openedAt !== null) {
-      const elapsed = this.now() - this.openedAt;
-      if (elapsed >= this.openDurationMs) {
-        this.transitionTo('HALF_OPEN');
-        this.openedAt = null;
-        this.probeInFlight = false;
-        logger.info('llm_cost_circuit_breaker_half_open', {
-          hourlySpendCents: this.computeHourlySpend(),
-          dailySpendCents: this.currentDailySpend(),
-        });
-      }
-    }
-    return this.currentState;
+    return this.circuit.state;
   }
 
   /**
@@ -140,121 +129,75 @@ export class LlmCostCircuitBreaker {
    * (single probe slot, race-safe via sync mutation).
    */
   canAttempt(): boolean {
-    const state = this.state;
-    if (state === 'CLOSED') return true;
-    if (state === 'OPEN') return false;
-    if (this.probeInFlight) return false;
-    this.probeInFlight = true;
-    return true;
+    return this.circuit.canAttempt();
   }
 
   /** Recovers HALF_OPEN → CLOSED. Pure cost accumulation otherwise. */
   recordCharge(cents: number): void {
     if (!Number.isFinite(cents) || cents <= 0) return;
-    const now = this.now();
-    this.appendCharge(now, cents);
+    const stateBefore = this.circuit.state; // triggers lazy OPEN → HALF_OPEN
 
-    // Trip BEFORE HALF_OPEN recovery so cap breaches are honoured on the probe call.
-    if (this.shouldTrip()) {
-      this.trip(now, 'CLOSED');
+    if (stateBefore === 'HALF_OPEN') {
+      // W1-C1 transition fidelity. Decide whether THIS probe breaches a cap BEFORE
+      // committing to a recovery — a breaching probe never recovered, so it must NOT
+      // flicker HALF_OPEN → CLOSED → OPEN (which would emit a spurious
+      // `llm_cost_circuit_breaker_close` "recovery succeeded" log and mislabel the
+      // re-trip origin as `from:'closed'`). We project the probe onto the current
+      // spend WITHOUT mutating the strategy: `getHourlySpendCents`/`getDailySpendCents`
+      // prune then read, so adding `cents` mirrors exactly what `shouldTrip` would see
+      // after the charge. The daily accumulator is durable, so a breaker tripped on the
+      // daily cap (still over for this UTC day) re-trips here — correct money behaviour.
+      const now = this.nowFn();
+      const wouldBreach =
+        this.strategy.getHourlySpendCents(now) + cents > this.hourlyThresholdCents ||
+        this.strategy.getDailySpendCents(now) + cents > this.dailyBudgetCents;
+
+      if (wouldBreach) {
+        // Single HALF_OPEN → OPEN transition (from:'half_open', no close log). Count the
+        // breaching probe so the durable daily accumulator includes it.
+        this.strategy.recordCharge(cents);
+        this.circuit.trip('HALF_OPEN');
+        return;
+      }
+
+      // Healthy probe → recover. `recordOutcome('success')` transitions HALF_OPEN →
+      // CLOSED and calls `CostTripStrategy.resetTransient()`, clearing any stale hourly
+      // spike window while PRESERVING the durable daily accumulator. THEN record the
+      // probe into the now-fresh window so the recovered breaker's hourly spend reflects
+      // ONLY this probe — counted exactly once against both hourly and daily.
+      this.circuit.recordOutcome('success');
+      this.strategy.recordCharge(cents);
       return;
     }
 
-    if (this.currentState === 'HALF_OPEN') {
-      this.transitionTo('CLOSED');
-      this.probeInFlight = false;
-      logger.info('llm_cost_circuit_breaker_close', {
-        hourlySpendCents: this.computeHourlySpend(),
-        dailySpendCents: this.currentDailySpend(),
-      });
+    this.strategy.recordCharge(cents);
+    // Trip on a cap breach (CLOSED, or a re-evaluation that should re-OPEN).
+    if (this.strategy.shouldTrip(this.nowFn())) {
+      this.circuit.trip(stateBefore);
     }
   }
 
   /** Probe attempt consumed (no cost charged). HALF_OPEN → re-trips OPEN. */
   recordFailure(): void {
-    if (this.currentState === 'HALF_OPEN') {
-      this.trip(this.now(), 'HALF_OPEN');
+    if (this.circuit.state === 'HALF_OPEN') {
+      this.circuit.recordOutcome('failure');
     }
   }
 
   getState(): LlmCostCircuitBreakerSnapshot {
+    const now = this.nowFn();
+    const state = this.circuit.state; // triggers lazy OPEN → HALF_OPEN if cooldown elapsed
     return {
-      state: this.state, // triggers lazy OPEN → HALF_OPEN if cooldown elapsed
-      hourlySpendCents: this.computeHourlySpend(),
-      dailySpendCents: this.currentDailySpend(),
-      lastTripAt: this.lastTripAt !== null ? new Date(this.lastTripAt) : null,
-      openedAt: this.openedAt !== null ? new Date(this.openedAt) : null,
+      state,
+      hourlySpendCents: this.strategy.getHourlySpendCents(now),
+      dailySpendCents: this.strategy.getDailySpendCents(now),
+      lastTripAt: this.circuit.lastTripAt !== null ? new Date(this.circuit.lastTripAt) : null,
+      openedAt: this.circuit.openedAt !== null ? new Date(this.circuit.openedAt) : null,
     };
   }
 
   /** Test-only. */
   reset(): void {
-    const prev = this.currentState;
-    this.currentState = 'CLOSED';
-    this.openedAt = null;
-    this.lastTripAt = null;
-    this.hourlyCharges = [];
-    this.dailySpend = { day: '', cents: 0 };
-    this.probeInFlight = false;
-    if (prev !== 'CLOSED') {
-      this.onStateChange?.('CLOSED', prev);
-    }
-  }
-
-  private appendCharge(now: number, cents: number): void {
-    this.hourlyCharges.push({ at: now, cents });
-    this.pruneExpiredCharges(now);
-    this.accumulateDaily(now, cents);
-  }
-
-  private pruneExpiredCharges(now: number): void {
-    const cutoff = now - HOUR_MS;
-    this.hourlyCharges = this.hourlyCharges.filter((e) => e.at > cutoff);
-  }
-
-  private accumulateDaily(now: number, cents: number): void {
-    const day = utcDayKey(now);
-    if (this.dailySpend.day !== day) {
-      this.dailySpend = { day, cents: 0 };
-    }
-    this.dailySpend.cents += cents;
-  }
-
-  private computeHourlySpend(): number {
-    this.pruneExpiredCharges(this.now());
-    return this.hourlyCharges.reduce((acc, e) => acc + e.cents, 0);
-  }
-
-  private currentDailySpend(): number {
-    const day = utcDayKey(this.now());
-    return this.dailySpend.day === day ? this.dailySpend.cents : 0;
-  }
-
-  private shouldTrip(): boolean {
-    return (
-      this.computeHourlySpend() > this.hourlyThresholdCents ||
-      this.currentDailySpend() > this.dailyBudgetCents
-    );
-  }
-
-  private trip(now: number, from: LlmCostCircuitState): void {
-    this.transitionTo('OPEN');
-    this.openedAt = now;
-    this.lastTripAt = now;
-    this.probeInFlight = false;
-    logger.warn('llm_cost_circuit_breaker_open', {
-      hourlySpendCents: this.computeHourlySpend(),
-      dailySpendCents: this.currentDailySpend(),
-      hourlyThresholdCents: this.hourlyThresholdCents,
-      dailyBudgetCents: this.dailyBudgetCents,
-      from: from === 'HALF_OPEN' ? 'half_open' : 'closed',
-    });
-  }
-
-  private transitionTo(next: LlmCostCircuitState): void {
-    const prev = this.currentState;
-    if (prev === next) return;
-    this.currentState = next;
-    this.onStateChange?.(next, prev);
+    this.circuit.reset();
   }
 }

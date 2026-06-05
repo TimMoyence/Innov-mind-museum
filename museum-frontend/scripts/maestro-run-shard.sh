@@ -24,6 +24,18 @@ fi
 
 if [ "$SHARD" = "all" ]; then
   FLOWS=$(jq -r '.shards[].flows[]' "$MAESTRO_DIR/shards.json")
+elif [ "$SHARD" = "smoke" ]; then
+  # Per-PR fast subset: a handful of proven-green critical happy paths run on a
+  # single emulator boot (~12min). The full per-shard suite runs nightly. The
+  # `smoke` list lives OUTSIDE `.shards[]` so its flows (which are also in the
+  # `auth` shard) don't trip the shard-manifest dedup sentinel.
+  FLOWS=$(jq -r '.smoke[]' "$MAESTRO_DIR/shards.json")
+elif [ "$SHARD" = "netshapeSmoke" ]; then
+  # W3 — conditional per-PR weak-net smoke: the 2 fastest netshape flows, run
+  # only when chat/connectivity/net-shaping paths change (paths-filtered in
+  # ci-cd-mobile.yml). Like `smoke`, this subset lives OUTSIDE `.shards[]` (its
+  # flows are also in the `netshape` shard) to avoid the dedup sentinel.
+  FLOWS=$(jq -r '.netshapeSmoke[]' "$MAESTRO_DIR/shards.json")
 else
   FLOWS=$(jq -r --arg s "$SHARD" '.shards[] | select(.name == $s) | .flows[]' "$MAESTRO_DIR/shards.json")
 fi
@@ -37,10 +49,30 @@ FAIL_COUNT=0
 echo "[shard:$SHARD] flows to run:"
 echo "$FLOWS"
 
+# Each flow gets one retry before being marked FAIL. Maestro flows on a CI
+# emulator have a transient-flake floor (deep-link mount timing, a dropped first
+# tap right after boot, animation races) that a single re-run clears. Only
+# failures retry, so green flows pay nothing; a genuinely-broken flow runs twice
+# (acceptable — the guard rail must not go red on a one-off flake).
+MAX_ATTEMPTS="${MAESTRO_FLOW_ATTEMPTS:-2}"
+
 while IFS= read -r flow; do
   [ -z "$flow" ] && continue
-  echo "[shard:$SHARD] running $flow…"
-  if maestro test "$MAESTRO_DIR/$flow" 2>&1 | tee "$LOG_DIR/${SHARD}-${flow%.yaml}.log"; then
+  attempt=1
+  passed=0
+  while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+    echo "[shard:$SHARD] running $flow (attempt $attempt/$MAX_ATTEMPTS)…"
+    # `--debug-output` writes the per-flow view hierarchy + screenshots into
+    # logs/debug/<flow>/, captured by the CI "Upload shard logs" artifact — it
+    # shows the exact screen the app was on when an assertion failed.
+    if maestro test --debug-output "$LOG_DIR/debug/${flow%.yaml}" "$MAESTRO_DIR/$flow" 2>&1 | tee "$LOG_DIR/${SHARD}-${flow%.yaml}.log"; then
+      passed=1
+      break
+    fi
+    echo "[shard:$SHARD] $flow attempt $attempt failed"
+    attempt=$((attempt + 1))
+  done
+  if [ "$passed" -eq 1 ]; then
     echo "[shard:$SHARD] $flow PASS"
   else
     echo "[shard:$SHARD] $flow FAIL"

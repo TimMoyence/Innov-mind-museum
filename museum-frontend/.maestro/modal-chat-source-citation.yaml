@@ -1,0 +1,138 @@
+appId: com.musaium.mobile.preview
+---
+# screen: SourceCitation
+#
+# C2 — SourceCitation happy path (UFR-021 modal coverage).
+#
+# Trigger (prod): tap an inline citation marker `[n]` in an assistant message
+# that carries sources (ChatMessageBubble.tsx). The sourced LLM response comes
+# from a live backend, so this flow is NIGHTLY (backend-dependent), NOT
+# PR-blocking — same class as chat-flow.yaml.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   source-citation-marker     (open trigger)
+#   source-citation-open-url   (assert sheet open)
+#   source-citation-close      (dismiss)
+#
+# Prerequisites:
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
+#   - Backend returns an assistant message with >=1 citation source.
+
+# ──────────────────────────────────────────────
+# Phase 0: Launch fresh + log in
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open chat + send a factual question (yields a sourced answer)
+# ──────────────────────────────────────────────
+# Home primary CTA: scroll into view (last element, below the fold) + tap by
+# accessibility label (the Pressable's accessibilityLabel collapses the subtree,
+# so the visible "Démarrer une conversation" Text is NOT separately queryable).
+# The home default-conversation CTA sits half-under the bottom tab bar, so its
+# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
+# best-effort, then deterministically: Musées tab → museum card → sheet →
+# "Démarrer un chat ici" → chat composer.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
+# MUST be accepted BEFORE the composer is reachable. First-session-only, so
+# the wait is bounded and the tap is the deterministic dismissal.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
+
+- tapOn:
+    id: "chat-input"
+- inputText: "Who painted the Mona Lisa and where is it kept?"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 2: Wait for a citation marker, open the source sheet
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "source-citation-marker"
+    timeout: 60000
+- tapOn:
+    id: "source-citation-marker"
+    index: 0
+- waitForAnimationToEnd
+
+# ──────────────────────────────────────────────
+# Phase 3: Assert the sheet is open, then dismiss it
+# ──────────────────────────────────────────────
+- assertVisible:
+    id: "source-citation-open-url"
+- tapOn:
+    id: "source-citation-close"
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: "source-citation-open-url"

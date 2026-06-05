@@ -1,6 +1,6 @@
 # Musaium — Release Checklist & Remaining Work
 
-> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-01 | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
+> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-07 (date canonique, cf. `docs/ROADMAP_PRODUCT.md`) | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
 
 ---
 
@@ -77,17 +77,9 @@ CORS_ORIGINS=https://musaium.com,https://www.musaium.com,https://musaium.fr,http
 | `GOOGLE_OAUTH_CLIENT_ID` | `<client-id-1>,<client-id-2>` | Requis si Google Sign-In est activé sur le mobile |
 | `APP_VERSION` | `1.0.0` | Actuellement `local-dev` — utilisé par Sentry pour le suivi des releases |
 
-### 3.3 Feature flags à activer (selon tes besoins)
+### 3.3 ~~Feature flags~~ (section supprimée)
 
-Tous les feature flags sont à `false` par défaut. Les features sont codées et migrées mais **inactives** tant que le flag n'est pas set :
-
-| Flag | Default | Recommandation | Impact |
-|------|---------|----------------|--------|
-| `FEATURE_FLAG_USER_MEMORY` | `false` | **`true`** si tu veux la personnalisation cross-session | Injecte le profil utilisateur dans le prompt LLM |
-| `FEATURE_FLAG_MULTI_TENANCY` | `false` | `true` si multi-musées activé | Isole les données par musée |
-| `FEATURE_FLAG_VOICE_MODE` | `false` | `true` si TTS activé | Réponses audio via OpenAI TTS |
-| `FEATURE_FLAG_OCR_GUARD` | `false` | `false` pour l'instant | Guardrail OCR (pas encore mature) |
-| `FEATURE_FLAG_API_KEYS` | `false` | `false` sauf si API publique | Auth par clé API pour partenaires |
+> **2026-05-26** : `FEATURE_FLAG_VOICE_MODE`, `FEATURE_FLAG_USER_MEMORY`, `FEATURE_FLAG_MULTI_TENANCY`, `FEATURE_FLAG_OCR_GUARD`, `FEATURE_FLAG_API_KEYS` n'existent pas dans `env.ts` (grep vide). La section ci-dessus était incorrecte. Voice pipeline = always-on depuis 2026-04. Vérifier les vars actives réelles dans `museum-backend/src/shared/config/env.ts`.
 
 ### 3.4 Variables mortes à supprimer
 
@@ -221,7 +213,7 @@ cd /srv/museum
 
 #### A. Mettre à jour docker-compose.yml
 
-Remplacer le contenu par la version complète de la section 2.1.D ci-dessus.
+Remplacer le contenu par la version complète décrite en section 2.1 ci-dessus (services : backend, db, redis, llm-guard).
 
 #### B. Mettre à jour .env
 

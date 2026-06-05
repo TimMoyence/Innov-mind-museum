@@ -146,6 +146,7 @@ export function BiometricSetupSheet({
             accessibilityLabel={activateText}
             variant="primary"
             size="md"
+            testID="biometric-setup-activate"
           />
 
           <LiquidButton
@@ -154,6 +155,7 @@ export function BiometricSetupSheet({
             accessibilityLabel={laterText}
             variant="secondary"
             size="md"
+            testID="biometric-setup-skip"
           />
         </Animated.View>
       </Animated.View>

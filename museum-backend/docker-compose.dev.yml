@@ -24,6 +24,12 @@ services:
     # matches the `redis` service's `--requirepass` below (single source of
     # truth for dev/CI smoke).
     environment:
+      # DB_* injected here (same pattern as REDIS_* below) so .env can hold the
+      # HOST-side coords (localhost:5433, used by host-shell `pnpm dev` /
+      # `migration:run`) while the container always talks to the `db` service on
+      # the docker network. Compose `environment:` overrides env_file `.env`.
+      DB_HOST: db
+      DB_PORT: '5432'
       REDIS_HOST: redis
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:-dev-redis-password}
@@ -106,6 +112,37 @@ services:
         condition: service_healthy
     ports:
       - '8082:8080'
+    restart: unless-stopped
+
+  # Toxiproxy — DEV/CI-ONLY weak-net shaper (Layer 3). Gated behind the `weaknet`
+  # compose profile so the everyday `pnpm dev` (default profile) never starts it.
+  # It proxies the `backend` service so a device/emulator can hit the shaped port
+  # 3100 instead of 3000 and experience a ratified NETWORK_PROFILES condition.
+  #   - 8474 = Toxiproxy admin API (POST toxics here; see
+  #            scripts/net-shaping/profile-to-toxics.mjs <profile> for the JSON).
+  #   - 3100 = the SHAPED listener that forwards upstream to backend:3000.
+  # Toxiproxy MUST NEVER appear in a prod artifact (sentinel:toxiproxy-no-prod).
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    container_name: dev-toxiproxy
+    profiles: [weaknet]
+    depends_on:
+      - backend
+    ports:
+      # admin API (create/update toxics)
+      - '8474:8474'
+      # shaped listener → upstream backend:3000
+      - '3100:3100'
+    # Boot the admin server, then register the `backend` proxy on 0.0.0.0:3100
+    # forwarding to the upstream backend:3000. `toxiproxy-cli` ships in the image.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        /toxiproxy -host=0.0.0.0 &
+        until /toxiproxy-cli list >/dev/null 2>&1; do sleep 0.2; done;
+        /toxiproxy-cli create -l 0.0.0.0:3100 -u backend:3000 backend || true;
+        wait
     restart: unless-stopped
 
 volumes:

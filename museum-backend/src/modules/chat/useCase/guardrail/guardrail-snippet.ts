@@ -1,15 +1,20 @@
 import { createHash } from 'node:crypto';
 
+import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
+
 /**
  * Redacted shape of a guardrail-blocked payload for audit logging (V13 / STRIDE R3).
  *
  * The contract is intentionally narrow:
  *   - `snippetPreview`: human-scannable head of the offending text, capped at 64
- *     UTF-16 code units. Enough for analysts to spot patterns ("ignore previous…")
- *     without storing the full prompt back in our forensic store.
- *   - `snippetFingerprint`: SHA-256 hex digest of the FULL text. Enables forensic
- *     dedup ("how many times have we blocked this exact payload?") and clustering
- *     of attack variants without reconstructing the source.
+ *     UTF-16 code units, with email/phone PII scrubbed to `[EMAIL]`/`[PHONE]`
+ *     placeholders FIRST. Enough for analysts to spot patterns ("ignore previous…")
+ *     without storing raw user PII back in our forensic store.
+ *   - `snippetFingerprint`: SHA-256 hex digest of the FULL, ORIGINAL (raw) text.
+ *     Enables forensic dedup ("how many times have we blocked this exact
+ *     payload?") and clustering of attack variants without reconstructing the
+ *     source. Hashing the raw text (not the sanitized variant) keeps the dedup
+ *     invariant: two payloads differing only in their PII stay distinct.
  *
  * Storing the full payload would (a) bloat the audit hash chain and (b) leak PII
  * back through forensic queries — both unacceptable for a 13-month retention window.
@@ -23,7 +28,21 @@ export interface GuardrailSnippet {
 const SNIPPET_PREVIEW_MAX_CHARS = 64;
 
 /**
+ * Stateless email/phone scrubber. Shared module-level singleton — the sanitizer
+ * holds no per-call state, so a single instance is safe and avoids re-allocating
+ * the regexes on every audit row. Self-contained here (TD-66) so the audit-safe
+ * snippet shape can never be built without first scrubbing PII.
+ */
+const piiSanitizer = new RegexPiiSanitizer();
+
+/**
  * Builds the audit-safe snippet shape for a guardrail-blocked payload.
+ *
+ * TD-66 — the block path threads the RAW user text. A short email/phone
+ * (< 64 chars) used to survive `slice(0, 64)` verbatim into the 13-month audit
+ * hash chain. We now scrub PII to `[EMAIL]`/`[PHONE]` placeholders BEFORE slicing
+ * the preview, while the fingerprint still hashes the ORIGINAL raw text so
+ * forensic dedup keeps clustering identical raw payloads / attack variants.
  *
  * `slice` operates on UTF-16 code units. For inputs that contain astral-plane
  * characters (emoji, some CJK ideographs) this means a surrogate pair could in
@@ -34,7 +53,8 @@ const SNIPPET_PREVIEW_MAX_CHARS = 64;
  * mid-byte-cut multibyte sequences and produce U+FFFD).
  */
 export function redactSnippetForAudit(fullText: string): GuardrailSnippet {
-  const snippetPreview = fullText.slice(0, SNIPPET_PREVIEW_MAX_CHARS);
+  const { sanitizedText } = piiSanitizer.sanitize(fullText);
+  const snippetPreview = sanitizedText.slice(0, SNIPPET_PREVIEW_MAX_CHARS);
   const snippetFingerprint = createHash('sha256').update(fullText, 'utf8').digest('hex');
   return { snippetPreview, snippetFingerprint };
 }

@@ -109,10 +109,25 @@ const makeAuthSessionServiceStub = (user: User): AuthSessionService =>
  * Spy-friendly wrapper around the in-memory repo that records markUsed calls
  * AND exposes the new (step) param. Today `markUsed(uid, at)` has 2 args; the
  * R5 signature adds `step`. Assertions below pin the new arg position.
+ *
+ * NOT declared `implements ITotpSecretRepository`: cycle T widens `markUsed` to
+ * return `Promise<{affected}>`, which is structurally incompatible with the HEAD
+ * port (`Promise<void>`) — so the wrapper is cast to the port via
+ * `as unknown as ITotpSecretRepository` at the ctor call. The cast pins the
+ * future contract WITHOUT a pure tsc error (the use-case ignores the return at
+ * HEAD; the new R2 case fails behaviourally, not at compile time).
  */
-class StepAwareTotpRepo implements ITotpSecretRepository {
+class StepAwareTotpRepo {
   inner: InMemoryTotpSecretRepository;
   markUsedSpy = jest.fn();
+  /**
+   * Cycle T / R2: when set, `markUsed` returns this CAS result INSTEAD of
+   * mutating the row — simulates the adapter losing the compare-and-set race
+   * (`affected:0`). The use-case MUST gate `issueSessionForUser` on
+   * `affected === 1`. Today it does NOT, so a forced `{affected:0}` still mints
+   * a session → the new R2 case fails for the right reason.
+   */
+  casOverride: { affected: number } | null = null;
 
   constructor(seed: RowWithStep) {
     this.inner = new InMemoryTotpSecretRepository();
@@ -128,14 +143,22 @@ class StepAwareTotpRepo implements ITotpSecretRepository {
   async markEnrolled(userId: number, at: Date): Promise<void> {
     return await this.inner.markEnrolled(userId, at);
   }
-  /** Tests call this with 3 args (incl. step). Today's signature is 2; the cast pins R5. */
-  async markUsed(userId: number, at: Date, step?: number): Promise<void> {
+  /**
+   * Cycle T / R1-R2: `markUsed` now returns the CAS result `{affected}`. Tests
+   * call it with 3 args (incl. step). The `Promise<{affected:number}>` cast pins
+   * the future contract — at HEAD the port returns `Promise<void>`.
+   */
+  async markUsed(userId: number, at: Date, step?: number): Promise<{ affected: number }> {
     this.markUsedSpy(userId, at, step);
+    if (this.casOverride !== null) {
+      return this.casOverride;
+    }
     if (step !== undefined) {
       const row = this.inner.rows.get(userId) as RowWithStep | undefined;
       if (row) row.lastUsedStep = String(step);
     }
     await this.inner.markUsed(userId, at);
+    return { affected: 1 };
   }
   async updateRecoveryCodes(
     userId: number,
@@ -169,10 +192,37 @@ describe('ChallengeMfaUseCase — replay protection (R4)', () => {
     const refreshRepo = makeRefreshTokenRepo();
     const totpRepo = new StepAwareTotpRepo(seedRow);
     const authSvc = makeAuthSessionServiceStub(user);
-    const useCase = new ChallengeMfaUseCase(userRepo, totpRepo, authSvc);
+    const useCase = new ChallengeMfaUseCase(
+      userRepo,
+      totpRepo as unknown as ITotpSecretRepository,
+      authSvc,
+    );
     const mfaSessionToken = issueMfaSessionToken(user.id);
     return { useCase, totpRepo, mfaSessionToken, user, authSvc, refreshRepo };
   };
+
+  it('rejects INVALID_MFA_CODE and does NOT issue a session when markUsed CAS affects 0 rows (R2 — lost race)', async () => {
+    // A code valid for currentStep, lastUsedStep one behind → JS compare PASSES.
+    // The authoritative gate must be the CAS result: markUsed forced to
+    // {affected:0} (a concurrent request already consumed this step) → the
+    // use-case MUST throw INVALID_MFA_CODE BEFORE issueSessionForUser.
+    const seed = makeRowWithStep({
+      userId: 15,
+      lastUsedStep: String(currentStep - 1),
+    });
+    const { useCase, mfaSessionToken, totpRepo, authSvc } = buildCtx(seed);
+    totpRepo.casOverride = { affected: 0 }; // adapter lost the compare-and-set
+
+    const totp = buildTotp(PLAIN_SECRET_B32);
+    const code = codeForStep(totp, currentStep);
+
+    await expect(useCase.execute({ mfaSessionToken, code })).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_MFA_CODE',
+    });
+    // Fails today: no `affected` gate → session issued despite affected:0.
+    expect(authSvc.issueSessionForUser).not.toHaveBeenCalled();
+  });
 
   it('rejects code valid for step N when lastUsedStep === N (R4.a — exact replay)', async () => {
     const seedStep = currentStep;

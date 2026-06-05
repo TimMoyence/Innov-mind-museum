@@ -193,7 +193,10 @@ describe('AdminDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledWith('/api/admin/stats');
+      // Phase 3 web refactor: apiGet now accepts an optional `{signal}` 2nd
+      // arg propagated by `useFetchData`. Assertion stays at first-arg level.
+      expect(mockApiGet).toHaveBeenCalled();
+      expect(mockApiGet.mock.calls[0]?.[0]).toBe('/api/admin/stats');
     });
   });
 });

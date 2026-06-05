@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/react-native';
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { BiometricLockScreen } from '@/features/auth/ui/BiometricLockScreen';
-import { runAuthRefresh } from '@/shared/infrastructure/httpClient';
+import { authSessionService } from '@/features/auth/infrastructure/authSessionService';
 
 const breadcrumb = (message: string, data?: Record<string, unknown>): void => {
   try {
@@ -70,7 +70,7 @@ export function BiometricGate({ children }: { children: ReactNode }) {
     }
 
     breadcrumb('refresh_preflight');
-    const refresh = await runAuthRefresh();
+    const refresh = await authSessionService.refresh();
     breadcrumb('refresh_result', { kind: refresh.kind });
 
     // `invalid` → unauthorizedHandler already cleared the session and

@@ -77,9 +77,9 @@ describe('ConversationsHeader', () => {
     expect(getByLabelText('conversations.saved')).toBeTruthy();
   });
 
-  it('renders the share action label', () => {
-    const { getByText } = render(<ConversationsHeader {...defaultProps} />);
-    expect(getByText('conversations.share')).toBeTruthy();
+  it('does not render a share action (moved to Settings — QA-10)', () => {
+    const { queryByText } = render(<ConversationsHeader {...defaultProps} />);
+    expect(queryByText('conversations.share')).toBeNull();
   });
 
   it('renders the edit action label by default', () => {

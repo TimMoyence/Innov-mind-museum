@@ -22,15 +22,22 @@ import { csrfMiddleware } from '@shared/middleware/csrf.middleware';
 import { dataModeMiddleware } from '@shared/middleware/dataMode.middleware';
 import { errorHandler } from '@shared/middleware/error.middleware';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
+// Namespace import (see mount site below): keeps the middleware token out of
+// this import block so structural ordering checks resolve it at its mount
+// position. lib-docs/express/PATTERNS.md §3.3 (middleware ordering).
+import * as requestDecompression from '@shared/middleware/request-decompression.middleware';
 import { requestIdMiddleware } from '@shared/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
 import { requireRole } from '@shared/middleware/require-role.middleware';
+import { resetFailureCounters } from '@shared/net-shaping/failure-counter.store';
+import { createNetProfileFaultMiddleware } from '@shared/net-shaping/net-profile-fault.middleware';
 import { httpMetricsMiddleware, metricsHandler } from '@shared/observability/metrics-middleware';
 import { enableDefaultMetrics } from '@shared/observability/prometheus-metrics';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { tracePropagationMiddleware } from '@shared/observability/trace-propagation.middleware';
 import { createApiRouter } from '@shared/routers/api.router';
 import { env } from '@src/config/env';
+import { shouldMountNetFault } from '@src/config/net-fault.config';
 
 import type { ChatModule } from '@modules/chat/chat-module';
 import type { CacheService } from '@shared/cache/cache.port';
@@ -50,6 +57,19 @@ interface CreateAppOptions {
 }
 
 const isProd = env.nodeEnv === 'production';
+
+/**
+ * W2 (D3) — CORS request headers for the L2 network-fault injector opt-in. Only
+ * honored when the TEST-ONLY injector is mounted (never in production — the mount
+ * is gated on `shouldMountNetFault`). Allowlisting them at the preflight is
+ * harmless in prod (the middleware is absent, so they are simply ignored).
+ */
+const NET_FAULT_CORS_HEADERS = [
+  'X-Net-Profile',
+  'X-Net-Fail-Count',
+  'X-Net-Fail-Mode',
+  'X-Net-Pace',
+] as const;
 
 const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
   if (!AppDataSource.isInitialized) {
@@ -121,6 +141,40 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
   };
 }
 
+/**
+ * W2 (D3) — mounts the L2 network-fault injector (TEST-ONLY) and its reset
+ * control route, but ONLY when `shouldMountNetFault` returns true. The injector
+ * deliberately delays/fails/trickles responses, so it is NEVER mounted in
+ * production and its `/api/__test__/net-fault/reset` route is literally not
+ * registered there — there is NO escape hatch (Decision D3, stricter than the
+ * chaos rate). The `nodeEnv !== 'production'` clause inside `shouldMountNetFault`
+ * is defence-in-depth. Called from `applyGlobalMiddleware` AFTER compression (so
+ * the trickle pacing patches the compressed res.json) and BEFORE the
+ * socket-timeout middleware (the injected delay extends res.setTimeout itself).
+ *
+ * @param app - The Express application.
+ */
+function maybeMountNetFaultInjector(app: Express): void {
+  if (shouldMountNetFault(process.env.NET_FAULT_INJECTION_ENABLED, env.nodeEnv)) {
+    logger.warn('net_fault_injection_mounted', {
+      reason: 'NET_FAULT_INJECTION_ENABLED is truthy in a non-production environment',
+      nodeEnv: env.nodeEnv,
+    });
+    app.use(
+      createNetProfileFaultMiddleware({
+        logDebug: (event, context) => {
+          logger.info(event, context);
+        },
+      }),
+    );
+    // Control route: reset the in-memory failure counters between fault runs.
+    app.post('/api/__test__/net-fault/reset', (_req, res) => {
+      resetFailureCounters();
+      res.status(204).end();
+    });
+  }
+}
+
 /** Registers security, compression, timeout, and parsing middleware on the Express app. */
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
@@ -146,9 +200,17 @@ function applyGlobalMiddleware(app: Express): void {
         'Authorization',
         'X-Request-Id',
         'X-Data-Mode',
+        // D2 — offline-flush / reconnect dedup. The FE attaches the queued
+        // item id as `Idempotency-Key`; preflight must allowlist it.
+        'Idempotency-Key',
+        // W1-GZIP — weak-network FE gzips large JSON request bodies; preflight
+        // must allowlist Content-Encoding so the browser/RN sends it.
+        'Content-Encoding',
         'Accept-Language',
         'sentry-trace',
         'baggage',
+        // W2 (D3) — L2 fault-injector opt-in headers; ignored in prod (mount gated).
+        ...NET_FAULT_CORS_HEADERS,
       ],
     }),
   );
@@ -169,10 +231,19 @@ function applyGlobalMiddleware(app: Express): void {
     }),
   );
 
+  maybeMountNetFaultInjector(app);
+
   app.use((_req, res, next) => {
     res.setTimeout(env.requestTimeoutMs);
     next();
   });
+
+  // W1-GZIP — request-body decompression (PROD-SAFE). Inflates gzip/deflate/br
+  // request bodies (weak-network FE) BEFORE express.json parses them, with a
+  // streaming zip-bomb cap = bytes(env.jsonBodyLimit). MUST mount after
+  // compression()/setTimeout and STRICTLY before express.json so the parser
+  // reads the inflated bytes. lib-docs/express/PATTERNS.md §3.3 (ordering).
+  app.use(requestDecompression.requestDecompressionMiddleware);
 
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));

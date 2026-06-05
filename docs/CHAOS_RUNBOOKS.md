@@ -47,8 +47,8 @@ functional), BullMQ queues pause until Redis returns.
 ### Rollback if experiment goes wrong
 
 - The kill is reversible. If the rate-limit fail-closed policy degrades
-  user experience beyond acceptable, deploy the kill-switch
-  `RATE_LIMIT_FAIL_OPEN=true` env var (per ADR-011 escape hatch).
+  user experience beyond acceptable, deploy the kill-switch by setting
+  `RATE_LIMIT_FAIL_CLOSED=false` env var (per ADR-011 escape hatch — disables the fail-closed behaviour).
 
 ## 2. PostgreSQL replica kill — verify primary fallback
 

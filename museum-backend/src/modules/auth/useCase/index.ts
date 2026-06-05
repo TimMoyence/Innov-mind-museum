@@ -70,7 +70,9 @@ import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSess
 import type { EmailService } from '@shared/email/email.port';
 import type {
   AudioCleanupPort,
+  LeadErasurePort,
   MarketingContactRemovalPort,
+  MarketingErasureFallbackPort,
 } from '@shared/ports/audio-cleanup.port';
 
 const userRepository = new UserRepositoryPg(AppDataSource);
@@ -198,13 +200,43 @@ const brevoRemovalProxy: MarketingContactRemovalPort = {
   },
 };
 
-const deleteAccountUseCase = new DeleteAccountUseCase(
+/**
+ * R5 (Cycle D) — durable fallback when the inline Brevo `removeContact` fails:
+ * persists a `pending` `brevo_erasure` lead so the WS-B redelivery cron retries
+ * the contact removal until success/404. Lazy-bound to the leads repo to keep
+ * auth free of a static auth→leads dependency. PII: payload is `{ email }` only.
+ */
+const marketingErasureFallbackProxy: MarketingErasureFallbackPort = {
+  async enqueueBrevoErasure(email: string): Promise<void> {
+    const { LeadRepositoryPg } =
+      await import('@modules/leads/adapters/secondary/pg/lead.repository.pg');
+    const leadRepository = new LeadRepositoryPg(AppDataSource);
+    await leadRepository.insertPending({ type: 'brevo_erasure', payload: { email } });
+  },
+};
+
+/**
+ * R6 (Cycle D) — purges persisted `leads` rows carrying the account email (GDPR
+ * Art.17). Lazy-bound to the leads repo. Returns the rows-deleted count.
+ */
+const leadErasureProxy: LeadErasurePort = {
+  async deleteByEmail(emailNormalized: string): Promise<number> {
+    const { LeadRepositoryPg } =
+      await import('@modules/leads/adapters/secondary/pg/lead.repository.pg');
+    const leadRepository = new LeadRepositoryPg(AppDataSource);
+    return await leadRepository.deleteByEmail(emailNormalized);
+  },
+};
+
+const deleteAccountUseCase = new DeleteAccountUseCase({
   userRepository,
-  imageCleanupProxy,
-  legacyImageRefLookupProxy,
-  audioCleanupProxy,
-  brevoRemovalProxy,
-);
+  imageStorage: imageCleanupProxy,
+  legacyImageRefLookup: legacyImageRefLookupProxy,
+  audioCleanup: audioCleanupProxy,
+  brevoRemoval: brevoRemovalProxy,
+  marketingErasureFallback: marketingErasureFallbackProxy,
+  leadErasure: leadErasureProxy,
+});
 
 /** Lazy-bound — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {

@@ -8,7 +8,7 @@ import { useImagePicker } from '@/features/chat/application/useImagePicker';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockOptimizeImageForUpload = jest.fn<Promise<string>, [string]>();
+const mockOptimizeImageAdaptive = jest.fn<Promise<{ uploadUri: string }>, [string, unknown]>();
 const mockRequestMediaLibraryPermissionsAsync = jest.fn<Promise<{ status: string }>, []>();
 const mockLaunchImageLibraryAsync = jest.fn<
   Promise<{ canceled: boolean; assets: { uri: string }[] }>,
@@ -29,7 +29,8 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 jest.mock('@/features/chat/application/imageUploadOptimization', () => ({
-  optimizeImageForUpload: (...args: unknown[]) => mockOptimizeImageForUpload(args[0] as string),
+  optimizeImageAdaptive: (...args: unknown[]) =>
+    mockOptimizeImageAdaptive(args[0] as string, args[1]),
 }));
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -37,7 +38,9 @@ jest.mock('@/features/chat/application/imageUploadOptimization', () => ({
 describe('useImagePicker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockOptimizeImageForUpload.mockImplementation((uri: string) => Promise.resolve(uri));
+    mockOptimizeImageAdaptive.mockImplementation((uri: string) =>
+      Promise.resolve({ uploadUri: uri }),
+    );
   });
 
   it('initialises with null selectedImage', () => {
@@ -60,7 +63,10 @@ describe('useImagePicker', () => {
 
     expect(mockRequestMediaLibraryPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchImageLibraryAsync).toHaveBeenCalledTimes(1);
-    expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://photo.jpg');
+    expect(mockOptimizeImageAdaptive).toHaveBeenCalledWith(
+      'file://photo.jpg',
+      expect.objectContaining({ upload: expect.any(Object) }),
+    );
     expect(result.current.selectedImage).toBe('file://photo.jpg');
   });
 
@@ -108,7 +114,10 @@ describe('useImagePicker', () => {
 
     expect(mockRequestCameraPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(mockLaunchCameraAsync).toHaveBeenCalledTimes(1);
-    expect(mockOptimizeImageForUpload).toHaveBeenCalledWith('file://camera-photo.jpg');
+    expect(mockOptimizeImageAdaptive).toHaveBeenCalledWith(
+      'file://camera-photo.jpg',
+      expect.objectContaining({ upload: expect.any(Object) }),
+    );
     expect(result.current.selectedImage).toBe('file://camera-photo.jpg');
   });
 
@@ -118,7 +127,7 @@ describe('useImagePicker', () => {
       canceled: false,
       assets: [{ uri: 'file://original.jpg' }],
     });
-    mockOptimizeImageForUpload.mockRejectedValue(new Error('optimize failed'));
+    mockOptimizeImageAdaptive.mockRejectedValue(new Error('optimize failed'));
 
     const { result } = renderHook(() => useImagePicker());
 

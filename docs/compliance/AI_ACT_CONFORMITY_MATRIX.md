@@ -64,7 +64,7 @@ Musaium is **limited-risk** at current classification ; this section is deferred
 
 | Article | Obligation summary | Status | Evidence / location | Owner | Phase |
 |---|---|---|---|---|---|
-| **Art. 50 §1** — Disclosure of AI interaction | Inform user they interact with AI at first interaction (text + voice) | IN PROGRESS | Mobile : badge "Assistant IA Musaium" on first session — implementation in `features/chat/ui/VoiceSessionIntro.tsx` (Phase 0 fold-in). Web : equivalent badge on landing. Voice : audio announcement "Vous interagissez avec un assistant IA" at start of each session (research §10 critical note — voice "alloy" is naturalistic, audio disclosure required) | Founder | **Phase 0 — pre-2026-08-02 deadline** |
+| **Art. 50 §1** — Disclosure of AI interaction | Inform user they interact with AI at first interaction (text + voice) | COMPLIANT | Implemented 2026-05-12. Evidence: `docs/legal/AI_DISCLOSURE.md`. Mobile : badge "Assistant IA Musaium" on first session (`features/chat/ui/VoiceSessionIntro.tsx`). Web : equivalent badge on landing. Voice : audio announcement "Vous interagissez avec un assistant IA" at start of each session. | Founder | Done |
 | **Art. 50 §2** — Synthetic content marking | AI-generated text + audio marked as such | PARTIAL | TTS audio is implicitly synthetic ; explicit machine-readable mark deferred to draft Code of Practice ([Bird & Bird](https://www.twobirds.com/en/insights/2026/taking-the-eu-ai-act-to-practice-understanding-the-draft-transparency-code-of-practice)) | Founder | Phase 1 |
 | **Art. 50 §3** — Emotion recognition / biometric categorisation disclosure | N/A — Musaium does not perform | N/A | — | — | — |
 | **Art. 50 §4** — Deep-fake disclosure | N/A — Musaium does not generate deep-fakes | N/A | — | — | — |
@@ -104,7 +104,7 @@ SME (Musaium falls here pre-Series A) : the **lower** of the two caps applies (A
 
 - **Doctrine** : this matrix + [`compliance-research-eu-ai-act.md`](../../.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-eu-ai-act.md).
 - **Code paths owned by guardrail** : `museum-backend/src/modules/chat/useCase/guardrail/`, `museum-backend/src/shared/audit/`.
-- **Operational evidence** : [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md), [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml).
+- **Operational evidence** : [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md), [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml).
 - **Compliance docs** : [`docs/legal/DPIA.md`](../legal/DPIA.md), [`docs/legal/ROPA.md`](../legal/ROPA.md), [`docs/compliance/DATA_FLOW_MAP.md`](./DATA_FLOW_MAP.md), [`docs/compliance/SUBPROCESSORS.md`](./SUBPROCESSORS.md), [`docs/compliance/FAIRNESS_METRICS_PLAN.md`](./FAIRNESS_METRICS_PLAN.md), [`docs/compliance/art5-audit.md`](./art5-audit.md).
 - **Pentest preparation** : [`docs/operations/PENTEST_SCOPE.md`](../operations/PENTEST_SCOPE.md).
 

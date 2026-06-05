@@ -35,10 +35,13 @@ export class PgMonthlyQuotaRepo implements MonthlyQuotaRepo {
     monthStart: Date,
     limit: number,
   ): Promise<{ sessionsMonthCount: number; sessionsMonthStart: Date } | null> {
+    interface QuotaRow {
+      sessions_month_count: number;
+      sessions_month_start: string;
+    }
     const monthStartIso = monthStart.toISOString().slice(0, 10); // YYYY-MM-DD
-    const result: { sessions_month_count: number; sessions_month_start: string }[] =
-      await this.dataSource.query(
-        `UPDATE "users"
+    const result: unknown = await this.dataSource.query(
+      `UPDATE "users"
             SET "sessions_month_count" =
                   CASE
                     WHEN "sessions_month_start" = $2 THEN "sessions_month_count" + 1
@@ -53,11 +56,21 @@ export class PgMonthlyQuotaRepo implements MonthlyQuotaRepo {
               OR "sessions_month_count" < $3
             )
           RETURNING "sessions_month_count", "sessions_month_start"`,
-        [userId, monthStartIso, limit],
-      );
+      [userId, monthStartIso, limit],
+    );
 
-    if (result.length === 0) return null;
-    const row = result[0];
+    // TypeORM 0.3.28: `dataSource.query("UPDATE … RETURNING …")` returns the tuple
+    // `[rows[], affectedCount]` on Postgres (e.g. `[[], 0]` / `[[{…}], 1]`), NOT a flat
+    // `rows[]`. So `result.length` is always 2 — reading `result[0]` as a row is the bug.
+    // Cf. lib-docs/typeorm/PATTERNS.md §4.10 + LESSONS 2026-05-08. Defensive guard tolerates a
+    // future flat-shape (TypeORM v1.0 bump; 0.3.x repo archived, cf. CLAUDE.md §Dependency Monitoring):
+    // tuple → `result[0]` is the rows array; flat/SELECT-like → `result` is the rows array.
+    const rows: QuotaRow[] =
+      Array.isArray(result) && Array.isArray(result[0])
+        ? (result[0] as QuotaRow[])
+        : ((result as QuotaRow[] | undefined) ?? []);
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const row = rows[0];
     return {
       sessionsMonthCount: row.sessions_month_count,
       sessionsMonthStart: new Date(row.sessions_month_start),

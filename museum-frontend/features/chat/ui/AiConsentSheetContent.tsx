@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
-} from '@/features/chat/application/thirdPartyAiConsent';
+} from '@/features/chat/domain/consentScopes';
 import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
@@ -126,20 +126,40 @@ const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 const REQUIRED_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
 
 /**
- * `location_to_llm` is a coarse-location data-sharing scope (city/country only),
- * NOT a per-LLM-vendor grant — so it renders in its own single-row "Location"
- * group BELOW the provider grid (design §9 D1), never under OpenAI/Google.
- * Default OFF (GDPR Art. 4(11) unambiguous affirmative action). The BE consent
- * gate (`location-resolver.ts`) is what actually propagates the coarse location
- * once this is granted.
+ * The two geo scopes are location data-sharing grants (NOT per-LLM-vendor
+ * grants), so they render in their own "Location" group BELOW the provider grid
+ * (design §2.2), never under OpenAI/Google. Both default OFF (GDPR Art. 4(11)
+ * unambiguous affirmative action) and are mutually exclusive (D1 Option C —
+ * `GEO_SCOPES` below drives the exclusivity in `toggle`):
+ *   - `location_to_llm` = full / neighbourhood (`<neighbourhood>, <city>`).
+ *   - `location_coarse_to_llm` = coarse / city + country only (Cycle 1.5-FE).
+ * The BE consent gate (`location-resolver.ts:214-251`) is what actually
+ * propagates the resolved location once one of these is granted.
  */
-const LOCATION_ROW: RowSpec = {
-  scope: 'location_to_llm',
-  icon: 'location-outline',
-  labelKey: 'consent.scope_location',
-  hintKey: 'consent.scope_location_hint',
-  required: false,
-};
+const LOCATION_ROWS: readonly RowSpec[] = [
+  {
+    scope: 'location_to_llm',
+    icon: 'location-outline',
+    labelKey: 'consent.scope_location',
+    hintKey: 'consent.scope_location_hint',
+    required: false,
+  },
+  {
+    scope: 'location_coarse_to_llm',
+    icon: 'business-outline',
+    labelKey: 'consent.scope_location_coarse',
+    hintKey: 'consent.scope_location_coarse_hint',
+    required: false,
+  },
+] as const;
+
+/**
+ * The two mutually-exclusive geo scopes (D1 Option C). Enabling one forces the
+ * other OFF in the sheet's local state, preventing the misleading "both ON"
+ * state (where the BE silently lets full dominate). Derived from LOCATION_ROWS
+ * so the source of truth stays single.
+ */
+const GEO_SCOPES: readonly ThirdPartyAiScope[] = LOCATION_ROWS.map((row) => row.scope);
 
 const initialState = (): Record<ThirdPartyAiScope, boolean> =>
   Object.fromEntries(THIRD_PARTY_AI_SCOPES.map((s) => [s, false])) as Record<
@@ -194,7 +214,11 @@ export const AiConsentSheetContent = ({
   const canSave = grants[REQUIRED_SCOPE];
 
   const handleAcceptAll = (): void => {
-    onAccept?.(THIRD_PARTY_AI_SCOPES);
+    // D1 Option C — the two geo scopes are mutually exclusive, so "Accept all"
+    // cannot grant both. It grants the full level (`location_to_llm`) and OMITS
+    // `location_coarse_to_llm` (full dominates coarse on the BE anyway).
+    const acceptAllScopes = THIRD_PARTY_AI_SCOPES.filter((s) => s !== 'location_coarse_to_llm');
+    onAccept?.(acceptAllScopes);
     close();
   };
 
@@ -204,7 +228,19 @@ export const AiConsentSheetContent = ({
   };
 
   const toggle = (scope: ThirdPartyAiScope): void => {
-    setGrants((prev) => ({ ...prev, [scope]: !prev[scope] }));
+    setGrants((prev) => {
+      const nextValue = !prev[scope];
+      const next = { ...prev, [scope]: nextValue };
+      // D1 Option C — geo exclusivity: turning a geo scope ON forces the other
+      // geo scope OFF (never "both ON", which would mislead the user since the
+      // BE silently lets full dominate coarse).
+      if (nextValue && GEO_SCOPES.includes(scope)) {
+        for (const other of GEO_SCOPES) {
+          if (other !== scope) next[other] = false;
+        }
+      }
+      return next;
+    });
   };
 
   if (view === 'summary') {
@@ -341,32 +377,29 @@ export const AiConsentSheetContent = ({
             { backgroundColor: theme.surface, borderColor: theme.cardBorder },
           ]}
         >
-          <View style={styles.switchRow}>
-            <Ionicons
-              name={LOCATION_ROW.icon}
-              size={20}
-              color={theme.primary}
-              style={styles.switchIcon}
-            />
-            <View style={styles.switchInfo}>
-              <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>
-                {t(LOCATION_ROW.labelKey)}
-              </Text>
-              <Text style={[styles.switchHint, { color: theme.textSecondary }]}>
-                {t(LOCATION_ROW.hintKey)}
-              </Text>
+          {LOCATION_ROWS.map((row) => (
+            <View key={row.scope} style={styles.switchRow}>
+              <Ionicons name={row.icon} size={20} color={theme.primary} style={styles.switchIcon} />
+              <View style={styles.switchInfo}>
+                <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>
+                  {t(row.labelKey)}
+                </Text>
+                <Text style={[styles.switchHint, { color: theme.textSecondary }]}>
+                  {t(row.hintKey)}
+                </Text>
+              </View>
+              <Switch
+                testID={`consent-switch-${row.scope}`}
+                value={grants[row.scope]}
+                onValueChange={() => {
+                  toggle(row.scope);
+                }}
+                trackColor={{ false: theme.cardBorder, true: theme.primary }}
+                accessibilityRole="switch"
+                accessibilityLabel={t(row.labelKey)}
+              />
             </View>
-            <Switch
-              testID={`consent-switch-${LOCATION_ROW.scope}`}
-              value={grants[LOCATION_ROW.scope]}
-              onValueChange={() => {
-                toggle(LOCATION_ROW.scope);
-              }}
-              trackColor={{ false: theme.cardBorder, true: theme.primary }}
-              accessibilityRole="switch"
-              accessibilityLabel={t(LOCATION_ROW.labelKey)}
-            />
-          </View>
+          ))}
         </View>
 
         <Pressable

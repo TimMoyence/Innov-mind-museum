@@ -123,9 +123,6 @@
     "sorted_by_messages": "Triées par nombre de messages",
     "showing_saved_only": "Sessions enregistrées uniquement",
     "showing_all": "Toutes les sessions",
-    "share_title": "Tableau de bord Musaium",
-    "share_body": "Tableau de bord Musaium : {{total}} sessions, {{savedCount}} enregistrées.",
-    "shared_success": "Résumé du tableau de bord partagé",
     "session_unsaved": "Session retirée des favoris",
     "session_saved": "Session enregistrée",
     "empty_title": "Aucune conversation",
@@ -190,6 +187,8 @@
     "export_data_desc": "Télécharger toutes vos données personnelles (RGPD)",
     "export_data_success": "Données exportées avec succès",
     "rate_musaium": "Noter Musaium",
+    "inviteFriend": "Inviter un ami",
+    "inviteMessage": "Découvre Musaium, ton compagnon culturel IA pour les musées et monuments. Rejoins-moi : https://musaium.com",
     "ai_memory": "Personnalisation IA",
     "ai_memory_hint": "Utilise vos préférences artistiques et historique de visites pour personnaliser les réponses de l'IA",
     "ai_consent_title": "Fournisseurs d'IA tiers",
@@ -204,7 +203,8 @@
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — transcriptions vocales",
       "third_party_ai_profile_google": "Google AI — préférences & historique",
-      "location_to_llm": "Localisation — lieux à proximité"
+      "location_to_llm": "Localisation — lieux à proximité",
+      "location_coarse_to_llm": "Localisation — ville uniquement"
     },
     "accessibility": "Accessibilité",
     "audio_description": "Audiodescription",
@@ -472,7 +472,7 @@
     "audio": "Audio",
     "image_sent": "[Image envoyée]",
     "voice_message": "[Message vocal]",
-    "share_footer": "Partagé via Musaium — Votre compagnon de musée\nhttps://musaium.app",
+    "share_footer": "Partagé via Musaium — Votre compagnon de musée\nhttps://musaium.com",
     "share_response": "Partager",
     "replace_image": "Remplacer",
     "remove_image": "Supprimer",
@@ -526,7 +526,8 @@
       "gallery": "Choisir dans la galerie",
       "record_audio": "Enregistrer un message vocal",
       "stop_audio": "Arrêter l'enregistrement",
-      "scan_cartel": "Scanner le cartel"
+      "scan_cartel": "Scanner le QR de l'œuvre",
+      "compare": "Comparer cette œuvre"
     },
     "cartelScanner": {
       "title": "Scanner le QR du cartel",
@@ -646,18 +647,6 @@
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",
     "send": "Envoyer"
   },
-  "welcome": {
-    "title": "Bienvenue sur Musaium",
-    "subtitle": "Votre compagnon de musée personnel",
-    "suggestions": {
-      "museum_camera": "Quelle œuvre est devant moi ?",
-      "museum_history": "Parlez-moi de l'histoire de ce musée",
-      "museum_next": "Que devrais-je voir ensuite ?",
-      "standard_camera": "Photographiez une œuvre pour en savoir plus",
-      "standard_style": "Parlez-moi de l'Impressionnisme",
-      "standard_question": "Qui a peint la Joconde ?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Débutant",
     "intermediate": "Intermédiaire",
@@ -722,7 +711,8 @@
       "account_suspended": "Votre compte a été suspendu. Contactez le support.",
       "account_deleted": "Ce compte a été supprimé.",
       "locked_out": "Trop de tentatives échouées. Réessayez dans quelques minutes.",
-      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
+      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française).",
+      "mfa_web_only": "La double authentification est gérée dans l'admin web. Connectez-vous là-bas."
     },
     "chat": {
       "contract_invalid": "Réponse du serveur invalide. Veuillez réessayer.",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} Fermé"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "Logo {{name}}"
+  },
   "museum": {
     "about": "À propos",
     "opening_hours": "Horaires",
@@ -840,6 +833,11 @@
     "phone": "Téléphone",
     "loading_details": "Chargement des informations…",
     "no_extra_info": "Pas d'infos détaillées disponibles.",
+    "info_coming_soon": "Informations bientôt disponibles",
+    "admission": "Tarifs",
+    "collections": "Collections",
+    "exhibitions": "Expositions en cours",
+    "accessibility": "Accessibilité",
     "offlinePack": {
       "title": "Tu es près de {{cityName}}",
       "description": "Télécharge le contenu hors-ligne pour explorer sans connexion.",
@@ -941,6 +939,8 @@
       "send_hint": "Envoie votre message à l'assistant du musée",
       "message_input": "Saisissez votre message",
       "assistant_message": "Message de l'assistant",
+      "attached_image": "Image jointe au message",
+      "loading": "Chargement de la réponse",
       "user_message": "Votre message",
       "long_press_hint": "Appui long pour plus d'options",
       "recommendation_hint": "Remplit le champ avec cette suggestion",
@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "Votre nom d'affichage",
       "comment_input": "Votre commentaire d'avis",
-      "star_button": "Donner {{count}} étoiles"
+      "star_button": "Donner {{count}} étoiles",
+      "nps_value": "Score de recommandation {{value}} sur 10"
     },
     "preferences": {
       "language_button": "Sélectionner la langue {{language}}",
@@ -1064,6 +1065,9 @@
     "attachmentPicker": {
       "opened": "Options de pièces jointes ouvertes"
     },
+    "bottomSheet": {
+      "dismiss": "Fermer la feuille"
+    },
     "cartelScanner": {
       "opened": "Scanner de cartel ouvert",
       "scan_success": "Code cartel capturé",
@@ -1115,7 +1119,9 @@
     "manage_subtitle": "Décoche chaque catégorie librement. Le scope « Textes OpenAI » est requis pour pouvoir discuter avec l'IA.",
     "save_required_hint": "Active « Textes OpenAI » pour pouvoir enregistrer.",
     "scope_location": "Localisation",
-    "scope_location_hint": "Ta zone approximative (ville) est partagée avec l'IA pour reconnaître les musées et monuments à proximité. Ta localisation précise n'est jamais partagée."
+    "scope_location_hint": "Ton quartier approximatif (quartier + ville) est partagé avec l'IA pour reconnaître les musées et monuments à proximité. Ta rue, ton adresse et ta localisation précise ne sont jamais partagés.",
+    "scope_location_coarse": "Ville uniquement",
+    "scope_location_coarse_hint": "Seuls ta ville et ton pays sont partagés avec l'IA — une option moins précise que le niveau quartier. Ta rue et ta localisation précise ne sont jamais partagées."
   },
   "dailyArt": {
     "title": "Oeuvre du Jour",
@@ -1172,6 +1178,9 @@
     "writeReview": "Écrire un avis",
     "averageRating": "Note moyenne",
     "ratingLabel": "Votre note",
+    "npsLabel": "Quelle est la probabilité que vous recommandiez Musaium ?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Votre nom",
     "commentPlaceholder": "Partagez votre expérience...",
     "submit": "Envoyer l'avis",

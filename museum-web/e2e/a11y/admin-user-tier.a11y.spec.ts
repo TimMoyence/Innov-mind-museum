@@ -58,6 +58,10 @@ test('admin user-detail page (en) has no WCAG 2.1 AA violations with confirm mod
   // `Demote to free` depending on the seed user's tier — try both.
   const promote = page.getByRole('button', { name: /Promote to premium/i });
   const demote = page.getByRole('button', { name: /Demote to free/i });
+  // `count()` resolves immediately (no auto-wait), so on a slow render both
+  // counts can be 0 → no click fires → the dialog waitFor below times out
+  // (flaky). Gate on whichever tier-change button the user's tier renders.
+  await promote.or(demote).first().waitFor({ state: 'visible' });
   if (await promote.count()) {
     await promote.first().click();
   } else if (await demote.count()) {

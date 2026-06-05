@@ -42,7 +42,11 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
       callOrder.push('repo:deleteUser');
     });
 
-    const useCase = new DeleteAccountUseCase(repo, imageStorage, lookup);
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      imageStorage,
+      legacyImageRefLookup: lookup,
+    });
 
     await useCase.execute(7);
 
@@ -62,7 +66,11 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     const imageStorage = makeImageStorage();
     const lookup = makeLegacyLookup(legacyRefs);
 
-    const useCase = new DeleteAccountUseCase(repo, imageStorage, lookup);
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      imageStorage,
+      legacyImageRefLookup: lookup,
+    });
     await useCase.execute(42);
 
     // Grab the fetcher the use case handed to the storage adapter and exercise
@@ -82,7 +90,11 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     const lookup = makeLegacyLookup();
     lookup.findLegacyImageRefsByUserId.mockRejectedValue(new Error('DB down'));
 
-    const useCase = new DeleteAccountUseCase(repo, imageStorage, lookup);
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      imageStorage,
+      legacyImageRefLookup: lookup,
+    });
     await useCase.execute(13);
 
     const forwardedFetcher = imageStorage.deleteByPrefix.mock.calls[0][1];
@@ -98,7 +110,11 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     const repo = makeUserRepo(makeUser({ id: 5 }));
     const imageStorage = makeImageStorage();
 
-    const useCase = new DeleteAccountUseCase(repo, imageStorage /* no lookup */);
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      imageStorage,
+      /* no lookup */
+    });
     await useCase.execute(5);
 
     expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith(5, undefined);

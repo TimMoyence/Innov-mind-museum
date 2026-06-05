@@ -14,14 +14,14 @@
 - `museum-backend/src/modules/chat/useCase/orchestration/sources-validator.ts` (NFKC string-match grounding gate R4, T2.4 — Phase 2 landed)
 - `museum-backend/src/modules/chat/useCase/orchestration/url-head-probe.ts` (HEAD probe R5 + Redis 1h cache, T2.5 — DI seam wired, instance held for V1.1 — see §Open follow-ups)
 - `museum-backend/src/modules/chat/useCase/llm/llm-sections.ts` (Spotlighting datamarking envelope + `generateNonce()` 8-byte hex, T2.3 — Phase 2 landed)
-- `museum-backend/src/modules/chat/adapters/secondary/web-search/` (Brave Search client, now wired through `KnowledgeRouter`)
-- `museum-backend/src/modules/chat/useCase/judge/` (judge V2 confidence stream)
+- `museum-backend/src/modules/chat/adapters/secondary/search/` (Brave Search client + fallback provider) + `museum-backend/src/modules/chat/useCase/web-search/web-search.service.ts` (now wired through `KnowledgeRouter`)
+- `museum-backend/src/modules/chat/useCase/llm/llm-judge-guardrail.ts` (judge V2 confidence stream)
 - `museum-backend/security/promptfoo/halluc.config.yaml` + `halluc-corpus.json` (Phase 4 regression corpus, T4.x)
 - `museum-frontend/features/chat/ui/SourceCitation.tsx` (inline `[n]` marker + slide-up sheet, T5.1 — Phase 5 landed ; uses RN core `Modal`, see §Open follow-ups for `@gorhom/bottom-sheet` deferral)
 - `museum-frontend/features/chat/ui/ChatMessageBubble.tsx` (renders `metadata.sources.map(...)`, T5.2 — Phase 5 landed)
 - `museum-backend/src/shared/observability/prometheus-metrics.ts` lines 224-271 (4 C4 counters, T7.3 — Phase 7 landed)
 - `infra/grafana/dashboards/chat-latency.json` panels id 8-11 + `infra/grafana/alerting/chat-latency.yml` alerts `chat_websearch_error_rate_high|critical` (T7.4 — Phase 7 landed)
-- `team-state/2026-05-11-c4-anti-hallucination/{spec,design}.md` (R1–R13, D1–D11)
+- `team-state/2026-05-11-c4-anti-hallucination/{spec,design}.md` (R1–R13, D1–D11) — *run de travail élagué (rétention 30j) ; conservé ici comme référence de provenance.*
 
 ---
 
@@ -67,13 +67,13 @@ The seven decisions below form an indivisible package. Partial adoption (e.g. ci
 **Negative / risks:**
 
 - **Latency p99 +200–2000 ms on the WebSearch fallback path.** Mitigated by the `AbortSignal.any()` sub-budgets and NFR1 (`chat_request_duration_seconds` p99 ≤ 5 s alert). If the alert fires sustainedly (>2 consecutive 5-min windows), rollback path is `git revert` of the C4 merge — pre-launch V1 has no separate staging.
-- **LLM token output +30 %** on responses carrying `quote` verbatim citations. Cost increase is bounded by max-tokens; cache hit-rate on `museum-mode` / `personalized` contextClasses (ADR-036) is expected to partly absorb it. Tracked via `llm_output_tokens_total{context_class}` Prom counter.
+- **LLM token output +30 %** on responses carrying `quote` verbatim citations. Cost increase is bounded by max-tokens; cache hit-rate on `museum-mode` / `personalized` contextClasses (ADR-036) is expected to partly absorb it. *(Note 2026-05-31 : le compteur `llm_output_tokens_total{context_class}` envisagé ici n'a pas été implémenté en V1 — aucune métrique de tokens dans `prometheus-metrics.ts` ; le coût est suivi via le cost circuit-breaker, pas un counter Prom dédié.)*
 - **Multi-instance judge budget (ADR-015 §Phase 2) does not aggregate across replicas.** Single-instance is acceptable for launch traffic projections. A future ADR-039 LATER will introduce a shared Redis budget if and when we scale-out beyond one chat replica.
 - **HEAD probe adds an external network dependency** per request (mitigated by the 1-hour Redis cache: hit-rate target ≥80 % after warmup).
 
 **Neutral:**
 
-- **LLM cache key shape unchanged.** ADR-036 v1 key `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` continues to apply; the citations schema v2 addition lives on the *output* side and does not alter `contextClass` derivation. Existing cached entries remain valid post-deploy — no cache-buster needed.
+- **LLM cache key shape unchanged by this ADR.** ~~ADR-036 v1 key `llm:v1:...`~~ → note: the key was bumped to `v2` by commit `d54552beb` (2026-05-19, unrelated to this ADR) to fold `voiceMode` + `audioDescriptionMode` into the hash. The citations schema v2 addition of this ADR lives on the *output* side and does not alter `contextClass` derivation. Current key shape: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` — source of truth `llm-cache.service.ts:119`.
 
 ---
 
@@ -125,7 +125,7 @@ Both annotate to dashboard `/d/chat-latency` and runbook `docs/CHAOS_RUNBOOKS.md
 
 ### Label divergence vs initial sketch (honest note)
 
-The original sketch in `team-state/2026-05-11-c4-anti-hallucination/design.md §10` proposed `chat_url_head_probe_total{cache_hit, reachable}` (binary boolean × boolean). The landed counter is `chat_url_head_probe_total{cache_hit, outcome}` with `outcome ∈ {reachable, unreachable}` — same 4 series cardinality, clearer Grafana legends. Non-breaking observability decision recorded in STORY.md §Phase 7 "Open issues for Phase 8+". The 13-series cardinality budget is preserved.
+The original sketch in `team-state/2026-05-11-c4-anti-hallucination/design.md §10` (run élagué, rétention 30j) proposed `chat_url_head_probe_total{cache_hit, reachable}` (binary boolean × boolean). The landed counter is `chat_url_head_probe_total{cache_hit, outcome}` with `outcome ∈ {reachable, unreachable}` — same 4 series cardinality, clearer Grafana legends. Non-breaking observability decision recorded in STORY.md §Phase 7 "Open issues for Phase 8+". The 13-series cardinality budget is preserved.
 
 ---
 
@@ -162,4 +162,4 @@ The Phase D work is small (~1 day with /team) and explicitly out-of-scope for th
 
 ---
 
-*Status flip to `Accepted` reserved for Tech Lead at C4 merge SHA (Step 8.1). Until then this ADR documents the architectural intent and the seven design-time decisions; the code wiring lives in the C4 PR series. Verbatim quote from `docs/plans/2026-05-10-c4-launch-prompt.md` §E Step 1.4 informed each decision above; any drift between this ADR and the code is a defect to be reconciled before merge per UFR-013.*
+*Status flip to `Accepted` reserved for Tech Lead at C4 merge SHA (Step 8.1). Until then this ADR documents the architectural intent and the seven design-time decisions; the code wiring lives in the C4 PR series. Verbatim quote from the C4 launch-prompt plan (`2026-05-10-c4-launch-prompt.md`, sous `docs/plans/` — prunée 2026-05-12 `9471649d`, cf `git log`) §E Step 1.4 informed each decision above; any drift between this ADR and the code is a defect to be reconciled before merge per UFR-013.*

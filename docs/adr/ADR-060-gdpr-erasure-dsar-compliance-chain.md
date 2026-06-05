@@ -9,7 +9,7 @@
 
 ## Context
 
-The V1 launch (2026-06-01) with 3 B2B museum pilots requires demonstrable GDPR Art.17 (right-to-erasure) and Art.15/20 (right-of-access / portability) compliance. A code audit (2026-05-21) found six load-bearing gaps:
+The V1 launch (2026-06-01, B2C freemium with demo museum data — no B2B pilots contracted) requires demonstrable GDPR Art.17 (right-to-erasure) and Art.15/20 (right-of-access / portability) compliance for end-user personal data. A code audit (2026-05-21) found six load-bearing gaps:
 
 1. TTS audio files stored in S3 (`chat-audios/YYYY/MM/<uuid>`) were never deleted on account erasure — `DeleteAccountUseCase` had no audio cleanup path.
 2. Brevo marketing contacts survived account deletion — `BrevoBetaSignupNotifier` only had `subscribe()`, no removal path.
@@ -62,6 +62,8 @@ The `DeleteAccountUseCase` docstring (A8b) explicitly states this: "audit_logs r
 This stance is consistent with GDPR Recital 65 (retention permitted for legal claims) and does not conflict with Art.17 (which provides exceptions for legal obligation — GDPR Art.17(3)(b)).
 
 ### D6 — DSAR export payload versioned at schemaVersion '2'
+
+> **Amendement 2026-05-26 (Cycle 4 / B-03) :** `schemaVersion` a depuis été bumpé `'2'` → `'3'` (ajout de `artworkMatches` par message). Valeur actuelle = `'3'` (`exportUserData.types.ts:281`, historique en-tête `:6,:12`). La décision D6 ci-dessous documente l'état d'origine `'2'`.
 
 `UserExportPayload.schemaVersion` is bumped from `'1'` to `'2'`. All new fields are additive. The export uses explicit per-field allow-list mappers (not entity spread) so that a future column addition to any entity cannot accidentally leak into the export payload (D4 from the run design). Secrets and security credentials are excluded by the mappers: no `password`, `*_token`, `hash`, `salt`, `prevHash`, `rowHash` fields are present at any level of the payload (verified by frozen test `export-user-data-completeness.test.ts`).
 

@@ -30,14 +30,34 @@ export const getRedisRateLimitStore = (): RedisRateLimitStore | null => redisSto
 
 interface RateLimitOptions {
   limit: number;
-  windowMs: number;
-  keyGenerator: (req: Parameters<RequestHandler>[0]) => string;
+  /**
+   * Window in ms. Pass a function to resolve per-request (e.g. seconds-until-
+   * midnight for a calendar-day reset). PR-11 (R7).
+   */
+  windowMs: number | ((req: Parameters<RequestHandler>[0]) => number);
+  /**
+   * Bucket key extractor. Return `null` to skip the middleware entirely (no
+   * counter read/write, `next()` called clean). Useful for anonymous requests
+   * on auth-gated limiters. PR-11 (R2.1).
+   */
+  keyGenerator: (req: Parameters<RequestHandler>[0]) => string | null;
   /**
    * Distinct prefix per instance — limiters sharing keyGenerator (e.g. multiple `byIp`)
    * must not share bucket counters. Pass explicit name (e.g. `"register"`) for stable
-   * Redis keys across deployments.
+   * Redis keys across deployments. Empty string opts OUT of the prefix entirely
+   * (forwards the raw keyGenerator output as the Redis key). PR-11 (R8).
    */
   bucketName?: string;
+  /**
+   * Custom AppError `code` on cap (default `'TOO_MANY_REQUESTS'`). When set,
+   * `details: { limit }` is attached for clients that branch on the cap value.
+   * PR-11 (R1).
+   */
+  errorCode?: string;
+  /** Custom AppError `message` on cap (default `'Too many requests. Please retry later.'`). PR-11 (R1). */
+  errorMessage?: string;
+  /** Custom HTTP status on cap (default `429`). PR-11 (R1). */
+  statusCode?: 429 | 402;
 }
 
 let anonymousBucketSeq = 0;
@@ -49,16 +69,45 @@ const nextAnonymousBucketName = (): string => {
 type Next = Parameters<RequestHandler>[2];
 type Res = Parameters<RequestHandler>[1];
 
+interface CapError {
+  /** Pre-resolved cap-error fields (PR-11 R1). `null` → use default tooManyRequests(). */
+  code: string | null;
+  message: string | null;
+  statusCode: 429 | 402 | null;
+}
+
 interface BucketContext {
   key: string;
   limit: number;
   windowMs: number;
   res: Res;
   next: Next;
+  capError: CapError;
+  /**
+   * Snapshot of `env.rateLimit.failClosed` captured at request entry. Reading
+   * eagerly (sync) avoids a TOCTOU between handler invocation and the deferred
+   * catch microtask — tests that pin env for the duration of the handler call
+   * (e.g. `withFailClosed(...)`) only see the pinned value if we read it
+   * before the catch is awaited.
+   */
+  failClosed: boolean;
 }
 
+/** Build the cap AppError, honouring custom error fields when configured (PR-11 R1). */
+const buildCapError = (limit: number, capError: CapError): AppError => {
+  if (capError.code !== null) {
+    return new AppError({
+      message: capError.message ?? 'Too many requests. Please retry later.',
+      statusCode: capError.statusCode ?? 429,
+      code: capError.code,
+      details: { limit },
+    });
+  }
+  return tooManyRequests('Too many requests. Please retry later.');
+};
+
 const consumeMemoryBucket = (ctx: BucketContext): void => {
-  const { key, limit, windowMs, res, next } = ctx;
+  const { key, limit, windowMs, res, next, capError } = ctx;
   const now = Date.now();
   const current = store.get(key);
 
@@ -71,7 +120,7 @@ const consumeMemoryBucket = (ctx: BucketContext): void => {
   if (current.count >= limit) {
     const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
     res.setHeader('Retry-After', retryAfterSec.toString());
-    next(tooManyRequests('Too many requests. Please retry later.'));
+    next(buildCapError(limit, capError));
     return;
   }
 
@@ -85,8 +134,8 @@ const consumeMemoryBucket = (ctx: BucketContext): void => {
  * degrade to per-instance memory bucket.
  */
 const handleRedisFailure = (redisError: unknown, ctx: BucketContext): void => {
-  const { key, res, next } = ctx;
-  if (env.rateLimit.failClosed) {
+  const { key, res, next, failClosed } = ctx;
+  if (failClosed) {
     logger.error('rate_limit_redis_unavailable_failclosed', {
       key,
       error: redisError instanceof Error ? redisError.message : String(redisError),
@@ -115,20 +164,49 @@ export const createRateLimitMiddleware = ({
   windowMs,
   keyGenerator,
   bucketName,
+  errorCode,
+  errorMessage,
+  statusCode,
 }: RateLimitOptions): RequestHandler => {
+  // PR-11 R8 — empty-string opts OUT of the namespace prefix. `undefined`
+  // still falls back to a unique anon prefix (legacy behaviour). `??` is
+  // intentional: empty string is a valid (opt-out) namespace, not a missing
+  // value, so we must NOT trigger the anon fallback for `''`.
   const namespace = bucketName ?? nextAnonymousBucketName();
+  const usePrefix = namespace !== '';
+  const capError: CapError = {
+    code: errorCode ?? null,
+    message: errorMessage ?? null,
+    statusCode: statusCode ?? null,
+  };
   return (req, res, next) => {
-    const key = `${namespace}:${keyGenerator(req)}`;
-    const ctx: BucketContext = { key, limit, windowMs, res, next };
+    // PR-11 R2.1 — null key skips the middleware (no counter touched).
+    const rawKey = keyGenerator(req);
+    if (rawKey === null) {
+      next();
+      return;
+    }
+    // PR-11 R7 — windowMs may be a function resolved per-request.
+    const resolvedWindowMs = typeof windowMs === 'function' ? windowMs(req) : windowMs;
+    const key = usePrefix ? `${namespace}:${rawKey}` : rawKey;
+    const ctx: BucketContext = {
+      key,
+      limit,
+      windowMs: resolvedWindowMs,
+      res,
+      next,
+      capError,
+      failClosed: env.rateLimit.failClosed,
+    };
 
     if (redisStore) {
       void redisStore
-        .increment(key, windowMs)
+        .increment(key, resolvedWindowMs)
         .then(({ count, resetAt }) => {
           if (count > limit) {
             const retryAfterSec = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
             res.setHeader('Retry-After', retryAfterSec.toString());
-            next(tooManyRequests('Too many requests. Please retry later.'));
+            next(buildCapError(limit, capError));
             return;
           }
           next();

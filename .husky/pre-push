@@ -28,8 +28,32 @@
 #  17. Affected tests FE                            — jest --findRelatedTests
 #  18. Affected tests Web                           — vitest run --changed
 #  19. Prometheus metric-naming ratchet (BE)         — node scripts/sentinels/metric-naming.mjs
+#  20. Roadmap claim resolves (UFR-024)              — node scripts/sentinels/roadmap-claim-resolves.mjs
+#  21. ai-tests count ratchet (BE)                   — node scripts/sentinels/ai-tests-count.mjs
+#  22. Screen test-coverage sentinel (mobile UFR-021) — node scripts/sentinels/screen-test-coverage.mjs
+#  23. Factory-coverage ratchet (BE DRY-factories)   — node scripts/sentinels/audit-factory-coverage.mjs
+#  24. SBOM attestation contract (3 deploy workflows) — node scripts/sentinels/sbom-attest-check.mjs
+#  25. Doc last-verified freshness (≤90d, was CI-only) — node scripts/sentinels/doc-last-verified.mjs
+#  26. Subprocessor ledger (GDPR Art 28, was CI-only) — node scripts/sentinels/subprocessor-ledger-completeness.mjs
+#  27. a11y floor ratchet (EN 301 549 / RGAA)        — node scripts/sentinels/a11y-ratchet.mjs
+#  28. quota/validator ordering (BE, ultrareview F1) — node museum-backend/scripts/sentinels/quota-ordering.mjs
+#  29. prod security-header invariants (BE helmet/CSP) — node museum-backend/scripts/sentinels/security-headers-invariants.mjs
+#  30. secret/cert rotation runbook freshness (≤120d) — node scripts/sentinels/secret-rotation-freshness.mjs
+#
+# Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
+# .gitattributes — React.xcframework) upload on push. The LFS step is chained
+# HERE (inside the tracked husky hook) instead of letting `git lfs install`
+# clobber this file — see scripts/install-git-lfs-hooks.mjs + the
+# husky-lfs-integrity sentinel. The marker line below lets that sentinel tell a
+# real gate apart from a bare git-lfs clobber wrapper. DO NOT remove the marker.
+# husky-lfs-integrity: musaium-gate
 # =============================================================================
 set -e
+
+# Buffer the ref list git delivers on stdin BEFORE any gate runs, so we can feed
+# it to `git lfs pre-push` at the end (stdin is single-pass; the gates below do
+# not consume it, but buffering is robust against future gates that might).
+lfs_stdin="$(cat)"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -64,6 +88,12 @@ gate_end "Gate 3"
 gate_start "Gate 4/10 OpenAPI sync (BE validate + FE types check)"
 node scripts/sentinels/openapi-sync.mjs || exit 1
 gate_end "Gate 4"
+
+# ─── Gate 4b — Router↔spec drift (R14) ─────────────────────────────────────
+# Cycle B: every mounted Express route MUST be documented in openapi.json.
+gate_start "Gate 4b router-spec drift sentinel (BE)"
+( cd museum-backend && pnpm run sentinel:router-spec-drift ) || exit 1
+gate_end "Gate 4b"
 
 # ─── Gate 5 — Migration revertibility ──────────────────────────────────────
 gate_start "Gate 5/10 migration revertibility sentinel"
@@ -310,8 +340,112 @@ gate_start "Gate 21/21 ai-tests count ratchet (backend)"
 }
 gate_end "Gate 21"
 
+# ─── Gate 22 — Screen test-coverage (mobile UFR-021) ───────────────────────
+# Every new/changed user-facing screen (museum-frontend/app/**, features/**/ui/
+# *Screen.tsx) MUST ship with a Maestro flow exercising its happy path, OR carry
+# an explicit `// e2e-skip: <reason>` opt-out. The sentinel walks the route/
+# screen inventory against .maestro/*.yaml + the grandfather baseline and fails
+# fast if a screen is uncovered. Catches the DOB-2026-05-17-class regression
+# (component test green, real screen broken) BEFORE it reaches TestFlight.
+gate_start "Gate 22/22 screen test-coverage sentinel (mobile)"
+# Single-line fail-fast form (mirrors Gates 4/5/6 `node … || exit 1`). The
+# UFR-021 remediation hint (add a Maestro flow OR `// e2e-skip:`) is printed by
+# the sentinel itself on failure, so a bare `|| exit 1` keeps the gate honest
+# without swallowing the sentinel's own diagnostics.
+node scripts/sentinels/screen-test-coverage.mjs || exit 1
+gate_end "Gate 22"
+
+# ─── Gate 23 — Factory-coverage ratchet (BE, DRY-factories) ────────────────
+# Was an orphan one-shot audit until 2026-05-31 (audit 360 dim.3). Now a real
+# ratchet: any entity referenced >= 3x in tests with no make<Entity> factory and
+# NOT in scripts/sentinels/audit-factory-coverage-baseline.json fails the push.
+gate_start "Gate 23/26 factory-coverage ratchet (backend)"
+node scripts/sentinels/audit-factory-coverage.mjs || exit 1
+gate_end "Gate 23"
+
+# ─── Gate 24 — SBOM attestation contract (3 workflows) ─────────────────────
+# Was an orphan (RED proof of the I-CMP6 lot, never re-run). Now wired so a
+# removed `cosign attest --type cyclonedx` step in any of the 3 deploy workflows
+# is caught locally, not silently in a future supply-chain gap.
+gate_start "Gate 24/26 SBOM attestation contract sentinel"
+node scripts/sentinels/sbom-attest-check.mjs || exit 1
+gate_end "Gate 24"
+
+# ─── Gate 25 — Doc last-verified freshness (canonical docs ≤90d) ───────────
+# Was CI-only (mirror P25) → invalidable locally before push. Now a real local
+# gate: the 6 curated canonical docs MUST carry a last-verified stamp ≤ 90d.
+gate_start "Gate 25/26 doc last-verified freshness"
+node scripts/sentinels/doc-last-verified.mjs || exit 1
+gate_end "Gate 25"
+
+# ─── Gate 26 — Subprocessor ledger completeness (GDPR Art 28) ──────────────
+# Was CI-only (mirror P23) → invalidable locally before push. Now a real local
+# gate: every detected vendor host marker MUST be documented in SUBPROCESSORS.md.
+gate_start "Gate 26/30 subprocessor ledger completeness"
+node scripts/sentinels/subprocessor-ledger-completeness.mjs || exit 1
+gate_end "Gate 26"
+
+# ─── Gate 27 — a11y floor ratchet (mobile, EN 301 549 / RGAA) ──────────────
+# Floor ratchet on accessibilityLabel/Role/Hint counts + RTL physical-side-leak
+# audit tests. Catches a refactor silently stripping a11y signal. audit 360 dim.3.
+gate_start "Gate 27/30 a11y floor ratchet (museum-frontend)"
+node scripts/sentinels/a11y-ratchet.mjs || exit 1
+gate_end "Gate 27"
+
+# ─── Gate 28 — quota/validator ordering (BE, ultrareview F1) ───────────────
+# A business-quota middleware (monthlySessionQuota/dailyChatLimit/llmCostGuard)
+# that consumes the counter MUST run AFTER validateBody, else a Zod 400 inflates
+# the quota. Guards the "mutating middleware ordering" gotcha. audit 360 dim.3.
+gate_start "Gate 28/30 quota/validator ordering sentinel (backend)"
+node museum-backend/scripts/sentinels/quota-ordering.mjs || exit 1
+gate_end "Gate 28"
+
+# ─── Gate 29 — prod security-header invariants (BE helmet/CSP/CORS) ─────────
+# Asserts the prod branch of buildHelmetOptions + CORS still hold: HSTS 2y+preload,
+# CSP enabled, no unsafe-inline scriptSrc, frame/object 'none', and sentry-trace +
+# baggage in allowedHeaders (dropping them breaks FE↔BE tracing). audit 360 dim.3.
+gate_start "Gate 29/31 prod security-header invariants (backend)"
+node museum-backend/scripts/sentinels/security-headers-invariants.mjs || exit 1
+gate_end "Gate 29"
+
+# ─── Gate 30 — request-decompression invariants (BE gzip, W1-GZIP) ─────────
+# Asserts: 'Content-Encoding' in CORS allowedHeaders, requestDecompressionMiddleware
+# mounted after compression() and STRICTLY before express.json(, and the middleware
+# module is PROD-SAFE (no NODE_ENV/isProd refusal). Distinct from the W2 fault guard.
+gate_start "Gate 30/31 request-decompression invariants (backend)"
+node museum-backend/scripts/sentinels/request-decompression-invariants.mjs || exit 1
+gate_end "Gate 30"
+
+# ─── Gate 31 — secret/cert rotation runbook freshness (≤120d) ──────────────
+# Rotation runbooks rot silently vs live infra. Each must carry a last-verified
+# stamp re-affirmed within 120d (quarterly cadence + buffer). audit 360 dim.3.
+gate_start "Gate 31/32 secret-rotation runbook freshness"
+node scripts/sentinels/secret-rotation-freshness.mjs || exit 1
+gate_end "Gate 31"
+
+# ─── Gate 32 — hexagonal domain-purity (BE, ESLint-independent backstop) ────
+# fs-walk over src/modules/*/domain/** asserting no domain file imports the
+# adapters/useCase/application/infrastructure/data layers. Defense-in-depth for
+# the boundaries/dependencies lint rule (which was a months-long no-op until a
+# missing import/resolver was wired). Loads NO eslint config, so it still fires
+# if the lint rule re-regresses. run 2026-06-04-hexagonal-boundaries-enforcement.
+gate_start "Gate 32/32 hexagonal domain-purity sentinel (backend)"
+node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs || exit 1
+gate_end "Gate 32"
+
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 21 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 32 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
+
+# ─── Git LFS — upload LFS objects for this push ────────────────────────────
+# Runs only AFTER every gate passed (a rejected push must not upload). Feeds the
+# buffered ref list back on stdin. Non-fatal if git-lfs is absent so a
+# contributor without LFS installed is not blocked (committed LFS objects simply
+# won't re-upload — CI mirror still enforces correctness).
+if command -v git-lfs >/dev/null 2>&1; then
+  printf '%s' "$lfs_stdin" | git lfs pre-push "$@"
+else
+  echo "[pre-push] ⚠ git-lfs not on PATH — skipping LFS object upload (install git-lfs: https://git-lfs.com)"
+fi

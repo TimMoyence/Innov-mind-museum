@@ -33,7 +33,7 @@ type ListRow =
   | { kind: 'skeleton'; key: string }
   | { kind: 'empty' };
 
-/** Renders the dashboard screen listing recent chat sessions with sort, save, share, swipe-to-delete, and bulk delete capabilities. */
+/** Renders the dashboard screen listing recent chat sessions with sort, save, swipe-to-delete, and bulk delete capabilities. */
 export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -56,7 +56,6 @@ export default function ConversationsScreen() {
     savedSessionIds,
     toggleSortMode,
     toggleSavedFilter,
-    shareDashboard,
     toggleSavedSession,
     confirmDeleteSingle,
     confirmDeleteSelected,
@@ -120,7 +119,7 @@ export default function ConversationsScreen() {
     ({ item }: { item: ListRow }) => {
       if (item.kind === 'sticky') {
         return (
-          <View style={[styles.stickyBar, { backgroundColor: theme.cardBackground }]}>
+          <View style={styles.stickyBar}>
             <ConversationSearchBar value={searchQuery} onChangeText={setSearchQuery} />
             <Pressable
               style={[
@@ -215,7 +214,6 @@ export default function ConversationsScreen() {
         onToggleEdit={toggleEditMode}
         onToggleSortMode={toggleSortMode}
         onToggleSavedFilter={toggleSavedFilter}
-        onShareDashboard={shareDashboard}
       />
 
       {menuStatus ? (
@@ -267,12 +265,16 @@ export default function ConversationsScreen() {
       />
 
       {editMode && selectedIds.size > 0 ? (
-        <ConversationsBulkBar
-          selectedCount={selectedIds.size}
-          onSelectAll={selectAll}
-          onDeleteSelected={handleConfirmDeleteSelected}
-          isDeleting={isDeleting}
-        />
+        // Lift the bulk-action bar above the floating tab bar (absolute-positioned
+        // at the screen bottom) so it isn't hidden behind it (QA-04).
+        <View style={{ marginBottom: bottomPad }}>
+          <ConversationsBulkBar
+            selectedCount={selectedIds.size}
+            onSelectAll={selectAll}
+            onDeleteSelected={handleConfirmDeleteSelected}
+            isDeleting={isDeleting}
+          />
+        </View>
       ) : null}
     </LiquidScreen>
   );
@@ -295,10 +297,14 @@ const styles = StyleSheet.create({
     paddingTop: semantic.screen.padding,
   },
   stickyBar: {
+    // Transparent sticky panel — the search bar (own glass bg + border) and the
+    // solid primary button float directly on the page, no surrounding card band.
+    // Spacing via gap (not child margins). Trade-off: as the sticky header is
+    // index 1, list rows scroll under it; the gaps no longer occlude them.
     paddingVertical: semantic.list.itemPaddingYCompact,
+    gap: semantic.form.gapLarge,
   },
   primaryButton: {
-    marginTop: semantic.form.gapLarge,
     borderRadius: semantic.button.radius,
     paddingVertical: semantic.button.paddingY,
     alignItems: 'center',

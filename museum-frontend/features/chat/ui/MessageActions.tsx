@@ -133,6 +133,9 @@ const styles = StyleSheet.create({
     borderRadius: semantic.card.radiusCompact,
     borderWidth: semantic.input.borderWidth,
     padding: space['2.5'],
+    // Spacing between toggle and expanded text via gap, not child marginTop,
+    // which would reveal this wrap's glassBackground as a band.
+    gap: semantic.chat.gap,
   },
   deeperContextToggle: {
     flexDirection: 'row',
@@ -144,7 +147,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deeperContextText: {
-    marginTop: semantic.chat.gap,
     fontSize: semantic.form.labelSize,
     lineHeight: lineHeightPx['19'],
   },

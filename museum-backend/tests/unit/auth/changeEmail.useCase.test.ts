@@ -78,8 +78,9 @@ describe('ChangeEmailUseCase', () => {
     const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'wrongPass')).rejects.toMatchObject({
-      message: 'Current password is incorrect',
-      statusCode: 400,
+      message: 'Invalid credentials',
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
     });
   });
 
@@ -88,8 +89,9 @@ describe('ChangeEmailUseCase', () => {
     const useCase = new ChangeEmailUseCase(repo);
 
     await expect(useCase.execute(1, 'new@test.com', 'anything')).rejects.toMatchObject({
-      message: 'Cannot change email for social-only accounts',
+      message: 'Cannot perform this action on a social-only account',
       statusCode: 400,
+      code: 'SOCIAL_ONLY_ACCOUNT',
     });
   });
 
@@ -137,6 +139,23 @@ describe('ChangeEmailUseCase', () => {
       message: 'Invalid email format',
       statusCode: 400,
     });
+  });
+
+  // TD-65: a soft-deleted account must keep its email reserved — changing into
+  // it would let the new owner squat the deleted account's identity.
+  it('rejects when the target email belongs to a soft-deleted account', async () => {
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
+    const repo = makeUserRepo();
+    (repo.getUserByEmail as jest.Mock).mockResolvedValueOnce(
+      makeUser({ id: 2, email: 'taken@test.com', deletedAt: new Date() }),
+    );
+    const useCase = new ChangeEmailUseCase(repo);
+
+    await expect(useCase.execute(1, 'taken@test.com', 'ValidPass1')).rejects.toMatchObject({
+      message: 'This email is already in use',
+      statusCode: 400,
+    });
+    expect(repo.setEmailChangeToken).not.toHaveBeenCalled();
   });
 
   it('normalizes email to lowercase and trimmed', async () => {

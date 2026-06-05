@@ -29,9 +29,15 @@ import {
   makeBetaSignupPayload,
   type BetaSignupPayload,
 } from '../../helpers/leads/betaSignup.fixtures';
+import {
+  makeStubLeadRepository,
+  type StubLeadRepository,
+} from '../../helpers/leads/stubLeadRepository';
 
 import { SubmitBetaSignupUseCase } from '@modules/leads/useCase/submitBetaSignup.useCase';
 import { logger } from '@shared/logger/logger';
+
+import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 
 /** Outbound port shape under test — production version will live alongside the use case. */
 interface BetaSignupNotifier {
@@ -44,20 +50,32 @@ interface BetaSignupNotifier {
   ): Promise<void>;
 }
 
+/**
+ * Cycle B (« Aucun lead perdu ») — persist-then-notify: the use-case depends on
+ * `ILeadRepository` (2-arg ctor) and NO LONGER rethrows on notifier failure
+ * (spec R5 — durability is guaranteed by persistence, the route answers 202).
+ */
+type BetaUseCaseCtor = new (
+  notifier: BetaSignupNotifier,
+  repository: ILeadRepository,
+) => {
+  execute(
+    input: BetaSignupPayload & { ip?: string; requestId?: string; userAgent?: string },
+  ): Promise<void>;
+};
+
 describe('SubmitBetaSignupUseCase (R3 §1 R10/R11/R14/R16/R17)', () => {
   const subscribe = jest.fn<Promise<void>, [Parameters<BetaSignupNotifier['subscribe']>[0]]>();
   const notifier: BetaSignupNotifier = { subscribe };
-  // Cast to the public contract — TypeScript stays honest about the missing
-  // module while keeping `as any` out of the ratchet.
-  const useCase = new (SubmitBetaSignupUseCase as new (n: BetaSignupNotifier) => {
-    execute(
-      input: BetaSignupPayload & { ip?: string; requestId?: string; userAgent?: string },
-    ): Promise<void>;
-  })(notifier);
+  const Ctor = SubmitBetaSignupUseCase as unknown as BetaUseCaseCtor;
+  let repository: StubLeadRepository;
+  let useCase: InstanceType<BetaUseCaseCtor>;
 
   beforeEach(() => {
     subscribe.mockReset();
     subscribe.mockResolvedValue(undefined);
+    repository = makeStubLeadRepository();
+    useCase = new Ctor(notifier, repository);
     jest.spyOn(logger, 'info').mockImplementation(() => undefined);
     jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
   });
@@ -133,11 +151,19 @@ describe('SubmitBetaSignupUseCase (R3 §1 R10/R11/R14/R16/R17)', () => {
     expect(subscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('notifier throws → use case rethrows (R15 — route maps to 5xx)', async () => {
+  it('notifier throws → use case does NOT rethrow, lead marked failed (Cycle B R5 — route stays 202)', async () => {
+    // Cycle B supersedes the original R15 rethrow contract: the lead is already
+    // persisted `pending`, so a Brevo failure must NOT surface a 5xx — the
+    // use-case marks the row `failed` (recoverable by the retry job) and resolves.
     subscribe.mockRejectedValue(new Error('Brevo contacts add failed (502): bad gateway'));
-    await expect(useCase.execute(makeBetaSignupPayload())).rejects.toThrow(
-      /Brevo contacts add failed/,
-    );
+
+    await expect(useCase.execute(makeBetaSignupPayload())).resolves.toBeUndefined();
+
+    expect(repository.inserted).toHaveLength(1);
+    expect(repository.failed).toHaveLength(1);
+    expect(repository.delivered).toHaveLength(0);
+    // No api-key / Brevo internals beyond the sliced message; just the error text.
+    expect(repository.failed[0]?.lastError).toContain('Brevo contacts add failed');
   });
 
   // ── Structured logging — R17 ────────────────────────────────────────

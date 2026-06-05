@@ -1,11 +1,9 @@
-import crypto from 'node:crypto';
-
-import bcrypt from 'bcrypt';
-
+import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildChangeEmailEmail } from '@shared/email/templates';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { issueEmailToken } from '@shared/security/single-use-email-token';
 import { validateEmail } from '@shared/validation/email';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -25,19 +23,7 @@ export class ChangeEmailUseCase {
     currentPassword: string,
     locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
   ): Promise<string> {
-    const user = await this.userRepository.getUserById(userId);
-    if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
-    }
-
-    if (!user.password) {
-      throw badRequest('Cannot change email for social-only accounts');
-    }
-
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) {
-      throw badRequest('Current password is incorrect');
-    }
+    const user = await assertPasswordReauth(this.userRepository, userId, currentPassword);
 
     const normalizedEmail = newEmail.trim().toLowerCase();
 
@@ -55,8 +41,7 @@ export class ChangeEmailUseCase {
     }
 
     // 32-byte raw → hex; SHA-256 hash persisted (raw sent in email).
-    const token = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const { raw: token, hashed: hashedToken } = issueEmailToken();
     const expires = new Date(Date.now() + 3600000); // 1 hour
 
     await this.userRepository.setEmailChangeToken(userId, hashedToken, normalizedEmail, expires);

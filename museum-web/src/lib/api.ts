@@ -14,16 +14,28 @@
  * double-submit verification by the backend.
  */
 
+import * as Sentry from '@sentry/nextjs';
+
 // ── Error class ────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
+  /**
+   * The parsed JSON response body, when the failing response carried one.
+   * Callers (e.g. the admin login flow) discriminate on it — `mfaRequired`,
+   * `mfaEnrollmentRequired`, or `{ error: { code } }` — without re-parsing.
+   * `undefined` when the body was absent or not valid JSON.
+   */
+  public body?: unknown;
+
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     message: string,
+    body?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
+    this.body = body;
   }
 }
 
@@ -128,11 +140,40 @@ async function refreshAccessToken(): Promise<string> {
 
 // ── Core request function ──────────────────────────────────────────────
 
+/**
+ * Options accepted by public API request helpers.
+ *
+ * Phase 3 (web refactor 2026-05-23) scope: `signal` is currently honoured by
+ * `apiGet` only — `useFetchData` needs it to cancel in-flight reads when
+ * dependencies change or the component unmounts. Mutation helpers
+ * (`apiPost`/`apiPatch`/`apiPut`/`apiDelete`) keep their current signatures
+ * to limit blast-radius; the same option can be added trivially later if a
+ * `useMutation` hook surfaces.
+ */
+export interface ApiRequestOptions {
+  /** Optional AbortSignal forwarded to the underlying fetch() call. */
+  signal?: AbortSignal;
+  /**
+   * Opt out of the 401 → auto-refresh → retry → onLogout path. A 401 then
+   * falls straight through to the error block and throws an `ApiError`. Used by
+   * the MFA challenge/recovery calls (and the credentials login): a 401 there is
+   * a DOMAIN error (wrong/expired code, no session yet), not session expiry, so
+   * firing the session-refresh/logout would bounce the admin off the step.
+   * Does NOT affect CSRF or `credentials: 'include'`.
+   */
+  skipAuthRefresh?: boolean;
+}
+
+interface InternalRequestOptions extends ApiRequestOptions {
+  /** Set on the recursive call after a refresh — prevents an infinite loop. */
+  isRetry?: boolean;
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  isRetry = false,
+  options?: InternalRequestOptions,
 ): Promise<T> {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}${path}`;
@@ -151,18 +192,29 @@ async function request<T>(
     }
   }
 
+  // TD-47 — forward the active Sentry trace context so server-rendered RSC calls
+  // (which bypass the SDK's auto-fetch instrumentation) appear in the correlated
+  // BE↔FE trace. getTraceData() returns {} or undefined values when no span is
+  // active, so only string-typed entries are copied — never an undefined header.
+  for (const [key, value] of Object.entries(Sentry.getTraceData())) {
+    if (typeof value === 'string') {
+      headers[key] = value;
+    }
+  }
+
   const res = await fetch(url, {
     method,
     headers,
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal: options?.signal,
   });
 
   // Handle 401 — attempt refresh (once). F7: cookie-based, no token check needed
   // upfront; the backend rejects with 401 if the refresh cookie is also missing/expired.
   // refreshAccessToken itself fires onLogout on definitive failure (it owns the queue);
   // we just translate the throw into an ApiError for the caller.
-  if (res.status === 401 && !isRetry) {
+  if (res.status === 401 && !options?.isRetry && !options?.skipAuthRefresh) {
     try {
       await refreshAccessToken();
     } catch {
@@ -170,20 +222,27 @@ async function request<T>(
     }
 
     // Retry the original request — new cookies are now in the jar.
-    return request<T>(method, path, body, true);
+    // Propagate the abort signal so a caller-driven cancel still takes effect on retry.
+    return request<T>(method, path, body, {
+      isRetry: true,
+      signal: options?.signal,
+      skipAuthRefresh: options?.skipAuthRefresh,
+    });
   }
 
   if (!res.ok) {
     let message = res.statusText;
+    let parsedBody: unknown;
     try {
-      const errorBody = (await res.json()) as { message?: string };
+      parsedBody = await res.json();
+      const errorBody = parsedBody as { message?: string };
       if (errorBody.message) {
         message = errorBody.message;
       }
     } catch {
-      // ignore parse errors — keep statusText
+      // ignore parse errors — keep statusText, leave body undefined
     }
-    throw new ApiError(res.status, res.statusText, message);
+    throw new ApiError(res.status, res.statusText, message, parsedBody);
   }
 
   // Handle 204 No Content
@@ -196,16 +255,20 @@ async function request<T>(
 
 // ── Public API ─────────────────────────────────────────────────────────
 
-export function apiGet<T>(path: string): Promise<T> {
-  return request<T>('GET', path);
+export function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return request<T>('GET', path, undefined, options);
 }
 
-export function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('POST', path, body);
+export function apiPost<T>(path: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
+  return request<T>('POST', path, body, options);
 }
 
 export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   return request<T>('PATCH', path, body);
+}
+
+export function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>('PUT', path, body);
 }
 
 export function apiDelete<T>(path: string): Promise<T> {

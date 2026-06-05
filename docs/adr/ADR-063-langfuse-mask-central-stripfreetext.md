@@ -19,13 +19,13 @@ Le pipeline observabilité Musaium émet vers Langfuse (`cloud.langfuse.com` par
 1. **Spans hand-codés** via `withLangfuseTrace` + `safeTrace` sur les 4 paths LLM non-LangChain (judge, TTS, STT, LLM-Guard) — `metadata` est contraint à la source à des champs PII-safe (`museumId`, `intent`, `locale`, `tier`, `requestId`, `inputLength`, `estimatedCostCents`).
 2. **Auto-capture LangChain** via `langfuse-langchain.CallbackHandler({root, updateRoot:true})` attaché par `attachLangChainCallback` sur chaque `chat.invoke()`. Ce handler capture **automatiquement** `input.messages[*].content` (prompt user) et `output.text` (LLM completion) à chaque LLM call (`langfuse-langchain` v3.38.0 `handleLLMEnd` convention).
 
-Avant ce run, le ctor `new Langfuse({ publicKey, secretKey, baseUrl, flushAt, flushInterval })` (`museum-backend/src/shared/observability/langfuse.client.ts:55-61`) **n'avait pas** la clé `mask` câblée. Conséquence : tout `LANGFUSE_ENABLED=true` (default `false` `config/env.ts:264`, mais activable ops-side) shippait les prompts utilisateur et complétions LLM **non maskés** vers Langfuse. Vecteur PII direct (OWASP LLM07 — PII via tracing ; GDPR Art. 5 §1.c — data minimisation ; CNIL recommandation 2022-06-23 sur observabilité).
+Avant ce run, le ctor `new Langfuse({ publicKey, secretKey, baseUrl, flushAt, flushInterval })` (`museum-backend/src/shared/observability/langfuse.client.ts:57-69`) **n'avait pas** la clé `mask` câblée. Conséquence : tout `LANGFUSE_ENABLED=true` (default `false` `config/env.ts:264`, mais activable ops-side) shippait les prompts utilisateur et complétions LLM **non maskés** vers Langfuse. Vecteur PII direct (OWASP LLM07 — PII via tracing ; GDPR Art. 5 §1.c — data minimisation ; CNIL recommandation 2022-06-23 sur observabilité).
 
 `lib-docs/langfuse/LESSONS.md` LF-V3-05 (2026-05-18) classait initialement « no `mask` hook » en **LOW deferred**, raisonnant les spans hand-codés (déjà PII-safe à la source). Cette analyse **n'avait pas valorisé** que LF-V3-02 closing (2026-05-18 — CallbackHandler wiring) avait *ré-ouvert* le vecteur PII via les input/output auto-capturés. Le run `/team 2026-05-21-p0-c1-pii-egress` corrige cette mis-évaluation et reclasse LF-V3-05 en P0 CLOSED (`lib-docs/langfuse/LESSONS.md:49`).
 
 Les forces en présence :
 
-- **Langfuse SDK contract** — `langfuse-core@3.38.20` expose `mask?: MaskFunction` dans `LangfuseCoreOptions` (`lib/index.d.ts:6966`), avec signature `type MaskFunction = (params: { data: any }) => any` (`:7126-7128`). Le hook est appliqué **centralement** par `maskEventBodyInPlace` (`:7407`) sur chaque event/observation body **avant le transport SDK**. C'est **le seul endroit canonique** pour gater l'egress.
+- **Langfuse SDK contract** — `langfuse-core@3.38.20` expose `mask?: MaskFunction` dans `LangfuseCoreOptions` (`lib/index.d.ts L6966`), avec signature `type MaskFunction = (params: { data: any }) => any` (`:7126-7128`). Le hook est appliqué **centralement** par `maskEventBodyInPlace` (`:7407`) sur chaque event/observation body **avant le transport SDK**. C'est **le seul endroit canonique** pour gater l'egress.
 - **Defense-in-depth requirement** — un decorator adapter-level (style `CachingChatOrchestrator` ADR-036) serait fragile : il faudrait wrapper chaque caller LangChain individuellement, et tout nouveau caller régresserait silencieusement. Le mask central garantit qu'aucun event Langfuse ne peut sortir sans passer par `stripFreeText`.
 - **Fail-safe requirement** — Langfuse SDK applique le mask **synchroniquement** dans `maskEventBodyInPlace`. Si le mask throw, le caller (chain.invoke) peut le voir remonter selon le path SDK. UFR (chat path stability) impose que `mask exception ≠ chat path break`.
 - **Cost UI preservation** — Langfuse calcule `cost_usd_estimate` depuis `usage.*` / `usageDetails.*` + catalog model. Le mask **ne doit PAS** toucher `usage`, `usageDetails`, `model`, `metadata.*` (où vivent `museumId`, `tier`, etc.).
@@ -39,13 +39,13 @@ Les forces en présence :
 
 ### D1 — Mask au ctor, jamais en decorator adapter-level
 
-Le mask est passé au constructeur `new LangfuseCtor({ …, mask: stripFreeText })` (`museum-backend/src/shared/observability/langfuse.client.ts:68`). C'est **le seul point d'enforcement** : `langfuse-core` applique `maskEventBodyInPlace` (`langfuse-core@3.38.20 lib/index.d.ts:7407`) sur chaque event/observation body avant transport SDK. Aucun decorator adapter-level (style ADR-036 `CachingChatOrchestrator` retired) n'est ajouté — la centralité du hook ctor rend tout decorator redondant et fragile.
+Le mask est passé au constructeur `new LangfuseCtor({ …, mask: stripFreeText })` (`museum-backend/src/shared/observability/langfuse.client.ts:68`). C'est **le seul point d'enforcement** : `langfuse-core` applique `maskEventBodyInPlace` (`langfuse-core@3.38.20 lib/index.d.ts L7407`) sur chaque event/observation body avant transport SDK. Aucun decorator adapter-level (style ADR-036 `CachingChatOrchestrator` retired) n'est ajouté — la centralité du hook ctor rend tout decorator redondant et fragile.
 
 Conséquence : **toute future instanciation Langfuse cross-app (FE/Web hypothétique) DOIT passer le même `stripFreeText` (ou équivalent fail-safe respectant la même contract).** Cf. D5 ci-dessous pour le path de mutualisation si un 2e consommateur émerge.
 
 ### D2 — `stripFreeText` est fail-safe par contrat (try/catch + retour `data` inchangé + `logger.warn`)
 
-`museum-backend/src/shared/observability/strip-free-text.ts:138-146` enroule la logique de scrub dans `try { … } catch (err) { logger.warn('langfuse_mask_failed', {error: err.message}); return data; }`. Garanties :
+`museum-backend/src/shared/observability/strip-free-text.ts:258-286` (fonction `stripFreeText`) enroule la logique de scrub dans `try { … } catch (error) { logger.warn('langfuse_mask_failed', { … }); return params; }`. Garanties :
 
 - **Idempotent** : appliquer `stripFreeText` deux fois consécutives ne change pas le résultat (R6).
 - **Pas de PII dans le log** : seul `error.message` est loggé, **jamais** le `data` (qui vient justement de faire fail le mask).
@@ -53,7 +53,7 @@ Conséquence : **toute future instanciation Langfuse cross-app (FE/Web hypothét
 
 ### D3 — Marker `'[STRIPPED]'`, distinct de Sentry `'[redacted]'`
 
-`stripFreeText` remplace les portions free-text par le marker littéral `'[STRIPPED]'`. Choix d'un marker **distinct** de Sentry's `'[redacted]'` (`packages/musaium-shared/src/observability/sentry-scrubber.ts:42`) pour éviter ambiguïté à la lecture des logs Langfuse vs Sentry. `'[STRIPPED]'` est le marker idiomatic Musaium pour PII Langfuse ; pas de collision (vérifié grep codebase). Préserve la lisibilité humaine du payload Langfuse.
+`stripFreeText` remplace les portions free-text par le marker littéral `'[STRIPPED]'`. Choix d'un marker **distinct** de Sentry's `'[redacted]'` (`packages/musaium-shared/src/observability/sentry-scrubber.ts:65`) pour éviter ambiguïté à la lecture des logs Langfuse vs Sentry. `'[STRIPPED]'` est le marker idiomatic Musaium pour PII Langfuse ; pas de collision (vérifié grep codebase). Préserve la lisibilité humaine du payload Langfuse.
 
 ### D4 — `stripFreeText` couvre les shapes LangChain + paths manuels, préserve metadata/usage/model
 
@@ -92,7 +92,7 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
 - **`metadata` non couvert par le mask** — assumption design (callers Musaium n'écrivent que des champs PII-safe dans `metadata`) **non enforced**. Risque : un futur caller ajoute `metadata.userEmail` accidentellement et la PII traverse. **Suivi** : `TD-OBS-PII-METADATA-ALLOWLIST` (LOW, NON_BLOCKER) — ajouter sentinel OU assertion runtime côté caller.
 - **`scrubRecord` recursion sans cycle/depth cap** — Sentry-scrubber traversal est aujourd'hui structurellement défendu par le contrat JSON Sentry, mais defense-in-depth manquante. **Suivi** : `TD-OBS-SCRUBRECORD-CYCLE-HARDENING` (LOW, NON_BLOCKER) — ajouter `WeakSet` seen-guard + `MAX_DEPTH=10`.
 - **Coupling `stripFreeText` ↔ `langfuse-core MaskFunction` signature** — si Langfuse v4 change la signature `MaskFunction`, il faudra adapter `stripFreeText`. Risque borné par le pin `langfuse@3.38.20` + `langfuse-langchain@3.38.0` (cf. `lib-docs/INDEX.json`) ; ADR-050 acte le V3-EOL stance jusqu'à H1 2026.
-- **`MaskFunction` parameter type = `any`** — la signature SDK est `(params: { data: any }) => any` (`langfuse-core@3.38.20 lib/index.d.ts:7126-7128`). Notre wrapper accepte donc `any`. Un `eslint-disable @typescript-eslint/no-explicit-any` byte-conform SDK est appliqué dans `strip-free-text.ts` (Justification: + Approved-by: per LINT_DISCIPLINE.md, declared dans phase=green deviation #1).
+- **`MaskFunction` parameter type = `any`** — la signature SDK est `(params: { data: any }) => any` (`langfuse-core@3.38.20 lib/index.d.ts L7126-7128`). Notre wrapper accepte donc `any`. Un `eslint-disable @typescript-eslint/no-explicit-any` byte-conform SDK est appliqué dans `strip-free-text.ts` (Justification: + Approved-by: per LINT_DISCIPLINE.md, declared dans phase=green deviation #1).
 
 ### Neutres
 
@@ -119,20 +119,20 @@ Tout futur caller `new Langfuse({ … })` ou `new LangfuseCore({ … })` cross-a
 
 - **Run artefacts** : `team-state/2026-05-21-p0-c1-pii-egress/{spec.md,design.md,tasks.md,STORY.md}`, code review `code-review.json` (APPROVED 96.25).
 - **Lib reference** :
-  - `langfuse-core@3.38.20 lib/index.d.ts:6966` — `mask?: MaskFunction` sur `LangfuseCoreOptions`.
-  - `langfuse-core@3.38.20 lib/index.d.ts:7126-7128` — `type MaskFunction = (params: { data: any }) => any`.
-  - `langfuse-core@3.38.20 lib/index.d.ts:7407` — `private maskEventBodyInPlace` central application.
+  - `langfuse-core@3.38.20 lib/index.d.ts L6966` — `mask?: MaskFunction` sur `LangfuseCoreOptions`.
+  - `langfuse-core@3.38.20 lib/index.d.ts L7126-7128` — `type MaskFunction = (params: { data: any }) => any`.
+  - `langfuse-core@3.38.20 lib/index.d.ts L7407` — `private maskEventBodyInPlace` central application.
   - `langfuse-langchain@3.38.0` — `CallbackHandler({root, updateRoot:true})` auto-capture wiring (`museum-backend/src/shared/observability/langfuse-langchain.ts:57-68`).
 - **Impl** :
   - `museum-backend/src/shared/observability/langfuse.client.ts:68` (`mask: stripFreeText` ctor wiring).
-  - `museum-backend/src/shared/observability/strip-free-text.ts:83-147` (impl + R7 fail-safe).
+  - `museum-backend/src/shared/observability/strip-free-text.ts:68-286` (helpers + `stripFreeText` impl + R7 fail-safe).
   - `museum-backend/tests/integration/observability/langfuse-pii-seed.test.ts` (R8 invariant lock).
   - `museum-backend/tests/unit/observability/{strip-free-text,langfuse-mask-ctor-wiring}.test.ts` (R5/R6/R7 unit coverage).
 - **Lib-docs** :
   - `lib-docs/langfuse/LESSONS.md:49` — LF-V3-05 RECLASSED P0 → CLOSED 2026-05-21.
   - `lib-docs/langfuse/PATTERNS.md` §2.1 (mask ctor option) + §3 DO #13 (central mask) + §8.1 (trace tree shape unaffected).
 - **Cross-ADR** :
-  - ADR-045 — shared observability package extraction (sentry-scrubber lives in `@musaium/shared` ; ce ADR-061 NE migre PAS `strip-free-text` cross-app — voir D5).
+  - ADR-045 — shared observability package extraction (sentry-scrubber lives in `@musaium/shared` ; ce ADR-063 NE migre PAS `strip-free-text` cross-app — voir D5).
   - ADR-050 — accept Langfuse v3 EOL (pin `langfuse@3.38.20` justifié H1 2026).
   - ADR-058 — selective hexagonal ports policy (observability est cross-cutting, pas domain port — `stripFreeText` vit shared/observability/, pas dans un `*.port.ts`).
 - **Tech debt suivi** :

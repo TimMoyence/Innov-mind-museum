@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
+import { badRequest } from '@shared/errors/app.error';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
@@ -19,19 +20,7 @@ export class ChangePasswordUseCase {
   ) {}
 
   async execute(userId: number, currentPassword: string, newPassword: string): Promise<void> {
-    const user = await this.userRepository.getUserById(userId);
-    if (!user) {
-      throw new AppError({ message: 'User not found', statusCode: 404, code: 'NOT_FOUND' });
-    }
-
-    if (!user.password) {
-      throw badRequest('Cannot change password for social-only accounts');
-    }
-
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) {
-      throw badRequest('Current password is incorrect');
-    }
+    const user = await assertPasswordReauth(this.userRepository, userId, currentPassword);
 
     const pw = validatePassword(newPassword);
     if (!pw.valid) {
@@ -41,6 +30,8 @@ export class ChangePasswordUseCase {
     // F10 — block breached new passwords at change (banking-grade default).
     await assertPasswordNotBreached(newPassword);
 
+    // `user.password` is typed `string` (not `string | null`) here — the
+    // re-auth helper narrows the return type via `ReauthenticatedUser`.
     const isSame = await bcrypt.compare(newPassword, user.password);
     if (isSame) {
       throw badRequest('New password must be different from current password');

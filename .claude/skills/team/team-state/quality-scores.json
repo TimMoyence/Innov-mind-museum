@@ -324,7 +324,7 @@
     "scores": {
       "correctness": {
         "score": 94,
-        "weight": 0.30,
+        "weight": 0.3,
         "reasoning": "All 13 EARS reqs PASS with implAt traceability; 5/5 frozen suites green (29 tests). Token byte-preservation pinned by xyz%20z test; pass-through verified for musaium:///(stack)/mfa-enroll (length!==1 guard). Auto-submit closure-cell cancellation guard present (TokenExchangeFlow.tsx:69-84)."
       },
       "security": {
@@ -334,7 +334,7 @@
       },
       "maintainability": {
         "score": 92,
-        "weight": 0.20,
+        "weight": 0.2,
         "reasoning": "KISS/DRY/hexagonal all PASS. Shared TokenExchangeFlow avoids triplication; DS tokens used (no raw hex/px/rgb); RTL logical props only (textAlign:'auto', no Left/Right). Naming matches project conventions; reused AUTH_ROUTE/HOME_ROUTE constants and isAppError guard rather than re-implementing."
       },
       "testCoverage": {
@@ -344,7 +344,7 @@
       },
       "docQuality": {
         "score": 78,
-        "weight": 0.10,
+        "weight": 0.1,
         "reasoning": "Source JSDoc is thorough and ties each decision to spec/design refs (D1-D8) and R-ids. Deduction: STORY.md left as unfilled template — red/green libDocsConsulted are 'placeholders', so the run narrative + lib-docs proof are not captured in STORY (caught at review, not a code defect)."
       },
       "weightedMean": 90.9
@@ -353,6 +353,158 @@
       "blocker": 0,
       "important": 0,
       "nit": 2
+    }
+  },
+  {
+    "runId": "2026-05-25-p0-cleanup",
+    "ts": "2026-05-25T09:56:20Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 94,
+        "weight": 0.3,
+        "reasoning": "All 13 EARS PASS (R1/R13 finalize-deferred per brief). migrateStorageKey matches design §4 contract exactly (idempotent short-circuit existing.length>0, no-overwrite, no-op-on-absent-legacy, opaque-string copy). RED genuineness verified at start commit (send.ts:178 streaming branch). 6 call-sites wired migrate-before-read; I18nContext 6th-consumer caught in GREEN. FE 3370 tests pass, BE tsc+sentinel green. Edge: useDailyArt adds a real end-to-end migrate test through the hook (strengthens coverage)."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "Plaintext invariant preserved (LESSONS SECURITY INVARIANT): only UI prefs migrated, no token/PII, no auth.* key, queryClient PII-allowlist untouched. D3 removes a never-wired guardrail candidate — defense-in-depth (ADR-015 layers 1-6, V2 llm-guard+judge) intact, 0 runtime instantiation verified. migrateStorageKey full try/catch satisfies PATTERNS.md:111/LESSONS-F3 (storage.ts wrapper does NOT catch setItem/removeItem). No env-leak/eval/raw-SQL added. -8 only because TD-AS-02 (wrapper try/catch) remains open project-wide (out of scope, correctly deferred)."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.2,
+        "reasoning": "Net -~1243 LOC dead/dormant. KISS/DRY/hexagonal all PASS. Single shared reader (D-Q3) reused at 6 sites. Atomic config removal (value+type). Honest cleanup-only handling of keys #5/#6 (D-Q4, verified in source not assumed — UFR-018). Clear JSDoc on the new helper citing design §4 + PATTERNS.md. 1 NIT (cosmetic migrate-all consolidation option, out of scope)."
+      },
+      "testCoverage": {
+        "score": 92,
+        "weight": 0.15,
+        "reasoning": "New migrateStorageKey.test.ts covers all 4 behaviours via Map-backed module mock (allowed, not inline entity). Frozen RED tests byte-identical (freeze PASS). Companion sweep updates literals without weakening assertions + ADDS an end-to-end migrate test in useDailyArt.test.ts. No suite lost beyond intentional D3/D4/SSE deletions. -8: auth-email integration (DB harness) not run locally here, but tsc-green + the removed line is an auth-unrelated config field."
+      },
+      "docQuality": {
+        "score": 90,
+        "weight": 0.1,
+        "reasoning": "D5 pure-doc corrections accurate: ADR-036 v1->v2 (cites d54552beb + llm-cache.service.ts:119), AiDisclosureModal->AiDisclosureSheetContent x6. Intentional preservations CORRECT and verified: ADR-055:21 (historical before-list), TECH_DEBT.md:514/519 (TD-57 rename doc), ROADMAP_PRODUCT.md:135 (D5 tracker). Helper + call-sites well-commented. -10: STORY.md append + TECH_DEBT.md:1259 tick are documenter-phase follow-ups (not yet in diff, expected)."
+      },
+      "weightedMean": 92.6
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
+    }
+  },
+  {
+    "runId": "2026-05-25-p0-a11y-compliance",
+    "ts": "2026-05-25T09:22:41Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 93,
+        "weight": 0.3,
+        "reasoning": "R1-R11 all genuinely fix the violation (not cosmetic). R5 partition is type-safe (ChatUiMessage.text:string) and non-overlapping vs useAutoTts.ts:55 bodyless-skip. Cleanup ordering (R3/R4) verified by invocationCallOrder test. Upstream: FE jest 110/110, web vitest 622 pass/1 skip."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "continue-on-error scoped ONLY to NEW advisory SBOM/attest steps; existing cosign sign/SLSA attest-build-provenance/cosign verify/gh attestation verify remain blocking + byte-unchanged (sentinel enforces). No secret/injection/env-leak; cosign uses secrets.GHCR_USER. Security phase 0 findings. No LLM/guardrail/auth path touched."
+      },
+      "maintainability": {
+        "score": 90,
+        "weight": 0.2,
+        "reasoning": "Partition-by-content (no shared mutable state) chosen over cross-hook signal per KISS/§D1. Reuses documented in-repo patterns. Comments cite spec/design/lib-docs § precisely. Type-only import keeps native module out of bundle."
+      },
+      "testCoverage": {
+        "score": 90,
+        "weight": 0.15,
+        "reasoning": "7 non-vacuous RED tests (R1,R3,R4,R5,R6,R7,R8) + 2 strengthened pre-existing + Maestro flow (UFR-021, registered shards.json settings shard) + dual-locale Playwright RED-first + YAML sentinel for R11. Factories used (makeAssistantMessage). No .skip. getByA11yHint confirmed valid in RNTL 13.3.3 (hint-text.d.ts:13)."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.1,
+        "reasoning": "TECH_DEBT TD-CMP6-SBOM-ATTEST records the Q3 decision + mobile residual gap + CRA Art.13/2027 target + close-out steps. R2 contrast honestly qualified as solid-on-solid floor (NOT pixel-exact composited) per UFR-013. Code comments justify the why with refs."
+      },
+      "weightedMean": 91.2
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
+    }
+  },
+  {
+    "runId": "2026-06-01-museum-picker-osm-select",
+    "ts": "2026-06-01T11:35:22Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 95,
+        "weight": 0.30,
+        "reasoning": "14/14 EARS requirements traced to code + green tests (BE unit 3/3, contract 2/2, FE 3589/3589 incl. run suites). Invariant id<->local proven structurally and by test. Verified OSM branch does NOT trigger useStartConversation auto-detect (autoDetectMuseum undefined -> detect block skipped, useStartConversation.ts:87-143) so generic session has no silent museum context (D4/Option B). No regression: full FE museum module + BE search module green."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "No new attack surface: id already public via /directory, numeric, never prompt-interpolated; no IDOR (search lists active public museums); OSM name never reaches an LLM prompt; security gate PASS (semgrep owasp 0). bearerAuth unchanged. -8 only because security agent's llm ruleset 404'd -> manual fallback (acceptable for a non-LLM-path projection change)."
+      },
+      "maintainability": {
+        "score": 93,
+        "weight": 0.20,
+        "reasoning": "Discriminated unions (SelectedMuseum, PickableMuseum) make the local|osm split type-exhaustive; switch(kind) in handlePick + caller is compiler-checked. Helpers (osmKeyOf/rowTestId/rowKey) DRY. Minor: one stale header JSDoc (NIT). KISS preserved."
+      },
+      "testCoverage": {
+        "score": 92,
+        "weight": 0.15,
+        "reasoning": "Shared factories used (makeSearchEntryLocal/Osm, makeMuseum/makeMuseumRepo) — no inline entities. toPickable unit covers local/osm/directory-null; component covers tap-local (favourite+onSelect), tap-osm (no favourite, no museumId), empty-state, deterministic OSM testID. BE covers radius+no-coords+bbox paths. Maestro R14 env-gated runtime (acceptable per spec/UFR-021 deterministic-entry caveat). No .skip."
+      },
+      "docQuality": {
+        "score": 90,
+        "weight": 0.10,
+        "reasoning": "Thorough JSDoc on new types/helpers explaining the invariant + Option B rationale; Maestro flow header rewritten to describe the fixed contract; OpenAPI description added. -10: header comment l.1-12 of MuseumPickerScreen still references the old onSelect(museumId) signature + an old spec path."
+      },
+      "weightedMean": 92.85
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 2
+    }
+  },
+  {
+    "runId": "2026-06-01-quota-tuple-402",
+    "ts": "2026-06-01T12:16:08Z",
+    "verdict": "APPROVED",
+    "scores": {
+      "correctness": {
+        "score": 94,
+        "weight": 0.30,
+        "reasoning": "Root cause (tuple [rows,affected] read as rows[]) correctly fixed; guard sound on both shapes converging on rows.length===0⇒null. All 6 R / 7 AC traceable to impl+test. SQL byte-identical (atomicity preserved). LIVE runtime confirmed: count=3→402, cycle 0→3=201 then 402 (verify gate verbatim)."
+      },
+      "security": {
+        "score": 92,
+        "weight": 0.25,
+        "reasoning": "Closes OWASP API4:2023 quota-bypass (free-tier cap was never enforced → unbounded LLM cost). semgrep 0 findings. Parameterized SQL, no injection, no PII surface change, fail-CLOSED restored on the right path while fail-OPEN preserved on middleware paths."
+      },
+      "maintainability": {
+        "score": 90,
+        "weight": 0.20,
+        "reasoning": "KISS/DRY/hexagonal all PASS. Inline comment cites real lib-docs §4.10 + LESSONS 2026-05-08 (verified to exist + match the bug). Minor: one redundant Array.isArray belt (NIT, harmless)."
+      },
+      "testCoverage": {
+        "score": 92,
+        "weight": 0.15,
+        "reasoning": "Dual RED closes the UFR-017 gap the mocked middleware test left open: unit tuple-replay (gate pnpm test, 2/2) + integration real-pg (3/3 under RUN_INTEGRATION) exercising the true driver shape. Factories used (makeUser), no inline entity, scheduleStop() teardown, frozen-test PASS."
+      },
+      "docQuality": {
+        "score": 88,
+        "weight": 0.10,
+        "reasoning": "Test headers explain RED intent + UFR-017 rationale; source comment justifies the defensive guard with WHY (v1.0 bump) and cites lib-docs. STORY.md sections present though templated. TZ-fragility fix documented in localCalendarDay JSDoc."
+      },
+      "weightedMean": 92.0
+    },
+    "findingsCount": {
+      "blocker": 0,
+      "important": 0,
+      "nit": 1
     }
   }
 ]

@@ -363,6 +363,20 @@ describe('openapi response contracts (active API)', () => {
     });
   });
 
+  // T-API-5 (RED — S-BE-API, R13-R17). Baseline FAILS: the `/api/admin/nps`
+  // path + `NpsResponse` schema do NOT exist in openapi.json yet, so
+  // `getResponseSchema` throws `OpenAPI path not found: /api/admin/nps`
+  // (failure mode = missing-schema). After green (T-API-11) the path + schema
+  // exist and the 5-int-field NpsResponse validates.
+  it('GET /api/admin/nps 200 matches the NpsResponse schema (R13-R17)', () => {
+    assertMatchesOpenApiResponse({
+      path: '/api/admin/nps',
+      method: 'get',
+      statusCode: 200,
+      payload: { nps: 40, promoters: 4, passives: 4, detractors: 2, count: 10 },
+    });
+  });
+
   it('validates error responses match the ApiError schema', () => {
     const errorPayload = {
       error: {

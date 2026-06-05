@@ -13,14 +13,14 @@
         "auth-register-minor-dob.yaml",
         "auth-register-password-breached.yaml",
         "auth-account-delete.yaml",
-        "mfa-enroll-flow.yaml",
         "magic-link-verify-email.yaml",
         "magic-link-confirm-email-change.yaml",
         "magic-link-reset-password.yaml",
         "onboarding-flow.yaml",
         "onboarding-full-carousel.yaml",
         "onboarding-skip-anonymous.yaml",
-        "cert-pinning-smoke.yaml"
+        "cert-pinning-smoke.yaml",
+        "modal-auth-biometric-setup.yaml"
       ]
     },
     {
@@ -33,7 +33,17 @@
         "audio-recording-flow.yaml",
         "chat-cartel-deeplink.yaml",
         "connectivity-offline-banner.yaml",
-        "consent-location-grant.yaml"
+        "consent-location-grant.yaml",
+        "chat-guardrail-insult.yaml",
+        "chat-guardrail-injection.yaml",
+        "chat-offtopic-redirect.yaml",
+        "chat-multiturn-coherence.yaml",
+        "chat-input-very-long.yaml",
+        "chat-input-edge.yaml",
+        "chat-image-describe.yaml",
+        "modal-chat-artwork-hero.yaml",
+        "modal-chat-image-fullscreen.yaml",
+        "modal-chat-source-citation.yaml"
       ]
     },
     {
@@ -43,14 +53,41 @@
         "museum-picker-flow.yaml",
         "navigation-flow.yaml",
         "nav-stack-deep-links.yaml",
-        "nav-tabs-roundtrip.yaml"
+        "nav-tabs-roundtrip.yaml",
+        "modal-museum-sheet.yaml",
+        "modal-museum-offline-pack.yaml",
+        "modal-paywall-quota-upsell.yaml",
+        "museum-branding-detail.yaml"
       ]
     },
     {
       "name": "settings",
-      "flows": ["settings-flow.yaml", "settings-locale-switch.yaml", "support-ticket-create.yaml"]
+      "flows": [
+        "settings-flow.yaml",
+        "settings-locale-switch.yaml",
+        "settings-audio-description.yaml",
+        "support-ticket-create.yaml",
+        "reviews-submit-flow.yaml"
+      ]
+    },
+    {
+      "name": "netshape",
+      "flows": [
+        "net-chat-edge.yaml",
+        "net-image-upload-edge.yaml",
+        "net-offline-queue-resync.yaml",
+        "net-auth-geo-edge.yaml"
+      ]
     }
   ],
   "iosNightly": "all",
+  "smoke": [
+    "auth-login-happy.yaml",
+    "auth-register-happy.yaml",
+    "auth-persistence.yaml",
+    "onboarding-flow.yaml",
+    "magic-link-verify-email.yaml"
+  ],
+  "netshapeSmoke": ["net-chat-edge.yaml", "net-offline-queue-resync.yaml"],
   "excluded": ["config.yaml"]
 }

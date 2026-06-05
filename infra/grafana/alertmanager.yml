@@ -1,20 +1,43 @@
-# AlertManager — single receiver routing to the Telegram bridge.
+# AlertManager — severity-split routing to the Telegram bridge.
 # AlertManager has no native Telegram receiver ; the bridge service
 # (alertmanager-telegram) translates the AM webhook payload to the
 # Telegram Bot API `sendMessage`.
+#
+# Routing (I-OPS2, 2026-05-25): the default leg sends every alert to
+# `telegram-ops-warning`; a child route matching `severity = "critical"`
+# diverts critical alerts to `telegram-ops-critical`, which pages FASTER
+# (group_wait 10s vs 30s) and re-pages MORE OFTEN until resolved
+# (repeat_interval 1h vs 4h). Both receivers still hit the SAME Telegram
+# bridge URL (the bridge is the only Telegram path) — they are separable and
+# labelled so a critical page is distinguishable from a warning.
 
 global:
   resolve_timeout: 5m
 
 route:
-  receiver: telegram-ops
+  # Default leg = warning cadence. Anything not matched by a child route
+  # (i.e. severity != critical) lands here.
+  receiver: telegram-ops-warning
   group_by: ["alertname", "service"]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
+  routes:
+    # Critical alerts page faster and re-page more often until resolved.
+    - matchers:
+        - 'severity = "critical"'
+      receiver: telegram-ops-critical
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
 
 receivers:
-  - name: telegram-ops
+  - name: telegram-ops-warning
+    webhook_configs:
+      - url: "http://alertmanager-telegram:9094/alert"
+        send_resolved: true
+        max_alerts: 0
+  - name: telegram-ops-critical
     webhook_configs:
       - url: "http://alertmanager-telegram:9094/alert"
         send_resolved: true

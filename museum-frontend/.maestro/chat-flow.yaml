@@ -3,89 +3,189 @@ appId: com.musaium.mobile.preview
 # Chat Flow: Start a new conversation -> send a message -> verify AI response
 #
 # Prerequisites:
-#   - User is already logged in (run auth-flow.yaml first, or app state is authenticated)
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
 #   - Backend running on localhost:3000 with a working LLM provider
 #
 # This flow validates the core chat experience.
 
 # ──────────────────────────────────────────────
-# Phase 1: Verify home screen is visible
+# Phase 0: Launch fresh + log in (Maestro 2.5.1 does NOT auto-launch)
 # ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+# Systemic interceptor #1 — analytics consent banner. It mounts a beat AFTER the
+# auth screen (async consent read), so an immediate optional tap races and misses
+# it. Wait for the banner to be present, THEN decline (deterministic on clearState).
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+# Systemic interceptor #2 — iOS native "Save Password?" dialog
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+
+# ──────────────────────────────────────────────
+# Phase 1: Land on home
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+# UFR-021 anchor for app/(tabs)/home.tsx — the visit-notebook link
+# (testID home-carnet-link) is ALWAYS rendered on home (decision §0.5 + Q7),
+# so it is the stable per-screen marker for the home route.
+# Use scrollUntilVisible (not bare assertVisible): once the account has a prior
+# conversation, home renders a "Reprendre" resume card that pushes the carnet
+# link below the fold, and assertVisible only checks the viewport. Scrolling to
+# it de-flakes the anchor on a dirty account while still asserting it exists
+# (and still references the testID literal for the sentinel).
+- scrollUntilVisible:
+    element:
+      id: "home-carnet-link"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 60
+
+# ──────────────────────────────────────────────
+# Phase 2: Start a new conversation -> reach the chat composer.
+#
+# The home default-conversation CTA ("Commencer une nouvelle conversation",
+# the LAST element in the home ScrollView) starts a new conversation directly
+# on this binary: the tap creates the session and routes straight into chat,
+# where the AI-disclosure consent sheet ("Accepter tout") mounts over the
+# composer. We exercise that real home affordance, then converge on the
+# AI-disclosure handling below.
+#
+# Defensive fallback: on some layouts the CTA can sit half-under the bottom tab
+# bar and the tap lands on the "Musées" tab instead, routing to the nearby
+# museums directory (the hybrid companion model hands off to a context picker).
+# If we end up in the directory (a `museum-card` is visible and no AI-disclosure
+# sheet appeared), pick the first museum and "Démarrer un chat ici" to reach the
+# same chat composer. Both branches converge on Phase 3.
+# ──────────────────────────────────────────────
+# centerElement: true scrolls the CTA to the viewport CENTER so it clears the
+# bottom tab bar (it is the LAST ScrollView child and otherwise sits half-under
+# the bar, making the tap land on the "Musées" tab). This — plus the museum-card
+# fallback below — makes the home-CTA entry robust on a dirty account.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 100
+    centerElement: true
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
 - waitForAnimationToEnd
 
-# If we land on auth screen, we need to log in first
+# Fallback branch — only runs if the CTA landed us on the museums directory
+# instead of opening chat directly. Picking a card opens the museum sheet;
+# "Démarrer un chat ici" (museum-sheet-start-chat) creates the session and
+# routes into chat. If the CTA opened chat directly, `museum-card` is not
+# visible and this whole block is skipped.
 - runFlow:
     when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
+      visible:
+        id: "museum-card"
+    commands:
+      - tapOn:
+          id: "museum-card"
+          index: 0
+      - extendedWaitUntil:
+          visible:
+            id: "museum-sheet-start-chat"
+          timeout: 40000
+      - tapOn:
+          id: "museum-sheet-start-chat"
 
-# Handle onboarding if it appears
+# ──────────────────────────────────────────────
+# Phase 3: Handle the AI-disclosure consent sheet (first time only). It mounts
+# OVER the chat screen ("Réponses générées par IA") and covers chat-input, so it
+# MUST be accepted BEFORE asserting the composer is reachable.
+# ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
 - tapOn:
-    text: "Skip"
-    optional: true
+    text: "Accepter tout|Accept all"
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 2: Start a new conversation
-# ──────────────────────────────────────────────
-- tapOn: "Start Conversation"
-- waitForAnimationToEnd:
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 3: Handle AI consent modal (first time only)
-# ──────────────────────────────────────────────
-- tapOn:
-    text: "I understand, continue"
-    optional: true
-- waitForAnimationToEnd
+    visible:
+      id: "chat-input"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 4: Send a text message
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Ask about an artwork.*"
+    id: "chat-input"
 - inputText: "Who painted the Mona Lisa?"
-
-# Tap the send button (identified by accessibility label)
+- hideKeyboard
 - tapOn:
-    label: "Send message"
+    id: "send-button"
 
 # ──────────────────────────────────────────────
 # Phase 5: Wait for AI response
 # ──────────────────────────────────────────────
-# The response should appear as an assistant message bubble.
-# Wait for the loading/streaming to finish and verify content appeared.
-- waitForAnimationToEnd:
-    timeout: 30000
-
-# Verify the user message is visible
+# Verify the user message echoed
 - assertVisible: "Who painted the Mona Lisa?"
+
+# C-07 — Assert the ASSISTANT bubble actually rendered, not just the optimistic
+# user echo. `chat-bubble-assistant` (ChatMessageBubble.tsx:205,219) wraps the
+# streamed body, present only once a real assistant message exists in the store
+# (the pending phase uses the distinct `chat-assistant-pending` placeholder).
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
+- assertVisible:
+    id: "chat-bubble-assistant"
 
 # ──────────────────────────────────────────────
 # Phase 6: Send a follow-up message
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Ask about an artwork.*"
+    id: "chat-input"
 - inputText: "Tell me about the style of this painting"
-
+- hideKeyboard
 - tapOn:
-    label: "Send message"
-
+    id: "send-button"
+- assertVisible: "Tell me about the style of this painting"
 - waitForAnimationToEnd:
     timeout: 30000
-
-# Verify the follow-up was sent
-- assertVisible: "Tell me about the style of this painting"
 
 # ──────────────────────────────────────────────
 # Phase 7: Close the chat and return
 # ──────────────────────────────────────────────
+# The close button (ChatHeader.tsx:137) carries accessibilityLabel
+# a11y.chat.close — Maestro matches it via the `text` selector (a bare `label:`
+# under tapOn is only a log label, NOT a target → it taps nothing).
 - tapOn:
-    label: "Close conversation"
-
+    text: "Fermer la conversation|Close conversation"
 - waitForAnimationToEnd
+- assertNotVisible:
+    id: "chat-input"

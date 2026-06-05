@@ -34,12 +34,14 @@ name: llm-security-promptfoo
 on:
   schedule:
     - cron: '0 4 * * 1'
-  pull_request:
-    paths:
-      - 'museum-backend/src/modules/chat/**'
-      - 'museum-backend/src/shared/llm/**'
-      - 'museum-backend/scripts/llm-security/**'
-      - '.github/workflows/llm-security-*.yml'
+  # Path filtering moved from workflow-level `on.pull_request.paths` to a
+  # job-level `if:` (see `changes` job + `promptfoo-leak.if` below) so the
+  # workflow ALWAYS starts on a PR and the required `promptfoo systemprompt-leak
+  # corpus` context is reported (skipped=success) even when chat/guardrail code
+  # is untouched. A workflow-level path filter would leave a REQUIRED check
+  # "Expected" forever on unrelated PRs and freeze merges under enforce_admins.
+  # Real LLM cost stays bounded to PRs that actually touch the gated paths.
+  pull_request: {}
   workflow_dispatch:
 
 permissions:
@@ -50,7 +52,38 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # ─── 0. Change detection — gates the (LLM-cost-incurring) corpus job so a PR
+  #        that doesn't touch chat / guardrail / the leak corpus skips it.
+  #        Skipped = success for branch protection, so the required
+  #        `promptfoo systemprompt-leak corpus` context is satisfied without
+  #        booting the backend or sending the 85-prompt adversarial corpus.
+  changes:
+    name: detect chat/guardrail changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      chat: ${{ steps.filter.outputs.chat }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+        id: filter
+        with:
+          filters: |
+            chat:
+              - 'museum-backend/src/modules/chat/**'
+              - 'museum-backend/src/shared/llm/**'
+              - 'museum-backend/scripts/llm-security/**'
+              - '.github/workflows/llm-security-*.yml'
+
   promptfoo-leak:
+    needs: changes
+    # Run the real adversarial corpus only when chat/guardrail changed, or on the
+    # weekly cron / manual dispatch. Otherwise the job skips → reported `success`
+    # so the required context never blocks an unrelated PR.
+    if: |
+      needs.changes.outputs.chat == 'true' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     name: promptfoo systemprompt-leak corpus
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -108,8 +141,6 @@ jobs:
           node-version: '22'
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install backend deps
         working-directory: museum-backend
@@ -136,19 +167,33 @@ jobs:
           exit 1
 
       - name: Seed pre-verified smoke account
+        id: seed_smoke
         # Same pattern as llm-promptfoo-smoke.yml — seed canonical avoids
-        # EMAIL_NOT_VERIFIED 403 sur login fresh register.
+        # EMAIL_NOT_VERIFIED 403 sur login fresh register. Uses the `create`
+        # subcommand, which generates a per-run RANDOM password (env
+        # SMOKE_TEST_PASSWORD is ignored) and prints it on a single
+        # `SMOKE_TEST_PASSWORD=<value>` stdout line (ops logs go to stderr). We
+        # extract that line, `::add-mask::` it, and expose it as a step output
+        # consumed only by the bootstrap step below. Never echoed in clear.
         working-directory: museum-backend
         env:
           SMOKE_TEST_EMAIL: llm-security+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
-          SMOKE_TEST_PASSWORD: LlmSec!CI-${{ github.run_id }}-${{ github.run_attempt }}
-        run: pnpm run seed:smoke-account
+        run: |
+          set -euo pipefail
+          CREATE_STDOUT="$(pnpm --silent run seed:smoke-account create)"
+          PWD_VALUE="$(printf '%s\n' "$CREATE_STDOUT" | sed -n 's/^SMOKE_TEST_PASSWORD=//p' | tail -n1)"
+          if [ -z "$PWD_VALUE" ]; then
+            echo "create step did not emit a SMOKE_TEST_PASSWORD line" >&2
+            exit 1
+          fi
+          echo "::add-mask::$PWD_VALUE"
+          echo "password=$PWD_VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Bootstrap chat session
         id: bootstrap
         env:
           SMOKE_TEST_EMAIL: llm-security+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
-          SMOKE_TEST_PASSWORD: LlmSec!CI-${{ github.run_id }}-${{ github.run_attempt }}
+          SMOKE_TEST_PASSWORD: ${{ steps.seed_smoke.outputs.password }}
         run: |
           set -euo pipefail
           LOGIN_BODY="{\"email\":\"${SMOKE_TEST_EMAIL}\",\"password\":\"${SMOKE_TEST_PASSWORD}\"}"
@@ -173,6 +218,14 @@ jobs:
 
       - name: Run promptfoo eval
         working-directory: museum-backend/scripts/llm-security
+        # promptfoo exits 100 on ANY failed case. The documented gate (header §,
+        # "fails when pass-rate < 95 %") is the dedicated "Enforce ≥95 % pass-rate"
+        # step below — which reads the JSON report. Without continue-on-error, a
+        # single non-deterministic adversarial failure (e.g. 84/85 = 98.8 %) would
+        # fail the job HERE and make the 95 % threshold step unreachable dead code.
+        # continue-on-error lets the report be written and the real gate decide;
+        # crashes (no report / total==0) are still caught by that step.
+        continue-on-error: true
         env:
           MUSAIUM_API_BASE_URL: http://localhost:3000
           MUSAIUM_API_KEY: ${{ steps.bootstrap.outputs.token }}
@@ -217,6 +270,17 @@ jobs:
           path: museum-backend/scripts/llm-security/reports
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Cleanup smoke account
+        # Backend CI is throwaway (destroyed with the job), so cleanup is not
+        # strictly required — but running it keeps the create/cleanup contract
+        # symmetric and exercises the `cleanup` verb in CI. Runs unconditionally
+        # so no account survives even when an earlier step failed midway.
+        if: ${{ always() }}
+        working-directory: museum-backend
+        env:
+          SMOKE_TEST_EMAIL: llm-security+ci-${{ github.run_id }}-${{ github.run_attempt }}@musaium.test
+        run: pnpm run seed:smoke-account cleanup || true
 
       - name: Print backend log on failure
         if: failure()

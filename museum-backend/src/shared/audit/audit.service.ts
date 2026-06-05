@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import * as Sentry from '@sentry/node';
 
 import { logger } from '@shared/logger/logger';
+import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import { BREACH_EVENT_SET, type BreachEventName } from './breach-event-types';
 
@@ -17,6 +18,25 @@ import type { AuditLogEntry } from './audit.types';
  * Internal errors caught and logged: audit-pipeline failure must never break
  * user request (the action already happened).
  */
+
+/**
+ * Input for {@link AuditService.logActorAction}. Mirrors {@link AuditLogEntry}
+ * minus `actorType` (helper forces `'user'`). `actorId` is required (an actor
+ * action by definition has an authenticated actor); `targetType`/`targetId`/
+ * `metadata`/`ip`/`requestId` remain optional and pass through verbatim.
+ *
+ * The exclusion of `actorType` is intentional (PR-7 R-2 mitigation): callers
+ * MUST NOT be able to override the literal `'user'` via this helper.
+ */
+export interface LogActorActionInput {
+  action: string;
+  actorId: number;
+  targetType?: string | null;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  ip?: string | null;
+  requestId?: string | null;
+}
 
 /** Severity. Mirrors `BREACH_PLAYBOOK.md` § 3. */
 export type BreachSeverity = 'P0' | 'P1' | 'P2';
@@ -94,6 +114,11 @@ export class AuditService {
         action: entry.action,
         error: error instanceof Error ? error.message : String(error),
       });
+      // R4 (Cycle D) — a swallowed insert failure on a real privileged action
+      // (e.g. ACCOUNT_DELETED) would otherwise be a forensic black hole: the
+      // action happened, no trace persisted. Route it to Sentry so a silent
+      // failure is detectable. Context carries only the action (no PII).
+      captureExceptionWithContext(error, { action: entry.action, kind: 'audit_log_failed' });
       // Do NOT rethrow — audit failure must not break the user request.
     }
   }
@@ -122,6 +147,32 @@ export class AuditService {
       });
       // Do NOT rethrow — audit failure must not break the user request.
     }
+  }
+
+  /**
+   * Convenience helper for actor-action audit rows: forces `actorType:'user'`
+   * (no caller override possible — see {@link LogActorActionInput}) and
+   * null-coerces `ip`/`requestId` so route handlers can pass `req.ip` /
+   * `req.id` straight through without inline `?? null`.
+   *
+   * Delegates to {@link AuditService.log} → inherits the `breach_*` guard,
+   * the swallow-on-repo-error semantics, and the chain-hash contract.
+   *
+   * Wire-format identity (PR-7 R3): row hash is unchanged vs the pre-sweep
+   * inline shape because `computeRowHash` does NOT hash `actorType`, `ip`, or
+   * `requestId` (cf. `audit-chain.ts:39-60`).
+   */
+  async logActorAction(input: LogActorActionInput): Promise<void> {
+    await this.log({
+      action: input.action,
+      actorType: 'user',
+      actorId: input.actorId,
+      targetType: input.targetType ?? null,
+      targetId: input.targetId ?? null,
+      metadata: input.metadata ?? null,
+      ip: input.ip ?? null,
+      requestId: input.requestId ?? null,
+    });
   }
 
   /**

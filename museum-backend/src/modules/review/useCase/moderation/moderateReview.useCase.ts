@@ -24,12 +24,19 @@ export interface ModerateReviewUseCaseInput {
   actorId: number;
   ip?: string;
   requestId?: string;
+  /**
+   * C1B — tenant ownership guard (BOLA, write side). `undefined`/`null` =
+   * unscoped (super_admin/admin may moderate any review). When set (forced by
+   * the route for a `museum_manager`), a review whose `museumId` differs from
+   * this scope is treated as non-existent → `404` (existence-hiding), no write.
+   */
+  scopeMuseumId?: number | null;
 }
 
 const MODERATION_STATUSES: ReviewStatus[] = ['approved', 'rejected'];
 
 export interface ModerateReviewUseCaseDeps {
-  audit?: Pick<AuditService, 'log'>;
+  audit?: Pick<AuditService, 'log' | 'logActorAction'>;
   notifier?: ReviewModerationNotifier;
   authorLookup?: ReviewAuthorLookup;
 }
@@ -40,13 +47,13 @@ export interface ModerateReviewUseCaseDeps {
  * best-effort: a failed email must NOT fail the moderation (ADR-notifications-best-effort).
  */
 export class ModerateReviewUseCase {
-  private readonly audit: Pick<AuditService, 'log'>;
+  private readonly audit: Pick<AuditService, 'log' | 'logActorAction'>;
   private readonly notifier?: ReviewModerationNotifier;
   private readonly authorLookup?: ReviewAuthorLookup;
 
   constructor(
     private readonly repository: IReviewRepository,
-    depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log'> = {},
+    depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log' | 'logActorAction'> = {},
   ) {
     // Back-compat: accept either a full deps object OR a bare audit stub (existing tests).
     const deps: ModerateReviewUseCaseDeps =
@@ -66,6 +73,14 @@ export class ModerateReviewUseCase {
       throw notFound('Review not found');
     }
 
+    // C1B — tenant ownership guard (BOLA write side). A scoped actor
+    // (museum_manager) may only moderate reviews of their own museum; a
+    // foreign-tenant or NULL-museum review is hidden as non-existent (404)
+    // BEFORE any write, so no audit row is emitted for a rejected attempt.
+    if (input.scopeMuseumId != null && before.museumId !== input.scopeMuseumId) {
+      throw notFound('Review not found');
+    }
+
     const updated = await this.repository.moderateReview({
       reviewId: input.reviewId,
       status: input.status as ReviewStatus,
@@ -75,9 +90,8 @@ export class ModerateReviewUseCase {
       throw notFound('Review not found');
     }
 
-    await this.audit.log({
+    await this.audit.logActorAction({
       action: AUDIT_ADMIN_REVIEW_MODERATED,
-      actorType: 'user',
       actorId: input.actorId,
       targetType: 'review',
       targetId: input.reviewId,
@@ -85,8 +99,8 @@ export class ModerateReviewUseCase {
         beforeStatus: before.status,
         afterStatus: updated.status,
       },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     this.scheduleAuthorNotification(updated);

@@ -2,7 +2,7 @@
 
 Pipeline unique fresh-context pour TOUTE modification de code applicatif + tests.
 
-> **Plus de selecteur micro/standard/enterprise** — un seul pipeline, 9 phases obligatoires.
+> **Plus de selecteur micro/standard/enterprise** — un seul pipeline, 8 phases obligatoires.
 > Exemption auto uniquement si `git diff` = 0 fichier code (pure-doc edit, detecte par `pre-phase-pure-doc-check.sh`).
 > Ce template est chargé en warm-up cache prefix (SKILL.md Step 3 §135). Il mirror le pipeline canonique de `team-protocols/sdlc-pipelines.md` + SKILL.md Steps 4a→9.
 
@@ -10,15 +10,15 @@ Pipeline unique fresh-context pour TOUTE modification de code applicatif + tests
 
 ---
 
-## TASK GRAPH (mode unique 9-phase)
+## TASK GRAPH (mode unique 8-phase)
 
 ```
 P1: spec           (blockedBy: rien)              architect fresh #1
 P2: plan           (blockedBy: P1)                architect fresh #2 — zero memory de P1
-P3: doc-freshness   (blockedBy: P2)               doc-fetcher + doc-curator fresh (×N libs stale, optionnel)
+P3: doc-cache       (blockedBy: P2)               doc-cache fresh (×N libs stale, optionnel) — fetch PUIS curate un spawn
 P4: red            (blockedBy: P3)                editor fresh #1 — tests qui FAIL + red-test-manifest.json
 P5: green          (blockedBy: P4)                editor fresh #2 — zero memory de P4, FROZEN-TEST byte-for-byte
-P6: verify         (blockedBy: P5)                verifier fresh
+P6: verify         (blockedBy: P5)                gate hooks deterministe, pas de spawn agent
 P7: security       (blockedBy: P6)                security fresh — TOUJOURS present
 P8: review         (blockedBy: P7)                reviewer fresh — rejection loop ILLIMITE
 P9: documenter     (blockedBy: P8)                documenter fresh — TOUJOURS present
@@ -47,14 +47,15 @@ P9: documenter     (blockedBy: P8)                documenter fresh — TOUJOURS 
 4. Inclure section ## Multi-cycle progress si match multi-cycle-features trouve a INIT
 ```
 
-### P3 — doc-freshness (doc-fetcher + doc-curator fresh, optionnel)
+### P3 — doc-cache (doc-cache fresh, optionnel)
 
 ```
 1. Hook pre-phase-doc-freshness.sh detecte les libs non-dev-only touchees par tasks.md
 2. Pour chaque lib stale (>14j OU version drift OU PATTERNS.md manquant) :
-   a. doc-fetcher fresh : WebSearch + WebFetch 5-10 pages -> snapshot-YYYY-MM-DD.md (untracked)
-   b. doc-curator fresh : extract -> PATTERNS.md ~200-500 lignes (untracked)
-   c. Dispatcher update lib-docs/INDEX.json (tracked)
+   a. doc-cache fresh : fetch PUIS curate en un seul spawn —
+      WebSearch + WebFetch 5-10 pages -> snapshot-YYYY-MM-DD.md + sources.json + VERSION (untracked),
+      puis curate -> PATTERNS.md ~200-500 lignes (untracked)
+   b. Dispatcher update lib-docs/INDEX.json (tracked)
 3. WebSearch fail -> WARN + use stale + tag rapport. JAMAIS de BLOCK.
 4. Parallelisme autorise par-lib (read-only sur source, write zones disjointes)
 ```
@@ -90,14 +91,15 @@ P9: documenter     (blockedBy: P8)                documenter fresh — TOUJOURS 
 CAP intra-phase : intraPhaseHookLoops >= 2 (lint/tsc/test fails dans la MEME phase) -> STOP + escalade user.
 ```
 
-### P6 — verify (verifier fresh spawn)
+### P6 — verify (gate déterministe, hooks, sans agent)
 
 ```
-1. BRIEF-ACK: <sha256> + BLOCK-CONTEXT-LEAK self-defense
-2. pre-complete-verify.sh : pnpm test scoped (BE/FE/WEB) + gitnexus_detect_changes() + mutation si banking-grade
-3. pre-phase-doc-reference-check.sh : cross-check libDocsConsulted[] (red+green) vs imports du diff
-4. post-edit-green-test-freeze.sh (defense-in-depth, FROZEN-TEST final assert)
-5. Verdict PASS/WARN/FAIL. FAIL -> boucle corrective intra-phase OU re-spawn fresh la phase pointee.
+Aucun spawn agent. Le dispatcher lance directement les hooks deterministes :
+1. pre-complete-verify.sh : pnpm test scoped (BE/FE/WEB) + gitnexus_detect_changes() + mutation si banking-grade
+2. pre-phase-doc-reference-check.sh : cross-check libDocsConsulted[] (red+green) vs imports du diff
+3. post-edit-green-test-freeze.sh (defense-in-depth, FROZEN-TEST final assert)
+4. Verdict gate PASS/WARN/FAIL ecrit dans state.json.gates[]. FAIL -> boucle corrective intra-phase OU re-spawn fresh la phase pointee.
+5. Le jugement non-deterministe (scope-boundary vs plan, spot-check du fichier le plus risque, DoD-confirmation, lib-docs-reference assertion) est absorbe par le reviewer (P8).
 ```
 
 ### P7 — security (security fresh spawn, TOUJOURS present)

@@ -61,6 +61,7 @@ export const SourceCitation = React.memo(({ source, index }: SourceCitationProps
         accessibilityLabel={t('chat.sources.viewSource')}
         hitSlop={6}
         style={styles.marker}
+        testID="source-citation-marker"
       >
         <Text style={[styles.markerText, { color: theme.primary }]}>{`[${String(index)}]`}</Text>
       </Pressable>
@@ -98,6 +99,7 @@ export const SourceCitation = React.memo(({ source, index }: SourceCitationProps
               accessibilityRole="button"
               accessibilityLabel={t('chat.sources.closeSheet')}
               hitSlop={8}
+              testID="source-citation-close"
             >
               <Ionicons name="close" size={24} color={theme.textPrimary} />
             </Pressable>
@@ -121,6 +123,7 @@ export const SourceCitation = React.memo(({ source, index }: SourceCitationProps
             accessibilityRole="button"
             accessibilityLabel={t('chat.sources.openLink')}
             style={[styles.openButton, { borderColor: theme.primaryBorderSubtle }]}
+            testID="source-citation-open-url"
           >
             <Ionicons name="open-outline" size={18} color={theme.primary} />
             <Text style={[styles.openButtonText, { color: theme.primary }]}>

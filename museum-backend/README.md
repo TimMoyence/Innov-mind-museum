@@ -148,17 +148,15 @@ Express 5 + TypeORM backend for Musaium (mobile-first API). PostgreSQL via the `
 
 ## Environment Setup
 
-Use environment-specific templates:
+Use the available templates:
 
 ```bash
-cp .env.local.example .env        # local dev
-# or
-cp .env.staging.example .env      # preprod/staging
+cp .env.example .env               # local dev (generic)
 # or
 cp .env.production.example .env   # production
 ```
 
-Legacy convenience file `./.env.example` still exists, but prefer the environment-specific templates.
+> `.env.local.example` and `.env.staging.example` do not exist — use `.env.example` for local dev. No staging server for V1.
 
 ## Install
 

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROADMAP_PRODUCT.md</title>
+<style>
+:root{--ink:#1f2933;--muted:#5a6672;--faint:#8a94a0;--bg:#fff;--panel:#f6f7f9;
+--border:#e3e6ea;--accent:#3b5b7a;--accent2:#b06a3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
+header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
+font-weight:600;margin:0 0 10px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.meta{margin-top:18px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 20px}
+h2{font-size:21px;margin:48px 0 8px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 6px;font-weight:650}
+h4,h5,h6{margin:22px 0 6px}
+p{margin:12px 0}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px 18px;
+overflow:auto;font-size:13.5px;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+border-bottom:2px solid var(--border)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+blockquote{margin:16px 0;padding:2px 18px;border-left:3px solid var(--border);color:var(--muted)}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+.cb{color:var(--accent);font-weight:700}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);
+background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:0 0 8px}
+.kv b{color:var(--ink);font-weight:600;margin-right:4px}
+.chip{display:inline-block;font-size:12px;background:#e7eef5;color:var(--accent);
+border-radius:20px;padding:2px 10px;margin:2px 0}
+.muted{color:var(--muted)}
+.verdict{display:inline-block;font-weight:700;font-size:13px;letter-spacing:.04em;
+padding:4px 12px;border-radius:6px}
+.verdict.ok{background:#e7eef5;color:var(--accent)}
+.verdict.warn{background:#f3ece5;color:var(--accent2)}
+.verdict.bad{background:#f6e7e3;color:#9a3412}
+.finding{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:12px 0}
+.finding-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+.finding-title{font-weight:600;margin:4px 0}
+.suggestion{color:var(--muted)}
+.sev{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:4px}
+.sev.crit{background:#f6e7e3;color:#9a3412}
+.sev.high{background:#f3ece5;color:var(--accent2)}
+.sev.med{background:#eef1f4;color:var(--accent)}
+.sev.low{background:#eceff1;color:var(--muted)}
+.axis{font-size:12px;color:var(--muted)}
+.loc{font-size:12px}
+dl{margin:8px 0;padding-left:14px;border-left:1px solid var(--border)}
+dt{font-weight:600;font-size:13px;color:var(--accent);margin-top:8px}
+dd{margin:2px 0 2px 8px}
+nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 20px;margin:0 0 36px}
+nav.toc strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;padding:2px 0}
+section.artifact{padding-top:8px}
+section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
+footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
+@media print{
+html,body{background:#fff;color:#000;font-size:11pt}
+.wrap{max-width:none;padding:0}
+a{color:#000;text-decoration:none}
+.kv,.chip,code,pre,.verdict,.sev,.finding,nav.toc{background:transparent!important}
+.finding,.kv,nav.toc,pre{border-color:#999}
+h1,h2,h3{page-break-after:avoid}
+h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
+header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
+@page{margin:18mm 16mm}
+}</style></head>
+<body><div class="wrap">
+<header class="doc">
+<p class="eyebrow">Roadmap</p>
+<h1>ROADMAP_PRODUCT.md</h1>
+<div class="meta"><span>ROADMAP_PRODUCT.md</span></div>
+</header>
+<section class="rm-dash"><div class="rm-gng warn">GO WITH RISKS</div><div class="rm-blockers">🚩 Blockers launch — 1 code · 5 ops (Tim)</div><div class="rm-asof">État vérifié-code · 2026-05-31 — J-8 avant launch (2026-06-07)</div><div class="rm-bar big"><span class="seg done" style="flex:97"></span><span class="seg partial" style="flex:28"></span><span class="seg open" style="flex:48"></span><span class="seg ops" style="flex:5"></span></div><div class="rm-dash-pct">54% <span>livré · vérifié-code (toutes lanes, 178 items)</span></div><div class="rm-stats"><span class="rm-stat done"><b>97</b> done</span><span class="rm-stat partial"><b>28</b> partial</span><span class="rm-stat open"><b>48</b> open</span><span class="rm-stat ops"><b>5</b> ops</span><span class="rm-stat todo"><b>0</b> todo</span></div><div class="rm-filters"><button class="rm-chip active" data-rm-filter="all">Tout</button><button class="rm-chip" data-rm-filter="done">Done</button><button class="rm-chip" data-rm-filter="partial">Partial</button><button class="rm-chip" data-rm-filter="open">Open</button><button class="rm-chip" data-rm-filter="ops">Ops</button><button class="rm-chip" data-rm-filter="todo">Todo</button></div></section><h1>Roadmap Produit — Musaium</h1>
+<blockquote><p><strong>Source de vérité unique pour le produit.</strong> État <strong>vérifié-code</strong> (on croit le code, pas la doc ni les marqueurs antérieurs). Façade lisible ici ; la <strong>preuve item-par-item</strong> (178 items, path:line, re-vérif adversariale) vit dans <a href="#"><code>ROADMAP_AUDIT_TRAIL.md</code></a>. Snapshots = <code>git log -- docs/ROADMAP_*.md</code>.</p>
+<p><strong>Vérification 2026-05-31</strong> — workflow <code>roadmap-launch-readiness-audit</code> : 11 clusters × sous-agents lisant le code réel, puis <strong>re-vérification adversariale</strong> de chaque blocker (un 2ᵉ agent relit le code sans croire le 1er) + veille web (concurrence / compliance UE / NPS). <strong>178 items : ✅ 93 livré-vérifié · 🟧 28 partiel · 🔴 48 ouvert · ♻️ 4 stale-claim · 🧑‍🔧 5 ops.</strong></p>
+<p><strong>Verdict launch : 🟧 GO avec risques.</strong> Les 21 « blockers » nominaux se réduisent, après re-vérification, à <strong>1 vrai blocker code + 5 actions ops</strong> (ci-dessous ; C10 fermé 2026-05-31, commit <code>787e2ba9</code>). Les 14 autres étaient des <em>stale-claims</em> — des bugs déjà corrigés que la doc traînait encore (consent gating, museum_id FK, budgets latence, BOLA scope, MFA mobile retirée).</p></blockquote>
+<hr>
+<h2>North Star</h2>
+<p><strong>Musaium V1 = compagnon culturel IA voice-first, dedans ET dehors.</strong> Tu photographies une œuvre (en musée) ou un monument/lieu (en ville) → chat AI conversationnel voice-first (STT + TTS Opus) sur ce que tu vois, mêmes capacités in/out musée, + <strong>suggestions de proximité</strong> (« un monument à côté », « un musée pas loin ») sans navigation. Carnet post-visite dans les deux modes.</p>
+<p><strong>V2 = parcours guidé navigué</strong> (itinéraire GPS multi-POI + audio streaming auto entre points). Sprint sep-nov 2026 si signal KR2 NPS positif. Distinction nette : <strong>V1 = réactif</strong> (tu photographies ce qui est devant toi) · <strong>V2 = proactif navigué</strong> (l'app te guide d'un point à l'autre et narre en route).</p>
+<p><strong>Audience</strong> — B2C freemium (cible V1, soft-paywall stub à valider data-driven). <strong>B2B musée = hypothèse future, 0 musée démarché à ce jour</strong> (les 3 musées Bordeaux = données de démo). Institutionnel = backlog H2.</p>
+<p><strong>OKR Q2</strong> — KR1 pitch B2B démontrable · KR2 NPS post-session ≥7/10 (instrumenté, PR #301) · KR3 crash-free ≥99.5 % + chat p99 &lt;5s · KR4 100 inscrits B2C semaine 1.</p>
+<hr>
+<h2>🚦 P0 — Launch blockers restants (avant 2026-06-07)</h2><div class="rm-prog"><div class="rm-bar"><span class="seg done" style="flex:1"></span><span class="seg partial" style="flex:1"></span><span class="seg open" style="flex:1"></span><span class="seg ops" style="flex:5"></span></div><div class="rm-prog-meta"><b>13%</b> · 1 done · 1 partial · 1 open · 5 ops</div></div>
+<blockquote><p>Tout le reste du P0 historique (sécurité, GDPR, feature-gates, stabilité) est <strong>vérifié livré sur <code>dev</code></strong> — détail § V1 ci-dessous et dans l'audit trail. Voici les <strong>seuls items qui bloquent encore</strong> le launch.</p></blockquote>
+<h3>Code (1)</h3>
+<ul><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>C10 — « un autre musée à côté » câblé</strong> — <code>home.tsx</code> passe désormais <code>onChooseAnother={() =&gt; router.push('/(stack)/museums-picker')}</code> : la CTA suggestion-de-proximité (NorthStar V1) route vers le picker existant (reuse, UFR-016). Test d'intégration AC1 (nav picker) + AC2 (pas de session chat), red prouvé avant câblage. Commit <code>787e2ba9</code> sur <code>dev</code>, <strong>fermé 2026-05-31</strong>.</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>CNIL âge-15 — preuve e2e manquante</strong> — le code <em>enforce</em> déjà le floor (<code>auth.schemas.ts</code> <code>dateOfBirth</code> requis + <code>register.useCase</code> rejette &lt;15 ans, CNIL Délib. 2021-018). Reste à <strong>prouver par 1 flow Maestro happy-path</strong> (UFR-021) que le path date <code>DD/MM/YYYY</code> FR n'a pas régressé (classe de bug DOB-2026-05-17). Jest seul ne suffit pas.</li></ul>
+<h3>Ops — Tim, hors-code (5)</h3>
+<ul><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>P0.B13</strong> — provisionner l'alias <strong><code>security@musaium.com</code></strong> (OVH → Gmail). Requis par la clé PGP publiée, le breach-playbook et l'intake VDP/CRA. ~30 min.</li><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>P0.B14</strong> — signer/confirmer le <strong>DPA Langfuse</strong> (<code>SUBPROCESSORS.md:52</code> encore « TBD »). Langfuse traite le contenu des prompts → GDPR Art.28 obligatoire avant données réelles en prod.</li><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>P0.B17</strong> — <strong>révoquer la clé Anthropic</strong> encore vivante côté secret-store Tim (code + <code>.env.example</code> déjà nettoyés ; rotation out-of-band).</li><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>P0.B19</strong> — renseigner les <strong>contacts réels</strong> du breach-playbook (<code>docs/incidents/BREACH_PLAYBOOK.md</code>) + confirmer le <strong>S3 PAB</strong> (<code>GetPublicAccessBlock</code>, pas de Terraform → vérif console/sentinel).</li><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>P1-FA15 / I-OPS5</strong> — poser <strong><code>EXPO_PUBLIC_PLAUSIBLE_DOMAIN</code></strong> en prod (sinon funnel KR4 silencieusement no-op) + <strong>1 restore-drill</strong> confirmant que le backup DB atterrit dans <code>backups/daily/</code>.</li></ul>
+<h3>⚖️ Décision à trancher avant launch (pas un blocker)</h3>
+<ul><li data-rm-status="partial"><span class="rm-pill partial">PARTIAL</span> <strong>/chat/compare (image-similarity C3)</strong> — <code>fetch-models.sh</code> tolère le bucket GCS non-provisionné (exit 0 sur 404) et <code>EMBEDDINGS_PROVIDER</code> retombe sur <code>replicate</code>. <strong>Décider</strong> : provisionner <code>musaium-models-public</code> (SHA-pin) <strong>OU</strong> <code>EMBEDDINGS_PROVIDER=replicate</code> + <code>REPLICATE_API_TOKEN</code>, sinon /chat/compare est inerte en prod.</li></ul>
+<hr>
+<h2>✅ V1 — Livré &amp; vérifié-code (sur <code>dev</code>)</h2><div class="rm-prog"><div class="rm-bar"><span class="seg done" style="flex:9"></span></div><div class="rm-prog-meta"><b>100%</b> · 9 done</div></div>
+<blockquote><p>Une ligne par cluster — chaque ✅ = vérifié contre le code cette session. Détail item-par-item + path:line dans <a href="#"><code>ROADMAP_AUDIT_TRAIL.md</code></a>.</p></blockquote>
+<ul><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Sécurité &amp; PII (P0.A — 9/9)</strong> — email domain-only (<code>extractEmailDomain.ts</code>), DOB hard-gate 400, Sentry scrub URL <strong>+ event.tags</strong> (<code>sentry-scrubber.ts:37-54</code>, 16 clés), Langfuse <code>mask</code> câblé, cost+latency circuit breakers enforced sur les 2 paths (<code>langchain.orchestrator.ts:162-177,556-559</code>).</li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Sécurité round 2 (P0.I-SEC — 10/12)</strong> — Redis <code>maxmemory</code>, coût vision par-image, <code>POST /art-keywords</code> gaté rôle+rate-limit, <code>EXPORT_PSEUDONYM_SALT</code> ≥32 prod, TOTP replay + access-token denylist, <strong>KE scopé <code>museum_id</code></strong> (#300, cross-tenant bleed clos), deps <code>ws</code>/<code>brace-expansion</code> pinnées. <em>(résiduels mineurs : I-SEC4 api-key role, I-SEC6 login-key email → V1.0.x.)</em></li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>GDPR &amp; anonymisation (P0.B — 12/19 code)</strong> — cleanup audio TTS à la suppression compte, unsubscribe Brevo, <strong>DSAR Art.15 complet</strong> (UserMemory/AuditLog/feedback/reports/social/api_keys + artwork_matches), consent BE enforced au call-site LLM, purge S3 orphelins câblée, consent namespace per-user, <strong>bypass raw-coords GDPR Art.7 clos</strong> (#305). <em>(le reste = ops B13/B14/B17/B19.)</em></li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Feature-gates (P0.C — 6/10)</strong> — mapping licence URI→slug Wikidata, <strong><code>reviews.museum_id</code> FK</strong> (migration mergée), télémétrie Plausible câblée FE+BE (consent-gated), <code>museum_manager</code> dans l'AdminShell. <em>(C8 stats museum_id = no-op documenté, C1 SigLIP → décision ci-dessus.)</em></li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Stabilité (P0.I-OPS — corrigé)</strong> — alertes API 5xx/up==0 <strong>présentes</strong> (<code>api-health.yml</code>), budgets latence cohérents (<code>env.ts:163-165</code>), <strong>index ops</strong> créés (#300 <code>AddOpsStabilityIndexes</code>). <em>(I-OPS3 double-run migration, I-OPS6 pgvector gate, I-OPS8 CI gates → V1.0.x.)</em></li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>a11y / compliance / correctness (P0.I-CMP/I-FIX — 5/9)</strong> — <strong>AI Act Art.50</strong> badge disclosure contraste AA (#298), <strong>40 clés consent i18n 8 locales</strong>, invalidation cache LLM corrigée, clé cache cross-artwork. <em>(I-CMP3/I-CMP5 résiduels a11y → V1.0.x.)</em></li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Honnêteté / dead-code (P0.D — 4/5)</strong> — burial SSE FE (−434 LOC), stryker cache dé-tracké (−18,5 MB), Llama-Prompt-Guard supprimé (ADR-051), 3 <code>describe.skip</code> retirés.</li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Findings critiques (FA — 6)</strong> — bulle assistant vide texte-seul corrigée (FA1, <code>406fe9b82</code>), <strong>KR2 NPS livré</strong> (FA4, widget 0-10 + <code>aggregateNps</code> + dashboard), <strong><code>museum_manager</code> BOLA fermé</strong> (FA6, scope par tenant + co-branding mobile), MFA mobile <strong>entièrement retirée</strong> (FA2, web-admin-only), DSAR artwork_matches (FA12).</li><li data-rm-status="done"><span class="rm-pill done">DONE</span> <strong>Plateforme produit (P0.F — 19/21)</strong> — cache LLM v2 + Prom + Grafana, enrichment image fan-out, <strong>SigLIP ONNX + pgvector halfvec(768) HNSW</strong>, KnowledgeRouter cascade KB→judge→WS, <strong>halluc-eval CI gaté</strong> (97-corpus, <code>ci-cd-backend.yml:658</code>), paywall stub + quota + tier, <strong>audio-description WCAG</strong> + AI Act badge + i18n 8/8, refonte chat UX (composer/hero/bubble/carnet/QR), géofence hybrid, RBAC + moderation + CSV, landing + B2B page, <strong>distributed tracing FE↔BE</strong>, guardrail fairness dashboard, TTS Opus + voice preference.</li></ul>
+<hr>
+<h2>🔧 V1.0.x — Hotfix window (2026-06-07 → 06-21)</h2><div class="rm-prog"><div class="rm-bar"><span class="seg partial" style="flex:4"></span><span class="seg open" style="flex:5"></span><span class="seg ops" style="flex:1"></span></div><div class="rm-prog-meta"><b>0%</b> · 4 partial · 5 open · 1 ops</div></div>
+<blockquote><p>Shipped-mais-gap-mineur OU ouvert-non-bloquant. À traiter dans la fenêtre hotfix post-launch.</p></blockquote>
+<ul><li data-rm-status="partial"><span class="rm-pill partial">PARTIAL</span> <strong>C8 — stats multi-tenant museum_id</strong> : RBAC/BOLA fermé, mais <code>WHERE museum_id</code> sur users/sessions/messages = no-op (colonnes absentes). Axe analytics par-musée inerte tant que non câblé.</li><li data-rm-status="partial"><span class="rm-pill partial">PARTIAL</span> <strong>I-CMP3 / I-CMP5 — résiduels a11y</strong> : bulle UTILISATEUR masque son texte (<code>ChatMessageBubble.tsx:237-238</code>), live-region non-conditionnelle (<code>StreamingBody.tsx:54</code>), 4 refs <code>support@musaium.app</code> mortes (<code>accessibility-content.ts</code>).</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>SEC-PRIVILEGE-ESCALATION</strong> : route <code>PATCH /users/:id/role</code> <strong>est</strong> gardée <code>requireRole('admin')</code> (pas d'escalade cross-tier), mais <code>changeUserRole.useCase.ts:19-57</code> laisse un admin promouvoir <code>super_admin</code> sans check de rang acteur↔cible. Ajouter un rank-guard.</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>I-OPS1 — Sentry release/dist</strong> : <code>sentry-init.ts:35-47</code> sans <code>release</code>/<code>dist</code> → les crashes remontent mais symbolication/attribution-build dégradées. Ajouter via plugin EAS Sentry.</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>I-OPS3 / I-OPS6 / I-OPS8</strong> : migrations 2× par deploy (idempotent mais à rendre single-path), pgvector ≥0.7.0 jamais gaté en code, CI gates partiellement théâtre (<code>ai-tests</code> jamais en PR, Expo Doctor <code>continue-on-error</code>).</li><li data-rm-status="partial"><span class="rm-pill partial">PARTIAL</span> <strong>I-OPS5 — backup shared-fate</strong> : backup DB OK mais <strong>dans le même bucket que les médias</strong> + volume <code>uploads</code> non-backupé. 2ᵉ bucket off-site.</li><li data-rm-status="partial"><span class="rm-pill partial">PARTIAL</span> <strong>P1-FA7 / P1-FA9 / P1-FA13</strong> : logger <code>req.originalUrl</code> non-scrubbé (<code>error.middleware.ts:97</code>), recovery cost-breaker wipe <code>dailySpend</code> (<code>three-state-circuit.ts</code>), compte smoke seedé prod (guardé env, à supprimer post-deploy).</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>Finitions feature</strong> : <code>C3.5 useCompareImage</code> hook orphelin (FE ne peuple jamais <code>compareResults</code>), <code>audioDescriptionMode</code> write FE→BE zéro call-site (sync cross-device cassé), Accept-Language <code>fr-FR</code> strict-equals (<code>chat-compare.route.ts:77-82</code>), <code>reviews.userName</code> ghost field.</li><li data-rm-status="open"><span class="rm-pill open">OPEN</span> <strong>Maestro UFR-021</strong> : <code>audio-recording-flow.yaml</code> cassé (labels inexistants) + flows manquants AI-badge / voice-intro / paywall.</li><li data-rm-status="ops"><span class="rm-pill ops">OPS</span> <strong>C7.5 / C8.x</strong> — smoke device TTS iPhone réel (Tim), CNIL dry-run, CERT-FR 1Password, calendrier renouvellement PGP 2027.</li></ul>
+<hr>
+<h2>🔭 V1.1 — Q3 2026 (juin-août) — chat backend modernization + B2B polish + V2 prep</h2><div class="rm-prog"><div class="rm-bar"><span class="seg todo" style="flex:12"></span></div><div class="rm-prog-meta"><b>0%</b> · 12 todo</div></div>
+<ul><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W5.1</strong> — décision WebRTC Realtime 4 sem post-launch (reco veille : <strong>skip</strong>, ~5× coût + ré-arch guardrail).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W6.2</strong> — localiser system prompt FR/JA/ZH/AR (actuellement EN + <code>Respond in ${language}</code>).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W6.3</strong> — tsvector + RRF hybrid search sur <code>artwork_embeddings</code> (recall@10 78 %→91 %).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W6.4</strong> — provider Anthropic + prompt-caching middleware (−90 % coût préfixe cached).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W6.5</strong> — refactor dossiers chat 44→33-35 (<code>git mv</code> + sed, ~3j).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W6.11 / W6.12</strong> — <code>LLM_CACHE_ENABLED</code> kill-switch + propagation <code>outcome=cache_hit</code> + panels ratio cache.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W7.1</strong> — multi-persona voice (Curator / Friend / Kid) — veille confirme l'UX persona (Herodot). Piggyback <code>guideLevel</code>.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W7.2</strong> — WelcomeCard dynamique (<code>useDynamicSuggestions</code> : GPS + last artwork + heure) — dette doctrine hybrid-product.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>W7.3</strong> — nudge idle mid-conversation (silence &gt;30s).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>B2B polish</strong> — multi-tenant scoping toutes routes admin, NPS true 0-10 per museum, hard-delete admin Art.17, OpenAPI <code>/leads/*</code>, rate-limit Brevo per-pod, i18n pages admin B2B.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Sécu hardening</strong> — <code>event.tags</code> via <code>scrubEvent</code>, HMAC IP at-write, zero-width strip user-path, homoglyph fold, QR replay cross-museum fix, audit chain ADR-054 Phase 1+2, privilege-escalation rank-guard.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Premium full</strong> — Stripe + receipts iOS/Android, conditionné aux données du soft-paywall stub.</li></ul>
+<hr>
+<h2>🚶 V2 — Walk hors-musée (sprint sep-nov 2026)</h2><div class="rm-prog"><div class="rm-bar"><span class="seg todo" style="flex:7"></span></div><div class="rm-prog-meta"><b>0%</b> · 7 todo</div></div>
+<blockquote><p><strong>Démarrage conditionné</strong> : fin Phase 1 + signal KR2 NPS ≥7/10 sur 50 sessions. Code-vérifié absent aujourd'hui (<code>features/walk/</code> n'existe pas, 0 migration POI, MapLibre = markers only, TTS 100 % sync).</p></blockquote>
+<ul><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong><code>features/walk/</code></strong> — ~700 LOC FE (state machine, screens, GPS-arrival, audio queue).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Migrations</strong> — <code>museum_pois</code>, <code>walk_routes</code>, <code>walk_progress</code>, <code>tour_step_audio_cache</code>.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>BE module <code>walk</code></strong> — directions adapter (OSRM self-host) + circuit breaker + audio sidecar.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>TTS streaming</strong> — port renvoie <code>Readable</code> (chunked) au lieu de <code>Buffer</code>. <em>(reco veille : reste V1.1/V2, pas un table-stake V1 pour l'UX photo-puis-discute async.)</em></li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>MapLibre polyline</strong> — <code>&lt;LineLayer&gt;</code> + <code>&lt;ShapeSource&gt;</code> GeoJSON, glyphs self-hosted.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Pause-resume VoiceMap-style</strong> + background GPS (<code>expo-task-manager</code>, re-review App Store) + 5 ADRs.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Contenu démo</strong> — ~5 tours × 5-8 POI Bordeaux + scripts audio FR/EN.</li></ul>
+<hr>
+<h2>🌙 LATER — Q4 2026+ / Moonshots</h2><div class="rm-prog"><div class="rm-bar"><span class="seg todo" style="flex:5"></span></div><div class="rm-prog-meta"><b>0%</b> · 5 todo</div></div>
+<ul><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Infra VPS</strong> — F1 disque dédié docker, F2 photos S3/B2, F4 split multi-tenant, F5 resource limits, F6 disk SLO. <em>(F3 backups off-VPS =  shippé 2026-04-26.)</em></li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>M1 B2B-ready</strong> — curator-overrideable LLM, dashboard analytics musée, white-label/co-branding, AR pilot, LSF/BSL overlay, voice-pack artistes domaine public.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>M2 RAG modernization</strong> — Anthropic Contextual Retrieval, GraphRAG, Jina-CLIP-v2 multilingue, realtime-mini walk-mode (triggers mesurés).</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>M3 moonshots 2027+</strong> — 3DGS scan œuvres, co-présence multi-visiteurs « shared walk », re-mix génératif (whitepaper droit d'auteur), affective computing ( AI Act Art.5), haptic Apple Watch, voice mood prosody, cross-museum visit graph.</li><li data-rm-status="todo"><span class="rm-pill todo">TODO</span> <strong>Social / offline</strong> — réseau museum-explorer, offline pack musée, LLM cache cross-user warm, i18n web admin complète.</li></ul>
+<hr>
+<h2>⛔ KILLED (ne pas redécider sans signal nouveau)</h2>
+<table><thead><tr><th>Item</th><th>Date</th><th>Raison</th></tr></thead><tbody><tr><td>SSE streaming chat</td><td>2026-04</td><td>Remplacé par sync chat ; burial FE fait (P0.D1)</td></tr><tr><td>Garak orchestrator</td><td>2026-05-17</td><td>Coût réel ~$120/mois vs $2 estimé</td></tr><tr><td>Realtime API V1 walk-mode</td><td>2026-05-20</td><td>5× coût + ré-arch guardrail ; park V2.1+</td></tr><tr><td>MFA mobile user-facing</td><td>2026-05-26</td><td>Web-admin-only V1 (ADR-017 Withdrawn) ; surface retirée</td></tr><tr><td>Hexagonal POJO 23 entities V1</td><td>2026-05-20</td><td>157 fichiers cross-importants, infaisable V1</td></tr><tr><td>Chat éclatement 4 sous-modules V1</td><td>2026-05-20</td><td>909 LOC composition root sain</td></tr><tr><td>Voice clone DIY artistes sous licence</td><td>2026-05-03</td><td>Négo successions only</td></tr></tbody></table>
+<hr>
+<h2>🌐 Veille (web, 2026-05-31)</h2>
+<ul><li><strong>Concurrence</strong> — Smartify (700+ orgs), Bloomberg Connects (free B2B), <strong>Herodot AI</strong> (persona selector + photo-to-story), <strong>VoiceMap</strong> (multi-POI pause-resume = pattern V2). Parité V1 atteinte sur photo-activation + conversationnel + voice + 8 locales ; streaming-TTS et auto-narration caméra = correctement V1.1/V2.</li><li><strong>Compliance UE</strong> — <strong>AI Act Art.50</strong> transparence (obligatoire 2026-08-02) <strong>déjà implémenté</strong> (badges disclosure) ; période transitoire couvre le launch juin. <strong>CRA</strong> reporting dès 2026-09-11 (breach-process doit exister au launch → B19). <strong>CNIL âge-15</strong> = le seul item réglementaire demandant un sign-off final.</li><li><strong>NPS</strong> — benchmark B2C culture/voyage 2026 ; mesure post-session, échantillon ≥50, attention au biais de timing (KR2 instrumenté).</li></ul>
+<hr>
+<h2>Comment utiliser cette roadmap</h2>
+<ol><li><strong>Début sprint</strong> — <code>/team</code> lit ce fichier + <code>ROADMAP_TEAM.md</code>, propose les items P0/V1.0.x à attaquer. NEXT bloquée tant que P0 incomplet (sauf hotfix).</li><li><strong>Au merge</strong> — fais avancer le marqueur de statut (open → partial → done). Bloqué = <code>[BLOCKED: raison]</code> inline.</li><li><strong>Preuve</strong> — tout claim trace à un <code>path:line</code> dans <a href="#"><code>ROADMAP_AUDIT_TRAIL.md</code></a> (UFR-024). On croit le code, pas la doc.</li><li><strong>Rendu lisible</strong> — <code>node scripts/render-artifact.mjs docs/ROADMAP_PRODUCT.md --out artifacts/roadmap.html</code> (dashboard go/no-go + lanes + filtres).</li><li><strong>Fin sprint</strong> — réécriture complète (P0 vidé, NEXT remonte), commit <code>docs(roadmap): sprint &lt;date&gt;</code>. La trace des versions = <code>git log</code>.</li></ol>
+<footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
+</div><script>
+(function(){
+  var chips=document.querySelectorAll('[data-rm-filter]');
+  if(!chips.length)return;
+  var items=document.querySelectorAll('[data-rm-status]');
+  chips.forEach(function(c){c.addEventListener('click',function(){
+    var f=c.getAttribute('data-rm-filter');
+    chips.forEach(function(x){x.classList.remove('active')});c.classList.add('active');
+    items.forEach(function(it){it.style.display=(f==='all'||it.getAttribute('data-rm-status')===f)?'':'none'});
+  })});
+})();
+</script></body></html>

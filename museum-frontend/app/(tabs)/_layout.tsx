@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -36,8 +36,21 @@ export default function TabLayout() {
             marginBottom: insets.bottom + TAB_BAR_FLOATING_GAP,
           },
         ],
+        // Apple-style liquid glass: on iOS use the native adaptive material
+        // (vibrant, picks up the colour of whatever it floats over) rather than
+        // the flat 'light'/'dark' frost. No solid fill — the glass stays pure.
         tabBarBackground: () => (
-          <BlurView tint={theme.blurTint} intensity={72} style={StyleSheet.absoluteFill} />
+          <BlurView
+            tint={
+              Platform.OS === 'ios'
+                ? theme.blurTint === 'dark'
+                  ? 'systemChromeMaterialDark'
+                  : 'systemChromeMaterialLight'
+                : theme.blurTint
+            }
+            intensity={72}
+            style={StyleSheet.absoluteFill}
+          />
         ),
       }}
     >

@@ -2,6 +2,7 @@ import { withPolicyCitation } from '@modules/chat/useCase/image/chat-image.helpe
 import { AUDIT_SECURITY_GUARDRAIL_PASS } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
 import { deriveTier } from '@shared/observability/derive-tier';
+import { env } from '@src/config/env';
 
 import {
   buildGuardrailRefusal,
@@ -46,6 +47,7 @@ export class GuardrailEvaluationService {
   private readonly guardrailProviderObserveOnly: boolean;
   private readonly llmJudge?: LlmJudgeFn;
   private readonly llmJudgeEnabled: boolean;
+  private readonly frictionEnabled: boolean;
 
   constructor(deps: GuardrailEvaluationServiceDeps) {
     this.repository = deps.repository;
@@ -54,6 +56,7 @@ export class GuardrailEvaluationService {
     this.guardrailProviderObserveOnly = deps.guardrailProviderObserveOnly ?? true;
     this.llmJudge = deps.llmJudge;
     this.llmJudgeEnabled = deps.llmJudgeEnabled ?? false;
+    this.frictionEnabled = deps.frictionEnabled ?? env.guardrails.frictionEnabled;
   }
 
   /**
@@ -112,6 +115,33 @@ export class GuardrailEvaluationService {
       text: text ?? '',
       ...this.scopeFromContext(context),
     });
+  }
+
+  /**
+   * Hybrid-gravity (2026-06-01) — legacy kill-switch inline judge. Extracted
+   * from `evaluateInput` (complexity cap) and invoked ONLY when
+   * `frictionEnabled=false`, preserving the prior hard-block-every-off-topic
+   * behaviour (spec R13). Returns the block result when the judge refuses, or
+   * `null` when it allows (caller continues the normal allow path).
+   */
+  private async runLegacyInlineJudge(
+    text: string | undefined,
+    locale: string,
+    context?: GuardrailAuditContext,
+  ): Promise<InputGuardrailResult | null> {
+    const scope = this.scopeFromContext(context);
+    const judgeDecision = await runLlmJudge(text ?? '', this.judgeDeps(), scope);
+    if (judgeDecision.allow) return null;
+    recordBiasMetrics({ locale, layer: 'judge', decision: judgeDecision });
+    await this.logBlock({
+      phase: 'input',
+      reason: judgeDecision.reason,
+      fullText: text ?? '',
+      classifierRan: false,
+      providerRan: false,
+      context,
+    });
+    return judgeDecision;
   }
 
   /**
@@ -178,19 +208,17 @@ export class GuardrailEvaluationService {
     // F4 — judge selectively invoked on long inputs where keyword said allow.
     // Cannot upgrade keyword blocks (those returned earlier). TD-20 (R13c/R12) —
     // forwards `{tier, requestId}` from the audit context (museumId absent, D5).
-    const scope = this.scopeFromContext(context);
-    const judgeDecision = await runLlmJudge(text ?? '', this.judgeDeps(), scope);
-    if (!judgeDecision.allow) {
-      recordBiasMetrics({ locale, layer: 'judge', decision: judgeDecision });
-      await this.logBlock({
-        phase: 'input',
-        reason: judgeDecision.reason,
-        fullText: text ?? '',
-        classifierRan: false,
-        providerRan: false,
-        context,
-      });
-      return judgeDecision;
+    //
+    // Hybrid-gravity (2026-06-01): when `frictionEnabled`, the judge is NO
+    // LONGER run inline here — it runs in PARALLEL of generation via
+    // `evaluateInputSemantic` so an isolated off-topic is soft-redirected
+    // instead of hard-blocked. The inline judge is kept ONLY for the legacy
+    // kill-switch path (`frictionEnabled=false`), preserving the prior
+    // hard-block-every-off-topic behaviour (spec R13). Single code path per
+    // mode — no double evaluation.
+    if (!this.frictionEnabled) {
+      const legacyBlock = await this.runLegacyInlineJudge(text, locale, context);
+      if (legacyBlock) return legacyBlock;
     }
 
     if (preClassified === 'art') {
@@ -211,6 +239,55 @@ export class GuardrailEvaluationService {
     };
   }
 
+  /**
+   * Hybrid-gravity (2026-06-01) — the off-topic SEMANTIC leg of the guardrail,
+   * extracted from the inline `evaluateInput` judge block. Runs in PARALLEL of
+   * generation (NOT before it). Returns a structured verdict; it does NOT
+   * hard-block on its own — the orchestration decides soft-redirect vs
+   * hard-block from the friction counters. Fail-OPEN: judge null/timeout/budget
+   * → `allow` (a slow judge never blocks availability — spec R8).
+   *
+   * Gating (length ≥ `judgeMinMessageLength`, `llmJudgeEnabled`) is delegated to
+   * the shared `runLlmJudge`, so a short message or a disabled judge → `allow`
+   * with no model call.
+   */
+  async evaluateInputSemantic(
+    text: string,
+    context?: GuardrailAuditContext,
+  ): Promise<{ verdict: 'allow' } | { verdict: 'offtopic'; reason: GuardrailBlockReason }> {
+    const scope = this.scopeFromContext(context);
+    const judgeDecision = await runLlmJudge(text, this.judgeDeps(), scope);
+    if (judgeDecision.allow) return { verdict: 'allow' };
+    return { verdict: 'offtopic', reason: judgeDecision.reason };
+  }
+
+  /**
+   * Hybrid-gravity (2026-06-01) — audit a friction strike (off-topic or
+   * security). Only emitted when the strike ESCALATES to a hard-block cool-down
+   * (a soft-redirect is not a block, so it stays out of the audit chain).
+   * Mirrors the `logBlock` used by the inline gates. NEVER throws.
+   */
+  async logFrictionBlock(params: {
+    reason: GuardrailBlockReason;
+    fullText: string;
+    context?: GuardrailAuditContext;
+  }): Promise<void> {
+    const locale = resolveLocaleLabel(params.context);
+    recordBiasMetrics({
+      locale,
+      layer: 'judge',
+      decision: { allow: false, reason: params.reason },
+    });
+    await this.logBlock({
+      phase: 'input',
+      reason: params.reason,
+      fullText: params.fullText,
+      classifierRan: false,
+      providerRan: false,
+      context: params.context,
+    });
+  }
+
   /** Persists user message + assistant refusal atomically. */
   async handleInputBlock(params: {
     sessionId: string;
@@ -218,12 +295,18 @@ export class GuardrailEvaluationService {
     requestedLocale?: string;
     userId?: number;
     userMessage: PersistMessageInput;
+    /**
+     * Hybrid-gravity (2026-06-01) — when true, an `off_topic` block renders the
+     * warmer `refocus` cool-down copy instead of the flat `default` refusal. The
+     * `policy:off_topic` citation is unchanged. Defaults false (legacy wording).
+     */
+    useRefocus?: boolean;
   }): Promise<PostMessageResult> {
-    const { sessionId, reason, requestedLocale, userMessage } = params;
+    const { sessionId, reason, requestedLocale, userMessage, useRefocus } = params;
 
     // Audit row written upstream in evaluateInput (V13/STRIDE R3 SSOT); logging
     // again here would double-write to the hash chain.
-    const refusalText = buildGuardrailRefusal(requestedLocale, reason);
+    const refusalText = buildGuardrailRefusal(requestedLocale, reason, useRefocus ?? false);
     const refusalMetadata = withPolicyCitation({}, reason);
     // A5 — refusals follow standard `composing → done`. Terminal phase always
     // `done` (uniform FE handling, StatusIndicator unmount).
@@ -238,6 +321,39 @@ export class GuardrailEvaluationService {
       },
     });
 
+    return {
+      sessionId,
+      message: {
+        id: refusal.id,
+        role: 'assistant',
+        text: refusalText,
+        createdAt: refusal.createdAt.toISOString(),
+      },
+      metadata: refusalMetadata,
+    };
+  }
+
+  /**
+   * Hybrid-gravity (2026-06-01) — persists ONLY the assistant cool-down refusal.
+   * Unlike `handleInputBlock`, the user message is NOT (re)persisted: the
+   * friction escalation happens AFTER `prepare` already persisted the user turn
+   * (the off-topic message went through to generation before being suppressed).
+   * Warm `refocus` copy, `policy:off_topic` citation, standard `done` phase.
+   */
+  async buildCoolDownRefusal(params: {
+    sessionId: string;
+    requestedLocale?: string;
+  }): Promise<PostMessageResult> {
+    const { sessionId, requestedLocale } = params;
+    const refusalText = buildGuardrailRefusal(requestedLocale, 'off_topic', true);
+    const refusalMetadata = withPolicyCitation({}, 'off_topic');
+    refusalMetadata.phase = 'done';
+    const refusal = await this.repository.persistMessage({
+      sessionId,
+      role: 'assistant',
+      text: refusalText,
+      metadata: refusalMetadata as Record<string, unknown>,
+    });
     return {
       sessionId,
       message: {

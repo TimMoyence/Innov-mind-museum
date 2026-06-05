@@ -11,9 +11,11 @@ import type {
   ExportRowTicket,
   ExportSessionsFilter,
 } from '@modules/admin/domain/export/csv-export.types';
-import type { ExportSessionsRepository } from '@modules/admin/useCase/export/exportChatSessions.useCase';
-import type { ExportReviewsRepository } from '@modules/admin/useCase/export/exportReviews.useCase';
-import type { ExportTicketsRepository } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
+import type {
+  ExportReviewsRepository,
+  ExportSessionsRepository,
+  ExportTicketsRepository,
+} from '@modules/admin/domain/export/export-repositories.port';
 import type { DataSource, Repository } from 'typeorm';
 
 // I-SEC5 (2026-05-21) — historical literal fallback REMOVED. The committed

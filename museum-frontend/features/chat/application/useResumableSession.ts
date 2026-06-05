@@ -3,7 +3,8 @@
  *
  * Fetches the user's session list once on mount, filters down to sessions
  * eligible for resumption (`messageCount > 0` AND age < 7 days), picks the
- * most recently updated one, and exposes a `dismiss()` mechanism that hides
+ * most recently active one — ranked by last message time, not the BE-frozen
+ * `updatedAt` (QA-09) — and exposes a `dismiss()` mechanism that hides
  * the banner for 24 hours via AsyncStorage.
  *
  * Spec : `docs/chat-ux-refonte/specs/B2.md` §1.1 R1-R12 ; §4 AC1-AC10.
@@ -13,9 +14,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { storage } from '@/shared/infrastructure/storage';
+import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 
 /** Storage key holding the ISO timestamp until which the banner stays hidden. */
-export const RESUMPTION_BANNER_DISMISS_STORAGE_KEY = 'settings.resumption_banner_dismissed_until';
+export const RESUMPTION_BANNER_DISMISS_STORAGE_KEY =
+  'musaium.settings.resumptionBannerDismissedUntil';
+
+/** Pre-namespacing key migrated forward once before the read (TD-AS-01). */
+const LEGACY_RESUMPTION_KEY = 'settings.resumption_banner_dismissed_until';
 
 /** 24 hours in milliseconds — duration of the dismiss-until window. */
 export const RESUMPTION_BANNER_DISMISS_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -46,6 +52,12 @@ interface ListSessionItem {
   readonly museumId?: number | null;
   readonly lastArtworkTitle?: string | null;
   readonly updatedAt: string;
+  /**
+   * Timestamp of the session's most recent message (BE: `MAX(m.createdAt)`).
+   * The real activity signal — `updatedAt` is frozen at creation by the BE and
+   * must NOT be used to rank resumption (QA-09).
+   */
+  readonly lastMessageAt?: string | null;
   readonly messageCount: number;
 }
 
@@ -54,20 +66,30 @@ interface ListSessionsResponseShape {
 }
 
 /**
- * Selects the session most recently updated among those satisfying the
- * resumption filter (`messageCount > 0` AND age < 7 days). Pure helper —
- * does NOT assume BE-side ordering.
+ * Timestamp used to rank resumable sessions: the last message time when known,
+ * falling back to `updatedAt`. The BE freezes `updatedAt` at session creation,
+ * so it never reflects activity — `lastMessageAt` (BE `MAX(m.createdAt)`) is the
+ * real "last conversation" signal (QA-09).
+ */
+function activityMs(s: ListSessionItem): number {
+  return new Date(s.lastMessageAt ?? s.updatedAt).getTime();
+}
+
+/**
+ * Selects the most recently ACTIVE session among those satisfying the
+ * resumption filter (`messageCount > 0` AND last activity < 7 days). Pure
+ * helper — does NOT assume BE-side ordering; ranks by `lastMessageAt` (QA-09).
  */
 function pickResumable(sessions: readonly ListSessionItem[], now: number): ListSessionItem | null {
   const eligible = sessions.filter((s) => {
     if (s.messageCount <= 0) return false;
-    const updatedAtMs = new Date(s.updatedAt).getTime();
-    if (Number.isNaN(updatedAtMs)) return false;
-    return now - updatedAtMs < RESUMPTION_BANNER_WINDOW_MS;
+    const ms = activityMs(s);
+    if (Number.isNaN(ms)) return false;
+    return now - ms < RESUMPTION_BANNER_WINDOW_MS;
   });
   if (eligible.length === 0) return null;
   return eligible.reduce((best, current) =>
-    new Date(current.updatedAt).getTime() > new Date(best.updatedAt).getTime() ? current : best,
+    activityMs(current) > activityMs(best) ? current : best,
   );
 }
 
@@ -75,7 +97,7 @@ function pickResumable(sessions: readonly ListSessionItem[], now: number): ListS
  * Conversation resumption banner data hook.
  *
  * - Fetches the most recent sessions exactly once on mount.
- * - Filters by `messageCount > 0` AND age < 7 days, picks max-by-updatedAt.
+ * - Filters by `messageCount > 0` AND age < 7 days, picks max-by-lastMessageAt.
  * - Respects a dismiss-until storage flag (`settings.resumption_banner_dismissed_until`)
  *   suppressing the banner for 24 h after the user taps the dismiss button.
  * - Tolerates API and storage failures silently — never throws.
@@ -102,6 +124,8 @@ export function useResumableSession(): {
     void (async () => {
       try {
         // 1. Dismiss-until storage gate — read tolerant of failure.
+        // Migrate the legacy key forward once before reading (TD-AS-01).
+        await migrateStorageKey(RESUMPTION_BANNER_DISMISS_STORAGE_KEY, LEGACY_RESUMPTION_KEY);
         let dismissedUntilRaw: string | null = null;
         try {
           dismissedUntilRaw = await storage.getItem(RESUMPTION_BANNER_DISMISS_STORAGE_KEY);

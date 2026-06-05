@@ -11,7 +11,10 @@
  *   R1 — every metric `name:` matches ^[a-z][a-z0-9_]*$ (snake_case).
  *   R2 — every Counter name ends in `_total`.
  *   R3 — every Histogram name ends in `_seconds`, EXCEPT the grandfathered
- *        `musaium_rerank_latency_ms` (F1 known debt — listed explicitly).
+ *        histograms in NON_SECONDS_HISTOGRAMS:
+ *          - `musaium_rerank_latency_ms` (F1 known debt — mis-united duration);
+ *          - `llm_cost_user_daily_usd` (WAVE 6 C4 — a monetary AMOUNT, not a
+ *            duration; `_usd` is its legitimate base unit, NOT base-unit debt).
  *   Inventory freeze — the exact 44 (type,name) pairs are pinned.
  *   Prefix ratchet — `musaium_`-prefixed count must not exceed 16 (F2: nudge
  *        new metrics toward the bare-prefix target convention).
@@ -26,10 +29,16 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(__dirname, '../../src/shared/observability/prometheus-metrics.ts');
 
-/** F1 — the single grandfathered duration histogram still in milliseconds. */
-const GRANDFATHERED_MS = 'musaium_rerank_latency_ms';
+/**
+ * Histograms allowed to NOT end in `_seconds`. Two distinct categories:
+ *   - `musaium_rerank_latency_ms` — F1 KNOWN DEBT (a duration mis-united in ms);
+ *     this category must SHRINK over time.
+ *   - `llm_cost_user_daily_usd` — WAVE 6 C4: a monetary AMOUNT, not a duration.
+ *     `_usd` is its correct base unit; R3 (`_seconds`) only targets durations.
+ */
+const NON_SECONDS_HISTOGRAMS = new Set(['musaium_rerank_latency_ms', 'llm_cost_user_daily_usd']);
 
-/** Audit §2 frozen inventory: 44 (type,name) pairs, post-W1+W3 merge. */
+/** Audit §2 frozen inventory: 44 (type,name) pairs, post-W1+W3+W6 merge; -1 = TD-69 buried TenantRateLimiter (musaium_tenant_rate_limit_rejects_total). */
 const FROZEN = [
   ['Counter', 'http_requests_total'],
   ['Histogram', 'http_request_duration_seconds'],
@@ -64,7 +73,6 @@ const FROZEN = [
   ['Gauge', 'musaium_llm_cost_circuit_breaker_state'],
   ['Counter', 'musaium_llm_cost_circuit_breaker_trips_total'],
   ['Gauge', 'musaium_llm_cost_eur_per_hour'],
-  ['Counter', 'musaium_tenant_rate_limit_rejects_total'],
   ['Counter', 'musaium_guardrail_decisions_total'],
   ['Counter', 'musaium_guardrail_category_blocks_total'],
   ['Counter', 'musaium_guardrail_pii_redacted_total'],
@@ -75,6 +83,17 @@ const FROZEN = [
   ['Histogram', 'musaium_rerank_latency_ms'],
   ['Counter', 'musaium_rerank_fallback_total'],
   ['Counter', 'musaium_llm_prompt_cache_hits_total'],
+  // I-FIX3 (2026-05-25) — bare-prefix per F2 Option A (do NOT add to the musaium_ count).
+  ['Counter', 'guardrail_judge_degraded_total'],
+  ['Counter', 'llm_cost_anon_bypass_total'],
+  // WAVE 6 (2026-05-26) — C4 per-user daily spend histogram. Bare prefix (F2
+  // Option A) + `_usd` amount (not a `_seconds` duration → NON_SECONDS_HISTOGRAMS).
+  ['Histogram', 'llm_cost_user_daily_usd'],
+  // 2026-06-02 — guardrail-friction Redis fail-SOFT fallback counter (hybrid-gravity
+  // guardrail). Bare prefix per F2 Option A — sibling of the older
+  // musaium_guardrail_budget_redis_fallback_total, but kept bare to hold the
+  // musaium_ cap at 16. See METRIC_NAMING_AUDIT.md §2.
+  ['Counter', 'guardrail_friction_redis_fallback_total'],
 ];
 const MAX_MUSAIUM_PREFIXED = 16;
 
@@ -103,9 +122,9 @@ function main() {
     if (type === 'Counter' && !name.endsWith('_total')) {
       errors.push(`R2 counter '${name}' must end in '_total'.`);
     }
-    if (type === 'Histogram' && !name.endsWith('_seconds') && name !== GRANDFATHERED_MS) {
+    if (type === 'Histogram' && !name.endsWith('_seconds') && !NON_SECONDS_HISTOGRAMS.has(name)) {
       errors.push(
-        `R3 histogram '${name}' must use base unit '_seconds' (only '${GRANDFATHERED_MS}' is grandfathered — see audit F1).`,
+        `R3 histogram '${name}' must use base unit '_seconds' (only ${[...NON_SECONDS_HISTOGRAMS].map((n) => `'${n}'`).join(', ')} are grandfathered — see audit F1 + WAVE 6 C4).`,
       );
     }
   }

@@ -32,6 +32,14 @@ interface AttachmentPickerSheetContentProps {
    * picker sheet closes itself when the user taps the action.
    */
   readonly onOpenScanner: () => void;
+  /**
+   * Trigger the visual-compare flow (Cycle D, Option C). The screen wires this
+   * to `useCompareTrigger` (picks an image → `POST /chat/compare` → reload to
+   * surface the persisted carousel). Optional so legacy mounts/tests that
+   * predate the compare action stay valid; the picker sheet closes itself when
+   * the user taps the action (parity camera/gallery).
+   */
+  readonly onCompareImage?: () => void;
   /** Dismiss the bottom sheet — supplied by the C4 router. */
   readonly close: () => void;
 }
@@ -58,6 +66,7 @@ export function AttachmentPickerSheetContent({
   playRecordedAudio,
   clearMedia,
   onOpenScanner,
+  onCompareImage,
   close,
 }: AttachmentPickerSheetContentProps) {
   const { theme } = useTheme();
@@ -85,7 +94,7 @@ export function AttachmentPickerSheetContent({
           ]}
         >
           <Ionicons name="camera-outline" size={20} color={theme.textPrimary} />
-          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+          <Text style={[styles.actionText, { color: theme.textPrimary }]} numberOfLines={2}>
             {t('chat.attachmentPicker.camera')}
           </Text>
         </Pressable>
@@ -104,7 +113,7 @@ export function AttachmentPickerSheetContent({
           ]}
         >
           <Ionicons name="images-outline" size={20} color={theme.textPrimary} />
-          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+          <Text style={[styles.actionText, { color: theme.textPrimary }]} numberOfLines={2}>
             {t('chat.attachmentPicker.gallery')}
           </Text>
         </Pressable>
@@ -129,7 +138,7 @@ export function AttachmentPickerSheetContent({
             size={20}
             color={theme.textPrimary}
           />
-          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+          <Text style={[styles.actionText, { color: theme.textPrimary }]} numberOfLines={2}>
             {isRecording
               ? t('chat.attachmentPicker.stop_audio')
               : t('chat.attachmentPicker.record_audio')}
@@ -150,10 +159,31 @@ export function AttachmentPickerSheetContent({
           ]}
         >
           <Ionicons name="qr-code-outline" size={20} color={theme.textPrimary} />
-          <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+          <Text style={[styles.actionText, { color: theme.textPrimary }]} numberOfLines={2}>
             {t('chat.attachmentPicker.scan_cartel')}
           </Text>
         </Pressable>
+
+        {onCompareImage ? (
+          <Pressable
+            onPress={() => {
+              onCompareImage();
+              close();
+            }}
+            testID="attachment-picker-compare"
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.attachmentPicker.compare')}
+            style={[
+              styles.actionButton,
+              { borderColor: theme.cardBorder, backgroundColor: theme.surface },
+            ]}
+          >
+            <Ionicons name="git-compare-outline" size={20} color={theme.textPrimary} />
+            <Text style={[styles.actionText, { color: theme.textPrimary }]} numberOfLines={2}>
+              {t('chat.attachmentPicker.compare')}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {hasAudio ? (
@@ -213,21 +243,27 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
     gap: semantic.chat.gap,
   },
   actionButton: {
-    flexDirection: 'row',
+    // WhatsApp-style grid tile: icon stacked above the label, every tile the
+    // same fixed cross-axis size (~3 columns; flexWrap handles 4 or 5 actions).
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexBasis: '30%',
     gap: semantic.chat.gapSmall,
     borderRadius: radius.lg,
     borderWidth: semantic.input.borderWidth,
     paddingHorizontal: semantic.card.paddingCompact,
-    paddingVertical: space['2.5'],
-    minHeight: 44,
+    paddingVertical: space['3'],
+    minHeight: 76,
   },
   actionText: {
     fontWeight: '600',
     fontSize: fontSize.sm,
+    textAlign: 'center',
   },
   audioCard: {
     padding: space['2.5'],

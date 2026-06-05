@@ -10,3 +10,11 @@ export type {
   BetaSignupOutcome,
   BetaSignupPayload,
 } from './domain/ports/beta-signup-notifier.port';
+export type {
+  InsertLeadInput,
+  LeadDTO,
+  LeadPayload,
+  LeadStatus,
+  LeadType,
+} from './domain/lead/lead.types';
+export type { ILeadRepository } from './domain/lead/lead.repository.interface';

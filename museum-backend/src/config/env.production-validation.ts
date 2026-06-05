@@ -1,3 +1,5 @@
+import { toBoolean } from './env-helpers';
+
 import type { AppEnv } from './env.types';
 
 const required = (name: string, value: string | undefined): string => {
@@ -49,12 +51,32 @@ function validateJwtSecrets(env: AppEnv): void {
   assertSecretLength('JWT_REFRESH_SECRET', env.auth.refreshTokenSecret);
 }
 
+/** Truthy values accepted for the conscious DeepSeek EU-transfer opt-in. */
+function isTransferApproved(raw: string | undefined): boolean {
+  return /^(1|true|yes)$/i.test((raw ?? '').trim());
+}
+
 function validateLlmProviderKey(env: AppEnv): void {
   switch (env.llm.provider) {
     case 'openai':
       required('OPENAI_API_KEY', env.llm.openAiApiKey);
       return;
     case 'deepseek':
+      // COMP-04 — RGPD Art.44-49 / Schrems II. DeepSeek (api.deepseek.com, China)
+      // has no EU adequacy decision; sending chat text / images / coarse geo there
+      // is an unguarded cross-border transfer. Block in production unless the
+      // controller has consciously accepted the risk via a documented flag. The
+      // default provider (openai) and google are unaffected — this guard never
+      // throws for them, so it cannot break the normal boot path.
+      if (!isTransferApproved(process.env.DEEPSEEK_EU_TRANSFER_APPROVED)) {
+        throw new Error(
+          'LLM_PROVIDER=deepseek is blocked in production (Schrems II): DeepSeek ' +
+            '(api.deepseek.com, China) has no EU adequacy decision, so chat/image/geo ' +
+            'data would be transferred cross-border without a safeguard. Set ' +
+            'DEEPSEEK_EU_TRANSFER_APPROVED=true to consciously accept the transfer risk ' +
+            '(document the decision in the ROPA), or use LLM_PROVIDER=openai/google.',
+        );
+      }
       required('DEEPSEEK_API_KEY', env.llm.deepseekApiKey);
       return;
     case 'google':
@@ -65,6 +87,22 @@ function validateLlmProviderKey(env: AppEnv): void {
 
 function validateS3Storage(env: AppEnv): void {
   if (env.storage.driver !== 's3') return;
+
+  // COMP-02 — RGPD Art.32. Object keys are enumerable (chat-images/YYYY/MM/
+  // user-<id>/...); a world-readable bucket leaks every user's photos + voice
+  // audio. No aws-sdk/Terraform here to assert the bucket Public Access Block
+  // automatically, so require the operator to consciously attest they verified
+  // it is private before any prod deploy (fail-closed, no boot-time network).
+  // Enforcing the block via IaC / GetPublicAccessBlock probe needs cloud creds.
+  if (!isTransferApproved(process.env.S3_PUBLIC_ACCESS_BLOCK_VERIFIED)) {
+    throw new Error(
+      'S3 object storage in production requires S3_PUBLIC_ACCESS_BLOCK_VERIFIED=true ' +
+        '— attest that the bucket Public Access Block is enabled (bucket is PRIVATE; ' +
+        'presigned URLs only). Enumerable user-<id> keys make a public bucket a GDPR ' +
+        'Art.32 breach. Verify with the cloud console / `aws s3api get-public-access-block`.',
+    );
+  }
+
   required('S3_ENDPOINT', env.storage.s3?.endpoint);
   required('S3_REGION', env.storage.s3?.region);
   required('S3_BUCKET', env.storage.s3?.bucket);
@@ -105,6 +143,21 @@ function validateRedis(env: AppEnv): void {
  * `NODE_ENV === 'production'`. Throws to fail fast on startup.
  */
 export function validateProductionEnv(env: AppEnv): void {
+  // D3 (W2-07) — the L2 network-fault injector is a TEST-ONLY middleware that
+  // deliberately delays, fails, and trickles responses. It MUST be OFF in
+  // production UNCONDITIONALLY, with NO escape hatch (stricter than the chaos
+  // rate). `shouldMountNetFault` already coerces false in prod, but a misconfig
+  // (e.g. a stray `NET_FAULT_INJECTION_ENABLED=true` leaking into the prod
+  // environment) is an operator error we fail-fast on at boot rather than
+  // silently swallow — mirroring the AUTH_EMAIL_SERVICE_KIND='test' ban class.
+  if (toBoolean(process.env.NET_FAULT_INJECTION_ENABLED, false)) {
+    throw new Error(
+      'NET_FAULT_INJECTION_ENABLED is forbidden in production. The L2 network-fault ' +
+        'injector is a TEST-ONLY middleware (deliberately delays/fails/trickles responses) ' +
+        'with NO production escape hatch (Decision D3). Remove it from the environment.',
+    );
+  }
+
   // Phase 5 sentinel: 'test' email forbidden in prod — silently swallows
   // outbound emails into in-memory store; misconfig would lose real verification mails.
   if (env.auth.emailServiceKind === 'test') {
@@ -126,6 +179,8 @@ export function validateProductionEnv(env: AppEnv): void {
   if (!env.brevoApiKey) {
     console.warn('BREVO_API_KEY not set \u2014 password reset emails will not be sent');
   }
+
+  warnIfPlausibleNotConfigured(env);
 
   validateJwtSecrets(env);
 
@@ -164,6 +219,63 @@ export function validateProductionEnv(env: AppEnv): void {
   validateLlmProviderKey(env);
   validateS3Storage(env);
   validateRedis(env);
+
+  // W1-C2 (run 2026-05-26-kr-domains): fail-CLOSED at boot when the per-user LLM
+  // cost guard is configured but its Redis counter cannot exist. Placed AFTER
+  // validateRedis so a misconfigured-but-present Redis throws its specific error
+  // first (no masking).
+  validateCostGuardRedis(env);
+}
+
+/**
+ * W1-C2 — fail-CLOSED at boot if the per-user daily LLM cost cap is configured
+ * (`OPENAI_USER_DAILY_USD_CAP > 0`, the env.ts default is 0.5) but the Redis cache
+ * is disabled (`REDIS_URL` unset → `env.cache` undefined). The cap is enforced via
+ * the Redis-backed `llmCostCounter`, wired only inside `if (env.cache?.enabled)`;
+ * without Redis the counter stays null and `llmCostGuard` fails OPEN, silently
+ * serving paid LLM calls with NO per-user cap. Serving uncapped paid calls in prod
+ * is unacceptable (mission "the bill stops running away"), so we block the boot.
+ *
+ * `userDailyCapUsd === 0` is an explicit operator opt-out and is tolerated. Only
+ * invoked from `validateProductionEnv` (production-only).
+ *
+ * @param env
+ */
+function validateCostGuardRedis(env: AppEnv): void {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Justification: env trust boundary. AppEnv types `llm.costGuard.userDailyCapUsd` as always-present, but this boot validator is also fed partial env mocks (undefined `llm`/`costGuard`) → bare access threw TypeError (WAVE1-C2 regression). `?? 0` keeps prod fail-CLOSED (default cap 0.5 still throws) while treating absent cap as opt-out. Approved-by: M4-corrective@2026-05-26
+  if ((env.llm?.costGuard?.userDailyCapUsd ?? 0) > 0 && !env.cache?.enabled) {
+    throw new Error(
+      'LLM cost guard is configured (OPENAI_USER_DAILY_USD_CAP > 0) but Redis cache ' +
+        'is disabled (REDIS_URL unset) in production. The per-user daily USD cap cannot ' +
+        'be enforced without the Redis counter — set REDIS_URL or set ' +
+        'OPENAI_USER_DAILY_USD_CAP=0 to explicitly disable the cap.',
+    );
+  }
+}
+
+/**
+ * C3.2 (NFR-ROBUST-1) — NON-blocking warn when Plausible analytics is not fully
+ * configured. The KR4 funnel goes silent (the PlausibleAdapter no-ops) when
+ * either var is absent ; without this warn an operator has no boot-time signal.
+ * Never throws — an analytics outage MUST NOT block prod boot (same doctrine as
+ * the BREVO_API_KEY warn). Reads the PARSED env (`env.plausible`), not
+ * `process.env` directly, mirroring the BREVO precedent.
+ */
+function warnIfPlausibleNotConfigured(env: AppEnv): void {
+  const domain = env.plausible?.domain;
+  const endpointUrl = env.plausible?.endpointUrl;
+  if (domain && endpointUrl) return;
+
+  const missing = [
+    domain ? null : 'PLAUSIBLE_DOMAIN',
+    endpointUrl ? null : 'PLAUSIBLE_ENDPOINT_URL',
+  ]
+    .filter(Boolean)
+    .join(', ');
+  console.warn(
+    `Plausible analytics not fully configured (${missing}) — the KR4 funnel ` +
+      'will be silent (PlausibleAdapter no-ops). Set these to enable funnel tracking.',
+  );
 }
 
 function validateExportPseudonymSalt(env: AppEnv): void {

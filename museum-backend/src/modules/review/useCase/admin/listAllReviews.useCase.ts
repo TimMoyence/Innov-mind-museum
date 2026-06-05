@@ -1,5 +1,6 @@
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
 import { badRequest } from '@shared/errors/app.error';
+import { assertPagination } from '@shared/types/pagination';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type {
@@ -13,6 +14,12 @@ export interface ListAllReviewsInput {
   status?: string;
   page: number;
   limit: number;
+  /**
+   * C1B — tenant scope (BOLA). `undefined`/`null` = global cross-tenant view
+   * (super_admin/admin). For a `museum_manager` the route forces this to their
+   * JWT claim so the repo filters to their own museum's reviews only.
+   */
+  museumId?: number | null;
 }
 
 /** Admin use only — lists all reviews regardless of status. */
@@ -20,12 +27,7 @@ export class ListAllReviewsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 
   async execute(input: ListAllReviewsInput): Promise<PaginatedResult<ReviewDTO>> {
-    if (!Number.isInteger(input.page) || input.page < 1) {
-      throw badRequest('page must be a positive integer');
-    }
-    if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) {
-      throw badRequest('limit must be between 1 and 100');
-    }
+    const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
     if (input.status && !REVIEW_STATUSES.includes(input.status as ReviewStatus)) {
       throw badRequest(`status must be one of: ${REVIEW_STATUSES.join(', ')}`);
@@ -33,7 +35,8 @@ export class ListAllReviewsUseCase {
 
     const filters: ListReviewsFilters = {
       status: input.status as ReviewStatus | undefined,
-      pagination: { page: input.page, limit: input.limit },
+      museumId: input.museumId,
+      pagination: { page, limit },
     };
 
     return await this.repository.listReviews(filters);

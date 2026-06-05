@@ -87,14 +87,17 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     flex: 1,
+    minHeight: space['14'],
     borderRadius: semantic.card.radiusCompact,
     borderWidth: semantic.input.borderWidth,
     paddingVertical: space['2.5'],
     alignItems: 'center',
+    justifyContent: 'center',
   },
   optionLabel: {
     fontWeight: '600',
     fontSize: semantic.form.labelSize,
+    textAlign: 'center',
   },
   description: {
     fontSize: semantic.card.captionSize,

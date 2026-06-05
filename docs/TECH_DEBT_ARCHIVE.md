@@ -1351,3 +1351,99 @@
 - [x] **Statut** : fermé 2026-05-21 — `errorCorrectionLevel: 'H'` ajouté au `QRCode.toString` dans `museum-web/src/app/[locale]/admin/mfa/page.tsx`. Test vitest `page.test.tsx` (red→green vérifié) asserte l'option. lib-docs/qrcode/PATTERNS.md:76,87.
 **Fix** : ~~add `errorCorrectionLevel: 'H'` to QRCode.toString call~~ FAIT.
 
+## Archivé 2026-06-04 (clôture dette audit 360)
+
+> Lots de clôture de l'audit contrôle qualité 360 (cf `## Audit contrôle qualité 360°` dans TECH_DEBT.md pour TD-62/71 restés ouverts). Tous commités sur `dev` (non poussés). Source : workflow `/team` `wf_06958ad2-beb` + reprise post-crash 2026-06-04.
+
+### TD-61 — `audit-chain.computeRowHash` exclut le contenu imbriqué du hash (collision) — ✔ **RÉSOLU** (commit `613aa564`)
+
+- [x] **Statut** : **résolu** (commit `613aa564`, sur `dev` non poussé) — /team run `2026-06-04-audit-chain-nested-hash` (UFR-022 fresh-context), reviewer APPROVED weightedMean 92.3. Cf. **[ADR-070](adr/ADR-070-audit-chain-canonical-deep-serializer-hash-version.md)**. **AUDIT-02 (oracles de test buggés) corrigé dans le même lot.** *(historique d'origine conservé ci-dessous.)*
+- **Sévérité (origine)** : HIGH, candidat CRITICAL (chemin notification CNIL, légalement opposable).
+- **Référence code (origine, créé 2026-06-04 — audit 360 AUDIT-01)** :
+  ```
+  museum-backend/src/shared/audit/audit-chain.ts:43-46   # JSON.stringify(metadata, Object.keys(metadata).sort())
+  museum-backend/src/shared/audit/audit.service.ts:207-219
+  # + payload guardrail/breach nested (provider:{}, breach:{})
+  ```
+- **Symptôme (vérifié, origine)** : le 2ᵉ argument de `JSON.stringify` est un **replacer-allowlist appliqué récursivement** ; `Object.keys(metadata)` ne liste que le 1ᵉʳ niveau → tout objet imbriqué est sérialisé sans ses sous-clés (`{"breach":{}}`). Deux payloads forensiques nested différents → **même hash**. Collision reproduite par l'agent (`COLLISION=true`) ET confirmée par lecture directe du code. La migration `AddAuditLogHashChain` utilise un vrai sérialiseur récursif → **diverge du runtime**, parité non testée. Les tests hardcodent le sérialiseur buggé comme oracle (AUDIT-02) → bug structurellement invisible.
+- **Résolution livrée** :
+  - Sérialiseur canonique deep-recursif `canonicalStringify` (clés triées à tous les niveaux, comparateur **code-unit** déterministe, PAS `localeCompare`) — **source unique** partagée runtime (`audit-chain.ts`) + migration `AddAuditLogHashChain` (import partagé, parité verrouillée par snapshot de sortie).
+  - Dispatch versionné par **colonne `hash_version` hors-payload** (option A, migration `1780564269011-AddAuditLogHashVersion`, `DEFAULT 1`) : lignes legacy vérifiées sous v1 figé → **zéro faux BREAK**, **aucun recompute** (valeur forensique préservée, pas de sign-off DPO). Nouvelles écritures = v2.
+  - **AUDIT-02** : oracles de test indépendants (`oracleCanonical`/`oracleRowDigest` écrits à la main, byte-comparés à la sortie prod) + cas nested + tableau d'objets + chaîne mixte v1/v2 + mutation imbriquée qui casse la chaîne. Plus aucun test ne réutilise `computeRowHash` ni le sérialiseur buggé comme oracle.
+  - **Invariant à maintenir** : `AuditMetadataSchema` doit continuer d'imposer des clés **lowercase-first** (cf. ADR-070 INVARIANT — `localeCompare`→code-unit diverge sur clés de casse mixte, no-op sur les clés camelCase actuelles).
+- **Backlog résiduel (LOW)** : `canonicalStringify` émet un token littéral `undefined` pour une valeur d'objet imbriquée `undefined` (non atteignable — breach/guardrail utilisent `?? null`, Zod interdit `undefined`). Durcir ou documenter l'invariant `?? null` (cf. ADR-070 § Backlog).
+
+### TD-63 — Garantie fail-CLOSED V2 (ADR-047) non gardée en CI — ✔ **RÉSOLU** (commit `776215ec`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `776215ec` `fix(ci): TD-63+70 — CI fail-CLOSED V2 gate + Stryker honnetete`, lot de clôture audit 360). Sévérité HIGH. *(historique d'origine conservé ci-dessous.)*
+- **Résolution livrée** : nouveau job CI **bloquant** `guardrail-failclosed` (sans `continue-on-error`, sans `OPENAI_API_KEY` ni sidecar) qui lance la suite déterministe `tests/ai/guardrail-failclosed-deterministic.ai.test.ts` (144 lignes, dead-port→deny / dead-URL→deny / budget→fail-OPEN null / fail-soft) et gate `deploy-prod` (ajouté aux `needs`). Les invariants short-circuitent avant tout appel modèle/réseau → déterministe. Les asserts LLM live restent advisory dans `ai-tests` (`continue-on-error`). Diff : `.github/workflows/ci-cd-backend.yml` (+48), `tests/ai/guardrail-failclosed-deterministic.ai.test.ts` (+144).
+- **Statut (origine)** : ouvert (créé 2026-06-04, audit 360 TQ-01). Sévérité HIGH.
+- **Référence code** : `.github/workflows/ci-cd-backend.yml:524-565` (ai-tests `continue-on-error:true` l.564, aucun `services:`/sidecar) ; `tests/ai/guardrail-v2-live*`.
+- **Symptôme** : sans sidecar, `guardrail-v2-live` throw en `beforeAll` → avalé par `continue-on-error`. Les invariants déterministes (dead-port/dead-URL/budget/fail-soft) sont co-localisés avec des asserts LLM non-déterministes → tombent ensemble. Aucun gate bloquant ne valide fail-CLOSED. `ci-cd-llm-guard.yml` ne fait que build+health-smoke.
+- **Comment fermer** : sortir les tests fail-CLOSED déterministes du `describe` live-sidecar → job bloquant sans sidecar ; laisser les asserts LLM en advisory.
+
+### TD-64 — `artKeyword.upsert` lit le tuple RETURNING comme une ligne — ✖ **FAUX POSITIF** (clos 2026-06-04)
+
+- [x] **Statut** : **clos faux-positif 2026-06-04** (audit 360 SYS-01, lot de clôture). Sévérité MEDIUM **rétractée**. Aucune modif de code — le code était déjà correct ; le finding sur-généralisait la gotcha UPDATE/DELETE à INSERT.
+- **Verdict (vérifié contre le driver réel)** : `PostgresQueryRunner` (`node_modules/typeorm/driver/postgres/PostgresQueryRunner.js:198-206`) ne renvoie le tuple `[rows[], count]` QUE pour `command === 'UPDATE' | 'DELETE'`. Un `INSERT` (y compris `INSERT … ON CONFLICT … RETURNING`) retombe sur le défaut → `result.raw = raw.rows` (les lignes seules). Donc `artKeyword.repository.typeorm.ts` `(rows as ArtKeyword[])[0]` est **correct** pour un INSERT…RETURNING, et `prune-stale-art-keywords.ts` lit déjà `result[1]` correctement pour son vrai DELETE.
+- **Résidu leads/support/review — aussi déjà correct** : les 4 (et seuls) call-sites raw `.query('…RETURNING')` de ces modules lisent tous `result[1]` avec garde tuple-aware (`lead.repository.pg.ts:124-145`, `prune-support-tickets.ts:46-58`, `prune-reviews.ts:55-59`). Aucun ne lit `result[0]` comme une row.
+- **Leçon (UFR-017)** : la gotcha CLAUDE.md « RETURNING renvoie `[rows,count]` » vaut pour UPDATE/DELETE, PAS pour INSERT. Le bug réel d'origine ([[TD-12]] + quota `f74ce7de`) portait sur un UPDATE/DELETE. Vérifier le driver/test avant de classer — ne pas propager une classe de bug par analogie de surface.
+
+### TD-65 — Soft-delete `deletedAt` non filtré hors login (tokens reset + email-squat) — ✔ **RÉSOLU** (commits `d529450c` + `59790c79`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `d529450c` `fix(debt): TD-65 — Auth soft-delete email-squat`, lot de clôture audit 360). Sévérité HIGH (sécurité). *(historique d'origine conservé ci-dessous.)*
+- **Résolution livrée** : `ForgotPasswordUseCase.execute` garde sur `user.deletedAt` → skip silencieux (même pattern anti-énumération que le skip unverified) + log `forgot_password_soft_deleted_skipped`. Plus aucun token/email de reset n'est émis à un compte soft-deleted. Root-cause confirmée : `deletedAt` est une colonne hand-rolled (pas `@DeleteDateColumn`) → `getUserByEmail` ne filtre pas, seuls login/refresh le gardaient. Diff : `museum-backend/src/modules/auth/useCase/password/forgotPassword.useCase.ts` (+12).
+- **changeEmail / register — déjà sûrs (vérifié 2026-06-04, garde-régression commités `59790c79`)** : pas de squat possible. `getUserByEmail` ne filtre PAS les soft-deleted (colonne hand-rolled) → le check `if (existing)` de `changeEmail` rejette déjà l'email d'un compte supprimé ; et la contrainte `UNIQUE(email)` est **plaine** (pas partielle `WHERE deleted_at IS NULL`, cf. `InitDatabase`) → `registerUser` (INSERT) entre en conflit. 3 tests de caractérisation verrouillent ces invariants (forgot/change/register). NB : une future migration `@DeleteDateColumn` rendrait `changeEmail`/`register` à nouveau vulnérables → ces tests basculeraient RED (garde voulu).
+- **Statut (origine)** : ouvert (créé 2026-06-04, audit 360 SYS-02). Sévérité HIGH (sécurité).
+- **Référence code** : `museum-backend/src/modules/auth/useCase/session/authSession.service.ts:116,198` (seuls sites filtrant `deletedAt`, vérifié grep) ; chemins `forgotPassword`/`registerUser`/`changeEmail` (auth) non re-lus ligne-à-ligne.
+- **Symptôme (corroboré)** : `grep` confirme que `deletedAt` n'est filtré QUE dans les chemins login. L'agent rapporte que `forgotPassword` émet des tokens de reset à des comptes soft-deleted et que `registerUser`/`changeEmail` laissent un compte supprimé squatter l'email (unicité non exclue des soft-deleted). À re-lire/reproduire avant fix.
+- **Comment fermer** : filtrer `deletedAt` dans `forgotPassword` (pas de token à un compte supprimé) + exclure les soft-deleted des checks d'unicité email (ou migrer vers `@DeleteDateColumn`).
+
+### TD-66 — Snippet d'audit BLOCKED garde 64 chars user bruts avant le sanitizer PII — ✔ **RÉSOLU** (commit `5912b5e`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `5912b5e`, lot de clôture audit 360). Sévérité MEDIUM (PII/rétention). Reviewé APPROVED 88 (workflow `wf_06958ad2-beb`).
+- **Résolution livrée** : `redactSnippetForAudit` (`guardrail-snippet.ts`) applique `RegexPiiSanitizer.sanitize()` sur le texte intégral AVANT `slice(0,64)` → le preview d'audit (rétention 13 mois) porte `[EMAIL]`/`[PHONE]` au lieu de PII brute. Le `snippetFingerprint` continue de hasher le texte ORIGINAL (sha256) → invariant de dédup forensique préservé. +5 tests `guardrail-snippet` +1 `guardrail-audit-payload`.
+- **Statut (origine)** : ouvert (audit 360 AISAN-01). `slice(0,64)` du texte user AVANT `RegexPiiSanitizer`, rétention 13 mois.
+
+### TD-67 — `ThreeStateCircuit` : probe HALF_OPEN sans timeout → lock-out permanent possible — ✔ **RÉSOLU** (commit `11981930`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `11981930`, lot de clôture audit 360). Sévérité MEDIUM. Reviewé APPROVED 88.
+- **Résolution livrée** : nouvelle primitive `releaseProbe()` + flag privé `hasOutstandingProbe` (`three-state-circuit.ts`) → un appelant enveloppe `canAttempt`/`recordOutcome` en try/finally et relâche le slot HALF_OPEN si une exception fuit entre les deux (sémantique idempotente, jamais sur-relâchée, NO-I/O purity intacte). +RED test `three-state-circuit-probe-release.test.ts`.
+- **Statut (origine)** : ouvert (audit 360 CIRCUIT-01). Exception entre `canAttempt` et `recordOutcome` → probe HALF_OPEN fuit → lock-out permanent.
+
+### TD-68 — `sentry-scrubber` ne scrub pas les URL (token query-string) dans `extra`/`data` — ✔ **RÉSOLU** (commit `f7c7e801`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `f7c7e801`, lot de clôture audit 360). Sévérité MEDIUM (fuite obs). Review adversariale fraîche APPROVED (7/7).
+- **Résolution livrée** : `scrubRecord` (`packages/musaium-shared/src/observability/sentry-scrubber.ts`) applique `scrubUrl` aux valeurs URL-like sous clé non-sensible (précédence : clé sensible → `REDACTED` d'abord ; `scrubUrl` no-op sans param sensible → pas de sur-masquage). Couvre `extra` + `request.data` + arrays/nested. +4 tests shared (3 RED + 1 garde no-over-masking), dist rebuild, `CANONICAL_HASH` ré-épinglé (`b162fa86…`). Vérifié shared 35/35, BE 35/35, web 5/5, parité exit 0.
+- **Statut (origine)** : ouvert (audit 360 SCRUB-01). URL avec token en query-string sous clé `extra`/`data` non-sensible échappait (seuls `tags`/`request.url` scrubés). Résidu hors-scope surfacé → [[TD-71]].
+
+### TD-69 — Dead-code / scaling B2B prématuré à enterrer (UFR-016) — ✔ **RÉSOLU** (commits `16a2932a` + `9bd785ed`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commits `16a2932a` burial Node + `9bd785ed` script seed, lot de clôture audit 360). Sévérité LOW. Burial Node reviewé APPROVED 88 (mort empiriquement confirmée : 0 référence résiduelle `TenantRateLimiter`/`getTenantRateLimiter`/`_tenantRateLimiter`).
+- **Résolution livrée** : (1) `TenantRateLimiter` supprimé (classe + test + 5 points de câblage `chat-module.ts`) + orphan-sweep (bloc env `env.ts`/`env.types.ts`, métrique `tenantRateLimitRejectsTotal` + fiche `METRIC_NAMING_AUDIT.md`, fixture integration). (2) `scripts/seed-pilot-museums.sh` supprimé (orchestrait Louvre/Orsay/Pompidou — QID jamais seedés — sous vocabulaire « pilot ») + P0.C4 de `ROADMAP_AUDIT_TRAIL.md` repointé vers la preuve réelle (seed Bordeaux `seed-museums.ts`).
+- **Statut (origine)** : ouvert (audit 360 KISS-01/RMAP-01). Code mort B2B-prématuré + incohérence narrative North Star.
+
+### TD-70 — Stryker désarmé absent de la posture de risque produit — ✔ **RÉSOLU** (commit `776215ec`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `776215ec`, lot de clôture audit 360). Décision tranchée : **acter dans la roadmap** (PAS re-armer — re-arm = décision coût réservée à l'humain).
+- **Résolution livrée** : `ROADMAP_PRODUCT.md` § « Posture de risque qualité — gardes désarmés » documente explicitement que Stryker est DÉSARMÉ (`if:false` depuis 2026-05-09), que le kill-rate réel est INCONNU (seule la couverture de lignes est mesurée), et qu'il ne doit JAMAIS être cité comme garde actif. Le SHA parasite `c17c404e` glissé par erreur dans cette note a été retiré en `9bd785ed`.
+- **Reste ouvert (NON fait dans ce lot — honnêteté)** : `TD-39` (wrapper Stryker module-auth) + `TD-40` (`noUncheckedIndexedAccess` BE absent) restent **ouverts**, re-confirmés par l'audit mais non traités ici. Ne PAS les marquer clos.
+
+### TD-71 — `request.query_string` déclaré mais jamais scrubé par `scrubRequest` — ✔ **RÉSOLU** (commit `fb2d8640`)
+
+- [x] **Statut** : **résolu 2026-06-04** (commit `fb2d8640`, sur `dev` non poussé). Sévérité MEDIUM (fuite obs). Surfacé par la review adversariale de [[TD-68]] ; review fraîche APPROVED 8/8 (incl. durcissement `?`-initial recommandé).
+- **Résolution livrée** : `scrubRequest` (`packages/musaium-shared/src/observability/sentry-scrubber.ts`) applique `scrubUrl` à `query_string` — strip d'un `?` initial (défensif : sinon `?token=x` keyerait sur `?token`, hors `SENSITIVE_QUERY_KEYS` → fuite), wrap en query nue pour réutiliser la redaction par clé sensible, puis strip du `?` synthétique. No-op sans param sensible. +4 tests shared, dist rebuild, `CANONICAL_HASH` ré-épinglé (`2e024c11…`). Vérifié shared 39/39, BE 35/35, web 5/5, parité exit 0.
+- **Statut (origine)** : ouvert, surfacé par la review de TD-68 — `request.query_string` (champ dédié) échappait au scrub (seuls headers/data/url traités).
+
+---
+
+## Archivé 2026-06-05 (night-run dette — fresh-context red→green→review)
+
+Série autonome de 7 dettes (UFR-008). Chaque dette code = red→green→review adversarial fresh, zéro bypass hook. Détail commits + reviews : `artifacts/2026-06-05-night-run-report.html`. TD-40 reste OUVERT dans `docs/TECH_DEBT.md` (différé, scope corrigé).
+
+- **TD-46** (`440494fd`) — `VDP_RUNBOOK.md` §10 « Post-launch operational cadence Sentry P0 » (daily J+1..J+7 09:00 UTC, weekly Mon, per-release 24 h, owner, audit-trail, miss-policy). Doc-only.
+- **TD-27** (`f4331705`) — restore-drill mensuel vérifie la chaîne de hash `audit_logs` post-restore (SOC2 CC7.3). Câblage du vérificateur canonique `pnpm audit-chain:verify` (ts-node) après `pg_restore`, **PAS** un `.cjs` redondant (dériverait du sérialiseur v1/v2 → faux-INTACT). + test de contenu de workflow. Reviewer fresh APPROVED. Preuve CLI : exit 0 (vide) / exit 1 (rompu).
+- **TD-48** (`f6d96c06`) — validateur W3C Baggage all-or-nothing dans `trace-propagation.middleware.ts` (BE). Rejet silencieux des baggage malformés. Parseur linéaire (scan code-point, pas de regex sonar-flaggée). Review fresh 2-passes (sur-rejet OWS-avant-`;` chopé + corrigé). 9/9 tests.
+- **TD-47** (`75a8db25`) — `museum-web/src/lib/api.ts` forwarde `sentry-trace`/`baggage` (Sentry.getTraceData v10) sur happy-path RSC. Review fresh APPROVED (double-injection client bénigne vérifiée dans le SDK). 25/25 tests.
+- **TD-34** (`79723d0d`) — 3 flows Maestro stale CI-skippés supprimés (UFR-016 ; paywall/voice supersédés, RTL = gap doc), 3 utils screenshot gardés + `maestro/README.md`, inventaires de test corrigés + citation roadmap pendante réparée. Déviation assumée delete-vs-relocate (sharder du non-vérifié casserait Maestro push-main).
+- **TD-22** (`1843ce68`) — verified-moot : 0 des 14 ports chat inlinable sous ADR-058 (tous multi-impl prod ou test-swap depuis 2026-05-17) ; addendum ADR-058 superseder la liste inline. Vérifié par agent adversarial frais (2 justifications corrigées).

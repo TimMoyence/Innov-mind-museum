@@ -20,6 +20,7 @@ import { WikidataKbDump } from '@modules/chat/domain/wikidata-kb-dump.entity';
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import { ExtractedContent } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
+import { Lead } from '@modules/leads/domain/lead/lead.entity';
 import { Museum } from '@modules/museum/domain/museum/museum.entity';
 import { MuseumQaSeed } from '@modules/museum/domain/qa-seed/museumQaSeed.entity';
 import { Review } from '@modules/review/domain/review/review.entity';
@@ -64,6 +65,7 @@ export const AppDataSource = new DataSource({
     Review,
     SupportTicket,
     TicketMessage,
+    Lead,
     ExtractedContent,
     ArtworkKnowledge,
     MuseumEnrichment,

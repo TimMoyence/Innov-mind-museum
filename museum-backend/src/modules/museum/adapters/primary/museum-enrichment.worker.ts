@@ -158,6 +158,14 @@ function buildEnrichmentView(input: BuildViewInput): MuseumEnrichmentView {
     phone: facts.phone,
     imageUrl: facts.imageUrl,
     openingHours: input.openingHours,
+    // The auto-fetch pipeline (Wikidata/Wikipedia/OSM) does not source these
+    // rich fields — they stay null at refresh time. The cache adapter's UPDATE
+    // path deliberately leaves the columns untouched so any seeded value is
+    // preserved (see typeorm-museum-enrichment-cache.adapter.ts).
+    admissionFees: null,
+    collections: null,
+    currentExhibitions: null,
+    accessibility: null,
     fetchedAt: input.now.toISOString(),
   };
 }

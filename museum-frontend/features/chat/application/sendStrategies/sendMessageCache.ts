@@ -1,9 +1,11 @@
 import {
   buildOptimisticMessage,
+  isRenderableAssistantContent,
   sortByTime,
   type ChatUiMessage,
   type ChatUiMessageMetadata,
 } from '../chatSessionLogic.pure';
+import { logEmptyAssistantResponse } from './sendStrategy.shared';
 import type { SendMessageContext } from './sendStrategy.types';
 
 /** Outcome of the cache strategy — callers use this to decide whether to fall through to streaming. */
@@ -35,13 +37,23 @@ export const sendMessageCache = async (
   });
 
   if (cached) {
+    const cachedMetadata = (cached.metadata as ChatUiMessageMetadata | undefined) ?? null;
+    // Cycle 5 (D4/D7) — a corrupted hit (empty/whitespace answer, no media) must
+    // not render a phantom bubble. Treat it as a `miss` so the caller falls
+    // through to streaming and fetches a real answer, instead of caching-in a
+    // blank reply that would block the turn.
+    if (!isRenderableAssistantContent(cached.answer, cachedMetadata)) {
+      logEmptyAssistantResponse('cache');
+      return { kind: 'miss' };
+    }
+
     const userMsg = buildOptimisticMessage({ text: attempt.text });
     const assistantMsg: ChatUiMessage = {
       id: `${String(Date.now())}-cached`,
       role: 'assistant',
       text: cached.answer,
       createdAt: new Date().toISOString(),
-      metadata: (cached.metadata as ChatUiMessageMetadata | undefined) ?? null,
+      metadata: cachedMetadata,
       cached: true,
     };
     context.setMessages((prev) => sortByTime([...prev, userMsg, assistantMsg]));

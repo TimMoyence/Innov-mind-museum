@@ -98,4 +98,12 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 STOPSIGNAL SIGTERM
 
-CMD ["sh", "-c", "node dist/src/data/db/run-migrations.js && node dist/src/index.js"]
+# Boot runs the app ONLY. Migrations run on a SINGLE path — the CI deploy step
+# (`docker compose run --rm backend node dist/src/data/db/run-migrations.js`),
+# which carries the pgvector preflight guard (run-migrations.ts:17). The boot
+# CMD no longer migrates (I-OPS3, 2026-05-25): a double-run on two code paths
+# turned a failed migration into an opaque `restart: unless-stopped` loop.
+# DR NOTE: a fresh prod DB brought up WITHOUT the CI deploy step (manual rebuild)
+# will boot against an unmigrated schema — the DR runbook MUST first run
+# `docker compose run --rm backend node dist/src/data/db/run-migrations.js`.
+CMD ["node", "dist/src/index.js"]

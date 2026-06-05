@@ -35,9 +35,17 @@ export interface IReviewRepository {
   findByMuseum(museumId: number, filters: ListReviewsFilters): Promise<PaginatedResult<ReviewDTO>>;
 
   /**
-   * Wave B C7 / R-C7b — NPS aggregate over `approved` reviews for a given
-   * tenant museum. Uses the new 0-10 rating range (D8 cohabitation : a 1-5
-   * review is still scored — counts as detractor if ≤ 6, passive if 7-8, etc.).
+   * NPS aggregate over `approved` reviews. Uses the 0-10 rating range (D8
+   * cohabitation : a 1-5 review is still scored — counts as detractor if ≤ 6,
+   * passive if 7-8, promoter if 9-10).
+   *
+   * Scope (C2 / R6-R7) :
+   *   - `museumId` omitted / `null` / `undefined` → **global** aggregate over
+   *     ALL approved reviews, INCLUDING rows with `museum_id IS NULL` (the
+   *     dominant B2C V1 case). The museum predicate is simply omitted — NOT
+   *     `museum_id IS NULL`.
+   *   - `museumId` provided → per-museum aggregate (`museum_id IS NULL` rows
+   *     are excluded for any specific museum).
    */
-  aggregateNps(museumId: number): Promise<NpsAggregate>;
+  aggregateNps(museumId?: number | null): Promise<NpsAggregate>;
 }

@@ -1,12 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
-import type { PaginatedResponse, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
+import type { ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 
 // -- Badge colors ────────────────────────────────────────────────────────
@@ -23,55 +29,51 @@ export default function AdminReviewsPage() {
   const adminDict = useAdminDict();
   const dateLocale = useDateLocale();
 
-  const [reviews, setReviews] = useState<ReviewDTO[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | ''>('pending');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Moderation modal state
   const [moderating, setModerating] = useState<ReviewDTO | null>(null);
   const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
   const [saving, setSaving] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
 
-  const fetchReviews = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
+  const reviewsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    return `/api/admin/reviews?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<ReviewDTO>>(
-        `/api/admin/reviews?${params.toString()}`,
-      );
-      setReviews(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reviews');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
+  const {
+    data: reviewsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchReviews,
+  } = useFetchData<ReviewDTO[]>(reviewsUrl, {
+    deps: [page, statusFilter],
+    errorFallback: 'Failed to load reviews',
+  });
 
-  useEffect(() => {
-    void fetchReviews();
-  }, [fetchReviews]);
+  const reviews = reviewsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Moderation handler ─────────────────────────────────────────────
 
   async function handleModerate() {
     if (!moderating || !decision) return;
     setSaving(true);
+    setMutationError(null);
     try {
       await apiPatch<{ review: ReviewDTO }>(`/api/admin/reviews/${moderating.id}`, {
         status: decision,
@@ -80,32 +82,11 @@ export default function AdminReviewsPage() {
       setDecision(null);
       void fetchReviews();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to moderate review');
+      setMutationError(err instanceof Error ? err.message : 'Failed to moderate review');
     } finally {
       setSaving(false);
     }
   }
-
-  // -- Modal backdrop ref ─────────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  const modalOpen = moderating !== null && decision !== null;
-  useEffect(() => {
-    if (!modalOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) {
-        setModerating(null);
-        setDecision(null);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [modalOpen, saving]);
 
   return (
     <div>
@@ -140,14 +121,12 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 
@@ -158,24 +137,12 @@ export default function AdminReviewsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.author}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.rating}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reviewsPage.comment}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.author}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.rating}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reviewsPage.comment}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -188,30 +155,28 @@ export default function AdminReviewsPage() {
                 ) : (
                   reviews.map((r) => (
                     <tr key={r.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(r.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {r.userName}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-primary">
-                        {r.rating}/5
-                      </td>
-                      <td className="max-w-md truncate px-6 py-3 text-text-secondary">
-                        {r.comment}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="text-text-primary">
+                        {r.rating}/10
+                      </TableDataCell>
+                      <TableDataCell className="max-w-md truncate">{r.comment}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status]}`}
                         >
                           {adminDict.reviewsPage[r.status]}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         {r.status === 'pending' ? (
                           <div className="flex items-center gap-2">
                             {MODERATION_STATUSES.map((s) => (
@@ -237,7 +202,7 @@ export default function AdminReviewsPage() {
                             {adminDict.reviewsPage.moderated}
                           </span>
                         )}
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}
@@ -255,33 +220,23 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* Moderation confirm modal */}
+      {/* Moderation confirm modal (outlier OQ-6: inline footer with green/red
+          dynamic button — keeps BaseModal scaffold but not ModalActions). */}
       {moderating && decision && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) {
-              setModerating(null);
-              setDecision(null);
-            }
+        <BaseModal
+          open
+          onClose={() => {
+            setModerating(null);
+            setDecision(null);
           }}
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {decision === 'approved'
-                ? adminDict.reviewsPage.confirmApprove
-                : adminDict.reviewsPage.confirmReject}
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">{moderating.userName}</p>
-            <p className="mt-1 text-sm text-text-primary">{moderating.rating}/5</p>
-            <blockquote className="mt-3 border-l-4 border-primary-200 pl-4 text-sm italic text-text-secondary">
-              {moderating.comment}
-            </blockquote>
-
+          title={
+            decision === 'approved'
+              ? adminDict.reviewsPage.confirmApprove
+              : adminDict.reviewsPage.confirmReject
+          }
+          size="md"
+          dismissable={!saving}
+          footer={
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -304,14 +259,20 @@ export default function AdminReviewsPage() {
                 }`}
               >
                 {saving
-                  ? '...'
+                  ? '…'
                   : decision === 'approved'
                     ? adminDict.reviewsPage.approve
                     : adminDict.reviewsPage.reject}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p className="mt-2 text-sm text-text-secondary">{moderating.userName}</p>
+          <p className="mt-1 text-sm text-text-primary">{moderating.rating}/10</p>
+          <blockquote className="mt-3 border-l-4 border-primary-200 pl-4 text-sm italic text-text-secondary">
+            {moderating.comment}
+          </blockquote>
+        </BaseModal>
       )}
     </div>
   );

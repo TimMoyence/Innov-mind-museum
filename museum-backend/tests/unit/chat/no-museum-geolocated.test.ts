@@ -40,6 +40,9 @@ const userText = (result: ReturnType<typeof buildOrchestratorMessages>): string 
 describe('no-museum geolocated chat path (museumId === null)', () => {
   it('emits a coarse <visitor_context> for an outdoor monument when location is resolved (R8/AC-NM-1)', () => {
     const resolvedLocation = makeResolvedLocation({
+      // Coarse consent → city only ships; the quartier MUST NOT escalate (REQ-5).
+      consentGranularity: 'coarse',
+      reverseGeocodeNeighbourhood: null,
       reverseGeocodeCoarse: 'Bordeaux, France',
       reverseGeocode: '12 Place des Quinconces, 33000 Bordeaux, France',
       nearbyMuseums: [makeNearbyMuseum({ id: 7, name: 'CAPC', distance: 800 })],
@@ -86,7 +89,12 @@ describe('no-museum geolocated chat path (museumId === null)', () => {
     const withLocation = buildOrchestratorMessages(
       makeNullMuseumInput({
         text: 'Hello',
-        resolvedLocation: makeResolvedLocation({ reverseGeocodeCoarse: 'Lyon, France' }),
+        resolvedLocation: makeResolvedLocation({
+          // Coarse consent → city only (no quartier escalation, REQ-5).
+          consentGranularity: 'coarse',
+          reverseGeocodeNeighbourhood: null,
+          reverseGeocodeCoarse: 'Lyon, France',
+        }),
       }),
     );
     expect(userText(withLocation)).toContain('Lyon, France');
@@ -95,5 +103,137 @@ describe('no-museum geolocated chat path (museumId === null)', () => {
     // not the gate; the resolved location is.
     const withoutLocation = buildOrchestratorMessages(makeNullMuseumInput({ text: 'Hello' }));
     expect(userText(withoutLocation)).not.toContain('visitor_context');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 1 (RUN_ID 2026-05-26-chat-pipeline-hardening) — A-01 GPS-leak guard.
+//
+// Bug A-01 (CRITICAL): when geo consent is REFUSED / anonymous
+// (`resolvedLocation === undefined`) but the raw client GPS string is still
+// propagated unconditionally into `context.location` (format
+// `"lat:X,lng:Y"`), `buildVisitorContextLine` falls into its `!rl` branch and
+// interpolates the raw coordinates verbatim into the `<visitor_context>` sent
+// to the third-party LLM (`sanitizePromptInput` does NOT strip them).
+//
+// GDPR inversion (Art. 7): a visitor who ACCEPTS only leaks the coarse city;
+// a visitor who REFUSES leaks exact GPS. Refusing must never leak MORE than
+// accepting.
+//
+// Spec/Design: spec-cycle1.md (REQ-1/2/3/4/5, AC-1/3/4/5/8) AS AMENDED by
+// spec-cycle1-amendment.md (Narrow contract — PREVAILS over Décision D2).
+// These tests EXTEND the file (they do not rewrite the R8/R9/R3 characterization
+// above).
+//
+// Narrow contract (chemin principal P, branche `!resolvedLocation`):
+//   - `context.location` parseable as GPS (`lat:X,lng:Y`) → NO `<visitor_context>` (drop). [A-01]
+//   - `context.location` non-GPS free-text label → M4 behaviour preserved (anti-injection
+//     guardrail; a legitimate label is still emitted). This is covered, unchanged, by the
+//     existing M4 tests `llm-prompt-builder.test.ts:617,710` + the `location field guardrail`
+//     block — so there is NO test here asserting absence for a non-GPS label (the old D2 "T6"
+//     case was removed: under Narrow a non-GPS label MUST be emitted, not dropped).
+//
+// Expected status on CURRENT (pre-fix) code:
+//   - T1 (refused/anon + GPS)            → FAILS (leaks lat:/lng:/coords). Proof of A-01.
+//   - T3 (granted outdoor + GPS coexist) → PASSES (hardened with coexisting GPS).
+//   - T4 (granted museum  + GPS coexist) → PASSES (hardened).
+//   - T5 (granted nearby  + GPS coexist) → PASSES (hardened).
+// ---------------------------------------------------------------------------
+
+/** Asserts a prompt text never leaks raw GPS markers nor the given coord numbers. */
+const expectNoCoordinateLeak = (text: string, ...coordTokens: string[]): void => {
+  expect(text).not.toContain('lat:');
+  expect(text).not.toContain('lng:');
+  for (const token of coordTokens) {
+    expect(text).not.toContain(token);
+  }
+};
+
+describe('no-museum geolocated chat path — A-01 raw GPS never reaches the LLM (cycle 1)', () => {
+  it('T1: refused/anonymous consent + raw context.location GPS → no geo visitor_context, no coords leak (AC-1, FAILS pre-fix)', () => {
+    const result = buildOrchestratorMessages(
+      makeNullMuseumInput({
+        text: 'What is this statue?',
+        userId: null, // anonymous → resolveLocationForMessage returns undefined upstream
+        // No resolvedLocation (consent refused / anonymous), but the client still
+        // shipped the raw GPS in context.location — the exact A-01 condition.
+        resolvedLocation: undefined,
+        context: { location: 'lat:48.8606,lng:2.3376' },
+      }),
+    );
+
+    const text = userText(result);
+    // Narrow contract (REQ-2'): with resolvedLocation undefined, a GPS-parseable
+    // context.location is dropped — no visitor_context emitted.
+    expect(text).not.toContain('visitor_context');
+    // And — defense in depth — the raw coordinates must never appear anywhere.
+    expectNoCoordinateLeak(text, '48.8606', '2.3376');
+  });
+
+  it('T3: granted consent, outdoor coarse, with coexisting raw GPS → ships city only, never coords (AC-3, AC-5)', () => {
+    const result = buildOrchestratorMessages(
+      makeNullMuseumInput({
+        text: 'What is this monument?',
+        resolvedLocation: makeResolvedLocation({
+          // Coarse consent → city only ships; quartier MUST NOT escalate (REQ-5).
+          consentGranularity: 'coarse',
+          reverseGeocodeNeighbourhood: null,
+          reverseGeocodeCoarse: 'Bordeaux, France',
+          reverseGeocode: '12 Place des Quinconces, 33000 Bordeaux, France',
+        }),
+        // Raw GPS coexists in the payload — must NOT leak even when granted.
+        context: { location: 'lat:44.8378,lng:-0.5792' },
+      }),
+    );
+
+    const text = userText(result);
+    expect(text).toContain('visitor_context');
+    expect(text).toContain('Bordeaux, France');
+    // Coarse only — the fine street-level value and the raw GPS never ship.
+    expect(text).not.toContain('Place des Quinconces');
+    expect(text).not.toMatch(/\b33000\b/);
+    expectNoCoordinateLeak(text, '44.8378', '-0.5792');
+  });
+
+  it('T4: granted consent, inside museum, with coexisting raw GPS → ships museum name only, never coords (AC-4, AC-5)', () => {
+    const result = buildOrchestratorMessages(
+      makeNullMuseumInput({
+        text: 'Tell me about this room',
+        resolvedLocation: makeResolvedLocation({
+          isInsideMuseum: true,
+          reverseGeocodeCoarse: null,
+          reverseGeocode: null,
+          nearestMuseumDistance: 50,
+          nearbyMuseums: [makeNearbyMuseum({ id: 7, name: 'CAPC musée', distance: 50 })],
+        }),
+        context: { location: 'lat:44.8631,lng:-0.5620' },
+      }),
+    );
+
+    const text = userText(result);
+    expect(text).toContain('visitor_context');
+    expect(text).toContain('CAPC musée');
+    expectNoCoordinateLeak(text, '44.8631', '-0.5620');
+  });
+
+  it('T5: granted consent, outdoor non-geocoded but nearby museums, with coexisting raw GPS → ships museum names only, never coords (AC-5)', () => {
+    const result = buildOrchestratorMessages(
+      makeNullMuseumInput({
+        text: 'What can I see nearby?',
+        resolvedLocation: makeResolvedLocation({
+          reverseGeocodeCoarse: null,
+          reverseGeocode: null,
+          isInsideMuseum: false,
+          nearestMuseumDistance: 900,
+          nearbyMuseums: [makeNearbyMuseum({ id: 9, name: 'Musée Mer Marine', distance: 900 })],
+        }),
+        context: { location: 'lat:44.8500,lng:-0.5700' },
+      }),
+    );
+
+    const text = userText(result);
+    expect(text).toContain('visitor_context');
+    expect(text).toContain('Musée Mer Marine');
+    expectNoCoordinateLeak(text, '44.8500', '-0.5700');
   });
 });

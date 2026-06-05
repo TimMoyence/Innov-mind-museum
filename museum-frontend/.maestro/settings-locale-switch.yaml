@@ -1,96 +1,88 @@
 appId: com.musaium.mobile.preview
 ---
-# Settings — switch locale (fr ↔ en) and verify UI re-renders
+# screen: PreferencesScreen
+# Settings → Preferences — switch locale (fr ↔ en) and verify the UI re-renders.
 #
-# Validates i18n wiring end-to-end:
-#   1. Home → Settings → Preferences
-#   2. switch locale to English
-#   3. assert English label appears
-#   4. switch back to French
-#   5. assert French label appears
-#   6. back to Home
-#
-# Prerequisites:
-#   - User logged in
+# The language buttons render each option's NATIVE label ("Français" / "English"),
+# which is locale-INDEPENDENT (always shown regardless of the active locale), so we
+# tap those literals directly. To verify the switch took effect we assert on the
+# Preferences screen TITLE, which IS localized: EN "Preferences" vs FR "Préférences".
+# App starts in French, so the title begins as "Préférences".
 
-- waitForAnimationToEnd
-
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip"
-    optional: true
-- waitForAnimationToEnd
-
+# ──────────────────────────────────────────────
+# Phase 0: Fresh launch + login → home
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 1: Home → Settings → Preferences
-# ──────────────────────────────────────────────
-- tapOn: "Settings"
-- waitForAnimationToEnd
-
-- scrollUntilVisible:
-    element: "Open Preferences"
-    direction: DOWN
-
-- tapOn: "Open Preferences"
-- waitForAnimationToEnd
-
-- assertVisible: "Preferences"
-
-# ──────────────────────────────────────────────
-# Phase 2: Switch to English
-# ──────────────────────────────────────────────
-- scrollUntilVisible:
-    element:
-      text: "English"
-    direction: DOWN
-    optional: true
-
-- tapOn:
-    text: "English"
-    optional: true
-- waitForAnimationToEnd
-
-# Verify English label — the home CTA uses a stable English string
-# that is not present in FR. If unavailable, keep flow resilient.
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
 - extendedWaitUntil:
-    visible: "English"
-    timeout: 5000
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
     optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 3: Switch back to Français
+# Phase 1: Home → Settings → Préférences
+# (Settings reached via the home gear; Préférences is the first
+# FloatingContextMenu item, tappable by its label.)
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Français"
-    optional: true
-- waitForAnimationToEnd
-
+    id: "hero-settings-button"
 - extendedWaitUntil:
-    visible: "Français"
-    timeout: 5000
-    optional: true
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000
+- tapOn:
+    text: "Préférences|Preferences"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      text: "Préférences|Preferences"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 4: Back to Home
+# Phase 2: Switch to English, assert the EN title appears.
+# The language Pressable's accessibilityLabel (a11y.preferences.language_button,
+# "Sélectionner la langue English" / "Select English language") COLLAPSES the
+# subtree, so the visible "English" Text is NOT separately queryable — match the
+# accessibility label via a substring regex that works in either active locale.
 # ──────────────────────────────────────────────
-- back
-- waitForAnimationToEnd
-
-- scrollUntilVisible:
-    element: "Back to Home"
-    direction: DOWN
-
-- tapOn: "Back to Home"
-- waitForAnimationToEnd
-
+- tapOn:
+    text: ".*English.*"
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Preferences"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 3: Switch back to Français, assert the FR title returns
+# ──────────────────────────────────────────────
+- tapOn:
+    text: ".*Français.*"
+- extendedWaitUntil:
+    visible:
+      text: "Préférences"
+    timeout: 40000

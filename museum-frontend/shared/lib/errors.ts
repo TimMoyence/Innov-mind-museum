@@ -178,6 +178,11 @@ const authCodeMessage = (code: string | undefined): string | null => {
         'error.auth.minor_parental_consent_required',
         'Sign-up is reserved for users aged 15 and over (French digital majority).',
       );
+    case 'MFA_WEB_ONLY':
+      return t(
+        'error.auth.mfa_web_only',
+        'Two-factor authentication is managed in the web admin. Sign in there.',
+      );
     case 'BAD_REQUEST':
       // Generic 400 — fall back to the kind-level translation.
       return null;

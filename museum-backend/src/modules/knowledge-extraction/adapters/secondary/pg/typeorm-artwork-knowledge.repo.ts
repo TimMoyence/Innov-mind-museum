@@ -1,3 +1,6 @@
+import { confidenceUpsert } from '@shared/db/confidence-upsert';
+import { logger } from '@shared/logger/logger';
+
 import type { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { Repository } from 'typeorm';
@@ -13,9 +16,34 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
       .getOne();
   }
 
-  /** W3 (T5.4) — UUID-keyed lookup; returns null on miss. */
-  async findById(id: string): Promise<ArtworkKnowledge | null> {
-    return await this.repo.findOne({ where: { id } });
+  /**
+   * W3 (T5.4) — UUID-keyed lookup; returns null on miss.
+   *
+   * I-SEC8 (OWASP LLM08) — tenant-scoped at the SQL layer (defense-in-depth,
+   * mirror of `ArtworkEmbeddingRepositoryPg.findNearest`). A row whose
+   * `museum_id` is NULL (global catalog) is visible to every tenant; a row
+   * scoped to tenant X is returned only when `museumId === X`. A cross-tenant
+   * row is excluded by the predicate, so it resolves to `null` exactly like an
+   * unknown id. Omitting `museumId` performs a legacy global-only read and logs
+   * a stable, grep-able unscoped warn.
+   */
+  async findById(id: string, museumId?: number | null): Promise<ArtworkKnowledge | null> {
+    // Only a positive integer activates tenant scope; null/undefined both = legacy global read.
+    const scopedMuseumId = typeof museumId === 'number' ? museumId : null;
+    if (scopedMuseumId === null) {
+      // OWASP LLM08 — grep this line to fix unscoped callers before B2B.
+      logger.warn('artwork_knowledge_find_by_id_unscoped', {
+        reason: 'museumId not provided — global read (cross-tenant scope disabled)',
+      });
+    }
+    return await this.repo
+      .createQueryBuilder('ak')
+      .where('ak.id = :id', { id })
+      .andWhere(
+        '(:museumId::integer IS NULL OR ak.museum_id IS NULL OR ak.museum_id = :museumId)',
+        { museumId: scopedMuseumId },
+      )
+      .getOne();
   }
 
   async searchByTitle(searchTerm: string, locale: string, limit = 3): Promise<ArtworkKnowledge[]> {
@@ -37,42 +65,20 @@ export class TypeOrmArtworkKnowledgeRepo implements ArtworkKnowledgeRepoPort {
   ): Promise<ArtworkKnowledge> {
     const existing = await this.findByTitleAndLocale(data.title, data.locale);
     if (existing) {
-      if (!existing.sourceUrls.includes(sourceUrl)) {
-        existing.sourceUrls = [...existing.sourceUrls, sourceUrl];
-      }
-      if (data.confidence > existing.confidence) {
-        Object.assign(existing, data, {
-          id: existing.id,
-          sourceUrls: existing.sourceUrls,
-          createdAt: existing.createdAt,
-        });
-      } else {
-        type NullableField =
-          | 'artist'
-          | 'period'
-          | 'technique'
-          | 'historicalContext'
-          | 'dimensions'
-          | 'currentLocation';
-        const nullableFields: NullableField[] = [
-          'artist',
-          'period',
-          'technique',
-          'historicalContext',
-          'dimensions',
-          'currentLocation',
-        ];
-        const patch: Partial<Pick<ArtworkKnowledge, NullableField>> = {};
-        for (const key of nullableFields) {
-          const incoming = data[key];
-          if (existing[key] === null && incoming !== null) {
-            patch[key] = incoming;
-          }
-        }
-        Object.assign(existing, patch);
-      }
-      existing.needsReview = data.needsReview;
-      return await this.repo.save(existing);
+      return await this.repo.save(
+        confidenceUpsert(existing, data, {
+          sourceUrl,
+          nullableFields: [
+            'artist',
+            'period',
+            'technique',
+            'historicalContext',
+            'dimensions',
+            'currentLocation',
+          ],
+          preserveFields: ['id', 'sourceUrls', 'createdAt'],
+        }),
+      );
     }
     return await this.repo.save(this.repo.create({ ...data, sourceUrls: [sourceUrl] }));
   }

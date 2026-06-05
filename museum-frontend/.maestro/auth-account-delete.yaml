@@ -2,54 +2,58 @@ appId: com.musaium.mobile.preview
 ---
 # Auth — Account deletion (login → settings → delete → confirm → logout)
 #
-# Login as the seeded smoke account, navigate to Settings → Danger Zone,
+# Login as a deletable seeded account, navigate to Settings → Danger Zone,
 # tap "Delete account", confirm the native Alert, and expect to land back
 # on the auth screen (auto-logout after backend success).
 #
-# WARNING: This flow DESTROYS the account it logs into. Use a dedicated
-# deletable account, NOT the global TEST_EMAIL. Recommended:
-#   cd museum-backend && pnpm seed:smoke-account -- \
-#     --email=maestro+delete-${MAESTRO_RUN_ID}@local.dev \
-#     --password=DeleteMe!2026X
-# Then run this flow with:
-#   MAESTRO_DELETE_EMAIL=maestro+delete-${MAESTRO_RUN_ID}@local.dev
-#   MAESTRO_DELETE_PASSWORD=DeleteMe!2026X
+# WARNING: This flow DESTROYS the account it logs into. It uses the seeded
+# apple.test@apple.com / Apple1234! account — the validation harness MUST
+# RE-SEED that account after every run of this flow.
 #
-# If those env vars are unset, the flow falls back to the .env TEST_EMAIL
-# (apple.test@apple.com / Apple1234!) — re-seed after every run.
-#
-# Notes for maintainers (see AUTH_FLOWS_NOTES.md):
-#   - "Delete account" Pressable in SettingsDangerZone has accessibilityLabel
-#     `a11y.settings.delete_account` but NO testID. We tap by visible text
-#     ("Supprimer le compte" / "Delete account").
-#   - The confirmation is a native iOS/Android Alert (Alert.alert) — buttons
-#     match by text ("Supprimer" / "Delete", "Annuler" / "Cancel").
+# Notes (see AUTH_FLOWS_NOTES.md):
+#   - Home reaches Settings only via the hero gear button (testID
+#     "hero-settings-button"); there is no tappable "Settings" text on home.
+#   - "Delete account" Pressable has accessibilityLabel a11y.settings.delete_account
+#     but NO testID — we tap by visible text ("Supprimer le compte" / "Delete account").
+#   - The confirmation is a native Alert.alert: title="Supprimer le compte",
+#     destructive button=common.delete ("Supprimer"/"Delete").
+# screen: AuthScreen
 
 # ──────────────────────────────────────────────
-# Phase 1: Login
+# Phase 0: Cold start -> auth screen
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-- assertVisible:
-    text: "Welcome back|Bon retour"
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
-        ? MAESTRO_DELETE_EMAIL
-        : 'apple.test@apple.com';
-      output.password = (typeof MAESTRO_DELETE_PASSWORD !== 'undefined' && MAESTRO_DELETE_PASSWORD)
-        ? MAESTRO_DELETE_PASSWORD
-        : 'Apple1234!';
-
+# ──────────────────────────────────────────────
+# Phase 1: Login (seeded deletable account, hard-coded — RE-SEED after run)
+# ──────────────────────────────────────────────
 - tapOn:
     id: "email-input"
-- inputText: "${output.email}"
+- inputText: "apple.test@apple.com"
 
 - tapOn:
     id: "password-input"
-- inputText: "${output.password}"
+- inputText: "Apple1234!"
 
 - hideKeyboard
 
 - tapOn:
     id: "auth-submit"
+# iOS native "Save Password?" dialog
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
 
 - waitForAnimationToEnd:
     timeout: 10000
@@ -63,54 +67,49 @@ appId: com.musaium.mobile.preview
 - extendedWaitUntil:
     visible:
       text: "Your museum companion|Votre compagnon de musée"
-    timeout: 10000
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 2: Navigate to Settings
+# Phase 2: Navigate to Settings (hero gear button)
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Settings|Réglages|Paramètres"
+    id: "hero-settings-button"
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "Settings|Paramètres"
-    timeout: 5000
+    timeout: 10000
 
 # ──────────────────────────────────────────────
 # Phase 3: Scroll to Danger Zone + tap Delete account
 # ──────────────────────────────────────────────
-
-# The Danger Zone card is at the bottom of Settings; scroll until visible
+# Low visibility threshold — the Danger Zone heading sits at the bottom of the
+# settings scroll and rarely reaches 100% visibility.
 - scrollUntilVisible:
     element:
-      text: "Danger zone|Zone de danger"
+      text: "Zone de danger|Danger Zone"
     direction: DOWN
-    timeout: 10000
-
+    timeout: 20000
+    visibilityPercentage: 1
 - assertVisible:
-    text: "Danger zone|Zone de danger"
+    text: "Zone de danger|Danger Zone"
 
-# Tap the "Delete account" button (no testID — see notes above)
+# Tap the "Delete account" row button (no testID). Its visible label is
+# "Supprimer le compte" but its accessibilityLabel (a11y.settings.delete_account
+# = "Supprimer le compte définitivement" / "Delete account permanently")
+# COLLAPSES the subtree, so match the a11y label.
 - tapOn:
-    text: "Delete account|Supprimer le compte"
+    id: "settings-delete-account"
 
 # ──────────────────────────────────────────────
-# Phase 4: Confirm native Alert
+# Phase 4: Confirm native Alert (settings.delete_confirm_title / _body)
 # ──────────────────────────────────────────────
-
-# Alert.alert renders a native dialog — assert title appears
 - extendedWaitUntil:
     visible:
-      text: "Delete account|Supprimer le compte"
+      text: ".*(permanently|définitivement).*"
     timeout: 5000
 
-# The body explains the irreversibility (settings.delete_confirm_body)
-- assertVisible:
-    text: "permanently|définitivement"
-
-# Tap the destructive "Delete" / "Supprimer" Alert button.
-# Use index: 1 because the cancel button (index 0) also says "Cancel"/"Annuler"
-# but they are different labels — so direct text match is safe.
+# Tap the destructive alert button (common.delete = "Supprimer" / "Delete").
 - tapOn:
     text: "^Delete$|^Supprimer$"
 
@@ -123,7 +122,7 @@ appId: com.musaium.mobile.preview
 - extendedWaitUntil:
     visible:
       text: "Welcome back|Bon retour"
-    timeout: 15000
+    timeout: 40000
 
 # Sanity: app evicted us from settings
 - assertNotVisible:

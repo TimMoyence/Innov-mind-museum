@@ -41,7 +41,7 @@ src/
 ```
 
 Modules + composition pattern:
-- **admin / auth / leads / museum / review / support** — barrel pattern. `useCase/index.ts` re-exports the public application services.
+- **admin / auth / leads / museum / review / support / telemetry** — barrel pattern. `useCase/index.ts` re-exports the public application services.
 - **chat / knowledge-extraction** — composition-root pattern; `useCase/index.ts` is intentionally absent (composition root replaces it). Chat wires its DI graph via `chat-module.ts`; knowledge-extraction has no `*-module.ts` — its composition root is `index.ts`, which exports the `KnowledgeExtractionModule` class.
 - **daily-art** — hexagonal scaffold normalized at Phase 0bis. Tiny module (1 use case, 1 catalog), still follows the same skeleton for repo coherence.
 

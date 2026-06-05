@@ -95,7 +95,16 @@ const SENSITIVE_QUERY_KEY_PREFIXES = new Set<string>([
  * `false` keeps the query in memory but skips the AsyncStorage write for this
  * entry. Exported for unit tests.
  */
-export function shouldDehydrateQuery(query: { queryKey: readonly unknown[] }): boolean {
+export function shouldDehydrateQuery(query: {
+  queryKey: readonly unknown[];
+  state: { status: string };
+}): boolean {
+  // Only persist SETTLED, successful queries. A custom predicate REPLACES React
+  // Query's built-in status gate (defaultShouldDehydrateQuery), so without this
+  // a PENDING (in-flight) query is serialised and rehydrates as a dead promise
+  // on cold start → "A query that was dehydrated as pending ended up rejecting /
+  // CancelledError" (QA-05, observed on ['museums','directory']).
+  if (query.state.status !== 'success') return false;
   const head = query.queryKey[0];
   if (typeof head !== 'string') return true;
   return !SENSITIVE_QUERY_KEY_PREFIXES.has(head);

@@ -12,9 +12,14 @@ import {
   RedisNonceStore,
   setSocialNonceStore,
 } from '@modules/auth/adapters/secondary/social/nonce-store';
-import { authSessionService } from '@modules/auth/useCase';
+import { authSessionService, challengeMfaUseCase, recoveryMfaUseCase } from '@modules/auth/useCase';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
-import { getOcrService, stopArtKeywordsRefresh, stopKnowledgeExtraction } from '@modules/chat';
+import {
+  getOcrService,
+  stopArtKeywordsRefresh,
+  stopKnowledgeExtraction,
+  stopWikidataBreaker,
+} from '@modules/chat';
 import { shutdownEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
 import { registerArtKeywordsRetentionCron } from '@modules/chat/jobs/art-keywords-retention-cron.registrar';
 import {
@@ -25,6 +30,8 @@ import {
   registerS3OrphanPurgeCron,
   type S3OrphanPurgeCronHandle,
 } from '@modules/chat/jobs/s3-orphan-purge-cron.registrar';
+import { LeadRepositoryPg } from '@modules/leads/adapters/secondary/pg/lead.repository.pg';
+import { registerLeadsRedeliveryCron } from '@modules/leads/jobs/leads-redelivery-cron.registrar';
 import {
   buildPurgeDeadEnrichmentsUseCase,
   buildRefreshStaleEnrichmentsUseCase,
@@ -39,7 +46,6 @@ import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-counter';
 import { logger } from '@shared/logger/logger';
 import { setAccessTokenDenylist } from '@shared/middleware/authenticated.middleware';
-import { setDailyChatLimitCacheService } from '@shared/middleware/daily-chat-limit.middleware';
 import { setLlmCostCounter } from '@shared/middleware/llm-cost-guard.middleware';
 import { setMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.middleware';
 import { PgMonthlyQuotaRepo } from '@shared/middleware/monthly-session-quota.repo.pg';
@@ -117,7 +123,9 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     });
     const redisRateLimitStore = new RedisRateLimitStore(redisClient);
     setRedisRateLimitStore(redisRateLimitStore);
-    setDailyChatLimitCacheService(redisCacheService);
+    // PR-11 (2026-05-23) — `setDailyChatLimitCacheService` removed; the
+    // `dailyChatLimit` middleware now counts atomically via `RedisRateLimitStore`
+    // wired one line above.
     // P0-4 (audit 2026-05-12 §P0-U-2) — wire the per-user daily USD counter on
     // the same ioredis client. The middleware fails OPEN if no counter is
     // registered (dev/test), so this single setter is the only boot wiring.
@@ -138,6 +146,13 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     const accessTokenDenylist = new RedisAccessTokenDenylist(redisClient);
     setAccessTokenDenylist(accessTokenDenylist);
     authSessionService.setAccessTokenDenylist(accessTokenDenylist);
+    // R7/R8 — single-use mfaSessionToken: the challenge/recovery use-cases denylist
+    // the token's jti after one successful MFA step (and reject a replayed token).
+    // Same fail-OPEN shared `accessTokenDenylist` (ADR-064); same post-construction
+    // setter pattern as `authSessionService` above (the auth singletons instantiate
+    // before this boot path runs).
+    challengeMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
+    recoveryMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };
@@ -270,6 +285,10 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   } = resources;
 
   await safeTeardown('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
+  // TD-OP-01 — release the Wikidata opossum breaker's rolling-stats timer.
+  await safeTeardown('wikidata_breaker_shutdown_error', () => {
+    stopWikidataBreaker();
+  });
   if (enrichmentScheduler) {
     await safeTeardown('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
   }
@@ -437,8 +456,20 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
       hitThreshold: artKeywordsHitThreshold,
       batchLimit,
     });
+    // Cycle B (« Aucun lead perdu », T5.4) — async redelivery of pending/failed
+    // leads + in-handler retention purge. Joins the sequential boot + teardown
+    // list so SIGTERM awaits its BullMQ `.close()` (lib-docs/bullmq/LESSONS:11-14).
+    const leadsRedeliveryHandle = registerLeadsRedeliveryCron(new LeadRepositoryPg(AppDataSource), {
+      connection,
+      cronPattern: env.leads.redeliveryCronPattern,
+      maxAttempts: env.leads.maxAttempts,
+      batchLimit: env.leads.redeliveryBatchLimit,
+      retentionDays: env.leads.retentionDays,
+      backoffBaseMs: env.leads.backoffBaseMs,
+      backoffCapMs: env.leads.backoffCapMs,
+    });
 
-    // Sequential startup so the three retention workers do not race the DB at
+    // Sequential startup so the four background workers do not race the DB at
     // boot. BullMQ already enforces concurrency=1 per queue, but a parallel
     // `Promise.all` here briefly tripled the cron-tick load and contributed to
     // the 2026-05-08 pgbouncer saturation when the prune busy-loop hit (see
@@ -446,9 +477,10 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
     await supportHandle.start();
     await reviewHandle.start();
     await artKeywordsHandle.start();
+    await leadsRedeliveryHandle.start();
 
     logger.info('retention_crons_started', { cronPattern });
-    return [supportHandle, reviewHandle, artKeywordsHandle];
+    return [supportHandle, reviewHandle, artKeywordsHandle, leadsRedeliveryHandle];
   } catch (err) {
     logger.warn('retention_crons_boot_skipped', {
       error: err instanceof Error ? err.message : String(err),

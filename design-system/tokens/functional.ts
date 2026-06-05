@@ -26,20 +26,29 @@ export function withOpacity(hex: string, alpha: number): string {
 
 export const functional = {
   /* ── Light theme glass ────────────────────────────── */
+  // Glass FILLS are tinted with primary.50 (234,242,255) instead of pure white
+  // so cards read as light-blue glass over the blue page, not flat white. Same
+  // luminance as white → WCAG AA on dark text preserved (muted ≥ 5.0:1). The
+  // glassBorder stays pure white: it's the specular sheen of the liquid effect.
   glassBorder: 'rgba(255, 255, 255, 0.58)',
-  glassBackground: 'rgba(255, 255, 255, 0.44)',
-  cardBackground: 'rgba(255, 255, 255, 0.66)',
+  glassBackground: 'rgba(234, 242, 255, 0.44)',
+  cardBackground: 'rgba(234, 242, 255, 0.66)',
   cardBorder: 'rgba(148, 163, 184, 0.42)',
-  inputBackground: 'rgba(255, 255, 255, 0.7)',
+  inputBackground: 'rgba(234, 242, 255, 0.7)',
   inputBorder: 'rgba(148, 163, 184, 0.45)',
-  surface: 'rgba(255, 255, 255, 0.64)',
+  surface: 'rgba(234, 242, 255, 0.64)',
   overlay: 'rgba(255, 255, 255, 0.70)',
+  // Dedicated full-screen page veil for LiquidScreen ONLY (not cards/panels,
+  // which keep surface/overlay). Lighter than surface/overlay so the blue
+  // pageGradient reads through. 0.42 paired with text.muted #556677 keeps muted
+  // ≥ 4.5:1 on every gradient stop (worst = #D8E7FF mid, 4.54:1) — WCAG 1.4.3 AA.
+  pageVeil: 'rgba(255, 255, 255, 0.42)',
   separator: 'rgba(148, 163, 184, 0.35)',
 
   /* ── Light theme bubbles ──────────────────────────── */
   userBubble: 'rgba(30, 64, 175, 0.88)',
   userBubbleBorder: 'rgba(191, 219, 254, 0.6)',
-  assistantBubble: 'rgba(255, 255, 255, 0.72)',
+  assistantBubble: 'rgba(234, 242, 255, 0.72)',
   assistantBubbleBorder: 'rgba(148, 163, 184, 0.22)',
 
   /* ── Light theme accents ──────────────────────────── */

@@ -18,16 +18,18 @@ LLM-critic agents are wasteful for things compilers can decide. Lint / typecheck
 | Hook | Trigger | Purpose |
 |---|---|---|
 | `pre-phase-pure-doc-check.sh` | Step 0 INIT §8 | Auto-exemption: diff = 0 applicative-code files (pure-doc edit) → skip the whole pipeline + write `pure-doc-skip.marker`. |
-| `pre-phase-doc-freshness.sh` | Step 4.5 | Detect libs imported by the diff, run 3-way staleness check (>14d / version drift / missing), write `doc-refresh-queue.json` for doc-fetcher + doc-curator. |
+| `pre-phase-doc-freshness.sh` | Step 4.5 | Detect libs imported by the diff, run 3-way staleness check (>14d / version drift / missing), write `doc-refresh-queue.json` for doc-cache. |
 | `post-edit-green-test-freeze.sh` | After every edit in phase Green | FROZEN-TEST gate — re-hash sha256 of each test in `red-test-manifest.json`; any mismatch = exit 1 STOP (Green cannot mutate a Red test byte-for-byte). |
 | `pre-phase-doc-reference-check.sh` | Step 6 Verify | Assert `libDocsConsulted[]` covers every non-dev-only import in the diff + hash drift check (lib-docs obligation proof). |
+| `pre-complete-debug-log-check.sh` | Step 6 Verify | systematic-debugging enforcement (absorbed from superpowers): if `intraPhaseHookLoops >= 2`, require a complete `debug-log.md` (4 phases + architecture question). Else FAIL → re-spawn green with the protocol. |
+| `pre-complete-review-response-check.sh` | Step 6 Verify | receiving-code-review enforcement (absorbed from superpowers): if `reviewerRejectionLoops >= 1`, require `review-response.md` (verdict per finding + Evidence per DISPUTE + no performative agreement). Else FAIL → re-spawn with the protocol. |
 
 ### Lifecycle hooks
 
 | Hook | Trigger | Purpose |
 |---|---|---|
 | `pre-cycle-roadmap-load.sh` | Step 0 INIT §9 | T1.6 — read `docs/ROADMAP_PRODUCT.md` + `docs/ROADMAP_TEAM.md`, parse unchecked NOW items, write `team-state/$RUN_ID/roadmap-context.json`. WARN-tolerant. |
-| `post-complete-lesson-capture.sh` | Step 9 Finalize, after cost delta | T2.1 KR4 — extract 1 lesson markdown from STORY.md into `team-knowledge/lessons/<RUN_ID>.md`. Fail-open. |
+| `post-complete-lesson-capture.sh` | Step 9 Finalize, after cost delta | T2.1 KR4 — extract 1 lesson markdown from STORY.md into `team-knowledge/lessons/<RUN_ID>.md` for manual reading (no longer fed to a learning-curator agent). Fail-open. |
 | `post-cycle-roadmap-update.sh` | Step 9 Finalize, after lesson capture | T1.6 — fuzzy-match DESCRIPTION ↔ NOW items, propose staged `[x]` patch (never auto-commits). |
 
 ## Concurrency model

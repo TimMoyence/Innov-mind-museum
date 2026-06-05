@@ -1,4 +1,7 @@
 {
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "ai_disclosure": {
     "banner": "Musaium is an AI assistant. Replies are generated automatically and may contain errors."
   },
@@ -352,6 +355,7 @@
     "tickets": "Tickets",
     "reviewsAdmin": "Reviews",
     "supportAdmin": "Support",
+    "nps": "NPS",
     "accessDenied": "Access Denied",
     "goToHomepage": "Go to homepage",
     "login": {
@@ -362,7 +366,22 @@
       "error": "Invalid credentials",
       "googleButton": "Continue with Google",
       "divider": "or",
-      "oauthError": "Google sign-in failed. Try again or use your password."
+      "oauthError": "Google sign-in failed. Try again or use your password.",
+      "mfaTitle": "Two-factor authentication",
+      "mfaInstructions": "Enter the 6-digit code from your authenticator app.",
+      "mfaCodeLabel": "Authentication code",
+      "mfaCodePlaceholder": "123456",
+      "mfaSubmit": "Verify and sign in",
+      "mfaUseRecovery": "Use a recovery code instead",
+      "mfaRecoveryLabel": "Recovery code",
+      "mfaRecoveryPlaceholder": "Recovery code",
+      "mfaRecoverySubmit": "Sign in with recovery code",
+      "mfaRecoveryContinue": "Continue to admin",
+      "mfaBackToCode": "Back to authenticator code",
+      "mfaErrorInvalid": "That code is incorrect. Please try again.",
+      "mfaErrorRateLimited": "Too many attempts. Please wait a moment before trying again.",
+      "mfaErrorExpired": "Your session expired. Please sign in again.",
+      "mfaRecoveryRemaining": "{count} recovery codes remaining."
     },
     "common": {
       "date": "Date",
@@ -565,6 +584,18 @@
       "topMuseums": "Top Museums",
       "museum": "Museum",
       "guardrailBlockRate": "Guardrail Block Rate"
+    },
+    "npsPage": {
+      "subtitle": "Visitor recommendation sentiment, on the 0-10 scale.",
+      "score": "NPS score",
+      "promoters": "Promoters",
+      "passives": "Passives",
+      "detractors": "Detractors",
+      "responses": "Responses",
+      "distribution": "Response distribution",
+      "chartAriaLabel": "Bar chart of promoter, passive and detractor counts",
+      "allMuseums": "All museums",
+      "noMuseumAssigned": "No museum is assigned to your account. Please contact an administrator."
     },
     "export": {
       "sessions": {

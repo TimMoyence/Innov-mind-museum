@@ -1,7 +1,7 @@
 import type { LlmPathTier } from '@shared/observability/derive-tier';
 
 export interface TtsResult {
-  /** MP3. */
+  /** Encoded audio bytes; the wire format is carried by `contentType` (currently Opus, `audio/ogg`). */
   audio: Buffer;
   contentType: string;
 }

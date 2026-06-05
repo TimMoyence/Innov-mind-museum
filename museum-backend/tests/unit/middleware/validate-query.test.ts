@@ -1,6 +1,8 @@
 import type { NextFunction } from 'express';
 import { z } from 'zod';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
+import { validateBody } from '@shared/middleware/validate-body.middleware';
+import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 import { AppError } from '@shared/errors/app.error';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
@@ -137,5 +139,124 @@ describe('validateQuery middleware', () => {
     }
 
     expect(noop).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * UFR-022 RED phase — RUN_ID 2026-05-23-pr-4-formatZodIssues.
+ *
+ * Wire-format parity guards between validateQuery and validateBody.
+ * Canonical formatter = `@shared/validation/zod-issue.formatter` ; see spec §5 AC2
+ * and design.md §4.2. These cases MUST fail before the green codemod
+ * (current inline `${path.join('.')}: ${msg}` diverges from `formatZodIssues`).
+ */
+describe('validateQuery — wire-format parity with validateBody', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  // Helper: run a middleware and return the thrown AppError's message.
+  const captureMessage = (run: () => void): string => {
+    try {
+      run();
+    } catch (err) {
+      if (err instanceof AppError) return err.message;
+      throw err;
+    }
+    throw new Error('expected middleware to throw AppError but it did not');
+  };
+
+  it('C1 — single field error: query message byte-equal to body message (canonical "<path> <message>" form, no colon prefix)', () => {
+    const schema = z.object({ q: z.string().min(1) });
+
+    const queryReq = makePartialRequest({ query: { q: '' } });
+    const queryRes = makePartialResponse();
+    const queryMsg = captureMessage(() => {
+      validateQuery(schema)(queryReq, queryRes, noop);
+    });
+
+    const bodyReq = makePartialRequest({ body: { q: '' } });
+    const bodyRes = makePartialResponse();
+    const bodyMsg = captureMessage(() => {
+      validateBody(schema)(bodyReq, bodyRes, noop);
+    });
+
+    // Parity: both middlewares MUST produce byte-equal messages.
+    expect(queryMsg).toBe(bodyMsg);
+    // Canonical form: starts with `q ` (space, not colon).
+    expect(queryMsg).toMatch(/^q /);
+    // Negative regression: no `<field>: ` prefix anywhere at start.
+    expect(queryMsg).not.toMatch(/^\w+: /);
+  });
+
+  it('C2 — root error (empty path): query message identical to canonical formatZodIssues output (raw message, no ": " prefix)', () => {
+    const schema = z.object({ q: z.string() });
+
+    const queryReq = makePartialRequest({
+      query: 'not-an-object' as unknown as Record<string, string>,
+    });
+    const queryRes = makePartialResponse();
+    const queryMsg = captureMessage(() => {
+      validateQuery(schema)(queryReq, queryRes, noop);
+    });
+
+    // Compute the canonical expected wire format directly from formatZodIssues
+    // for the same issue set, ensuring byte-equal parity.
+    const probe = schema.safeParse('not-an-object');
+    expect(probe.success).toBe(false);
+    if (probe.success) throw new Error('unreachable: schema must reject string');
+    const canonical = formatZodIssues(probe.error.issues);
+
+    expect(queryMsg).toBe(canonical);
+    // Root error MUST NOT be prefixed by ": " (legacy inline bug).
+    expect(queryMsg).not.toMatch(/^: /);
+  });
+
+  it('C3 — dedupe: issue whose message already starts with its path MUST NOT be double-prefixed', () => {
+    // `.refine` with a custom message that includes the field name in its prose.
+    const schema = z.object({
+      q: z.string().refine(() => false, { message: 'q must be set' }),
+    });
+
+    const queryReq = makePartialRequest({ query: { q: 'whatever' } });
+    const queryRes = makePartialResponse();
+    const queryMsg = captureMessage(() => {
+      validateQuery(schema)(queryReq, queryRes, noop);
+    });
+
+    // Canonical dedupe branch of formatZodIssue → no "q: q must be set" double-prefix.
+    expect(queryMsg).toBe('q must be set');
+    expect(queryMsg).not.toMatch(/^q: q /);
+  });
+
+  it('C4 — empty issues edge case: defensive fallback to "Invalid payload" (not empty string)', () => {
+    // Synthesise a schema whose safeParse yields success:false with issues:[]
+    // to exercise the defensive branch of formatZodIssues.
+    const fakeSchema = {
+      safeParse: () => ({ success: false as const, error: { issues: [] as z.core.$ZodIssue[] } }),
+    } as unknown as z.ZodType;
+
+    const queryReq = makePartialRequest({ query: {} });
+    const queryRes = makePartialResponse();
+    const queryMsg = captureMessage(() => {
+      validateQuery(fakeSchema)(queryReq, queryRes, noop);
+    });
+
+    // Canonical formatter returns 'Invalid payload' for empty issues; legacy
+    // inline produced '' (empty string).
+    expect(queryMsg).toBe('Invalid payload');
+    expect(queryMsg).not.toBe('');
+  });
+
+  it('C5 — negative sentinel: no "<field>: " colon-form prefix in any validateQuery 400 message', () => {
+    const schema = z.object({ q: z.string().min(1) });
+
+    const queryReq = makePartialRequest({ query: { q: '' } });
+    const queryRes = makePartialResponse();
+    const queryMsg = captureMessage(() => {
+      validateQuery(schema)(queryReq, queryRes, noop);
+    });
+
+    // Anti-regression: even if a future hand edit reintroduces the inline
+    // `${path}: ${message}` form, this assertion catches it.
+    expect(queryMsg).not.toMatch(/^\w+: /);
   });
 });

@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
-import { AppError } from '@shared/errors/app.error';
+import { AppError, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 /**
@@ -22,6 +24,10 @@ export const MFA_SESSION_TOKEN_ISSUER = 'musaium-mfa-session';
 
 export function issueMfaSessionToken(userId: number): string {
   // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
+  // `jwtid` (RFC 7519 §4.1.7 `jti`) is a per-issue random UUID (project pattern,
+  // session-issuer.service.ts) so a single token can be single-used: after one
+  // successful MFA step the jti is added to the access-token denylist and any
+  // replay of the SAME token is rejected (R7, design §9 D2).
   return jwt.sign(
     {
       sub: String(userId),
@@ -34,15 +40,24 @@ export function issueMfaSessionToken(userId: number): string {
       expiresIn: env.auth.mfaSessionTokenTtlSeconds,
       issuer: MFA_SESSION_TOKEN_ISSUER,
       audience: MFA_SESSION_TOKEN_ISSUER,
+      jwtid: randomUUID(),
     },
   );
 }
 
-const unauthorized = (message: string, code = 'INVALID_MFA_SESSION'): AppError =>
-  new AppError({ message, statusCode: 401, code });
-
-/** @throws {Error} 401 on any inconsistency. */
-export function verifyMfaSessionToken(token: string): { userId: number } {
+/**
+ * @throws {Error} 401 on any inconsistency.
+ *
+ * Returns the `userId` plus the single-use coordinates: `jti` (RFC 7519 — the
+ * denylist key; `undefined` for a legacy token signed before the jti rollout,
+ * design §9 D6 tolerance) and `exp` (UNIX seconds — the use-case derives the
+ * denylist TTL as `exp - now`).
+ */
+export function verifyMfaSessionToken(token: string): {
+  userId: number;
+  jti: string | undefined;
+  exp: number | undefined;
+} {
   try {
     // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
     const decoded = jwt.verify(token, env.auth.mfaSessionTokenSecret, {
@@ -53,17 +68,17 @@ export function verifyMfaSessionToken(token: string): { userId: number } {
 
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: jwt payload runtime shape */
     if (decoded.type !== 'mfa_session' || !decoded.mfaPending || typeof decoded.sub !== 'string') {
-      throw unauthorized('Invalid MFA session token');
+      throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
     const userId = Number(decoded.sub);
     if (!Number.isFinite(userId) || userId <= 0) {
-      throw unauthorized('Invalid MFA session token');
+      throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
     }
-    return { userId };
+    return { userId, jti: decoded.jti, exp: decoded.exp };
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw unauthorized('Invalid MFA session token');
+    throw unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
   }
 }

@@ -10,7 +10,7 @@ import {
 } from '@/features/chat/application/citations';
 import { logCitationResolution } from '@/features/chat/application/citation-telemetry';
 import { CitationChip } from '@/features/chat/ui/CitationChip';
-import { semantic, space } from '@/shared/ui/tokens';
+import { space } from '@/shared/ui/tokens';
 
 interface CitationChipsProps {
   readonly metadata: ChatUiMessageMetadata | null | undefined;
@@ -79,7 +79,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: semantic.chat.gapSmall,
     columnGap: space['1'],
     rowGap: space['1'],
   },

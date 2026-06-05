@@ -1,7 +1,10 @@
 # Prometheus alerting rules — chat pipeline latency.
 # Loaded by Prometheus via `rule_files` glob in museum-backend/prometheus.yml.
-# AlertManager routes the firing alerts to the `telegram-ops` receiver
-# defined in infra/grafana/alertmanager.yml (D11 — user choice 2026-05-08).
+# AlertManager splits firing alerts by their `severity` label (alertmanager.yml,
+# D11 — user choice 2026-05-08): `critical` alerts route to the
+# `telegram-ops-critical` receiver (fast group_wait, 1h repeat_interval),
+# `warning` alerts route to `telegram-ops-warning` (4h repeat_interval). Both
+# receivers hit the same Telegram bridge.
 
 groups:
   - name: chat-latency

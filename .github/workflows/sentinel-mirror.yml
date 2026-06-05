@@ -42,7 +42,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
           run_install: false
 
       # Monorepo — pnpm-lock.yaml lives in each app dir, not at the repo
@@ -119,6 +118,9 @@ jobs:
       - name: 'Mirror Gate P9 — sentry-scrubber parity (PII redaction)'
         run: node scripts/sentinels/sentry-scrubber-parity.mjs
 
+      - name: 'Mirror — net-profiles parity (FE↔BE network profile registry, W1-REG)'
+        run: node scripts/sentinels/net-profiles-parity.mjs
+
       - name: 'Mirror Gate P21 — fe-version-sync (museum-frontend package.json ↔ app.config.ts)'
         run: node scripts/sentinels/fe-version-sync.mjs
 
@@ -129,12 +131,57 @@ jobs:
       - name: 'Mirror Gate P15 — compose-parity (dev vs prod docker-compose)'
         run: node scripts/sentinels/compose-parity.mjs
 
+      - name: 'Mirror Gate P23 — husky × git-lfs hook integrity (UFR-020)'
+        run: node scripts/sentinels/husky-lfs-integrity.mjs
+
       - name: 'Mirror Gate P20 — roadmap claim resolves (UFR-024)'
         run: node scripts/sentinels/roadmap-claim-resolves.mjs
+
+      - name: 'Mirror Gate P23 — subprocessor ledger completeness (GDPR Art 28, COMP-03/08)'
+        run: node scripts/sentinels/subprocessor-ledger-completeness.mjs
+
+      - name: 'Mirror Gate P24 — canonical domain (no musaium.app, repo-wide, A11Y-02/C11)'
+        run: node museum-backend/scripts/sentinels/web-domain-canonical.mjs
+
+      - name: 'Mirror Gate P25 — doc last-verified freshness (sidecar manifest, ≤ 90d, HON-08)'
+        run: node scripts/sentinels/doc-last-verified.mjs
 
       - name: 'Mirror Gate P22 — ai-tests count ratchet (BE)'
         working-directory: museum-backend
         run: node scripts/sentinels/ai-tests-count.mjs
+
+      - name: 'Mirror — screen-test-coverage (UFR-021, mobile)'
+        run: node scripts/sentinels/screen-test-coverage.mjs
+
+      - name: 'Mirror — factory-coverage ratchet (BE DRY-factories, was orphan)'
+        run: node scripts/sentinels/audit-factory-coverage.mjs
+
+      - name: 'Mirror — SBOM attestation contract (3 deploy workflows, was orphan)'
+        run: node scripts/sentinels/sbom-attest-check.mjs
+
+      - name: 'Mirror — a11y floor ratchet (EN 301 549 / RGAA, mobile)'
+        run: node scripts/sentinels/a11y-ratchet.mjs
+
+      - name: 'Mirror — quota/validator ordering (BE, ultrareview F1)'
+        run: node museum-backend/scripts/sentinels/quota-ordering.mjs
+
+      - name: 'Mirror — prod security-header invariants (BE helmet/CSP/CORS)'
+        run: node museum-backend/scripts/sentinels/security-headers-invariants.mjs
+
+      - name: 'Mirror — request-decompression invariants (BE gzip, W1-GZIP)'
+        run: node museum-backend/scripts/sentinels/request-decompression-invariants.mjs
+
+      - name: 'Mirror — net-fault prod-guard (BE, D3 OFF-in-prod, W2-10)'
+        run: node museum-backend/scripts/sentinels/net-fault-prod-guard.mjs
+
+      - name: 'Mirror — toxiproxy-no-prod (L3 shaper never in prod compose/EAS, W3-04)'
+        run: node scripts/sentinels/toxiproxy-no-prod.mjs
+
+      - name: 'Mirror — secret/cert rotation runbook freshness (≤120d)'
+        run: node scripts/sentinels/secret-rotation-freshness.mjs
+
+      - name: 'Mirror — hexagonal domain-purity (BE, ESLint-independent backstop)'
+        run: node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
 
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'

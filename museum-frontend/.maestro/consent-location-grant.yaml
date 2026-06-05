@@ -12,66 +12,125 @@ appId: com.musaium.mobile.preview
 # starved because no FE surface granted the scope).
 #
 # Prerequisites:
+#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
 #   - Backend running on localhost:3000 with a working LLM provider.
-#   - A fresh per-user namespace (no prior consent memo) so the sheet appears.
+#   - clearState gives a fresh per-user namespace (no prior consent memo) so the
+#     sheet appears.
 
 # ──────────────────────────────────────────────
-# Phase 1: Reach the home / chat entry
+# Phase 0: Launch fresh + log in
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
 - tapOn:
-    text: "Skip"
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+
+# ──────────────────────────────────────────────
+# Phase 1: Open the consent sheet via Start Conversation
+# ──────────────────────────────────────────────
+# The home default-conversation CTA sits half-under the bottom tab bar, so its
+# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
+# best-effort, then deterministically start a chat from a museum card → the
+# first-time AI-disclosure consent sheet ("Gérer mes choix") mounts over the
+# chat screen.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
     optional: true
 - waitForAnimationToEnd
-
+- tapOn:
+    text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+- extendedWaitUntil:
+    visible:
+      text: "Gérer mes choix|Manage my choices"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 2: Open the consent sheet via Start Conversation
-# ──────────────────────────────────────────────
-- tapOn: "Start Conversation"
-- waitForAnimationToEnd:
-    timeout: 10000
-
-# ──────────────────────────────────────────────
-# Phase 3: Manage choices -> reveal the granular switches
+# Phase 2: Manage choices -> reveal the granular switches
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Manage my choices"
+    text: "Gérer mes choix|Manage my choices"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 4: Toggle the required Text scope + the Location scope ON
+# Phase 3: Toggle the required Text scope + the Location scope ON
 # ──────────────────────────────────────────────
-# The required text->OpenAI switch (first switch) must be ON to enable Save.
+# The required text->OpenAI switch must be ON to enable Save (canSave gate).
 - tapOn:
     id: "consent-switch-third_party_ai_text_openai"
     optional: true
 
-# The Location (location_to_llm) switch — identified by its testID literal on
-# the Location group switch added in the green phase.
+# The Location (location_to_llm) full-precision switch sits below the OpenAI +
+# Google scope sections — scroll it into view before tapping.
+- scrollUntilVisible:
+    element:
+      id: "consent-switch-location_to_llm"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
 - tapOn:
     id: "consent-switch-location_to_llm"
 
 # ──────────────────────────────────────────────
-# Phase 5: Save and continue
+# Phase 4: Save and continue
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Save and continue"
+    text: "Enregistrer et continuer|Save and continue"
 - waitForAnimationToEnd:
     timeout: 10000
 
 # ──────────────────────────────────────────────
-# Phase 6: Chat is reachable (grant succeeded, sheet dismissed)
+# Phase 5: Chat is reachable (grant succeeded, sheet dismissed)
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
-    visible: "Ask about an artwork.*"
-    timeout: 10000
+    visible:
+      id: "chat-input"
+    timeout: 40000

@@ -42,6 +42,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:abuse', confidence: 0.85 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -57,6 +61,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:injection', confidence: 0.7 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -71,6 +79,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:offtopic', confidence: 0.62 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -85,6 +97,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:abuse', confidence: 0.55 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -98,6 +114,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'allow', confidence: 0.99 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -115,6 +135,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:abuse', confidence: 0.99 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: false,
     });
@@ -129,6 +153,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:abuse', confidence: 0.99 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -143,6 +171,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub(null);
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -157,6 +189,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'allow', confidence: 0.95 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });
@@ -171,6 +207,10 @@ describe('GuardrailEvaluationService — LLM judge wiring (F4)', () => {
     const judge = buildJudgeStub({ decision: 'block:injection', confidence: 0.9 });
     const service = new GuardrailEvaluationService({
       repository: repoStub,
+      // Hybrid-gravity (2026-06-01): the off-topic judge now runs in PARALLEL of
+      // generation by default; the INLINE judge contract these F4 tests assert
+      // is the legacy kill-switch path → pin `frictionEnabled: false`.
+      frictionEnabled: false,
       llmJudge: judge.fn,
       llmJudgeEnabled: true,
     });

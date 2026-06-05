@@ -1,0 +1,75 @@
+appId: com.musaium.mobile.preview
+---
+# screen: BiometricSetupSheet
+#
+# C2 — BiometricSetupSheet best-effort coverage (UFR-021).
+#
+# Trigger (prod): after a successful login the sheet appears only when
+# `biometric.isAvailable && !isEnabled` (app/auth.tsx). Emulators frequently
+# report no enrolled biometric capability, so the sheet may never appear. This
+# flow tap-throughs a REAL login happy path (the observable CTA), then taps the
+# sheet's "Later" CTA with `optional: true` — exercising the sheet when the
+# device supports it, no-op otherwise. NOT a phantom flow: the login submit is
+# a genuine happy path.
+#
+# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
+#   biometric-setup-skip       (Later CTA, best-effort tap)
+#   biometric-setup-activate   (Activate CTA, documented anchor)
+#
+# Prerequisites:
+#   - Test account seeded (helpers/quick-login.yaml: e2e-test-login@test.musaium.dev).
+#   - Device with enrolled biometrics for the sheet to actually appear
+#     (best-effort; flow still passes when absent).
+# screen: AuthScreen
+
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+
+# ──────────────────────────────────────────────
+# Phase 0: Real login happy path (the observable CTA we exercise)
+# ──────────────────────────────────────────────
+- runFlow:
+    file: helpers/quick-login.yaml
+
+# iOS native "Save Password?" dialog after login submit
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ──────────────────────────────────────────────
+# Phase 1: If the biometric sheet appeared, exercise its "Later" CTA
+# ──────────────────────────────────────────────
+# Best-effort: on a device without enrolled biometrics the sheet never shows,
+# so this tap is optional and the flow continues. When it shows, tapping
+# "Later" dismisses it without enrolling (never-blocking per spec).
+- tapOn:
+    id: "biometric-setup-skip"
+    optional: true
+- waitForAnimationToEnd
+
+# Skip onboarding if it surfaced before/after the sheet
+- tapOn:
+    text: "Skip|Passer"
+    optional: true
+- waitForAnimationToEnd
+
+# Confirm we landed past auth (home reachable), proving the login CTA
+# happy path completed regardless of the sheet.
+- extendedWaitUntil:
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 40000

@@ -6,7 +6,7 @@ We take the security of Musaium and the data of our visitors, museum partners, a
 
 ## Supported versions
 
-Musaium is in pre-launch V1 (target 2026-06-01). Until V1 General Availability, the only supported version is `main` (backend, web, mobile). After GA, the two most recent minor releases of each app receive security updates.
+Musaium is in pre-launch V1 (target 2026-06-07, minimum — à reconfirmer). Until V1 General Availability, the only supported version is `main` (backend, web, mobile). After GA, the two most recent minor releases of each app receive security updates.
 
 | Component | Branch / Version | Status |
 |---|---|---|
@@ -26,7 +26,14 @@ Please include:
 - Affected component and version (backend / mobile / web)
 - Your contact info (so we can credit you; anonymous reports are also welcome)
 
-**PGP / encrypted reports:** PGP public key publication is pending pre-launch. Until then, contact [security@musaium.com](mailto:security@musaium.com) to coordinate an out-of-band encrypted channel (Signal, age, or vendor portal). The URL <https://musaium.com/.well-known/pgp-key.txt> will host the public key once generated per [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md); algorithm, fingerprint, and expiry will be advertised here at that point.
+**PGP / encrypted reports:** the public key is published at <https://musaium.com/.well-known/pgp-key.txt> (also advertised via the `Encryption:` field of [`security.txt`](https://musaium.com/.well-known/security.txt)). Encrypt vulnerability reports to it.
+
+- **Identity:** `Musaium Security <security@musaium.com>`
+- **Primary key:** Ed25519 (sign + certify); **encryption subkey:** Cv25519.
+- **Fingerprint:** `1DE4 45C0 923E DC3C B040  BE38 3431 E6D3 A0E8 1C9F`
+- **Created:** 2026-05-27 · **Expires:** 2028-05-26 (renew by 2028-04-26, −30 d).
+
+Verify the fingerprint out-of-band before trusting the key. Generation procedure: [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md).
 
 **Please do not** open public GitHub issues, post on social media, or contact unrelated team members for vulnerability reports. Use the security email only.
 

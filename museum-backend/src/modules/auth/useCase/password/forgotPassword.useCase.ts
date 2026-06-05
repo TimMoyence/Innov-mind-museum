@@ -1,9 +1,8 @@
-import crypto from 'node:crypto';
-
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildResetPasswordEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
+import { issueEmailToken } from '@shared/security/single-use-email-token';
 import { env } from '@src/config/env';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -28,6 +27,18 @@ export class ForgotPasswordUseCase {
     const user = await this.userRepository.getUserByEmail(normalizedEmail);
     if (!user) return;
 
+    // TD-65: never issue a reset token to a soft-deleted account. `deletedAt`
+    // is a hand-rolled column (not @DeleteDateColumn), so it is NOT filtered
+    // by `getUserByEmail` — only login/refresh guard it. Skip silently to
+    // avoid enumerating deleted accounts (same anti-enumeration pattern as the
+    // unverified skip below).
+    if (user.deletedAt) {
+      logger.warn('forgot_password_soft_deleted_skipped', {
+        emailDomain: extractEmailDomain(normalizedEmail),
+      });
+      return;
+    }
+
     // SEC-HARDENING (M16): require verified email before issuing reset token.
     // Silently skip to avoid enumerating verified vs. unverified accounts.
     if (!user.email_verified) {
@@ -37,8 +48,7 @@ export class ForgotPasswordUseCase {
       return;
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const { raw: token, hashed: hashedToken } = issueEmailToken();
     const expires = new Date(Date.now() + 3600000); // 1 hour expiration
     await this.userRepository.setResetToken(normalizedEmail, hashedToken, expires);
 

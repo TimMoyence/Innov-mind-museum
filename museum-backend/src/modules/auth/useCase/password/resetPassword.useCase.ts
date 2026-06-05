@@ -1,9 +1,8 @@
-import crypto from 'node:crypto';
-
 import bcrypt from 'bcrypt';
 
 import { badRequest } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
+import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
 
@@ -29,7 +28,7 @@ export class ResetPasswordUseCase {
     // F10 — block breached passwords at reset; same fail-open semantics as registration.
     await assertPasswordNotBreached(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = hashEmailTokenForLookup(token, { trim: false });
     const user = await this.userRepository.consumeResetTokenAndUpdatePassword(
       hashedToken,
       hashedPassword,

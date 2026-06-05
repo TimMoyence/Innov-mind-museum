@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan — hybrid-gravity guardrail</title>
+<style>
+:root{--ink:#1f2933;--muted:#5a6672;--faint:#8a94a0;--bg:#fff;--panel:#f6f7f9;
+--border:#e3e6ea;--accent:#3b5b7a;--accent2:#b06a3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
+header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
+font-weight:600;margin:0 0 10px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.meta{margin-top:18px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 20px}
+h2{font-size:21px;margin:48px 0 8px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 6px;font-weight:650}
+h4,h5,h6{margin:22px 0 6px}
+p{margin:12px 0}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px 18px;
+overflow:auto;font-size:13.5px;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+border-bottom:2px solid var(--border)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+blockquote{margin:16px 0;padding:2px 18px;border-left:3px solid var(--border);color:var(--muted)}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+.cb{color:var(--accent);font-weight:700}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);
+background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:0 0 8px}
+.kv b{color:var(--ink);font-weight:600;margin-right:4px}
+.chip{display:inline-block;font-size:12px;background:#e7eef5;color:var(--accent);
+border-radius:20px;padding:2px 10px;margin:2px 0}
+.muted{color:var(--muted)}
+.verdict{display:inline-block;font-weight:700;font-size:13px;letter-spacing:.04em;
+padding:4px 12px;border-radius:6px}
+.verdict.ok{background:#e7eef5;color:var(--accent)}
+.verdict.warn{background:#f3ece5;color:var(--accent2)}
+.verdict.bad{background:#f6e7e3;color:#9a3412}
+.finding{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:12px 0}
+.finding-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+.finding-title{font-weight:600;margin:4px 0}
+.suggestion{color:var(--muted)}
+.sev{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:4px}
+.sev.crit{background:#f6e7e3;color:#9a3412}
+.sev.high{background:#f3ece5;color:var(--accent2)}
+.sev.med{background:#eef1f4;color:var(--accent)}
+.sev.low{background:#eceff1;color:var(--muted)}
+.axis{font-size:12px;color:var(--muted)}
+.loc{font-size:12px}
+dl{margin:8px 0;padding-left:14px;border-left:1px solid var(--border)}
+dt{font-weight:600;font-size:13px;color:var(--accent);margin-top:8px}
+dd{margin:2px 0 2px 8px}
+nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 20px;margin:0 0 36px}
+nav.toc strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;padding:2px 0}
+section.artifact{padding-top:8px}
+section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
+footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
+@media print{
+html,body{background:#fff;color:#000;font-size:11pt}
+.wrap{max-width:none;padding:0}
+a{color:#000;text-decoration:none}
+.kv,.chip,code,pre,.verdict,.sev,.finding,nav.toc{background:transparent!important}
+.finding,.kv,nav.toc,pre{border-color:#999}
+h1,h2,h3{page-break-after:avoid}
+h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
+header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
+@page{margin:18mm 16mm}
+}</style></head>
+<body><div class="wrap">
+<header class="doc">
+<p class="eyebrow">Bundle</p>
+<h1>Plan — hybrid-gravity guardrail</h1>
+<div class="meta"><span>3 artefacts</span></div>
+</header>
+<nav class="toc"><strong>Sommaire</strong><a href="#spec-md">spec.md</a><a href="#design-md">design.md</a><a href="#tasks-md">tasks.md</a></nav><section class="artifact" id="spec-md"><h2>spec.md</h2><h1>Spec — Guardrail hybride par gravité (judge parallèle + compteur de friction 2 niveaux)</h1>
+<blockquote><p>RUN_ID <code>2026-06-01-hybrid-gravity-guardrail</code> — phase <strong>spec</strong> (UFR-022 fresh-context). Source de vérité design : <code>docs/superpowers/specs/2026-06-01-hybrid-gravity-guardrail-design.md</code> (validé Tim 2026-06-01). Statut : enrichissement défense-en-profondeur (PAS un blocker launch). Le bug aigu judge fail-open silencieux est déjà corrigé (commit <code>d769e2df</code>, timeout 1500ms).</p></blockquote>
+<h2>1. Stakeholders</h2>
+<table><thead><tr><th>Rôle</th><th>Intérêt</th></tr></thead><tbody><tr><td>Visiteur B2C (utilisateur final, FR + 7 autres locales)</td><td>Réponse fluide voice-first ; un écart hors-sujet occasionnel doit être recentré gracieusement, pas hard-bloqué.</td></tr><tr><td>Visiteur abuseur / spammeur off-topic</td><td>Doit être escaladé (hard-block + cool-down) sans pénaliser le visiteur légitime.</td></tr><tr><td>Tech Lead / sécurité (Tim)</td><td>Les invariants sécurité §3 du design restent non-négociables ; pas de PII/injection envoyée au LLM de réponse ; pas de fail-closed dû à une panne infra.</td></tr><tr><td>Ops</td><td>Kill-switch env sans redeploy ; observabilité (compteurs de strikes, escalades).</td></tr><tr><td>FinOps</td><td>Off-topic sous-seuil paie answer+judge ; abort = optimisation coût, pas une condition de correction.</td></tr></tbody></table>
+<h2>2. Glossaire</h2>
+<ul><li><strong>Friction strike</strong> : incrément pondéré enregistré dans le <code>GuardrailFrictionStore</code> quand un message déclenche une friction (off-topic via judge = poids <code>w_offtopic</code> ; sécurité via V1/sidecar = poids <code>w_security</code>). Stocké par scope (session / user / ip).</li><li><strong>Gravity band (bande de gravité)</strong> : classe de sévérité d'un message — <code>security</code> (injection/toxicité/PII, hard-block inline), <code>offtopic</code> (judge block, soft-redirect par défaut), <code>on-topic</code> (réponse normale, poids 0).</li><li><strong>Soft-redirect</strong> : laisser la génération répondre ; le section prompt recentre gracieusement l'off-topic occasionnel SANS court-circuiter ni émettre <code>policy:off_topic</code>.</li><li><strong>Cool-down</strong> : message de recentrage localisé honnête (i18n) renvoyé à la place de la réponse, sans 500, sans emoji. Deux déclencheurs distincts : (a) escalade session par-message off-topic, (b) cool-down temporisé global user/IP.</li><li><strong>Escalade session (par-message ciblée off-topic)</strong> : à partir de <code>FRICTION_SESSION_THRESHOLD</code> strikes session, un message off-topic est hard-bloqué (cool-down) AU LIEU d'être soft-redirigé, POUR LE RESTE de la session. Les messages on-topic continuent normalement.</li><li><strong>Cool-down user/IP (temporisé global)</strong> : à partir de <code>FRICTION_USER_THRESHOLD</code> strikes sur le scope user (ou IP hashée si anon), pendant <code>FRICTION_COOLDOWN_MS</code>, TOUS les messages de cet user/IP sont rate-limités (cool-down), même en changeant de session.</li><li><strong>Fail-soft</strong> : sur indisponibilité du store de friction, <code>count()</code> renvoie 0 → pas d'escalade ; le soft-redirect + la sécurité inline tiennent. Jamais de blocage dur dû à une panne infra.</li><li><strong>Fail-OPEN (judge)</strong> : judge timeout/erreur/budget → <code>null</code> → repli sur le verdict V1 (allow). Vérifié <code>judgeWithLlm</code> → <code>null</code> (<code>llm-judge-guardrail.ts:175-249</code>).</li><li><strong>Fail-CLOSED (sidecar)</strong> : sidecar muet/timeout → <code>policy:service_unavailable</code> (ADR-047, inchangé).</li><li><strong>Suppress (abort dégradé)</strong> : si l'orchestrateur ne propage pas l'<code>AbortSignal</code> externe, on laisse finir la génération puis on jette/remplace la réponse par le cool-down. Correct, juste moins économe.</li></ul>
+<h2>3. Requirements (EARS)</h2>
+<h3>3.1 Sécurité inline (invariants durs — design §3, non négociables)</h3>
+<ul><li><strong>R1</strong> — WHEN un message est reçu, THE SYSTEM SHALL évaluer V1 keyword guardrail puis sidecar LLM-Guard AVANT tout appel au LLM de réponse. (Inchangé : <code>evaluateInput</code> reste appelé avant <code>orchestrator.generate</code>, <code>prepare-message.pipeline.ts:283</code> puis <code>chat-message.service.ts:285</code>.)</li><li><strong>R2</strong> — IF la couche sécurité (V1 ou sidecar) renvoie un block, THE SYSTEM SHALL hard-bloquer le message immédiatement, persister l'échange bloqué (<code>handleInputBlock</code>), enregistrer un friction strike de poids <code>FRICTION_WEIGHT_SECURITY</code> sur les scopes session ET user/IP, et vérifier le plancher user/IP.</li><li><strong>R3</strong> — THE SYSTEM SHALL NEVER envoyer du contenu classé PII/injection/toxicité au LLM de réponse. (Seul le judge — fail-OPEN, off-topic — peut s'exécuter en parallèle de la génération.)</li><li><strong>R4</strong> — WHILE le sidecar est muet ou en timeout, THE SYSTEM SHALL répondre <code>policy:service_unavailable</code> (fail-CLOSED, ADR-047, inchangé).</li></ul>
+<h3>3.2 Judge parallèle (off-topic, latence)</h3>
+<ul><li><strong>R5</strong> — WHEN un message ≥ <code>LLM_GUARDRAIL_JUDGE_MIN_LENGTH</code> (50c) passe V1+sidecar ALLOW, THE SYSTEM SHALL exécuter le judge sémantique EN PARALLÈLE de la génération de la réponse (<code>Promise.allSettled</code>), et non plus en série avant elle.</li><li><strong>R6</strong> — WHILE le judge s'exécute en parallèle d'une réponse on-topic, THE SYSTEM SHALL n'ajouter aucune latence mesurable au cas allow (latence totale ≈ latence de la génération seule).</li><li><strong>R7</strong> — IF le judge renvoie <code>allow</code> (ou <code>null</code> = fail-OPEN), THE SYSTEM SHALL renvoyer la réponse générée.</li><li><strong>R8</strong> — IF le judge timeout/erreur/budget épuisé (<code>null</code>), THE SYSTEM SHALL faire fail-OPEN (repli verdict V1 allow) ; un judge lent NE DOIT JAMAIS bloquer la disponibilité.</li></ul>
+<h3>3.3 Friction + escalade</h3>
+<ul><li><strong>R9</strong> — WHEN le judge renvoie <code>block</code> (off_topic) ET le scope session est sous <code>FRICTION_SESSION_THRESHOLD</code> ET le scope user/IP est sous <code>FRICTION_USER_THRESHOLD</code>, THE SYSTEM SHALL enregistrer un strike <code>FRICTION_WEIGHT_OFFTOPIC</code> sur session ET user/IP, et renvoyer la réponse générée (soft-redirect — le section prompt recentre). Aucune émission de <code>policy:off_topic</code>.</li><li><strong>R10</strong> — WHEN le judge renvoie <code>block</code> (off_topic) ET le scope session atteint <code>FRICTION_SESSION_THRESHOLD</code>, THE SYSTEM SHALL hard-bloquer ce message off-topic (cool-down localisé <code>policy:off_topic</code>) au lieu de le soft-rediriger, POUR LE RESTE de la session. Les messages on-topic suivants de la même session SHALL continuer de répondre normalement.</li><li><strong>R11</strong> — WHEN le scope user (ou IP hashée si anon) atteint <code>FRICTION_USER_THRESHOLD</code> sur la fenêtre <code>FRICTION_USER_TTL_MS</code>, THE SYSTEM SHALL armer un cool-down global de <code>FRICTION_COOLDOWN_MS</code> ; WHILE ce cool-down est armé, TOUS les messages de cet user/IP (toutes sessions) SHALL recevoir le cool-down localisé.</li><li><strong>R12</strong> — THE SYSTEM SHALL utiliser le scope <code>user</code> (par <code>userId</code>) quand l'utilisateur est authentifié, et le scope <code>ip</code> (par <code>sha256(ip)</code>) quand anonyme. L'IP NE DOIT JAMAIS être stockée ni loggée en clair (RGPD).</li><li><strong>R13</strong> — WHILE <code>GUARDRAIL_FRICTION_ENABLED=false</code>, THE SYSTEM SHALL retomber sur le comportement legacy (judge inline qui hard-block tout off-topic) — kill-switch sans redeploy.</li></ul>
+<h3>3.4 Fail-soft store</h3>
+<ul><li><strong>R14</strong> — IF le <code>GuardrailFrictionStore</code> (Redis) est indisponible ou throw, THE SYSTEM SHALL traiter <code>count()</code> comme 0 (pas d'escalade), laisser le soft-redirect + la sécurité inline opérer, et NE JAMAIS fail-closed le chat ni renvoyer un 500 dû à la panne infra.</li><li><strong>R15</strong> — THE SYSTEM SHALL appliquer un TTL par scope : session <code>FRICTION_SESSION_TTL_MS</code> (déf 6h), user/IP <code>FRICTION_USER_TTL_MS</code> (déf 24h glissant). Le cool-down user/IP utilise un flag dédié à TTL <code>FRICTION_COOLDOWN_MS</code>.</li></ul>
+<h3>3.5 Abort (best-effort, optimisation)</h3>
+<ul><li><strong>R16</strong> — WHEN une escalade (R10/R11) est décidée pendant que la génération est en cours, THE SYSTEM SHALL, SI l'orchestrateur propage un <code>AbortSignal</code> externe, abort la génération pour ne payer qu'une fraction des tokens.</li><li><strong>R17</strong> — IF l'orchestrateur ne propage PAS d'<code>AbortSignal</code> externe (état actuel vérifié — voir design §AbortSignal), THE SYSTEM SHALL laisser la génération finir puis supprimer/remplacer la réponse par le cool-down. L'abort est une optimisation, pas une condition de correction (R16 et R17 produisent le MÊME résultat user-visible).</li></ul>
+<h3>3.6 Sortie &amp; message de cool-down</h3>
+<ul><li><strong>R18</strong> — THE SYSTEM SHALL renvoyer le cool-down comme message assistant localisé (8 locales : en, fr, es, de, it, ja, zh, ar), honnête, SANS emoji unicode, avec citation <code>policy:off_topic</code> dans <code>metadata.citations</code>.</li></ul>
+<h2>4. NFR (non-fonctionnels)</h2>
+<ul><li><strong>NFR-Latence-1</strong> — Sur message on-topic ≥50c, la latence ajoutée par le judge SHALL être ≈ 0 (parallélisme). Le judge (~0,6–1,2s) finit avant la réponse (3–9s).</li><li><strong>NFR-Latence-2</strong> — Le socket ceiling chat (<code>chatRouteSocketCeilingMs</code>, <code>chat-route.helpers.ts:39</code>) NE DOIT PAS augmenter : le judge ne s'additionne plus en série (<code>serialGuardrailBudgetMs</code>, <code>chat-route.helpers.ts:24-25</code>). L'invariant R2 du I-OPS4 reste vrai ; le budget peut baisser. Vérifier honnêtement et documenter le delta.</li><li><strong>NFR-Sécurité-1</strong> — Les invariants §3.1 (R1–R4) sont testés explicitement en réel (test §7.8 du design).</li><li><strong>NFR-Fail-soft-1</strong> — Aucune panne du store de friction ne peut produire un 500 ni un fail-closed (test §7.6).</li><li><strong>NFR-Coût-1</strong> — Off-topic sous-seuil paie answer+judge (judge ~0,06¢ réel, compté 1¢ conservateur, <code>llm-judge-guardrail.ts:89</code>). Acceptable : off-topic = minorité.</li><li><strong>NFR-RGPD-1</strong> — IP jamais en clair (hash sha256), cohérent avec le pattern <code>RedisRateLimitStore</code> existant.</li><li><strong>NFR-Observabilité-1</strong> — Les fail-soft du store SHOULD être comptés (métrique/log) façon <code>guardrailBudgetRedisFallbackTotal</code> (<code>guardrail-budget.ts:128</code>).</li><li><strong>NFR-Test-1</strong> — Suite <code>tests/ai/guardrail-v2-live.ai.test.ts</code> prolongée (réel, no mock LLM) ; plancher <code>MIN_TOTAL_AI_TESTS</code> (<code>scripts/sentinels/ai-tests-count.mjs:72</code>) bumpé dans le même commit que les nouveaux <code>it()</code>.</li></ul>
+<h2>5. Critères d'acceptation</h2>
+<ol><li><strong>Off-topic isolé &lt; seuil</strong> → soft-redirect : réponse présente, PAS de <code>policy:off_topic</code>, recentrage par le section prompt. (R9)</li><li><strong>Off-topic répété ≥ <code>FRICTION_SESSION_THRESHOLD</code></strong> (3×) → 3ᵉ message hard-block <code>policy:off_topic</code> + cool-down ; un on-topic ensuite répond normalement. (R10)</li><li><strong>Latence parallèle</strong> : message on-topic jugé → latence totale ≈ latence réponse seule (pas la somme answer+judge ; marge tolérante). (R6, NFR-Latence-1)</li><li><strong>Plancher user cross-session</strong> : strikes répartis sur 2 sessions du même <code>userId</code> → cool-down à <code>FRICTION_USER_THRESHOLD</code>. (R11, R12)</li><li><strong>Abort</strong> : judge bloque pendant la génération → génération avortée OU supprimée (pas de réponse complète user-visible ; cool-down rendu). (R16/R17)</li><li><strong>Fail-soft store</strong> : <code>GuardrailFrictionStore</code> qui throw → pas d'escalade, chat répond, pas de 500. (R14)</li><li><strong>Kill-switch</strong> : <code>GUARDRAIL_FRICTION_ENABLED=false</code> → comportement legacy (judge inline hard-block). (R13)</li><li><strong>Sécurité inchangée</strong> : injection/PII toujours hard-block immédiat + strike sécurité poids <code>FRICTION_WEIGHT_SECURITY</code>. (R1, R2, R4)</li><li><strong>Unitaires <code>GuardrailFrictionStore</code></strong> : <code>recordStrike</code> (incrBy + TTL), <code>count</code> (0 si store down), <code>reset</code>, backends memory/redis, <code>__setStoreForTest</code>. (façon <code>guardrail-budget</code> tests)</li><li><strong>i18n</strong> : nouveau champ refocus/cool-down présent et non vide dans les 8 locales ; golden test <code>guardrail-refusals.test.ts</code> étendu. (R18)</li><li><code>tsc</code> 0, <code>pnpm lint</code> 0, <code>lint:test-discipline</code> 0, suite <code>guardrail-v2-live</code> + nouveaux tests verts en réel.</li></ol></section>
+<section class="artifact" id="design-md"><h2>design.md</h2><h1>Design — Guardrail hybride par gravité</h1>
+<blockquote><p>RUN_ID <code>2026-06-01-hybrid-gravity-guardrail</code> — phase <strong>plan</strong> (UFR-022 fresh-context). Ancré au code RÉEL vérifié 2026-06-01 (path:line). Lit <code>spec.md</code> + <code>docs/superpowers/specs/2026-06-01-hybrid-gravity-guardrail-design.md</code>.</p></blockquote>
+<h2>0. Constat de faisabilité AbortSignal (UFR-013 — vérifié, honnête)</h2>
+<p><strong>Vérification du code réel :</strong></p>
+<ul><li><code>LangChainChatOrchestrator.generate(input: OrchestratorInput)</code> prend <strong>un seul argument</strong> (<code>langchain.orchestrator.ts:290</code>). Le port <code>ChatOrchestrator.generate(input)</code> aussi (<code>chat-orchestrator.port.ts:99</code>).</li><li><code>OrchestratorInput</code> (<code>chat-orchestrator.port.ts:11-95</code>) n'a <strong>AUCUN champ <code>signal</code></strong>. Aucun <code>AbortSignal</code> externe n'y entre.</li><li>L'orchestrateur construit son PROPRE <code>AbortSignal.timeout()</code> en interne, par section (<code>langchain.orchestrator.ts:424</code> <code>run: async (signal: AbortSignal)</code> via le section-runner ; et chemin walk <code>langchain.orchestrator.ts:493</code> <code>AbortSignal.timeout(env.llm.totalBudgetMs)</code>).</li><li>La couche modèle SUPPORTE bien un signal : <code>ChatModel.invoke(messages, { signal })</code> (<code>langchain-orchestrator-support.ts:82,85,114</code>) et <code>mergeInvokeOpts({ signal }, ...)</code> (<code>langchain.orchestrator.ts:65-72,245,495</code>).</li></ul>
+<p><strong>Conclusion honnête :</strong> l'abort externe <strong>n'est PAS supporté aujourd'hui</strong> au niveau du port. Le câbler exigerait : (a) ajouter <code>signal?: AbortSignal</code> à <code>OrchestratorInput</code> (ou un 2ᵉ arg à <code>generate</code>), (b) combiner ce signal externe avec le signal interne par section via <code>AbortSignal.any([internalTimeoutSignal, externalSignal])</code> dans <code>invokeSection</code> (<code>langchain.orchestrator.ts:243-247</code>) ET <code>generateWalk</code> (<code>langchain.orchestrator.ts:493-497</code>).</p>
+<p><strong>Décision design (conforme spec R16/R17, design §4.1 « abort = optimisation ») :</strong></p>
+<ul><li><strong>Phase 1 (ce run) = SUPPRESS-only.</strong> On NE modifie PAS le port orchestrateur. On parallélise judge ‖ generate ; si une escalade est décidée, on <strong>ignore/remplace</strong> la réponse générée par le cool-down. Résultat user-visible identique à l'abort. Coût : on paie les tokens de la génération escaladée (minorité de cas, judge ~0,06¢, off-topic répété rare).</li><li><strong>Abort réel = explicitement HORS périmètre de ce run</strong>, noté en tech-debt (<code>OrchestratorInput.signal</code> + <code>AbortSignal.any</code>). Le tenter ici toucherait le port partagé + walk path + tous les fakes de test → blast-radius large à J-6 pour un gain coût marginal. UFR-019 : ne pas sur-scoper.</li></ul>
+<blockquote><p>⚠️ Pour l'éditeur : NE PAS prétendre câbler un abort. Implémenter le SUPPRESS. Si une tâche « abort » apparaît, elle est OPTIONNELLE et documentée comme tech-debt, pas requise pour les critères d'acceptation.</p></blockquote>
+<h2>1. Vue d'ensemble du flux cible</h2>
+<p>État actuel (série) :</p>
+<pre><code>prepare() [pipeline]
+  → evaluateInput(text)  // V1 + sidecar + JUDGE (tous inline, AVANT génération)  -- guardrail-evaluation.service.ts:122-212
+      ├─ block → handleInputBlock → refused                                       -- :215-251
+      └─ allow → ready
+chat-message.service.postMessage:285 → orchestrator.generate(input)  // génération
+  → commitResponse → evaluateOutput  // output guardrail</code></pre>
+<p>État cible (gravité) :</p>
+<pre><code>prepare() [pipeline]
+  → securityGate(text)  // = evaluateInput SANS le judge : V1 + sidecar inline    -- evaluateInput allégé
+      ├─ block (sécurité) → recordStrike(security, w_security) on session+user/IP
+      │                    → check plancher user/IP
+      │                    → handleInputBlock → refused
+      └─ allow → ready  (+ flag « judge à faire en parallèle »)
+chat-message.service.postMessage:
+  → cool-down pré-check : si user/IP en cool-down armé (R11) → renvoyer cool-down (skip génération)
+  → PARALLÈLE { semanticJudge(text, scope, frictionState)  ‖  orchestrator.generate(input) }   via Promise.allSettled
+      ├─ judge allow|null  → réponse = answer généré
+      └─ judge block(offtopic) :
+            recordStrike(offtopic, w_offtopic) on session+user/IP
+            escalate = (sessionCount ≥ S_soft) || (userCount ≥ U_floor)
+            escalate ? réponse = cool-down (suppress answer)  : réponse = answer (soft-redirect)
+  → commitResponse → evaluateOutput  (inchangé)</code></pre>
+<h2>2. (a) Extraction du judge hors de <code>evaluateInput</code></h2>
+<p><strong>Fichier : <code>guardrail-evaluation.service.ts</code></strong></p>
+<p>Aujourd'hui <code>evaluateInput</code> (<code>:122-212</code>) enchaîne : V1 keyword (<code>:131</code>), sidecar provider (<code>:147</code>), redaction log (<code>:168-176</code>), <strong>judge</strong> (<code>:182</code> <code>runLlmJudge</code>), preClassified short-circuit (<code>:196</code>). Le judge est la seule partie à extraire.</p>
+<ul><li><strong><code>evaluateInput</code> allégé</strong> : garde V1 (<code>:131-143</code>) + sidecar (<code>:147-163</code>) + redaction (<code>:165-176</code>) + le retour <code>allow</code> (avec <code>redactedText</code>). On <strong>retire le bloc judge <code>:178-194</code></strong>. Sémantique : <code>evaluateInput</code> ne fait plus QUE la sécurité inline (gravity band <code>security</code>). Son contrat de retour <code>InputGuardrailResult</code> (<code>guardrail-evaluation.types.ts:9-20</code>) est inchangé.</li><li><strong>Nouvelle méthode <code>evaluateInputSemantic(text, scope)</code></strong> sur <code>GuardrailEvaluationService</code> : encapsule l'appel judge (le code retiré <code>:178-194</code> : <code>runLlmJudge(text, this.judgeDeps(), scope)</code>), retourne un résultat structuré <code>{ verdict: 'allow' | 'offtopic'; reason?; }</code> (ne hard-block pas elle-même ; c'est l'orchestration qui décide soft vs hard selon la friction). Gère le gating longueur ≥ <code>judgeMinMessageLength</code> et le <code>llmJudgeEnabled</code> (sinon <code>allow</code> direct — fail-OPEN legacy).</li><li><strong>Audit</strong> : le block judge enregistrait <code>logBlock</code> (<code>:185-192</code>). Dans le modèle cible, le <code>logBlock</code> n'est émis que si l'off-topic <strong>escalade vers hard-block</strong> (sinon soft-redirect = pas un block, pas d'entrée chaîne d'audit). À câbler dans l'orchestration (voir §3) ou via un paramètre <code>escalated</code> passé à une méthode <code>handleOffTopicEscalation</code>.</li><li><strong>Kill-switch legacy (R13)</strong> : quand <code>GUARDRAIL_FRICTION_ENABLED=false</code>, <code>evaluateInput</code> RÉINTÈGRE le judge inline (comportement legacy hard-block). Implémentation : garder le bloc judge dans <code>evaluateInput</code> gardé par <code>if (!env.guardrails.frictionEnabled)</code>, et l'orchestration n'appelle <code>evaluateInputSemantic</code> en parallèle QUE si <code>frictionEnabled</code>. Ainsi un seul code path par mode, pas de double évaluation.</li></ul>
+<blockquote><p>Risque : <code>evaluateInput</code> est appelé depuis <code>prepare-message.pipeline.ts:283</code>. Impact analysis à lancer en GREEN (<code>gitnexus_impact evaluateInput</code>) avant édition. Le contrat de retour ne change pas → callers inchangés hors pipeline.</p></blockquote>
+<h2>3. (b) Restructuration <code>prepare-message.pipeline.ts</code> + <code>chat-message.service.ts</code></h2>
+<p>Le judge parallèle doit s'exécuter <strong>au moment de la génération</strong>, qui vit dans <code>chat-message.service.postMessage</code> (<code>:285</code>), PAS dans <code>prepare</code> (<code>:244</code>). <code>prepare</code> se termine avant la génération. Donc :</p>
+<ul><li><strong><code>prepare-message.pipeline.ts:283</code></strong> : <code>evaluateInput</code> reste appelé (= securityGate, sécurité inline). Sur block : ajouter l'enregistrement du strike sécurité (R2) + check plancher avant <code>handleInputBlock</code> (<code>:294</code>). <code>prepare</code> retourne <code>ready</code> en exposant ce qu'il faut pour le judge parallèle aval : le <code>text</code> sanitisé est déjà calculé côté message service (<code>chat-message.service.ts:249-250</code>), et le <code>scope</code> est dérivable du contexte. <code>prepare</code> SHALL exposer un drapeau / les champs <code>sessionId, userId/ip</code> nécessaires (déjà présents dans <code>PrepareReady.session</code> / <code>ownerId</code>).</li><li><strong><code>chat-message.service.ts:282-298</code></strong> : le tronçon <code>try { aiResult = await this.orchestrator.generate(...) }</code>. Le restructurer en :<ul><li><strong>Pré-check cool-down</strong> (R11) : <code>await frictionStore.isCoolingDown(scope)</code> → si vrai, renvoyer directement le cool-down (via un nouvel helper <code>buildCoolDownResult</code> réutilisant <code>handleInputBlock</code>/<code>buildBlockedOutputPayload</code> sémantique avec <code>reason='off_topic'</code>), SANS générer.</li><li><strong>Parallèle</strong> : <code>const [judgeRes, genRes] = await Promise.allSettled([ this.guardrail.evaluateInputSemantic(sanitizedText, scope), this.orchestrator.generate(orchestratorInput) ])</code>. (Gardé par <code>frictionEnabled</code> ; sinon legacy = <code>evaluateInput</code> a déjà jugé inline en amont et le flux reste l'actuel.)</li><li><strong>Décision</strong> : si <code>judgeRes</code> = offtopic → <code>recordStrike</code> session+user/IP (poids <code>w_offtopic</code>) → recalcul <code>escalate</code> → si escalade : <code>logBlock</code> (audit), armer cool-down user/IP si U_floor atteint, et réponse = cool-down (suppress <code>genRes</code>). Sinon réponse = <code>genRes.value</code> (soft-redirect).</li><li><strong>genRes rejected</strong> : si la génération a throw (<code>genRes.status === 'rejected'</code>), conserver le mapping actuel <code>mapOrchestratorError</code> (<code>chat-message.service.ts:290</code>). Le judge n'altère pas la gestion d'erreur de génération.</li></ul></li><li><strong>Span <code>composing</code></strong> (<code>chat-message.service.ts:292</code>) : conserver le try/finally d'émission (merged_bug_004). Le <code>Promise.allSettled</code> doit rester DANS la fenêtre du span pour mesurer la latence réelle.</li></ul>
+<blockquote><p>NOTE faisabilité : <code>Promise.allSettled</code> garantit qu'un judge qui throw (il ne devrait pas — <code>judgeWithLlm</code> est no-throw <code>:175</code>) ne casse jamais la génération. Le judge fail-OPEN (<code>null</code>) → traité comme <code>allow</code>.</p></blockquote>
+<h2>4. (c) Nouveau <code>GuardrailFrictionStore</code> — calqué sur <code>guardrail-budget.ts</code></h2>
+<p><strong>Fichier neuf : <code>src/modules/chat/useCase/guardrail/guardrail-friction.store.ts</code></strong> (+ types).</p>
+<p>Modèle de référence vérifié : <code>guardrail-budget.ts:24-227</code> — port <code>IGuardrailBudgetStore</code>, adapters <code>InProcess</code> / <code>Redis</code>, <code>CacheService.incrBy(key, n, ttlSec)</code> (<code>:117</code>), <code>cache.ping()</code> reachability gate (<code>:123</code>), <code>cache.get</code> / <code>cache.del</code>, <code>configureGuardrailBudget</code> composition, <code>ensureStore</code> defensive default, <code>__setStoreForTest</code> (<code>:225</code>), <code>__setNowForTest</code> (<code>:216</code>).</p>
+<h3>Interface (spec §4.2 du design)</h3>
+<pre><code>export type FrictionScope =
+  | { kind: 'session'; sessionId: string }
+  | { kind: 'user'; userId: number }
+  | { kind: 'ip'; ipHash: string };
+
+export interface IGuardrailFrictionStore {
+  recordStrike(scope: FrictionScope, weight: number): Promise&lt;void&gt;; // incrBy + TTL
+  count(scope: FrictionScope): Promise&lt;number&gt;;                      // 0 si store down (FAIL-SOFT)
+  armCoolDown(scope: FrictionScope): Promise&lt;void&gt;;                  // SET flag TTL = FRICTION_COOLDOWN_MS
+  isCoolingDown(scope: FrictionScope): Promise&lt;boolean&gt;;             // false si store down (FAIL-SOFT)
+  reset(scope: FrictionScope): Promise&lt;void&gt;;                        // tests / cron défensif
+}</code></pre>
+<blockquote><p>Différence clé vs budget : <strong>FAIL-SOFT</strong> (renvoie 0/false sur store down) — l'OPPOSÉ du budget qui est <strong>FAIL-CLOSED</strong> (<code>Infinity</code> sur down, <code>guardrail-budget.ts:120-142</code>). Bien recopier la STRUCTURE, mais INVERSER la politique de panne (spec R14). Pas de <code>ping</code>-gate fail-closed : sur erreur Redis, catch → 0/false + métrique + log warn (façon <code>guardrailBudgetRedisFallbackTotal.inc()</code> <code>:128</code>, créer un <code>guardrailFrictionRedisFallbackTotal</code>).</p></blockquote>
+<h3>Clés &amp; TTL</h3>
+<table><thead><tr><th>Scope</th><th>Clé</th><th>TTL (sec)</th></tr></thead><tbody><tr><td>session</td><td><code>friction:session:&lt;sessionId&gt;</code></td><td><code>FRICTION_SESSION_TTL_MS / 1000</code></td></tr><tr><td>user</td><td><code>friction:user:&lt;userId&gt;</code></td><td><code>FRICTION_USER_TTL_MS / 1000</code> (glissant : ré-set TTL à chaque <code>incrBy</code>)</td></tr><tr><td>ip</td><td><code>friction:ip:&lt;sha256(ip)&gt;</code></td><td>idem user</td></tr><tr><td>cooldown</td><td>`friction:cooldown:session\</td><td>user\</td></tr></tbody></table>
+<ul><li><code>recordStrike</code> : <code>cache.incrBy(key, weight, ttlSec)</code> (incrBy pose/rafraîchit le TTL — vérifié dans le pattern budget <code>:117</code>). Défensif <code>weight &lt;= 0 || !Number.isFinite</code> → no-op (façon budget <code>:68,114</code>).</li><li><code>count</code> : <code>try { v = await cache.get&lt;number&gt;(key) ; return v ?? 0 } catch { fallback metric ; return 0 }</code>. <strong>PAS</strong> de ping-gate fail-closed.</li><li><code>armCoolDown</code> : <code>cache.set(coolKey, 1, ttlSec)</code> (ou <code>incrBy(coolKey,1,ttl)</code> si pas de <code>set</code> typé — vérifier <code>CacheService</code> API en RED via le port <code>@shared/cache/cache.port</code>).</li><li><code>isCoolingDown</code> : <code>try { return (await cache.get(coolKey)) != null } catch { return false }</code>.</li><li>IP hash : <code>import { createHash } from 'crypto'</code> → <code>createHash('sha256').update(ip).digest('hex')</code>. Vérifier en RED s'il existe déjà un helper de hash IP (<code>RedisRateLimitStore</code> — grep <code>ipHash</code>/<code>sha256</code> dans rate-limit) pour réutiliser plutôt que dupliquer.</li><li>Backend : suit <code>env.guardrails.budgetBackend</code> (<code>guardrail-budget.ts:164</code>, env <code>:420</code>) — même <code>CacheService</code>. <code>configureGuardrailFriction({ cache })</code> à wirer au composition root du chat module (là où <code>configureGuardrailBudget</code> est appelé — grep <code>configureGuardrailBudget(</code> pour le site exact).</li></ul>
+<h2>5. (d) Politique d'escalade 2 niveaux</h2>
+<p>Implémentée dans l'orchestration (§3 step 3), pure logique sur les counts :</p>
+<ul><li><strong>Niveau 1 — session par-message off-topic</strong> : <code>escalateSession = sessionCount &gt;= env.guardrails.frictionSessionThreshold</code>. Si vrai ET judge=offtopic → hard-block CE message (cool-down <code>policy:off_topic</code>). On-topic continue (le judge ne bloque pas l'on-topic → pas d'escalade).</li><li><strong>Niveau 2 — cool-down user/IP global</strong> : après <code>recordStrike</code> user/IP, <code>userCount = count(user|ip)</code>. Si <code>userCount &gt;= env.guardrails.frictionUserThreshold</code> → <code>armCoolDown(user|ip)</code>. Le pré-check (§3 step 1) <code>isCoolingDown</code> court-circuite les messages suivants pendant <code>FRICTION_COOLDOWN_MS</code>.</li><li>Strike sécurité (R2) : poids <code>frictionWeightSecurity</code> (2) sur session+user/IP → un spammeur d'injections atteint U_floor plus vite (2 vs 1) → cool-down dur. Câblé dans le pipeline securityGate block branch (<code>prepare-message.pipeline.ts:291-302</code>).</li></ul>
+<h2>6. (e) Câblage AbortSignal — voir §0</h2>
+<p><strong>SUPPRESS-only ce run.</strong> Pas de modification du port. La génération escaladée est jetée/remplacée. Tâche abort = tech-debt optionnelle (non requise par les critères d'acceptation 5 : « avortée OU supprimée »).</p>
+<h2>7. (f) Clés env</h2>
+<p><strong>Fichiers : <code>src/config/env.ts</code> (bloc <code>guardrails:</code> <code>:395-420</code>) + <code>src/config/env.types.ts</code> (<code>:572-604</code>).</strong></p>
+<p>Ajouter à <code>env.guardrails</code> :</p>
+<pre><code>frictionEnabled:        toBoolean(process.env.GUARDRAIL_FRICTION_ENABLED, true)
+frictionSessionThreshold: toNumber(process.env.FRICTION_SESSION_THRESHOLD, 3)
+frictionUserThreshold:  toNumber(process.env.FRICTION_USER_THRESHOLD, 10)
+frictionSessionTtlMs:   toNumber(process.env.FRICTION_SESSION_TTL_MS, 21_600_000)   // 6h
+frictionUserTtlMs:      toNumber(process.env.FRICTION_USER_TTL_MS, 86_400_000)      // 24h
+frictionCooldownMs:     toNumber(process.env.FRICTION_COOLDOWN_MS, 120_000)         // 2min
+frictionWeightSecurity: toNumber(process.env.FRICTION_WEIGHT_SECURITY, 2)
+frictionWeightOfftopic: toNumber(process.env.FRICTION_WEIGHT_OFFTOPIC, 1)</code></pre>
+<p>Types miroir dans <code>env.types.ts</code> <code>guardrails:</code> interface. Helpers <code>toNumber</code>/<code>toBoolean</code> déjà utilisés dans le bloc (<code>env.ts:401-420</code>). Mettre à jour <code>.env.example</code> (clés + commentaires) — UFR-018 (configs vérifiables). Pas de feature flag prélaunch interdit : <code>GUARDRAIL_FRICTION_ENABLED</code> est un <strong>kill-switch ops</strong> (autorisé, comme <code>GUARDRAILS_V2_OBSERVE_ONLY</code>), pas un flag A/B (cf. UFR-015 — kill-switch ≠ feature flag).</p>
+<h2>8. (i18n) — cool-down localisé</h2>
+<p><strong>Fichier : <code>src/shared/i18n/guardrail-refusals.ts</code></strong> (vérifié : 8 locales en/fr/es/de/it/ja/zh/ar, interface <code>RefusalMessages</code> <code>:3-12</code>, <code>GUARDRAIL_REFUSALS</code> <code>:14</code>).</p>
+<ul><li>Ajouter un champ <code>refocus</code> (cool-down honnête, sans emoji) à l'interface <code>RefusalMessages</code> ET aux 8 locales. Ex FR : « Je suis ton compagnon culturel — restons sur l'art et le patrimoine. On reprend quand tu veux. » EN : « I'm your cultural companion — let's stay on art and heritage. We can pick up whenever you're ready. »</li><li><code>buildGuardrailRefusal</code> (<code>art-topic-guardrail.ts:242-251</code>) : ajouter un mapping pour le cas cool-down. Option A : nouveau <code>GuardrailBlockReason</code> <code>'refocus'</code> (ou réutiliser <code>'off_topic'</code> avec un paramètre). Recommandé : un reason dédié <code>'off_topic'</code> continue de citer <code>policy:off_topic</code>, mais le <strong>texte</strong> du cool-down = <code>messages.refocus</code> quand on est en escalade. Vérifier <code>GuardrailBlockReason</code> union (<code>art-topic-guardrail.ts:13</code>) et étendre proprement. Golden test <code>tests/unit/shared/i18n/guardrail-refusals.test.ts</code> à étendre (non-vide × 8).</li></ul>
+<blockquote><p>Note honnêteté : le design dit « i18n <code>error.chat.refocus</code> (8 locales) ». Dans le code RÉEL, les refus chat sont backend-side (<code>GUARDRAIL_REFUSALS</code>), PAS une clé FE <code>error.chat.refocus</code>. On implémente côté backend (<code>guardrail-refusals.ts</code>). Le FE n'a pas besoin de clé i18n pour ce message (le backend renvoie le texte déjà localisé dans <code>message.text</code>). Si l'on veut aussi un libellé FE, ce serait <code>museum-frontend/shared/locales/&lt;8&gt;/translation.json</code> — HORS périmètre sauf demande explicite.</p></blockquote>
+<h2>9. socketCeilingMs — vérification NFR-Latence-2</h2>
+<p><code>chat-route.helpers.ts:23-40</code> : <code>serialGuardrailBudgetMs = env.guardrails.timeoutMs + env.guardrails.judgeTimeoutMs</code> ; <code>chatRouteSocketCeilingMs = totalBudgetMs + serialGuardrailBudget + margin</code>.</p>
+<ul><li>Avec le judge en PARALLÈLE de la génération, le judge ne s'ajoute plus en série au chemin réponse. Le <code>serialGuardrailBudgetMs</code> devrait conceptuellement retomber à <code>timeoutMs</code> seul (sidecar inline reste série ; judge non).</li><li><strong>Décision conservatrice</strong> : NE PAS baisser le ceiling ce run (laisser une marge ne casse rien, R2/I-OPS4 reste satisfait — le ceiling est un MAXIMUM, jamais shorté). Documenter dans le code un commentaire que le terme <code>judgeTimeoutMs</code> est désormais une sur-estimation sûre (judge parallèle), à raffiner post-bake. Ajouter un test/assert que le ceiling reste ≥ <code>totalBudgetMs + timeoutMs + margin</code>. NE PAS toucher <code>extendTimeoutForUpload</code>.</li></ul>
+<h2>10. Impact code récapitulatif (path:line vérifiés)</h2>
+<table><thead><tr><th>Fichier</th><th>Action</th></tr></thead><tbody><tr><td><code>src/modules/chat/useCase/guardrail/guardrail-friction.store.ts</code> (NEUF)</td><td>Store + types, calqué <code>guardrail-budget.ts</code>, FAIL-SOFT.</td></tr><tr><td><code>src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts:122-212</code></td><td>Extraire judge → <code>evaluateInputSemantic</code> ; <code>evaluateInput</code> = securité inline ; judge inline gardé sous <code>!frictionEnabled</code> (legacy R13).</td></tr><tr><td><code>src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:283-302</code></td><td>securityGate : strike sécurité + check plancher sur block ; exposer scope pour le judge aval.</td></tr><tr><td><code>src/modules/chat/useCase/message/chat-message.service.ts:282-298</code></td><td>Pré-check cool-down ; <code>Promise.allSettled([judge, generate])</code> ; décision soft/hard ; suppress.</td></tr><tr><td><code>src/modules/chat/useCase/orchestration/chat.service.ts:67-109</code></td><td><code>ChatServiceDeps</code> : injecter <code>frictionStore</code> (optionnel) ; passer à <code>ChatMessageService</code> <code>safety</code>.</td></tr><tr><td><code>src/config/env.ts:395-420</code> + <code>env.types.ts:572-604</code></td><td>clés <code>friction*</code>.</td></tr><tr><td><code>.env.example</code></td><td>clés + commentaires.</td></tr><tr><td><code>src/shared/i18n/guardrail-refusals.ts</code> + <code>art-topic-guardrail.ts:242-251</code></td><td>champ <code>refocus</code> × 8 locales + mapping.</td></tr><tr><td>composition root chat (site de <code>configureGuardrailBudget</code>)</td><td><code>configureGuardrailFriction({ cache })</code>.</td></tr><tr><td><code>chat-route.helpers.ts:23-40</code></td><td>commentaire + assert ceiling (pas de baisse).</td></tr><tr><td><code>tests/ai/guardrail-v2-live.ai.test.ts</code></td><td>+8 scénarios §7 design (réels).</td></tr><tr><td><code>scripts/sentinels/ai-tests-count.mjs:72</code></td><td>bump <code>MIN_TOTAL_AI_TESTS</code> même commit.</td></tr><tr><td><code>tests/unit/.../guardrail-friction.store.test.ts</code> (NEUF)</td><td>unitaires façon budget.</td></tr><tr><td><code>tests/unit/shared/i18n/guardrail-refusals.test.ts</code></td><td>étendre golden (refocus × 8).</td></tr></tbody></table>
+<h2>11. Libs importées (non dev-only — pour lib-docs, phases red/green/reviewer)</h2>
+<ul><li><strong><code>@langchain/core</code></strong> (<code>HumanMessage</code>, <code>SystemMessage</code>) — déjà importé dans <code>llm-judge-guardrail.ts:17</code> ; on ne change pas le judge LLM lui-même mais on l'orchestre. → <code>lib-docs/langchain/PATTERNS.md</code> + <code>LESSONS.md</code>.</li><li><strong><code>zod</code></strong> — schéma judge (<code>JudgeDecisionSchema</code>, <code>llm-judge-guardrail.ts:64</code>), inchangé mais touché par référence. → <code>lib-docs/zod/</code>.</li><li><strong><code>node:crypto</code></strong> (<code>createHash</code> sha256 IP) — lib standard Node, pas de lib-docs externe requise, mais vérifier d'abord un helper existant (<code>RedisRateLimitStore</code>).</li><li><strong><code>CacheService</code></strong> (<code>@shared/cache/cache.port</code>) — interne, pas de lib externe ; vérifier l'API exacte (<code>incrBy</code>/<code>get</code>/<code>set</code>/<code>del</code>/<code>ping</code>) en RED.</li><li>Pas de nouvelle dépendance npm. Aucun ajout au <code>package.json</code>.</li></ul>
+<h2>12. Risques &amp; mitigations (design §9, conservés)</h2>
+<ul><li><strong>Sécurité-sensible à J-6</strong> : invariants §3.1 testés explicitement (tests §7.8 du design), kill-switch env, fresh-context + security agent + reviewer. <code>gitnexus_impact</code> sur <code>evaluateInput</code> avant édition.</li><li><strong>Régression contrat partagé</strong> : <code>evaluateInput</code> est consommé par <code>prepare-message.pipeline.ts:283</code>. Le retour ne change pas → callers OK. Lancer la suite ENTIÈRE module chat (pas seulement le scope) en verify (cf. feedback_scoped_review_misses_contract_breakage).</li><li><strong>Faux positifs judge</strong> : seuil session=3 (pas 1), poids off-topic faible ; judge déjà testé anti-over-block (matrice).</li><li><strong>Abort non câblé</strong> : SUPPRESS suffit (R17). Pas de dette de correction, juste de coût.</li></ul></section>
+<section class="artifact" id="tasks-md"><h2>tasks.md</h2><h1>Tasks — Guardrail hybride par gravité</h1>
+<blockquote><p>RUN_ID <code>2026-06-01-hybrid-gravity-guardrail</code> — phase <strong>plan</strong> (UFR-022). Ordre = RED d'abord (tests qui FAIL), puis GREEN (impl qui rend vert). FROZEN-TEST byte-for-byte entre red et green. Libs non-dev-only à consulter (lib-docs, red/green/reviewer) : <code>@langchain/core</code>, <code>zod</code>. <code>node:crypto</code> = std. <code>CacheService</code> = port interne (vérifier API).</p></blockquote>
+<h2>Légende</h2>
+<ul><li><strong>[RED]</strong> = phase 3 (tests d'abord, doivent FAIL). <strong>[GREEN]</strong> = phase 4 (impl, rend vert, ne touche AUCUN test mané).</li><li>Done criteria explicites par tâche. <code>gitnexus_impact</code> requis avant édition d'un symbole existant (CLAUDE.md).</li></ul>
+<hr>
+<h2>Bloc 0 — Pré-requis lecture (GREEN, avant impl)</h2>
+<h3>T0.1 [GREEN] Vérifier l'API <code>CacheService</code> réelle</h3>
+<ul><li>Fichiers : lire <code>src/shared/cache/cache.port.ts</code>.</li><li>Done : confirmé les signatures de <code>incrBy(key, n, ttlSec?)</code>, <code>get&lt;T&gt;</code>, <code>set</code>/équivalent, <code>del</code>, <code>ping</code>. Si <code>set</code> typé absent → utiliser <code>incrBy(coolKey, 1, ttl)</code> pour le flag cool-down. Noté dans le design si écart.</li></ul>
+<h3>T0.2 [GREEN] Vérifier l'existence d'un helper de hash IP</h3>
+<ul><li>Fichiers : grep <code>ipHash|sha256|RateLimitStore</code> sous <code>src/</code>.</li><li>Done : helper réutilisé s'il existe ; sinon <code>createHash('sha256')</code> local justifié.</li></ul>
+<h3>T0.3 [GREEN] Localiser le composition root chat (site <code>configureGuardrailBudget</code>)</h3>
+<ul><li>Done : site exact identifié pour y ajouter <code>configureGuardrailFriction({ cache })</code>.</li></ul>
+<hr>
+<h2>Bloc 1 — <code>GuardrailFrictionStore</code> (unitaires + impl)</h2>
+<h3>T1.1 [RED] Tests unitaires <code>guardrail-friction.store.test.ts</code></h3>
+<ul><li>Fichier neuf : <code>tests/unit/chat/guardrail/guardrail-friction.store.test.ts</code> (calqué structure des tests <code>guardrail-budget</code>).</li><li>Couvre : <code>recordStrike</code> incrémente par poids ; <code>count</code> reflète la somme ; TTL posé (via <code>__setNowForTest</code> ou stub <code>CacheService</code> capturant le ttl) ; backends memory ET redis (stub <code>CacheService</code>) ; <strong>FAIL-SOFT</strong> : <code>count</code> → 0 et <code>isCoolingDown</code> → false quand le stub throw ; <code>armCoolDown</code>/<code>isCoolingDown</code> ; <code>reset</code> ; <code>__setStoreForTest</code>. Scopes session/user/ip (ip → clé hashée, pas l'IP brute).</li><li>Utilise les factories de test partagées (DRY, <code>docs/TEST_FACTORIES.md</code>) ; pas d'objets inline interdits.</li><li>Done : <code>pnpm test -- --testPathPattern=guardrail-friction.store</code> exit ≠ 0 (module impl absent → FAIL). Hash dans <code>red-test-manifest.json</code> (FLAT <code>{path:sha256}</code>).</li></ul>
+<h3>T1.2 [GREEN] Impl <code>guardrail-friction.store.ts</code></h3>
+<ul><li>Fichier neuf : <code>src/modules/chat/useCase/guardrail/guardrail-friction.store.ts</code> (+ types <code>FrictionScope</code>, <code>IGuardrailFrictionStore</code>).</li><li>Calqué <code>guardrail-budget.ts</code> MAIS FAIL-SOFT (inverse du fail-closed budget : pas de ping-gate Infinity ; catch → 0/false + métrique <code>guardrailFrictionRedisFallbackTotal</code> + log warn).</li><li>Clés/TTL §4 design. <code>configureGuardrailFriction({cache})</code>, <code>ensureStore</code>, <code>__setStoreForTest</code>, <code>__setNowForTest</code>.</li><li>Done : T1.1 vert. <code>tsc</code> 0, lint 0. AUCUN test modifié.</li></ul>
+<h3>T1.3 [GREEN] Métrique Prometheus <code>guardrailFrictionRedisFallbackTotal</code></h3>
+<ul><li>Fichier : <code>src/shared/observability/prometheus-metrics.ts</code> (façon <code>guardrailBudgetRedisFallbackTotal</code>).</li><li>Done : compteur déclaré, importé par le store. Pas de label user-dérivé (prom-client LESSONS).</li></ul>
+<hr>
+<h2>Bloc 2 — Env + i18n (fondations sans logique)</h2>
+<h3>T2.1 [RED] Test config env friction</h3>
+<ul><li>Fichier : <code>tests/unit/config/env.test.ts</code> (ou nouveau ciblé) — assert defaults <code>frictionEnabled=true</code>, seuils 3/10, TTL 6h/24h, cooldown 120000, poids 2/1, et override par <code>process.env</code>.</li><li>Done : FAIL (clés absentes). Hash manifesté.</li></ul>
+<h3>T2.2 [GREEN] Clés env friction</h3>
+<ul><li>Fichiers : <code>src/config/env.ts:395-420</code> (bloc guardrails) + <code>src/config/env.types.ts:572-604</code> + <code>.env.example</code>.</li><li>Done : T2.1 vert. <code>tsc</code> 0.</li></ul>
+<h3>T2.3 [RED] Étendre golden test i18n refusals</h3>
+<ul><li>Fichier : <code>tests/unit/shared/i18n/guardrail-refusals.test.ts</code> — assert champ <code>refocus</code> présent + non-vide sur les 8 locales + sans emoji unicode.</li><li>Done : FAIL (champ absent). Hash manifesté.</li></ul>
+<h3>T2.4 [GREEN] Champ <code>refocus</code> × 8 locales + mapping refusal</h3>
+<ul><li>Fichiers : <code>src/shared/i18n/guardrail-refusals.ts</code> (interface <code>RefusalMessages</code> + 8 locales) ; <code>src/modules/chat/useCase/guardrail/art-topic-guardrail.ts:242-251</code> (mapping cool-down → <code>messages.refocus</code>, citation <code>policy:off_topic</code> conservée).</li><li>Done : T2.3 vert. Pas d'emoji (ast-grep/no-unicode-emoji si applicable côté BE — vérifier).</li></ul>
+<hr>
+<h2>Bloc 3 — Extraction du judge + sémantique</h2>
+<h3>T3.1 [RED] Test <code>evaluateInputSemantic</code> (unitaire, judge mockable)</h3>
+<ul><li>Fichier : <code>tests/unit/chat/guardrail/guardrail-evaluation.service.test.ts</code> (étendre l'existant si présent, sinon neuf).</li><li>Couvre : <code>evaluateInput</code> ne hard-block PLUS l'off-topic quand <code>frictionEnabled=true</code> (retourne allow) ; <code>evaluateInputSemantic</code> retourne <code>offtopic</code> sur judge block / <code>allow</code> sur judge allow|null (fail-OPEN) ; gating longueur &lt; <code>judgeMinMessageLength</code> → allow sans appel judge ; <code>llmJudgeEnabled=false</code> → allow.</li><li>Done : FAIL (méthode absente / evaluateInput juge encore inline). Hash manifesté.</li></ul>
+<h3>T3.2 [GREEN] Extraire judge → <code>evaluateInputSemantic</code></h3>
+<ul><li>Fichier : <code>guardrail-evaluation.service.ts:122-212</code>. <code>gitnexus_impact evaluateInput direction=upstream</code> AVANT édition (reporter blast radius).</li><li>Retirer le bloc judge <code>:178-194</code> de <code>evaluateInput</code> quand <code>frictionEnabled</code> ; nouvelle méthode <code>evaluateInputSemantic(text, scope)</code>. Garder le judge inline sous <code>!frictionEnabled</code> (legacy R13). Contrat <code>InputGuardrailResult</code> inchangé.</li><li>Done : T3.1 vert. Suite ENTIÈRE du module guardrail verte. <code>tsc</code>/lint 0. AUCUN test modifié.</li></ul>
+<hr>
+<h2>Bloc 4 — Orchestration parallèle + escalade</h2>
+<h3>T4.1 [RED] Tests orchestration (unitaire, store + judge + orchestrator stubbés)</h3>
+<ul><li>Fichier : <code>tests/unit/chat/message/chat-message.service.test.ts</code> (ou ciblé) — stubs <code>frictionStore</code>, <code>guardrail.evaluateInputSemantic</code>, <code>orchestrator.generate</code>.</li><li>Couvre : (a) off-topic sous-seuil → réponse générée présente, strike enregistré, pas de <code>policy:off_topic</code> ; (b) off-topic à <code>frictionSessionThreshold</code> → cool-down <code>policy:off_topic</code>, réponse générée supprimée ; (c) pré-check <code>isCoolingDown=true</code> → cool-down sans appel <code>orchestrator.generate</code> ; (d) strike sécurité poids 2 sur block sécurité + check plancher ; (e) fail-soft : <code>frictionStore.count</code> throw → pas d'escalade, réponse rendue, pas de throw ; (f) <code>frictionEnabled=false</code> → legacy (pas d'appel parallèle, judge inline en amont) ; (g) <code>genRes</code> rejected → <code>mapOrchestratorError</code> préservé.</li><li>Done : FAIL. Hash manifesté.</li></ul>
+<h3>T4.2 [GREEN] Restructurer pipeline securityGate (strike sécurité + plancher)</h3>
+<ul><li>Fichier : <code>prepare-message.pipeline.ts:283-302</code>. <code>gitnexus_impact</code> sur la branche block.</li><li>Sur block sécurité : <code>recordStrike(security, frictionWeightSecurity)</code> session+user/IP + check/arm plancher avant <code>handleInputBlock</code>. Exposer scope (sessionId, userId/ipHash) au message service.</li><li>Done : contribue à T4.1 ; sécurité inline inchangée fonctionnellement (block toujours = refused). <code>tsc</code>/lint 0.</li></ul>
+<h3>T4.3 [GREEN] Parallélisme judge ‖ generate + décision soft/hard</h3>
+<ul><li>Fichier : <code>chat-message.service.ts:282-298</code>. <code>gitnexus_impact postMessage</code>.</li><li>Pré-check cool-down ; <code>Promise.allSettled([evaluateInputSemantic, orchestrator.generate])</code> (gardé par <code>frictionEnabled</code>) ; décision : offtopic → strike + escalate calc → soft-redirect (answer) | hard-block (cool-down, suppress answer, arm cool-down si U_floor) ; <code>logBlock</code> uniquement sur escalade ; span <code>composing</code> conservé (try/finally) ; <code>genRes</code> rejected → <code>mapOrchestratorError</code>.</li><li>Helper <code>buildCoolDownResult</code> (réutilise <code>buildBlockedOutputPayload</code>/<code>handleInputBlock</code> sémantique, reason cool-down, texte <code>messages.refocus</code>).</li><li>Done : T4.1 vert. <code>tsc</code>/lint 0. AUCUN test modifié.</li></ul>
+<h3>T4.4 [GREEN] Wiring <code>frictionStore</code> dans <code>ChatServiceDeps</code> → <code>ChatMessageService</code></h3>
+<ul><li>Fichiers : <code>chat.service.ts:67-109</code> (dep optionnelle <code>frictionStore</code>) → passée à <code>safety</code> de <code>ChatMessageService</code> ; composition root chat → <code>configureGuardrailFriction({cache})</code> (T0.3).</li><li>Done : compile, injecté, <code>tsc</code>/lint 0.</li></ul>
+<hr>
+<h2>Bloc 5 — socketCeiling + tests réels (live AI) + sentinel</h2>
+<h3>T5.1 [GREEN] Vérif socketCeiling (pas de baisse) + commentaire</h3>
+<ul><li>Fichier : <code>chat-route.helpers.ts:23-40</code>. Commentaire : <code>judgeTimeoutMs</code> désormais sur-estimation sûre (judge parallèle), ceiling reste un MAX, non shorté. Optionnel : assert dans un test existant que ceiling ≥ <code>totalBudgetMs + timeoutMs + margin</code>.</li><li>Done : aucun changement de valeur ; commentaire honnête ajouté ; <code>tsc</code>/lint 0.</li></ul>
+<h3>T5.2 [RED] +8 scénarios réels dans <code>guardrail-v2-live.ai.test.ts</code></h3>
+<ul><li>Fichier : <code>tests/ai/guardrail-v2-live.ai.test.ts</code> (prolonger, réel, no mock LLM). Les 8 scénarios §7 du design :<ul><li>off-topic isolé &lt; seuil → soft-redirect (réponse présente, pas <code>policy:off_topic</code>).</li><li>off-topic ≥ seuil session (3×) → 3ᵉ hard-block <code>policy:off_topic</code> + cool-down.</li><li>latence parallèle : on-topic jugé → latence ≈ réponse seule (marge tolérante).</li><li>plancher user cross-session → cool-down à U_floor (2 sessions même userId).</li><li>abort/suppress : escalade pendant génération → réponse complète NON rendue (cool-down rendu).</li><li>fail-soft store : frictionStore throw → pas d'escalade, chat répond (pas de 500).</li><li>kill-switch <code>GUARDRAIL_FRICTION_ENABLED=false</code> → legacy (judge inline hard-block).</li><li>sécurité inchangée : injection/PII hard-block immédiat + strike sécurité poids 2.</li></ul></li><li>Utiliser les helpers existants (<code>buildAiTestServiceWithV2</code>, <code>buildRealJudgeFn</code>, <code>__setStoreForTest</code> pour le friction store), factories DRY. Garder <code>describeAi</code>/<code>shouldRunAiTests</code> (gating <code>RUN_AI_TESTS</code>).</li><li>Done : FAIL en réel (impl pas complète) si lancés avec <code>RUN_AI_TESTS=true</code>. Hash manifesté. (Note : en CI sans <code>RUN_AI_TESTS</code>, <code>describe.skip</code> — la preuve RED se fait localement avec sidecar + OPENAI_API_KEY.)</li></ul>
+<h3>T5.3 [GREEN] Faire passer les 8 scénarios live</h3>
+<ul><li>Réalisé par les blocs 1-4 ; cette tâche = run réel + ajustements non-test (ex : helper de test seam <code>configureGuardrailFriction</code> exposable). NE PAS toucher les tests manés.</li><li>Done : <code>RUN_AI_TESTS=true pnpm test -- --testPathPattern=guardrail-v2-live</code> vert (sidecar up + OPENAI_API_KEY). Reporter le coût réel (~1,8¢/run ordre de grandeur).</li></ul>
+<h3>T5.4 [GREEN] Bump <code>MIN_TOTAL_AI_TESTS</code></h3>
+<ul><li>Fichier : <code>scripts/sentinels/ai-tests-count.mjs:72</code>. Passer de 92 à 92 + (nb réel de nouveaux <code>it()</code> ajoutés en T5.2). MÊME commit que les tests.</li><li>Done : <code>pnpm sentinel:ai-tests-count</code> PASS.</li></ul>
+<hr>
+<h2>Bloc 6 — Vérification finale (verify/review)</h2>
+<h3>T6.1 [GREEN] Suite complète + gates</h3>
+<ul><li>Done : <code>pnpm lint</code> (= ESLint + lint:test-discipline + tsc --noEmit) exit 0 ; <code>pnpm test</code> module chat vert ; <code>pnpm sentinel:ai-tests-count</code> PASS ; <code>gitnexus_detect_changes</code> = scope attendu uniquement.</li><li>Lancer la VRAIE commande gate, lire chaque exit code (pas le global d'un <code>;</code>-chain — feedback_verify_real_gate_not_global_exit).</li></ul>
+<h3>T6.2 [GREEN] Mise à jour doc + STORY</h3>
+<ul><li>Done : <code>.env.example</code> à jour ; mention dans <code>CLAUDE.md §AI Safety</code> (judge désormais parallèle + friction 2 niveaux) si pertinent ; STORY.md du run rempli.</li></ul>
+<hr>
+<h2>Notes d'exécution</h2>
+<ul><li><strong>AbortSignal = SUPPRESS-only</strong> (design §0/§6). NE PAS modifier <code>OrchestratorInput</code>/le port. Une tâche abort réelle est explicitement HORS périmètre (tech-debt). Critère d'acceptation 5 satisfait par le suppress.</li><li><strong>Frozen-test</strong> : red T1.1/T2.1/T2.3/T3.1/T4.1/T5.2 → manifestés FLAT <code>{path:sha256}</code>. Green ne touche AUCUN. Test suspecté buggé → <code>BLOCK-TEST-WRONG &lt;file&gt;:&lt;line&gt; &lt;reason&gt;</code>, re-spawn red.</li><li><strong>Verify broad</strong> : changement de <code>evaluateInput</code> (contrat partagé) → lancer la suite ENTIÈRE du module chat, pas seulement les patterns scopés (feedback_scoped_review_misses_contract_breakage).</li><li><strong>gitnexus_impact</strong> avant toute édition de <code>evaluateInput</code>, <code>postMessage</code>, <code>prepare</code>, <code>buildGuardrailRefusal</code>. Warn user si HIGH/CRITICAL.</li></ul></section>
+<footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
+</div></body></html>

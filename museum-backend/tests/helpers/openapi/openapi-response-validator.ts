@@ -20,7 +20,7 @@ type OpenApiSchema = {
 
 type OpenApiSpec = typeof openApiSpec;
 
-const spec = openApiSpec as OpenApiSpec;
+const spec: OpenApiSpec = openApiSpec;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -65,6 +65,17 @@ const validateAgainstSchema = (
   path: string,
 ): string[] => {
   const schema = schemaInput.$ref ? getSchemaByRef(schemaInput.$ref) : schemaInput;
+
+  // OpenAPI 3.0 nullability: a `nullable: true` schema accepts an explicit
+  // `null` regardless of its declared `type`. This spec mixes two nullability
+  // conventions — JSON-Schema unions (`type: ["string", "null"]`, handled by
+  // the multi-type branch below) and OpenAPI 3.0 `nullable: true`. The latter
+  // was previously ignored here, so any null-valued `nullable` field (phone,
+  // imageUrl, openingHours, the rich JSONB records…) was wrongly rejected.
+  // Purely additive: only turns null-vs-nullable failures into passes.
+  if (value === null && schema.nullable === true) {
+    return [];
+  }
 
   if (schema.oneOf?.length) {
     const branches = schema.oneOf.map((branch) => validateAgainstSchema(branch, value, path));
@@ -158,7 +169,7 @@ const validateAgainstSchema = (
       return [];
     }
     return value.flatMap((item, index) =>
-      validateAgainstSchema(schema.items as OpenApiSchema, item, `${path}[${index}]`),
+      validateAgainstSchema(schema.items!, item, `${path}[${index}]`),
     );
   }
 
@@ -180,9 +191,7 @@ const validateAgainstSchema = (
       if (!(key in value)) {
         continue;
       }
-      errors.push(
-        ...validateAgainstSchema(propertySchema as OpenApiSchema, value[key], `${path}.${key}`),
-      );
+      errors.push(...validateAgainstSchema(propertySchema, value[key], `${path}.${key}`));
     }
 
     const additional = schema.additionalProperties;
@@ -197,7 +206,7 @@ const validateAgainstSchema = (
         if (key in properties) {
           continue;
         }
-        errors.push(...validateAgainstSchema(additional as OpenApiSchema, v, `${path}.${key}`));
+        errors.push(...validateAgainstSchema(additional, v, `${path}.${key}`));
       }
     }
 
@@ -252,6 +261,10 @@ const getResponseSchema = (
 /**
  * Test utility: asserts that a response payload structurally matches the OpenAPI spec for the given endpoint.
  * @param params - Endpoint path, HTTP method, status code, and the response payload to validate.
+ * @param params.path
+ * @param params.method
+ * @param params.statusCode
+ * @param params.payload
  * @throws Error if the payload does not conform to the declared schema.
  */
 export const assertMatchesOpenApiResponse = (params: {
@@ -284,6 +297,8 @@ export const assertMatchesOpenApiResponse = (params: {
 /**
  * Resolves the `application/json` request-body schema declared in OpenAPI
  * for a given operation, or `null` when no body is declared.
+ * @param path
+ * @param method
  */
 const getRequestBodySchema = (path: string, method: HttpMethod): OpenApiSchema | null => {
   const pathItem = (spec.paths as Record<string, unknown>)[path];
@@ -327,6 +342,10 @@ const getRequestBodySchema = (path: string, method: HttpMethod): OpenApiSchema |
  * Use this in contract tests to catch drift between what routes validate
  * (Zod schemas) and what the OpenAPI spec declares (source-of-truth for
  * external consumers + generated mobile types).
+ * @param params
+ * @param params.path
+ * @param params.method
+ * @param params.body
  */
 export const assertMatchesOpenApiRequest = (params: {
   path: string;

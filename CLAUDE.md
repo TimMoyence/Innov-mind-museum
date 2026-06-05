@@ -11,10 +11,11 @@ Monorepo, 3 apps indépendantes :
 - **`museum-frontend/`** — React Native 0.83 + Expo 55 + Expo Router (npm)
 - **`museum-web/`** — Next.js 15 + React 19 + Tailwind 4 + Framer Motion (pnpm) — landing + admin panel
 
-## Roadmap (vivante, double)
+## Roadmap (vivante, triple)
 
-- **`docs/ROADMAP_PRODUCT.md`** — features, OKR Q2-2026, NOW/NEXT/LATER. Coche `[x]` au merge.
+- **`docs/ROADMAP_PRODUCT.md`** — features, OKR Q2-2026, NOW/NEXT/LATER. Coche `[x]` au merge. Preuve item-par-item (path:line) dans `docs/ROADMAP_AUDIT_TRAIL.md`.
 - **`docs/ROADMAP_TEAM.md`** — orchestrateur /team v13, OKR cost+quality, T1.x backlog.
+- **`docs/ROADMAP_FE_RN_BEST_PRACTICES.md`** — audit FE React Native (score 86 → 92+).
 
 Réécrites chaque sprint (4 sem). Snapshots = `git log -- docs/ROADMAP_*.md`. Chaque feature non-triviale passe par `/team` Spec Kit (spec/design/tasks.md), lus en début de cycle, cochés au merge. Index : **`docs/DOCS_INDEX.md`**. Tech debt : **`docs/TECH_DEBT.md`**. Runtime tracking : `.claude/skills/team/team-reports/`.
 
@@ -25,7 +26,7 @@ Réécrites chaque sprint (4 sem). Snapshots = `git log -- docs/ROADMAP_*.md`. C
 ```bash
 pnpm install                     # install deps
 pnpm dev                         # dev server with nodemon (port 3000)
-pnpm lint                        # typecheck (tsc --noEmit)
+pnpm lint                        # ESLint + lint:test-discipline + tsc --noEmit
 pnpm test                        # all Jest tests
 pnpm test -- --testPathPattern=tests/unit/   # run specific test folder
 pnpm test -- -t "test name"      # run single test by name
@@ -51,7 +52,7 @@ docker compose -f docker-compose.dev.yml up -d   # DB on localhost:5433, Adminer
 ```bash
 npm install                      # install deps
 npm run dev                      # Expo dev server
-npm run lint                     # typecheck (tsc --noEmit)
+npm run lint                     # ESLint + tsc --noEmit
 npm test                         # Node.js test runner (compiles to .test-dist/ then runs)
 npm run generate:openapi-types   # regenerate API types from backend OpenAPI spec
 npm run check:openapi-types      # verify generated types are up to date
@@ -78,8 +79,7 @@ pnpm build                       # build design tokens → museum-frontend/share
 GitHub Actions workflows (`.github/workflows/`):
 - `ci-cd-backend.yml` — quality gate (tsc + ESLint + tests + OpenAPI validate + audit) → E2E (PR/nightly) → deploy prod (push main) / staging (push staging) w/ Trivy + Sentry + smoke
 - `ci-cd-web.yml` — quality (lint + build + test + audit) → Lighthouse CI (PR) → deploy Docker/GHCR → VPS
-- `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android matrix (4 shards) + iOS nightly cron → EAS build + store submit
-- `_deploy-backend.yml` — reusable deploy workflow
+- `ci-cd-mobile.yml` — quality (Expo Doctor + OpenAPI sync + audit + i18n + lint + tests + shard-manifest sentinel) → Maestro Android e2e on **ubuntu-latest + KVM** (x86_64 emulator, backend via GHA pgvector/redis services, Release APK) → EAS build + store submit. **Per-PR = `smoke` subset (~12min, 1 emulator boot); full 4-shard suite runs nightly cron + on push to `main`.** A red full run auto-files a GitHub issue (`maestro-full-alert` job, label `nightly-maestro-alert`) and `node scripts/nightly-status.mjs` surfaces the last full result — **run it at the start of any frontend-touching session** so an unattended red isn't missed. iOS Maestro stays nightly (HVF needs a Mac runner).
 - `deploy-privacy-policy.yml` — privacy policy static page deploy
 - `codeql.yml` — CodeQL security analysis
 - `semgrep.yml` — SAST static analysis
@@ -115,7 +115,7 @@ Auto-generated/massive/pure-data. Reading full wastes tokens.
 | `museum-frontend/shared/api/generated/openapi.ts` | ~115 KB / ~4 800 lines | Auto-generated from backend OpenAPI spec | `Grep` for specific type/operation name, or read ±50 lines with `offset`/`limit` |
 | `museum-frontend/package-lock.json` / `pnpm-lock.yaml` / `museum-backend/pnpm-lock.yaml` / `museum-web/pnpm-lock.yaml` | multi-MB | Lockfiles | Never read directly — use `pnpm list <pkg>` or `npm ls <pkg>` |
 | `museum-backend/src/data/db/migrations/*.ts` (~64 files) | ~5 KB each | TypeORM migrations — immutable once run | Read only specific migration relevant to current work |
-| `museum-backend/src/modules/daily-art/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
+| `museum-backend/src/modules/daily-art/adapters/secondary/catalog/artworks.data.ts` | 17 KB / 373 lines | Static artwork catalog | Grep for specific artwork ID or title |
 | `museum-frontend/shared/ui/tokens.generated.ts` | generated | Design tokens output | Edit `design-system/` source instead |
 
 Doubt? Use `Grep` w/ specific pattern first, then `Read` relevant block w/ `offset`/`limit`.
@@ -131,12 +131,13 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **GitNexus skills installent nested (`.claude/skills/gitnexus/gitnexus-X/`) → jamais chargés** — `scripts/patch-gitnexus.sh` Patch A réécrit le binaire pour pointer top-level. Re-lancer après tout `npm install/update -g gitnexus`.
 - **TypeORM `.set({ field: undefined })` silencieusement skip** — pas de `SET field = NULL`. Affecte aussi `repo.update(criteria, partialEntity)` (même code path). Use `() => 'NULL'`. Bug verifyEmail `9d1e971a5`. ESLint `musaium-test-discipline/no-typeorm-set-undefined` (Pattern A `.set({})` + B `repo.update(_, {})`, scope `*.repository*.ts`/`*.repo.ts`).
 - **LLM response cache = `LlmCacheServiceImpl` only (ADR-036)** — un seul layer use-case-level. Ne PAS réintroduire de décorateur adapter-level (`CachingChatOrchestrator` supprimé). Cache key = `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256}` (bumpé `v1` → `v2` par commit `d54552beb` 2026-05-19 quand `voiceMode` + `audioDescriptionMode` ont été inclus dans la key — invalide l'ancien namespace ; doc CLAUDE.md restait stale jusqu'au P0 lot fix 2026-05-22 / TD-DOC-WAVEC-01). Source de vérité : `museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts:103`. TTL tune = data-driven, ≥7j bake + ADR-036 amendment.
-- **pgvector `halfvec(N)` exige extension ≥ 0.7.0 côté Postgres prod** (`halfvec` absent en 0.6.x ; pas un alias de `vector`, type FP16 distinct). Migration C3 (`artwork_embeddings.vector halfvec(768)`) revert au 1er `migration:run` sinon. Vérifier `\dx vector`. Index IVFFlat avec `vector_cosine_ops` sinon "operator class does not exist". ADR-037.
+- **pgvector `halfvec(N)` exige extension ≥ 0.7.0 côté Postgres prod** (`halfvec` absent en 0.6.x ; pas un alias de `vector`, type FP16 distinct). Migration C3 (`artwork_embeddings.embedding halfvec(768)`, `AddArtworkEmbeddings.ts:53`) revert au 1er `migration:run` sinon. Vérifier `\dx vector`. Index **HNSW** avec `halfvec_ip_ops` (m=16, ef_construction=64 ; vecteurs L2-normalisés → inner-product ≡ cosine), code réel `AddArtworkEmbeddings.ts:77-78` — **PAS** `vector_cosine_ops` (op class incompatible avec `halfvec` → "operator class does not exist"). HNSW = défaut SOTA prod (IVFFlat dégrade au fil des insert/delete). ADR-037.
 - Pièges moins fréquents (PgBouncer, SWC Relation, Prometheus var, SigLIP normalize, nginx proxy_pass var) → [docs/GOTCHAS_ARCHIVE.md](docs/GOTCHAS_ARCHIVE.md).
 - **CI `pnpm dev` / `migration:run` exigent services dédiés** — `pnpm dev` boot BullMQ eager → `services:` DOIT inclure `redis:7-alpine` (sinon `ECONNREFUSED 6379`, /api/health timeout). `migration:run` fait `CREATE EXTENSION vector` → image Postgres MUST être `pgvector/pgvector:pg16`. Health probe = `/api/health` (apiRouter monté `/api`), JAMAIS `/health` (404, masque la cause Redis). Mirror `services:` de `ci-cd-backend.yml`/`ci-cd-promptfoo.yml`. PR #255.
 - **`process.env.X` typed local vs CI diff (museum-frontend)** — local Expo ambient = `string`, CI = `any` → `no-unsafe-*`. Aucun wrap simple ne survit `eslint --fix` + les 2 gates. Solution : **toujours** `import { readEnvString } from '@/shared/lib/env'` (predicate `typeof`, narrows `any`→`string`, non-autofixable). Jamais de def locale. Réf `681eef19`, audit T1.9.
 - **RTL : RN logical-side props obligatoires (museum-frontend)** — sous `features/`, `shared/ui/` : `marginStart/End` (pas `Left/Right`), `paddingStart/End`, `start/end` positionnel, `borderStart/EndWidth/Color`. `textAlign` : `'auto'` only (`'start'/'end'` pas dans types RN → use `writingDirection`). NE PAS codemod : `hitSlop` (auto-mirroré), MapLibre `fitBounds({padding})`, `Confetti.tsx`, `alignSelf:'flex-start'|'flex-end'`. Tests : `__tests__/rtl/_rtl-style-audit.ts`. Audit F10, EN 301 549 §9.1.3.2.
 - **Pas d'emoji unicode dans museum-frontend (PNG + Ionicons only)** — visuels = PNG `require(...)` cast `ImageSourcePropType` ; affordances UI = Ionicons `@expo/vector-icons`. JAMAIS d'emoji unicode (rendu inconsistant + non accessible + off-brand). PNG pas prêt → bloque l'impl, jamais de placeholder emoji. ast-grep `tools/ast-grep-rules/no-unicode-emoji-in-screen.yml`.
+- **Espacement interne d'un conteneur coloré = `gap`/`padding`, JAMAIS `margin` d'enfant (museum-frontend)** — un `<View>` avec `backgroundColor` (`theme.cardBackground`/`surface`/`glassBackground`/bulle…) dont un enfant direct s'espace par `marginTop`/`marginBottom`/`marginVertical` : RN ne collapse PAS les margins → le fond du conteneur transparaît en **bande asymétrique** au-dessus/entre les éléments (effet « la couleur déborde »), surtout si parent et enfant partagent la couleur ou contrastent. Règle : conteneur coloré → `paddingVertical` pour le cadre + `gap` (flex column/row) pour l'espacement entre enfants ; aucun `margin` vertical sur les enfants directs. Cas de référence corrigé : `app/(tabs)/conversations.tsx` `stickyBar` (header sticky `cardBackground` + enfants `marginTop` → `gap`) + `ConversationSearchBar.tsx`. Idem F1 `MessageActions` deeperContextWrap, F3 `ProactiveMuseumBanner`, F4 `OfflinePackPrompt` (margins redondants avec un `gap` déjà présent). Pas de lint auto fiable (bg inline + margin en StyleSheet = relation cross-élément non résoluble par ast-grep sans faux positifs) → discipline à la revue. Reste à traiter : F2 `bubbleSections/ImageSection` (refactor bulle = `gap` sur `bubbleContent`).
 - **Stryker `forceExit:false` (config CRITICAL) révèle les open handles que `pnpm test` cache** — tests admin/auth/chat via `createRouteTestApp()`→`createApp()` instancient eagerly `BullmqMuseumEnrichmentQueueAdapter` (si `EXTRACTION_WORKER_ENABLED=true`) → ioredis TCP jamais `.unref()` → Jest worker hang → 100% mutant timeout. Diag `pnpm jest --detectOpenHandles --testPathPattern=<scope>`. Fix : (a) `tests/helpers/<scope>/jest-env.setup.ts` pin `EXTRACTION_WORKER_ENABLED=false`+`CACHE_ENABLED=false`, (b) `defineConfig` `setupFiles:[...]`+`extraTestPathIgnorePatterns:[...]` pour skip tests inconciliables avec le pin. Note : full unit-integration `--forceExit=false` = 845 fails/102 suites (TECH_DEBT). Réf `cefa480f`.
 - **Stryker label `Timeout` = souvent vrai kill** — quand un test détecte un mutant mais a des open handles (BullMQ/ioredis), le worker hang jusqu'au `timeoutMS=5000` → label `Timeout` au lieu de `Killed`. Le kill est réel, les 2 catégories scorent positif → métrique fiable. Ne pas chasser les Timeouts comme fausses victoires (c'est le symptôme du leak ci-dessus). Diag : sample mutants Timeout via `jq` sur `reports/mutation/mutation.json`, applique au source, run les tests `coveredBy` → fail = vrai kill.
 - **iOS build = Xcode Cloud (pas EAS), Pods/ committés** — XCloud ne run PAS `pod install`. **(a)** `ios/Pods/` MUST rester committé (`git add -f`). **(b)** Après `expo prebuild --clean`, ré-appliquer patch `Podfile post_install` fmt-consteval (`__apple_build_version__ < 14000029L` → `__apple_build_version__` dans `Pods/fmt/include/fmt/base.h`, `chmod 0644` avant write). **(c)** Même `post_install` injecte `ENTRY_FILE="node_modules/expo-router/entry.js"` (SDK 55 Metro 404) + supprime copie `MapLibre.xcframework-ios.signature` du `BUILT_PRODUCTS_DIR` (NSCocoaErrorDomain 516). **(d)** Nouvelle native dep → `pod install` + `git add -f ios/Pods/...` + vérifier `Podfile.lock` + `ExpoModulesProvider.swift`. PR #258 a shipped `expo-web-browser` sans `pod install` → crash SIGABRT TestFlight, hotfix `f7ec92f7`. Défense : lazy `require()` sur native modules non-critiques + global error handler downgrade fatal→non-fatal en release.
@@ -146,15 +147,17 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **Renovate `config:best-practices` force-pin devDeps même avec `rangeStrategy: replace`** (auto-applique `:pinAllExceptPeerDependencies`). Fix : ajouter `:preserveSemverRanges` OU drop `config:best-practices`. Ajouter aussi `museum-frontend/ios/Pods/**` à `ignorePaths` (sinon scanne le `.gitlab-ci.yml` du vendor libdav1d). PR #267.
 - **Stryker `DryRunExecutor` hang sur initial test run quand worktrees concurrents tournent** — symptôme : timeouts 5-min consécutifs, pas de `mutation.json`. Cause = CPU/disk contention (worktrees stales × 1-2GB). Diag : monitor disk + cleanup `.git/worktrees/agent-*` stales.
 - **Audit chain `pg_advisory_xact_lock(GLOBAL_KEY)` cap INSERT à 50-200/s** — per-row hash chain force serialization (`audit.repository.pg.ts`). Lock transaction-scoped → PgBouncer txn-mode compatible. Scale 100k MAU → refonte Merkle batch (ADR-054).
-- **Sentry+OTel Node SDK v2** — `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` REQUIS (sinon collide avec custom OTel NodeSDK). `tracePropagationTargets` explicite (`['^https://api.musaium\\.com/']`). Corrélation BE↔FE = middleware header-based `trace-propagation.middleware.ts`, **PAS** un SDK bridge `@sentry/opentelemetry` (ne PAS câbler `SentryPropagator`/etc). État-cible définitif (ADR-045, TD-SN-01 STALE-BY-DESIGN).
+- **Sentry+OTel Node SDK v2** — `skipOpenTelemetrySetup: true` + `getDefaultIntegrationsWithoutPerformance()` REQUIS (sinon collide avec custom OTel NodeSDK). `tracePropagationTargets` explicite (`['^https://api.musaium\\.com/']`). Corrélation BE↔FE = middleware header-based `shared/observability/trace-propagation.middleware.ts`, **PAS** un SDK bridge `@sentry/opentelemetry` (ne PAS câbler `SentryPropagator`/etc). État-cible définitif (ADR-045, TD-SN-01 STALE-BY-DESIGN).
 - **TTS cache key MUST include `voice`** — généralisable : toute cache key dérivée d'un param user-tweakable DOIT inclure ce param. `tts:<messageId>` seul = stale audio quand user change voice. Cf. TD-23.
-- **CORS allowedHeaders contient déjà `sentry-trace` + `baggage` (`museum-backend/src/app.ts`)** — distributed tracing. Ne PAS les retirer (sinon `sentry-trace` stripped au preflight, bridge FE↔BE cassé silencieusement). Middleware `trace-propagation.middleware.ts` (`tracePropagationMiddleware`) monté `app.ts` (commit `f687b600`). Réf `docs/observability/DISTRIBUTED_TRACING.md` §5.
+- **CORS allowedHeaders contient déjà `sentry-trace` + `baggage` (`museum-backend/src/app.ts`)** — distributed tracing. Ne PAS les retirer (sinon `sentry-trace` stripped au preflight, bridge FE↔BE cassé silencieusement). Middleware `shared/observability/trace-propagation.middleware.ts` (`tracePropagationMiddleware`) monté `app.ts` (commit `f687b600`). Réf `docs/observability/DISTRIBUTED_TRACING.md` §5.
 - **`infra/grafana/dashboards/*.json` UID immutable** — renommer le fichier mais GARDER l'`uid:` historique (sinon liens permanents + annotations/alerts `/d/<uid>` → 404). Pareil pour panels `id:` numérotés (deep-link `&viewPanel=<id>`). Ex `chat-stages-latency.json`.
 - **PGP key `museum-web/public/.well-known/pgp-key.txt` = placeholder** — token `PGP_KEY_PLACEHOLDER_DO_NOT_SHIP`. Deploy pipeline DOIT gate sur l'absence de ce token avant prod (sinon PGP publiée vide → signal "vendor négligent"). Génération : `docs/operations/PGP_KEY_GENERATION.md`.
-- **`apiPut` n'existe pas dans `museum-web/src/lib/api.ts`** — la stack expose `apiGet/Post/Patch/Delete`. Les pages admin qui PUT (ex branding) utilisent un wrapper `fetch` local + CSRF cookie (`csrf_token`→`X-CSRF-Token`) + `credentials:'include'`. >2 sites ré-implémentant ce wrapper → ajouter `apiPut` proprement. Réf `admin/museums/[id]/branding/page.tsx`.
+- **`museum-web/src/lib/api.ts` expose `apiGet/Post/Patch/Put/Delete`** — CSRF géré centralement : lit le cookie `csrf_token` (non-HttpOnly) → header `X-CSRF-Token` sur les méthodes state-changing + `credentials:'include'` (auth via cookie HttpOnly `access_token`). NE PAS ré-implémenter un wrapper `fetch` local par page : utiliser ces helpers. `apiPut` ajouté (`api.ts:258`) — l'ancienne note « apiPut n'existe pas » était stale (corrigée 2026-05-27). Réf `admin/museums/[id]/branding/page.tsx`.
 - **`SAVEPOINT` dans une migration crash sous `runMigrations({transaction:'none'})`** — l'integration harness (`tests/helpers/integration/integration-harness.ts`) run les migrations HORS transaction → `SAVEPOINT can only be used in transaction blocks` → **kill TOUTES les suites integration**. Fix : guarder par `if (queryRunner.isTransactionActive)`. Réf migration `AddMuseumGeofence.ts`.
 - **Retirer un pin `@types/*` d'un `pnpm.overrides` ne suffit PAS à le bumper** — si le `@types` parent déclare une range qui matche déjà la version pinnée, pnpm garde le lockfile. Forcer : déclarer le sous-paquet en `devDependencies` directe avec la range cible (ex `@types/express-serve-static-core: ^5.1.1`), puis re-résoudre. Réf `museum-backend/package.json`. TD-11.
-- **Écran affichant un secret (TOTP/recovery codes) → screen-capture impératif, PAS le hook lib (museum-frontend)** — `usePreventScreenCapture()` de `expo-screen-capture` ne release que sur unmount, or un `<Stack.Screen>` reste monté quand on navigue dessus (host persistant, même classe que RN Modal). Utiliser `preventScreenCaptureAsync`/`allowScreenCaptureAsync` impératifs pilotés par `useFocusEffect` (release on blur ET unmount), key dédiée. `require()` lazy/web-safe gardé (le module est natif → absent sur web/Jest), erreurs via `reportError` sans payload secret, jamais logger le secret. `expo-screen-capture` = native dep → `pod install` + `git add -f ios/Pods/...` + Podfile.lock + ExpoModulesProvider.swift committés (Xcode Cloud ne run pas `pod install`). Tokens : `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` (device-bound, non-backup-migratable). Réf `features/auth/hooks/usePreventScreenCapture.ts`, TD-SEC-01/02, `lib-docs/expo-screen-capture/PATTERNS.md`.
+- **Auth tokens device-bound (museum-frontend)** — `authTokenStore.ts` passe `keychainAccessible: WHEN_UNLOCKED_THIS_DEVICE_ONLY` à `expo-secure-store` (device-bound, non-backup-migratable) : un refresh token ne migre pas vers un autre appareil via une sauvegarde iCloud/Google. Ne pas relâcher ce flag sans revue sécurité.
+- **MFA = web-admin-only en V1 (museum-frontend)** — la surface MFA mobile user-facing (écrans enrôlement/challenge/banner, route `mfa-enroll`, client `mfaApi`, hook screen-capture, flow Maestro) a été **retirée** (décision produit 2026-05-26, UFR-016, cf. ADR-017 Withdrawn-for-V1). `authService.login()` gère `mfaRequired` gracieusement (AppError `Forbidden`/`MFA_WEB_ONLY` → message i18n `error.auth.mfa_web_only`, jamais le token brut `MFA_REQUIRED`). L'enforcement backend (ADR-014) + l'admin web restent actifs. Aucun écran mobile n'affiche plus de secret TOTP.
+- **TypeORM `dataSource.query()` : SELECT renvoie `rows[]`, mais INSERT/UPDATE/DELETE…RETURNING renvoie le tuple `[rows[], affectedCount]`** — forme différente selon le type de requête (pg, TypeORM 0.3.28). Tout code qui fait `const r = await dataSource.query('UPDATE … RETURNING …')` puis lit `r[0]` comme une row, ou teste `r.length === 0`, est buggé : `r.length` vaut toujours 2 et `r[0]` est le **tableau** de rows (`[]` si 0 match). Lire via une garde `const rows = Array.isArray(r[0]) ? r[0] : r;` puis `rows.length === 0`. Bug réel : le quota free-tier (`monthly-session-quota.repo.pg.ts` `tryConsume`) ne bloquait jamais (402 jamais émis ; `result[0]=[]` truthy → `next()` → 201, compteur jamais incrémenté) — fix commit `f74ce7de`. Détail + incident antérieur (prune cron) : `lib-docs/typeorm/PATTERNS.md §4.10` + `LESSONS.md` (2026-05-08). Auditer les autres `query('…RETURNING')` raw.
 
 ## Environment Setup
 
@@ -184,7 +187,7 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 
 **Opt-out** : `// e2e-skip: <raison ≥30 chars>` en haut de la source. Valide : "dev-only debug route", "covered transitively by parent flow X", "third-party native screen". Invalide : "TODO", "low priority", "P2 backlog".
 
-**Enforcement** : `pnpm sentinel:screen-test-coverage` avant push (fail = ajoute flow OU `// e2e-skip:`). `.maestro/coverage-baseline.json` grandfathers les écrans pré-UFR-021 — **JAMAIS de nouvelle entrée**, removals only (si écran rendu out-of-scope, retire du baseline même commit). Phase 2 (post-validation) : pre-push gate + CI mirror.
+**Enforcement** : `pnpm sentinel:screen-test-coverage` avant push (fail = ajoute flow OU `// e2e-skip:`). `.maestro/coverage-baseline.json` grandfathers les écrans pré-UFR-021 — **JAMAIS de nouvelle entrée**, removals only (si écran rendu out-of-scope, retire du baseline même commit). **Phase 2 câblée (2026-05-31)** : pre-push **Gate 22** (`screen-test-coverage.mjs`, fail-fast `|| exit 1`) + step `ci-cd-mobile.yml` quality job (avant prebuild) + mirror `sentinel-mirror.yml` (anti-bypass UFR-020). Checkbox PR (UFR-021) déjà présente dans `PULL_REQUEST_TEMPLATE.md`.
 
 Specs : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL.md), [`docs/TEST_COVERAGE_INVENTORY.md`](docs/TEST_COVERAGE_INVENTORY.md), [`docs/TESTING_PHASE2_PLAN.md`](docs/TESTING_PHASE2_PLAN.md).
 
@@ -210,7 +213,7 @@ Specs : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL
 
 **Obligation lib-docs (red/green/reviewer) :**
 - Tout agent touchant/reviewant du code DOIT consulter `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib importée.
-- Cache stale (>14j OU version drift package.json OU manquant) → refresh forcé via **doc-fetcher** + **doc-curator** (fresh agents).
+- Cache stale (>14j OU version drift package.json OU manquant OU PATTERNS.md sha256 drift) → refresh forcé via **doc-cache** (fresh agent, fetch+curate ; fusion doc-fetcher+doc-curator 2026-05-31).
 - WebSearch fail (offline/404/rate-limit) → WARN + use stale + tag rapport (pas de BLOCK).
 - Verifier hook `pre-phase-doc-reference-check.sh` vérifie `libDocsConsulted[]` couvre les libs importées.
 - Reviewer DOIT citer `PATTERNS.md:<line>` quand code dévie → CHANGES_REQUESTED.
@@ -226,12 +229,12 @@ lib-docs/
     ├── VERSION         # UNTRACKED — regenerable from INDEX.json
     ├── snapshot-*.md   # UNTRACKED — raw WebFetch dump (5-10 pages)
     ├── sources.json    # UNTRACKED — fetcher metadata
-    └── PATTERNS.md     # UNTRACKED — curated by doc-curator, ~200-500 lignes
+    └── PATTERNS.md     # UNTRACKED — curated by doc-cache, ~200-500 lignes
 ```
 
 **Reviewer rejection loop = ILLIMITÉ.** Zero cap, zero warning, zero mention. Re-spawn fresh à la phase pointée (`spec`/`plan`/`red`/`green`). Cap 2 corrective loops s'applique UNIQUEMENT aux fails de hooks intra-phase (lint/tsc/test dans la même phase éditeur).
 
-**Mode unique `/team`.** Plus de selector micro/standard/enterprise. Plus de keywords bypass Spec Kit (`typo`, `dep bump`). Plus de modes `chore`/`hotfix`/`audit`/`mockup` séparés. UN pipeline pour toute modif code applicatif. Audit dans le pipeline (security + verifier toujours). Cost gate = telemetry pure (plus de seuil $20/$50).
+**Mode unique `/team`.** Plus de selector micro/standard/enterprise. Plus de keywords bypass Spec Kit (`typo`, `dep bump`). Plus de modes `chore`/`hotfix`/`audit`/`mockup` séparés. UN pipeline pour toute modif code applicatif. Audit dans le pipeline (security agent + gate verify déterministe toujours). Cost gate = telemetry pure (plus de seuil $20/$50).
 
 **Exemption auto** : si `git diff --name-only` ∩ `{museum-backend/src/**, museum-frontend/{app,features,shared,components}/**, museum-web/src/**, tests/}` vide → pipeline skippé, run direct Step 9 finalize. Append STORY.md "skipped — pure-doc edit".
 
@@ -244,6 +247,27 @@ lib-docs/
 - "Cap 2 boucles atteint" appliqué au reviewer → cap 2 = hook failures intra-phase only. Reviewer = illimité.
 
 Specs : [`docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md`](docs/superpowers/specs/2026-05-18-ufr-022-fresh-context-five-phases-design.md).
+
+## Output format
+
+Pour tout artefact destiné à la lecture humaine (reports, briefings, summaries, plans, retros, status updates, memos, decks) :
+
+- Default to a single self-contained HTML file with inline CSS.
+- Use semantic HTML (`h1`, `h2`, `section`) and embedded styles.
+- Visual style: clean typography, generous whitespace, restrained color use.
+- Always include a print-friendly stylesheet (`@media print`).
+- Light Mode is the default.
+- File extension `.html`, save in `artifacts/` alongside the markdown source.
+
+Pour le matériel de référence qui ne sera QUE édité (specs, configs, READMEs, project notes) : keep markdown as the primary format.
+
+**When unsure: ask "is this for someone to read or someone to edit?"** Read = HTML. Edit = markdown.
+
+**Pourquoi (les idées derrière ces règles) :**
+
+- **One file, no dependencies.** Single HTML file, all CSS inline in `<style>` tags, all SVG charts inline. No external fonts, no CDN, no JavaScript unless the artifact is genuinely interactive. The reader can save the file, email it, paste it into Slack, drop it into a Notion page, archive it for compliance — all without anything breaking. Self-contained HTML is the new "real" artifact.
+- **Print-friendly, always.** Add a `@media print` block that strips backgrounds, adjusts margins, and forces page breaks at section boundaries. ~30 % des décideurs impriment les rapports générés par l'IA. The print layout matters more than expected.
+- **Restrained design.** Resist the instinct to add a hundred icons and gradient backgrounds. The artifact should look like something a careful human designer made, not like a Tailwind playground. Trois règles : **maximum two accent colors, generous white space, sans-serif body type.**
 
 ## Honesty + truth-telling (UFR-013)
 
@@ -326,12 +350,12 @@ Agents MUST write to `.claude/skills/team/team-reports/`. `working/` = disposabl
 ## Dependency Monitoring
 
 ### TypeORM
-TypeORM docs repo archived March 2026. v1.0 planned H1 2026 w/ breaking changes. Current : works, migration not urgent, monitor releases. Alternatives for future : Drizzle (S-tier 2026), Prisma 7, Kysely.
+TypeORM **v1.0.0 released 2026-05-19** ; le repo 0.3.x est archivé. Musaium = `typeorm 0.3.28` (Node 22, OK pour v1.0 qui exige Node 20+). Breaking changes v1.0 : `Connection`→`DataSource` (déjà adopté via `data-source.ts`), `@EntityRepository`/`getCustomRepository()` supprimés, `findOneBy`/`findBy`/`exists` consolidés, `null`/`undefined` dans `where` lèvent, relations non-nullables → INNER JOIN. Codemod `npx @typeorm/codemod v1 src/` couvre ~80 %. Migration **planifiable post-launch** (pas urgente, mais 0.3.x = repo archivé sans patchs sécu futurs → tracked). Alternatives : Drizzle (S-tier 2026), Prisma 7, Kysely.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (31419 symbols, 50493 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (35183 symbols, 56701 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

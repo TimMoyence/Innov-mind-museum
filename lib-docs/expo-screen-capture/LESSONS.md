@@ -3,4 +3,26 @@
 > Human-edited gotchas learned in production. Agents MUST NOT auto-fill this file.
 > Add dated, verified incidents only (e.g. "2026-MM-DD: <what broke> → <fix>").
 
-_No lessons recorded yet._
+## 2026-05-26 — withdrawn from active perimeter (MFA mobile removed)
+
+The `usePreventScreenCapture` hook was buried (UFR-016, cycle M2 — mobile MFA surface removal). Its only consumer was `MfaEnrollScreen`, which displayed the TOTP secret + recovery codes; both are gone. The `expo-screen-capture` dep was then **removed** from `package.json` (cycle E2 — `pod install` regenerated Podfile.lock + ExpoModulesProvider.swift; 0 ScreenCapture references remain). This lib was removed from `INDEX.json` (active tracking); this `LESSONS.md` is kept tracked for the historical doctrine below.
+## 2026-05-26 — `usePreventScreenCapture()` releases on unmount ONLY — use imperative API with `useFocusEffect`
+
+`usePreventScreenCapture()` calls `allowScreenCaptureAsync` only on component **unmount**. A `<Stack.Screen>` that stays mounted when you navigate away (host-persistent) never unmounts → protection leaks to screens that should NOT be protected, and is never released on blur.
+
+**Correct pattern** (use imperative calls driven by `useFocusEffect`):
+```ts
+useFocusEffect(
+  useCallback(() => {
+    preventScreenCaptureAsync(key);
+    return () => allowScreenCaptureAsync(key); // release on blur AND unmount
+  }, [key])
+);
+```
+
+**Never use** `usePreventScreenCapture()` on screens displaying secrets (TOTP QR, recovery codes). Use `preventScreenCaptureAsync`/`allowScreenCaptureAsync` with a dedicated `key`.
+
+**Additional rules:**
+- `require()` lazy/web-safe (native module, absent on web/Jest). Errors via `reportError` without logging secret payload.
+- `expo-screen-capture` is a native dep → `pod install` + `git add -f ios/Pods/...` + Podfile.lock + ExpoModulesProvider.swift committed.
+- Reference implementation: `features/auth/hooks/usePreventScreenCapture.ts`. Tech debt: TD-SEC-01/02.

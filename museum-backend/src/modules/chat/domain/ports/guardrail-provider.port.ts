@@ -120,7 +120,7 @@ export interface GuardrailProvider {
    * Stable *behavioural* version. Bump on any change that may shift decisions
    * (model swap, threshold change, prompt template). Used by shadow-mode
    * promotion gates + audit log + bias monitoring. Conventionally semver-ish
-   * (e.g. `'llm-guard-0.3.16'`, `'llama-prompt-guard-2-86m'`).
+   * (e.g. `'llm-guard-0.3.16'`).
    */
   readonly version: string;
 

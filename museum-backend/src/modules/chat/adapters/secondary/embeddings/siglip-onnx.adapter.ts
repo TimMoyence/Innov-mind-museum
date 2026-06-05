@@ -120,6 +120,10 @@ export class SiglipOnnxAdapter implements EmbeddingsPort {
     const tensorData = await preprocessForSiglip(input.buffer);
     const inputTensor = new runtime.Tensor('float32', tensorData, SIGLIP_TENSOR_SHAPE);
 
+    // PR-14: does NOT use `fetchWithTimeout` — signal feeds `runWithTimeout`
+    // wrapping `session.run` (onnxruntime API), not a `fetch` call. The helper
+    // is fetch-specific (Response return type); onnxruntime exposes no fetch
+    // surface, so the inline pattern stays here.
     const controller = new AbortController();
     const timeoutHandle = setTimeout(() => {
       controller.abort();

@@ -1,6 +1,13 @@
 // Domain types for the hybrid museum enrichment flow (per-locale cache +
 // async refresh via BullMQ). See `EnrichMuseumUseCase`.
 
+import type {
+  AdmissionFees,
+  Collections,
+  CurrentExhibitions,
+  Accessibility,
+} from '@shared/db/jsonb-schemas/museum-enrichment.schemas';
+
 export type OpeningDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 export type OpeningDayStatus = 'open' | 'closed' | 'unknown';
@@ -36,6 +43,17 @@ export interface MuseumEnrichmentView {
   phone: string | null;
   imageUrl: string | null;
   openingHours: ParsedOpeningHours | null;
+  /**
+   * Rich JSONB fields. Free-form `Record<string, unknown> | null` (validated by
+   * loose Zod schemas — no key is guaranteed). Surfaced to the mobile detail
+   * screen; `null` when the column is empty. The async refresh worker does NOT
+   * populate these (it only fetches summary/website/phone/imageUrl/openingHours)
+   * so a worker refresh carrying `null` here must NOT overwrite a seeded value.
+   */
+  admissionFees: AdmissionFees | null;
+  collections: Collections | null;
+  currentExhibitions: CurrentExhibitions | null;
+  accessibility: Accessibility | null;
   fetchedAt: string;
 }
 

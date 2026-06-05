@@ -9,9 +9,8 @@
  * Wired this way (façade + named exports) so that:
  *  - `import { chatApi } from '@/features/chat/infrastructure/chatApi'` keeps
  *    working unchanged for the 12+ existing consumers (backward-compat).
- *  - `sendMessageSmart` receives `postMessage` and `postMessageStream` as
- *    explicit dependencies, breaking the previous `this`-based coupling
- *    between sibling methods.
+ *  - `sendMessageSmart` receives `postMessage` as an explicit dependency,
+ *    breaking the previous `this`-based coupling between sibling methods.
  */
 import { postAudioMessage, synthesizeSpeech } from './audio';
 import { getMessageImageUrl } from './image';
@@ -24,16 +23,14 @@ import {
   setSessionContext,
 } from './metadata';
 import { createSession, createSessionOrThrow, postMessage, sendMessageSmart } from './send';
-import { postMessageStream } from './stream';
 
-const sendMessageSmartBound = sendMessageSmart({ postMessage, postMessageStream });
+const sendMessageSmartBound = sendMessageSmart({ postMessage });
 
 /** Aggregator preserving the legacy `chatApi.method(...)` call sites. */
 export const chatApi = {
   createSession,
   createSessionOrThrow,
   postMessage,
-  postMessageStream,
   postAudioMessage,
   synthesizeSpeech,
   getMessageImageUrl,
@@ -60,9 +57,7 @@ export {
   createSession,
   createSessionOrThrow,
   postMessage,
-  postMessageStream,
 };
 export type { PostMessageParams, SendMessageSmartParams } from './send';
-export type { PostMessageStreamParams } from './stream';
 export type { PostAudioMessageParams } from './audio';
 export type { SetSessionContextResult } from './metadata';

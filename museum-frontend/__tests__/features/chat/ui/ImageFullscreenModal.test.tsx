@@ -158,4 +158,21 @@ describe('ImageFullscreenModal', () => {
     expect(screen.getByText('2 / 2')).toBeTruthy();
     jest.useRealTimers();
   });
+
+  // ── Audit #16 (R11) — UFR-022 run 2026-05-23-chat-composer-buttons-modal-dismiss ──
+  // No tap-anywhere-to-close: the image area is reserved for prev/next tap
+  // zones + swipe-down dismiss, never for "tap on image center". This guard
+  // ensures any future refactor that wires a tap-to-close handler on the
+  // image host fails CI.
+  it('tap on image center does not call onClose (audit #16, R11)', () => {
+    const onClose = jest.fn();
+    const images = [makeEnrichedImage({ caption: 'Center' })];
+    render(<ImageFullscreenModal images={images} initialIndex={0} visible onClose={onClose} />);
+
+    // The image is rendered with accessibilityLabel = current.caption.
+    const image = screen.getByLabelText('Center');
+    // The image is a plain RN <Image> with no onPress handler.
+    expect((image.props as { onPress?: () => void }).onPress).toBeUndefined();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

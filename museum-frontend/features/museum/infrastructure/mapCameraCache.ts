@@ -1,6 +1,9 @@
 import { storage } from '@/shared/infrastructure/storage';
+import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 
-const STORAGE_KEY = 'museum.lastCameraView.v1';
+const STORAGE_KEY = 'musaium.museum.lastCameraView.v1';
+/** Pre-namespacing key migrated forward once before the first read (TD-AS-01). */
+const LEGACY_STORAGE_KEY = 'museum.lastCameraView.v1';
 /** Cached camera views older than 30 days are discarded so a returning user doesn't land
  * on a stale region they'd likely expect to be re-centered. */
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -58,6 +61,7 @@ export const mapCameraCache = {
   },
 
   async load(): Promise<CachedCamera | null> {
+    await migrateStorageKey(STORAGE_KEY, LEGACY_STORAGE_KEY);
     let raw: StoredCamera | null;
     try {
       raw = await storage.getJSON<StoredCamera>(STORAGE_KEY);

@@ -1,12 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
-import type { PaginatedResponse, Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
+import type { Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
 
 // -- Badge colors ────────────────────────────────────────────────────────
@@ -31,58 +38,55 @@ export default function TicketsPage() {
   const locale = useAdminLocale();
   const dateLocale = useDateLocale();
 
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Update modal state
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [newStatus, setNewStatus] = useState<TicketStatus>('open');
   const [newPriority, setNewPriority] = useState<TicketPriority>('low');
   const [saving, setSaving] = useState(false);
+  // Mutation-specific error (separate from the read-only `error` returned by
+  // the hook — they have the same UX role but distinct sources).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [statusFilter, priorityFilter]);
 
-  const fetchTickets = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
-      if (priorityFilter) params.set('priority', priorityFilter);
+  const ticketsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    if (priorityFilter) params.set('priority', priorityFilter);
+    return `/api/admin/tickets?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<Ticket>>(
-        `/api/admin/tickets?${params.toString()}`,
-      );
-      setTickets(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tickets');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter, priorityFilter]);
+  const {
+    data: ticketsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchTickets,
+  } = useFetchData<Ticket[]>(ticketsUrl, {
+    deps: [page, statusFilter, priorityFilter],
+    errorFallback: 'Failed to load tickets',
+  });
 
-  useEffect(() => {
-    void fetchTickets();
-  }, [fetchTickets]);
+  const tickets = ticketsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Update handler ──────────────────────────────────────────────────
 
   async function handleUpdate() {
     if (!editingTicket) return;
     setSaving(true);
+    setMutationError(null);
     try {
       await apiPatch<Ticket>(`/api/admin/tickets/${editingTicket.id}`, {
         status: newStatus,
@@ -91,28 +95,11 @@ export default function TicketsPage() {
       setEditingTicket(null);
       void fetchTickets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update ticket');
+      setMutationError(err instanceof Error ? err.message : 'Failed to update ticket');
     } finally {
       setSaving(false);
     }
   }
-
-  // -- Modal backdrop ref ─────────────────────────────────────────────
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingTicket) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) setEditingTicket(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingTicket, saving]);
 
   return (
     <div>
@@ -160,14 +147,12 @@ export default function TicketsPage() {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 
@@ -178,27 +163,13 @@ export default function TicketsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.subject}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.user}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.priority}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.messages}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.subject}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.user}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.priority}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.messages}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -211,37 +182,33 @@ export default function TicketsPage() {
                 ) : (
                   tickets.map((t) => (
                     <tr key={t.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(t.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="max-w-[200px] truncate px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell className="max-w-[200px] truncate font-medium text-text-primary">
                         {t.subject}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {t.userId}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{t.userId}</TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[t.status]}`}
                         >
                           {t.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_COLORS[t.priority]}`}
                         >
                           {t.priority}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {t.messageCount ?? 0}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{t.messageCount ?? 0}</TableDataCell>
+                      <TableDataCell nowrap>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -261,7 +228,7 @@ export default function TicketsPage() {
                             {adminDict.ticketsPage.view}
                           </a>
                         </div>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}
@@ -281,82 +248,67 @@ export default function TicketsPage() {
 
       {/* Update Ticket Modal */}
       {editingTicket && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingTicket(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingTicket(null);
           }}
+          title={adminDict.ticketsPage.updateTicket}
+          size="sm"
+          dismissable={!saving}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingTicket(null);
+              }}
+              onConfirm={() => void handleUpdate()}
+              confirmDisabled={
+                newStatus === editingTicket.status && newPriority === editingTicket.priority
+              }
+              confirmBusy={saving}
+            />
+          }
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.ticketsPage.updateTicket}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">{editingTicket.subject}</p>
+          <p className="mt-1 text-sm text-text-secondary">{editingTicket.subject}</p>
 
-            <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {adminDict.common.status}
-            </label>
-            <select
-              aria-label={adminDict.common.status}
-              value={newStatus}
-              onChange={(e) => {
-                setNewStatus(e.target.value as TicketStatus);
-              }}
-              className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {TICKET_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+          <label className="mt-4 block text-sm font-medium text-text-secondary">
+            {adminDict.common.status}
+          </label>
+          <select
+            aria-label={adminDict.common.status}
+            value={newStatus}
+            onChange={(e) => {
+              setNewStatus(e.target.value as TicketStatus);
+            }}
+            className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {TICKET_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
 
-            <label className="mt-4 block text-sm font-medium text-text-secondary">
-              {adminDict.common.priority}
-            </label>
-            <select
-              aria-label={adminDict.common.priority}
-              value={newPriority}
-              onChange={(e) => {
-                setNewPriority(e.target.value as TicketPriority);
-              }}
-              className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {TICKET_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingTicket(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={
-                  saving ||
-                  (newStatus === editingTicket.status && newPriority === editingTicket.priority)
-                }
-                onClick={() => void handleUpdate()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? '...' : adminDict.common.confirm}
-              </button>
-            </div>
-          </div>
-        </div>
+          <label className="mt-4 block text-sm font-medium text-text-secondary">
+            {adminDict.common.priority}
+          </label>
+          <select
+            aria-label={adminDict.common.priority}
+            value={newPriority}
+            onChange={(e) => {
+              setNewPriority(e.target.value as TicketPriority);
+            }}
+            className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {TICKET_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </BaseModal>
       )}
     </div>
   );

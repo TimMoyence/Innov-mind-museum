@@ -127,9 +127,7 @@ export const ImageCarousel = React.memo(({ images, onImagePress }: ImageCarousel
 ImageCarousel.displayName = 'ImageCarousel';
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: semantic.chat.gap,
-  },
+  container: {},
   contentContainer: {
     flexDirection: 'row',
   },

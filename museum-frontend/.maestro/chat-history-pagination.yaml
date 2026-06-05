@@ -4,111 +4,167 @@ appId: com.musaium.mobile.preview
 #
 # Validates:
 #   1. open a chat session, send 3 messages
-#   2. assert all 3 appear in the thread
-#   3. scroll up to load older messages (if pagination marker visible)
-#   4. close chat
+#   2. assert all 3 user messages appear in the thread
+#   3. scroll up to load older messages
+#   4. close chat, return home
 #
-# Prerequisites: user logged in, backend /chat endpoints healthy
+# Prerequisites: seeded test account, backend /chat endpoints healthy
 
-- waitForAnimationToEnd
-
-- runFlow:
-    when:
-      visible: "Welcome back"
-    file: helpers/quick-login.yaml
-
-- tapOn:
-    text: "Skip"
-    optional: true
-- waitForAnimationToEnd
-
+# ──────────────────────────────────────────────
+# Phase 0: Launch fresh + log in
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
 - extendedWaitUntil:
-    visible: "Start Conversation"
-    timeout: 10000
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
+- tapOn:
+    id: "email-input"
+- inputText: "e2e-test-login@test.musaium.dev"
+- tapOn:
+    id: "password-input"
+- inputText: "TestPassword123!"
+- hideKeyboard
+- tapOn:
+    id: "auth-submit"
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    id: "analytics-consent-decline"
+    optional: true
+- tapOn:
+    text: "Passer|Skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 1: Open a new chat session
 # ──────────────────────────────────────────────
-- tapOn: "Start Conversation"
+# The home default-conversation CTA ("Commencer une nouvelle conversation") sits
+# half-under the bottom tab bar on this binary, so a tap on it lands on the
+# "Musées" tab and routes to the nearby-museums directory (hybrid companion model
+# hands off to a context picker before chatting). Exercise the home affordance
+# best-effort, then make the directory deterministic via the "Musées" tab, pick a
+# museum card -> sheet -> "Démarrer un chat ici" -> chat.
+- scrollUntilVisible:
+    element:
+      text: "Commencer une nouvelle conversation|Start a new conversation"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 30
+- tapOn:
+    text: "Commencer une nouvelle conversation|Start a new conversation"
+    optional: true
 - waitForAnimationToEnd
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
+# MUST be accepted BEFORE the composer is reachable. First-session-only, so
+# the wait is bounded and the tap is the deterministic dismissal.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+- tapOn:
+    text: "Accepter tout|Accept all"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 2: Send message #1
 # ──────────────────────────────────────────────
 - tapOn:
     id: "chat-input"
-    optional: true
 - inputText: "Tell me about the Mona Lisa."
+- hideKeyboard
 - tapOn:
-    id: "chat-send"
-    optional: true
-- tapOn:
-    text: "Send"
-    optional: true
-- waitForAnimationToEnd
-
-# Wait for assistant response (allow LLM latency)
+    id: "send-button"
+- assertVisible: "Tell me about the Mona Lisa."
 - extendedWaitUntil:
-    visible: "Mona Lisa"
-    timeout: 20000
-    optional: true
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 3: Send message #2
 # ──────────────────────────────────────────────
 - tapOn:
     id: "chat-input"
-    optional: true
 - inputText: "Who painted it?"
+- hideKeyboard
 - tapOn:
-    id: "chat-send"
-    optional: true
-- tapOn:
-    text: "Send"
-    optional: true
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Leonardo"
-    timeout: 20000
-    optional: true
+    id: "send-button"
+- assertVisible: "Who painted it?"
+- waitForAnimationToEnd:
+    timeout: 30000
 
 # ──────────────────────────────────────────────
 # Phase 4: Send message #3
 # ──────────────────────────────────────────────
 - tapOn:
     id: "chat-input"
-    optional: true
 - inputText: "In which museum is it kept?"
+- hideKeyboard
 - tapOn:
-    id: "chat-send"
-    optional: true
-- tapOn:
-    text: "Send"
-    optional: true
-- waitForAnimationToEnd
-
-- extendedWaitUntil:
-    visible: "Louvre"
-    timeout: 20000
-    optional: true
+    id: "send-button"
+- assertVisible: "In which museum is it kept?"
+- waitForAnimationToEnd:
+    timeout: 30000
 
 # ──────────────────────────────────────────────
-# Phase 5: Scroll up to load older history (best-effort)
+# Phase 5: Scroll up the thread to load older history (best-effort)
 # ──────────────────────────────────────────────
 - swipe:
     direction: DOWN
     optional: true
-
-# ──────────────────────────────────────────────
-# Phase 6: Close chat and return to home
-# ──────────────────────────────────────────────
-- tapOn:
-    text: "Close"
-    optional: true
-- back
 - waitForAnimationToEnd
 
+# Earliest user message must still be reachable in the thread.
+- assertVisible: "Tell me about the Mona Lisa."
+
+# ──────────────────────────────────────────────
+# Phase 6: Close chat and return
+# ──────────────────────────────────────────────
+# The close button (ChatHeader.tsx:137) carries accessibilityLabel
+# a11y.chat.close ("Fermer la conversation" / "Close conversation"). Maestro
+# matches an iOS accessibilityLabel via the `text` selector (a bare `label:`
+# under tapOn is only a log label, NOT a target → it taps nothing).
+- tapOn:
+    text: "Fermer la conversation|Close conversation"
+- waitForAnimationToEnd
+# Closing the chat returns to wherever it was opened from — here the nearby-
+# museums directory (the chat was created from a museum card). Assert we left
+# the chat composer (back on the directory), which proves the close worked.
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Musées à proximité|Nearby museums|Votre compagnon de musée|Your museum companion"
+    timeout: 40000
+- assertNotVisible:
+    id: "chat-input"

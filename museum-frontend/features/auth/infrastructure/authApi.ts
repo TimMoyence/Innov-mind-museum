@@ -6,6 +6,7 @@ import {
   type OpenApiResponseFor,
 } from '@/shared/api/openapiClient';
 import type { TtsVoice } from '@/features/settings/voice-catalog';
+import { createAppError } from '@/shared/types/AppError';
 
 type Schemas = components['schemas'];
 type RegisterPayload = OpenApiJsonRequestBodyFor<'/api/auth/register', 'post'>;
@@ -39,17 +40,19 @@ export const authService = {
   /**
    * Authenticates a user with email and password.
    *
-   * R16 — the backend now returns a discriminated union (`AuthSessionResponse
-   * | MfaRequiredResponse`). This thin wrapper preserves the historical
-   * `LoginResponse`-only contract for callers that don't yet handle MFA.
-   * MFA-aware callers should consume `mfaApi.ts` (which exposes the same
-   * envelope as `LoginEnvelope`) instead.
+   * The backend login envelope is a discriminated union (`AuthSessionResponse
+   * | MfaRequiredResponse`). MFA is **web-admin-only in V1** — the mobile app
+   * exposes no enrolment/challenge surface (cycle M2, UFR-016, cf. ADR-017).
+   * If the backend ever returns `mfaRequired` for a mobile login, this wrapper
+   * rejects gracefully with a structured {@link AppError} (`Forbidden` /
+   * `MFA_WEB_ONLY`) so `getErrorMessage()` resolves a translated hint instead
+   * of leaking the raw `MFA_REQUIRED` token. No navigation, no crash.
    *
    * @param email - User email address.
    * @param password - User password.
    * @returns Session tokens on success.
-   * @throws Error when the backend returns an MFA challenge — caller must
-   *   route through the dedicated MFA flow before reaching here.
+   * @throws AppError (`Forbidden` / `MFA_WEB_ONLY`) when the backend signals an
+   *   MFA challenge — MFA is managed in the web admin, not on mobile.
    */
   async login(email: string, password: string): Promise<LoginResponse> {
     const result = await openApiRequest({
@@ -59,7 +62,11 @@ export const authService = {
       requiresAuth: false,
     });
     if ('mfaRequired' in result) {
-      throw new Error('MFA_REQUIRED');
+      throw createAppError({
+        kind: 'Forbidden',
+        code: 'MFA_WEB_ONLY',
+        message: 'MFA is managed on the web admin.',
+      });
     }
     return result;
   },

@@ -10,9 +10,9 @@ The 2026-04-20 audit flagged "coverage non-measured" across the three apps. Cros
 
 | App | `coverage` config | CI behaviour |
 |---|---|---|
-| museum-backend | `jest.config.ts` declares `coverageThreshold` = 88 / 77 / 85 / 88 (stmt/br/fn/ln) — **enforced** | `pnpm test -- --coverage` runs; non-zero exit on miss, but **no CI step calls it with `--coverage`** |
-| museum-frontend | `jest.config.js` declares `coverageThreshold` = 86 / 74 / 72 / 87 — **enforced** | `npm test` does NOT pass `--coverage`, gates are dormant |
-| museum-web | `vitest.config.ts` — **no `test.coverage.thresholds` block** | `pnpm test` runs Vitest; coverage is off entirely |
+| museum-backend | `jest.config.ts` declares `coverageThreshold` = 88 / 74 / 86 / 89 (stmt/br/fn/ln) — **enforced** | `pnpm test -- --coverage` runs; CI gate hard-fails on miss |
+| museum-frontend | `jest.config.js` declares `coverageThreshold` = 91 / 78 / 80 / 91 — **enforced** | `npm run test:coverage` — CI gate hard-fails on miss |
+| museum-web | `vitest.config.ts` — `coverage.thresholds` = lines: 70 / branches: 54 / functions: 64 / statements: 68 | CI gate wired |
 
 Net result today: thresholds exist but no merge is blocked on coverage. The audit's "coverage is marketing" critique holds at the CI gate level even though per-app configs are mostly sane.
 
@@ -48,3 +48,24 @@ Adopt a three-app coverage gate with staged rollout:
 - [Bloc C1] ticket — CI workflow edits + vitest.config.ts addition.
 - [Bloc C5] ticket — 10 web admin tests to bring museum-web over the 70 % floor before the CI gate is enabled on `push`.
 - Monthly review — raise thresholds by 2–3 pts per app per quarter until converging on 90 % / 85 % / 80 % / 90 %.
+
+---
+
+## Amendment 2026-06-01 — Decision: the global line-coverage gate is a RATCHET, not a quality target (supersedes the "monthly raise to 90 %" follow-up for museum-backend)
+
+**Trigger:** 360 audit dim.1 (`audit-state/2026-05-31-cartographie-360`) flagged that `museum-backend/jest.config.ts` thresholds (88 / 74 / 86 / 89) are **re-pinned to the SWC-jest actuals at each drift** (see the dated comment block `jest.config.ts:104-141`: branches 75→74 on 2026-05-10, floor-pin after deleting a tautological test, etc.). i.e. the global gate is an **anti-regression cliquet**, not an aspirational bar that pulls quality upward. The audit asked us to *trancher* this explicitly rather than leave it as silent status quo.
+
+**Decision (chosen, not status quo):**
+
+1. The museum-backend **global** coverage threshold is **operated as a ratchet** — a floor pinned to the measured actuals that may only move **up** (never silently down), exactly as `.claude/quality-ratchet.json` + the `jest.config.ts` comment trail already do. It is a *regression tripwire*, not a quality KPI. We stop pretending the global % is a quality target.
+2. The **load-bearing quality signal is mutation testing** (Stryker, `.stryker-hot-files.json`, killRatioMin ≥ 80 on banking-grade files) — this is where "is this code actually tested" is enforced, per the original ADR-007 §rejected-alternatives spirit and the `jest.config.ts:126-128` rationale ("pushing branches via cosmetic tests would be net-negative"). Line/branch % is a coverage *floor*; mutation kill-rate is the *quality bar*.
+3. The original follow-up **"Monthly review — raise thresholds … converging on 90 %"** is **formally deprecated for the museum-backend global line/branch metric.** Chasing a higher global % by writing cosmetic tests that import symbols without asserting behaviour is explicitly net-negative (it inflates the number while lowering signal — the exact failure mode the deleted user-memory-entity test exhibited, `jest.config.ts:131-136`). Threshold raises happen **only** as a natural by-product of behaviour-driven tests landing under coverage, never as a target to chase.
+4. **No change to the numbers** is made by this amendment — 88 / 74 / 86 / 89 stay as the current floor. This amendment changes the *meaning and governance* of the gate, not its values.
+
+**Scope:** museum-backend. museum-frontend / museum-web keep the original staged-rollout intent (they are less mature; their gates can still pull upward). This ratchet-not-target framing is backend-specific because backend already leans on Stryker as the real signal.
+
+**Why not just delete the global gate?** Rejected: a ratchet floor still catches gross regressions (a PR that deletes a test suite, or adds a large untested module, drops the aggregate below the pin and fails). It is cheap insurance; it just must not be *marketed* as a quality target.
+
+**Consequence for honesty (UFR-013):** any doc/roadmap claim that "backend coverage is N % and rising toward 90 %" is misleading and must instead read "backend coverage floor is pinned at the actuals as a regression ratchet; the quality signal is Stryker mutation kill-rate on hot files."
+
+**Related:** mutation-scope expansion is evaluated separately in `docs/MUTATION_SCOPE_EVALUATION.md` (2026-06-01). e2e merge-gating / required checks remain a separate open item (out of scope here).

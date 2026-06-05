@@ -1,4 +1,6 @@
+import { resolveNpsScaleEpoch } from '@modules/review/domain/review/nps-scale-epoch';
 import { Review } from '@modules/review/domain/review/review.entity';
+import { paginate } from '@shared/pagination/offset-paginate';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type {
@@ -32,21 +34,25 @@ export class ReviewRepositoryPg implements IReviewRepository {
   }
 
   async createReview(input: CreateReviewInput): Promise<ReviewDTO> {
-    const entity = this.repo.create({
+    const draft: Partial<Review> = {
       userId: input.userId,
       userName: input.userName,
       rating: input.rating,
       comment: input.comment,
       museumId: input.museumId ?? null,
-    });
+    };
+    // NPS attribution link (C2 / R5). Only set when the caller threads a
+    // sessionId — keeps the persisted shape byte-identical for create paths
+    // that never carry a session (e.g. legacy / direct repo callers).
+    if (input.sessionId !== undefined) {
+      draft.sessionId = input.sessionId;
+    }
+    const entity = this.repo.create(draft);
     const saved = await this.repo.save(entity);
     return toDTO(saved);
   }
 
   async listReviews(filters: ListReviewsFilters): Promise<PaginatedResult<ReviewDTO>> {
-    const { page, limit } = filters.pagination;
-    const offset = (page - 1) * limit;
-
     const qb = this.repo.createQueryBuilder('r');
 
     // `andWhere` first-call behaves as `where` in TypeORM 0.3.x, so we can
@@ -60,17 +66,9 @@ export class ReviewRepositoryPg implements IReviewRepository {
       qb.andWhere('r.museumId = :museumId', { museumId: filters.museumId });
     }
 
-    const total = await qb.getCount();
+    qb.orderBy('r.createdAt', 'DESC');
 
-    const data = await qb.orderBy('r.createdAt', 'DESC').skip(offset).take(limit).getMany();
-
-    return {
-      data: data.map(toDTO),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return await paginate(qb, filters.pagination, toDTO);
   }
 
   /**
@@ -90,21 +88,54 @@ export class ReviewRepositoryPg implements IReviewRepository {
   }
 
   /**
-   * Wave B C7 / R-C7b — NPS aggregate over `approved` reviews scoped to a
-   * single tenant museum. NPS = %promoters - %detractors, computed in SQL via
-   * conditional COUNT so a single round-trip + indexed scan suffices.
-   * `count = 0` → all buckets 0 + nps 0 (no signal).
+   * NPS aggregate over `approved` reviews. NPS = %promoters - %detractors,
+   * computed in SQL via conditional COUNT so a single round-trip + indexed scan
+   * suffices. `count = 0` → all buckets 0 + nps 0 (no signal).
+   *
+   * Scope (C2 / R6-R7) :
+   *   - `museumId` null/undefined → global; the museum predicate is OMITTED so
+   *     `museum_id IS NULL` rows are INCLUDED (the dominant B2C V1 case). We do
+   *     NOT add `museum_id IS NULL` — simply skip the predicate.
+   *   - `museumId` provided → `AND r.museumId = :museumId` (NULL rows excluded).
+   *
+   * `status = 'approved'` is always present (pending / rejected excluded so
+   * moderation controls the public score).
+   *
+   * NPS scale-epoch (F3) : the rating scale switched 1-5 (legacy stars) → 0-10
+   * (NPS). A legacy "5" is indistinguishable by value from an NPS "5" yet would
+   * now be miscounted as a detractor (≤6). So we count ONLY reviews created
+   * AT/AFTER the configured epoch (`resolveNpsScaleEpoch()` — env
+   * `NPS_SCALE_EPOCH` or the deploy-date default; `createdAt >= :npsEpoch`,
+   * parameterized timestamptz) — the legacy cohort is excluded from BOTH the
+   * global and the per-museum aggregate. Applies before bucketing, so buckets +
+   * total + nps are all over the post-epoch cohort only.
    */
-  async aggregateNps(museumId: number): Promise<NpsAggregate> {
-    const row = await this.repo
+  async aggregateNps(museumId?: number | null): Promise<NpsAggregate> {
+    const qb = this.repo
       .createQueryBuilder('r')
       .select('COUNT(*) FILTER (WHERE r.rating >= 9 AND r.rating <= 10)', 'promoters')
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 7 AND r.rating <= 8)', 'passives')
       .addSelect('COUNT(*) FILTER (WHERE r.rating >= 0 AND r.rating <= 6)', 'detractors')
       .addSelect('COUNT(*)', 'count')
-      .where('r.museumId = :museumId', { museumId })
-      .andWhere('r.status = :status', { status: 'approved' })
-      .getRawOne<{ promoters: string; passives: string; detractors: string; count: string }>();
+      .where('r.status = :status', { status: 'approved' })
+      // F3 — exclude legacy 1-5 reviews predating the 0-10 scale switch. Bound
+      // as a parameter (never concatenated); pg casts the ISO string to the
+      // `createdAt` timestamptz column. Applies to global AND per-museum paths.
+      // Resolved per-call so an env override is honoured without a restart.
+      .andWhere('r.createdAt >= :npsEpoch', { npsEpoch: resolveNpsScaleEpoch() });
+
+    // Per-museum scope ONLY when a concrete museumId is supplied. Omitting the
+    // predicate (not adding `IS NULL`) is the key global-incl-NULL fix (R7).
+    if (museumId !== undefined && museumId !== null) {
+      qb.andWhere('r.museumId = :museumId', { museumId });
+    }
+
+    const row = await qb.getRawOne<{
+      promoters: string;
+      passives: string;
+      detractors: string;
+      count: string;
+    }>();
 
     const promoters = Number.parseInt(row?.promoters ?? '0', 10);
     const passives = Number.parseInt(row?.passives ?? '0', 10);

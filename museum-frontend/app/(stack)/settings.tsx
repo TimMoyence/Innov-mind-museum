@@ -1,4 +1,13 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +32,9 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useTheme } from '@/shared/ui/ThemeContext';
+
+/** Canonical public app link shared when inviting a friend (QA-10). */
+const APP_SHARE_URL = 'https://musaium.com';
 
 type SettingsRoute =
   | '/(stack)/preferences'
@@ -63,6 +75,10 @@ export default function SettingsScreen() {
 
   const open = (path: SettingsRoute) => {
     router.push(path);
+  };
+
+  const onInviteFriend = () => {
+    void Share.share({ message: t('settings.inviteMessage'), url: APP_SHARE_URL });
   };
 
   return (
@@ -224,6 +240,21 @@ export default function SettingsScreen() {
           isExporting={isExporting}
         />
 
+        <GlassCard style={styles.card} intensity={52}>
+          <Pressable
+            testID="settings-invite-friend"
+            style={styles.inviteRow}
+            onPress={onInviteFriend}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.inviteFriend')}
+          >
+            <Ionicons name="person-add-outline" size={fontSize.xl} color={theme.primary} />
+            <Text style={[styles.inviteLabel, { color: theme.textPrimary }]}>
+              {t('settings.inviteFriend')}
+            </Text>
+          </Pressable>
+        </GlassCard>
+
         <Pressable
           style={[styles.primaryButton, { backgroundColor: theme.primary }]}
           onPress={() => {
@@ -321,6 +352,15 @@ const styles = StyleSheet.create({
   card: {
     padding: semantic.card.padding,
     gap: space['2.5'],
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space['3'],
+  },
+  inviteLabel: {
+    fontWeight: '700',
+    fontSize: semantic.form.labelSize,
   },
   cardTitle: {
     fontWeight: '700',

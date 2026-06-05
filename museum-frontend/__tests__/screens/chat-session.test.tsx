@@ -1,6 +1,6 @@
 import '../helpers/test-utils';
 import { mockUseChatSession, defaultChatSession } from '../helpers/chat-screen.setup';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen } from '../helpers/render-chat-screen';
 
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 

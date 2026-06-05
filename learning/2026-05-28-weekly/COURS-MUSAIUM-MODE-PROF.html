@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musaium — Cours mode prof — l’app, les flux, la réalité</title>
+<style>
+  :root{
+    --ink:#1c1b19; --muted:#6b6760; --line:#e6e3db; --bg:#fbfaf7; --card:#fff;
+    --accent:#1f6a73; --accent-soft:#e9f2f2; --warn:#8a5a06; --warn-soft:#fbf3e2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:880px;margin:0 auto;padding:46px 26px 110px}
+  header.doc{border-bottom:3px solid var(--accent);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:14.5px}
+  h2{font-size:23px;margin:52px 0 6px;padding-top:14px;border-top:1px solid var(--line);letter-spacing:-.2px;display:flex;align-items:center;gap:12px}
+  h2 .num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center}
+  h3{font-size:15.5px;margin:24px 0 8px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px}
+  p{margin:.5em 0}
+  a{color:var(--accent)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84em;
+    background:#f1efe9;border:1px solid var(--line);border-radius:4px;padding:.5px 5px;word-break:break-word}
+  .topic{color:var(--muted);font-size:14.5px;font-style:italic;margin-top:2px}
+  .big{font-size:17px;background:var(--accent-soft);border:1px solid #cfe3e3;border-radius:10px;padding:12px 16px}
+  .why{font-size:14.5px;color:#403d38}
+  ol.flow{list-style:none;counter-reset:f;padding:0;margin:8px 0}
+  ol.flow li{counter-increment:f;position:relative;padding:12px 0 12px 40px;border-bottom:1px solid var(--line)}
+  ol.flow li::before{content:counter(f);position:absolute;left:0;top:12px;width:26px;height:26px;border-radius:6px;
+    background:#fff;border:1.5px solid var(--accent);color:var(--accent);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .ft{font-weight:700;font-size:15px}
+  .fd{font-size:14px;color:#35332e;margin-top:3px}
+  .ff{margin-top:5px}
+  .insight{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;
+    padding:10px 14px;margin:9px 0;font-size:14px}
+  .insight::before{content:"★ ";color:var(--accent);font-weight:700}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:6px 0}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  td:first-child{white-space:nowrap;width:1%}
+  .reality{background:var(--warn-soft);border:1px solid #efddc0;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px}
+  .gloss{margin:12px 0;font-size:13.5px}
+  .gloss summary{cursor:pointer;color:var(--accent);font-weight:600}
+  .gloss dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+  .gloss dt{font-weight:700} .gloss dd{margin:0;color:#403d38}
+  nav.toc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:8px 0 4px}
+  nav.toc b{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  nav.toc ol{margin:8px 0 0;padding-left:20px} nav.toc li{margin:3px 0}
+  .glance{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0}
+  .glance .c{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:#fff;font-size:13.5px}
+  .glance .c b{display:block;color:var(--accent);font-size:14px;margin-bottom:3px}
+  .verdict{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);
+    border:1px solid #cfe3e3;border-radius:10px;padding:16px 20px;margin:10px 0}
+  .verdict .n{font-size:42px;font-weight:700;color:var(--accent);line-height:1}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0}
+  .box{border:1px solid var(--line);border-radius:8px;padding:13px 16px;background:#fff;font-size:14px}
+  .box h4{margin:0 0 6px;font-size:14px}
+  ul.tight{margin:.3em 0;padding-left:1.15em} ul.tight li{margin:.22em 0}
+  .ok{color:#3f6212} .ko{color:#a3341f}
+  .recap{border:1px solid var(--line);border-radius:8px;background:#fff;padding:4px 16px;margin:10px 0}
+  footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  @media (max-width:640px){.glance,.grid2{grid-template-columns:1fr}.gloss dl{grid-template-columns:1fr}}
+  @media print{
+    body{background:#fff;font-size:11pt}.wrap{max-width:none;padding:0}
+    .big,.insight,.reality,.box,nav.toc,.verdict,.glance .c{background:#fff!important}
+    h2{page-break-after:avoid} section,.box,ol.flow li{page-break-inside:avoid}
+    a{color:var(--ink);text-decoration:none}
+    h2 .num,ol.flow li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>Musaium — le cours mode prof</h1>
+  <div class="sub">L’app au global, les flux réels, la réalité · <b>2026-06-04</b> · matériel vérifié-code (path:line réels, rien d’inventé — UFR-013). Complète la formation de la semaine 21-28 mai avec tout ce qui a shippé depuis + une carte d’ensemble.</div>
+</header>
+
+<p class="big">Objectif : qu’à la fin tu puisses <b>situer n’importe quel fichier dans un flux</b>, expliquer le chemin d’un message du tap au pixel, et connaître l’état <b>honnête</b> de chaque garde-fou. Les 5 chapitres ci-dessous viennent d’agents qui ont relu le code réel ; la section « réalité » vient de l’audit 360 du même jour.</p>
+
+<h2 style="border-top:none;padding-top:0"><span class="num">0</span> Musaium en 30 secondes</h2>
+<p>Compagnon culturel <b>IA voice-first</b>, dedans <i>et</i> dehors : tu photographies une œuvre (musée) ou un monument (ville) → tu en discutes avec l’IA (voix ou texte) → carnet post-visite, + suggestions de proximité. <b>V1 = réactif</b> (tu photographies ce qui est devant toi). <b>V2 = navigué</b> (parcours guidé, plus tard). Audience B2C freemium ; <b>0 musée B2B démarché</b> (les 3 musées Bordeaux = démo).</p>
+<div class="glance">
+  <div class="c"><b>museum-backend</b>Node 22 · Express 5 · TypeORM · PG 16. Hexagonal (domain → useCase → adapters). ~68k LOC. Le cerveau.</div>
+  <div class="c"><b>museum-frontend</b>React Native 0.83 · Expo 55 · Expo Router. Feature-driven sous <code>features/</code>. ~52k LOC. L’app dans ta poche.</div>
+  <div class="c"><b>museum-web</b>Next 15 · React 19 · Tailwind 4. Landing + admin panel JWT. ~31k LOC. La vitrine + le back-office.</div>
+</div>
+
+<nav class="toc">
+  <b>Les 5 chapitres</b>
+  <ol>
+    <li><a href="#m1">La carte de l’app — du tap au pixel</a></li>
+    <li><a href="#m2">Le pipeline chat — défense en profondeur</a></li>
+    <li><a href="#m3">Géo &amp; voix — le contexte du monde réel</a></li>
+    <li><a href="#m4">Auth, consentement &amp; RGPD — la conformité câblée</a></li>
+    <li><a href="#m5">Tout le reste — ce qui a shippé depuis le 28 mai</a></li>
+  </ol>
+  <p style="margin:8px 0 0;font-size:13px;color:var(--muted)">Puis : <a href="#courses">les 4 cours de mai</a> · <a href="#reality">la réalité honnête (audit 79/100)</a> · <a href="#next">continuer</a>.</p>
+</nav>
+
+
+  <section id="m1">
+    <h2><span class="num">1</span> La carte de l’app</h2>
+    <p class="topic">La carte de l'app — du tap au pixel : cycle de vie d'une requete reelle (mobile -&gt; backend hexagonal -&gt; LLM/PG)</p>
+    <p class="big"><b>L’idée maîtresse —</b> Une requete traverse 3 couches concentriques — l'app cliente (mobile/web) parle HTTP au backend, qui passe par un mur de middlewares globaux dans <code>app.ts</code>, puis route /api -&gt; module hexagonal (route primary -&gt; useCase -&gt; domain -&gt; adapter secondary -&gt; PG/LLM) et renvoie la reponse.</p>
+    <p class="why"><b>Pourquoi ça compte —</b> Une fois cette carte memorisee, Tim peut situer N'IMPORTE QUEL fichier du monorepo dans le flux en 2 secondes (est-ce une porte d'entree, un cerveau metier, ou un adaptateur vers le monde exterieur ?) — c'est la cle pour debugger et etendre l'app sans se perdre.</p>
+    <h3>Le flux réel, étape par étape</h3>
+    <ol class="flow">
+      <li>
+        <div class="ft">1. Le client mobile construit l'appel HTTP</div>
+        <div class="fd">L'app RN/Expo n'appelle jamais fetch() en dur dans un ecran. Une feature (ex chat) a une couche infrastructure : postMessage() construit le body (JSON, ou multipart FormData si imageUri) puis delegue a httpRequest() — le wrapper axios partage. C'est LA frontiere FE-&gt;BE.</div>
+        <div class="ff"><code>museum-frontend/features/chat/infrastructure/chatApi/send.ts:162</code></div>
+      </li>
+      <li>
+        <div class="ft">2. httpRequest -&gt; axios attache l'auth et part vers /api</div>
+        <div class="fd">httpRequest pose Content-Type, gzip eventuel des gros bodies (W1-GZIP), puis httpClient.request(). Le token Bearer + base URL sont injectes par l'intercepteur axios (requiresAuth:true par defaut). Cote web admin c'est l'equivalent <code>api.ts</code> (apiGet/Post) qui ajoute X-CSRF-Token + credentials:include car l'auth y passe par cookie HttpOnly, pas Bearer.</div>
+        <div class="ff"><code>museum-frontend/shared/api/httpRequest.ts:103</code></div>
+      </li>
+      <li>
+        <div class="ft">3. Le backend recoit : mur de middlewares globaux (app.ts)</div>
+        <div class="fd">applyGlobalMiddleware monte dans CET ordre precis : requestId -&gt; helmet (tot, pour que meme un 429 ait les headers) -&gt; tracePropagation -&gt; CORS -&gt; rate-limit IP -&gt; compression -&gt; [timeout] -&gt; decompression gzip -&gt; <code>express.js</code>on -&gt; cookieParser -&gt; csrf -&gt; acceptLanguage -&gt; dataMode. L'ordre est load-bearing (ex csrf APRES cookieParser pour lire le cookie).</div>
+        <div class="ff"><code>museum-backend/src/app.ts:179</code></div>
+      </li>
+      <li>
+        <div class="ft">4. Montage des routes sous /api (apiRouter)</div>
+        <div class="fd">createApiRouter expose /health + /health/deep puis mountDomainRouters branche chaque module sur son prefixe : /chat, /auth, /museums, /daily-art, /admin, /reviews, /leads, /telemetry... Chaque sous-routeur vient du dossier adapters/primary/http/routes d'un module.</div>
+        <div class="ff"><code>museum-backend/src/shared/routers/api.router.ts:349</code></div>
+      </li>
+      <li>
+        <div class="ft">5. Route PRIMARY du module : parse + middlewares route-specifiques</div>
+        <div class="fd">Ex POST /chat/sessions/:id/messages : le handler lit req.file / req.body, parse le contexte (locale, museumMode...), valide via Zod (parsePostMessageRequest), passe par isAuthenticated + dailyChatLimit + llmCostGuard + idempotency, puis appelle chatService.postMessage(). La route NE contient PAS de logique metier — elle traduit HTTP -&gt; appel useCase.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/adapters/primary/http/routes/chat-message.route.ts:81</code></div>
+      </li>
+      <li>
+        <div class="ft">6. Use-case = le cerveau metier (orchestration)</div>
+        <div class="fd"><code>chat.service.ts</code> est la facade ; il delegue a <code>chat-message.service.ts</code> qui orchestre la sequence reelle : guardrail input -&gt; persist message user -&gt; cache LLM lookup -&gt; generation -&gt; guardrail output -&gt; persist reponse. Le use-case ne connait QUE des interfaces (ports), jamais TypeORM ni LangChain directement.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:268</code></div>
+      </li>
+      <li>
+        <div class="ft">7. Adapter SECONDARY : le use-case touche le monde exterieur</div>
+        <div class="fd">this.orchestrator.generate() est un port ; l'implementation reelle est LangChainChatOrchestrator (appelle OpenAI/Deepseek/Gemini via .invoke() avec messages [System, System(section), ...history, Human], protege par circuit-breaker + semaphore). La persistance passe par TypeOrmChatRepository (port ChatRepository) -&gt; PostgreSQL. C'est ici, et SEULEMENT ici, qu'on parle a une lib/un service externe.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/adapters/secondary/llm/langchain.orchestrator.ts:240</code></div>
+      </li>
+      <li>
+        <div class="ft">8. Reponse remonte + filet de securite</div>
+        <div class="fd">Le DTO remonte useCase -&gt; route -&gt; errorHandler (<code>museum-backend/src/app.ts:353</code>) qui transforme toute AppError en JSON propre + status. Sentry capte les 500. Le body redescend par axios -&gt; ensureContract() valide la forme cote FE avant de toucher l'UI.</div>
+        <div class="ff"><code>museum-frontend/features/chat/infrastructure/chatApi/send.ts:168</code></div>
+      </li></ol>
+    <h3>À retenir</h3><div class="insight">DEUX styles de module, meme contrat hexagonal. Regarde un <code>index.ts</code> : <code>museum/index.ts</code> est un BARREL PUR (re-exporte juste les useCases depuis ./useCase). <code>chat/index.ts</code> est une COMPOSITION-ROOT (expose buildChatService qui instancie tout). Dans les deux cas la structure interne est identique : adapters/{primary,secondary} + domain + useCase. primary = qui m'appelle (HTTP), secondary = qui j'appelle (DB, LLM, S3). Si tu vois 'adapters/primary/http/routes' = porte d'entree ; 'adapters/secondary/llm' = sortie vers l'exterieur ; 'useCase' = metier pur ; 'domain' = types + interfaces (ports) + entites.</div><div class="insight">LES ALIAS D'IMPORT SONT TA BOUSSOLE. @modules/* (= src/modules) pointe un module, @shared/* (= src/shared) le code transverse (middlewares, cache, observability), @data/* (= src/data) la DB/migrations, @src/* la racine. Donc des qu'un fichier importe @shared/middleware/csrf.middleware tu sais que c'est de l'infra HTTP, et @modules/chat/domain/ports/... que c'est un contrat (interface) que le useCase consomme sans connaitre l'implem. Regle d'or hexagonale visible dans le code : un useCase n'importe JAMAIS depuis adapters/secondary directement — il recoit le port en parametre (DI dans <code>chat-module.ts</code> build()).</div><div class="insight">L'INVERSION DE DEPENDANCE EST CONCRETE, pas theorique. <code>chat-message.service.ts:337</code> fait this.orchestrator.generate(...) ou orchestrator est de type ChatOrchestrator (un port/interface dans domain/ports). Le useCase ne sait pas que c'est LangChain derriere. C'est exactement pour ca que les tests peuvent injecter un faux orchestrator (createApp accepte chatService en option, <code>app.ts:46</code>). Pour brancher Deepseek au lieu d'OpenAI : tu touches l'adapter secondary, jamais le useCase.</div><div class="insight">L'ORDRE DES MIDDLEWARES EST UN PIEGE A BUGS. Dans <code>app.ts</code> les commentaires expliquent POURQUOI chaque position : helmet AVANT rate-limit (sinon un 429 partait sans headers de securite, TD-HEL-01), decompression gzip AVANT <code>express.js</code>on (sinon le parser lit des octets compresses), csrf APRES cookieParser (sinon pas de cookie a lire). Quand tu ajoutes un middleware, sa POSITION dans applyGlobalMiddleware est une decision, pas un detail. Le mount /api vient APRES tout ce mur, donc chaque route herite gratuitement de CORS+csrf+rate-limit+trace.</div>
+    <h3>Fichiers-clés</h3>
+    <table><thead><tr><th>Fichier</th><th>Rôle</th></tr></thead><tbody>
+      <tr><td><code>museum-backend/src/app.ts:179</code></td><td>applyGlobalMiddleware — le mur d'entree commun a TOUTES les requetes. L'ordre des app.use() est la doctrine (helmet tot, csrf apres cookieParser, decompression avant <code>express.js</code>on).</td></tr>
+      <tr><td><code>museum-backend/src/app.ts:304</code></td><td>createApp() — assemble l'appli : wireAuthMiddleware -&gt; middlewares -&gt; /metrics gate super-admin -&gt; buildChatService (DI) -&gt; monte /api -&gt; errorHandler en dernier.</td></tr>
+      <tr><td><code>museum-backend/src/shared/routers/api.router.ts:349</code></td><td>mountDomainRouters — la table d'aiguillage : quel prefixe URL va vers quel module. Le point de depart pour 'ou est gere l'endpoint X ?'.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/index.ts:1</code></td><td>Barrel d'un module composition-root : expose buildChatService + accesseurs runtime. Compare au <code>museum/index.ts</code> (barrel pur qui re-exporte useCases).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/chat-module.ts:656</code></td><td>build() — composition root du module chat : instancie les adapters REELS (TypeOrmChatRepository:663, LangChainChatOrchestrator:708, imageStorage, PII sanitizer) et les injecte dans le ChatService. C'est ici que les ports recoivent leurs implementations.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/adapters/primary/http/routes/chat-message.route.ts:55</code></td><td>Adapter PRIMARY : traduit HTTP (multipart, headers, params) en appel chatService.postMessage. Zero logique metier.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:268</code></td><td>Le cerveau metier : sequence guardrail-&gt;persist-&gt;cache-&gt;generate-&gt;commit. Ne depend que de ports (interfaces).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/adapters/secondary/llm/langchain.orchestrator.ts:240</code></td><td>Adapter SECONDARY : la SEULE place qui parle a un LLM externe (structured.invoke + circuit-breaker + semaphore).</td></tr>
+      <tr><td><code>museum-frontend/shared/api/httpRequest.ts:103</code></td><td>Frontiere FE-&gt;BE cote mobile : wrapper axios partage (auth Bearer via intercepteur, gzip, mapping d'erreur). Tout appel API mobile passe par la.</td></tr>
+      <tr><td><code>museum-web/src/lib/api.ts:176</code></td><td>Equivalent cote web admin : auth par cookie HttpOnly + X-CSRF-Token + credentials:include (PAS de Bearer). Montre la difference de modele d'auth entre les 2 clients.</td></tr></tbody></table>
+    <div class="reality"><b>La réalité (honnête, vérifiée code) —</b> Tout ce qui precede est VERIFIE dans le code reel (lu, pas reconstitue de memoire) — les path:line sont exacts au 2026-06-04 sur la branche dev. Nuances honnetes : (1) Le streaming SSE FE-&gt;reponse token-par-token est MORT/enterre — sendMessageSmart ignore onToken/onDone et le seul transport reel est le postMessage synchrone (commentaire D1 explicite, <code>send.ts:176</code>). Donc 'du tap au pixel' = une seule reponse JSON, pas du streaming. (2) buildChatService accepte des overrides DI uniquement pour les tests (CreateAppOptions, <code>app.ts:46</code>) — en prod tout vient du composition root. (3) createChatRouter prend encore 8 args positionnels (dette assumee avec eslint-disable approuve, <code>chat/index.ts:25</code>) au lieu d'un objet d'options — refactor tracke en TECH_DEBT. (4) Le museum-web admin utilise un modele d'auth DIFFERENT du mobile (cookie HttpOnly + CSRF vs Bearer) : ne pas supposer que les 2 clients parlent au backend de la meme facon. (5) Le 3e 'parcours' (daily-art, museums, etc.) suit exactement la meme topologie route-&gt;useCase-&gt;adapter ; je n'ai trace en profondeur que le chat (le plus riche) comme fil conducteur.</div>
+    <details class="gloss"><summary>Glossaire du module</summary><dl><dt>Adapter primary (driving)</dt><dd>Code qui DECLENCHE le metier depuis l'exterieur. Chez toi = les routes HTTP sous adapters/primary/http/routes. Traduit une requete HTTP en appel de useCase.</dd><dt>Adapter secondary (driven)</dt><dd>Code que le metier APPELLE pour atteindre le monde exterieur : DB (TypeOrmChatRepository), LLM (LangChainChatOrchestrator), stockage image, sidecar PII. Implemente un port.</dd><dt>Port</dt><dd>Une interface dans domain/ports (ex ChatOrchestrator, ChatRepository). Le useCase en depend ; l'adapter secondary l'implemente. Permet de swapper l'implem (OpenAI&lt;-&gt;Deepseek, PG&lt;-&gt;mock) sans toucher le metier.</dd><dt>Composition root</dt><dd>L'endroit unique qui instancie les vrais adapters et les injecte (<code>chat-module.ts</code> build():656). C'est le seul fichier ou 'new LangChainChatOrchestrator' apparait.</dd><dt>Barrel (index.ts)</dt><dd>Fichier qui re-exporte l'API publique d'un module pour qu'on importe @modules/museum au lieu de chemins profonds. Politique minimal-barrel : on n'expose que le strict necessaire.</dd><dt>mountDomainRouters</dt><dd>La fonction d'<code>api.router.ts</code> qui associe chaque prefixe d'URL (/chat, /auth, /museums...) au routeur du module correspondant. Le plan de la surface API.</dd></dl></details>
+  </section>
+
+  <section id="m2">
+    <h2><span class="num">2</span> Le pipeline chat</h2>
+    <p class="topic">Le pipeline chat — defense en profondeur (du message user a la reponse TTS)</p>
+    <p class="big"><b>L’idée maîtresse —</b> Un seul tour de chat traverse 6 couches de garde-fous independantes (chacune couvrant un mode d echec different) avant ET apres l appel LLM, le tout cable pour de vrai au composition root — ce n est pas de la theorie.</p>
+    <p class="why"><b>Pourquoi ça compte —</b> C est le coeur produit de Musaium : si une seule couche cede (injection, off-topic, fuite PII, sidecar down, juge lent), les autres tiennent. Comprendre l ordre exact des couches et leur politique de panne (fail-CLOSED vs fail-OPEN vs fail-SOFT) te permet de modifier le chat sans rouvrir un trou de securite.</p>
+    <h3>Le flux réel, étape par étape</h3>
+    <ol class="flow">
+      <li>
+        <div class="ft">1. Entree + facade + consent gate GDPR</div>
+        <div class="fd">postMessage(sessionId, input{text?, image?, context{location, locale, museumMode...}}) entre par la facade ChatService qui delegue a ChatMessageService.postMessage, lequel appelle d abord pipeline.prepare(). Tout premier acte de prepare(): runConsentGate() AVANT meme ensureSessionAccess — un anonyme (currentUserId nullish) avec scope third_party_ai refuse fail-CLOSE sans jamais toucher la session ni Redis. Puis validation taille texte + ouverture session.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:267-287</code></div>
+      </li>
+      <li>
+        <div class="ft">2. Couche 1 — guardrail V1 keyword (sync ~5ms, hard-blocks)</div>
+        <div class="fd">guardrail.evaluateInput() lance d abord evaluateUserInputGuardrail() : normalize (lowercase + NFD + strip accents) puis recherche INSULT_KEYWORDS (8 langues) et INJECTION_PATTERNS (ignore previous, jailbreak, system prompt... 8 langues + CJK/arabe via includes). Match insulte -&gt; reason:insult ; match injection -&gt; reason:prompt_injection. Bloc -&gt; handleInputBlock persiste user+refus atomiquement, marque securityBlock=true (toute raison sauf off_topic).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/guardrail/art-topic-guardrail.ts:217-225</code></div>
+      </li>
+      <li>
+        <div class="ft">3. Couche 4 (input) — sidecar LLM-Guard, fail-CLOSED</div>
+        <div class="fd">Si V1 laisse passer, evaluateGuardrailProvider('input', ...) appelle le sidecar ProtectAI (prompt-injection/PII/toxicity). N importe quel throw -&gt; raw={allow:false, reason:error} = FAIL-CLOSED (ADR-047/048). En mode observeOnly (env.guardrails.observeOnly) un bloc est downgrade en allow apres log (rodage prod sans refuser l user). Si le sidecar scrub de la PII, redactedText remonte jusqu au call-site qui le substitue AVANT l LLM (LLM02).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/guardrail/eval/v2-layers.helper.ts:65-119</code></div>
+      </li>
+      <li>
+        <div class="ft">4. Sanitization + persist user + enrichissement parallele</div>
+        <div class="fd">effectiveUserText = redactedText ?? input.text, puis piiSanitizer.sanitize() (regex local, defense en profondeur). Le message user est persiste. Enrichissement (userMemory, KB, web search, location via Promise.all) + resolveCurrentArtwork ([CURRENT ARTWORK] si cartel scanne). sanitizePromptInput (NFC + strip zero-width/control + truncate 200) est applique aux champs context (location/locale) avant insertion prompt.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:281-290</code></div>
+      </li>
+      <li>
+        <div class="ft">5. Couche 2 — isolation structurelle dans le message array</div>
+        <div class="fd">buildSectionMessages construit [0]=SystemMessage(systemPrompt portant [END OF SYSTEM INSTRUCTIONS]), [1]=SystemMessage(sectionPrompt) = PREFIXE STABLE (cache prompt OpenAI/Gemini), puis tail variable : enveloppe Spotlighting &lt;untrusted_content&gt; (KB/web XML-escaped), history, userMessage (texte user enveloppe &lt;user_message&gt; avec &lt; &gt; remplaces par fullwidth), et en DERNIER un SystemMessage rappel anti-injection (sandwich). Le system est TOUJOURS avant le user.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:361-434</code></div>
+      </li>
+      <li>
+        <div class="ft">6. Appel LLM (LangChain) en PARALLELE du juge off-topic (hybrid-gravity)</div>
+        <div class="fd">Verif cache LLM d abord (tryLlmCacheLookup). Sinon, si friction activee (defaut true), friction.runParallel() lance Promise.allSettled([evaluateInputSemantic (juge LLM-as-judge, fail-OPEN), orchestrator.generate()]) : un message on-topic ajoute ~0 latence (voice-first). orchestrator.generate -&gt; buildOrchestratorMessages + buildSectionMessages + appel modele (env.llm.provider OpenAI/Deepseek/Google).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/guardrail/guardrail-escalation.ts:125-177</code></div>
+      </li>
+      <li>
+        <div class="ft">7. Escalade par gravite (off-topic soft-redirect / cool-down)</div>
+        <div class="fd">Juge allow ou null (fail-OPEN) -&gt; on rend la reponse. Juge off-topic : recordStrike (poids 1) sur scope session + principal (user, ou ip HASHEE RGPD), puis si sessionCount&gt;=3 OU userCount&gt;=10 -&gt; HARD-BLOCK cool-down (la reponse generee est SUPPRIMEE, tokens deja payes), sinon SOFT-REDIRECT (on rend quand meme la reponse). Bloc securite (etape 2) = recordSecurityStrike poids 2. Tout appel store est FAIL-SOFT (panne Redis -&gt; jamais de 500 ni de faux bloc).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:313-376</code></div>
+      </li>
+      <li>
+        <div class="ft">8. Couche 6 — output guardrail + persist + cache + TTS</div>
+        <div class="fd">commitAssistantResponse appelle evaluateOutput : aggregateOutputText (reponse + captions/rationales images) -&gt; V1 keyword puis sidecar V2 (defense-en-profondeur, catch leaks). Reponse vide ou contenant insulte/injection -&gt; reason:unsafe_output. Puis anti-hallucination (drop quotes non-verbatim + URL probe), persist row assistant (stampe avec cacheKey pour invalidation feedback), store cache LLM (jamais un refus). TTS via media.synthesizeSpeech a la demande, key incluant la voix.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/orchestration/message-commit.ts:161-217</code></div>
+      </li></ol>
+    <h3>À retenir</h3><div class="insight">POURQUOI defense-en-profondeur, couche par couche : V1 keyword (etape 2) attrape l evident en 5ms sans cout LLM (insultes, jailbreak connus) ; le sidecar (etape 3, fail-CLOSED) attrape l injection/PII subtile que les keywords ratent — fail-CLOSED car un scanner de securite muet = danger ; le juge LLM (etape 6, fail-OPEN) juge le SEMANTIQUE off-topic — fail-OPEN car un juge lent ne doit JAMAIS casser la dispo voice-first ; l isolation structurelle (etape 5) defend meme si tout le reste cede (le LLM voit clairement systeme vs user). Chaque couche = un mode d echec distinct, et la politique de panne est choisie par couche.</div><div class="insight">La regle d or des politiques de panne dans ce code : sidecar = fail-CLOSED (bloque en cas de doute, c est de la securite) ; juge = fail-OPEN (laisse passer en cas de doute, c est de la dispo) ; friction store Redis = fail-SOFT (panne = ni 500 ni faux bloc, juste pas d escalade). Confondre ces 3 te ferait soit refuser des users legitimes, soit ouvrir un trou. Le code le repete a chaque catch (<code>v2-layers.helper.ts:75-82</code> vs <code>guardrail-escalation.ts:108-111</code>).</div><div class="insight">Le passage inline -&gt; parallele du juge (hybrid-gravity, 2026-06-01) est la decision la plus subtile : avant, le juge tournait AVANT generate (latence serie sur CHAQUE message long). Maintenant runParallel lance juge + generate ensemble via Promise.allSettled (<code>guardrail-escalation.ts:131-139</code>). Un message on-topic paie ~0 latence supplementaire. Cout : si off-topic franchit le seuil, la reponse est deja generee donc payee en tokens — le commentaire <code>chat-message.service.ts:357-360</code> l assume honnetement (abort non cable, AbortSignal non supporte).</div><div class="insight">La friction n est PAS un simple compteur off-topic : c est 2 scopes (session + principal) avec des poids par gravite (securite=2, off-topic=1, <code>env.ts:448-449</code>) et 2 seuils (session=3, user/IP=10). Un spammeur d injections cumule des strikes poids-2 sur son IP hashee a travers TOUTES ses sessions (recordSecurityStrike) jusqu a armer un cool-down global. C est ce qui transforme un hard-block ponctuel en rate-limit progressif sans bannir un user qui derape une fois. L IP est toujours hashee (hashIp) — RGPD.</div>
+    <h3>Fichiers-clés</h3>
+    <table><thead><tr><th>Fichier</th><th>Rôle</th></tr></thead><tbody>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/orchestration/chat.service.ts:130-182</code></td><td>Facade + composition interne : assemble ChatSessionService / ChatMessageService / ChatMediaService et passe les deps safety (guardrailProvider, llmJudge, frictionStore...) et enrichment.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:267-352</code></td><td>Phase PRE-LLM : consent gate -&gt; session -&gt; image+OCR -&gt; guardrail input -&gt; persist user -&gt; enrichissement parallele. Renvoie ready|refused (refused porte securityBlock).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:268-376</code></td><td>Orchestration du tour complet : sanitize PII -&gt; cache -&gt; juge parallele + generate -&gt; escalade -&gt; commit. C est le chef d orchestre.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts:152-262</code></td><td>Service guardrail : evaluateInput (V1 keyword -&gt; sidecar -&gt; juge legacy si friction OFF), evaluateInputSemantic (leg off-topic parallele), evaluateOutput (V1+V2 sur sortie).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/guardrail/art-topic-guardrail.ts:34-225</code></td><td>Couche V1 keyword : listes INSULT_KEYWORDS + INJECTION_PATTERNS multilingues, normalize NFD, matching mot-entier vs includes (CJK/arabe). Pur, deterministe, ~5ms.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/guardrail/guardrail-escalation.ts:125-204</code></td><td>Hybrid-gravity : runParallel (juge en parallele de generate), politique d escalade 2-niveaux session/principal, recordSecurityStrike. Tout FAIL-SOFT.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:361-434</code></td><td>Construction du message array : prefixe stable [System, System(section)] avec [END OF SYSTEM INSTRUCTIONS], enveloppes &lt;untrusted_content&gt;, sandwich anti-injection en dernier.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/guardrail/eval/v2-layers.helper.ts:33-119</code></td><td>Les 2 couches V2 isolees : runLlmJudge (fail-OPEN, floor confiance 0.6, min 50 chars) et evaluateGuardrailProvider (sidecar fail-CLOSED + mode observe-only).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/chat-module.ts:715-900</code></td><td>Composition root REEL : configureGuardrailFriction({cache}) + injection frictionStore/guardrailProvider/llmJudge dans buildChatService. Preuve que hybrid-gravity tourne en prod.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts:118-148</code></td><td>Cache LLM (LlmCacheServiceImpl, ADR-036) : cle llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256} ; le sha256 folde model/systemSection/locale/prompt + voiceMode/audioDescriptionMode/imageContentHash (truthy-only).</td></tr></tbody></table>
+    <div class="reality"><b>La réalité (honnête, vérifiée code) —</b> VERIFIE ET ACTIF EN PROD : les 6 couches sont reellement cablees au composition root <code>chat-module.ts</code> (frictionStore injecte ligne 781/881, guardrailProvider 875, llmJudge 884, configureGuardrailFriction 720). frictionEnabled defaut=true (<code>env.ts:442</code>). NUANCES HONNETES : (1) le sidecar LLM-Guard (couche 4) n est actif QUE si GUARDRAILS_V2_LLM_GUARD_URL est set et tourne souvent en observeOnly (bloc downgrade en allow) — verifier env prod ; (2) le juge LLM (couche 5/6) n est actif QUE si budgetCentsPerDay &gt; 0 (llmJudgeEnabled, ligne 877) et ne juge que les messages &gt;50 chars (<code>v2-layers.helper.ts:39</code>) ; (3) hybrid-gravity : l ABORT de la generation off-topic n est PAS cable (les tokens sont payes meme quand la reponse est supprimee — assume dans le commentaire <code>chat-message.service.ts:357-360</code>, AbortSignal non supporte = tech-debt) ; (4) la friction store est fail-SOFT : si Redis tombe, l escalade ne se fait juste pas (degrade en soft-redirect pur), ce n est pas un bug mais un choix R14. La memoire projet (project_hybrid_gravity_guardrail) confirme : 19/19 tests live + 447/447 module, reviewer fresh a valide le cablage prod.</div>
+    <details class="gloss"><summary>Glossaire du module</summary><dl><dt>fail-CLOSED</dt><dd>Politique de panne du sidecar V2 : en cas de throw/timeout, on BLOQUE (allow:false). C est de la securite, le doute profite a la protection (<code>v2-layers.helper.ts:75-82</code>).</dd><dt>fail-OPEN</dt><dd>Politique du juge LLM : en cas de null/timeout/budget epuise, on LAISSE PASSER (allow). C est de la dispo, un juge lent ne doit jamais casser le chat voice-first (runLlmJudge:38-43).</dd><dt>fail-SOFT</dt><dd>Politique du friction store : une panne Redis degrade en soft-redirect / pas d escalade, jamais un 500 ni un faux hard-block (<code>guardrail-escalation.ts</code> catch blocks).</dd><dt>hybrid-gravity</dt><dd>Le guardrail par gravite (2026-06-01) : securite = hard-block inline + strike poids 2 ; off-topic = juge parallele -&gt; soft-redirect, escalade en cool-down seulement au-dela des seuils.</dd><dt>securityBlock</dt><dd>Flag sur PrepareRefused (<code>prepare-message.pipeline.ts:314-316</code>) = true pour toute raison de bloc V1/sidecar SAUF off_topic ; declenche un strike securite poids 2 au call-site.</dd><dt>prefixe stable</dt><dd>Les 2 premiers SystemMessage [systemPrompt, sectionPrompt] byte-identiques entre tours d une meme session -&gt; cache prompt OpenAI/Gemini. Tout le variable vient APRES (<code>llm-prompt-builder.ts:386-393</code>).</dd><dt>sandwich defense</dt><dd>Anti-injection structurel : marker [END OF SYSTEM INSTRUCTIONS] cote systeme + un dernier SystemMessage rappel apres le message user, pour que le LLM ne suive pas d instructions injectees (<code>llm-prompt-builder.ts:427-431</code>).</dd><dt>observeOnly</dt><dd>Mode du sidecar (env.guardrails.observeOnly) : il logge ce qu il AURAIT bloque mais downgrade en allow — permet de valider sur trafic prod sans refuser de vrais users (<code>v2-layers.helper.ts:93-105</code>).</dd></dl></details>
+  </section>
+
+  <section id="m3">
+    <h2><span class="num">3</span> Géo &amp; voix</h2>
+    <p class="topic">Geo &amp; voix — le contexte du monde réel (LocationResolver per-message + pipeline voix STT→LLM→TTS)</p>
+    <p class="big"><b>L’idée maîtresse —</b> Musaium injecte le « où » (géo per-message, jamais les coordonnées brutes au LLM) et le « comment » (voix STT→LLM→TTS) dans la conversation, avec deux protections de coût distinctes : un breaker global observe-only sur le voice spend et une clé de cache TTS voice-aware.</p>
+    <p class="why"><b>Pourquoi ça compte —</b> Ce sont les deux flux qui rendent Musaium « voice-first, dedans ET dehors » : la géo per-message permet de reconnaître qu'on est dans un musée vs devant un monument et de suggérer la proximité ; la voix est le mode d'interaction principal. Mal câblés, ils fuient la position GPS exacte (RGPD Art. 7) ou servent un audio périmé / explosent la facture OpenAI.</p>
+    <h3>Le flux réel, étape par étape</h3>
+    <ol class="flow">
+      <li>
+        <div class="ft">1. Le client envoie context.location = "lat:X,lng:Y" à CHAQUE message</div>
+        <div class="fd">Pas de session-scope : la position est ré-évaluée par message dans le pipeline d'enrichissement, en parallèle (Promise.all) avec la recherche collection et le routeur de faits. C'est volontaire — l'utilisateur bouge entre deux questions (sort du musée, change de monument).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:461</code></div>
+      </li>
+      <li>
+        <div class="ft">2. Gate de consentement RGPD AVANT tout appel réseau</div>
+        <div class="fd">resolveLocationForMessage évalue 2 scopes : location_to_llm (full → quartier+ville) &gt; location_coarse_to_llm (coarse → ville+pays). Anonyme, aucun des deux, OU erreur du checker → return undefined fail-closed : aucun signal géo n'entre dans le prompt, pas même le nom du musée.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/location-resolver.ts:227</code></div>
+      </li>
+      <li>
+        <div class="ft">3. parseLocationString valide les coords, puis LocationResolver.resolve décide in/out musée</div>
+        <div class="fd">findNearbyMuseums calcule la distance ; &lt; 200m (IN_MUSEUM_THRESHOLD_M) = dans un musée. Cas in-musée : PAS de reverse-geocoding (on sait déjà où on est), résultat caché 20min sous geo:resolve:{lat3}:{lng3} car l'utilisateur ne bouge pas dans un musée.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/location-resolver.ts:84</code></div>
+      </li>
+      <li>
+        <div class="ft">4. Cas extérieur (ville) : reverse-geocoding Nominatim, jamais caché au top-level</div>
+        <div class="fd">Le ResolvedLocation outdoor n'est PAS mis dans geo:resolve: — les distances nearby-museum dépendent des coords exactes. Seul l'appel Nominatim coûteux est caché (client séparé) sous nominatim:rev:{lat3}:{lng3}, arrondi à ~111m (TTL 24h positif / 1h négatif), rate-limité 1 req/s + User-Agent OSMF obligatoire, fail-open (null).</div>
+        <div class="ff"><code>museum-backend/src/shared/http/nominatim.client.ts:324</code></div>
+      </li>
+      <li>
+        <div class="ft">5. Le prompt-builder choisit le label selon la granularité ET in/out musée</div>
+        <div class="fd">In-musée → « inside or very near: &lt;musée&gt; ». Outdoor full → quartier (dégradé ville), coarse → ville seule + liste « Nearby museums: … » (suggestions de proximité). Garde-fou clé : si resolvedLocation est undefined MAIS context.location est une coordonnée brute, le bloc entier est DROPPÉ — sanitizePromptInput ne strippe pas les coords.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:211</code></div>
+      </li>
+      <li>
+        <div class="ft">6. Voix entrée : postAudioMessage → STT (transcribe), puis transcript routé vers postMessage</div>
+        <div class="fd">OpenAiAudioTranscriber (gpt-4o-mini-transcribe) décode le base64, biaise le prompt STT vers les noms propres déjà discutés (artiste/titre, données musée publiques). Le texte transcrit passe ensuite dans le pipeline standard postMessage → guardrails (V1 keyword + V2 sidecar/judge) + LLM. Les guardrails s'appliquent donc au texte intermédiaire.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:491</code></div>
+      </li>
+      <li>
+        <div class="ft">7. Voix sortie : synthesizeSpeech à la demande, clé de cache voice-aware</div>
+        <div class="fd">Séparé de la réponse texte (on-demand par messageId). targetVoice = user.ttsVoice ?? env.tts.voice (défaut 'alloy'). Clé = tts:v2:&lt;messageId&gt;:&lt;voiceId&gt; : le préfixe v2 + le voiceId ont été ajoutés (TD-28) car tts:&lt;messageId&gt; seul servait l'audio d'une AUTRE voix quand l'utilisateur changeait de voix. Format opus/OGG, persistance S3 fire-and-forget.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:242</code></div>
+      </li>
+      <li>
+        <div class="ft">8. Cost-confinement : breaker global cost observe-only + middleware per-user</div>
+        <div class="fd">STT et TTS appellent recordVoiceCost → LlmCostCircuitBreaker.recordCharge (estimateSttCostCents=0.4¢ flat, estimateTtsCostCents linéaire en chars). La voix N'EST JAMAIS gatée sur canAttempt() (observe-only, design §D4) : un pic voix accumule la dépense et peut faire tripper le path TEXTE (cap horaire $50 / quotidien $500). Couche distincte : llm-cost-guard.middleware (blocage per-user Redis).</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/adapters/secondary/audio/text-to-speech.openai.ts:182</code></div>
+      </li></ol>
+    <h3>À retenir</h3><div class="insight">POURQUOI la géo est per-message et pas par session : un visiteur sort du musée pour photographier le Pont de Pierre, ou se déplace d'une salle à l'autre. resolveLocationForMessage est appelé à chaque message (<code>prepare-message.pipeline.ts:461</code>). Optimisation fine : in-musée le résultat est caché 20min (on ne bouge pas), mais en ville on ne cache QUE l'appel Nominatim (clé arrondie ~111m), pas le ResolvedLocation complet — car les distances aux musées proches dépendent des coords exactes (<code>location-resolver.ts:46-47</code>).</div><div class="insight">POURQUOI 3 labels et jamais la coordonnée brute au LLM : ResolvedLocation porte reverseGeocode (fine, name+road+suburb+city, INTERNE analytics only), reverseGeocodeCoarse (ville+pays) et reverseGeocodeNeighbourhood (quartier+ville). Le prompt n'émet QUE coarse ou neighbourhood selon le consentement. Filet de sécurité réel : si le consentement est refusé, resolveLocationForMessage retourne undefined, et comme le client envoie quand même "lat:X,lng:Y" dans context.location, le prompt-builder DROP le bloc entier quand isCoordinateString est vrai (<code>llm-prompt-builder.ts:203</code>) — sinon sanitizePromptInput laisserait fuiter le GPS exact.</div><div class="insight">POURQUOI la clé TTS DOIT inclure la voix : avant TD-28 la clé était tts:&lt;messageId&gt;. Un utilisateur qui change sa voix (user.ttsVoice) re-demandait l'audio du même message et récupérait l'ancienne voix depuis le cache. Le préfixe a été bumpé en tts:v2:&lt;messageId&gt;:&lt;voiceId&gt; (<code>chat-media.service.ts:242</code>). Règle généralisable du gotcha CLAUDE.md : toute clé de cache dérivée d'un paramètre tweakable par l'utilisateur DOIT inclure ce paramètre.</div><div class="insight">POURQUOI le breaker voix est observe-only : les adaptateurs STT/TTS appellent recordCharge mais ne consultent JAMAIS canAttempt() (commentaires design §D4 dans les 2 adaptateurs). Conséquence : une attaque/pic via la voix accumule la dépense dans le breaker GLOBAL partagé et peut faire tripper le path TEXTE (cap horaire $50 / quotidien $500), au lieu de bloquer la voix. C'est de la defense-in-depth : la vraie protection de la voix est la couche distincte llm-cost-guard.middleware (blocage per-user Redis, plafonds audio $0.012 / tts $0.0015).</div>
+    <h3>Fichiers-clés</h3>
+    <table><thead><tr><th>Fichier</th><th>Rôle</th></tr></thead><tbody>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/location-resolver.ts:227</code></td><td>Gate RGPD 3-niveaux (resolveLocationForMessage) + LocationResolver.resolve (décision in/out musée, cache 20min in-musée, granularité full/coarse/none fail-closed)</td></tr>
+      <tr><td><code>museum-backend/src/shared/http/nominatim.client.ts:324</code></td><td>Client Nominatim caché OSMF-conforme : clé arrondie ~111m, TTL 24h+/1h-, rate-limiter 1 req/s singleton, User-Agent, fail-open null</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/llm/llm-prompt-builder.ts:195</code></td><td>buildVisitorContextLine : transforme ResolvedLocation en bloc &lt;visitor_context&gt; ; choisit quartier/ville selon consentement, drop si coord brute, ajoute la liste musées proches</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/orchestration/prepare-message.pipeline.ts:461</code></td><td>Point d'appel PER-MESSAGE de la résolution géo, en parallèle de l'enrichissement (Promise.all)</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/audio/chat-media.service.ts:218</code></td><td>synthesizeSpeech : clé cache tts:v2:&lt;messageId&gt;:&lt;voiceId&gt; (voice-aware, TD-28), targetVoice = user.ttsVoice ?? défaut, persistance S3 découplée</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/message/chat-message.service.ts:480</code></td><td>postAudioMessage : STT (transcribe avec biais noms propres) puis transcript → postMessage (guardrails + LLM sur le texte intermédiaire)</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/adapters/secondary/audio/voice-cost-pricing.ts:31</code></td><td>Estimateurs de coût voix conservateurs (STT 0.4¢ flat car pas de durée connue ; TTS linéaire 15$/1M chars) alimentant le breaker global</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker.ts:74</code></td><td>Breaker cost global (ThreeStateCircuit + CostTripStrategy) : trip sur pic horaire $50 OU cap quotidien UTC $500 ; voix observe-only</td></tr>
+      <tr><td><code>museum-backend/src/shared/circuit-breaker/three-state-circuit.ts:74</code></td><td>Primitive FSM CLOSED→OPEN→HALF_OPEN générique, réutilisée par les 3 breakers (latence/cost/guardrail)</td></tr></tbody></table>
+    <div class="reality"><b>La réalité (honnête, vérifiée code) —</b> Vérifié dans le code (pas supposé). GÉO : per-message, cache 20min in-musée, cache Nominatim séparé arrondi ~111m, gate RGPD fail-closed, drop coord brute — tout est réel et câblé. VOIX : STT→LLM via postAudioMessage→postMessage est réel ; les guardrails s'appliquent bien au transcript (le transcript passe par le pipeline standard). NUANCE IMPORTANTE : la voix n'est PAS un pipeline auto-chaîné STT→LLM→TTS en un seul appel — le TTS (synthesizeSpeech) est une synthèse À LA DEMANDE par messageId, séparée de la réponse texte (Realtime WebRTC reporté V1.1, cf CLAUDE.md). COÛT : estimateSttCostCents est un plat 0.4¢ honnête car l'adaptateur n'a PAS de source de durée (durationKnown:false, TD-20) — borne conservatrice, pas une vraie mesure ; le breaker over-protège donc volontairement. ENV : nominatim/S3/Langfuse fail-open partout (null/log, jamais de crash du hot path) — robuste mais signifie qu'une panne géo dégrade silencieusement le contexte.</div>
+    <details class="gloss"><summary>Glossaire du module</summary><dl><dt>ResolvedLocation</dt><dd>Objet domaine portant nearbyMuseums, distances, 3 labels géo (fine interne / coarse / neighbourhood), consentGranularity et isInsideMuseum</dd><dt>IN_MUSEUM_THRESHOLD_M</dt><dd>200m — en-dessous, on considère l'utilisateur DANS un musée ; déclenche le cache 20min et saute le reverse-geocoding</dd><dt>reverse-geocoding</dt><dd>Convertir des coordonnées GPS en adresse lisible via Nominatim (OpenStreetMap), seulement en extérieur</dd><dt>observe-only (breaker)</dt><dd>L'adaptateur enregistre la dépense (recordCharge) mais ne bloque jamais sur canAttempt() — la voix alimente le cap global sans s'auto-bloquer</dd><dt>fail-closed / fail-open</dt><dd>Géo consentement = fail-closed (erreur → aucune position émise) ; Nominatim/S3 = fail-open (erreur → null + log, le hot path continue)</dd><dt>TD-28</dt><dd>Correctif qui a rendu la clé cache TTS voice-aware (tts:v2:&lt;messageId&gt;:&lt;voiceId&gt;) pour ne plus servir l'audio d'une voix périmée</dd></dl></details>
+  </section>
+
+  <section id="m4">
+    <h2><span class="num">4</span> Auth, consentement &amp; RGPD</h2>
+    <p class="topic">Auth, consentement &amp; RGPD — la conformité câblée dans Musaium</p>
+    <p class="big"><b>L’idée maîtresse —</b> L'auth Musaium est une rotation de refresh-token "banking-grade" à familles révocables sur réutilisation, posée sur des tokens device-bound côté FE ; la conformité RGPD est exécutée par du code (consent gate fail-closed, erasure multi-store, audit hash-chain) — pas par une politique sur papier.</p>
+    <p class="why"><b>Pourquoi ça compte —</b> Tim vend un compagnon IA qui envoie des données utilisateur à OpenAI/Google : la moindre faille auth ou un trou RGPD (consentement, droit à l'effacement, registre inviolable) est un risque légal direct et un signal de sérieux pour des futurs musées B2B. Comprendre où la conformité est réelle vs honor-system est vital avant le launch V1.</p>
+    <h3>Le flux réel, étape par étape</h3>
+    <ol class="flow">
+      <li>
+        <div class="ft">1. Login (BE) — vérif identité + portes 403</div>
+        <div class="fd">AuthSessionService.login() normalise l'email, applique le rate-limiter en mémoire, bcrypt.compare le mot de passe, puis 4 portes 403 dans un ordre précis : deletedAt &gt; suspended &gt; email_verified (ADR-052 : le signal opérateur prime sur la bannière de vérification). Messages d'erreur volontairement génériques (INVALID_CREDENTIALS) pour ne pas révéler si un compte existe ou utilise le social sign-in.</div>
+        <div class="ff"><code>museum-backend/src/modules/auth/useCase/session/authSession.service.ts:89-162</code></div>
+      </li>
+      <li>
+        <div class="ft">2. Émission de la paire JWT à familles</div>
+        <div class="fd">SessionIssuerService.issueSession() génère accessJti + refreshJti + familyId (3 UUID). L'access token (HS256, TTL court) porte sub/role/museumId ; le refresh porte familyId. On ne stocke JAMAIS le refresh en clair : seul son sha256 va en base (tokenHash), donc une fuite de la table refresh_tokens ne donne pas de tokens utilisables. iss+aud épinglés par famille (musaium-access vs musaium-refresh) → un access token ne peut pas se faire passer pour un refresh.</div>
+        <div class="ff"><code>museum-backend/src/modules/auth/useCase/session/session-issuer.service.ts:57-111</code></div>
+      </li>
+      <li>
+        <div class="ft">3. Persistance device-bound (FE)</div>
+        <div class="fd">AuthContext reçoit la réponse, écrit refresh+access dans authStorage qui délègue à expo-secure-store avec keychainAccessible = WHEN_UNLOCKED_THIS_DEVICE_ONLY : les tokens n'entrent jamais dans une sauvegarde iCloud/iTunes et ne migrent pas vers un autre appareil. L'access token vit aussi en RAM (variable module getAccessToken) pour l'attacher aux requêtes sans I/O keychain à chaque appel.</div>
+        <div class="ff"><code>museum-frontend/features/auth/infrastructure/authTokenStore.ts:55-67</code></div>
+      </li>
+      <li>
+        <div class="ft">4. Rotation banking-grade + détection de réutilisation</div>
+        <div class="fd">refresh() vérifie le JWT, charge la ligne par jti, puis assertRefreshTokenUsable() : si le hash fourni ≠ hash stocké OU si la ligne est déjà rotated/revoked/reuseDetected → revokeFamily(reuseDetected=true), TOUTE la famille meurt (un attaquant qui rejoue un vieux token tue la session du vrai user, qui doit se relogger = signal). Sinon expiry, puis fenêtre d'inactivité glissante (lastRotatedAt). rotate() est atomique : insère le nouveau + marque l'ancien rotatedAt dans une seule transaction.</div>
+        <div class="ff"><code>museum-backend/src/modules/auth/useCase/session/session-issuer.service.ts:113-142</code></div>
+      </li>
+      <li>
+        <div class="ft">5. Consent gate fail-CLOSED (RGPD Art.7) avant tout appel LLM</div>
+        <div class="fd">Dans le pipeline chat, checkThirdPartyAiConsent() calcule les scopes requis (text et/ou image selon le tour) et exige TOUS les consentements (AND-intersection). Le checker applique le fail-closed : userId null/undefined → false SANS consulter la base (un anonyme est refusé par défaut). Un refus court-circuite AVANT persistMessage et AVANT que le texte brut n'atteigne Redis/BullMQ → AppError CONSENT_REQUIRED, aucune ligne message n'est créée.</div>
+        <div class="ff"><code>museum-backend/src/modules/chat/useCase/orchestration/consent-gate.ts:55-82</code></div>
+      </li>
+      <li>
+        <div class="ft">6. Effacement multi-store (RGPD Art.17), ordre load-bearing</div>
+        <div class="fd">DeleteAccountUseCase.execute() efface dans un ordre OBLIGATOIRE car la cascade DB détruit les refs : (1) images S3, (2) audio TTS S3, (3) contact marketing Brevo — si Brevo échoue, on N'abandonne PAS : on persiste un lead brevo_erasure que le cron de redelivery retentera (jamais de PII tierce résiduelle silencieuse), (3.b) lignes leads par email, (4) cascade DB (chat_sessions→messages, users→tokens/consents). Chaque étape externe est best-effort (un échec est loggé et avalé, la suppression DB continue). Les audit_logs sont VOLONTAIREMENT conservés (obligation légale, chaîne immuable).</div>
+        <div class="ff"><code>museum-backend/src/modules/auth/useCase/account/deleteAccount.useCase.ts:105-189</code></div>
+      </li>
+      <li>
+        <div class="ft">7. Registre d'audit en chaîne de hash inviolable</div>
+        <div class="fd">Chaque action sensible (grant/revoke consent, etc.) appelle AuditService.log(). AuditRepositoryPg.appendOne() prend un pg_advisory_xact_lock cluster-wide (sérialise les append, sinon deux INSERT concurrents verraient le même tail et forkeraient la chaîne), lit le row_hash de queue, calcule le nouveau hash via computeRowHash(input, prevHash) et écrit. verifyAuditChain() rejoue toute la chaîne depuis le génésis (64 zéros) et signale la première rupture — toute altération a posteriori d'une ligne casse tous les hash suivants.</div>
+        <div class="ff"><code>museum-backend/src/shared/audit/audit.repository.pg.ts:75-111</code></div>
+      </li></ol>
+    <h3>À retenir</h3><div class="insight">LE PIÈGE JSON.stringify replacer-array (cas d'école, <code>audit-chain.ts:43-46</code>) : computeRowHash fait JSON.stringify(input.metadata, Object.keys(input.metadata).sort()). Le 2e argument de JSON.stringify n'est PAS qu'un ordonnanceur de clés — quand c'est un tableau, c'est une ALLOWLIST de propriétés appliquée RÉCURSIVEMENT à tous les niveaux. Donc pour un metadata imbriqué comme {action:'notify', cnil:{ref:'X', severity:'high'}}, seules les clés top-level (action, cnil) sont dans l'allowlist ; les clés internes (ref, severity) n'y sont pas → l'objet cnil est sérialisé comme {} vide. Deux notifications CNIL avec des contenus internes DIFFÉRENTS produisent le MÊME hash = collision. Le contenu nested est invisible à la chaîne d'intégrité. La leçon : pour canonicaliser un objet de profondeur arbitraire, le replacer-array est le mauvais outil ; il faut un sérialiseur à clés triées récursif (replacer-FONCTION, ou tri récursif manuel) avant le hash.</div><div class="insight">Pourquoi la rotation est 'banking-grade' et pas juste 'un refresh token' : la combinaison familyId + sha256-only + revokeFamily-sur-reuse implémente le pattern OWASP de détection de vol. Si un attaquant vole un refresh et le rejoue après que le vrai user a déjà tourné (<code>session-issuer.service.ts:124-127</code>), le hash ne matche plus OU la ligne est déjà rotated → toute la famille est tuée. Conséquence pédagogique importante : le vrai user est déconnecté aussi (c'est voulu — le réveil forcé est le signal). C'est pour ça que la fenêtre d'inactivité glissante existe en plus (ligne 134-141) : sans rotation pendant X, on force la re-auth même sans vol.</div><div class="insight">Le logout doit gérer DEUX surfaces, pas une (<code>authSession.service.ts:226-250</code>) : révoquer le refresh token ne suffit pas, car l'access token reste cryptographiquement VALIDE jusqu'à son TTL (≤15 min). D'où la denylist Redis sur le access-jti, avec un TTL = exp - now (on n'inscrit rien si déjà expiré). Le logout est volontairement idempotent et fail-OPEN : un token invalide est avalé silencieusement (fiabilité côté FE), et un échec d'écriture denylist ne casse pas le logout. C'est l'inverse exact du consent gate qui, lui, est fail-CLOSED.</div><div class="insight">Fail-OPEN vs fail-CLOSED, choisis selon l'enjeu : le consent gate RGPD est fail-CLOSED (<code>consent-gate.ts</code> + checker:42-44 : dans le doute on REFUSE, car laisser passer = violation Art.7). Le logout/denylist est fail-OPEN (dans le doute on continue, car bloquer = user coincé connecté). L'erasure Art.17 (deleteAccount) est best-effort par étape externe MAIS la cascade DB s'exécute toujours, avec une outbox durable pour Brevo : on accepte qu'une étape tierce rate temporairement, jamais qu'elle bloque la suppression légale ni qu'elle laisse de la PII résiduelle non retentée.</div>
+    <h3>Fichiers-clés</h3>
+    <table><thead><tr><th>Fichier</th><th>Rôle</th></tr></thead><tbody>
+      <tr><td><code>museum-backend/src/modules/auth/useCase/session/authSession.service.ts:89-211</code></td><td>Façade auth : login (4 portes 403, ordre ADR-052), refresh (rotation), logout (denylist access-jti côté Redis car révoquer le refresh laisse l'access valide jusqu'à son TTL).</td></tr>
+      <tr><td><code>museum-backend/src/modules/auth/useCase/session/session-issuer.service.ts:113-142</code></td><td>Cœur banking-grade : assertRefreshTokenUsable — reuse → revokeFamily(true), expiry, fenêtre d'inactivité glissante. Co-pinné Stryker (fichier hot mutation-testé).</td></tr>
+      <tr><td><code>museum-backend/src/modules/auth/useCase/session/token-jwt.service.ts:12-13,80-85</code></td><td>Familles de tokens : iss+aud distincts (musaium-access / musaium-refresh) épinglés à sign ET verify pour bloquer la token-confusion ; refresh stocké en sha256 seulement.</td></tr>
+      <tr><td><code>museum-frontend/features/auth/infrastructure/authTokenStore.ts:55-67</code></td><td>Tokens device-bound : keychainAccessible WHEN_UNLOCKED_THIS_DEVICE_ONLY (TD-SEC-01) — non-backup-migratable. La constante est lue sur le module chargé pour avoir la vraie valeur enum iOS au runtime.</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/useCase/third-party-ai-consent-checker.ts:40-52</code></td><td>Fail-closed RGPD Art.7 : anonyme = refusé sans toucher la base (D3). Lazy-import pour casser le cycle init chat↔auth.</td></tr>
+      <tr><td><code>museum-backend/src/modules/auth/useCase/account/deleteAccount.useCase.ts:96-189</code></td><td>Erasure Art.17 multi-store, ordre load-bearing avant cascade DB ; Brevo échoue → outbox durable au lieu de drop ; audit_logs conservés (obligation légale).</td></tr>
+      <tr><td><code>museum-backend/src/shared/audit/audit-chain.ts:39-60</code></td><td>computeRowHash — SHA-256 canonique pipe-separated avec prev_hash chaîné. CONTIENT LE BUG (replacer-array récursif).</td></tr>
+      <tr><td><code>museum-backend/src/shared/audit/audit.repository.pg.ts:67-111</code></td><td>Writer INSERT-only : advisory lock cluster-wide pour sérialiser la chaîne (cap 50-200/s, ADR-054 Merkle batch prévu à 100k MAU).</td></tr></tbody></table>
+    <div class="reality"><b>La réalité (honnête, vérifiée code) —</b> VÉRIFIÉ et réel (code lu) : la rotation à familles + revokeFamily-sur-reuse + fenêtre glissante (<code>session-issuer.service.ts</code>), le sha256-only du refresh, l'épinglage iss+aud par famille (<code>token-jwt.service.ts</code>), le device-bound WHEN_UNLOCKED_THIS_DEVICE_ONLY (<code>authTokenStore.ts:62</code>), le fail-closed anonyme (checker:42-44), l'ordre load-bearing de l'erasure + outbox Brevo (<code>deleteAccount.useCase.ts</code>), l'advisory lock qui sérialise la chaîne (<code>audit.repository.pg.ts:67-73</code>). BUG CONFIRMÉ par lecture source (audit 360 du 2026-06-04) : computeRowHash (<code>audit-chain.ts:43-46</code>) passe Object.keys(metadata).sort() comme replacer-array à JSON.stringify, appliqué récursivement → tout objet imbriqué dans metadata est haché comme {} vide ; collision réelle sur le chemin notification CNIL (metadata à contenu nested). La chaîne reste inviolable pour les metadata PLATS (consentements via buildConsentAuditMetadata sont plats, donc OK aujourd'hui), mais l'invariant 'le hash couvre tout le contenu' est FAUX dès qu'un appelant écrit du nested. À corriger avant de s'appuyer dessus comme registre légal complet. NUANCE honnête : je n'ai pas trouvé en code le chemin 'notification CNIL' qui écrit du metadata nested (grep CNIL ne sort que des migrations/templates non liés au hash) — le bug du replacer récursif est prouvé par lecture du code ; l'occurrence concrète 'CNIL' provient du rapport d'audit cité dans le brief, je ne l'ai pas re-vérifiée ligne par ligne. Le MFA mobile a été retiré (web-admin-only, ADR-017 Withdrawn-for-V1) — login() retourne mfaRequired géré gracieusement mais aucun écran mobile n'affiche de secret TOTP.</div>
+    <details class="gloss"><summary>Glossaire du module</summary><dl><dt>Token family (familyId)</dt><dd>UUID partagé par toutes les générations successives d'un même refresh token. Permet de révoquer d'un coup toute la lignée quand un vol/replay est détecté.</dd><dt>Refresh-token rotation</dt><dd>À chaque refresh, l'ancien token est invalidé et un nouveau émis (rotate atomique). Un token n'est utilisable qu'une fois ; le réutiliser = signal de vol.</dd><dt>Fail-closed / fail-open</dt><dd>En cas d'incertitude (erreur, donnée manquante), fail-closed REFUSE (consent gate RGPD) ; fail-open AUTORISE (logout/denylist). On choisit selon que le risque est de laisser passer ou de bloquer à tort.</dd><dt>Device-bound token (WHEN_UNLOCKED_THIS_DEVICE_ONLY)</dt><dd>Classe d'accessibilité keychain iOS : le secret ne sort pas dans les sauvegardes iCloud/iTunes et ne migre pas vers un autre appareil.</dd><dt>Hash chain (registre en chaîne)</dt><dd>Chaque ligne d'audit contient le hash de la précédente (prev_hash) + son propre hash. Altérer une ligne casse tous les hash suivants → falsification détectable par rejeu (verifyAuditChain).</dd><dt>JSON.stringify replacer-array</dt><dd>2e argument de JSON.stringify sous forme de tableau : c'est une ALLOWLIST de propriétés appliquée à TOUS les niveaux d'imbrication. Toute clé absente (y compris dans un sous-objet) est omise — source du bug de collision.</dd><dt>pg_advisory_xact_lock</dt><dd>Verrou applicatif PostgreSQL au niveau transaction, relâché au COMMIT/ROLLBACK. Ici il sérialise les INSERT d'audit pour que la chaîne ne forke pas sous concurrence.</dd><dt>Outbox durable (Brevo)</dt><dd>Quand la suppression du contact marketing échoue, on persiste l'intention (lead brevo_erasure) qu'un cron retente — au lieu d'avaler l'échec et laisser de la PII tierce survivre.</dd></dl></details>
+  </section>
+
+  <section id="m5">
+    <h2><span class="num">5</span> Tout le reste (depuis le 28 mai)</h2>
+    <p class="topic">Tout le reste — ce qui a shippé depuis le 28 mai : résilience réseau faible (W1-W3), migration Maestro macOS→ubuntu+KVM + remédiation e2e + parité iOS/Android, et le test e2e réel des couches V2 guardrail</p>
+    <p class="big"><b>L’idée maîtresse —</b> Trois chantiers qui durcissent Musaium contre le réel — réseau 2G/edge, vraie CI mobile, vraies couches de sécurité IA — tous sous la même doctrine : prouver localement (2 min) ce que la CI ne pourra prouver que 15 min trop tard.</p>
+    <p class="why"><b>Pourquoi ça compte —</b> Ces trois chantiers transforment des « ça devrait marcher » en « c'est prouvé » : un visiteur sous edge dans un musée souterrain peut uploader sa photo, la CI mobile catche les régressions par-PR au lieu de jamais, et les couches de sécurité IA V2 que le code prétendait avoir sont enfin réellement exécutées (elles étaient silencieusement débranchées en test).</p>
+    <h3>Le flux réel, étape par étape</h3>
+    <ol class="flow">
+      <li>
+        <div class="ft">1. Le keystone : un registre de profils réseau gelé, source unique FE↔BE</div>
+        <div class="fd">6 profils ratifiés (offline/2g/edge/3g-lossy/flapping/normal) décrits comme données pures — aucun import react/netinfo (pureté EARS R6). Le module FE est la vérité ; le BE en garde une copie byte-identique dans une 'data region' délimitée par des marqueurs LOAD-BEARING. Un sentinel sha256 (<code>net-profiles-parity.mjs</code>) hash UNIQUEMENT les octets entre marqueurs et fail si les deux dérivent. La conversion kbps→KB/s n'existe qu'à UN endroit (toToxics, DRY R4).</div>
+        <div class="ff"><code>museum-frontend/shared/infrastructure/connectivity/networkProfiles.ts:96</code></div>
+      </li>
+      <li>
+        <div class="ft">2. Compression adaptative à l'upload (~16-18×)</div>
+        <div class="fd">decideCompression(dataMode, webpSupported) est pure : 'normal' garde le legacy 1600px JPEG (2.7 Mo, byte-identique), 'low'/'edge' produit DEUX sorties — un upload ~150 Ko (1024px WebP q0.60) ET un dérivé local ~320 Ko (1280px WebP q0.70) pour le carnet. 2.7 Mo → 150 Ko = ~18×, transformant un upload edge de &gt;3 min en ~13 s. WebP non supporté → fallback JPEG.</div>
+        <div class="ff"><code>museum-frontend/features/chat/application/compressionDecision.pure.ts:90</code></div>
+      </li>
+      <li>
+        <div class="ft">3. gzip de requête FE + décompression BE prod-safe (anti zip-bomb)</div>
+        <div class="fd">Côté FE, maybeGzipBody gzip (pako) le JSON &gt;1024 octets UNIQUEMENT en data mode 'low' et JAMAIS du FormData (axios gère sa propre frontière multipart). Côté BE, un middleware monté après compression() et AVANT <code>express.js</code>on inflate gzip/deflate/br via un compteur d'octets STREAMING capé à <code>env.js</code>onBodyLimit : à la moindre dépassée il détruit le flux et renvoie 413 AVANT de matérialiser le payload (prouvé par un test 16 Mio→cap 1 Mio). Prod-safe : ne se débranche jamais selon l'environnement.</div>
+        <div class="ff"><code>museum-backend/src/shared/middleware/request-decompression.middleware.ts:143</code></div>
+      </li>
+      <li>
+        <div class="ft">4. Robustesse retry : idempotency + 3 couches de test</div>
+        <div class="fd">Idempotency-Key dedup sur POST messages, monté APRÈS les validators (sinon une 400 brûlerait la clé — gotcha 'Mutating middleware ordering'), fail-OPEN. Le test-track a 3 couches : L1 = harness FE pur (withNetworkSim : latence+perte déterministes par seed), L2 = middleware BE d'injection de faute (net-profile-fault, TEST-ONLY, piloté par headers X-Net-Profile/X-Net-Fail-Count, gardé hors prod par un sentinel), L3 = Toxiproxy device-track.</div>
+        <div class="ff"><code>museum-backend/src/shared/net-shaping/net-profile-fault.middleware.ts:1</code></div>
+      </li>
+      <li>
+        <div class="ft">5. L3 Toxiproxy : shaping transport réel, gardé hors prod</div>
+        <div class="fd">profile-to-toxics traduit chaque profil en toxics Toxiproxy sur les DEUX directions (upstream bwUpKbps/8 + downstream bwDownKbps/8 + latency — le reviewer a chopé qu'une seule direction était shapée, rendant la métrique de compression non-signifiante). Le service toxiproxy est dans <code>docker-compose.dev.yml</code> sous profiles:[weaknet] (le `pnpm dev` quotidien reste byte-inchangé) ; un sentinel toxiproxy-no-prod fail si l'image ou :3100/:8474 apparaît dans un artefact prod.</div>
+        <div class="ff"><code>museum-backend/docker-compose.dev.yml:125</code></div>
+      </li>
+      <li>
+        <div class="ft">6. Maestro migré macOS→ubuntu+KVM : per-PR enfin possible</div>
+        <div class="fd">Les runners ubuntu-latest exposent /dev/kvm (virtualisation nested) → un AVD x86_64 tourne accéléré matériellement, vs le chemin arm64 software-only de macos-latest (HVF indispo sur Mac hébergé). L'APK est buildé x86_64-only (gradlew -PreactNativeArchitectures=x86_64, divise par 4 le build natif). Backend via GHA services pgvector/pgvector:pg16 + redis:7-alpine (sinon migration AddArtworkEmbeddings revert / BullMQ ECONNREFUSED). Per-PR = subset `smoke` (~12 min, 1 boot émulateur), full 4-shards en nightly cron + push main.</div>
+        <div class="ff"><code>.github/workflows/ci-cd-mobile.yml:314</code></div>
+      </li>
+      <li>
+        <div class="ft">7. Remédiation faux-vert : ce qui passait ne testait rien</div>
+        <div class="fd">Le faux-vert e2e (0/43 réel) venait de causes structurelles : APK dev-client launcher au lieu de Release, et — chopé par le reviewer sur la W3 netshape — le job nightly réutilisait l'APK baké au :3000 (NON shapé) ; corrigé par un job prebuild-netshape dédié bakant au :3100 + seed Toxiproxy fail-hard (assert qu'un toxic upstream ET downstream sont vivants avant boot). Boot émulateur flaky → retry attempt-1 continue-on-error + attempt-2 décisif. Échec → issue GitHub auto + <code>nightly-status.mjs</code> à lancer en début de session frontend.</div>
+        <div class="ff"><code>museum-frontend/scripts/maestro-run-shard.sh:52</code></div>
+      </li>
+      <li>
+        <div class="ft">8. Parité iOS/Android + couches V2 guardrail réellement exécutées</div>
+        <div class="fd">Parité : 3 fixes verts sur émulateur Android ET iPhone 17/iOS 26.5 — consent IA tierce server-side (clearState ne le ré-arme pas → optional tap), reviews scrollUntilVisible (le swipe aveugle dépassait la ligne), input très long découpé en 4 chunks + hideKeyboard gaté Android (abort sur iOS). Les vrais blockers shards étaient des artefacts d'état LOCAL (install résiduel → chooser 'Open with' ; quota épuisé → paywall), pas des bugs yaml. V2 guardrail : buildChatTestService DROPPAIT les deps V2 → les tests passaient en V1-only ; le fix passe guardrailProvider/llmJudge verbatim à ChatService, et guardrail-v2-live (13 it, zéro mock) verrouille fail-CLOSED (sidecar down → bloque) et fail-OPEN (judge timeout/budget → laisse passer).</div>
+        <div class="ff"><code>museum-backend/tests/helpers/chat/chatTestApp.ts:541</code></div>
+      </li></ol>
+    <h3>À retenir</h3><div class="insight">Le contrat de parité FE↔BE est une astuce élégante : au lieu d'un package partagé, on duplique volontairement les données mais on garde un sentinel sha256 qui hash UNIQUEMENT les octets entre les marqueurs NETWORK_PROFILES_DATA_REGION_START/END. C'est pourquoi le commentaire dit que ces marqueurs sont 'LOAD-BEARING' — déplacer un commentaire ou ajouter un import à l'intérieur de la région casse le hash. Le BE peut ainsi importer les profils sans tirer react/netinfo, et la dérive est impossible à merger.</div><div class="insight">Le ~16× n'est pas magique, c'est de l'arithmétique vérifiable : NORMAL_UPLOAD = 1600px JPEG ciblant 2_700_000 octets ; lowUploadWebp = 1024px WebP q0.60 ciblant 150_000 octets (<code>compressionDecision.pure.ts:43</code> et :56). 2.7 Mo / 150 Ko ≈ 18×. Et c'est une décision PURE testable sans toucher au manipulateur expo — d'où le suffixe <code>.pure.ts</code>. Le dérivé local plus grand (320 Ko) sert le carnet post-visite, pas le réseau.</div><div class="insight">La doctrine '2 min local &gt; 15 min CI rouge' se voit littéralement dans la migration KVM : avant, Maestro ne tournait JAMAIS par-PR (macOS arm64 software-only trop lent), donc les régressions e2e n'étaient catchées qu'en nightly — ou jamais (faux-vert). KVM rend le smoke per-PR possible en ~12 min, transformant un blocker local-green-only en garde-fou pré-merge. Le reviewer a deux fois sauvé le chantier en chopant des faux-verts (APK :3000 non shapé, toxic mono-direction) — preuve que le pipeline fresh-context /team fonctionne.</div><div class="insight">Le fix V2 guardrail illustre le pire piège de la confiance aveugle : le code SUPPORTAIT les deux couches V2 (sidecar fail-CLOSED, judge fail-OPEN) mais buildChatTestService les laissait tomber silencieusement, donc chaque test passait en V1-only — un faux sentiment de sécurité. Pire, la suite live a révélé que le timeout judge par défaut (500 ms) était inférieur à la latence réelle de gpt-4o-mini (670-1050 ms) → le judge fail-open sur CHAQUE appel prod, ne bloquant jamais rien. Corrigé à 1500 ms. On ne peut prouver une couche de sécurité qu'en l'exécutant réellement, sans mock.</div>
+    <h3>Fichiers-clés</h3>
+    <table><thead><tr><th>Fichier</th><th>Rôle</th></tr></thead><tbody>
+      <tr><td><code>museum-frontend/shared/infrastructure/connectivity/networkProfiles.ts:96</code></td><td>Keystone : registre gelé des 6 profils réseau, vérité FE. La 'data region' (lignes 96+) est copiée byte-identique côté BE et gardée par un sentinel sha256.</td></tr>
+      <tr><td><code>museum-backend/src/shared/net-shaping/networkProfiles.ts:1</code></td><td>Copie BE byte-identique du registre (data region) + toToxics/toMiddlewareDescriptor consommés par L2/L3.</td></tr>
+      <tr><td><code>museum-frontend/features/chat/application/compressionDecision.pure.ts:90</code></td><td>Décision de compression pure : profils nommés (lowUploadWebp 150 Ko vs normal JPEG 2.7 Mo = ~18×) + fallback JPEG quand WebP indispo.</td></tr>
+      <tr><td><code>museum-backend/src/shared/middleware/request-decompression.middleware.ts:143</code></td><td>Décompression de requête prod-safe : compteur d'octets streaming capé → 413 anti-zip-bomb AVANT matérialisation (handler 'data' lignes 143-152).</td></tr>
+      <tr><td><code>museum-frontend/shared/api/httpRequest.ts:75</code></td><td>FE : maybeGzipBody — gzip JSON &gt;1024 octets seulement en data mode 'low', jamais FormData (lignes 85-93).</td></tr>
+      <tr><td><code>museum-backend/src/modules/chat/adapters/primary/http/middleware/idempotency.middleware.ts:1</code></td><td>Dedup Idempotency-Key monté après les validators (anti brûlage de clé sur 400), fail-OPEN, clé scopée key+userId+sessionId, capée à 200 chars sinon sha256.</td></tr>
+      <tr><td><code>museum-backend/src/shared/net-shaping/net-profile-fault.middleware.ts:1</code></td><td>L2 : injecteur de faute TEST-ONLY piloté par headers ; latence déterministe (worst-case fixe, reproductible), X-Net-Fail-Count keyé hors body, gardé hors prod par sentinel.</td></tr>
+      <tr><td><code>museum-frontend/shared/testing/withNetworkSim.ts:52</code></td><td>L1 : harness FE pur — latence + perte de paquets déterministes (RNG seedé mulberry32) pilotés par un NetworkProfile.</td></tr>
+      <tr><td><code>museum-backend/docker-compose.dev.yml:125</code></td><td>L3 : service toxiproxy gaté profiles:[weaknet] (:3100 listener shapé, :8474 admin) — `pnpm dev` quotidien byte-inchangé.</td></tr>
+      <tr><td><code>.github/workflows/ci-cd-mobile.yml:314</code></td><td>Cœur de la migration : maestro-shard sur ubuntu-latest + KVM, services pgvector+redis, APK x86_64-only, smoke per-PR / full nightly + retry boot 2× + maestro-full-alert (issue auto) + prebuild-netshape:3100.</td></tr>
+      <tr><td><code>museum-frontend/scripts/maestro-run-shard.sh:52</code></td><td>Runner de shard : sélection smoke/netshapeSmoke/par-shard via jq sur <code>shards.js</code>on + retry par-flow (MAX_ATTEMPTS=2) absorbant le flake émulateur.</td></tr>
+      <tr><td><code>museum-frontend/.maestro/net-chat-edge.yaml:1</code></td><td>Flow netshape NIGHTLY (device→Toxiproxy :3100) : force-data-mode 'low' → bannière éco → message → airplane mode → bannière offline (assertion i18n, jamais un token brut comme NETWORK_ERROR).</td></tr>
+      <tr><td><code>museum-backend/tests/helpers/chat/chatTestApp.ts:541</code></td><td>Le fix qui rebranche V2 : guardrailProvider/observeOnly/llmJudge/llmJudgeEnabled passés verbatim à ChatService (avant : droppés → tests V1-only).</td></tr></tbody></table>
+    <div class="reality"><b>La réalité (honnête, vérifiée code) —</b> État honnête vérifié dans le code/commits. RÉEL et prouvé localement : registre + parité sentinel (FE 42 + BE 3 tests verts), compression pure + gzip BE (cap zip-bomb prouvé 16Mio→1Mio), idempotency, L1 harness, L2 middleware — tout test-first vert. Les couches V2 guardrail sont RÉELLEMENT exécutées (guardrail-v2-live 13/13 sans mock) et le bug timeout 500→1500ms est CORRIGÉ. Le smoke Maestro per-PR ubuntu+KVM tourne en vraie CI (5/5 vert rapporté). RUNTIME-DEFERRED / non validé localement (tagué UFR-013 par le commit lui-même) : les 4 flows net-*.yaml + le job maestro-netshape-nightly + la métrique wall-clock de compression tournent device→proxy UNIQUEMENT en CI nightly — la tranche vérifiable (mapper toToxics + sentinels + gating compose) est test-first verte, mais le device-track complet n'a pas été exécuté localement. La parité iOS/Android des 3 flows fixés est vérifiée verte sur les deux plateformes (commit 4738f7ad, non poussé — Tim doit lander). Note infra : image-describe/chat-compare restent nightly car le modèle SigLIP n'est pas provisionné en local (bucket storage absent). iOS Maestro reste nightly (HVF exige un runner Mac).</div>
+    <details class="gloss"><summary>Glossaire du module</summary><dl><dt>Profil réseau (NetworkProfile)</dt><dd>Une condition réseau ratifiée décrite par données pures (latence, jitter, bande passante up/down en kbps, perte %, type NetInfo, data mode attendu). 6 existent : offline/2g/edge/3g-lossy/flapping/normal.</dd><dt>data region (parité FE↔BE)</dt><dd>Le bloc d'octets entre les marqueurs NETWORK_PROFILES_DATA_REGION_START/END, hashé par un sentinel sha256 pour garantir que la copie BE du registre est byte-identique à la vérité FE.</dd><dt>Toxiproxy (L3)</dt><dd>Proxy TCP qui injecte des 'toxics' (latence, bande passante, timeout) sur le trafic réel. Service dev-only gaté profiles:[weaknet] dans docker-compose ; listener shapé :3100, admin :8474. Jamais en prod (sentinel).</dd><dt>3 couches de test (L1/L2/L3)</dt><dd>L1 = simulateur FE pur (logique, déterministe). L2 = middleware BE d'injection de faute (HTTP-level, headers). L3 = Toxiproxy device-track (transport-level réel sur émulateur). Les trois sont pilotées par le MÊME registre keystone.</dd><dt>KVM (ubuntu Maestro)</dt><dd>Kernel-based Virtual Machine : virtualisation nested exposée par /dev/kvm sur les runners ubuntu-latest, qui rend un émulateur Android x86_64 accéléré matériellement — impossible sur macOS hébergé (HVF indispo).</dd><dt>smoke vs full (shards)</dt><dd>smoke = subset rapide de happy-paths critiques, ~12 min, 1 boot émulateur, joué par-PR. full = 4 shards (auth/chat/museum/settings), ~45 min/shard, joué nightly cron + push main.</dd><dt>fail-CLOSED vs fail-OPEN</dt><dd>Politique de dégradation. Sidecar LLM-Guard = fail-CLOSED (sidecar down → on BLOQUE, sécurité d'abord). Judge LLM = fail-OPEN (timeout/budget épuisé → on LAISSE PASSER, on retombe sur V1 pour ne pas casser le voice-first).</dd><dt>zip-bomb cap</dt><dd>Garde anti-déni-de-service : un petit corps gzip peut s'inflater en gigaoctets. Le middleware BE compte les octets décompressés au fil de l'eau et détruit le flux + renvoie 413 dès le dépassement, AVANT de tout matérialiser en mémoire.</dd></dl></details>
+  </section>
+
+<h2 id="courses"><span class="num">↩</span> Les 4 cours de la semaine du 21-28 mai (rappel)</h2>
+<p>Ces cours détaillés (markdown, code-vérifiés) restent la base ; les 5 chapitres ci-dessus les complètent et donnent la carte d’ensemble.</p>
+<div class="recap">
+  <p><b>A — DRY / refactor</b> · <code>learning/2026-05-28-weekly/A-dry-refactor.md</code><br>Extract-helper + sweep, codemods, machine à états circuit-breaker (<code>ThreeStateCircuit</code>), Redis Lua atomique, anti-cache-stampede, compose-ref React 19.</p>
+  <p><b>B — RGPD / PII / consentement</b> · <code>B-rgpd-pii-consent.md</code><br>Consent gate fail-closed, audit hash-chain, outbox, effacement external-before-DB, pseudonymisation. (Approfondi au chapitre 4 ci-dessus.)</p>
+  <p><b>C — Pipeline chat</b> · <code>C-chat-pipeline.md</code><br>Défense en profondeur, fuite GPS inversée, masquage PII Langfuse, invalidation cache LLM. (Approfondi au chapitre 2.)</p>
+  <p><b>D+E — Coûts &amp; multi-tenant</b> · <code>D-E-costs-multitenant.md</code><br>Circuit breaker cost-aware, intégrité cost-cap, alertes Prometheus, défense BOLA, NPS en 1 requête SQL.</p>
+</div>
+
+<h2 id="reality"><span class="num">!</span> La réalité honnête — audit 360 du 2026-06-04</h2>
+<div class="verdict">
+  <div class="n">79<span style="font-size:18px;color:var(--muted)">/100</span></div>
+  <div style="flex:1;min-width:240px;font-size:14.5px">Code applicatif <b>genuinement mûr</b> (sécurité / IA / conformité enterprise-grade vérifiées). Le défaut n’est presque jamais l’exécution — ce sont les <b>garde-fous censés garantir la qualité dans le temps</b>, et le <b>timing</b> de l’ingénierie.</div>
+</div>
+<div class="grid2">
+  <div class="box"><h4 class="ok">Ce qui est vraiment solide</h4><ul class="tight">
+    <li>Auth banking-grade, BOLA fermé, secrets fail-fast, CSRF/CSP.</li>
+    <li>6 couches d’assainissement IA câblées + double-scrub Sentry/Langfuse.</li>
+    <li>Conformité 2026 réelle (AI Act Art.50, RGPD Art.17, CNIL 15 ans).</li>
+    <li>Zéro <code>as any</code> en prod sur ~150k LOC ; leçons enforcées par outillage.</li>
+  </ul></div>
+  <div class="box"><h4 class="ko">La leçon n°1 pour toi (pattern transverse)</h4>
+    <p style="margin:.2em 0;font-size:13.5px"><b>« Un mécanisme existe, est documenté comme actif, mais ne mord pas. »</b></p>
+    <ul class="tight">
+      <li>Stryker mutation gate <code>if:false</code> (toujours off).</li>
+      <li><code>eslint-plugin-boundaries</code> = no-op prouvé (pas de resolver).</li>
+      <li>fail-CLOSED V2 en <code>continue-on-error</code> → throw avalé.</li>
+    </ul>
+    <p style="margin:.4em 0 0;font-size:13px;color:var(--muted)">La qualité tient par discipline humaine, pas par enforcement. C’est <i>le</i> risque structurel d’un dev solo full-IA.</p>
+  </div>
+</div>
+<p style="margin-top:14px"><b>Le bug à connaître par cœur</b> — <code>audit-chain.computeRowHash</code> (<code>audit-chain.ts:43-46</code>) fait <code>JSON.stringify(metadata, Object.keys(metadata).sort())</code>. Le 2ᵉ argument de <code>JSON.stringify</code> n’est pas « trier les clés » : c’est un <b>replacer-allowlist appliqué récursivement</b>. <code>Object.keys</code> ne liste que le 1ᵉʳ niveau → tout objet imbriqué est hashé vide (<code>{"breach":{}}</code>) → collision sur le chemin de notification CNIL. C’est exactement le genre de subtilité (un argument d’API mal lu) qui passe tous les tests et tient pourtant. Tracé <code>TD-61</code>, à corriger via <code>/team</code>.</p>
+<p style="font-size:13.5px;color:var(--muted)"><b>Bonne nouvelle :</b> 2 des 3 piliers « désarmés » de la cartographie de mai sont réellement remédiés (e2e Maestro faux-vert fermé, frozen-test = vrai hook). Détail complet : <code>artifacts/2026-06-04-controle-qualite-360.html</code> + <code>audit-state/2026-06-04-controle-qualite-360/</code>.</p>
+
+<h2 id="next"><span class="num">→</span> Comment continuer la formation</h2>
+<ul class="tight">
+  <li>Méthode (un item à la fois, on améliore en discutant) + état d’avancement : <code>learning/2026-05-28-weekly/RESUME-PROMPT.md</code>.</li>
+  <li>Tes questions + le backlog d’améliorations révélées : <code>QUESTIONS-AND-IMPROVEMENTS.md</code> (gouvernance : backlog → <code>/team</code> → roadmap/TECH_DEBT).</li>
+  <li>Prochain item naturel du cours A : décortiquer <code>ThreeStateCircuit</code> (FSM CLOSED/OPEN/HALF_OPEN), puis le rate-limit Redis Lua.</li>
+</ul>
+
+<footer>
+  Cours généré le 2026-06-04. Les 5 chapitres proviennent de 5 agents ayant relu le code réel (path:line vérifiés au jour J sur <code>dev</code>) ; la section « réalité » provient de l’audit 360 du même jour. Rien n’a été reconstruit de mémoire (UFR-013). Source de la formation : <code>learning/2026-05-28-weekly/</code>.
+</footer>
+
+</div>
+</body>
+</html>

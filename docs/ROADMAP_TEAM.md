@@ -1,7 +1,7 @@
 # Roadmap /team — Musaium
 
 > **Vivante.** Réécrite à chaque sprint (4 semaines). Snapshots précédents = git history.
-> **Sprint courant :** 2026-05-03 → 2026-06-01.
+> **Sprint courant :** 2026-05-03 → 2026-06-07 (minimum, à reconfirmer).
 > **Horizon :** 1 mois NOW + 1 trimestre NEXT/LATER.
 
 ---
@@ -70,7 +70,7 @@ Doit produire des features de qualité prod sans micro-management humain, en res
 
 ---
 
-## NOW — Sprint launch (2026-05-03 → 2026-06-01)
+## NOW — Sprint launch (2026-05-03 → 2026-06-07 (minimum, à reconfirmer))
 
 > Coche `[x]` au merge. /team auto-consolide cette roadmap fin de chaque cycle.
 

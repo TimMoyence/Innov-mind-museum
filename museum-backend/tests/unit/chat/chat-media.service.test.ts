@@ -1,6 +1,4 @@
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
-import { buildCacheKey } from '@modules/chat/useCase/message/chat-cache-key.util';
-import { logger } from '@shared/logger/logger';
 import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/session/chat.repository.interface';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
@@ -9,11 +7,11 @@ import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/me
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
+// Silence logger during tests (no assertions on logger here — see
+// `feedback-cache-invalidation.test.ts` for shape-of-log assertions).
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
-
-const loggerWarn = logger.warn as unknown as jest.Mock;
 
 // ── Factories ──────────────────────────────────────────────────────────
 
@@ -338,155 +336,18 @@ describe('ChatMediaService', () => {
     });
   });
 
-  // ── F2 feedback-invalidation cartesian ─────────────────────────────────
+  // ── Feedback-invalidation ──────────────────────────────────────────────
   //
-  // Spec F2.1/F2.2/F2.3 (2026-05-19 run, design.md D2). Today's
-  // `chat-media.service.ts:178` hardcodes `audioDescriptionMode:false` AND
-  // omits `voiceMode` entirely — so negative feedback only invalidates the
-  // single `false × undefined` shape and leaves stale entries for the 3 other
-  // cartesian shapes (audioDescriptionMode × voiceMode ∈ {false,true}²)
-  // plus the cross-namespace dual (global + user-scoped).
+  // PR-P0-1 (2026-05-23) — the previous F2 cartesian block (8/4 `del` calls
+  // across {audioDescriptionMode × voiceMode} × {global + user-scoped})
+  // tested the now-removed `buildFeedbackInvalidationKeys` helper, which
+  // emitted `chat:llm:*` keys that have NO writers in the production cache
+  // (real writes go through `LlmCacheServiceImpl` under `llm:v2:*`). The
+  // cartesian targeted 0 real entries.
   //
-  // These tests pin the corrected contract: 4 shapes × 2 namespaces = 8 del
-  // calls when an owner is present, 4 when anon. Partial failures (one bad
-  // `del`) must NOT skip the other keys (fail-open, per-key try/catch).
-  describe('F2 feedback-invalidation cartesian', () => {
-    const USER_MSG_ID = 'c2c2c2c2-d3d3-4e4e-9f5f-a6a6a6a6a6a6';
-    const ASSISTANT_MSG_ID = MESSAGE_ID;
-    const MUSEUM_ID = 42;
-    const OWNER_ID = 7;
-    const USER_TEXT = 'What is impressionism?';
-
-    /**
-     * Builds the 4 cartesian shape keys for a given namespace (global or user).
-     * @param opts
-     * @param opts.ownerId
-     */
-    const expectedShapeKeys = (opts: { ownerId?: number }): string[] => {
-      const baseInput = {
-        text: USER_TEXT,
-        museumId: String(MUSEUM_ID),
-        locale: 'fr',
-        guideLevel: 'beginner',
-        hasHistory: false,
-        hasAttachment: false,
-        hasGeo: false,
-      };
-      const keys: string[] = [];
-      for (const audioDescriptionMode of [false, true]) {
-        for (const voiceMode of [false, true]) {
-          keys.push(
-            buildCacheKey({
-              ...baseInput,
-              audioDescriptionMode,
-              voiceMode,
-              ...(opts.ownerId !== undefined ? { userId: opts.ownerId } : {}),
-            }),
-          );
-        }
-      }
-      return keys;
-    };
-
-    const setupNegativeFeedbackScenario = (opts: { withOwner: boolean }) => {
-      const session = makeSession({
-        id: SESSION_ID,
-        museumId: MUSEUM_ID,
-        locale: 'fr',
-        user: opts.withOwner ? makeSessionUser(OWNER_ID) : undefined,
-      });
-
-      const userMsg = makeMessage({
-        id: USER_MSG_ID,
-        role: 'user',
-        text: USER_TEXT,
-        session,
-      });
-      const assistantMsg = makeMessage({
-        id: ASSISTANT_MSG_ID,
-        role: 'assistant',
-        text: 'Impressionism is...',
-        session,
-      });
-
-      const row: ChatMessageWithSessionOwnership = { message: assistantMsg, session };
-
-      const repo = makeChatRepo({
-        getMessageById: jest.fn().mockResolvedValue(row),
-        getMessageFeedback: jest.fn().mockResolvedValue(null),
-        upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),
-        listSessionHistory: jest.fn().mockResolvedValue([userMsg, assistantMsg]),
-      });
-      const cache = makeCache();
-      const callerId = opts.withOwner ? OWNER_ID : undefined;
-      const svc = new ChatMediaService({ repository: repo, cache });
-      return { svc, repo, cache, callerId };
-    };
-
-    beforeEach(() => {
-      loggerWarn.mockClear();
-    });
-
-    // F2.2 — authenticated owner: full 4-shape × 2-namespace cartesian (8 keys).
-    it('deletes 8 distinct cartesian keys when session has an owner', async () => {
-      const { svc, cache, callerId } = setupNegativeFeedbackScenario({ withOwner: true });
-
-      await svc.setMessageFeedback(ASSISTANT_MSG_ID, callerId!, 'negative');
-
-      const calledWith = cache.del.mock.calls.map((args) => args[0]);
-      // 8 calls total — 4 shapes × (global + user) namespaces.
-      expect(cache.del).toHaveBeenCalledTimes(8);
-      // All keys distinct (no duplicates).
-      expect(new Set(calledWith).size).toBe(8);
-
-      const expected = [
-        ...expectedShapeKeys({}), // global (no userId)
-        ...expectedShapeKeys({ ownerId: OWNER_ID }), // user-scoped
-      ];
-      expect(new Set(calledWith)).toEqual(new Set(expected));
-    });
-
-    // F2.2 — anonymous session: global namespace only, 4 keys.
-    it('deletes only 4 global keys when session.user is undefined (anon)', async () => {
-      // Anon session: setMessageFeedback enforces ensureSessionOwnership which
-      // requires session.user.id when currentUserId is provided. Use
-      // currentUserId=undefined to traverse the anon path while still
-      // exercising invalidateCacheForFeedback. Repo-level guards skipped here
-      // — this test pins the cache invalidation contract, not auth.
-      const { svc, cache } = setupNegativeFeedbackScenario({ withOwner: false });
-
-      // Anon caller (no currentUserId) — ensureSessionOwnership allows when
-      // both session.user.id and currentUserId are undefined.
-      await svc.setMessageFeedback(ASSISTANT_MSG_ID, undefined as unknown as number, 'negative');
-
-      const calledWith = cache.del.mock.calls.map((args) => args[0]);
-      expect(cache.del).toHaveBeenCalledTimes(4);
-      expect(new Set(calledWith).size).toBe(4);
-      expect(new Set(calledWith)).toEqual(new Set(expectedShapeKeys({})));
-    });
-
-    // F2.3 — partial failure resilience: 1st del rejects, others still attempted.
-    it('continues invalidating remaining keys when first cache.del rejects', async () => {
-      const { svc, cache, callerId } = setupNegativeFeedbackScenario({ withOwner: true });
-      cache.del.mockRejectedValueOnce(new Error('redis down'));
-
-      // Should NOT throw — fail-open contract.
-      await expect(
-        svc.setMessageFeedback(ASSISTANT_MSG_ID, callerId!, 'negative'),
-      ).resolves.toEqual({ messageId: ASSISTANT_MSG_ID, status: 'created' });
-
-      // All 8 del calls still attempted despite the first one rejecting.
-      expect(cache.del).toHaveBeenCalledTimes(8);
-
-      // logger.warn emitted at least once with the redis-down error.
-      expect(loggerWarn).toHaveBeenCalled();
-      const warnCalls = loggerWarn.mock.calls;
-      const sawRedisDown = warnCalls.some((call) => {
-        const payload = call[1] as Record<string, unknown> | undefined;
-        const errStr = payload?.error;
-        return typeof errStr === 'string' && errStr.includes('redis down');
-      });
-      expect(sawRedisDown).toBe(true);
-    });
-  });
+  // The corrected contract — targeted 1-entry `del(message.cacheKey)` with
+  // fail-open WARN log on throw, INFO skip when `cacheKey` is null — is
+  // pinned non-tautologically in
+  // `tests/unit/chat/feedback-cache-invalidation.test.ts` (the RED/GREEN
+  // suite for this fix). See `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.
 });

@@ -24,7 +24,15 @@ exports.SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
  * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
  * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
  * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
- * lockstep ; golden test `sentry-scrubber.test.ts` asserts the 11-entry set.
+ * lockstep ; golden test `sentry-scrubber.test.ts` asserts the set size.
+ *
+ * Cycle 10 (A-02, 2026-05-26) — extended from 11 to 16 entries to close the
+ * presigned-S3 / signed-URL signature leak (`x-amz-signature`,
+ * `x-amz-credential`, `x-amz-security-token`, `sig`, `signature`). Matching is
+ * case-insensitive (`key.toLowerCase()` in `scrubUrl`) so `X-Amz-Signature`
+ * matches `x-amz-signature`. Generic `key` / `author` are deliberately NOT
+ * added (too prone to false positives — D4). Sentinel `CANONICAL_HASH` bumped
+ * in lockstep ; golden test asserts the 16-entry set.
  */
 exports.SENSITIVE_QUERY_KEYS = new Set([
     'access_token',
@@ -36,8 +44,13 @@ exports.SENSITIVE_QUERY_KEYS = new Set([
     'phone',
     'refresh_token',
     'secret',
+    'sig',
+    'signature',
     'state',
     'token',
+    'x-amz-credential',
+    'x-amz-security-token',
+    'x-amz-signature',
 ]);
 /** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
 exports.SENSITIVE_BREADCRUMB_PATHS = [
@@ -68,7 +81,20 @@ const scrubRecord = (input) => {
         const src = input;
         const out = {};
         for (const [key, value] of Object.entries(src)) {
-            out[key] = exports.SENSITIVE_FIELD_REGEX.test(key) ? exports.REDACTED : (0, exports.scrubRecord)(value);
+            if (exports.SENSITIVE_FIELD_REGEX.test(key)) {
+                out[key] = exports.REDACTED;
+            }
+            else if ((0, exports.isUrlLikeValue)(value)) {
+                // TD-68 (SCRUB-01) — a URL-like value under a NON-sensitive key still
+                // carries sensitive query-string params (`?token=…`, `?code=…`). Without
+                // this, such a URL nested in `extra` / `request.data` reached Sentry raw
+                // (only `tags` and `request.url` previously ran scrubUrl). scrubUrl is a
+                // no-op on URLs with no sensitive params, so this never over-masks.
+                out[key] = (0, exports.scrubUrl)(value);
+            }
+            else {
+                out[key] = (0, exports.scrubRecord)(value);
+            }
         }
         return out;
     }
@@ -122,6 +148,16 @@ const scrubRequest = (request) => {
     }
     if (typeof out.url === 'string') {
         out.url = (0, exports.scrubUrl)(out.url);
+    }
+    if (typeof out.query_string === 'string') {
+        // TD-71 — Sentry's dedicated request.query_string field (raw query) was never
+        // scrubbed, so a token=…/code=… reached Sentry verbatim. Strip any leading '?'
+        // first (defensive — Sentry's convention omits it; without this strip a
+        // '?token=x' input would key on '?token', which isn't sensitive → leak), then
+        // wrap as a bare query to reuse scrubUrl's sensitive-key redaction, and strip
+        // the synthetic '?'. No-op when no sensitive param is present.
+        const rawQuery = out.query_string.replace(/^\?/, '');
+        out.query_string = (0, exports.scrubUrl)(`?${rawQuery}`).slice(1);
     }
     return out;
 };

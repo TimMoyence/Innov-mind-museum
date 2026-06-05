@@ -123,9 +123,6 @@
     "sorted_by_messages": "Sorted by message count",
     "showing_saved_only": "Showing saved sessions only",
     "showing_all": "Showing all sessions",
-    "share_title": "Musaium dashboard",
-    "share_body": "Musaium dashboard: {{total}} sessions, {{savedCount}} saved.",
-    "shared_success": "Dashboard summary shared",
     "session_unsaved": "Session removed from saved",
     "session_saved": "Session saved",
     "empty_title": "No conversations yet",
@@ -190,6 +187,8 @@
     "export_data_desc": "Download all your personal data (GDPR)",
     "export_data_success": "Data exported successfully",
     "rate_musaium": "Rate Musaium",
+    "inviteFriend": "Invite a friend",
+    "inviteMessage": "Discover Musaium, your AI culture companion for museums and monuments. Join me: https://musaium.com",
     "ai_memory": "AI Personalization",
     "ai_memory_hint": "Uses your art preferences and visit history to personalize AI responses",
     "ai_consent_title": "Third-party AI providers",
@@ -204,7 +203,8 @@
       "third_party_ai_image_google": "Google AI — photos",
       "third_party_ai_audio_google": "Google AI — voice transcripts",
       "third_party_ai_profile_google": "Google AI — preferences & history",
-      "location_to_llm": "Location — nearby places"
+      "location_to_llm": "Location — nearby places",
+      "location_coarse_to_llm": "Location — city only"
     },
     "accessibility": "Accessibility",
     "audio_description": "Audio Description",
@@ -472,7 +472,7 @@
     "audio": "Audio",
     "image_sent": "[Image sent]",
     "voice_message": "[Voice message]",
-    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.app",
+    "share_footer": "Shared via Musaium — Your museum companion\nhttps://musaium.com",
     "share_response": "Share",
     "replace_image": "Replace",
     "remove_image": "Remove",
@@ -526,7 +526,8 @@
       "gallery": "Pick from gallery",
       "record_audio": "Record voice message",
       "stop_audio": "Stop recording",
-      "scan_cartel": "Scan cartel"
+      "scan_cartel": "Scan the artwork QR code",
+      "compare": "Compare this artwork"
     },
     "cartelScanner": {
       "title": "Scan the cartel QR",
@@ -646,18 +647,6 @@
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
     "send": "Send"
   },
-  "welcome": {
-    "title": "Welcome to Musaium",
-    "subtitle": "Your personal museum companion",
-    "suggestions": {
-      "museum_camera": "What artwork is in front of me?",
-      "museum_history": "Tell me about the history of this museum",
-      "museum_next": "What should I see next?",
-      "standard_camera": "Photograph an artwork to learn about it",
-      "standard_style": "Tell me about Impressionism",
-      "standard_question": "Who painted the Mona Lisa?"
-    }
-  },
   "expertiseBadge": {
     "beginner": "Beginner",
     "intermediate": "Intermediate",
@@ -722,7 +711,8 @@
       "account_suspended": "Your account has been suspended. Contact support.",
       "account_deleted": "This account has been deleted.",
       "locked_out": "Too many failed attempts. Try again in a few minutes.",
-      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority)."
+      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority).",
+      "mfa_web_only": "Two-factor authentication is managed in the web admin. Sign in there."
     },
     "chat": {
       "contract_invalid": "Unexpected server response. Please try again.",
@@ -833,6 +823,9 @@
       "weekly_closed": "{{day}} Closed"
     }
   },
+  "museumBranding": {
+    "logo_a11y": "{{name}} logo"
+  },
   "museum": {
     "about": "About",
     "opening_hours": "Opening hours",
@@ -840,6 +833,11 @@
     "phone": "Phone",
     "loading_details": "Loading details…",
     "no_extra_info": "No detailed info available.",
+    "info_coming_soon": "More info coming soon",
+    "admission": "Admission",
+    "collections": "Collections",
+    "exhibitions": "Current exhibitions",
+    "accessibility": "Accessibility",
     "offlinePack": {
       "title": "You're near {{cityName}}",
       "description": "Download the offline content to explore without a connection.",
@@ -941,6 +939,8 @@
       "send_hint": "Sends your message to the museum assistant",
       "message_input": "Type your message",
       "assistant_message": "Assistant message",
+      "attached_image": "Image attached to message",
+      "loading": "Loading response",
       "user_message": "Your message",
       "long_press_hint": "Long press for more options",
       "recommendation_hint": "Fills input with this suggestion",
@@ -979,7 +979,8 @@
     "reviews": {
       "name_input": "Your display name",
       "comment_input": "Your review comment",
-      "star_button": "Set {{count}} star rating"
+      "star_button": "Set {{count}} star rating",
+      "nps_value": "Recommendation score {{value}} out of 10"
     },
     "preferences": {
       "language_button": "Select {{language}} language",
@@ -1064,6 +1065,9 @@
     "attachmentPicker": {
       "opened": "Attachment options opened"
     },
+    "bottomSheet": {
+      "dismiss": "Dismiss sheet"
+    },
     "cartelScanner": {
       "opened": "Cartel scanner opened",
       "scan_success": "Cartel code captured",
@@ -1115,7 +1119,9 @@
     "manage_subtitle": "Uncheck any category freely. The \"OpenAI Text\" scope is required to chat with the AI.",
     "save_required_hint": "Enable \"OpenAI Text\" to save your choices.",
     "scope_location": "Location",
-    "scope_location_hint": "Your approximate area (city) is shared with the AI to recognize nearby museums and monuments. Your precise location is never shared."
+    "scope_location_hint": "Your approximate neighbourhood (district + city) is shared with the AI to recognize nearby museums and monuments. Your street, address and precise location are never shared.",
+    "scope_location_coarse": "City only",
+    "scope_location_coarse_hint": "Only your city and country are shared with the AI — a less precise option than the neighbourhood level. Your street and precise location are never shared."
   },
   "dailyArt": {
     "title": "Artwork of the Day",
@@ -1172,6 +1178,9 @@
     "writeReview": "Write a Review",
     "averageRating": "Average Rating",
     "ratingLabel": "Your Rating",
+    "npsLabel": "How likely are you to recommend Musaium?",
+    "averageOutOf10": "/ 10",
+    "ratingOutOf10": "/10",
     "namePlaceholder": "Your name",
     "commentPlaceholder": "Share your experience...",
     "submit": "Submit Review",

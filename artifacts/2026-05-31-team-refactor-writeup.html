@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refonte /team — writeup technique (2026-05-31)</title>
+<style>
+  :root{--ink:#1b1b1b;--mut:#5e5e5e;--ln:#e4e4e2;--ac:#1f6f5c;--ac2:#a23b2d;--bg:#fbfbfa;--code:#f0efed;}
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;max-width:960px;margin:0 auto;padding:52px 36px;}
+  header.doc{margin-bottom:40px;}
+  h1{font-size:2rem;margin:0 0 6px;letter-spacing:-.015em;line-height:1.15;}
+  .lede{color:var(--mut);font-size:1.02rem;margin:6px 0 0;}
+  .meta{color:var(--mut);font-size:.85rem;margin-top:14px;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);padding:10px 0;display:flex;flex-wrap:wrap;gap:18px;}
+  .meta b{color:var(--ink);font-weight:600;}
+  h2{font-size:1.35rem;margin:46px 0 14px;padding-bottom:7px;border-bottom:2px solid var(--ac);}
+  h3{font-size:1.08rem;margin:28px 0 8px;}
+  h4{font-size:.95rem;margin:18px 0 6px;color:var(--ac);text-transform:uppercase;letter-spacing:.04em;}
+  p{margin:10px 0;}
+  ul,ol{margin:10px 0;padding-left:22px;}
+  li{margin:5px 0;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;background:var(--code);padding:1px 5px;border-radius:3px;}
+  pre{background:#1e2220;color:#e6e6e6;border-radius:7px;padding:14px 16px;overflow-x:auto;font-size:.82rem;line-height:1.5;}
+  pre code{background:none;padding:0;color:inherit;}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.88rem;}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--ln);vertical-align:top;}
+  th{font-weight:600;color:var(--mut);font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;}
+  .toc{background:#fff;border:1px solid var(--ln);border-radius:8px;padding:18px 24px;margin:24px 0;}
+  .toc ol{margin:6px 0;}
+  .toc a{color:var(--ac);text-decoration:none;}
+  .card{border:1px solid var(--ln);border-left:4px solid var(--ac);border-radius:7px;padding:14px 20px;margin:16px 0;background:#fff;}
+  .card.warn{border-left-color:var(--ac2);}
+  .card h4{margin-top:0;}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:.03em;vertical-align:middle;}
+  .keep{background:#e4f0ec;color:var(--ac);}
+  .merge{background:#fdeee9;color:var(--ac2);}
+  .del{background:#f3e3e0;color:var(--ac2);}
+  .num{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ac2);}
+  .ok{color:var(--ac);font-weight:600;}
+  blockquote{margin:12px 0;padding:8px 16px;border-left:3px solid var(--ac);background:#f4f8f6;color:#33403b;font-size:.92rem;}
+  .principle{background:#fff;border:1px solid var(--ln);border-radius:7px;padding:16px 20px;margin:14px 0;}
+  .principle .h{font-weight:700;color:var(--ac2);display:block;margin-bottom:4px;}
+  hr{border:none;border-top:1px solid var(--ln);margin:40px 0;}
+  .foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--ln);color:var(--mut);font-size:.82rem;}
+  .arrow{color:var(--ac2);font-weight:700;}
+  @media print{
+    body{background:#fff;max-width:100%;padding:0;font-size:10.5pt;color:#000;}
+    h2{page-break-after:avoid;border-bottom-color:#000;}
+    h2,h3{break-after:avoid;}
+    .card,table,pre,.principle{page-break-inside:avoid;}
+    pre{background:#f4f4f4;color:#000;border:1px solid #ccc;}
+    blockquote{background:#f4f4f4;}
+    .toc{display:none;}
+    a{color:#000;text-decoration:none;}
+    .meta{color:#333;}
+  }
+</style>
+</head>
+<body>
+<header class="doc">
+  <h1>Refonte de la machinerie <code>/team</code></h1>
+  <p class="lede">Élagage 9&nbsp;→&nbsp;6 agents · fermeture de l'honor-system lib-docs · alignement modèles · 1<sup>re</sup> absorption superpowers. Writeup technique pour l'équipe.</p>
+  <div class="meta">
+    <span><b>Date</b> 2026-05-31</span>
+    <span><b>Périmètre</b> outillage <code>.claude/</code> (méta-/team), zéro code applicatif</span>
+    <span><b>Branche</b> dev</span>
+    <span><b>Commits</b> <code>1535abe0</code>, <code>2e60c5ed</code></span>
+    <span><b>Auteur</b> Tim Kraken + Claude (Opus 4.8)</span>
+  </div>
+</header>
+
+<div class="toc">
+<b>Sommaire</b>
+<ol>
+  <li><a href="#ctx">Contexte &amp; mandat</a></li>
+  <li><a href="#prereq">Pré-requis vérifié (session #3)</a></li>
+  <li><a href="#o1">Objectif 1 — lib-docs : fermer l'honor-system</a></li>
+  <li><a href="#o2">Objectif 2 — drift modèle</a></li>
+  <li><a href="#o3">Objectif 3 — élagage des agents (décision)</a></li>
+  <li><a href="#o4">Objectif 4 + absorption systematic-debugging</a></li>
+  <li><a href="#principles">Décisions d'architecture &amp; principes transférables</a></li>
+  <li><a href="#beforeafter">Avant / Après</a></li>
+  <li><a href="#ledger">Registre des commits &amp; vérifications</a></li>
+  <li><a href="#followups">Suites &amp; non-faits</a></li>
+</ol>
+</div>
+
+<h2 id="ctx">1. Contexte &amp; mandat</h2>
+<p>L'audit 360 du 2026-05-31 (<code>audit-state/2026-05-31-cartographie-360/raw/07-machinerie-team.md</code> et <code>raw/11-team-vs-anthropic.md</code>) a établi que le skill <code>/team</code> a une plus-value réelle mais <strong>marginale</strong> : ~80&nbsp;% du pipeline 5-phase duplique le plugin officiel <code>superpowers</code> + la sémantique native des subagents Claude Code. La valeur <em>non-native</em> se réduit à deux mécaniques : le <strong>frozen-test</strong> et le <strong>lib-docs versionné</strong>.</p>
+<p>La session avait quatre objectifs, sous trois contraintes : <strong>exempt /team</strong> (ce travail méta ne passe pas lui-même par le pipeline /team), <strong>UFR-013</strong> (honnêteté — vérifier avant d'affirmer), et <strong>présenter les options d'élagage avant d'agir</strong>.</p>
+<ol>
+  <li><b>lib-docs versionné</b> — vérifier que le contrat sha256 tient réellement, qu'il n'est pas honor-system, et que le câblage des hooks existe.</li>
+  <li><b>Drift modèle</b> — les frontmatter d'agents pinnaient <code>claude-opus-4-7</code> alors que l'environnement tourne Opus&nbsp;4.8.</li>
+  <li><b>Élagage</b> — décision utilisateur sur doc-fetcher / doc-curator / learning-curator (sur-découpage ?) et verifier / security (chevauchent le two-stage review ?).</li>
+  <li><b>Décision stratégique</b> — plan d'alignement <code>/team</code> ↔ <code>superpowers</code>.</li>
+</ol>
+
+<h2 id="prereq">2. Pré-requis vérifié (session #3)</h2>
+<p>Avant tout, vérification que le câblage du hook frozen-test (traité en session #3) était bien en place, pour éviter une collision&nbsp;:</p>
+<ul>
+  <li><code>post-edit-green-test-freeze.sh</code> est <span class="ok">bien câblé</span> dans <code>.claude/settings.json</code> (PostToolUse, matcher <code>Edit|Write</code>).</li>
+  <li><code>lint-on-edit.sh</code> ne fait <em>pas</em> un skip glob <code>*.test.*</code> naïf : il skippe les fichiers listés dans un <code>red-test-manifest.json</code> actif — donc il ne gèle que les tests réellement manifestés par une phase red. <strong>Supérieur</strong> au glob (les tests non-gelés restent formatés). Non retouché.</li>
+</ul>
+<blockquote>Insight : deux hooks PostToolUse sur le même fichier doivent se coordonner. Un <code>prettier --fix</code> silencieux sur un test gelé changerait son sha256 et <strong>contournerait mécaniquement</strong> le frozen-test. Le skip manifest-based est ce qui rend cette coordination correcte.</blockquote>
+
+<h2 id="o1">3. Objectif 1 — lib-docs : fermer l'honor-system</h2>
+
+<h4>Le problème</h4>
+<p>Le <strong>câblage</strong> des hooks était présent (<code>pre-phase-doc-freshness.sh</code> en Step 4.5, <code>pre-phase-doc-reference-check.sh</code> en Step 6 ; les deux self-tests passaient). <strong>Mais le contrat sha256 était honor-system</strong> : aucun hook ne re-hashait les fichiers <em>sur disque</em> contre l'<code>INDEX.json</code>.</p>
+<p>Preuve, pas supposition : sur les 107 libs de l'INDEX, <span class="num">43</span> hash ne correspondaient pas à leurs fichiers locaux (20 snapshots + 23 PATTERNS). Le champ <code>patternsSha256</code> était purement <strong>décoratif</strong>.</p>
+<div class="card warn">
+<h4>Pourquoi c'était activement nuisible</h4>
+<p><code>pre-phase-doc-reference-check.sh</code> comparait le hash <em>déclaré par l'agent</em> (<code>patternsSha256AtConsult</code>) contre l'INDEX — en faisant confiance à l'INDEX comme vérité-terrain. Or l'INDEX était faux. Donc&nbsp;: soit l'agent re-hashait honnêtement le vrai fichier → <strong>faux BLOCK « HASH DRIFT »</strong> sur ~23 libs ; soit l'agent recopiait le hash de l'INDEX → <strong>drift jamais détecté</strong>. Les deux lectures = cassé.</p>
+</div>
+
+<h4>Le fix</h4>
+<ol>
+  <li><b>Réconciliation de l'INDEX</b> : re-hash de tous les fichiers locaux → <span class="num">18</span> drifts réels corrigés + <span class="num">25</span> champs absents remplis (12 snapshot + 13 patterns). Résultat&nbsp;: <span class="ok">0 mismatch</span>, vérifié par re-hash.</li>
+  <li><b>Durcissement du hook</b> : <code>pre-phase-doc-freshness.sh</code> passe d'un check 3-way à <strong>4-way</strong> — il re-hashe le <code>PATTERNS.md</code> sur disque et le compare à l'INDEX ; un drift re-queue la lib (self-heal). Plus honor-system.</li>
+</ol>
+<pre><code># nouvelle 4e branche du staleness check (pre-phase-doc-freshness.sh)
+if [ ! -f "$patterns_path" ]; then
+  REASONS+="patterns-missing-local "
+elif ! patterns_hash_matches "$lib" "$patterns_path"; then
+  REASONS+="patterns-hash-drift "      # &lt;-- de-honor-system
+fi</code></pre>
+<p>Self-test du hook&nbsp;: <span class="ok">7/7</span> (3 nouveaux scénarios : match, drift détecté, no-recorded-hash → pas de faux trigger).</p>
+
+<h2 id="o2">4. Objectif 2 — drift modèle</h2>
+<p>Le drift était pire que signalé&nbsp;: <span class="num">8</span> frontmatter en <code>claude-opus-4-7</code> + <code>documenter.md</code> en <code>claude-opus-4-6</code> = <strong>9 fichiers</strong>. Et l'alignement du frontmatter a exposé un drift prose bien plus large (~30 mentions <code>opus-4.7</code>/<code>4.6</code> dans <code>SKILL.md</code>, <code>agent-mandate.md</code>, <code>team-sdlc-index.md</code>) — dont <strong>deux affirmations déjà fausses</strong> (un alias <code>model: opus</code> qui n'a jamais existé dans le frontmatter).</p>
+<div class="card warn">
+<h4>Le piège caché : <code>state.schema.json</code></h4>
+<p>Le schéma de validation des runs avait un enum modèle <code>["opus-4.7","opus-4.6","sonnet-4.6"]</code> — il <strong>aurait rejeté</strong> tout run enregistrant <code>opus-4.8</code>. Corrigé en <code>["opus-4.8","opus-4.7","opus-4.6"]</code> (4.8 courant + legacy pour les 77 runs historiques).</p>
+</div>
+<p>Tout aligné sur <code>claude-opus-4-8</code>. Vérification : <code>grep claude-opus-4-7 .claude/agents/ = 0</code>. Les lignes de changelog historiques datées ont été préservées (réécrire l'historique du tier d'alors serait malhonnête — UFR-013).</p>
+
+<h2 id="o3">5. Objectif 3 — élagage des agents (décision utilisateur)</h2>
+
+<h4>Le cadrage qui change tout</h4>
+<p>Deux lectures coexistent sans se contredire&nbsp;:</p>
+<ul>
+  <li><b>Les agents sont disjoints entre eux.</b> Lecture ligne-à-ligne : <code>verifier</code> = gates mécaniques, <code>security</code> = threat-model, <code>reviewer</code> = sémantique. Pas de doublon mutuel.</li>
+  <li><b>L'appareil global duplique ~80&nbsp;% du natif.</b> Le « redondant » de l'audit vise l'<em>appareil vs superpowers/subagents</em>, pas un agent vs un autre.</li>
+</ul>
+<p>Donc l'élagage ne se justifie pas par « ils font la même chose », mais par <strong>« cette couche refait du natif »</strong> et <strong>« cette machinerie n'a jamais servi »</strong>.</p>
+
+<h4>Données d'usage (77 runs /team) — la preuve décisive</h4>
+<table>
+<tr><th>Mécanique</th><th>Exercée sur 77 runs</th><th>Verdict</th></tr>
+<tr><td>frozen-test (<code>red-test-manifest.json</code>)</td><td><span class="num">39</span> runs</td><td>Valeur nette prouvée</td></tr>
+<tr><td>lib-docs PATTERNS (cache 107 libs, consulté)</td><td>existe + lu</td><td>Utile</td></tr>
+<tr><td>doc-fetcher/curator (fetch dynamique)</td><td><span class="num">1</span> run (seed 2026-05-19)</td><td>Quasi-dormant</td></tr>
+<tr><td>learning-curator (amendements)</td><td>9 lessons in, <span class="num">0</span> sortie</td><td>Jamais livré</td></tr>
+</table>
+
+<h4>Décisions actées (après présentation des options)</h4>
+<div class="card"><span class="tag merge">FUSION</span> <b>doc-fetcher + doc-curator → <code>doc-cache</code></b><br>
+Le split en deux agents n'avait qu'une justification : préserver le context-window des agents <em>aval</em> (ils lisent un <code>PATTERNS.md</code> de ~400 lignes, pas le snapshot de 50&nbsp;KB). Mais cet argument concerne l'aval, pas fetcher/curator eux-mêmes — un seul agent peut fetch <em>puis</em> curer dans son propre contexte et n'émettre que <code>PATTERNS.md</code>. Le split ajoutait 1 spawn + 1 handoff sans bénéfice. <span class="arrow">−1 agent, −1 handoff ; valeur lib-docs intacte.</span></div>
+<div class="card"><span class="tag del">SUPPRESSION</span> <b>learning-curator</b> (+ mode <code>/team learning:review</code>)<br>
+0 amendement produit en 77 runs. Machinerie spéculative non amortie. Les lessons restent capturées (<code>post-complete-lesson-capture.sh</code>) pour lecture manuelle. N'affecte ni frozen-test ni lib-docs. <span class="arrow">−1 agent (162 lignes).</span></div>
+<div class="card"><span class="tag merge">FUSION</span> <b>verifier → reviewer + hooks</b><br>
+Le cœur de <code>verifier</code> = lancer <code>lint/tsc/test/mutation</code> — des commandes <strong>déterministes</strong> déjà couvertes par les hooks + la CI. Un agent LLM pour ça était du gaspillage. Sa seule part de jugement (scope-boundary, spot-check) recoupe le reviewer. <span class="arrow">−1 agent ; gate verify reste (hooks), jugement → reviewer.</span></div>
+<div class="card"><span class="tag keep">CONSERVÉ</span> <b>security</b> — <em>push-back sur l'audit</em><br>
+L'audit suggérait de fusionner security dans le reviewer. Refusé : OWASP LLM Top-10 (injection, <code>&lt;untrusted_content&gt;</code>, Presidio), contrats auth (rotation refresh, nonce social, rate-limit), SAST (semgrep/CodeQL), supply-chain — non réductible à un reviewer générique pour une app IA culturelle avec surface d'injection LLM.</div>
+
+<p>Exécution : <strong>9 → 6 agents</strong>, rewiring cohérent sur ~19 fichiers (création <code>doc-cache.md</code>, suppression des 4, mise à jour <code>SKILL.md</code> / <code>agent-mandate.md</code> / <code>sdlc-index</code> / <code>sdlc-pipelines</code> / <code>enterprise</code> / <code>quality-gates</code> / <code>conflict-resolution</code> / <code>error-taxonomy</code> / <code>state.schema.json</code> / <code>user-feedback-rules.json</code> / <code>CLAUDE.md</code> + hooks). Balayage final : <span class="ok">0 référence orpheline active</span>. Commit <code>1535abe0</code> (27 fichiers, +525/−1025, 8 gates pre-commit verts).</p>
+
+<h2 id="o4">6. Objectif 4 + absorption <code>systematic-debugging</code></h2>
+<p><b>Décision stratégique (Q4)</b> : plutôt que remplacer <code>/team</code> par les skills natifs, <strong>/team reste primaire et absorbe le bon de superpowers</strong>. « La team est la priorité d'évolution ». Conséquence : on ne bascule pas vers le natif ; on vendore (copie locale) les mécaniques utiles pour que <code>/team</code> reste self-contained.</p>
+
+<h4>Pourquoi <code>systematic-debugging</code></h4>
+<p>L'absorption utile comble un <strong>trou méthodologique réel</strong>, pas un doublon. TDD ≈ red/green+frozen-test, writing-plans ≈ spec/plan, requesting-code-review ≈ reviewer loop — tout ça, /team l'a déjà. Ce qui manquait : <strong>aucune méthodologie de debug</strong>. Quand le gate verify FAIL ou que le green produit du code qui casse, l'editor « corrige » sans discipline root-cause (le cap 2 boucles = un compteur, pas une méthode).</p>
+
+<div class="card">
+<h4>La convergence exploitée</h4>
+<p>Le skill dit&nbsp;: « <strong>3+ fixes échoués = questionne l'architecture, ne refixe pas</strong> ». Or /team a <em>déjà</em> ce signal : <code>intraPhaseHookLoops</code> cap=2 → STOP+escalade (REGLE 14). Ce qui manquait, c'est la méthode entre les tentatives. Donc l'absorption <strong>n'ajoute aucun nouveau point bloquant</strong> — elle enrichit le stop existant : au cap, l'escalade devient « questionne l'archi » avec un <code>debug-log.md</code> documentant les hypothèses échouées.</p>
+</div>
+
+<h4>Ce que /team ajoute au skill (les « teeth »)</h4>
+<p>superpowers est un skill en <em>prose</em>. /team le rend <strong>enforce-able</strong> — fil rouge de toute la session (« pas d'honor-system »)&nbsp;: un nouveau hook <code>pre-complete-debug-log-check.sh</code> exige un <code>debug-log.md</code> complet (4 phases + section « Architecture question ») dès que <code>intraPhaseHookLoops ≥ 2</code>. Tiéré pour ne pas faux-bloquer un fix trivial. Self-test <span class="ok">4/4</span>.</p>
+<pre><code># enforcement tiéré
+loops &lt; 2  → PASS (une ligne de root-cause en STORY suffit)
+loops ≥ 2  → debug-log.md MUST exist + 4 phase markers + ≥1 Hypothesis
+             + section "Architecture question" (Phase 4.5)   sinon FAIL</code></pre>
+<p>Wiring : <code>team-protocols/systematic-debugging.md</code> (méthodo vendored, crédite Obra/superpowers) ; <code>editor.md</code> section DEBUG PROTOCOL (phase green) ; <code>SKILL.md</code> Step 6 (hook&nbsp;d) + REGLE 14 + changelog ; <code>error-taxonomy.md</code> E-RUNTIME ; <code>state.schema.json</code> (gate enum) ; <code>sdlc-index</code> + <code>team-hooks/README</code>. Commit <code>2e60c5ed</code> (8 fichiers, +265/−5, gates verts).</p>
+
+<h2 id="principles">7. Décisions d'architecture &amp; principes transférables</h2>
+<div class="principle"><span class="h">1. « Agent LLM qui exécute du déterministe » = signal « ça devrait être un hook »</span>
+Le <code>verifier</code> lançait <code>lint/tsc/test</code>. Le bon critère d'élagage n'est pas « est-ce redondant ? » mais <strong>« est-ce que ça demande un LLM ? »</strong>. Inversement, <code>frozen-test</code> (jugement de contrat) et <code>security</code> (threat-model) restent.</div>
+<div class="principle"><span class="h">2. Un mécanisme honor-system ne tient pas — ajoute des dents</span>
+Le <code>patternsSha256</code> était dans un fichier <em>tracké</em> mais jamais re-vérifié → 43 divergences silencieuses. Même logique pour la discipline de debug : un protocole en prose ne suffit pas, il faut un artefact + un hook. <strong>Si une garantie compte, elle doit être vérifiable.</strong></div>
+<div class="principle"><span class="h">3. Sur-découper sans bénéfice aval = coût net</span>
+doc-fetcher → doc-curator était justifié par l'économie de contexte… des agents <em>aval</em>, pas d'eux-mêmes. Fusionner ne perd rien et économise un spawn + un handoff.</div>
+<div class="principle"><span class="h">4. La machinerie non-amortie se prune sur les données, pas l'intuition</span>
+learning-curator : 0 sortie / 77 runs. Les données d'usage tranchent ; on ne garde pas « au cas où » avant un launch.</div>
+<div class="principle"><span class="h">5. Absorber &gt; remplacer — et vendorer pour rester self-contained</span>
+Q4 : /team garde son orchestration et copie localement les mécaniques natives utiles (pas de dépendance au plugin). On exploite les convergences (le cap existant = le signal du skill) plutôt que d'empiler.</div>
+<div class="principle"><span class="h">6. Honnêteté documentaire (UFR-013)</span>
+Les changelogs historiques datés sont préservés (réécrire l'historique = mensonge). Les SHA/stats cités en mémoire ont été corrigés aux valeurs réelles après commit. Le ratio <code>−1025/+525</code> raconte l'histoire : on a retiré deux fois plus de prose qu'ajouté.</div>
+
+<h2 id="beforeafter">8. Avant / Après</h2>
+<h4>Pipeline</h4>
+<table>
+<tr><th></th><th>Avant (9 phases / 9 agents)</th><th>Après (8 phases / 6 agents)</th></tr>
+<tr><td>Phases</td><td>spec → plan → <b>doc-freshness</b> → red → green → <b>verify (agent)</b> → security → review → documenter</td><td>spec → plan → <b>doc-cache</b> → red → green → <b>verify (gate hooks, sans agent)</b> → security → review → documenter</td></tr>
+<tr><td>Agents</td><td>architect, editor, <b>verifier</b>, security, reviewer, documenter, <b>learning-curator</b>, <b>doc-fetcher</b>, <b>doc-curator</b></td><td>architect, editor, <b>doc-cache</b>, security, reviewer, documenter</td></tr>
+<tr><td>Modèle</td><td>8× <code>claude-opus-4-7</code> + documenter <code>4-6</code></td><td>6× <code>claude-opus-4-8</code> (unifié)</td></tr>
+<tr><td>Protocoles</td><td>8</td><td>9 (+ <code>systematic-debugging.md</code>)</td></tr>
+<tr><td>Hooks</td><td>11</td><td>12 (+ <code>pre-complete-debug-log-check.sh</code>)</td></tr>
+<tr><td>lib-docs contrat</td><td>honor-system (43 drifts non détectés)</td><td>self-heal (re-hash on-disk, 0 mismatch)</td></tr>
+</table>
+
+<h2 id="ledger">9. Registre des commits &amp; vérifications</h2>
+<table>
+<tr><th>Commit</th><th>Sujet</th><th>Diff</th><th>Gates</th></tr>
+<tr><td><code>1535abe0</code></td><td>élague /team 9→6 + ferme honor-system lib-docs + aligne modèles 4-8</td><td>27 fichiers, +525 / −1025</td><td>8/8 pre-commit ✓</td></tr>
+<tr><td><code>2e60c5ed</code></td><td>absorbe superpowers:systematic-debugging (Q4)</td><td>8 fichiers, +265 / −5</td><td>8/8 pre-commit ✓</td></tr>
+</table>
+<h4>Ledger de vérification (UFR-013 — commandes réellement lancées)</h4>
+<pre><code>JSON valides (INDEX, user-feedback-rules, state.schema) ......... OK
+pre-phase-doc-freshness        --self-test .................... 7/7
+pre-phase-doc-reference-check  --self-test .................... 3/3
+pre-complete-debug-log-check   --self-test .................... 4/4
+INDEX re-hash mismatch ......................................... 0
+grep claude-opus-4-7 .claude/agents/ ........................... 0
+références orphelines (4 agents supprimés) ..................... 0
+références croisées systematic-debugging (7 points) ........... toutes résolvent
+agents finaux .................................................. 6 (tous opus-4-8)</code></pre>
+
+<h2 id="followups">10. Suites &amp; non-faits</h2>
+<ul>
+  <li><b>Push</b> : rien n'est poussé. <code>dev</code> est 97 commits ahead de <code>main</code>. HEAD au moment de l'écriture = <code>e9754d6f</code> (voir ci-dessous) ; mes deux commits en sont des ancêtres vérifiés (<code>git merge-base --is-ancestor</code>).</li>
+  <li><b>Staging discipliné</b> : mes deux commits n'ont stagé que leurs propres fichiers (jamais <code>git add -A</code>), pour éviter un commit composite. Les modifs pré-stagées sans rapport (CI workflows, maestro, <code>cache-key-parity.test.ts</code>) ont ensuite été committées <em>séparément</em> par les sentinelles event-driven du repo (hook Stop <code>ssot-sentinel.sh</code>) : <code>45d159a6</code> (ci deploy-prod gate) et <code>e9754d6f</code> (re-stamp ROPA cascade) — commits distincts, pas un bundle.</li>
+  <li><b>Direction Q4 ouverte</b> : <code>systematic-debugging</code> est la 1<sup>re</sup> absorption ; le modèle (vendorer + ajouter un hook enforce) est reproductible pour d'autres skills natifs — candidat suivant naturel : <code>receiving-code-review</code> (discipline côté phase re-spawnée après un CHANGES_REQUESTED).</li>
+  <li><b>GitNexus</b> : index marqué stale ; le hook PostToolUse sur <code>git commit</code> relance <code>npx gitnexus analyze</code> en arrière-plan.</li>
+</ul>
+
+<div class="foot">
+Sources : <code>audit-state/2026-05-31-cartographie-360/raw/07,11</code> · lecture des 9 agents + protocoles + hooks · données d'usage <code>.claude/skills/team/team-state/</code> (77 runs) · self-tests des hooks · <code>git show</code> des 2 commits. Analyse décisionnelle compagnon : <code>artifacts/2026-05-31-team-pruning-analysis.html</code>. Toutes les affirmations chiffrées sont vérifiées (UFR-013) ; aucune fabrication.
+</div>
+</body>
+</html>

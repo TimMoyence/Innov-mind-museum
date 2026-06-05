@@ -139,3 +139,101 @@ describe('offlineImageStorage', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// W1-D4-FE-03 — dedicated capped image cache (carnet re-download). ADDED block
+// (the original describe above is byte-frozen for green; these tests pin the
+// NEW capped-cache surface: getCachedImage / cacheRemoteImage with LRU + maxAge
+// eviction + post-wipe miss). Mocks the same `expo-file-system/legacy` module,
+// augmented at runtime with the extra FS methods the capped cache needs
+// (downloadAsync / readDirectoryAsync / getFreeDiskStorageAsync) — purely
+// additive, the original 4-method factory is untouched.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface CappedCacheModule {
+  getCachedImage(key: string): Promise<string | null>;
+  cacheRemoteImage(key: string, remoteUrl: string): Promise<string | null>;
+}
+
+interface AugmentedFs {
+  downloadAsync: jest.Mock;
+  readDirectoryAsync: jest.Mock;
+  getFreeDiskStorageAsync: jest.Mock;
+  writeAsStringAsync: jest.Mock;
+  readAsStringAsync: jest.Mock;
+}
+
+describe('offlineImageStorage — capped image cache (W1-D4-FE-03)', () => {
+  const CACHED_DIR = OFFLINE_DIR;
+  let cappedCache: CappedCacheModule;
+  let fs: AugmentedFs;
+
+  beforeAll(() => {
+    // Augment the already-mocked module with the extra FS surface the capped
+    // cache relies on. requireMock returns the SAME mocked object the source
+    // under test imports.
+    const mockedFs = jest.requireMock('expo-file-system/legacy');
+    mockedFs.downloadAsync = jest.fn();
+    mockedFs.readDirectoryAsync = jest.fn();
+    mockedFs.getFreeDiskStorageAsync = jest.fn();
+    mockedFs.writeAsStringAsync = jest.fn();
+    mockedFs.readAsStringAsync = jest.fn();
+    fs = mockedFs as unknown as AugmentedFs;
+
+    // RED: these exports do not exist yet → require throws / undefined access.
+    cappedCache = jest.requireActual('@/features/chat/application/offlineImageStorage');
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetInfoAsync.mockResolvedValue({ exists: true, isDirectory: true });
+    fs.downloadAsync.mockResolvedValue({ uri: `${CACHED_DIR}downloaded.jpg`, status: 200 });
+    fs.readDirectoryAsync.mockResolvedValue([]);
+    fs.getFreeDiskStorageAsync.mockResolvedValue(1_000_000_000);
+    fs.writeAsStringAsync.mockResolvedValue(undefined);
+    fs.readAsStringAsync.mockResolvedValue('{}');
+  });
+
+  describe('getCachedImage', () => {
+    it('returns null when the cached file is absent (post-wipe miss)', async () => {
+      mockGetInfoAsync.mockResolvedValue({ exists: false });
+
+      const result = await cappedCache.getCachedImage('msg-wiped');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns the cached uri when the file exists', async () => {
+      mockGetInfoAsync.mockResolvedValue({ exists: true, size: 1_000 });
+
+      const result = await cappedCache.getCachedImage('msg-present');
+
+      expect(typeof result).toBe('string');
+      expect(result).toContain(CACHED_DIR);
+    });
+  });
+
+  describe('cacheRemoteImage — cap enforcement', () => {
+    it('measures the downloaded derivative size via getInfoAsync', async () => {
+      mockGetInfoAsync.mockResolvedValue({ exists: true, size: 2_048 });
+
+      await cappedCache.cacheRemoteImage('msg-new', 'https://signed.example.com/fresh.jpg');
+
+      // The freshly-downloaded file is stat'd so its size counts against the cap.
+      expect(mockGetInfoAsync).toHaveBeenCalled();
+      expect(fs.downloadAsync).toHaveBeenCalled();
+    });
+
+    it('evicts LRU files via deleteAsync when the write pushes the cache over cap', async () => {
+      // Two pre-existing large entries + a large new download → over the
+      // dedicated cap → at least one LRU file must be deleted.
+      fs.readDirectoryAsync.mockResolvedValue(['old-lru.jpg', 'recent.jpg', 'index.json']);
+      const HUGE = 200 * 1024 * 1024; // 200 MB each — guaranteed over any sane cap
+      mockGetInfoAsync.mockResolvedValue({ exists: true, size: HUGE });
+
+      await cappedCache.cacheRemoteImage('msg-overflow', 'https://signed.example.com/big.jpg');
+
+      expect(mockDeleteAsync).toHaveBeenCalled();
+    });
+  });
+});

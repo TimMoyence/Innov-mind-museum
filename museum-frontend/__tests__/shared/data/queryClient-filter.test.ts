@@ -7,7 +7,10 @@ import { shouldDehydrateQuery } from '@/shared/data/queryClient';
  * roundtrip is suppressed.
  */
 describe('queryClient — shouldDehydrateQuery (sensitive filter)', () => {
-  const asQuery = (queryKey: readonly unknown[]) => ({ queryKey });
+  const asQuery = (queryKey: readonly unknown[], status = 'success') => ({
+    queryKey,
+    state: { status },
+  });
 
   describe.each([['messages'], ['session'], ['admin'], ['auth'], ['user']])(
     'excludes sensitive prefix "%s"',
@@ -41,5 +44,15 @@ describe('queryClient — shouldDehydrateQuery (sensitive filter)', () => {
 
   it('keeps an empty query key (pathological but survivable)', () => {
     expect(shouldDehydrateQuery(asQuery([]))).toBe(true);
+  });
+
+  // QA-05 regression — a query dehydrated while still PENDING serialises a live
+  // promise that rehydrates as a dead one on cold start, surfacing
+  // "A query that was dehydrated as pending ended up rejecting / CancelledError"
+  // (observed on the ['museums','directory'] list). A custom shouldDehydrateQuery
+  // REPLACES React Query's default status gate, so it must re-assert it.
+  it('does NOT persist a pending or errored query, even with a non-sensitive key', () => {
+    expect(shouldDehydrateQuery(asQuery(['museums', 'directory'], 'pending'))).toBe(false);
+    expect(shouldDehydrateQuery(asQuery(['museums', 'directory'], 'error'))).toBe(false);
   });
 });

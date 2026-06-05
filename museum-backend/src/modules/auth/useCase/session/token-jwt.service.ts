@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
-import { AppError } from '@shared/errors/app.error';
+import { AppError, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import type { UserRole } from '@modules/auth/domain/user/user-role';
@@ -26,14 +26,6 @@ export interface RefreshTokenClaims extends JwtPayload {
   jti: string;
   familyId: string;
 }
-
-const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError => {
-  return new AppError({
-    message,
-    statusCode: 401,
-    code,
-  });
-};
 
 const INVALID_ACCESS_TOKEN_MSG = 'Invalid access token';
 const INVALID_ACCESS_TOKEN_CODE = 'INVALID_ACCESS_TOKEN';

@@ -1,9 +1,10 @@
 import { memo, useCallback, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { radius, semantic, space } from '@/shared/ui/tokens';
+import { radius, semantic } from '@/shared/ui/tokens';
 
 const PROACTIVE_REFRESH_MS = 5 * 60 * 1000;
 
@@ -28,6 +29,7 @@ export const ImageSection = memo(function ImageSection({
   onImageError,
 }: ImageSectionProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const handleImageError = useCallback(() => {
     onImageError(messageId);
@@ -64,13 +66,14 @@ export const ImageSection = memo(function ImageSection({
       recyclingKey={messageId}
       cachePolicy="memory-disk"
       onError={handleImageError}
+      accessibilityRole="image"
+      accessibilityLabel={t('a11y.chat.attached_image')}
     />
   );
 });
 
 const styles = StyleSheet.create({
   messageImage: {
-    marginTop: space['2'],
     width: semantic.media.imagePreview,
     height: semantic.media.imagePreview,
     borderRadius: radius.lg,

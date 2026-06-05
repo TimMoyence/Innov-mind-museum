@@ -12,8 +12,8 @@
 
 Two LLM cache layers cohabit in the chat pipeline as of 2026-05-08, with no documented architectural authority:
 
-- **L1 — `LlmCacheServiceImpl`** (`museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts`) — use-case-level cache, called by `chat-message.service.ts` BEFORE the orchestrator. Adaptive TTL by `contextClass` (generic 7d / museum-mode 1d / personalized 1h). Prom counters `llm_cache_hits_total{context_class}` + `llm_cache_misses_total{context_class}` already shipped. Public API includes `invalidateMuseum(museumId)`. Key shape: `llm:v1:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfCanonicalInput}`.
-- **L2 — `CachingChatOrchestrator`** (`museum-backend/src/modules/chat/adapters/secondary/llm/caching-chat-orchestrator.ts`) — adapter-level decorator wrapping the `ChatOrchestrator` port, wired in the composition root (`chat-module.ts:244`). Bypass conditions diverge from L1 (image, history>0, text>500 chars, userMemoryBlock present, KB block present, web-search block, PII detection, no museumId). Maintains a Redis sorted-set for popularity-weighted warmup. **No Prom metrics** — only `logger.info` events.
+- **L1 — `LlmCacheServiceImpl`** (`museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts`) — use-case-level cache, called by `chat-message.service.ts` BEFORE the orchestrator. Adaptive TTL by `contextClass` (generic 7d / museum-mode 1d / personalized 1h). Prom counters `llm_cache_hits_total{context_class}` + `llm_cache_misses_total{context_class}` already shipped. Public API includes `invalidateMuseum(museumId)`. Key shape: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfCanonicalInput}`.
+- **L2 — `CachingChatOrchestrator`** *(historique — fichier `museum-backend/src/modules/chat/adapters/secondary/llm/caching-chat-orchestrator.ts` supprimé en PR-B 2026-05-08, voir §Decision ; l'orchestrateur est désormais instancié direct, `chat-module.ts:698`)* — adapter-level decorator wrapping the `ChatOrchestrator` port, wired in the composition root au moment de l'ADR. Bypass conditions diverge from L1 (image, history>0, text>500 chars, userMemoryBlock present, KB block present, web-search block, PII detection, no museumId). Maintains a Redis sorted-set for popularity-weighted warmup. **No Prom metrics** — only `logger.info` events.
 
 The roadmap previously cited "ADR-035 llm-cache" as the architectural reference. That citation is incorrect: ADR-035 covers the Wikidata Knowledge Base. **No ADR has ever been active for the LLM cache strategy** — this is the first.
 
@@ -53,7 +53,7 @@ The two-PR split exists to enable bisect: if cache hit-rate regresses after PR-B
 |---|---|
 | Implementation | `LlmCacheServiceImpl` (`museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts`). |
 | Lookup site | `chat-message.service.ts` BEFORE the orchestrator call. |
-| Key shape | `llm:v1:{contextClass}:{museumId\|none}:{userId\|anon}:{sha256OfCanonicalInput}`. `museumId` precedes `userId` so `delByPrefix` can target a museum across all users. |
+| Key shape | `llm:v2:{contextClass}:{museumId\|none}:{userId\|anon}:{sha256OfCanonicalInput}`. `museumId` precedes `userId` so `delByPrefix` can target a museum across all users. The `v2` namespace (bumped from `v1` by `d54552beb`, 2026-05-19) folds `voiceMode` + `audioDescriptionMode` into the hashed input — source of truth `llm-cache.service.ts:119`. |
 | `contextClass` derivation | `classify()` returns `personalized` if `userPreferencesHash` is present, `museum-mode` if `museumContext.museumId` is set, else `generic`. |
 | TTL constants | `TTL_GENERIC_S = 7 * 24 * 60 * 60` (7 days), `TTL_MUSEUM_MODE_S = 24 * 60 * 60` (1 day), `TTL_PERSONALIZED_S = 60 * 60` (1 hour). All defined in `llm-cache.service.ts` ; data-driven tuning gated by R11 below. |
 | Bypass conditions | Owned by `chat-message.service.ts` calling code (image input, oversize text, PII flag, etc.). The cache itself does not bypass — it always derives a key and looks up. The caller decides whether to call. |
@@ -107,8 +107,8 @@ TTL constants are not tuned by intuition. Tune protocol:
 - Spec: `.claude/skills/team/team-state/2026-05-08-c1-chat-fast/spec.md` (R7, R8, R9, R10, R11, R13).
 - Design: `.claude/skills/team/team-state/2026-05-08-c1-chat-fast/design.md` §9 D1.
 - Code (L1, retained): `museum-backend/src/modules/chat/useCase/llm/llm-cache.service.ts`.
-- Code (L2, slated for removal in PR-B): `museum-backend/src/modules/chat/adapters/secondary/llm/caching-chat-orchestrator.ts`.
-- Composition root: `museum-backend/src/modules/chat/chat-module.ts:244` (PR-B updates this site).
+- Code (L2, **removed in PR-B 2026-05-08**): `museum-backend/src/modules/chat/adapters/secondary/llm/caching-chat-orchestrator.ts` — fichier supprimé ; `grep -rn "CachingChatOrchestrator" museum-backend/src` retourne zéro.
+- Composition root: PR-B a retiré le wrapper L2 ; l'orchestrateur est désormais instancié direct (`LangChainChatOrchestrator`, `museum-backend/src/modules/chat/chat-module.ts:698`).
 - Tests (L1): `museum-backend/tests/unit/chat/llm-cache.service.ts`.
 - Integration test (admin invalidation, both context classes — PR-A T1.11): `museum-backend/tests/integration/admin/admin-museum-cache-invalidation.integration.test.ts` (NEW).
 - Pipeline spans test (PR-A T1.10): `museum-backend/tests/integration/chat/chat-pipeline-spans.integration.test.ts` (NEW).

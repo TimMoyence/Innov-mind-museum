@@ -28,6 +28,7 @@ export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
       }}
       accessibilityRole="button"
       accessibilityLabel={museum.name}
+      testID="museum-card"
     >
       <View style={styles.header}>
         <Ionicons name="business-outline" size={20} color={theme.primary} style={styles.icon} />

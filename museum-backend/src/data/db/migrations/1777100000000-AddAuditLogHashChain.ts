@@ -1,28 +1,19 @@
 import { createHash } from 'node:crypto';
 
+import { canonicalStringify } from '@shared/audit/audit-chain';
+
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Canonical JSON stringify with sorted keys (deep).
- *
- * KEEP IN SYNC WITH src/shared/audit/audit-chain.ts (computeRowHash). The
- * canonical definition lives there; this migration duplicates the logic only
- * because TypeORM's migration CLI runner cannot reliably import compiled app
- * code at runtime. Parity is pinned by the test
- * `tests/unit/audit/audit-chain-migration-parity.test.ts`.
+ * Metadata serialization for the backfill hash is the SHARED `canonicalStringify`
+ * from `@shared/audit/audit-chain` — the single source of truth (R5/AC4). The
+ * migration CLI runs under `ts-node -r tsconfig-paths/register` (see package.json
+ * `typeorm` script), so the `@shared/*` alias resolves at runtime; `audit-chain.ts`
+ * is a pure module (only `node:crypto`, no decorators / DataSource / side effects),
+ * making this import safe inside a migration. The old inline `stableStringify`
+ * duplicate is removed — parity is pinned by
+ * `tests/unit/audit/audit-chain-migration-parity.test.ts` (AC3 nested + AC4 snapshot).
  */
-function stableStringify(v: unknown): string {
-  if (v === null || typeof v !== 'object') return JSON.stringify(v);
-  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
-  const keys = Object.keys(v).sort((a, b) => a.localeCompare(b));
-  return (
-    '{' +
-    keys
-      .map((k) => JSON.stringify(k) + ':' + stableStringify((v as Record<string, unknown>)[k]))
-      .join(',') +
-    '}'
-  );
-}
 
 /**
  * Adds tamper-evident SHA-256 hash chain columns to `audit_logs`:
@@ -81,7 +72,7 @@ export class AddAuditLogHashChain1777100000000 implements MigrationInterface {
           row.action,
           row.target_type ?? '',
           row.target_id ?? '',
-          row.metadata === null ? '' : stableStringify(row.metadata),
+          row.metadata === null ? '' : canonicalStringify(row.metadata),
           row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
           prev,
         ].join('|');

@@ -378,10 +378,16 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
 
     await waitFor(() => {
-      expect(mockedApiPost).toHaveBeenCalledWith('/api/auth/login', {
-        email: 'admin@test.com',
-        password: 'secret123',
-      });
+      expect(mockedApiPost).toHaveBeenCalledWith(
+        '/api/auth/login',
+        {
+          email: 'admin@test.com',
+          password: 'secret123',
+        },
+        // M1 (T4.2): a 401/403 on /login is a domain/credential error, not
+        // session expiry — login() opts out of the auto-refresh/logout path.
+        { skipAuthRefresh: true },
+      );
     });
   });
 

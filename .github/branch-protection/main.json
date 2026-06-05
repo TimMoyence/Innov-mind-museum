@@ -1,0 +1,43 @@
+{
+  "_doc": [
+    "SOURCE OF TRUTH for main's required status checks.",
+    "Reconciled onto the live branch protection by .github/workflows/branch-protection-reconcile.yml",
+    "on every push to main (and via workflow_dispatch). Edit THIS file to change required checks —",
+    "never the GitHub UI; live drift is overwritten on the next push to main.",
+    "",
+    "The REST endpoint PATCH .../required_status_checks REPLACES the whole contexts array, so the",
+    "reconcile script rebuilds it from `always` + the `guarded` entries whose freeze-guard passes.",
+    "Dropping a context here = un-requiring it. Adding one = requiring it (it MUST be reportable on",
+    "every PR, i.e. its job uses a JOB-LEVEL `if:` gate, never a workflow-level path filter).",
+    "",
+    "`always`  : contexts pinned unconditionally (their workflows already report on every PR).",
+    "`guarded` : contexts pinned ONLY when `workflow` uses `pull_request: {}` (job-level gating).",
+    "            If the workflow regresses to a workflow-level path filter, the reconcile script",
+    "            DROPS the context from required (prevents an 'Expected'-forever freeze) and warns."
+  ],
+  "required_status_checks": {
+    "strict": true,
+    "always": [
+      "quality",
+      "ai-tests",
+      "CodeQL (javascript-typescript)",
+      "semgrep",
+      "sentinel-mirror",
+      "coverage-merge",
+      "integration",
+      "e2e",
+      "migration-drift"
+    ],
+    "guarded": [
+      {
+        "context": "promptfoo",
+        "workflow": ".github/workflows/ci-cd-promptfoo.yml"
+      },
+      {
+        "context": "promptfoo systemprompt-leak corpus",
+        "workflow": ".github/workflows/llm-security-promptfoo.yml"
+      }
+    ]
+  },
+  "enforce_admins": true
+}

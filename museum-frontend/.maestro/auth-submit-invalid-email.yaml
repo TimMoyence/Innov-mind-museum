@@ -10,11 +10,20 @@ appId: com.musaium.mobile.preview
 # screen: AuthScreen
 
 # ──────────────────────────────────────────────
-# Phase 1: Reach auth screen (login mode is default)
+# Phase 0: Cold start -> auth screen (login mode is default)
 # ──────────────────────────────────────────────
-- waitForAnimationToEnd
-- assertVisible:
-    text: "Welcome back|Bon retour"
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
 # Phase 2: Type a malformed email + a structurally-valid password
@@ -28,7 +37,10 @@ appId: com.musaium.mobile.preview
     id: "password-input"
 - inputText: "AnyValidPwd123"
 
-- hideKeyboard
+# Dismiss keyboard via a static-text tap (hideKeyboard intermittently hard-fails
+# on iOS when no standard dismiss accessory is present).
+- tapOn:
+    text: "Welcome back|Bon retour"
 
 - tapOn:
     id: "auth-submit"

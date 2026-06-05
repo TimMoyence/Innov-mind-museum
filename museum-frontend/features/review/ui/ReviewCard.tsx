@@ -6,8 +6,6 @@ import { semantic, space, radius, fontSize, lineHeightPx } from '@/shared/ui/tok
 
 import type { ReviewDTO } from '../infrastructure/reviewApi';
 
-import { StarRating } from './StarRating';
-
 interface ReviewCardProps {
   review: ReviewDTO;
 }
@@ -25,10 +23,10 @@ const formatRelativeDate = (iso: string, locale: string): string => {
   return `${String(Math.floor(diffDays / 365))}y`;
 };
 
-/** Displays a single review with stars, username, comment, and relative date. */
+/** Displays a single review with its 0-10 NPS rating, username, comment, and relative date. */
 export const ReviewCard = ({ review }: ReviewCardProps) => {
   const { theme } = useTheme();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <View
@@ -44,7 +42,19 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
           {formatRelativeDate(review.createdAt, i18n.language)}
         </Text>
       </View>
-      <StarRating rating={review.rating} size={16} />
+      {/* NPS score on a 0-10 scale (no 5-star clamp). R26/Q4.
+          The numerator and the "/10" suffix are two adjacent Text nodes so the
+          number can be emphasised; the suffix dict value is a bare "/10" (no
+          {{rating}} interpolation) — rendering the rating exactly ONCE → "9/10"
+          (C2FE-F1: the prior duplicated "{{rating}}/10" produced "9 9/10"). */}
+      <View style={styles.ratingRow}>
+        <Text style={[styles.ratingNumber, { color: theme.textPrimary }]}>
+          {String(review.rating)}
+        </Text>
+        <Text style={[styles.ratingScale, { color: theme.textTertiary }]}>
+          {t('reviews.ratingOutOf10')}
+        </Text>
+      </View>
       <Text style={[styles.comment, { color: theme.textSecondary }]}>{review.comment}</Text>
     </View>
   );
@@ -67,6 +77,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   date: {
+    fontSize: fontSize.xs,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  ratingNumber: {
+    fontWeight: '700',
+    fontSize: fontSize['base-'],
+  },
+  ratingScale: {
     fontSize: fontSize.xs,
   },
   comment: {

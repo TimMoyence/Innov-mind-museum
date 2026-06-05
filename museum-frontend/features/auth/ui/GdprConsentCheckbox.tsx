@@ -40,6 +40,7 @@ export function GdprConsentCheckbox({
       accessibilityState={{ checked: accepted }}
     >
       <View
+        testID="gdpr-consent-checkbox"
         style={[
           styles.checkbox,
           { borderColor: theme.inputBorder, backgroundColor: theme.inputBackground },

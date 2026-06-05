@@ -33,6 +33,9 @@ const styles = StyleSheet.create({
   text: {
     fontSize: fontSize.xs,
     textAlign: 'center',
-    opacity: 0.7,
+    // R1/R2 (design §D2): the EU AI Act Art. 50 disclosure renders at full
+    // token contrast (no dimming). It must meet WCAG 2.1 AA 4.5:1;
+    // `theme.textSecondary` solid-on-solid floor clears AA, so the structural
+    // fix (full contrast) is sufficient — no token change.
   },
 });

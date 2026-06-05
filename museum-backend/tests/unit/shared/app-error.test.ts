@@ -174,6 +174,41 @@ describe('error factory functions', () => {
     expect(err.code).toBe('UNAUTHORIZED');
     expect(err.message).toBe('Sign in required');
   });
+
+  // PR-1 / UFR-022 RED — `unauthorized()` MUST accept an optional second
+  // `code` argument so the 6 local copies in src/ can be removed. The current
+  // mono-arg signature ignores anything beyond `message`, so the assertions
+  // below FAIL until the GREEN phase extends the factory.
+  describe('unauthorized 2-arg signature (PR-1)', () => {
+    it('mono-arg call defaults code to UNAUTHORIZED (backward-compat regression guard)', () => {
+      const err = unauthorized('Token required');
+      expect(err.statusCode).toBe(401);
+      expect(err.code).toBe('UNAUTHORIZED');
+      expect(err.message).toBe('Token required');
+    });
+
+    it('overrides the default code when an explicit 2nd argument is provided', () => {
+      const err = unauthorized('Invalid access token', 'INVALID_ACCESS_TOKEN');
+      expect(err.statusCode).toBe(401);
+      expect(err.code).toBe('INVALID_ACCESS_TOKEN');
+      expect(err.message).toBe('Invalid access token');
+    });
+
+    it('propagates the INVALID_MFA_SESSION code used by mfaSessionToken paths', () => {
+      const err = unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
+      expect(err.code).toBe('INVALID_MFA_SESSION');
+    });
+
+    it('propagates the REFRESH_TOKEN_REUSE_DETECTED code used by sessionIssuer paths', () => {
+      const err = unauthorized('Refresh token reuse detected', 'REFRESH_TOKEN_REUSE_DETECTED');
+      expect(err.code).toBe('REFRESH_TOKEN_REUSE_DETECTED');
+    });
+
+    it('propagates the TOKEN_REVOKED code used by authenticated middleware paths', () => {
+      const err = unauthorized('Token revoked', 'TOKEN_REVOKED');
+      expect(err.code).toBe('TOKEN_REVOKED');
+    });
+  });
 });
 
 // Kills L37 ObjectLiteral + StringLiteral and L38 StringLiteral mutations on

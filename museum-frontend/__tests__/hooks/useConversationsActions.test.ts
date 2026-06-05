@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert, Share } from 'react-native';
+import { Alert } from 'react-native';
 
 import { useConversationsActions } from '@/features/conversation/application/useConversationsActions';
 import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
@@ -66,9 +66,8 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
     }),
 }));
 
-// Spy on Alert.alert and Share.share
+// Spy on Alert.alert
 const mockAlertAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-const mockShareShare = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -161,20 +160,6 @@ describe('useConversationsActions', () => {
 
     expect(result.current.isSavedOnly).toBe(false);
     expect(result.current.menuStatus).toBe('conversations.showing_all');
-  });
-
-  it('shareDashboard calls Share.share with summary', async () => {
-    const { result } = renderHook(() => useConversationsActions());
-
-    await act(async () => {
-      await result.current.shareDashboard();
-    });
-
-    expect(mockShareShare).toHaveBeenCalledWith({
-      title: 'conversations.share_title',
-      message: expect.stringContaining('conversations.share_body'),
-    });
-    expect(result.current.menuStatus).toBe('conversations.shared_success');
   });
 
   it('toggleSavedSession delegates to store and sets status', () => {

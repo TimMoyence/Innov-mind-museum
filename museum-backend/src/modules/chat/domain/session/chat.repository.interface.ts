@@ -30,6 +30,14 @@ export interface PersistMessageInput {
   sessionUpdates?: PersistMessageSessionUpdates;
   /** Persisted in the same transaction as the message. */
   artworkMatch?: Omit<PersistArtworkMatchInput, 'messageId'>;
+  /**
+   * PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie persisted on
+   * the `chat_messages.cache_key` column. Set ONLY for assistant messages
+   * whose response was cached (so `ChatMediaService.invalidateCacheForFeedback`
+   * can purge the exact entry on negative feedback). Null otherwise.
+   * Internal-only (NFR-2) — never exposed via API responses.
+   */
+  cacheKey?: string | null;
 }
 
 export interface PersistArtworkMatchInput {
@@ -108,6 +116,18 @@ export interface UserChatExportData {
       audioUrl?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
+      // Cycle 4 (DSAR Art.15/20 — B-03) — recognised artworks (ArtworkMatch)
+      // nested in each message (design D-1). Allow-listed business fields only
+      // (D-2): never the internal uuid PK nor the FK. `[]` when none (EARS-3).
+      artworkMatches: {
+        artworkId: string | null;
+        title: string | null;
+        artist: string | null;
+        confidence: number;
+        source: string | null;
+        room: string | null;
+        createdAt: string;
+      }[];
     }[];
   }[];
 }

@@ -31,7 +31,7 @@ Phase 1.A delivery is **~80 LOC** : counter declarations + 1 wire-up + 1 Grafana
 
 ### Phase 1.B — Threshold alerts (day 1 post-launch)
 
-Prometheus alert rules in [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml) group `bias-monitoring` :
+Prometheus alert rules in [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml) group `bias-monitoring` :
 
 - **Recording rule** `musaium:guardrail_block_rate_per_locale:1h` — block rate per locale, 1 h rolling window.
 - **Recording rule** `musaium:guardrail_block_rate_avg_locales:1h` — equal-weighted average across locales. **Methodological note :** this is the correct baseline ; the global rate (`global_blocks / global_requests`) is inflated by any single-locale anomaly and silently masks the alert (research §4 trap).
@@ -72,7 +72,7 @@ musaium_guardrail_false_positive_rate{locale}                  # Phase 2 — pop
 musaium_guardrail_block_rate_drift_score{locale, window}       # Phase 2
 ```
 
-Plus the two recording rules derived from these in [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml).
+Plus the two recording rules derived from these in [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml).
 
 ---
 
@@ -124,7 +124,7 @@ Enforcement deadline for Art. 10 against high-risk systems is 2026-08-02 (per re
 
 ## See also
 
-- [`docs/observability/alerts-llm-guard.yml`](../observability/alerts-llm-guard.yml) — group `bias-monitoring` (recording rules + alerts).
+- [`infra/grafana/alerting/llm-guard-bias.yml`](../../infra/grafana/alerting/llm-guard-bias.yml) — group `bias-monitoring` (recording rules + alerts).
 - [`docs/compliance/AI_ACT_CONFORMITY_MATRIX.md`](./AI_ACT_CONFORMITY_MATRIX.md) — Art. 10 row.
 - [`docs/RUNBOOKS/guardrail-incidents.md`](../RUNBOOKS/guardrail-incidents.md) — scenario S4 (false-positive surge), the operational arm of bias alerts.
 - Research : [`compliance-research-bias-monitoring.md`](../../.claude/skills/team/team-state/2026-05-12-llm-guard-perennial-10y-design/compliance-research-bias-monitoring.md).

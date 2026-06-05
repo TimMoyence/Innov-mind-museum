@@ -11,7 +11,7 @@ import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token
 
 // Mock the audit service module so we can assert log calls without touching DB.
 jest.mock('@shared/audit', () => ({
-  auditService: { log: jest.fn() },
+  auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_USER_SUSPENDED: 'ADMIN_USER_SUSPENDED',
   AUDIT_ADMIN_USER_UNSUSPENDED: 'ADMIN_USER_UNSUSPENDED',
   AUDIT_ADMIN_USER_DELETED: 'ADMIN_USER_DELETED',
@@ -91,7 +91,7 @@ describe('SuspendUserUseCase', () => {
 
     expect(result.suspended).toBe(true);
     expect(repo.suspendUser).toHaveBeenCalledWith(1);
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'ADMIN_USER_SUSPENDED',
         actorId: 99,
@@ -110,7 +110,7 @@ describe('SuspendUserUseCase', () => {
       code: 'CANNOT_SUSPEND_SELF',
     });
     expect(repo.suspendUser).not.toHaveBeenCalled();
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
   });
 
   it('returns 404 when target user vanished', async () => {
@@ -122,7 +122,7 @@ describe('SuspendUserUseCase', () => {
     await expect(sut.execute({ userId: 1, actorId: 99 })).rejects.toMatchObject({
       statusCode: 404,
     });
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
   });
 });
 
@@ -140,7 +140,7 @@ describe('UnsuspendUserUseCase', () => {
     const result = await sut.execute({ userId: 1, actorId: 99 });
 
     expect(result.suspended).toBe(false);
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'ADMIN_USER_UNSUSPENDED' }),
     );
   });
@@ -178,7 +178,7 @@ describe('DeleteUserUseCase', () => {
     expect(result.deletedAt).toBe('2026-05-14T10:00:00.000Z');
     expect(repo.softDeleteUser).toHaveBeenCalledWith(42);
     expect(refreshRepo.revokeAllForUser).toHaveBeenCalledWith(42);
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'ADMIN_USER_DELETED', targetId: '42' }),
     );
   });
@@ -198,7 +198,7 @@ describe('DeleteUserUseCase', () => {
     });
     expect(repo.softDeleteUser).not.toHaveBeenCalled();
     expect(refreshRepo.revokeAllForUser).not.toHaveBeenCalled();
-    expect(auditService.log).not.toHaveBeenCalled();
+    expect(auditService.logActorAction).not.toHaveBeenCalled();
   });
 
   it('refuses to delete the only remaining super_admin', async () => {

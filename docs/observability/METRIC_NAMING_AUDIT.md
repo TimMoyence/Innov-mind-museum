@@ -34,11 +34,11 @@ Per the official Prometheus naming guidelines:
 
 ---
 
-## 2. Full registry inventory (44 metrics)
+## 2. Full registry inventory (46 metrics)
 
 Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · ❌ hard violation.
 
-### 2.1 Bare-prefix metrics (28) — subsystem prefix, no `musaium_`
+### 2.1 Bare-prefix metrics (32) — subsystem prefix, no `musaium_`
 
 | Metric name | Type | R1 snake | R2/R3 suffix | Verdict |
 |---|---|---|---|---|
@@ -70,6 +70,10 @@ Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · �
 | `geo_detect_museum_total` *(W3)* | Counter | ✅ | ✅ `_total` | ✅ (see R4 §3) |
 | `nominatim_requests_total` *(W3)* | Counter | ✅ | ✅ `_total` | ✅ (see R4 §3) |
 | `nominatim_request_duration_seconds` *(W3)* | Histogram | ✅ | ✅ `_seconds` | ✅ (see R4 §3) |
+| `guardrail_judge_degraded_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
+| `llm_cost_anon_bypass_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
+| `llm_cost_user_daily_usd` *(W6)* | Histogram | ✅ | ⚠️ `_usd` amount, not `_seconds` (R3 N/A — monetary, not a duration) | ✅ (F2 Option A — bare prefix; see F6) |
+| `guardrail_friction_redis_fallback_total` *(hybrid-gravity, 2026-06-02)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix; sibling of the older `musaium_guardrail_budget_redis_fallback_total`, kept bare to hold the cap at 16) |
 
 ### 2.2 `musaium_`-prefixed metrics (16)
 
@@ -84,7 +88,6 @@ Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · �
 | `musaium_llm_cost_circuit_breaker_state` | Gauge | ✅ | ✅ `_state` | ✅ |
 | `musaium_llm_cost_circuit_breaker_trips_total` | Counter | ✅ | ✅ `_total` | ✅ |
 | `musaium_llm_cost_eur_per_hour` *(W1)* | Gauge | ✅ | ⚠️ `_per_hour` (R6) + non-base unit | ⚠️ |
-| `musaium_tenant_rate_limit_rejects_total` | Counter | ✅ | ✅ `_total` | ✅ |
 | `musaium_guardrail_decisions_total` | Counter | ✅ | ✅ `_total` | ✅ |
 | `musaium_guardrail_category_blocks_total` | Counter | ✅ | ✅ `_total` | ✅ |
 | `musaium_guardrail_pii_redacted_total` | Counter | ✅ | ✅ `_total` | ✅ |
@@ -157,6 +160,31 @@ All 44 metric names are valid lowercase `snake_case`; all 27 counters carry
 `_total`; 8 of 9 duration histograms use `_seconds` (the 9th is F1). No camelCase,
 no uppercase, no bare counters.
 
+### F6 — `llm_cost_user_daily_usd` is a MONETARY histogram, not base-unit debt (R3 N/A) — **W6, accept-with-note**
+
+WAVE 6 (C4, 2026-05-26) added a labelless histogram `llm_cost_user_daily_usd`
+exposing the per-user daily LLM spend distribution (fed once per allowed call from
+`LlmCostGuard.assertAllowed`, observing the new daily total returned by the Redis
+counter `increment`). It uses a bare `llm_cost_` prefix (F2 Option A) and the
+`_usd` suffix is its **base unit for a monetary amount**.
+
+**This is NOT an R3 violation in the F1 sense.** R3 mandates `_seconds` for
+*durations*; `llm_cost_user_daily_usd` is a USD amount, which has no `_seconds`
+base form. It is grandfathered in both metric-naming sentinels
+(`NON_SECONDS_HISTOGRAMS` in `museum-backend/scripts/sentinels/metric-naming.mjs`
+and `GRANDFATHERED_HISTOGRAMS` in `scripts/sentinels/metric-naming.mjs`) as a
+**legitimate non-duration histogram** — explicitly distinct from F1's
+`musaium_rerank_latency_ms`, which IS genuine base-unit debt (a duration mis-united
+in ms and expected to be renamed). A future audit must NOT "fix" `_usd` to
+`_seconds`. **No rename proposed.**
+
+> **Count note (pre-existing drift, hand-off):** the §2 header (`46 metrics`) and
+> the line-12 / line-159 counters (`44`) already disagreed before W6 and were not
+> recomputed here to avoid introducing a wrong number (UFR-013). The verified
+> source-of-truth count is the sentinel `FROZEN`/`EXPECTED` inventory, now **46**
+> pairs (the 2026-06-02 `guardrail_friction_redis_fallback_total` addition, bare
+> prefix). Reconciling the prose counters is a separate doc-hygiene item (M5).
+
 ---
 
 ## 4. Dashboard / alert reference map (what a rename would break)
@@ -170,15 +198,14 @@ appends `_bucket` / `_count` / `_sum` suffixes for histograms).
 |---|---|
 | `musaium_rerank_latency_ms` | *(none — safe to rename now)* |
 | `artwork_embeddings_count` | `infra/grafana/dashboards/visual-compare.json` |
-| `musaium_guardrail_decisions_total` | `guardrail-fairness.json`, `alerting/llm-cost.yml`*, `docs/observability/alerts-llm-guard.yml` |
+| `musaium_guardrail_decisions_total` | `guardrail-fairness.json`, `alerting/llm-cost.yml`*, `infra/grafana/alerting/llm-guard-bias.yml` |
 | `musaium_guardrail_category_blocks_total` | `guardrail-fairness.json` |
 | `musaium_guardrail_budget_redis_fallback_total` | `alerting/llm-cost.yml` |
 | `musaium_llm_cost_circuit_breaker_state` | `alerting/llm-cost.yml` |
-| `musaium_llm_guard_circuit_breaker_state` | `alerting/llm-cost.yml`, `docs/observability/alerts-llm-guard.yml` |
-| `musaium_llm_guard_circuit_breaker_skips_total` | `alerting/llm-cost.yml`, `docs/observability/alerts-llm-guard.yml` |
-| `musaium_llm_guard_scan_duration_seconds` | `docs/observability/alerts-llm-guard.yml` |
+| `musaium_llm_guard_circuit_breaker_state` | `alerting/llm-cost.yml`, `infra/grafana/alerting/llm-guard-bias.yml` |
+| `musaium_llm_guard_circuit_breaker_skips_total` | `alerting/llm-cost.yml`, `infra/grafana/alerting/llm-guard-bias.yml` |
+| `musaium_llm_guard_scan_duration_seconds` | `infra/grafana/alerting/llm-guard-bias.yml` |
 | `musaium_llm_cost_eur_per_hour` | *(not renamed — F4)* |
-| `musaium_tenant_rate_limit_rejects_total` | *(none found)* |
 | `musaium_llm_guard_circuit_breaker_trips_total` | *(none found)* |
 | `musaium_llm_guard_chaos_injections_total` | *(none found)* |
 | `musaium_guardrail_pii_redacted_total` | *(none found)* |
@@ -229,7 +256,7 @@ risk (lowest first):
 |---|---|---|---|
 | 1 | `musaium_rerank_latency_ms` → `rerank_duration_seconds` (+ second buckets) | none | **low** |
 | 2 | `artwork_embeddings_count` → `artwork_embeddings` | `visual-compare.json` | low |
-| 3 | Drop `musaium_` from the 12 remaining prefixed metrics (F2 Option A) | `guardrail-fairness.json`, `alerting/llm-cost.yml`, `alerts-llm-guard.yml` | **medium** |
+| 3 | Drop `musaium_` from the 12 remaining prefixed metrics (F2 Option A) | `guardrail-fairness.json`, `alerting/llm-cost.yml`, `llm-guard-bias.yml` | **medium** |
 
 Each step: rename the `name:` in `prometheus-metrics.ts` **and** every PromQL
 reference in the same commit, bump the dashboard `schemaVersion`/keep the `uid`

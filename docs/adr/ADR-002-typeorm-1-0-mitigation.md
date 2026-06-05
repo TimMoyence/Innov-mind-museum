@@ -20,11 +20,11 @@ A codemod is published (`@typeorm/codemod v1 src/`) that automates most of the r
 
 Separately the TypeORM docs repository was archived in March 2026 (dead project signal). Community alternatives gaining traction in 2026 : **Drizzle** (S-tier), **Prisma 7**, **Kysely**.
 
-The InnovMind backend is at `typeorm@^0.3.27` (113 migrations, 19 entities, heavy hexagonal repo adapters).
+The InnovMind backend is at `typeorm@0.3.28` (exact pin, 69 migrations, 24 entities, heavy hexagonal repo adapters).
 
 ## Decision
 
-1. **Pin** `typeorm` in `museum-backend/package.json` to `>=0.3.27 <1.0.0` to prevent unsupervised auto-upgrade via `pnpm update`.
+1. **Pin** `typeorm` in `museum-backend/package.json` to exact `0.3.28` to prevent unsupervised auto-upgrade via `pnpm update`.
 2. **Do not migrate yet** — 0.3.x works, no known vulnerabilities, and H1 2026 is still the target for v1.0.
 3. **Spike planned** (not executed in this ADR): branch `spike/typeorm-v1-codemod`, run the codemod, measure diff, report on outcome. Owner TBD.
 4. **Re-evaluation** when either : (a) TypeORM v1.0 ships stable, or (b) a new critical CVE appears on 0.3.x, or (c) a blocker arises that Drizzle would solve cleanly.

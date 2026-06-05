@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getLocale } from '@/shared/infrastructure/httpClient';
 import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnectivity';
-import { syncKeywords } from '../infrastructure/artKeywordsApi';
+import { syncKeywords, getLocale } from '../infrastructure/artKeywordsApi';
 import { useArtKeywordsStore } from '../infrastructure/artKeywordsStore';
 
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours

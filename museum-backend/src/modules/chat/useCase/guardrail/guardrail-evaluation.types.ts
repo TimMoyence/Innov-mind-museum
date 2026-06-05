@@ -56,4 +56,12 @@ export interface GuardrailEvaluationServiceDeps {
    * as an explicit dep so tests can flip it without env mutation.
    */
   llmJudgeEnabled?: boolean;
+  /**
+   * Hybrid-gravity guardrail (2026-06-01) — when true, the judge is REMOVED
+   * from the inline `evaluateInput` security gate and instead run in PARALLEL
+   * of generation via `evaluateInputSemantic` (soft-redirect + friction
+   * escalation). When false (kill-switch), the legacy inline judge hard-block
+   * is preserved. Defaults to `env.guardrails.frictionEnabled`.
+   */
+  frictionEnabled?: boolean;
 }

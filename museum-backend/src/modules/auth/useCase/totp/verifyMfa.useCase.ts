@@ -62,8 +62,21 @@ export class VerifyMfaUseCase {
     }
 
     const now = new Date();
+    // AUTHORITATIVE gate (R4) — consume the step atomically BEFORE treating the
+    // enrollment as successful. The JS step compare above is defense-in-depth; the
+    // CAS is what makes exactly one of N concurrent verifies win. `affected === 0`
+    // ⇒ a concurrent verify already consumed this step ⇒ reject INVALID_MFA_CODE
+    // and do NOT stamp enrollment / clear the deadline (no partial success).
+    const { affected } = await this.totpRepository.markUsed(userId, now, result.step);
+    if (affected !== 1) {
+      throw new AppError({
+        message: 'Invalid MFA code.',
+        statusCode: 401,
+        code: 'INVALID_MFA_CODE',
+      });
+    }
+
     await this.totpRepository.markEnrolled(userId, now);
-    await this.totpRepository.markUsed(userId, now, result.step);
     await this.userRepository.setMfaEnrollmentDeadline(userId, null);
 
     return {

@@ -1,11 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiGet, apiPatch } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
-import type { PaginatedResponse, Report, ReportStatus } from '@/lib/admin-types';
+import { AlertBanner } from '@/components/ui/AlertBanner';
+import { BaseModal } from '@/components/ui/BaseModal';
+import { ModalActions } from '@/components/ui/ModalActions';
+import { Spinner } from '@/components/ui/Spinner';
+import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
+import { TableDataCell } from '@/components/ui/TableDataCell';
+import type { Report, ReportStatus } from '@/lib/admin-types';
 
 // -- Status badge colors ----------------------------------------------------------
 
@@ -22,19 +29,16 @@ const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
 export default function ReportsPage() {
   const adminDict = useAdminDict();
 
-  const [reports, setReports] = useState<Report[]>([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | ''>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Review modal state
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [newStatus, setNewStatus] = useState<ReportStatus>('reviewed');
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Mutation-specific error (kept distinct from the read-only hook `error`).
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const dateLocale = useDateLocale();
 
@@ -43,37 +47,36 @@ export default function ReportsPage() {
     setPage(1);
   }, [statusFilter]);
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '20');
-      if (statusFilter) params.set('status', statusFilter);
+  const reportsUrl = (() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', '20');
+    if (statusFilter) params.set('status', statusFilter);
+    return `/api/admin/reports?${params.toString()}`;
+  })();
 
-      const data = await apiGet<PaginatedResponse<Report>>(
-        `/api/admin/reports?${params.toString()}`,
-      );
-      setReports(data.data);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, statusFilter]);
+  const {
+    data: reportsPayload,
+    loading,
+    error,
+    pagination,
+    refetch: fetchReports,
+  } = useFetchData<Report[]>(reportsUrl, {
+    deps: [page, statusFilter],
+    errorFallback: 'Failed to load reports',
+  });
 
-  useEffect(() => {
-    void fetchReports();
-  }, [fetchReports]);
+  const reports = reportsPayload ?? [];
+  const totalPages = pagination?.totalPages ?? 0;
+  const total = pagination?.total ?? 0;
+  const combinedError = error ?? mutationError;
 
   // -- Review handler -------------------------------------------------------------
 
   async function handleReview() {
     if (!editingReport) return;
     setSubmitting(true);
+    setMutationError(null);
     try {
       await apiPatch<Report>(`/api/admin/reports/${editingReport.id}`, {
         status: newStatus,
@@ -82,28 +85,11 @@ export default function ReportsPage() {
       setEditingReport(null);
       void fetchReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update report');
+      setMutationError(err instanceof Error ? err.message : 'Failed to update report');
     } finally {
       setSubmitting(false);
     }
   }
-
-  // -- Ref for modal backdrop -----------------------------------------------------
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Window-level Escape close: the dialog div is not focusable, so a
-  // div-scoped onKeyDown never fires while focus stays on the trigger
-  // button. Window listener catches Escape regardless of focus location.
-  useEffect(() => {
-    if (!editingReport) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) setEditingReport(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [editingReport, submitting]);
 
   return (
     <div>
@@ -130,14 +116,12 @@ export default function ReportsPage() {
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
+      {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
       {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <Spinner />
         </div>
       )}
 
@@ -148,24 +132,12 @@ export default function ReportsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-primary-100 bg-surface-elevated">
                 <tr>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.date}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.user}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reportsPage.reason}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.reportsPage.message}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.status}
-                  </th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">
-                    {adminDict.common.actions}
-                  </th>
+                  <TableHeaderCell>{adminDict.common.date}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.user}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reportsPage.reason}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.reportsPage.message}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.status}</TableHeaderCell>
+                  <TableHeaderCell>{adminDict.common.actions}</TableHeaderCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-50">
@@ -178,37 +150,34 @@ export default function ReportsPage() {
                 ) : (
                   reports.map((r) => (
                     <tr key={r.id} className="hover:bg-surface-muted/50">
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
+                      <TableDataCell nowrap>
                         {formatDate(r.createdAt, dateLocale, {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
                         })}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 font-medium text-text-primary">
+                      </TableDataCell>
+                      <TableDataCell nowrap className="font-medium text-text-primary">
                         {r.userId}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3 text-text-secondary">
-                        {r.reason}
-                      </td>
-                      <td
-                        className="max-w-xs truncate px-6 py-3 text-text-secondary"
-                        title={r.messageText ?? ''}
-                      >
-                        {r.messageText
-                          ? r.messageText.length > 100
-                            ? `${r.messageText.slice(0, 100)}...`
-                            : r.messageText
-                          : '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>{r.reason}</TableDataCell>
+                      <TableDataCell className="max-w-xs truncate">
+                        <span title={r.messageText ?? ''}>
+                          {r.messageText
+                            ? r.messageText.length > 100
+                              ? `${r.messageText.slice(0, 100)}...`
+                              : r.messageText
+                            : '—'}
+                        </span>
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status]}`}
                         >
                           {r.status}
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-3">
+                      </TableDataCell>
+                      <TableDataCell nowrap>
                         <button
                           type="button"
                           onClick={() => {
@@ -220,7 +189,7 @@ export default function ReportsPage() {
                         >
                           {adminDict.reportsPage.review}
                         </button>
-                      </td>
+                      </TableDataCell>
                     </tr>
                   ))
                 )}
@@ -240,80 +209,65 @@ export default function ReportsPage() {
 
       {/* Review Modal */}
       {editingReport && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- Backdrop is a non-interactive dialog wrapper. Escape is handled via a window-level keydown listener (see useEffect above), so the keyboard contract is satisfied without focus inside this div.
-        <div
-          ref={modalRef}
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            if (e.target === modalRef.current) setEditingReport(null);
+        <BaseModal
+          open
+          onClose={() => {
+            setEditingReport(null);
           }}
-        >
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-text-primary">
-              {adminDict.reportsPage.reviewReport}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {adminDict.reportsPage.reason} : {editingReport.reason}
-            </p>
-
-            {editingReport.messageText && (
-              <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">
-                <p className="mb-1 text-xs font-medium text-text-muted">
-                  {adminDict.reportsPage.reportedMessage}
-                </p>
-                {editingReport.messageText}
-              </div>
-            )}
-
-            <select
-              aria-label={adminDict.reportsPage.review}
-              value={newStatus}
-              onChange={(e) => {
-                setNewStatus(e.target.value as ReportStatus);
+          title={adminDict.reportsPage.reviewReport}
+          size="md"
+          dismissable={!submitting}
+          footer={
+            <ModalActions
+              cancelLabel={adminDict.common.cancel}
+              confirmLabel={adminDict.common.confirm}
+              onCancel={() => {
+                setEditingReport(null);
               }}
-              className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <textarea
-              value={reviewerNotes}
-              onChange={(e) => {
-                setReviewerNotes(e.target.value);
-              }}
-              maxLength={2000}
-              rows={3}
-              placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
-              className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              onConfirm={() => void handleReview()}
+              confirmBusy={submitting}
             />
+          }
+        >
+          <p className="mt-1 text-sm text-text-secondary">
+            {adminDict.reportsPage.reason} : {editingReport.reason}
+          </p>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingReport(null);
-                }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted"
-              >
-                {adminDict.common.cancel}
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => void handleReview()}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? '...' : adminDict.common.confirm}
-              </button>
+          {editingReport.messageText && (
+            <div className="mt-3 rounded-lg bg-surface-muted p-3 text-sm text-text-secondary">
+              <p className="mb-1 text-xs font-medium text-text-muted">
+                {adminDict.reportsPage.reportedMessage}
+              </p>
+              {editingReport.messageText}
             </div>
-          </div>
-        </div>
+          )}
+
+          <select
+            aria-label={adminDict.reportsPage.review}
+            value={newStatus}
+            onChange={(e) => {
+              setNewStatus(e.target.value as ReportStatus);
+            }}
+            className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          <textarea
+            value={reviewerNotes}
+            onChange={(e) => {
+              setReviewerNotes(e.target.value);
+            }}
+            maxLength={2000}
+            rows={3}
+            placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
+            className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          />
+        </BaseModal>
       )}
     </div>
   );

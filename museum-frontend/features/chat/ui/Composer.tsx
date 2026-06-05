@@ -33,17 +33,20 @@ interface ComposerProps {
 }
 
 /**
- * Unified composer (A1) — minimalist 1-line surface that hosts the `+` button
- * (opens the attachment-picker bottom sheet), the existing `<ChatInput>`
- * building block (text + send), an optional audio mini-pill when an audio
- * message has been recorded, and the mic button.
+ * Unified composer (A1) — minimalist 1-line surface that hosts the leading
+ * vertical column (mic stacked above `+`), the existing `<ChatInput>` building
+ * block (text + send), and an optional audio mini-pill when an audio message
+ * has been recorded.
  *
  * Doctrine reuse: `<ChatInput>` is consumed as-is (R7 — non-regression). The
  * row introduces no new container token, no animation, no internal state. The
  * EU AI Act gate is preserved upstream via the screen's wrapped
  * `toggleRecording` (the composer receives the wrapped version).
  *
- * Spec: docs/chat-ux-refonte/specs/A1.md §1.1, §2.3.
+ * a11y: all a11y props live on the `<Pressable>` per
+ * `lib-docs/react-native/PATTERNS.md` §7. No `accessibilityRole='button'` on
+ * any inner View — VoiceOver / TalkBack discover the surrounding Pressable
+ * only, no double-announce.
  */
 export const Composer = React.memo(function Composer({
   text,
@@ -64,20 +67,45 @@ export const Composer = React.memo(function Composer({
 
   return (
     <View style={styles.row}>
-      <Pressable
-        onPress={onOpenAttachments}
-        testID="composer-attach-button"
-        accessibilityRole="button"
-        accessibilityLabel={t('chat.composer.a11y.open_attachments')}
-        accessibilityHint={t('chat.composer.a11y.open_attachments_hint')}
-        style={[
-          styles.iconButton,
-          { backgroundColor: theme.surface, borderColor: theme.cardBorder },
-        ]}
-        hitSlop={6}
-      >
-        <Ionicons name="add-circle-outline" size={22} color={theme.textPrimary} />
-      </Pressable>
+      <View style={styles.leadingColumn}>
+        <Pressable
+          testID="composer-mic-button"
+          onPress={() => void toggleRecording()}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isRecording ? t('chat.composer.a11y.mic_recording') : t('chat.composer.a11y.mic')
+          }
+          accessibilityState={{ busy: isRecording }}
+          style={[
+            styles.iconButton,
+            {
+              backgroundColor: isRecording ? theme.error : theme.surface,
+              borderColor: theme.cardBorder,
+            },
+          ]}
+          hitSlop={6}
+        >
+          <Ionicons
+            name={isRecording ? 'stop-circle-outline' : 'mic-outline'}
+            size={22}
+            color={isRecording ? theme.primaryContrast : theme.textPrimary}
+          />
+        </Pressable>
+        <Pressable
+          testID="composer-attach-button"
+          onPress={onOpenAttachments}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.composer.a11y.open_attachments')}
+          accessibilityHint={t('chat.composer.a11y.open_attachments_hint')}
+          style={[
+            styles.iconButton,
+            { backgroundColor: theme.surface, borderColor: theme.cardBorder },
+          ]}
+          hitSlop={6}
+        >
+          <Ionicons name="add-circle-outline" size={22} color={theme.textPrimary} />
+        </Pressable>
+      </View>
 
       <View style={styles.inputWrap}>
         <ChatInput
@@ -93,8 +121,8 @@ export const Composer = React.memo(function Composer({
 
       {hasAudio ? (
         <Pressable
-          onPress={onOpenAttachments}
           testID="composer-audio-pill"
+          onPress={onOpenAttachments}
           accessibilityRole="button"
           accessibilityLabel={t('chat.composer.a11y.audio_pill')}
           style={[styles.audioPill, { backgroundColor: theme.primary }]}
@@ -103,30 +131,6 @@ export const Composer = React.memo(function Composer({
           <Ionicons name="musical-notes" size={14} color={theme.primaryContrast} />
         </Pressable>
       ) : null}
-
-      <Pressable
-        onPress={() => void toggleRecording()}
-        testID="composer-mic-button"
-        accessibilityRole="button"
-        accessibilityLabel={
-          isRecording ? t('chat.composer.a11y.mic_recording') : t('chat.composer.a11y.mic')
-        }
-        accessibilityState={{ busy: isRecording }}
-        style={[
-          styles.iconButton,
-          {
-            backgroundColor: isRecording ? theme.error : theme.surface,
-            borderColor: theme.cardBorder,
-          },
-        ]}
-        hitSlop={6}
-      >
-        <Ionicons
-          name={isRecording ? 'stop-circle-outline' : 'mic-outline'}
-          size={22}
-          color={isRecording ? theme.primaryContrast : theme.textPrimary}
-        />
-      </Pressable>
     </View>
   );
 });
@@ -137,6 +141,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: semantic.chat.gap,
     marginTop: semantic.screen.gapSmall,
+  },
+  leadingColumn: {
+    flexDirection: 'column',
+    gap: semantic.chat.gap,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   inputWrap: {
     flex: 1,

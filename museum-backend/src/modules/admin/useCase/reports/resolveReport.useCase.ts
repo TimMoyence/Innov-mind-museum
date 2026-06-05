@@ -34,15 +34,14 @@ export class ResolveReportUseCase {
       throw notFound('Report not found');
     }
 
-    await auditService.log({
+    await auditService.logActorAction({
       action: AUDIT_ADMIN_REPORT_RESOLVED,
-      actorType: 'user',
       actorId: input.reviewedBy,
       targetType: 'message_report',
       targetId: input.reportId,
       metadata: { status: input.status, reviewerNotes: input.reviewerNotes ?? null },
-      ip: input.ip ?? null,
-      requestId: input.requestId ?? null,
+      ip: input.ip,
+      requestId: input.requestId,
     });
 
     return result;

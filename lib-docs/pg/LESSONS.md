@@ -117,9 +117,17 @@ storage of `vector(768)` and ~2× faster index build). Two pitfalls:
    `migration:run` — the `halfvec` type does not exist. Verify
    `SELECT extversion FROM pg_extension WHERE extname = 'vector'` ≥ `0.7.0`
    before deploying.
-2. Index operator class must be `vector_cosine_ops` (or the corresponding
-   `halfvec_*_ops` if available in your pgvector build). The default
-   `btree_ops` errors with `operator class … does not exist`.
+2. Index operator class MUST be a `halfvec_*_ops` class — the real migration
+   (`AddArtworkEmbeddings.ts:77-78`) builds an **HNSW** index with
+   `halfvec_ip_ops` (m=16, ef_construction=64). Vectors are L2-normalised, so
+   inner-product ≡ cosine. **Do NOT use `vector_cosine_ops`** with a `halfvec`
+   column: the op class is for the `vector` type and errors
+   `operator class "vector_cosine_ops" does not exist` (or "does not accept
+   data type halfvec") → the migration rolls back. HNSW is the SOTA prod
+   default (IVFFlat degrades on insert/delete churn).
+   <!-- Corrected 2026-06-04 (audit 360 LESS-01): the previous text recommended
+        vector_cosine_ops as primary, which is incompatible with halfvec and
+        would break migration:run. Matches CLAUDE.md § Pièges connus. -->
 
 ADR-037 freezes the choice. Re-evaluate only on pgvector major bump.
 

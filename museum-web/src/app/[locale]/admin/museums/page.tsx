@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet } from '@/lib/api';
+import { useFetchData } from '@/lib/hooks/useFetchData';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO } from '@/lib/admin-types';
 
 // W4 W2.1/2.2 — Admin museum list. Parent route for /admin/museums/new
@@ -34,29 +34,20 @@ interface ListResponse {
 }
 
 export default function MuseumsListPage() {
-  const [museums, setMuseums] = useState<MuseumDTO[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchMuseums = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<ListResponse>('/api/museums');
-      // The BE returns { museums: [...] } for /directory and may return
-      // either shape for the admin list. Tolerate both.
-      const rows = data.museums ?? data.data ?? [];
-      setMuseums(rows);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : STRINGS.error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchMuseums();
-  }, [fetchMuseums]);
+  // The BE returns { museums: [...] } for /directory and may return either
+  // shape for the admin list. parseData tolerates both and yields MuseumDTO[].
+  const {
+    data: museumsPayload,
+    loading,
+    error,
+  } = useFetchData<MuseumDTO[]>('/api/museums', {
+    parseData: (raw) => {
+      const r = raw as ListResponse;
+      return r.museums ?? r.data ?? [];
+    },
+    errorFallback: STRINGS.error,
+  });
+  const museums = museumsPayload ?? [];
 
   return (
     <section className="space-y-6">
@@ -73,11 +64,7 @@ export default function MuseumsListPage() {
         </Link>
       </header>
 
-      {error && (
-        <div role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <AlertBanner variant="error" message={error} />}
 
       {loading && <p className="text-sm text-gray-600">{STRINGS.loading}</p>}
 

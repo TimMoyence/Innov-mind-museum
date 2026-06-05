@@ -3,7 +3,7 @@ import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupport
 
 // Mock the audit module — the use case imports the singleton directly
 jest.mock('@shared/audit', () => ({
-  auditService: { log: jest.fn() },
+  auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_TICKET_UPDATED: 'ADMIN_TICKET_UPDATED',
 }));
 
@@ -125,8 +125,8 @@ describe('UpdateTicketStatusUseCase', () => {
       requestId: 'req-42',
     });
 
-    expect(auditService.log).toHaveBeenCalledTimes(1);
-    expect(auditService.log).toHaveBeenCalledWith(
+    expect(auditService.logActorAction).toHaveBeenCalledTimes(1);
+    expect(auditService.logActorAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'ADMIN_TICKET_UPDATED',
         actorId: 5,
@@ -148,7 +148,7 @@ describe('UpdateTicketStatusUseCase', () => {
       actorId: 1,
     });
 
-    const logCall = auditService.log.mock.calls[0][0];
+    const logCall = auditService.logActorAction.mock.calls[0][0];
     expect(logCall.metadata).toEqual({ priority: 'high' });
     expect(logCall.metadata.status).toBeUndefined();
   });

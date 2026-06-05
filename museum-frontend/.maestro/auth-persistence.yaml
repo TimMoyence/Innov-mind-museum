@@ -6,31 +6,52 @@ appId: com.musaium.mobile.preview
 #   1. login (quick-login helper)
 #   2. assert home is reached
 #   3. killApp
-#   4. launchApp
+#   4. relaunch WITHOUT clearState
 #   5. assert we land on home (session restored from secure-store)
 #
 # This is the single flow that catches token persistence regressions —
 # a common break when expo-secure-store config changes or refresh token
 # rotation is disabled.
+# screen: AuthScreen
 
-- waitForAnimationToEnd
+# ──────────────────────────────────────────────
+# Phase 0: Cold start clean (logged out)
+# ──────────────────────────────────────────────
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour|No account|Pas de compte"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
 # Phase 1: Login via helper
 # ──────────────────────────────────────────────
 - runFlow:
     when:
-      visible: "Welcome back"
+      visible:
+        text: "Welcome back|Bon retour"
     file: helpers/quick-login.yaml
 
+# iOS native "Save Password?" dialog after submit
 - tapOn:
-    text: "Skip"
+    text: "Plus tard|Not Now"
+    optional: true
+- tapOn:
+    text: "Skip|Passer"
     optional: true
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 10000
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 40000
 
 # ──────────────────────────────────────────────
 # Phase 2: Kill the app (simulates process eviction)
@@ -48,14 +69,16 @@ appId: com.musaium.mobile.preview
 
 # Skip onboarding if shown (first relaunch might re-show it)
 - tapOn:
-    text: "Skip"
+    text: "Skip|Passer"
     optional: true
 - waitForAnimationToEnd
 
-# We MUST land on home — NOT on the Welcome back auth screen.
+# We MUST land on home — NOT on the auth screen.
 # This is the single assertion that proves token persistence works.
 - extendedWaitUntil:
-    visible: "Your museum companion"
-    timeout: 15000
+    visible:
+      text: "Your museum companion|Votre compagnon de musée"
+    timeout: 40000
 
-- assertNotVisible: "Welcome back"
+- assertNotVisible:
+    text: "Welcome back|Bon retour"

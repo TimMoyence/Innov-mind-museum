@@ -4,9 +4,9 @@ import type {
   ContentPreference,
   VisitContext,
 } from '@modules/chat/domain/chat.types';
+import type { KnowledgeRouterSource } from '@modules/chat/domain/knowledge/knowledge-router.types';
 import type { ResolvedLocation } from '@modules/chat/domain/location/resolvedLocation';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
-import type { KnowledgeRouterSource } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
 export interface OrchestratorInput {
   history: ChatMessage[];

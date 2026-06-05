@@ -28,6 +28,13 @@ import type { ChatUiMessage } from './chatSessionLogic.pure';
 /** Shape consumed by `<ArtworkHeroCard>` + `<ArtworkHeroModal>`. */
 export interface ArtworkHeroModel {
   readonly imageUrl: string;
+  /**
+   * Id of the user message that carries the uploaded image. Used by the card
+   * to re-mint a fresh signed URL + repopulate the durable cache when the
+   * embedded `imageUrl` (a signed S3 URL) has expired (D4 carnet re-download).
+   * `null` when no source message id is available.
+   */
+  readonly messageId: string | null;
   readonly title: string | null;
   readonly artist: string | null;
   readonly museum: string | null;
@@ -82,6 +89,7 @@ export function useArtworkHero(messages: ChatUiMessage[]): ArtworkHeroModel | nu
     if (!match) {
       return {
         imageUrl,
+        messageId: userMsg.id,
         title: null,
         artist: null,
         museum: null,
@@ -93,6 +101,7 @@ export function useArtworkHero(messages: ChatUiMessage[]): ArtworkHeroModel | nu
     const d = match.metadata?.detectedArtwork;
     return {
       imageUrl,
+      messageId: userMsg.id,
       title: d?.title ?? null,
       artist: d?.artist ?? null,
       museum: d?.museum ?? null,

@@ -31,6 +31,11 @@ export const AUDIT_AUTH_TTS_VOICE_UPDATED = 'AUTH_TTS_VOICE_UPDATED';
 export const AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED = 'AUTH_PROFILE_PREFERENCES_UPDATED';
 
 // ─── Account lifecycle ───
+// Cycle D (R1) — durable "the deletion was requested" trace, emitted BEFORE any
+// erasure runs. Pairs with AUDIT_ACCOUNT_DELETED (emitted only AFTER success):
+// a REQUESTED row without a DELETED row is a forensic signal of a failed/aborted
+// erasure; a DELETED row is never written unless the cascade actually ran.
+export const AUDIT_ACCOUNT_DELETION_REQUESTED = 'ACCOUNT_DELETION_REQUESTED';
 export const AUDIT_ACCOUNT_DELETED = 'ACCOUNT_DELETED';
 export const AUDIT_DATA_EXPORT = 'DATA_EXPORT';
 

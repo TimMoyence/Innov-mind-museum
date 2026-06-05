@@ -14,8 +14,8 @@ appId: com.musaium.mobile.preview
 #   - The pin set in `shared/config/cert-pinning.ts` matches the
 #     live `musaium.com:443` chain (otherwise the auth fetch TLS-fails).
 #
-# Test account: seeded smoke account (apple.test@apple.com / Apple1234!)
-# — matches helpers/quick-login.yaml + auth-login-happy.yaml conventions.
+# Test account: stable e2e account (e2e-test-login@test.musaium.dev) — NOT
+# apple.test, which auth-account-delete destructively deletes earlier in the shard.
 #
 # Cited: lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md §5.2
 # lines 127-133 (iOS TLS session cache makes "wrong pin" tests lie).
@@ -25,25 +25,35 @@ appId: com.musaium.mobile.preview
     clearState: true
     stopApp: true
 
-- waitForAnimationToEnd
-
-- assertVisible:
-    text: "Welcome back|Bon retour"
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back|Bon retour"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "analytics-consent-banner"
+    timeout: 15000
+- tapOn:
+    id: "analytics-consent-decline"
 
 - tapOn:
     id: "email-input"
-- inputText: "apple.test@apple.com"
+- inputText: "e2e-test-login@test.musaium.dev"
 
 - tapOn:
     id: "password-input"
-- inputText: "Apple1234!"
+- inputText: "TestPassword123!"
 
 - hideKeyboard
 
 - tapOn:
     id: "auth-submit"
+# iOS native "Save Password?" dialog after submit
+- tapOn:
+    text: "Plus tard|Not Now"
+    optional: true
 
-# If pinning is broken, the TLS handshake to musaium.com:443 fails,
+# If pinning is broken, the TLS handshake to the pinned host fails,
 # the auth fetch rejects, and the "Your museum companion" home hero
 # never appears. The timeout below is the pinning-applied assertion.
 - waitForAnimationToEnd:
@@ -58,7 +68,7 @@ appId: com.musaium.mobile.preview
 - extendedWaitUntil:
     visible:
       text: "Your museum companion|Votre compagnon de musée"
-    timeout: 15000
+    timeout: 40000
 
 - assertNotVisible:
     text: "Welcome back|Bon retour"

@@ -1,3 +1,19 @@
+// B-02 — describe now gates every third-party AI call on consent. These
+// golden-path tests grant all relevant scopes so the route reaches the service;
+// the denial branches are covered by `tests/unit/chat/chat-describe-consent.test.ts`.
+const grantedScopes = new Set<string>([
+  'third_party_ai_text_openai',
+  'third_party_ai_image_openai',
+  'third_party_ai_audio_openai',
+]);
+
+jest.mock('@modules/chat/useCase/third-party-ai-consent-checker', () => ({
+  buildThirdPartyAiConsentChecker: () => ({
+    isGranted: async (userId: number | undefined | null, scope: string) =>
+      await Promise.resolve(userId !== undefined && userId !== null && grantedScopes.has(scope)),
+  }),
+}));
+
 import express from 'express';
 import request from 'supertest';
 
@@ -20,9 +36,7 @@ const buildApp = (service: DescribeService) => {
   return app;
 };
 
-const makeServiceMock = (
-  overrides: Partial<DescribeService> = {},
-): DescribeService =>
+const makeServiceMock = (overrides: Partial<DescribeService> = {}): DescribeService =>
   ({
     describe: jest.fn().mockResolvedValue({
       description: 'A serene landscape.',
@@ -108,9 +122,7 @@ describe('POST /api/chat/describe', () => {
     const service = makeServiceMock();
     const app = buildApp(service);
 
-    const res = await request(app)
-      .post('/api/chat/describe')
-      .send({ text: 'hello' });
+    const res = await request(app).post('/api/chat/describe').send({ text: 'hello' });
 
     expect(res.status).toBe(401);
   });

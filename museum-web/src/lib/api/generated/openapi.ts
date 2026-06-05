@@ -2038,10 +2038,16 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Return today's curated artwork */
+    /**
+     * Return today's curated artwork
+     * @description Returns a single deterministic artwork for the current date. The funFact field is localized to the requested locale (query locale then Accept-Language, falling back to English).
+     */
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          /** @description Locale for the funFact field. Falls back to Accept-Language, then English. */
+          locale?: 'en' | 'fr' | 'es' | 'de' | 'it' | 'ja' | 'zh' | 'ar';
+        };
         header?: never;
         path?: never;
         cookie?: never;
@@ -2114,7 +2120,11 @@ export interface paths {
           'application/json': {
             rating: number;
             comment: string;
-            userName: string;
+            /**
+             * Format: uuid
+             * @description NPS attribution: the chat session the review was authored from. Server derives museum scope; absent/foreign sessions yield a global review.
+             */
+            sessionId?: string;
           };
         };
       };
@@ -2546,6 +2556,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/admin/nps': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Net Promoter Score aggregate (global or per-museum) over approved reviews */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Per-museum scope. Omitted = global (incl. unscoped reviews). museum_manager callers are forced to their own tenant. */
+          museumId?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description NPS aggregate */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['NpsResponse'];
+          };
+        };
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/admin/reports': {
     parameters: {
       query?: never;
@@ -2935,6 +2986,8 @@ export interface paths {
           content: {
             'application/json': {
               museums: {
+                /** @description DB primary key — present only when source = 'local' (OSM entries have no DB row). */
+                id?: number;
                 name: string;
                 address?: string | null;
                 latitude: number;
@@ -3314,6 +3367,179 @@ export interface paths {
       };
     };
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/leads/b2b': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a public B2B lead
+     * @description Persist-then-notify (Cycle B): the lead is persisted before the Brevo notifier is invoked, so a Brevo failure never loses it. Returns 202 as soon as it is durable, regardless of the delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            name: string;
+            museum: string;
+            /** @enum {string} */
+            role: 'director' | 'curator' | 'digital' | 'other';
+            message: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/leads/beta': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a public beta-signup lead
+     * @description Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe, durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/leads/paywall-interest': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Submit a paywall premium-interest lead
+     * @description Persist-then-notify (Cycle B): persisted before the Brevo contact subscribe (tagged `paywall_premium_interest`), durable through a Brevo failure, 202 regardless of delivery outcome. Public endpoint (no auth); `website` is a honeypot.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: email */
+            email: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            website?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Lead accepted (persisted; delivery is async-recoverable) */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        429: components['responses']['TooManyRequests'];
+        500: components['responses']['InternalError'];
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -3808,6 +4034,116 @@ export interface paths {
         403: components['responses']['Forbidden'];
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/museums/{id}/enrichment': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get cached museum enrichment (Wikidata + OSM + rich JSONB fields) */
+    get: {
+      parameters: {
+        query: {
+          /** @description BCP-47 locale, e.g. fr or en */
+          locale: string;
+        };
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Cached enrichment is ready. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentReady'];
+          };
+        };
+        /** @description Enrichment refresh queued — poll /enrichment/status with the returned jobId. */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentPending'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/museums/{id}/enrichment/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Poll the status of a queued museum enrichment refresh */
+    get: {
+      parameters: {
+        query: {
+          /** @description BCP-47 locale, e.g. fr or en */
+          locale: string;
+          /** @description Job id returned by a prior 202 enrichment response */
+          jobId: string;
+        };
+        header?: never;
+        path: {
+          /** @description Museum ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Cached enrichment is ready. */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentReady'];
+          };
+        };
+        /** @description Enrichment refresh still pending. */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MuseumEnrichmentPending'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -4416,14 +4752,22 @@ export interface components {
       createdAt: string;
     };
     AdminStats: {
-      totalUsers: number;
-      usersByRole: {
+      totalUsers?: number;
+      usersByRole?: {
         [key: string]: number;
       };
       totalSessions: number;
       totalMessages: number;
-      recentSignups: number;
+      recentSignups?: number;
       recentSessions: number;
+    };
+    /** @description Net Promoter Score aggregate over approved reviews. nps = %promoters (rating 9-10) - %detractors (rating 0-6), range -100..100. count=0 yields nps 0. */
+    NpsResponse: {
+      nps: number;
+      promoters: number;
+      passives: number;
+      detractors: number;
+      count: number;
     };
     AdminReportDTO: {
       id: string;
@@ -4691,6 +5035,63 @@ export interface components {
       locale?: 'fr' | 'en';
       /** @description Optional list of Wikidata museum QIDs scoping the kNN search to the selected museums (R4). */
       museumQids?: string[];
+    };
+    ParsedOpeningDay: {
+      /** @enum {string} */
+      day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+      /** @description HH:mm local time, null when closed that day */
+      opens: string | null;
+      /** @description HH:mm local time, null when closed that day */
+      closes: string | null;
+    };
+    ParsedOpeningHours: {
+      /** @description Original OSM opening_hours value */
+      raw: string;
+      /** @enum {string} */
+      status: 'open' | 'closed' | 'unknown';
+      /** @enum {string} */
+      statusReason: 'currently_open' | 'currently_closed' | 'unparseable' | 'no_data';
+      closesAtLocal: string | null;
+      opensAtLocal: string | null;
+      weekly: components['schemas']['ParsedOpeningDay'][];
+    };
+    MuseumEnrichmentView: {
+      museumId: number;
+      locale: string;
+      summary: string | null;
+      wikidataQid: string | null;
+      website: string | null;
+      phone: string | null;
+      imageUrl: string | null;
+      openingHours: components['schemas']['ParsedOpeningHours'] | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      admissionFees: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      collections: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      currentExhibitions: {
+        [key: string]: unknown;
+      } | null;
+      /** @description Free-form JSONB record (no key guaranteed). Null when empty. */
+      accessibility: {
+        [key: string]: unknown;
+      } | null;
+      /** Format: date-time */
+      fetchedAt: string;
+    };
+    MuseumEnrichmentReady: {
+      /** @enum {string} */
+      status: 'ready';
+      data: components['schemas']['MuseumEnrichmentView'];
+    };
+    MuseumEnrichmentPending: {
+      /** @enum {string} */
+      status: 'pending';
+      jobId: string;
     };
   };
   responses: {

@@ -904,7 +904,7 @@
       "curatedAt": "2026-05-18T09:16:07Z",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
       "snapshotSha256": "434eae5eb30106efd1bbe2fbf4c8cd47bf8fb2a9bf507823b441020769edcd8c",
-      "patternsSha256": "f0eb0ff71cf4de0a85bb3c2d142d7037235db247af20976b1e668a4ea7ff3417",
+      "patternsSha256": "fb88e6f977c06e2da6de21a5c8f8f806c32dc79e07d7d3b6e0d6215df6a9ac36",
       "sourceUrls": [
         "https://raw.githubusercontent.com/expressjs/multer/main/README.md",
         "https://raw.githubusercontent.com/expressjs/multer/main/CHANGELOG.md",
@@ -926,8 +926,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:16:07Z",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "snapshotSha256": "973c5c6fd0bfd9b0c514197b2349aa79002076f229946af05a2f85b044b1b868",
-      "patternsSha256": "5ea62ed9f9c3207487d2ac4dcc27389a8b857d02a6fbee464231dddf1e5cb5b2",
+      "snapshotSha256": "6d276afc6b1c911831af7871b1d322064f2cf9e73f25141c5a7c952d6582a2a1",
+      "patternsSha256": "4f521ea17162dd2ffd6f6fec0eac16eaa491893d9672b5406d029cbb0b7d4dae",
       "sourceUrls": [
         "https://github.com/scottie1984/swagger-ui-express",
         "https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/"
@@ -1097,8 +1097,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:43:16Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "480620cd3536e2c972c09cbc7bd6131f86aa10977fd24c426b489ff4fa5dde0b",
-      "patternsSha256": "79e8933ea62421daa7abdbb5c9e2c4c73c9cf19deef51488121ecf2b7e5f0b4c",
+      "snapshotSha256": "df59b982690e7c0205f71e33403608b74a498814eaf0e197f4cbc8eca2f09882",
+      "patternsSha256": "4652f4063ffdea39bf3189db5c63805c042e1e61fbd302b5282f25a629fecc61",
       "sourceUrls": [
         "https://docs.swmansion.com/react-native-gesture-handler/docs/legacy-gestures/"
       ],
@@ -1114,8 +1114,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:43:16Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "812da2efdaa4bdb4e94af95dfe52d54d40de0c53314cdd3a829ed5a659280259",
-      "patternsSha256": "3151e78dfb85e9c3e028a3f7670d8538a34627f5faf79927e5e16b5f6a584eb0",
+      "snapshotSha256": "a7141000f2de5ba3ce611bca7e4595a4aceab61472cf8708bf36973c1be13658",
+      "patternsSha256": "dd304189d8e8b05526ec00d7650d0746472143fc3f0982c0b3eaf1860ddefba4",
       "sourceUrls": [
         "https://appandflow.github.io/react-native-safe-area-context/"
       ],
@@ -1127,8 +1127,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:43:16Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "bc2de1e8d9fdeabc69c7acef634e72a5dda7114917c015f21aac86b5164eeda6",
-      "patternsSha256": "369238975ab4ec2c2146723086eb620674775bd9700918f3196cb04eb66958a9",
+      "snapshotSha256": "057722e5b64f39078cf23c97887062edeb331037f56abd77a584dd6b11f542b1",
+      "patternsSha256": "f6c4132630e842ec802a1fa0f353fecf908bcac909c2b4af2e105cb254e468e5",
       "sourceUrls": [
         "https://github.com/software-mansion/react-native-screens",
         "https://reactnavigation.org/docs/native-stack-navigator/"
@@ -1145,8 +1145,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:43:16Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "8c78f141f8a1e5e276005b8a178cac7f8ed525db77fa859982ec8becff1bc380",
-      "patternsSha256": "69441f77ff6cdeb0c64cc8e899abf894f35772626b01edeb5a8d9cfd164a7d3f",
+      "snapshotSha256": "9b11fc6a4653e68a38d838985a448b4e7bd46f1b8fc3543b5bb807f150318ded",
+      "patternsSha256": "a53b3114a584c394894954231e40260848aa6a060ffbc17bbeb8d84e2f597c93",
       "sourceUrls": [
         "https://github.com/software-mansion/react-native-svg/blob/main/USAGE.md"
       ],
@@ -1158,8 +1158,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:43:16Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "b33938926b685dcfaa4e74c602ff311750b12680b82fe648aa9f6001c210a433",
-      "patternsSha256": "f3f6e642e171c3d17ec8cadf1ad82a2f8c232d4a8c6e7fc3c1bb5dcdabe16208",
+      "snapshotSha256": "c59bd5a9ea6ad87165d775093fd75124323d70f046d6766ea54c70ca31d76a48",
+      "patternsSha256": "78f79b55c5eff81035c80fd4c99ae807a3a9286a5bcb1d509eb398c12b78e882",
       "sourceUrls": [
         "https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md",
         "https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md"
@@ -1177,8 +1177,8 @@
       "fetchedBy": "doc-fetcher",
       "curatedAt": "2026-05-18T09:52:14Z",
       "curatedBy": "doc-curator",
-      "snapshotSha256": "9d022488c71ffbf3dab5617589670ff1dccafef99e05d506525333cbee711c8a",
-      "patternsSha256": "35d4a676decf55b9155a2648e37ff93935fdc05336c85fd6b24cc532f66f0506",
+      "snapshotSha256": "613ab9107fab794f66e8e8d94a93119b95f762b3c1dc63126e947560845888b8",
+      "patternsSha256": "7b66826eb2f48ac7f7f30d56e907264da50ad453622da0939e7ff3c556ab8826",
       "sourceUrls": [
         "https://necolas.github.io/react-native-web/docs/"
       ],
@@ -1254,10 +1254,10 @@
     },
     "@react-native-async-storage/async-storage": {
       "version": "2.2.0",
-      "fetched": "2026-05-20T20:00:00Z",
+      "fetched": "2026-05-25T08:25:00Z",
       "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-18T09:52:14Z",
-      "curatedBy": "lib-doc-curator",
+      "curatedAt": "2026-05-25T08:30:00Z",
+      "curatedBy": "doc-curator",
       "snapshotSha256": "3291aea50a8ca916704f356095b6fd0b64e63deb0b4e2ee1c2b53d3f84c4b720",
       "patternsSha256": "f215f55aed49142b4b20b7b586c9a06e283c6a8044f2b30085b628fcb86e460c",
       "sourceUrls": [
@@ -1634,7 +1634,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "0d512bf158b105d35583d09f1a876c1b442eb1bcda15146b54489e25bf94ebe0",
+      "patternsSha256": "22b4f438f7b7fd86ac102b8d35aecf079fe9ad3b1b42b9d1346c2ccc60dfc1b7"
     },
     "expo-image": {
       "coveredBy": "expo",
@@ -1643,7 +1645,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "b73014212500a09b92809829f610c425554ae55116b145a4b1577df72dfd04eb",
+      "patternsSha256": "4a468dd22e9f4047375394906eed65d98593c381d861cc4cae2ce8f00a62b0e6"
     },
     "expo-image-picker": {
       "coveredBy": "expo",
@@ -1693,7 +1697,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "fb6942d2ccaa60250fb7dcdf890b1817203057ba52f34527090f40f0ca7a0068",
+      "patternsSha256": "57595b2ecf53ae72d9e0e521f598d0f98cf893cacfa5e618f28c554d16d8fd7f"
     },
     "expo-secure-store": {
       "coveredBy": "expo",
@@ -1702,7 +1708,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "1dd9bf6813baf7bf5535f7f6a953eafc396c71cf57700aec8b852a0306f6ef2f",
+      "patternsSha256": "89f58a4cfcf425f3944007dac586d2234c757600af03aa26e63b1adc89ae4a35"
     },
     "expo-file-system": {
       "coveredBy": "expo",
@@ -1711,7 +1719,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "1a31fb0fb26270856b0a75714d9ee99acc15330d253db7cc580bbf29944366ed",
+      "patternsSha256": "9e7142e0efad429ee581953ebcbe1309320aaa9dcdf265a84427fbb49e1407d9"
     },
     "expo-blur": {
       "coveredBy": "expo",
@@ -1720,7 +1730,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "052f645cdbd8edffe82b786bd2a63b1160b2c30216c4f4e976175b8958981794",
+      "patternsSha256": "440538e3c01583080ef7d27bf25c315a86e52064d1090bee39b16c030014c61d"
     },
     "expo-haptics": {
       "coveredBy": "expo",
@@ -1729,7 +1741,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "0a908c82b3cbb09c7dda8e5c684729622875e939eece493f84d196bd965c8be7",
+      "patternsSha256": "7e53eea7e7c41f89748233a1dd5dc4a4644695ffa214a473318f0df0bb36cec1"
     },
     "expo-linear-gradient": {
       "coveredBy": "expo",
@@ -1738,7 +1752,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "9b6fc50bfb0c58e12ab48835e9e5481387071ae286205aa2cf13f563b1790ed6",
+      "patternsSha256": "a9f16fcc02795877dae8b4220ec90dfa387b1baa7ae093511297c9befc9e3c3d"
     },
     "expo-linking": {
       "coveredBy": "expo",
@@ -1786,7 +1802,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "50a4fdc36655d1a3d4f5dd578a3c169b60d9fc86fc9ec229d64f734d1dd29161",
+      "patternsSha256": "3200b071d7f0356af2044a111e9b496adccace57e247f75f6c9443b6cfe8d538"
     },
     "expo-speech": {
       "coveredBy": "expo",
@@ -1795,7 +1813,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "98687bf866c8c904ba44816d1bffa243dedc9cadaba6b03bb2b001c2432661fb",
+      "patternsSha256": "89092a86641a99ba8b07cb25af137f49b89d024fb9eb9f87b5e8eeb191a53750"
     },
     "expo-splash-screen": {
       "coveredBy": "expo",
@@ -1972,7 +1992,9 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "snapshotSha256": "ca1ec3bc6eff885b99e556ac3a9f07f040555633b2d0d4f602fa134c92e66e01",
+      "patternsSha256": "88e42e24b5035d80016f2543cbef844ad1b0806dc9210da46602cbbfc80acfc4"
     },
     "expo-constants": {
       "coveredBy": "expo",
@@ -2020,7 +2042,7 @@
       "note": "stub PATTERNS.md points to lib-docs/expo/PATTERNS.md (UFR-022 collapse policy)",
       "curatedBy": "lib-doc-curator",
       "snapshotSha256": "2564b788dcb7816d54c4ad0156830b2226f1328c126bc46c2d02a687c6f22fe7",
-      "patternsSha256": "024774c7738a30184f04a8fa585fe63a6dbc33dd61c7fc54be069abc7dc05010",
+      "patternsSha256": "08d0e2c05d27bcda4b242020f5b1ef4cd6819f340bddd05f0192edea1cdfd176",
       "sourceUrls": [
         "https://docs.expo.dev/guides/icons/",
         "https://github.com/expo/vector-icons/releases",
@@ -2138,7 +2160,9 @@
       "version": "0.7.4",
       "fetched": "2026-05-18T10:12:57Z",
       "fetchedBy": "stub",
-      "note": "stub PATTERNS.md points to lib-docs/react-native-reanimated/PATTERNS.md (UFR-022 collapse policy)"
+      "note": "stub PATTERNS.md points to lib-docs/react-native-reanimated/PATTERNS.md (UFR-022 collapse policy)",
+      "snapshotSha256": "1904ccec96f0a8b130dbb8a9ea60b2ad69b4ba6dc28a0f4ab4e13931c87f2bb7",
+      "patternsSha256": "bfcecfd7fc048571372bf49ab355fb2f7eda7a5a989ca329c37a56541bf6ab01"
     },
     "react-i18next": {
       "coveredBy": "i18next",
@@ -2354,7 +2378,8 @@
       "fetchedBy": "stub",
       "note": "stub PATTERNS.md points to lib-docs/linkedom/PATTERNS.md (UFR-022 collapse policy). Migration target documented in linkedom/PATTERNS.md §6 (defuddle, TD-33).",
       "curatedBy": "doc-curator (refresh 2026-05-20)",
-      "refreshed": "2026-05-20"
+      "refreshed": "2026-05-20",
+      "patternsSha256": "4c1ccdd70c2ceb5a0941bbb7194afd6072f74c4c9def9ec797dcfe45f9f23adc"
     },
     "@opentelemetry/api": {
       "version": "1.9.0",
@@ -2382,24 +2407,6 @@
         "13.0.0-alpha.0 exists on npm (pre-release) — not adopted; pinned ^12.39.0."
       ],
       "refreshed": "2026-05-20"
-    },
-    "expo-screen-capture": {
-      "version": "55.0.14",
-      "fetched": "2026-05-21T06:33:31Z",
-      "fetchedBy": "doc-fetcher",
-      "curatedAt": "2026-05-21T07:00:00Z",
-      "curatedBy": "doc-curator (UFR-022 run 2026-05-21-td-sec-01-02-mobile-secrets)",
-      "snapshotSha256": "ee0c15875569e5c21162786ff73e0f8147f0f1b2e810d1d6b020312499e8c640",
-      "patternsSha256": "3b9c175b5cb7f8450671a859492167ec0900a45619072ffccfb395f5c60fe712",
-      "sourceUrls": [
-        "https://docs.expo.dev/versions/latest/sdk/screen-capture/",
-        "https://libraries.io/npm/expo-screen-capture"
-      ],
-      "warnings": [
-        "npmjs.com HTTP 403 — version 55.0.14 confirmed via libraries.io + WebSearch, not npm registry.",
-        "usePreventScreenCapture hook releases on UNMOUNT ONLY (not navigation blur) — for secret screens use imperative prevent/allow via useFocusEffect. See PATTERNS critical doctrine."
-      ],
-      "refreshed": "2026-05-21"
     }
   },
   "devOnlyLibs": [

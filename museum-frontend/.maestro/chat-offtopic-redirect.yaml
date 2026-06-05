@@ -1,0 +1,34 @@
+appId: com.musaium.mobile.preview
+---
+# Conversation category: OFF-TOPIC → real LLM round-trip (graceful redirect).
+#
+# An off-topic question (weather) is NOT a V1 keyword hard-block (off_topic is
+# allowed through to the LLM — see guardrail-matrix.ai.test.ts: "Pas de blocage
+# synchrone off_topic"). It reaches the real LLM, which redirects back to the
+# art/heritage mission per the system prompt. The exact redirect wording is
+# LLM-generated and varies, so at the UI layer we assert the real assistant
+# bubble renders (a genuine round-trip completed, the app did not crash on an
+# off-mission input). The semantic redirection CONTENT (stays on art/museum) is
+# asserted deterministically in the backend AI matrix (guardrail-matrix.ai.test.ts).
+
+- runFlow:
+    file: helpers/chat-entry.yaml
+
+- tapOn:
+    id: "chat-input"
+- inputText: "What is the weather forecast for tomorrow in Tokyo?"
+- hideKeyboard
+- tapOn:
+    id: "send-button"
+
+- assertVisible: "What is the weather forecast for tomorrow in Tokyo?"
+
+# A real assistant message lands (the off-topic input was handled gracefully via
+# the live LLM, not dropped or crashed). chat-bubble-assistant is only present
+# once a real assistant message exists (pending uses chat-assistant-pending).
+- extendedWaitUntil:
+    visible:
+      id: "chat-bubble-assistant"
+    timeout: 40000
+- assertVisible:
+    id: "chat-bubble-assistant"

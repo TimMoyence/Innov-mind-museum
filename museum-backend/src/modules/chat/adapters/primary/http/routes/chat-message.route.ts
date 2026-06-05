@@ -9,6 +9,7 @@ import {
   getRequestUser,
   extendTimeoutForUpload,
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
+import { idempotencyMiddleware } from '@modules/chat/adapters/primary/http/middleware/idempotency.middleware';
 import { badRequest } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
@@ -188,6 +189,11 @@ export const createMessageRouter = (
     sessionLimiter,
     // P0-4 — gates LLM USD spend; ordering: AFTER rate-limit, BEFORE admission. Mirrors chat-media.
     llmCostGuard,
+    // D2 — Idempotency-Key dedup. Mounted AFTER auth/rate/cost guards so a
+    // replayed key cannot be burned by a 401/429/402, BEFORE upload + handler
+    // so a duplicate replays the stored 201 instead of re-running postMessage
+    // (CLAUDE.md "Mutating middleware ordering"). No-op when the header is absent.
+    idempotencyMiddleware(),
     ...(uploadAdmission ? [uploadAdmission] : []),
     extendTimeoutForUpload,
     upload.single('image'),

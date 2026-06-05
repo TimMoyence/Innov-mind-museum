@@ -48,6 +48,7 @@
     "babel-preset-expo": "~55.0.8",
     "expo": "^55.0.11",
     "expo-apple-authentication": "~55.0.11",
+    "pako": "^2.1.0",
     "expo-asset": "~55.0.12",
     "expo-audio": "^55.0.11",
     "expo-blur": "~55.0.12",
@@ -67,7 +68,6 @@
     "expo-localization": "~55.0.13",
     "expo-location": "~55.1.6",
     "expo-router": "~55.0.10",
-    "expo-screen-capture": "~55.0.14",
     "expo-secure-store": "~55.0.11",
     "expo-speech": "~55.0.11",
     "expo-splash-screen": "~55.0.15",
@@ -103,6 +103,7 @@
     "@faker-js/faker": "^10.4.0",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "29.5.14",
+    "@types/pako": "^2.0.4",
     "@types/react": "19.2.14",
     "@typescript-eslint/utils": "^8.58.1",
     "babel-plugin-react-compiler": "^1.0.0",
@@ -139,7 +140,9 @@
         "expo-constants",
         "expo-dev-client",
         "expo-file-system",
+        "expo-font",
         "expo-haptics",
+        "expo-image",
         "expo-image-manipulator",
         "expo-image-picker",
         "expo-linear-gradient",
@@ -150,18 +153,26 @@
         "expo-router",
         "expo-secure-store",
         "expo-splash-screen",
+        "expo-status-bar",
         "expo-store-review",
         "expo-system-ui",
         "expo-updates",
+        "expo-web-browser",
         "jest-expo",
+        "react",
+        "react-dom",
         "react-native-gesture-handler",
         "react-native-safe-area-context",
-        "react-native-screens"
+        "react-native-screens",
+        "react-native-svg"
       ]
     },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": []
+      },
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
       }
     }
   },
@@ -171,7 +182,8 @@
     "@tootallnate/once": ">=2.0.1",
     "@xmldom/xmldom": "^0.8.12",
     "postcss": ">=8.5.10",
-    "react-test-renderer": "19.2.6"
+    "react-test-renderer": "19.2.6",
+    "tmp": ">=0.2.6"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
