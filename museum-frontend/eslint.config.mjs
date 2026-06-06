@@ -29,6 +29,12 @@ export default tseslint.config(
       'eslint.config.mjs',
       'metro.config.js',
       'index.js',
+      // Build-time CommonJS module consumed by app.config.ts via Node `require`
+      // (run 2026-06-06-api-url-prod-safety, design D1). Like the other root
+      // `.js` tooling configs above, it lives outside the TS project graph, so
+      // the typed `projectService` parser cannot resolve it. Its contract is
+      // exercised by __tests__/infrastructure/api-url.config.test.ts.
+      'api-url.config.js',
       'scripts/',
       'plugins/',
       'coverage/',

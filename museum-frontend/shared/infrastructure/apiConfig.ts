@@ -2,6 +2,19 @@ import Constants from 'expo-constants';
 
 import { readEnvString } from '@/shared/lib/env';
 
+// Single source of truth for the loopback regex + canonical prod host
+// (run 2026-06-06-api-url-prod-safety, spec R7 / DRY). The build-time path
+// (`app.config.ts`) and this runtime path BOTH consume the same `.js` module so
+// the localhost-detection regex can never drift between them. Unlike
+// `app.config.ts`, this runtime TS file is bundled by Metro (which DOES resolve
+// the relative `.js`), so a normal `import` is licit here — the no-TS-import
+// constraint is `app.config.ts`-specific only.
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- the shared resolver module is a plain CommonJS `.js` (it must be require-able by app.config.ts); a typed `import` of a non-typed `.js` would need a `.d.ts`. Justification: keep ONE loopback regex + prod-host literal (spec R7) without adding a declaration file.
+const { isLocalhostUrl: isLoopbackUrl } = require('../../api-url.config.js') as {
+  isLocalhostUrl: (value: string) => boolean;
+  PROD_API_BASE_URL: string;
+};
+
 /** Target API environment the app is configured to communicate with. */
 type ApiEnvironment = 'staging' | 'production' | 'custom';
 
@@ -92,21 +105,17 @@ const resolveConfiguredBaseUrls = (): {
   };
 };
 
-const localhostPattern = /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|::1)$/i;
-
 /**
  * Checks whether a URL points to a localhost address.
+ *
+ * Delegates to the single loopback source of truth in
+ * `museum-frontend/api-url.config.js` (spec R7 / DRY) so the build-time and
+ * runtime localhost checks can never diverge. Kept as an exported wrapper for
+ * back-compat with existing callers + tests.
  * @param value - URL string to test.
  * @returns `true` if the hostname is a loopback address.
  */
-export const isLocalhostApiBaseUrl = (value: string): boolean => {
-  try {
-    const hostname = new URL(value).hostname;
-    return localhostPattern.test(hostname);
-  } catch {
-    return value.includes('localhost') || value.includes('127.0.0.1');
-  }
-};
+export const isLocalhostApiBaseUrl = (value: string): boolean => isLoopbackUrl(value);
 
 /**
  * Determines the default API environment from env vars, Expo config, or the build variant.

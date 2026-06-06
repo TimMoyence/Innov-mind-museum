@@ -200,3 +200,75 @@ describe('apiConfig — tryResolveInitialApiBaseUrl', () => {
     expect(error).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// RED phase — run 2026-06-06-api-url-prod-safety (UFR-022), T1.2 / C10 / R6.
+//
+// The reported defect: a local Xcode Release/Archive binary had NO system
+// `APP_VARIANT`; its variant was frozen into `Constants.expoConfig.extra`
+// at the app-config build phase. After the P1 fix that build is stamped
+// `extra.APP_VARIANT='production'`, so the runtime guard must treat it as a
+// production build and REJECT localhost — it must NOT be exempted as
+// "development".
+//
+// This block exercises the build-time-frozen `extra.APP_VARIANT` path
+// specifically (no `process.env.APP_VARIANT`), which `resolveBuildVariant`
+// reads via `readExtra()` on every call. Per design.md D3, R6 is satisfied
+// primarily by P1 (Release => variant 'production' => guard active); these
+// are the regression-lock tests that pin that contract and would catch any
+// regression that re-opens the localhost-in-release hole.
+// ---------------------------------------------------------------------------
+describe('apiConfig — R6: build-time-stamped variant drives the localhost guard', () => {
+  const originalEnv = { ...process.env };
+
+  // The module-level jest.mock returns a mutable `expoConfig` object;
+  // `resolveBuildVariant()` reads `Constants.expoConfig.extra.APP_VARIANT`
+  // fresh on each call, so reassigning `expoConfig.extra` here simulates the
+  // frozen build-time stamp without a second mock module. We replace the whole
+  // `extra` reference (no dynamic key delete) and restore it afterwards.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- mirror the module under test which consumes Constants.expoConfig.extra at call time. Justification: must reach the same mocked Constants object the SUT reads.
+  const Constants = require('expo-constants') as {
+    expoConfig: { extra: Record<string, unknown> };
+  };
+  const originalExtra: Record<string, unknown> = { ...Constants.expoConfig.extra };
+
+  const setExtra = (extra: Record<string, unknown>): void => {
+    Constants.expoConfig.extra = { ...extra };
+  };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    setExtra(originalExtra);
+  });
+
+  const loadFresh = loadFreshConfigModule;
+
+  it('C10: a Release binary stamped extra.APP_VARIANT=production rejects localhost (no env APP_VARIANT)', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    setExtra({ APP_VARIANT: 'production' });
+    expect(() => {
+      loadFresh().assertApiBaseUrlAllowed('http://localhost:3000');
+    }).toThrow(/Localhost backend URL is blocked/);
+  });
+
+  it('C10b: a genuine development extra still exempts localhost (dev loop preserved)', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    setExtra({ APP_VARIANT: 'development' });
+    expect(() => {
+      loadFresh().assertApiBaseUrlAllowed('http://localhost:3000');
+    }).not.toThrow();
+  });
+
+  it('C10c: getStartupConfigurationError is non-null for a Release binary resolving to localhost', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL_STAGING;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL_PROD;
+    // production stamp + only a localhost base url available => startup error.
+    setExtra({ APP_VARIANT: 'production', API_BASE_URL: 'http://localhost:3000' });
+    expect(loadFresh().getStartupConfigurationError()).not.toBeNull();
+  });
+});

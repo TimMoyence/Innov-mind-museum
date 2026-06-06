@@ -49,20 +49,6 @@ const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
   './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
 const BRAND_BACKGROUND_COLOR = '#1E1B19';
 
-const resolveVariant = (env: RuntimeEnv): AppVariant => {
-  const raw = (env.APP_VARIANT ?? env.EAS_BUILD_PROFILE ?? 'development').toLowerCase();
-
-  if (raw === 'production') {
-    return 'production';
-  }
-
-  if (raw === 'preview') {
-    return 'preview';
-  }
-
-  return 'development';
-};
-
 const nonEmpty = (value?: string): string | undefined => {
   if (!value) {
     return undefined;
@@ -81,31 +67,26 @@ const nonPlaceholder = (value?: string): string | undefined => {
   return normalized.startsWith('$') ? undefined : normalized;
 };
 
-const resolveApiEnvironment = (variant: AppVariant, env: RuntimeEnv): ApiEnvironment => {
-  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_ENVIRONMENT)?.toLowerCase();
-  if (explicit === 'production') {
-    return 'production';
-  }
+/**
+ * Shape of the co-located CommonJS build-time API-URL resolver module
+ * (run 2026-06-06-api-url-prod-safety, design D1). It is `require`d (not
+ * `import`ed) for the SAME reason `require('./package.json')` is below: Expo
+ * CLI loads app.config.ts via Node `require`, which does NOT honor the `@/*`
+ * alias nor transitively compile `.ts` imports (lib-docs/expo/LESSONS.md:34).
+ * A plain `.js` sibling sidesteps that while keeping the prod-host constant +
+ * resolvers in a single, unit-testable source of truth (spec R7).
+ */
+interface ApiUrlConfigModule {
+  PROD_API_BASE_URL: string;
+  resolveVariant: (env: RuntimeEnv) => AppVariant;
+  resolveApiEnvironment: (variant: AppVariant, env: RuntimeEnv) => ApiEnvironment;
+  resolveApiBaseUrl: (variant: AppVariant, env: RuntimeEnv) => string;
+  isLocalhostUrl: (value: string) => boolean;
+}
 
-  if (explicit === 'staging') {
-    return 'staging';
-  }
-
-  return variant === 'production' ? 'production' : 'staging';
-};
-
-const resolveApiBaseUrl = (variant: AppVariant, env: RuntimeEnv): string => {
-  const explicit = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL);
-  const staging = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING);
-  const production = nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD);
-  const apiEnvironment = resolveApiEnvironment(variant, env);
-
-  if (apiEnvironment === 'production') {
-    return production ?? explicit ?? 'http://localhost:3000';
-  }
-
-  return explicit ?? staging ?? production ?? 'http://localhost:3000';
-};
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Expo CLI Node require entry; app.config.ts cannot import the build-time resolvers as a TS module (no ESM/alias resolution at config-load time — lib-docs/expo/LESSONS.md:34). Justification: the resolvers MUST be a require-able .js so a Release/Archive build resolves the prod host without a TS compile step.
+const apiUrlConfig = require('./api-url.config.js') as ApiUrlConfigModule;
+const { resolveVariant, resolveApiEnvironment, resolveApiBaseUrl } = apiUrlConfig;
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const env = process.env as RuntimeEnv;
@@ -145,7 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // (`com.musaium.mobile.preview`) is absent from the published AASA, so a
       // non-prod build claiming `applinks:musaium.com` would fail verification.
       associatedDomains: variant === 'production' ? ['applinks:musaium.com'] : undefined,
-      buildNumber: '91',
+      buildNumber: '92',
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -265,7 +246,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               },
             ]
           : undefined,
-      versionCode: 91,
+      versionCode: 92,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',

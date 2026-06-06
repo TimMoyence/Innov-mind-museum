@@ -183,6 +183,9 @@ jobs:
       - name: 'Mirror — hexagonal domain-purity (BE, ESLint-independent backstop)'
         run: node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
 
+      - name: 'Mirror — api-url production-safety (mobile, build-time localhost guard)'
+        run: node museum-frontend/scripts/sentinels/api-url-production-safety.mjs
+
       # Install ast-grep for Gate P14 — Cargo+brew are slower than npm install in CI.
       - name: 'Install ast-grep CLI (for Gate P14)'
         run: npm install -g @ast-grep/cli
