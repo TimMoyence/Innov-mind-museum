@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Musaium API",
-    "version": "1.1.1",
+    "version": "1.3.0",
     "description": "Active API surface for Musaium mobile backend (health, auth, chat, daily-art, reviews, admin, museum, support)."
   },
   "servers": [

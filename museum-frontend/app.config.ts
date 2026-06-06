@@ -145,7 +145,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // (`com.musaium.mobile.preview`) is absent from the published AASA, so a
       // non-prod build claiming `applinks:musaium.com` would fail verification.
       associatedDomains: variant === 'production' ? ['applinks:musaium.com'] : undefined,
-      buildNumber: '90',
+      buildNumber: '91',
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -265,7 +265,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               },
             ]
           : undefined,
-      versionCode: 90,
+      versionCode: 91,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',
