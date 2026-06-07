@@ -95,11 +95,11 @@ describe('apiConfig — environment + build variant resolution', () => {
 
   it('resolves production variant from APP_VARIANT=production', () => {
     process.env.APP_VARIANT = 'production';
-    process.env.EXPO_PUBLIC_API_BASE_URL_PROD = 'https://api.musaium.com';
+    process.env.EXPO_PUBLIC_API_BASE_URL_PROD = 'https://musaium.com';
     const snap = loadFresh().getApiConfigurationSnapshot();
     expect(snap.buildVariant).toBe('production');
     expect(snap.apiEnvironment).toBe('production');
-    expect(snap.resolvedBaseUrl).toBe('https://api.musaium.com');
+    expect(snap.resolvedBaseUrl).toBe('https://musaium.com');
   });
 
   it('resolves preview variant from EAS_BUILD_PROFILE=preview (staging API)', () => {
@@ -270,5 +270,127 @@ describe('apiConfig — R6: build-time-stamped variant drives the localhost guar
     // production stamp + only a localhost base url available => startup error.
     setExtra({ APP_VARIANT: 'production', API_BASE_URL: 'http://localhost:3000' });
     expect(loadFresh().getStartupConfigurationError()).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RED phase — run 2026-06-06-api-url-prod-runtime-resolver (UFR-022), T1.2.
+//
+// The launch blocker: a locally-built Release iOS binary is stamped at the
+// app-config build phase with the already-correct, promotion-included
+// `extra` values (`API_ENVIRONMENT='production'`, `API_BASE_URL='https://
+// musaium.com'`, `APP_VARIANT='production'`). But the runtime resolver
+// `apiConfig.ts` re-derives the environment + base URL from the raw
+// `process.env.EXPO_PUBLIC_*` Metro-inlined dev `.env` pins
+// (`EXPO_PUBLIC_API_ENVIRONMENT='staging'`,
+// `EXPO_PUBLIC_API_BASE_URL='http://localhost:3000'`) BEFORE consulting
+// `extra` => it resolves `staging` + localhost => `assertApiBaseUrlAllowed`
+// throws => the app is launch-blocked.
+//
+// These cases pin the corrected contract (R1/R2/R6 — `extra` authoritative,
+// process.env fallback). They FAIL against the current process.env-first
+// resolver (AC1: snapshot resolves 'staging' + localhost, getStartup… !== null).
+// ---------------------------------------------------------------------------
+describe('apiConfig — R1/R2/R6: extra is authoritative over the dev .env pins (launch blocker)', () => {
+  const originalEnv = { ...process.env };
+
+  // Same mechanism as the R6 block above: the module-level jest.mock returns a
+  // mutable `expoConfig` object; the SUT reads `Constants.expoConfig.extra`
+  // fresh on each call. Replacing the whole `extra` reference simulates the
+  // frozen build-time stamp without a second mock module.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- mirror the module under test which consumes Constants.expoConfig.extra at call time. Justification: must reach the same mocked Constants object the SUT reads.
+  const Constants = require('expo-constants') as {
+    expoConfig: { extra: Record<string, unknown> };
+  };
+  const originalExtra: Record<string, unknown> = { ...Constants.expoConfig.extra };
+
+  const setExtra = (extra: Record<string, unknown>): void => {
+    Constants.expoConfig.extra = { ...extra };
+  };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    setExtra(originalExtra);
+  });
+
+  const loadFresh = loadFreshConfigModule;
+
+  it('AC1: a production-stamped binary built from the dev .env resolves prod, NOT the localhost/staging pins', () => {
+    // The build-time resolver already wrote the correct decision into `extra`.
+    setExtra({
+      APP_VARIANT: 'production',
+      API_ENVIRONMENT: 'production',
+      API_BASE_URL: 'https://musaium.com',
+    });
+    // The Metro-inlined dev `.env` residual pins are still present at runtime.
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:3000';
+    process.env.EXPO_PUBLIC_API_ENVIRONMENT = 'staging';
+
+    const mod = loadFresh();
+    const snap = mod.getApiConfigurationSnapshot();
+    expect(snap.apiEnvironment).toBe('production');
+    expect(snap.resolvedBaseUrl).toBe('https://musaium.com');
+    expect(mod.getStartupConfigurationError()).toBeNull();
+  });
+
+  it('R6 parity: the runtime (apiEnvironment, resolvedBaseUrl) equals what extra carries, not the process.env pins', () => {
+    setExtra({
+      APP_VARIANT: 'production',
+      API_ENVIRONMENT: 'production',
+      API_BASE_URL: 'https://musaium.com',
+    });
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:3000';
+    process.env.EXPO_PUBLIC_API_ENVIRONMENT = 'staging';
+
+    const snap = loadFresh().getApiConfigurationSnapshot();
+    expect(snap.apiEnvironment).toBe(Constants.expoConfig.extra.API_ENVIRONMENT);
+    expect(snap.resolvedBaseUrl).toBe(Constants.expoConfig.extra.API_BASE_URL);
+  });
+
+  it('R4 fail-loud: an extra-stamped localhost API_BASE_URL on a production stamp is rejected at startup', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL_STAGING;
+    delete process.env.EXPO_PUBLIC_API_BASE_URL_PROD;
+    delete process.env.EXPO_PUBLIC_API_ENVIRONMENT;
+    setExtra({
+      APP_VARIANT: 'production',
+      API_ENVIRONMENT: 'production',
+      API_BASE_URL: 'http://localhost:3000',
+    });
+    const mod = loadFresh();
+    expect(mod.getStartupConfigurationError()).not.toBeNull();
+    expect(mod.getApiConfigurationSnapshot().resolvedBaseUrl).toMatch(/localhost/);
+  });
+
+  it('R3 dev-loop: a development stamp keeps the localhost dev override with no throw', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:3000';
+    process.env.EXPO_PUBLIC_API_ENVIRONMENT = 'staging';
+    setExtra({ APP_VARIANT: 'development' });
+    const mod = loadFresh();
+    const snap = mod.getApiConfigurationSnapshot();
+    expect(snap.buildVariant).toBe('development');
+    expect(snap.resolvedBaseUrl).toBe('http://localhost:3000');
+    expect(mod.getStartupConfigurationError()).toBeNull();
+  });
+
+  it('R8 no-extra fallback: an empty extra falls back to the process.env dev default without crashing', () => {
+    delete process.env.APP_VARIANT;
+    delete process.env.EAS_BUILD_PROFILE;
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'http://localhost:3000';
+    delete process.env.EXPO_PUBLIC_API_ENVIRONMENT;
+    setExtra({});
+    const mod = loadFresh();
+    const snap = mod.getApiConfigurationSnapshot();
+    expect(snap.buildVariant).toBe('development');
+    expect(snap.resolvedBaseUrl).toBe('http://localhost:3000');
+    expect(mod.getStartupConfigurationError()).toBeNull();
   });
 });

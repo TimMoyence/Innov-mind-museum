@@ -116,15 +116,47 @@ function resolveVariant(env) {
 }
 
 /**
- * Resolve the target API environment (unchanged semantics vs the former inlined
- * `app.config.ts` helper — spec R5).
+ * Resolve the target API environment (spec R1/R5).
+ *
+ * Two distinct build paths both land on `variant=production` while carrying a
+ * residual `EXPO_PUBLIC_API_ENVIRONMENT=staging` pin from the dev `.env`:
+ *
+ *  - **Release PROMOTED** — an Xcode Release built from the dev `.env`: the
+ *    variant was promoted to `production` by `CONFIGURATION=Release`
+ *    (`resolveVariant` rule 2) while `APP_VARIANT`/`EAS_BUILD_PROFILE` is a
+ *    residual `development`. Here the `EXPO_PUBLIC_*` values are dev `.env`
+ *    leftovers — we IGNORE the staging pin and target prod.
+ *  - **Deliberate production** — EAS `internal`/`production`: `APP_VARIANT`/
+ *    `EAS_BUILD_PROFILE` is EXPLICITLY `production` (or `preview`). Here the
+ *    staging pin is intentional (R5 staging-intent signal) — we HONOR it.
+ *
+ * Discriminant = the same explicit `APP_VARIANT || EAS_BUILD_PROFILE` expression
+ * `resolveVariant` reads. Assumed side effect (OK for V1, no staging server —
+ * `project_no_staging_v1`): a local Release can no longer target staging via the
+ * `EXPO_PUBLIC_API_ENVIRONMENT` pin alone; an explicit `APP_VARIANT`/
+ * `EAS_BUILD_PROFILE` of `production`/`preview` (the EAS internal/preview
+ * profile) is now required to honor a staging pin.
+ *
  * @param {'development'|'preview'|'production'} variant
  * @param {Record<string, string|undefined>} env
  * @returns {'staging'|'production'}
  */
 function resolveApiEnvironment(variant, env) {
-  const explicit = nonPlaceholder(env && env.EXPO_PUBLIC_API_ENVIRONMENT);
+  const e = env || {};
+  const explicit = nonPlaceholder(e.EXPO_PUBLIC_API_ENVIRONMENT);
   const normalized = explicit ? explicit.toLowerCase() : undefined;
+
+  // Release-promoted production (CONFIGURATION=Release, no explicit
+  // production/preview profile) ⇒ ignore the residual dev-`.env` pins, target
+  // prod. A deliberate `production`/`preview` profile keeps `promoted=false` and
+  // falls through to honor the pin (EAS internal stays staging).
+  const explicitVariant = String(e.APP_VARIANT || e.EAS_BUILD_PROFILE || '').toLowerCase();
+  const promoted =
+    variant === 'production' && explicitVariant !== 'production' && explicitVariant !== 'preview';
+  if (promoted) {
+    return 'production';
+  }
+
   if (normalized === 'production') {
     return 'production';
   }

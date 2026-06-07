@@ -86,8 +86,14 @@ const resolveConfiguredBaseUrls = (): {
   production?: string;
 } => {
   const extra = readExtra();
+  // `extra.API_BASE_URL` is the build-time-resolved decision (app.config.ts
+  // stamps it via api-url.config.js `resolveApiBaseUrl`, promotion + prod-host
+  // included; never localhost for a prod build) → AUTHORITATIVE over the raw
+  // Metro-inlined dev `.env` pin (spec R1/R2/R6 — single decision point, no
+  // build-time↔runtime re-divergence). `process.env.EXPO_PUBLIC_API_BASE_URL`
+  // stays the fallback for jsdom/test where `extra` is absent (R8).
   const explicit =
-    readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL) ?? readEnvString(extra.API_BASE_URL);
+    readEnvString(extra.API_BASE_URL) ?? readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL);
 
   const staging =
     readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL_STAGING) ??
@@ -123,10 +129,15 @@ export const isLocalhostApiBaseUrl = (value: string): boolean => isLoopbackUrl(v
  */
 const getDefaultApiEnvironment = (): ApiEnvironment => {
   const extra = readExtra();
+  // `extra.API_ENVIRONMENT` is the build-time-resolved decision (app.config.ts
+  // stamps it via api-url.config.js `resolveApiEnvironment`, promotion
+  // included) → AUTHORITATIVE over the raw Metro-inlined dev `.env` pin
+  // (spec R1/R6 — single decision point). `process.env.EXPO_PUBLIC_API_ENVIRONMENT`
+  // stays the fallback for jsdom/test where `extra` is absent (R8).
   // TD-RN-03 — canonical helper (CLAUDE.md gotcha § process.env local-vs-CI).
   const explicit =
-    normalizeApiEnvironment(readEnvString(process.env.EXPO_PUBLIC_API_ENVIRONMENT)) ??
-    normalizeApiEnvironment(extra.API_ENVIRONMENT);
+    normalizeApiEnvironment(extra.API_ENVIRONMENT) ??
+    normalizeApiEnvironment(readEnvString(process.env.EXPO_PUBLIC_API_ENVIRONMENT));
 
   if (explicit && explicit !== 'custom') {
     return explicit;

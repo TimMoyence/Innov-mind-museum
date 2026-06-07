@@ -89,13 +89,30 @@ describe('api-url.config — resolveVariant precedence (D2)', () => {
   });
 });
 
-describe('api-url.config — resolveApiEnvironment (unchanged semantics, R5)', () => {
-  it('explicit EXPO_PUBLIC_API_ENVIRONMENT=staging wins even for a production variant', () => {
+describe('api-url.config — resolveApiEnvironment (promoted vs explicit, R1/R5)', () => {
+  it('an explicit production variant honors the EXPO_PUBLIC_API_ENVIRONMENT=staging pin (EAS internal)', () => {
+    // EAS `internal`: APP_VARIANT is EXPLICITLY `production` (deliberate), so the
+    // staging pin is honored — a production-bundle build that intentionally
+    // targets staging (R5 staging-intent signal = explicit production/preview).
     expect(
       apiUrlConfig.resolveApiEnvironment('production', {
         EXPO_PUBLIC_API_ENVIRONMENT: 'staging',
+        APP_VARIANT: 'production',
       }),
     ).toBe('staging');
+  });
+
+  it('C-promoted: a Release-promoted production variant ignores the EXPO_PUBLIC_API_ENVIRONMENT=staging pin (R1)', () => {
+    // Xcode Release built from the dev `.env`: variant is PROMOTED to production
+    // by CONFIGURATION=Release while APP_VARIANT is a residual `development` pin.
+    // The EXPO_PUBLIC_* values are dev `.env` residuals => ignored => target prod.
+    expect(
+      apiUrlConfig.resolveApiEnvironment('production', {
+        EXPO_PUBLIC_API_ENVIRONMENT: 'staging',
+        APP_VARIANT: 'development',
+        CONFIGURATION: 'Release',
+      }),
+    ).toBe('production');
   });
 
   it('production variant defaults to the production environment', () => {
