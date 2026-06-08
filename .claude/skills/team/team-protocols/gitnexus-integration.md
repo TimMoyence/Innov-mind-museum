@@ -103,3 +103,48 @@ Si un outil GitNexus retourne un warning "stale index" :
 4. Reprendre le travail
 
 Le hook PostToolUse re-indexe automatiquement apres `git commit` et `git merge`.
+
+---
+
+## CLUSTER SKILLS — cartes de code auto-generees (OBLIGATOIRE en COMPRENDRE)
+
+`gitnexus analyze --skills` produit 20 **cartes de cluster** dans
+`.claude/skills/generated/<cluster>/SKILL.md` (chat, auth, llm, migrations, ui, pg, …).
+Chaque carte = fichiers-cles + entry points + symboles-cles d'un domaine fonctionnel,
+regroupes par cohesion (pas par arborescence — un fichier peut appartenir a 2 cartes).
+
+**Ce ne sont PAS des skills invocables** (nichees a 2 niveaux → non decouvertes par
+l'outil Skill ; regenerees a chaque run). On les consulte comme **materiel de reference
+read-only** via un index routable.
+
+### Index routable
+
+`.claude/skills/cluster-skills-index.json` (schema `cluster-skills-index/v1`) —
+manifeste deterministe : pour chaque cluster `{name, skillPath, description, symbolCount,
+fileCount, cohesion, apps, pathPrefixes, keyFiles, entryPoints, keySymbols, sourceSha}`.
+Genere par `scripts/gen-cluster-skills-index.mjs`. **NE PAS editer a la main** (regenere).
+
+### Usage par phase
+
+**COMPRENDRE (architect spec/plan + editor red/green) — apres `gitnexus_query`, AVANT d'ecrire :**
+```
+1. Determiner les fichiers touches par la tache (tasks.md / diff / scope).
+2. node scripts/gen-cluster-skills-index.mjs --route <fichiers...>
+     (sans arg → git diff HEAD + untracked)
+   → liste les cartes de cluster pertinentes (longest-prefix par fichier).
+3. Read la/les SKILL.md retournee(s) → entry points + symboles-cles du domaine
+   AVANT de proposer une spec / un plan / du code. Cite la carte consultee dans
+   l'output ("cluster <name> consulte").
+```
+Le routage complete `gitnexus_query` (concept → flows) par une **vue domaine stable**
+(qui sont les fichiers/symboles structurants de ce cluster). Les deux sont complementaires.
+
+### Fraicheur (boucle d'amelioration continue)
+
+- Le hook PostToolUse `git commit` lance `.claude/hooks/gitnexus-skills-refresh.sh` :
+  re-index → `gitnexus analyze --skills` → regenere l'index + logue le diff des clusters
+  (`/tmp/gitnexus-skills-refresh-*.log`). Le code change → les cartes suivent automatiquement.
+- Sentinelle : `node scripts/gen-cluster-skills-index.mjs --check` (exit 1 si l'index sur
+  disque est desynchronise des cartes generees). Utilisable en pre-push / gate verify.
+- Index absent ou `--route` echoue → WARN, continuer avec `gitnexus_query` seul (fail-open,
+  jamais de BLOCK : la carte est un accelerateur, pas un gate).

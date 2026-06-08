@@ -45,7 +45,7 @@
 | Quality gates | [`quality-gates.md`](team-protocols/quality-gates.md) |
 | Agent mandates | [`agent-mandate.md`](team-protocols/agent-mandate.md) |
 | Import coherence | [`import-coherence.md`](team-protocols/import-coherence.md) |
-| GitNexus integration | [`gitnexus-integration.md`](team-protocols/gitnexus-integration.md) |
+| GitNexus integration | [`gitnexus-integration.md`](team-protocols/gitnexus-integration.md) — inclut § CLUSTER SKILLS (cartes `.claude/skills/generated/`, index routable `cluster-skills-index.json`, refresh post-commit) |
 | Finalize & KB | [`finalize.md`](team-protocols/finalize.md) |
 | Error taxonomy | [`error-taxonomy.md`](team-protocols/error-taxonomy.md) |
 | Conflict resolution | [`conflict-resolution.md`](team-protocols/conflict-resolution.md) |

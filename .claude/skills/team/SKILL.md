@@ -167,7 +167,8 @@ Le mode unique charge TOUS les protocoles et KB JSON (équivalent ancien `enterp
      "task": "Produce spec.md only (EARS + NFR + glossary + stakeholders + acceptance criteria) for: <description>",
      "context_refs": [
        "team-state/$RUN_ID/roadmap-context.json",
-       "lib-docs/INDEX.json"
+       "lib-docs/INDEX.json",
+       ".claude/skills/cluster-skills-index.json"
      ],
      "outputPaths": ["team-state/$RUN_ID/spec.md"]
    }
@@ -201,6 +202,7 @@ Le mode unique charge TOUS les protocoles et KB JSON (équivalent ancien `enterp
      "context_refs": [
        "team-state/$RUN_ID/spec.md",
        "lib-docs/INDEX.json",
+       ".claude/skills/cluster-skills-index.json",
        "team-state/multi-cycle-features/<slug>/tasks-latest.md (if exists)"
      ],
      "outputPaths": ["team-state/$RUN_ID/design.md", "team-state/$RUN_ID/tasks.md"]

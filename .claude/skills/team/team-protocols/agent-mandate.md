@@ -133,6 +133,7 @@ UFR-022 sépare CHAQUE phase en un spawn fresh-context distinct. L'architect spa
 
 1. Lecture des templates spec + KB pertinents + `roadmap-context.json` (read-only).
 2. `mcp__gitnexus__query` pour mapper la demande aux modules existants.
+2b. **CLUSTER SKILLS (cf. `gitnexus-integration.md` § CLUSTER SKILLS)** : `node scripts/gen-cluster-skills-index.mjs --route <fichiers du scope>` → Read la/les carte(s) `.claude/skills/generated/<cluster>/SKILL.md` retournée(s) pour la vue domaine (entry points + symboles structurants) AVANT de rédiger la spec. Citer "cluster <name> consulté". Fail-open si index absent.
 3. `mcp__gitnexus__impact` pour blast-radius sur symboles touchés (HIGH/CRITICAL → flag user).
 4. Production de `spec.md` UNIQUEMENT (EARS + NFR + Glossary + Stakeholders + acceptance criteria). **Pas de design, pas de tasks, pas de code.**
 5. Handoff brief ≤200 tokens vers la phase plan (refs > inline content).
@@ -146,6 +147,7 @@ UFR-022 sépare CHAQUE phase en un spawn fresh-context distinct. L'architect spa
 ### Phase red — editor #1 (Opus 4.8), fresh-context
 
 1. Lit `spec.md` + `design.md` + `tasks.md` depuis le disque + handoff brief.
+1b. CLUSTER SKILLS : `node scripts/gen-cluster-skills-index.mjs --route <fichiers de tasks.md>` → Read la/les carte(s) du domaine pour situer les fixtures/entry points existants (fail-open).
 2. Consulte `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` pour chaque lib importée (REGLE 15).
 3. Produit des tests qui **FAIL** (prouve absence feature / présence bug). `pnpm test` exit ≠ 0 = succès de la phase.
 4. Écrit `red-test-manifest.json` `{path: sha256}` figeant chaque test produit.
@@ -154,6 +156,7 @@ UFR-022 sépare CHAQUE phase en un spawn fresh-context distinct. L'architect spa
 ### Phase green — editor #2 (Opus 4.8), fresh-context, zéro mémoire de red
 
 1. Lit le diff red depuis le disque + le manifest.
+1b. CLUSTER SKILLS : `node scripts/gen-cluster-skills-index.mjs --route` (sans arg = diff courant) → Read la/les carte(s) du domaine pour réutiliser les symboles/patterns existants au lieu d'en réinventer (fail-open).
 2. Consulte `lib-docs/<lib>/PATTERNS.md` (REGLE 15).
 3. Pour chaque task : `gitnexus_impact` upstream → edit/write code APPLICATIF → `post-edit-lint.sh` + `post-edit-typecheck.sh` + `post-edit-green-test-freeze.sh` → si FAIL boucle corrective **intra-phase (cap 2 — hook fails uniquement)**.
 4. **FROZEN-TEST byte-for-byte** : ne touche AUCUN test du manifest. Si un test paraît buggé → `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher → re-spawn fresh phase red.

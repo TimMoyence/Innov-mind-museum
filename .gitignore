@@ -222,6 +222,11 @@ design-system/pnpm-lock.yaml
 *.apk
 *.ipa
 .gitnexus
+# GitNexus cartes de cluster auto-générées + index routable — dérivés du graphe .gitnexus,
+# régénérés localement par .claude/hooks/gitnexus-skills-refresh.sh à chaque commit (untracked
+# comme .gitnexus lui-même et les snapshots lib-docs). Consommés par /team en local.
+.claude/skills/generated/
+.claude/skills/cluster-skills-index.json
 
 # Ephemeral agent reports (not source, not docs-for-humans)
 team-reports/

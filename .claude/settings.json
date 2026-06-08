@@ -62,7 +62,7 @@
           },
           {
             "type": "command",
-            "command": "(cd \"$(git rev-parse --show-toplevel)\" && nohup npx gitnexus analyze > \"/tmp/gitnexus-analyze-$(date +%s).log\" 2>&1 < /dev/null & disown) || true"
+            "command": "(cd \"$(git rev-parse --show-toplevel)\" && bash .claude/hooks/gitnexus-skills-refresh.sh < /dev/null) || true"
           }
         ]
       }

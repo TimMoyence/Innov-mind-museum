@@ -41,6 +41,7 @@
 #  30. secret/cert rotation runbook freshness (≤120d) — node scripts/sentinels/secret-rotation-freshness.mjs
 #  31. hexagonal domain-purity (BE backstop)         — node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
 #  32. api-url production-safety (mobile, build-time) — node museum-frontend/scripts/sentinels/api-url-production-safety.mjs
+#  + Advisory (NON-BLOCKING): cluster-skills index freshness — node scripts/gen-cluster-skills-index.mjs --check
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
 # .gitattributes — React.xcframework) upload on push. The LFS step is chained
@@ -448,6 +449,23 @@ gate_end "Gate 32"
 gate_start "Gate 33/33 api-url production-safety sentinel (mobile)"
 node museum-frontend/scripts/sentinels/api-url-production-safety.mjs || exit 1
 gate_end "Gate 33"
+
+# ─── Advisory (NON-BLOCKING) — cluster-skills index freshness ──────────────
+# Les cartes de cluster GitNexus (.claude/skills/generated/) + leur index routable
+# (.claude/skills/cluster-skills-index.json, lu par /team en phase COMPRENDRE) sont
+# régénérées en arrière-plan par .claude/hooks/gitnexus-skills-refresh.sh au commit.
+# Ce sont des dérivés gitignored = ACCÉLÉRATEUR, pas un gate de correctness → JAMAIS
+# de exit 1 (le refresh post-commit est async ; bloquer ici = faux positifs). On se
+# contente d'avertir si l'index a dérivé des cartes. Cf. team-protocols/gitnexus-integration.md § CLUSTER SKILLS.
+if [ -d "$repo_root/.claude/skills/generated" ]; then
+  if node "$repo_root/scripts/gen-cluster-skills-index.mjs" --check >/dev/null 2>&1; then
+    echo "[pre-push] ✓ cluster-skills index frais (advisory)"
+  else
+    echo "[pre-push] ⚠ cluster-skills index périmé (advisory, NON-bloquant) — régénère: node scripts/gen-cluster-skills-index.mjs"
+  fi
+else
+  echo "[pre-push] · cluster-skills: cartes generated/ absentes localement — skip advisory"
+fi
 
 total=$(( $(date +%s) - start_ts ))
 echo ""
