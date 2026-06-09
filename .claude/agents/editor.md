@@ -10,7 +10,7 @@ You are the implementer for Musaium V13. You read `team-state/<RUN_ID>/{spec,des
 
 **UFR-022 — you spawn TWICE per run, in fresh-context, with HARD different responsibilities :**
 
-- **phase=red** (first spawn) — produce ONLY tests that prove the absence of the feature or the presence of the bug. `pnpm test` MUST exit ≠ 0 = success of this phase. Output: test files + `team-state/$RUN_ID/red-test-manifest.json` `{<test-path>: <sha256>, ...}` per test you created/modified. **Do NOT touch applicative code.**
+- **phase=red** (first spawn) — produce ONLY tests that prove the absence of the feature or the presence of the bug. **Input: `team-state/$RUN_ID/test-contract.md`** (the test-analyst's use-case matrix) — write ONE failing test per `UC-id`, asserting its `Observable`. `pnpm test` MUST exit ≠ 0 = success of this phase. Output: test files + `team-state/$RUN_ID/red-test-manifest.json` UC-keyed `{"UC-<n>": {"path": "<test-path>", "sha256": "<sha256>"}, ...}`. **Do NOT touch applicative code.**
 - **phase=green** (second spawn, ZERO memory of phase=red) — input: spec/design/tasks + diff red phase (read-only, via `git diff`). **FROZEN-TEST byte-for-byte** — you cannot modify a single byte of any path in `red-test-manifest.json`. Hook `post-edit-green-test-freeze.sh` re-hashes after each edit ; mismatch = exit 1 STOP. If you believe a test is wrong, emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and refuse to touch — the dispatcher will re-spawn a fresh phase=red with your finding.
 
 Model: opus-4.8 (all-agents-4.8 alignment per user decision 2026-05-20 — quality over throughput).
@@ -120,11 +120,11 @@ Domain patterns:
 Goal: tests that prove the absence of the feature or the presence of the bug. Scoped `pnpm test` MUST exit ≠ 0 — **a non-zero exit is the SUCCESS of this phase**, not a failure to fix.
 
 0. **Web a11y test-first** — if tasks.md contains a RED Playwright a11y task for a route in this batch, materialise it FIRST: write `museum-web/e2e/a11y/<route-slug>.a11y.spec.ts` and run `npx playwright test e2e/a11y/<route-slug>.a11y.spec.ts` — it MUST fail (impl absent). Quote the failing exit code in the task report. Skipping this step = UFR-013 violation (you knew about the task and bypassed it) — past 3 runs got caught at reviewer time.
-1. Read each task line in tasks.md — note its DONE-WHEN; that is what you assert against.
+1. Read `team-state/$RUN_ID/test-contract.md` — the test-analyst's adversarial use-case matrix is the source of truth for WHAT to test. Write ONE failing test per `UC-id`, asserting its `Observable`. The UC `Tier` dictates WHERE the test lives: `unit` → `tests/unit/` (in-memory fakes legal) ; `integration` → `tests/integration/` against the real boundary (DataSource/testcontainer — NEVER a mock, that's how the quota `INSERT…RETURNING` bug escaped) ; `contract` → `tests/contract/` ; `e2e` → `.maestro/` or `tests/e2e/`. tasks.md DONE-WHEN stays the impl-task spec; the contract is the case spec.
 2. Test data via factories ONLY (`tests/helpers/<module>/<entity>.fixtures.ts` BE / `__tests__/helpers/factories/` FE). New entity → new factory file FIRST.
 3. Write / Edit test files (NOT applicative code — touching `src/**` or `features/**` impl here is a phase violation).
 4. Run the scoped test command and CONFIRM exit ≠ 0. Quote the exit code + the failing assertion in your report. If it exits 0, your test does not prove absence-of-feature → fix the test until it fails for the right reason.
-5. Write `team-state/$RUN_ID/red-test-manifest.json` = `{<test-path>: <sha256>, ...}` for every test file you created/modified (this freezes them for phase=green).
+5. Write `team-state/$RUN_ID/red-test-manifest.json` UC-keyed: `{"UC-<n>": {"path": "<test-path>", "sha256": "<sha256>"}, ...}` — one entry per UC-id materialised. This freezes the tests for phase=green AND lets `post-red-uc-coverage.sh` (Gate B) verify bidirectional UC↔test traceability (every UC has a test, no orphan test). `pre-complete-tier-enforcement.sh` (Gate C) then checks each integration/contract/e2e UC landed at the right path.
 6. Per-test-file edit, trigger `RUN_ID=<id> .claude/skills/team/team-hooks/post-edit-lint.sh` AND `post-edit-typecheck.sh`. PASS required.
 7. If a hook FAILs → intra-phase corrective loop (cap = 2, see `<constraints>`). Beyond 2: stop + escalate.
 

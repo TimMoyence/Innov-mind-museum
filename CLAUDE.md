@@ -191,19 +191,22 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 
 Specs : [`docs/TESTING_DISCIPLINE_PROPOSAL.md`](docs/TESTING_DISCIPLINE_PROPOSAL.md), [`docs/TEST_COVERAGE_INVENTORY.md`](docs/TEST_COVERAGE_INVENTORY.md), [`docs/TESTING_PHASE2_PLAN.md`](docs/TESTING_PHASE2_PLAN.md).
 
-## Fresh-context 5-phase workflow (UFR-022)
+## Fresh-context 6-phase workflow (UFR-022)
 
 **Non-negotiable.** S'applique à TOUTE modif code applicatif + tests, via `/team` OU session classique. Twinné avec `UFR-022` dans `.claude/agents/shared/user-feedback-rules.json`.
 
 **Pourquoi** — agent qui voit les artefacts d'une phase précédente devient rubber stamp ou prend des raccourcis ("inline pour efficacité tokens"). Agent qui teste son propre code rend les tests verts en touchant le test. Fresh-context + frozen-test ferment ces 2 raccourcis structurellement.
 
-**Les 5 phases obligatoires :**
+**Les 6 phases obligatoires :**
 
 1. **Spec** — `architect.md` fresh spawn. Output `team-state/<RUN_ID>/spec.md` (EARS + NFR + glossary + stakeholders + acceptance criteria). Pas de code/design.
-2. **Plan** — `architect.md` fresh spawn (2e invocation, **zero memory phase 1**, lit spec.md disque). Output `design.md` + `tasks.md`. `tasks.md` contient `## Multi-cycle progress` pour features long-running ; archivé `team-state/multi-cycle-features/<slug>/` (exempté pruning >30j).
-3. **Red** — `editor.md` fresh spawn. Produit tests qui **FAIL** (prouve absence feature/présence bug). `pnpm test` exit ≠ 0 = success. Output tests + `red-test-manifest.json` `{path: sha256}`.
-4. **Green** — `editor.md` fresh spawn (zero memory phase 3, lit diff red disque). Produit code qui rend tests verts. **FROZEN-TEST byte-for-byte** : hook `post-edit-green-test-freeze.sh` re-hash chaque test, mismatch sha256 = exit 1 STOP. Test buggé suspecté → émet `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher → re-spawn fresh phase 3.
-5. **Review** — `reviewer.md` fresh spawn. Verdict APPROVED | CHANGES_REQUESTED | BLOCK + JSON.
+2. **Plan** — `architect.md` fresh spawn (2e invocation, **zero memory phase 1**, lit spec.md disque). Output `design.md` + `tasks.md`. `tasks.md` contient `## Multi-cycle progress` pour features long-running ; archivé `team-state/multi-cycle-features/<slug>/` (exempté pruning >30j). **Le `DONE-WHEN` reste un hook d'acceptation terse par tâche ; l'énumération exhaustive des cas appartient à la phase 3.**
+3. **Test-contract** — `test-analyst.md` fresh spawn (zero memory phases 1-2, lit spec.md + design.md disque). Output `test-contract.md` = matrice de use-cases **adversariale exhaustive** (UC-id + given/when/then + `Tier` ADR-012 + lien critère d'acceptation ; traçabilité bidirectionnelle UC↔AC). Mode cognitif = « comment ça casse, chaque cas », pas « comment ça marche ». Dit QUOI tester et tous les cas ; **n'écrit AUCUN test ni code**. **Gate A** `pre-red-contract-check.sh` ferme la phase (couverture sans cellule vide + UC complets + Tier valide).
+4. **Red** — `editor.md` fresh spawn. **UN test qui FAIL par UC-id** du contrat (prouve absence feature/présence bug). `pnpm test` exit ≠ 0 = success. Output tests + `red-test-manifest.json` UC-keyé `{UC-id: {path, sha256}}`. Le `Tier` du UC dicte le path (`integration` → `tests/integration/` vs vraie frontière `DataSource`, **jamais un mock** — c'est la classe de bug quota `INSERT…RETURNING`). **Gate B** `post-red-uc-coverage.sh` (traçabilité UC↔test bidirectionnelle, zéro orphelin).
+5. **Green** — `editor.md` fresh spawn (zero memory phase red, lit diff red disque). Produit code qui rend tests verts. **FROZEN-TEST byte-for-byte** : hook `post-edit-green-test-freeze.sh` re-hash chaque test (dual-format plat + UC-keyé), mismatch sha256 = exit 1 STOP. Test buggé suspecté → émet `BLOCK-TEST-WRONG <file>:<line> <reason>` SANS toucher → re-spawn fresh phase red.
+6. **Review** — `reviewer.md` fresh spawn. Verdict APPROVED | CHANGES_REQUESTED | BLOCK + JSON.
+
+**Gates C/D (verify déterministe, Step 6)** : `pre-complete-tier-enforcement.sh` (UC integration/contract/e2e matérialisé au bon tier — interdit le unit-mock là où l'infra est réelle) + `pre-complete-incident-regression-check.sh` (un bug échappé dans `docs/INCIDENT_LEDGER.md` exige au fix un UC `Catégorie=regression` de `Tier` ≥ le `Tier-qui-l'aurait-pris` du registre). Spec : `docs/superpowers/specs/2026-06-09-test-contract-phase-and-shift-left-design.md`.
 
 **Mécaniques fresh-context :**
 - Chaque phase = un appel `Agent` tool depuis l'orchestrateur.
@@ -355,7 +358,7 @@ TypeORM **v1.0.0 released 2026-05-19** ; le repo 0.3.x est archivé. Musaium = `
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (35183 symbols, 56701 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (36359 symbols, 58213 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -393,5 +396,25 @@ This project is indexed by GitNexus as **Innov-mind-museum** (35183 symbols, 567
 | Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
+| Work in the Chat area (405 symbols) | `.claude/skills/generated/chat/SKILL.md` |
+| Work in the Application area (194 symbols) | `.claude/skills/generated/application/SKILL.md` |
+| Work in the Scripts area (182 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
+| Work in the Migrations area (154 symbols) | `.claude/skills/generated/migrations/SKILL.md` |
+| Work in the Infrastructure area (118 symbols) | `.claude/skills/generated/infrastructure/SKILL.md` |
+| Work in the Middleware area (111 symbols) | `.claude/skills/generated/middleware/SKILL.md` |
+| Work in the Sentinels area (102 symbols) | `.claude/skills/generated/sentinels/SKILL.md` |
+| Work in the Admin area (94 symbols) | `.claude/skills/generated/admin/SKILL.md` |
+| Work in the Auth area (94 symbols) | `.claude/skills/generated/auth/SKILL.md` |
+| Work in the Guardrail area (90 symbols) | `.claude/skills/generated/guardrail/SKILL.md` |
+| Work in the Pg area (83 symbols) | `.claude/skills/generated/pg/SKILL.md` |
+| Work in the Routes area (76 symbols) | `.claude/skills/generated/routes/SKILL.md` |
+| Work in the Session area (70 symbols) | `.claude/skills/generated/session/SKILL.md` |
+| Work in the Llm area (66 symbols) | `.claude/skills/generated/llm/SKILL.md` |
+| Work in the Ui area (62 symbols) | `.claude/skills/generated/ui/SKILL.md` |
+| Work in the Visual-similarity area (61 symbols) | `.claude/skills/generated/visual-similarity/SKILL.md` |
+| Work in the Ports area (59 symbols) | `.claude/skills/generated/ports/SKILL.md` |
+| Work in the Http area (50 symbols) | `.claude/skills/generated/http/SKILL.md` |
+| Work in the Image area (48 symbols) | `.claude/skills/generated/image/SKILL.md` |
+| Work in the Observability area (47 symbols) | `.claude/skills/generated/observability/SKILL.md` |
 
 <!-- gitnexus:end -->

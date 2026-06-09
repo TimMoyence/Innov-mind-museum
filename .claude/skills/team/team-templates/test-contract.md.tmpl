@@ -1,0 +1,45 @@
+# Test Contract — {{RUN_ID}}
+
+> Owned by the **test-analyst** (UFR-022 phase=test-contract). Says WHAT to test and every case.
+> The editor `red` phase materialises **one failing test per UC-id**. Filling this is NOT writing tests.
+
+## Couverture (traçabilité bidirectionnelle)
+
+> Every acceptance criterion AC-x from spec.md MUST map to ≥1 UC. An empty cell = `pre-red-contract-check.sh` ROUGE.
+
+| Critère (spec AC) | Use-cases couvrants |
+|-------------------|---------------------|
+| AC-1              | UC-1, UC-2          |
+| AC-2              | UC-3                |
+
+## Use-cases
+
+> One `### UC-<n> — <title>` per case. All 7 fields mandatory.
+> `Tier` rule (mechanical, ADR-012): touches DataSource / real driver / network / build ⇒ `integration` or `contract`, NEVER `unit`.
+> `Observable` = what to observe (assertion target), NOT the test code.
+
+### UC-1 — {{TITLE}}
+- **Couvre**     : AC-1
+- **Catégorie**  : happy            <!-- happy | error | edge | boundary | security | regression -->
+- **Tier**       : unit             <!-- unit | integration | contract | e2e -->
+- **Factory**    : make{{Entity}}({{...}})
+- **Given**      : {{precondition}}
+- **When**       : {{action}}
+- **Then**       : {{expected outcome}}
+- **Observable** : {{what to assert — e.g. status=200 ∧ field X persisted}}
+
+### UC-2 — {{TITLE}}
+- **Couvre**     : AC-1
+- **Catégorie**  : error
+- **Tier**       : integration
+- **Factory**    : make{{Entity}}({{...}})
+- **Given**      : {{precondition}}
+- **When**       : {{action}}
+- **Then**       : {{expected outcome}}
+- **Observable** : {{what to assert}}
+
+## Open questions
+
+> Ambiguous acceptance criteria where enumerating cases would mean guessing. BLOCK the run if any.
+
+- (none)

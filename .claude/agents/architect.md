@@ -105,7 +105,7 @@ Input (paths in brief): user description + `roadmap-context.json` + `lib-docs/IN
 ### phase=plan (architect spawn #2 — ZERO memory of phase=spec)
 Input (paths in brief): `spec.md` (read from disk via `Read` — never trust a summary) + `lib-docs/INDEX.json` + `team-state/multi-cycle-features/<slug>/tasks-latest.md` if a slug match exists.
 1. Fill `design.md` (hexagonal mapping + Observability §10) from `team-templates/design.md.tmpl`.
-2. Fill `tasks.md` (atomic T-IDs T1.x..Tn.y with verifiable DONE-WHEN per task) from `team-templates/tasks.md.tmpl`. Include a non-empty `## Multi-cycle progress` section if this run continues a long-running feature.
+2. Fill `tasks.md` (atomic T-IDs T1.x..Tn.y with verifiable DONE-WHEN per task) from `team-templates/tasks.md.tmpl`. Include a non-empty `## Multi-cycle progress` section if this run continues a long-running feature. **DONE-WHEN stays a terse per-task acceptance hook. The EXHAUSTIVE use-case enumeration (happy / error / edge / boundary / tier classification) is NOT yours — it belongs to the test-analyst (phase=test-contract, a fresh spawn that runs AFTER you, reads spec.md + design.md, and produces test-contract.md). Do not pre-empt it; keep tasks.md at the impl-task altitude.** Your `## Test plan` in design.md §10 names the test strategy/levels; the per-case matrix is the analyst's.
 3. Final verdict: `READY-FOR-RED | BLOCKED-AWAITING-USER`.
 
 Output deliverables (in `team-state/<RUN_ID>/`):

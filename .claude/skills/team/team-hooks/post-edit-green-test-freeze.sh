@@ -76,6 +76,29 @@ self_test() {
     PASS=$((PASS + 1))
   fi
 
+  # Scenario 4: UC-keyed manifest form (UFR-022 test-contract) matches (PASS)
+  echo "describe('q', () => it('a', () => expect(1).toBe(2)));" > "$TMP/b.test.ts"
+  local hb
+  hb=$(sha256_of "$TMP/b.test.ts")
+  echo "{\"UC-3\":{\"path\":\"$TMP/b.test.ts\",\"sha256\":\"$hb\"}}" > "$TMP/uc-manifest.json"
+  if verify_with_manifest "$TMP/uc-manifest.json"; then
+    echo "  PASS  uc-keyed-form (dual-format parsed)"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  uc-keyed-form (dual-format not parsed)"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # Scenario 5: UC-keyed form, file modified (FAIL detected)
+  echo "describe('q', () => it('a', () => expect(1).toBe(1)));" > "$TMP/b.test.ts"
+  if verify_with_manifest "$TMP/uc-manifest.json"; then
+    echo "  FAIL  uc-keyed-mismatch (missed the modification)"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  PASS  uc-keyed-mismatch (correctly detected)"
+    PASS=$((PASS + 1))
+  fi
+
   echo "self-test: $PASS pass, $FAIL fail"
   [ "$FAIL" -eq 0 ]
 }
@@ -84,11 +107,14 @@ verify_with_manifest() {
   local mfile="$1"
   local fail=0
   local entries
-  entries=$(jq -c 'to_entries[]' "$mfile") || return 1
-  while IFS= read -r entry; do
-    local path expected actual
-    path=$(echo "$entry" | jq -r '.key')
-    expected=$(echo "$entry" | jq -r '.value')
+  # Dual-format (UFR-022 test-contract): the manifest is either the historical
+  # flat form {"<path>": "<sha256>"} or the UC-keyed form
+  # {"UC-<n>": {"path": "<path>", "sha256": "<sha256>"}}. Normalise both to
+  # "<path>\t<sha256>" tuples — the freeze contract is per-path, key-agnostic.
+  entries=$(jq -r 'to_entries[] | if (.value|type)=="object" then "\(.value.path)\t\(.value.sha256)" else "\(.key)\t\(.value)" end' "$mfile") || return 1
+  while IFS=$'\t' read -r path expected; do
+    [ -n "$path" ] || continue
+    local actual
     if [ ! -f "$path" ]; then
       echo "  MISMATCH: $path (file missing — was deleted or moved)"
       fail=1

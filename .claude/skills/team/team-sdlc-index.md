@@ -1,33 +1,35 @@
 # /team SDLC — Index de Référence (v13 UFR-022)
 
-> **Table de vérité unique** : relie agents, pipeline 8-phase, protocoles, templates, UFR, gates, hooks, KB, skills.
+> **Table de vérité unique** : relie agents, pipeline 9-phase, protocoles, templates, UFR, gates, hooks, KB, skills.
 > **Détail d'exécution** : [`SKILL.md`](SKILL.md) (canonique — Step 0..9, REGLES ABSOLUES).
 > Créé par P02 (Team Hardening, 2026-04-17). Réécrit v13 (mode unique UFR-022, 2026-05-18).
 
 ## Pipeline (mode unique UFR-022)
 
-**Plus de selecteur micro/standard/enterprise. Plus de modes feature/bug/mockup/refactor/hotfix/chore/audit. Plus de flux 7-phase / 13-phase.** UN seul pipeline 8-phase pour TOUTE modif code applicatif. Audit = inclus (security + verify toujours présents).
+**Plus de selecteur micro/standard/enterprise. Plus de modes feature/bug/mockup/refactor/hotfix/chore/audit. Plus de flux 7-phase / 13-phase.** UN seul pipeline 9-phase pour TOUTE modif code applicatif. Audit = inclus (security + verify toujours présents).
 
 | # | Phase | Step SKILL.md | Agent (fresh-context) | Sortie clé |
 |---|---|---|---|---|
 | 1 | **spec** | 4a | architect #1 | `team-state/<RUN_ID>/spec.md` (EARS + NFR + glossary + stakeholders + acceptance) |
 | 2 | **plan** | 4b | architect #2 (zero memory #1) | `design.md` + `tasks.md` |
 | 3 | **doc-cache** | 4.5 | doc-cache ×N | `lib-docs/<lib>/PATTERNS.md` refresh + `doc-refresh-queue.json` |
-| 4 | **red** | 5a | editor #1 | tests qui FAIL + `red-test-manifest.json {path: sha256}` |
-| 5 | **green** | 5b | editor #2 (zero memory red, FROZEN-TEST) | code applicatif, tests verts |
-| 6 | **verify** | 6 | *gate déterministe (hooks, sans agent)* | DoD machine-verified + lib-docs reference assertion (hooks) |
-| 7 | **security** | 7 | security | SAST + audit + promptfoo + lib-docs auth/crypto/llm |
-| 8 | **review** | 8 | reviewer (fresh-context) | verdict APPROVED / CHANGES_REQUESTED / BLOCK + JSON |
-| 9 | **documenter** | 8.5 | documenter | ADR / CHANGELOG / STORY.md final |
+| 4 | **test-contract** | 4.6 | test-analyst | `test-contract.md` (matrice UC adversariale + tier ADR-012 + traçabilité bidirectionnelle UC↔AC) — **Gate A** |
+| 5 | **red** | 5a | editor #1 | un test FAIL par UC-id + `red-test-manifest.json {UC-id: {path, sha256}}` — **Gate B** |
+| 6 | **green** | 5b | editor #2 (zero memory red, FROZEN-TEST) | code applicatif, tests verts |
+| 7 | **verify** | 6 | *gate déterministe (hooks, sans agent)* | DoD + lib-docs ref + **Gate C** (tier) + **Gate D** (incident→regression) |
+| 8 | **security** | 7 | security | SAST + audit + promptfoo + lib-docs auth/crypto/llm |
+| 9 | **review** | 8 | reviewer (fresh-context) | verdict APPROVED / CHANGES_REQUESTED / BLOCK + JSON |
+| 10 | **documenter** | 8.5 | documenter | ADR / CHANGELOG / STORY.md final |
 
 **Exemption auto** : diff = 0 fichier code → `pre-phase-pure-doc-check.sh` écrit `pure-doc-skip.marker`, JUMP Step 9 finalize. **Reviewer rejection loop = ILLIMITÉ** (zéro cap). **Cap 2 = intra-phase hook fails uniquement** (lint/tsc/test dans la même phase éditeur).
 
-## 6 Agents
+## 7 Agents
 
 | Agent | Rôle | Mandat | Model (doctrine) | Write scope |
 |---|---|---|---|---|
 | [architect](../../agents/architect.md) | architect | spec.md (#1) puis design.md + tasks.md (#2). Hexagonal + feature-driven + OpenAPI contract-first | opus-4.8 | `team-state/<RUN_ID>/*.md` |
-| [editor](../../agents/editor.md) | editor | red (tests FAIL, #1) puis green (code, FROZEN-TEST, #2). BE/FE/Web/CI/migrations | claude-opus-4-8 | source code (no deploy/git push) |
+| [test-analyst](../../agents/test-analyst.md) | test-analyst | test-contract (#3) : matrice de use-cases adversariale (UC-id + given/when/then + `Tier` ADR-012 + traçabilité bidirectionnelle UC↔AC). Dit QUOI tester et tous les cas ; n'écrit aucun test/code | claude-opus-4-8 | `team-state/<RUN_ID>/test-contract.md` |
+| [editor](../../agents/editor.md) | editor | red (tests FAIL, un par UC-id, #1) puis green (code, FROZEN-TEST, #2). BE/FE/Web/CI/migrations | claude-opus-4-8 | source code (no deploy/git push) |
 | [doc-cache](../../agents/doc-cache.md) | doc-cache | fetch PUIS curate en un seul spawn : WebSearch + WebFetch 5-10 pages → snapshot + sources.json + VERSION, puis curate → `PATTERNS.md` (~200-500 lignes) | claude-opus-4-8 | `lib-docs/<lib>/` (snapshot + `PATTERNS.md`) |
 | [security](../../agents/security.md) | security | OWASP LLM Top-10 + API Top-10 + SAST (semgrep/codeql/supply-chain) + promptfoo | claude-opus-4-8 | read-only |
 | [reviewer](../../agents/reviewer.md) | reviewer | Fresh-context semantic review (KISS/DRY/hexagonal/spec↔impl parity/UFR/PATTERNS.md compliance) + scope-boundary vs plan + spot-check du fichier le plus risqué + DoD-confirmation + lib-docs-reference assertion | claude-opus-4-8 | read-only |
@@ -68,7 +70,7 @@
 
 `micro.md` / `standard.md` / `audit.md` = legacy dead-concept (sélecteur retiré UFR-022) ; conservés non-référencés.
 
-## 13 Hooks déterministes (`team-hooks/`)
+## 17 Hooks déterministes (`team-hooks/`)
 
 | Hook | Trigger | Rôle |
 |---|---|---|
@@ -76,6 +78,10 @@
 | `post-edit-typecheck.sh` | Après editor task | scoped tsc --noEmit |
 | `post-edit-green-test-freeze.sh` | Après chaque edit phase Green | FROZEN-TEST : re-hash sha256 chaque test du manifest ; mismatch = exit 1 STOP |
 | `pre-feature-spec-check.sh` | Fin Step 4b | Spec Kit closing gate (3 fichiers ≥200B, headers remplis ; plus de bypass keywords) |
+| `pre-red-contract-check.sh` | Fin Step 4.6 (**Gate A**) | Contrat clos : `## Couverture` sans cellule vide + chaque UC a ses 7 champs + Tier valide. Self-test 6/6 |
+| `post-red-uc-coverage.sh` | Fin Step 5a (**Gate B**) | Traçabilité bidirectionnelle UC↔test (chaque UC → ≥1 entrée manifest, zéro orphelin ; manifest UC-keyé). Self-test 6/6 |
+| `pre-complete-tier-enforcement.sh` | Step 6 Verify (**Gate C**) | UC integration/contract/e2e materialisé au bon path + (integration) vraie frontière ; interdit le unit-mock là où l'infra est réelle. Self-test 6/6 |
+| `pre-complete-incident-regression-check.sh` | Step 6 Verify (**Gate D**) | Si `INC_ID` (bug de `docs/INCIDENT_LEDGER.md`) : exige un UC `regression` couvrant l'INC-id, Tier ≥ `Tier-qui-l'aurait-pris`. Self-test 5/5 |
 | `pre-phase-pure-doc-check.sh` | Step 0 INIT §8 | Diff = 0 code → skip pipeline + `pure-doc-skip.marker` |
 | `pre-phase-doc-freshness.sh` | Step 4.5 | Détecte libs touchées, 4-way staleness (version/14j/présence/sha256 drift), écrit `doc-refresh-queue.json` |
 | `pre-phase-doc-reference-check.sh` | Step 6 Verify | Assert `libDocsConsulted[]` couvre les imports non-dev-only + hash drift |
@@ -86,7 +92,7 @@
 | `pre-complete-review-response-check.sh` | Step 6 Verify | receiving-code-review : si `reviewerRejectionLoops ≥ 1`, exige `review-response.md` (verdict/finding + Evidence/DISPUTE + zéro accord performatif) (absorbé de superpowers) |
 | `post-complete-lesson-capture.sh` | Step 9 finalize | Extrait 1 lesson → `team-knowledge/lessons/<RUN_ID>.md` (fail-open) |
 
-Plus `lib/roadmap-rotate.sh` (`/team roadmap:rotate`, manuel). Tous mutent `state.json` via CAS (`mkdir state.json.lock.d`). Détail : [`team-hooks/README.md`](team-hooks/README.md).
+Plus `lib/roadmap-rotate.sh` (`/team roadmap:rotate`, manuel). La plupart mutent `state.json` via CAS (`mkdir state.json.lock.d`) ; les 4 gates contrat A–D impriment le verdict + note STORY.md sur FAIL (pas de mutation CAS), exit 1 = re-spawn fresh la phase pointée. Détail : [`team-hooks/README.md`](team-hooks/README.md).
 
 ## Shared Resources (`.claude/agents/shared/`)
 
@@ -197,6 +203,7 @@ Exemples : `/team compose:recap "ajouter pagination"` · `/team compose:semgrep,
 | **v13 index** | **2026-05-20** | Réécriture index : 6→9 agents, 12→22 UFR, suppression pipelines/modes/flux 7-13-phase, KB path corrigé `→ .claude/skills/team/team-knowledge/`, 11 hooks indexés, 8 skills morts purgés, templates UFR-022 ajoutés |
 | **v13.prune-9→6** | **2026-05-31** | Élagage agents 9→6. `doc-fetcher`+`doc-curator` → `doc-cache` (fetch+curate un spawn). `verifier` retiré : gates déterministes dans hooks+CI, jugement absorbé par `reviewer`. `learning-curator` + `/team learning:review` retirés (0 amendement en 77 runs ; `team-knowledge/lessons/` lecture seule). Phase `verify` devient gate déterministe sans agent. Pipeline 8-phase (spec→plan→doc-cache→red→green→verify[gate]→security→review→documenter). `security` conservé |
 | **v13.absorb-superpowers** | **2026-05-31** | Direction Q4 : /team reste primaire, absorbe le bon de superpowers (pas de bascule native). 5 skills absorbés (vendored, self-contained) : `systematic-debugging` + `receiving-code-review` (avec hooks+artefacts enforce) ; `verification-before-completion` + `finishing-a-development-branch` + `brainstorming` (disciplines sans hook). 13 protocoles, 13 hooks. Ledger ci-dessous |
+| **v13.test-contract** | **2026-06-09** | **Phase `test-contract` insérée entre plan et red** (UFR-022 5→6 phases). Nouvel agent `test-analyst` (7 agents) : matrice de use-cases adversariale `test-contract.md` (UC-id + given/when/then + `Tier` ADR-012 + traçabilité bidirectionnelle UC↔AC) ; dit QUOI tester, n'écrit aucun test/code. Red écrit 1 test/UC-id, `red-test-manifest.json` UC-keyé. 4 gates déterministes (17 hooks) : A `pre-red-contract-check`, B `post-red-uc-coverage`, C `pre-complete-tier-enforcement` (interdit unit-mock là où infra réelle — classe quota `INSERT…RETURNING`), D `pre-complete-incident-regression-check` (incident→gate via `docs/INCIDENT_LEDGER.md`). `post-edit-green-test-freeze` rendu dual-format (plat + UC-keyé, rétro-compat). Spec : `docs/superpowers/specs/2026-06-09-test-contract-phase-and-shift-left-design.md` |
 
 ## Superpowers absorption ledger (Q4, 2026-05-31)
 
@@ -215,7 +222,7 @@ Exemples : `/team compose:recap "ajouter pagination"` · `/team compose:semgrep,
 | Skill | Couvert par |
 |---|---|
 | `dispatching-parallel-agents` | REGLE 12 (parallélisme read-only, max 5) |
-| `executing-plans` | le pipeline 8-phase lui-même |
+| `executing-plans` | le pipeline 9-phase lui-même |
 | `requesting-code-review` | reviewer auto-spawné (Step 8) |
 | `subagent-driven-development` | /team EST subagent-driven (chaque phase = un Agent spawn) |
 | `test-driven-development` | red/green + frozen-test (plus fort : byte-frozen) |

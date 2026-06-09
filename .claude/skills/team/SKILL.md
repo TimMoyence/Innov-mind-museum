@@ -248,6 +248,58 @@ Run AFTER plan, BEFORE red — so tasks.md is the basis for which libs the diff 
 4. Parallelism : step 2a can run in parallel per-lib (read-only on source ; write zones disjoint per-lib).
 ```
 
+### Step 4.6 — Test-contract phase (UFR-022 fresh-context, test-analyst spawn)
+
+**Inséré entre doc-cache et red.** Un `test-analyst` FRESH lit spec.md + design.md from disk et produit `test-contract.md` UNIQUEMENT — la matrice de use-cases adversariale qui dit QUOI tester (chaque cas, chacun tier-taggé ADR-012). L'editor red écrit ensuite UN test qui FAIL par UC-id. Le test-analyst N'écrit aucun test ni code.
+
+```
+1. Détecte INC_ID (incident→gate) :
+     INC_ID=$(printf '%s' "$DESCRIPTION" | grep -oE 'INC-[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+' | head -1)
+   - Si le run corrige un bug listé dans docs/INCIDENT_LEDGER.md, DESCRIPTION doit citer son INC-id.
+2. Compose handoff 005-test-contract.json (≤ 200 tokens) :
+   {
+     "from": "dispatcher",
+     "to": "test-analyst",
+     "phase": "test-contract",
+     "task": "Read spec.md + design.md, produce test-contract.md: matrice de use-cases exhaustive (UC-id + given/when/then + Tier + lien AC). Un UC par cas (happy + CHAQUE chemin d'échec + comportement infra/driver/build réel). AUCUN code de test, AUCUN code applicatif.",
+     "context_refs": [
+       "team-state/$RUN_ID/spec.md",
+       "team-state/$RUN_ID/design.md",
+       "lib-docs/INDEX.json"
+     ],
+     "libDocsRequired": [list of libs from doc-refresh-queue.json (non-dev-only)],
+     "incId": "$INC_ID (si non vide — le contrat DOIT inclure un UC Catégorie=regression couvrant cet INC-id, Tier ≥ ledger)",
+     "outputPaths": ["team-state/$RUN_ID/test-contract.md"]
+   }
+3. briefSha256 = sha256(handoff JSON file).
+4. Spawn Agent tool :
+   - description: "Test-analyst phase=test-contract"
+   - subagent_type: general-purpose (chargé du système prompt .claude/agents/test-analyst.md)
+   - prompt: "Tu es test-analyst.md, phase=test-contract (UFR-022 fresh-context). Read brief at <handoff_path>. Produce ONLY test-contract.md at <outputPath>. Emit BRIEF-ACK: <briefSha256>. BLOCK-CONTEXT-LEAK si une autre phase du même RUN_ID est dans l'history. Verdict FINAL: READY-FOR-RED | BLOCKED-AWAITING-USER."
+5. Parse agent return. Verify BRIEF-ACK match + libDocsConsulted[] (assertion par pre-phase-doc-reference-check au Step 6).
+6. Update state.json : currentStep = "test-contract", phaseSpawns.testContract += 1, append agents[] {role: test-analyst, phase: test-contract, freshContext: true, briefSha256}.
+7. Render lisible (dispatcher, fail-open — CLAUDE.md § Output format) :
+     node scripts/render-artifact.mjs .claude/skills/team/team-state/$RUN_ID/test-contract.md \
+         --out artifacts/team/$RUN_ID/test-contract.html --eyebrow "Test Contract — $RUN_ID" --quiet
+   - Permet à l'utilisateur de LIRE la matrice de use-cases avant red. Markdown = source de vérité.
+   - Exit non-0 NEVER blocks (fail-open).
+```
+
+#### Gate A — contract closing gate (déterministe, UFR-022)
+
+AVANT de passer au Step 5a, le dispatcher machine-vérifie le contrat :
+
+```
+RUN_ID=$RUN_ID .claude/skills/team/team-hooks/pre-red-contract-check.sh
+```
+
+| Cas | Verdict | Exit | Suite |
+|---|---|---|---|
+| Contrat complet (`## Couverture` sans cellule vide + chaque UC a ses 7 champs + Tier ∈ {unit,integration,contract,e2e}) | PASS | 0 | Step 5a |
+| Cellule de couverture vide / UC incomplet / Tier invalide / fichier absent | FAIL | 1 | STOP + re-spawn fresh test-analyst (phase=test-contract) |
+
+Self-test : `bash .claude/skills/team/team-hooks/pre-red-contract-check.sh --self-test` → 6/6 scénarios PASS.
+
 ### Step 5a — Red phase (UFR-022 fresh-context, editor spawn #1)
 
 **Editor fresh spawn dedie a la production de tests qui FAIL.** Pas de code applicatif a cette phase.
@@ -258,8 +310,9 @@ Run AFTER plan, BEFORE red — so tasks.md is the basis for which libs the diff 
      "from": "dispatcher",
      "to": "editor",
      "phase": "red",
-     "task": "Write FAILING tests proving absence of feature or presence of bug per spec.md/design.md/tasks.md. pnpm test must exit != 0 = success.",
+     "task": "Write FAILING tests: ONE test per UC-id in test-contract.md, asserting its Observable. The UC Tier dictates the path (unit→tests/unit, integration→tests/integration vs real boundary, contract→tests/contract, e2e→.maestro/). pnpm test must exit != 0 = success.",
      "context_refs": [
+       "team-state/$RUN_ID/test-contract.md",
        "team-state/$RUN_ID/spec.md",
        "team-state/$RUN_ID/design.md",
        "team-state/$RUN_ID/tasks.md",
@@ -270,10 +323,25 @@ Run AFTER plan, BEFORE red — so tasks.md is the basis for which libs the diff 
    }
 2. Spawn Agent tool (editor.md, fresh).
 3. Agent verifies pnpm test scoped exit != 0 (red).
-4. Agent writes red-test-manifest.json {<path>: sha256} per test created/modified.
+4. Agent writes red-test-manifest.json UC-keyed {"UC-<n>": {"path": "<test-path>", "sha256": "<sha256>"}} — one entry per UC-id materialised.
 5. Agent returns JSON with libDocsConsulted[].
 6. Update state.json : phaseSpawns.red += 1, append agents[].
 ```
+
+#### Gate B — UC coverage closing gate (déterministe, UFR-022)
+
+AVANT de passer au Step 5b, le dispatcher vérifie la traçabilité UC↔test bidirectionnelle :
+
+```
+RUN_ID=$RUN_ID .claude/skills/team/team-hooks/post-red-uc-coverage.sh
+```
+
+| Cas | Verdict | Exit | Suite |
+|---|---|---|---|
+| Chaque UC-id du contrat → ≥1 entrée manifest ET chaque entrée → un UC-id (zéro orphelin), manifest UC-keyé | PASS | 0 | Step 5b |
+| UC non testé / test orphelin / manifest plat (non UC-keyé) | FAIL | 1 | STOP + re-spawn fresh red (aligner tests ↔ contrat) |
+
+Self-test : `bash .claude/skills/team/team-hooks/post-red-uc-coverage.sh --self-test` → 6/6 scénarios PASS.
 
 ### Step 5b — Green phase (UFR-022 fresh-context, editor spawn #2 — FROZEN-TEST)
 
@@ -388,6 +456,12 @@ Self-test du hook : `bash .claude/skills/team/team-hooks/pre-feature-spec-check.
       - Si reviewerRejectionLoops ≥ 1 (un CHANGES_REQUESTED a eu lieu), exige review-response.md : verdict
         par finding, Evidence: sur tout DISPUTE, ZÉRO accord performatif (anti-sycophancy UFR-013).
       - Exit 1 = FAIL = re-spawn fresh AVEC team-protocols/receiving-code-review.md.
+   f. .claude/skills/team/team-hooks/pre-complete-tier-enforcement.sh  ← GATE C (test-tier enforcement, ADR-012)
+      - Chaque UC integration/contract/e2e du contrat → test au bon path + (integration) import d'une vraie frontière (DataSource/harness/testcontainer).
+      - Interdit le unit-mock là où l'infra est réelle (la classe de bug quota INSERT...RETURNING). Exit 1 = FAIL = re-spawn fresh red.
+   g. INC_ID=$INC_ID .claude/skills/team/team-hooks/pre-complete-incident-regression-check.sh  ← GATE D (incident→gate)
+      - Si le run corrige un INC-id de docs/INCIDENT_LEDGER.md : exige un UC Catégorie=regression couvrant l'INC-id, Tier ≥ le Tier-qui-l'aurait-pris du registre.
+      - INC_ID vide → PASS (non applicable). Exit 1 = FAIL = re-spawn fresh test-analyst (ajoute le UC regression) puis fresh red.
 2. Append STORY.md section `verify` avec les exit codes verbatim (UFR-013).
 3. Si un hook exit ≠ 0 → boucle corrective intra-phase OU re-spawn fresh la phase pointée. Pas de gate vert sans exit 0 réel (cf. feedback_verify_real_gate_not_global_exit).
 4. Update state.json.gates[] : {name:"verify", verdict:"PASS|FAIL", details:"<exit codes>"}.
