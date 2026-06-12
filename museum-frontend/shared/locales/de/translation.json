@@ -586,14 +586,16 @@
     "offlineImageFailed": "Das Bild konnte nicht für den Offline-Versand gespeichert werden. Ihre Nachricht wurde ohne Bild in die Warteschlange gestellt.",
     "audio_mode_on": "Audiobeschreibung ein",
     "audio_mode_off": "Audiobeschreibung aus",
-    "lowDataActive": "Datenspar-Modus aktiv",
+    "lowDataBadge": {
+      "label": "Datensparmodus",
+      "a11yLabel": "Datensparmodus aktiv. Sprachantworten pausiert. Öffnet die Dateneinstellungen."
+    },
     "cachedResponse": "Antwort aus lokalem Cache",
     "savedForLater": "Frage für später gespeichert",
     "optimistic": {
       "image_placeholder": "Bild gesendet",
       "voice_placeholder": "Sprachnachricht"
     },
-    "lowDataDetails": "Datensparmodus — TTS deaktiviert, Bilder komprimiert",
     "tts": {
       "disabled_low_data": "Im Datensparmodus deaktiviert. Modus in den Einstellungen ändern."
     },

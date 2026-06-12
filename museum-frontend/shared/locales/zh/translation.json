@@ -586,14 +586,16 @@
     "offlineImageFailed": "无法保存图片以供离线发送。您的消息已在没有图片的情况下排队。",
     "audio_mode_on": "音频描述已开启",
     "audio_mode_off": "音频描述已关闭",
-    "lowDataActive": "数据节省模式已激活",
+    "lowDataBadge": {
+      "label": "省流量模式",
+      "a11yLabel": "省流量模式已开启。语音回复已暂停。打开数据设置。"
+    },
     "cachedResponse": "来自本地缓存的响应",
     "savedForLater": "问题已保存以便稍后发送",
     "optimistic": {
       "image_placeholder": "已发送图片",
       "voice_placeholder": "语音消息"
     },
-    "lowDataDetails": "省流量模式 — TTS 已停用，图片已压缩",
     "tts": {
       "disabled_low_data": "省流量模式下已停用。在设置中更改模式。"
     },

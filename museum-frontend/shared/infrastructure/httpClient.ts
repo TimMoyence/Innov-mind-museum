@@ -6,6 +6,7 @@ import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
 import { getApiErrorCode, mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
 import { getCurrentDataMode } from './dataMode/currentDataMode';
+import { recordHttpQualitySample } from './connectivity/qualitySampling';
 
 type UnauthorizedHandler = () => void;
 
@@ -128,6 +129,8 @@ type HttpRequestConfig = {
   _retryCount?: number;
   _retriedAfterAuthRefresh?: boolean;
   _startedAt?: number;
+  /** Opt this request out of passive quality sampling (design §2.3 / US-10.2). */
+  skipQualitySample?: boolean;
 } & Record<string, unknown>;
 
 const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
@@ -250,12 +253,30 @@ httpClient.interceptors.response.use(
       response.status,
       'info',
     );
+    // Passive quality sample (US-10.1) — eligibility + AppState gate applied
+    // downstream; never throws (design §2.3).
+    recordHttpQualitySample(response.config as typeof response.config & HttpRequestConfig, {
+      ok: true,
+      timedOut: false,
+    });
     return response;
   },
   async (error: unknown) => {
     const axiosError = toAxiosLikeError(error);
     const config = (axiosError?.config ?? {}) as HttpRequestConfig;
     const status = axiosError?.response?.status;
+
+    // Passive quality sample (US-03.2 / design P-05): an HTTP error WITH a
+    // response (4xx/5xx) means the network worked ⇒ `ok: true`; only a timeout
+    // (`ECONNABORTED`) or a network error without response is a failure.
+    // Recorded before the 401-refresh/retry branches so every first attempt
+    // samples once (retries are excluded via `_retryCount > 0`).
+    recordHttpQualitySample(
+      config,
+      axiosError?.response
+        ? { ok: true, timedOut: false }
+        : { ok: false, timedOut: axiosError?.code === 'ECONNABORTED' },
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-base-to-string -- config.url is always string at runtime
     const requestUrl = String(config.url ?? '');

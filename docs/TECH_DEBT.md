@@ -1532,3 +1532,33 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Reste à fermer (W2/W3 post-launch, séquencé, code-only, par vague)** :
   - **W2** : 34 racines de composition DI B1 (`useCase/index.ts` → `module-root index.ts`, 6 modules, auth 456 LOC + 17 importers) + 2 B2 résiduels (daily-art catalog, admin `composition.ts`) ; armer l'arm `application` une fois propre.
   - **W3** : ~16 edges C1/C2 chat-adapter→useCase + untangle bidirectionnel `llm-prompt-builder.ts` ; armer l'arm `infrastructure` ; **close TD-62 complet** (les 3 arms armés, ARCH-01 fermée sur les 3 couches). Gaté sur la suite chat complète (447) + matrice e2e guardrail réelle.
+
+---
+
+## Review run `undefined-network-detection-reliability` — 2026-06-12 (restes découverts hors périmètre, reviewer fresh)
+
+### TD-LLM-V2-STALE-COMMENTS — commentaires `llm:v2` stale dans src BE après le bump KEY_VERSION v3 (LOW, doc-only)
+
+- [ ] **Statut** : ouvert (créé 2026-06-12). Classe TD-DOC-WAVEC-01 (doc stale après bump de namespace — même piège qu'au bump v1→v2).
+- **Référence code** (grep `llm:v2` dans `museum-backend/src/`, vérifié 2026-06-12) :
+  ```
+  src/modules/chat/useCase/message/chat-message.service.ts:92
+  src/modules/chat/useCase/audio/chat-media.service.ts:163
+  src/modules/chat/domain/message/chatMessage.entity.ts:63
+  src/modules/chat/useCase/orchestration/message-commit.ts:175
+  src/modules/admin/adapters/primary/http/routes/cache-purge.route.ts:17,47
+  ```
+- **Symptôme** : ces commentaires citent `llm:v2:*` comme namespace courant ; depuis le bump 2026-06-12 (`llm-cache.service.ts:14` `KEY_VERSION='v3'`, dimension `lowDataMode`), le namespace prod est `llm:v3:*`. Comportement runtime correct (les préfixes sont dérivés de `KEY_VERSION`) — dette purement documentaire. La migration `1779536483274-AddCacheKeyToChatMessages.ts` est immuable (exempte).
+- **Comment fermer** : sweep mécanique des 5 fichiers → `llm:v3:*` ou formulation version-agnostique (« namespace courant `llm:{KEY_VERSION}:*` »).
+
+### TD-BE-PREEXISTING-RED-UNITS — 2 suites unit BE rouges localement sur HEAD non modifié + 1 flake d'ordre (MEDIUM)
+
+- [ ] **Statut** : ouvert (créé 2026-06-12, découvert par le run full-suite BE de la review — env local Docker OFF / Redis OFF).
+- **Référence code** :
+  ```
+  tests/unit/daily-art/daily-art.test.ts:56        # « cycles through the list » : jan1.title ≠ jan31.title (attendu identique via % 30)
+  tests/unit/museum/opening-hours-parser.test.ts:18 # 3 cas currently_open/currently_closed reçoivent l'inverse
+  tests/unit/routes/auth.route.test.ts:803          # export 200 attendu → 405 reçu, UNIQUEMENT en batch (passe solo 73/73)
+  ```
+- **Symptôme (vérifié 2026-06-12)** : `daily-art` + `opening-hours-parser` échouent AUSSI en isolation (`--testPathPattern`, 4 fails/28) alors que `git diff --stat` sur ces modules = 0 ligne — préexistant au cycle, cause non investiguée (suspect : dépendance date/heure/timezone locale, à confirmer). `auth.route` est un flake d'ordre sous Redis-off (bruit BullMQ/ioredis `ECONNREFUSED 6379`, classe open-handles connue) : rouge dans un run batch scope chat/routes/contract, vert solo et vert dans le full run suivant.
+- **Comment fermer** : (a) root-cause les 2 suites date/heure-dépendantes (clock injectée ou dates fixes timezone-safe) ; (b) auth.route : isoler la dépendance d'ordre (probable état partagé app/Redis entre suites) — recouper avec la dette « full unit-integration `--forceExit=false` = 845 fails/102 suites ».

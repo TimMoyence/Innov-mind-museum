@@ -21,7 +21,11 @@
  * it → R-id → spec/source mapping:
  *   R1  store-key === lookup-key                  (read/write parity)   → AC7
  *   R2  computeKey === store-key === lookup-key    (persistence stamp)  → AC7
- *   R3  key format llm:v2:{ctx}:{museum|none}:{user|anon}:{32-hex}      → AC8
+ *   R3  key format llm:v3:{ctx}:{museum|none}:{user|anon}:{32-hex}      → AC8
+ *       (v3 since 2026-06-12 — lowDataMode KEY_VERSION bump, US-12.2/INV-21,
+ *       run undefined-network-detection-reliability ; supersedes the §4
+ *       never-edit constraint of the ORIGINAL characterization run for the
+ *       version segment only)
  *   R4  museumId segment precedes userId segment   (buildKey :130)      → AC8
  *   R5  invalidateMuseum prefix string-prefixes stored keys (:98-100)   → AC10
  *   R6  key independent of input field-insertion order (:168-171)       → AC10
@@ -75,11 +79,11 @@ describe('cache-key parity contract (sentinel: cache-key-parity)', () => {
   });
 
   // ── R3 — exact key format ─────────────────────────────────────────────
-  it('R3 — key matches llm:v2:{ctx}:{museum|none}:{user|anon}:{32-lowercase-hex}', () => {
+  it('R3 — key matches llm:v3:{ctx}:{museum|none}:{user|anon}:{32-lowercase-hex}', () => {
     const key = service.computeKey(makeLlmCacheKeyInput());
 
     expect(key).toMatch(
-      /^llm:v2:(generic|museum-mode|personalized):(\d+|none):(\d+|anon):[0-9a-f]{32}$/,
+      /^llm:v3:(generic|museum-mode|personalized):(\d+|none):(\d+|anon):[0-9a-f]{32}$/,
     );
   });
 
@@ -90,7 +94,7 @@ describe('cache-key parity contract (sentinel: cache-key-parity)', () => {
     );
 
     const parts = key.split(':');
-    // ['llm','v2',<ctx>,<museumId>,<userId>,<hash>]
+    // ['llm','v3',<ctx>,<museumId>,<userId>,<hash>]
     expect(parts[3]).toBe('42');
     expect(parts[4]).toBe('7');
   });

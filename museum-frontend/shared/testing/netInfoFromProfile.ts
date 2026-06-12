@@ -4,8 +4,11 @@
  * Maps a ratified {@link NetworkProfile} to a structural NetInfo snapshot whose
  * `isConnectionExpensive` + `cellularGeneration` live nested under `details`
  * (design anchor §3 / spec R1), exactly the shape the REAL `resolveDataMode`
- * consumes. `isInternetReachable` mirrors `isConnected` (a degraded-but-present
- * interface is still "reachable" in the simulation; offline is unreachable).
+ * consumes. `isConnectionExpensive` derives from `profile.metered` on the
+ * online branch and is forced `false` offline (US-11.3 / US-02.5 — via the
+ * registry's `toNetInfoSnapshot`, single source of truth). `isInternetReachable`
+ * mirrors `isConnected` (a degraded-but-present interface is still "reachable"
+ * in the simulation; offline is unreachable).
  *
  * NEVER imported by `app/**` — enforced by the `no-restricted-imports` boundary
  * (eslint.config.mjs). This module imports neither `react` nor

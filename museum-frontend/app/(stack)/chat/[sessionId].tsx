@@ -36,6 +36,7 @@ import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
 import { CollapsibleTopBar } from '@/features/chat/ui/CollapsibleTopBar';
 import { ChatSessionSurface } from '@/features/chat/ui/ChatSessionSurface';
 import { Composer } from '@/features/chat/ui/Composer';
+import { LowDataBadge } from '@/features/chat/ui/LowDataBadge';
 import { BottomSheetRouter, useBottomSheetRouter } from '@/features/chat/ui/bottom-sheet-router';
 import type { MusaiumDeeplink } from '@/features/chat/application/sanitizeCartelCode';
 import { setSessionContext } from '@/features/chat/infrastructure/chatApi/metadata';
@@ -503,6 +504,11 @@ export default function ChatSessionScreen() {
             onOpenAiDisclosure={openAiDisclosure}
             collapsed={topBarCollapsed}
           />
+
+          {/* Chat-scoped low-data badge (US-09, design §2.6) — renders iff
+              isLowData && isOnline; the only mount point app-wide (structural
+              auth gating, US-09.2). */}
+          <LowDataBadge />
 
           {isWalkMode ? (
             <Text

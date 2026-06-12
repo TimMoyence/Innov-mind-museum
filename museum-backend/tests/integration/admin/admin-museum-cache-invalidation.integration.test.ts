@@ -7,9 +7,11 @@
  * requires that BOTH `museum-mode` and `personalized` context-class buckets
  * are purged on a single invalidation call — this test asserts both
  * `delByPrefix` invocations carry the canonical key shape
- * `llm:v2:{contextClass}:{museumId}:` so a future refactor that drops one
+ * `llm:v3:{contextClass}:{museumId}:` so a future refactor that drops one
  * bucket trips a clear failure. (KEY_VERSION bumped v1→v2 on 2026-05-19
- * audit-360-w2 T1-GREEN to isolate pre-F1 canonical-input entries.)
+ * audit-360-w2 T1-GREEN to isolate pre-F1 canonical-input entries ; bumped
+ * v2→v3 on 2026-06-12 for the lowDataMode dimension — US-12.2/INV-21, run
+ * undefined-network-detection-reliability.)
  *
  * Lives under `tests/integration/admin/` because the contract is consumed
  * by the admin module ; the cache itself is exercised against a mocked
@@ -39,8 +41,8 @@ describe('admin → invalidateMuseum cache contract', () => {
 
     await service.invalidateMuseum(42);
 
-    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:museum-mode:42:');
-    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:personalized:42:');
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v3:museum-mode:42:');
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v3:personalized:42:');
     expect(cache.delByPrefix).toHaveBeenCalledTimes(2);
   });
 
@@ -64,8 +66,8 @@ describe('admin → invalidateMuseum cache contract', () => {
 
     await expect(service.invalidateMuseum(99)).resolves.toBeUndefined();
     expect(cache.delByPrefix).toHaveBeenCalledTimes(2);
-    expect(cache.delByPrefix).toHaveBeenNthCalledWith(1, 'llm:v2:museum-mode:99:');
-    expect(cache.delByPrefix).toHaveBeenNthCalledWith(2, 'llm:v2:personalized:99:');
+    expect(cache.delByPrefix).toHaveBeenNthCalledWith(1, 'llm:v3:museum-mode:99:');
+    expect(cache.delByPrefix).toHaveBeenNthCalledWith(2, 'llm:v3:personalized:99:');
   });
 
   it('uses the same key shape the cache lookup writes to', async () => {
@@ -111,9 +113,9 @@ describe('admin → invalidateMuseum cache contract', () => {
 
     await service.invalidateMuseum(7);
 
-    expect(writtenKeys[0]).toMatch(/^llm:v2:museum-mode:7:/);
-    expect(writtenKeys[1]).toMatch(/^llm:v2:personalized:7:/);
-    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:museum-mode:7:');
-    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v2:personalized:7:');
+    expect(writtenKeys[0]).toMatch(/^llm:v3:museum-mode:7:/);
+    expect(writtenKeys[1]).toMatch(/^llm:v3:personalized:7:/);
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v3:museum-mode:7:');
+    expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v3:personalized:7:');
   });
 });
