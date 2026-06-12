@@ -89,7 +89,7 @@ interface LlmCacheCtx {
   sessionId: string;
   requestId: string | undefined;
   /**
-   * PR-P0-1 (2026-05-23) — exact `llm:v2:*` Redis key emitted by
+   * PR-P0-1 (2026-05-23) — exact `llm:{KEY_VERSION}:*` Redis key emitted by
    * `LlmCacheServiceImpl.computeKey()` on the lookup OR store path.
    * Threaded into `commitAssistantResponse` so the assistant `ChatMessage`
    * row is stamped with the key for later feedback-driven invalidation.

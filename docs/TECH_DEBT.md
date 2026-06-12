@@ -1537,19 +1537,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 
 ## Review run `undefined-network-detection-reliability` — 2026-06-12 (restes découverts hors périmètre, reviewer fresh)
 
-### TD-LLM-V2-STALE-COMMENTS — commentaires `llm:v2` stale dans src BE après le bump KEY_VERSION v3 (LOW, doc-only)
-
-- [ ] **Statut** : ouvert (créé 2026-06-12). Classe TD-DOC-WAVEC-01 (doc stale après bump de namespace — même piège qu'au bump v1→v2).
-- **Référence code** (grep `llm:v2` dans `museum-backend/src/`, vérifié 2026-06-12) :
-  ```
-  src/modules/chat/useCase/message/chat-message.service.ts:92
-  src/modules/chat/useCase/audio/chat-media.service.ts:163
-  src/modules/chat/domain/message/chatMessage.entity.ts:63
-  src/modules/chat/useCase/orchestration/message-commit.ts:175
-  src/modules/admin/adapters/primary/http/routes/cache-purge.route.ts:17,47
-  ```
-- **Symptôme** : ces commentaires citent `llm:v2:*` comme namespace courant ; depuis le bump 2026-06-12 (`llm-cache.service.ts:14` `KEY_VERSION='v3'`, dimension `lowDataMode`), le namespace prod est `llm:v3:*`. Comportement runtime correct (les préfixes sont dérivés de `KEY_VERSION`) — dette purement documentaire. La migration `1779536483274-AddCacheKeyToChatMessages.ts` est immuable (exempte).
-- **Comment fermer** : sweep mécanique des 5 fichiers → `llm:v3:*` ou formulation version-agnostique (« namespace courant `llm:{KEY_VERSION}:*` »).
+> TD-LLM-V2-STALE-COMMENTS (commentaires `llm:v2` stale, LOW doc-only) : **traité le jour même** — sweep des 5 fichiers src + ADR-036/038 + ROADMAP_AUDIT_TRAIL + lib-docs/ioredis vers `llm:{KEY_VERSION}:*`/v3 (doctrine « stale = fix maintenant », pas de tracking). Migration `1779536483274` immuable (seule exemption) ; mentions « at the time » des tests = historiquement exactes, conservées.
 
 ### TD-BE-PREEXISTING-RED-UNITS — 2 suites unit BE rouges localement sur HEAD non modifié + 1 flake d'ordre (MEDIUM)
 
