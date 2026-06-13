@@ -160,13 +160,22 @@ jobs:
           done
           echo "Backend did not become healthy"; tail -50 /tmp/be.log; exit 1
 
-      # Web: install + start dev server
+      # Web: install + build + start the PRODUCTION server.
+      # We test the prod build (`next build` + `next start`), NOT `next dev`:
+      # the dev server differs from prod (no minification, different hydration
+      # timing, dev-only error overlays) and was masking real prod e2e failures.
+      # API_BASE_URL is read at build time (next.config.ts rewrites manifest) AND
+      # at runtime (server-side proxy + src/lib/api.ts) — set on both steps.
       - name: Install web deps
         run: pnpm install --frozen-lockfile
-      - name: Start Next.js dev server
+      - name: Build Next.js (production)
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
-        run: nohup pnpm dev > /tmp/web.log 2>&1 &
+          API_BASE_URL: http://localhost:3000
+        run: pnpm build
+      - name: Start Next.js production server
+        env:
+          API_BASE_URL: http://localhost:3000
+        run: nohup pnpm start > /tmp/web.log 2>&1 &
       - name: Wait for web ready
         run: |
           for i in $(seq 1 60); do
@@ -265,12 +274,18 @@ jobs:
             sleep 2
           done
           tail -50 /tmp/be.log; exit 1
+      # Build + start the PRODUCTION server (see playwright-pr rationale):
+      # the nightly multi-browser run must exercise the real prod build, not dev.
       - name: Install web deps
         run: pnpm install --frozen-lockfile
-      - name: Start web
+      - name: Build Next.js (production)
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
-        run: nohup pnpm dev > /tmp/web.log 2>&1 &
+          API_BASE_URL: http://localhost:3000
+        run: pnpm build
+      - name: Start Next.js production server
+        env:
+          API_BASE_URL: http://localhost:3000
+        run: nohup pnpm start > /tmp/web.log 2>&1 &
       - name: Wait for web
         run: |
           for i in $(seq 1 60); do
@@ -296,6 +311,48 @@ jobs:
           name: playwright-report-nightly
           path: museum-web/playwright-report/
           retention-days: 14
+
+  # ─── Web nightly issue-on-red alert ─────────────────────────────────────
+  # Mirrors the mobile `maestro-full-alert` pattern: the nightly multi-browser
+  # Playwright run is otherwise a dead gate (nobody watches the cron). On a red
+  # nightly this opens (or re-pings) a tracking issue via the native GITHUB_TOKEN
+  # — the repo owner gets a GitHub notification and the issue stays visible in
+  # the Issues tab until fixed. On a green nightly it auto-closes the issue.
+  # No external secret/webhook needed. Dedicated label `nightly-web-e2e-alert`
+  # (MUST NOT collide with the mobile `nightly-maestro-alert` label).
+  playwright-nightly-alert:
+    if: ${{ always() && github.event_name == 'schedule' }}
+    needs: [playwright-nightly]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open/close the nightly web-e2e tracking issue
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
+        with:
+          script: |
+            const failed = ${{ needs.playwright-nightly.result != 'success' }};
+            const { owner, repo } = context.repo;
+            const label = 'nightly-web-e2e-alert';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const existing = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: label });
+            if (failed) {
+              const body = `The nightly multi-browser Playwright (web e2e) suite failed.\n\nRun: ${runUrl}\n\nThis issue auto-closes when the next nightly web-e2e run is green.`;
+              if (existing.data.length > 0) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: existing.data[0].number, body: `Still failing (nightly) — ${runUrl}` });
+              } else {
+                try { await github.rest.issues.getLabel({ owner, repo, name: label }); }
+                catch { await github.rest.issues.createLabel({ owner, repo, name: label, color: 'b60205', description: 'Auto-filed when a nightly web Playwright run fails' }); }
+                await github.rest.issues.create({ owner, repo, title: `🌙 Nightly web Playwright failing`, body, labels: [label] });
+              }
+            } else {
+              for (const issue of existing.data) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: `✅ Nightly web Playwright green again — ${runUrl}. Closing.` });
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed' });
+              }
+            }
 
   lighthouse:
     needs: quality
@@ -373,6 +430,11 @@ jobs:
           file: ./museum-web/deploy/Dockerfile.prod
           load: true
           tags: museum-web:ci
+          # Bake the Plausible site domain into the client bundle (NEXT_PUBLIC_*
+          # is inlined at build, not read at runtime). Repo var overrides the
+          # musaium.com default. Keep in sync with the Push step below.
+          build-args: |
+            NEXT_PUBLIC_PLAUSIBLE_DOMAIN=${{ vars.PLAUSIBLE_DOMAIN || 'musaium.com' }}
 
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
@@ -391,6 +453,10 @@ jobs:
           context: .
           file: ./museum-web/deploy/Dockerfile.prod
           push: true
+          # Same build-arg as the Build/Trivy step above so the scanned image
+          # and the pushed image are byte-for-byte the same artifact.
+          build-args: |
+            NEXT_PUBLIC_PLAUSIBLE_DOMAIN=${{ vars.PLAUSIBLE_DOMAIN || 'musaium.com' }}
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-web:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-web:${{ github.sha }}

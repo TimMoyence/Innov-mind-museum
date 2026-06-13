@@ -26,6 +26,15 @@ COPY packages/musaium-shared /packages/musaium-shared
 COPY --from=deps /app/node_modules ./node_modules
 COPY museum-web ./
 
+# Wave C5 — Plausible site domain MUST be baked at build time: Next inlines
+# every NEXT_PUBLIC_* into the client bundle during `next build`, so a runtime
+# VPS env var arrives too late (the prod image would ship layout.tsx's
+# 'musaium.local' fallback ⇒ analytics silently disabled). CI passes
+# --build-arg NEXT_PUBLIC_PLAUSIBLE_DOMAIN (ci-cd-web.yml). Empty default ⇒
+# fail-closed (PLAUSIBLE_ENABLED stays false), never a wrong domain.
+ARG NEXT_PUBLIC_PLAUSIBLE_DOMAIN=""
+ENV NEXT_PUBLIC_PLAUSIBLE_DOMAIN=$NEXT_PUBLIC_PLAUSIBLE_DOMAIN
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build
 

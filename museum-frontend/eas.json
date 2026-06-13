@@ -37,16 +37,19 @@
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_API_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_PLAUSIBLE_DOMAIN": "musaium.com",
         "ENTRY_FILE": "node_modules/expo-router/entry.js"
       },
       "android": {
         "env": {
-          "SENTRY_PROJECT": "android"
+          "SENTRY_PROJECT": "android",
+          "EXPO_PUBLIC_SENTRY_DSN_ANDROID": "https://db0002a004fb7cfb40c915fdcc1f4469@o4511082055860224.ingest.de.sentry.io/4511082080370768"
         }
       },
       "ios": {
         "env": {
-          "SENTRY_PROJECT": "apple-ios"
+          "SENTRY_PROJECT": "apple-ios",
+          "EXPO_PUBLIC_SENTRY_DSN_IOS": "https://50bc059a7310d9b37c4c3f3f20a64f3d@o4511082055860224.ingest.de.sentry.io/4511082083057744"
         }
       }
     }
