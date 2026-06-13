@@ -78,7 +78,7 @@ export default function LandingSteps({ dict }: LandingStepsProps) {
             {dict.items.map((item, i) => (
               <AnimatedSection key={i} delay={i * 0.15} variant="scale">
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-3 text-xs font-bold text-primary-400">
+                  <div className="mb-3 text-xs font-bold text-primary-500">
                     {String(i + 1).padStart(2, '0')}
                   </div>
                   <div
