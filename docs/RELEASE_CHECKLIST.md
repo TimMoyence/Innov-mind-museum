@@ -1,6 +1,6 @@
 # Musaium — Release Checklist & Remaining Work
 
-> Last updated: 2026-05-20 (W4 audit-360 run) — references refreshed for V1 launch 2026-06-07 (date canonique, cf. `docs/ROADMAP_PRODUCT.md`) | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
+> Last updated: 2026-06-13 — references refreshed for V1 launch 2026-08-27 (date canonique, cf. `docs/ROADMAP_PRODUCT.md`) | Overall: 111/112 tasks (99%) | Pre-launch verdict: GO (W4 cluster C/C7.4 sign-off).
 
 ---
 
@@ -49,23 +49,19 @@ Dockerfile.
 
 ## 3. CRITICAL — .env Production : Variables manquantes & à corriger
 
-### 3.1 CORS_ORIGINS — Domaines obsolètes (BLOQUANT)
+### 3.1 CORS_ORIGINS — vérifier le `.env` VPS live (plus un BLOQUANT du template)
 
-**Actuel :**
+**Le template `.env.production.example:31` ship déjà la bonne valeur** (corrigé 2026-06,
+vérifié `grep CORS_ORIGINS museum-backend/.env.production.example`) :
 ```
-CORS_ORIGINS=https://museum.asilidesign.fr,https://asilidesign.fr,https://www.asilidesign.fr
-```
-
-**Le nginx route déjà `musaium.com` et `musaium.fr` vers le backend.**
-L'app mobile appelle `musaium.com`. Ces domaines sont absents de CORS → **les requêtes seront rejetées**.
-
-**Correction :**
-```
-CORS_ORIGINS=https://musaium.com,https://www.musaium.com,https://musaium.fr,https://www.musaium.fr,https://museum.asilidesign.fr
+CORS_ORIGINS=https://musaium.com,https://www.musaium.com,https://musaium.fr,https://www.musaium.fr
 ```
 
-> Note : les apps mobiles natives n'envoient pas d'en-tête `Origin` donc CORS ne les bloque pas directement,
-> mais l'admin dashboard web et tout client navigateur en ont besoin.
+Action opérateur restante : confirmer que le `.env` **réel sur le VPS** porte ces domaines.
+Un ancien `.env` peut précéder la correction et lister encore `asilidesign.fr` → les requêtes
+du dashboard admin web / clients navigateur seraient alors rejetées (le nginx route déjà
+`musaium.com`/`musaium.fr` vers le backend). Les apps mobiles natives n'envoient pas d'en-tête
+`Origin`, donc CORS ne les bloque pas directement.
 
 ### 3.2 Variables manquantes à ajouter
 
@@ -478,6 +474,23 @@ eas submit --platform android --profile production --latest
 ---
 
 ## 12. Synthèse — Checklist de release finale
+
+### Actions opérateur (infra, hors CI) — 12 items consolidés
+
+> Ces gates ne sont **pas** automatisés en CI ; ils exigent une action manuelle de l'opérateur avant ou juste après le go-live. Les runbooks détaillés sont liés en regard.
+
+- [ ] **Secrets prod générés** — `bash museum-backend/scripts/gen-prod-secrets.sh` émet les 8 secrets (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`, `MEDIA_SIGNING_SECRET`, `MFA_ENCRYPTION_KEY`, `MFA_SESSION_TOKEN_SECRET`, `EXPORT_PSEUDONYM_SALT`, `REDIS_PASSWORD`) → pipés dans le secret store. **Aucun `FEATURE_FLAG_*` fantôme** (n'existent pas dans `env.ts`, cf. §3.3).
+- [ ] **S3 / Object Storage Public-Access-Block** — bucket OVH/S3 verrouillé en privé puis `S3_PUBLIC_ACCESS_BLOCK_VERIFIED=true` posé après vérification. Runbook : [`docs/operations/S3_PUBLIC_ACCESS_VERIFICATION.md`](operations/S3_PUBLIC_ACCESS_VERIFICATION.md).
+- [ ] **Boîtes mail OVH (MX + redirections)** — `security@`, `contact@`, `support@musaium.com` redirigent vers la boîte opérateur (MX OVH actif).
+- [ ] **Clé PGP** — DÉJÀ livrée : `museum-web/public/.well-known/pgp-key.txt` contient une vraie clé Ed25519 (`Musaium Security <security@musaium.com>`). Action = simplement vérifier que le gate anti-placeholder de déploiement reste vert (`ci-cd-web.yml` step « PGP placeholder deploy gate »). Génération/rotation : [`docs/operations/PGP_KEY_GENERATION.md`](operations/PGP_KEY_GENERATION.md).
+- [ ] **Plausible analytics** — site créé côté Plausible + `PLAUSIBLE_DOMAIN` configuré.
+- [ ] **Universal / App Links** — capability Associated Domains + vérifications post-deploy (§4bis / §12). Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERSAL_LINKS_VERIFICATION.md).
+- [ ] **SigLIP model provisioning** — modèle d'embedding image provisionné (bucket + checkpoint) pour `chat-compare` en prod. Runbook : [`docs/operations/SIGLIP_MODEL_PROVISIONING.md`](operations/SIGLIP_MODEL_PROVISIONING.md).
+- [ ] **CORS_ORIGINS** — `musaium.com` / `musaium.fr` (+ `www.`) présents (cf. §3.1).
+- [ ] **BREVO_API_KEY** — configurée (sans elle, reset password par email KO).
+- [ ] **APP_VERSION** — valeur de release (pas `local-dev`).
+- [ ] **Migrations DB + `DB_SYNCHRONIZE=false`** — toutes les migrations appliquées (`migration:show`) et `DB_SYNCHRONIZE=false` confirmé.
+- [ ] **Contact DPO / RGPD** — `contact@musaium.com` exposé sur la privacy policy + canaux RGPD.
 
 ### Infrastructure (VPS)
 - [ ] **docker-compose.yml** mis à jour avec Redis + volume uploads + healthcheck DB
