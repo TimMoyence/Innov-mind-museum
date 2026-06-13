@@ -1,5 +1,14 @@
 import type { Config } from '@jest/types';
 
+// Pin the test timezone to UTC so every date/time-sensitive test is deterministic
+// regardless of the runner's local timezone (CI and prod both run in UTC). Without
+// this, tests that build dates as UTC-midnight (e.g. `new Date('2025-01-01')`) and
+// then read day-of-year / opening-hours via LOCAL components are off-by-one in
+// behind-UTC zones (e.g. EDT/EST) — green in CI, red on a US-based dev machine.
+// Set here (loaded by the Jest main process before any worker forks / any Date is
+// evaluated) so it applies in both --runInBand and worker modes.
+process.env.TZ = 'UTC';
+
 /**
  * Shared per-project options. `preset`, `transform`, `moduleNameMapper`,
  * `testEnvironment`, and `testPathIgnorePatterns` are project-scoped in Jest

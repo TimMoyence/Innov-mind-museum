@@ -160,7 +160,7 @@ export class ChatMediaService {
    *
    * Reads `row.message.cacheKey` (stamped at write time by
    * `ChatMessageService.tryLlmCacheStore` / `tryLlmCacheLookup` via
-   * `LlmCacheServiceImpl.computeKey`) and purges the exact `llm:v2:*` entry
+   * `LlmCacheServiceImpl.computeKey`) and purges the exact `llm:{KEY_VERSION}:*` entry
    * that produced this assistant message — 1 del, exact match, no cartesian.
    *
    * Fail-open: a `cache.del` throw produces a WARN log and the HTTP 200

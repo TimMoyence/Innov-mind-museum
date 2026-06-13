@@ -382,6 +382,14 @@ const env: AppEnv = {
   webSearch: {
     tavilyApiKey: toOptionalString(process.env.TAVILY_API_KEY),
     braveSearchApiKey: toOptionalString(process.env.BRAVE_SEARCH_API_KEY),
+    // Google Programmable Search (CSE) — needs BOTH key and engine id (`cx`) to wire.
+    googleCseApiKey: toOptionalString(process.env.GOOGLE_CSE_API_KEY),
+    googleCseId: toOptionalString(process.env.GOOGLE_CSE_ID),
+    // SearXNG metasearch — CSV of operator-vetted instance base URLs → string[].
+    searxngInstances: (toOptionalString(process.env.SEARXNG_INSTANCES) ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0),
     timeoutMs: toNumber(process.env.WEB_SEARCH_TIMEOUT_MS, 3000),
     cacheTtlSeconds: toNumber(process.env.WEB_SEARCH_CACHE_TTL_SECONDS, 3600),
     maxResults: toNumber(process.env.WEB_SEARCH_MAX_RESULTS, 5),
@@ -399,9 +407,11 @@ const env: AppEnv = {
   // JUSTIFIED: e2e harness opts out (no Redis) to avoid BullMQ/ioredis
   // ECONNREFUSED log floods. Prod sentinel rejects false. Pre-launch V1.
   extractionWorkerEnabled: toBoolean(process.env.EXTRACTION_WORKER_ENABLED, true),
-  // JUSTIFIED: producer wired but no `MuseumEnrichmentWorker` consumer
-  // instantiated at boot → leaving scheduler on queues jobs nothing drains.
-  // Flip on (delete flag) once consumer wired. Pre-launch V1 carry-over.
+  // JUSTIFIED: the on-demand `MuseumEnrichmentWorker` consumer is now wired at
+  // boot (index.ts startEnrichmentWorker, task #16) so cache-miss enqueues drain.
+  // This flag gates only the SEPARATE periodic stale-rescan scheduler (its own
+  // `museum-enrichment-scheduler` queue) — deferred by product decision, stays
+  // default-FALSE for V1. Pre-launch V1 carry-over.
   museumEnrichmentSchedulerEnabled: toBoolean(
     process.env.MUSEUM_ENRICHMENT_SCHEDULER_ENABLED,
     false,

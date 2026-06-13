@@ -32,6 +32,12 @@ const VENDOR_HOSTS = [
   { marker: 'cloud.langfuse.com', vendor: 'Langfuse', scan: ['museum-backend/src'] },
   { marker: 'langfuse.client', vendor: 'Langfuse', scan: ['museum-backend/src'] },
   { marker: 'cartocdn.com', vendor: 'CARTO', scan: ['museum-frontend/features', 'museum-web/src'] },
+  // Web-search providers (C9.15 reversed 2026-06-13). Each outbound host must bind
+  // to its Art 28 ledger row (#22 Google CSE, #17 DuckDuckGo, #18 SearXNG).
+  { marker: 'www.googleapis.com/customsearch', vendor: 'Google', scan: ['museum-backend/src'] },
+  { marker: 'api.duckduckgo.com', vendor: 'DuckDuckGo', scan: ['museum-backend/src'] },
+  // SearXNG instances are operator-defined (no fixed host) — bind on the client marker.
+  { marker: 'searxng.client', vendor: 'SearXNG', scan: ['museum-backend/src'] },
 ];
 
 const SCANNED_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']);

@@ -1161,8 +1161,8 @@ describe('ChatMessageService', () => {
       // tryLlmCacheLookup to stash the byte-string key on the LlmCacheCtx
       // (later stamped on the assistant ChatMessage row for targeted
       // feedback-driven invalidation). Default to a deterministic
-      // `llm:v2:*`-shaped stub.
-      computeKey: jest.fn().mockReturnValue('llm:v2:generic:none:anon:deadbeef'),
+      // `llm:v3:*`-shaped stub.
+      computeKey: jest.fn().mockReturnValue('llm:v3:generic:none:anon:deadbeef'),
       lookup: jest.fn().mockResolvedValue({ hit: false, value: null, contextClass: 'generic' }),
       store: jest.fn().mockResolvedValue(undefined),
       invalidateMuseum: jest.fn().mockResolvedValue(undefined),
@@ -1187,6 +1187,36 @@ describe('ChatMessageService', () => {
         voiceMode?: boolean;
       };
       expect(cacheInput.voiceMode).toBe(true);
+    });
+
+    // ── US-12.2 / INV-21 (2026-06-12, run undefined-network-detection-reliability)
+    //
+    // ADDITIVE case on the voiceMode pattern above (design.md P-07): the route
+    // already threads `lowDataMode: req.dataMode === 'low'` into
+    // `PostMessageInput.context` (chat-message.route.ts:50, chat.types.ts) and
+    // `llm-prompt-builder.ts:152-156` shortens the answer to 100-150 words —
+    // but `buildLlmCacheInput` drops `lowDataMode` on the floor, so (low,
+    // normal) cohorts share a cache line and cross-serve wrong-length
+    // responses. Same bug class as voiceMode F1 (`d54552beb`).
+    it('threads input.context.lowDataMode=true into LlmCacheKeyInput (INV-21)', async () => {
+      const llmCache = makeLlmCacheMock();
+      const { service } = buildService({ llmCache });
+
+      await service.postMessage(
+        SESSION_ID,
+        {
+          text: 'Tell me about this painting',
+          context: { lowDataMode: true },
+        },
+        'req-1',
+        USER_ID,
+      );
+
+      expect(llmCache.store).toHaveBeenCalledTimes(1);
+      const cacheInput = llmCache.store.mock.calls[0][0] as LlmCacheKeyInput & {
+        lowDataMode?: boolean;
+      };
+      expect(cacheInput.lowDataMode).toBe(true);
     });
   });
 });

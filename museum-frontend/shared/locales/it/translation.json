@@ -586,14 +586,16 @@
     "offlineImageFailed": "L'immagine non è stata salvata per l'invio offline. Il messaggio è stato accodato senza immagine.",
     "audio_mode_on": "Audiodescrizione attiva",
     "audio_mode_off": "Audiodescrizione disattiva",
-    "lowDataActive": "Modalità risparmio dati attiva",
+    "lowDataBadge": {
+      "label": "Modalità risparmio dati",
+      "a11yLabel": "Modalità risparmio dati attiva. Risposte vocali in pausa. Apre le impostazioni dati."
+    },
     "cachedResponse": "Risposta dalla cache locale",
     "savedForLater": "Domanda salvata per dopo",
     "optimistic": {
       "image_placeholder": "Immagine inviata",
       "voice_placeholder": "Messaggio vocale"
     },
-    "lowDataDetails": "Risparmio dati — TTS disattivato, immagini compresse",
     "tts": {
       "disabled_low_data": "Disattivato in modalità risparmio dati. Modifica in Impostazioni."
     },

@@ -43,6 +43,17 @@ export interface LlmCacheKeyInput {
    * JSON to pre-I-FIX2 entries — no KEY_VERSION bump required.
    */
   readonly currentArtworkKey?: string;
+  /**
+   * US-12.2 / INV-21 (2026-06-12, run undefined-network-detection-reliability) —
+   * `X-Data-Mode: low` flips the prompt builder to a 100-150-word concise
+   * answer (`llm-prompt-builder.ts:152-156`) but the cache key historically
+   * ignored it → (low, normal) cohorts shared a cache line and cross-served
+   * wrong-length responses. Same bug class as voiceMode F1 (`d54552beb`).
+   * Truthy-only emit downstream (mirror voiceMode/imageContentHash contracts) ;
+   * KEY_VERSION bump v2→v3 isolates the pre-fix namespace polluted by the FE
+   * metered→low resolution bug.
+   */
+  readonly lowDataMode?: boolean;
 }
 
 export interface LlmCacheLookupResult<T> {

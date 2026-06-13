@@ -51,7 +51,7 @@ stats: done=97 partial=28 open=48 ops=5
 - 🧑‍🔧 **P0.B14** — signer/confirmer le **DPA Langfuse** (`SUBPROCESSORS.md:52` encore « TBD »). Langfuse traite le contenu des prompts → GDPR Art.28 obligatoire avant données réelles en prod.
 - 🧑‍🔧 **P0.B17** — **révoquer la clé Anthropic** encore vivante côté secret-store Tim (code + `.env.example` déjà nettoyés ; rotation out-of-band).
 - 🧑‍🔧 **P0.B19** — renseigner les **contacts réels** du breach-playbook (`docs/incidents/BREACH_PLAYBOOK.md`) + confirmer le **S3 PAB** (`GetPublicAccessBlock`, pas de Terraform → vérif console/sentinel).
-- 🧑‍🔧 **P1-FA15 / I-OPS5** — poser **`EXPO_PUBLIC_PLAUSIBLE_DOMAIN`** en prod (sinon funnel KR4 silencieusement no-op) + **1 restore-drill** confirmant que le backup DB atterrit dans `backups/daily/`.
+- 🧑‍🔧 **P1-FA15 / I-OPS5** — **Plausible : décision 2026-06-13 = laissé MUET au build** (funnel KR4 no-op, **non bloquant** au boot — warn-only). ⚠️ **À ACTIVER avant le launch 2026-08-27** : créer le site Plausible `musaium.com` → poser `PLAUSIBLE_DOMAIN` (+ `PLAUSIBLE_ENDPOINT_URL`) côté BE et `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` côté mobile. + **1 restore-drill** confirmant que le backup DB atterrit dans `backups/daily/`.
 
 ### ⚖️ Décision à trancher avant launch (pas un blocker)
 

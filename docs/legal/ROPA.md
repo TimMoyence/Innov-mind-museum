@@ -4,9 +4,9 @@
 **Dernière revue éditoriale** : 2026-05-12
 **Date de rédaction technique** : 2026-05-13 (audit P0-1).
 **Responsable du traitement** : Tim Moyence — Entrepreneur Individuel (InnovMind / Musaium).
-**Coordonnées** : `tim.moyence@gmail.com` — France.
+**Coordonnées** : `contact@musaium.com` — France.
 **Représentant UE** : non applicable (responsable de traitement établi en France).
-**Contact DPO** : `dpo@musaium.com` (alias de redirection vers `tim.moyence@gmail.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
+**Contact DPO** : `dpo@musaium.com` (alias de redirection vers `contact@musaium.com` en attente de mandat). DPO externe à mandater — **deadline ferme : 2026-05-25** (D-7 du launch V1, audit P0-1 du 2026-05-13). Cabinet pressenti : <!-- DPO MANDATE PENDING: shortlist cabinets, sign mandate by 2026-05-25 --> à confirmer.
 
 Le présent registre satisfait l'obligation prévue à l'article 30 du RGPD (Règlement (UE) 2016/679) ainsi que les recommandations CNIL sur la tenue du registre des activités de traitement pour les responsables de traitement.
 

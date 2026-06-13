@@ -179,7 +179,10 @@ describe('LlmCacheServiceImpl', () => {
   // `LlmCacheKeyInput` → keys collide → wrong-shape responses get cross-served
   // across (voice, no-voice) / (audio-desc, no-audio-desc) cohorts. T1-GREEN
   // adds the fields + bumps KEY_VERSION v1→v2 so legacy entries don't bleed.
-  describe('F1 — voiceMode / audioDescriptionMode key discrimination (KEY_VERSION v2)', () => {
+  // 2026-06-12 (run undefined-network-detection-reliability, US-12.2/INV-21) —
+  // KEY_VERSION bumped v2→v3 (lowDataMode dimension); version-pinned asserts
+  // below re-pinned v3 (contract evolution, design.md §4 #12).
+  describe('F1 — voiceMode / audioDescriptionMode key discrimination (KEY_VERSION v3)', () => {
     it('A — two inputs differing only in voiceMode produce different keys', async () => {
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
@@ -206,28 +209,65 @@ describe('LlmCacheServiceImpl', () => {
 
     it('C — golden-hash for canonical input without voiceMode/audioDescriptionMode', async () => {
       // Both fields absent → canonical hash MUST be byte-identical to today's
-      // shape (mirror imageContentHash R8/AC6 contract). Only the KEY_VERSION
-      // prefix flips from v1 → v2. Pinned key updated as part of T1-GREEN
-      // (architect note: this golden survives unchanged on the hex side; only
-      // the `:v1:` → `:v2:` segment shifts).
+      // shape (mirror imageContentHash R8/AC6 contract). The hex side survives
+      // every truthy-only field addition (lowDataMode included); only the
+      // version segment shifts (v1 → v2 F1, v2 → v3 lowDataMode 2026-06-12,
+      // US-12.2/INV-21).
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
 
       await service.store(baseInput, { text: 'x' });
 
       const key = String(cache.set.mock.calls[0][0]);
-      expect(key).toBe('llm:v2:generic:none:anon:6c3364ef2dd9937a4a72638ab32b67b8');
+      expect(key).toBe('llm:v3:generic:none:anon:6c3364ef2dd9937a4a72638ab32b67b8');
     });
 
-    it('D — buildKey output contains the `:v2:` version segment', async () => {
+    it('D — buildKey output contains the `:v3:` version segment', async () => {
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
 
       await service.store(baseInput, { text: 'x' });
 
       const key = String(cache.set.mock.calls[0][0]);
-      expect(key).toContain(':v2:');
-      expect(key).not.toContain(':v1:');
+      expect(key).toContain(':v3:');
+      // v2 namespace is polluted by pre-fix cohorts (FE used to resolve `low`
+      // for every metered connection) — the bump isolates it (US-12.2).
+      expect(key).not.toContain(':v2:');
+    });
+  });
+
+  // ── US-12.2 / INV-21 (2026-06-12, run undefined-network-detection-reliability)
+  //
+  // `X-Data-Mode: low` flips the prompt builder to a 100-150-word concise
+  // answer (`llm-prompt-builder.ts:152-156`) but `lowDataMode` was absent from
+  // `LlmCacheKeyInput` → (low, normal) cohorts shared a cache line and
+  // cross-served wrong-length responses. Same bug class as voiceMode F1
+  // (`d54552beb`). GREEN adds the field (truthy-only emit, mirror
+  // voiceMode/imageContentHash contracts) + bumps KEY_VERSION v2→v3.
+  describe('US-12.2 — lowDataMode key discrimination (KEY_VERSION v3)', () => {
+    it('INV-21 — two inputs differing only in lowDataMode produce different keys', async () => {
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store(baseInput, { text: 'normal-length' });
+      await service.store({ ...baseInput, lowDataMode: true }, { text: 'concise-low' });
+
+      const keyNormal = String(cache.set.mock.calls[0][0]);
+      const keyLow = String(cache.set.mock.calls[1][0]);
+      expect(keyNormal).not.toBe(keyLow);
+    });
+
+    it('INV-21 — lowDataMode:false folds to the absent-field canonical (truthy-only emit)', async () => {
+      // Mirror of the voiceMode/audioDescriptionMode fold contract: false and
+      // absent MUST produce byte-identical canonical JSON, so the majority
+      // `normal` cohort keeps hex-stable keys across the v3 bump.
+      const cache = buildMockCache();
+      const service = new LlmCacheServiceImpl(cache);
+
+      await service.store(baseInput, { text: 'x' });
+      await service.store({ ...baseInput, lowDataMode: false }, { text: 'x' });
+
+      expect(String(cache.set.mock.calls[0][0])).toBe(String(cache.set.mock.calls[1][0]));
     });
   });
 });

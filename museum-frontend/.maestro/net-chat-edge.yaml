@@ -5,11 +5,19 @@ appId: com.musaium.mobile.preview
 #
 # W3-06 — Chat under EDGE / low-data + an offline blip (Layer 3 device track).
 #
-# Drives the REAL low-data path (force-data-mode deeplink → resolveDataMode 'low'
-# → the low-data banner lights), sends a chat message under the shaped condition,
-# then flips airplane mode ON to assert the OFFLINE banner surfaces and the chat
-# surface degrades gracefully (an i18n offline string, NOT a raw error token like
-# "NETWORK_ERROR"). Restoring connectivity must clear the banner (resync).
+# Drives the REAL low-data path (force-data-mode deeplink with persist=1 →
+# resolveDataMode 'low' → the chat-scoped LowDataBadge lights — US-13.2, run
+# `undefined-network-detection-reliability`), sends a chat message under the
+# shaped condition, flips airplane mode ON to assert the OFFLINE banner
+# surfaces and the chat surface degrades gracefully (an i18n offline string,
+# NOT a raw error token like "NETWORK_ERROR"). Restoring connectivity must
+# clear the banner (resync). Then taps the badge → data settings screen
+# (US-09.3 happy path, UFR-021), and cleans up via a NON-persisted deeplink
+# (its unmount resets the preference to 'auto' — R6 no-leak).
+#
+# The badge assert is NON-optional: `persist=1` keeps the forced 'low'
+# preference alive past the dev route's immediate <Redirect> unmount (design
+# P-01) — without it the assert is indeterministic.
 #
 # DEVICE→PROXY (runtime-deferred): on the Android nightly matrix the app's API
 # base URL points at the Toxiproxy shaped listener (10.0.2.2:3100) seeded from
@@ -20,20 +28,19 @@ appId: com.musaium.mobile.preview
 # Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!,
 # backend reachable through the shaped proxy, working LLM provider.
 
-# ── Force the low-data mode deterministically (W1 dev route) ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
+# ── Force the low-data mode deterministically (W1 dev route, persisted) ──
+- openLink: "musaium:///(dev)/force-data-mode?value=low&persist=1"
 - waitForAnimationToEnd
 
 # ── Reach the chat composer via the proven deterministic entry helper ──
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ── Low-data banner must light (forced preference 'low') ──
+# ── Low-data badge must light (forced preference 'low' + online) — NON-optional ──
 - extendedWaitUntil:
     visible:
-      text: "Mode économie de données actif|Data saving mode active"
+      id: "low-data-badge"
     timeout: 15000
-    optional: true
 
 # ── Send a message under the shaped (EDGE) condition ──
 - tapOn:
@@ -64,3 +71,20 @@ appId: com.musaium.mobile.preview
       id: "offline-banner"
     timeout: 20000
     optional: true
+
+# ── Badge tap-through → data settings screen (US-09.3, UFR-021 happy path) ──
+- extendedWaitUntil:
+    visible:
+      id: "low-data-badge"
+    timeout: 15000
+- tapOn:
+    id: "low-data-badge"
+- extendedWaitUntil:
+    visible:
+      text: "Paramètres|Settings"
+    timeout: 40000
+
+# ── Cleanup: NON-persisted deeplink — its unmount resets the preference to
+#    'auto' so the forced mode never leaks into the next flow (R6 no-leak) ──
+- openLink: "musaium:///(dev)/force-data-mode?value=normal"
+- waitForAnimationToEnd

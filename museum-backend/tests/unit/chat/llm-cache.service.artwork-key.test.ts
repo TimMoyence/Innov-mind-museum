@@ -90,6 +90,8 @@ const baseInput: LlmCacheKeyInput = {
  * IMPORTANT : we cast through `unknown` (NOT `any`) so the call site stays
  * typed at the boundary. The cast is contained here, contract-documented, and
  * narrowly scoped so the BODY of each test stays declarative.
+ * @param base
+ * @param currentArtworkKey
  */
 const inputWithArtwork = (
   base: LlmCacheKeyInput,
@@ -100,9 +102,12 @@ const inputWithArtwork = (
  * Capture the cache key (full string) issued by the service for a given input.
  * Uses `store` because the mock records the key as the first arg to `cache.set`.
  * Returns just the trailing sha256 hex (32 chars) — the part that depends on
- * the canonical input contents (the prefix part `llm:v2:{ctx}:{museumId}:{userId}:`
+ * the canonical input contents (the prefix part `llm:v3:{ctx}:{museumId}:{userId}:`
  * is structural and stable across these tests since we hold museumId/userId
  * constant).
+ * @param service
+ * @param cache
+ * @param input
  */
 const hashFromStoredKey = async (
   service: LlmCacheServiceImpl,
@@ -116,8 +121,10 @@ const hashFromStoredKey = async (
     throw new Error('cache.set was not called — service.store contract changed');
   }
   const key = String(lastCall[0]);
-  // Pattern : `llm:v2:{contextClass}:{museumIdOrNone}:{userIdOrAnon}:{sha256}`
-  const match = /^llm:v2:[a-z-]+:[0-9a-z-]+:[0-9a-z-]+:([0-9a-f]{32})$/.exec(key);
+  // Pattern : `llm:v3:{contextClass}:{museumIdOrNone}:{userIdOrAnon}:{sha256}`
+  // (KEY_VERSION bumped v2→v3 on 2026-06-12 for the lowDataMode dimension —
+  // US-12.2/INV-21, run undefined-network-detection-reliability.)
+  const match = /^llm:v3:[a-z-]+:[0-9a-z-]+:[0-9a-z-]+:([0-9a-f]{32})$/.exec(key);
   if (!match) {
     throw new Error(`cache key shape unexpected : ${key}`);
   }

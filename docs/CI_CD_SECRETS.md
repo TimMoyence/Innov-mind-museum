@@ -110,7 +110,7 @@ Note mobile:
 - Utilisé par: l'adapter télémétrie backend (`PlausibleAdapter`). No-op si absent ; warn boot via `validateProductionEnv` en prod.
 - Portée recommandée: environment (`production`).
 
-> **Note ops (PLAUSIBLE_* backend)** — l'injection effective de `PLAUSIBLE_DOMAIN` / `PLAUSIBLE_ENDPOINT_URL` dans les workflows de déploiement (`ci-cd-backend.yml`) + le `.env` du VPS reste **à faire — HORS-SCOPE de ce cycle (boundary MISSION 4)**. Sans elle, le funnel KR4 reste muet en prod malgré le template `.env*.example` et le warn de boot.
+> **Note ops (PLAUSIBLE_* backend)** — `PLAUSIBLE_DOMAIN` / `PLAUSIBLE_ENDPOINT_URL` côté backend restent une **action opérateur** : ce sont des variables runtime du `.env` du VPS (`/srv/museum/.env`), gérées manuellement par l'opérateur — la CI ne les gère pas par design (cf. § "Backend runtime env / VPS"). Sans elles, le funnel KR4 backend reste muet en prod malgré le template `.env*.example` et le warn de boot `validateProductionEnv`. (NB : le pendant mobile `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` est désormais câblé dans `museum-frontend/eas.json` — voir plus bas.)
 
 ## Secrets Smoke Tests Post-Deploy (Strictement requis)
 
@@ -186,7 +186,7 @@ Ces secrets sont **maintenant bloquants** dans les workflows de déploiement bac
 - Utilisé par: le client analytics mobile (`shared/analytics/plausible.ts`).
 - Portée recommandée: environment (`production`) / EAS build profile.
 
-> **Note ops (EXPO_PUBLIC_PLAUSIBLE_*)** — l'injection effective de `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` / `EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL` dans `ci-cd-mobile.yml` + la config EAS (build profiles) reste **à faire — HORS-SCOPE de ce cycle (boundary MISSION 4)**. Sans elle, le funnel KR4 mobile reste muet en prod malgré les templates `.env*.example`.
+> **Note ops (EXPO_PUBLIC_PLAUSIBLE_*)** — `EXPO_PUBLIC_PLAUSIBLE_DOMAIN=musaium.com` est **désormais câblé** dans `museum-frontend/eas.json` (`build.production.env`, hérité par `build.internal`), car un build EAS distant ne baked les `EXPO_PUBLIC_*` dans le bundle QUE depuis `eas.json` build.<profile>.env — pas depuis l'env du job GitHub `ci-cd-mobile.yml`. C'est une valeur littérale non-secrète (le domaine ship dans le bundle client de toute façon). `EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL` reste optionnel : le client mobile (`shared/analytics/plausible.ts` `resolveEndpoint()`) compose `<EXPO_PUBLIC_API_BASE_URL>/api/telemetry/funnel` par défaut, donc inutile de le poser tant que l'API base prod suffit.
 
 ### `EXPO_PUBLIC_EAS_PROJECT_ID`
 - Statut: plus requis par le workflow mobile actuel.

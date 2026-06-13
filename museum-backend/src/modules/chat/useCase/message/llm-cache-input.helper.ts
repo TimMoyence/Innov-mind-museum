@@ -47,6 +47,14 @@ export function buildLlmCacheInput(
     // → keys collide → wrong-shape responses cross-served.
     voiceMode: input.context?.voiceMode,
     audioDescriptionMode: input.context?.audioDescriptionMode,
+    // US-12.2 / INV-21 (2026-06-12) — propagate lowDataMode so the cache key
+    // discriminates (low, normal) cohorts. The route already threads
+    // `lowDataMode: req.dataMode === 'low'` into `PostMessageInput.context`
+    // (chat-message.route.ts:50) and `llm-prompt-builder.ts:152-156` shortens
+    // the answer to 100-150 words — dropped here, the cohorts cross-served
+    // wrong-length responses. Same bug class as voiceMode F1 (`d54552beb`).
+    // Truthy-only contract enforced downstream in `sha256OfCanonicalInput`.
+    lowDataMode: input.context?.lowDataMode,
     // I-FIX2 (2026-05-21) — `[CURRENT ARTWORK]` is rendered in the system
     // prompt (`llm-prompt-builder.ts:74`) but was historically NOT folded
     // into the cache key — two visitors in the same museum asking the same

@@ -34,6 +34,7 @@
     "sentinel:web-cookies": "node ./scripts/sentinels/web-cookies-audit.mjs",
     "smoke:api": "node ./scripts/smoke-api.cjs",
     "smoke:emails": "ts-node -r tsconfig-paths/register scripts/smoke-emails.ts",
+    "validate:prod-env": "node ./scripts/validate-prod-env.cjs",
     "test": "jest --watchman=false --runInBand --selectProjects unit-integration",
     "test:scripts": "NODE_OPTIONS=--experimental-vm-modules jest --watchman=false --runInBand --selectProjects scripts-esm",
     "test:coverage": "jest --watchman=false --runInBand --selectProjects unit-integration --coverage --testTimeout=15000",
@@ -88,7 +89,8 @@
       "fast-uri": ">=3.1.2",
       "uuid": "^11.1.1",
       "brace-expansion": ">=5.0.6",
-      "ws": ">=8.20.1"
+      "ws": ">=8.20.1",
+      "@grpc/grpc-js": ">=1.14.4"
     }
   },
   "devDependencies": {

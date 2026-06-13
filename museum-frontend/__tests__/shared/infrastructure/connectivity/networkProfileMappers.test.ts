@@ -1,32 +1,18 @@
 /**
- * W1-REG-07 (RED) — the three pure mappers.
+ * B-R3 (RED) — the three pure mappers, re-ratified at 10 profiles + un-forced
+ * L1 shape (run `undefined-network-detection-reliability`, spec §10 #5).
  *
- * Spec: master spec §"Three mappers" + tasks.md W1-REG-07. Each mapper translates
- * a frozen profile into one layer's knobs; the kbps→KB/s conversion lives in
- * EXACTLY ONE place (toToxics) — DRY (EARS R4).
+ * Contract evolution (documented, NOT a frozen-test breach):
+ *   - `FetchMockShape.forcedDataModePreference` is REMOVED (US-11.6 / design
+ *     P-08 — dead-code burial UFR-016): the old mapper forced the preference
+ *     for EVERY profile, so the L1 harness never exercised the real `auto`
+ *     resolution (the doc said "un-forced", the code forced). No consumer
+ *     exists outside the registry + this test (verified P-08).
+ *   - the 4 new profiles (`4g` / `5g` / `wifi-metered` / `cellular-degraded`)
+ *     flow through all three mappers; kbps→KB/s stays in EXACTLY ONE place
+ *     (toToxics, EARS R4).
  *
- *   toFetchMockShape(edge) → {
- *     preResponseDelayMs: 200,           // = edge.latencyMs
- *     failProbability: 0.01,             // = edge.lossPct
- *     msPerKbitDown/Up: derived from 200/90 kbps (= 1000 / kbps),
- *     netinfo: toNetInfoSnapshot(edge),
- *     forcedDataModePreference: 'low',   // edge.expectedDataMode
- *   }
- *   toFetchMockShape(normal).forcedDataModePreference → undefined | 'normal' (NOT 'low').
- *
- *   toMiddlewareDescriptor(2g) → {
- *     delayMs: 350, jitterMs: 150, failProbability: 0.02,
- *     sseChunkDelayMs: derived (slower profile → larger), ingressKbps: 40 (= bwUpKbps),
- *   }
- *
- *   toToxics(edge) → ToxiproxyToxic[] shaping BOTH streams (spec §NFR "both streams
- *     sole shaper"): an UPSTREAM bandwidth toxic rate = bwUpKbps/8 = 11.25 KB/s AND a
- *     DOWNSTREAM bandwidth toxic rate = bwDownKbps/8 = 25 KB/s, each carrying its own
- *     `stream` field. kbps→KB/s lives in EXACTLY ONE place (toToxics) — the OTHER two
- *     mappers emit NO KB/s field.
- *   toToxics(offline) → blocking (bandwidth 0 / timeout) toxics on BOTH streams.
- *
- * lib-docs: none (pure mappers). toNetInfoSnapshot reused from W1-REG-04.
+ * lib-docs: none (pure mappers). toNetInfoSnapshot reused from the registry.
  * No inline test entities — profiles sourced from the registry.
  */
 import {
@@ -43,14 +29,27 @@ const edge = NETWORK_PROFILES.edge;
 const twoG = NETWORK_PROFILES['2g'];
 const normal = NETWORK_PROFILES.normal;
 const offline = NETWORK_PROFILES.offline;
+const fourG = NETWORK_PROFILES['4g'];
+const fiveG = NETWORK_PROFILES['5g'];
+const wifiMetered = NETWORK_PROFILES['wifi-metered'];
+const cellularDegraded = NETWORK_PROFILES['cellular-degraded'];
 
-describe('toFetchMockShape (W1-REG-07a)', () => {
-  it('maps edge to the L1 Jest shape with latency/loss/forced-low', () => {
+const allProfiles = Object.values(NETWORK_PROFILES);
+
+const rateOf = (t: ToxiproxyToxic | undefined): number | undefined =>
+  (t?.attributes as { rate?: number } | undefined)?.rate;
+
+const bandwidthToxic = (
+  toxics: ToxiproxyToxic[],
+  stream: 'upstream' | 'downstream',
+): ToxiproxyToxic | undefined => toxics.find((t) => t.type === 'bandwidth' && t.stream === stream);
+
+describe('toFetchMockShape (B-R3 — un-forced L1 shape, US-11.6)', () => {
+  it('maps edge to the L1 Jest shape with latency/loss/netinfo passthrough', () => {
     const shape = toFetchMockShape(edge);
 
     expect(shape.preResponseDelayMs).toBe(edge.latencyMs);
     expect(shape.failProbability).toBeCloseTo(edge.lossPct, 10);
-    expect(shape.forcedDataModePreference).toBe('low');
     expect(shape.netinfo).toEqual(toNetInfoSnapshot(edge));
   });
 
@@ -61,9 +60,21 @@ describe('toFetchMockShape (W1-REG-07a)', () => {
     expect(shape.msPerKbitUp).toBeCloseTo(1000 / edge.bwUpKbps, 6);
   });
 
-  it('does NOT force low for the normal control profile', () => {
-    const shape = toFetchMockShape(normal);
-    expect(shape.forcedDataModePreference).not.toBe('low');
+  // US-11.6 / P-08 — the field is REMOVED, not just un-forced: the L1 harness
+  // must exercise the REAL auto resolution for every profile.
+  it.each(allProfiles.map((p) => [p.name, p] as const))(
+    'no longer emits forcedDataModePreference for "%s" (US-11.6 — L1 exercises real auto resolution)',
+    (_name, profile) => {
+      const shape = toFetchMockShape(profile);
+      expect(shape).not.toHaveProperty('forcedDataModePreference');
+    },
+  );
+
+  it('passes the metered-derived netinfo through for the new profiles (US-11.3)', () => {
+    expect(toFetchMockShape(fourG).netinfo).toEqual(toNetInfoSnapshot(fourG));
+    expect(toFetchMockShape(fourG).netinfo.details?.isConnectionExpensive).toBe(true);
+    expect(toFetchMockShape(wifiMetered).netinfo.details?.isConnectionExpensive).toBe(true);
+    expect(toFetchMockShape(normal).netinfo.details?.isConnectionExpensive).toBe(false);
   });
 
   it('emits no raw KB/s field (conversion belongs to toToxics only)', () => {
@@ -73,7 +84,7 @@ describe('toFetchMockShape (W1-REG-07a)', () => {
   });
 });
 
-describe('toMiddlewareDescriptor (W1-REG-07b)', () => {
+describe('toMiddlewareDescriptor (B-R3 — L2 values incl. the 4 new profiles)', () => {
   it('maps 2g to the L2 descriptor with delay/jitter/loss/ingress', () => {
     const d = toMiddlewareDescriptor(twoG);
 
@@ -83,12 +94,30 @@ describe('toMiddlewareDescriptor (W1-REG-07b)', () => {
     expect(d.ingressKbps).toBe(twoG.bwUpKbps);
   });
 
+  it.each([
+    ['4g', fourG],
+    ['5g', fiveG],
+    ['wifi-metered', wifiMetered],
+    ['cellular-degraded', cellularDegraded],
+  ] as const)('maps new profile "%s" straight from its canonical numbers', (_name, profile) => {
+    const d = toMiddlewareDescriptor(profile);
+
+    expect(d.delayMs).toBe(profile.latencyMs);
+    expect(d.jitterMs).toBe(profile.jitterMs);
+    expect(d.failProbability).toBeCloseTo(profile.lossPct, 10);
+    expect(d.ingressKbps).toBe(profile.bwUpKbps);
+    expect(d.sseChunkDelayMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('derives a positive sseChunkDelayMs that is larger for slower bandwidth', () => {
     const slow = toMiddlewareDescriptor(twoG);
     const fast = toMiddlewareDescriptor(normal);
+    const degraded = toMiddlewareDescriptor(cellularDegraded);
 
     expect(slow.sseChunkDelayMs).toBeGreaterThan(0);
     expect(slow.sseChunkDelayMs).toBeGreaterThan(fast.sseChunkDelayMs);
+    // cellular-degraded (75 kbps down) is even slower than 2g (100 kbps down).
+    expect(degraded.sseChunkDelayMs).toBeGreaterThan(slow.sseChunkDelayMs);
   });
 
   it('emits no raw KB/s field (conversion belongs to toToxics only)', () => {
@@ -98,30 +127,12 @@ describe('toMiddlewareDescriptor (W1-REG-07b)', () => {
   });
 });
 
-/**
- * The both-streams contract (spec §NFR): green adds a per-toxic
- * `stream?: 'upstream' | 'downstream'` to `ToxiproxyToxic` so the mapper shapes
- * both directions. We assert against that future field via a local widening so the
- * contract is expressed test-first without touching the mapper in red.
- */
-type StreamedToxic = ToxiproxyToxic & { readonly stream?: 'upstream' | 'downstream' };
-
-const toxicStream = (t: ToxiproxyToxic): 'upstream' | 'downstream' | undefined =>
-  (t as StreamedToxic).stream;
-
-const rateOf = (t: ToxiproxyToxic | undefined): number | undefined =>
-  (t?.attributes as { rate?: number } | undefined)?.rate;
-
-describe('toToxics (W1-REG-07c — the single kbps→KB/s site, both streams)', () => {
-  it('shapes BOTH streams: upstream rate = bwUpKbps/8 (11.25), downstream rate = bwDownKbps/8 (25)', () => {
+describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profiles)', () => {
+  it('shapes BOTH streams for edge: upstream 90/8 = 11.25 KB/s, downstream 200/8 = 25 KB/s', () => {
     const toxics = toToxics(edge);
 
-    const up = toxics.find(
-      (t: ToxiproxyToxic) => t.type === 'bandwidth' && toxicStream(t) === 'upstream',
-    );
-    const down = toxics.find(
-      (t: ToxiproxyToxic) => t.type === 'bandwidth' && toxicStream(t) === 'downstream',
-    );
+    const up = bandwidthToxic(toxics, 'upstream');
+    const down = bandwidthToxic(toxics, 'downstream');
     expect(up).toBeDefined();
     expect(down).toBeDefined();
 
@@ -134,9 +145,34 @@ describe('toToxics (W1-REG-07c — the single kbps→KB/s site, both streams)', 
     // Exactly the two bandwidth streams (no extras, none dropped).
     const bandwidthStreams = toxics
       .filter((t: ToxiproxyToxic) => t.type === 'bandwidth')
-      .map((t: ToxiproxyToxic) => toxicStream(t))
+      .map((t: ToxiproxyToxic) => t.stream)
       .sort();
     expect(bandwidthStreams).toEqual(['downstream', 'upstream']);
+  });
+
+  it.each([
+    ['4g', fourG, 700 / 8, 1600 / 8],
+    ['5g', fiveG, 5000 / 8, 10000 / 8],
+    ['wifi-metered', wifiMetered, 2000 / 8, 5000 / 8],
+    ['cellular-degraded', cellularDegraded, 30 / 8, 75 / 8],
+  ] as const)(
+    'shapes new profile "%s" with kbps/8 rates on both streams',
+    (_name, profile, expectedUpKBs, expectedDownKBs) => {
+      const toxics = toToxics(profile);
+
+      expect(rateOf(bandwidthToxic(toxics, 'upstream'))).toBeCloseTo(expectedUpKBs, 6);
+      expect(rateOf(bandwidthToxic(toxics, 'downstream'))).toBeCloseTo(expectedDownKBs, 6);
+    },
+  );
+
+  it('carries the symmetric latency toxic with the profile latency/jitter (cellular-degraded 1800/600)', () => {
+    const latency = toToxics(cellularDegraded).find((t) => t.type === 'latency');
+
+    expect(latency).toBeDefined();
+    expect(latency?.attributes).toEqual({
+      latency: cellularDegraded.latencyMs,
+      jitter: cellularDegraded.jitterMs,
+    });
   });
 
   it('emits blocking/timeout toxics on BOTH streams for offline (bandwidth 0)', () => {
@@ -146,11 +182,9 @@ describe('toToxics (W1-REG-07c — the single kbps→KB/s site, both streams)', 
     const isBlocking = (t: ToxiproxyToxic): boolean =>
       t.type === 'timeout' || (t.type === 'bandwidth' && rateOf(t) === 0);
 
-    const blockingUp = toxics.some(
-      (t: ToxiproxyToxic) => toxicStream(t) === 'upstream' && isBlocking(t),
-    );
+    const blockingUp = toxics.some((t: ToxiproxyToxic) => t.stream === 'upstream' && isBlocking(t));
     const blockingDown = toxics.some(
-      (t: ToxiproxyToxic) => toxicStream(t) === 'downstream' && isBlocking(t),
+      (t: ToxiproxyToxic) => t.stream === 'downstream' && isBlocking(t),
     );
     expect(blockingUp).toBe(true);
     expect(blockingDown).toBe(true);

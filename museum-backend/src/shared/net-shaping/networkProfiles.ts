@@ -4,6 +4,8 @@
  * Authoritative spec:
  *   docs/superpowers/specs/2026-06-01-weak-network-resilience-and-test-track-design.md
  *   §"The Profile Registry (the keystone)".
+ *   Re-ratified at 10 profiles by run `undefined-network-detection-reliability`
+ *   (US-11.1/US-11.2 — cost axis `metered` + engine verdict `expectedQuality`).
  *
  * BYTE-IDENTICAL data region with the frontend source of truth
  * (`museum-frontend/shared/infrastructure/connectivity/networkProfiles.ts`). The
@@ -23,11 +25,32 @@ export type NetinfoType = 'none' | 'cellular' | 'wifi';
 /** Cellular generation as surfaced by NetInfo's `details.cellularGeneration`. */
 export type CellularGeneration = '2g' | '3g' | '4g' | '5g';
 
-/** The six ratified profile names. */
-export type NetworkProfileName = 'offline' | '2g' | 'edge' | '3g-lossy' | 'flapping' | 'normal';
+/** The ten ratified profile names. */
+export type NetworkProfileName =
+  | 'offline'
+  | '2g'
+  | 'edge'
+  | '3g-lossy'
+  | 'flapping'
+  | 'normal'
+  | '4g'
+  | '5g'
+  | 'wifi-metered'
+  | 'cellular-degraded';
 
-/** Resolved data mode the profile is expected to drive `resolveDataMode` to. */
+/**
+ * Data mode the profile is expected to drive the REAL `resolveDataMode` to by
+ * LABEL ALONE, with an EMPTY measurement window (quality `'unknown'`, US-11.4).
+ * The measurement verdict lives on the separate {@link ExpectedQuality} axis:
+ * `cellular-degraded` is `'normal'` here (healthy 4g label) yet `'slow'` there.
+ */
 export type ExpectedDataMode = 'low' | 'normal';
+
+/**
+ * Quality-ENGINE verdict the profile's derived samples must land on (D-04 —
+ * an EXPLICIT data-region field, never derived inside a test).
+ */
+export type ExpectedQuality = 'ok' | 'slow';
 
 /** Connect/disconnect schedule attached ONLY to the flapping profile. */
 export interface DutyCycle {
@@ -49,6 +72,14 @@ export interface NetworkProfile {
   readonly netinfoType: NetinfoType;
   readonly cellularGeneration: CellularGeneration | null;
   readonly expectedDataMode: ExpectedDataMode;
+  /**
+   * COST axis (US-11.2): source of `details.isConnectionExpensive` in
+   * snapshots. All cellular profiles are metered; plain wifi + offline are not;
+   * `wifi-metered` models the Android hotspot/metered-wifi case (US-02.6).
+   */
+  readonly metered: boolean;
+  /** Engine verdict for profile-derived samples; `null` = offline (no samples possible). */
+  readonly expectedQuality: ExpectedQuality | null;
   /** Present ONLY on `flapping`. */
   readonly dutyCycle?: DutyCycle;
 }
@@ -98,6 +129,8 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'none',
       cellularGeneration: null,
       expectedDataMode: 'low',
+      metered: false,
+      expectedQuality: null,
     }),
     '2g': Object.freeze({
       name: '2g',
@@ -110,6 +143,8 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'cellular',
       cellularGeneration: '2g',
       expectedDataMode: 'low',
+      metered: true,
+      expectedQuality: 'ok',
     }),
     edge: Object.freeze({
       name: 'edge',
@@ -122,6 +157,8 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'cellular',
       cellularGeneration: '2g',
       expectedDataMode: 'low',
+      metered: true,
+      expectedQuality: 'ok',
     }),
     '3g-lossy': Object.freeze({
       name: '3g-lossy',
@@ -134,6 +171,8 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'cellular',
       cellularGeneration: '3g',
       expectedDataMode: 'low',
+      metered: true,
+      expectedQuality: 'ok',
     }),
     flapping: Object.freeze({
       name: 'flapping',
@@ -146,6 +185,8 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'cellular',
       cellularGeneration: '3g',
       expectedDataMode: 'low',
+      metered: true,
+      expectedQuality: 'ok',
       dutyCycle: Object.freeze({
         onlineMs: 5000,
         offlineMs: 3000,
@@ -163,6 +204,64 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
       netinfoType: 'wifi',
       cellularGeneration: null,
       expectedDataMode: 'normal',
+      metered: false,
+      expectedQuality: 'ok',
+    }),
+    '4g': Object.freeze({
+      name: '4g',
+      label: '4G (healthy cellular)',
+      latencyMs: 175,
+      jitterMs: 50,
+      bwDownKbps: 1600,
+      bwUpKbps: 700,
+      lossPct: 0,
+      netinfoType: 'cellular',
+      cellularGeneration: '4g',
+      expectedDataMode: 'normal',
+      metered: true,
+      expectedQuality: 'ok',
+    }),
+    '5g': Object.freeze({
+      name: '5g',
+      label: '5G (healthy cellular)',
+      latencyMs: 60,
+      jitterMs: 20,
+      bwDownKbps: 10000,
+      bwUpKbps: 5000,
+      lossPct: 0,
+      netinfoType: 'cellular',
+      cellularGeneration: '5g',
+      expectedDataMode: 'normal',
+      metered: true,
+      expectedQuality: 'ok',
+    }),
+    'wifi-metered': Object.freeze({
+      name: 'wifi-metered',
+      label: 'WiFi (metered hotspot)',
+      latencyMs: 80,
+      jitterMs: 30,
+      bwDownKbps: 5000,
+      bwUpKbps: 2000,
+      lossPct: 0,
+      netinfoType: 'wifi',
+      cellularGeneration: null,
+      expectedDataMode: 'normal',
+      metered: true,
+      expectedQuality: 'ok',
+    }),
+    'cellular-degraded': Object.freeze({
+      name: 'cellular-degraded',
+      label: 'Cellular degraded (5G one-bar basement)',
+      latencyMs: 1800,
+      jitterMs: 600,
+      bwDownKbps: 75,
+      bwUpKbps: 30,
+      lossPct: 0.3,
+      netinfoType: 'cellular',
+      cellularGeneration: '4g',
+      expectedDataMode: 'normal',
+      metered: true,
+      expectedQuality: 'slow',
     }),
   },
 );
@@ -172,12 +271,14 @@ export const NETWORK_PROFILES: Readonly<Record<NetworkProfileName, NetworkProfil
 
 /**
  * Builds a structural NetInfo snapshot for a profile, consumable by the REAL
- * `resolveDataMode('auto', snapshot)`. `isConnectionExpensive` is nested under
- * `details` (mirrors NetInfo's real shape).
+ * `resolveDataMode('auto', snapshot, quality)`. `isConnectionExpensive` is
+ * nested under `details` (mirrors NetInfo's real shape) and DERIVES from
+ * `profile.metered` on the online branch (US-11.3). The offline branch forces
+ * it `false`, override included: no cost without an interface (US-02.5).
  */
 export function toNetInfoSnapshot(
   profile: NetworkProfile,
-  options?: { online?: boolean },
+  options?: { online?: boolean; isConnectionExpensive?: boolean },
 ): NetInfoSnapshot {
   const defaultOnline = profile.netinfoType !== 'none';
   const online = options?.online ?? defaultOnline;
@@ -197,7 +298,7 @@ export function toNetInfoSnapshot(
     isConnected: true,
     type: profile.netinfoType,
     details: {
-      isConnectionExpensive: false,
+      isConnectionExpensive: options?.isConnectionExpensive ?? profile.metered,
       cellularGeneration: profile.cellularGeneration,
     },
   };
@@ -236,6 +337,10 @@ export function flapScheduleAt(profile: NetworkProfile, elapsedMs: number): Flap
  * L1 Jest fetch-mock shape. Carries a `string` index signature so harnesses
  * (and the contract tests) can index it generically — it is a loosely-typed
  * config descriptor, not a domain entity.
+ *
+ * `forcedDataModePreference` was REMOVED (US-11.6 / UFR-016 burial): the old
+ * mapper forced the preference for EVERY profile, so the L1 harness never
+ * exercised the real `auto` resolution.
  */
 export interface FetchMockShape {
   readonly preResponseDelayMs: number;
@@ -243,7 +348,6 @@ export interface FetchMockShape {
   readonly msPerKbitDown: number;
   readonly msPerKbitUp: number;
   readonly netinfo: NetInfoSnapshot;
-  readonly forcedDataModePreference?: 'low' | 'normal';
   readonly [key: string]: unknown;
 }
 
@@ -270,7 +374,11 @@ function msPerKbit(bwKbps: number): number {
   return bwKbps === 0 ? Number.POSITIVE_INFINITY : 1000 / bwKbps;
 }
 
-/** L1 — translate a profile into the Jest fetch-mock shape. */
+/**
+ * L1 — translate a profile into the Jest fetch-mock shape. No data-mode
+ * preference is forced (US-11.6): the harness exercises the REAL `auto`
+ * resolution against the metered-derived `netinfo` snapshot.
+ */
 export function toFetchMockShape(profile: NetworkProfile): FetchMockShape {
   return {
     preResponseDelayMs: profile.latencyMs,
@@ -278,7 +386,6 @@ export function toFetchMockShape(profile: NetworkProfile): FetchMockShape {
     msPerKbitDown: msPerKbit(profile.bwDownKbps),
     msPerKbitUp: msPerKbit(profile.bwUpKbps),
     netinfo: toNetInfoSnapshot(profile),
-    forcedDataModePreference: profile.expectedDataMode,
   };
 }
 

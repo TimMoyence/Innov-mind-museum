@@ -40,6 +40,32 @@ export interface CompressionDecision {
 /** DataMode the picker resolved. `edge` is treated like `low` (even weaker network). */
 export type CompressionDataMode = 'low' | 'edge' | 'normal';
 
+/**
+ * Resolves the compression mode from the QUALITY axis (`resolved`) plus the
+ * COST axis (`metered`, gated by the user `preference`) — D-06, run
+ * undefined-network-detection-reliability.
+ *
+ * Returns `'low'` iff `resolved === 'low'` OR (`preference === 'auto'` AND
+ * `metered`), otherwise `'normal'` — never the dead `'edge'` mode:
+ * - `resolved === 'low'` (measured quality, label 2g/3g, offline, or explicit
+ *   `low` preference via the resolver) always compresses aggressively;
+ * - metered networks in `auto` compress aggressively even when healthy
+ *   (US-02.3 — an upload's volume is a COST, INV-02);
+ * - an explicit `'normal'` preference bypasses the cost gate (US-08.2, INV-03).
+ *
+ * Pure, side-effect-free companion to {@link decideCompression}: callers feed
+ * the result straight into `decideCompression(mode, webpSupported)`.
+ */
+export function resolveCompressionMode(args: {
+  resolved: 'low' | 'normal';
+  preference: 'auto' | 'low' | 'normal';
+  metered: boolean;
+}): CompressionDataMode {
+  if (args.resolved === 'low') return 'low';
+  if (args.preference === 'auto' && args.metered) return 'low';
+  return 'normal';
+}
+
 const NORMAL_UPLOAD: ImageProfile = {
   maxDimensionPx: 1600,
   format: 'jpeg',

@@ -36,7 +36,7 @@ This scenario is small (< 500 affected), of one data type only (email), and cont
 1. Go to <https://notifications.cnil.fr/notifications/index>. Log in.
 2. Click **"Notifier une violation de données"** → **"Nouveau"**.
 3. Section "Identité du responsable de traitement" — verify the pre-filled fields. Empty fields = STOP and call CNIL support; the dry-run uncovers the gap.
-4. Section "Coordonnées du DPO" — fill in founder name + `dpo@musaium.com` (alias, → forward to founder personal). NOTE: this email alias must exist; if not, file `[TODO]` ticket to create it as part of C8.1 follow-up.
+4. Section "Coordonnées du DPO" — fill in founder name + `dpo@musaium.com` (alias, → forward to `contact@musaium.com`). NOTE: this email alias must exist; if not, file `[TODO]` ticket to create it as part of C8.1 follow-up.
 5. Section "Nature de la violation" — choose `confidentiality` only, with cause `dysfonctionnement applicatif` and `interne` = oui.
 6. Section "Catégories de données" — `email` only.
 7. Section "Catégories de personnes" — `prospects / visiteurs`.

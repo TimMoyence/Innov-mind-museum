@@ -18,7 +18,7 @@ import * as ImagePickerLib from 'expo-image-picker';
 
 import { normalizeImageMimeTypeFromExtension } from '@/features/chat/infrastructure/chatApi/_internals';
 import { optimizeImageAdaptive } from './imageUploadOptimization';
-import { decideCompression } from './compressionDecision.pure';
+import { decideCompression, resolveCompressionMode } from './compressionDecision.pure';
 import { useDataMode } from './DataModeProvider';
 
 /** RN-shaped image file consumed by the compare pipeline. */
@@ -39,7 +39,7 @@ const describeImage = (uri: string): { name: string; type: string } => {
 
 export const useCompareImagePicker = () => {
   const { t } = useTranslation();
-  const { resolved } = useDataMode();
+  const { resolved, preference, metered } = useDataMode();
 
   const pickForCompare = useCallback(async (): Promise<CompareImageFile | null> => {
     const { status } = await ImagePickerLib.requestMediaLibraryPermissionsAsync();
@@ -71,7 +71,12 @@ export const useCompareImagePicker = () => {
     // optimized URI extension (.webp / .jpg) so the multipart header matches the
     // bytes actually sent. Fall back to the raw URI so a failed optimization
     // never blocks the compare flow (parity useImagePicker).
-    const decision = decideCompression(resolved, true);
+    // D-06: aggressive iff quality is low OR (pref 'auto' AND metered) —
+    // upload volume is a COST decision (INV-02, US-02.3).
+    const decision = decideCompression(
+      resolveCompressionMode({ resolved, preference, metered }),
+      true,
+    );
     let uri = firstAsset.uri;
     try {
       const { uploadUri } = await optimizeImageAdaptive(firstAsset.uri, decision);
@@ -81,7 +86,7 @@ export const useCompareImagePicker = () => {
     }
 
     return { uri, ...describeImage(uri) };
-  }, [resolved, t]);
+  }, [resolved, preference, metered, t]);
 
   return { pickForCompare };
 };

@@ -1532,3 +1532,21 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - **Reste à fermer (W2/W3 post-launch, séquencé, code-only, par vague)** :
   - **W2** : 34 racines de composition DI B1 (`useCase/index.ts` → `module-root index.ts`, 6 modules, auth 456 LOC + 17 importers) + 2 B2 résiduels (daily-art catalog, admin `composition.ts`) ; armer l'arm `application` une fois propre.
   - **W3** : ~16 edges C1/C2 chat-adapter→useCase + untangle bidirectionnel `llm-prompt-builder.ts` ; armer l'arm `infrastructure` ; **close TD-62 complet** (les 3 arms armés, ARCH-01 fermée sur les 3 couches). Gaté sur la suite chat complète (447) + matrice e2e guardrail réelle.
+
+---
+
+## Review run `undefined-network-detection-reliability` — 2026-06-12 (restes découverts hors périmètre, reviewer fresh)
+
+> TD-LLM-V2-STALE-COMMENTS (commentaires `llm:v2` stale, LOW doc-only) : **traité le jour même** — sweep des 5 fichiers src + ADR-036/038 + ROADMAP_AUDIT_TRAIL + lib-docs/ioredis vers `llm:{KEY_VERSION}:*`/v3 (doctrine « stale = fix maintenant », pas de tracking). Migration `1779536483274` immuable (seule exemption) ; mentions « at the time » des tests = historiquement exactes, conservées.
+
+### TD-BE-PREEXISTING-RED-UNITS — 2 suites unit BE rouges localement sur HEAD non modifié + 1 flake d'ordre (MEDIUM)
+
+- [ ] **Statut** : ouvert (créé 2026-06-12, découvert par le run full-suite BE de la review — env local Docker OFF / Redis OFF).
+- **Référence code** :
+  ```
+  tests/unit/daily-art/daily-art.test.ts:56        # « cycles through the list » : jan1.title ≠ jan31.title (attendu identique via % 30)
+  tests/unit/museum/opening-hours-parser.test.ts:18 # 3 cas currently_open/currently_closed reçoivent l'inverse
+  tests/unit/routes/auth.route.test.ts:803          # export 200 attendu → 405 reçu, UNIQUEMENT en batch (passe solo 73/73)
+  ```
+- **Symptôme (vérifié 2026-06-12)** : `daily-art` + `opening-hours-parser` échouent AUSSI en isolation (`--testPathPattern`, 4 fails/28) alors que `git diff --stat` sur ces modules = 0 ligne — préexistant au cycle, cause non investiguée (suspect : dépendance date/heure/timezone locale, à confirmer). `auth.route` est un flake d'ordre sous Redis-off (bruit BullMQ/ioredis `ECONNREFUSED 6379`, classe open-handles connue) : rouge dans un run batch scope chat/routes/contract, vert solo et vert dans le full run suivant.
+- **Comment fermer** : (a) root-cause les 2 suites date/heure-dépendantes (clock injectée ou dates fixes timezone-safe) ; (b) auth.route : isoler la dépendance d'ordre (probable état partagé app/Redis entre suites) — recouper avec la dette « full unit-integration `--forceExit=false` = 845 fails/102 suites ».

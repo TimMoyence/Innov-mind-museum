@@ -91,7 +91,7 @@ export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
     {
       id: 'contact',
       title: '10. Contact',
-      paragraphs: ['For questions about these terms, contact: tim.moyence@gmail.com.'],
+      paragraphs: ['For questions about these terms, contact: contact@musaium.com.'],
     },
   ],
 };

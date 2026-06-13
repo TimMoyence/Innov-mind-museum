@@ -586,14 +586,16 @@
     "offlineImageFailed": "No se pudo guardar la imagen para el envío sin conexión. Tu mensaje fue puesto en cola sin la imagen.",
     "audio_mode_on": "Audiodescripción activada",
     "audio_mode_off": "Audiodescripción desactivada",
-    "lowDataActive": "Modo ahorro de datos activo",
+    "lowDataBadge": {
+      "label": "Modo ahorro de datos",
+      "a11yLabel": "Modo ahorro de datos activo. Respuestas de voz en pausa. Abre los ajustes de datos."
+    },
     "cachedResponse": "Respuesta desde caché local",
     "savedForLater": "Pregunta guardada para más tarde",
     "optimistic": {
       "image_placeholder": "Imagen enviada",
       "voice_placeholder": "Mensaje de voz"
     },
-    "lowDataDetails": "Ahorro de datos — TTS desactivado, imágenes comprimidas",
     "tts": {
       "disabled_low_data": "Desactivado en modo ahorro de datos. Cámbialo en Ajustes."
     },

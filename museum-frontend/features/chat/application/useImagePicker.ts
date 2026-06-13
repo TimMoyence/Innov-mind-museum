@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePickerLib from 'expo-image-picker';
 
 import { optimizeImageAdaptive } from './imageUploadOptimization';
-import { decideCompression } from './compressionDecision.pure';
+import { decideCompression, resolveCompressionMode } from './compressionDecision.pure';
 import { useDataMode } from './DataModeProvider';
 
 /**
@@ -14,14 +14,19 @@ import { useDataMode } from './DataModeProvider';
  */
 export const useImagePicker = () => {
   const { t } = useTranslation();
-  const { resolved } = useDataMode();
+  const { resolved, preference, metered } = useDataMode();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const setOptimizedImage = useCallback(
     async (uri: string) => {
       // WebP is the preferred weak-network codec; the optimizer retries JPEG at
       // runtime if a platform rejects the encode, so we request it optimistically.
-      const decision = decideCompression(resolved, true);
+      // D-06: aggressive iff quality is low OR (pref 'auto' AND metered) —
+      // upload volume is a COST decision (INV-02, US-02.3).
+      const decision = decideCompression(
+        resolveCompressionMode({ resolved, preference, metered }),
+        true,
+      );
       try {
         const { uploadUri } = await optimizeImageAdaptive(uri, decision);
         setSelectedImage(uploadUri);
@@ -30,7 +35,7 @@ export const useImagePicker = () => {
         setSelectedImage(uri);
       }
     },
-    [resolved],
+    [resolved, preference, metered],
   );
 
   const onPickImage = useCallback(async () => {

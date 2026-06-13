@@ -172,7 +172,7 @@ export async function commitAssistantResponse(
     /** Absent → grounding gate skipped (NFR8 backward-compat). */
     routerFacts?: readonly string[];
     /**
-     * PR-P0-1 (2026-05-23) — exact `llm:v2:*` Redis key emitted by
+     * PR-P0-1 (2026-05-23) — exact `llm:{KEY_VERSION}:*` Redis key emitted by
      * `LlmCacheServiceImpl.computeKey` when the assistant response was
      * cached. Null/absent for non-cached paths (image-only, no llmCache,
      * image present but no visual signature, etc.). Stamped on the

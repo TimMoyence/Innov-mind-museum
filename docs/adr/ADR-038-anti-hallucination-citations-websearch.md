@@ -73,7 +73,7 @@ The seven decisions below form an indivisible package. Partial adoption (e.g. ci
 
 **Neutral:**
 
-- **LLM cache key shape unchanged by this ADR.** ~~ADR-036 v1 key `llm:v1:...`~~ → note: the key was bumped to `v2` by commit `d54552beb` (2026-05-19, unrelated to this ADR) to fold `voiceMode` + `audioDescriptionMode` into the hash. The citations schema v2 addition of this ADR lives on the *output* side and does not alter `contextClass` derivation. Current key shape: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` — source of truth `llm-cache.service.ts:119`.
+- **LLM cache key shape unchanged by this ADR.** ~~ADR-036 v1 key `llm:v1:...`~~ → note: the key was bumped to `v2` by commit `d54552beb` (2026-05-19, unrelated to this ADR) to fold `voiceMode` + `audioDescriptionMode` into the hash. The citations schema v2 addition of this ADR lives on the *output* side and does not alter `contextClass` derivation. Current key shape: `llm:v3:{contextClass}:{museumId|none}:{userId|anon}:{sha256OfInput}` (v2→v3 le 2026-06-12, `lowDataMode` folded, commit `60b6bcdc`) — source of truth `llm-cache.service.ts:14` (`KEY_VERSION`).
 
 ---
 
@@ -98,7 +98,7 @@ Both spans go through `safeTrace()` (`museum-backend/src/shared/observability/sa
 
 | Span name | Wired in | Attributes (PII-hash safe) |
 |---|---|---|
-| `chat.knowledge.lookup.span` | `KnowledgeRouterService.emitTelemetry` (`useCase/knowledge/knowledge-router.service.ts:360`) | `knowledge.source`, `knowledge.fallback_triggered`, `knowledge.judge_confidence`, `knowledge.search_term_hash` (sha256[:16] — NFR7), `knowledge.latency_ms.{kb,judge,web}` |
+| `chat.knowledge.lookup.span` | `KnowledgeRouterService.emitTelemetry` (`useCase/knowledge/knowledge-router.service.ts:491`) | `knowledge.source`, `knowledge.fallback_triggered`, `knowledge.judge_confidence`, `knowledge.search_term_hash` (sha256[:16] — NFR7), `knowledge.latency_ms.{kb,judge,web}` |
 | `chat.citations.head_probe.span` | `UrlHeadProbe.probeBatch` (`useCase/orchestration/url-head-probe.ts`) | `head_probe.url_count`, `head_probe.cache_hit_rate`, `head_probe.unreachable_count` |
 
 ### Grafana panels (chat-latency dashboard, id 8-11)

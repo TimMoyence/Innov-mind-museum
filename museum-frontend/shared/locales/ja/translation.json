@@ -586,14 +586,16 @@
     "offlineImageFailed": "オフライン送信用に画像を保存できませんでした。画像なしでメッセージがキューに追加されました。",
     "audio_mode_on": "音声ガイド オン",
     "audio_mode_off": "音声ガイド オフ",
-    "lowDataActive": "データ節約モードが有効です",
+    "lowDataBadge": {
+      "label": "データ節約モード",
+      "a11yLabel": "データ節約モードが有効です。音声の返答は一時停止中です。データ設定を開きます。"
+    },
     "cachedResponse": "ローカルキャッシュからの応答",
     "savedForLater": "質問を後で送信するために保存しました",
     "optimistic": {
       "image_placeholder": "画像送信",
       "voice_placeholder": "音声メッセージ"
     },
-    "lowDataDetails": "データセーバー有効 — TTSは無効、画像は圧縮",
     "tts": {
       "disabled_low_data": "データセーバーで無効です。設定で変更できます。"
     },

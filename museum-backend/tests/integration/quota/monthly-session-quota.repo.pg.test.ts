@@ -48,7 +48,14 @@ const describeIntegration = shouldRunIntegration ? describe : describe.skip;
  * @returns A Date pinned to the 1st of that month at UTC midnight.
  */
 function monthStartUtc(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  // Noon UTC (not midnight) so the value's LOCAL calendar day equals its UTC day
+  // in every realistic runner timezone (UTC-11..UTC+11). The Postgres `date`
+  // column round-trips through LOCAL midnight while the repo compares the month
+  // boundary via toISOString() (UTC); a midnight-UTC seed desynced the two in
+  // behind-UTC zones (e.g. EDT made the seed land on the previous day) and the
+  // WHERE clause took the rollover branch instead of refusing. Noon removes the
+  // boundary. CI/prod (UTC) is unaffected.
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 12));
 }
 
 /**
@@ -57,27 +64,8 @@ function monthStartUtc(d: Date): Date {
  * @returns A Date pinned to the 1st of the previous month at UTC midnight.
  */
 function previousMonthStartUtc(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1));
-}
-
-/**
- * The calendar `YYYY-MM-DD` a Date denotes, read from LOCAL components.
- *
- * A Postgres `date` column carries no time/zone; the `pg` driver materialises
- * it as a JS Date at LOCAL midnight (e.g. `2026-06-01` → `2026-06-01T00:00 +TZ`),
- * whereas `Date.UTC(y, m, 1)` yields UTC midnight. Comparing the two via
- * `toISOString()` (UTC) is off-by-one whenever the runner's offset is ahead of
- * UTC. Reading LOCAL components puts both inputs on the same calendar basis, so
- * the assertion checks the intended business day (1st of the current month)
- * without timezone fragility. Both arguments below are normalised identically.
- * @param d The date to normalise.
- * @returns The `YYYY-MM-DD` local calendar day of `d`.
- */
-function localCalendarDay(d: Date): string {
-  const y = d.getFullYear().toString().padStart(4, '0');
-  const m = (d.getMonth() + 1).toString().padStart(2, '0');
-  const day = d.getDate().toString().padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  // Noon UTC — see monthStartUtc for the timezone-portability rationale.
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1, 12));
 }
 
 describeIntegration(
@@ -169,21 +157,19 @@ describeIntegration(
         expect(result).not.toBeNull();
         expect(result?.sessionsMonthCount).toBe(1);
         // Business intent: the start is reset to the 1st of the *current* month.
-        // Derive the expected day from `now`'s LOCAL components (the same basis
-        // `localCalendarDay` reads the pg-returned date on) so the assertion is
-        // timezone-consistent rather than off-by-one across UTC/local midnight.
-        const expectedCurrentMonthFirst = localCalendarDay(
-          new Date(now.getFullYear(), now.getMonth(), 1),
-        );
-        expect(localCalendarDay((result as { sessionsMonthStart: Date }).sessionsMonthStart)).toBe(
+        // The repo stores + returns sessions_month_start as the UTC calendar day
+        // it computed (currentMonthStart.toISOString().slice(0,10)), so assert on
+        // that SAME UTC basis. A prior local-components comparison was off-by-one
+        // against the UTC-anchored value in behind-UTC runners (e.g. EDT).
+        const utcDay = (d: Date): string => new Date(d).toISOString().slice(0, 10);
+        const expectedCurrentMonthFirst = currentMonthStart.toISOString().slice(0, 10);
+        expect(utcDay((result as { sessionsMonthStart: Date }).sessionsMonthStart)).toBe(
           expectedCurrentMonthFirst,
         );
 
         const after = await userRepo.findOneByOrFail({ id: seeded.id });
         expect(after.sessionsMonthCount).toBe(1);
-        expect(localCalendarDay(new Date(after.sessionsMonthStart!))).toBe(
-          expectedCurrentMonthFirst,
-        );
+        expect(utcDay(new Date(after.sessionsMonthStart!))).toBe(expectedCurrentMonthFirst);
       });
     });
   },

@@ -82,7 +82,12 @@ function tsString(value) {
  */
 function emitSection(section, indent) {
   const inner = indent + '  ';
-  const paragraphs = section.paragraphs.map((p) => `${inner}    ${tsString(p)},`).join('\n');
+  // Array elements sit one indent level (2 spaces) inside the `paragraphs: [`
+  // line, which is itself at `inner`. Emitting `inner + '  '` keeps the output
+  // prettier-clean; `inner + '    '` over-indented by 2 and caused lint-staged
+  // (prettier --write) to reformat on commit -> perpetual codegen drift.
+  const paragraphLine = inner + '  ';
+  const paragraphs = section.paragraphs.map((p) => `${paragraphLine}${tsString(p)},`).join('\n');
   return [
     `${indent}{`,
     `${inner}id: ${tsString(section.id)},`,
@@ -196,7 +201,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   lastUpdated: ${tsString(canonical.lastUpdated)},
   controllerName: 'InnovMind (Tim Moyence, Entrepreneur Individuel)',
   controllerAddress: 'France',
-  contactEmail: 'tim.moyence@gmail.com',
+  contactEmail: 'contact@musaium.com',
   dpoContact: "Non désigné (non requis au titre de l'article 37 du RGPD)",
   rightsSummary: [
     'Access your data',

@@ -34,8 +34,11 @@
  *   - museum-mode   → museumContext.museumId set, no userPreferencesHash
  *   - personalized  → userPreferencesHash set
  *   `LlmCacheServiceImpl.classify` (llm-cache.service.ts:25) is what routes between
- *   them; the key prefix differs (`llm:v2:generic:*` vs `llm:v2:museum-mode:*` vs
- *   `llm:v2:personalized:*`). Table-driven coverage below.
+ *   them; the key prefix differs (`llm:v3:generic:*` vs `llm:v3:museum-mode:*` vs
+ *   `llm:v3:personalized:*`). Table-driven coverage below.
+ *   (Historical mentions of `llm:v2:*` above describe the namespace at the time
+ *   of PR-P0-1 ; KEY_VERSION bumped v2→v3 on 2026-06-12 for the lowDataMode
+ *   dimension — US-12.2/INV-21, run undefined-network-detection-reliability.)
  */
 
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
@@ -259,10 +262,11 @@ describe('Feedback cache invalidation (non-tautological, UFR-022 PR-P0-1)', () =
   // by re-invoking the production hash function — that is the structural
   // anti-tautology of this suite.
   // ---------------------------------------------------------------------------
+  // INV-21 — prefixes pinned on KEY_VERSION v3 (lowDataMode bump 2026-06-12).
   describe.each<['generic' | 'museum-mode' | 'personalized', string]>([
-    ['generic', 'llm:v2:generic:'],
-    ['museum-mode', 'llm:v2:museum-mode:'],
-    ['personalized', 'llm:v2:personalized:'],
+    ['generic', 'llm:v3:generic:'],
+    ['museum-mode', 'llm:v3:museum-mode:'],
+    ['personalized', 'llm:v3:personalized:'],
   ])(
     'purges the exact LlmCacheServiceImpl entry for contextClass=%s',
     (variant, expectedPrefix) => {
@@ -278,7 +282,7 @@ describe('Feedback cache invalidation (non-tautological, UFR-022 PR-P0-1)', () =
         // Sanity: confirm prefix shape matches LlmCacheServiceImpl namespace
         // (this is a SHAPE check on the captured key, not a recomputation
         // — if this passes but the purge assertion below fails, the bug is
-        // proven: the cache wrote under `llm:v2:*` but the feedback path
+        // proven: the cache wrote under `llm:v3:*` but the feedback path
         // purges something else).
         expect(realKey.startsWith(expectedPrefix)).toBe(true);
         expect(memCache.store.has(realKey)).toBe(true);
@@ -447,7 +451,7 @@ describe('Feedback cache invalidation (non-tautological, UFR-022 PR-P0-1)', () =
   // No cache injected — preserve existing early-return semantic.
   // ---------------------------------------------------------------------------
   it('does not throw when ChatMediaService is constructed without a cache (early return)', async () => {
-    const row = makeAssistantRow('llm:v2:museum-mode:7:42:abcdef');
+    const row = makeAssistantRow('llm:v3:museum-mode:7:42:abcdef');
     const repo = makeChatRepo({
       getMessageById: jest.fn().mockResolvedValue(row),
       upsertMessageFeedback: jest.fn().mockResolvedValue(undefined),

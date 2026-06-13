@@ -60,7 +60,8 @@ export class ChatMessage {
   /**
    * PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie.
    *
-   * The exact Redis key (`llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`)
+   * The exact Redis key (`llm:{KEY_VERSION}:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`,
+   * v3 since the 2026-06-12 `lowDataMode` bump — see `llm-cache.service.ts:14`)
    * used by `LlmCacheServiceImpl` when this assistant response was cached.
    * Read at feedback time by `ChatMediaService.invalidateCacheForFeedback`
    * to purge the exact entry (replaces the broken `chat:llm:*` cartesian

@@ -1,55 +1,51 @@
 /**
- * RED test — T2.5 (run 2026-05-21-connectivity-offline-first).
+ * GlobalOfflineBannerHost — offline-only host.
+ * Run `undefined-network-detection-reliability`, cluster D, task D-R1 (TR-07).
  *
- * Proves the absence of a global offline-banner host. Today `OfflineBanner` is
- * only mounted inside the chat screen (app/(stack)/chat/[sessionId].tsx:493);
- * there is no app-root host that sources `isOnline` from the connectivity
- * context and renders the banner on every screen.
+ * CONTRACT EVOLUTION (spec §10 invalidated test #8, INV-12 / INV-13): the host
+ * keeps mounting the single global OfflineBanner (offline state surfaced on
+ * EVERY screen, auth included — R8/R10 unchanged) but no longer renders ANY
+ * low-data UI: the low-data indicator moves to the chat-scoped `LowDataBadge`
+ * (own component test, D-R2). The former low-data host cases are replaced by
+ * the proof that the host is offline-only.
  *
- * Spec R8 (exactly one global mount) / R10 (offline surfaced on any screen),
- * design §D5. Target: a small `GlobalOfflineBannerHost` component (mirrors the
- * PaywallModalHost pattern) reading `useConnectivity().isOnline` and rendering
- * `<OfflineBanner isOffline={!isOnline} pendingCount={0} />`. Also requires a
- * `testID="offline-banner"` on the offline `<View>` for the Maestro flow (T3.1).
+ * No `useDataMode` mock (D-R1): low-data is produced through the REAL
+ * `DataModeProvider` with `preference: 'low'` (INV-03 short-circuit).
  *
- * Green-phase path contract: `GlobalOfflineBannerHost` is exported from
- *   shared/infrastructure/connectivity/GlobalOfflineBannerHost.tsx
- * (co-located with the connectivity module). If green chooses another path it
- * MUST keep this import resolvable — emit BLOCK-TEST-WRONG instead of relocating.
- *
- * lib-docs cited: none lib-specific (React composition) — design §D5. NetInfo /
- * react-query are not imported by the banner.
- *
- * RED contract: FAILS before T2.5 because the module/component does not exist
- * (import resolution error).
+ * RED contract: the "null while online even in low-data" case FAILS today
+ * because OfflineBanner still renders the yellow variant. If green believes a
+ * case is wrong, emit BLOCK-TEST-WRONG — never edit this file (UFR-022).
  */
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
 
-// Tri-state connectivity context driven per-test.
+// Tri-state connectivity context driven per-test (host consumes useConnectivity).
 let mockIsOnline = true;
 jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   useConnectivity: () => ({
-    isConnected: mockIsOnline ? true : false,
-    isInternetReachable: mockIsOnline ? true : false,
+    isConnected: mockIsOnline,
+    isInternetReachable: mockIsOnline,
     isOnline: mockIsOnline,
   }),
 }));
 
-// OfflineBanner also consumes useDataMode for the low-data branch.
-let mockIsLowData = false;
-jest.mock('@/features/chat/application/DataModeProvider', () => ({
-  useDataMode: () => ({ isLowData: mockIsLowData }),
-}));
-
 import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
+import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
+import { useDataModePreferenceStore } from '@/features/settings/dataModeStore';
 
-describe('GlobalOfflineBannerHost — T2.5 / spec R8+R10 / design D5', () => {
+describe('GlobalOfflineBannerHost — offline-only (D-R1, INV-12/INV-13)', () => {
   beforeEach(() => {
     mockIsOnline = true;
-    mockIsLowData = false;
+  });
+
+  afterEach(() => {
+    // act(): a mounted DataModeProvider subscribes to the zustand store —
+    // resetting outside act() triggers the React update warning.
+    act(() => {
+      useDataModePreferenceStore.setState({ preference: 'auto' });
+    });
   });
 
   it('renders the offline banner (offline.title) when isOnline === false', () => {
@@ -58,16 +54,26 @@ describe('GlobalOfflineBannerHost — T2.5 / spec R8+R10 / design D5', () => {
     expect(getByText('offline.title')).toBeTruthy();
   });
 
-  it('exposes the offline-banner testID for the Maestro flow when offline', () => {
+  it('exposes the offline-banner testID for the Maestro flow when offline (INV-13)', () => {
     mockIsOnline = false;
     const { getByTestId } = render(<GlobalOfflineBannerHost />);
     expect(getByTestId('offline-banner')).toBeTruthy();
   });
 
-  it('renders null when online and not in low-data mode', () => {
+  it('renders null when online', () => {
     mockIsOnline = true;
-    mockIsLowData = false;
     const { toJSON } = render(<GlobalOfflineBannerHost />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders null when online EVEN while the resolved data mode is low (INV-12 — host is offline-only)', () => {
+    mockIsOnline = true;
+    useDataModePreferenceStore.setState({ preference: 'low' });
+    const { toJSON } = render(
+      <DataModeProvider>
+        <GlobalOfflineBannerHost />
+      </DataModeProvider>,
+    );
     expect(toJSON()).toBeNull();
   });
 });

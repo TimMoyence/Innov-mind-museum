@@ -36,6 +36,15 @@ echo "[setup] running migrations…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   pnpm migration:run
 
+# Seed the demo museums (idempotent upsert ON CONFLICT slug). ROOT CAUSE of the
+# "Maestro full never green" history: museums were never seeded in CI, so every
+# museum-shard / picker flow ran against an empty `museums` table. This single
+# site covers ALL three Maestro boot paths (Android shard matrix, netshape
+# nightly, iOS nightly) since each calls this script — no per-job inline seed.
+echo "[setup] seeding demo museums…"
+DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
+  pnpm seed:museums
+
 # Start the backend API in the background, log to /tmp/backend.log
 echo "[setup] starting backend API…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \

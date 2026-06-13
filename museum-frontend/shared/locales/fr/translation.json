@@ -586,14 +586,16 @@
     "offlineImageFailed": "L'image n'a pas pu être sauvegardée pour l'envoi hors ligne. Votre message a été mis en file d'attente sans l'image.",
     "audio_mode_on": "Audiodescription activée",
     "audio_mode_off": "Audiodescription désactivée",
-    "lowDataActive": "Mode économie de données actif",
+    "lowDataBadge": {
+      "label": "Mode éco de données",
+      "a11yLabel": "Mode éco de données actif. Réponses vocales en pause. Ouvre les réglages de données."
+    },
     "cachedResponse": "Réponse depuis le cache local",
     "savedForLater": "Question sauvegardée pour plus tard",
     "optimistic": {
       "image_placeholder": "Image envoyée",
       "voice_placeholder": "Message vocal"
     },
-    "lowDataDetails": "Mode data économe : TTS désactivé, réponses plus courtes, prefetch wifi uniquement",
     "tts": {
       "disabled_low_data": "Désactivé en mode data économe. Changez de mode dans Réglages."
     },

@@ -196,7 +196,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   lastUpdated: '2026-05-21',
   controllerName: 'InnovMind (Tim Moyence, Entrepreneur Individuel)',
   controllerAddress: 'France',
-  contactEmail: 'tim.moyence@gmail.com',
+  contactEmail: 'contact@musaium.com',
   dpoContact: "Non désigné (non requis au titre de l'article 37 du RGPD)",
   rightsSummary: [
     'Access your data',
@@ -221,7 +221,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       paragraphs: [
         'Musaium is operated by InnovMind (Tim Moyence, Entrepreneur Individuel), acting as data controller for personal data processed through the mobile application and related support channels.',
         'Registered address: France.',
-        'Contact: tim.moyence@gmail.com.',
+        'Contact: contact@musaium.com.',
         'Pursuant to Article 37 GDPR, the designation of a Data Protection Officer (DPO) is not required for our organisation.',
       ],
     },
@@ -315,7 +315,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       paragraphs: [
         'You may request access, rectification, erasure, restriction, portability, and objection to processing where applicable.',
         'Where processing is based on consent, you may withdraw consent at any time without affecting the lawfulness of processing before withdrawal.',
-        'To exercise your rights, contact: tim.moyence@gmail.com. Include enough information to verify your request. Response within one month (Art. 12(3) GDPR), extendable by two months if necessary.',
+        'To exercise your rights, contact: contact@musaium.com. Include enough information to verify your request. Response within one month (Art. 12(3) GDPR), extendable by two months if necessary.',
       ],
     },
     {
@@ -323,7 +323,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
       title: '10. Children & Minors',
       paragraphs: [
         'Musaium is not intended for users under 15 years old. Pursuant to Article 8 GDPR and Article 45 of the French Data Protection Act (Loi Informatique et Libertés), and consistent with CNIL Délibération 2021-018 setting the French digital majority at 15 years, users under 15 require parental authorisation to create an account.',
-        'If you believe a minor under 15 years old provided personal data without parental authorisation, contact us at tim.moyence@gmail.com so we can promptly delete the relevant data.',
+        'If you believe a minor under 15 years old provided personal data without parental authorisation, contact us at contact@musaium.com so we can promptly delete the relevant data.',
         'Reference: CNIL Délibération 2021-018 (French digital majority — 15 years).',
       ],
     },

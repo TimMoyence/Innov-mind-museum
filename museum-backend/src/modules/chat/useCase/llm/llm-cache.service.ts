@@ -11,7 +11,7 @@ import type {
 } from './llm-cache.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-const KEY_VERSION = 'v2';
+const KEY_VERSION = 'v3';
 const KEY_PREFIX = 'llm';
 
 const TTL_GENERIC_S = 7 * 24 * 60 * 60;
@@ -116,12 +116,15 @@ export class LlmCacheServiceImpl implements LlmCacheService {
   }
 
   /**
-   * Key: `llm:v2:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
+   * Key: `llm:v3:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
    * museumId BEFORE userId for `delByPrefix` invalidateMuseum pattern (inverts
    * spec's conceptual order). F1 (2026-05-19) — canonical input now folds in
    * `voiceMode` + `audioDescriptionMode` (truthy-only, mirror imageContentHash
    * R8/AC6 contract) so the (voice / no-voice) and (audio-desc / no-audio-desc)
    * cohorts get distinct scopes ; legacy entries are isolated by the v1→v2 bump.
+   * US-12.2 / INV-21 (2026-06-12) — canonical input also folds in `lowDataMode`
+   * (truthy-only) ; v2→v3 bump isolates the v2 namespace polluted by the
+   * pre-fix cohorts (FE used to resolve `low` for every metered connection).
    */
   private buildKey(input: LlmCacheKeyInput, contextClass: LlmContextClass): string {
     const userIdSeg = input.userId === 'anon' ? 'anon' : String(input.userId);
@@ -163,6 +166,15 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
   // (no KEY_VERSION bump needed).
   if (input.currentArtworkKey) {
     canonical.currentArtworkKey = input.currentArtworkKey;
+  }
+  // US-12.2 / INV-21 (2026-06-12) — truthy-only emit (mirror voiceMode F1 /
+  // imageContentHash R8/AC6). `lowDataMode` flips `llm-prompt-builder.ts:152-156`
+  // to a 100-150-word concise answer — absent from the key, the (low, normal)
+  // cohorts cross-serve wrong-length responses. `false`/absent fold to the same
+  // canonical JSON so the majority `normal` cohort keeps hex-stable hashes ;
+  // the v2→v3 KEY_VERSION bump isolates the pre-fix polluted namespace.
+  if (input.lowDataMode) {
+    canonical.lowDataMode = true;
   }
   // Sort keys for deterministic JSON (localeCompare = stable).
   const sortedJson = JSON.stringify(

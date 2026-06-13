@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conformité — Spec rebrand email RGPD (cycle #8)</title>
+<style>
+:root{--ink:#1f2933;--muted:#5a6672;--faint:#8a94a0;--bg:#fff;--panel:#f6f7f9;
+--border:#e3e6ea;--accent:#3b5b7a;--accent2:#b06a3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 40px 96px}
+header.doc{border-bottom:2px solid var(--accent);padding-bottom:24px;margin-bottom:36px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);
+font-weight:600;margin:0 0 10px}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+.meta{margin-top:18px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 20px}
+h2{font-size:21px;margin:48px 0 8px;font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;margin:28px 0 6px;font-weight:650}
+h4,h5,h6{margin:22px 0 6px}
+p{margin:12px 0}
+a{color:var(--accent)}
+hr{border:0;border-top:1px solid var(--border);margin:32px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;
+background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px 18px;
+overflow:auto;font-size:13.5px;line-height:1.5}
+pre code{background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+border-bottom:2px solid var(--border)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+blockquote{margin:16px 0;padding:2px 18px;border-left:3px solid var(--border);color:var(--muted)}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+.cb{color:var(--accent);font-weight:700}
+.kv{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);
+background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin:0 0 8px}
+.kv b{color:var(--ink);font-weight:600;margin-right:4px}
+.chip{display:inline-block;font-size:12px;background:#e7eef5;color:var(--accent);
+border-radius:20px;padding:2px 10px;margin:2px 0}
+.muted{color:var(--muted)}
+.verdict{display:inline-block;font-weight:700;font-size:13px;letter-spacing:.04em;
+padding:4px 12px;border-radius:6px}
+.verdict.ok{background:#e7eef5;color:var(--accent)}
+.verdict.warn{background:#f3ece5;color:var(--accent2)}
+.verdict.bad{background:#f6e7e3;color:#9a3412}
+.finding{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:12px 0}
+.finding-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+.finding-title{font-weight:600;margin:4px 0}
+.suggestion{color:var(--muted)}
+.sev{font-size:11px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:4px}
+.sev.crit{background:#f6e7e3;color:#9a3412}
+.sev.high{background:#f3ece5;color:var(--accent2)}
+.sev.med{background:#eef1f4;color:var(--accent)}
+.sev.low{background:#eceff1;color:var(--muted)}
+.axis{font-size:12px;color:var(--muted)}
+.loc{font-size:12px}
+dl{margin:8px 0;padding-left:14px;border-left:1px solid var(--border)}
+dt{font-weight:600;font-size:13px;color:var(--accent);margin-top:8px}
+dd{margin:2px 0 2px 8px}
+nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 20px;margin:0 0 36px}
+nav.toc strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+color:var(--muted);margin-bottom:8px}
+nav.toc a{display:block;padding:2px 0}
+section.artifact{padding-top:8px}
+section.artifact+section.artifact{margin-top:24px;border-top:1px solid var(--border)}
+footer.doc{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+font-size:13px;color:var(--faint)}
+/* ── roadmap mode ─────────────────────────────────────────────── */
+:root{--rm-done:#2f7d4f;--rm-partial:#b06a3c;--rm-open:#b0413c;--rm-ops:#3b5b7a;--rm-todo:#9aa4b0}
+.rm-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
+line-height:1.4;padding:1px 7px;border-radius:20px;vertical-align:1px;margin-right:2px;color:#fff}
+.rm-pill.done{background:var(--rm-done)}.rm-pill.partial{background:var(--rm-partial)}
+.rm-pill.open{background:var(--rm-open)}.rm-pill.ops{background:var(--rm-ops)}
+.rm-pill.todo{background:#eceff1;color:var(--rm-todo);box-shadow:inset 0 0 0 1px var(--border)}
+.rm-bar{display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--panel);
+box-shadow:inset 0 0 0 1px var(--border);margin:8px 0 4px}
+.rm-bar.big{height:14px;margin:14px 0 6px}
+.rm-bar .seg.done{background:var(--rm-done)}.rm-bar .seg.partial{background:var(--rm-partial)}
+.rm-bar .seg.open{background:var(--rm-open)}.rm-bar .seg.ops{background:var(--rm-ops)}
+.rm-bar .seg.todo{background:#d6dbe0}
+.rm-prog{margin:6px 0 10px}.rm-prog-meta{font-size:12px;color:var(--muted)}
+.rm-prog-meta b{color:var(--ink)}
+.rm-dash{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+padding:22px 24px;margin:0 0 32px}
+.rm-gng{display:inline-block;font-weight:800;font-size:13px;letter-spacing:.08em;
+padding:5px 14px;border-radius:6px;margin-bottom:10px}
+.rm-gng.ok{background:#e3f0e8;color:var(--rm-done)}
+.rm-gng.warn{background:#f3ece5;color:var(--rm-partial)}
+.rm-gng.bad{background:#f6e7e3;color:var(--rm-open)}
+.rm-blockers{font-size:14px;font-weight:600;color:var(--rm-open);margin:4px 0 8px}
+.rm-asof{font-size:12px;color:var(--faint);margin-bottom:6px}
+.rm-dash-pct{font-size:15px;font-weight:600;margin:2px 0 14px}
+.rm-dash-pct span{color:var(--muted);font-weight:400;font-size:13px}
+.rm-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:16px}
+.rm-stat{font-size:12.5px;color:var(--muted);padding:3px 11px;border-radius:20px;
+background:#fff;box-shadow:inset 0 0 0 1px var(--border)}
+.rm-stat b{color:var(--ink);font-weight:700}
+.rm-stat.done b{color:var(--rm-done)}.rm-stat.partial b{color:var(--rm-partial)}
+.rm-stat.open b{color:var(--rm-open)}.rm-stat.ops b{color:var(--rm-ops)}
+.rm-filters{display:flex;flex-wrap:wrap;gap:6px}
+.rm-chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);
+background:#fff;color:var(--muted);border-radius:20px;padding:4px 13px;transition:.12s}
+.rm-chip:hover{border-color:var(--accent);color:var(--accent)}
+.rm-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+[data-rm-status]{scroll-margin-top:12px}
+@media print{
+html,body{background:#fff;color:#000;font-size:11pt}
+.wrap{max-width:none;padding:0}
+a{color:#000;text-decoration:none}
+.kv,.chip,code,pre,.verdict,.sev,.finding,nav.toc{background:transparent!important}
+.finding,.kv,nav.toc,pre{border-color:#999}
+h1,h2,h3{page-break-after:avoid}
+h2,h3,table,pre,.finding,section.artifact{page-break-inside:avoid}
+header.doc{page-break-after:avoid}
+.rm-filters{display:none}
+.rm-dash{background:transparent!important;border-color:#999}
+.rm-pill,.rm-bar .seg,.rm-gng{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rm-dash,.rm-prog,.rm-stat{page-break-inside:avoid}
+@page{margin:18mm 16mm}
+}</style></head>
+<body><div class="wrap">
+<header class="doc">
+<p class="eyebrow">Artifact</p>
+<h1>Conformité — Spec rebrand email RGPD (cycle #8)</h1>
+<div class="meta"><span>spec.md</span></div>
+</header>
+<h1>Spec — Conformité réglementaire pré-launch : email RGPD + juridiction Langfuse</h1>
+<blockquote><p>Phase SPEC (UFR-022 fresh-context). Aucun code, aucun test écrit ici. RUN_ID : <code>2026-06-13-conformite-email-subprocessors</code> Toute affirmation ci-dessous = <code>file:line</code> vérifié ou commande exécutée (UFR-013).</p></blockquote>
+<hr>
+<h2>1. Contexte + objectif</h2>
+<p>Avant le launch V1, deux corrections de conformité réglementaire :</p>
+<ul><li><strong>A — Email de contact RGPD.</strong> L'email de contact du responsable de traitement publié dans tous les contenus légaux user-facing et docs légales est <code>tim.moyence@gmail.com</code> (boîte personnelle Gmail). Il doit devenir <code>contact@musaium.com</code> (boîte de marque). Décision actée : domaine canonique = <code>musaium.com</code>, email = <code>contact@musaium.com</code>.</li><li><strong>B — Juridiction Langfuse.</strong> La doc <code>docs/compliance/SUBPROCESSORS.md:52</code> affirme un transfert/hébergement <strong>US par défaut</strong> pour Langfuse (« US by default », « SCC + DPF », « US-hosted by default »). Décision actée : Langfuse = région <strong>EU</strong> (<code>cloud.eu.langfuse.com</code>), DPA auto-accepté au signup (click-accept = SCC Annexe I.A). La doc doit refléter EU et cesser d'affirmer un transfert US.</li></ul>
+<p><strong>Constat de terrain dirimant (à trancher par l'humain — cf. §6 et résumé) :</strong> les <strong>copies canoniques légales</strong> (<code>privacy-content.canonical.json</code> BE + web, FR/EN) décrivent <strong>déjà</strong> Langfuse comme <code>Germany</code>/<code>Allemagne</code>, <code>transferMechanism: &quot;internal&quot;</code> (EU). Vérifié :</p>
+<ul><li><code>museum-backend/src/shared/legal/privacy-content.canonical.json:67,242-247,354,529-534</code></li><li><code>museum-web/src/lib/legal/privacy-content.canonical.json</code> (byte-identique, cf. §INV-1).</li></ul>
+<p>Donc la <strong>route <code>/subprocessors</code></strong> rend déjà EU. Le seul artefact qui affirme US pour Langfuse = <code>docs/compliance/SUBPROCESSORS.md:52</code>. La réconciliation B est donc essentiellement <strong>doc-only</strong> côté contenu legal — MAIS le <strong>défaut de code</strong> <code>env.ts:290</code> pointe <code>https://cloud.langfuse.com</code> (US), ce qui rend l'ancienne phrase de la doc factuellement vraie pour le déploiement par défaut. Voir §6 « point ambigu ».</p>
+<hr>
+<h2>2. User stories</h2>
+<ul><li><strong>US-A1</strong> — En tant qu'<strong>utilisateur final</strong> (visiteur RGPD), je veux que l'email de contact affiché dans la politique de confidentialité, les CGU et la page cookies soit <code>contact@musaium.com</code>, afin de pouvoir exercer mes droits (Art. 15-22 RGPD) auprès d'une adresse de marque pérenne et non d'une boîte Gmail personnelle.</li><li><strong>US-A2</strong> — En tant qu'<strong>autorité de contrôle / DPO externe</strong>, je veux que les docs légales internes (DPIA, ROPA, readiness) citent l'email de contact officiel <code>contact@musaium.com</code>, afin que la documentation Art. 30 (ROPA) et Art. 35 (DPIA) soit cohérente avec les surfaces publiques.</li><li><strong>US-A3</strong> — En tant que <strong>développeur</strong>, je veux que la source de génération (<code>codegen-legal-content.mjs</code>) et la copie générée (<code>privacyPolicyContent.ts</code>) portent le même email, afin qu'une régénération ne réintroduise pas l'ancien email (anti-drift).</li><li><strong>US-B1</strong> — En tant qu'<strong>utilisateur final / autorité</strong>, je veux que la page <code>/subprocessors</code> et la doc <code>SUBPROCESSORS.md</code> décrivent Langfuse comme hébergé en région <strong>EU</strong> (Allemagne, transfert interne UE), afin que l'information de transfert hors-EEE soit exacte (Art. 13(1)(f), Art. 28, Art. 44-46 RGPD).</li><li><strong>US-B2</strong> — En tant que <strong>responsable conformité</strong>, je veux que <code>SUBPROCESSORS.md</code> n'affirme plus un transfert US ni un mécanisme DPF pour Langfuse, afin de ne pas documenter un transfert hors-EEE qui n'a pas lieu (sur-déclaration = signal d'imprécision en audit).</li></ul>
+<hr>
+<h2>3. Exigences EARS</h2>
+<h3>Sous-objectif A — Email RGPD</h3>
+<ul><li><strong>EARS-A1</strong> — WHEN un contenu légal user-facing (privacy, terms, cookies) est rendu sur n'importe quelle surface (BE canonical, web, mobile), THE SYSTEM SHALL afficher <code>contact@musaium.com</code> comme email de contact RGPD et SHALL NOT afficher <code>tim.moyence@gmail.com</code>.</li><li><strong>EARS-A2</strong> — WHILE <code>codegen-legal-content.mjs</code> régénère <code>privacyPolicyContent.ts</code>, THE SYSTEM SHALL émettre <code>contactEmail: 'contact@musaium.com'</code> (la valeur étant hardcodée dans le template du script, cf. <code>codegen-legal-content.mjs:199</code>, PAS lue depuis le JSON).</li><li><strong>EARS-A3</strong> — WHEN les copies canoniques privacy/terms BE et web sont comparées, THE SYSTEM SHALL les garder JSON-équivalentes (cf. INV-1), y compris sur les paragraphes contenant l'email.</li><li><strong>EARS-A4</strong> — IF une occurrence de <code>tim.moyence@gmail.com</code> subsiste dans un contenu légal user-facing ou une doc légale (hors exclusions §6), THE SYSTEM SHALL être considéré non conforme (critère d'acceptation AC-A1 échoue).</li><li><strong>EARS-A5</strong> — WHEN les docs légales internes (DPIA, ROPA, DPIA_ROPA_READINESS) référencent l'email du responsable, THE SYSTEM SHALL utiliser <code>contact@musaium.com</code>. Le <strong>mécanisme d'alias <code>dpo@musaium.com</code> → boîte de redirection</strong> SHALL pointer vers <code>contact@musaium.com</code> (et non plus vers <code>tim.moyence@gmail.com</code>) là où ce flux est décrit (<code>DPIA.md:8</code>, <code>ROPA.md:9</code>, <code>DPIA_ROPA_READINESS.md:16</code>).</li></ul>
+<h3>Sous-objectif B — Juridiction Langfuse</h3>
+<ul><li><strong>EARS-B1</strong> — WHEN <code>docs/compliance/SUBPROCESSORS.md</code> décrit Langfuse (ligne 52), THE SYSTEM SHALL indiquer une juridiction/hébergement <strong>région EU</strong> (<code>cloud.eu.langfuse.com</code>) et SHALL NOT affirmer « US by default » / « US-hosted by default » / un transfert hors-EEE comme état nominal.</li><li><strong>EARS-B2</strong> — WHEN la doc décrit le mécanisme de transfert Langfuse, THE SYSTEM SHALL refléter un DPA auto-accepté au signup (click-accept = SCC Annexe I.A) cohérent avec un hébergement EU, et SHALL NOT mentionner DPF (Data Privacy Framework, mécanisme US-only) pour Langfuse.</li><li><strong>EARS-B3</strong> — WHEN la route <code>/subprocessors</code> et la doc <code>SUBPROCESSORS.md</code> sont comparées sur la ligne Langfuse, THE SYSTEM SHALL être cohérent (les deux disent EU). (Constat : la route dit déjà EU via canonical JSON ; seule la doc diverge.)</li><li><strong>EARS-B4</strong> — IF la valeur de juridiction Langfuse dans le canonical JSON (<code>Germany</code>/<code>Allemagne</code>, <code>internal</code>) doit changer, THE SYSTEM SHALL appliquer le changement aux DEUX copies canoniques (BE + web) pour préserver INV-1. (Note : aucun changement JSON requis si on garde EU=Allemagne/internal ; cf. §6.)</li></ul>
+<hr>
+<h2>4. NFR (Non-Functional Requirements)</h2>
+<ul><li><strong>NFR-1 (i18n FR/EN)</strong> — Les contenus légaux existent en FR et EN. Le remplacement de l'email DOIT couvrir les deux locales. L'email étant un littéral identique FR/EN, aucune traduction n'est requise, mais chaque occurrence localisée DOIT être traitée (ex. <code>cookies/page.tsx:65</code> EN + <code>:104</code> FR).</li><li><strong>NFR-2 (no-drift 3 copies canoniques)</strong> — Les trois surfaces de contenu privacy/terms (BE canonical JSON, web canonical JSON, FE généré) DOIVENT rester cohérentes. Mécanique réelle :<ul><li>BE canonical JSON = source de vérité (<code>privacy-content-drift.mjs:62,80</code>).</li><li>Web canonical JSON = copie JSON-équivalente vérifiée par <code>privacy-content-drift.mjs:80-87</code> (whitespace-insensitive).</li><li>FE <code>privacyPolicyContent.ts</code> = <strong>généré</strong> par <code>codegen-legal-content.mjs</code> (header <code>GENERATED-FROM-CANONICAL — DO NOT EDIT MANUALLY</code>, <code>privacyPolicyContent.ts:1</code>). Le <code>contactEmail</code> est hardcodé dans le script, pas dérivé du JSON.</li><li>FE <code>termsOfServiceContent.ts</code> = <strong>NON généré</strong> (hand-maintained, pas de header GENERATED ; le codegen ne touche pas terms — vérifié : <code>grep terms codegen-legal-content.mjs</code> = 0).</li></ul></li><li><strong>NFR-3 (RGPD Art. 28 / 13-14)</strong> — Le registre des sous-traitants (Art. 28) et l'information sur les transferts (Art. 13(1)(f)/14) DOIVENT être exacts : pas de sur-déclaration d'un transfert US inexistant pour Langfuse.</li><li><strong>NFR-4 (idempotence codegen)</strong> — Après édition, <code>node museum-frontend/scripts/codegen-legal-content.mjs</code> puis <code>git diff --exit-code -- museum-frontend/features/legal/privacyPolicyContent.ts</code> DOIT être vide (codegen et fichier généré alignés).</li><li><strong>NFR-5 (sentinels verts)</strong> — <code>privacy-content-drift.mjs</code> et <code>subprocessor-ledger-completeness.mjs</code> DOIVENT rester verts après modifications.</li></ul>
+<hr>
+<h2>5. INVARIANTS</h2>
+<ul><li><strong>INV-1</strong> — Les copies canoniques privacy ET terms BE↔web DOIVENT rester JSON-équivalentes. État de base vérifié AVANT toute modif : <code>diff -q</code> privacy = IDENTICAL, terms = IDENTICAL (commande exécutée 2026-06-13). Toute modif sur l'une DOIT être répliquée à l'autre.</li><li><strong>INV-2</strong> — Zéro occurrence résiduelle de <code>tim.moyence@gmail.com</code> dans le scope conformité (contenus légaux + docs légales), HORS exclusions explicites (§6 : <code>.next/</code>, migration immuable, et — à trancher — scripts ops / OPS_DEPLOYMENT / CI_CD_SECRETS qui référencent l'email comme identité super_admin de compte, pas comme contact RGPD).</li><li><strong>INV-3</strong> — <code>docs/compliance/SUBPROCESSORS.md</code> n'affirme JAMAIS un transfert/hébergement US comme état nominal pour Langfuse ; mentionne EU (<code>cloud.eu.langfuse.com</code>).</li><li><strong>INV-4</strong> — <code>privacyPolicyContent.ts</code> reste byte-identique à la sortie de <code>codegen-legal-content.mjs</code> (NFR-4). Donc on N'ÉDITE PAS <code>privacyPolicyContent.ts</code> à la main : on édite le script + le JSON, puis on régénère.</li><li><strong>INV-5</strong> — Le <code>contactEmail</code> exposé par les trois surfaces (canonical JSON paragraphes, FE généré, web route/JSON) référence la même adresse <code>contact@musaium.com</code>.</li></ul>
+<hr>
+<h2>6. Inventaire EXACT des fichiers</h2>
+<h3>À MODIFIER — Sous-objectif A (email)</h3>
+<table><thead><tr><th>Fichier:ligne</th><th>Raison</th></tr></thead><tbody><tr><td><code>museum-backend/src/shared/legal/privacy-content.canonical.json:13,107,115,300,394,402</code></td><td>Source de vérité privacy, paragraphes contact + minors (FR/EN).</td></tr><tr><td><code>museum-backend/src/shared/legal/terms-content.canonical.json:80,160</code></td><td>Source de vérité terms, paragraphe contact (FR/EN).</td></tr><tr><td><code>museum-web/src/lib/legal/privacy-content.canonical.json:13,107,115,300,394,402</code></td><td>Copie web — DOIT rester identique au BE (INV-1).</td></tr><tr><td><code>museum-web/src/lib/legal/terms-content.canonical.json:80,160</code></td><td>Copie web terms — idem INV-1.</td></tr><tr><td><code>museum-frontend/scripts/codegen-legal-content.mjs:199</code></td><td><code>contactEmail</code> hardcodé dans le template du générateur. SANS ça, régénération réintroduit l'ancien email (INV-4).</td></tr><tr><td><code>museum-frontend/features/legal/termsOfServiceContent.ts:94</code></td><td>NON généré → édition manuelle requise (FE terms paragraphe contact).</td></tr><tr><td><code>museum-frontend/features/legal/privacyPolicyContent.ts:199,224,318,326</code></td><td>Généré → NE PAS éditer à la main ; sera régénéré depuis JSON+script (INV-4). Listé ici pour traçabilité de l'état attendu post-régénération.</td></tr><tr><td><code>museum-web/src/app/[locale]/cookies/page.tsx:65,104</code></td><td>Page cookies user-facing (EN+FR), hand-maintained.</td></tr><tr><td><code>docs/privacy-policy.html:494,553,766,814,899,935,962</code></td><td>Politique de confidentialité HTML publiée (statique).</td></tr><tr><td><code>docs/legal/DPIA.md:7,8</code></td><td>Doc légale interne : contact responsable + alias DPO.</td></tr><tr><td><code>docs/legal/ROPA.md:7,9</code></td><td>Doc légale interne : coordonnées + alias DPO.</td></tr><tr><td><code>docs/legal/DPIA_ROPA_READINESS.md:16</code></td><td>Doc readiness : mailbox alias.</td></tr></tbody></table>
+<h3>À MODIFIER — Sous-objectif B (Langfuse)</h3>
+<table><thead><tr><th>Fichier:ligne</th><th>Raison</th></tr></thead><tbody><tr><td><code>docs/compliance/SUBPROCESSORS.md:52</code></td><td>SEUL artefact affirmant US pour Langfuse. Remplacer juridiction/transfert/DPF par EU (<code>cloud.eu.langfuse.com</code>), SCC via click-accept.</td></tr></tbody></table>
+<blockquote><p>La route <code>/subprocessors</code> (<code>museum-web/src/app/[locale]/subprocessors/page.tsx</code>) et le canonical JSON (<code>...:242-247,529-534</code>) disent <strong>déjà</strong> EU/Allemagne/internal → <strong>aucune modif requise</strong> sauf décision contraire (§ point ambigu). À CONFIRMER, pas à modifier par défaut.</p></blockquote>
+<h3>À NE PAS MODIFIER (avec raison)</h3>
+<table><thead><tr><th>Fichier</th><th>Raison</th></tr></thead><tbody><tr><td><code>museum-web/.next/standalone/**</code> (14 occurrences)</td><td>Artefacts de build régénérés — modifs perdues au prochain <code>next build</code>.</td></tr><tr><td><code>museum-backend/src/data/db/migrations/1778240010000-BackfillSuperAdminOwner.ts:5,31</code></td><td>Migration <strong>jouée = immuable</strong> (gouvernance migrations, CLAUDE.md). L'email y est une <strong>clé d'identité de compte</strong> (<code>WHERE email = ...</code>), pas un contact RGPD. Le réécrire casserait l'historique et ne ciblerait pas le bon compte.</td></tr></tbody></table>
+<h3>À TRANCHER PAR L'HUMAIN (zone grise — ne PAS modifier sans décision)</h3>
+<table><thead><tr><th>Fichier:ligne</th><th>Nature</th><th>Question</th></tr></thead><tbody><tr><td><code>museum-backend/scripts/smoke-grafana-prod.sh:13</code> ; <code>docs/CI_CD_SECRETS.md:492</code> ; <code>docs/OPS_DEPLOYMENT.md:1078,1083</code></td><td><code>tim.moyence@gmail.com</code> = <strong>identité du compte super_admin / <code>PROD_SUPER_ADMIN_EMAIL</code></strong> (login admin), PAS un contact RGPD user-facing.</td><td>Hors scope strict « contenus légaux ». Si le compte super_admin garde l'email Gmail, ces refs DOIVENT rester. Si le compte est rebrandé, c'est une migration de données séparée (hors cette feature). <strong>Défaut : NE PAS toucher.</strong></td></tr><tr><td><code>museum-backend/src/config/env.ts:290</code> (défaut <code>cloud.langfuse.com</code> = US)</td><td>Le <strong>défaut de code</strong> contredit la décision EU.</td><td>La feature est scoppée « doc + route ». Faut-il aussi flipper le défaut → <code>cloud.eu.langfuse.com</code> (ou exiger <code>LANGFUSE_HOST</code> en prod) pour que la doc EU soit factuellement vraie ? Sinon la doc déclarera EU alors que le déploiement par défaut va en US. <strong>Recommandation : trancher avant green.</strong></td></tr></tbody></table>
+<hr>
+<h2>7. Critères d'acceptation (mesurables)</h2>
+<ul><li><strong>AC-A1</strong> — <code>grep -rn &quot;tim.moyence@gmail.com&quot; museum-backend/src/shared/legal museum-web/src/lib/legal museum-web/src/app museum-frontend/features/legal museum-frontend/scripts/codegen-legal-content.mjs docs/legal docs/privacy-policy.html docs/compliance</code> retourne <strong>0</strong> ligne.</li><li><strong>AC-A2</strong> — <code>grep -c &quot;contact@musaium.com&quot;</code> sur chacune des 4 copies canoniques (BE/web × privacy/terms) &gt; 0 et FR+EN couverts.</li><li><strong>AC-A3</strong> — <code>node museum-frontend/scripts/codegen-legal-content.mjs &amp;&amp; git diff --exit-code -- museum-frontend/features/legal/privacyPolicyContent.ts</code> exit 0 (NFR-4 / INV-4).</li><li><strong>AC-A4</strong> — <code>diff -q museum-backend/src/shared/legal/privacy-content.canonical.json museum-web/src/lib/legal/privacy-content.canonical.json</code> = identique ; idem terms (INV-1).</li><li><strong>AC-B1</strong> — <code>grep -ni &quot;US by default\|US-hosted\|DPF&quot; docs/compliance/SUBPROCESSORS.md</code> sur la ligne Langfuse retourne <strong>0</strong> ; <code>grep -ni &quot;cloud.eu.langfuse.com&quot; docs/compliance/SUBPROCESSORS.md</code> &gt; 0 (INV-3).</li><li><strong>AC-B2</strong> — <code>node scripts/sentinels/subprocessor-ledger-completeness.mjs</code> exit 0 (le host-marker <code>cloud.langfuse.com</code> reste mappé ; vérifier que le changement de texte ne casse pas le binding <code>VENDOR_HOSTS</code>).</li><li><strong>AC-GEN</strong> — <code>node museum-backend/scripts/sentinels/privacy-content-drift.mjs</code> exit 0.</li></ul>
+<hr>
+<h2>8. Ébauche test-contract (NE PAS écrire les tests ici)</h2>
+<blockquote><p>La matrice exhaustive appartient à la phase 3 (test-analyst). Ébauche de cadrage uniquement.</p></blockquote>
+<p><strong>Use-cases adversariaux à couvrir :</strong></p>
+<ul><li><strong>UC-EMAIL-1 (regression, Tier unit)</strong> — Le contenu privacy canonical (BE) NE contient AUCUNE occurrence de <code>tim.moyence@gmail.com</code> et contient <code>contact@musaium.com</code> (FR+EN). Lire le JSON, assert. <em>Réutilise / étend</em> <code>museum-frontend/__tests__/infrastructure/legalContent.test.ts</code> qui aujourd'hui n'assert que <code>contactEmail.toContain('@')</code> (<code>:13</code>) — durcir vers l'email exact.</li><li><strong>UC-EMAIL-2 (regression, Tier unit)</strong> — <code>PRIVACY_POLICY_CONTENT.contactEmail === 'contact@musaium.com'</code> (FE généré). Idem terms (<code>termsOfServiceContent.ts</code>).</li><li><strong>UC-EMAIL-3 (drift, Tier unit/integration)</strong> — Après régénération codegen, <code>privacyPolicyContent.ts</code> reste byte-identique (NFR-4) ET porte le nouvel email. Garde anti-réintroduction depuis le script.</li><li><strong>UC-EMAIL-4 (no-drift, Tier unit)</strong> — BE et web canonical JSON byte/JSON-équivalents sur les paragraphes email (INV-1). <em>Couvert par</em> <code>privacy-content-drift.mjs</code> — vérifier qu'il reste vert.</li><li><strong>UC-EMAIL-5 (negative/scope, Tier unit)</strong> — La migration <code>BackfillSuperAdminOwner.ts</code> et <code>.next/</code> NE sont PAS dans le scope du grep d'invariant (sinon faux-positif). Le test d'invariant INV-2 doit exclure ces chemins.</li><li><strong>UC-LF-1 (regression, Tier unit)</strong> — <code>SUBPROCESSORS.md</code> ligne Langfuse ne matche pas <code>/US by default|US-hosted|\bDPF\b/</code> et matche <code>cloud.eu.langfuse.com</code> (INV-3).</li><li><strong>UC-LF-2 (consistency, Tier unit)</strong> — La route <code>/subprocessors</code> (via canonical JSON) déclare Langfuse jurisdiction EU/Allemagne/internal — assert sur le JSON consommé par <code>getSubprocessors</code> (<code>museum-web/src/lib/privacy-content.ts:164</code>).</li><li><strong>UC-LF-3 (sentinel, Tier integration)</strong> — <code>subprocessor-ledger-completeness.mjs</code> reste vert (le binding host-marker <code>cloud.langfuse.com</code>→Langfuse n'est pas cassé par le reword).</li></ul>
+<p><strong>Tests existants &amp; ce qu'ils gardent :</strong></p>
+<ul><li><code>museum-web/src/components/shared/Footer.cookies-terms-subprocessors.test.tsx</code> — assert UNIQUEMENT les hrefs des liens footer (<code>/fr/subprocessors</code>, etc., <code>:104-137</code>). N'assert NI l'email NI la juridiction Langfuse → <strong>inchangé</strong>, pas de couverture à ajouter ici.</li><li><code>museum-frontend/__tests__/infrastructure/legalContent.test.ts:13</code> — assert faible (<code>contactEmail.toContain('@')</code>) → <strong>à durcir</strong> (UC-EMAIL-2).</li><li><code>privacy-content-drift.mjs</code> (sentinel) — couvre INV-1 / no-drift → garder vert (UC-EMAIL-4).</li><li><code>subprocessor-ledger-completeness.mjs</code> (sentinel) — couvre code↔ledger Langfuse → garder vert (UC-LF-3).</li></ul>
+<footer class="doc">Généré par <code>scripts/render-artifact.mjs</code> — fichier HTML autonome, CSS inline, imprimable, sans dépendance externe. CLAUDE.md § Output format.</footer>
+</div></body></html>

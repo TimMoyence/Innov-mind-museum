@@ -33,6 +33,7 @@ import {
 import { LeadRepositoryPg } from '@modules/leads/adapters/secondary/pg/lead.repository.pg';
 import { registerLeadsRedeliveryCron } from '@modules/leads/jobs/leads-redelivery-cron.registrar';
 import {
+  buildMuseumEnrichmentWorker,
   buildPurgeDeadEnrichmentsUseCase,
   buildRefreshStaleEnrichmentsUseCase,
   createBullmqEnrichmentScheduler,
@@ -62,7 +63,7 @@ import { env } from '@src/config/env';
 
 import { createApp } from './app';
 
-import type { EnrichmentSchedulerPort } from '@modules/museum';
+import type { EnrichmentSchedulerPort, MuseumEnrichmentWorker } from '@modules/museum';
 import type { CacheService } from '@shared/cache/cache.port';
 import type { ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
 import type { Server } from 'node:http';
@@ -173,9 +174,11 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
  * (missing Redis, BullMQ init failure) is logged and the server proceeds
  * without the scheduler — on-demand enrichment keeps working.
  *
- * Default-off (`MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=false`) until the matching
- * `MuseumEnrichmentWorker` consumer is wired at boot — without a consumer, the
- * producer just fills Redis with unprocessed jobs.
+ * Default-off (`MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=false`) — this is the
+ * separate *periodic* stale-rescan feature (different `museum-enrichment-scheduler`
+ * queue) and stays off by product decision for V1. The on-demand CONSUMER it once
+ * waited on is now wired at boot (see {@link startEnrichmentWorker}, task #16), so
+ * cache-miss enqueues are drained; only the daily rescan remains gated by this flag.
  */
 async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | undefined> {
   if (!env.museumEnrichmentSchedulerEnabled) {
@@ -198,6 +201,39 @@ async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | und
     return scheduler;
   } catch (err) {
     logger.warn('enrichment_scheduler_boot_skipped', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+/**
+ * Boots the on-demand museum-enrichment CONSUMER (`MuseumEnrichmentWorker` on the
+ * `museum-enrichment` queue). Without it the producer (`EnrichMuseumUseCase` on a
+ * cache miss) just fills Redis with jobs nobody drains, so the `museum_enrichment`
+ * cache row is never written and the fiche stays pending/empty (task #16).
+ *
+ * Gated on `env.cache?.enabled` (BullMQ requires Redis) — an infra-capability
+ * check, NOT a feature flag: dev/test/CI without Redis short-circuit BEFORE any
+ * ioredis client is opened, exactly like the retention crons (`:421`) and the
+ * knowledge-extraction worker, so no un-`.unref()`d socket / `ECONNREFUSED` flood
+ * / Jest-Stryker open-handle hang. Fail-open: any construction/start error is
+ * logged and boot proceeds (on-demand enrichment degrades to "pending").
+ */
+function startEnrichmentWorker(): MuseumEnrichmentWorker | undefined {
+  if (!env.cache?.enabled) {
+    logger.info('enrichment_worker_disabled', {
+      reason: 'redis_unavailable',
+    });
+    return undefined;
+  }
+  try {
+    const worker = buildMuseumEnrichmentWorker(createRedisConnectionOptions());
+    worker.start();
+    logger.info('enrichment_worker_started');
+    return worker;
+  } catch (err) {
+    logger.warn('enrichment_worker_boot_skipped', {
       error: err instanceof Error ? err.message : String(err),
     });
     return undefined;
@@ -240,6 +276,7 @@ interface ShutdownResources {
   cacheService: CacheService;
   poolMonitor: NodeJS.Timeout;
   enrichmentScheduler: EnrichmentSchedulerPort | undefined;
+  enrichmentWorker: MuseumEnrichmentWorker | undefined;
   auditCron: AuditCronHandle | undefined;
   auditCronQueue: Queue | undefined;
   chatPurgeCron: ChatPurgeCronHandle | undefined;
@@ -276,6 +313,7 @@ function stopSynchronousSchedulers(
 async function drainAsyncResources(resources: ShutdownResources): Promise<void> {
   const {
     enrichmentScheduler,
+    enrichmentWorker,
     auditCron,
     auditCronQueue,
     chatPurgeCron,
@@ -291,6 +329,13 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
   });
   if (enrichmentScheduler) {
     await safeTeardown('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
+  }
+  // F10/TD-BMQ-02 (lib-docs/bullmq/LESSONS.md:11-14) — SIGTERM MUST await the
+  // on-demand enrichment worker's close() so in-flight jobs drain (or hit
+  // lockDuration) before exit; the awaited close() also releases the blocking
+  // ioredis connection (PATTERNS.md:137).
+  if (enrichmentWorker) {
+    await safeTeardown('enrichment_worker_shutdown_error', () => enrichmentWorker.close());
   }
   if (auditCron) {
     await safeTeardown('audit_cron_shutdown_error', () => auditCron.stop());
@@ -501,6 +546,9 @@ async function bootBackgroundJobs(
 
   const poolMonitor = startPoolMonitor();
   const enrichmentScheduler = await startEnrichmentScheduler();
+  // Task #16 — drain the on-demand `museum-enrichment` queue so the fiche
+  // gets populated. Gated on Redis availability inside startEnrichmentWorker().
+  const enrichmentWorker = startEnrichmentWorker();
   const { handle: auditCron, queue: auditCronQueue } = env.cache?.enabled
     ? await startAuditCron()
     : { handle: undefined, queue: undefined };
@@ -520,6 +568,7 @@ async function bootBackgroundJobs(
     tokenCleanup,
     poolMonitor,
     enrichmentScheduler,
+    enrichmentWorker,
     auditCron,
     auditCronQueue,
     chatPurgeCron,

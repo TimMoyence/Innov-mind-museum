@@ -62,7 +62,7 @@ const COPY: Record<LegalLocale, CookiesCopy> = {
       },
     ],
     contactNote:
-      'Questions about cookies? Contact tim.moyence@gmail.com. We will respond within 30 days.',
+      'Questions about cookies? Contact contact@musaium.com. We will respond within 30 days.',
   },
   fr: {
     intro:
@@ -101,7 +101,7 @@ const COPY: Record<LegalLocale, CookiesCopy> = {
       },
     ],
     contactNote:
-      'Questions sur les cookies ? Contactez tim.moyence@gmail.com. Nous répondons sous 30 jours.',
+      'Questions sur les cookies ? Contactez contact@musaium.com. Nous répondons sous 30 jours.',
   },
 };
 

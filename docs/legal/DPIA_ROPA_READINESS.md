@@ -13,7 +13,7 @@ Le contrôleur (Tim Moyence) a tenu une session « DPO walkthrough » et a posé
 
 | Question | Décision controller (2026-05-13) |
 |---|---|
-| DPO mandate (DPIA:8 + ROPA:9) | **Deadline ferme 2026-05-25** ; cabinet en cours de shortlist ; mailbox `dpo@musaium.com` reliée par alias à `tim.moyence@gmail.com` |
+| DPO mandate (DPIA:8 + ROPA:9) | **Deadline ferme 2026-05-25** ; cabinet en cours de shortlist ; mailbox `dpo@musaium.com` reliée par alias à `contact@musaium.com` |
 | Base légale Auth (ROPA TR-01) | **6(1)(b) uniquement** (exécution du contrat) — alignée EDPB 03/2022 |
 | Base légale Chat / T1 (DPIA T1.1 + ROPA TR-02) | **Cumul 6(1)(b) + 6(1)(a)** — service = contrat ; consentement uniquement sur toggle `location_to_llm` |
 | Rétention audit logs 13 mois (ROPA TR-01) | **Défendue** : CNIL anti-fraude + Art. 22 + cycle annuel d'audit |

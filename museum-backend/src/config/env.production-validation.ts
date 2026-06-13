@@ -12,6 +12,9 @@ const required = (name: string, value: string | undefined): string => {
 /** Min length for JWT signing secrets in prod (L2). */
 const MIN_JWT_SECRET_LENGTH = 32;
 
+/** Shared rationale appended to cross-domain secret-reuse distinctness errors. */
+const SECRET_REUSE_RATIONALE = 'Sharing secrets across signing domains defeats key rotation.';
+
 function assertSecretLength(name: string, value: string): void {
   if (value.length >= MIN_JWT_SECRET_LENGTH) return;
   const required = String(MIN_JWT_SECRET_LENGTH);
@@ -191,10 +194,12 @@ export function validateProductionEnv(env: AppEnv): void {
   // fallback to JWT_*. Must also be distinct so rotation/leak of one does
   // not compromise the other.
   const mediaSigningSecret = required('MEDIA_SIGNING_SECRET', process.env.MEDIA_SIGNING_SECRET);
+  // SEC-HARDENING (L2): >= 32 chars, same floor as every other signing secret.
+  assertSecretLength('MEDIA_SIGNING_SECRET', mediaSigningSecret);
   if (mediaSigningSecret === process.env.JWT_ACCESS_SECRET) {
     throw new Error(
       'MEDIA_SIGNING_SECRET must be distinct from JWT_ACCESS_SECRET in production. ' +
-        'Sharing secrets across signing domains defeats key rotation.',
+        SECRET_REUSE_RATIONALE,
     );
   }
   if (mediaSigningSecret === process.env.JWT_REFRESH_SECRET) {
@@ -282,6 +287,41 @@ function validateExportPseudonymSalt(env: AppEnv): void {
   const salt = required('EXPORT_PSEUDONYM_SALT', process.env.EXPORT_PSEUDONYM_SALT);
   assertSecretLength('EXPORT_PSEUDONYM_SALT', salt);
 
+  // Reusing any signing secret as the export salt collapses two trust domains:
+  // a leak of the salt would also leak the signing key, and vice-versa. Reject a
+  // salt equal to any other production secret. Boot-time check from in-memory env
+  // values (no remote attacker) → plain `===` is fine (mirror validateCsrfSecret).
+
+  if (salt === process.env.JWT_ACCESS_SECRET) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT must be distinct from JWT_ACCESS_SECRET in production. ' +
+        SECRET_REUSE_RATIONALE,
+    );
+  }
+  if (salt === process.env.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT must be distinct from JWT_REFRESH_SECRET in production.',
+    );
+  }
+  if (salt === process.env.MEDIA_SIGNING_SECRET) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT must be distinct from MEDIA_SIGNING_SECRET in production.',
+    );
+  }
+  if (salt === process.env.CSRF_SECRET) {
+    throw new Error('EXPORT_PSEUDONYM_SALT must be distinct from CSRF_SECRET in production.');
+  }
+  if (salt === process.env.MFA_ENCRYPTION_KEY) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT must be distinct from MFA_ENCRYPTION_KEY in production.',
+    );
+  }
+  if (salt === process.env.MFA_SESSION_TOKEN_SECRET) {
+    throw new Error(
+      'EXPORT_PSEUDONYM_SALT must be distinct from MFA_SESSION_TOKEN_SECRET in production.',
+    );
+  }
+
   // Drift detection (mirror validateCsrfSecret) — parsed env MUST agree with
   // raw env var. A future refactor dropping the wiring in env.ts would silently
   // bypass the boot gate ; we fail fast instead.
@@ -299,7 +339,7 @@ function validateCsrfSecret(env: AppEnv): void {
   if (csrf === process.env.JWT_ACCESS_SECRET) {
     throw new Error(
       'CSRF_SECRET must be distinct from JWT_ACCESS_SECRET in production. ' +
-        'Sharing secrets across signing domains defeats key rotation.',
+        SECRET_REUSE_RATIONALE,
     );
   }
   if (csrf === process.env.JWT_REFRESH_SECRET) {
@@ -331,7 +371,7 @@ function validateMfaSecrets(env: AppEnv): void {
   if (mfaKey === process.env.JWT_ACCESS_SECRET) {
     throw new Error(
       'MFA_ENCRYPTION_KEY must be distinct from JWT_ACCESS_SECRET in production. ' +
-        'Sharing secrets across signing domains defeats key rotation.',
+        SECRET_REUSE_RATIONALE,
     );
   }
   if (mfaKey === process.env.JWT_REFRESH_SECRET) {
