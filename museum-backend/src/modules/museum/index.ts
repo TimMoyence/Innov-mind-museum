@@ -9,9 +9,11 @@ export {
   buildEnrichMuseumUseCase,
   buildRefreshStaleEnrichmentsUseCase,
   buildPurgeDeadEnrichmentsUseCase,
+  buildMuseumEnrichmentWorker,
   createBullmqEnrichmentScheduler,
   museumRepository,
 } from './useCase';
+export type { MuseumEnrichmentWorker } from '@modules/museum/adapters/primary/museum-enrichment.worker';
 export type { Museum } from '@modules/museum/domain/museum/museum.entity';
 export type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 export type {
