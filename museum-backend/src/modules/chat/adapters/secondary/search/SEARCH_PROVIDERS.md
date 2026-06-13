@@ -1,7 +1,9 @@
 # Web Search Providers — Architecture
 
 > Documentation du pattern de composition pour les providers de recherche web.
-> Mis à jour 2026-05-17 (C9.15 — Google CSE / SearXNG / DuckDuckGo retired; Tavily + Brave only).
+> Mis à jour 2026-06-13 (C9.15 reversed — Google CSE / SearXNG / DuckDuckGo réintroduits ;
+> chaîne `Tavily → Brave → Google CSE → SearXNG → DuckDuckGo`, chacun câblé sur présence
+> d'env var, DuckDuckGo keyless toujours actif en queue).
 
 ## Vue d'ensemble
 
@@ -21,7 +23,8 @@ Le module `chat` consomme la recherche web via le port `WebSearchProvider`. L'im
 └──────┬──────┬──────┬──────┬──────┬──────────┘
        │      │      │      │      │
        ▼      ▼      ▼      ▼      ▼
-       Tavily              Brave
+    Tavily  Brave  Google  SearXNG  DuckDuckGo
+                    CSE
 ```
 
 ## Port (domain)
@@ -41,8 +44,13 @@ export interface WebSearchProvider {
 |---|---|---|
 | `tavily.client.ts` | Tavily Search API | `TAVILY_API_KEY` |
 | `brave-search.client.ts` | Brave Search API | `BRAVE_SEARCH_API_KEY` |
+| `google-cse.client.ts` | Google Programmable Search (Custom Search JSON API) | `GOOGLE_CSE_API_KEY` **et** `GOOGLE_CSE_ID` |
+| `searxng.client.ts` | SearXNG metasearch (operator-hosted) | `SEARXNG_INSTANCES` (CSV d'URL vettées) |
+| `duckduckgo.client.ts` | DuckDuckGo Instant Answer API | aucune clé (keyless, toujours actif) |
 
-> **Retirés 2026-05-17 (C9.15)** : `google-cse.client.ts`, `searxng.client.ts`, `duckduckgo.client.ts` — jamais activés en production. Reintroduction via PR + env var au besoin.
+> **C9.15 reversed 2026-06-13** : `google-cse.client.ts`, `searxng.client.ts`,
+> `duckduckgo.client.ts` réintroduits. Google CSE et SearXNG ne sont câblés que si
+> leurs env var sont présentes ; DuckDuckGo (keyless) est toujours en queue de chaîne.
 
 Tous implémentent `WebSearchProvider` avec `readonly name` exposé pour le logging.
 
@@ -58,7 +66,9 @@ Tous implémentent `WebSearchProvider` avec `readonly name` exposé pour le logg
 
 `chat/chat-module.ts` construit la liste de providers selon les env vars disponibles, puis instancie `FallbackSearchProvider`.
 
-Ordre actuel : `Tavily` puis `Brave`. Les deux sont payants ; pas de fallback gratuit V1 (retiré 2026-05-17, cf. C9.15).
+Ordre actuel : `Tavily → Brave → Google CSE → SearXNG → DuckDuckGo`. Tavily et Brave sont payants ;
+Google CSE a un quota gratuit (100 req/jour) ; SearXNG est auto-hébergé ; DuckDuckGo (keyless) est le
+fallback gratuit toujours actif en queue de chaîne (C9.15 reversed 2026-06-13).
 
 ## Ajouter un nouveau provider
 
@@ -115,9 +125,13 @@ Ajouter la construction conditionnelle sur la présence de l'env var, puis l'ins
 Chaque client a un fichier de tests dédié :
 - `tavily-client.test.ts`
 - `brave-search-client.test.ts`
+- `google-cse-client.test.ts`
+- `searxng-client.test.ts`
+- `duckduckgo-client.test.ts`
 
 Le chaînage est testé dans :
 - `fallback-search-provider.test.ts` (15 cas : success/empty/throw/all-fail/logging/stringify)
+- `web-search-wiring.test.ts` (ordre additif `buildWebSearch` selon présence d'env var)
 
 Pattern commun aux tests client :
 - Mock `global.fetch` pour chaque scenario (ok, !ok, network error)

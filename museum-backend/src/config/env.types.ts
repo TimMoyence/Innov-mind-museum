@@ -487,6 +487,12 @@ export interface AppEnv {
   webSearch: {
     tavilyApiKey?: string;
     braveSearchApiKey?: string;
+    googleCseApiKey?: string;
+    googleCseId?: string;
+    // Always an array in production (env.ts builds it from the CSV). Declared
+    // optional so callers nullish-guard it (the wiring test mutates it to
+    // undefined to exercise the "no instances configured" branch).
+    searxngInstances?: string[];
     timeoutMs: number;
     cacheTtlSeconds: number;
     maxResults: number;

@@ -261,7 +261,8 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       };
     }
 
-    // Leg 3 — WebSearch (Tavily → Brave fallback, 1500ms). C9.15 retired SearXNG.
+    // Leg 3 — WebSearch (Tavily → Brave → Google CSE → SearXNG → DuckDuckGo
+    // fallback, 1500ms; each present iff its env key(s) are set — C9.15 reversed 2026-06-13).
     const { webFacts, webResultCount, latencyWeb } = await this.runWebSearchLeg(
       searchTermNormalised,
       parentSignal,
