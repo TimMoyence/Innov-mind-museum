@@ -30,7 +30,11 @@ import { preprocessForSiglip } from './image-preprocess';
 const SIGLIP_MODEL_VERSION = 'siglip2-base-patch16-224@v1';
 
 const SIGLIP_INPUT_NAME = 'pixel_values';
-const SIGLIP_OUTPUT_NAME = 'image_embeds';
+// The vision-only ONNX export of google/siglip2-base-patch16-224 exposes the
+// pooled image embedding (the exact tensor `SiglipModel.get_image_features`
+// returns) under its native transformers name `pooler_output` (768-dim), not
+// the higher-level `image_embeds` alias. Read it by its real export name.
+const SIGLIP_OUTPUT_NAME = 'pooler_output';
 const EXPECTED_VECTOR_LEN = 768;
 
 /** NCHW, batch 1, RGB, 224×224. */
