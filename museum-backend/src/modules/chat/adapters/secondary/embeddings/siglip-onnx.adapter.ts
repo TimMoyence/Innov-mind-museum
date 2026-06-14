@@ -118,12 +118,6 @@ export class SiglipOnnxAdapter implements EmbeddingsPort {
    * @throws {EncoderUnavailableError} session-load / run / timeout / malformed output
    */
   public async encode(input: EncodeInput): Promise<EncodeOutput> {
-    const runtime = loadOnnxRuntime();
-    const session = await this.acquireSession(runtime);
-
-    const tensorData = await preprocessForSiglip(input.buffer);
-    const inputTensor = new runtime.Tensor('float32', tensorData, SIGLIP_TENSOR_SHAPE);
-
     // PR-14: does NOT use `fetchWithTimeout` — signal feeds `runWithTimeout`
     // wrapping `session.run` (onnxruntime API), not a `fetch` call. The helper
     // is fetch-specific (Response return type); onnxruntime exposes no fetch
@@ -134,6 +128,17 @@ export class SiglipOnnxAdapter implements EmbeddingsPort {
     }, this.timeoutMs);
 
     try {
+      // Acquire runtime + session + preprocess INSIDE the try so a native
+      // onnxruntime-node load failure, a missing/corrupt model, or an image
+      // preprocessing error all surface as EncoderUnavailableError (→ 503
+      // graceful fallback) instead of escaping as an uncaught 500. These three
+      // calls previously sat OUTSIDE the try; a native-module load failure was
+      // the path that produced the raw 500 on /api/chat/compare.
+      const runtime = loadOnnxRuntime();
+      const session = await this.acquireSession(runtime);
+      const tensorData = await preprocessForSiglip(input.buffer);
+      const inputTensor = new runtime.Tensor('float32', tensorData, SIGLIP_TENSOR_SHAPE);
+
       const outputs = await runWithTimeout(
         session.run({ [SIGLIP_INPUT_NAME]: inputTensor }),
         controller.signal,

@@ -10,14 +10,16 @@ appId: com.musaium.mobile.preview
 #     it, and `useCompareTrigger` DOES fire POST /api/chat/compare (confirmed in
 #     backend logs: compare_request with a queryEmbeddingHash, userId 38).
 # The REAL blocker is backend-side: the SigLIP ONNX encoder model
-# (`./models/siglip2-base-patch16-224.onnx`, ~340MB) is absent in the local
-# Docker backend, so every compare returns HTTP 503 "Visual similarity encoder is
+# (`./models/siglip2-base-patch16-224.onnx`, ~354MB) must be present in the
+# backend, else every compare returns HTTP 503 "Visual similarity encoder is
 # temporarily unavailable" (log: siglip_onnx_session_create_failed → fallbackReason
-# encoder_unavailable). The model is NOT in git and its GCS bucket
-# (musaium-models-public) is not yet provisioned (see museum-backend/scripts/
-# fetch-models.sh TODO(ops)); /chat/compare additionally needs seeded
-# artwork_embeddings to return matches. Both are backend-infra prerequisites that
-# CI/nightly provisions, so this stays a NIGHTLY/CI-only flow. The UI wiring (chat
+# encoder_unavailable). As of 2026-06-14 (P0.C1) the model is OWNED + baked into
+# the prod image via a pinned GHCR base image (museum-backend/deploy/Dockerfile.prod
+# `COPY --from museum-backend-base:siglip-v1`) — the old GCS-bucket blocker is gone.
+# A local dev-stack backend still needs the file (run `bash scripts/pull-siglip-
+# model.sh`), and /chat/compare additionally needs seeded artwork_embeddings to
+# return matches. Both are backend-infra prerequisites that CI/nightly provisions,
+# so this stays a NIGHTLY/CI-only flow against a prod-image backend. The UI wiring (chat
 # entry → attachment picker → Compare → pick → POST /chat/compare) is fully
 # exercised locally and the app degrades gracefully (an "Unexpected server error"
 # banner, no crash). NOTE: the image-DESCRIBE path (chat-image-describe.yaml) uses

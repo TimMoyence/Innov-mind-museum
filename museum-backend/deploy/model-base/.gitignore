@@ -1,0 +1,9 @@
+# The ~354 MB ONNX model is NOT committed to git — it lives in the GHCR base
+# image (ghcr.io/timmoyence/museum-backend-base:siglip-v1) and is reproducible
+# from the provenance in README.md. Drop it here only transiently to (re)build
+# or verify the base image.
+*.onnx
+
+# Python bytecode cache from verify-model.py.
+__pycache__/
+*.pyc

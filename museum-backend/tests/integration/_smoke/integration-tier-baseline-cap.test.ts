@@ -82,7 +82,13 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 //   - telemetry/quota-exceeded-anonymized.test.ts (2026-05-27, PR #301 C3 RGPD —
 //     spy-injected telemetry sink; same Express-smoke pattern as funnel-* above)
 // Reduce back only by deleting baseline entries, never by adding more.
-const PHASE_1_BASELINE_CAP = 24;
+//
+// 2026-06-14 (P0.C1 — SigLIP own-the-model): shrank 24 → 23. Removed the
+// fetch-models.sh.test.ts baseline entry: scripts/fetch-models.sh was retired
+// when the SigLIP ONNX moved off the never-provisioned GCS bucket onto the
+// pinned GHCR base image (deploy/model-base/, COPY'd into Dockerfile.prod).
+// A cap shrink is always allowed.
+const PHASE_1_BASELINE_CAP = 23;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {

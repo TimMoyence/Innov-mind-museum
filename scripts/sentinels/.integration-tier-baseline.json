@@ -95,12 +95,6 @@
       "date": "2026-05-22"
     },
     {
-      "path": "museum-backend/tests/integration/scripts/fetch-models.sh.test.ts",
-      "reason": "P0 feature-gates squash (PR #295, 2026-05-22) — shell-script contract test for scripts/fetch-models.sh. The test IS the boundary (subprocess invocation); no DB, Redis, or outbound HTTP — the script targets the local model cache. Same precedent: ssrf-matrix.integration.test.ts (test intent IS the boundary).",
-      "approved_by": "2026-05-22 V1-lock squash merge (#295)",
-      "date": "2026-05-22"
-    },
-    {
       "path": "museum-backend/tests/integration/telemetry/funnel-consent-header.test.ts",
       "reason": "P0 feature-gates squash (PR #295, 2026-05-22) — telemetry funnel test pinning the consent-header HTTP contract (X-Consent-State propagation) via supertest against a bare Express harness with spy-injected telemetry sink. Pure middleware integration; persistence covered separately by funnel-event repository tests.",
       "approved_by": "2026-05-22 V1-lock squash merge (#295)",

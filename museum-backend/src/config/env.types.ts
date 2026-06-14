@@ -391,8 +391,9 @@ export interface AppEnv {
     provider: EmbeddingsProvider;
     /**
      * Path to SigLIP ONNX bundle. Relative paths resolve from `process.cwd()`.
-     * Default `./models/siglip2-base-patch16-224.onnx` (downloaded at Docker
-     * build by `scripts/fetch-models.sh`). Ignored when `provider === 'replicate'`.
+     * Default `./models/siglip2-base-patch16-224.onnx` (COPY'd at Docker build
+     * from the pinned GHCR base image — see deploy/Dockerfile.prod; for local
+     * dev, scripts/pull-siglip-model.sh). Ignored when `provider === 'replicate'`.
      */
     siglipOnnxModelPath: string;
     /** Only consumed when `provider === 'replicate'`. */
@@ -447,9 +448,9 @@ export interface AppEnv {
     provider: RerankerProvider;
     /**
      * Path to the bge-reranker-v2-m3 ONNX bundle. Relative paths resolve from
-     * `process.cwd()`. Default `./models/bge-reranker-v2-m3.onnx` (V2: fetched
-     * at Docker build by `scripts/fetch-models.sh`). Ignored when
-     * `provider === 'null'`.
+     * `process.cwd()`. Default `./models/bge-reranker-v2-m3.onnx` (V2: to be
+     * baked into a pinned GHCR base image like the SigLIP model — see
+     * deploy/model-base/). Ignored when `provider === 'null'`.
      */
     modelPath: string;
     /**

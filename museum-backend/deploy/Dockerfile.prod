@@ -5,13 +5,24 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
-# `curl` is required by museum-backend/scripts/fetch-models.sh (C3 SigLIP
-# ONNX bundle). node:22-bookworm-slim does not ship curl.
+# `ca-certificates` ensures TLS trust for the pnpm registry fetch below.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
+
+# C3 (2026-06) — SigLIP ONNX vision encoder, baked into a pinned, self-owned
+# GHCR base image (museum-backend-base:siglip-v1) and COPY'd in here. This layer
+# is content-addressed by the base image digest, so it is cached across source
+# changes: the 354 MB model is pulled at most once per runner, NEVER re-fetched
+# per build. Provenance + rebuild recipe (HF google/siglip2-base-patch16-224 →
+# ONNX vision export, sha256 c0573e3f…b163bcad): deploy/model-base/README.md.
+# Replaces fetch-models.sh + its never-provisioned GCS bucket — the phantom URL
+# that 500'd /api/chat/compare. `models/` is dockerignored so the later
+# `COPY museum-backend ./` cannot clobber this file.
+COPY --from=ghcr.io/timmoyence/museum-backend-base:siglip-v1 \
+     /models/siglip2-base-patch16-224.onnx ./models/siglip2-base-patch16-224.onnx
 
 # Copy the workspace plugin AND @musaium/shared FIRST so file: paths exist
 # when pnpm resolves the lockfile. Both are committed with their dist/.
@@ -24,18 +35,8 @@ RUN pnpm install --frozen-lockfile
 COPY museum-backend ./
 RUN pnpm run build
 
-# C3 (2026-05) — fetch the SigLIP ONNX bundle for the visual-similarity engine.
-# Idempotent: skips re-download when the file is already present and (when
-# configured via SIGLIP_ONNX_SHA256) its sha256 matches the recorded value.
-# Build-arg pattern lets CI inject a pinned hash without rebuilding the
-# script. The script exits non-zero ONCE SIGLIP_ONNX_SHA256 is set (then any
-# 404 / hash mismatch is a hard failure — desired fail-loud behaviour). When
-# the SHA is unset (current state, bucket pending provisioning), 404 logs a
-# warning and exits 0 so the rest of the deploy can proceed; the runtime
-# falls back to `EMBEDDINGS_PROVIDER=replicate`.
-ARG SIGLIP_ONNX_SHA256=""
-ENV SIGLIP_ONNX_SHA256=${SIGLIP_ONNX_SHA256}
-RUN bash scripts/fetch-models.sh
+# (SigLIP ONNX model is COPY'd from the pinned GHCR base image near the top of
+# this build stage — see the C3 note after corepack. No per-build download.)
 
 # ---------- Production deps stage ----------
 FROM node:22-bookworm-slim AS deps
@@ -77,8 +78,8 @@ COPY museum-backend/package.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/openapi ./openapi
-# C3 (2026-05) — visual-similarity ONNX bundle staged in the build stage by
-# scripts/fetch-models.sh. Path mirrors SIGLIP_ONNX_MODEL_PATH default
+# C3 (2026-06) — visual-similarity ONNX bundle, COPY'd into the build stage from
+# the pinned GHCR base image. Path mirrors SIGLIP_ONNX_MODEL_PATH default
 # (./models/siglip2-base-patch16-224.onnx) so env.ts resolution works at runtime.
 COPY --from=build /app/models ./models
 

@@ -55,7 +55,7 @@ stats: done=97 partial=28 open=48 ops=5
 
 ### ⚖️ Décision à trancher avant launch (pas un blocker)
 
-- 🟧 **/chat/compare (image-similarity C3)** — `fetch-models.sh` tolère le bucket GCS non-provisionné (exit 0 sur 404) et `EMBEDDINGS_PROVIDER` retombe sur `replicate`. **Décider** : provisionner `musaium-models-public` (SHA-pin) **OU** `EMBEDDINGS_PROVIDER=replicate` + `REPLICATE_API_TOKEN`, sinon /chat/compare est inerte en prod.
+- ✅ **/chat/compare (image-similarity C3)** — **RÉSOLU 2026-06-14** (décision = posséder le modèle). Le SigLIP ONNX est figé dans une image de base GHCR mono-couche (`museum-backend-base:siglip-v1`) et copié en prod via `COPY --from` (`deploy/Dockerfile.prod`) — plus de bucket GCS à provisionner, plus de 503 « cold ». `EMBEDDINGS_PROVIDER=siglip-onnx` self-hosté par défaut ; `replicate` reste un fallback optionnel. Recette reproductible : `deploy/model-base/README.md`.
 
 ---
 

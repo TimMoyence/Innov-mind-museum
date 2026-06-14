@@ -43,16 +43,14 @@ museum-backend/scripts/*
 # Source must reach the build stage so TS compiles it to dist/scripts/. Whitelisted
 # 2026-05-17 after CI run 25983633356 failed with "Cannot find module".
 !museum-backend/scripts/audit-chain-verify.ts
-# C3 (2026-05) — fetch-models.sh runs in the build stage (RUN bash scripts/fetch-models.sh).
-!museum-backend/scripts/fetch-models.sh
 museum-backend/docker-compose*.yml
 museum-backend/deploy/
 museum-backend/.vscode/
 museum-backend/.claude/
 museum-backend/.github/
 
-# C3 (2026-05) — local ONNX bundle. Fetched inside the prod build stage by
-# scripts/fetch-models.sh; never copied from the host context.
+# C3 — local ONNX bundle. The prod build gets it via `COPY --from` the pinned
+# GHCR base image (deploy/Dockerfile.prod); never copied from the host context.
 museum-backend/models/
 
 # tools/ — only the eslint-plugin is consumed; trim its noise
