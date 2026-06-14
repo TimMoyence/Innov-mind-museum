@@ -74,10 +74,10 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
       run: onnxRunMock,
       release: onnxReleaseMock,
       inputNames: ['pixel_values'],
-      outputNames: ['image_embeds'],
+      outputNames: ['pooler_output'],
     });
     onnxRunMock.mockResolvedValue({
-      image_embeds: { data: FAKE_RAW_OUTPUT, dims: [1, 768] },
+      pooler_output: { data: FAKE_RAW_OUTPUT, dims: [1, 768] },
     });
   });
 
@@ -104,7 +104,7 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
       run: onnxRunMock,
       release: onnxReleaseMock,
       inputNames: ['wrong_input'],
-      outputNames: ['image_embeds'],
+      outputNames: ['pooler_output'],
     });
     const adapter = new SiglipOnnxAdapter({
       modelPath: './models/bad.onnx',
@@ -213,7 +213,7 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
       run: onnxRunMock,
       release: onnxReleaseMock,
       inputNames: ['pixel_values'],
-      outputNames: ['image_embeds'],
+      outputNames: ['pooler_output'],
     });
 
     const adapter = new SiglipOnnxAdapter({
