@@ -157,12 +157,20 @@ export const buildS3SignedHeadersForPut = (params: {
     canonicalRequest,
   });
 
-  const authorization = [
-    'AWS4-HMAC-SHA256',
-    `Credential=${params.config.accessKeyId}/${scope}`,
-    `SignedHeaders=${signedHeaders}`,
-    `Signature=${signature}`,
-  ].join(', ');
+  // SigV4 Authorization = "<algo> Credential=...,SignedHeaders=...,Signature=..."
+  // — a SPACE separates the algorithm from the comma-joined params. Joining the
+  // algorithm into the comma list (`AWS4-HMAC-SHA256, Credential=...`) is accepted
+  // by AWS S3 but REJECTED by OVH/Swift's stricter parser, which then returns a
+  // misleading `AWS authentication requires a valid Date or x-amz-date header`
+  // 403 — the real root cause of INC-2026-06-14 (all object-store writes 403'd
+  // against OVH while the same creds worked via aws-cli).
+  const authorization =
+    'AWS4-HMAC-SHA256 ' +
+    [
+      `Credential=${params.config.accessKeyId}/${scope}`,
+      `SignedHeaders=${signedHeaders}`,
+      `Signature=${signature}`,
+    ].join(', ');
 
   return {
     url,
@@ -214,12 +222,20 @@ export const buildS3SignedHeaders = (params: {
     canonicalRequest,
   });
 
-  const authorization = [
-    'AWS4-HMAC-SHA256',
-    `Credential=${params.config.accessKeyId}/${scope}`,
-    `SignedHeaders=${signedHeaders}`,
-    `Signature=${signature}`,
-  ].join(', ');
+  // SigV4 Authorization = "<algo> Credential=...,SignedHeaders=...,Signature=..."
+  // — a SPACE separates the algorithm from the comma-joined params. Joining the
+  // algorithm into the comma list (`AWS4-HMAC-SHA256, Credential=...`) is accepted
+  // by AWS S3 but REJECTED by OVH/Swift's stricter parser, which then returns a
+  // misleading `AWS authentication requires a valid Date or x-amz-date header`
+  // 403 — the real root cause of INC-2026-06-14 (all object-store writes 403'd
+  // against OVH while the same creds worked via aws-cli).
+  const authorization =
+    'AWS4-HMAC-SHA256 ' +
+    [
+      `Credential=${params.config.accessKeyId}/${scope}`,
+      `SignedHeaders=${signedHeaders}`,
+      `Signature=${signature}`,
+    ].join(', ');
 
   return {
     'X-Amz-Content-Sha256': params.payloadHash,

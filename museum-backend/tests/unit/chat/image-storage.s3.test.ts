@@ -173,7 +173,17 @@ describe('image-storage.s3', () => {
       '/museum-private/staging/chat-images/2026/02/user-42/session-abc/custom.png',
     );
     expect(received.headers['content-type']).toBe('image/png');
-    expect(received.headers.authorization).toContain('AWS4-HMAC-SHA256');
+    // Regression INC-2026-06-14: SigV4 Authorization MUST be
+    // "AWS4-HMAC-SHA256 Credential=...,SignedHeaders=...,Signature=..." — a SPACE
+    // separates the algorithm from the comma-joined params. The old `.join(', ')`
+    // emitted a COMMA after the algorithm ("AWS4-HMAC-SHA256, Credential=...");
+    // AWS S3 tolerated it but OVH/Swift's stricter parser rejected EVERY upload
+    // with a misleading "AWS authentication requires a valid Date or x-amz-date
+    // header" 403. The previous `.toContain('AWS4-HMAC-SHA256')` passed for BOTH
+    // forms — so it never caught the bug. Assert the exact prefix + the absence
+    // of the comma form.
+    expect(received.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=/);
+    expect(received.headers.authorization).not.toContain('AWS4-HMAC-SHA256,');
     expect(received.headers['x-amz-date']).toEqual(expect.any(String));
     expect(received.headers['x-amz-content-sha256']).toMatch(/^[a-f0-9]{64}$/);
     expect(received.headers['x-amz-security-token']).toBe('upload-session-token');

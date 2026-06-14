@@ -613,6 +613,41 @@ async function main() {
     console.log(
       `[smoke:api] tts OK (bytes=${buf.length}, contentType=${ttsResult.contentType}, msgId=${assistantMessageId.slice(0, 8)})`,
     );
+
+    // 7. S3 OBJECT-STORE verification (INC-2026-06-14). A chat message WITH an
+    //    image runs the shared image pipeline → imageStorage.save = a REAL S3
+    //    upload (NOT the compare's skipStorage path). A working object store
+    //    returns 201; a misconfigured one fails the upload with a 500
+    //    `S3 upload failed (...)`. This is the only smoke assertion that exercises
+    //    the real S3 credentials end to end (audit finding #1 residual). The 1×1
+    //    PNG is fine — we verify the upload path, not vision quality.
+    //    expected=[201,402,429,503]: a 500 (S3) fails the smoke loudly; a
+    //    402/429/503 means S3 succeeded but the vision/LLM side is degraded
+    //    (cost guard / rate limit / breaker) — not an S3 fault, so warn only.
+    const imageChatEnabled =
+      getEnv('SMOKE_IMAGE_CHAT_ENABLED', 'true').toLowerCase() === 'true';
+    if (imageChatEnabled) {
+      const imgChat = await fetchJson({
+        baseUrl,
+        path: `/api/chat/sessions/${createdSessionId}/messages`,
+        method: 'POST',
+        token: accessToken,
+        body: {
+          text: 'Décris brièvement cette image.',
+          image: `data:image/png;base64,${SMOKE_TEST_PNG_B64}`,
+          context: {},
+        },
+        timeoutMs,
+        expected: [201, 402, 429, 503],
+      });
+      if (imgChat.status === 201) {
+        console.log('[smoke:api] chat image (real S3 upload) OK (status=201)');
+      } else {
+        console.log(
+          `[smoke:api] WARN chat image status=${imgChat.status} — S3 upload OK, vision/LLM side degraded (not an S3 fault)`,
+        );
+      }
+    }
   } finally {
     // R10 / AC8 — DELETE cleanup runs UNCONDITIONALLY, even on TTS failure.
     // Contract reminder : `/api/chat/sessions/:id` maps to `deleteSessionIfEmpty`,
