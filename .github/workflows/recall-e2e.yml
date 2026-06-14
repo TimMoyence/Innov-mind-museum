@@ -1,0 +1,162 @@
+name: recall-e2e
+
+# Nightly visual-similarity recall@5 lane (C3 / T7.4) — NON-blocking but REPORTED.
+#
+# Why a dedicated nightly lane (not per-PR):
+#   - The real SigLIP ONNX model (~355 MB) is pulled from the pinned GHCR base
+#     image and the onnxruntime-node CPU inference is heavy. Running this on
+#     every PR would be slow and burn cache/registry bandwidth for no signal —
+#     the recall numbers only move when the model version or the catalog/encoder
+#     pipeline changes, both of which are caught nightly + on push to main.
+#   - The suite `describe.skip`s when the model file is absent (honest skip), so
+#     before this lane existed — with ZERO references to it in any workflow — it
+#     was a PERMANENT silent skip and had never actually run in CI. This lane
+#     fixes that: it materialises the model so
+#     `tests/integration/chat/visual-similarity/recall.test.ts` runs for real and
+#     FAILS LOUD on a missing fixture (UFR-013, no fabricated green).
+#
+# NON-blocking but REPORTED:
+#   - This is a STANDALONE workflow, deliberately NOT in the branch-protection
+#     required-status-checks list — a recall regression must NOT block a merge or
+#     a prod deploy (recall is a quality signal, not a release gate, and the
+#     real-model run is too heavy/slow to sit in the per-PR critical path).
+#   - But "non-blocking" must NOT mean "silently dead". The `recall-alert` job
+#     below opens (or re-pings) a tracking GitHub issue when the nightly /
+#     push-to-main recall run is red, and auto-closes it when green again —
+#     mirroring `ci-cd-mobile.yml`'s `maestro-full-alert`. So a recall regression
+#     SURFACES (a GitHub notification + a visible Issue) without gating CI.
+#
+# DB: the recall test uses `createIntegrationHarness`, which spins up its own
+# `pgvector/pgvector:pg16` Postgres via Docker testcontainer and applies all
+# migrations (so the `halfvec(768)` HNSW index per the CLAUDE.md pgvector gotcha
+# exists). No `services.postgres` is needed — only Docker (present on
+# ubuntu-latest) + the redis service (eager BullMQ boot guard, mirrors the
+# backend integration job).
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Nightly 04:40 UTC — offset from the backend 03:17 nightly so the two heavy
+    # suites don't contend for the same runners.
+    - cron: '40 4 * * *'
+  push:
+    # Re-run on changes to the encoder / repo / fixtures / the test itself so a
+    # pipeline regression on main is caught at merge, not only overnight.
+    branches: ['main']
+    paths:
+      - 'museum-backend/src/modules/chat/adapters/secondary/embeddings/**'
+      - 'museum-backend/src/modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg.ts'
+      - 'museum-backend/tests/integration/chat/visual-similarity/recall.test.ts'
+      - 'museum-backend/tests/fixtures/recall-eval.json'
+      - 'museum-backend/tests/fixtures/recall-images/**'
+      - 'museum-backend/tests/helpers/chat/visual-similarity/embedding.fixtures.ts'
+      - 'museum-backend/tests/helpers/integration/onnx-node-environment.cjs'
+      - 'museum-backend/scripts/pull-siglip-model.sh'
+      - '.github/workflows/recall-e2e.yml'
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: recall-e2e-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  recall:
+    name: recall@5 (real SigLIP ONNX + pgvector)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Mirror of the backend integration job: `pnpm dev`/eager BullMQ boot opens
+    # an ioredis client at import time; without redis the harness trips
+    # ECONNREFUSED 6379. CLAUDE.md § Pièges connus documents this dependency.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: museum-backend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # The model lives in the pinned, sha256-verified GHCR base image; the pull
+      # script extracts it via `docker cp` (no external object store). GHCR may be
+      # private → log in first. The script no-ops if the file already matches.
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Pull SigLIP ONNX model from GHCR base image
+        run: bash scripts/pull-siglip-model.sh
+      - name: Run recall@5 integration suite (real model + Docker pgvector)
+        run: >-
+          pnpm exec jest --watchman=false --coverage=false --runInBand
+          --forceExit --testPathPattern=visual-similarity/recall
+        env:
+          RUN_INTEGRATION: 'true'
+          SIGLIP_ONNX_MODEL_PATH: ./models/siglip2-base-patch16-224.onnx
+
+  # ─── Nightly / push-main alert — make a red recall run impossible to miss ───
+  # The `recall` job is non-blocking (this workflow is not a required status
+  # check), which is correct: a recall regression must not block a merge/deploy.
+  # But a non-blocking job that runs unattended (nightly cron / push to main) is
+  # a dead signal if nobody looks. On a red recall run this opens (or re-pings) a
+  # tracking issue via the native GITHUB_TOKEN — the repo owner gets a GitHub
+  # notification and the issue stays visible in the Issues tab until fixed. On a
+  # green run it auto-closes the issue. No external secret/webhook needed.
+  # Same pattern as `ci-cd-mobile.yml`'s `maestro-full-alert`.
+  #
+  # Only fires on unattended triggers (schedule / push to main), NOT on
+  # workflow_dispatch — a manual run is watched by the person who dispatched it.
+  recall-alert:
+    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    needs: [recall]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open/close the recall tracking issue
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const failed = ${{ needs.recall.result != 'success' }};
+            const { owner, repo } = context.repo;
+            const label = 'nightly-recall-alert';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const trigger = context.eventName === 'schedule' ? 'nightly' : 'push to main';
+            const existing = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: label });
+            if (failed) {
+              const body = `The visual-similarity recall@5 suite failed on a **${trigger}** run.\n\nRun: ${runUrl}\n\nThis is a NON-blocking quality signal (recall is not a release gate), but a red run means retrieval may have regressed below the 0.85 floor, the SigLIP model/encoder pipeline changed, or a recall fixture is missing. This issue auto-closes when the next recall run is green.`;
+              if (existing.data.length > 0) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: existing.data[0].number, body: `Still failing (${trigger}) — ${runUrl}` });
+              } else {
+                try { await github.rest.issues.getLabel({ owner, repo, name: label }); }
+                catch { await github.rest.issues.createLabel({ owner, repo, name: label, color: 'b60205', description: 'Auto-filed when a nightly/push-main recall@5 run fails' }); }
+                await github.rest.issues.create({ owner, repo, title: `Recall@5 regression (${trigger})`, body, labels: [label] });
+              }
+            } else {
+              for (const issue of existing.data) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body: `Recall@5 green again — ${runUrl}. Closing.` });
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed' });
+              }
+            }

@@ -173,3 +173,133 @@ describe('smoke-api.cjs — R5 TTS contract (static grep)', () => {
   // discipline (no `expect(true).toBe(true)`).
   it.todo('validateMp3MagicBytes(buffer) — pure helper test, only if T2 extracts the validator');
 });
+
+/**
+ * INC-2026-06-14 fail-loud-by-default contract (static grep).
+ *
+ * These assertions guard the six assertion-strengthening targets that close the
+ * INC-2026-06-14 silent-green regression. They are STATIC (read the script text,
+ * grep for the shape) — same readFileSync+regex pattern as the TTS contract
+ * block above. They MUST fail against the pre-INC-2026-06-14 smoke-api.cjs (which
+ * tolerated 503-compare, degraded-health, non-empty modelVersion, and both
+ * delete booleans) and pass once the hardening lands.
+ */
+describe('smoke-api.cjs — INC-2026-06-14 fail-loud contract (static grep)', () => {
+  describe('H1-COMPARE-DEFAULT-200 (INV-2) — a 503 compare fails by default', () => {
+    it('defaults compare expected to [200] and gates 503 behind SMOKE_COMPARE_ALLOW_ENCODER_DOWN', () => {
+      const src = readScript();
+      // The named opt-out env must exist and default to 'false'.
+      expect(src).toMatch(/SMOKE_COMPARE_ALLOW_ENCODER_DOWN/);
+      expect(src).toMatch(
+        /getEnv\(\s*['"]SMOKE_COMPARE_ALLOW_ENCODER_DOWN['"]\s*,\s*['"]false['"]\s*\)/,
+      );
+      // The strict-by-default expected list: [200] when the opt-out is off,
+      // [200, 503] only when it is on. Anchor the ternary shape.
+      expect(src).toMatch(/allowEncoderDown\s*\?\s*\[\s*200\s*,\s*503\s*\]\s*:\s*\[\s*200\s*\]/);
+    });
+  });
+
+  describe('H1-COMPARE-MODELVERSION-PINNED (INV-3) — 200 must carry the catalogued model version', () => {
+    it('reads SMOKE_EXPECTED_MODEL_VERSION defaulting to the live SigLIP version and asserts equality', () => {
+      const src = readScript();
+      expect(src).toMatch(
+        /getEnv\(\s*['"]SMOKE_EXPECTED_MODEL_VERSION['"]\s*,\s*['"]siglip2-base-patch16-224@v1['"]\s*,?\s*\)/,
+      );
+      // The assertion must compare the response modelVersion against the
+      // expected value (strict !==), not merely check non-empty.
+      expect(src).toMatch(/modelVersion\s*!==\s*expectedModelVersion/);
+    });
+
+    it('no longer accepts any non-empty modelVersion on a 200 (the old vacuous check is gone)', () => {
+      const src = readScript();
+      // The pre-INC check `compare.json.modelVersion === ''` thrown a "missing
+      // modelVersion" error for empty-only. The new code pins the exact value,
+      // so the loose `=== ''`-only gate must be gone.
+      expect(src).not.toMatch(/Compare 200 response missing modelVersion/);
+    });
+  });
+
+  describe('M-SMOKE-HEALTH-REQUIRE-OK (INV-1) — degraded health and redis-down fail by default', () => {
+    it('requires status===ok by default and gates degraded behind SMOKE_ALLOW_DEGRADED_HEALTH', () => {
+      const src = readScript();
+      expect(src).toMatch(
+        /getEnv\(\s*['"]SMOKE_ALLOW_DEGRADED_HEALTH['"]\s*,\s*['"]false['"]\s*\)/,
+      );
+      // The allowed-statuses list is ['ok'] unless the opt-out is on.
+      expect(src).toMatch(/\[\s*['"]ok['"]\s*,\s*['"]degraded['"]\s*\]\s*:\s*\[\s*['"]ok['"]\s*\]/);
+      // The old "accept ok OR degraded unconditionally" guard must be gone.
+      expect(src).not.toMatch(
+        /status\s*!==\s*['"]ok['"]\s*&&\s*[A-Za-z0-9_.?]+\s*!==\s*['"]degraded['"]/,
+      );
+    });
+
+    it('defaults SMOKE_REQUIRE_REDIS to true and distinguishes skipped from down', () => {
+      const src = readScript();
+      expect(src).toMatch(/getEnv\(\s*['"]SMOKE_REQUIRE_REDIS['"]\s*,\s*['"]true['"]\s*\)/);
+      // Explicit skipped vs down branches (distinct messages, INV per contract).
+      expect(src).toMatch(/===\s*['"]skipped['"]/);
+      expect(src).toMatch(/===\s*['"]down['"]/);
+    });
+  });
+
+  describe('M-SMOKE-CHAT (INV-4) — length>50 + round-trip GET, citations stay unasserted', () => {
+    it('asserts the assistant text length is greater than 50 chars', () => {
+      const src = readScript();
+      // A real Joconde answer is far longer than 50 chars; a stub/refusal is caught.
+      expect(src).toMatch(/\.trim\(\)\.length\s*<=\s*50/);
+    });
+
+    it('performs a GET round-trip on the session and finds the persisted assistant message', () => {
+      const src = readScript();
+      // After the POST, re-read the session and locate the assistant message by id.
+      expect(src).toMatch(/method:\s*['"]GET['"]/);
+      expect(src).toMatch(
+        /\.find\(\s*\(?[A-Za-z0-9_]+\)?\s*=>\s*[A-Za-z0-9_]+\??\.id\s*===\s*assistantMessageId\s*\)/,
+      );
+      expect(src).toMatch(/chat round-trip OK/);
+    });
+
+    it('does NOT assert citations are non-empty (citations is nullable on the healthy path)', () => {
+      const src = readScript();
+      // Over-asserting citations would false-fail healthy runs (INV-4). Guard
+      // against any assertion that throws on empty/missing citations.
+      expect(src).not.toMatch(
+        /citations[\s\S]{0,80}(?:length\s*===\s*0|missing citations|empty citations)/i,
+      );
+    });
+  });
+
+  describe('M-SMOKE-TTS-GRANULEPOS (INV-5) — decoded audio duration, not just magic bytes', () => {
+    it('declares an Ogg granulepos parser and a >=96000-sample (~2s) floor', () => {
+      const src = readScript();
+      expect(src).toMatch(
+        /(?:function\s+readLastOggGranulePos\s*\(|const\s+readLastOggGranulePos\s*=)/,
+      );
+      // Reads a 64-bit LE granule position via two 32-bit halves (pure byte parse).
+      expect(src).toMatch(/readUInt32LE/);
+      // The 2s floor at 48kHz Opus.
+      expect(src).toMatch(/96000/);
+      // The fail message names granulepos + <2s.
+      expect(src).toMatch(/granulepos[\s\S]{0,40}<2s|<2s[\s\S]{0,40}granulepos/i);
+    });
+  });
+
+  describe('M-SMOKE-DELETE (INV-6) — non-empty session: deleted===false + GET 200', () => {
+    it('asserts deleted===false for the guaranteed-non-empty session', () => {
+      const src = readScript();
+      expect(src).toMatch(/deleted\.json\.deleted\s*!==\s*false/);
+    });
+
+    it('performs a GET after the no-op DELETE expecting 200 (session survives)', () => {
+      const src = readScript();
+      // A GET on the same session id, after the DELETE, asserting status 200.
+      expect(src).toMatch(/session survives GET 200|did not survive the no-op DELETE/);
+    });
+
+    it('no longer tolerates both delete booleans (the vacuous "validate shape not value" is gone)', () => {
+      const src = readScript();
+      // The pre-INC comment deliberately tolerated true and false. It must be gone.
+      expect(src).not.toMatch(/Validate the response shape, not the boolean value/);
+    });
+  });
+});
