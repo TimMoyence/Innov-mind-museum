@@ -57,4 +57,41 @@ describe('AlertBanner', () => {
     // Variant classes must still be present.
     expect(node.className).toContain('bg-red-50');
   });
+
+  // ── a11y semantics (behaviour, not styling) ──────────────────────────────
+  // The whole point of this component is that assistive tech announces the
+  // message via the right live-region role. These assertions exercise that
+  // contract through @testing-library role queries rather than class strings.
+
+  it('exposes the error message as the announced content of the alert live region', () => {
+    render(<AlertBanner variant="error" message="Save failed" />);
+    // A screen reader announces the message because it is the text content of
+    // the role="alert" live region (assertive). There is exactly one alert.
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent('Save failed');
+  });
+
+  it('error and success are assertive alert regions, info is a polite status', () => {
+    const { rerender } = render(<AlertBanner variant="error" message="E" />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+
+    rerender(<AlertBanner variant="success" message="S" />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+
+    // info must NOT be announced assertively — it is a status region only.
+    rerender(<AlertBanner variant="info" message="I" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('renders the message as plain text (no raw HTML injection)', () => {
+    render(<AlertBanner variant="error" message="<b>x</b> & y" />);
+    const alert = screen.getByRole('alert');
+    // The angle-bracket string is shown verbatim as text, never parsed as markup.
+    expect(alert).toHaveTextContent('<b>x</b> & y');
+    expect(alert.querySelector('b')).toBeNull();
+  });
 });

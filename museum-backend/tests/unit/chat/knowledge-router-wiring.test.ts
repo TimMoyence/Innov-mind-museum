@@ -1,5 +1,12 @@
 /**
- * C4.1 T3.3 — `KnowledgeRouter` wiring integration test (composition root).
+ * C4.1 T3.3 — `KnowledgeRouter` wiring composition/cascade UNIT test.
+ *
+ * Tier note (moved tests/integration → tests/unit 2026-06-14): this file
+ * `jest.mock()`s the three adapter clients and feeds `ChatModule.build()` a
+ * stub `DataSource` (see {@link makeStubDataSource}). It crosses NO real infra
+ * boundary — no `createIntegrationHarness`, no Docker, no DataSource. It is a
+ * legitimate composition-root / cascade UNIT test and now lives under
+ * tests/unit/ to match its tier.
  *
  * Asserts that {@link ChatModule.build} instantiates a `KnowledgeRouterService`
  * with the wired KB / judge / WebSearch providers, and that the resulting
@@ -100,7 +107,7 @@ function makeStubDataSource(): DataSource {
 
 /* ───────────────────────────────────────────────────────────────────────── */
 
-describe('chat-module knowledge router wiring (T3.3 integration)', () => {
+describe('chat-module knowledge router wiring (T3.3 composition unit)', () => {
   let module: ChatModule;
   let router: KnowledgeRouterPort;
 

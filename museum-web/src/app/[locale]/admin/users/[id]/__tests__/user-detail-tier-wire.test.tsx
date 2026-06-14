@@ -109,21 +109,29 @@ describe('User detail page wires TierToggleButton (R1 §0.3 web + §3.6 D6)', ()
 
   // ── Runtime assertion : DTO carries `tier`, button renders ───────────
 
-  // R1 corrective (2026-05-15) — runtime render assertion deferred.
+  // SKIP REASON (auditable — not a silent skip):
   //
-  // Justification: React 19 `use(params)` + Suspense don't flush microtasks
-  // reliably in jsdom + Vitest test environment. Tried: <Suspense> wrap + 5s
-  // timeout + `findByText` async — Suspense fallback never resolves.
+  // jsdom cannot render this page's React 19 Suspense streaming path. The page
+  // is a Server-style component that calls `use(params)` and suspends on the
+  // params Promise; jsdom + Vitest do not drive React 19's concurrent
+  // Suspense->microtask->useEffect->refetch flush, so the <Suspense> fallback
+  // below never resolves (verified: <Suspense> wrap + async `findByText` + a 5s
+  // timeout all still time out — the fallback stays mounted). This is an
+  // environment limitation, NOT a defect in the page or the test assertion.
   //
-  // Static-source coverage (it #1 above) ALREADY confirms the page imports
-  // TierToggleButton and references it in JSX. The component itself is
-  // exhaustively tested in `TierToggleButton.test.tsx` (renders + click +
-  // confirm modal + PATCH + loading + error). So this runtime smoke test
-  // is redundant with two existing layers of green coverage.
+  // What IS still covered (so the wire is not entirely unverified):
+  //  - `it` #1 above statically asserts the page imports + references
+  //    <TierToggleButton> in its TSX.
+  //  - `TierToggleButton.test.tsx` exercises the component runtime
+  //    (render + click + confirm modal + PATCH + loading + error).
+  // What is NOT covered and is the reason this test exists: the *page-level*
+  // runtime render of the button against a real `tier=free` DTO. That gap is
+  // intentionally tracked for a Playwright (real-browser) e2e — the only
+  // environment that runs React 19 Suspense streaming faithfully.
   //
-  // Reviewer (R1 loop 1) accepted this defer as honest. Reopen if React
-  // 19 + Vitest interaction matures (Vitest 5.x or jsdom flush patch).
-  // Approved-by: dispatcher 2026-05-15 — duplicated coverage rule.
+  // TODO(playwright-e2e): re-enable as a Playwright `/admin/users/[id]` e2e
+  // asserting "Free tier" renders for a tier=free user. Do NOT un-skip under
+  // jsdom — it will only re-introduce a flaky/never-resolving Suspense fallback.
   it.skip('page renders TierToggleButton when user DTO includes tier=free', async () => {
     mockApiGet.mockResolvedValueOnce({
       user: {

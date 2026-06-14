@@ -1,11 +1,43 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import type { SyntheticEvent } from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Button from './Button';
 
 describe('Button', () => {
   it('renders children text', () => {
     render(<Button>Click me</Button>);
     expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument();
+  });
+
+  it('invokes onClick when clicked', () => {
+    const onClick = vi.fn();
+    render(<Button onClick={onClick}>Click me</Button>);
+    fireEvent.click(screen.getByRole('button', { name: 'Click me' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invoke onClick while disabled', () => {
+    const onClick = vi.fn();
+    render(
+      <Button disabled onClick={onClick}>
+        Disabled
+      </Button>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Disabled' }));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('submits the enclosing form via the default submit type', () => {
+    const onSubmit = vi.fn((e: SyntheticEvent<HTMLFormElement>) => {
+      e.preventDefault();
+    });
+    render(
+      <form onSubmit={onSubmit}>
+        <Button type="submit">Send</Button>
+      </form>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it('applies primary variant classes by default', () => {

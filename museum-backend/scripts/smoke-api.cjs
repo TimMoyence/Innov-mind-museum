@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 
+// Shared, dependency-free audio byte validators (magic-byte container detection
+// + Ogg granulepos parsing). Extracted to a single source of truth so the smoke
+// and its unit tests assert the SAME logic — no more inline replicas.
+const {
+  MIN_GRANULEPOS_2S_48KHZ,
+  MIN_TTS_BYTE_LENGTH,
+  detectAudioContainer,
+  readLastOggGranulePos,
+} = require('./validate-audio.cjs');
+
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_RETRIES = 18;
 const DEFAULT_HEALTH_RETRY_DELAY_MS = 5000;
@@ -40,39 +50,6 @@ function buildUrl(baseUrl, path) {
  */
 const SMOKE_TEST_PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
-/**
- * M-SMOKE-TTS-GRANULEPOS (INV-5) — read the granule position of the LAST Ogg
- * page from an Ogg/Opus byte stream, purely from bytes (no ffprobe/ffmpeg, no
- * new deps). Ogg page header layout (RFC 3533 §6):
- *   bytes 0..3  : "OggS" capture pattern
- *   byte  4     : stream structure version
- *   byte  5     : header type flag
- *   bytes 6..13 : granule position (64-bit little-endian)
- * For Opus, the granule position is the total number of decoded PCM samples at
- * 48 kHz at the end of that page (RFC 7845 §4) minus pre-skip — so the last
- * page's granulepos is a lower bound on the decoded sample count.
- *
- * Returns the granulepos as a Number (audio is < 2^53 samples here, ~5.7 years
- * of audio, so no BigInt precision concern), or null if no Ogg page is found.
- */
-function readLastOggGranulePos(buf) {
-  // Scan for the LAST "OggS" capture pattern (0x4f 0x67 0x67 0x53).
-  let lastPageStart = -1;
-  for (let i = 0; i + 14 <= buf.length; i += 1) {
-    if (buf[i] === 0x4f && buf[i + 1] === 0x67 && buf[i + 2] === 0x67 && buf[i + 3] === 0x53) {
-      lastPageStart = i;
-    }
-  }
-  if (lastPageStart === -1) {
-    return null;
-  }
-  // 64-bit little-endian granule position at offset +6 of the page header.
-  // Read as two 32-bit halves to avoid BigInt; recombine in Number space.
-  const low = buf.readUInt32LE(lastPageStart + 6);
-  const high = buf.readUInt32LE(lastPageStart + 10);
-  return high * 0x1_0000_0000 + low;
-}
 
 /**
  * POST a multipart/form-data payload (used for `/api/chat/compare` which only
@@ -736,8 +713,8 @@ async function main() {
       );
     }
 
-    // 4. Magic-byte validation per R4 / D2.
-    //    Accept any of the audio container formats the backend has shipped :
+    // 4. Magic-byte validation per R4 / D2, via the shared `validate-audio.cjs`
+    //    `detectAudioContainer`. Accept any container the backend has shipped :
     //      - "OggS" header (0x4f 0x67 0x67 0x53) — Ogg container (current
     //        path : OpenAI Opus, response_format='opus' since C9.12a)
     //      - "ID3" header (0x49 0x44 0x33) — MP3 with ID3v2 tag
@@ -748,11 +725,8 @@ async function main() {
     if (buf.length < 4) {
       throw new Error(`TTS audio too short for magic-byte check (length=${buf.length})`);
     }
-    const isOggS =
-      buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53;
-    const isId3 = buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33;
-    const isMpegFrameSync = buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0;
-    if (!isOggS && !isId3 && !isMpegFrameSync) {
+    const container = detectAudioContainer(buf);
+    if (container === null) {
       const head = Array.from(buf.subarray(0, 4))
         .map((b) => `0x${b.toString(16).padStart(2, '0')}`)
         .join(' ');
@@ -763,20 +737,22 @@ async function main() {
 
     // 5. Length floor per R5 — sub-1KB body almost always = error envelope
     //    misrouted as binary or truncated stream.
-    if (buf.length < 1024) {
-      throw new Error(`TTS audio length ${buf.length} < 1024 (suspect truncated or error envelope)`);
+    if (buf.length < MIN_TTS_BYTE_LENGTH) {
+      throw new Error(
+        `TTS audio length ${buf.length} < ${MIN_TTS_BYTE_LENGTH} (suspect truncated or error envelope)`,
+      );
     }
 
-    // 5b. M-SMOKE-TTS-GRANULEPOS (INV-5) — magic-bytes + the 1024 floor are
+    // 5b. M-SMOKE-TTS-GRANULEPOS (INV-5) — magic-bytes + the byte floor are
     //     cheap pre-filters but a silence/truncated Opus stub carries a valid
-    //     OggS header and can exceed 1024 bytes while containing ~0s of audio.
+    //     OggS header and can exceed the floor while containing ~0s of audio.
     //     The backend emits Ogg/Opus (response_format:'opus',
     //     text-to-speech.openai.ts:50; audio/ogg, :184). Parse the last Ogg
     //     page's granule position (Opus = sample count at 48 kHz) and require it
-    //     to imply >= ~2s of audio (96000 samples), allowing for pre-skip. A
-    //     silence/empty stub yields granulepos ~0 and fails loudly. Pure byte
-    //     parse — only applies when the container is actually Ogg.
-    if (isOggS) {
+    //     to imply >= ~2s of audio (MIN_GRANULEPOS_2S_48KHZ samples), allowing
+    //     for pre-skip. A silence/empty stub yields granulepos ~0 and fails
+    //     loudly. Pure byte parse — only applies when the container is Ogg.
+    if (container === 'ogg') {
       const granulePos = readLastOggGranulePos(buf);
       if (granulePos === null) {
         throw new Error(
@@ -784,7 +760,6 @@ async function main() {
             '(suspect a truncated/corrupt stream).',
         );
       }
-      const MIN_GRANULEPOS_2S_48KHZ = 96000; // 2s × 48000 Hz; pre-skip only adds to this floor.
       if (granulePos < MIN_GRANULEPOS_2S_48KHZ) {
         throw new Error(
           `TTS audio granulepos ${granulePos} implies <2s of audio (suspect silence/stub; ` +

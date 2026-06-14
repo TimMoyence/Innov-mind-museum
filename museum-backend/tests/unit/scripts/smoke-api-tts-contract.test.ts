@@ -18,8 +18,14 @@ import { resolve } from 'node:path';
 // package is not installed here (jest@29 ships globals via the test runner).
 
 const SMOKE_SCRIPT_PATH = resolve(__dirname, '../../../scripts/smoke-api.cjs');
+// The byte-floor + Ogg-granulepos validators were extracted out of the smoke
+// script into this shared, dependency-free module (2026-06-14). The smoke
+// `require()`s it, so the static contract for those two checks now reads the
+// validator's text — see `readValidator` — instead of the smoke script's.
+const VALIDATE_AUDIO_PATH = resolve(__dirname, '../../../scripts/validate-audio.cjs');
 
 const readScript = (): string => readFileSync(SMOKE_SCRIPT_PATH, 'utf8');
+const readValidator = (): string => readFileSync(VALIDATE_AUDIO_PATH, 'utf8');
 
 describe('smoke-api.cjs — R5 TTS contract (static grep)', () => {
   describe('R3 / D5 — POST /api/chat/messages/:messageId/tts is exercised', () => {
@@ -125,13 +131,26 @@ describe('smoke-api.cjs — R5 TTS contract (static grep)', () => {
   });
 
   describe('R5 — minimum byte-length floor (defence against truncation / error envelope)', () => {
-    it('source asserts buffer length >= 1024', () => {
+    it('source requires the shared validate-audio.cjs module', () => {
       const src = readScript();
-      // §1 R5 — literal floor 1024. Don't bind to variable name; just check
-      // the number appears in proximity to a length check.
+      // The floor logic now lives in the extracted validator; the smoke MUST
+      // require it (otherwise the floor check would be silently dropped).
+      expect(src).toMatch(/require\(\s*['"]\.\/validate-audio\.cjs['"]\s*\)/);
+    });
+
+    it('source gates the body length against the MIN_TTS_BYTE_LENGTH floor', () => {
+      const src = readScript();
+      // §1 R5 — the smoke compares the buffer length against the shared floor
+      // constant (don't bind to the exact comparator direction).
       expect(src).toMatch(
-        /(?:length|byteLength)\s*[><=]+\s*1024|1024\s*[><=]+\s*(?:length|byteLength)/,
+        /(?:length|byteLength)\s*[><=]+\s*MIN_TTS_BYTE_LENGTH|MIN_TTS_BYTE_LENGTH\s*[><=]+\s*(?:length|byteLength)/,
       );
+    });
+
+    it('validate-audio.cjs pins the literal floor to 1024', () => {
+      const validator = readValidator();
+      // §1 R5 — the literal 1024 floor lives in the shared module now.
+      expect(validator).toMatch(/MIN_TTS_BYTE_LENGTH\s*=\s*1024/);
     });
   });
 
@@ -164,14 +183,109 @@ describe('smoke-api.cjs — R5 TTS contract (static grep)', () => {
     });
   });
 
-  // Placeholder for a future pure-helper unit test if green-code-agent extracts
-  // the magic-byte validator into its own exported function (e.g. into a
-  // sibling `.cjs` so it can be `require`-d). The Design (§3.1) keeps it inline
-  // so this is intentionally NOT implemented in T1. If green extraction
-  // happens later, replace this `it.todo` with a real test against the
-  // exported helper. `it.todo` is the canonical placeholder per Musaium
-  // discipline (no `expect(true).toBe(true)`).
-  it.todo('validateMp3MagicBytes(buffer) — pure helper test, only if T2 extracts the validator');
+  // 2026-06-14: the magic-byte validator HAS now been extracted into the
+  // sibling `scripts/validate-audio.cjs` (shared by the smoke + tests), so the
+  // former `it.todo('validateMp3MagicBytes ...')` placeholder is replaced by the
+  // real pure-helper behavioural tests below — see the dedicated describe block
+  // `validate-audio.cjs — extracted pure helpers`.
+});
+
+/**
+ * Pure-helper behavioural tests for the extracted `scripts/validate-audio.cjs`.
+ *
+ * This closes the long-standing `it.todo` in the static-grep block above. The
+ * smoke (`scripts/smoke-api.cjs`) `require()`s this exact module, so these
+ * assertions exercise the SAME code that runs post-deploy — they are not a
+ * re-implementation. We assert OUTCOMES (which container a byte buffer maps to,
+ * what granulepos a crafted Ogg page yields), never the source shape.
+ */
+describe('validate-audio.cjs — extracted pure helpers (closes the former it.todo)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- pure CJS validator shared with the .cjs smoke script; required to run the identical implementation, not a typed re-export
+  const validateAudio = require('../../../scripts/validate-audio.cjs') as {
+    MIN_GRANULEPOS_2S_48KHZ: number;
+    MIN_TTS_BYTE_LENGTH: number;
+    detectAudioContainer: (buf: Buffer) => 'ogg' | 'mp3-id3' | 'mp3-frame-sync' | null;
+    readLastOggGranulePos: (buf: Buffer) => number | null;
+  };
+
+  describe('detectAudioContainer — magic-byte classification (R4 / D2)', () => {
+    it('classifies an "OggS" header as ogg', () => {
+      const ogg = Buffer.from([0x4f, 0x67, 0x67, 0x53, 0x00, 0x02]);
+      expect(validateAudio.detectAudioContainer(ogg)).toBe('ogg');
+    });
+
+    it('classifies an "ID3" header as mp3-id3', () => {
+      const id3 = Buffer.from([0x49, 0x44, 0x33, 0x03, 0x00]);
+      expect(validateAudio.detectAudioContainer(id3)).toBe('mp3-id3');
+    });
+
+    it('classifies an MPEG frame-sync (0xFF 0xFB) as mp3-frame-sync', () => {
+      const mp3 = Buffer.from([0xff, 0xfb, 0x90, 0x44]);
+      expect(validateAudio.detectAudioContainer(mp3)).toBe('mp3-frame-sync');
+    });
+
+    it.each([
+      { name: 'all zeros', buf: Buffer.from([0x00, 0x00, 0x00, 0x00]) },
+      { name: 'JSON error envelope', buf: Buffer.from([0x7b, 0x22, 0x65, 0x72]) /* {"er */ },
+      { name: 'HTML error page', buf: Buffer.from([0x3c, 0x21, 0x44, 0x4f]) /* <!DO */ },
+      { name: 'OggS single-byte drift', buf: Buffer.from([0x4f, 0x67, 0x67, 0x54, 0x00]) },
+      { name: 'too short (<4 bytes)', buf: Buffer.from([0x4f, 0x67, 0x67]) },
+    ])('rejects $name as null (no known container)', ({ buf }) => {
+      expect(validateAudio.detectAudioContainer(buf)).toBeNull();
+    });
+  });
+
+  describe('readLastOggGranulePos — Ogg page granule parse (INV-5)', () => {
+    it('reads the 64-bit LE granulepos from a single Ogg page header', () => {
+      // Craft a minimal Ogg page header: "OggS" + version + type + 8-byte
+      // granulepos. We encode 96000 (the 2s @48kHz floor) as a 64-bit LE value.
+      const page = Buffer.alloc(14);
+      page.write('OggS', 0, 'ascii'); // bytes 0..3
+      page[4] = 0x00; // version
+      page[5] = 0x02; // header type
+      page.writeUInt32LE(96000, 6); // low 32 bits of granulepos
+      page.writeUInt32LE(0, 10); // high 32 bits
+      expect(validateAudio.readLastOggGranulePos(page)).toBe(96000);
+    });
+
+    it('reads the LAST page when several "OggS" pages are concatenated', () => {
+      const mkPage = (granule: number): Buffer => {
+        const p = Buffer.alloc(14);
+        p.write('OggS', 0, 'ascii');
+        p.writeUInt32LE(granule, 6);
+        p.writeUInt32LE(0, 10);
+        return p;
+      };
+      // A stream whose final page carries the cumulative sample count.
+      const stream = Buffer.concat([mkPage(0), mkPage(240000)]);
+      expect(validateAudio.readLastOggGranulePos(stream)).toBe(240000);
+    });
+
+    it('recombines low+high halves above 2^32 without BigInt loss', () => {
+      const page = Buffer.alloc(14);
+      page.write('OggS', 0, 'ascii');
+      page.writeUInt32LE(0, 6); // low
+      page.writeUInt32LE(1, 10); // high = 1 → value = 2^32
+      expect(validateAudio.readLastOggGranulePos(page)).toBe(0x1_0000_0000);
+    });
+
+    it('returns null when no "OggS" page header is present', () => {
+      const notOgg = Buffer.from([
+        0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ]);
+      expect(validateAudio.readLastOggGranulePos(notOgg)).toBeNull();
+    });
+  });
+
+  describe('exported floors are the catalogued constants', () => {
+    it('MIN_GRANULEPOS_2S_48KHZ is 96000 (2s × 48000 Hz Opus)', () => {
+      expect(validateAudio.MIN_GRANULEPOS_2S_48KHZ).toBe(96000);
+    });
+
+    it('MIN_TTS_BYTE_LENGTH is 1024 (R5 floor)', () => {
+      expect(validateAudio.MIN_TTS_BYTE_LENGTH).toBe(1024);
+    });
+  });
 });
 
 /**
@@ -270,16 +384,25 @@ describe('smoke-api.cjs — INC-2026-06-14 fail-loud contract (static grep)', ()
   });
 
   describe('M-SMOKE-TTS-GRANULEPOS (INV-5) — decoded audio duration, not just magic bytes', () => {
-    it('declares an Ogg granulepos parser and a >=96000-sample (~2s) floor', () => {
-      const src = readScript();
-      expect(src).toMatch(
+    it('validate-audio.cjs declares the Ogg granulepos parser and the >=96000-sample floor', () => {
+      const validator = readValidator();
+      // The parser + 2s floor constant live in the extracted shared module.
+      expect(validator).toMatch(
         /(?:function\s+readLastOggGranulePos\s*\(|const\s+readLastOggGranulePos\s*=)/,
       );
       // Reads a 64-bit LE granule position via two 32-bit halves (pure byte parse).
-      expect(src).toMatch(/readUInt32LE/);
-      // The 2s floor at 48kHz Opus.
-      expect(src).toMatch(/96000/);
-      // The fail message names granulepos + <2s.
+      expect(validator).toMatch(/readUInt32LE/);
+      // The 2s floor at 48kHz Opus, pinned as a named constant.
+      expect(validator).toMatch(/MIN_GRANULEPOS_2S_48KHZ\s*=\s*96000/);
+    });
+
+    it('smoke source gates the parsed granulepos against the shared floor and fails loud (<2s)', () => {
+      const src = readScript();
+      // The smoke MUST call the shared parser and compare against the shared
+      // floor constant — otherwise a silence/stub Opus body would pass.
+      expect(src).toMatch(/readLastOggGranulePos\s*\(/);
+      expect(src).toMatch(/granulePos\s*<\s*MIN_GRANULEPOS_2S_48KHZ/);
+      // The fail message (emitted by the smoke at runtime) names granulepos + <2s.
       expect(src).toMatch(/granulepos[\s\S]{0,40}<2s|<2s[\s\S]{0,40}granulepos/i);
     });
   });
