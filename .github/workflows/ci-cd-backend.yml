@@ -159,6 +159,13 @@ jobs:
       - name: Hexagonal domain-purity sentinel (ESLint-independent backstop)
         run: pnpm run sentinel:hexagonal-domain-purity
 
+      - name: Integration-gate discipline sentinel (STREAM H9 — dark suites)
+        # Fails if a tests/integration/** suite gates on process.env.RUN_E2E
+        # without RUN_INTEGRATION — such a suite runs in NO CI job (this
+        # integration leg sets RUN_INTEGRATION; the e2e leg path-excludes
+        # tests/integration/), giving silent false coverage.
+        run: node scripts/sentinels/integration-gate-discipline.mjs
+
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
 

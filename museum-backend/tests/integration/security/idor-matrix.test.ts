@@ -13,11 +13,12 @@ import { registerAndLogin, loginUser } from 'tests/helpers/e2e/e2e-auth.helpers'
  *  - Consent: scoped by JWT `sub`, path `:scope` is non-enumerable per-user,
  *    so the IDOR surface is indirect — we still assert isolation.
  *
- * Runs only under `RUN_E2E=true` (like the other e2e suites) because it boots
- * a real Postgres testcontainer + full Express server. Use `pnpm test:e2e`.
+ * Runs under `RUN_E2E=true` OR `RUN_INTEGRATION=true` (the arm the CI
+ * integration job sets) because it boots a real Postgres testcontainer + full
+ * Express server. Enforced by scripts/sentinels/integration-gate-discipline.mjs.
  */
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
@@ -74,10 +75,56 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(getOwn.status).toBe(200);
     });
 
-    // No admin bypass exists today for chat sessions — admin also receives 404.
-    // Documented as a product gap; flip to a positive assertion once the
-    // moderation endpoint lands.
-    test.todo('admin can GET any session (requires dedicated admin moderation endpoint)');
+    // Admin moderation endpoint: a promoted admin can read ANY user's chat
+    // session via the dedicated admin-bypass read path (NOT ensureSessionOwnership),
+    // while a non-privileged user is rejected by RBAC (403) before any DB read.
+    it('admin GET /api/admin/chat/sessions/:id returns 200 with owner content; non-admin gets 403', async () => {
+      const password = 'Password123!';
+      const userA = await registerAndLogin(harness, { password });
+      const userB = await registerAndLogin(harness, { password });
+      const admin = await registerAndLogin(harness, { password });
+
+      // Promote admin (same convention as the support-ticket IDOR test below).
+      await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [
+        admin.userId,
+      ]);
+      const adminLogin = await loginUser(harness.request, admin.email, password);
+
+      // User A creates a session owned by them.
+      const created = await harness.request(
+        '/api/chat/sessions',
+        {
+          method: 'POST',
+          body: JSON.stringify({ locale: 'en', museumMode: true }),
+        },
+        userA.token,
+      );
+      expect(created.status).toBe(201);
+      const sessionId = (created.body as { session: { id: string } }).session.id;
+
+      // Admin → 200, body carries the session id + owner-content shape
+      // (mirrors the owner GetSessionResponse: { session, messages, page }).
+      const getAdmin = await harness.request(
+        `/api/admin/chat/sessions/${sessionId}`,
+        { method: 'GET' },
+        adminLogin.accessToken,
+      );
+      expect(getAdmin.status).toBe(200);
+      const adminBody = getAdmin.body as {
+        session: { id: string };
+        messages: unknown[];
+      };
+      expect(adminBody.session.id).toBe(sessionId);
+      expect(Array.isArray(adminBody.messages)).toBe(true);
+
+      // Non-privileged user B → 403 (RBAC, before any DB read).
+      const getNonAdmin = await harness.request(
+        `/api/admin/chat/sessions/${sessionId}`,
+        { method: 'GET' },
+        userB.token,
+      );
+      expect(getNonAdmin.status).toBe(403);
+    });
   });
 
   describe('chat message owned by user A', () => {
@@ -131,11 +178,16 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     });
 
     it('cross-user POST /messages/:messageId/feedback returns 404', async () => {
+      // Body must be a VALID feedback value ('positive'|'negative') so the
+      // request passes `parseFeedbackMessageRequest` validation and actually
+      // reaches the ownership boundary. With an invalid value (e.g. 'up') the
+      // route 400s on validation before the IDOR check ever runs, which would
+      // not genuinely exercise the cross-user 404.
       const res = await harness.request(
         `/api/chat/messages/${messageId}/feedback`,
         {
           method: 'POST',
-          body: JSON.stringify({ value: 'up' }),
+          body: JSON.stringify({ value: 'positive' }),
         },
         userBToken,
       );
@@ -152,6 +204,26 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     });
 
     it('cross-user POST /messages/:messageId/tts returns 404', async () => {
+      // The TTS route checks third-party-AI AUDIO consent (GDPR Art.7) BEFORE
+      // the ownership check (chat-media.route.ts). Without consent user B would
+      // 403 on the consent gate and never reach the IDOR boundary, so the 404
+      // assertion would not genuinely exercise ownership isolation. Grant the
+      // audio consent first (real grant against the testcontainer) so the
+      // consent gate passes and the request reaches — and is rejected by — the
+      // cross-user ownership check.
+      const grant = await harness.request(
+        '/api/auth/consent',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            scope: 'third_party_ai_audio_openai',
+            version: '2026-04-24',
+          }),
+        },
+        userBToken,
+      );
+      expect(grant.status).toBe(201);
+
       const res = await harness.request(
         `/api/chat/messages/${messageId}/tts`,
         { method: 'POST' },

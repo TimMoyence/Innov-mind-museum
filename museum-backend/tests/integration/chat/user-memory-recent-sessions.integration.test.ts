@@ -5,11 +5,13 @@
  * via {@link createE2EHarness}. Exercises the LEFT JOIN + MAX(createdAt) GROUP BY
  * shape that powers the locale-mode and session-duration p90 mergers.
  *
- * Gated on `RUN_E2E=true` (matches the convention used by sibling integration
- * suites that boot a real Postgres testcontainer — see
- * `tests/integration/security/idor-matrix.test.ts`). Run with:
+ * Gated on `RUN_E2E=true` OR `RUN_INTEGRATION=true` (matches the convention
+ * used by sibling integration suites that boot a real Postgres testcontainer —
+ * see `tests/integration/auth/deleteAccount-cascade.int.test.ts`). The
+ * `RUN_INTEGRATION` arm is what makes this suite run in the CI integration job.
+ * Run with:
  *
- *   RUN_E2E=true pnpm test:integration -- --testPathPattern=user-memory-recent-sessions
+ *   RUN_INTEGRATION=true pnpm test:integration -- --testPathPattern=user-memory-recent-sessions
  */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
@@ -18,7 +20,7 @@ import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { User } from '@modules/auth/domain/user/user.entity';
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {

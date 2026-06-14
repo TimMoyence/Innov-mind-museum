@@ -41,6 +41,7 @@
 #  30. secret/cert rotation runbook freshness (≤120d) — node scripts/sentinels/secret-rotation-freshness.mjs
 #  31. hexagonal domain-purity (BE backstop)         — node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
 #  32. api-url production-safety (mobile, build-time) — node museum-frontend/scripts/sentinels/api-url-production-safety.mjs
+#  33. integration-gate discipline (BE dark suites)   — node museum-backend/scripts/sentinels/integration-gate-discipline.mjs
 #  + Advisory (NON-BLOCKING): cluster-skills index freshness — node scripts/gen-cluster-skills-index.mjs --check
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
@@ -446,9 +447,20 @@ gate_end "Gate 32"
 # localhost), a forced-localhost production build THROWS (R4 fail-loud),
 # CONFIGURATION=Release ⇒ production (beats a stray .env dev), and the prod
 # host literal is not duplicated. run 2026-06-06-api-url-prod-safety.
-gate_start "Gate 33/33 api-url production-safety sentinel (mobile)"
+gate_start "Gate 33/34 api-url production-safety sentinel (mobile)"
 node museum-frontend/scripts/sentinels/api-url-production-safety.mjs || exit 1
 gate_end "Gate 33"
+
+# ─── Gate 34 — integration-gate discipline (BE, dark suites, STREAM H9) ─────
+# A tests/integration/** suite gated ONLY on process.env.RUN_E2E runs in NO CI
+# job (the integration job sets RUN_INTEGRATION; the e2e job path-excludes
+# tests/integration/) → silent dark suite, false coverage. This sentinel fails
+# if any integration file references RUN_E2E without also honouring
+# RUN_INTEGRATION, so a future RUN_E2E-only gate fails the build instead of
+# silently skipping. run 2026-06-14-dark-integration-suites.
+gate_start "Gate 34/34 integration-gate discipline (backend)"
+node museum-backend/scripts/sentinels/integration-gate-discipline.mjs || exit 1
+gate_end "Gate 34"
 
 # ─── Advisory (NON-BLOCKING) — cluster-skills index freshness ──────────────
 # Les cartes de cluster GitNexus (.claude/skills/generated/) + leur index routable
@@ -470,7 +482,7 @@ fi
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 33 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 34 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────

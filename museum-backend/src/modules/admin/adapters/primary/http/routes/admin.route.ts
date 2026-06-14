@@ -39,6 +39,7 @@ import {
   adminReviewFacade,
   adminSupportFacade,
 } from '@modules/admin/useCase';
+import { getChatSessionForModerationUseCase } from '@modules/admin/useCase/chat/composition';
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { getNpsUseCase } from '@modules/review/useCase';
 import { computeTenantScope } from '@shared/authz/tenant-scope';
@@ -227,6 +228,39 @@ adminRouter.get(
     });
 
     res.json(result);
+  },
+);
+
+/**
+ * STREAM H11 / IDOR matrix — admin moderation read of ANY user's chat session.
+ *
+ * RBAC: `requireRole('admin', 'moderator')` → 403 for every other role BEFORE
+ * any DB read (the non-admin negative case in `idor-matrix.test.ts`). The use
+ * case deliberately bypasses `ensureSessionOwnership` (INV-4 — dedicated admin
+ * bypass path per `session-access.ts:11-18`) and `await`s an
+ * `ADMIN_CHAT_SESSION_VIEWED` audit row BEFORE the 200 (INV-6). A missing id
+ * returns 404 (notFound), an invalid (non-UUID) id returns 400 — matching the
+ * owner-read contract. Composition is lazy (INV-8) so the import chain does not
+ * pull the chat module at module load.
+ */
+adminRouter.get(
+  '/chat/sessions/:id',
+  isAuthenticated,
+  requireRole('admin', 'moderator'),
+  async (req: Request, res: Response) => {
+    const sessionId = parseStringParam(req, 'id');
+    if (!sessionId) throw badRequest('Invalid session ID');
+
+    const result = await getChatSessionForModerationUseCase().execute({
+      sessionId,
+      actorId: req.user?.id ?? 0,
+      ip: req.ip,
+      requestId: req.requestId,
+      cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+    });
+
+    res.status(200).json(result);
   },
 );
 

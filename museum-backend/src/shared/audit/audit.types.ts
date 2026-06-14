@@ -70,6 +70,13 @@ export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
 // AFTER mutation, BEFORE returning (N3 ordering). Metadata = `{ from, to }`;
 // no counter state (N9 R2: state on user row, audit carries transition only).
 export const AUDIT_ADMIN_USER_TIER_CHANGED = 'ADMIN_USER_TIER_CHANGED';
+// ─── Admin moderation read (chat session view, IDOR matrix / STREAM H11) ───
+// Emitted by GetChatSessionForModerationUseCase AFTER the bypass read resolves
+// and BEFORE the 200 response is observable (SOC2 CC7.2 / GDPR Art. 30 — every
+// admin access to another user's chat content leaves a forensic trail). The
+// admin path deliberately bypasses `ensureSessionOwnership`, so the audit row is
+// the only record that a privileged cross-user read happened.
+export const AUDIT_ADMIN_CHAT_SESSION_VIEWED = 'ADMIN_CHAT_SESSION_VIEWED';
 // ─── Admin CSV export (R2 W3.4) ───
 // Distinct from AUDIT_DATA_EXPORT (user-self DSAR) — mixing breaks audit-chain
 // filter semantics. Per-kind constants make `WHERE action =` trivial.

@@ -172,8 +172,10 @@ describe('F1 — chat-session quota ordering (Zod 400 must not burn counter)', (
   });
 
   // ── Test D — Documented residual hole (handler 5xx tail under D1=(a)) ─
-
-  it.todo(
-    'F1.Risk1 V1.1 — handler 5xx after counter increment leaves counter inflated; promote to reserve+commit (§3.1 option b) if post-bake telemetry shows >1% inflation tail',
-  );
+  // F1.Risk1 V1.1 (handler 5xx after counter increment leaves counter inflated)
+  // is now materialized as a real integration test (Tier=integration, real PG
+  // row) — see tests/integration/quota/monthly-session-quota-inflation.integration.test.ts
+  // (UC-H12-01). A mock repo here cannot prove the PERSISTED counter reverted,
+  // so the bare it.todo was promoted to that integration test rather than left
+  // permanently pending.
 });

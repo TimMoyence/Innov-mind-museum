@@ -537,7 +537,9 @@ describe('db-resilience: graceful error handling (no internal leaks)', () => {
 // 7. Transaction isolation (conditional — requires real PG)
 // =========================================================================
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+// Gated on RUN_E2E=true OR RUN_INTEGRATION=true — the RUN_INTEGRATION arm is
+// what makes this transaction-isolation suite run in the CI integration job.
+const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('db-resilience: transaction isolation (real PG)', () => {

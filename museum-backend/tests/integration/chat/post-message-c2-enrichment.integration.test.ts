@@ -8,9 +8,10 @@
  * `caption` + `rationale` propagated from the prior assistant turn's
  * `suggestedImages[]` array (R1, R5, R8 of spec §3).
  *
- * Gated on `RUN_E2E=true`. Local dev opts in via:
+ * Gated on `RUN_E2E=true` OR `RUN_INTEGRATION=true` (the `RUN_INTEGRATION` arm
+ * is what makes this suite run in the CI integration job). Local dev opts in via:
  *
- *   RUN_E2E=true pnpm jest --runInBand \
+ *   RUN_INTEGRATION=true pnpm jest --runInBand \
  *     tests/integration/chat/post-message-c2-enrichment.integration.test.ts
  */
 
@@ -36,7 +37,7 @@ import type {
 import type { EnrichedImage } from '@modules/chat/domain/chat.types';
 import type { E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 /* ────────────────────────── shared mock helpers ────────────────────────── */
