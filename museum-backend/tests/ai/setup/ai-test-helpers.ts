@@ -69,10 +69,6 @@ export const assertArtResponse = (text: string): void => {
   expect(text).not.toContain('running without an LLM key');
 };
 
-/** Test utility: base64-encoded 1x1 red pixel PNG used as minimal valid image input for vision pipeline tests. */
-export const TEST_IMAGE_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-
 // ---------------------------------------------------------------------------
 // Real-image fixtures (public-domain, committed under tests/ai/fixtures/).
 //   art-mona-lisa.jpg      — Leonardo da Vinci, Mona Lisa (ART)

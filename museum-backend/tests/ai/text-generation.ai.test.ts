@@ -1,4 +1,8 @@
-import { shouldRunAiTests, buildAiTestService, assertArtResponse } from './setup/ai-test-helpers';
+import {
+  shouldRunAiTests,
+  buildAiTestService,
+  assertSubstantiveAnswer,
+} from './setup/ai-test-helpers';
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
 
@@ -14,7 +18,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(/leonardo|da vinci|1503|1506/);
   });
 
@@ -27,7 +31,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { locale: 'fr-FR' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(/l[ée]onard|vinci|joconde/);
   });
 
@@ -40,7 +44,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { locale: 'en-US', museumMode: true },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(/starry|van gogh|night/);
   });
 
@@ -53,7 +57,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { guideLevel: 'beginner', locale: 'en-US' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
   });
 
   it('adjusts response for expert guide level', async () => {
@@ -65,7 +69,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { guideLevel: 'expert', locale: 'en-US' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
   });
 
   it('includes museum context when museumMode is enabled', async () => {
@@ -77,7 +81,7 @@ describeAi('AI text generation (real LLM)', () => {
       context: { museumMode: true, locale: 'en-US' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
   });
 
   it('handles location context in the prompt', async () => {
@@ -89,6 +93,6 @@ describeAi('AI text generation (real LLM)', () => {
       context: { location: 'Louvre Museum, Room 711', locale: 'en-US', museumMode: true },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
   });
 });
