@@ -236,6 +236,10 @@ function buildCompareImageProcessor(
         },
         input.sessionId,
         input.ownerId,
+        // Compare only needs the EXIF-stripped buffer to encode; it discards the
+        // imageRef. Skip the S3 upload so a misconfigured/unavailable object
+        // store never 500s /chat/compare (prod incident 2026-06-14 — S3 403).
+        { skipStorage: true },
       );
       const orchImage = processed.orchestratorImage;
       const cleanedBuffer = Buffer.from(orchImage.value, 'base64');

@@ -66,6 +66,15 @@ export class ImageProcessingService {
     image: NonNullable<PostMessageInput['image']>,
     sessionId: string,
     ownerId?: number,
+    // C3 — `/chat/compare` passes { skipStorage: true }: it only needs the
+    // EXIF-stripped buffer to ENCODE for visual similarity and discards the
+    // imageRef (the use-case persists the match RESULT, never the query photo).
+    // Skipping the upload removes a useless S3 round-trip that 500'd compare
+    // whenever the object store was unavailable — prod incident 2026-06-14:
+    // every /chat/compare returned 500 on `S3 upload failed (403)` (object
+    // store misconfigured) BEFORE the encoder ever ran. The buffer the compare
+    // actually needs never required S3.
+    options?: { skipStorage?: boolean },
   ): Promise<ProcessedImage> {
     if (image.source === 'url') {
       if (!isSafeImageUrl(image.value)) {
@@ -94,15 +103,17 @@ export class ImageProcessingService {
       const stripped = await this.stripExif(normalizedBase64, mimeType);
       assertImageSize(stripped.sizeBytes, env.llm.maxImageBytes);
 
-      const imageRef = await this.imageStorage.save({
-        base64: stripped.base64,
-        mimeType: stripped.mimeType,
-        objectKey: buildChatImageObjectKey({
-          mimeType: stripped.mimeType,
-          sessionId,
-          userId: ownerId,
-        }),
-      });
+      const imageRef = options?.skipStorage
+        ? ''
+        : await this.imageStorage.save({
+            base64: stripped.base64,
+            mimeType: stripped.mimeType,
+            objectKey: buildChatImageObjectKey({
+              mimeType: stripped.mimeType,
+              sessionId,
+              userId: ownerId,
+            }),
+          });
 
       return {
         imageRef,
@@ -127,15 +138,17 @@ export class ImageProcessingService {
     const strippedLegacy = await this.stripExif(decoded.base64, decoded.mimeType);
     assertImageSize(strippedLegacy.sizeBytes, env.llm.maxImageBytes);
 
-    const imageRef = await this.imageStorage.save({
-      base64: strippedLegacy.base64,
-      mimeType: strippedLegacy.mimeType,
-      objectKey: buildChatImageObjectKey({
-        mimeType: strippedLegacy.mimeType,
-        sessionId,
-        userId: ownerId,
-      }),
-    });
+    const imageRef = options?.skipStorage
+      ? ''
+      : await this.imageStorage.save({
+          base64: strippedLegacy.base64,
+          mimeType: strippedLegacy.mimeType,
+          objectKey: buildChatImageObjectKey({
+            mimeType: strippedLegacy.mimeType,
+            sessionId,
+            userId: ownerId,
+          }),
+        });
 
     return {
       imageRef,
