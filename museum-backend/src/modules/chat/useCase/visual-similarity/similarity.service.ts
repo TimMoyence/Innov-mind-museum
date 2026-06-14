@@ -296,6 +296,10 @@ export class VisualSimilarityService {
 
     const enrichStart = Date.now();
     const qids = neighbours.map((n) => n.qid);
+    // Enrichment is a supplementary overlay over the visual kNN. Its per-qid
+    // failures are isolated INSIDE wikidata-enricher (a lookup throw → gap in
+    // the Map, never a batch rejection) — that is the root-cause guard for the
+    // 2026-06-14 prod 500 (encoder fix exposed an unprotected lookup throw).
     const factsByQid = await this.enricher.enrichBatch(qids, input.locale);
     recordStageSpan(parentSpan, 'enrich', enrichStart, {
       requestedQids: qids.length,

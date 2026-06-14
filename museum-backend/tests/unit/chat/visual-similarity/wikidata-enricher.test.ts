@@ -26,7 +26,10 @@ import type { CacheService } from '@shared/cache/cache.port';
 // `lookup` mock + record the in-flight count so concurrency assertions are
 // possible without a real network round-trip.
 // ---------------------------------------------------------------------------
-const lookupMock = jest.fn<Promise<ArtworkFacts | null>, [{ searchTerm: string; language?: string }]>();
+const lookupMock = jest.fn<
+  Promise<ArtworkFacts | null>,
+  [{ searchTerm: string; language?: string }]
+>();
 
 jest.mock('@modules/chat/adapters/secondary/search/wikidata.client', () => ({
   WikidataClient: jest.fn().mockImplementation(() => ({ lookup: lookupMock })),
@@ -45,11 +48,12 @@ interface WikidataEnricherCtorArgs {
 
 // SUT — Phase 4 file, must not yet exist.
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { WikidataEnricher } = require('@modules/chat/useCase/visual-similarity/wikidata-enricher') as {
-  WikidataEnricher: new (args: WikidataEnricherCtorArgs) => {
-    enrichBatch: (qids: string[], lang: string) => Promise<Map<string, ArtworkFacts>>;
+const { WikidataEnricher } =
+  require('@modules/chat/useCase/visual-similarity/wikidata-enricher') as {
+    WikidataEnricher: new (args: WikidataEnricherCtorArgs) => {
+      enrichBatch: (qids: string[], lang: string) => Promise<Map<string, ArtworkFacts>>;
+    };
   };
-};
 
 const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
 
@@ -74,6 +78,28 @@ describe('WikidataEnricher.enrichBatch (T4.6)', () => {
     expect(result.size).toBe(3);
     expect(result.get('Q1')?.qid).toBe('Q1');
     expect(result.get('Q2')?.qid).toBe('Q2');
+    expect(result.get('Q3')?.qid).toBe('Q3');
+  });
+
+  it('does NOT reject when a lookup THROWS — drops that qid (gap in Map) and resolves the rest', async () => {
+    // Regression (prod 2026-06-14): WikidataClient.lookup is *meant* to be
+    // fail-soft (return null), but in prod it threw (egress/DNS/SSRF block).
+    // runWithLimit uses Promise.all → the throw propagated out of enrichBatch
+    // and out of /chat/compare → HTTP 500. A per-qid throw must become a gap,
+    // not a batch rejection.
+    lookupMock.mockImplementation(async ({ searchTerm }) => {
+      if (searchTerm === 'Q2') throw new Error('ENOTFOUND wikidata.org (prod egress block)');
+      return makeArtworkFacts({ qid: searchTerm, title: `Title ${searchTerm}` });
+    });
+    const cache = makeCache();
+    const enricher = new WikidataEnricher({ client: { lookup: lookupMock }, cache });
+
+    // MUST resolve (the prod incident was a rejection here).
+    const result = await enricher.enrichBatch(['Q1', 'Q2', 'Q3'], 'en');
+
+    expect(result.size).toBe(2);
+    expect(result.has('Q2')).toBe(false); // throwing qid → gap
+    expect(result.get('Q1')?.qid).toBe('Q1');
     expect(result.get('Q3')?.qid).toBe('Q3');
   });
 
@@ -104,9 +130,9 @@ describe('WikidataEnricher.enrichBatch (T4.6)', () => {
   it('returns the cached value without calling lookup when the cache hits', async () => {
     const cached = makeArtworkFacts({ qid: 'Q12418', title: 'Cached Mona Lisa' });
     const cache = makeCache({
-      get: jest.fn().mockImplementation(async (key: string) =>
-        key.includes('Q12418') ? cached : null,
-      ),
+      get: jest
+        .fn()
+        .mockImplementation(async (key: string) => (key.includes('Q12418') ? cached : null)),
     });
     lookupMock.mockResolvedValue(makeArtworkFacts({ qid: 'Q-other' }));
 

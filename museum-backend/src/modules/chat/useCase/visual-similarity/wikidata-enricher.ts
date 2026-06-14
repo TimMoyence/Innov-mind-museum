@@ -150,7 +150,24 @@ export class WikidataEnricher {
         return;
       }
 
-      const facts = await this.client.lookup({ searchTerm: qid, language: lang });
+      // Per-qid isolation: the lookup is *meant* to be fail-soft (return null),
+      // but an underlying client can still throw (prod egress/DNS failure, SSRF
+      // guard, parse error). Catch it here so one qid's failure becomes a gap in
+      // the Map (same contract as null) instead of rejecting runWithLimit's
+      // Promise.all → enrichBatch throw → /chat/compare 500. Enrichment is a
+      // supplementary overlay; it must never crash the core visual-similarity
+      // result. (Prod incident 2026-06-14: encoder fix exposed this latent throw
+      // — every compare with neighbours 500'd once the model loaded.)
+      let facts: ArtworkFacts | null = null;
+      try {
+        facts = await this.client.lookup({ searchTerm: qid, language: lang });
+      } catch (err) {
+        logger.warn('wikidata_enricher_lookup_error', {
+          qid,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return; // Drop on throw — gap in the result Map (same contract as null).
+      }
       if (facts === null) return; // Drop nulls — gap in the result Map is the contract.
 
       result.set(qid, facts);
